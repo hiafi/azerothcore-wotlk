@@ -347,7 +347,8 @@ class Corpus:
         file contents and the code; whatever the caller replays after this (pending and module files, which change
         every run) is applied to the returned object and is not part of the snapshot."""
         files = [(str(p), self.digest(p)) for p in stable]
-        path = self._snapshot_path(f"{kind}-{hashlib.sha256(repr((kind, params, self.version)).encode()).hexdigest()[:20]}")
+        name = hashlib.sha256(repr((kind, params, self.version)).encode()).hexdigest()[:20]
+        path = self._snapshot_path(f"{kind}-{name}")
         header = {"kind": kind, "code": self.version, "params": repr(params)}
         cached = None
         if path is not None and path.is_file() and not self.rebuild:

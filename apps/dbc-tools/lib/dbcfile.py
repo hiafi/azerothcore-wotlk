@@ -15,8 +15,11 @@ regardless of its fmt char (see dbcfmt.py's module docstring for why).
 
 from __future__ import annotations
 
+import functools
 import struct
+from operator import itemgetter
 from pathlib import Path
+from typing import NamedTuple
 
 from .dbcfmt import DbcTable
 
@@ -42,35 +45,69 @@ def read_dbc(path: Path, table: DbcTable) -> list[dict]:
     strings_start = records_start + record_count * record_size
     string_pool = data[strings_start:strings_start + string_size]
 
-    def read_string(offset: int) -> str:
-        end = string_pool.index(b"\x00", offset)
-        return string_pool[offset:end].decode("utf-8", "replace")
+    if record_count == 0:
+        return []
 
-    rows = []
-    for r in range(record_count):
-        base = records_start + r * record_size
-        offset = 0
-        row = {}
-        for ch, col in zip(table.fmt, table.columns):
-            if ch == "f":
-                (val,) = struct.unpack_from("<f", data, base + offset)
-                offset += 4
-            elif ch == "s" or col in table.read_as_string:
-                (strref,) = struct.unpack_from("<I", data, base + offset)
-                val = read_string(strref)
-                offset += 4
-            elif ch in ("n", "i", "x"):
-                fmt_char = "<i" if col in table.signed else "<I"
-                (val,) = struct.unpack_from(fmt_char, data, base + offset)
-                offset += 4
-            elif ch in ("b", "X"):
-                val = data[base + offset]
-                offset += 1
-            else:
-                raise ValueError(f"unsupported format char {ch!r} in {table.name}")
-            row[col] = val
-        rows.append(row)
+    layout = _read_layout(table)
+    columns = table.columns
+    st = layout.packer
+    if st.size == record_size:
+        # records are contiguous: one C-level pass over the whole record block
+        tuples = st.iter_unpack(data[records_start:strings_start])
+    else:
+        unpack_from = st.unpack_from
+        tuples = (unpack_from(data, records_start + r * record_size) for r in range(record_count))
+
+    rows = [dict(zip(columns, values)) for values in tuples]
+    if layout.string_columns:
+        strings = _StringPool(string_pool)
+        for col in layout.string_columns:
+            for row in rows:
+                row[col] = strings[row[col]]
     return rows
+
+
+class _StringPool(dict):
+    """NUL-terminated strings of a DBC string block by offset, decoded on first use."""
+
+    def __init__(self, pool: bytes):
+        super().__init__()
+        self._pool = pool
+
+    def __missing__(self, offset: int) -> str:
+        end = self._pool.index(b"\x00", offset)
+        text = self[offset] = self._pool[offset:end].decode("utf-8", "replace")
+        return text
+
+
+class _ReadLayout(NamedTuple):
+    packer: struct.Struct
+    string_columns: tuple
+
+
+@functools.lru_cache(maxsize=None)
+def _read_layout(table: DbcTable) -> _ReadLayout:
+    """One precompiled struct per table, plus the names of its string-offset columns."""
+    codes = []
+    string_columns = []
+    for ch, col in zip(table.fmt, table.columns):
+        if ch == "f":
+            codes.append("f")
+        elif ch == "s" or col in table.read_as_string:
+            codes.append("I")
+            string_columns.append(col)
+        elif ch in ("n", "i", "x"):
+            codes.append("i" if col in table.signed else "I")
+        elif ch in ("b", "X"):
+            codes.append("B")
+        else:
+            raise ValueError(f"unsupported format char {ch!r} in {table.name}")
+    return _ReadLayout(struct.Struct("<" + "".join(codes)), tuple(string_columns))
+
+
+@functools.lru_cache(maxsize=None)
+def _string_columns(table: DbcTable) -> tuple:
+    return tuple(col for ch, col in zip(table.fmt, table.columns) if ch == "s" or col in table.read_as_string)
 
 
 def _pack_string_pool(rows: list[dict], table: DbcTable):
@@ -79,10 +116,9 @@ def _pack_string_pool(rows: list[dict], table: DbcTable):
     Returns (pool_bytes, {value: offset})."""
     pool = bytearray(b"\x00")
     offsets: dict[str, int] = {"": 0}
+    string_cols = _string_columns(table)
     for row in rows:
-        for ch, col in zip(table.fmt, table.columns):
-            if ch != "s" and col not in table.read_as_string:
-                continue
+        for col in string_cols:
             val = row.get(col) or ""
             if val not in offsets:
                 offsets[val] = len(pool)
@@ -157,6 +193,58 @@ def order_talent_rows(rows: list[dict], base_rows: list[dict]) -> list[dict]:
     return ordered
 
 
+def _pack_body(table: DbcTable, rows: list[dict], string_offsets: dict[str, int]) -> bytes:
+    """All records as one byte string.
+
+    Columns are extracted in bulk (C-level itemgetter, falling back to row.get(col, 0) when a row
+    lacks the column); float and string columns are coerced exactly as the per-field code did
+    (float(val or 0.0), offsets[val or ""]). Integer columns go straight into struct.pack; a row
+    whose value it rejects (negative, > 32 bit, None, float, str ...) gets the int(val or 0) &
+    0xFFFFFFFF coercion instead."""
+    mask = 0xFFFFFFFF
+    cols = []
+    int_positions = []
+    for i, (ch, col) in enumerate(zip(table.fmt, table.columns)):
+        if ch == "f":
+            kind = 0
+        elif ch == "s" or col in table.read_as_string:
+            kind = 1
+        elif ch in ("n", "i", "x"):
+            kind = 2
+        else:
+            raise ValueError(f"unsupported format char {ch!r} in {table.name}")
+        try:
+            raw = list(map(itemgetter(col), rows))
+        except KeyError:
+            raw = [r.get(col, 0) for r in rows]
+        if kind == 0:
+            raw = [float(v or 0.0) for v in raw]
+        elif kind == 1:
+            raw = [string_offsets[v or ""] for v in raw]
+        elif col in table.signed:  # negative by design: wrap them all up front
+            raw = [int(v or 0) & mask for v in raw]
+        else:
+            int_positions.append(i)
+        cols.append(raw)
+
+    pack = _pack_struct(table).pack
+    chunks = []
+    for values in zip(*cols):
+        try:
+            chunks.append(pack(*values))
+        except (struct.error, TypeError, OverflowError):
+            fixed = list(values)
+            for i in int_positions:
+                fixed[i] = int(fixed[i] or 0) & mask
+            chunks.append(pack(*fixed))
+    return b"".join(chunks)
+
+
+@functools.lru_cache(maxsize=None)
+def _pack_struct(table: DbcTable) -> struct.Struct:
+    return struct.Struct("<" + "".join("f" if ch == "f" else "I" for ch in table.fmt))
+
+
 def pack_dbc_bytes(table: DbcTable, rows: list[dict], *, sort: bool = True) -> bytes:
     """Pack rows into a binary WDBC file's bytes.
 
@@ -170,23 +258,15 @@ def pack_dbc_bytes(table: DbcTable, rows: list[dict], *, sort: bool = True) -> b
     record_size = 4 * len(table.fmt)  # every field here is exactly 4 bytes
     string_pool, string_offsets = _pack_string_pool(rows, table)
 
-    body = bytearray()
-    for row in rows:
-        for ch, col in zip(table.fmt, table.columns):
-            val = row.get(col, 0)
-            if ch == "f":
-                body += struct.pack("<f", float(val or 0.0))
-            elif ch == "s" or col in table.read_as_string:
-                body += struct.pack("<I", string_offsets[val or ""])
-            elif ch in ("n", "i", "x"):
-                body += struct.pack("<I", int(val or 0) & 0xFFFFFFFF)
-            else:
-                raise ValueError(f"unsupported format char {ch!r} in {table.name}")
+    if not rows:
+        body = b""
+    else:
+        body = _pack_body(table, rows, string_offsets)
 
     header = struct.pack(
         "<4sIIII", MAGIC, len(rows), len(table.fmt), record_size, len(string_pool)
     )
-    return header + bytes(body) + string_pool
+    return header + body + string_pool
 
 
 def pack_client_dbc(table: DbcTable, rows: list[dict], base_rows: list[dict]) -> bytes:

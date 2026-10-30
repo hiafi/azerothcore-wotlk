@@ -211,7 +211,8 @@ def promote_newest(sandbox: Path, generated: dict[str, str]) -> str:
     pending = sandbox / "data" / "sql" / "updates" / "pending_db_world"
     newest = sorted(p for p in pending.glob("rev_*.sql") if p.name in generated)[-1]
     target = sandbox / "data" / "sql" / "updates" / "db_world" / "2026_10_30_00.sql"
-    target.write_text("-- DB update 2026_10_29_00 -> 2026_10_30_00\n" + newest.read_text(encoding="utf-8"), encoding="utf-8")
+    header = "-- DB update 2026_10_29_00 -> 2026_10_30_00\n"
+    target.write_text(header + newest.read_text(encoding="utf-8"), encoding="utf-8")
     newest.unlink()
     return newest.name
 
@@ -372,7 +373,8 @@ def cmd_compare(args: argparse.Namespace) -> int:
                 da, db = canonical_pending(da), canonical_pending(db)
             for key in sorted(set(da) | set(db)):
                 if da.get(key) != db.get(key):
-                    problems.append(f"{kind}/{key}: {'missing in A' if key not in da else 'missing in B' if key not in db else 'bytes differ'}")
+                    what = "missing in A" if key not in da else "missing in B" if key not in db else "bytes differ"
+                    problems.append(f"{kind}/{key}: {what}")
         status = "IDENTICAL" if not problems else "DIFFERENT"
         print(f"{name:14s} {status}  (A {sa['seconds']}s, B {sb['seconds']}s)")
         for p in problems[:30]:

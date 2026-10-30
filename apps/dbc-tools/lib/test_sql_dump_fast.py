@@ -113,7 +113,9 @@ def _composite_script(rng: random.Random) -> str:
         a, b = rng.randint(1, 4), rng.randint(1, 3)
         kind = rng.random()
         if kind < 0.3:
-            out.append(f"INSERT INTO `t` (`a`, `b`, `v`, `w`) VALUES ({a}, {b}, {rng.randint(0, 9)}, {rng.randint(0, 9)});")
+            out.append(
+                f"INSERT INTO `t` (`a`, `b`, `v`, `w`) VALUES ({a}, {b}, {rng.randint(0, 9)}, {rng.randint(0, 9)});"
+            )
         elif kind < 0.45:
             out.append(f"UPDATE `t` SET `v` = {rng.randint(10, 99)} WHERE `a` = {a} AND `b` = {b};")
         elif kind < 0.55:
@@ -175,7 +177,9 @@ class CompositeIndexTest(unittest.TestCase):
         self.assertEqual({a for a, _b in rows}, {1, 3, 5})
 
 
-WIDGET = DbcTable(name="Widget", dbc_filename="Widget.dbc", sql_table="widget_dbc", fmt="nsi", columns=("ID", "Name", "Value"))
+WIDGET = DbcTable(
+    name="Widget", dbc_filename="Widget.dbc", sql_table="widget_dbc", fmt="nsi", columns=("ID", "Name", "Value"),
+)
 
 SAMPLE_SQL = """-- header
 INSERT INTO `other` VALUES (1, 'x');
@@ -292,7 +296,10 @@ class HeadIndexTest(unittest.TestCase):
 
 class UnescapeTest(unittest.TestCase):
     def test_token_values_match_read_value(self):
-        for token in ["'a'", "'it''s'", "'x\\ny'", "'p\\%q'", "'q\\_r'", "'b\\\\s'", "NULL", "5", "-5", "1.5", "2e3", "1E-2"]:
+        tokens = [
+            "'a'", "'it''s'", "'x\\ny'", "'p\\%q'", "'q\\_r'", "'b\\\\s'", "NULL", "5", "-5", "1.5", "2e3", "1E-2",
+        ]
+        for token in tokens:
             with self.subTest(token=token):
                 self.assertEqual(
                     _typed(sql_dump._TokenValues()[token]), _typed(sql_dump._read_value(token + ")", 0)[0])

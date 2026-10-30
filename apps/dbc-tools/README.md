@@ -67,7 +67,15 @@ row is declared. See "Death Knight T1" below.
 
 ```
 python3 apps/dbc-tools/generate.py
+python3 apps/dbc-tools/generate.py --check                  # read-only lints + generated-header gate
+python3 apps/dbc-tools/generate.py --check --class warrior  # the same for one class only (seconds)
 ```
+
+Flags: `--no-prune`, `--check`, `--check --class NAME` (refused without `--check`), `--no-cache`, `--rebuild-cache`.
+A run replays the base dumps and every promoted `db_world` file to learn what is live; that replay is cached under
+the gitignored `var/dbc-tools-cache/` and reused while the files, the loader code and the parameters are unchanged
+(see `.agents/docs/systems/dbc-tools.md`, "generate.py speed"). A run after a change that touches the cache's inputs
+is slower once. Timings and the harness that proves the output unchanged: `apps/dbc-tools/bench/equivalence.py`.
 
 Reads `source/ids.yaml` plus every file under `source/spells/*.csv` and
 `source/talents/*.yaml` (merged together — see "Source files" below for why

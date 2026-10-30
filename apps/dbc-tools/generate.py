@@ -535,8 +535,9 @@ def cache_code_version() -> str:
 
 def _check_report(
     corpus: sqlcorpus.Corpus, progress, ids_cfg: dict, spell_entries: list[dict], talents: dict, dsl_classes: dict,
-    spell_table_index, existing_talents: dict, header_classes: tuple[str, ...], gcd_scope: tuple[str, ...] | None = None,
-    family: int | None = None, declared_elsewhere: frozenset[int] | set[int] = frozenset(),
+    spell_table_index, existing_talents: dict, header_classes: tuple[str, ...],
+    gcd_scope: tuple[str, ...] | None = None, family: int | None = None,
+    declared_elsewhere: frozenset[int] | set[int] = frozenset(),
 ) -> int:
     """The `--check` lints and header gate over a declared population, printed in this order. One function for the
     whole-tree `--check` and for `--check --class X` (which hands it one class's population and that class's header
@@ -636,9 +637,10 @@ def _run_scoped_check(corpus: sqlcorpus.Corpus, class_name: str) -> int:
             trainer_index=Lazy(trainer_state.load_trainer_index),
             existing_group_ids={key[0] for key in spell_table_index.live_keys("spell_group")},
             shapeshift_index=Lazy(lambda: state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM)),
-            existing_creature_rows=Lazy(
-                lambda: {int(r["entry"]): r for r in spell_tables.load_creature_table_index().live_rows("creature_template")}
-            ),
+            existing_creature_rows=Lazy(lambda: {
+                int(r["entry"]): r
+                for r in spell_tables.load_creature_table_index().live_rows("creature_template")
+            }),
             creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
             creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS, live_data=live_data,
         )
