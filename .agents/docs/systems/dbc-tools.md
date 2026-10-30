@@ -39,7 +39,7 @@ Plan and review notes: `.agents/plans/dbc-tools-generate-speed/` (local).
 
 - **Where the time went.** Not the DSL (1.4 s): replaying ~1,300 SQL files (`db_world` 229 MB, pending 56 MB, the base
   dumps) in pure Python, once per table per loader. The fixes keep every loader's answer and printed warnings exactly
-  (full run ~515 s -> ~125 s cold, ~20-30 s warm; `--check` ~220 s -> ~10 s warm; `--check --class X` ~6 s).
+  (measured on a host at load ~20: full run ~450-680 s -> ~165 s cold and ~37 s warm; `--check` ~220-330 s -> ~19 s; `--check --class X` ~9 s).
 - **`lib/sqlcorpus.py`** owns the files for a run. `generate.py` activates it; with no corpus active (tests, the other
   tools) `read_text`/`mentions`/`checkpointed` are plain reads and plain replays. It gives each file once: its text
   (`SqlText`, a `str`), its statement-head index (`INSERT`/`DELETE`/`UPDATE .. SET`/`SET @v`, scanned once and shared
