@@ -22,15 +22,19 @@ and produces:
      client actually renders (name, icon, tooltip, talent frame).
   3. The same bytes copied into env/dist/data/dbc/ if that directory exists.
 
-Usage: python3 apps/dbc-tools/generate.py [--no-prune]
+Usage: python3 apps/dbc-tools/generate.py [--no-prune] [--check] [--no-cache] [--rebuild-cache]
 
-  --no-prune   skip the prune pass (rows an earlier run emitted that source/classes/*
-               no longer declares are left live instead of being deleted)
-  -h, --help   print this message and exit
+  --no-prune       skip the prune pass (rows an earlier run emitted that source/classes/*
+                   no longer declares are left live instead of being deleted)
+  --check          read-only gate: lints and the generated-header staleness check, no SQL or patch
+  --no-cache       do not read or write the on-disk cache of replayed SQL state (var/dbc-tools-cache/)
+  --rebuild-cache  ignore what the cache holds, replay everything, and write the cache afresh
+  -h, --help       print this message and exit
 """
 
 from __future__ import annotations
 
+import hashlib
 import sys
 import time
 from pathlib import Path
@@ -41,11 +45,11 @@ sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, source, sql_out, state  # noqa: E402
 from lib import gcd_haste, header_gen, potency_sheet, spell_tables, superseded_ranks  # noqa: E402
-from lib import trainer_pricing, trainer_state  # noqa: E402
+from lib import sqlcorpus, trainer_pricing, trainer_state  # noqa: E402
 from bootstrap import load_spell_ranks_chains  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 
-KNOWN_FLAGS = {"--no-prune", "--check"}
+KNOWN_FLAGS = {"--no-prune", "--check", "--no-cache", "--rebuild-cache", "--cache"}
 
 # PLAN P2b step 4: adopted class by class, inside each class's own pass - not a side effect of
 # every generate.py run. Extend this tuple when a pass is ready to start generating/relying on its
@@ -436,6 +440,40 @@ def main() -> int:
         print(f"generate.py: unknown argument(s): {' '.join(unknown)} (see --help)", file=sys.stderr)
         return 2
 
+    corpus = sqlcorpus.activate(
+        None if "--no-cache" in args or "--cache" not in args else CACHE_DIR, cache_code_version(), rebuild="--rebuild-cache" in args,
+    )
+    try:
+        return _run(corpus)
+    finally:
+        sqlcorpus.deactivate()
+
+
+# The files whose code decides what a cached replay holds: the SQL parser, the corpus, the table loaders and the DBC
+# reader. A change to any of them (or to the item overlay's own parser) is a cache miss; an edit to a lint or to the
+# DSL is not, since neither feeds a snapshot. `--rebuild-cache` is the escape hatch for anything missed here.
+CACHE_DIR = REPO_ROOT / "var" / "dbc-tools-cache"
+CACHE_CODE_FILES = (
+    "sqlcorpus.py", "sql_dump.py", "dbcfile.py", "dbcfmt.py", "state.py", "trainer_state.py", "spell_tables.py",
+    "trainer_pricing.py",
+)
+
+
+def cache_code_version() -> str:
+    h = hashlib.sha256()
+    h.update(sqlcorpus.code_version([REPO_ROOT / "apps" / "item-tools" / "item_lib"]).encode())
+    for name in CACHE_CODE_FILES:
+        h.update(name.encode())
+        h.update((TOOL_ROOT / "lib" / name).read_bytes())
+    return h.hexdigest()[:24]
+
+
+def _cache_summary(corpus: sqlcorpus.Corpus) -> str:
+    stats = corpus.stats
+    return f"{stats['hit']} hit, {stats['extend']} extended, {stats['miss']} miss, {stats['corrupt']} corrupt"
+
+
+def _run(corpus: sqlcorpus.Corpus) -> int:
     start = time.monotonic()
 
     def progress(label: str) -> None:
@@ -613,7 +651,7 @@ def main() -> int:
                 print(f"ERROR: {problem}")
             return 1
         print(f"note: generated header(s) up to date for {', '.join(CLASSES_WITH_GENERATED_HEADERS)}")
-        progress("--check done")
+        progress(f"--check done (cache: {_cache_summary(corpus)})")
         return 0
     else:
         for warning in header_gen.collect_warnings(dsl_classes, CLASSES_WITH_GENERATED_HEADERS):
@@ -1177,7 +1215,7 @@ def main() -> int:
                 f"layer (see docs/dbc-build-pipeline.md)."
             )
             continue
-        base_rows = dbcfile.read_dbc(dbc_path, table)
+        base_rows = state.read_dbc_cached(dbc_path, table)  # read-only: shared with the stock-row loaders
         merged = {row[table.index_column]: row for row in base_rows}
         merged.update(new_rows)
         # Talent.dbc's and TalentTab.dbc's physical row order is load-bearing to the client - see
@@ -1207,7 +1245,7 @@ def main() -> int:
                   f"by hand for an immediate manifest.txt refresh)")
     else:
         print("patch: nothing to write (no base DBCs available yet)")
-    progress("done")
+    progress(f"done (cache: {_cache_summary(corpus)})")
 
     return 0
 

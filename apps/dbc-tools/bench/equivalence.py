@@ -44,6 +44,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -174,7 +175,7 @@ def input_fingerprint() -> dict:
 
 def scenario_args(name: str) -> tuple[list[str], bool]:
     """(generate.py args, mutate pending first?)"""
-    if name == "check":
+    if name in ("check", "check2"):
         return ["--check"], False
     if name in ("full", "full2"):
         return [], False
@@ -193,6 +194,16 @@ def mutate_pending(sandbox: Path) -> str:
     return target.name
 
 
+def mpq_contents(mpq: Path) -> dict[str, str]:
+    """{archive path: sha256} of the files inside an MPQ. smpq stamps file times into the archive, so two runs never
+    produce the same archive bytes; the files inside are what the client reads."""
+    if not mpq.is_file():
+        return {}
+    with tempfile.TemporaryDirectory(prefix="dbc-equiv-mpq-") as tmp:
+        subprocess.run(["smpq", "-x", "-q", str(mpq.resolve())], cwd=tmp, check=True)
+        return _tree_digest(Path(tmp))
+
+
 def capture_outputs(sandbox: Path, dest: Path) -> dict:
     """Digest of every file a run can produce; copies the files themselves into `dest` for later diffing."""
     pending = sandbox / "data" / "sql" / "updates" / "pending_db_world"
@@ -202,7 +213,7 @@ def capture_outputs(sandbox: Path, dest: Path) -> dict:
         "headers": _tree_digest(sandbox / "src" / "server" / "game" / "Entities" / "Unit" / "Generated"),
         "docs": _tree_digest(sandbox / "docs"),
         "loose_dbc": _tree_digest(patch / "DBFilesClient"),
-        "mpq": {"patch-Z.mpq": _sha(patch / "patch-Z.mpq")} if (patch / "patch-Z.mpq").is_file() else {},
+        "mpq": mpq_contents(patch / "patch-Z.mpq"),
     }
     if dest.exists():
         shutil.rmtree(dest)
@@ -216,8 +227,12 @@ def capture_outputs(sandbox: Path, dest: Path) -> dict:
     return out
 
 
-def run_scenario(sandbox: Path, run_dir: Path, name: str, python: str) -> dict:
+def run_scenario(
+    sandbox: Path, run_dir: Path, name: str, python: str, generated: dict[str, str],
+    extra_args: list[str] | None = None,
+) -> dict:
     args, mutate = scenario_args(name)
+    args = [*args, *(extra_args or [])]
     record: dict = {"scenario": name, "args": args}
     if mutate:
         record["mutated"] = mutate_pending(sandbox)
@@ -233,21 +248,21 @@ def run_scenario(sandbox: Path, run_dir: Path, name: str, python: str) -> dict:
     scen_dir = run_dir / "scenarios" / name
     scen_dir.mkdir(parents=True, exist_ok=True)
     (scen_dir / "stdout.raw.txt").write_text(proc.stdout, encoding="utf-8")
-    normalized = _REV_RE.sub("rev_N", _PROGRESS_RE.sub("", proc.stdout))
-    (scen_dir / "stdout.txt").write_text(normalized, encoding="utf-8")
     new_files = sorted(p.name for p in (sandbox / "data/sql/updates/pending_db_world").glob("*.sql")
                        if p.name not in pending_before)
     record["new_pending"] = len(new_files)
 
+    for file_name in new_files:  # revs are named after the clock: number them in the order they were written
+        generated[file_name] = f"<generated #{len(generated)}>.sql"
+
     def rename(rel: str) -> str:
-        return "<new-rev>.sql" if rel in new_files else rel
+        return generated.get(rel, rel)
 
     outputs = capture_outputs(sandbox, scen_dir / "files")
     outputs["pending"] = {rename(k): v for k, v in outputs["pending"].items()}
     if new_files:  # keep the generated SQL under a stable name for text diffs
         shutil.copy2(sandbox / "data/sql/updates/pending_db_world" / new_files[-1], scen_dir / "new_rev.sql")
     record["outputs"] = outputs
-    record["stdout_sha"] = hashlib.sha256(normalized.encode()).hexdigest()
     return record
 
 
@@ -262,14 +277,34 @@ def cmd_run(args: argparse.Namespace) -> int:
         "code_head": subprocess.run(["git", "rev-parse", "HEAD"], cwd=FROZEN_REPO, capture_output=True, text=True,
                                     check=True).stdout.strip(),
     }
+    generated: dict[str, str] = {}
     for name in args.scenarios.split(","):
         print(f"[{args.label}] scenario {name} ...", flush=True)
-        record = run_scenario(sandbox, run_dir, name, args.python)
+        record = run_scenario(sandbox, run_dir, name, args.python, generated, args.gen_args.split())
         manifest["scenarios"].append(record)
         (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
         print(f"[{args.label}] scenario {name}: rc={record['returncode']} {record['seconds']}s "
               f"new_pending={record['new_pending']}", flush=True)
     return 0
+
+
+def normalized_stdout(label: str, scenario: str) -> str:
+    """stdout of a scenario with the `[ x.xs]` progress lines, the sandbox path and the rev name stripped. Done at
+    compare time from the raw capture so the normalisation can be refined without re-running anything."""
+    raw = (RUNS_DIR / label / "scenarios" / scenario / "stdout.raw.txt").read_text(encoding="utf-8")
+    sandbox = RUNS_DIR / label / "sandbox"
+    for form in {str(sandbox), str(sandbox.resolve())}:
+        raw = raw.replace(form, "<SANDBOX>")
+    return _REV_RE.sub("rev_N", _PROGRESS_RE.sub("", raw))
+
+
+def canonical_pending(digests: dict[str, str]) -> dict[str, str]:
+    """Pending files a run wrote are named after the clock; call them `<generated #k>` in name (= time) order, so two
+    runs compare by what each scenario wrote, not by when. Files that were already in the frozen tree keep their name."""
+    frozen = {p.name for p in (FROZEN_REPO / "data" / "sql" / "updates" / "pending_db_world").glob("*.sql")}
+    written = sorted(name for name in digests if name not in frozen and not name.startswith("<"))
+    renames = {name: f"<generated #{i}>.sql" for i, name in enumerate(written)}  # a manifest from before numbering
+    return {renames.get(name, name): digest for name, digest in digests.items()}
 
 
 def cmd_compare(args: argparse.Namespace) -> int:
@@ -289,10 +324,16 @@ def cmd_compare(args: argparse.Namespace) -> int:
         problems = []
         if sa["returncode"] != sb["returncode"]:
             problems.append(f"return code {sa['returncode']} != {sb['returncode']}")
-        if sa["stdout_sha"] != sb["stdout_sha"]:
-            problems.append("stdout differs (see `diff` of scenarios/%s/stdout.txt)" % name)
+        out_a, out_b = normalized_stdout(args.a, name), normalized_stdout(args.b, name)
+        if out_a != out_b:
+            (RUNS_DIR / "last-compare").mkdir(exist_ok=True)
+            (RUNS_DIR / "last-compare" / f"{name}.A.txt").write_text(out_a, encoding="utf-8")
+            (RUNS_DIR / "last-compare" / f"{name}.B.txt").write_text(out_b, encoding="utf-8")
+            problems.append(f"stdout differs (diff var/dbc-tools-equiv/runs/last-compare/{name}.A.txt .B.txt)")
         for kind in sa["outputs"]:
             da, db = sa["outputs"][kind], sb["outputs"][kind]
+            if kind == "pending":
+                da, db = canonical_pending(da), canonical_pending(db)
             for key in sorted(set(da) | set(db)):
                 if da.get(key) != db.get(key):
                     problems.append(f"{kind}/{key}: {'missing in A' if key not in da else 'missing in B' if key not in db else 'bytes differ'}")
@@ -312,6 +353,7 @@ def main() -> int:
     run.add_argument("--code-ref", required=True, help="git ref of the code under test, or 'worktree'")
     run.add_argument("--scenarios", default=",".join(DEFAULT_SCENARIOS))
     run.add_argument("--python", default=DEFAULT_PYTHON)
+    run.add_argument("--gen-args", default="", help="extra generate.py arguments for every scenario, e.g. '--cache'")
     cmp_ = sub.add_parser("compare")
     cmp_.add_argument("a")
     cmp_.add_argument("b")

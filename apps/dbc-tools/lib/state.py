@@ -56,7 +56,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import dbcfile, sql_dump
+from . import dbcfile, sql_dump, sqlcorpus
 from .dbcfmt import DbcTable
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -68,20 +68,49 @@ PROMOTED_SQL_DIR = REPO_ROOT / "data" / "sql" / "updates" / "db_world"
 LIVE_SECONDARY_ROWS_SQL = REPO_ROOT / "apps" / "dbc-tools" / "source" / "live_secondary_rows.sql"
 
 
-def load_stock_rows(table: DbcTable) -> dict[int, dict]:
-    """Pure vanilla state: base client DBC overlaid by the base SQL dump only
-    - no db_world/ promoted migrations. Use this (never `load_existing_rows`)
-    for anything that decides what the *client patch* needs to contain - see
-    this module's docstring for why."""
+_stock_cache: dict[tuple, dict[int, dict]] = {}
+_dbc_cache: dict[tuple, list[dict]] = {}
+sqlcorpus.register_reset(_stock_cache.clear)
+sqlcorpus.register_reset(_dbc_cache.clear)
+
+
+def read_dbc_cached(path: Path, table: DbcTable) -> list[dict]:
+    """`dbcfile.read_dbc`, read once per run while a `sqlcorpus` is active (`generate.py` asks for the same stock file
+    from several places). The list and its rows are shared: callers must not modify them."""
+    if sqlcorpus.active() is None:
+        return dbcfile.read_dbc(path, table)
+    key = (str(path), table.name)
+    if key not in _dbc_cache:
+        _dbc_cache[key] = dbcfile.read_dbc(path, table)
+    return _dbc_cache[key]
+
+
+def _read_stock_rows(table: DbcTable) -> dict[int, dict]:
     rows: dict[int, dict] = {}
     dbc_path = BASE_DBC_DIR / table.dbc_filename
     if dbc_path.is_file():
-        for row in dbcfile.read_dbc(dbc_path, table):
+        for row in read_dbc_cached(dbc_path, table):
             rows[row[table.index_column]] = row
     sql_path = BASE_SQL_DIR / f"{table.sql_table}.sql"
     if sql_path.is_file():
         rows.update(sql_dump.read_table_dump(sql_path, table))
     return rows
+
+
+def load_stock_rows(table: DbcTable) -> dict[int, dict]:
+    """Pure vanilla state: base client DBC overlaid by the base SQL dump only
+    - no db_world/ promoted migrations. Use this (never `load_existing_rows`)
+    for anything that decides what the *client patch* needs to contain - see
+    this module's docstring for why.
+
+    While a `sqlcorpus` is active the table is built once per run and every call gets its own copy of the rows
+    (callers edit the rows they get; `generate.py` asks for Spell eleven times)."""
+    if sqlcorpus.active() is None:
+        return _read_stock_rows(table)
+    key = (table.name, table.sql_table, table.dbc_filename)
+    if key not in _stock_cache:
+        _stock_cache[key] = _read_stock_rows(table)
+    return {row_id: dict(row) for row_id, row in _stock_cache[key].items()}
 
 
 _promoted_sql_cache: list[tuple[Path, str]] | None = None
@@ -119,15 +148,33 @@ def load_existing_rows(table: DbcTable) -> dict[int, dict]:
     (`DELETE ... BETWEEN`), and it never overrides a row they insert. Without
     it a run that mints one new duration, range or radius rewrites that block
     without the live-only rows other spells still point at."""
-    rows = load_stock_rows(table)
     needle = f"`{table.sql_table}`"
-    for path, text in _promoted_sql_files():
-        if needle not in text:
-            continue
-        try:
-            sql_dump.apply_statements(rows, table, text)
-        except Exception as exc:  # pragma: no cover - defensive, see module docstring
-            print(f"warning: state.py: skipping {path} for {table.sql_table}: {exc}")
+    dbc_path = BASE_DBC_DIR / table.dbc_filename
+    sql_path = BASE_SQL_DIR / f"{table.sql_table}.sql"
+    corpus = sqlcorpus.active()
+    if corpus is None:
+        texts = {path: text for path, text in _promoted_sql_files() if needle in text}
+        promoted = list(texts)
+        read = texts.__getitem__
+    else:
+        promoted = [p for p in sorted(PROMOTED_SQL_DIR.glob("*.sql")) if corpus.mentions(p, table.sql_table)]
+        read = corpus.read_text
+
+    def step(rows: dict[int, dict], path: Path) -> dict[int, dict]:
+        if path == dbc_path:
+            for row in read_dbc_cached(dbc_path, table):
+                rows[row[table.index_column]] = dict(row)  # a copy: the replay below edits rows in place
+        elif path == sql_path:
+            rows.update(sql_dump.read_table_dump(sql_path, table))
+        else:
+            try:
+                sql_dump.apply_statements(rows, table, read(path))
+            except Exception as exc:  # pragma: no cover - defensive, see module docstring
+                print(f"warning: state.py: skipping {path} for {table.sql_table}: {exc}")
+        return rows
+
+    stable = [p for p in (dbc_path, sql_path) if p.is_file()] + promoted
+    rows = sqlcorpus.checkpointed("existing_rows", (table.name, table.sql_table), stable, dict, step)
     seed = LIVE_SECONDARY_ROWS_SQL.read_text(encoding="utf-8")
     if needle in seed:
         live_rows: dict[int, dict] = {}
