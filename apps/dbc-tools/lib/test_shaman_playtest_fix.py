@@ -91,7 +91,7 @@ def check_nesting(links: list[str], cells=None) -> list[str]:
 
 
 def _conf_links(text: str, slot: str) -> list[str]:
-    return [re.search(rf"^AiPlayerbot\.PremadeSpecLink\.{re.escape(slot)}\.{lv} = (\S+)$", text, re.M).group(1)
+    return [re.search(rf"^Playerbots\.PremadeSpecLink\.{re.escape(slot)}\.{lv} = (\S+)$", text, re.M).group(1)
             for lv in (30, 45, 60, 80)]
 
 
