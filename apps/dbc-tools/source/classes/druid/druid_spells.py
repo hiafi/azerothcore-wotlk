@@ -2675,9 +2675,10 @@ skull_bash_200605 = spell(
           "2) in Category 88 with a 16 sec CategoryRecoveryTime and RecoveryTime 0, the same numbers as the paladin's "
           "Rebuke (D7). No cost (a single PowerType cannot serve both energy and rage). ShapeshiftMask SS_FERAL: Cat, "
           "Bear Form (form 8) and Bestial Fury (form 5) - D8's 'Cat and Bear, Dire Bear included'. No family bit. "
-          "Caveat: Player::AddSpellAndCategoryCooldowns only spreads a category cooldown to same-SpellFamilyName "
-          "spells, so the shared lockout with Rebuke (family 10) and Kick/Pummel (8/4) needs a core change; see "
-          ".agents/plans/dungeon-prereqs/dungeon-prereqs.STAGE-S5-DRUID-REPORT.md.",
+          "Player::AddSpellAndCategoryCooldowns normally spreads a category cooldown to same-SpellFamilyName spells "
+          "only; a Custom exception (030c381f8) lets Category 88 cross class families for spells the player knows, so "
+          "the lockout is shared with Rebuke (family 10) and Kick/Pummel/Mind Freeze (8/4/15). Free and usable in "
+          "Bestial Fury (user ruling 2026-10-31).",
     raw_overrides=_feral_new_raw(
         "Bash the target's skull, interrupting spellcasting and preventing any spell in that school from being cast "
         "for $d.  Usable in Cat Form and Bear Form.",
