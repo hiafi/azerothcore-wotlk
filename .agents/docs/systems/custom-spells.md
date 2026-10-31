@@ -66,6 +66,6 @@ playtest only caught after a deploy. Each cost a fix cycle in a past rework. Che
 
 ## Character state while testing
 
-- `.maxskill` leaves crit stale until a relog; the live config uses `AlwaysMaxSkillForLevel = 1` instead.
+- `.maxskill` leaves crit stale until a relog; the live config uses `AlwaysMaxSkillForLevel = 1` and `AlwaysMaxWeaponSkill = 1` instead.
 - A character showing another class's talents or spells: check for orphan rows under its guid (the DPS sim once wrote
   them; `.agents/plans/dpssim-orphan-fix/`).
