@@ -1722,13 +1722,13 @@ _AURA_EFFECTS = frozenset({6, 27, 35, 65, 119, 128, 129, 143})
 _PERIODIC_DAMAGE_OR_HEAL_AURAS = frozenset({3, 8, 20, 53, 89})
 
 # Existing custom ground effects that tick hasted today. PLAN s7 keeps their behavior until their owner rules, so
-# they are listed, not changed. Keep one comment per id.
+# they are listed, not changed. Keep one comment per id. (Light's Hammer 201200 was ruled fixed-cadence 2026-10-31 and
+# dropped 0x2000, so it is no longer listed.)
 # SpellAuraEffects.cpp FIXED_CADENCE_PERIODIC_SPELLS (IsFixedCadencePeriodic): spells whose periodic ticks the core
 # never hastes. Priest Echo of Light heal / damage today (PriestMechanics.h). Add an id here when that array grows.
 FIXED_CADENCE_PERIODIC_SPELLS: frozenset[int] = frozenset({200218, 200219})
 GROUND_HASTE_ALLOW: frozenset[int] = frozenset({
     200096,  # mage Meteor: the ground burn is a persistent area aura carrying PERIODIC_DAMAGE, so it ticks hasted
-    201200,  # paladin Light's Hammer: AttributesEx5 0x2000 (cloned from a stock ground effect), so it ticks hasted
 })
 
 
@@ -1819,23 +1819,8 @@ REQ_SPELL_PHASE_PROC_FLAG_MASK = SPELL_PROC_FLAG_MASK & DONE_HIT_PROC_FLAG_MASK
 
 # Declared spell_proc rows that fail LoadSpellProcs' checks today (SpellId -> why it is accepted), found by the run
 # that introduced this lint. Each logs an error at boot; the owner triages whether the row was meant.
-_PROC_PHASE_UNUSED = (
-    "SpellPhaseMask 2 on taken-only ProcFlags: the phase is ignored (SpellMgr.cpp:917 checks it only for done-hit "
-    "flags), the proc still fires, boot logs 'won't be used'"
-)
 SPELL_PROC_ALLOW: dict[int, str] = {
     -17106: "druid Intensity: ProcFlags 0 on purpose, it neutralises the stock Enrage-rage proc (druid_talents.py)",
-    20098: "paladin Anticipation: " + _PROC_PHASE_UNUSED,
-    -20127: "paladin Redoubt: " + _PROC_PHASE_UNUSED,
-    -53590: "paladin Touched by the Light: " + _PROC_PHASE_UNUSED,
-    201347: "paladin Bulwark of Faith: " + _PROC_PHASE_UNUSED,
-    201353: "paladin Avenging Light: " + _PROC_PHASE_UNUSED,
-    201354: "paladin Avenging Light: " + _PROC_PHASE_UNUSED,
-    201355: "paladin Avenging Light: " + _PROC_PHASE_UNUSED,
-    201365: "paladin Shroud of Light: " + _PROC_PHASE_UNUSED,
-    201367: "paladin Touched by the Light: " + _PROC_PHASE_UNUSED,
-    201374: "paladin Shield of the Templar: " + _PROC_PHASE_UNUSED,
-    -30299: "warlock Nether Protection: " + _PROC_PHASE_UNUSED,
 }
 
 

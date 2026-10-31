@@ -5468,17 +5468,17 @@ divinity_63648 = spell(
 
 # paladin-rework S3 Protection (PROTECTION §7 / §5.2): proc rows, script bindings, stock-row removals for the ranks edited above.
 # Flags: TAKEN melee auto 0x8, TAKEN spell melee 0x20, TAKEN ranged auto 0x80, TAKEN spell ranged 0x200 (0x2A8 together);
-# TAKEN none pos 0x800, TAKEN magic pos 0x8000 (0x8800); HitMask DODGE 0x10, PARRY 0x20, BLOCK 0x40. Phase CAST 1 / HIT 2.
+# TAKEN none pos 0x800, TAKEN magic pos 0x8000 (0x8800); HitMask DODGE 0x10, PARRY 0x20, BLOCK 0x40. No SpellPhaseMask: TAKEN-only flags never read it.
 
 # Anticipation r3: dodge or parry -> 201361 (Bulwark grant). Positive row on r3 only: the chain -20096 has none and the DBC ProcTypeMask is 0.
-procs_on(20098, proc_flags=0x28, spell_phase_mask=2, hit_mask=0x30, chance=100, disable_effects_mask=0x1)
+procs_on(20098, proc_flags=0x28, hit_mask=0x30, chance=100, disable_effects_mask=0x1)
 
 # Touched by the Light: effective direct heals from others (any TAKEN positive heal). AttributesMask 0x2 (TRIGGERED_CAN_PROC) so triggered heals
 # from others (Beacon copies, Prayer of Mending, ...) roll; DisableEffectsMask 0x6 = r3 eff1 (Mastery k DUMMY) and the empty eff2. Chance 0 = DBC 11/22/33.
-procs_on(-53590, proc_flags=0x8800, spell_type_mask=2, spell_phase_mask=2, attributes_mask=0x2, disable_effects_mask=0x6)
+procs_on(-53590, proc_flags=0x8800, spell_type_mask=2, attributes_mask=0x2, disable_effects_mask=0x6)
 
 # Redoubt: block -> buff. Replaces the DBC-auto row (stock 10% on any hit); 10 s internal cooldown; DisableEffectsMask 0x2 = eff1 block% aura.
-procs_on(-20127, proc_flags=0x2A8, spell_phase_mask=2, hit_mask=0x40, cooldown_ms=10000, disable_effects_mask=0x2)
+procs_on(-20127, proc_flags=0x2A8, hit_mask=0x40, cooldown_ms=10000, disable_effects_mask=0x2)
 
 # The Redoubt buffs lose their charges and DBC ProcTypeMask above; their stock HitMask-64 rows go (T1 helper, PROTECTION §3 item 11).
 remove_spell_proc(20128)
