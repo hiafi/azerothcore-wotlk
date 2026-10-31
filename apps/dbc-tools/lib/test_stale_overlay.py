@@ -54,9 +54,9 @@ def _overlay(*files: tuple[str, bool]) -> stale_overlay.OverlayState:
     return state
 
 
-def _find(overlay, declared_rows, emitted=()):
+def _find(overlay, declared_rows, emitted=(), prune=True):
     return stale_overlay.find_stale(
-        TALENT_RANGE, {r["ID"]: r for r in declared_rows}, set(emitted), overlay, STOCK,
+        TALENT_RANGE, {r["ID"]: r for r in declared_rows}, set(emitted), overlay, STOCK, prune=prune,
     )
 
 
@@ -114,6 +114,14 @@ class ShockwaveBackToStockTest(unittest.TestCase):
         stale = _find(_overlay(self.s1), [CUSTOM])
         self.assertEqual(stale.deletes, [SHOCKWAVE])
         self.assertEqual(stale.undeclared, [SHOCKWAVE])
+
+    def test_no_prune_keeps_undeclared_rows(self):
+        """--no-prune: a no-longer-declared generated row is reported, not deleted; declared-at-stock still is."""
+        stale = _find(_overlay(self.s1), [CUSTOM], prune=False)
+        self.assertEqual((stale.deletes, stale.undeclared), ([], []))
+        self.assertEqual(stale.kept_undeclared, [SHOCKWAVE])
+        stale = _find(_overlay(self.s1), [CUSTOM, STOCK_SHOCKWAVE], prune=False)
+        self.assertEqual(stale.deletes, [SHOCKWAVE])
 
     def test_undeclared_custom_row_without_stock_is_kept(self):
         orphan = _talent(5000, 1, 1)

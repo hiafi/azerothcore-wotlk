@@ -1113,7 +1113,7 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
     for ids_key, table, entries, built_rows, resolved, stock_rows in stale_inputs:
         stale = stale_overlay.find_stale(
             ids_cfg[ids_key], {int(r[table.index_column]): r for r in built_rows}, set(resolved.edited_ids),
-            stale_overlay.load_overlay_state(table), stock_rows,
+            stale_overlay.load_overlay_state(table), stock_rows, prune="--no-prune" not in sys.argv,
         )
         by_id = {e["id"]: e for e in entries}
         for row_id in stale.reemit:
@@ -1140,7 +1140,7 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         if stale.kept_undeclared:
             print(
                 f"note: stale overlay: {table.sql_table}: {len(stale.kept_undeclared)} undeclared generated row(s) "
-                f"with no stock row to fall back to, left live {stale.kept_undeclared[:20]}"
+                f"left live (no stock row to fall back to, or --no-prune) {stale.kept_undeclared[:20]}"
             )
     progress("checked live overlay rows for stale generated rows")
 

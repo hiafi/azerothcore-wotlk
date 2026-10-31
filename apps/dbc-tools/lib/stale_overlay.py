@@ -116,7 +116,7 @@ class Stale:
 
 def find_stale(
     id_range: dict, declared: dict[int, dict], emitted_ids: set[int], overlay: OverlayState,
-    stock_rows: dict[int, dict],
+    stock_rows: dict[int, dict], prune: bool = True,
 ) -> Stale:
     """See the module docstring. `declared` is every declared row of the table, built (in and out of the reserved
     block); `emitted_ids` the out-of-block ids `resolve.resolve_rows` already marked as edits; `stock_rows` the stock
@@ -125,7 +125,10 @@ def find_stale(
     An emitted id whose declared row equals stock is not re-inserted (`drop`): the overlay row is deleted when a
     generated file wrote it (`deletes`), and nothing is written when there is no overlay row (the server already
     reads the stock DBC row; `state.load_existing_rows` replays a DELETE as removing the DBC row too, which is how
-    such an id reads as edited). A stock-valued declaration over a hand-written or module row stays an edit."""
+    such an id reads as edited). A stock-valued declaration over a hand-written or module row stays an edit.
+
+    `prune=False` (generate.py --no-prune): an undeclared generated row is never deleted, it is reported in
+    `kept_undeclared`. Declared rows back at stock are still deleted, since that follows the declarations."""
     result = Stale()
 
     def at_stock(row_id: int, want: dict) -> bool:
@@ -153,7 +156,7 @@ def find_stale(
         if row_id in emitted_ids:
             continue
         if want is None:
-            if row_id not in overlay.base_ids and stock_rows.get(row_id) is not None:
+            if prune and row_id not in overlay.base_ids and stock_rows.get(row_id) is not None:
                 result.deletes.append(row_id)
                 result.undeclared.append(row_id)
             else:
