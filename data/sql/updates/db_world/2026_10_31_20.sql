@@ -1,0 +1,5 @@
+-- DB update 2026_10_31_19 -> 2026_10_31_20
+DELETE FROM `spellvisual_dbc` WHERE `ID` BETWEEN 90090 AND 90091;
+INSERT INTO `spellvisual_dbc` (`ID`, `PrecastKit`, `CastKit`, `ImpactKit`, `StateKit`, `StateDoneKit`, `ChannelKit`, `HasMissile`, `MissileModel`, `MissilePathType`, `MissileDestinationAttachment`, `MissileSound`, `AnimEventSoundID`, `Flags`, `CasterImpactKit`, `TargetImpactKit`, `MissileAttachment`, `MissileFollowGroundHeight`, `MissileFollowGroundDropSpeed`, `MissileFollowGroundApproach`, `MissileFollowGroundFlags`, `MissileMotion`, `MissileTargetingKit`, `InstantAreaKit`, `ImpactAreaKit`, `PersistentAreaKit`, `MissileCastOffsetX`, `MissileCastOffsetY`, `MissileCastOffsetZ`, `MissileImpactOffsetX`, `MissileImpactOffsetY`, `MissileImpactOffsetZ`) VALUES
+(90090, 0, 0, 0, 0, 0, 0, 1, 90090, 0, 1, 11649, 0, 0, 0, 0, 3, 0, 0, 0, 0, 221, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+(90091, 0, 0, 213, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 9318, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
