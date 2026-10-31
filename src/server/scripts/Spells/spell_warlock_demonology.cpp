@@ -1319,7 +1319,7 @@ public:
 
     void OnPlayerLearnTalents(Player* player, uint32 /*talentId*/, uint32 /*talentRank*/, uint32 /*spellid*/) override
     {
-        if (!IsWarlock(player))
+        if (!player)
             return;
         Warlock::SyncLegionsCall(player);
         RefreshCurrentDemon(player);
@@ -1327,7 +1327,7 @@ public:
 
     void OnPlayerTalentsReset(Player* player, bool /*noCost*/) override
     {
-        if (!IsWarlock(player))
+        if (!player)
             return;
         Warlock::SyncLegionsCall(player, true);
         // This hook fires before the reset actually removes any talent (Player.cpp:3895, same
@@ -1342,7 +1342,7 @@ public:
 
     void OnPlayerAfterSpecSlotChanged(Player* player, uint8 /*newSlot*/) override
     {
-        if (!IsWarlock(player))
+        if (!player)
             return;
         Warlock::SyncLegionsCall(player);
         RefreshCurrentDemon(player);
@@ -1350,33 +1350,29 @@ public:
 
     void OnPlayerLogin(Player* player) override
     {
-        if (IsWarlock(player))
+        if (player)
             Warlock::SyncLegionsCall(player);
     }
 
     void OnPlayerGetTrainerSpellState(Player const* player, uint32 /*trainerId*/, uint32 spellId,
         Trainer::SpellState& state) override
     {
-        if (!player || player->getClass() != CLASS_WARLOCK)
+        // Gated on the talent, not the class: a Freepick character can train Inferno/Ritual of Doom
+        // and take Legion's Call.
+        if (spellId != Warlock::SPELL_INFERNO && spellId != Warlock::SPELL_RITUAL_OF_DOOM)
             return;
 
-        if ((spellId == Warlock::SPELL_INFERNO || spellId == Warlock::SPELL_RITUAL_OF_DOOM) &&
-            player->HasTalent(Warlock::SPELL_LEGIONS_CALL, player->GetActiveSpec()))
+        if (player && player->HasTalent(Warlock::SPELL_LEGIONS_CALL, player->GetActiveSpec()))
             state = Trainer::SpellState::Unavailable;
     }
 
     void OnPlayerLogout(Player* player) override
     {
-        if (IsWarlock(player))
+        if (player)
             Warlock::ClearDemonologyPlayerState(player->GetGUID());
     }
 
 private:
-    static bool IsWarlock(Player const* player)
-    {
-        return player && player->getClass() == CLASS_WARLOCK;
-    }
-
     static void RefreshCurrentDemon(Player* player)
     {
         if (Unit* pet = player->GetPet())

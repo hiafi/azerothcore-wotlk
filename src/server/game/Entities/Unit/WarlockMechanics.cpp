@@ -1342,8 +1342,9 @@ namespace Warlock
             player->removeSpell(SPELL_INFERNO, SPEC_MASK_ALL, false);
             player->removeSpell(SPELL_RITUAL_OF_DOOM, SPEC_MASK_ALL, false);
         }
-        else
+        else if (player->getClass() == CLASS_WARLOCK)
         {
+            // Auto-learn is warlock class progression; other classes (Freepick) train these.
             if (player->GetLevel() >= 50 && !player->HasSpell(SPELL_INFERNO))
                 player->learnSpell(SPELL_INFERNO);
             if (player->GetLevel() >= 60 && !player->HasSpell(SPELL_RITUAL_OF_DOOM))
