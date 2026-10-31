@@ -1767,10 +1767,10 @@ wake_of_ashes_stun_201414 = spell(
 # Melee interrupt for every spec, learned at 10. Copied from Pummel 6552 (INTERRUPT_CAST, mechanic 26, 4 s school
 # lockout, melee range, off the GCD, DefenseType 2, PreventionType 2). Cooldown: Kick / Pummel / Mind Freeze's stock
 # Category 88 with CategoryRecoveryTime 16000 and RecoveryTime 0, the same template as the druid's Skull Bash (D7).
-# Caveat (S3 report): Player::AddSpellAndCategoryCooldowns only spreads a category cooldown to spells of the same
-# SpellFamilyName, so the server does not yet share this lockout with Kick (8), Pummel (4), Mind Freeze (15) or
-# Skull Bash (7). Icon 90183 is mined by build_patch_i.py (spell_holy_rebuke.blp). SLA 30533, Retribution tab like
-# Judgement. Cost: 8% of base mana, Wind Shear's (an open question in the S3 report).
+# The lockout is shared with Kick (8), Pummel (4), Mind Freeze (15) and Skull Bash (7) by a Custom exception in
+# Player::AddSpellAndCategoryCooldowns (stock only spreads a category cooldown within one SpellFamilyName; the
+# exception covers only the five melee kicks). Icon 90183 is mined by build_patch_i.py (spell_holy_rebuke.blp).
+# SLA 30533, Retribution tab like Judgement. Cost: 8% of base mana, Wind Shear's (an open question in the S3 report).
 rebuke_201473 = spell(
     id=201473,
     name='Rebuke',
@@ -1789,7 +1789,7 @@ rebuke_201473 = spell(
     ],
     spell_icon_id=90183,
     notes='dungeon-prereqs S3 (D7): Pummel 6552 template, family 10 with no class mask, learn 10, Category 88 / 16 s '
-          'category recovery (shared with Skull Bash by ruling; see the caveat above).',
+          'category recovery (shared with the other melee kicks by ruling, via the core exception noted above).',
     raw_overrides=_raw(
         AttributesEx=134218240,
         AttributesEx3=8,
