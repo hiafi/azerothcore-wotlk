@@ -195,6 +195,37 @@ write a migration file even when nothing changed.
 Note this interacts with the rule above: the prune reads *generated files still on disk*, so
 deleting an earlier `rev_*.sql` also erases the tool's memory that those rows were ever emitted.
 
+## Stale overlay rows: a DBC row returned to stock (`lib/stale_overlay.py`)
+
+The DBC tables' new/edited/unchanged split (`resolve.resolve_rows`) compares against
+`state.load_existing_rows`, which is promoted state only (`db_world/`). A row an earlier run wrote into a
+**pending** file is invisible to it, so a declaration edited back to its stock values before that file was
+promoted read as "unchanged" and emitted nothing — no INSERT and no DELETE — and the earlier overlay row
+stayed live (Shockwave's talent 1872 move, fixed by hand on 2026-10-30; the same pass found
+`skilllineability_dbc` 17659 still superseded by the retired Thunderstorm 202594 after the shaman removal,
+and `spell_dbc` 5405 still carrying the Frost Mage rework's old edit).
+
+`generate.py` now replays each of `spell_dbc`, `talent_dbc`, `talenttab_dbc`, `skilllineability_dbc` and
+`item_dbc` as the server loads it (base dump, then promoted, pending and module migrations) and records
+which ids a generated file wrote last (same `GENERATED_MARKER` provenance as the prune pass; a later
+hand-written or module INSERT/UPDATE/DELETE of the id makes it not ours). Then, per table:
+
+- out of the reserved block, declared at stock values, a generated overlay row live → bare
+  `DELETE ... IN (id)` (joins the edited-id DELETE, no INSERT); prints `stale overlay: ... deleting`.
+- out of the block, **no longer declared**, stock DBC has the id → the same delete. A custom id with no
+  stock row is only reported (`note: stale overlay: ... left live`), since a delete would drop the row.
+- declared, live generated row differs but the declaration is not stock (or the base dump has the id) →
+  re-emitted as an edit.
+- an edit `resolve_rows` already found whose declared row equals stock is not re-inserted (`not
+  re-inserting`): a delete if a generated row is live, nothing if no overlay row is live (the replay in
+  `load_existing_rows` treats a DELETE as also removing the DBC row, which is how such an id reads as edited).
+- a reserved block whose live rows differ from this run's rows (a pending-only row since dropped) is
+  re-emitted even if promoted state matches.
+
+Not covered: the four secondary tables (durations, ranges, radii, cast times); an orphan reserved row there
+is unreferenced and harmless. The replay is ~45 s cold, cached like the other loaders after that.
+Tests: `lib/test_stale_overlay.py`.
+
 ## WP-T: five more declared tables, and declared removals
 
 `.agents/plans/druid-rework/druid-rework.WP-T-HANDOFF.md` (PLAN B11/§5.0) added five more world-DB

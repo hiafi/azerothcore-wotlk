@@ -50,7 +50,7 @@ sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, source, sql_out, state  # noqa: E402
 from lib import gcd_haste, header_gen, potency_sheet, spell_tables, superseded_ranks  # noqa: E402
-from lib import sqlcorpus, trainer_pricing, trainer_state  # noqa: E402
+from lib import sqlcorpus, stale_overlay, trainer_pricing, trainer_state  # noqa: E402
 from bootstrap import load_spell_ranks_chains  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 from lib.lazy import Lazy  # noqa: E402
@@ -226,7 +226,7 @@ def _priced_trainer_spells(dsl_classes: dict, trainer_index: trainer_state.Train
 
 
 def _drop_unchanged_blocks(
-    blocks: list[tuple],
+    blocks: list[tuple], force: set[str] | frozenset[str] = frozenset(),
 ) -> tuple[list[tuple[object, dict, list[dict], list[int]]], int]:
     """Filters a `(table, id_range, rows, edited_ids, existing_rows)` list
     (the 5-tuple shape - one extra element, `existing_rows`, over what
@@ -246,11 +246,16 @@ def _drop_unchanged_blocks(
     only reorganized/relabeled source with zero build-output effect" (see
     .agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md's readability
     work, which hit exactly this while confirming a pure file-split changed
-    nothing)."""
+    nothing).
+
+    `force` names tables (`DbcTable.name`) kept regardless: the stale overlay check (lib/stale_overlay.py) found
+    live reserved-block rows that `existing_rows` (promoted state only) cannot show."""
     filtered = []
     n_dropped = 0
     for table, id_range, rows, edited_ids, existing_rows in blocks:
-        if resolve.reserved_range_changed(rows, table.index_column, id_range, edited_ids, existing_rows):
+        if getattr(table, "name", None) in force or resolve.reserved_range_changed(
+            rows, table.index_column, id_range, edited_ids, existing_rows,
+        ):
             filtered.append((table, id_range, rows, edited_ids))
         else:
             n_dropped += 1
@@ -520,7 +525,7 @@ def main() -> int:
 CACHE_DIR = REPO_ROOT / "var" / "dbc-tools-cache"
 CACHE_CODE_FILES = (
     "sqlcorpus.py", "sql_dump.py", "dbcfile.py", "dbcfmt.py", "state.py", "trainer_state.py", "spell_tables.py",
-    "trainer_pricing.py",
+    "trainer_pricing.py", "stale_overlay.py",
 )
 
 
@@ -1074,12 +1079,77 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         )
     progress("resolved source/ against existing rows (new/edited/unchanged split)")
 
+    # Stale overlay rows (lib/stale_overlay.py): the split above compares against promoted state only, so a row an
+    # earlier run wrote into a still-pending migration and that is now back at its stock values (Shockwave's talent
+    # move) reads as unchanged and would stay live. Delete such rows, re-emit a declared row whose live overlay row
+    # differs, and re-emit a reserved block whose live content differs.
+    stock_spells = state.load_stock_rows(dbcfmt.SPELL)
+    stock_talents = state.load_stock_rows(dbcfmt.TALENT)
+    stock_talenttabs = state.load_stock_rows(dbcfmt.TALENTTAB)
+    stock_items = state.load_stock_rows(dbcfmt.ITEM)
+    all_spell_rows = [build.build_spell_row(e, scratch_reuse) for e in spell_entries]
+    stale_inputs = (
+        ("spell", dbcfmt.SPELL, spell_entries, all_spell_rows, spell_resolved, stock_spells),
+        (
+            "talent", dbcfmt.TALENT, talents["talents"], [build.build_talent_row(e) for e in talents["talents"]],
+            talent_resolved, stock_talents,
+        ),
+        (
+            "talenttab", dbcfmt.TALENTTAB, talents["tabs"], [build.build_talenttab_row(e) for e in talents["tabs"]],
+            talenttab_resolved, stock_talenttabs,
+        ),
+        (
+            "skilllineability", dbcfmt.SKILLLINEABILITY, talents["skill_line_abilities"],
+            [build.build_skilllineability_row(e) for e in talents["skill_line_abilities"]],
+            skilllineability_resolved, stock_skilllineabilities,
+        ),
+        (
+            "item", dbcfmt.ITEM, item_entries, [build.build_item_row(e) for e in item_entries], item_resolved,
+            stock_items,
+        ),
+    )
+    stale_deletes: dict[str, list[int]] = {}
+    stale_force: set[str] = set()
+    for ids_key, table, entries, built_rows, resolved, stock_rows in stale_inputs:
+        stale = stale_overlay.find_stale(
+            ids_cfg[ids_key], {int(r[table.index_column]): r for r in built_rows}, set(resolved.edited_ids),
+            stale_overlay.load_overlay_state(table), stock_rows,
+        )
+        by_id = {e["id"]: e for e in entries}
+        for row_id in stale.reemit:
+            resolved.entries.append(by_id[row_id])
+            resolved.edited_ids.append(row_id)
+        if stale.drop:
+            dropped = set(stale.drop)
+            resolved.entries[:] = [e for e in resolved.entries if e["id"] not in dropped]
+            resolved.edited_ids[:] = [i for i in resolved.edited_ids if i not in dropped]
+        stale_deletes[table.name] = stale.deletes
+        if stale.reserved_changed:
+            stale_force.add(table.name)
+        if stale.deletes:
+            print(
+                f"stale overlay: {table.sql_table}: deleting {len(stale.deletes)} generated row(s) to fall back to "
+                f"stock {stale.deletes} (no longer declared: {stale.undeclared})"
+            )
+        if stale.drop:
+            print(f"stale overlay: {table.sql_table}: not re-inserting {len(stale.drop)} row(s) at stock {stale.drop}")
+        if stale.reemit:
+            print(f"stale overlay: {table.sql_table}: re-emitting {len(stale.reemit)} row(s) {stale.reemit}")
+        if stale.reserved_changed:
+            print(f"stale overlay: {table.sql_table}: live reserved-block rows differ, re-emitting the block")
+        if stale.kept_undeclared:
+            print(
+                f"note: stale overlay: {table.sql_table}: {len(stale.kept_undeclared)} undeclared generated row(s) "
+                f"with no stock row to fall back to, left live {stale.kept_undeclared[:20]}"
+            )
+    progress("checked live overlay rows for stale generated rows")
+
     # Real build pass (real ReuseContext this time) over just what survived
     # reconciliation — this is what actually gets emitted to SQL.
     reuse = ReuseContext(existing_secondary, ids_cfg)
     spell_rows = [build.build_spell_row(e, reuse) for e in spell_resolved.entries]
-    # Pure stock client rows: the classmask lint exempts an effect only if it matches stock exactly.
-    stock_spells = state.load_stock_rows(dbcfmt.SPELL)
+    # Pure stock client rows (stock_spells, loaded above): the classmask lint exempts an effect only if it matches
+    # stock exactly.
     for warning in lint.check_classmask_scoping(spell_resolved.entries, spell_rows, stock_spells):
         print(f"WARNING: {warning}")
     for warning in lint.check_missing_skill_line_ability(
@@ -1125,8 +1195,7 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
     for warning in lint.check_custom_equipped_item_class(spell_entries):
         print(f"WARNING: {warning}")
     # Full declared population (like the scans above): a family-0 SpellMod already live is not "edited",
-    # so a resolved-only scan would hide it.
-    all_spell_rows = [build.build_spell_row(e, scratch_reuse) for e in spell_entries]
+    # so a resolved-only scan would hide it (all_spell_rows: built above, for the stale overlay check).
     for warning in lint.check_family_zero_spellmods(spell_entries, all_spell_rows, stock_spells):
         print(f"WARNING: {warning}")
     # Shaman T1 lints (same population and function as --check, with the promoted-aware spell and SLA state).
@@ -1175,10 +1244,8 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
     # decide what the *client patch* needs to carry — see state.py's "Two
     # baselines, two purposes" note. Reuses the same `reuse` (idempotent
     # find_or_mint, see reuse.py) so this can't mint a duplicate secondary row
-    # for something the SQL-emission pass above already minted one for.
-    stock_talents = state.load_stock_rows(dbcfmt.TALENT)
-    stock_talenttabs = state.load_stock_rows(dbcfmt.TALENTTAB)
-    stock_items = state.load_stock_rows(dbcfmt.ITEM)
+    # for something the SQL-emission pass above already minted one for. (stock_talents, stock_talenttabs and
+    # stock_items: loaded above, for the stale overlay check.)
     # P9 (potency-system.PLAN.md, D12): SpellDescriptionVariables references - a tooltip variable
     # the spell's entry doesn't define renders as a literal `$<var>` in the client. Errors stop the
     # run here, before any SQL or patch is written.
@@ -1280,18 +1347,19 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         return 1
 
     # -- pending SQL: reserved range + explicit edited IDs, per table --
+    # Stale overlay deletes join the explicit-ID DELETE with no INSERT row behind them.
     blocks = [
-        (dbcfmt.SPELL, ids_cfg["spell"], spell_rows, spell_resolved.edited_ids, existing_spells),
-        (dbcfmt.TALENT, ids_cfg["talent"], talent_rows, talent_resolved.edited_ids, existing_talents),
-        (
-            dbcfmt.TALENTTAB, ids_cfg["talenttab"], talenttab_rows, talenttab_resolved.edited_ids,
-            existing_talenttabs,
-        ),
-        (
-            dbcfmt.SKILLLINEABILITY, ids_cfg["skilllineability"], skilllineability_rows,
-            skilllineability_resolved.edited_ids, existing_skilllineabilities,
-        ),
-        (dbcfmt.ITEM, ids_cfg["item"], item_rows, item_resolved.edited_ids, existing_items),
+        (table, ids_cfg[ids_key], rows, resolved.edited_ids + stale_deletes[table.name], existing)
+        for table, ids_key, rows, resolved, existing in (
+            (dbcfmt.SPELL, "spell", spell_rows, spell_resolved, existing_spells),
+            (dbcfmt.TALENT, "talent", talent_rows, talent_resolved, existing_talents),
+            (dbcfmt.TALENTTAB, "talenttab", talenttab_rows, talenttab_resolved, existing_talenttabs),
+            (
+                dbcfmt.SKILLLINEABILITY, "skilllineability", skilllineability_rows, skilllineability_resolved,
+                existing_skilllineabilities,
+            ),
+            (dbcfmt.ITEM, "item", item_rows, item_resolved, existing_items),
+        )
     ]
     for name, table in SECONDARY_TABLES.items():
         # reserved_rows (reused ∪ minted), not .minted alone - see ReuseContext.reserved_rows's
@@ -1300,7 +1368,7 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
             (table, ids_cfg[name], reuse.reserved_rows.get(name, []), [], existing_secondary_by_id[name])
         )
 
-    blocks, n_skipped_unchanged_tables = _drop_unchanged_blocks(blocks)
+    blocks, n_skipped_unchanged_tables = _drop_unchanged_blocks(blocks, force=stale_force)
     if n_skipped_unchanged_tables:
         print(
             f"note: {n_skipped_unchanged_tables} table(s) reserved-block content is already "
