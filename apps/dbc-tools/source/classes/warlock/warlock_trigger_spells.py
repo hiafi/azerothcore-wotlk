@@ -4,7 +4,7 @@ Warlock - spells that are never directly cast - proc/periodic-tick effects, trig
 Split from a single source/classes/warlock.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .warlock_...` below) resolve.
 """
 
-from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, RANGE_SELF, School
+from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, RANGE_SELF, School, SpellModOp
 from lib.dsl.registry import bonus_coefficients, creature_model, creature_template, custom_attr, linked_spell, procs_on, scripted_by, spell, spell_group, spell_group_rule, unbind_bonus_coefficients, unbind_script, unlink_spell
 from . import _masks as m
 
@@ -2188,12 +2188,13 @@ master_conjuror_18767 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=23),
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.EFFECT1),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.EFFECT1),
     ],
     spell_icon_id=1506,
-    notes='warlock-rework DEMONOLOGY §6 (3,2): moved (4,2)->(3,2). stored 149->99 (100% live).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the combat ratings gained from your conjured Firestone and Spellstone by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2097152, 'EffectSpellClassMaskB_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (3,2): moved (4,2)->(3,2). stored 149->99 (100% live). dungeon-prereqs S5b (WARLOCK-STONES s5): three SpellMods, no script. eff0 EFFECT1 +100% on the stone buffs (d1 SPELLSTONE | FIRESTONE_ENCHANT: crit / haste), eff1 DAMAGE +50% on Fire Blast 200716 (d2 STONE_FIRE_BLAST), eff2 EFFECT1 +50% on Spellstone Surge 200717 (d2 STONE_SURGE). Old misc 23 (combat rating) masks cleared.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the spell critical strike chance from your Firestone and the haste from your Spellstone by $s1%, the damage of your Firestone's Fire Blast by $s2%, and the Mastery from your Spellstone by $s3%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SPELLSTONE | m.FIRESTONE_ENCHANT, 'EffectSpellClassMaskB_2': m.STONE_FIRE_BLAST, 'EffectSpellClassMaskC_2': m.STONE_SURGE, 'EffectBonusMultiplier_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2209,12 +2210,13 @@ master_conjuror_18768 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=199, implicit_target_a=1, apply_aura=108, misc_value=23),
-        Effect(type=EffectType.APPLY_AURA, base_points=199, implicit_target_a=1, apply_aura=108, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=199, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.EFFECT1),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.EFFECT1),
     ],
     spell_icon_id=1506,
-    notes='warlock-rework DEMONOLOGY §6 (3,2): moved (4,2)->(3,2). stored 299->199 (200% live).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the combat ratings gained from your conjured Firestone and Spellstone by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2097152, 'EffectSpellClassMaskB_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (3,2): moved (4,2)->(3,2). stored 299->199 (200% live). dungeon-prereqs S5b (WARLOCK-STONES s5): three SpellMods, no script. eff0 EFFECT1 +200% on the stone buffs (d1 SPELLSTONE | FIRESTONE_ENCHANT: crit / haste), eff1 DAMAGE +100% on Fire Blast 200716 (d2 STONE_FIRE_BLAST), eff2 EFFECT1 +100% on Spellstone Surge 200717 (d2 STONE_SURGE). Old misc 23 (combat rating) masks cleared.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the spell critical strike chance from your Firestone and the haste from your Spellstone by $s1%, the damage of your Firestone's Fire Blast by $s2%, and the Mastery from your Spellstone by $s3%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SPELLSTONE | m.FIRESTONE_ENCHANT, 'EffectSpellClassMaskB_2': m.STONE_FIRE_BLAST, 'EffectSpellClassMaskC_2': m.STONE_SURGE, 'EffectBonusMultiplier_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 

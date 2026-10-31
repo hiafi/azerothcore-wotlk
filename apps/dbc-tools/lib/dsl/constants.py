@@ -271,6 +271,7 @@ class CombatRating(IntEnum):
     MASTERY = 20  # Custom: was CR_WEAPON_SKILL_MAINHAND
     VERSATILITY = 21  # Custom: was CR_WEAPON_SKILL_OFFHAND
     COOLDOWN_HASTE = 22  # Custom: was CR_WEAPON_SKILL_RANGED
+    MASTERY_TENTHS = 25  # Custom: aura 306 only, not a rating (MAX_COMBAT_RATING): Mastery in tenths of a percent
 
 
 class AcquireMethod(IntEnum):

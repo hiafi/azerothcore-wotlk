@@ -1327,6 +1327,57 @@ class spell_warl_guardian_hit_mods : public SpellScript
 };
 
 // ===========================================================================================
+// 200714 Firestone, 200715 Spellstone - stone buff procs (dungeon-prereqs S5b,
+// .agents/plans/dungeon-prereqs/dungeon-prereqs.WARLOCK-STONES.md s4). The spell_proc rows set the
+// flags, chance (Proc Chance scales it natively, never rolled here) and internal cooldown; this
+// check only adds what a row can't: the warlock's own hit on a hostile target, and one roll per
+// cast (Systems.md s5) - an AoE cast's second and later targets are rejected. Periodic ticks have
+// no Spell, so each tick rolls and the internal cooldown is the throttle.
+// ===========================================================================================
+class spell_warl_stone_buff : public AuraScript
+{
+    PrepareAuraScript(spell_warl_stone_buff);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ WarlockData::SPELL_FIRE_BLAST, WarlockData::SPELL_SPELLSTONE_SURGE });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        Unit* actor = eventInfo.GetActor();
+        Unit* victim = eventInfo.GetActionTarget();
+        if (!actor || !actor->IsPlayer() || actor != GetTarget() || !victim || victim == actor ||
+            !actor->IsValidAttackTarget(victim))
+            return false;
+
+        Spell const* procSpell = eventInfo.GetProcSpell();
+        if (!procSpell)
+            return true;
+
+        // Once-per-cast guard: one claim per Spell object per world tick. Every target of a
+        // multi-target spell is hit in the same tick; the ms check keeps a reused Spell address
+        // from matching. CheckProc runs before the chance roll, so the claim spends the one roll.
+        uint32 const now = uint32(GameTime::GetGameTimeMS().count());
+        if (procSpell == _guardSpell && now == _guardMs)
+            return false;
+
+        _guardSpell = procSpell;
+        _guardMs = now;
+        return true;
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_warl_stone_buff::CheckProc);
+    }
+
+private:
+    Spell const* _guardSpell = nullptr;
+    uint32 _guardMs = 0;
+};
+
+// ===========================================================================================
 // ScriptMgr classes (not spell_script_names rows) - DEMONOLOGY-WP-BRIEF.md's checklist
 // ===========================================================================================
 
@@ -1494,6 +1545,7 @@ void AddSC_warlock_demonology_spell_scripts()
     RegisterSpellScript(spell_warl_sacrifice_brutality);
     RegisterSpellScript(spell_warl_enslave_demon_potency);
     RegisterSpellScript(spell_warl_guardian_hit_mods);
+    RegisterSpellScript(spell_warl_stone_buff);
 
     new warlock_demonology_player_script();
     new warlock_demonology_unit_script();
