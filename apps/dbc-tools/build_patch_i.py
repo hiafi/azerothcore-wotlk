@@ -175,6 +175,16 @@ ICON_ID_PISTOL_SHOT = 90374  # Pistol Shot 203958 + the Surprise Attacks extra s
 ICON_ID_WARRIOR_AVATAR = 90420
 ICON_ID_WARRIOR_COLOSSUS_SMASH = 90421
 
+# Mage talent icon pass (10-31 bug fixes, ids.yaml reservation 90450-90499; 90456-90499 spare). Six talents/spells
+# shared a stock icon with their partner talent; each id is shared by the talent ranks, the castable and every helper
+# / buff row that shows it. Empowering Frostbolt moved to stock icon 36 (Spell_Frost_ManaRecharge), so it mints nothing.
+ICON_ID_MAGE_ARCANE_EMPOWERMENT = 90450  # talent ranks 31579 / 31582 / 31583 (party buff is the talent row itself)
+ICON_ID_MAGE_EMPOWERED_FIRE = 90451  # talent ranks 31656-31658
+ICON_ID_MAGE_FLURRY = 90452  # 200004 and its bolt 200037
+ICON_ID_MAGE_GLACIAL_SPIKE = 90453  # 200002 and the windups / impact 200025-200027
+ICON_ID_MAGE_FROZEN_ORB = 90454  # 200007 and the pulse / periodic 200008 / 200009
+ICON_ID_MAGE_ENDURING_WINTER = 90455  # talent ranks 44557 / 44560 / 44561
+
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),
     (ICON_ID_DIVINE_STAR, "Interface/icons/spell_priest_divinestar.blp"),
@@ -231,6 +241,12 @@ ICONS = (
     (ICON_ID_PISTOL_SHOT, "Interface/icons/ability_rogue_pistolshot.blp"),
     (ICON_ID_WARRIOR_AVATAR, "Interface/icons/warrior_talent_icon_avatar.blp"),
     (ICON_ID_WARRIOR_COLOSSUS_SMASH, "Interface/icons/ability_warrior_colossussmash.blp"),
+    (ICON_ID_MAGE_ARCANE_EMPOWERMENT, "Interface/icons/spell_arcane_arcanetactics.blp"),
+    (ICON_ID_MAGE_EMPOWERED_FIRE, "Interface/icons/spell_mage_kindling.blp"),
+    (ICON_ID_MAGE_FLURRY, "Interface/icons/ability_mage_burstofcold.blp"),
+    (ICON_ID_MAGE_GLACIAL_SPIKE, "Interface/icons/ability_mage_glacialspike.blp"),
+    (ICON_ID_MAGE_FROZEN_ORB, "Interface/icons/spell_frost_frozenorb.blp"),
+    (ICON_ID_MAGE_ENDURING_WINTER, "Interface/icons/ability_shawaterelemental_swirl.blp"),
 )
 
 # "Stock path, no blp" entries (warlock-rework DESTRUCTION §2.6/§11 Q19): a SpellIcon.dbc row that
