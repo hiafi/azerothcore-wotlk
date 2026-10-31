@@ -657,12 +657,11 @@ stock client rows plus the declared SkillLineAbility rows, and the full run adds
   ONLY_PROC_ON_CASTER); an attack or a stun is not. Allow: `lint.TRAINER_SPELL_LEVEL_ALLOW` (empty).
 
 Each allow set holds the hits that existed when the lint was written, one comment per entry. `SPELL_PROC_ALLOW`
-holds boot errors that are harmless (`... won't be used`: a phase on taken-only flags) and the 6 priest rows with
-done-spell flags and no phase. Those priest rows, and 6 more, are a **known live bug owned by the priest rework**
-(`SHADOWED_PROC_ALLOW`): stock rank-chain rows (-27811, -33150, -34753, -63730, -64127, -47516) load first and the
-declared per-rank rows are dropped as duplicates, and the priest rework zeroed the chain rows' DBC `ProcTypeMask`, so
-Blessed Recovery, Surge of Light, Holy Concentration, Serendipity and Body and Soul never proc live (Grace rank 3
-runs on the stock values). Adding a phase to those rows changes nothing; the fix is in the priest data.
+holds boot errors that are harmless (`... won't be used`: a phase on taken-only flags). `SHADOWED_PROC_ALLOW` is
+empty: the priest rows it held (Blessed Recovery, Surge of Light, Holy Concentration, Serendipity, Body and Soul, Grace
+rank 3), shadowed by the stock rank-chain rows -27811, -33150, -34753, -63730, -64127 and -47516, were fixed 2026-10-31
+by `remove_spell_proc()` of the chain rows (plus a HIT phase on the done-spell rows) and by dropping Grace rank 3's
+positive row, which the -47516 chain row already covers through the talent rank chain.
 
 **`lint.TOOL_FREE_CLASS_SETS`** (empty frozenset) widens `check_totem_tools` to every spell of the listed
 `SpellClassSet`s: the declared ones, stock ids included, and the undeclared stock spells in the base Spell rows (stock

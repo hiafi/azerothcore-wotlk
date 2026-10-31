@@ -5,7 +5,10 @@ Split from a single source/classes/priest.py via split_class_file.py (.agents/pl
 """
 
 from lib.dsl import RANGE_SELF, ApplyAura, AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
-from lib.dsl.registry import bonus_coefficients, linked_spell, procs_on, scripted_by, spell, unbind_bonus_coefficients, unbind_script
+from lib.dsl.registry import (
+    bonus_coefficients, linked_spell, procs_on, remove_spell_proc, scripted_by, spell, unbind_bonus_coefficients,
+    unbind_script,
+)
 from . import _masks
 
 # Proc flags/phases used by the procs_on() calls below - src/server/game/Spells/SpellMgr.h's
@@ -2318,7 +2321,16 @@ blessed_recovery_27816 = spell(
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effectiveness of your healing spells by $s1%.\n\nCapstone Bonus: When your Renew heals a target at or below 35% health, immediately heal them for an additional 2 ticks worth without consuming duration. Occurs once per 20 sec per target.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': _masks.PRIEST_HEAL_MASK[0], 'EffectSpellClassMaskA_2': _masks.PRIEST_HEAL_MASK[1], 'EffectSpellClassMaskA_3': _masks.PRIEST_HEAL_MASK[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 procs_on(blessed_recovery_27816, PROC_FLAG_DONE_PERIODIC | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS,
-         family_name=6, family_mask=(_masks.RENEW, 0, 0), spell_type_mask=PROC_SPELL_TYPE_HEAL, chance=100)
+         family_name=6, family_mask=(_masks.RENEW, 0, 0), spell_type_mask=PROC_SPELL_TYPE_HEAL,
+         spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=100)
+# The stock whole-chain row -27811 (old melee/ranged-crit-taken shape) loads before the per-rank row
+# above and claims every rank, so 27816 was dropped at boot as a duplicate and the talent never
+# procced; ranks 1-2 have no proc of their own (ProcTypeMask 0), so the chain row simply goes.
+# The stock whole-chain script row -27811 goes too: with it AND the 27816 binding above, rank 3 gets
+# two spell_pri_blessed_recovery instances (spell_script_names is a multimap) and the capstone heal
+# would fire twice per proc.
+remove_spell_proc(-27811)
+unbind_script(-27811, 'spell_pri_blessed_recovery')
 scripted_by(blessed_recovery_27816, 'spell_pri_blessed_recovery')
 
 
@@ -2550,7 +2562,9 @@ surge_of_light_33150 = spell(
     raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your direct damage and healing criticals have a 10% chance to cause your next Smite or Flash Heal spell to be instant cast and cost no mana. Stacks up to 2 times.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 procs_on(surge_of_light_33150, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS,
-         hit_mask=PROC_HIT_CRITICAL, chance=10)
+         spell_phase_mask=PROC_SPELL_PHASE_HIT, hit_mask=PROC_HIT_CRITICAL, chance=10)
+# The stock whole-chain row -33150 shadowed both per-rank rows (duplicate entry at boot) - see -27811.
+remove_spell_proc(-33150)
 
 
 surge_of_light_33154 = spell(
@@ -2572,7 +2586,7 @@ surge_of_light_33154 = spell(
     raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your direct damage and healing criticals have a 20% chance to cause your next Smite or Flash Heal spell to be instant cast and cost no mana. Stacks up to 2 times.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 procs_on(surge_of_light_33154, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS,
-         hit_mask=PROC_HIT_CRITICAL, chance=20)
+         spell_phase_mask=PROC_SPELL_PHASE_HIT, hit_mask=PROC_HIT_CRITICAL, chance=20)
 # spell_pri_surge_of_light_consume binds on Smite (585) and Flash Heal (2061) themselves (HOLY.md
 # 5,0's Script column), not on these talent ranks - see the scripted_by() calls next to those two
 # spells in priest_spells.py.
@@ -3174,9 +3188,11 @@ holy_concentration_34753 = spell(
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased by $200199s1% for $200199d after a critical heal with Flash Heal, Greater Heal or Binding Heal, or a critical hit with Holy Fire or Smite. Greater Heal, Flash Heal, Binding Heal and Circle of Healing have a $s2% chance to extend your Renew on all nearby party and raid members by 3 sec, to a maximum of 6 additional sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 procs_on(holy_concentration_34753, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
-         hit_mask=PROC_HIT_CRITICAL, family_name=6,
+         spell_phase_mask=PROC_SPELL_PHASE_HIT, hit_mask=PROC_HIT_CRITICAL, family_name=6,
          family_mask=(_masks.FLASH_HEAL | _masks.GREATER_HEAL | _masks.SMITE | _masks.HOLY_FIRE, _masks.BINDING_HEAL, 0),
          chance=100)
+# The stock whole-chain row -34753 shadowed all three per-rank rows (duplicate entry at boot) - see -27811.
+remove_spell_proc(-34753)
 # spell_pri_holy_concentration_extend binds on Greater Heal (2060), Flash Heal (2061), Binding
 # Heal (32546) and Circle of Healing (34861) themselves (HOLY.md 6,0's Script column: AfterCast on
 # each), not on this talent rank - see the scripted_by() calls next to those four spells in
@@ -3204,7 +3220,7 @@ holy_concentration_34859 = spell(
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased by $200200s1% for $200200d after a critical heal with Flash Heal, Greater Heal or Binding Heal, or a critical hit with Holy Fire or Smite. Greater Heal, Flash Heal, Binding Heal and Circle of Healing have a $s2% chance to extend your Renew on all nearby party and raid members by 3 sec, to a maximum of 6 additional sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 procs_on(holy_concentration_34859, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
-         hit_mask=PROC_HIT_CRITICAL, family_name=6,
+         spell_phase_mask=PROC_SPELL_PHASE_HIT, hit_mask=PROC_HIT_CRITICAL, family_name=6,
          family_mask=(_masks.FLASH_HEAL | _masks.GREATER_HEAL | _masks.SMITE | _masks.HOLY_FIRE, _masks.BINDING_HEAL, 0),
          chance=100)
 
@@ -3230,7 +3246,7 @@ holy_concentration_34860 = spell(
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased by $200201s1% for $200201d after a critical heal with Flash Heal, Greater Heal or Binding Heal, or a critical hit with Holy Fire or Smite. Greater Heal, Flash Heal, Binding Heal and Circle of Healing have a $s2% chance to extend your Renew on all nearby party and raid members by 3 sec, to a maximum of 6 additional sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 procs_on(holy_concentration_34860, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
-         hit_mask=PROC_HIT_CRITICAL, family_name=6,
+         spell_phase_mask=PROC_SPELL_PHASE_HIT, hit_mask=PROC_HIT_CRITICAL, family_name=6,
          family_mask=(_masks.FLASH_HEAL | _masks.GREATER_HEAL | _masks.SMITE | _masks.HOLY_FIRE, _masks.BINDING_HEAL, 0),
          chance=100)
 
@@ -3504,8 +3520,10 @@ grace_47517 = spell(
 # Ranks 1-2 share one whole-chain spell_proc row (see the -14531 comment): Chance is left at 0 so
 # LoadSpellProcs falls back to each rank's own DBC ProcChance (33 / 66). AttributesMask 2 =
 # PROC_ATTR_TRIGGERED_CAN_PROC, kept from the stock row - Penance's heal bolts are triggered casts
-# and would otherwise never proc Grace. Rank 3 (200163) is a brand-new spell outside this rank
-# chain and carries its own positive row, declared with it below.
+# and would otherwise never proc Grace. Rank 3 (200163) is in this chain too: the talent rank chain
+# (Talent.dbc, SpellMgr::LoadSpellTalentRanks) links 47516 -> 47517 -> 200163, so this row covers
+# it as well and its DBC ProcChance 100 applies. A positive 200163 row would be dropped at boot as
+# a duplicate, so it has none.
 procs_on(-47516, proc_flags=PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, family_name=6,
          family_mask=_GRACE_TRIGGER_MASK, spell_phase_mask=PROC_SPELL_PHASE_HIT,
          attributes_mask=PROC_ATTR_TRIGGERED_CAN_PROC, chance=0)
@@ -4609,6 +4627,8 @@ serendipity_63730 = spell(
 procs_on(serendipity_63730, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
          spell_phase_mask=PROC_SPELL_PHASE_HIT | PROC_SPELL_PHASE_CAST, chance=100)
 scripted_by(serendipity_63730, 'spell_pri_serendipity')
+# The stock whole-chain row -63730 shadowed all three per-rank rows (duplicate entry at boot) - see -27811.
+remove_spell_proc(-63730)
 
 
 serendipity_63733 = spell(
@@ -4689,6 +4709,11 @@ body_and_soul_64127 = spell(
 )
 procs_on(body_and_soul_64127, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, spell_phase_mask=PROC_SPELL_PHASE_CAST,
          family_name=6, family_mask=(_masks.RENEW, 0, _masks.LEAP_OF_FAITH), chance=100)
+# The stock whole-chain row -64127 shadowed both per-rank rows (duplicate entry at boot) - see -27811.
+# Its stock script row -64127 also doubled the 64129 binding below; bind each rank explicitly instead.
+remove_spell_proc(-64127)
+unbind_script(-64127, 'spell_pri_body_and_soul')
+scripted_by(body_and_soul_64127, 'spell_pri_body_and_soul')
 
 
 body_and_soul_64129 = spell(
@@ -6016,11 +6041,8 @@ grace_200163 = spell(
           'clones 200164/200165 instead.',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Flash Heal, Greater Heal, Penance and Power Word: Shield have a 100% chance to bless the target with Grace, increasing all healing received from you by 3%.  Stacks up to 3 times.  Lasts 12 sec.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': _GRACE_TRIGGER_MASK[0], 'EffectSpellClassMaskA_2': _GRACE_TRIGGER_MASK[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
-# Rank 3 is outside 47516's spell_ranks chain, so it needs its own positive spell_proc row
-# (no duplicate-entry hazard - 200163 is a brand-new id nothing else covers).
-procs_on(grace_200163, proc_flags=PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, family_name=6,
-         family_mask=_GRACE_TRIGGER_MASK, spell_phase_mask=PROC_SPELL_PHASE_HIT,
-         attributes_mask=PROC_ATTR_TRIGGERED_CAN_PROC, chance=100)
+# No spell_proc row of its own: the -47516 whole-chain row (above) covers rank 3 through the talent
+# rank chain, and a positive 200163 row would be dropped at boot as a duplicate.
 
 
 # The 1%/2% Grace buffs - byte-for-byte clones of 47930 apart from the amount and the name-

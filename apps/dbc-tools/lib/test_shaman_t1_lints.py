@@ -397,13 +397,15 @@ class ShadowedSpellProcTest(unittest.TestCase):
         # remove_spell_proc(-1) in the same output: the chain row leaves the final set
         self.assertEqual(self._check([3, 4], live=[-1], removed={-1}), [])
 
-    def test_the_allow_set_is_the_priest_rows_with_a_reason(self):
+    def test_the_allow_set_is_empty_after_the_priest_fix(self):
+        # 10-31 fix A: the priest chain rows (-27811, -33150, -34753, -63730, -64127) are removed and Grace rank 3
+        # (200163) has no positive row, so nothing is shadowed any more.
+        self.assertEqual(lint.SHADOWED_PROC_ALLOW, {})
+
+    def test_an_allowed_id_is_silent(self):
         self.assertEqual(
-            set(lint.SHADOWED_PROC_ALLOW),
-            {27816, 33150, 33154, 34753, 34859, 34860, 63730, 63733, 63737, 64127, 64129, 200163},
+            lint.check_shadowed_spell_procs([self._proc(33154)], [self._proc(-33150)], set(), {}, allow={33154}), [],
         )
-        self.assertTrue(all("priest rework" in why for why in lint.SHADOWED_PROC_ALLOW.values()))
-        self.assertEqual(lint.check_shadowed_spell_procs([self._proc(33154)], [self._proc(-33150)], set(), {}), [])
 
 
 class TrainerSpellLevelTest(unittest.TestCase):
