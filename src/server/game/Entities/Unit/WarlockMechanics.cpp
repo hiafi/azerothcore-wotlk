@@ -862,8 +862,10 @@ namespace Warlock
 
         // Enslave Demon (1098) charms an arbitrary demon - checked before the entry switch so an
         // enslaved copy of e.g. an Imp-shaped demon isn't mistaken for the warlock's own Imp pet.
+        // Custom: only a real demon counts - without the warlock class gate a Hunter's pet possessed via Eyes of the
+        // Beast (or any other charmed non-demon) would otherwise read as an Enslaved demon.
         if (demon->GetCharmerGUID() == owner->GetGUID())
-            return DemonKind::Enslaved;
+            return demon->GetCreatureType() == CREATURE_TYPE_DEMON ? DemonKind::Enslaved : DemonKind::None;
 
         switch (demon->GetEntry())
         {
