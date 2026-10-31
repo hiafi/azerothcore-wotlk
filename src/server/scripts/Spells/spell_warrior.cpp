@@ -22,6 +22,7 @@
 #include "SpellPotency.h" // Custom: potency-system
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
+#include "TankCritImmunity.h" // Custom: shared tank crit immunity
 /*
  * Scripts for spells with SPELLFAMILY_WARRIOR and SPELLFAMILY_GENERIC spells used by warrior players.
  * Ordered alphabetically using scriptname.
@@ -86,10 +87,6 @@ enum MiscSpells
     SPELL_PALADIN_GREATER_BLESSING_OF_SANCTUARY     = 25899,
     SPELL_PRIEST_RENEWED_HOPE                       = 63944,
     SPELL_GEN_DAMAGE_REDUCTION_AURA                 = 68066,
-    // Custom: tank crit immunity (commit 96912e178; 200000-209999 reserved block, dbc-tools generic.csv):
-    // grants baseline immunity to melee/ranged critical strikes; also applied by
-    // Righteous Fury, Bear Form/Dire Bear Form, and Frost Presence
-    SPELL_GEN_CRIT_IMMUNITY                         = 200000,
 };
 
 // 71 - Defensive Stance. Custom: tank crit immunity (commit 96912e178), not an upstream script.
@@ -99,17 +96,17 @@ class spell_warr_defensive_stance : public AuraScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_GEN_CRIT_IMMUNITY });
+        return ValidateSpellInfo({ TankCritImmunity::SPELL_CRIT_IMMUNITY });
     }
 
     void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        GetTarget()->CastSpell(GetTarget(), SPELL_GEN_CRIT_IMMUNITY, true);
+        TankCritImmunity::Refresh(GetTarget());
     }
 
     void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        GetTarget()->RemoveAurasDueToSpell(SPELL_GEN_CRIT_IMMUNITY);
+        TankCritImmunity::Refresh(GetTarget());
     }
 
     void Register() override
