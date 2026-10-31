@@ -916,12 +916,12 @@ class spell_pal_blessed_hands_capstone : public AuraScript
 };
 
 // 4987, 1152 - Cleanse / Purify: Pure of Heart mana and the Sacred Cleansing capstone Glimmer
+// dungeon-prereqs S3 (D4/D6): Purify removes Disease, Cleanse Disease and Magic, so both count those two types
 class spell_pal_cleanse_holy : public SpellScript
 {
     PrepareSpellScript(spell_pal_cleanse_holy);
 
-    uint32 _diseasePoisonBefore = 0;
-    uint32 _allBefore = 0;
+    uint32 _cleansableBefore = 0;
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
@@ -931,12 +931,11 @@ class spell_pal_cleanse_holy : public SpellScript
             PaladinData::SPELL_GLIMMER_OF_LIGHT_ENEMY });
     }
 
-    // No dispel hit-mask exists, hence a before / after count of stacks (or charges) of the negative dispellable
-    // auras: a partial dispel (one stack of several) lowers the sum too
-    static void Count(Unit const* target, uint32& diseasePoison, uint32& all)
+    // No dispel hit-mask exists, hence a before / after count of stacks (or charges) of the negative Disease and
+    // Magic auras: a partial dispel (one stack of several) lowers the sum too
+    static uint32 CountCleansable(Unit const* target)
     {
-        diseasePoison = 0;
-        all = 0;
+        uint32 count = 0;
         for (auto const& pair : target->GetAppliedAuras())
         {
             AuraApplication const* aurApp = pair.second;
@@ -944,28 +943,19 @@ class spell_pal_cleanse_holy : public SpellScript
                 continue;
 
             Aura const* aura = aurApp->GetBase();
-            uint32 const weight = std::max<uint32>(1, aura->GetStackAmount() > 1 ? aura->GetStackAmount()
-                                                                                  : aura->GetCharges());
-            switch (aura->GetSpellInfo()->Dispel)
-            {
-                case DISPEL_DISEASE:
-                case DISPEL_POISON:
-                    diseasePoison += weight;
-                    all += weight;
-                    break;
-                case DISPEL_MAGIC:
-                    all += weight;
-                    break;
-                default:
-                    break;
-            }
+            uint32 const dispel = aura->GetSpellInfo()->Dispel;
+            if (dispel != DISPEL_DISEASE && dispel != DISPEL_MAGIC)
+                continue;
+
+            count += std::max<uint32>(1, aura->GetStackAmount() > 1 ? aura->GetStackAmount() : aura->GetCharges());
         }
+        return count;
     }
 
     void HandleBeforeHit(SpellMissInfo /*missInfo*/)
     {
         if (Unit* target = GetHitUnit())
-            Count(target, _diseasePoisonBefore, _allBefore);
+            _cleansableBefore = CountCleansable(target);
     }
 
     void HandleAfterHit()
@@ -975,22 +965,18 @@ class spell_pal_cleanse_holy : public SpellScript
         if (!caster || !target)
             return;
 
-        uint32 diseasePoison = 0;
-        uint32 all = 0;
-        Count(target, diseasePoison, all);
+        if (CountCleansable(target) >= _cleansableBefore)
+            return;
 
-        if (diseasePoison < _diseasePoisonBefore)
-        {
-            int32 const pct = Paladin::GetRankAmount(caster, { PaladinData::SPELL_PURE_OF_HEART_TALENT_R3,
-                PaladinData::SPELL_PURE_OF_HEART_31823, PaladinData::SPELL_PURE_OF_HEART }, EFFECT_0);
-            int32 const perSecond = CalculatePct(int32(caster->GetStat(STAT_INTELLECT)), pct);
-            if (pct > 0 && perSecond > 0) // [TUNE] rank % x Intellect per second for 5 s; same caster refreshes
-                caster->CastCustomSpell(PaladinData::SPELL_PURE_OF_HEART_MANA, SPELLVALUE_BASE_POINT0, perSecond,
-                    caster, TRIGGERED_FULL_MASK);
-        }
+        int32 const pct = Paladin::GetRankAmount(caster, { PaladinData::SPELL_PURE_OF_HEART_TALENT_R3,
+            PaladinData::SPELL_PURE_OF_HEART_31823, PaladinData::SPELL_PURE_OF_HEART }, EFFECT_0);
+        int32 const perSecond = CalculatePct(int32(caster->GetStat(STAT_INTELLECT)), pct);
+        if (pct > 0 && perSecond > 0) // [TUNE] rank % x Intellect per second for 5 s; same caster refreshes
+            caster->CastCustomSpell(PaladinData::SPELL_PURE_OF_HEART_MANA, SPELLVALUE_BASE_POINT0, perSecond,
+                caster, TRIGGERED_FULL_MASK);
 
         // Sacred Cleansing capstone: Cleanse (only) that removed anything also places Glimmer (no pulse)
-        if (GetSpellInfo()->Id == PaladinData::SPELL_CLEANSE && all < _allBefore &&
+        if (GetSpellInfo()->Id == PaladinData::SPELL_CLEANSE &&
             caster->HasAura(PaladinData::SPELL_SACRED_CLEANSING_53553))
             Paladin::ApplyGlimmer(caster, target);
     }

@@ -1835,7 +1835,7 @@ pure_of_heart_31822 = spell(
     ],
     spell_icon_id=2142,
     notes='pulled from existing data | paladin-rework S2 HOLY 5 (4,0): eff1 -> DUMMY bp 19 (mana % of Intellect, TUNE); stock eff2/eff3 and the stale mask removed; r3 is 201279',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Purify or Cleanse removes a Disease or Poison effect, you restore mana equal to $s1% of your Intellect every sec for 5 sec.\n\n|cFF9D9D9DCapstone Bonus: The duration of Disease effects on you is reduced by 30%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Purify or Cleanse removes a Disease or Magic effect, you restore mana equal to $s1% of your Intellect every sec for 5 sec.\n\n|cFF9D9D9DCapstone Bonus: The duration of Disease effects on you is reduced by 30%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -1855,7 +1855,7 @@ pure_of_heart_31823 = spell(
     ],
     spell_icon_id=2142,
     notes='pulled from existing data | paladin-rework S2 HOLY 5 (4,0): eff1 -> DUMMY bp 39 (mana % of Intellect, TUNE); stock eff2/eff3 and the stale mask removed; r3 is 201279',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Purify or Cleanse removes a Disease or Poison effect, you restore mana equal to $s1% of your Intellect every sec for 5 sec.\n\n|cFF9D9D9DCapstone Bonus: The duration of Disease effects on you is reduced by 30%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Purify or Cleanse removes a Disease or Magic effect, you restore mana equal to $s1% of your Intellect every sec for 5 sec.\n\n|cFF9D9D9DCapstone Bonus: The duration of Disease effects on you is reduced by 30%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
