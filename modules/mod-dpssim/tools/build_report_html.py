@@ -167,6 +167,7 @@ def render_report_html(data: dict, label: str) -> str:
     spell_names.setdefault(0, "Melee leech" if is_heal(data) else "Melee")
     # EventRecorder::PET_MELEE_SPELL_ID: a pet/guardian/totem's white swings
     spell_names.setdefault(4294967294, "Pet Melee")
+    spell_names.setdefault(4294901761, "Melee (off-hand)")  # EventRecorder::OFFHAND_MELEE_SPELL_ID (S3)
     html = (HEAL_TEMPLATE_PATH if is_heal(data) else TEMPLATE_PATH).read_text()
     if not is_heal(data):
         html = inject_tank(html, is_tank(data))

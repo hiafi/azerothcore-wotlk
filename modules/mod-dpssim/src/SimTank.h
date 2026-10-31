@@ -165,6 +165,9 @@ namespace SimTank
         uint32 MaxPower = 0;
         // Stacks of the Paladin's Bulwark buff (0 for everyone else)
         uint8 BulwarkStacks = 0;
+        // What is left of every absorb shield on the actor (SPELL_AURA_SCHOOL_ABSORB amounts summed; e.g. the
+        // Warrior's Storm's Bulwark 200028)
+        uint32 AbsorbRemaining = 0;
     };
     constexpr uint32 TANK_SAMPLE_INTERVAL_MS = 500;
 

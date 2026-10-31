@@ -457,7 +457,7 @@ GAMEOBJECTDISPLAYINFO = DbcTable(
 )
 
 # SpellCategory.dbc - one Flags column per Spell.dbc `Category` id (stock IDs up to 1253; the
-# ids.yaml `spellcategory` block 1300-1309 is for custom categories). Paladin T1: spell_category()
+# ids.yaml `spellcategory` block 1300-1319 is for custom categories). Paladin T1: spell_category()
 # declares the row; the server side goes out through spell_tables.py's SPELL_TABLES
 # (`spellcategory_dbc`) and generate.py merges the same declared rows over
 # var/extractors/dbc/SpellCategory.dbc into patch-Z.mpq, so the client knows the category too.

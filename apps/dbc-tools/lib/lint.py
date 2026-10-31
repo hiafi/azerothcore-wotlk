@@ -1261,7 +1261,45 @@ ROGUE_FAMILY_RULES = FamilyBitRules(
         "Master of Subtlety / Overkill tails, d0 b25 the Hemorrhage combo point / dagger hardcode"
     ),
 )
-FAMILY_BIT_RULES = (HUNTER_FAMILY_RULES, SHAMAN_FAMILY_RULES, DEATHKNIGHT_FAMILY_RULES, ROGUE_FAMILY_RULES)
+# Warrior T1 (.agents/plans/warrior-rework/warrior-rework.FAMILY-BITS.md s3.3 "never take", s6.2 hardcodes;
+# T1-HANDOFF WP2). Carrier bits no custom warrior-family spell may carry, each keyed in core or a script:
+#   d0 b0 (0x1): Charge's own bit, shared with ~95 NPC rows and read by Improved Charge, Glyph of Charge and
+#     Juggernaut's proc row (the likeliest slip is copying stock Heroic Leap 53625's mask, which sits on it).
+#   d0 b1 (0x2) and d0 b24 (0x1000000): the diminishing-returns categories (SpellMgr.cpp:158-166, Hamstring / Charge
+#     Stun).
+#   d0 b17 (0x20000) and d1 b5 (0x20): the "Shout" CC marker, SPELL_ATTR0_CU_AURA_CC (SpellMgr.cpp:3474-3477,
+#     Unit.cpp:5442).
+#   d1 b6 (0x40): Devastate casts Sunder Armor 58567 off this bit (SpellEffects.cpp:3681-3693).
+#   d2 b31 (0x80000000): the Draenei racial Gift of the Naaru 28880 carries it, and Shadow Resistance 59221 reads it
+#     (the only stock family-4 d2 carrier and reader).
+# Reader ban: d2 b31, a reader containing it would modify the racial.
+# The bits that depend on a spell's role are not expressible in this table (a carrier list is all-or-nothing and a
+# "never take except on X" rule needs a per-spell exemption the dataclass has no field for), so W0b and the spec stages
+# pin them with targeted tests: d0 b7 only on Thunder Clap and its echo (Improved Thunder Clap, Thunderstruck);
+# d0 b10 only on Revenge (the Incite capstone, spell_warrior.cpp:1382); d1 b8 Victory Rush damage / glyph
+# (SpellEffects.cpp:371-383, Unit.cpp:9212); d1 b9 plus category 1209 Shield Slam (SpellEffects.cpp:361-370); d1 b18 the
+# Victorious aura state (SpellInfo.cpp:2052); d1 b21 (a carrier counts as Dazed for Heroic Strike's bonus,
+# spell_warrior.cpp:1080); d0 b23 the stances (a rage-keep block keys on icon 139 / A112 831, not the bit, so it is a
+# role bit, not a ban); d2 b0-b3 only on their FAMILY-BITS s5
+# roles; and no new warrior spell on category 132 unless it should get NO_CATEGORY_COOLDOWN_MODS
+# (SpellInfoCorrections.cpp:5335). `source/classes/warrior/_masks.py` holds the same literals: the lint does not
+# import it (a lint must not import the thing it checks), lib/test_warrior_family_rules.py asserts they agree.
+WARRIOR_FAMILY_RULES = FamilyBitRules(
+    name="warrior",
+    spell_class_set=4,
+    forbidden_carrier_bits=(0x01020003, 0x60, 0x80000000),           # d0 b0 / b1 / b17 / b24, d1 b5 / b6, d2 b31
+    forbidden_reader_bits=(0, 0, 0x80000000),                        # d2 b31 (Draenei racial)
+    carrier_note=(
+        "d0 b0 Charge's bit (Improved Charge, Glyph of Charge, Juggernaut read it), d0 b1 / b24 diminishing-returns "
+        "categories, d0 b17 / d1 b5 the Shout CC marker, d1 b6 Devastate's Sunder cast, d2 b31 the Draenei racial's bit"
+    ),
+    reader_label="the Draenei racial's bit (d2 b31 Gift of the Naaru)",
+    reader_reaches="the racial",
+    reader_hint="Pick another bit for the reader.",
+)
+FAMILY_BIT_RULES = (
+    HUNTER_FAMILY_RULES, SHAMAN_FAMILY_RULES, DEATHKNIGHT_FAMILY_RULES, ROGUE_FAMILY_RULES, WARRIOR_FAMILY_RULES,
+)
 _CUSTOM_SPELL_ID_START = 200000
 PET_SHARED_SKILL_LINE = 270  # "Pet - Hunter": the skill line every hunter pet family shares
 

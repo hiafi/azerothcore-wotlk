@@ -17,11 +17,14 @@ nothing.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
+import sys
 from pathlib import Path
 from typing import Iterable
 
-from . import trainer_state
+from . import sqlcorpus, trainer_state
 
 POLICY_FILE = Path(__file__).resolve().parents[1] / "source" / "trainer_pricing.py"
 
@@ -121,9 +124,41 @@ def live_priced_trainer_ids(
     return ids, skipped
 
 
+_replay_memo: tuple[dict[Key, dict], str] | None = None
+
+
+def _reset_replay_memo() -> None:
+    global _replay_memo
+    _replay_memo = None
+
+
+sqlcorpus.register_reset(_reset_replay_memo)
+
+
 def replay_trainer_spells() -> dict[Key, dict]:
     """`trainer_spell` as the DB holds it after the base dump and every migration, replayed in apply
-    order. A statement the replay cannot apply prints a WARNING (never silently skipped)."""
+    order. A statement the replay cannot apply prints a WARNING (never silently skipped).
+
+    `generate.py` calls this twice. While a `sqlcorpus` is active the replay runs once and the second call prints the
+    same WARNING lines again (stdout stays what two replays would have written) and returns its own copy."""
+    global _replay_memo
+    if sqlcorpus.active() is None:
+        return _replay_trainer_spells()
+    if _replay_memo is None:
+        buf = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buf):
+                rows = _replay_trainer_spells()
+        except BaseException:
+            sys.stdout.write(buf.getvalue())  # what the replay printed before it failed
+            raise
+        _replay_memo = (rows, buf.getvalue())
+    rows, printed = _replay_memo
+    sys.stdout.write(printed)
+    return {key: dict(row) for key, row in rows.items()}
+
+
+def _replay_trainer_spells() -> dict[Key, dict]:
     rows = trainer_state.load_replayed_table_rows(
         "trainer_spell", TRAINER_SPELL_COLUMNS, ("TrainerId", "SpellId"), warn_skipped=True,
         fill_missing=True,  # every trainer_spell column defaults to 0

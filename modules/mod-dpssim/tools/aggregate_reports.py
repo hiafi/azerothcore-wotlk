@@ -8,7 +8,8 @@ one noisy sample, not a measurement.
 
 Averages what can be meaningfully averaged across iterations - summary totals (dps, totalDamage,
 castCount, critCount, critRatePct) and the per-spell breakdown - and takes everything else (hits,
-auraEvents, manaSamples, powerSamples, minionSamples, casts) from a single representative iteration, verbatim:
+auraEvents, manaSamples, powerSamples, minionSamples, casts, and auraSamples when the profile sets AuraSampleIds)
+from a single representative iteration, verbatim:
 those are per-run timelines (when did this specific hit land, when did that specific buff go up), and there
 is no sensible way to "average" N different timelines into one without fabricating events that
 never happened in any single run.
@@ -25,7 +26,8 @@ under "aggregate.trim.rawMean" and every raw per-iteration value still rides alo
 "aggregate.perIteration" (unaffected by trimming) - trimming is meant to reduce the influence of
 outliers, not hide that they happened.
 
-The representative iteration (whose hits/auraEvents/manaSamples/powerSamples/minionSamples/casts appear verbatim) is
+The representative iteration (whose hits/auraEvents/manaSamples/powerSamples/minionSamples/casts/auraSamples appear
+verbatim; each cast keeps its powerCost) is
 whichever *kept* run's own DPS sits at or just below the *kept* set's median - not simply "iteration 1" (an
 unusually quiet or lucky run could land there by pure chance - see
 docs/.master-todo-list.md's cast-count-swing entry) and not a trimmed-away outlier either, since
@@ -588,6 +590,8 @@ def main_tank(out_path: Path, report_paths: list[Path], reports: list[dict]) -> 
         "powerSamples": representative.get("powerSamples", []),
         "minionSamples": representative.get("minionSamples", []),
         "casts": representative.get("casts", []),
+        # Only a profile with AuraSampleIds has the key; carried verbatim from the representative iteration
+        **({"auraSamples": representative["auraSamples"]} if "auraSamples" in representative else {}),
         "targets": aggregate_targets(reports, kept_idx),
         "tank": {
             "config": rep_tank.get("config", {}),
@@ -701,6 +705,8 @@ def main() -> int:
         "powerSamples": representative.get("powerSamples", []),
         "minionSamples": representative.get("minionSamples", []),
         "casts": representative.get("casts", []),
+        # Only a profile with AuraSampleIds has the key; carried verbatim from the representative iteration
+        **({"auraSamples": representative["auraSamples"]} if "auraSamples" in representative else {}),
         "aggregate": {
             "iterations": len(reports),
             "actorDeathCount": len(death_times),

@@ -42,6 +42,7 @@
 #include "GameTime.h"
 #include "GridNotifiersImpl.h"
 #include "Group.h"
+#include "KillCredit.h" // Custom: kill credit window (warrior-rework KC)
 #include "Log.h"
 #include "MageMechanics.h"
 #include "MapMgr.h"
@@ -1010,6 +1011,7 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
 
     // Hook for OnDamage Event
     sScriptMgr->OnDamage(attacker, victim, damage);
+    KillCredit::RecordHit(attacker, victim, damagetype, spellProto, damageSpell); // Custom: kill credit window, direct ability hits
 
     // Signal to pets that their owner was attacked - except when DOT.
     if (attacker != victim && damagetype != DOT)
@@ -1128,7 +1130,8 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
             case BASE_ATTACK:
             case OFF_ATTACK:
                 {
-                    weaponSpeedHitFactor = attacker->GetRageWeaponSpeedHitFactor(cleanDamage->attackType);
+                    // Custom: warrior-rework W0a - player rage speed factor (no hook sees rage; see WarriorMechanics.h)
+                    weaponSpeedHitFactor = Warrior::RageSpeedFactor(attacker, cleanDamage->attackType);
                     if (cleanDamage->hitOutCome == MELEE_HIT_CRIT)
                         weaponSpeedHitFactor *= 2;
 
@@ -2156,7 +2159,8 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
             case BASE_ATTACK:
             case OFF_ATTACK:
             {
-                uint32 weaponSpeedHitFactor = GetRageWeaponSpeedHitFactor(damageInfo->attackType);
+                // Custom: warrior-rework W0a - player rage speed factor (no hook sees rage; see WarriorMechanics.h)
+                uint32 weaponSpeedHitFactor = Warrior::RageSpeedFactor(this, damageInfo->attackType);
                 RewardRage(damageInfo->cleanDamage, weaponSpeedHitFactor, true);
                 break;
             }
@@ -10957,6 +10961,10 @@ int32 Unit::ModifyPower(Powers power, int32 dVal, bool withPowerUpdate /*= true*
         gain = maxPower - curPower;
     }
 
+    // Custom: warrior-rework S2 Endless Rage overflow (rage that did not fit; no hook sees rage, WarriorMechanics.h)
+    if (power == POWER_RAGE && dVal > 0 && dVal > gain)
+        Warrior::OnRageOverflow(this, dVal - std::max<int32>(gain, 0));
+
     if (GetAI())
     {
         GetAI()->OnPowerUpdate(power, gain, dVal, curPower);
@@ -13858,6 +13866,7 @@ void Unit::Kill(Unit* killer, Unit* victim, bool durabilityLoss, WeaponAttackTyp
     {
         Unit::ProcSkillsAndAuras(killer, victim, killer ? PROC_FLAG_KILL : 0, PROC_FLAG_KILLED, PROC_EX_NONE, 0, attackType, nullptr, nullptr, -1, nullptr);
     }
+    KillCredit::OnKill(killer, victim, spellProto); // Custom: kill credit window, assisters' kill procs and hooks
 
     // Proc auras on death - must be before aura/combat remove
     Unit::ProcSkillsAndAuras(victim, nullptr, PROC_FLAG_DEATH, PROC_FLAG_NONE, PROC_EX_NONE, 0, attackType, nullptr, nullptr, -1, nullptr);
@@ -15805,6 +15814,10 @@ void Unit::UpdateHeight(float newZ)
 
 void Unit::RewardRage(uint32 damage, uint32 weaponSpeedHitFactor, bool attacker)
 {
+    // Custom: warrior-rework W0a - dampened player rage dealt (no hook sees rage; see WarriorMechanics.h)
+    if (Warrior::RewardRage(this, damage, weaponSpeedHitFactor, attacker))
+        return;
+
     // Rage formulae https://wowwiki-archive.fandom.com/wiki/Rage#Formulae
     float addRage;
 

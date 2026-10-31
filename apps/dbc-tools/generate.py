@@ -22,15 +22,24 @@ and produces:
      client actually renders (name, icon, tooltip, talent frame).
   3. The same bytes copied into env/dist/data/dbc/ if that directory exists.
 
-Usage: python3 apps/dbc-tools/generate.py [--no-prune]
+Usage: python3 apps/dbc-tools/generate.py [--no-prune] [--check [--class NAME]] [--no-cache] [--rebuild-cache]
 
-  --no-prune   skip the prune pass (rows an earlier run emitted that source/classes/*
-               no longer declares are left live instead of being deleted)
-  -h, --help   print this message and exit
+  --no-prune       skip the prune pass (rows an earlier run emitted that source/classes/*
+                   no longer declares are left live instead of being deleted)
+  --check          read-only gate: lints and the generated-header staleness check, no SQL or patch
+  --class NAME     with --check only: lint one class's declarations (source/classes/NAME) and its generated header
+                   instead of the whole tree. Not a substitute for a plain --check before a deploy: it does not load
+                   the legacy CSV/YAML sources, source/npcs or source/world, and cannot see duplicate ids across
+                   classes. Refused for a run that writes anything: the reserved id blocks, the client patch and
+                   the prune pass are global, so a write run always covers every class.
+  --no-cache       do not read or write the on-disk cache of replayed SQL state (var/dbc-tools-cache/)
+  --rebuild-cache  ignore what the cache holds, replay everything, and write the cache afresh
+  -h, --help       print this message and exit
 """
 
 from __future__ import annotations
 
+import hashlib
 import sys
 import time
 from pathlib import Path
@@ -41,16 +50,17 @@ sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, source, sql_out, state  # noqa: E402
 from lib import gcd_haste, header_gen, potency_sheet, spell_tables, superseded_ranks  # noqa: E402
-from lib import trainer_pricing, trainer_state  # noqa: E402
+from lib import sqlcorpus, trainer_pricing, trainer_state  # noqa: E402
 from bootstrap import load_spell_ranks_chains  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
+from lib.lazy import Lazy  # noqa: E402
 
-KNOWN_FLAGS = {"--no-prune", "--check"}
+KNOWN_FLAGS = {"--no-prune", "--check", "--no-cache", "--rebuild-cache"}
 
 # PLAN P2b step 4: adopted class by class, inside each class's own pass - not a side effect of
 # every generate.py run. Extend this tuple when a pass is ready to start generating/relying on its
 # own Generated/<Class>Data.h (warlock first, in P4).
-CLASSES_WITH_GENERATED_HEADERS = ("warlock", "paladin", "hunter", "shaman", "deathknight", "rogue")
+CLASSES_WITH_GENERATED_HEADERS = ("warlock", "paladin", "hunter", "shaman", "deathknight", "rogue", "warrior")
 GENERATED_HEADER_DIR = REPO_ROOT / "src" / "server" / "game" / "Entities" / "Unit" / "Generated"
 from lib.reuse import ReuseContext  # noqa: E402
 
@@ -141,6 +151,9 @@ def _rune_cost_errors(spell_entries: list[dict], dsl_classes: dict, ids_cfg: dic
     return errors
 
 
+_GCD_CHECK_PREFIX = "gcd haste (--check, stock approximation): "
+
+
 def _gcd_haste_check_warnings(
     spell_entries: list[dict], talents: dict, dsl_classes: dict, stock_spells: dict[int, dict], ids_cfg: dict,
 ) -> list[str]:
@@ -162,7 +175,7 @@ def _gcd_haste_check_warnings(
     superseded = superseded_ranks.superseded_ranks(
         load_spell_ranks_chains(), superseded_ranks.survivor_ids(dsl_classes["spells"]),
     )
-    prefix = "gcd haste (--check, stock approximation): "
+    prefix = _GCD_CHECK_PREFIX
     try:
         _entries, result = _gcd_haste_entries(
             spell_entries, talents, dsl_classes["spells"], superseded,
@@ -333,13 +346,18 @@ def _proc_shadow_inputs(
 def _t1_content_warnings(
     dsl_classes: dict, talents: dict, spell_entries: list[dict], built_rows: list[dict], base_spells: dict[int, dict],
     live_skilllineabilities: list[dict], proc_shadow_inputs: tuple | None = None,
+    undeclared_scan_class_set: int | None = None, declared_elsewhere: frozenset[int] | set[int] = frozenset(),
 ) -> list[str]:
     """The shaman-T1 spell-content lints (lib/lint.py), over the full declared population. One function for the
     `--check` block and the full run, so a `--check` session sees what the full run would print (hunter T1-10).
     `built_rows` is every declared entry built (aligned with `spell_entries`); `base_spells` the rows behind them
     (the promoted-aware live Spell.dbc in the full run, the stock client file in `--check`);
     `live_skilllineabilities` the live SkillLineAbility rows (empty in `--check`, which only sees the declared
-    ones). `proc_shadow_inputs` is `_proc_shadow_inputs(...)`; without it the shadowed-proc check is skipped."""
+    ones). `proc_shadow_inputs` is `_proc_shadow_inputs(...)`; without it the shadowed-proc check is skipped.
+    `undeclared_scan_class_set` narrows the scan for UNDECLARED stock spells (`check_totem_tools`) to the stock rows of
+    one SpellClassSet: a scoped `--check --class` only declares one class's spells, so every other class's stock
+    spells would read as undeclared. `declared_elsewhere` are spell ids a scoped run knows another source declares (the
+    legacy CSVs), which that scan must not report either."""
     spell_lookup = {**base_spells, **{int(r["ID"]): r for r in built_rows}}
     sla_rows = [
         {"Spell": int(e["spell_id"]), "SkillLine": int(e["skill_line"])} for e in talents["skill_line_abilities"]
@@ -350,7 +368,11 @@ def _t1_content_warnings(
     trainer_spells = dsl_classes["trainer_spells"]
     warnings: list[str] = []
     warnings += lint.check_creature_spell_rows(dsl_classes["creature_template_spells"], set(spell_lookup))
-    warnings += lint.check_totem_tools(spell_entries, built_rows, base_spells=base_spells)
+    scan_spells = base_spells if undeclared_scan_class_set is None else {
+        spell_id: row for spell_id, row in base_spells.items()
+        if int(row.get("SpellClassSet") or 0) == undeclared_scan_class_set and spell_id not in declared_elsewhere
+    }
+    warnings += lint.check_totem_tools(spell_entries, built_rows, base_spells=scan_spells)
     warnings += lint.check_hidden_learned_spells(
         spell_entries, built_rows, sla_rows, {int(r["SpellId"]) for r in trainer_spells}, talent_rank_ids,
         _pet_skill_lines(),
@@ -424,18 +446,233 @@ def _merge_dsl_sources(spell_entries: list[dict], talents: dict, dsl_classes: di
             talents[key].append(entry)
 
 
+def known_classes() -> list[str]:
+    """The names `--class` accepts: every entry of source/classes/ the DSL loader would load."""
+    return sorted(
+        p.stem for p in (SOURCE_DIR / "classes").iterdir()
+        if not p.name.startswith(("_", ".")) and (p.is_dir() or p.suffix == ".py")
+    )
+
+
+def parse_args(args: list[str]) -> tuple[set[str], str | None, str | None]:
+    """`(flags, class name, error)`. No argparse - hand-checked so an unknown flag (e.g. --help before this existed)
+    can't silently fall through into a full multi-minute run that writes a pending SQL migration. `--class` is the
+    one option with a value (`--class NAME` or `--class=NAME`); it is accepted only together with `--check`."""
+    flags: set[str] = set()
+    class_names: list[str] = []
+    unknown: list[str] = []
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "--class":
+            if i + 1 >= len(args) or args[i + 1].startswith("-"):
+                return flags, None, "--class needs a class name (e.g. --check --class warrior)"
+            class_names.append(args[i + 1])
+            i += 2
+            continue
+        if arg.startswith("--class="):
+            class_names.append(arg.removeprefix("--class="))
+        elif arg in KNOWN_FLAGS:
+            flags.add(arg)
+        else:
+            unknown.append(arg)
+        i += 1
+    if unknown:
+        return flags, None, f"unknown argument(s): {' '.join(unknown)} (see --help)"
+    if not class_names:
+        return flags, None, None
+    if len(class_names) > 1 or not class_names[0]:
+        return flags, None, "--class takes exactly one class name"
+    if "--check" not in flags:
+        return flags, None, (
+            "--class only works together with --check: it narrows the lints to one class, but a run that writes "
+            "(the pending SQL, the client patch, the prune pass) covers every class, because the reserved id "
+            "blocks and the patch are built from all of them. Run a plain generate.py for that."
+        )
+    name = class_names[0]
+    if name not in known_classes():
+        return flags, None, f"unknown class {name!r} for --class (known: {', '.join(known_classes())})"
+    return flags, name, None
+
+
 def main() -> int:
-    # No argparse - hand-checked so an unknown flag (e.g. --help before this existed) can't
-    # silently fall through into a full multi-minute run that writes a pending SQL migration.
     args = sys.argv[1:]
     if "-h" in args or "--help" in args:
         print(__doc__.strip())
         return 0
-    unknown = [a for a in args if a not in KNOWN_FLAGS]
-    if unknown:
-        print(f"generate.py: unknown argument(s): {' '.join(unknown)} (see --help)", file=sys.stderr)
+    flags, class_name, error = parse_args(args)
+    if error:
+        print(f"generate.py: {error}", file=sys.stderr)
         return 2
 
+    corpus = sqlcorpus.activate(
+        None if "--no-cache" in flags else CACHE_DIR, cache_code_version(), rebuild="--rebuild-cache" in flags,
+    )
+    try:
+        return _run_scoped_check(corpus, class_name) if class_name else _run(corpus)
+    finally:
+        sqlcorpus.deactivate()
+
+
+# The files whose code decides what a cached replay holds: the SQL parser, the corpus, the table loaders and the DBC
+# reader. A change to any of them (or to the item overlay's own parser) is a cache miss; an edit to a lint or to the
+# DSL is not, since neither feeds a snapshot. `--rebuild-cache` is the escape hatch for anything missed here.
+CACHE_DIR = REPO_ROOT / "var" / "dbc-tools-cache"
+CACHE_CODE_FILES = (
+    "sqlcorpus.py", "sql_dump.py", "dbcfile.py", "dbcfmt.py", "state.py", "trainer_state.py", "spell_tables.py",
+    "trainer_pricing.py",
+)
+
+
+def cache_code_version() -> str:
+    h = hashlib.sha256()
+    h.update(sqlcorpus.code_version([REPO_ROOT / "apps" / "item-tools" / "item_lib"]).encode())
+    for name in CACHE_CODE_FILES:
+        h.update(name.encode())
+        h.update((TOOL_ROOT / "lib" / name).read_bytes())
+    return h.hexdigest()[:24]
+
+
+def _check_report(
+    corpus: sqlcorpus.Corpus, progress, ids_cfg: dict, spell_entries: list[dict], talents: dict, dsl_classes: dict,
+    spell_table_index, existing_talents: dict, header_classes: tuple[str, ...],
+    gcd_scope: tuple[str, ...] | None = None, family: int | None = None,
+    declared_elsewhere: frozenset[int] | set[int] = frozenset(),
+) -> int:
+    """The `--check` lints and header gate over a declared population, printed in this order. One function for the
+    whole-tree `--check` and for `--check --class X` (which hands it one class's population and that class's header
+    list); `gcd_scope` limits the GCD-haste dry run's messages to those that start with one of the given family names
+    (a scoped run still sees every family's stock rows, but only its own family's verdict is its business); `family`
+    is the scoped class's SpellFamilyName/SpellClassSet number, which limits the undeclared-stock-spell scan to it, and
+    `declared_elsewhere` the ids that scan must treat as declared."""
+    # A fast, read-only staleness gate (PLAN P2b step 3) - everything below this point (SQL
+    # diffing, DBC state, the client patch) is irrelevant to "is the committed header stale",
+    # so --check returns here instead of running the rest of the ~130s pipeline.
+    for warning in header_gen.collect_warnings(dsl_classes, header_classes):
+        print(f"WARNING: {warning}")
+    for warning in lint.check_range_on_nonself_helpers(dsl_classes["spells"]):
+        print(f"WARNING: {warning}")
+    for warning in lint.check_custom_equipped_item_class(dsl_classes["spells"]):
+        print(f"WARNING: {warning}")
+    # Family-0 SpellMods need the built SpellClassSet. --check skips the live secondary tables; seeding the
+    # stock lookup rows keeps the throwaway context from minting (and exhausting) reserved index blocks.
+    check_reuse = ReuseContext(
+        {name: list(state.load_stock_rows(table).values()) for name, table in SECONDARY_TABLES.items()}, ids_cfg,
+    )
+    check_rows = [build.build_spell_row(e, check_reuse) for e in spell_entries]
+    check_stock_spells = state.load_stock_rows(dbcfmt.SPELL)
+    for warning in lint.check_family_zero_spellmods(spell_entries, check_rows, check_stock_spells):
+        print(f"WARNING: {warning}")
+    # Shaman T1 lints and the family-bit rules, over the declared population. --check has no promoted-aware
+    # spell/SLA state: the base rows are the stock client file and only declared SkillLineAbility rows count.
+    for warning in _t1_content_warnings(
+        dsl_classes, talents, spell_entries, check_rows, check_stock_spells, [],
+        _proc_shadow_inputs(spell_table_index, dsl_classes, talents, existing_talents),
+        undeclared_scan_class_set=family, declared_elsewhere=declared_elsewhere,
+    ):
+        print(f"WARNING: {warning}")
+    missing_family_file = _creature_family_missing_warning(check_rows)
+    if missing_family_file:
+        print(missing_family_file)
+    for warning in lint.check_family_bit_rules(
+        spell_entries, check_rows, dsl_classes["spell_procs"],
+        [{"Spell": int(e["spell_id"]), "SkillLine": int(e["skill_line"])} for e in talents["skill_line_abilities"]],
+        _pet_skill_lines(),
+    ):
+        print(f"WARNING: {warning}")
+    # The full run's GCD-haste computation over stock inputs (Death Knight T1 step 6): its errors are WARNINGs
+    # here (an approximation), printed so a new family-15 spell with an all-zero class mask shows up in --check.
+    for warning in _gcd_haste_check_warnings(spell_entries, talents, dsl_classes, check_stock_spells, ids_cfg):
+        if gcd_scope is None or warning.removeprefix(_GCD_CHECK_PREFIX).startswith(gcd_scope):
+            print(f"WARNING: {warning}")
+    header_problems = header_gen.check_headers(
+        dsl_classes, GENERATED_HEADER_DIR, header_classes
+    )
+    # Errors the full run stops on, so --check exits 1 for them too (hunter T1-10).
+    check_errors = _rune_cost_errors(spell_entries, dsl_classes, ids_cfg) + header_problems
+    if check_errors:
+        for problem in check_errors:
+            print(f"ERROR: {problem}")
+        return 1
+    if header_classes:
+        print(f"note: generated header(s) up to date for {', '.join(header_classes)}")
+    progress(f"--check done (cache: {_cache_summary(corpus)})")
+    return 0
+
+
+def _run_scoped_check(corpus: sqlcorpus.Corpus, class_name: str) -> int:
+    """`--check --class NAME`: the `--check` lints over one class's declarations only.
+
+    Loads `source/classes/<name>` and nothing else of the source tree (no legacy CSV/YAML, no npcs, no world), so it
+    answers "is my class clean" in seconds with a warm cache. What it deliberately does not do: see a declaration
+    clash with another class's, judge the class-less content, or write anything (not even the potency sheets). The
+    live state the DSL helpers validate against (trainer index, creature rows, item rows) loads only if the class
+    calls a helper that needs it."""
+    start = time.monotonic()
+
+    def progress(label: str) -> None:
+        print(f"[{time.monotonic() - start:6.1f}s] {label}", flush=True)
+
+    ids_cfg = source.load_ids(SOURCE_DIR / "ids.yaml")
+    spell_entries: list[dict] = []
+    talents: dict = {"tabs": [], "talents": [], "skill_line_abilities": []}
+    spell_table_index = spell_tables.load_spell_table_index()
+    progress("loaded spell table index")
+    existing_talents = state.load_existing_rows(dbcfmt.TALENT)
+    live_sla_cache: dict[str, dict[int, dict]] = {}
+
+    def live_skilllineabilities() -> dict[int, dict]:
+        if "rows" not in live_sla_cache:
+            live_sla_cache["rows"] = state.load_existing_rows(dbcfmt.SKILLLINEABILITY)
+        return live_sla_cache["rows"]
+
+    item_live_rows = Lazy(spell_tables.load_live_item_template_rows)
+    live_data = spell_tables.dsl_live_data(
+        existing_talents, item_live_rows, live_skilllineabilities, lambda: state.load_stock_rows(dbcfmt.CHRCLASSES),
+        lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY),
+    )
+    try:
+        dsl_classes = dsl_registry.load_classes_dir(
+            SOURCE_DIR / "classes", ids_cfg=ids_cfg, only=class_name,
+            trainer_index=Lazy(trainer_state.load_trainer_index),
+            existing_group_ids={key[0] for key in spell_table_index.live_keys("spell_group")},
+            shapeshift_index=Lazy(lambda: state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM)),
+            existing_creature_rows=Lazy(lambda: {
+                int(r["entry"]): r
+                for r in spell_tables.load_creature_table_index().live_rows("creature_template")
+            }),
+            creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
+            creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS, live_data=live_data,
+        )
+    except dsl_registry.MissingStockFileError as error:
+        print(f"ERROR: {error}")
+        return 1
+    # Not check_retired_talent_tab(): the holding tab is declared once, by one class, for every class that retires a
+    # talent - which another class's retire_talent() calls cannot see from here.
+    _merge_dsl_sources(spell_entries, talents, dsl_classes)
+    progress(f"loaded source/classes/{class_name} ({sum(len(v) for v in dsl_classes.values())} entries)")
+    print(
+        f"note: scoped check of source/classes/{class_name}: {len(spell_entries)} spell(s), "
+        f"{len(talents['talents'])} talent(s); legacy CSV/YAML sources, npcs and world are not part of it"
+    )
+    family = next(
+        (number for number, name in gcd_haste.FAMILY_NAMES.items() if name.replace(" ", "").lower() == class_name), None
+    )
+    family_name = gcd_haste.FAMILY_NAMES.get(family, "")
+    return _check_report(
+        corpus, progress, ids_cfg, spell_entries, talents, dsl_classes, spell_table_index, existing_talents,
+        (class_name,) if class_name in CLASSES_WITH_GENERATED_HEADERS else (),
+        gcd_scope=(f"{family_name}:", f"{family_name} (family") if family else (), family=family,
+        declared_elsewhere={e["id"] for e in source.load_spells_csv(SOURCE_DIR / "spells")},
+    )
+
+
+def _cache_summary(corpus: sqlcorpus.Corpus) -> str:
+    stats = corpus.stats
+    return f"{stats['hit']} hit, {stats['extend']} extended, {stats['miss']} miss, {stats['corrupt']} corrupt"
+
+
+def _run(corpus: sqlcorpus.Corpus) -> int:
     start = time.monotonic()
 
     def progress(label: str) -> None:
@@ -565,56 +802,10 @@ def main() -> int:
     # run Python), so it's only written for classes that have opted in
     # (CLASSES_WITH_GENERATED_HEADERS) rather than for every class with any spell at all.
     if "--check" in sys.argv:
-        # A fast, read-only staleness gate (PLAN P2b step 3) - everything below this point (SQL
-        # diffing, DBC state, the client patch) is irrelevant to "is the committed header stale",
-        # so --check returns here instead of running the rest of the ~130s pipeline.
-        for warning in header_gen.collect_warnings(dsl_classes, CLASSES_WITH_GENERATED_HEADERS):
-            print(f"WARNING: {warning}")
-        for warning in lint.check_range_on_nonself_helpers(dsl_classes["spells"]):
-            print(f"WARNING: {warning}")
-        for warning in lint.check_custom_equipped_item_class(dsl_classes["spells"]):
-            print(f"WARNING: {warning}")
-        # Family-0 SpellMods need the built SpellClassSet. --check skips the live secondary tables; seeding the
-        # stock lookup rows keeps the throwaway context from minting (and exhausting) reserved index blocks.
-        check_reuse = ReuseContext(
-            {name: list(state.load_stock_rows(table).values()) for name, table in SECONDARY_TABLES.items()}, ids_cfg,
+        return _check_report(
+            corpus, progress, ids_cfg, spell_entries, talents, dsl_classes, spell_table_index, existing_talents,
+            CLASSES_WITH_GENERATED_HEADERS,
         )
-        check_rows = [build.build_spell_row(e, check_reuse) for e in spell_entries]
-        check_stock_spells = state.load_stock_rows(dbcfmt.SPELL)
-        for warning in lint.check_family_zero_spellmods(spell_entries, check_rows, check_stock_spells):
-            print(f"WARNING: {warning}")
-        # Shaman T1 lints and the family-bit rules, over the declared population. --check has no promoted-aware
-        # spell/SLA state: the base rows are the stock client file and only declared SkillLineAbility rows count.
-        for warning in _t1_content_warnings(
-            dsl_classes, talents, spell_entries, check_rows, check_stock_spells, [],
-            _proc_shadow_inputs(spell_table_index, dsl_classes, talents, existing_talents),
-        ):
-            print(f"WARNING: {warning}")
-        missing_family_file = _creature_family_missing_warning(check_rows)
-        if missing_family_file:
-            print(missing_family_file)
-        for warning in lint.check_family_bit_rules(
-            spell_entries, check_rows, dsl_classes["spell_procs"],
-            [{"Spell": int(e["spell_id"]), "SkillLine": int(e["skill_line"])} for e in talents["skill_line_abilities"]],
-            _pet_skill_lines(),
-        ):
-            print(f"WARNING: {warning}")
-        # The full run's GCD-haste computation over stock inputs (Death Knight T1 step 6): its errors are WARNINGs
-        # here (an approximation), printed so a new family-15 spell with an all-zero class mask shows up in --check.
-        for warning in _gcd_haste_check_warnings(spell_entries, talents, dsl_classes, check_stock_spells, ids_cfg):
-            print(f"WARNING: {warning}")
-        header_problems = header_gen.check_headers(
-            dsl_classes, GENERATED_HEADER_DIR, CLASSES_WITH_GENERATED_HEADERS
-        )
-        # Errors the full run stops on, so --check exits 1 for them too (hunter T1-10).
-        check_errors = _rune_cost_errors(spell_entries, dsl_classes, ids_cfg) + header_problems
-        if check_errors:
-            for problem in check_errors:
-                print(f"ERROR: {problem}")
-            return 1
-        print(f"note: generated header(s) up to date for {', '.join(CLASSES_WITH_GENERATED_HEADERS)}")
-        progress("--check done")
-        return 0
     else:
         for warning in header_gen.collect_warnings(dsl_classes, CLASSES_WITH_GENERATED_HEADERS):
             print(f"WARNING: {warning}")
@@ -1177,7 +1368,7 @@ def main() -> int:
                 f"layer (see docs/dbc-build-pipeline.md)."
             )
             continue
-        base_rows = dbcfile.read_dbc(dbc_path, table)
+        base_rows = state.read_dbc_cached(dbc_path, table)  # read-only: shared with the stock-row loaders
         merged = {row[table.index_column]: row for row in base_rows}
         merged.update(new_rows)
         # Talent.dbc's and TalentTab.dbc's physical row order is load-bearing to the client - see
@@ -1207,7 +1398,7 @@ def main() -> int:
                   f"by hand for an immediate manifest.txt refresh)")
     else:
         print("patch: nothing to write (no base DBCs available yet)")
-    progress("done")
+    progress(f"done (cache: {_cache_summary(corpus)})")
 
     return 0
 

@@ -25,7 +25,7 @@
 EventRecorder::EventRecorder(ObjectGuid actorGuid, std::vector<ObjectGuid> targetGuids, uint32 rotationSpellId)
     : UnitScript("mod_dpssim_event_recorder", true,
                  {UNITHOOK_ON_SPELL_DAMAGE_TAKEN_FINAL, UNITHOOK_ON_MELEE_DAMAGE_FINAL, UNITHOOK_ON_PERIODIC_DAMAGE_FINAL,
-                  UNITHOOK_ON_AURA_APPLY, UNITHOOK_ON_AURA_REMOVE}),
+                  UNITHOOK_ON_AURA_APPLY, UNITHOOK_ON_AURA_REMOVE, UNITHOOK_ON_MELEE_OUTCOME_FINAL}),
       _actorGuid(actorGuid), _targetGuids(std::move(targetGuids)), _rotationSpellId(rotationSpellId)
 {
 }
@@ -100,6 +100,7 @@ void EventRecorder::OnPeriodicDamageFinal(Unit* target, Unit* attacker, uint32 d
 
 void EventRecorder::OnMeleeDamageFinal(Unit* target, Unit* attacker, uint32 damage, bool isCrit)
 {
+    _pendingMeleeRow = -1;
     bool isPet = false;
     uint32 sourceEntry = 0;
     int8 const targetIndex = target ? TargetIndexOf(target->GetGUID()) : -1;
@@ -111,6 +112,23 @@ void EventRecorder::OnMeleeDamageFinal(Unit* target, Unit* attacker, uint32 dama
         return;
 
     RecordHit(isPet ? PET_MELEE_SPELL_ID : MELEE_SPELL_ID, damage, isCrit, isPet, uint8(targetIndex), sourceEntry);
+    _pendingMeleeRow = int64(_hitSpellIds.size()) - 1;
+}
+
+void EventRecorder::OnMeleeOutcomeFinal(CalcDamageInfo const* damageInfo)
+{
+    // The row of this very swing (OnMeleeDamageFinal runs immediately before this hook in CalculateMeleeDamage); none
+    // when that hook recorded nothing, so a miss, a foreign swing or a single-spell recorder falls through here
+    int64 const row = _pendingMeleeRow;
+    _pendingMeleeRow = -1;
+    if (!damageInfo || row < 0 || row >= int64(_hitSpellIds.size()) || damageInfo->attackType != OFF_ATTACK)
+        return;
+
+    // Only the actor's own off-hand white swing is re-tagged; a pet keeps PET_MELEE_SPELL_ID
+    if (_hitIsPet[row] || _hitSpellIds[row] != MELEE_SPELL_ID)
+        return;
+
+    _hitSpellIds[row] = OFFHAND_MELEE_SPELL_ID;
 }
 
 void EventRecorder::RecordHit(uint32 spellId, uint32 damage, bool isCrit, bool isPet, uint8 targetIndex,
@@ -143,6 +161,7 @@ void EventRecorder::Reset()
     _hitTargetIndex.clear();
     _hitSourceEntries.clear();
     _auraEvents.clear();
+    _pendingMeleeRow = -1;
 }
 
 void EventRecorder::OnAuraApply(Unit* unit, Aura* aura)

@@ -47,7 +47,7 @@ from typing import Callable
 
 import re
 
-from . import sql_dump
+from . import sql_dump, sqlcorpus
 from .dbcfmt import DbcTable
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -149,7 +149,7 @@ UNIT_NPC_FLAG_TRAINER = 0x00000010
 _TRAINER_TABLES = ("creature_default_trainer", "trainer_spell", "creature_template", "creature")
 
 
-def load_table_rows(table_name: str) -> list[dict]:
+def load_table_rows(table_name: str, project: tuple[str, ...] | None = None) -> list[dict]:
     """Every INSERT `table_name` has ever appeared in, across the base dump
     and every db_world/pending_db_world migration that mentions it (a cheap
     substring check before bothering to parse each file). Public because
@@ -170,18 +170,35 @@ def load_table_rows(table_name: str) -> list[dict]:
     down - skip it with a warning, same defensive posture as
     `state.load_existing_rows`'s own `apply_statements` loop, and for the
     same reason: an imperfect read degrading safely beats a hard crash on
-    a run trying to do something unrelated to whichever migration choked."""
+    a run trying to do something unrelated to whichever migration choked.
+
+    `project` keeps only those columns of each row (a caller that reads two columns of the 150k-row `creature` dump
+    need not hold, or cache, the other thirty)."""
     base_path = BASE_SQL_DIR / f"{table_name}.sql"
     fallback_columns: tuple[str, ...] = ()
-    rows: list[dict] = []
     if base_path.is_file():
         fallback_columns = sql_dump.parse_create_table_columns(base_path, table_name)
-        rows.extend(sql_dump.read_table_rows(base_path, table_name, fallback_columns))
-    for path in _migration_files_mentioning(table_name):
-        try:
-            rows.extend(sql_dump.read_table_rows(path, table_name, fallback_columns))
-        except Exception as exc:  # pragma: no cover - defensive, see docstring above
-            print(f"warning: trainer_state.py: skipping {path} for {table_name}: {exc}")
+
+    def step(rows: list[dict], path: Path) -> list[dict]:
+        if path == base_path:
+            more = sql_dump.read_table_rows(base_path, table_name, fallback_columns)
+        else:
+            try:
+                more = sql_dump.read_table_rows(path, table_name, fallback_columns)
+            except Exception as exc:  # pragma: no cover - defensive, see docstring above
+                print(f"warning: trainer_state.py: skipping {path} for {table_name}: {exc}")
+                return rows
+        if project is not None:
+            more = [{c: row[c] for c in project if c in row} for row in more]
+        rows.extend(more)
+        return rows
+
+    stable, volatile = _split_stable(_migration_files_mentioning(table_name))
+    rows = sqlcorpus.checkpointed(
+        "table_rows", (table_name, project), ([base_path] if base_path.is_file() else []) + stable, list, step,
+    )
+    for path in volatile:
+        step(rows, path)
     return rows
 
 
@@ -202,19 +219,24 @@ def _INVISIBLE_RE_FOR(table_name: str) -> re.Pattern:
 def _migration_files_mentioning(table_name: str, loose: bool = False) -> list[Path]:
     """Every non-base SQL file that mentions `table_name`, in apply order:
     promoted core updates, pending core updates, then module SQL (a cheap
-    substring check before bothering to parse each file)."""
-    needle = f"`{table_name}`"
-    unquoted = re.compile(rf"\b{re.escape(table_name)}\b", re.IGNORECASE)
+    substring check before bothering to parse each file). `loose` also opens a
+    file that only names the table unquoted, so its statements can be warned about."""
     candidates = [
         *(sorted(PROMOTED_SQL_DIR.glob("*.sql")) if PROMOTED_SQL_DIR.is_dir() else []),
         *(sorted(PENDING_SQL_DIR.glob("*.sql")) if PENDING_SQL_DIR.is_dir() else []),
         *module_sql_files(),
     ]
-    # `loose` also opens a file that only names the table unquoted, so its statements can be warned about.
-    return [
-        p for p in candidates
-        if needle in (text := p.read_text(encoding="utf-8")) or (loose and unquoted.search(text))
-    ]
+    return [p for p in candidates if sqlcorpus.mentions(p, table_name, loose)]
+
+
+def _split_stable(files: list[Path]) -> tuple[list[Path], list[Path]]:
+    """`files` (from `_migration_files_mentioning`) as `(promoted prefix, the rest)`. The promoted `db_world` files are
+    immutable history, so a replay of them can be cached (`sqlcorpus.checkpointed`); pending and module files change
+    from run to run and are replayed on top every time."""
+    n = 0
+    while n < len(files) and files[n].parent == PROMOTED_SQL_DIR:
+        n += 1
+    return files[:n], files[n:]
 
 
 def load_keyed_table_rows(table_name: str, columns: tuple[str, ...]) -> dict[int, dict]:
@@ -237,11 +259,17 @@ def load_keyed_table_rows(table_name: str, columns: tuple[str, ...]) -> dict[int
     )
     fmt = "n" + "".join("s" if c in string_columns else "i" for c in columns[1:])
     table = DbcTable(name=table_name, dbc_filename="", sql_table=table_name, fmt=fmt, columns=tuple(columns))
-    rows: dict[int, dict] = {}
-    if base_path.is_file():
-        sql_dump.apply_statements(rows, table, base_path.read_text(encoding="utf-8"))
-    for path in _migration_files_mentioning(table_name):
-        sql_dump.apply_statements(rows, table, path.read_text(encoding="utf-8"))
+
+    def step(rows: dict[int, dict], path: Path) -> dict[int, dict]:
+        sql_dump.apply_statements(rows, table, sqlcorpus.read_text(path))
+        return rows
+
+    stable, volatile = _split_stable(_migration_files_mentioning(table_name))
+    rows = sqlcorpus.checkpointed(
+        "keyed_rows", (table_name, tuple(columns)), ([base_path] if base_path.is_file() else []) + stable, dict, step,
+    )
+    for path in volatile:
+        step(rows, path)
     return rows
 
 
@@ -287,7 +315,6 @@ def load_replayed_table_rows(
 
     The WHERE of a DELETE/UPDATE may use OR / AND / `=` / `IN (...)` / `BETWEEN`, and `SET col = col | n`
     style expressions are evaluated (`sql_dump.parse_where_predicate`); this applies to every caller."""
-    rows: dict[tuple, dict] = {}
     base_path = BASE_SQL_DIR / f"{table_name}.sql"
 
     def reporter(path: Path) -> Callable[[str], None] | None:
@@ -298,27 +325,29 @@ def load_replayed_table_rows(
             f"live state may be wrong: {' '.join(snippet.split())[:100]}"
         )
 
-    def warn_invisible(path: Path, text: str | None = None) -> None:
+    def warn_invisible(path: Path, text: str) -> None:
         """Statements on the table that `_STATEMENT_HEAD_RE` cannot see at all."""
         if not warn_skipped:
             return
-        text = path.read_text(encoding="utf-8") if text is None else text
         for m in _INVISIBLE_RE_FOR(table_name).finditer(text):
             if not sql_dump._in_line_comment(text, m.start()):
                 reporter(path)(m.group(0))
 
-    if base_path.is_file():
-        sql_dump.apply_composite_key_statements(
-            rows, columns, key_columns, table_name, base_path.read_text(encoding="utf-8"),
-            reporter(base_path), fill_missing,
-        )
-        warn_invisible(base_path)
-    for path in _migration_files_mentioning(table_name, loose=warn_skipped):
-        text = path.read_text(encoding="utf-8")
+    def step(rows: dict[tuple, dict], path: Path) -> dict[tuple, dict]:
+        text = sqlcorpus.read_text(path)
         sql_dump.apply_composite_key_statements(
             rows, columns, key_columns, table_name, text, reporter(path), fill_missing,
         )
         warn_invisible(path, text)
+        return rows
+
+    stable, volatile = _split_stable(_migration_files_mentioning(table_name, loose=warn_skipped))
+    rows = sqlcorpus.checkpointed(
+        "replayed_rows", (table_name, tuple(columns), tuple(key_columns), warn_skipped, fill_missing),
+        ([base_path] if base_path.is_file() else []) + stable, dict, step,
+    )
+    for path in volatile:
+        step(rows, path)
     return list(rows.values())
 
 
@@ -392,5 +421,8 @@ class TrainerIndex:
 def load_trainer_index() -> TrainerIndex:
     return TrainerIndex(
         list(load_keyed_table_rows("creature_default_trainer", ("CreatureId", "TrainerId")).values()),
-        *(load_table_rows(name) for name in _TRAINER_TABLES[1:]),
+        load_table_rows("trainer_spell"),
+        # TrainerIndex reads two columns of creature_template and three of creature (150k rows): keep just those.
+        load_table_rows("creature_template", project=("entry", "npcflag")),
+        load_table_rows("creature", project=("id1", "id2", "id3")),
     )

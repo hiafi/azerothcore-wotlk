@@ -22,6 +22,7 @@
 #include "Util.h"
 #include <algorithm>
 #include <fstream>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 
@@ -224,6 +225,25 @@ bool SimProfile::Load(std::string const& path, Profile& out)
                 return false;
             }
         }
+        else if (key == "DummyStartHealthPct")
+        {
+            try
+            {
+                size_t consumed = 0;
+                float const pct = std::stof(value, &consumed);
+                // 0 is "off"; NaN fails the comparisons too
+                if (consumed != value.size() || !(pct >= 0.0f && pct <= 100.0f))
+                    throw std::invalid_argument("range");
+                parsed.DummyStartHealthPct = pct;
+            }
+            catch (std::exception const&)
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'DummyStartHealthPct' value '{}' is not a number "
+                    "from 0 to 100.", path, lineNo, value);
+                return false;
+            }
+        }
         else if (key == "TargetArmor")
         {
             try
@@ -254,6 +274,39 @@ bool SimProfile::Load(std::string const& path, Profile& out)
                     "mod-dpssim: SimProfile::Load() - '{}' line {}: 'PrePullBuffMs' value '{}' is not a number.",
                     path, lineNo, value);
                 return false;
+            }
+        }
+        else if (key == "AuraSampleIds")
+        {
+            std::istringstream ids(value);
+            std::string token;
+            while (std::getline(ids, token, ','))
+            {
+                std::string const spellId = Trim(token);
+                if (spellId.empty())
+                    continue;
+                try
+                {
+                    if (spellId.find('-') != std::string::npos)
+                        throw std::invalid_argument("negative");
+                    // The whole token must be a number that fits (stoul alone keeps a numeric prefix and wraps a
+                    // value of 2^32 or more)
+                    size_t consumed = 0;
+                    unsigned long const parsedId = std::stoul(spellId, &consumed);
+                    if (consumed != spellId.size() || parsedId > std::numeric_limits<uint32>::max())
+                        throw std::invalid_argument("malformed");
+                    uint32 const id = uint32(parsedId);
+                    if (std::find(parsed.AuraSampleIds.begin(), parsed.AuraSampleIds.end(), id) ==
+                        parsed.AuraSampleIds.end())
+                        parsed.AuraSampleIds.push_back(id);
+                }
+                catch (std::exception const&)
+                {
+                    LOG_ERROR("server.dpssim",
+                        "mod-dpssim: SimProfile::Load() - '{}' line {}: 'AuraSampleIds' entry '{}' is not a number.",
+                        path, lineNo, spellId);
+                    return false;
+                }
             }
         }
         else if (key == "PetCreatureEntry")

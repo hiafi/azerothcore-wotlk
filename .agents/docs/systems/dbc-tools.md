@@ -21,7 +21,7 @@ table's use, entry 70001). If you're touching `var/extractors/dbc/Item.dbc`: it 
 `client/MPQs/enUS/`) — earlier patches (`patch-enUS.MPQ`, `patch-enUS-2.MPQ`) also contain an
 `Item.dbc` but it's shadowed/stale, smaller, and not what the client actually ends up using.
 
-## Watch out: `generate.py` has no per-table scope flag
+## Watch out: `generate.py` has no per-table scope flag (a write run is always global)
 
 Running it regenerates the pending SQL for *every* table at once — `spell`/`talent`/`item`/etc. If
 `source/spells/*.csv` or `source/talents/*.yaml` have in-progress, not-yet-promoted edits sitting
@@ -30,6 +30,58 @@ in them (someone else's rework mid-flight), a run made for an unrelated reason (
 spell(s) [...]" line before treating the generated SQL as ready to apply — if it names IDs you
 didn't touch, hand-extract just the block(s) you actually meant to ship into their own migration
 file rather than applying (or discarding) the whole thing.
+
+`--check --class NAME` is the only scope flag, and it is read-only; see "generate.py speed" below.
+
+## generate.py speed: the SQL corpus, the disk cache, `--check --class`, the equivalence harness
+
+Plan and review notes: `.agents/plans/dbc-tools-generate-speed/` (local).
+
+- **Where the time went.** Not the DSL (1.4 s): replaying ~1,300 SQL files (`db_world` 229 MB, pending 56 MB, the base
+  dumps) in pure Python, once per table per loader. The fixes keep every loader's answer and printed warnings exactly
+  (measured on a host at load ~20: full run ~450-680 s -> ~165 s cold and ~37 s warm; `--check` ~220-330 s -> ~19 s; `--check --class X` ~9 s).
+- **`lib/sqlcorpus.py`** owns the files for a run. `generate.py` activates it; with no corpus active (tests, the other
+  tools) `read_text`/`mentions`/`checkpointed` are plain reads and plain replays. It gives each file once: its text
+  (`SqlText`, a `str`), its statement-head index (`INSERT`/`DELETE`/`UPDATE .. SET`/`SET @v`, scanned once and shared
+  by every table's replay through `sql_dump._next_statement`/`_next_match`; a search that starts inside a head-looking
+  string of a skipped statement goes back to the regex), and whether it mentions a table.
+- **`sql_dump` fast paths**, each with its reference kept: a plain-literal tuple is read by a regex and `_TokenValues`
+  (`_read_tuples(fast=False)` is the character parser it is tested against); `_KeyIndex` finds the rows a
+  composite-key `UPDATE ... WHERE` can touch by key instead of testing all 30k `creature_template` rows per statement
+  (an assignment to a key column, a `DELETE` or an unpinned `WHERE` falls back to the scan); `_fill_defaults` no
+  longer probes 234 columns per row. `lib/test_sql_dump_fast.py` runs every pair on random and edge inputs.
+  `lib/dbcfile.py` reads and packs with one `struct.Struct` per table (`lib/test_dbcfile_fast.py` keeps the old code).
+- **The disk cache** (`Corpus.checkpointed`): a loader's replay of the base dump plus the promoted `db_world` files is
+  pickled to `var/dbc-tools-cache/<code version>/snap-*.bin` with the ordered `(path, content hash)` list it was built
+  from, the loader code version and the parameters. It is used only when that list is a prefix of today's: files
+  appended since extend it, anything else (edited, removed, inserted-before-the-end file, new code, a truncated or
+  garbled snapshot) rebuilds from scratch. `pending_db_world` and module SQL change every run and are replayed on top
+  each time; whatever a replay printed (stdout, stderr) is stored and printed again. Files are compared by content
+  hash (sha256), not mtime. Code version = `generate.CACHE_CODE_FILES` plus `item_lib/*.py`: edit a loader or parser
+  and the next run is cold (the previous version's directory is kept, older ones are deleted). `--rebuild-cache`
+  ignores the cache and rewrites it, `--no-cache` skips the disk (the in-process memo stays). Tests:
+  `lib/test_sqlcorpus_cache.py`.
+- **A new cached loader** = a `step(state, path)` function plus `sqlcorpus.checkpointed(kind, params, stable, init,
+  step)`, then replay the volatile (pending, module) files on the returned state yourself. `params` must name
+  everything the replay depends on besides the files (columns, key columns, flags). A projection
+  (`load_table_rows(project=...)`) keeps a 150k-row dump out of the snapshot. `load_live_item_template_rows`
+  re-implements item-tools' replay loop on its private helpers: change `item_lib/overlay.py` and re-run the harness.
+- **`--check --class NAME`** (`generate._run_scoped_check`) loads `source/classes/NAME` only and runs the same lint
+  block (`_check_report`) over it, with the live state the DSL helpers need behind `lib/lazy.py`. It leaves out what
+  is not one class's: the CSV/YAML sources (except their ids, so a CSV-declared stock spell is not called undeclared),
+  `source/npcs`, `source/world`, cross-class duplicate ids, the shared holding-tab check, the potency sheets, and the
+  GCD-haste messages that do not start with the class's family name (the `EXCLUDE[..]`/policy ones are
+  `source/gcd_haste.py`'s, not the class's). `--class` with anything but `--check`, a missing, unknown or repeated
+  name, all exit 2 before loading (`lib/test_generate_class_flag.py`). When you add a lint to `_check_report` that
+  scans stock rows the class did not declare, scope it (see `undeclared_scan_class_set`) or the scoped run will report
+  other classes' stock spells.
+- **Equivalence harness** `apps/dbc-tools/bench/equivalence.py` (read its docstring): runs `generate.py` from two code
+  refs in throwaway sandboxes (copy of the code, symlinked frozen inputs, copied pending dir, hardlinked `db_world`,
+  no `local_config.py`, so nothing is deployed and nothing is written outside `var/dbc-tools-equiv/`) and diffs the
+  pending SQL, headers, potency sheets, every loose `.dbc`, the files inside the MPQ (smpq stamps times, so archive
+  bytes always differ) and stdout. Scenarios: `check`, `full`, `full2`, `mutate-full` (edits a pending file),
+  `promote-full` (adds the newest rev to `db_world`), `check-injected` + `check-class-X` (`scoped` subcommand). Run it
+  before and after any change to a loader.
 
 ## Watch out: never delete an earlier generated `pending_db_world/rev_*.sql`
 
@@ -307,7 +359,8 @@ accounted for:
 ## Paladin T1: `spell_category()` and `remove_spell_proc()`
 
 `spell_category(id, flags)` declares a `spellcategory_dbc` row (a `SPELL_TABLES` entry, so diff/prune
-like `custom_attr`); ids come from `ids.yaml`'s `spellcategory` block (1300-1309, stock max 1253).
+like `custom_attr`); ids come from `ids.yaml`'s `spellcategory` block (1300-1319, widened by Warrior T1; stock max
+1253).
 The same declared rows also go into the client patch: `generate.py` merges them over the stock
 `var/extractors/dbc/SpellCategory.dbc` (`dbcfmt.SPELLCATEGORY`, fmt `ni`, not in `ALL_TABLES`/
 `SECONDARY_TABLES` so the SQL is not emitted twice) into patch-Z.mpq, and stops with an error if
@@ -592,8 +645,31 @@ section has the syntax.
   `gameobjectdisplayinfo`, `summonproperties` and `spellcategory` are not reserved (not needed); the first stage that
   needs one adds its slice. `lib/test_id_blocks.py::scanned_used_ids` skips the `*_STOCK` constants in
   `patch_rogue_vfx_models.py` (they are stock ids below 90000) and a test pins every other rogue VFX constant to the
-  rogue slices (spellvisual 90250-90299, soundentries 90121-90140). The spellvisual block is full after the rogue:
-  the next class widens it.
+  rogue slices (spellvisual 90250-90299, soundentries 90121-90140). The spellvisual block filled up with the rogue;
+  Warrior T1 widened it to 90399 (see "Warrior T1" below).
+
+## Warrior T1: id blocks, family bits and the capstone test
+
+Tooling for the warrior rework (`.agents/plans/warrior-rework/warrior-rework.T1-HANDOFF.md`), data-neutral: no declared
+row changed, so there is nothing to generate or deploy.
+
+- **Ids.** `reservations: warrior` has the PLAN s4 slices (spell 204400-204899 and so on). The P0 spike's 204869-204899
+  (31 ids, not the 30 the PLAN first said), spell_group 1305 and creatures 300388-300389 are never reused; talents
+  60488-60489 and SkillLineAbility 30868-30869 were reserved for it but never declared (also never reuse).
+  `spellvisual` is widened to 90399 and `spellcategory` to 1319 (the warrior takes 90300-90339 and 1313-1319). The
+  September Protection ids (spells 200028-200066 minus the mage's two, talents 60003-60006) are outside the reservation
+  on purpose: `lib/test_id_blocks.py::WARRIOR_LEGACY` pins them exactly, so a new id outside the slices fails and a
+  retired legacy id tells the stage to shrink the set. The spellcategory lint (`check_undeclared_spell_categories`) runs
+  only in the full run, not `--check`: after touching the block call it directly on the declared population.
+- **Family bits.** `source/classes/warrior/_masks.py` (append-only) and `lint.WARRIOR_FAMILY_RULES` (carriers banned on
+  a custom family-4 spell: d0 b0 / b1 / b17 / b24, d1 b5 / b6, d2 b31; readers banned: d2 b31). The d0 b23 stance bit is
+  not banned (the rage-keep block keys on icon 139 and A112 831, not the bit). Role bits are targeted tests of the
+  warrior stages; the comment block above the rule row lists them with their causes.
+- **Capstone tooltips.** `lib/test_capstone_format.py` (`rank_problems`, `load_class_talents`, `capstone_problems`,
+  `EXPECTED_CAPSTONES`) and `source/classes/warrior/_tooltips.py::_desc`. Every spec stage lists its capstone talents by
+  name (derived from the doc's Tooltip lines when it has no "Capstones" line) and adds them to `EXPECTED_CAPSTONES`. The
+  checker is reusable: `capstone_problems("rogue", names)` works for any class whose package loads (druid and warlock
+  need `SpellShapeshiftForm.dbc`). Adding a class key is enough: `ExpectedCapstonesTest` runs every key.
 
 ## Watch out: one client DBC, one patch archive
 

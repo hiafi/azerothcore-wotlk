@@ -4,8 +4,13 @@ Warrior - spells that are never directly cast - proc/periodic-tick effects, trig
 Split from a single source/classes/warrior.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .warrior_...` below) resolve.
 """
 
-from lib.dsl import AuraType, Effect, EffectType, PowerType, School
+from lib.dsl import AuraType, Effect, EffectType, PowerType, School, SpellModOp
 from lib.dsl.registry import procs_on, spell
+
+from ._tooltips import _desc
+from .warrior_shared import RAGE_STANCE_MASTERY_POINTS
+
+_CR_COOLDOWN_HASTE = 1 << 22  # aura 306 MOD_CUSTOM_STAT_PCT misc_value = 1 << CombatRating.COOLDOWN_HASTE (paladin Enduring Light precedent)
 
 
 defiance_12303 = spell(
@@ -84,15 +89,19 @@ stance_mastery_12678 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        # W0a A2 (D10): the stance-swap clamp (SpellAuraEffects.cpp, icon 139) keeps (base points + 1) * 10 rage, so
+        # 149 keeps 1,500, above any max rage (Endless Rage's 120). Value from warrior_shared's const (A4's test pins it).
+        Effect(type=EffectType.APPLY_AURA, base_points=RAGE_STANCE_MASTERY_POINTS['value'], implicit_target_a=1,
+               apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=139,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You retain up to $s1 of your rage points when you change stances.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Passive', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 20, 'SpellPriority': 50},
+    notes='pulled from existing data; W0a A2 (D10): base points 9 -> 149, tooltip from the shared doc, visible passive '
+          '(Attributes 0x50, no hidden bit), auto-learned by the SkillLineAbility override in warrior_shared.py',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You keep all of your rage when you change stances.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Passive', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 20, 'SpellPriority': 50},
 )
 
 
-flurry_12966 = spell(
+flurry_buff_r1_12966 = spell(
     id=12966,
     name='Flurry',
     school=School.NORMAL,
@@ -105,11 +114,11 @@ flurry_12966 = spell(
     range_yards=0.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, points_per_level=0.3389830508474576, implicit_target_a=1, apply_aura=138),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=138),
     ],
     spell_icon_id=108,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attack speed increased by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack speed by $12966s1% for your next 3 swings after dealing a melee critical strike.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcCharges': 3, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 12379},
+    notes='pulled from existing data; warrior-rework S3 D28: 8% (bp 7) with RealPointsPerLevel 0 and MaxLevel 0 (stock rank 1 scaled to ~25% at 60); variable renamed so SPELL_FLURRY frees up for the talent rank 12319; aura text per doc',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attack speed increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack speed by 8% for your next 3 swings after dealing a melee critical strike.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcCharges': 3, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 12379},
 )
 
 
@@ -206,7 +215,7 @@ victory_rush_34428 = spell(
         'ap_potency formula instead of a hard-coded percent multiply; the ApplyPct(damage, AP) line '
         'is now gated behind SpellPotency::HasRow() (SpellEffects.cpp).'
     ),
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 6, 'CasterAuraState': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly attack the target causing {pot1} damage.  Can only be used within $32216d after you kill an enemy that yields experience or honor.  Damage is based on your attack power.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 327680, 'SpellClassMask_2': 256, 'SpellClassSet': 4, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 372, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 8, 'CasterAuraState': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly attack the target for {pot1.avg} and heal yourself for $204409s1% of your maximum health. Usable for $32216d after an enemy you recently struck dies.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 0, 'SpellClassMask_2': 256, 'SpellClassMask_3': 8, 'SpellClassSet': 4, 'SpellLevel': 8, 'SpellPriority': 50, 'SpellVisualID_1': 372, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -231,8 +240,8 @@ storm_s_bulwark_200028 = spell(
         ),
     ],
     spell_icon_id=1941,
-    notes="New for the Protection Warrior rework (docs/prot_warrior_rework.md, New Spells/Auras: Storm's Bulwark). Absorbs damage of any school (misc_value 127 = all schools, SPELL_AURA_SCHOOL_ABSORB). Multiple sources stack additively into one pool capped at 50% of max HP and refresh the 15s duration via the GrantStormsBulwark() helper in spell_warrior.cpp; base_points is always 0 here since the real amount is supplied per-cast as custom basepoints. Self-cast only (implicit_target_a 1), so the null range_yards is safe (see docs/dbc-build-pipeline.md's range_yards gotcha for non-self casts). Which talents grant it (Incite, Reprisal, the Storm's Bulwark talent, Shockwave) and their mastery scaling are phase 2/3 work; this spell is only the shared absorb pool they all feed.",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Absorbs damage. All sources of Storm's Bulwark stack and refresh the duration. You can have up to 50% of your maximum health in Storm's Bulwark.", 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 4, 'SpellPriority': 50, 'StartRecoveryCategory': 133},
+    notes="New for the Protection Warrior rework (docs/prot_warrior_rework.md, New Spells/Auras: Storm's Bulwark). Absorbs damage of any school (misc_value 127 = all schools, SPELL_AURA_SCHOOL_ABSORB). Multiple sources stack additively into one pool capped at 30% of max HP (S1 D5: Mastery raises amounts and the cap only with Storm's Bulwark's capstone) and refresh the 15s duration via the GrantStormsBulwark() helper in spell_warrior.cpp; base_points is always 0 here since the real amount is supplied per-cast as custom basepoints. Self-cast only (implicit_target_a 1), so the null range_yards is safe (see docs/dbc-build-pipeline.md's range_yards gotcha for non-self casts). Which talents grant it (Incite, Reprisal, the Storm's Bulwark talent, Shockwave) and their mastery scaling are phase 2/3 work; this spell is only the shared absorb pool they all feed.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Absorbs damage.", 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 4, 'SpellPriority': 50, 'StartRecoveryCategory': 133},
 )
 
 
@@ -247,11 +256,11 @@ concussed_200029 = spell(
     range_yards=5.0,
     duration_ms=10000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-15, implicit_target_a=6, apply_aura=79, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=6, apply_aura=79, misc_value=127),
     ],
     spell_icon_id=2112,
-    notes='New for the Protection Warrior rework (docs/prot_warrior_rework.md, New Spells/Auras: Concussed). Target deals 15% reduced damage of all types (misc_value 127 = all schools, SPELL_AURA_MOD_DAMAGE_PERCENT_DONE) for 10s. range_yards set explicitly to 5.0 (melee range) since this is cast on an enemy target - leaving it null maps to RangeIndex 0, which is not unlimited and silently fails non-self casts (see docs/dbc-build-pipeline.md). Applied by Concussion Blow (Row 5 talent) to targets that cannot be stunned; wiring that branch into spell_warr_concussion_blow is phase 3 work - this spell is just the debuff itself.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Deals 15% reduced damage of all types.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals 15% reduced damage of all types for $d.', 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 4, 'SpellPriority': 50, 'StartRecoveryCategory': 133},
+    notes='New for the Protection Warrior rework (docs/prot_warrior_rework.md, New Spells/Auras: Concussed). Target deals 15% reduced damage of all types (bp -16 = -15%, S1 D24; was bp -15 = 14%; misc_value 127 = all schools, SPELL_AURA_MOD_DAMAGE_PERCENT_DONE) for 10s. range_yards set explicitly to 5.0 (melee range) since this is cast on an enemy target - leaving it null maps to RangeIndex 0, which is not unlimited and silently fails non-self casts (see docs/dbc-build-pipeline.md). Applied by Concussion Blow (Row 5 talent) to targets that cannot be stunned; wiring that branch into spell_warr_concussion_blow is phase 3 work - this spell is just the debuff itself.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Dealing less damage.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing 15% less damage.', 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 4, 'SpellPriority': 50, 'StartRecoveryCategory': 133},
 )
 
 
@@ -267,25 +276,21 @@ bloodstorm_200030 = spell(
     range_yards=10.0,
     duration_ms=9000,
     effects=[
-        Effect(
-            type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000,
-            potency_excluded="percent-of-other-damage: spell_warr_thunder_clap::HandleDamageEffect "
-            "computes the per-tick amount as a percentage (Blood and Thunder's talent rank) of "
-            "Thunder Clap's own real hit damage (CalculatePct(GetHitDamage(), ...)/3), then pushes "
-            "it in via CastCustomSpell - base_points is always 0 on the real cast (see this "
-            "spell's own notes=), so the DBC fields are dead per D2/docs/potency-system.md's 'Out "
-            "of scope by design' (same category as Ignite/Deep Wounds/Conflagrate).",
-        ),
+        # S1 D7 (Rogue Doomblade holder shape): the visible aura only carries the 3 s cadence. PERIODIC_DUMMY, no
+        # spell-haste-periodic attribute (AttributesEx5 0x2000 unset), so the cadence is a fixed 3000 ms. Each tick's
+        # damage is cast by spell_warr_bloodstorm as 204775 (A2's warrior_protection.py) from the per-tick amount
+        # Warrior::ApplyPercentBleed stored in the target's CustomData.
+        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=3000),
     ],
     spell_icon_id=2774,
-    notes="New for the Protection Warrior rework (docs/prot_warrior_rework.md, New Spells/Auras: Bloodstorm). Bleed DoT dealing 15/30% of Thunder Clap's damage over 9s, ticking every 3s (matches Rend's tick cadence). base_points is always 0 here since the real per-tick amount is supplied per-cast as custom basepoints once the total is split across ticks. A separate effect from Rend (distinct spell id, no CumulativeAura) and stacks alongside it; not applied or refreshed by the Thunderstruck echo. range_yards set explicitly to 10.0 (covers Thunder Clap's own 8yd radius) since this is cast on an enemy target - leaving it null maps to RangeIndex 0, which silently fails non-self casts (see docs/dbc-build-pipeline.md). Applying it from Thunder Clap when Blood and Thunder is talented, and excluding the Thunderstruck echo cast, is phase 3 work - this spell is just the DoT itself.",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': "Bleeding for a percentage of Thunder Clap's damage.", 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Bleeding for a percentage of Thunder Clap's damage over $d.", 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 4, 'SpellPriority': 50, 'StartRecoveryCategory': 133},
+    notes="New for the Protection Warrior rework (docs/prot_warrior_rework.md, New Spells/Auras: Bloodstorm). S1 D7: percent-of-damage shape (Rogue Doomblade precedent): this spell is the visible holder only (PERIODIC_DUMMY 3000 ms, 9 s = DurationIndex 105, aura text 'Bleeding.', stock Rend visual 372, no spell-haste-periodic attribute so the cadence is fixed); spell_warr_bloodstorm casts the tick spell 204775 each period with 15/30% of Thunder Clap's final hit split over the 3 ticks. A new Thunder Clap replaces the bleed (Warrior::ApplyPercentBleed). Separate from Rend (distinct spell id) and stacks alongside it; not applied or refreshed by the Thunderstruck echo. range_yards set explicitly to 10.0 since this is cast on an enemy target - leaving it null maps to RangeIndex 0, which silently fails non-self casts (see docs/dbc-build-pipeline.md).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Bleeding.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Bleeding for Physical damage every 3 sec.', 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 4, 'SpellPriority': 50, 'SpellVisualID_1': 372, 'StartRecoveryCategory': 133},
 )
 
 
-improved_heroic_strike_12282 = spell(
+heavy_blows_12282 = spell(
     id=12282,
-    name='Improved Heroic Strike',
+    name='Heavy Blows',
     school=School.NORMAL,
     attributes=262608,
     cast_time_ms=0,
@@ -295,11 +300,11 @@ improved_heroic_strike_12282 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=int(SpellModOp.DAMAGE)),
     ],
     spell_icon_id=856,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cost of your Heroic Strike ability by $/10;s1 rage point.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Heroic Strike and Slam by 5%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2097216, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -315,11 +320,12 @@ improved_charge_12285 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=107, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=107, misc_value=int(SpellModOp.ALL_EFFECTS)),
+        Effect(type=EffectType.APPLY_AURA, base_points=499, implicit_target_a=1, apply_aura=107, misc_value=int(SpellModOp.DURATION)),
     ],
     spell_icon_id=457,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount of rage generated by your Charge ability by $/10;s1.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the rage generated by your Charge by 5 and the duration of its stun by 0.5 sec.', 'The range of your Charge is increased by 5 yards.', last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EffectSpellClassMaskB_1': 16777216, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -335,11 +341,12 @@ improved_rend_12286 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=int(SpellModOp.DOT)),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=int(SpellModOp.CRITICAL_CHANCE)),
     ],
     spell_icon_id=245,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bleed damage done by your Rend ability by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bleed damage done by your Rend by 10% and its critical strike chance by 3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 32, 'EffectSpellClassMaskB_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -355,12 +362,13 @@ improved_thunder_clap_12287 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=107, misc_value=6),
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=107, misc_value=12),
     ],
     spell_icon_id=42,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Thunder Clap rank 1 - dropped slow-% effect, rage cost/damage already correct',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cost of your Thunder Clap ability by 1 rage point and increases its damage by 10%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 128, 'EffectSpellClassMaskB_1': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D18 (docs/reworks/warrior-protection-rework.md): Improved Thunder Clap rank 1. The flat rage cost cut is gone. e0 SPELLMOD_RADIUS (op 6) flat +1 yd on Thunder Clap (mask e0.d0 0x80; the RADIUS flat is added after the radius cap), e1 SPELLMOD_DAMAGE +10% (mask e1.d0 0x80, kept), e2 SPELLMOD_EFFECT2 (op 12) flat -4 on Thunder Clap's slow, which is effect index 1 (aura 138, mask e2.d0 0x80). The Thunder Clap echo 200065 shares d0 0x80, so it gets all three. 0-verify S1 item 3: no other EFFECT2 reader on d0 0x80, RADIUS only Glyph of Thunder Clap (they add).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Thunder Clap by 10%, increases its radius by 1 yard, and increases the time between the targets' attacks by an additional 4%.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 128, 'EffectSpellClassMaskB_1': 128, 'EffectSpellClassMaskC_1': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -381,7 +389,7 @@ improved_hamstring_12289 = spell(
     ],
     spell_icon_id=23,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Hamstring ability a $h% chance to immobilize the target for $23694d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Hamstring ability a $h% chance to immobilize the target for $23694d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -398,11 +406,11 @@ improved_overpower_12290 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=107, misc_value=int(SpellModOp.CRITICAL_CHANCE)),
     ],
     spell_icon_id=1464,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Overpower ability by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4, 'EffectSpellClassMaskA_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Overpower by 20%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4, 'EffectSpellClassMaskA_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -441,11 +449,11 @@ improved_bloodrage_12301 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=108, misc_value=3),
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=86,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Bloodrage rank 1 - added Def-Stance dmg reduction',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the rage generated by your Bloodrage ability by 25%. While in Defensive Stance, reduces damage taken by 2%.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 131072, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D19: Improved Bloodrage rank 1. e0 SPELLMOD_EFFECT1 (op 3) +25% rage on Bloodrage (mask e0.d0 0x100, kept). e1 was the permanent Defensive-Stance-only physical damage taken aura (87, ShapeshiftMask 131072); it is now a DUMMY carrier 2 (bp 1) read by the dispatcher, which casts the Improved Bloodrage buff 204774 when Bloodrage is cast in Defensive Stance. ShapeshiftMask 0.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the rage generated by your Bloodrage ability by 25%. While in Defensive Stance your Bloodrage reduces your damage taken by 2%.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 0, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -461,12 +469,12 @@ puncture_12308 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=280),
     ],
     spell_icon_id=565,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Puncture rank - rage cost unchanged, retargeted to Devastate only, added armor-pen. Fixed 2026-09-04: EffectSpellClassMaskA_1 (dword 1) never matched Devastate, whose own SpellClassMask lives in dword 2 (SpellClassMask_2=64, confirmed against 200045 Devastate: Extra Target\'s own correctly-scoped row) - the classmask-dword gotcha from docs/dbc-build-pipeline.md Bug 3"',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the rage cost of your Devastate ability by 1. Your attacks ignore an additional 4% of your target's armor.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D18: Puncture rank 1. The rage cost cut is gone: e0 is now SPELLMOD_DAMAGE (aura 108 op 0) +5% on Devastate (mask e0.d1 0x40: the classmask-dword gotcha of 2026-09-04 stays fixed; d0 0x40 would be Heroic Strike), e1 armor ignore 4% kept.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Devastate by 5%. Your attacks ignore an additional 4% of your target's armor.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -487,13 +495,13 @@ gag_order_12311 = spell(
     ],
     spell_icon_id=280,
     notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Gag Order rank 1 - values already matched, description only',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Shield Bash and Heroic Throw abilities a 50% chance to silence the target for 3 sec and increases the damage of your Shield Slam ability by 5%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 50, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Shield Bash and Heroic Throw a 50% chance to silence the target for 3 sec. Increases the damage of your Shield Slam ability by 5%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 50, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
-improved_disciplines_12312 = spell(
+the_wall_12312 = spell(
     id=12312,
-    name='Improved Disciplines',
+    name='The Wall',
     school=School.NORMAL,
     attributes=262352,
     cast_time_ms=0,
@@ -503,11 +511,11 @@ improved_disciplines_12312 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-20001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-30001, implicit_target_a=1, apply_aura=107, misc_value=11),
     ],
     spell_icon_id=281,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Disciplines rank 1 - 20s',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Shield Wall, Retaliation and Recklessness abilities by 20 secs.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 8208, 'EffectSpellClassMaskA_2': 8, 'EffectSpellClassMaskB_1': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D14: The Wall rank 1 (was Improved Disciplines). SPELLMOD_COOLDOWN (op 11) flat -30 s on Shield Wall only (mask e0.d0 0x2000; the Recklessness d0 0x10 and Retaliation d1 0x8 bits and the stale e1 mask B_1 0x2000 are gone). Capstone (rank 2): spell_warr_shield_slam takes 3 s off Shield Wall via Warrior::ReduceCooldown.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Reduces the cooldown of your Shield Wall by 30 sec.', 'Your Shield Slam reduces the remaining cooldown of Shield Wall by 3 sec.', last=False), 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -545,11 +553,11 @@ commanding_presence_12318 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2014,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the melee attack power bonus of your Battle Shout and the health bonus of your Commanding Shout by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 65536, 'EffectSpellClassMaskA_2': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; warrior-rework S3 D30: DUMMY rank marker (rank 1 half, rank 2 full), the stock ALL_EFFECTS shout mod removed; the shouts carry the Strength / Stamina effect (spell_warr_commanding_presence)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Battle Shout also increases Strength, and your Commanding Shout also increases Stamina, of party and raid members. Rank 1 gives half the bonus.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -608,11 +616,11 @@ improved_cleave_12329 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=0),
     ],
     spell_icon_id=277,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bonus damage done by your Cleave ability by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4194304, 'EffectSpellClassMaskA_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; W0a: SPELLMOD_DAMAGE 5/10/15% total Cleave damage (Fury Q17, PLAN 1E); warrior-rework S3 D23: tooltip with the capstone clause',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the damage done by your Cleave ability by 5%.', 'Your Cleave strikes 1 additional target.', last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4194304, 'EffectSpellClassMaskA_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -648,17 +656,18 @@ improved_rend_12658 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=int(SpellModOp.DOT)),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=int(SpellModOp.CRITICAL_CHANCE)),
     ],
     spell_icon_id=245,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bleed damage done by your Rend ability by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bleed damage done by your Rend by 20% and its critical strike chance by 6%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 32, 'EffectSpellClassMaskB_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
-improved_heroic_strike_12663 = spell(
+heavy_blows_12663 = spell(
     id=12663,
-    name='Improved Heroic Strike',
+    name='Heavy Blows',
     school=School.NORMAL,
     attributes=262608,
     cast_time_ms=0,
@@ -669,17 +678,17 @@ improved_heroic_strike_12663 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=int(SpellModOp.DAMAGE)),
     ],
     spell_icon_id=856,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cost of your Heroic Strike ability by $/10;s1 rage points.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 64, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Heroic Strike and Slam by 10%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 64, 'EffectSpellClassMaskA_1': 2097216, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
-improved_heroic_strike_12664 = spell(
+heavy_blows_12664 = spell(
     id=12664,
-    name='Improved Heroic Strike',
+    name='Heavy Blows',
     school=School.NORMAL,
     attributes=262608,
     cast_time_ms=0,
@@ -690,11 +699,11 @@ improved_heroic_strike_12664 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=int(SpellModOp.DAMAGE)),
     ],
     spell_icon_id=856,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cost of your Heroic Strike ability by $/10;s1 rage points.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 64, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Heroic Strike and Slam by 15%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 64, 'EffectSpellClassMaskA_1': 2097216, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -710,12 +719,13 @@ improved_thunder_clap_12665 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=6),
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=-8, implicit_target_a=1, apply_aura=107, misc_value=12),
     ],
     spell_icon_id=42,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Thunder Clap rank 2 - dropped slow-% effect',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cost of your Thunder Clap ability by 2 rage points and increases its damage by 20%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 128, 'EffectSpellClassMaskB_1': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D18 (docs/reworks/warrior-protection-rework.md): Improved Thunder Clap rank 2. The flat rage cost cut is gone. e0 SPELLMOD_RADIUS (op 6) flat +2 yd on Thunder Clap (mask e0.d0 0x80; the RADIUS flat is added after the radius cap), e1 SPELLMOD_DAMAGE +20% (mask e1.d0 0x80, kept), e2 SPELLMOD_EFFECT2 (op 12) flat -7 on Thunder Clap's slow, which is effect index 1 (aura 138, mask e2.d0 0x80). The Thunder Clap echo 200065 shares d0 0x80, so it gets all three. 0-verify S1 item 3: no other EFFECT2 reader on d0 0x80, RADIUS only Glyph of Thunder Clap (they add).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Thunder Clap by 20%, increases its radius by 2 yards, and increases the time between the targets' attacks by an additional 7%.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 128, 'EffectSpellClassMaskB_1': 128, 'EffectSpellClassMaskC_1': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -731,12 +741,13 @@ improved_thunder_clap_12666 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=6),
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=107, misc_value=12),
     ],
     spell_icon_id=42,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Thunder Clap rank 3 - dropped slow-% effect. Fixed 2026-09-04: base_points was -41 (a 4-rage reduction) instead of -31 (3 rage',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cost of your Thunder Clap ability by 3 rage points and increases its damage by 30%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 128, 'EffectSpellClassMaskB_1': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D18 (docs/reworks/warrior-protection-rework.md): Improved Thunder Clap rank 3. The flat rage cost cut is gone. e0 SPELLMOD_RADIUS (op 6) flat +3 yd on Thunder Clap (mask e0.d0 0x80; the RADIUS flat is added after the radius cap), e1 SPELLMOD_DAMAGE +30% (mask e1.d0 0x80, kept), e2 SPELLMOD_EFFECT2 (op 12) flat -10 on Thunder Clap's slow, which is effect index 1 (aura 138, mask e2.d0 0x80). The Thunder Clap echo 200065 shares d0 0x80, so it gets all three. 0-verify S1 item 3: no other EFFECT2 reader on d0 0x80, RADIUS only Glyph of Thunder Clap (they add).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Thunder Clap by 30%, increases its radius by 3 yards, and increases the time between the targets' attacks by an additional 10%.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 128, 'EffectSpellClassMaskB_1': 128, 'EffectSpellClassMaskC_1': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -757,7 +768,7 @@ improved_hamstring_12668 = spell(
     ],
     spell_icon_id=23,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Hamstring ability a $h% chance to immobilize the target for $23694d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Hamstring ability a $h% chance to immobilize the target for $23694d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -817,11 +828,13 @@ improved_charge_12697 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=107, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=107, misc_value=int(SpellModOp.ALL_EFFECTS)),
+        Effect(type=EffectType.APPLY_AURA, base_points=999, implicit_target_a=1, apply_aura=107, misc_value=int(SpellModOp.DURATION)),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=int(SpellModOp.RANGE)),
     ],
     spell_icon_id=457,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount of rage generated by your Charge ability by $/10;s1.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the rage generated by your Charge by 10 and the duration of its stun by 1 sec.', 'The range of your Charge is increased by 5 yards.', last=True), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EffectSpellClassMaskB_1': 16777216, 'EffectSpellClassMaskC_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -841,13 +854,13 @@ improved_revenge_12797 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY, trigger_spell=200045),
     ],
     spell_icon_id=562,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Revenge rank 1 - now unconditional (was chance-based) Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases damage of your Revenge ability by 15%. After using Revenge your next Devastate within 8 sec will strike an additional target.\n\n|cFF9D9D9DCapstone Bonus: Your Revenge strikes 2 additional targets.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 25, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D12/D25: Improved Revenge rank 1: Revenge damage +15% (e0 mask d0 0x400), Devastate extra target buff 200045 via the cast-phase proc row (spell_phase_mask CAST: once per Revenge cast, S1 D12), capstone (rank 2): Revenge +2 targets (e2 JUMP_TARGETS, mask d0 0x400). The tooltip is built with _desc (capstone format, grey below the last rank).',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases damage of your Revenge ability by 15%. After using Revenge your next Devastate within 8 sec will strike an additional target.', 'Your Revenge strikes 2 additional targets.', last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 25, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 procs_on(
     improved_revenge_12797, proc_flags=0x10, family_name=4, family_mask=(0x400, 0, 0), spell_type_mask=1,
-    spell_phase_mask=2, hit_mask=0, attributes_mask=0, disable_effects_mask=0b101, chance=100.0, cooldown_ms=0,
-)
+    spell_phase_mask=1, hit_mask=0, attributes_mask=0, disable_effects_mask=0b101, chance=100.0, cooldown_ms=0,
+)  # S1 D12: spell_phase_mask 1 = CAST (2 was HIT): one 200045 per Revenge cast, not per target
 
 
 improved_revenge_12799 = spell(
@@ -867,18 +880,18 @@ improved_revenge_12799 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=17),
     ],
     spell_icon_id=562,
-    notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Revenge rank 2 + capstone (unconditional +2 Revenge targets) - PLAYTEST, novel combo of proven primitives Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks, normal color on the final rank), separated from the base text by two newlines, matching the pattern already used by the Frost Mage rework's pulled-from-Blizzard capstone talents (e.g. Frostbite).",
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases damage of your Revenge ability by 30%. After using Revenge your next Devastate within 8 sec will strike an additional target.\n\nCapstone Bonus: Your Revenge strikes 2 additional targets.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EffectSpellClassMaskB_1': 1024, 'EffectSpellClassMaskC_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 50, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D12/D25: Improved Revenge rank 2: Revenge damage +30% (e0 mask d0 0x400), Devastate extra target buff 200045 via the cast-phase proc row (spell_phase_mask CAST: once per Revenge cast, S1 D12), capstone (rank 2): Revenge +2 targets (e2 JUMP_TARGETS, mask d0 0x400). The tooltip is built with _desc (capstone format, grey below the last rank).',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases damage of your Revenge ability by 30%. After using Revenge your next Devastate within 8 sec will strike an additional target.', 'Your Revenge strikes 2 additional targets.', last=True), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EffectSpellClassMaskB_1': 1024, 'EffectSpellClassMaskC_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 50, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 procs_on(
     improved_revenge_12799, proc_flags=0x10, family_name=4, family_mask=(0x400, 0, 0), spell_type_mask=1,
-    spell_phase_mask=2, hit_mask=0, attributes_mask=0, disable_effects_mask=0b101, chance=100.0, cooldown_ms=0,
-)
+    spell_phase_mask=1, hit_mask=0, attributes_mask=0, disable_effects_mask=0b101, chance=100.0, cooldown_ms=0,
+)  # S1 D12: spell_phase_mask 1 = CAST (2 was HIT): one 200045 per Revenge cast, not per target
 
 
-improved_disciplines_12803 = spell(
+the_wall_12803 = spell(
     id=12803,
-    name='Improved Disciplines',
+    name='The Wall',
     school=School.NORMAL,
     attributes=262352,
     cast_time_ms=0,
@@ -888,11 +901,11 @@ improved_disciplines_12803 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-40001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-60001, implicit_target_a=1, apply_aura=107, misc_value=11),
     ],
     spell_icon_id=281,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Disciplines rank 2 - 40s',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Shield Wall, Retaliation and Recklessness abilities by 40 secs.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 8208, 'EffectSpellClassMaskA_2': 8, 'EffectSpellClassMaskB_1': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D14: The Wall rank 2 (was Improved Disciplines). SPELLMOD_COOLDOWN (op 11) flat -60 s on Shield Wall only (mask e0.d0 0x2000; the Recklessness d0 0x10 and Retaliation d1 0x8 bits and the stale e1 mask B_1 0x2000 are gone). Capstone (rank 2): spell_warr_shield_slam takes 3 s off Shield Wall via Warrior::ReduceCooldown.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Reduces the cooldown of your Shield Wall by 60 sec.', 'Your Shield Slam reduces the remaining cooldown of Shield Wall by 3 sec.', last=True), 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -929,12 +942,12 @@ puncture_12810 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=280),
     ],
     spell_icon_id=565,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Puncture rank - rage cost unchanged, retargeted to Devastate only, added armor-pen. Fixed 2026-09-04: EffectSpellClassMaskA_1 (dword 1) never matched Devastate, whose own SpellClassMask lives in dword 2 (SpellClassMask_2=64, confirmed against 200045 Devastate: Extra Target\'s own correctly-scoped row) - the classmask-dword gotcha from docs/dbc-build-pipeline.md Bug 3"',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the rage cost of your Devastate ability by 2. Your attacks ignore an additional 8% of your target's armor.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D18: Puncture rank 2. The rage cost cut is gone: e0 is now SPELLMOD_DAMAGE (aura 108 op 0) +10% on Devastate (mask e0.d1 0x40: the classmask-dword gotcha of 2026-09-04 stays fixed; d0 0x40 would be Heroic Strike), e1 armor ignore 8% kept.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Devastate by 10%. Your attacks ignore an additional 8% of your target's armor.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -950,12 +963,12 @@ puncture_12811 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=280),
     ],
     spell_icon_id=565,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Puncture rank - rage cost unchanged, retargeted to Devastate only, added armor-pen. Fixed 2026-09-04: EffectSpellClassMaskA_1 (dword 1) never matched Devastate, whose own SpellClassMask lives in dword 2 (SpellClassMask_2=64, confirmed against 200045 Devastate: Extra Target\'s own correctly-scoped row) - the classmask-dword gotcha from docs/dbc-build-pipeline.md Bug 3"',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the rage cost of your Devastate ability by 3. Your attacks ignore an additional 12% of your target's armor.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D18: Puncture rank 3. The rage cost cut is gone: e0 is now SPELLMOD_DAMAGE (aura 108 op 0) +15% on Devastate (mask e0.d1 0x40: the classmask-dword gotcha of 2026-09-04 stays fixed; d0 0x40 would be Heroic Strike), e1 armor ignore 12% kept.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Devastate by 15%. Your attacks ignore an additional 12% of your target's armor.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -972,11 +985,11 @@ improved_bloodrage_12818 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=108, misc_value=3),
-        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=86,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Bloodrage rank 2 - added Def-Stance dmg reduction',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the rage generated by your Bloodrage ability by 50%. While in Defensive Stance, reduces damage taken by 4%.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 131072, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D19: Improved Bloodrage rank 2. e0 SPELLMOD_EFFECT1 (op 3) +50% rage on Bloodrage (mask e0.d0 0x100, kept). e1 was the permanent Defensive-Stance-only physical damage taken aura (87, ShapeshiftMask 131072); it is now a DUMMY carrier 4 (bp 3) read by the dispatcher, which casts the Improved Bloodrage buff 204774 when Bloodrage is cast in Defensive Stance. ShapeshiftMask 0.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the rage generated by your Bloodrage ability by 50%. While in Defensive Stance your Bloodrage reduces your damage taken by 4%.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 0, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -993,10 +1006,11 @@ deep_wounds_12834 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=12162),
+        Effect(type=EffectType.APPLY_AURA, base_points=10, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=243,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 2, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your critical strikes cause the opponent to bleed, dealing 16% of your melee weapon's average damage over $12721d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69972, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 2, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your melee critical strikes cause the target to bleed for 11% of your melee weapon's average damage over 6 sec.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69972, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1034,10 +1048,11 @@ deep_wounds_12849 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=12850),
+        Effect(type=EffectType.APPLY_AURA, base_points=21, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=243,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 2, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your critical strikes cause the opponent to bleed, dealing 32% of your melee weapon's average damage over $12721d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69972, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 2, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your melee critical strikes cause the target to bleed for 22% of your melee weapon's average damage over 6 sec.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69972, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1054,11 +1069,11 @@ commanding_presence_12857 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2014,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the melee attack power bonus of your Battle Shout and the health bonus of your Commanding Shout by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 65536, 'EffectSpellClassMaskA_2': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; warrior-rework S3 D30: DUMMY rank marker (rank 1 half, rank 2 full), the stock ALL_EFFECTS shout mod removed; the shouts carry the Strength / Stamina effect (spell_warr_commanding_presence)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Battle Shout also increases Strength, and your Commanding Shout also increases Stamina, of party and raid members. Rank 1 gives half the bonus.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1158,10 +1173,11 @@ deep_wounds_12867 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=12868),
+        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=243,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108866, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your critical strikes cause the opponent to bleed, dealing 48% of your melee weapon's average damage over $12721d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69972, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108866, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your melee critical strikes cause the target to bleed for 33% of your melee weapon's average damage over 6 sec.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69972, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1262,11 +1278,11 @@ improved_cleave_12950 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=79, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=0),
     ],
     spell_icon_id=277,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bonus damage done by your Cleave ability by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4194304, 'EffectSpellClassMaskA_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; W0a: SPELLMOD_DAMAGE 5/10/15% total Cleave damage (Fury Q17, PLAN 1E); warrior-rework S3 D23: tooltip with the capstone clause',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the damage done by your Cleave ability by 10%.', 'Your Cleave strikes 1 additional target.', last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4194304, 'EffectSpellClassMaskA_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1287,7 +1303,7 @@ gag_order_12958 = spell(
     ],
     spell_icon_id=280,
     notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Gag Order rank 2 - 100% silence chance, 10% Shield Slam dmg',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Shield Bash and Heroic Throw abilities a 100% chance to silence the target for 3 sec and increases the damage of your Shield Slam ability by 10%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Shield Bash and Heroic Throw a 100% chance to silence the target for 3 sec. Increases the damage of your Shield Slam ability by 10%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1304,11 +1320,11 @@ improved_overpower_12963 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=107, misc_value=int(SpellModOp.CRITICAL_CHANCE)),
     ],
     spell_icon_id=1464,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Overpower ability by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4, 'EffectSpellClassMaskA_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Overpower by 40%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4, 'EffectSpellClassMaskA_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1327,8 +1343,8 @@ impale_16493 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=15),
     ],
     spell_icon_id=105,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your abilities by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3999288558, 'EffectSpellClassMaskA_2': 51013, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
+    notes='pulled from existing data; warrior-rework S3 D35: d2 mask 0xB -> 0xF (adds Rampage b2: the strikes are abilities)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Warrior abilities by 10%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 643845358, 'EffectSpellClassMaskA_2': 51013, 'EffectSpellClassMaskA_3': 15, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
 )
 
 
@@ -1347,8 +1363,8 @@ impale_16494 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=15),
     ],
     spell_icon_id=105,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your abilities by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3999288558, 'EffectSpellClassMaskA_2': 51013, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
+    notes='pulled from existing data; warrior-rework S3 D35: d2 mask 0xB -> 0xF (adds Rampage b2: the strikes are abilities)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Warrior abilities by 20%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 643845358, 'EffectSpellClassMaskA_2': 51013, 'EffectSpellClassMaskA_3': 15, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
 )
 
 
@@ -1365,11 +1381,12 @@ improved_cleave_20496 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=119, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=int(SpellModOp.JUMP_TARGETS)),
     ],
     spell_icon_id=277,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bonus damage done by your Cleave ability by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4194304, 'EffectSpellClassMaskA_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; W0a: SPELLMOD_DAMAGE 5/10/15% total Cleave damage (Fury Q17, PLAN 1E); warrior-rework S3 D23: new e1 ADD_FLAT_MODIFIER JUMP_TARGETS bp 0 (+1) on Cleave (d0 0x400000, EffectSpellClassMaskB_1), the Glyph of Cleaving shape: Cleave hits 3',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the damage done by your Cleave ability by 15%.', 'Your Cleave strikes 1 additional target.', last=True), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4194304, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskB_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1390,7 +1407,7 @@ improved_berserker_rage_20500 = spell(
     ],
     spell_icon_id=1465,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The Berserker Rage ability will generate $/10;23690s1 rage when used.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 4},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The Berserker Rage ability will generate $/10;23690s1 rage when used.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4},
 )
 
 
@@ -1411,7 +1428,7 @@ improved_berserker_rage_20501 = spell(
     ],
     spell_icon_id=1465,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The Berserker Rage ability will generate $/10;23691s1 rage when used.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 4},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The Berserker Rage ability will generate $/10;23691s1 rage when used.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4},
 )
 
 
@@ -1428,11 +1445,11 @@ improved_execute_20502 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1648,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the rage cost of your Execute ability by $/10;s1.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 536870912, 'EffectSpellClassMaskA_1': 536870912, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
+    notes='pulled from existing data; warrior-rework S3 D17: COST mod -> DUMMY carrier (value 8, read by GetImprovedExecuteMultiplier), no SpellMod mask; capstone clause on the last rank',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the damage of your Execute ability by 8%. This damage increase is doubled against targets below 20% health.', 'Using Execute on a target below 20% health increases your melee critical strike chance by 10% for 5 sec, stacking up to 3 times.', last=False), 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
 )
 
 
@@ -1449,11 +1466,11 @@ improved_execute_20503 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1648,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the rage cost of your Execute ability by $/10;s1.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 536870912, 'EffectSpellClassMaskA_1': 536870912, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
+    notes='pulled from existing data; warrior-rework S3 D17: COST mod -> DUMMY carrier (value 16, read by GetImprovedExecuteMultiplier), no SpellMod mask; capstone clause on the last rank',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the damage of your Execute ability by 16%. This damage increase is doubled against targets below 20% health.', 'Using Execute on a target below 20% health increases your melee critical strike chance by 10% for 5 sec, stacking up to 3 times.', last=True), 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
 )
 
 
@@ -1599,7 +1616,7 @@ improved_hamstring_23695 = spell(
     ],
     spell_icon_id=23,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Hamstring ability a $h% chance to immobilize the target for $23694d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Hamstring ability a $h% chance to immobilize the target for $23694d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1658,11 +1675,11 @@ endless_rage_29623 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=213),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=35, misc_value=1),
     ],
     spell_icon_id=1962,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You generate $s1% more rage from damage dealt.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 1048576, 'SpellClassSet': 4},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases your maximum rage by 10.', 'Rage you would gain above your maximum instead increases the damage of your next Mortal Strike by 1% per point, up to 20%, for 20 sec.', last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 1048576, 'SpellClassSet': 4},
 )
 
 
@@ -1678,11 +1695,12 @@ improved_whirlwind_29721 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=int(SpellModOp.COOLDOWN)),
     ],
     spell_icon_id=83,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Whirlwind ability by $s1%.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 4, 'EffectSpellClassMaskB_2': 16384, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; warrior-rework S3 D22: e0 DAMAGE +3% on Whirlwind (d1 0x4, EffectSpellClassMaskA_2), e1 ADD_FLAT_MODIFIER COOLDOWN -1000 ms on Whirlwind (d1 0x4, EffectSpellClassMaskB_2; was a stray d1 0x4000)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Whirlwind ability by 3% and reduces its cooldown by 1 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 4, 'EffectSpellClassMaskB_2': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1803,11 +1821,12 @@ improved_whirlwind_29776 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=-2001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=int(SpellModOp.COOLDOWN)),
     ],
     spell_icon_id=83,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Whirlwind ability by $s1%.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 4, 'EffectSpellClassMaskB_2': 16384, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; warrior-rework S3 D22: e0 DAMAGE +6% on Whirlwind (d1 0x4, EffectSpellClassMaskA_2), e1 ADD_FLAT_MODIFIER COOLDOWN -2000 ms on Whirlwind (d1 0x4, EffectSpellClassMaskB_2; was a stray d1 0x4000)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Whirlwind ability by 6% and reduces its cooldown by 2 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 4, 'EffectSpellClassMaskB_2': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1823,11 +1842,11 @@ focused_rage_29787 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2008,
-    notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Focused Rage rank - repositioned only, values already match. Capstone deferred to phase 3. Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks, normal color on the final rank), separated from the base text by two newlines, matching the pattern already used by the Frost Mage rework's pulled-from-Blizzard capstone talents (e.g. Frostbite).",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the rage cost of your offensive abilities by $/10;s1.\n\n|cFF9D9D9DCapstone Bonus: You gain 5 rage every time the target of your Vigilance takes damage. This effect can only occur once every second.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1852722926, 'EffectSpellClassMaskA_2': 4253284, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D18: Focused Rage rank 1. The flat rage cost cut (aura 107 op 14 on every offensive ability, a mask that leaked onto Thunder Clap, Revenge, Devastate and Shield Slam) is gone: e0 is a plain DUMMY carrier 5% (bp 4) with no SpellMod and no mask, read by Warrior::RewardRage's rage-from-damage-taken branch (stock formula x (1 + 5%)). The Vigilance capstone clause is built with _desc (grey below the last rank).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('You generate 5% more rage from damage taken.', 'You gain 5 rage every time the target of your Vigilance takes damage. This effect can only occur once every second.', last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1843,11 +1862,11 @@ focused_rage_29790 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2008,
-    notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Focused Rage rank - repositioned only, values already match. Capstone deferred to phase 3. Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks, normal color on the final rank), separated from the base text by two newlines, matching the pattern already used by the Frost Mage rework's pulled-from-Blizzard capstone talents (e.g. Frostbite).",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the rage cost of your offensive abilities by $/10;s1.\n\n|cFF9D9D9DCapstone Bonus: You gain 5 rage every time the target of your Vigilance takes damage. This effect can only occur once every second.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1852722926, 'EffectSpellClassMaskA_2': 4253284, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D18: Focused Rage rank 2. The flat rage cost cut (aura 107 op 14 on every offensive ability, a mask that leaked onto Thunder Clap, Revenge, Devastate and Shield Slam) is gone: e0 is a plain DUMMY carrier 10% (bp 9) with no SpellMod and no mask, read by Warrior::RewardRage's rage-from-damage-taken branch (stock formula x (1 + 10%)). The Vigilance capstone clause is built with _desc (grey below the last rank).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('You generate 10% more rage from damage taken.', 'You gain 5 rage every time the target of your Vigilance takes damage. This effect can only occur once every second.', last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1863,11 +1882,11 @@ focused_rage_29792 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2008,
-    notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Focused Rage rank - repositioned only, values already match. Capstone deferred to phase 3. Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks, normal color on the final rank), separated from the base text by two newlines, matching the pattern already used by the Frost Mage rework's pulled-from-Blizzard capstone talents (e.g. Frostbite).",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the rage cost of your offensive abilities by $/10;s1.\n\nCapstone Bonus: You gain 5 rage every time the target of your Vigilance takes damage. This effect can only occur once every second.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1852722926, 'EffectSpellClassMaskA_2': 4253284, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D18: Focused Rage rank 3. The flat rage cost cut (aura 107 op 14 on every offensive ability, a mask that leaked onto Thunder Clap, Revenge, Devastate and Shield Slam) is gone: e0 is a plain DUMMY carrier 15% (bp 14) with no SpellMod and no mask, read by Warrior::RewardRage's rage-from-damage-taken branch (stock formula x (1 + 15%)). The Vigilance capstone clause is built with _desc (grey below the last rank).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('You generate 15% more rage from damage taken.', 'You gain 5 rage every time the target of your Vigilance takes damage. This effect can only occur once every second.', last=True), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1905,11 +1924,11 @@ second_wind_29834 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1697,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever you are struck by a Stun or Immobilize effect you will generate $/10;29841o1 rage and $29841o2% of your total health over $29841d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8208, 'EffectSpellClassMaskA_2': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 174760, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Rend and Deep Wounds heal you for 2% of the damage they deal. This healing is doubled while you are below 35% health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1925,12 +1944,12 @@ blood_frenzy_29836 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=109, trigger_spell=30069),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=138),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=138),
     ],
     spell_icon_id=2005,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your melee attack speed by $s2%.  In addition your Rend and Deep Wounds abilities also increase all physical damage caused to that target by $30069s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 32, 'EffectSpellClassMaskA_2': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your melee attack speed by 2%. Your Rend and Deep Wounds increase all physical damage the target takes by 2%. Does not stack with similar effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1947,11 +1966,11 @@ second_wind_29838 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1697,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever you are struck by a Stun or Immobilize effect you will generate $/10;29842o1 rage and $29842o2% of your total health over $29842d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8208, 'EffectSpellClassMaskA_2': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 699048, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Rend and Deep Wounds heal you for 4% of the damage they deal. This healing is doubled while you are below 35% health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1967,12 +1986,12 @@ blood_frenzy_29859 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=109, trigger_spell=30070),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=138),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=138),
     ],
     spell_icon_id=2005,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your melee attack speed by $s2%.  In addition your Rend and Deep Wounds abilities also increase all physical damage caused to that target by $30070s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 32, 'EffectSpellClassMaskA_2': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your melee attack speed by 4%. Your Rend and Deep Wounds increase all physical damage the target takes by 4%. Does not stack with similar effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2028,12 +2047,12 @@ improved_mortal_strike_35446 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=-334, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=-6, implicit_target_a=1, apply_aura=107, misc_value=int(SpellModOp.EFFECT1)),
     ],
     spell_icon_id=564,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage caused by your Mortal Strike ability by $s1% and reduces the cooldown by $/1000;S2 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Mortal Strike by 5% and its healing reduction by 5%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2049,12 +2068,12 @@ improved_mortal_strike_35448 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=-667, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=107, misc_value=int(SpellModOp.EFFECT1)),
     ],
     spell_icon_id=564,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage caused by your Mortal Strike ability by $s1% and reduces the cooldown by $/1000;S2 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Mortal Strike by 10% and its healing reduction by 10%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2134,11 +2153,12 @@ intensify_rage_46908 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-12, implicit_target_a=1, apply_aura=108, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-12, implicit_target_a=1, apply_aura=108, misc_value=int(SpellModOp.COOLDOWN)),
+        Effect(type=EffectType.APPLY_AURA, base_points=-26, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=int(SpellModOp.COST)),
     ],
     spell_icon_id=1962,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Bloodrage, Berserker Rage, Recklessness and Death Wish abilities by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 1, 'EffectSpellClassMaskA_1': 269484304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
+    notes='pulled from existing data; warrior-rework S3 D25: e0 COOLDOWN -11% mask d0 0x100010 (Recklessness | Death Wish; Bloodrage and Berserker Rage dropped), new e1 ADD_PCT_MODIFIER COST -25% on Bloodrage (d0 0x100, EffectSpellClassMaskB_1; Glyph of Bloodrage shape); capstone clause on every rank',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Reduces the cooldown of your Recklessness and Death Wish abilities by 11%, and the health cost of your Bloodrage by 25%.', 'Your successful interrupts with Pummel silence the target for 3 sec and grant you Bloodrage at no health cost.', last=False), 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 1, 'EffectSpellClassMaskA_1': 1048592, 'EffectSpellClassMaskB_1': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
 )
 
 
@@ -2154,11 +2174,12 @@ intensify_rage_46909 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-23, implicit_target_a=1, apply_aura=108, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-23, implicit_target_a=1, apply_aura=108, misc_value=int(SpellModOp.COOLDOWN)),
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=int(SpellModOp.COST)),
     ],
     spell_icon_id=1962,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Bloodrage, Berserker Rage, Recklessness and Death Wish abilities by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 1, 'EffectSpellClassMaskA_1': 269484304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
+    notes='pulled from existing data; warrior-rework S3 D25: e0 COOLDOWN -22% mask d0 0x100010 (Recklessness | Death Wish; Bloodrage and Berserker Rage dropped), new e1 ADD_PCT_MODIFIER COST -50% on Bloodrage (d0 0x100, EffectSpellClassMaskB_1; Glyph of Bloodrage shape); capstone clause on every rank',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Reduces the cooldown of your Recklessness and Death Wish abilities by 22%, and the health cost of your Bloodrage by 50%.', 'Your successful interrupts with Pummel silence the target for 3 sec and grant you Bloodrage at no health cost.', last=False), 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 1, 'EffectSpellClassMaskA_1': 1048592, 'EffectSpellClassMaskB_1': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
 )
 
 
@@ -2174,11 +2195,11 @@ bloodsurge_46913 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=127, trigger_spell=46916),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=127, trigger_spell=204652),
     ],
     spell_icon_id=2767,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Heroic Strike, Bloodthirst, and Whirlwind hits have a $h% chance of making your next Slam instant for $46916d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 7, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 4},
+    notes='pulled from existing data; warrior-rework S3 D15: ProcChance 10, e0 triggers the fresh buff 204652 (Bloodthirst | Whirlwind CAST-phase procs_on and the unbind live in warrior_fury.py)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Bloodthirst and Whirlwind hits have a 10% chance to make your next Slam or Cleave cost no rage and deal 20% more damage.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 4},
 )
 
 
@@ -2194,11 +2215,11 @@ bloodsurge_46914 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=127, trigger_spell=46916),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=127, trigger_spell=204652),
     ],
     spell_icon_id=2767,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Heroic Strike, Bloodthirst, and Whirlwind hits have a $h% chance of making your next Slam instant for $46916d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 13, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 4},
+    notes='pulled from existing data; warrior-rework S3 D15: ProcChance 20, e0 triggers the fresh buff 204652 (Bloodthirst | Whirlwind CAST-phase procs_on and the unbind live in warrior_fury.py)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Bloodthirst and Whirlwind hits have a 20% chance to make your next Slam or Cleave cost no rage and deal 20% more damage.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 4},
 )
 
 
@@ -2214,11 +2235,11 @@ bloodsurge_46915 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=127, trigger_spell=46916),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=127, trigger_spell=204652),
     ],
     spell_icon_id=2767,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Heroic Strike, Bloodthirst, and Whirlwind hits have a $h% chance of making your next Slam instant for $46916d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 4},
+    notes='pulled from existing data; warrior-rework S3 D15: ProcChance 30, e0 triggers the fresh buff 204652 (Bloodthirst | Whirlwind CAST-phase procs_on and the unbind live in warrior_fury.py)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Bloodthirst and Whirlwind hits have a 30% chance to make your next Slam or Cleave cost no rage and deal 20% more damage.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 30, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 4},
 )
 
 
@@ -2238,8 +2259,8 @@ titan_s_grip_46917 = spell(
         Effect(type=140, die_sides=0, implicit_target_a=1, trigger_spell=50483),
     ],
     spell_icon_id=2750,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Allows you to equip two-handed axes, maces and swords in one hand.  While you have a two-handed weapon equipped in one hand, your physical damage done is reduced by $49152s1%.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskC_1': 778044516, 'EffectSpellClassMaskC_2': 17733, 'EquippedItemClass': 2, 'EquippedItemInvTypes': 6291456, 'EquippedItemSubclass': 41395, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
+    notes='pulled from existing data; warrior-rework S3 D36 (orchestrator, A4 finding): the tooltip is the doc wording, the stock text read $49152s1% and 49152 is forced to 0 by spell_warr_titans_grip_hardcode',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Allows you to wield a two-handed axe, mace or sword in each hand. While a two-handed weapon is in your off hand, all damage dealt and healing done is reduced by 10%.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskC_1': 778044516, 'EffectSpellClassMaskC_2': 17733, 'EquippedItemClass': 2, 'EquippedItemInvTypes': 6291456, 'EquippedItemSubclass': 41395, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
 )
 
 
@@ -2255,12 +2276,11 @@ safeguard_46945 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        None,
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=46946),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=107, misc_value=12),
     ],
     spell_icon_id=2781,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces damage taken by the target of your Intervene ability by $46946s1% for $46946d.', 'EffectBasePoints_1': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_1': 1, 'EffectSpellClassMaskA_1': 1073741825, 'EffectSpellClassMaskA_2': 65536, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 1024, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D21: Safeguard rank 1 is data only. e0 SPELLMOD_EFFECT2 (op 12) flat -10 on Intervene (mask e0.d1 0x10000 = Intervene 3411 only), so Intervene's own -10% (effect index 1, W0b) reads -20% total. The old proc on Intervene (stock buffs 46946/46947) is gone: e1 cleared, ProcTypeMask/ProcChance 0, spell_proc row removed (warrior_protection.py).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Intervene reduces the target's damage taken by 20% instead of 10%.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2276,12 +2296,11 @@ safeguard_46949 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        None,
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=46947),
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=107, misc_value=12),
     ],
     spell_icon_id=2781,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces damage taken by the target of your Intervene ability by $46947s1% for $46947d.', 'EffectBasePoints_1': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_1': 1, 'EffectSpellClassMaskA_1': 1073741825, 'EffectSpellClassMaskA_2': 65536, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 1024, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D21: Safeguard rank 2 is data only. e0 SPELLMOD_EFFECT2 (op 12) flat -20 on Intervene (mask e0.d1 0x10000 = Intervene 3411 only), so Intervene's own -10% (effect index 1, W0b) reads -30% total. The old proc on Intervene (stock buffs 46946/46947) is gone: e1 cleared, ProcTypeMask/ProcChance 0, spell_proc row removed (warrior_protection.py).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Intervene reduces the target's damage taken by 30% instead of 10%.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2297,12 +2316,12 @@ sword_and_board_46951 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=1, trigger_spell=50227),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=7),
     ],
     spell_icon_id=2780,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Sword and Board rank - retuned Devastate crit%',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of Devastate by 5%. Casting an ability that costs rage has a chance to reset the cooldown of Shield Slam, make it cost no rage and increase its damage by 10%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D13: Sword and Board rank 1. e0 is a DUMMY carrier 10 (bp 9) read by Warrior::RollSwordAndBoard (chance per rage-costing cast; the old PROC_TRIGGER_SPELL on 50227 and its spell_proc row are gone, ProcTypeMask/ProcChance 0). e1 SPELLMOD_CRITICAL_CHANCE +5% on Devastate (mask e1.d1 0x40) kept.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of Devastate by 5%. Casting an ability that costs rage has a 10% chance to reset the cooldown of Shield Slam, make it cost no rage and increase its damage by 10%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2318,12 +2337,12 @@ sword_and_board_46952 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=1, trigger_spell=50227),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=7),
     ],
     spell_icon_id=2780,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Sword and Board rank - retuned Devastate crit%',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of Devastate by 10%. Casting an ability that costs rage has a chance to reset the cooldown of Shield Slam, make it cost no rage and increase its damage by 10%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D13: Sword and Board rank 2. e0 is a DUMMY carrier 20 (bp 19) read by Warrior::RollSwordAndBoard (chance per rage-costing cast; the old PROC_TRIGGER_SPELL on 50227 and its spell_proc row are gone, ProcTypeMask/ProcChance 0). e1 SPELLMOD_CRITICAL_CHANCE +10% on Devastate (mask e1.d1 0x40) kept.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of Devastate by 10%. Casting an ability that costs rage has a 20% chance to reset the cooldown of Shield Slam, make it cost no rage and increase its damage by 10%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2339,12 +2358,12 @@ sword_and_board_46953 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=1, trigger_spell=50227),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=7),
     ],
     spell_icon_id=2780,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Sword and Board rank - retuned Devastate crit%',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of Devastate by 15%. Casting an ability that costs rage has a chance to reset the cooldown of Shield Slam, make it cost no rage and increase its damage by 10%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 30, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D13: Sword and Board rank 3. e0 is a DUMMY carrier 30 (bp 29) read by Warrior::RollSwordAndBoard (chance per rage-costing cast; the old PROC_TRIGGER_SPELL on 50227 and its spell_proc row are gone, ProcTypeMask/ProcChance 0). e1 SPELLMOD_CRITICAL_CHANCE +15% on Devastate (mask e1.d1 0x40) kept.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of Devastate by 15%. Casting an ability that costs rage has a 30% chance to reset the cooldown of Shield Slam, make it cost no rage and increase its damage by 10%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2360,12 +2379,12 @@ critical_block_47294 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=7),
         Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2778,
-    notes='Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Critical Block rank - added guaranteed 8% block-damage-reduction marker (WarriorMechanics.cpp)',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your successful blocks reduce the damage you take from the blocked hit by 8%. Increases your chance to critically hit with your Shield Slam ability by 4%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D23: Critical Block rank 1. e0 SPELLMOD_CRITICAL_CHANCE (op 7) +4% on Shield Slam (mask e0.d1 0x200; nothing else reads CRITICAL_CHANCE on that bit) - the effect the live build left empty. e1 DUMMY (icon 2778, bp 7: -8% on the blocked hit) is read by WarriorMechanics via GetAuraEffect(DUMMY, WARRIOR, 2778, EFFECT_1); its stale mask is cleared. Touched by the Light exclusion is in the core line.',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your successful blocks now further reduce the damage you take from the blocked hit by 8%. Increases your chance to critically hit with your Shield Slam ability by 4%. Does not work with Touched by the Light.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2381,12 +2400,12 @@ critical_block_47295 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=107, misc_value=7),
         Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2778,
-    notes='Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Critical Block rank - added guaranteed 16% block-damage-reduction marker (WarriorMechanics.cpp)',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your successful blocks reduce the damage you take from the blocked hit by 16%. Increases your chance to critically hit with your Shield Slam ability by 7%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D23: Critical Block rank 2. e0 SPELLMOD_CRITICAL_CHANCE (op 7) +7% on Shield Slam (mask e0.d1 0x200; nothing else reads CRITICAL_CHANCE on that bit) - the effect the live build left empty. e1 DUMMY (icon 2778, bp 15: -16% on the blocked hit) is read by WarriorMechanics via GetAuraEffect(DUMMY, WARRIOR, 2778, EFFECT_1); its stale mask is cleared. Touched by the Light exclusion is in the core line.',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your successful blocks now further reduce the damage you take from the blocked hit by 16%. Increases your chance to critically hit with your Shield Slam ability by 7%. Does not work with Touched by the Light.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2402,12 +2421,12 @@ critical_block_47296 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=7),
         Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2778,
-    notes='Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Critical Block rank - added guaranteed 25% block-damage-reduction marker (WarriorMechanics.cpp)',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your successful blocks reduce the damage you take from the blocked hit by 25%. Increases your chance to critically hit with your Shield Slam ability by 10%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D23: Critical Block rank 3. e0 SPELLMOD_CRITICAL_CHANCE (op 7) +10% on Shield Slam (mask e0.d1 0x200; nothing else reads CRITICAL_CHANCE on that bit) - the effect the live build left empty. e1 DUMMY (icon 2778, bp 24: -25% on the blocked hit) is read by WarriorMechanics via GetAuraEffect(DUMMY, WARRIOR, 2778, EFFECT_1); its stale mask is cleared. Touched by the Light exclusion is in the core line.',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your successful blocks now further reduce the damage you take from the blocked hit by 25%. Increases your chance to critically hit with your Shield Slam ability by 10%. Does not work with Touched by the Light.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2426,8 +2445,8 @@ incite_50685 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=7),
     ],
     spell_icon_id=2841,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Incite - retargeted from HS/Cleave/TC to Revenge; capstone deferred to phase 3 Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical strike chance of your Revenge by 10%.\n\n|cFF9D9D9DCapstone Bonus: Critical strikes with Revenge add an amount equal to 1.5% of your maximum health to your Storm's Bulwark shield increased by your mastery, up to its maximum. This does not extend the shield's duration.|r", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D25: Incite rank 1: Revenge crit +10% (e0 mask d0 0x400). Capstone clause built with _desc (grey below the last rank); 'increased by your mastery' removed (Mastery now only applies with Storm's Bulwark's capstone).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the critical strike chance of your Revenge by 10%.', "Critical strikes with Revenge add an amount equal to 1.5% of your maximum health to your Storm's Bulwark shield, up to its maximum. This does not extend the shield's duration.", last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2446,8 +2465,8 @@ incite_50686 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=107, misc_value=7),
     ],
     spell_icon_id=2841,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Incite - retargeted from HS/Cleave/TC to Revenge; capstone deferred to phase 3 Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical strike chance of your Revenge by 20%.\n\n|cFF9D9D9DCapstone Bonus: Critical strikes with Revenge add an amount equal to 1.5% of your maximum health to your Storm's Bulwark shield increased by your mastery, up to its maximum. This does not extend the shield's duration.|r", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D25: Incite rank 2: Revenge crit +20% (e0 mask d0 0x400). Capstone clause built with _desc (grey below the last rank); 'increased by your mastery' removed (Mastery now only applies with Storm's Bulwark's capstone).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the critical strike chance of your Revenge by 20%.', "Critical strikes with Revenge add an amount equal to 1.5% of your maximum health to your Storm's Bulwark shield, up to its maximum. This does not extend the shield's duration.", last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2467,8 +2486,8 @@ incite_50687 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2841,
-    notes='Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Incite rank 3 - added capstone proc marker (spell_warr_incite) Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical strike chance of your Revenge by 30%.\n\nCapstone Bonus: Critical strikes with Revenge add an amount equal to 1.5% of your maximum health to your Storm's Bulwark shield increased by your mastery, up to its maximum. This does not extend the shield's duration.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D11: Incite rank 3 (capstone). e0 SPELLMOD_CRITICAL_CHANCE +30% on Revenge (mask e0.d0 0x400). e1 DUMMY stays as the capstone marker read by WarriorUnitScript::OnSpellDamageTakenFinal (a critical Revenge hit, once per Revenge cast, grants 1.5% of max health to Storm's Bulwark via Warrior::GrantStormsBulwark without refreshing the timer). The proc fields are zeroed so no default spell_proc entry is built and the old spell_warr_incite AuraScript binding is gone.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the critical strike chance of your Revenge by 30%.', "Critical strikes with Revenge add an amount equal to 1.5% of your maximum health to your Storm's Bulwark shield, up to its maximum. This does not extend the shield's duration.", last=True), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2484,11 +2503,11 @@ taste_for_blood_56636 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=11, trigger_spell=60503),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=11, trigger_spell=204403),
     ],
     spell_icon_id=2961,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx6': 64, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever your Rend ability causes damage, you have a $h% chance of allowing the use of your Overpower ability for $60503d.  1 charge.  This effect will not occur more than once every 6 sec.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 33554432, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx6': 64, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Your Rend damage has a 10% chance to grant a charge of Overpower, stacking up to 5 times.', 'Your Mortal Strike has a 50% chance to grant a charge of Overpower.', last=False), 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2504,11 +2523,11 @@ taste_for_blood_56637 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=11, trigger_spell=60503),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=11, trigger_spell=204403),
     ],
     spell_icon_id=2961,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx6': 64, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever your Rend ability causes damage, you have a $h% chance of allowing the use of your Overpower ability for $60503d.  1 charge.  This effect will not occur more than once every 6 sec.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 33554432, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx6': 64, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Your Rend damage has a 20% chance to grant a charge of Overpower, stacking up to 5 times.', 'Your Mortal Strike has a 50% chance to grant a charge of Overpower.', last=False), 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2524,11 +2543,11 @@ taste_for_blood_56638 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=11, trigger_spell=60503),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=11, trigger_spell=204403),
     ],
     spell_icon_id=2961,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx6': 64, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever your Rend ability causes damage, you have a $h% chance of allowing the use of your Overpower ability for $60503d.  1 charge.  This effect will not occur more than once every 6 sec.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 33554432, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx6': 64, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Your Rend damage has a 30% chance to grant a charge of Overpower, stacking up to 5 times.', 'Your Mortal Strike has a 50% chance to grant a charge of Overpower.', last=True), 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 30, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2544,11 +2563,12 @@ intensify_rage_56924 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-34, implicit_target_a=1, apply_aura=108, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-34, implicit_target_a=1, apply_aura=108, misc_value=int(SpellModOp.COOLDOWN)),
+        Effect(type=EffectType.APPLY_AURA, base_points=-76, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=int(SpellModOp.COST)),
     ],
     spell_icon_id=1962,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Bloodrage, Berserker Rage, Recklessness and Death Wish abilities by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 1, 'EffectSpellClassMaskA_1': 269484304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
+    notes='pulled from existing data; warrior-rework S3 D25: e0 COOLDOWN -33% mask d0 0x100010 (Recklessness | Death Wish; Bloodrage and Berserker Rage dropped), new e1 ADD_PCT_MODIFIER COST -75% on Bloodrage (d0 0x100, EffectSpellClassMaskB_1; Glyph of Bloodrage shape); capstone clause on every rank',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Reduces the cooldown of your Recklessness and Death Wish abilities by 33%, and the health cost of your Bloodrage by 75%.', 'Your successful interrupts with Pummel silence the target for 3 sec and grant you Bloodrage at no health cost.', last=True), 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 1, 'EffectSpellClassMaskA_1': 1048592, 'EffectSpellClassMaskB_1': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4},
 )
 
 
@@ -2564,12 +2584,12 @@ unending_fury_56927 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        None,
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=0),
     ],
     spell_icon_id=2729,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Slam, Whirlwind and Bloodthirst abilities by $s2%.', 'EffectBasePoints_1': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_1': 1, 'EffectSpellClassMaskA_1': 33554432, 'EffectSpellClassMaskB_1': 2097152, 'EffectSpellClassMaskB_2': 1028, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; warrior-rework S3 D21: e0 DAMAGE +5% on Heroic Strike | Slam | Cleave (d0 0x600040, EffectSpellClassMaskA_1), e1 DAMAGE +5% on Bloodthirst | Whirlwind (d1 0x404, EffectSpellClassMaskB_2); the stray d0 0x2000000 cleared; capstone clause on every rank',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the damage done by your Bloodthirst, Whirlwind, Slam, Heroic Strike and Cleave by 5%.', 'Each Cleave reduces the remaining cooldown of your Whirlwind by 1.5 sec.', last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 6291520, 'EffectSpellClassMaskB_2': 1028, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2585,12 +2605,12 @@ unending_fury_56929 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        None,
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=0),
     ],
     spell_icon_id=2729,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Slam, Whirlwind and Bloodthirst abilities by $s2%.', 'EffectBasePoints_1': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_1': 1, 'EffectSpellClassMaskA_1': 33554432, 'EffectSpellClassMaskB_1': 2097152, 'EffectSpellClassMaskB_2': 1028, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; warrior-rework S3 D21: e0 DAMAGE +10% on Heroic Strike | Slam | Cleave (d0 0x600040, EffectSpellClassMaskA_1), e1 DAMAGE +10% on Bloodthirst | Whirlwind (d1 0x404, EffectSpellClassMaskB_2); the stray d0 0x2000000 cleared; capstone clause on every rank',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the damage done by your Bloodthirst, Whirlwind, Slam, Heroic Strike and Cleave by 10%.', 'Each Cleave reduces the remaining cooldown of your Whirlwind by 1.5 sec.', last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 6291520, 'EffectSpellClassMaskB_2': 1028, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2606,12 +2626,12 @@ unending_fury_56930 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        None,
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=0),
     ],
     spell_icon_id=2729,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Slam, Whirlwind and Bloodthirst abilities by $s2%.', 'EffectBasePoints_1': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_1': 1, 'EffectSpellClassMaskA_1': 33554432, 'EffectSpellClassMaskB_1': 2097152, 'EffectSpellClassMaskB_2': 1028, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; warrior-rework S3 D21: e0 DAMAGE +15% on Heroic Strike | Slam | Cleave (d0 0x600040, EffectSpellClassMaskA_1), e1 DAMAGE +15% on Bloodthirst | Whirlwind (d1 0x404, EffectSpellClassMaskB_2); the stray d0 0x2000000 cleared; capstone clause on every rank',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the damage done by your Bloodthirst, Whirlwind, Slam, Heroic Strike and Cleave by 15%.', 'Each Cleave reduces the remaining cooldown of your Whirlwind by 1.5 sec.', last=True), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 6291520, 'EffectSpellClassMaskB_2': 1028, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2695,7 +2715,7 @@ damage_shield_58872 = spell(
     ],
     spell_icon_id=3214,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 2, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever you take damage from or block a melee attack you cause damage equal to $s1% of your block value.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 40, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 2, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever you take direct damage from or block a melee attack you cause damage equal to 10% of your block value.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 40, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2715,7 +2735,7 @@ damage_shield_58874 = spell(
     ],
     spell_icon_id=3214,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 2, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever you take damage from or block a melee attack you cause damage equal to $s1% of your block value.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 40, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 2, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever you take direct damage from or block a melee attack you cause damage equal to 20% of your block value.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 40, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2775,12 +2795,12 @@ armored_to_the_teeth_61216 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=107, implicit_target_a=1, apply_aura=285, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=285, misc_value=1),
         Effect(type=EffectType.DUMMY),
     ],
     spell_icon_id=3516,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack power by $s2 for every ${$m1*$m2} armor value you have.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 196608, 'EffectSpellClassMaskA_2': 128, 'EffectSpellClassMaskB_1': 196608, 'EffectSpellClassMaskB_2': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; warrior-rework S3 D29: aura 285 amount = armor per attack power (100 / 50 / 100 + 50 = exactly 3 per 100), stray masks cleared, tooltip per the Fury doc',
+    raw_overrides={'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack power by 1 for every 100 armor value you have.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2796,12 +2816,12 @@ armored_to_the_teeth_61221 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=53, implicit_target_a=1, apply_aura=285, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=285, misc_value=1),
         Effect(type=EffectType.DUMMY, base_points=1),
     ],
     spell_icon_id=3516,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack power by $s2 for every ${$m1*$m2} armor value you have.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 196608, 'EffectSpellClassMaskA_2': 128, 'EffectSpellClassMaskB_1': 196608, 'EffectSpellClassMaskB_2': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; warrior-rework S3 D29: aura 285 amount = armor per attack power (100 / 50 / 100 + 50 = exactly 3 per 100), stray masks cleared, tooltip per the Fury doc',
+    raw_overrides={'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack power by 2 for every 100 armor value you have.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2817,12 +2837,13 @@ armored_to_the_teeth_61222 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=35, implicit_target_a=1, apply_aura=285, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=285, misc_value=1),
         Effect(type=EffectType.DUMMY, base_points=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=285, misc_value=1),
     ],
     spell_icon_id=3516,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack power by $s2 for every ${$m1*$m2} armor value you have.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 196608, 'EffectSpellClassMaskA_2': 128, 'EffectSpellClassMaskB_1': 196608, 'EffectSpellClassMaskB_2': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; warrior-rework S3 D29: aura 285 amount = armor per attack power (100 / 50 / 100 + 50 = exactly 3 per 100), stray masks cleared, tooltip per the Fury doc',
+    raw_overrides={'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack power by 3 for every 100 armor value you have.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2838,13 +2859,13 @@ juggernaut_64976 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=262, misc_value=1),
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=7, trigger_spell=65156),
-        Effect(type=EffectType.APPLY_AURA, base_points=4999, implicit_target_a=1, apply_aura=107, misc_value=11),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=-2001, implicit_target_a=1, apply_aura=107, misc_value=int(SpellModOp.COOLDOWN)),
     ],
     spell_icon_id=2769,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Charge ability is now usable while in combat, but the cooldown on Charge is increased by ${$m3/1000} sec. Following a Charge, your next Slam or Mortal Strike has an additional $65156s1% chance to critically hit if used within $65156d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EffectSpellClassMaskB_1': 2097152, 'EffectSpellClassMaskC_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 4096, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Following a Heroic Leap, or a Charge from more than 20 yards away or at a target above 90% health, you have a 50% chance for your next Slam to critically hit and your next Mortal Strike to apply Rend. Reduces the cooldown of your Heroic Leap by 2 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellPriority': 50},
 )
 
 
@@ -2860,11 +2881,11 @@ iron_temper_29593 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200050),
+        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2024,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Defensive Stance rank 1 - fixed crit-taken aura type, repointed Enrage to flat-6% copy. Reworked 2026-09-04 into Iron Temper: crit-taken reduction removed (now baseline elsewhere), talent is now just the Block/Parry/Dodge->Enrage proc; icon -> Spell_Nature_ShamanRage (2024).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you Block, Parry or Dodge an attack you have a 50% chance to become Enraged, increasing Physical damage caused by 6% and take 6% reduced damage. for 12 sec.', 'DurationIndex': 0, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 50, 'ProcTypeMask': 174760, 'RangeIndex': 1, 'ShapeshiftMask': 131072},
+    notes='warrior-rework S1 D16: Iron Temper rank 1 (was Improved Defensive Stance). The Defensive-Stance block/dodge/parry proc is gone (ProcTypeMask/ProcChance 0, ShapeshiftMask 0, spell_proc row removed in warrior_protection.py). One DUMMY carrier (bp -4 = value -3) is the damage-taken amount spell_warr_revenge hands to Tempered 200050 with SPELLVALUE_BASE_POINT0; icon Spell_Nature_ShamanRage (2024).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Revenge makes you Tempered for 8 sec. While Tempered, you take 3% less damage and deal 6% more physical damage.', 'DurationIndex': 0, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'ShapeshiftMask': 0},
 )
 
 
@@ -2880,11 +2901,11 @@ iron_temper_29594 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200050),
+        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2024,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Defensive Stance rank 2 - fixed crit-taken aura type, repointed Enrage to flat-6% copy. Reworked 2026-09-04 into Iron Temper: crit-taken reduction removed (now baseline elsewhere), talent is now just the Block/Parry/Dodge->Enrage proc; icon -> Spell_Nature_ShamanRage (2024).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you Block, Parry or Dodge an attack you have a 100% chance to become Enraged, increasing Physical damage caused by 6% and take 6% reduced damage. for 12 sec.', 'DurationIndex': 0, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 174760, 'RangeIndex': 1, 'ShapeshiftMask': 131072},
+    notes='warrior-rework S1 D16: Iron Temper rank 2 (was Improved Defensive Stance). The Defensive-Stance block/dodge/parry proc is gone (ProcTypeMask/ProcChance 0, ShapeshiftMask 0, spell_proc row removed in warrior_protection.py). One DUMMY carrier (bp -7 = value -6) is the damage-taken amount spell_warr_revenge hands to Tempered 200050 with SPELLVALUE_BASE_POINT0; icon Spell_Nature_ShamanRage (2024).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Revenge makes you Tempered for 8 sec. While Tempered, you take 6% less damage and deal 6% more physical damage.', 'DurationIndex': 0, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'ShapeshiftMask': 0},
 )
 
 
@@ -2900,11 +2921,11 @@ vigilance_59665 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=130, base_points=14, implicit_target_a=57),
+        Effect(type=130, base_points=9, implicit_target_a=57),
     ],
     spell_icon_id=2834,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Vigilance threat-redirect 10%->15% (spell_warr_vigilance_redirect_threat already handles the rest)',
-    raw_overrides={'AttributesEx2': 4, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Focus your protective gaze on a group or raid target, reducing their damage taken by $50720s1% and transfers $50720s3% of the threat they cause to you.  In addition, each time they are hit by an attack your Taunt cooldown is refreshed.  Lasts $50720d.  This effect can only be on one target at a time.', 'DurationIndex': 0, 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101},
+    notes="warrior-rework S1 D24: Vigilance threat redirect 15% -> 10% (bp 14 -> 9, the stock value; doc 'transfer 10% of the threat'; the tank sim measures it). The Taunt and Growl refresh is spell_warr_vigilance_trigger_growl on 50725 (warrior_protection.py / spell_warrior_protection.cpp).",
+    raw_overrides={'AttributesEx2': 4, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Focus your protective gaze on a group or raid target to reduce their damage taken by 3% and transfer 10% of the threat they cause to you. Each time they are hit by an attack your Taunt and Growl cooldown is refreshed. Lasts 30 min. This effect can only be on one target at a time.', 'DurationIndex': 0, 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101},
 )
 
 
@@ -2980,9 +3001,9 @@ procs_on(
 )
 
 
-unbridled_wrath_200034 = spell(
+unwavering_sentinel_200034 = spell(
     id=200034,
-    name='Unbridled Wrath',
+    name='Unwavering Sentinel',
     school=School.NORMAL,
     attributes=464,
     cast_time_ms=0,
@@ -2992,17 +3013,17 @@ unbridled_wrath_200034 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=23602),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=_CR_COOLDOWN_HASTE),
     ],
     spell_icon_id=2005,
-    notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Unbridled Wrath rank (new copy of Fury's 12322/12999-13002; donor untouched)",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'You have a 10% chance to generate 5 rage when you deal melee damage. This effect can only occur once per ability use.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 10% chance to generate 5 rage when you deal melee damage. This effect can only occur once per ability use.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Unbridled Wrath', 'ProcChance': 10, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D20: Unwavering Sentinel rank 1 (was the Unbridled Wrath clone). aura 306 MOD_CUSTOM_STAT_PCT misc 1 << 22 (Cooldown Haste) +1% (bp 0, value bp + 1; paladin Enduring Light precedent). The rage-on-melee proc, its weapon requirement and the proc fields are gone. Fury's Unbridled Wrath (talent 159, stock ranks) is untouched.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases your Cooldown Haste by 1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Cooldown Haste by 1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Unwavering Sentinel', 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
-unbridled_wrath_200035 = spell(
+unwavering_sentinel_200035 = spell(
     id=200035,
-    name='Unbridled Wrath',
+    name='Unwavering Sentinel',
     school=School.NORMAL,
     attributes=464,
     cast_time_ms=0,
@@ -3012,17 +3033,17 @@ unbridled_wrath_200035 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=23602),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=_CR_COOLDOWN_HASTE),
     ],
     spell_icon_id=2005,
-    notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Unbridled Wrath rank (new copy of Fury's 12322/12999-13002; donor untouched)",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'You have a 20% chance to generate 5 rage when you deal melee damage. This effect can only occur once per ability use.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 20% chance to generate 5 rage when you deal melee damage. This effect can only occur once per ability use.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Unbridled Wrath', 'ProcChance': 20, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D20: Unwavering Sentinel rank 2 (was the Unbridled Wrath clone). aura 306 MOD_CUSTOM_STAT_PCT misc 1 << 22 (Cooldown Haste) +2% (bp 1, value bp + 1; paladin Enduring Light precedent). The rage-on-melee proc, its weapon requirement and the proc fields are gone. Fury's Unbridled Wrath (talent 159, stock ranks) is untouched.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases your Cooldown Haste by 2%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Cooldown Haste by 2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Unwavering Sentinel', 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
-unbridled_wrath_200036 = spell(
+unwavering_sentinel_200036 = spell(
     id=200036,
-    name='Unbridled Wrath',
+    name='Unwavering Sentinel',
     school=School.NORMAL,
     attributes=464,
     cast_time_ms=0,
@@ -3032,11 +3053,11 @@ unbridled_wrath_200036 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=23602),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=_CR_COOLDOWN_HASTE),
     ],
     spell_icon_id=2005,
-    notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Unbridled Wrath rank (new copy of Fury's 12322/12999-13002; donor untouched)",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'You have a 30% chance to generate 5 rage when you deal melee damage. This effect can only occur once per ability use.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 30% chance to generate 5 rage when you deal melee damage. This effect can only occur once per ability use.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Unbridled Wrath', 'ProcChance': 30, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D20: Unwavering Sentinel rank 3 (was the Unbridled Wrath clone). aura 306 MOD_CUSTOM_STAT_PCT misc 1 << 22 (Cooldown Haste) +3% (bp 2, value bp + 1; paladin Enduring Light precedent). The rage-on-melee proc, its weapon requirement and the proc fields are gone. Fury's Unbridled Wrath (talent 159, stock ranks) is untouched.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases your Cooldown Haste by 3%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Cooldown Haste by 3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Unwavering Sentinel', 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3044,7 +3065,7 @@ devastate_extra_target_200045 = spell(
     id=200045,
     name='Devastate: Extra Target',
     school=School.NORMAL,
-    attributes=464,
+    attributes=0,
     cast_time_ms=0,
     cooldown_ms=0,
     category_cooldown_ms=0,
@@ -3057,7 +3078,7 @@ devastate_extra_target_200045 = spell(
     ],
     spell_icon_id=1508,
     notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Revenge's charge-buff - no script needed, see Player::ApplySpellMod. Fixed 2026-10-10: jump-target amount bp 1 (total +2, since Devastate's ChainTarget is 0 and the chain code needs >1) and the talent ranks got a spell_proc row",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your next Devastate will strike an additional target.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Devastate will strike an additional target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Devastate: Extra Target', 'ProcChance': 101, 'ProcCharges': 1, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your next Devastate strikes an additional target.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Devastate strikes an additional target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Devastate: Extra Target', 'ProcChance': 101, 'ProcCharges': 1, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3078,8 +3099,8 @@ firm_grip_200038 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=150),
     ],
     spell_icon_id=134,
-    notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Firm Grip rank (new; armor% only active while a Shield is equipped, matching Toughness's own item-gating convention)",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases your armor value from your equipped Shield by 10%. Increases your Stamina by 1%. Increases your block value by 2%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your armor value from your equipped Shield by 10%. Increases your Stamina by 1%. Increases your block value by 2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Firm Grip', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D22 (ruling 2, 0-verify option F7): Firm Grip rank 1. The shield requirement (EquippedItemClass 4 / Subclass 64) is removed so Stamina is no longer shield-gated (a type-2 link from a gated rank would stay gated). Deviation: armor (aura 142) and block value (aura 150) are ungated too, because no route gates only them without an unlearnable helper; block value is inert without a shield and the armor aura raises all base armor. Spells 204771-204773 stay unused.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases your armor value from your equipped Shield by 10%. Increases your Stamina by 1%. Increases your block value by 2%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your armor value from your equipped Shield by 10%. Increases your Stamina by 1%. Increases your block value by 2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Firm Grip', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3100,8 +3121,8 @@ firm_grip_200039 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=150),
     ],
     spell_icon_id=134,
-    notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Firm Grip rank (new; armor% only active while a Shield is equipped, matching Toughness's own item-gating convention)",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases your armor value from your equipped Shield by 20%. Increases your Stamina by 2%. Increases your block value by 4%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your armor value from your equipped Shield by 20%. Increases your Stamina by 2%. Increases your block value by 4%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Firm Grip', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D22 (ruling 2, 0-verify option F7): Firm Grip rank 2. The shield requirement (EquippedItemClass 4 / Subclass 64) is removed so Stamina is no longer shield-gated (a type-2 link from a gated rank would stay gated). Deviation: armor (aura 142) and block value (aura 150) are ungated too, because no route gates only them without an unlearnable helper; block value is inert without a shield and the armor aura raises all base armor. Spells 204771-204773 stay unused.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases your armor value from your equipped Shield by 20%. Increases your Stamina by 2%. Increases your block value by 4%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your armor value from your equipped Shield by 20%. Increases your Stamina by 2%. Increases your block value by 4%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Firm Grip', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3122,8 +3143,8 @@ firm_grip_200040 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=150),
     ],
     spell_icon_id=134,
-    notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Firm Grip rank (new; armor% only active while a Shield is equipped, matching Toughness's own item-gating convention)",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases your armor value from your equipped Shield by 30%. Increases your Stamina by 3%. Increases your block value by 6%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your armor value from your equipped Shield by 30%. Increases your Stamina by 3%. Increases your block value by 6%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Firm Grip', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D22 (ruling 2, 0-verify option F7): Firm Grip rank 3. The shield requirement (EquippedItemClass 4 / Subclass 64) is removed so Stamina is no longer shield-gated (a type-2 link from a gated rank would stay gated). Deviation: armor (aura 142) and block value (aura 150) are ungated too, because no route gates only them without an unlearnable helper; block value is inert without a shield and the armor aura raises all base armor. Spells 204771-204773 stay unused.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases your armor value from your equipped Shield by 30%. Increases your Stamina by 3%. Increases your block value by 6%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your armor value from your equipped Shield by 30%. Increases your Stamina by 3%. Increases your block value by 6%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Firm Grip', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3139,13 +3160,13 @@ shield_cover_200041 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-2, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=-2, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=150),
         Effect(type=EffectType.APPLY_AURA, base_points=-3001, implicit_target_a=1, apply_aura=107, misc_value=11),
     ],
     spell_icon_id=1935,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Shield Cover rank - CD reduction scoped to Spell Reflection (classmask dword2). Capstone deferred to phase 3 - all 3 effect slots already used by the base kit. Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Reduces your damage taken by 1%. Increases your block value by 4%. Reduces the cooldown of Spell Reflection by 3 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces your damage taken by 1%. Increases your block value by 4%. Reduces the cooldown of Spell Reflection by 3 sec.\n\n|cFF9D9D9DCapstone Bonus: Using Spell Reflection or Shield Block also reduces all Magic damage taken by 30% for 3 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_2': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Cover', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D23: Shield Cover rank 1. e0 damage taken -1% now covers all schools (misc 127; was physical only, misc 1), e1 block value +4%, e2 SPELLMOD_COOLDOWN -3 s on Spell Reflection (mask e2.d1 0x2). Capstone (rank 3): spell_warr_shield_cover_capstone casts 200061. Tooltip built with _desc.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Reduces your damage taken by 1%. Increases your block value by 4%. Reduces the cooldown of Spell Reflection by 3 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Reduces your damage taken by 1%. Increases your block value by 4%. Reduces the cooldown of Spell Reflection by 3 sec.', 'Using Spell Reflection or Shield Block also reduces all Magic damage taken by 30% for 3 sec.', last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_2': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Cover', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3161,13 +3182,13 @@ shield_cover_200042 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
         Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=150),
         Effect(type=EffectType.APPLY_AURA, base_points=-3001, implicit_target_a=1, apply_aura=107, misc_value=11),
     ],
     spell_icon_id=1935,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Shield Cover rank - CD reduction scoped to Spell Reflection (classmask dword2). Capstone deferred to phase 3 - all 3 effect slots already used by the base kit. Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Reduces your damage taken by 2%. Increases your block value by 7%. Reduces the cooldown of Spell Reflection by 3 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces your damage taken by 2%. Increases your block value by 7%. Reduces the cooldown of Spell Reflection by 3 sec.\n\n|cFF9D9D9DCapstone Bonus: Using Spell Reflection or Shield Block also reduces all Magic damage taken by 30% for 3 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_2': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Cover', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D23: Shield Cover rank 2. e0 damage taken -2% now covers all schools (misc 127; was physical only, misc 1), e1 block value +7%, e2 SPELLMOD_COOLDOWN -3 s on Spell Reflection (mask e2.d1 0x2). Capstone (rank 3): spell_warr_shield_cover_capstone casts 200061. Tooltip built with _desc.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Reduces your damage taken by 2%. Increases your block value by 7%. Reduces the cooldown of Spell Reflection by 3 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Reduces your damage taken by 2%. Increases your block value by 7%. Reduces the cooldown of Spell Reflection by 3 sec.', 'Using Spell Reflection or Shield Block also reduces all Magic damage taken by 30% for 3 sec.', last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_2': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Cover', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3183,35 +3204,35 @@ shield_cover_200043 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=150),
         Effect(type=EffectType.APPLY_AURA, base_points=-3001, implicit_target_a=1, apply_aura=107, misc_value=11),
     ],
     spell_icon_id=1935,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Shield Cover rank - CD reduction scoped to Spell Reflection (classmask dword2). Capstone deferred to phase 3 - all 3 effect slots already used by the base kit. Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Reduces your damage taken by 3%. Increases your block value by 10%. Reduces the cooldown of Spell Reflection by 3 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces your damage taken by 3%. Increases your block value by 10%. Reduces the cooldown of Spell Reflection by 3 sec.\n\nCapstone Bonus: Using Spell Reflection or Shield Block also reduces all Magic damage taken by 30% for 3 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_2': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Cover', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D23: Shield Cover rank 3. e0 damage taken -3% now covers all schools (misc 127; was physical only, misc 1), e1 block value +10%, e2 SPELLMOD_COOLDOWN -3 s on Spell Reflection (mask e2.d1 0x2). Capstone (rank 3): spell_warr_shield_cover_capstone casts 200061. Tooltip built with _desc.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Reduces your damage taken by 3%. Increases your block value by 10%. Reduces the cooldown of Spell Reflection by 3 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Reduces your damage taken by 3%. Increases your block value by 10%. Reduces the cooldown of Spell Reflection by 3 sec.', 'Using Spell Reflection or Shield Block also reduces all Magic damage taken by 30% for 3 sec.', last=True), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_2': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Cover', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
-enrage_iron_temper_200050 = spell(
+tempered_200050 = spell(
     id=200050,
-    name='Enrage (Iron Temper)',
+    name='Tempered',
     school=School.NORMAL,
-    attributes=464,
+    attributes=0,
     cast_time_ms=0,
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=0.0,
-    duration_ms=12000,
+    duration_ms=8000,
     effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=79, misc_value=1),
-        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
     ],
     spell_icon_id=1710,
-    notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): shared Enrage buff for Improved Defensive Stance's (now Iron Temper's) proc (donor Enrage 57514/57516 give 5%/10%, design wants flat 6%). Reworked 2026-09-04: added effect2 (SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, -6%, all schools) alongside the existing +6% physical damage, matching Iron Temper's new 'and take 6% reduced damage' text.",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases Physical damage caused by 6% and reduces damage taken by 6%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases Physical damage caused by 6% and reduces damage taken by 6%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Enrage (Iron Temper)', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D16: Tempered (was 'Enrage (Iron Temper)'), 8 s (DurationIndex 31). Cast on the caster by spell_warr_revenge with the Iron Temper rank's amount: e0 damage taken all schools (misc 127) has the effects swapped to index 0 so SPELLVALUE_BASE_POINT0 sets the -3/-6% (bp -4 here is only the rank 1 default); e1 +6% physical damage done (aura 79 misc 1, bp 5). Refreshes, never stacks. Not an Enrage (Dispel 0, Mechanic 0).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Taking less damage and dealing more physical damage.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Taking less damage and dealing more physical damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Tempered', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3293,13 +3314,11 @@ unrelenting_200049 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=262, misc_value=1),
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=275),
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=112, misc_value=6953),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2065,
-    notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Unrelenting (new copy of 'Warbringer' 57499, donor untouched). 'Each Revenge cast reduces Last Stand's cooldown by 1s' clause deferred to phase 3.",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your Charge, Intercept, and Intervene abilities are usable while in combat and in any stance.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Charge, Intercept, and Intervene abilities are usable while in combat and in any stance.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EffectSpellClassMaskB_1': 1073741825, 'EffectSpellClassMaskB_2': 65536, 'EffectSpellClassMaskC_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Unrelenting', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D15: Unrelenting. The Warbringer clone effects (aura 262/275 in-combat + any-stance, aura 112 class script 6953) are gone: that clause is baseline since W0b, and the Spell.cpp IsScriptOverriden(6953) check goes inert. One DUMMY marker remains, all masks cleared. Behaviour: spell_warr_revenge takes 1 s off Last Stand (floor 50%), spell_warr_devastate grants Empowered Revenge 204770.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': "Each cast of Revenge reduces the remaining cooldown of your Last Stand by 1 sec. Your Devastate empowers your next Revenge, increasing its damage by 30% and causing it to add an amount equal to 2% of your maximum health to your Storm's Bulwark shield.", 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Each cast of Revenge reduces the remaining cooldown of your Last Stand by 1 sec. Your Devastate empowers your next Revenge, increasing its damage by 30% and causing it to add an amount equal to 2% of your maximum health to your Storm's Bulwark shield.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Unrelenting', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3316,12 +3335,12 @@ thunderstruck_200051 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=329, implicit_target_a=1, apply_aura=107, misc_value=1),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1936,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Thunderstruck rank (new). Capstone (delayed Thunder Clap echo) deferred to phase 3. Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases the damage and threat of Shockwave and Thunder Clap by 10%. Increases the duration of Shockwave by 0.33 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and threat of Shockwave and Thunder Clap by 10%. Increases the duration of Shockwave by 0.33 sec.\n\n|cFF9D9D9DCapstone Bonus: 3 sec after casting Thunder Clap, a second Thunder Clap occurs at the same location at 50% effectiveness.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 128, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskB_1': 128, 'EffectSpellClassMaskB_2': 32768, 'EffectSpellClassMaskC_2': 32768, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Thunderstruck', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D17: Thunderstruck rank 1. e0 SPELLMOD_DAMAGE +10% on Thunder Clap (d0 0x80) and Shockwave (d1 0x8000) (mask e0 = (0x80, 0x8000, 0)), kept. e1 (the +10% threat mod) is removed (user ruling Q3: threat is revisited after the tank sim). e2 was the Shockwave stun duration mod; it is now a DUMMY carrier 10 (bp 9) read by spell_warr_shockwave (extra damage against stun-immune targets, multiplies with Shockwave's own double). Capstone (rank 3): 200066/200065 echo. Tooltip built with _desc.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases the damage of Shockwave and Thunder Clap by 10%. Shockwave deals an additional 10% damage to targets that cannot be stunned.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the damage of Shockwave and Thunder Clap by 10%. Shockwave deals an additional 10% damage to targets that cannot be stunned.', '3 sec after casting Thunder Clap, a second Thunder Clap strikes the same spot at 50% effectiveness.', last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 128, 'EffectSpellClassMaskA_2': 32768, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Thunderstruck', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3338,12 +3357,12 @@ thunderstruck_200052 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=659, implicit_target_a=1, apply_aura=107, misc_value=1),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1936,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Thunderstruck rank (new). Capstone (delayed Thunder Clap echo) deferred to phase 3. Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases the damage and threat of Shockwave and Thunder Clap by 20%. Increases the duration of Shockwave by 0.66 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and threat of Shockwave and Thunder Clap by 20%. Increases the duration of Shockwave by 0.66 sec.\n\n|cFF9D9D9DCapstone Bonus: 3 sec after casting Thunder Clap, a second Thunder Clap occurs at the same location at 50% effectiveness.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 128, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskB_1': 128, 'EffectSpellClassMaskB_2': 32768, 'EffectSpellClassMaskC_2': 32768, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Thunderstruck', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D17: Thunderstruck rank 2. e0 SPELLMOD_DAMAGE +20% on Thunder Clap (d0 0x80) and Shockwave (d1 0x8000) (mask e0 = (0x80, 0x8000, 0)), kept. e1 (the +20% threat mod) is removed (user ruling Q3: threat is revisited after the tank sim). e2 was the Shockwave stun duration mod; it is now a DUMMY carrier 20 (bp 19) read by spell_warr_shockwave (extra damage against stun-immune targets, multiplies with Shockwave's own double). Capstone (rank 3): 200066/200065 echo. Tooltip built with _desc.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases the damage of Shockwave and Thunder Clap by 20%. Shockwave deals an additional 20% damage to targets that cannot be stunned.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the damage of Shockwave and Thunder Clap by 20%. Shockwave deals an additional 20% damage to targets that cannot be stunned.', '3 sec after casting Thunder Clap, a second Thunder Clap strikes the same spot at 50% effectiveness.', last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 128, 'EffectSpellClassMaskA_2': 32768, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Thunderstruck', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3360,12 +3379,12 @@ thunderstruck_200053 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=999, implicit_target_a=1, apply_aura=107, misc_value=1),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1936,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Thunderstruck rank (new). Capstone (delayed Thunder Clap echo) deferred to phase 3. Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases the damage and threat of Shockwave and Thunder Clap by 30%. Increases the duration of Shockwave by 1.0 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and threat of Shockwave and Thunder Clap by 30%. Increases the duration of Shockwave by 1.0 sec.\n\nCapstone Bonus: 3 sec after casting Thunder Clap, a second Thunder Clap occurs at the same location at 50% effectiveness.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 128, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskB_1': 128, 'EffectSpellClassMaskB_2': 32768, 'EffectSpellClassMaskC_2': 32768, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Thunderstruck', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D17: Thunderstruck rank 3. e0 SPELLMOD_DAMAGE +30% on Thunder Clap (d0 0x80) and Shockwave (d1 0x8000) (mask e0 = (0x80, 0x8000, 0)), kept. e1 (the +30% threat mod) is removed (user ruling Q3: threat is revisited after the tank sim). e2 was the Shockwave stun duration mod; it is now a DUMMY carrier 30 (bp 29) read by spell_warr_shockwave (extra damage against stun-immune targets, multiplies with Shockwave's own double). Capstone (rank 3): 200066/200065 echo. Tooltip built with _desc.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases the damage of Shockwave and Thunder Clap by 30%. Shockwave deals an additional 30% damage to targets that cannot be stunned.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases the damage of Shockwave and Thunder Clap by 30%. Shockwave deals an additional 30% damage to targets that cannot be stunned.', '3 sec after casting Thunder Clap, a second Thunder Clap strikes the same spot at 50% effectiveness.', last=True), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 128, 'EffectSpellClassMaskA_2': 32768, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Thunderstruck', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3425,7 +3444,7 @@ reprisal_200056 = spell(
     ],
     spell_icon_id=558,
     notes='Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Reprisal rank (0.5%, stored as tenths) - marker read by spell_warr_devastate',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': "Your Devastate adds an amount equal to 0.5% of your maximum health to your Storm's Bulwark shield, increased by your mastery. This amount is increased by 20% for each application of Sunder Armor on the target.", 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Devastate adds an amount equal to 0.5% of your maximum health to your Storm's Bulwark shield, increased by your mastery. This amount is increased by 20% for each application of Sunder Armor on the target.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Reprisal', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': "Your Devastate adds an amount equal to 0.5% of your maximum health to your Storm's Bulwark shield. This amount is increased by 20% for each application of Sunder Armor on the target.", 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Devastate adds an amount equal to 0.5% of your maximum health to your Storm's Bulwark shield. This amount is increased by 20% for each application of Sunder Armor on the target.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Reprisal', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3445,7 +3464,7 @@ reprisal_200057 = spell(
     ],
     spell_icon_id=558,
     notes='Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Reprisal rank (1%, stored as tenths) - marker read by spell_warr_devastate',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': "Your Devastate adds an amount equal to 1% of your maximum health to your Storm's Bulwark shield, increased by your mastery. This amount is increased by 20% for each application of Sunder Armor on the target.", 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Devastate adds an amount equal to 1% of your maximum health to your Storm's Bulwark shield, increased by your mastery. This amount is increased by 20% for each application of Sunder Armor on the target.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Reprisal', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': "Your Devastate adds an amount equal to 1% of your maximum health to your Storm's Bulwark shield. This amount is increased by 20% for each application of Sunder Armor on the target.", 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Devastate adds an amount equal to 1% of your maximum health to your Storm's Bulwark shield. This amount is increased by 20% for each application of Sunder Armor on the target.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Reprisal', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3464,8 +3483,8 @@ storm_s_bulwark_200058 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1941,
-    notes="Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Storm's Bulwark talent rank (2%) - marker read by spell_warr_thunder_clap",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your Thunder Clap grants you an absorb shield equal to 2% of your maximum health, increased by your mastery, plus an additional 1% for each target struck. Lasts 15 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Thunder Clap grants you an absorb shield equal to 2% of your maximum health, increased by your mastery, plus an additional 1% for each target struck. Lasts 15 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': "Storm's Bulwark", 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D5/D25: Storm's Bulwark talent rank 1 (2%). DUMMY marker read by Warrior::GrantStormsBulwark's Thunder Clap branch (bp 1); rank 3 (200060) also turns on Mastery for every source and the cap. Tooltip built with _desc (capstone clause: Mastery).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your Thunder Clap grants you an absorb shield equal to 2% of your maximum health, plus an additional 1% for each target struck, up to 5 targets. Lasts 15 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Your Thunder Clap grants you an absorb shield equal to 2% of your maximum health, plus an additional 1% for each target struck, up to 5 targets. Lasts 15 sec.', "Mastery increases every amount added to your Storm's Bulwark shield, and raises its maximum.", last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': "Storm's Bulwark", 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3484,8 +3503,8 @@ storm_s_bulwark_200059 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1941,
-    notes="Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Storm's Bulwark talent rank (4%) - marker read by spell_warr_thunder_clap",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your Thunder Clap grants you an absorb shield equal to 4% of your maximum health, increased by your mastery, plus an additional 1% for each target struck. Lasts 15 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Thunder Clap grants you an absorb shield equal to 4% of your maximum health, increased by your mastery, plus an additional 1% for each target struck. Lasts 15 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': "Storm's Bulwark", 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D5/D25: Storm's Bulwark talent rank 2 (4%). DUMMY marker read by Warrior::GrantStormsBulwark's Thunder Clap branch (bp 3); rank 3 (200060) also turns on Mastery for every source and the cap. Tooltip built with _desc (capstone clause: Mastery).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your Thunder Clap grants you an absorb shield equal to 4% of your maximum health, plus an additional 1% for each target struck, up to 5 targets. Lasts 15 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Your Thunder Clap grants you an absorb shield equal to 4% of your maximum health, plus an additional 1% for each target struck, up to 5 targets. Lasts 15 sec.', "Mastery increases every amount added to your Storm's Bulwark shield, and raises its maximum.", last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': "Storm's Bulwark", 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3504,8 +3523,8 @@ storm_s_bulwark_200060 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1941,
-    notes="Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Storm's Bulwark talent rank (6%) - marker read by spell_warr_thunder_clap",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your Thunder Clap grants you an absorb shield equal to 6% of your maximum health, increased by your mastery, plus an additional 1% for each target struck. Lasts 15 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Thunder Clap grants you an absorb shield equal to 6% of your maximum health, increased by your mastery, plus an additional 1% for each target struck. Lasts 15 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': "Storm's Bulwark", 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D5/D25: Storm's Bulwark talent rank 3 (6%). DUMMY marker read by Warrior::GrantStormsBulwark's Thunder Clap branch (bp 5); rank 3 (200060) also turns on Mastery for every source and the cap. Tooltip built with _desc (capstone clause: Mastery).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your Thunder Clap grants you an absorb shield equal to 6% of your maximum health, plus an additional 1% for each target struck, up to 5 targets. Lasts 15 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Your Thunder Clap grants you an absorb shield equal to 6% of your maximum health, plus an additional 1% for each target struck, up to 5 targets. Lasts 15 sec.', "Mastery increases every amount added to your Storm's Bulwark shield, and raises its maximum.", last=True), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': "Storm's Bulwark", 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3513,7 +3532,7 @@ shield_cover_200061 = spell(
     id=200061,
     name='Shield Cover',
     school=School.NORMAL,
-    attributes=464,
+    attributes=0,
     cast_time_ms=0,
     cooldown_ms=0,
     category_cooldown_ms=0,
@@ -3526,7 +3545,7 @@ shield_cover_200061 = spell(
     ],
     spell_icon_id=1935,
     notes='Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Shield Cover capstone buff - cast by spell_warr_shield_cover_capstone',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Reduces Magic damage taken by 30% for 3 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces Magic damage taken by 30% for 3 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Cover', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Magic damage taken reduced.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces Magic damage taken by 30% for 3 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Cover', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3574,20 +3593,20 @@ shield_discipline_200064 = spell(
     id=200064,
     name='Shield Discipline',
     school=School.NORMAL,
-    attributes=464,
+    attributes=0,
     cast_time_ms=0,
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=0.0,
-    duration_ms=30000,
+    duration_ms=20000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1935,
-    notes="Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Shield Discipline's internal charge buff - basepoints set per-cast, see spell_warr_shield_slam",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': "Your next Thunder Clap's absorb is increased.", 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your next Thunder Clap's absorb is increased.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Discipline', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="warrior-rework S1 D23: Shield Discipline's charge buff, 30 s -> 20 s (DurationIndex 18). Consumed by every Thunder Clap whether or not Storm's Bulwark is talented; raises only the Thunder Clap contribution. Basepoints set per cast by spell_warr_shield_slam.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your next Thunder Clap grants a larger shield.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Thunder Clap grants a larger shield.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Discipline', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3602,22 +3621,14 @@ thunder_clap_echo_200065 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=0.0,
+    duration_ms=30000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=44.9, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=41.5, potency_kind='direct', implicit_target_a=87, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.APPLY_AURA, mechanic=8, implicit_target_a=87, implicit_target_b=16, radius_yards=8.0, base_points=-11, apply_aura=AuraType.MOD_MELEE_HASTE),
     ],
     spell_icon_id=1936,
-    notes=(
-        "Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Thunderstruck capstone "
-        "echo - ~50% of Thunder Clap's own damage formula, fired by 200066's native periodic "
-        "trigger; deliberately damage-only (no slow, no Blood and Thunder/Storm's Bulwark "
-        "re-trigger). Fixed 2026-09-03: effect1 was type 6 (APPLY_AURA) / apply_aura 2 "
-        "(SPELL_AURA_MOD_POSSESS) instead of type 2 (SCHOOL_DAMAGE) - caused the echo to possess "
-        "the target instead of damaging it. Potency system P7 (warrior pass): converted to "
-        "ap_potency=44.9 (warrior-potency-report.md base-implied default, non-mismatched; this is "
-        "a normal, fully DBC-driven effect - not script-computed, unlike Bloodstorm - so no "
-        "exclusion or F11 gate needed)."
-    ),
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': '', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': '', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Thunder Clap Echo', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 128, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="Protection Warrior rework: Thunderstruck capstone echo, cast by the warrior 3 s after Thunder Clap from 200066's periodic tick (spell_warr_thunderstruck_echo_holder) at the spot where that Thunder Clap was cast (S1 D6; user 2026-10-30, S1 playtest: the echo strikes the Thunder Clap's spot, not where the warrior stands when it fires). Targets 87/16 (TARGET_DEST_DEST + TARGET_UNIT_DEST_AREA_ENEMY, stock Ball Lightning 52779's pair): the explicit destination is the stored spot, the area, its line-of-sight checks and the radius mods centre there, and the warrior stays the caster (damage, crit, threat, procs, kill credit, its own spell mods). RangeIndex 1 skips Spell::CheckRange, so the warrior may have walked any distance from the spot. e0 deals 50% of Thunder Clap's damage (ap_potency 41.5 = half of Thunder Clap's 83; it owns d0 0x80 like Thunder Clap, so Improved Thunder Clap's damage / radius / slow and Thunderstruck's damage scale it exactly like Thunder Clap). e1 (S1 ruling 5) is Thunder Clap's slow (aura 138 bp -11 = -10% attack speed, mechanic 8, same targets and radius, same effect index as Thunder Clap's so Improved Thunder Clap's EFFECT2 mod reaches it); DurationIndex 21 -> 9 (30 s) so the slow lasts like Thunder Clap's. spell_warr_thunder_clap_echo (spell_warrior_protection.cpp) filters targets to those engaged with the owner or group, grants 50% of the unamplified Thunder Clap Storm's Bulwark amount once per cast and rolls Sword and Board. No Bloodstorm, no Shield Discipline. Visual (S1 playtest, user 2026-10-30): SpellVisualID_1 90300 (patch_warrior_vfx_models.py, patch-M) = Thunder Clap 6343's SpellVisual 145 with its CastKit 356 (the stomp animation 181, the hand lightning, the ring, sound and shake, all played on the caster) cleared and InstantAreaKit = stock kit 7397 (Spells\\ThunderClap_Cast_Base.mdx as WorldEffect, Thunder Clap's sound 3090, shake 3: kit 356 without the animation and hands), so the ring plays at the destination and the warrior does not stomp again; ImpactKit 283 (lightning on each target) and StateKit 360 (the slow) stay 145's. Stock precedent for a ThunderClap_Cast_Base InstantAreaKit at a spell's destination: Air Burst 32014 (targets 53/16) and Concussive Shock 71337 (18/16), kit 9208. It was 145 from the first S1 playtest fix, which played the whole Thunder Clap on the warrior. S1-FIX: DefenseType (DmgClass) 0 -> 3 like Thunder Clap 6343, so the echo can crit (Unit::SpellDoneCritChance returns 0 for SPELL_DAMAGE_CLASS_NONE; the S1 sims saw 0 crits in 369 echo hits) and uses Thunder Clap's melee crit, 2x crit damage and hit table. Fixed 2026-09-03: effect 1 was APPLY_AURA / MOD_POSSESS instead of SCHOOL_DAMAGE. Potency system P7 (warrior pass): ap_potency based on the warrior-potency-report.md base-implied default; a normal DBC-driven effect, not script-computed.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': '', 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': '', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Thunder Clap Echo', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 128, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 90300},
 )
 
 
@@ -3637,6 +3648,97 @@ thunderstruck_200066 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PERIODIC_TRIGGER_SPELL, amplitude=3000, trigger_spell=thunder_clap_echo_200065.id),
     ],
     spell_icon_id=1936,
-    notes="Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Thunderstruck capstone's delay holder - pure PERIODIC_TRIGGER_SPELL, no script; cast on self by spell_warr_thunder_clap only when Thunderstruck rank 3 (200053) is talented",
+    notes="Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Thunderstruck capstone's delay holder, cast on self by spell_warr_thunder_clap only when Thunderstruck rank 3 (200053) is talented. S1 playtest (user 2026-10-30): AuraScript spell_warr_thunderstruck_echo_holder remembers where the warrior stood when the aura was applied (the Thunder Clap's spot, same tick) and on the one periodic tick (3000 ms) prevents the native trigger and casts the echo 200065 at that spot instead (skipped after a map change). A Thunder Clap while the holder is up (only possible past the 6 s category cooldown, e.g. .cheat cooldown) removes it first, so the newest Thunder Clap's spot gets the one echo 3 s later, as the old refresh timed it; the older pending echo is dropped. The trigger_spell stays 200065 (the tick's spell; mod-dpssim removes this timed passive between iterations, and a removed aura never ticks).",
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': '', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': '', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Thunderstruck', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+
+
+victorious_32216 = spell(
+    id=32216,
+    name='Victorious',
+    school=1,
+    attributes=256,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=20000,
+    effects=[
+        Effect(type=6, base_points=-1, implicit_target_a=1, apply_aura=4),
+    ],
+    spell_icon_id=2053,
+    notes='pulled from existing data',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 4, 'SpellClassMask_2': 262144, 'AuraDescription_Lang_enUS': 'Victory Rush is usable.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+execute_20647 = spell(
+    id=20647,
+    name='Execute',
+    school=1,
+    attributes=262160,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    power_type=1,
+    mana_cost=1,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=2, implicit_target_a=6),
+    ],
+    spell_icon_id=1648,
+    notes='pulled from existing data',
+    raw_overrides={'AttributesEx': 512, 'AttributesEx2': 4, 'AttributesEx3': 1073742336, 'TargetAuraState': 2, 'CastingTimeIndex': 1, 'BaseLevel': 1, 'SpellLevel': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Attempt to finish off a wounded foe, causing damage and converting each extra point of rage into additional damage.  Only usable on enemies that have less than 20% health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 4, 'SpellClassMask_1': 536870912, 'SpellClassMask_3': 8, 'DefenseType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+whirlwind_44949 = spell(
+    id=44949,
+    name='Whirlwind',
+    school=1,
+    attributes=327696,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    power_type=1,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=121, base_points=-1, implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=156, implicit_target_a=22, implicit_target_b=15,
+               radius_yards=8.0),
+    ],
+    spell_icon_id=83,
+    notes='pulled from existing data. Warrior balance 2026-10-30 (user): Whirlwind +20% then +30% (156%) on both hands, eff1 '
+          'WEAPON_PERCENT_DAMAGE 156 after the normalized weapon effect (the stale slot-2 die/base keys dropped).',
+    raw_overrides={'AttributesEx': 16, 'AttributesEx3': 16777216, 'AttributesEx4': 128, 'AttributesEx5': 32768, 'CastingTimeIndex': 1, 'BaseLevel': 36, 'SpellLevel': 36, 'RangeIndex': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41395, 'SpellVisualID_1': 223, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 4, 'SpellClassMask_2': 4, 'SpellClassMask_3': 8, 'MaxTargets': 4, 'DefenseType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+whirlwind_50622 = spell(
+    id=50622,
+    name='Whirlwind',
+    school=1,
+    attributes=327696,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    power_type=1,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=121, base_points=-1, implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
+        Effect(type=64, die_sides=0, implicit_target_a=22, trigger_spell=44949),
+    ],
+    spell_icon_id=83,
+    notes='pulled from existing data',
+    raw_overrides={'AttributesEx': 16, 'AttributesEx3': 1536, 'AttributesEx4': 128, 'AttributesEx5': 32768, 'CastingTimeIndex': 1, 'BaseLevel': 36, 'SpellLevel': 36, 'RangeIndex': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'SpellVisualID_1': 11756, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'In a whirlwind of steel you attack up to $i enemies within $a1 yards, causing weapon damage from both melee weapons to each enemy.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 4, 'SpellClassMask_2': 4, 'SpellClassMask_3': 8, 'MaxTargets': 4, 'DefenseType': 2, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
 )

@@ -100,6 +100,8 @@ bool SimTarget::Create(Map* map, Position const& pos, Config const& config)
     _summon->UpdateMaxHealth();
     _summon->SetFullHealth();
     SimDummyAI::SetHealthDrain(config.HealthDrain);
+    SimDummyAI::SetStartHealthPct(config.StartHealthPct);
+    SimDummyAI::ResetHealth(_summon);
 
     LOG_INFO("server.dpssim", "mod-dpssim: SimTarget created - entry {}, level {}, armor {} (configured {}), maxHealth {}.",
         entry, config.Level, _summon->GetArmor(), config.Armor, _summon->GetMaxHealth());

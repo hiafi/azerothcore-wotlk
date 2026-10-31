@@ -67,7 +67,15 @@ row is declared. See "Death Knight T1" below.
 
 ```
 python3 apps/dbc-tools/generate.py
+python3 apps/dbc-tools/generate.py --check                  # read-only lints + generated-header gate
+python3 apps/dbc-tools/generate.py --check --class warrior  # the same for one class only (seconds)
 ```
+
+Flags: `--no-prune`, `--check`, `--check --class NAME` (refused without `--check`), `--no-cache`, `--rebuild-cache`.
+A run replays the base dumps and every promoted `db_world` file to learn what is live; that replay is cached under
+the gitignored `var/dbc-tools-cache/` and reused while the files, the loader code and the parameters are unchanged
+(see `.agents/docs/systems/dbc-tools.md`, "generate.py speed"). A run after a change that touches the cache's inputs
+is slower once. Timings and the harness that proves the output unchanged: `apps/dbc-tools/bench/equivalence.py`.
 
 Reads `source/ids.yaml` plus every file under `source/spells/*.csv` and
 `source/talents/*.yaml` (merged together — see "Source files" below for why
@@ -370,8 +378,9 @@ phase file itself.
 ```python
 from lib.dsl.registry import remove_spell_proc, spell_category
 
-# spellcategory_dbc - id from ids.yaml's `spellcategory` block (1300-1309; stock tops out at
-# 1253). A spell then shares the cooldown with `category=1300, category_cooldown_ms=15000`.
+# spellcategory_dbc - id from ids.yaml's `spellcategory` block (1300-1319, widened from
+# 1309 by Warrior T1; stock tops out at 1253). A spell then shares the cooldown with
+# `category=1300, category_cooldown_ms=15000`.
 # generate.py stops with an error for a spell whose Category (typed `category` or a raw
 # `Category` override) is in that block but has no spell_category() - without the server row
 # SpellInfo::GetCategory() is 0 and the category cooldown silently never exists.
@@ -670,11 +679,12 @@ The other shaman "never take" bits (d0 b10 on a shield with NO_THREAT, d2 b14 ro
 b11" depend on attributes or on the spell's role, which the table cannot express: they are SH0's targeted tests.
 
 **ID blocks.** `source/ids.yaml` now names the client-patch tables' ranges (`spellicon` 90100-90499, `soundentries`
-90001-90199, `spellvisual` 90001-90299 shared by SpellVisual/Kit/EffectName, `creaturedisplayinfo` and
+90001-90199, `spellvisual` 90001-90399 shared by SpellVisual/Kit/EffectName, `creaturedisplayinfo` and
 `creaturemodeldata` 90001-90499, `gameobjectdisplayinfo` 90001-90099, `summonproperties` 3000-3099; stock tops out
 at 2935; `soundentries` and `spellvisual` were widened by Death Knight T1, `spellicon` from 90399 and the `spell_group`
-block from 1299 to 1399 by Rogue T1) and a `reservations:` key holding each class's slice of every table (shaman,
-deathknight and rogue; `healsim` reserves the healing sim's spells). Nothing mints
+block from 1299 to 1399 by Rogue T1, `spellvisual` to 90399 and `spellcategory` to 1319 by Warrior T1) and a
+`reservations:` key holding each class's slice of every table (shaman,
+deathknight, rogue and warrior; `healsim` reserves the healing sim's spells). Nothing mints
 from the new blocks; `lib/test_id_blocks.py` checks that blocks of one table do not overlap, that a reservation sits
 inside its block and overlaps no other class, and that every custom id `source/classes/<class>/` declares inside a
 tool-wide block is inside that class's reservation. A new class reserves its slice in `ids.yaml` first (keep to
@@ -846,6 +856,32 @@ Death Knight's first spell block swallowed the healing sim's spells).
   full run both apply it): a custom spell may not carry d0 b11 (`0x800`), d0 b22 (`0x400000`) or d0 b25 (`0x2000000`).
   The role-dependent "never take" bits (d0 b16 / b20 / b17 / b26, d1 b1 / b2 / b3 / b18, the DR and Preparation bits)
   are the rogue stages' targeted tests.
+
+### Warrior T1: id blocks, family bits and the capstone tooltip test (tooling only, no warrior content)
+
+- *ID blocks.* `reservations:` gains `warrior` (PLAN s4: spell 204400-204899 split shared 204400-204489 / Arms
+  204490-204629 / Fury 204630-204769 / Protection 204770-204799 / spare 204800-204868; talent 60450-60489,
+  SkillLineAbility 30840-30869, spell_group 1296-1305, SpellDescriptionVariables 1370-1429, creature 300370-300389,
+  SpellIcon 90420-90449, SoundEntries 90141-90150, SpellVisual / Kit / EffectName 90300-90339, spellcategory 1313-1319).
+  The P0 spike's spells 204869-204899, spell_group 1305 and creatures 300388-300389 are never reused; talents
+  60488-60489 and SkillLineAbility 30868-30869 were reserved for it but never declared (also never reuse). `spellvisual`
+  is widened 90299 -> 90399 and `spellcategory` 1309 -> 1319. The September Protection build's ids (spells
+  200028-200066 except the mage's 200037 / 200044, talents 60003-60006) stay outside the reservation, pinned exactly as
+  `WARRIOR_LEGACY` in `lib/test_id_blocks.py` (a spec stage that retires one shrinks that set). The helper
+  `class_slice_problems(class_name, script_name, scanned)` generalises the rogue VFX-script ownership rule
+  (`rogue_slice_problems` is a wrapper) and `WARRIOR_VFX_SCRIPT` names the warrior's, for stage V.
+- *Family bits.* `source/classes/warrior/_masks.py` names the FAMILY-BITS s5 allocation (d2 b0 Heroic Leap, b1 Colossus
+  Smash, b2 Rampage, b3 the R1 damaging-ability group; b4-b7 reserved; append-only) and `lint.WARRIOR_FAMILY_RULES`
+  (`SpellClassSet` 4, in `FAMILY_BIT_RULES`, so `--check` and the full run both apply it): a custom spell may not carry
+  d0 b0 / b1 / b17 / b24, d1 b5 / b6 or d2 b31, and no reader mask may contain d2 b31. The role bits (d0 b7 / b10 / b23,
+  d1 b8 / b9 / b18 / b21, category 132) are the warrior stages' targeted tests. `lib/test_warrior_family_rules.py`.
+- *Capstone tooltips.* `source/classes/warrior/_tooltips.py::_desc(text, capstone, last)` builds the user's capstone
+  paragraph (grey `|cFF9D9D9DCapstone Bonus: <clause>|r` below the last rank, plain on the last, the same clause on
+  every rank, never in `AuraDescription_Lang_enUS`); `lib/test_capstone_format.py` checks it:
+  `capstone_problems(class_name, expected_names)` loads `source/classes/<class>/` and fails any rank that breaks the
+  format, any listed talent that is missing or ambiguous, and any unlisted talent whose rank text says "capstone". Add
+  the class to `EXPECTED_CAPSTONES` in that file when its talents get capstones, and list every capstone talent by name
+  in the stage handoff (a clause without the label cannot be found by a text scan).
 
 ### Declaring tooltip variables (P9)
 

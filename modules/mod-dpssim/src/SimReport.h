@@ -70,7 +70,7 @@ namespace SimReport
     //   "minionSamples": [{timestampMs, counts: {"<entry>": n, ...}}, ...] - the alive units the actor controls (pet,
     //                  guardians, totems, summons) per creature entry, every 500 ms in the playerbot DPS run and the
     //                  tank run (empty in others), see RunResult::MinionSample.
-    //   "casts": [{timestampMs, spellId, triggered, target}, ...] - every spell the actor cast, in cast
+    //   "casts": [{timestampMs, spellId, triggered, target, powerCost}, ...] - every spell the actor cast, in cast
     //             order, damage or not (Evocation, self-buffs, ...) - see RunResult::CastEvents's
     //             doc comment. Distinct from "hits" above: a cast here is logged the moment it
     //             fires (Spell::cast() completing), a hit in "hits" is logged when a direct-damage
@@ -80,7 +80,19 @@ namespace SimReport
     //             true for a proc/internal trigger (a talent's passive effect being granted, a free
     //             proc-triggered cast, ...) - the report groups on this to separate real ability
     //             usage from buffs that just showed up on their own. `target` is the explicit unit target's
-    //             dummy index, -1 for self, none, ground or a non-dummy.
+    //             dummy index, -1 for self, none, ground or a non-dummy. `powerCost` is Spell::GetPowerCost() (the
+    //             spell's m_powerCost) at cast time in the cast's power type, as the engine stores it (rage and runic
+    //             power are x10). It is the built cost, not the resource consumed: a free cast (Momentum's Slam) reads
+    //             0, but a script's extra spend (Execute's extra rage, the Sudden Death floor's SetPower) is invisible,
+    //             a dodged or parried strike still records the full cost, and a triggered spell with a cost reads it
+    //             (non-zero). Take Execute's extra spend from the powerSamples delta.
+    //   "auraSamples": [{ts, spellId, onTarget, stacks, remainingMs}, ...] - only when the profile sets AuraSampleIds,
+    //             after "casts". Every sim step, for each listed id, one entry for the aura on the actor (onTarget
+    //             false, any caster) and one for the actor's own aura on target 0 (onTarget true), each only while the
+    //             aura exists; ts is ms since the iteration start, sampled after the step's clock advance and the bot's
+    //             action, so a cast at T shows its post-cast state first at ts = T + stepMs (compare a cast at T with
+    //             the sample at T + stepMs). remainingMs is -1 for a permanent aura. A gap in ts is the aura being
+    //             absent. See RunResult::AuraSample.
     //   "targets": [{index, totalDamage, pctOfTotal}, ...] - damage per dummy, in index order.
     bool WriteJson(std::string const& path, SimDaemon::RunConfig const& config, SimDaemon::RunResult const& result);
 
@@ -169,7 +181,8 @@ namespace SimReport
     //   "selfHeals": [{spellId, isPet, casts, hits, ticks, crits, effective, overheal, overhealPct, healAbsorbed}]
     //   "swings":  [{timestampMs, dummy, outcome, preArmor, armor, blocked, absorbed, resisted, final, rageTenths
     //               (null without rage), expected {miss, dodge, parry, block, crit} (percent), inFrontArc, takenMult}]
-    //   "samples": [{timestampMs, health, maxHealth, powerType, power, maxPower, bulwarkStacks}] every 500 ms; rage
+    //   "samples": [{timestampMs, health, maxHealth, powerType, power, maxPower, bulwarkStacks, absorbRemaining}]
+    //               every 500 ms (absorbRemaining: the actor's absorb shields' amount left, summed); rage
     //               and runic power are in display units (the core stores them x10). The dps scenario's samples are
     //               read before the step's health refill.
     //   "threat":  [{dummy, samples: [[timestampMs, threat], ...]}] every second

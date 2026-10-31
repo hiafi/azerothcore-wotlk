@@ -34,8 +34,9 @@
 #                 SpellCategory ids top out at 1253 (the DBC's own highest ID row, which is what
 #                 DBCStructure.h's SpellCategoryEntry / sSpellCategoryStore read), and 1300-1309
 #                 appeared nowhere in spell_dbc.Category, spellcategory_dbc or any migration when
-#                 this block was cut, so it keeps a clear gap above stock. See apps/dbc-tools/lib/
-#                 dsl/registry.py's spell_category() (Paladin T1).
+#                 this block was cut, so it keeps a clear gap above stock. Widened from 1309 to
+#                 1319 by Warrior T1 (1310-1312 stay unreserved, the warrior takes 1313-1319).
+#                 See apps/dbc-tools/lib/dsl/registry.py's spell_category() (Paladin T1).
 #
 # `reuse.py` only mints a new ID from these blocks when nothing existing
 # (base DBC or current overlay) already matches what's being asked for.
@@ -49,6 +50,9 @@ spell:
   # with Death Knight's first spell block, 2026-10-23).
   # 203700-204399: Rogue (`reservations: rogue`, rogue-rework.PLAN.md s4): shared 203700-203799, Assassination
   # 203800-203949, Combat 203950-204129, Subtlety 204130-204279, spare 204280-204399 (the P0 spike held 204370-204399).
+  # 204400-204899: Warrior (`reservations: warrior`, warrior-rework.PLAN.md s4): shared 204400-204489, Arms
+  # 204490-204629, Fury 204630-204769, Protection 204770-204799, spare 204800-204868, 204869-204899 = the P0 spike.
+  # The September Protection build's 37 spells 200028-200066 (all but the mage's 200037 / 200044) stay below the slice.
 
 talent:
   start: 60000
@@ -144,10 +148,11 @@ spelldescriptionvariables:
 # paladin-rework.T1-HANDOFF.md) - a shared category cooldown across several spells (the paladin
 # auras' 15 s one, 1300). Stock ids top out at 1253 and 1300-1309 are unused anywhere (checked
 # against spell_dbc.Category, spellcategory_dbc base + updates, and every migration), so this is a
-# ten-id block clear of stock. Server-only: no client SpellCategory.dbc row is generated.
+# ten-id block clear of stock; Warrior T1 widened it from 1309 to 1319 (stock still tops out at 1253, nothing in
+# 1310-1319 is used anywhere). Server-only: no client SpellCategory.dbc row is generated.
 spellcategory:
   start: 1300
-  end: 1309
+  end: 1319
 
 # --- Client-patch id blocks (shaman-rework T1, .agents/plans/shaman-rework/shaman-rework.T0a-REPORT.md s1) ---
 #
@@ -160,7 +165,7 @@ spellcategory:
 # reservation (the `reservations:` key at the bottom) sits inside the tool-wide range and overlaps no other
 # class. Each range contains every id already used, checked against the constants in build_patch_*.py and
 # patch_*_vfx_models.py and the maxima in the shaman T0a report (2026-10-18):
-#   - spellicon:  used 90100-90239, 90270, 90310-90312, 90370-90374 (build_patch_i.py ICON_ID_*). 90100 is the first id: the Ascension
+#   - spellicon:  used 90100-90239, 90270, 90310-90312, 90370-90374, 90420-90421 (build_patch_i.py ICON_ID_*). 90100 is the first id: the Ascension
 #                 icon mining started above CreatureDisplayInfo's 90001+ rows (a different table, same numbers).
 #                 Widened from 90399 to 90499 by Rogue T1 (the rogue slice 90370-90419 ends past the old end).
 #   - soundentries: used 90001-90033 (druid 1-4, priest 5-10, warlock 11, paladin 31-33). Widened from 90100 to
@@ -168,7 +173,8 @@ spellcategory:
 #   - spellvisual: SpellVisual, SpellVisualKit and SpellVisualEffectName share these numbers. Used 90001-90091
 #                 (mage from 90001, hunter glaive toss 90090/90091 are the highest). Widened from 90199 to 90299
 #                 by Death Knight T1 (shaman's slice filled 90130-90179); Death Knight reserves 90180-90249 and the
-#                 Rogue 90250-90299, which fills the block: the next class widens it.
+#                 Rogue 90250-90299, which filled the block. Widened from 90299 to
+#                 90399 by Warrior T1 (the warrior reserves 90300-90339).
 #   - creaturedisplayinfo / creaturemodeldata: used 90001-90321 / 90001-90310 (mage 90001-90003, the shapeshift
 #                 appearances 90100-90399 of build_patch_f.py).
 #   - gameobjectdisplayinfo: used 90001 (client patch-M).
@@ -183,7 +189,7 @@ soundentries:
 
 spellvisual:
   start: 90001
-  end: 90299
+  end: 90399
 
 creaturedisplayinfo:
   start: 90001
@@ -270,7 +276,7 @@ reservations:
   # the holding tab 60800), re-checked free by rogue-rework.T0-REPORT.md s1. Left out on purpose: gameobjectdisplayinfo,
   # summonproperties and spellcategory (T0: the rogue needs none of them; the PLAN keeps them "only if needed". A later
   # stage that does need one adds its slice here, and widens the block where it is short: spellcategory 1300-1309 for
-  # 1310-1312).
+  # 1310-1312; Warrior T1 did that, widening the block to 1319).
   rogue:
     # Spell: shared 203700-203799, Assassination 203800-203949, Combat 203950-204129, Subtlety 204130-204279, spare
     # 204280-204399 (204370-204399 held the P0 spike: never reuse, players' clients may have cached them).
@@ -289,6 +295,37 @@ reservations:
     spellvisual: {start: 90250, end: 90299}  # SpellVisual, Kit and EffectName
     creaturedisplayinfo: {start: 90490, end: 90499}
     creaturemodeldata: {start: 90490, end: 90499}
+
+  # Warrior: .agents/plans/warrior-rework/warrior-rework.PLAN.md s4 (TalentTab: none, the rework reuses 161 / 164 / 163
+  # and the holding tab 60800), re-checked free by warrior-rework.T0-REPORT.md s1. No CreatureDisplayInfo /
+  # CreatureModelData, GameObjectDisplayInfo or SummonProperties slice: Skull Banner borrows stock displays and
+  # SummonProperties 121. Not in any slice (they stay outside the reservation, grandfathered in
+  # lib/test_id_blocks.py's WARRIOR_LEGACY): the September Protection build's spells 200028-200066 except the mage's
+  # 200037 / 200044 (37 ids) and talents 60003-60006. A note, not a key: a sibling key under `reservations:` would break
+  # every reader that indexes it by table name.
+  warrior:
+    # Spell: shared 204400-204489, Arms 204490-204629, Fury 204630-204769, Protection 204770-204799, spare
+    # 204800-204868, 204869-204899 held the P0 spike: never reuse, players' clients may have cached them.
+    spell: {start: 204400, end: 204899}
+    # Talent: Arms 60450-60464, Fury 60465-60479, Protection 60480-60484, spare 60485-60487, 60488-60489 were reserved
+    # for the P0 spike but never declared: never reuse.
+    talent: {start: 60450, end: 60489}
+    # SkillLineAbility: shared 30840-30849, Arms 30850-30854, Fury 30855-30859, Protection 30860-30862, spare
+    # 30863-30867, 30868-30869 were reserved for the P0 spike but never declared: never reuse.
+    skilllineability: {start: 30840, end: 30869}
+    # spell_group: 1296 Rallied, 1297 Colossus Smash, 1298-1299 shared spare, Arms 1300-1301, Fury 1302-1303,
+    # Protection 1304, 1305 = the P0 spike.
+    spell_group: {start: 1296, end: 1305}
+    # tooltip variables: shared 1370-1384, Arms 1385-1404, Fury 1405-1419, Protection 1420-1424, spare 1425-1429.
+    spelldescriptionvariables: {start: 1370, end: 1429}
+    # creature: 300370-300371 Skull Banner (one per faction, PLAN s1E); 300388-300389 = the P0 spike, declared from
+    # source/npcs/warrior_p0_spike_npcs.py.
+    creature: {start: 300370, end: 300389}
+    spellicon: {start: 90420, end: 90449}
+    soundentries: {start: 90141, end: 90150}
+    spellvisual: {start: 90300, end: 90339}  # SpellVisual, Kit and EffectName
+    spellcategory: {start: 1313, end: 1319}  # only 1 expected: Sweeping Strikes <-> Blade Flurry (PLAN s4)
+
   # The healing sim (source/npcs/healsim_spells.py) is not a class, but its spells sit inside the spell block, so it
   # reserves under its project name and the overlap test keeps every class out of them.
   healsim:
