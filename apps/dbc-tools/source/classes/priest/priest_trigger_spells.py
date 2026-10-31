@@ -6802,6 +6802,15 @@ spirit_of_redemption_form_200194 = spell(
 )
 
 
+# 200226's -100% cost: PRIEST_HEAL_MASK plus the heals it lacks that carry their own mana cost - Heal, Lesser Heal,
+# the Holy Nova button (its cost sits on the damage id 15237's HOLY_NOVA_DMG bit; the heal 23455 is already in) and
+# the Penance button 47540 (PENANCE; the bolts cost nothing). fix-D 2026-10-31.
+_SOR_FREE_HEALS_MASK = (
+    _masks.PRIEST_HEAL_MASK[0] | _masks.HEAL | _masks.LESSER_HEAL | _masks.HOLY_NOVA_DMG,
+    _masks.PRIEST_HEAL_MASK[1] | _masks.PENANCE,
+    _masks.PRIEST_HEAL_MASK[2],
+)
+
 spirit_of_redemption_free_heals_200226 = spell(
     id=200226,
     name='Spirit of Redemption',
@@ -6815,8 +6824,10 @@ spirit_of_redemption_free_heals_200226 = spell(
           'which does not exist) cast alongside 200193/200194 by spell_pri_spirit_of_redemption. '
           '-100% cost (base_points=-101) scoped to PRIEST_HEAL_MASK on all three dwords, 5 s. S1c (user ruling 2026-10-16): Lightwell\'s '
           'dword-1 bit (0x40000000) stays, so Lightwell is free in the form; Resurrection, Mass Resurrection, '
-          'Shackle Undead, Shadowfiend and Guardian Spirit share the bit and are free too (harmless in a 5 s form).',
-    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Priest heals cost no mana.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals cost no mana.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.PRIEST_HEAL_MASK[0], 'EffectSpellClassMaskA_2': _masks.PRIEST_HEAL_MASK[1], 'EffectSpellClassMaskA_3': _masks.PRIEST_HEAL_MASK[2], 'EffectChainAmplitude_1': 1.0},
+          'Shackle Undead, Shadowfiend and Guardian Spirit share the bit and are free too (harmless in a 5 s form). '
+          'fix-D 2026-10-31: _SOR_FREE_HEALS_MASK adds Heal, Lesser Heal, the Holy Nova button (dw1 HOLY_NOVA_DMG; '
+          'Twin Disciplines passives share the bit, no cost to touch) and the Penance button (dw2 PENANCE).',
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Priest heals cost no mana.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals cost no mana.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _SOR_FREE_HEALS_MASK[0], 'EffectSpellClassMaskA_2': _SOR_FREE_HEALS_MASK[1], 'EffectSpellClassMaskA_3': _SOR_FREE_HEALS_MASK[2], 'EffectChainAmplitude_1': 1.0},
 )
 
 
@@ -7113,6 +7124,19 @@ procs_on(holy_wrath_200212, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, hit_mask=P
 scripted_by(holy_wrath_200212, 'spell_pri_holy_wrath_capstone')
 
 
+# 200213's crit mask: every priest Holy heal and nuke. Was the literal (420748992, 134283268, 4) - Renew, Smite, PoH,
+# Heal, Flash Heal, Greater Heal, Lesser Heal, Holy Fire, Desperate Prayer, Holy Nova heal, CoH | Binding Heal, Penance
+# heal bolt, Guardian Spirit heal | Divine Hymn heal - kept bit for bit; fix-D 2026-10-31 adds Holy Nova damage, PoM
+# (33110's dw2 bit), the Penance damage bolt, the three Holy Words, Divine Star and Halo.
+_HOLY_WRATH_CRIT_MASK = (
+    _masks.RENEW | _masks.SMITE | _masks.POH | _masks.HEAL | _masks.FLASH_HEAL | _masks.GREATER_HEAL
+    | _masks.LESSER_HEAL | _masks.HOLY_FIRE | _masks.HOLY_NOVA_DMG | _masks.DESPERATE_PRAYER | _masks.HOLY_NOVA_HEAL
+    | _masks.COH,
+    _masks.BINDING_HEAL | _masks.POM | _masks.PENANCE_DMG_BOLT | _masks.PENANCE_HEAL_BOLT | _masks.GUARDIAN_SPIRIT_HEAL,
+    _masks.DIVINE_HYMN_HEAL | _masks.DIVINE_STAR | _masks.HALO | _masks.HW_SERENITY | _masks.HW_SANCTIFY
+    | _masks.HW_CHASTISE,
+)
+
 holy_wrath_crit_200213 = spell(
     id=200213,
     name='Holy Wrath',
@@ -7128,8 +7152,10 @@ holy_wrath_crit_200213 = spell(
           "the standard priest-heal family bits (Flash Heal/Heal/Greater Heal/Binding Heal/Penance/"
           'Prayer of Mending/Prayer of Healing/Circle of Healing, same as Inspiration/Test of '
           "Faith's own scoping) PLUS Smite|Holy Fire (dw1), since \"next Holy spell\" in a damage "
-          "capstone's own tooltip most plausibly includes the caster's direct Holy nukes, not only heals.",
-    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your next Holy spell by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Next Holy spell crit chance increased.', 'EquippedItemClass': -1, 'ProcChance': 101, 'ProcCharges': 1, 'CumulativeAura': 5, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 420748992, 'EffectSpellClassMaskA_2': 134283268, 'EffectSpellClassMaskA_3': 4, 'EffectChainAmplitude_1': 1.0},
+          "capstone's own tooltip most plausibly includes the caster's direct Holy nukes, not only heals. "
+          'fix-D 2026-10-31: _HOLY_WRATH_CRIT_MASK adds Holy Nova damage, PoM, the Penance damage bolt, the Holy '
+          'Words, Divine Star and Halo (Twin Disciplines passives share the Holy Nova bit, they never crit).',
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your next Holy spell by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Next Holy spell crit chance increased.', 'EquippedItemClass': -1, 'ProcChance': 101, 'ProcCharges': 1, 'CumulativeAura': 5, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _HOLY_WRATH_CRIT_MASK[0], 'EffectSpellClassMaskA_2': _HOLY_WRATH_CRIT_MASK[1], 'EffectSpellClassMaskA_3': _HOLY_WRATH_CRIT_MASK[2], 'EffectChainAmplitude_1': 1.0},
 )
 
 

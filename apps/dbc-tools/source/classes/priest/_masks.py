@@ -17,10 +17,12 @@ PWS = 1
 RENEW = 64
 SMITE = 128
 POH = 512
+HEAL = 1024  # Heal 2054/2055/6063/6064
 FLASH_HEAL = 2048
 GREATER_HEAL = 4096
 MIND_BLAST = 8192
 SWP = 32768
+LESSER_HEAL = 262144  # Lesser Heal 2050/2052/2053
 HOLY_FIRE = 1048576
 HOLY_NOVA_DMG = 4194304
 # 58381, the helper spell Mind Flay's PERIODIC_TRIGGER_SPELL_WITH_VALUE effect fires once per tick -
@@ -46,16 +48,19 @@ BINDING_HEAL = 4
 POM = 32
 MASS_DISPEL = 128
 VT = 1024
+PENANCE_DMG_BOLT = 32768  # 47666/52998-53000, the damage bolt the channel fires at an enemy
 PENANCE_HEAL_BOLT = 65536
 DISPERSION = 262144
 MIND_SEAR_TICK = 524288  # 49821, the spell that actually deals damage
 MIND_SEAR = 1048576  # 48045, the cast
 DIVINE_HYMN = 4194304
+GUARDIAN_SPIRIT_HEAL = 0x08000000  # 48153, the heal Guardian Spirit casts when it saves the target
 PENANCE = 8388608  # the (8388608,0,0) "Mind Sear" a naive family scan shows is NPC spell 32000, not this
 
 # --- dword 3 (SpellClassMask_3 / EffectSpellClassMaskX_3) ---
 MIND_FLAY = 64
 PENANCE_BOLT = 128
+DIVINE_HYMN_HEAL = 4  # 64844, the heal each Divine Hymn tick casts
 PRIEST_GENERIC = 1024
 # PLAN §4.4 - one named constant per row, in bit order.
 DIVINE_STAR = 0x00010000  # bit 16 - Divine Star 200133 and its pulse 200134
