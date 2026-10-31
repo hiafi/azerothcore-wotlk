@@ -759,6 +759,9 @@ namespace
     // Frost talent tree item in docs/frost-mage-handoff.md).
     constexpr float FROZEN_ORB_TRAVEL_DISTANCE = 30.0f;
     constexpr float FROZEN_ORB_SPEED_RATE = 0.55f;
+    // After its first pulse connects the orb keeps drifting toward its destination at this fraction
+    // of its travel speed ("slows down significantly", 20% of the normal speed) instead of stopping.
+    constexpr float FROZEN_ORB_SLOWED_SPEED_PCT = 0.2f;
 }
 
 // 300001 - Frozen Orb (the projectile itself). Display is CreatureDisplayID 90001, a custom row
@@ -841,6 +844,7 @@ public:
         // or terrain collision - called on the owner (not `me`) because that's whose facing at
         // cast time determines the orb's direction.
         Position dest = owner->GetFirstCollisionPosition(FROZEN_ORB_TRAVEL_DISTANCE, 0.0f);
+        _dest = dest;
         // generatePath=false: with pathfinding on, the orb curves around obstacles like a mob
         // giving chase, which looks wrong for a projectile. Issued once - re-issuing every tick
         // would resend SMSG_MONSTER_MOVE every tick and make the client visibly stutter.
@@ -854,21 +858,26 @@ public:
 
     // Called from spell_mage_frozen_orb_pulse::NotifyOrb (OnEffectHitTarget on 200008) whenever a
     // pulse actually connects with an enemy. Both the "slows down significantly after dealing
-    // damage" travel change and the Fingers of Frost grant chain start here -
+    // damage" travel change (the orb keeps moving at 20% of its speed, it does not stop) and the
+    // Fingers of Frost grant chain start here -
     // docs/frost-mage-redesign.md sec 1: "Grants 1 charge when the orb first strikes any enemy,
     // then 1 additional charge every 3 sec while active."
     void NotifyPulseHit()
     {
-        if (_halted)
+        if (_slowed)
             return;
-        _halted = true;
+        _slowed = true;
 
         // Not Kill() (fires death events/loot/combat log noise for a trigger) and not setting
         // speed to 0 (divide-by-zero paths in movement code, desyncs the client) - see the
-        // implementation plan's notes.
+        // implementation plan's notes. The orb used to stop dead here (MoveIdle); the spec is
+        // "slows to 20% speed", so lower the run speed and re-issue the same point move once (the
+        // spline is built with the speed current at issue time, so changing the rate alone would
+        // not affect a move already in flight). Issued exactly once, guarded by _slowed, for the
+        // same resend-stutter reason as the initial MovePoint.
+        me->SetSpeedRate(MOVE_RUN, FROZEN_ORB_SPEED_RATE * FROZEN_ORB_SLOWED_SPEED_PCT);
         me->GetMotionMaster()->Clear();
-        me->GetMotionMaster()->MoveIdle();
-        me->StopMoving();
+        me->GetMotionMaster()->MovePoint(POINT_FROZEN_ORB_END, _dest, FORCED_MOVEMENT_NONE, 0.0f, false);
 
         GrantFingersOfFrost();
         _events.ScheduleEvent(EVENT_FROZEN_ORB_GRANT_FOF, 3s);
@@ -916,7 +925,8 @@ private:
 
     ObjectGuid _ownerGUID;
     EventMap _events;
-    bool _halted = false;
+    Position _dest;
+    bool _slowed = false;
 };
 
 // 200007 - Frozen Orb
