@@ -2566,12 +2566,14 @@ surge_of_light_33150 = spell(
     raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your direct damage and healing criticals have a 10% chance to cause your next Smite or Flash Heal spell to be instant cast and cost no mana. Stacks up to 2 times.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 procs_on(surge_of_light_33150, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS,
-         spell_phase_mask=PROC_SPELL_PHASE_HIT, hit_mask=PROC_HIT_CRITICAL, attributes_mask=PROC_ATTR_TRIGGERED_CAN_PROC,
-         chance=10)
-# HIT phase only (one roll per critical target, "any direct damage or healing critical"). AttributesMask
-# PROC_ATTR_TRIGGERED_CAN_PROC is kept from the stock -33150 row (the design doc is silent on triggered
-# crits); no loop, the proc only applies the 33151 buff. The stock 6 sec cooldown is not kept: the design
-# doc rules "no runaway guard needed".
+         spell_phase_mask=PROC_SPELL_PHASE_CAST, hit_mask=PROC_HIT_CRITICAL, chance=10)
+# Systems.md section 5 "a cast rolls once; triggered hits roll nothing": CAST phase + HitMask CRITICAL.
+# The CAST proc (Spell.cpp, after HandleLaunchPhase) fires once per non-triggered cast and carries
+# PROC_HIT_CRITICAL when any target's pre-rolled crit (DoAllEffectOnLaunchTarget, only for crit-capable
+# direct damage / heal spells) is set - so one roll per cast that crits, never per AoE target, and never for
+# triggered spells (Penance bolts, PoM bounces, Divine Hymn ticks, item procs). Same shape as druid Nature's
+# Grace (-16880). No family filter: the text is "direct damage and healing criticals", any spell. No
+# cooldown: the design doc rules "no runaway guard needed".
 # The stock whole-chain row -33150 shadowed both per-rank rows (duplicate entry at boot) - see -27811.
 remove_spell_proc(-33150)
 
@@ -2595,8 +2597,7 @@ surge_of_light_33154 = spell(
     raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your direct damage and healing criticals have a 20% chance to cause your next Smite or Flash Heal spell to be instant cast and cost no mana. Stacks up to 2 times.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 procs_on(surge_of_light_33154, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS,
-         spell_phase_mask=PROC_SPELL_PHASE_HIT, hit_mask=PROC_HIT_CRITICAL, attributes_mask=PROC_ATTR_TRIGGERED_CAN_PROC,
-         chance=20)
+         spell_phase_mask=PROC_SPELL_PHASE_CAST, hit_mask=PROC_HIT_CRITICAL, chance=20)
 # spell_pri_surge_of_light_consume binds on Smite (585) and Flash Heal (2061) themselves (HOLY.md
 # 5,0's Script column), not on these talent ranks - see the scripted_by() calls next to those two
 # spells in priest_spells.py.
@@ -3198,11 +3199,11 @@ holy_concentration_34753 = spell(
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased by $200199s1% for $200199d after a critical heal with Flash Heal, Greater Heal or Binding Heal, or a critical hit with Holy Fire or Smite. Greater Heal, Flash Heal, Binding Heal and Circle of Healing have a $s2% chance to extend your Renew on all nearby party and raid members by 3 sec, to a maximum of 6 additional sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 procs_on(holy_concentration_34753, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
-         spell_phase_mask=PROC_SPELL_PHASE_HIT, hit_mask=PROC_HIT_CRITICAL, family_name=6,
+         spell_phase_mask=PROC_SPELL_PHASE_CAST, hit_mask=PROC_HIT_CRITICAL, family_name=6,
          family_mask=(_masks.FLASH_HEAL | _masks.GREATER_HEAL | _masks.SMITE | _masks.HOLY_FIRE, _masks.BINDING_HEAL, 0),
-         attributes_mask=PROC_ATTR_TRIGGERED_CAN_PROC, chance=100)
-# PROC_ATTR_TRIGGERED_CAN_PROC kept from the stock -34753 row (design doc silent on triggered casts); no
-# loop, the proc only applies the 200199-200201 Spirit buff.
+         chance=100)
+# CAST phase + HitMask CRITICAL, no triggered procs: once per cast that crits (a Binding Heal critting both
+# targets rolls once), per Systems.md section 5 - see the Surge of Light rows for how the CAST crit works.
 # The stock whole-chain row -34753 shadowed all three per-rank rows (duplicate entry at boot) - see -27811.
 remove_spell_proc(-34753)
 # spell_pri_holy_concentration_extend binds on Greater Heal (2060), Flash Heal (2061), Binding
@@ -3232,9 +3233,9 @@ holy_concentration_34859 = spell(
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased by $200200s1% for $200200d after a critical heal with Flash Heal, Greater Heal or Binding Heal, or a critical hit with Holy Fire or Smite. Greater Heal, Flash Heal, Binding Heal and Circle of Healing have a $s2% chance to extend your Renew on all nearby party and raid members by 3 sec, to a maximum of 6 additional sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 procs_on(holy_concentration_34859, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
-         spell_phase_mask=PROC_SPELL_PHASE_HIT, hit_mask=PROC_HIT_CRITICAL, family_name=6,
+         spell_phase_mask=PROC_SPELL_PHASE_CAST, hit_mask=PROC_HIT_CRITICAL, family_name=6,
          family_mask=(_masks.FLASH_HEAL | _masks.GREATER_HEAL | _masks.SMITE | _masks.HOLY_FIRE, _masks.BINDING_HEAL, 0),
-         attributes_mask=PROC_ATTR_TRIGGERED_CAN_PROC, chance=100)
+         chance=100)
 
 
 holy_concentration_34860 = spell(
@@ -3258,9 +3259,9 @@ holy_concentration_34860 = spell(
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased by $200201s1% for $200201d after a critical heal with Flash Heal, Greater Heal or Binding Heal, or a critical hit with Holy Fire or Smite. Greater Heal, Flash Heal, Binding Heal and Circle of Healing have a $s2% chance to extend your Renew on all nearby party and raid members by 3 sec, to a maximum of 6 additional sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 procs_on(holy_concentration_34860, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
-         spell_phase_mask=PROC_SPELL_PHASE_HIT, hit_mask=PROC_HIT_CRITICAL, family_name=6,
+         spell_phase_mask=PROC_SPELL_PHASE_CAST, hit_mask=PROC_HIT_CRITICAL, family_name=6,
          family_mask=(_masks.FLASH_HEAL | _masks.GREATER_HEAL | _masks.SMITE | _masks.HOLY_FIRE, _masks.BINDING_HEAL, 0),
-         attributes_mask=PROC_ATTR_TRIGGERED_CAN_PROC, chance=100)
+         chance=100)
 
 
 # Priest Discipline rework (docs/reworks/priest-disc-rework.md (5,2)): Enlightenment now grants all
