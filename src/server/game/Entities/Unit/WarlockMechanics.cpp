@@ -862,8 +862,10 @@ namespace Warlock
 
         // Enslave Demon (1098) charms an arbitrary demon - checked before the entry switch so an
         // enslaved copy of e.g. an Imp-shaped demon isn't mistaken for the warlock's own Imp pet.
+        // Custom: only a real demon counts - without the warlock class gate a Hunter's pet possessed via Eyes of the
+        // Beast (or any other charmed non-demon) would otherwise read as an Enslaved demon.
         if (demon->GetCharmerGUID() == owner->GetGUID())
-            return DemonKind::Enslaved;
+            return demon->GetCreatureType() == CREATURE_TYPE_DEMON ? DemonKind::Enslaved : DemonKind::None;
 
         switch (demon->GetEntry())
         {
@@ -1330,6 +1332,15 @@ namespace Warlock
     // ------------------------------------------------------------------
     // Legion's Call (§7.11)
     // ------------------------------------------------------------------
+    static bool OwnsLegionsCallInAnySpec(Player const* player)
+    {
+        for (uint8 spec = 0; spec < player->GetSpecsCount(); ++spec)
+            if (player->HasTalent(SPELL_LEGIONS_CALL, spec))
+                return true;
+
+        return false;
+    }
+
     void SyncLegionsCall(Player* player, bool losingTalent)
     {
         if (!player)
@@ -1342,8 +1353,13 @@ namespace Warlock
             player->removeSpell(SPELL_INFERNO, SPEC_MASK_ALL, false);
             player->removeSpell(SPELL_RITUAL_OF_DOOM, SPEC_MASK_ALL, false);
         }
-        else
+        else if (player->getClass() == CLASS_WARLOCK || OwnsLegionsCallInAnySpec(player))
         {
+            // Auto-learn is warlock class progression. A Freepick/Classless character is eligible only
+            // once it has taken Legion's Call (the spells were, or are about to be, removed by it): the
+            // reset hook fires before the talent is dropped, so the talent is still visible on the
+            // respec that frees the spells, and another spec holding it covers a spec switch.
+            // Everyone else trains them from a trainer and is never taught them here.
             if (player->GetLevel() >= 50 && !player->HasSpell(SPELL_INFERNO))
                 player->learnSpell(SPELL_INFERNO);
             if (player->GetLevel() >= 60 && !player->HasSpell(SPELL_RITUAL_OF_DOOM))

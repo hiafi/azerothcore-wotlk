@@ -187,9 +187,10 @@ def emit_pending_sql(
     is pre-rendered SQL text (e.g. from `render_generic_table_block`) for
     tables that don't fit that shape — appended after the per-table blocks,
     in the order given. Writes nothing and returns False if everything is
-    empty (nothing new/changed to emit)."""
+    empty (nothing new/changed to emit). A block with explicit `edited_ids` but no rows still counts: its
+    `DELETE ... IN` is a stale overlay row's removal (lib/stale_overlay.py)."""
     extra_blocks = [b for b in (extra_blocks or []) if b]
-    if not any(rows for _, _, rows, _ in blocks) and not extra_blocks:
+    if not any(rows or edited_ids for _, _, rows, edited_ids in blocks) and not extra_blocks:
         return False
     # Note: no extra "\n" here — the "\n\n".join below already inserts one
     # blank line between the header and the first block; adding another

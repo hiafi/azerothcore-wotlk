@@ -803,7 +803,9 @@ public:
 
         Unit* ownerUnit = pet->GetOwner();
         Player* owner = ownerUnit ? ownerUnit->ToPlayer() : nullptr;
-        if (owner && owner->getClass() == CLASS_WARLOCK)
+        // No class check: RefreshDemonAuras only acts on the warlock demon entries, and a
+        // Freepick/Classless owner can summon them too.
+        if (owner)
             Warlock::RefreshDemonAuras(owner, pet);
     }
 };

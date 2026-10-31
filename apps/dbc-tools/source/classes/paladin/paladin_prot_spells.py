@@ -276,8 +276,7 @@ shroud_of_light_buff_201365 = _buff_spell(
 )
 procs_on(
     shroud_of_light_buff_201365, proc_flags=_PROC_TAKEN_DIRECT_ANY_DAMAGE, spell_type_mask=1,
-    spell_phase_mask=m.PROC_SPELL_PHASE_HIT, hit_mask=0, attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC,
-    chance=100.0, cooldown_ms=0,
+    hit_mask=0, attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, chance=100.0, cooldown_ms=0,
 )
 
 shroud_of_light_heal_201366 = spell(
@@ -304,7 +303,7 @@ touched_by_the_light_block_201367 = _hidden_passive(
 )
 procs_on(
     touched_by_the_light_block_201367, proc_flags=_PROC_TAKEN_MELEE_RANGED, spell_type_mask=0,
-    spell_phase_mask=m.PROC_SPELL_PHASE_HIT, hit_mask=_PROC_BLOCK, chance=100.0, cooldown_ms=0,
+    hit_mask=_PROC_BLOCK, chance=100.0, cooldown_ms=0,
 )
 linked_spell(53592, touched_by_the_light_block_201367.id, type=2)
 
@@ -433,8 +432,7 @@ shield_of_the_templar_capstone_201374 = _hidden_passive(
 scripted_by(shield_of_the_templar_capstone_201374, 'spell_pal_shield_of_the_templar_capstone')
 procs_on(
     shield_of_the_templar_capstone_201374, proc_flags=0x88800, spell_type_mask=2,
-    spell_phase_mask=m.PROC_SPELL_PHASE_HIT, hit_mask=0, attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC,
-    chance=100.0, cooldown_ms=1000,
+    hit_mask=0, attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, chance=100.0, cooldown_ms=1000,
 )
 linked_spell(53711, shield_of_the_templar_capstone_201374.id, type=2)
 

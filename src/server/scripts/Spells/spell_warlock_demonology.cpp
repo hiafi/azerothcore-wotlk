@@ -56,6 +56,7 @@
 #include "SpellMgr.h"
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
+#include "TankCritImmunity.h"
 #include "TemporarySummon.h"
 #include "Trainer.h"
 #include "Unit.h"
@@ -621,6 +622,31 @@ class spell_warl_dark_apotheosis : public SpellScript
     void Register() override
     {
         OnCheckCast += SpellCheckCastFn(spell_warl_dark_apotheosis::CheckCast);
+    }
+};
+
+// Dark Apotheosis is a tank crit immunity source: 200000 follows the form through TankCritImmunity (not a
+// spell_linked_spell row, whose removal would strip it while another tank aura still grants it).
+class spell_warl_dark_apotheosis_aura : public AuraScript
+{
+    PrepareAuraScript(spell_warl_dark_apotheosis_aura);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ TankCritImmunity::SPELL_CRIT_IMMUNITY });
+    }
+
+    void HandleCritImmunity(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        TankCritImmunity::Refresh(GetTarget());
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_warl_dark_apotheosis_aura::HandleCritImmunity, EFFECT_0,
+            SPELL_AURA_MOD_SHAPESHIFT, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_warl_dark_apotheosis_aura::HandleCritImmunity, EFFECT_0,
+            SPELL_AURA_MOD_SHAPESHIFT, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
@@ -1319,7 +1345,7 @@ public:
 
     void OnPlayerLearnTalents(Player* player, uint32 /*talentId*/, uint32 /*talentRank*/, uint32 /*spellid*/) override
     {
-        if (!IsWarlock(player))
+        if (!player)
             return;
         Warlock::SyncLegionsCall(player);
         RefreshCurrentDemon(player);
@@ -1327,7 +1353,7 @@ public:
 
     void OnPlayerTalentsReset(Player* player, bool /*noCost*/) override
     {
-        if (!IsWarlock(player))
+        if (!player)
             return;
         Warlock::SyncLegionsCall(player, true);
         // This hook fires before the reset actually removes any talent (Player.cpp:3895, same
@@ -1342,7 +1368,7 @@ public:
 
     void OnPlayerAfterSpecSlotChanged(Player* player, uint8 /*newSlot*/) override
     {
-        if (!IsWarlock(player))
+        if (!player)
             return;
         Warlock::SyncLegionsCall(player);
         RefreshCurrentDemon(player);
@@ -1350,33 +1376,29 @@ public:
 
     void OnPlayerLogin(Player* player) override
     {
-        if (IsWarlock(player))
+        if (player)
             Warlock::SyncLegionsCall(player);
     }
 
     void OnPlayerGetTrainerSpellState(Player const* player, uint32 /*trainerId*/, uint32 spellId,
         Trainer::SpellState& state) override
     {
-        if (!player || player->getClass() != CLASS_WARLOCK)
+        // Gated on the talent, not the class: a Freepick character can train Inferno/Ritual of Doom
+        // and take Legion's Call.
+        if (spellId != Warlock::SPELL_INFERNO && spellId != Warlock::SPELL_RITUAL_OF_DOOM)
             return;
 
-        if ((spellId == Warlock::SPELL_INFERNO || spellId == Warlock::SPELL_RITUAL_OF_DOOM) &&
-            player->HasTalent(Warlock::SPELL_LEGIONS_CALL, player->GetActiveSpec()))
+        if (player && player->HasTalent(Warlock::SPELL_LEGIONS_CALL, player->GetActiveSpec()))
             state = Trainer::SpellState::Unavailable;
     }
 
     void OnPlayerLogout(Player* player) override
     {
-        if (IsWarlock(player))
+        if (player)
             Warlock::ClearDemonologyPlayerState(player->GetGUID());
     }
 
 private:
-    static bool IsWarlock(Player const* player)
-    {
-        return player && player->getClass() == CLASS_WARLOCK;
-    }
-
     static void RefreshCurrentDemon(Player* player)
     {
         if (Unit* pet = player->GetPet())
@@ -1453,7 +1475,7 @@ void AddSC_warlock_demonology_spell_scripts()
     RegisterSpellScript(spell_warl_soul_fire_demonology);
     RegisterSpellScript(spell_warl_metamorphosis_demo);
     RegisterSpellScript(spell_warl_demonology_form_passive);
-    RegisterSpellScript(spell_warl_dark_apotheosis);
+    RegisterSpellAndAuraScriptPair(spell_warl_dark_apotheosis, spell_warl_dark_apotheosis_aura);
     RegisterSpellScript(spell_warl_unending_resolve);
     RegisterSpellScript(spell_warl_immolation_aura_tick);
     RegisterSpellScript(spell_warl_demon_aura);

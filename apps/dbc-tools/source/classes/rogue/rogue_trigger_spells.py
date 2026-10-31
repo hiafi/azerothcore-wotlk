@@ -3900,8 +3900,12 @@ combat_potency_35541 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=35542),
     ],
     spell_icon_id=2260,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your successful off-hand melee attacks a $h% chance to generate $35542s1 Energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassSet': 8},
+    notes=(
+        'pulled from existing data; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once remove_spell_proc '
+        'deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your successful off-hand melee attacks a $h% chance to generate $35542s1 Energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 8},
 )
 
 
@@ -3920,8 +3924,12 @@ combat_potency_35550 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=35545),
     ],
     spell_icon_id=2260,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your successful off-hand melee attacks a $h% chance to generate $35545s1 Energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassSet': 8},
+    notes=(
+        'pulled from existing data; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once remove_spell_proc '
+        'deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your successful off-hand melee attacks a $h% chance to generate $35545s1 Energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 8},
 )
 
 
@@ -3940,8 +3948,12 @@ combat_potency_35551 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=35546),
     ],
     spell_icon_id=2260,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your successful off-hand melee attacks a $h% chance to generate $35546s1 Energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassSet': 8},
+    notes=(
+        'pulled from existing data; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once remove_spell_proc '
+        'deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your successful off-hand melee attacks a $h% chance to generate $35546s1 Energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 8},
 )
 
 
@@ -3960,8 +3972,12 @@ combat_potency_35552 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=35547),
     ],
     spell_icon_id=2260,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your successful off-hand melee attacks a $h% chance to generate $35547s1 Energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassSet': 8},
+    notes=(
+        'pulled from existing data; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once remove_spell_proc '
+        'deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your successful off-hand melee attacks a $h% chance to generate $35547s1 Energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 8},
 )
 
 
@@ -3980,8 +3996,12 @@ combat_potency_35553 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=35548),
     ],
     spell_icon_id=2260,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your successful off-hand melee attacks a $h% chance to generate $35548s1 Energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassSet': 8},
+    notes=(
+        'pulled from existing data; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once remove_spell_proc '
+        'deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your successful off-hand melee attacks a $h% chance to generate $35548s1 Energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 8},
 )
 
 
@@ -4118,8 +4138,12 @@ cut_to_the_chase_51664 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=22),
     ],
     spell_icon_id=2909,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Eviscerate and Envenom abilities have a $h% chance to refresh your Slice and Dice duration to its 5 combo point maximum.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1048832, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 8, 'SpellVisualID_1': 11819},
+    notes=(
+        'pulled from existing data; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once remove_spell_proc '
+        'deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Eviscerate and Envenom abilities have a $h% chance to refresh your Slice and Dice duration to its 5 combo point maximum.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1048832, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 8, 'SpellVisualID_1': 11819},
 )
 
 
@@ -4138,8 +4162,12 @@ cut_to_the_chase_51665 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=22),
     ],
     spell_icon_id=2909,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Eviscerate and Envenom abilities have a $h% chance to refresh your Slice and Dice duration to its 5 combo point maximum.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1048832, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 40, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 8, 'SpellVisualID_1': 11819},
+    notes=(
+        'pulled from existing data; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once remove_spell_proc '
+        'deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Eviscerate and Envenom abilities have a $h% chance to refresh your Slice and Dice duration to its 5 combo point maximum.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1048832, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 40, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 8, 'SpellVisualID_1': 11819},
 )
 
 
@@ -4158,8 +4186,12 @@ cut_to_the_chase_51667 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=22),
     ],
     spell_icon_id=2909,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Eviscerate and Envenom abilities have a $h% chance to refresh your Slice and Dice duration to its 5 combo point maximum.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1048832, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 60, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 8, 'SpellVisualID_1': 11819},
+    notes=(
+        'pulled from existing data; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once remove_spell_proc '
+        'deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Eviscerate and Envenom abilities have a $h% chance to refresh your Slice and Dice duration to its 5 combo point maximum.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1048832, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 60, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 8, 'SpellVisualID_1': 11819},
 )
 
 
@@ -4178,8 +4210,12 @@ cut_to_the_chase_51668 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=22),
     ],
     spell_icon_id=2909,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Eviscerate and Envenom abilities have a $h% chance to refresh your Slice and Dice duration to its 5 combo point maximum.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1048832, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 80, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 8, 'SpellVisualID_1': 11819},
+    notes=(
+        'pulled from existing data; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once remove_spell_proc '
+        'deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Eviscerate and Envenom abilities have a $h% chance to refresh your Slice and Dice duration to its 5 combo point maximum.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1048832, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 80, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 8, 'SpellVisualID_1': 11819},
 )
 
 
@@ -4198,8 +4234,156 @@ cut_to_the_chase_51669 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=22),
     ],
     spell_icon_id=2909,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Eviscerate and Envenom abilities have a $h% chance to refresh your Slice and Dice duration to its 5 combo point maximum.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1048832, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 8, 'SpellVisualID_1': 11819},
+    notes=(
+        'pulled from existing data; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once remove_spell_proc '
+        'deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Eviscerate and Envenom abilities have a $h% chance to refresh your Slice and Dice duration to its 5 combo point maximum.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1048832, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 8, 'SpellVisualID_1': 11819},
+)
+
+
+turn_the_tables_51627 = spell(
+    id=51627,
+    name='Turn the Tables',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AREA_AURA_RAID, base_points=1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=52914, radius_yards=100.0),
+    ],
+    spell_icon_id=2905,
+    notes=(
+        'pulled from existing data; retired talent Turn the Tables (retire_talent 2066), stock row first-declared; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once '
+        'remove_spell_proc deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 268558336, 'EffectSpellClassMaskA_2': 16, 'SpellVisualID_1': 11743, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever anyone in your party or raid blocks, dodges, or parries an attack your chance to critically hit with all combo moves is increased by $52914s1% for $52914d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+turn_the_tables_51628 = spell(
+    id=51628,
+    name='Turn the Tables',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AREA_AURA_RAID, base_points=3, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=52915, radius_yards=100.0),
+    ],
+    spell_icon_id=2905,
+    notes=(
+        'pulled from existing data; retired talent Turn the Tables (retire_talent 2066), stock row first-declared; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once '
+        'remove_spell_proc deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 268558336, 'EffectSpellClassMaskA_2': 16, 'SpellVisualID_1': 11743, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever anyone in your party or raid blocks, dodges, or parries an attack your chance to critically hit with all combo moves is increased by $52915s1% for $52915d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+turn_the_tables_51629 = spell(
+    id=51629,
+    name='Turn the Tables',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AREA_AURA_RAID, base_points=5, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=52910, radius_yards=100.0),
+    ],
+    spell_icon_id=2905,
+    notes=(
+        'pulled from existing data; retired talent Turn the Tables (retire_talent 2066), stock row first-declared; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once '
+        'remove_spell_proc deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 268558336, 'EffectSpellClassMaskA_2': 16, 'SpellVisualID_1': 11743, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever anyone in your party or raid blocks, dodges, or parries an attack your chance to critically hit with all combo moves is increased by $52910s1% for $52910d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+setup_13983 = spell(
+    id=13983,
+    name='Setup',
+    school=School.NORMAL,
+    attributes=448,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=15250),
+    ],
+    spell_icon_id=229,
+    notes=(
+        'pulled from existing data; retired talent Setup (retire_talent 246), stock row first-declared; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once '
+        'remove_spell_proc deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'AttributesEx3': 67108864, 'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 33, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a $h1% chance to add a combo point to your target after dodging their attack or fully resisting one of their spells.  This cannot happen more than once per second.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+setup_14070 = spell(
+    id=14070,
+    name='Setup',
+    school=School.NORMAL,
+    attributes=448,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=15250),
+    ],
+    spell_icon_id=229,
+    notes=(
+        'pulled from existing data; retired talent Setup (retire_talent 246), stock row first-declared; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once '
+        'remove_spell_proc deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'AttributesEx3': 67108864, 'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 66, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a $h1% chance to add a combo point to your target after dodging their attack or fully resisting one of their spells.  This cannot happen more than once per second.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+setup_14071 = spell(
+    id=14071,
+    name='Setup',
+    school=School.NORMAL,
+    attributes=448,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=15250),
+    ],
+    spell_icon_id=229,
+    notes=(
+        'pulled from existing data; retired talent Setup (retire_talent 246), stock row first-declared; '
+        'ProcTypeMask 0 so SpellMgr builds no default proc once '
+        'remove_spell_proc deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'AttributesEx3': 67108864, 'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a $h1% chance to add a combo point to your target after dodging their attack or fully resisting one of their spells.  This cannot happen more than once per second.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
 )
 
 
@@ -6823,7 +7007,9 @@ killing_spree_off_57842 = spell(
 unbind_script(-51685, 'spell_rog_prey_on_the_weak')
 
 # Retired Combat talents (U67): Combat Potency and Nerves of Steel lose their scripts; Combat Potency's proc row and
-# Blade Twisting's daze proc row (the ranks are DUMMY now, raw ProcTypeMask 0) are removed.
+# Blade Twisting's daze proc row are removed. Blade Twisting's ranks are DUMMY now with raw ProcTypeMask 0; Combat
+# Potency's ranks (35541, 35550-35553) keep their PROC_TRIGGER_SPELL aura but carry raw ProcTypeMask 0 too, so SpellMgr
+# builds no default proc for either once the stock row is gone.
 unbind_script(-35541, 'spell_rog_combat_potency')
 unbind_script(-31130, 'spell_rog_nerves_of_steel')
 remove_spell_proc(-35541)

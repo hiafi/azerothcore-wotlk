@@ -2327,8 +2327,11 @@ float Aura::CalcProcChance(SpellProcEntry const& procEntry, ProcEventInfo& event
     if ((procEntry.AttributesMask & PROC_ATTR_REDUCE_PROC_60) && eventInfo.GetActor()->GetLevel() > 60)
         chance = std::max(0.f, (1.f - ((eventInfo.GetActor()->GetLevel() - 60) * 1.f / 30.f)) * chance);
 
-    // Custom: Proc Chance stat increases the chance of any aura-driven proc (talents, item procs, ...)
-    if (Unit* caster = GetCaster())
+    // Custom: Proc Chance stat increases the chance of any aura-driven proc (talents, buffs, ...)
+    // Custom: 10-31 bug F (Systems.md section 5) - items get no Proc Chance: skip auras applied by an item
+    // (equip spells, enchant/gem equip spells, on-use buffs; their legacy PPM rows included). Set bonuses have
+    // no CastItemGUID and still scale.
+    if (Unit* caster = GetCaster(); caster && !GetCastItemGUID())
         if (caster->IsPlayer())
             chance *= 1.0f + caster->ToPlayer()->GetProcChancePercentage() / 100.0f;
 

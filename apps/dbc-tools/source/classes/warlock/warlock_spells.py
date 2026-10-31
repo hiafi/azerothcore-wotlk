@@ -2216,7 +2216,8 @@ scripted_by(dark_apotheosis_200835, 'spell_warl_dark_apotheosis')
 skill_line_ability(id=30475, skill_line=354, spell_id=200835, class_mask=256)
 linked_spell(200835, 200836, type=2)
 linked_spell(200835, 200838, type=2)
-linked_spell(200835, 200000, type=2)
+# Tank crit immunity 200000 is not linked: spell_warl_dark_apotheosis_aura adds and removes it through
+# TankCritImmunity::Refresh, so leaving the form keeps it while another tank aura still grants it (10-31 fix B).
 
 
 implosion_200827 = spell(

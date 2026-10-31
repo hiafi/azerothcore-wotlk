@@ -94,10 +94,13 @@ namespace RogueData
     constexpr uint32 SPELL_INITIATIVE_13979 = 13979; // initiative_13979
     constexpr uint32 SPELL_INITIATIVE_13980 = 13980; // initiative_13980
     constexpr uint32 SPELL_ELUSIVENESS = 13981; // elusiveness_13981
+    constexpr uint32 SPELL_SETUP = 13983; // setup_13983
     constexpr uint32 SPELL_OPPORTUNITY = 14057; // opportunity_14057
     constexpr uint32 SPELL_CAMOUFLAGE_14062 = 14062; // camouflage_14062
     constexpr uint32 SPELL_CAMOUFLAGE_14063 = 14063; // camouflage_14063
     constexpr uint32 SPELL_ELUSIVENESS_14066 = 14066; // elusiveness_14066
+    constexpr uint32 SPELL_SETUP_14070 = 14070; // setup_14070
+    constexpr uint32 SPELL_SETUP_14071 = 14071; // setup_14071
     constexpr uint32 SPELL_OPPORTUNITY_14072 = 14072; // opportunity_14072
     constexpr uint32 SPELL_DIRTY_TRICKS = 14076; // dirty_tricks_14076
     constexpr uint32 SPELL_IMPROVED_AMBUSH = 14079; // improved_ambush_14079
@@ -215,6 +218,9 @@ namespace RogueData
     constexpr uint32 SPELL_CHEATING_DEATH = 45182; // cheating_death_45182
     constexpr uint32 SPELL_DEADLY_BREW = 51625; // deadly_brew_51625
     constexpr uint32 SPELL_DEADLY_BREW_51626 = 51626; // deadly_brew_51626
+    constexpr uint32 SPELL_TURN_THE_TABLES = 51627; // turn_the_tables_51627
+    constexpr uint32 SPELL_TURN_THE_TABLES_51628 = 51628; // turn_the_tables_51628
+    constexpr uint32 SPELL_TURN_THE_TABLES_51629 = 51629; // turn_the_tables_51629
     constexpr uint32 SPELL_INFECTIOUS_POISONS = 51630; // infectious_poisons_51630
     constexpr uint32 SPELL_BLOOD_SPATTER = 51632; // blood_spatter_51632
     constexpr uint32 SPELL_BLOOD_SPATTER_51633 = 51633; // blood_spatter_51633

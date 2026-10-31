@@ -116,6 +116,18 @@ class DropUnchangedBlocksTest(unittest.TestCase):
         self.assertEqual(filtered, [(table, ID_RANGE, rows, [116])])
         self.assertEqual(n_dropped, 0)
 
+    def test_forced_table_is_kept(self):
+        """lib/stale_overlay.py found live reserved rows that promoted state cannot show: keep the block."""
+        table = _FakeTable()
+        table.name = "Talent"
+        rows = [{"ID": 200000, "v": 1}]
+        existing = {200000: {"ID": 200000, "v": 1}}
+        filtered, n_dropped = generate._drop_unchanged_blocks(
+            [(table, ID_RANGE, rows, [], existing)], force={"Talent"},
+        )
+        self.assertEqual(filtered, [(table, ID_RANGE, rows, [])])
+        self.assertEqual(n_dropped, 0)
+
     def test_mixed_list_keeps_only_the_changed_tables(self):
         # Two different tables (own ID space each, even though this synthetic test happens to
         # reuse the same numeric ID_RANGE for both) - each must be judged against its own

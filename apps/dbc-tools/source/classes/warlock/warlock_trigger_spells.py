@@ -2918,7 +2918,7 @@ nether_protection_30302 = spell(
     raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces periodic spell damage taken by $s2%.\n\nCapstone Bonus: When you are hit by a spell or take periodic spell damage, you have a 20% chance to gain Nether Protection, reducing damage taken from that spell\'s school by 10% for 6 sec. Cannot occur more than once every 4 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 997, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 655360, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 scripted_by(nether_protection_30302, 'spell_warl_nether_protection_destruction')
-procs_on(-30299, proc_flags=m.PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG | m.PROC_FLAG_TAKEN_PERIODIC, school_mask=126, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=0, cooldown_ms=4000)
+procs_on(-30299, proc_flags=m.PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG | m.PROC_FLAG_TAKEN_PERIODIC, school_mask=126, chance=0, cooldown_ms=4000)
 
 
 demonic_resilience_30319 = spell(
