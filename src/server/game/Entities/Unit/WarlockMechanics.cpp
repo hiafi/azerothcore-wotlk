@@ -1330,6 +1330,15 @@ namespace Warlock
     // ------------------------------------------------------------------
     // Legion's Call (§7.11)
     // ------------------------------------------------------------------
+    static bool OwnsLegionsCallInAnySpec(Player const* player)
+    {
+        for (uint8 spec = 0; spec < player->GetSpecsCount(); ++spec)
+            if (player->HasTalent(SPELL_LEGIONS_CALL, spec))
+                return true;
+
+        return false;
+    }
+
     void SyncLegionsCall(Player* player, bool losingTalent)
     {
         if (!player)
@@ -1342,9 +1351,13 @@ namespace Warlock
             player->removeSpell(SPELL_INFERNO, SPEC_MASK_ALL, false);
             player->removeSpell(SPELL_RITUAL_OF_DOOM, SPEC_MASK_ALL, false);
         }
-        else if (player->getClass() == CLASS_WARLOCK)
+        else if (player->getClass() == CLASS_WARLOCK || OwnsLegionsCallInAnySpec(player))
         {
-            // Auto-learn is warlock class progression; other classes (Freepick) train these.
+            // Auto-learn is warlock class progression. A Freepick/Classless character is eligible only
+            // once it has taken Legion's Call (the spells were, or are about to be, removed by it): the
+            // reset hook fires before the talent is dropped, so the talent is still visible on the
+            // respec that frees the spells, and another spec holding it covers a spec switch.
+            // Everyone else trains them from a trainer and is never taught them here.
             if (player->GetLevel() >= 50 && !player->HasSpell(SPELL_INFERNO))
                 player->learnSpell(SPELL_INFERNO);
             if (player->GetLevel() >= 60 && !player->HasSpell(SPELL_RITUAL_OF_DOOM))
