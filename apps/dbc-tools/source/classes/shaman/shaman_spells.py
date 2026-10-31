@@ -802,7 +802,7 @@ cleansing_totem_8170 = spell(
     school=School.NORMAL,
     attributes=65536,
     cast_time_ms=0,
-    cooldown_ms=60000,
+    cooldown_ms=90000,
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=8,
@@ -812,8 +812,8 @@ cleansing_totem_8170 = spell(
         Effect(type=EffectType.SUMMON, base_points=4, implicit_target_a=42, misc_value=5924),
     ],
     spell_icon_id=1673,
-    notes='SH0b (shared doc, Totems): cooldown 0 -> 60 s, duration 300 s -> 10 s, + d0 b16, tooltip, tool strip. Summon stays creature 5924. Was: pulled from existing data',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 38, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Cleansing Totem for $d that removes 1 poison and 1 disease effect from party members within 30 yards when placed and every 3 sec. 1 min cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': m.SUMMON_D0_B29 | m.CLEANSING_SUMMON, 'SpellClassSet': 11, 'SpellLevel': 38, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='SH0b (shared doc, Totems): cooldown 0 -> 60 s, duration 300 s -> 10 s, + d0 b16, tooltip, tool strip. Dungeon prereqs S4 (D2): cooldown 60 s -> 90 s, tooltip "90 sec cooldown". Summon stays creature 5924. Was: pulled from existing data',
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 38, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Cleansing Totem for $d that removes 1 poison and 1 disease effect from party members within 30 yards when placed and every 3 sec. 90 sec cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': m.SUMMON_D0_B29 | m.CLEANSING_SUMMON, 'SpellClassSet': 11, 'SpellLevel': 38, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -1509,12 +1509,14 @@ cleanse_spirit_51886 = spell(
     mana_cost_pct=7,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.DISPEL, implicit_target_a=21, misc_value=4),
+        Effect(type=EffectType.DISPEL, implicit_target_a=21, misc_value=1),
         Effect(type=EffectType.DISPEL, implicit_target_a=21, misc_value=2),
     ],
     spell_icon_id=3740,
-    notes='SH0a: learn level 40 -> 36 (now baseline, was Restoration talent 2084); disease effect (misc 3) removed, curse + poison remain.',
-    raw_overrides={'AttributesEx6': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 36, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Removes 1 curse and 1 poison effect from a friendly target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 8, 'SpellClassSet': 11, 'SpellLevel': 36, 'SpellVisualID_1': 187, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='SH0a: learn level 40 -> 36 (now baseline, was Restoration talent 2084); disease effect (misc 3) removed, curse + poison remain. '
+          'Dungeon prereqs S4 (D2/D3): poison effect (misc 4) -> Magic (misc 1), so it removes 1 curse and 1 magic effect; learn level 36 -> 18 '
+          '(BaseLevel/SpellLevel, trainer row in shaman_trainers.py); tooltip.',
+    raw_overrides={'AttributesEx6': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 18, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Removes 1 curse and 1 magic effect from a friendly target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 8, 'SpellClassSet': 11, 'SpellLevel': 18, 'SpellVisualID_1': 187, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
