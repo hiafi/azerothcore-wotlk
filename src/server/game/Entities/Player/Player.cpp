@@ -11277,7 +11277,9 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
         // ModifySpellCooldown() inline below, it's deferred one world tick via m_Events so it
         // always lands after SendSpellGo() has already gone out - see the two call sites below.
         // Custom: paladin-rework A7 - seals are on CUSTOM_COOLDOWN_HASTE_DENY_LIST (SHARED B5.12)
-        if (float const cdh = GetCooldownHastePercentage(); cdh > 0.0f &&
+        // Custom: 10-31 bug F (Systems.md section 4) - never on a cooldown started from an item (itemId set:
+        // on-use trinkets, potions, item spells whose cooldown comes from item_template).
+        if (float const cdh = GetCooldownHastePercentage(); cdh > 0.0f && !itemId &&
             std::find(CUSTOM_COOLDOWN_HASTE_DENY_LIST.begin(), CUSTOM_COOLDOWN_HASTE_DENY_LIST.end(), spellInfo->Id) ==
                 CUSTOM_COOLDOWN_HASTE_DENY_LIST.end())
         {
