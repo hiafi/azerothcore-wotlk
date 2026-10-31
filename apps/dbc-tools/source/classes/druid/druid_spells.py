@@ -6,7 +6,9 @@ Split from a single source/classes/druid.py via split_class_file.py (.agents/pla
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp
 from lib.dsl.constants import ShapeshiftForm
-from lib.dsl.registry import bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by, unbind_bonus_coefficients
+from lib.dsl.registry import (
+    bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by, unbind_bonus_coefficients, untrain,
+)
 from ._masks import BLOOM, CENARION_WARD, MASS_ENTANGLEMENT, STARSURGE
 from ._masks import BERSERK_COST, IRONFUR, PULVERIZE, THRASH, UPHEAVAL  # druid-rework Feral pass
 from .druid_trigger_spells import (
@@ -2599,3 +2601,92 @@ trained_by(savage_bite_200439, trainer_id=216, req_level=10, money_cost=600)
 trained_by(savage_bite_200439, trainer_id=217, req_level=10, money_cost=600)
 skill_line_ability(id=30439, skill_line=134, spell_id=savage_bite_200439.id, class_mask=1024)
 scripted_by(savage_bite_200439, 'spell_dru_savage_bite')
+
+
+# ============================================================================
+# dungeon-prereqs S5 (druid): the druid's Magic dispel (D2/D3/D5) and melee interrupt (D7/D8).
+# .agents/plans/dungeon-prereqs/dungeon-prereqs.PLAN.md. Remove Curse 2782 is retired (untrain below; its stock
+# SkillLineAbility 6352 already has AcquireMethod 0, so nothing auto-learns it); Cure Poison 8946 and Abolish Poison
+# 2893 stay.
+# ============================================================================
+
+
+natures_cure_200604 = spell(
+    id=200604,
+    name="Nature's Cure",
+    school=School.NATURE,
+    attributes=65536,  # Remove Curse 2782's: NOT_SHAPESHIFTED, so the same forms can cast it
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=8,
+    range_yards=40.0,
+    effects=[
+        Effect(type=EffectType.DISPEL, implicit_target_a=21, misc_value=DispelType.MAGIC),
+        Effect(type=EffectType.DISPEL, implicit_target_a=21, misc_value=DispelType.POISON),
+    ],
+    spell_icon_id=3740,  # Cleanse Spirit 51886's stock icon (retail Nature's Cure shares the art)
+    notes="NEW (dungeon-prereqs S5, D2/D3/D5 (a)): the druid's Magic dispel for the whole class, learned at 18 like "
+          "every healer's Magic dispel. One button for Magic and Poison, mirroring Cleanse / Cleanse Spirit. Replaces "
+          "Remove Curse 2782 (retired: untrained below), whose layout it copies (8% base mana, 40 yd, on the GCD, "
+          "Remove Curse's visual). No family bit (no SpellMod needs to scope to it). Cure Poison 8946 and Abolish "
+          "Poison 2893 stay.",
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 18, 'SpellLevel': 18, 'CastingTimeIndex': 1,
+        'DefenseType': 1, 'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': 'Cleanses a friendly target, removing 1 Magic effect and 1 Poison effect.',
+        'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712188, 'NameSubtext_Lang_enUS': '',
+        'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellVisualID_1': 186,
+        'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500,
+    },
+)
+trained_by(natures_cure_200604, trainer_id=216, req_level=18)
+trained_by(natures_cure_200604, trainer_id=217, req_level=18)
+# Restoration skill line 573, where Remove Curse / Cure Poison / Abolish Poison sit (stock SLA 6352/6351/6349);
+# 30450 is the first of the druid PLAN's Resto spare SkillLineAbility ids (druid-rework.PLAN.md §4.3).
+skill_line_ability(id=30450, skill_line=573, spell_id=natures_cure_200604.id, class_mask=1024)
+
+# Remove Curse 2782 is retired (D5): trainer 216 and the old class trainer 33 teach it on the live DB (mod-progression
+# has no trainer_spell rows). character_spell / character_action cleanup: hand-written pending_db_characters file.
+untrain(remove_curse_2782, trainer_ids=[33, 216])
+
+
+skull_bash_200605 = spell(
+    id=200605,
+    name='Skull Bash',
+    school=School.NORMAL,
+    attributes=262160,  # IS_ABILITY | DO_NOT_SHEATH (Kick's minus NOT_SHAPESHIFTED: it is a form ability)
+    category=88,  # Kick / Pummel / Mind Freeze's category (D7)
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=16000,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=5.0,
+    duration_ms=4000,
+    effects=[
+        Effect(type=EffectType.INTERRUPT_CAST, mechanic=26, implicit_target_a=6),  # MECHANIC_INTERRUPT, as Kick/Pummel
+    ],
+    spell_icon_id=3201,  # INV_Bone_Skull_04, the retail Skull Bash art (stock icon)
+    notes="NEW (dungeon-prereqs S5, D7/D8): the Cat and Bear melee interrupt, learned at 10 for every spec. Pummel "
+          "6552's template (INTERRUPT_CAST, 4 sec school lockout, melee range, off the GCD, DefenseType/PreventionType "
+          "2) in Category 88 with a 16 sec CategoryRecoveryTime and RecoveryTime 0, the same numbers as the paladin's "
+          "Rebuke (D7). No cost (a single PowerType cannot serve both energy and rage). ShapeshiftMask SS_FERAL: Cat, "
+          "Bear Form (form 8) and Bestial Fury (form 5) - D8's 'Cat and Bear, Dire Bear included'. No family bit. "
+          "Caveat: Player::AddSpellAndCategoryCooldowns only spreads a category cooldown to same-SpellFamilyName "
+          "spells, so the shared lockout with Rebuke (family 10) and Kick/Pummel (8/4) needs a core change; see "
+          ".agents/plans/dungeon-prereqs/dungeon-prereqs.STAGE-S5-DRUID-REPORT.md.",
+    raw_overrides=_feral_new_raw(
+        "Bash the target's skull, interrupting spellcasting and preventing any spell in that school from being cast "
+        "for $d.  Usable in Cat Form and Bear Form.",
+        AttributesEx=134218240, AttributesEx3=8, AttributesEx6=8388608, FacingCasterFlags=1, RangeIndex=2,
+        DefenseType=2, PreventionType=2, StartRecoveryCategory=0, StartRecoveryTime=0, ShapeshiftMask=SS_FERAL,
+        BaseLevel=10, SpellLevel=10, SpellVisualID_1=3948,  # Bash 5211's visual
+    ),
+)
+trained_by(skull_bash_200605, trainer_id=216, req_level=10)
+trained_by(skull_bash_200605, trainer_id=217, req_level=10)
+# Feral Combat skill line 134, like Savage Bite 30439; 30440 is the first Feral spare id (druid-rework.PLAN.md §4.3).
+skill_line_ability(id=30440, skill_line=134, spell_id=skull_bash_200605.id, class_mask=1024)
