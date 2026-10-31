@@ -493,15 +493,14 @@ for _radiant_rank in (radiant_bulwark_201343, radiant_bulwark_201344, radiant_bu
 # Bulwark of Faith rank 2: magic damage taken, direct + periodic, triggered NPC spells count, 6 s ICD; eff1 is the DR aura.
 procs_on(
     bulwark_of_faith_201347, proc_flags=0xA2000, school_mask=126, spell_type_mask=1,
-    spell_phase_mask=m.PROC_SPELL_PHASE_HIT, attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, disable_effects_mask=0x1,
+    attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, disable_effects_mask=0x1,
     chance=100, cooldown_ms=6000,
 )
 
 # Avenging Light: Holy Shield blocks (HitMask BLOCK), chance = the rank's DBC ProcChance, 10 s ICD.
 for _avenging_rank in (avenging_light_201353, avenging_light_201354, avenging_light_201355):
     procs_on(
-        _avenging_rank, proc_flags=0x2A8, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, hit_mask=0x40, chance=0,
-        cooldown_ms=10000,
+        _avenging_rank, proc_flags=0x2A8, hit_mask=0x40, chance=0, cooldown_ms=10000,
     )
 
 

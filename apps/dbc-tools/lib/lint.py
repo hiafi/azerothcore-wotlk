@@ -1722,13 +1722,13 @@ _AURA_EFFECTS = frozenset({6, 27, 35, 65, 119, 128, 129, 143})
 _PERIODIC_DAMAGE_OR_HEAL_AURAS = frozenset({3, 8, 20, 53, 89})
 
 # Existing custom ground effects that tick hasted today. PLAN s7 keeps their behavior until their owner rules, so
-# they are listed, not changed. Keep one comment per id.
+# they are listed, not changed. Keep one comment per id. (Light's Hammer 201200 was ruled fixed-cadence 2026-10-31 and
+# dropped 0x2000, so it is no longer listed.)
 # SpellAuraEffects.cpp FIXED_CADENCE_PERIODIC_SPELLS (IsFixedCadencePeriodic): spells whose periodic ticks the core
 # never hastes. Priest Echo of Light heal / damage today (PriestMechanics.h). Add an id here when that array grows.
 FIXED_CADENCE_PERIODIC_SPELLS: frozenset[int] = frozenset({200218, 200219})
 GROUND_HASTE_ALLOW: frozenset[int] = frozenset({
     200096,  # mage Meteor: the ground burn is a persistent area aura carrying PERIODIC_DAMAGE, so it ticks hasted
-    201200,  # paladin Light's Hammer: AttributesEx5 0x2000 (cloned from a stock ground effect), so it ticks hasted
 })
 
 
@@ -1819,34 +1819,8 @@ REQ_SPELL_PHASE_PROC_FLAG_MASK = SPELL_PROC_FLAG_MASK & DONE_HIT_PROC_FLAG_MASK
 
 # Declared spell_proc rows that fail LoadSpellProcs' checks today (SpellId -> why it is accepted), found by the run
 # that introduced this lint. Each logs an error at boot; the owner triages whether the row was meant.
-_PROC_PHASE_UNUSED = (
-    "SpellPhaseMask 2 on taken-only ProcFlags: the phase is ignored (SpellMgr.cpp:917 checks it only for done-hit "
-    "flags), the proc still fires, boot logs 'won't be used'"
-)
-_PROC_PHASE_MISSING = (
-    "done-spell ProcFlags with SpellPhaseMask 0 (CanSpellTriggerProcOnEvent, SpellMgr.cpp:917-921, never matches); BUT "
-    "the row is shadowed by a stock rank-chain row (SHADOWED_PROC_ALLOW), so it is never even loaded: adding a phase "
-    "changes nothing until the priest rework removes the chain row. KNOWN LIVE BUG owned by the priest rework"
-)
 SPELL_PROC_ALLOW: dict[int, str] = {
     -17106: "druid Intensity: ProcFlags 0 on purpose, it neutralises the stock Enrage-rage proc (druid_talents.py)",
-    20098: "paladin Anticipation: " + _PROC_PHASE_UNUSED,
-    -20127: "paladin Redoubt: " + _PROC_PHASE_UNUSED,
-    -53590: "paladin Touched by the Light: " + _PROC_PHASE_UNUSED,
-    201347: "paladin Bulwark of Faith: " + _PROC_PHASE_UNUSED,
-    201353: "paladin Avenging Light: " + _PROC_PHASE_UNUSED,
-    201354: "paladin Avenging Light: " + _PROC_PHASE_UNUSED,
-    201355: "paladin Avenging Light: " + _PROC_PHASE_UNUSED,
-    201365: "paladin Shroud of Light: " + _PROC_PHASE_UNUSED,
-    201367: "paladin Touched by the Light: " + _PROC_PHASE_UNUSED,
-    201374: "paladin Shield of the Templar: " + _PROC_PHASE_UNUSED,
-    -30299: "warlock Nether Protection: " + _PROC_PHASE_UNUSED,
-    27816: "priest Blessed Recovery: " + _PROC_PHASE_MISSING,
-    33150: "priest Surge of Light: " + _PROC_PHASE_MISSING,
-    33154: "priest Surge of Light: " + _PROC_PHASE_MISSING,
-    34753: "priest Holy Concentration: " + _PROC_PHASE_MISSING,
-    34859: "priest Holy Concentration: " + _PROC_PHASE_MISSING,
-    34860: "priest Holy Concentration: " + _PROC_PHASE_MISSING,
 }
 
 
@@ -1906,29 +1880,9 @@ def check_spell_proc_rows(
     return warnings
 
 
-# Declared per-rank spell_proc rows that a negative rank-chain row shadows today (SpellId -> why it is accepted).
-SHADOWED_PROC_ALLOW: dict[int, str] = {
-    spell_id: (
-        f"priest {name}: the stock rank-chain row loads first and claims every rank, so this declared per-rank row "
-        f"is dropped with 'duplicate entry' at boot (live boot log, rev a5992f1a8); KNOWN LIVE BUG owned by the "
-        f"priest rework, which also zeroed the chain row's DBC ProcTypeMask, so the talent never procs. Fix there: "
-        f"remove_spell_proc() of the chain row, or move the declarations onto the chain key"
-    )
-    for spell_id, name in (
-        (27816, "Blessed Recovery (chain -27811)"),
-        (33150, "Surge of Light (chain -33150)"),
-        (33154, "Surge of Light (chain -33150)"),
-        (34753, "Holy Concentration (chain -34753)"),
-        (34859, "Holy Concentration (chain -34753)"),
-        (34860, "Holy Concentration (chain -34753)"),
-        (63730, "Serendipity (chain -63730)"),
-        (63733, "Serendipity (chain -63730)"),
-        (63737, "Serendipity (chain -63730)"),
-        (64127, "Body and Soul (chain -64127)"),
-        (64129, "Body and Soul (chain -64127)"),
-        (200163, "Grace rank 3 (chain -47516: it runs on the stock values, not its declared ones)"),
-    )
-}
+# Declared per-rank spell_proc rows that a negative rank-chain row shadows today (SpellId -> why it is accepted). Empty:
+# the priest rows found when the lint was written were fixed by remove_spell_proc() of the stock chain rows (10-31 fix A).
+SHADOWED_PROC_ALLOW: dict[int, str] = {}
 
 
 def check_shadowed_spell_procs(

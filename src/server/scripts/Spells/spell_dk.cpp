@@ -23,6 +23,7 @@
 #include "SpellMgr.h"
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
+#include "TankCritImmunity.h" // Custom: shared tank crit immunity
 #include "Totem.h"
 #include "UnitAI.h"
 /*
@@ -53,10 +54,6 @@ enum DeathKnightSpells
     SPELL_DK_FROST_FEVER                        = 55095,
     SPELL_DK_FROST_PRESENCE                     = 48263,
     SPELL_DK_FROST_PRESENCE_TRIGGERED           = 61261,
-    // custom (200000-209999 reserved block, apps/dbc-tools/source/spells/generic.csv):
-    // grants baseline immunity to melee/ranged critical strikes; also applied by
-    // Defensive Stance, Righteous Fury, and Bear Form/Dire Bear Form
-    SPELL_GEN_CRIT_IMMUNITY                     = 200000,
     SPELL_DK_GHOUL_EXPLODE                      = 47496,
     SPELL_DK_GLYPH_OF_DISEASE                   = 63334,
     SPELL_DK_GLYPH_OF_ICEBOUND_FORTITUDE        = 58625,
@@ -1991,14 +1988,15 @@ class spell_dk_presence : public AuraScript
                 SPELL_DK_IMPROVED_UNHOLY_PRESENCE_TRIGGERED,
                 SPELL_DK_FROST_PRESENCE_TRIGGERED,
                 SPELL_DK_UNHOLY_PRESENCE_TRIGGERED,
-                SPELL_GEN_CRIT_IMMUNITY
+                TankCritImmunity::SPELL_CRIT_IMMUNITY
             });
     }
 
+    // Custom: Frost Presence is a tank crit immunity source (TankCritImmunity::SOURCE_AURAS)
     void HandleCritImmunity(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (GetId() == SPELL_DK_FROST_PRESENCE)
-            GetTarget()->CastSpell(GetTarget(), SPELL_GEN_CRIT_IMMUNITY, true);
+            TankCritImmunity::Refresh(GetTarget());
     }
 
     void HandleImprovedBloodPresence(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
@@ -2050,7 +2048,7 @@ class spell_dk_presence : public AuraScript
         target->RemoveAura(SPELL_DK_IMPROVED_UNHOLY_PRESENCE_TRIGGERED);
         target->RemoveAura(SPELL_DK_FROST_PRESENCE_TRIGGERED);
         target->RemoveAura(SPELL_DK_UNHOLY_PRESENCE_TRIGGERED);
-        target->RemoveAura(SPELL_GEN_CRIT_IMMUNITY);
+        TankCritImmunity::Refresh(target); // Custom: keeps 200000 while another tank aura grants it
     }
 
     void Register() override

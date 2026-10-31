@@ -1194,6 +1194,7 @@ void npc_doctor::npc_doctorAI::UpdateAI(uint32 diff)
 enum Garments
 {
     SPELL_LESSER_HEAL_R2    = 2052,
+    SPELL_GREATER_HEAL      = 2060, // Custom: Lesser Heal is retired for players, Greater Heal is the baseline heal
     SPELL_FORTITUDE_R1      = 1243,
 
     QUEST_MOON              = 5621,
@@ -1213,6 +1214,12 @@ enum Garments
     SAY_GOODBYE             = 1,
     SAY_HEALED              = 2,
 };
+
+// Custom: the quests ask for Lesser Heal (Rank 2), which no priest can learn any more; Greater Heal counts too.
+static bool IsGarmentsHealSpell(uint32 spellId)
+{
+    return spellId == SPELL_LESSER_HEAL_R2 || spellId == SPELL_GREATER_HEAL;
+}
 
 class npc_garments_of_quests : public CreatureScript
 {
@@ -1252,7 +1259,7 @@ public:
 
         void SpellHit(Unit* caster, SpellInfo const* spell) override
         {
-            if (spell->Id == SPELL_LESSER_HEAL_R2 || spell->Id == SPELL_FORTITUDE_R1)
+            if (IsGarmentsHealSpell(spell->Id) || spell->Id == SPELL_FORTITUDE_R1)
             {
                 //not while in combat
                 if (me->IsInCombat())
@@ -1274,7 +1281,7 @@ public:
                                     Talk(SAY_THANKS, caster);
                                     CanRun = true;
                                 }
-                                else if (!IsHealed && spell->Id == SPELL_LESSER_HEAL_R2)
+                                else if (!IsHealed && IsGarmentsHealSpell(spell->Id))
                                 {
                                     CasterGUID = caster->GetGUID();
                                     me->SetStandState(UNIT_STAND_STATE_STAND);
@@ -1291,7 +1298,7 @@ public:
                                     Talk(SAY_THANKS, caster);
                                     CanRun = true;
                                 }
-                                else if (!IsHealed && spell->Id == SPELL_LESSER_HEAL_R2)
+                                else if (!IsHealed && IsGarmentsHealSpell(spell->Id))
                                 {
                                     CasterGUID = caster->GetGUID();
                                     me->SetStandState(UNIT_STAND_STATE_STAND);
@@ -1308,7 +1315,7 @@ public:
                                     Talk(SAY_THANKS, caster);
                                     CanRun = true;
                                 }
-                                else if (!IsHealed && spell->Id == SPELL_LESSER_HEAL_R2)
+                                else if (!IsHealed && IsGarmentsHealSpell(spell->Id))
                                 {
                                     CasterGUID = caster->GetGUID();
                                     me->SetStandState(UNIT_STAND_STATE_STAND);
@@ -1325,7 +1332,7 @@ public:
                                     Talk(SAY_THANKS, caster);
                                     CanRun = true;
                                 }
-                                else if (!IsHealed && spell->Id == SPELL_LESSER_HEAL_R2)
+                                else if (!IsHealed && IsGarmentsHealSpell(spell->Id))
                                 {
                                     CasterGUID = caster->GetGUID();
                                     me->SetStandState(UNIT_STAND_STATE_STAND);
@@ -1342,7 +1349,7 @@ public:
                                     Talk(SAY_THANKS, caster);
                                     CanRun = true;
                                 }
-                                else if (!IsHealed && spell->Id == SPELL_LESSER_HEAL_R2)
+                                else if (!IsHealed && IsGarmentsHealSpell(spell->Id))
                                 {
                                     CasterGUID = caster->GetGUID();
                                     me->SetStandState(UNIT_STAND_STATE_STAND);

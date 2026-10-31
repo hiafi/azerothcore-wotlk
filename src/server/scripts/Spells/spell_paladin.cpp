@@ -23,6 +23,7 @@
 #include "SpellMgr.h"
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
+#include "TankCritImmunity.h" // Custom: shared tank crit immunity
 #include "UnitAI.h"
 /*
  * Scripts for spells with SPELLFAMILY_PALADIN and SPELLFAMILY_GENERIC spells used by paladin players.
@@ -109,10 +110,6 @@ enum PaladinSpells
     SPELL_PALADIN_SEAL_OF_COMMAND                = 20375,
 
     SPELL_PALADIN_RIGHTEOUS_FURY                 = 25780,
-    // custom (200000-209999 reserved block, apps/dbc-tools/source/spells/generic.csv):
-    // grants baseline immunity to melee/ranged critical strikes; also applied by
-    // Defensive Stance, Bear Form/Dire Bear Form, and Frost Presence
-    SPELL_GEN_CRIT_IMMUNITY                      = 200000,
 };
 
 // 25780 - Righteous Fury
@@ -122,17 +119,17 @@ class spell_pal_righteous_fury : public AuraScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_GEN_CRIT_IMMUNITY });
+        return ValidateSpellInfo({ TankCritImmunity::SPELL_CRIT_IMMUNITY });
     }
 
     void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        GetTarget()->CastSpell(GetTarget(), SPELL_GEN_CRIT_IMMUNITY, true);
+        TankCritImmunity::Refresh(GetTarget());
     }
 
     void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        GetTarget()->RemoveAurasDueToSpell(SPELL_GEN_CRIT_IMMUNITY);
+        TankCritImmunity::Refresh(GetTarget());
     }
 
     void Register() override

@@ -68,7 +68,9 @@ GRID: dict[int, tuple[int, int, list[int]]] = {
     2000: (10, 1, [49206]),
 }
 GRID_TALENTS, GRID_POINTS = 35, 80
-PREREQS: dict[int, dict] = {2043: {"talent_id": 1962, "rank": 2}}
+# No prerequisites: the Crypt Fever -> Ebon Plaguebringer arrow was dropped in playtest
+# (docs/reworks/death-knight-unholy-rework.md, talent grid notes).
+PREREQS: dict[int, dict] = {}
 SLA = {203448: 30760, 203452: 30761}
 
 # S3 new spells 203440-203478 (brief section 2)
@@ -663,9 +665,9 @@ class DeathKnightS3NegativeTest(unittest.TestCase):
         self.assertGreaterEqual(len(check_grid(moved)), 1)
         self.assertGreaterEqual(len(check_grid(good[1:])), 3)
         idx = {t["id"]: i for i, t in enumerate(good)}
-        nodep = [dict(t) for t in good]
-        nodep[idx[2043]]["depends_on"] = None
-        self.assertEqual(len(check_grid(nodep)), 1)
+        dep = [dict(t) for t in good]
+        dep[idx[2043]]["depends_on"] = {"talent_id": 1962, "rank": 2}  # the dropped Crypt Fever arrow
+        self.assertEqual(len(check_grid(dep)), 1)
         mog = [dict(t) for t in good]
         mog[idx[1984]]["depends_on"] = {"talent_id": 2225, "rank": 1}  # the stock prereq that must be cleared
         self.assertEqual(len(check_grid(mog)), 1)

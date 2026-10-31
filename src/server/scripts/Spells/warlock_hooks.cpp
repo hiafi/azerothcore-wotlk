@@ -20,8 +20,9 @@
  * spell id) the three passes need, in one file (druid_hooks.cpp precedent;
  * .agents/plans/warlock-rework/warlock-rework.SHARED.md §4's handler table,
  * warlock-rework.AFFLICTION.md §7.14). These run on every damage/heal/cast event for every class
- * server-wide - every handler here checks for a warlock caster/target (or the specific spell/
- * talent id it cares about) first before doing anything.
+ * server-wide - every handler here early-outs on a cheap, class-independent check first (caster
+ * is a Player, or the specific spell/aura/talent id it cares about). Never gate on the caster's
+ * class: Freepick/Classless characters cast warlock spells and hold warlock talents too.
  *
  * This pass (Affliction, S1) added:
  *   - UnitScript::ModifyPeriodicDamageAurasTick - Bane of Agony's live per-tick stack multiplier
@@ -64,10 +65,11 @@
 
 namespace
 {
-    Player* GetWarlockPlayer(Unit* unit)
+    // Class-independent: Freepick/Classless characters use warlock spells and talents, so the
+    // handlers below gate on the spell/aura/talent itself. IsPlayer() is the cheap hot-path early-out.
+    Player* GetCasterPlayer(Unit* unit)
     {
-        Player* player = unit ? unit->ToPlayer() : nullptr;
-        return player && player->getClass() == CLASS_WARLOCK ? player : nullptr;
+        return unit ? unit->ToPlayer() : nullptr;
     }
 
     // Destruction pass (S2) local ids - talent rank ids not part of the frozen WarlockMechanics.h
@@ -135,7 +137,7 @@ public:
     {
     }
 
-    // Pandemic (R3): if the refreshing aura is Unstable Affliction from a warlock with either
+    // Pandemic (R3): if the refreshing aura is Unstable Affliction from a caster with either
     // Pandemic rank and 0 < remaining <= 5 s, carry the remainder onto the new maximum. Runs
     // before SPELLMOD_DURATION (SpellAuras.cpp), so Lingering Agony's flat bonus still adds.
     void OnCalcMaxDuration(Aura const* aura, int32& maxDuration) override
@@ -144,7 +146,7 @@ public:
             return;
 
         Unit* casterUnit = aura->GetCaster();
-        if (!GetWarlockPlayer(casterUnit))
+        if (!casterUnit)
             return;
 
         if (!casterUnit->HasAura(Warlock::SPELL_PANDEMIC_R1) && !casterUnit->HasAura(Warlock::SPELL_PANDEMIC_R2))
@@ -171,7 +173,7 @@ public:
         if (spell)
         {
             Unit* casterUnit = spell->GetCaster() ? spell->GetCaster()->ToUnit() : nullptr;
-            if (Player* player = GetWarlockPlayer(casterUnit))
+            if (Player* player = GetCasterPlayer(casterUnit))
             {
                 Warlock::OnPrepareGrantInstantCast(player, spell);
                 // DESTRUCTION.md §7.9 - Destructive Reach's >20 yd crit helper (C3), same handler,
@@ -184,7 +186,7 @@ public:
 
     void OnSpellCast(Spell* spell, Unit* caster, SpellInfo const* /*spellInfo*/, bool /*skipCheck*/) override
     {
-        if (Player* player = GetWarlockPlayer(caster))
+        if (Player* player = GetCasterPlayer(caster))
             Warlock::OnCastConsumeInstantCast(player, spell);
     }
 };
@@ -202,7 +204,7 @@ public:
         if (!spell || !spellInfo || spell->IsTriggered())
             return;
 
-        Player* player = GetWarlockPlayer(caster);
+        Player* player = GetCasterPlayer(caster);
         if (!player || !player->HasAura(SPELL_EMBERSTORM_R3))
             return;
 

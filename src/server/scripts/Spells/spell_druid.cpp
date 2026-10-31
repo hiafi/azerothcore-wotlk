@@ -24,6 +24,7 @@
 #include "SpellPotency.h" // Custom: potency-system
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
+#include "TankCritImmunity.h" // Custom: shared tank crit immunity
 /*
  * Scripts for spells with SPELLFAMILY_DRUID and SPELLFAMILY_GENERIC spells used by druid players.
  * Ordered alphabetically using scriptname.
@@ -58,10 +59,6 @@ enum DruidSpells
     SPELL_DRUID_TIGER_S_FURY_ENERGIZE       = 51178,
     SPELL_DRUID_BEAR_FORM_PASSIVE           = 1178,
     SPELL_DRUID_DIRE_BEAR_FORM_PASSIVE      = 9635,
-    // custom (200000-209999 reserved block, apps/dbc-tools/source/spells/generic.csv):
-    // grants baseline immunity to melee/ranged critical strikes; also applied by
-    // Defensive Stance, Righteous Fury, and Frost Presence
-    SPELL_GEN_CRIT_IMMUNITY                 = 200000,
     SPELL_DRUID_ENRAGE                      = 5229,
     SPELL_DRUID_ENRAGED_DEFENSE             = 70725,
     SPELL_DRUID_ITEM_T10_FERAL_4P_BONUS     = 70726,
@@ -243,17 +240,17 @@ class spell_dru_bear_form_crit_immunity : public AuraScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_GEN_CRIT_IMMUNITY });
+        return ValidateSpellInfo({ TankCritImmunity::SPELL_CRIT_IMMUNITY });
     }
 
     void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        GetTarget()->CastSpell(GetTarget(), SPELL_GEN_CRIT_IMMUNITY, true);
+        TankCritImmunity::Refresh(GetTarget());
     }
 
     void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        GetTarget()->RemoveAurasDueToSpell(SPELL_GEN_CRIT_IMMUNITY);
+        TankCritImmunity::Refresh(GetTarget());
     }
 
     void Register() override

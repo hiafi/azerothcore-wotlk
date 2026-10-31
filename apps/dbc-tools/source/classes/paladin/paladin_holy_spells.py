@@ -43,7 +43,6 @@ _ATTR3_DOT_STACKING_RULE = 0x80
 _ATTR3_SUPPRESS_CASTER_PROCS = 0x10000
 _ATTR3_ALWAYS_HIT = 0x40000
 _ATTR3_IGNORE_CASTER_MODIFIERS = 0x20000000
-_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC = 0x2000
 
 # DmgClass (the column the DSL calls DefenseType)
 _DMG_NONE = 0
@@ -241,9 +240,9 @@ light_s_hammer_201200 = spell(
     spell_icon_id=90220,  # build_patch_i.py ICON_ID_LIGHTS_HAMMER
     tooltip_vars=holy_heal_tooltip,
     notes="paladin-rework HOLY §4.3: Rain of Fire C5 shape - eff0 ground reticle + dynobj (no potency), eff1 2 s "
-          "PERIODIC_DUMMY (7 ticks, hasted via AttributesEx5 0x2000). Learn 20, 15% mana, 60 s (Cooldown-Haste "
+          "PERIODIC_DUMMY (7 fixed ticks: no AttributesEx5 0x2000, ruled 2026-10-31, not hasted). Learn 20, 15% mana, 60 s (Cooldown-Haste "
           "eligible), GCD. Bit LH, no MOD_DECREASE_SPEED anywhere. Ground-target flags (AttributesEx 0x88, "
-          "AttributesEx2 0x400000, Targets 64) copied from the reworked Rain of Fire 5740. Visual 90040 "
+          "AttributesEx2 0x400000, Targets 64) copied from the reworked Rain of Fire 5740 (not its AttributesEx5 0x2000). Visual 90040 "
           "(patch_paladin_vfx_models.py): Ascension's grounded hammer + impact.",
     raw_overrides=_raw(
         "Hurls a Light's Hammer to the ground. Every 2 sec for 14 sec it heals up to 5 allies within 10 yards for "
@@ -252,7 +251,7 @@ light_s_hammer_201200 = spell(
         + " Holy damage to up to 5 enemies within 10 yards. Only one Light's Hammer can be active at a time.",
         "Light's Hammer is active.",
         level=20, dmg_class=_DMG_MAGIC,
-        AttributesEx=136, AttributesEx2=4194304, AttributesEx5=_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC,
+        AttributesEx=136, AttributesEx2=4194304,
         PreventionType=1, StartRecoveryCategory=133, StartRecoveryTime=1500,
         SpellClassMask_3=m.LIGHTS_HAMMER, SpellVisualID_1=90040, Targets=64,
     ),
