@@ -165,7 +165,7 @@ spellcategory:
 # reservation (the `reservations:` key at the bottom) sits inside the tool-wide range and overlaps no other
 # class. Each range contains every id already used, checked against the constants in build_patch_*.py and
 # patch_*_vfx_models.py and the maxima in the shaman T0a report (2026-10-18):
-#   - spellicon:  used 90100-90239, 90270, 90310-90312, 90370-90374 (build_patch_i.py ICON_ID_*). 90100 is the first id: the Ascension
+#   - spellicon:  used 90100-90239, 90270, 90310-90312, 90370-90374, 90420-90421 (build_patch_i.py ICON_ID_*). 90100 is the first id: the Ascension
 #                 icon mining started above CreatureDisplayInfo's 90001+ rows (a different table, same numbers).
 #                 Widened from 90399 to 90499 by Rogue T1 (the rogue slice 90370-90419 ends past the old end).
 #   - soundentries: used 90001-90033 (druid 1-4, priest 5-10, warlock 11, paladin 31-33). Widened from 90100 to

@@ -23,6 +23,10 @@ HEROIC_LEAP = 0x1                        # d2 b0 (cast, landing strike, outer-ri
 COLOSSUS_SMASH = 0x2                     # d2 b1 (button, hit and the debuff aura, unless C1 splits the debuff off)
 RAMPAGE = 0x4                            # d2 b2 (cast + 4 strikes)
 DAMAGING_ABILITY_GROUP = 0x8             # d2 b3 (R1: the warrior damaging-ability group)
+# S3 (Fury): the one read-only sentinel. Shredding Blows' buffs 204644-204646 (aura 280) read this bit so that only
+# white swings (null spell, EquippedItemClass -1) get the armor penetration: no spell carries d2 b8, so no ability
+# ever matches it. A "never carried" bit: the scope audit and the lint must not "fix" it, nothing may carry it.
+SHREDDING_SENTINEL = 0x100               # d2 b8, never carried by any spell (WP-BRIEF S3 D27)
 
 # Reserved, not named until a stage takes them (a name here would read as taken):
 #   d2 b4 (0x10)  Colossus Smash debuff, if C1 splits it from the button

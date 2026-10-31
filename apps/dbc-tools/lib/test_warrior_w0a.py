@@ -7,9 +7,11 @@ stale raw twin that wins fails here too. Every check is a pure function over bui
 tests prove each one can fail.
 
   1. Heroic Strike / Cleave / Slam: attr0 0x4 clear, GCD 133/1500, percent effect (31) before the flat effect (58),
-     flat part = sp_potency 10 direct T 1500 (25 at level 60), Cleave chain 2 on both effects; the D4 percents.
+     flat part = sp_potency 12/12/18/17/18 direct T 1500 (31/31/46/43/46 at level 60, balance 2026-10-30),
+     Cleave chain 2 on both effects; the D4 percents.
   2. Slam: instant, RecoveryTime 6000, no DUMMY effect, no -1464 binding (unbind declared).
-  3. Mortal Strike effect order, Category 0 / 6000 / SpellLevel 20; Bloodthirst 0 / 4000; Overpower 0 / no cooldown and
+  3. Mortal Strike effect order, Category 0 / 6000 / SpellLevel 20; Bloodthirst 0 / 6000 (S3 D9: was 4000);
+     Overpower 0 / no cooldown and
      FINISHING_MOVE (AttributesEx 0x100000) CLEAR (W0b D3: the charge aura replaces the combo-point need);
      Revenge 0 / 3000.
   4. D9 stance zero list (22 ids) and the untouched ids (28880, the removed three, talent passives, ranks).
@@ -62,18 +64,23 @@ W0A_IDS = (HS, CLEAVE, SLAM, OVERPOWER, MS, BT, REVENGE, REND, THUNDER_CLAP, COM
            SHATTERING_THROW, HEROIC_THROW, DEFENSIVE, BATTLE, BERSERKER, BERSERKER_PASSIVE, STANCE_MASTERY, PATH)
 
 # D4 percents (WP-BRIEF ruling 1): weapon_potency P -> stored bp P - 1 (die 1 adds the 1 back)
-PERCENTS = {HS: 150, CLEAVE: 120, SLAM: 115, MS: 130, OVERPOWER: 100}
+# Warrior balance 2026-10-30 (user, five rounds compounded): HS x1.3 x1.3 x0.9 x0.8, Cleave x1.2, Slam to 200%,
+# MS x1.5 x1.4 x0.8 x1.1 x0.95, Overpower x1.5 x1.4 x0.8, on both parts
+PERCENTS = {HS: 183, CLEAVE: 144, SLAM: 200, MS: 228, OVERPOWER: 168}
 # strike -> (percent effect index, flat effect index, flat carrier type)
 STRIKE_SHAPE = {HS: (1, 2, WEAPON_DAMAGE), CLEAVE: (1, 2, WEAPON_DAMAGE), SLAM: (1, 2, WEAPON_DAMAGE),
                 MS: (2, 3, NORMALIZED_WEAPON), OVERPOWER: (1, 2, NORMALIZED_WEAPON)}
-FLAT_L60, FLAT_L22 = 25, {HS: 4, CLEAVE: 3, SLAM: 8, OVERPOWER: 3, MS: 4}
+FLAT_POT = {HS: 12, CLEAVE: 12, SLAM: 18, OVERPOWER: 17, MS: 18}
+FLAT_L60 = {HS: 31, CLEAVE: 31, SLAM: 46, OVERPOWER: 43, MS: 46}
+FLAT_L22 = {HS: 5, CLEAVE: 5, SLAM: 16, OVERPOWER: 6, MS: 7}
 
 # WP-BRIEF ruling 2 / 0VERIFY 2e: ShapeshiftMask -> 0
 ZERO_LIST = (72, 100, 355, 676, 772, 871, 1680, 1715, 1719, 2565, 3411, 5308, 6343, 6552, 6572, 7384, 7922, 12328,
              23920, 34428, 64380, 64382)
 # left alone: id -> stock mask (built value today)
 UNTOUCHED = {28880: 2164260864, 694: 196608, 20230: 65536, 20252: 262144, 12295: 131072, 7887: 65536, 11584: 65536,
-             11585: 65536, 12301: 131072, 29759: 262144}
+             11585: 65536, 12301: 0, 29759: 262144}
+# 12301 (Improved Bloodrage r1) is 0 since S1 D19 (12818 too): 204774 carries the stance gate for its damage-taken half
 
 # D3 trainer rows: (trainer, spell) -> ReqLevel; the last five are W0b's (D17: Victory Rush, Intervene, Heroic Leap,
 # Enraged Regeneration, Skull Banner, trainer 200 only; test_warrior_w0b.py pins them too)
@@ -154,8 +161,8 @@ def check_strike_shape(rows: dict[int, dict], entries: dict[int, dict]) -> list[
             bad.append(f"{sid}: percent {_i(r, f'EffectBasePoints_{pe}') + 1}, expected {PERCENTS[sid]}")
         if float(r.get(f"EffectRealPointsPerLevel_{pe}") or 0) != 0:
             bad.append(f"{sid}: percent effect {pe} carries a per-level slope")
-        if calc_value(r, fe, 60) != FLAT_L60:
-            bad.append(f"{sid}: flat part at level 60 is {calc_value(r, fe, 60)}, expected {FLAT_L60}")
+        if calc_value(r, fe, 60) != FLAT_L60[sid]:
+            bad.append(f"{sid}: flat part at level 60 is {calc_value(r, fe, 60)}, expected {FLAT_L60[sid]}")
         if calc_value(r, fe, 22) != FLAT_L22[sid]:
             bad.append(f"{sid}: flat part at level 22 is {calc_value(r, fe, 22)}, expected {FLAT_L22[sid]}")
         e = entries.get(sid)
@@ -163,9 +170,9 @@ def check_strike_shape(rows: dict[int, dict], entries: dict[int, dict]) -> list[
         if not pot:
             bad.append(f"{sid}: flat effect {fe} is not a potency effect")
         else:
-            if pot.get("kind") != "direct" or pot.get("total_potency") != 10 or pot.get("t_seconds") != 1.5:
+            if pot.get("kind") != "direct" or pot.get("total_potency") != FLAT_POT[sid] or pot.get("t_seconds") != 1.5:
                 bad.append(f"{sid}: flat potency {pot.get('kind')}/{pot.get('total_potency')}/"
-                           f"T {pot.get('t_seconds')}, expected direct/10/T 1.5")
+                           f"T {pot.get('t_seconds')}, expected direct/{FLAT_POT[sid]}/T 1.5")
             if float(pot.get("ap_coefficient") or 0) != 0:
                 bad.append(f"{sid}: flat potency carries an attack-power coefficient")
         if _i(r, f"Effect_{fe + 1}") != 0 and fe < 3:
@@ -228,7 +235,7 @@ def check_slam(rows: dict[int, dict], script_removals: list[dict], script_names:
 
 def check_categories(rows: dict[int, dict]) -> list[str]:
     bad = []
-    want = {MS: (0, 6000, 0), BT: (0, 4000, 0), OVERPOWER: (0, 0, 0), REVENGE: (0, 3000, 0)}
+    want = {MS: (0, 6000, 0), BT: (0, 6000, 0), OVERPOWER: (0, 0, 0), REVENGE: (0, 3000, 0)}
     for sid, (cat, rec, crec) in want.items():
         r = rows.get(sid)
         if r is None:
@@ -339,15 +346,15 @@ def check_rend(rows: dict[int, dict], entries: dict[int, dict], script_removals:
         return [f"{REND}: not built"]
     bad = []
     pot = (e.get("effect1") or {}).get("_potency") or {}
-    if (pot.get("kind"), pot.get("total_potency"), pot.get("t_seconds")) != ("periodic", 9.0, 3.0):
+    if (pot.get("kind"), pot.get("total_potency"), pot.get("t_seconds")) != ("periodic", 11.23, 3.0):
         bad.append(f"potency {pot.get('kind')}/{pot.get('total_potency')}/T {pot.get('t_seconds')}, "
-                   "expected periodic/9/T 3")
+                   "expected periodic/11.23/T 3")
     if not float(pot.get("ap_coefficient") or 0):
         bad.append("no attack-power coefficient")
     if (_i(r, "EffectAura_1"), _i(r, "EffectAuraPeriod_1")) != (3, 3000):
         bad.append(f"aura/period {r.get('EffectAura_1')}/{r.get('EffectAuraPeriod_1')}, expected 3 / 3000")
-    if calc_value(r, 1, 60) != 48 or calc_value(r, 1, 22) != 7:
-        bad.append(f"per-tick value {calc_value(r, 1, 22)} at 22 / {calc_value(r, 1, 60)} at 60, expected 7 / 48")
+    if calc_value(r, 1, 60) != 60 or calc_value(r, 1, 22) != 9:
+        bad.append(f"per-tick value {calc_value(r, 1, 22)} at 22 / {calc_value(r, 1, 60)} at 60, expected 9 / 60")
     if not any(int(x["spell_id"]) == -REND and x["ScriptName"] == "spell_warr_rend" for x in script_removals):
         bad.append("unbind_script(-772, 'spell_warr_rend') is not declared")
     if any(int(x["spell_id"]) == -REND for x in script_names):
@@ -666,28 +673,29 @@ class WarriorW0aRageReferenceTest(unittest.TestCase):
 # ---- negative fixtures: every check must fire on a minimal bad mutation of a built-row shape -----------------------
 
 def _strike_rows() -> dict[int, dict]:
-    def strike(sid, p_idx, f_idx, carrier, percent, sl, flat_bp, attrs=0x50010, **extra):
+    def strike(sid, p_idx, f_idx, carrier, percent, sl, flat_bp, rppl, attrs=0x50010, **extra):
         r = {"ID": sid, "Attributes": attrs, "StartRecoveryCategory": 133, "StartRecoveryTime": 1500,
              "CastingTimeIndex": 1, "BaseLevel": sl, "SpellLevel": sl, f"Effect_{p_idx}": WEAPON_PERCENT,
              f"EffectBasePoints_{p_idx}": percent - 1, f"EffectDieSides_{p_idx}": 1,
              f"Effect_{f_idx}": carrier, f"EffectBasePoints_{f_idx}": flat_bp, f"EffectDieSides_{f_idx}": 1,
-             f"EffectRealPointsPerLevel_{f_idx}": 0.5714285714285714}
+             f"EffectRealPointsPerLevel_{f_idx}": rppl}
         r.update(extra)
         return r
     return {
-        HS: strike(HS, 1, 2, WEAPON_DAMAGE, 150, 1, -9),
-        CLEAVE: strike(CLEAVE, 1, 2, WEAPON_DAMAGE, 120, 14, -2, EffectChainTargets_1=2, EffectChainTargets_2=2),
-        SLAM: strike(SLAM, 1, 2, WEAPON_DAMAGE, 115, 30, 7),
-        OVERPOWER: strike(OVERPOWER, 1, 2, NORMALIZED_WEAPON, 100, 12, -3),
-        MS: strike(MS, 2, 3, NORMALIZED_WEAPON, 130, 20, 2, Effect_1=APPLY_AURA, EffectAura_1=118),
+        HS: strike(HS, 1, 2, WEAPON_DAMAGE, 183, 1, -10, 4.8 / 7),
+        CLEAVE: strike(CLEAVE, 1, 2, WEAPON_DAMAGE, 144, 14, -1, 4.8 / 7, EffectChainTargets_1=2,
+                       EffectChainTargets_2=2),
+        SLAM: strike(SLAM, 1, 2, WEAPON_DAMAGE, 200, 30, 15, 7.2 / 7),
+        OVERPOWER: strike(OVERPOWER, 1, 2, NORMALIZED_WEAPON, 168, 12, -4, 6.8 / 7),
+        MS: strike(MS, 2, 3, NORMALIZED_WEAPON, 228, 20, 4, 7.2 / 7, Effect_1=APPLY_AURA, EffectAura_1=118),
     }
 
 
 def _entries() -> dict[int, dict]:
-    pot = {"kind": "direct", "total_potency": 10, "t_seconds": 1.5, "ap_coefficient": 0.0}
     out = {}
     for sid, (_p, fe, _c) in STRIKE_SHAPE.items():
-        out[sid] = {"id": sid, f"effect{fe}": {"_potency": dict(pot)}}
+        pot = {"kind": "direct", "total_potency": FLAT_POT[sid], "t_seconds": 1.5, "ap_coefficient": 0.0}
+        out[sid] = {"id": sid, f"effect{fe}": {"_potency": pot}}
     return out
 
 
@@ -730,8 +738,8 @@ class WarriorW0aNegativeTest(unittest.TestCase):
             self.assertGreaterEqual(len(check_strike_shape(
                 {**rows, sid: {**rows[sid], f"EffectBasePoints_{fe}": rows[sid][f"EffectBasePoints_{fe}"] + 5}},
                 ents)), 1, (sid, "flat value"))
-            # flat sp_potency not 10 / not direct / not T 1500 / missing
-            for key, val in (("total_potency", 12), ("kind", "periodic"), ("t_seconds", 3.0), ("ap_coefficient", 0.1)):
+            # flat sp_potency wrong / not direct / not T 1500 / missing
+            for key, val in (("total_potency", 99), ("kind", "periodic"), ("t_seconds", 3.0), ("ap_coefficient", 0.1)):
                 e2 = copy.deepcopy(ents)
                 e2[sid][f"effect{fe}"]["_potency"][key] = val
                 self.assertGreaterEqual(len(check_strike_shape(rows, e2)), 1, (sid, key))
@@ -764,7 +772,7 @@ class WarriorW0aNegativeTest(unittest.TestCase):
         rows = {MS: {"ID": MS, "Category": 0, "RecoveryTime": 6000, "SpellLevel": 20, "BaseLevel": 20, "ManaCost": 250,
                      "Effect_1": APPLY_AURA, "EffectAura_1": 118, "Effect_2": WEAPON_PERCENT,
                      "Effect_3": NORMALIZED_WEAPON},
-                BT: {"ID": BT, "Category": 0, "RecoveryTime": 4000},
+                BT: {"ID": BT, "Category": 0, "RecoveryTime": 6000},
                 OVERPOWER: {"ID": OVERPOWER, "Category": 0, "AttributesEx": 0x58000200},
                 REVENGE: {"ID": REVENGE, "Category": 0, "RecoveryTime": 3000}}
         self.assertEqual(check_categories(rows), [])
@@ -772,7 +780,8 @@ class WarriorW0aNegativeTest(unittest.TestCase):
             (MS, "Category", 971), (MS, "RecoveryTime", 0), (MS, "CategoryRecoveryTime", 6000), (MS, "SpellLevel", 40),
             (MS, "BaseLevel", 40), (MS, "EffectAura_1", 0), (MS, "Effect_2", NORMALIZED_WEAPON),
             (MS, "Effect_3", WEAPON_PERCENT), (BT, "Category", 971), (BT, "RecoveryTime", 0),
-            (BT, "CategoryRecoveryTime", 4000), (OVERPOWER, "Category", 65), (OVERPOWER, "CategoryRecoveryTime", 5000),
+            (BT, "CategoryRecoveryTime", 6000), (BT, "RecoveryTime", 4000), (OVERPOWER, "Category", 65),
+            (OVERPOWER, "CategoryRecoveryTime", 5000),
             (OVERPOWER, "RecoveryTime", 6000), (OVERPOWER, "AttributesEx", 0x58100200), (REVENGE, "Category", 65),
             (REVENGE, "RecoveryTime", 0), (REVENGE, "CategoryRecoveryTime", 3000), (MS, "ManaCost", 300))
         for sid, col, val in mutations:
@@ -829,8 +838,8 @@ class WarriorW0aNegativeTest(unittest.TestCase):
 
     def test_rend(self):
         row = {"ID": REND, "EffectAura_1": 3, "EffectAuraPeriod_1": 3000, "BaseLevel": 4, "SpellLevel": 4,
-               "EffectBasePoints_1": -13, "EffectRealPointsPerLevel_1": 1.08, "EffectDieSides_1": 1}
-        ent = {"id": REND, "effect1": {"_potency": {"kind": "periodic", "total_potency": 9.0, "t_seconds": 3.0,
+               "EffectBasePoints_1": -16, "EffectRealPointsPerLevel_1": 1.3476, "EffectDieSides_1": 1}
+        ent = {"id": REND, "effect1": {"_potency": {"kind": "periodic", "total_potency": 11.23, "t_seconds": 3.0,
                                                     "ap_coefficient": 0.0771}}}
         rem = [{"spell_id": -REND, "ScriptName": "spell_warr_rend"}]
         self.assertEqual(check_rend({REND: row}, {REND: ent}, rem, []), [])
@@ -841,7 +850,7 @@ class WarriorW0aNegativeTest(unittest.TestCase):
         e0 = copy.deepcopy(ent)
         e0["effect1"]["_potency"]["ap_coefficient"] = 0.0
         self.assertGreaterEqual(len(check_rend({REND: row}, {REND: e0}, rem, [])), 1)
-        for col, val in (("EffectAuraPeriod_1", 1000), ("EffectAura_1", 4), ("EffectBasePoints_1", -15)):
+        for col, val in (("EffectAuraPeriod_1", 1000), ("EffectAura_1", 4), ("EffectBasePoints_1", -21)):
             self.assertGreaterEqual(len(check_rend({REND: {**row, col: val}}, {REND: ent}, rem, [])), 1, col)
         self.assertEqual(len(check_rend({REND: row}, {REND: ent}, [], [])), 1)
         self.assertEqual(len(check_rend({REND: row}, {REND: ent}, rem, [{"spell_id": -REND}])), 1)

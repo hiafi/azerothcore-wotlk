@@ -78,7 +78,7 @@ def scanned_used_ids(scripts: list[Path] | None = None) -> dict[str, list[tuple[
 
 
 ROGUE_VFX_SCRIPT = "patch_rogue_vfx_models.py"
-WARRIOR_VFX_SCRIPT = "patch_warrior_vfx_models.py"  # stage V; the scan finds nothing in the warrior slices until then
+WARRIOR_VFX_SCRIPT = "patch_warrior_vfx_models.py"  # S1 echo visual 90300 first; stage V adds the rest
 # The one shared icon script: every class's Ascension SpellIcon rows are minted here (the rogue's 90370-90374 too), so a
 # spellicon constant of this script may sit in the rogue slice.
 ICON_SCRIPT = "build_patch_i.py"
@@ -236,14 +236,19 @@ class BlockShapeTest(unittest.TestCase):
              "patch_other_vfx_models.py:EFFECT_Z = 90260 (spellvisual)"],
         )
 
-    def test_the_real_scan_finds_nothing_in_the_warrior_slices(self):
-        # stage V writes patch_warrior_vfx_models.py; until then no script may name a constant in 90141-90150
-        # (soundentries), 90300-90339 (spellvisual) or the warrior's spellicon slice 90420-90449
+    def test_the_real_scan_finds_only_the_warrior_script_in_the_warrior_slices(self):
+        # patch_warrior_vfx_models.py (S1 playtest, the Thunder Clap Echo's SpellVisual 90300) is the only script that
+        # may name a constant in 90141-90150 (soundentries) or 90300-90339 (spellvisual); stage V adds its rows to the
+        # same script. The warrior's spellicon slice 90420-90449 is minted by the shared build_patch_i.py (playtest
+        # 2026-10-30: Avatar 90420, Colossus Smash 90421)
         scanned = scanned_used_ids()
         warrior = RESERVATIONS["warrior"]
         inside = [f"{where} = {value} ({block})" for block, found in scanned.items() for value, where in found
                   if block in warrior and warrior[block]["start"] <= value <= warrior[block]["end"]]
-        self.assertEqual(inside, [])
+        self.assertEqual(sorted(inside), sorted([
+            f"{WARRIOR_VFX_SCRIPT}:SV_THUNDER_CLAP_ECHO = 90300 (spellvisual)",
+            "build_patch_i.py:ICON_ID_WARRIOR_AVATAR = 90420 (spellicon)",
+            "build_patch_i.py:ICON_ID_WARRIOR_COLOSSUS_SMASH = 90421 (spellicon)"]))
         self.assertEqual(class_slice_problems("warrior", WARRIOR_VFX_SCRIPT, scanned), [])
         # not vacuous: the real scan did run over the scripts and over the other classes' slices
         self.assertGreaterEqual(sum(len(found) for found in scanned.values()), 100)

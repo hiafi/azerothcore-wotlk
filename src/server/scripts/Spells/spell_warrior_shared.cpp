@@ -42,7 +42,10 @@ namespace
 {
     // Stock rows the forked Charge script casts (stock spell_warrior.cpp names them the same way).
     constexpr uint32 SPELL_CHARGE_RAGE_ENERGIZE = 34846;
-    constexpr uint32 SPELL_JUGGERNAUT_CRIT_BONUS_BUFF = 65156;
+
+    // Custom: warrior-rework S2 (D13). Juggernaut's Charge condition: farther than this or a target above this health.
+    constexpr float JUGGERNAUT_CHARGE_MIN_DISTANCE_YD = 20.0f;
+    constexpr float JUGGERNAUT_CHARGE_MIN_TARGET_HEALTH_PCT = 90.0f;
 
     // Numerical guard for the leap's horizontal speed (a zero distance would give a zero-speed spline); the spell's
     // 8 yd minimum range keeps real leaps far above it.
@@ -56,14 +59,17 @@ namespace
 // the rage is Warrior::ChargeCombatRage(distance at cast), out of combat stock's effect 1 value. Distance and combat
 // state are read in OnCast, before the CHARGE effect's launch moves the caster. Refused while Heroic Leap's flight
 // aura is up (D7: a CHARGE cast mid-leap would replace the jump spline).
+// Custom: warrior-rework S2: both branches carry the effect-2 spell mods (Improved Charge's and Anger Management's
+// flat ALL_EFFECTS rage, D12 / D24 / C4); the in-combat figure is run through Unit::ApplyEffectModifiers, the very
+// call that builds GetEffectValue(). Anger Management's capstone buff is cast on every Charge (D12), and Juggernaut
+// (D13) is granted at the cast when the charge is longer than 20 yd or the target is above 90% health.
 class spell_warr_charge_rework : public SpellScript
 {
     PrepareSpellScript(spell_warr_charge_rework);
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_CHARGE_RAGE_ENERGIZE, WarriorData::SPELL_JUGGERNAUT,
-            SPELL_JUGGERNAUT_CRIT_BONUS_BUFF, WarriorData::SPELL_LEAPING });
+        return ValidateSpellInfo({ SPELL_CHARGE_RAGE_ENERGIZE, WarriorData::SPELL_LEAPING });
     }
 
     SpellCastResult CheckCast()
@@ -85,6 +91,12 @@ class spell_warr_charge_rework : public SpellScript
         // GetDistance is edge to edge (combat reaches removed), the metric the spell's 8-25 yd range is checked with.
         _distance = caster->GetDistance(target);
         _inCombat = caster->IsInCombat();
+
+        // Custom: warrior-rework S2 (D13): the grant rolls the rank chance inside Warrior::GrantJuggernaut.
+        Player* player = caster->ToPlayer();
+        if (player && (_distance > JUGGERNAUT_CHARGE_MIN_DISTANCE_YD ||
+            target->GetHealthPct() > JUGGERNAUT_CHARGE_MIN_TARGET_HEALTH_PCT))
+            Warrior::GrantJuggernaut(player);
     }
 
     void HandleDummy(SpellEffIndex /*effIndex*/)
@@ -93,12 +105,20 @@ class spell_warr_charge_rework : public SpellScript
         if (!caster)
             return;
 
-        int32 chargeBasePoints0 = _inCombat ? Warrior::ChargeCombatRage(_distance) : GetEffectValue();
+        int32 chargeBasePoints0 = GetEffectValue();
+        if (_inCombat)
+        {
+            // Custom: warrior-rework S2 (C4): the in-combat figure ignored every spell mod; GetEffectValue() is
+            // CalcValue + ApplyEffectModifiers on effect 1 (ALL_EFFECTS then EFFECT2), so run the same call on it.
+            chargeBasePoints0 = int32(std::lround(caster->ApplyEffectModifiers(GetSpellInfo(), EFFECT_1,
+                float(Warrior::ChargeCombatRage(_distance)))));
+        }
+
         caster->CastCustomSpell(caster, SPELL_CHARGE_RAGE_ENERGIZE, &chargeBasePoints0, nullptr, nullptr, true);
 
-        // Juggernaut crit bonus (stock lines, unchanged)
-        if (caster->HasAura(WarriorData::SPELL_JUGGERNAUT))
-            caster->CastSpell(caster, SPELL_JUGGERNAUT_CRIT_BONUS_BUFF, true);
+        // Custom: warrior-rework S2 (D12): Anger Management's capstone buff on every Charge.
+        if (Player* player = caster->ToPlayer())
+            Warrior::GrantAngerManagementCapstone(player);
     }
 
     void Register() override

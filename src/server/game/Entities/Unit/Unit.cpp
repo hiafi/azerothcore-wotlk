@@ -10961,6 +10961,10 @@ int32 Unit::ModifyPower(Powers power, int32 dVal, bool withPowerUpdate /*= true*
         gain = maxPower - curPower;
     }
 
+    // Custom: warrior-rework S2 Endless Rage overflow (rage that did not fit; no hook sees rage, WarriorMechanics.h)
+    if (power == POWER_RAGE && dVal > 0 && dVal > gain)
+        Warrior::OnRageOverflow(this, dVal - std::max<int32>(gain, 0));
+
     if (GetAI())
     {
         GetAI()->OnPowerUpdate(power, gain, dVal, curPower);

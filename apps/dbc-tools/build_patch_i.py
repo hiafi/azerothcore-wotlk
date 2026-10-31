@@ -170,6 +170,11 @@ ICON_ID_POISON_BOMB = 90372  # 203807 (castable, talent rank and cloud in one ro
 ICON_ID_ROGUE_PRECISION = 90373  # unused since 2026-10-28 (Precision and Accuracy back on stock icon 126)
 ICON_ID_PISTOL_SHOT = 90374  # Pistol Shot 203958 + the Surprise Attacks extra shot 203988
 
+# Warrior rework (ids.yaml reservation 90420-90449). Playtest fix 2026-10-30: Avatar 204492 borrowed Recklessness's
+# icon and Colossus Smash 204490 / its debuff 204491 borrowed Slam's; the user picked Ascension's retail art.
+ICON_ID_WARRIOR_AVATAR = 90420
+ICON_ID_WARRIOR_COLOSSUS_SMASH = 90421
+
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),
     (ICON_ID_DIVINE_STAR, "Interface/icons/spell_priest_divinestar.blp"),
@@ -224,6 +229,8 @@ ICONS = (
     (ICON_ID_POISON_BOMB, "Interface/icons/inv_ability_poison_nova.blp"),
     (ICON_ID_ROGUE_PRECISION, "Interface/icons/ability_rogue_combatexpertise.blp"),  # same file as Hunter 90237
     (ICON_ID_PISTOL_SHOT, "Interface/icons/ability_rogue_pistolshot.blp"),
+    (ICON_ID_WARRIOR_AVATAR, "Interface/icons/warrior_talent_icon_avatar.blp"),
+    (ICON_ID_WARRIOR_COLOSSUS_SMASH, "Interface/icons/ability_warrior_colossussmash.blp"),
 )
 
 # "Stock path, no blp" entries (warlock-rework DESTRUCTION §2.6/§11 Q19): a SpellIcon.dbc row that

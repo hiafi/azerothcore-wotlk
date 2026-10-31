@@ -21,7 +21,7 @@ fail.
 Not driven here: the lib/gcd_haste recompute of 201560 (melee mask (0x3e7f4666, 0x4247ed, 0x8)). It needs the merged
 family-4 stock + DSL population and the learnable set (about 10 minutes of CPU in the 0-verify run), which is not a
 cheap
-driver from the loaded package; the inputs it reads (1719 off the GCD, the 17 carriers' d2 b3, the ranged mask rows
+driver from the loaded package; the inputs it reads (1719 off the GCD, the 19 carriers' d2 b3, the ranged mask rows
 untouched) are asserted instead.
 
 Run: cd apps/dbc-tools && PYTHONDONTWRITEBYTECODE=1 .venv/bin/python3 -m pytest lib/test_warrior_w0b.py -q
@@ -64,13 +64,18 @@ SB_BUTTON, SB_BUFF, SB_RALLIED, SB_HORDE, VR_HEAL = 204405, 204406, 204407, 2044
 W0B_NEW_IDS = tuple(range(204400, 204410))
 SB_ALLIANCE_NPC, SB_HORDE_NPC = 300370, 300371
 
-# D19: the 17 d2 b3 carriers and their identity bits: id -> (SpellClassMask column, bit)
+# D19: the 17 d2 b3 carriers (+ S2 Colossus Smash, + S3 Frenzied Blows' two strikes) and their identity bits:
+# id -> (SpellClassMask column, bit)
 M1, M2 = "SpellClassMask_1", "SpellClassMask_2"
 G_CARRIERS = {
     78: (M1, 0x40), 845: (M1, 0x400000), 1464: (M1, 0x200000), 1680: (M2, 0x4), 6572: (M1, 0x400),
     7384: (M1, 0x4), 12294: (M1, 0x2000000), 12809: (M1, 0x4000000), 20243: (M2, 0x40), 23881: (M2, 0x400),
     23922: (M2, 0x200), 34428: (M2, 0x100), 57755: (M2, 0x1), 64382: (M2, 0x400000), 20647: (M1, 0x20000000),
     44949: (M2, 0x4), 50622: (M2, 0x4),
+    204490: ("SpellClassMask_3", 0x2),     # S2: Colossus Smash (d2 0xA = its own identity b1 + the group bit b3)
+    # S3 (D19): Frenzied Blows' two off-hand strikes carry the parent's identity bit + d2 b3, so every Heroic Strike /
+    # Cleave damage modifier and Recklessness' crit reach "the same ability's damage"
+    204633: (M1, 0x40), 204634: (M1, 0x400000),
 }
 GROUP_BIT, HEROIC_LEAP_BIT = 0x8, 0x1
 
@@ -92,7 +97,28 @@ TRAINER_201 = {(201, 2458): 16}
 # brief ruling 8: the bindings this package declares, and the removals W0b adds
 BINDINGS = {(-100, "spell_warr_charge_rework"), (3411, "spell_warr_intervene_rework"),
             (34428, "spell_warr_victory_rush_heal"), (204400, "spell_warr_heroic_leap"),
-            (204405, "spell_warr_skull_banner")}
+            (204405, "spell_warr_skull_banner"),
+            # S2 (Arms) bindings, pinned in test_warrior_s2.py
+            (12294, "spell_warr_mortal_strike_arms"), (772, "spell_warr_rend_arms"),
+            (-12834, "spell_warr_deep_wounds_rework"), (204496, "spell_warr_deep_wounds_holder"),
+            (-29723, "spell_warr_sudden_death_reset"), (204401, "spell_warr_heroic_leap_landing"),
+            (204495, "spell_warr_bladestorm_whirl"), (1680, "spell_warr_whirlwind_seismic"),
+            (-12296, "spell_warr_anger_management"), (204514, "spell_warr_weapon_spec_sword"),
+            (204517, "spell_warr_weapon_spec_sword"), (204520, "spell_warr_weapon_spec_sword"),
+            (204493, "spell_warr_sweeping_strikes_rework"),
+            # S1 (Protection delta) bindings, pinned in test_warrior_s1.py
+            (12809, "spell_warr_concussion_blow_rework"), (50720, "spell_warr_vigilance_focused_rage"),
+            (50725, "spell_warr_vigilance_trigger_growl"), (200030, "spell_warr_bloodstorm"),
+            (200065, "spell_warr_thunder_clap_echo"), (200066, "spell_warr_thunderstruck_echo_holder"),
+            # S3 (Fury) bindings, pinned in test_warrior_s3.py
+            (23881, "spell_warr_bloodthirst_fury"), (-5308, "spell_warr_execute_fury"),
+            (204630, "spell_warr_rampage_fury"), (204636, "spell_warr_enrage_fury"),
+            (12292, "spell_warr_death_wish_fury"), (1719, "spell_warr_recklessness_fury"),
+            (78, "spell_warr_hs_cleave_fury"), (845, "spell_warr_hs_cleave_fury"),
+            (49152, "spell_warr_titans_grip_hardcode"), (-204524, "spell_warr_two_handed_weapon_mastery_gate"),
+            (6552, "spell_warr_pummel_fury"), (-204653, "spell_warr_dance_of_death"),
+            (6673, "spell_warr_commanding_presence"), (469, "spell_warr_commanding_presence"),
+            (-204671, "spell_warr_deathmaker")}
 W0B_UNBINDINGS = {(-100, "spell_warr_charge"), (3411, "spell_warr_intervene")}
 
 # D31 consts
@@ -282,23 +308,19 @@ def check_recklessness_impale(rows: dict, procs: list[dict]) -> list[str]:
         bad.append(f"1719: eff0 mask {tuple(hex(x) for x in _eff_mask(r))}, expected (0, 0, 0x8)")
     if _u32(r.get(M1)) & 0x10 == 0:
         bad.append("1719: lost its identity bit d0 b4")
-    row = next((p for p in procs if int(p["SpellId"]) == RECKLESSNESS), None)
-    if row is None:
-        bad.append("1719: no spell_proc row")
-    else:
-        got = (int(row["SpellFamilyName"]), int(row["SpellFamilyMask0"]), int(row["SpellFamilyMask1"]),
-               int(row["SpellFamilyMask2"]), int(row["SpellTypeMask"]), int(row["SpellPhaseMask"]),
-               int(row["AttributesMask"]))
-        if got != (4, 0, 0, GROUP_BIT, 1, 2, 8):
-            bad.append(f"1719 spell_proc (family, mask0-2, type, phase, attrs) {got}, expected (4, 0, 0, 8, 1, 2, 8)")
-        if got[1:4] != _eff_mask(r):
-            bad.append("1719 spell_proc family mask differs from the aura's eff0 mask")
-        if int(row["ProcFlags"]) != 0 or float(row.get("Chance") or 0) != 0 or int(row["Charges"]) != 0:
-            bad.append("1719 spell_proc: ProcFlags/Chance/Charges are not the live 0/0/0")
+    # S3 B-R1: Recklessness has NO spell_proc row (Player::RemoveSpellMods spends one charge per Spell at finish, after
+    # every target and synchronous child) and raw ProcTypeMask 0 so none is auto-generated; the old W0b / S3-D6 phase
+    # rows are gone (remove_spell_proc(1719) is pinned in test_warrior_s3.py)
+    if any(int(p["SpellId"]) == RECKLESSNESS for p in procs):
+        bad.append("1719: a spell_proc row is declared (S3 B-R1: none, ProcTypeMask 0)")
+    if _i(r, "ProcTypeMask") != 0:
+        bad.append(f"1719: ProcTypeMask {r.get('ProcTypeMask')!r}, expected 0 (no auto-generated proc row)")
     for sid in (IMPALE_1, IMPALE_2):
-        if _eff_mask(rows[sid]) != (0x26604CEE, 0xC745, 8):
+        # S2 (D24) adds Heroic Leap (d2 b0) and Colossus Smash (d2 b1) to the group bit: 0x8 -> 0xB; S3 (D35) adds
+        # Rampage (d2 b2: its strikes are abilities): 0xB -> 0xF
+        if _eff_mask(rows[sid]) != (0x26604CEE, 0xC745, 0xF):
             bad.append(f"{sid}: Impale mask {tuple(hex(x) for x in _eff_mask(rows[sid]))}, "
-                       "expected (0x26604cee, 0xc745, 0x8)")
+                       "expected (0x26604cee, 0xc745, 0xf)")
     return bad
 
 
@@ -666,7 +688,14 @@ class WarriorW0bDataTest(unittest.TestCase):
     def test_w0b_ids_are_inside_the_frozen_block(self):
         rows = _data()["rows"]
         self.assertEqual([sid for sid in W0B_NEW_IDS if sid not in rows], [])
-        self.assertEqual(sorted(sid for sid in rows if 204400 <= sid <= 204899), list(W0B_NEW_IDS))
+        # S1 adds exactly 204770 (Empowered Revenge), 204774 (Improved Bloodrage buff), 204775 (Bloodstorm tick)
+        s1_ids = [204770, 204774, 204775]
+        # S2 adds the contiguous run 204490-204544 (test_warrior_s2.py pins it)
+        s2_ids = list(range(204490, 204545))
+        # S3 adds the contiguous run 204630-204680 (test_warrior_s3.py pins it)
+        s3_ids = list(range(204630, 204681))
+        self.assertEqual(sorted(sid for sid in rows if 204400 <= sid <= 204899),
+                         list(W0B_NEW_IDS) + s2_ids + s3_ids + s1_ids)
 
 
 # ---- negative fixtures: every check must fire on a minimal bad mutation of the real built rows -------------------
@@ -765,13 +794,18 @@ class WarriorW0bNegativeTest(unittest.TestCase):
                 (IMPALE_1, "EffectSpellClassMaskA_1", 0xEE604CEE), (IMPALE_1, "EffectSpellClassMaskA_3", 0),
                 (IMPALE_2, "EffectSpellClassMaskA_2", 0xC744), (IMPALE_2, "EffectSpellClassMaskA_3", 0x10)):
             self.assertGreaterEqual(len(check_recklessness_impale(_mut(rows, sid, **{col: val}), procs)), 1, (sid, col))
-        for col, val in (("SpellFamilyMask2", 0), ("SpellFamilyMask0", 0x2E600444), ("SpellFamilyMask1", 4),
-                         ("SpellPhaseMask", 1), ("SpellTypeMask", 2), ("AttributesMask", 0), ("SpellFamilyName", 0),
-                         ("ProcFlags", 16), ("Charges", 3)):
-            bad = [{**p, col: val} if int(p["SpellId"]) == RECKLESSNESS else p for p in procs]
-            self.assertGreaterEqual(len(check_recklessness_impale(rows, bad)), 1, col)
-        rest = [p for p in procs if int(p["SpellId"]) != RECKLESSNESS]
-        self.assertGreaterEqual(len(check_recklessness_impale(rows, rest)), 1)
+        # S3 B-R1: a spell_proc row for 1719 (the old live phase-2 row or an S3-D6 CAST row) is a problem, and so is a
+        # non-zero ProcTypeMask (it would auto-generate one)
+        for row in ({"SpellId": RECKLESSNESS, "SpellFamilyName": 4, "SpellFamilyMask2": 8, "SpellTypeMask": 1,
+                     "SpellPhaseMask": 2, "AttributesMask": 8},
+                    {"SpellId": RECKLESSNESS, "SpellPhaseMask": 1}):
+            self.assertGreaterEqual(len(check_recklessness_impale(rows, [*procs, row])), 1, row)
+        self.assertGreaterEqual(len(check_recklessness_impale(_mut(rows, RECKLESSNESS, ProcTypeMask=4368), procs)), 1)
+        self.assertGreaterEqual(len(check_recklessness_impale(_mut(rows, RECKLESSNESS, ProcTypeMask=16), procs)), 1)
+        for sid in (IMPALE_1, IMPALE_2):                       # S2's 0xB pin moved to 0xF (S3 D35)
+            for bad in (0xB, 0x7, 0xE, 0x8):
+                self.assertGreaterEqual(len(check_recklessness_impale(
+                    _mut(rows, sid, EffectSpellClassMaskA_3=bad), procs)), 1, (sid, bad))
 
     def test_heroic_leap(self):
         rows, ents, ca, r50 = self.rows, self.d["entries"], self.d["custom_attrs"], self.d["range_50000"]

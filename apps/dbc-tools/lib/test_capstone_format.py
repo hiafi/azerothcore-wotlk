@@ -43,14 +43,20 @@ GREY = "|cFF9D9D9D"
 RESET = "|r"
 HOLDING_TAB = registry.RETIRED_TAB_ID  # retired talents (no ranks) sit on this tab
 
-# Each class's capstone talents, by rank 1's spell name. Warrior: the 5 Protection talents live today (the September
-# build). Each spec stage's handoff names its talents (T1-HANDOFF C3, derived from the docs' Tooltip lines because only
-# the Fury doc has a "Capstones" line): S1 adds Storm's Bulwark and The Wall, S2 Arms' 5 (Improved Charge, Anger
+# Each class's capstone talents, by rank 1's spell name. Warrior: the 5 Protection talents live in the September build
+# plus the two S1 adds (The Wall, Storm's Bulwark), four S2 Arms ones and the nine S3 Fury ones, so 20 now. Each
+# spec stage's handoff names its talents (T1-HANDOFF C3, derived from the docs' Tooltip lines because only the Fury doc
+# has a "Capstones" line): S1 added Storm's Bulwark and The Wall (S1 D25), S2 Arms' 5 (Improved Charge, Anger
 # Management, Taste for Blood, Colossus Smash, Endless Rage), S3 Fury's 9 (Dance of Death, Merciless, Improved Cleave,
-# Frenzied Blows, Improved Execute, Quick Execution, Intensify Rage, Unshackled Fury, Unending Fury). Other classes
-# join with their own key when their rework next touches talents.
+# Frenzied Blows, Improved Execute, Quick Execution, Intensify Rage, Unshackled Fury, Unending Fury). User 2026-10-30:
+# Colossus Smash's Mastery line moved into its main text ("15% plus your Mastery"), so it is no longer a capstone.
+# Other classes join with their own key when their rework next touches talents.
 EXPECTED_CAPSTONES = {
-    "warrior": frozenset({"Incite", "Improved Revenge", "Focused Rage", "Shield Cover", "Thunderstruck"}),
+    "warrior": frozenset({"Incite", "Improved Revenge", "Focused Rage", "Shield Cover", "Thunderstruck", "The Wall",
+                          "Storm's Bulwark", "Improved Charge", "Anger Management", "Taste for Blood",
+                          "Endless Rage", "Dance of Death", "Merciless", "Improved Cleave",
+                          "Frenzied Blows", "Improved Execute", "Quick Execution", "Intensify Rage",
+                          "Unshackled Fury", "Unending Fury"}),
 }
 
 _COLOUR_CODE_AT_END = re.compile(r"(\|c[0-9A-Fa-f]{8})([ \t\r\n]*)$")
@@ -476,8 +482,11 @@ class LiveWarriorPackageTest(unittest.TestCase):
     def test_the_check_is_not_vacuous(self):
         found = [t for t in self.talents if _says_capstone(t)]
         self.assertEqual({t["name"] for t in found}, set(self.expected))
-        self.assertEqual(len(found), 5)
-        self.assertEqual(sum(len(t["descriptions"]) for t in found), 14)  # 3 + 2 + 3 + 3 + 3 ranks
+        self.assertEqual(len(found), 20)
+        # S1: 3 + 2 + 3 + 3 + 3 + 2 + 3 ranks; S2: Improved Charge 2 + Anger Management 3 + Taste for Blood 3 +
+        # Endless Rage 2 (Colossus Smash dropped 2026-10-30); S3: Dance of Death 3 + Merciless 3 + Improved Cleave 3 + Frenzied Blows 2 +
+        # Improved Execute 2 + Quick Execution 3 + Intensify Rage 3 + Unshackled Fury 3 + Unending Fury 3
+        self.assertEqual(sum(len(t["descriptions"]) for t in found), 54)
         # the loader resolved every rank to a row with a description (an unresolved rank would be an empty string)
         self.assertTrue(all(all(d for d in t["descriptions"]) for t in found))
 
@@ -492,23 +501,23 @@ class LiveWarriorPackageTest(unittest.TestCase):
         self.assertIn("a rank below the last must be grey", problems[0])
 
     def test_a_listed_talent_without_a_clause_fails_with_its_missing_ranks(self):
-        # Storm's Bulwark (talent 60005, 200058-200060) has no clause live: this is what S1 must fix
-        problems = capstone_problems("warrior", self.expected | {"Storm's Bulwark"}, talents=self.talents)
-        bulwark = next(t for t in self.talents if t["name"] == "Storm's Bulwark")
+        # Resolve (200046-200048) is a Protection talent with no capstone: listing it must fail
+        problems = capstone_problems("warrior", self.expected | {"Resolve"}, talents=self.talents)
+        resolve = next(t for t in self.talents if t["name"] == "Resolve")
         self.assertEqual(
             problems,
-            [f"Storm's Bulwark rank {i + 1} (spell {spell_id}): no Capstone Bonus clause"
-             for i, spell_id in enumerate(bulwark["spell_ids"])],
+            [f"Resolve rank {i + 1} (spell {spell_id}): no Capstone Bonus clause"
+             for i, spell_id in enumerate(resolve["spell_ids"])],
         )
-        self.assertEqual([200058, 200059, 200060], bulwark["spell_ids"])
+        self.assertEqual([200046, 200047, 200048], resolve["spell_ids"])
 
     def test_an_unlisted_talent_with_inline_capstone_text_fails_the_set_rule(self):
         talents = self._copy()
-        victim = next(t for t in talents if t["name"] == "Storm's Bulwark")
+        victim = next(t for t in talents if t["name"] == "Resolve")
         victim["descriptions"][0] += " Capstone: 5% more."
         problems = capstone_problems("warrior", self.expected, talents=talents)
         self.assertEqual(len(problems), 1, problems)
-        self.assertIn("(Storm's Bulwark) has capstone text but is not in the expected capstone list", problems[0])
+        self.assertIn("(Resolve) has capstone text but is not in the expected capstone list", problems[0])
 
     def test_an_expected_name_that_matches_nothing_or_twice_is_a_problem(self):
         problems = capstone_problems("warrior", self.expected | {"No Such Talent"}, talents=self.talents)
@@ -522,7 +531,7 @@ class LiveWarriorPackageTest(unittest.TestCase):
 
     def test_an_unlisted_talent_with_capstone_only_in_its_aura_description_fails_the_set_rule(self):
         talents = self._copy()
-        victim = next(t for t in talents if t["name"] == "Storm's Bulwark")
+        victim = next(t for t in talents if t["name"] == "Resolve")
         victim["auras"][0] = "Capstone Bonus: x"
         problems = capstone_problems("warrior", self.expected, talents=talents)
         self.assertEqual(len(problems), 1, problems)

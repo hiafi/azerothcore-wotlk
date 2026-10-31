@@ -234,6 +234,16 @@ class spell_rog_riposte : public SpellScript
     }
 };
 
+// Custom: warrior-rework S2 (R6 / D4): Sweeping Strikes (Arms, sweeping_strikes_arms_204493) shares a 30 s
+// cooldown with Blade Flurry. Category cooldowns do not cross spell families, so each side's script sets the peer's
+// cooldown by hand (the warrior side is spell_warr_sweeping_strikes_rework). A local id: the rogue code does not
+// include WarriorData.h.
+namespace
+{
+    constexpr uint32 SPELL_WARRIOR_SWEEPING_STRIKES_ARMS = 204493;
+    constexpr uint32 BLADE_FLURRY_SWEEPING_LOCK_MS = 30000;
+}
+
 // 13877 - Blade Flurry (rework). The copies live in the damage hooks (RogueUnitScript); the cast only resolves Deft
 // Maneuvers. The NPC ids 33735 / 51211 / 65956 keep the stock spell_rog_blade_flurry.
 class spell_rog_blade_flurry_rework : public SpellScript
@@ -247,6 +257,15 @@ class spell_rog_blade_flurry_rework : public SpellScript
             return;
 
         Rogue::OnBladeFlurryCast(rogue);
+
+        // Custom: warrior-rework S2 (R6): a rogue who also knows the Arms Sweeping Strikes puts it on the full 30 s,
+        // never shortening a longer cooldown. end_time is a duration in ms; the resend shows it on the client.
+        if (rogue->HasSpell(SPELL_WARRIOR_SWEEPING_STRIKES_ARMS) &&
+            rogue->GetSpellCooldownDelay(SPELL_WARRIOR_SWEEPING_STRIKES_ARMS) < BLADE_FLURRY_SWEEPING_LOCK_MS)
+        {
+            rogue->AddSpellCooldown(SPELL_WARRIOR_SWEEPING_STRIKES_ARMS, 0, BLADE_FLURRY_SWEEPING_LOCK_MS, true);
+            rogue->ResendSpellCooldown(SPELL_WARRIOR_SWEEPING_STRIKES_ARMS);
+        }
     }
 
     void Register() override
