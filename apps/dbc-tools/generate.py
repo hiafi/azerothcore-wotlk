@@ -1176,6 +1176,7 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         [int(r["SpellId"]) for r in dsl_classes["proc_removals"]],
         {**existing_spells, **{int(r["ID"]): r for r in spell_rows}},
         rank_chains,
+        [int(r["SpellId"]) for r in dsl_classes["spell_procs"]],
     ):
         print(f"WARNING: {warning}")
     # Same full-population scan: RangeIndex 0 on a spell aimed at another unit fails CheckRange

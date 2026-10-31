@@ -151,6 +151,12 @@ class CheckRawOverrideTypedMismatchTest(unittest.TestCase):
         entry = _entry(effect1={"type": 6, "base_points": 1}, raw_overrides={"EffectDieSides_1": 1})
         self.assertEqual(lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES), [])
 
+    def test_undeclared_effect_raw_override_does_not_warn(self):
+        # Waylay / Honor Among Thieves: one declared effect, raw EffectDieSides_2=0 zeroes the junk eff1.
+        # build_spell_row skips an undeclared effect, so nothing typed competes with the override.
+        entry = _entry(effect1={"type": 6, "base_points": 1}, raw_overrides={"EffectDieSides_2": 0})
+        self.assertEqual(lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES), [])
+
     def test_effect_radius_index_mismatch_warns(self):
         entry = _entry(effect1={"type": 6, "radius_yards": 5.0}, raw_overrides={"EffectRadiusIndex_1": 8})
         warnings = lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES)
@@ -413,5 +419,22 @@ class CheckClassmaskScopingTest(unittest.TestCase):
         self.assertEqual(len(self._warn(row)), 1)
 
 
+class CheckMissingSkillLineAbilityTest(unittest.TestCase):
+    IDS_CFG = {"spell": {"start": 200000, "end": 209999}}
+    CASTABLE = {"attributes": 0, "cast_time_ms": 2000, "cooldown_ms": 0, "category_cooldown_ms": 0,
+                "mana_cost": 0, "mana_cost_pct": 0}
+
+    def test_castable_custom_spell_without_row_warns(self):
+        entry = _entry(id=200001, **self.CASTABLE)
+        warnings = lint.check_missing_skill_line_ability([entry], [], {}, self.IDS_CFG)
+        self.assertEqual(len(warnings), 1)
+
+    def test_creature_cast_spell_is_exempt(self):
+        entry = _entry(id=200824, name="Fel Firebolt", **self.CASTABLE)
+        self.assertIn(200824, lint.CREATURE_CAST_SPELL_ALLOW)
+        self.assertEqual(lint.check_missing_skill_line_ability([entry], [], {}, self.IDS_CFG), [])
+
+
 if __name__ == "__main__":
     unittest.main()
+

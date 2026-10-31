@@ -223,6 +223,18 @@ class RemovedProcFlagsWarningTest(unittest.TestCase):
         rows = {53695: {"ProcTypeMask": 0}, 53696: {"ProcTypeMask": 69904}}
         self.assertEqual(lint.check_removed_proc_flags([53695], rows, {53695: [53695, 53696]}), [])
 
+    def test_declared_chain_row_covers_its_ranks(self):
+        # Maelstrom Weapon: stock per-rank rows removed, -51528 declared; ranks cut from the talent still warn.
+        rows = {i: {"ProcTypeMask": 20} for i in (51528, 51529, 51530, 51531)}
+        chains = {51528: [51528, 51529, 51530], 51531: [51528, 51529, 51530, 51531]}
+        (warning,) = lint.check_removed_proc_flags([51528, 51529, 51530, 51531], rows, chains, [-51528])
+        self.assertIn("spell 51531 ", warning)
+
+    def test_declared_same_id_row_covers_it(self):
+        # Waylay: -51692 removed, rank 2 keeps its own declared row.
+        rows = {51692: {"ProcTypeMask": 0}, 51696: {"ProcTypeMask": 16}}
+        self.assertEqual(lint.check_removed_proc_flags([-51692], rows, {51692: [51692, 51696]}, [51696]), [])
+
     def test_dsl_chain_beats_existing_talents(self):
         existing = {1: {"SpellRank_1": 53695, "SpellRank_2": 53696, "SpellRank_3": 0}}
         dsl = [{"rank_spell_ids": [53695, 53696, 99001]}]

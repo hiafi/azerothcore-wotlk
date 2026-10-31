@@ -211,6 +211,16 @@ def check_family_zero_spellmods(
     return warnings
 
 
+# Custom spells only a creature (a guardian or summoned elemental) ever casts: a cast time but no learner, so
+# check_missing_skill_line_ability's player-castable heuristic misfires on them. {spell_id: who casts it}.
+CREATURE_CAST_SPELL_ALLOW: dict[int, str] = {
+    200824: "Fel Firebolt - cast by the Wild Imp (npc_warl_wild_imp)",
+    200832: "Doom Bolt - cast by the Doomguard guardian (npc_warl_doomguard_guardian)",
+    202276: "Water Bolt - cast by the Water Elemental guardian (creature_spell 300260)",
+    202278: "Storm Bolt - cast by the Storm Elemental guardian (creature_spell 300261)",
+}
+
+
 def check_missing_skill_line_ability(
     entries: list[dict],
     skill_line_ability_entries: list[dict],
@@ -255,7 +265,7 @@ def check_missing_skill_line_ability(
         spell_id = entry["id"]
         if not (spell_range["start"] <= spell_id <= spell_range["end"]):
             continue  # reused stock ID - Blizzard's own data already covers it if it needs it
-        if spell_id in covered:
+        if spell_id in covered or spell_id in CREATURE_CAST_SPELL_ALLOW:
             continue
         if not looks_player_castable(SimpleNamespace(**entry)):
             continue
@@ -441,7 +451,9 @@ def check_raw_override_typed_mismatch(
             ))
 
         for i in (1, 2, 3):
-            effect = entry.get(f"effect{i}") or {}
+            effect = entry.get(f"effect{i}")
+            if not effect:
+                continue  # build_spell_row writes nothing for an undeclared effect, so the raw override is the only setter
             for field, base_column in _EFFECT_DIRECT_FIELDS.items():
                 column = f"{base_column}_{i}"
                 if column not in overrides or allowed(column):
@@ -1009,6 +1021,7 @@ def check_removed_proc_flags(
     removal_ids: list[int],
     spell_rows: dict[int, dict],
     rank_chains: dict[int, list[int]] | None = None,
+    declared_proc_ids: list[int] | None = None,
 ) -> list[str]:
     """Warnings for a `remove_spell_proc()` whose spell still has non-zero DBC `ProcTypeMask`
     (the spell_dbc column holding `ProcFlags`). Removing the `spell_proc` row alone does not
@@ -1023,8 +1036,17 @@ def check_removed_proc_flags(
     not spell_ranks - generate.py builds it from the DSL talent entries (post-rework ranks win),
     falling back to the existing talent rows' SpellRank_1..9. A negative id absent from it checks
     only `abs(id)`. `spell_rows`: spell_dbc rows by ID, already overlaid with this run's built
-    rows. An id with no row anywhere is skipped."""
+    rows. An id with no row anywhere is skipped.
+
+    `declared_proc_ids`: the `spell_proc` SpellIds the source declares itself (`procs_on()`). A spell
+    one of them covers - the same id, or a rank of a negative id's chain - has a real row, so
+    `SpellMgr` builds no default one for it and the removal only replaces a stock row (Elemental
+    Focus: remove 16164, declare -16164)."""
     rank_chains = rank_chains or {}
+    covered: set[int] = set()
+    for proc_id in declared_proc_ids or []:
+        base = abs(int(proc_id))
+        covered.update(rank_chains.get(base) or [base] if int(proc_id) < 0 else [base])
     warnings = []
     for removal_id in removal_ids:
         base = abs(int(removal_id))
@@ -1033,7 +1055,7 @@ def check_removed_proc_flags(
             ids.insert(0, base)
         for spell_id in ids:
             row = spell_rows.get(spell_id)
-            if row is None:
+            if row is None or spell_id in covered:
                 continue
             flags = int(row.get("ProcTypeMask", 0) or 0)
             if flags:
