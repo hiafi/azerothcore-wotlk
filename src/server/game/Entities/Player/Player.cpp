@@ -11323,6 +11323,7 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
         }
 
         PacketCooldowns forcedCategoryCooldowns;
+        constexpr uint32 SPELL_CATEGORY_MELEE_INTERRUPT = 88; // Custom: Kick/Pummel/Mind Freeze/Rebuke/Skull Bash
 
         SpellCategoryStore::const_iterator i_scstore = sSpellsByCategoryStore.find(cat);
         if (i_scstore != sSpellsByCategoryStore.end())
@@ -11342,7 +11343,13 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
 
                 // Only within the same spellfamily
                 SpellInfo const* categorySpellInfo = sSpellMgr->GetSpellInfo(i_scset->second);
-                if (!categorySpellInfo || categorySpellInfo->SpellFamilyName != spellInfo->SpellFamilyName)
+                // Custom: the melee kicks (Kick, Pummel, Mind Freeze, Rebuke, Skull Bash) share one lockout across
+                // class families, so a Freepick kit with several of them can't chain them. Only spells the player
+                // knows, and the client is told explicitly since its own category check is per family.
+                bool const crossFamilyKick = cat == SPELL_CATEGORY_MELEE_INTERRUPT && categorySpellInfo &&
+                    categorySpellInfo->SpellFamilyName != spellInfo->SpellFamilyName && HasSpell(i_scset->second);
+                if (!categorySpellInfo ||
+                    (categorySpellInfo->SpellFamilyName != spellInfo->SpellFamilyName && !crossFamilyKick))
                 {
                     continue;
                 }
@@ -11362,7 +11369,8 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
 
                 _AddSpellCooldown(i_scset->second, cat, itemId, catrecTime, !spellInfo->IsCooldownStartedOnEvent() && catrec && rec && catrec != rec);
 
-                if (spellInfo->HasAttribute(SPELL_ATTR0_CU_FORCE_SEND_CATEGORY_COOLDOWNS))
+                // Custom: crossFamilyKick, see above
+                if (spellInfo->HasAttribute(SPELL_ATTR0_CU_FORCE_SEND_CATEGORY_COOLDOWNS) || crossFamilyKick)
                 {
                     forcedCategoryCooldowns[i_scset->second] = catrecTime;
                 }
