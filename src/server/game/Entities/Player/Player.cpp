@@ -11147,7 +11147,6 @@ uint32 Player::GetMaxPersonalArenaRatingRequirement(uint32 minarenaslot) const
     return max_personal_rating;
 }
 
-
 void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 itemId, Spell* spell, bool infinityCooldown)
 {
     // init cooldown values
