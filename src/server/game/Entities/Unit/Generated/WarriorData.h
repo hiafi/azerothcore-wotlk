@@ -117,6 +117,9 @@ namespace WarriorData
     constexpr uint32 SPELL_FLURRY_12972 = 12972; // flurry_12972
     constexpr uint32 SPELL_LAST_STAND = 12975; // last_stand_12975
     constexpr uint32 SPELL_UNBRIDLED_WRATH_12999 = 12999; // unbridled_wrath_12999
+    constexpr uint32 SPELL_UNBRIDLED_WRATH_13000 = 13000; // unbridled_wrath_13000
+    constexpr uint32 SPELL_UNBRIDLED_WRATH_13001 = 13001; // unbridled_wrath_13001
+    constexpr uint32 SPELL_UNBRIDLED_WRATH_13002 = 13002; // unbridled_wrath_13002
     constexpr uint32 SPELL_ENRAGE_13045 = 13045; // enrage_13045
     constexpr uint32 SPELL_ENRAGE_13046 = 13046; // enrage_13046
     constexpr uint32 SPELL_ENRAGE_13047 = 13047; // enrage_13047
@@ -197,6 +200,8 @@ namespace WarriorData
     constexpr uint32 SPELL_WRECKING_CREW = 46867; // wrecking_crew_46867
     constexpr uint32 SPELL_INTENSIFY_RAGE = 46908; // intensify_rage_46908
     constexpr uint32 SPELL_INTENSIFY_RAGE_46909 = 46909; // intensify_rage_46909
+    constexpr uint32 SPELL_FURIOUS_ATTACKS = 46910; // furious_attacks_46910
+    constexpr uint32 SPELL_FURIOUS_ATTACKS_46911 = 46911; // furious_attacks_46911
     constexpr uint32 SPELL_BLOODSURGE = 46913; // bloodsurge_46913
     constexpr uint32 SPELL_BLOODSURGE_46914 = 46914; // bloodsurge_46914
     constexpr uint32 SPELL_BLOODSURGE_46915 = 46915; // bloodsurge_46915

@@ -488,7 +488,83 @@ for _stock_id in (12322, 12999):
              family_mask=(_HEROIC_STRIKE_D0 | _CLEAVE_D0, 0, 0), spell_phase_mask=_PROC_PHASE_CAST,
              chance=15 if _stock_id == 12322 else 30)
 
-# The cut ranks' stock PPM rows (the talent keeps 2 ranks; 13000-13002 stay inert spells).
+unbridled_wrath_13000 = spell(
+    id=13000,
+    name='Unbridled Wrath',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=12964),
+    ],
+    spell_icon_id=689,
+    notes=(
+        'pulled from existing data; cut ranks 3-5 of Unbridled Wrath, stock rows first-declared; '
+        'ProcTypeMask 0 and ProcChance 0 so SpellMgr builds no default proc once '
+        'remove_spell_proc deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 0, 'SpellLevel': 1, 'RangeIndex': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a chance to generate an additional rage point when you deal melee damage with a weapon.  Effect occurs more often than Unbridled Wrath (Rank 2).', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+unbridled_wrath_13001 = spell(
+    id=13001,
+    name='Unbridled Wrath',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=12964),
+    ],
+    spell_icon_id=689,
+    notes=(
+        'pulled from existing data; cut ranks 3-5 of Unbridled Wrath, stock rows first-declared; '
+        'ProcTypeMask 0 and ProcChance 0 so SpellMgr builds no default proc once '
+        'remove_spell_proc deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 0, 'SpellLevel': 1, 'RangeIndex': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a chance to generate an additional rage point when you deal melee damage with a weapon.  Effect occurs more often than Unbridled Wrath (Rank 3).', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+unbridled_wrath_13002 = spell(
+    id=13002,
+    name='Unbridled Wrath',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=12964),
+    ],
+    spell_icon_id=689,
+    notes=(
+        'pulled from existing data; cut ranks 3-5 of Unbridled Wrath, stock rows first-declared; '
+        'ProcTypeMask 0 and ProcChance 0 so SpellMgr builds no default proc once '
+        'remove_spell_proc deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 0, 'SpellLevel': 1, 'RangeIndex': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a chance to generate an additional rage point when you deal melee damage with a weapon.  Effect occurs more often than Unbridled Wrath (Rank 4).', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# The cut ranks' stock PPM rows (the talent keeps 2 ranks; 13000-13002 stay inert spells: ProcTypeMask / ProcChance 0
+# above, so no default proc is built once the stock rows go).
 remove_spell_proc(13000)
 remove_spell_proc(13001)
 remove_spell_proc(13002)

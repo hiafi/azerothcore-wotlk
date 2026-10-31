@@ -699,9 +699,60 @@ unbind_script(-5308, 'spell_warr_execute')                  # D17: replaced by s
 unbind_script(-46913, 'spell_warr_extra_proc')              # D15: Bloodsurge now triggers 204652 (the T10 hook is lost)
 unbind_script(-12317, 'spell_gen_proc_from_direct_damage')  # D3: Enrage is a DUMMY carrier now (-49004 stays)
 
-# spell_proc rows the rewritten ranks no longer use (their ProcTypeMask / ProcChance are zeroed in the rank rows or the
-# talents are retired, so no default entry is built either). The Enrage / Blood Craze / Unbridled Wrath rank-key
-# removals (-12317, -16487, 12322 / 12999 / 13000-13002) are with the rank rows (warrior_fury_ranks.py).
+# Furious Attacks: the retired talent's stock ranks, first-declared so the proc fields can be zeroed (below).
+furious_attacks_46910 = spell(
+    id=46910,
+    name='Furious Attacks',
+    school=School.NORMAL,
+    attributes=262592,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=127, trigger_spell=56112),
+    ],
+    spell_icon_id=2783,
+    notes=(
+        'pulled from existing data; retired talent Furious Attacks (retire_talent 1865, D16), stock row first-declared; '
+        'ProcTypeMask 0 and ProcChance 0 so SpellMgr builds no default proc once '
+        'remove_spell_proc deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 0, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your normal melee attacks have a chance to reduce all healing done to the target by $56112s1% for $56112d.  This can stack up to $56112u times.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+furious_attacks_46911 = spell(
+    id=46911,
+    name='Furious Attacks',
+    school=School.NORMAL,
+    attributes=262592,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=127, trigger_spell=56112),
+    ],
+    spell_icon_id=2783,
+    notes=(
+        'pulled from existing data; retired talent Furious Attacks (retire_talent 1865, D16), stock row first-declared; '
+        'ProcTypeMask 0 and ProcChance 0 so SpellMgr builds no default proc once '
+        'remove_spell_proc deletes the stock row (generate-warnings, 2026-10-31)'
+    ),
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 0, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your normal melee attacks have a chance to reduce all healing done to the target by $56112s1% for $56112d.  This can stack up to $56112u times.  This occurs more often than Furious Attacks (Rank 1).', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+# spell_proc rows the rewritten ranks no longer use. SpellMgr builds a default proc for any trigger-aura spell whose
+# DBC ProcTypeMask is non-zero, retired talent or not, so every rank here has its ProcTypeMask / ProcChance zeroed in
+# its own row (the rank rows, or Furious Attacks' first-declared stock rows above). The Enrage / Blood Craze /
+# Unbridled Wrath rank-key removals (-12317, -16487, 12322 / 12999 / 13000-13002) are with the rank rows
+# (warrior_fury_ranks.py).
 remove_spell_proc(-20500)                                   # Improved Berserker Rage (retired talent, D12)
 remove_spell_proc(46910)                                    # Furious Attacks rank 1 (retired talent, D16)
 remove_spell_proc(46911)                                    # Furious Attacks rank 2 (retired talent, D16)
