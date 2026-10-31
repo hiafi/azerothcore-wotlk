@@ -23,6 +23,7 @@
 namespace
 {
     bool s_healthDrain = false;
+    float s_startHealthPct = 0.0f;
 
     // A sim-exclusive training dummy AI (entry 900004+, data/sql/updates/pending_db_world - see
     // that migration's own doc comment) - identical to the shared npc_training_dummy
@@ -74,6 +75,31 @@ void SimDummyAI::SetHealthDrain(bool enabled)
 bool SimDummyAI::IsHealthDrainEnabled()
 {
     return s_healthDrain;
+}
+
+void SimDummyAI::SetStartHealthPct(float pct)
+{
+    s_startHealthPct = pct;
+}
+
+bool SimDummyAI::HasStartHealthPct()
+{
+    return s_startHealthPct > 0.0f && s_startHealthPct < 100.0f;
+}
+
+void SimDummyAI::ResetHealth(Creature* dummy)
+{
+    if (!dummy)
+        return;
+
+    if (s_startHealthPct <= 0.0f || s_startHealthPct >= 100.0f)
+    {
+        dummy->SetFullHealth();
+        return;
+    }
+
+    uint64 const health = uint64(double(dummy->GetMaxHealth()) * double(s_startHealthPct) / 100.0);
+    dummy->SetHealth(uint32(std::max<uint64>(health, 1)));
 }
 
 void AddSC_SimDummyAI()

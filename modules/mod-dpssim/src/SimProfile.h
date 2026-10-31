@@ -111,6 +111,14 @@ namespace SimProfile
         bool DummyHealthDrain = false;
         uint32 DummyMaxHealth = 0;
 
+        // `DummyStartHealthPct = <percent>` (float, 0 to 100; 0 or absent = every dummy starts full, as before): each
+        // dummy starts every iteration at this percentage of its max health instead of 100%, so a drain run can
+        // start inside an execute phase (21 with DummyMaxHealth 600000: below 35% at once, below 20% after about
+        // 6 s at ~1,000 DPS). Works with or without DummyHealthDrain (without it the dummy takes no damage and stays
+        // at that percentage; the iteration reset puts it back after the buff phase's regeneration). Tank mode uses
+        // it only with DummyHealthDrain; without drain its dummies keep the default pool, refilled every step.
+        float DummyStartHealthPct = 0.0f;
+
         // The dummy's armor. 0 (absent) = no armor, as before. Copied to SimDaemon::Config::TargetArmor and from there
         // to SimTarget::Config::Armor. The profiles use 4350, about a level-62 dungeon boss (creature_classlevelstats
         // level 62 class 1 = 4,344).
@@ -125,6 +133,12 @@ namespace SimProfile
         // A cast still going when the phase ends is interrupted, with a warning. 0 disables the phase: the old
         // behaviour (the bot starts every iteration in combat, unbuffed). A run with no profile uses the default.
         uint32 PrePullBuffMs = 15000;
+
+        // `AuraSampleIds = <spell id>, <spell id>, ...`: spells whose auras are sampled every sim step of the measured
+        // fight (the report's "auraSamples", see SimReport.h): the actor's own aura of each id, and the actor's aura
+        // (cast by the actor) of that id on the primary dummy. Empty (absent) = no sampling and no "auraSamples" key in
+        // the report. Copied to SimDaemon::RunConfig::AuraSampleIds.
+        std::vector<uint32> AuraSampleIds;
 
         // Whether the actor gets its class's premade glyphs, as a live random bot does: PlayerbotFactory::
         // InitGlyphs() after the talents, picking Playerbots.PremadeSpecGlyph.<class>.<spec tab> by level (true by

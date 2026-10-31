@@ -250,9 +250,25 @@ static bool WriteDpsReport(std::string const& path, SimDaemon::RunConfig const& 
         SimDaemon::RunResult::CastEvent const& c = result.CastEvents[i];
         file << "    {\"timestampMs\": " << c.TimestampMs << ", \"spellId\": " << c.SpellId
              << ", \"triggered\": " << (c.Triggered ? "true" : "false") << ", \"target\": " << int32(c.TargetIndex)
+             << ", \"powerCost\": " << c.PowerCost
              << "}" << (i + 1 < result.CastEvents.size() ? ",\n" : "\n");
     }
     file << "  ],\n";
+
+    // The per-step aura samples of the profile's AuraSampleIds (RunResult::AuraSamples). The key exists only when the
+    // profile listed ids, so every other report is byte-for-byte what it was
+    if (!config.AuraSampleIds.empty())
+    {
+        file << "  \"auraSamples\": [\n";
+        for (size_t i = 0; i < result.AuraSamples.size(); ++i)
+        {
+            SimDaemon::RunResult::AuraSample const& a = result.AuraSamples[i];
+            file << "    {\"ts\": " << a.TimestampMs << ", \"spellId\": " << a.SpellId << ", \"onTarget\": "
+                 << (a.OnTarget ? "true" : "false") << ", \"stacks\": " << a.Stacks << ", \"remainingMs\": "
+                 << a.RemainingMs << "}" << (i + 1 < result.AuraSamples.size() ? ",\n" : "\n");
+        }
+        file << "  ],\n";
+    }
 
     // Damage per dummy, in index order
     std::vector<uint64> damageByTarget(targetCount, 0);
@@ -1209,7 +1225,7 @@ namespace
                  << s.MaxHealth << ", \"powerType\": " << uint32(s.PowerType) << ", \"power\": "
                  << TankPowerDisplay(s.PowerType, s.Power) << ", \"maxPower\": "
                  << TankPowerDisplay(s.PowerType, s.MaxPower) << ", \"bulwarkStacks\": "
-                 << uint32(s.BulwarkStacks) << "}";
+                 << uint32(s.BulwarkStacks) << ", \"absorbRemaining\": " << s.AbsorbRemaining << "}";
         });
 
         // Threat over time, one series per dummy: [[timestampMs, threat], ...]

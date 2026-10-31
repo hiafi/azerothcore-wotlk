@@ -586,3 +586,9 @@ void SimBot::ReestablishCombatState(std::vector<Creature*> const& targets)
     _ai->AllowActivity(ALL_ACTIVITY, true);
     _ai->SetNextCheckDelay(0);
 }
+
+void SimBot::RestartCombatClock()
+{
+    if (_ai)
+        _ai->ChangeEngineOnCombat();
+}

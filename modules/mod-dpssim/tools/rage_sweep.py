@@ -14,7 +14,8 @@ what the user needs to pick the level-60 constants:
   4. the dual-wield advantage, stock against the new formula (the doc says "about halved"),
   5. the 15% haste check (W0b D23): two rows per profile, +15% SPELL haste (rage per second x1.15) and +15% ATTACK
      SPEED only (about x1.03: only the damage term moves with the swing rate),
-  6. D16's Arms budget table (white-swing income plus Anger Management 3 against the Arms rotation's spend).
+  6. D36's Arms budget table (white-swing income with Battle Stance and Two-Handed Weapon Mastery, Anger Management 3
+     and Bloodrage against the Arms rotation's spend at the built costs).
 
 The formula (D12 + W0b D21, mirrored in src/server/game/Entities/Unit/WarriorMechanics.cpp):
     c(L)      = 0.0091107836 L^2 + 3.225598133 L + 4.2652911          (+13.27 per level above 70)
@@ -40,17 +41,19 @@ known. NOTE: the existing W0a reports were produced by the pre-W0b build (hasted
 reference is the W0b formula, so their reference rows differ from the old output by the haste term.
 
 WHAT THE REPORT CAN AND CANNOT TELL US (find: SimReport.h / EventRecorder.h):
-  - A white swing is a "hits" row with spellId 0 (EventRecorder::MELEE_SPELL_ID), isPet false, sourceEntry 0:
-    {timestampMs, spellId, damage, crit, isPet, sourceEntry, target}. There is NO main-hand / off-hand tag and no
-    swing speed in the report, and a swing that missed or was dodged leaves no row at all (PvE is always-hit here).
+  - A white swing is a "hits" row, isPet false, sourceEntry 0: {timestampMs, spellId, damage, crit, isPet,
+    sourceEntry, target}. Since S3 the recorder tags the hand: spellId 0 (EventRecorder::MELEE_SPELL_ID) is the main
+    hand, 0xFFFF0001 (EventRecorder::OFFHAND_MELEE_SPELL_ID, "Melee (off-hand)" in the HTML report) the off hand; a
+    pre-S3 report has only spellId 0. There is no swing speed in the report, and a swing that missed or was dodged
+    leaves no row at all (PvE is always-hit here).
   - The aggregate report keeps "hits" only from ONE representative iteration (the per-spell "spells" row has the
     averaged hitCount / critCount / totalDamage but no hands). So this script reads the per-iteration files
     (<stamp>.iterN.report.json, written next to the aggregate by run-sim.sh) whenever they exist and falls back to
     the aggregate's single run with a note (--aggregate-only forces that).
-  - Hands: a two-hander has only the main hand. For dual wield the script splits the white swings into two clusters
-    of crit-normalised damage (1-D 2-means; the off hand hits for about half the main hand) and calls the lower
-    cluster the off hand. It warns when the clusters are not clearly apart or when the counts do not match the swing
-    speeds. A hand tag in the report would remove this guess (C++ change, not done: out of this tool's scope).
+  - Hands: a two-hander has only the main hand. For dual wield the script splits by the recorder's tag when the
+    report has it (any 0xFFFF0001 row). On a pre-S3 (untagged) report it falls back to two clusters of
+    crit-normalised damage (1-D 2-means; the off hand hits for about half the main hand) and calls the lower cluster
+    the off hand, warning when the clusters are not clearly apart or when the counts do not match the swing speeds.
   - Swing speed: the mean gap between one hand's consecutive hits in the run (the hasted swing time the new formula
     uses when no gear haste is known, exact on average even when Flurry-style haste comes and goes). The UNHASTED
     weapon speed the stock formula uses is not in the report either: it is a per-profile default below (the
@@ -69,6 +72,7 @@ Usage:
                                    [--crit-mult 2.0] [--header PATH] [--speed KEY=MH[/OH]]
                                    [--stance KEY=battle|berserker] [--haste KEY=PCT] [--aggregate-only]
                                    [--reports-dir DIR]
+    python3 -I tools/rage_sweep.py [--tg-start SRC] [--tg-end SRC] [--fury]   (S3 D46: the FURY BUDGET section)
     python3 -I tools/rage_sweep.py --measured [same options]
     python3 -I tools/rage_sweep.py --self-test
 
@@ -121,6 +125,7 @@ HASTE_CHECK = 0.15             # D15/D23: the "+15%" of the haste check
 GROWTH_TARGET = 1.25           # D15 (b), the W0a solve's bracket-growth target (the doc now measures about 8%)
 RATING_PER_HASTE_PCT_60 = 10.0  # gtCombatRatings CR_HASTE_MELEE (id 1759) / CR_HASTE_SPELL (id 1959) at level 60 = 10
 MEASURED_TOLERANCE = 0.05      # D23: measured hasted/unhasted ratio within 5% of the reference ratio
+OFFHAND_WHITE_SPELL_ID = 0xFFFF0001  # EventRecorder::OFFHAND_MELEE_SPELL_ID: off-hand white swings (S3, D43)
 RAGE_POWER_TYPE = 1            # Powers::POWER_RAGE
 
 HEADER_NAMES = {
@@ -132,7 +137,7 @@ HEADER_NAMES = {
 }
 
 # Profiles that need not have a report (no "(no report found ...)" line when missing).
-OPTIONAL_PROFILES = {"2h-start-haste"}
+OPTIONAL_PROFILES = {"2h-start-haste", "tg-start", "tg-end"}
 
 # The four sweep profiles: key -> (profile name, hands, default stance, default unhasted weapon speeds MH / OH).
 # Speeds are the reference weapons of the profiles (see each conf's header).
@@ -145,19 +150,64 @@ PROFILES = {
     "dw-start": ("WarriorRageDwStartSim", 2, "berserker", 2.6, 2.5),
     # Sand Polished Hammer 21715 + Ancient Qiraji Ripper 21650
     "dw-end": ("WarriorRageDwEndSim", 2, "berserker", 2.6, 2.8),
+    # S3 (D43): Titan's Grip, two 2H axes 19200 / two Manslayer of the Qiraji 21492, 1.3 link; optional
+    "tg-start": ("WarriorRageTgStartSim", 2, "berserker", 3.6, 3.6),
+    "tg-end": ("WarriorRageTgEndSim", 2, "berserker", 3.6, 3.6),
 }
 
-# D16: Arms rotation spend per minute (docs/reworks/warrior-arms-rework.md section 9, "About 40 presses a minute at
-# 0 haste") x rage cost, and Anger Management rank 3 (2/4/6 rage per 3 sec: 6 x 20 = 120 a minute).
+# D36 (warrior-rework.S2-HANDOFF.md, "The Arms rage budget"): the doc's 40-press minute at the BUILT costs
+# (Mortal Strike 25, Colossus Smash 20, Overpower 5, Rend 10, Slam 15). Momentum makes ~3.6 of the 10 Slams free, so
+# 6.4 are paid. Mortal Strike counts ~2 Sudden Death resets in its 12 presses.
 ARMS_SPEND = [
-    ("Mortal Strike", 12, 30),
-    ("Overpower", 12, 5),
-    ("Slam", 10, 15),
+    ("Mortal Strike", 12, 25),
     ("Colossus Smash", 4, 20),
+    ("Overpower", 12, 5),
     ("Rend", 2, 10),
+    ("Slam (6.4 paid)", 6.4, 15),
 ]
+ARMS_FREE_SLAMS_PER_MIN = 3.6   # Momentum's free Slams (informational: the paid count above already excludes them)
+# Income beyond the white swings (D36): Anger Management 3/3 (6 rage per 3 s in combat) and Bloodrage (20 + 10 over
+# 10 s, once a minute). Two-Handed Weapon Mastery 2/2's +30% white rage (aura 213) is additive with Battle Stance's
+# +10% on the unmodified white rage.
 ANGER_MANAGEMENT_3_PER_MIN = 120.0
-MORTAL_STRIKE_ALT_COST = 25    # D16's "if short, MS 30 -> 25"
+BLOODRAGE_PER_MIN = 30.0
+THWM_WHITE_RAGE_PCT = 30.0
+MORTAL_STRIKE_ALT_COST = 20    # D36 lever: "Mortal Strike 25 -> 20 saves 60" (costs are [fixed]; doc change, not built)
+
+
+# D46 (warrior-rework.S3-HANDOFF.md, "The Fury rage budget"): level 60, Berserker Stance (no rage bonus), build 1.3,
+# single target, 100% melee uptime, no rage from damage taken. Spend of the guide's minute at the BUILT costs, per
+# ability: (name, T0 presses, T0 paid presses, T3 presses, T3 paid presses, cost). Blood Rush 2/2 makes ~40% of the
+# Rampages free (3 of 5 paid), Bloodsurge ~4.5 free Slams at T0 (6 of 10 paid; T3 4 of 8 paid). Presses total 40.5 /
+# 45.5 (the D46 table rounds them to 40 / 46); rage total 550 / 650.
+FURY_SPEND_13 = [
+    ("Bloodthirst", 10, 10, 9, 9, 0),
+    ("Rampage", 5, 3, 5, 3, 60),
+    ("Whirlwind", 5, 5, 6, 6, 25),
+    ("Slam", 10, 6, 8, 4, 15),
+    ("Heroic Strike", 10, 10, 17, 17, 15),
+    ("Death Wish", 0.5, 0.5, 0.5, 0.5, 10),
+]
+# Build 1.4 (packs; D46 / fury-bots-sims section 6.3): no Blood Rush, so every Rampage is paid; Whirlwind 8.5 a minute
+# (8 s cooldown with Cleave cuts); the rage-limited allocation leaves nothing for paid Cleave (Cleave ~5.6 a minute
+# is Bloodsurge-free, powerCost 0), ~11-12 GCDs idle. T0 / T3 columns follow the 1.3 bracket labels: Rampage 4.9 / 5.4
+# presses (293 / 324 rage in D46's text; 294 / 324 here), Whirlwind 8.5 (214 in the text; 212.5 here).
+FURY_SPEND_14 = [
+    ("Bloodthirst", 10, 10, 10, 10, 0),
+    ("Rampage", 4.9, 4.9, 5.4, 5.4, 60),
+    ("Whirlwind", 8.5, 8.5, 8.5, 8.5, 25),
+    ("Cleave (Bloodsurge-free)", 5.6, 0, 5.6, 0, 20),
+    ("Death Wish", 0.5, 0.5, 0.5, 0.5, 10),
+]
+FURY_WHITE_DOC = (261.0, 305.0)         # D46: white swings MH + OH with Dual Wield Specialization 5 and Cruelty 3
+FURY_WHITE_FACTOR = 1.06                # D46: Enrage haste + Flurry only grow the damage term: x1.06 over the uptime
+FURY_WHITE_FACTOR_MEASURED = 1.0        # the tg-* sims play the full 1.3 build: Enrage / Flurry already in the white
+FURY_BLOODTHIRST_RAGE = 10.0
+FURY_IMPROVED_BLOODTHIRST_RAGE = 6.0    # Improved Bloodthirst 2/2
+FURY_BLOODTHIRST_CASTS = 10             # 6 s cooldown, not hasted
+FURY_UNBRIDLED_WRATH = (45.0, 44.0)     # Unbridled Wrath 2/2: 20% x 4 rage on ~48 swings + ~8 Heroic Strikes
+FURY_METER = 190                        # Enrage meter size (D46: no change; the lever is 170)
+FURY_METER_LEVER = 170
 
 
 # ----------------------------------------------------------------------------------------------------------------
@@ -324,10 +374,18 @@ def add_report(pd: ProfileData, report: dict, path: str, crit_mult: float) -> No
     if died:
         pd.notes.append(f"WARNING: {Path(path).name}: the actor died at {died} ms (the rest of the run counts as zero)")
     rows = [h for h in report.get("hits", [])
-            if h.get("spellId") == 0 and not h.get("isPet") and not h.get("sourceEntry")]
+            if h.get("spellId") in (0, OFFHAND_WHITE_SPELL_ID) and not h.get("isPet") and not h.get("sourceEntry")]
     if not rows:
-        pd.notes.append(f"WARNING: {Path(path).name}: no white swings (spellId 0) in 'hits'")
-    if pd.hands == 2:
+        pd.notes.append(f"WARNING: {Path(path).name}: no white swings (spellId 0 / 0xFFFF0001) in 'hits'")
+    tagged = any(h.get("spellId") == OFFHAND_WHITE_SPELL_ID for h in rows)
+    if pd.hands == 2 and tagged:
+        # the recorder tags the hand (S3): 0 = main hand, 0xFFFF0001 = off hand; no damage-cluster guess needed
+        mh_rows = [h for h in rows if h.get("spellId") == 0]
+        oh_rows = [h for h in rows if h.get("spellId") == OFFHAND_WHITE_SPELL_ID]
+        if path == pd.files[0]:
+            pd.notes.append(f"hand split by the recorder's tag: main hand {len(mh_rows)} swings, off hand "
+                            f"{len(oh_rows)} swings")
+    elif pd.hands == 2:
         mh_rows, oh_rows, notes = split_hands(rows, crit_mult)
         pd.notes.extend(notes if path == pd.files[0] else [])  # the split note once, from the first file
     else:
@@ -527,7 +585,7 @@ def fmt(x: float, nd: int = 2) -> str:
 
 
 def print_sources(profiles: dict[str, ProfileData]) -> None:
-    print("== SOURCES (white swings: spellId 0, not pet) ==")
+    print("== SOURCES (white swings: spellId 0 main hand, 0xFFFF0001 off hand, not pet) ==")
     print(f"{'profile':<26} {'files':>5} {'sec':>6} {'stance':<9} {'hand':<4} {'hits':>5} {'crit%':>6} "
           f"{'avg d':>7} {'avg d(nc)':>9} {'swing s':>8} {'base s':>7} {'meas.h%':>7} {'gear h%':>7}")
     for pd in profiles.values():
@@ -741,14 +799,23 @@ def print_measured(profiles: dict[str, ProfileData], k: float, m: float, level: 
     return status
 
 
+def arms_income(white_stance: float, stance_pct: float) -> tuple[float, float, float]:
+    """D36 income per minute from the white-swing rage that already includes the stance bonus: (white base, white with
+    the stance and Two-Handed Weapon Mastery bonuses added together, total with Anger Management and Bloodrage)."""
+    base = white_stance / (1.0 + stance_pct / 100.0)
+    white = base * (1.0 + (stance_pct + THWM_WHITE_RAGE_PCT) / 100.0)
+    return base, white, white + ANGER_MANAGEMENT_3_PER_MIN + BLOODRAGE_PER_MIN
+
+
 def print_arms_budget(profiles: dict[str, ProfileData], k: float, m: float, level: int, rate: float,
                       title: str) -> None:
     spend = sum(n * c for _, n, c in ARMS_SPEND)
-    print(f"== ARMS BUDGET (D16, {title}, k={k:g} m={m:g}) ==")
-    print("  spend per minute (Arms doc section 9, ~40 presses at 0 haste):")
+    print(f"== ARMS BUDGET (D36, {title}, k={k:g} m={m:g}) ==")
+    print("  spend per minute (Arms doc, ~40 presses at 0 haste, built costs; Momentum's "
+          f"~{ARMS_FREE_SLAMS_PER_MIN:g} free Slams per minute are not paid):")
     for name, n, c in ARMS_SPEND:
-        print(f"    {name:<16} {n:>3} x {c:>3} = {n * c:>4}")
-    print(f"    {'total':<16} {'':>9} {spend:>4}")
+        print(f"    {name:<16} {n:>4g} x {c:>3} = {n * c:>5g}")
+    print(f"    {'total':<16} {'':>10} {spend:>5g}")
     ms_n, ms_c = ARMS_SPEND[0][1], ARMS_SPEND[0][2]
     spend_alt = spend - ms_n * (ms_c - MORTAL_STRIKE_ALT_COST)
     shown = False
@@ -757,17 +824,96 @@ def print_arms_budget(profiles: dict[str, ProfileData], k: float, m: float, leve
             continue
         shown = True
         pd = profiles[key]
-        white = new_rates(pd, k, m, level, rate).total * 60.0
-        income = white + ANGER_MANAGEMENT_3_PER_MIN
+        # new_rates() includes Battle Stance's +10% (additive aura 213); THWM's +30% is additive with it on the base
+        # white rage: base * (1 + 0.10 + 0.30).
+        white_stance = new_rates(pd, k, m, level, rate).total * 60.0
+        stance_pct = BATTLE_STANCE_PCT if pd.battle else 0.0
+        white_base, white, income = arms_income(white_stance, stance_pct)
         verdict = "SHORT" if income < spend else "enough"
-        print(f"  {pd.name:<22} white swings {fmt(white, 0):>5}/min + Anger Management 3 "
-              f"{fmt(ANGER_MANAGEMENT_3_PER_MIN, 0)}/min = {fmt(income, 0):>5}/min vs spend {spend}/min: "
+        print(f"  {pd.name:<22} white {fmt(white_base, 0):>4} base -> {fmt(white, 0):>4} with stance "
+              f"+{stance_pct:g}% and THWM +{THWM_WHITE_RAGE_PCT:g}%, + Anger Management 3 "
+              f"{fmt(ANGER_MANAGEMENT_3_PER_MIN, 0)} + "
+              f"Bloodrage {fmt(BLOODRAGE_PER_MIN, 0)} = {fmt(income, 0):>4}/min vs spend {spend:g}/min: "
               f"{fmt(income - spend, 0):>5} ({verdict}); with Mortal Strike at {MORTAL_STRIKE_ALT_COST} the spend is "
-              f"{spend_alt} ({fmt(income - spend_alt, 0)})")
+              f"{spend_alt:g} ({fmt(income - spend_alt, 0)})")
     if not shown:
         print("  needs a 2h profile")
-    print("  (white swings only, 100% melee uptime; no rage from damage taken, Charge, Bloodrage or Execute; "
-          "'short' means the D16 follow-up: set Mortal Strike 12294's cost to 25)")
+    print("  (white swings only, 100% melee uptime; no rage from damage taken, Charge or Execute; a SHORT minute "
+          "is covered by the bot's pooling, the lever sizes are doc-level changes and are NOT built)")
+    print()
+
+
+def fury_spend(table: list[tuple[str, float, float, float, float, int]], bracket: int) -> float:
+    """D46 paid rage per minute of one spend table; bracket 0 = T0 (bracket start), 3 = T3 (bracket end)."""
+    return sum((paid0 if bracket == 0 else paid3) * cost for _n, _p0, paid0, _p3, paid3, cost in table)
+
+
+def fury_income(white: float, unbridled_wrath: float = FURY_UNBRIDLED_WRATH[0],
+                white_factor: float = FURY_WHITE_FACTOR) -> dict[str, float]:
+    """D46 Fury income per minute: white swings (MH + OH) x `white_factor` + Bloodthirst (10 + Improved Bloodthirst 6)
+    x 10 casts + Unbridled Wrath + Bloodrage 30. `white` is the white-swing rage per minute. The factor is 1.06 (Enrage
+    haste + Flurry over their uptime) for the doc figures, which exclude them, and FURY_WHITE_FACTOR_MEASURED (1.0) for
+    a measured tg-* sim, whose bot plays the full 1.3 build so its white already includes them."""
+    parts = {
+        "white": white * white_factor,
+        "bloodthirst": (FURY_BLOODTHIRST_RAGE + FURY_IMPROVED_BLOODTHIRST_RAGE) * FURY_BLOODTHIRST_CASTS,
+        "unbridled wrath": unbridled_wrath,
+        "bloodrage": BLOODRAGE_PER_MIN,
+    }
+    parts["total"] = sum(parts.values())
+    return parts
+
+
+def print_fury_budget(profiles: dict[str, ProfileData], k: float, m: float, level: int, rate: float,
+                      title: str) -> None:
+    print(f"== FURY BUDGET (D46, {title}, k={k:g} m={m:g}) ==")
+    for label, table in (("build 1.3 (guide minute, Titan's Grip or dual wield)", FURY_SPEND_13),
+                         ("build 1.4 (packs, rage-limited minute; no Blood Rush)", FURY_SPEND_14)):
+        print(f"  spend per minute, {label}: presses and paid rage at bracket start T0 / end T3")
+        for name, p0, paid0, p3, paid3, cost in table:
+            print(f"    {name:<26} T0 {p0:>5g} presses {paid0 * cost:>5g} rage   T3 {p3:>5g} presses "
+                  f"{paid3 * cost:>5g} rage   (cost {cost})")
+        print(f"    {'total':<26} T0 {sum(r[1] for r in table):>5g} presses {fury_spend(table, 0):>5g} rage   "
+              f"T3 {sum(r[3] for r in table):>5g} presses {fury_spend(table, 3):>5g} rage")
+    spend = (fury_spend(FURY_SPEND_13, 0), fury_spend(FURY_SPEND_13, 3))
+    rows = []   # (label, white per minute, unbridled wrath, bracket index, white factor)
+    for i, (label, uw, key_tg, key_dw) in enumerate((("start", FURY_UNBRIDLED_WRATH[0], "tg-start", "dw-start"),
+                                                     ("end", FURY_UNBRIDLED_WRATH[1], "tg-end", "dw-end"))):
+        rows.append((f"doc white, bracket {label}", FURY_WHITE_DOC[i], uw, i, FURY_WHITE_FACTOR))
+        if key_tg in profiles:
+            white = new_rates(profiles[key_tg], k, m, level, rate).total * 60.0
+            rows.append((f"measured {profiles[key_tg].name}", white, uw, i, FURY_WHITE_FACTOR_MEASURED))
+        if key_dw in profiles:
+            white = new_rates(profiles[key_dw], k, m, level, rate).total * 60.0
+            print(f"  (sweep {profiles[key_dw].name}: white {fmt(white, 0)}/min BEFORE Dual Wield Specialization 5 and "
+                  f"Cruelty 3; the doc figure {fmt(FURY_WHITE_DOC[i], 0)} includes them)")
+    print("  income per minute (white x 1.06 on the doc rows, x 1.0 on the measured ones: their sims already play "
+          "Enrage and Flurry; + Bloodthirst 16 x 10 + Unbridled Wrath + Bloodrage 30; spell haste adds 1:1 to the "
+          "white part) against the 1.3 guide-minute spend:")
+    for label, white, uw, i, factor in rows:
+        inc = fury_income(white, uw, factor)
+        gap = inc["total"] - spend[i]
+        print(f"    {label:<34} white {fmt(white, 0):>4} x {factor:g} = {fmt(inc['white'], 0):>4} + "
+              f"Bloodthirst {fmt(inc['bloodthirst'], 0)} + Unbridled Wrath {fmt(uw, 0)} + Bloodrage "
+              f"{fmt(inc['bloodrage'], 0)} = {fmt(inc['total'], 0):>4} vs spend {spend[i]:g}: {fmt(gap, 0):>5} "
+              f"({'SHORT' if gap < 0 else 'enough'})")
+    # lever sizes (D46: for M / the user, NOT built), computed on the doc start / end bracket
+    print("  levers (per minute, NOT built; costs are [fixed], a doc change):")
+    for i, label in ((0, "T0"), (1, "T3")):
+        inc = fury_income(FURY_WHITE_DOC[i], FURY_UNBRIDLED_WRATH[i])
+        paid = {n: (paid0 if i == 0 else paid3) for n, _p0, paid0, _p3, paid3, _c in FURY_SPEND_13}
+        paid_total = fury_spend(FURY_SPEND_13, 0 if i == 0 else 3)
+        small = paid["Heroic Strike"] + paid["Slam"]
+        print(f"    {label}: Enrage meter {FURY_METER} -> {FURY_METER_LEVER}: fills "
+              f"{fmt(paid_total / FURY_METER, 2)} -> {fmt(paid_total / FURY_METER_LEVER, 2)} a minute (about +6 points "
+              f"of Enrage uptime); Bloodthirst +3 rage: +{3 * FURY_BLOODTHIRST_CASTS}; Heroic Strike / Cleave / Slam "
+              f"-5 each: -{fmt(5 * small, 0)} spend ({fmt(paid['Heroic Strike'], 0)} HS + {fmt(paid['Slam'], 0)} paid "
+              f"Slam presses; D46 text 35-50 on the rage-limited minute); Rampage 60 -> 50: "
+              f"-{fmt(10 * paid['Rampage'], 0)} (D46 text ~32 at 5.4 presses); Unbridled Wrath 20% -> 30%: "
+              f"+{fmt(FURY_UNBRIDLED_WRATH[i] / 2, 0)}; Bloodrage 30 -> 40: +10; k/m +10% white: "
+              f"+{fmt(0.10 * inc['white'], 0)}; Quick Execution (cover) raises spell haste = rage/s 1:1")
+    print("  (100% melee uptime, no rage from damage taken, Charge or Execute; the sims measure it: rage paid = "
+          "powerCost + Execute's extra, fills = paid / 190, uptime, starvation, seconds at cap)")
     print()
 
 
@@ -834,6 +980,34 @@ def self_test() -> int:
     truth("the stock cap 15 d / c binds on a 10-damage hit", abs(tiny - 15 * 10 / rage_conversion(60)) < 1e-9,
           f"{tiny:.4f}")
 
+    # D36 Arms budget: spend 556 a minute at the built costs; income 430 / 472 at the sweep's white 220 / 253 (Battle
+    # Stance included): base 200 / 230, x (1 + 0.10 + 0.30), + Anger Management 120 + Bloodrage 30
+    truth("D36 Arms spend is 556 a minute", abs(sum(n * c for _, n, c in ARMS_SPEND) - 556) < 1e-9,
+          str(sum(n * c for _, n, c in ARMS_SPEND)))
+    truth("D36 Arms income is 430 at white 220 and 472 at white 253",
+          round(arms_income(220.0, BATTLE_STANCE_PCT)[2]) == 430
+          and round(arms_income(253.0, BATTLE_STANCE_PCT)[2]) == 472,
+          f"{arms_income(220.0, BATTLE_STANCE_PCT)[2]:.1f} / {arms_income(253.0, BATTLE_STANCE_PCT)[2]:.1f}")
+
+    # D46 Fury budget: income 512 / 557 at white 261 / 305 (x1.06 + 160 + Unbridled Wrath 45 / 44 + Bloodrage 30),
+    # spend 550 / 650 of the 1.3 guide minute
+    inc_start, inc_end = fury_income(261.0, 45.0)["total"], fury_income(305.0, 44.0)["total"]
+    truth("D46 Fury income is 512 at white 261 and 557 at white 305",
+          round(inc_start) == 512 and round(inc_end) == 557, f"{inc_start:.1f} / {inc_end:.1f}")
+    truth("D46 Fury Bloodthirst income is 160 a minute", fury_income(261.0)["bloodthirst"] == 160.0)
+    truth("a measured tg-* row counts its white once (factor 1.0, not 1.06)",
+          fury_income(300.0, 45.0, FURY_WHITE_FACTOR_MEASURED)["white"] == 300.0
+          and abs(fury_income(300.0, 45.0)["white"] - 318.0) < 1e-9)
+    truth("D46 Fury spend is 550 at T0 and 650 at T3",
+          fury_spend(FURY_SPEND_13, 0) == 550 and fury_spend(FURY_SPEND_13, 3) == 650,
+          f"{fury_spend(FURY_SPEND_13, 0):g} / {fury_spend(FURY_SPEND_13, 3):g}")
+    truth("D46 Fury gap is -38 at T0 and -93 at T3",
+          round(inc_start - 550) == -38 and round(inc_end - 650) == -93, f"{inc_start - 550:.1f} / {inc_end - 650:.1f}")
+    # 511.5 / 541.5 exactly: a tolerance, not round() (round-half-even would hide a 0.5 shift)
+    truth("D46 pack (1.4) spend is about 512 at T0 and 542 at T3 (no Blood Rush, Cleave Bloodsurge-free)",
+          abs(fury_spend(FURY_SPEND_14, 0) - 511.5) < 0.01 and abs(fury_spend(FURY_SPEND_14, 3) - 541.5) < 0.01,
+          f"{fury_spend(FURY_SPEND_14, 0):g} / {fury_spend(FURY_SPEND_14, 3):g}")
+
     print("pipeline: synthetic reports (hand split, rates, spell-haste and attack-speed checks, measured, D15 solve)")
     _self_test_pipeline(truth, check)
     if failures:
@@ -844,11 +1018,11 @@ def self_test() -> int:
 
 
 def _synthetic_report(duration_ms: int, mh: tuple[float, float], oh: tuple[float, float] | None, step_ms: int = 100,
-                      crit_every: int = 5, crit_mult: float = 2.0) -> dict:
+                      crit_every: int = 5, crit_mult: float = 2.0, tag_oh: bool = False) -> dict:
     """White swings for one run: MH every mh[1] seconds at damage mh[0] (+- a small wobble), OH likewise."""
     hits = []
 
-    def add(dmg: float, swing_s: float, phase_ms: int, tag: int) -> None:
+    def add(dmg: float, swing_s: float, phase_ms: int, tag: int, spell_id: int = 0) -> None:
         t, n = float(phase_ms), 0
         while t < duration_ms:
             n += 1
@@ -856,13 +1030,13 @@ def _synthetic_report(duration_ms: int, mh: tuple[float, float], oh: tuple[float
             wobble = 1.0 + 0.04 * ((n * 7 + tag) % 5 - 2) / 2.0
             d = dmg * wobble * (crit_mult if crit else 1.0)
             ts = int(round(t / step_ms) * step_ms)
-            hits.append({"timestampMs": ts, "spellId": 0, "damage": int(round(d)), "crit": crit, "isPet": False,
+            hits.append({"timestampMs": ts, "spellId": spell_id, "damage": int(round(d)), "crit": crit, "isPet": False,
                          "sourceEntry": 0, "target": 0})
             t += swing_s * 1000.0
 
     add(mh[0], mh[1], 1000, 0)
     if oh:
-        add(oh[0], oh[1], 1500, 3)
+        add(oh[0], oh[1], 1500, 3, OFFHAND_WHITE_SPELL_ID if tag_oh else 0)
     hits.sort(key=lambda h: h["timestampMs"])
     # a distractor: a non-white row that must be ignored
     hits.append({"timestampMs": 2000, "spellId": 12294, "damage": 9999, "crit": False, "isPet": False,
@@ -946,6 +1120,17 @@ def _self_test_pipeline(truth, check) -> None:
           f"MH {mh_n} OH {oh_n}")
     oh_swing = statistics.mean(h.swing_s for h in dw.hits if h.off_hand)
     truth("off-hand swing time measured", abs(oh_swing - 2.45) < 0.06, f"{oh_swing:.3f}")
+    # tagged report (S3 recorder: off hand = spellId 0xFFFF0001): split by the tag, even when the hands hit alike
+    tg = ProfileData("tg-start", "synthetic-tg-start", 2, "berserker", 3.6, 3.6)
+    tg.files.append("synthetic-tagged")
+    tagged_report = _synthetic_report(60000, (200, 3.55), (190, 3.45), tag_oh=True)
+    add_report(tg, tagged_report, tg.files[-1], CRIT_MULT)
+    want_oh = sum(1 for h in tagged_report["hits"] if h["spellId"] == OFFHAND_WHITE_SPELL_ID)
+    want_mh = sum(1 for h in tagged_report["hits"] if h["spellId"] == 0)
+    got_oh = sum(1 for h in tg.hits if h.off_hand)
+    got_mh = sum(1 for h in tg.hits if not h.off_hand)
+    truth("tagged report split by the spellId tag", (got_mh, got_oh) == (want_mh, want_oh) and got_oh > 0,
+          f"MH {got_mh}/{want_mh} OH {got_oh}/{want_oh}")
     # stock gives the off hand int(2.5 x 1.75) = int(4.375) = 4
     truth("stock off-hand factor from the base speed", stock_factor(2.5, True, False) == 4)
 
@@ -1067,6 +1252,8 @@ def main(argv: list[str]) -> int:
                          "hasted / unhasted ratio check (W0b D23); skips the other tables")
     ap.add_argument("--aggregate-only", action="store_true", help="use the aggregate's representative run only")
     ap.add_argument("--reports-dir", type=Path, default=here.parent / "reports")
+    ap.add_argument("--fury", action="store_true", help="also print the D46 FURY BUDGET (always printed when a "
+                    "tg-start / tg-end report exists)")
     ap.add_argument("--self-test", action="store_true", help="reproduce the worked example and the pipeline checks")
     args = ap.parse_args(argv)
 
@@ -1128,6 +1315,8 @@ def main(argv: list[str]) -> int:
     print_dw_advantage(profiles, k_flag, m_flag, args.level, args.rate, "flag constants")
     print_haste_check(profiles, k_flag, m_flag, args.level, args.rate, "flag constants")
     print_arms_budget(profiles, k_flag, m_flag, args.level, args.rate, "flag constants")
+    if args.fury or "tg-start" in profiles or "tg-end" in profiles:
+        print_fury_budget(profiles, k_flag, m_flag, args.level, args.rate, "flag constants")
 
     # D15 solve (suggestion only)
     print("== D15 SOLVE (a SUGGESTION: the user picks k and m) ==")
@@ -1166,6 +1355,8 @@ def main(argv: list[str]) -> int:
     print_dw_advantage(profiles, k_s, m_s, args.level, args.rate, "suggested constants")
     print_haste_check(profiles, k_s, m_s, args.level, args.rate, "suggested constants")
     print_arms_budget(profiles, k_s, m_s, args.level, args.rate, "suggested constants")
+    if args.fury or "tg-start" in profiles or "tg-end" in profiles:
+        print_fury_budget(profiles, k_s, m_s, args.level, args.rate, "suggested constants")
     return 0
 
 

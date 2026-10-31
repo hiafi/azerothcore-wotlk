@@ -114,6 +114,18 @@ public:
     // are also flagged by GetHitIsPet(), so a pet spell sharing an id with one of the bot's own never merges.
     static constexpr uint32 PET_MELEE_SPELL_ID = 0xFFFFFFFE;
 
+    // Pseudo spell id for the actor's OFF-HAND white swings (the main hand stays MELEE_SPELL_ID = 0, so every consumer
+    // that reads "spellId 0 = white" keeps working; a dual-wielder's off-hand swings are the only rows that use it).
+    // Far above any real spell id (the DBC and spell_dbc ids stay below 1,000,000) and not 0xFFFFFFFE. Added for the
+    // S3 Fury stage: Unbridled Wrath, Flurry and Titan's Grip comparisons need the hands apart.
+    static constexpr uint32 OFFHAND_MELEE_SPELL_ID = 0xFFFF0001;
+
+    // UNITHOOK_ON_MELEE_OUTCOME_FINAL fires right after OnMeleeDamageFinal for the same swing and carries the attack
+    // type. It records nothing new: it only re-tags the row OnMeleeDamageFinal just wrote as OFFHAND_MELEE_SPELL_ID
+    // when the swing was an off-hand one by the actor itself, so a swing is never counted twice and a run without an
+    // off-hand weapon produces no new rows.
+    void OnMeleeOutcomeFinal(CalcDamageInfo const* damageInfo) override;
+
     // Periodic damage ticks (DoTs), recorded under the aura's spell id - OnPeriodicDamageFinal is a core hook
     // added 2026-10-05 for the S0 harness stage (see its doc comment in UnitScript.h). Before it, a DoT's damage
     // never reached the recorder at all, so DoT specs' sim totals silently omitted it.
@@ -238,6 +250,10 @@ private:
     std::vector<uint8> _hitTargetIndex;
     std::vector<uint32> _hitSourceEntries;
     std::vector<AuraEvent> _auraEvents;
+
+    // Index into the hit vectors of the row the latest OnMeleeDamageFinal wrote, or -1 when it wrote none (miss,
+    // foreign attacker, single-spell recorder); consumed by the OnMeleeOutcomeFinal call of the same swing.
+    int64 _pendingMeleeRow = -1;
 };
 
 #endif

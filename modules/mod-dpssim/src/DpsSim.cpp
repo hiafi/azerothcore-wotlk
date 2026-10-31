@@ -199,8 +199,10 @@ void DpsSimWorldScript::OnDpsSimRun()
                 config.AttackPower = profile.AttackPower;
                 config.DummyHealthDrain = profile.DummyHealthDrain;
                 config.DummyMaxHealth = profile.DummyMaxHealth;
+                config.DummyStartHealthPct = profile.DummyStartHealthPct;
                 config.TargetArmor = profile.TargetArmor;
                 config.PrePullBuffMs = profile.PrePullBuffMs;
+                config.AuraSampleIds = profile.AuraSampleIds;
                 config.PlayerbotGlyphs = profile.PlayerbotGlyphs;
                 config.PetCreatureEntry = profile.PetCreatureEntry;
                 if (profile.HealMode)

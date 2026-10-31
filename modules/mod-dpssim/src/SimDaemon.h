@@ -142,6 +142,8 @@ namespace SimDaemon
         // a loaded profile; 0 max health = SimTarget::Config's default.
         bool DummyHealthDrain = false;
         uint32 DummyMaxHealth = 0;
+        // Percent of max health every dummy starts each iteration at (SimProfile.h's DummyStartHealthPct); 0 = full
+        float DummyStartHealthPct = 0.0f;
         // Multi-target runs (DpsSim.TargetCount / TargetSpreadYards / TargetRank): how many dummies spawn (1-10,
         // the same for every iteration), the ring radius of the extras around the primary (SimTargetGroup) and which
         // dummy entries they are. Run settings, not profile keys. DpsSim.cpp clamps the first two and resolves
@@ -151,6 +153,8 @@ namespace SimDaemon
         SimTarget::Rank TargetRank = SimTarget::Rank::Boss;
         // Pre-pull buff phase length in sim ms - see SimProfile.h's Profile::PrePullBuffMs. 0 disables the phase.
         uint32 PrePullBuffMs = 15000;
+        // Spell ids whose auras are sampled every step - see SimProfile.h's Profile::AuraSampleIds. Empty = none.
+        std::vector<uint32> AuraSampleIds;
         // Give the actor its premade glyphs - see SimProfile.h's Profile::PlayerbotGlyphs.
         bool PlayerbotGlyphs = true;
         // Hunter pet entry the actor tames before the first iteration (0 = none) - see SimProfile.h's
@@ -317,6 +321,20 @@ namespace SimDaemon
             std::vector<std::pair<uint32, uint32>> Counts;
         };
         std::vector<MinionSample> MinionSamples;
+
+        // One entry per sampled aura per sim step (RunConfig::AuraSampleIds; empty when the profile lists none),
+        // only for an aura that exists at that step: TimestampMs is ms since the iteration start (the sim clock's
+        // elapsed time), OnTarget false = the aura on the actor (any caster), true = the actor's own aura on the
+        // primary dummy (target 0); Stacks is the stack amount and RemainingMs the time left (-1 for a permanent aura).
+        struct AuraSample
+        {
+            uint32 TimestampMs = 0;
+            uint32 SpellId = 0;
+            bool OnTarget = false;
+            uint32 Stacks = 0;
+            int32 RemainingMs = 0;
+        };
+        std::vector<AuraSample> AuraSamples;
 
         // One entry per spell the actor actually cast, in cast order - a "cast log" alongside the
         // hit log above, so non-damage abilities (Evocation, self-buffs, ...) show up too, not just

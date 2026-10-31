@@ -122,6 +122,10 @@ public:
     // combat between iterations - not anything PlayerbotAI caches on its own side).
     void ReestablishCombatState(std::vector<Creature*> const& targets);
 
+    // Restarts the AI's combat clock (combat_time() in the strategy data) at the current sim time. SimDaemon calls it
+    // at the pull with the sim clock set to the first measured ms.
+    void RestartCombatClock();
+
     // Tank mode: the bot's own "my attacker count" value (what the tanking triggers read), 0 without an AI
     [[nodiscard]] uint8 GetMyAttackerCount() const;
 

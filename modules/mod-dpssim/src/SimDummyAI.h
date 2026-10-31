@@ -18,6 +18,8 @@
 #ifndef MODULE_DPSSIM_SIMDUMMYAI_H
 #define MODULE_DPSSIM_SIMDUMMYAI_H
 
+class Creature;
+
 // Registers npc_dpssim_training_dummy (SimDummyAI.cpp) - called once from Addmod_dpssimScripts()
 // (dpssim_loader.cpp), same as every other script this module registers.
 void AddSC_SimDummyAI();
@@ -30,6 +32,15 @@ namespace SimDummyAI
     // single-threaded (see EventRecorder.h), so a plain flag is enough.
     void SetHealthDrain(bool enabled);
     [[nodiscard]] bool IsHealthDrainEnabled();
+
+    // The percentage of max health a dummy starts every iteration at (profile key DummyStartHealthPct); 0 = full
+    // health. Set from SimTarget::Create(), applied by ResetHealth().
+    void SetStartHealthPct(float pct);
+    // True when a start percentage below 100 is set: the iteration reset then applies it with or without drain
+    [[nodiscard]] bool HasStartHealthPct();
+
+    // Puts `dummy` back to its starting health: full, or the start percentage of its max health (at least 1)
+    void ResetHealth(Creature* dummy);
 }
 
 #endif

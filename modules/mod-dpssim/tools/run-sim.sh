@@ -58,6 +58,9 @@
 # Environment:
 #   DPSSIM_TARGET_RANK  Dummy rank (DpsSim.TargetRank): boss, elite or auto. Default: auto.
 #   DPSSIM_KEEP_LOG=1   Keep the container's log next to the reports.
+#   DPSSIM_BOT_LOG=1    Keep the bot engine's action log ("PUSH:<action>" and "A:<action> - OK|IMPOSSIBLE|USELESS|
+#                       FAILED|PREREQ" per tick, the playerbots DEBUG lines of Playerbots.log) next to the reports as
+#                       "<batch>.<ts>.playerbots.log", to read skipped or refused casts. Verbose.
 #   DPSSIM_IMAGE        Worldserver image to run instead of the one the live ac-worldserver container was started from
 #                       (e.g. acore/ac-wotlk-worldserver:master after a `docker compose build` the live container has
 #                       not been recreated for).
@@ -416,6 +419,12 @@ set_playerbots_key botActiveAloneSmartScale 0
 # Defensive pets only: an aggressive pet would pick the dummy during the buff phase and pull the bot into combat.
 set_playerbots_key DefaultPetStance 1
 
+# DPSSIM_BOT_LOG=1: Engine::LogAction writes only for a bot in a group with a client master unless LogInGroupOnly is
+# 0. The live worldserver.conf already sends the "playerbots" logger at DEBUG to Playerbots.log (copied out below).
+if [[ "${DPSSIM_BOT_LOG:-0}" == 1 ]]; then
+    set_playerbots_key LogInGroupOnly 0
+fi
+
 # mod-ollama-chat off for the sim: its bot chatter would make paid LLM API calls. (Its tables must still exist in
 # acore_characters: the module loads its personality templates at startup even when disabled, and aborts without
 # them.) Only the scratch copy changes.
@@ -536,6 +545,14 @@ set -e
 if [[ "${DPSSIM_KEEP_LOG:-0}" == 1 ]]; then
     cp "$RUN_LOG" "$REPORTS_DIR/${BATCH_NAME}.${BATCH_TS}.run.log"
     echo "kept run log: $REPORTS_DIR/${BATCH_NAME}.${BATCH_TS}.run.log" >&2
+fi
+if [[ "${DPSSIM_BOT_LOG:-0}" == 1 ]]; then
+    if [[ -f "$SCRATCH/logs/Playerbots.log" ]]; then
+        cp "$SCRATCH/logs/Playerbots.log" "$REPORTS_DIR/${BATCH_NAME}.${BATCH_TS}.playerbots.log"
+        echo "kept bot action log: $REPORTS_DIR/${BATCH_NAME}.${BATCH_TS}.playerbots.log" >&2
+    else
+        echo "warning: DPSSIM_BOT_LOG=1 but the run wrote no Playerbots.log (check Appender.Playerbots)" >&2
+    fi
 fi
 
 if [[ $STATUS -ne 0 ]]; then

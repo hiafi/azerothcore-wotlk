@@ -45,6 +45,79 @@ off the series. The hardcoded-rotation run writes the key empty, and the heal re
 `tools/aggregate_reports.py` (the multi-iteration report `run-sim.sh` prints) carries the representative run's series
 into the aggregate, like `manaSamples`. Source: `RunResult::PowerSample`, `MaybeSamplePower()` in `SimDaemon.cpp`.
 
+## Spend per cast and per-step aura samples (`casts[].powerCost`, `auraSamples[]`)
+
+Two additions to the DPS report (and the tank report, which is the DPS report plus a `tank` section); both leave every
+existing field, and the order of the existing keys, as they were.
+
+- `casts[]` entries now end with `powerCost`: `{timestampMs, spellId, triggered, target, powerCost}`. It is
+  `Spell::GetPowerCost()` at cast time (the spell's own `m_powerCost`), in the cast's power type and the engine's units,
+  so rage and runic power are x10 (a 25-rage Mortal Strike reads 250) while mana is as stored. It is the cost the spell
+  was built with, not the resource the cast actually consumed: a free cast (Momentum's free Slam) reads 0, but a
+  script's extra spend (Execute's extra rage, the Sudden Death floor that `SetPower`s in `spell_warr_execute`) is
+  invisible here, a dodged or parried strike still records the full cost, and a triggered spell that carries a cost
+  reads that cost, non-zero (sum `powerCost` over `triggered == false` casts only). So the sum of `powerCost` is the
+  nominal spend only; the analysis takes Execute's extra
+  spend from the `powerSamples` delta. (The heal report had it already.)
+- `auraSamples[]` follows `casts` and exists only when the profile sets **`AuraSampleIds`**, a comma-separated list of
+  spell ids (`AuraSampleIds = 204403, 200123`; a duplicate id is read once; every entry must be a whole number that
+  fits 32 bits, or the profile is refused). Every sim step (the 100 ms `stepMs`, not
+  the 500 ms cadence of `powerSamples`), after the bot has acted, each listed id is looked up twice and an entry
+  is written for each lookup that finds an aura:
+
+  ```
+  {"ts": 4300, "spellId": 204403, "onTarget": false, "stacks": 3, "remainingMs": 7400}
+  ```
+
+  `onTarget: false` is the aura on the actor (any caster); `onTarget: true` is the actor's own aura (the actor is the
+  caster) on target 0, the primary dummy (the other dummies are not sampled). A refresh of an aura produces no aura
+  event, so a refresh shows only as `remainingMs` rising before the aura ran out. `ts` is ms since the iteration start
+  (the `powerSamples` time base),
+  taken after the step's clock advance and the bot's action, so the state after a cast at T first appears at
+  `ts = T + stepMs`: compare a cast at T with the sample at T + stepMs. `stacks` is the stack amount, `remainingMs`
+  the time left (`-1` for a permanent aura). Nothing is written while an aura
+  is absent, so a gap in `ts` is the aura being down and a stack falling to zero reads as the last entry. A profile
+  without the key writes no `auraSamples` key at all (the report is byte-for-byte what it was). It samples a DPS run and
+  a tank run; a heal run ignores it. Memory is one entry per id per side per step: a 60 s run with ten ids is about
+  6,000 entries per side.
+- `tools/aggregate_reports.py` carries both through: `casts` (with `powerCost`) and `auraSamples` come, like
+  `powerSamples`, verbatim from the representative iteration; the per-iteration `iterN.report.json` files keep every
+  iteration's own. Source: `RunResult::AuraSample`, `MaybeSampleAuras()` in `SimDaemon.cpp`, `Profile::AuraSampleIds`
+  in `SimProfile.h`.
+
+## Off-hand white swings and `DummyStartHealthPct` (S3 Fury additions)
+
+The off-hand tag is NOT opt-in: every dual-wield actor (Rogues, Enhancement, dual-wield Death Knights, Fury, Titan's
+Grip) now gets a second "Melee (off-hand)" row, and its "Melee" row shrinks by the off-hand share (about a third);
+totals are unchanged. To compare a dual-wield report with a pre-S3 one (e.g. the `CombatRogueSim` regression baseline),
+add the "Melee" and "Melee (off-hand)" rows. A two-hander's report is unchanged. `DummyStartHealthPct` is additive (0
+or absent = as before). `tools/aggregate_reports.py` carries both through unchanged (a `spells[]` row is keyed by
+`(spellId, isPet, sourceEntry)`, so the off-hand row never merges into the main-hand one).
+
+- **Off-hand white swings.** The actor's main-hand white swings stay spell id `0` (`EventRecorder::MELEE_SPELL_ID`),
+  so every consumer that reads "spellId 0 = white swing" (Prot/Arms/Bear/Rogue reports, `rage_sweep.py`) is unchanged.
+  A dual-wielder's OFF-HAND white swings are recorded as the pseudo spell id **`0xFFFF0001` (4294901761,
+  `EventRecorder::OFFHAND_MELEE_SPELL_ID`)**, in `hits[]` and `spells[]` like any other row (`isPet` false,
+  `sourceEntry` 0). Source: `EventRecorder` also subscribes to `UNITHOOK_ON_MELEE_OUTCOME_FINAL`, which carries the
+  swing's attack type and fires right after `OnMeleeDamageFinal`; it re-tags the row that hook just wrote, so a swing
+  is never counted twice. A run with no off-hand weapon produces no row with that id, a pet's swings keep
+  `0xFFFFFFFE`, and misses/dodges/parries (damage 0) are still not rows. Titan's Grip's second two-hander is an
+  off-hand swing too, so it lands under this id. The id is above every real spell id (and not
+  `0xFFFFFFFE`); `build_report_html.py` names it "Melee (off-hand)", and `tools/rage_sweep.py` splits the hands by
+  this tag (spellId 0 = main hand, `0xFFFF0001` = off hand).
+- **`DummyStartHealthPct = <0-100>`** (profile key, float percent of `DummyMaxHealth`; 0 or absent = every dummy
+  starts full, as before). Each dummy starts every iteration at that percentage of its max health (at least 1), so a
+  drain run can begin inside an execute phase: `DummyHealthDrain = true`, `DummyMaxHealth = 600000`,
+  `DummyStartHealthPct = 21` is below 35% from the pull and crosses 20% after about 6 s at ~1,000 DPS (6,000 damage),
+  and the 120,000 health left at 20% keeps a 60 s run off the 1-health floor (where drain clamps the damage taken).
+  Size it from the run's DPS: start % = 20 + DPS x seconds-to-20% / DummyMaxHealth x 100. Without `DummyHealthDrain`
+  the dummy takes no damage and stays at that percentage for the whole run (an "always below 20%" run). In tank mode
+  the key only applies with `DummyHealthDrain = true`; without drain the tank dummies keep the huge default pool and
+  are refilled to full every step. A value outside 0-100 or not a number fails the profile load. Source:
+  `Profile::DummyStartHealthPct` (`SimProfile.h`), applied by `SimDummyAI::ResetHealth()` after the dummy is created
+  (`SimTarget::Create()`) and by every `RefillResources()` (between iterations and after the pre-pull buff phase,
+  whose combat stop lets the dummy regenerate), with or without drain.
+
 ## Minion attribution (`sourceEntry`, pet auras, `minionSamples[]`)
 
 The DPS report and the tank report (the DPS report plus a `tank` section) attribute the actor's minions one by one:

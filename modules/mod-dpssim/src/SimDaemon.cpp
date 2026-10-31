@@ -40,12 +40,14 @@
 #include "SimTankDummyAI.h"
 #include "SimTarget.h"
 #include "Spell.h"
+#include "SpellAuraEffects.h"
 #include "SpellAuras.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "StringFormat.h"
 #include "TemporarySummon.h"
 #include "Timer.h"
+#include "WarriorMechanics.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -172,6 +174,32 @@ namespace
         sampledOnce = true;
     }
 
+    // Appends the profile's AuraSampleIds samples for this step (RunResult::AuraSamples): for each id the aura on the
+    // actor (any caster) and the actor's own aura on the primary dummy, each only when it exists. Called once per sim
+    // step (not on the 500 ms cadence of the power samples) after the bot has acted, so a stack the bot's action just
+    // spent or added reads as the step's end state. A no-op for an empty list, which keeps a profile without the key
+    // byte-identical.
+    void MaybeSampleAuras(Player* actor, Unit* primary, uint32 nowMs, std::vector<uint32> const& spellIds,
+        std::vector<SimDaemon::RunResult::AuraSample>& samples)
+    {
+        for (uint32 const spellId : spellIds)
+        {
+            for (bool const onTarget : {false, true})
+            {
+                Aura* aura = nullptr;
+                if (!onTarget)
+                    aura = actor->GetAura(spellId);
+                else if (primary)
+                    aura = primary->GetAura(spellId, actor->GetGUID());
+                if (!aura)
+                    continue;
+
+                samples.push_back({nowMs, spellId, onTarget, uint32(aura->GetStackAmount()),
+                    aura->IsPermanent() ? -1 : aura->GetDuration()});
+            }
+        }
+    }
+
     // Hardcoded rotation: cast Frostbolt whenever the actor isn't already casting/channeling and
     // both the GCD and Frostbolt's own cooldown (it doesn't have one, but check anyway - Phase 2's
     // rotation engine will need a real cooldown check and this is the pattern it'll follow) are
@@ -233,6 +261,8 @@ namespace
         bool const tankRefilled = config.RunMode == SimDaemon::Mode::Tank && !config.DummyHealthDrain;
         if (config.DummyMaxHealth > 0 && !tankRefilled)
             targetConfig.MaxHealth = config.DummyMaxHealth;
+        if (!tankRefilled)
+            targetConfig.StartHealthPct = config.DummyStartHealthPct;
         return targetConfig;
     }
 
@@ -411,6 +441,12 @@ namespace
             RefillResources(player, dummies);
             bot.ReestablishCombatState(dummies);
         }
+        // combat_time() counts from the moment the combat engine started, on getMSTime(). Here that clock still
+        // reads the last buff tick, which is earlier than the pull when the buff phase ended early, or the
+        // ResetForNextIteration() time without a buff phase: iteration 2+ then opened with combat_time() already
+        // past 10 s and every combat_time() hold fired at the pull. Start it at the first measured ms instead.
+        Acore::Time::SetSimClockOverride(Milliseconds(measuredStartMs));
+        bot.RestartCombatClock();
         LogAurasAtPull(player);
         // The primary dummy's armor at the pull: a recalculation restoring the template armor would show here.
         LOG_INFO("server.dpssim", "mod-dpssim: iteration pull - dummy armor {}, maxHealth {}.",
@@ -427,6 +463,7 @@ namespace
         uint32 lastMinionSampleMs = 0;
         bool sampledMinionsOnce = false;
         std::vector<SimDaemon::RunResult::MinionSample> minionSamples;
+        std::vector<SimDaemon::RunResult::AuraSample> auraSamples;
         // The bot's own current target, seeded with the primary at the pull (D5: measured, not inferred from casts)
         ObjectGuid lastTarget = bot.GetCurrentTarget();
         uint32 targetSwitches = 0;
@@ -455,6 +492,7 @@ namespace
             MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
             MaybeSamplePower(player, clock.GetElapsedMs(), lastPowerSampleMs, sampledPowerOnce, powerSamples);
             MaybeSampleMinions(player, clock.GetElapsedMs(), lastMinionSampleMs, sampledMinionsOnce, minionSamples);
+            MaybeSampleAuras(player, dummies.front(), clock.GetElapsedMs(), config.AuraSampleIds, auraSamples);
 
             ObjectGuid const currentTarget = bot.GetCurrentTarget();
             if (!currentTarget.IsEmpty())
@@ -499,6 +537,7 @@ namespace
         result.ManaSamples = std::move(manaSamples);
         result.PowerSamples = std::move(powerSamples);
         result.MinionSamples = std::move(minionSamples);
+        result.AuraSamples = std::move(auraSamples);
         result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
 
         // Recorders stamp raw getMSTime(); reports count from the iteration start. An event recorded before
@@ -518,8 +557,8 @@ namespace
     }
 
     // Health and every power type back to the class's starting value, for the bot, its pet and (with health drain
-    // on) every dummy. Run by ResetForNextIteration() and again after the pre-pull buff phase, so the buff casts'
-    // mana/rage/energy costs never reach the fight.
+    // on or a DummyStartHealthPct set) every dummy. Run by ResetForNextIteration() and again after the pre-pull buff
+    // phase, so the buff casts' mana/rage/energy costs never reach the fight.
     void RefillResources(Player* player, std::vector<Creature*> const& dummies)
     {
         player->SetFullHealth();
@@ -553,17 +592,20 @@ namespace
         }
 
         // Dummy health drain (SimProfile.h's DummyHealthDrain): the dummy takes real damage now, so it starts every
-        // iteration at full health. Off, the dummy never loses health and there is nothing to reset.
-        if (SimDummyAI::IsHealthDrainEnabled())
+        // iteration at full health, or at DummyStartHealthPct of it when the profile sets that. Without drain the
+        // dummy never loses health, but a start percentage is still put back here: the buff phase's combat stop lets
+        // the dummy regenerate to full before the pull. Neither: nothing to reset.
+        if (SimDummyAI::IsHealthDrainEnabled() || SimDummyAI::HasStartHealthPct())
             for (Creature* dummy : dummies)
-                dummy->SetFullHealth();
+                SimDummyAI::ResetHealth(dummy);
     }
 
     // Between-iteration reset for RunPlayerbotBatch() - see that function's doc comment (SimDaemon.h)
     // for the full reasoning, especially the passive-aura carve-out and SimBot::ReestablishCombatState()'s
     // own doc comment for the real failure this also guards against (a batch's first iteration
     // landing real hits, then every iteration after it landing zero, forever). The target dummies' health is only
-    // refilled with health drain on (otherwise its AI zeroes all damage taken, so it never drops); the global
+    // reset with health drain on or a start percentage set (otherwise its AI zeroes all damage taken, so it never
+    // drops); the global
     // cooldown is left alone (RunPlayerbotIteration() starts each iteration ITERATION_GAP_MS later, by which time
     // it has long expired).
     void ResetForNextIteration(Player* player, std::vector<Creature*> const& dummies, SimBot& bot,
@@ -629,6 +671,10 @@ namespace
         player->RemoveAppliedAuras(removeNonPassive);
         for (Creature* dummy : dummies)
             dummy->RemoveAppliedAuras(removeNonPassive);
+        // A state aura the character keeps while it holds its gear, which only the equip / login / talent hooks put
+        // back: Titan's Grip's visible penalty 204651 (a non-passive permanent aura) would otherwise be gone from the
+        // second iteration on. No-op for every other actor.
+        Warrior::UpdateTitansGripPenalty(player);
 
         // Not resetting cooldowns here - RunPlayerbotIteration() itself now does that
         // unconditionally at the start of every call, including this one.
@@ -1136,6 +1182,8 @@ namespace
         sample.MaxPower = actor->GetMaxPower(type);
         if (Aura const* bulwark = actor->GetAura(SimTank::SPELL_BULWARK))
             sample.BulwarkStacks = bulwark->GetStackAmount();
+        for (AuraEffect const* absorb : actor->GetAuraEffectsByType(SPELL_AURA_SCHOOL_ABSORB))
+            sample.AbsorbRemaining += uint32(std::max(absorb->GetAmount(), 0));
         return sample;
     }
 
@@ -1288,6 +1336,7 @@ namespace
         uint32 lastMinionSampleMs = 0;
         bool sampledMinionsOnce = false;
         std::vector<SimDaemon::RunResult::MinionSample> minionSamples;
+        std::vector<SimDaemon::RunResult::AuraSample> auraSamples;
         ObjectGuid lastTarget = bot.GetCurrentTarget();
         uint32 targetSwitches = 0;
         uint32 lastTankSampleMs = 0;
@@ -1350,6 +1399,7 @@ namespace
             MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
             MaybeSamplePower(player, clock.GetElapsedMs(), lastPowerSampleMs, sampledPowerOnce, powerSamples);
             MaybeSampleMinions(player, clock.GetElapsedMs(), lastMinionSampleMs, sampledMinionsOnce, minionSamples);
+            MaybeSampleAuras(player, dummies.front(), clock.GetElapsedMs(), config.AuraSampleIds, auraSamples);
 
             // The crit chance the dummies have once the bot has acted (its stance, its first buffs): the pull value was
             // taken before any of that
@@ -1430,6 +1480,7 @@ namespace
         result.ManaSamples = std::move(manaSamples);
         result.PowerSamples = std::move(powerSamples);
         result.MinionSamples = std::move(minionSamples);
+        result.AuraSamples = std::move(auraSamples);
         result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
 
         // The actor's own healing and shields (heal-mode structs, target index 0 = the actor), and the incoming swings

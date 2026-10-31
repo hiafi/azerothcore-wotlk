@@ -99,6 +99,8 @@ public:
         // Dummy health drain (SimDummyAI::SetHealthDrain) - the dummy takes real damage but never dies. Set by the
         // profile keys DummyHealthDrain / DummyMaxHealth. Off = the dummy zeroes all damage, as before.
         bool HealthDrain = false;
+        // Percent of max health the dummy starts at (profile key DummyStartHealthPct); 0 = full health
+        float StartHealthPct = 0.0f;
     };
 
     // The three training dummy template entries - see the class comment. Only levels 60/70/80 have
