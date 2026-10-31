@@ -182,11 +182,11 @@ static constexpr std::array<uint32, 3> CUSTOM_COOLDOWN_HASTE_ALLOW_LIST = { 2003
 static constexpr std::array<uint32, 8> CUSTOM_COOLDOWN_HASTE_DENY_LIST =
     { 20154, 20164, 20165, 20166, 20375, 21084, 31801, 21169 };
 
-// Custom: dungeon-prereqs D7 - the melee kicks that share one lockout across class families: Kick 1766-1769,
+// Custom: dungeon-prereqs D7 - the melee kicks that share one lockout across class families: Kick 1766-1769/38768,
 // Pummel 6552/6554/6555, Mind Freeze 47528, Rebuke 201473, Skull Bash 200605. Counterspell and Shield Bash sit in
 // the same Spell.dbc category 88 but keep the stock (same-family only) behaviour.
-static constexpr std::array<uint32, 10> CUSTOM_MELEE_KICK_SPELLS =
-    { 1766, 1767, 1768, 1769, 6552, 6554, 6555, 47528, 201473, 200605 };
+static constexpr std::array<uint32, 11> CUSTOM_MELEE_KICK_SPELLS =
+    { 1766, 1767, 1768, 1769, 38768, 6552, 6554, 6555, 47528, 201473, 200605 };
 
 static bool IsCustomMeleeKick(uint32 spellId)
 {
