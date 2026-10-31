@@ -978,6 +978,15 @@ def check_spell_groups(groups: list[dict]) -> list[str]:
     return bad
 
 
+def check_shout_stack_rules(rules: list[dict]) -> list[str]:
+    """10-31 bug I: the one-rank Commanding Shout 469 keeps the stronger copy across warriors (Commanding Presence's
+    Stamina effect), like Battle Shout's stock group 1003. Stock group 1091 is rule 0, so the last cast replaced it."""
+    found = [r for r in rules if int(r["group_id"]) == 1091]
+    if len(found) != 1 or int(found[0]["stack_rule"]) != 4:
+        return [f"spell_group_stack_rules 1091 (Commanding Shout) must be one stack_rule 4 row, got {found}"]
+    return []
+
+
 def check_consts(consts: list[dict]) -> list[str]:
     bad = []
     by_name = {c["name"]: c for c in consts}
@@ -1247,6 +1256,9 @@ class WarriorS3DataTest(unittest.TestCase):
 
     def test_spell_groups(self):
         self.assertClean(check_spell_groups(_data()["package"].spell_groups))
+
+    def test_shout_stack_rules(self):
+        self.assertClean(check_shout_stack_rules(_data()["package"].spell_group_rules))
 
     def test_consts(self):
         self.assertClean(check_consts(_data()["package"].consts))
@@ -1600,6 +1612,11 @@ class WarriorS3NegativeTest(unittest.TestCase):
                     {"id": 1400, "spell_id": 204636},
                     {"id": 1303, "spell_id": 1}):
             self.assertGreaterEqual(len(check_spell_groups([*groups, bad])), 1, bad)
+
+    def test_shout_stack_rules(self):
+        rules = [r for r in self.d["package"].spell_group_rules if int(r["group_id"]) != 1091]
+        self.assertGreaterEqual(len(check_shout_stack_rules(rules)), 1)
+        self.assertGreaterEqual(len(check_shout_stack_rules([*rules, {"group_id": 1091, "stack_rule": 0}])), 1)
 
     def test_consts(self):
         consts = self.d["package"].consts

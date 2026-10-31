@@ -28,7 +28,8 @@ rank files A1, A2b and A3 are editing.
 
 from lib.dsl import AuraType, Effect, EffectType, PowerType, RANGE_SELF, School, SpellModOp
 from lib.dsl.registry import (
-    bonus_coefficients, const, custom_attr, procs_on, remove_spell_proc, scripted_by, spell, unbind_script,
+    bonus_coefficients, const, custom_attr, procs_on, remove_spell_proc, scripted_by, spell, spell_group_rule,
+    unbind_script,
 )
 
 from . import _masks
@@ -682,6 +683,15 @@ scripted_by(-204653, 'spell_warr_dance_of_death')           # Dance of Death ran
 scripted_by(6673, 'spell_warr_commanding_presence')         # Battle Shout: the Strength effect's amount
 scripted_by(469, 'spell_warr_commanding_presence')          # Commanding Shout: the Stamina effect's amount
 scripted_by(-204671, 'spell_warr_deathmaker')               # Deathmaker ranks: CheckProc = Warrior::IsStrikeCast
+
+# "The stronger shout wins, as stock" (D30, Fury doc "Commanding Presence"). Battle Shout's stock group 1003 is already
+# EXCLUSIVE_HIGHEST (4), so a talented Battle Shout's Strength effect out-ranks a plain one in
+# Unit::IsHighestExclusiveAura. Commanding Shout's stock group 1091 is rule 0 (DEFAULT): two copies of the one-rank
+# 469 from different warriors fall through to Aura::CanStackWith's same-rank-chain rule and the LAST cast replaces the
+# other, so a plain Commanding Shout overwrote a Commanding Presence one (10-31 bug I). Rule 4 compares each effect
+# (health, then the Stamina effect) and keeps the stronger; ties still refresh. Nested groups are unchanged: 1093 (vs
+# Blood Pact, rule 4) and 1011 (one shout per warrior, rule 2).
+spell_group_rule(1091, stack_rule=4, description='Commanding Shout')
 
 # Stock classes S3 retires from these ids (the stock classes stay registered where other ids still use them).
 unbind_script(23881, 'spell_warr_bloodthirst')              # D9: replaced by spell_warr_bloodthirst_fury (23880 stays)
