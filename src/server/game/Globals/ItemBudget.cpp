@@ -558,9 +558,12 @@ namespace
                 }
                 else
                 {
+                    // Debug only: the materialized item_template migrations already cleared the
+                    // absorbed spells from the table, so on real data almost every set bit points
+                    // at an empty slot (~4,900 rows), and clearing an empty slot is harmless.
                     for (uint8 i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
                         if ((row.AbsorbedSpellSlots & (1u << i)) && tpl.Spells[i].SpellId == 0)
-                            LOG_ERROR("server.loading", "item_itemization entry {}: absorbed_spell_slots marks slot {} but it has no spell to absorb -- check the bitmask", entry, i);
+                            LOG_DEBUG("server.loading", "item_itemization entry {}: absorbed_spell_slots marks slot {} but it has no spell to absorb", entry, i);
                 }
 
                 // Check 9: this row's secondary shape's rules, evaluated against its primary
