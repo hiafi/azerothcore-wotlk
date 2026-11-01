@@ -4,8 +4,8 @@ Declared from `source/ids.yaml`'s `npc_tools` block (900000-900099); loaded by g
 `registry.load_classes_dir(source/npcs/)` next to the class folders. dpssim stage MT0
 (.agents/plans/dpssim-multi-target/dpssim-multi-target.STAGE-MT0-HANDOFF.md) moved the first nine
 entries here from hand-written migrations; the values below reproduce their live rows, so
-generate.py emits nothing for them. 900010 (Quinn Testbury) and 900012 (Ursana) are NPC tools too
-but stay hand-written. World spawns (`creature` rows) are not declared by dbc-tools.
+generate.py emits nothing for them. 900010 (Quinn Testbury), 900012 (Ursana) and 900018 (Farseer
+Umbrua, Stormwind shaman trainer) stay hand-written. World spawns (`creature` rows) are not declared by dbc-tools.
 """
 
 from lib.dsl.registry import creature_model, creature_template

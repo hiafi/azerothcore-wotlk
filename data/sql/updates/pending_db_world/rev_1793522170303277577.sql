@@ -1,0 +1,105 @@
+-- Stormwind Park Shaman trainer and guard directions, made independent of mod-progression.
+--
+-- 2026_10_23_33 spawned Farseer Umbrua (20407) in the Park (guid 5300708) and added the guard option (401, 6). Both
+-- only survive because mod-progression phase_00 already ran: if it runs again (module SQL hash change or
+-- Progression.Reset) it hides every 20407 spawn (phaseMask 16384) and deletes (401, 6), and phase_07 later shows the
+-- stock Valley of Heroes spawn (guid 79860) next to ours. The module's phase files are left untouched (editing one
+-- re-applies it); instead nothing the phases touch is used any more:
+--   * the Park trainer becomes 900018, a copy of 20407 (npc_tools block, hand-written like 900010/900012);
+--   * the stock spawn 79860 is removed, so phase_07 has no Umbrua to show;
+--   * the guards' "Class Trainer" option points at 5300011, a copy of submenu 401 that the phases do not edit.
+
+-- Farseer Umbrua: same faction, gossip (8110), trainer (210), model, gear and quests as 20407.
+INSERT INTO `creature_template` (`entry`, `difficulty_entry_1`, `difficulty_entry_2`, `difficulty_entry_3`,
+    `KillCredit1`, `KillCredit2`, `name`, `subname`, `IconName`, `gossip_menu_id`, `minlevel`, `maxlevel`, `exp`,
+    `faction`, `npcflag`, `speed_walk`, `speed_run`, `speed_swim`, `speed_flight`, `detection_range`, `rank`,
+    `dmgschool`, `DamageModifier`, `BaseAttackTime`, `RangeAttackTime`, `BaseVariance`, `RangeVariance`,
+    `unit_class`, `unit_flags`, `unit_flags2`, `dynamicflags`, `family`, `type`, `type_flags`, `lootid`,
+    `pickpocketloot`, `skinloot`, `PetSpellDataId`, `VehicleId`, `mingold`, `maxgold`, `AIName`, `MovementType`,
+    `HoverHeight`, `HealthModifier`, `ManaModifier`, `ArmorModifier`, `ExperienceModifier`, `RacialLeader`,
+    `movementId`, `RegenHealth`, `CreatureImmunitiesId`, `flags_extra`, `ScriptName`, `VerifiedBuild`)
+VALUES (900018, 0, 0, 0, 0, 0, 'Farseer Umbrua', 'Shaman Trainer', NULL, 8110, 60, 60, 0, 1640, 51, 1, 1.14286, 1,
+    1, 20, 0, 0, 1, 2000, 2000, 1, 1, 2, 0, 2048, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, '', 1, 1, 1.35, 1, 1, 1, 0, 0, 1,
+    0, 2, '', NULL)
+    ON DUPLICATE KEY UPDATE `difficulty_entry_1` = VALUES(`difficulty_entry_1`),
+    `difficulty_entry_2` = VALUES(`difficulty_entry_2`), `difficulty_entry_3` = VALUES(`difficulty_entry_3`),
+    `KillCredit1` = VALUES(`KillCredit1`), `KillCredit2` = VALUES(`KillCredit2`), `name` = VALUES(`name`),
+    `subname` = VALUES(`subname`), `IconName` = VALUES(`IconName`), `gossip_menu_id` = VALUES(`gossip_menu_id`),
+    `minlevel` = VALUES(`minlevel`), `maxlevel` = VALUES(`maxlevel`), `exp` = VALUES(`exp`),
+    `faction` = VALUES(`faction`), `npcflag` = VALUES(`npcflag`), `speed_walk` = VALUES(`speed_walk`),
+    `speed_run` = VALUES(`speed_run`), `speed_swim` = VALUES(`speed_swim`), `speed_flight` = VALUES(`speed_flight`),
+    `detection_range` = VALUES(`detection_range`), `rank` = VALUES(`rank`), `dmgschool` = VALUES(`dmgschool`),
+    `DamageModifier` = VALUES(`DamageModifier`), `BaseAttackTime` = VALUES(`BaseAttackTime`),
+    `RangeAttackTime` = VALUES(`RangeAttackTime`), `BaseVariance` = VALUES(`BaseVariance`),
+    `RangeVariance` = VALUES(`RangeVariance`), `unit_class` = VALUES(`unit_class`), `unit_flags` = VALUES(`unit_flags`),
+    `unit_flags2` = VALUES(`unit_flags2`), `dynamicflags` = VALUES(`dynamicflags`), `family` = VALUES(`family`),
+    `type` = VALUES(`type`), `type_flags` = VALUES(`type_flags`), `lootid` = VALUES(`lootid`),
+    `pickpocketloot` = VALUES(`pickpocketloot`), `skinloot` = VALUES(`skinloot`),
+    `PetSpellDataId` = VALUES(`PetSpellDataId`), `VehicleId` = VALUES(`VehicleId`), `mingold` = VALUES(`mingold`),
+    `maxgold` = VALUES(`maxgold`), `AIName` = VALUES(`AIName`), `MovementType` = VALUES(`MovementType`),
+    `HoverHeight` = VALUES(`HoverHeight`), `HealthModifier` = VALUES(`HealthModifier`),
+    `ManaModifier` = VALUES(`ManaModifier`), `ArmorModifier` = VALUES(`ArmorModifier`),
+    `ExperienceModifier` = VALUES(`ExperienceModifier`), `RacialLeader` = VALUES(`RacialLeader`),
+    `movementId` = VALUES(`movementId`), `RegenHealth` = VALUES(`RegenHealth`),
+    `CreatureImmunitiesId` = VALUES(`CreatureImmunitiesId`), `flags_extra` = VALUES(`flags_extra`),
+    `ScriptName` = VALUES(`ScriptName`), `VerifiedBuild` = VALUES(`VerifiedBuild`);
+
+DELETE FROM `creature_template_model` WHERE `CreatureID` = 900018;
+INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, `DisplayScale`, `Probability`,
+    `VerifiedBuild`)
+VALUES (900018, 0, 19598, 1, 1, NULL);
+
+DELETE FROM `creature_template_addon` WHERE `entry` = 900018;
+INSERT INTO `creature_template_addon` (`entry`, `path_id`, `mount`, `bytes1`, `bytes2`, `emote`,
+    `visibilityDistanceType`, `auras`)
+VALUES (900018, 0, 0, 1, 1, 0, 0, NULL);
+
+DELETE FROM `creature_equip_template` WHERE `CreatureID` = 900018;
+INSERT INTO `creature_equip_template` (`CreatureID`, `ID`, `ItemID1`, `ItemID2`, `ItemID3`, `VerifiedBuild`)
+VALUES (900018, 1, 29694, 0, 0, NULL);
+
+DELETE FROM `creature_default_trainer` WHERE `CreatureId` = 900018;
+INSERT INTO `creature_default_trainer` (`CreatureId`, `TrainerId`) VALUES (900018, 210);
+
+-- Elemental Mastery, Call of Water, Call of Air, Relic of the Earthen Ring
+DELETE FROM `creature_queststarter` WHERE `id` = 900018;
+INSERT INTO `creature_queststarter` (`id`, `quest`) VALUES
+(900018, 8410),
+(900018, 10490),
+(900018, 10491),
+(900018, 14111);
+
+-- The Park spawn switches to the new entry; the stock Valley of Heroes spawn goes.
+DELETE FROM `creature` WHERE `id` IN (20407, 900018) AND `guid` = 5300708;
+INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseMask`, `equipment_id`,
+    `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `wander_distance`, `currentwaypoint`,
+    `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`,
+    `CreateObject`, `Comment`) VALUES
+(5300708, 900018, 0, 1519, 1519, 1, 1, 1, -8751.139, 1084.062, 90.78052, 5.133289, 180, 0, 0, 3297, 2434, 0, 0, 0, 0,
+    '', 0, 0, 'Farseer Umbrua - Stormwind Park Shaman trainer');
+
+DELETE FROM `creature` WHERE `id` = 20407 AND `guid` = 79860;
+
+-- Stormwind City Guard / City Patroller / Harbor Guard: "Class Trainer" (435, 14) now opens 5300011, a copy of
+-- submenu 401 (same text and options, Shaman -> 8164 / POI 37, Death Knight -> 5300005 / POI 1010). Menu 401 itself is
+-- left to mod-progression. The Stormwind Guard's submenu 3519 is not touched by the module and stays as it is.
+DELETE FROM `gossip_menu` WHERE `MenuID` = 5300011;
+INSERT INTO `gossip_menu` (`MenuID`, `TextID`) VALUES
+(5300011, 898);
+
+DELETE FROM `gossip_menu_option` WHERE `MenuID` = 5300011;
+INSERT INTO `gossip_menu_option` (`MenuID`, `OptionID`, `OptionIcon`, `OptionText`, `OptionBroadcastTextID`,
+    `OptionType`, `OptionNpcFlag`, `ActionMenuID`, `ActionPoiID`, `BoxCoded`, `BoxMoney`, `BoxText`,
+    `BoxBroadcastTextID`, `VerifiedBuild`) VALUES
+(5300011, 0, 0, 'Druid', 45409, 1, 1, 405, 32, 0, 0, '', 0, 0),
+(5300011, 1, 0, 'Hunter', 50546, 1, 1, 408, 33, 0, 0, '', 0, 0),
+(5300011, 2, 0, 'Mage', 45404, 1, 1, 402, 34, 0, 0, '', 0, 0),
+(5300011, 3, 0, 'Paladin', 48028, 1, 1, 407, 35, 0, 0, '', 0, 0),
+(5300011, 4, 0, 'Priest', 45405, 1, 1, 406, 35, 0, 0, '', 0, 0),
+(5300011, 5, 0, 'Rogue', 45406, 1, 1, 403, 36, 0, 0, '', 0, 0),
+(5300011, 6, 0, 'Shaman', 45410, 1, 1, 8164, 37, 0, 0, '', 0, 0),
+(5300011, 7, 0, 'Warlock', 45407, 1, 1, 409, 38, 0, 0, '', 0, 0),
+(5300011, 8, 0, 'Warrior', 45408, 1, 1, 404, 39, 0, 0, '', 0, 0),
+(5300011, 9, 0, 'Death Knight', 0, 1, 1, 5300005, 1010, 0, 0, '', 0, 0);
+
+UPDATE `gossip_menu_option` SET `ActionMenuID` = 5300011 WHERE `MenuID` = 435 AND `OptionID` = 14;
