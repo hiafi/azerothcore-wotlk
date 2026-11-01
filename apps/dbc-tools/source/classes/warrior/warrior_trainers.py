@@ -38,3 +38,7 @@ trained_by(2458, WARRIOR_STARTER_TRAINER, req_level=16)
 untrain(694, [WARRIOR_TRAINER])
 untrain(20230, [WARRIOR_TRAINER])
 untrain(20252, [WARRIOR_TRAINER, WARRIOR_STARTER_TRAINER])
+
+# Plate (750) is granted automatically at login by Custom_WeaponProficiency (dungeon-prereqs S1), so the level-40
+# trainer row goes. The Paladin row (trainer 202) is retired in the paladin files.
+untrain(750, [WARRIOR_TRAINER])

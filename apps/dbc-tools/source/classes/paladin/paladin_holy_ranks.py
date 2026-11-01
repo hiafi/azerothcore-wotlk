@@ -499,7 +499,7 @@ pure_of_heart_talent_r3_201279 = _rank(
     201279, 'Pure of Heart',
     [_dummy(59), _aura(AuraType.MOD_AURA_DURATION_BY_DISPEL_NOT_STACK, -31, _MISC_SCHOOL_HOLY_DISEASE)], 2142, 30,
     _desc(
-        "When your Purify or Cleanse removes a Disease or Poison effect, you restore mana equal to 60% of your Intellect "
+        "When your Purify or Cleanse removes a Disease or Magic effect, you restore mana equal to 60% of your Intellect "
         "every sec for 5 sec.",
         "The duration of Disease effects on you is reduced by 30%.", last=True,
     ),

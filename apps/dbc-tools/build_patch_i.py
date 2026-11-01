@@ -110,7 +110,7 @@ ICON_ID_SUMMON_DOOMGUARD = 90163
 ICON_ID_CHAOS_RIFT = 90171
 ICON_ID_HAVOC = 90172
 
-# Paladin rework shared block (paladin-rework.SHARED.md B0 / B1, A2 icons 90180-90189; 90183-90189 spare).
+# Paladin rework shared block (paladin-rework.SHARED.md B0 / B1, A2 icons 90180-90189; 90184-90189 spare).
 # All three are "stock path, no blp" aliases (see STOCK_ALIAS_ICONS), so each gets its own SpellIcon.dbc
 # id without changing the texture:
 #   90180 - Primed: Righteousness 201063. Part A forbids SpellIcon 25 on it (icon-25 hardcode, SIC:5314),
@@ -122,6 +122,8 @@ ICON_ID_HAVOC = 90172
 ICON_ID_PRIMED_RIGHTEOUSNESS_ALIAS = 90180
 ICON_ID_DELIVERANCE_ALIAS = 90181
 ICON_ID_VENGEANCE_DOT_ALIAS = 90182
+# dungeon-prereqs S3 (D7): Rebuke 201473, the class-wide melee interrupt, mined from the Ascension patch-I.
+ICON_ID_REBUKE = 90183
 
 # Paladin rework Retribution (paladin-rework.RETRIBUTION.md §2.6): block 90210-90219, 90215-90219 spare.
 ICON_ID_BLADE_OF_JUSTICE = 90210  # 201400, echoes 201401-201409
@@ -220,6 +222,7 @@ ICONS = (
     (ICON_ID_BLADE_OF_WRATH, "Interface/icons/ability_paladin_bladeofjusticeblue.blp"),
     (ICON_ID_BULWARK, "Interface/icons/inv_ability_lightsmithpaladin_holybulwark.blp"),
     (ICON_ID_LIGHTS_HAMMER, "Interface/icons/spell_paladin_lightshammer.blp"),
+    (ICON_ID_REBUKE, "Interface/icons/spell_holy_rebuke.blp"),
     (ICON_ID_HUNTER_TRAP_MASTERY, "Interface/icons/ability_hunter_traplauncher.blp"),
     (ICON_ID_HUNTER_IMPROVED_GLAIVE_TOSS, "Interface/icons/inv_ability_hunter_deathchakram.blp"),
     (ICON_ID_HUNTER_ENTRAPMENT, "Interface/icons/inv_pet_pettrap01.blp"),

@@ -326,6 +326,11 @@ reservations:
     spellvisual: {start: 90300, end: 90339}  # SpellVisual, Kit and EffectName
     spellcategory: {start: 1313, end: 1319}  # only 1 expected: Sweeping Strikes <-> Blade Flurry (PLAN s4)
 
+  # Warlock: only a tooltip-variable slice (dungeon-prereqs S5b, WARLOCK-STONES s2: 1430 = the stone Master Conjuror
+  # multipliers). The warlock's spell / talent / group ids predate the reservations and stay outside them.
+  warlock:
+    spelldescriptionvariables: {start: 1430, end: 1439}
+
   # Mage: only the SpellIcon slice, for the 10-31 bug-fix talent icon pass (build_patch_i.py ICON_ID_MAGE_*: 90450-90455).
   # The mage's spell / talent / visual ids predate the reservations and stay outside them.
   mage:

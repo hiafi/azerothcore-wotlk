@@ -11,7 +11,7 @@ trained_by(2645, 210, 16)  # Ghost Wolf
 trained_by(674, 210, 20)  # Dual Wield
 trained_by(974, 210, 25)  # Earth Shield
 trained_by(51514, 210, 28)  # Hex
-trained_by(51886, 210, 36)  # Cleanse Spirit
+trained_by(51886, 210, 18)  # Cleanse Spirit (dungeon prereqs S4 D3: every healer's Magic dispel at 18; was 36)
 trained_by(51505, 210, 42)  # Lava Burst
 trained_by(2825, 210, 60)  # Bloodlust
 trained_by(32182, 210, 60)  # Heroism
@@ -20,3 +20,6 @@ trained_by(32182, 210, 60)  # Heroism
 untrain(8071, [210, 211])
 for _spell_id in (8075, 8227, 8181, 8184, 5675, 10595, 8512, 6495, 526, 66842, 66843, 66844):
     untrain(_spell_id, [210])
+
+# Dungeon prereqs S1/D1: Shamans get Mail at level 1 (granted on login), so the level-40 trainer row goes.
+untrain(8737, [210])

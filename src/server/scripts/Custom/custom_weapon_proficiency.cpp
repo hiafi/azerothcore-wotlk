@@ -19,6 +19,10 @@
 // having to buy the proficiency from a weapon trainer. "Allowed" is whatever SkillRaceClassInfo.dbc
 // lists for the player's race/class, i.e. exactly what the trainers would have offered.
 // Runs on login, so existing characters are caught up too; already-known spells are skipped.
+//
+// The same script grants Plate (Warrior, Paladin) and Mail (Hunter, Shaman) from level 1 instead of level 40, from an
+// explicit list so no other armor skill is granted. The equip check is skill-only and ignores the
+// SkillRaceClassInfo MinLevel, and the level-40 trainer rows are removed in dbc-tools (dungeon-prereqs S1).
 
 #include "DBCStores.h"
 #include "Player.h"
@@ -28,6 +32,27 @@
 
 namespace
 {
+    enum ArmorProficiency
+    {
+        SPELL_PLATE_MAIL_PROFICIENCY = 750,
+        SPELL_MAIL_PROFICIENCY       = 8737,
+    };
+
+    struct ArmorGrant
+    {
+        uint32 classId;
+        uint32 skillId;
+        uint32 spellId;
+    };
+
+    ArmorGrant const ArmorGrants[] =
+    {
+        { CLASS_WARRIOR, SKILL_PLATE_MAIL, SPELL_PLATE_MAIL_PROFICIENCY },
+        { CLASS_PALADIN, SKILL_PLATE_MAIL, SPELL_PLATE_MAIL_PROFICIENCY },
+        { CLASS_HUNTER,  SKILL_MAIL,       SPELL_MAIL_PROFICIENCY       },
+        { CLASS_SHAMAN,  SKILL_MAIL,       SPELL_MAIL_PROFICIENCY       },
+    };
+
     struct WeaponProficiency
     {
         uint32 skillId;
@@ -88,6 +113,20 @@ public:
                 player->LearnDefaultSkill(proficiency.skillId, 0);
 
             player->learnSpell(proficiency.spellId);
+        }
+
+        for (ArmorGrant const& grant : ArmorGrants)
+        {
+            if (grant.classId != player->getClass() || player->HasSpell(grant.spellId))
+                continue;
+
+            if (!GetSkillRaceClassInfo(grant.skillId, player->getRace(), player->getClass()))
+                continue;
+
+            if (!player->HasSkill(grant.skillId))
+                player->LearnDefaultSkill(grant.skillId, 0);
+
+            player->learnSpell(grant.spellId);
         }
     }
 };

@@ -529,4 +529,5 @@ namespace PaladinData
     constexpr uint32 SPELL_SANCTIFIED_RETRIBUTION_201470 = 201470; // sanctified_retribution_201470
     constexpr uint32 SPELL_DIVINE_PURPOSE_201471 = 201471; // divine_purpose_201471
     constexpr uint32 SPELL_THE_ART_OF_WAR_201472 = 201472; // the_art_of_war_201472
+    constexpr uint32 SPELL_REBUKE = 201473; // rebuke_201473
 }

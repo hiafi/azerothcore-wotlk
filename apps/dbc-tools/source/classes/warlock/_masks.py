@@ -36,11 +36,12 @@ LASH_OF_PAIN = 0x2000
 DRAIN_SOUL = 0x4000
 CURSE_OF_WEAKNESS = 0x8000
 HEALTHSTONE = 0x10000
-SPELLSTONE = 0x20000
+SPELLSTONE = 0x20000  # the Spellstone buff 200715 (dungeon-prereqs S5b); also the dead stock enchant auras 55172...
 LIFE_TAP = 0x40000
 DEATH_COIL = 0x80000
 CREATE_STONE = 0x100000
-FIRESTONE_ENCHANT = 0x200000
+FIRESTONE_ENCHANT = 0x200000  # the Firestone buff 200714 (dungeon-prereqs S5b); also the dead stock enchant auras
+# 55146... Master Conjuror eff0 reads both stone bits (SPELLSTONE | FIRESTONE_ENCHANT)
 CURSE_OF_EXHAUSTION = 0x400000
 BLOOD_PACT_FIRE_SHIELD = 0x800000
 HEALTH_FUNNEL = 0x1000000
@@ -81,8 +82,10 @@ RITUAL_OF_SOULS = 0x80000000
 # Reserve (free, PLAN §4.4) - not yet assigned to any spec:
 D2_RESERVE_11 = 0x800  # SHARED §3: pencilled for Wild Imp Fel Firebolt 200824 - round-2 resolved
 # to the scripted fallback instead (no family bit used); kept as a named reserve, not consumed.
-D2_RESERVE_19 = 0x80000
-D2_RESERVE_21 = 0x200000
+# Warlock stones (dungeon-prereqs S5b, .agents/plans/dungeon-prereqs/dungeon-prereqs.WARLOCK-STONES.md s2): these two
+# join no composite, so the Destruction family-mask talents never reach the stone procs. Was D2_RESERVE_19 / _21.
+STONE_FIRE_BLAST = 0x80000  # Fire Blast 200716 (the Firestone proc); Master Conjuror eff1
+STONE_SURGE = 0x200000  # Spellstone Surge 200717 (the Spellstone proc); Master Conjuror eff2
 
 # --- dword 3 (SpellClassMask_3 / EffectSpellClassMaskX_3) ---
 INFERNO_EFFECT = 0x1

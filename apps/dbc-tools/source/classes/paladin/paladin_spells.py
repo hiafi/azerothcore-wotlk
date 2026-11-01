@@ -228,11 +228,11 @@ purify_1152 = spell(
     range_yards=40.0,
     effects=[
         Effect(type=EffectType.DISPEL, implicit_target_a=21, misc_value=3),
-        Effect(type=EffectType.DISPEL, implicit_target_a=21, misc_value=4),
     ],
     spell_icon_id=300,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Purifies the friendly target, removing $s1 disease effect and $s2 poison effect.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 4096, 'SpellClassSet': 10, 'SpellLevel': 8, 'SpellVisualID_1': 312, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data | dungeon-prereqs S3 (D4a): Disease only, the stock Poison effect (eff2) dropped; '
+          'learn level 8 kept.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Purifies the friendly target, removing $s1 disease effect.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 4096, 'SpellClassSet': 10, 'SpellLevel': 8, 'SpellVisualID_1': 312, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -272,13 +272,15 @@ cleanse_4987 = spell(
     mana_cost_pct=6,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.DISPEL, implicit_target_a=21, misc_value=4),
         Effect(type=EffectType.DISPEL, implicit_target_a=21, misc_value=3),
         Effect(type=EffectType.DISPEL, implicit_target_a=21, misc_value=1),
     ],
     spell_icon_id=321,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx6': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 42, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Cleanses a friendly target, removing $s1 poison effect, $s2 disease effect, and $s3 magic effect.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 4096, 'SpellClassSet': 10, 'SpellLevel': 42, 'SpellVisualID_1': 337, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data | dungeon-prereqs S3 (D2-D4a): Magic + Disease, the stock Poison effect (eff1) '
+          'dropped; '
+          'learn 42 -> 18 (BaseLevel / SpellLevel and the trainer row). SpellClassMask_1 0x1000 (CLEANSE_PURIFY) kept: '
+          "Purifying Power's cost mod (eff1 d0 0x1020) still matches.",
+    raw_overrides={'AttributesEx6': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 18, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Cleanses a friendly target, removing $s1 disease effect and $s2 magic effect.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 4096, 'SpellClassSet': 10, 'SpellLevel': 18, 'SpellVisualID_1': 337, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1761,6 +1763,53 @@ wake_of_ashes_stun_201414 = spell(
 )
 
 
+# --- Rebuke 201473 (dungeon-prereqs S3, D7) -----------------------------------------------------------
+# Melee interrupt for every spec, learned at 10. Copied from Pummel 6552 (INTERRUPT_CAST, mechanic 26, 4 s school
+# lockout, melee range, off the GCD, DefenseType 2, PreventionType 2). Cooldown: Kick / Pummel / Mind Freeze's stock
+# Category 88 with CategoryRecoveryTime 16000 and RecoveryTime 0, the same template as the druid's Skull Bash (D7).
+# The lockout is shared with Kick (8), Pummel (4), Mind Freeze (15) and Skull Bash (7) by a Custom exception in
+# Player::AddSpellAndCategoryCooldowns (stock only spreads a category cooldown within one SpellFamilyName; the
+# exception covers only the five melee kicks). Icon 90183 is mined by build_patch_i.py (spell_holy_rebuke.blp).
+# SLA 30533, Retribution tab like Judgement. Cost: 8% of base mana, Wind Shear's (an open question in the S3 report).
+rebuke_201473 = spell(
+    id=201473,
+    name='Rebuke',
+    school=School.NORMAL,
+    attributes=327696,
+    category=88,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=16000,
+    mana_cost=0,
+    mana_cost_pct=8,
+    range_yards=5.0,
+    duration_ms=4000,
+    effects=[
+        Effect(type=EffectType.INTERRUPT_CAST, die_sides=0, mechanic=26, implicit_target_a=6),
+    ],
+    spell_icon_id=90183,
+    notes='dungeon-prereqs S3 (D7): Pummel 6552 template, family 10 with no class mask, learn 10, Category 88 / 16 s '
+          'category recovery (shared with the other melee kicks by ruling, via the core exception noted above).',
+    raw_overrides=_raw(
+        AttributesEx=134218240,
+        AttributesEx3=8,
+        AttributesEx6=8388608,
+        BaseLevel=10,
+        DefenseType=2,
+        FacingCasterFlags=1,
+        PreventionType=2,
+        RangeIndex=2,
+        SpellLevel=10,
+        SpellVisualID_1=1023,
+        Description_Lang_enUS='Rebukes the target, interrupting spellcasting and preventing any spell in that school '
+                              'from being cast for $d.',
+    ),
+)
+skill_line_ability(id=30533, skill_line=184, spell_id=201473, class_mask=2)
+for _trainer in (202, 203):
+    trained_by(rebuke_201473, trainer_id=_trainer, req_level=10)
+
+
 # --- Trainer rows (SHARED B1.1 / B5 / C2.2; trainer 203 = the starter-zone trainer, B1.1) ------------
 # Seals: prices are starting guesses (neighbouring rows). 203 teaches at the same level and price as 202.
 for _trainer in (202, 203):
@@ -1781,6 +1830,11 @@ trained_by(greater_blessing_of_wisdom_25894, trainer_id=202, req_level=54, money
 # a separate table: 25782 <- 19838 (Blessing of Might r6), 25894 <- 19854 (Blessing of Wisdom r5), both retired ranks.
 unrequire_spell(greater_blessing_of_might_25782, 19838)
 unrequire_spell(greater_blessing_of_wisdom_25894, 19854)
+# dungeon-prereqs S3 (D3): every healer's Magic dispel is learned at 18, so Cleanse moves from 42.
+trained_by(cleanse_4987, trainer_id=202, req_level=18)
+# dungeon-prereqs D1: Plate (750) is granted automatically at login by Custom_WeaponProficiency, so the level-40
+# trainer row goes (the Warrior row on trainer 200 is retired in the warrior files).
+untrain(750, trainer_ids=[202])
 
 # B3.4: the old castable Judgements are no longer taught (their spell rows stay declared above).
 untrain(20271, trainer_ids=[202, 203])

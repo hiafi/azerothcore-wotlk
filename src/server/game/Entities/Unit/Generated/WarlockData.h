@@ -369,6 +369,10 @@ namespace WarlockData
     constexpr uint32 SPELL_SOULBURN_MARKER = 200711; // soulburn_marker_200711
     constexpr uint32 SPELL_SOULBURN_HAUNT_DEBUFF = 200712; // soulburn_haunt_debuff_200712
     constexpr uint32 SPELL_INSTANT_CAST_HELPER = 200713; // instant_cast_helper_200713
+    constexpr uint32 SPELL_FIRESTONE = 200714; // firestone_200714
+    constexpr uint32 SPELL_SPELLSTONE = 200715; // spellstone_200715
+    constexpr uint32 SPELL_FIRE_BLAST = 200716; // fire_blast_200716
+    constexpr uint32 SPELL_SPELLSTONE_SURGE = 200717; // spellstone_surge_200717
     constexpr uint32 SPELL_TAINTED_SOUL = 200721; // tainted_soul_200721
     constexpr uint32 SPELL_TAINTED_SOUL_ERUPTION = 200722; // tainted_soul_eruption_200722
     constexpr uint32 SPELL_INEVITABLE_DEMISE = 200723; // inevitable_demise_200723

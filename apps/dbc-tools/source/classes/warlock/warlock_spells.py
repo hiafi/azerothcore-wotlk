@@ -7,6 +7,7 @@ Split from a single source/classes/warlock.py via split_class_file.py (.agents/p
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, RANGE_SELF, School
 from lib.dsl.registry import bonus_coefficients, creature_model, creature_template, custom_attr, linked_spell, procs_on, scripted_by, shapeshift_form, skill_line_ability, spell, spell_group, spell_group_rule, trained_by, unbind_bonus_coefficients, unbind_script, untrain
 from .warlock_trigger_spells import hellfire_effect_5857
+from .warlock_stones import CREATE_FIRESTONE_TEXT, CREATE_SPELLSTONE_TEXT, warlock_stones_1430
 from . import _masks as m
 
 
@@ -547,8 +548,9 @@ create_spellstone_2362 = spell(
         Effect(type=24, implicit_target_a=1),
     ],
     spell_icon_id=344,
+    tooltip_vars=warlock_stones_1430,  # dungeon-prereqs S5b: Master Conjuror multipliers on the stone text
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 36); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 131072, 'AttributesEx5': 2, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 36, 'CastingTimeIndex': 6, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While applied to target weapon it increases damage dealt by periodic spells by $55172s1% and spell haste rating by $55172s3.  Lasts for 1 hour.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 41191, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'ReagentCount_1': 0, 'Reagent_1': 0, 'SpellClassMask_1': 1048576, 'SpellClassSet': 5, 'SpellLevel': 36, 'SpellVisualID_1': 138, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 131072, 'AttributesEx5': 2, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 36, 'CastingTimeIndex': 6, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': CREATE_SPELLSTONE_TEXT, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 41191, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'ReagentCount_1': 0, 'Reagent_1': 0, 'SpellClassMask_1': 1048576, 'SpellClassSet': 5, 'SpellLevel': 36, 'SpellVisualID_1': 138, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -836,8 +838,9 @@ create_firestone_6366 = spell(
         Effect(type=24, implicit_target_a=1),
     ],
     spell_icon_id=1506,
+    tooltip_vars=warlock_stones_1430,  # dungeon-prereqs S5b: Master Conjuror multipliers on the stone text
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 28); RealPointsPerLevel from rank1->covers-60 (anchor rank 4 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 131072, 'AttributesEx5': 2, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 28, 'CastingTimeIndex': 14, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While applied to target weapon it increases damage dealt by direct spells by 1% and spell critical strike rating by $55146s3.  Lasts for 1 hour.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 41170, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'ReagentCount_1': 0, 'Reagent_1': 0, 'SpellClassMask_1': 1048576, 'SpellClassSet': 5, 'SpellLevel': 28, 'SpellVisualID_1': 4800, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 131072, 'AttributesEx5': 2, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 28, 'CastingTimeIndex': 14, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': CREATE_FIRESTONE_TEXT, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 41170, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'ReagentCount_1': 0, 'Reagent_1': 0, 'SpellClassMask_1': 1048576, 'SpellClassSet': 5, 'SpellLevel': 28, 'SpellVisualID_1': 4800, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
