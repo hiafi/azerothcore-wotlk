@@ -129,8 +129,9 @@ creature:
 # Training Dummy, levels 60/70/80), 900004-900006 (the dpssim sim dummies, modules/mod-dpssim's
 # SimTarget), 900007-900009 (the elite "pack" variants of those, for multi-target sim runs) and
 # 900011/900013/900014 (Healing Training Dummy, its combat variant and its combat anchor).
-# 900010 (Quinn Testbury) and 900012 (Ursana) are NPC tools too but stay hand-written, as does 900018
-# (Farseer Umbrua, the Stormwind Park copy of shaman trainer 20407 that mod-progression cannot hide).
+# 900010 (Quinn Testbury) and 900012 (Ursana) are NPC tools too but stay hand-written, as do 900018
+# and 900019 (Farseer Umbrua and Farseer Javad, the Stormwind and Ironforge copies of shaman trainers
+# 20407 and 23127 that mod-progression cannot hide).
 # A creature entry in either this block or the creature block above passes creature_template()'s check.
 npc_tools:
   start: 900000

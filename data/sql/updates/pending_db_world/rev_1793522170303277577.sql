@@ -7,7 +7,7 @@
 -- re-applies it); instead nothing the phases touch is used any more:
 --   * the Park trainer becomes 900018, a copy of 20407 (npc_tools block, hand-written like 900010/900012);
 --   * the stock spawn 79860 is removed, so phase_07 has no Umbrua to show;
---   * the guards' "Class Trainer" option points at 5300011, a copy of submenu 401 that the phases do not edit.
+--   * the guards' "Class Trainer" option points at 5300013, a copy of submenu 401 that the phases do not edit.
 
 -- Farseer Umbrua: same faction, gossip (8110), trainer (210), model, gear and quests as 20407.
 INSERT INTO `creature_template` (`entry`, `difficulty_entry_1`, `difficulty_entry_2`, `difficulty_entry_3`,
@@ -80,26 +80,26 @@ INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `p
 
 DELETE FROM `creature` WHERE `id` = 20407 AND `guid` = 79860;
 
--- Stormwind City Guard / City Patroller / Harbor Guard: "Class Trainer" (435, 14) now opens 5300011, a copy of
+-- Stormwind City Guard / City Patroller / Harbor Guard: "Class Trainer" (435, 14) now opens 5300013, a copy of
 -- submenu 401 (same text and options, Shaman -> 8164 / POI 37, Death Knight -> 5300005 / POI 1010). Menu 401 itself is
 -- left to mod-progression. The Stormwind Guard's submenu 3519 is not touched by the module and stays as it is.
-DELETE FROM `gossip_menu` WHERE `MenuID` = 5300011;
+DELETE FROM `gossip_menu` WHERE `MenuID` = 5300013;
 INSERT INTO `gossip_menu` (`MenuID`, `TextID`) VALUES
-(5300011, 898);
+(5300013, 898);
 
-DELETE FROM `gossip_menu_option` WHERE `MenuID` = 5300011;
+DELETE FROM `gossip_menu_option` WHERE `MenuID` = 5300013;
 INSERT INTO `gossip_menu_option` (`MenuID`, `OptionID`, `OptionIcon`, `OptionText`, `OptionBroadcastTextID`,
     `OptionType`, `OptionNpcFlag`, `ActionMenuID`, `ActionPoiID`, `BoxCoded`, `BoxMoney`, `BoxText`,
     `BoxBroadcastTextID`, `VerifiedBuild`) VALUES
-(5300011, 0, 0, 'Druid', 45409, 1, 1, 405, 32, 0, 0, '', 0, 0),
-(5300011, 1, 0, 'Hunter', 50546, 1, 1, 408, 33, 0, 0, '', 0, 0),
-(5300011, 2, 0, 'Mage', 45404, 1, 1, 402, 34, 0, 0, '', 0, 0),
-(5300011, 3, 0, 'Paladin', 48028, 1, 1, 407, 35, 0, 0, '', 0, 0),
-(5300011, 4, 0, 'Priest', 45405, 1, 1, 406, 35, 0, 0, '', 0, 0),
-(5300011, 5, 0, 'Rogue', 45406, 1, 1, 403, 36, 0, 0, '', 0, 0),
-(5300011, 6, 0, 'Shaman', 45410, 1, 1, 8164, 37, 0, 0, '', 0, 0),
-(5300011, 7, 0, 'Warlock', 45407, 1, 1, 409, 38, 0, 0, '', 0, 0),
-(5300011, 8, 0, 'Warrior', 45408, 1, 1, 404, 39, 0, 0, '', 0, 0),
-(5300011, 9, 0, 'Death Knight', 0, 1, 1, 5300005, 1010, 0, 0, '', 0, 0);
+(5300013, 0, 0, 'Druid', 45409, 1, 1, 405, 32, 0, 0, '', 0, 0),
+(5300013, 1, 0, 'Hunter', 50546, 1, 1, 408, 33, 0, 0, '', 0, 0),
+(5300013, 2, 0, 'Mage', 45404, 1, 1, 402, 34, 0, 0, '', 0, 0),
+(5300013, 3, 0, 'Paladin', 48028, 1, 1, 407, 35, 0, 0, '', 0, 0),
+(5300013, 4, 0, 'Priest', 45405, 1, 1, 406, 35, 0, 0, '', 0, 0),
+(5300013, 5, 0, 'Rogue', 45406, 1, 1, 403, 36, 0, 0, '', 0, 0),
+(5300013, 6, 0, 'Shaman', 45410, 1, 1, 8164, 37, 0, 0, '', 0, 0),
+(5300013, 7, 0, 'Warlock', 45407, 1, 1, 409, 38, 0, 0, '', 0, 0),
+(5300013, 8, 0, 'Warrior', 45408, 1, 1, 404, 39, 0, 0, '', 0, 0),
+(5300013, 9, 0, 'Death Knight', 0, 1, 1, 5300005, 1010, 0, 0, '', 0, 0);
 
-UPDATE `gossip_menu_option` SET `ActionMenuID` = 5300011 WHERE `MenuID` = 435 AND `OptionID` = 14;
+UPDATE `gossip_menu_option` SET `ActionMenuID` = 5300013 WHERE `MenuID` = 435 AND `OptionID` = 14;
