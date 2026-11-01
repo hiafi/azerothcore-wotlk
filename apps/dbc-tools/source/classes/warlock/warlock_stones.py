@@ -2,10 +2,11 @@
 Warlock - Firestone and Spellstone as 2 hour self-buffs (dungeon-prereqs S5b, PLAN D9).
 
 Design: .agents/plans/dungeon-prereqs/dungeon-prereqs.WARLOCK-STONES.md (sections 2-9; user rulings 2026-10-31 at
-its top: the stone on-use KEEPS the old 3 sec cast, the Mastery-in-tenths core term is allowed).
+its top: the Mastery-in-tenths core term is allowed; later the same day: the cast time sits on the Create spell, the
+stone's on-use is instant and the stone is single use).
 
-The conjured stone items stay. Each stone item's on-use spell (13 stock ids, rewritten in place below) is a 3 sec cast
-whose only effect is a TRIGGER_SPELL that casts the 2 hour buff (200714 Firestone / 200715 Spellstone). A buff cast
+The conjured stone items stay, now single use (spellcharges_1 -1, gone on use). Each stone item's on-use spell (13
+stock ids, rewritten in place below) is an instant cast on the GCD whose only effect is a TRIGGER_SPELL that casts the 2 hour buff (200714 Firestone / 200715 Spellstone). A buff cast
 through a trigger carries no cast item, so the engine's Proc Chance multiplier reaches its proc (Aura::CalcProcChance
 skips only auras with a CastItemGUID), it refreshes in place, and it outlives the stone. Each buff holds one stat effect
 and one PROC_TRIGGER_SPELL effect with a spell_proc row; spell_warl_stone_buff (spell_warlock_demonology.cpp) adds the
@@ -17,7 +18,8 @@ Ids: 200714-200717 (the warlock-shared spares, SHARED s1), spell_group 1203 (SHA
 """
 
 from lib.dsl import AuraType, CombatRating, Effect, EffectType, RANGE_SELF, School
-from lib.dsl.registry import pot_text, procs_on, scripted_by, spell, spell_group, spell_group_rule, tooltip_vars
+from lib.dsl.registry import (item_template, pot_text, procs_on, scripted_by, spell, spell_group, spell_group_rule,
+                               tooltip_vars)
 from lib.dsl.tooltip import talent_mult
 
 from . import _masks as m
@@ -32,7 +34,6 @@ _ATTR3_ALLOW_AURA_WHILE_DEAD = 0x100000  # with AttributesEx2 0x1: the shaman im
 _DMG_MAGIC = 1  # DefenseType: SPELL_DAMAGE_CLASS_MAGIC
 _TARGET_UNIT_CASTER = 1
 _TARGET_UNIT_TARGET_ENEMY = 6
-_INTERRUPT_ON_MOVE_PUSHBACK_INTERRUPT_COMBAT = 15  # the stock on-use rows' InterruptFlags (a 3 sec cast)
 
 # spell_proc masks (src/server/game/Spells/SpellMgr.h)
 _PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG = 0x1000
@@ -202,8 +203,8 @@ spellstone_200715 = spell(
 
 # Item -> spell links stay as they are (41170 Lesser Firestone ... 40773 Master Firestone; 41191 Spellstone ... 41196
 # Grand Spellstone), so no client item cache goes stale; only 41170 and 41191 can be created today (the single-rank
-# Create spells), the rest stay consistent for any stray higher rank. Each keeps its name and the old 3 sec cast (user
-# ruling 2026-10-31), and loses the weapon target: Targets 0, EquippedItemClass -1, no EquippedItemInvTypes, no
+# Create spells), the rest stay consistent for any stray higher rank. Each keeps its name, becomes instant on the GCD
+# (user ruling 2026-10-31: the cast time is the Create spell's 3 / 5 sec), and loses the weapon target: Targets 0, EquippedItemClass -1, no EquippedItemInvTypes, no
 # AttributesEx2 0x2000 (enchant own item only), no SpellVisual (3182 was the weapon glow). Family 5 with no bits.
 _STONE_USE_SPELLS = (
     # (id, name, buff, icon, description)
@@ -225,22 +226,28 @@ _STONE_USE_SPELLS = (
 for _use_id, _use_name, _use_buff, _use_icon, _use_text in _STONE_USE_SPELLS:
     spell(
         id=_use_id, name=_use_name, school=School.NORMAL, attributes=_ATTR0_DO_NOT_SHEATH,
-        cast_time_ms=3000, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF,
+        cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF,
         effects=[Effect(type=EffectType.TRIGGER_SPELL, trigger_spell=_use_buff.id,
                         implicit_target_a=_TARGET_UNIT_CASTER)],
         spell_icon_id=_use_icon,
         tooltip_vars=warlock_stones_1430,
         notes=f'dungeon-prereqs S5b (WARLOCK-STONES s3): stone item on-use, rewritten in place from the stock weapon '
-              f'enchant (effect 54, item target) into a 3 sec cast that triggers the {_use_buff.name} buff '
-              f'{_use_buff.id}. Targets 0, EquippedItemClass -1, no weapon glow; name, icon and the 3 sec cast kept.',
+              f'enchant (effect 54, item target) into an instant cast that triggers the {_use_buff.name} buff '
+              f'{_use_buff.id}. Targets 0, EquippedItemClass -1, no weapon glow; name and icon kept.',
         raw_overrides={
             'SpellClassSet': _SPELLFAMILY_WARLOCK, 'EquippedItemClass': -1, 'Targets': 0, 'SpellLevel': 15,
-            'InterruptFlags': _INTERRUPT_ON_MOVE_PUSHBACK_INTERRUPT_COMBAT, 'ProcChance': 101,
+            'ProcChance': 101,
             'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500,
             'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0,
             'Description_Lang_enUS': _use_text, **_LANG_MASKS,
         },
     )
+
+
+# The stone items: single use (stock -5 = 5 charges; -1 = one charge, the item is destroyed on use). Entries in
+# _STONE_USE_SPELLS order.
+for _entry in (41170, 41169, 41171, 41172, 41173, 41174, 40773, 41191, 41192, 41193, 41194, 41195, 41196):
+    item_template(_entry, spellcharges_1=-1)
 
 
 # =====================================================================================================================
