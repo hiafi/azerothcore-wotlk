@@ -271,13 +271,30 @@ class TextureGeometryTest(unittest.TestCase):
         margin = int(size * pbm.MARGIN_FRAC)
         for fill in (pbm.FILL_ALPHA, pbm.OUTLINE_FILL_ALPHA):
             plane = pbm.line_alpha(size, fill)
-            for row in (0, size // 2, size - 1):
+            for row in (size // 2, size // 2 + 37, size - 1):
                 self.assertGreaterEqual(_alpha_at(plane, size, row, margin), pbm.RIM_ALPHA - 1)
                 self.assertGreaterEqual(_alpha_at(plane, size, row, size - 1 - margin), pbm.RIM_ALPHA - 1)
                 self.assertEqual(_alpha_at(plane, size, row, margin - 1), 0)         # the margin
                 self.assertEqual(_alpha_at(plane, size, row, size - margin), 0)
                 self.assertEqual(_alpha_at(plane, size, row, size // 2), fill)
-            self.assertEqual(plane[:size], plane[size * (size // 2):size * (size // 2 + 1)])  # no end rim
+            self.assertEqual(plane[size * (size // 2):size * (size // 2 + 1)], plane[size * (size - 1):])  # no end rim
+            full = pbm.line_alpha(size, fill, half=False)                           # the probe: the whole strip
+            self.assertEqual(full[:size], full[size * (size - 1):])
+            self.assertEqual(full[size * (size // 2):], plane[size * (size // 2):])
+
+    def test_line_draws_only_its_forward_half(self):
+        """M1-FIX-LINES: the line model is symmetric (x in [-k, k]); the texture draws only v >= 1/2, which
+        model +X carries (the cone's mapping), so the line runs from the stalker forward whatever the client
+        does with an off-centre origin."""
+        size = pbm.SMALL
+        plane = pbm.line_alpha(size)
+        self.assertEqual(set(plane[:size * (size // 2)]), {0})                      # rows v < 1/2: nothing
+        self.assertEqual(_alpha_at(plane, size, size // 2, size // 2), pbm.FILL_ALPHA)  # the first drawn row
+        verts = pbm.line_verts(pbm.LINE_UNIT_STEP)
+        self.assertEqual({v[0] for v in verts}, {-1.0, 1.0})
+        # The same direction as a cone: the cone opens toward increasing rows too.
+        cone = pbm.cone_alpha(size, 60)
+        self.assertGreater(_alpha_at(cone, size, size // 2 + 40, size // 2), 0)
 
 
 class EdgeTexelTest(unittest.TestCase):
@@ -297,7 +314,7 @@ class EdgeTexelTest(unittest.TestCase):
                 continue
             seen.add(d.texture)
             b = blp_write.read_blp(self.textures[f"{d.texture}.blp"])
-            line = d.shape in ("line", "line_outline")
+            line = d.shape in ("line", "line_outline", "probe_line")
             for level, mip in enumerate(b["mips"]):
                 w, h, a = mip["width"], mip["height"], mip["alpha"]
                 cols = [a[y * w] for y in range(h)] + [a[y * w + w - 1] for y in range(h)]
@@ -309,11 +326,16 @@ class EdgeTexelTest(unittest.TestCase):
                     self.assertGreater(max(a), 0, f"{d.texture} mip {level}: the shape vanished")
 
     def test_line_ends_stay_open(self):
+        """The far end (last row) is drawn up to the edge; the start sits on the texel boundary at v = 1/2 at
+        every mip down to four rows (below that the cleared long edges are the whole texture)."""
         b = blp_write.read_blp(self.textures["bm_line.blp"])
-        for mip in b["mips"][:5]:
-            w, a = mip["width"], mip["alpha"]
-            self.assertEqual(a[:w], a[(mip["height"] - 1) * w:])               # first row = last row
-            self.assertGreater(a[w // 2], 0)                                    # and both are drawn
+        for mip in b["mips"]:
+            w, h, a = mip["width"], mip["height"], mip["alpha"]
+            if w < 4:
+                break
+            self.assertGreater(a[(h - 1) * w + w // 2], 0)                      # the far end is drawn
+            self.assertEqual(a[(h // 2) * w:(h // 2 + 1) * w], a[(h - 1) * w:])  # first drawn row = last row
+            self.assertEqual(set(a[:(h // 2) * w]), {0})                        # the back half stays empty
 
     def test_mip_edges_without_the_flags_are_kept(self):
         plane = bytes([200] * 64)
@@ -470,20 +492,48 @@ class M2PatchTest(unittest.TestCase):
             stray = [i for i in _diff_offsets(self.model, out) if not any(lo <= i < hi for lo, hi in allowed)]
             self.assertEqual(stray, [], f"bytes changed outside the patched ranges: {stray[:8]}")
 
-    def test_line_model_runs_from_the_stalker_forward(self):
+    def test_line_model_is_symmetric_and_v_runs_forward(self):
+        """M1-FIX-LINES: x in [-k, k], centred on the stalker, with v = 1 at +X (the cone's mapping), so the
+        texture's drawn half (v >= 1/2) is x in [0, k], ahead of the stalker."""
         half = struct.unpack("<f", struct.pack("<f", pbm.LINE_HALF))[0]
         for i in (0, 8, 16, pbm.LINE_STEPS - 1):
-            k = pbm.line_aspect(i)
+            k = struct.unpack("<f", struct.pack("<f", pbm.line_aspect(i)))[0]
             out = m2_patch.patch_model(self.model, pbm.line_verts(i), skins=True)
             verts = m2_patch.vertex_positions(out)
-            self.assertEqual({round(v[0], 5) for v in verts}, {0.0, round(k, 5)})
+            self.assertEqual({v[0] for v in verts}, {-k, k})
             self.assertEqual({v[1] for v in verts}, {-half, half})
-            self.assertEqual(struct.unpack_from("<6f", out, m2_patch.OFS_BBOX)[3:5],
-                             (struct.unpack_from("<f", out, m2_patch.OFS_BBOX + 12)[0], half))
+            for (x, _y, _z), (_u, v) in zip(verts, m2_patch.vertex_uvs(out)):
+                self.assertEqual(v, 1.0 if x > 0 else 0.0)                     # v follows +X
+            box = struct.unpack_from("<6f", out, m2_patch.OFS_BBOX)
+            self.assertEqual((box[0], box[3]), (-k, k))
             self.assertAlmostEqual(struct.unpack_from("<f", out, m2_patch.OFS_SPHERE)[0], math.hypot(k, half),
                                    places=4)
+        cone = m2_patch.patch_model(self.model, pbm.QUAD, skins=True)
+        for (x, _y, _z), (_u, v) in zip(m2_patch.vertex_positions(cone), m2_patch.vertex_uvs(cone)):
+            self.assertEqual(v, 1.0 if x > 0 else 0.0)                         # the same mapping as the cone
+
+    def test_line_ladder(self):
+        self.assertEqual(pbm.LINE_STEPS, 33)
+        self.assertAlmostEqual(pbm.line_aspect(0), 0.25)
+        self.assertAlmostEqual(pbm.line_aspect(4), 0.5)
+        self.assertAlmostEqual(pbm.line_aspect(pbm.LINE_UNIT_STEP), 1.0)
+        self.assertAlmostEqual(pbm.line_aspect(16), 2.0)
         self.assertAlmostEqual(pbm.line_aspect(pbm.LINE_STEPS - 1), 8.0)
-        self.assertAlmostEqual(pbm.line_aspect(8), 2.0)
+        for i in range(1, pbm.LINE_STEPS):
+            self.assertGreater(pbm.line_aspect(i), pbm.line_aspect(i - 1))
+            self.assertLessEqual(pbm.line_aspect(i) / pbm.line_aspect(i - 1), 2 ** 0.25 + 1e-9)
+
+    def test_probe_is_the_live_line_model(self):
+        (probe,) = pbm.build_probe()
+        self.assertEqual((probe.id, probe.color, probe.shape), (91996, "red", "probe_line"))
+        self.assertEqual({v[0] for v in probe.verts}, {0.0, pbm.PROBE_ASPECT})
+        self.assertGreater(probe.id, pbm.LAST_ID)
+        self.assertLessEqual(probe.id, pbm.BLOCK_LAST_ID)
+        self.assertFalse(pbm.DIAG_FIRST_ID <= probe.id <= pbm.DIAG_LAST_ID)
+        plane = pbm.alpha_for(probe)
+        size = probe.size
+        self.assertEqual(plane[:size], plane[size * (size - 1):])               # the whole strip draws
+        self.assertGreater(_alpha_at(plane, size, 0, size // 2), 0)
 
     def test_hard_coded_texture_path_without_skins(self):
         out = m2_patch.patch_model(self.model, pbm.QUAD, skins=False, texture_path="spells\\bm_cone_090_red.blp")
@@ -497,14 +547,16 @@ class M2PatchTest(unittest.TestCase):
                 m2_patch.patch_model(self.model, pbm.QUAD, skins=False, texture_path="spells\\bm_disc.blp", rgb=bad)
 
     def test_skin_only_changes_the_submesh_bounds(self):
-        out = m2_patch.patch_skin(self.skin, pbm.line_verts(16))        # k = 4
+        out = m2_patch.patch_skin(self.skin, pbm.probe_verts())         # x in [0, 8]
         ofs = m2_patch.check_skin(self.skin)
         stray = [i for i in _diff_offsets(self.skin, out)
                  if not ofs + m2_patch.SUBMESH_CENTRES <= i < ofs + m2_patch.SUBMESH_CENTRES + 28]
         self.assertEqual(stray, [])
         mass, centre, radius = m2_patch.skin_submesh_bounds(out)
-        self.assertEqual((mass, centre), ((2.0, 0.0, 0.0), (2.0, 0.0, 0.0)))
-        self.assertAlmostEqual(radius, math.hypot(2.0, pbm.LINE_HALF), places=5)
+        self.assertEqual((mass, centre), ((4.0, 0.0, 0.0), (4.0, 0.0, 0.0)))
+        self.assertAlmostEqual(radius, math.hypot(4.0, pbm.LINE_HALF), places=5)
+        mass, centre, _radius = m2_patch.skin_submesh_bounds(m2_patch.patch_skin(self.skin, pbm.line_verts(16)))
+        self.assertEqual((mass, centre), ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0)))   # the symmetric line
 
     def test_untrusted_input_is_rejected_not_crashed_on(self):
         for bad in (b"", b"MD20", self.model[:100], b"XXXX" + self.model[4:], self.model[:4] + b"\x01\x00\x00\x00"
@@ -523,7 +575,7 @@ _TEXTURE_CACHE: dict[int, dict[str, bytes]] = {}
 def _textures(displays) -> dict[str, bytes]:
     """pbm.build_textures, built once per process (the pure-Python shapes take a few seconds)."""
     if 0 not in _TEXTURE_CACHE:
-        _TEXTURE_CACHE[0] = pbm.build_textures(pbm.build_displays(True))
+        _TEXTURE_CACHE[0] = pbm.build_textures(pbm.build_displays(True) + pbm.build_probe())
     wanted = {f"{d.texture}.blp" for d in displays}
     return {name: data for name, data in _TEXTURE_CACHE[0].items() if name in wanted}
 
@@ -543,9 +595,9 @@ def _expected_ids() -> dict[int, tuple[str, int, str]]:
         for j in range(8):
             exp[base + 17 + j] = ("cone", j, color)
             exp[base + 25 + j] = ("cone_outline", j, color)
-        for i in range(25):
+        for i in range(33):
             exp[base + 33 + i] = ("line", i, color)
-            exp[base + 58 + i] = ("line_outline", i, color)
+            exp[base + 66 + i] = ("line_outline", i, color)
     return exp
 
 
@@ -555,25 +607,26 @@ class DisplayTableTest(unittest.TestCase):
             got = {d.id: (d.shape, d.step, d.color) for d in pbm.build_displays(skins)}
             self.assertEqual(got, _expected_ids())
         exp = _expected_ids()
-        self.assertEqual((min(exp), max(exp), len(exp)), (91000, 91882, 747))
-        for c in range(9):                                      # each color block is dense: +0 .. +82, spare +83 ..
+        self.assertEqual((min(exp), max(exp), len(exp)), (91000, 91898, 891))
+        for c in range(9):                                      # each color block is dense: +0 .. +98, spare +99
             self.assertEqual(sorted(i for i in exp if 91000 + 100 * c <= i < 91100 + 100 * c),
-                             list(range(91000 + 100 * c, 91083 + 100 * c)))
-        self.assertEqual((pbm.FIRST_ID, pbm.LAST_ID, pbm.BLOCK_LAST_ID), (91000, 91882, 91999))
+                             list(range(91000 + 100 * c, 91099 + 100 * c)))
+        self.assertEqual((pbm.FIRST_ID, pbm.LAST_ID, pbm.BLOCK_LAST_ID), (91000, 91898, 91999))
         self.assertEqual((pbm.OLD_FIRST_ID, pbm.OLD_LAST_ID), (90500, 90699))
-        self.assertEqual((pbm.COLOR_STRIDE, pbm.PER_COLOR), (100, 83))
+        self.assertEqual((pbm.COLOR_STRIDE, pbm.PER_COLOR), (100, 99))
 
     def test_display_id_is_the_module_formula(self):
         """mod-boss-mechanics BossMechanicsIds.h MarkerDisplay(color, shape, step): the same numbers."""
         self.assertEqual(pbm.SHAPE_OFFSET, {"disc": 0, "ring": 1, "timer": 2, "donut": 3, "donut_outline": 10,
-                                            "cone": 17, "cone_outline": 25, "line": 33, "line_outline": 58})
+                                            "cone": 17, "cone_outline": 25, "line": 33, "line_outline": 66})
         self.assertEqual(pbm.display_id(0, "disc"), 91000)
         self.assertEqual(pbm.display_id(2, "ring"), 91201)
         self.assertEqual(pbm.display_id(1, "donut", 3), 91106)
         self.assertEqual(pbm.display_id(0, "cone", 3), 91020)
-        self.assertEqual(pbm.display_id(3, "line_outline", 16), 91374)
-        self.assertEqual(pbm.display_id(8, "line_outline", 24), 91882)
-        for bad in ((9, "disc", 0), (-1, "disc", 0), (0, "ring", 1), (0, "cone", 8), (0, "line", 25)):
+        self.assertEqual(pbm.display_id(3, "line_outline", 8), 91374)
+        self.assertEqual(pbm.display_id(4, "line", 0), 91433)
+        self.assertEqual(pbm.display_id(8, "line_outline", 32), 91898)
+        for bad in ((9, "disc", 0), (-1, "disc", 0), (0, "ring", 1), (0, "cone", 8), (0, "line", 33)):
             with self.assertRaises(ValueError):
                 pbm.display_id(*bad)
 
@@ -595,7 +648,7 @@ class DisplayTableTest(unittest.TestCase):
     def test_ladders_and_colors(self):
         self.assertEqual(pbm.DONUT_RATIOS, (0.25, 0.33, 0.40, 0.50, 0.60, 0.67, 0.75))
         self.assertEqual(pbm.CONE_ANGLES, (30, 45, 60, 90, 120, 150, 180, 270))
-        self.assertEqual(pbm.LINE_STEPS, 25)
+        self.assertEqual(pbm.LINE_STEPS, 33)
         self.assertEqual(pbm.COLORS, ("red", "yellow", "blue", "purple", "orange", "green", "teal", "white", "black"))
         self.assertEqual(pbm.COLOR_RGB, {
             "red": (230, 40, 30), "yellow": (245, 200, 40), "blue": (30, 140, 255), "purple": (185, 90, 250),
@@ -650,12 +703,12 @@ class DisplayTableTest(unittest.TestCase):
                 path = Path(tmp) / name
                 path.write_bytes(src.read_bytes())
                 rows = dbcfile.read_dbc(path, table)
-                probe = {90499, 90500, 90695, 90699, 91883, 91999}
+                probe = {90499, 90500, 90695, 90699, 91899, 91999}
                 extra = [dict(rows[0], ID=90695, **ours),            # an old diagnostic of ours: dropped
                          dict(rows[0], ID=90500, **ours),            # the old fill disc: dropped
                          dict(rows[0], ID=90699, **foreign),         # another owner in the freed slice: kept
                          dict(rows[0], ID=90499, **foreign),         # the rogue's slice: never touched
-                         dict(rows[0], ID=91883, **foreign),         # a spare id of our block: cleared outright
+                         dict(rows[0], ID=91899, **foreign),         # a spare id of our block: cleared outright
                          dict(rows[0], ID=91999, **ours)]
                 dbcfile.write_dbc(path, table, [r for r in rows if r["ID"] not in probe] + extra)
                 pbm.merge_block(path, table, [row_of(d) for d in displays])
@@ -684,7 +737,7 @@ class DisplayTableTest(unittest.TestCase):
             self.assertEqual(d.tint, pbm.COLOR_RGB[d.color])
             self.assertTrue(d.model.endswith("_" + d.color))
             self.assertFalse(any(d.texture.endswith("_" + c) for c in pbm.COLORS), d.texture)
-        self.assertEqual(len(by_key), 83)
+        self.assertEqual(len(by_key), 99)
         for key, group in by_key.items():
             self.assertEqual([d.color for d in group], list(pbm.COLORS), key)
             self.assertEqual(len({d.texture for d in group}), 1, key)
@@ -693,6 +746,7 @@ class DisplayTableTest(unittest.TestCase):
         displays = pbm.build_displays(True)
         textures = _textures(displays)
         self.assertEqual(len(textures), 35)          # disc, ring, timer + 7 + 7 donuts + 8 + 8 cones + 2 lines
+        self.assertEqual(len(_textures(displays + pbm.build_probe())), 36)          # + the probe's full strip
         white = blp_write.expand565(blp_write.rgb565(pbm.WHITE))
         self.assertEqual(white, (255, 255, 255))
         for d in displays:
@@ -709,14 +763,14 @@ class DisplayTableTest(unittest.TestCase):
         ns: dict = {"__name__": "codestyle_sql_under_test"}
         exec(compile(text, str(script), "exec"), ns)
         self.assertIn("BETWEEN 91000 AND 91999;", pbm.build_pending_sql(pbm.build_displays(True)))
-        sql = pbm.build_pending_sql(pbm.build_displays(False) + pbm.build_diagnostics())
+        sql = pbm.build_pending_sql(pbm.build_displays(False) + pbm.build_probe() + pbm.build_diagnostics())
         self.assertIn("DELETE FROM `creaturemodeldata_dbc` WHERE `ID` BETWEEN 90500 AND 90699 AND `ModelName` LIKE "
                       "'SPELLS_bm\\_%';", sql)
         self.assertIn("DELETE FROM `creaturedisplayinfo_dbc` WHERE `ID` BETWEEN 90500 AND 90699 AND "
                       "`TextureVariation_1` LIKE 'bm\\_%';", sql)
         self.assertIn("DELETE FROM `creaturemodeldata_dbc` WHERE `ID` BETWEEN 91000 AND 91999;", sql)
         self.assertIn("DELETE FROM `creaturedisplayinfo_dbc` WHERE `ID` BETWEEN 91000 AND 91999;", sql)
-        self.assertEqual(sql.count("\n(9"), 2 * (747 + 6))      # every row, both tables
+        self.assertEqual(sql.count("\n(9"), 2 * (891 + 1 + 6))  # every row, both tables
         with tempfile.NamedTemporaryFile("w", suffix=".sql", delete=False, encoding="utf-8") as f:
             f.write(sql)
             path = Path(f.name)
@@ -740,7 +794,7 @@ class OutputFilesTest(unittest.TestCase):
         cls.model, cls.skin = _src()
 
     def _files(self, skins: bool, diagnostics: bool = False):
-        displays = pbm.build_displays(skins)
+        displays = pbm.build_displays(skins) + pbm.build_probe()
         files = {**pbm.build_models(displays, self.model, self.skin), **_textures(displays)}
         if diagnostics:
             diags = pbm.build_diagnostics()
@@ -792,16 +846,16 @@ class OutputFilesTest(unittest.TestCase):
     def test_skins_mode_shares_models(self):
         displays, files = self._files(True)
         models = {n for n in files if n.endswith(".m2")}
-        self.assertEqual(len(models), 26 * 9)                   # one quad + 25 line lengths, per color
-        for name in models:
+        self.assertEqual(len(models), 34 * 9 + 1)               # one quad + 33 line lengths, per color; the probe
+        for name in models - {"bm_probe_line.m2"}:
             self.assertEqual(_texture_entry(files[name])[0], 11, name)
             self.assertEqual(m2_patch.replaceable_lookup(files[name])[11], 0, name)
 
-    def test_no_skins_gives_747_models_with_hard_coded_paths(self):
+    def test_no_skins_gives_892_models_with_hard_coded_paths(self):
         displays, files = self._files(False)
         models = {n for n in files if n.endswith(".m2")}
-        self.assertEqual(len(models), 747)
-        self.assertEqual(len({n for n in files if n.endswith(".skin")}), 747)
+        self.assertEqual(len(models), 892)                      # 891 markers + the probe
+        self.assertEqual(len({n for n in files if n.endswith(".skin")}), 892)
         for d in displays:
             data = files[f"{d.model}.m2"]
             ttype, _flags, length, ofs = _texture_entry(data)
