@@ -587,7 +587,9 @@ namespace Warlock
     constexpr uint32 SPELL_BRUTALITY_VOIDWALKER = WarlockData::SPELL_DEMONIC_BRUTALITY_VOIDWALKER;               // hidden, Voidwalker HP%/armor%
     constexpr uint32 SPELL_DEMONIC_POWER_IMP_HASTE = WarlockData::SPELL_DEMONIC_POWER_IMP;            // hidden self-buff on a Wild Imp
     constexpr uint32 SPELL_DEMONIC_VERSATILITY = WarlockData::SPELL_DEMONIC_VERSATILITY;                // hidden aura on every demon
-    // 200855-200859 spare
+    // hidden owner spell power share on every guardian (potency audit fix F1)
+    constexpr uint32 SPELL_DEMONIC_GUARDIAN_POWER = WarlockData::SPELL_DEMONIC_GUARDIAN_POWER;
+    // 200856-200859 spare
 
     // Talent rank spells (200860-200905, DEMONOLOGY.md §2.1/§6)
     constexpr uint32 SPELL_DEMONIC_RESOLVE_R1 = WarlockData::SPELL_DEMONIC_RESOLVE;                 // talent 1224 (repurposed), (0,1)

@@ -121,8 +121,9 @@ SDV_NAME = re.compile(r"^\$(\w+)=", re.MULTILINE)
 MAX_SDV_NAME = 12
 D_AND_D_PINNED = {"Attributes": 67108864, "AttributesEx": 136, "AttributesEx3": 0, "AttributesEx5": 512,
                   "RuneCostID": 101, "PowerType": POWER_RUNE, "CategoryRecoveryTime": 30000, "Effect_1": 27,
-                  "EffectAura_1": 226, "EffectBasePoints_1": 8}  # RETUNE 2026-10-25 re-anchor: was 25
+                  "EffectAura_1": 226, "EffectBasePoints_1": 23}  # 13 -> 23 = potency 39.95 (2026-11-01, DPS balance pass 1031 round R4, Death and Decay +70%); RETUNE 2026-10-25 re-anchor: was 25; 8 -> 12 (2026-11-01, DPS balance pass 1031 round T1, Death and Decay +50%); 12 -> 13 = potency 23.5 on a 1 s basis (2026-11-01, potency audit fix F9)
 D_AND_D_MASK = (m.DEATH_AND_DECAY, 0, 0)
+DND_TICK_POTENCY = 39.95  # DEATH_AND_DECAY_TICK_POTENCY in deathknight_trigger_spells.py (potency audit F9)
 STOCK_COMPARE_COLUMNS = ("Attributes", "AttributesEx", "AttributesEx2", "AttributesEx3", "AttributesEx4",
                          "AttributesEx5", "AttributesEx6", "AttributesEx7", "Effect_1", "Effect_2", "Effect_3",
                          "EffectAura_1", "EffectAura_2", "EffectAura_3", "EffectBasePoints_1", "EffectBasePoints_2",
@@ -482,7 +483,9 @@ def check_vendetta_unbound(removals: list[dict]) -> list[str]:
 
 
 def check_d_and_d_tick_untouched(rows_by_id: dict[int, dict], stock: dict[int, dict]) -> list[str]:
-    """52212 is not an S1 edit: it is either absent from the DSL or still equal to the stock row on every gameplay column."""
+    """52212 is not an S1 edit: it is either absent from the DSL or still equal to the stock row on every gameplay column.
+    EffectBasePoints_1 is exempt: the potency audit (F9) declares the tick with base_potency=0.0, which stores the generated
+    -1 (the caller-supplied amount replaces it), where the stock row stored 0."""
     row = rows_by_id.get(D_AND_D_TICK)
     if row is None:
         return []
@@ -490,7 +493,7 @@ def check_d_and_d_tick_untouched(rows_by_id: dict[int, dict], stock: dict[int, d
     if base is None:
         return [f"{D_AND_D_TICK}: declared by the DSL but has no stock row to compare"]
     return [f"{D_AND_D_TICK}: {col} {_fmt(_i(row, col))}, stock {_fmt(_i(base, col))}"
-            for col in STOCK_COMPARE_COLUMNS if _i(row, col) != _i(base, col)]
+            for col in STOCK_COMPARE_COLUMNS if col != "EffectBasePoints_1" and _i(row, col) != _i(base, col)]
 
 
 def check_d_and_d_stock(rows_by_id: dict[int, dict]) -> list[str]:
@@ -582,6 +585,22 @@ class DeathKnightS1DataTest(unittest.TestCase):
 
     def test_43265_stock_fields(self):
         self.assertClean(check_d_and_d_stock(self._rows()))
+
+    def test_d_and_d_tick_on_one_potency(self):
+        """Potency audit F9: the 43265 carrier (base) and the 52212 tick (attack power) read one shared number, with no
+        hand coefficient row left for 52212 besides the generated one."""
+        pkg = self._pkg()
+        spells = {int(e["id"]): e for e in pkg.spells}
+        carrier = spells[D_AND_D]["effect1"]["_potency"]
+        tick = spells[D_AND_D_TICK]["effect1"]["_potency"]
+        self.assertEqual(carrier["total_potency"], DND_TICK_POTENCY)
+        self.assertEqual(carrier["kind"], "periodic")
+        self.assertEqual(tick["total_potency"], 0.0)  # base_potency=0.0: the passed amount is not doubled
+        self.assertAlmostEqual(tick["ap_coefficient"], DND_TICK_POTENCY / 100.0 / 3.5, places=6)
+        rows = [r for r in pkg.spell_bonus_data if int(r["entry"]) == D_AND_D_TICK]
+        self.assertEqual(len(rows), 1)  # the generated one only, not a second hand bonus_coefficients() row
+        self.assertAlmostEqual(rows[0]["ap_bonus"], tick["ap_coefficient"], places=6)
+        self.assertEqual((rows[0]["direct_bonus"], rows[0]["dot_bonus"], rows[0]["ap_dot_bonus"]), (0.0, 0.0, 0.0))
 
 
 # ---- negative fixtures: every check must fire on a minimal bad input --------------------------------------------

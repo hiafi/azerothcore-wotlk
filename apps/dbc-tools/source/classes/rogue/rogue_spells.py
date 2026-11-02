@@ -19,7 +19,7 @@ from .rogue_assassination import (
     tooltip_venomous_fan_1321, tooltip_vile_poisons_1320,
 )
 from .rogue_shared import ghostly_veil_203723
-from .rogue_subtlety import tooltip_ambush_1336, tooltip_backstab_1335
+from .rogue_subtlety import FAN_OF_KNIVES_WEAPON_POTENCY, tooltip_ambush_1336, tooltip_backstab_1335
 from .rogue_trigger_spells import vanish_11327
 
 
@@ -53,15 +53,15 @@ _dt_flat = _potency.resolve(
 _dt_flat = _replace(_dt_flat, ap_token=_potency.RANGED_AP_TOKEN)
 _dt_cp = _potency.resolve(
     _potency.PotencyEffect(ap_potency=42.042, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=_DT_LEVEL)
-# Eviscerate 2098 effect 1 (direct, T 1.5 s, SpellLevel 1): flat ap_potency 35.49 + per combo point cp_ap_potency
-# 56.056 (M2c user ruling 2026-10-28 +30% of M2a's 27.3 / 43.12, themselves x1.4 of 19.5 / 30.8), both AP terms melee $AP. The tooltip ladder quotes the average per combo point
+# Eviscerate 2098 effect 1 (direct, T 1.5 s, SpellLevel 1): flat ap_potency 36.9096 + per combo point cp_ap_potency
+# 58.29824 (DPS balance pass 1031 round B3 +30% of round B1's 28.392 / 44.8448, which were -20% of M2c's 35.49 / 56.056; M2c user ruling 2026-10-28 +30% of M2a's 27.3 / 43.12, themselves x1.4 of 19.5 / 30.8), both AP terms melee $AP. The tooltip ladder quotes the average per combo point
 # (flat line +5% mid-roll, plus N x the per-point line) times Seal Fate x Coup de Grace x Surprise Attacks ($<evmult>,
 # SDV 1323), each line one `$max()` (potency.md "Tooltips").
 _EVISCERATE_LEVEL = 1
 _ev_flat = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=35.49, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=_EVISCERATE_LEVEL)
+    _potency.PotencyEffect(ap_potency=36.9096, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=_EVISCERATE_LEVEL)
 _ev_cp = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=56.056, kind=_potency.KIND_PERIODIC, t_ms=1500.0),
+    _potency.PotencyEffect(ap_potency=58.29824, kind=_potency.KIND_PERIODIC, t_ms=1500.0),
     spell_level=_EVISCERATE_LEVEL)
 
 
@@ -94,8 +94,8 @@ backstab_53 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=250, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=500, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=20, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
@@ -108,7 +108,8 @@ backstab_53 = spell(
         'was (weapon + flat) x 150%), eff2 ADD_COMBO 1. SpellLevel 4; BaseLevel / MaxLevel / per-level keys come from '
         'the generator. Stock family bits (0x800004), dagger requirement 0x8000, behind-the-target custom attr 0x20000 '
         'and every other column kept. Cost not talent-reducible (shared doc). '
-        'rogue-rework M2a (M1 U4, [tune]): weapon_potency 150 -> 250.'
+        'rogue-rework M2a (M1 U4, [tune]): weapon_potency 150 -> 250. '
+        'weapon_potency 250 -> 500 and sp_potency 10 -> 20 (2026-11-01, DPS balance pass 1031, user ruling: Backstab +100%).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Backstab the target, causing ${$s1*$<bsall>}% weapon damage plus {pot2.avg*bsall}. Awards 1 combo point. Requires a dagger in the main hand. Must be behind the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 32768, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8388612, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 4, 'SpellPriority': 50, 'SpellVisualID_1': 155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -213,8 +214,8 @@ sinister_strike_1752 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=250, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=200, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=8, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
@@ -229,7 +230,8 @@ sinister_strike_1752 = spell(
         'kept. The flat part is the doc\'s [tune] starting value (balanced in M). '
         'S3a A4 (U58): tooltip_vars = SDV 1350 and the multiplier token ssmult (Improved Sinister Strike x Surprise '
         'Attacks) on the weapon percent and the flat part; second binding spell_rog_sinister_strike_combat. '
-        'rogue-rework M2a (M1 S2, [tune]): weapon_potency 100 -> 250 (the second strike 203986 mirrors it).'
+        'rogue-rework M2a (M1 S2, [tune]): weapon_potency 100 -> 250 (the second strike 203986 mirrors it). '
+        'weapon_potency 250 -> 200 and sp_potency 10 -> 8 (2026-11-01, DPS balance pass 1031, user ruling: Sinister Strike -20%; 203986 mirrors it).'
     ),
     tooltip_vars=tooltip_sinister_strike_1350,
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant strike that causes ${$s1*$<ssmult>}% weapon damage plus {pot2.avg*ssmult}. Awards 1 combo point.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8388610, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 1, 'SpellVisualID_1': 253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
@@ -431,7 +433,7 @@ rupture_1943 = spell(
     duration_ms=4000,
     max_duration_ms=24000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, base_potency=29.4075, ap_potency=9.84375, potency_kind='periodic'),
+        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, base_potency=35.289, ap_potency=11.8125, potency_kind='periodic'),
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=1),
     ],
     tooltip_vars=tooltip_blood_spatter_1322,
@@ -467,7 +469,8 @@ rupture_1943 = spell(
         '70.0 + 0.0375 x AP), so the 5-point total is unchanged (840.1 + 0.45 x AP over 12 ticks) and fewer points '
         'only shorten it. The tooltip shows the tick ({pot1}). Stock SpellDescriptionVariableID 63 (the ladder '
         'variables) dropped. '
-        'rogue-rework M2a (M1 S1, [tune]): tick x1.5, base_potency 19.605 -> 29.4075, ap_potency 6.5625 -> 9.84375.'
+        'rogue-rework M2a (M1 S1, [tune]): tick x1.5, base_potency 19.605 -> 29.4075, ap_potency 6.5625 -> 9.84375. '
+        'base_potency 29.4075 -> 35.289 and ap_potency 9.84375 -> 11.8125 (2026-11-01, DPS balance pass 1031, user ruling: Rupture +20%).'
     ),
     raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 8, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bleeding.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _RUPTURE_DESCRIPTION, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 1048576, 'SpellClassMask_3': m.FINISHER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 20, 'SpellVisualID_1': 250, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -545,7 +548,7 @@ eviscerate_2098 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=35.49, cp_ap_potency=56.056, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=47.98248, cp_ap_potency=75.787712, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=1),
     ],
     tooltip_vars=tooltip_seal_fate_1323,
@@ -559,7 +562,10 @@ eviscerate_2098 = spell(
         'combo points, 1000 attack power (1208) to within 0.2%. EffectPointsPerCombo_1 is generated '
         'as 0 - SpellPotency::Apply() adds the per-combo-point term instead. '
         'rogue-rework M2a (M1 R2, user ruling: Eviscerate becomes [tune]): x1.4, ap_potency 19.5 -> 27.3, '
-        'cp_ap_potency 30.8 -> 43.12; M2c (user 2026-10-28): +30% to 35.49 / 56.056. Deadly Throw keeps its 75% ratio; '
+        'cp_ap_potency 30.8 -> 43.12; M2c (user 2026-10-28): +30% to 35.49 / 56.056; '
+        'ap_potency 35.49 -> 28.392 and cp_ap_potency 56.056 -> 44.8448 (2026-11-01, DPS balance pass 1031, user ruling: Eviscerate -20%); '
+        'ap_potency 28.392 -> 36.9096 and cp_ap_potency 44.8448 -> 58.29824 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Eviscerate +30%); '
+        'ap_potency 36.9096 -> 47.98248 and cp_ap_potency 58.29824 -> 75.787712 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Eviscerate +30%). Deadly Throw keeps its 75% ratio; '
         'Between the Eyes (x1.8 of M2a) and the Death from Above landing (x1.15 of M2a) were set on their own in M2c. '
         'The stock-shaped ladder ($m1 / $b1 / $AP x 0.03-0.35) is replaced by the potency '
         'ladder _EVISCERATE_LADDER (average per combo point, both AP terms melee $AP, times $<evmult>).'
@@ -761,8 +767,8 @@ ambush_8676 = spell(
     mana_cost_pct=0,
     range_yards=25.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=350, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=315, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=9, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, base_points=1, implicit_target_a=6),
     ],
@@ -779,7 +785,8 @@ ambush_8676 = spell(
         'was stealthed and is out of melee range. Attributes 0x270010 (ONLY_STEALTHED), Stances 0x20000000 and family '
         'bits 0x800200 kept, so a Shadowed (aura 275) rogue passes CheckCast. NPC users 7052 / 7056 (SAI spellhit -> '
         'Kill Self on 8676) keep landing a spell hit. '
-        'rogue-rework M2a (M1 U1, [tune]): weapon_potency 175 -> 350.'
+        'rogue-rework M2a (M1 U1, [tune]): weapon_potency 175 -> 350; '
+        'weapon_potency 350 -> 315 and the NORMALIZED_WEAPON_DMG sp_potency 10 -> 9 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Ambush -10%).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Ambush the target, causing ${$s1*$<amall>}% weapon damage plus {pot2.avg*amall}. If you are stealthed and more than melee range away, you first teleport behind the target. Awards 2 combo points. Must be Hidden.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'ShapeshiftMask': 536870912, 'SpellClassMask_1': 8389120, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 18, 'SpellPriority': 50, 'SpellVisualID_1': 155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -1378,7 +1385,7 @@ fan_of_knives_51723 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=18, implicit_target_b=16,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=FAN_OF_KNIVES_WEAPON_POTENCY, implicit_target_a=18, implicit_target_b=16,
                radius_yards=8.0),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=18, implicit_target_b=16, radius_yards=8.0),
     ],
@@ -1392,12 +1399,43 @@ fan_of_knives_51723 = spell(
         'dagger +50% hardcode (family d1 b18, 0x40000) stays on purpose: 105% with daggers, 70% otherwise. Off-hand '
         'copy 52874 (spell_linked_spell 51723 -> 52874) untouched. '
         'rogue-rework M2a (M1 AoE option B, [tune]): weapon_potency 70 -> 100 (150% with daggers through the same '
-        'hardcode); the off hand 52874 (npc.csv bp 69 -> 99) and the Second Volley copies 204166 / 204167 match.'
+        'hardcode); the off hand 52874 (npc.csv bp 69 -> 99) and the Second Volley copies 204166 / 204167 match. '
+        'weapon_potency 100 is now the module constant FAN_OF_KNIVES_WEAPON_POTENCY (rogue_subtlety.py), shared with the '
+        'off hand 52874 below and the Second Volley copies, so a retune carries to all four (2026-11-01, potency audit '
+        'fix F6).'
     ),
     raw_overrides={'AttributesEx': 16, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly throw both weapons at all enemies within 8 yards, causing ${$s1*1.5*$<fanmult>}% weapon damage with daggers and ${$s1*$<fanmult>}% with other weapons. Awards 1 combo point.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 1, 'Speed': 18.0, 'SpellClassMask_2': 262144, 'SpellClassSet': 8, 'SpellLevel': 24, 'SpellVisualID_1': 12317, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 scripted_by(fan_of_knives_51723, 'spell_rog_fan_of_knives')
+
+# The off-hand throw, linked from 51723 (spell_linked_spell 51723 -> 52874). It was a stock row in npc.csv (bp 99, a bare
+# 100% that matched 51723 only by coincidence); now declared, with the weapon percent tied to 51723's.
+fan_of_knives_off_hand_52874 = spell(
+    id=52874,
+    name='Fan of Knives',
+    school=School.NORMAL,
+    attributes=65552,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    power_type=PowerType.ENERGY,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=5.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=FAN_OF_KNIVES_WEAPON_POTENCY, implicit_target_a=18,
+               implicit_target_b=16, radius_yards=8.0),
+    ],
+    spell_icon_id=2904,
+    notes=(
+        'pulled from existing data (stock off-hand throw, was in npc.csv). Eff0 base_points 99 -> weapon_potency '
+        'FAN_OF_KNIVES_WEAPON_POTENCY (100, the same 100% off-hand hit), tied to 51723\'s so a retune carries over; '
+        'SpellLevel 80 kept (BaseLevel is generated equal to it) (2026-11-01, potency audit fix F6).'
+    ),
+    raw_overrides={'AttributesEx': 16, 'AttributesEx3': 16777216, 'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 80, 'RangeIndex': 2, 'Speed': 18.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'SpellVisualID_1': 12318, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly throw both weapons at all targets within $a1 yards, causing $s1% weapon damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 8, 'SpellClassMask_2': 262144, 'DefenseType': 2, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
 
 tricks_of_the_trade_57934 = spell(
     id=57934,
@@ -1775,7 +1813,7 @@ riposte_14251 = spell(
     range_yards=5.0,
     duration_ms=30000,
     effects=[
-        Effect(type=31, base_points=149, implicit_target_a=6),
+        Effect(type=31, weapon_potency=683, implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=-21, mechanic=8, implicit_target_a=6, apply_aura=138),
         Effect(type=EffectType.ADD_COMBO_POINTS, base_points=1, implicit_target_a=6),
     ],
@@ -1787,9 +1825,13 @@ riposte_14251 = spell(
         'class_mask_keys; the 150% weapon hit, the 20% slow (30 s), 10 energy and 6 s cooldown are stock; the slow '
         'joins stock spell_group 1059 (attack-speed slows: the strongest applies, no stacking with Thunder Clap); '
         'tooltip and debuff text = the doc, verbatim (Opportunity and the dodge lighting are C++: '
-        'spell_rog_riposte, RoguePlayerScript::OnPlayerIsClass).'
+        'spell_rog_riposte, RoguePlayerScript::OnPlayerIsClass). '
+        'Eff0 base_points 149 -> weapon_potency 150 (the same 150% weapon hit; SpellLevel 0 declared as the potency '
+        'system requires, as stock) (2026-11-01, potency audit fix F14). '
+        'weapon_potency 150 -> 525 (the Improved Riposte cleave 203993 matches) (2026-11-01, DPS balance pass 1031 round R4, user ruling: Riposte +250%). '
+        'weapon_potency 525 -> 683 (682.5 rounded up; the cleave 203993 matches) (2026-11-02, DPS balance pass 1031 round R5, user ruling: Riposte +30%).'
     ),
-    raw_overrides={'AttributesEx': 131584, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attack speed reduced.', 'CasterAuraState': 1, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "A strike that becomes active after you dodge or parry an attack. Deals $s1% weapon damage, slows the target's melee attack speed by $s2% for $d, awards $s3 combo points and grants Opportunity.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, **m.class_mask_keys(m.RIPOSTE_CLASS_S3), 'SpellClassSet': 8, 'SpellVisualID_1': 3799, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'SpellLevel': 0, 'AttributesEx': 131584, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attack speed reduced.', 'CasterAuraState': 1, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "A strike that becomes active after you dodge or parry an attack. Deals $s1% weapon damage, slows the target's melee attack speed by $s2% for $d, awards $s3 combo points and grants Opportunity.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, **m.class_mask_keys(m.RIPOSTE_CLASS_S3), 'SpellClassSet': 8, 'SpellVisualID_1': 3799, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 scripted_by(riposte_14251, 'spell_rog_riposte')   # S3: Opportunity, Improved Riposte's cleave
@@ -1810,7 +1852,7 @@ ghostly_strike_14278 = spell(
     range_yards=5.0,
     duration_ms=0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=390, implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, trigger_spell=ghostly_veil_203723.id, implicit_target_a=1),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
@@ -1822,7 +1864,9 @@ ghostly_strike_14278 = spell(
         'for '
         '5 melee attacks taken, fired in the LAUNCH phase so it lands on every cast, hit or miss). eff0 '
         'WEAPON_PERCENT_DAMAGE weapon_potency 100 (no flat part, no dagger bonus), eff2 ADD_COMBO 1. Family d0 '
-        '0x44000000 -> 0x40000000: b26 (0x4000000, the dagger +50% hardcode) dropped, b30 kept. Cost 40 (stock).'
+        '0x44000000 -> 0x40000000: b26 (0x4000000, the dagger +50% hardcode) dropped, b30 kept. Cost 40 (stock). '
+        'weapon_potency 100 -> 300 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Ghostly Strike +200%). '
+        'weapon_potency 300 -> 390 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Ghostly Strike +30%).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A strike that deals $s1% weapon damage and increases your dodge chance by $203723s1% for your next $203723n melee attacks taken. Awards 1 combo point.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': m.GHOSTLY_STRIKE, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP | m.GHOSTLY_STRIKE_ID, 'SpellClassSet': 8, 'SpellLevel': 10, 'SpellVisualID_1': 4159, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )

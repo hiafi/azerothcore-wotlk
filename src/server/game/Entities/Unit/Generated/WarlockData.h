@@ -210,6 +210,7 @@ namespace WarlockData
     constexpr uint32 SPELL_DEMONIC_AEGIS_30145 = 30145; // demonic_aegis_30145
     constexpr uint32 SPELL_SUMMON_FELGUARD = 30146; // summon_felguard_30146
     constexpr uint32 SPELL_INTERCEPT = 30151; // intercept_30151
+    constexpr uint32 SPELL_FELGUARD_CLEAVE = 30213; // felguard_cleave_30213
     constexpr uint32 SPELL_DEMONIC_TACTICS = 30242; // demonic_tactics_30242
     constexpr uint32 SPELL_DEMONIC_TACTICS_30245 = 30245; // demonic_tactics_30245
     constexpr uint32 SPELL_DEMONIC_TACTICS_30246 = 30246; // demonic_tactics_30246
@@ -459,6 +460,7 @@ namespace WarlockData
     constexpr uint32 SPELL_DEMONIC_BRUTALITY_VOIDWALKER = 200852; // demonic_brutality_voidwalker_200852
     constexpr uint32 SPELL_DEMONIC_POWER_IMP = 200853; // demonic_power_imp_200853
     constexpr uint32 SPELL_DEMONIC_VERSATILITY = 200854; // demonic_versatility_200854
+    constexpr uint32 SPELL_DEMONIC_GUARDIAN_POWER = 200855; // demonic_guardian_power_200855
     constexpr uint32 SPELL_DEMONIC_RESOLVE = 200860; // demonic_resolve_200860
     constexpr uint32 SPELL_DEMONIC_RESOLVE_200861 = 200861; // demonic_resolve_200861
     constexpr uint32 SPELL_DEMONIC_RESOLVE_200862 = 200862; // demonic_resolve_200862

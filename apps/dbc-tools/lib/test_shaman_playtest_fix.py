@@ -24,8 +24,9 @@ from lib.test_shaman_sh0b import _data as _shaman_data  # noqa: E402
 REPO_ROOT = Path(__file__).resolve().parents[3]
 BOT_CONF = REPO_ROOT / "modules" / "mod-playerbots" / "conf" / "playerbots.conf.dist"
 
-# spell id -> ManaCostPct
-BASE_COSTS = {403: 7, 202282: 6, 8056: 4, 8042: 6, 8050: 6}
+# spell id -> ManaCostPct. DPS balance pass 1031 S1 (2026-11-02, user ruling: shaman package; proposal Revision 5): the big
+# three Elemental spenders, Chain Lightning 26 -> 12, Fire Nova 22 -> 12, Magma Totem 27 -> 18.
+BASE_COSTS = {403: 7, 202282: 6, 8056: 4, 8042: 6, 8050: 6, 421: 12, 1535: 12, 202268: 18}
 CHAIN_HEAL_VISUAL = 3659          # Chain Heal 1064's SpellVisual: cast kit 3169 carries the beam
 UCT_HEAL = 202663
 
@@ -140,7 +141,7 @@ class ShamanPlaytestFixTest(unittest.TestCase):
 
     def test_cost_gate_negative(self):
         rows = {403: {"ManaCostPct": 10}, 202282: {"ManaCostPct": 6}, 8056: {"ManaCostPct": 4}, 8042: {"ManaCostPct": 6},
-                8050: {"ManaCostPct": 6}}
+                8050: {"ManaCostPct": 6}, 421: {"ManaCostPct": 12}, 1535: {"ManaCostPct": 12}, 202268: {"ManaCostPct": 18}}
         self.assertEqual(len(check_base_costs(rows)), 1)
         self.assertEqual(len(check_uct_beam({UCT_HEAL: {"SpellVisualID_1": 0}})), 1)
 

@@ -216,7 +216,7 @@ def _weapon_strike(percent, target=_TARGET_UNIT_TARGET_ENEMY, **kwargs):
 # button's own id as well, D3). Icon 90421 (patch-I, playtest 2026-10-30; was Slam's 559). Visual 39.
 colossus_smash_204490 = _arms(
     204490, 'Colossus Smash',
-    [_weapon_strike(420),
+    [_weapon_strike(315),
      Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY,
             trigger_spell=204491)],
     _ICON_COLOSSUS_SMASH,
@@ -225,8 +225,9 @@ colossus_smash_204490 = _arms(
     '133 / 1500, 20 rage, RecoveryTime 20000 (Category 0: never Cooldown-Haste eligible, the allow list must not '
     'gain it), SpellLevel = BaseLevel 40, SpellClassMask_3 = 0xA (d2 b1 Colossus Smash | b3 damaging-ability group). '
     'eff0 WEAPON_PERCENT_DAMAGE 150% [tune], eff1 TRIGGER_SPELL -> 204491 on the target. Icon 90421 (patch-I; was '
-    'Slam\'s 559), visual 39 (Mortal Strike\'s swing).',
-    _raw('Smash the target for 420% weapon damage and expose it for 6 sec, increasing the damage it takes from you by '
+    'Slam\'s 559), visual 39 (Mortal Strike\'s swing). Effect 1 weapon_potency 420 -> 315 '
+    '(2026-10-31, DPS balance pass 1031, user ruling: Arms damage -25%).',
+    _raw('Smash the target for 315% weapon damage and expose it for 6 sec, increasing the damage it takes from you by '
          '15% plus your Mastery. Your Mortal Strike reduces the remaining cooldown of Colossus Smash by 2 sec.',
          level=40, RangeIndex=_RANGE_INDEX_MELEE, FacingCasterFlags=1, DefenseType=_DMG_CLASS_MELEE,
          PreventionType=_PREVENTION_PACIFY, EquippedItemClass=_WEAPON_CLASS, EquippedItemSubclass=_WEAPON_SUBCLASSES,

@@ -87,11 +87,11 @@ holy_light_635 = spell(
     mana_cost_pct=29,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=135.0, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=108.675, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=70,
     tooltip_vars=holy_heal_tooltip,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 13 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=135.0 (paladin-potency-proposals.txt, user value; was 207.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: sp_potency 150 -> 135 (2,383 at 60); description {pot1} -> {pot1*hl} (entry 1105 owned by paladin_holy_spells.py).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 13 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=135.0 (paladin-potency-proposals.txt, user value; was 207.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: sp_potency 150 -> 135 (2,383 at 60); description {pot1} -> {pot1*hl} (entry 1105 owned by paladin_holy_spells.py). sp_potency 135 -> 94.5 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Holy Light healing -30%). sp_potency 94.5 -> 108.675 (2026-11-01, DPS balance pass 1031 round T2, user ruling: Holy Light healing +15%).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 20, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1*hl}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2147483648, 'SpellClassSet': 10, 'SpellLevel': 1, 'SpellVisualID_1': 2936, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -134,11 +134,12 @@ exorcism_879 = spell(
     mana_cost_pct=8,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=87.5, ap_potency=87.5, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=61.25, ap_potency=61.25, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=292,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=140.0 / ap_potency=140.0 (paladin-potency-proposals.txt total 280.0, user value; was 271.8 from a stale worktree copy, corrected 2026-10-02; split evenly - matches the pre-existing 0.15/0.15 equal SP/AP coefficient split); also fixes PLAN F13 (the single-rank migration had zeroed this spell\'s spell_bonus_data direct_bonus, killing its live SP scaling - this conversion restores it as a side effect, same as docs/potency-system.md\'s "Known live bug" note).'
-          ' Effect 1 sp_potency/ap_potency 125.0 -> 87.5 (2026-10-08, DPS balance pass, user ruling: Retribution Exorcism x0.70, round 9).',
+          ' Effect 1 sp_potency/ap_potency 125.0 -> 87.5 (2026-10-08, DPS balance pass, user ruling: Retribution Exorcism x0.70, round 9).'
+          ' Effect 1 sp_potency/ap_potency 87.5 -> 61.25 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
     raw_overrides={'AttributesEx': 512, 'AttributesEx6': 33554432, 'AttributesEx7': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1*mult_exo} Holy damage to an enemy target.  If the target is Undead or Demon, it will always critically hit.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 2, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1104, 'SpellLevel': 20, 'SpellVisualID_1': 324, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -881,15 +882,15 @@ shield_of_righteousness_53600 = spell(
     cooldown_ms=6000,
     category_cooldown_ms=6000,
     mana_cost=0,
-    mana_cost_pct=6,
+    mana_cost_pct=4,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=145.8, potency_kind='direct', implicit_target_a=6, chain_targets=1),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=204.12, potency_kind='direct', implicit_target_a=6, chain_targets=1),
     ],
     spell_icon_id=3031,
     tooltip_vars=prot_sor_tooltip,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 75); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 2 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=145.8 (potency-report base-damage default; not mismatched - this flat bonus never had an SP coefficient at all live, so the new 0.625 coefficient is a real, intended gain from "move to the formula", docs/potency-system.md D4). Only this flat $s1 bonus effect is touched - the separate block-value-based effect (EffectBasePoints_2=99, not modeled by this Effect() list) is untouched.',
-    raw_overrides={'AttributesEx': 512, 'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Slam the target with your shield, causing Holy damage based on your block value plus an additional {pot1*il}.', 'EffectBasePoints_2': 99, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 1048576, 'SpellClassSet': 10, 'SpellLevel': 48, 'SpellVisualID_1': 11792, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 75); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 2 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=145.8 (potency-report base-damage default; not mismatched - this flat bonus never had an SP coefficient at all live, so the new 0.625 coefficient is a real, intended gain from "move to the formula", docs/potency-system.md D4). Only this flat $s1 bonus effect is touched - the separate block-value-based effect (EffectBasePoints_2=99, not modeled by this Effect() list) is untouched. sp_potency 145.8 -> 291.6 and EffectBasePoints_2 99 -> 199 (block-value percent 100% -> 200%, read by SpellEffects.cpp Shield of Righteousness) (2026-11-01, DPS balance pass 1031 round T1, user ruling: Shield of Righteousness +100%). mana_cost_pct 6 -> 4 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Prot Paladin mana costs). sp_potency 291.6 -> 204.12 and EffectBasePoints_2 199 -> 139 (block-value percent 200% -> 140%) (2026-11-02, DPS balance pass 1031 round R6, user ruling: Shield of the Righteous -30%).',
+    raw_overrides={'AttributesEx': 512, 'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Slam the target with your shield, causing Holy damage based on your block value plus an additional {pot1*il}.', 'EffectBasePoints_2': 139, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 1048576, 'SpellClassSet': 10, 'SpellLevel': 48, 'SpellVisualID_1': 11792, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1021,7 +1022,7 @@ holy_shield_20925 = spell(
     cooldown_ms=0,
     category_cooldown_ms=15000,
     mana_cost=0,
-    mana_cost_pct=10,
+    mana_cost_pct=7,
     range_yards=0.0,
     duration_ms=10000,
     effects=[
@@ -1032,7 +1033,7 @@ holy_shield_20925 = spell(
     spell_icon_id=453,
     tooltip_vars=prot_holy_shield_tooltip,
     notes='paladin-rework S3 PROTECTION 4.1: category cooldown 15 s, SpellLevel 30, eff2 -> aura 87 misc 126 (Consecrated Shield carrier, amount 0), tooltip var 1136. pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
-    'Potency system P7 (paladin pass), PLAN F13 fix: effect 2 (the "damage when blocked" proc) is an APPLY_AURA whose aura type is PROC_TRIGGER_DAMAGE (43), not one of the PERIODIC_DAMAGE/PERIODIC_HEAL/SCHOOL_ABSORB shapes potency_report.py\'s classify_effect() recognizes, so this row never appeared in paladin-potency-report.md even though it is one of the six F13 "mixed" rows (data/sql/updates/db_world/2026_09_01_26.sql:444 zeroed its spell_bonus_data direct_bonus, same bug as Exorcism/Holy Wrath/Hammer of Wrath/Avenger\'s Shield/Consecration). Coefficient-implied potency was 21.0 SP + 13.1 AP = 34.1 total against the base-implied 65.8 (V60=176 at level 60, T=1.5s) - since this row never made it into paladin-potency-report.md for the user to review alongside the other five F13 spells, the user set it directly to an even 35/35 (70 total) rather than either derived value. Full potency conversion chosen over a narrower spell_bonus_data-only fix since the effect shape fully supports it.',
+    'Potency system P7 (paladin pass), PLAN F13 fix: effect 2 (the "damage when blocked" proc) is an APPLY_AURA whose aura type is PROC_TRIGGER_DAMAGE (43), not one of the PERIODIC_DAMAGE/PERIODIC_HEAL/SCHOOL_ABSORB shapes potency_report.py\'s classify_effect() recognizes, so this row never appeared in paladin-potency-report.md even though it is one of the six F13 "mixed" rows (data/sql/updates/db_world/2026_09_01_26.sql:444 zeroed its spell_bonus_data direct_bonus, same bug as Exorcism/Holy Wrath/Hammer of Wrath/Avenger\'s Shield/Consecration). Coefficient-implied potency was 21.0 SP + 13.1 AP = 34.1 total against the base-implied 65.8 (V60=176 at level 60, T=1.5s) - since this row never made it into paladin-potency-report.md for the user to review alongside the other five F13 spells, the user set it directly to an even 35/35 (70 total) rather than either derived value. Full potency conversion chosen over a narrower spell_bonus_data-only fix since the effect shape fully supports it. mana_cost_pct 10 -> 7 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Prot Paladin mana costs).',
     raw_overrides={'AttributesEx3': 2, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Block chance increased by $s1%.  {pot2} Holy damage dealt to attacker when blocked.  $n charges.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases chance to block by $s1% for $d and deals {pot2*ld} Holy damage for each attack blocked while active. Each block expends a charge. $n charges.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 8, 'ProcTypeMask': 680, 'RangeIndex': 1, 'SpellClassMask_2': 64, 'SpellClassSet': 10, 'SpellLevel': 30, 'SpellVisualID_1': 5620, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1048,15 +1049,15 @@ avenger_s_shield_31935 = spell(
     cooldown_ms=0,
     category_cooldown_ms=30000,
     mana_cost=0,
-    mana_cost_pct=26,
+    mana_cost_pct=16,
     range_yards=30.0,
     duration_ms=10000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=132.35, ap_potency=132.35, potency_kind='direct', implicit_target_a=6, chain_targets=3),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=264.7, ap_potency=264.7, potency_kind='direct', implicit_target_a=6, chain_targets=3),
         Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED, chain_targets=3),
     ],
     spell_icon_id=2172,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=132.35 / ap_potency=132.35 (paladin-potency-proposals.txt total 264.7, split evenly - matches the pre-existing 0.07/0.07 equal SP/AP coefficient split); also fixes PLAN F13 (zeroed direct_bonus restored as a side effect of the conversion).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=132.35 / ap_potency=132.35 (paladin-potency-proposals.txt total 264.7, split evenly - matches the pre-existing 0.07/0.07 equal SP/AP coefficient split); also fixes PLAN F13 (zeroed direct_bonus restored as a side effect of the conversion). sp_potency 132.35 -> 264.7 and ap_potency 132.35 -> 264.7 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Avenger’s Shield +100%). mana_cost_pct 26 -> 16 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Prot Paladin mana costs).',
     raw_overrides={'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Dazed.', 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls a holy shield at the enemy, dealing {pot1} Holy damage, Dazing them and then jumping to additional nearby enemies.  Affects $x1 total targets.  Lasts $d. Grants 2 stacks of Bulwark.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 35.0, 'SpellClassMask_1': 16384, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 7886, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1213,12 +1214,13 @@ crusader_strike_35395 = spell(
     duration_ms=1,
     effects=[
         Effect(type=121, base_points=-1, implicit_target_a=6),
-        Effect(type=31, weapon_potency=168, implicit_target_a=6),
+        Effect(type=31, weapon_potency=118, implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=6, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2309,
     notes='pulled from existing data'
-          ' Effect 2 weapon_potency 140 -> 168 (2026-10-08, DPS balance pass, user ruling: Retribution x1.20).',
+          ' Effect 2 weapon_potency 140 -> 168 (2026-10-08, DPS balance pass, user ruling: Retribution x1.20).'
+          ' Effect 2 weapon_potency 168 -> 118 (117.6 rounded to a whole number, weapon_potency must be whole) (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
     raw_overrides={'AttributesEx': 268435968, 'AttributesEx6': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant strike that causes ${$m2*$<mult_cs>}% weapon damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 32768, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1103, 'SpellLevel': 1, 'SpellVisualID_1': 8316, 'StanceBarOrder': 4294967295, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1239,11 +1241,12 @@ divine_storm_53385 = spell(
     effects=[
         Effect(type=EffectType.DUMMY, base_points=149, implicit_target_a=1),
         Effect(type=EffectType.DUMMY, base_points=24, implicit_target_a=1),
-        Effect(type=31, weapon_potency=180, implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
+        Effect(type=31, weapon_potency=126, implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
     ],
     spell_icon_id=3027,
     notes='pulled from existing data'
-          ' Effect 3 weapon_potency 150 -> 180 (2026-10-08, DPS balance pass, user ruling: Retribution x1.20).',
+          ' Effect 3 weapon_potency 150 -> 180 (2026-10-08, DPS balance pass, user ruling: Retribution x1.20).'
+          ' Effect 3 weapon_potency 180 -> 126 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
     raw_overrides={'AttributesEx': 16, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant weapon attack that causes $s3% of weapon damage to up to 5 enemies within $a3 yards.  The Divine Storm heals up to 3 injured party or raid members for a total of $s2% of the damage caused.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'MaxTargets': 5, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 12006, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1262,10 +1265,13 @@ beacon_of_light_53563 = spell(
     range_yards=60.0,
     duration_ms=60000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=57, apply_aura=AuraType.PERIODIC_TRIGGER_SPELL, amplitude=1500, trigger_spell=53651),
+        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=57, apply_aura=AuraType.PERIODIC_TRIGGER_SPELL, amplitude=1500, trigger_spell=53651),
     ],
     spell_icon_id=3032,
-    notes='pulled from existing data | paladin-rework S2 HOLY 4.1: SpellLevel/BaseLevel 60 -> 50',
+    notes='pulled from existing data | paladin-rework S2 HOLY 4.1: SpellLevel/BaseLevel 60 -> 50. Effect 0 base_points 99 -> 59 '
+          '(copy 100% -> 60% of the healing done; $s1 in the description, read by the Divine Toll Beacon copy via CalcValue; the '
+          'Holy Light / Flash of Light / Holy Shock copies read the same percent from Light\'s Beacon 53651 eff0, changed in step) '
+          '(2026-11-01, DPS balance pass 1031 round H2, user ruling: Beacon of Light copies 60% of the healing done).',
     raw_overrides={'AttributesEx': 131072, 'AttributesEx4': 524288, 'AttributesEx5': 544, 'AttributesEx6': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Beacon of Light.', 'AuraInterruptFlags': 524288, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The target becomes a Beacon of Light to all members of your party or raid within a 60 yard radius.  Any heals you cast on party or raid members will also heal the Beacon for $s1% of the amount healed.  Only one target can be the Beacon of Light at a time. Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 16777216, 'SpellClassSet': 10, 'SpellLevel': 50, 'SpellVisualID_1': 11876, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1279,14 +1285,14 @@ hammer_of_the_righteous_53595 = spell(
     cooldown_ms=6000,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=6,
+    mana_cost_pct=4,
     range_yards=5.0,
     effects=[
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6, chain_targets=3),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=75, implicit_target_a=6, chain_targets=3),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=315, implicit_target_a=6, chain_targets=3),
     ],
     spell_icon_id=3023,
-    notes='pulled from existing data. paladin-rework S3 PROTECTION 4.1: eff0 NORMALIZED_WEAPON_DMG + eff1 WEAPON_PERCENT_DAMAGE weapon_potency 75 (Crusader Strike shape, both chain 3), no direct-damage effect left (stock main-hand DPS hardcode inert), stale effect-2/3 keys + MaxLevel 59 / BaseLevel 50 removed, SpellLevel 20 (generator sets BaseLevel/MaxLevel).',
+    notes='pulled from existing data. paladin-rework S3 PROTECTION 4.1: eff0 NORMALIZED_WEAPON_DMG + eff1 WEAPON_PERCENT_DAMAGE weapon_potency 75 (Crusader Strike shape, both chain 3), no direct-damage effect left (stock main-hand DPS hardcode inert), stale effect-2/3 keys + MaxLevel 59 / BaseLevel 50 removed, SpellLevel 20 (generator sets BaseLevel/MaxLevel). Effect 1 weapon_potency 75 -> 225 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Hammer of the Righteous +200%). Effect 1 weapon_potency 225 -> 394 (225 x 1.75 = 393.75, rounded to a whole number) (2026-11-01, DPS balance pass 1031 round R4, user ruling: Hammer of the Righteous +75%). mana_cost_pct 6 -> 4 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Prot Paladin mana costs). Effect 1 weapon_potency 394 -> 315 (394 x 0.8 = 315.2, rounded to a whole number) (2026-11-02, DPS balance pass 1031 round R6, user ruling: Hammer of the Righteous -20%).',
     raw_overrides={'AttributesEx': 512, 'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hammer the current target and up to ${$x2-1} additional nearby targets, causing $s2% weapon damage as Holy damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41105, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'Speed': 35.0, 'SpellClassMask_2': 262144, 'SpellClassSet': 10, 'SpellLevel': 20, 'SpellVisualID_1': 11927, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1443,11 +1449,12 @@ judgement_201060 = spell(
     mana_cost_pct=5,
     range_yards=10.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=50.0, ap_potency=50.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=35.0, ap_potency=35.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=205,
     notes='paladin-rework S1 SHARED B3.1: own hit 100 potency hybrid (50 SP / 50 AP), MAGIC class, family bit J (d2 0x8), shared 6 s cooldown with Deliverance, castable with no Primed aura (D1). '
-          'Visual copied from stock Judgement of Light 20271 (5651). spell_pal_judgement_dispatch does the Primed consume / unleash.',
+          'Visual copied from stock Judgement of Light 20271 (5651). spell_pal_judgement_dispatch does the Primed consume / unleash.'
+          ' Effect 1 sp_potency/ap_potency 50.0 -> 35.0 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
     raw_overrides=_raw(
         castable=True,
         SpellClassMask_3=m.JUDGEMENT,
@@ -1572,11 +1579,12 @@ blade_of_justice_201400 = spell(
     mana_cost_pct=4,
     range_yards=20.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=100.0, ap_potency=100.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=65.0, ap_potency=65.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90210,
     notes='paladin-rework S1 RETRIBUTION §4.1: 100 / 100 potency, 10 s cooldown (< 30 s: no Cooldown Haste), BoJ bit d2 0x800, learn 30. Visual = Crusader Strike SV 8316 placeholder (VFX follow-up). '
-          'The six seal echoes 201401-201409 are paladin_trigger_spells.py.',
+          'The six seal echoes 201401-201409 are paladin_trigger_spells.py.'
+          ' Effect 1 sp_potency/ap_potency 100.0 -> 65.0 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -35%).',
     raw_overrides=_raw(
         castable=True,
         SpellClassMask_3=m.BLADE_OF_JUSTICE,
@@ -1604,12 +1612,13 @@ execution_sentence_burst_201411 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=234.0, ap_potency=234.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=163.8, ap_potency=163.8, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90212,
     notes='paladin-rework S1 RETRIBUTION §4.3: the hammer\'s main-target strike, 180 / 180, triggered only. Range 50000 (the hammer can expire with the paladin far away). '
           'spell_pal_execution_sentence_burst applies x(1 + 0.05 * gained) and keeps the main target out of the splash.'
-          ' Effect 1 sp_potency/ap_potency 180.0 -> 234.0 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).',
+          ' Effect 1 sp_potency/ap_potency 180.0 -> 234.0 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).'
+          ' Effect 1 sp_potency/ap_potency 234.0 -> 163.8 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
     raw_overrides=_raw(
         AttributesEx2=0x4,  # SPELL_ATTR2_IGNORE_LINE_OF_SIGHT: script-cast at a target / dest the paladin may not see
         SpellClassMask_3=m.EXECUTION_SENTENCE,
@@ -1635,12 +1644,13 @@ execution_sentence_splash_201412 = spell(
     range_yards=50000.0,
     effects=[
         Effect(
-            type=EffectType.SCHOOL_DAMAGE, sp_potency=90.0, ap_potency=90.0, potency_kind='direct',
+            type=EffectType.SCHOOL_DAMAGE, sp_potency=63.0, ap_potency=63.0, potency_kind='direct',
             implicit_target_a=87, implicit_target_b=16, radius_yards=5.0,
         ),
     ],
     spell_icon_id=90212,
-    notes='paladin-rework S1 RETRIBUTION §4.3: splash around the target / corpse, 90 / 90, 5 yd, MaxTargets 4 (starting value: the main target plus 4 = "burst up to 5"). Triggered only.',
+    notes='paladin-rework S1 RETRIBUTION §4.3: splash around the target / corpse, 90 / 90, 5 yd, MaxTargets 4 (starting value: the main target plus 4 = "burst up to 5"). Triggered only.'
+          ' Effect 1 sp_potency/ap_potency 90.0 -> 63.0 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
     raw_overrides=_raw(
         AttributesEx2=0x4,  # SPELL_ATTR2_IGNORE_LINE_OF_SIGHT: script-cast at a target / dest the paladin may not see
         MaxTargets=4,
@@ -1669,7 +1679,7 @@ execution_sentence_201410 = spell(
     duration_ms=10000,
     effects=[
         Effect(
-            type=EffectType.APPLY_AURA, sp_potency=46.8, ap_potency=46.8, potency_kind='periodic', implicit_target_a=6,
+            type=EffectType.APPLY_AURA, sp_potency=32.76, ap_potency=32.76, potency_kind='periodic', implicit_target_a=6,
             apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000,
         ),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.MOD_DAMAGE_FROM_CASTER),
@@ -1677,7 +1687,8 @@ execution_sentence_201410 = spell(
     spell_icon_id=90212,
     notes='paladin-rework S1 RETRIBUTION §4.3: DoT 36 / 36 per 1 s tick for 10 s (480 total at T 1 s), 60 s cooldown (>= 30 s: Cooldown Haste applies), magic-dispellable (a dispel fires the burst), ES bit d2 0x2000, learn 50. '
           'eff2 = aura 271 (damage taken from the caster) 0% until Fanaticism adds to it through SPELLMOD_EFFECT2; it reads SEAL_DAMAGE (U | P) on mask B. Visual 90044 (patch_paladin_vfx_models.py): Ascension\'s falling hammer as a StateKit on the DoT.'
-          ' Effect 1 (periodic) sp_potency/ap_potency 36.0 -> 46.8 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).',
+          ' Effect 1 (periodic) sp_potency/ap_potency 36.0 -> 46.8 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).'
+          ' Effect 1 (periodic) sp_potency/ap_potency 46.8 -> 32.76 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
     raw_overrides=_raw(
         castable=True,
         AuraDescription_Lang_Mask=16712190,

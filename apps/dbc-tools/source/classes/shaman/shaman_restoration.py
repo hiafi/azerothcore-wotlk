@@ -489,17 +489,19 @@ cloudburst_totem_202652 = _totem_summon(
 )
 scripted_by(cloudburst_totem_202652, 'spell_sha_resto_cloudburst')
 
-# ---- Improved Earth Shield rank 3 (talent 2059, row 8): charges +3, healing +15%, capstone = rank-based --------------------
+# ---- Improved Earth Shield rank 3 (talent 2059, row 8): charges +3, healing +130%, capstone = rank-based -------------------
 # Mirrors A2's 51560 / 51561: eff1 aura 107 misc 4 (SPELLMOD_CHARGES) flat on Earth Shield (d1 b10), eff2 aura 108 pct on
 # the same bit. SpellInfoCorrections.cpp:911-916 forces eff2's misc to SPELLMOD_DAMAGE on 51560 / 51561 (0-verify X2);
 # this row declares misc 0 itself.
 improved_earth_shield_rank3_202653 = _rank(
     202653, 'Improved Earth Shield',
-    [_aura(AuraType.ADD_FLAT_MODIFIER, 2, int(SpellModOp.CHARGES)), _mod(SpellModOp.DAMAGE, True, 14)],
+    [_aura(AuraType.ADD_FLAT_MODIFIER, 2, int(SpellModOp.CHARGES)), _mod(SpellModOp.DAMAGE, True, 129)],
     ICON_IES, 50,
-    _desc('Increases the number of charges of your Earth Shield by 3 and the healing it does by 15%.',
+    _desc('Increases the number of charges of your Earth Shield by 3 and the healing it does by 130%.',
           'Healing with Earth Shield grants you 1 charge of Tidal Waves. This effect can only occur once every 5 sec. '
           'Requires the final rank of Tidal Waves.', True),
+    'eff2 healing +15% -> +130% (stored 14 -> 129) (2026-11-01, DPS balance pass 1031 round T1, user ruling: Earth Shield x2 '
+    'instead of x4, Improved Earth Shield carries Restoration\'s value). '
     'Improved Earth Shield rank 3 (the capstone; the new rank of talent 2059): eff1 SPELLMOD_CHARGES (aura 107 misc 4) '
     'flat +3 (stored 2), eff2 SPELLMOD_DAMAGE (aura 108 misc 0, declared here, X2) pct +15% (stored 14), both on '
     'Earth Shield 974 (d1 b10). The healing flows through 974\'s own effect (379 ignores caster mods). The capstone '

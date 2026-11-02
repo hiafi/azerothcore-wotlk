@@ -8,8 +8,8 @@ from lib.dsl import AuraType, DispelType, Effect, EffectType, PowerType, School
 from lib.dsl.registry import leave_spell_group, pot_text, procs_on, remove_spell_proc, scripted_by, spell, unbind_script
 
 from . import _masks as m
-from .rogue_combat import (HACK_AND_SLASH_CHANCE_PCT, PREY_CRIT_HEALTH_PCT, PREY_DAMAGE_HEALTH_PCT,
-                           SURPRISE_ATTACKS_EXTRA_SHOTS, UNFAIR_ADVANTAGE_ICD_MS, _c, _sec)
+from .rogue_combat import (DEFLECTION_CAP, ENDURANCE_CAP, HACK_AND_SLASH_CHANCE_PCT, PREY_CRIT_HEALTH_PCT,
+                           PREY_DAMAGE_HEALTH_PCT, SURPRISE_ATTACKS_EXTRA_SHOTS, UNFAIR_ADVANTAGE_ICD_MS, _c, _sec)
 from .rogue_subtlety import (CHEAT_DEATH_CAP_MAX_HEALTH_PCT, SINISTER_CALLING_MAX_TARGETS, SINISTER_CALLING_PCT_PER_CP,
                              SLAUGHTER_CDR_MS, THROWING_SPEC_EXTRA_TARGETS, sinister_calling_volley_204165)
 
@@ -518,13 +518,13 @@ endurance_13742 = spell(
     ],
     spell_icon_id=178,
     notes=(
-        'rogue-rework S3a A2, Combat doc "Endurance": eff0 flat COOLDOWN -30000 ms on Evasion only (ENDURANCE_EVASION_READ; the Sprint clause is gone), eff1 Stamina +2% (stock), eff2 DUMMY 10 (Magic damage taken reduction %, read by the 204001 helper).'
+        'rogue-rework S3a A2, Combat doc "Endurance": eff0 flat COOLDOWN -30000 ms on Evasion only (ENDURANCE_EVASION_READ; the Sprint clause is gone), eff1 Stamina +2% (stock), eff2 DUMMY 10 (Magic damage taken reduction %, read by the 204001 helper). Capstone clause (grey on this rank; DPS balance pass 1031): Riposte heal 204004 in Enforcer Stance.'
     ),
     raw_overrides={
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': 'Reduces the cooldown of your Evasion by $/1000;s1 sec. Increases your total Stamina by $s2%. You take $s3% less Magic damage while Evasion is active.',
+        'Description_Lang_enUS': _with_cap('Reduces the cooldown of your Evasion by $/1000;s1 sec. Increases your total Stamina by $s2%. You take $s3% less Magic damage while Evasion is active.', ENDURANCE_CAP, False),
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -968,13 +968,13 @@ endurance_13872 = spell(
     ],
     spell_icon_id=178,
     notes=(
-        'rogue-rework S3a A2, Combat doc "Endurance": eff0 flat COOLDOWN -60000 ms on Evasion only (ENDURANCE_EVASION_READ; the Sprint clause is gone), eff1 Stamina +4% (stock), eff2 DUMMY 20 (Magic damage taken reduction %, read by the 204001 helper).'
+        'rogue-rework S3a A2, Combat doc "Endurance": eff0 flat COOLDOWN -60000 ms on Evasion only (ENDURANCE_EVASION_READ; the Sprint clause is gone), eff1 Stamina +4% (stock), eff2 DUMMY 20 (Magic damage taken reduction %, read by the 204001 helper). Capstone (DPS balance pass 1031): this rank\'s presence plus Enforcer Stance makes every Riposte hit cast the heal 204004 (Rogue::OnRiposteHit).'
     ),
     raw_overrides={
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': 'Reduces the cooldown of your Evasion by $/1000;s1 sec. Increases your total Stamina by $s2%. You take $s3% less Magic damage while Evasion is active.',
+        'Description_Lang_enUS': _with_cap('Reduces the cooldown of your Evasion by $/1000;s1 sec. Increases your total Stamina by $s2%. You take $s3% less Magic damage while Evasion is active.', ENDURANCE_CAP, True),
         'EffectBonusMultiplier_1': 1.0,
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
@@ -991,6 +991,37 @@ endurance_13872 = spell(
         **m.clear_mask_keys(1, 2),
     },
 )
+
+
+def _deflection(spell_id, rank, parry_stored):
+    """Deflection (Combat 1,1): stock parry +2 / +4 / +6% (pulled from existing data, values unchanged); the rank text
+    gains Deflection's capstone clause (DPS balance pass 1031): rank 3 in Enforcer Stance makes Eviscerate heal
+    (204005, Rogue::ApplyCombatSpentClauses)."""
+    return spell(
+        id=spell_id,
+        name='Deflection',
+        school=School.NORMAL,
+        attributes=464,
+        cast_time_ms=0,
+        cooldown_ms=0,
+        category_cooldown_ms=0,
+        mana_cost=0,
+        mana_cost_pct=0,
+        range_yards=0.0,
+        effects=[
+            Effect(type=EffectType.APPLY_AURA, base_points=parry_stored, implicit_target_a=1, apply_aura=47),
+        ],
+        spell_icon_id=558,
+        notes='pulled from existing data (stock parry values kept). DPS balance pass 1031 (rogue tank capstones, user '
+              '2026-11-01): only Description_Lang_enUS changes, adding the capstone clause (grey below rank 3); rank 3\'s '
+              'presence (13854) plus Enforcer Stance makes Eviscerate cast the heal 204005.',
+        raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': f'Rank {rank}', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': _with_cap('Increases your Parry chance by $s1%.', DEFLECTION_CAP, rank == 3), 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+    )
+
+
+deflection_13713 = _deflection(13713, 1, 1)
+deflection_13853 = _deflection(13853, 2, 3)
+deflection_13854 = _deflection(13854, 3, 5)
 
 
 improved_sprint_13875 = spell(
@@ -6693,13 +6724,16 @@ unfair_advantage_strike_51675 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, base_points=49, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=50, implicit_target_a=6),
     ],
     spell_icon_id=2964,
     notes=(
-        'rogue-rework S3a A2, Combat doc "Unfair Advantage" strike: stock effects (50% main hand on eff1); SpellClassSet 8 with no family bits (C14) so the rogue hooks see it (Blade Flurry copies it); stale A_1 0x20006 cleared (R1).'
+        'rogue-rework S3a A2, Combat doc "Unfair Advantage" strike: stock effects (50% main hand on eff1); SpellClassSet 8 with no family bits (C14) so the rogue hooks see it (Blade Flurry copies it); stale A_1 0x20006 cleared (R1). '
+        'Eff1 base_points 49 -> weapon_potency 50 (the same 50% main-hand hit; SpellLevel 0 declared as the potency '
+        'system requires, as stock) (2026-11-01, potency audit fix F14).'
     ),
     raw_overrides={
+        'SpellLevel': 0,
         'AttributesEx4': 16384,
         'CastingTimeIndex': 1,
         'ProcChance': 101,
@@ -6738,13 +6772,16 @@ unfair_advantage_strike_51677 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, base_points=99, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=6),
     ],
     spell_icon_id=2964,
     notes=(
-        'rogue-rework S3a A2, Combat doc "Unfair Advantage" strike: stock effects (100% main hand on eff1); SpellClassSet 8 with no family bits (C14) so the rogue hooks see it (Blade Flurry copies it); stale A_1 0x20006 cleared (R1).'
+        'rogue-rework S3a A2, Combat doc "Unfair Advantage" strike: stock effects (100% main hand on eff1); SpellClassSet 8 with no family bits (C14) so the rogue hooks see it (Blade Flurry copies it); stale A_1 0x20006 cleared (R1). '
+        'Eff1 base_points 99 -> weapon_potency 100 (the same 100% main-hand hit; SpellLevel 0 declared as the potency '
+        'system requires, as stock) (2026-11-01, potency audit fix F14).'
     ),
     raw_overrides={
+        'SpellLevel': 0,
         'AttributesEx4': 16384,
         'CastingTimeIndex': 1,
         'ProcChance': 101,

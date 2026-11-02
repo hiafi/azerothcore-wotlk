@@ -406,14 +406,15 @@ magma_totem_passive_202269 = spell(
 )
 
 magma_totem_ground_202268 = _summon(
-    202268, 'Magma Totem', 300277, SUMMON_PROPS_FIRE, TARGET_DEST_DEST, 15000, 30000, 27, 30.0, ICON_MAGMA, 26,
+    202268, 'Magma Totem', 300277, SUMMON_PROPS_FIRE, TARGET_DEST_DEST, 15000, 30000, 18, 30.0, ICON_MAGMA, 26,
     'Summons a Magma Totem at the target location for $d that deals ' + pot_text(magma_totem_8187, var='mfc')
     + ' Fire damage to all enemies within 8 yards every 1.5 sec. 30 sec cooldown.',
     'Magma Totem, learned at 26 (trainer 210); the player id (ground targeting would break the NPC casters of 8190, '
     'SAI 2555 / 17235, which keep the stock spell, creature 5929 and passive 8188). Ground-targeted (A=87 + Targets '
     '0x40), 30 yd [tune], Fire props 63 (Fire Nova needs a real Totem in the fire slot). 15 s, 30 s cooldown, 27% '
     'base mana [tune] (stock 8190), GCD 1000 / 133. Family d0 b12 (the stock Magma identity bit, in the "any totem" '
-    'mask), not b29. Visual: stock 369.',
+    'mask), not b29. Visual: stock 369. Base mana 27% -> 18% (2026-11-02, DPS balance pass 1031 round S1, user ruling: '
+    'shaman package): Revision 5, the big base mana costs (it stays the priciest of the three cut spells because it lasts).',
     tooltip_vars=shaman_firetotems_1216,
     SpellClassMask_1=MAGMA_SUMMON_D0_B12,
     Targets=TARGET_FLAG_DEST_LOCATION,

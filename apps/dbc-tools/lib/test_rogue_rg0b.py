@@ -114,15 +114,15 @@ def expectations(idx: dict) -> tuple[dict, dict, dict]:
             "SpellClassMask_1": 0, "SpellClassMask_2": 0, "SpellClassMask_3": 0,
         },
         # ---- reworked stock rows: costs, effect order (percent first), levels
-        SS: {"ManaCost": 40, "SpellLevel": 1, "BaseLevel": 1, "Effect_1": 31, "EffectBasePoints_1": 249,   # M2a: 250%
+        SS: {"ManaCost": 40, "SpellLevel": 1, "BaseLevel": 1, "Effect_1": 31, "EffectBasePoints_1": 199,   # DPS balance pass 1031: 200% (M2a 250%)
              "Effect_2": 121, "Effect_3": 80, "MaxLevel": 0, "StartRecoveryCategory": 133, "StartRecoveryTime": 1000},
-        BS: {"ManaCost": 45, "SpellLevel": 4, "BaseLevel": 4, "Effect_1": 31, "EffectBasePoints_1": 249,   # M2a: 250%
+        BS: {"ManaCost": 45, "SpellLevel": 4, "BaseLevel": 4, "Effect_1": 31, "EffectBasePoints_1": 499,   # DPS balance pass 1031: 500% (M2a 250%)
              "Effect_2": 121, "Effect_3": 80},
-        AMBUSH: {"ManaCost": 45, "SpellLevel": 18, "BaseLevel": 18, "Effect_1": 31, "EffectBasePoints_1": 349,   # M2a
+        AMBUSH: {"ManaCost": 45, "SpellLevel": 18, "BaseLevel": 18, "Effect_1": 31, "EffectBasePoints_1": 314,   # M2a; 314 = R4 Ambush -10%
                  "Effect_2": 121, "Effect_3": 80, "EffectBasePoints_3": 1, "RangeIndex": idx["r25"],
                  "EquippedItemClass": 2, "EquippedItemSubclass": 0x2A5F3},
         GS: {"RecoveryTime": 0, "Category": 0, "CategoryRecoveryTime": 0, "DurationIndex": inf, "SpellLevel": 10,
-             "BaseLevel": 10, "SpellClassMask_1": 0x40000000, "Effect_1": 31, "EffectBasePoints_1": 99,
+             "BaseLevel": 10, "SpellClassMask_1": 0x40000000, "Effect_1": 31, "EffectBasePoints_1": 389,
              "Effect_2": 64, "EffectTriggerSpell_2": VEIL, "ImplicitTargetA_2": 1, "Effect_3": 80},
         FOK: {"SpellLevel": 24, "BaseLevel": 24, "Effect_1": 31, "EffectBasePoints_1": 99, "Effect_2": 80,   # M2a: 100%
               "Effect_3": 0},
@@ -396,11 +396,11 @@ def _balanced_single_max(expr: str) -> bool:
 _DT_FLAT = potency.resolve(
     potency.PotencyEffect(ap_potency=26.6175, kind=potency.KIND_DIRECT, t_ms=1500.0), spell_level=36)
 _RUPTURE_TICK = potency.resolve(
-    potency.PotencyEffect(base_potency=29.4075, kind=potency.KIND_PERIODIC, t_ms=2000.0), spell_level=20)
+    potency.PotencyEffect(base_potency=35.289, kind=potency.KIND_PERIODIC, t_ms=2000.0), spell_level=20)
 _DT_CP_LINE = 5 * 112.46235        # cp_line 112.46235 per point (M2a 86.5095, was 61.7925), 5 points
 _DT_CP_AP = 0.9009                 # cp AP 0.18018 x 5, token $AP (melee)
 _DT_FLAT_AP = 0.114075             # spell_bonus_data.ap_bonus of ap_potency 26.6175, token $RAP
-_RUP_AP_TICK = 0.05625            # ap_potency 9.84375 per 2 s tick (1.5 x the old 5-point AP part, M2a)
+_RUP_AP_TICK = 0.0675             # ap_potency 11.8125 per 2 s tick (M2a 1.5 x the old 5-point AP part, then x1.2 in the DPS balance pass 1031)
 
 
 def dt_oracle(level: int, ap: float, rap: float) -> float:
@@ -451,12 +451,13 @@ def check_tooltips(dt_desc: str, rupture_desc: str) -> list[str]:
         try:
             for level in (20, 24, 25, 40, 60, 80):
                 got, want = eval_tooltip(ru, level, 100), rupture_oracle(level, 100)
-                if abs(got - want) > 1.0:
+                # 1.5 (was 1.0): the 1031 x1.2 tick makes the integer base-points rounding at L20 reach 1.06
+                if abs(got - want) > 1.5:
                     bad.append(f"{RUPTURE}: tooltip at L{level} = {got:.2f}, simulate_value says {want:.2f}")
-            if abs(eval_tooltip(ru, 60) - 105.0) > 0.3:
-                bad.append(f"{RUPTURE}: L60 tick {eval_tooltip(ru, 60):.2f}, expected 105.0 (M2a x1.5 of 70.0)")
-            if abs(eval_tooltip(ru, 60, ap=100) - eval_tooltip(ru, 60) - 5.625) > 0.05:
-                bad.append(f"{RUPTURE}: AP term per 100 is not 5.625 (0.05625 x AP per tick)")
+            if abs(eval_tooltip(ru, 60) - 126.0) > 0.3:
+                bad.append(f"{RUPTURE}: L60 tick {eval_tooltip(ru, 60):.2f}, expected 126.0 (M2a x1.5 of 70.0, then x1.2, DPS balance pass 1031)")
+            if abs(eval_tooltip(ru, 60, ap=100) - eval_tooltip(ru, 60) - 6.75) > 0.05:
+                bad.append(f"{RUPTURE}: AP term per 100 is not 6.75 (0.0675 x AP per tick)")
         except Exception as exc:
             bad.append(f"{RUPTURE}: tooltip does not evaluate: {exc!r}")
         if "every 2 sec" not in rupture_desc:
@@ -570,10 +571,11 @@ def _good_rows() -> dict:
 
 
 def _good_descs() -> tuple[str, str]:
-    # M2a: Deadly Throw x1.4 (with Eviscerate), Rupture's tick x1.5; M2c: Deadly Throw x1.3 more (with Eviscerate).
+    # M2a: Deadly Throw x1.4 (with Eviscerate), Rupture's tick x1.5; M2c: Deadly Throw x1.3 more (with Eviscerate);
+    # DPS balance pass 1031: Rupture's tick x1.2 (Deadly Throw unchanged).
     dt = ("causing ${$max($max(0.1141*$RAP+562.3118+0.9009*$AP,4.4085+0.4359*$PL+0.1141*$RAP+562.3118+0.9009*$AP),"
           "1.597*$max(0,$PL-15.2926)+0.1141*$RAP+562.3118+0.9009*$AP)} Physical damage.")
-    ru = ("causes ${$max($max(0.0562*$AP,6.4942+0.6421*$PL+0.0562*$AP),2.3526*$max(0,$PL-15.3685)+0.0562*$AP)} "
+    ru = ("causes ${$max($max(0.0675*$AP,7.793+0.7705*$PL+0.0675*$AP),2.8231*$max(0,$PL-15.3685)+0.0675*$AP)} "
           "Physical damage every 2 sec. Lasts longer per combo point: 1 point: 8 sec, 5 points: 24 sec.")
     return dt, ru
 
@@ -757,8 +759,8 @@ class RogueRG0bNegativeTest(unittest.TestCase):
         for old, new in (("562.3118", "540"), ("0.9009*$AP", "0.95*$AP"), ("0.1141*$RAP", "0.1141*$AP"),
                          ("1.597*$max", "2.4*$max")):
             self.assertGreaterEqual(len(check_tooltips(dt.replace(old, new), ru)), 1, old)
-        for old, new in (("2.3526", "1.8"), ("0.0562*$AP", "0.045*$AP"), ("0.0562*$AP", "0.0562*$RAP"),
-                         ("6.4942+0.6421", "26.4942+0.6421"), ("every 2 sec", "over time")):
+        for old, new in (("2.8231", "1.8"), ("0.0675*$AP", "0.045*$AP"), ("0.0675*$AP", "0.0675*$RAP"),
+                         ("7.793+0.7705", "27.793+0.7705"), ("every 2 sec", "over time")):
             self.assertGreaterEqual(len(check_tooltips(dt, ru.replace(old, new))), 1, old)
         self.assertGreaterEqual(len(check_tooltips("no block", ru)), 1)
         self.assertGreaterEqual(len(check_tooltips(dt, "no block")), 1)

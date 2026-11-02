@@ -170,8 +170,8 @@ plague_strike_66216 = spell(
     range_yards=100.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=49, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=1, points_per_level=0.5933, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=54, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=1, points_per_level=0.6573, implicit_target_a=6),
     ],
     spell_icon_id=2719,
     notes=(
@@ -179,7 +179,8 @@ plague_strike_66216 = spell(
         '(bp 1, 0.5933 per level; was bp 30 / 2.48 = 177 at 60). '
         'pulled from existing data; S2a D1: off-hand copy of 45462 (Threat of Thassarian), percent effect first (weapon_potency 49 = '
         '45462 E1), then 0.245 x the main-hand flat (45462 is flat-first so its flat is scaled by 49%; half of that for the off-hand doubling: bp 124 / 10.12 per level), '
-        'EFFECT_2 empty (stale E2 twins deleted), cast-triggered.'
+        'EFFECT_2 empty (stale E2 twins deleted), cast-triggered. '
+        'weapon_potency 49 -> 54 and flat points_per_level 0.5933 -> 0.6573 (37 -> 40.8 at 60, x 54/49) (2026-11-01, DPS balance pass 1031 round B3, user ruling: Plague Strike +10%, the Threat of Thassarian off-hand copy follows the main hand 45462).'
     ),
     raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'CastingTimeIndex': 1, 'SpellLevel': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'SpellVisualID_1': 11624, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals offhand weapon damage plus a bonus and infects the target with Blood Plague, a disease dealing Shadow damage over time.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassSet': 15, 'SpellClassMask_1': 1, 'DefenseType': 2, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'RuneCostID': 1845},
 )

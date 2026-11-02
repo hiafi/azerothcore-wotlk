@@ -463,6 +463,9 @@ class spell_sha_elemental_owner_stats : public AuraScript
 // 202280 - Earthquake: eff0 is the ground zone (its dynamic object), eff1 a 1 s periodic dummy on the shaman. Each tick
 // casts the single-target tick, as the shaman, at every valid attackable enemy inside the zone with line of sight
 // (H7, no target cap; T0b section 4 and 8). The zone is unhasted: PERIODIC_DUMMY gets no haste.
+// DPS balance pass 1031 S1 (user ruling: shaman package): the enemies are counted first and every tick of this pulse
+// carries the multiplier 100 + EARTHQUAKE_EXTRA_ENEMY_PCT x (count - 1) in SPELLVALUE_BASE_POINT1 (the tick's effect 1
+// is empty; the value only rides on the Spell), which spell_sha_earthquake_tick applies (x1 alone, x2 at 5 enemies).
 class spell_sha_earthquake : public AuraScript
 {
     PrepareAuraScript(spell_sha_earthquake);
@@ -489,14 +492,19 @@ class spell_sha_earthquake : public AuraScript
         Acore::UnitListSearcher<Acore::AnyUnfriendlyUnitInObjectRangeCheck> searcher(zone, nearby, check);
         Cell::VisitObjects(zone, searcher, radius);
 
-        for (Unit* enemy : nearby)
+        nearby.remove_if([caster, zone, tickInfo](Unit* enemy)
         {
-            if (!caster->IsValidAttackTarget(enemy, tickInfo) || !zone->IsWithinLOSInMap(enemy))
-                continue;
+            return !caster->IsValidAttackTarget(enemy, tickInfo) || !zone->IsWithinLOSInMap(enemy);
+        });
 
+        if (nearby.empty())
+            return;
+
+        int32 const multiplierPct = 100 + int32(ShamanData::EARTHQUAKE_EXTRA_ENEMY_PCT) * (int32(nearby.size()) - 1);
+        for (Unit* enemy : nearby)
             LogCastFailure("spell_sha_earthquake", ShamanData::SPELL_EARTHQUAKE_TICK, caster, enemy,
-                caster->CastSpell(enemy, tickInfo, TRIGGERED_FULL_MASK, nullptr, aurEff));
-        }
+                caster->CastCustomSpell(ShamanData::SPELL_EARTHQUAKE_TICK, SPELLVALUE_BASE_POINT1, multiplierPct, enemy,
+                    TRIGGERED_FULL_MASK, nullptr, aurEff));
     }
 
     void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
@@ -511,6 +519,33 @@ class spell_sha_earthquake : public AuraScript
             SPELL_AURA_PERIODIC_DUMMY);
         AfterEffectRemove += AuraEffectRemoveFn(spell_sha_earthquake::HandleRemove, EFFECT_1,
             SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 202281 - Earthquake tick (DPS balance pass 1031 S1): scales the hit by the multiplier spell_sha_earthquake passed in
+// SPELLVALUE_BASE_POINT1 (percent; 0 or 100 leaves it unchanged, a tick cast from anywhere else carries 0). Runs in
+// OnHit, after launch computed the hit (base, spell power, done mods) and before crit and the target's mitigation.
+class spell_sha_earthquake_tick : public SpellScript
+{
+    PrepareSpellScript(spell_sha_earthquake_tick);
+
+    void HandleOnHit()
+    {
+        SpellValue const* spellValue = GetSpellValue();
+        int32 const damage = GetHitDamage();
+        if (!spellValue || damage <= 0)
+            return;
+
+        int32 const multiplierPct = spellValue->EffectBasePoints[EFFECT_1];
+        if (multiplierPct <= 100)
+            return;
+
+        SetHitDamage(int32(int64(damage) * multiplierPct / 100));
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_sha_earthquake_tick::HandleOnHit);
     }
 };
 
@@ -886,6 +921,7 @@ void AddSC_shaman_totem_spell_scripts()
     RegisterSpellScript(spell_sha_water_bolt);
     RegisterSpellScript(spell_sha_elemental_owner_stats);
     RegisterSpellScript(spell_sha_earthquake);
+    RegisterSpellScript(spell_sha_earthquake_tick);
     RegisterSpellAndAuraScriptPair(spell_sha_healing_rain, spell_sha_healing_rain_aura);
     RegisterSpellScript(spell_sha_elemental_engaged_aoe);
     RegisterSpellScript(spell_sha_angered_earth_engaged);

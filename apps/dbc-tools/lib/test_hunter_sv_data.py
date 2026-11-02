@@ -16,7 +16,7 @@ raw_overrides via `build.build_spell_row`), so a stale raw twin that wins fails 
   (c) the four castables (A4, stale line 14): Attributes 0x50000 (no USES_RANGED_SLOT), CastingTimeIndex 1, live cast
       0, EquippedItemClass -1, GCD 1500 / 133, their one family bit, not an `_is_hunter_shot` row, SpellLevel = learn
       level (N2), plus the per-spell shape of 5.1 / 5.3 / 5.4 / 5.8;
-  (d) Explosive Shot 53301 (A5, stale line 1, brief 7): index 18 / live cast 0 / class 2, eff0 SCHOOL_DAMAGE 76.5 AP
+  (d) Explosive Shot 53301 (A5, stale line 1, brief 7): index 18 / live cast 0 / class 2, eff0 SCHOOL_DAMAGE 53.55 AP
       direct, eff1 bare PERIODIC_DUMMY 1000 ms (no potency, no potency_excluded), Ex5 0x200 cleared, SpellLevel 30 and
       no raw BaseLevel / MaxLevel key in its spell() call; `check_ranged_shot_cast_bars` sees it; the blast 53352
       carries the only blast potency (26 AP, generated spell_bonus_data replaces 0.16), Ex2 0x4, class -1, no stale
@@ -261,7 +261,7 @@ EXPLOSIVE_SHOT_FIELDS = {
     "EffectAura_2": AURA_PERIODIC_DUMMY, "ImplicitTargetA_2": 6, "EffectAuraPeriod_2": 1000,
     "EffectBasePoints_2": -1, "Effect_3": 0, "SpellDescriptionVariableID": 1180,
 }
-EXPLOSIVE_SHOT_AP, BLAST_AP, BLAST_STALE_AP_BONUS = 76.5, 26.0, 0.16
+EXPLOSIVE_SHOT_AP, BLAST_AP, BLAST_STALE_AP_BONUS = 53.55, 18.2, 0.16
 EXPLOSIVE_SHOT_DURATION_MS = 2000
 SPLASH_PCT = 40
 
@@ -1523,7 +1523,7 @@ def good_explosive() -> tuple[dict, dict, str]:
     row = {"ID": EXPLOSIVE_SHOT, **EXPLOSIVE_SHOT_FIELDS, "Speed": 40.0, "SpellClassSet": 9,
            "SpellClassMask_2": D1_EXPLOSIVE_SHOT, "DurationIndex": DUR2000, "AttributesEx5": 0,
            "AttributesEx2": 0x20000}
-    entry = {"id": EXPLOSIVE_SHOT, "effect1": {"_potency": {"kind": "direct", "total_potency": 76.5,
+    entry = {"id": EXPLOSIVE_SHOT, "effect1": {"_potency": {"kind": "direct", "total_potency": 53.55,
                                                             "ap_coefficient": 0.43}},
              "effect2": {}}
     source = ("explosive_shot_53301 = spell(\n    id=53301,\n    raw_overrides={'SpellLevel': 30, "
@@ -1534,7 +1534,7 @@ def good_explosive() -> tuple[dict, dict, str]:
 def good_blast() -> tuple[dict, dict, list[dict]]:
     row = {"ID": EXPLOSIVE_BLAST, "Effect_1": EFFECT_SCHOOL_DAMAGE, "SpellLevel": 30, "BaseLevel": 30, "MaxLevel": 0,
            "EquippedItemClass": -1, "SpellClassMask_3": D2_EXPLOSIVE_SHOT_TICK, "AttributesEx2": 0x4}
-    entry = {"id": EXPLOSIVE_BLAST, "effect1": {"_potency": {"kind": "direct", "total_potency": 26.0,
+    entry = {"id": EXPLOSIVE_BLAST, "effect1": {"_potency": {"kind": "direct", "total_potency": 18.2,
                                                              "ap_coefficient": 0.1429}}}
     return row, entry, [{"entry": EXPLOSIVE_BLAST, "ap_bonus": 0.1429}]
 

@@ -245,14 +245,16 @@ scavenger_energize_202044 = _helper(
 # ---- 5.3 Wildfire Bomb 202045 (talent (2,1), learn 20; impact + burn in one spell, d1 b6) ----
 wildfire_bomb_202045 = _castable(
     202045, 'Wildfire Bomb', School.FIRE, 2505, 20,
-    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=84.0, potency_kind='direct', implicit_target_a=53,
+    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=67.2, potency_kind='direct', implicit_target_a=53,
             implicit_target_b=16, radius_yards=8.0),
-     Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000, ap_potency=16.0,
+     Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000, ap_potency=12.8,
             potency_kind='periodic', implicit_target_a=53, implicit_target_b=16, radius_yards=8.0)],
     'S3a A1 / SV 5.3 + A4: Wildfire Bomb. Fire instant, unit-targeted, 15 yd, 18 s cooldown (< 30 s: no Cooldown '
     'Haste), category 0, 6% base mana (placeholder, M), eff0 impact 120 AP potency (T 1.5), eff1 burn 23 AP potency '
     'per 1 s tick for 6 s (snapshots at impact), both A 53 / B 16 8 yd. Dispel Magic. d1 b6 (WILDFIRE_BOMB), '
-    'CastingTimeIndex 1, tooltip_vars 1180. The impact is a direct Fire hit (Burning Tar), the burn never is.',
+    'CastingTimeIndex 1, tooltip_vars 1180. The impact is a direct Fire hit (Burning Tar), the burn never is. '
+    'Effect 1 ap_potency 84.0 -> 67.2 (2026-11-01, DPS balance pass 1031, user ruling: Wildfire Bomb -20%). '
+    'Effect 2 ap_potency 16.0 -> 12.8 (2026-11-01, DPS balance pass 1031, user ruling: Wildfire Bomb -20%).',
     bit=(2, m.WILDFIRE_BOMB), cooldown_ms=18000, mana_pct=6, range_yards=15.0, duration_ms=6000,
     dispel=DispelType.MAGIC, tooltip_vars=sv_explosive_1180,
     raw={'Description_Lang_enUS': 'Hurl a bomb at an enemy. It explodes for {pot1*tntdemo} Fire damage to the target '

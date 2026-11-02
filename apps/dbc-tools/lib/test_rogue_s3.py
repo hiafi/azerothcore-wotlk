@@ -40,7 +40,8 @@ from lib.test_rogue_rg0b import check_rows  # noqa: E402
 # ---- ids (brief section 2) ---------------------------------------------------------------------------------------------
 
 S3_IDS = tuple(range(203950, 204004))                 # 54 new rows
-S3_SPARE = tuple(range(204004, 204130))               # fix-pass spare + unassigned: nothing may be built here
+S3_SPARE = tuple(range(204007, 204130))               # fix-pass spare + unassigned: nothing may be built here
+TANK_CAPSTONE_IDS = (204004, 204005, 204006)          # DPS balance pass 1031: Endurance / Deflection / Reinforced Leather
 QR = (203950, 203951, 203952)
 ACC = (203953, 203954, 203955)
 LEARN, MARKER, PS, BTE = 203956, 203957, 203958, 203959
@@ -537,7 +538,7 @@ def check_names(rows: dict) -> list[str]:
 
 def check_s3_id_set(rows: dict) -> list[str]:
     bad = [f"{sid}: S3 row not built" for sid in S3_IDS if sid not in rows]
-    bad += [f"{sid}: unexpected row (204004-204129 are spare / unassigned)" for sid in S3_SPARE if sid in rows]
+    bad += [f"{sid}: unexpected row (204007-204129 are spare / unassigned)" for sid in S3_SPARE if sid in rows]
     return bad
 
 
@@ -1146,7 +1147,7 @@ class RogueS3NegativeTest(unittest.TestCase):
         rows = {sid: {} for sid in S3_IDS}
         self.assertEqual(check_s3_id_set(rows), [])
         self.assertEqual(len(check_s3_id_set({k: v for k, v in rows.items() if k != PS})), 1)
-        for extra in (204004, 204029, 204030, 204129):
+        for extra in (204007, 204029, 204030, 204129):
             self.assertEqual(len(check_s3_id_set({**rows, extra: {}})), 1, extra)
         self.assertEqual(len(check_s3_id_set({**rows, 204130: {}})), 0)       # S2's first row is not a stray
 

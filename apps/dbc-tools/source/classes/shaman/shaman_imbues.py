@@ -161,7 +161,7 @@ flametongue_attack_202202 = spell(
     id=202202, name='Flametongue Attack', school=School.FIRE, attributes=_ATTR0_DO_NOT_SHEATH,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=8.0, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=6.8, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         Effect(type=EffectType.DUMMY, base_points=999, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
@@ -172,7 +172,8 @@ flametongue_attack_202202 = spell(
           'in ms (SPELLVALUE_BASE_POINT1; stored 999 = live 1000 ms = 1 s = 8 potency when cast bare). '
           'spell_sha_flametongue_attack multiplies the hit by ms / 1000 (B4). AttributesEx 0x88, DO_NOT_SHEATH and '
           'RangeIndex as stock 10444; AttributesEx3 0x10000 (marker only; the real no-proc guard is the cast being triggered with no NOT_A_PROC, '
-          'SpellAuras.cpp GetProcEffectMask).',
+          'SpellAuras.cpp GetProcEffectMask). '
+          '2026-11-01 sp_potency 8.0 -> 6.8 (2026-11-01, DPS balance pass 1031, user ruling: Flametongue Attack -15%; the user wrote "15%" with no sign, read as a cut because Enhancement is over target).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_1': m.FLAMETONGUE_ATTACK, 'DefenseType': _DMG_MAGIC,
         'EquippedItemClass': -1, 'SpellLevel': 10, 'CastingTimeIndex': 1, 'AttributesEx': 0x88,

@@ -33,6 +33,7 @@
 #include "Spell.h"
 #include "SpellAuras.h"
 #include "SpellInfo.h"
+#include "SpellMgr.h"
 #include "TemporarySummon.h"
 #include "Unit.h"
 #include "UnitScript.h"
@@ -107,7 +108,8 @@ public:
     }
 
     // The minion damage seam on white swings (Unit::CalculateMeleeDamage passes the target first): S1 U17
-    // Bloodworms, S3 U16 every Unholy minion kind. GetMinionDamageMultiplier is 1.0 for anything else.
+    // Bloodworms, S3 U16 every Unholy minion kind. GetMinionDamageMultiplier is 1.0 for anything else. The Army of
+    // the Dead ghoul's whole swing (weapon and attack power parts) is then scaled by a data percentage.
     void ModifyMeleeDamage(Unit* /*target*/, Unit* attacker, uint32& damage) override
     {
         if (!damage || !attacker || !attacker->IsCreature() ||
@@ -118,7 +120,15 @@ public:
         if (!owner)
             return;
 
-        float const multiplier = DeathKnight::GetMinionDamageMultiplier(owner, attacker, nullptr);
+        float multiplier = DeathKnight::GetMinionDamageMultiplier(owner, attacker, nullptr);
+
+        // Army of the Dead ghoul white-hit damage, in percent: dbc-tools data in Army of the Dead 42650 effect 3
+        // (EFFECT_2) (user ruling 2026-11-01, DPS balance pass 1031: ghoul melee -30%). Unchanged if the spell is
+        // missing. Felguard (spell_warlock_demonology.cpp) and Cat Form (druid_hooks.cpp) precedent.
+        if (DeathKnight::GetMinionKind(attacker) == DeathKnight::MinionKind::ArmyGhoul)
+            if (SpellInfo const* armyInfo = sSpellMgr->GetSpellInfo(DeathKnightData::SPELL_ARMY_OF_THE_DEAD))
+                multiplier *= float(armyInfo->Effects[EFFECT_2].CalcValue()) / 100.0f;
+
         if (multiplier != 1.0f)
             damage = uint32(std::max(0.0f, float(damage) * multiplier));
     }

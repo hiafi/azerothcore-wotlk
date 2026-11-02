@@ -13,6 +13,15 @@ Ids (Enhancement block 202360-202519):
     202415         [S3a fix pass] Stormstrike cleave strike, off hand (clone of 32176 that procs nothing; M1)
     202416-202419  [playtest fix pass P2] the cosmetic ascend bursts at the shaman's feet: Fire / Frost / Wind / Earth (Elemental and
                    Earthen Ascendance share the Earth one); no damage, threat, aura or script binding
+    202440-202442  [DPS balance pass 1031 T1, 2026-11-01] the tank capstone helpers: Earthen Power's spread slow, Anticipation's
+                   Chain Lightning stone shell, Spirit Guard's crumbled-stone shell
+    202443         [DPS balance pass 1031 R4, 2026-11-01] retired 2026-11-02 (round S1): Rockbiter's hidden +100% tank damage
+                   bonus and its spell_linked_spell row are gone (user: "implement the plan as it was without hidden
+                   buffs"); the id stays unused (clients may have cached it)
+    202444-202449  [DPS balance pass 1031 S1, 2026-11-02] the tank Lightning Shield kit and the Stormstrike cleave: Toughness's
+                   orb heal 202444, Anticipation's Chain Lightning jumps child 202447, Static Shock's orb damage child
+                   202448, Improved Lightning Shield's Stormstrike cleave 202449 (here); the arc 202445 and the Chain
+                   Lightning orb 202446 sit next to the orb 26364 in shaman_trigger_spells.py. 202450-202519 stay spare.
 SkillLineAbility 30680 (Living Earth), creatures 300262-300265 (the four Elemental Spirit wolves), tooltip entries 1217-1219,
 spell_group 1259.
 
@@ -244,6 +253,27 @@ UR_R2 = const('UR_R2', 6, 'Unleashed Rage rank 2: magic damage bonus, percent [f
 UR_R3 = const('UR_R3', 9, 'Unleashed Rage rank 3: magic damage bonus, percent [fixed].')
 MOLTEN_FURY_RAMP_PCT = const('MOLTEN_FURY_RAMP_PCT', 10, 'Molten Fury capstone: Magma Totem damage bonus per pulse already fired, percent [fixed].')
 MASTERY_ROUND_PCT = const('MASTERY_ROUND_PCT', 1, 'Ascendance capstone: Mastery is rounded to whole percent in the integer aura amounts (Stoneskin 1 % x (1 + M) per stack) [fixed].')
+EARTHEN_POWER_SLOW_RADIUS_YD = const('EARTHEN_POWER_SLOW_RADIUS_YD', 8.0, 'Earthen Power capstone: radius around the shaman in which Earth Shock\'s attack speed slow also lands (202440), yd [tune].')
+# DPS balance pass 1031 round S1 (2026-11-02, user ruling: shaman package; proposal
+# .agents/plans/dps-balance-1031/dps-balance-1031.SHAMAN-TANK-LIGHTNING-SHIELD.PROPOSAL.md Revisions 1-5): the tank's Lightning
+# Shield kit (Rockbiter-gated, one job per tank talent), Improved Lightning Shield's Stormstrike cleave and Thundering
+# Strikes' Chain Lightning surge.
+ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT = const('ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT', 10, 'Rockbiter with any Spirit Guard rank: damage dealt bonus, percent (Rockbiter 8017 effect 0, aura 79, set by spell_sha_rockbiter_damage; 0 without Spirit Guard) [tune].')
+STATIC_SHOCK_ORB_DAMAGE_R1 = const('STATIC_SHOCK_ORB_DAMAGE_R1', 20, 'Static Shock rank 1 under Rockbiter: Lightning Shield orb damage bonus (202448 SPELLMOD_DAMAGE on d0 b10), percent [tune].')
+STATIC_SHOCK_ORB_DAMAGE_R2 = const('STATIC_SHOCK_ORB_DAMAGE_R2', 40, 'Static Shock rank 2 under Rockbiter: Lightning Shield orb damage bonus, percent [tune].')
+STATIC_SHOCK_ORB_DAMAGE_R3 = const('STATIC_SHOCK_ORB_DAMAGE_R3', 55, 'Static Shock rank 3 under Rockbiter: Lightning Shield orb damage bonus, percent [tune].')
+STATIC_SHOCK_ARC_PCT = const('STATIC_SHOCK_ARC_PCT', 55, 'Static Shock under Rockbiter: an orb arc (202445) deals this percent of the orb 26364\'s potency (the arc\'s own row) [tune].')
+STATIC_SHOCK_ARC_RADIUS_YD = const('STATIC_SHOCK_ARC_RADIUS_YD', 8.0, 'Static Shock under Rockbiter: an orb arcs to enemies attacking the shaman within this radius of the orb\'s target, yd [fixed].')
+ANTICIPATION_CL_JUMPS = const('ANTICIPATION_CL_JUMPS', 2, 'Anticipation under Rockbiter: extra Chain Lightning jump targets (202447 SPELLMOD_JUMP_TARGETS) [fixed].')
+ILS_SS_CLEAVE_R1 = const('ILS_SS_CLEAVE_R1', 33, 'Improved Lightning Shield rank 1: Stormstrike cleave (202449) share of the landed Stormstrike damage, percent [tune].')
+ILS_SS_CLEAVE_R2 = const('ILS_SS_CLEAVE_R2', 66, 'Improved Lightning Shield rank 2: Stormstrike cleave share, percent [tune].')
+ILS_SS_CLEAVE_R3 = const('ILS_SS_CLEAVE_R3', 100, 'Improved Lightning Shield rank 3: Stormstrike cleave share, percent [tune].')
+ILS_SS_CLEAVE_TARGETS = const('ILS_SS_CLEAVE_TARGETS', 4, 'Improved Lightning Shield: enemies the Stormstrike cleave strikes besides the target [fixed].')
+ILS_SS_CLEAVE_RADIUS_YD = const('ILS_SS_CLEAVE_RADIUS_YD', 8.0, 'Improved Lightning Shield: Stormstrike cleave radius around the target, yd [fixed].')
+THUNDERING_SURGE_R1 = const('THUNDERING_SURGE_R1', 40, 'Thundering Strikes rank 1: damage bonus of a 5-stack Maelstrom Weapon Chain Lightning under Flametongue / Frostbrand / Windfury, percent [tune].')
+THUNDERING_SURGE_R2 = const('THUNDERING_SURGE_R2', 80, 'Thundering Strikes rank 2: the Chain Lightning surge, percent [tune].')
+THUNDERING_SURGE_R3 = const('THUNDERING_SURGE_R3', 125, 'Thundering Strikes rank 3: the Chain Lightning surge, percent [tune].')
+THUNDERING_SURGE_MW_STACKS = const('THUNDERING_SURGE_MW_STACKS', 5, 'Thundering Strikes: Maelstrom Weapon stacks a Chain Lightning cast needs for the surge [fixed].')
 
 
 # =====================================================================================================================
@@ -504,16 +534,18 @@ def _cleave_strike(spell_id: int, off_hand: bool):
         power_type=3 if off_hand else 0,
         cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=5.0,
         effects=[Effect(
-            type=EffectType.WEAPON_DAMAGE, base_points=0, die_sides=0, implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
-            potency_excluded='clone of the stock Stormstrike strike ' + ('32176' if off_hand else '32175') + ': 100% weapon damage '
-                             'like the primary strike, level independent.',
+            type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=140, implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
         )],
         spell_icon_id=ICON_STORMSTRIKE,
         notes=NOTE + 'Stormstrike cleave strike, ' + ('off hand (clone of 32176)' if off_hand else 'main hand (clone of 32175)') +
               ': cast by spell_sha_enh_stormstrike::Cleave on the Frost Ascendance (1) / Elemental Ascendance (2) cleave targets. '
               'Same as the stock strike except AttributesEx3 loses NOT_A_PROC (0x200) and gains SUPPRESS_CASTER_PROCS (0x10000), '
               'AttributesEx4 gains SUPPRESS_WEAPON_PROCS (0x00800000), and the own mask is d2 b10 | b12 only (no d1 b4). It rolls '
-              'no proc of the shaman\'s and no enchant / item proc (S3a code review M1a). Physical, melee range, SpellLevel 40.',
+              'no proc of the shaman\'s and no enchant / item proc (S3a code review M1a). Physical, melee range, SpellLevel 40. '
+              'Eff0 WEAPON_DAMAGE base 0 / die 0 (potency_excluded) -> WEAPON_PERCENT_DAMAGE weapon_potency 100, the same '
+              '100% hit as the primary strikes 32175 / 32176 (shaman_spells.py), now on potency; BaseLevel was 0 and is '
+              'now generated equal to SpellLevel 40 (2026-11-01, potency audit fix F14). '
+              'Effect 1 weapon_potency 100 -> 140 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Stormstrike +40%).',
         raw_overrides=_raw(
             'Instantly attacks with ' + ('your off-hand weapon.' if off_hand else 'your main-hand weapon.'), '', 40,
             AttributesEx=512 if not off_hand else 0,
@@ -677,7 +709,7 @@ living_earth_202361 = spell(
     )],
     spell_icon_id=ICON_LIVING_EARTH,
     tooltip_vars=shaman_livearth_1219,
-    notes=NOTE + 'Living Earth (talent 60296 rank, SLA 30680, learned at 30): instant, GCD 1500 / 133 (core-hasted: magic class, not an '
+    notes=NOTE + 'sp_potency 40 -> 80 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Living Earth +100%), then 80 -> 60 (2026-11-01, DPS balance pass 1031 round T2, user ruling: Living Earth overshot, settle between the two). Then 60 -> 20 (2026-11-01, DPS balance pass 1031 round R4, user ruling: shaman tank damage to ~750 / survival to ~80 s): with Earth Shield x2 and the mail tank set the 1-target boss run survived the full 120 s; Living Earth (58% of all absorbs) and the Spirit Guard shell are the tank-only sustain cut back. Then 20 -> 40 (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package): the tank keeps Lightning Shield instead of a self Earth Shield from level 45, so R4\'s cut is relaxed to the pre-T1 value; Toughness\'s orb heal (202444) carries the healing Earth Shield gave. Living Earth (talent 60296 rank, SLA 30680, learned at 30): instant, GCD 1500 / 133 (core-hasted: magic class, not an '
           'ability), RecoveryTime 10000 (Cooldown Haste does not apply: < 30 s), 3% base mana, CasterAuraSpell 8017 ("Requires '
           'Rockbiter"; the server refuses with SPELL_FAILED_CASTER_AURASTATE). E0 SCHOOL_ABSORB every school, 40 potency absorb on the '
           'healing scale (T 1500, about 424 at 60 [tune]), 10 s; E0 is the effect Guardian Totems\' SPELLMOD_EFFECT1 (+10 / 20 %, '
@@ -1065,9 +1097,153 @@ molten_fury_rank1_202365 = _molten_fury(202365, 10, False)
 molten_fury_rank2_202366 = _molten_fury(202366, 20, False)
 molten_fury_rank3_202367 = _molten_fury(202367, 30, True)
 
+# ---- Tank survivability capstones (2026-11-01, DPS balance pass 1031 round T1, user ruling; proposal ---------------------------------
+# .agents/plans/dps-balance-1031/dps-balance-1031.SHAMAN-TANK-CAPSTONES.PROPOSAL.md): the three helpers the capstones of Earthen Power
+# (51524), Anticipation (16272) and Spirit Guard (202370) cast, all under Rockbiter only. Ids from the S3a spare range 202440-202519.
+earthen_power_slow_202440 = spell(
+    id=202440, name='Earthen Power', school=School.NATURE, attributes=0, category=0,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0, duration_ms=8000,
+    effects=[_aura(138, -11, target=TARGET_UNIT_TARGET_ENEMY, mechanic=8)],
+    spell_icon_id=ICON_EARTH_SHOCK,
+    notes=NOTE + 'Earthen Power capstone (2026-11-01, DPS balance pass 1031 round T1, user ruling): the attack speed slow Earth Shock '
+          'spreads to every other enemy within EARTHEN_POWER_SLOW_RADIUS_YD of the shaman (spell_sha_earth_shock_rockbiter, only '
+          'enemies engaged with the shaman or the group, never one already slowed by this shaman\'s Earth Shock). E0 aura 138 '
+          '(MOD_MELEE_HASTE) mechanic 8 (slow attack), as Earth Shock 8042 E0; base -11 (live -10) is a placeholder: the script '
+          'passes the live value as bp0, 8042 E0 plus the caster\'s SPELLMOD_EFFECT1 (Earthen Power\'s own -10, so -20%). A percent, '
+          'no potency (lint PERCENT_FIELD_EFFECTS). 8 s (Earth Shock\'s). No family bits, so no shaman SpellMod reaches it. Range '
+          '50000 (L6), the script filters line of sight. Visible debuff, aura text number-free.',
+    raw_overrides=_raw(
+        'Reduces melee attack speed by $s1% for $d.', 'Attack speed slowed.', 50, family=False, DefenseType=1,
+        AttributesEx3=ATTR3_SUPPRESS_CASTER_PROCS,
+    ),
+)
+
+anticipation_shell_202441 = _buff(
+    202441, 'Anticipation',
+    [Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=SCHOOL_ALL,
+            implicit_target_a=TARGET_UNIT_CASTER, sp_potency=3.0, potency_kind='absorb', time_basis_ms=1500)],
+    ICON_LIVING_EARTH, 8000,
+    'A shell of stone absorbs damage.',
+    'Absorbs {pot1} damage for each enemy your Chain Lightning hit.',
+    'Anticipation capstone (2026-11-01, DPS balance pass 1031 round T1, user ruling): under Rockbiter, each enemy the shaman\'s '
+    'Chain Lightning hits adds E0 to this shell (spell_sha_stoneskin_grant: the first hit of a cast replaces the old shell, '
+    'later hits add to it). E0 SCHOOL_ABSORB every school, 6 potency absorb on the healing scale per enemy (T 1500, about 64 '
+    'at 60 [tune]); the script reads it with Shaman::GetSelfAbsorbAmount (base at the shaman\'s level plus healing power x '
+    'the generated coefficient, Living Earth\'s formula) and passes the total as bp0. 8 s [fixed]. No family bits. Visible, '
+    'not consolidated; aura text number-free. No visual yet (V stage). '
+    'sp_potency 6 -> 3 (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package): with Anticipation\'s +2 '
+    'jumps under Rockbiter Chain Lightning hits 5 enemies about every 7 s, so the per-enemy share is halved (about 32 per '
+    'enemy at 60).',
+    level=20, family=False,
+)
+
+spirit_guard_shell_202442 = _buff(
+    202442, 'Spirit Guard',
+    [Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=SCHOOL_ALL,
+            implicit_target_a=TARGET_UNIT_CASTER, sp_potency=0.25, potency_kind='absorb', time_basis_ms=1500)],
+    ICON_STONESKIN, 6000,
+    'Crumbled stone absorbs damage.',
+    'Absorbs {pot1} damage for each Stoneskin stack lost.',
+    'Spirit Guard capstone (2026-11-01, DPS balance pass 1031 round T1, user ruling): under Rockbiter, the Stoneskin stacks a hit '
+    'erodes crumble into this shell (Shaman::ErodeStoneskin): E0 per stack lost, 1 potency absorb on the healing scale (T 1500, '
+    'about 10.6 at 60 [tune]), added to what is left of the current shell and capped at STONESKIN_MAX stacks\' worth; the C++ '
+    'reads E0 with Shaman::GetSelfAbsorbAmount and passes the total as bp0. 6 s [fixed], refreshed by each new crumble. No '
+    'family bits. Visible, not consolidated; aura text number-free. No visual (it refreshes on most hits; V stage). '
+    'sp_potency 1 -> 0.25 (2026-11-01, DPS balance pass 1031 round R4, user ruling: shaman tank damage to ~750 / survival to ~80 s): about 2.6 per stack, 132 at the 50-stack cap.',
+    level=45, family=False,
+)
+
+
+# 202443 (R4's hidden Rockbiter + Spirit Guard +100% damage passive, linked to 202412) is retired (2026-11-02, DPS balance
+# pass 1031 round S1, user ruling: "implement the plan as it was without hidden buffs"): the row and its spell_linked_spell
+# row are no longer declared, so the next generate drops both (reserved-block re-emit + the linked-spell prune). The
+# tank's damage is now Rockbiter's visible +10% with Spirit Guard (8017 effect 0, ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT) plus
+# the Lightning Shield clauses spread over its talents. The id stays unused.
+
+# ---- The tank Lightning Shield kit (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package) -----------------------------
+# Proposal .agents/plans/dps-balance-1031/dps-balance-1031.SHAMAN-TANK-LIGHTNING-SHIELD.PROPOSAL.md, Revisions 1-3: one job per
+# tank talent, every clause under Rockbiter. The two orb copies (the arc 202445, the Chain Lightning orb 202446) sit next to the
+# orb 26364 in shaman_trigger_spells.py (they read its potency); the rank texts that quote these rows are there too.
+S1_NOTE = '(2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package) '
+ICON_TOUGHNESS = 52
+ICON_ANTICIPATION = 229
+ICON_STATIC_SHOCK = 3059
+ATTR0_NO_ACTIVE_DEFENSE = 0x200000
+ATTR2_CANT_CRIT = 0x20000000
+ATTR3_ALWAYS_HIT = 0x40000
+ATTR3_IGNORE_CASTER_MODIFIERS = 0x20000000
+CU_IGNORE_ARMOR = 0x8000
+CHAIN_LIGHTNING_D0 = 0x2              # d0 b1: Chain Lightning 421 (and its overload copy 202592)
+
+toughness_heal_202444 = spell(
+    id=202444, name='Toughness', school=School.NATURE, attributes=0,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF,
+    effects=[Effect(type=EffectType.HEAL, sp_potency=15.0, potency_kind='heal', time_basis_ms=1500,
+                    implicit_target_a=TARGET_UNIT_CASTER)],
+    spell_icon_id=ICON_TOUGHNESS,
+    notes=NOTE + S1_NOTE + 'Toughness\'s orb heal: under Rockbiter, every Lightning Shield orb the shield fires (the shield\'s own '
+          'proc or a Static Shock proc, both cast 26364; never an arc 202445 or a Chain Lightning orb 202446) heals the shaman. '
+          'E0 HEAL, 15 potency on the healing scale (T 1500, about 160-180 at 60) = rank 3; spell_sha_enh_toughness_heal scales '
+          'the hit by the Toughness rank / 3 (5 / 10 / 15 potency), cast by spell_sha_enh_storm_orb. DefenseType 1 (spell power '
+          'and done-% mods apply; lint check_potency_defense_type). Family 0, no class bits. AttributesEx3 SUPPRESS_CASTER_PROCS '
+          '(it procs nothing). SpellLevel 25 (Toughness row 3).',
+    raw_overrides=_raw('Heals you for {pot1}.', '', 25, family=False, DefenseType=1,
+                       AttributesEx3=ATTR3_SUPPRESS_CASTER_PROCS),
+)
+scripted_by(toughness_heal_202444, 'spell_sha_enh_toughness_heal')
+
+anticipation_jumps_202447 = _hidden_child(
+    202447, 'Anticipation', [_mod(SpellModOp.JUMP_TARGETS, False, ANTICIPATION_CL_JUMPS['value'] - 1)], ICON_ANTICIPATION,
+    School.NATURE, 'Your Chain Lightning jumps to additional targets.',
+    S1_NOTE + 'hidden child of Rockbiter for Anticipation (any rank): E0 SPELLMOD_JUMP_TARGETS flat +ANTICIPATION_CL_JUMPS (2, stored '
+    '1) on Chain Lightning (d0 b1, the shape of Frostbrand\'s and Storm Empowerment\'s jump mods). Applied by '
+    'Shaman::SyncRockbiterChildren while Rockbiter is up and Anticipation has a rank (Rockbiter apply / remove, talent change, '
+    'login), removed with Rockbiter. Passive + DO_NOT_DISPLAY with the L5 pair. No class bits of its own.',
+    **_emask(1, CHAIN_LIGHTNING_D0),
+)
+
+static_shock_orb_damage_202448 = _hidden_child(
+    202448, 'Static Shock', [_mod(SpellModOp.DAMAGE, True, STATIC_SHOCK_ORB_DAMAGE_R3['value'] - 1)], ICON_STATIC_SHOCK,
+    School.NATURE, 'Your Lightning Shield orbs deal more damage.',
+    S1_NOTE + 'hidden child of Rockbiter for Static Shock (any rank): E0 SPELLMOD_DAMAGE pct on d0 b10 (the orb 26364, the arc '
+    '202445 and the Chain Lightning orb 202446; the shield 324 deals no damage). The row stores rank 3\'s 55 % (stored 54); '
+    'Shaman::SyncRockbiterChildren sets the live rank value STATIC_SHOCK_ORB_DAMAGE_R1..R3 (20 / 40 / 55 %) with ChangeAmount, as '
+    'the Spirit Guard parry child. Applied while Rockbiter is up and Static Shock has a rank, removed with Rockbiter. A SpellMod '
+    'damage percent multiplies with Improved Lightning Shield\'s and Static Shock\'s own (Player::ApplySpellMod). Passive + '
+    'DO_NOT_DISPLAY with the L5 pair. No class bits of its own.',
+    **_emask(1, 0x400),
+)
+
+ils_stormstrike_cleave_202449 = spell(
+    id=202449, name='Improved Lightning Shield', school=School.NORMAL, attributes=ATTR0_NO_ACTIVE_DEFENSE,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
+    effects=[Effect(
+        type=EffectType.SCHOOL_DAMAGE, implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
+        potency_excluded='script-sized: ILS_SS_CLEAVE_R1..R3 (33 / 66 / 100 %) of the shaman\'s landed Stormstrike damage on the '
+                         'primary (main hand + off hand, after armor) is passed as bp0 by spell_sha_enh_stormstrike::Cleave.',
+    )],
+    spell_icon_id=ICON_STORMSTRIKE,
+    notes=NOTE + S1_NOTE + 'Improved Lightning Shield\'s Stormstrike cleave (Revision 3): while the shaman\'s own Lightning Shield 324 has '
+          'a charge, a Stormstrike that lands on its target also strikes up to ILS_SS_CLEAVE_TARGETS (4) other enemies within '
+          'ILS_SS_CLEAVE_RADIUS_YD (8 yd) of the target, in combat with the shaman, for the rank\'s share of the landed damage; '
+          'enemies the Frost / Elemental Ascendance cleave already struck are skipped (they took that cleave\'s full copy). Any '
+          'imbue. Physical SCHOOL_DAMAGE, DmgClass melee, script-sized (potency_excluded). SpellClassSet 0 and no bits (no shaman '
+          'SpellMod stacks onto the share). AttributesEx3 IGNORE_CASTER_MODIFIERS (the amount already carries every done bonus) | '
+          'SUPPRESS_CASTER_PROCS | ALWAYS_HIT, AttributesEx4 SUPPRESS_WEAPON_PROCS, AttributesEx2 CANT_CRIT (the share already '
+          'carries the strike\'s crit), ATTR0 NO_ACTIVE_DEFENSE; custom attr IGNORE_ARMOR (the share is post-armor). Range 50000 '
+          '(L6). The Dark Transformation cleave 203466 shape.',
+    raw_overrides=_raw('Strikes the target for a share of your Stormstrike.', '', 40, family=False, DefenseType=2,
+                       AttributesEx2=ATTR2_CANT_CRIT,
+                       AttributesEx3=ATTR3_SUPPRESS_CASTER_PROCS | ATTR3_ALWAYS_HIT | ATTR3_IGNORE_CASTER_MODIFIERS,
+                       AttributesEx4=ATTR4_SUPPRESS_WEAPON_PROCS),
+)
+custom_attr(ils_stormstrike_cleave_202449, CU_IGNORE_ARMOR)
+
 # ---- Spirit Guard (60300, row 7): teaches parry, Rockbiter parry bonus and Stoneskin per parry -----------------------------------------
 _SPIRIT_GUARD_BONUS = (1, 2, 3)
 _SPIRIT_GUARD_STONESKIN = (3, 6, 10)
+_SPIRIT_GUARD_CAPSTONE = ('While Rockbiter is active, each Stoneskin stack you lose to damage crumbles into stone, absorbing '
+                          + pot_text(spirit_guard_shell_202442) + ' damage, up to 50 stacks\' worth. Lasts 6 sec.')
 
 
 def _spirit_guard(spell_id: int, rank: int):
@@ -1075,12 +1251,19 @@ def _spirit_guard(spell_id: int, rank: int):
     return _rank(
         spell_id, 'Spirit Guard',
         [_aura(AURA_MOD_PARRY_PERCENT, -1), _dummy(bonus - 1), _dummy(stoneskin - 1)], ICON_SPIRIT_GUARD, 45,
-        f'Teaches you to parry. While Rockbiter is active, increases your chance to parry by {bonus}%, and parrying an attack grants '
-        f'you {stoneskin} Stoneskin.',
+        _desc(f'Teaches you to parry. While Rockbiter is active, increases your chance to parry by {bonus}%, parrying an attack '
+              f'grants you {stoneskin} Stoneskin, and Rockbiter increases your damage dealt by '
+              f'{ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT["value"]}%.', _SPIRIT_GUARD_CAPSTONE, rank == 3),
         f'Spirit Guard rank {rank} (talent 60300, learned at 45): E0 MOD_PARRY_PERCENT amount 0 (stored -1: the handler enables the '
         f'parry skill, S3a-0VERIFY (e); the 5 % engine baseline appears once learned and stays until relog), E1 DUMMY = the Rockbiter '
         f'parry bonus {bonus} % (stored {bonus - 1}; the hidden child 202412 carries it), E2 DUMMY = Stoneskin per parry {stoneskin} '
-        f'(stored {stoneskin - 1}; SPIRIT_GUARD_STONESKIN_R{rank}). spell_proc -202368 (taken parry) + spell_sha_enh_spirit_guard.',
+        f'(stored {stoneskin - 1}; SPIRIT_GUARD_STONESKIN_R{rank}). spell_proc -202368 (taken parry) + spell_sha_enh_spirit_guard. '
+        f'Rank 3 carries the capstone (2026-11-01, DPS balance pass 1031 round T1): the crumbled-stone shell 202442, cast by '
+        f'Shaman::ErodeStoneskin. '
+        f'Any rank gates Rockbiter\'s damage clause (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package): '
+        f'Rockbiter 8017 effect 0 is +ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT % damage dealt with a Spirit Guard rank, 0 without '
+        f'(spell_sha_rockbiter_damage, recalculated by Shaman::SyncRockbiterChildren); R4\'s "$202443s1%" clause and its '
+        f'hidden passive are gone.',
         subtext=f'Rank {rank}',
     )
 
@@ -1198,3 +1381,20 @@ scripted_by(8187, 'spell_sha_enh_molten_fury')
 scripted_by(8042, 'spell_sha_earth_shock_rockbiter')
 scripted_by(202206, 'spell_sha_stoneskin')
 scripted_by(324, 'spell_sha_enh_lightning_shield')
+
+# DPS balance pass 1031 round S1 (2026-11-02, user ruling: shaman package):
+# - the orb 26364 (both orb paths cast it: the shield's own proc and Static Shock): Toughness's heal and Static Shock's arcs
+#   under Rockbiter;
+# - Rockbiter 8017 effect 0: the visible +10 % damage dealt with any Spirit Guard rank (next to spell_sha_imbue);
+# - Chain Lightning 421: Thundering Strikes' 5-stack Maelstrom surge under a damage imbue (next to spell_sha_ele_spell_hooks
+#   and spell_sha_stoneskin_grant; separate script classes on one id are fine).
+scripted_by(26364, 'spell_sha_enh_storm_orb')
+scripted_by(SPELL_ROCKBITER, 'spell_sha_rockbiter_damage')
+scripted_by(421, 'spell_sha_enh_thundering_surge')
+# Earth's Grasp: a hit the shields fully absorb still fires the orb under Rockbiter. The live -324 row (base dump: SpellTypeMask
+# DAMAGE, no phase, AttributesMask TRIGGERED_CAN_PROC, Cooldown 3500, the DBC's ProcTypeMask / chance / charges) gains
+# HitMask NORMAL | CRITICAL | ABSORB (0x403; HitMask 0 meant NORMAL | CRITICAL for a taken proc, SpellMgr.cpp). Only a fully
+# absorbed hit is new, and spell_sha_enh_lightning_shield::CheckProc lets it through only for a player with Rockbiter and
+# an Earth's Grasp rank; 324 has no rank chain any more, so NPC shields of other ranks keep their own default rows.
+procs_on(-324, proc_flags=0, spell_type_mask=0x1, hit_mask=0x403, attributes_mask=PROC_ATTR_TRIGGERED_CAN_PROC,
+         cooldown_ms=3500)

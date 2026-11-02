@@ -1087,7 +1087,8 @@ class spell_hun_piercing_shots_mm : public AuraScript
 // ===========================================================================================
 
 // 2643 Multi-Shot - the 5-target cap, Keen Eye's Multi-Shot half and the Trick Shots copies and marker (MARKSMANSHIP
-// §5.3, S2b B1). Built eff0: NORMALIZED_WEAPON_DMG, TargetA 6 (TARGET_UNIT_TARGET_ENEMY), chain 3.
+// §5.3, S2b B1). Built eff0: NORMALIZED_WEAPON_DMG (the potency flat), TargetA 6 (TARGET_UNIT_TARGET_ENEMY),
+// chain 3; eff1: WEAPON_PERCENT_DAMAGE (weapon_potency), the same target and chain (potency audit F14).
 class spell_hun_multi_shot_mm : public SpellScript
 {
     PrepareSpellScript(spell_hun_multi_shot_mm);
@@ -1201,6 +1202,10 @@ class spell_hun_multi_shot_mm : public SpellScript
     void Register() override
     {
         OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_hun_multi_shot_mm::TrimChainTargets, EFFECT_0,
+            TARGET_UNIT_TARGET_ENEMY);
+        // Effect 1 (WEAPON_PERCENT_DAMAGE, the potency weapon percent) selects its own chain list, and it is the last
+        // weapon effect, so the engine deals the hit on its targets: cap it the same way
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_hun_multi_shot_mm::TrimChainTargets, EFFECT_1,
             TARGET_UNIT_TARGET_ENEMY);
         OnCast += SpellCastFn(spell_hun_multi_shot_mm::HandleOnCast);
         OnEffectHitTarget += SpellEffectFn(spell_hun_multi_shot_mm::HandleCopyMarks, EFFECT_0,

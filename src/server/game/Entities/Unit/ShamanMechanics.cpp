@@ -173,6 +173,29 @@ namespace
         }, Milliseconds(ShamanData::STONESKIN_OOC_MS));
     }
 
+    // DPS balance pass 1031 T1, Spirit Guard capstone (rank 3, under Rockbiter): the `stacksLost` a hit eroded crumble
+    // into the 202442 shell, its effect 0 (potency) per stack, added to what is left of the current shell and capped
+    // at STONESKIN_MAX stacks' worth. The new cast replaces the old shell with the total and restarts its duration.
+    void AddCrumbledStone(Player* victim, uint32 stacksLost)
+    {
+        SpellInfo const* shellInfo = sSpellMgr->GetSpellInfo(ShamanData::SPELL_SPIRIT_GUARD_SHELL);
+        if (!shellInfo)
+            return;
+
+        int32 const perStack = int32(Shaman::GetSelfAbsorbAmount(victim, shellInfo, EFFECT_0));
+        if (perStack <= 0)
+            return;
+
+        int32 left = 0;
+        if (AuraEffect const* shell = victim->GetAuraEffect(ShamanData::SPELL_SPIRIT_GUARD_SHELL, EFFECT_0,
+            victim->GetGUID()))
+            left = std::max(0, shell->GetAmount());
+
+        int32 const cap = perStack * int32(ShamanData::STONESKIN_MAX);
+        int32 const amount = std::min(cap, left + perStack * int32(stacksLost));
+        victim->CastCustomSpell(ShamanData::SPELL_SPIRIT_GUARD_SHELL, SPELLVALUE_BASE_POINT0, amount, victim, true);
+    }
+
     // S2: drops the Restoration state (defined in the S2 block); called by Shaman::ClearState.
     void ClearRestorationState(Player* player);
 
@@ -377,6 +400,12 @@ namespace Shaman
         // A negative ModStackAmount neither refreshes the duration nor the timers, and removes the aura at 0.
         if (removed && !aura->ModStackAmount(-int32(removed)))
             RefreshStoneskinAmount(victim);
+
+        // DPS balance pass 1031 T1: Spirit Guard's capstone turns the lost stacks into an absorb (applies from the
+        // next hit; this hook runs inside Unit::DealDamage, after this hit's absorbs).
+        if (removed && victim->HasAura(ShamanData::SPELL_SPIRIT_GUARD_RANK3) &&
+            victim->HasAura(ShamanData::SPELL_ROCKBITER_WEAPON))
+            AddCrumbledStone(victim, removed);
     }
 
     void OnCombatChange(Player* player, bool inCombat)
@@ -849,7 +878,7 @@ namespace
 
     // Guardian auras added by the owner (L5): the guardian-side Empowerment on every elemental and the Water
     // Elemental's bonus damage and the Earth Elemental's no-threat aura (Power of the Elements); the Earth Elemental's
-    // bonus damage (Elemental Warding capstone).
+    // bonus damage (Elemental Warding capstone) and its always-on melee bonus.
     void SyncGuardianAuras(Player* player)
     {
         bool const powerOfTheElements = Shaman::GetTalentRank(player,
@@ -878,6 +907,8 @@ namespace
                 {
                     SetOwnerAura(player, guardian, ShamanData::SPELL_EARTH_ELEMENTAL_NO_THREAT, powerOfTheElements);
                     SetOwnerAura(player, guardian, ShamanData::SPELL_EARTH_ELEMENTAL_DAMAGE, wardingCapstone);
+                    // Always on: the melee tuning (DamageModifier does not reach a physical guardian's swing).
+                    SetOwnerAura(player, guardian, ShamanData::SPELL_EARTH_ELEMENTAL_MELEE, true);
                 }
             }
         }
@@ -1471,6 +1502,22 @@ namespace Shaman
         return uint32(std::max(0.0f, amount));
     }
 
+    uint32 GetSelfAbsorbAmount(Player const* player, SpellInfo const* shield, uint8 effIndex)
+    {
+        if (!player || !shield || effIndex >= MAX_SPELL_EFFECTS)
+            return 0;
+
+        // Living Earth's formula (spell_sha_enh_living_earth_aura): absorbs get no engine spell power (potency.md).
+        // The power getter is non-const only because it caches nothing.
+        Player* source = const_cast<Player*>(player);
+        SpellEffectInfo const& effect = shield->Effects[effIndex];
+
+        float bonus = effect.BonusMultiplier * float(source->SpellBaseHealingBonusDone(shield->GetSchoolMask()));
+        bonus *= player->CalculateLevelPenalty(shield);
+
+        return uint32(std::max(0.0f, float(effect.CalcValue(player)) + bonus));
+    }
+
     void GrantTidalWaves(Player* player, uint8 amount)
     {
         if (!player || !amount)
@@ -1766,6 +1813,29 @@ namespace
     };
 
     constexpr uint8 GUARDIAN_TOTEMS_CAPSTONE_RANK = 2;
+
+    // DPS balance pass 1031 S1: the Rockbiter children of Anticipation (Chain Lightning +2 jumps, 202447) and Static
+    // Shock (orb damage, 202448, its live amount by rank).
+    constexpr std::array<uint32, 3> ANTICIPATION_RANKS =
+    {
+        ShamanData::SPELL_ANTICIPATION,
+        ShamanData::SPELL_ANTICIPATION_16271,
+        ShamanData::SPELL_ANTICIPATION_16272
+    };
+
+    constexpr std::array<uint32, 3> STATIC_SHOCK_RANKS =
+    {
+        ShamanData::SPELL_STATIC_SHOCK,
+        ShamanData::SPELL_STATIC_SHOCK_51526,
+        ShamanData::SPELL_STATIC_SHOCK_51527
+    };
+
+    constexpr std::array<int32, 3> STATIC_SHOCK_ORB_DAMAGE_PCT =
+    {
+        int32(ShamanData::STATIC_SHOCK_ORB_DAMAGE_R1),
+        int32(ShamanData::STATIC_SHOCK_ORB_DAMAGE_R2),
+        int32(ShamanData::STATIC_SHOCK_ORB_DAMAGE_R3)
+    };
 
     // Spirit Guard's parry bonus under Rockbiter is 1/2/3% (doc [fixed]): the rank itself. The brief names no const
     // for it (local fallback).
@@ -2100,8 +2170,25 @@ namespace
         }, Milliseconds(delayMs + 50));
     }
 
+    // A hidden Rockbiter child's first effect of `auraType` set to `amount` (ChangeAmount, marked: a recalculation
+    // keeps the live value).
+    void SetChildAmount(Player* player, uint32 spellId, AuraType auraType, int32 amount)
+    {
+        if (Aura* aura = player->GetAura(spellId, player->GetGUID()))
+            for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                if (AuraEffect* effect = aura->GetEffect(i))
+                    if (effect->GetAuraType() == auraType)
+                    {
+                        if (effect->GetAmount() != amount)
+                            effect->ChangeAmount(amount);
+                        return;
+                    }
+    }
+
     // Spirit Guard's parry child (rank %) and the Improved Lightning Shield threat child, on while Rockbiter is up and
     // the talent is known. Both are passive and hidden; the parry amount is set live (it is not a row value).
+    // DPS balance pass 1031 S1: Anticipation's jumps child and Static Shock's orb damage child (rank %) follow the same
+    // rule, and Rockbiter's own effect 0 (damage dealt with Spirit Guard, spell_sha_rockbiter_damage) is recalculated.
     void SyncRockbiterChildren(Player* player, bool rockbiter)
     {
         uint8 const spiritGuardRank = Shaman::GetTalentRank(player, SPIRIT_GUARD_RANKS);
@@ -2120,6 +2207,21 @@ namespace
 
         SetOwnerAura(player, player, ShamanData::SPELL_ROCKBITER_ILS_THREAT,
             rockbiter && Shaman::GetTalentRank(player, IMPROVED_LIGHTNING_SHIELD_RANKS) > 0);
+
+        SetOwnerAura(player, player, ShamanData::SPELL_ANTICIPATION_JUMPS,
+            rockbiter && Shaman::GetTalentRank(player, ANTICIPATION_RANKS) > 0);
+
+        uint8 const staticShockRank = Shaman::GetTalentRank(player, STATIC_SHOCK_RANKS);
+        bool const orbDamageWanted = rockbiter && staticShockRank > 0;
+        SetOwnerAura(player, player, ShamanData::SPELL_STATIC_SHOCK_ORB_DAMAGE, orbDamageWanted);
+        if (orbDamageWanted)
+            SetChildAmount(player, ShamanData::SPELL_STATIC_SHOCK_ORB_DAMAGE, SPELL_AURA_ADD_PCT_MODIFIER,
+                STATIC_SHOCK_ORB_DAMAGE_PCT[staticShockRank - 1]);
+
+        if (rockbiter)
+            if (AuraEffect* damage = player->GetAuraEffect(ShamanData::SPELL_ROCKBITER_WEAPON, EFFECT_0,
+                player->GetGUID()))
+                damage->RecalculateAmount();
     }
 
     // 1-based rank of the highest rank in the player's talent map for the active spec (no aura fallback); 0 if none.

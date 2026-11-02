@@ -297,9 +297,12 @@ def check_lightning_mastery_duration(entries: dict[int, dict]) -> list[str]:
 # 2026-10-20 smoke-test fix pass: summon cost 8%, Lightning Mastery 7% per stack, Icefury refund 5% in every window,
 # and the rough damage cut (S1-FIX-REPORT table). (spell id, effect index in `entries_by_id`'s effectN, total potency)
 FIX_PASS_SUMMONS = (2062, 2894, 202272, 202273)
+# 2026-11-01 B3: 8042 eff2 60.0 -> 96.0 (+60%), 202282 43.0 -> 86.0 (+100%).
+# 2026-11-01 DPS balance pass 1031: 51505 57.6 -> 46.08, 403 126.0 -> 100.8, 8050 32.3 -> 25.84 / 10.8 -> 8.64, 202276 43.0 -> 21.5
+# 2026-11-02 DPS balance pass 1031 S1 (shaman package): 421 79.6 -> 99.5 (x1.25, and no per-jump falloff)
 FIX_PASS_POTENCY = (
-    (51505, 1, 57.6), (403, 1, 126.0), (421, 1, 79.6), (8042, 2, 60.0), (8050, 1, 32.3), (8050, 2, 10.8),
-    (8056, 2, 32.3), (202281, 1, 21.5), (202282, 1, 43.0), (202276, 1, 43.0), (202278, 1, 51.6),
+    (51505, 1, 46.08), (403, 1, 100.8), (421, 1, 99.5), (8042, 2, 96.0), (8050, 1, 25.84), (8050, 2, 8.64),
+    (8056, 2, 32.3), (202281, 1, 21.5), (202282, 1, 86.0), (202276, 1, 21.5), (202278, 1, 51.6),
     (202270, 1, 10.8), (8349, 1, 104.1),
 )
 
@@ -346,8 +349,8 @@ def check_earth_shock_burst(rows: dict[int, dict], entries: dict[int, dict], con
         if have.get(name) != want:
             bad.append(f"const {name} {have.get(name)!r}, expected {want}")
     pot = ((entries.get(EARTH_SHOCK) or {}).get("effect2") or {}).get("_potency") or {}
-    if pot.get("total_potency") != 60.0:
-        bad.append(f"{EARTH_SHOCK}: effect 2 total potency {pot.get('total_potency')!r}, expected 60.0")
+    if pot.get("total_potency") != 96.0:
+        bad.append(f"{EARTH_SHOCK}: effect 2 total potency {pot.get('total_potency')!r}, expected 96.0")
     return bad
 
 
@@ -550,7 +553,8 @@ class ShamanS1aDataTest(unittest.TestCase):
         # Id map of the WP brief: 202520-202536 (rank spells, castables, markers), 202560-202595 (buffs, copies, ranks);
         # 202537-202559 and 202596+ are unused spares.
         # 202594 (the stun-castable Thunderstorm) was removed 2026-10-22 (P6) and stays retired.
-        want = (set(range(202520, 202537)) | set(range(202560, 202596))) - {202594}
+        # 202596: Earth Elemental melee +200% guardian aura (DPS balance pass 1031, the first spare after the block).
+        want = (set(range(202520, 202537)) | set(range(202560, 202596)) | {202596}) - {202594}
         have = {i for i in _data()["rows_by_id"] if 202520 <= i <= 202639}
         self.assertEqual(sorted(want - have), [], "S1a ids not declared")
         self.assertEqual(sorted(have - want), [], "ids declared outside the S1a id map")
@@ -627,6 +631,32 @@ class ShamanS1aDataTest(unittest.TestCase):
 
     def test_flame_shock_dot_effects(self):
         self.assertClean(check_flame_shock_dots(_data()["rows_by_id"]))
+
+    def test_s1_elemental_package(self):
+        """DPS balance pass 1031 S1 (2026-11-02, user ruling: shaman package): Chain Lightning 99.5 potency with no per-jump
+        falloff (its overload copy too) and no falloff sentence; the Storm Bolt chains to 4 more enemies at full damage; Eye
+        of the Storm's capstone is +1 Chain Lightning jump (no DAMAGE_MULTIPLIER, which would compound per jump without the
+        falloff); Earthquake +25 % per extra enemy (const + tooltip + the tick script)."""
+        d = _data()
+        rows, p = d["rows_by_id"], d["package"]
+        cl = rows[421]
+        self.assertEqual(float(cl["EffectChainAmplitude_1"]), 1.0)
+        self.assertNotIn("reduces the damage", cl["Description_Lang_enUS"])
+        self.assertEqual(float(rows[202592]["EffectChainAmplitude_1"]), 1.0)
+        bolt = rows[202278]
+        self.assertEqual((int(bolt["EffectChainTargets_1"]), float(bolt["EffectChainAmplitude_1"])), (5, 1.0))
+        eots = rows[29065]
+        self.assertEqual((int(eots["EffectAura_3"]), int(eots["EffectMiscValue_3"])), (107, 17))   # flat JUMP_TARGETS
+        self.assertEqual(int(eots["EffectBasePoints_3"]) + 1, 1)
+        self.assertEqual(int(eots["EffectSpellClassMaskC_1"]), 0x2)
+        for sid in (29062, 29064, 29065):
+            with self.subTest(rank=sid):
+                self.assertIn("Your Chain Lightning jumps to 1 additional target.", rows[sid]["Description_Lang_enUS"])
+        consts = {c["name"]: c["value"] for c in p.consts}
+        self.assertEqual(consts["EARTHQUAKE_EXTRA_ENEMY_PCT"], 25)
+        self.assertIn("25% more damage for each other enemy", rows[202280]["Description_Lang_enUS"])
+        names = {(int(r["spell_id"]), r["ScriptName"]) for r in p.spell_script_names}
+        self.assertIn((202281, "spell_sha_earthquake_tick"), names)
 
     def test_cpp_shaman_data_names_exist(self):
         texts = {p.name: p.read_text() for p in CPP_FILES}
@@ -767,7 +797,7 @@ class ShamanS1aNegativeTest(unittest.TestCase):
         rows = {sid: _row(sid, ManaCostPct=8) for sid in FIX_PASS_SUMMONS}
         entries = {sid: {f"effect{e}": {"_potency": {"total_potency": p}}} for sid, e, p in FIX_PASS_POTENCY
                    if sid not in (8050,)}
-        entries[8050] = {"effect1": {"_potency": {"total_potency": 32.3}}, "effect2": {"_potency": {"total_potency": 10.8}}}
+        entries[8050] = {"effect1": {"_potency": {"total_potency": 25.84}}, "effect2": {"_potency": {"total_potency": 8.64}}}
         consts = [{"name": "LM_CHANCE_PER_STACK", "value": 7}, {"name": "ICEFURY_MANA_PCT", "value": 5}]
         self.assertEqual(check_fix_pass(rows, entries, consts), [])
         self.assertEqual(len(check_fix_pass({**rows, 2062: _row(2062, ManaCostPct=24)}, entries, consts)), 1)
@@ -778,7 +808,7 @@ class ShamanS1aNegativeTest(unittest.TestCase):
 
     def test_earth_shock_burst(self):
         rows = {ECHO_BUFF: _row(ECHO_BUFF, EffectBasePoints_1=29, EffectBasePoints_2=9)}
-        entries = {ECHO_BUFF: {"duration_ms": 30000}, EARTH_SHOCK: {"effect2": {"_potency": {"total_potency": 60.0}}}}
+        entries = {ECHO_BUFF: {"duration_ms": 30000}, EARTH_SHOCK: {"effect2": {"_potency": {"total_potency": 96.0}}}}
         consts = [{"name": "ECHO_DURATION_MS", "value": 30000}, {"name": "ECHO_EARTH_ELEMENTAL_GRANT", "value": 5},
                   {"name": "ECHO_MAX", "value": 10}]
         self.assertEqual(check_earth_shock_burst(rows, entries, consts), [])

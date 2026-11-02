@@ -133,6 +133,7 @@ namespace WarriorData
     constexpr uint32 SPELL_BERSERKER_RAGE = 18499; // berserker_rage_18499
     constexpr uint32 SPELL_IMPROVED_INTIMIDATING_SHOUT = 19870; // improved_intimidating_shout_19870
     constexpr uint32 SPELL_RETALIATION = 20230; // retaliation_20230
+    constexpr uint32 SPELL_RETALIATION_STRIKE = 20240; // retaliation_strike_20240
     constexpr uint32 SPELL_DEVASTATE = 20243; // devastate_20243
     constexpr uint32 SPELL_INTERCEPT = 20252; // intercept_20252
     constexpr uint32 SPELL_IMPROVED_CLEAVE_20496 = 20496; // improved_cleave_20496
@@ -184,7 +185,6 @@ namespace WarriorData
     constexpr uint32 SPELL_IMPROVED_INTERCEPT_29889 = 29889; // improved_intercept_29889
     constexpr uint32 SPELL_BLOOD_FRENZY_DEBUFF_R1 = 30069; // blood_frenzy_debuff_r1_30069
     constexpr uint32 SPELL_BLOOD_FRENZY_DEBUFF_R2 = 30070; // blood_frenzy_debuff_r2_30070
-    constexpr uint32 SPELL_CLEAVE_30213 = 30213; // cleave_30213
     constexpr uint32 SPELL_VICTORIOUS = 32216; // victorious_32216
     constexpr uint32 SPELL_VICTORY_RUSH = 34428; // victory_rush_34428
     constexpr uint32 SPELL_IMPROVED_MORTAL_STRIKE = 35446; // improved_mortal_strike_35446

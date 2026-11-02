@@ -36,7 +36,7 @@ S2b (S2b-HANDOFF WP-A row A2, B2 / B6 / B7 / B9, the S2a review's m-1 and the 34
 
   (n) the ricochet 201934 / bounce 201935 (B2): d0 b17 only, Speed 0, CastingTimeIndex 18, EquippedItemClass -1,
       SUPPRESS_CASTER_PROCS, eff0 NORMALIZED_WEAPON_DMG bp -1, eff1 live weapon potency = PACK_SHOT_DAMAGE_PCT of
-      Aimed Shot 19434's (A1 derives it from a private literal 594: the built equality is the guard), 297 today;
+      Aimed Shot 19434's (A1 derives it from a private literal 416: the built equality is the guard), 208 today;
   (o) the half Volley 201936 / tick 201937 (B6): 201936 d2 b30 only, hidden (0x80), 3 s / 1 s = 3 unhasted ticks
       (no AttributesEx5 0x2000), eff0 the dynobj with ap potency 75.5 direct time_basis 1500 (spell_bonus_data equal
       to the Volley tick 42243's); 201937 potency_excluded (no bonus row), no family bit, AttributesEx3 0x20010000;
@@ -378,7 +378,7 @@ PACK_SHOT_FIELDS = {
     "Effect_1": EFFECT_NORMALIZED_WEAPON_DMG, "EffectBasePoints_1": -1, "ImplicitTargetA_1": 6,
     "Effect_2": EFFECT_WEAPON_PERCENT_DAMAGE, "ImplicitTargetA_2": 6, "Effect_3": 0,
 }
-PACK_SHOT_WEAPON_POTENCY = 297           # B2 literal: half of Aimed Shot's 594 (TUNE3; TUNE1 220 of 440)
+PACK_SHOT_WEAPON_POTENCY = 208           # B2 literal: half of Aimed Shot's 416 (pass 1031: was 297 of 594; TUNE3; TUNE1 220 of 440)
 # (o) the half Volley
 HALF_VOLLEY_DURATION_MS, HALF_VOLLEY_AMPLITUDE_MS, HALF_VOLLEY_TICKS = 3000, 1000, 3
 HALF_VOLLEY_AP_POTENCY, HALF_VOLLEY_TIME_BASIS_S = 75.5, 1.5
@@ -389,12 +389,15 @@ HUNTER_TALENT_TABS = frozenset({361, 362, 363})
 HUNTER_SKILL_LINES = frozenset({50, 51, 163})
 SLA_AUTO_LEARN = frozenset({1, 2})
 # (t) Multi-Shot 2643 (B1 "data unchanged" except S2-FIX F-2, the user's ruling: truly instant, index 18 = -1,000,000 ms;
-# index 1 plus the engine's +500 ms ranged-slot add was a hidden 0.5 s cast)
+# index 1 plus the engine's +500 ms ranged-slot add was a hidden 0.5 s cast). Potency audit F14 (2026-11-01): effect 2 is
+# now the weapon percent (weapon_potency 100, chain 3 like effect 1) beside the flat in effect 1 (sp_potency 103), so the
+# pinned Effect_2 is WEAPON_PERCENT_DAMAGE, not empty.
 MULTI_SHOT_FIELDS = {
     "SpellClassSet": SPELLFAMILY_HUNTER, "SpellClassMask_1": D0_MULTI_SHOT, "SpellClassMask_2": 0,
     "SpellClassMask_3": 0, "CastingTimeIndex": 18, "EquippedItemClass": 2, "Category": 85,
     "CategoryRecoveryTime": 10000, "Effect_1": EFFECT_NORMALIZED_WEAPON_DMG, "ImplicitTargetA_1": 6,
-    "EffectChainTargets_1": 3, "Effect_2": 0, "Effect_3": 0, "DefenseType": DEFENSE_RANGED,
+    "EffectChainTargets_1": 3, "Effect_2": EFFECT_WEAPON_PERCENT_DAMAGE, "ImplicitTargetA_2": 6,
+    "EffectChainTargets_2": 3, "Effect_3": 0, "DefenseType": DEFENSE_RANGED,
 }
 # (u) the S2b review fixes
 IGNORE_LOS_IDS = (RICOCHET, BOUNCE, CONVERGENCE)                  # R-cpp m-1: the pack is defined around the primary
@@ -603,7 +606,8 @@ def check_aimed_shot(row: dict | None, entry: dict | None, cast_times: dict[int,
                        f"{potency.get('sp_coefficient')} (M3: none on 19434, or it needs time_basis_ms=2000)")
     if any(int(b["entry"]) == AIMED_SHOT for b in bonus_rows):
         bad.append("has a spell_bonus_data row (an ap/sp potency effect)")
-    if any(int(c["spell_id"]) == AIMED_SHOT for c in corrections):
+    # A pure weapon_potency effect's all-zero marker row (potency audit S2, 2026-11-01) is expected; any other row is not.
+    if any(int(c["spell_id"]) == AIMED_SHOT and not c.get("_weapon_marker") for c in corrections):
         bad.append("has a spell_potency_correction row (a non-weapon potency effect)")
     if (_i(row, "Effect_1"), _i(row, "EffectBasePoints_1")) != (EFFECT_NORMALIZED_WEAPON_DMG, -1) \
             or float(row.get("EffectRealPointsPerLevel_1") or 0):
@@ -1671,12 +1675,12 @@ def good_bindings() -> tuple[list[dict], list[dict], list[dict]]:
 
 
 def good_pack_rows() -> dict[int, dict]:
-    aimed = {"ID": AIMED_SHOT, "Effect_2": EFFECT_WEAPON_PERCENT_DAMAGE, "EffectBasePoints_2": 593,
+    aimed = {"ID": AIMED_SHOT, "Effect_2": EFFECT_WEAPON_PERCENT_DAMAGE, "EffectBasePoints_2": 415,
              "EffectDieSides_2": 1}
     rows = {AIMED_SHOT: aimed}
     for i in PACK_SHOTS:
         rows[i] = {"ID": i, **PACK_SHOT_FIELDS, "Speed": 0.0, "AttributesEx3": ATTR_EX3_SUPPRESS_CASTER_PROCS,
-                   "EffectBasePoints_2": 296, "EffectDieSides_2": 1, "EffectDieSides_1": 1}
+                   "EffectBasePoints_2": 207, "EffectDieSides_2": 1, "EffectDieSides_1": 1}
     return rows
 
 
@@ -2044,7 +2048,7 @@ class HunterMmDataNegativeTest(unittest.TestCase):
                            ("Speed", 40.0), ("AttributesEx3", 0), ("EffectBasePoints_1", 0),
                            ("EffectBasePoints_2", 109)):
             bad = {**rows, RICOCHET: changed(rows[RICOCHET], **{key: value})}
-        # Aimed Shot retuned to 500 while A1's private 594 stays: the copies keep 297, expected 250 (+ the B2 literal)
+        # Aimed Shot retuned to 500 while A1's private 416 stays: the copies keep 208, expected 250 (+ the B2 literal)
         # Aimed Shot retuned to 500 while A1's private 440 stays: the copies keep 220, expected 250 (+ the B2 literal)
         aimed = {**rows, AIMED_SHOT: changed(rows[AIMED_SHOT], EffectBasePoints_2=499)}
         self.assertEqual(len(check_pack_shots(aimed, 50)), 3)

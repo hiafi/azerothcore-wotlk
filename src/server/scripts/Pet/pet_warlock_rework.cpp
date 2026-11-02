@@ -82,6 +82,18 @@ namespace
         return 0;
     }
 
+    // Custom: potency audit fix F1 (2026-11-01): gives the guardian the warlock's spell power (the
+    // share is data on 200855, see spell_warl_guardian_spell_power), so the generated potency
+    // coefficients on Fel Firebolt, Implosion, Bite, Doom Bolt and Immolation apply. The warlock is
+    // the aura caster, like the other hidden demon auras.
+    void ApplyGuardianSpellPower(Player* owner, Creature* guardian)
+    {
+        if (!owner || !guardian || guardian->HasAura(Warlock::SPELL_DEMONIC_GUARDIAN_POWER, owner->GetGUID()))
+            return;
+
+        owner->AddAura(Warlock::SPELL_DEMONIC_GUARDIAN_POWER, guardian);
+    }
+
     // ---- Wild Imp / Imp Gang Boss (300150/300151) tuning + local ids ----
     constexpr float WILD_IMP_ATTACK_RANGE = 40.0f;
     constexpr float WILD_IMP_CHASE_RANGE = 30.0f;
@@ -202,6 +214,7 @@ public:
         me->SetReactState(REACT_PASSIVE);
 
         Warlock::RefreshDemonAuras(owner, me);
+        ApplyGuardianSpellPower(owner, me);
         if (gangBoss)
             DoCastSelf(Warlock::SPELL_IMP_GANG_BOSS_AURA, true);
         else
@@ -456,6 +469,7 @@ public:
 
         me->SetReactState(REACT_PASSIVE);
         Warlock::RefreshDemonAuras(owner, me);
+        ApplyGuardianSpellPower(owner, me);
 
         _events.ScheduleEvent(EVENT_DREADSTALKER_CHASE, 0ms);
         _events.ScheduleEvent(EVENT_DREADSTALKER_BITE, 0ms);
@@ -584,6 +598,7 @@ public:
 
         me->SetReactState(REACT_PASSIVE);
         Warlock::RefreshDemonAuras(owner, me);
+        ApplyGuardianSpellPower(owner, me);
 
         _events.ScheduleEvent(EVENT_DOOMGUARD_CHASE, 0ms);
         _events.ScheduleEvent(EVENT_DOOMGUARD_CAST, 0ms);
@@ -689,6 +704,7 @@ public:
 
         me->SetReactState(REACT_PASSIVE);
         Warlock::RefreshDemonAuras(owner, me);
+        ApplyGuardianSpellPower(owner, me);
         UpdateMeleeDamage();
 
         _events.ScheduleEvent(EVENT_INFERNAL_CHASE, 0ms);

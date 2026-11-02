@@ -28,6 +28,10 @@ from lib.dsl.tooltip import product, talent_mult
 
 from . import _masks as m
 
+# Fan of Knives' weapon percent: one number for the main hand 51723, its stock off hand 52874 (rogue_spells.py) and the
+# Second Volley copies 204166 / 204167 below, so a retune of one carries to all four (potency audit F6, 2026-11-01).
+FAN_OF_KNIVES_WEAPON_POTENCY = 100
+
 # ---- Spell.dbc flag values (src/server/shared/SharedDefines.h) ----
 _SPELLFAMILY_ROGUE = 8
 _ATTR0_DO_NOT_DISPLAY = 0x80
@@ -273,7 +277,7 @@ def _buff(spell_id, name, effects, icon, duration_ms, text, raw=None, notes='', 
 # ---------------------------------------------------------------------------------------------------------------------
 # Death from Above frame and potency: the area hit 204169 first (the castable's tooltip quotes it)
 # ---------------------------------------------------------------------------------------------------------------------
-# 204169: Physical SCHOOL_DAMAGE, cp_ap_potency 27.6 per combo point (138 potency at 5; M2c +15%, M2a 24, was 8) [tune], SpellLevel 60, 8 yd around
+# 204169: Physical SCHOOL_DAMAGE, cp_ap_potency 38.64 per combo point (193.2 potency at 5; DPS balance pass 1031 +40% of M2c's 27.6 / 138; M2c +15%, M2a 24, was 8) [tune], SpellLevel 60, 8 yd around
 # Death from Above's target (A 53 TARGET_DEST_TARGET_ENEMY / B 16 TARGET_UNIT_DEST_AREA_ENEMY, cast at the target;
 # S2a-REVIEW L8), RangeIndex 6 / facing 0 (a script cast, R11), d2 b7 | d2 b18, hidden. A cp-only potency effect needs
 # base_potency 0 (potency.resolve rejects an all-zero effect without one). R12: no combo-point attributes, so the finish
@@ -284,18 +288,20 @@ death_from_above_area_204169 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None, radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_ap_potency=27.6, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_ap_potency=38.64, potency_kind='direct',
                implicit_target_a=_TARGET_DEST_TARGET_ENEMY, implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY,
                radius_yards=8.0),
     ],
     spell_icon_id=_ICON_DEATH_FROM_ABOVE,
     notes='rogue-rework S2a A3, subtlety doc "Death from Above" (Known-hard 3, R12, R15): the area hit cast by '
-          'spell_rog_death_from_above at the DUMMY hit. Physical SCHOOL_DAMAGE, cp_ap_potency 27.6 per combo point '
-          '(138 at 5; M2c +15%, M2a 24 / 120, was 8 / 40) [tune], base_potency 0 (cp-only effect), SpellLevel 60, cast at the DfA target: A 53 '
+          'spell_rog_death_from_above at the DUMMY hit. Physical SCHOOL_DAMAGE, cp_ap_potency 38.64 per combo point '
+          '(193.2 at 5; M2c +15%, M2a 24 / 120, was 8 / 40) [tune], base_potency 0 (cp-only effect), SpellLevel 60, cast at the DfA target: A 53 '
           'TARGET_DEST_TARGET_ENEMY / B 16 TARGET_UNIT_DEST_AREA_ENEMY radius 8 around it (S2a-REVIEW L8; '
           'spell_rog_death_from_above_area keeps the explicit target + units in combat with the rogue), DefenseType 2 '
           '(melee crit, dodgeable like Eviscerate), RangeIndex 6 (100 yd), FacingCasterFlags 0, no combo attributes '
-          '(R12), EquippedItemClass -1, hidden. d2 b7 | d2 b18 (m.DEATH_FROM_ABOVE_CLASS), never d0 b17.',
+          '(R12), EquippedItemClass -1, hidden. d2 b7 | d2 b18 (m.DEATH_FROM_ABOVE_CLASS), never d0 b17. '
+          'cp_ap_potency 27.6 -> 38.64 (2026-11-01, DPS balance pass 1031, user ruling: Death from Above +40%). The castable tooltip '
+          '_DFA_CP was still the original 8.0 (stale since M2a) and is now 38.64 too.',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.DEATH_FROM_ABOVE_CLASS), 'EquippedItemClass': -1,
         'CastingTimeIndex': 1, 'SpellLevel': 60, 'DefenseType': 2, 'PreventionType': 0, 'RangeIndex': _RANGE_100_YD,
@@ -305,7 +311,7 @@ death_from_above_area_204169 = spell(
 )
 scripted_by(death_from_above_area_204169, 'spell_rog_death_from_above_area')
 
-# 204170: the landing. Physical SCHOOL_DAMAGE ap_potency 47.0925 + cp_ap_potency 74.382 [tune] (M2c user ruling
+# 204170: the landing. Physical SCHOOL_DAMAGE ap_potency 65.9295 + cp_ap_potency 104.1348 [tune] (DPS balance pass 1031: +40% of M2c's 47.0925 / 74.382) (M2c user ruling
 # 2026-10-28: x1.15 of M2a's 40.95 / 64.68, which were 1.5 x Eviscerate; now ~1.33 x Eviscerate's 35.49 / 56.056), SpellLevel 60, A 6 on the target, 100 yd (R11, a script cast), Eviscerate's visual 671 (U47), d2 b8 | d2 b18
 # (counts as an Eviscerate for Finality / Seal-style readers), never d0 b17. R4: the C++ passes the snapshot as bp0
 # (CastCustomSpell skips the potency rescale) and SpellDamageBonusDone adds 47.0925 potency of AP read at the landing.
@@ -314,21 +320,23 @@ death_from_above_landing_204170 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=47.0925, cp_ap_potency=74.382, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=65.9295, cp_ap_potency=104.1348, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_DEATH_FROM_ABOVE,
     notes='rogue-rework S2a A3, subtlety doc "Death from Above" (Known-hard 3, R4, R11, R12, R15): the landing hit, cast '
-          'by Rogue::LaunchDeathFromAbove with bp0 = the snapshot. Physical SCHOOL_DAMAGE ap_potency 47.0925 + '
-          'cp_ap_potency 74.382 direct [tune] (M2c: x1.15 of M2a\'s 40.95 / 64.68, ~1.33 x Eviscerate; was 29.25 / 46.2), SpellLevel 60, A 6, RangeIndex 6 '
+          'by Rogue::LaunchDeathFromAbove with bp0 = the snapshot. Physical SCHOOL_DAMAGE ap_potency 65.9295 + '
+          'cp_ap_potency 104.1348 direct [tune] (M2c: x1.15 of M2a\'s 40.95 / 64.68, ~1.33 x Eviscerate; was 29.25 / 46.2), SpellLevel 60, A 6, RangeIndex 6 '
           '(100 yd), FacingCasterFlags 0, DefenseType 2, Eviscerate\'s visual 671, no combo attributes, hidden. d2 b8 | '
-          'd2 b18 (m.DFA_LANDING_CLASS), never d0 b17. R4: the flat 47.0925 potency of AP is live at the landing '
-          '(~10% of a 5-point landing); no potency_excluded.',
+          'd2 b18 (m.DFA_LANDING_CLASS), never d0 b17. R4: the flat 65.9295 potency of AP is live at the landing '
+          '(~10% of a 5-point landing); no potency_excluded. ap_potency 47.0925 -> 65.9295 and cp_ap_potency '
+          '74.382 -> 104.1348 (2026-11-01, DPS balance pass 1031, user ruling: Death from Above +40%). Eviscerate fell 20% in the same pass, so '
+          'the landing is now 2.32 x Eviscerate: text "33% stronger" -> "132% stronger".',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.DFA_LANDING_CLASS), 'EquippedItemClass': -1,
         'CastingTimeIndex': 1, 'SpellLevel': 60, 'DefenseType': 2, 'PreventionType': 0, 'RangeIndex': _RANGE_100_YD,
         'FacingCasterFlags': 0, 'SpellVisualID_1': _SV_EVISCERATE,
-        'Description_Lang_enUS': 'Comes down on the target with an Eviscerate that is 33% stronger.',
+        'Description_Lang_enUS': 'Comes down on the target with an Eviscerate that is 132% stronger.',
     },
 )
 scripted_by(death_from_above_landing_204170, 'spell_rog_death_from_above_landing')
@@ -353,14 +361,14 @@ death_from_above_flight_204171 = _buff(
 # Death from Above 204148: the castable
 # ---------------------------------------------------------------------------------------------------------------------
 _DFA_CP = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=8.0, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=60)
-# The 5-combo-point area damage (40 potency): 5 x the level-60 line + 5 x the AP coefficient x AP, inside one `$max()`
+    _potency.PotencyEffect(ap_potency=38.64, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=60)
+# The 5-combo-point area damage (193.2 potency, 38.64 per point after the DPS balance pass 1031; was 8.0 / 40 here, stale since M2a): 5 x the level-60 line + 5 x the AP coefficient x AP, inside one `$max()`
 # (a top-level `+` outside it is dropped by the client; potency.md "Tooltips").
 _DFA_AREA_5CP = ('${$max(0,' + _potency._fmt(5 * _DFA_CP.level60_value) + '+'
                  + _potency._fmt(5 * _DFA_CP.ap_coefficient) + '*$AP)}')
 _DEATH_FROM_ABOVE_TEXT = (
     f'Finishing move that strikes the target and all enemies within $204169a1 yards for {_DFA_AREA_5CP} Physical damage, '
-    'then leaps into the air and comes down on the target with an Eviscerate that is 33% stronger. Damage per combo '
+    'then leaps into the air and comes down on the target with an Eviscerate that is 132% stronger. Damage per combo '
     'point.')
 
 # Eviscerate's frame (R15): typed Attributes 327696, raw AttributesEx 0x100200, Ex3 0x400, weapon requirement 2 / 173555,
@@ -611,8 +619,8 @@ second_volley_main_204166 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=RANGE_SELF, radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=_TARGET_DEST_CASTER,
-               implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=8.0),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=FAN_OF_KNIVES_WEAPON_POTENCY,
+               implicit_target_a=_TARGET_DEST_CASTER, implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=8.0),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=_TARGET_DEST_CASTER,
                implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=8.0),
     ],
@@ -640,8 +648,8 @@ second_volley_off_204167 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=RANGE_SELF, radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=_TARGET_DEST_CASTER,
-               implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=8.0),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=FAN_OF_KNIVES_WEAPON_POTENCY,
+               implicit_target_a=_TARGET_DEST_CASTER, implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=8.0),
     ],
     spell_icon_id=_ICON_FAN_OF_KNIVES,
     notes='rogue-rework S2a A3, subtlety doc "Second Volley" (U41, Known-hard 8): the off-hand copy, linked from 204166 '

@@ -141,8 +141,8 @@ heroic_strike_78 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=183, implicit_target_a=6),
-        Effect(type=EffectType.WEAPON_DAMAGE, sp_potency=12, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=172, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_DAMAGE, sp_potency=10.2, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=heroic_strike_tooltip,
@@ -157,6 +157,8 @@ heroic_strike_78 = spell(
         'Stale single-rank bootstrap keys (BaseLevel, MaxLevel, EffectBonusMultiplier_1, the per-level flat) dropped. '
         'Family bit d0 b6 and every other stock column kept. warrior-rework S2 D27: the damage read Heavy Blows '
         '(tooltip_vars 1385); S3 D37 moves it to 1405 (Heavy Blows x Frenzied Blows x Unending Fury, token $<mult>).'
+          ' Effect 1 weapon_potency 183 -> 156 (155.55 rounded to a whole number) (2026-10-31, DPS balance pass 1031, user ruling: Fury damage -15%). Effect 2 sp_potency 12 -> 10.2 (2026-10-31, DPS balance pass 1031, user ruling: Fury damage -15%).'
+          ' Effect 1 weapon_potency 156 -> 172 (171.6 rounded to a whole number); the flat part stays 10.2 (2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%).'
     ),
     raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant strike that deals ${$m1*$<mult>}% weapon damage plus {pot2.avg*mult}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 64, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 39, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -268,6 +270,31 @@ mocking_blow_694 = spell(
 )
 
 
+# The counterattack Retaliation (20230) casts. A stock row that lived in npc.csv: effect 58 WEAPON_DAMAGE with base 0 /
+# die 0, a bare 100% weapon hit; now a WEAPON_PERCENT_DAMAGE with weapon_potency 100 (the same hit, on potency).
+retaliation_strike_20240 = spell(
+    id=20240,
+    name='Retaliation',
+    school=School.NORMAL,
+    attributes=151257088,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    power_type=PowerType.RAGE,
+    mana_cost=1,
+    mana_cost_pct=0,
+    range_yards=5.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=6),
+    ],
+    spell_icon_id=278,
+    notes='pulled from existing data (stock counterattack strike, was in npc.csv). Eff0 WEAPON_DAMAGE base 0 / die 0 -> '
+          'WEAPON_PERCENT_DAMAGE weapon_potency 100: the same 100% hit, now on potency (2026-11-01, potency audit fix F14).',
+    raw_overrides={'AttributesEx3': 512, 'FacingCasterFlags': 1, 'CastingTimeIndex': 1, 'SpellLevel': 1, 'RangeIndex': 2, 'EquippedItemClass': -1, 'SpellVisualID_1': 39, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly counterattack any enemy that strikes you in melee for $20230d.  Melee attacks made from behind cannot be counterattacked.  A maximum of $20230n attacks will cause retaliation.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 4, 'SpellClassMask_1': 2147483648, 'DefenseType': 2, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
 rend_772 = spell(
     id=772,
     name='Rend',
@@ -283,7 +310,7 @@ rend_772 = spell(
     range_yards=5.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, ap_potency=11.23, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=8.42, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
     ],
     tooltip_vars=improved_rend_tooltip,
     spell_icon_id=245,
@@ -298,6 +325,7 @@ rend_772 = spell(
         'weapon-gated physical aura-79 mods (Two-Handed Weapon Specialization, Two-Handed Weapon Mastery) into the '
         'bleed at application (Unit.cpp SpellPctDamageModsDone), so spell_warr_rend_arms divides them back out: '
         'two-hander talents do not raise bleeds. D27: the bleed damage reads Improved Rend (tooltip_vars 1388). The tooltip is per tick ("every $t1 sec for $d"), not a total: Lingering Wounds (a duration SpellMod) lengthens the bleed without moving the base 15 s, so a total would be wrong at 3/3.'
+          ' Effect 1 (periodic) ap_potency 11.23 -> 8.42 (2026-10-31, DPS balance pass 1031, user ruling: Arms damage -25%).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bleeding.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Wounds the target, causing it to bleed for {pot1*ir} every $t1 sec for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 0, 'SpellClassMask_1': 32, 'SpellClassSet': 4, 'SpellLevel': 4, 'SpellVisualID_1': 372, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -417,8 +445,8 @@ slam_1464 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=200, implicit_target_a=6),
-        Effect(type=EffectType.WEAPON_DAMAGE, sp_potency=18, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=150, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_DAMAGE, sp_potency=13.5, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=slam_tooltip,
@@ -433,6 +461,7 @@ slam_1464 = spell(
         '(below): a script base point would override the potency value (potency.md "What doesn\'t get a potency '
         'value" 1). warrior-rework S2 D27: the damage read Heavy Blows (tooltip_vars 1385); S3 D37 moves it to 1406 '
         '(Heavy Blows x Unending Fury, token $<mult>).'
+          ' Effect 1 weapon_potency 200 -> 150 (2026-10-31, DPS balance pass 1031, user ruling: Arms and Fury damage -25%). Effect 2 sp_potency 18 -> 13.5 (2026-10-31, DPS balance pass 1031, user ruling: Arms and Fury damage -25%).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 131072, 'AttributesEx3': 1024, 'AttributesEx6': 32, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant strike that deals ${$m1*$<mult>}% weapon damage plus {pot2.avg*mult}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 2097152, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 30, 'SpellVisualID_1': 1165, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -636,11 +665,18 @@ execute_5308 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.DUMMY, base_points=92, points_per_level=24.339285714285715, implicit_target_a=6),
+        # Potency carrier: spell_warr_execute_fury reads GetEffectValue() (the base) and this spell's generated
+        # spell_bonus_data ap_bonus (0.2), adds the per-rage term (EffectChainAmplitude_1) and casts 20647 with the sum.
+        Effect(type=EffectType.DUMMY, base_potency=362.2, ap_potency=46.667, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=1648,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 24); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 24, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Attempt to finish off a wounded foe, causing ${$m1+$AP*0.2} damage and converting each extra point of rage into $*10;F1 additional damage (up to a maximum cost of 30 rage).  Only usable on enemies that have less than 20% health.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 0.30000001192092896, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'ShapeshiftMask': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 4, 'SpellLevel': 24, 'SpellPriority': 50, 'SpellVisualID_1': 250, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetAuraState': 2},
+    notes=(
+        'Base bp 92 + 24.34/level from 24 (hand) -> base_potency 362.2, AP x 0.2 (C++ literal) -> ap_potency 46.667 '
+        '(coefficient 0.2, read from spell_bonus_data by the script) (2026-11-01, potency audit fix F3). Level 60: '
+        'base 969 -> 969 average (now a +-5% roll, 923-1,015), + 0.2 AP unchanged, rage term unchanged. '
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 24); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+    ),
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 24, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Attempt to finish off a wounded foe, causing {pot1} damage and converting each extra point of rage into $*10;F1 additional damage (up to a maximum cost of 30 rage).  Only usable on enemies that have less than 20% health.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 0.30000001192092896, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'ShapeshiftMask': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 4, 'SpellLevel': 24, 'SpellPriority': 50, 'SpellVisualID_1': 250, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetAuraState': 2},
 )
 
 
@@ -659,7 +695,7 @@ thunder_clap_6343 = spell(
     range_yards=0.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=83.0, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=99.6, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-11, mechanic=8, implicit_target_a=22, implicit_target_b=15, apply_aura=138, radius_yards=8.0),
     ],
     tooltip_vars=thunder_clap_tooltip,
@@ -673,7 +709,8 @@ thunder_clap_6343 = spell(
         'base-implied default; old ap_bonus 0.120, new 0.356). Effect 2 (the attack-speed slow '
         'debuff) is untouched. warrior-rework W0a D20 (shared doc "Thunder Clap"): the slow lasts 30 s (was the level 6 '
         'value of 10 s); ShapeshiftMask -> 0; tooltips from the doc. warrior-rework S1 D26: the damage reads '
-        '{pot1*mult} (Improved Thunder Clap x Thunderstruck, tooltip_vars 1422).'
+        '{pot1*mult} (Improved Thunder Clap x Thunderstruck, tooltip_vars 1422). '
+        'Effect 0 ap_potency 83 -> 99.6 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Thunder Clap +20%).'
     ),
     raw_overrides={'AttributesEx': 136, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Time between attacks increased.', 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts nearby enemies, dealing {pot1*mult} Physical damage and increasing the time between their attacks by $s2% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'RangeIndex': 1, 'ShapeshiftMask': 0, 'SpellClassMask_1': 128, 'SpellClassSet': 4, 'SpellLevel': 6, 'SpellVisualID_1': 145, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -715,7 +752,7 @@ revenge_6572 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=441.5, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=176.6, potency_kind='direct', implicit_target_a=6),
     ],
     tooltip_vars=revenge_tooltip,
     spell_icon_id=562,
@@ -727,7 +764,9 @@ revenge_6572 = spell(
         'converted to ap_potency=441.5 (warrior-potency-proposals.txt - matches the mismatched '
         'base-implied default; old ap_bonus 0.310, new 1.892). warrior-rework W0a D8: Category 65 -> 0 with a plain '
         'RecoveryTime 3000 (Revenge no longer shares a cooldown with Overpower); ShapeshiftMask -> 0. '
-        'warrior-rework S1 D26: the damage reads {pot1*ir} (Improved Revenge, tooltip_vars 1420).'
+        'warrior-rework S1 D26: the damage reads {pot1*ir} (Improved Revenge, tooltip_vars 1420). '
+        'Effect 0 ap_potency 441.5 -> 220.75 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Revenge -50%). '
+        'Effect 0 ap_potency 220.75 -> 176.6 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Revenge -20%).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 14, 'CasterAuraState': 1, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly counterattack an enemy for {pot1*ir}. Usable for 5 sec after you block, dodge or parry.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 0, 'SpellClassMask_1': 1024, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 14, 'SpellPriority': 50, 'SpellVisualID_1': 342, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -774,8 +813,8 @@ overpower_7384 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=168, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=17, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=126, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=12.75, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=battlelord_tooltip,
@@ -788,6 +827,7 @@ overpower_7384 = spell(
         'FINISHING_MOVE_DAMAGE cleared in W0b (D3, 0x58100200 -> 0x58000200): usable on CasterAuraSpell 204403 (the Overpower '
         'charge aura, overpower_204403 in warrior_shared.py) instead of a combo point. SpellLevel 12. spell_warr_overpower '
         'stays bound (EFFECT_0 SPELL_EFFECT_ANY). warrior-rework S2 D27: the damage reads Battlelord (tooltip_vars 1386).'
+          ' Effect 1 weapon_potency 168 -> 126 (2026-10-31, DPS balance pass 1031, user ruling: Arms damage -25%). Effect 2 sp_potency 17 -> 12.75 (2026-10-31, DPS balance pass 1031, user ruling: Arms damage -25%).'
     ),
     raw_overrides={'AttributesEx': 1476395520, 'AttributesEx3': 1024, 'AttributesEx4': 512, 'AttributesEx6': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CasterAuraSpell': 204403, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly overpower the enemy, dealing ${$m1*$<bl>}% weapon damage plus {pot2.avg*bl}. Usable only with an Overpower charge. Parrying an attack grants a charge.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 0, 'SpellClassMask_1': 4, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 12, 'SpellVisualID_1': 39, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1031,27 +1071,6 @@ battle_shout_25289 = spell(
 )
 
 
-cleave_30213 = spell(
-    id=30213,
-    name='Cleave',
-    school=School.NORMAL,
-    attributes=327696,
-    category=40,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=6000,
-    mana_cost=0,
-    mana_cost_pct=10,
-    range_yards=5.0,
-    effects=[
-        Effect(type=EffectType.WEAPON_DAMAGE, base_points=31, points_per_level=3.066666666666667, implicit_target_a=6, chain_targets=2),
-    ],
-    spell_icon_id=277,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 512, 'AttributesEx2': 4096, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "A sweeping attack that does the Felguard's weapon damage plus $s1 to the target and his nearest ally.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 4194304, 'SpellClassSet': 4, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 219, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
-)
-
-
 enraged_regeneration_55694 = spell(
     id=55694,
     name='Enraged Regeneration',
@@ -1143,8 +1162,8 @@ mortal_strike_12294 = spell(
     duration_ms=10000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=6, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=228, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=18, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=171, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=13.5, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=improved_mortal_strike_tooltip,
@@ -1156,6 +1175,7 @@ mortal_strike_12294 = spell(
         'BaseLevel = SpellLevel, MaxLevel 0). Category 971 -> 0 with a plain RecoveryTime 6000 (no longer shares a '
         'cooldown with Bloodthirst). warrior-rework S2 D27: the damage (not the healing reduction) reads Improved '
         'Mortal Strike (tooltip_vars 1387).'
+          ' Effect 2 weapon_potency 228 -> 171 (2026-10-31, DPS balance pass 1031, user ruling: Arms damage -25%). Effect 3 sp_potency 18 -> 13.5 (2026-10-31, DPS balance pass 1031, user ruling: Arms damage -25%).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing received is reduced.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals ${$m2*$<ims>}% weapon damage plus {pot3.avg*ims} and wounds the target, reducing the healing it receives by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'SpellClassMask_1': 33554432, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 39, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1175,8 +1195,8 @@ devastate_20243 = spell(
     range_yards=5.0,
     effects=[
         None,
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=120, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=240, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=20, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=devastate_tooltip,
@@ -1190,7 +1210,8 @@ devastate_20243 = spell(
         'Sunder: a 5-stack Devastate adds 5V = 50 potency (about 134 damage at 60; V is 25-27.5). The tooltip says it '
         'as the engine counts. SpellLevel 50 -> 10 (open level; potency spell: BaseLevel = SpellLevel, MaxLevel 0, the '
         'old BaseLevel 50 / MaxLevel 80 overrides are gone). Shield requirement kept. D26: weapon % and flat part both '
-        'read Puncture through {pot3.avg*pun} / ${$m2*$<pun>} (tooltip_vars 1421).'
+        'read Puncture through {pot3.avg*pun} / ${$m2*$<pun>} (tooltip_vars 1421). '
+        'Effect 1 weapon_potency 120 -> 240 and effect 2 sp_potency 10 -> 20 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Devastate +100%).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': '', 'CastingTimeIndex': 1, 'CumulativeAura': 5, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Sunder the target's armor causing the Sunder Armor effect.  In addition, causes ${$m2*$<pun>}% weapon damage plus {pot3.avg*pun} for each application of Sunder Armor on the target, counting the application from this attack.  The Sunder Armor effect can stack up to $u times.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'FacingCasterFlags': 1, 'ImplicitTargetA_1': 6, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 64, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 10, 'SpellVisualID_1': 12295, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1340,7 +1361,7 @@ bloodthirst_23881 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=91.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=85.1, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.DUMMY),
     ],
     tooltip_vars=bloodthirst_tooltip,
@@ -1370,6 +1391,8 @@ bloodthirst_23881 = spell(
         'caster-target effect makes the caster a second target, the Victory Rush bug class). Rebound from stock '
         'spell_warr_bloodthirst to spell_warr_bloodthirst_fury (warrior_fury.py). Tooltip from the Fury doc; the damage '
         'reads Unending Fury (tooltip_vars 1408, token {pot1*uf}).'
+          ' Effect 1 ap_potency 91.0 -> 77.35 (2026-10-31, DPS balance pass 1031, user ruling: Fury damage -15%).'
+          ' Effect 1 ap_potency 77.35 -> 85.1 (85.085 rounded) (2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly attack the target, causing {pot1*uf} Physical damage and generating 10 rage. Each bleed applied by you increases the damage of Bloodthirst by 8%, up to 40%. In addition, your next successful melee attack restores $m2% of your maximum health. Lasts $23885d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 1024, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 372, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )

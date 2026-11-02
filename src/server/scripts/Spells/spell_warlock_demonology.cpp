@@ -797,6 +797,52 @@ class spell_warl_demon_aura : public AuraScript
 };
 
 // ===========================================================================================
+// 200855 - Demonic Guardian Power - hidden aura on every Demonology guardian (Wild Imp, Imp Gang
+// Boss, Dreadstalker, Doomguard, Infernal), put on it by the warlock at summon
+// (pet_warlock_rework.cpp). Custom: potency audit fix F1 (2026-11-01): the guardians had no spell
+// power, so the generated potency coefficients on their spells multiplied 0. EFFECT_0
+// (MOD_DAMAGE_DONE, all magic schools) is the owner's spell power, the higher of Fire and Shadow,
+// times EFFECT_0's own data value in percent (the share). EFFECT_1's PERIODIC_DUMMY tick (its
+// amplitude is data) re-reads it so owner buffs and procs carry over.
+// ===========================================================================================
+class spell_warl_guardian_spell_power : public AuraScript
+{
+    PrepareAuraScript(spell_warl_guardian_spell_power);
+
+    void CalcSpellPower(AuraEffect const* aurEff, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+        amount = 0;
+
+        Unit* guardian = GetUnitOwner();
+        Unit* owner = guardian ? guardian->GetOwner() : nullptr;
+        if (!owner)
+            owner = GetCaster();
+        if (!owner)
+            return;
+
+        int32 const fire = owner->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_FIRE);
+        int32 const shadow = owner->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_SHADOW);
+        int32 const sharePct = GetSpellInfo()->Effects[aurEff->GetEffIndex()].CalcValue();
+        amount = CalculatePct(std::max<int32>(0, std::max(fire, shadow)), sharePct);
+    }
+
+    void HandlePeriodic(AuraEffect const* /*aurEff*/)
+    {
+        if (AuraEffect* spellPower = GetEffect(EFFECT_0))
+            spellPower->RecalculateAmount();
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_warl_guardian_spell_power::CalcSpellPower, EFFECT_0,
+            SPELL_AURA_MOD_DAMAGE_DONE);
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_warl_guardian_spell_power::HandlePeriodic, EFFECT_1,
+            SPELL_AURA_PERIODIC_DUMMY);
+    }
+};
+
+// ===========================================================================================
 // 200842, 200845 - Fel Cruelty buff / Demonic Pact Empower - push Potency on apply/remove -
 // DEMONOLOGY.md §7.1, §7.8
 // ===========================================================================================
@@ -1530,6 +1576,7 @@ void AddSC_warlock_demonology_spell_scripts()
     RegisterSpellScript(spell_warl_unending_resolve);
     RegisterSpellScript(spell_warl_immolation_aura_tick);
     RegisterSpellScript(spell_warl_demon_aura);
+    RegisterSpellScript(spell_warl_guardian_spell_power);
     RegisterSpellScript(spell_warl_demonic_potency_input);
     RegisterSpellScript(spell_warl_demonic_knowledge_int);
     RegisterSpellScript(spell_warl_soul_link_split);

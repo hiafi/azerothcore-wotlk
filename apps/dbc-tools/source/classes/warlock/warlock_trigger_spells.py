@@ -129,10 +129,10 @@ seed_of_corruption_27285 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=440.0, potency_kind='direct', implicit_target_a=16, radius_yards=15.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=132.0, potency_kind='direct', implicit_target_a=16, radius_yards=15.0),
     ],
     spell_icon_id=1932,
-    notes='warlock-rework AFFLICTION §4.1 B8 items 3/4b. SpellClassMask_2 keeps 0x10 (detonation, unaffected by the B16 Seed DoT rebit). Potency system P4 (warlock pilot): converted to sp_potency=440.0 (user-reviewed, mismatched row).',
+    notes='warlock-rework AFFLICTION §4.1 B8 items 3/4b. SpellClassMask_2 keeps 0x10 (detonation, unaffected by the B16 Seed DoT rebit). Potency system P4 (warlock pilot): converted to sp_potency=440.0 (user-reviewed, mismatched row). sp_potency 440.0 -> 132.0 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Seed of Corruption damage -70%).',
     raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 1, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Imbeds a demon seed in the enemy target, causing $27243o1 Shadow damage over $27243d.  When the target takes $27243s2 total damage or dies, the seed will inflict {pot1} Shadow damage to all enemies within $27285a1 yards of the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 32784, 'SpellClassSet': 5, 'SpellLevel': 44, 'SpellVisualID_1': 7682, 'Targets': 64},
 )
 scripted_by(seed_of_corruption_27285, 'spell_warl_seed_of_corruption_detonation_affliction')
@@ -6116,10 +6116,10 @@ chaos_bolt_copy_200980 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=213.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=170.4, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=3178,
-    notes='warlock-rework DESTRUCTION §5/§7.5/§7.6: Cast for the Havoc duplicate and Soulburn: Chaos Bolts extra targets (WP-B); range_yards 30 so Destructive Reach and the engine range check enforce "within range". Shares Chaos Bolts d2 0x20000; triggered + SUPPRESS_CASTER_PROCS so it never re-rolls Soulburn/Chaotic Inferno/Intensity/Soul Leech/Chaos Echo (G3). Potency system P4 (warlock pilot): converted to sp_potency=213.0 (user-reviewed, mismatched row) - same value as Chaos Bolt 50796 by design.',
+    notes='warlock-rework DESTRUCTION §5/§7.5/§7.6: Cast for the Havoc duplicate and Soulburn: Chaos Bolts extra targets (WP-B); range_yards 30 so Destructive Reach and the engine range check enforce "within range". Shares Chaos Bolts d2 0x20000; triggered + SUPPRESS_CASTER_PROCS so it never re-rolls Soulburn/Chaotic Inferno/Intensity/Soul Leech/Chaos Echo (G3). Potency system P4 (warlock pilot): converted to sp_potency=213.0 (user-reviewed, mismatched row) - same value as Chaos Bolt 50796 by design. Effect 1 sp_potency 213.0 -> 170.4 (2026-11-01, DPS balance pass 1031, user ruling: Chaos Bolt -20%).',
     raw_overrides={'AttributesEx3': 327680, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Shadowflame damage. Cannot be resisted, and pierces through all absorption effects.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': m.CHAOS_BOLT, 'SpellClassSet': 5, 'SpellLevel': 40, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
 scripted_by(chaos_bolt_copy_200980, 'spell_warl_chaos_bolt_copy', 'spell_warl_chaos_bolt_mastery')
@@ -6550,10 +6550,10 @@ hand_of_guldan_splash_200821 = spell(
     range_yards=100.0,
     radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=55.0, potency_kind='direct', implicit_target_a=53, implicit_target_b=16),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=44.0, potency_kind='direct', implicit_target_a=53, implicit_target_b=16),
     ],
     spell_icon_id=90160,
-    notes='warlock-rework DEMONOLOGY §4.1/§7.3: Metamorphosis-only AoE splash, triggered by spell_warl_hand_of_guldan (CastSpell TRIGGERED_FULL_MASK, not a LEARN chain) - player-cast (original caster is the player), not a pet/guardian spell, despite firing from a trigger. SUPPRESS_CASTER_PROCS (AttributesEx3=65536) - never procs the caster twice. implicit_target_a=53 (DEST_TARGET_ENEMY), b=16 (UNIT_DEST_AREA_ENEMY); OnObjectAreaTargetSelect removes the primary target and non-combat units (PLAN §2 propagation rule, spell_warl_hand_of_guldan_splash). SpellClassSet 5, SpellClassMask_3=HAND_OF_GULDAN (shared with 200820, Starfire-cleave precedent). Potency system P4 (warlock pilot): converted to sp_potency=55.0 (user-reviewed, mismatched row) - replaces the old _scaling.sb_units(0.325, 10, 157, 158) SB-units derivation.',
+    notes='warlock-rework DEMONOLOGY §4.1/§7.3: Metamorphosis-only AoE splash, triggered by spell_warl_hand_of_guldan (CastSpell TRIGGERED_FULL_MASK, not a LEARN chain) - player-cast (original caster is the player), not a pet/guardian spell, despite firing from a trigger. SUPPRESS_CASTER_PROCS (AttributesEx3=65536) - never procs the caster twice. implicit_target_a=53 (DEST_TARGET_ENEMY), b=16 (UNIT_DEST_AREA_ENEMY); OnObjectAreaTargetSelect removes the primary target and non-combat units (PLAN §2 propagation rule, spell_warl_hand_of_guldan_splash). SpellClassSet 5, SpellClassMask_3=HAND_OF_GULDAN (shared with 200820, Starfire-cleave precedent). Potency system P4 (warlock pilot): converted to sp_potency=55.0 (user-reviewed, mismatched row) - replaces the old _scaling.sb_units(0.325, 10, 157, 158) SB-units derivation. Effect 1 sp_potency 55.0 -> 44.0 (2026-11-01, DPS balance pass 1031, user ruling: Hand of Gul\'dan -20%; the Metamorphosis splash 200821 is the same ability).',
     raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Shadowflame damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.HAND_OF_GULDAN, 'SpellClassSet': 5, 'SpellLevel': 10, 'Speed': 0.0, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
 scripted_by(hand_of_guldan_splash_200821, 'spell_warl_hand_of_guldan_splash')
@@ -6613,11 +6613,12 @@ fel_firebolt_200824 = spell(
     mana_cost_pct=0,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=18.36, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=12.852, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=2298,
     notes="warlock-rework DEMONOLOGY §5.0/§0.1.6: cast by the Wild Imp (npc_warl_wild_imp). SpellClassSet 0, no bits (guardian leak rule); Demonic Power +7/14% is applied on the HIT in spell_warl_guardian_hit_mods, never the base points (§4.0). AttributesEx=1024 (NO_THREAT). Speed=20 (missile); SpellVisualID_1=67 = stock Firebolt 3110's visual (was 3110 - the spell id pasted as a visual id, so no missile showed). Potency system P8 (warlock guardians, user-approved 2026-10-02): moved from the bespoke Warlock::ComputeGuardianBasePoints(guardian, spellId, spCoefficient) owner-SP-coefficient formula (eff0 was previously via _scaling.sb_units(0.12, 10, 58, 58)) to the standard potency curve - converted to sp_potency=19.1 (potency-report base-implied default, T=2s cast, no mismatch). pet_warlock_rework.cpp's call site switched from me->CastCustomSpell(target, ..., &bp0, ...) to a plain me->CastSpell(target, ..., false) so the generated EffectBonusMultiplier_1/correction row apply through the normal CalcValue hook with the Wild Imp as caster (its level is owner-synced at summon, Spell::SummonGuardian). This is a real rebalance, not a preserved total - SpellLevel=1 (no player learn level; pure guardian-cast). Effect 1 sp_potency 19.1 -> 15.3 (2026-10-08, DPS balance pass, user ruling: Demonology damage)."
-          ' Effect 1 sp_potency 15.3 -> 18.36 (2026-10-08, DPS balance pass, user ruling: Demonology Wild Imp Fel Firebolt x1.20).',
+          ' Effect 1 sp_potency 15.3 -> 18.36 (2026-10-08, DPS balance pass, user ruling: Demonology Wild Imp Fel Firebolt x1.20).'
+          ' Effect 1 sp_potency 18.36 -> 12.852 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Fel Firebolt -30%).',
     raw_overrides={'AttributesEx': 1024, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Speed': 20.0, 'SpellVisualID_1': 67, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals {pot1} Fire damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'SpellLevel': 1},
 )
 
@@ -6655,10 +6656,10 @@ dreadstalker_bite_200830 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=49.5, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=39.6, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=4062,
-    notes="warlock-rework DEMONOLOGY §5.0: cast by each Dreadstalker every 2 s (npc_warl_dreadstalker). SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT). Potency system P8 (warlock guardians, user-approved 2026-10-02): moved from the bespoke Warlock::ComputeGuardianBasePoints owner-SP-coefficient formula (eff0 was previously via _scaling.sb_units(0.183, 30, 88, 89)) to the standard potency curve - converted to sp_potency=49.5 (potency-report base-implied default, T=1.5s instant floor, no mismatch). pet_warlock_rework.cpp's DoBite() switched from me->CastCustomSpell(target, ..., &bp0, ...) to a plain me->CastSpell(target, ..., true) so the generated EffectBonusMultiplier_1/correction row apply through the normal CalcValue hook with the Dreadstalker as caster. This is a real rebalance, not a preserved total - SpellLevel=1 (no player learn level; pure guardian-cast).",
+    notes="warlock-rework DEMONOLOGY §5.0: cast by each Dreadstalker every 2 s (npc_warl_dreadstalker). SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT). Potency system P8 (warlock guardians, user-approved 2026-10-02): moved from the bespoke Warlock::ComputeGuardianBasePoints owner-SP-coefficient formula (eff0 was previously via _scaling.sb_units(0.183, 30, 88, 89)) to the standard potency curve - converted to sp_potency=49.5 (potency-report base-implied default, T=1.5s instant floor, no mismatch). pet_warlock_rework.cpp's DoBite() switched from me->CastCustomSpell(target, ..., &bp0, ...) to a plain me->CastSpell(target, ..., true) so the generated EffectBonusMultiplier_1/correction row apply through the normal CalcValue hook with the Dreadstalker as caster. This is a real rebalance, not a preserved total - SpellLevel=1 (no player learn level; pure guardian-cast). Effect 1 sp_potency 49.5 -> 39.6 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Dreadstalker Bite -20%).",
     raw_overrides={'AttributesEx': 1024, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals {pot1} Shadow damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'SpellLevel': 1},
 )
 
@@ -7172,6 +7173,38 @@ scripted_by(200852, 'spell_warl_demon_aura')
 scripted_by(200854, 'spell_warl_demon_aura')
 scripted_by(200842, 'spell_warl_demonic_potency_input')
 scripted_by(200845, 'spell_warl_demonic_potency_input')
+
+
+demonic_guardian_power_200855 = spell(
+    id=200855,
+    name='Demonic Guardian Power',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_DONE, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=1000),
+    ],
+    spell_icon_id=0,
+    notes="Hidden aura the warlock puts on each Demonology guardian (Wild Imp 300150, Imp Gang Boss 300151, Dreadstalker 300152,"
+          " Doomguard 300153, Infernal 300154) at summon (pet_warlock_rework.cpp, the aura caster is the warlock)."
+          " eff0 MOD_DAMAGE_DONE misc 126 gives the guardian the warlock's spell power (the higher of Fire and Shadow)"
+          " times eff0's own value in percent: base_points 99 + die 1 = 100% (the share; retune = change this number,"
+          " generate, import). eff1 PERIODIC_DUMMY re-reads it every amplitude ms (1000). Both by"
+          " spell_warl_guardian_spell_power. The guardians' spells (Fel Firebolt 200824, Implosion 200828, Bite 200830,"
+          " Doom Bolt 200832, Immolation 200834) carry generated potency coefficients that apply to this spell power."
+          " New spell, guardian spell power share none -> 100% (2026-11-01, potency audit fix F1). EquippedItemClass -1:"
+          " Unit::SpellBaseDamageBonusDone only counts a MOD_DAMAGE_DONE aura whose spell has EquippedItemClass -1"
+          " (review B1).",
+    raw_overrides={'EquippedItemClass': -1, 'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+scripted_by(demonic_guardian_power_200855, 'spell_warl_guardian_spell_power')
 
 
 dark_apotheosis_learner_200863 = spell(

@@ -326,7 +326,7 @@ avengers_shield_extra_201370 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=_FAR_RANGE, duration_ms=10000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=132.35, ap_potency=132.35, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=264.7, ap_potency=264.7, potency_kind='direct',
                implicit_target_a=6, chain_targets=3),
         Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=11, implicit_target_a=6,
                apply_aura=AuraType.MOD_DECREASE_SPEED, chain_targets=3),
@@ -336,7 +336,9 @@ avengers_shield_extra_201370 = spell(
           "10 s) with NO family bits - above all not AS (d0 0x4000), so no Shield of the Templar roll; triggered "
           "only, no cost / cooldown, range 50000, IGNORE_LINE_OF_SIGHT, SUPPRESS_CASTER_PROCS (one cast for procs), "
           "learn / anchor level 40. Speed 35, DmgClass RANGED, visual 7886 as 31935. Not bound to "
-          "spell_pal_seal_builder (no seal stack). Cast x2 by spell_pal_avengers_shield_prot.",
+          "spell_pal_seal_builder (no seal stack). Cast x2 by spell_pal_avengers_shield_prot. "
+          "sp_potency 132.35 -> 264.7 and ap_potency 132.35 -> 264.7 (2026-11-01, DPS balance pass 1031 round T1, "
+          "user ruling: Avenger's Shield +100%).",
     raw_overrides=_raw(
         "", "Dazed.", level=40, dmg_class=_DMG_RANGED,
         AttributesEx2=_ATTR2_IGNORE_LINE_OF_SIGHT, AttributesEx3=_ATTR3_SUPPRESS_CASTER_PROCS,

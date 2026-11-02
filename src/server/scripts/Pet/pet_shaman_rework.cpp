@@ -591,6 +591,18 @@ struct ShamanMeleeElementalAI : public ScriptedAI
         Shaman::OnElementalDied(me);
     }
 
+    // The summon issues MoveFollow(owner). A chase that starts already in range sends no spline of its own, so the
+    // follow spline still in flight would carry the guardian back to the owner's side, and the chase only re-paths
+    // once the target moves (never, for a training dummy or a stationary boss). Stop the old spline first, as the
+    // Infernal does (docs/bugs-and-fixes.md, "Infernal walks back to the warlock and never swings").
+    void AttackStart(Unit* who) override
+    {
+        if (who && who != me->GetVictim())
+            me->StopMoving();
+
+        ScriptedAI::AttackStart(who);
+    }
+
 protected:
     void AcquireEngagedTarget()
     {
@@ -929,6 +941,16 @@ public:
             return;
 
         DoMeleeAttackIfReady();
+    }
+
+    // Same follow-spline guard as ShamanMeleeElementalAI::AttackStart: stop the summon's MoveFollow spline before a
+    // chase that starts in range, or the wolf is carried back to the owner and never swings at a stationary target.
+    void AttackStart(Unit* who) override
+    {
+        if (who && who != me->GetVictim())
+            me->StopMoving();
+
+        ScriptedAI::AttackStart(who);
     }
 
 protected:

@@ -9,6 +9,7 @@ Ids 202520-202595 (Ele block 202520-202639):
     202560-202590  buffs, debuffs, charges and guardian auras (read by the C++ by id)
     202591-202593  Lightning Overload copies (LB, CL, Lava Burst)
     202595         Astral Shift, empowered
+    202596         Earth Elemental melee +200% guardian aura (DPS balance pass 1031)
 SkillLineAbility 30690 (Call of the Elements). (202594, the stun-castable Thunderstorm rank 2, its SkillLineAbility 30691
 and the superseded_by edit of the stock row 17659 were removed in playtest fix pass 2 / P6: Call of Thunder's capstone is
 now "Thunderstorm restores 100% more mana". Ids 202594 and 30691 stay retired; clients may have cached them.)
@@ -58,6 +59,7 @@ TARGET_UNIT_TARGET_ENEMY = 6
 CR_MASTERY_BIT = 1 << 20
 CR_PROC_CHANCE_BIT = 1 << 11
 
+SCHOOL_PHYSICAL = 1
 SCHOOL_ALL = 127
 SCHOOL_ALL_MAGIC = 126
 SCHOOL_NATURE = 8
@@ -738,6 +740,17 @@ earth_elemental_no_threat_202589 = _buff(
     'Earth 36213 (pet_shaman_rework.cpp).',
     hidden=True, guardian=True,
 )
+# 2026-11-01 DPS balance pass 1031 (user ruling: Earth Elemental melee +200%). creature_template.DamageModifier never
+# reaches a physical guardian's swing (Guardian::UpdateDamagePhysical has no DamageModifier term), so the +200% is this
+# aura: aura 79 physical (misc 1) feeds the guardian's TOTAL_PCT. Always on (not talent-gated); SyncGuardianAuras adds it.
+earth_elemental_melee_202596 = _buff(
+    202596, 'Earth Elemental Melee', [_aura(AuraType.MOD_DAMAGE_PERCENT_DONE, 199, SCHOOL_PHYSICAL)], ICON_EARTH, -1, '',
+    'Increases the physical damage dealt by your Earth Elemental by 200%.',
+    'Earth Elemental melee +200% (DPS balance pass 1031): aura 79 physical (stored 199, misc 1), owner-added on the '
+    'guardian (L5), replaces the no-op DamageModifier 4.5 on 15352. EquippedItemClass -1 (from _raw). Id 202596 is '
+    'the first spare after the S1a block.',
+    hidden=True, guardian=True,
+)
 
 # ---- Astral Shift: plain (-10%, script sets by rank / CC) and empowered (-25%, 6 s) ------------------------------------------------------------------------
 astral_shift_buff_202590 = _buff(
@@ -770,7 +783,7 @@ astral_shift_empowered_202595 = _buff(
 # target can be visible to the previous target only. The copy is only ever cast at a target the parent just hit, so the
 # parent's own LoS filtering stands in for it.
 def _overload_copy(spell_id: int, name: str, school, parent, parent_t_ms: int, mask_d0: int, mask_d1: int, level: int,
-                   icon: int, speed: float, visual: int, description: str, chain_amp: float = 1.0):
+                   icon: int, speed: float, visual: int, description: str, chain_amp: float = 1.0, extra_note: str = ''):
     potency = parent.effects[0].sp_potency / 2
     return spell(
         id=spell_id, name=name, school=school, attributes=0,
@@ -783,7 +796,7 @@ def _overload_copy(spell_id: int, name: str, school, parent, parent_t_ms: int, m
               f'LoS-checked from the previous target, not the shaman; the copy is only cast at a target the parent '
               f'just hit); parent bits d0 {mask_d0:#x} / d1 {mask_d1:#x}; no '
               f'NOT_A_PROC, no IGNORE_CASTER_DAMAGE_MODIFIERS; single target. Cast triggered by '
-              f'spell_sha_ele_lightning_overload; spell_sha_ele_overload_copy rolls Shamanism / Echo.',
+              f'spell_sha_ele_lightning_overload; spell_sha_ele_overload_copy rolls Shamanism / Echo.' + extra_note,
         raw_overrides=_raw(
             description, '', level, AttributesEx=ATTR1_NO_THREAT, AttributesEx2=ATTR2_IGNORE_LOS, DefenseType=1,
             PreventionType=1, Speed=speed,
@@ -797,16 +810,22 @@ def _overload_copy(spell_id: int, name: str, school, parent, parent_t_ms: int, m
 lightning_bolt_overload_202591 = _overload_copy(
     202591, 'Lightning Bolt', School.NATURE, lightning_bolt_403, 2000, LB, 0, 1, ICON_LB, 20.0, 173,
     'Casts a bolt of lightning at the target for {pot1} Nature damage.',
+    extra_note=' 2026-11-01 sp_potency 63 -> 50.4 (2026-11-01, DPS balance pass 1031, user ruling: Lightning Bolt -20%; '
+               'follows the parent 403 at half).',
 )
 chain_lightning_overload_202592 = _overload_copy(
     202592, 'Chain Lightning', School.NATURE, chain_lightning_421, 2000, CL, 0, 32, ICON_CL, 20.0, 36,
     'Hurls a lightning bolt at the enemy, dealing {pot1} Nature damage.',
-    chain_amp=0.7,   # the parent's per-jump factor, as a safety net if a jump leaks through (script trims to 1 target)
+    chain_amp=1.0,   # the parent's per-jump factor, as a safety net if a jump leaks through (script trims to 1 target)
+    extra_note=' EffectChainAmplitude_1 0.7 -> 1.0 with the parent 421 (2026-11-02, DPS balance pass 1031 round S1, user ruling: '
+               'shaman package); potency follows the parent 421 (79.6 -> 99.5) at half.',
 )
 lava_burst_overload_202593 = _overload_copy(
     202593, 'Lava Burst', School.FIRE, lava_burst_51505, 2000, 0, LAVA_BURST, 42, ICON_LAVA_BURST, 24.0, 11565,
     'You hurl molten lava at the target, dealing {pot1} Fire damage. If your Flame Shock is on the target, Lava Burst '
     'will deal a critical strike.',
+    extra_note=' 2026-11-01 sp_potency 28.8 -> 23.04 (2026-11-01, DPS balance pass 1031, user ruling: Lava Burst -20%; '
+               'follows the parent 51505 at half).',
 )
 for _copy in (lightning_bolt_overload_202591, chain_lightning_overload_202592, lava_burst_overload_202593):
     scripted_by(_copy, 'spell_sha_ele_overload_copy')
