@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Boss-mechanics telegraph marker assets (dungeon mechanics stage M1, WP-A): 170 creature displays
-that are flat, coloured, alpha-blended floor shapes a stalker creature wears and `SetObjectScale`s
+Boss-mechanics telegraph marker assets (dungeon mechanics stage M1, WP-A): 747 creature displays
+that are flat, colored, alpha-blended floor shapes a stalker creature wears and `SetObjectScale`s
 to any size. Every telegraph draws two layers (M1-FIX-TELEGRAPH-FILL-REPORT.md): a static OUTLINE
 (rim + faint interior, the full hitbox from the first frame) and a FILL (rim + solid interior) that
 the server grows into the outline over the warning time.
@@ -9,35 +9,44 @@ the server grows into the outline over the warning time.
 Source model: Ascension's `SPELLS\\red_circle_filled.M2` (a 4-vertex quad) from its client backup.
 The model is patched (lib/m2_patch.py) into a quad (x, y in [-QUAD_HALF, QUAD_HALF], z = 0) and 25
 line models (x in [0, k], y in [-LINE_HALF, LINE_HALF], k = 2^(i/8), so scale = width and the model
-starts at the stalker). Textures are generated here, not mined (lib/blp_write.py, DXT5): one flat
-colour per file with the shape in the alpha channel. The shape stops MARGIN_FRAC of the side short
-of every texture edge it would otherwise touch, and the quad is that much bigger (QUAD_HALF = 8/7),
-so scale 1 is still exactly a 1-yard radius / length / width; the edge texels are transparent at
-every mip level (`encode_blp(clear_cols=..., clear_rows=...)`). The first build drew the shapes
+starts at the stalker). Textures are generated here, not mined (lib/blp_write.py, DXT5): WHITE, with
+the shape in the alpha channel, one per shape step and shared by every color. The color is the
+model's own: its M2Color track (the one the skin batch's color index 0 points at) holds the color's
+RGB, and the client multiplies the texture by it (M1-FIX-COLORS-REPORT.md). So each display is a
+1.2 KB model + 156 B skin, and the 35 textures are shared. The shape stops MARGIN_FRAC of the side
+short of every texture edge it would otherwise touch, and the quad is that much bigger (QUAD_HALF =
+8/7), so scale 1 is still exactly a 1-yard radius / length / width; the edge texels are transparent
+at every mip level (`encode_blp(clear_cols=..., clear_rows=...)`). The first build drew the shapes
 edge to edge, and the clamped edge texels of the lower mips drew straight lines along the quad edge
 where the disc touches it (N/E/S/W).
 
-Rows written: CreatureModelData + CreatureDisplayInfo ids 90500-90669 (one pair per display, the
+Rows written: CreatureModelData + CreatureDisplayInfo ids 91000-91882 (one pair per display, the
 same id in both tables), into the working copy `var/model-visual-dbc/DBFilesClient/`, with any other
-row of the reserved block 90500-90699 removed; model, skin and texture files into
-`var/model-visual-dbc/SPELLS/` (packed by build_patch_m.py); `--sql-out` emits the matching server
-rows (DELETE + INSERT of the whole block). Deliberately not named `patch_*_vfx_models.py`, so
-lib/test_id_blocks.py's constant scan of those scripts is unaffected.
+row of the reserved block 91000-91999 or of the old slice 90500-90699 removed; model, skin and
+texture files into `var/model-visual-dbc/SPELLS/` (packed by build_patch_m.py); `--sql-out` emits the
+matching server rows (DELETE of both ranges + INSERT). Deliberately not named
+`patch_*_vfx_models.py`, so lib/test_id_blocks.py's constant scan of those scripts is unaffected.
 
-Display ids (CreatureDisplayInfo id = CreatureModelData id; colour index c: red 0, yellow 1, blue
-2, purple 3; get-out shapes ship red and yellow only). F = fill layer, O = outline layer:
+Display ids (CreatureDisplayInfo id = CreatureModelData id): one block of 100 ids per color,
 
-    90500-90503  disc (F), 90500 + c            90504-90507  ring (O), 90504 + c
-    90508-90521  donut (F), 90508 + 2j + c, rho_j in (0.25 0.33 0.40 0.50 0.60 0.67 0.75)
-    90522-90537  cone (F), 90522 + 2j + c, angle_j in (30 45 60 90 120 150 180 270) degrees
-    90538-90587  line (F), 90538 + 2i + c, k_i = 2^(i/8), i = 0..24 (aspect 1 to 8)
-    90588-90637  line (O), 90588 + 2i + c
-    90638-90653  cone (O), 90638 + 2j + c
-    90654-90667  donut (O), 90654 + 2j + c
-    90668-90669  timer ring (rim only; a donut's timer), 90668 + c
-    90670-90689  spare
-    90690-90695  diagnostic displays, only with --diagnostics (DIAGNOSTICS below)
-    90696-90699  spare
+    id = 91000 + 100 * c + SHAPE_OFFSET[shape] + step
+
+c = color index (COLORS: red 0, yellow 1, blue 2, purple 3, orange 4, green 5, teal 6, white 7,
+black 8). Within a color's block (F = fill layer, O = outline layer):
+
+    +0          disc (F)                    +1        ring (O)
+    +2          timer ring (rim only; a donut's timer)
+    +3..+9      donut (F), rho_j in (0.25 0.33 0.40 0.50 0.60 0.67 0.75)
+    +10..+16    donut (O)
+    +17..+24    cone (F), angle_j in (30 45 60 90 120 150 180 270) degrees
+    +25..+32    cone (O)
+    +33..+57    line (F), k_i = 2^(i/8), i = 0..24 (aspect 1 to 8)
+    +58..+82    line (O)
+    +83..+99    spare
+
+91900-91989 are spare; 91990-91995 are the diagnostic displays, only with --diagnostics
+(DIAGNOSTICS below). mod-boss-mechanics `src/BossMechanicsIds.h` (`MarkerDisplay`) computes the
+same ids; keep both in sync.
 
 Orientation: model +X is forward and carries v, model +Y carries u, so a cone's wedge opens toward
 increasing v (down the image rows) and its apex is the texture centre. Spike S5 checks it in game.
@@ -46,13 +55,14 @@ Texture binding (fix 2026-11-02, M1-FIX-MARKERS-REPORT.md): by default every dis
 model copy whose texture path is hard-coded (type 0, how the source model binds its texture; texture
 flags 0 = clamp in both directions). The first build used one shared model with a type-11 skin
 texture, which drew green boxes: the source's replaceable-texture lookup only maps type 0. `--skins`
-restores the shared-model layout with that lookup fixed (lib/m2_patch.py); ids are the same either way.
+restores a shared-model layout (one model per geometry and color, the texture through
+TextureVariation_1) with that lookup fixed (lib/m2_patch.py); ids are the same either way.
 
 Usage (untrusted input rule: the extracted Ascension files get their own new, empty directory):
     python3 -I apps/dbc-tools/patch_bossmechanics_markers.py --extract <patch-N.MPQ>
     python3 -I apps/dbc-tools/patch_bossmechanics_markers.py --dry-run
     python3 -I apps/dbc-tools/patch_bossmechanics_markers.py --sql-out data/sql/updates/pending_db_world/rev_<ns>.sql
-`--extract` also takes the source's own texture (for the diagnostic displays 90690 and 90694).
+`--extract` also takes the source's own texture (for the diagnostic displays 91990 and 91994).
 Then run build_patch_m.py to pack SPELLS/ and the DBCs into patch-M.mpq.
 """
 
@@ -80,31 +90,56 @@ SOURCE_TEXTURE = "red_circle_filled_editeda_circle_solid_red.blp"   # Ascension'
 SOURCE_ARCHIVE_PATHS = (f"SPELLS/{SOURCE_MODEL}", f"SPELLS/{SOURCE_SKIN}", f"SPELLS/{SOURCE_TEXTURE}")
 PREFIX = "bm_"
 
-# --- ids (handoff §3.1; reservations.bossmechanics in source/ids.yaml) ---
+# --- ids (handoff §3.1; reservations.bossmechanics in source/ids.yaml; moved to 91000-91999 by the colors fix) ---
 
-FIRST_ID = 90500
-LAST_ID = 90669
-BLOCK_LAST_ID = 90699        # the reservation's end: the SQL and the DBC merge clear the whole block
-DIAG_FIRST_ID = 90690
-DIAG_LAST_ID = 90695
+FIRST_ID = 91000
+COLOR_STRIDE = 100           # ids per color block
+BLOCK_LAST_ID = 91999        # the reservation's end: the SQL and the DBC merge clear the whole block
+OLD_FIRST_ID = 90500         # the slice the markers used before the colors fix (free again: see _owned)
+OLD_LAST_ID = 90699
+DIAG_FIRST_ID = 91990
+DIAG_LAST_ID = 91995
 
-COLOURS = ("red", "yellow", "blue", "purple")
-COLOUR_RGB = {"red": (230, 40, 30), "yellow": (245, 200, 40), "blue": (40, 120, 240), "purple": (160, 70, 220)}
-GET_OUT_COLOURS = COLOURS[:2]
-
-DISC_BASE = 90500            # fill
-RING_BASE = 90504            # outline
-DONUT_BASE = 90508           # fill
-CONE_BASE = 90522            # fill
-LINE_BASE = 90538            # fill
-LINE_OUTLINE_BASE = 90588
-CONE_OUTLINE_BASE = 90638
-DONUT_OUTLINE_BASE = 90654
-TIMER_RING_BASE = 90668
+# Color index c = position in COLORS (BossMechanics::Color in the module). RGB tuned 2026-11-02 for dark floors,
+# snow and sand (M1-FIX-COLORS-REPORT.md): red and yellow unchanged (playtested), blue brighter and more saturated
+# (was 40, 120, 240 and the hardest to read), purple brighter (was 160, 70, 220). Black darkens the floor (alpha
+# blend of a black texel): it reads on light floors only; white is the reverse.
+COLORS = ("red", "yellow", "blue", "purple", "orange", "green", "teal", "white", "black")
+COLOR_RGB = {
+    "red": (230, 40, 30), "yellow": (245, 200, 40), "blue": (30, 140, 255), "purple": (185, 90, 250),
+    "orange": (255, 130, 20), "green": (80, 225, 60), "teal": (20, 215, 200), "white": (245, 245, 245),
+    "black": (0, 0, 0),
+}
+WHITE = (255, 255, 255)      # every marker texture's RGB: the model's M2Color supplies the color
 
 DONUT_RATIOS = (0.25, 0.33, 0.40, 0.50, 0.60, 0.67, 0.75)
 CONE_ANGLES = (30, 45, 60, 90, 120, 150, 180, 270)
 LINE_STEPS = 25                                  # i = 0..24, aspect 1 to 8
+
+# (shape, steps) in id order inside one color block: fill disc, outline ring, timer ring, then fill / outline donut,
+# cone and line ladders. SHAPE_OFFSET[shape] is the first id offset of that shape in the block.
+SHAPES = (
+    ("disc", 1), ("ring", 1), ("timer", 1),
+    ("donut", len(DONUT_RATIOS)), ("donut_outline", len(DONUT_RATIOS)),
+    ("cone", len(CONE_ANGLES)), ("cone_outline", len(CONE_ANGLES)),
+    ("line", LINE_STEPS), ("line_outline", LINE_STEPS),
+)
+SHAPE_OFFSET: dict[str, int] = {}
+_next = 0
+for _shape, _steps in SHAPES:
+    SHAPE_OFFSET[_shape] = _next
+    _next += _steps
+PER_COLOR = _next                                # 83
+del _next, _shape, _steps
+LAST_ID = FIRST_ID + COLOR_STRIDE * (len(COLORS) - 1) + PER_COLOR - 1      # 91882
+
+
+def display_id(color: int, shape: str, step: int = 0) -> int:
+    """The display id of one shape step in one color (BossMechanicsIds.h `MarkerDisplay`)."""
+    steps = dict(SHAPES)[shape]
+    if not 0 <= color < len(COLORS) or not 0 <= step < steps:
+        raise ValueError(f"no display for color {color}, {shape} step {step}")
+    return FIRST_ID + COLOR_STRIDE * color + SHAPE_OFFSET[shape] + step
 
 
 def line_aspect(i: int) -> float:
@@ -214,17 +249,22 @@ class Display:
     """One CreatureDisplayInfo + CreatureModelData pair.
 
     shape: disc, ring, timer, donut, cone, line (fill layer: disc, donut, cone, line; outline layer: ring,
-    donut_outline, cone_outline, line_outline; timer: the donut's rim-only timer ring) or diag; param: the
-    donut ratio or cone angle. binding: how the model gets its texture: "path" (type 0, hard-coded
+    donut_outline, cone_outline, line_outline; timer: the donut's rim-only timer ring) or diag; step: the ladder
+    index (0 for disc, ring and timer); param: the donut ratio or cone angle. texture: the texture file stem (shared
+    by every color); tex_rgb: that texture's RGB (white for the markers); tint: the RGB the model's M2Color
+    multiplies it by (the display's color). binding: how the model gets its texture: "path" (type 0, hard-coded
     `spells\\<texture>.blp`), "skin" (type 11 + fixed replaceable lookup, TextureVariation_1 = texture),
-    "skin_broken" (type 11 with the source's one-entry lookup: the first M1 build, a diagnostic only) or
-    "source" (the untouched source model, only its texture path rewritten: a diagnostic only)."""
-    __slots__ = ("id", "shape", "texture", "colour", "model", "verts", "size", "binding", "param")
+    "skin_broken" (type 11 with the source's one-entry lookup: the first M1 build, a diagnostic only) or "source"
+    (the untouched source model, only its texture path rewritten: a diagnostic only)."""
+    __slots__ = ("id", "shape", "step", "texture", "color", "model", "verts", "size", "binding", "param",
+                 "tex_rgb", "tint")
 
-    def __init__(self, id_: int, shape: str, texture: str, colour: str, model: str, verts, size: int,
-                 binding: str = "path", param: float = 0.0):
-        self.id, self.shape, self.texture, self.colour = id_, shape, texture, colour
+    def __init__(self, id_: int, shape: str, texture: str, color: str, model: str, verts, size: int,
+                 binding: str = "path", param: float = 0.0, step: int = 0, tex_rgb=WHITE, tint=None):
+        self.id, self.shape, self.step, self.texture, self.color = id_, shape, step, texture, color
         self.model, self.verts, self.size, self.binding, self.param = model, verts, size, binding, param
+        self.tex_rgb = tex_rgb
+        self.tint = COLOR_RGB[color] if tint is None else tint
 
 
 QUAD = [(-QUAD_HALF, -QUAD_HALF), (QUAD_HALF, -QUAD_HALF), (-QUAD_HALF, QUAD_HALF), (QUAD_HALF, QUAD_HALF)]
@@ -235,65 +275,74 @@ def line_verts(i: int) -> list[tuple[float, float]]:
     return [(0.0, -LINE_HALF), (k, -LINE_HALF), (0.0, LINE_HALF), (k, LINE_HALF)]
 
 
-# Diagnostic displays (90690-90695, only with --diagnostics): which half of a broken marker is at fault.
-# (id, model file, texture file stem, binding). Every one is a red disc; view with `.morph target <id>`.
+# Diagnostic displays (91990-91995, only with --diagnostics): which half of a broken marker is at fault.
+# (id, model file, texture file stem, binding). Every one is a red disc; view with `.morph target <id>`. They predate
+# the tint: a red texture under a white M2Color, except 91992, 91993 and 91995, which use the production white disc
+# under a red M2Color (91993 is byte for byte the red production disc 91000).
 DIAG_ASC_TEXTURE = f"{PREFIX}diag_asc_red"      # SOURCE_TEXTURE, copied verbatim
 DIAG_PAL_TEXTURE = f"{PREFIX}diag_pal_red"      # the disc in the first build's palette format
 DIAGNOSTICS = (
-    (90690, f"{PREFIX}diag_src", DIAG_ASC_TEXTURE, "source"),       # untouched model + Ascension texture
-    (90691, f"{PREFIX}diag_pal", DIAG_PAL_TEXTURE, "path"),         # our model + palette BLP
-    (90692, f"{PREFIX}diag_skin", f"{PREFIX}disc_red", "skin"),     # type 11, fixed lookup + DXT5
-    (90693, f"{PREFIX}diag_dxt", f"{PREFIX}disc_red", "path"),      # type 0 + DXT5 (= 90500)
-    (90694, f"{PREFIX}diag_ascpatch", DIAG_ASC_TEXTURE, "path"),    # our model + Ascension texture
-    (90695, f"{PREFIX}diag_oldskin", f"{PREFIX}disc_red", "skin_broken"),  # the first build's binding
+    (91990, f"{PREFIX}diag_src", DIAG_ASC_TEXTURE, "source"),       # untouched model + Ascension texture
+    (91991, f"{PREFIX}diag_pal", DIAG_PAL_TEXTURE, "path"),         # our model + palette BLP
+    (91992, f"{PREFIX}diag_skin", f"{PREFIX}disc", "skin"),         # type 11, fixed lookup + DXT5
+    (91993, f"{PREFIX}diag_dxt", f"{PREFIX}disc", "path"),          # type 0 + DXT5 (= 91000)
+    (91994, f"{PREFIX}diag_ascpatch", DIAG_ASC_TEXTURE, "path"),    # our model + Ascension texture
+    (91995, f"{PREFIX}diag_oldskin", f"{PREFIX}disc", "skin_broken"),  # the first build's binding
 )
 
 
 def build_diagnostics() -> list[Display]:
-    return [Display(id_, "diag", texture, "red", model, QUAD, BIG, binding)
-            for id_, model, texture, binding in DIAGNOSTICS]
+    out = []
+    for id_, model, texture, binding in DIAGNOSTICS:
+        tinted = texture == f"{PREFIX}disc"
+        out.append(Display(id_, "diag", texture, "red", model, QUAD, BIG, binding,
+                           tex_rgb=WHITE if tinted else COLOR_RGB["red"], tint=None if tinted else WHITE))
+    return out
+
+
+def texture_stem(shape: str, step: int) -> str:
+    """The shared (white) texture of one shape step: bm_disc, bm_cone_090, bm_outline_donut_33, bm_line, ..."""
+    if shape in ("disc", "ring", "timer", "line"):
+        return f"{PREFIX}{shape}"
+    if shape == "line_outline":
+        return f"{PREFIX}outline_line"
+    outline = shape.endswith("_outline")
+    base = shape.removesuffix("_outline")
+    tag = f"{round(DONUT_RATIOS[step] * 100):02d}" if base == "donut" else f"{CONE_ANGLES[step]:03d}"
+    return f"{PREFIX}{'outline_' if outline else ''}{base}_{tag}"
 
 
 def build_displays(skins: bool) -> list[Display]:
+    """Every color x every shape step, in id order."""
     out: list[Display] = []
     binding = "skin" if skins else "path"
-
-    def add(id_: int, shape: str, tex_stem: str, colour: str, size: int, shared_model: str, verts,
-            param: float = 0.0, model: str | None = None) -> None:
-        texture = f"{PREFIX}{tex_stem}_{colour}"
-        own = model or texture
-        out.append(Display(id_, shape, texture, colour, shared_model if skins else own, verts, size, binding, param))
-
-    quad = f"{PREFIX}quad"
-    for c, colour in enumerate(COLOURS):
-        add(DISC_BASE + c, "disc", "disc", colour, BIG, quad, QUAD)
-        add(RING_BASE + c, "ring", "ring", colour, BIG, quad, QUAD)
-    for j, ratio in enumerate(DONUT_RATIOS):
-        for c, colour in enumerate(GET_OUT_COLOURS):
-            add(DONUT_BASE + 2 * j + c, "donut", f"donut_{round(ratio * 100):02d}", colour, SMALL, quad, QUAD, ratio)
-    for j, angle in enumerate(CONE_ANGLES):
-        for c, colour in enumerate(GET_OUT_COLOURS):
-            add(CONE_BASE + 2 * j + c, "cone", f"cone_{angle:03d}", colour, SMALL, quad, QUAD, angle)
-    for base, shape, stem in ((LINE_BASE, "line", "line"), (LINE_OUTLINE_BASE, "line_outline", "outline_line")):
-        for i in range(LINE_STEPS):
-            for c, colour in enumerate(GET_OUT_COLOURS):
-                add(base + 2 * i + c, shape, stem, colour, SMALL, f"{PREFIX}line_{i:02d}", line_verts(i), i,
-                    model=f"{PREFIX}{stem}_{i:02d}_{colour}")
-    for j, angle in enumerate(CONE_ANGLES):
-        for c, colour in enumerate(GET_OUT_COLOURS):
-            add(CONE_OUTLINE_BASE + 2 * j + c, "cone_outline", f"outline_cone_{angle:03d}", colour, SMALL, quad,
-                QUAD, angle)
-    for j, ratio in enumerate(DONUT_RATIOS):
-        for c, colour in enumerate(GET_OUT_COLOURS):
-            add(DONUT_OUTLINE_BASE + 2 * j + c, "donut_outline", f"outline_donut_{round(ratio * 100):02d}", colour,
-                SMALL, quad, QUAD, ratio)
-    for c, colour in enumerate(GET_OUT_COLOURS):
-        add(TIMER_RING_BASE + c, "timer", "timer", colour, BIG, quad, QUAD)
+    for c, color in enumerate(COLORS):
+        for shape, steps in SHAPES:
+            for step in range(steps):
+                line = shape in ("line", "line_outline")
+                texture = texture_stem(shape, step)
+                if line:
+                    verts = line_verts(step)
+                    own = f"{texture}_{step:02d}_{color}"
+                    shared = f"{PREFIX}line_{step:02d}_{color}"
+                else:
+                    verts = QUAD
+                    own = f"{texture}_{color}"
+                    shared = f"{PREFIX}quad_{color}"
+                if shape in ("donut", "donut_outline"):
+                    param = DONUT_RATIOS[step]
+                elif shape in ("cone", "cone_outline"):
+                    param = CONE_ANGLES[step]
+                else:
+                    param = step if line else 0.0
+                size = BIG if shape in ("disc", "ring", "timer") else SMALL
+                out.append(Display(display_id(c, shape, step), shape, texture, color, shared if skins else own,
+                                   verts, size, binding, param, step))
     return out
 
 
 def alpha_for(display: Display) -> bytes:
-    """The alpha plane of a display's texture (colour-independent; callers cache it per texture stem)."""
+    """The alpha plane of a display's texture (color-independent; callers cache it per texture)."""
     shape, size, param = display.shape, display.size, display.param
     if shape in ("disc", "diag"):
         return disc_alpha(size, FILL_ALPHA)
@@ -318,35 +367,33 @@ def edge_clearing(display: Display) -> dict:
     return {"clear_cols": True, "clear_rows": True}
 
 
-def texture_stem(display: Display) -> str:
-    return display.texture.removeprefix(PREFIX).rsplit("_", 1)[0]
-
-
 def build_textures(displays: list[Display], fmt: str = "dxt5", source_texture: bytes | None = None) -> dict[str, bytes]:
     """{texture file name: BLP bytes}, one per distinct texture (fmt: "dxt5" or "palette").
 
     The diagnostic textures ignore `fmt`: bm_diag_pal_* is always the palette format and
     bm_diag_asc_red is `source_texture` (the Ascension file) verbatim."""
     textures: dict[str, bytes] = {}
-    planes: dict[str, bytes] = {}
     for d in displays:
-        if f"{d.texture}.blp" in textures:
+        name = f"{d.texture}.blp"
+        if name in textures:
             continue
         if d.texture == DIAG_ASC_TEXTURE:
             if source_texture is None:
                 raise SystemExit(f"diagnostic {d.id} needs {SOURCE_TEXTURE}; run --extract into a fresh --src "
                                  "or leave out --diagnostics")
-            textures[f"{d.texture}.blp"] = source_texture
+            textures[name] = source_texture
             continue
-        stem = "disc" if d.shape == "diag" else texture_stem(d)
-        if stem not in planes:
-            planes[stem] = alpha_for(d)
+        plane = alpha_for(d)
         if d.texture == DIAG_PAL_TEXTURE or fmt == "palette":
-            textures[f"{d.texture}.blp"] = encode_blp_palette(d.size, d.size, COLOUR_RGB[d.colour], planes[stem])
+            textures[name] = encode_blp_palette(d.size, d.size, d.tex_rgb, plane)
         else:
-            textures[f"{d.texture}.blp"] = encode_blp(d.size, d.size, COLOUR_RGB[d.colour], planes[stem],
-                                                      **edge_clearing(d))
+            textures[name] = encode_blp(d.size, d.size, d.tex_rgb, plane, **edge_clearing(d))
     return textures
+
+
+def tint_floats(rgb: tuple[int, int, int]) -> tuple[float, float, float]:
+    """An 8-bit RGB as the M2Color track's float RGB (0..1)."""
+    return tuple(v / 255.0 for v in rgb)
 
 
 def build_models(displays: list[Display], src_model: bytes, src_skin: bytes) -> dict[str, bytes]:
@@ -360,10 +407,11 @@ def build_models(displays: list[Display], src_model: bytes, src_skin: bytes) -> 
             files[f"{d.model}.m2"] = set_texture_path(src_model, path)
             files[f"{d.model}00.skin"] = src_skin
             continue
+        rgb = tint_floats(d.tint)
         if d.binding == "path":
-            model = patch_model(src_model, d.verts, skins=False, texture_path=path)
+            model = patch_model(src_model, d.verts, skins=False, texture_path=path, rgb=rgb)
         elif d.binding in ("skin", "skin_broken"):
-            model = patch_model(src_model, d.verts, skins=True, skin_lookup=d.binding == "skin")
+            model = patch_model(src_model, d.verts, skins=True, skin_lookup=d.binding == "skin", rgb=rgb)
         else:
             raise ValueError(d.binding)
         files[f"{d.model}.m2"] = model
@@ -388,22 +436,43 @@ def display_row(d: Display) -> dict:
     )
 
 
+# The slice the markers used before the colors fix (90500-90699) is free again for other owners, so its cleanup
+# only ever touches rows that are ours by name: a CreatureModelData row whose model is SPELLS\\bm_*, a
+# CreatureDisplayInfo row whose texture is bm_*. The block 91000-91999 is cleared outright.
+
+
+def _is_marker_row(table, row: dict) -> bool:
+    if table is dbcfmt.CREATUREMODELDATA:
+        return str(row.get("ModelName", "")).lower().startswith(f"spells\\{PREFIX}")
+    return str(row.get("TextureVariation_1", "")).lower().startswith(PREFIX)
+
+
+def _owned(table, row: dict) -> bool:
+    if FIRST_ID <= row["ID"] <= BLOCK_LAST_ID:
+        return True
+    return OLD_FIRST_ID <= row["ID"] <= OLD_LAST_ID and _is_marker_row(table, row)
+
+
 def build_pending_sql(displays: list[Display]) -> str:
-    """DELETE the whole reserved block (stale rows of an earlier layout included) and INSERT `displays`."""
-    rng = {"start": FIRST_ID, "end": BLOCK_LAST_ID}
-    blocks = [
-        _table_block(dbcfmt.CREATUREMODELDATA, rng, [model_row(d) for d in displays], []),
-        _table_block(dbcfmt.CREATUREDISPLAYINFO, rng, [display_row(d) for d in displays], []),
-    ]
+    """DELETE our rows of the old slice and the whole reserved block (stale rows of every earlier layout included)
+    and INSERT `displays`."""
+    blocks = []
+    guards = {dbcfmt.CREATUREMODELDATA: "`ModelName` LIKE 'SPELLS_bm\\_%'",
+              dbcfmt.CREATUREDISPLAYINFO: "`TextureVariation_1` LIKE 'bm\\_%'"}
+    for table, rows in ((dbcfmt.CREATUREMODELDATA, [model_row(d) for d in displays]),
+                        (dbcfmt.CREATUREDISPLAYINFO, [display_row(d) for d in displays])):
+        old = (f"DELETE FROM `{table.sql_table}` WHERE `{table.index_column}` "
+               f"BETWEEN {OLD_FIRST_ID} AND {OLD_LAST_ID} AND {guards[table]};")
+        blocks.append(old + "\n" + _table_block(table, {"start": FIRST_ID, "end": BLOCK_LAST_ID}, rows, []))
     return "\n\n".join(blocks) + "\n"
 
 
 def merge_block(path: Path, table, rows: list[dict]) -> tuple[int, int]:
-    """Write `rows` into a DBC and drop every other row of FIRST_ID..BLOCK_LAST_ID (an earlier layout's ids).
+    """Write `rows` into a DBC and drop every other row we own (an earlier layout's ids; see _owned).
     Returns (rows added or changed, rows removed)."""
     keep = {r["ID"] for r in rows}
     existing = dbcfile.read_dbc(path, table)
-    stale = [r for r in existing if FIRST_ID <= r["ID"] <= BLOCK_LAST_ID and r["ID"] not in keep]
+    stale = [r for r in existing if _owned(table, r) and r["ID"] not in keep]
     if stale:
         dbcfile.write_dbc(path, table, [r for r in existing if r not in stale])
     return _merge(path, table, rows), len(stale)
@@ -471,7 +540,7 @@ def main() -> None:
     parser.add_argument("--texture-format", choices=("dxt5", "palette"), default="dxt5",
                         help="BLP2 encoding of the marker textures (default dxt5; palette = the first M1 build)")
     parser.add_argument("--diagnostics", action="store_true",
-                        help="also build the diagnostic displays 90690-90695 (red discs in the bindings and texture "
+                        help="also build the diagnostic displays 91990-91995 (red discs in the bindings and texture "
                              "formats the first fixes tested)")
     parser.add_argument("--no-diagnostics", action="store_true", help=argparse.SUPPRESS)  # the old default
     args = parser.parse_args()
@@ -510,7 +579,8 @@ def main() -> None:
     changed_d, removed_d = merge_block(dbc_dir / "CreatureDisplayInfo.dbc", dbcfmt.CREATUREDISPLAYINFO,
                                        [display_row(d) for d in displays])
     print(f"{changed + changed_d} DBC row(s) added or changed, {removed + removed_d} stale row(s) of "
-          f"{FIRST_ID}-{BLOCK_LAST_ID} removed (0 / 0 means everything already matched)")
+          f"{OLD_FIRST_ID}-{OLD_LAST_ID} / {FIRST_ID}-{BLOCK_LAST_ID} removed (0 / 0 means everything already "
+          "matched)")
     if args.sql_out:
         args.sql_out.write_text(sql)
         print(f"wrote server-side SQL -> {args.sql_out}")

@@ -1,5 +1,5 @@
 """
-Pure-Python BLP2 writers for flat-colour textures with a shape in the alpha channel, plus a reader
+Pure-Python BLP2 writers for flat-color textures with a shape in the alpha channel, plus a reader
 (with a DXT5 decoder) for tests.
 
 Two formats:
@@ -27,8 +27,8 @@ Header (little endian):
     0x494 mip 0 ... mip N-1
 
 DXT5 block (16 bytes, one per 4x4 pixels): alpha0 u8, alpha1 u8, 16 x 3-bit alpha indices (48 bits,
-little endian, pixel i = row * 4 + col at bit 3 * i), then the DXT1 colour block: c0 u16, c1 u16
-(RGB565), 16 x 2-bit indices. A flat colour makes the colour block trivial (c0 = c1, indices 0).
+little endian, pixel i = row * 4 + col at bit 3 * i), then the DXT1 color block: c0 u16, c1 u16
+(RGB565), 16 x 2-bit indices. A flat color makes the color block trivial (c0 = c1, indices 0).
 """
 
 from __future__ import annotations
@@ -202,7 +202,7 @@ def dxt5_alpha_blocks(plane: bytes, width: int, height: int) -> list[bytes]:
 @functools.lru_cache(maxsize=64)
 def _dxt5_alpha_levels(alpha: bytes, width: int, height: int, clear_cols: bool = False,
                        clear_rows: bool = False) -> tuple[tuple[bytes, ...], ...]:
-    """Alpha blocks of every mip level (colour independent, so cached per plane)."""
+    """Alpha blocks of every mip level (color independent, so cached per plane)."""
     return tuple(tuple(dxt5_alpha_blocks(plane, w, h))
                  for w, h, plane in _mip_planes(alpha, width, height, clear_cols, clear_rows))
 
@@ -217,9 +217,9 @@ def encode_blp(width: int, height: int, rgb: tuple[int, int, int], alpha: bytes,
     if width % 4 or height % 4:
         raise ValueError("DXT needs sides that are a multiple of 4")
     c = rgb565(rgb)
-    colour = struct.pack("<HHI", c, c, 0)
+    color = struct.pack("<HHI", c, c, 0)
     levels = _dxt5_alpha_levels(bytes(alpha), width, height, clear_cols, clear_rows)
-    blobs = [b"".join(a + colour for a in level) for level in levels]
+    blobs = [b"".join(a + color for a in level) for level in levels]
     return _assemble(width, height, COMPRESSION_DXT, 8, ALPHA_TYPE_DXT5, bytes(PALETTE_SIZE), blobs)
 
 
@@ -240,7 +240,7 @@ def decode_dxt5(blob: bytes, width: int, height: int) -> tuple[list[tuple[int, i
             e0, e1 = expand565(c0), expand565(c1)
             cpal = [e0, e1,
                     tuple((2 * p + q + 1) // 3 for p, q in zip(e0, e1)),
-                    tuple((p + 2 * q + 1) // 3 for p, q in zip(e0, e1))]  # DXT5: always the 4-colour mode
+                    tuple((p + 2 * q + 1) // 3 for p, q in zip(e0, e1))]  # DXT5: always the 4-color mode
             for i in range(16):
                 y, x = by * 4 + i // 4, bx * 4 + i % 4
                 if y < height and x < width:
@@ -252,7 +252,7 @@ def decode_dxt5(blob: bytes, width: int, height: int) -> tuple[list[tuple[int, i
 def read_blp(data: bytes) -> dict:
     """Parse a BLP2 (palette with alpha depth 8, or DXT5). Raises ValueError otherwise.
 
-    Every mip carries "alpha" (decoded plane) and "rgb0" (the first pixel's colour)."""
+    Every mip carries "alpha" (decoded plane) and "rgb0" (the first pixel's color)."""
     if data[:4] != b"BLP2":
         raise ValueError("not a BLP2 file")
     (kind,) = struct.unpack_from("<I", data, 4)

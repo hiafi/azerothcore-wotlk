@@ -48,7 +48,7 @@ def _src() -> tuple[bytes, bytes]:
 # --- BLP ---
 
 class BlpRoundTripTest(unittest.TestCase):
-    """The palette writer (kept for the 90691 diagnostic and --texture-format palette)."""
+    """The palette writer (kept for the 91991 diagnostic and --texture-format palette)."""
 
     def test_header_mips_and_planes(self):
         w = h = 64
@@ -115,7 +115,7 @@ class Dxt5Test(unittest.TestCase):
 
     def test_header_matches_the_known_good_ascension_texture(self):
         disc = pbm.disc_alpha(512, pbm.FILL_ALPHA)
-        data = blp_write.encode_blp(512, 512, pbm.COLOUR_RGB["red"], disc)
+        data = blp_write.encode_blp(512, 512, pbm.COLOR_RGB["red"], disc)
         self.assertEqual(data[:4], b"BLP2")
         self.assertEqual(struct.unpack_from("<I", data, 4)[0], 1)
         self.assertEqual(struct.unpack_from("<4B", data, 8), (2, 8, 7, 1))   # DXT, alpha 8, DXT5, mips
@@ -144,8 +144,8 @@ class Dxt5Test(unittest.TestCase):
         self.assertEqual(b["mip_offsets"][0], blp_write.DATA_START)
         self.assertEqual(b["file_size"], blp_write.DATA_START + sum(b["mip_sizes"]))
 
-    def test_flat_colour_block(self):
-        for rgb in pbm.COLOUR_RGB.values():
+    def test_flat_color_block(self):
+        for rgb in (*pbm.COLOR_RGB.values(), pbm.WHITE):
             data = blp_write.encode_blp(8, 8, rgb, bytes([200] * 64))
             b = blp_write.read_blp(data)
             want = blp_write.expand565(blp_write.rgb565(rgb))
@@ -309,7 +309,7 @@ class EdgeTexelTest(unittest.TestCase):
                     self.assertGreater(max(a), 0, f"{d.texture} mip {level}: the shape vanished")
 
     def test_line_ends_stay_open(self):
-        b = blp_write.read_blp(self.textures["bm_line_red.blp"])
+        b = blp_write.read_blp(self.textures["bm_line.blp"])
         for mip in b["mips"][:5]:
             w, a = mip["width"], mip["alpha"]
             self.assertEqual(a[:w], a[(mip["height"] - 1) * w:])               # first row = last row
@@ -415,18 +415,26 @@ class M2PatchTest(unittest.TestCase):
         self.assertEqual(set(lookup[:11]), {-1})
         self.assertEqual(len(out) % 16, 0)
         broken = m2_patch.patch_model(self.model, pbm.QUAD, skins=True, skin_lookup=False)
-        self.assertEqual(m2_patch.replaceable_lookup(broken), [0])   # diagnostic 90625 only
+        self.assertEqual(m2_patch.replaceable_lookup(broken), [0])   # diagnostic 91995 only
         plain = m2_patch.patch_model(self.model, pbm.QUAD, skins=False, texture_path="spells\\bm_disc_red.blp")
         self.assertEqual(m2_patch.replaceable_lookup(plain), [0])    # type 0 needs none
 
-    def test_colour_and_transparency_are_white_and_opaque(self):
+    def test_color_is_the_tint_and_transparency_is_opaque(self):
         before = m2_patch.inspect(self.model)
         self.assertTrue(any(v != 0x7FFF for vals in before["alpha"] + before["transparency"] for v in vals),
                         "the source is not opaque, which is why it is patched")
+        self.assertEqual(before["rgb"], [(1.0, 1.0, 1.0)])                   # one RGB key, white, Stand only
+        self.assertEqual(len(before["rgb_track"]["keys"]), 1)
         for skins in (True, False):
-            out = m2_patch.patch_model(self.model, pbm.QUAD, skins=skins, texture_path="spells\\bm_disc_red.blp")
+            out = m2_patch.patch_model(self.model, pbm.QUAD, skins=skins, texture_path="spells\\bm_disc.blp")
             after = m2_patch.inspect(out)
-            self.assertTrue(all(rgb == (1.0, 1.0, 1.0) for rgb in after["rgb"]))
+            self.assertTrue(all(rgb == (1.0, 1.0, 1.0) for rgb in after["rgb"]))     # the default tint is white
+            blue = pbm.tint_floats(pbm.COLOR_RGB["blue"])
+            tinted = m2_patch.inspect(m2_patch.patch_model(self.model, pbm.QUAD, skins=skins,
+                                                           texture_path="spells\\bm_disc.blp", rgb=blue))
+            self.assertEqual(len(tinted["rgb"]), 1)
+            for got, want in zip(tinted["rgb"][0], blue):
+                self.assertAlmostEqual(got, want, places=6)
             # static: every animation (Stand, Hold 158, Decay 159) has exactly one opaque key at t = 0, so no
             # sequence fades in, fades out or falls back to a default value
             n_anim = m2_patch.check_source(out, patched=True)["animations"][0]
@@ -451,7 +459,8 @@ class M2PatchTest(unittest.TestCase):
     def test_only_the_patched_ranges_differ(self):
         allowed = _patched_ranges(self.model)
         for verts, skins in ((pbm.QUAD, True), (pbm.line_verts(17), True), (pbm.QUAD, False)):
-            out = m2_patch.patch_model(self.model, verts, skins=skins, texture_path="spells\\bm_disc_red.blp")
+            out = m2_patch.patch_model(self.model, verts, skins=skins, texture_path="spells\\bm_disc.blp",
+                                       rgb=pbm.tint_floats(pbm.COLOR_RGB["teal"]))
             if skins:   # the appended replaceable lookup, and the header entry that points at it
                 self.assertGreater(len(out), len(self.model))
                 out = out[:m2_patch.OFS_REPLACEABLE_LOOKUP] + self.model[m2_patch.OFS_REPLACEABLE_LOOKUP:
@@ -483,6 +492,9 @@ class M2PatchTest(unittest.TestCase):
         self.assertEqual(out[ofs:ofs + length], b"spells\\bm_cone_090_red.blp\0")   # length counts the NUL only
         with self.assertRaises(m2_patch.M2Error):
             m2_patch.patch_model(self.model, pbm.QUAD, skins=False, texture_path="spells\\" + "x" * 80 + ".blp")
+        for bad in ((1.5, 0.0, 0.0), (-0.1, 0.0, 0.0), (1.0, 1.0)):
+            with self.assertRaises(m2_patch.M2Error):
+                m2_patch.patch_model(self.model, pbm.QUAD, skins=False, texture_path="spells\\bm_disc.blp", rgb=bad)
 
     def test_skin_only_changes_the_submesh_bounds(self):
         out = m2_patch.patch_skin(self.skin, pbm.line_verts(16))        # k = 4
@@ -515,58 +527,81 @@ def _textures(displays) -> dict[str, bytes]:
     wanted = {f"{d.texture}.blp" for d in displays}
     return {name: data for name, data in _TEXTURE_CACHE[0].items() if name in wanted}
 
-def _expected_ids() -> dict[int, tuple[str, str]]:
-    """{display id: (shape, colour)} written out independently (handoff §3.1 + the telegraph-fill layout)."""
+def _expected_ids() -> dict[int, tuple[str, int, str]]:
+    """{display id: (shape, step, color)} written out independently (the colors-fix layout: one block of 100 ids per
+    color from 91000; inside it disc, ring, timer ring, donut F/O, cone F/O, line F/O)."""
     exp = {}
-    colours = ["red", "yellow", "blue", "purple"]
-    for c in range(4):
-        exp[90500 + c] = ("disc", colours[c])
-        exp[90504 + c] = ("ring", colours[c])
-    for c in range(2):
+    colors = ["red", "yellow", "blue", "purple", "orange", "green", "teal", "white", "black"]
+    for c, color in enumerate(colors):
+        base = 91000 + 100 * c
+        exp[base + 0] = ("disc", 0, color)
+        exp[base + 1] = ("ring", 0, color)
+        exp[base + 2] = ("timer", 0, color)
         for j in range(7):
-            exp[90508 + 2 * j + c] = ("donut", colours[c])
-            exp[90654 + 2 * j + c] = ("donut_outline", colours[c])
+            exp[base + 3 + j] = ("donut", j, color)
+            exp[base + 10 + j] = ("donut_outline", j, color)
         for j in range(8):
-            exp[90522 + 2 * j + c] = ("cone", colours[c])
-            exp[90638 + 2 * j + c] = ("cone_outline", colours[c])
+            exp[base + 17 + j] = ("cone", j, color)
+            exp[base + 25 + j] = ("cone_outline", j, color)
         for i in range(25):
-            exp[90538 + 2 * i + c] = ("line", colours[c])
-            exp[90588 + 2 * i + c] = ("line_outline", colours[c])
-        exp[90668 + c] = ("timer", colours[c])
+            exp[base + 33 + i] = ("line", i, color)
+            exp[base + 58 + i] = ("line_outline", i, color)
     return exp
 
 
 class DisplayTableTest(unittest.TestCase):
-    def test_id_table_equals_the_handoff(self):
+    def test_id_table_equals_the_layout(self):
         for skins in (True, False):
-            got = {d.id: (d.shape, d.colour) for d in pbm.build_displays(skins)}
+            got = {d.id: (d.shape, d.step, d.color) for d in pbm.build_displays(skins)}
             self.assertEqual(got, _expected_ids())
-        self.assertEqual(min(_expected_ids()), 90500)
-        self.assertEqual(max(_expected_ids()), 90669)
-        self.assertEqual(len(_expected_ids()), 170)
-        self.assertEqual(sorted(_expected_ids()), list(range(90500, 90670)))     # dense, no gap
-        self.assertEqual((pbm.FIRST_ID, pbm.LAST_ID, pbm.BLOCK_LAST_ID), (90500, 90669, 90699))
+        exp = _expected_ids()
+        self.assertEqual((min(exp), max(exp), len(exp)), (91000, 91882, 747))
+        for c in range(9):                                      # each color block is dense: +0 .. +82, spare +83 ..
+            self.assertEqual(sorted(i for i in exp if 91000 + 100 * c <= i < 91100 + 100 * c),
+                             list(range(91000 + 100 * c, 91083 + 100 * c)))
+        self.assertEqual((pbm.FIRST_ID, pbm.LAST_ID, pbm.BLOCK_LAST_ID), (91000, 91882, 91999))
+        self.assertEqual((pbm.OLD_FIRST_ID, pbm.OLD_LAST_ID), (90500, 90699))
+        self.assertEqual((pbm.COLOR_STRIDE, pbm.PER_COLOR), (100, 83))
+
+    def test_display_id_is_the_module_formula(self):
+        """mod-boss-mechanics BossMechanicsIds.h MarkerDisplay(color, shape, step): the same numbers."""
+        self.assertEqual(pbm.SHAPE_OFFSET, {"disc": 0, "ring": 1, "timer": 2, "donut": 3, "donut_outline": 10,
+                                            "cone": 17, "cone_outline": 25, "line": 33, "line_outline": 58})
+        self.assertEqual(pbm.display_id(0, "disc"), 91000)
+        self.assertEqual(pbm.display_id(2, "ring"), 91201)
+        self.assertEqual(pbm.display_id(1, "donut", 3), 91106)
+        self.assertEqual(pbm.display_id(0, "cone", 3), 91020)
+        self.assertEqual(pbm.display_id(3, "line_outline", 16), 91374)
+        self.assertEqual(pbm.display_id(8, "line_outline", 24), 91882)
+        for bad in ((9, "disc", 0), (-1, "disc", 0), (0, "ring", 1), (0, "cone", 8), (0, "line", 25)):
+            with self.assertRaises(ValueError):
+                pbm.display_id(*bad)
 
     def test_layer_params(self):
         by_id = {d.id: d for d in pbm.build_displays(False)}
-        for j, ratio in enumerate(pbm.DONUT_RATIOS):
-            self.assertEqual(by_id[90508 + 2 * j].param, ratio)
-            self.assertEqual(by_id[90654 + 2 * j + 1].param, ratio)
-        for j, angle in enumerate(pbm.CONE_ANGLES):
-            self.assertEqual(by_id[90522 + 2 * j].param, angle)
-            self.assertEqual(by_id[90638 + 2 * j + 1].param, angle)
-        for i in range(pbm.LINE_STEPS):
-            self.assertEqual(by_id[90538 + 2 * i].verts, by_id[90588 + 2 * i + 1].verts)   # same geometry
-            self.assertEqual(by_id[90588 + 2 * i].model, f"bm_outline_line_{i:02d}_red")
+        for c in range(len(pbm.COLORS)):
+            for j, ratio in enumerate(pbm.DONUT_RATIOS):
+                self.assertEqual(by_id[pbm.display_id(c, "donut", j)].param, ratio)
+                self.assertEqual(by_id[pbm.display_id(c, "donut_outline", j)].param, ratio)
+            for j, angle in enumerate(pbm.CONE_ANGLES):
+                self.assertEqual(by_id[pbm.display_id(c, "cone", j)].param, angle)
+                self.assertEqual(by_id[pbm.display_id(c, "cone_outline", j)].param, angle)
+            for i in range(pbm.LINE_STEPS):
+                fill, outline = by_id[pbm.display_id(c, "line", i)], by_id[pbm.display_id(c, "line_outline", i)]
+                self.assertEqual(fill.verts, outline.verts)                                 # same geometry
+                self.assertEqual(outline.model, f"bm_outline_line_{i:02d}_{pbm.COLORS[c]}")
+                self.assertEqual(fill.model, f"bm_line_{i:02d}_{pbm.COLORS[c]}")
 
-    def test_ladders(self):
+    def test_ladders_and_colors(self):
         self.assertEqual(pbm.DONUT_RATIOS, (0.25, 0.33, 0.40, 0.50, 0.60, 0.67, 0.75))
         self.assertEqual(pbm.CONE_ANGLES, (30, 45, 60, 90, 120, 150, 180, 270))
         self.assertEqual(pbm.LINE_STEPS, 25)
-        self.assertEqual(pbm.COLOUR_RGB["red"], (230, 40, 30))
-        self.assertEqual(pbm.COLOUR_RGB["yellow"], (245, 200, 40))
-        self.assertEqual(pbm.COLOUR_RGB["blue"], (40, 120, 240))
-        self.assertEqual(pbm.COLOUR_RGB["purple"], (160, 70, 220))
+        self.assertEqual(pbm.COLORS, ("red", "yellow", "blue", "purple", "orange", "green", "teal", "white", "black"))
+        self.assertEqual(pbm.COLOR_RGB, {
+            "red": (230, 40, 30), "yellow": (245, 200, 40), "blue": (30, 140, 255), "purple": (185, 90, 250),
+            "orange": (255, 130, 20), "green": (80, 225, 60), "teal": (20, 215, 200), "white": (245, 245, 245),
+            "black": (0, 0, 0)})
+        self.assertEqual(pbm.WHITE, (255, 255, 255))
 
     def test_ids_sit_in_the_bossmechanics_reservation(self):
         from lib import source  # lazy: needs ruamel, which the system python lacks (Pillow test runs there)
@@ -575,18 +610,26 @@ class DisplayTableTest(unittest.TestCase):
         self.assertIsNotNone(reservation, "reservations.bossmechanics is missing from source/ids.yaml (WP-B)")
         for table in ("creaturedisplayinfo", "creaturemodeldata"):
             slice_ = reservation[table]
-            self.assertLessEqual(slice_["start"], 90500, table)
-            self.assertGreaterEqual(slice_["end"], pbm.BLOCK_LAST_ID, table)
+            self.assertEqual((slice_["start"], slice_["end"]), (pbm.FIRST_ID, pbm.BLOCK_LAST_ID), table)
             self.assertLessEqual(slice_["end"], ids[table]["end"], table)
+            # the old slice is free again: no reservation of any owner covers it
+            for owner, tables in ids["reservations"].items():
+                if table in tables:
+                    self.assertFalse(tables[table]["start"] <= pbm.OLD_LAST_ID
+                                     and pbm.OLD_FIRST_ID <= tables[table]["end"], (owner, table))
 
     def test_diagnostic_displays(self):
         diags = pbm.build_diagnostics()
-        self.assertEqual([d.id for d in diags], list(range(90690, 90696)))
+        self.assertEqual([d.id for d in diags], list(range(91990, 91996)))
         self.assertEqual({d.binding for d in diags}, {"source", "path", "skin", "skin_broken"})
         self.assertTrue(all(pbm.DIAG_FIRST_ID <= d.id <= pbm.DIAG_LAST_ID for d in diags))
+        self.assertGreater(pbm.DIAG_FIRST_ID, pbm.LAST_ID)
         self.assertEqual(len({d.model for d in diags}), len(diags))
         production = {d.model for skins in (True, False) for d in pbm.build_displays(skins)}
         self.assertFalse(production & {d.model for d in diags})
+        for d in diags:                                          # every one draws red: in the texture or the tint
+            self.assertIn(pbm.COLOR_RGB["red"], (d.tex_rgb, d.tint), d.id)
+            self.assertIn(pbm.WHITE, (d.tex_rgb, d.tint), d.id)
         from lib import source  # lazy: needs ruamel
         reservation = source.load_ids(TOOL_ROOT / "source" / "ids.yaml")["reservations"]["bossmechanics"]
         for table in ("creaturedisplayinfo", "creaturemodeldata"):
@@ -594,25 +637,34 @@ class DisplayTableTest(unittest.TestCase):
 
     @unittest.skipUnless((TOOL_ROOT / "var" / "model-visual-dbc" / "DBFilesClient" / "CreatureModelData.dbc").is_file(),
                          "no working-copy CreatureModelData.dbc")
-    def test_dbc_merge_drops_stale_rows_of_the_block_only(self):
+    def test_dbc_merge_drops_our_stale_rows_only(self):
         from lib import dbcfile, dbcfmt
-        src = TOOL_ROOT / "var" / "model-visual-dbc" / "DBFilesClient" / "CreatureModelData.dbc"
         displays = pbm.build_displays(False)
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "CreatureModelData.dbc"
-            path.write_bytes(src.read_bytes())
-            rows = dbcfile.read_dbc(path, dbcfmt.CREATUREMODELDATA)
-            stale = dict(rows[0], ID=90695)                           # an old diagnostic id
-            outside = dict(rows[0], ID=90499)                         # the rogue's slice: never touched
-            dbcfile.write_dbc(path, dbcfmt.CREATUREMODELDATA,
-                              [r for r in rows if r["ID"] not in (90499, 90695)] + [stale, outside])
-            pbm.merge_block(path, dbcfmt.CREATUREMODELDATA, [pbm.model_row(d) for d in displays])
-            ids = {r["ID"] for r in dbcfile.read_dbc(path, dbcfmt.CREATUREMODELDATA)}
-            self.assertNotIn(90695, ids)
-            self.assertIn(90499, ids)
-            self.assertEqual({i for i in ids if 90500 <= i <= 90699}, set(range(90500, 90670)))
-            changed, removed = pbm.merge_block(path, dbcfmt.CREATUREMODELDATA, [pbm.model_row(d) for d in displays])
-            self.assertEqual((changed, removed), (0, 0))              # idempotent
+        for name, table, row_of, ours, foreign in (
+                ("CreatureModelData.dbc", dbcfmt.CREATUREMODELDATA, pbm.model_row,
+                 {"ModelName": "SPELLS\\bm_disc_red.mdx"}, {"ModelName": "Creature\\Other\\Other.mdx"}),
+                ("CreatureDisplayInfo.dbc", dbcfmt.CREATUREDISPLAYINFO, pbm.display_row,
+                 {"TextureVariation_1": "bm_disc_red"}, {"TextureVariation_1": "OtherSkin"})):
+            src = TOOL_ROOT / "var" / "model-visual-dbc" / "DBFilesClient" / name
+            with tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / name
+                path.write_bytes(src.read_bytes())
+                rows = dbcfile.read_dbc(path, table)
+                probe = {90499, 90500, 90695, 90699, 91883, 91999}
+                extra = [dict(rows[0], ID=90695, **ours),            # an old diagnostic of ours: dropped
+                         dict(rows[0], ID=90500, **ours),            # the old fill disc: dropped
+                         dict(rows[0], ID=90699, **foreign),         # another owner in the freed slice: kept
+                         dict(rows[0], ID=90499, **foreign),         # the rogue's slice: never touched
+                         dict(rows[0], ID=91883, **foreign),         # a spare id of our block: cleared outright
+                         dict(rows[0], ID=91999, **ours)]
+                dbcfile.write_dbc(path, table, [r for r in rows if r["ID"] not in probe] + extra)
+                pbm.merge_block(path, table, [row_of(d) for d in displays])
+                ids = {r["ID"] for r in dbcfile.read_dbc(path, table)}
+                self.assertEqual(ids & probe, {90499, 90699}, name)
+                self.assertEqual({i for i in ids if 91000 <= i <= 91999}, set(_expected_ids()), name)
+                self.assertFalse({i for i in ids if 90500 <= i <= 90698}, name)
+                changed, removed = pbm.merge_block(path, table, [row_of(d) for d in displays])
+                self.assertEqual((changed, removed), (0, 0), name)      # idempotent
 
     def test_rows_use_one_id_for_model_and_display(self):
         for d in pbm.build_displays(True):
@@ -624,21 +676,30 @@ class DisplayTableTest(unittest.TestCase):
             self.assertEqual(row["TextureVariation_1"], d.texture)
             self.assertTrue(m["ModelName"].startswith("SPELLS\\bm_") and m["ModelName"].endswith(".mdx"))
 
-    def test_colour_sets(self):
-        for d in pbm.build_displays(True):
-            if d.shape not in ("disc", "ring"):
-                self.assertIn(d.colour, ("red", "yellow"))
-            self.assertTrue(d.texture.endswith("_" + d.colour))
+    def test_every_shape_step_exists_in_every_color_and_shares_one_texture(self):
+        by_key: dict[tuple[str, int], list] = {}
+        for d in pbm.build_displays(False):
+            by_key.setdefault((d.shape, d.step), []).append(d)
+            self.assertEqual(d.tex_rgb, pbm.WHITE)
+            self.assertEqual(d.tint, pbm.COLOR_RGB[d.color])
+            self.assertTrue(d.model.endswith("_" + d.color))
+            self.assertFalse(any(d.texture.endswith("_" + c) for c in pbm.COLORS), d.texture)
+        self.assertEqual(len(by_key), 83)
+        for key, group in by_key.items():
+            self.assertEqual([d.color for d in group], list(pbm.COLORS), key)
+            self.assertEqual(len({d.texture for d in group}), 1, key)
 
-    def test_textures_are_decodable_and_the_right_size(self):
+    def test_textures_are_decodable_white_and_the_right_size(self):
         displays = pbm.build_displays(True)
         textures = _textures(displays)
-        self.assertEqual(len(textures), 74)          # 4 + 4 + 14 + 16 + 2 fill/outline circles..lines, 14 + 16 + 2 + 2
+        self.assertEqual(len(textures), 35)          # disc, ring, timer + 7 + 7 donuts + 8 + 8 cones + 2 lines
+        white = blp_write.expand565(blp_write.rgb565(pbm.WHITE))
+        self.assertEqual(white, (255, 255, 255))
         for d in displays:
             b = blp_write.read_blp(textures[f"{d.texture}.blp"])
             self.assertEqual((b["width"], b["height"]), (d.size, d.size))
             self.assertEqual((b["encoding"], b["alpha_depth"], b["alpha_encoding"]), (2, 8, 7))
-            self.assertEqual(b["mips"][0]["rgb0"], blp_write.expand565(blp_write.rgb565(pbm.COLOUR_RGB[d.colour])))
+            self.assertEqual(b["mips"][0]["rgb0"], white)
             self.assertEqual(d.size, 512 if d.shape in ("disc", "ring", "timer") else 256)
             self.assertEqual(b["mip_count"], 10 if d.size == 512 else 9)
 
@@ -647,10 +708,15 @@ class DisplayTableTest(unittest.TestCase):
         text = script.read_text(encoding="utf-8").split("# Collect all files from matching directories")[0]
         ns: dict = {"__name__": "codestyle_sql_under_test"}
         exec(compile(text, str(script), "exec"), ns)
-        self.assertIn("BETWEEN 90500 AND 90699;", pbm.build_pending_sql(pbm.build_displays(True)))
+        self.assertIn("BETWEEN 91000 AND 91999;", pbm.build_pending_sql(pbm.build_displays(True)))
         sql = pbm.build_pending_sql(pbm.build_displays(False) + pbm.build_diagnostics())
-        self.assertIn("DELETE FROM `creaturemodeldata_dbc` WHERE `ID` BETWEEN 90500 AND 90699;", sql)
-        self.assertIn("DELETE FROM `creaturedisplayinfo_dbc` WHERE `ID` BETWEEN 90500 AND 90699;", sql)
+        self.assertIn("DELETE FROM `creaturemodeldata_dbc` WHERE `ID` BETWEEN 90500 AND 90699 AND `ModelName` LIKE "
+                      "'SPELLS_bm\\_%';", sql)
+        self.assertIn("DELETE FROM `creaturedisplayinfo_dbc` WHERE `ID` BETWEEN 90500 AND 90699 AND "
+                      "`TextureVariation_1` LIKE 'bm\\_%';", sql)
+        self.assertIn("DELETE FROM `creaturemodeldata_dbc` WHERE `ID` BETWEEN 91000 AND 91999;", sql)
+        self.assertIn("DELETE FROM `creaturedisplayinfo_dbc` WHERE `ID` BETWEEN 91000 AND 91999;", sql)
+        self.assertEqual(sql.count("\n(9"), 2 * (747 + 6))      # every row, both tables
         with tempfile.NamedTemporaryFile("w", suffix=".sql", delete=False, encoding="utf-8") as f:
             f.write(sql)
             path = Path(f.name)
@@ -713,34 +779,37 @@ class OutputFilesTest(unittest.TestCase):
         by_id = {d.id: d for d in displays}
         self.assertEqual(files["bm_diag_asc_red.blp"], (SRC_DIR / pbm.SOURCE_TEXTURE).read_bytes())
         self.assertEqual(blp_write.read_blp(files["bm_diag_pal_red.blp"])["encoding"], 1)
-        self.assertEqual(blp_write.read_blp(files["bm_disc_red.blp"])["encoding"], 2)
+        self.assertEqual(blp_write.read_blp(files["bm_disc.blp"])["encoding"], 2)
         src = files["bm_diag_src.m2"]                            # the untouched source apart from its path
         self.assertEqual(m2_patch.vertex_positions(src), m2_patch.vertex_positions(self.model))
         self.assertEqual(files["bm_diag_src00.skin"], self.skin)
         self.assertEqual(m2_patch.replaceable_lookup(files["bm_diag_skin.m2"])[11], 0)
         self.assertEqual(m2_patch.replaceable_lookup(files["bm_diag_oldskin.m2"]), [0])
-        self.assertEqual(by_id[90693].texture, "bm_disc_red")
-        self.assertEqual(files["bm_diag_dxt.m2"], files["bm_disc_red.m2"])   # 90693 is exactly 90500
+        self.assertEqual(by_id[91993].texture, "bm_disc")
+        self.assertEqual(files["bm_diag_dxt.m2"], files["bm_disc_red.m2"])   # 91993 is exactly 91000
+        self.assertEqual(m2_patch.inspect(files["bm_diag_pal.m2"])["rgb"], [(1.0, 1.0, 1.0)])  # red texture, white
 
     def test_skins_mode_shares_models(self):
         displays, files = self._files(True)
         models = {n for n in files if n.endswith(".m2")}
-        self.assertEqual(len(models), 26)                       # one quad + 25 line lengths
+        self.assertEqual(len(models), 26 * 9)                   # one quad + 25 line lengths, per color
         for name in models:
             self.assertEqual(_texture_entry(files[name])[0], 11, name)
             self.assertEqual(m2_patch.replaceable_lookup(files[name])[11], 0, name)
 
-    def test_no_skins_gives_170_models_with_hard_coded_paths(self):
+    def test_no_skins_gives_747_models_with_hard_coded_paths(self):
         displays, files = self._files(False)
         models = {n for n in files if n.endswith(".m2")}
-        self.assertEqual(len(models), 170)
-        self.assertEqual(len({n for n in files if n.endswith(".skin")}), 170)
+        self.assertEqual(len(models), 747)
+        self.assertEqual(len({n for n in files if n.endswith(".skin")}), 747)
         for d in displays:
             data = files[f"{d.model}.m2"]
             ttype, _flags, length, ofs = _texture_entry(data)
             self.assertEqual(ttype, 0)
             self.assertEqual(data[ofs:ofs + length], f"spells\\{d.texture}.blp\0".encode())
             self.assertIn(f"{d.texture}.blp", files)
+            for got, want in zip(m2_patch.inspect(data)["rgb"][0], pbm.tint_floats(d.tint)):   # the color
+                self.assertAlmostEqual(got, want, places=6)
 
     def test_rerun_removes_stale_files_of_the_other_mode(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -796,6 +865,17 @@ class ResolveSpellAttributesTest(unittest.TestCase):
             self.assertEqual(row["AttributesEx3"], 0x20040200, sid)
             self.assertEqual(row["AttributesEx4"], 0x00000001, sid)
             self.assertEqual(row["DefenseType"], 1, sid)
+
+    def test_weakened_is_ten_percent_per_stack_and_says_so(self):
+        row = self.rows[205000]
+        # the core adds one to BasePoints when DieSides is 1 (SpellEffectInfo::CalcValue): -11 + 1 = -10 per stack
+        self.assertEqual((row["EffectBasePoints_1"], row["EffectDieSides_1"]), (-11, 1))
+        self.assertEqual(row["EffectBasePoints_1"] + row["EffectDieSides_1"], -10)
+        self.assertEqual(row["CumulativeAura"], 7)
+        self.assertEqual(row["AuraDescription_Lang_enUS"], "Damage done reduced by $s1% per stack.")
+        self.assertEqual(row["Description_Lang_enUS"],
+                         "Damage done reduced by $s1% per stack, stacking up to $u times. Lasts $d.")
+        self.assertEqual(row["AuraDescription_Lang_Mask"], 16712190)
 
 
 if __name__ == "__main__":

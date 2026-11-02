@@ -12,10 +12,15 @@ What gets patched (handoff §3.9):
     bounding box and sphere radius, the three animation bounds and the skin submesh bounds follow;
   - the render-flags entry keeps its flags (0x15: unlit, two-sided, no depth write) and gets blend
     mode 2 (alpha) instead of 4 (additive);
-  - the colour track must be white and the colour alpha / transparency tracks opaque and static
-    (the source fades in over 534 ms on Stand, out over 534 ms on Decay, and is half transparent):
-    every per-animation key list of those tracks is cut to one opaque key, and an animation with no
-    keys (Hold, 158) borrows that key, so no sequence can fade, grow or fall back to a default;
+  - the color track (M2Color 0, which the skin's one batch points at with color index 0) holds the
+    marker's color: every key is set to `rgb` (white by default). The client multiplies the texture
+    by it (the batch is unlit, render flag 0x01), so one white texture serves every color. The source
+    track has one key list (Stand) and interpolation none; it is left that way: markers only ever play
+    Stand (M1-FIX-COLORS-REPORT.md);
+  - the color alpha / transparency tracks are opaque and static (the source fades in over 534 ms on
+    Stand, out over 534 ms on Decay, and is half transparent): every per-animation key list of those
+    tracks is cut to one opaque key, and an animation with no keys (Hold, 158) borrows that key, so
+    no sequence can fade, grow or fall back to a default;
   - the texture entry stays type 0 with a new hard-coded path (the default), or becomes type 11
     with an empty name (creature skin 1, so `CreatureDisplayInfo.TextureVariation_1` supplies the
     texture). Type 11 also needs the replaceable-texture lookup to map 11 to texture 0: the source's
@@ -24,7 +29,7 @@ What gets patched (handoff §3.9):
     ([-1] * 11 + [0], the layout stock creature models such as Skunk.m2 carry) at the end of the file
     and repoints the header; that is the one place the file grows.
 
-M2 header offsets used (WotLK, v264): animations 0x1C, vertices 0x3C, colours 0x48, textures 0x50,
+M2 header offsets used (WotLK, v264): animations 0x1C, vertices 0x3C, colors 0x48, textures 0x50,
 transparency 0x58, replaceable texture lookup 0x68, render flags 0x70, bounding box 0xA0 (6 floats),
 bounding sphere radius 0xB8.
 """
@@ -99,10 +104,10 @@ def check_source(data: bytes, *, patched: bool = False) -> dict:
     if tex_type != 0 and not (patched and tex_type == TEXTURE_TYPE_SKIN1):
         raise M2Error(f"texture type {tex_type}, expected 0 (hard-coded path)")
     _span(data, name_ofs, name_len, "texture name")
-    n_col, o_col = _array(data, OFS_COLORS, COLOR_SIZE, "colours")
+    n_col, o_col = _array(data, OFS_COLORS, COLOR_SIZE, "colors")
     n_tr, o_tr = _array(data, OFS_TRANSPARENCY, TRACK_SIZE, "transparency")
     if n_col != 1 or n_tr != 1:
-        raise M2Error(f"{n_col} colour / {n_tr} transparency tracks, expected 1 / 1")
+        raise M2Error(f"{n_col} color / {n_tr} transparency tracks, expected 1 / 1")
     n_anim, o_anim = _array(data, OFS_ANIMATIONS, ANIM_SIZE, "animations")
     return {
         "vertices": o_vert, "render_flags": o_flags, "texture": o_tex, "name_len": name_len,
@@ -132,7 +137,7 @@ def _track(data: bytes, off: int) -> dict:
 
 
 def inspect(data: bytes) -> dict:
-    """The colour / alpha / transparency facts the handoff says to check before patching."""
+    """The color / alpha / transparency facts the handoff says to check before patching."""
     facts = check_source(data, patched=True)
     color = facts["colors"]
     rgb = _track(data, color)
@@ -140,11 +145,11 @@ def inspect(data: bytes) -> dict:
     transp = _track(data, facts["transparency"])
     rgb_values = []
     for count, ofs in rgb["keys"]:
-        _span(data, ofs, count * 12, "colour keys")
+        _span(data, ofs, count * 12, "color keys")
         rgb_values += [struct.unpack_from("<3f", data, ofs + 12 * i) for i in range(count)]
     alpha_values = []
     for count, ofs in alpha["keys"]:
-        _span(data, ofs, count * 2, "colour alpha keys")
+        _span(data, ofs, count * 2, "color alpha keys")
         alpha_values.append([struct.unpack_from("<h", data, ofs + 2 * i)[0] for i in range(count)])
     transp_values = []
     for count, ofs in transp["keys"]:
@@ -214,7 +219,8 @@ def _static_opaque(out: bytearray, track: dict) -> None:
 
 
 def patch_model(data: bytes, verts: list[tuple[float, float]], *, skins: bool,
-                texture_path: str | None = None, skin_lookup: bool = True) -> bytes:
+                texture_path: str | None = None, skin_lookup: bool = True,
+                rgb: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> bytes:
     """Return the patched model.
 
     verts: four (x, y) pairs in the source vertex order (-,-), (+,-), (-,+), (+,+), z becomes 0.
@@ -222,6 +228,7 @@ def patch_model(data: bytes, verts: list[tuple[float, float]], *, skins: bool,
     `skin_lookup`, appends the replaceable-texture lookup that type needs (False reproduces the
     first M1 build, for the 90625 diagnostic only); False keeps the hard-coded path and rewrites it
     to `texture_path` (must fit the source name's capacity).
+    rgb: the color track's value (0..1 per channel), the tint the client multiplies the texture by.
     """
     if len(verts) != 4:
         raise M2Error("need exactly four vertices")
@@ -242,11 +249,15 @@ def patch_model(data: bytes, verts: list[tuple[float, float]], *, skins: bool,
     # render flags entry: u16 flags (kept), u16 blend mode
     struct.pack_into("<H", out, facts["render_flags"] + 2, BLEND_ALPHA)
 
-    # colour: white; colour alpha and transparency: one opaque key per animation (static)
+    # color: the tint; color alpha and transparency: one opaque key per animation (static)
+    if len(rgb) != 3 or not all(0.0 <= v <= 1.0 for v in rgb):
+        raise M2Error(f"color {rgb!r}: three floats in 0..1")
     info = inspect(data)
+    if not any(count for count, _ofs in info["rgb_track"]["keys"]):
+        raise M2Error("the color track has no keys to hold the tint")
     for count, ofs in info["rgb_track"]["keys"]:
         for i in range(count):
-            struct.pack_into("<3f", out, ofs + 12 * i, 1.0, 1.0, 1.0)
+            struct.pack_into("<3f", out, ofs + 12 * i, *rgb)
     for track in (info["alpha_track"], info["transp_track"]):
         _static_opaque(out, track)
 
