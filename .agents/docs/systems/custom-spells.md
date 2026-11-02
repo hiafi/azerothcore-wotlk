@@ -53,6 +53,11 @@ playtest only caught after a deploy. Each cost a fix cycle in a past rework. Che
 - Triggered spells still run CheckCast's caster-to-target line-of-sight check. A splash or bounce that sets
   `AttributesEx2 0x4` (ignore LoS) must filter LoS itself, from the primary target.
 
+- A damage or heal spell with `DefenseType` 0 (DmgClass NONE) and no `spell_bonus_data` row gets **no spell power and no
+  done-% mods**: `SpellDamageBonusDone` / `SpellHealingBonusDone` return the bare base. A potency coefficient on it is
+  dead. Give it `'DefenseType': 1` in raw_overrides (lint `check_potency_defense_type`). Side effects: it can now crit,
+  be reflected, and its procs move to the magic-class flags.
+
 - `Player::HasSpell` is **false for passive talent ranks**: `_addTalentAurasAndSpells` only casts their aura and
   never adds them to the spell map. Check a passive talent with `HasAura(rank)` (or `HasTalent(rank, spec)`). Deadly
   Focus's Raptor Strike mana and Trap Mastery's snake sting both silently did nothing this way.

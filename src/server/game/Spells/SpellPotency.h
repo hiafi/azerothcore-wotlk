@@ -63,6 +63,13 @@ namespace SpellPotency
     /// converts, its generated spell_bonus_data ap_bonus/ap_dot_bonus coefficient is the only one
     /// that should apply, and this hard-coded addition would otherwise double it.
     bool HasRow(uint32 spellId, uint8 effIndex);
+
+    /// True when any effect of `spellId` has a loaded row - the spell is declared with potency in
+    /// dbc-tools, weapon potency included (the generator writes an all-zero marker row for a pure
+    /// weapon-percent effect, which has no correction of its own). The spell-level gate for a
+    /// hard-coded stock bonus that is not tied to one effect: Rune Strike's 0.15 x AP and Kill
+    /// Shot's 0.4 x RAP in Spell::EffectWeaponDmg (potency audit S2, F11, F14).
+    bool IsDeclared(uint32 spellId);
 }
 
 #endif

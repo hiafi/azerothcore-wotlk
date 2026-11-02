@@ -183,3 +183,12 @@ bool SpellPotency::HasRow(uint32 spellId, uint8 effIndex)
 {
     return g_potencyCorrections.find(PotencyKey(spellId, effIndex)) != g_potencyCorrections.end();
 }
+
+bool SpellPotency::IsDeclared(uint32 spellId)
+{
+    for (uint8 effIndex = 0; effIndex < MAX_SPELL_EFFECTS; ++effIndex)
+        if (HasRow(spellId, effIndex))
+            return true;
+
+    return false;
+}

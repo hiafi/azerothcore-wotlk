@@ -123,7 +123,14 @@ class SpellPotencyResolutionTest(unittest.TestCase):
         # confirms this reproduces a live value of exactly 100.
         self.assertEqual(entry["effect1"]["base_points"], 99)
         self.assertEqual(entry["effect1"]["points_per_level"], 0.0)
-        self.assertEqual(s.potency_correction_rows, [])
+        # Potency audit S2 (2026-11-01): one all-zero marker row, so the core's SpellPotency::IsDeclared sees the
+        # strike as converted; zero correction, breakpoint, variance and cp terms make it a no-op in Apply.
+        self.assertEqual(len(s.potency_correction_rows), 1)
+        marker = s.potency_correction_rows[0]
+        self.assertEqual((marker["spell_id"], marker["effect_index"]), (90005, 0))
+        for key in ("correction_per_level", "breakpoint_level", "variance_pct", "cp_line",
+                    "cp_correction_per_level", "cp_ap"):
+            self.assertEqual(marker[key], 0)
         self.assertIsNone(s.potency_bonus_row)
         self.assertNotIn("EffectBonusMultiplier_1", entry["raw_overrides"])
 
