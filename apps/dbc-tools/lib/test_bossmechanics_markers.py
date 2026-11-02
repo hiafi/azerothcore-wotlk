@@ -32,6 +32,13 @@ from lib import blp_write, m2_patch  # noqa: E402
 SRC_DIR = TOOL_ROOT / "var" / "bossmech-src" / "SPELLS"
 HAVE_SOURCE = (SRC_DIR / pbm.SOURCE_MODEL).is_file() and (SRC_DIR / pbm.SOURCE_SKIN).is_file()
 NEEDS_SOURCE = unittest.skipUnless(HAVE_SOURCE, f"extracted source model not found under {SRC_DIR}")
+HAVE_SOURCE_TEXTURE = (SRC_DIR / pbm.SOURCE_TEXTURE).is_file()
+NEEDS_SOURCE_TEXTURE = unittest.skipUnless(HAVE_SOURCE_TEXTURE, f"{pbm.SOURCE_TEXTURE} not found under {SRC_DIR}")
+
+# Ascension's known-good DXT5 texture for this model family (SOURCE_TEXTURE, 512 x 512), measured 2026-11-02.
+KNOWN_GOOD_512_OFFSETS = (1172, 263316, 328852, 345236, 349332, 350356, 350612, 350676, 350692, 350708)
+KNOWN_GOOD_512_SIZES = (262144, 65536, 16384, 4096, 1024, 256, 64, 16, 16, 16)
+KNOWN_GOOD_512_FILE_SIZE = 350724
 
 
 def _src() -> tuple[bytes, bytes]:
@@ -41,10 +48,12 @@ def _src() -> tuple[bytes, bytes]:
 # --- BLP ---
 
 class BlpRoundTripTest(unittest.TestCase):
+    """The palette writer (kept for the 90621 diagnostic and --texture-format palette)."""
+
     def test_header_mips_and_planes(self):
         w = h = 64
         alpha = bytes((x * 4) % 256 for x in range(w * h))
-        data = blp_write.encode_blp(w, h, (10, 20, 30), alpha)
+        data = blp_write.encode_blp_palette(w, h, (10, 20, 30), alpha)
         self.assertEqual(data[:4], b"BLP2")
         self.assertEqual(struct.unpack_from("<I", data, 4)[0], 1)
         self.assertEqual(struct.unpack_from("<4B", data, 8), (1, 8, 0, 1))  # palette, alpha 8, alpha enc 0, mips
@@ -66,7 +75,7 @@ class BlpRoundTripTest(unittest.TestCase):
 
     def test_mip_chain_averages_alpha(self):
         alpha = bytes([200, 100, 0, 0] * 2 + [0] * 8)                        # 4x4, top-left 2x2 = 200,100,0,0
-        b = blp_write.read_blp(blp_write.encode_blp(4, 4, (1, 2, 3), bytes(alpha)))
+        b = blp_write.read_blp(blp_write.encode_blp_palette(4, 4, (1, 2, 3), bytes(alpha)))
         self.assertEqual(b["mips"][1]["alpha"][0], (200 + 100 + 200 + 100 + 2) >> 2)
         self.assertEqual(b["mip_count"], 3)
 
@@ -77,6 +86,8 @@ class BlpRoundTripTest(unittest.TestCase):
 
     def test_alpha_length_is_checked(self):
         with self.assertRaises(ValueError):
+            blp_write.encode_blp_palette(4, 4, (0, 0, 0), bytes(15))
+        with self.assertRaises(ValueError):
             blp_write.encode_blp(4, 4, (0, 0, 0), bytes(15))
 
     def test_pillow_reads_the_header(self):
@@ -84,12 +95,92 @@ class BlpRoundTripTest(unittest.TestCase):
             from PIL import Image
         except ImportError:
             self.skipTest("Pillow not importable")
-        data = blp_write.encode_blp(32, 32, (255, 0, 0), bytes(32 * 32))
-        with tempfile.TemporaryDirectory() as tmp:
-            p = Path(tmp) / "x.blp"
-            p.write_bytes(data)
-            with Image.open(p) as im:
-                self.assertEqual(im.size, (32, 32))
+        for data in (blp_write.encode_blp_palette(32, 32, (255, 0, 0), bytes(32 * 32)),
+                     blp_write.encode_blp(32, 32, (255, 0, 0), bytes(32 * 32))):
+            with tempfile.TemporaryDirectory() as tmp:
+                p = Path(tmp) / "x.blp"
+                p.write_bytes(data)
+                with Image.open(p) as im:
+                    self.assertEqual(im.size, (32, 32))
+
+
+def _dxt5_block_roundtrip(values: list[int]) -> list[int]:
+    block = blp_write.dxt5_alpha_blocks(bytes(values), 4, 4)[0]
+    data = block + struct.pack("<HHI", 0, 0, 0)
+    return list(blp_write.decode_dxt5(data, 4, 4)[1])
+
+
+class Dxt5Test(unittest.TestCase):
+    """The DXT5 writer (the default since the 2026-11-02 fix) and the decoder the tests read it back with."""
+
+    def test_header_matches_the_known_good_ascension_texture(self):
+        disc = pbm.disc_alpha(512, pbm.FILL_ALPHA)
+        data = blp_write.encode_blp(512, 512, pbm.COLOUR_RGB["red"], disc)
+        self.assertEqual(data[:4], b"BLP2")
+        self.assertEqual(struct.unpack_from("<I", data, 4)[0], 1)
+        self.assertEqual(struct.unpack_from("<4B", data, 8), (2, 8, 7, 1))   # DXT, alpha 8, DXT5, mips
+        self.assertEqual(struct.unpack_from("<II", data, 12), (512, 512))
+        self.assertEqual(struct.unpack_from("<16I", data, 20), KNOWN_GOOD_512_OFFSETS + (0,) * 6)
+        self.assertEqual(struct.unpack_from("<16I", data, 84), KNOWN_GOOD_512_SIZES + (0,) * 6)
+        self.assertEqual(data[blp_write.HEADER_SIZE:blp_write.DATA_START], bytes(blp_write.PALETTE_SIZE))
+        self.assertEqual(len(data), KNOWN_GOOD_512_FILE_SIZE)
+
+    @NEEDS_SOURCE_TEXTURE
+    def test_header_bytes_equal_the_real_file(self):
+        good = (SRC_DIR / pbm.SOURCE_TEXTURE).read_bytes()
+        ours = blp_write.encode_blp(512, 512, (1, 2, 3), bytes(512 * 512))
+        self.assertEqual(ours[:blp_write.DATA_START], good[:blp_write.DATA_START])  # header + palette block
+        self.assertEqual(len(ours), len(good))
+        b = blp_write.read_blp(good)                                         # the decoder reads the real one
+        self.assertEqual(b["mip_count"], 10)
+        centre = 256 * 512 + 256
+        self.assertEqual(b["mips"][0]["rgb"][centre][1:], (0, 0))           # a red file
+        self.assertGreater(b["mips"][0]["rgb"][centre][0], 100)
+
+    def test_256_level_sizes(self):
+        b = blp_write.read_blp(blp_write.encode_blp(256, 256, (9, 9, 9), bytes(256 * 256)))
+        self.assertEqual(b["mip_count"], 9)
+        self.assertEqual(b["mip_sizes"][:9], (65536, 16384, 4096, 1024, 256, 64, 16, 16, 16))
+        self.assertEqual(b["mip_offsets"][0], blp_write.DATA_START)
+        self.assertEqual(b["file_size"], blp_write.DATA_START + sum(b["mip_sizes"]))
+
+    def test_flat_colour_block(self):
+        for rgb in pbm.COLOUR_RGB.values():
+            data = blp_write.encode_blp(8, 8, rgb, bytes([200] * 64))
+            b = blp_write.read_blp(data)
+            want = blp_write.expand565(blp_write.rgb565(rgb))
+            for mip in b["mips"]:
+                self.assertEqual(set(mip["rgb"]), {want})
+                self.assertEqual(set(mip["alpha"]), {200})
+            for level, ofs in enumerate(b["mip_offsets"][:b["mip_count"]]):
+                c0, c1, bits = struct.unpack_from("<HHI", data, ofs + 8)
+                self.assertEqual((c0, c1, bits), (blp_write.rgb565(rgb), blp_write.rgb565(rgb), 0), level)
+            self.assertLessEqual(max(abs(a - w) for a, w in zip(rgb, want)), 4)
+
+    def test_alpha_blocks(self):
+        self.assertEqual(_dxt5_block_roundtrip([77] * 16), [77] * 16)                     # all equal
+        self.assertEqual(_dxt5_block_roundtrip([0, 255] * 8), [0, 255] * 8)               # the explicit codes
+        two = [0] * 8 + [230] * 8
+        self.assertEqual(_dxt5_block_roundtrip(two), two)                                  # endpoints exact
+        ramp = [i * 17 for i in range(16)]
+        got = _dxt5_block_roundtrip(ramp)
+        self.assertLessEqual(max(abs(a - b) for a, b in zip(got, ramp)), 19)               # 8 levels over 255
+        rim = [0, 0, 90, 90, 0, 230, 230, 90, 0, 0, 90, 90, 255, 0, 90, 90]
+        got = _dxt5_block_roundtrip(rim)                                                   # 0, 255 + 2 inner values
+        self.assertEqual(got, rim)
+
+    def test_every_marker_plane_round_trips(self):
+        for name, plane, size in (("disc", pbm.disc_alpha(pbm.BIG, pbm.FILL_ALPHA), pbm.BIG),
+                                  ("cone", pbm.cone_alpha(pbm.SMALL, 90), pbm.SMALL),
+                                  ("line", pbm.line_alpha(pbm.SMALL), pbm.SMALL)):
+            b = blp_write.read_blp(blp_write.encode_blp(size, size, (1, 2, 3), plane))
+            got = b["mips"][0]["alpha"]
+            errors = [abs(x - y) for x, y in zip(got, plane)]
+            self.assertLessEqual(max(errors), 40, name)                    # worst block: a rim edge
+            self.assertLess(sum(errors) / len(errors), 1.0, name)
+            self.assertFalse(any(x for x, y in zip(got, plane) if y == 0),
+                             f"{name}: a transparent pixel turned visible")
+            self.assertTrue(all(x for x, y in zip(got, plane) if y >= 40), f"{name}: a visible pixel vanished")
 
 
 # --- texture geometry ---
@@ -186,6 +277,11 @@ def _patched_ranges(data: bytes) -> list[tuple[int, int]]:
     for track in (info["alpha_track"], info["transp_track"]):
         for count, ofs in track["keys"]:
             ranges.append((ofs, ofs + 2 * count))
+        for count, ofs in track["stamps"]:
+            ranges.append((ofs, ofs + 4 * count))
+        n = len(track["keys"])
+        ranges += [(track["ts_headers"], track["ts_headers"] + 8 * n),
+                   (track["key_headers"], track["key_headers"] + 8 * n)]
     ranges.append((facts["texture"], facts["texture"] + m2_patch.TEXTURE_SIZE))
     ranges.append((facts["name_ofs"], facts["name_ofs"] + facts["name_len"]))
     return ranges
@@ -231,19 +327,58 @@ class M2PatchTest(unittest.TestCase):
         self.assertEqual(_texture_entry(out), (11, 0, 0, 0))         # creature skin 1, empty name
         self.assertEqual(m2_patch.vertex_uvs(out), m2_patch.vertex_uvs(self.model))
 
+    def test_skin_texture_gets_a_replaceable_lookup_entry(self):
+        """The first build's green boxes: type 11 with the source's lookup [0] has no slot for skin 1."""
+        self.assertEqual(m2_patch.replaceable_lookup(self.model), [0])
+        out = m2_patch.patch_model(self.model, pbm.QUAD, skins=True)
+        lookup = m2_patch.replaceable_lookup(out)
+        self.assertEqual(len(lookup), 12)
+        self.assertEqual(lookup[m2_patch.TEXTURE_TYPE_SKIN1], 0)
+        self.assertEqual(set(lookup[:11]), {-1})
+        self.assertEqual(len(out) % 16, 0)
+        broken = m2_patch.patch_model(self.model, pbm.QUAD, skins=True, skin_lookup=False)
+        self.assertEqual(m2_patch.replaceable_lookup(broken), [0])   # diagnostic 90625 only
+        plain = m2_patch.patch_model(self.model, pbm.QUAD, skins=False, texture_path="spells\\bm_disc_red.blp")
+        self.assertEqual(m2_patch.replaceable_lookup(plain), [0])    # type 0 needs none
+
     def test_colour_and_transparency_are_white_and_opaque(self):
         before = m2_patch.inspect(self.model)
         self.assertTrue(any(v != 0x7FFF for vals in before["alpha"] + before["transparency"] for v in vals),
                         "the source is not opaque, which is why it is patched")
-        after = m2_patch.inspect(m2_patch.patch_model(self.model, pbm.QUAD, skins=True))
-        self.assertTrue(all(rgb == (1.0, 1.0, 1.0) for rgb in after["rgb"]))
-        for vals in after["alpha"] + after["transparency"]:
-            self.assertTrue(all(v == 0x7FFF for v in vals), vals)
+        for skins in (True, False):
+            out = m2_patch.patch_model(self.model, pbm.QUAD, skins=skins, texture_path="spells\\bm_disc_red.blp")
+            after = m2_patch.inspect(out)
+            self.assertTrue(all(rgb == (1.0, 1.0, 1.0) for rgb in after["rgb"]))
+            # static: every animation (Stand, Hold 158, Decay 159) has exactly one opaque key at t = 0, so no
+            # sequence fades in, fades out or falls back to a default value
+            n_anim = m2_patch.check_source(out, patched=True)["animations"][0]
+            self.assertEqual(len(after["alpha"]), n_anim)
+            for vals in after["alpha"] + after["transparency"]:
+                self.assertEqual(vals, [0x7FFF])
+            for track in (after["alpha_track"], after["transp_track"]):
+                for count, ofs in track["stamps"]:
+                    self.assertEqual(count, 1)
+                    self.assertEqual(struct.unpack_from("<I", out, ofs)[0], 0)
+
+    def test_no_bone_animation_scales_or_moves_the_quad(self):
+        bones = struct.unpack_from("<II", self.model, 0x2C)
+        self.assertEqual(bones[0], 1)
+        for track_ofs in (16, 36, 56):                                # translation, rotation, scale
+            self.assertEqual(struct.unpack_from("<4xI", self.model, bones[1] + track_ofs)[0], 0)
+        self.assertEqual(struct.unpack_from("<I", self.model, 0x60)[0], 0)    # no texture transforms (UV anim)
+        self.assertEqual(struct.unpack_from("<I", self.model, 0x128)[0], 0)   # no particle emitters
+        self.assertEqual(struct.unpack_from("<I", self.model, 0x120)[0], 0)   # no ribbons
+        self.assertEqual(struct.unpack_from("<I", self.model, 0x14)[0], 0)    # no global sequences
 
     def test_only_the_patched_ranges_differ(self):
         allowed = _patched_ranges(self.model)
         for verts, skins in ((pbm.QUAD, True), (pbm.line_verts(17), True), (pbm.QUAD, False)):
             out = m2_patch.patch_model(self.model, verts, skins=skins, texture_path="spells\\bm_disc_red.blp")
+            if skins:   # the appended replaceable lookup, and the header entry that points at it
+                self.assertGreater(len(out), len(self.model))
+                out = out[:m2_patch.OFS_REPLACEABLE_LOOKUP] + self.model[m2_patch.OFS_REPLACEABLE_LOOKUP:
+                                                                         m2_patch.OFS_REPLACEABLE_LOOKUP + 8] \
+                    + out[m2_patch.OFS_REPLACEABLE_LOOKUP + 8:len(self.model)]
             self.assertEqual(len(out), len(self.model))
             stray = [i for i in _diff_offsets(self.model, out) if not any(lo <= i < hi for lo, hi in allowed)]
             self.assertEqual(stray, [], f"bytes changed outside the patched ranges: {stray[:8]}")
@@ -265,7 +400,7 @@ class M2PatchTest(unittest.TestCase):
         out = m2_patch.patch_model(self.model, pbm.QUAD, skins=False, texture_path="spells\\bm_cone_090_red.blp")
         ttype, _flags, length, ofs = _texture_entry(out)
         self.assertEqual(ttype, 0)
-        self.assertEqual(out[ofs:ofs + length].split(b"\0")[0], b"spells\\bm_cone_090_red.blp")
+        self.assertEqual(out[ofs:ofs + length], b"spells\\bm_cone_090_red.blp\0")   # length counts the NUL only
         with self.assertRaises(m2_patch.M2Error):
             m2_patch.patch_model(self.model, pbm.QUAD, skins=False, texture_path="spells\\" + "x" * 80 + ".blp")
 
@@ -348,6 +483,19 @@ class DisplayTableTest(unittest.TestCase):
             self.assertGreaterEqual(slice_["end"], 90619, table)
             self.assertLessEqual(slice_["end"], ids[table]["end"], table)
 
+    def test_diagnostic_displays(self):
+        diags = pbm.build_diagnostics()
+        self.assertEqual([d.id for d in diags], list(range(90620, 90626)))
+        self.assertEqual({d.binding for d in diags}, {"source", "path", "skin", "skin_broken"})
+        self.assertTrue(all(pbm.DIAG_FIRST_ID <= d.id <= pbm.DIAG_LAST_ID for d in diags))
+        self.assertEqual(len({d.model for d in diags}), len(diags))
+        production = {d.model for skins in (True, False) for d in pbm.build_displays(skins)}
+        self.assertFalse(production & {d.model for d in diags})
+        from lib import source  # lazy: needs ruamel
+        reservation = source.load_ids(TOOL_ROOT / "source" / "ids.yaml")["reservations"]["bossmechanics"]
+        for table in ("creaturedisplayinfo", "creaturemodeldata"):
+            self.assertGreaterEqual(reservation[table]["end"], pbm.DIAG_LAST_ID, table)
+
     def test_rows_use_one_id_for_model_and_display(self):
         for d in pbm.build_displays(True):
             m, row = pbm.model_row(d), pbm.display_row(d)
@@ -371,7 +519,8 @@ class DisplayTableTest(unittest.TestCase):
         for d in displays:
             b = blp_write.read_blp(textures[f"{d.texture}.blp"])
             self.assertEqual((b["width"], b["height"]), (d.size, d.size))
-            self.assertEqual(b["palette0_rgb"], pbm.COLOUR_RGB[d.colour])
+            self.assertEqual((b["encoding"], b["alpha_depth"], b["alpha_encoding"]), (2, 8, 7))
+            self.assertEqual(b["mips"][0]["rgb0"], blp_write.expand565(blp_write.rgb565(pbm.COLOUR_RGB[d.colour])))
             self.assertEqual(d.size, 512 if d.shape in ("disc", "ring") else 256)
             self.assertEqual(b["mip_count"], 10 if d.size == 512 else 9)
 
@@ -380,9 +529,10 @@ class DisplayTableTest(unittest.TestCase):
         text = script.read_text(encoding="utf-8").split("# Collect all files from matching directories")[0]
         ns: dict = {"__name__": "codestyle_sql_under_test"}
         exec(compile(text, str(script), "exec"), ns)
-        sql = pbm.build_pending_sql(pbm.build_displays(True))
-        self.assertIn("DELETE FROM `creaturemodeldata_dbc` WHERE `ID` BETWEEN 90500 AND 90619;", sql)
-        self.assertIn("DELETE FROM `creaturedisplayinfo_dbc` WHERE `ID` BETWEEN 90500 AND 90619;", sql)
+        self.assertIn("BETWEEN 90500 AND 90619;", pbm.build_pending_sql(pbm.build_displays(True)))
+        sql = pbm.build_pending_sql(pbm.build_displays(False) + pbm.build_diagnostics())
+        self.assertIn("DELETE FROM `creaturemodeldata_dbc` WHERE `ID` BETWEEN 90500 AND 90629;", sql)
+        self.assertIn("DELETE FROM `creaturedisplayinfo_dbc` WHERE `ID` BETWEEN 90500 AND 90629;", sql)
         with tempfile.NamedTemporaryFile("w", suffix=".sql", delete=False, encoding="utf-8") as f:
             f.write(sql)
             path = Path(f.name)
@@ -405,22 +555,54 @@ class OutputFilesTest(unittest.TestCase):
     def setUpClass(cls):
         cls.model, cls.skin = _src()
 
-    def _files(self, skins: bool):
+    def _files(self, skins: bool, diagnostics: bool = False):
         displays = pbm.build_displays(skins)
-        files = {**pbm.build_models(displays, self.model, self.skin, skins), **_textures(displays)}
+        files = {**pbm.build_models(displays, self.model, self.skin), **_textures(displays)}
+        if diagnostics:
+            diags = pbm.build_diagnostics()
+            files.update(pbm.build_models(diags, self.model, self.skin))
+            files.update(pbm.build_textures(diags, "dxt5", (SRC_DIR / pbm.SOURCE_TEXTURE).read_bytes()))
+            displays = displays + diags
         return displays, files
+
+    def _check_rows_resolve(self, displays, files):
+        with tempfile.TemporaryDirectory() as tmp:
+            pbm.write_assets(Path(tmp), files)
+            on_disk = {p.name for p in Path(tmp).iterdir()}
+        for d in displays:
+            model = pbm.model_row(d)["ModelName"].split("\\")[-1].removesuffix(".mdx")
+            self.assertIn(f"{model}.m2", on_disk)
+            self.assertIn(f"{model}00.skin", on_disk)
+            data = files[f"{model}.m2"]
+            ttype, _flags, length, ofs = _texture_entry(data)
+            if ttype == 0:      # the texture the model itself names
+                path = data[ofs:ofs + length].split(b"\0")[0].decode()
+                self.assertTrue(path.startswith("spells\\"), path)
+                self.assertIn(path.split("\\", 1)[1], on_disk, d.id)
+                self.assertEqual(path, f"spells\\{d.texture}.blp", d.id)
+            else:               # the texture CreatureDisplayInfo hands the skin slot
+                self.assertEqual(ttype, 11)
+                self.assertIn(f"{pbm.display_row(d)['TextureVariation_1']}.blp", on_disk)
 
     def test_every_display_row_has_its_model_skin_and_texture(self):
         for skins in (True, False):
-            displays, files = self._files(skins)
-            with tempfile.TemporaryDirectory() as tmp:
-                pbm.write_assets(Path(tmp), files)
-                on_disk = {p.name for p in Path(tmp).iterdir()}
-            for d in displays:
-                model = pbm.model_row(d)["ModelName"].split("\\")[-1].removesuffix(".mdx")
-                self.assertIn(f"{model}.m2", on_disk)
-                self.assertIn(f"{model}00.skin", on_disk)
-                self.assertIn(f"{pbm.display_row(d)['TextureVariation_1']}.blp", on_disk)
+            self._check_rows_resolve(*self._files(skins))
+
+    @NEEDS_SOURCE_TEXTURE
+    def test_diagnostic_rows_resolve_and_bind_as_named(self):
+        displays, files = self._files(False, diagnostics=True)
+        self._check_rows_resolve(displays, files)
+        by_id = {d.id: d for d in displays}
+        self.assertEqual(files["bm_diag_asc_red.blp"], (SRC_DIR / pbm.SOURCE_TEXTURE).read_bytes())
+        self.assertEqual(blp_write.read_blp(files["bm_diag_pal_red.blp"])["encoding"], 1)
+        self.assertEqual(blp_write.read_blp(files["bm_disc_red.blp"])["encoding"], 2)
+        src = files["bm_diag_src.m2"]                            # the untouched source apart from its path
+        self.assertEqual(m2_patch.vertex_positions(src), m2_patch.vertex_positions(self.model))
+        self.assertEqual(files["bm_diag_src00.skin"], self.skin)
+        self.assertEqual(m2_patch.replaceable_lookup(files["bm_diag_skin.m2"])[11], 0)
+        self.assertEqual(m2_patch.replaceable_lookup(files["bm_diag_oldskin.m2"]), [0])
+        self.assertEqual(by_id[90623].texture, "bm_disc_red")
+        self.assertEqual(files["bm_diag_dxt.m2"], files["bm_disc_red.m2"])   # 90623 is exactly the new 90500
 
     def test_skins_mode_shares_models(self):
         displays, files = self._files(True)
@@ -428,6 +610,7 @@ class OutputFilesTest(unittest.TestCase):
         self.assertEqual(len(models), 42)                       # one quad + 41 line lengths
         for name in models:
             self.assertEqual(_texture_entry(files[name])[0], 11, name)
+            self.assertEqual(m2_patch.replaceable_lookup(files[name])[11], 0, name)
 
     def test_no_skins_gives_120_models_with_hard_coded_paths(self):
         displays, files = self._files(False)
@@ -438,7 +621,7 @@ class OutputFilesTest(unittest.TestCase):
             data = files[f"{d.model}.m2"]
             ttype, _flags, length, ofs = _texture_entry(data)
             self.assertEqual(ttype, 0)
-            self.assertEqual(data[ofs:ofs + length].split(b"\0")[0], f"spells\\{d.texture}.blp".encode())
+            self.assertEqual(data[ofs:ofs + length], f"spells\\{d.texture}.blp\0".encode())
             self.assertIn(f"{d.texture}.blp", files)
 
     def test_rerun_removes_stale_files_of_the_other_mode(self):

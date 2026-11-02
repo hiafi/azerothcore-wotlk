@@ -683,7 +683,8 @@ class ClassDeclarationsTest(unittest.TestCase):
         self.assertEqual(out_of_reservation("bossmechanics", {"spell": [205100, 204899], "creature": [300420]}),
                          ["spell 204899", "spell 205100", "creature 300420"])
         # the markers' displays are WP-A's rows (not declared by dbc-tools yet): the slice keeps the display ids
-        # 90500-90619 clear of every other owner, USED_DISPLAY_IDS stays at the live maxima until they are deployed
+        # 90500-90619 (and the diagnostic displays 90620-90629) clear of every other owner, USED_DISPLAY_IDS stays
+        # at the live maxima until they are deployed
 
     def test_a_deliberately_out_of_block_id_fails(self):
         ids = {"spell": [202800], "talent": [60330], "skilllineability": [30720], "spell_group": [1271],

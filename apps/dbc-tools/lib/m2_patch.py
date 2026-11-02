@@ -12,14 +12,21 @@ What gets patched (handoff §3.9):
     bounding box and sphere radius, the three animation bounds and the skin submesh bounds follow;
   - the render-flags entry keeps its flags (0x15: unlit, two-sided, no depth write) and gets blend
     mode 2 (alpha) instead of 4 (additive);
-  - the colour track must be white and the colour alpha / transparency tracks opaque (the source
-    fades in over 534 ms and is half transparent), so the texture alpha is the on-screen alpha;
-  - the texture entry becomes either type 11 with an empty name (creature skin 1, so
-    `CreatureDisplayInfo.TextureVariation_1` supplies the texture) or stays type 0 with a new
-    hard-coded path (`--no-skins`).
+  - the colour track must be white and the colour alpha / transparency tracks opaque and static
+    (the source fades in over 534 ms on Stand, out over 534 ms on Decay, and is half transparent):
+    every per-animation key list of those tracks is cut to one opaque key, and an animation with no
+    keys (Hold, 158) borrows that key, so no sequence can fade, grow or fall back to a default;
+  - the texture entry stays type 0 with a new hard-coded path (the default), or becomes type 11
+    with an empty name (creature skin 1, so `CreatureDisplayInfo.TextureVariation_1` supplies the
+    texture). Type 11 also needs the replaceable-texture lookup to map 11 to texture 0: the source's
+    lookup has one entry ([0], type 0 only), so the client finds no slot for skin 1 and draws the
+    empty texture (the first M1 build's green boxes). `skin_lookup=True` appends a 12-entry lookup
+    ([-1] * 11 + [0], the layout stock creature models such as Skunk.m2 carry) at the end of the file
+    and repoints the header; that is the one place the file grows.
 
 M2 header offsets used (WotLK, v264): animations 0x1C, vertices 0x3C, colours 0x48, textures 0x50,
-transparency 0x58, render flags 0x70, bounding box 0xA0 (6 floats), bounding sphere radius 0xB8.
+transparency 0x58, replaceable texture lookup 0x68, render flags 0x70, bounding box 0xA0 (6 floats),
+bounding sphere radius 0xB8.
 """
 
 from __future__ import annotations
@@ -32,6 +39,7 @@ OFS_VERTICES = 0x3C
 OFS_COLORS = 0x48
 OFS_TEXTURES = 0x50
 OFS_TRANSPARENCY = 0x58
+OFS_REPLACEABLE_LOOKUP = 0x68
 OFS_RENDER_FLAGS = 0x70
 OFS_BBOX = 0xA0
 OFS_SPHERE = 0xB8
@@ -46,6 +54,7 @@ OPAQUE = 0x7FFF           # fixed16 1.0
 
 BLEND_ALPHA = 2
 TEXTURE_TYPE_SKIN1 = 11
+SKIN1_LOOKUP = [-1] * TEXTURE_TYPE_SKIN1 + [0]     # replaceable type -> texture index
 
 
 class M2Error(ValueError):
@@ -105,12 +114,21 @@ def _track(data: bytes, off: int) -> dict:
     """Decode one M2 animation track header into its per-animation key lists."""
     _span(data, off, TRACK_SIZE, "track")
     n_ts, o_ts, n_keys, o_keys = struct.unpack_from("<4xIIII", data, off)
+    _span(data, o_ts, n_ts * 8, "track timestamp headers")
     _span(data, o_keys, n_keys * 8, "track key headers")
+    if n_ts != n_keys:
+        raise M2Error(f"track at {off:#x}: {n_ts} timestamp lists but {n_keys} key lists")
     keys = []
+    stamps = []
     for i in range(n_keys):
         count, ofs = struct.unpack_from("<II", data, o_keys + 8 * i)
         keys.append((count, ofs))
-    return {"n_ts": n_ts, "keys": keys}
+        t_count, t_ofs = struct.unpack_from("<II", data, o_ts + 8 * i)
+        if t_count != count:
+            raise M2Error(f"track at {off:#x}, animation {i}: {t_count} timestamps but {count} keys")
+        _span(data, t_ofs, 4 * t_count, "timestamps")
+        stamps.append((t_count, t_ofs))
+    return {"n_ts": n_ts, "keys": keys, "stamps": stamps, "ts_headers": o_ts, "key_headers": o_keys}
 
 
 def inspect(data: bytes) -> dict:
@@ -162,13 +180,48 @@ def bounds_of(verts: list[tuple[float, float]]) -> dict:
     }
 
 
+def replaceable_lookup(data: bytes) -> list[int]:
+    count, ofs = _u32(data, OFS_REPLACEABLE_LOOKUP), _u32(data, OFS_REPLACEABLE_LOOKUP + 4)
+    _span(data, ofs, 2 * count, "replaceable texture lookup")
+    return list(struct.unpack_from(f"<{count}h", data, ofs))
+
+
+def set_texture_path(data: bytes, texture_path: str) -> bytes:
+    """Only rewrite the type-0 texture's hard-coded path, in place (it must fit the source name's bytes)."""
+    facts = check_source(data)
+    raw = texture_path.encode("ascii") + b"\0"
+    if len(raw) > facts["name_len"]:
+        raise M2Error(f"texture path {texture_path!r} does not fit the source name ({facts['name_len']} bytes)")
+    out = bytearray(data)
+    out[facts["name_ofs"]:facts["name_ofs"] + facts["name_len"]] = raw + bytes(facts["name_len"] - len(raw))
+    # the entry's length counts the new name and its terminator, as Blizzard's files do (no stray NULs)
+    struct.pack_into("<I", out, facts["texture"] + 8, len(raw))
+    return bytes(out)
+
+
+def _static_opaque(out: bytearray, track: dict) -> None:
+    """Every animation's key list -> one opaque key at t = 0; an empty list borrows the first real one."""
+    donor = next(((t, k) for t, k in zip(track["stamps"], track["keys"]) if k[0] > 0), None)
+    if donor is None:
+        raise M2Error("an alpha track with no keys at all")
+    for i, ((t_count, t_ofs), (count, ofs)) in enumerate(zip(track["stamps"], track["keys"])):
+        if count == 0:
+            (_, t_ofs), (_, ofs) = donor
+        struct.pack_into("<I", out, t_ofs, 0)
+        struct.pack_into("<h", out, ofs, OPAQUE)
+        struct.pack_into("<II", out, track["ts_headers"] + 8 * i, 1, t_ofs)
+        struct.pack_into("<II", out, track["key_headers"] + 8 * i, 1, ofs)
+
+
 def patch_model(data: bytes, verts: list[tuple[float, float]], *, skins: bool,
-                texture_path: str | None = None) -> bytes:
+                texture_path: str | None = None, skin_lookup: bool = True) -> bytes:
     """Return the patched model.
 
     verts: four (x, y) pairs in the source vertex order (-,-), (+,-), (-,+), (+,+), z becomes 0.
-    skins: True turns the texture into creature skin 1 (type 11, empty name); False keeps the
-    hard-coded path and rewrites it to `texture_path` (must fit the source name's capacity).
+    skins: True turns the texture into creature skin 1 (type 11, empty name) and, with
+    `skin_lookup`, appends the replaceable-texture lookup that type needs (False reproduces the
+    first M1 build, for the 90625 diagnostic only); False keeps the hard-coded path and rewrites it
+    to `texture_path` (must fit the source name's capacity).
     """
     if len(verts) != 4:
         raise M2Error("need exactly four vertices")
@@ -189,28 +242,27 @@ def patch_model(data: bytes, verts: list[tuple[float, float]], *, skins: bool,
     # render flags entry: u16 flags (kept), u16 blend mode
     struct.pack_into("<H", out, facts["render_flags"] + 2, BLEND_ALPHA)
 
-    # colour: white; colour alpha and transparency: opaque on every animation that has keys
+    # colour: white; colour alpha and transparency: one opaque key per animation (static)
     info = inspect(data)
     for count, ofs in info["rgb_track"]["keys"]:
         for i in range(count):
             struct.pack_into("<3f", out, ofs + 12 * i, 1.0, 1.0, 1.0)
     for track in (info["alpha_track"], info["transp_track"]):
-        for count, ofs in track["keys"]:
-            for i in range(count):
-                struct.pack_into("<h", out, ofs + 2 * i, OPAQUE)
+        _static_opaque(out, track)
 
     # texture entry
     tex = facts["texture"]
     if skins:
         struct.pack_into("<IIII", out, tex, TEXTURE_TYPE_SKIN1, 0, 0, 0)
-    else:
-        if not texture_path:
-            raise M2Error("texture_path is required without skins")
-        raw = texture_path.encode("ascii") + b"\0"
-        if len(raw) > facts["name_len"]:
-            raise M2Error(f"texture path {texture_path!r} does not fit the source name ({facts['name_len']} bytes)")
-        out[facts["name_ofs"]:facts["name_ofs"] + facts["name_len"]] = raw + bytes(facts["name_len"] - len(raw))
-    return bytes(out)
+        if skin_lookup:
+            out += bytes(-len(out) % 16)
+            struct.pack_into("<II", out, OFS_REPLACEABLE_LOOKUP, len(SKIN1_LOOKUP), len(out))
+            out += struct.pack(f"<{len(SKIN1_LOOKUP)}h", *SKIN1_LOOKUP)
+            out += bytes(-len(out) % 16)
+        return bytes(out)
+    if not texture_path:
+        raise M2Error("texture_path is required without skins")
+    return set_texture_path(bytes(out), texture_path)
 
 
 # --- skin ---

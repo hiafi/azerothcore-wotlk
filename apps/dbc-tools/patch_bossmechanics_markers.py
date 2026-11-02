@@ -8,8 +8,8 @@ Source model: Ascension's `SPELLS\\red_circle_filled.M2` (a 4-vertex quad) from 
 The model is patched (lib/m2_patch.py) into a unit quad (x, y in [-1, 1], z = 0, so a scale of r is
 exactly an r-yard radius) and 41 line models (x in [0, k], y in [-0.5, 0.5], k = 2^(i/8), so scale =
 width and the model starts at the stalker). Textures are generated here, not mined
-(lib/blp_write.py): one flat colour per file with the shape in the alpha plane, so the geometry is
-exact and nothing needs in-game calibration beyond the S1-S7 spike checks in the handoff.
+(lib/blp_write.py, DXT5): one flat colour per file with the shape in the alpha channel, so the
+geometry is exact and nothing needs in-game calibration beyond the S1-S7 spike checks in the handoff.
 
 Rows written: CreatureModelData + CreatureDisplayInfo ids 90500-90619 (one pair per display, the
 same id in both tables), into the working copy `var/model-visual-dbc/DBFilesClient/`; model, skin
@@ -24,18 +24,23 @@ Display ids (CreatureDisplayInfo id = CreatureModelData id; colour index c: red 
     90508-90521  donut, 90508 + 2j + c, rho_j in (0.25 0.33 0.40 0.50 0.60 0.67 0.75)
     90522-90537  cone, 90522 + 2j + c, angle_j in (30 45 60 90 120 150 180 270) degrees
     90538-90619  line, 90538 + 2i + c, k_i = 2^(i/8), i = 0..40 (aspect 1 to 32)
-    90620-90649  spare
+    90620-90629  diagnostic displays (DIAGNOSTICS below; `.morph target <id>` on yourself)
+    90630-90649  spare
 
 Orientation: model +X is forward and carries v, model +Y carries u, so a cone's wedge opens toward
 increasing v (down the image rows) and its apex is the texture centre. Spike S5 checks it in game.
 
-With --no-skins (spike S1 fallback if the client ignores TextureVariation on this model) every
-display gets its own model copy whose texture path is hard-coded; ids are unchanged.
+Texture binding (fix 2026-11-02, M1-FIX-MARKERS-REPORT.md): by default every display gets its own
+model copy whose texture path is hard-coded (type 0, how the source model binds its texture). The
+first build used one shared model with a type-11 skin texture, which drew green boxes: the source's
+replaceable-texture lookup only maps type 0. `--skins` restores the shared-model layout with that
+lookup fixed (lib/m2_patch.py); ids are the same either way.
 
 Usage (untrusted input rule: the extracted Ascension files get their own new, empty directory):
     python3 -I apps/dbc-tools/patch_bossmechanics_markers.py --extract <patch-N.MPQ>
     python3 -I apps/dbc-tools/patch_bossmechanics_markers.py --dry-run
     python3 -I apps/dbc-tools/patch_bossmechanics_markers.py --sql-out data/sql/updates/pending_db_world/rev_<ns>.sql
+`--extract` also takes the source's own texture (for the diagnostic displays 90620 and 90624).
 Then run build_patch_m.py to pack SPELLS/ and the DBCs into patch-M.mpq.
 """
 
@@ -51,21 +56,24 @@ TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import dbcfmt  # noqa: E402
-from lib.blp_write import encode_blp  # noqa: E402
-from lib.m2_patch import patch_model, patch_skin  # noqa: E402
+from lib.blp_write import encode_blp, encode_blp_palette  # noqa: E402
+from lib.m2_patch import patch_model, patch_skin, set_texture_path  # noqa: E402
 from lib.sql_out import _table_block  # noqa: E402
 from patch_priest_vfx_models import _merge, _row, model_path  # noqa: E402
 
 DEFAULT_VAR = TOOL_ROOT / "var"
 SOURCE_MODEL = "red_circle_filled.M2"
 SOURCE_SKIN = "red_circle_filled00.skin"
-SOURCE_ARCHIVE_PATHS = (f"SPELLS/{SOURCE_MODEL}", f"SPELLS/{SOURCE_SKIN}")
+SOURCE_TEXTURE = "red_circle_filled_editeda_circle_solid_red.blp"   # Ascension's DXT5, known good
+SOURCE_ARCHIVE_PATHS = (f"SPELLS/{SOURCE_MODEL}", f"SPELLS/{SOURCE_SKIN}", f"SPELLS/{SOURCE_TEXTURE}")
 PREFIX = "bm_"
 
 # --- ids (handoff §3.1; reservations.bossmechanics in source/ids.yaml) ---
 
 FIRST_ID = 90500
 LAST_ID = 90619
+DIAG_FIRST_ID = 90620
+DIAG_LAST_ID = 90629         # the SQL deletes the whole diagnostic block, used or not
 
 COLOURS = ("red", "yellow", "blue", "purple")
 COLOUR_RGB = {"red": (230, 40, 30), "yellow": (245, 200, 40), "blue": (40, 120, 240), "purple": (160, 70, 220)}
@@ -175,11 +183,18 @@ def line_alpha(size: int) -> bytes:
 # --- display table ---
 
 class Display:
-    __slots__ = ("id", "shape", "texture", "colour", "model", "verts", "size")
+    """One CreatureDisplayInfo + CreatureModelData pair.
 
-    def __init__(self, id_: int, shape: str, texture: str, colour: str, model: str, verts, size: int):
+    binding: how the model gets its texture: "path" (type 0, hard-coded `spells\\<texture>.blp`),
+    "skin" (type 11 + fixed replaceable lookup, TextureVariation_1 = texture), "skin_broken"
+    (type 11 with the source's one-entry lookup: the first M1 build, diagnostic 90625 only) or
+    "source" (the untouched source model, only its texture path rewritten: diagnostic 90620)."""
+    __slots__ = ("id", "shape", "texture", "colour", "model", "verts", "size", "binding")
+
+    def __init__(self, id_: int, shape: str, texture: str, colour: str, model: str, verts, size: int,
+                 binding: str = "path"):
         self.id, self.shape, self.texture, self.colour = id_, shape, texture, colour
-        self.model, self.verts, self.size = model, verts, size
+        self.model, self.verts, self.size, self.binding = model, verts, size, binding
 
 
 QUAD = [(-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)]
@@ -190,12 +205,32 @@ def line_verts(i: int) -> list[tuple[float, float]]:
     return [(0.0, -0.5), (k, -0.5), (0.0, 0.5), (k, 0.5)]
 
 
+# Diagnostic displays (90620-90629): one login tells which half of a still-broken marker is at fault.
+# (id, model file, texture file stem, binding). Every one is a red disc; view with `.morph target <id>`.
+DIAG_ASC_TEXTURE = f"{PREFIX}diag_asc_red"      # SOURCE_TEXTURE, copied verbatim
+DIAG_PAL_TEXTURE = f"{PREFIX}diag_pal_red"      # the disc in the first build's palette format
+DIAGNOSTICS = (
+    (90620, f"{PREFIX}diag_src", DIAG_ASC_TEXTURE, "source"),       # untouched model + Ascension texture
+    (90621, f"{PREFIX}diag_pal", DIAG_PAL_TEXTURE, "path"),         # our model + palette BLP
+    (90622, f"{PREFIX}diag_skin", f"{PREFIX}disc_red", "skin"),     # type 11, fixed lookup + DXT5
+    (90623, f"{PREFIX}diag_dxt", f"{PREFIX}disc_red", "path"),      # type 0 + DXT5 (= the new 90500)
+    (90624, f"{PREFIX}diag_ascpatch", DIAG_ASC_TEXTURE, "path"),    # our model + Ascension texture
+    (90625, f"{PREFIX}diag_oldskin", f"{PREFIX}disc_red", "skin_broken"),  # the first build's binding
+)
+
+
+def build_diagnostics() -> list[Display]:
+    return [Display(id_, "diag", texture, "red", model, QUAD, BIG, binding)
+            for id_, model, texture, binding in DIAGNOSTICS]
+
+
 def build_displays(skins: bool) -> list[Display]:
     out: list[Display] = []
+    binding = "skin" if skins else "path"
 
     def add(id_: int, shape: str, tex_stem: str, colour: str, size: int, model: str, verts) -> None:
         texture = f"{PREFIX}{tex_stem}_{colour}"
-        out.append(Display(id_, shape, texture, colour, model if skins else texture, verts, size))
+        out.append(Display(id_, shape, texture, colour, model if skins else texture, verts, size, binding))
 
     for c, colour in enumerate(COLOURS):
         add(DISC_BASE + c, "disc", "disc", colour, BIG, f"{PREFIX}quad", QUAD)
@@ -212,7 +247,7 @@ def build_displays(skins: bool) -> list[Display]:
             texture = f"{PREFIX}line_{colour}"
             model = f"{PREFIX}line_{i:02d}"
             out.append(Display(LINE_BASE + 2 * i + c, "line", texture, colour,
-                               model if skins else f"{model}_{colour}", line_verts(i), SMALL))
+                               model if skins else f"{model}_{colour}", line_verts(i), SMALL, binding))
     return out
 
 
@@ -232,28 +267,49 @@ def alpha_for(display: Display) -> bytes:
     raise ValueError(stem)
 
 
-def build_textures(displays: list[Display]) -> dict[str, bytes]:
-    """{texture file name: BLP bytes}, one per distinct texture."""
+def build_textures(displays: list[Display], fmt: str = "dxt5", source_texture: bytes | None = None) -> dict[str, bytes]:
+    """{texture file name: BLP bytes}, one per distinct texture (fmt: "dxt5" or "palette").
+
+    The diagnostic textures ignore `fmt`: bm_diag_pal_* is always the palette format and
+    bm_diag_asc_red is `source_texture` (the Ascension file) verbatim."""
+    encoders = {"dxt5": encode_blp, "palette": encode_blp_palette}
     textures: dict[str, bytes] = {}
     planes: dict[str, bytes] = {}
     for d in displays:
-        if d.texture in textures:
+        if f"{d.texture}.blp" in textures:
             continue
-        stem = d.texture.removeprefix(PREFIX).rsplit("_", 1)[0]
+        if d.texture == DIAG_ASC_TEXTURE:
+            if source_texture is None:
+                raise SystemExit(f"diagnostic {d.id} needs {SOURCE_TEXTURE}; run --extract into a fresh --src "
+                                 "or pass --no-diagnostics")
+            textures[f"{d.texture}.blp"] = source_texture
+            continue
+        encoder = encode_blp_palette if d.texture == DIAG_PAL_TEXTURE else encoders[fmt]
+        stem = "disc" if d.shape == "diag" else d.texture.removeprefix(PREFIX).rsplit("_", 1)[0]
         if stem not in planes:
-            planes[stem] = alpha_for(d)
-        textures[f"{d.texture}.blp"] = encode_blp(d.size, d.size, COLOUR_RGB[d.colour], planes[stem])
+            planes[stem] = disc_alpha(d.size, FILL_ALPHA) if stem == "disc" else alpha_for(d)
+        textures[f"{d.texture}.blp"] = encoder(d.size, d.size, COLOUR_RGB[d.colour], planes[stem])
     return textures
 
 
-def build_models(displays: list[Display], src_model: bytes, src_skin: bytes, skins: bool) -> dict[str, bytes]:
-    """{file name: bytes} for every model and skin file the displays use."""
+def build_models(displays: list[Display], src_model: bytes, src_skin: bytes) -> dict[str, bytes]:
+    """{file name: bytes} for every model and skin file the displays use (per each display's binding)."""
     files: dict[str, bytes] = {}
     for d in displays:
         if f"{d.model}.m2" in files:
             continue
-        path = None if skins else f"spells\\{d.texture}.blp"
-        files[f"{d.model}.m2"] = patch_model(src_model, d.verts, skins=skins, texture_path=path)
+        path = f"spells\\{d.texture}.blp"
+        if d.binding == "source":
+            files[f"{d.model}.m2"] = set_texture_path(src_model, path)
+            files[f"{d.model}00.skin"] = src_skin
+            continue
+        if d.binding == "path":
+            model = patch_model(src_model, d.verts, skins=False, texture_path=path)
+        elif d.binding in ("skin", "skin_broken"):
+            model = patch_model(src_model, d.verts, skins=True, skin_lookup=d.binding == "skin")
+        else:
+            raise ValueError(d.binding)
+        files[f"{d.model}.m2"] = model
         files[f"{d.model}00.skin"] = patch_skin(src_skin, d.verts)
     return files
 
@@ -276,7 +332,7 @@ def display_row(d: Display) -> dict:
 
 
 def build_pending_sql(displays: list[Display]) -> str:
-    rng = {"start": FIRST_ID, "end": LAST_ID}
+    rng = {"start": FIRST_ID, "end": DIAG_LAST_ID if any(d.id > LAST_ID for d in displays) else LAST_ID}
     blocks = [
         _table_block(dbcfmt.CREATUREMODELDATA, rng, [model_row(d) for d in displays], []),
         _table_block(dbcfmt.CREATUREDISPLAYINFO, rng, [display_row(d) for d in displays], []),
@@ -301,12 +357,13 @@ def extract_source(mpq: Path, dest: Path) -> None:
     print(f"extracted {len(SOURCE_ARCHIVE_PATHS)} file(s) into {dest}")
 
 
-def read_source(src: Path) -> tuple[bytes, bytes]:
-    model, skin = src / "SPELLS" / SOURCE_MODEL, src / "SPELLS" / SOURCE_SKIN
+def read_source(src: Path) -> tuple[bytes, bytes, bytes | None]:
+    """(model, skin, texture or None): the texture is only needed by the diagnostic displays."""
+    model, skin, texture = (src / "SPELLS" / n for n in (SOURCE_MODEL, SOURCE_SKIN, SOURCE_TEXTURE))
     for p in (model, skin):
         if not p.is_file():
             raise SystemExit(f"{p} not found; run with --extract <patch-N.MPQ> first")
-    return model.read_bytes(), skin.read_bytes()
+    return model.read_bytes(), skin.read_bytes(), texture.read_bytes() if texture.is_file() else None
 
 
 def write_assets(spells_dir: Path, files: dict[str, bytes]) -> tuple[int, int]:
@@ -338,25 +395,34 @@ def main() -> None:
                              "into --src, which must be new or empty")
     parser.add_argument("--sql-out", type=Path, default=None, help="write the server-side SQL migration here")
     parser.add_argument("--dry-run", action="store_true", help="build everything in memory, write nothing")
-    parser.add_argument("--no-skins", action="store_true",
-                        help="spike S1 fallback: one model copy per display with a hard-coded texture path")
+    parser.add_argument("--skins", action="store_true",
+                        help="one shared model per shape with a type-11 skin texture (TextureVariation_1) instead "
+                             "of the default one model copy per display with a hard-coded texture path")
+    parser.add_argument("--no-skins", action="store_true", help=argparse.SUPPRESS)  # the old flag; now the default
+    parser.add_argument("--texture-format", choices=("dxt5", "palette"), default="dxt5",
+                        help="BLP2 encoding of the marker textures (default dxt5; palette = the first M1 build)")
+    parser.add_argument("--no-diagnostics", action="store_true",
+                        help="leave out the diagnostic displays 90620-90625")
     args = parser.parse_args()
 
-    skins = not args.no_skins
+    skins = args.skins
     src = args.src or (args.var / "bossmech-src")
     if args.extract:
         extract_source(args.extract, src)
-    src_model, src_skin = read_source(src)
+    src_model, src_skin, src_texture = read_source(src)
 
     displays = build_displays(skins)
-    models = build_models(displays, src_model, src_skin, skins)
-    textures = build_textures(displays)
+    if not args.no_diagnostics:
+        displays += build_diagnostics()
+    models = build_models(displays, src_model, src_skin)
+    textures = build_textures(displays, args.texture_format, src_texture)
     files = {**models, **textures}
     sql = build_pending_sql(displays)
 
     n_models = sum(1 for n in files if n.endswith(".m2"))
-    print(f"{len(displays)} displays (ids {FIRST_ID}-{LAST_ID}), {n_models} model(s) + skin(s), "
-          f"{len(textures)} texture(s), skins={'yes' if skins else 'no (hard-coded paths)'}")
+    print(f"{len(displays)} displays (ids {FIRST_ID}-{max(d.id for d in displays)}), {n_models} model(s) + skin(s), "
+          f"{len(textures)} {args.texture_format} texture(s), "
+          f"skins={'yes (type 11)' if skins else 'no (hard-coded paths)'}")
     print("model radius at scale 1: quad half-size 1.0 yd (scale = radius); line models "
           f"x in [0, k], y in [-0.5, 0.5], k = {line_aspect(0):.4f} .. {line_aspect(LINE_STEPS - 1):.4f}")
     if args.dry_run:

@@ -745,29 +745,48 @@ floor shapes (disc, ring, donut ratios, cones, lines) a creature scales to any s
 under another name so `lib/test_id_blocks.py`'s scan of those scripts stays as it is.
 
 - **Source model:** Ascension's `SPELLS\red_circle_filled.M2` + `00.skin`, a 4-vertex quad.
-  `--extract <patch-N.MPQ>` runs `smpq -x` for the two files into `--src` (default `var/bossmech-src/`),
-  which must be new or empty. Run Python on that data with `-I`; scripts stay outside the directory.
+  `--extract <patch-N.MPQ>` runs `smpq -x` for them and the model's own texture into `--src` (default
+  `var/bossmech-src/`), which must be new or empty. Run Python on that data with `-I`; scripts stay outside the directory.
 - **Model patch (`lib/m2_patch.py`):** byte-level, nothing re-serialised. Vertices become a flat unit
   quad (x, y in [-1, 1], z = 0, so scale = radius in yards) or a line model (x in [0, k], y in
   [-0.5, 0.5], k = 2^(i/8), i = 0..40, so scale = width). Bounding box, sphere, animation bounds and
   skin submesh follow. Blend mode 4 (additive) becomes 2 (alpha); flags 0x15 stay. The source fades
-  in over 534 ms and is half transparent, so colour alpha and transparency keys are forced opaque.
-  The texture entry becomes type 11 (creature skin 1, empty name) so
-  `CreatureDisplayInfo.TextureVariation_1` picks the file, resolved in the model's folder
-  (`SPELLS\`). `--no-skins` is the fallback if the client ignores that: one model per display, with
-  a hard-coded texture path.
+  in over 534 ms on Stand, out on Decay (159), and is half transparent, so the colour alpha and
+  transparency tracks are cut to one opaque key per animation (Hold, 158, has none and borrows it):
+  a marker is fully drawn the moment it appears, whatever the warning time.
+- **Texture binding: hard-coded path (type 0), one model copy per display.** The first build used
+  one shared model per shape with a type-11 skin texture and `TextureVariation_1`, and drew **green
+  boxes**: the source's replaceable-texture lookup (header 0x68) is `[0]`, so the client has no slot
+  for skin type 11 and the texture stays empty. Stock creature models carry a lookup with entry 11
+  (Skunk.m2: `[-1] * 11 + [0]`). `--skins` brings the shared layout back and appends that lookup;
+  type 0 stays the default because it is how this model already worked in Ascension's client.
 - **Textures (`lib/blp_write.py`):** generated, one flat colour per file with the shape in the alpha
-  plane (palette BLP2, alpha depth 8, full mip chain: disc and ring 512 px, the rest 256 px). No
-  Pillow in the venv, and the system Pillow's BLP writer has no alpha plane or mips. Its reader
-  also ignores the alpha plane, so tests read the files back with `read_blp`.
-- **Output:** model, skin and `.blp` files (all prefixed `bm_`) into `var/model-visual-dbc/SPELLS/`,
-  the two DBCs merged in `var/model-visual-dbc/DBFilesClient/`, and `--sql-out` writes the
-  `creaturemodeldata_dbc` / `creaturedisplayinfo_dbc` rows as one pending file. A rerun replaces
-  its rows and drops stale `bm_` files (for example after switching `--no-skins`). Then run
+  channel, **DXT5** BLP2 (compression 2, alpha depth 8, alpha type 7, full mip chain to 1x1, 2x2
+  and 1x1 one padded block each): header, zeroed palette block and mip offsets are byte for byte
+  those of Ascension's `red_circle_filled_editeda_circle_solid_red.blp` (tested). Disc and ring
+  512 px, the rest 256 px. The colour block is trivial (c0 = c1, indices 0); the alpha encoder
+  tries both DXT5 modes per block. `--texture-format palette` keeps the first build's palette
+  format (alpha depth 8). No Pillow in the venv, and the system Pillow's BLP writer has no alpha
+  or mips, so tests decode with `read_blp` / `decode_dxt5`.
+- **Diagnostic displays 90620-90625** (all red discs, `--no-diagnostics` drops them; view with
+  `.morph target <id>` on yourself, `.modify scale <n>` to size, `.morph reset`): 90620 untouched
+  source model + Ascension's own texture, 90621 our model + palette BLP, 90622 type 11 with the fixed
+  lookup + DXT5, 90623 type 0 + DXT5 (= the shipped 90500), 90624 our model + Ascension texture,
+  90625 the first build's type 11 binding (expected green). 90626-90649 stay spare.
+- **Output:** model, skin and `.blp` files (all prefixed `bm_`) into `var/model-visual-dbc/SPELLS/`
+  (126 models + 126 skins + 42 textures), the two DBCs merged in
+  `var/model-visual-dbc/DBFilesClient/`, and `--sql-out` writes the `creaturemodeldata_dbc` /
+  `creaturedisplayinfo_dbc` rows as one pending file (`DELETE ... BETWEEN 90500 AND 90629`). A rerun
+  replaces its rows and drops stale `bm_` files (for example after switching `--skins`). Then run
   `build_patch_m.py` to pack them. `--var <dir>` points the whole thing at another working copy,
-  and `--dry-run` writes nothing.
+  and `--dry-run` writes nothing. Diagnostics 90620/90624 need the source texture in `--src`.
+- **Server-side create ordering (not fixed here):** the module summons the marker (create packet
+  goes out at once, display 11686, scale 1) and only then sets display and scale, so a client
+  sees a scale change on every new marker. If markers visibly grow after spawning, that is the cause;
+  see `.agents/plans/dungeon-mechanics/dungeon-mechanics.M1-FIX-MARKERS-REPORT.md`.
 - **Tests:** `lib/test_bossmechanics_markers.py`. The M2 tests skip when `var/bossmech-src/` is
-  missing. The Pillow header check needs the system `python3` (the venv has no Pillow).
+  missing; the real-file header comparison and diagnostic file checks also need the source texture.
+  The Pillow header check needs the system `python3` (the venv has no Pillow).
 
 ## Load-bearing gotcha: `EffectSpellClassMask{A,B,C}_{1,2,3}`
 
