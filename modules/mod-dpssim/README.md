@@ -262,12 +262,23 @@ one of the targets. Plan: `.agents/plans/healing-sim/healing-sim.PLAN.md`.
 HEALSIM_GROUP=party HEALSIM_TARGETS=pin50 tools/run-sim.sh HolyPriestHealSim 60 60 1 3
 HEALSIM_TARGETS=drain:150 tools/run-sim.sh HolyPriestHealSim 120 60 1 3          # the group defaults to the profile's
 HEALSIM_INFINITE_MANA=1 HEALSIM_TARGETS=pin50 tools/run-sim.sh HolyPriestHealSim 60 60 1 3
+HEALSIM_TARGETS=drain:150 HEALSIM_DRAIN_NOISE=0.5 HEALSIM_DRAIN_PULSE_MS=3000 tools/run-sim.sh HolyPriestHealSim 120 60 1 3
 ```
 
 - `HEALSIM_GROUP`: `party`, `raid10` or `raid20`. `HEALSIM_TARGETS`: the preset `pin50` / `pin20` (every member held at
   that health by real hits: the pure-HPS measurement), `drain:<n>` (every member takes n damage a second, tanks 3x; the
   survival measurement), or a full list such as `tank:drain:450, 3*dps:drain:150, self:drain:100`.
   `HEALSIM_INFINITE_MANA=1` keeps the healer's mana full during the fight.
+- Drain shape, for a noisier and more realistic check where overhealing and target choice matter. A drain value is
+  always damage per second, whatever the pulse length. `HEALSIM_DRAIN_PULSE_MS` (profile key `DrainPulseMs`, conf
+  `DpsSim.DrainPulseMs`, whole ms, at least 100, default 1000) sets how often the Sim Damage Pulse lands: a 3000 ms
+  pulse deals 3x the amount of a 1000 ms one. `HEALSIM_DRAIN_NOISE` (profile key `DrainNoise`, conf `DpsSim.DrainNoise`,
+  0 to 1, default 0 = equal pulses) makes each pulse unequal: every living draining member draws a weight
+  `1 + noise * u` (u uniform in [-1, 1]) and takes its normal amount (a tank's 3x included) times that weight, rescaled
+  so the pulse's total damage is exactly the noiseless pulse's total (the damage per second is unchanged, only who takes
+  it moves). The shares are whole hit points; one that rounds to 0 skips that hit. The environment variables beat the
+  profile keys. A run with a non-default noise or pulse adds `.n50`, `.p3000` or `.n50p3000` to its file names, the
+  report's `config` has `drainNoise` and `drainPulseMs`, and `aggregate_reports.py` refuses to mix different values.
 - Profiles: `DiscPriestHealSim`, `HolyPriestHealSim` (Human, race 1), `RestoDruidHealSim` (Tauren, race 6) and
   `HolyPaladinHealSim` (Human); each one's header has its talent decode, gear arithmetic and the sweep commands.
   `NoHealerHealSim` is the harness test profile.
@@ -279,7 +290,8 @@ HEALSIM_INFINITE_MANA=1 HEALSIM_TARGETS=pin50 tools/run-sim.sh HolyPriestHealSim
   mana.
 - Known-value tests: `DpsSim.RunTests=1` (optionally `DpsSim.TestFilter=heal`) also runs six heal-mode tests (a Flash
   Heal's amount, an undefended drain target's death, a Power Word: Shield's absorb, Renew's ticks, no pushback on a
-  pinned healer, Guardian Spirit's credit). They replace the healer's bot AI with a scripted cast
+  pinned healer, Guardian Spirit's credit) and a seventh (`heal-drain-noise`: a noisy drain keeps each pulse's total and
+  varies the shares). They replace the healer's bot AI with a scripted cast
   (`RunConfig::HealStepHook`) on an untalented, ungeared Priest. Run one with
   `DPSSIM_EXTRA_CONF='DpsSim.RunTests = 1\nDpsSim.TestFilter = heal' tools/run-sim.sh NoHealerHealSim 10 60 1 1`
   (the script then exits 1, as no report is written; keep the log with `DPSSIM_KEEP_LOG=1` and grep `[PASS]`/`[FAIL]`).

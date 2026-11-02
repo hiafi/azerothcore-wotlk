@@ -176,9 +176,9 @@ namespace SimDaemon
         // ---- Heal mode (RunMode == Mode::Heal) ----
         // The actor is the healer. It heals a group of HealGroupSize members (HealTargets, one per member in index
         // order, the healer's own slot included) that a boss damages with real hits; see SimHealScenario.h. The
-        // profile's Mode / HealGroup / HealTargets / Ally* / DrainPulseMs keys, with DpsSim.HealGroup /
-        // DpsSim.HealTargets in the conf overriding the first two (DpsSim.cpp). TargetCount, TargetRank and the dummy
-        // settings play no part.
+        // profile's Mode / HealGroup / HealTargets / Ally* / DrainPulseMs / DrainNoise keys, with DpsSim.HealGroup /
+        // DpsSim.HealTargets / DpsSim.DrainPulseMs / DpsSim.DrainNoise in the conf overriding the profile's
+        // (DpsSim.cpp). TargetCount, TargetRank and the dummy settings play no part.
         Mode RunMode = Mode::Dps;
         uint32 HealGroupSize = SimHeal::PARTY_SIZE;
         std::vector<SimHeal::TargetSpec> HealTargets;
@@ -188,6 +188,8 @@ namespace SimDaemon
         std::string AllyTankTalents;
         float AllySpreadYards = 10.0f;
         uint32 DrainPulseMs = 1000;
+        // 0 to 1, see SimProfile.h's Profile::DrainNoise
+        float DrainNoise = 0.0f;
         // Heal mode: set the healer's mana to full every step of the measured fight (profile key InfiniteMana, with
         // DpsSim.InfiniteMana overriding it). The buff phase is untouched.
         bool InfiniteMana = false;

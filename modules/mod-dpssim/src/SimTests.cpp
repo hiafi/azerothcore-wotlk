@@ -321,9 +321,10 @@ namespace
     using HealStepHook = std::function<void(uint32, Player*, std::vector<Player*> const&)>;
 
     // Runs one heal-mode iteration of `durationMs` for the Priest above. `allyMaxHealthDps` is the max health of a
-    // drain-mode DPS ally (a pinned target has the profile default of 30,000).
+    // drain-mode DPS ally (a pinned target has the profile default of 30,000); `drainNoise` and `drainPulseMs` are the
+    // profile's keys of the same name.
     bool RunHealScenario(char const* targetsText, uint32 durationMs, HealStepHook hook, SimDaemon::RunResult& result,
-        uint32 allyMaxHealthDps = 5000)
+        uint32 allyMaxHealthDps = 5000, float drainNoise = 0.0f, uint32 drainPulseMs = 1000)
     {
         SimDaemon::RunConfig config;
         config.RunMode = SimDaemon::Mode::Heal;
@@ -338,6 +339,8 @@ namespace
         config.InfiniteMana = true;
         config.HealGroupSize = SimHeal::PARTY_SIZE;
         config.AllyMaxHealthDps = allyMaxHealthDps;
+        config.DrainNoise = drainNoise;
+        config.DrainPulseMs = drainPulseMs;
         config.AllyTankTalents = SimProfile::Profile{}.AllyTankTalents;
 
         std::string error;
@@ -572,6 +575,70 @@ namespace
             "the other targets, {} heal event(s).", maxHealth, pulses.size(), DRAIN, maxHealth, DRAIN, expectedPulses,
             badAmounts, badSpacing, result.Deaths.size(), deathAtMs, lastPulseMs, otherDamage,
             result.HealEvents.size()));
+        return passed;
+    }
+
+    // Heal test 2b (heal-drain-noise): a noisy drain keeps each pulse's total and varies who takes what. A tank
+    // draining 300 a second and three DPS allies draining 100 each, on a 2,000 ms pulse at noise 0.5: every pulse must
+    // request 2 x (300 + 3 x 100) = 1,200 in total (the noiseless total, and the per-second scaling of the pulse
+    // length), in the order tank, DPS 1-3, and at least one pulse must not be the noiseless 600 / 200 / 200 / 200.
+    // Nobody may die (the tank would need over 12 pulses of the worst share to). Requested is compared, not the damage
+    // the tank's armor and the DPS allies' resilience leave.
+    bool RunHealDrainNoiseTest()
+    {
+        constexpr uint32 PULSE_MS = 2000;
+        constexpr uint32 DRAINED_MEMBERS = 4;
+        constexpr uint32 PULSE_TOTAL = 2 * (300 + 3 * 100);
+        constexpr uint32 MIN_PULSES = 4;
+
+        SimDaemon::RunResult result;
+        auto const idle = [](uint32, Player*, std::vector<Player*> const&) { };
+        if (!RunHealScenario("tank:drain:300, 3*dps:drain:100, self:pin:50", 13000, idle, result, 50000, 0.5f,
+                PULSE_MS))
+        {
+            LogVerdict("heal-drain-noise test", false, "the heal scenario did not run - see preceding LOG_ERROR "
+                "output.");
+            return false;
+        }
+
+        std::vector<SimHeal::DamageEvent> hits;
+        for (SimHeal::DamageEvent const& e : result.DamageTakenEvents)
+            if (!e.Pin)
+                hits.push_back(e);
+
+        uint32 const pulses = uint32(hits.size() / DRAINED_MEMBERS);
+        uint32 badTotals = 0;
+        uint32 badOrder = 0;
+        uint32 unequalPulses = 0;
+        for (uint32 pulse = 0; pulse < pulses; ++pulse)
+        {
+            uint32 total = 0;
+            bool noiseless = true;
+            for (uint32 member = 0; member < DRAINED_MEMBERS; ++member)
+            {
+                SimHeal::DamageEvent const& e = hits[pulse * DRAINED_MEMBERS + member];
+                total += e.Requested;
+                badOrder += e.TargetIndex != member ? 1 : 0;
+                noiseless = noiseless && e.Requested == (member == 0 ? 600u : 200u);
+            }
+
+            if (total != PULSE_TOTAL)
+            {
+                ++badTotals;
+                LOG_ERROR("server.dpssim", "mod-dpssim: heal-drain-noise test - pulse {} requested {} in total "
+                    "(expected {}).", pulse + 1, total, PULSE_TOTAL);
+            }
+
+            unequalPulses += noiseless ? 0 : 1;
+        }
+
+        bool const passed = pulses >= MIN_PULSES && hits.size() % DRAINED_MEMBERS == 0 && badTotals == 0 &&
+            badOrder == 0 && unequalPulses > 0 && result.Deaths.empty();
+        LogVerdict("heal-drain-noise test", passed, Acore::StringFormat(
+            "{} drain hit(s) = {} pulse(s) of {} ms (expected at least {}), {} pulse(s) whose total was not {}, {} "
+            "hit(s) out of member order, {} pulse(s) that differed from the noiseless 600 / 200 / 200 / 200, {} "
+            "death(s).", hits.size(), pulses, PULSE_MS, MIN_PULSES, badTotals, PULSE_TOTAL, badOrder, unequalPulses,
+            result.Deaths.size()));
         return passed;
     }
 
@@ -1807,6 +1874,7 @@ void SimTests::RunAll()
         {"no-persist", RunNoPersistTest},
         {"heal-flash", RunHealFlashHealTest},
         {"heal-drain", RunHealDrainDeathTest},
+        {"heal-drain-noise", RunHealDrainNoiseTest},
         {"heal-shield", RunHealShieldTest},
         {"heal-hot", RunHealHotTest},
         {"heal-pushback", RunHealPushbackTest},
@@ -1822,7 +1890,7 @@ void SimTests::RunAll()
     };
 
     LOG_INFO("server.dpssim", "mod-dpssim: SimTests::RunAll() - running Phase 1's three required tests, the "
-        "no-persist guard, the six healing-sim and the eight tank-sim known-value tests{}.",
+        "no-persist guard, the seven healing-sim and the eight tank-sim known-value tests{}.",
         filter.empty() ? std::string() : Acore::StringFormat(" (filter '{}')", filter));
 
     uint32 ran = 0;

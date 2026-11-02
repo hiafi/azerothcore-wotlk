@@ -219,8 +219,17 @@ namespace SimProfile
         // Diameter of the cluster the allies stand in, around a point 8 yd in front of the healer. At most 25.
         float AllySpreadYards = 10.0f;
 
-        // Time between the drain pulses (`drain:` targets), in sim ms. At least 100.
+        // Time between the drain pulses (`drain:` targets), in sim ms. At least 100. A drain value is damage per
+        // SECOND whatever this is: a 3,000 ms pulse deals three times the amount of a 1,000 ms one, so the damage per
+        // second stays the same and only its granularity changes.
         uint32 DrainPulseMs = 1000;
+
+        // Drain noise, 0 to 1 (default 0 = every pulse hits every draining member for its exact amount). With noise n
+        // each pulse draws a weight 1 + n * u (u uniform in [-1, 1]) per living draining member and rescales the
+        // damage by those weights, so the members take different amounts but the pulse's total stays what the
+        // noiseless pulse would deal: the damage per second is unchanged, overhealing and target choice start to
+        // matter. See SimHealScenario::DrainPulse().
+        float DrainNoise = 0.0f;
 
         // `InfiniteMana = true`: the healer's mana is set to full every step of the measured fight (not the buff
         // phase), for a pure-throughput run (plan D8). DpsSim.InfiniteMana in the conf overrides it. Heal profiles

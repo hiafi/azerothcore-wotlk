@@ -41,8 +41,8 @@ would be meaningless. A report from before multi-target support counts as target
 
 Heal reports ("kind": "heal", SimReport::WriteHealJson()) are aggregated by the same recipe in main_heal() below:
 trimmed by hps instead of dps, an iteration with a death (healer or ally) is never trimmed, the representative run is
-the median-hps kept one, and reports of a different group, HealTargets or infiniteMana are refused. The DPS path above
-is untouched.
+the median-hps kept one, and reports of a different group, HealTargets, infiniteMana, drainNoise or drainPulseMs are
+refused. The DPS path above is untouched.
 
 Tank reports ("kind": "tank", SimReport::WriteTankJson()) are a DPS report plus a "tank" section and are merged by
 main_tank() below: the DPS part with the DPS helpers above, the tank section with its own (every numeric field of
@@ -224,7 +224,8 @@ HEAL_TIMELINE_KEYS = ["heals", "absorbs", "damageTaken", "healthSamples", "death
 
 def heal_setup(r: dict) -> tuple:
     c = r.get("config", {})
-    return c.get("group"), c.get("healTargets"), bool(c.get("infiniteMana", False))
+    return (c.get("group"), c.get("healTargets"), bool(c.get("infiniteMana", False)), c.get("drainNoise", 0.0),
+            c.get("drainPulseMs", 1000))
 
 
 # Like trim_by_dps(), on hps. An iteration with a death (a healer or ally dying) is never trimmed, from either end: a
@@ -312,11 +313,12 @@ def aggregate_heal_targets(reports: list[dict], kept_idx: set[int], representati
 def main_heal(out_path: Path, report_paths: list[Path], reports: list[dict]) -> int:
     for path, r in zip(report_paths, reports):
         if heal_setup(r) != heal_setup(reports[0]):
-            g0, t0, m0 = heal_setup(reports[0])
-            g1, t1, m1 = heal_setup(r)
+            g0, t0, m0, n0, p0 = heal_setup(reports[0])
+            g1, t1, m1, n1, p1 = heal_setup(r)
             print(f"error: refusing to aggregate heal reports of different scenarios: {report_paths[0].name} has "
-                  f"group {g0!r} / HealTargets {t0!r} / infiniteMana {m0}, {path.name} has group {g1!r} / "
-                  f"HealTargets {t1!r} / infiniteMana {m1}", file=sys.stderr)
+                  f"group {g0!r} / HealTargets {t0!r} / infiniteMana {m0} / drainNoise {n0} / drainPulseMs {p0}, "
+                  f"{path.name} has group {g1!r} / HealTargets {t1!r} / infiniteMana {m1} / drainNoise {n1} / "
+                  f"drainPulseMs {p1}", file=sys.stderr)
             return 1
 
     kept_idx, dropped_low, dropped_high = trim_by_hps(reports)

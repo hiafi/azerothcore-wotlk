@@ -541,6 +541,7 @@ bool SimReport::WriteHealJson(std::string const& path, SimDaemon::RunConfig cons
     file << "    \"allyMaxHealthTank\": " << config.AllyMaxHealthTank << ",\n";
     file << "    \"allyMaxHealthDps\": " << config.AllyMaxHealthDps << ",\n";
     file << "    \"drainPulseMs\": " << config.DrainPulseMs << ",\n";
+    file << "    \"drainNoise\": " << config.DrainNoise << ",\n";
     file << "    \"allySpreadYards\": " << config.AllySpreadYards << "\n";
     file << "  },\n";
 

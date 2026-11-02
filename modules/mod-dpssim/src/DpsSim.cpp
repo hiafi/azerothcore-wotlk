@@ -57,6 +57,47 @@ namespace
         size_t const lastSep = info.rfind(';');
         return lastSep == std::string::npos ? std::string() : info.substr(lastSep + 1);
     }
+
+    // DpsSim.DrainPulseMs: a whole number of at least 100 (SimProfile::Load()'s rule for the profile key)
+    bool ParseDrainPulseMs(std::string const& text, uint32& out)
+    {
+        try
+        {
+            size_t used = 0;
+            if (text.find_first_not_of("0123456789") != std::string::npos)
+                return false;
+
+            unsigned long const value = std::stoul(text, &used);
+            if (used != text.size() || value < 100 || value > std::numeric_limits<uint32>::max())
+                return false;
+
+            out = uint32(value);
+            return true;
+        }
+        catch (std::exception const&)
+        {
+            return false;
+        }
+    }
+
+    // DpsSim.DrainNoise: a number from 0 to 1
+    bool ParseDrainNoise(std::string const& text, float& out)
+    {
+        try
+        {
+            size_t used = 0;
+            float const value = std::stof(text, &used);
+            if (used != text.size() || !(value >= 0.0f && value <= 1.0f))
+                return false;
+
+            out = value;
+            return true;
+        }
+        catch (std::exception const&)
+        {
+            return false;
+        }
+    }
 }
 
 DpsSimWorldScript::DpsSimWorldScript() : WorldScript(MODULE_STRING, {WORLDHOOK_ON_DPS_SIM_RUN}) { }
@@ -254,6 +295,25 @@ void DpsSimWorldScript::OnDpsSimRun()
                     config.AllyTankTalents = profile.AllyTankTalents;
                     config.AllySpreadYards = profile.AllySpreadYards;
                     config.DrainPulseMs = profile.DrainPulseMs;
+                    config.DrainNoise = profile.DrainNoise;
+
+                    // DpsSim.DrainPulseMs / DpsSim.DrainNoise override the profile's keys when set (run-sim.sh sets
+                    // them per run); the same ranges as SimProfile::Load()
+                    std::string const pulseText = sConfigMgr->GetOption<std::string>("DpsSim.DrainPulseMs", "");
+                    if (!pulseText.empty() && !ParseDrainPulseMs(pulseText, config.DrainPulseMs))
+                    {
+                        LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.DrainPulseMs '{}' is not a whole number of "
+                            "at least 100 - aborting DpsSim.RunPlayerbot job.", pulseText);
+                        ready = false;
+                    }
+
+                    std::string const noiseText = sConfigMgr->GetOption<std::string>("DpsSim.DrainNoise", "");
+                    if (!noiseText.empty() && !ParseDrainNoise(noiseText, config.DrainNoise))
+                    {
+                        LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.DrainNoise '{}' is not a number between 0 and "
+                            "1 - aborting DpsSim.RunPlayerbot job.", noiseText);
+                        ready = false;
+                    }
 
                     // DpsSim.InfiniteMana (true/false) overrides the profile's InfiniteMana; empty = the profile's
                     config.InfiniteMana = profile.InfiniteMana;
@@ -270,14 +330,22 @@ void DpsSimWorldScript::OnDpsSimRun()
                     }
 
                     LOG_INFO("server.dpssim", "mod-dpssim: heal mode - group '{}' ({} members), targets '{}', "
-                        "infinite mana {}.", groupText, config.HealGroupSize, targetsText,
-                        config.InfiniteMana ? "on" : "off");
+                        "infinite mana {}, drain pulse {} ms, drain noise {:.2f}.", groupText, config.HealGroupSize,
+                        targetsText, config.InfiniteMana ? "on" : "off", config.DrainPulseMs, config.DrainNoise);
                 }
                 else if (!sConfigMgr->GetOption<std::string>("DpsSim.InfiniteMana", "").empty())
                 {
                     // A DPS run has no mana to refill: refuse rather than silently ignore the override
                     LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.InfiniteMana is set but profile '{}' is not a "
                         "Heal profile (Mode = Heal) - aborting DpsSim.RunPlayerbot job.", profilePath);
+                    ready = false;
+                }
+                else if (!sConfigMgr->GetOption<std::string>("DpsSim.DrainPulseMs", "").empty() ||
+                    !sConfigMgr->GetOption<std::string>("DpsSim.DrainNoise", "").empty())
+                {
+                    LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.DrainPulseMs / DpsSim.DrainNoise is set but "
+                        "profile '{}' is not a Heal profile (Mode = Heal) - aborting DpsSim.RunPlayerbot job.",
+                        profilePath);
                     ready = false;
                 }
                 // Tank mode: the profile's Tank* keys, each overridden by the DpsSim.Tank* conf key of the same name

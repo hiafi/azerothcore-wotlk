@@ -426,7 +426,9 @@ table.log th.r { text-align: right; }
     if (!d) return;
     var c = d.config || {};
     sc.textContent = (c.group || "?") + " · " + (c.healTargets || "?") + " · " +
-      (c.infiniteMana ? "infinite mana (the pool is refilled every step)" : "normal mana");
+      (c.infiniteMana ? "infinite mana (the pool is refilled every step)" : "normal mana") +
+      (c.drainNoise > 0 ? " · drain noise " + Math.round(c.drainNoise * 100) + "%" : "") +
+      (c.drainPulseMs && c.drainPulseMs !== 1000 ? " · " + c.drainPulseMs + " ms drain pulse" : "");
   }
 
   // ---- summary ----
