@@ -19,8 +19,10 @@ Every bit below was checked against the core (src/server/shared/SharedDefines.h,
                   0x20000000  SPELL_ATTR2_CANT_CRIT                Unit::SpellDoneCritChance / SpellTakenCritChance
   AttributesEx3   0x00000200  SPELL_ATTR3_NOT_A_PROC               a TRIGGERED_FULL_MASK cast still triggers the
                                                                     victim's auras (SpellAuras.cpp, GetProcEffectMask)
-                  0x00040000  SPELL_ATTR3_ALWAYS_HIT               no miss / dodge / parry / block / deflect / reflect
-                                                                    roll (WorldObject::SpellHitResult)
+                  0x00040000  SPELL_ATTR3_ALWAYS_HIT               no miss / dodge / parry / block / deflect roll
+                                                                    (WorldObject::SpellHitResult); NOT reflect: the
+                                                                    Spell const* overload rolls reflect first, only
+                                                                    SPELL_ATTR1_NO_REFLECTION (0x80) stops it
                   0x20000000  SPELL_ATTR3_IGNORE_CASTER_MODIFIERS  SpellDamageBonusDone returns the bp0 amount as is,
                                                                     so the creature spell damage rate cannot change it
   AttributesEx4   0x00000001  SPELL_ATTR4_NO_CAST_LOG ("cannot be resisted")  Unit::CalcAbsorbResist skips the resist roll

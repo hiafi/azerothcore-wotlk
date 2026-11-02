@@ -191,13 +191,15 @@ spellvisual:
   start: 90001
   end: 90399
 
+# Widened from 90499 to 90699 by boss mechanics M1 (mod-boss-mechanics marker displays: the bossmechanics slice
+# 90500-90649, handoff dungeon-mechanics.STAGE-M1-HANDOFF.md s3.1; the rogue slice 90490-90499 ended the old block).
 creaturedisplayinfo:
   start: 90001
-  end: 90499
+  end: 90699
 
 creaturemodeldata:
   start: 90001
-  end: 90499
+  end: 90699
 
 gameobjectdisplayinfo:
   start: 90001
@@ -341,3 +343,12 @@ reservations:
   healsim:
     # 202900 Sim Damage Pulse, 202901 Sim Pin Hit, 202902-202909 spare.
     spell: {start: 202900, end: 202909}
+
+  # mod-boss-mechanics (source/npcs/boss_mechanics.py, stage M1): Weakened 205000, resolve spells 205001-205007 (one per
+  # school), Mechanic Marker 300400 and Mechanic Test Owner 300401, and the telegraph marker displays 90500-90619
+  # (patch_bossmechanics_markers.py; 90620-90649 spare). Pinned in dungeon-mechanics.STAGE-M1-HANDOFF.md s3.1.
+  bossmechanics:
+    spell: {start: 205000, end: 205099}
+    creature: {start: 300400, end: 300419}
+    creaturedisplayinfo: {start: 90500, end: 90649}
+    creaturemodeldata: {start: 90500, end: 90649}

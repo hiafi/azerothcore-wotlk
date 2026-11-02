@@ -735,6 +735,40 @@ and the custom ID ranges in use are in `docs/ascension-asset-mining.md` Part 3. 
 After running one of these scripts, run `build_patch_m.py`. Also apply the `--sql-out` migration if
 the script changed `SpellVisual`, which the server loads.
 
+## Boss mechanics markers (M1)
+
+`patch_bossmechanics_markers.py` makes the 120 telegraph displays (`CreatureModelData` +
+`CreatureDisplayInfo` ids 90500-90619, one pair per display, owner `bossmechanics`, source
+`apps/dbc-tools/source/ids.yaml`) that the `mod-boss-mechanics` stalker wears: flat, alpha-blended
+floor shapes (disc, ring, donut ratios, cones, lines) a creature scales to any size with
+`SetDisplayId` then `SetObjectScale`. It is a sibling of the `patch_*_vfx_models.py` scripts, kept
+under another name so `lib/test_id_blocks.py`'s scan of those scripts stays as it is.
+
+- **Source model:** Ascension's `SPELLS\red_circle_filled.M2` + `00.skin`, a 4-vertex quad.
+  `--extract <patch-N.MPQ>` runs `smpq -x` for the two files into `--src` (default `var/bossmech-src/`),
+  which must be new or empty. Run Python on that data with `-I`; scripts stay outside the directory.
+- **Model patch (`lib/m2_patch.py`):** byte-level, nothing re-serialised. Vertices become a flat unit
+  quad (x, y in [-1, 1], z = 0, so scale = radius in yards) or a line model (x in [0, k], y in
+  [-0.5, 0.5], k = 2^(i/8), i = 0..40, so scale = width). Bounding box, sphere, animation bounds and
+  skin submesh follow. Blend mode 4 (additive) becomes 2 (alpha); flags 0x15 stay. The source fades
+  in over 534 ms and is half transparent, so colour alpha and transparency keys are forced opaque.
+  The texture entry becomes type 11 (creature skin 1, empty name) so
+  `CreatureDisplayInfo.TextureVariation_1` picks the file, resolved in the model's folder
+  (`SPELLS\`). `--no-skins` is the fallback if the client ignores that: one model per display, with
+  a hard-coded texture path.
+- **Textures (`lib/blp_write.py`):** generated, one flat colour per file with the shape in the alpha
+  plane (palette BLP2, alpha depth 8, full mip chain: disc and ring 512 px, the rest 256 px). No
+  Pillow in the venv, and the system Pillow's BLP writer has no alpha plane or mips. Its reader
+  also ignores the alpha plane, so tests read the files back with `read_blp`.
+- **Output:** model, skin and `.blp` files (all prefixed `bm_`) into `var/model-visual-dbc/SPELLS/`,
+  the two DBCs merged in `var/model-visual-dbc/DBFilesClient/`, and `--sql-out` writes the
+  `creaturemodeldata_dbc` / `creaturedisplayinfo_dbc` rows as one pending file. A rerun replaces
+  its rows and drops stale `bm_` files (for example after switching `--no-skins`). Then run
+  `build_patch_m.py` to pack them. `--var <dir>` points the whole thing at another working copy,
+  and `--dry-run` writes nothing.
+- **Tests:** `lib/test_bossmechanics_markers.py`. The M2 tests skip when `var/bossmech-src/` is
+  missing. The Pillow header check needs the system `python3` (the venv has no Pillow).
+
 ## Load-bearing gotcha: `EffectSpellClassMask{A,B,C}_{1,2,3}`
 
 Every other per-effect `spell_dbc` column uses `_1/_2/_3` as the **effect index**

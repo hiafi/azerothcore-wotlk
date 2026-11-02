@@ -10,8 +10,9 @@ Checks, from the file itself and from the class sources:
     30779 and 300349, and the Rogue P0 spike's 204370-204399, 1295, 30838/30839 and 300368/300369 are inside theirs;
     the Warrior's September Protection ids 200028-200066 (all but the mage's two) and talents 60003-60006 are the one
     grandfathered exception, pinned exactly in `WARRIOR_LEGACY`);
-  - a non-class owner reserves under its project name (`healsim`: spells 202900-202909, declared from source/npcs),
-    so the overlap test keeps every class out of its ids.
+  - a non-class owner reserves under its project name (`healsim`: spells 202900-202909, declared from source/npcs;
+    `bossmechanics`: spells 205000-205099, creatures 300400-300419 and the marker displays 90500-90649), so the
+    overlap test keeps every class out of its ids.
 
 Run directly:
 
@@ -175,10 +176,20 @@ class BlockShapeTest(unittest.TestCase):
         self.assertEqual(BLOCKS["soundentries"], {"start": 90001, "end": 90199})
         self.assertEqual(BLOCKS["spellicon"], {"start": 90100, "end": 90499})
         self.assertEqual(BLOCKS["spell_group"], {"start": 1200, "end": 1399})
-        self.assertEqual(BLOCKS["creaturedisplayinfo"], {"start": 90001, "end": 90499})
-        self.assertEqual(BLOCKS["creaturemodeldata"], {"start": 90001, "end": 90499})
+        # (the two display blocks were widened to 90699 by boss mechanics M1; Warrior T1 left them at 90499)
+        self.assertEqual(BLOCKS["creaturedisplayinfo"], {"start": 90001, "end": 90699})
+        self.assertEqual(BLOCKS["creaturemodeldata"], {"start": 90001, "end": 90699})
         self.assertEqual(BLOCKS["gameobjectdisplayinfo"], {"start": 90001, "end": 90099})
         self.assertEqual(BLOCKS["summonproperties"], {"start": 3000, "end": 3099})
+
+    def test_boss_mechanics_m1_widened_the_display_blocks(self):
+        # 90499 -> 90699: the rogue slice 90490-90499 ended the old block; bossmechanics takes 90500-90649
+        self.assertEqual(BLOCKS["creaturedisplayinfo"], {"start": 90001, "end": 90699})
+        self.assertEqual(BLOCKS["creaturemodeldata"], {"start": 90001, "end": 90699})
+        # no other block moved
+        self.assertEqual(BLOCKS["spellvisual"], {"start": 90001, "end": 90399})
+        self.assertEqual(BLOCKS["spellicon"], {"start": 90100, "end": 90499})
+        self.assertEqual(BLOCKS["spell"], {"start": 200000, "end": 209999})
 
     def test_every_id_already_used_is_inside_its_block(self):
         for name, (low, high) in USED_DISPLAY_IDS.items():
@@ -282,8 +293,8 @@ class BlockShapeTest(unittest.TestCase):
 
 
 class ReservationTest(unittest.TestCase):
-    def test_a_reservation_exists_for_shaman_death_knight_rogue_warrior_and_the_healing_sim(self):
-        for owner in ("shaman", "deathknight", "rogue", "warrior", "healsim"):
+    def test_a_reservation_exists_for_shaman_death_knight_rogue_warrior_the_healing_sim_and_boss_mechanics(self):
+        for owner in ("shaman", "deathknight", "rogue", "warrior", "healsim", "bossmechanics"):
             self.assertIn(owner, RESERVATIONS)
 
     def test_reservations_sit_inside_their_block(self):
@@ -392,6 +403,24 @@ class ReservationTest(unittest.TestCase):
     def test_healsim_reserves_its_spells_and_nothing_else(self):
         healsim = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["healsim"].items()}
         self.assertEqual(healsim, {"spell": (202900, 202909)})
+
+    def test_bossmechanics_reserves_its_slices(self):
+        boss = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["bossmechanics"].items()}
+        self.assertEqual(boss, {
+            "spell": (205000, 205099), "creature": (300400, 300419),
+            "creaturedisplayinfo": (90500, 90649), "creaturemodeldata": (90500, 90649),
+        })
+
+    def test_bossmechanics_overlaps_no_earlier_owner(self):
+        for table, boss in RESERVATIONS["bossmechanics"].items():
+            for other, tables in RESERVATIONS.items():
+                if other != "bossmechanics" and table in tables:
+                    with self.subTest(table=table, other=other):
+                        self.assertFalse(_overlap(boss, tables[table]))
+        # the display slice starts right after the rogue's (the old block end), the spell slice clear of the warrior's
+        self.assertEqual(RESERVATIONS["bossmechanics"]["creaturedisplayinfo"]["start"],
+                         RESERVATIONS["rogue"]["creaturedisplayinfo"]["end"] + 1)
+        self.assertGreater(RESERVATIONS["bossmechanics"]["spell"]["start"], RESERVATIONS["warrior"]["spell"]["end"])
 
     def test_death_knights_spell_slice_does_not_overlap_the_healing_sims(self):
         # the T0 collision: DK's first spell block was 202900-203599 and swallowed 202900-202909
@@ -555,10 +584,11 @@ class ClassDeclarationsTest(unittest.TestCase):
         # block now and test_rogue_out_of_reservation_probes_fail judges it.)
         rogue = RESERVATIONS["rogue"]
         for table in ("creaturedisplayinfo", "creaturemodeldata"):
-            self.assertEqual(rogue[table]["end"], BLOCKS[table]["end"])
-        self.assertEqual(out_of_reservation("rogue", {"creaturedisplayinfo": [90500]}), [])
-        self.assertEqual(BLOCKS["creaturedisplayinfo"], {"start": 90001, "end": 90499})
-        self.assertEqual(BLOCKS["creaturemodeldata"], {"start": 90001, "end": 90499})
+            self.assertEqual(rogue[table]["end"], 90499)  # the old block end; the block itself now ends at 90699
+        # Boss mechanics M1 widened both blocks to 90699, so 90500 is inside the block now and judged: a rogue-out id
+        self.assertEqual(out_of_reservation("rogue", {"creaturedisplayinfo": [90500]}), ["creaturedisplayinfo 90500"])
+        self.assertEqual(BLOCKS["creaturedisplayinfo"], {"start": 90001, "end": 90699})
+        self.assertEqual(BLOCKS["creaturemodeldata"], {"start": 90001, "end": 90699})
 
     def test_warrior_declares_only_inside_its_reservation_apart_from_the_legacy_ids(self):
         # exact equality, both ways: a new id outside the reservation fails this test, and a legacy id a spec stage
@@ -621,12 +651,39 @@ class ClassDeclarationsTest(unittest.TestCase):
         self.assertEqual(out_of_reservation("deathknight", {"spell": [202900]}), ["spell 202900"])  # the sim's spell
 
     def test_the_healing_sims_spells_are_inside_the_healsim_reservation(self):
-        sim_spells = [i for i in self.npcs["spell"] if BLOCKS["spell"]["start"] <= i <= BLOCKS["spell"]["end"]]
+        # source/npcs also declares the boss mechanics spells (205000-205007, the `bossmechanics` reservation)
+        boss = RESERVATIONS["bossmechanics"]["spell"]
+        sim_spells = [i for i in self.npcs["spell"] if BLOCKS["spell"]["start"] <= i <= BLOCKS["spell"]["end"]
+                      and not boss["start"] <= i <= boss["end"]]
         self.assertTrue(sim_spells)  # source/npcs/healsim_spells.py declares 202900 and 202901
         self.assertEqual(out_of_reservation("healsim", {"spell": sim_spells}), [])
         self.assertTrue({202900, 202901} <= set(sim_spells))
         self.assertEqual(out_of_reservation("healsim", {"spell": [202910]}), ["spell 202910"])
         self.assertEqual(out_of_reservation("healsim", {"spell": [203000]}), ["spell 203000"])
+
+    def test_boss_mechanics_declares_exactly_its_ids_and_no_other_npcs_file_declares_in_its_slices(self):
+        expected = {"spell": list(range(205000, 205008)), "creature": [300400, 300401]}
+        res = RESERVATIONS["bossmechanics"]
+        # the whole source/npcs directory: whatever sits inside the reservation is boss_mechanics.py's declarations
+        inside = {kind: sorted(i for i in set(self.npcs[kind]) if res[kind]["start"] <= i <= res[kind]["end"])
+                  for kind in expected}
+        self.assertEqual(inside, expected)
+        self.assertEqual(out_of_reservation("bossmechanics", {k: self.npcs[k] for k in expected}),
+                         [f"{kind} {i}" for kind in expected for i in sorted(set(self.npcs[kind]))
+                          if BLOCKS[kind]["start"] <= i <= BLOCKS[kind]["end"] and i not in expected[kind]])
+        # the file alone declares them all, and nothing outside the reservation (copy it to a scratch dir)
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "boss_mechanics.py").write_text(
+                (TOOL_ROOT / "source" / "npcs" / "boss_mechanics.py").read_text(encoding="utf-8"), encoding="utf-8")
+            alone = declared_ids(Path(tmp))
+        self.assertEqual(sorted(set(alone["spell"])), expected["spell"])
+        self.assertEqual(sorted(set(alone["creature"])), expected["creature"])
+        self.assertEqual(out_of_reservation("bossmechanics", alone), [])
+        # probes: one past each slice fails
+        self.assertEqual(out_of_reservation("bossmechanics", {"spell": [205100, 204899], "creature": [300420]}),
+                         ["spell 204899", "spell 205100", "creature 300420"])
+        # the markers' displays are WP-A's rows (not declared by dbc-tools yet): the slice keeps the display ids
+        # 90500-90619 clear of every other owner, USED_DISPLAY_IDS stays at the live maxima until they are deployed
 
     def test_a_deliberately_out_of_block_id_fails(self):
         ids = {"spell": [202800], "talent": [60330], "skilllineability": [30720], "spell_group": [1271],
