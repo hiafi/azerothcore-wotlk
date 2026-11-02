@@ -29,6 +29,7 @@
 
 #include "Cell.h"
 #include "CellImpl.h"
+#include "EngagementMechanics.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
 #include "Player.h"
@@ -70,6 +71,12 @@ namespace
         ShamanData::SPELL_VOLCANIC_ERUPTION_RANK1,
         ShamanData::SPELL_VOLCANIC_ERUPTION_RANK2
     };
+
+    // DPS balance pass 1031 S1: the tank talents whose Rockbiter clauses these shared scripts carry (rank order)
+    constexpr std::array<uint32, 3> SPIRIT_GUARD_RANKS = { ShamanData::SPELL_SPIRIT_GUARD_RANK1,
+        ShamanData::SPELL_SPIRIT_GUARD_RANK2, ShamanData::SPELL_SPIRIT_GUARD_RANK3 };
+    constexpr std::array<uint32, 2> EARTHS_GRASP_RANKS = { ShamanData::SPELL_EARTH_S_GRASP,
+        ShamanData::SPELL_EARTH_S_GRASP_16130 };
 
     // Taunt immunity (the helper's ATTACK_ME effect or its MOD_TAUNT aura): an immune target is skipped silently, a
     // taunt that can never land is not an error (raid bosses, the sim's Raid Boss).
@@ -176,6 +183,29 @@ class spell_sha_imbue : public AuraScript
             AURA_EFFECT_HANDLE_REAL);
         AfterEffectRemove += AuraEffectRemoveFn(spell_sha_imbue::HandleRemove, EFFECT_0, SPELL_AURA_ANY,
             AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 8017 Rockbiter, effect 0 (DPS balance pass 1031 S1, user ruling: shaman package): damage dealt +
+// ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT with any Spirit Guard rank, 0 without, so Rockbiter has no ungated damage and every
+// damage imbue stays stronger for a DPS spec. A CalcAmount, so the level-up recalculation (shaman_hooks.cpp) and a
+// login keep the right value; Shaman::SyncRockbiterChildren recalculates it on a talent change. NPC casters get 0.
+class spell_sha_rockbiter_damage : public AuraScript
+{
+    PrepareAuraScript(spell_sha_rockbiter_damage);
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
+    {
+        Unit* owner = GetUnitOwner();
+        Player* player = owner ? owner->ToPlayer() : nullptr;
+        amount = player && Shaman::GetTalentRank(player, SPIRIT_GUARD_RANKS) > 0 ?
+            int32(ShamanData::ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT) : 0;
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_sha_rockbiter_damage::CalculateAmount, EFFECT_0,
+            SPELL_AURA_MOD_DAMAGE_PERCENT_DONE);
     }
 };
 
@@ -532,6 +562,54 @@ class spell_sha_stoneskin_grant : public SpellScript
             Shaman::AddStoneskin(player, stacks);
             _granted = true;
         }
+
+        // DPS balance pass 1031 T1: Anticipation's capstone (rank 3), one stone shell share per enemy hit; S1: and a
+        // Lightning Shield orb on each hit enemy attacking the shaman, while its own Lightning Shield is up
+        if (perTarget && player->HasAura(ShamanData::SPELL_ANTICIPATION_16272))
+        {
+            GrowStoneShell(player);
+            StrikeWithOrb(player, GetHitUnit());
+        }
+    }
+
+    // Anticipation capstone (DPS balance pass 1031 S1): the Chain Lightning orb 202446 (a full orb copy; no charge, no
+    // heal, no arc) on a hit enemy whose victim is the shaman. Needs the shaman's own Lightning Shield.
+    static void StrikeWithOrb(Player* player, Unit* target)
+    {
+        if (!target || !target->IsAlive() || target->GetVictim() != player ||
+            !player->HasAura(ShamanData::SPELL_LIGHTNING_SHIELD, player->GetGUID()))
+            return;
+
+        player->CastSpell(target, ShamanData::SPELL_LIGHTNING_SHIELD_CHAIN_ORB, true);
+    }
+
+    // Anticipation capstone: each enemy this Chain Lightning hits adds the 202441 shell's effect 0 (potency, through
+    // Shaman::GetSelfAbsorbAmount). The first hit of a cast replaces the previous shell; each later hit of the same
+    // cast adds to it and restarts its duration.
+    void GrowStoneShell(Player* player)
+    {
+        SpellInfo const* shellInfo = sSpellMgr->GetSpellInfo(ShamanData::SPELL_ANTICIPATION_SHELL);
+        if (!shellInfo)
+            return;
+
+        int32 const perEnemy = int32(Shaman::GetSelfAbsorbAmount(player, shellInfo, EFFECT_0));
+        if (perEnemy <= 0)
+            return;
+
+        if (_shellHits++ == 0)
+        {
+            player->CastCustomSpell(ShamanData::SPELL_ANTICIPATION_SHELL, SPELLVALUE_BASE_POINT0, perEnemy, player,
+                true);
+            return;
+        }
+
+        Aura* shell = player->GetAura(ShamanData::SPELL_ANTICIPATION_SHELL, player->GetGUID());
+        AuraEffect* effect = shell ? shell->GetEffect(EFFECT_0) : nullptr;
+        if (!effect)
+            return;
+
+        effect->ChangeAmount(effect->GetAmount() + perEnemy);
+        shell->RefreshDuration();
     }
 
     void Register() override
@@ -540,6 +618,7 @@ class spell_sha_stoneskin_grant : public SpellScript
     }
 
     bool _granted = false;
+    uint32 _shellHits = 0;
 };
 
 // 8042 Earth Shock under Rockbiter (shared doc "Earth Shock", Q9): the target is taunted (helper 202394: ATTACK_ME and
@@ -589,8 +668,17 @@ class spell_sha_earth_shock_rockbiter : public SpellScript
             return;
 
         Player* player = GetRockbiterPlayer();
-        if (!player || !Shaman::IsEarthenAscendant(player))
+        if (!player)
             return;
+
+        // DPS balance pass 1031 T1: outside Earthen Ascendance (whose copies slow every nearby enemy themselves),
+        // Earthen Power's capstone spreads the slow instead.
+        if (!Shaman::IsEarthenAscendant(player))
+        {
+            if (player->HasAura(ShamanData::SPELL_EARTHEN_POWER_51524))
+                SpreadEarthenPowerSlow(player);
+            return;
+        }
 
         float const radius = ShamanData::EARTHEN_ASC_RADIUS_YD;
         Unit const* primary = GetExplTargetUnit();
@@ -606,6 +694,36 @@ class spell_sha_earth_shock_rockbiter : public SpellScript
                 continue;
 
             player->CastSpell(enemy, ShamanData::SPELL_EARTH_SHOCK, true);
+        }
+    }
+
+    // Earthen Power capstone (rank 2, DPS balance pass 1031 T1): Earth Shock's attack speed slow (its effect 0 with the
+    // caster's SPELLMOD_EFFECT1, Earthen Power's own clause) lands as 202440 on every other enemy within
+    // EARTHEN_POWER_SLOW_RADIUS_YD of the shaman. Only enemies engaged with the shaman or the group (never pulls), in
+    // line of sight, and never one already slowed by this shaman's Earth Shock (the two auras would stack).
+    void SpreadEarthenPowerSlow(Player* player)
+    {
+        int32 slow = GetSpellInfo()->Effects[EFFECT_0].CalcValue(player);
+        player->ApplySpellMod(ShamanData::SPELL_EARTH_SHOCK, SPELLMOD_EFFECT1, slow);
+        SpellInfo const* slowInfo = sSpellMgr->GetSpellInfo(ShamanData::SPELL_EARTHEN_POWER_SLOW);
+        if (slow >= 0 || !slowInfo)
+            return;
+
+        float const radius = ShamanData::EARTHEN_POWER_SLOW_RADIUS_YD;
+        Unit const* primary = GetExplTargetUnit();
+        std::list<Unit*> nearby;
+        Acore::AnyUnfriendlyUnitInObjectRangeCheck check(player, player, radius);
+        Acore::UnitListSearcher<Acore::AnyUnfriendlyUnitInObjectRangeCheck> searcher(player, nearby, check);
+        Cell::VisitObjects(player, searcher, radius);
+
+        for (Unit* enemy : nearby)
+        {
+            if (enemy == primary || !enemy->IsAlive() || !player->IsValidAttackTarget(enemy, slowInfo) ||
+                !player->IsWithinLOSInMap(enemy) || !Engagement::IsEngagedWithOwnerOrGroup(enemy, player) ||
+                enemy->HasAura(ShamanData::SPELL_EARTH_SHOCK, player->GetGUID()))
+                continue;
+
+            player->CastCustomSpell(ShamanData::SPELL_EARTHEN_POWER_SLOW, SPELLVALUE_BASE_POINT0, slow, enemy, true);
         }
     }
 
@@ -655,9 +773,23 @@ class spell_sha_stoneskin : public AuraScript
 //    charge. The refund is AfterProc + ModCharges(+1): it runs after the core took the charge and before the aura is
 //    removed for having none, and the proc's internal cooldown stays set (never DoPrepareProc, which skips both).
 // Static Shock's own orb is cast by spell_sha_enh_static_shock, which owns its refund and Stoneskin.
+// Earth's Grasp (DPS balance pass 1031 S1): the -324 spell_proc row also accepts PROC_HIT_ABSORB, so a hit the shields
+// fully absorb (it carries no NORMAL / CRITICAL) reaches CheckProc; only a player under Rockbiter with an Earth's Grasp
+// rank lets it fire the orb. Everyone else (NPC shields included) keeps the stock "a hit that reaches health" rule.
 class spell_sha_enh_lightning_shield : public AuraScript
 {
     PrepareAuraScript(spell_sha_enh_lightning_shield);
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        if (eventInfo.GetHitMask() & (PROC_HIT_NORMAL | PROC_HIT_CRITICAL))
+            return true;
+
+        Unit* owner = GetUnitOwner();
+        Player* player = owner ? owner->ToPlayer() : nullptr;
+        return player && Shaman::GetActiveImbue(player) == ShamanData::SPELL_ROCKBITER_WEAPON &&
+            Shaman::GetTalentRank(player, EARTHS_GRASP_RANKS) > 0;
+    }
 
     void HandleAfterProc(ProcEventInfo& /*eventInfo*/)
     {
@@ -680,6 +812,7 @@ class spell_sha_enh_lightning_shield : public AuraScript
 
     void Register() override
     {
+        DoCheckProc += AuraCheckProcFn(spell_sha_enh_lightning_shield::CheckProc);
         AfterProc += AuraProcFn(spell_sha_enh_lightning_shield::HandleAfterProc);
     }
 };
@@ -743,6 +876,7 @@ class spell_sha_attunement : public AuraScript
 void AddSC_shaman_shared_spell_scripts()
 {
     RegisterSpellScript(spell_sha_imbue);
+    RegisterSpellScript(spell_sha_rockbiter_damage);
     RegisterSpellScript(spell_sha_flametongue_proc);
     RegisterSpellScript(spell_sha_flametongue_attack);
     RegisterSpellScript(spell_sha_frostbrand_proc);

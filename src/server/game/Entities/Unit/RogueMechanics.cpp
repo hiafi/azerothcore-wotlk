@@ -2664,6 +2664,33 @@ namespace Rogue
             if (triggerPct > 0 && RollProcChance(rogue, float(triggerPct * comboPoints)))
                 rogue->CastSpell(rogue, RogueData::SPELL_HAIR_TRIGGER_BUFF, TRIGGERED_FULL_MASK);
         }
+
+        // Tank capstones (DPS balance pass 1031), Enforcer Stance only: a percent of maximum health per spent point,
+        // read from the helper's eff1 (the tooltip's $s2). Deflection: Eviscerate heals (204005's HEAL_PCT takes the
+        // whole percent as bp0). Reinforced Leather: Between the Eyes shields (204006; a new shield replaces the old).
+        if (rogue->HasAura(RogueData::SPELL_ENFORCER_STANCE))
+        {
+            if (finisherSpellId == RogueData::SPELL_EVISCERATE && rogue->HasAura(RogueData::SPELL_DEFLECTION_13854))
+            {
+                if (SpellInfo const* heal = sSpellMgr->GetSpellInfo(RogueData::SPELL_DEFLECTION_EVISCERATE_HEAL))
+                {
+                    int32 healPct = heal->Effects[EFFECT_1].CalcValue() * comboPoints;
+                    if (healPct > 0)
+                        rogue->CastCustomSpell(rogue, heal->Id, &healPct, nullptr, nullptr, true);
+                }
+            }
+            else if (finisherSpellId == RogueData::SPELL_BETWEEN_THE_EYES &&
+                rogue->HasAura(RogueData::SPELL_REINFORCED_LEATHER_203962))
+            {
+                if (SpellInfo const* shield = sSpellMgr->GetSpellInfo(RogueData::SPELL_REINFORCED_LEATHER_SHIELD))
+                {
+                    int32 absorb = int32(rogue->CountPctFromMaxHealth(
+                        shield->Effects[EFFECT_1].CalcValue() * comboPoints));
+                    if (absorb > 0)
+                        rogue->CastCustomSpell(rogue, shield->Id, &absorb, nullptr, nullptr, true);
+                }
+            }
+        }
     }
 
     void GrantOpportunity(Player* rogue)
@@ -2760,6 +2787,12 @@ namespace Rogue
 
         // R21: every Riposte hit grants Opportunity (tooltip literal).
         GrantOpportunity(rogue);
+
+        // Endurance's capstone (DPS balance pass 1031): in Enforcer Stance every Riposte hit heals the rogue for a
+        // percent of maximum health (204004's own HEAL_PCT); Improved Riposte's cleave below never heals.
+        if (rogue->IsAlive() && rogue->HasAura(RogueData::SPELL_ENFORCER_STANCE) &&
+            rogue->HasAura(RogueData::SPELL_ENDURANCE_13872))
+            rogue->CastSpell(rogue, RogueData::SPELL_ENDURANCE_RIPOSTE_HEAL, TRIGGERED_FULL_MASK);
 
         // Improved Riposte's capstone: Riposte's damage on up to 2 more engaged enemies near the target.
         if (!target || !rogue->HasAura(RogueData::SPELL_IMPROVED_RIPOSTE_203968))

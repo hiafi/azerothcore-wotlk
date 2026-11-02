@@ -246,7 +246,7 @@ def _mark(spell_id, name, school, icon, level, cooldown_ms, visual, description,
 
 # Viper's Bite / Viper's Venom are declared before Viper's Mark: its tooltip quotes them through pot_text().
 # ---- mark DoTs (MARKSMANSHIP 5.6): Nature, RANGED, d2 b28 (MARK_DOT), proc-free, triggered at another unit ----
-def _mark_dot(spell_id, name, duration_ms, icon, level, potency, description, raw=None):
+def _mark_dot(spell_id, name, duration_ms, icon, level, potency, description, raw=None, note_extra=''):
     overrides = {
         'EquippedItemClass': -1, 'SpellLevel': level, 'DefenseType': 3,
         'SpellClassSet': 9, 'SpellClassMask_3': m.MARK_DOT, 'AttributesEx3': _SUPPRESS_CASTER_PROCS,
@@ -274,16 +274,17 @@ def _mark_dot(spell_id, name, duration_ms, icon, level, potency, description, ra
         tooltip_vars=mm_mark_dots_1170,
         notes=f'S2a A1 / MM 5.6: {name}. Nature PERIODIC_DAMAGE every 3 s, ap_potency {potency:g} per 3 s tick '
               f'(placeholder, M), {duration_ms // 1000} s, d2 b28, SUPPRESS_CASTER_PROCS, 50000 yd (triggered at the '
-              f'target), snapshots at application. tooltip_vars 1170.',
+              f'target), snapshots at application. tooltip_vars 1170.' + note_extra,
         raw_overrides=overrides,
     )
 
 
 vipers_bite_201930 = _mark_dot(
-    201930, "Viper's Bite", 12000, 1630, 40, 4.6,
+    201930, "Viper's Bite", 12000, 1630, 40, 3.22,
     'Deals {pot1*mult} Nature damage every $t1 sec for $d per stack.',
     # stack = Viper's stacks consumed (SPELLVALUE_AURA_STACK; old Bite removed first)
     raw={'CumulativeAura': int(MARK_MAX_STACKS['value'])},
+    note_extra=' Effect 1 ap_potency 4.6 -> 3.22 (2026-11-01, DPS balance pass 1031, user ruling: Vipers Bite -30%).',
 )
 vipers_venom_201931 = _mark_dot(
     201931, "Viper's Venom", 6000, 3521, 60, 23.0,
@@ -550,8 +551,8 @@ marksmanship_mastery_201951 = _buff(
 # helper reach them), Speed 0 (launch and hit inside the handler's CastSpell), always cast with TRIGGERED_FULL_MASK (R3:
 # only TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD keeps the d0 b17 load fix's 10 s RecoveryTime from starting).
 # Must equal aimed_shot_19434's eff1 weapon_potency (hunter_spells.py imports this file, so no import back).
-_AIMED_SHOT_WEAPON_POTENCY = 594
-_PACK_SHOT_WEAPON_POTENCY = _AIMED_SHOT_WEAPON_POTENCY * int(PACK_SHOT_DAMAGE_PCT['value']) // 100   # 297
+_AIMED_SHOT_WEAPON_POTENCY = 416   # 2026-11-01 DPS balance pass 1031: 594 -> 416 (Aimed Shot -30%, whole number)
+_PACK_SHOT_WEAPON_POTENCY = _AIMED_SHOT_WEAPON_POTENCY * int(PACK_SHOT_DAMAGE_PCT['value']) // 100   # 208
 
 
 def _pack_shot(spell_id, kind, notes):
@@ -588,12 +589,15 @@ aimed_shot_ricochet_201934 = _pack_shot(
     'cooldown, 50000 yd, SUPPRESS_CASTER_PROCS, IGNORE_LINE_OF_SIGHT (S2b R-cpp m-1), SpellLevel 20, icon 253; eff0 '
     'NORMALIZED_WEAPON_DMG bp -1, eff1 '
     'weapon_potency 110 (PACK_SHOT_DAMAGE_PCT of Aimed Shot\'s 220). spell_hun_aimed_shot_ricochet scales OnHit by '
-    'Triangulation x the Sniper payoff; the handler consumes the target\'s marks afterwards. Visual 7955 (Aimed Shot).',
+    'Triangulation x the Sniper payoff; the handler consumes the target\'s marks afterwards. Visual 7955 (Aimed Shot). '
+    'Effect 2 weapon_potency 297 -> 208 (2026-11-01, DPS balance pass 1031, user ruling: Aimed Shot -30%; the pack '
+    'percent of Aimed Shot\'s new 416).',
 )
 aimed_shot_bounce_201935 = _pack_shot(
     201935, 'bounce',
     'S2b A1 / MM 5.4 (B2): Rain of Arrows bounce, identical to the ricochet 201934 and unscripted (reads and consumes '
-    'no marks). Visual 7955 (Aimed Shot).',
+    'no marks). Visual 7955 (Aimed Shot). Effect 2 weapon_potency 297 -> 208 (2026-11-01, DPS balance pass 1031, '
+    'user ruling: Aimed Shot -30%, rides with the ricochet 201934; the same 50% of Aimed Shot\'s new 416).',
 )
 
 # Half Volley 201936 / tick 201937 (B6, Q30, the warlock Rain of Fire C5 shape): 201936 eff0 is the dynobj and the

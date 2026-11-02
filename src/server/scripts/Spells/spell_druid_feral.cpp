@@ -978,8 +978,8 @@ class spell_dru_protector_of_the_pack : public AuraScript
     }
 };
 
-// 33853, 33855, 33856 - Survival of the Fittest (5,2): the attack power bonus only while Bestial Fury
-// is active. Recalculated on every form change by druid_hooks.cpp.
+// 33853, 33855, 33856 - Survival of the Fittest (5,2): the attack power bonus in either bear form (Dire Bear
+// Form and Bestial Fury; Bestial Fury only until 2026-11-01). Recalculated on every form change by druid_hooks.cpp.
 class spell_dru_survival_of_the_fittest : public AuraScript
 {
     PrepareAuraScript(spell_dru_survival_of_the_fittest);
@@ -989,7 +989,7 @@ class spell_dru_survival_of_the_fittest : public AuraScript
         canBeRecalculated = true;
 
         Unit* owner = GetUnitOwner();
-        if (!owner || !Druid::IsBestialFuryActive(owner))
+        if (!owner || !Druid::IsInBearForm(owner))
             amount = 0;
     }
 

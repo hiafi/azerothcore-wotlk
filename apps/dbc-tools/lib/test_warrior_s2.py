@@ -236,7 +236,7 @@ NEW_ROW_PINS: dict[int, dict] = {
                 "EquippedItemSubclass": 173555, "SpellLevel": 40, "BaseLevel": 40, "RecoveryTime": 20000,
                 "Category": 0, "CategoryRecoveryTime": 0, "ManaCost": 200, "StartRecoveryCategory": 133,
                 "StartRecoveryTime": 1500, "DefenseType": 2, "Effect_1": EFF_WEAPON_PERCENT,
-                "EffectBasePoints_1": 419, "Effect_2": EFF_TRIGGER_SPELL, "EffectTriggerSpell_2": CS_DEBUFF},
+                "EffectBasePoints_1": 314, "Effect_2": EFF_TRIGGER_SPELL, "EffectTriggerSpell_2": CS_DEBUFF},
     # ... and its debuff: a visible DUMMY (never aura 271), per caster, d2 0x2
     CS_DEBUFF: {"Name_Lang_enUS": "Colossus Smash", "Attributes": 0, "AttributesEx3": ATTR3_ONE_INSTANCE_PER_CASTER,
                 "SpellClassSet": 4, "SpellClassMask_3": 0x2, "DurationIndex": DUR["6s"], "EquippedItemClass": -1,
@@ -429,7 +429,7 @@ TOOLTIP_FRAGMENTS = {
     46854: ("damage of your Deep Wounds by 15%",), 46855: ("damage of your Deep Wounds by 30%",),
     29834: ("heal you for 2% of the damage they deal", "doubled while you are below 35% health"),
     29838: ("heal you for 4% of the damage they deal",),
-    204490: ("420% weapon damage", "for 6 sec", "damage it takes from you by 15% plus your Mastery",
+    204490: ("315% weapon damage", "for 6 sec", "damage it takes from you by 15% plus your Mastery",
              "reduces the remaining cooldown of Colossus Smash by 2 sec"),
     46865: ("total Strength by 2% and Stamina by 1%", "next Mortal Strike deals 5% more damage",
             "stacking up to 2 times"),
@@ -720,9 +720,10 @@ def check_mortal_strike_and_rend(rows: dict) -> list[str]:
     if (_i(ms, "RecoveryTime"), _i(ms, "ManaCost")) != (6000, 250):
         bad.append(f"{MORTAL_STRIKE}: cooldown / cost {(_i(ms, 'RecoveryTime'), _i(ms, 'ManaCost'))}, "
                    "expected (6000, 250) (Q2: row unchanged)")
-    if _i(ms, "EffectBasePoints_2") != 227:
-        bad.append(f"{MORTAL_STRIKE}: weapon percent bp {ms.get('EffectBasePoints_2')!r}, expected 227 "
-                   "(D29 130%, balance 2026-10-30 x1.5 x1.4 x0.8 x1.1 x0.95: 228%)")
+    if _i(ms, "EffectBasePoints_2") != 170:
+        bad.append(f"{MORTAL_STRIKE}: weapon percent bp {ms.get('EffectBasePoints_2')!r}, expected 170 "
+                   "(D29 130%, balance 2026-10-30 x1.5 x1.4 x0.8 x1.1 x0.95: 228%, "
+                   "DPS balance pass 1031 Arms x0.75: 171%)")
     # Q9 (user ruling 2026-10-30): Rend needs any melee weapon (the stock gate); the weapon talents fold into it
     # through the core's normal item-gated aura-79 path (second ruling 2026-10-30: no divide-out hook)
     if (_i(rend, "EquippedItemClass"), _i(rend, "EquippedItemSubclass")) != (2, 173555):

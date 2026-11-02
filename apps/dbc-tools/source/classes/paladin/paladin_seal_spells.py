@@ -231,11 +231,12 @@ unleash_righteousness_201069 = spell(
     id=201069, name='Judgement of Righteousness', school=_HOLY,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0,
-    effects=[_unleash_direct(136.5)],
+    effects=[_unleash_direct(95.55)],
     spell_icon_id=_ICON_SOR,
     notes='paladin-rework SHARED B4.1: Righteousness unleash (single target), 75/75 potency. Speed 0 and instant on purpose: the unleash context needs a synchronous cast - never give this a missile visual.'
           ' Effect 1 potency 75.0 -> 97.5 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).'
-          ' Effect 1 potency 97.5 -> 136.5 (2026-10-08, DPS balance pass, user ruling: Retribution x1.40, round 9).',
+          ' Effect 1 potency 97.5 -> 136.5 (2026-10-08, DPS balance pass, user ruling: Retribution x1.40, round 9).'
+          ' Effect 1 potency 136.5 -> 95.55 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
     raw_overrides=_unleash_raw('Deals {pot1} Holy damage.'),
 )
 
@@ -243,10 +244,11 @@ unleash_command_201070 = spell(
     id=201070, name='Judgement of Command', school=_HOLY_FIRE,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0,
-    effects=[_unleash_direct(56.25)],
+    effects=[_unleash_direct(78.75)],
     spell_icon_id=_ICON_SOC,
     notes='paladin-rework SHARED B4.1: Command unleash (single target), 37.5/37.5 potency. Bits U + CU, no C (Purify the Unclean reads C = the passives only; Prot Improved Seal of Command scopes C | CU).'
-          ' Effect 1 potency 37.5 -> 56.25 (2026-10-08, DPS balance pass, user ruling: Retribution x1.50, round 9).',
+          ' Effect 1 potency 37.5 -> 56.25 (2026-10-08, DPS balance pass, user ruling: Retribution x1.50, round 9).'
+          ' Effect 1 potency 56.25 -> 78.75 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Judgement of Command +40%).',
     raw_overrides=_unleash_raw('Deals {pot1} Holy and Fire damage.', command=True),
 )
 
@@ -254,11 +256,12 @@ unleash_vengeance_201071 = spell(
     id=201071, name='Judgement of Vengeance', school=_HOLY_SHADOW,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0, duration_ms=15000,
-    effects=[_unleash_dot(15.12)],
+    effects=[_unleash_dot(10.58)],
     spell_icon_id=_ICON_SOV_DOT_ALIAS,
     notes='paladin-rework SHARED B4.1: Vengeance unleash DoT, 9/9 per 3 s tick over 15 s (snapshots natively). Icon 90182 (alias of the 2292 texture) and no d1 0x400000, so the JoV +10%/stack hardcode never fires. The script sets canBeRecalculated = false.'
           ' Effect 1 (periodic) potency per tick 9.0 -> 10.8 (2026-10-08, DPS balance pass, user ruling: Retribution x1.20).'
-          ' Effect 1 (periodic) potency per tick 10.8 -> 15.12 (2026-10-08, DPS balance pass, user ruling: Retribution x1.40, round 9).',
+          ' Effect 1 (periodic) potency per tick 10.8 -> 15.12 (2026-10-08, DPS balance pass, user ruling: Retribution x1.40, round 9).'
+          ' Effect 1 (periodic) potency per tick 15.12 -> 10.58 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
     raw_overrides=_unleash_raw('Afflicts the target with Twilight damage over time.', '{pot1} Twilight damage every $t1 sec.'),
 )
 

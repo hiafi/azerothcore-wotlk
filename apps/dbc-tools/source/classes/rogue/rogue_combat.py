@@ -3,7 +3,8 @@ Rogue - S3 Combat, data half: every new row 203950-204003 (talent ranks, the Bet
 Pistol Shot, Between the Eyes, Grappling Hook, En Garde, Blade Rush, the Opportunity / Primed Powder / Hair Trigger /
 Surprise Attacks / Blade Rush / Improved Kick buffs, Anticipation, Celerity's Adrenaline Rush, the Blade Twisting and
 Prey on the Weak debuffs, the second strike, the extra shot, the Blade Flurry copy, the Deft Maneuvers / Improved
-Riposte / Hack and Slash strikes, the Improved Sprint / Endurance / Improved Feint helpers), the explicit
+Riposte / Hack and Slash strikes, the Improved Sprint / Endurance / Improved Feint helpers; plus the DPS balance pass
+1031 tank capstone helpers 204004-204006 at the bottom), the explicit
 SkillLineAbility rows 30810 / 30811, the SpellDescriptionVariables 1350-1352 (U58 talent bonuses on tooltips), the
 scripted_by / linked_spell / spell_group / custom_attr rows of the new ids and the hidden script numbers (`const()`) the
 C++ reads through the generated RogueData.h.
@@ -226,6 +227,18 @@ def _with_cap(text, capstone, last):
     return f'{text}\n\n{capstone if last else _grey(capstone)}'
 
 
+# Tank survivability capstone clauses (DPS balance pass 1031, the 204004-204006 rows at the bottom of this file).
+# The rank text (house format through `_with_cap`); Endurance and Deflection ranks import theirs (their stock rows
+# live in rogue_trigger_spells.py).
+ENDURANCE_CAP = ('Capstone Bonus: While you are in Enforcer Stance, your Riposte heals you for $204004s1% of your '
+                 'maximum health.')
+DEFLECTION_CAP = ('Capstone Bonus: While you are in Enforcer Stance, your Eviscerate heals you for $204005s2% of your '
+                  'maximum health per combo point.')
+_REINFORCED_LEATHER_CAP = ('Capstone Bonus: While you are in Enforcer Stance, your Between the Eyes shields you for '
+                           '$204006s2% of your maximum health per combo point, absorbing damage of any school for '
+                           '$204006d.')
+
+
 # ---- effect helpers ----
 def _aura(aura, base_points=0, misc_value=0, target=_TARGET_UNIT_CASTER, **kwargs):
     return Effect(type=EffectType.APPLY_AURA, apply_aura=int(aura), base_points=base_points,
@@ -400,7 +413,7 @@ linked_spell(opportunity_buff_203983.id, opportunity_companion_203984.id, 2,
              'Opportunity: the hidden companion that carries the cost and damage SpellMods lives with the buff')
 
 # ---- Pistol Shot 203958 (U55, R25) ----
-# Physical SCHOOL_DAMAGE ap_potency 90 direct (M2c; 120 in M2a) (SpellLevel 20) + ADD_COMBO_POINTS 1. Builder frame (typed 327696,
+# Physical SCHOOL_DAMAGE ap_potency 72 direct (DPS balance pass 1031; 90 in M2c, 120 in M2a) (SpellLevel 20) + ADD_COMBO_POINTS 1. Builder frame (typed 327696,
 # Sinister Strike's raw AttributesEx 0x8000000 minus INITIATE_COMBAT: no auto-attack toward a 20 yd target), 30 energy,
 # 20 yd (idx 3), Speed 0 (the hit resolves in the cast), DefenseType 2 (melee AP / armor / melee crit), no weapon at all
 # (R25: EquippedItemClass -1, no Ex3 0x400), no USES_RANGED_SLOT, FacingCasterFlags 1, GCD 133 / 1000, SV 90252.
@@ -410,7 +423,7 @@ pistol_shot_203958 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=30, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=90.0, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=79.2, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
@@ -424,7 +437,8 @@ pistol_shot_203958 = spell(
           'SV 90252. d2 b4 | d2 b19 (m.PISTOL_SHOT_CLASS). Tooltip quotes the damage times the Surprise Attacks factor '
           '(SDV 1351). spell_rog_pistol_shot: latches Opportunity, OnPistolShotHit, spends one stack in AfterCast. '
           'M2a (M1 C1, [tune]): ap_potency 50 -> 120; M2c (user 2026-10-28, -25%): 120 -> 90 (the extra shot 203988 '
-          'matches).',
+          'matches); ap_potency 90 -> 72 (2026-11-01, DPS balance pass 1031, user ruling: Pistol Shot -20%; 203988 matches); '
+          'ap_potency 72 -> 79.2 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Pistol Shot +10%; 203988 matches).',
     tooltip_vars=tooltip_pistol_shot_1351,
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.PISTOL_SHOT_CLASS), 'EquippedItemClass': -1,
@@ -439,13 +453,13 @@ scripted_by(pistol_shot_203958, 'spell_rog_pistol_shot')
 
 # ---- Between the Eyes 203959 (U55, R25) ----
 # Eviscerate's finisher frame (typed 327696, raw AttributesEx 0x100200, PreventionType 2) with no weapon requirement
-# (R25), Physical SCHOOL_DAMAGE ap_potency 36.855 + cp_ap_potency 58.212 [tune] (M2c user ruling 2026-10-28: x1.8 of M2a's
+# (R25), Physical SCHOOL_DAMAGE ap_potency 58.968 + cp_ap_potency 93.1392 [tune] (B3 +60% of M2c's 36.855 / 58.212; M2c user ruling 2026-10-28: x1.8 of M2a's
 # 20.475 / 32.34, which were 75% of Eviscerate; now ~104% of Eviscerate's 35.49 / 56.056, the ratio is no longer fixed), SpellLevel 20, 35 energy, 20 yd, Speed 0, no stun, GCD 133 / 1000, SV 90252. d2 b5 | d2 b18, never
 # d0 b17 (m.BETWEEN_THE_EYES_CLASS).
 _BTE_FLAT = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=36.855, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=20)
+    _potency.PotencyEffect(ap_potency=58.968, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=20)
 _BTE_CP = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=58.212, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=20)
+    _potency.PotencyEffect(ap_potency=93.1392, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=20)
 
 
 def _expr_plus(resolved, extra, *, ticks=1.0, scale=1.0):
@@ -475,15 +489,15 @@ between_the_eyes_203959 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=35, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=36.855, cp_ap_potency=58.212, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=58.968, cp_ap_potency=93.1392, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_BETWEEN_THE_EYES,
     notes='rogue-rework S3a A3, combat doc "Between the Eyes (spell)" (U55, R25, Known-hard 3): learned from the rank '
           '203956 (SkillLineAbility 30811). Eviscerate 2098\'s finisher frame (typed 327696, AttributesEx 0x100200, '
           'PreventionType 2) without the weapon requirement and Ex3 0x400 (R25: EquippedItemClass -1). eff0 Physical '
-          'SCHOOL_DAMAGE ap_potency 36.855 + cp_ap_potency 58.212 direct [tune] (M2c: x1.8 of M2a\'s 20.475 / 32.34, ~104% '
-          'of Eviscerate; M2a R2 was 75% of Eviscerate, before that 14.625 / 23.1) at SpellLevel 20, 35 energy, 20 yd (idx 3), Speed 0, DefenseType 2, no stun, GCD '
+          'SCHOOL_DAMAGE ap_potency 58.968 + cp_ap_potency 93.1392 direct [tune] (M2c: x1.8 of M2a\'s 20.475 / 32.34, ~104% '
+          'of Eviscerate; M2a R2 was 75% of Eviscerate, before that 14.625 / 23.1; ap_potency 36.855 -> 58.968 and cp_ap_potency 58.212 -> 93.1392 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Between the Eyes +60%)) at SpellLevel 20, 35 energy, 20 yd (idx 3), Speed 0, DefenseType 2, no stun, GCD '
           '133 '
           '/ 1000, SV 90252. d2 b5 | d2 b18 (m.BETWEEN_THE_EYES_CLASS), never d0 b17. The tooltip hand-builds the '
           '5-point value like Deadly Throw\'s and multiplies it by Coup de Grace x Surprise Attacks (SDV 1352). '
@@ -537,8 +551,8 @@ skill_line_ability(id=30811, skill_line=38, spell_id=between_the_eyes_203959.id,
                    acquire_method=0)
 
 # ---- the second strike 203986 (U61, C9) ----
-# Sinister Strike's weapon frame (eff0 WEAPON_PERCENT_DAMAGE weapon_potency 250, eff1 NORMALIZED_WEAPON_DMG
-# sp_potency 10
+# Sinister Strike's weapon frame (eff0 WEAPON_PERCENT_DAMAGE weapon_potency 200, eff1 NORMALIZED_WEAPON_DMG
+# sp_potency 8
 # direct T 1500, SpellLevel 1), no ADD_COMBO_POINTS (the point goes through GainComboPoints). Own bit d2 b23 only,
 # Ex3 SUPPRESS_CASTER_PROCS | main hand, Ex4 SUPPRESS_WEAPON_PROCS, 100 yd, no facing, SS's visual, hidden.
 sinister_strike_second_strike_203986 = spell(
@@ -546,8 +560,8 @@ sinister_strike_second_strike_203986 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=250, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=200, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=8, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_SINISTER_STRIKE,
@@ -559,7 +573,8 @@ sinister_strike_second_strike_203986 = spell(
           'and '
           'the companion never land on it), Ex3 SUPPRESS_CASTER_PROCS | REQUIRES_MAIN_HAND, Ex4 '
           'SUPPRESS_WEAPON_PROCS, weapon requirement as 1752, 100 yd (idx 6), FacingCasterFlags 0, DefenseType 2, '
-          'SV 253, hidden.',
+          'SV 253, hidden. weapon_potency 250 -> 200 and sp_potency 10 -> 8 (2026-11-01, DPS balance pass 1031, user ruling: Sinister Strike -20%; '
+          'mirrors 1752).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.SS_SECOND_STRIKE_CLASS),
         'EquippedItemClass': _ITEM_CLASS_WEAPON, 'EquippedItemSubclass': _ANY_MELEE_WEAPON, 'CastingTimeIndex': 1,
@@ -591,16 +606,18 @@ pistol_shot_extra_203988 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=90.0, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=79.2, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_PISTOL_SHOT,
     notes='rogue-rework S3a A3, combat doc "Surprise Attacks" (C9): the capstone\'s extra shots. Pistol Shot 203958\'s '
-          'damage line (Physical ap_potency 90 direct since M2c, SpellLevel 20) on its own bit d2 b24 only '
+          'damage line (Physical ap_potency 72 direct since the DPS balance pass 1031, 90 from M2c, SpellLevel 20) on its own bit d2 b24 only '
           '(m.PISTOL_SHOT_EXTRA_CLASS: Improved SS / Aggression / Surprise Attacks / Blade Twisting read it; Hair '
           'Trigger, Opportunity and Primed Powder never do), no combo point, 100 yd (idx 6), FacingCasterFlags 0, '
           'DefenseType 2, Ex3 SUPPRESS_CASTER_PROCS, SV 90252, hidden. spell_rog_pistol_shot_extra multiplies the '
-          'hit by (100 + OPPORTUNITY_EMPOWER_PCT)% when the stamp says the first shot was empowered.',
+          'hit by (100 + OPPORTUNITY_EMPOWER_PCT)% when the stamp says the first shot was empowered. '
+          'ap_potency 90 -> 72 (2026-11-01, DPS balance pass 1031, user ruling: Pistol Shot -20%; same line as 203958); '
+          'ap_potency 72 -> 79.2 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Pistol Shot +10%; same line as 203958).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.PISTOL_SHOT_EXTRA_CLASS), 'EquippedItemClass': -1,
         'CastingTimeIndex': 1, 'AttributesEx3': _ATTR3_SUPPRESS_CASTER_PROCS, 'DefenseType': _DEFENSE_MELEE,
@@ -657,9 +674,11 @@ def _reinforced_leather(spell_id, rank):
     return _rank(
         spell_id, 'Reinforced Leather', rank, _ROW_REINFORCED_LEATHER,
         [_aura(_AURA_MOD_BASE_RESISTANCE_PCT, 15 * rank - 1, _MISC_PHYSICAL)], _ICON_REINFORCED_LEATHER,
-        'Increases your armor contribution from cloth and leather items by $s1%.',
+        _with_cap('Increases your armor contribution from cloth and leather items by $s1%.', _REINFORCED_LEATHER_CAP,
+                  rank == 3),
         notes=f'aura 142 MOD_BASE_RESISTANCE_PCT misc 1 +{15 * rank}% (stored {15 * rank - 1}; Enforcer Stance\'s eff0 '
-              'shape: the core multiplies BASE_PCT mods, so rank 3 in stance is x2.61 item armor, U57).')
+              'shape: the core multiplies BASE_PCT mods, so rank 3 in stance is x2.61 item armor, U57). Capstone (DPS '
+              'balance pass 1031): rank 3 in Enforcer Stance makes Between the Eyes shield 204006.')
 
 
 reinforced_leather_203960 = _reinforced_leather(203960, 1)
@@ -1111,7 +1130,7 @@ improved_riposte_cleave_203993 = spell(
     id=203993, name='Riposte', school=School.NORMAL, attributes=_ATTR0_IS_ABILITY | _ATTR0_DO_NOT_DISPLAY,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
-    effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=150,
+    effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=683,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_IMPROVED_RIPOSTE,
     notes='rogue-rework S3a A3, combat doc "Improved Riposte" (U72, R20): the capstone\'s cleave Rogue::OnRiposteHit '
@@ -1120,7 +1139,8 @@ improved_riposte_cleave_203993 = spell(
           '(WEAPON_PERCENT_DAMAGE weapon_potency 150, SpellLevel 35; the stock row is -1 for the equipped item), no '
           'slow, no combo point, d1 b8 only (m.RIPOSTE_CLEAVE_CLASS: Improved Riposte\'s threat mod reaches it, '
           'never d2 b19), A 6, RangeIndex 6, FacingCasterFlags 0, Ex3 SUPPRESS_CASTER_PROCS, DefenseType 2, SV 3799, '
-          'hidden.',
+          'hidden. weapon_potency 150 -> 525 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Riposte +250%; same line as 14251). '
+          'weapon_potency 525 -> 683 (682.5 rounded up) (2026-11-02, DPS balance pass 1031 round R5, user ruling: Riposte +30%; same line as 14251).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.RIPOSTE_CLEAVE_CLASS), 'EquippedItemClass': -1,
         'CastingTimeIndex': 1, 'AttributesEx3': _ATTR3_SUPPRESS_CASTER_PROCS, 'DefenseType': _DEFENSE_MELEE,
@@ -1214,3 +1234,83 @@ improved_feint_helper_204002 = _hidden_aura(
 scripted_by(improved_feint_helper_204002, 'spell_rog_improved_feint_helper')
 linked_spell(1966, improved_feint_helper_204002.id, 2,
              'Improved Feint: the damage-taken helper lives exactly as long as Feint')
+
+
+# =====================================================================================================================
+# Tank survivability capstones 204004-204006 (DPS balance pass 1031, user 2026-11-01:
+# .agents/plans/dps-balance-1031/dps-balance-1031.ROGUE-TANK-CAPSTONES.PROPOSAL.md). Each fires only in Enforcer Stance
+# and only with its host talent's last rank: Endurance 13872 (Riposte heal), Deflection 13854 (Eviscerate heal),
+# Reinforced Leather 203962 (Between the Eyes shield). Every value is a percent of maximum health in a flat base-points
+# field (points_per_level 0, potency_excluded; lint PERCENT_FIELD_EFFECTS, S4), so it scales with Stamina, not attack
+# power. DmgClass NONE: no crit, no healing-done bonuses (healing-taken effects still apply).
+# =====================================================================================================================
+_ICON_DEFLECTION = 558                      # stock Deflection 13713's icon
+
+def _self_heal_raw(description):
+    """A logged self heal (Victory Rush 204409's frame): instant, self range, no equipment, DmgClass NONE."""
+    return {
+        'SpellClassSet': _SPELLFAMILY_ROGUE, 'EquippedItemClass': -1, 'CastingTimeIndex': 1, 'RangeIndex': _RANGE_SELF,
+        'AttributesEx': _ATTR1_ALLOW_WHILE_STEALTHED, 'Description_Lang_enUS': description,
+    }
+
+
+# ---- Endurance's Riposte heal 204004: HEAL_PCT 14% of max health [tune] (stored 13), once per Riposte hit ----
+endurance_riposte_heal_204004 = spell(
+    id=204004, name='Endurance', school=School.NORMAL, attributes=_ATTR0_IS_ABILITY, cast_time_ms=0, cooldown_ms=0,
+    category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=13, implicit_target_a=_TARGET_UNIT_CASTER,
+               potency_excluded='percent of maximum health (Spell::EffectHealPct); a tank heal that scales with '
+                                'Stamina, not attack power'),
+    ],
+    spell_icon_id=_ICON_ENDURANCE,
+    notes='DPS balance pass 1031 (rogue tank capstones, user 2026-11-01): Endurance\'s capstone. eff0 HEAL_PCT 14% of '
+          'max health [tune] (stored 13), A 1, self range, instant, no 0x80 so the heal shows in the combat log '
+          '(Victory Rush 204409\'s frame), DmgClass NONE, no SkillLineAbility. Cast triggered on the rogue by '
+          'Rogue::OnRiposteHit (once per Riposte hit; Improved Riposte\'s cleave never heals) with Enforcer Stance up '
+          'and Endurance rank 2 (13872) held. Endurance\'s rank text quotes $204004s1.',
+    raw_overrides=_self_heal_raw('Heals you for $s1% of your maximum health.'),
+)
+
+# ---- Deflection's Eviscerate heal 204005: HEAL_PCT from the script, 8% of max health per combo point [tune] ----
+# eff0 carries the whole percent as bp0 (DieSides 0, so CastCustomSpell's value is not rolled up by one); eff1 DUMMY
+# holds the per-point percent the C++ and the tooltip read ($204005s2).
+deflection_eviscerate_heal_204005 = spell(
+    id=204005, name='Deflection', school=School.NORMAL, attributes=_ATTR0_IS_ABILITY, cast_time_ms=0, cooldown_ms=0,
+    category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=0, die_sides=0, implicit_target_a=_TARGET_UNIT_CASTER,
+               potency_excluded='percent of maximum health, supplied as bp0 by Rogue::ApplyCombatSpentClauses (eff1 x '
+                                'combo points spent); a tank heal that scales with Stamina, not attack power'),
+        Effect(type=EffectType.DUMMY, base_points=7, implicit_target_a=_TARGET_UNIT_CASTER,
+               potency_excluded='percent of maximum health per combo point, read by Rogue::ApplyCombatSpentClauses'),
+    ],
+    spell_icon_id=_ICON_DEFLECTION,
+    notes='DPS balance pass 1031 (rogue tank capstones, user 2026-11-01): Deflection\'s capstone. eff0 HEAL_PCT base 0 / '
+          'DieSides 0 (Rogue::ApplyCombatSpentClauses passes bp0 = eff1 x the combo points Eviscerate actually spent, '
+          'so a 5-point Eviscerate heals 40%), eff1 DUMMY 8% per combo point [tune] (stored 7, 4 -> 8 '
+          '(2026-11-01, DPS balance pass 1031 round T2, user ruling: Deflection +100%); the tooltip\'s '
+          '$204005s2), A 1, self range, instant, logged, DmgClass NONE, no SkillLineAbility. Needs Enforcer Stance and '
+          'Deflection rank 3 (13854) at the spend.',
+    raw_overrides=_self_heal_raw('Heals you for a percentage of your maximum health.'),
+)
+
+# ---- Reinforced Leather's Between the Eyes shield 204006: 5% of max health per combo point [tune], 15 s, all schools --
+# eff0 SCHOOL_ABSORB misc 127 stored 0 / DieSides 0 (the script supplies the amount), eff1 DUMMY 5 per point (the
+# tooltip's $204006s2). A new shield replaces the running one (same caster: the refresh takes the new base amount).
+reinforced_leather_shield_204006 = _buff(
+    204006, 'Reinforced Leather',
+    [Effect(type=EffectType.APPLY_AURA, apply_aura=int(AuraType.SCHOOL_ABSORB), base_points=0, die_sides=0,
+            misc_value=_MISC_ALL_SCHOOLS, implicit_target_a=_TARGET_UNIT_CASTER,
+            potency_excluded='percent of maximum health per combo point: Rogue::ApplyCombatSpentClauses supplies the '
+                             'amount (CountPctFromMaxHealth(eff1 x points spent)), the Storm\'s Bulwark 200028 shape'),
+     _aura(AuraType.DUMMY, 4,
+           potency_excluded='percent of maximum health per combo point, read by Rogue::ApplyCombatSpentClauses')],
+    _ICON_REINFORCED_LEATHER, 15000, 'Absorbs damage.',
+    notes='DPS balance pass 1031 (rogue tank capstones, user 2026-11-01): Reinforced Leather\'s capstone. eff0 aura 69 '
+          'SCHOOL_ABSORB misc 127 (all schools) stored 0 / DieSides 0, the amount from '
+          'Rogue::ApplyCombatSpentClauses (CastCustomSpell bp0 = CountPctFromMaxHealth(eff1 x the points Between the '
+          'Eyes actually spent)); eff1 aura DUMMY 5% per combo point [tune] (stored 4; the tooltip\'s $204006s2). '
+          'Visible, non-passive, number-free aura text, 15 s, AttributesEx7 0 (not a Consolidated Buff), Ex1 0x20. '
+          'Needs Enforcer Stance and Reinforced Leather rank 3 (203962) at the spend; a new shield replaces the old.',
+)

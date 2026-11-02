@@ -702,11 +702,11 @@ holy_shock_25914 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=150.0, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=105.0, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=156,
     tooltip_vars=holy_heal_tooltip,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=125.0 (paladin-potency-proposals.txt, user value; was 137.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: sp_potency 125 -> 150 (A2), SpellLevel 40 -> 30; description quotes only its own value ({pot1*shock}); NOT_A_PROC kept for the resolver',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=125.0 (paladin-potency-proposals.txt, user value; was 137.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: sp_potency 125 -> 150 (A2), SpellLevel 40 -> 30; description quotes only its own value ({pot1*shock}); NOT_A_PROC kept for the resolver. sp_potency 150 -> 105 (2026-11-01, DPS balance pass 1031 round H2, user ruling: Holy Shock healing -30%, damage 25912 unchanged).',
     raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, healing an ally for {pot1*shock}.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 65536, 'SpellClassSet': 10, 'SpellLevel': 30, 'SpellVisualID_1': 135, 'StartRecoveryCategory': 133},
 )
 

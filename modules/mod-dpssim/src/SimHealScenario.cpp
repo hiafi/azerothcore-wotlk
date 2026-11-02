@@ -26,6 +26,7 @@
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "Playerbots.h"
+#include "Random.h"
 #include "SimHealBossAI.h"
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
@@ -54,6 +55,9 @@ namespace
     // The extra damage a pin hit may carry to beat the 1-point truncation of a damage reduction (see Step()). Its upper
     // bound, and the most a hit can overshoot the pin by
     constexpr uint32 PIN_STUCK_MAX = 16;
+
+    // A drain value (HealTargets drain:<n>) is damage per this many ms; a pulse of another length is scaled to it
+    constexpr uint32 DRAIN_VALUE_PERIOD_MS = 1000;
 
     // Health a pinned target is held at: `percent` of its current max health, rounded down
     uint32 PinHealth(uint32 maxHealth, float percent)
@@ -119,6 +123,7 @@ bool SimHealScenario::Create(Player* healer, Setup const& setup)
 
     _specs = setup.Targets;
     _drainPulseMs = setup.DrainPulseMs;
+    _drainNoise = std::clamp(setup.DrainNoise, 0.0f, 1.0f);
     _pinMaxHealth = setup.PinMaxHealth;
 
     return CreateBoss(healer) && CreateAllies(healer, setup) && CreateGroup(healer, setup);
@@ -438,10 +443,77 @@ void SimHealScenario::Pull()
 
 uint32 SimHealScenario::DrainAmount(SimHeal::TargetSpec const& spec, Player* target) const
 {
-    if (spec.Percent)
-        return std::max(1u, uint32(float(target->GetMaxHealth()) * spec.Value / 100.0f + 0.5f));
+    // The spec's value is damage per second (percent of max health per second with `percent`); a pulse every
+    // DrainPulseMs deals its share of that. At the default 1,000 ms nothing is scaled, so the amounts are exactly what
+    // they were before the pulse length was a knob.
+    float amount = spec.Percent ? float(target->GetMaxHealth()) * spec.Value / 100.0f : spec.Value;
+    if (_drainPulseMs != DRAIN_VALUE_PERIOD_MS)
+        amount = amount * float(_drainPulseMs) / float(DRAIN_VALUE_PERIOD_MS);
 
-    return std::max(1u, uint32(spec.Value + 0.5f));
+    return std::max(1u, uint32(amount + 0.5f));
+}
+
+void SimHealScenario::ApplyDrainNoise(std::vector<uint32>& amounts) const
+{
+    // Nothing to share out between fewer than two members
+    if (_drainNoise <= 0.0f || amounts.size() < 2)
+        return;
+
+    // Member i's share of the pulse is amounts[i] * w_i with w_i = 1 + noise * u_i, u_i uniform in [-1, 1] (so
+    // w_i >= 0), scaled so that the shares add up to the total of the noiseless pulse. With equal amounts that is
+    // w_i over the mean weight; the tanks' 3x amount keeps its 3x in expectation.
+    uint64 total = 0;
+    double shareSum = 0.0;
+    std::vector<double> shares(amounts.size());
+    for (size_t i = 0; i < amounts.size(); ++i)
+    {
+        total += amounts[i];
+        shares[i] = double(amounts[i]) * (1.0 + double(_drainNoise) * double(frand(-1.0f, 1.0f)));
+        shareSum += shares[i];
+    }
+
+    if (!(shareSum > 0.0))
+        return;
+
+    // Whole hit points by cumulative rounding: member i takes round(running share) - round(previous running share),
+    // so the amounts sum to exactly `total` and none is negative (a share that rounds to 0 is skipped by the caller)
+    double const scale = double(total) / shareSum;
+    double running = 0.0;
+    uint64 dealt = 0;
+    for (size_t i = 0; i < amounts.size(); ++i)
+    {
+        running += shares[i] * scale;
+        uint64 const upTo = std::min(uint64(running + 0.5), total);
+        amounts[i] = uint32(upTo > dealt ? upTo - dealt : 0);
+        dealt = std::max(dealt, upTo);
+    }
+}
+
+void SimHealScenario::DrainPulse()
+{
+    std::vector<size_t> indices;
+    std::vector<uint32> amounts;
+    for (size_t i = 0; i < _members.size(); ++i)
+    {
+        if (_specs[i].Kind == SimHeal::ModeKind::Drain && _members[i]->IsAlive())
+        {
+            indices.push_back(i);
+            amounts.push_back(DrainAmount(_specs[i], _members[i]));
+        }
+    }
+
+    ApplyDrainNoise(amounts);
+
+    for (size_t k = 0; k < indices.size(); ++k)
+    {
+        // A member an earlier hit of this pulse killed (a proc, say) takes no more; a noise share that rounded to 0
+        // skips its hit
+        if (amounts[k] == 0 || !_members[indices[k]]->IsAlive())
+            continue;
+
+        if (CastHit(SimHeal::SPELL_DAMAGE_PULSE, indices[k], int32(amounts[k])))
+            ++_drainHits;
+    }
 }
 
 bool SimHealScenario::CastHit(uint32 spellId, size_t targetIndex, int32 amount)
@@ -519,15 +591,7 @@ void SimHealScenario::Step(uint32 elapsedMs)
     while (elapsedMs >= _nextDrainMs)
     {
         _nextDrainMs += _drainPulseMs;
-        for (size_t i = 0; i < _members.size(); ++i)
-        {
-            Player* member = _members[i];
-            if (_specs[i].Kind != SimHeal::ModeKind::Drain || !member->IsAlive())
-                continue;
-
-            if (CastHit(SimHeal::SPELL_DAMAGE_PULSE, i, int32(DrainAmount(_specs[i], member))))
-                ++_drainHits;
-        }
+        DrainPulse();
     }
 
     // Pin: every step, each living pinned target above its pin, or with a shield still on it, takes the Sim Pin Hit for

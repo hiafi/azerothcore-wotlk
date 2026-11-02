@@ -925,6 +925,238 @@ def check_potency_bonus_overrides(
     return errors
 
 
+# Spell ids whose DmgClass `SpellInfoCorrections.cpp` forces to MAGIC at load, so the engine's DmgClass NONE early
+# return never fires for them even though the generated DBC row says 0. A potency spell in this set may keep
+# DefenseType 0 (Lifebloom, Earth Shield's 379 / 52042 pair, Divine Hymn, Hunter's Mark, Explosive Trap Effect).
+DMG_CLASS_FORCED_MAGIC_IDS = frozenset({
+    20167, 54968, 53652, 53653, 53654, 1130, 14323, 14324, 14325, 53338,
+    13812, 14314, 14315, 27026, 49064, 49065, 52042, 379, 59637, 31707, 72898, 59638, 59653, 64844, 33778,
+})
+# Effects whose amount goes through SpellDamageBonusDone / SpellHealingBonusDone, where the DmgClass NONE early
+# return drops the spell power term and every done-% modifier: SCHOOL_DAMAGE, HEALTH_LEECH, HEAL, HEAL_MAX_HEALTH and
+# the periodic damage / leech / heal auras. A DUMMY carrier (the Mind Flay shape) and an absorb (SCHOOL_ABSORB, the
+# script reads the coefficient itself) never reach those functions, so they are not checked.
+_DMG_CLASS_CHECKED_EFFECTS = frozenset({2, 9, 10, 67})
+_DMG_CLASS_CHECKED_AURAS = frozenset({3, 8, 20, 53})
+_EFFECT_APPLY_AURA = 6
+
+
+def check_potency_defense_type(
+    spell_entries: list[dict], bonus_row_ids: set[int], allowed_ids: frozenset[int] = DMG_CLASS_FORCED_MAGIC_IDS,
+) -> list[str]:
+    """Errors for potency spells that silently lose their spell power coefficient (potency audit S1, 2026-11-01).
+
+    `Unit::SpellDamageBonusDone` / `SpellHealingBonusDone` (Unit.cpp) return the raw amount for a spell with
+    DmgClass (the DBC `DefenseType`) NONE (0) and no `spell_bonus_data` row: no spell power, no done-% modifiers. The
+    generator writes the coefficient to `EffectBonusMultiplier_N`, which that early return never reads, so the spell
+    ships its bare base number and the tooltip's `$SP` term lies. 16 potency spells shipped like this.
+
+    An effect is flagged when it is a damage / heal effect (or a periodic damage / heal aura), carries a non-zero
+    generated spell power or attack power coefficient, and its spell has DefenseType 0, no row in `bonus_row_ids`
+    (the DSL's `spell_bonus_data` ids, which include the generator's own AP rows) and is not in `allowed_ids` (the ids
+    `SpellInfoCorrections.cpp` forces to MAGIC). The fix is `'DefenseType': 1` (MAGIC) in the spell's raw_overrides, or
+    `ap_potency` for a physical hunter / melee spell (the AP half writes a bonus row, which ends the early return)."""
+    errors = []
+    for entry in spell_entries:
+        spell_id = entry["id"]
+        if spell_id in bonus_row_ids or spell_id in allowed_ids:
+            continue
+        if int((entry.get("raw_overrides") or {}).get("DefenseType", 0) or 0) != 0:
+            continue
+        bad = []
+        for index in (1, 2, 3):
+            effect = entry.get(f"effect{index}") or {}
+            potency = effect.get("_potency")
+            if not potency:
+                continue
+            etype = int(effect.get("type", 0) or 0)
+            if not (
+                etype in _DMG_CLASS_CHECKED_EFFECTS
+                or (etype == _EFFECT_APPLY_AURA and int(effect.get("apply_aura", 0) or 0) in _DMG_CLASS_CHECKED_AURAS)
+            ):
+                continue
+            if potency.get("sp_coefficient") or potency.get("ap_coefficient"):
+                bad.append(f"effect {index - 1} (coefficient {potency.get('sp_coefficient', 0):.4g})")
+        if bad:
+            errors.append(
+                f"spell {spell_id} ({entry.get('name', '?')}): potency {', '.join(bad)} has no effect - DefenseType 0 "
+                f"(DmgClass NONE) and no spell_bonus_data row make SpellDamageBonusDone / SpellHealingBonusDone return "
+                f"the bare base. Set raw_overrides DefenseType 1 (MAGIC), or use ap_potency for a physical spell "
+                f"(potency audit S1)"
+            )
+    return errors
+
+
+# S4 (potency audit 2026-11-01, F10): effects whose value a script reads as a PERCENT (CalculatePct,
+# CountPctFromMaxHealth, ...). Potency would make the percent grow with level (Anti-Magic Shell read ~76% at level 60 and
+# ~109% at 80), so these must stay a flat base_points with points_per_level 0 and no potency (potency_excluded).
+# (spell id, effect index) -> the reader. Add a row here when a script starts reading a potency-class effect as a percent.
+PERCENT_FIELD_EFFECTS: dict[tuple[int, int], str] = {
+    (48707, 0): "spell_dk_anti_magic_shell_self (spell_dk.cpp): CalculatePct(damage, CalcValue) absorb share",
+    (52284, 0): "spell_dk_will_of_the_necropolis (spell_dk.cpp): CalculatePct(damage, CalcValue) absorb share",
+    (48743, 2): "Spell::EffectHeal Death Pact branch (SpellEffects.cpp): CountPctFromMaxHealth(CalcValue)",
+    (48721, 1): "Unit::SpellDamageBonusDone Blood Boil branch (Unit.cpp): AddPct vs diseased targets",
+    (42650, 2): "deathknight_hooks.cpp Army of the Dead ghoul damage multiplier (CalcValue / 100)",
+    (200855, 0): "spell_warl_guardian_spell_power (spell_warlock_demonology.cpp): owner spell power share in percent",
+    (204004, 0): "Spell::EffectHealPct (Rogue::OnRiposteHit's Endurance heal): CountPctFromMaxHealth(CalcValue)",
+    (204005, 0): "Spell::EffectHealPct with the bp0 Rogue::ApplyCombatSpentClauses supplies (eff1 x points spent)",
+    (204005, 1): "Rogue::ApplyCombatSpentClauses Deflection heal: percent of max health per combo point (CalcValue)",
+    (204006, 1): "Rogue::ApplyCombatSpentClauses Reinforced Leather shield: CountPctFromMaxHealth(CalcValue x points)",
+    (8042, 0): "spell_sha_earth_shock_rockbiter (spell_shaman_shared.cpp): Earthen Power capstone reads Earth Shock's attack "
+               "speed slow (CalcValue + SPELLMOD_EFFECT1) as the percent it spreads",
+    (202440, 0): "spell_sha_earth_shock_rockbiter (spell_shaman_shared.cpp): the spread attack speed slow, bp0 = Earth Shock's "
+                 "live percent",
+    (8017, 0): "spell_sha_rockbiter_damage (spell_shaman_shared.cpp): Rockbiter's damage dealt percent with Spirit Guard "
+               "(ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT), aura 79",
+}
+# The (effect type, aura type) shapes a potency effect may sit on: direct damage/heal/weapon strikes, the periodic
+# damage/heal/leech/absorb auras, and the dummy/script carriers a helper reads its snapshot from. Anything else
+# (a MOD_* aura, an energize, a stat) is a percent or a count that must not scale with level.
+_POTENCY_EFFECT_TYPES = frozenset({2, 3, 10, 17, 31, 58, 77, 121})
+_POTENCY_CARRIER_EFFECT_TYPES = frozenset({6, 27, 35})
+# 226 = PERIODIC_DUMMY: Death and Decay's 43265 carrier, whose script passes the amount into the 52212 tick (F9).
+_POTENCY_AURAS = frozenset({0, 3, 4, 8, 43, 53, 69, 226, 227})
+
+
+def check_percent_field_potency(
+    entries: list[dict], percent_fields: dict[tuple[int, int], str] | None = None,
+) -> list[str]:
+    """Errors for S4: (a) a `PERCENT_FIELD_EFFECTS` effect that carries potency or a per-level slope, and (b) any
+    potency effect on an effect type that is not damage/heal/absorb shaped (`_POTENCY_*`). `entries` are the built
+    DSL spell entries (`effect1..3` dicts, the potency pass leaves a `_potency` stash on each potency effect)."""
+    fields = PERCENT_FIELD_EFFECTS if percent_fields is None else percent_fields
+    errors = []
+    for entry in entries:
+        spell_id = int(entry["id"])
+        for index in range(3):
+            effect = entry.get(f"effect{index + 1}")
+            if not effect:
+                continue
+            has_potency = bool(effect.get("_potency"))
+            reader = fields.get((spell_id, index))
+            if reader is not None and (has_potency or float(effect.get("points_per_level") or 0)):
+                errors.append(
+                    f"spell {spell_id} ({entry.get('name', '?')}) effect {index}: read as a percent by {reader}, so it "
+                    f"must be a flat base_points with points_per_level 0 and potency_excluded, not potency "
+                    f"(the percent would grow with level) (S4)"
+                )
+            elif has_potency:
+                effect_type = int(effect.get("type") or 0)
+                aura = int(effect.get("apply_aura") or 0)
+                shaped = effect_type in _POTENCY_EFFECT_TYPES or (
+                    effect_type in _POTENCY_CARRIER_EFFECT_TYPES and aura in _POTENCY_AURAS
+                )
+                if not shaped:
+                    errors.append(
+                        f"spell {spell_id} ({entry.get('name', '?')}) effect {index}: potency on effect type "
+                        f"{effect_type} aura {aura}, which is not a damage/heal/absorb effect - a percent or count "
+                        f"field must not scale with level; use potency_excluded (S4)"
+                    )
+    return errors
+
+
+# S3 (potency audit 2026-11-01, F14): a weapon strike's damage must sit on potency. A weapon effect (17 WEAPON_DAMAGE_NOSCHOOL,
+# 31 WEAPON_PERCENT_DAMAGE, 58 WEAPON_DAMAGE, 121 NORMALIZED_WEAPON_DMG) is a bare 100% weapon hit plus a flat amount (types
+# 17 / 58 / 121) or a weapon percent (type 31). The percent is `weapon_potency` and the flat part an ordinary `sp_potency` on its
+# own effect (the Heroic Strike / Sinister Strike layout: percent first, flat second); a hand-typed percent or a hand-set flat
+# is invisible to the potency sheets and to every retune of the strike.
+WEAPON_DAMAGE_EFFECTS = frozenset({17, 31, 58, 121})
+_FLAT_WEAPON_EFFECTS = frozenset({17, 58, 121})
+
+# Strikes that still break the rule, reported by the 2026-11-01 audit and deliberately left (spell id -> why). A new offender
+# that is not listed here is an error; an entry that stops being a finding is only a note (see weapon_potency_report), so
+# fixing one never blocks a run. Add the reason when listing an id, and delete the row when the strike is migrated.
+WEAPON_POTENCY_DEFERRED: dict[int, str] = {
+    694: "Mocking Blow: a bare 100% normalized hit (no hand-set number); all three effect slots are used (taunt, "
+         "ATTACK_ME), so there is no slot for a percent effect, and a plain type-31 effect would lose the normalization",
+    1082: "Claw (Cat): hand flat 27 + 5.72 per level beside the 100% weapon hit; the Feral pass",
+    5374: "Mutilate (rogue_trigger_spells.py): hand flat 44 + 2.32 per level; the Assassination pass",
+    16511: "Hemorrhage (rogue_spells.py): hand-typed weapon percent; the Subtlety pass",
+    19503: "Scatter Shot (hunter_spells.py): hand-typed weapon percent on a control shot",
+    25286: "Heroic Strike rank 9: superseded rank kept for item_template spellid references",
+    25294: "Multi-Shot rank 6: superseded rank kept for item_template spellid references",
+    25300: "Backstab rank 10: superseded rank kept for item_template spellid references",
+    27576: "Mutilate off-hand (rogue_trigger_spells.py): hand flat 44 + 2.32 per level; the Assassination pass",
+    45902: "Blood Strike: flat-first hand flat 260 + 20.16 per level (DK P7 pass left it); the Blood pass",
+    49020: "Obliterate: flat-first hand flat 248 + 17.7 per level (DK P7 pass left it); the Frost pass",
+    50622: "Whirlwind (warrior_trigger_spells.py): a bare 100% normalized hit with no hand-set number; the Arms/Fury pass",
+    59133: "Plague Strike (stock variant with a shadow DoT, no percent effect): hand flat 36 + 6.08 per level; the Unholy pass",
+    66215: "Blood Strike off-hand copy (Threat of Thassarian): hand flat 130 + 4.2 per level; follows 45902",
+    66216: "Plague Strike off-hand copy (Threat of Thassarian): hand flat 2 + 0.59 per level = 0.245 x 45462's flat; "
+           "follows 45462, which is on potency since 2026-11-01 (P5) - move it with the DK off-hand copies test",
+}
+
+
+def _weapon_potency_problems(entry: dict) -> list[str]:
+    """What is wrong with one built spell entry's weapon effects (empty when it is fine or has none)."""
+    weapon = []
+    for index in (1, 2, 3):
+        effect = entry.get(f"effect{index}")
+        if effect and int(effect.get("type") or 0) in WEAPON_DAMAGE_EFFECTS:
+            weapon.append((index - 1, effect))
+    if not weapon:
+        return []
+    problems = []
+    if not any((effect.get("_potency") or {}).get("kind") == "weapon" for _, effect in weapon):
+        kinds = ", ".join(f"effect {index} type {int(effect.get('type') or 0)}" for index, effect in weapon)
+        problems.append(f"no weapon_potency on the spell ({kinds})")
+    for index, effect in weapon:
+        if effect.get("_potency") or effect.get("_potency_excluded"):
+            continue
+        if int(effect.get("type") or 0) not in _FLAT_WEAPON_EFFECTS:
+            continue
+        die_sides = effect.get("die_sides")
+        die_sides = 1 if die_sides is None else int(die_sides)
+        base = int(effect.get("base_points") or 0) + (1 if die_sides == 1 else 0)
+        per_level = float(effect.get("points_per_level") or 0)
+        if base or per_level:
+            problems.append(
+                f"effect {index} type {int(effect['type'])} has a hand-set flat part (base {base}, {per_level:g} per level) "
+                f"that is not on potency"
+            )
+    return problems
+
+
+def weapon_potency_findings(entries: list[dict]) -> dict[int, tuple[str, list[str]]]:
+    """spell id -> (name, problems) for every built entry with a weapon-potency problem (S3), deferred or not."""
+    found = {}
+    for entry in entries:
+        problems = _weapon_potency_problems(entry)
+        if problems:
+            found[int(entry["id"])] = (str(entry.get("name", "?")), problems)
+    return found
+
+
+def check_weapon_potency(entries: list[dict], deferred: dict[int, str] | None = None) -> list[str]:
+    """Errors for S3: a weapon strike whose percent or flat part is not on potency and is not in `deferred`
+    (`WEAPON_POTENCY_DEFERRED`). `entries` are the built DSL spell entries (`effect1..3` dicts; the potency pass leaves a
+    `_potency` stash, kind "weapon", on a weapon_potency effect and on a flat sp_potency effect)."""
+    allowed = WEAPON_POTENCY_DEFERRED if deferred is None else deferred
+    return [
+        f"spell {spell_id} ({name}): {'; '.join(problems)} - put the percent on weapon_potency and the flat on sp_potency, "
+        f"or list the id in lint.WEAPON_POTENCY_DEFERRED with a reason (S3)"
+        for spell_id, (name, problems) in sorted(weapon_potency_findings(entries).items())
+        if spell_id not in allowed
+    ]
+
+
+def weapon_potency_report(entries: list[dict], deferred: dict[int, str] | None = None) -> list[str]:
+    """Report lines for S3: every finding (marked deferred or new) and every deferred id that is no longer a finding."""
+    allowed = WEAPON_POTENCY_DEFERRED if deferred is None else deferred
+    found = weapon_potency_findings(entries)
+    lines = [
+        f"{'deferred' if spell_id in allowed else 'NEW'} {spell_id} ({name}): {'; '.join(problems)}"
+        + (f" [{allowed[spell_id]}]" if spell_id in allowed else "")
+        for spell_id, (name, problems) in sorted(found.items())
+    ]
+    present = {int(entry["id"]) for entry in entries}
+    lines += [
+        f"stale deferral {spell_id}: no longer a finding, delete it from WEAPON_POTENCY_DEFERRED"
+        for spell_id in sorted(allowed) if spell_id in present and spell_id not in found
+    ]
+    return lines
+
+
 # LFGDungeons.dbc TypeIDs LFGMgr::LoadLFGDungeons keeps that sit on an instance map (LFGMgr.h:
 # LFG_TYPE_DUNGEON/RAID/HEROIC). LFG_TYPE_RANDOM is also kept but its MapID is 0, a continent.
 _LFG_INSTANCE_TYPES = {1: "dungeon", 2: "raid", 5: "heroic"}

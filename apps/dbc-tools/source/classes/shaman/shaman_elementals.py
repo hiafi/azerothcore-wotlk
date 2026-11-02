@@ -152,10 +152,12 @@ storm_elemental_totem_202273 = spell(
     notes=NOTE + 'Storm Elemental, learned at 56 (trainer 210). Summons the invisible Air slot totem 300273 (props 83), '
           'whose Index-0 passive 202275 summons the guardian 300261. Same cooldown / category / GCD / cost [tune] / '
           'HP as 202272, Air\'s back-right spawn point (3738 / 8512). Family d0 b29 + d1 b8. Bound to '
-          'spell_sha_elemental_lockout. Icon 90270 = inv_stormelemental.blp (custom SpellIcon, patch-I; P5, 2026-10-22).',
+          'spell_sha_elemental_lockout. Icon 90270 = inv_stormelemental.blp (custom SpellIcon, patch-I; P5, 2026-10-22). '
+          'Tooltip: the Storm Bolt chain (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package).',
     raw_overrides=_summon_raw(
         56, SUMMON_PROPS_AIR,
-        'Calls forth a greater storm elemental for $d that strikes your enemies with lightning. 2 min cooldown.',
+        'Calls forth a greater storm elemental for $d that strikes your enemies with lightning that chains to up to 4 '
+        'additional nearby enemies. 2 min cooldown.',
         m.STORM_ELEMENTAL_SUMMON),
 )
 
@@ -211,14 +213,15 @@ water_bolt_202276 = spell(
     id=202276, name='Water Bolt', school=School.FROST, attributes=0, cast_time_ms=2000, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=45.0,
     effects=[Effect(
-        type=EffectType.SCHOOL_DAMAGE, sp_potency=43.0, potency_kind='direct', implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
+        type=EffectType.SCHOOL_DAMAGE, sp_potency=21.5, potency_kind='direct', implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
     )],
     spell_icon_id=ICON_WATERBOLT,
     notes=NOTE + 'the Water Elemental\'s only ability (shared doc "Water Elemental"): 2 s cast, 43 potency Frost damage '
           '(was 100; x0.43 smoke-test fix pass 2026-10-20) (T 2000 = the cast); spell_sha_water_bolt (eff0 hit) heals the 3 lowest players via 202277. Plain CastSpell from '
           'the guardian, SpellLevel 1 (warlock P8 shape). Range 45 yd = stock Waterbolt 31707 (RangeIndex 36); the AI '
           'chases to 30 yd and searches 40 yd (consts). Missile speed 16 and SV 7875 are Waterbolt\'s ("mage Waterbolt" '
-          'visual). Family d2 b25.',
+          'visual). Family d2 b25. '
+          '2026-11-01 sp_potency 43.0 -> 21.5 (2026-11-01, DPS balance pass 1031, user ruling: Greater Water Elemental Water Bolt -50%).',
     raw_overrides={
         'SpellClassSet': SPELLFAMILY_SHAMAN, 'SpellClassMask_3': m.WATER_BOLT_DAMAGE, 'EquippedItemClass': -1,
         'DefenseType': 1, 'PreventionType': 1, 'SpellLevel': 1, 'Speed': 16.0, 'SpellVisualID_1': SV_WATERBOLT,
@@ -256,16 +259,22 @@ storm_bolt_202278 = spell(
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=45.0,
     effects=[Effect(
         type=EffectType.SCHOOL_DAMAGE, sp_potency=51.6, potency_kind='direct', implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
+        chain_targets=5,
     )],
     spell_icon_id=ICON_LIGHTNING_BOLT,
     notes=NOTE + 'the Storm Elemental\'s only ability (shared doc "Storm Elemental"): 2 s cast, 51.6 potency Nature damage '
           '(was 120 / about 428 at 60; x0.43 smoke-test fix pass 2026-10-20; about 184 now, T 2000 = the cast), no heal, no family bit (SpellClassSet 11 with an empty mask). Plain '
           'CastSpell from the guardian, SpellLevel 1. Range 45 yd (same as Water Bolt, so both guardians have equal '
-          'reach). Missile speed 20 and SV 173 are Lightning Bolt\'s.',
+          'reach). Missile speed 20 and SV 173 are Lightning Bolt\'s. '
+          'EffectChainTargets_1 1 -> 5 at EffectChainAmplitude_1 1.0: the bolt chains to up to 4 more enemies at full damage (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package); '
+          'Revision 4 lever 5a (elementals that cleave), kept by Revision 5. The AI already casts it at its victim, so the chain '
+          'comes from the row. The jump search is the engine\'s (nearby enemies of the previous target, magic-class radius).',
     raw_overrides={
         'SpellClassSet': SPELLFAMILY_SHAMAN, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1,
         'SpellLevel': 1, 'Speed': 20.0, 'SpellVisualID_1': SV_LIGHTNING_BOLT,
-        'Description_Lang_enUS': 'Strikes an enemy with lightning for {pot1} Nature damage.',
+        'EffectChainAmplitude_1': 1.0,
+        'Description_Lang_enUS': 'Strikes an enemy with lightning for {pot1} Nature damage, then chains to up to 4 additional '
+                                 'nearby enemies.',
     },
 )
 
@@ -344,8 +353,18 @@ creature_spell(300261, 0, storm_bolt_202278)
 # Stock guardians (decision 13): ids are hard-coded in Pet.cpp (stat scaling by NPC_FIRE_ELEMENTAL / NPC_EARTH_ELEMENTAL) and
 # spell_shaman.cpp:353 (Fire Elemental's AP inheritance), so the entries stay; only the AI changes. An existing entry keeps
 # every unmentioned column.
-greater_fire_elemental_15438 = creature_template(15438, 'Greater Fire Elemental', ScriptName='npc_sha_fire_elemental_rework')
-greater_earth_elemental_15352 = creature_template(15352, 'Greater Earth Elemental', ScriptName='npc_sha_earth_elemental_rework')
+# 2026-11-01 DPS balance pass 1031 (user ruling): Greater Fire Elemental melee -60%: DamageModifier 1 -> 0.4 (x0.40). That
+# lever works for the Fire Elemental only because its melee is Fire school (dmgschool 2), which goes through
+# Creature::CalculateMinMaxDamage (StatSystem.cpp) and multiplies weapon + attack power by DamageModifier. The Earth
+# Elemental's melee is physical (dmgschool 0): its swing reads UNIT_FIELD_MINDAMAGE/MAXDAMAGE from
+# Guardian::UpdateDamagePhysical, which has no DamageModifier term, so DamageModifier is a no-op there (the 4.5 tried
+# first changed nothing). Its +200% (x3.00) is the owner-added aura earth_elemental_melee_202596 (shaman_elemental.py,
+# applied in SyncGuardianAuras); DamageModifier stays at the stock 1.5. Fire Blast, Fire Nova and Angered Earth are not
+# melee and are untouched either way.
+greater_fire_elemental_15438 = creature_template(15438, 'Greater Fire Elemental', ScriptName='npc_sha_fire_elemental_rework',
+                                                 DamageModifier=0.4)
+greater_earth_elemental_15352 = creature_template(15352, 'Greater Earth Elemental', ScriptName='npc_sha_earth_elemental_rework',
+                                                  DamageModifier=1.5)
 
 # =====================================================================================================================
 # Bindings, trainer rows (Earth / Fire's are A1's, next to their rows), SkillLineAbility

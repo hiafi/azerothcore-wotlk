@@ -57,6 +57,34 @@ EXPECTED_CAPSTONES = {
                           "Endless Rage", "Dance of Death", "Merciless", "Improved Cleave",
                           "Frenzied Blows", "Improved Execute", "Quick Execution", "Intensify Rage",
                           "Unshackled Fury", "Unending Fury"}),
+    # Rogue: the rework's 21 capstones plus the three tank survivability ones of the DPS balance pass 1031 (user
+    # 2026-11-01): Endurance (Riposte heal), Deflection (Eviscerate heal), Reinforced Leather (Between the Eyes shield).
+    "rogue": frozenset({"Cheat Death", "Coup de Grace", "Doomblade", "Executioner", "Heightened Senses",
+                        "Honor Among Thieves", "Improved Kick", "Improved Poisons", "Improved Riposte",
+                        "Improved Sprint", "Master Poisoner", "Master of Subtlety", "Remorseless Attacks", "Seal Fate",
+                        "Sinister Calling", "Surprise Attacks", "Throwing Specialization", "Toxic Blade",
+                        "Venomous Fan", "Vile Poisons", "Waylay", "Endurance", "Deflection", "Reinforced Leather"}),
+    # Priest: the rework's 25 capstones (Disc, Holy, Shadow) plus Holy Concentration's Holy Word mana-regen one of the
+    # DPS balance pass 1031 (user 2026-11-01).
+    "priest": frozenset({"Aspiration", "Blessed Recovery", "Dissolving Shadows", "Divine Aegis", "Empowered Renew",
+                         "Focused Power", "Focused Will", "Healing Focus", "Holy Concentration", "Holy Reach",
+                         "Holy Wrath", "Improved Devouring Plague", "Improved Flash Heal",
+                         "Improved Power Word: Shield", "Lash of Insanity", "Meditation", "Renewed Hope", "Reprieve",
+                         "Serendipity", "Shadow Affinity", "Shadow Power", "Shadow Reach", "Spirit of Redemption",
+                         "Test of Faith", "Void-touched Mind", "Writhing Agony"}),
+    # Shaman: the rework's 42 capstones (Elemental, Enhancement, Restoration) plus the three Enhancement tank survivability
+    # ones of the DPS balance pass 1031 (user 2026-11-01): Earthen Power (the spread Earth Shock slow), Anticipation (the
+    # Chain Lightning stone shell), Spirit Guard (crumbled Stoneskin absorbs).
+    "shaman": frozenset({"Ascendance", "Astral Shift", "Booming Echoes", "Call of Thunder", "Conduit of the Elements",
+                         "Elemental Fury", "Elemental Precision", "Elemental Reach", "Elemental Warding",
+                         "Elemental Weapons", "Eye of the Storm", "Frozen Power", "Fusion of Elements", "Guardian Totems",
+                         "Improved Chain Heal", "Improved Earth Shield", "Improved Ghost Wolf", "Improved Healing Stream",
+                         "Improved Lightning Shield", "Improved Water Shield", "Kindling", "Lava Flows",
+                         "Lightning Overload", "Mental Dexterity", "Mental Quickness", "Molten Fury", "Nature's Guardian",
+                         "Rainfall", "Rising Flames", "Shamanism", "Shamanistic Focus", "Static Shock",
+                         "Thundering Strikes", "Tidal Focus", "Tidal Mastery", "Tidal Waves", "Torrent", "Totemic Focus",
+                         "Totemic Resonance", "Toughness", "Unrelenting Storm", "Wind Rush", "Earthen Power",
+                         "Anticipation", "Spirit Guard"}),
 }
 
 _COLOUR_CODE_AT_END = re.compile(r"(\|c[0-9A-Fa-f]{8})([ \t\r\n]*)$")

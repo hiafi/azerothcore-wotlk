@@ -8695,11 +8695,10 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
             }
 
             // Blood Boil - bonus for diseased targets
+            // Custom: potency audit F2 - the bonus is the percent in Blood Boil's effect 1 (dbc-tools data) applied to
+            // the whole potency hit, replacing the stock flat +95 and ApCoeffMod = 1.5835 (which also wiped Impurity).
             if ((spellProto->SpellFamilyFlags[0] & 0x00040000) && victim->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DEATHKNIGHT, 0, 0, 0x00000002, GetGUID()))
-            {
-                DoneTotal += 95;
-                ApCoeffMod = 1.5835f;
-            }
+                AddPct(DoneTotalMod, spellProto->Effects[EFFECT_1].CalcValue(this));
             break;
         }
         default:

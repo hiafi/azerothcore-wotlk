@@ -71,6 +71,10 @@ namespace Shaman
     // S3: nothing erodes during Earthen Ascendance; Toughness rank 3 halves the loss (TOUGHNESS_ERODE_PCT) while the
     // victim is below TOUGHNESS_THRESHOLD_PCT health before the hit.
     void ErodeStoneskin(Player* victim, uint32 landedDamage);
+    // DPS balance pass 1031 T1: a self absorb's amount at cast for the tank capstone shells (Anticipation 202441,
+    // Spirit Guard 202442), Living Earth's formula: `shield` effect `effIndex` at the player's level (potency) plus
+    // the player's healing power x the generated coefficient x the level penalty. 0 on null input.
+    uint32 GetSelfAbsorbAmount(Player const* player, SpellInfo const* shield, uint8 effIndex);
     // Out-of-combat 2 min timer: started on leave, cancelled on re-enter.
     void OnCombatChange(Player* player, bool inCombat);
 

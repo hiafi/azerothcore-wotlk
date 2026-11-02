@@ -83,6 +83,12 @@ shaman_blast_1214 = tooltip_vars(
     mult=product('cnc', 'bme', 'fus'),
 )
 
+EARTHQUAKE_EXTRA_ENEMY_PCT = const(
+    'EARTHQUAKE_EXTRA_ENEMY_PCT', 25, 'Earthquake: each tick deals this percent more damage for each enemy inside the quake '
+    'beyond the first (spell_sha_earthquake counts the valid enemies, spell_sha_earthquake_tick scales the hit; nothing at 1 '
+    'target) (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package), Revision 5 (Revision 4 had 50) [tune].',
+)
+
 HEALING_RAIN_TARGETS = const(
     'HEALING_RAIN_TARGETS', 5, 'Allies Healing Rain heals per pulse, most injured first, players only [fixed].',
     cpp_type='uint8',
@@ -110,7 +116,11 @@ earthquake_tick_202281 = spell(
           '(SUPPRESS_CASTER_PROCS, H8: the tick rolls no caster procs; the mask exclusions per talent are the Elemental '
           'stage\'s to revisit). range_yards 50000 (L6: the shaman casts it at enemies up to 35 yd + 8 yd away). '
           'AttributesEx2 0x4 (ignore LoS) IS set (orchestrator, after B3): spell_sha_earthquake filters LoS from the zone '
-          'itself, so the engine\'s caster-to-target check must not skip enemies the shaman cannot see.',
+          'itself, so the engine\'s caster-to-target check must not skip enemies the shaman cannot see. '
+          'Enemy-count scaling (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package): spell_sha_earthquake counts the enemies the tick will hit and passes the multiplier '
+          '100 + EARTHQUAKE_EXTRA_ENEMY_PCT x (count - 1) in SPELLVALUE_BASE_POINT1 (effect 1 is empty, so the value only '
+          'rides on the Spell); spell_sha_earthquake_tick scales the hit by it in OnHit (x2.0 at 5 enemies, x1.0 alone). '
+          'A cast of the tick from anywhere else carries 0 there and is not scaled.',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_3': m.EARTHQUAKE, 'DefenseType': _DMG_MAGIC,
         'EquippedItemClass': -1, 'SpellLevel': 38, 'CastingTimeIndex': 1,
@@ -140,7 +150,7 @@ earthquake_202280 = spell(
           'SpellLevel 38. SpellVisualID 10405 = stock Earthquake\'s kit as is (100 yd scale x5, V stage scales it '
           'down). spell_sha_earthquake (AuraScript, eff1) casts the tick 202281 at every attackable enemy inside the '
           'dynobj with LoS (H7). Rows carry no AuraDescription number; the aura sits on enemies inside the area as a '
-          'dummy debuff.',
+          'dummy debuff. Tooltip: the enemy-count clause (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_3': m.EARTHQUAKE, 'DefenseType': _DMG_MAGIC,
         'PreventionType': 1, 'EquippedItemClass': -1, 'SpellLevel': 38,
@@ -149,12 +159,15 @@ earthquake_202280 = spell(
         'SpellVisualID_1': _SV_EARTHQUAKE,
         'Description_Lang_enUS': 'Causes the earth to shake beneath the target area, dealing '
                                  + pot_text(earthquake_tick_202281, var='mult')
-                                 + ' Nature damage every $t2 sec for $d to all enemies inside it. 30 sec cooldown.',
+                                 + ' Nature damage every $t2 sec for $d to all enemies inside it. Each tick deals '
+                                 + str(EARTHQUAKE_EXTRA_ENEMY_PCT['value'])
+                                 + '% more damage for each other enemy inside the quake. 30 sec cooldown.',
         'AuraDescription_Lang_enUS': 'Shaken by an earthquake.',
     },
     tooltip_vars=shaman_quake_1213,
 )
 scripted_by(earthquake_202280, 'spell_sha_earthquake')
+scripted_by(earthquake_tick_202281, 'spell_sha_earthquake_tick')
 
 # =====================================================================================================================
 # Elemental Blast (shared doc "Elemental Blast"): trained at 50, instant, Fire + Frost + Nature in one hit.
@@ -162,7 +175,7 @@ scripted_by(earthquake_202280, 'spell_sha_earthquake')
 elemental_blast_202282 = spell(
     id=202282, name='Elemental Blast', school=School.FIRE | School.FROST | School.NATURE, attributes=0,
     cast_time_ms=0, cooldown_ms=12000, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=6, range_yards=40.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=43.0, potency_kind='direct', time_basis_ms=1500,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=86.0, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_ELEMENTAL_BLAST,
     notes='SH0b A5, shared doc "Elemental Blast": instant, SchoolMask 0x1C (Fire 4 + Frost 16 + Nature 8: counts as '
@@ -170,7 +183,7 @@ elemental_blast_202282 = spell(
           '< 30 s), 40 yd, 6% base mana (was 8%; user playtest fix pass 2026-10-22, P1), GCD 1500 / 133 (an explicit spell-GCD like Lava Burst, brief decision 4), '
           'd2 b20 (no d0 b0 / b1, d1 b12). Speed 24 and SpellVisualID 11565 = Lava Burst\'s missile and impact (a '
           'lightning-impact clone of 11565 in the 90131+ block is the V stage). SpellLevel 50. Icon 1930 is a '
-          'placeholder (the 3.3.5 client has no Elemental Blast icon).',
+          'placeholder (the 3.3.5 client has no Elemental Blast icon). Effect 1 sp_potency 43 -> 86 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Elemental Blast +100%).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_3': m.ELEMENTAL_BLAST, 'DefenseType': _DMG_MAGIC,
         'PreventionType': 1, 'EquippedItemClass': -1, 'SpellLevel': 50, 'CastingTimeIndex': 1,

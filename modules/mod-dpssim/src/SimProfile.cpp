@@ -479,6 +479,20 @@ bool SimProfile::Load(std::string const& path, Profile& out)
                 return false;
             }
         }
+        else if (key == "DrainNoise")
+        {
+            try
+            {
+                parsed.DrainNoise = std::stof(value);
+            }
+            catch (std::exception const&)
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'DrainNoise' value '{}' is not a number.",
+                    path, lineNo, value);
+                return false;
+            }
+        }
         else if (auto const it = RATING_KEYS.find(key); it != RATING_KEYS.end())
         {
             int32 ratingValue = 0;
@@ -590,6 +604,11 @@ bool SimProfile::Load(std::string const& path, Profile& out)
         else if (parsed.DrainPulseMs < 100)
         {
             error = "DrainPulseMs must be at least 100";
+            ok = false;
+        }
+        else if (!(parsed.DrainNoise >= 0.0f && parsed.DrainNoise <= 1.0f))
+        {
+            error = "DrainNoise must be between 0 and 1";
             ok = false;
         }
 

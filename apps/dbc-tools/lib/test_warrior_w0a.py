@@ -66,13 +66,15 @@ W0A_IDS = (HS, CLEAVE, SLAM, OVERPOWER, MS, BT, REVENGE, REND, THUNDER_CLAP, COM
 # D4 percents (WP-BRIEF ruling 1): weapon_potency P -> stored bp P - 1 (die 1 adds the 1 back)
 # Warrior balance 2026-10-30 (user, five rounds compounded): HS x1.3 x1.3 x0.9 x0.8, Cleave x1.2, Slam to 200%,
 # MS x1.5 x1.4 x0.8 x1.1 x0.95, Overpower x1.5 x1.4 x0.8, on both parts
-PERCENTS = {HS: 183, CLEAVE: 144, SLAM: 200, MS: 228, OVERPOWER: 168}
+# DPS balance pass 1031 (2026-10-31, user): HS x0.85 (Fury -15%), Slam / MS / Overpower x0.75 (Arms -25%), both parts
+# Round R5 (2026-11-02, user): HS weapon percent 156 -> 172 (about +10%), the flat part unchanged
+PERCENTS = {HS: 172, CLEAVE: 144, SLAM: 150, MS: 171, OVERPOWER: 126}
 # strike -> (percent effect index, flat effect index, flat carrier type)
 STRIKE_SHAPE = {HS: (1, 2, WEAPON_DAMAGE), CLEAVE: (1, 2, WEAPON_DAMAGE), SLAM: (1, 2, WEAPON_DAMAGE),
                 MS: (2, 3, NORMALIZED_WEAPON), OVERPOWER: (1, 2, NORMALIZED_WEAPON)}
-FLAT_POT = {HS: 12, CLEAVE: 12, SLAM: 18, OVERPOWER: 17, MS: 18}
-FLAT_L60 = {HS: 31, CLEAVE: 31, SLAM: 46, OVERPOWER: 43, MS: 46}
-FLAT_L22 = {HS: 5, CLEAVE: 5, SLAM: 16, OVERPOWER: 6, MS: 7}
+FLAT_POT = {HS: 10.2, CLEAVE: 12, SLAM: 13.5, OVERPOWER: 12.75, MS: 13.5}
+FLAT_L60 = {HS: 26, CLEAVE: 31, SLAM: 34, OVERPOWER: 32, MS: 34}
+FLAT_L22 = {HS: 4, CLEAVE: 5, SLAM: 11, OVERPOWER: 5, MS: 5}
 
 # WP-BRIEF ruling 2 / 0VERIFY 2e: ShapeshiftMask -> 0
 ZERO_LIST = (72, 100, 355, 676, 772, 871, 1680, 1715, 1719, 2565, 3411, 5308, 6343, 6552, 6572, 7384, 7922, 12328,
@@ -346,15 +348,15 @@ def check_rend(rows: dict[int, dict], entries: dict[int, dict], script_removals:
         return [f"{REND}: not built"]
     bad = []
     pot = (e.get("effect1") or {}).get("_potency") or {}
-    if (pot.get("kind"), pot.get("total_potency"), pot.get("t_seconds")) != ("periodic", 11.23, 3.0):
+    if (pot.get("kind"), pot.get("total_potency"), pot.get("t_seconds")) != ("periodic", 8.42, 3.0):
         bad.append(f"potency {pot.get('kind')}/{pot.get('total_potency')}/T {pot.get('t_seconds')}, "
-                   "expected periodic/11.23/T 3")
+                   "expected periodic/8.42/T 3")
     if not float(pot.get("ap_coefficient") or 0):
         bad.append("no attack-power coefficient")
     if (_i(r, "EffectAura_1"), _i(r, "EffectAuraPeriod_1")) != (3, 3000):
         bad.append(f"aura/period {r.get('EffectAura_1')}/{r.get('EffectAuraPeriod_1')}, expected 3 / 3000")
-    if calc_value(r, 1, 60) != 60 or calc_value(r, 1, 22) != 9:
-        bad.append(f"per-tick value {calc_value(r, 1, 22)} at 22 / {calc_value(r, 1, 60)} at 60, expected 9 / 60")
+    if calc_value(r, 1, 60) != 45 or calc_value(r, 1, 22) != 7:
+        bad.append(f"per-tick value {calc_value(r, 1, 22)} at 22 / {calc_value(r, 1, 60)} at 60, expected 7 / 45")
     if not any(int(x["spell_id"]) == -REND and x["ScriptName"] == "spell_warr_rend" for x in script_removals):
         bad.append("unbind_script(-772, 'spell_warr_rend') is not declared")
     if any(int(x["spell_id"]) == -REND for x in script_names):
@@ -682,12 +684,12 @@ def _strike_rows() -> dict[int, dict]:
         r.update(extra)
         return r
     return {
-        HS: strike(HS, 1, 2, WEAPON_DAMAGE, 183, 1, -10, 4.8 / 7),
+        HS: strike(HS, 1, 2, WEAPON_DAMAGE, 172, 1, -9, 4.08 / 7),
         CLEAVE: strike(CLEAVE, 1, 2, WEAPON_DAMAGE, 144, 14, -1, 4.8 / 7, EffectChainTargets_1=2,
                        EffectChainTargets_2=2),
-        SLAM: strike(SLAM, 1, 2, WEAPON_DAMAGE, 200, 30, 15, 7.2 / 7),
-        OVERPOWER: strike(OVERPOWER, 1, 2, NORMALIZED_WEAPON, 168, 12, -4, 6.8 / 7),
-        MS: strike(MS, 2, 3, NORMALIZED_WEAPON, 228, 20, 4, 7.2 / 7, Effect_1=APPLY_AURA, EffectAura_1=118),
+        SLAM: strike(SLAM, 1, 2, WEAPON_DAMAGE, 150, 30, 10, 5.4 / 7),
+        OVERPOWER: strike(OVERPOWER, 1, 2, NORMALIZED_WEAPON, 126, 12, -3, 5.1 / 7),
+        MS: strike(MS, 2, 3, NORMALIZED_WEAPON, 171, 20, 3, 5.4 / 7, Effect_1=APPLY_AURA, EffectAura_1=118),
     }
 
 
@@ -838,12 +840,12 @@ class WarriorW0aNegativeTest(unittest.TestCase):
 
     def test_rend(self):
         row = {"ID": REND, "EffectAura_1": 3, "EffectAuraPeriod_1": 3000, "BaseLevel": 4, "SpellLevel": 4,
-               "EffectBasePoints_1": -16, "EffectRealPointsPerLevel_1": 1.3476, "EffectDieSides_1": 1}
-        ent = {"id": REND, "effect1": {"_potency": {"kind": "periodic", "total_potency": 11.23, "t_seconds": 3.0,
-                                                    "ap_coefficient": 0.0771}}}
+               "EffectBasePoints_1": -12, "EffectRealPointsPerLevel_1": 1.0104, "EffectDieSides_1": 1}
+        ent = {"id": REND, "effect1": {"_potency": {"kind": "periodic", "total_potency": 8.42, "t_seconds": 3.0,
+                                                    "ap_coefficient": 0.0578}}}
         rem = [{"spell_id": -REND, "ScriptName": "spell_warr_rend"}]
         self.assertEqual(check_rend({REND: row}, {REND: ent}, rem, []), [])
-        for key, val in (("total_potency", 10.7), ("kind", "direct"), ("t_seconds", 1.5)):
+        for key, val in (("total_potency", 11.23), ("kind", "direct"), ("t_seconds", 1.5)):
             e2 = copy.deepcopy(ent)
             e2["effect1"]["_potency"][key] = val
             self.assertGreaterEqual(len(check_rend({REND: row}, {REND: e2}, rem, [])), 1, key)

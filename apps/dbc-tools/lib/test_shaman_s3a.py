@@ -102,7 +102,15 @@ GRID_TALENTS, GRID_POINTS = 34, 81
 # ids: the brief's id map (spells 202360-202419) and the stock rows S3a rewrites.
 S3A_IDS = tuple(range(202360, 202420))
 S3A_UNMAPPED = tuple(range(202420, 202440))     # 202413 / 202415 are the cleave strikes, 202414 the Elemental Ascendance speed helper, 202416-202419 the ascend bursts (P2); 202420-202439 unassigned
-S3A_SPARE = range(202440, 202520)
+# DPS balance pass 1031 T1 (2026-11-01): the three tank capstone helpers took the first spare ids.
+T1_CAPSTONE_HELPERS = (202440, 202441, 202442)   # Earthen Power slow, Anticipation stone shell, Spirit Guard crumbled stone
+# DPS balance pass 1031 R4 (2026-11-01): Rockbiter's hidden tank damage bonus 202443, retired in round S1 (2026-11-02, user
+# ruling: "implement the plan as it was without hidden buffs"); the id stays unused.
+R4_ROCKBITER_DAMAGE_RETIRED = 202443
+# DPS balance pass 1031 S1 (2026-11-02, user ruling: shaman package): the tank Lightning Shield kit and the Stormstrike cleave.
+S1_TOUGHNESS_HEAL, S1_ARC, S1_CHAIN_ORB, S1_JUMPS, S1_ORB_DAMAGE, S1_SS_CLEAVE = range(202444, 202450)
+S1_IDS = tuple(range(202444, 202450))
+S3A_SPARE = range(202450, 202520)
 REWRITTEN_STOCK = (
     16257, 53817, 8017, 324, 8042, 8349, 8187, 2484, 59566, 63685, 3600, 32175, 32176, 421, 60103, 17364, 30823, 51533,
     2645, 26364, 16256, 16281, 16282, 30802, 30808, 30809, 16268, 30816, 30818, 30819,
@@ -121,6 +129,7 @@ MW_BUFF = 53817
 MW_CONSUME = (0x1 | 0x2 | 0x80, 0x1000, 0)      # Lightning Bolt d0 b0, Chain Lightning d0 b1, LHW d0 b7, Lava Burst d1 b12
 ELEMENTAL_SPIRITS = 51533
 LIVING_EARTH = 202361
+
 GUST, GUST_SPLASH = 202391, 202392
 SPIRIT_WEAPONS = (16268, 202373, 202374)
 UNLEASHED_RAGE = (30802, 30808, 30809)
@@ -448,7 +457,7 @@ def check_unleashed_rage(rows: dict, ids=UNLEASHED_RAGE) -> list[str]:
 
 
 LAVA_LASH = 60103
-LAVA_LASH_WEAPON_PERCENT = 110   # off-hand weapon damage % [tune], stock 100, 250 on 2026-10-22 then trimmed to 110 (S3-ENH-TRIM-DIAG option 3)
+LAVA_LASH_WEAPON_PERCENT = 154   # off-hand weapon damage % [tune], stock 100, 250 on 2026-10-22 then trimmed to 110 (S3-ENH-TRIM-DIAG option 3), 154 on 2026-11-01 (B3, +40%)
 EFFECT_WEAPON_PERCENT_DAMAGE = 31
 
 
@@ -612,8 +621,10 @@ class ShamanS3aDataTest(unittest.TestCase):
 
     def test_equipped_item_class(self):
         d = _data()
-        # Stormstrike / Lava Lash keep the stock weapon requirement (class 2 + subclass masks), not the unset-0 hazard.
-        ids = sorted((set(S3A_IDS) | set(_enh_ranks(d)) | set(REWRITTEN_STOCK) | set(S3A_SPARE)) - {17364, 60103})
+        # Stormstrike / Lava Lash keep the stock weapon requirement (class 2 + subclass masks), not the unset-0 hazard. The
+        # two Stormstrike strikes 32175 / 32176 joined the DSL package with the potency audit F14 (2026-11-01) and keep it too.
+        ids = sorted((set(S3A_IDS) | set(_enh_ranks(d)) | set(REWRITTEN_STOCK) | set(S3A_SPARE) | set(T1_CAPSTONE_HELPERS)
+                      | set(S1_IDS)) - {17364, 60103, 32175, 32176})
         self.assertClean(check_equipped_item_class(d["rows_by_id"], ids))
 
     def test_no_forbidden_bits(self):
@@ -637,6 +648,105 @@ class ShamanS3aDataTest(unittest.TestCase):
     def test_living_earth(self):
         d = _data()
         self.assertClean(check_living_earth(d["rows_by_id"], d["entries_by_id"]))
+
+    def test_tank_capstone_helpers(self):
+        """DPS balance pass 1031 T1: Earthen Power's spread slow is a family-0 aura 138 (the script passes Earth Shock's live
+        percent, a PERCENT_FIELD_EFFECTS row); the Anticipation and Spirit Guard shells are family-0 absorbs on potency."""
+        from lib import lint
+        d = _data()
+        rows, entries = d["rows_by_id"], d["entries_by_id"]
+        self.assertEqual(int(rows[202440]["EffectAura_1"]), 138)
+        self.assertIn((202440, 0), lint.PERCENT_FIELD_EFFECTS)
+        self.assertIn((8042, 0), lint.PERCENT_FIELD_EFFECTS)
+        for sid, potency in ((202441, 3.0), (202442, 0.25)):   # 202442 1 -> 0.25 in R4, 202441 6 -> 3 in S1
+            with self.subTest(spell=sid):
+                self.assertEqual(int(rows[sid]["EffectAura_1"]), AURA_SCHOOL_ABSORB)
+                pot = entries[sid]["effect1"]["_potency"]
+                self.assertEqual((pot["kind"], float(pot["total_potency"])), ("absorb", potency))
+        for sid in T1_CAPSTONE_HELPERS:
+            with self.subTest(spell=sid):
+                self.assertEqual(int(rows[sid].get("SpellClassSet") or 0), 0)
+        names = {(int(r["spell_id"]), r["ScriptName"]) for r in d["package"].spell_script_names}
+        self.assertIn((8042, "spell_sha_earth_shock_rockbiter"), names)
+        self.assertIn((421, "spell_sha_stoneskin_grant"), names)
+        for sid in (51524, 16272, 202370):
+            with self.subTest(rank=sid):
+                self.assertIn("Capstone Bonus: While Rockbiter is active, ", rows[sid]["Description_Lang_enUS"])
+
+    def test_s1_rockbiter_damage_is_visible(self):
+        """DPS balance pass 1031 S1: R4's hidden +100 % passive 202443 and its linked row are gone; Rockbiter 8017 effect 0 is
+        aura 79 (all schools) at 0, set to ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT (10) by spell_sha_rockbiter_damage with Spirit
+        Guard, and both tooltips say so; Living Earth is 40 potency again."""
+        from lib import lint
+        d = _data()
+        rows, entries, p = d["rows_by_id"], d["entries_by_id"], d["package"]
+        self.assertNotIn(R4_ROCKBITER_DAMAGE_RETIRED, rows)
+        links = {(int(r["spell_trigger"]), int(r["spell_effect"])) for r in p.linked_spells}
+        self.assertFalse(any(R4_ROCKBITER_DAMAGE_RETIRED in link for link in links))
+        consts = {c["name"]: c["value"] for c in p.consts}
+        self.assertEqual(consts["ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT"], 10)
+        rb = rows[8017]
+        self.assertEqual(int(rb["EffectAura_1"]), 79)
+        self.assertEqual(int(rb["EffectMiscValue_1"]), 127)
+        self.assertEqual(int(rb["EffectBasePoints_1"]) + 1, 0)
+        self.assertEqual(float(rb.get("EffectRealPointsPerLevel_1") or 0), 0.0)
+        self.assertIn((8017, 0), lint.PERCENT_FIELD_EFFECTS)
+        self.assertIn("With Spirit Guard, your damage dealt is increased by 10%.", rb["Description_Lang_enUS"])
+        self.assertNotIn("attack power", rb["Description_Lang_enUS"])
+        names = {(int(r["spell_id"]), r["ScriptName"]) for r in p.spell_script_names}
+        self.assertIn((8017, "spell_sha_rockbiter_damage"), names)
+        self.assertIn((8017, "spell_sha_imbue"), names)
+        for sid in (202368, 202369, 202370):
+            with self.subTest(rank=sid):
+                text = rows[sid]["Description_Lang_enUS"]
+                self.assertIn("Rockbiter increases your damage dealt by 10%.", text)
+                self.assertNotIn("$202443", text)
+        pot = entries[LIVING_EARTH]["effect1"]["_potency"]
+        self.assertEqual(float(pot["total_potency"]), 40.0)
+
+    def test_s1_tank_lightning_shield_kit(self):
+        """DPS balance pass 1031 S1: the orb heal (Toughness), the arc at 55 % and the Chain Lightning orb at 100 % of the orb
+        26364 (family 11 d0 b10 like the orb), the Anticipation +2 jumps and Static Shock orb damage children, the bindings
+        and the -324 absorbed-hit row."""
+        d = _data()
+        rows, entries, p = d["rows_by_id"], d["entries_by_id"], d["package"]
+        heal = entries[S1_TOUGHNESS_HEAL]["effect1"]["_potency"]
+        self.assertEqual((heal["kind"], float(heal["total_potency"])), ("heal", 15.0))
+        self.assertEqual(int(rows[S1_TOUGHNESS_HEAL]["DefenseType"]), 1)
+        orb = 103.9  # ORB_COPY_BASE_POTENCY: the copies keep the orb's R5 potency (R6 cut the orb 26364 itself to 77.925)
+        for sid, pct in ((S1_ARC, 55), (S1_CHAIN_ORB, 100)):
+            with self.subTest(copy=sid):
+                self.assertAlmostEqual(float(entries[sid]["effect1"]["_potency"]["total_potency"]), orb * pct / 100, places=3)
+                self.assertEqual(int(rows[sid]["SpellClassSet"]), 11)
+                self.assertEqual(spell_mask(rows[sid]), (0x400, 0, 0))
+                self.assertEqual(int(rows[sid]["SpellLevel"]), int(rows[26364]["SpellLevel"]))
+        jumps = rows[S1_JUMPS]
+        self.assertEqual((int(jumps["EffectAura_1"]), int(jumps["EffectMiscValue_1"])), (AURA_ADD_FLAT_MODIFIER, 17))
+        self.assertEqual(int(jumps["EffectBasePoints_1"]) + 1, 2)
+        self.assertEqual(int(jumps["EffectSpellClassMaskA_1"]), 0x2)
+        dmg = rows[S1_ORB_DAMAGE]
+        self.assertEqual((int(dmg["EffectAura_1"]), int(dmg["EffectMiscValue_1"])), (AURA_ADD_PCT_MODIFIER, SPELLMOD_DAMAGE))
+        self.assertEqual(int(dmg["EffectSpellClassMaskA_1"]), 0x400)
+        cleave = rows[S1_SS_CLEAVE]
+        self.assertEqual(int(cleave.get("SpellClassSet") or 0), 0)
+        self.assertEqual(int(cleave["AttributesEx3"]) & 0x20050000, 0x20050000)   # IGNORE_CASTER_MODIFIERS | ALWAYS_HIT | SUPPRESS
+        self.assertIn((S1_SS_CLEAVE, 0x8000), {(int(r["spell_id"]), int(r["attributes"])) for r in p.custom_attrs})
+        consts = {c["name"]: c["value"] for c in p.consts}
+        self.assertEqual([consts[f"STATIC_SHOCK_ORB_DAMAGE_R{r}"] for r in (1, 2, 3)], [20, 40, 55])
+        self.assertEqual([consts[f"ILS_SS_CLEAVE_R{r}"] for r in (1, 2, 3)], [33, 66, 100])
+        self.assertEqual([consts[f"THUNDERING_SURGE_R{r}"] for r in (1, 2, 3)], [40, 80, 125])
+        self.assertEqual((consts["STATIC_SHOCK_ARC_PCT"], consts["ANTICIPATION_CL_JUMPS"], consts["ILS_SS_CLEAVE_TARGETS"]),
+                         (55, 2, 4))
+        names = {(int(r["spell_id"]), r["ScriptName"]) for r in p.spell_script_names}
+        for binding in ((26364, "spell_sha_enh_storm_orb"), (S1_TOUGHNESS_HEAL, "spell_sha_enh_toughness_heal"),
+                        (421, "spell_sha_enh_thundering_surge"), (421, "spell_sha_stoneskin_grant"),
+                        (324, "spell_sha_enh_lightning_shield")):
+            with self.subTest(binding=binding):
+                self.assertIn(binding, names)
+        proc = [r for r in p.spell_procs if int(r["SpellId"]) == -324]
+        self.assertEqual(len(proc), 1)
+        self.assertEqual((proc[0]["HitMask"], proc[0]["AttributesMask"], proc[0]["Cooldown"], proc[0]["SpellTypeMask"]),
+                         (0x403, 0x2, 3500, 0x1))
 
     def test_gust(self):
         self.assertClean(check_gust(_data()["rows_by_id"]))
@@ -941,8 +1051,8 @@ class ShamanS3aNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_unleashed_rage({30802: _row(30802, EffectAura_1=137, EffectAura_2=240)})), 1)
 
     def test_lava_lash(self):
-        good = _row(60103, Effect_1=31, EffectBasePoints_1=109, EffectDieSides_1=1,
-                    Description_Lang_enUS="Strike for 110% off-hand weapon damage as Fire damage.")
+        good = _row(60103, Effect_1=31, EffectBasePoints_1=153, EffectDieSides_1=1,
+                    Description_Lang_enUS="Strike for 154% off-hand weapon damage as Fire damage.")
         self.assertEqual(check_lava_lash({60103: good}), [])
         self.assertEqual(len(check_lava_lash({60103: {**good, "EffectBasePoints_1": 99}})), 1)
         self.assertEqual(len(check_lava_lash({60103: {**good, "Description_Lang_enUS": "100% off-hand weapon damage"}})), 1)

@@ -104,7 +104,7 @@ namespace SimReport
     //   "kind":    "heal"
     //   "config":  {actorLevel, actorRace, actorClass, durationMs, stepMs, group ("party"|"raid10"|"raid20"),
     //               healTargets (canonical text, SimHeal::TargetsText()), infiniteMana, pinMaxHealth,
-    //               allyMaxHealthTank, allyMaxHealthDps, drainPulseMs, allySpreadYards}
+    //               allyMaxHealthTank, allyMaxHealthDps, drainPulseMs, drainNoise, allySpreadYards}
     //   "summary": {elapsedMs, effectiveHealing, rawHealing, overhealing, overhealPct, healAbsorbed, absorbHealing,
     //               hps, rawHps, hpsBeforeOom, castCount, triggeredCasts, critRatePct, manaSpent, healingPerMana,
     //               oomAtMs, deaths, firstDeathAtMs, resurrections, actorDiedAtMs, damageDone, dps, wallClockMs,

@@ -43,7 +43,9 @@ class Unit;
 //  - Boss: one "Sim Raid Boss" (SimHealBossAI.cpp) standing past the group. At each pull it engages the healer and
 //    every ally and keeps the first living tank as its victim.
 //  - Drivers, run from the sim step (never from inside a hook callback, HS0 report section 4): the drain driver casts
-//    the Sim Damage Pulse on every living draining target each DrainPulseMs; the pin driver casts the Sim Pin Hit on
+//    the Sim Damage Pulse on every living draining target each DrainPulseMs (a drain value is damage per second, so a
+//    longer pulse hits harder; with DrainNoise the members take unequal shares of the pulse's unchanged total); the
+//    pin driver casts the Sim Pin Hit on
 //    every pinned target above its pin or with a shield on it, with exactly enough damage to bring it to the pin
 //    through its shields (ruling D2: a real hit uses up every shield).
 //  - Bookkeeping: health samples, deaths and resurrections, and the driver counters.
@@ -62,6 +64,8 @@ public:
         std::string AllyTankTalents;
         float SpreadYards = 10.0f;
         uint32 DrainPulseMs = 1000;
+        // 0 to 1: how unequally each drain pulse shares out its damage (SimProfile.h's Profile::DrainNoise)
+        float DrainNoise = 0.0f;
     };
 
     ~SimHealScenario();
@@ -135,7 +139,15 @@ private:
     bool CastHit(uint32 spellId, size_t targetIndex, int32 amount);
     void UpdateLife();
     void SampleHealth();
+    // The drain hit points of one pulse for one member, before noise: the spec's value is damage per second, scaled
+    // to the pulse length
     [[nodiscard]] uint32 DrainAmount(SimHeal::TargetSpec const& spec, Player* target) const;
+    // Spreads the pulse's total (the sum of `amounts`) unevenly over its members: member i gets a weight
+    // 1 + _drainNoise * u_i, u_i uniform in [-1, 1], its share of the total is amounts[i] * weight_i over the sum of
+    // those products. Whole hit points, rounded so that the sum stays exactly what it was. No-op without noise.
+    void ApplyDrainNoise(std::vector<uint32>& amounts) const;
+    // One drain pulse: the Sim Damage Pulse on every living draining member
+    void DrainPulse();
 
     TempSummon* _boss = nullptr;
     Group* _group = nullptr;
@@ -145,6 +157,7 @@ private:
     Player* _mainTank = nullptr;
     size_t _selfIndex = 0;
     uint32 _drainPulseMs = 1000;
+    float _drainNoise = 0.0f;
     uint32 _pinMaxHealth = 30000;
 
     // Per iteration

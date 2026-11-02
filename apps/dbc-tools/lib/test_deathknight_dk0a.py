@@ -145,9 +145,10 @@ def check_death_strike(rows_by_id: dict[int, dict]) -> list[str]:
                    f"expected {DEATH_STRIKE_ATTR_EX:#x}")
     if int(row.get("Effect_3") or 0) != EFFECT_DUMMY:
         bad.append(f"{DEATH_STRIKE}: effect 3 is {row.get('Effect_3')!r}, expected DUMMY (3, the heal %)")
-    if int(row.get("EffectBasePoints_3") or 0) != 24:
+    if int(row.get("EffectBasePoints_3") or 0) != 29:
         bad.append(f"{DEATH_STRIKE}: effect 3 EffectBasePoints {row.get('EffectBasePoints_3')!r}, "
-                   f"expected 24 (heal 25%)")
+                   f"expected 29 (heal 30%; 24 -> 37 -> 39 -> 29 2026-11-01, DPS balance pass 1031 rounds T1/T2, "
+                   f"user ruling: Death Strike heal 30%)")
     if _f32(row.get("EffectRealPointsPerLevel_3")) != 0:
         bad.append(f"{DEATH_STRIKE}: effect 3 points per level {row.get('EffectRealPointsPerLevel_3')!r}, expected 0")
     return bad
@@ -430,7 +431,7 @@ class DeathKnightDK0aNegativeTest(unittest.TestCase):
 
     def test_death_strike(self):
         good = _row(DEATH_STRIKE, PowerType=6, ManaCost=400, RuneCostID=0, AttributesEx=DEATH_STRIKE_ATTR_EX,
-                    Effect_3=EFFECT_DUMMY, EffectBasePoints_3=24, EffectRealPointsPerLevel_3=0.0)
+                    Effect_3=EFFECT_DUMMY, EffectBasePoints_3=29, EffectRealPointsPerLevel_3=0.0)
         self.assertEqual(check_death_strike({DEATH_STRIKE: good}), [])
         for col, value in (("PowerType", 0), ("ManaCost", 0), ("RuneCostID", 1142), ("AttributesEx", 0x400),
                            ("Effect_3", 2), ("EffectBasePoints_3", 404), ("EffectRealPointsPerLevel_3", 37.667)):

@@ -190,7 +190,8 @@ public:
 
         Shaman::RefreshAttunements(player);
 
-        // Rockbiter's attack power scales with level and is computed at aura creation (SH0a review L1).
+        // Rockbiter's effects are computed at aura creation (SH0a review L1); its effect 0 is the Spirit Guard damage
+        // percent since DPS balance pass 1031 S1 (spell_sha_rockbiter_damage), which the recalculation keeps.
         if (Aura* rockbiter = player->GetAura(ShamanData::SPELL_ROCKBITER_WEAPON, player->GetGUID()))
             rockbiter->RecalculateAmountOfEffects();
     }

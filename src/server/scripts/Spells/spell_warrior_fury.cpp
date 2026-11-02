@@ -215,8 +215,12 @@ class spell_warr_execute_fury : public SpellScript
 
         caster->SetPower(POWER_RAGE, uint32(newRage));
 
+        // Potency audit F3: the base is this effect's potency value (GetEffectValue), the AP share is 5308's generated
+        // spell_bonus_data ap_bonus (ap_potency), the per-rage term is the effect's DamageMultiplier - all data.
+        SpellBonusEntry const* bonus = sSpellMgr->GetSpellBonusData(spellInfo->Id);
+        float const apCoeff = bonus ? bonus->ap_bonus : 0.0f;
         int32 bp = GetEffectValue() + int32(rageUsed * spellInfo->Effects[effIndex].DamageMultiplier +
-            caster->GetTotalAttackPowerValue(BASE_ATTACK) * 0.2f);
+            caster->GetTotalAttackPowerValue(BASE_ATTACK) * apCoeff);
 
         Player* player = caster->ToPlayer();
         if (player)

@@ -283,6 +283,8 @@ namespace ShamanData
     constexpr uint32 SPELL_NATURE_S_GUARDIAN_30884 = 30884; // nature_s_guardian_30884
     constexpr uint32 SPELL_NATURE_S_GUARDIAN_30885 = 30885; // nature_s_guardian_30885
     constexpr uint32 SPELL_NATURE_S_GUARDIAN_30886 = 30886; // nature_s_guardian_30886
+    constexpr uint32 SPELL_STORMSTRIKE_MAIN_HAND = 32175; // stormstrike_main_hand_32175
+    constexpr uint32 SPELL_STORMSTRIKE_OFF_HAND = 32176; // stormstrike_off_hand_32176
     constexpr uint32 SPELL_HEROISM = 32182; // heroism_32182
     constexpr uint32 SPELL_ANGERED_EARTH = 36213; // angered_earth_36213
     constexpr uint32 SPELL_TOTEMIC_RECALL = 36936; // totemic_recall_36936
@@ -496,6 +498,15 @@ namespace ShamanData
     constexpr uint32 SPELL_ASCENDANCE_FROST_NOVA = 202417; // ascendance_frost_nova_202417
     constexpr uint32 SPELL_ASCENDANCE_WIND_BURST = 202418; // ascendance_wind_burst_202418
     constexpr uint32 SPELL_ASCENDANCE_EARTH_STOMP = 202419; // ascendance_earth_stomp_202419
+    constexpr uint32 SPELL_EARTHEN_POWER_SLOW = 202440; // earthen_power_slow_202440
+    constexpr uint32 SPELL_ANTICIPATION_SHELL = 202441; // anticipation_shell_202441
+    constexpr uint32 SPELL_SPIRIT_GUARD_SHELL = 202442; // spirit_guard_shell_202442
+    constexpr uint32 SPELL_TOUGHNESS_HEAL = 202444; // toughness_heal_202444
+    constexpr uint32 SPELL_LIGHTNING_SHIELD_ARC = 202445; // lightning_shield_arc_202445
+    constexpr uint32 SPELL_LIGHTNING_SHIELD_CHAIN_ORB = 202446; // lightning_shield_chain_orb_202446
+    constexpr uint32 SPELL_ANTICIPATION_JUMPS = 202447; // anticipation_jumps_202447
+    constexpr uint32 SPELL_STATIC_SHOCK_ORB_DAMAGE = 202448; // static_shock_orb_damage_202448
+    constexpr uint32 SPELL_ILS_STORMSTRIKE_CLEAVE = 202449; // ils_stormstrike_cleave_202449
     constexpr uint32 SPELL_RAZE_RANK1 = 202520; // raze_rank1_202520
     constexpr uint32 SPELL_RAZE_RANK2 = 202521; // raze_rank2_202521
     constexpr uint32 SPELL_RAZE_RANK3 = 202522; // raze_rank3_202522
@@ -548,6 +559,7 @@ namespace ShamanData
     constexpr uint32 SPELL_CHAIN_LIGHTNING_OVERLOAD = 202592; // chain_lightning_overload_202592
     constexpr uint32 SPELL_LAVA_BURST_OVERLOAD = 202593; // lava_burst_overload_202593
     constexpr uint32 SPELL_ASTRAL_SHIFT_EMPOWERED = 202595; // astral_shift_empowered_202595
+    constexpr uint32 SPELL_EARTH_ELEMENTAL_MELEE = 202596; // earth_elemental_melee_202596
     constexpr uint32 SPELL_FLOWING_TIDES_RANK1 = 202640; // flowing_tides_rank1_202640
     constexpr uint32 SPELL_FLOWING_TIDES_RANK2 = 202641; // flowing_tides_rank2_202641
     constexpr uint32 SPELL_FLOWING_TIDES_RANK3 = 202642; // flowing_tides_rank3_202642
@@ -611,6 +623,7 @@ namespace ShamanData
 
     // const() - hidden script numbers (tier 3)
     constexpr float AA_RADIUS_YD = 40.0f; // Ancestral Awakening: search radius for the most injured ally, yd [fixed].
+    constexpr int32 ANTICIPATION_CL_JUMPS = 2; // Anticipation under Rockbiter: extra Chain Lightning jump targets (202447 SPELLMOD_JUMP_TARGETS) [fixed].
     constexpr int32 ASC_DURATION_EA_MS = 20000; // Elemental Ascendance: duration, ms [fixed].
     constexpr int32 ASC_OOC_MS = 120000; // Ascendance: out-of-combat time before a held single Ascendance falls off, ms [fixed].
     constexpr int32 ASTRAL_SHIFT_EMPOWERED_MS = 6000; // Empowered Astral Shift duration, ms [fixed].
@@ -637,9 +650,11 @@ namespace ShamanData
     constexpr int32 DEVASTATION_PC_R3 = 10; // Elemental Devastation rank 3 Proc Chance bonus [fixed].
     constexpr int32 EARTHEN_ASC_DURATION_MS = 10000; // Earthen Ascendance: duration, ms [fixed].
     constexpr float EARTHEN_ASC_RADIUS_YD = 8.0f; // Earthen Ascendance: radius of the Earth Shock copies around the shaman, yd [tune].
+    constexpr float EARTHEN_POWER_SLOW_RADIUS_YD = 8.0f; // Earthen Power capstone: radius around the shaman in which Earth Shock's attack speed slow also lands (202440), yd [tune].
     constexpr int32 EARTHEN_WALL_PERIOD_MS = 2000; // Earthen Wall Totem: ms between pulses, the first at placement [fixed].
     constexpr int32 EARTHEN_WALL_PULSES = 8; // Earthen Wall Totem: pulses per placement [fixed].
     constexpr float EARTHEN_WALL_RANGE_YD = 40.0f; // Earthen Wall Totem: spill-to-ally search radius, yd [tune].
+    constexpr int32 EARTHQUAKE_EXTRA_ENEMY_PCT = 25; // Earthquake: each tick deals this percent more damage for each enemy inside the quake beyond the first (spell_sha_earthquake counts the valid enemies, spell_sha_earthquake_tick scales the hit; nothing at 1 target) (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package), Revision 5 (Revision 4 had 50) [tune].
     constexpr int32 EARTH_ELEMENTAL_BONUS_PCT = 20; // Earth Elemental damage bonus (Elemental Warding capstone), percent [fixed].
     constexpr int32 ECHO_DURATION_MS = 30000; // Echo duration, ms, refreshed by each Echo [tune] (20 s until the 2026-10-20 Earth Shock burst ruling).
     constexpr int32 ECHO_EARTH_ELEMENTAL_GRANT = 5; // Echo granted by each Earth Elemental summon with the Booming Echoes capstone [tune].
@@ -678,6 +693,11 @@ namespace ShamanData
     constexpr int32 IHS_PLACEMENTS = 3; // Improved Healing Stream capstone: every Nth Healing Stream placement is a Healing Tide [fixed].
     constexpr int32 ILS_NO_EXPEND_CHANCE = 30; // Improved Lightning Shield capstone: chance an orb does not expend a charge, percent (Proc Chance applies) [fixed].
     constexpr int32 ILS_ORB_STONESKIN = 1; // Improved Lightning Shield: Stoneskin per orb under Rockbiter [fixed].
+    constexpr int32 ILS_SS_CLEAVE_R1 = 33; // Improved Lightning Shield rank 1: Stormstrike cleave (202449) share of the landed Stormstrike damage, percent [tune].
+    constexpr int32 ILS_SS_CLEAVE_R2 = 66; // Improved Lightning Shield rank 2: Stormstrike cleave share, percent [tune].
+    constexpr int32 ILS_SS_CLEAVE_R3 = 100; // Improved Lightning Shield rank 3: Stormstrike cleave share, percent [tune].
+    constexpr float ILS_SS_CLEAVE_RADIUS_YD = 8.0f; // Improved Lightning Shield: Stormstrike cleave radius around the target, yd [fixed].
+    constexpr int32 ILS_SS_CLEAVE_TARGETS = 4; // Improved Lightning Shield: enemies the Stormstrike cleave strikes besides the target [fixed].
     constexpr int32 IWS_CAPSTONE_MANA_PCT = 1; // Improved Water Shield capstone: percent of maximum mana per direct-heal critical strike [fixed].
     constexpr int32 KINDLING_CDR_MS = 3000; // Kindling capstone: real-time cooldown reduction of the Undulating Currents Totem, ms [fixed].
     constexpr int32 KINDLING_CHANCE = 15; // Kindling capstone: chance a Chain Heal cast cuts the Undulating Currents Totem cooldown, percent (Proc Chance applies) [fixed].
@@ -712,6 +732,7 @@ namespace ShamanData
     constexpr float RIP_CURRENT_RADIUS_YD = 20.0f; // Rip Current: second-ally search radius around the primary target, yd [fixed].
     constexpr int32 RISING_FLAMES_PCT_PER_STACK = 10; // Rising Flames capstone Fire Nova damage per stack, percent [fixed].
     constexpr int32 RISING_FLAMES_TICK_MS = 2000; // Rising Flames capstone stack period, ms [fixed].
+    constexpr int32 ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT = 10; // Rockbiter with any Spirit Guard rank: damage dealt bonus, percent (Rockbiter 8017 effect 0, aura 79, set by spell_sha_rockbiter_damage; 0 without Spirit Guard) [tune].
     constexpr int32 ROCK_SPIRIT_STONESKIN_PER_HIT = 1; // Rock Spirit: Stoneskin the shaman gains per Rock Spirit hit [fixed].
     constexpr int32 ROCK_TAUNT_MS = 3000; // Rock Spirit: taunt duration, ms [tune]; also 202410's duration.
     constexpr float ROCK_TAUNT_RADIUS_YD = 10.0f; // Rock Spirit: taunt radius on summon, yd [tune]; also 202410's radius.
@@ -729,6 +750,11 @@ namespace ShamanData
     constexpr float SS_CLEAVE_RADIUS_YD = 8.0f; // Stormstrike cleave: radius around the target, yd [tune].
     constexpr int32 SS_STATIC_SHOCK_CAP = 9; // Static Shock capstone: Lightning Shield charge cap (3 + the talent's 6) [fixed].
     constexpr int32 SS_STATIC_SHOCK_CHARGES = 3; // Static Shock capstone: Lightning Shield charges Stormstrike adds [fixed].
+    constexpr int32 STATIC_SHOCK_ARC_PCT = 55; // Static Shock under Rockbiter: an orb arc (202445) deals this percent of the orb 26364's potency (the arc's own row) [tune].
+    constexpr float STATIC_SHOCK_ARC_RADIUS_YD = 8.0f; // Static Shock under Rockbiter: an orb arcs to enemies attacking the shaman within this radius of the orb's target, yd [fixed].
+    constexpr int32 STATIC_SHOCK_ORB_DAMAGE_R1 = 20; // Static Shock rank 1 under Rockbiter: Lightning Shield orb damage bonus (202448 SPELLMOD_DAMAGE on d0 b10), percent [tune].
+    constexpr int32 STATIC_SHOCK_ORB_DAMAGE_R2 = 40; // Static Shock rank 2 under Rockbiter: Lightning Shield orb damage bonus, percent [tune].
+    constexpr int32 STATIC_SHOCK_ORB_DAMAGE_R3 = 55; // Static Shock rank 3 under Rockbiter: Lightning Shield orb damage bonus, percent [tune].
     constexpr int32 STONESKIN_CHAIN_LIGHTNING = 1; // Stoneskin stacks Chain Lightning grants per target hit [tune].
     constexpr int32 STONESKIN_EARTH_SHOCK = 15; // Stoneskin stacks Earth Shock grants, once per cast [tune].
     constexpr int32 STONESKIN_LAVA_LASH = 5; // Stoneskin stacks Lava Lash grants [tune].
@@ -739,6 +765,10 @@ namespace ShamanData
     constexpr int32 TF_ECHO_DELAY_MS = 1000; // Tidal Force: delay of the Healing Wave echo, ms [fixed].
     constexpr int32 TF_ECHO_PCT = 30; // Tidal Force: Healing Wave echo, percent of the amount healed [fixed].
     constexpr int32 TF_STACK_MAX = 3; // Tidal Force: Lesser Healing Wave stacks on the ally [fixed]; also the CumulativeAura cap of 202673.
+    constexpr int32 THUNDERING_SURGE_MW_STACKS = 5; // Thundering Strikes: Maelstrom Weapon stacks a Chain Lightning cast needs for the surge [fixed].
+    constexpr int32 THUNDERING_SURGE_R1 = 40; // Thundering Strikes rank 1: damage bonus of a 5-stack Maelstrom Weapon Chain Lightning under Flametongue / Frostbrand / Windfury, percent [tune].
+    constexpr int32 THUNDERING_SURGE_R2 = 80; // Thundering Strikes rank 2: the Chain Lightning surge, percent [tune].
+    constexpr int32 THUNDERING_SURGE_R3 = 125; // Thundering Strikes rank 3: the Chain Lightning surge, percent [tune].
     constexpr int32 TIDAL_FOCUS_CLEANSE_COUNT = 2; // Tidal Focus capstone: disease and poison effects removed per party member, each [fixed].
     constexpr float TIDAL_FOCUS_CLEANSE_RADIUS_YD = 40.0f; // Tidal Focus capstone: party search radius around the placed Cleansing Totem, yd [fixed].
     constexpr int32 TIDAL_WAVES_DURATION_MS = 15000; // Tidal Waves: duration, refreshed by each grant, ms [tune] (stock).

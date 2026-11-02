@@ -4291,7 +4291,7 @@ class spell_mage_arcane_overload : public SpellScript
     }
 
     // "...for damage equal to the mana spent plus a spell power coefficient. Deals reduced damage
-    // beyond 5 targets." Placeholder coefficient (0.5) and falloff shape (-10%/target past the
+    // beyond 5 targets." Placeholder coefficient (0.5, now data: see below) and falloff shape (-10%/target past the
     // 5th, floor 50%) - same "ship reasonable value, flag for playtest" precedent as Arcane
     // Barrage's base damage and Incanter's Absorption's shield size. Damage is dealt through a
     // dedicated sub-spell via CastCustomSpell so it still rolls crit and picks up Versatility like
@@ -4304,8 +4304,18 @@ class spell_mage_arcane_overload : public SpellScript
         if (!target)
             return;
 
+        // The two shares come from the damage spell's own data (user ruling 2026-10-31, DPS balance pass 1031):
+        // 200092 effect 2 (EFFECT_1) = percent of the mana spent, effect 3 (EFFECT_2) = spell power coefficient in
+        // percent. A missing SpellInfo, or a row without those two DUMMY effects (old data), keeps the pre-balance
+        // 100% / 50%.
+        SpellInfo const* overloadInfo = sSpellMgr->GetSpellInfo(SPELL_MAGE_ARCANE_OVERLOAD_DAMAGE);
+        bool const hasShares = overloadInfo && overloadInfo->Effects[EFFECT_1].Effect == SPELL_EFFECT_DUMMY &&
+            overloadInfo->Effects[EFFECT_2].Effect == SPELL_EFFECT_DUMMY;
+        float const manaPct = hasShares ? float(overloadInfo->Effects[EFFECT_1].CalcValue()) : 100.0f;
+        float const spellPowerPct = hasShares ? float(overloadInfo->Effects[EFFECT_2].CalcValue()) : 50.0f;
+
         int32 spellPower = caster->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_ARCANE);
-        int32 damage = _manaSpent + int32(spellPower * 0.5f);
+        int32 damage = int32(float(_manaSpent) * manaPct / 100.0f) + int32(float(spellPower) * spellPowerPct / 100.0f);
 
         if (_targetIndex >= 5)
             damage = int32(damage * std::max(0.5f, 1.0f - 0.1f * float(_targetIndex - 4)));

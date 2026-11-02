@@ -472,9 +472,26 @@ class Spell:
                 del d["_potency"]["owner_scaling"]  # keep an unset spell's stash exactly what it was
 
             if effect.weapon_potency is not None and not effect.sp_potency:
-                continue  # pure weapon percent: "no correction row", no DBC/spell_bonus_data
-                          # coefficient either - a weapon_potency WITH a flat sp_potency bonus falls
-                          # through below instead, since the flat part needs both ("Weapon attacks")
+                # Pure weapon percent: no correction and no DBC/spell_bonus_data coefficient - a
+                # weapon_potency WITH a flat sp_potency bonus falls through below instead, since the
+                # flat part needs both ("Weapon attacks"). It still gets an all-zero MARKER row
+                # (potency audit S2, 2026-11-01): SpellPotency::HasRow / IsDeclared is how the core
+                # tells a potency-declared strike from a stock one (Rune Strike's 0.15 x AP gate),
+                # and a zero row is a no-op in SpellPotency::Apply (no correction, no roll, cp 0).
+                self.potency_correction_rows.append({
+                    "id": f"{self.id}:{i}",
+                    "spell_id": self.id,
+                    "effect_index": i,
+                    "correction_per_level": 0.0,
+                    "breakpoint_level": 0,
+                    "variance_pct": 0.0,
+                    "cp_line": 0.0,
+                    "cp_correction_per_level": 0.0,
+                    "cp_ap": 0.0,
+                    "comment": f"weapon potency {resolved.total_potency:g} (marker, no correction)",
+                    "_weapon_marker": True,
+                })
+                continue
 
             raw_overrides[f"EffectBonusMultiplier_{index}"] = resolved.sp_coefficient
             if is_periodic_like and self.duration_ms and pe.t_ms:

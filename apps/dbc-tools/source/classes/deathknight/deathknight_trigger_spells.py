@@ -15,6 +15,13 @@ from .deathknight_blood import bloody_strikes_tooltip_1250, improved_death_strik
 from .deathknight_frost_b import avalanche_203321
 from .deathknight_unholy_b import on_a_pale_horse_damage_203477
 
+# Death and Decay's per-tick potency, ONE number for the whole spell (user rule 2026-11-01: every damage number and its
+# AP scaling comes from potency; potency audit fix F9). 43265's effect 0 (deathknight_spells.py, the PERSISTENT_AREA_AURA
+# carrier) reads it for the tick's base points, which spell_dk.cpp passes into the 52212 tick below as BASE_POINT0, and
+# 52212's attack-power coefficient reads it too, so the two can never drift apart. 23.5 at the 1 s tick reproduces the
+# round-T1 (+50%) level-60 tick at 1,000 AP (about 110) with the base and the AP term moved onto the potency ratio.
+DEATH_AND_DECAY_TICK_POTENCY = 39.95  # 23.5 -> 39.95 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Death and Decay +70%)
+
 # =====================================================================================================================
 # S2a (Frost): the talent-rank helper, the tooltip_vars entries 1254 / 1255 and Avalanche's potency text
 # =====================================================================================================================
@@ -89,6 +96,10 @@ heart_plague_strike_tooltip_1254 = tooltip_vars(
     heart=product('bs_heart', 'gravefrost'),
     outbreak=talent_mult([49013, 55236, 55237], effect=1),
     plague=product('gravefrost', 'outbreak'),
+    # Plague Strike's flat (eff0, potency) is scaled by its own weapon percent (eff1, $m2) before it lands, so the
+    # tooltip's flat is {pot1*plagueflat} (2026-11-01, potency audit review S1: the old ${$m1*$m2/100*...} text read
+    # the converted eff0 BasePoints, which no longer scale with level).
+    plagueflat=product('plague', '$m2/100'),
 )
 # 1255 Icy Touch: Improved Icy Touch (49175 / 50031 / 51456 eff0 DUMMY +5/10/15%).
 icy_touch_tooltip_1255 = tooltip_vars(
@@ -110,8 +121,8 @@ plague_strike_45462 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=121, base_points=9, points_per_level=2.3899, implicit_target_a=6),
-        Effect(type=31, weapon_potency=49, implicit_target_a=6),
+        Effect(type=121, sp_potency=56.4, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),
+        Effect(type=31, weapon_potency=54, implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=6, trigger_spell=55078),
     ],
     spell_icon_id=2719,
@@ -133,9 +144,15 @@ plague_strike_45462 = spell(
         'eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=49 (same off-by-one fix as '
         'Mangle/Swipe/Shred - base_points=49 was dealing 50% live). The flat eff1 '
         '(NORMALIZED_WEAPON_DMG) is left hand-set, same reasoning as the Feral pass\'s Mangle/'
-        'Swipe/Shred: far larger than weapon_potency\'s WEAPON_FLAT_BONUS_MAX=10 budget.'
+        'Swipe/Shred: far larger than weapon_potency\'s WEAPON_FLAT_BONUS_MAX=10 budget. '
+        'Flat eff0 (bp 9, 2.3899 per level = 151 at 60) -> sp_potency 56.4 (direct, T 1500, avg 150.9 at 60, the same '
+        'C(L) curve the re-anchor used; it sits in its own effect, so the 10-potency cap of a flat riding on the weapon '
+        'effect does not apply); it still comes first, so the 49% weapon percent still scales it (2026-11-01, potency '
+        'audit fix F14). The off-hand copy 66216 keeps its hand-set flat (37 at 60), which already follows this flat at '
+        '0.245 x. '
+        'weapon_potency 49 -> 54 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Plague Strike +10%; 49 x 1.1 = 53.9 rounded to the whole number 54, so +10.2%; the flat eff0 sits before the percent effect and is scaled by it, so it follows without an edit; the off-hand copy 66216 follows).'
     ),
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals ${$m2*$<plague>}% weapon damage plus ${$m1*$m2/100*$<plague>} and infects the target with Blood Plague, a disease dealing Shadow damage over time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 221, 'SpellClassMask_1': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 11624, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals ${$m2*$<plague>}% weapon damage plus {pot1*plagueflat} and infects the target with Blood Plague, a disease dealing Shadow damage over time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 221, 'SpellClassMask_1': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 11624, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -248,10 +265,16 @@ blood_boil_48721 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=39.4, potency_kind='direct', implicit_target_a=18, implicit_target_b=16, radius_yards=10.0),
+        # Diseased-target bonus, percent of the whole potency hit (base + AP part): Unit::SpellDamageBonusDone's
+        # Blood Boil case reads Effects[EFFECT_1].CalcValue() and AddPct()s it. Same targets as effect 0.
+        Effect(type=EffectType.DUMMY, base_points=69, implicit_target_a=18, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=2725,
     tooltip_vars=bloody_strikes_tooltip_1250,
     notes=(
+        'Diseased-target bonus flat +95 and AP coefficient x1.5835 (Unit.cpp hard-code) -> effect 1 DUMMY 70% of the '
+        'whole hit, read by Unit.cpp (2026-11-01, potency audit fix F2). Level 60 at 1,000 AP: 467.5 -> 466.7 on a '
+        'diseased target, 274.5 unchanged on a clean one; Impurity is no longer wiped on diseased targets. '
         'RETUNE 2026-10-25 (re-anchor): ap_potency 92.0 -> 39.4 = 105.5 average at 60 (stock rank 1 89-107 at 58 and '
         'rank 2 116-140 at 66, interpolated at 60: 105.5 / C(60) 2.675). 92.0 was the base-implied potency of the '
         'bootstrap value 246 at 60 (slope kept from the new learn level 24); the AP coefficient follows potency '
@@ -266,7 +289,7 @@ blood_boil_48721 = spell(
         'was 14.0, the base-damage-implied 92.0 wins per the user-reviewed proposal). DieSides '
         '19 replaced by the system-standard +-5% roll.'
     ),
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Boils the blood of all enemies within $a1 yards, dealing {pot1*boil} Shadow damage.  Deals additional damage to targets infected with Blood Plague or Frost Fever.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 22, 'ImplicitTargetA_3': 22, 'ImplicitTargetB_2': 15, 'ImplicitTargetB_3': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 523, 'SpellClassMask_1': 262144, 'SpellClassSet': 15, 'SpellLevel': 24, 'SpellVisualID_1': 11117, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Boils the blood of all enemies within $a1 yards, dealing {pot1*boil} Shadow damage.  Deals $s2% additional damage to targets infected with Blood Plague or Frost Fever.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 22, 'ImplicitTargetB_3': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 523, 'SpellClassMask_1': 262144, 'SpellClassSet': 15, 'SpellLevel': 24, 'SpellVisualID_1': 11117, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -351,7 +374,7 @@ improved_corpse_explosion_49601 = spell(
 # Effects[EFFECT_0].DamageMultiplier (EffectChainAmplitude_1 5.0 = 5% max HP per disease); the new script ignores it and it
 # is back at the default 1.0. Off-hand 66188 is untouched (no heal); the heal 45470 is declared below.
 DEATH_STRIKE_WINDOW_SEC = 5
-DEATH_STRIKE_MIN_HEAL_PERCENT = 5
+DEATH_STRIKE_MIN_HEAL_PERCENT = 10  # 5 -> 8 (round T1 +50%) -> 10 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Death Strike heal 40% / min 10% max HP)
 death_strike_window_ms = const('DEATH_STRIKE_WINDOW_MS', DEATH_STRIKE_WINDOW_SEC * 1000,
                                doc='Death Strike damage record window (shared doc: the last 5 sec)')
 death_strike_min_heal_pct = const('DEATH_STRIKE_MIN_HEAL_PCT', DEATH_STRIKE_MIN_HEAL_PERCENT,
@@ -371,10 +394,10 @@ death_strike_49998 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=85, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=128, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=15, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
-        Effect(type=EffectType.DUMMY, base_points=24, implicit_target_a=6),
+        Effect(type=EffectType.DUMMY, base_points=29, implicit_target_a=6),
     ],
     spell_icon_id=2751,
     tooltip_vars=improved_death_strike_tooltip_1251,
@@ -386,7 +409,13 @@ death_strike_49998 = spell(
         'CalcValue 25 = the heal % read by spell_dk_death_strike_rework (the stock -49998 spell_dk_death_strike is '
         'unbound). EffectChainAmplitude_1 5.0 (the stock per-disease 5% max HP) back to 1.0. AttributesEx 0x08000200 '
         'kept (0x400 would be NO_THREAT, P0 M1), AttributesEx3 1024 kept. Stock was flat eff0 bp 111 ppl 7.708 + '
-        'weapon_potency 74 + DUMMY 405/37.667.'
+        'weapon_potency 74 + DUMMY 405/37.667. '
+        'weapon_potency 85 -> 128 (127.5 rounded up, weapon potency must be whole) and sp_potency 10 -> 15 (2026-11-01, DPS balance pass 1031 round T1, user ruling: '
+        'Death Strike damage +50%). DUMMY (the heal percent of damage taken) base_points 24 -> 37, CalcValue 25 -> 38 '
+        '(2026-11-01, DPS balance pass 1031 round T1, user ruling: Death Strike healing +50%, 37.5 rounded up; the minimum-heal floor '
+        'DEATH_STRIKE_MIN_HEAL_PCT 5 -> 8 in step). Then base_points 37 -> 39 (CalcValue 38 -> 40) and DEATH_STRIKE_MIN_HEAL_PCT '
+        '8 -> 10 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Death Strike heals 40% of damage taken, minimum 10% of max health). '
+        'Then base_points 39 -> 29 (CalcValue 40 -> 30) (2026-11-01, DPS balance pass 1031 round T2, user ruling: Death Strike heals 30% of damage taken, minimum 10% kept).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': f'Focuses dark power into a strike that deals ${{$s1*$<dsdmg>}}% weapon damage plus {{pot2.avg*dsdmg}} and heals you for ${{$s3*$<dsheal>}}% of all damage you have taken in the last {DEATH_STRIKE_WINDOW_SEC} sec, minimum {DEATH_STRIKE_MIN_HEAL_PERCENT}% of your maximum health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'RuneCostID': 0, 'SpellClassMask_1': m.DEATH_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellPriority': 50, 'SpellVisualID_1': 11831, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -612,7 +641,8 @@ will_of_the_necropolis_52284 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=1.4, potency_kind='absorb', implicit_target_a=1, apply_aura=69, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, points_per_level=0.0, implicit_target_a=1, apply_aura=69, misc_value=127,
+               potency_excluded='percent of incoming damage (5%, ranks 2/3 are stock 52285/52286 at 10/15%); spell_dk_will_of_the_necropolis reads it with CalculatePct'),
     ],
     spell_icon_id=857,
     notes=(
@@ -622,7 +652,9 @@ will_of_the_necropolis_52284 = spell(
         'P7 Death Knight pass, 2026-10-01): converted eff1 (SCHOOL_ABSORB) to sp_potency=1.4 '
         '(deathknight-potency-report.md\'s base-damage-implied default; old '
         'EffectBonusMultiplier was 0, no mismatch). Added explicit SpellLevel=0 to '
-        'raw_overrides, required by the potency generator (previously implicit/absent).'
+        'raw_overrides, required by the potency generator (previously implicit/absent). '
+        'Absorb % was sp_potency 1.4 (16% at level 60, above the 10/15% of ranks 2/3), now base_points 4 '
+        '(flat 5%), potency_excluded (2026-11-01, potency audit fix F10).'
     ),
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'TEST', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 921, 'SpellClassSet': 15, 'SpellLevel': 0},
 )
@@ -724,12 +756,13 @@ death_strike_66188 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=85, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=128, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=7.5, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2751,
     notes=(
+        'weapon_potency 85 -> 128 and sp_potency 5 -> 7.5 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Death Strike +50%, the Threat of Thassarian off-hand copy follows the main hand). '
         'death-knight-rework S2a (U16 / U17, brief D1): Threat of Thassarian off-hand copy of Death Strike 49998. eff0 '
         'WEAPON_PERCENT_DAMAGE weapon_potency 85 first, eff1 NORMALIZED_WEAPON_DMG sp_potency 5 (HALF of the main hand\'s 10: '
         'the physical off-hand path doubles the flat), direct T 1500; EFFECT_2 empty (the stock max-health heal DUMMY 1309 and the '
@@ -782,8 +815,8 @@ obliterate_66198 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=118, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=130, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5.5, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2639,
@@ -795,7 +828,8 @@ obliterate_66198 = spell(
         'physical off-hand path doubles the flat), direct T 1500; EFFECT_2 empty (the stock per-disease DUMMY 24 = +12.5% per '
         'disease is gone: Obliterate never reads or consumes diseases). A Killing Machine cast switches the copy to Frost through a '
         'flag the main hand sets (spell_dk_frost_offhand), and the helper adds the missing half flat back. SpellLevel 20 = the '
-        'main hand\'s. d1 b17 is kept: the Killing Machine crit mod (203320) reaches the copy.'
+        'main hand\'s. d1 b17 is kept: the Killing Machine crit mod (203320) reaches the copy. '
+        'weapon_potency 118 -> 130 and sp_potency 5 -> 5.5 (2026-11-01, DPS balance pass 1031, user ruling: Obliterate +10%; mirrors 203054).'
     ),
     raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A brutal instant attack with your off-hand weapon that deals $s1% weapon damage plus {pot2.avg}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RuneCostID': 2330, 'SpellClassMask_2': 131072, 'SpellClassSet': 15, 'SpellLevel': 20, 'SpellVisualID_1': 11613, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -854,8 +888,8 @@ heart_strike_55050 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=60, implicit_target_a=6, chain_targets=2),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=90, implicit_target_a=6, chain_targets=2),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=15, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6, chain_targets=2),
     ],
     spell_icon_id=3145,
@@ -868,7 +902,9 @@ heart_strike_55050 = spell(
         'first, flat second: U9), both chain_targets 2 with EffectChainAmplitude 0.5 (the second enemy takes half). '
         'EFFECT_2 builds all zero: the stock third-slot twins (EffectBasePoints_3 9, EffectDieSides_3 1, '
         'ImplicitTargetA_3 25, EffectChainAmplitude_3 1.0) that fed the core\'s per-disease bonus are removed on '
-        'purpose. Stock was flat eff0 bp 249 ppl 19.44 + weapon_potency 49 and the talent-learned SpellLevel 55.'
+        'purpose. Stock was flat eff0 bp 249 ppl 19.44 + weapon_potency 49 and the talent-learned SpellLevel 55. '
+        'weapon_potency 60 -> 90 and sp_potency 10 -> 15 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Heart Strike +50%; both rows, the '
+        'second-target hit rides the same effects at the 0.5 chain amplitude).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 4096, 'AttributesEx3': 1024, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the target and the nearest other enemy, dealing ${$s1*$<heart>}% weapon damage plus {pot2.avg*heart} to the target and half as much to the second enemy.', 'EffectChainAmplitude_1': 0.5, 'EffectChainAmplitude_2': 0.5, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 1142, 'SpellClassMask_1': m.HEART_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellVisualID_1': 11148, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -896,7 +932,7 @@ scourge_strike_55090 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=70, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=77, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=11, implicit_target_a=6),
     ],
@@ -914,7 +950,8 @@ scourge_strike_55090 = spell(
         '(Subversion, the GCD-haste candidate 201565, Outbreak, Vicious Strikes, Dirge, Desecration, Desolation read it); '
         'AttributesEx3 0x400, CumulativeAura 1, the 1.5 s GCD and spell_threat 55090 kept; the stock SkillLineAbility 19202 '
         '(superseded by 55265) is harmless. The tooltip reads Outbreak through tooltip_vars 1280 ($outbreak). Rebinds '
-        '-55090 to spell_dk_scourge_strike_rework (end of this file).'
+        '-55090 to spell_dk_scourge_strike_rework (end of this file). '
+        'weapon_potency 70 -> 77 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Scourge Strike +10%; the Shadow part is a percent of the dealt damage and follows).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An unholy strike that deals ${$s1*$<outbreak>}% weapon damage as Physical damage, plus $s3% of that damage as Shadow damage for each of your diseases on the target. Bursts half the Festering Wounds on the target, rounded down, minimum 2. Each rune it spends has a 33% chance to return as a Death Rune.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 2602, 'SpellClassMask_2': m.SCOURGE_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 15, 'SpellPriority': 50, 'SpellVisualID_1': 11832, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1093,8 +1130,8 @@ vendetta_49015 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3008,
-    notes='S1a (Blood doc "Vendetta"): kill heal unchanged (E1 DUMMY bp 1 / 3 / 5 = 2 / 4 / 6%). The strike heal (5 / 10 / 15% of the damage, VENDETTA_STRIKE_HEAL_PCT_RANK1/2/3) is a const, not an effect: E2 is free. The type-2 link to the hidden proc passive 203153 is deathknight_blood_b.py\'s. Stale E2 residue (EffectBasePoints_2 -11, EffectDieSides_2, ImplicitTargetA_2/3) cleared.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals you for up to 2% of your maximum health whenever you kill a target that yields experience or honor. In addition, your Heart Strike and Marrowrend heal you for 5% of the damage they deal.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'RuneCostID': 586, 'SpellClassMask_1': 65536, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 7578},
+    notes='S1a (Blood doc "Vendetta"): kill heal unchanged (E1 DUMMY bp 1 / 3 / 5 = 2 / 4 / 6%). The strike heal (8 / 15 / 23% of the damage, VENDETTA_STRIKE_HEAL_PCT_RANK1/2/3; was 5 / 10 / 15, x1.5 rounded to whole percents, 2026-11-01, DPS balance pass 1031 round T1, user ruling: the Heart Strike leech +50%) is a const, not an effect: E2 is free. The type-2 link to the hidden proc passive 203153 is deathknight_blood_b.py\'s. Stale E2 residue (EffectBasePoints_2 -11, EffectDieSides_2, ImplicitTargetA_2/3) cleared.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals you for up to 2% of your maximum health whenever you kill a target that yields experience or honor. In addition, your Heart Strike and Marrowrend heal you for 8% of the damage they deal.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'RuneCostID': 586, 'SpellClassMask_1': 65536, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 7578},
 )
 
 
@@ -2800,8 +2837,8 @@ vendetta_50154 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3008,
-    notes='S1a (Blood doc "Vendetta"): kill heal unchanged (E1 DUMMY bp 1 / 3 / 5 = 2 / 4 / 6%). The strike heal (5 / 10 / 15% of the damage, VENDETTA_STRIKE_HEAL_PCT_RANK1/2/3) is a const, not an effect: E2 is free. The type-2 link to the hidden proc passive 203153 is deathknight_blood_b.py\'s.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals you for up to 4% of your maximum health whenever you kill a target that yields experience or honor. In addition, your Heart Strike and Marrowrend heal you for 10% of the damage they deal.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'RuneCostID': 803, 'SpellClassMask_1': 65536, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 7578},
+    notes='S1a (Blood doc "Vendetta"): kill heal unchanged (E1 DUMMY bp 1 / 3 / 5 = 2 / 4 / 6%). The strike heal (8 / 15 / 23% of the damage, VENDETTA_STRIKE_HEAL_PCT_RANK1/2/3; was 5 / 10 / 15, x1.5 rounded to whole percents, 2026-11-01, DPS balance pass 1031 round T1, user ruling: the Heart Strike leech +50%) is a const, not an effect: E2 is free. The type-2 link to the hidden proc passive 203153 is deathknight_blood_b.py\'s.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals you for up to 4% of your maximum health whenever you kill a target that yields experience or honor. In addition, your Heart Strike and Marrowrend heal you for 15% of the damage they deal.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'RuneCostID': 803, 'SpellClassMask_1': 65536, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 7578},
 )
 
 
@@ -3711,8 +3748,8 @@ vendetta_55136 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3008,
-    notes='S1a (Blood doc "Vendetta"): kill heal unchanged (E1 DUMMY bp 1 / 3 / 5 = 2 / 4 / 6%). The strike heal (5 / 10 / 15% of the damage, VENDETTA_STRIKE_HEAL_PCT_RANK1/2/3) is a const, not an effect: E2 is free. The type-2 link to the hidden proc passive 203153 is deathknight_blood_b.py\'s.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals you for up to 6% of your maximum health whenever you kill a target that yields experience or honor. In addition, your Heart Strike and Marrowrend heal you for 15% of the damage they deal.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'RuneCostID': 1147, 'SpellClassMask_1': 65536, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 7578},
+    notes='S1a (Blood doc "Vendetta"): kill heal unchanged (E1 DUMMY bp 1 / 3 / 5 = 2 / 4 / 6%). The strike heal (8 / 15 / 23% of the damage, VENDETTA_STRIKE_HEAL_PCT_RANK1/2/3; was 5 / 10 / 15, x1.5 rounded to whole percents, 2026-11-01, DPS balance pass 1031 round T1, user ruling: the Heart Strike leech +50%) is a const, not an effect: E2 is free. The type-2 link to the hidden proc passive 203153 is deathknight_blood_b.py\'s.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals you for up to 6% of your maximum health whenever you kill a target that yields experience or honor. In addition, your Heart Strike and Marrowrend heal you for 23% of the damage they deal.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'RuneCostID': 1147, 'SpellClassMask_1': 65536, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 7578},
 )
 
 
@@ -4906,3 +4943,33 @@ scripted_by(crypt_fever_50508, 'spell_dk_crypt_fever_amount')           # DoEffe
 scripted_by(ebon_plague_51726, 'spell_dk_crypt_fever_amount')           # DoEffectCalcAmount on eff1: the caster's Ebon Plaguebringer rank
 unbind_script(51963, 'spell_pet_dk_gargoyle_strike')
 scripted_by(gargoyle_strike_51963, 'spell_dk_gargoyle_strike_rework')
+
+
+death_and_decay_tick_52212 = spell(
+    id=52212,
+    name='Death and Decay',
+    school=School.SHADOW,
+    attributes=75497472,
+    power_type=PowerType.RUNE,
+    range_yards=50000.0,
+    effects=[
+        # base_potency=0.0: this effect carries NO base damage of its own - the amount is the base points 43265's aura
+        # passes in (spell_dk.cpp CastCustomSpell), already level-scaled there from DEATH_AND_DECAY_TICK_POTENCY
+        # (the potency correction is skipped for a caller-supplied value, so it is never scaled twice). A generated
+        # base would be added on top of it, so base_potency=0.0 keeps the stock-shaped BasePoints -1 / DieSides 1 /
+        # RealPointsPerLevel 0 and ap_potency only generates the attack-power coefficient: 23.5 / 100 * (1.0 s / 3.5)
+        # = 0.0671 in spell_bonus_data.ap_bonus. time_basis_ms=1000 is the carrier's tick interval (cast_time_ms 0
+        # would otherwise default T to 1.5 s).
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=DEATH_AND_DECAY_TICK_POTENCY, base_potency=0.0, potency_kind='direct', time_basis_ms=1000, implicit_target_a=25),
+    ],
+    spell_icon_id=118,
+    notes="Death and Decay's per-tick damage helper (stock row 52212), brought under the DSL 2026-11-01 (potency audit "
+          "fix F9; row moved out of npc.csv). The damage is the base points 43265's aura passes in plus the "
+          "attack-power term. Before: base from 43265's hand base_points 8 / points_per_level 0.5667 and the stock "
+          "spell_bonus_data ap 0.04805 (T1 round +50% on both: 12 / 0.85 and ap 0.0721 by a hand "
+          "bonus_coefficients(52212)); now the base is 43265 effect 0 base_potency=DEATH_AND_DECAY_TICK_POTENCY and the "
+          "coefficient is ap_potency=DEATH_AND_DECAY_TICK_POTENCY here, the same number "
+          "(23.5): ap_bonus 0.0721 -> 0.0671 (2026-11-01, potency audit fix F9). Shared potency 23.5 -> 39.95 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Death and Decay +70%; carrier 43265 and this tick share the constant)",
+    raw_overrides={'AttributesEx': 136, 'AttributesEx3': 1107296256, 'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Diseased.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Corrupts the ground targeted by the Death Knight, causing Shadow damage every sec that targets remain in the area for $43265d.  This ability produces a high amount of threat.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 901, 'SpellClassMask_3': 8, 'SpellClassSet': 15, 'SpellLevel': 30, 'SpellVisualID_1': 11452},
+)
+

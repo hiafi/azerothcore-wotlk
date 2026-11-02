@@ -727,7 +727,7 @@ breath_of_sindragosa_tick_203307 = spell(
     id=203307, name='Breath of Sindragosa', school=School.FROST, attributes=0, cast_time_ms=0, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF, radius_yards=12.0, duration_ms=0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=92.0, potency_kind='direct', time_basis_ms=1000,
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=101.062, potency_kind='direct', time_basis_ms=1000,
                implicit_target_a=_TARGET_UNIT_CONE_ENEMY_104, radius_yards=12.0),
     ],
     spell_icon_id=_ICON_BREATH_OF_SINDRAGOSA,
@@ -737,7 +737,10 @@ breath_of_sindragosa_tick_203307 = spell(
         'arc) '
         'radius 12 yd, self range, Frost, magic class, visual 14711. d2 b10 (m.BREATH) the only family bit. '
         'AttributesEx3 SUPPRESS_CASTER_PROCS. spell_dk_breath_of_sindragosa_tick: primary full, secondary '
-        'BREATH_SECONDARY_PCT, multiplier, AfterHit stores the damage for Final Roar. SpellLevel 60 = 9 + 5 x 10 + 1.'
+        'BREATH_SECONDARY_PCT, multiplier, AfterHit stores the damage for Final Roar. SpellLevel 60 = 9 + 5 x 10 + 1. '
+        'ap_potency 92 -> 59.8 (2026-11-01, DPS balance pass 1031, user ruling: Breath of Sindragosa -35%). '
+        'ap_potency 59.8 -> 77.74 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Breath of Sindragosa +30%). '
+        'ap_potency 77.74 -> 101.062 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Breath of Sindragosa +30%).'
     ),
     raw_overrides=_raw(
         'Deals {pot1.avg} Frost damage to enemies in a cone in front of you.', level=60, magic=True,

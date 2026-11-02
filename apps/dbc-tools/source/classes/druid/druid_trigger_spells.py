@@ -69,10 +69,10 @@ hurricane_42231 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=102.8, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=51.4, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=220,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=102.8 (potency-report default, base/coef already agreed).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=102.8 (potency-report default, base/coef already agreed). sp_potency 102.8 -> 51.4 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Hurricane -50%).',
     raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 1073741824, 'AttributesEx5': 1024, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a violent storm in the target area causing {pot1} Nature damage to enemies every $16914t3 sec, and increasing the time between attacks of enemies by $16914s2%.  Lasts $16914d.  Druid must channel to maintain the spell.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 135, 'SpellClassMask_1': 4194304, 'SpellClassSet': 7, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 9491, 'StartRecoveryCategory': 133},
 )
 
@@ -2876,8 +2876,8 @@ survival_of_the_fittest_33853 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER_PCT),
     ],
     spell_icon_id=2253,
-    notes='druid-rework FERAL §7 (5,2): rank 1/3 - eff0 all attributes 1/2/3%; eff1 crit-taken aura -> MOD_ATTACK_POWER_PCT 3/6/10% (spell_dru_survival_of_the_fittest zeroes it unless Bestial Fury); eff2 (stock armor DUMMY) removed; ShapeshiftMask 0 -> both bears; icon 961 -> 2253 (Ability_Druid_PrimalTenacity, freed by the Primal Tenacity cut) so the stock icon-961 aura-137 block goes inert (CORE-AUDIT row 32).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While you are in Bear Form or Dire Bear Form, increases all attributes by $s1%. While Bestial Fury is active, increases your attack power by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'ShapeshiftMask': SS_ANY_BEAR},
+    notes='druid-rework FERAL §7 (5,2): rank 1/3 - eff0 all attributes 1/2/3%; eff1 crit-taken aura -> MOD_ATTACK_POWER_PCT 3/6/10% (spell_dru_survival_of_the_fittest zeroes it outside the bear forms; Bestial Fury only until 2026-11-01, then both bear forms: DPS balance pass 1031 round T3, user ruling: Survival of the Fittest AP for Dire Bear too); eff2 (stock armor DUMMY) removed; ShapeshiftMask 0 -> both bears; icon 961 -> 2253 (Ability_Druid_PrimalTenacity, freed by the Primal Tenacity cut) so the stock icon-961 aura-137 block goes inert (CORE-AUDIT row 32).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While you are in Bear Form or Dire Bear Form, increases all attributes by $s1% and your attack power by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'ShapeshiftMask': SS_ANY_BEAR},
 )
 
 
@@ -2897,8 +2897,8 @@ survival_of_the_fittest_33855 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER_PCT),
     ],
     spell_icon_id=2253,
-    notes='druid-rework FERAL §7 (5,2): rank 2/3 - eff0 all attributes 1/2/3%; eff1 crit-taken aura -> MOD_ATTACK_POWER_PCT 3/6/10% (spell_dru_survival_of_the_fittest zeroes it unless Bestial Fury); eff2 (stock armor DUMMY) removed; ShapeshiftMask 0 -> both bears; icon 961 -> 2253 (Ability_Druid_PrimalTenacity, freed by the Primal Tenacity cut) so the stock icon-961 aura-137 block goes inert (CORE-AUDIT row 32).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While you are in Bear Form or Dire Bear Form, increases all attributes by $s1%. While Bestial Fury is active, increases your attack power by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'ShapeshiftMask': SS_ANY_BEAR},
+    notes='druid-rework FERAL §7 (5,2): rank 2/3 - eff0 all attributes 1/2/3%; eff1 crit-taken aura -> MOD_ATTACK_POWER_PCT 3/6/10% (spell_dru_survival_of_the_fittest zeroes it outside the bear forms; Bestial Fury only until 2026-11-01, then both bear forms: DPS balance pass 1031 round T3, user ruling: Survival of the Fittest AP for Dire Bear too); eff2 (stock armor DUMMY) removed; ShapeshiftMask 0 -> both bears; icon 961 -> 2253 (Ability_Druid_PrimalTenacity, freed by the Primal Tenacity cut) so the stock icon-961 aura-137 block goes inert (CORE-AUDIT row 32).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While you are in Bear Form or Dire Bear Form, increases all attributes by $s1% and your attack power by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'ShapeshiftMask': SS_ANY_BEAR},
 )
 
 
@@ -2918,8 +2918,8 @@ survival_of_the_fittest_33856 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER_PCT),
     ],
     spell_icon_id=2253,
-    notes='druid-rework FERAL §7 (5,2): rank 3/3 - eff0 all attributes 1/2/3%; eff1 crit-taken aura -> MOD_ATTACK_POWER_PCT 3/6/10% (spell_dru_survival_of_the_fittest zeroes it unless Bestial Fury); eff2 (stock armor DUMMY) removed; ShapeshiftMask 0 -> both bears; icon 961 -> 2253 (Ability_Druid_PrimalTenacity, freed by the Primal Tenacity cut) so the stock icon-961 aura-137 block goes inert (CORE-AUDIT row 32).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While you are in Bear Form or Dire Bear Form, increases all attributes by $s1%. While Bestial Fury is active, increases your attack power by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'ShapeshiftMask': SS_ANY_BEAR},
+    notes='druid-rework FERAL §7 (5,2): rank 3/3 - eff0 all attributes 1/2/3%; eff1 crit-taken aura -> MOD_ATTACK_POWER_PCT 3/6/10% (spell_dru_survival_of_the_fittest zeroes it outside the bear forms; Bestial Fury only until 2026-11-01, then both bear forms: DPS balance pass 1031 round T3, user ruling: Survival of the Fittest AP for Dire Bear too); eff2 (stock armor DUMMY) removed; ShapeshiftMask 0 -> both bears; icon 961 -> 2253 (Ability_Druid_PrimalTenacity, freed by the Primal Tenacity cut) so the stock icon-961 aura-137 block goes inert (CORE-AUDIT row 32).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While you are in Bear Form or Dire Bear Form, increases all attributes by $s1% and your attack power by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'ShapeshiftMask': SS_ANY_BEAR},
 )
 
 
@@ -5165,10 +5165,10 @@ insect_swarm_200352 = spell(
     range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     duration_ms=14000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=34.8, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=17.3, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=1771,
-    notes="NEW (druid-rework BALANCE §6 row 3,1 capstone copy): clone of 5570's eff1 only (same base/ppl/coefficient), shares Insect Swarm's family bit (INSECT_SWARM), no script binding - propagation is linear only (spell_dru_swarming_rot never re-triggers off a copy). Potency system P5 (druid pass): converted to sp_potency=34.8, same as 5570 (not mismatched; potency-report base-damage default).",
+    notes="NEW (druid-rework BALANCE §6 row 3,1 capstone copy): clone of 5570's eff1 only (same base/ppl/coefficient), shares Insect Swarm's family bit (INSECT_SWARM), no script binding - propagation is linear only (spell_dru_swarming_rot never re-triggers off a copy). Potency system P5 (druid pass): converted to sp_potency=34.8, same as 5570 (not mismatched; potency-report base-damage default). sp_potency 34.8 -> 17.3 (2026-11-02, DPS balance pass 1031 round R5, user ruling: the copy must be identical to Insect Swarm 5570; it never took the 2026-10-08 Balance cuts 5570 got, so it was about 2x).",
     raw_overrides={'BaseLevel': 20, 'SpellLevel': 20, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_1': INSECT_SWARM, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The enemy target is swarmed by insects, causing {pot1.total} Nature damage over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Nature damage every $t1 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
@@ -6853,7 +6853,7 @@ fury_swipe_200429 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, base_points=309, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=310, implicit_target_a=6),
         Effect(type=EffectType.ENERGIZE, base_points=199, implicit_target_a=1, misc_value=1),
     ],
     spell_icon_id=4114,
@@ -6861,10 +6861,12 @@ fury_swipe_200429 = spell(
           "swing); eff1 +20 rage, prevented outside bear by spell_dru_fury_swipe. Physical, melee DefenseType. "
           "AttributesEx3 SPELL_ATTR3_NOT_A_PROC implements §13 Q7's default ('can crit, triggers Primal Fury and "
           "Savage Defense'): without it a proc-triggered spell can't trigger other auras. No family bit. Visual: "
-          "Swipe (Bear)'s.",
+          "Swipe (Bear)'s. Eff0 base_points 309 -> weapon_potency 310 (the same 310% weapon hit; SpellLevel 0 declared "
+          "as the potency system requires, as before) (2026-11-01, potency audit fix F14).",
     raw_overrides=_feral_raw(
         "Deals $s1% weapon damage.  In Bear Form, also generates $/10;s2 rage.",
         DefenseType=2, PreventionType=2, RangeIndex=2, AttributesEx3=_SPELL_ATTR3_NOT_A_PROC, SpellVisualID_1=189,
+        SpellLevel=0,
         EffectBonusMultiplier_1=1.0, DurationIndex=0,
     ),
 )

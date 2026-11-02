@@ -236,6 +236,7 @@ namespace DeathKnightData
     constexpr uint32 SPELL_ON_A_PALE_HORSE_51970 = 51970; // on_a_pale_horse_51970
     constexpr uint32 SPELL_ON_A_PALE_HORSE_51983 = 51983; // on_a_pale_horse_51983
     constexpr uint32 SPELL_MASTER_OF_GHOULS = 52143; // master_of_ghouls_52143
+    constexpr uint32 SPELL_DEATH_AND_DECAY_TICK = 52212; // death_and_decay_tick_52212
     constexpr uint32 SPELL_WILL_OF_THE_NECROPOLIS_52284 = 52284; // will_of_the_necropolis_52284
     constexpr uint32 SPELL_ABOMINATION_S_MIGHT = 53137; // abomination_s_might_53137
     constexpr uint32 SPELL_ABOMINATION_S_MIGHT_53138 = 53138; // abomination_s_might_53138
@@ -493,7 +494,7 @@ namespace DeathKnightData
     constexpr int32 DARK_TRANSFORMATION_CLEAVE_PCT = 50; // Dark Transformation cleave: percent of the unmitigated hit.
     constexpr int32 DEATHCHILL_DAMAGE_PCT = 20; // Deathchill direct-damage bonus percent.
     constexpr int32 DEATHS_CARESS_EXTRA_TARGETS = 2; // Additional nearby enemies Death's Caress hits besides its target [fixed].
-    constexpr int32 DEATH_STRIKE_MIN_HEAL_PCT = 5; // Death Strike minimum heal, percent of maximum health
+    constexpr int32 DEATH_STRIKE_MIN_HEAL_PCT = 10; // Death Strike minimum heal, percent of maximum health
     constexpr int32 DEATH_STRIKE_WINDOW_MS = 5000; // Death Strike damage record window (shared doc: the last 5 sec)
     constexpr int32 FESTERING_PLAGUE_PLUS1_PCT = 25; // Festering Plague: chance percent of +1 wound on Plague Strike (x Proc Chance).
     constexpr int32 FESTERING_PLAGUE_PLUS2_PCT = 5; // Festering Plague: chance percent of +2 wounds on Plague Strike (x Proc Chance).
@@ -551,9 +552,9 @@ namespace DeathKnightData
     constexpr int32 SCOURGE_STRIKE_DISEASE_PCT = 12; // Scourge Strike Shadow part: percent of the hit per own disease.
     constexpr int32 SHADOW_INFUSION_STACKS = 5; // Shadow Infusion stacks needed for Dark Transformation.
     constexpr int32 UNHOLY_BLIGHT_SHARE_PCT = 10; // Unholy Blight: percent of the Death Coil damage dealt over the DoT.
-    constexpr int32 VENDETTA_STRIKE_HEAL_PCT_RANK1 = 5; // Vendetta rank 1: percent of the Heart Strike / Marrowrend damage healed [tune].
-    constexpr int32 VENDETTA_STRIKE_HEAL_PCT_RANK2 = 10; // Vendetta rank 2: percent of the Heart Strike / Marrowrend damage healed [tune].
-    constexpr int32 VENDETTA_STRIKE_HEAL_PCT_RANK3 = 15; // Vendetta rank 3: percent of the Heart Strike / Marrowrend damage healed [tune].
+    constexpr int32 VENDETTA_STRIKE_HEAL_PCT_RANK1 = 6; // Vendetta rank 1: percent of the Heart Strike / Marrowrend damage healed [tune]. 5 -> 8 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Heart Strike leech +50%, rounded to a whole percent; int32 const). 8 -> 6 (2026-11-01, DPS balance pass 1031 round T2, user ruling: Vendetta heals 6/13/20%).
+    constexpr int32 VENDETTA_STRIKE_HEAL_PCT_RANK2 = 13; // Vendetta rank 2: percent of the Heart Strike / Marrowrend damage healed [tune]. 10 -> 15 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Heart Strike leech +50%, rounded to a whole percent; int32 const). 15 -> 13 (2026-11-01, DPS balance pass 1031 round T2, user ruling: Vendetta heals 6/13/20%).
+    constexpr int32 VENDETTA_STRIKE_HEAL_PCT_RANK3 = 20; // Vendetta rank 3: percent of the Heart Strike / Marrowrend damage healed [tune]. 15 -> 23 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Heart Strike leech +50%, rounded to a whole percent; int32 const). 23 -> 20 (2026-11-01, DPS balance pass 1031 round T2, user ruling: Vendetta heals 6/13/20%).
     constexpr int32 WOUND_BURST_MIN = 2; // Scourge Strike bursts max(this, stacks / 2) wounds, capped at the stack.
     constexpr int32 WOUND_EXPLOSION_PCT = 30; // Death explosion: percent of a wound burst per wound.
     constexpr int32 WOUND_EXPLOSION_TARGETS = 5; // Death explosion target cap.

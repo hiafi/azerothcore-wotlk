@@ -1392,7 +1392,7 @@ unbind_script(healing_touch_5185, 'spell_dru_nurturing_instinct_empower')
 # Protector of the Pack: damage reduction off in Bestial Fury
 for _rank in (protector_of_the_pack_57873, protector_of_the_pack_57876, protector_of_the_pack_57877):
     scripted_by(_rank, 'spell_dru_protector_of_the_pack')
-# Survival of the Fittest: AP % only in Bestial Fury
+# Survival of the Fittest: AP % in either bear form (Bestial Fury only until 2026-11-01)
 for _rank in (survival_of_the_fittest_33853, survival_of_the_fittest_33855, survival_of_the_fittest_33856):
     scripted_by(_rank, 'spell_dru_survival_of_the_fittest')
 # Predatory Instincts: crit damage only in Cat Form

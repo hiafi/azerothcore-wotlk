@@ -117,16 +117,19 @@ BLOODWORM_HEAL_PCT = const(
     'BLOODWORM_HEAL_PCT', 100, 'Percent of a Bloodworm\'s damage that heals its owner (stock 150) [tune].',
 )
 VENDETTA_STRIKE_HEAL_PCT_RANK1 = const(
-    'VENDETTA_STRIKE_HEAL_PCT_RANK1', 5, 'Vendetta rank 1: percent of the Heart Strike / Marrowrend damage healed '
-    '[tune].',
+    'VENDETTA_STRIKE_HEAL_PCT_RANK1', 6, 'Vendetta rank 1: percent of the Heart Strike / Marrowrend damage healed '
+    '[tune]. 5 -> 8 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Heart Strike leech +50%, rounded to a whole percent; int32 const). '
+    '8 -> 6 (2026-11-01, DPS balance pass 1031 round T2, user ruling: Vendetta heals 6/13/20%).',
 )
 VENDETTA_STRIKE_HEAL_PCT_RANK2 = const(
-    'VENDETTA_STRIKE_HEAL_PCT_RANK2', 10, 'Vendetta rank 2: percent of the Heart Strike / Marrowrend damage healed '
-    '[tune].',
+    'VENDETTA_STRIKE_HEAL_PCT_RANK2', 13, 'Vendetta rank 2: percent of the Heart Strike / Marrowrend damage healed '
+    '[tune]. 10 -> 15 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Heart Strike leech +50%, rounded to a whole percent; int32 const). '
+    '15 -> 13 (2026-11-01, DPS balance pass 1031 round T2, user ruling: Vendetta heals 6/13/20%).',
 )
 VENDETTA_STRIKE_HEAL_PCT_RANK3 = const(
-    'VENDETTA_STRIKE_HEAL_PCT_RANK3', 15, 'Vendetta rank 3: percent of the Heart Strike / Marrowrend damage healed '
-    '[tune].',
+    'VENDETTA_STRIKE_HEAL_PCT_RANK3', 20, 'Vendetta rank 3: percent of the Heart Strike / Marrowrend damage healed '
+    '[tune]. 15 -> 23 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Heart Strike leech +50%, rounded to a whole percent; int32 const). '
+    '23 -> 20 (2026-11-01, DPS balance pass 1031 round T2, user ruling: Vendetta heals 6/13/20%).',
 )
 
 
@@ -420,7 +423,7 @@ bonestorm_tick_203149 = spell(
     category_cooldown_ms=0, power_type=PowerType.MANA, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF,
     duration_ms=0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=40.0, potency_kind='direct', time_basis_ms=1000,
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=80.0, potency_kind='direct', time_basis_ms=1000,
                implicit_target_a=_TARGET_UNIT_SRC_AREA_ENEMY, radius_yards=8.0),
     ],
     spell_icon_id=2782,
@@ -429,7 +432,7 @@ bonestorm_tick_203149 = spell(
         '40 direct (time basis defaults to 1500), 8 yd TARGET_UNIT_SRC_AREA_ENEMY, no target cap. d2 b13 BLOOD_OTHER_MAGIC '
         '(R1; Runic Focus reads it: 200% crits). AttributesEx3 SUPPRESS_CASTER_PROCS: rolls no procs; '
         'spell_dk_bonestorm_tick counts targets for the heal, grants the crit stacks and applies the U13 Blood Gorged '
-        'snapshot correction. SpellLevel 60 = 9 + 5 x 10 + 1 (D3).'
+        'snapshot correction. SpellLevel 60 = 9 + 5 x 10 + 1 (D3). ap_potency 40 -> 80 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Bonestorm +100%).'
     ),
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_DEATHKNIGHT, 'SpellClassMask_3': m.BLOOD_OTHER_MAGIC, 'EquippedItemClass': -1,
@@ -619,14 +622,14 @@ scripted_by(blood_gorged_mastery_203155, 'spell_dk_blood_gorged_mastery')
 
 dancing_rune_weapon_parry_203156 = spell(
     id=203156, name='Dancing Rune Weapon Parry', school=School.NORMAL, attributes=0, cast_time_ms=0, cooldown_ms=0,
-    category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF, duration_ms=12000,
+    category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF, duration_ms=18000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, apply_aura=_AURA_MOD_PARRY_PERCENT, base_points=19,
                implicit_target_a=_TARGET_UNIT_CASTER),
     ],
     spell_icon_id=2873,
     notes=(
-        'S1a Blood (6,1) U15: the visible 12 s parry buff of Dancing Rune Weapon (not passive, no consolidation flag), '
+        'Duration 12 s -> 18 s to match Dancing Rune Weapon (2026-11-02, DPS balance pass 1031 round R5, user ruling: Dancing Rune Weapon +50% duration). S1a Blood (6,1) U15: the visible 12 s parry buff of Dancing Rune Weapon (not passive, no consolidation flag), '
         'MOD_PARRY_PERCENT (47) stored 19 = live +20%, cast by the type 0 link row below when 49028 is cast. Spell '
         'Deflection (49145) reads parry, so this buff counts. Duration 12 s (index 29).'
     ),

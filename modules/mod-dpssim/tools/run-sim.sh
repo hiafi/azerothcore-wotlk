@@ -82,8 +82,18 @@
 #                          or a full list such as "tank:drain:450, 3*dps:drain:150, self:drain:100" (SimHeal.h has the
 #                          syntax). The key handed to the worldserver always holds the full expanded list.
 #   HEALSIM_INFINITE_MANA  1/true or 0/false (DpsSim.InfiniteMana): keep the healer's mana full during the fight.
+#   HEALSIM_DRAIN_NOISE    0 to 1 (DpsSim.DrainNoise; the profile's DrainNoise, default 0). Makes each drain pulse
+#                          unequal: every living draining member draws a weight 1 + noise * u (u uniform in [-1, 1]) and
+#                          the pulse's damage is shared out by those weights, rescaled so the pulse's total is exactly
+#                          what the noiseless pulse deals (the damage per second is unchanged).
+#   HEALSIM_DRAIN_PULSE_MS whole ms between the drain pulses, at least 100 (DpsSim.DrainPulseMs; the profile's
+#                          DrainPulseMs, default 1000). The drain value stays damage per second: a 3000 ms pulse deals
+#                          3x the amount of a 1000 ms one.
 # File tag: the preset name (pin50, drain150, ...) or, for a full HEALSIM_TARGETS list (or none at all, the profile's
-# own), "x" and a short hash of the list; "-inf" is appended for infinite mana.
+# own), "x" and a short hash of the list; "-inf" is appended for infinite mana. A run whose drain noise or pulse differs
+# from the default (0 / 1000 ms, whether from the environment or the profile) adds a segment after it: ".n50" (noise
+# 0.5), ".p3000" (3000 ms pulse) or ".n50p3000" ("Profile.party.drain150.n50p3000.<ts>..."), so runs never overwrite
+# each other.
 #
 # Tank runs: a profile with "Mode = Tank" (see SimProfile.h, plan .agents/plans/tank-sim/tank-sim.PLAN.md) runs the DPS
 # sim with the dummies swinging at the actor. Everything above applies, including [targets] (1 = a boss dummy, 2-10 = an
@@ -203,6 +213,26 @@ if [[ "$IS_HEAL" -eq 1 ]]; then
         HEAL_INF=1
     fi
 
+    # Drain noise and pulse length: the environment wins over the profile; the worldserver validates the profile's own
+    DRAIN_NOISE="$(profile_key DrainNoise)"
+    DRAIN_PULSE_MS="$(profile_key DrainPulseMs)"
+    if [[ -n "${HEALSIM_DRAIN_NOISE:-}" ]]; then
+        if ! [[ "$HEALSIM_DRAIN_NOISE" =~ ^([0-9]+([.][0-9]*)?|[.][0-9]+)$ ]] ||
+                ! awk -v n="$HEALSIM_DRAIN_NOISE" 'BEGIN { exit !(n >= 0 && n <= 1) }'; then
+            die "HEALSIM_DRAIN_NOISE must be a number from 0 to 1, got '$HEALSIM_DRAIN_NOISE'"
+        fi
+        DRAIN_NOISE="$HEALSIM_DRAIN_NOISE"
+        HEAL_CONF+="DpsSim.DrainNoise = ${HEALSIM_DRAIN_NOISE}"$'\n'
+    fi
+    if [[ -n "${HEALSIM_DRAIN_PULSE_MS:-}" ]]; then
+        if ! [[ "$HEALSIM_DRAIN_PULSE_MS" =~ ^[1-9][0-9]*$ ]] || (( ${#HEALSIM_DRAIN_PULSE_MS} > 9 )) ||
+                (( HEALSIM_DRAIN_PULSE_MS < 100 )); then
+            die "HEALSIM_DRAIN_PULSE_MS must be a whole number of ms, at least 100, got '$HEALSIM_DRAIN_PULSE_MS'"
+        fi
+        DRAIN_PULSE_MS="$HEALSIM_DRAIN_PULSE_MS"
+        HEAL_CONF+="DpsSim.DrainPulseMs = ${HEALSIM_DRAIN_PULSE_MS}"$'\n'
+    fi
+
     HEAL_TAG=""
     HEAL_TARGETS_STR=""
     if [[ -n "${HEALSIM_TARGETS:-}" ]]; then
@@ -247,6 +277,16 @@ if [[ "$IS_HEAL" -eq 1 ]]; then
     fi
     if [[ "$HEAL_INF" -eq 1 ]]; then HEAL_TAG+="-inf"; fi
     BATCH_SCENARIO="${HEAL_GROUP}.${HEAL_TAG}"
+    # A non-default drain noise / pulse gets its own segment (".n50", ".p3000", ".n50p3000"; see the header)
+    DRAIN_SEG=""
+    if [[ "$DRAIN_NOISE" =~ ^([0-9]+([.][0-9]*)?|[.][0-9]+)$ ]] &&
+            awk -v n="$DRAIN_NOISE" 'BEGIN { exit !(n > 0) }'; then
+        DRAIN_SEG+="n$(awk -v n="$DRAIN_NOISE" 'BEGIN { printf "%g", n * 100 }' | tr '.' '_')"
+    fi
+    if [[ "$DRAIN_PULSE_MS" =~ ^[0-9]+$ ]] && (( 10#$DRAIN_PULSE_MS != 1000 )); then
+        DRAIN_SEG+="p$((10#$DRAIN_PULSE_MS))"
+    fi
+    if [[ -n "$DRAIN_SEG" ]]; then BATCH_SCENARIO+=".${DRAIN_SEG}"; fi
 fi
 
 # --- tank sim: detect a tank profile and resolve the scenario (file names, conf overrides) ---------------------------
@@ -481,7 +521,7 @@ if [[ "$IS_TANK" -eq 1 ]]; then BATCH_NAME="${PROFILE_NAME}.tank-${TANK_SCENARIO
 if [[ "$IS_HEAL" -eq 1 ]]; then
     echo "Running heal profile '${PROFILE_NAME}' (${ITERATIONS} iteration(s), in one container)" \
         "for ${DURATION_SECONDS}s (sim time) each at level ${LEVEL}, race ${RACE}, ${STEP_MS}ms step," \
-        "group ${HEAL_GROUP}, scenario ${HEAL_TAG}," \
+        "group ${HEAL_GROUP}, scenario ${HEAL_TAG}${DRAIN_SEG:+.$DRAIN_SEG}," \
         "infinite mana $([[ "$HEAL_INF" -eq 1 ]] && echo on || echo off)..." >&2
 elif [[ "$IS_TANK" -eq 1 ]]; then
     echo "Running tank profile '${PROFILE_NAME}' (${ITERATIONS} iteration(s), in one container)" \

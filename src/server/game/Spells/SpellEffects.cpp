@@ -3784,7 +3784,10 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                 // Kill Shot
                 if (m_spellInfo->SpellFamilyFlags[1] & 0x800000)
                 {
-                    spell_bonus += int32(unitCaster->GetTotalAttackPowerValue(RANGED_ATTACK) * 0.4f);
+                    // Custom: potency audit F14 - once Kill Shot is declared with potency (weapon_potency + a
+                    // base_potency flat part), the stock 0.4 x RAP is dropped; the weapon percent carries the scaling.
+                    if (!SpellPotency::IsDeclared(m_spellInfo->Id))
+                        spell_bonus += int32(unitCaster->GetTotalAttackPowerValue(RANGED_ATTACK) * 0.4f);
                 }
                 break;
             }
@@ -3869,7 +3872,10 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                     // percent instead"), so this hard-coded 0.15*AP bonus is dropped once
                     // converted, not replaced - same treatment as Eviscerate/Ferocious Bite's own
                     // dropped AP terms in P6.
-                    if (!SpellPotency::HasRow(m_spellInfo->Id, effIndex))
+                    // Potency audit S2/F11: gated on the spell (any effect's row, including the
+                    // generator's all-zero marker row on a pure weapon_potency effect), not on
+                    // effIndex, which is only the last weapon effect of the spell.
+                    if (!SpellPotency::IsDeclared(m_spellInfo->Id))
                         spell_bonus += int32(0.15f * unitCaster->GetTotalAttackPowerValue(BASE_ATTACK));
                 }
 

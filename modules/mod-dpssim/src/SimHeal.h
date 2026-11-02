@@ -43,8 +43,9 @@ namespace SimHeal
         Pin
     };
 
-    // One target of the group, in index order. `value` is, for Drain, hit points per pulse (or percent of the target's
-    // max health per pulse when `percent` is set) and, for Pin, the pin percent (1-99).
+    // One target of the group, in index order. `value` is, for Drain, hit points per second (or percent of the
+    // target's max health per second when `percent` is set; a pulse deals DrainPulseMs / 1000 of it) and, for Pin, the
+    // pin percent (1-99).
     struct TargetSpec
     {
         Role TargetRole = Role::Dps;

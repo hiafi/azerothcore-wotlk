@@ -1106,6 +1106,7 @@ namespace
         setup.AllyTankTalents = config.AllyTankTalents;
         setup.SpreadYards = config.AllySpreadYards;
         setup.DrainPulseMs = config.DrainPulseMs;
+        setup.DrainNoise = config.DrainNoise;
         if (!scenario.Create(player, setup))
         {
             LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunHealBatch() - building the group failed - aborting.");

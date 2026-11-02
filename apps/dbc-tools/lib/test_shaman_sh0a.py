@@ -48,7 +48,10 @@ EQUIPPED_IDS = (8017, 8024, 8033, 8232, 51730, 8042, 8050, 8056, 421, 1535, 5799
 SHOCKS_6S = (8042, 8050, 8056, 421)
 SHOCK_10S = (1535,)
 ROCKBITER = 8017
-ROCKBITER_AP = {20: 10, 24: 21, 42: 70, 52: 98, 60: 120}
+# DPS balance pass 1031 S1 (2026-11-02, user ruling: shaman package): Rockbiter's effect 0 is no longer attack power
+# (was 10/21/70/98/120 at 20/24/42/52/60) but MOD_DAMAGE_PERCENT_DONE, all schools, base 0; spell_sha_rockbiter_damage
+# sets 10 with Spirit Guard.
+AURA_MOD_DAMAGE_PERCENT_DONE = 79
 ATTUNEMENT_GROUP = 1252
 DUMMY_AURA = 4
 ICON_688 = 688
@@ -183,13 +186,19 @@ def check_shocks(rows_by_id: dict[int, dict]) -> list[str]:
 
 
 def check_rockbiter_ap(rows_by_id: dict[int, dict]) -> list[str]:
+    """S1 (2026-11-02): effect 0 (EffectAura_1) is aura 79 on every school at 0 at every level (no slope); the script
+    sets the live percent."""
     row = rows_by_id.get(ROCKBITER)
     if row is None:
         return []
-    if int(row.get("EffectAura_1") or 0) != 99:
-        return [f"{ROCKBITER}: effect 1 aura {row.get('EffectAura_1')}, expected 99 (MOD_ATTACK_POWER)"]
-    return [f"{ROCKBITER}: AP at L{lvl} = {engine_value(row, 1, lvl)}, expected {want}"
-            for lvl, want in ROCKBITER_AP.items() if engine_value(row, 1, lvl) != want]
+    if int(row.get("EffectAura_1") or 0) != AURA_MOD_DAMAGE_PERCENT_DONE:
+        return [f"{ROCKBITER}: effect 1 aura {row.get('EffectAura_1')}, expected 79 (MOD_DAMAGE_PERCENT_DONE)"]
+    bad = []
+    if int(row.get("EffectMiscValue_1") or 0) != 127:
+        bad.append(f"{ROCKBITER}: effect 1 school mask {row.get('EffectMiscValue_1')}, expected 127")
+    bad += [f"{ROCKBITER}: effect 1 at L{lvl} = {engine_value(row, 1, lvl)}, expected 0 (the script sets it)"
+            for lvl in (1, 20, 45, 60, 80) if engine_value(row, 1, lvl) != 0]
+    return bad
 
 
 def check_attunement_group_order(groups: list[dict]) -> list[str]:
@@ -328,12 +337,12 @@ class ShamanSH0aNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_shocks({1535: _row(1535, Category=0, RecoveryTime=6000)})), 1)
 
     def test_rockbiter_ap(self):
-        row = _row(8017, EffectAura_1=99, EffectBasePoints_1=9, EffectRealPointsPerLevel_1=2.75, BaseLevel=20,
-                   SpellLevel=1, MaxLevel=60)
+        row = _row(8017, EffectAura_1=79, EffectMiscValue_1=127, EffectBasePoints_1=-1, EffectRealPointsPerLevel_1=0,
+                   BaseLevel=20, SpellLevel=1, MaxLevel=60)
         self.assertEqual(check_rockbiter_ap({8017: row}), [])
-        self.assertEqual(len(check_rockbiter_ap({8017: {**row, "EffectRealPointsPerLevel_1": 3.0}})), 4)
-        self.assertEqual(len(check_rockbiter_ap({8017: {**row, "BaseLevel": 15}})), 5)
-        self.assertEqual(len(check_rockbiter_ap({8017: {**row, "EffectAura_1": 4}})), 1)
+        self.assertEqual(len(check_rockbiter_ap({8017: {**row, "EffectRealPointsPerLevel_1": 2.75}})), 3)   # L45 / 60 / 80
+        self.assertEqual(len(check_rockbiter_ap({8017: {**row, "EffectMiscValue_1": 1}})), 1)
+        self.assertEqual(len(check_rockbiter_ap({8017: {**row, "EffectAura_1": 99}})), 1)
 
     def test_group_order(self):
         def g(gid, *spells):

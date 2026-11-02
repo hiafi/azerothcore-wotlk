@@ -594,7 +594,16 @@ def _check_report(
         dsl_classes, GENERATED_HEADER_DIR, header_classes
     )
     # Errors the full run stops on, so --check exits 1 for them too (hunter T1-10).
-    check_errors = _rune_cost_errors(spell_entries, dsl_classes, ids_cfg) + header_problems
+    check_errors = (
+        _rune_cost_errors(spell_entries, dsl_classes, ids_cfg) + header_problems
+        + lint.check_percent_field_potency(spell_entries)
+    )
+    # Potency audit S1: a potency coefficient on a DmgClass NONE spell with no spell_bonus_data row never applies.
+    check_errors += lint.check_potency_defense_type(
+        spell_entries, {int(r["entry"]) for r in dsl_classes["spell_bonus_data"]},
+    )
+    # Potency audit S3: a weapon strike's percent and flat part must sit on potency (or be listed as deferred).
+    check_errors += lint.check_weapon_potency(dsl_classes["spells"])
     if check_errors:
         for problem in check_errors:
             print(f"ERROR: {problem}")
@@ -1272,7 +1281,12 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         else {int(k[0]) for k in spell_tables.pruned_keys(spell_table_index, dsl_classes, "spell_bonus_data")}
     )
     bonus_errors = lint.check_potency_bonus_overrides(
-        {r["spell_id"]: spell_names.get(r["spell_id"], "?") for r in dsl_classes["potency_corrections"]},
+        # A pure weapon_potency effect's all-zero marker row (potency audit S2) has no coefficient for a live
+        # spell_bonus_data row to override, so it is not a D1 candidate on its own.
+        {
+            r["spell_id"]: spell_names.get(r["spell_id"], "?")
+            for r in dsl_classes["potency_corrections"] if not r.get("_weapon_marker")
+        },
         {int(r["entry"]) for r in dsl_classes["spell_bonus_data"]},
         {int(r["entry"]) for r in dsl_classes["bonus_removals"]},
         trainer_state.load_keyed_table_rows(
@@ -1280,6 +1294,12 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         ),
         pruned_bonus_ids,
     )
+    # Potency audit S1 (same lint as --check, which returns before this point).
+    bonus_errors += lint.check_potency_defense_type(
+        spell_entries, {int(r["entry"]) for r in dsl_classes["spell_bonus_data"]},
+    )
+    # Potency audit S3 (same lint as --check).
+    bonus_errors += lint.check_weapon_potency(dsl_classes["spells"])
     # Paladin T1: a spell using a custom (spellcategory-block) Category with no spell_category()
     # declaration silently loses its category cooldown on the server.
     category_errors = lint.check_undeclared_spell_categories(
@@ -1300,8 +1320,9 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
     lfg_errors, lfg_notes = lint.check_lfg_exclusions(dsl_classes["lfg_disables"], lfg_dungeons)
     for note in lfg_notes:
         print(f"note: {note}")
-    if tooltip_errors or bonus_errors or category_errors or lfg_errors:
-        for error in tooltip_errors + bonus_errors + category_errors + lfg_errors:
+    percent_errors = lint.check_percent_field_potency(spell_entries)
+    if tooltip_errors or bonus_errors or category_errors or lfg_errors or percent_errors:
+        for error in tooltip_errors + bonus_errors + category_errors + lfg_errors + percent_errors:
             print(f"ERROR: {error}")
         return 1
     client_spell_resolved = resolve.resolve_rows(

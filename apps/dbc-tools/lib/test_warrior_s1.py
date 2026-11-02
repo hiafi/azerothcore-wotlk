@@ -606,8 +606,8 @@ def check_echo(rows: dict, entries: dict, dur_ms) -> list[str]:
     r = rows[ECHO]
     sid = ECHO
     pot = (entries[sid].get("effect1") or {}).get("_potency") or {}
-    if pot.get("total_potency") != 41.5:
-        bad.append(f"{sid}: effect 1 potency {pot.get('total_potency')!r}, expected 41.5 (half of Thunder Clap's 83)")
+    if pot.get("total_potency") != 49.8:
+        bad.append(f"{sid}: effect 1 potency {pot.get('total_potency')!r}, expected 49.8 (half of Thunder Clap's 99.6)")
     if _eff(r, 0)[0] != EFF_SCHOOL_DAMAGE:
         bad.append(f"{sid}: e0 type {_eff(r, 0)[0]}, expected SCHOOL_DAMAGE")
     bad += _aura_effect(r, 1, AURA_MELEE_HASTE, 0, -11, None, sid, "slow")
@@ -775,19 +775,19 @@ def check_devastate(rows: dict, entries: dict, corrections: list[dict]) -> list[
     if _eff(r, 2)[0] != EFF_NORMALIZED:
         bad.append(f"{sid}: e2 type {_eff(r, 2)[0]}, expected NORMALIZED_WEAPON_DMG 121")
     weapon = _potency_of(entries, sid, 2)
-    if weapon.get("kind") != "weapon" or weapon.get("total_potency") != 120:
+    if weapon.get("kind") != "weapon" or weapon.get("total_potency") != 240:
         bad.append(f"{sid}: effect 1 (DBC Effect_2) weapon potency {weapon.get('total_potency')!r}/"
-                   f"{weapon.get('kind')!r}, expected 120 / weapon")
+                   f"{weapon.get('kind')!r}, expected 240 / weapon")
     flat = _potency_of(entries, sid, 3)
-    if flat.get("total_potency") != 10 or flat.get("kind") != "direct":
+    if flat.get("total_potency") != 20 or flat.get("kind") != "direct":
         bad.append(f"{sid}: effect 2 (DBC Effect_3) potency {flat.get('total_potency')!r}/{flat.get('kind')!r}, "
-                   "expected 10 / direct")
+                   "expected 20 / direct")
     # V = the built correction resolves to 25-27.5 at level 60; the 5-stack hit adds 5V = 50 potency (127-137.5 dmg)
     v = float(flat.get("level60_value") or 0)
-    if not 25.0 <= v <= 27.5:
-        bad.append(f"{sid}: V (effect 2 at level 60) {v}, expected 25-27.5")
-    if not 125.0 <= 5 * v <= 137.5:
-        bad.append(f"{sid}: 5 stacks add {5 * v}, expected 125-137.5")
+    if not 50.0 <= v <= 55.0:
+        bad.append(f"{sid}: V (effect 2 at level 60) {v}, expected 50-55")
+    if not 250.0 <= 5 * v <= 275.0:
+        bad.append(f"{sid}: 5 stacks add {5 * v}, expected 250-275")
     if not any(int(c["spell_id"]) == sid and int(c["effect_index"]) == 2 for c in corrections):
         bad.append(f"{sid}: no potency correction row (20243, 2)")
     if _i(r, "EquippedItemClass") != 4 or _i(r, "EquippedItemSubclass") != 64:

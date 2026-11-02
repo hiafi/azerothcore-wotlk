@@ -216,23 +216,14 @@ namespace
         return 0;
     }
 
-    // Rapture's per-rank self-mana share: 1 / 1.75 / 2.5% (docs/reworks/priest-disc-rework.md).
-    // Deliberately not read from the rank row's own base points: those are int32, so 1.75% cannot
-    // be stored there - the stock engine block had the same problem and fudged it by adding or
-    // subtracting 0.5 per rank id, which is the idiom this replaces.
-    float GetRaptureSelfManaPct(uint32 rankSpellId)
+    // Rapture's per-rank self-mana share (1 / 1.8 / 2.5%; doubled and halved back on 2026-11-01).
+    // The rank row's EFFECT_0 dummy holds it in tenths of a percent (10 / 18 / 25, dbc-tools
+    // priest_trigger_spells.py), because a fraction is not an int32 - the stock engine block
+    // fudged 1.75% by adding or subtracting 0.5 per rank id, which is the idiom this replaces.
+    float GetRaptureSelfManaPct(Aura const* rapture)
     {
-        switch (rankSpellId)
-        {
-            case SPELL_PRIEST_RAPTURE_R1:
-                return 1.0f;
-            case SPELL_PRIEST_RAPTURE_R2:
-                return 1.75f;
-            case SPELL_PRIEST_RAPTURE_R3:
-                return 2.5f;
-            default:
-                return 0.0f;
-        }
+        AuraEffect const* selfManaEffect = rapture->GetEffect(EFFECT_0);
+        return selfManaEffect ? float(selfManaEffect->GetAmount()) / 10.0f : 0.0f;
     }
 }
 
@@ -1091,7 +1082,7 @@ class spell_pri_power_word_shield_aura : public AuraScript
 
     /*
      * Rapture (7,1): "When your Power Word: Shield is completely absorbed you are instantly
-     * energized with 1/1.75/2.5% of your total mana. You also energize your shielded target with
+     * energized with 1/1.8/2.5% of your total mana. You also energize your shielded target with
      * 1% total mana, 8 rage and 16 energy. This effect can only occur once every 5 sec."
      *
      * Migrated out of Aura::HandleAuraSpecificMods (SpellAuras.cpp) per PLAN sec 6.8: living on
@@ -1119,7 +1110,7 @@ class spell_pri_power_word_shield_aura : public AuraScript
 
         caster->AddSpellCooldown(rapture->GetId(), 0, PRIEST_RAPTURE_INTERNAL_COOLDOWN_MS);
 
-        int32 selfMana = int32(CalculatePct(float(caster->GetMaxPower(POWER_MANA)), GetRaptureSelfManaPct(rapture->GetId())));
+        int32 selfMana = int32(CalculatePct(float(caster->GetMaxPower(POWER_MANA)), GetRaptureSelfManaPct(rapture)));
         if (selfMana > 0)
             caster->CastCustomSpell(caster, SPELL_PRIEST_RAPTURE_SELF_MANA, &selfMana, nullptr, nullptr, true);
 

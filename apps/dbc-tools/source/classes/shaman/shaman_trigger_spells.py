@@ -14,6 +14,12 @@ from . import _masks as m
 # A3's Restoration rows (shaman_restoration.py has no import from this file), for the two capstone tooltips that quote a heal.
 from .shaman_enh_tooltips import shaman_lshield_1217
 from .shaman_restoration import natures_guardian_heal_202675, totemic_focus_heal_202677
+from .shaman_enhancement import (
+    ANTICIPATION_CL_JUMPS, ILS_SS_CLEAVE_R1, ILS_SS_CLEAVE_R2, ILS_SS_CLEAVE_R3, ILS_SS_CLEAVE_RADIUS_YD, ILS_SS_CLEAVE_TARGETS,
+    S1_NOTE, STATIC_SHOCK_ARC_PCT, STATIC_SHOCK_ARC_RADIUS_YD, STATIC_SHOCK_ORB_DAMAGE_R1, STATIC_SHOCK_ORB_DAMAGE_R2,
+    STATIC_SHOCK_ORB_DAMAGE_R3, THUNDERING_SURGE_MW_STACKS, THUNDERING_SURGE_R1, THUNDERING_SURGE_R2, THUNDERING_SURGE_R3,
+    anticipation_shell_202441, toughness_heal_202444,
+)
 
 # S3a A2: Frozen Power's capstone quotes the Blizzard tick's potency. A3's shaman_enhancement.py declares the tick and must NOT
 # import this file (import cycle); until it exists the tooltip token falls back to the raw spell reference.
@@ -79,12 +85,86 @@ def _desc(text, capstone=None, last=False):
     return f"{text}\n\n|cFF9D9D9DCapstone Bonus: {capstone}|r"
 
 
+# Tank survivability capstones (2026-11-01, DPS balance pass 1031 round T1, user ruling), Rockbiter-gated: Earthen Power rank 2
+# (spell_sha_earth_shock_rockbiter, helper 202440) and Anticipation rank 3 (spell_sha_stoneskin_grant, helper 202441).
+_EARTHEN_POWER_CAPSTONE = ('While Rockbiter is active, your Earth Shock also applies its attack speed slow to all other enemies '
+                           'within 8 yards of you.')
+_ANTICIPATION_CAPSTONE = ('While Rockbiter is active, your Chain Lightning encases you in stone, absorbing '
+                          + pot_text(anticipation_shell_202441) + ' damage for each enemy it hits, and strikes each enemy '
+                          'attacking you with a Lightning Shield orb. The stone lasts 8 sec.')
+
+
 def _cap(text, capstone, last=False):
     """S2a rank text with the repo's established capstone clause (talent-tooltip-audit step 5): the label is
     "Capstone Bonus: ", grey on every rank below the last, plain on the last. (`_desc` above is the S1 spelling.)"""
     if last:
         return f"{text}\n\nCapstone Bonus: {capstone}"
     return f"{text}\n\n|cFF9D9D9DCapstone Bonus: {capstone}|r"
+
+
+def _scaled_pot(text, num, den):
+    """A `pot_text()` tooltip value times num / den: every top-level `${...}` group gets `*num/den` (or `/den` for num 1)
+    before its closing brace (the multiply-after-the-outer-expression form of P9.3). For a rank that deals a share of a
+    helper's potency (Toughness's 5 / 10 / 15 potency orb heal is the 15-potency 202444 x rank / 3)."""
+    if num == den:
+        return text
+    factor = f'/{den}' if num == 1 else f'*{num}/{den}'
+    out, depth, i = [], 0, 0
+    while i < len(text):
+        if text.startswith('${', i) and depth == 0:
+            out.append('${')
+            depth = 1
+            i += 2
+            continue
+        ch = text[i]
+        if depth:
+            if ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:
+                    out.append(factor)
+        out.append(ch)
+        i += 1
+    return ''.join(out)
+
+
+# DPS balance pass 1031 round S1 (2026-11-02, user ruling: shaman package): the tank talents' Rockbiter clauses, one job per
+# talent (proposal Revisions 2-3), and the Improved Lightning Shield / Thundering Strikes DPS clauses.
+def _toughness_clause(rank):
+    return (' While Rockbiter is active, your Lightning Shield orbs heal you for '
+            + _scaled_pot(pot_text(toughness_heal_202444), rank, 3) + '.')
+
+
+_STATIC_SHOCK_ORB = (STATIC_SHOCK_ORB_DAMAGE_R1['value'], STATIC_SHOCK_ORB_DAMAGE_R2['value'], STATIC_SHOCK_ORB_DAMAGE_R3['value'])
+
+
+def _static_shock_clause(rank):
+    enemies = 'enemy' if rank == 1 else 'enemies'
+    return (f' While Rockbiter is active, your Lightning Shield orbs deal {_STATIC_SHOCK_ORB[rank - 1]}% more damage and arc '
+            f'to up to {rank} other {enemies} attacking you within {STATIC_SHOCK_ARC_RADIUS_YD["value"]:g} yards for '
+            f'{STATIC_SHOCK_ARC_PCT["value"]}% of their damage.')
+
+
+_ILS_CLEAVE = (ILS_SS_CLEAVE_R1['value'], ILS_SS_CLEAVE_R2['value'], ILS_SS_CLEAVE_R3['value'])
+
+
+def _ils_cleave_clause(rank):
+    return (f' While your Lightning Shield is active, your Stormstrike also strikes up to {ILS_SS_CLEAVE_TARGETS["value"]} other '
+            f'enemies within {ILS_SS_CLEAVE_RADIUS_YD["value"]:g} yards of your target for {_ILS_CLEAVE[rank - 1]}% of its damage.')
+
+
+_THUNDERING_SURGE = (THUNDERING_SURGE_R1['value'], THUNDERING_SURGE_R2['value'], THUNDERING_SURGE_R3['value'])
+
+
+def _thundering_surge_clause(rank):
+    return (f' While Flametongue, Frostbrand or Windfury is active, a Chain Lightning cast with '
+            f'{THUNDERING_SURGE_MW_STACKS["value"]} Maelstrom Weapon stacks deals {_THUNDERING_SURGE[rank - 1]}% more damage and '
+            f'costs no mana.')
+
+
+_ANTICIPATION_JUMPS_CLAUSE = (f' While Rockbiter is active, your Chain Lightning jumps to {ANTICIPATION_CL_JUMPS["value"]} '
+                              f'additional targets.')
 
 
 def _aura(aura, base_points=0, misc_value=0, **kw):
@@ -555,15 +635,62 @@ lightning_shield_26364 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=103.9, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=77.925, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=62,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 11 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
-          'Potency system P7-Shaman: converted to sp_potency=103.9 (shaman-potency-proposals.txt, mismatched row). Cast by the player via lightning_shield_324\'s own PROC_TRIGGER_SPELL aura (triggered off the player\'s own buff, not a totem/pet), so this is an ordinary player-attributed potency conversion, not a D2 script-bp case (lightning_shield_324 casts it with no CastCustomSpell override).',
+          'Potency system P7-Shaman: converted to sp_potency=103.9 (shaman-potency-proposals.txt, mismatched row). Cast by the player via lightning_shield_324\'s own PROC_TRIGGER_SPELL aura (triggered off the player\'s own buff, not a totem/pet), so this is an ordinary player-attributed potency conversion, not a D2 script-bp case (lightning_shield_324 casts it with no CastCustomSpell override). sp_potency 103.9 -> 77.925 (-25 %; the tank orb was half of the shaman tank\'s single-target damage) (2026-11-02, DPS balance pass 1031 round R6, user ruling: Lightning Shield -25 %); the two orb copies 202445 / 202446 keep their R5 damage (ORB_COPY_BASE_POTENCY).',
     tooltip_vars=shaman_lshield_1217,
     raw_overrides={'AttributesEx2': 805306372, 'AttributesEx3': 512, 'AttributesEx4': 16384, 'AttributesEx5': 393224, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Casts a bolt of lightning at the target for {pot1*mult} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 1024, 'SpellClassSet': 11, 'SpellLevel': 8},
 )
 
+
+
+# The two Lightning Shield orb copies of the tank kit (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package;
+# proposal Revisions 1-3). Same shape as the orb 26364 above (Nature SCHOOL_DAMAGE at the target, DefenseType 1, its
+# attributes: AttributesEx2 CANT_CRIT + IGNORE_LOS, the scripts filter line of sight from the struck enemy), family 11 d0 b10
+# like the orb, so Improved Lightning Shield, Static Shock (its own +5..15 % and the Rockbiter child 202448), the Rockbiter
+# threat child 202411 and Improved Stormstrike reach them. Separate ids so the arc's 55 % does not apply to the Chain
+# Lightning orb, neither heals nor arcs (spell_sha_enh_storm_orb is bound to 26364 only: no recursion) and the sim shows
+# their own rows. Neither spends a Lightning Shield charge.
+# R6 (2026-11-02, user ruling: Lightning Shield -25 % for the single-target share): the copies read this fixed base, the orb's
+# R5 potency, rather than the orb's own (now 77.925), so the 5-target numbers stay where R5 put them.
+ORB_COPY_BASE_POTENCY = 103.9
+
+
+def _orb_copy(spell_id: int, pct: int, what: str, notes: str):
+    return spell(
+        id=spell_id, name='Lightning Shield', school=School.NATURE, attributes=16777216,
+        cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
+        effects=[Effect(type=EffectType.SCHOOL_DAMAGE,
+                        sp_potency=round(ORB_COPY_BASE_POTENCY * pct / 100, 4),
+                        potency_kind='direct', implicit_target_a=6)],
+        spell_icon_id=62,
+        notes=S1_NOTE + f'{what}: a copy of the orb 26364 at {pct} % of its R5 potency (ORB_COPY_BASE_POTENCY 103.9), SpellLevel 8 '
+              f'as the orb so the share is exact at every level. ' + notes,
+        raw_overrides={
+            'AttributesEx2': 805306372, 'AttributesEx3': 512, 'AttributesEx4': 16384, 'AttributesEx5': 393224,
+            'CastingTimeIndex': 1, 'DefenseType': 1, 'PreventionType': 1, 'EquippedItemClass': -1, 'ProcChance': 101,
+            'SpellClassSet': 11, 'SpellClassMask_1': 0x400, 'SpellLevel': 8,
+            'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0,
+            'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188,
+            'Description_Lang_Mask': 16712190,
+            'Description_Lang_enUS': 'Strikes the target with lightning for {pot1} Nature damage.',
+        },
+    )
+
+
+lightning_shield_arc_202445 = _orb_copy(
+    202445, STATIC_SHOCK_ARC_PCT['value'], 'Static Shock\'s arc',
+    'Under Rockbiter with Static Shock, spell_sha_enh_storm_orb casts it from each orb the shield fires at up to 1 / 2 / 3 (the '
+    'Static Shock rank) other enemies attacking the shaman within STATIC_SHOCK_ARC_RADIUS_YD (8 yd) of the struck enemy, nearest '
+    'first, in line of sight from it. STATIC_SHOCK_ARC_PCT 55 (Revision 3; was 85).',
+)
+lightning_shield_chain_orb_202446 = _orb_copy(
+    202446, 100, 'Anticipation\'s Chain Lightning orb',
+    'Under Rockbiter with Anticipation rank 3 (the capstone) and the shaman\'s own Lightning Shield up, spell_sha_stoneskin_grant '
+    'casts it at each enemy the shaman\'s Chain Lightning hits whose victim is the shaman.',
+)
 
 lightning_shield_324 = spell(
     id=324,
@@ -963,9 +1090,9 @@ call_of_thunder_16041 = _talent(
 earth_s_grasp_16043 = _talent(
     16043, "Earth's Grasp", 'Rank 1',
     [_dummy(24), _mod(SpellModOp.RADIUS, 9), _mod(SpellModOp.COOLDOWN, -16)], 689,
-    "Increases the absorb of your Earthen Wall Totem's shields by 25%. Increases the radius of your Earthbind Totem by 10% and reduces its cooldown by 15%.",
+    "Increases the absorb of your Earthen Wall Totem's shields by 25%. Increases the radius of your Earthbind Totem by 10% and reduces its cooldown by 15%. While Rockbiter is active, attacks absorbed by your shields still trigger your Lightning Shield.",
     masks={2: (0, 0x1, m.EARTHBIND_ROOT), 3: (0, 0, m.EARTHBIND_ROOT)},
-    notes='S3a A2: eff1 DUMMY 25 (Earthen Wall absorb +25%, read by Shaman::GetEarthenWallAbsorb; talent_mult effect 1), eff2 SPELLMOD_RADIUS pct +10 on d1 b0 (the slow 3600 / 59566 / 62287 / 63532) and d2 b5 (the root 202260), eff3 SPELLMOD_COOLDOWN pct -15 on d2 b5 (Earthbind cast 2484 + its root only). Data only, no C++ (0-verify C6). Stock Stoneclaw health clause and the d2 b14 cooldown twin are gone.',
+    notes='S3a A2: eff1 DUMMY 25 (Earthen Wall absorb +25%, read by Shaman::GetEarthenWallAbsorb; talent_mult effect 1), eff2 SPELLMOD_RADIUS pct +10 on d1 b0 (the slow 3600 / 59566 / 62287 / 63532) and d2 b5 (the root 202260), eff3 SPELLMOD_COOLDOWN pct -15 on d2 b5 (Earthbind cast 2484 + its root only). Data only, no C++ (0-verify C6). Stock Stoneclaw health clause and the d2 b14 cooldown twin are gone. ' + S1_NOTE + 'Both ranks: under Rockbiter a hit the shaman\'s shields fully absorb still fires the Lightning Shield orb (spell_proc -324 HitMask NORMAL | CRITICAL | ABSORB, shaman_enhancement.py; spell_sha_enh_lightning_shield::CheckProc lets a fully absorbed hit through only for a player with Rockbiter and an Earth\'s Grasp rank).',
 )
 
 
@@ -1172,9 +1299,9 @@ reverberation_16116 = spell(
 earth_s_grasp_16130 = _talent(
     16130, "Earth's Grasp", 'Rank 2',
     [_dummy(49), _mod(SpellModOp.RADIUS, 19), _mod(SpellModOp.COOLDOWN, -31)], 689,
-    "Increases the absorb of your Earthen Wall Totem's shields by 50%. Increases the radius of your Earthbind Totem by 20% and reduces its cooldown by 30%.",
+    "Increases the absorb of your Earthen Wall Totem's shields by 50%. Increases the radius of your Earthbind Totem by 20% and reduces its cooldown by 30%. While Rockbiter is active, attacks absorbed by your shields still trigger your Lightning Shield.",
     masks={2: (0, 0x1, m.EARTHBIND_ROOT), 3: (0, 0, m.EARTHBIND_ROOT)},
-    notes='S3a A2: eff1 DUMMY 50 (Earthen Wall absorb +50%, read by Shaman::GetEarthenWallAbsorb; talent_mult effect 1), eff2 SPELLMOD_RADIUS pct +20 on d1 b0 (the slow 3600 / 59566 / 62287 / 63532) and d2 b5 (the root 202260), eff3 SPELLMOD_COOLDOWN pct -30 on d2 b5 (Earthbind cast 2484 + its root only). Data only, no C++ (0-verify C6). Stock Stoneclaw health clause and the d2 b14 cooldown twin are gone.',
+    notes='S3a A2: eff1 DUMMY 50 (Earthen Wall absorb +50%, read by Shaman::GetEarthenWallAbsorb; talent_mult effect 1), eff2 SPELLMOD_RADIUS pct +20 on d1 b0 (the slow 3600 / 59566 / 62287 / 63532) and d2 b5 (the root 202260), eff3 SPELLMOD_COOLDOWN pct -30 on d2 b5 (Earthbind cast 2484 + its root only). Data only, no C++ (0-verify C6). Stock Stoneclaw health clause and the d2 b14 cooldown twin are gone. ' + S1_NOTE + 'Both ranks: under Rockbiter a hit the shaman\'s shields fully absorb still fires the Lightning Shield orb (spell_proc -324 HitMask NORMAL | CRITICAL | ABSORB, shaman_enhancement.py; spell_sha_enh_lightning_shield::CheckProc lets a fully absorbed hit through only for a player with Rockbiter and an Earth\'s Grasp rank).',
 )
 
 
@@ -1786,10 +1913,11 @@ enhancing_totems_16259 = _talent(
 improved_shields_16261 = _talent(
     16261, 'Improved Lightning Shield', 'Rank 1',
     [_mod(SpellModOp.DAMAGE, 14)], 19,
-    _cap('Increases the damage of your Lightning Shield orbs by 15%. While Rockbiter is active, your Lightning Shield orbs also grant 1 Stoneskin each and generate double threat.',
+    _cap('Increases the damage of your Lightning Shield orbs by 15%.' + _ils_cleave_clause(1)
+         + ' While Rockbiter is active, your Lightning Shield orbs also grant 1 Stoneskin each and generate double threat.',
           'Your Lightning Shield has a 30% chance not to expend a charge when it would.', last=False),
     masks={1: (0x400, 0, 0)},
-    notes='S3a A2: Improved Lightning Shield (was Improved Shields): orb damage +15% (SPELLMOD_DAMAGE on d0 b10, the orb 26364; talent_mult effect 1 for tooltip entry 1217). The Water Shield / Earth Shield clauses are gone. The Rockbiter Stoneskin/threat and the rank 3 capstone are scripts (spell_sha_enh_lightning_shield, hidden child 202411).',
+    notes='S3a A2: Improved Lightning Shield (was Improved Shields): orb damage +15% (SPELLMOD_DAMAGE on d0 b10, the orb 26364; talent_mult effect 1 for tooltip entry 1217). The Water Shield / Earth Shield clauses are gone. The Rockbiter Stoneskin/threat and the rank 3 capstone are scripts (spell_sha_enh_lightning_shield, hidden child 202411).' + S1_NOTE + 'Stormstrike cleave clause (Revision 3, any imbue): with the shaman\'s own Lightning Shield holding a charge, Stormstrike also strikes up to 4 other enemies within 8 yd of its target for 33 / 66 / 100 % of the landed damage (202449, spell_sha_enh_stormstrike::Cleave). Dormant until Stormstrike (row 6, level 40).',
 )
 
 
@@ -1826,10 +1954,11 @@ improved_ghost_wolf_16287 = _talent(
 improved_shields_16290 = _talent(
     16290, 'Improved Lightning Shield', 'Rank 2',
     [_mod(SpellModOp.DAMAGE, 29)], 19,
-    _cap('Increases the damage of your Lightning Shield orbs by 30%. While Rockbiter is active, your Lightning Shield orbs also grant 1 Stoneskin each and generate double threat.',
+    _cap('Increases the damage of your Lightning Shield orbs by 30%.' + _ils_cleave_clause(2)
+         + ' While Rockbiter is active, your Lightning Shield orbs also grant 1 Stoneskin each and generate double threat.',
           'Your Lightning Shield has a 30% chance not to expend a charge when it would.', last=False),
     masks={1: (0x400, 0, 0)},
-    notes='S3a A2: Improved Lightning Shield (was Improved Shields): orb damage +30% (SPELLMOD_DAMAGE on d0 b10, the orb 26364; talent_mult effect 1 for tooltip entry 1217). The Water Shield / Earth Shield clauses are gone. The Rockbiter Stoneskin/threat and the rank 3 capstone are scripts (spell_sha_enh_lightning_shield, hidden child 202411).',
+    notes='S3a A2: Improved Lightning Shield (was Improved Shields): orb damage +30% (SPELLMOD_DAMAGE on d0 b10, the orb 26364; talent_mult effect 1 for tooltip entry 1217). The Water Shield / Earth Shield clauses are gone. The Rockbiter Stoneskin/threat and the rank 3 capstone are scripts (spell_sha_enh_lightning_shield, hidden child 202411).' + S1_NOTE + 'Stormstrike cleave clause (Revision 3, any imbue): with the shaman\'s own Lightning Shield holding a charge, Stormstrike also strikes up to 4 other enemies within 8 yd of its target for 33 / 66 / 100 % of the landed damage (202449, spell_sha_enh_stormstrike::Cleave). Dormant until Stormstrike (row 6, level 40).',
 )
 
 
@@ -1980,13 +2109,17 @@ elemental_reach_29000 = _talent(
 )
 
 
+# Revision 4 / 5 of the shaman package (2026-11-02, DPS balance pass 1031 round S1, user ruling): Chain Lightning lost its 30 %
+# per-jump falloff (421 jump factor 1.0), so the capstone's falloff clause is obsolete; it is +1 jump instead.
+_EOTS_CAPSTONE = 'Your Chain Lightning jumps to 1 additional target.'
+
 eye_of_the_storm_29062 = _talent(
     29062, 'Eye of the Storm', 'Rank 1',
     [_aura(AuraType.HASTE_ALL, 0), _mod(SpellModOp.NOT_LOSE_CASTING_TIME, 32)], 2028,
     _desc('Increases your spell, ranged and melee haste by 1%. Reduces the pushback suffered from damaging attacks while casting by 33%.',
-          "Your Chain Lightning's damage is reduced by only 10% per jump, instead of 30%."),
+          _EOTS_CAPSTONE),
     masks={2: (_LB | _CL, 0x9000, 0)},
-    notes='S1a A2: eff1 haste +1% (aura 193), eff2 pushback (stock op and mask, values 33/66/100 stored 32/65/99 as the hunter precedent).',
+    notes='S1a A2: eff1 haste +1% (aura 193), eff2 pushback (stock op and mask, values 33/66/100 stored 32/65/99 as the hunter precedent). ' + S1_NOTE + 'Grey capstone text: +1 Chain Lightning jump (was the 10 % falloff).',
 )
 
 
@@ -1994,20 +2127,20 @@ eye_of_the_storm_29064 = _talent(
     29064, 'Eye of the Storm', 'Rank 2',
     [_aura(AuraType.HASTE_ALL, 1), _mod(SpellModOp.NOT_LOSE_CASTING_TIME, 65)], 2028,
     _desc('Increases your spell, ranged and melee haste by 2%. Reduces the pushback suffered from damaging attacks while casting by 66%.',
-          "Your Chain Lightning's damage is reduced by only 10% per jump, instead of 30%."),
+          _EOTS_CAPSTONE),
     masks={2: (_LB | _CL, 0x9000, 0)},
-    notes='S1a A2: see eye_of_the_storm_29062.',
+    notes='S1a A2: see eye_of_the_storm_29062. ' + S1_NOTE + 'Grey capstone text: +1 Chain Lightning jump (was the 10 % falloff).',
 )
 
 
 eye_of_the_storm_29065 = _talent(
     29065, 'Eye of the Storm', 'Rank 3',
     [_aura(AuraType.HASTE_ALL, 2), _mod(SpellModOp.NOT_LOSE_CASTING_TIME, 99),
-     _mod(SpellModOp.DAMAGE_MULTIPLIER, 28)], 2028,
+     _mod(SpellModOp.JUMP_TARGETS, 0, pct=False)], 2028,
     _desc('Increases your spell, ranged and melee haste by 3%. Reduces the pushback suffered from damaging attacks while casting by 100%.',
-          "Your Chain Lightning's damage is reduced by only 10% per jump, instead of 30%.", last=True),
+          _EOTS_CAPSTONE, last=True),
     masks={2: (_LB | _CL, 0x9000, 0), 3: (_CL, 0, 0)},
-    notes='S1a A2 (brief Decision 2): eff3 capstone, SPELLMOD_DAMAGE_MULTIPLIER pct stored 28 (live 29): the per-jump factor 0.7 * 1.29 = 0.903, the nearest an additive percent mod reaches to the doc 0.9 (S1a 0-verify section 6). DEVIATION: 0.903, not 0.9.',
+    notes='S1a A2 (brief Decision 2): eff3 capstone, was SPELLMOD_DAMAGE_MULTIPLIER pct stored 28 (live 29): the per-jump factor 0.7 * 1.29 = 0.903 (S1a 0-verify section 6). ' + S1_NOTE + 'eff3 -> SPELLMOD_JUMP_TARGETS flat +1 (stored 0) on Chain Lightning (d0 b1): with the falloff gone (421 jump factor 1.0) a DAMAGE_MULTIPLIER would compound per jump; the capstone text follows.',
 )
 
 
@@ -2554,53 +2687,58 @@ improved_stormstrike_51522 = _talent(
 earthen_power_51523 = _talent(
     51523, 'Earthen Power', 'Rank 1',
     [Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=59566), _mod(SpellModOp.EFFECT1, -6, pct=False)], 2289,
-    'Placing your Earthbind Totem has a 50% chance to remove all slowing effects from you and nearby friendly targets. Your Earth Shock reduces enemy attack speed by an additional 5%.',
+    _cap('Placing your Earthbind Totem has a 50% chance to remove all slowing effects from you and nearby friendly targets. Your Earth Shock reduces enemy attack speed by an additional 5%.',
+         _EARTHEN_POWER_CAPSTONE, last=False),
     masks={2: (0x100000, 0, 0)},
     ProcChance=50, ProcTypeMask=0x14000,
-    notes='S3a A2: pulled stock rank, rewritten. eff1 PROC_TRIGGER_SPELL -> 59566 (dispel snares; stock script spell_sha_earthen_power filters to snared allies), 50% from the rank ProcChance on the CAST of Earthbind 2484 (spell_proc -51523: d2 b5, CAST phase, the root is triggered by the totem so it never procs the player). eff2 Earth Shock attack-speed slow 5% more (SPELLMOD_EFFECT1 flat on d0 b20; total 15 / 20%).',
+    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 2 makes spell_sha_earth_shock_rockbiter spread the Earth Shock slow as 202440. S3a A2: pulled stock rank, rewritten. eff1 PROC_TRIGGER_SPELL -> 59566 (dispel snares; stock script spell_sha_earthen_power filters to snared allies), 50% from the rank ProcChance on the CAST of Earthbind 2484 (spell_proc -51523: d2 b5, CAST phase, the root is triggered by the totem so it never procs the player). eff2 Earth Shock attack-speed slow 5% more (SPELLMOD_EFFECT1 flat on d0 b20; total 15 / 20%).',
 )
 
 
 earthen_power_51524 = _talent(
     51524, 'Earthen Power', 'Rank 2',
     [Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=59566), _mod(SpellModOp.EFFECT1, -11, pct=False)], 2289,
-    'Placing your Earthbind Totem has a 100% chance to remove all slowing effects from you and nearby friendly targets. Your Earth Shock reduces enemy attack speed by an additional 10%.',
+    _cap('Placing your Earthbind Totem has a 100% chance to remove all slowing effects from you and nearby friendly targets. Your Earth Shock reduces enemy attack speed by an additional 10%.',
+         _EARTHEN_POWER_CAPSTONE, last=True),
     masks={2: (0x100000, 0, 0)},
     ProcChance=100, ProcTypeMask=0x14000,
-    notes='S3a A2: pulled stock rank, rewritten. eff1 PROC_TRIGGER_SPELL -> 59566 (dispel snares; stock script spell_sha_earthen_power filters to snared allies), 100% from the rank ProcChance on the CAST of Earthbind 2484 (spell_proc -51523: d2 b5, CAST phase, the root is triggered by the totem so it never procs the player). eff2 Earth Shock attack-speed slow 10% more (SPELLMOD_EFFECT1 flat on d0 b20; total 15 / 20%).',
+    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 2 makes spell_sha_earth_shock_rockbiter spread the Earth Shock slow as 202440. S3a A2: pulled stock rank, rewritten. eff1 PROC_TRIGGER_SPELL -> 59566 (dispel snares; stock script spell_sha_earthen_power filters to snared allies), 100% from the rank ProcChance on the CAST of Earthbind 2484 (spell_proc -51523: d2 b5, CAST phase, the root is triggered by the totem so it never procs the player). eff2 Earth Shock attack-speed slow 10% more (SPELLMOD_EFFECT1 flat on d0 b20; total 15 / 20%).',
 )
 
 
 static_shock_51525 = _talent(
     51525, 'Static Shock', 'Rank 1',
     [_mod(SpellModOp.DAMAGE, 4), _mod(SpellModOp.CHARGES, 5, pct=False), _dummy(0)], 3059,
-    _cap('Your Lightning Shield deals 5% more damage and gains 6 additional charges, and your melee attacks and abilities have a 5% chance to hit your target with a Lightning Shield orb. This effect can only occur once every 1.5 sec.',
+    _cap('Your Lightning Shield deals 5% more damage and gains 6 additional charges, and your melee attacks and abilities have a 5% chance to hit your target with a Lightning Shield orb. This effect can only occur once every 1.5 sec.'
+         + _static_shock_clause(1),
           'Your Stormstrike adds 3 charges to your Lightning Shield.', last=False),
     masks={1: (0x400, 0, 0), 2: (0x400, 0, 0)},
     ProcChance=5, ProcTypeMask=12582932,
-    notes='S3a A2: orb damage +5% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 5% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.',
+    notes='S3a A2: orb damage +5% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 5% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.' + S1_NOTE + 'Rockbiter clauses: orb damage +20 / 40 / 55 % (hidden child 202448, rank value set by Shaman::SyncRockbiterChildren) and each orb the shield fires arcs (202445, 55 % of the orb) to up to 1 / 2 / 3 other enemies attacking the shaman within 8 yd (spell_sha_enh_storm_orb).',
 )
 
 
 static_shock_51526 = _talent(
     51526, 'Static Shock', 'Rank 2',
     [_mod(SpellModOp.DAMAGE, 9), _mod(SpellModOp.CHARGES, 5, pct=False), _dummy(0)], 3059,
-    _cap('Your Lightning Shield deals 10% more damage and gains 6 additional charges, and your melee attacks and abilities have a 10% chance to hit your target with a Lightning Shield orb. This effect can only occur once every 1.5 sec.',
+    _cap('Your Lightning Shield deals 10% more damage and gains 6 additional charges, and your melee attacks and abilities have a 10% chance to hit your target with a Lightning Shield orb. This effect can only occur once every 1.5 sec.'
+         + _static_shock_clause(2),
           'Your Stormstrike adds 3 charges to your Lightning Shield.', last=False),
     masks={1: (0x400, 0, 0), 2: (0x400, 0, 0)},
     ProcChance=10, ProcTypeMask=12582932,
-    notes='S3a A2: orb damage +10% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 10% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.',
+    notes='S3a A2: orb damage +10% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 10% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.' + S1_NOTE + 'Rockbiter clauses: orb damage +20 / 40 / 55 % (hidden child 202448, rank value set by Shaman::SyncRockbiterChildren) and each orb the shield fires arcs (202445, 55 % of the orb) to up to 1 / 2 / 3 other enemies attacking the shaman within 8 yd (spell_sha_enh_storm_orb).',
 )
 
 
 static_shock_51527 = _talent(
     51527, 'Static Shock', 'Rank 3',
     [_mod(SpellModOp.DAMAGE, 14), _mod(SpellModOp.CHARGES, 5, pct=False), _dummy(0)], 3059,
-    _cap('Your Lightning Shield deals 15% more damage and gains 6 additional charges, and your melee attacks and abilities have a 15% chance to hit your target with a Lightning Shield orb. This effect can only occur once every 1.5 sec.',
+    _cap('Your Lightning Shield deals 15% more damage and gains 6 additional charges, and your melee attacks and abilities have a 15% chance to hit your target with a Lightning Shield orb. This effect can only occur once every 1.5 sec.'
+         + _static_shock_clause(3),
           'Your Stormstrike adds 3 charges to your Lightning Shield.', last=True),
     masks={1: (0x400, 0, 0), 2: (0x400, 0, 0)},
     ProcChance=15, ProcTypeMask=12582932,
-    notes='S3a A2: orb damage +15% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 15% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.',
+    notes='S3a A2: orb damage +15% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 15% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.' + S1_NOTE + 'Rockbiter clauses: orb damage +20 / 40 / 55 % (hidden child 202448, rank value set by Shaman::SyncRockbiterChildren) and each orb the shield fires arcs (202445, 55 % of the orb) to up to 1 / 2 / 3 other enemies attacking the shaman within 8 yd (spell_sha_enh_storm_orb).',
 )
 
 
@@ -2783,21 +2921,21 @@ ancestral_awakening_51558 = spell(
 
 improved_earth_shield_51560 = _talent(
     51560, 'Improved Earth Shield', 'Rank 1',
-    [_mod(SpellModOp.CHARGES, 0, pct=False), _mod(SpellModOp.DAMAGE, 4)], 2015,
-    _cap('Increases the number of charges of your Earth Shield by 1 and the healing it does by 5%.',
+    [_mod(SpellModOp.CHARGES, 0, pct=False), _mod(SpellModOp.DAMAGE, 42)], 2015,
+    _cap('Increases the number of charges of your Earth Shield by 1 and the healing it does by 43%.',
           'Healing with Earth Shield grants you 1 charge of Tidal Waves. This effect can only occur once every 5 sec. Requires the final rank of Tidal Waves.', last=False),
     masks={1: (0, _ES_D1, 0), 2: (0, _ES_D1, 0)},
-    notes="S2a A2 (X2): eff1 charges +1/+2 (flat SPELLMOD_CHARGES), eff2 healing +5/10% (SPELLMOD_DAMAGE; SpellInfoCorrections.cpp forces misc 0 on effect index 1 of 51560/51561, which this already is). Earth Shield's heal 379 ignores caster modifiers, so the percent reaches the heal through 974's own effect (spell_sha_resto_earth_shield). Rank 3 (202653, A3) carries the capstone.",
+    notes="eff2 healing +5/10% -> +43/87% (stored 4/9 -> 42/86) (2026-11-01, DPS balance pass 1031 round T1, user ruling: Earth Shield x2 instead of x4, Improved Earth Shield carries Restoration's value). S2a A2 (X2): eff1 charges +1/+2 (flat SPELLMOD_CHARGES), eff2 healing +5/10% (SPELLMOD_DAMAGE; SpellInfoCorrections.cpp forces misc 0 on effect index 1 of 51560/51561, which this already is). Earth Shield's heal 379 ignores caster modifiers, so the percent reaches the heal through 974's own effect (spell_sha_resto_earth_shield). Rank 3 (202653, A3) carries the capstone.",
 )
 
 
 improved_earth_shield_51561 = _talent(
     51561, 'Improved Earth Shield', 'Rank 2',
-    [_mod(SpellModOp.CHARGES, 1, pct=False), _mod(SpellModOp.DAMAGE, 9)], 2015,
-    _cap('Increases the number of charges of your Earth Shield by 2 and the healing it does by 10%.',
+    [_mod(SpellModOp.CHARGES, 1, pct=False), _mod(SpellModOp.DAMAGE, 86)], 2015,
+    _cap('Increases the number of charges of your Earth Shield by 2 and the healing it does by 87%.',
           'Healing with Earth Shield grants you 1 charge of Tidal Waves. This effect can only occur once every 5 sec. Requires the final rank of Tidal Waves.', last=False),
     masks={1: (0, _ES_D1, 0), 2: (0, _ES_D1, 0)},
-    notes="S2a A2 (X2): eff1 charges +1/+2 (flat SPELLMOD_CHARGES), eff2 healing +5/10% (SPELLMOD_DAMAGE; SpellInfoCorrections.cpp forces misc 0 on effect index 1 of 51560/51561, which this already is). Earth Shield's heal 379 ignores caster modifiers, so the percent reaches the heal through 974's own effect (spell_sha_resto_earth_shield). Rank 3 (202653, A3) carries the capstone.",
+    notes="eff2 healing +5/10% -> +43/87% (stored 4/9 -> 42/86) (2026-11-01, DPS balance pass 1031 round T1, user ruling: Earth Shield x2 instead of x4, Improved Earth Shield carries Restoration's value). S2a A2 (X2): eff1 charges +1/+2 (flat SPELLMOD_CHARGES), eff2 healing +5/10% (SPELLMOD_DAMAGE; SpellInfoCorrections.cpp forces misc 0 on effect index 1 of 51560/51561, which this already is). Earth Shield's heal 379 ignores caster modifiers, so the percent reaches the heal through 974's own effect (spell_sha_resto_earth_shield). Rank 3 (202653, A3) carries the capstone.",
 )
 
 
@@ -2881,10 +3019,11 @@ tidal_waves_51566 = spell(
 improved_shields_51881 = _talent(
     51881, 'Improved Lightning Shield', 'Rank 3',
     [_mod(SpellModOp.DAMAGE, 44)], 19,
-    _cap('Increases the damage of your Lightning Shield orbs by 45%. While Rockbiter is active, your Lightning Shield orbs also grant 1 Stoneskin each and generate double threat.',
+    _cap('Increases the damage of your Lightning Shield orbs by 45%.' + _ils_cleave_clause(3)
+         + ' While Rockbiter is active, your Lightning Shield orbs also grant 1 Stoneskin each and generate double threat.',
           'Your Lightning Shield has a 30% chance not to expend a charge when it would.', last=True),
     masks={1: (0x400, 0, 0)},
-    notes='S3a A2: Improved Lightning Shield (was Improved Shields): orb damage +45% (SPELLMOD_DAMAGE on d0 b10, the orb 26364; talent_mult effect 1 for tooltip entry 1217). The Water Shield / Earth Shield clauses are gone. The Rockbiter Stoneskin/threat and the rank 3 capstone are scripts (spell_sha_enh_lightning_shield, hidden child 202411).',
+    notes='S3a A2: Improved Lightning Shield (was Improved Shields): orb damage +45% (SPELLMOD_DAMAGE on d0 b10, the orb 26364; talent_mult effect 1 for tooltip entry 1217). The Water Shield / Earth Shield clauses are gone. The Rockbiter Stoneskin/threat and the rank 3 capstone are scripts (spell_sha_enh_lightning_shield, hidden child 202411).' + S1_NOTE + 'Stormstrike cleave clause (Revision 3, any imbue): with the shaman\'s own Lightning Shield holding a charge, Stormstrike also strikes up to 4 other enemies within 8 yd of its target for 33 / 66 / 100 % of the landed damage (202449, spell_sha_enh_stormstrike::Cleave). Dormant until Stormstrike (row 6, level 40).',
 )
 
 
@@ -3652,26 +3791,30 @@ scripted_by(8170, 'spell_sha_resto_cleansing_totem')
 toughness_16252 = _talent(
     16252, 'Toughness', 'Rank 1',
     [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 3, 1), _aura(232, -11, 11)], 52,
-    _cap('Increases your armor value from items by 4% and reduces the duration of movement slowing effects on you by 10%.',
+    _cap('Increases your armor value from items by 4% and reduces the duration of movement slowing effects on you by 10%.'
+         + _toughness_clause(1),
           'While you are below 35% health, your Stoneskin erodes 50% slower.', last=False),
-    notes='S3a A2: pulled stock rank, rewritten. Item armor +4% (aura 142 physical; the stock Stamina clause is gone), snare duration -10% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.',
+    notes='S3a A2: pulled stock rank, rewritten. Item armor +4% (aura 142 physical; the stock Stamina clause is gone), snare duration -10% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.' + S1_NOTE + 'Rockbiter clause: every Lightning Shield orb the shield fires heals for 202444 x rank / 3 (5 / 10 / 15 potency; spell_sha_enh_storm_orb + spell_sha_enh_toughness_heal).',
 )
 
 
 anticipation_16254 = _talent(
     16254, 'Anticipation', 'Rank 1',
     [_aura(AuraType.MOD_DODGE_PERCENT, 0), _aura(234, -21, 3)], 229,
-    'Increases your chance to dodge by 1% and reduces the duration of Disarm effects used against you by 20%. Does not stack with other Disarm duration reducing effects.',
-    notes='S3a A2: pulled stock rank, rewritten. Dodge +1% (aura 49), disarm duration -20% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).',
+    _cap('Increases your chance to dodge by 1% and reduces the duration of Disarm effects used against you by 20%. Does not stack with other Disarm duration reducing effects.'
+         + _ANTICIPATION_JUMPS_CLAUSE,
+         _ANTICIPATION_CAPSTONE, last=False),
+    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 3 makes spell_sha_stoneskin_grant build the Chain Lightning stone shell 202441. S3a A2: pulled stock rank, rewritten. Dodge +1% (aura 49), disarm duration -20% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).' + S1_NOTE + 'Rockbiter clauses: any rank, Chain Lightning jumps to 2 more targets (hidden child 202447, Shaman::SyncRockbiterChildren); the capstone adds the Chain Lightning orb 202446 on each hit enemy attacking the shaman (spell_sha_stoneskin_grant) and the shell 202441 drops 6 -> 3 potency.',
 )
 
 
 thundering_strikes_16255 = _talent(
     16255, 'Thundering Strikes', 'Rank 1',
     [_aura(AuraType.MOD_CRIT_PCT, 0)], 25,
-    _cap('Increases your chance to get a critical strike with all spells and attacks by 1%.',
+    _cap('Increases your chance to get a critical strike with all spells and attacks by 1%.'
+         + _thundering_surge_clause(1),
           'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=False),
-    notes='S3a A2: pulled stock rank, rewritten. All crit +1% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).',
+    notes='S3a A2: pulled stock rank, rewritten. All crit +1% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +40 / 80 / 125 % and its mana cost is refunded (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
 )
 
 
@@ -3696,16 +3839,20 @@ spirit_weapons_16268 = _talent(
 anticipation_16271 = _talent(
     16271, 'Anticipation', 'Rank 2',
     [_aura(AuraType.MOD_DODGE_PERCENT, 1), _aura(234, -36, 3)], 229,
-    'Increases your chance to dodge by 2% and reduces the duration of Disarm effects used against you by 35%. Does not stack with other Disarm duration reducing effects.',
-    notes='S3a A2: pulled stock rank, rewritten. Dodge +2% (aura 49), disarm duration -35% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).',
+    _cap('Increases your chance to dodge by 2% and reduces the duration of Disarm effects used against you by 35%. Does not stack with other Disarm duration reducing effects.'
+         + _ANTICIPATION_JUMPS_CLAUSE,
+         _ANTICIPATION_CAPSTONE, last=False),
+    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 3 makes spell_sha_stoneskin_grant build the Chain Lightning stone shell 202441. S3a A2: pulled stock rank, rewritten. Dodge +2% (aura 49), disarm duration -35% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).' + S1_NOTE + 'Rockbiter clauses: any rank, Chain Lightning jumps to 2 more targets (hidden child 202447, Shaman::SyncRockbiterChildren); the capstone adds the Chain Lightning orb 202446 on each hit enemy attacking the shaman (spell_sha_stoneskin_grant) and the shell 202441 drops 6 -> 3 potency.',
 )
 
 
 anticipation_16272 = _talent(
     16272, 'Anticipation', 'Rank 3',
     [_aura(AuraType.MOD_DODGE_PERCENT, 2), _aura(234, -51, 3)], 229,
-    'Increases your chance to dodge by 3% and reduces the duration of Disarm effects used against you by 50%. Does not stack with other Disarm duration reducing effects.',
-    notes='S3a A2: pulled stock rank, rewritten. Dodge +3% (aura 49), disarm duration -50% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).',
+    _cap('Increases your chance to dodge by 3% and reduces the duration of Disarm effects used against you by 50%. Does not stack with other Disarm duration reducing effects.'
+         + _ANTICIPATION_JUMPS_CLAUSE,
+         _ANTICIPATION_CAPSTONE, last=True),
+    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 3 makes spell_sha_stoneskin_grant build the Chain Lightning stone shell 202441. S3a A2: pulled stock rank, rewritten. Dodge +3% (aura 49), disarm duration -50% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).' + S1_NOTE + 'Rockbiter clauses: any rank, Chain Lightning jumps to 2 more targets (hidden child 202447, Shaman::SyncRockbiterChildren); the capstone adds the Chain Lightning orb 202446 on each hit enemy attacking the shaman (spell_sha_stoneskin_grant) and the shell 202441 drops 6 -> 3 potency.',
 )
 
 
@@ -3730,37 +3877,41 @@ flurry_16282 = _talent(
 thundering_strikes_16302 = _talent(
     16302, 'Thundering Strikes', 'Rank 2',
     [_aura(AuraType.MOD_CRIT_PCT, 1)], 25,
-    _cap('Increases your chance to get a critical strike with all spells and attacks by 2%.',
+    _cap('Increases your chance to get a critical strike with all spells and attacks by 2%.'
+         + _thundering_surge_clause(2),
           'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=False),
-    notes='S3a A2: pulled stock rank, rewritten. All crit +2% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).',
+    notes='S3a A2: pulled stock rank, rewritten. All crit +2% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +40 / 80 / 125 % and its mana cost is refunded (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
 )
 
 
 thundering_strikes_16303 = _talent(
     16303, 'Thundering Strikes', 'Rank 3',
     [_aura(AuraType.MOD_CRIT_PCT, 2), Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=202397)], 25,
-    _cap('Increases your chance to get a critical strike with all spells and attacks by 3%.',
+    _cap('Increases your chance to get a critical strike with all spells and attacks by 3%.'
+         + _thundering_surge_clause(3),
           'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=True),
     ProcChance=10, ProcTypeMask=0x14000,
-    notes='S3a A2: pulled stock rank, rewritten. All crit +3% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair). Rank 3 eff2 PROC_TRIGGER_SPELL -> 202397 (Agility = level, A3); spell_proc 16303: HIT phase, SpellTypeMask damage|heal, 10%, ICD 6000, once per cast (spell_sha_enh_thundering_strikes). Ranks 4 and 5 (16304/16305) leave the talent.',
+    notes='S3a A2: pulled stock rank, rewritten. All crit +3% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair). Rank 3 eff2 PROC_TRIGGER_SPELL -> 202397 (Agility = level, A3); spell_proc 16303: HIT phase, SpellTypeMask damage|heal, 10%, ICD 6000, once per cast (spell_sha_enh_thundering_strikes). Ranks 4 and 5 (16304/16305) leave the talent.' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +40 / 80 / 125 % and its mana cost is refunded (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
 )
 
 
 toughness_16306 = _talent(
     16306, 'Toughness', 'Rank 2',
     [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 6, 1), _aura(232, -21, 11)], 52,
-    _cap('Increases your armor value from items by 7% and reduces the duration of movement slowing effects on you by 20%.',
+    _cap('Increases your armor value from items by 7% and reduces the duration of movement slowing effects on you by 20%.'
+         + _toughness_clause(2),
           'While you are below 35% health, your Stoneskin erodes 50% slower.', last=False),
-    notes='S3a A2: pulled stock rank, rewritten. Item armor +7% (aura 142 physical; the stock Stamina clause is gone), snare duration -20% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.',
+    notes='S3a A2: pulled stock rank, rewritten. Item armor +7% (aura 142 physical; the stock Stamina clause is gone), snare duration -20% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.' + S1_NOTE + 'Rockbiter clause: every Lightning Shield orb the shield fires heals for 202444 x rank / 3 (5 / 10 / 15 potency; spell_sha_enh_storm_orb + spell_sha_enh_toughness_heal).',
 )
 
 
 toughness_16307 = _talent(
     16307, 'Toughness', 'Rank 3',
     [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 9, 1), _aura(232, -31, 11)], 52,
-    _cap('Increases your armor value from items by 10% and reduces the duration of movement slowing effects on you by 30%.',
+    _cap('Increases your armor value from items by 10% and reduces the duration of movement slowing effects on you by 30%.'
+         + _toughness_clause(3),
           'While you are below 35% health, your Stoneskin erodes 50% slower.', last=True),
-    notes='S3a A2: pulled stock rank, rewritten. Item armor +10% (aura 142 physical; the stock Stamina clause is gone), snare duration -30% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.',
+    notes='S3a A2: pulled stock rank, rewritten. Item armor +10% (aura 142 physical; the stock Stamina clause is gone), snare duration -30% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.' + S1_NOTE + 'Rockbiter clause: every Lightning Shield orb the shield fires heals for 202444 x rank / 3 (5 / 10 / 15 potency; spell_sha_enh_storm_orb + spell_sha_enh_toughness_heal).',
 )
 
 

@@ -11,6 +11,15 @@ from lib.dsl.registry import (
 )
 from . import _masks
 
+# Mind Flay's per-tick potency, ONE number for the whole spell (user ruling 2026-11-01: "make
+# everything based on potency so we have no surprises later"). 15407's effect 3 (the
+# PERIODIC_TRIGGER_SPELL_WITH_VALUE tick effect, priest_spells.py) reads it for the tick's base
+# points, and mind_flay_58381 (the helper that effect fires each tick) reads it for the
+# spell-power coefficient, so the two can never drift apart. 98.21 -> 88.39 is the 2026-11-01
+# DPS balance pass 1031 Mind Flay -10%; 88.39 -> 83.97 is a further -5% once the whole spell ran
+# on this potency (2026-11-01, DPS balance pass 1031, user ruling: Mind Flay -5% more).
+MIND_FLAY_TICK_POTENCY = 83.97
+
 # Proc flags/phases used by the procs_on() calls below - src/server/game/Spells/SpellMgr.h's
 # ProcFlags / ProcFlagsSpellPhase / ProcAttributes enums. Named here rather than as bare ints so a
 # reader doesn't have to decode a hex literal to see what a talent procs off.
@@ -424,11 +433,18 @@ improved_power_word_shield_14748 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.ALL_EFFECTS),
+        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.ALL_EFFECTS),
     ],
     spell_icon_id=566,
-    notes=_IMPROVED_PWS_NOTE,
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage absorbed by your Power Word: Shield by 5%.\n\n|cFF9D9D9DCapstone Bonus: Your Power Word: Shield and Spirit Shell absorption is additionally increased by your Mastery. This bonus is multiplicative and applies after all other modifiers.|r', 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 1, 'EffectSpellClassMaskA_1': _masks.PWS, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes=_IMPROVED_PWS_NOTE + (
+        ' Eff1 SPELLMOD_ALL_EFFECTS on Power Word: Shield 5% -> 33% (base_points 4 -> 32) '
+        '(2026-11-01, DPS balance pass 1031 round R4, user ruling: Disc Priest output, "maybe adjust Power Word: '
+        'Shield mana and healing"; R4 revision, user ruling: "buff Improved Power Word: Shield further on top" '
+        'of the baseline +50%); ranks 33/67/100% (first R4 draft 20/40/60%). Disc-only by construction (Holy '
+        'builds never reach (2,2)); '
+        'spell_pri_power_word_shield_aura applies it to both the base and the spell power part.'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage absorbed by your Power Word: Shield by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Power Word: Shield and Spirit Shell absorption is additionally increased by your Mastery. This bonus is multiplicative and applies after all other modifiers.|r', 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 1, 'EffectSpellClassMaskA_1': _masks.PWS, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -508,11 +524,18 @@ improved_power_word_shield_14768 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.ALL_EFFECTS),
+        Effect(type=EffectType.APPLY_AURA, base_points=66, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.ALL_EFFECTS),
     ],
     spell_icon_id=566,
-    notes=_IMPROVED_PWS_NOTE,
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage absorbed by your Power Word: Shield by 10%.\n\n|cFF9D9D9DCapstone Bonus: Your Power Word: Shield and Spirit Shell absorption is additionally increased by your Mastery. This bonus is multiplicative and applies after all other modifiers.|r', 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 1, 'EffectSpellClassMaskA_1': _masks.PWS, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes=_IMPROVED_PWS_NOTE + (
+        ' Eff1 SPELLMOD_ALL_EFFECTS on Power Word: Shield 10% -> 67% (base_points 9 -> 66) '
+        '(2026-11-01, DPS balance pass 1031 round R4, user ruling: Disc Priest output, "maybe adjust Power Word: '
+        'Shield mana and healing"; R4 revision, user ruling: "buff Improved Power Word: Shield further on top" '
+        'of the baseline +50%); ranks 33/67/100% (first R4 draft 20/40/60%). Disc-only by construction (Holy '
+        'builds never reach (2,2)); '
+        'spell_pri_power_word_shield_aura applies it to both the base and the spell power part.'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage absorbed by your Power Word: Shield by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Power Word: Shield and Spirit Shell absorption is additionally increased by your Mastery. This bonus is multiplicative and applies after all other modifiers.|r', 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 1, 'EffectSpellClassMaskA_1': _masks.PWS, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -529,12 +552,19 @@ improved_power_word_shield_14769 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.ALL_EFFECTS),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.ALL_EFFECTS),
         ApplyAura(AuraType.DUMMY, base_points=0, implicit_target_a=1),
     ],
     spell_icon_id=566,
-    notes=_IMPROVED_PWS_NOTE,
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage absorbed by your Power Word: Shield by 15%.\n\nCapstone Bonus: Your Power Word: Shield and Spirit Shell absorption is additionally increased by your Mastery. This bonus is multiplicative and applies after all other modifiers.', 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 1, 'EffectSpellClassMaskA_1': _masks.PWS, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes=_IMPROVED_PWS_NOTE + (
+        ' Eff1 SPELLMOD_ALL_EFFECTS on Power Word: Shield 15% -> 100% (base_points 14 -> 99) '
+        '(2026-11-01, DPS balance pass 1031 round R4, user ruling: Disc Priest output, "maybe adjust Power Word: '
+        'Shield mana and healing"; R4 revision, user ruling: "buff Improved Power Word: Shield further on top" '
+        'of the baseline +50%); ranks 33/67/100% (first R4 draft 20/40/60%). Disc-only by construction (Holy '
+        'builds never reach (2,2)); '
+        'spell_pri_power_word_shield_aura applies it to both the base and the spell power part.'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage absorbed by your Power Word: Shield by $s1%.\n\nCapstone Bonus: Your Power Word: Shield and Spirit Shell absorption is additionally increased by your Mastery. This bonus is multiplicative and applies after all other modifiers.', 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 1, 'EffectSpellClassMaskA_1': _masks.PWS, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -3190,13 +3220,19 @@ holy_concentration_34753 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200199),
         Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
     ],
     spell_icon_id=2169,
     notes='Priest Holy rework (HOLY.md 6,0): reworked - eff1 now triggers the new 200199 Spirit buff '
           '(replacing the old mana-regen buff 34754); procs_on below adds Holy Fire/Smite crits to '
           'the trigger list (stock only covered heal crits). New eff2 DUMMY 33% (base_points=32) - '
-          'the Renew-extension chance read by spell_pri_holy_concentration_extend.',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased by $200199s1% for $200199d after a critical heal with Flash Heal, Greater Heal or Binding Heal, or a critical hit with Holy Fire or Smite. Greater Heal, Flash Heal, Binding Heal and Circle of Healing have a $s2% chance to extend your Renew on all nearby party and raid members by 3 sec, to a maximum of 6 additional sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
+          'the Renew-extension chance read by spell_pri_holy_concentration_extend. '
+          'New eff3: -15% mana cost of the Holy Words (Serenity, Sanctify, Chastise; SPELLMOD_COST, '
+          'base_points=-16, mask C_3 = HW_SERENITY | HW_SANCTIFY | HW_CHASTISE) (2026-11-01, DPS '
+          'balance pass 1031 round R4 revision, user ruling: "Holy Concentration instead reduces the '
+          'mana cost of the Holy Words by 15/30/45%"). Replaces the first R4 draft\'s all-heals cut; '
+          'the heal cost cut moved to baseline Prayer of Healing (priest_spells.py).',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased by $200199s1% for $200199d after a critical heal with Flash Heal, Greater Heal or Binding Heal, or a critical hit with Holy Fire or Smite. Greater Heal, Flash Heal, Binding Heal and Circle of Healing have a $s2% chance to extend your Renew on all nearby party and raid members by 3 sec, to a maximum of 6 additional sec. Reduces the mana cost of your Holy Words by $s3%.\n\n|cFF9D9D9DCapstone Bonus: Casting a Holy Word allows $200227s1% of your mana regeneration to continue while casting for $200227d.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_3': _masks.HW_SERENITY | _masks.HW_SANCTIFY | _masks.HW_CHASTISE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 procs_on(holy_concentration_34753, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
          spell_phase_mask=PROC_SPELL_PHASE_CAST, hit_mask=PROC_HIT_CRITICAL, family_name=6,
@@ -3226,11 +3262,17 @@ holy_concentration_34859 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200200),
         Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
     ],
     spell_icon_id=2169,
     notes='Priest Holy rework (HOLY.md 6,0): rank 2 - triggers 200200 (20% Spirit); Renew-extension '
-          'chance 66% (base_points=65).',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased by $200200s1% for $200200d after a critical heal with Flash Heal, Greater Heal or Binding Heal, or a critical hit with Holy Fire or Smite. Greater Heal, Flash Heal, Binding Heal and Circle of Healing have a $s2% chance to extend your Renew on all nearby party and raid members by 3 sec, to a maximum of 6 additional sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
+          'chance 66% (base_points=65). '
+          'New eff3: -30% mana cost of the Holy Words (Serenity, Sanctify, Chastise; SPELLMOD_COST, '
+          'base_points=-31, mask C_3 = HW_SERENITY | HW_SANCTIFY | HW_CHASTISE) (2026-11-01, DPS '
+          'balance pass 1031 round R4 revision, user ruling: "Holy Concentration instead reduces the '
+          'mana cost of the Holy Words by 15/30/45%"). Replaces the first R4 draft\'s all-heals cut; '
+          'the heal cost cut moved to baseline Prayer of Healing (priest_spells.py).',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased by $200200s1% for $200200d after a critical heal with Flash Heal, Greater Heal or Binding Heal, or a critical hit with Holy Fire or Smite. Greater Heal, Flash Heal, Binding Heal and Circle of Healing have a $s2% chance to extend your Renew on all nearby party and raid members by 3 sec, to a maximum of 6 additional sec. Reduces the mana cost of your Holy Words by $s3%.\n\n|cFF9D9D9DCapstone Bonus: Casting a Holy Word allows $200227s1% of your mana regeneration to continue while casting for $200227d.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_3': _masks.HW_SERENITY | _masks.HW_SANCTIFY | _masks.HW_CHASTISE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 procs_on(holy_concentration_34859, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
          spell_phase_mask=PROC_SPELL_PHASE_CAST, hit_mask=PROC_HIT_CRITICAL, family_name=6,
@@ -3252,16 +3294,78 @@ holy_concentration_34860 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200201),
         Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=-46, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
     ],
     spell_icon_id=2169,
     notes='Priest Holy rework (HOLY.md 6,0): rank 3 - triggers 200201 (30% Spirit); Renew-extension '
-          'chance 100% (base_points=99).',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased by $200201s1% for $200201d after a critical heal with Flash Heal, Greater Heal or Binding Heal, or a critical hit with Holy Fire or Smite. Greater Heal, Flash Heal, Binding Heal and Circle of Healing have a $s2% chance to extend your Renew on all nearby party and raid members by 3 sec, to a maximum of 6 additional sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
+          'chance 100% (base_points=99). '
+          'New eff3: -45% mana cost of the Holy Words (Serenity, Sanctify, Chastise; SPELLMOD_COST, '
+          'base_points=-46, mask C_3 = HW_SERENITY | HW_SANCTIFY | HW_CHASTISE) (2026-11-01, DPS '
+          'balance pass 1031 round R4 revision, user ruling: "Holy Concentration instead reduces the '
+          'mana cost of the Holy Words by 15/30/45%"). Replaces the first R4 draft\'s all-heals cut; '
+          'the heal cost cut moved to baseline Prayer of Healing (priest_spells.py).',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased by $200201s1% for $200201d after a critical heal with Flash Heal, Greater Heal or Binding Heal, or a critical hit with Holy Fire or Smite. Greater Heal, Flash Heal, Binding Heal and Circle of Healing have a $s2% chance to extend your Renew on all nearby party and raid members by 3 sec, to a maximum of 6 additional sec. Reduces the mana cost of your Holy Words by $s3%.\n\nCapstone Bonus: Casting a Holy Word allows $200227s1% of your mana regeneration to continue while casting for $200227d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_3': _masks.HW_SERENITY | _masks.HW_SANCTIFY | _masks.HW_CHASTISE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 procs_on(holy_concentration_34860, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
          spell_phase_mask=PROC_SPELL_PHASE_CAST, hit_mask=PROC_HIT_CRITICAL, family_name=6,
          family_mask=(_masks.FLASH_HEAL | _masks.GREATER_HEAL | _masks.SMITE | _masks.HOLY_FIRE, _masks.BINDING_HEAL, 0),
          chance=100)
+
+
+# Holy Concentration capstone (DPS balance pass 1031, user ruling 2026-11-01): "Casting a Holy Word
+# allows 100% of your mana regeneration to continue while casting for 10 sec." (20 sec since round R4.)
+# Rank 3's own spell_proc row is taken by the crit-heal Spirit proc above, so the Holy Word proc lives on a hidden
+# passive carrier (200228) that rank 3 grants through a type-2 (aura) spell_linked_spell row - the
+# shadow_power_33221 -> 200689 pattern. The carrier procs on the CAST phase of Serenity (200197),
+# Sanctify (200198) and Chastise (200223): Spell::_cast fires PROC_SPELL_PHASE_CAST for every
+# non-triggered spell with no action target and flags from DmgClass alone (all three are
+# DefenseType 1 = MAGIC), so the ground-targeted Sanctify procs it like the other two - no script.
+holy_concentration_capstone_200228 = spell(
+    id=200228,
+    name='Holy Concentration',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=RANGE_SELF,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200227),
+    ],
+    spell_icon_id=2169,
+    notes='Holy Concentration capstone carrier (2026-11-01): hidden passive, linked (type=2) from rank '
+          '3 (34860); procs 200227 on casting any Holy Word.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 6, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'ProcChance': 101},
+)
+linked_spell(holy_concentration_34860.id, holy_concentration_capstone_200228.id, type=2,
+             comment='Holy Concentration rank 3 -> capstone carrier 200228 (Holy Word mana regen)')
+procs_on(holy_concentration_capstone_200228, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
+         spell_phase_mask=PROC_SPELL_PHASE_CAST, family_name=6,
+         family_mask=(0, 0, _masks.HW_SERENITY | _masks.HW_SANCTIFY | _masks.HW_CHASTISE), chance=100)
+
+
+# The capstone buff: SPELL_AURA_MOD_MANA_REGEN_INTERRUPT (134) at 100% (flat percent, base_points 99,
+# no potency) for 20 sec (10 sec until round R4). Player::UpdateManaRegen (StatSystem.cpp) sums every aura
+# 134 and caps the total at 100, so it never double-dips with Meditation or Spirit Tap. Visible, number-free
+# aura text.
+holy_concentration_regen_200227 = spell(
+    id=200227,
+    name='Holy Concentration',
+    school=School.HOLY,
+    duration_ms=20000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.MOD_MANA_REGEN_INTERRUPT),
+    ],
+    spell_icon_id=2169,
+    notes='Holy Concentration capstone buff (2026-11-01): 100% mana regen while casting, 10 sec, '
+          'triggered by 200228 on a Holy Word cast. duration_ms 10000 -> 20000 (2026-11-01, DPS balance '
+          'pass 1031 round R4, user ruling: "increase the duration of their mana regen talent from Holy '
+          'Words to probably 20 seconds"); the talent tooltips read $200227d and follow.',
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Allows $s1% of your mana regeneration to continue while casting.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Mana regeneration continues while casting.', 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
 
 
 # Priest Discipline rework (docs/reworks/priest-disc-rework.md (5,2)): Enlightenment now grants all
@@ -3542,19 +3646,25 @@ procs_on(-47516, proc_flags=PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, family_nam
          attributes_mask=PROC_ATTR_TRIGGERED_CAN_PROC, chance=0)
 
 
-# Priest Discipline rework (docs/reworks/priest-disc-rework.md (7,1)): the only data-side change is
-# eff2, the "chance to energize your shielded target" roll - the spec makes that clause
-# unconditional, so every rank now stores 100%. Everything else about Rapture is engine-side and
-# belongs to WP-B: the self-mana amounts (1/1.75/2.5%) are NOT expressible here - the stock engine
-# derives them from eff1's amount with a per-rank +/-0.5 fudge keyed on the spell id
-# (SpellAuras.cpp's SPELLFAMILY_PRIEST Power Word: Shield block), and they are non-integers - and
-# the target's 1% mana / 8 rage / 16 energy plus the 5 s internal cooldown (stock: 12 s) are
-# hardcoded there too. eff1 is therefore left at its stock amount as the rank marker the engine
-# still keys on.
+# Priest Discipline rework (docs/reworks/priest-disc-rework.md (7,1)). eff2 is the "chance to
+# energize your shielded target" roll - the spec makes that clause unconditional, so every rank
+# stores 100%. eff1 carries the self-mana share in TENTHS of a percent (script tier 2, PLAN "Script
+# numbers"): spell_pri_power_word_shield::HandleRapture (spell_priest.cpp) reads the rank aura's
+# EFFECT_0 amount / 10 as the percent of max mana returned - tenths because 3.5% is not an integer.
+# 2026-11-01 (DPS balance pass 1031, user ruling "double Rapture's mana return"): 1/1.75/2.5% ->
+# 2/3.5/5% (amount 20/35/50; was hardcoded in C++ as GetRaptureSelfManaPct, eff1 was a stock
+# leftover marker). Round R4 revision (same day, user ruling): halved back to 1/1.8/2.5% (amount
+# 10/18/25). Rank 2 was 1.75% before the doubling; 17.5 tenths is not an integer, so it rounds to
+# 1.8% rather than changing the C++ divisor (a data deploy without a rebuild would then pay 10x).
+# The target's 1% mana / 8 rage / 16 energy and the 5 s ICD stay engine-side.
 _RAPTURE_NOTE = (
     'Discipline rework (7,1): target-energize chance raised to 100% on every rank (the spec drops '
-    'the roll). Self-mana 1/1.75/2.5%, the 1% / 8 rage / 16 energy target values and the 5 s ICD '
-    'are all engine-side (WP-B) - not representable in this row.'
+    'the roll). eff1 = self-mana in tenths of a percent, read by HandleRapture (spell_priest.cpp): '
+    '2026-11-01 doubled 1/1.75/2.5% -> 2/3.5/5% (amount 20/35/50, DPS balance pass 1031, user '
+    'ruling), then halved back to 1/1.8/2.5% (amount 10/18/25; 1.75% rounds to 1.8% in tenths) '
+    '(2026-11-01, DPS balance pass 1031 round R4 revision, user ruling: revert the Rapture '
+    'doubling, keep it data-driven). The 1% / 8 rage / 16 energy target values and the 5 s ICD '
+    'are engine-side.'
 )
 
 
@@ -3570,7 +3680,7 @@ rapture_47535 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2894,
@@ -3591,12 +3701,12 @@ rapture_47536 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=17, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2894,
     notes=_RAPTURE_NOTE,
-    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Power Word: Shield is completely absorbed you are instantly energized with 1.75% of your total mana.  You also energize your shielded target with 1% total mana, 8 rage and 16 energy.  This effect can only occur once every 5 sec.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 1, 'EffectSpellClassMaskB_2': 16777216, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 6144, 'SpellClassMask_2': 65536, 'SpellClassSet': 6},
+    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Power Word: Shield is completely absorbed you are instantly energized with 1.8% of your total mana.  You also energize your shielded target with 1% total mana, 8 rage and 16 energy.  This effect can only occur once every 5 sec.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 1, 'EffectSpellClassMaskB_2': 16777216, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 6144, 'SpellClassMask_2': 65536, 'SpellClassSet': 6},
 )
 
 
@@ -3612,7 +3722,7 @@ rapture_47537 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2894,
@@ -4386,10 +4496,16 @@ improved_flash_heal_63504 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
         Effect(type=EffectType.APPLY_AURA, base_points=-6, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=2542,
-    notes=_IMPROVED_FLASH_HEAL_NOTE,
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Flash Heal by 5%, and increases its critical effect chance by 5%.\n\n|cFF9D9D9DCapstone Bonus: Flash Heal casts reduce the cooldown of Inner Focus by 1 sec.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': _masks.FLASH_HEAL, 'EffectSpellClassMaskB_1': _masks.FLASH_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes=_IMPROVED_FLASH_HEAL_NOTE + (
+        ' New eff3: SPELLMOD_DAMAGE +10% on Flash Heal (base_points 9) (2026-11-01, DPS balance pass 1031 round R4, '
+        'user ruling: Disc Priest output, "increase Flash Heal\'s healing"); '
+        'ranks 10/20/30%. Disc-only by construction (Holy builds never reach (6,2)), so Holy\'s Flash '
+        'Heal is unchanged. SpellHealingBonusDone applies SPELLMOD_DAMAGE to direct heals.'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Flash Heal by $s2%, increases its critical effect chance by $s1%, and increases its healing by $s3%.\n\n|cFF9D9D9DCapstone Bonus: Flash Heal casts reduce the cooldown of Inner Focus by 1 sec.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': _masks.FLASH_HEAL, 'EffectSpellClassMaskB_1': _masks.FLASH_HEAL, 'EffectSpellClassMaskC_1': _masks.FLASH_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -4407,10 +4523,16 @@ improved_flash_heal_63505 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
         Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=2542,
-    notes=_IMPROVED_FLASH_HEAL_NOTE,
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Flash Heal by 10%, and increases its critical effect chance by 10%.\n\n|cFF9D9D9DCapstone Bonus: Flash Heal casts reduce the cooldown of Inner Focus by 1 sec.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': _masks.FLASH_HEAL, 'EffectSpellClassMaskB_1': _masks.FLASH_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes=_IMPROVED_FLASH_HEAL_NOTE + (
+        ' New eff3: SPELLMOD_DAMAGE +20% on Flash Heal (base_points 19) (2026-11-01, DPS balance pass 1031 round R4, '
+        'user ruling: Disc Priest output, "increase Flash Heal\'s healing"); '
+        'ranks 10/20/30%. Disc-only by construction (Holy builds never reach (6,2)), so Holy\'s Flash '
+        'Heal is unchanged. SpellHealingBonusDone applies SPELLMOD_DAMAGE to direct heals.'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Flash Heal by $s2%, increases its critical effect chance by $s1%, and increases its healing by $s3%.\n\n|cFF9D9D9DCapstone Bonus: Flash Heal casts reduce the cooldown of Inner Focus by 1 sec.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': _masks.FLASH_HEAL, 'EffectSpellClassMaskB_1': _masks.FLASH_HEAL, 'EffectSpellClassMaskC_1': _masks.FLASH_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -4428,10 +4550,16 @@ improved_flash_heal_63506 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
         Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=2542,
-    notes=_IMPROVED_FLASH_HEAL_NOTE,
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Flash Heal by 15%, and increases its critical effect chance by 15%.\n\nCapstone Bonus: Flash Heal casts reduce the cooldown of Inner Focus by 1 sec.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': _masks.FLASH_HEAL, 'EffectSpellClassMaskB_1': _masks.FLASH_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes=_IMPROVED_FLASH_HEAL_NOTE + (
+        ' New eff3: SPELLMOD_DAMAGE +30% on Flash Heal (base_points 29) (2026-11-01, DPS balance pass 1031 round R4, '
+        'user ruling: Disc Priest output, "increase Flash Heal\'s healing"); '
+        'ranks 10/20/30%. Disc-only by construction (Holy builds never reach (6,2)), so Holy\'s Flash '
+        'Heal is unchanged. SpellHealingBonusDone applies SPELLMOD_DAMAGE to direct heals.'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Flash Heal by $s2%, increases its critical effect chance by $s1%, and increases its healing by $s3%.\n\nCapstone Bonus: Flash Heal casts reduce the cooldown of Inner Focus by 1 sec.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': _masks.FLASH_HEAL, 'EffectSpellClassMaskB_1': _masks.FLASH_HEAL, 'EffectSpellClassMaskC_1': _masks.FLASH_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -4538,8 +4666,12 @@ soul_warding_63574 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-8, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
     ],
     spell_icon_id=2142,
-    notes=_SOUL_WARDING_NOTE,
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Power Word: Shield by 2 sec, and reduces its mana cost by 7%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': _masks.PWS, 'EffectSpellClassMaskB_1': _masks.PWS, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes=_SOUL_WARDING_NOTE + (
+        ' Tooltip reads $s2 instead of a literal. The round R4 draft\'s -30/60% cost was reverted to -7/15% '
+        '(2026-11-01, DPS balance pass 1031 round R4 revision, user ruling: Power Word: Shield\'s base '
+        'cost carries the cut now).'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Power Word: Shield by 2 sec, and reduces its mana cost by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': _masks.PWS, 'EffectSpellClassMaskB_1': _masks.PWS, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -4813,8 +4945,8 @@ divine_star_pulse_200134 = spell(
           'sp_potency=37.4 (both user-reviewed, mismatched rows) - replaces the bonus_coefficients(direct=0.4) '
           'call below (removed; this is a brand-new custom id with no stock-dump row to retire, unlike '
           'Circle of Healing). '
-          'Divine Star\'s heal/damage pulse (docs/reworks/priest-new-spells.md: "100 (0.4 spellpower coeff) healing/damage"). Cast by the owning priest directly at whichever specific unit npc_pri_divine_star (spell_priest_new.cpp) finds newly within its own small pulse radius as it travels out and back - an explicit single-unit target per cast (owner->CastSpell(unit, 200134, true)), not a native AoE dest-area query. TARGET_UNIT_TARGET_ALLY (21) on the heal effect and TARGET_UNIT_TARGET_ENEMY (6) on the damage effect do NOT independently no-op against an explicit single-unit target server-side - Spell::SelectImplicitTargetObjectTargets (the TARGET_REFERENCE_TYPE_TARGET/TARGET_SELECT_CATEGORY_DEFAULT path these two target types take) never consults SpellImplicitTargetInfo::GetCheckType() the way the AoE/nearby/chain/trajectory search paths do, so both effects were applying to literally every unit hit - a priest healing themselves also silently self-damaged for the same amount, and any enemy hit also got healed. Playtest bugfix (2026-09-20, "not sure if Divine Star is healing, is it being attributed correctly"): spell_pri_divine_star_pulse (spell_priest_new.cpp) now hooks OnObjectTargetSelect per effect (EFFECT_0/ally, EFFECT_1/enemy) and nulls the target WorldObject*& when the caster\'s actual IsValidAssistTarget/IsValidAttackTarget disagrees with that effect\'s intended reaction - same idiom as spell_mage_arcane_blast::ClearSelfTarget (spell_mage.cpp) for nulling a single effect\'s target without touching the other effect\'s own resolution. This also gives full manual control over per-leg hit-dedup (tracked in the creature AI, not this row) rather than fighting native AoE re-hit semantics. base_points=99 (stored -1 convention) for the tooltip\'s 100; coeff_weight=0.4 matches the design doc\'s spellpower coefficient but is passthrough metadata only (lib/build.py\'s own docstring) - it never turns into a spell_bonus_data row or an EffectBonusMultiplier by itself. Confirmed live: spell_bonus_data had zero rows for 200134 and EffectBonusMultiplier_1/_2 were both 0 in spell_dbc, so every cast landed for a flat, non-scaling 100 regardless of the caster\'s spellpower. Fixed below via bonus_coefficients(), the actual mechanism (see halo_pulse_200136\'s own identical fix just above, and mage_trigger_spells.py/mage_spells.py for the established precedent - e.g. meteor_impact_200096, burnout_explosion_200116) that emits the spell_bonus_data row SpellMgr::GetSpellBonusData reads (both SpellDamageBonusDone and SpellHealingBonusDone key off the same direct_bonus column, so one row covers both effects). "Healing reduced beyond 6 targets": npc_pri_divine_star tracks a cast-wide (both legs) count of distinct allies healed and, once that count exceeds 6, casts the heal via CastCustomSpell/SPELLVALUE_BASE_POINT0 with a reduced amount instead of this row\'s own base_points - default falloff 10% per target beyond 6, compounding (retail\'s own value; docs/reworks/priest-new-spells.md doesn\'t specify a curve, flagged as playtest-tunable). No RangeIndex/range concern: the owner casts this triggered (bypasses range checks) at the missile\'s live position, which may be well outside the caster\'s own melee range. SpellVisualID_1=90013 is the yellow burst impact kit patch_priest_vfx_models.py mints (ChestEffect -> Priest_DivineStar_Impact_Yellow, mined from Ascension\'s client) - the missile\'s own travelling orb model is wired separately, on the creature_template row, not here.',
-    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 0, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 32, 'SpellPriority': 50, 'SpellVisualID_1': 90013, 'SpellClassMask_3': _masks.DIVINE_STAR},
+          'Divine Star\'s heal/damage pulse (docs/reworks/priest-new-spells.md: "100 (0.4 spellpower coeff) healing/damage"). Cast by the owning priest directly at whichever specific unit npc_pri_divine_star (spell_priest_new.cpp) finds newly within its own small pulse radius as it travels out and back - an explicit single-unit target per cast (owner->CastSpell(unit, 200134, true)), not a native AoE dest-area query. TARGET_UNIT_TARGET_ALLY (21) on the heal effect and TARGET_UNIT_TARGET_ENEMY (6) on the damage effect do NOT independently no-op against an explicit single-unit target server-side - Spell::SelectImplicitTargetObjectTargets (the TARGET_REFERENCE_TYPE_TARGET/TARGET_SELECT_CATEGORY_DEFAULT path these two target types take) never consults SpellImplicitTargetInfo::GetCheckType() the way the AoE/nearby/chain/trajectory search paths do, so both effects were applying to literally every unit hit - a priest healing themselves also silently self-damaged for the same amount, and any enemy hit also got healed. Playtest bugfix (2026-09-20, "not sure if Divine Star is healing, is it being attributed correctly"): spell_pri_divine_star_pulse (spell_priest_new.cpp) now hooks OnObjectTargetSelect per effect (EFFECT_0/ally, EFFECT_1/enemy) and nulls the target WorldObject*& when the caster\'s actual IsValidAssistTarget/IsValidAttackTarget disagrees with that effect\'s intended reaction - same idiom as spell_mage_arcane_blast::ClearSelfTarget (spell_mage.cpp) for nulling a single effect\'s target without touching the other effect\'s own resolution. This also gives full manual control over per-leg hit-dedup (tracked in the creature AI, not this row) rather than fighting native AoE re-hit semantics. base_points=99 (stored -1 convention) for the tooltip\'s 100; coeff_weight=0.4 matches the design doc\'s spellpower coefficient but is passthrough metadata only (lib/build.py\'s own docstring) - it never turns into a spell_bonus_data row or an EffectBonusMultiplier by itself. Confirmed live: spell_bonus_data had zero rows for 200134 and EffectBonusMultiplier_1/_2 were both 0 in spell_dbc, so every cast landed for a flat, non-scaling 100 regardless of the caster\'s spellpower. Fixed below via bonus_coefficients(), the actual mechanism (see halo_pulse_200136\'s own identical fix just above, and mage_trigger_spells.py/mage_spells.py for the established precedent - e.g. meteor_impact_200096, burnout_explosion_200116) that emits the spell_bonus_data row SpellMgr::GetSpellBonusData reads (both SpellDamageBonusDone and SpellHealingBonusDone key off the same direct_bonus column, so one row covers both effects). "Healing reduced beyond 6 targets": npc_pri_divine_star tracks a cast-wide (both legs) count of distinct allies healed and, once that count exceeds 6, casts the heal via CastCustomSpell/SPELLVALUE_BASE_POINT0 with a reduced amount instead of this row\'s own base_points - default falloff 10% per target beyond 6, compounding (retail\'s own value; docs/reworks/priest-new-spells.md doesn\'t specify a curve, flagged as playtest-tunable). No RangeIndex/range concern: the owner casts this triggered (bypasses range checks) at the missile\'s live position, which may be well outside the caster\'s own melee range. SpellVisualID_1=90013 is the yellow burst impact kit patch_priest_vfx_models.py mints (ChestEffect -> Priest_DivineStar_Impact_Yellow, mined from Ascension\'s client) - the missile\'s own travelling orb model is wired separately, on the creature_template row, not here. DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit).',
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 0, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 32, 'SpellPriority': 50, 'SpellVisualID_1': 90013, 'SpellClassMask_3': _masks.DIVINE_STAR, 'DefenseType': 1},
 )
 scripted_by(divine_star_pulse_200134, 'spell_pri_divine_star_pulse')
 
@@ -4833,8 +4965,8 @@ halo_pulse_200136 = spell(
     notes='Potency system P5-Priest: eff0 (heal) converted to sp_potency=18.9, eff1 (damage) to '
           'sp_potency=74.8 (both user-reviewed, mismatched rows) - replaces the bonus_coefficients(direct=0.526) '
           'call below (removed; brand-new custom id, no stock-dump row to retire). '
-          'Halo\'s heal/damage pulse (docs/reworks/priest-new-spells.md: "200 (0.526 spellpower coeff) healing/damage"). Cast by the owning priest directly at whichever specific unit spell_pri_halo (AuraScript on 200135, spell_priest_new.cpp) finds newly crossed by the expanding ring on each periodic tick - same explicit-single-unit-target "ally heals / enemy damages" idiom as Divine Star\'s pulse (200134, priest_trigger_spells.py); see that spell\'s own notes for why this sidesteps native-AoE re-hit dedup problems entirely. base_points=199 (stored -1 convention) for the tooltip\'s 200; coeff_weight=0.526 matches the design doc. Playtest bugfix (2026-09-20, "Halo is also not healing either or its not being attributed correctly") - two independent bugs, same shape as Divine Star\'s own pulse (200134, see its notes just above for the full mechanism writeup): (1) TARGET_UNIT_TARGET_ALLY (21, EFFECT_0/HEAL) and TARGET_UNIT_TARGET_ENEMY (6, EFFECT_1/SCHOOL_DAMAGE) do NOT independently gate against an explicit single-unit target - Spell::SelectImplicitTargetObjectTargets never consults each effect\'s own check type for this target-reference path, so both effects landed on every unit the ring touched regardless of reaction (an ally took damage alongside the heal; an enemy got healed alongside the damage) - fixed by spell_pri_halo_pulse (spell_priest_new.cpp), same OnObjectTargetSelect-nulling idiom as spell_pri_divine_star_pulse. (2) coeff_weight alone is passthrough metadata only (lib/build.py\'s own docstring) - it never turns into a spell_bonus_data row or an EffectBonusMultiplier by itself, unlike what its name suggests. Confirmed live: spell_bonus_data had zero rows for 200136 and EffectBonusMultiplier_1/_2 were both 0 in spell_dbc, so every cast landed for a flat, non-scaling ~200 regardless of the caster\'s spellpower. Fixed by calling bonus_coefficients() below, the actual mechanism (see mage_trigger_spells.py/mage_spells.py for the established precedent - e.g. meteor_impact_200096, burnout_explosion_200116) that emits the spell_bonus_data row SpellMgr::GetSpellBonusData reads.',
-    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 0, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 52, 'SpellPriority': 50, 'SpellClassMask_3': _masks.HALO},
+          'Halo\'s heal/damage pulse (docs/reworks/priest-new-spells.md: "200 (0.526 spellpower coeff) healing/damage"). Cast by the owning priest directly at whichever specific unit spell_pri_halo (AuraScript on 200135, spell_priest_new.cpp) finds newly crossed by the expanding ring on each periodic tick - same explicit-single-unit-target "ally heals / enemy damages" idiom as Divine Star\'s pulse (200134, priest_trigger_spells.py); see that spell\'s own notes for why this sidesteps native-AoE re-hit dedup problems entirely. base_points=199 (stored -1 convention) for the tooltip\'s 200; coeff_weight=0.526 matches the design doc. Playtest bugfix (2026-09-20, "Halo is also not healing either or its not being attributed correctly") - two independent bugs, same shape as Divine Star\'s own pulse (200134, see its notes just above for the full mechanism writeup): (1) TARGET_UNIT_TARGET_ALLY (21, EFFECT_0/HEAL) and TARGET_UNIT_TARGET_ENEMY (6, EFFECT_1/SCHOOL_DAMAGE) do NOT independently gate against an explicit single-unit target - Spell::SelectImplicitTargetObjectTargets never consults each effect\'s own check type for this target-reference path, so both effects landed on every unit the ring touched regardless of reaction (an ally took damage alongside the heal; an enemy got healed alongside the damage) - fixed by spell_pri_halo_pulse (spell_priest_new.cpp), same OnObjectTargetSelect-nulling idiom as spell_pri_divine_star_pulse. (2) coeff_weight alone is passthrough metadata only (lib/build.py\'s own docstring) - it never turns into a spell_bonus_data row or an EffectBonusMultiplier by itself, unlike what its name suggests. Confirmed live: spell_bonus_data had zero rows for 200136 and EffectBonusMultiplier_1/_2 were both 0 in spell_dbc, so every cast landed for a flat, non-scaling ~200 regardless of the caster\'s spellpower. Fixed by calling bonus_coefficients() below, the actual mechanism (see mage_trigger_spells.py/mage_spells.py for the established precedent - e.g. meteor_impact_200096, burnout_explosion_200116) that emits the spell_bonus_data row SpellMgr::GetSpellBonusData reads. DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit).',
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 0, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 52, 'SpellPriority': 50, 'SpellClassMask_3': _masks.HALO, 'DefenseType': 1},
 )
 scripted_by(halo_pulse_200136, 'spell_pri_halo_pulse')
 
@@ -5142,10 +5274,19 @@ focused_will_45234 = spell(
     effects=[
         None,
         ApplyAura(AuraType.MOD_CRIT_PCT, base_points=0, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
     spell_icon_id=2215,
-    notes=_FOCUSED_WILL_NOTE,
-    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell critical effect chance by 1%.\n\n|cFF9D9D9DCapstone Bonus: Your Flash Heal and Greater Heal have a 5% chance to empower your next Penance. Empowered Penance fires additional bolts at allies near your target, applying Divine Aegis to each. Lasts 30 sec, does not stack, consumed on use.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+    notes=_FOCUSED_WILL_NOTE + (
+        ' New eff3: SPELLMOD_CRITICAL_CHANCE +10% on Prayer of Healing (base_points 9) '
+        '(2026-11-01, DPS balance pass 1031 round R4, user ruling: Disc Priest output, "increase Prayer of Healing '
+        'crit rate"); ranks 10/20/30%. Disc-only by construction (Holy builds never reach (6,0)), so '
+        'Holy\'s Prayer of Healing is unchanged. A spellmod effect does nothing on proc '
+        '(AuraEffect::HandleProc default case), so the -45234 spell_proc row is unaffected. '
+        'SpellClassSet 0 -> 6 so the new SpellMod stays on priest spells (lint '
+        'check_family_zero_spellmods).'
+    ),
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell critical effect chance by 1%, and the critical effect chance of your Prayer of Healing by an additional $s3%.\n\n|cFF9D9D9DCapstone Bonus: Your Flash Heal and Greater Heal have a 5% chance to empower your next Penance. Empowered Penance fires additional bolts at allies near your target, applying Divine Aegis to each. Lasts 30 sec, does not stack, consumed on use.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': _masks.POH, 'SpellClassSet': 6, 'EffectBonusMultiplier_1': 1.0},
 )
 
 
@@ -5163,10 +5304,19 @@ focused_will_45243 = spell(
     effects=[
         None,
         ApplyAura(AuraType.MOD_CRIT_PCT, base_points=1, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
     spell_icon_id=2215,
-    notes=_FOCUSED_WILL_NOTE,
-    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell critical effect chance by 2%.\n\n|cFF9D9D9DCapstone Bonus: Your Flash Heal and Greater Heal have a 5% chance to empower your next Penance. Empowered Penance fires additional bolts at allies near your target, applying Divine Aegis to each. Lasts 30 sec, does not stack, consumed on use.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+    notes=_FOCUSED_WILL_NOTE + (
+        ' New eff3: SPELLMOD_CRITICAL_CHANCE +20% on Prayer of Healing (base_points 19) '
+        '(2026-11-01, DPS balance pass 1031 round R4, user ruling: Disc Priest output, "increase Prayer of Healing '
+        'crit rate"); ranks 10/20/30%. Disc-only by construction (Holy builds never reach (6,0)), so '
+        'Holy\'s Prayer of Healing is unchanged. A spellmod effect does nothing on proc '
+        '(AuraEffect::HandleProc default case), so the -45234 spell_proc row is unaffected. '
+        'SpellClassSet 0 -> 6 so the new SpellMod stays on priest spells (lint '
+        'check_family_zero_spellmods).'
+    ),
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell critical effect chance by 2%, and the critical effect chance of your Prayer of Healing by an additional $s3%.\n\n|cFF9D9D9DCapstone Bonus: Your Flash Heal and Greater Heal have a 5% chance to empower your next Penance. Empowered Penance fires additional bolts at allies near your target, applying Divine Aegis to each. Lasts 30 sec, does not stack, consumed on use.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': _masks.POH, 'SpellClassSet': 6, 'EffectBonusMultiplier_1': 1.0},
 )
 
 
@@ -5184,10 +5334,19 @@ focused_will_45244 = spell(
     effects=[
         ApplyAura(AuraType.DUMMY, base_points=4, implicit_target_a=1),
         ApplyAura(AuraType.MOD_CRIT_PCT, base_points=2, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
     spell_icon_id=2215,
-    notes=_FOCUSED_WILL_NOTE,
-    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell critical effect chance by 3%.\n\nCapstone Bonus: Your Flash Heal and Greater Heal have a 5% chance to empower your next Penance. Empowered Penance fires additional bolts at allies near your target, applying Divine Aegis to each. Lasts 30 sec, does not stack, consumed on use.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+    notes=_FOCUSED_WILL_NOTE + (
+        ' New eff3: SPELLMOD_CRITICAL_CHANCE +30% on Prayer of Healing (base_points 29) '
+        '(2026-11-01, DPS balance pass 1031 round R4, user ruling: Disc Priest output, "increase Prayer of Healing '
+        'crit rate"); ranks 10/20/30%. Disc-only by construction (Holy builds never reach (6,0)), so '
+        'Holy\'s Prayer of Healing is unchanged. A spellmod effect does nothing on proc '
+        '(AuraEffect::HandleProc default case), so the -45234 spell_proc row is unaffected. '
+        'SpellClassSet 0 -> 6 so the new SpellMod stays on priest spells (lint '
+        'check_family_zero_spellmods).'
+    ),
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell critical effect chance by 3%, and the critical effect chance of your Prayer of Healing by an additional $s3%.\n\nCapstone Bonus: Your Flash Heal and Greater Heal have a 5% chance to empower your next Penance. Empowered Penance fires additional bolts at allies near your target, applying Divine Aegis to each. Lasts 30 sec, does not stack, consumed on use.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': _masks.POH, 'SpellClassSet': 6, 'EffectBonusMultiplier_1': 1.0},
 )
 scripted_by(focused_will_45244, 'spell_pri_focused_will')
 # Negative (whole-rank-chain) spell_proc row - see the -14531 comment above for why a positive
@@ -5838,11 +5997,13 @@ soul_warding_200154 = spell(
     spell_icon_id=2142,
     notes='Discipline rework (4,2) NEW rank 2 of Soul Warding - the stock row 63574 becomes rank 1 '
           '(-2 sec / -7%) and this carries the old -4 sec / -15%, taking Power Word: Shield\'s '
-          '4 sec base cooldown to 0 at full rank.',
+          '4 sec base cooldown to 0 at full rank. Tooltip reads $s2 instead of a literal; the round R4 '
+          'draft\'s -60% cost was reverted to -15% (2026-11-01, DPS balance pass 1031 round R4 revision, '
+          'user ruling: Power Word: Shield\'s base cost carries the cut now).',
     raw_overrides=_passive_raw(
         EffectSpellClassMaskA_1=_masks.PWS,
         EffectSpellClassMaskB_1=_masks.PWS,
-        Description_Lang_enUS='Reduces the cooldown of your Power Word: Shield by 4 sec, and reduces its mana cost by 15%.',
+        Description_Lang_enUS='Reduces the cooldown of your Power Word: Shield by 4 sec, and reduces its mana cost by $s2%.',
     ),
 )
 
@@ -5866,7 +6027,7 @@ greater_power_word_shield_200155 = spell(
     range_yards=40.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=96.8, potency_kind='absorb', implicit_target_a=21, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=145.2, potency_kind='absorb', implicit_target_a=21, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127),
     ],
     spell_icon_id=453,
     notes='Discipline rework: the secondary shield the Renewed Hope capstone puts on the 2 nearest '
@@ -5878,7 +6039,11 @@ greater_power_word_shield_200155 = spell(
           'Word: Shield (566) rather than the shared/reused one it had before. '
           'Potency system P5-Priest: converted to sp_potency=96.8 (potency-report default, base/coef '
           'already agreed) - shares spell_pri_power_word_shield_aura (spell_priest.cpp) with Power '
-          'Word: Shield (17), so the CalculateSpellAmount fix made for 17 applies here for free.',
+          'Word: Shield (17), so the CalculateSpellAmount fix made for 17 applies here for free. '
+          'sp_potency 96.8 -> 145.2 (+50%, matching Power Word: Shield\'s baseline +50%) (2026-11-01, DPS balance '
+          'pass 1031 round R4 revision, user ruling: '
+          '"raise Power Word: Shield\'s baseline absorb"; the Renewed Hope proc shield must not fall '
+          'behind the shield it replaces).',
     raw_overrides={'AttributesEx2': 2621440, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Draws on the soul of the friendly target to shield them, absorbing damage.  While the shield holds, spellcasting will not be interrupted by damage.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': _masks.GREATER_PWS, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 784},
 )
 scripted_by(greater_power_word_shield_200155, 'spell_pri_power_word_shield_aura')
@@ -6935,8 +7100,8 @@ lightwell_heal_200202 = spell(
           "in need within 20 yds. Potency system P8: migrated from base_points=289 flat + "
           "bonus_coefficients(direct=0.4) to sp_potency=27.4 (base-implied, preserving the ~290 "
           "level-60 heal; see comment above) - no stock-dump conflict at this custom id, so the "
-          "prune pass retires the old spell_bonus_data row without needing unbind_bonus_coefficients().",
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1}.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0, 'SpellLevel': 0},
+          "prune pass retires the old spell_bonus_data row without needing unbind_bonus_coefficients(). DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit).",
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1}.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0, 'SpellLevel': 0, 'DefenseType': 1},
 )
 
 
@@ -7679,6 +7844,41 @@ summon_tentacle_of_madness_200245 = spell(
 )
 
 
+mind_flay_58381 = spell(
+    id=58381,
+    name='Mind Flay',
+    school=School.SHADOW,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=-1,
+    effects=[
+        # base_potency=0.0: this effect carries NO base damage of its own - the amount comes from
+        # 15407's effect 3 (PERIODIC_TRIGGER_SPELL_WITH_VALUE passes it as BASE_POINT0), already
+        # level-scaled there from MIND_FLAY_TICK_POTENCY. A generated base would be added on top of
+        # it (RealPointsPerLevel is applied to a passed value too; only the potency correction is
+        # skipped for a caller-supplied value), so base_potency=0.0 keeps this row at the stock
+        # BasePoints -1 / DieSides 1 / RealPointsPerLevel 0 (a net 0 base) and sp_potency only
+        # generates the spell-power coefficient: 83.97 / 100 * (1.0 s tick / 3.5) = 0.2399 in
+        # EffectBonusMultiplier_1. time_basis_ms=1000 is the channel's tick interval, since this
+        # row is a direct hit on its own (cast_time_ms 0 would otherwise default T to 1.5 s).
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=MIND_FLAY_TICK_POTENCY, base_potency=0.0, potency_kind='direct', time_basis_ms=1000, implicit_target_a=77),
+    ],
+    spell_icon_id=548,
+    notes="Mind Flay's per-tick damage helper (stock rank 9 row), brought under the DSL 2026-11-01 "
+          "(DPS balance pass 1031, user ruling: Mind Flay fully potency-based; row moved out of npc.csv). Its spell-power "
+          "coefficient was the stock spell_bonus_data row (58381, direct_bonus 0.257), which beats "
+          "the DBC EffectBonusMultiplier; that row is retired by unbind_bonus_coefficients() below "
+          "and the coefficient now comes from sp_potency=MIND_FLAY_TICK_POTENCY (83.97, 1 s tick): "
+          "EffectBonusMultiplier_1 0.257 -> 0.2399.",
+    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 1073741824, 'CastingTimeIndex': 1, 'InterruptFlags': 15, 'ChannelInterruptFlags': 31788, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 9', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Assault the target's mind with Shadow energy, causing Shadow damage over $48156d and slowing the target to $15407s2% of their movement speed.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed slowed to $15407s2% of normal.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 6, 'SpellClassMask_1': 8388608, 'SpellLevel': 0, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+unbind_bonus_coefficients(mind_flay_58381)  # retires the stock spell_bonus_data row (58381, direct_bonus 0.257) that beat the generated potency coefficient (D1)
+
+
 tentacle_mind_flay_200246 = spell(
     id=200246,
     name='Mind Flay',
@@ -7690,7 +7890,7 @@ tentacle_mind_flay_200246 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=68.859, base_potency=0.0, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
     ],
     spell_icon_id=548,
     notes="Priest Shadow rework (SHADOW.md (3,0) / ID map): the tentacle's own channeled Mind Flay "
@@ -7721,14 +7921,14 @@ tentacle_mind_flay_200246 = spell(
           'AttributesEx (67125252 - confirmed SPELL_ATTR1_IS_CHANNELED (0x4) already set) so the '
           "tentacle's channel generates no threat, matching the design doc's \"Generates no threat "
           'for the priest.\" spell_pri_tentacle_mind_flay (WP-B, AuraScript) hooks OnEffectPeriodic '
-          'for the 1-Madness-per-tick generation. dot bonus coefficient 0.257 -> 0.2313 (2026-10-08, DPS balance pass, user ruling: Shadow damage). dot bonus coefficient 0.2313 -> 0.2429 (2026-10-08, DPS balance pass, user ruling: Tentacle Mind Flay x1.05, round 10).',
-    raw_overrides={'AttributesEx': 67126276, 'AttributesEx2': 524288, 'AttributesEx5': 134225920, 'AttributesEx6': 8388608, 'SpellVisualID_1': 12637, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'CastingTimeIndex': 1, 'SpellClassSet': 6, 'SpellClassMask_3': _masks.MIND_FLAY, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Assaults the target's mind with Shadow energy, causing Shadow damage over 3 sec.", 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+          'for the 1-Madness-per-tick generation. dot bonus coefficient 0.257 -> 0.2313 (2026-10-08, DPS balance pass, user ruling: Shadow damage). dot bonus coefficient 0.2313 -> 0.2429 (2026-10-08, DPS balance pass, user ruling: Tentacle Mind Flay x1.05, round 10). dot bonus coefficient 0.2429 -> 0.2186 (2026-11-01, DPS balance pass 1031, user ruling: Mind Flay -10%). Converted 2026-11-01 (user ruling: Mind Flay fully potency-based) from the hand-set bonus_coefficients(dot=0.2186) to sp_potency=76.51 (periodic, 1 s tick: 76.51 / 100 / 3.5 = 0.2186, damage unchanged) with base_potency=0.0 so the base stays 0 and the damage stays fully coefficient-driven. sp_potency 76.51 -> 68.859 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Mind Flay Tentacle -10%).',
+    raw_overrides={'AttributesEx': 67126276, 'AttributesEx2': 524288, 'AttributesEx5': 134225920, 'AttributesEx6': 8388608, 'SpellVisualID_1': 12637, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'CastingTimeIndex': 1, 'SpellClassSet': 6, 'SpellLevel': 0, 'SpellClassMask_3': _masks.MIND_FLAY, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Assaults the target's mind with Shadow energy, causing Shadow damage over 3 sec.", 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
 )
 # SpellVisualID_1 12637 is stock Mind Flay's own channel visual (shared by 15407/17313/17314).
 # Without it the tentacle's channel is invisible - damage ticks and the debuff land, but no beam
 # is drawn (playtest 2026-09-23). A pulled clone doesn't inherit it: 200246 was authored from
 # scratch rather than copied from 15407's row.
-bonus_coefficients(tentacle_mind_flay_200246, dot=0.2429)  # 0.257 -> 0.2313 (2026-10-08, DPS balance pass, user ruling: Shadow damage); 0.2313 -> 0.2429 (2026-10-08, round 10, x1.05)
+# bonus_coefficients(tentacle_mind_flay_200246, dot=0.2186) retired 2026-11-01 for sp_potency=76.51 on the effect above (76.51 / 100 * (1.0 s / 3.5) = 0.2186, the same coefficient); history: 0.2429 -> 0.2186 (2026-11-01, DPS balance pass 1031, user ruling: Mind Flay -10%); 0.257 -> 0.2313 (2026-10-08, DPS balance pass, user ruling: Shadow damage); 0.2313 -> 0.2429 (2026-10-08, round 10, x1.05)
 scripted_by(tentacle_mind_flay_200246, 'spell_pri_tentacle_mind_flay')
 
 

@@ -306,12 +306,18 @@ multi_shot_2643 = spell(
     mana_cost_pct=9,
     range_yards=35.0,
     effects=[
-        Effect(type=121, points_per_level=6.564516129032258, die_sides=0, implicit_target_a=6, chain_targets=3),
+        # 2026-11-01 potency audit F14: the stock flat (6.5645 per level from 18 = 275 at 60) is sp_potency 103 (avg
+        # 275.5 at 60); the 100% normalized ranged weapon hit that effect 121 carries stays implicit and gets its own
+        # percent in effect 1. Flat first, percent second, so the 100% leaves the hit (W + 275) exactly as it was.
+        Effect(type=121, sp_potency=103, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6, chain_targets=3),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=6, chain_targets=3),
     ],
     spell_icon_id=85,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 18); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. S2-FIX F-2 (user ruling): CastingTimeIndex 18 (was 1): index 1 plus the engine\'s +500 ms ranged-slot add was a hidden 0.5 s cast',
-    raw_overrides={'AttributesEx2': 131072, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 18, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fires several missiles, hitting $x1 targets.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 9, 'MaxLevel': 80, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 30.0, 'SpellClassMask_1': 4096, 'SpellClassSet': 9, 'SpellLevel': 18, 'SpellPriority': 50, 'SpellVisualID_1': 567, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 18); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. S2-FIX F-2 (user ruling): CastingTimeIndex 18 (was 1): index 1 plus the engine\'s +500 ms ranged-slot add was a hidden 0.5 s cast. Potency audit F14 (2026-11-01): effect 0 hand flat (6.5645 per level, 275 at 60) -> sp_potency 103 (275.5 at 60, on the potency curve with the 5% direct variance), new effect 1 WEAPON_PERCENT_DAMAGE weapon_potency 100 (chain 3 like effect 0; the 100% weapon hit is unchanged), BaseLevel 18 / MaxLevel 80 now generated (MaxLevel 0), the stray stock spell_bonus_data row (ap 0.2) unbound; spell_hun_multi_shot_mm trims effect 1\'s chain too',
+    raw_overrides={'AttributesEx2': 131072, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fires several missiles, hitting $x1 targets.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 9, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 30.0, 'SpellClassMask_1': 4096, 'SpellClassSet': 9, 'SpellLevel': 18, 'SpellPriority': 50, 'SpellVisualID_1': 567, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+
+unbind_bonus_coefficients(multi_shot_2643)  # stray stock spell_bonus_data ap 0.2 (inert on a weapon effect; D1)
 
 
 growl_2649 = spell(
@@ -1139,7 +1145,7 @@ kill_command_34026 = spell(
     mana_cost_pct=3,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=86.0, potency_kind='direct', implicit_target_a=6),   # TUNE1: was 75
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=108.79, potency_kind='direct', implicit_target_a=6),  # TUNE1: was 75; 2026-11-01 pass 1031: 86.0 -> 98.9 -> 108.79
         Effect(type=EffectType.DUMMY, implicit_target_a=6),
     ],
     spell_icon_id=2226,
@@ -1148,6 +1154,8 @@ kill_command_34026 = spell(
         'H0-P2 (PET.md 6.2): rewritten in place as a hunter-damage pet command. eff0 SCHOOL_DAMAGE ap_potency 75, '
         'eff1 DUMMY (script hook, spell_hun_kill_command_rework), no aura and no duration (inert by data, 6.1), '
         'Category 0, RecoveryTime 6000, GCD 1500/133, 40 yd, AttributesEx/Ex2 0, SpellLevel 10, d1 b11 unchanged.'
+        ' Effect 1 ap_potency 86.0 -> 98.9 (2026-11-01, DPS balance pass 1031, user ruling: Kill Command +15%).'
+        ' Effect 1 ap_potency 98.9 -> 108.79 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Kill Command +10%).'
     ),
     raw_overrides={
         'AuraDescription_Lang_Mask': 16712188,
@@ -1636,12 +1644,21 @@ kill_shot_53351 = spell(
     mana_cost_pct=7,
     range_yards=45.0,
     effects=[
-        Effect(type=17, base_points=204, points_per_level=0.0, implicit_target_a=6),
-        Effect(type=31, base_points=199, implicit_target_a=6),
+        # Flat part on potency with no stat coefficient (a weapon effect never reads one); it is added before
+        # effect 1's percent multiplies the hit, so it is paid out x4.
+        Effect(type=17, base_potency=17.5, potency_kind='direct', implicit_target_a=6),
+        Effect(type=31, weapon_potency=400, implicit_target_a=6),
     ],
     spell_icon_id=3676,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 71); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 3 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You attempt to finish the wounded target off, firing a long range attack dealing $s2% weapon damage plus ${$RAP*0.40+$m1*2}. Kill Shot can only be used on enemies that have 20% or less health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 4, 'MaxLevel': 0, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 155, 'Speed': 40.0, 'SpellClassMask_2': 8388608, 'SpellClassSet': 9, 'SpellLevel': 40, 'SpellVisualID_1': 11780, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetAuraState': 2},
+    notes=(
+        'Flat part 205 (hand) -> base_potency 17.5 (46.8 at 60), weapon 200% (hand) -> weapon_potency 400, the '
+        'SpellEffects.cpp 0.4 x RAP add gated off by SpellPotency::IsDeclared (2026-11-01, potency audit fix F14). '
+        'Matched on the hunter sim bow (Ancient Bone Bow 78-145, 2.8 s, no ammo): old 2 x (weapon + 205) + 0.4 RAP = '
+        '633 + 0.8 RAP, new 4 x (weapon + 46.8) = 633 + 0.8 RAP; level 60 at 1,000 RAP 1,433 -> 1,433 (average). '
+        'Not in sims. '
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 71); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 3 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+    ),
+    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You attempt to finish the wounded target off, firing a long range attack dealing $s2% of (your weapon damage + {pot1.avg}). Kill Shot can only be used on enemies that have 20% or less health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 4, 'MaxLevel': 0, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 155, 'Speed': 40.0, 'SpellClassMask_2': 8388608, 'SpellClassSet': 9, 'SpellLevel': 40, 'SpellVisualID_1': 11780, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetAuraState': 2},
 )
 
 
@@ -1780,12 +1797,12 @@ steady_shot_56641 = spell(
     range_yards=35.0,
     effects=[
         # The potency time basis stays at the live 1.5 s cast (DBC 1000 ms + the engine's 500 ms), not cast_time_ms.
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=49.0, potency_kind='direct', time_basis_ms=1500,
-               implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=44.1, potency_kind='direct', time_basis_ms=1500,
+               implicit_target_a=6),   # 2026-11-01 pass 1031: ap_potency 49.0 -> 44.1
     ],
     spell_icon_id=2228,
     tooltip_vars=bm_steady_shot_1150,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted effect 1 (the flat + AP-scaling term) to ap_potency=42.6 (potency-report default, base/coef already agreed); the raw weapon+ammo damage added in SpellEffects.cpp\'s SPELLFAMILY_HUNTER case is real weapon itemization, not hard-coded AP math (no RAP term there), so it is untouched.',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted effect 1 (the flat + AP-scaling term) to ap_potency=42.6 (potency-report default, base/coef already agreed); the raw weapon+ammo damage added in SpellEffects.cpp\'s SPELLFAMILY_HUNTER case is real weapon itemization, not hard-coded AP math (no RAP term there), so it is untouched. Effect 1 ap_potency 49.0 -> 44.1 (2026-11-01, DPS balance pass 1031, user ruling: Steady Shot -10%).',
     raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 134217728, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 4, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A steady shot that causes {pot1*steady} Physical damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_3': m.STEADY_SHOT, 'SpellClassSet': 9, 'SpellLevel': 8, 'SpellVisualID_1': 8155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # 204 is the live Hunter trainer; Steady Shot is a baseline at 8 (hunter-rework SHARED B1).
@@ -2035,10 +2052,10 @@ aimed_shot_19434 = spell(
     effects=[
         # Q11: no flat part. The damage is pure weapon_potency, which takes no time basis (M3).
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=594, implicit_target_a=6),   # placeholder, M
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=416, implicit_target_a=6),   # placeholder, M; 2026-11-01 pass 1031: 594 -> 416
     ],
     spell_icon_id=1629,
-    notes='pulled from existing data. S2a (MARKSMANSHIP 5.1): 2.0 s live cast, category 1301 / 10 s, 220 weapon potency; the stock flat bp 4 + 6.72/level and the -50% healing debuff are dropped (Q11, MM 0.5). S2-FIX F-1: Attributes 0x410012 (+TRACK_TARGET_IN_CAST_PLAYER_ONLY) and AttributesEx4 0x18000000 (+FORCE_DISPLAY_CASTBAR 0x08000000: the client hides a ranged-slot shot\'s cast bar without it), like Steady Shot 56641.',
+    notes='pulled from existing data. S2a (MARKSMANSHIP 5.1): 2.0 s live cast, category 1301 / 10 s, 220 weapon potency; the stock flat bp 4 + 6.72/level and the -50% healing debuff are dropped (Q11, MM 0.5). S2-FIX F-1: Attributes 0x410012 (+TRACK_TARGET_IN_CAST_PLAYER_ONLY) and AttributesEx4 0x18000000 (+FORCE_DISPLAY_CASTBAR 0x08000000: the client hides a ranged-slot shot\'s cast bar without it), like Steady Shot 56641. Effect 2 weapon_potency 594 -> 416 (2026-11-01, DPS balance pass 1031, user ruling: Aimed Shot -30%; 594 x 0.7 = 415.8, weapon_potency must be whole).',
     raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 0x18000000, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 16, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "An aimed shot that deals $s2% weapon damage and consumes your marks on the target, triggering each mark's effect.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_1': 131072, 'SpellClassSet': 9, 'SpellLevel': 20, 'SpellVisualID_1': 7955, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -2057,7 +2074,7 @@ explosive_shot_53301 = spell(
     duration_ms=2000,
     effects=[
         # The hit (SURVIVAL 5.5, V2): the only 53301 potency.
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=76.5, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=53.55, potency_kind='direct', implicit_target_a=6),   # 2026-11-01 pass 1031: 76.5 -> 53.55
         # A bare 1 s timer (live 0, no potency, no potency_excluded): its d1 b31 hardcode (cast 53352 with BP0 =
         # m_amount, SpellAuraEffects.cpp) is prevented by spell_hun_explosive_shot_rework, which casts 53352 with no bp.
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DUMMY,
@@ -2073,7 +2090,8 @@ explosive_shot_53301 = spell(
           '262156 (a player-cast ranged shot, N5), Speed 40, category 1173 / 6 s, 7% mana, d1 b31. '
           'Tooltip SURVIVAL 5.5 with tooltip_vars 1180 (T.N.T. x Demolitions). '
           'User 2026-10-17: no minimum range, RangeIndex 114 (Hunter Range, ranged flag = melee-range minimum) -> 35 '
-          '(Medium-Long Range, 0-35 yd, no flag).',
+          '(Medium-Long Range, 0-35 yd, no flag). '
+          'Effect 1 ap_potency 76.5 -> 53.55 (2026-11-01, DPS balance pass 1031, user ruling: Explosive Shot -30%).',
     raw_overrides={'AttributesEx2': 131072, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Taking Fire damage every second.', 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You fire an explosive charge into the enemy target, dealing {pot1*tntdemo} Fire damage. The charge blasts the target every second for an additional $d, dealing ' + pot_text(explosive_shot_53352, var='tntdemo') + ' Fire damage each time. Nearby enemies take $202054s2% of the damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 35, 'Speed': 40.0, 'SpellClassMask_2': 2147483648, 'SpellClassSet': 9, 'SpellLevel': 30, 'SpellVisualID_1': 11828, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -2246,10 +2264,10 @@ chimera_shot_53209 = spell(
     effects=[
         Effect(type=77, die_sides=0, implicit_target_a=6),
         Effect(type=121, base_points=-1, implicit_target_a=6),
-        Effect(type=31, weapon_potency=135, implicit_target_a=6),   # R2-15 (user 2026-10-13); placeholder, M
+        Effect(type=31, weapon_potency=122, implicit_target_a=6),   # R2-15 (user 2026-10-13); placeholder, M; 2026-11-01 pass 1031: 135 -> 122
     ],
     spell_icon_id=3412,
-    notes='pulled from existing data',
+    notes='pulled from existing data. Effect 3 weapon_potency 135 -> 122 (2026-11-01, DPS balance pass 1031, user ruling: Chimera Shot -10%; 135 x 0.9 = 121.5, weapon_potency must be whole, rounded up).',
     raw_overrides={'AttributesEx2': 131072, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "You deal $s3% weapon damage, refreshing your Serpent Sting on the target and instantly dealing " + _c(CHIMERA_SERPENT_BURST_PCT) + "% of its total damage. Each of your marks on the target also triggers, without being consumed: Sniper's Mark makes this a critical strike with " + _c(CHIMERA_SNIPER_CRIT_DAMAGE) + "% more critical strike damage; Viper's Mark adds a stack and applies Viper's Venom; Falcon's Mark increases your attack power by $201947s1% for $201947d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_3': 1, 'SpellClassSet': 9, 'SpellLevel': 60, 'SpellVisualID_1': 11725, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

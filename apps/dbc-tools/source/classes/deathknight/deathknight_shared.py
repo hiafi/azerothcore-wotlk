@@ -433,7 +433,7 @@ rune_haste_sync_203053 = spell(
 scripted_by(rune_haste_sync_203053, 'spell_dk_rune_haste_sync')
 
 # ---- Obliterate (shared doc "Obliterate", U2, U3, U9, known-hard 5) ----
-# 1 Frost Rune + 15 RP (spell_rune_cost 2600; stock 587 is 1 Frost + 1 Unholy), 118% weapon damage + a 10 potency flat
+# 1 Frost Rune + 15 RP (spell_rune_cost 2600; stock 587 is 1 Frost + 1 Unholy), 130% weapon damage + an 11 potency flat
 # (RETUNE 2026-10-25: S2 TUNE 72%, doc 160%; the off-hand copy 66198 mirrors it).
 # Stock 49020's frame (Mograine 30838 keeps casting that one; its DSL row, SLA 17555 and rank chain stay). The percent
 # effect is FIRST and the flat NORMALIZED_WEAPON_DMG second: EffectWeaponDmg multiplies a flat effect that sits before
@@ -464,8 +464,8 @@ obliterate_203054 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=118, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=130, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=11, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=2639,
@@ -478,7 +478,8 @@ obliterate_203054 = spell(
         '2026-10-25; S2 TUNE 72, doc 160) FIRST, eff1 '
         'NORMALIZED_WEAPON_DMG sp_potency 10 direct T 1500; no EFFECT_2 (the core\'s per-disease value reads 0). '
         'RuneCostID 2600 = 1 Frost + 15 RP. d1 b17 (m.OBLITERATE) is the only family bit. Disease consumption is '
-        'suppressed by the always-100 guard 203055.'
+        'suppressed by the always-100 guard 203055. weapon_potency 118 -> 130 (weapon_potency must be whole: 118 x 1.1 = '
+        '129.8, rounded) and sp_potency 10 -> 11 (2026-11-01, DPS balance pass 1031, user ruling: Obliterate +10%).'
     ),
     raw_overrides={
         'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1,
@@ -604,7 +605,10 @@ blood_plague_55078 = spell(
     range_yards=50000.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, points_per_level=0.39399999380111694, mechanic=22,
+        # 2026-11-01 potency audit F5: the stock tick (bp -1, 0.394 per level = 23 at 60) and the stock spell_bonus_data
+        # ap_dot 0.06325 are now ap_potency 7.38 (periodic, 3 s tick: 7.38 / 100 x 3 / 3.5 = 0.06326) with base_potency
+        # 4.3 holding the base at 23 at 60 (5.35 x 4.3), so the tick is unchanged at any attack power.
+        Effect(type=EffectType.APPLY_AURA, ap_potency=7.38, base_potency=4.3, potency_kind='periodic', mechanic=22,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000,
                misc_value=_MISC_ALL_SCHOOLS),
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY,
@@ -613,11 +617,14 @@ blood_plague_55078 = spell(
     spell_icon_id=3141,
     notes=(
         'pulled from existing data; dk-rework DK0b (U6): DefenseType 2 -> 1 (magic class: spell crit chance, 150% base + '
-        'Runic Focus +100% = 200%). Everything else is the stock row. Stock spell_bonus_data ap_dot_bonus and the live '
-        'custom_attr are untouched.'
+        'Runic Focus +100% = 200%). Everything else is the stock row. The live '
+        'custom_attr is untouched. Tick 23 at 60 and stock ap_dot 0.06325 -> periodic ap_potency 7.38 (coefficient 0.06326) '
+        'with base_potency 4.3 (base 23 at 60), so the level-60 tick is unchanged at any attack power; the stock '
+        'spell_bonus_data row is replaced by the generated one; SpellLevel 0 -> 1 (BaseLevel was already 1) '
+        '(2026-11-01, potency audit fix F5).'
     ),
     raw_overrides={
-        'AttributesEx2': 4, 'AttributesEx3': 262144, 'AttributesEx4': 8388608, 'CastingTimeIndex': 1, 'BaseLevel': 1,
+        'AttributesEx2': 4, 'AttributesEx3': 262144, 'AttributesEx4': 8388608, 'CastingTimeIndex': 1, 'SpellLevel': 1,
         'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190,
         'Description_Lang_enUS': 'A disease dealing Shadow damage every 3 sec for $d.', 'Description_Lang_Mask': 16712190,
         'AuraDescription_Lang_enUS': 'Deals Shadow damage over $d.', 'AuraDescription_Lang_Mask': 16712190,
@@ -647,7 +654,9 @@ frost_fever_55095 = spell(
     range_yards=50000.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, points_per_level=0.3199999928474426, mechanic=22,
+        # 2026-11-01 potency audit F5: the stock tick (bp -1, 0.32 per level = 19 at 60) and the stock ap_dot 0.06325 are
+        # now ap_potency 7.38 (periodic, 3 s tick) with base_potency 3.55 holding the base at 19 at 60 (5.35 x 3.55).
+        Effect(type=EffectType.APPLY_AURA, ap_potency=7.38, base_potency=3.55, potency_kind='periodic', mechanic=22,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000,
                misc_value=_MISC_ALL_SCHOOLS),
         Effect(type=EffectType.APPLY_AURA, base_points=-15, mechanic=8, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY,
@@ -659,10 +668,13 @@ frost_fever_55095 = spell(
     notes=(
         'pulled from existing data; dk-rework DK0b (U6): DefenseType 0 -> 1 (magic class: Frost Fever can now crit, spell '
         'crit chance, 150% base + Runic Focus +100% = 200%). Everything else is the stock row; live spell_custom_attr 512 '
-        '(IGNORE_BINARY) stays, declared in deathknight_trigger_spells.py.'
+        '(IGNORE_BINARY) stays, declared in deathknight_trigger_spells.py. Tick 19 at 60 and stock ap_dot 0.06325 -> '
+        'periodic ap_potency 7.38 (coefficient 0.06326) with base_potency 3.55 (base 19 at 60), so the level-60 tick is '
+        'unchanged at any attack power; the stock spell_bonus_data row is replaced by the generated one; SpellLevel 0 -> 1 '
+        '(2026-11-01, potency audit fix F5).'
     ),
     raw_overrides={
-        'AttributesEx3': 262144, 'AttributesEx4': 9437184, 'CastingTimeIndex': 1, 'ProcChance': 101,
+        'AttributesEx3': 262144, 'AttributesEx4': 9437184, 'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1,
         'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190,
         'Description_Lang_enUS': "A disease dealing Frost damage every 3 sec and reducing the target's melee and ranged "
                                  "attack speed by $55095s2% for $55095d.",

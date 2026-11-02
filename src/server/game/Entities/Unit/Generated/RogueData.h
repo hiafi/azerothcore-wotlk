@@ -59,6 +59,7 @@ namespace RogueData
     constexpr uint32 SPELL_PRECISION = 13705; // precision_13705
     constexpr uint32 SPELL_WEAPON_SPECIALIZATION = 13709; // weapon_specialization_13709
     constexpr uint32 SPELL_LIGHTNING_REFLEXES = 13712; // lightning_reflexes_13712
+    constexpr uint32 SPELL_DEFLECTION = 13713; // deflection_13713
     constexpr uint32 SPELL_DUAL_WIELD_SPECIALIZATION = 13715; // dual_wield_specialization_13715
     constexpr uint32 SPELL_IMPROVED_SINISTER_STRIKE = 13732; // improved_sinister_strike_13732
     constexpr uint32 SPELL_PUNCTURING_WOUNDS = 13733; // puncturing_wounds_13733
@@ -79,6 +80,8 @@ namespace RogueData
     constexpr uint32 SPELL_DUAL_WIELD_SPECIALIZATION_13849 = 13849; // dual_wield_specialization_13849
     constexpr uint32 SPELL_DUAL_WIELD_SPECIALIZATION_13851 = 13851; // dual_wield_specialization_13851
     constexpr uint32 SPELL_DUAL_WIELD_SPECIALIZATION_13852 = 13852; // dual_wield_specialization_13852
+    constexpr uint32 SPELL_DEFLECTION_13853 = 13853; // deflection_13853
+    constexpr uint32 SPELL_DEFLECTION_13854 = 13854; // deflection_13854
     constexpr uint32 SPELL_IMPROVED_SINISTER_STRIKE_13863 = 13863; // improved_sinister_strike_13863
     constexpr uint32 SPELL_PUNCTURING_WOUNDS_13865 = 13865; // puncturing_wounds_13865
     constexpr uint32 SPELL_PUNCTURING_WOUNDS_13866 = 13866; // puncturing_wounds_13866
@@ -257,6 +260,7 @@ namespace RogueData
     constexpr uint32 SPELL_SHADOW_DANCE = 51713; // shadow_dance_51713
     constexpr uint32 SPELL_DISMANTLE = 51722; // dismantle_51722
     constexpr uint32 SPELL_FAN_OF_KNIVES = 51723; // fan_of_knives_51723
+    constexpr uint32 SPELL_FAN_OF_KNIVES_OFF_HAND = 52874; // fan_of_knives_off_hand_52874
     constexpr uint32 SPELL_KILLING_SPREE_MAIN = 57841; // killing_spree_main_57841
     constexpr uint32 SPELL_KILLING_SPREE_OFF = 57842; // killing_spree_off_57842
     constexpr uint32 SPELL_TRICKS_OF_THE_TRADE = 57934; // tricks_of_the_trade_57934
@@ -392,6 +396,9 @@ namespace RogueData
     constexpr uint32 SPELL_ENDURANCE_HELPER = 204001; // endurance_helper_204001
     constexpr uint32 SPELL_IMPROVED_FEINT_HELPER = 204002; // improved_feint_helper_204002
     constexpr uint32 SPELL_PREY_ON_THE_WEAK_CRIT = 204003; // prey_on_the_weak_crit_204003
+    constexpr uint32 SPELL_ENDURANCE_RIPOSTE_HEAL = 204004; // endurance_riposte_heal_204004
+    constexpr uint32 SPELL_DEFLECTION_EVISCERATE_HEAL = 204005; // deflection_eviscerate_heal_204005
+    constexpr uint32 SPELL_REINFORCED_LEATHER_SHIELD = 204006; // reinforced_leather_shield_204006
     constexpr uint32 SPELL_DEEPENING_SHADOWS = 204130; // deepening_shadows_204130
     constexpr uint32 SPELL_DEEPENING_SHADOWS_204131 = 204131; // deepening_shadows_204131
     constexpr uint32 SPELL_DEEPENING_SHADOWS_204132 = 204132; // deepening_shadows_204132

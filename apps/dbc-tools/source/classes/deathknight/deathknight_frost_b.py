@@ -407,12 +407,14 @@ heart_strike_offhand_203322 = spell(
     id=203322, name='Heart Strike', school=School.NORMAL, attributes=_ATTR0_IS_ABILITY | 0x40000 | _ATTR0_NO_ACTIVE_DEFENSE,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=60, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=90, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=7.5, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_HEART_STRIKE,
     notes=(
+        'weapon_potency 60 -> 90 and sp_potency 5 -> 7.5 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Heart Strike +50%, the Threat of '
+        'Thassarian off-hand copy follows the main hand). '
         'S2a Frost (7,0) U16 / D1: the Threat of Thassarian off-hand Heart Strike, cast triggered by the main-hand Heart '
         'Strike (spell_dk_frost_offhand). Frame copy of Heart Strike 55050 with the attribute words of 66188 (0-verify '
         'item 2): Attributes 0x240010, AttributesEx 0x8000000, AttributesEx3 0x1040000 = REQUIRES_OFF_HAND_WEAPON | '

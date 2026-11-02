@@ -508,7 +508,7 @@ def check_copy_frames(rows: dict) -> list[str]:
                                        "EffectAura_2", "SchoolMask")),
              (SV_MAIN, FOK, ("SpellVisualID_1", "ImplicitTargetA_1", "ImplicitTargetB_1", "EffectRadiusIndex_1",
                              "ImplicitTargetA_2", "ImplicitTargetB_2", "EffectRadiusIndex_2", "DefenseType")),
-             )   # 52874 (stock, not in the DSL package) is not compared
+             )   # 52874 (declared in the DSL since the 2026-11-01 potency audit F6, weapon_potency tied to 51723's) is not compared
     for copy, src, cols in pairs:
         rc, rs = rows.get(copy), rows.get(src)
         if rc is None or rs is None:

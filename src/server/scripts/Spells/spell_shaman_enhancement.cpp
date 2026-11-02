@@ -85,6 +85,17 @@ namespace
     constexpr std::array<int32, 3> SPIRIT_GUARD_STONESKIN = { ShamanData::SPIRIT_GUARD_STONESKIN_R1,
         ShamanData::SPIRIT_GUARD_STONESKIN_R2, ShamanData::SPIRIT_GUARD_STONESKIN_R3 };
 
+    // DPS balance pass 1031 S1 (user ruling: shaman package): Toughness's orb heal, Improved Lightning Shield's
+    // Stormstrike cleave and Thundering Strikes' Chain Lightning surge, by rank.
+    constexpr std::array<uint32, 3> TOUGHNESS_RANKS = { ShamanData::SPELL_TOUGHNESS, ShamanData::SPELL_TOUGHNESS_16306,
+        ShamanData::SPELL_TOUGHNESS_16307 };
+    constexpr std::array<uint32, 3> THUNDERING_STRIKES_RANKS = { ShamanData::SPELL_THUNDERING_STRIKES,
+        ShamanData::SPELL_THUNDERING_STRIKES_16302, ShamanData::SPELL_THUNDERING_STRIKES_16303 };
+    constexpr std::array<int32, 3> ILS_SS_CLEAVE_PCT = { ShamanData::ILS_SS_CLEAVE_R1, ShamanData::ILS_SS_CLEAVE_R2,
+        ShamanData::ILS_SS_CLEAVE_R3 };
+    constexpr std::array<int32, 3> THUNDERING_SURGE_PCT = { ShamanData::THUNDERING_SURGE_R1,
+        ShamanData::THUNDERING_SURGE_R2, ShamanData::THUNDERING_SURGE_R3 };
+
     // Stormstrike's cleave hits: Frost Ascendance 1, Elemental Ascendance 2 (doc Ascendance values, [fixed])
     constexpr uint32 SS_CLEAVE_FROST = 1;
     constexpr uint32 SS_CLEAVE_ELEMENTAL = 2;
@@ -469,6 +480,164 @@ class spell_sha_enh_static_shock : public AuraScript
     }
 };
 
+// 26364 Lightning Shield orb (DPS balance pass 1031 S1, user ruling: shaman package). Both orb paths cast it (the
+// shield's own proc and Static Shock's). Under Rockbiter, after an orb lands:
+//  - Toughness (any rank): the shaman heals for 202444 (spell_sha_enh_toughness_heal scales it by the rank).
+//  - Static Shock (rank 1 / 2 / 3): the orb arcs to up to that many other enemies attacking the shaman within
+//    STATIC_SHOCK_ARC_RADIUS_YD of the struck enemy, nearest first, in line of sight from it (202445, 55 % of the orb).
+// The arc and the Chain Lightning orb (202446) are other ids, so neither heals nor arcs again. NPC shields and the
+// Enhancement DPS builds (never in Rockbiter) stop at the first check.
+class spell_sha_enh_storm_orb : public SpellScript
+{
+    PrepareSpellScript(spell_sha_enh_storm_orb);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ ShamanData::SPELL_TOUGHNESS_HEAL, ShamanData::SPELL_LIGHTNING_SHIELD_ARC });
+    }
+
+    bool Load() override
+    {
+        return GetCaster() && GetCaster()->IsPlayer();
+    }
+
+    void HandleAfterHit()
+    {
+        Player* player = GetCaster()->ToPlayer();
+        Unit* struck = GetHitUnit();
+        if (!player || !struck || Shaman::GetActiveImbue(player) != ShamanData::SPELL_ROCKBITER_WEAPON)
+            return;
+
+        if (Shaman::GetTalentRank(player, TOUGHNESS_RANKS))
+            player->CastSpell(player, ShamanData::SPELL_TOUGHNESS_HEAL, true);
+
+        uint8 const arcs = Shaman::GetTalentRank(player, STATIC_SHOCK_RANKS);
+        SpellInfo const* arcInfo = sSpellMgr->GetSpellInfo(ShamanData::SPELL_LIGHTNING_SHIELD_ARC);
+        if (!arcs || !arcInfo)
+            return;
+
+        // Copied first: a cast can change the attacker set (a death)
+        float const radius = ShamanData::STATIC_SHOCK_ARC_RADIUS_YD;
+        std::vector<Unit*> candidates;
+        for (Unit* attacker : player->getAttackers())
+            if (attacker && attacker != struck && attacker->IsAlive() && struck->GetExactDist(attacker) <= radius &&
+                player->IsValidAttackTarget(attacker, arcInfo) && struck->IsWithinLOSInMap(attacker))
+                candidates.push_back(attacker);
+
+        std::sort(candidates.begin(), candidates.end(), [struck](Unit const* a, Unit const* b)
+        {
+            return struck->GetExactDist(a) < struck->GetExactDist(b);
+        });
+
+        if (candidates.size() > std::size_t(arcs))
+            candidates.resize(arcs);
+
+        for (Unit* unit : candidates)
+            player->CastSpell(unit, ShamanData::SPELL_LIGHTNING_SHIELD_ARC, true);
+    }
+
+    void Register() override
+    {
+        AfterHit += SpellHitFn(spell_sha_enh_storm_orb::HandleAfterHit);
+    }
+};
+
+// 202444 Toughness's orb heal (DPS balance pass 1031 S1): the row is rank 3's 15 potency; ranks 1 / 2 heal a third
+// or two thirds of it (5 / 10 potency). Scaled in OnHit, after launch computed the heal (spell power, done mods) and
+// before crit.
+class spell_sha_enh_toughness_heal : public SpellScript
+{
+    PrepareSpellScript(spell_sha_enh_toughness_heal);
+
+    void HandleOnHit()
+    {
+        Unit* caster = GetCaster();
+        Player* player = caster ? caster->ToPlayer() : nullptr;
+        int32 const heal = GetHitHeal();
+        if (!player || heal <= 0)
+            return;
+
+        uint8 const rank = Shaman::GetTalentRank(player, TOUGHNESS_RANKS);
+        SetHitHeal(int32(int64(heal) * rank / int64(TOUGHNESS_RANKS.size())));
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_sha_enh_toughness_heal::HandleOnHit);
+    }
+};
+
+// 421 Chain Lightning, Thundering Strikes' surge (DPS balance pass 1031 S1, any rank). A non-triggered cast that starts
+// with THUNDERING_SURGE_MW_STACKS Maelstrom Weapon stacks (read in BeforeCast, before the cast spends them) while
+// Flametongue, Frostbrand or Windfury is active deals THUNDERING_SURGE_R1..R3 % more to every target it hits and
+// refunds the mana it cost after the cast ("costs no mana"). Rockbiter, Earthliving and Elemental (no Maelstrom stacks)
+// never qualify. The overload copy 202592 is another id and is not scaled.
+class spell_sha_enh_thundering_surge : public SpellScript
+{
+    PrepareSpellScript(spell_sha_enh_thundering_surge);
+
+    bool Load() override
+    {
+        return GetCaster() && GetCaster()->IsPlayer();
+    }
+
+    void HandleBeforeCast()
+    {
+        _pct = 0;
+        Player* player = GetCaster()->ToPlayer();
+        if (!player || GetSpell()->IsTriggered())
+            return;
+
+        uint8 const rank = Shaman::GetTalentRank(player, THUNDERING_STRIKES_RANKS);
+        if (!rank)
+            return;
+
+        switch (Shaman::GetActiveImbue(player))
+        {
+            case ShamanData::SPELL_FLAMETONGUE_WEAPON:
+            case ShamanData::SPELL_FROSTBRAND_WEAPON:
+            case ShamanData::SPELL_WINDFURY_WEAPON:
+                break;
+            default:
+                return;
+        }
+
+        Aura const* maelstrom = player->GetAura(ShamanData::SPELL_MAELSTROM_WEAPON_53817, player->GetGUID());
+        if (!maelstrom || uint32(maelstrom->GetStackAmount()) < uint32(ShamanData::THUNDERING_SURGE_MW_STACKS))
+            return;
+
+        _pct = THUNDERING_SURGE_PCT[rank - 1];
+    }
+
+    void HandleOnHit()
+    {
+        int32 const damage = GetHitDamage();
+        if (!_pct || damage <= 0)
+            return;
+
+        SetHitDamage(int32(int64(damage) * (100 + _pct) / 100));
+    }
+
+    void HandleAfterCast()
+    {
+        Player* player = GetCaster()->ToPlayer();
+        int32 const cost = GetSpell()->GetPowerCost();
+        if (!_pct || !player || cost <= 0 || GetSpellInfo()->PowerType != POWER_MANA)
+            return;
+
+        player->ModifyPower(POWER_MANA, cost);
+    }
+
+    void Register() override
+    {
+        BeforeCast += SpellCastFn(spell_sha_enh_thundering_surge::HandleBeforeCast);
+        OnHit += SpellHitFn(spell_sha_enh_thundering_surge::HandleOnHit);
+        AfterCast += SpellCastFn(spell_sha_enh_thundering_surge::HandleAfterCast);
+    }
+
+    int32 _pct = 0;
+};
+
 // -63373 Frozen Power (63373, 63374, 202375; replaces spell_sha_frozen_power, which refused targets within 15 yd).
 // A Frost Shock hit rolls the rank's DUMMY chance (33/66/100%) x Proc Chance to root the target (63685). Rank 3: an
 // Elemental Blast hit while Frostbrand is active creates the Blizzard (202404) at the target. spell_proc: Frost Shock
@@ -612,6 +781,8 @@ class spell_sha_enh_frozen_blizzard : public AuraScript
 //    Stormstrike, no copy). They are the dedicated clones 202413 / 202415, not the stock 32175 / 32176: the stock
 //    strikes carry NOT_A_PROC (that is how the primary hits feed Flametongue, Windfury and the rest), the clones carry
 //    SUPPRESS_CASTER_PROCS and SUPPRESS_WEAPON_PROCS, so a cleave hit rolls no proc and no enchant.
+//  - Improved Lightning Shield (DPS balance pass 1031 S1): with the shaman's Lightning Shield up, a share of the landed
+//    damage on up to 4 other enemies near the target (202449), after the Ascendance cleave and never on its targets.
 class spell_sha_enh_stormstrike : public SpellScript
 {
     PrepareSpellScript(spell_sha_enh_stormstrike);
@@ -620,7 +791,8 @@ class spell_sha_enh_stormstrike : public SpellScript
     {
         return ValidateSpellInfo({ SPELL_STORMSTRIKE_MAIN_HAND, SPELL_STORMSTRIKE_OFF_HAND,
             ShamanData::SPELL_STORMSTRIKE_CLEAVE_MAIN_HAND, ShamanData::SPELL_STORMSTRIKE_CLEAVE_OFF_HAND,
-            ShamanData::SPELL_IMPROVED_STORMSTRIKE_DEBUFF, ShamanData::SPELL_IMPROVED_STORMSTRIKE_MANA });
+            ShamanData::SPELL_IMPROVED_STORMSTRIKE_DEBUFF, ShamanData::SPELL_IMPROVED_STORMSTRIKE_MANA,
+            ShamanData::SPELL_ILS_STORMSTRIKE_CLEAVE });
     }
 
     bool Load() override
@@ -664,7 +836,8 @@ class spell_sha_enh_stormstrike : public SpellScript
         if (landed)
             Shaman::OnStormstrikeLanded(player, target, landed);
 
-        Cleave(player, target);
+        std::vector<Unit*> const ascendanceStruck = Cleave(player, target);
+        LightningShieldCleave(player, target, landed, ascendanceStruck);
     }
 
     void HandleAfterCast()
@@ -723,8 +896,10 @@ class spell_sha_enh_stormstrike : public SpellScript
             shield->SetCharges(uint8(charges));
     }
 
-    static void Cleave(Player* player, Unit* primary)
+    // The Frost / Elemental Ascendance cleave; returns the enemies it struck
+    static std::vector<Unit*> Cleave(Player* player, Unit* primary)
     {
+        std::vector<Unit*> struck;
         uint32 count = 0;
         if (player->HasAura(ShamanData::SPELL_ELEMENTAL_ASCENDANCE, player->GetGUID()))
             count = SS_CLEAVE_ELEMENTAL;
@@ -732,7 +907,7 @@ class spell_sha_enh_stormstrike : public SpellScript
             count = SS_CLEAVE_FROST;
 
         if (!count)
-            return;
+            return struck;
 
         std::list<Unit*> candidates = FindEnemiesAround(player, player, ShamanData::SS_CLEAVE_RADIUS_YD, primary);
         candidates.remove_if([player](Unit* unit) { return !unit->IsInCombatWith(player); });
@@ -747,8 +922,54 @@ class spell_sha_enh_stormstrike : public SpellScript
                 break;
 
             --count;
+            struck.push_back(unit);
             player->CastSpell(unit, ShamanData::SPELL_STORMSTRIKE_CLEAVE_MAIN_HAND, true);
             player->CastSpell(unit, ShamanData::SPELL_STORMSTRIKE_CLEAVE_OFF_HAND, true);
+        }
+
+        return struck;
+    }
+
+    // Improved Lightning Shield (DPS balance pass 1031 S1, any imbue): while the shaman's own Lightning Shield holds a
+    // charge, the Stormstrike that landed `landed` damage on `primary` (both strikes, after armor) also strikes up to
+    // ILS_SS_CLEAVE_TARGETS other enemies within ILS_SS_CLEAVE_RADIUS_YD of it that are in combat with the shaman,
+    // nearest first, for the rank's share (202449: no caster modifiers, no crit, no procs, ignores armor). Enemies the
+    // Ascendance cleave already struck are skipped (they took its full strikes).
+    static void LightningShieldCleave(Player* player, Unit* primary, uint32 landed,
+        std::vector<Unit*> const& ascendanceStruck)
+    {
+        uint8 const rank = Shaman::GetTalentRank(player, IMPROVED_LIGHTNING_SHIELD_RANKS);
+        if (!rank || !landed)
+            return;
+
+        Aura const* shield = player->GetAura(ShamanData::SPELL_LIGHTNING_SHIELD, player->GetGUID());
+        if (!shield || (shield->IsUsingCharges() && !shield->GetCharges()))
+            return;
+
+        int32 const share = int32(CalculatePct(landed, ILS_SS_CLEAVE_PCT[rank - 1]));
+        if (share <= 0)
+            return;
+
+        std::list<Unit*> candidates = FindEnemiesAround(player, primary, ShamanData::ILS_SS_CLEAVE_RADIUS_YD, primary);
+        candidates.remove_if([player, &ascendanceStruck](Unit* unit)
+        {
+            return !unit->IsInCombatWith(player) ||
+                std::find(ascendanceStruck.begin(), ascendanceStruck.end(), unit) != ascendanceStruck.end();
+        });
+        candidates.sort([primary](Unit const* a, Unit const* b)
+        {
+            return primary->GetExactDist(a) < primary->GetExactDist(b);
+        });
+
+        uint32 count = uint32(ShamanData::ILS_SS_CLEAVE_TARGETS);
+        for (Unit* unit : candidates)
+        {
+            if (!count)
+                break;
+
+            --count;
+            player->CastCustomSpell(ShamanData::SPELL_ILS_STORMSTRIKE_CLEAVE, SPELLVALUE_BASE_POINT0, share, unit,
+                true);
         }
     }
 
@@ -1415,6 +1636,9 @@ void AddSC_shaman_enhancement_spell_scripts()
     RegisterSpellScript(spell_sha_enh_elemental_charge);
     RegisterSpellScript(spell_sha_enh_maelstrom_weapon);
     RegisterSpellScript(spell_sha_enh_static_shock);
+    RegisterSpellScript(spell_sha_enh_storm_orb);
+    RegisterSpellScript(spell_sha_enh_toughness_heal);
+    RegisterSpellScript(spell_sha_enh_thundering_surge);
     RegisterSpellScript(spell_sha_enh_frozen_power);
     RegisterSpellScript(spell_sha_enh_frozen_blizzard);
     RegisterSpellScript(spell_sha_enh_stormstrike);
