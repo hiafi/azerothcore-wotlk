@@ -11,7 +11,7 @@ Checks, from the file itself and from the class sources:
     the Warrior's September Protection ids 200028-200066 (all but the mage's two) and talents 60003-60006 are the one
     grandfathered exception, pinned exactly in `WARRIOR_LEGACY`);
   - a non-class owner reserves under its project name (`healsim`: spells 202900-202909, declared from source/npcs;
-    `bossmechanics`: spells 205000-205099, creatures 300400-300419 and the marker displays 90500-90649), so the
+    `bossmechanics`: spells 205000-205099, creatures 300400-300419 and the marker displays 90500-90699), so the
     overlap test keeps every class out of its ids.
 
 Run directly:
@@ -183,7 +183,7 @@ class BlockShapeTest(unittest.TestCase):
         self.assertEqual(BLOCKS["summonproperties"], {"start": 3000, "end": 3099})
 
     def test_boss_mechanics_m1_widened_the_display_blocks(self):
-        # 90499 -> 90699: the rogue slice 90490-90499 ended the old block; bossmechanics takes 90500-90649
+        # 90499 -> 90699: the rogue slice 90490-90499 ended the old block; bossmechanics takes 90500-90699
         self.assertEqual(BLOCKS["creaturedisplayinfo"], {"start": 90001, "end": 90699})
         self.assertEqual(BLOCKS["creaturemodeldata"], {"start": 90001, "end": 90699})
         # no other block moved
@@ -408,7 +408,7 @@ class ReservationTest(unittest.TestCase):
         boss = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["bossmechanics"].items()}
         self.assertEqual(boss, {
             "spell": (205000, 205099), "creature": (300400, 300419),
-            "creaturedisplayinfo": (90500, 90649), "creaturemodeldata": (90500, 90649),
+            "creaturedisplayinfo": (90500, 90699), "creaturemodeldata": (90500, 90699),
         })
 
     def test_bossmechanics_overlaps_no_earlier_owner(self):
@@ -683,7 +683,7 @@ class ClassDeclarationsTest(unittest.TestCase):
         self.assertEqual(out_of_reservation("bossmechanics", {"spell": [205100, 204899], "creature": [300420]}),
                          ["spell 204899", "spell 205100", "creature 300420"])
         # the markers' displays are WP-A's rows (not declared by dbc-tools yet): the slice keeps the display ids
-        # 90500-90619 (and the diagnostic displays 90620-90629) clear of every other owner, USED_DISPLAY_IDS stays
+        # 90500-90669 (and the opt-in diagnostic displays 90690-90695) clear of every other owner, USED_DISPLAY_IDS stays
         # at the live maxima until they are deployed
 
     def test_a_deliberately_out_of_block_id_fails(self):

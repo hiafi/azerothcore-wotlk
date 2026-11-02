@@ -737,21 +737,29 @@ the script changed `SpellVisual`, which the server loads.
 
 ## Boss mechanics markers (M1)
 
-`patch_bossmechanics_markers.py` makes the 120 telegraph displays (`CreatureModelData` +
-`CreatureDisplayInfo` ids 90500-90619, one pair per display, owner `bossmechanics`, source
-`apps/dbc-tools/source/ids.yaml`) that the `mod-boss-mechanics` stalker wears: flat, alpha-blended
-floor shapes (disc, ring, donut ratios, cones, lines) a creature scales to any size with
-`SetDisplayId` then `SetObjectScale`. It is a sibling of the `patch_*_vfx_models.py` scripts, kept
-under another name so `lib/test_id_blocks.py`'s scan of those scripts stays as it is.
+`patch_bossmechanics_markers.py` makes the 170 telegraph displays (`CreatureModelData` +
+`CreatureDisplayInfo` ids 90500-90669, one pair per display; owner `bossmechanics` reserves
+90500-90699 in `apps/dbc-tools/source/ids.yaml`) that the `mod-boss-mechanics` stalker wears: flat,
+alpha-blended floor shapes a creature scales to any size with `SetDisplayId(display, scale)`. It is a
+sibling of the `patch_*_vfx_models.py` scripts, kept under another name so `lib/test_id_blocks.py`'s
+scan of those scripts stays as it is.
 
+- **Two layers per telegraph** (telegraph-fill fix): an **outline** (rim 230 + interior 50, static,
+  the full hitbox) and a **fill** (rim 230 + interior 90) the module grows into it over the warning.
+  Ids (c = colour; red, yellow, blue, purple; get-out shapes red and yellow only): fill disc 90500+c,
+  outline ring 90504+c, fill donut 90508+2j+c, fill cone 90522+2j+c, fill line 90538+2i+c, outline
+  line 90588+2i+c, outline cone 90638+2j+c, outline donut 90654+2j+c, rim-only timer ring 90668+c
+  (a donut's timer). 90670-90699 spare. `mod-boss-mechanics/src/BossMechanicsIds.h` mirrors the table.
 - **Source model:** Ascension's `SPELLS\red_circle_filled.M2` + `00.skin`, a 4-vertex quad.
   `--extract <patch-N.MPQ>` runs `smpq -x` for them and the model's own texture into `--src` (default
   `var/bossmech-src/`), which must be new or empty. Run Python on that data with `-I`; scripts stay outside the directory.
-- **Model patch (`lib/m2_patch.py`):** byte-level, nothing re-serialised. Vertices become a flat unit
-  quad (x, y in [-1, 1], z = 0, so scale = radius in yards) or a line model (x in [0, k], y in
-  [-0.5, 0.5], k = 2^(i/8), i = 0..40, so scale = width). Bounding box, sphere, animation bounds and
-  skin submesh follow. Blend mode 4 (additive) becomes 2 (alpha); flags 0x15 stay. The source fades
-  in over 534 ms on Stand, out on Decay (159), and is half transparent, so the colour alpha and
+- **Model patch (`lib/m2_patch.py`):** byte-level, nothing re-serialised. Vertices become a flat
+  quad (x, y in [-8/7, 8/7], z = 0) or a line model (x in [0, k], y in [-4/7, 4/7], k = 2^(i/8),
+  i = 0..24, aspect 1 to 8; longer lines are several abutting pieces). The extra 1/7 is the
+  texture's transparent margin, so scale is still exactly radius / width in yards. Bounding box,
+  sphere, animation bounds and skin submesh follow. Blend mode 4 (additive) becomes 2 (alpha); flags
+  0x15 stay. Texture flags stay 0 (clamp in both directions; 0x1 / 0x2 would wrap X / Y). The source
+  fades in over 534 ms on Stand, out on Decay (159), and is half transparent, so the colour alpha and
   transparency tracks are cut to one opaque key per animation (Hold, 158, has none and borrows it):
   a marker is fully drawn the moment it appears, whatever the warning time.
 - **Texture binding: hard-coded path (type 0), one model copy per display.** The first build used
@@ -763,27 +771,35 @@ under another name so `lib/test_id_blocks.py`'s scan of those scripts stays as i
 - **Textures (`lib/blp_write.py`):** generated, one flat colour per file with the shape in the alpha
   channel, **DXT5** BLP2 (compression 2, alpha depth 8, alpha type 7, full mip chain to 1x1, 2x2
   and 1x1 one padded block each): header, zeroed palette block and mip offsets are byte for byte
-  those of Ascension's `red_circle_filled_editeda_circle_solid_red.blp` (tested). Disc and ring
-  512 px, the rest 256 px. The colour block is trivial (c0 = c1, indices 0); the alpha encoder
-  tries both DXT5 modes per block. `--texture-format palette` keeps the first build's palette
+  those of Ascension's `red_circle_filled_editeda_circle_solid_red.blp` (tested). Disc, ring and
+  timer ring 512 px, the rest 256 px. The colour block is trivial (c0 = c1, indices 0); the alpha
+  encoder tries both DXT5 modes per block. `--texture-format palette` keeps the first build's palette
   format (alpha depth 8). No Pillow in the venv, and the system Pillow's BLP writer has no alpha
   or mips, so tests decode with `read_blp` / `decode_dxt5`.
-- **Diagnostic displays 90620-90625** (all red discs, `--no-diagnostics` drops them; view with
-  `.morph target <id>` on yourself, `.modify scale <n>` to size, `.morph reset`): 90620 untouched
-  source model + Ascension's own texture, 90621 our model + palette BLP, 90622 type 11 with the fixed
-  lookup + DXT5, 90623 type 0 + DXT5 (= the shipped 90500), 90624 our model + Ascension texture,
-  90625 the first build's type 11 binding (expected green). 90626-90649 stay spare.
+- **Edge texels (the "lines at the cardinals"):** the first build drew every shape edge to edge, so a
+  disc touched the texture edge at N/E/S/W. With clamp addressing the edge texel of a low mip is
+  stretched along the quad edge, which draws a straight tangent line where the disc touches it,
+  scaling with the marker. Now every shape stops 1/16 of the side short of the edge (the geometry
+  grows by 8/7 to compensate) and `encode_blp(clear_cols=, clear_rows=)` zeroes the edge texels at
+  every mip level after filtering. Lines clear only their long edges: their ends are open on purpose
+  so pieces abut without a seam.
+- **Diagnostic displays 90690-90695**, only with `--diagnostics` (all red discs; view with
+  `.morph target <id>` on yourself, `.modify scale <n>` to size, `.morph reset`): 90690 untouched
+  source model + Ascension's own texture, 90691 our model + palette BLP, 90692 type 11 with the fixed
+  lookup + DXT5, 90693 type 0 + DXT5 (= 90500), 90694 our model + Ascension texture, 90695 the first
+  build's type 11 binding (expected green). They lived at 90620-90625 until the telegraph-fill fix.
 - **Output:** model, skin and `.blp` files (all prefixed `bm_`) into `var/model-visual-dbc/SPELLS/`
-  (126 models + 126 skins + 42 textures), the two DBCs merged in
-  `var/model-visual-dbc/DBFilesClient/`, and `--sql-out` writes the `creaturemodeldata_dbc` /
-  `creaturedisplayinfo_dbc` rows as one pending file (`DELETE ... BETWEEN 90500 AND 90629`). A rerun
-  replaces its rows and drops stale `bm_` files (for example after switching `--skins`). Then run
-  `build_patch_m.py` to pack them. `--var <dir>` points the whole thing at another working copy,
-  and `--dry-run` writes nothing. Diagnostics 90620/90624 need the source texture in `--src`.
-- **Server-side create ordering (not fixed here):** the module summons the marker (create packet
-  goes out at once, display 11686, scale 1) and only then sets display and scale, so a client
-  sees a scale change on every new marker. If markers visibly grow after spawning, that is the cause;
-  see `.agents/plans/dungeon-mechanics/dungeon-mechanics.M1-FIX-MARKERS-REPORT.md`.
+  (170 models + 170 skins + 74 textures), the two DBCs merged in
+  `var/model-visual-dbc/DBFilesClient/` (rows of 90500-90699 the run does not write are removed),
+  and `--sql-out` writes the `creaturemodeldata_dbc` / `creaturedisplayinfo_dbc` rows as one
+  pending file (`DELETE ... BETWEEN 90500 AND 90699`). A rerun replaces its rows and drops stale
+  `bm_` files (for example after switching `--skins`). Then run `build_patch_m.py` to pack them.
+  `--var <dir>` points the whole thing at another working copy, and `--dry-run` writes nothing.
+  Diagnostics 90690/90694 need the source texture in `--src`.
+- **Server side:** the module sets display and scale before the marker enters the map (its own
+  TempSummon create, not `Map::SummonCreature`), because the client blends every scale change in and
+  a marker resized after its create packet visibly grew from 1 yd. The fill timer is that blend on
+  purpose: the module resizes the fill every `BossMechanics.Telegraph.FillStepMs`.
 - **Tests:** `lib/test_bossmechanics_markers.py`. The M2 tests skip when `var/bossmech-src/` is
   missing; the real-file header comparison and diagnostic file checks also need the source texture.
   The Pillow header check needs the system `python3` (the venv has no Pillow).
