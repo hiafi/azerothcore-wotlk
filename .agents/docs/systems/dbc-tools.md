@@ -737,21 +737,24 @@ the script changed `SpellVisual`, which the server loads.
 
 ## Boss mechanics markers (M1)
 
-`patch_bossmechanics_markers.py` makes the 891 telegraph displays (`CreatureModelData` +
-`CreatureDisplayInfo` ids 91000-91898, one pair per display, plus the line-direction probe 91996;
-owner `bossmechanics` reserves
-91000-91999 in `apps/dbc-tools/source/ids.yaml`) that the `mod-boss-mechanics` stalker wears: flat,
+`patch_bossmechanics_markers.py` makes the 1,332 telegraph displays (`CreatureModelData` +
+`CreatureDisplayInfo` ids 91000-91833, 92000-92856 and 93000-93856, one pair per display; owner
+`bossmechanics` reserves 91000-93999 in `apps/dbc-tools/source/ids.yaml`) that the
+`mod-boss-mechanics` stalker wears: flat,
 alpha-blended floor shapes a creature scales to any size with `SetDisplayId(display, scale)`. It is a
 sibling of the `patch_*_vfx_models.py` scripts, kept under another name so `lib/test_id_blocks.py`'s
 scan of those scripts stays as it is.
 
 - **Two layers per telegraph** (telegraph-fill fix): an **outline** (rim 230 + interior 50, static,
   the full hitbox) and a **fill** (rim 230 + interior 90) the module grows into it over the warning.
-- **Ids (colors fix):** every shape in nine colors (`COLORS`: red, yellow, blue, purple, orange,
-  green, teal, white, black = c 0-8), one 100-id block per color: id = 91000 + 100c + offset + step,
-  offsets disc 0, ring 1, rim-only timer ring 2 (a donut's timer), fill donut 3+j, outline donut
-  10+j, fill cone 17+j, outline cone 25+j, fill line 33+i, outline line 66+i (99 per color, 91898
-  the last; 91900-91999 spare apart from the diagnostics and the probe). `display_id()` and
+- **Ids (colors fix, line-fill fix):** every shape in nine colors (`COLORS`: red, yellow, blue,
+  purple, orange, green, teal, white, black = c 0-8), one 100-id block per color: id = 91000 + 100c
+  + offset + step, offsets disc 0, ring 1, rim-only timer ring 2 (a donut's timer), fill donut 3+j,
+  outline donut 10+j, fill cone 17+j, outline cone 25+j, dashed ring 33 (an armed mine; 34 per
+  color, 91833 the last, +34..+99 spare). The line ladders have their own blocks: fill line 92000 +
+  100c + i, outline line 93000 + 100c + i (i 0..56). Before the line-fill fix the lines sat at
+  +33..+98 of the 91000 blocks; the block-wide DELETE / DBC merge clears those rows and round 3's
+  line-direction probe 91996. `display_id()` and
   `mod-boss-mechanics/src/BossMechanicsIds.h` `MarkerDisplay()` compute the same numbers (both
   tested). The markers used 90500-90699 before; that slice is unreserved again, and the cleanup of
   it only deletes rows that are ours by name (`SPELLS\bm_*` models, `bm_*` textures), in the DBC
@@ -759,16 +762,19 @@ scan of those scripts stays as it is.
 - **Tinting, not per-color textures:** the textures are white; each model's M2Color track (color
   0, the one the skin batch's color index points at) holds the color, and the client multiplies the
   texture by it (the batch is unlit, render flag 0x01; blend mode 2 is `src * a + dst * (1 - a)`, so
-  black is drawable: it darkens the floor). 35 textures serve all 891 displays. The source's color
+  black is drawable: it darkens the floor). 36 textures serve all 1,332 displays. The source's color
   track has one key list (Stand) with interpolation none; markers only ever play Stand, so it is left
   at one list. RGB values: `COLOR_RGB` (blue brightened to 30, 140, 255 after the playtest).
 - **Source model:** Ascension's `SPELLS\red_circle_filled.M2` + `00.skin`, a 4-vertex quad.
   `--extract <patch-N.MPQ>` runs `smpq -x` for them and the model's own texture into `--src` (default
   `var/bossmech-src/`), which must be new or empty. Run Python on that data with `-I`; scripts stay outside the directory.
-- **Model patch (`lib/m2_patch.py`):** byte-level, nothing re-serialised. Vertices become a flat
-  quad (x, y in [-8/7, 8/7], z = 0) or a line model (x in [-k, k], y in [-4/7, 4/7]; `line_aspect`:
-  k = 2^((i-8)/4) for i 0..7, 1/4 to 0.84, and 2^((i-8)/8) for i 8..32, 1 to 8; longer lines are
-  abutting pieces of aspect 8 plus one rounded-up rest). The extra 1/7 is the
+- **Model patch (`lib/m2_patch.py`):** byte-level, nothing re-serialised apart from the two-quad
+  skin. Vertices become a flat quad (x, y in [-8/7, 8/7], z = 0) or a two-quad line model (eight
+  vertices appended as a new vertex array, the header repointed, each a copy of the source vertex of
+  its corner; the skin rebuilt with eight indices, twelve triangle indices and the submesh over both
+  quads): back quad x in [-k, 0], front quad x in [0, k], y in [-4/7, 4/7]; `line_aspect`: k =
+  2^((i-8)/4) for i 0..7, 1/4 to 0.84, and 2^((i-8)/8) for i 8..56, 1 to 64; longer lines are
+  abutting pieces of aspect 64 plus one rounded-up rest. The extra 1/7 is the
   texture's transparent margin, so scale is still exactly radius / width in yards. Bounding box,
   sphere, animation bounds and skin submesh follow. Blend mode 4 (additive) becomes 2 (alpha); flags
   0x15 stay. Texture flags stay 0 (clamp in both directions; 0x1 / 0x2 would wrap X / Y). The source
@@ -794,27 +800,32 @@ scan of those scripts stays as it is.
   stretched along the quad edge, which draws a straight tangent line where the disc touches it,
   scaling with the marker. Now every shape stops 1/16 of the side short of the edge (the geometry
   grows by 8/7 to compensate) and `encode_blp(clear_cols=, clear_rows=)` zeroes the edge texels at
-  every mip level after filtering. Lines clear only their long edges: their far end is open on
-  purpose so pieces abut without a seam.
-- **Line direction (lines fix):** the live telegraph-fill build drew `.mech test line` behind the GM
-  while cones pointed forward. A cone's direction comes from its texture (wedge toward increasing v,
-  which model +X carries); a line's came from its off-centre geometry (x in [0, k]). Line models are
-  now symmetric (x in [-k, k]) and their texture draws only v >= 1/2 (x >= 0), so lines take their
-  direction from the texture exactly the way cones do. The start row (v = 1/2) is a texel boundary at
-  every mip down to 2 rows. Probe display 91996 (built by default) is the old line model (x in
-  [0, 8], whole strip, red): `.morph target 91996` shows how the client places a model whose origin is
-  at one end.
+  every mip level after filtering. Lines clear only their long edges: their body rows run to the
+  last row (that also leaves their 2 x 2 and 1 x 1 levels all 0).
+- **Line direction and ends (lines fix, line-fill fix):** the client draws a creature model centred
+  on its bounds (round-3 check L1: an off-centre x in [0, 8] model was drawn centred on the unit), so
+  a line model stays symmetric about its origin. It is two quads: the back quad x in [-k, 0] samples
+  v in `LINE_BACK_V` (0 .. 1/4), rows that are transparent at every level the client uses (bilinear
+  footprint inside the transparent half down to 4 x 4; 2 x 2 and 1 x 1 all 0); the front quad x in
+  [0, k] samples v in `LINE_FRONT_V` (5/8 .. 7/8), body rows that are all the same. So the line runs
+  forward from the marker, its start and far end are hard geometric edges (round 3's darker joint
+  bands came from the old texture start edge at v = 1/2 bleeding behind each joint at low mips), and
+  every aspect uses the same texture with no stretch. A test decodes the shipped line textures and
+  samples both quads' UVs bilinearly at every mip.
+- **Dashed ring (line-fill fix):** `dashed_alpha`, the outline rim (2.5% of the radius, alpha 230)
+  cut into `DASH_COUNT` 20 dashes at 50% duty, one centred on +X, interior clear, 512 px; the
+  module swaps an armed mine's outline to it and drops its fill.
 - **Diagnostic displays 91990-91995**, only with `--diagnostics` (all red discs; view with
   `.morph target <id>` on yourself, `.modify scale <n>` to size, `.morph reset`): 91990 untouched
   source model + Ascension's own texture, 91991 our model + palette BLP, 91992 type 11 with the fixed
   lookup + DXT5, 91993 type 0 + DXT5 (= 91000), 91994 our model + Ascension texture, 91995 the first
   build's type 11 binding (expected green). They lived at 90620-90625, then 90690-90695.
 - **Output:** model, skin and `.blp` files (all prefixed `bm_`) into `var/model-visual-dbc/SPELLS/`
-  (892 models + 892 skins + 36 textures), the two DBCs merged in
-  `var/model-visual-dbc/DBFilesClient/` (rows of 91000-91999 the run does not write, and our old rows
+  (1,332 models + 1,332 skins + 36 textures, 6.5 MB), the two DBCs merged in
+  `var/model-visual-dbc/DBFilesClient/` (rows of 91000-93999 the run does not write, and our old rows
   in 90500-90699, are removed), and `--sql-out` writes the `creaturemodeldata_dbc` /
   `creaturedisplayinfo_dbc` rows as one pending file (`DELETE ... BETWEEN 90500 AND 90699 AND <ours by
-  name>`, `DELETE ... BETWEEN 91000 AND 91999`, then the INSERTs). A rerun replaces its rows and drops stale
+  name>`, `DELETE ... BETWEEN 91000 AND 93999`, then the INSERTs). A rerun replaces its rows and drops stale
   `bm_` files (for example after switching `--skins`). Then run `build_patch_m.py` to pack them.
   `--var <dir>` points the whole thing at another working copy, and `--dry-run` writes nothing.
   Diagnostics 91990/91994 need the source texture in `--src`.

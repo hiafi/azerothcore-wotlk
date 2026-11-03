@@ -10,6 +10,11 @@ checked and `check_source` pins the exact shape this patcher was written against
 What gets patched (handoff §3.9):
   - the four vertices become a flat quad at z = 0 (x, y given by the caller), and the header
     bounding box and sphere radius, the three animation bounds and the skin submesh bounds follow;
+  - or (eight vertices, M1-FIX-LINE-FILL) the model becomes two quads with their own UVs: the new
+    vertex array is appended at the end of the file (each vertex a copy of the source vertex in the
+    same corner, so its bone weights and normal are the source's) and the header repointed; the old
+    four vertices stay in the file, unreferenced. The skin is rebuilt to match (`patch_skin`): eight
+    indices and properties, twelve triangle indices, the submesh's vertex and index counts;
   - the render-flags entry keeps its flags (0x15: unlit, two-sided, no depth write) and gets blend
     mode 2 (alpha) instead of 4 (additive);
   - the color track (M2Color 0, which the skin's one batch points at with color index 0) holds the
@@ -92,7 +97,7 @@ def check_source(data: bytes, *, patched: bool = False) -> dict:
     if _u32(data, 4) != 264:
         raise M2Error(f"version {_u32(data, 4)}, expected 264")
     n_vert, o_vert = _array(data, OFS_VERTICES, VERTEX_SIZE, "vertices")
-    if n_vert != 4:
+    if n_vert != 4 and not (patched and n_vert == 8):
         raise M2Error(f"{n_vert} vertices, expected 4")
     n_flags, o_flags = _array(data, OFS_RENDER_FLAGS, 4, "render flags")
     if n_flags != 1:
@@ -110,7 +115,7 @@ def check_source(data: bytes, *, patched: bool = False) -> dict:
         raise M2Error(f"{n_col} color / {n_tr} transparency tracks, expected 1 / 1")
     n_anim, o_anim = _array(data, OFS_ANIMATIONS, ANIM_SIZE, "animations")
     return {
-        "vertices": o_vert, "render_flags": o_flags, "texture": o_tex, "name_len": name_len,
+        "vertices": o_vert, "n_vertices": n_vert, "render_flags": o_flags, "texture": o_tex, "name_len": name_len,
         "name_ofs": name_ofs, "colors": o_col, "transparency": o_tr, "animations": (n_anim, o_anim),
     }
 
@@ -160,13 +165,14 @@ def inspect(data: bytes) -> dict:
 
 
 def vertex_positions(data: bytes) -> list[tuple[float, float, float]]:
-    ofs = check_source(data, patched=True)["vertices"]
-    return [struct.unpack_from("<3f", data, ofs + VERTEX_SIZE * i) for i in range(4)]
+    facts = check_source(data, patched=True)
+    return [struct.unpack_from("<3f", data, facts["vertices"] + VERTEX_SIZE * i) for i in range(facts["n_vertices"])]
 
 
 def vertex_uvs(data: bytes) -> list[tuple[float, float]]:
-    ofs = check_source(data, patched=True)["vertices"]
-    return [struct.unpack_from("<2f", data, ofs + VERTEX_SIZE * i + 32) for i in range(4)]
+    facts = check_source(data, patched=True)
+    return [struct.unpack_from("<2f", data, facts["vertices"] + VERTEX_SIZE * i + 32)
+            for i in range(facts["n_vertices"])]
 
 
 def bounds_of(verts: list[tuple[float, float]]) -> dict:
@@ -193,7 +199,9 @@ def replaceable_lookup(data: bytes) -> list[int]:
 
 def set_texture_path(data: bytes, texture_path: str) -> bytes:
     """Only rewrite the type-0 texture's hard-coded path, in place (it must fit the source name's bytes)."""
-    facts = check_source(data)
+    facts = check_source(data, patched=True)        # the source, or patch_model's own (two-quad) output
+    if struct.unpack_from("<I", data, facts["texture"])[0] != 0:
+        raise M2Error("only a type-0 (hard-coded path) texture has a path to rewrite")
     raw = texture_path.encode("ascii") + b"\0"
     if len(raw) > facts["name_len"]:
         raise M2Error(f"texture path {texture_path!r} does not fit the source name ({facts['name_len']} bytes)")
@@ -220,23 +228,40 @@ def _static_opaque(out: bytearray, track: dict) -> None:
 
 def patch_model(data: bytes, verts: list[tuple[float, float]], *, skins: bool,
                 texture_path: str | None = None, skin_lookup: bool = True,
-                rgb: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> bytes:
+                rgb: tuple[float, float, float] = (1.0, 1.0, 1.0),
+                uvs: list[tuple[float, float]] | None = None) -> bytes:
     """Return the patched model.
 
-    verts: four (x, y) pairs in the source vertex order (-,-), (+,-), (-,+), (+,+), z becomes 0.
+    verts: four (x, y) pairs in the source vertex order (-,-), (+,-), (-,+), (+,+), z becomes 0; or eight,
+    two quads in that order each (the second quad's vertices appended as a new vertex array).
+    uvs: one (u, v) per vertex (default: the source quad's UVs, repeated per quad).
     skins: True turns the texture into creature skin 1 (type 11, empty name) and, with
     `skin_lookup`, appends the replaceable-texture lookup that type needs (False reproduces the
     first M1 build, for the 90625 diagnostic only); False keeps the hard-coded path and rewrites it
     to `texture_path` (must fit the source name's capacity).
     rgb: the color track's value (0..1 per channel), the tint the client multiplies the texture by.
     """
-    if len(verts) != 4:
-        raise M2Error("need exactly four vertices")
+    if len(verts) not in (4, 8):
+        raise M2Error("need four vertices (one quad) or eight (two quads)")
+    if uvs is not None and len(uvs) != len(verts):
+        raise M2Error(f"{len(uvs)} UVs for {len(verts)} vertices")
     facts = check_source(data)
     out = bytearray(data)
 
+    o_vert = facts["vertices"]
+    if len(verts) == 8:
+        # the source's four vertex records, one per corner, become the template of each quad's corners
+        template = bytes(data[o_vert:o_vert + 4 * VERTEX_SIZE])
+        out += bytes(-len(out) % 16)
+        new_ofs = len(out)
+        out += template * 2
+        struct.pack_into("<II", out, OFS_VERTICES, 8, new_ofs)
+        out += bytes(-len(out) % 16)
+        o_vert = new_ofs
     for i, (x, y) in enumerate(verts):
-        struct.pack_into("<3f", out, facts["vertices"] + VERTEX_SIZE * i, x, y, 0.0)
+        struct.pack_into("<3f", out, o_vert + VERTEX_SIZE * i, x, y, 0.0)
+        if uvs is not None:
+            struct.pack_into("<2f", out, o_vert + VERTEX_SIZE * i + 32, *uvs[i])
 
     b = bounds_of(verts)
     struct.pack_into("<6f", out, OFS_BBOX, *b["min"], *b["max"])
@@ -252,7 +277,7 @@ def patch_model(data: bytes, verts: list[tuple[float, float]], *, skins: bool,
     # color: the tint; color alpha and transparency: one opaque key per animation (static)
     if len(rgb) != 3 or not all(0.0 <= v <= 1.0 for v in rgb):
         raise M2Error(f"color {rgb!r}: three floats in 0..1")
-    info = inspect(data)
+    info = inspect(data)        # the tracks are unchanged by the vertex append: their offsets hold in `out`
     if not any(count for count, _ofs in info["rgb_track"]["keys"]):
         raise M2Error("the color track has no keys to hold the tint")
     for count, ofs in info["rgb_track"]["keys"]:
@@ -283,6 +308,11 @@ SUBMESH_SIZE = 48
 SUBMESH_CENTRES = 20        # centerMass(3f) centerBBox(3f) radius(f) after ten u16 fields
 
 
+SKIN_HEADER_SIZE = 48       # 'SKIN', five (count, offset) arrays, u32 bone count max
+SKIN_BATCH_SIZE = 24
+QUAD_TRIANGLES = (0, 1, 2, 3, 2, 1)     # the source skin's two triangles
+
+
 def check_skin(data: bytes) -> int:
     if data[:4] != b"SKIN":
         raise M2Error("not a SKIN file")
@@ -293,13 +323,60 @@ def check_skin(data: bytes) -> int:
     return ofs
 
 
+def skin_arrays(data: bytes) -> dict:
+    """The skin's index, triangle and property lists (u16, u16, 4-byte entries) and its batches."""
+    check_skin(data)
+    n_idx, o_idx, n_tri, o_tri, n_prop, o_prop = struct.unpack_from("<6I", data, 4)
+    n_batch, o_batch = struct.unpack_from("<II", data, 36)
+    _span(data, o_idx, 2 * n_idx, "skin indices")
+    _span(data, o_tri, 2 * n_tri, "skin triangles")
+    _span(data, o_prop, 4 * n_prop, "skin properties")
+    _span(data, o_batch, SKIN_BATCH_SIZE * n_batch, "skin batches")
+    return {
+        "indices": list(struct.unpack_from(f"<{n_idx}H", data, o_idx)),
+        "triangles": list(struct.unpack_from(f"<{n_tri}H", data, o_tri)),
+        "properties": [data[o_prop + 4 * i:o_prop + 4 * i + 4] for i in range(n_prop)],
+        "batches": data[o_batch:o_batch + SKIN_BATCH_SIZE * n_batch], "n_batches": n_batch,
+    }
+
+
+def skin_submesh_counts(data: bytes) -> tuple[int, int, int, int]:
+    """(vertex start, vertex count, index start, index count) of the single submesh."""
+    ofs = check_skin(data)
+    return struct.unpack_from("<4H", data, ofs + 4)
+
+
 def patch_skin(data: bytes, verts: list[tuple[float, float]]) -> bytes:
-    """Move the single submesh's centre and radius to the new quad."""
+    """Move the single submesh's centre and radius to the new quad; for eight vertices (two quads) rebuild the
+    skin around them: eight indices and properties (the source's, per quad), twelve triangle indices, and the
+    submesh's vertex and index counts. The header's bone count max, the submesh's other fields and the batch are
+    the source's."""
     ofs = check_skin(data)
     b = bounds_of(verts)
-    out = bytearray(data)
-    struct.pack_into("<7f", out, ofs + SUBMESH_CENTRES, *b["centre"], *b["centre"], b["centre_radius"])
-    return bytes(out)
+    if len(verts) == 4:
+        out = bytearray(data)
+        struct.pack_into("<7f", out, ofs + SUBMESH_CENTRES, *b["centre"], *b["centre"], b["centre_radius"])
+        return bytes(out)
+    if len(verts) != 8:
+        raise M2Error("need four vertices (one quad) or eight (two quads)")
+    src = skin_arrays(data)
+    if src["indices"] != [0, 1, 2, 3] or tuple(src["triangles"]) != QUAD_TRIANGLES or len(src["properties"]) != 4:
+        raise M2Error("the source skin is not the one-quad skin this patcher was written for")
+    indices = list(range(8))
+    triangles = [*QUAD_TRIANGLES, *(t + 4 for t in QUAD_TRIANGLES)]
+    props = b"".join(src["properties"]) * 2
+    submesh = bytearray(data[ofs:ofs + SUBMESH_SIZE])
+    struct.pack_into("<4H", submesh, 4, 0, 8, 0, len(triangles))
+    struct.pack_into("<7f", submesh, SUBMESH_CENTRES, *b["centre"], *b["centre"], b["centre_radius"])
+    o_idx = SKIN_HEADER_SIZE
+    o_tri = o_idx + 2 * len(indices)
+    o_prop = o_tri + 2 * len(triangles)
+    o_sub = o_prop + len(props)
+    o_batch = o_sub + SUBMESH_SIZE
+    head = struct.pack("<4s10I", b"SKIN", len(indices), o_idx, len(triangles), o_tri, len(props) // 4, o_prop,
+                       1, o_sub, src["n_batches"], o_batch) + data[44:48]
+    return (head + struct.pack(f"<{len(indices)}H", *indices) + struct.pack(f"<{len(triangles)}H", *triangles)
+            + props + bytes(submesh) + src["batches"])
 
 
 def skin_submesh_bounds(data: bytes) -> tuple[tuple[float, float, float], tuple[float, float, float], float]:

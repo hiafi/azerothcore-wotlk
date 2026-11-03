@@ -176,8 +176,8 @@ spellcategory:
 #                 Rogue 90250-90299, which filled the block. Widened from 90299 to
 #                 90399 by Warrior T1 (the warrior reserves 90300-90339).
 #   - creaturedisplayinfo / creaturemodeldata: used 90001-90321 / 90001-90310 (mage 90001-90003, the shapeshift
-#                 appearances 90100-90399 of build_patch_f.py), and the boss mechanics markers 91000-91882 (plus the
-#                 opt-in diagnostics 91990-91995; patch_bossmechanics_markers.py).
+#                 appearances 90100-90399 of build_patch_f.py), and the boss mechanics markers 91000-91833,
+#                 92000-92856 and 93000-93856 (plus the opt-in diagnostics 91990-91995; patch_bossmechanics_markers.py).
 #   - gameobjectdisplayinfo: used 90001 (client patch-M).
 #   - summonproperties: stock DBC tops out at 2935 (SummonProperties.dbc, 200 rows); the overlay table is empty.
 spellicon:
@@ -198,13 +198,17 @@ spellvisual:
 # 91000-91999). 90500-90999 are unreserved again: the markers' old rows in 90500-90699 are deleted by name
 # (SPELLS\bm_* models, bm_* textures), so a later owner may take them. Checked free 2026-11-02: no stock or custom
 # row in 90670-91999 in the working-copy DBCs or the live creaturedisplayinfo_dbc / creaturemodeldata_dbc.
+# Widened to 93999 on 2026-11-02 by the M1 line-fill fix (the line ladders, 57 steps x 2 layers x 9 colors, moved to
+# their own blocks 92000-92856 / 93000-93856). Checked free 2026-11-02: no row in 92000-99999 in the working-copy DBCs
+# (shared checkout and worktree) or the live creaturedisplayinfo_dbc / creaturemodeldata_dbc, and no
+# creature_template_model row uses a display in 91000-93999.
 creaturedisplayinfo:
   start: 90001
-  end: 91999
+  end: 93999
 
 creaturemodeldata:
   start: 90001
-  end: 91999
+  end: 93999
 
 gameobjectdisplayinfo:
   start: 90001
@@ -351,12 +355,14 @@ reservations:
 
   # mod-boss-mechanics (source/npcs/boss_mechanics.py, stage M1): Weakened 205000, resolve spells 205001-205007 (one per
   # school), Mechanic Marker 300400 and Mechanic Test Owner 300401, and the telegraph marker displays
-  # (patch_bossmechanics_markers.py): 91000 + 100 * color + shape offset + step, nine colors, outline + fill layers,
-  # so 91000-91882 with 91083-91099, 91183-91199 ... (each color block's tail) and 91900-91989 spare; 91990-91995 the
-  # opt-in diagnostic displays. Moved from 90500-90699 by the M1 colors fix (that slice is unreserved again).
-  # Pinned in dungeon-mechanics.STAGE-M1-HANDOFF.md s3.1 and dungeon-mechanics.M1-FIX-COLORS-REPORT.md.
+  # (patch_bossmechanics_markers.py), nine colors, outline + fill layers: 91000 + 100 * color + shape offset + step
+  # for the quad shapes (91000-91833, +34..+99 of each color block spare), 91990-91995 the opt-in diagnostic
+  # displays, and the line ladders at 92000 (fill) / 93000 (outline) + 100 * color + step (57 steps each, +57..+99
+  # spare). Moved from 90500-90699 by the M1 colors fix (that slice is unreserved again); widened from 91999 to 93999
+  # on 2026-11-02 by the M1 line-fill fix. Pinned in dungeon-mechanics.STAGE-M1-HANDOFF.md s3.1,
+  # dungeon-mechanics.M1-FIX-COLORS-REPORT.md and dungeon-mechanics.M1-FIX-LINE-FILL-REPORT.md.
   bossmechanics:
     spell: {start: 205000, end: 205099}
     creature: {start: 300400, end: 300419}
-    creaturedisplayinfo: {start: 91000, end: 91999}
-    creaturemodeldata: {start: 91000, end: 91999}
+    creaturedisplayinfo: {start: 91000, end: 93999}
+    creaturemodeldata: {start: 91000, end: 93999}

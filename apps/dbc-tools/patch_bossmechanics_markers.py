@@ -1,40 +1,47 @@
 #!/usr/bin/env python3
 """
-Boss-mechanics telegraph marker assets (dungeon mechanics stage M1, WP-A): 891 creature displays
+Boss-mechanics telegraph marker assets (dungeon mechanics stage M1, WP-A): 1,332 creature displays
 that are flat, colored, alpha-blended floor shapes a stalker creature wears and `SetObjectScale`s
 to any size. Every telegraph draws two layers (M1-FIX-TELEGRAPH-FILL-REPORT.md): a static OUTLINE
 (rim + faint interior, the full hitbox from the first frame) and a FILL (rim + solid interior) that
-the server grows into the outline over the warning time.
+the server grows into the outline over the warning time. An armed mine draws a DASHED RING instead.
 
 Source model: Ascension's `SPELLS\\red_circle_filled.M2` (a 4-vertex quad) from its client backup.
-The model is patched (lib/m2_patch.py) into a quad (x, y in [-QUAD_HALF, QUAD_HALF], z = 0) and 33
-line models (x in [-k, k], y in [-LINE_HALF, LINE_HALF], k = line_aspect(i), scale = width). A line
-texture is transparent on its first half (v < 1/2, model x < 0), so the visible line runs x in [0, k]:
-from the stalker forward, with its direction set by the texture exactly the way a cone's is (the
-model is symmetric about its origin; M1-FIX-LINES-REPORT.md). Textures are generated here, not
-mined (lib/blp_write.py, DXT5): WHITE, with the shape in the alpha channel, one per shape step and shared by every color. The color is the
-model's own: its M2Color track (the one the skin batch's color index 0 points at) holds the color's
-RGB, and the client multiplies the texture by it (M1-FIX-COLORS-REPORT.md). So each display is a
-1.2 KB model + 156 B skin, and the 35 textures are shared. The shape stops MARGIN_FRAC of the side
-short of every texture edge it would otherwise touch, and the quad is that much bigger (QUAD_HALF =
-8/7), so scale 1 is still exactly a 1-yard radius / length / width; the edge texels are transparent
-at every mip level (`encode_blp(clear_cols=..., clear_rows=...)`). The first build drew the shapes
-edge to edge, and the clamped edge texels of the lower mips drew straight lines along the quad edge
-where the disc touches it (N/E/S/W).
+The model is patched (lib/m2_patch.py) into a quad (x, y in [-QUAD_HALF, QUAD_HALF], z = 0) and 57
+line models of two quads each (M1-FIX-LINE-FILL-REPORT.md): x in [-k, 0] and [0, k], y in
+[-LINE_HALF, LINE_HALF], k = line_aspect(i), scale = width. The client draws a creature model centred
+on its bounds (round-3 check L1), so the line stays symmetric about its origin; the back quad samples
+a transparent texel region (LINE_BACK_V) and the front quad a body band that is the same in every row
+(LINE_FRONT_V). The visible line runs x in [0, k], from the stalker forward, its start and far end
+hard geometric edges (no texture edge to blur across a joint), and every aspect shares one texture.
+Textures are generated here, not mined (lib/blp_write.py, DXT5): WHITE, with the shape in the alpha
+channel, one per shape step and shared by every color. The color is the model's own: its M2Color
+track (the one the skin batch's color index 0 points at) holds the color's RGB, and the client
+multiplies the texture by it (M1-FIX-COLORS-REPORT.md). So each display is a small model + skin,
+and the 36 textures are shared. The shape stops MARGIN_FRAC of the side short of every texture edge
+it would otherwise touch, and the quad is that much bigger (QUAD_HALF = 8/7), so scale 1 is still
+exactly a 1-yard radius / length / width; the edge texels are transparent at every mip level
+(`encode_blp(clear_cols=..., clear_rows=...)`). The first build drew the shapes edge to edge, and
+the clamped edge texels of the lower mips drew straight lines along the quad edge where the disc
+touches it (N/E/S/W).
 
-Rows written: CreatureModelData + CreatureDisplayInfo ids 91000-91898 and the probe 91996 (one pair per display, the
-same id in both tables), into the working copy `var/model-visual-dbc/DBFilesClient/`, with any other
-row of the reserved block 91000-91999 or of the old slice 90500-90699 removed; model, skin and
-texture files into `var/model-visual-dbc/SPELLS/` (packed by build_patch_m.py); `--sql-out` emits the
-matching server rows (DELETE of both ranges + INSERT). Deliberately not named
-`patch_*_vfx_models.py`, so lib/test_id_blocks.py's constant scan of those scripts is unaffected.
+Rows written: CreatureModelData + CreatureDisplayInfo ids 91000-91833, 92000-92856 and 93000-93856
+(one pair per display, the same id in both tables), into the working copy
+`var/model-visual-dbc/DBFilesClient/`, with any other row of the reserved block 91000-93999 or of
+the old slice 90500-90699 removed; model, skin and texture files into `var/model-visual-dbc/SPELLS/`
+(packed by build_patch_m.py); `--sql-out` emits the matching server rows (DELETE of both ranges +
+INSERT). Deliberately not named `patch_*_vfx_models.py`, so lib/test_id_blocks.py's constant scan of
+those scripts is unaffected.
 
-Display ids (CreatureDisplayInfo id = CreatureModelData id): one block of 100 ids per color,
+Display ids (CreatureDisplayInfo id = CreatureModelData id): one block of 100 ids per color in each
+of three ranges,
 
-    id = 91000 + 100 * c + SHAPE_OFFSET[shape] + step
+    id = 91000 + 100 * c + SHAPE_OFFSET[shape] + step       the quad shapes
+    id = 92000 + 100 * c + i                                 line (F), i = 0..56
+    id = 93000 + 100 * c + i                                 line (O)
 
 c = color index (COLORS: red 0, yellow 1, blue 2, purple 3, orange 4, green 5, teal 6, white 7,
-black 8). Within a color's block (F = fill layer, O = outline layer):
+black 8). Within a color's 91000 block (F = fill layer, O = outline layer):
 
     +0          disc (F)                    +1        ring (O)
     +2          timer ring (rim only; a donut's timer)
@@ -42,21 +49,20 @@ black 8). Within a color's block (F = fill layer, O = outline layer):
     +10..+16    donut (O)
     +17..+24    cone (F), angle_j in (30 45 60 90 120 150 180 270) degrees
     +25..+32    cone (O)
-    +33..+65    line (F), k_i = line_aspect(i), i = 0..32 (aspect 1/4 to 8; i = 8 is aspect 1)
-    +66..+98    line (O)
-    +99         spare
+    +33         dashed ring (rim dashes only; an armed mine)
+    +34..+99    spare (+33..+98 were the line ladders before M1-FIX-LINE-FILL)
 
-91900-91989 are spare; 91990-91995 are the diagnostic displays, only with --diagnostics
-(DIAGNOSTICS below); 91996 is the line-direction probe (PROBE_ID, built by default): the live
-build's line model (x in [0, 8], full texture) to `.morph` onto a player, showing how the client
-places a model whose origin is at one end. mod-boss-mechanics `src/BossMechanicsIds.h`
-(`MarkerDisplay`) computes the same ids; keep both in sync.
+Line ladder: k_i = line_aspect(i), i = 0..56 (aspect 1/4 to 64; i = 8 is aspect 1), the same for
+both layers; +57..+99 of each line block are spare. 91834-91989 are spare; 91990-91995 are the
+diagnostic displays, only with --diagnostics (DIAGNOSTICS below). The line-direction probe 91996 of
+round 3 is gone (L1 answered it); the block clear removes its rows. mod-boss-mechanics
+`src/BossMechanicsIds.h` (`MarkerDisplay`) computes the same ids; keep both in sync.
 
 Orientation: model +X is forward and carries v, model +Y carries u, so a cone's wedge opens toward
 increasing v (down the image rows) and its apex is the texture centre. Spike S5 checked it in game
 (a cone points the way the GM faces). Retail's off-centre cones (Spell-Shadow-Cone, x in [0, 100])
-agree: v = 0 at their far end, and their wide end is texture row 0. Lines use the same mapping:
-their visible half is the rows v >= 1/2, model x >= 0.
+agree: v = 0 at their far end, and their wide end is texture row 0. Lines keep the mapping (v grows
+with +X) inside each of their quads.
 
 Texture binding (fix 2026-11-02, M1-FIX-MARKERS-REPORT.md): by default every display gets its own
 model copy whose texture path is hard-coded (type 0, how the source model binds its texture; texture
@@ -97,11 +103,13 @@ SOURCE_TEXTURE = "red_circle_filled_editeda_circle_solid_red.blp"   # Ascension'
 SOURCE_ARCHIVE_PATHS = (f"SPELLS/{SOURCE_MODEL}", f"SPELLS/{SOURCE_SKIN}", f"SPELLS/{SOURCE_TEXTURE}")
 PREFIX = "bm_"
 
-# --- ids (handoff §3.1; reservations.bossmechanics in source/ids.yaml; moved to 91000-91999 by the colors fix) ---
+# --- ids (handoff §3.1; reservations.bossmechanics in source/ids.yaml; moved to 91000-91999 by the colors fix,
+# widened to 93999 by the line-fill fix for the line ladders) ---
 
 FIRST_ID = 91000
 COLOR_STRIDE = 100           # ids per color block
-BLOCK_LAST_ID = 91999        # the reservation's end: the SQL and the DBC merge clear the whole block
+LINE_FIRST_ID = {"line": 92000, "line_outline": 93000}      # the line ladders' own ranges, one block per color
+BLOCK_LAST_ID = 93999        # the reservation's end: the SQL and the DBC merge clear the whole block
 OLD_FIRST_ID = 90500         # the slice the markers used before the colors fix (free again: see _owned)
 OLD_LAST_ID = 90699
 DIAG_FIRST_ID = 91990
@@ -121,27 +129,29 @@ WHITE = (255, 255, 255)      # every marker texture's RGB: the model's M2Color s
 
 DONUT_RATIOS = (0.25, 0.33, 0.40, 0.50, 0.60, 0.67, 0.75)
 CONE_ANGLES = (30, 45, 60, 90, 120, 150, 180, 270)
-LINE_STEPS = 33                                  # i = 0..32, aspect 1/4 to 8
+LINE_STEPS = 57                                  # i = 0..56, aspect 1/4 to 64
 LINE_UNIT_STEP = 8                               # the step of aspect 1
 
-# (shape, steps) in id order inside one color block: fill disc, outline ring, timer ring, then fill / outline donut,
-# cone and line ladders. SHAPE_OFFSET[shape] is the first id offset of that shape in the block.
-SHAPES = (
+# (shape, steps) in id order inside one color block: fill disc, outline ring, timer ring, then fill / outline donut
+# and cone ladders and the dashed ring. SHAPE_OFFSET[shape] is the first id offset of that shape in the block. The
+# two line ladders follow in LINE_FIRST_ID's ranges.
+QUAD_SHAPES = (
     ("disc", 1), ("ring", 1), ("timer", 1),
     ("donut", len(DONUT_RATIOS)), ("donut_outline", len(DONUT_RATIOS)),
     ("cone", len(CONE_ANGLES)), ("cone_outline", len(CONE_ANGLES)),
-    ("line", LINE_STEPS), ("line_outline", LINE_STEPS),
+    ("dashed", 1),
 )
+SHAPES = QUAD_SHAPES + (("line", LINE_STEPS), ("line_outline", LINE_STEPS))
 SHAPE_OFFSET: dict[str, int] = {}
 _next = 0
-for _shape, _steps in SHAPES:
+for _shape, _steps in QUAD_SHAPES:
     SHAPE_OFFSET[_shape] = _next
     _next += _steps
-PER_COLOR = _next                                # 99
+PER_COLOR = _next                                # 34
 del _next, _shape, _steps
-LAST_ID = FIRST_ID + COLOR_STRIDE * (len(COLORS) - 1) + PER_COLOR - 1      # 91898
-PROBE_ID = 91996                                 # the line-direction probe (see the docstring)
-PROBE_ASPECT = 8.0
+QUAD_LAST_ID = FIRST_ID + COLOR_STRIDE * (len(COLORS) - 1) + PER_COLOR - 1                  # 91833
+LAST_ID = LINE_FIRST_ID["line_outline"] + COLOR_STRIDE * (len(COLORS) - 1) + LINE_STEPS - 1  # 93856
+DISPLAY_COUNT = len(COLORS) * (PER_COLOR + 2 * LINE_STEPS)                                   # 1332
 
 
 def display_id(color: int, shape: str, step: int = 0) -> int:
@@ -149,13 +159,14 @@ def display_id(color: int, shape: str, step: int = 0) -> int:
     steps = dict(SHAPES)[shape]
     if not 0 <= color < len(COLORS) or not 0 <= step < steps:
         raise ValueError(f"no display for color {color}, {shape} step {step}")
+    if shape in LINE_FIRST_ID:
+        return LINE_FIRST_ID[shape] + COLOR_STRIDE * color + step
     return FIRST_ID + COLOR_STRIDE * color + SHAPE_OFFSET[shape] + step
 
 
 def line_aspect(i: int) -> float:
     """k_i: the visible line is k_i long and 1 wide (scale = width). Quarter-octave steps below aspect 1
-    (1/4 .. 0.84: a fill, or a line shorter than wide, keeps its full width), eighth-octave steps from 1
-    to 8 (MechanicMath.h LineAspect)."""
+    (1/4 .. 0.84: a line shorter than wide), eighth-octave steps from 1 to 64 (MechanicMath.h LineAspect)."""
     d = i - LINE_UNIT_STEP
     return 2.0 ** (d / 4.0 if d < 0 else d / 8.0)
 
@@ -168,6 +179,8 @@ RIM_ALPHA = 230             # both layers' rim (0.9)
 RIM_FRAC = 0.025            # rim width as a fraction of the outer radius
 LINE_RIM_FRAC = 0.03        # line rim width as a fraction of the line width
 TIMER_RIM_FRAC = 0.04       # the donut timer ring's band, as a fraction of its radius
+DASH_COUNT = 20             # the armed-mine ring's dashes (and as many gaps)
+DASH_DUTY = 0.5             # the dash's share of one dash + gap period
 BIG = 512                   # disc, ring and timer ring
 SMALL = 256                 # everything else
 
@@ -244,20 +257,42 @@ def cone_alpha(size: int, angle_deg: float, fill: int = FILL_ALPHA) -> bytes:
     return _plane(size, alpha)
 
 
-def line_alpha(size: int, fill: int = FILL_ALPHA, half: bool = True) -> bytes:
-    """Fill with rims on the two long edges (columns), MARGIN_FRAC in from the texture edge. half: only
-    the rows v >= 1/2 (model x >= 0, the forward half of the symmetric line model) draw; the first half
-    is transparent, so the line starts exactly at the stalker. The far end (the last row) is open and
-    runs to the edge, so a piece starting there joins without a seam. half=False: the whole strip (the
-    probe, i.e. the live build's line)."""
+def dashed_alpha(size: int, dashes: int = DASH_COUNT, duty: float = DASH_DUTY) -> bytes:
+    """The armed mine's ring: the outline's rim (RIM_FRAC of the radius, RIM_ALPHA) cut into `dashes` dashes,
+    one centred on +X (model forward), with an empty interior. Antialiased along the band and at the dash ends."""
+    radius = shape_radius(size)
+    rim = RIM_FRAC * radius
+
+    def alpha(x: float, y: float) -> float:
+        d = math.hypot(x, y)
+        sd_band = max(d - radius, (radius - rim) - d)
+        phase = (math.atan2(y, x) / (2 * math.pi) * dashes + duty / 2) % 1.0
+        period = 2 * math.pi * max(d, 1e-6) / dashes          # pixels along the arc per dash + gap
+        inside = min(phase, duty - phase) if phase < duty else -min(phase - duty, 1.0 - phase)
+        return RIM_ALPHA * _cov(max(sd_band, -inside * period))
+
+    return _plane(size, alpha)
+
+
+# Line UVs (M1-FIX-LINE-FILL): v of the back quad (x in [-k, 0]) and the front quad (x in [0, k]), each from its -X to
+# its +X end. The line texture is transparent on rows v < 1/2 and the body row on rows v >= 1/2. The back quad samples
+# the first quarter of the rows: at every level down to 4 x 4 its bilinear footprint stays in rows that are all 0
+# (a 4-row level: rows 0..1 of the transparent 0..1), and the 2 x 2 and 1 x 1 levels are all 0 anyway (both columns
+# are long edges, cleared). The front quad samples the middle of the body rows, where every row is the same, so the
+# drawn line has no start or end in the texture: its ends are the quad's own edges.
+LINE_BACK_V = (0.0, 0.25)
+LINE_FRONT_V = (0.625, 0.875)
+
+
+def line_alpha(size: int, fill: int = FILL_ALPHA) -> bytes:
+    """Rows v < 1/2: transparent (the back quad's region). Rows v >= 1/2: the body, the same in every row: fill
+    with rims on the two long edges (columns), MARGIN_FRAC in from the texture edge."""
     margin = size * MARGIN_FRAC
     rim = LINE_RIM_FRAC * (size - 2 * margin)
     row = bytearray(size)
     for col in range(size):
         inside = min(col + 0.5 - margin, size - margin - col - 0.5)     # distance in from the nearer edge
         row[col] = _byte(_shaded(fill, -inside, rim))
-    if not half:
-        return bytes(row) * size
     return bytes(size) * (size // 2) + bytes(row) * (size - size // 2)
 
 
@@ -275,36 +310,35 @@ class Display:
     "skin_broken" (type 11 with the source's one-entry lookup: the first M1 build, a diagnostic only) or "source"
     (the untouched source model, only its texture path rewritten: a diagnostic only)."""
     __slots__ = ("id", "shape", "step", "texture", "color", "model", "verts", "size", "binding", "param",
-                 "tex_rgb", "tint")
+                 "tex_rgb", "tint", "uvs")
 
     def __init__(self, id_: int, shape: str, texture: str, color: str, model: str, verts, size: int,
-                 binding: str = "path", param: float = 0.0, step: int = 0, tex_rgb=WHITE, tint=None):
+                 binding: str = "path", param: float = 0.0, step: int = 0, tex_rgb=WHITE, tint=None, uvs=None):
         self.id, self.shape, self.step, self.texture, self.color = id_, shape, step, texture, color
         self.model, self.verts, self.size, self.binding, self.param = model, verts, size, binding, param
         self.tex_rgb = tex_rgb
         self.tint = COLOR_RGB[color] if tint is None else tint
+        self.uvs = uvs          # one (u, v) per vertex; None = the source quad's
 
 
 QUAD = [(-QUAD_HALF, -QUAD_HALF), (QUAD_HALF, -QUAD_HALF), (-QUAD_HALF, QUAD_HALF), (QUAD_HALF, QUAD_HALF)]
 
 
 def line_verts(i: int) -> list[tuple[float, float]]:
-    """The symmetric line model: x in [-k, k] (the texture draws only x >= 0)."""
+    """The symmetric two-quad line model: the back quad x in [-k, 0], then the front quad x in [0, k], each in the
+    source vertex order (-,-), (+,-), (-,+), (+,+)."""
     k = line_aspect(i)
-    return [(-k, -LINE_HALF), (k, -LINE_HALF), (-k, LINE_HALF), (k, LINE_HALF)]
+    h = LINE_HALF
+    return [(-k, -h), (0.0, -h), (-k, h), (0.0, h),
+            (0.0, -h), (k, -h), (0.0, h), (k, h)]
 
 
-def probe_verts() -> list[tuple[float, float]]:
-    """The live build's line model (origin at one end): x in [0, PROBE_ASPECT]."""
-    return [(0.0, -LINE_HALF), (PROBE_ASPECT, -LINE_HALF), (0.0, LINE_HALF), (PROBE_ASPECT, LINE_HALF)]
-
-
-def build_probe() -> list[Display]:
-    """The line-direction probe 91996: `.morph target 91996` on a player shows where the client draws a
-    line model whose origin is at one end (ahead = it honours the origin, centred = it centres the model,
-    behind = it mirrors it). Red, the outline look over the whole strip."""
-    return [Display(PROBE_ID, "probe_line", f"{PREFIX}probe_line", "red", f"{PREFIX}probe_line", probe_verts(),
-                    SMALL)]
+def line_uvs() -> list[tuple[float, float]]:
+    """The UVs of line_verts: u follows +Y (0 at -Y), v follows +X inside each quad (LINE_BACK_V, LINE_FRONT_V)."""
+    out = []
+    for v0, v1 in (LINE_BACK_V, LINE_FRONT_V):
+        out += [(0.0, v0), (0.0, v1), (1.0, v0), (1.0, v1)]
+    return out
 
 
 # Diagnostic displays (91990-91995, only with --diagnostics): which half of a broken marker is at fault.
@@ -334,7 +368,7 @@ def build_diagnostics() -> list[Display]:
 
 def texture_stem(shape: str, step: int) -> str:
     """The shared (white) texture of one shape step: bm_disc, bm_cone_090, bm_outline_donut_33, bm_line, ..."""
-    if shape in ("disc", "ring", "timer", "line"):
+    if shape in ("disc", "ring", "timer", "dashed", "line"):
         return f"{PREFIX}{shape}"
     if shape == "line_outline":
         return f"{PREFIX}outline_line"
@@ -354,11 +388,11 @@ def build_displays(skins: bool) -> list[Display]:
                 line = shape in ("line", "line_outline")
                 texture = texture_stem(shape, step)
                 if line:
-                    verts = line_verts(step)
+                    verts, uvs = line_verts(step), line_uvs()
                     own = f"{texture}_{step:02d}_{color}"
                     shared = f"{PREFIX}line_{step:02d}_{color}"
                 else:
-                    verts = QUAD
+                    verts, uvs = QUAD, None
                     own = f"{texture}_{color}"
                     shared = f"{PREFIX}quad_{color}"
                 if shape in ("donut", "donut_outline"):
@@ -367,9 +401,9 @@ def build_displays(skins: bool) -> list[Display]:
                     param = CONE_ANGLES[step]
                 else:
                     param = step if line else 0.0
-                size = BIG if shape in ("disc", "ring", "timer") else SMALL
+                size = BIG if shape in ("disc", "ring", "timer", "dashed") else SMALL
                 out.append(Display(display_id(c, shape, step), shape, texture, color, shared if skins else own,
-                                   verts, size, binding, param, step))
+                                   verts, size, binding, param, step, uvs=uvs))
     return out
 
 
@@ -382,22 +416,23 @@ def alpha_for(display: Display) -> bytes:
         return disc_alpha(size, OUTLINE_FILL_ALPHA)
     if shape == "timer":
         return disc_alpha(size, 0, TIMER_RIM_FRAC)
+    if shape == "dashed":
+        return dashed_alpha(size)
     if shape in ("donut", "donut_outline"):
         return donut_alpha(size, param, FILL_ALPHA if shape == "donut" else OUTLINE_FILL_ALPHA)
     if shape in ("cone", "cone_outline"):
         return cone_alpha(size, param, FILL_ALPHA if shape == "cone" else OUTLINE_FILL_ALPHA)
     if shape in ("line", "line_outline"):
         return line_alpha(size, FILL_ALPHA if shape == "line" else OUTLINE_FILL_ALPHA)
-    if shape == "probe_line":
-        return line_alpha(size, OUTLINE_FILL_ALPHA, half=False)
     raise ValueError(shape)
 
 
 def edge_clearing(display: Display) -> dict:
-    """encode_blp's edge flags: every shape keeps all four edges clear except a line, whose far end is open
-    on purpose (the last row runs to the edge so pieces abut; its first rows are transparent anyway), so
-    only its long edges (columns) are cleared."""
-    if display.shape in ("line", "line_outline", "probe_line"):
+    """encode_blp's edge flags: every shape keeps all four edges clear except a line, whose body rows must stay
+    the same down to the last one (the front quad samples them up to LINE_FRONT_V[1]; its first rows are
+    transparent anyway), so only its long edges (columns) are cleared. That also clears the whole 2 x 2 and
+    1 x 1 levels of a line texture."""
+    if display.shape in ("line", "line_outline"):
         return {"clear_cols": True, "clear_rows": False}
     return {"clear_cols": True, "clear_rows": True}
 
@@ -444,9 +479,9 @@ def build_models(displays: list[Display], src_model: bytes, src_skin: bytes) -> 
             continue
         rgb = tint_floats(d.tint)
         if d.binding == "path":
-            model = patch_model(src_model, d.verts, skins=False, texture_path=path, rgb=rgb)
+            model = patch_model(src_model, d.verts, skins=False, texture_path=path, rgb=rgb, uvs=d.uvs)
         elif d.binding in ("skin", "skin_broken"):
-            model = patch_model(src_model, d.verts, skins=True, skin_lookup=d.binding == "skin", rgb=rgb)
+            model = patch_model(src_model, d.verts, skins=True, skin_lookup=d.binding == "skin", rgb=rgb, uvs=d.uvs)
         else:
             raise ValueError(d.binding)
         files[f"{d.model}.m2"] = model
@@ -473,7 +508,7 @@ def display_row(d: Display) -> dict:
 
 # The slice the markers used before the colors fix (90500-90699) is free again for other owners, so its cleanup
 # only ever touches rows that are ours by name: a CreatureModelData row whose model is SPELLS\\bm_*, a
-# CreatureDisplayInfo row whose texture is bm_*. The block 91000-91999 is cleared outright.
+# CreatureDisplayInfo row whose texture is bm_*. The block 91000-93999 is cleared outright.
 
 
 def _is_marker_row(table, row: dict) -> bool:
@@ -586,7 +621,7 @@ def main() -> None:
         extract_source(args.extract, src)
     src_model, src_skin, src_texture = read_source(src)
 
-    displays = build_displays(skins) + build_probe()
+    displays = build_displays(skins)
     if args.diagnostics:
         displays += build_diagnostics()
     models = build_models(displays, src_model, src_skin)
@@ -595,13 +630,14 @@ def main() -> None:
     sql = build_pending_sql(displays)
 
     n_models = sum(1 for n in files if n.endswith(".m2"))
-    print(f"{len(displays)} displays (ids {FIRST_ID}-{max(d.id for d in displays)}), {n_models} model(s) + skin(s), "
+    print(f"{len(displays)} displays (ids {FIRST_ID}-{QUAD_LAST_ID}, {LINE_FIRST_ID['line']}-..., "
+          f"{LINE_FIRST_ID['line_outline']}-{max(d.id for d in displays)}), {n_models} model(s) + skin(s), "
           f"{len(textures)} {args.texture_format} texture(s), "
           f"skins={'yes (type 11)' if skins else 'no (hard-coded paths)'}")
     print(f"shape radius at scale 1: 1.0 yd (scale = radius; quad half-size {QUAD_HALF:.4f}, margin "
-          f"{MARGIN_FRAC:.4f} of the side); line models x in [-k, k] (drawn x in [0, k]), y in "
+          f"{MARGIN_FRAC:.4f} of the side); line models two quads x in [-k, 0] (transparent) + [0, k], y in "
           f"[-{LINE_HALF:.4f}, {LINE_HALF:.4f}] (width 1 yd inside the margin), k = {line_aspect(0):.4f} .. "
-          f"{line_aspect(LINE_STEPS - 1):.4f}; probe {PROBE_ID}")
+          f"{line_aspect(LINE_STEPS - 1):.4f}")
     if args.dry_run:
         print("dry run: nothing written")
         return
