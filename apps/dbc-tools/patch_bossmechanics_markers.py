@@ -8,12 +8,13 @@ the server grows into the outline over the warning time. An armed mine draws a D
 
 Source model: Ascension's `SPELLS\\red_circle_filled.M2` (a 4-vertex quad) from its client backup.
 The model is patched (lib/m2_patch.py) into a quad (x, y in [-QUAD_HALF, QUAD_HALF], z = 0) and 57
-line models of two quads each (M1-FIX-LINE-FILL-REPORT.md): x in [-k, 0] and [0, k], y in
-[-LINE_HALF, LINE_HALF], k = line_aspect(i), scale = width. The client draws a creature model centred
-on its bounds (round-3 check L1), so the line stays symmetric about its origin; the back quad samples
-a transparent texel region (LINE_BACK_V) and the front quad a body band that is the same in every row
-(LINE_FRONT_V). The visible line runs x in [0, k], from the stalker forward, its start and far end
-hard geometric edges (no texture edge to blur across a joint), and every aspect shares one texture.
+line models, each one quad x in [-k, k], y in [-LINE_HALF, LINE_HALF], k = line_aspect(i), scale =
+width, with the source quad's UVs (v grows with +X). The client draws a creature model centred on its
+bounds (round-3 check L1), so the line stays symmetric about its origin, and the line texture is
+transparent on rows v < 1/2: the visible line runs x in [0, k], from the stalker forward. Its far end
+is the quad's edge; its start is the texture edge at v = 1/2, soft by half a texel of the active mip.
+Every aspect shares one texture. (M1-FIX-LINE-FILL's two-quad model, a transparent back quad and a
+body front quad, drew only part of each line in game; round 4b reverted it to this round-3 shape.)
 Textures are generated here, not mined (lib/blp_write.py, DXT5): WHITE, with the shape in the alpha
 channel, one per shape step and shared by every color. The color is the model's own: its M2Color
 track (the one the skin batch's color index 0 points at) holds the color's RGB, and the client
@@ -62,7 +63,7 @@ Orientation: model +X is forward and carries v, model +Y carries u, so a cone's 
 increasing v (down the image rows) and its apex is the texture centre. Spike S5 checked it in game
 (a cone points the way the GM faces). Retail's off-centre cones (Spell-Shadow-Cone, x in [0, 100])
 agree: v = 0 at their far end, and their wide end is texture row 0. Lines keep the mapping (v grows
-with +X) inside each of their quads.
+with +X along their one quad).
 
 Texture binding (fix 2026-11-02, M1-FIX-MARKERS-REPORT.md): by default every display gets its own
 model copy whose texture path is hard-coded (type 0, how the source model binds its texture; texture
@@ -274,19 +275,9 @@ def dashed_alpha(size: int, dashes: int = DASH_COUNT, duty: float = DASH_DUTY) -
     return _plane(size, alpha)
 
 
-# Line UVs (M1-FIX-LINE-FILL): v of the back quad (x in [-k, 0]) and the front quad (x in [0, k]), each from its -X to
-# its +X end. The line texture is transparent on rows v < 1/2 and the body row on rows v >= 1/2. The back quad samples
-# the first quarter of the rows: at every level down to 4 x 4 its bilinear footprint stays in rows that are all 0
-# (a 4-row level: rows 0..1 of the transparent 0..1), and the 2 x 2 and 1 x 1 levels are all 0 anyway (both columns
-# are long edges, cleared). The front quad samples the middle of the body rows, where every row is the same, so the
-# drawn line has no start or end in the texture: its ends are the quad's own edges.
-LINE_BACK_V = (0.0, 0.25)
-LINE_FRONT_V = (0.625, 0.875)
-
-
 def line_alpha(size: int, fill: int = FILL_ALPHA) -> bytes:
-    """Rows v < 1/2: transparent (the back quad's region). Rows v >= 1/2: the body, the same in every row: fill
-    with rims on the two long edges (columns), MARGIN_FRAC in from the texture edge."""
+    """Rows v < 1/2: transparent (the line model's x < 0 half). Rows v >= 1/2: the body, the same in every row:
+    fill with rims on the two long edges (columns), MARGIN_FRAC in from the texture edge."""
     margin = size * MARGIN_FRAC
     rim = LINE_RIM_FRAC * (size - 2 * margin)
     row = bytearray(size)
@@ -318,27 +309,20 @@ class Display:
         self.model, self.verts, self.size, self.binding, self.param = model, verts, size, binding, param
         self.tex_rgb = tex_rgb
         self.tint = COLOR_RGB[color] if tint is None else tint
-        self.uvs = uvs          # one (u, v) per vertex; None = the source quad's
+        self.uvs = uvs          # one (u, v) per vertex; None = the source quad's (every display)
 
 
 QUAD = [(-QUAD_HALF, -QUAD_HALF), (QUAD_HALF, -QUAD_HALF), (-QUAD_HALF, QUAD_HALF), (QUAD_HALF, QUAD_HALF)]
 
 
 def line_verts(i: int) -> list[tuple[float, float]]:
-    """The symmetric two-quad line model: the back quad x in [-k, 0], then the front quad x in [0, k], each in the
-    source vertex order (-,-), (+,-), (-,+), (+,+)."""
+    """The symmetric one-quad line model x in [-k, k], in the source vertex order (-,-), (+,-), (-,+), (+,+), so it
+    keeps the source quad's UVs (v = 0 at -X, 1 at +X; u = 0 at -Y): the line texture's transparent rows (v < 1/2)
+    cover x < 0 and the visible line runs x in [0, k]. Round-3 geometry; M1-FIX-LINE-FILL's two-quad model drew only
+    the far end of each line in game (round 4 probes) and was reverted in round 4b."""
     k = line_aspect(i)
     h = LINE_HALF
-    return [(-k, -h), (0.0, -h), (-k, h), (0.0, h),
-            (0.0, -h), (k, -h), (0.0, h), (k, h)]
-
-
-def line_uvs() -> list[tuple[float, float]]:
-    """The UVs of line_verts: u follows +Y (0 at -Y), v follows +X inside each quad (LINE_BACK_V, LINE_FRONT_V)."""
-    out = []
-    for v0, v1 in (LINE_BACK_V, LINE_FRONT_V):
-        out += [(0.0, v0), (0.0, v1), (1.0, v0), (1.0, v1)]
-    return out
+    return [(-k, -h), (k, -h), (-k, h), (k, h)]
 
 
 # Diagnostic displays (91990-91995, only with --diagnostics): which half of a broken marker is at fault.
@@ -388,11 +372,11 @@ def build_displays(skins: bool) -> list[Display]:
                 line = shape in ("line", "line_outline")
                 texture = texture_stem(shape, step)
                 if line:
-                    verts, uvs = line_verts(step), line_uvs()
+                    verts = line_verts(step)
                     own = f"{texture}_{step:02d}_{color}"
                     shared = f"{PREFIX}line_{step:02d}_{color}"
                 else:
-                    verts, uvs = QUAD, None
+                    verts = QUAD
                     own = f"{texture}_{color}"
                     shared = f"{PREFIX}quad_{color}"
                 if shape in ("donut", "donut_outline"):
@@ -403,7 +387,7 @@ def build_displays(skins: bool) -> list[Display]:
                     param = step if line else 0.0
                 size = BIG if shape in ("disc", "ring", "timer", "dashed") else SMALL
                 out.append(Display(display_id(c, shape, step), shape, texture, color, shared if skins else own,
-                                   verts, size, binding, param, step, uvs=uvs))
+                                   verts, size, binding, param, step))
     return out
 
 
@@ -428,10 +412,10 @@ def alpha_for(display: Display) -> bytes:
 
 
 def edge_clearing(display: Display) -> dict:
-    """encode_blp's edge flags: every shape keeps all four edges clear except a line, whose body rows must stay
-    the same down to the last one (the front quad samples them up to LINE_FRONT_V[1]; its first rows are
-    transparent anyway), so only its long edges (columns) are cleared. That also clears the whole 2 x 2 and
-    1 x 1 levels of a line texture."""
+    """encode_blp's edge flags: every shape keeps all four edges clear except a line, whose body rows run to the
+    last row (the far end of the line is the quad's edge, not a texture edge; its first rows are transparent
+    anyway), so only its long edges (columns) are cleared. That also clears the whole 2 x 2 and 1 x 1 levels
+    of a line texture."""
     if display.shape in ("line", "line_outline"):
         return {"clear_cols": True, "clear_rows": False}
     return {"clear_cols": True, "clear_rows": True}
@@ -635,8 +619,9 @@ def main() -> None:
           f"{len(textures)} {args.texture_format} texture(s), "
           f"skins={'yes (type 11)' if skins else 'no (hard-coded paths)'}")
     print(f"shape radius at scale 1: 1.0 yd (scale = radius; quad half-size {QUAD_HALF:.4f}, margin "
-          f"{MARGIN_FRAC:.4f} of the side); line models two quads x in [-k, 0] (transparent) + [0, k], y in "
-          f"[-{LINE_HALF:.4f}, {LINE_HALF:.4f}] (width 1 yd inside the margin), k = {line_aspect(0):.4f} .. "
+          f"{MARGIN_FRAC:.4f} of the side); line models one quad x in [-k, k] (drawn [0, k]: texture rows v < 1/2 "
+          f"transparent), y in [-{LINE_HALF:.4f}, {LINE_HALF:.4f}] (width 1 yd inside the margin), "
+          f"k = {line_aspect(0):.4f} .. "
           f"{line_aspect(LINE_STEPS - 1):.4f}")
     if args.dry_run:
         print("dry run: nothing written")

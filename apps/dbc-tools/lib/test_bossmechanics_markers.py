@@ -282,27 +282,26 @@ class TextureGeometryTest(unittest.TestCase):
             self.assertEqual(plane[size * (size // 2):], body * (size - size // 2))    # every body row the same
             self.assertEqual(set(plane[:size * (size // 2)]), {0})                     # rows v < 1/2: nothing
 
-    def test_line_model_is_two_quads_back_transparent_front_body(self):
-        """M1-FIX-LINE-FILL: the line model stays symmetric about its origin (x in [-k, k], the client centres a
-        model on its bounds), as a back quad [-k, 0] whose v range is the transparent rows and a front quad [0, k]
-        whose v range is the body rows; v grows with +X inside each quad (the cone's mapping)."""
-        for i in (0, pbm.LINE_UNIT_STEP, 32, pbm.LINE_STEPS - 1):
-            k = pbm.line_aspect(i)
-            verts, uvs = pbm.line_verts(i), pbm.line_uvs()
-            self.assertEqual(len(verts), 8)
-            self.assertEqual(len(uvs), 8)
-            back, front = verts[:4], verts[4:]
-            self.assertEqual({v[0] for v in back}, {-k, 0.0})
-            self.assertEqual({v[0] for v in front}, {0.0, k})
-            self.assertEqual({abs(v[1]) for v in verts}, {pbm.LINE_HALF})
-            for quad, (v0, v1) in ((range(0, 4), pbm.LINE_BACK_V), (range(4, 8), pbm.LINE_FRONT_V)):
-                xs = [verts[j][0] for j in quad]
-                for j in quad:
-                    self.assertEqual(uvs[j][1], v1 if verts[j][0] == max(xs) else v0)          # v follows +X
-                    self.assertEqual(uvs[j][0], 1.0 if verts[j][1] > 0 else 0.0)            # u follows +Y
-        self.assertLessEqual(pbm.LINE_BACK_V[1], 0.25)
-        self.assertGreaterEqual(pbm.LINE_FRONT_V[0], 0.5 + 0.125)
-        self.assertLessEqual(pbm.LINE_FRONT_V[1], 1.0 - 0.125)
+    def test_line_model_is_one_symmetric_quad_with_the_source_uvs(self):
+        """Round 4b (the round-3 shape): the line model is one quad x in [-k, k], y in [-LINE_HALF, LINE_HALF],
+        symmetric about its origin (the client centres a model on its bounds), in the source vertex order, so it
+        keeps the source quad's UVs: v grows with +X (0 at -k, 1/2 at the origin, 1 at k), u with +Y. With the
+        texture's rows v < 1/2 transparent, the visible line is x in [0, k], ahead of the marker. No UVs of its own:
+        M1-FIX-LINE-FILL's two-quad model drew only part of each line in game."""
+        source_uvs = [(0.0, 0.0), (0.0, 1.0), (1.0, 0.0), (1.0, 1.0)]       # M2PatchTest pins the source's
+        for i in range(pbm.LINE_STEPS):
+            k, h = pbm.line_aspect(i), pbm.LINE_HALF
+            verts = pbm.line_verts(i)
+            self.assertEqual(verts, [(-k, -h), (k, -h), (-k, h), (k, h)])
+            for (x, y), (u, v) in zip(verts, source_uvs):
+                self.assertEqual(v, (x + k) / (2 * k))                            # v follows +X
+                self.assertEqual(u, 1.0 if y > 0 else 0.0)                        # u follows +Y
+        for d in pbm.build_displays(False):
+            self.assertIsNone(d.uvs, d.id)                                       # every display: the source UVs
+            if d.shape in ("line", "line_outline"):
+                self.assertEqual(d.verts, pbm.line_verts(d.step))
+        self.assertFalse(hasattr(pbm, "line_uvs"))
+        self.assertFalse(hasattr(pbm, "LINE_BACK_V") or hasattr(pbm, "LINE_FRONT_V"))
 
     def test_dashed_ring_is_rim_dashes_only(self):
         """The armed mine's ring: the outline rim's radius, width and alpha, cut into DASH_COUNT dashes (one centred
@@ -371,12 +370,13 @@ class EdgeTexelTest(unittest.TestCase):
                 if w >= 16:
                     self.assertGreater(max(a), 0, f"{d.texture} mip {level}: the shape vanished")
 
-    def test_line_quads_sample_their_regions_at_every_mip(self):
-        """M1-FIX-LINE-FILL: decode the shipped line textures and sample them the way the client does (bilinear,
-        clamp, at every mip level) over each quad's UVs: the back quad reads alpha 0 everywhere at every level
-        (the 2 x 2 and 1 x 1 levels are all 0: both their columns are cleared long edges), and the front quad
-        reads the same value all along v at every u, so the line has no texture start or end: both ends are the
-        quad's geometric edges, and abutting pieces meet edge to edge."""
+    def test_line_quad_is_clear_behind_and_one_body_ahead_at_every_mip(self):
+        """Decode the shipped line textures and sample them the way the client does (bilinear, clamp) over the one
+        quad's v range, at every mip level of h rows: v <= 1/2 - 1/(2h) (the model's x < 0, behind the marker, up to
+        half a texel) reads alpha 0 at every u; v >= 1/2 + 1/(2h) (x > 0) reads the same value all along v at every
+        u, up to the far end v = 1, the quad's edge. Only the start is soft, over one texel of the active level
+        (half a texel each side of x = 0): k * scale / h yards (a 6 x 6 cell at mip 0: 0.023 yd each side). The
+        2 x 2 and 1 x 1 levels are all 0: both their columns are cleared long edges."""
         for name in ("bm_line.blp", "bm_outline_line.blp"):
             b = blp_write.read_blp(self.textures[name])
             us = [n / 32 for n in range(33)]
@@ -384,15 +384,18 @@ class EdgeTexelTest(unittest.TestCase):
                 w, h = mip["width"], mip["height"]
                 if w <= 2:
                     self.assertEqual(set(mip["alpha"]), {0}, f"{name} mip {level}")
-                back_vs = [pbm.LINE_BACK_V[0] + (pbm.LINE_BACK_V[1] - pbm.LINE_BACK_V[0]) * n / 16 for n in range(17)]
-                front_vs = [pbm.LINE_FRONT_V[0] + (pbm.LINE_FRONT_V[1] - pbm.LINE_FRONT_V[0]) * n / 16
-                            for n in range(17)]
-                self.assertEqual({_bilinear(mip, u, v) for u in us for v in back_vs}, {0.0}, f"{name} mip {level}")
+                    continue
+                lo, hi = 0.5 - 0.5 / h, 0.5 + 0.5 / h
+                behind = [lo * n / 16 for n in range(17)]
+                ahead = [hi + (1.0 - hi) * n / 16 for n in range(17)]
+                self.assertEqual({_bilinear(mip, u, v) for u in us for v in behind}, {0.0}, f"{name} mip {level}")
                 for u in us:
-                    vals = {round(_bilinear(mip, u, v), 6) for v in front_vs}
+                    vals = {round(_bilinear(mip, u, v), 6) for v in ahead}
                     self.assertEqual(len(vals), 1, f"{name} mip {level} u {u}: the body changes along v")
-                if w >= 4:
-                    self.assertGreater(_bilinear(mip, 0.5, sum(pbm.LINE_FRONT_V) / 2), 0, f"{name} mip {level}")
+                self.assertGreater(_bilinear(mip, 0.5, 0.75), 0, f"{name} mip {level}")
+                # the start: inside the one-texel band the alpha climbs from 0 to the body's
+                self.assertGreater(_bilinear(mip, 0.5, 0.5), 0, f"{name} mip {level}")
+                self.assertLess(_bilinear(mip, 0.5, 0.5), _bilinear(mip, 0.5, hi), f"{name} mip {level}")
 
     def test_mip_edges_without_the_flags_are_kept(self):
         plane = bytes([200] * 64)
@@ -435,6 +438,17 @@ def _patched_ranges(data: bytes) -> list[tuple[int, int]]:
     ranges.append((facts["texture"], facts["texture"] + m2_patch.TEXTURE_SIZE))
     ranges.append((facts["name_ofs"], facts["name_ofs"] + facts["name_len"]))
     return ranges
+
+
+def _two_quads(k: float) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
+    """m2_patch's eight-vertex input (M1-FIX-LINE-FILL's line model, no display uses it since round 4b): a back
+    quad x in [-k, 0] and a front quad x in [0, k], each in the source vertex order, with v ranges of their own."""
+    h = pbm.LINE_HALF
+    verts = [(-k, -h), (0.0, -h), (-k, h), (0.0, h), (0.0, -h), (k, -h), (0.0, h), (k, h)]
+    uvs = []
+    for v0, v1 in ((0.0, 0.25), (0.625, 0.875)):
+        uvs += [(0.0, v0), (0.0, v1), (1.0, v0), (1.0, v1)]
+    return verts, uvs
 
 
 def _diff_offsets(a: bytes, b: bytes) -> list[int]:
@@ -551,11 +565,12 @@ class M2PatchTest(unittest.TestCase):
             self.assertEqual(stray, [], f"bytes changed outside the patched ranges: {stray[:8]}")
 
     def test_two_quad_model_appends_its_vertices_and_keeps_the_rest(self):
-        """Eight vertices: a new vertex array at the end of the file, repointed in the header; each record a copy
-        of the source vertex of its corner (bone weights, normal) with the new position and UV. Everything before
-        the appended array matches the one-quad patch apart from the header's vertex entry and the bounds."""
+        """m2_patch's eight-vertex mode (no display uses it since round 4b; kept and tested): a new vertex array at
+        the end of the file, repointed in the header; each record a copy of the source vertex of its corner (bone
+        weights, normal) with the new position and UV. Everything before the appended array matches the one-quad
+        patch apart from the header's vertex entry and the bounds."""
         allowed = _patched_ranges(self.model) + [(m2_patch.OFS_VERTICES, m2_patch.OFS_VERTICES + 8)]
-        verts, uvs = pbm.line_verts(20), pbm.line_uvs()
+        verts, uvs = _two_quads(pbm.line_aspect(20))
         out = m2_patch.patch_model(self.model, verts, skins=False, texture_path="spells\\bm_line.blp",
                                    rgb=pbm.tint_floats(pbm.COLOR_RGB["blue"]), uvs=uvs)
         n, ofs = struct.unpack_from("<II", out, m2_patch.OFS_VERTICES)
@@ -591,9 +606,9 @@ class M2PatchTest(unittest.TestCase):
         self.assertEqual(m2_patch.vertex_uvs(skinned), uvs)
 
     def test_two_quad_skin(self):
-        """The rebuilt skin: eight indices and properties, both quads' triangles, the submesh over all of them, the
-        source's batch and bone count max."""
-        verts = pbm.line_verts(pbm.LINE_STEPS - 1)
+        """The eight-vertex skin (no display uses it since round 4b): eight indices and properties, both quads'
+        triangles, the submesh over all of them, the source's batch and bone count max."""
+        verts, _uvs = _two_quads(pbm.line_aspect(pbm.LINE_STEPS - 1))
         out = m2_patch.patch_skin(self.skin, verts)
         arr, src = m2_patch.skin_arrays(out), m2_patch.skin_arrays(self.skin)
         self.assertEqual(arr["indices"], list(range(8)))
@@ -608,6 +623,32 @@ class M2PatchTest(unittest.TestCase):
         so = m2_patch.check_skin(self.skin)
         oo = m2_patch.check_skin(out)
         self.assertEqual(out[oo + 12:oo + 20], self.skin[so + 12:so + 20])        # bone fields of the submesh
+
+    def test_line_displays_are_one_quad_models_with_the_source_uvs_and_skin(self):
+        """Round 4b: every line display's model (fill and outline, every step) has the source's four vertices at
+        line_verts, the source quad's UVs and second UV set, symmetric bounds, and the source's one-quad skin with
+        only the submesh bounds moved."""
+        displays = [d for d in pbm.build_displays(False) if d.shape in ("line", "line_outline") and d.color == "red"]
+        self.assertEqual(len(displays), 2 * pbm.LINE_STEPS)
+        files = pbm.build_models(displays, self.model, self.skin)
+        src_uvs = m2_patch.vertex_uvs(self.model)
+        src_ofs = m2_patch.check_source(self.model)["vertices"]
+        for d in displays:
+            out = files[f"{d.model}.m2"]
+            self.assertEqual(struct.unpack_from("<II", out, m2_patch.OFS_VERTICES), (4, src_ofs), d.id)
+            f32 = [tuple(struct.unpack("<f", struct.pack("<f", c))[0] for c in xy) for xy in d.verts]
+            self.assertEqual([v[:2] for v in m2_patch.vertex_positions(out)], f32, d.id)
+            self.assertEqual(m2_patch.vertex_uvs(out), src_uvs, d.id)
+            for i in range(4):
+                self.assertEqual(out[src_ofs + 48 * i + 40:src_ofs + 48 * i + 48],
+                                 self.model[src_ofs + 48 * i + 40:src_ofs + 48 * i + 48])        # second UV set
+            k = f32[1][0]
+            box = struct.unpack_from("<6f", out, m2_patch.OFS_BBOX)
+            self.assertEqual((box[0], box[3]), (-k, k), d.id)
+            skin = files[f"{d.model}00.skin"]
+            self.assertEqual(len(skin), len(self.skin), d.id)
+            self.assertEqual(m2_patch.skin_submesh_counts(skin), m2_patch.skin_submesh_counts(self.skin))
+            self.assertEqual(m2_patch.skin_arrays(skin)["indices"], [0, 1, 2, 3])
 
     def test_line_ladder(self):
         self.assertEqual(pbm.LINE_STEPS, 57)

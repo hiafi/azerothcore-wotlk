@@ -768,11 +768,11 @@ scan of those scripts stays as it is.
 - **Source model:** Ascension's `SPELLS\red_circle_filled.M2` + `00.skin`, a 4-vertex quad.
   `--extract <patch-N.MPQ>` runs `smpq -x` for them and the model's own texture into `--src` (default
   `var/bossmech-src/`), which must be new or empty. Run Python on that data with `-I`; scripts stay outside the directory.
-- **Model patch (`lib/m2_patch.py`):** byte-level, nothing re-serialised apart from the two-quad
-  skin. Vertices become a flat quad (x, y in [-8/7, 8/7], z = 0) or a two-quad line model (eight
-  vertices appended as a new vertex array, the header repointed, each a copy of the source vertex of
-  its corner; the skin rebuilt with eight indices, twelve triangle indices and the submesh over both
-  quads): back quad x in [-k, 0], front quad x in [0, k], y in [-4/7, 4/7]; `line_aspect`: k =
+- **Model patch (`lib/m2_patch.py`):** byte-level, nothing re-serialised. Vertices become a flat
+  quad: x, y in [-8/7, 8/7], or a line model x in [-k, k], y in [-4/7, 4/7], z = 0, the source's UVs
+  kept. (m2_patch also takes eight vertices, two quads with their own UVs in an appended vertex array
+  and a rebuilt skin; that was M1-FIX-LINE-FILL's line model, which drew only part of each line in
+  game, so no display uses it since round 4b; it stays, tested.) `line_aspect`: k =
   2^((i-8)/4) for i 0..7, 1/4 to 0.84, and 2^((i-8)/8) for i 8..56, 1 to 64; longer lines are
   abutting pieces of aspect 64 plus one rounded-up rest. The extra 1/7 is the
   texture's transparent margin, so scale is still exactly radius / width in yards. Bounding box,
@@ -802,16 +802,17 @@ scan of those scripts stays as it is.
   grows by 8/7 to compensate) and `encode_blp(clear_cols=, clear_rows=)` zeroes the edge texels at
   every mip level after filtering. Lines clear only their long edges: their body rows run to the
   last row (that also leaves their 2 x 2 and 1 x 1 levels all 0).
-- **Line direction and ends (lines fix, line-fill fix):** the client draws a creature model centred
-  on its bounds (round-3 check L1: an off-centre x in [0, 8] model was drawn centred on the unit), so
-  a line model stays symmetric about its origin. It is two quads: the back quad x in [-k, 0] samples
-  v in `LINE_BACK_V` (0 .. 1/4), rows that are transparent at every level the client uses (bilinear
-  footprint inside the transparent half down to 4 x 4; 2 x 2 and 1 x 1 all 0); the front quad x in
-  [0, k] samples v in `LINE_FRONT_V` (5/8 .. 7/8), body rows that are all the same. So the line runs
-  forward from the marker, its start and far end are hard geometric edges (round 3's darker joint
-  bands came from the old texture start edge at v = 1/2 bleeding behind each joint at low mips), and
-  every aspect uses the same texture with no stretch. A test decodes the shipped line textures and
-  samples both quads' UVs bilinearly at every mip.
+- **Line direction and ends (lines fix, round 4b):** the client draws a creature model centred on
+  its bounds (round-3 check L1: an off-centre x in [0, 8] model was drawn centred on the unit), so a
+  line model stays symmetric about its origin: one quad x in [-k, k] with the source quad's UVs (v
+  grows with +X) on a texture whose rows v < 1/2 are transparent. The line runs x in [0, k], forward
+  from the marker (`.morph target 93048` draws 32 yd ahead from the feet, round 4b). Its far end is
+  the quad's edge; its start is the texture edge at v = 1/2, soft by half a texel of the active mip
+  (k x scale / rows yards each side: 0.02 yd for a 6 x 6 cell at mip 0, 0.16 yd for a 40 yd lane).
+  M1-FIX-LINE-FILL tried two quads (a transparent back quad, a body front quad) to make the start a
+  hard edge too; in game it drew only a short piece at the far end of each line, cause unknown, so
+  round 4b reverted it. A test decodes the shipped line textures and samples the quad bilinearly at
+  every mip: 0 behind the start band, one body value ahead of it.
 - **Dashed ring (line-fill fix):** `dashed_alpha`, the outline rim (2.5% of the radius, alpha 230)
   cut into `DASH_COUNT` 20 dashes at 50% duty, one centred on +X, interior clear, 512 px; the
   module swaps an armed mine's outline to it and drops its fill.
@@ -832,7 +833,10 @@ scan of those scripts stays as it is.
 - **Server side:** the module sets display and scale before the marker enters the map (its own
   TempSummon create, not `Map::SummonCreature`), because the client blends every scale change in and
   a marker resized after its create packet visibly grew from 1 yd. The fill timer is that blend on
-  purpose: the module resizes the fill every `BossMechanics.Telegraph.FillStepMs`.
+  purpose: the module resizes the fill every step, paced so its leading edge moves at most
+  `BossMechanics.Telegraph.FillStepYd` (0.4 yd) per step, between 50 ms and
+  `BossMechanics.Telegraph.FillStepMs` (round 4b: the blend is shorter than a 150 ms step, so a
+  32 yd line fill stepped every 150 ms moved in visible jumps).
 - **Tests:** `lib/test_bossmechanics_markers.py`. The M2 tests skip when `var/bossmech-src/` is
   missing; the real-file header comparison and diagnostic file checks also need the source texture.
   The Pillow header check needs the system `python3` (the venv has no Pillow).

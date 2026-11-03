@@ -10,7 +10,8 @@ checked and `check_source` pins the exact shape this patcher was written against
 What gets patched (handoff §3.9):
   - the four vertices become a flat quad at z = 0 (x, y given by the caller), and the header
     bounding box and sphere radius, the three animation bounds and the skin submesh bounds follow;
-  - or (eight vertices, M1-FIX-LINE-FILL) the model becomes two quads with their own UVs: the new
+  - or (eight vertices, M1-FIX-LINE-FILL; no display uses it since round 4b reverted the line models
+    to one quad, kept and tested) the model becomes two quads with their own UVs: the new
     vertex array is appended at the end of the file (each vertex a copy of the source vertex in the
     same corner, so its bone weights and normal are the source's) and the header repointed; the old
     four vertices stay in the file, unreferenced. The skin is rebuilt to match (`patch_skin`): eight
