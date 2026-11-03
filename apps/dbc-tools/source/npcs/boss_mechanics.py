@@ -30,9 +30,11 @@ Ids are pinned in .agents/plans/dungeon-mechanics/dungeon-mechanics.STAGE-M1-HAN
 
 Marker flags: unit_flags 33554946 = NOT_SELECTABLE | IMMUNE_TO_NPC | NON_ATTACKABLE (no IMMUNE_TO_PC: an attacker with
 it cannot hit player-controlled units, so the stalker could not be the caster); flags_extra 66 = CIVILIAN | NO_XP and
-deliberately NOT the TRIGGER bit (0x80: a trigger's display is forced invisible for non-GMs). Level 1 here; the AI
-copies the owner's level and faction at summon time. Model 11686 is the invisible stalker display; the module swaps in
-the marker displays (91000-91999, patch_bossmechanics_markers.py) at runtime.
+deliberately NOT the TRIGGER bit (0x80: a trigger's display is forced invisible for non-GMs). The marker (300400) adds
+NO_MOVE_FLAGS_UPDATE (0x200, so 578): without it the core recomputes movement flags when a moving marker stops, drops
+the gravity-off flag the module sets (the template has no flight), and the client drops the floor quad. Level 1 here;
+the AI copies the owner's level and faction at summon time. Model 11686 is the invisible stalker display; the module
+swaps in the marker displays (91000-93999, patch_bossmechanics_markers.py) at runtime.
 """
 
 from lib.dsl import RANGE_SELF, AuraType, Effect, EffectType, School
@@ -137,7 +139,7 @@ _MARKER = dict(
     IconName="", faction=14, minlevel=1, maxlevel=1, detection_range=0, unit_class=1, unit_flags=33554946,
     unit_flags2=2048, type=10, flags_extra=66, ScriptName="npc_boss_mechanic_marker", VerifiedBuild=0,
 )
-creature_template(300400, "Mechanic Marker", subname="", **_MARKER)
+creature_template(300400, "Mechanic Marker", subname="", **{**_MARKER, "flags_extra": 66 | 0x200})
 creature_model(300400, display_id=11686)
 creature_template(300401, "Mechanic Test Owner", subname="", **_MARKER)
 creature_model(300401, display_id=11686)
