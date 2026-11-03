@@ -737,37 +737,131 @@ the script changed `SpellVisual`, which the server loads.
 
 ## Boss mechanics markers (M1)
 
-`patch_bossmechanics_markers.py` makes the 120 telegraph displays (`CreatureModelData` +
-`CreatureDisplayInfo` ids 90500-90619, one pair per display, owner `bossmechanics`, source
-`apps/dbc-tools/source/ids.yaml`) that the `mod-boss-mechanics` stalker wears: flat, alpha-blended
-floor shapes (disc, ring, donut ratios, cones, lines) a creature scales to any size with
-`SetDisplayId` then `SetObjectScale`. It is a sibling of the `patch_*_vfx_models.py` scripts, kept
-under another name so `lib/test_id_blocks.py`'s scan of those scripts stays as it is.
+`patch_bossmechanics_markers.py` makes the 1,332 telegraph displays (`CreatureModelData` +
+`CreatureDisplayInfo` ids 91000-91833, 92000-92856 and 93000-93856, one pair per display; owner
+`bossmechanics` reserves 91000-93999 in `apps/dbc-tools/source/ids.yaml`) that the
+`mod-boss-mechanics` stalker wears: flat,
+alpha-blended floor shapes a creature scales to any size with `SetDisplayId(display, scale)`. It is a
+sibling of the `patch_*_vfx_models.py` scripts, kept under another name so `lib/test_id_blocks.py`'s
+scan of those scripts stays as it is.
 
+- **Two layers per telegraph** (telegraph-fill fix): an **outline** (rim 230 + interior 50, static,
+  the full hitbox) and a **fill** (rim 230 + interior 90) the module grows into it over the warning.
+- **Ids (colors fix, line-fill fix):** every shape in nine colors (`COLORS`: red, yellow, blue,
+  purple, orange, green, teal, white, black = c 0-8), one 100-id block per color: id = 91000 + 100c
+  + offset + step, offsets disc 0, ring 1, rim-only timer ring 2 (a donut's timer), fill donut 3+j,
+  outline donut 10+j, fill cone 17+j, outline cone 25+j, dashed ring 33 (an armed mine; 34 per
+  color, 91833 the last, +34..+99 spare). The line ladders have their own blocks: fill line 92000 +
+  100c + i, outline line 93000 + 100c + i (i 0..56). Before the line-fill fix the lines sat at
+  +33..+98 of the 91000 blocks; the block-wide DELETE / DBC merge clears those rows and round 3's
+  line-direction probe 91996. `display_id()` and
+  `mod-boss-mechanics/src/BossMechanicsIds.h` `MarkerDisplay()` compute the same numbers (both
+  tested). The markers used 90500-90699 before; that slice is unreserved again, and the cleanup of
+  it only deletes rows that are ours by name (`SPELLS\bm_*` models, `bm_*` textures), in the DBC
+  merge and in the SQL.
+- **Tinting, not per-color textures:** the textures are white; each model's M2Color track (color
+  0, the one the skin batch's color index points at) holds the color, and the client multiplies the
+  texture by it (the batch is unlit, render flag 0x01; blend mode 2 is `src * a + dst * (1 - a)`, so
+  black is drawable: it darkens the floor). 36 textures serve all 1,332 displays. The source's color
+  track has one key list (Stand) with interpolation none; markers only ever play Stand, so it is left
+  at one list. RGB values: `COLOR_RGB` (blue brightened to 30, 140, 255 after the playtest).
 - **Source model:** Ascension's `SPELLS\red_circle_filled.M2` + `00.skin`, a 4-vertex quad.
-  `--extract <patch-N.MPQ>` runs `smpq -x` for the two files into `--src` (default `var/bossmech-src/`),
-  which must be new or empty. Run Python on that data with `-I`; scripts stay outside the directory.
-- **Model patch (`lib/m2_patch.py`):** byte-level, nothing re-serialised. Vertices become a flat unit
-  quad (x, y in [-1, 1], z = 0, so scale = radius in yards) or a line model (x in [0, k], y in
-  [-0.5, 0.5], k = 2^(i/8), i = 0..40, so scale = width). Bounding box, sphere, animation bounds and
-  skin submesh follow. Blend mode 4 (additive) becomes 2 (alpha); flags 0x15 stay. The source fades
-  in over 534 ms and is half transparent, so colour alpha and transparency keys are forced opaque.
-  The texture entry becomes type 11 (creature skin 1, empty name) so
-  `CreatureDisplayInfo.TextureVariation_1` picks the file, resolved in the model's folder
-  (`SPELLS\`). `--no-skins` is the fallback if the client ignores that: one model per display, with
-  a hard-coded texture path.
-- **Textures (`lib/blp_write.py`):** generated, one flat colour per file with the shape in the alpha
-  plane (palette BLP2, alpha depth 8, full mip chain: disc and ring 512 px, the rest 256 px). No
-  Pillow in the venv, and the system Pillow's BLP writer has no alpha plane or mips. Its reader
-  also ignores the alpha plane, so tests read the files back with `read_blp`.
-- **Output:** model, skin and `.blp` files (all prefixed `bm_`) into `var/model-visual-dbc/SPELLS/`,
-  the two DBCs merged in `var/model-visual-dbc/DBFilesClient/`, and `--sql-out` writes the
-  `creaturemodeldata_dbc` / `creaturedisplayinfo_dbc` rows as one pending file. A rerun replaces
-  its rows and drops stale `bm_` files (for example after switching `--no-skins`). Then run
-  `build_patch_m.py` to pack them. `--var <dir>` points the whole thing at another working copy,
-  and `--dry-run` writes nothing.
+  `--extract <patch-N.MPQ>` runs `smpq -x` for them and the model's own texture into `--src` (default
+  `var/bossmech-src/`), which must be new or empty. Run Python on that data with `-I`; scripts stay outside the directory.
+- **Model patch (`lib/m2_patch.py`):** byte-level, nothing re-serialised. Vertices become a flat
+  quad: x, y in [-8/7, 8/7], or a line model x in [-8k/7, 8k/7], y in [-4/7, 4/7], z = 0, the source's UVs
+  kept. (m2_patch also takes eight vertices, two quads with their own UVs in an appended vertex array
+  and a rebuilt skin; that was M1-FIX-LINE-FILL's line model, which drew only part of each line in
+  game, so no display uses it since round 4b; it stays, tested.) `line_aspect`: k =
+  2^((i-8)/4) for i 0..7, 1/4 to 0.84, and 2^((i-8)/8) for i 8..56, 1 to 64; longer lines are
+  abutting pieces of aspect 64 plus one rounded-up rest. The extra 1/7 is the
+  texture's transparent margin, so scale is still exactly radius / width in yards. Bounding box,
+  sphere, animation bounds and skin submesh follow. Blend mode 4 (additive) becomes 2 (alpha); flags
+  0x15 stay. The skin batch keeps its flags 0x14, which include 0x04, the **projected-texture** bit:
+  Ascension's `red_circle_filled_noproject.M2` differs from the source only in that skin byte (0x10)
+  and its quad height. Projection drapes the marker over sloped ground, so it stays on; its cost is
+  the border rule under "Edge texels". Texture flags stay 0 (clamp in both directions; 0x1 / 0x2
+  would wrap X / Y). The source
+  fades in over 534 ms on Stand, out on Decay (159), and is half transparent, so the color alpha and
+  transparency tracks are cut to one opaque key per animation (Hold, 158, has none and borrows it):
+  a marker is fully drawn the moment it appears, whatever the warning time.
+- **Texture binding: hard-coded path (type 0), one model copy per display.** The first build used
+  one shared model per shape with a type-11 skin texture and `TextureVariation_1`, and drew **green
+  boxes**: the source's replaceable-texture lookup (header 0x68) is `[0]`, so the client has no slot
+  for skin type 11 and the texture stays empty. Stock creature models carry a lookup with entry 11
+  (Skunk.m2: `[-1] * 11 + [0]`). `--skins` brings the shared layout back and appends that lookup;
+  type 0 stays the default because it is how this model already worked in Ascension's client.
+- **Textures (`lib/blp_write.py`):** generated, flat white with the shape in the alpha
+  channel, **DXT5** BLP2 (compression 2, alpha depth 8, alpha type 7, full mip chain to 1x1, 2x2
+  and 1x1 one padded block each): header, zeroed palette block and mip offsets are byte for byte
+  those of Ascension's `red_circle_filled_editeda_circle_solid_red.blp` (tested). Disc, ring and
+  timer ring 512 px, the rest 256 px. The color block is trivial (c0 = c1, indices 0); the alpha
+  encoder tries both DXT5 modes per block. `--texture-format palette` keeps the first build's palette
+  format (alpha depth 8). No Pillow in the venv, and the system Pillow's BLP writer has no alpha
+  or mips, so tests decode with `read_blp` / `decode_dxt5`.
+- **Projected textures need clear borders at every mip (hard rule).** The skin batch's 0x04 bit
+  makes the client project the texture onto the ground triangles (terrain, WMO floor) around the
+  model, and with clamp addressing every border texel repeats over all of that ground past the
+  quad. So every border texel (both edge rows, both edge columns) of every marker texture must
+  decode to exactly 0 at **every** mip level, down to 1 x 1. Two bugs came from breaking it: the
+  first build's discs touched the texture edge at N/E/S/W and drew straight "lines at the
+  cardinals"; and the line textures kept their last row (the far end) as body and drew a rimless,
+  pointed strip several yards past the end of every line, its outline made of ADT triangle edges (45-degree
+  diagonals, notches), its length set by the ground triangles, not the line
+  (`dungeon-mechanics.M1-LINE-RENDER-FORENSICS.md`, probes 93990-93999). Every shape now stops 1/16
+  of the side short of every edge (the geometry grows by 8/7 to compensate) and
+  `encode_blp(clear_cols=True, clear_rows=True)` zeroes the edge texels at every level after
+  filtering. `EdgeTexelTest` decodes all 36 shipped textures and enforces it.
+- **Line layout (round 4b + the line-projection fix):** the client draws a creature model centred
+  on its bounds (round-3 check L1: an off-centre x in [0, 8] model was drawn centred on the unit),
+  so a line model stays symmetric about its origin: one quad x in [-k', k'], k' = 8k/7
+  (`LINE_QUAD_K`), with the source quad's UVs (v grows with +X). The texture body is rows v in
+  [1/2, 15/16) (`LINE_END`), with all four borders clear like every other shape, so the line runs
+  exactly x in [0, k] x 1 (times scale = width), forward from the marker: v = 1/2 at x = 0 and
+  v = 15/16 at x = 8k/7 x 7/8 = k. Both ends are texel edges, soft by half a texel of the active
+  mip (0.02 yd for a 6 x 6 cell at mip 0). The width is unchanged (columns 1/16 in, y in
+  [-4/7, 4/7]). The module needs no change: it places each piece's origin at its start and steps
+  by `LineAspect(step) * width` (`MechanicMath.h`). Until the fix the quad was x in [-k, k] and the
+  body ran to the last row, which projection smeared past the far end (probe 93999 confirmed the
+  fix in game: 6 yd ahead, 0 behind, width 6, drapes over slopes). M1-FIX-LINE-FILL's two-quad
+  model drew only the far end of each line; read again, that was the same smear (forensics 3.4).
+  `LineVisibleRegionTest` maps the model UVs to world space and samples the decoded textures
+  bilinearly at every step and mip: the visible region is exactly [0, k] x width.
+- **Dashed ring (line-fill fix):** `dashed_alpha`, the outline rim (2.5% of the radius, alpha 230)
+  cut into `DASH_COUNT` 20 dashes at 50% duty, one centred on +X, interior clear, 512 px; the
+  module swaps an armed mine's outline to it and drops its fill.
+- **Diagnostic displays 91990-91995**, only with `--diagnostics` (all red discs; view with
+  `.morph target <id>` on yourself, `.modify scale <n>` to size, `.morph reset`): 91990 untouched
+  source model + Ascension's own texture, 91991 our model + palette BLP, 91992 type 11 with the fixed
+  lookup + DXT5, 91993 type 0 + DXT5 (= 91000), 91994 our model + Ascension texture, 91995 the first
+  build's type 11 binding (expected green). They lived at 90620-90625, then 90690-90695.
+- **Line-render probes 93990-93999**, only with `--probes` (red, `bm_probe_<id>` model, skin and
+  texture each; client DBCs and files only, never in `--sql-out`, since `.morph` takes any display
+  id): they split the line overshoot between texture, geometry and the projection bit. The table,
+  the expected drawings and the in-game results (2026-11-03) are `PROBES` in the script; the
+  checklist is in `dungeon-mechanics.M1-LINE-RENDER-FORENSICS.md`. Kept for future diagnosis: the
+  default run builds none and removes any left in the working copy. `/console projectedTextures 0`
+  did not stop the smear in game, so it is no way to test projection; use probe 93997 (batch flags
+  0x10) instead.
+- **Output:** model, skin and `.blp` files (all prefixed `bm_`) into `var/model-visual-dbc/SPELLS/`
+  (1,332 models + 1,332 skins + 36 textures, 6.5 MB), the two DBCs merged in
+  `var/model-visual-dbc/DBFilesClient/` (rows of 91000-93999 the run does not write, and our old rows
+  in 90500-90699, are removed), and `--sql-out` writes the `creaturemodeldata_dbc` /
+  `creaturedisplayinfo_dbc` rows as one pending file (`DELETE ... BETWEEN 90500 AND 90699 AND <ours by
+  name>`, `DELETE ... BETWEEN 91000 AND 93999`, then the INSERTs). A rerun replaces its rows and drops stale
+  `bm_` files (for example after switching `--skins`). Then run `build_patch_m.py` to pack them.
+  `--var <dir>` points the whole thing at another working copy, and `--dry-run` writes nothing.
+  Diagnostics 91990/91994 need the source texture in `--src`.
+- **Server side:** the module sets display and scale before the marker enters the map (its own
+  TempSummon create, not `Map::SummonCreature`), because the client blends every scale change in and
+  a marker resized after its create packet visibly grew from 1 yd. The fill timer is that blend on
+  purpose: the module resizes the fill every step, paced so its leading edge moves at most
+  `BossMechanics.Telegraph.FillStepYd` (0.4 yd) per step, between 50 ms and
+  `BossMechanics.Telegraph.FillStepMs` (round 4b: the blend is shorter than a 150 ms step, so a
+  32 yd line fill stepped every 150 ms moved in visible jumps).
 - **Tests:** `lib/test_bossmechanics_markers.py`. The M2 tests skip when `var/bossmech-src/` is
-  missing. The Pillow header check needs the system `python3` (the venv has no Pillow).
+  missing; the real-file header comparison and diagnostic file checks also need the source texture.
+  The Pillow header check needs the system `python3` (the venv has no Pillow).
 
 ## Load-bearing gotcha: `EffectSpellClassMask{A,B,C}_{1,2,3}`
 

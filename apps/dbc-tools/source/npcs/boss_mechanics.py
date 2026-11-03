@@ -5,7 +5,9 @@ Ids are pinned in .agents/plans/dungeon-mechanics/dungeon-mechanics.STAGE-M1-HAN
 
   205000        Weakened - the per-mechanic failure debuff. Self-applied by the module (Weakened::AddStack), 7 stacks,
                 30 s refreshed on every stack. EFFECT_0 is -10% damage done per stack (AuraEffect::CalculateAmount
-                multiplies by the stack count: 1 stack -10%, 7 stacks -70%). EFFECT_1 is MOD_THREAT with base 0: the
+                multiplies by the stack count: 1 stack -10%, 7 stacks -70%). BasePoints -11 with DieSides 1: the
+                core adds one (SpellEffectInfo::CalcValue), so the value and the tooltip's $s1 are -10 / "10"; the
+                first build had -10 and so ran -9% per stack. EFFECT_1 is MOD_THREAT with base 0: the
                 module sets the exact threat compensator after every stack change (ThreatPct = 11, 25, 43, 67, 100,
                 150, 233), and the AuraScript pins the engine-calculated amount to 0 so no recalculation can leave a
                 stale value. NO_IMMUNITIES lets it land through Divine Shield / Ice Block; Dispel none, so it cannot be
@@ -28,9 +30,11 @@ Ids are pinned in .agents/plans/dungeon-mechanics/dungeon-mechanics.STAGE-M1-HAN
 
 Marker flags: unit_flags 33554946 = NOT_SELECTABLE | IMMUNE_TO_NPC | NON_ATTACKABLE (no IMMUNE_TO_PC: an attacker with
 it cannot hit player-controlled units, so the stalker could not be the caster); flags_extra 66 = CIVILIAN | NO_XP and
-deliberately NOT the TRIGGER bit (0x80: a trigger's display is forced invisible for non-GMs). Level 1 here; the AI
-copies the owner's level and faction at summon time. Model 11686 is the invisible stalker display; the module swaps in
-the marker displays (90500-90649, WP-A) at runtime.
+deliberately NOT the TRIGGER bit (0x80: a trigger's display is forced invisible for non-GMs). The marker (300400) adds
+NO_MOVE_FLAGS_UPDATE (0x200, so 578): without it the core recomputes movement flags when a moving marker stops, drops
+the gravity-off flag the module sets (the template has no flight), and the client drops the floor quad. Level 1 here;
+the AI copies the owner's level and faction at summon time. Model 11686 is the invisible stalker display; the module
+swaps in the marker displays (91000-93999, patch_bossmechanics_markers.py) at runtime.
 """
 
 from lib.dsl import RANGE_SELF, AuraType, Effect, EffectType, School
@@ -56,14 +60,18 @@ _ATTR4_NO_CAST_LOG = 0x00000001
 _WEAKENED_ICON = 543  # Curse of Weakness (702), stock
 _SCHOOL_ALL = 127
 
-_WEAKENED_TEXT = 'Damage done reduced.'
+# Aura tooltip: the 3.3.5 client fills $s1 from the DBC (BasePoints + 1, shown without its sign) and never multiplies it
+# by the stack count, so the per-stack wording carries the stacking (stock and custom stacking auras word it the same
+# way, e.g. paladin_holy_spells.py: "increased by $s1% per stack"). $u is CumulativeAura (7), $d the duration.
+_WEAKENED_AURA_TEXT = 'Damage done reduced by $s1% per stack.'
+_WEAKENED_TEXT = 'Damage done reduced by $s1% per stack, stacking up to $u times. Lasts $d.'
 
 weakened_205000 = spell(
     id=205000, name='Weakened', school=School.NORMAL, dispel=0, mechanic=0,
     attributes=_ATTR0_AURA_IS_DEBUFF | _ATTR0_NO_IMMUNITIES, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,
     mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF, duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, base_points=-10,
+        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, base_points=-11,
                misc_value=_SCHOOL_ALL, implicit_target_a=_TARGET_UNIT_CASTER,
                potency_excluded='Weakened: a flat -10% damage done per stack, not a damage or heal value'),
         Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_THREAT, base_points=0,
@@ -74,15 +82,16 @@ weakened_205000 = spell(
     notes=(
         'mod-boss-mechanics M1: the failure debuff, applied to the player by itself (caster = target) so one aura '
         'collects stacks from any boss or stalker. CumulativeAura 7, 30 s refreshed per stack, AURA_IS_DEBUFF + '
-        'NO_IMMUNITIES, Dispel none. eff0 -10% damage done per stack (all schools); eff1 MOD_THREAT base 0, set to '
-        'ThreatPct(stacks) by Weakened::AddStack (the AuraScript pins the calculated amount to 0). Stock icon 543.'
+        'NO_IMMUNITIES, Dispel none. eff0 -10% damage done per stack (all schools; BasePoints -11 + DieSides 1); '
+        'eff1 MOD_THREAT base 0, set to ThreatPct(stacks) by Weakened::AddStack (the AuraScript pins the calculated '
+        'amount to 0). Stock icon 543.'
     ),
     raw_overrides={
         'SpellClassSet': 0, 'EquippedItemClass': -1, 'CastingTimeIndex': 1, 'SpellLevel': 0, 'CumulativeAura': 7,
         'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0,
         'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '',
         'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _WEAKENED_TEXT,
-        'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': _WEAKENED_TEXT,
+        'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': _WEAKENED_AURA_TEXT,
     },
 )
 scripted_by(weakened_205000, 'spell_boss_mechanics_weakened')
@@ -130,7 +139,7 @@ _MARKER = dict(
     IconName="", faction=14, minlevel=1, maxlevel=1, detection_range=0, unit_class=1, unit_flags=33554946,
     unit_flags2=2048, type=10, flags_extra=66, ScriptName="npc_boss_mechanic_marker", VerifiedBuild=0,
 )
-creature_template(300400, "Mechanic Marker", subname="", **_MARKER)
+creature_template(300400, "Mechanic Marker", subname="", **{**_MARKER, "flags_extra": 66 | 0x200})
 creature_model(300400, display_id=11686)
 creature_template(300401, "Mechanic Test Owner", subname="", **_MARKER)
 creature_model(300401, display_id=11686)
