@@ -769,7 +769,7 @@ scan of those scripts stays as it is.
   `--extract <patch-N.MPQ>` runs `smpq -x` for them and the model's own texture into `--src` (default
   `var/bossmech-src/`), which must be new or empty. Run Python on that data with `-I`; scripts stay outside the directory.
 - **Model patch (`lib/m2_patch.py`):** byte-level, nothing re-serialised. Vertices become a flat
-  quad: x, y in [-8/7, 8/7], or a line model x in [-k, k], y in [-4/7, 4/7], z = 0, the source's UVs
+  quad: x, y in [-8/7, 8/7], or a line model x in [-8k/7, 8k/7], y in [-4/7, 4/7], z = 0, the source's UVs
   kept. (m2_patch also takes eight vertices, two quads with their own UVs in an appended vertex array
   and a rebuilt skin; that was M1-FIX-LINE-FILL's line model, which drew only part of each line in
   game, so no display uses it since round 4b; it stays, tested.) `line_aspect`: k =
@@ -777,7 +777,11 @@ scan of those scripts stays as it is.
   abutting pieces of aspect 64 plus one rounded-up rest. The extra 1/7 is the
   texture's transparent margin, so scale is still exactly radius / width in yards. Bounding box,
   sphere, animation bounds and skin submesh follow. Blend mode 4 (additive) becomes 2 (alpha); flags
-  0x15 stay. Texture flags stay 0 (clamp in both directions; 0x1 / 0x2 would wrap X / Y). The source
+  0x15 stay. The skin batch keeps its flags 0x14, which include 0x04, the **projected-texture** bit:
+  Ascension's `red_circle_filled_noproject.M2` differs from the source only in that skin byte (0x10)
+  and its quad height. Projection drapes the marker over sloped ground, so it stays on; its cost is
+  the border rule under "Edge texels". Texture flags stay 0 (clamp in both directions; 0x1 / 0x2
+  would wrap X / Y). The source
   fades in over 534 ms on Stand, out on Decay (159), and is half transparent, so the color alpha and
   transparency tracks are cut to one opaque key per animation (Hold, 158, has none and borrows it):
   a marker is fully drawn the moment it appears, whatever the warning time.
@@ -795,24 +799,34 @@ scan of those scripts stays as it is.
   encoder tries both DXT5 modes per block. `--texture-format palette` keeps the first build's palette
   format (alpha depth 8). No Pillow in the venv, and the system Pillow's BLP writer has no alpha
   or mips, so tests decode with `read_blp` / `decode_dxt5`.
-- **Edge texels (the "lines at the cardinals"):** the first build drew every shape edge to edge, so a
-  disc touched the texture edge at N/E/S/W. With clamp addressing the edge texel of a low mip is
-  stretched along the quad edge, which draws a straight tangent line where the disc touches it,
-  scaling with the marker. Now every shape stops 1/16 of the side short of the edge (the geometry
-  grows by 8/7 to compensate) and `encode_blp(clear_cols=, clear_rows=)` zeroes the edge texels at
-  every mip level after filtering. Lines clear only their long edges: their body rows run to the
-  last row (that also leaves their 2 x 2 and 1 x 1 levels all 0).
-- **Line direction and ends (lines fix, round 4b):** the client draws a creature model centred on
-  its bounds (round-3 check L1: an off-centre x in [0, 8] model was drawn centred on the unit), so a
-  line model stays symmetric about its origin: one quad x in [-k, k] with the source quad's UVs (v
-  grows with +X) on a texture whose rows v < 1/2 are transparent. The line runs x in [0, k], forward
-  from the marker (`.morph target 93048` draws 32 yd ahead from the feet, round 4b). Its far end is
-  the quad's edge; its start is the texture edge at v = 1/2, soft by half a texel of the active mip
-  (k x scale / rows yards each side: 0.02 yd for a 6 x 6 cell at mip 0, 0.16 yd for a 40 yd lane).
-  M1-FIX-LINE-FILL tried two quads (a transparent back quad, a body front quad) to make the start a
-  hard edge too; in game it drew only a short piece at the far end of each line, cause unknown, so
-  round 4b reverted it. A test decodes the shipped line textures and samples the quad bilinearly at
-  every mip: 0 behind the start band, one body value ahead of it.
+- **Projected textures need clear borders at every mip (hard rule).** The skin batch's 0x04 bit
+  makes the client project the texture onto the ground triangles (terrain, WMO floor) around the
+  model, and with clamp addressing every border texel repeats over all of that ground past the
+  quad. So every border texel (both edge rows, both edge columns) of every marker texture must
+  decode to exactly 0 at **every** mip level, down to 1 x 1. Two bugs came from breaking it: the
+  first build's discs touched the texture edge at N/E/S/W and drew straight "lines at the
+  cardinals"; and the line textures kept their last row (the far end) as body and drew a rimless,
+  pointed strip several yards past the end of every line, its outline made of ADT triangle edges (45-degree
+  diagonals, notches), its length set by the ground triangles, not the line
+  (`dungeon-mechanics.M1-LINE-RENDER-FORENSICS.md`, probes 93990-93999). Every shape now stops 1/16
+  of the side short of every edge (the geometry grows by 8/7 to compensate) and
+  `encode_blp(clear_cols=True, clear_rows=True)` zeroes the edge texels at every level after
+  filtering. `EdgeTexelTest` decodes all 36 shipped textures and enforces it.
+- **Line layout (round 4b + the line-projection fix):** the client draws a creature model centred
+  on its bounds (round-3 check L1: an off-centre x in [0, 8] model was drawn centred on the unit),
+  so a line model stays symmetric about its origin: one quad x in [-k', k'], k' = 8k/7
+  (`LINE_QUAD_K`), with the source quad's UVs (v grows with +X). The texture body is rows v in
+  [1/2, 15/16) (`LINE_END`), with all four borders clear like every other shape, so the line runs
+  exactly x in [0, k] x 1 (times scale = width), forward from the marker: v = 1/2 at x = 0 and
+  v = 15/16 at x = 8k/7 x 7/8 = k. Both ends are texel edges, soft by half a texel of the active
+  mip (0.02 yd for a 6 x 6 cell at mip 0). The width is unchanged (columns 1/16 in, y in
+  [-4/7, 4/7]). The module needs no change: it places each piece's origin at its start and steps
+  by `LineAspect(step) * width` (`MechanicMath.h`). Until the fix the quad was x in [-k, k] and the
+  body ran to the last row, which projection smeared past the far end (probe 93999 confirmed the
+  fix in game: 6 yd ahead, 0 behind, width 6, drapes over slopes). M1-FIX-LINE-FILL's two-quad
+  model drew only the far end of each line; read again, that was the same smear (forensics 3.4).
+  `LineVisibleRegionTest` maps the model UVs to world space and samples the decoded textures
+  bilinearly at every step and mip: the visible region is exactly [0, k] x width.
 - **Dashed ring (line-fill fix):** `dashed_alpha`, the outline rim (2.5% of the radius, alpha 230)
   cut into `DASH_COUNT` 20 dashes at 50% duty, one centred on +X, interior clear, 512 px; the
   module swaps an armed mine's outline to it and drops its fill.
@@ -821,6 +835,14 @@ scan of those scripts stays as it is.
   source model + Ascension's own texture, 91991 our model + palette BLP, 91992 type 11 with the fixed
   lookup + DXT5, 91993 type 0 + DXT5 (= 91000), 91994 our model + Ascension texture, 91995 the first
   build's type 11 binding (expected green). They lived at 90620-90625, then 90690-90695.
+- **Line-render probes 93990-93999**, only with `--probes` (red, `bm_probe_<id>` model, skin and
+  texture each; client DBCs and files only, never in `--sql-out`, since `.morph` takes any display
+  id): they split the line overshoot between texture, geometry and the projection bit. The table,
+  the expected drawings and the in-game results (2026-11-03) are `PROBES` in the script; the
+  checklist is in `dungeon-mechanics.M1-LINE-RENDER-FORENSICS.md`. Kept for future diagnosis: the
+  default run builds none and removes any left in the working copy. `/console projectedTextures 0`
+  did not stop the smear in game, so it is no way to test projection; use probe 93997 (batch flags
+  0x10) instead.
 - **Output:** model, skin and `.blp` files (all prefixed `bm_`) into `var/model-visual-dbc/SPELLS/`
   (1,332 models + 1,332 skins + 36 textures, 6.5 MB), the two DBCs merged in
   `var/model-visual-dbc/DBFilesClient/` (rows of 91000-93999 the run does not write, and our old rows

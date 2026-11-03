@@ -84,17 +84,25 @@ def clear_edges(plane: bytes, width: int, height: int, *, cols: bool, rows: bool
     return bytes(out)
 
 
+def hard_threshold(plane: bytes, threshold: int) -> bytes:
+    """Every texel above `threshold` becomes 255, every other one 0."""
+    return bytes(255 if v > threshold else 0 for v in plane)
+
+
 def _mip_planes(alpha: bytes, width: int, height: int, clear_cols: bool = False,
-                clear_rows: bool = False) -> list[tuple[int, int, bytes]]:
+                clear_rows: bool = False, threshold: int | None = None) -> list[tuple[int, int, bytes]]:
     """Every mip level, box filtered from the one above. `clear_cols` / `clear_rows` zero the edge texels of
     every level (after filtering, so a level never inherits a zeroed edge's average either way): with clamp
     addressing an edge texel is stretched along the whole quad edge, so a shape that reaches the edge at a low mip
-    draws a straight line along it (the boss markers' "lines at the cardinals")."""
+    draws a straight line along it (the boss markers' "lines at the cardinals"). `threshold` (a probe only) makes
+    every level hard, 0 or 255 (`hard_threshold`), before the edges are cleared."""
     if len(alpha) != width * height:
         raise ValueError(f"alpha plane is {len(alpha)} bytes, expected {width * height}")
     planes = []
     plane, w, h = alpha, width, height
     for _ in range(mip_count(width, height)):
+        if threshold is not None:
+            plane = hard_threshold(plane, threshold)
         if clear_cols or clear_rows:
             plane = clear_edges(plane, w, h, cols=clear_cols, rows=clear_rows)
         planes.append((w, h, plane))
@@ -201,24 +209,25 @@ def dxt5_alpha_blocks(plane: bytes, width: int, height: int) -> list[bytes]:
 
 @functools.lru_cache(maxsize=64)
 def _dxt5_alpha_levels(alpha: bytes, width: int, height: int, clear_cols: bool = False,
-                       clear_rows: bool = False) -> tuple[tuple[bytes, ...], ...]:
+                       clear_rows: bool = False, threshold: int | None = None) -> tuple[tuple[bytes, ...], ...]:
     """Alpha blocks of every mip level (color independent, so cached per plane)."""
     return tuple(tuple(dxt5_alpha_blocks(plane, w, h))
-                 for w, h, plane in _mip_planes(alpha, width, height, clear_cols, clear_rows))
+                 for w, h, plane in _mip_planes(alpha, width, height, clear_cols, clear_rows, threshold))
 
 
 def encode_blp(width: int, height: int, rgb: tuple[int, int, int], alpha: bytes, *, clear_cols: bool = False,
-               clear_rows: bool = False) -> bytes:
+               clear_rows: bool = False, threshold: int | None = None) -> bytes:
     """A DXT5 BLP2 (compression 2, alpha depth 8, alpha type 7) with a full mip chain.
 
     `alpha` is width*height bytes, row-major, row 0 = the top row of the image (v = 0). `clear_cols` /
-    `clear_rows` keep the edge columns / rows transparent at every mip level (see `_mip_planes`).
+    `clear_rows` keep the edge columns / rows transparent at every mip level (see `_mip_planes`); `threshold`
+    makes every level 0 or 255.
     """
     if width % 4 or height % 4:
         raise ValueError("DXT needs sides that are a multiple of 4")
     c = rgb565(rgb)
     color = struct.pack("<HHI", c, c, 0)
-    levels = _dxt5_alpha_levels(bytes(alpha), width, height, clear_cols, clear_rows)
+    levels = _dxt5_alpha_levels(bytes(alpha), width, height, clear_cols, clear_rows, threshold)
     blobs = [b"".join(a + color for a in level) for level in levels]
     return _assemble(width, height, COMPRESSION_DXT, 8, ALPHA_TYPE_DXT5, bytes(PALETTE_SIZE), blobs)
 

@@ -268,29 +268,36 @@ class TextureGeometryTest(unittest.TestCase):
         self.assertEqual(_alpha_at(plane, size, size // 2 - 40, size // 2), 0)      # behind it
 
     def test_line_has_rims_on_the_long_edges_only(self):
+        """The body is rows [1/2, LINE_END) = [128, 240) of 256, every row the same; the rest is transparent."""
         size = pbm.SMALL
         margin = int(size * pbm.MARGIN_FRAC)
+        end = round(pbm.LINE_END * size)
+        self.assertEqual(end, size - margin)
         for fill in (pbm.FILL_ALPHA, pbm.OUTLINE_FILL_ALPHA):
             plane = pbm.line_alpha(size, fill)
-            for row in (size // 2, size // 2 + 37, size - 1):
+            for row in (size // 2, size // 2 + 37, end - 1):
                 self.assertGreaterEqual(_alpha_at(plane, size, row, margin), pbm.RIM_ALPHA - 1)
                 self.assertGreaterEqual(_alpha_at(plane, size, row, size - 1 - margin), pbm.RIM_ALPHA - 1)
                 self.assertEqual(_alpha_at(plane, size, row, margin - 1), 0)         # the margin
                 self.assertEqual(_alpha_at(plane, size, row, size - margin), 0)
                 self.assertEqual(_alpha_at(plane, size, row, size // 2), fill)
             body = plane[size * (size // 2):size * (size // 2 + 1)]
-            self.assertEqual(plane[size * (size // 2):], body * (size - size // 2))    # every body row the same
+            self.assertEqual(plane[size * (size // 2):size * end], body * (end - size // 2))   # every body row
             self.assertEqual(set(plane[:size * (size // 2)]), {0})                     # rows v < 1/2: nothing
+            self.assertEqual(set(plane[size * end:]), {0})                             # the far margin: nothing
 
     def test_line_model_is_one_symmetric_quad_with_the_source_uvs(self):
-        """Round 4b (the round-3 shape): the line model is one quad x in [-k, k], y in [-LINE_HALF, LINE_HALF],
-        symmetric about its origin (the client centres a model on its bounds), in the source vertex order, so it
-        keeps the source quad's UVs: v grows with +X (0 at -k, 1/2 at the origin, 1 at k), u with +Y. With the
-        texture's rows v < 1/2 transparent, the visible line is x in [0, k], ahead of the marker. No UVs of its own:
-        M1-FIX-LINE-FILL's two-quad model drew only part of each line in game."""
+        """Round 4b (the round-3 shape), grown by the line-projection fix: the line model is one quad x in [-k', k'],
+        k' = 8/7 k, y in [-LINE_HALF, LINE_HALF], symmetric about its origin (the client centres a model on its
+        bounds), in the source vertex order, so it keeps the source quad's UVs: v grows with +X (0 at -k', 1/2 at the
+        origin, 1 at k'), u with +Y. With the texture's rows v < 1/2 and v >= LINE_END transparent, the visible line
+        is x in [0, k], ahead of the marker (LineVisibleRegionTest). No UVs of its own: M1-FIX-LINE-FILL's two-quad
+        model drew only part of each line in game."""
         source_uvs = [(0.0, 0.0), (0.0, 1.0), (1.0, 0.0), (1.0, 1.0)]       # M2PatchTest pins the source's
+        self.assertAlmostEqual(pbm.LINE_QUAD_K, 8 / 7, places=12)
+        self.assertAlmostEqual(pbm.LINE_END, 15 / 16, places=12)
         for i in range(pbm.LINE_STEPS):
-            k, h = pbm.line_aspect(i), pbm.LINE_HALF
+            k, h = pbm.LINE_QUAD_K * pbm.line_aspect(i), pbm.LINE_HALF
             verts = pbm.line_verts(i)
             self.assertEqual(verts, [(-k, -h), (k, -h), (-k, h), (k, h)])
             for (x, y), (u, v) in zip(verts, source_uvs):
@@ -343,60 +350,106 @@ def _bilinear(mip: dict, u: float, v: float) -> float:
 
 
 class EdgeTexelTest(unittest.TestCase):
-    """The cardinal lines: with clamp addressing an edge texel is stretched along the quad edge, so a texture
-    whose shape reaches an edge at some mip draws a straight line there. Every texture keeps its edges
-    transparent at every level (a line only its long edges: its open ends must reach the rows' edge)."""
+    """Every marker model projects its texture onto the ground (skin batch flag 0x04) with clamp addressing, so a
+    visible border texel at any mip is smeared over the ground past the quad: the discs' cardinal lines of the first
+    build, the lines' rimless far-end strip before the line-projection fix (M1-LINE-RENDER-FORENSICS.md). The rule:
+    every border texel (both edge rows and both edge columns) of every shipped texture is exactly 0 after decoding,
+    at every mip level."""
 
     @classmethod
     def setUpClass(cls):
         cls.displays = pbm.build_displays(False)
         cls.textures = _textures(cls.displays)
 
-    def test_edges_are_transparent_at_every_mip(self):
-        seen = set()
+    def test_every_shipped_texture_has_clear_borders_at_every_mip(self):
+        self.assertEqual(len(self.textures), 36)
         for d in self.displays:
-            if d.texture in seen:
-                continue
-            seen.add(d.texture)
-            b = blp_write.read_blp(self.textures[f"{d.texture}.blp"])
-            line = d.shape in ("line", "line_outline")
+            self.assertEqual(pbm.edge_clearing(d), {"clear_cols": True, "clear_rows": True}, d.id)
+        for name, data in sorted(self.textures.items()):
+            b = blp_write.read_blp(data)
+            self.assertEqual(len(b["mips"]), b["mip_count"], name)
             for level, mip in enumerate(b["mips"]):
                 w, h, a = mip["width"], mip["height"], mip["alpha"]
-                cols = [a[y * w] for y in range(h)] + [a[y * w + w - 1] for y in range(h)]
-                self.assertEqual(set(cols), {0}, f"{d.texture} mip {level}: a long-edge texel is visible")
-                if not line:
-                    rows = list(a[:w]) + list(a[(h - 1) * w:])
-                    self.assertEqual(set(rows), {0}, f"{d.texture} mip {level}: an edge texel is visible")
+                border = (list(a[:w]) + list(a[(h - 1) * w:]) + [a[y * w] for y in range(h)]
+                          + [a[y * w + w - 1] for y in range(h)])
+                self.assertEqual(set(border), {0}, f"{name} mip {level}: a border texel is visible")
                 if w >= 16:
-                    self.assertGreater(max(a), 0, f"{d.texture} mip {level}: the shape vanished")
+                    self.assertGreater(max(a), 0, f"{name} mip {level}: the shape vanished")
 
-    def test_line_quad_is_clear_behind_and_one_body_ahead_at_every_mip(self):
-        """Decode the shipped line textures and sample them the way the client does (bilinear, clamp) over the one
-        quad's v range, at every mip level of h rows: v <= 1/2 - 1/(2h) (the model's x < 0, behind the marker, up to
-        half a texel) reads alpha 0 at every u; v >= 1/2 + 1/(2h) (x > 0) reads the same value all along v at every
-        u, up to the far end v = 1, the quad's edge. Only the start is soft, over one texel of the active level
-        (half a texel each side of x = 0): k * scale / h yards (a 6 x 6 cell at mip 0: 0.023 yd each side). The
-        2 x 2 and 1 x 1 levels are all 0: both their columns are cleared long edges."""
-        for name in ("bm_line.blp", "bm_outline_line.blp"):
-            b = blp_write.read_blp(self.textures[name])
-            us = [n / 32 for n in range(33)]
-            for level, mip in enumerate(b["mips"]):
-                w, h = mip["width"], mip["height"]
-                if w <= 2:
-                    self.assertEqual(set(mip["alpha"]), {0}, f"{name} mip {level}")
-                    continue
-                lo, hi = 0.5 - 0.5 / h, 0.5 + 0.5 / h
-                behind = [lo * n / 16 for n in range(17)]
-                ahead = [hi + (1.0 - hi) * n / 16 for n in range(17)]
-                self.assertEqual({_bilinear(mip, u, v) for u in us for v in behind}, {0.0}, f"{name} mip {level}")
-                for u in us:
-                    vals = {round(_bilinear(mip, u, v), 6) for v in ahead}
-                    self.assertEqual(len(vals), 1, f"{name} mip {level} u {u}: the body changes along v")
-                self.assertGreater(_bilinear(mip, 0.5, 0.75), 0, f"{name} mip {level}")
-                # the start: inside the one-texel band the alpha climbs from 0 to the body's
-                self.assertGreater(_bilinear(mip, 0.5, 0.5), 0, f"{name} mip {level}")
-                self.assertLess(_bilinear(mip, 0.5, 0.5), _bilinear(mip, 0.5, hi), f"{name} mip {level}")
+    def test_every_shipped_texture_has_clear_borders_in_skins_mode_too(self):
+        shared = _textures(pbm.build_displays(True))
+        self.assertEqual(shared, self.textures)          # the same 36 files whatever the binding
 
+
+class LineVisibleRegionTest(unittest.TestCase):
+    """Map the line models' UVs to world space and sample the shipped line textures there the way the client does
+    (bilinear, clamp) at every mip: at every ladder step the visible region is exactly x in [0, k], |y| <= 1/2 (scale
+    1: k yd long ahead of the marker, 1 yd wide), up to the half-texel soft edge of the active level, and nothing
+    anywhere else on the quad. Before the line-projection fix the quad was x in [-k, k] and the body ran to v = 1."""
+
+    SOURCE_UVS = [(0.0, 0.0), (0.0, 1.0), (1.0, 0.0), (1.0, 1.0)]       # M2PatchTest pins the source's
+
+    @classmethod
+    def setUpClass(cls):
+        textures = _textures(pbm.build_displays(False))
+        cls.mips = {name: blp_write.read_blp(textures[name])["mips"] for name in ("bm_line.blp", "bm_outline_line.blp")}
+
+    def _uv_map(self, verts):
+        """The affine (x, y) -> (u, v) map of a quad from its vertices and UVs (checked at the fourth vertex)."""
+        (x0, y0), (x1, _), (_, y1) = verts[0], verts[1], verts[2]
+        (u0, v0), (_, v1), (u1, _) = self.SOURCE_UVS[0], self.SOURCE_UVS[1], self.SOURCE_UVS[2]
+
+        def uv(x: float, y: float) -> tuple[float, float]:
+            return u0 + (y - y0) / (y1 - y0) * (u1 - u0), v0 + (x - x0) / (x1 - x0) * (v1 - v0)
+
+        for (x, y), want in zip(verts, self.SOURCE_UVS):
+            got = uv(x, y)
+            self.assertAlmostEqual(got[0], want[0], places=9)
+            self.assertAlmostEqual(got[1], want[1], places=9)
+        return uv
+
+    def test_visible_region_is_exactly_zero_to_k_by_the_width_at_every_step(self):
+        for i in range(pbm.LINE_STEPS):
+            k = pbm.line_aspect(i)
+            verts = pbm.line_verts(i)
+            uv = self._uv_map(verts)
+            kq, hq = verts[1][0], verts[2][1]                   # the quad's half-length and half-width
+            self.assertAlmostEqual(uv(0.0, 0.0)[1], 0.5, places=9)
+            self.assertAlmostEqual(uv(k, 0.0)[1], pbm.LINE_END, places=9)                   # the body's end row
+            self.assertAlmostEqual(uv(0.0, 0.5)[0], 1 - pbm.MARGIN_FRAC, places=9)          # the rims' outer edge
+            for name, mips in self.mips.items():
+                for level, mip in enumerate(mips):
+                    w, h = mip["width"], mip["height"]
+                    tx, ty = kq / h, hq / w                     # half a texel, in model units, along x and y
+                    xs = [-kq + 2 * kq * n / 32 for n in range(33)] + [-tx - 1e-6, tx, k - tx, k + tx + 1e-6]
+                    ys = [-hq + 2 * hq * n / 16 for n in range(17)] + [0.5 - ty, 0.5 + ty + 1e-6]
+                    for x in xs:
+                        for y in ys:
+                            a = _bilinear(mip, *uv(x, y))
+                            where = f"{name} step {i} mip {level} at ({x:.4f}, {y:.4f})"
+                            if x < -tx or x > k + tx or abs(y) > 0.5 + ty:
+                                self.assertEqual(a, 0.0, f"{where}: drawn outside [0, k] x width")
+                            elif w >= 16 and tx <= x <= k - tx and abs(y) <= 0.5 - ty:
+                                self.assertGreater(a, 0.0, f"{where}: a hole inside the line")
+                    if w >= 16:     # the body reads the same all along the line, at the centre and on the rim
+                        for y in (0.0, 0.5 - 3 * ty):
+                            vals = {round(_bilinear(mip, *uv(x, y)), 6) for x in (tx, k / 3, k / 2, k - tx)}
+                            self.assertEqual(len(vals), 1, f"{name} step {i} mip {level} y {y}")
+
+    def test_the_ends_are_soft_by_half_a_texel_at_mip_zero(self):
+        """Mip 0 (256 rows over 2k'): both ends sit on texel edges, so x = 0 and x = k read half the body."""
+        for name, mips in self.mips.items():
+            mip = mips[0]
+            for i in (0, pbm.LINE_UNIT_STEP, pbm.LINE_STEPS - 1):
+                k = pbm.line_aspect(i)
+                uv = self._uv_map(pbm.line_verts(i))
+                body = _bilinear(mip, *uv(k / 2, 0.0))
+                self.assertGreater(body, 0)
+                for x in (0.0, k):
+                    self.assertAlmostEqual(_bilinear(mip, *uv(x, 0.0)), body / 2, delta=1.0, msg=f"{name} {i} {x}")
+
+
+class MipEdgeFlagsTest(unittest.TestCase):
     def test_mip_edges_without_the_flags_are_kept(self):
         plane = bytes([200] * 64)
         b = blp_write.read_blp(blp_write.encode_blp(8, 8, (1, 2, 3), plane))
@@ -1018,6 +1071,164 @@ class OutputFilesTest(unittest.TestCase):
             self.assertGreater(removed, 0)
             self.assertTrue(keep.exists(), "files without the bm_ prefix are never touched")
             self.assertFalse((Path(tmp) / "bm_quad.m2").exists())
+
+
+# --- line-render probes (--probes, 93990-93999; M1-LINE-RENDER-FORENSICS.md) ---
+
+class ProbeTableTest(unittest.TestCase):
+    def test_probe_ids_sit_in_the_reservation_clear_of_every_display(self):
+        probes = pbm.build_probes()
+        self.assertEqual([d.id for d in probes], list(range(pbm.PROBE_FIRST_ID, pbm.PROBE_LAST_ID + 1)))
+        self.assertEqual((pbm.PROBE_FIRST_ID, pbm.PROBE_LAST_ID), (93990, 93999))
+        self.assertGreater(pbm.PROBE_FIRST_ID, pbm.LAST_ID)
+        self.assertLessEqual(pbm.PROBE_LAST_ID, pbm.BLOCK_LAST_ID)
+        taken = {d.id for d in pbm.build_displays(False) + pbm.build_diagnostics()}
+        self.assertFalse(taken & {d.id for d in probes})
+        for d in probes:
+            self.assertEqual((d.color, d.tint), ("red", pbm.COLOR_RGB["red"]), d.id)
+            self.assertEqual((d.model, d.texture), (f"bm_probe_{d.id}_red", f"bm_probe_{d.id}"), d.id)
+            self.assertTrue(pbm._owned(pbm.dbcfmt.CREATUREDISPLAYINFO, {"ID": d.id}), d.id)
+
+    def test_probes_never_reach_the_sql(self):
+        displays = pbm.build_displays(False)
+        sql = pbm.build_pending_sql(displays + pbm.build_probes())
+        self.assertEqual(sql, pbm.build_pending_sql(displays))
+        for id_ in range(93990, 94000):
+            self.assertNotIn(f"({id_},", sql)
+
+    def test_line_alpha_defaults_are_the_shipped_layout(self):
+        size = 64
+        a = pbm.line_alpha(size, 50)
+        self.assertEqual(a, pbm.line_alpha(size, 50, 0.5, pbm.LINE_END))
+        self.assertEqual(a, pbm.line_alpha(size, 50, 0.5, 1.0 - pbm.MARGIN_FRAC))
+        self.assertEqual(set(a[:size * size // 2]), {0})
+        self.assertEqual(set(a[size * 60:]), {0})
+        old = pbm._old_line(size, 50)
+        self.assertEqual(old, pbm.line_alpha(size, 50, 0.5, 1.0))
+        self.assertEqual(old[size * 32:size * 60], a[size * 32:size * 60])
+        self.assertEqual(old[size * 60:], old[size * 59:size * 60] * 4)         # the old body ran to the last row
+        full = pbm._old_line(size, 50, 0.0)
+        self.assertEqual(full[:size], old[-size:])
+        with self.assertRaises(ValueError):
+            pbm.line_alpha(size, 50, 0.75, 0.5)
+
+    def test_hard_threshold_levels_are_zero_or_full(self):
+        b = blp_write.read_blp(blp_write.encode_blp(64, 64, (255, 255, 255), pbm.line_alpha(64, 255),
+                                                    threshold=pbm.PROBE_HARD_THRESHOLD))
+        for level, mip in enumerate(b["mips"]):
+            w, a = mip["width"], mip["alpha"]
+            self.assertLessEqual(set(a), {0, 255}, level)
+            self.assertEqual({a[y * w] for y in range(mip["height"])}, {0}, level)
+
+
+@NEEDS_SOURCE
+class ProbeFilesTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.model, cls.skin = _src()
+        cls.probes = {d.id: d for d in pbm.build_probes()}
+        probes = list(cls.probes.values())
+        cls.files = {**pbm.build_models(probes, cls.model, cls.skin), **pbm.build_textures(probes)}
+        cls.mips = {id_: blp_write.read_blp(cls.files[f"bm_probe_{id_}.blp"])["mips"] for id_ in cls.probes}
+
+    def _row(self, mip: dict, v: float) -> bytes:
+        w, h = mip["width"], mip["height"]
+        r = min(h - 1, int(v * h))
+        return mip["alpha"][r * w:(r + 1) * w]
+
+    def test_every_probe_has_its_own_model_skin_and_texture(self):
+        self.assertEqual(len(self.files), 30)
+        for id_, d in self.probes.items():
+            data = self.files[f"bm_probe_{id_}_red.m2"]
+            _type, _flags, length, ofs = _texture_entry(data)
+            self.assertEqual(data[ofs:ofs + length - 1].decode(), f"spells\\bm_probe_{id_}.blp")
+            self.assertEqual(m2_patch.inspect(data)["rgb"],
+                             [tuple(map(_f32, pbm.tint_floats(pbm.COLOR_RGB["red"])))])
+            verts, _size, _alpha, _edges, _threshold, flags, z = pbm.PROBES[id_]
+            self.assertEqual([p[:2] for p in m2_patch.vertex_positions(data)], [tuple(map(_f32, v)) for v in verts])
+            self.assertEqual({p[2] for p in m2_patch.vertex_positions(data)}, {_f32(z)}, id_)
+            self.assertEqual(m2_patch.vertex_uvs(data), m2_patch.vertex_uvs(self.model), id_)
+            skin = self.files[f"bm_probe_{id_}_red00.skin"]
+            want = 0x10 if id_ == 93997 else m2_patch.batch_flags(self.skin)[0]
+            self.assertEqual(m2_patch.batch_flags(skin), [want], id_)
+
+    def test_only_93997_drops_the_projection_bit(self):
+        self.assertEqual(m2_patch.batch_flags(self.skin), [0x14])
+        for id_ in self.probes:
+            flags = m2_patch.batch_flags(self.files[f"bm_probe_{id_}_red00.skin"])[0]
+            self.assertEqual(bool(flags & m2_patch.BATCH_FLAG_PROJECTED), id_ != 93997, id_)
+
+    def test_copies_of_shipped_textures_are_byte_identical(self):
+        shipped = _textures(pbm.build_displays(True))
+        self.assertEqual(self.files["bm_probe_93990.blp"], shipped["bm_disc.blp"])
+        self.assertEqual(self.files["bm_probe_93999.blp"], shipped["bm_outline_line.blp"])     # the fix ships
+        old = blp_write.encode_blp(pbm.SMALL, pbm.SMALL, pbm.WHITE, pbm._old_line(pbm.SMALL), clear_cols=True)
+        self.assertNotEqual(old, shipped["bm_outline_line.blp"])
+        self.assertEqual(self.files["bm_probe_93992.blp"], old)                # the old outline line texture
+        self.assertEqual(self.files["bm_probe_93997.blp"], old)
+
+    def test_full_body_textures_reach_both_ends(self):
+        for id_ in (93991, 93993, 93994):
+            for level, mip in enumerate(self.mips[id_]):
+                if mip["width"] < 4:
+                    continue
+                w = mip["width"]
+                for v in (0.0, 0.5, 1.0):
+                    self.assertGreater(self._row(mip, v)[w // 2], 0, (id_, level, v))
+
+    def test_small_and_hard_copies(self):
+        self.assertEqual((self.mips[93995][0]["width"], len(self.mips[93995])), (32, 6))
+        for level, mip in enumerate(self.mips[93996]):
+            self.assertLessEqual(set(mip["alpha"]), {0, 255}, level)
+            if mip["width"] >= 4:
+                self.assertEqual(self._row(mip, 1.0)[mip["width"] // 2], 255, level)
+                self.assertEqual(set(self._row(mip, 0.25)), {0}, level)
+
+    def test_cleared_and_candidate_fix_textures_have_clear_borders(self):
+        for id_ in (93998, 93999):
+            for level, mip in enumerate(self.mips[id_]):
+                w, h, a = mip["width"], mip["height"], mip["alpha"]
+                self.assertEqual(set(a[:w]) | set(a[(h - 1) * w:]), {0}, (id_, level))
+                self.assertEqual({a[y * w] for y in range(h)} | {a[y * w + w - 1] for y in range(h)}, {0},
+                                 (id_, level))
+                if w >= 8:
+                    self.assertGreater(self._row(mip, 0.75)[w // 2], 0, (id_, level))
+
+    def test_candidate_fix_draws_exactly_k_ahead(self):
+        """93999: the quad is x in [-8/7, 8/7] and the body rows are [1/2, 15/16), so the body ends at x = 1 (one
+        yard per unit of scale) and starts at x = 0, on texel boundaries at mip 0. It is the shipped line of step 8."""
+        k = pbm.LINE_QUAD_K
+        self.assertAlmostEqual(k, 8 / 7)
+        self.assertEqual(pbm.PROBES[93999][0], pbm.line_verts(pbm.LINE_UNIT_STEP))
+        self.assertAlmostEqual((2 * (1 - pbm.MARGIN_FRAC) - 1) * k, 1.0)
+        mip = self.mips[93999][0]
+        w = mip["width"]
+        self.assertGreater(self._row(mip, 239 / 256)[w // 2], 0)
+        self.assertEqual(self._row(mip, 240 / 256)[w // 2], 0)
+        self.assertEqual(self._row(mip, 127 / 256)[w // 2], 0)
+        self.assertGreater(self._row(mip, 128 / 256)[w // 2], 0)
+
+    def test_set_batch_flags_changes_one_byte_and_the_lift_moves_the_bounds(self):
+        _n, o_batch = struct.unpack_from("<II", self.skin, 36)
+        self.assertEqual(_diff_offsets(self.skin, m2_patch.set_batch_flags(self.skin, 0x10)), [o_batch])
+        with self.assertRaises(m2_patch.M2Error):
+            m2_patch.set_batch_flags(self.skin, 0x100)
+        lifted = self.files["bm_probe_93997_red.m2"]
+        bbox = struct.unpack_from("<6f", lifted, m2_patch.OFS_BBOX)
+        self.assertEqual((bbox[2], bbox[5]), (_f32(pbm.PROBE_LIFT), _f32(pbm.PROBE_LIFT)))
+        flat = self.files["bm_probe_93998_red.m2"]
+        self.assertEqual(_diff_offsets(lifted, flat),
+                         _diff_offsets(m2_patch.patch_model(self.model, pbm.PROBES[93998][0], skins=False,
+                                                            texture_path="spells\\bm_probe_93997.blp",
+                                                            z=pbm.PROBE_LIFT,
+                                                            rgb=pbm.tint_floats(pbm.COLOR_RGB["red"])), flat))
+
+    def test_probe_rows_resolve(self):
+        OutputFilesTest._check_rows_resolve(self, list(self.probes.values()), self.files)
+
+
+def _f32(x: float) -> float:
+    return struct.unpack("<f", struct.pack("<f", x))[0]
 
 
 # --- resolve spell attributes (source/npcs/boss_mechanics.py; review H1) ---

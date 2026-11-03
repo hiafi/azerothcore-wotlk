@@ -8,23 +8,28 @@ the server grows into the outline over the warning time. An armed mine draws a D
 
 Source model: Ascension's `SPELLS\\red_circle_filled.M2` (a 4-vertex quad) from its client backup.
 The model is patched (lib/m2_patch.py) into a quad (x, y in [-QUAD_HALF, QUAD_HALF], z = 0) and 57
-line models, each one quad x in [-k, k], y in [-LINE_HALF, LINE_HALF], k = line_aspect(i), scale =
-width, with the source quad's UVs (v grows with +X). The client draws a creature model centred on its
-bounds (round-3 check L1), so the line stays symmetric about its origin, and the line texture is
-transparent on rows v < 1/2: the visible line runs x in [0, k], from the stalker forward. Its far end
-is the quad's edge; its start is the texture edge at v = 1/2, soft by half a texel of the active mip.
-Every aspect shares one texture. (M1-FIX-LINE-FILL's two-quad model, a transparent back quad and a
-body front quad, drew only part of each line in game; round 4b reverted it to this round-3 shape.)
+line models, each one quad x in [-k', k'], y in [-LINE_HALF, LINE_HALF], k' = LINE_QUAD_K * k, k =
+line_aspect(i), scale = width, with the source quad's UVs (v grows with +X). The client draws a
+creature model centred on its bounds (round-3 check L1), so the line stays symmetric about its
+origin. The line texture's body is rows v in [1/2, LINE_END) = [1/2, 15/16), so the visible line runs
+x in [0, k], from the stalker forward; both its ends are texel edges, soft by half a texel of the
+active mip. Every aspect shares one texture. (M1-FIX-LINE-FILL's two-quad model, a transparent back
+quad and a body front quad, drew only part of each line in game; round 4b reverted it to the round-3
+one-quad shape. Until the line-projection fix the quad was x in [-k, k] with the body running to the
+texture's last row, which the client's projected texture smeared past the far end: see below.)
 Textures are generated here, not mined (lib/blp_write.py, DXT5): WHITE, with the shape in the alpha
 channel, one per shape step and shared by every color. The color is the model's own: its M2Color
 track (the one the skin batch's color index 0 points at) holds the color's RGB, and the client
 multiplies the texture by it (M1-FIX-COLORS-REPORT.md). So each display is a small model + skin,
 and the 36 textures are shared. The shape stops MARGIN_FRAC of the side short of every texture edge
 it would otherwise touch, and the quad is that much bigger (QUAD_HALF = 8/7), so scale 1 is still
-exactly a 1-yard radius / length / width; the edge texels are transparent at every mip level
-(`encode_blp(clear_cols=..., clear_rows=...)`). The first build drew the shapes edge to edge, and
-the clamped edge texels of the lower mips drew straight lines along the quad edge where the disc
-touches it (N/E/S/W).
+exactly a 1-yard radius / length / width; all four edges of every texture are transparent at every
+mip level (`encode_blp(clear_cols=True, clear_rows=True)`). The skin batch carries the projected-
+texture bit (flags 0x14), so the client projects the texture onto the ground around the model with
+clamp addressing: any visible border texel is smeared over the ground past the quad. The first
+build drew the shapes edge to edge (straight lines at a disc's N/E/S/W), and until the line-
+projection fix the lines kept their far-end row as body (a rimless strip several yards past the
+end; M1-LINE-RENDER-FORENSICS.md).
 
 Rows written: CreatureModelData + CreatureDisplayInfo ids 91000-91833, 92000-92856 and 93000-93856
 (one pair per display, the same id in both tables), into the working copy
@@ -55,7 +60,9 @@ black 8). Within a color's 91000 block (F = fill layer, O = outline layer):
 
 Line ladder: k_i = line_aspect(i), i = 0..56 (aspect 1/4 to 64; i = 8 is aspect 1), the same for
 both layers; +57..+99 of each line block are spare. 91834-91989 are spare; 91990-91995 are the
-diagnostic displays, only with --diagnostics (DIAGNOSTICS below). The line-direction probe 91996 of
+diagnostic displays, only with --diagnostics (DIAGNOSTICS below); 93990-93999 are the line-render probes, only
+with --probes (the default run builds none and removes any), in the client DBCs and files only, never in the SQL
+(PROBES below). The line-direction probe 91996 of
 round 3 is gone (L1 answered it); the block clear removes its rows. mod-boss-mechanics
 `src/BossMechanicsIds.h` (`MarkerDisplay`) computes the same ids; keep both in sync.
 
@@ -93,7 +100,7 @@ sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import dbcfile, dbcfmt  # noqa: E402
 from lib.blp_write import encode_blp, encode_blp_palette  # noqa: E402
-from lib.m2_patch import patch_model, patch_skin, set_texture_path  # noqa: E402
+from lib.m2_patch import patch_model, patch_skin, set_batch_flags, set_texture_path  # noqa: E402
 from lib.sql_out import _table_block  # noqa: E402
 from patch_priest_vfx_models import _merge, _row, model_path  # noqa: E402
 
@@ -115,6 +122,8 @@ OLD_FIRST_ID = 90500         # the slice the markers used before the colors fix 
 OLD_LAST_ID = 90699
 DIAG_FIRST_ID = 91990
 DIAG_LAST_ID = 91995
+PROBE_FIRST_ID = 93990       # the line-render probes (--probes only; client DBCs only, never in the SQL)
+PROBE_LAST_ID = 93999
 
 # Color index c = position in COLORS (BossMechanics::Color in the module). RGB tuned 2026-11-02 for dark floors,
 # snow and sand (M1-FIX-COLORS-REPORT.md): red and yellow unchanged (playtested), blue brighter and more saturated
@@ -190,6 +199,10 @@ SMALL = 256                 # everything else
 MARGIN_FRAC = 1.0 / 16.0
 QUAD_HALF = 0.5 / (0.5 - MARGIN_FRAC)           # 8/7: quad half-size per yard of radius
 LINE_HALF = 0.5 * QUAD_HALF                      # 4/7: line model half-width per yard of width
+# Lines: the body stops MARGIN_FRAC short of the far texture edge (rows [1/2, LINE_END)), and the quad grows from
+# x in [-k, k] to [-k', k'], k' = LINE_QUAD_K * k, so the body still ends at exactly x = k (k' * (2 * LINE_END - 1)).
+LINE_END = 1.0 - MARGIN_FRAC                    # 15/16: the line body's last row (exclusive), as v
+LINE_QUAD_K = 1.0 / (1.0 - 2.0 * MARGIN_FRAC)   # 8/7: the line quad's half-length per yard of line
 
 
 def shape_radius(size: int) -> float:
@@ -275,16 +288,21 @@ def dashed_alpha(size: int, dashes: int = DASH_COUNT, duty: float = DASH_DUTY) -
     return _plane(size, alpha)
 
 
-def line_alpha(size: int, fill: int = FILL_ALPHA) -> bytes:
-    """Rows v < 1/2: transparent (the line model's x < 0 half). Rows v >= 1/2: the body, the same in every row:
-    fill with rims on the two long edges (columns), MARGIN_FRAC in from the texture edge."""
+def line_alpha(size: int, fill: int = FILL_ALPHA, start: float = 0.5, end: float = LINE_END) -> bytes:
+    """Rows v < `start` (1/2: the line model's x < 0 half) and v >= `end` (LINE_END: the far margin, x > k):
+    transparent. Rows in between: the body, the same in every row: fill with rims on the two long edges (columns),
+    MARGIN_FRAC in from the texture edge. Every display uses start 1/2, end LINE_END; other values are for the
+    line-render probes (end 1 is the layout before the line-projection fix)."""
     margin = size * MARGIN_FRAC
     rim = LINE_RIM_FRAC * (size - 2 * margin)
     row = bytearray(size)
     for col in range(size):
         inside = min(col + 0.5 - margin, size - margin - col - 0.5)     # distance in from the nearer edge
         row[col] = _byte(_shaded(fill, -inside, rim))
-    return bytes(size) * (size // 2) + bytes(row) * (size - size // 2)
+    first, last = round(start * size), round(end * size)
+    if not 0 <= first <= last <= size:
+        raise ValueError(f"line body rows [{start}, {end}) outside the texture")
+    return bytes(size) * first + bytes(row) * (last - first) + bytes(size) * (size - last)
 
 
 # --- display table ---
@@ -301,26 +319,31 @@ class Display:
     "skin_broken" (type 11 with the source's one-entry lookup: the first M1 build, a diagnostic only) or "source"
     (the untouched source model, only its texture path rewritten: a diagnostic only)."""
     __slots__ = ("id", "shape", "step", "texture", "color", "model", "verts", "size", "binding", "param",
-                 "tex_rgb", "tint", "uvs")
+                 "tex_rgb", "tint", "uvs", "z", "batch_flags", "probe")
 
     def __init__(self, id_: int, shape: str, texture: str, color: str, model: str, verts, size: int,
-                 binding: str = "path", param: float = 0.0, step: int = 0, tex_rgb=WHITE, tint=None, uvs=None):
+                 binding: str = "path", param: float = 0.0, step: int = 0, tex_rgb=WHITE, tint=None, uvs=None,
+                 z: float = 0.0, batch_flags: int | None = None, probe: dict | None = None):
         self.id, self.shape, self.step, self.texture, self.color = id_, shape, step, texture, color
         self.model, self.verts, self.size, self.binding, self.param = model, verts, size, binding, param
         self.tex_rgb = tex_rgb
         self.tint = COLOR_RGB[color] if tint is None else tint
         self.uvs = uvs          # one (u, v) per vertex; None = the source quad's (every display)
+        self.z = z              # the quad's height in model units (0 for every display but the probe 93997)
+        self.batch_flags = batch_flags      # None = the source skin's (0x14, projected texture)
+        self.probe = probe      # a line-render probe's texture recipe (PROBES), else None
 
 
 QUAD = [(-QUAD_HALF, -QUAD_HALF), (QUAD_HALF, -QUAD_HALF), (-QUAD_HALF, QUAD_HALF), (QUAD_HALF, QUAD_HALF)]
 
 
 def line_verts(i: int) -> list[tuple[float, float]]:
-    """The symmetric one-quad line model x in [-k, k], in the source vertex order (-,-), (+,-), (-,+), (+,+), so it
-    keeps the source quad's UVs (v = 0 at -X, 1 at +X; u = 0 at -Y): the line texture's transparent rows (v < 1/2)
-    cover x < 0 and the visible line runs x in [0, k]. Round-3 geometry; M1-FIX-LINE-FILL's two-quad model drew only
-    the far end of each line in game (round 4 probes) and was reverted in round 4b."""
-    k = line_aspect(i)
+    """The symmetric one-quad line model x in [-k', k'], k' = LINE_QUAD_K * line_aspect(i), in the source vertex order
+    (-,-), (+,-), (-,+), (+,+), so it keeps the source quad's UVs (v = 0 at -X, 1 at +X; u = 0 at -Y): the line
+    texture's transparent rows v < 1/2 cover x < 0 and v >= LINE_END cover x > k, so the visible line runs x in
+    [0, k]. Round-3 geometry, grown by 8/7 in the line-projection fix (probe 93999, confirmed in game); M1-FIX-LINE-
+    FILL's two-quad model drew only the far end of each line in game (round 4 probes) and was reverted in round 4b."""
+    k = LINE_QUAD_K * line_aspect(i)
     h = LINE_HALF
     return [(-k, -h), (k, -h), (-k, h), (k, h)]
 
@@ -347,6 +370,75 @@ def build_diagnostics() -> list[Display]:
         tinted = texture == f"{PREFIX}disc"
         out.append(Display(id_, "diag", texture, "red", model, QUAD, BIG, binding,
                            tex_rgb=WHITE if tinted else COLOR_RGB["red"], tint=None if tinted else WHITE))
+    return out
+
+
+# Line-render probes (93990-93999, only with --probes; M1-LINE-RENDER-FORENSICS.md). Kept for future diagnosis; the
+# default run builds none. Before the line-projection fix a line drew its proper rimmed length and then a rimless
+# strip several yards past its far end; discs, rings and cones were exact. Every marker's skin batch carries the
+# projected-texture bit (flags 0x14; Ascension's red_circle_filled_noproject.M2 has 0x10), so the client projects the
+# texture onto the ground under the model with clamp addressing. Every quad-shape texture was transparent on all four
+# borders at every mip, but the line textures kept their last row (v = 1, the line's far end) as body, and the
+# projection smeared that row over the ground past the quad. The probes split the texture, the geometry and the
+# projection bit. Every probe is red, with its own bm_probe_<id> model, skin and texture. "Old line" below is the
+# layout before the fix (quad x in [-k, k], body rows [1/2, 1), only the columns cleared). Expected drawing at scale 6
+# on a stationary unit, if the client drew exactly the quad with its UVs (ahead / behind the unit along its facing,
+# and the width; "smear" = what the projection hypothesis adds), then the in-game result (2026-11-03, bot morph):
+#   93990  line quad k = 1 + the disc texture (512): an ellipse 5.25 ahead, 5.25 behind, 6.0 wide (a circle of
+#          radius 5.25 instead means the projection maps a square, not the quad's UVs); no smear (clear borders)
+#   93991  line quad k = 1 + full-body line texture (every row body, columns cleared): 6 ahead, 6 behind, 6 wide;
+#          smear past both ends. Measured 9.8 / 9.8, smear on both ends
+#   93992  disc quad (8/7) + the old line texture: 6.86 ahead, 0 behind, 12.0 wide; smear ahead. Measured 14.25 ahead
+#   93993  disc quad + full-body texture: 6.86 ahead, 6.86 behind, 12.0 wide; smear past both ends. Measured 14.5 / 14.5
+#   93994  line quad k = 4 + full-body texture: 24 ahead, 24 behind, 6 wide; smear past both ends. Measured 28 / 28
+#   93995  old line quad k = 1 + a 32 x 32 copy of the old line texture: 6 ahead, 0 behind, 6 wide; smear as the old
+#          93008. Measured 9.7 ahead (93008 itself: 9.7)
+#   93996  old line quad k = 1 + the old line texture hard (0 or 255 at every mip, opaque, no rims): 6 / 0 / 6; smear.
+#          Measured 9.7 ahead
+#   93997  old line quad k = 1 + old texture, projection bit OFF (batch flags 0x10), quad lifted 0.05 (0.3 yd at scale
+#          6): 6 / 0 / 6, no smear; may dip into bumps (a flat quad, not projected). Measured 6 ahead, exact
+#   93998  old line quad k = 1 + old texture with its last row cleared too (all four borders, every mip): 6 ahead (soft
+#          by half a texel), 0 behind, 6 wide; no smear. Measured 6 / 0, exact
+#   93999  the fix: line quad k' = 8/7 (x in [-8/7, 8/7]) + texture body rows [1/2, 15/16), all borders cleared: 6.00
+#          ahead, 0 behind, 6 wide; no smear. Measured 6 / 0, width 6, drapes over sloped ground. Every line display
+#          now ships this layout (93999's quad and texture are those of the red outline line of step 8, 93008)
+PROBE_LIFT = 0.05                       # 93997's height in model units (0.3 yd at scale 6, the server's Lift)
+PROBE_HARD_THRESHOLD = 128              # 93996: a texel above it becomes 255, the rest 0, at every level
+
+
+def _probe_quad(k: float) -> list[tuple[float, float]]:
+    """A one-quad line model x in [-k, k], y in [-LINE_HALF, LINE_HALF], in the source vertex order."""
+    return [(-k, -LINE_HALF), (k, -LINE_HALF), (-k, LINE_HALF), (k, LINE_HALF)]
+
+
+def _old_line(size: int, fill: int = OUTLINE_FILL_ALPHA, start: float = 0.5) -> bytes:
+    """The line texture before the line-projection fix: body rows [start, 1), to the last row."""
+    return line_alpha(size, fill, start, 1.0)
+
+
+_COLS = {"clear_cols": True, "clear_rows": False}
+_ALL = {"clear_cols": True, "clear_rows": True}
+_NONE = {"clear_cols": False, "clear_rows": False}
+# id: (geometry, texture size, alpha recipe, edge clearing, hard threshold, batch flags, z)
+PROBES = {
+    93990: (_probe_quad(1.0), BIG, lambda: disc_alpha(BIG, FILL_ALPHA), _ALL, None, None, 0.0),
+    93991: (_probe_quad(1.0), SMALL, lambda: _old_line(SMALL, start=0.0), _COLS, None, None, 0.0),
+    93992: (QUAD, SMALL, lambda: _old_line(SMALL), _COLS, None, None, 0.0),
+    93993: (QUAD, SMALL, lambda: _old_line(SMALL, start=0.0), _COLS, None, None, 0.0),
+    93994: (_probe_quad(4.0), SMALL, lambda: _old_line(SMALL, start=0.0), _COLS, None, None, 0.0),
+    93995: (_probe_quad(1.0), 32, lambda: _old_line(32), _COLS, None, None, 0.0),
+    93996: (_probe_quad(1.0), SMALL, lambda: _old_line(SMALL, 255), _NONE, PROBE_HARD_THRESHOLD, None, 0.0),
+    93997: (_probe_quad(1.0), SMALL, lambda: _old_line(SMALL), _COLS, None, 0x10, PROBE_LIFT),
+    93998: (_probe_quad(1.0), SMALL, lambda: _old_line(SMALL), _ALL, None, None, 0.0),
+    93999: (_probe_quad(LINE_QUAD_K), SMALL, lambda: line_alpha(SMALL, OUTLINE_FILL_ALPHA), _ALL, None, None, 0.0),
+}
+
+
+def build_probes() -> list[Display]:
+    out = []
+    for id_, (verts, size, alpha, edges, threshold, flags, z) in PROBES.items():
+        out.append(Display(id_, "probe", f"{PREFIX}probe_{id_}", "red", f"{PREFIX}probe_{id_}_red", verts, size,
+                           z=z, batch_flags=flags, probe={"alpha": alpha, "edges": edges, "threshold": threshold}))
     return out
 
 
@@ -412,13 +504,11 @@ def alpha_for(display: Display) -> bytes:
 
 
 def edge_clearing(display: Display) -> dict:
-    """encode_blp's edge flags: every shape keeps all four edges clear except a line, whose body rows run to the
-    last row (the far end of the line is the quad's edge, not a texture edge; its first rows are transparent
-    anyway), so only its long edges (columns) are cleared. That also clears the whole 2 x 2 and 1 x 1 levels
-    of a line texture."""
-    if display.shape in ("line", "line_outline"):
-        return {"clear_cols": True, "clear_rows": False}
-    return {"clear_cols": True, "clear_rows": True}
+    """encode_blp's edge flags: every shape keeps all four edges clear at every mip. The skin batch projects the
+    texture onto the ground with clamp addressing, so a visible border texel is smeared past the quad (the lines'
+    far-end strip before the line-projection fix, the discs' cardinal lines of the first build). This also clears
+    the whole 2 x 2 and 1 x 1 levels."""
+    return dict(_ALL)
 
 
 def build_textures(displays: list[Display], fmt: str = "dxt5", source_texture: bytes | None = None) -> dict[str, bytes]:
@@ -430,6 +520,10 @@ def build_textures(displays: list[Display], fmt: str = "dxt5", source_texture: b
     for d in displays:
         name = f"{d.texture}.blp"
         if name in textures:
+            continue
+        if d.probe is not None:
+            textures[name] = encode_blp(d.size, d.size, d.tex_rgb, d.probe["alpha"](), **d.probe["edges"],
+                                        threshold=d.probe["threshold"])
             continue
         if d.texture == DIAG_ASC_TEXTURE:
             if source_texture is None:
@@ -463,13 +557,15 @@ def build_models(displays: list[Display], src_model: bytes, src_skin: bytes) -> 
             continue
         rgb = tint_floats(d.tint)
         if d.binding == "path":
-            model = patch_model(src_model, d.verts, skins=False, texture_path=path, rgb=rgb, uvs=d.uvs)
+            model = patch_model(src_model, d.verts, skins=False, texture_path=path, rgb=rgb, uvs=d.uvs, z=d.z)
         elif d.binding in ("skin", "skin_broken"):
-            model = patch_model(src_model, d.verts, skins=True, skin_lookup=d.binding == "skin", rgb=rgb, uvs=d.uvs)
+            model = patch_model(src_model, d.verts, skins=True, skin_lookup=d.binding == "skin", rgb=rgb, uvs=d.uvs,
+                                z=d.z)
         else:
             raise ValueError(d.binding)
         files[f"{d.model}.m2"] = model
-        files[f"{d.model}00.skin"] = patch_skin(src_skin, d.verts)
+        skin = patch_skin(src_skin, d.verts, d.z)
+        files[f"{d.model}00.skin"] = skin if d.batch_flags is None else set_batch_flags(skin, d.batch_flags)
     return files
 
 
@@ -509,7 +605,9 @@ def _owned(table, row: dict) -> bool:
 
 def build_pending_sql(displays: list[Display]) -> str:
     """DELETE our rows of the old slice and the whole reserved block (stale rows of every earlier layout included)
-    and INSERT `displays`."""
+    and INSERT `displays`. The line-render probes are client-only (`.morph` takes any display id), so they are left
+    out."""
+    displays = [d for d in displays if d.probe is None]
     blocks = []
     guards = {dbcfmt.CREATUREMODELDATA: "`ModelName` LIKE 'SPELLS_bm\\_%'",
               dbcfmt.CREATUREDISPLAYINFO: "`TextureVariation_1` LIKE 'bm\\_%'"}
@@ -597,6 +695,9 @@ def main() -> None:
                         help="also build the diagnostic displays 91990-91995 (red discs in the bindings and texture "
                              "formats the first fixes tested)")
     parser.add_argument("--no-diagnostics", action="store_true", help=argparse.SUPPRESS)  # the old default
+    parser.add_argument("--probes", action="store_true",
+                        help="also build the line-render probe displays 93990-93999 (red; client DBCs and files only, "
+                             "never in --sql-out; see PROBES)")
     args = parser.parse_args()
 
     skins = args.skins
@@ -608,19 +709,24 @@ def main() -> None:
     displays = build_displays(skins)
     if args.diagnostics:
         displays += build_diagnostics()
+    if args.probes:
+        displays += build_probes()
     models = build_models(displays, src_model, src_skin)
     textures = build_textures(displays, args.texture_format, src_texture)
     files = {**models, **textures}
     sql = build_pending_sql(displays)
 
     n_models = sum(1 for n in files if n.endswith(".m2"))
+    n_probes = sum(1 for d in displays if d.probe is not None)
     print(f"{len(displays)} displays (ids {FIRST_ID}-{QUAD_LAST_ID}, {LINE_FIRST_ID['line']}-..., "
-          f"{LINE_FIRST_ID['line_outline']}-{max(d.id for d in displays)}), {n_models} model(s) + skin(s), "
+          f"{LINE_FIRST_ID['line_outline']}-{LAST_ID}; {n_probes} probe(s) {PROBE_FIRST_ID}-{PROBE_LAST_ID} "
+          f"in the DBCs only), {n_models} model(s) + skin(s), "
           f"{len(textures)} {args.texture_format} texture(s), "
           f"skins={'yes (type 11)' if skins else 'no (hard-coded paths)'}")
     print(f"shape radius at scale 1: 1.0 yd (scale = radius; quad half-size {QUAD_HALF:.4f}, margin "
-          f"{MARGIN_FRAC:.4f} of the side); line models one quad x in [-k, k] (drawn [0, k]: texture rows v < 1/2 "
-          f"transparent), y in [-{LINE_HALF:.4f}, {LINE_HALF:.4f}] (width 1 yd inside the margin), "
+          f"{MARGIN_FRAC:.4f} of the side); line models one quad x in [-k', k'], k' = {LINE_QUAD_K:.4f} k (drawn "
+          f"[0, k]: texture body rows v in [1/2, {LINE_END:.4f})), y in [-{LINE_HALF:.4f}, {LINE_HALF:.4f}] "
+          f"(width 1 yd inside the margin), "
           f"k = {line_aspect(0):.4f} .. "
           f"{line_aspect(LINE_STEPS - 1):.4f}")
     if args.dry_run:

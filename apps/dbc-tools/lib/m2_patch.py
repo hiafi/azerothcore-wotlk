@@ -18,6 +18,9 @@ What gets patched (handoff §3.9):
     indices and properties, twelve triangle indices, the submesh's vertex and index counts;
   - the render-flags entry keeps its flags (0x15: unlit, two-sided, no depth write) and gets blend
     mode 2 (alpha) instead of 4 (additive);
+  - the skin batch keeps its flags 0x14, which include 0x04, the projected-texture bit (the client
+    projects the texture onto the ground under the model); `set_batch_flags` changes them (the
+    projection-off probe only);
   - the color track (M2Color 0, which the skin's one batch points at with color index 0) holds the
     marker's color: every key is set to `rgb` (white by default). The client multiplies the texture
     by it (the batch is unlit, render flag 0x01), so one white texture serves every color. The source
@@ -176,18 +179,18 @@ def vertex_uvs(data: bytes) -> list[tuple[float, float]]:
             for i in range(facts["n_vertices"])]
 
 
-def bounds_of(verts: list[tuple[float, float]]) -> dict:
-    """Bounding box (z = 0), its centre, the sphere radius around the model origin (the header
-    convention: the source's 5.7765 is hypot(4.0846, 4.0846) with the box centred on x = y = 0) and
-    the radius around the box centre (what the skin submesh stores)."""
+def bounds_of(verts: list[tuple[float, float]], z: float = 0.0) -> dict:
+    """Bounding box (flat at height z, 0 for every display), its centre, the sphere radius around the model
+    origin (the header convention: the source's 5.7765 is hypot(4.0846, 4.0846) with the box centred on
+    x = y = 0) and the radius around the box centre (what the skin submesh stores)."""
     xs = [v[0] for v in verts]
     ys = [v[1] for v in verts]
-    lo = (min(xs), min(ys), 0.0)
-    hi = (max(xs), max(ys), 0.0)
-    centre = ((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, 0.0)
+    lo = (min(xs), min(ys), z)
+    hi = (max(xs), max(ys), z)
+    centre = ((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, z)
     return {
         "min": lo, "max": hi, "centre": centre,
-        "origin_radius": max(math.hypot(x, y) for x, y in verts),
+        "origin_radius": max(math.hypot(x, y, z) for x, y in verts),
         "centre_radius": max(math.hypot(x - centre[0], y - centre[1]) for x, y in verts),
     }
 
@@ -230,11 +233,12 @@ def _static_opaque(out: bytearray, track: dict) -> None:
 def patch_model(data: bytes, verts: list[tuple[float, float]], *, skins: bool,
                 texture_path: str | None = None, skin_lookup: bool = True,
                 rgb: tuple[float, float, float] = (1.0, 1.0, 1.0),
-                uvs: list[tuple[float, float]] | None = None) -> bytes:
+                uvs: list[tuple[float, float]] | None = None, z: float = 0.0) -> bytes:
     """Return the patched model.
 
-    verts: four (x, y) pairs in the source vertex order (-,-), (+,-), (-,+), (+,+), z becomes 0; or eight,
-    two quads in that order each (the second quad's vertices appended as a new vertex array).
+    verts: four (x, y) pairs in the source vertex order (-,-), (+,-), (-,+), (+,+), z becomes `z` (0 for every
+    display; a lift only for the projection-off probe 93997); or eight, two quads in that order each (the second
+    quad's vertices appended as a new vertex array).
     uvs: one (u, v) per vertex (default: the source quad's UVs, repeated per quad).
     skins: True turns the texture into creature skin 1 (type 11, empty name) and, with
     `skin_lookup`, appends the replaceable-texture lookup that type needs (False reproduces the
@@ -260,11 +264,11 @@ def patch_model(data: bytes, verts: list[tuple[float, float]], *, skins: bool,
         out += bytes(-len(out) % 16)
         o_vert = new_ofs
     for i, (x, y) in enumerate(verts):
-        struct.pack_into("<3f", out, o_vert + VERTEX_SIZE * i, x, y, 0.0)
+        struct.pack_into("<3f", out, o_vert + VERTEX_SIZE * i, x, y, z)
         if uvs is not None:
             struct.pack_into("<2f", out, o_vert + VERTEX_SIZE * i + 32, *uvs[i])
 
-    b = bounds_of(verts)
+    b = bounds_of(verts, z)
     struct.pack_into("<6f", out, OFS_BBOX, *b["min"], *b["max"])
     struct.pack_into("<f", out, OFS_SPHERE, b["origin_radius"])
     n_anim, o_anim = facts["animations"]
@@ -312,6 +316,29 @@ SUBMESH_CENTRES = 20        # centerMass(3f) centerBBox(3f) radius(f) after ten 
 SKIN_HEADER_SIZE = 48       # 'SKIN', five (count, offset) arrays, u32 bone count max
 SKIN_BATCH_SIZE = 24
 QUAD_TRIANGLES = (0, 1, 2, 3, 2, 1)     # the source skin's two triangles
+BATCH_FLAG_PROJECTED = 0x04             # skin batch flag: project the texture onto the ground under the model
+# The source batch's flags are 0x14 (0x10 | projected), and every marker keeps them. Ascension ships the same model
+# without the projection bit as SPELLS\red_circle_filled_noproject.M2: its skin differs from the source's only in this
+# byte (0x10). See dungeon-mechanics.M1-LINE-RENDER-FORENSICS.md.
+
+
+def batch_flags(data: bytes) -> list[int]:
+    """The flags byte of every skin batch."""
+    arrays = skin_arrays(data)
+    return [arrays["batches"][SKIN_BATCH_SIZE * i] for i in range(arrays["n_batches"])]
+
+
+def set_batch_flags(data: bytes, flags: int) -> bytes:
+    """Every skin batch's flags byte set to `flags` (the rest of the skin unchanged)."""
+    if not 0 <= flags <= 0xFF:
+        raise M2Error(f"batch flags {flags:#x}: one byte")
+    check_skin(data)
+    n_batch, o_batch = struct.unpack_from("<II", data, 36)
+    _span(data, o_batch, SKIN_BATCH_SIZE * n_batch, "skin batches")
+    out = bytearray(data)
+    for i in range(n_batch):
+        out[o_batch + SKIN_BATCH_SIZE * i] = flags
+    return bytes(out)
 
 
 def check_skin(data: bytes) -> int:
@@ -347,13 +374,13 @@ def skin_submesh_counts(data: bytes) -> tuple[int, int, int, int]:
     return struct.unpack_from("<4H", data, ofs + 4)
 
 
-def patch_skin(data: bytes, verts: list[tuple[float, float]]) -> bytes:
+def patch_skin(data: bytes, verts: list[tuple[float, float]], z: float = 0.0) -> bytes:
     """Move the single submesh's centre and radius to the new quad; for eight vertices (two quads) rebuild the
     skin around them: eight indices and properties (the source's, per quad), twelve triangle indices, and the
     submesh's vertex and index counts. The header's bone count max, the submesh's other fields and the batch are
     the source's."""
     ofs = check_skin(data)
-    b = bounds_of(verts)
+    b = bounds_of(verts, z)
     if len(verts) == 4:
         out = bytearray(data)
         struct.pack_into("<7f", out, ofs + SUBMESH_CENTRES, *b["centre"], *b["centre"], b["centre_radius"])
