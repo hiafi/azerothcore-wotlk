@@ -332,6 +332,8 @@ def member_line(mech: dict, base: dict | None) -> dict:
         "msOutOfBandTask": counters.get("msOutOfBandTask", 0),
         "pullBlocks": counters.get("pullBlocks", 0),
         "pullsEnded": counters.get("pullsEnded", 0),
+        "landingBlocks": counters.get("landingBlocks", 0),
+        "motionEndStops": counters.get("motionEndStops", 0),
         "forcedLeaks": [counters.get(k, 0) for k in ("forcedMoves", "forcedCasts", "forcedTurns")],
         "strategyInstalled": mech.get("strategyInstalledAll", False),
         "deaths": mech.get("deaths", 0),

@@ -105,6 +105,8 @@ namespace
         out.emplace_back("msOutOfBandTask", c.msOutOfBandTask);
         out.emplace_back("pullBlocks", c.pullBlocks);
         out.emplace_back("pullsEnded", c.pullsEnded);
+        out.emplace_back("landingBlocks", c.landingBlocks);
+        out.emplace_back("motionEndStops", c.motionEndStops);
         out.emplace_back("forcedMoves", c.forcedMoves);
         out.emplace_back("forcedCasts", c.forcedCasts);
         out.emplace_back("forcedTurns", c.forcedTurns);
