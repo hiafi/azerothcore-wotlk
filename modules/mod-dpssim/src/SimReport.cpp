@@ -16,8 +16,11 @@
  */
 
 #include "SimReport.h"
+#include "Config.h"
 #include "Log.h"
+#include "SimBossMechanics.h"
 #include <algorithm>
+#include <cstdio>
 #include <fstream>
 #include <iomanip>
 #include <map>
@@ -1245,4 +1248,255 @@ namespace
 
         file << "  }\n";
     }
+}
+
+// ---- Mechanics mode (STAGE-M4-HANDOFF section 3.4) ----
+
+namespace
+{
+    // A JSON string literal. The mechanics report holds free text (the module's program error, strategy names), so it
+    // escapes, unlike the fixed-vocabulary writers above.
+    std::string JsonString(std::string const& text)
+    {
+        std::string out = "\"";
+        for (char const c : text)
+        {
+            switch (c)
+            {
+                case '"':
+                    out += "\\\"";
+                    break;
+                case '\\':
+                    out += "\\\\";
+                    break;
+                case '\n':
+                    out += "\\n";
+                    break;
+                case '\r':
+                    out += "\\r";
+                    break;
+                case '\t':
+                    out += "\\t";
+                    break;
+                default:
+                    if (static_cast<unsigned char>(c) < 0x20)
+                    {
+                        char buffer[8];
+                        std::snprintf(buffer, sizeof(buffer), "\\u%04x", static_cast<unsigned>(c));
+                        out += buffer;
+                    }
+                    else
+                        out += c;
+                    break;
+            }
+        }
+        return out + "\"";
+    }
+
+    // {"<Type>": {"<Kind>/<tag>": n, ...}, ...}
+    void WriteFailureMap(std::ofstream& file, std::map<std::string, std::map<std::string, uint32>> const& failures)
+    {
+        file << "{";
+        bool firstType = true;
+        for (auto const& [type, byKey] : failures)
+        {
+            file << (firstType ? "" : ", ") << JsonString(type) << ": {";
+            firstType = false;
+            bool firstKey = true;
+            for (auto const& [key, count] : byKey)
+            {
+                file << (firstKey ? "" : ", ") << JsonString(key) << ": " << count;
+                firstKey = false;
+            }
+            file << "}";
+        }
+        file << "}";
+    }
+
+    template <typename Value>
+    void WriteNamedNumbers(std::ofstream& file, std::vector<std::pair<std::string, Value>> const& values)
+    {
+        file << "{";
+        for (size_t i = 0; i < values.size(); ++i)
+            file << (i == 0 ? "" : ", ") << JsonString(values[i].first) << ": " << values[i].second;
+        file << "}";
+    }
+}
+
+bool SimReport::WriteMechanicsJson(std::string const& path, SimDaemon::RunConfig const& config,
+    SimDaemon::RunResult const& result)
+{
+    std::ofstream file(path, std::ios::out | std::ios::trunc);
+    if (!file.is_open())
+    {
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimReport::WriteMechanicsJson() - could not open '{}' for writing.",
+            path);
+        return false;
+    }
+
+    size_t actorIndex = 0;
+    for (size_t i = 0; i < config.MechMembers.size(); ++i)
+        if (config.MechMembers[i].UnderTest)
+            actorIndex = i;
+    bool baseline = !config.MechPrograms.empty();
+    for (std::string const& program : config.MechPrograms)
+        baseline = baseline && program == SimMechanics::BASELINE_PROGRAM;
+
+    file << "{\n";
+    file << "  \"kind\": \"mechanics\",\n";
+
+    // ---- config ----
+    file << "  \"config\": {\n";
+    file << "    \"actorLevel\": " << config.ActorLevel << ",\n";
+    file << "    \"targetLevel\": " << config.TargetLevel << ",\n";
+    file << "    \"durationMs\": " << config.DurationMs << ",\n";
+    file << "    \"stepMs\": " << config.StepMs << ",\n";
+    file << "    \"groupSize\": " << config.MechMembers.size() << ",\n";
+    file << "    \"actorIndex\": " << actorIndex << ",\n";
+    file << "    \"actorProfile\": "
+         << JsonString(config.MechMembers.empty() ? std::string() : config.MechMembers[actorIndex].Profile) << ",\n";
+    file << "    \"baseline\": " << (baseline ? "true" : "false") << ",\n";
+    file << "    \"program\": " << JsonString(result.MechProgram) << ",\n";
+    file << "    \"programs\": [";
+    for (size_t i = 0; i < config.MechPrograms.size(); ++i)
+        file << (i == 0 ? "" : ", ") << JsonString(config.MechPrograms[i]);
+    file << "],\n";
+    file << "    \"seed\": " << result.MechSeed << ",\n";
+    file << "    \"damage\": " << config.MechDamage << ",\n";
+    file << "    \"anchor\": {\"race\": " << uint32(config.MechAnchorRace) << "},\n";
+    file << "    \"bossSwings\": " << (config.MechBossSwings ? "true" : "false") << ",\n";
+    file << "    \"bossHit\": {\"min\": " << config.MechBossHit.Min << ", \"max\": " << config.MechBossHit.Max
+         << "},\n";
+    file << "    \"bossSwingMs\": " << config.MechBossSwingMs << ",\n";
+    file << "    \"bossCrit\": " << (config.MechBossCrit ? "true" : "false") << ",\n";
+    file << "    \"fallibility\": "
+         << (sConfigMgr->GetOption<bool>("BossMechanics.Bots.Fallibility.Enable", false) ? "true" : "false") << ",\n";
+    file << "    \"withBossMechanics\": " << (SimMech::Available() ? "true" : "false") << ",\n";
+    file << "    \"members\": [\n";
+    for (size_t i = 0; i < config.MechMembers.size(); ++i)
+    {
+        SimMechanics::MemberSpec const& m = config.MechMembers[i];
+        file << "      {\"index\": " << i << ", \"profile\": " << JsonString(m.Profile) << ", \"role\": \""
+             << SimMechanics::RoleName(m.MemberRole) << "\", \"underTest\": " << (m.UnderTest ? "true" : "false")
+             << ", \"race\": " << uint32(m.Race) << ", \"class\": " << uint32(m.Class) << "}"
+             << (i + 1 < config.MechMembers.size() ? ",\n" : "\n");
+    }
+    file << "    ]\n";
+    file << "  },\n";
+
+    // ---- summary ----
+    double groupDps = 0.0;
+    double actorDps = 0.0;
+    uint32 failures = 0;
+    uint32 hits = 0;
+    uint32 deaths = 0;
+    uint32 strategyMissing = 0;
+    for (SimMechanics::MemberResult const& m : result.MechMembers)
+    {
+        groupDps += m.Dps;
+        if (m.UnderTest)
+            actorDps = m.Dps;
+        failures += m.FailureTotal;
+        hits += m.Hits;
+        deaths += m.Died ? 1 : 0;
+        strategyMissing += m.StrategyInstalled ? 0 : 1;
+    }
+    uint32 groupFailures = 0;
+    for (auto const& [type, byKey] : result.MechGroupFailures)
+        for (auto const& [key, count] : byKey)
+            groupFailures += count;
+
+    file << "  \"summary\": {\n";
+    file << "    \"elapsedMs\": " << result.ElapsedMs << ",\n";
+    file << "    \"wallClockMs\": " << result.WallClockMs << ",\n";
+    file << "    \"programStarted\": " << (result.MechProgramStarted ? "true" : "false") << ",\n";
+    file << "    \"programError\": "
+         << (result.MechProgramStarted ? std::string("null") : JsonString(result.MechProgramError)) << ",\n";
+    file << "    \"actorDps\": " << actorDps << ",\n";
+    file << "    \"groupDps\": " << groupDps << ",\n";
+    file << "    \"failures\": " << failures << ",\n";
+    file << "    \"hits\": " << hits << ",\n";
+    file << "    \"groupFailures\": " << groupFailures << ",\n";
+    file << "    \"strayFailures\": " << result.MechStrayFailures << ",\n";
+    file << "    \"failuresLogged\": " << result.MechFailureLog.size() << ",\n";
+    file << "    \"failuresDropped\": " << result.MechFailuresDropped << ",\n";
+    file << "    \"deaths\": " << deaths << ",\n";
+    file << "    \"actorDiedAtMs\": ";
+    if (result.ActorDied)
+        file << result.ActorDiedAtMs;
+    else
+        file << "null";
+    file << ",\n";
+    file << "    \"strategyMissing\": " << strategyMissing << ",\n";
+    file << "    \"tankDamageTaken\": " << result.MechTankDamageTaken << ",\n";
+    file << "    \"tankSwings\": " << result.MechTankSwings << ",\n";
+    file << "    \"tankSaves\": " << result.MechTankSaves << "\n";
+    file << "  },\n";
+
+    // ---- members ----
+    file << "  \"members\": [\n";
+    for (size_t i = 0; i < result.MechMembers.size(); ++i)
+    {
+        SimMechanics::MemberResult const& m = result.MechMembers[i];
+        file << "    {\"index\": " << m.Index << ", \"profile\": " << JsonString(m.Profile) << ", \"role\": \""
+             << SimMechanics::RoleName(m.MemberRole) << "\", \"underTest\": " << (m.UnderTest ? "true" : "false")
+             << ", \"race\": " << uint32(m.Race) << ", \"class\": " << uint32(m.Class) << ", \"specTab\": "
+             << uint32(m.SpecTab) << ",\n";
+        file << "     \"strategyInstalled\": " << (m.StrategyInstalled ? "true" : "false") << ", \"strategies\": "
+             << JsonString(m.Strategies) << ", \"stripped\": [";
+        for (size_t k = 0; k < m.Stripped.size(); ++k)
+            file << (k == 0 ? "" : ", ") << JsonString(m.Stripped[k]);
+        file << "],\n";
+        file << "     \"damage\": " << m.Damage << ", \"dps\": " << m.Dps << ", \"casts\": " << m.Casts
+             << ", \"failureTotal\": " << m.FailureTotal << ", \"hits\": " << m.Hits << ", \"hitDamage\": "
+             << m.HitDamage << ",\n";
+        file << "     \"failures\": ";
+        WriteFailureMap(file, m.Failures);
+        file << ",\n";
+        file << "     \"movingMs\": " << m.MovingMs << ", \"distanceYd\": " << m.DistanceYd << ", \"died\": "
+             << (m.Died ? "true" : "false") << ", \"diedAtMs\": ";
+        if (m.Died)
+            file << m.DiedAtMs;
+        else
+            file << "null";
+        file << ",\n";
+
+        SimMech::Stats const& s = m.ModuleStats;
+        file << "     \"stats\": {\"valid\": " << (s.Valid ? "true" : "false") << ", \"modeMs\": ";
+        WriteNamedNumbers(file, s.ModeMs);
+        file << ",\n       \"leaks\": {\"moves\": " << s.LeakMoves << ", \"casts\": " << s.LeakCasts
+             << ", \"turns\": " << s.LeakTurns << ", \"spells\": [";
+        for (size_t k = 0; k < s.LeakSpells.size(); ++k)
+            file << (k == 0 ? "" : ", ") << "[" << s.LeakSpells[k].first << ", " << s.LeakSpells[k].second << "]";
+        file << "]},\n       \"counters\": ";
+        WriteNamedNumbers(file, s.Counters);
+        file << ",\n       \"cost\": ";
+        WriteNamedNumbers(file, s.Cost);
+        file << "}}" << (i + 1 < result.MechMembers.size() ? ",\n" : "\n");
+    }
+    file << "  ],\n";
+
+    file << "  \"groupFailures\": ";
+    WriteFailureMap(file, result.MechGroupFailures);
+    file << ",\n";
+
+    file << "  \"failureLog\": [\n";
+    for (size_t i = 0; i < result.MechFailureLog.size(); ++i)
+    {
+        SimMechanics::FailureRecord const& f = result.MechFailureLog[i];
+        file << "    {\"atMs\": " << f.AtMs << ", \"member\": " << f.Member << ", \"type\": " << JsonString(f.Type)
+             << ", \"kind\": " << JsonString(f.Kind) << ", \"tag\": " << f.Tag << ", \"mechanicId\": " << f.MechanicId
+             << ", \"damage\": " << f.Damage << "}" << (i + 1 < result.MechFailureLog.size() ? ",\n" : "\n");
+    }
+    file << "  ]\n";
+    file << "}\n";
+
+    if (!file.good())
+    {
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimReport::WriteMechanicsJson() - writing '{}' failed.", path);
+        return false;
+    }
+
+    LOG_INFO("server.dpssim", "mod-dpssim: SimReport::WriteMechanicsJson() - wrote '{}'.", path);
+    return true;
 }

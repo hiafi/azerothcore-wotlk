@@ -22,6 +22,7 @@
 #include "Player.h"
 #include "SimActor.h"
 #include "SimDaemon.h"
+#include "SimMechanicsConfig.h"
 #include "SimProfile.h"
 #include "SimReport.h"
 #include "SimTests.h"
@@ -458,6 +459,20 @@ void DpsSimWorldScript::OnDpsSimRun()
                             ready = false;
                         }
 
+                // Mechanics mode (STAGE-M4-HANDOFF 3.4): `Mode = Mechanics`, or any profile with
+                // DpsSim.MechanicsMode = 1 (the profile then takes its own role's slot in a group of reference bots;
+                // SimMechanicsConfig.h)
+                if (ready && (profile.MechanicsMode || sConfigMgr->GetOption<bool>("DpsSim.MechanicsMode", false)))
+                {
+                    std::string error;
+                    if (!SimMechanicsConfig::Build(profilePath, profile, config, error))
+                    {
+                        LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.Profile '{}': mechanics mode: {} - aborting "
+                            "DpsSim.RunPlayerbot job.", profilePath, error);
+                        ready = false;
+                    }
+                }
+
                 LOG_INFO("server.dpssim",
                     "mod-dpssim: loaded DpsSim.Profile '{}' (class {}, {} gear item(s), spellPower {}, attackPower {}, "
                     "{} synthetic rating(s), {} synthetic stat(s)).",
@@ -483,7 +498,9 @@ void DpsSimWorldScript::OnDpsSimRun()
         // A tank-mode job is a batch too (it logs its own summaries); its reports are the DPS report plus a tank
         // section
         bool const tank = config.RunMode == SimDaemon::Mode::Tank;
-        if (ready && iterations <= 1 && !heal && !tank)
+        // A mechanics-mode job is a batch too; one report per iteration ("kind": "mechanics"), named like a heal run's
+        bool const mechanics = config.RunMode == SimDaemon::Mode::Mechanics;
+        if (ready && iterations <= 1 && !heal && !tank && !mechanics)
             SimDaemon::RunPlayerbot(config);
         else if (ready)
         {
@@ -509,6 +526,18 @@ void DpsSimWorldScript::OnDpsSimRun()
                 if (!reportPath.empty())
                     for (size_t i = 0; i < results.size(); ++i)
                         SimReport::WriteHealJson(results.size() == 1 ? reportPath :
+                            IterationReportPath(reportPath, uint32(i + 1)), config, results[i]);
+
+                results.clear();
+            }
+
+            // The mechanics summaries are logged by RunMechanicsBatch(); one report per iteration, as a heal run
+            if (mechanics)
+            {
+                LOG_INFO("server.dpssim", "mod-dpssim: mechanics batch complete - {} iteration(s).", results.size());
+                if (!reportPath.empty())
+                    for (size_t i = 0; i < results.size(); ++i)
+                        SimReport::WriteMechanicsJson(results.size() == 1 ? reportPath :
                             IterationReportPath(reportPath, uint32(i + 1)), config, results[i]);
 
                 results.clear();

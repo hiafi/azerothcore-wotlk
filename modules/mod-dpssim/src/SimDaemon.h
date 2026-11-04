@@ -21,6 +21,7 @@
 #include "Define.h"
 #include "ObjectGuid.h"
 #include "SimHeal.h"
+#include "SimMechanics.h"
 #include "SimTank.h"
 #include "SimTarget.h"
 #include <functional>
@@ -60,12 +61,14 @@ namespace SimDaemon
     constexpr uint32 SINGLE_RANK_FROSTBOLT_SPELL_ID = 116;
 
     // What a batch simulates: the DPS sim (every profile without `Mode = Heal` or `Mode = Tank`), the healing sim
-    // (SimHeal.h, SimHealScenario.h) or the tank sim (SimTank.h, SimTankDummyAI.h)
+    // (SimHeal.h, SimHealScenario.h), the tank sim (SimTank.h, SimTankDummyAI.h) or the mechanics sim (SimMechanics.h,
+    // SimMechanicsScenario.h: `Mode = Mechanics`, or any profile with DpsSim.MechanicsMode = 1)
     enum class Mode : uint8
     {
         Dps,
         Heal,
-        Tank
+        Tank,
+        Mechanics
     };
 
     // One sim job's parameters. Defaults match the M1 smoke-test job Run() has always used
@@ -220,6 +223,26 @@ namespace SimDaemon
         // healer.
         std::function<void(uint32, Player*, std::vector<Creature*> const&)> TankStepHook;
         bool TankSilenceBot = false;
+
+        // ---- Mechanics mode (RunMode == Mode::Mechanics; STAGE-M4-HANDOFF section 3.4) ----
+        // A group of real bots (MechMembers, in group order: tanks, healers, DPS; the profile under test is the one
+        // with UnderTest set) fights the boss stand-in while mod-boss-mechanics runs a drill program on it. Built by
+        // DpsSim.cpp from DpsSim.Profile, the reference profiles and the DpsSim.Mechanics* keys. ActorLevel and
+        // TargetLevel apply to every member and to the boss; ActorRace, TargetCount and TargetRank play no part.
+        std::vector<SimMechanics::MemberSpec> MechMembers;
+        // Iteration i runs MechPrograms[i % size] (Drill::ParseProgram text); {"none"} is the paired baseline
+        std::vector<std::string> MechPrograms;
+        // Iteration i's drill dice seed is MechSeed + i, the same in the mechanics run and its baseline
+        uint32 MechSeed = 1;
+        // Flat damage of every damage step (DrillOptions::dmg)
+        int32 MechDamage = 1;
+        // The race whose start position anchors the fight (SimMechanicsScenario)
+        uint8 MechAnchorRace = 2;
+        // The boss stand-in swings at the first tank (SimTankDummyAI) with these settings
+        bool MechBossSwings = true;
+        SimTank::HitRange MechBossHit = SimTank::DEFAULT_BOSS_HIT;
+        uint32 MechBossSwingMs = SimTank::DEFAULT_SWING_MS;
+        bool MechBossCrit = true;
     };
 
     // One sim job's result. HitDamages/HitCrits are parallel vectors, one entry per landed hit, in
@@ -405,6 +428,29 @@ namespace SimDaemon
         std::vector<SimTank::ThreatSample> ThreatSamples;
         // The lowest health the actor reached at the end of any step, percent of max (before the dps scenario's refill)
         float TankMinHealthPct = 100.0f;
+
+        // ---- Mechanics mode (RunConfig::RunMode == Mode::Mechanics; empty otherwise) ----
+        // The DPS fields above stay empty; every member's numbers are in MechMembers (index = group order). Times are
+        // ms since the pull. WallClockMs (above) is the iteration's wall time.
+        bool MechanicsMode = false;
+        std::string MechProgram;
+        uint32 MechSeed = 0;
+        // StartProgram succeeded; MechProgramError holds the module's reason when it did not
+        bool MechProgramStarted = false;
+        std::string MechProgramError;
+        std::vector<SimMechanics::MemberResult> MechMembers;
+        // Failures without a player (MissedSoak), by type and "<Kind>/<tag>"
+        std::map<std::string, std::map<std::string, uint32>> MechGroupFailures;
+        // Every failure of the iteration in order (capped at SimMechanics::MAX_FAILURE_LOG; the rest only counted)
+        std::vector<SimMechanics::FailureRecord> MechFailureLog;
+        uint32 MechFailuresDropped = 0;
+        // Failures the sink saw for a player outside the group or on another map (should be 0)
+        uint32 MechStrayFailures = 0;
+        // The boss's swings at the tank: damage taken, swings, and lethal swings turned into a refill (a healer that
+        // could not keep the tank up)
+        uint64 MechTankDamageTaken = 0;
+        uint32 MechTankSwings = 0;
+        uint32 MechTankSaves = 0;
     };
 
     // Runs one sim job per `config` and fills `result`. Returns false (result.Success also false)

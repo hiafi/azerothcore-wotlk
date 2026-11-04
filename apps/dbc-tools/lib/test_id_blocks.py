@@ -670,7 +670,7 @@ class ClassDeclarationsTest(unittest.TestCase):
         self.assertEqual(out_of_reservation("healsim", {"spell": [203000]}), ["spell 203000"])
 
     def test_boss_mechanics_declares_exactly_its_ids_and_no_other_npcs_file_declares_in_its_slices(self):
-        expected = {"spell": list(range(205000, 205008)), "creature": [300400, 300401]}
+        expected = {"spell": list(range(205000, 205008)), "creature": [300400, 300401, 300402]}
         res = RESERVATIONS["bossmechanics"]
         # the whole source/npcs directory: whatever sits inside the reservation is boss_mechanics.py's declarations
         inside = {kind: sorted(i for i in set(self.npcs[kind]) if res[kind]["start"] <= i <= res[kind]["end"])

@@ -296,6 +296,89 @@ HEALSIM_TARGETS=drain:150 HEALSIM_DRAIN_NOISE=0.5 HEALSIM_DRAIN_PULSE_MS=3000 to
   `DPSSIM_EXTRA_CONF='DpsSim.RunTests = 1\nDpsSim.TestFilter = heal' tools/run-sim.sh NoHealerHealSim 10 60 1 1`
   (the script then exits 1, as no report is written; keep the log with `DPSSIM_KEEP_LOG=1` and grep `[PASS]`/`[FAIL]`).
 
+## Mechanics sim (mechanics mode)
+
+The dungeon mechanics plan's sim (`.agents/plans/dungeon-mechanics/dungeon-mechanics.STAGE-M4-HANDOFF.md`, section 3.4):
+the profile under test is one member of a group of **real bots** that fights a boss stand-in while mod-boss-mechanics
+runs its drills on it. Every member reports its damage, the failures the module's global failure sink saw for it (by
+type and mechanic) and the module's own counters (solves, outcomes, lock blocks, mode time, leaks, solve and route µs).
+The paired baseline is the same run with the program `none`. The worldserver must be built with mod-boss-mechanics
+(`SimBossMechanics.h` includes the module behind `__has_include`, so the sim still builds without it; a mechanics run
+then refuses to start).
+
+```
+MECHSIM=1 tools/run-sim.sh RetPaladinSim 120 60 2 5 100                     # the program rotation, 5 x 120 s
+MECHSIM=1 MECHSIM_BASELINE=1 tools/run-sim.sh RetPaladinSim 120 60 2 5 100  # its paired baseline
+MECHSIM=1 MECHSIM_GROUP=9 MECHSIM_PROGRAMS="barrage:60" tools/run-sim.sh FireMageSim 120 60 2 5 100   # crowd barrage
+tools/mechanics_sweep.py run                         # every reworked spec, mechanics + baseline, at most 6 at once
+tools/mechanics_sweep.py index reports/mechsweep-<sweep>    # re-pair a sweep, write index.json / index.md
+```
+
+- **The group** (`SimMechanicsConfig.h`): 1 tank, 1 healer, 3 DPS by default (`MECHSIM_GROUP` / `DpsSim.MechanicsGroup`,
+  2-40: 1 tank, 2 above 10; 1 healer, 2 for 6-10, 4 above 10). The profile under test takes its role's slot: a Tank
+  profile the tank slot, a Heal profile the healer slot, any other a DPS slot (`MECHSIM_ROLE` overrides; a
+  `Mode = Mechanics` profile names its slot with `MechanicsRole`). The other slots are fixed reference profiles, the
+  same for every spec of a sweep: tank `ProtWarriorTankSim`, healer `RestoShamanHealSim`, DPS `ArmsWarriorSim`,
+  `FireMageSim`, `CombatRogueSim` (lists, cycled for bigger groups, skipping the profile under test;
+  `DpsSim.Mechanics{Tank,Healer,Dps}Profiles`). Every member is created **Horde** (Orc, Blood Elf for a Paladin, Troll
+  for a Priest or Mage, Tauren for a Druid), so the group can heal and buff itself; `[race]` is ignored.
+- **The place** (`SimMechanicsScenario.h`): the open world at the Orc start (`DpsSim.MechanicsAnchorRace`; the Human
+  start's Wild Turkey keeps the AoE gates closed), every member moved onto that map. The boss stand-in (the DPS sim's
+  boss dummy, 900004-900006) stands 10 yd ahead of the anchor; the tank 3 yd in front of it, the others on an arc
+  (DPS 12 yd, healers 18 yd). Every member goes back to its spot between iterations.
+- **The group is all bots**, so `PlayerbotAI::FindNewMaster()` finds no master and nobody follows anybody;
+  `follow`, `stay`, `guard` and `passive` are removed from both engines anyway (the run log lists each member's
+  strategies and what was removed). Each bot's AI is ticked twice per step, as in every mode (`SimBot::UpdateAI` plus
+  playerbots' `OnPlayerAfterUpdate` inside `Map::Update`).
+- **The boss swings at the tank** (`DpsSim.MechanicsBossSwings`, on): the tank sim's dummy AI, with the first tank
+  profile's `TankHitDamage` / `TankSwingMs` / `TankDummyCrit`. The tank is unkillable (a lethal swing is refilled and
+  counted as `tankSaves`: the healer did not keep up). Without health drain the boss is refilled every step.
+- **The program** (`DpsSim.MechanicsPrograms`, `MECHSIM_PROGRAMS`): `;`-separated mod-boss-mechanics programs
+  (`Drill::ParseProgram`: drill names with cycles, `lanes`, `barrage` / `minefield` / `uminefield` with seconds),
+  iteration i runs entry i mod n, once (no loop). The default rotation covers every kind in five 120 s fights:
+  `smite,fenrus,ras` (Frontal, Spread, Bait, RunOut, Stack), `cookie,barrage:15` (cones, puddles, run-outs),
+  `soaks,minefield:30`, `alexei` (156 s; a 120 s fight sees hold still, stack, spread, out of bounds, line up, desks and
+  four heroic pairs), `barrage:60,lanes:3,uminefield:20`. The drill dice of iteration i are seeded `MechanicsSeed + i`,
+  the same in the baseline; drill hits deal `MechanicsDamage` (1).
+- **The start of every iteration**: the group's pre-pull buff phase (the longest `PrePullBuffMs` of the members), the
+  pull, then `Sim::StartProgram(boss, member under test, program)` and `Sim::ReconcileBot` for every member (the
+  module's gate installs `boss mechanics` once the scope exists; the run never ticks the world, so
+  `Sim::RegisterBotGlue` registers the glue once before any bot exists). At the end: `Sim::ReadBotStats`, then
+  `Sim::StopProgram` (markers, ledger, Weakened gone), then `Sim::ResetBotStats`.
+- **Fallibility** is off (`MECHSIM_FALLIBILITY=1` turns it on and adds `.f1` to the names). run-sim.sh's scratch
+  config also turns `BossMechanics.Enable`, `Bots.Enable` and `Bots.OpenWorldTestScope` on.
+
+### Mechanics reports (`"kind": "mechanics"`)
+
+One file per iteration (`src/SimReport.h` has the schema): `config` (the group, the programs, this iteration's program
+and seed, the boss settings, fallibility), `summary` (program started or its error, actor and group DPS, failures,
+group failures, stray failures, deaths, members without the strategy, the tank's damage taken and saves), `members[]`
+(per member: role, profile, class, spec tab, strategies, damage and DPS on the boss, casts, failures by type and
+`"<Kind>/<tag>"`, hits, moving time and distance, death, and `stats`: the module's mode time, leaks with spell ids,
+counters and cost block), `groupFailures` (MissedSoak), `failureLog` (every failure in order, capped at 2,000).
+Files: `reports/<Profile>.mech-<tag>.g<size>[.f1][.<DPSSIM_BATCH_TAG>].<ts>...` with tag `rot` (default rotation),
+`base` (baseline) or `x<hash>` (`MECHSIM_PROGRAMS`); the page is `reports/MechanicsProfileReport.html`
+(`tools/mechanics-report-template.html`).
+
+`tools/aggregate_reports.py` merges a run's iterations **without trimming** (5 iterations trim nothing anyway, and the
+iterations run different programs): per member `{mean, min, max, perIteration}` for DPS, damage, casts, moving time and
+distance, failure and hit counts with their sum, failures summed by type and mechanic, the module's counters summed (a
+name ending in `Max` takes the maximum), leaks summed by spell id. It refuses to merge runs with another group, program
+list, duration, damage, boss setting or fallibility.
+
+### The sweep (`tools/mechanics_sweep.py`)
+
+`run` launches every reworked spec (`mechanics_sweep.py list`: all ten classes, one profile per spec) twice, the
+rotation and the baseline, next to each other, at most 6 sims at once (`--jobs`, capped at 6: about 2.4 GB each), each
+with `DPSSIM_BATCH_TAG=<sweep>-<profile>-<mech|base>` and `DPSSIM_NO_HTML=1`, defaults 120 s x 5 iterations at a
+100 ms step, level 60 (`--duration`, `--iterations`, `--step`, `--level`, `--group`, `--programs`, `--fallibility`,
+`--specs` filters, `--profiles` replaces the matrix, `--dry-run` prints the run-sim.sh lines). Logs, `manifest.json`,
+`index.json` and `index.md` go to `reports/mechsweep-<sweep>/`. The index pairs each spec's two runs: per member the
+failures by type and mechanic, DPS with and without mechanics, `dpsLossPct = (1 - mech / base) x 100` (and its range
+over the paired iterations), moving time against the baseline's, escape / hold / freeze time, leaks, solve and route
+maxima; specs with a failure of the member under test, a leak, a missing strategy, a program error or a death come
+first. The reference members' failures are listed too (they are the same group in every spec).
+
 ## The sim never touches the live characters DB
 
 The sim actor is a real `Player` with no `characters` row, and it creates pets, level-up mail and items whose ids come

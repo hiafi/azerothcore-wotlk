@@ -263,6 +263,14 @@ namespace SimProfile
 
         // Whether the profile set any Tank* key, for the refusal in a non-Tank profile
         bool TankKeySet = false;
+
+        // ---- Mechanics mode (plan .agents/plans/dungeon-mechanics/dungeon-mechanics.STAGE-M4-HANDOFF.md, 3.4) ----
+        // `Mode = Mechanics` runs the mechanics sim with this profile as the member under test (any profile can also
+        // be run that way with DpsSim.MechanicsMode = 1 in the conf; a Tank profile then takes the tank slot, a Heal
+        // profile the healer slot, any other a DPS slot). `MechanicsRole = tank | healer | dps` (default dps) is the
+        // slot of a `Mode = Mechanics` profile; the loader refuses it in any other.
+        bool MechanicsMode = false;
+        std::string MechanicsRole;
     };
 
     // Loads `path` (a full file path - see dpssim.conf.dist's DpsSim.Profile doc comment for why

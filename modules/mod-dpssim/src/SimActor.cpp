@@ -19,6 +19,7 @@
 #include "DatabaseEnv.h"
 #include "Log.h"
 #include "Map.h"
+#include "MapMgr.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
@@ -314,7 +315,25 @@ bool SimActor::Create(Config const& config)
     _player->SetPower(POWER_MANA, _player->GetMaxPower(POWER_MANA));
 
     if (config.HasPosition)
+    {
+        // Another map than the race's start map: Player::Create() set the start map, and nothing is in the world yet,
+        // so the map can still be swapped (WorldObject::SetMap asserts both)
+        if (config.MapId != Config::MAP_ID_START_MAP && config.MapId != _player->GetMapId())
+        {
+            Map* map = sMapMgr->CreateMap(config.MapId, _player);
+            if (!map)
+            {
+                LOG_ERROR("server.dpssim", "mod-dpssim: SimActor::Create() - map {} could not be created.",
+                    config.MapId);
+                return false;
+            }
+
+            _player->ResetMap();
+            _player->SetMap(map);
+        }
+
         _player->Relocate(config.PositionX, config.PositionY, config.PositionZ, config.PositionO);
+    }
 
     ObjectAccessor::AddObject(_player);
     if (!_player->GetMap()->AddPlayerToMap(_player))

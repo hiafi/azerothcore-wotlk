@@ -16,6 +16,7 @@
  */
 
 #include "SimDaemon.h"
+#include "AiFactory.h"
 #include "CastRecorder.h"
 #include "CellImpl.h"
 #include "Config.h"
@@ -34,7 +35,9 @@
 #include "SimBot.h"
 #include "SimClock.h"
 #include "SimDummyAI.h"
+#include "SimBossMechanics.h"
 #include "SimHealScenario.h"
+#include "SimMechanicsScenario.h"
 #include "SimReport.h"
 #include "SimTank.h"
 #include "SimTankDummyAI.h"
@@ -1929,6 +1932,357 @@ namespace
         LogTankBatchSummary(results);
         return true;
     }
+
+    // ---- Mechanics mode (the mechanics branch of RunPlayerbotBatch(); STAGE-M4-HANDOFF section 3.4) ----
+
+    // RunBuffPhase() for the whole group at once: every bot on its trimmed non-combat engine, ticked once per step
+    // (plus the playerbots hook inside Map::Update, as everywhere), for `buffMs` ending at `endMs`. Ends early when any
+    // member enters combat. Unrecorded: the caller rewinds the recorders afterwards.
+    void RunGroupBuffPhase(SimDaemon::RunConfig const& config, uint32 buffMs, uint32 endMs,
+        SimMechanicsScenario& scenario)
+    {
+        size_t const size = scenario.Size();
+        bool warnedInactive = false;
+        for (size_t i = 0; i < size; ++i)
+            if (!scenario.GetBot(i).BeginBuffPhase() && !warnedInactive)
+            {
+                warnedInactive = true;
+                LOG_WARN("server.dpssim", "mod-dpssim: mechanics pre-pull buff phase - a member's PlayerbotAI reports "
+                    "it inactive out of combat (AllowActivity() false); set Playerbots.BotActiveAlone = 100 and "
+                    "Playerbots.botActiveAloneSmartScale = 0 for the sim (run-sim.sh does).");
+            }
+
+        Map* map = scenario.GetMap();
+        SimClock buffClock(config.StepMs, endMs - buffMs);
+        while (buffClock.GetElapsedMs() < buffMs)
+        {
+            buffClock.Tick(map);
+            for (size_t i = 0; i < size; ++i)
+                scenario.GetBot(i).UpdateAI(config.StepMs);
+
+            size_t inCombat = size;
+            for (size_t i = 0; i < size && inCombat == size; ++i)
+                if (scenario.GetPlayer(i)->IsInCombat())
+                    inCombat = i;
+            if (inCombat != size)
+            {
+                Unit* with = scenario.GetPlayer(inCombat)->GetCombatManager().GetAnyTarget();
+                LOG_WARN("server.dpssim", "mod-dpssim: mechanics pre-pull buff phase ended early at {} ms - member {} "
+                    "entered combat with {} (entry {}).", buffClock.GetElapsedMs(), inCombat,
+                    with ? with->GetName() : "nothing", with ? with->GetEntry() : 0);
+                break;
+            }
+
+            if (config.RealTimePaced)
+                std::this_thread::sleep_for(std::chrono::milliseconds(config.StepMs));
+        }
+
+        for (size_t i = 0; i < size; ++i)
+        {
+            scenario.GetPlayer(i)->InterruptNonMeleeSpells(false);
+            scenario.GetBot(i).EndBuffPhase();
+        }
+    }
+
+    // One mechanics iteration: the housekeeping and clock rules of RunPlayerbotIteration() for every member, the group
+    // buff phase, then the pull: the boss swings at the tank (BossSwings), the program starts on the boss
+    // (SimMech::StartProgram, scoped to the member under test, seeded MechSeed + iteration), every bot is
+    // reconciled (the module's gate installs "boss mechanics" now that the scope exists), and the tick loop runs. At
+    // the end: the module's counters, then the program is stopped (the encounter ends: markers, ledger, Weakened),
+    // then the counters are reset (the sim seam's order). Assumes the recorders are rewound (the batch's reset does
+    // that between iterations).
+    void RunMechanicsIteration(SimDaemon::RunConfig const& config, SimMechanicsScenario& scenario, uint32 iteration,
+        SimDaemon::RunResult& result)
+    {
+        auto const wallStart = std::chrono::steady_clock::now();
+        Map* map = scenario.GetMap();
+        Creature* boss = scenario.GetBoss();
+        std::vector<Creature*> const& bossList = scenario.GetBossList();
+        size_t const size = scenario.Size();
+        size_t const actorIndex = scenario.GetActorIndex();
+        Player* actor = scenario.GetPlayer(actorIndex);
+
+        uint32 buffMs = 0;
+        for (size_t i = 0; i < size; ++i)
+        {
+            Player* player = scenario.GetPlayer(i);
+            player->RemoveAllSpellCooldown();
+            if (!scenario.GetBot(i).EnsurePet())
+                LOG_ERROR("server.dpssim", "mod-dpssim: member {}'s hunter pet could not be restored for this "
+                    "iteration - it runs without one.", i);
+            for (auto const& [spellId, aura] : player->GetOwnedAuras())
+                aura->ResetProcCooldown();
+            buffMs = std::max(buffMs, scenario.GetSpec(i).PrePullBuffMs);
+        }
+        if (scenario.BossSwings())
+        {
+            scenario.GetPlayer(scenario.GetTankIndex())->DurabilityRepairAll(false, 0.0f, false);
+            SimTankDummy::EndFight(bossList);
+        }
+
+        uint32 const nowMs = std::max(getMSTime(), uint32(GameTime::GetGameTimeMS().count()));
+        uint32 const measuredStartMs = nowMs + ITERATION_GAP_MS;
+
+        if (buffMs > 0)
+        {
+            buffMs = std::min(buffMs, ITERATION_GAP_MS);
+            RunGroupBuffPhase(config, buffMs, measuredStartMs, scenario);
+            for (size_t i = 0; i < size; ++i)
+            {
+                Player* player = scenario.GetPlayer(i);
+                scenario.GetRecorder(i)->Reset();
+                scenario.GetCastRecorder(i)->Reset();
+                scenario.GetRecorder(i)->RecordAurasPresent(player);
+                scenario.GetRecorder(i)->RecordAurasPresent(boss);
+                RefillResources(player, bossList);
+                scenario.GetBot(i).ReestablishCombatState(bossList);
+            }
+        }
+        if (DamageTakenRecorder* tankRecorder = scenario.GetTankRecorder())
+            tankRecorder->Reset();
+
+        Acore::Time::SetSimClockOverride(Milliseconds(measuredStartMs));
+        for (size_t i = 0; i < size; ++i)
+            scenario.GetBot(i).RestartCombatClock();
+
+        // The boss takes real damage with the tank AI (clamped to 1 health), none with the passive one; without health
+        // drain it starts the pull and every step full, as a tank sim dummy
+        bool const refillBoss = !SimDummyAI::IsHealthDrainEnabled();
+        if (refillBoss)
+            boss->SetFullHealth();
+        if (scenario.BossSwings())
+            SimTankDummy::BeginFight(bossList, scenario.GetPlayer(scenario.GetTankIndex()), scenario.GetBossSettings());
+        WarnStrayUnitsOnce(actor, bossList);
+
+        // The program, then the gate (the scope exists once the program started)
+        for (size_t i = 0; i < size; ++i)
+            SimMech::ResetStats(scenario.GetPlayer(i));
+        result.MechProgram = config.MechPrograms[iteration % config.MechPrograms.size()];
+        result.MechSeed = config.MechSeed + iteration;
+        std::string error;
+        result.MechProgramStarted = SimMech::StartProgram(boss, actor->GetGUID(), result.MechProgram, result.MechSeed,
+            config.MechDamage, error);
+        if (!result.MechProgramStarted)
+        {
+            result.MechProgramError = error;
+            LOG_ERROR("server.dpssim", "mod-dpssim: mechanics iteration {} - the program '{}' did not start: {}.",
+                iteration + 1, result.MechProgram, error);
+        }
+        std::vector<bool> installed(size, false);
+        for (size_t i = 0; i < size; ++i)
+            installed[i] = SimMech::ReconcileBot(scenario.GetPlayer(i));
+        scenario.BeginIteration(measuredStartMs);
+
+        SimClock clock(config.StepMs, measuredStartMs);
+        while (clock.GetElapsedMs() < config.DurationMs)
+        {
+            clock.Tick(map);
+
+            // The existing actor-death rule (RunPlayerbotIteration()); another member's death is only noted (the tank
+            // cannot die with BossSwings, and the drills' flat damage cannot kill)
+            if (!actor->IsAlive())
+            {
+                result.ActorDied = true;
+                result.ActorDiedAtMs = clock.GetElapsedMs();
+                LOG_WARN("server.dpssim", "mod-dpssim: the member under test DIED {} ms into the mechanics iteration - "
+                    "iteration ended, its DPS counts the full {} ms.", result.ActorDiedAtMs, config.DurationMs);
+                break;
+            }
+
+            for (size_t i = 0; i < size; ++i)
+                if (scenario.GetPlayer(i)->IsAlive())
+                    scenario.GetBot(i).UpdateAI(config.StepMs);
+
+            scenario.Step(clock.GetElapsedMs(), config.StepMs);
+            if (refillBoss)
+                boss->SetFullHealth();
+
+            if (config.RealTimePaced)
+                std::this_thread::sleep_for(std::chrono::milliseconds(config.StepMs));
+        }
+        scenario.Step(clock.GetElapsedMs(), 0);
+
+        // The sim seam's order: read the counters, stop the program, reset the counters
+        std::vector<SimMech::Stats> stats(size);
+        for (size_t i = 0; i < size; ++i)
+            SimMech::ReadStats(scenario.GetPlayer(i), stats[i]);
+        scenario.EndIteration();
+        SimMech::StopProgram(boss);
+        if (scenario.BossSwings())
+            SimTankDummy::EndFight(bossList);
+        for (size_t i = 0; i < size; ++i)
+            SimMech::ResetStats(scenario.GetPlayer(i));
+
+        result.Success = true;
+        result.MechanicsMode = true;
+        result.ElapsedMs = result.ActorDied ? config.DurationMs : clock.GetElapsedMs();
+        double const seconds = double(config.DurationMs) / 1000.0;
+        for (size_t i = 0; i < size; ++i)
+        {
+            Player* player = scenario.GetPlayer(i);
+            SimMechanics::MemberSpec const& spec = scenario.GetSpec(i);
+            SimMechanics::MemberResult member = scenario.GetTally(i);
+            member.Index = uint32(i);
+            member.Profile = spec.Profile;
+            member.MemberRole = spec.MemberRole;
+            member.UnderTest = spec.UnderTest;
+            member.Race = player->getRace();
+            member.Class = player->getClass();
+            member.SpecTab = AiFactory::GetPlayerSpecTab(player);
+            member.StrategyInstalled = installed[i];
+            member.Strategies = scenario.GetBot(i).DescribeStrategies();
+            member.Stripped = scenario.GetStripped(i);
+            member.Damage = scenario.GetRecorder(i)->GetTotalDamage();
+            // Every member is charged the full duration, as every DPS report does
+            member.Dps = seconds > 0.0 ? double(member.Damage) / seconds : 0.0;
+            for (CastRecorder::CastEvent const& cast : scenario.GetCastRecorder(i)->GetCastEvents())
+                if (!cast.IsTriggered)
+                    ++member.Casts;
+            member.ModuleStats = std::move(stats[i]);
+            result.MechMembers.push_back(std::move(member));
+        }
+
+        // The actor's own damage in the DPS fields too, so a log line or a tool that reads summary.dps sees the
+        // member under test
+        result.TotalDamage = result.MechMembers[actorIndex].Damage;
+        result.MechGroupFailures = scenario.GetGroupFailures();
+        result.MechFailureLog = scenario.GetFailureLog();
+        result.MechFailuresDropped = scenario.GetFailuresDropped();
+        result.MechStrayFailures = scenario.GetStrayFailures();
+        if (DamageTakenRecorder* tankRecorder = scenario.GetTankRecorder())
+        {
+            for (SimTank::SwingEvent const& swing : tankRecorder->GetSwings())
+            {
+                ++result.MechTankSwings;
+                result.MechTankDamageTaken += swing.Final;
+            }
+            result.MechTankSaves = tankRecorder->GetSavedHits();
+        }
+
+        result.WallClockMs = uint32(std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - wallStart).count());
+    }
+
+    // One summary line per iteration and one per member (the JSON report carries the same numbers)
+    void LogMechanicsSummary(SimDaemon::RunResult const& result, uint32 iteration, uint32 iterations)
+    {
+        uint32 failures = 0;
+        for (SimMechanics::MemberResult const& m : result.MechMembers)
+            failures += m.FailureTotal;
+        uint32 groupFailures = 0;
+        for (auto const& [type, byKey] : result.MechGroupFailures)
+            for (auto const& [key, count] : byKey)
+                groupFailures += count;
+
+        LOG_INFO("server.dpssim", "mod-dpssim:   mechanics iteration {}/{} - program '{}' (seed {}, started {}), {} ms "
+            "({} wall ms): {} member failure(s), {} group failure(s), {} stray; tank took {} in {} swing(s), {} "
+            "save(s).", iteration, iterations, result.MechProgram, result.MechSeed,
+            result.MechProgramStarted ? "yes" : "NO", result.ElapsedMs, result.WallClockMs, failures, groupFailures,
+            result.MechStrayFailures, result.MechTankDamageTaken, result.MechTankSwings, result.MechTankSaves);
+
+        for (SimMechanics::MemberResult const& m : result.MechMembers)
+        {
+            uint64 solves = 0, escapeMs = 0, holdMs = 0;
+            for (auto const& [name, value] : m.ModuleStats.Counters)
+                if (name == "solves")
+                    solves = value;
+            for (auto const& [name, value] : m.ModuleStats.ModeMs)
+            {
+                if (name == "escape")
+                    escapeMs = value;
+                else if (name == "hold")
+                    holdMs = value;
+            }
+            LOG_INFO("server.dpssim", "mod-dpssim:     member {} ({} {}{}): {:.1f} DPS, {} cast(s), {} failure(s) ({} "
+                "hit(s)), moving {} ms ({:.1f} yd), strategy {}, {} solve(s), escape {} ms, hold {} ms, leaks {}/{}/{}"
+                "{}.", m.Index, SimMechanics::RoleName(m.MemberRole), m.Profile, m.UnderTest ? ", under test" : "",
+                m.Dps, m.Casts, m.FailureTotal, m.Hits, m.MovingMs, m.DistanceYd,
+                m.StrategyInstalled ? "installed" : "MISSING", solves, escapeMs, holdMs, m.ModuleStats.LeakMoves,
+                m.ModuleStats.LeakCasts, m.ModuleStats.LeakTurns, m.Died ? ", DIED" : "");
+        }
+    }
+
+    // RunPlayerbotBatch()'s mechanics branch: one group, one boss and one set of bots for every iteration, each member
+    // reset between iterations exactly as a DPS batch resets its actor (ResetForNextIteration()), then put back on its
+    // start spot
+    bool RunMechanicsBatch(SimDaemon::RunConfig const& config, uint32 iterations,
+        std::vector<SimDaemon::RunResult>& results)
+    {
+        if (!SimMech::Available())
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunMechanicsBatch() - this worldserver is built without "
+                "mod-boss-mechanics - aborting.");
+            return false;
+        }
+        if (config.MechMembers.empty() || config.MechPrograms.empty())
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunMechanicsBatch() - no group or no program - "
+                "aborting.");
+            return false;
+        }
+
+        // The module's bot glue registers on the first world tick, which a sim never reaches (the mod-dungeon-clear
+        // crash, docs/bugs-and-fixes.md): register it now, before any bot exists
+        if (!SimMech::RegisterBotGlue())
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunMechanicsBatch() - the boss-mechanics bot glue is "
+                "off (BossMechanics.Bots.Enable = 0, or no playerbots) - aborting.");
+            return false;
+        }
+
+        SimMechanicsScenario::Setup setup;
+        setup.Members = config.MechMembers;
+        setup.Level = uint8(config.ActorLevel);
+        setup.AnchorRace = config.MechAnchorRace;
+        setup.BossConfig = MakeTargetConfig(config);
+        setup.BossConfig.TargetRank = SimTarget::Rank::Boss;
+        // With the tank AI and no drain the boss keeps the huge default pool and is refilled every step, as a tank sim
+        // dummy (MakeTargetConfig() only knows tank mode)
+        if (config.MechBossSwings && !config.DummyHealthDrain)
+        {
+            setup.BossConfig.MaxHealth = SimTarget::Config().MaxHealth;
+            setup.BossConfig.StartHealthPct = 0.0f;
+        }
+        setup.BossSwings = config.MechBossSwings;
+        setup.BossSettings.Hit = config.MechBossHit;
+        setup.BossSettings.SwingMs = config.MechBossSwingMs;
+        setup.BossSettings.Crit = config.MechBossCrit;
+
+        SimMechanicsScenario scenario;
+        if (!scenario.Create(setup))
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunMechanicsBatch() - building the group failed - "
+                "aborting.");
+            return false;
+        }
+        scenario.LogRoles();
+
+        std::string programs;
+        for (std::string const& program : config.MechPrograms)
+            programs += (programs.empty() ? "'" : ", '") + program + "'";
+        LOG_INFO("server.dpssim", "mod-dpssim: mechanics mode - {} member(s), member {} under test, programs [{}] "
+            "(iteration i runs entry i mod {}), seed {} + i, damage {}, boss swings {}.", scenario.Size(),
+            scenario.GetActorIndex(), programs, config.MechPrograms.size(), config.MechSeed, config.MechDamage,
+            scenario.BossSwings() ? "on" : "off");
+
+        for (uint32 i = 0; i < iterations; ++i)
+        {
+            if (i > 0)
+            {
+                for (size_t m = 0; m < scenario.Size(); ++m)
+                    ResetForNextIteration(scenario.GetPlayer(m), scenario.GetBossList(), scenario.GetBot(m),
+                        scenario.GetRecorder(m), scenario.GetCastRecorder(m), scenario.GetStart(m));
+                scenario.ReturnToStart();
+            }
+
+            SimDaemon::RunResult result;
+            RunMechanicsIteration(config, scenario, i, result);
+            LogMechanicsSummary(result, i + 1, iterations);
+            results.push_back(std::move(result));
+        }
+
+        return true;
+    }
 }
 
 bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
@@ -2038,8 +2392,8 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
 
     if (config.RunMode != Mode::Dps)
     {
-        LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotOnce() - a heal-mode or tank-mode profile runs "
-            "through RunPlayerbotBatch() only.");
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotOnce() - a heal-mode, tank-mode or "
+            "mechanics-mode profile runs through RunPlayerbotBatch() only.");
         return false;
     }
 
@@ -2109,6 +2463,8 @@ bool SimDaemon::RunPlayerbotBatch(RunConfig const& config, uint32 iterations, st
         return RunHealBatch(config, iterations, results);
     if (config.RunMode == Mode::Tank)
         return RunTankBatch(config, iterations, results);
+    if (config.RunMode == Mode::Mechanics)
+        return RunMechanicsBatch(config, iterations, results);
 
     // Identical setup to RunPlayerbotOnce() above - see its own inline comments for what each step
     // does. Done once here rather than once per iteration - see this function's own doc comment

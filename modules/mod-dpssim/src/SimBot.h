@@ -164,6 +164,14 @@ public:
     // value picks
     void LogHealTargetVisibility(std::vector<Player*> const& members) const;
 
+    // Mechanics mode: removes every strategy named in `names` from both engines, and returns what it removed as
+    // "combat:<name>" / "non-combat:<name>". A group of real bots must not follow or hold position for each other
+    // (a spread or a soak needs each bot to go where its own brain sends it).
+    std::vector<std::string> RemoveStrategies(std::vector<std::string> const& names);
+
+    // "combat [a, b], non-combat [c, d]": the strategies both engines hold now (empty without an AI)
+    [[nodiscard]] std::string DescribeStrategies() const;
+
 private:
     // Every enemy count the bot strategies use is built from the bot's threat list ("attackers" walks
     // ThreatManager::GetThreatenedByMeList()), and Unit::SetInCombatWith() only makes a combat reference: a dummy

@@ -54,6 +54,15 @@ representative run is the median-DPS (dps) or median-TTD (survive) kept one. Rep
 target setup, hit settings, swing speed, crit switch or pull auras are refused (and of a different duration in
 "survive", where the duration is what a survived run's TTD means).
 
+Mechanics reports ("kind": "mechanics", SimReport::WriteMechanicsJson(), STAGE-M4-HANDOFF section 3.4) hold one entry
+per group member and are merged by aggregate_mechanics() below, without any trimming: the mechanics sweep runs 5
+iterations, where the DPS trim (floor(n * 0.1) per side) drops nothing anyway, and every iteration of a mechanics run
+can run a different program (DpsSim.MechanicsPrograms rotates), so no run is an outlier to drop. Per member every number
+gets {mean, min, max, perIteration} (failure counts also a sum), the failures by type and "<Kind>/<tag>" are summed, the
+module's counters are summed (a name ending in "Max" takes the maximum) and the leaks summed by spell id. Reports whose
+group, durations, damage, programs, boss settings or fallibility differ are refused. The pairing with the baseline run
+(program "none") and the DPS loss are tools/mechanics_sweep.py's.
+
 Usage:
     aggregate_reports.py <output.json> <report1.json> [<report2.json> ...]
 """
@@ -660,6 +669,170 @@ def main_tank(out_path: Path, report_paths: list[Path], reports: list[dict]) -> 
     return 0
 
 
+# ---------------------------------------------------------------------------------------------------------------------
+# Mechanics reports (SimReport::WriteMechanicsJson()'s schema, "kind": "mechanics")
+# ---------------------------------------------------------------------------------------------------------------------
+
+# What must match for two mechanics reports to merge (program and seed change per iteration by design)
+MECH_SETUP_KEYS = ("actorLevel", "targetLevel", "durationMs", "stepMs", "groupSize", "actorIndex", "actorProfile",
+                   "baseline", "programs", "damage", "bossSwings", "bossHit", "bossSwingMs", "bossCrit", "fallibility")
+
+
+def mechanics_setup(r: dict) -> dict:
+    cfg = r.get("config", {})
+    setup = {k: cfg.get(k) for k in MECH_SETUP_KEYS}
+    setup["members"] = [(m.get("profile"), m.get("role"), m.get("class")) for m in cfg.get("members", [])]
+    return setup
+
+
+def spread(values: list[float], with_sum: bool = False) -> dict:
+    """{mean, min, max, perIteration} over the iterations (and the sum for counts)."""
+    out = {
+        "mean": mean(values),
+        "min": min(values) if values else 0,
+        "max": max(values) if values else 0,
+        "perIteration": values,
+    }
+    if with_sum:
+        out["sum"] = sum(values)
+    return out
+
+
+def merge_counts(maps: list[dict]) -> dict:
+    """Named numbers summed over the iterations; a name ending in "Max" takes the maximum."""
+    out: dict = {}
+    for d in maps:
+        for name, value in (d or {}).items():
+            if not is_number(value):
+                continue
+            if name.endswith("Max"):
+                out[name] = max(out.get(name, value), value)
+            else:
+                out[name] = out.get(name, 0) + value
+    return out
+
+
+def merge_failures(maps: list[dict]) -> dict:
+    """{type: {key: n}} summed over the iterations."""
+    out: dict = {}
+    for d in maps:
+        for ftype, by_key in (d or {}).items():
+            bucket = out.setdefault(ftype, {})
+            for key, count in by_key.items():
+                bucket[key] = bucket.get(key, 0) + count
+    return {t: dict(sorted(k.items())) for t, k in sorted(out.items())}
+
+
+def aggregate_mechanics_member(rows: list[dict]) -> dict:
+    first = rows[0]
+    stats = [r.get("stats", {}) for r in rows]
+    mode_names: list[str] = []
+    for s in stats:
+        for name in (s.get("modeMs") or {}):
+            if name not in mode_names:
+                mode_names.append(name)
+    leak_spells: dict[int, int] = {}
+    for s in stats:
+        for spell_id, count in (s.get("leaks") or {}).get("spells", []):
+            leak_spells[spell_id] = leak_spells.get(spell_id, 0) + count
+    return {
+        "index": first["index"],
+        "profile": first["profile"],
+        "role": first["role"],
+        "underTest": first["underTest"],
+        "race": first.get("race"),
+        "class": first.get("class"),
+        "specTab": first.get("specTab"),
+        "strategyInstalledAll": all(r.get("strategyInstalled", False) for r in rows),
+        "strategies": first.get("strategies", ""),
+        "stripped": first.get("stripped", []),
+        "dps": spread([r["dps"] for r in rows]),
+        "damage": spread([r["damage"] for r in rows]),
+        "casts": spread([r["casts"] for r in rows]),
+        "failureTotal": spread([r["failureTotal"] for r in rows], with_sum=True),
+        "hits": spread([r["hits"] for r in rows], with_sum=True),
+        "hitDamage": sum(r.get("hitDamage", 0) for r in rows),
+        "failures": merge_failures([r.get("failures") for r in rows]),
+        "movingMs": spread([r["movingMs"] for r in rows]),
+        "distanceYd": spread([r["distanceYd"] for r in rows]),
+        "deaths": sum(1 for r in rows if r.get("died")),
+        "stats": {
+            "validAll": all(s.get("valid", False) for s in stats),
+            "modeMs": {name: spread([(s.get("modeMs") or {}).get(name, 0) for s in stats]) for name in mode_names},
+            "leaks": {
+                "moves": sum((s.get("leaks") or {}).get("moves", 0) for s in stats),
+                "casts": sum((s.get("leaks") or {}).get("casts", 0) for s in stats),
+                "turns": sum((s.get("leaks") or {}).get("turns", 0) for s in stats),
+                "spells": sorted([[k, v] for k, v in leak_spells.items()], key=lambda kv: (-kv[1], kv[0])),
+            },
+            "counters": merge_counts([s.get("counters") for s in stats]),
+            "cost": merge_counts([s.get("cost") for s in stats]),
+        },
+    }
+
+
+def aggregate_mechanics(reports: list[dict], names: list[str]) -> dict:
+    """Merges the iteration reports of one mechanics run (no trimming, see the module docstring). Raises ValueError
+    for reports that must not be merged."""
+    setup0 = mechanics_setup(reports[0])
+    for name, r in zip(names, reports):
+        if r.get("kind") != "mechanics":
+            raise ValueError(f"{name} is not a mechanics report")
+        setup = mechanics_setup(r)
+        if setup != setup0:
+            diff = sorted(k for k in setup if setup[k] != setup0.get(k))
+            raise ValueError(f"refusing to aggregate mechanics reports with different setups: {names[0]} and {name} "
+                             f"differ in {diff}")
+        if len(r.get("members", [])) != len(reports[0].get("members", [])):
+            raise ValueError(f"{name} has {len(r.get('members', []))} members, {names[0]} "
+                             f"{len(reports[0].get('members', []))}")
+
+    config = dict(reports[0]["config"])
+    config.pop("program", None)
+    config.pop("seed", None)
+    config["programsRun"] = [r["config"].get("program") for r in reports]
+    config["seeds"] = [r["config"].get("seed") for r in reports]
+
+    summaries = [r.get("summary", {}) for r in reports]
+    summary_keys = [k for k, v in summaries[0].items() if is_number(v) and not isinstance(v, bool)]
+    count_keys = {"failures", "hits", "groupFailures", "strayFailures", "failuresDropped", "deaths",
+                  "strategyMissing", "tankSaves", "tankSwings", "tankDamageTaken"}
+    summary = {k: spread([s.get(k, 0) or 0 for s in summaries], with_sum=k in count_keys) for k in summary_keys}
+    summary["programsStarted"] = sum(1 for s in summaries if s.get("programStarted"))
+    summary["programErrors"] = [s.get("programError") for s in summaries if s.get("programError")]
+    summary["actorDiedAtMs"] = [s["actorDiedAtMs"] for s in summaries if s.get("actorDiedAtMs") is not None]
+
+    member_count = len(reports[0]["members"])
+    members = [aggregate_mechanics_member([r["members"][i] for r in reports]) for i in range(member_count)]
+    return {
+        "kind": "mechanics",
+        "config": config,
+        "summary": summary,
+        "members": members,
+        "groupFailures": merge_failures([r.get("groupFailures") for r in reports]),
+        "aggregate": {
+            "iterations": len(reports),
+            "sourceReports": names,
+            "trim": {"fraction": 0.0, "keptCount": len(reports),
+                     "note": "mean, min and max over every iteration; mechanics runs are never trimmed"},
+        },
+    }
+
+
+def main_mechanics(out_path: Path, report_paths: list[Path], reports: list[dict]) -> int:
+    try:
+        merged = aggregate_mechanics(reports, [p.name for p in report_paths])
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(merged))
+    failures = merged["summary"].get("failures", {}).get("sum", 0)
+    print(f"wrote {out_path} (mechanics, {len(reports)} iteration(s), {len(merged['members'])} member(s), "
+          f"{failures} member failure(s), no trimming)")
+    return 0
+
+
 def main() -> int:
     if len(sys.argv) < 3:
         print(__doc__, file=sys.stderr)
@@ -678,6 +851,8 @@ def main() -> int:
         return main_heal(out_path, report_paths, reports)
     if kinds == {"tank"}:
         return main_tank(out_path, report_paths, reports)
+    if kinds == {"mechanics"}:
+        return main_mechanics(out_path, report_paths, reports)
 
     for path, r in zip(report_paths, reports):
         if target_count(r) != target_count(reports[0]) or target_rank(r) != target_rank(reports[0]):

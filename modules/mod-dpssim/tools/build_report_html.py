@@ -10,6 +10,10 @@ into the same report-template.html, with the "Damage taken" section from tank-se
 __TANK_*__ markers. For any other report those markers are replaced by nothing, so a DPS page is exactly the page
 the template alone gives.
 
+A mechanics report ("kind": "mechanics", SimReport::WriteMechanicsJson()'s schema, one iteration or
+aggregate_reports.py's merge) is baked into mechanics-report-template.html: the group's members, their failures by type
+and mechanic, and the mechanics brain's counters. It names no spells, so no spell names are looked up.
+
 Usage:
     build_report_html.py <output.html> <label> <report.json>
 """
@@ -30,6 +34,8 @@ HEAL_TEMPLATE_PATH = TOOLS_DIR / "heal-report-template.html"
 # "@@@ HTML" and "@@@ JS" lines), injected at the template's __TANK_CSS__, __TANK_SECTION__, __TANK_JS__ and
 # __TANK_RENDER__ markers
 TANK_SECTION_PATH = TOOLS_DIR / "tank-section.html"
+# Mechanics reports ("kind": "mechanics") render through their own template
+MECHANICS_TEMPLATE_PATH = TOOLS_DIR / "mechanics-report-template.html"
 
 
 def is_heal(data: dict) -> bool:
@@ -38,6 +44,10 @@ def is_heal(data: dict) -> bool:
 
 def is_tank(data: dict) -> bool:
     return data.get("kind") == "tank"
+
+
+def is_mechanics(data: dict) -> bool:
+    return data.get("kind") == "mechanics"
 
 
 def load_tank_section() -> dict[str, str]:
@@ -162,6 +172,14 @@ def fetch_spell_names(spell_ids: list[int]) -> dict[int, str]:
 # report on the fly (viewing a past run's JSON) without shelling out to this script or duplicating
 # its DB-lookup/placeholder-substitution logic - this is the one place that logic lives.
 def render_report_html(data: dict, label: str) -> str:
+    if is_mechanics(data):
+        return (
+            MECHANICS_TEMPLATE_PATH.read_text()
+            .replace("__PAGE_TITLE__", label)
+            .replace("__LABEL__", label)
+            .replace("__DATA_JSON__", safe_json(data))
+            .replace("__GENERATED_AT__", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        )
     spell_names = fetch_spell_names(collect_spell_ids(data))
     # Pseudo id 0 is a melee auto-attack swing (EventRecorder::MELEE_SPELL_ID), not a real spell row
     spell_names.setdefault(0, "Melee leech" if is_heal(data) else "Melee")

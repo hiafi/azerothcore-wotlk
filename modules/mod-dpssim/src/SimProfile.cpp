@@ -17,6 +17,7 @@
 
 #include "SimProfile.h"
 #include "Log.h"
+#include "SimMechanics.h"
 #include "StringFormat.h"
 #include "Unit.h"
 #include "Util.h"
@@ -355,17 +356,33 @@ bool SimProfile::Load(std::string const& path, Profile& out)
         {
             parsed.HealMode = false;
             parsed.TankMode = false;
+            parsed.MechanicsMode = false;
             if (StringEqualI(value, "Heal"))
                 parsed.HealMode = true;
             else if (StringEqualI(value, "Tank"))
                 parsed.TankMode = true;
+            else if (StringEqualI(value, "Mechanics"))
+                parsed.MechanicsMode = true;
             else if (!StringEqualI(value, "Dps"))
             {
                 LOG_ERROR("server.dpssim",
-                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'Mode' value '{}' is not Heal, Tank or Dps.",
-                    path, lineNo, value);
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'Mode' value '{}' is not Heal, Tank, Mechanics or "
+                    "Dps.", path, lineNo, value);
                 return false;
             }
+        }
+        else if (key == "MechanicsRole")
+        {
+            SimMechanics::Role role = SimMechanics::Role::Dps;
+            if (!SimMechanics::ParseRole(value, role))
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'MechanicsRole' value '{}' is not tank, healer or "
+                    "dps.", path, lineNo, value);
+                return false;
+            }
+
+            parsed.MechanicsRole = value;
         }
         else if (key == "TankScenario" || key == "TankHitDamage" || key == "TankPackHitDamage" ||
             key == "TankSwingMs" || key == "TankDummyCrit")
@@ -571,6 +588,13 @@ bool SimProfile::Load(std::string const& path, Profile& out)
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimProfile::Load() - '{}': the Tank* keys are for Tank profiles (add "
             "'Mode = Tank').", path);
+        return false;
+    }
+
+    if (!parsed.MechanicsMode && !parsed.MechanicsRole.empty())
+    {
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimProfile::Load() - '{}': 'MechanicsRole' is for Mechanics profiles "
+            "(add 'Mode = Mechanics'); any other profile takes its slot from its own Mode.", path);
         return false;
     }
 

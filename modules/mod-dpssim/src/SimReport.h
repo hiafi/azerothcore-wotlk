@@ -187,6 +187,35 @@ namespace SimReport
     //               read before the step's health refill.
     //   "threat":  [{dummy, samples: [[timestampMs, threat], ...]}] every second
     bool WriteTankJson(std::string const& path, SimDaemon::RunConfig const& config, SimDaemon::RunResult const& result);
+
+    // The mechanics-mode counterpart (STAGE-M4-HANDOFF section 3.4): one file per iteration of a mechanics run,
+    // "kind": "mechanics" at the top level, one entry per group member. The paired baseline (program "none") writes the
+    // same schema; tools/mechanics_sweep.py pairs the two and computes the DPS loss. All times are ms since the pull.
+    //
+    // Schema (top-level object):
+    //   "kind":    "mechanics"
+    //   "config":  {actorLevel, targetLevel, durationMs, stepMs, groupSize, actorIndex, actorProfile, baseline (every
+    //               program "none"), program (this iteration's), programs [all, in iteration order], seed (this
+    //               iteration's drill dice), damage, anchor {race} (the start the fight stands at), bossSwings,
+    //               bossHit {min, max},
+    //               bossSwingMs, bossCrit, fallibility (BossMechanics.Bots.Fallibility.Enable), withBossMechanics,
+    //               members [{index, profile, role, underTest, race, class}]}
+    //   "summary": {elapsedMs, wallClockMs, programStarted, programError (null when it started), actorDps, groupDps,
+    //               failures (every member's), hits, groupFailures (MissedSoak and other player-less ones),
+    //               strayFailures, failuresLogged, failuresDropped, deaths, actorDiedAtMs, strategyMissing (members
+    //               without "boss mechanics" after the reconcile), tankDamageTaken, tankSwings, tankSaves}
+    //   "members": [{index, profile, role, underTest, race, class, specTab, strategyInstalled, strategies, stripped [],
+    //               damage, dps, casts, failureTotal, hits, hitDamage, failures {<Type>: {"<Kind>/<tag>": n}},
+    //               movingMs, distanceYd, died, diedAtMs, stats {valid, modeMs {idle, watch, escape, hold, freeze,
+    //               released}, leaks {moves, casts, turns, spells [[spellId, n], ...]}, counters {<name>: n}, cost
+    //               {<name>: x}}}] in group order (tanks, healers, DPS). damage / dps: the member's (and its pet's)
+    //               damage to the boss over the full duration. movingMs: steps it moved more than 0.1 yd. stats come
+    //               from the module (Sim::ReadBotStats; valid false when the module could not read the bot).
+    //   "groupFailures": {<Type>: {"<Kind>/<tag>": n}}
+    //   "failureLog": [{atMs, member (-1 = group), type, kind, tag, mechanicId, damage}] in order, capped at
+    //               SimMechanics::MAX_FAILURE_LOG entries
+    bool WriteMechanicsJson(std::string const& path, SimDaemon::RunConfig const& config,
+        SimDaemon::RunResult const& result);
 }
 
 #endif
