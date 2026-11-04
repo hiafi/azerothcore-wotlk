@@ -331,6 +331,7 @@ def member_line(mech: dict, base: dict | None) -> dict:
         "msOutOfBand": counters.get("msOutOfBand", 0),
         "msOutOfBandTask": counters.get("msOutOfBandTask", 0),
         "pullBlocks": counters.get("pullBlocks", 0),
+        "moverBreaks": counters.get("moverBreaks", 0),
         "pullsEnded": counters.get("pullsEnded", 0),
         "landingBlocks": counters.get("landingBlocks", 0),
         "motionEndStops": counters.get("motionEndStops", 0),
