@@ -97,6 +97,7 @@ namespace
         // M4 (WP-C, WP-X)
         out.emplace_back("fallbackClear", c.fallbackClear);
         out.emplace_back("fallbackHot", c.fallbackHot);
+        out.emplace_back("fallbackKept", c.fallbackKept);
         out.emplace_back("routeLoops", c.routeLoops);
         out.emplace_back("specificBlocks", c.specificBlocks);
         out.emplace_back("doBypasses", c.doBypasses);

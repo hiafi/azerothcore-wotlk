@@ -307,6 +307,7 @@ def member_line(mech: dict, base: dict | None) -> dict:
         },
         "fallbackClear": counters.get("fallbackClear", 0),
         "fallbackHot": counters.get("fallbackHot", 0),
+        "fallbackKept": counters.get("fallbackKept", 0),
         "strategyInstalled": mech.get("strategyInstalledAll", False),
         "deaths": mech.get("deaths", 0),
         "cost": stats.get("cost", {}),
