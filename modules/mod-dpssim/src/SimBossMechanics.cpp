@@ -99,6 +99,14 @@ namespace
         out.emplace_back("fallbackHot", c.fallbackHot);
         out.emplace_back("fallbackKept", c.fallbackKept);
         out.emplace_back("routeLoops", c.routeLoops);
+        out.emplace_back("regionRoutes", c.regionRoutes);
+        out.emplace_back("regionRoutesFound", c.regionRoutesFound);
+        out.emplace_back("msOutOfBand", c.msOutOfBand);
+        out.emplace_back("msOutOfBandTask", c.msOutOfBandTask);
+        out.emplace_back("pullBlocks", c.pullBlocks);
+        out.emplace_back("forcedMoves", c.forcedMoves);
+        out.emplace_back("forcedCasts", c.forcedCasts);
+        out.emplace_back("forcedTurns", c.forcedTurns);
         out.emplace_back("specificBlocks", c.specificBlocks);
         out.emplace_back("doBypasses", c.doBypasses);
         out.emplace_back("unknownCasts", c.unknownCasts);
