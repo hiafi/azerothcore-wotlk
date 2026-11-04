@@ -17,6 +17,7 @@
 
 #include "AccountMgr.h"
 #include "Common.h"
+#include "Config.h"
 #include "DatabaseEnv.h"
 #include "Log.h"
 #include "ObjectAccessor.h"
@@ -64,7 +65,8 @@ AccountOpResult AccountMgr::CreateAccount(std::string username, std::string pass
     auto [salt, verifier] = Acore::Crypto::SRP6::MakeRegistrationData(username, password);
     stmt->SetData(1, salt);
     stmt->SetData(2, verifier);
-    stmt->SetData(3, uint8(sWorld->getIntConfig(CONFIG_EXPANSION)));
+    // Custom: mod-progression lowers CONFIG_EXPANSION to the live phase; new accounts take the configured one
+    stmt->SetData(3, sConfigMgr->GetOption<uint8>("Expansion", EXPANSION_WRATH_OF_THE_LICH_KING));
     stmt->SetData(4, email);
     stmt->SetData(5, email);
 
