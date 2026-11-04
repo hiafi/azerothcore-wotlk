@@ -1,4 +1,5 @@
-"""Boss mechanics registry data (mod-boss-mechanics, stages M1 and M4): Weakened, the resolve spells and the NPCs.
+"""Boss mechanics registry data (mod-boss-mechanics, stages M1 and M4): Weakened, the resolve spells, the drill's bait
+rotation stand-in (Baited) and the NPCs.
 
 Ids are pinned in .agents/plans/dungeon-mechanics/dungeon-mechanics.STAGE-M1-HANDOFF.md section 3.1 and reserved under
 `bossmechanics` in source/ids.yaml (spells 205000-205099, creatures 300400-300419).
@@ -25,6 +26,13 @@ Ids are pinned in .agents/plans/dungeon-mechanics/dungeon-mechanics.STAGE-M1-HAN
                 the marker: SPELL_ATTR1_NO_REFLECTION (0x80) is required, ALWAYS_HIT does not stop the reflect roll
                 (Object.cpp, the Spell const* SpellHitResult overload). Physical (205001) stays armor-reduced and the
                 other schools ignore resistances; damage-taken auras and absorbs apply to all of them.
+  205008        Baited (drill) - a generic stand-in for a boss's bait rotation debuff in the `.mech drill fenrus`
+                drill: the rider (`.mech test rider=205008`) on every player the Bait hits, baiter included, and the
+                aura the Bait rule counts ("fewest stacks baits"). It does not model the real Fenrus debuff (+200%
+                damage taken from the leap): one DUMMY aura, no damage-taken, stat or damage effect, 10 stacks, 2 min
+                refreshed on every stack. Cast by the marker with the owner as original caster, so the stacks from
+                every leap collect on one aura; TARGET_UNIT_TARGET_ANY so a neutral owner (the training dummy, faction
+                31) can land it too. Dispel none.
   300400        Mechanic Marker - the telegraph stalker and resolve caster (npc_boss_mechanic_marker).
   300401        Mechanic Test Owner - the hostile owner of `.mech test` (same script).
   300402        Mechanics Training Dummy - the stage M4 training dummy (npc_boss_mechanics_dummy, MechanicDummyAI): a
@@ -97,6 +105,40 @@ weakened_205000 = spell(
     },
 )
 scripted_by(weakened_205000, 'spell_boss_mechanics_weakened')
+
+# --- Baited (drill) 205008 (stage M4, user ruling 2026-11-04) ------------------------------------------------------
+# The baiter doing the job gets no Weakened, so the drill's Bait rotation needs its own stand-in rotation debuff: a
+# harmless stacking DUMMY aura the Bait rule counts (no damage-taken modifier; the drill does not model the real one).
+# Aura text number-free (custom-spells.md).
+_TARGET_UNIT_TARGET_ANY = 25
+_BAITED_DRILL_ICON = 538  # Ability_Hunter_SniperShot (Hunter's Mark), stock
+_BAITED_DRILL_TEXT = 'Drill stand-in for a bait rotation debuff; baits go to the fewest stacks. Lasts $d.'
+_BAITED_DRILL_AURA_TEXT = 'Drill stand-in for a bait rotation debuff; baits go to the fewest stacks.'
+
+baited_drill_205008 = spell(
+    id=205008, name='Baited (drill)', school=School.NORMAL, dispel=0, mechanic=0,
+    attributes=_ATTR0_AURA_IS_DEBUFF | _ATTR0_NO_IMMUNITIES, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,
+    mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=120000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.DUMMY, base_points=0,
+               implicit_target_a=_TARGET_UNIT_TARGET_ANY),
+    ],
+    spell_icon_id=_BAITED_DRILL_ICON,
+    notes=(
+        'mod-boss-mechanics M4: the drill stand-in for a bait rotation debuff. `.mech test rider=205008` casts it on '
+        'every player a Bait hits (the baiter too) and `aura=205008` makes the fewest-stacks rule count it, so the '
+        'pick rotates without Weakened on the baiter. One DUMMY aura, no damage-taken, stat or damage effect; '
+        'CumulativeAura 10, 2 min refreshed per stack, AURA_IS_DEBUFF + NO_IMMUNITIES, Dispel none. '
+        'TARGET_UNIT_TARGET_ANY: the marker casts it for a hostile or a neutral owner. Stock icon 538.'
+    ),
+    raw_overrides={
+        'SpellClassSet': 0, 'EquippedItemClass': -1, 'CastingTimeIndex': 1, 'SpellLevel': 0, 'CumulativeAura': 10,
+        'EffectChainAmplitude_1': 1.0,
+        'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '',
+        'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _BAITED_DRILL_TEXT,
+        'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': _BAITED_DRILL_AURA_TEXT,
+    },
+)
 
 _SCHOOLS = (
     (0, School.NORMAL, 'Physical'), (1, School.HOLY, 'Holy'), (2, School.FIRE, 'Fire'), (3, School.NATURE, 'Nature'),
