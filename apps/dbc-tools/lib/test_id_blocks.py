@@ -659,7 +659,7 @@ class ClassDeclarationsTest(unittest.TestCase):
         self.assertEqual(out_of_reservation("deathknight", {"spell": [202900]}), ["spell 202900"])  # the sim's spell
 
     def test_the_healing_sims_spells_are_inside_the_healsim_reservation(self):
-        # source/npcs also declares the boss mechanics spells (205000-205008, the `bossmechanics` reservation)
+        # source/npcs also declares the boss mechanics spells (205000-205009, the `bossmechanics` reservation)
         boss = RESERVATIONS["bossmechanics"]["spell"]
         sim_spells = [i for i in self.npcs["spell"] if BLOCKS["spell"]["start"] <= i <= BLOCKS["spell"]["end"]
                       and not boss["start"] <= i <= boss["end"]]
@@ -670,7 +670,7 @@ class ClassDeclarationsTest(unittest.TestCase):
         self.assertEqual(out_of_reservation("healsim", {"spell": [203000]}), ["spell 203000"])
 
     def test_boss_mechanics_declares_exactly_its_ids_and_no_other_npcs_file_declares_in_its_slices(self):
-        expected = {"spell": list(range(205000, 205009)), "creature": [300400, 300401, 300402]}
+        expected = {"spell": list(range(205000, 205010)), "creature": [300400, 300401, 300402]}
         res = RESERVATIONS["bossmechanics"]
         # the whole source/npcs directory: whatever sits inside the reservation is boss_mechanics.py's declarations
         inside = {kind: sorted(i for i in set(self.npcs[kind]) if res[kind]["start"] <= i <= res[kind]["end"])

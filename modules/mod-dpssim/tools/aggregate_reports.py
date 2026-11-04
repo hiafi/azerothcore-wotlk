@@ -800,15 +800,24 @@ def aggregate_mechanics(reports: list[dict], names: list[str]) -> dict:
 
     summaries = [r.get("summary", {}) for r in reports]
     summary_keys = [k for k, v in summaries[0].items() if is_number(v) and not isinstance(v, bool)]
-    # actorHps / groupHps are additive: reports from before the heal recorder lack them and read as 0
-    for extra in ("actorHps", "groupHps"):
+    # actorHps / groupHps (and programEntryErrors) are additive: reports from before the heal recorder (or the entry
+    # errors) lack them and read as 0
+    for extra in ("actorHps", "groupHps", "programEntryErrors"):
         if extra not in summary_keys:
             summary_keys.append(extra)
     count_keys = {"failures", "hits", "groupFailures", "strayFailures", "failuresDropped", "deaths",
-                  "strategyMissing", "tankSaves", "tankSwings", "tankDamageTaken"}
+                  "strategyMissing", "tankSaves", "tankSwings", "tankDamageTaken", "programEntryErrors"}
     summary = {k: spread([s.get(k, 0) or 0 for s in summaries], with_sum=k in count_keys) for k in summary_keys}
     summary["programsStarted"] = sum(1 for s in summaries if s.get("programStarted"))
+    # The start errors, then every failed program entry (STAGE-M4-R-REPORT M-1: a slice that did not run), by
+    # iteration; the sweep index lists a run with any of them as a problem.
     summary["programErrors"] = [s.get("programError") for s in summaries if s.get("programError")]
+    for i, s in enumerate(summaries):
+        messages = s.get("programEntryErrorMessages") or []
+        summary["programErrors"].extend(f"iteration {i + 1}: {m}" for m in messages)
+        hidden = (s.get("programEntryErrors") or 0) - len(messages)
+        if hidden > 0:
+            summary["programErrors"].append(f"iteration {i + 1}: {hidden} more program entry error(s)")
     summary["actorDiedAtMs"] = [s["actorDiedAtMs"] for s in summaries if s.get("actorDiedAtMs") is not None]
 
     member_count = len(reports[0]["members"])

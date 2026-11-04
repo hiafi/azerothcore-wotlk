@@ -1,5 +1,5 @@
-"""Boss mechanics registry data (mod-boss-mechanics, stages M1 and M4): Weakened, the resolve spells, the drill's bait
-rotation stand-in (Baited) and the NPCs.
+"""Boss mechanics registry data (mod-boss-mechanics, stages M1 and M4): Weakened, the resolve spells, the drills'
+stand-in auras (Baited, Marked) and the NPCs.
 
 Ids are pinned in .agents/plans/dungeon-mechanics/dungeon-mechanics.STAGE-M1-HANDOFF.md section 3.1 and reserved under
 `bossmechanics` in source/ids.yaml (spells 205000-205099, creatures 300400-300419).
@@ -33,6 +33,12 @@ Ids are pinned in .agents/plans/dungeon-mechanics/dungeon-mechanics.STAGE-M1-HAN
                 refreshed on every stack. Cast by the marker with the owner as original caster, so the stacks from
                 every leap collect on one aura; TARGET_UNIT_TARGET_ANY so a neutral owner (the training dummy, faction
                 31) can land it too. Dispel none.
+  205009        Marked (drill) - a generic stand-in for an eligibility or order aura in the drills (`.mech drill ras`:
+                Chill; `.mech drill soaks`: the ordered soak's stacks). The drill step `marker <stacks>` sets it on a
+                member (Player::AddAura, self as caster, then the exact stack count), so drill setup never hands out
+                Weakened (orchestrator ruling on STAGE-M4-R-REPORT M-2). Same harmless shape as 205008 (one DUMMY aura,
+                10 stacks, 2 min, Dispel none) with its own icon. Its own id, so the fenrus Baited stacks never count
+                for ras or soaks within one program slice.
   300400        Mechanic Marker - the telegraph stalker and resolve caster (npc_boss_mechanic_marker).
   300401        Mechanic Test Owner - the hostile owner of `.mech test` (same script).
   300402        Mechanics Training Dummy - the stage M4 training dummy (npc_boss_mechanics_dummy, MechanicDummyAI): a
@@ -137,6 +143,38 @@ baited_drill_205008 = spell(
         'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '',
         'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _BAITED_DRILL_TEXT,
         'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': _BAITED_DRILL_AURA_TEXT,
+    },
+)
+
+# --- Marked (drill) 205009 (stage M4 WP-F, orchestrator ruling on STAGE-M4-R-REPORT M-2) ------------------------------
+# Drill setup selectors (ras's runners, the ordered soak) used Weakened stacks; Weakened is only for failures, so the
+# drills set this harmless stacking DUMMY aura instead (`marker <stacks>` steps). Separate from Baited 205008: the
+# fenrus rider stacks must not count for ras or soaks eligibility. Aura text number-free (custom-spells.md).
+_MARKED_DRILL_ICON = 133  # Spell_Frost_WizardMark, stock (205008 uses 538)
+_MARKED_DRILL_TEXT = 'Drill stand-in for an eligibility or order aura; the drill reads its stacks. Lasts $d.'
+_MARKED_DRILL_AURA_TEXT = 'Drill stand-in for an eligibility or order aura; the drill reads its stacks.'
+
+marked_drill_205009 = spell(
+    id=205009, name='Marked (drill)', school=School.NORMAL, dispel=0, mechanic=0,
+    attributes=_ATTR0_AURA_IS_DEBUFF | _ATTR0_NO_IMMUNITIES, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,
+    mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=120000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.DUMMY, base_points=0,
+               implicit_target_a=_TARGET_UNIT_TARGET_ANY),
+    ],
+    spell_icon_id=_MARKED_DRILL_ICON,
+    notes=(
+        'mod-boss-mechanics M4: the drill stand-in for an eligibility or order aura. The drill step `marker <stacks>` '
+        'sets it on a member (self as caster, exact stack count) and `aura=` / `self=` / `order=205009` read it, so '
+        'drill setup never hands out Weakened. One DUMMY aura, no damage-taken, stat or damage effect; CumulativeAura '
+        '10, 2 min, AURA_IS_DEBUFF + NO_IMMUNITIES, Dispel none. Stock icon 133 (205008 has 538).'
+    ),
+    raw_overrides={
+        'SpellClassSet': 0, 'EquippedItemClass': -1, 'CastingTimeIndex': 1, 'SpellLevel': 0, 'CumulativeAura': 10,
+        'EffectChainAmplitude_1': 1.0,
+        'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '',
+        'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _MARKED_DRILL_TEXT,
+        'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': _MARKED_DRILL_AURA_TEXT,
     },
 )
 

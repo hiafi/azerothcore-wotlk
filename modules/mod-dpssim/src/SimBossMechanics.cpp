@@ -104,6 +104,7 @@ namespace
         out.emplace_back("msOutOfBand", c.msOutOfBand);
         out.emplace_back("msOutOfBandTask", c.msOutOfBandTask);
         out.emplace_back("pullBlocks", c.pullBlocks);
+        out.emplace_back("pullsEnded", c.pullsEnded);
         out.emplace_back("forcedMoves", c.forcedMoves);
         out.emplace_back("forcedCasts", c.forcedCasts);
         out.emplace_back("forcedTurns", c.forcedTurns);
@@ -209,6 +210,13 @@ void SimMech::StopProgram(Creature* owner)
     BossMechanics::Sim::StopProgram(owner);
 }
 
+uint32 SimMech::TakeProgramErrors(Creature const* owner, std::vector<std::string>& messages)
+{
+    BossMechanics::Sim::ProgramErrors errors = BossMechanics::Sim::TakeProgramErrors(owner);
+    messages = std::move(errors.messages);
+    return errors.count;
+}
+
 bool SimMech::ReadStats(Player const* bot, Stats& out)
 {
     out = Stats();
@@ -274,6 +282,12 @@ bool SimMech::StartProgram(Creature* /*owner*/, ObjectGuid /*scopePlayer*/, std:
 
 void SimMech::StopProgram(Creature* /*owner*/)
 {
+}
+
+uint32 SimMech::TakeProgramErrors(Creature const* /*owner*/, std::vector<std::string>& messages)
+{
+    messages.clear();
+    return 0;
 }
 
 bool SimMech::ReadStats(Player const* /*bot*/, Stats& out)

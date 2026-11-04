@@ -99,6 +99,10 @@ namespace SimMech
     bool StartProgram(Creature* owner, ObjectGuid scopePlayer, std::string const& program, uint32 seed, int32 damage,
         std::string& err);
     void StopProgram(Creature* owner);
+    // Sim::TakeProgramErrors: the program entries that failed on the owner's encounter since the last take (the
+    // module also logged each at LOG_ERROR). Returns the count; `messages` gets at most the module's cap, oldest
+    // first. Call it before StopProgram.
+    uint32 TakeProgramErrors(Creature const* owner, std::vector<std::string>& messages);
 
     // Sim::ReadBotStats / Sim::ResetBotStats
     bool ReadStats(Player const* bot, Stats& out);

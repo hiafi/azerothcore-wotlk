@@ -3,7 +3,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 :root {
   --bg: #12151d;
@@ -138,7 +140,8 @@ footer { margin-top: 28px; color: var(--text-dim); font-size: 12px; }
     ["actor HPS", fmt(val(s.actorHps), 0)], ["group HPS", fmt(val(s.groupHps), 0)],
     ["member failures", fmt(total(s.failures), 0)], ["hits", fmt(total(s.hits), 0)],
     ["group failures", fmt(total(s.groupFailures), 0)], ["tank saves", fmt(total(s.tankSaves), 0)],
-    ["no strategy", fmt(total(s.strategyMissing), 0)], ["stray failures", fmt(total(s.strayFailures), 0)]
+    ["no strategy", fmt(total(s.strategyMissing), 0)], ["stray failures", fmt(total(s.strayFailures), 0)],
+    ["program errors", fmt((s.programErrors || []).length, 0)]
   ];
   var tileBox = document.getElementById("tiles");
   tiles.forEach(function (t) {

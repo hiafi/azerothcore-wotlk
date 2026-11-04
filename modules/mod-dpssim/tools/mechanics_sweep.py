@@ -331,6 +331,7 @@ def member_line(mech: dict, base: dict | None) -> dict:
         "msOutOfBand": counters.get("msOutOfBand", 0),
         "msOutOfBandTask": counters.get("msOutOfBandTask", 0),
         "pullBlocks": counters.get("pullBlocks", 0),
+        "pullsEnded": counters.get("pullsEnded", 0),
         "forcedLeaks": [counters.get(k, 0) for k in ("forcedMoves", "forcedCasts", "forcedTurns")],
         "strategyInstalled": mech.get("strategyInstalledAll", False),
         "deaths": mech.get("deaths", 0),
@@ -388,7 +389,7 @@ def spec_entry(run_mech: dict | None, run_base: dict | None) -> dict:
     if not all(line["strategyInstalled"] for line in lines):
         entry["problems"].append("a member without the boss mechanics strategy")
     if entry["programErrors"]:
-        entry["problems"].append("program error")
+        entry["problems"].append(f"{len(entry['programErrors'])} program error(s): {entry['programErrors'][0]}")
     if any(line["deaths"] for line in lines):
         entry["problems"].append("a death")
     if base is None:

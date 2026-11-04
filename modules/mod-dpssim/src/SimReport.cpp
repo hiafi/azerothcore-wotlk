@@ -1417,6 +1417,12 @@ bool SimReport::WriteMechanicsJson(std::string const& path, SimDaemon::RunConfig
     file << "    \"programStarted\": " << (result.MechProgramStarted ? "true" : "false") << ",\n";
     file << "    \"programError\": "
          << (result.MechProgramStarted ? std::string("null") : JsonString(result.MechProgramError)) << ",\n";
+    // Program entries that failed (their slices did not run): the count and the module's messages (capped)
+    file << "    \"programEntryErrors\": " << result.MechProgramEntryErrors << ",\n";
+    file << "    \"programEntryErrorMessages\": [";
+    for (size_t i = 0; i < result.MechProgramEntryErrorMessages.size(); ++i)
+        file << (i ? ", " : "") << JsonString(result.MechProgramEntryErrorMessages[i]);
+    file << "],\n";
     file << "    \"actorDps\": " << actorDps << ",\n";
     file << "    \"groupDps\": " << groupDps << ",\n";
     file << "    \"actorHps\": " << actorHps << ",\n";

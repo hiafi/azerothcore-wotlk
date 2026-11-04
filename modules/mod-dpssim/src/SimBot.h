@@ -100,6 +100,11 @@ public:
     // reading its implementation, not assumed.
     void UpdateAI(uint32 diff);
 
+    // The near-teleport acknowledgement of UpdateAI() alone, without the AI tick (STAGE-M4-R-REPORT M-4). The
+    // mechanics mode calls this every step instead of UpdateAI(): mod-playerbots' OnPlayerAfterUpdate() already ticks
+    // the bot once inside Map::Update(), as live, so a second UpdateAI() made the bots think at twice the live rate.
+    void AckNearTeleport();
+
     // Tests only (RunConfig::HealStepHook): makes the bot's AI do nothing. PlayerbotAI::UpdateAI() is also driven by
     // mod-playerbots' own PlayerScript::OnPlayerAfterUpdate() on every Player::Update(), not only by UpdateAI() above,
     // so simply not calling UpdateAI() leaves the healer casting. A next-check delay that long (the AI counts it down

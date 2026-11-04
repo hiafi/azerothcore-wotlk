@@ -2091,9 +2091,12 @@ namespace
                 break;
             }
 
+            // One AI tick per step, as live (STAGE-M4-R-REPORT M-4): mod-playerbots' OnPlayerAfterUpdate() ticks every
+            // bot inside Map::Update() (the sim bots are registered with PlayerbotsMgr). Only the near-teleport ack a
+            // live bot's PlayerbotHolder would send is left here. The DPS, heal and tank modes still tick twice per
+            // step (their calibration assumes it), and so does the group buff phase above.
             for (size_t i = 0; i < size; ++i)
-                if (scenario.GetPlayer(i)->IsAlive())
-                    scenario.GetBot(i).UpdateAI(config.StepMs);
+                scenario.GetBot(i).AckNearTeleport();
 
             scenario.Step(clock.GetElapsedMs(), config.StepMs);
             if (refillBoss)
@@ -2108,6 +2111,12 @@ namespace
         std::vector<SimMech::Stats> stats(size);
         for (size_t i = 0; i < size; ++i)
             SimMech::ReadStats(scenario.GetPlayer(i), stats[i]);
+        result.MechProgramEntryErrors = SimMech::TakeProgramErrors(boss, result.MechProgramEntryErrorMessages);
+        if (result.MechProgramEntryErrors)
+            LOG_ERROR("server.dpssim", "mod-dpssim: mechanics iteration {} - {} program entr{} failed (first: {}); "
+                "the report lists them.", iteration + 1, result.MechProgramEntryErrors,
+                result.MechProgramEntryErrors == 1 ? "y" : "ies", result.MechProgramEntryErrorMessages.empty()
+                ? std::string("?") : result.MechProgramEntryErrorMessages.front());
         scenario.EndIteration();
         SimMech::StopProgram(boss);
         if (scenario.BossSwings())
@@ -2184,11 +2193,12 @@ namespace
             for (auto const& [key, count] : byKey)
                 groupFailures += count;
 
-        LOG_INFO("server.dpssim", "mod-dpssim:   mechanics iteration {}/{} - program '{}' (seed {}, started {}), {} ms "
-            "({} wall ms): {} member failure(s), {} group failure(s), {} stray; tank took {} in {} swing(s), {} "
-            "save(s).", iteration, iterations, result.MechProgram, result.MechSeed,
-            result.MechProgramStarted ? "yes" : "NO", result.ElapsedMs, result.WallClockMs, failures, groupFailures,
-            result.MechStrayFailures, result.MechTankDamageTaken, result.MechTankSwings, result.MechTankSaves);
+        LOG_INFO("server.dpssim", "mod-dpssim:   mechanics iteration {}/{} - program '{}' (seed {}, started {}, {} "
+            "entry error(s)), {} ms ({} wall ms): {} member failure(s), {} group failure(s), {} stray; tank took {} in "
+            "{} swing(s), {} save(s).", iteration, iterations, result.MechProgram, result.MechSeed,
+            result.MechProgramStarted ? "yes" : "NO", result.MechProgramEntryErrors, result.ElapsedMs,
+            result.WallClockMs, failures, groupFailures, result.MechStrayFailures, result.MechTankDamageTaken,
+            result.MechTankSwings, result.MechTankSaves);
 
         for (SimMechanics::MemberResult const& m : result.MechMembers)
         {

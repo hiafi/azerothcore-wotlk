@@ -328,8 +328,12 @@ tools/mechanics_sweep.py index reports/mechsweep-<sweep>    # re-pair a sweep, w
   (DPS 12 yd, healers 18 yd). Every member goes back to its spot between iterations.
 - **The group is all bots**, so `PlayerbotAI::FindNewMaster()` finds no master and nobody follows anybody;
   `follow`, `stay`, `guard` and `passive` are removed from both engines anyway (the run log lists each member's
-  strategies and what was removed). Each bot's AI is ticked twice per step, as in every mode (`SimBot::UpdateAI` plus
-  playerbots' `OnPlayerAfterUpdate` inside `Map::Update`).
+  strategies and what was removed). Each bot's AI is ticked **once** per step, as live: playerbots'
+  `OnPlayerAfterUpdate` inside `Map::Update`; the loop only acknowledges near teleports (`SimBot::AckNearTeleport`).
+  The DPS, heal and tank modes (and the mechanics mode's pre-pull buff phase) still tick twice per step
+  (`SimBot::UpdateAI` plus that hook); their calibration assumes it (STAGE-M4-R-REPORT M-4). **The m4-s1 sweep numbers
+  came from the double-tick build**: its bots reacted at twice the live rate, so its failures, DPS loss and late
+  arrivals are optimistic; re-baseline before comparing.
 - **The boss swings at the tank** (`DpsSim.MechanicsBossSwings`, on): the tank sim's dummy AI, with the first tank
   profile's `TankHitDamage` / `TankSwingMs` / `TankDummyCrit`. The tank is unkillable (a lethal swing is refilled and
   counted as `tankSaves`: the healer did not keep up). Without health drain the boss is refilled every step.
@@ -343,20 +347,25 @@ tools/mechanics_sweep.py index reports/mechsweep-<sweep>    # re-pair a sweep, w
 - **The start of every iteration**: the group's pre-pull buff phase (the longest `PrePullBuffMs` of the members), the
   pull, then `Sim::StartProgram(boss, member under test, program)` and `Sim::ReconcileBot` for every member (the
   module's gate installs `boss mechanics` once the scope exists; the run never ticks the world, so
-  `Sim::RegisterBotGlue` registers the glue once before any bot exists). At the end: `Sim::ReadBotStats`, then
-  `Sim::StopProgram` (markers, ledger, Weakened gone), then `Sim::ResetBotStats`.
+  `Sim::RegisterBotGlue` registers the glue once before any bot exists). At the end: `Sim::ReadBotStats` and
+  `Sim::TakeProgramErrors`, then `Sim::StopProgram` (markers, ledger, Weakened gone), then `Sim::ResetBotStats`.
+- **Program entry errors**: an entry that fails at its start (a drill step that no longer parses, for example a spell
+  row missing after a deploy, or nobody to land on) is skipped by the module, which logs it at `LOG_ERROR`. The sim
+  takes the iteration's errors into `summary.programEntryErrors` (count) and `programEntryErrorMessages`; the
+  aggregate lists them in `summary.programErrors` with the start errors, and the sweep index flags the spec.
 - **Fallibility** is off (`MECHSIM_FALLIBILITY=1` turns it on and adds `.f1` to the names). run-sim.sh's scratch
   config also turns `BossMechanics.Enable`, `Bots.Enable` and `Bots.OpenWorldTestScope` on.
 
 ### Mechanics reports (`"kind": "mechanics"`)
 
 One file per iteration (`src/SimReport.h` has the schema): `config` (the group, the programs, this iteration's program
-and seed, the boss settings, fallibility), `summary` (program started or its error, actor and group DPS, failures,
-group failures, stray failures, actor and group HPS, deaths, members without the strategy, the tank's damage taken and saves), `members[]`
-(per member: role, profile, class, spec tab, strategies, damage and DPS on the boss, healing done (`healEffective`, `healOverheal`, `healAbsorb`) and `hps` = (effective +
-absorbs) / duration, casts, failures by type and
-`"<Kind>/<tag>"`, hits, moving time and distance, death, and `stats`: the module's mode time, leaks with spell ids,
-counters and cost block), `groupFailures` (MissedSoak), `failureLog` (every failure in order, capped at 2,000).
+and seed, the boss settings, fallibility), `summary` (program started or its error, the program entry errors, actor
+and group DPS, failures, group failures, stray failures, actor and group HPS, deaths, members without the strategy, the
+tank's damage taken and saves), `members[]` (per member: role, profile, class, spec tab, strategies, damage and DPS on
+the boss, healing done (`healEffective`, `healOverheal`, `healAbsorb`) and `hps` = (effective + absorbs) / duration,
+casts, failures by type and `"<Kind>/<tag>"`, hits, moving time and distance, death, and `stats`: the module's mode
+time, leaks with spell ids, counters and cost block), `groupFailures` (MissedSoak), `failureLog` (every failure in
+order, capped at 2,000).
 Files: `reports/<Profile>.mech-<tag>.g<size>[.f1][.<DPSSIM_BATCH_TAG>].<ts>...` with tag `rot` (default rotation),
 `base` (baseline) or `x<hash>` (`MECHSIM_PROGRAMS`); the page is `reports/MechanicsProfileReport.html`
 (`tools/mechanics-report-template.html`).
@@ -378,9 +387,10 @@ with `DPSSIM_BATCH_TAG=<sweep>-<profile>-<mech|base>` and `DPSSIM_NO_HTML=1`, de
 failures by type and mechanic, DPS with and without mechanics, `dpsLossPct = (1 - mech / base) x 100` (and its range
 over the paired iterations); the same for HPS (`hpsLossPct`), which `index.md` shows instead of DPS when the member
 under test is a healer, plus the group's HPS with and without mechanics (the boss swings at the tank in the baseline,
-so a healer heals there too; reports from before the heal recorder read as 0 HPS), moving time against the baseline's, escape / hold / freeze time, leaks, solve and route
-maxima; specs with a failure of the member under test, a leak, a missing strategy, a program error or a death come
-first. The reference members' failures are listed too (they are the same group in every spec).
+so a healer heals there too; reports from before the heal recorder read as 0 HPS), moving time against the
+baseline's, escape / hold / freeze time, leaks, solve and route maxima; specs with a failure of the member under test,
+a leak, a missing strategy, a program error (a start error or a failed entry) or a death come first. The reference
+members' failures are listed too (they are the same group in every spec).
 
 ## The sim never touches the live characters DB
 

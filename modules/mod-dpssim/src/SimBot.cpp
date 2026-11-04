@@ -324,11 +324,17 @@ void SimBot::UpdateAI(uint32 diff)
     // so it is sent here, through the same PlayerbotAI::HandleTeleportAck() (with its 1-2 s next-check delay, as
     // live). Only a living actor's near teleport: a far one (map change) or a dead actor's release is the iteration
     // reset's job.
+    AckNearTeleport();
+    _ai->UpdateAI(diff);
+}
+
+void SimBot::AckNearTeleport()
+{
+    if (!_ai)
+        return;
     Player* bot = _ai->GetBot();
     if (bot && bot->IsAlive() && bot->IsBeingTeleportedNear())
         _ai->HandleTeleportAck();
-
-    _ai->UpdateAI(diff);
 }
 
 void SimBot::SilenceAI()

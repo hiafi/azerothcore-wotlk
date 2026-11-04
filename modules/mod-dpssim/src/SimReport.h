@@ -200,8 +200,9 @@ namespace SimReport
     //               bossHit {min, max},
     //               bossSwingMs, bossCrit, fallibility (BossMechanics.Bots.Fallibility.Enable), withBossMechanics,
     //               members [{index, profile, role, underTest, race, class}]}
-    //   "summary": {elapsedMs, wallClockMs, programStarted, programError (null when it started), actorDps, groupDps,
-    //               actorHps, groupHps,
+    //   "summary": {elapsedMs, wallClockMs, programStarted, programError (null when it started),
+    //               programEntryErrors (entries that failed at their start), programEntryErrorMessages [] (capped),
+    //               actorDps, groupDps, actorHps, groupHps,
     //               failures (every member's), hits, groupFailures (MissedSoak and other player-less ones),
     //               strayFailures, failuresLogged, failuresDropped, deaths, actorDiedAtMs, strategyMissing (members
     //               without "boss mechanics" after the reconcile), tankDamageTaken, tankSwings, tankSaves}

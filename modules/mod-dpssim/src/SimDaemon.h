@@ -438,6 +438,10 @@ namespace SimDaemon
         // StartProgram succeeded; MechProgramError holds the module's reason when it did not
         bool MechProgramStarted = false;
         std::string MechProgramError;
+        // Program entries that failed during the iteration (a drill step that no longer parses, nobody to land on):
+        // the slice did not run. The count, and the module's messages (capped). STAGE-M4-R-REPORT M-1.
+        uint32 MechProgramEntryErrors = 0;
+        std::vector<std::string> MechProgramEntryErrorMessages;
         std::vector<SimMechanics::MemberResult> MechMembers;
         // Failures without a player (MissedSoak), by type and "<Kind>/<tag>"
         std::map<std::string, std::map<std::string, uint32>> MechGroupFailures;
