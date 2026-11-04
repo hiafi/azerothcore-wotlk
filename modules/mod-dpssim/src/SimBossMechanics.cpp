@@ -107,6 +107,10 @@ namespace
         out.emplace_back("pullsEnded", c.pullsEnded);
         out.emplace_back("landingBlocks", c.landingBlocks);
         out.emplace_back("motionEndStops", c.motionEndStops);
+        // M4 WP-F2 (STAGE-M4-R2-REPORT M-1, m-3): melee time out of reach with the chase refused, the chase valve.
+        out.emplace_back("msChaseRefused", c.msChaseRefused);
+        out.emplace_back("chaseReleases", c.chaseReleases);
+        out.emplace_back("chaseSolves", c.chaseSolves);
         out.emplace_back("forcedMoves", c.forcedMoves);
         out.emplace_back("forcedCasts", c.forcedCasts);
         out.emplace_back("forcedTurns", c.forcedTurns);
