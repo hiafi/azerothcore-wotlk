@@ -201,15 +201,19 @@ namespace SimReport
     //               bossSwingMs, bossCrit, fallibility (BossMechanics.Bots.Fallibility.Enable), withBossMechanics,
     //               members [{index, profile, role, underTest, race, class}]}
     //   "summary": {elapsedMs, wallClockMs, programStarted, programError (null when it started), actorDps, groupDps,
+    //               actorHps, groupHps,
     //               failures (every member's), hits, groupFailures (MissedSoak and other player-less ones),
     //               strayFailures, failuresLogged, failuresDropped, deaths, actorDiedAtMs, strategyMissing (members
     //               without "boss mechanics" after the reconcile), tankDamageTaken, tankSwings, tankSaves}
     //   "members": [{index, profile, role, underTest, race, class, specTab, strategyInstalled, strategies, stripped [],
-    //               damage, dps, casts, failureTotal, hits, hitDamage, failures {<Type>: {"<Kind>/<tag>": n}},
+    //               damage, dps, healEffective, healOverheal, healAbsorb, hps, casts, failureTotal, hits, hitDamage,
+    //               failures {<Type>: {"<Kind>/<tag>": n}},
     //               movingMs, distanceYd, died, diedAtMs, stats {valid, modeMs {idle, watch, escape, hold, freeze,
     //               released}, leaks {moves, casts, turns, spells [[spellId, n], ...]}, counters {<name>: n}, cost
     //               {<name>: x}}}] in group order (tanks, healers, DPS). damage / dps: the member's (and its pet's)
-    //               damage to the boss over the full duration. movingMs: steps it moved more than 0.1 yd. stats come
+    //               damage to the boss over the full duration. hps = (healEffective + healAbsorb) / duration: heals and
+    //               shields by the member and its pets on any group member (HealRecorder, healing-only). movingMs:
+    //               steps it moved more than 0.1 yd. stats come
     //               from the module (Sim::ReadBotStats; valid false when the module could not read the bot).
     //   "groupFailures": {<Type>: {"<Kind>/<tag>": n}}
     //   "failureLog": [{atMs, member (-1 = group), type, kind, tag, mechanicId, damage}] in order, capped at

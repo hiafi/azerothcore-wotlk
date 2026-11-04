@@ -272,6 +272,16 @@ def member_line(mech: dict, base: dict | None) -> dict:
         for m, b in zip(mech["dps"].get("perIteration", []), base["dps"].get("perIteration", [])):
             if b:
                 per_iteration_loss.append((1.0 - m / b) * 100.0)
+    # Healing output, same pairing (reports from before the heal recorder have no hps and read as 0)
+    hps = mean_of(mech.get("hps"))
+    base_hps = mean_of(base.get("hps")) if base else None
+    hps_loss = (1.0 - hps / base_hps) * 100.0 if base_hps else None
+    per_iteration_hps_loss = []
+    if base:
+        mech_hps = (mech.get("hps") or {}).get("perIteration", [])
+        for m, b in zip(mech_hps, (base.get("hps") or {}).get("perIteration", [])):
+            if b:
+                per_iteration_hps_loss.append((1.0 - m / b) * 100.0)
     return {
         "index": mech["index"],
         "profile": mech["profile"],
@@ -285,6 +295,14 @@ def member_line(mech: dict, base: dict | None) -> dict:
         "dpsLossPct": loss,
         "dpsLossPctMin": min(per_iteration_loss) if per_iteration_loss else None,
         "dpsLossPctMax": max(per_iteration_loss) if per_iteration_loss else None,
+        "hps": hps,
+        "baselineHps": base_hps,
+        "hpsLossPct": hps_loss,
+        "hpsLossPctMin": min(per_iteration_hps_loss) if per_iteration_hps_loss else None,
+        "hpsLossPctMax": max(per_iteration_hps_loss) if per_iteration_hps_loss else None,
+        "healEffective": mean_of(mech.get("healEffective")),
+        "healOverheal": mean_of(mech.get("healOverheal")),
+        "healAbsorb": mean_of(mech.get("healAbsorb")),
         "movingMs": mean_of(mech.get("movingMs")),
         "baselineMovingMs": mean_of(base.get("movingMs")) if base else None,
         "escapeMs": mean_of(mode.get("escape")),
@@ -347,6 +365,9 @@ def spec_entry(run_mech: dict | None, run_base: dict | None) -> dict:
     summary = mech.get("summary", {})
     entry["groupFailures"] = mech.get("groupFailures", {})
     entry["programErrors"] = summary.get("programErrors", [])
+    base_summary = (base or {}).get("summary", {})
+    entry["groupHps"] = mean_of(summary.get("groupHps"))
+    entry["baselineGroupHps"] = mean_of(base_summary.get("groupHps")) if base else None
     entry["tankSaves"] = sum_of(summary.get("tankSaves"))
     entry["strayFailures"] = sum_of(summary.get("strayFailures"))
     entry["iterations"] = mech.get("aggregate", {}).get("iterations")
@@ -365,7 +386,7 @@ def spec_entry(run_mech: dict | None, run_base: dict | None) -> dict:
     if any(line["deaths"] for line in lines):
         entry["problems"].append("a death")
     if base is None:
-        entry["problems"].append("no baseline: no DPS loss")
+        entry["problems"].append("no baseline: no DPS/HPS loss")
     return entry
 
 
@@ -423,20 +444,24 @@ def write_index(manifest: dict, out_dir: Path) -> tuple[Path, Path]:
         f"{SOLVE_US_TARGET}), worst route {worst_route} µs (target {ROUTE_US_TARGET}) over every member; the targets "
         f"hold from 10 bots up, this group has {group}.",
         "",
-        "| Spec | Profile | Problems | Failures (under test) | DPS mech | DPS base | Loss % (min-max) | Moving s "
-        "(base) | Escape / hold / freeze s | Leaks m/c/t | Solve / route max µs | Reference failures |",
-        "| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+        "| Spec | Profile | Problems | Failures (under test) | Output | Mech | Base | Loss % (min-max) | Group HPS "
+        "mech / base | Moving s (base) | Escape / hold / freeze s | Leaks m/c/t | Solve / route max µs | "
+        "Reference failures |",
+        "| --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
     ]
     for e in entries:
         a = e.get("actor") or {}
         refs = "; ".join(f"{r['profile']} {int(r['failures'])}" for r in e.get("references", []) if r["failures"])
-        loss = (f"{fmt(a.get('dpsLossPct'), 1)} ({fmt(a.get('dpsLossPctMin'), 1)} to "
-                f"{fmt(a.get('dpsLossPctMax'), 1)})") if a else "-"
+        # A healer under test is judged on healing output (HPS), everyone else on DPS
+        pre = "hps" if a.get("role") == "healer" else "dps"
+        loss = (f"{fmt(a.get(pre + 'LossPct'), 1)} ({fmt(a.get(pre + 'LossPctMin'), 1)} to "
+                f"{fmt(a.get(pre + 'LossPctMax'), 1)})") if a else "-"
         lk = a.get("leaks", {})
         lines.append(" | ".join([
             f"| {e['class']} {e['spec']}", e["profile"], "; ".join(e["problems"]) or "clean",
             failures_text(a.get("failuresByType", {})) if a else "-",
-            fmt(a.get("dps")), fmt(a.get("baselineDps")), loss,
+            pre.upper() if a else "-", fmt(a.get(pre)), fmt(a.get("baselineHps" if pre == "hps" else "baselineDps")),
+            loss, f"{fmt(e.get('groupHps'))} / {fmt(e.get('baselineGroupHps'))}",
             f"{fmt((a.get('movingMs') or 0) / 1000, 1)} ({fmt((a.get('baselineMovingMs') or 0) / 1000, 1)})"
             if a else "-",
             f"{fmt(a.get('escapeMs', 0) / 1000, 1)} / {fmt(a.get('holdMs', 0) / 1000, 1)} / "

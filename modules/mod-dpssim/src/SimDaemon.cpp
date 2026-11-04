@@ -22,6 +22,7 @@
 #include "Config.h"
 #include "DamageTakenRecorder.h"
 #include "EventRecorder.h"
+#include "HealRecorder.h"
 #include "GameTime.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
@@ -2032,6 +2033,7 @@ namespace
                 Player* player = scenario.GetPlayer(i);
                 scenario.GetRecorder(i)->Reset();
                 scenario.GetCastRecorder(i)->Reset();
+                scenario.GetHealRecorder(i)->Reset();
                 scenario.GetRecorder(i)->RecordAurasPresent(player);
                 scenario.GetRecorder(i)->RecordAurasPresent(boss);
                 RefillResources(player, bossList);
@@ -2135,6 +2137,14 @@ namespace
             member.Damage = scenario.GetRecorder(i)->GetTotalDamage();
             // Every member is charged the full duration, as every DPS report does
             member.Dps = seconds > 0.0 ? double(member.Damage) / seconds : 0.0;
+            for (SimHeal::HealEvent const& heal : scenario.GetHealRecorder(i)->GetHealEvents())
+            {
+                member.HealEffective += heal.Effective;
+                member.HealOverheal += heal.Overheal;
+            }
+            for (SimHeal::AbsorbEvent const& absorb : scenario.GetHealRecorder(i)->GetAbsorbEvents())
+                member.HealAbsorb += absorb.Amount;
+            member.Hps = seconds > 0.0 ? double(member.HealEffective + member.HealAbsorb) / seconds : 0.0;
             for (CastRecorder::CastEvent const& cast : scenario.GetCastRecorder(i)->GetCastEvents())
                 if (!cast.IsTriggered)
                     ++member.Casts;
@@ -2193,10 +2203,11 @@ namespace
                 else if (name == "hold")
                     holdMs = value;
             }
-            LOG_INFO("server.dpssim", "mod-dpssim:     member {} ({} {}{}): {:.1f} DPS, {} cast(s), {} failure(s) ({} "
-                "hit(s)), moving {} ms ({:.1f} yd), strategy {}, {} solve(s), escape {} ms, hold {} ms, leaks {}/{}/{}"
+            LOG_INFO("server.dpssim", "mod-dpssim:     member {} ({} {}{}): {:.1f} DPS, {:.1f} HPS, {} cast(s), "
+                "{} failure(s) ({} hit(s)), moving {} ms ({:.1f} yd), strategy {}, {} solve(s), escape {} ms, "
+                "hold {} ms, leaks {}/{}/{}"
                 "{}.", m.Index, SimMechanics::RoleName(m.MemberRole), m.Profile, m.UnderTest ? ", under test" : "",
-                m.Dps, m.Casts, m.FailureTotal, m.Hits, m.MovingMs, m.DistanceYd,
+                m.Dps, m.Hps, m.Casts, m.FailureTotal, m.Hits, m.MovingMs, m.DistanceYd,
                 m.StrategyInstalled ? "installed" : "MISSING", solves, escapeMs, holdMs, m.ModuleStats.LeakMoves,
                 m.ModuleStats.LeakCasts, m.ModuleStats.LeakTurns, m.Died ? ", DIED" : "");
         }
@@ -2272,6 +2283,8 @@ namespace
                 for (size_t m = 0; m < scenario.Size(); ++m)
                     ResetForNextIteration(scenario.GetPlayer(m), scenario.GetBossList(), scenario.GetBot(m),
                         scenario.GetRecorder(m), scenario.GetCastRecorder(m), scenario.GetStart(m));
+                for (size_t m = 0; m < scenario.Size(); ++m)
+                    scenario.GetHealRecorder(m)->Reset();
                 scenario.ReturnToStart();
             }
 

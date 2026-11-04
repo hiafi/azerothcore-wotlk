@@ -1387,6 +1387,8 @@ bool SimReport::WriteMechanicsJson(std::string const& path, SimDaemon::RunConfig
     // ---- summary ----
     double groupDps = 0.0;
     double actorDps = 0.0;
+    double groupHps = 0.0;
+    double actorHps = 0.0;
     uint32 failures = 0;
     uint32 hits = 0;
     uint32 deaths = 0;
@@ -1396,6 +1398,9 @@ bool SimReport::WriteMechanicsJson(std::string const& path, SimDaemon::RunConfig
         groupDps += m.Dps;
         if (m.UnderTest)
             actorDps = m.Dps;
+        groupHps += m.Hps;
+        if (m.UnderTest)
+            actorHps = m.Hps;
         failures += m.FailureTotal;
         hits += m.Hits;
         deaths += m.Died ? 1 : 0;
@@ -1414,6 +1419,8 @@ bool SimReport::WriteMechanicsJson(std::string const& path, SimDaemon::RunConfig
          << (result.MechProgramStarted ? std::string("null") : JsonString(result.MechProgramError)) << ",\n";
     file << "    \"actorDps\": " << actorDps << ",\n";
     file << "    \"groupDps\": " << groupDps << ",\n";
+    file << "    \"actorHps\": " << actorHps << ",\n";
+    file << "    \"groupHps\": " << groupHps << ",\n";
     file << "    \"failures\": " << failures << ",\n";
     file << "    \"hits\": " << hits << ",\n";
     file << "    \"groupFailures\": " << groupFailures << ",\n";
@@ -1448,6 +1455,8 @@ bool SimReport::WriteMechanicsJson(std::string const& path, SimDaemon::RunConfig
             file << (k == 0 ? "" : ", ") << JsonString(m.Stripped[k]);
         file << "],\n";
         file << "     \"damage\": " << m.Damage << ", \"dps\": " << m.Dps << ", \"casts\": " << m.Casts
+             << ", \"healEffective\": " << m.HealEffective << ", \"healOverheal\": " << m.HealOverheal
+             << ", \"healAbsorb\": " << m.HealAbsorb << ", \"hps\": " << m.Hps
              << ", \"failureTotal\": " << m.FailureTotal << ", \"hits\": " << m.Hits << ", \"hitDamage\": "
              << m.HitDamage << ",\n";
         file << "     \"failures\": ";

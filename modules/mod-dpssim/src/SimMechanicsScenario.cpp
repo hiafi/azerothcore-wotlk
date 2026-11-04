@@ -21,6 +21,7 @@
 #include "Creature.h"
 #include "DamageTakenRecorder.h"
 #include "EventRecorder.h"
+#include "HealRecorder.h"
 #include "Group.h"
 #include "GroupMgr.h"
 #include "Log.h"
@@ -143,6 +144,11 @@ EventRecorder* SimMechanicsScenario::GetRecorder(size_t index) const
 CastRecorder* SimMechanicsScenario::GetCastRecorder(size_t index) const
 {
     return _castRecorders[index];
+}
+
+HealRecorder* SimMechanicsScenario::GetHealRecorder(size_t index) const
+{
+    return _healRecorders[index];
 }
 
 Position const& SimMechanicsScenario::GetStart(size_t index) const
@@ -366,12 +372,17 @@ bool SimMechanicsScenario::CreateBoss(Setup const& setup)
 bool SimMechanicsScenario::CreateBots(Setup const& /*setup*/)
 {
     Creature* boss = GetBoss();
+    // Every member is a heal target of every recorder (target index = member index)
+    std::vector<ObjectGuid> memberGuids;
+    for (auto const& member : _members)
+        memberGuids.push_back(member->GetPlayer()->GetGUID());
     for (size_t i = 0; i < _members.size(); ++i)
     {
         Player* player = _members[i]->GetPlayer();
         // Heap-allocated and never deleted, as every recorder (EventRecorder.h)
         _recorders.push_back(new EventRecorder(player->GetGUID(), { boss->GetGUID() }));
         _castRecorders.push_back(new CastRecorder(player->GetGUID(), { boss->GetGUID() }));
+        _healRecorders.push_back(new HealRecorder(player->GetGUID(), memberGuids, true));
     }
 
     // The group exists before the bots, as it does for a live group: strategy resolution sees a grouped bot

@@ -749,6 +749,11 @@ def aggregate_mechanics_member(rows: list[dict]) -> dict:
         "dps": spread([r["dps"] for r in rows]),
         "damage": spread([r["damage"] for r in rows]),
         "casts": spread([r["casts"] for r in rows]),
+        # Healing output (additive keys: a report from before the heal recorder reads as 0)
+        "hps": spread([r.get("hps", 0) or 0 for r in rows]),
+        "healEffective": spread([r.get("healEffective", 0) or 0 for r in rows]),
+        "healOverheal": spread([r.get("healOverheal", 0) or 0 for r in rows]),
+        "healAbsorb": spread([r.get("healAbsorb", 0) or 0 for r in rows]),
         "failureTotal": spread([r["failureTotal"] for r in rows], with_sum=True),
         "hits": spread([r["hits"] for r in rows], with_sum=True),
         "hitDamage": sum(r.get("hitDamage", 0) for r in rows),
@@ -795,6 +800,10 @@ def aggregate_mechanics(reports: list[dict], names: list[str]) -> dict:
 
     summaries = [r.get("summary", {}) for r in reports]
     summary_keys = [k for k, v in summaries[0].items() if is_number(v) and not isinstance(v, bool)]
+    # actorHps / groupHps are additive: reports from before the heal recorder lack them and read as 0
+    for extra in ("actorHps", "groupHps"):
+        if extra not in summary_keys:
+            summary_keys.append(extra)
     count_keys = {"failures", "hits", "groupFailures", "strayFailures", "failuresDropped", "deaths",
                   "strategyMissing", "tankSaves", "tankSwings", "tankDamageTaken"}
     summary = {k: spread([s.get(k, 0) or 0 for s in summaries], with_sum=k in count_keys) for k in summary_keys}

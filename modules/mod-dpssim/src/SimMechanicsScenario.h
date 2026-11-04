@@ -34,6 +34,7 @@ class CastRecorder;
 class Creature;
 class DamageTakenRecorder;
 class EventRecorder;
+class HealRecorder;
 class Group;
 class Map;
 class Player;
@@ -93,6 +94,7 @@ public:
     [[nodiscard]] SimBot& GetBot(size_t index) const;
     [[nodiscard]] EventRecorder* GetRecorder(size_t index) const;
     [[nodiscard]] CastRecorder* GetCastRecorder(size_t index) const;
+    [[nodiscard]] HealRecorder* GetHealRecorder(size_t index) const;
     [[nodiscard]] Position const& GetStart(size_t index) const;
     [[nodiscard]] SimMechanics::MemberSpec const& GetSpec(size_t index) const;
     [[nodiscard]] std::vector<std::string> const& GetStripped(size_t index) const;
@@ -147,6 +149,7 @@ private:
     std::vector<std::unique_ptr<SimBot>> _bots;
     std::vector<EventRecorder*> _recorders;
     std::vector<CastRecorder*> _castRecorders;
+    std::vector<HealRecorder*> _healRecorders;
     std::vector<Position> _starts;
     std::vector<std::vector<std::string>> _stripped;
     std::unordered_map<ObjectGuid, size_t> _indexByGuid;

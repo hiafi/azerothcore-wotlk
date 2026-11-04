@@ -118,6 +118,12 @@ namespace SimMechanics
         // Damage to the boss stand-in (the member's pet included) and its DPS over the full duration
         uint64 Damage = 0;
         double Dps = 0.0;
+        // Healing by the member and its pets: effective heals, overheal and absorbed damage (shields), to any group
+        // member; Hps = (HealEffective + HealAbsorb) / duration (the heal mode's headline), over the full duration
+        uint64 HealEffective = 0;
+        uint64 HealOverheal = 0;
+        uint64 HealAbsorb = 0;
+        double Hps = 0.0;
         // Deliberate casts (not triggered)
         uint32 Casts = 0;
         // Failures by type, then by FailureKey(); FailureTotal is their sum; Hits and HitDamage the Hit failures

@@ -24,11 +24,11 @@
 #include "Unit.h"
 #include <utility>
 
-HealRecorder::HealRecorder(ObjectGuid actorGuid, std::vector<ObjectGuid> groupGuids)
+HealRecorder::HealRecorder(ObjectGuid actorGuid, std::vector<ObjectGuid> groupGuids, bool healingOnly)
     : UnitScript("mod_dpssim_heal_recorder", true,
                  {UNITHOOK_ON_HEAL_FINAL, UNITHOOK_ON_ABSORB_FINAL, UNITHOOK_ON_SPELL_DAMAGE_TAKEN_FINAL,
                   UNITHOOK_ON_AURA_APPLY, UNITHOOK_ON_AURA_REMOVE}),
-      _actorGuid(actorGuid), _groupGuids(std::move(groupGuids))
+      _actorGuid(actorGuid), _groupGuids(std::move(groupGuids)), _healingOnly(healingOnly)
 {
 }
 
@@ -79,6 +79,9 @@ void HealRecorder::OnHealFinal(Unit* healer, Unit* target, SpellInfo const* spel
 void HealRecorder::OnSpellDamageTakenFinal(Unit* target, Unit* attacker, int32 damage, SpellInfo const* spellInfo,
     bool /*isCrit*/)
 {
+    if (_healingOnly)
+        return;
+
     // Whatever absorb comes next belongs to this damage, not to an older boss hit
     _openDamage = -1;
 
@@ -143,6 +146,9 @@ void HealRecorder::OnAbsorbFinal(Unit* victim, Unit* attacker, AuraEffect const*
 
 void HealRecorder::OnAuraApply(Unit* unit, Aura* aura)
 {
+    if (_healingOnly)
+        return;
+
     int8 const targetIndex = (unit && aura) ? IndexOf(unit->GetGUID()) : -1;
     if (targetIndex < 0)
         return;
@@ -158,6 +164,9 @@ void HealRecorder::OnAuraApply(Unit* unit, Aura* aura)
 
 void HealRecorder::OnAuraRemove(Unit* unit, AuraApplication* aurApp, AuraRemoveMode /*mode*/)
 {
+    if (_healingOnly)
+        return;
+
     int8 const targetIndex = (unit && aurApp && aurApp->GetBase()) ? IndexOf(unit->GetGUID()) : -1;
     if (targetIndex < 0)
         return;
