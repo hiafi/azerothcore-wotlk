@@ -65,9 +65,10 @@ DESCRIPTOR_PROGRAMS = "descriptor:2"
 DESCRIPTOR_COUNTERS = [
     # interrupts (WP-I)
     "kicksLanded", "kicksWasted", "doNotKickKicks", "duplicateKicks", "overloadHolds", "listedMissed",
-    "stockKicksDropped",
-    # dispels and purges (WP-P)
+    "stockKicksDropped", "castStops",
+    # dispels and purges (WP-P; dispelWrongAura M5 WP-F)
     "urgentDispels", "urgentLatencyMsMax", "deadlineDispels", "deadlineMisses", "listedDispels", "purges",
+    "dispelWrongAura",
     # targets and the ignore list (WP-T)
     "focusSwitches", "msLowerTarget", "breakOutMsMax", "ignoredHits", "ignoredDamage", "petIgnoredHits",
     "petIgnoredDamage", "ignoreBlocks", "ignoreDrops", "petRecalls",

@@ -144,6 +144,7 @@ namespace
         out.emplace_back("deadlineMisses", c.deadlineMisses);
         out.emplace_back("listedDispels", c.listedDispels);
         out.emplace_back("purges", c.purges);
+        out.emplace_back("dispelWrongAura", c.dispelWrongAura);     // M5 WP-F: a cure removed another aura
         // M5 WP-I: interrupts. listedMissed is counted by one bot of the group (the observer): sum it over the group.
         out.emplace_back("kicksLanded", c.kicksLanded);
         out.emplace_back("kicksWasted", c.kicksWasted);
@@ -152,6 +153,7 @@ namespace
         out.emplace_back("overloadHolds", c.overloadHolds);
         out.emplace_back("listedMissed", c.listedMissed);
         out.emplace_back("stockKicksDropped", c.stockKicksDropped);
+        out.emplace_back("castStops", c.castStops);     // M5 WP-F: stuns and silences judged as kicks
         // A new counter: one line here (a name ending in "Max" is aggregated as a maximum, any other as a sum), then
         // tools/mechanics_sweep.py DESCRIPTOR_COUNTERS (or member_line) and the report template's `names`.
     }

@@ -215,8 +215,8 @@ footer { margin-top: 28px; color: var(--text-dim); font-size: 12px; }
 
   var bt = document.getElementById("brain");
   var names = ["solves", "pathChecks", "outcomeMove", "outcomeFallback", "outcomeNoPath", "lateArrivals", "releases",
-    "lockBlocks", "castBreaks", "routesFound", "routesFailed", "solveUsMax", "refreshUsMax", "routeUsMax", "msChaseStranded", "strandRoutes",
-    "escapeFacingBlocks", "descriptorWakes"];
+    "lockBlocks", "castBreaks", "routesFound", "routesFailed", "solveUsMax", "refreshUsMax", "routeUsMax",
+    "msChaseStranded", "strandRoutes", "escapeFacingBlocks", "descriptorWakes"];
   row(bt, [{text: "#"}, {text: "profile"}].concat(names.map(function (n) { return {text: n, cls: "num"}; })), true);
   members.forEach(function (m) {
     row(bt, [{text: String(m.index)}, {text: m.profile}].concat(names.map(function (n) {
@@ -229,9 +229,9 @@ footer { margin-top: 28px; color: var(--text-dim); font-size: 12px; }
   // group's maximum in the total row, any other its sum. A new counter: add its name here.
   var dt = document.getElementById("descriptor");
   var descNames = ["kicksLanded", "kicksWasted", "doNotKickKicks", "duplicateKicks", "overloadHolds", "listedMissed",
-    "stockKicksDropped", "urgentDispels", "urgentLatencyMsMax", "deadlineDispels", "deadlineMisses", "listedDispels",
-    "purges", "focusSwitches", "msLowerTarget", "breakOutMsMax", "ignoredDamage", "petIgnoredDamage", "ignoreBlocks",
-    "ignoreDrops", "petRecalls"];
+    "stockKicksDropped", "castStops", "urgentDispels", "urgentLatencyMsMax", "deadlineDispels", "deadlineMisses",
+    "listedDispels", "purges", "dispelWrongAura", "focusSwitches", "msLowerTarget", "breakOutMsMax", "ignoredDamage",
+    "petIgnoredDamage", "ignoreBlocks", "ignoreDrops", "petRecalls"];
   var mustStayZero = {doNotKickKicks: true, duplicateKicks: true};
   row(dt, [{text: "#"}, {text: "profile"}].concat(descNames.map(function (n) { return {text: n, cls: "num"}; })),
     true);

@@ -252,8 +252,8 @@ def _standin_cast(spell_id, name, school, cast_ms, icon, desc, note):
 
 spell_cast_low_205010 = _standin_cast(
     205010, 'Frost Bolt (drill)', School.FROST, 2000, 188, 'Drill stand-in for a low priority interruptible cast.',
-    'M5 drill stand-in: low priority interruptible cast, 2.0 s, Frost damage. InterruptFlags 15, PreventionType silence. '
-    'Stock Frostbolt icon 188.')
+    'M5 drill stand-in: low priority interruptible cast, 2.0 s, Frost damage. InterruptFlags 15, PreventionType '
+    'silence. Stock Frostbolt icon 188.')
 spell_cast_mid_205011 = _standin_cast(
     205011, 'Shadow Bolt (drill)', School.SHADOW, 2500, 213, 'Drill stand-in for a mid priority interruptible cast.',
     'M5 drill stand-in: mid priority interruptible cast, 2.5 s, Shadow damage. InterruptFlags 15, PreventionType '

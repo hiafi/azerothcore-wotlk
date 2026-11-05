@@ -399,8 +399,10 @@ the **descriptor slice**: mod-boss-mechanics' `descriptor` program (casts to kic
 urgent and deadline debuffs, purgeable and Enrage buffs on adds, a priority add, ignored copies and a break-out
 prison; 64 s) twice in a row, `descriptor:2`, so a 120 s iteration sees it start twice as the 300403 dummy's loop does.
 It is not in the default rotation; the M4 slices are unchanged. Its casts, adds and auras come from program entries on
-the owner, so they run on the sim's boss stand-in (`SimTarget` 900004-900006, immune to grips only: kicks and stuns
-land) as on the dummy; adds and prisons spawn 4-8 yd around it at its level.
+the owner, so they run on the sim's boss stand-in (`SimTarget` 900004-900006) as on the dummy; adds and prisons spawn
+4-8 yd around it at its level. While a program with descriptor entries runs, the owner carries the reworked bosses'
+immunities (CreatureImmunitiesId -273: stun, silence, fear ...; kicks land), as 300403 and a reworked boss do; the
+template's set (-26, grips only) comes back when the program stops, and the M4 slices never change it.
 
 ```
 MECHSIM=1 MECHSIM_PROGRAMS="descriptor:2" tools/run-sim.sh RetPaladinSim 120 60 2 5 100   # files tagged mech-desc
@@ -409,7 +411,7 @@ tools/mechanics_sweep.py run --descriptor --specs shaman,warlock
 ```
 
 Any single drill (`interrupts`, `dispels`, `purges`, `targets`, `ignore`) or `descriptor-drills` (all five in turn,
-424 s) runs through `--programs` / `MECHSIM_PROGRAMS` as any other program.
+about 430 s) runs through `--programs` / `MECHSIM_PROGRAMS` as any other program.
 
 Every member's module counters carry the M5 blocks of `MechanicBotCounters.h` (`stats.counters`, summed over the
 iterations; a name ending in `Max` takes the maximum):
@@ -423,9 +425,11 @@ iterations; a name ending in `Max` takes the maximum):
 | `overloadHolds` | casts the bot could kick but held for a higher one due |
 | `listedMissed` | listed casts that completed; counted by **one bot per group**: only the group sum is whole |
 | `stockKicksDropped` | stock kick actions the descriptor's kick multiplier zeroed |
-| `urgentDispels`, `urgentLatencyMsMax` | cures of a listed loss-of-control aura; longest application-to-cure ms |
+| `castStops` | stuns, silences, incapacitates, fears outside the kick table judged as kicks (also counted above) |
+| `urgentDispels`, `urgentLatencyMsMax` | cures that removed a listed loss-of-control aura; longest time to removal |
 | `deadlineDispels`, `deadlineMisses` | deadline auras cured in time, and the ones that ran out on this bot |
 | `listedDispels`, `purges` | other listed cures; listed enemy buffs stripped (the pet's Devour Magic included) |
+| `dispelWrongAura` | cures that removed another aura while an urgent or deadline one of its type stayed |
 | `focusSwitches`, `msLowerTarget` | switches onto the pick; ms attacking something else while the pick lived |
 | `breakOutMsMax` | the longest a prison held its player, as this bot saw it |
 | `ignoredHits`, `ignoredDamage` | damage events and damage the bot dealt to ignored units |
