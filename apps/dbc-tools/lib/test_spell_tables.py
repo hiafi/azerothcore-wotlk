@@ -1002,6 +1002,83 @@ class CreatureTablesTest(unittest.TestCase):
         self.assertIn(", 194,", blocks[0])
 
 
+    # creature_template_columns(): owns only the named columns of an existing (stock) row - the pre-nerf raid
+    # HealthModifier declaration (source/world/raid_health_prenerf.py) is built on it.
+    def _edit_dsl(self, source: str) -> dict:
+        rows = {int(r["entry"]): r for r in self._index().live_rows("creature_template")}
+        return _load_creature_class(
+            "from lib.dsl.registry import creature_template_columns\n" + source, existing_creature_rows=rows
+        )
+
+    def test_columns_edit_matching_live_emits_nothing(self):
+        self._write_baseline_then_update(300001, "Frozen Orb", before=194, after=66)
+        dsl = self._edit_dsl("creature_template_columns(300001, flags_extra=66, HealthModifier=1)\n")
+        self.assertEqual(spell_tables.render_creature_blocks(self._index(), dsl), [])
+
+    def test_columns_edit_emits_a_column_limited_update(self):
+        self._write_baseline_then_update(300001, "Frozen Orb", before=194, after=66)
+        dsl = self._edit_dsl("creature_template_columns(300001, HealthModifier=50)\n")
+        self.assertEqual(
+            spell_tables.render_creature_blocks(self._index(), dsl),
+            ["UPDATE `creature_template` SET `HealthModifier` = 50 WHERE `entry` IN (300001);"],
+        )
+
+    def test_columns_edit_does_not_claim_other_columns(self):
+        self._write_baseline_then_update(300001, "Frozen Orb", before=194, after=66)
+        dsl = self._edit_dsl("creature_template_columns(300001, HealthModifier=1)\n")
+        # another source changes an unrelated column: the edit neither reports nor reverts it
+        self._promoted.joinpath("zz_other.sql").write_text(
+            "UPDATE `creature_template` SET `flags_extra` = 0, `name` = 'Renamed' WHERE `entry` = 300001;\n"
+        )
+        self.assertEqual(spell_tables.render_creature_blocks(self._index(), dsl), [])
+
+    def test_columns_edit_reemits_after_a_later_sql_changes_the_value(self):
+        # the pre-nerf raid health case: live equals the declaration (nothing emitted), then a later migration
+        # (an upstream merge) changes the value, and the next run restores the declared one
+        self._write_baseline_then_update(300001, "Frozen Orb", before=194, after=66)
+        self._promoted.joinpath("yy_pre.sql").write_text(
+            "UPDATE `creature_template` SET `HealthModifier` = 115 WHERE `entry` = 300001;\n"
+        )
+        dsl = self._edit_dsl("creature_template_columns(300001, HealthModifier=115)\n")
+        self.assertEqual(spell_tables.render_creature_blocks(self._index(), dsl), [])
+        self._promoted.joinpath("zz_upstream.sql").write_text(
+            "UPDATE `creature_template` SET `HealthModifier` = 40 WHERE `entry` = 300001;\n"
+        )
+        self.assertEqual(
+            spell_tables.render_creature_blocks(self._index(), dsl),
+            ["UPDATE `creature_template` SET `HealthModifier` = 115 WHERE `entry` IN (300001);"],
+        )
+
+    def test_columns_edit_rejects_bad_declarations(self):
+        self._write_baseline_then_update(300001, "Frozen Orb", before=194, after=66)
+        with self.assertRaises(ValueError):
+            self._edit_dsl("creature_template_columns(399999, HealthModifier=2)\n")  # not an existing row
+        with self.assertRaises(KeyError):
+            self._edit_dsl("creature_template_columns(300001, NoSuchColumn=2)\n")
+        with self.assertRaises(ValueError):
+            self._edit_dsl("creature_template_columns(300001)\n")
+        with self.assertRaises(registry.DuplicateIdError):
+            self._edit_dsl(
+                "creature_template_columns(300001, HealthModifier=2)\n"
+                "creature_template_columns(300001, HealthModifier=3)\n"
+            )
+
+    def test_conflict_check_flags_disagreeing_owners_only(self):
+        self._write_baseline_then_update(300001, "Frozen Orb", before=194, after=66)
+        rows = {int(r["entry"]): r for r in self._index().live_rows("creature_template")}
+        source = (
+            "from lib.dsl.registry import creature_template, creature_template_columns\n"
+            "creature_template(300001, 'Frozen Orb', HealthModifier=%d)\n"
+            "creature_template_columns(300001, HealthModifier=60)\n"
+        )
+        agree = _load_creature_class(source % 60, existing_creature_rows=rows)
+        self.assertEqual(spell_tables.check_creature_edit_conflicts(agree), [])
+        clash = _load_creature_class(source % 61, existing_creature_rows=rows)
+        (error,) = spell_tables.check_creature_edit_conflicts(clash)
+        self.assertIn("300001", error)
+        self.assertIn("HealthModifier", error)
+
+
 # Code review, 2026-09-28: _same_row assumed a column missing from a live row defaults to 0 (true
 # for every column in the original spell tables) - wrong for creature_template, where ~15 columns
 # default to something else (minlevel/speed_run/RegenHealth/... all default to 1 or more). Real

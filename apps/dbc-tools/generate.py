@@ -779,7 +779,10 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         _merge_npc_declarations(dsl_classes, dsl_npcs)
         # source/world/*.py: world content tied to no class or NPC (lfg_exclude(), item_template() edits of
         # stock items) - same loader, merged in.
-        dsl_world = dsl_registry.load_classes_dir(SOURCE_DIR / "world", ids_cfg=ids_cfg, live_data=live_data)
+        dsl_world = dsl_registry.load_classes_dir(
+            SOURCE_DIR / "world", ids_cfg=ids_cfg, live_data=live_data,
+            existing_creature_rows=existing_creature_rows, creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
+        )
         _merge_npc_declarations(dsl_classes, dsl_world, "source/world/")
     except dsl_registry.MissingStockFileError as error:
         print(f"ERROR: {error}")
@@ -836,6 +839,11 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
     # DELETEd, and pruning only the model row would leave a creature without one), so this is
     # entirely separate from the spell_table_index prune/render pass below - see
     # lib/spell_tables.py's CREATURE_TABLES module docstring.
+    conflicts = spell_tables.check_creature_edit_conflicts(dsl_classes)
+    if conflicts:
+        for error in conflicts:
+            print(f"ERROR: {error}")
+        return 1
     creature_blocks = spell_tables.render_creature_blocks(creature_table_index, dsl_classes)
     for line in spell_tables.render_creature_retirement_report(creature_table_index, dsl_classes):
         print(line)

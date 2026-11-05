@@ -428,6 +428,16 @@ finder entry uses. Deleting a line re-enables the dungeon (the prune pass DELETE
 included). Live on worldserver start or `.reload disables`. Needs the stock
 `var/extractors/dbc/LFGDungeons.dbc` (`DBFilesClient/LFGDungeons.dbc` from `patch-enUS-3.MPQ`, flattened).
 
+### Owning one column of a stock creature (`creature_template_columns`)
+
+`creature_template()` owns a whole row; for a **stock** creature where dbc-tools should own a single column (the
+pre-nerf TBC/WotLK raid `HealthModifier`, `source/world/raid_health_prenerf.py`) use
+`creature_template_columns(entry, HealthModifier=115)`. It needs the entry to exist, emits a column-limited
+`UPDATE creature_template SET <named columns> WHERE entry IN (...)` only when the replayed value differs (nothing on a
+run where live already matches), and re-emits the declared value after a later SQL file changes it. Other columns of
+the row are never read or written. It is never pruned. If a `creature_template()` full row also names the entry, a
+named column must agree (generate.py stops otherwise).
+
 ### Declaring a creature (T1)
 
 A `source/classes/*.py` file can also declare a rework's own NPC - `creature_template` +

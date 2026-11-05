@@ -421,6 +421,24 @@ accounted for:
   `_same_row` checks before falling back to the old 0/`None` guess; every other table's `TableSpec`
   leaves it empty and is unaffected.
 
+## `creature_template_columns()`: one owned column of a stock creature (progression-slim PS1 WP-P)
+
+`creature_template()` builds and upserts a full row, which on a stock entry would own its name, flags and loot too.
+`creature_template_columns(entry, **columns)` (`lib/dsl/registry.py`) owns only the named columns: the row goes to
+`Registry.creature_template_edits` (a separate list, so the full-row lints and `header_gen` never see a stock
+creature), `spell_tables.render_creature_blocks` compares just `_update_columns` (`_same_row`) against the replayed
+live row and renders a column-limited `UPDATE` (`sql_out.render_update_block`, the `item_template()` shape) after the
+full-row upserts. Live equals declared: no output. A later SQL file that changes the column: the next run re-emits the
+declared value (this is the drift guard). Never pruned. `source/world/raid_health_prenerf.py` declares the 244 pre-nerf
+TBC/WotLK raid `HealthModifier` values phase 0 set (every TBC/WotLK raid boss and trash mob keeps them until its raid is
+reworked). `source/world/*.py` is loaded with `existing_creature_rows`/`creature_columns` for this.
+
+Meeting a future dungeon-creature extraction (`dungeon(...)`): a dungeon creature that is also in the list (Hellfire
+Channeler 17256 spawns in Magtheridon's Lair and the Blood Furnace) is the only overlap today. If the extraction
+declares it as a full `creature_template()` row, built from live it carries the same `HealthModifier`, so the two agree
+(`spell_tables.check_creature_edit_conflicts` stops generate.py on a disagreement, so the pre-nerf value cannot be lost
+silently); the edit's UPDATE is rendered after the upsert and wins a tie. Otherwise they are independent.
+
 ## Paladin T1: `spell_category()` and `remove_spell_proc()`
 
 `spell_category(id, flags)` declares a `spellcategory_dbc` row (a `SPELL_TABLES` entry, so diff/prune

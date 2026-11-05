@@ -359,7 +359,10 @@ def _same_row(existing: dict, declared: dict, spec: TableSpec) -> bool:
     `spec.defaults` (its real per-column schema DEFAULT, when the caller has one - see
     `TableSpec`'s own comment) is checked first; the old 0/None guess is still the fallback for
     every table that never needed anything else."""
+    only = declared.get("_update_columns")  # a column-limited declaration owns (and is compared on) those columns only
     for c in spec.columns:
+        if only is not None and c not in only:
+            continue
         if c in spec.defaults:
             default = spec.defaults[c]
         else:
@@ -654,15 +657,36 @@ def render_creature_blocks(index: SpellTableIndex, dsl_classes: dict[str, list[d
     blocks = []
     for spec in CREATURE_TABLES:
         rows = index.rows_to_emit(spec, dsl_classes.get(spec.registry_key, []))
-        if not rows:
-            continue
         if spec.name == "creature_template":
             block = sql_out.render_upsert_block(spec.name, spec.columns, spec.key_columns, rows)
+            # creature_template_columns() edits of stock rows: after the full-row upserts, so they win a tie
+            edits = index.rows_to_emit(spec, dsl_classes.get("creature_template_edits", []))
+            edit_block = sql_out.render_update_block(spec.name, spec.columns, spec.key_columns[0], edits)
+            block = "\n".join(part for part in (block, edit_block) if part)
         else:
             block = sql_out.render_generic_table_block(spec.name, spec.columns, spec.key_columns, rows)
         if block:
             blocks.append(block)
     return blocks
+
+
+def check_creature_edit_conflicts(dsl_classes: dict[str, list[dict]]) -> list[str]:
+    """Errors for an entry declared by both `creature_template()` (a full row) and `creature_template_columns()`
+    whose values differ in a column the edit names (two owners disagreeing). Equal values are fine: that is how a
+    later dungeon-creature extraction meets the raid-health declaration on a shared entry."""
+    full = {int(row["entry"]): row for row in dsl_classes.get("creature_templates", [])}
+    errors = []
+    for edit in dsl_classes.get("creature_template_edits", []):
+        other = full.get(int(edit["entry"]))
+        if other is None:
+            continue
+        for column in edit["_update_columns"]:
+            if _normalise(other.get(column)) != _normalise(edit[column]):
+                errors.append(
+                    f"creature_template {edit['entry']}: creature_template_columns() declares {column} = "
+                    f"{edit[column]!r} but creature_template() declares {other.get(column)!r}"
+                )
+    return errors
 
 
 def render_creature_retirement_report(
