@@ -2636,7 +2636,7 @@ natures_cure_200604 = spell(
     id=200604,
     name="Nature's Cure",
     school=School.NATURE,
-    attributes=65536,  # Remove Curse 2782's: NOT_SHAPESHIFTED, so the same forms can cast it
+    attributes=65536,  # Remove Curse 2782's: NOT_SHAPESHIFTED (keeps refusing travel, aquatic and flight forms)
     cast_time_ms=0,
     cooldown_ms=0,
     category_cooldown_ms=0,
@@ -2652,8 +2652,12 @@ natures_cure_200604 = spell(
           "every healer's Magic dispel. One button for Magic and Poison, mirroring Cleanse / Cleanse Spirit. Replaces "
           "Remove Curse 2782 (retired: untrained below), whose layout it copies (8% base mana, 40 yd, on the GCD, "
           "Remove Curse's visual). No family bit (no SpellMod needs to scope to it). Cure Poison 8946 and Abolish "
-          "Poison 2893 stay.",
+          "Poison 2893 stay. M5-N: castable in Cat, Bear, Dire Bear and Bestial Fury (ShapeshiftMask SS_FERAL) and "
+          "still in caster form (AttributesEx2 ALLOW_WHILE_NOT_SHAPESHIFTED 0x80000: SpellInfo::CheckShapeshift "
+          "refuses a spell with stances in caster form without it). Cost stays 8% base mana: PowerType is mana and "
+          "the druid keeps its mana pool in feral forms.",
     raw_overrides={
+        'AttributesEx2': 524288, 'ShapeshiftMask': SS_FERAL,
         'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 18, 'SpellLevel': 18, 'CastingTimeIndex': 1,
         'DefenseType': 1, 'Description_Lang_Mask': 16712190,
         'Description_Lang_enUS': 'Cleanses a friendly target, removing 1 Magic effect and 1 Poison effect.',

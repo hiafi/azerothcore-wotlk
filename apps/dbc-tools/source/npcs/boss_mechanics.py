@@ -41,6 +41,7 @@ Ids are pinned in .agents/plans/dungeon-mechanics/dungeon-mechanics.STAGE-M1-HAN
                 for ras or soaks within one program slice.
   300400        Mechanic Marker - the telegraph stalker and resolve caster (npc_boss_mechanic_marker).
   300401        Mechanic Test Owner - the hostile owner of `.mech test` (same script).
+  205010-205029 Stage M5 descriptor stand-ins (section "M5 stand-ins" below; 205024-205029 reserved, undeclared).
   300402        Mechanics Training Dummy - the stage M4 training dummy (npc_boss_mechanics_dummy, MechanicDummyAI): a
                 player engages it and it runs the `.mech drill` program on itself as the boss stand-in (row below).
 
@@ -216,6 +217,160 @@ for _offset, _school, _label in _SCHOOLS:
     )
     scripted_by(_impact, 'spell_boss_mechanics_resolve')
 
+# --- M5 stand-ins (205010-205023, stage M5 WP-K-data) ---------------------------------------------------------------
+# Generic stand-ins the descriptor drills (`.mech drill interrupts|dispels|purges|targets|ignore`) cast on the Drill
+# NPCs and the drill members; ids pinned in dungeon-mechanics.STAGE-M5-HANDOFF.md section 3.6. Names and icons borrowed
+# from stock spells, tooltips number-free (custom-spells.md). 205024-205029 are RESERVED (summons, prison aura), not
+# declared. Damage is a small fixed value (BasePoints 49 + DieSides 1 -> 50): drill filler, not balanced content, so
+# it is potency-excluded like the resolve spells; the Magic/Curse/Poison/Disease debuffs only need to be present.
+_TARGET_UNIT_SRC_AREA_ALLY = 30
+_AURA_DEBUFF = _ATTR0_AURA_IS_DEBUFF
+_DISPEL_ENRAGE = 9
+_STANDIN_TEXT = {'Description_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '',
+                 'Name_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712190}
+_STANDIN_FIXED = 'drill stand-in: small fixed filler damage, not content'
+
+
+def _standin_raw(desc, aura_desc='', **more):
+    return {'SpellClassSet': 0, 'EquippedItemClass': -1, 'CastingTimeIndex': 1, 'SpellLevel': 0,
+            'Description_Lang_enUS': desc, 'AuraDescription_Lang_enUS': aura_desc, **_STANDIN_TEXT, **more}
+
+
+def _standin_cast(spell_id, name, school, cast_ms, icon, desc, note):
+    # InterruptFlags 15 (movement | pushback | INTERRUPT | autoattack) is what lets a kick interrupt the cast;
+    # PreventionType 1 (silence) is what lets a silence stop it (Holy Light's pair, paladin_spells.py).
+    raw = _standin_raw(desc, InterruptFlags=15, PreventionType=1, DefenseType=1)
+    raw.pop('CastingTimeIndex')
+    return spell(
+        id=spell_id, name=name, school=school, cast_time_ms=cast_ms, cooldown_ms=0, category_cooldown_ms=0,
+        mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=0,
+        effects=[Effect(type=EffectType.SCHOOL_DAMAGE, base_points=49, implicit_target_a=_TARGET_UNIT_TARGET_ANY,
+                        potency_excluded=_STANDIN_FIXED)],
+        spell_icon_id=icon, notes=note, raw_overrides=raw,
+    )
+
+
+spell_cast_low_205010 = _standin_cast(
+    205010, 'Frost Bolt (drill)', School.FROST, 2000, 188, 'Drill stand-in for a low priority interruptible cast.',
+    'M5 drill stand-in: low priority interruptible cast, 2.0 s, Frost damage. InterruptFlags 15, PreventionType '
+    'silence. Stock Frostbolt icon 188.')
+spell_cast_mid_205011 = _standin_cast(
+    205011, 'Shadow Bolt (drill)', School.SHADOW, 2500, 213, 'Drill stand-in for a mid priority interruptible cast.',
+    'M5 drill stand-in: mid priority interruptible cast, 2.5 s, Shadow damage. InterruptFlags 15, PreventionType '
+    'silence. Stock Shadow Bolt icon 213.')
+spell_cast_high_205012 = _standin_cast(
+    205012, 'Fireball (drill)', School.FIRE, 3000, 185, 'Drill stand-in for a high priority interruptible cast.',
+    'M5 drill stand-in: high priority interruptible cast, 3.0 s, Fire damage. InterruptFlags 15, PreventionType '
+    'silence. Stock Fireball icon 185.')
+spell_cast_nokick_205013 = _standin_cast(
+    205013, 'Ritual (drill)', School.ARCANE, 2500, 2290, 'Drill stand-in for a cast that must not be interrupted.',
+    'M5 drill stand-in: the do-not-kick cast, 2.5 s, Arcane damage; interruptible on purpose, the drill counts a kick '
+    'as the violation. InterruptFlags 15, PreventionType silence. Stock Fire Elemental Totem icon 2290.')
+
+
+def _standin_dot(spell_id, name, school, dispel, icon, duration_ms, desc, note):
+    return spell(
+        id=spell_id, name=name, school=school, dispel=dispel, mechanic=0, attributes=_AURA_DEBUFF, cast_time_ms=0,
+        cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0,
+        duration_ms=duration_ms,
+        effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DAMAGE, base_points=9,
+                        amplitude=3000, implicit_target_a=_TARGET_UNIT_TARGET_ANY,
+                        potency_excluded=_STANDIN_FIXED)],
+        spell_icon_id=icon, notes=note, raw_overrides=_standin_raw(desc + ' Lasts $d.', desc),
+    )
+
+
+spell_dispel_magic_205014 = _standin_dot(
+    205014, 'Magic Affliction (drill)', School.SHADOW, 1, 234, 24000, 'Drill stand-in for a dispellable Magic debuff.',
+    'M5 drill stand-in: Magic debuff, light periodic Shadow damage every 3 s, 24 s. Stock Shadow Word: Pain icon 234.')
+spell_dispel_curse_205015 = _standin_dot(
+    205015, 'Curse Affliction (drill)', School.SHADOW, 2, 544, 24000, 'Drill stand-in for a dispellable Curse debuff.',
+    'M5 drill stand-in: Curse debuff, light periodic Shadow damage every 3 s, 24 s. Stock Bane of Agony icon 544.')
+spell_dispel_poison_205016 = _standin_dot(
+    205016, 'Poison Affliction (drill)', School.NATURE, 4, 513, 24000,
+    'Drill stand-in for a dispellable Poison debuff.',
+    'M5 drill stand-in: Poison debuff, light periodic Nature damage every 3 s, 24 s. Stock Deadly Poison icon 513.')
+spell_dispel_disease_205017 = _standin_dot(
+    205017, 'Disease Affliction (drill)', School.NATURE, 3, 253, 24000,
+    'Drill stand-in for a dispellable Disease debuff.',
+    'M5 drill stand-in: Disease debuff, light periodic Nature damage every 3 s, 24 s. Stock Viper Sting icon 253.')
+
+spell_urgent_205018 = spell(
+    id=205018, name='Stunning Grip (drill)', school=School.HOLY, dispel=1, mechanic=12, attributes=_AURA_DEBUFF,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0,
+    duration_ms=7000,
+    effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_STUN, mechanic=12,
+                    implicit_target_a=_TARGET_UNIT_TARGET_ANY)],
+    spell_icon_id=302,
+    notes='M5 drill stand-in: urgent loss of control, Magic, stun mechanic, 7 s. Stock Hammer of Justice icon 302.',
+    raw_overrides=_standin_raw('Drill stand-in for an urgent loss of control. Lasts $d.',
+                               'Drill stand-in for an urgent loss of control.'),
+)
+
+spell_deadline_205019 = spell(
+    id=205019, name='Doom Mark (drill)', school=School.SHADOW, dispel=1, mechanic=0, attributes=_AURA_DEBUFF,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0,
+    duration_ms=8000,
+    effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.DUMMY, base_points=0,
+                    implicit_target_a=_TARGET_UNIT_TARGET_ANY)],
+    spell_icon_id=1488,
+    notes='M5 drill stand-in: deadline debuff, Magic, 8 s, DUMMY aura. On expiry 205020 must go off: NOT expressible '
+          'in the DSL (no on-expire trigger), so C++ (an AuraScript AfterRemove on expire, or a '
+          'spell_linked_spell -205019 -> 205020 row) casts it. Stock Psychic Scream icon 1488.',
+    raw_overrides=_standin_raw('Drill stand-in for a deadline debuff; it bursts when it expires, unless dispelled in '
+                               'time. Lasts $d.', 'Drill stand-in for a deadline debuff; it bursts when it expires.'),
+)
+
+spell_deadline_burst_205020 = spell(
+    id=205020, name='Doom Burst (drill)', school=School.SHADOW, cast_time_ms=0, cooldown_ms=0,
+    category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=0,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, base_points=99, implicit_target_a=22,
+                    implicit_target_b=_TARGET_UNIT_SRC_AREA_ALLY, radius_yards=10.0,
+                    potency_excluded=_STANDIN_FIXED)],
+    spell_icon_id=1488,
+    notes='M5 drill stand-in: the expiry burst of 205019, Shadow damage to allies of the caster within 10 yd of the '
+          'caster; cast by C++ (or a linked spell) when 205019 expires, with the doomed player as caster.',
+    raw_overrides=_standin_raw('Drill stand-in for the burst of a deadline debuff.'),
+)
+
+spell_purgeable_205021 = spell(
+    id=205021, name='Arcane Shield (drill)', school=School.ARCANE, dispel=1, mechanic=0, cast_time_ms=0,
+    cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=30000,
+    effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, base_points=19,
+                    misc_value=_SCHOOL_ALL, implicit_target_a=_TARGET_UNIT_TARGET_ANY,
+                    potency_excluded='drill stand-in: flat +20% damage done on an add')],
+    spell_icon_id=566,
+    notes='M5 drill stand-in: purgeable Magic buff on an add, +20% damage done, 30 s. Stock Power Word: Shield '
+          'icon 566.',
+    raw_overrides=_standin_raw('Drill stand-in for a purgeable buff that increases damage done. Lasts $d.',
+                               'Drill stand-in for a purgeable buff that increases damage done.'),
+)
+
+spell_enrage_205022 = spell(
+    id=205022, name='Frenzy (drill)', school=School.NORMAL, dispel=_DISPEL_ENRAGE, mechanic=0, cast_time_ms=0,
+    cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=30000,
+    effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, base_points=19,
+                    misc_value=_SCHOOL_ALL, implicit_target_a=_TARGET_UNIT_TARGET_ANY,
+                    potency_excluded='drill stand-in: flat +20% damage done on an add')],
+    spell_icon_id=169,
+    notes='M5 drill stand-in: Enrage (dispel type 9, soothe) buff on an add, +20% damage done, 30 s. Stock Death '
+          'Wish icon 169.',
+    raw_overrides=_standin_raw('Drill stand-in for an Enrage effect that increases damage done. Lasts $d.',
+                               'Drill stand-in for an Enrage effect that increases damage done.'),
+)
+
+spell_aiming_205023 = spell(
+    id=205023, name='Aiming (drill)', school=School.NORMAL, dispel=0, mechanic=0, cast_time_ms=0, cooldown_ms=0,
+    category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=30000,
+    effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.DUMMY, base_points=0,
+                    implicit_target_a=_TARGET_UNIT_TARGET_ANY)],
+    spell_icon_id=502,
+    notes='M5 drill stand-in: "Aiming" aura on an add, DUMMY and visual only; the module treats a unit carrying it as '
+          'higher priority. 30 s, Dispel none. Stock Mind Vision icon 502.',
+    raw_overrides=_standin_raw('Drill stand-in for an add that is preparing a dangerous attack. Lasts $d.',
+                               'Drill stand-in for an add that is preparing a dangerous attack.'),
+)
+
 # --- NPCs ---------------------------------------------------------------------------------------------------------
 _MARKER = dict(
     IconName="", faction=14, minlevel=1, maxlevel=1, detection_range=0, unit_class=1, unit_flags=33554946,
@@ -251,3 +406,30 @@ creature_template(
     CreatureImmunitiesId=-362, flags_extra=100925504, ScriptName="npc_boss_mechanics_dummy", VerifiedBuild=0,
 )
 creature_model(300402, display_id=3019)
+creature_template(
+    300403, "Descriptor Training Dummy", subname="Boss Mechanics", IconName="", faction=31, npcflag=1, rank=3,
+    minlevel=80, maxlevel=80, detection_range=0, DamageModifier=0, BaseAttackTime=2000, RangeAttackTime=2000,
+    unit_class=1, unit_flags2=2048, type=5, type_flags=4, HealthModifier=23809.5, RegenHealth=0,
+    CreatureImmunitiesId=-273, flags_extra=100925504, ScriptName="npc_boss_mechanics_dummy", VerifiedBuild=0,
+)
+creature_model(300403, display_id=3019)
+# 300403 is 300402 with CreatureImmunitiesId -273 (the reworked bosses' set: stun, fear, root, silence ... but not
+# INTERRUPT and not NO_TAUNT), so boss-cast kick drills work live. Same ScriptName: MechanicDummyAI.
+
+# --- M5 drill NPCs (300404-300407) ---------------------------------------------------------------------------------
+# Hostile (faction 14), attackable, no loot / XP / reputation. The drill programs (owner SummonCreature entries) place
+# them; none has a ScriptName. Level 80, a small pool each (HealthModifier 2) so players can kill or break them.
+#   flags_extra 64 = NO_XP; type 7 humanoid; no loot (no loot_id, no gold), no reputation (no faction rewards).
+_DRILL_NPC = dict(
+    IconName="", faction=14, minlevel=80, maxlevel=80, detection_range=0, DamageModifier=0, BaseAttackTime=2000,
+    RangeAttackTime=2000, unit_class=1, unit_flags2=2048, type=7, HealthModifier=2, RegenHealth=0,
+    flags_extra=64, ScriptName="", VerifiedBuild=0,
+)
+creature_template(300404, "Drill Caster", subname="Boss Mechanics", **_DRILL_NPC)  # casts the stand-in spells
+creature_model(300404, display_id=2329)  # Defias Conjurer (stock)
+creature_template(300405, "Drill Add", subname="Boss Mechanics", **_DRILL_NPC)  # buffed / aiming add
+creature_model(300405, display_id=2338)  # Defias Pillager
+creature_template(300406, "Drill Copy", subname="Boss Mechanics", **_DRILL_NPC)  # the ignore-list copy
+creature_model(300406, display_id=2339)  # Defias Pillager, second skin
+creature_template(300407, "Drill Prison", subname="Boss Mechanics", **_DRILL_NPC)  # holds a player; break-out target
+creature_model(300407, display_id=2148)  # Defias Prisoner

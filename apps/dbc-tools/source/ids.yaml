@@ -355,8 +355,10 @@ reservations:
     spell: {start: 202900, end: 202909}
 
   # mod-boss-mechanics (source/npcs/boss_mechanics.py, stage M1): Weakened 205000, resolve spells 205001-205007 (one per
-  # school), the drills' Baited and Marked stand-ins 205008 and 205009 (stage M4), Mechanic Marker 300400 and
-  # Mechanic Test Owner 300401, and the telegraph marker displays
+  # school), the drills' Baited and Marked stand-ins 205008 and 205009 (stage M4), the M5 descriptor stand-ins
+  # 205010-205023 (casts, dispellable debuffs, deadline pair, buffs, Aiming; 205024-205029 reserved), Mechanic Marker
+  # 300400, Mechanic Test Owner 300401, Mechanics Training Dummy 300402 (M4), Descriptor Training Dummy 300403 and the
+  # Drill Caster / Add / Copy / Prison 300404-300407 (M5), and the telegraph marker displays
   # (patch_bossmechanics_markers.py), nine colors, outline + fill layers: 91000 + 100 * color + shape offset + step
   # for the quad shapes (91000-91833, +34..+99 of each color block spare), 91990-91995 the opt-in diagnostic
   # displays, 93990-93999 the opt-in line-render probes (--probes; client DBCs only, the default run removes them),

@@ -88,6 +88,14 @@ footer { margin-top: 28px; color: var(--text-dim); font-size: 12px; }
   <h2>Mechanics brain</h2>
   <div class="wrap"><table id="brain"></table></div>
 
+  <h2>Boss descriptor</h2>
+  <div class="sub">Kicks (landed, wasted on an unlisted cast while a listed one was due, do-not-kick, duplicate,
+    overload holds, listed casts that completed: counted by one bot, so the group's sum is the total), dispels
+    (urgent and its longest latency, deadline cures and expiries, listed), purges, focus switches and the time on a
+    lower target while the pick lived, damage on ignored units (the bot's own and its pets'), the longest break-out.
+  </div>
+  <div class="wrap"><table id="descriptor"></table></div>
+
   <footer>Report JSON is <span class="mono">SimReport::WriteMechanicsJson()</span>'s schema (one iteration) or
     <span class="mono">aggregate_reports.py</span>'s mechanics merge (mean, min and max over the iterations, no trim).
     DPS is damage to the boss stand-in over the full duration. Generated __GENERATED_AT__.</footer>
@@ -207,7 +215,8 @@ footer { margin-top: 28px; color: var(--text-dim); font-size: 12px; }
 
   var bt = document.getElementById("brain");
   var names = ["solves", "pathChecks", "outcomeMove", "outcomeFallback", "outcomeNoPath", "lateArrivals", "releases",
-    "lockBlocks", "castBreaks", "routesFound", "routesFailed", "solveUsMax", "routeUsMax"];
+    "lockBlocks", "castBreaks", "routesFound", "routesFailed", "solveUsMax", "refreshUsMax", "routeUsMax",
+    "msChaseStranded", "strandRoutes", "escapeFacingBlocks", "descriptorWakes"];
   row(bt, [{text: "#"}, {text: "profile"}].concat(names.map(function (n) { return {text: n, cls: "num"}; })), true);
   members.forEach(function (m) {
     row(bt, [{text: String(m.index)}, {text: m.profile}].concat(names.map(function (n) {
@@ -215,5 +224,30 @@ footer { margin-top: 28px; color: var(--text-dim); font-size: 12px; }
       return {text: v === undefined ? "-" : fmt(v, 0), cls: "num"};
     })));
   });
+
+  // M5 boss descriptor counters (MechanicBotCounters.h WP-I / WP-P / WP-T blocks); a name ending in "Max" is the
+  // group's maximum in the total row, any other its sum. A new counter: add its name here.
+  var dt = document.getElementById("descriptor");
+  var descNames = ["kicksLanded", "kicksWasted", "doNotKickKicks", "duplicateKicks", "overloadHolds", "listedMissed",
+    "stockKicksDropped", "castStops", "urgentDispels", "urgentLatencyMsMax", "deadlineDispels", "deadlineMisses",
+    "listedDispels", "purges", "dispelWrongAura", "focusSwitches", "msLowerTarget", "breakOutMsMax", "ignoredDamage",
+    "petIgnoredDamage", "ignoreBlocks", "ignoreDrops", "petRecalls"];
+  var mustStayZero = {doNotKickKicks: true, duplicateKicks: true};
+  row(dt, [{text: "#"}, {text: "profile"}].concat(descNames.map(function (n) { return {text: n, cls: "num"}; })),
+    true);
+  var groupTotal = {};
+  members.forEach(function (m) {
+    row(dt, [{text: String(m.index)}, {text: m.profile}].concat(descNames.map(function (n) {
+      var v = counter(m, n);
+      if (v !== undefined) {
+        groupTotal[n] = /Max$/.test(n) ? Math.max(groupTotal[n] || 0, v) : (groupTotal[n] || 0) + v;
+      }
+      return {text: v === undefined ? "-" : fmt(v, 0), cls: "num" + (mustStayZero[n] && v > 0 ? " bad" : "")};
+    })), false, m.underTest ? "test" : "");
+  });
+  row(dt, [{text: ""}, {text: "group"}].concat(descNames.map(function (n) {
+    var v = groupTotal[n];
+    return {text: v === undefined ? "-" : fmt(v, 0), cls: "num" + (mustStayZero[n] && v > 0 ? " bad" : "")};
+  })), false, "test");
 })();
 </script>
