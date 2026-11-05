@@ -1,0 +1,8 @@
+# Replay-vs-live differences that are explained (replay_diff.py). Tab-separated: table, key (values
+# joined with ","), column ("*" = row present on one side only), reason. Earth Shock ranks 8046/10414: phase 0
+# inserted them; live points them at dbc-tools secondary rows that no file on disk writes
+# (the live-only secondary rows apps/dbc-tools/source/live_secondary_rows.sql seeds).
+spell_dbc	8046	DurationIndex	live-only remap to secondary rows 30109/30212, no file on disk (spell_dbc orphans)
+spell_dbc	8046	RangeIndex	live-only remap to secondary rows 30109/30212, no file on disk (spell_dbc orphans)
+spell_dbc	10414	DurationIndex	live-only remap to secondary rows 30109/30212, no file on disk (spell_dbc orphans)
+spell_dbc	10414	RangeIndex	live-only remap to secondary rows 30109/30212, no file on disk (spell_dbc orphans)

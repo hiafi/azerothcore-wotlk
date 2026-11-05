@@ -13,6 +13,12 @@ ObjectMgr.cpp), so an `item_template` edit alone would be undone at the next sta
 class/subclass from its own `Item.dbc`. `lint.check_item_dbc_consistency` warns when the two disagree.
 
 Excluded: 29889 (NPC equipment "NPC Equip 29889", 0 slots; nobody carries it).
+
+Prices (user 2026-11-05, progression-slim PS7): as plain bags the vendor quivers undercut real bags (a 10-slot
+Medium Quiver cost 10s against the Heavy Brown Bag's 2g). Every quiver or pouch a vendor sells for gold costs what the
+stock vendor bag with the same slot count costs: 6 slots Small Brown Pouch 5s, 8 Brown Leather Satchel 25s, 10 Heavy
+Brown Bag 2g, 14 Draenic Leather Pack 12g. SellPrice stays stock. Left alone: the Alterac Valley quivers (marks), the
+Outland reputation quivers, and the crafted and dropped ones nobody sells.
 """
 
 from lib.dsl.registry import item_template
@@ -23,5 +29,19 @@ QUIVER_ENTRIES = (
     44448,
 )
 
+# entry: BuyPrice in copper
+VENDOR_BAG_PRICES = {
+    2101: 500,      # Light Quiver, 6 slots (stock 4c)
+    2102: 500,      # Small Ammo Pouch, 6 slots (stock 4c)
+    5439: 2500,     # Small Quiver, 8 slots (stock 1s)
+    5441: 2500,     # Small Shot Pouch, 8 slots (stock 10s)
+    11362: 20000,   # Medium Quiver, 10 slots (stock 10s)
+    11363: 20000,   # Medium Shot Pouch, 10 slots (stock 10s)
+    7371: 120000,   # Heavy Quiver, 14 slots (stock 20s)
+}
+
 for _entry in QUIVER_ENTRIES:
-    item_template(_entry, **{"class": 1, "subclass": 0, "BagFamily": 0})
+    _columns = {"class": 1, "subclass": 0, "BagFamily": 0}
+    if _entry in VENDOR_BAG_PRICES:
+        _columns["BuyPrice"] = VENDOR_BAG_PRICES[_entry]
+    item_template(_entry, **_columns)

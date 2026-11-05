@@ -1,0 +1,2 @@
+# Verbatim copies of applied SQL: the bytes are checked against the live updates hashes (MANIFEST).
+*.sql -text -whitespace

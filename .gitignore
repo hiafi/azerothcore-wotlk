@@ -149,6 +149,10 @@ __pycache__/
 modules/mod-dpssim/reports/*
 modules/mod-dpssim/conf/profiles/.stat-weights-scratch/
 
+# mod-content-gate: the realm's content switch (instances, battlegrounds, continents, holidays, unlock bundles) and
+# the content scripts kept from mod-progression (see .agents/plans/progression-slim/) — tracked in this repo.
+!modules/mod-content-gate
+
 # Live-stack e2e private / local tooling (scratch tests stay uncommitted)
 e2e/local/**
 !e2e/local/README.md

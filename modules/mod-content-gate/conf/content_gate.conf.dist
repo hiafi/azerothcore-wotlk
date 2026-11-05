@@ -1,0 +1,200 @@
+#
+# This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
+#
+# This file is free software; as a special exception the author gives
+# unlimited permission to copy and/or distribute it, with or without
+# modifications, as long as this notice is preserved.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+
+########################################
+# mod-content-gate configuration
+########################################
+#
+# What is open on this realm. Everything the gate covers is CLOSED unless listed here:
+# every dungeon and raid map (per difficulty), battleground, arena, outdoor PvP zone,
+# Outland and Northrend. Stock holidays and events run on their stock schedule unless
+# listed in ContentGate.Closed.Events or tied to a closed switch (see below).
+#
+# The module feeds DisableMgr in memory; it never writes the `disables` table. A DB
+# `disables` row with the same key wins over this file, so the cutover deletes the rows the
+# module owns; `.gate status` lists any leftover row as a conflict.
+#
+# Live changes: edit this file, then `.reload config`. Instances, battlegrounds, events,
+# bundles (their spawns and quests) and the continents change at once; outdoor PvP and
+# Wintergrasp only at the next restart; quests opened live miss the boot quest
+# post-processing until the next restart (`.gate status` lists both as "Restart needed").
+# `.reload disables` wipes the in-memory entries; the watchdog puts them back within
+# ContentGate.WatchdogMs. Commands (GM): `.gate status`, `.gate reload`.
+#
+# Day-one set (designer rulings 2026-11-05): every vanilla 5-man on normal, Maraudon and
+# Dire Maul included; AV, WSG and AB; every vanilla and later-era holiday; raids closed
+# until their tier; heroics closed until each dungeon's rework; Outland, Northrend, TBC and
+# WotLK battlegrounds, arenas and world PvP closed until 70.
+#
+
+#
+#    ContentGate.Enable
+#        Description: Master switch. 0 = gate nothing (every instance, battleground, event and
+#                     continent open; bundles open). Switching it live with `.reload config` works.
+#        Default:     1 - (Enabled)
+#                     0 - (Disabled)
+#
+
+ContentGate.Enable = 1
+
+#
+#    ContentGate.Open.Instances.*
+#        Description: Open dungeon and raid difficulties. Space separated `<map>:<modes>`, modes
+#                     comma separated:
+#                       5-man: N (normal), H (heroic)
+#                       raid:  N or 10N, 25N, 10H, 25H (a vanilla 40-player raid has only N,
+#                              except Onyxia's Lair: 249 keeps its 10N and 25N rows, both 40
+#                              players, so open it with 249:* or a 25-player raid is refused)
+#                       *      every difficulty the map has
+#                     A mode the map has no MapDifficulty row for is a conf error (logged, ignored).
+#                     Every Open.Instances.* key below is read and merged; the split is only for
+#                     line length. Keys not present in this .dist file are ignored by the config
+#                     loader, so add new keys here first.
+#                     Bundles tied to a map (content_gate_bundle.opensWith = map:<id>:<mode>)
+#                     open with it: e.g. 409:N also spawns Lothos Riftwaker, 309:N the Yojamba camp
+#                     and the world bosses Azuregos and Lord Kazzak, 532:N the Karazhan bundle
+#                     (Nightbane's summon).
+#        Example:     ContentGate.Open.Instances.Raids = "409:N 249:*"
+#                     ContentGate.Open.Instances.EasternKingdoms = "36:N,H ..."
+#        Default:     the day-one set below
+#
+#        Eastern Kingdoms 5-mans: 33 Shadowfang Keep, 34 Stormwind Stockade, 36 Deadmines,
+#        70 Uldaman, 90 Gnomeregan, 109 Sunken Temple, 189 Scarlet Monastery, 229 Blackrock
+#        Spire, 230 Blackrock Depths, 289 Scholomance, 329 Stratholme.
+#        Kalimdor 5-mans: 43 Wailing Caverns, 47 Razorfen Kraul, 48 Blackfathom Deeps,
+#        129 Razorfen Downs, 209 Zul'Farrak, 349 Maraudon, 389 Ragefire Chasm, 429 Dire Maul.
+#        Vanilla raids: 409 Molten Core, 249 Onyxia's Lair, 309 Zul'Gurub, 469 Blackwing Lair,
+#        509 Ruins of Ahn'Qiraj, 531 Temple of Ahn'Qiraj; 533 Naxxramas (level 80 only).
+#
+
+ContentGate.Open.Instances.EasternKingdoms = "33:N 34:N 36:N 70:N 90:N 109:N 189:N 229:N 230:N 289:N 329:N"
+ContentGate.Open.Instances.Kalimdor = "43:N 47:N 48:N 129:N 209:N 349:N 389:N 429:N"
+ContentGate.Open.Instances.Raids = ""
+ContentGate.Open.Instances.TBC = ""
+ContentGate.Open.Instances.WotLK = ""
+
+#
+#    ContentGate.Open.Battlegrounds
+#        Description: Open battlegrounds and arenas, by BattlemasterList id. Space separated.
+#                       1 Alterac Valley, 2 Warsong Gulch, 3 Arathi Basin, 7 Eye of the Storm,
+#                       9 Strand of the Ancients, 30 Isle of Conquest, 32 Random Battleground
+#                       (open it only when every battleground it can pick is open),
+#                       6 All Arenas (the arena queue switch), 4 Nagrand, 5 Blade's Edge,
+#                       8 Ruins of Lordaeron, 10 Dalaran Sewers, 11 Ring of Valor (arena maps;
+#                       open them together with 6).
+#                     Call to Arms events follow their battleground (18 AV, 19 WSG, 20 AB,
+#                     21 EotS, 53 SotA, 54 IoC); the arena season events (75, 76, 55-60) follow 6:
+#                     while 6 is closed the module also stops the season event the core
+#                     force-starts at boot (or on `.arena season set`); opening 6 starts the
+#                     current season's event again.
+#        Default:     "1 2 3"
+#
+
+ContentGate.Open.Battlegrounds = "1 2 3"
+
+#
+#    ContentGate.Open.OutdoorPvP
+#        Description: Open outdoor PvP zones by type. Space separated. Needs a restart.
+#                       1 Hellfire Peninsula, 2 Nagrand, 3 Terokkar Forest, 4 Zangarmarsh,
+#                       5 Silithus, 6 Eastern Plaguelands (5 and 6 opened with the AQ tier in
+#                       mod-progression), 7 Grizzly Hills.
+#                     Wintergrasp is not an outdoor PvP zone: see ContentGate.Wintergrasp.*.
+#        Default:     ""
+#
+
+ContentGate.Open.OutdoorPvP = ""
+
+#
+#    ContentGate.Open.Outland
+#        Description: Outland proper: map 530 outside the Blood Elf and Draenei starting zones
+#                     and their cities (Hellfire, Zangarmarsh, Terokkar, Nagrand, Blade's Edge,
+#                     Netherstorm and its Twisting Nether islands, Shadowmoon, Auchindoun,
+#                     Shattrath; Isle of Quel'Danas counts as Outland).
+#                     Closed: a non-GM teleport there is refused (the Dark Portal, portals,
+#                     hearthstones, summons) and anyone found there is sent to the Blasted Lands
+#                     side of the Dark Portal. The Sun's Reach events (101-115) follow this switch.
+#                     Outland instances are separate maps: open them in Open.Instances.TBC.
+#        Default:     0 - (Closed)
+#                     1 - (Open)
+#
+
+ContentGate.Open.Outland = 0
+
+#
+#    ContentGate.Open.Northrend
+#        Description: Northrend (map 571). Closed: a non-GM teleport there is refused; a
+#                     passenger on a Northrend boat or zeppelin is put back on its old-world dock
+#                     when the transport changes map; anyone found there is sent to their
+#                     homebind (or their capital). The Kalu'ak Fishing Derby (63, 64) follows
+#                     this switch. Northrend instances: open them in Open.Instances.WotLK.
+#        Default:     0 - (Closed)
+#                     1 - (Open)
+#
+
+ContentGate.Open.Northrend = 0
+
+#
+#    ContentGate.Wintergrasp.FollowNorthrend
+#        Description: While Northrend is closed, force Wintergrasp.Enable = 2 (all Wintergrasp
+#                     processing off); once it is open, worldserver.conf's Wintergrasp.Enable
+#                     applies. Takes effect at the next restart.
+#        Default:     1 - (Follow the Northrend switch)
+#                     0 - (Leave Wintergrasp.Enable to worldserver.conf)
+#
+
+ContentGate.Wintergrasp.FollowNorthrend = 1
+
+#
+#    ContentGate.Closed.Events
+#        Description: Extra stock game events kept closed (game_event.eventEntry), space
+#                     separated. Every other stock event runs on its schedule, except the ones
+#                     tied to a switch above (Call to Arms, arena seasons, Sun's Reach, Kalu'ak)
+#                     and the events of closed bundles.
+#                       61 Zalazane's Fall: the 2010 Cataclysm pre-patch event (Echo Isles); its
+#                          dates are in 2010 and it never recurs, so it stays closed
+#        Default:     "61"
+#
+
+ContentGate.Closed.Events = "61"
+
+#
+#    ContentGate.Open.Bundles
+#        Description: Bundles (content_gate_bundle.name) opened by name, space separated, for
+#                     bundles not tied to an instance (opensWith empty) or to open one ahead of
+#                     its instance. A bundle opens when it is listed here OR its opensWith switch
+#                     is open. `.gate status` lists the bundles.
+#        Example:     ContentGate.Open.Bundles = "zul_gurub"   (Azuregos, Lord Kazzak and the
+#                     Yojamba camp while Zul'Gurub itself stays closed)
+#        Default:     ""
+#
+
+ContentGate.Open.Bundles = ""
+
+#
+#    ContentGate.WatchdogMs
+#        Description: How often (ms) the watchdog checks that `.reload disables` (or anything
+#                     else calling DisableMgr::LoadDisables) did not wipe the gate; it re-applies
+#                     it and logs a warning. Minimum 1000.
+#        Default:     5000
+#
+
+ContentGate.WatchdogMs = 5000
+
+#
+#    ContentGate.Debug
+#        Description: Log every refused continent teleport, bounce and dock return
+#                     (module.content_gate, INFO).
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+#
+
+ContentGate.Debug = 0

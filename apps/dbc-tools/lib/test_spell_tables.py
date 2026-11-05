@@ -22,7 +22,7 @@ from tempfile import TemporaryDirectory
 TOOL_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOL_ROOT))
 
-from lib import dbcfmt, spell_tables, sql_dump, trainer_state  # noqa: E402
+from lib import dbcfmt, frozen_replay, spell_tables, sql_dump, trainer_state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 
 CLASS_FILE = '''
@@ -505,35 +505,33 @@ class RemovalBlocksTest(unittest.TestCase):
             + "INSERT INTO `spell_bonus_data` (`entry`, `direct_bonus`, `dot_bonus`, `ap_bonus`, "
             "`ap_dot_bonus`, `comments`) VALUES (172, 0, 0.1333, 0, 0, 'Corruption');\n"
         )
-        # The removal typo guard reads mod-progression phase SQL too - point it at an empty
-        # modules dir so the real repo's phase files can't leak into these tests.
+        # The removal typo guard reads module SQL and the frozen replay inputs too - point both at
+        # empty dirs so the real repo's files can't leak into these tests.
         modules = Path(self._tmp.name) / "modules"
         modules.mkdir()
-        self._modules = modules
+        frozen = Path(self._tmp.name) / "frozen"
+        frozen.mkdir()
+        self._modules, self._frozen = modules, frozen
         self._orig = (
             trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR,
-            trainer_state.MODULES_DIR, trainer_state.PROGRESSION_CONF, trainer_state.PROGRESSION_CONF_DIST,
+            trainer_state.MODULES_DIR, frozen_replay.FROZEN_ROOT,
         )
         trainer_state.BASE_SQL_DIR = base
         trainer_state.PROMOTED_SQL_DIR = promoted
         trainer_state.PENDING_SQL_DIR = pending
         trainer_state.MODULES_DIR = modules
-        trainer_state.PROGRESSION_CONF = modules / "mod_progression.conf"
-        trainer_state.PROGRESSION_CONF_DIST = modules / "mod_progression.conf.dist"
-        trainer_state.PROGRESSION_CONF.write_text("Progression.Phase = 2\n")
+        frozen_replay.FROZEN_ROOT = frozen
 
     def tearDown(self):
         (
             trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR,
-            trainer_state.MODULES_DIR, trainer_state.PROGRESSION_CONF, trainer_state.PROGRESSION_CONF_DIST,
+            trainer_state.MODULES_DIR, frozen_replay.FROZEN_ROOT,
         ) = self._orig
         self._tmp.cleanup()
 
-    def _phase_trainer_spell(self, phase: int, trainer_id: int, spell_id: int) -> None:
-        # The shape of mod-progression's phase_NN-trainer_spell.sql (@TrainerId-relative rows).
-        sql_dir = self._modules / "mod-progression" / "src" / f"phase_{phase:02}" / "sql"
-        sql_dir.mkdir(parents=True)
-        (sql_dir / f"phase_{phase:02}-trainer_spell.sql").write_text(
+    def _trainer_spell_sql(self, trainer_id: int, spell_id: int) -> str:
+        # The shape of mod-progression's phase_00-trainer_spell.sql (@TrainerId-relative rows).
+        return (
             "SET @TrainerId := 200;\n"
             "INSERT INTO `trainer_spell` (`TrainerId`, `SpellId`, `ReqLevel`) VALUES\n"
             f"(@TrainerId+{trainer_id - 200}, {spell_id}, 10);\n"
@@ -645,25 +643,31 @@ class RemovalBlocksTest(unittest.TestCase):
         self.assertEqual(len(blocks), 1)
         self.assertTrue(any(l.startswith("WARNING:") for l in report))  # "live" set was empty, so it warns
 
-    def test_removal_of_a_later_phase_row_names_the_phase_not_a_typo(self):
-        # Progression.Phase is 2 (setUp): phase_07's row isn't live yet, so the plain typo guard
-        # would call it nonexistent - it's real, and phase 7 will re-add it after this DELETE.
-        self._phase_trainer_spell(7, 200, 469)
-        dsl = _load_wp_t_class('from lib.dsl.registry import untrain\nuntrain(469, [200])\n')
-        blocks, report = spell_tables.render_removal_blocks(dsl)
-        self.assertEqual(len(blocks), 1)  # still emitted
-        warnings = [l for l in report if l.startswith("WARNING:")]
-        self.assertEqual(len(warnings), 1)
-        self.assertIn("phase_07", warnings[0])
-        self.assertNotIn("check for a typo", warnings[0])
-
-    def test_removal_of_an_applied_phase_row_gets_a_fresh_db_note(self):
-        self._phase_trainer_spell(0, 208, 2060)
+    def test_removal_of_a_frozen_phase_00_row_is_live_not_a_typo(self):
+        # The frozen phase 0 (lib/frozen_replay.py) is part of the replay: a row it inserts is live.
+        (self._promoted / "2026_08_21_01.sql").write_text("-- slot anchor\n")
+        slot = self._frozen / "2026_09_02_mod_progression_phase_00"
+        slot.mkdir()
+        (slot / "SLOT").write_text("after = 2026_08_21_01.sql\nbefore = 2026_08_22_00.sql\n")
+        (slot / "phase_00-trainer_spell.sql").write_text(self._trainer_spell_sql(208, 2060))
         dsl = _load_wp_t_class('from lib.dsl.registry import untrain\nuntrain(2060, [208])\n')
         blocks, report = spell_tables.render_removal_blocks(dsl)
         self.assertEqual(len(blocks), 1)
-        self.assertFalse(any(l.startswith("WARNING:") for l in report))
-        self.assertTrue(any(l.startswith("note:") and "phase_00" in l and "fresh world DB" in l for l in report))
+        self.assertFalse(any(l.startswith(("WARNING:", "note:")) for l in report))
+
+    def test_mod_progression_phase_files_are_not_read(self):
+        # The phase replay is gone: a later phase's row in a module checkout is not live, so removing it is
+        # the plain typo warning (no phase note, no Progression.Phase lookup).
+        sql_dir = self._modules / "mod-progression" / "src" / "phase_07" / "sql"
+        sql_dir.mkdir(parents=True)
+        (sql_dir / "phase_07-trainer_spell.sql").write_text(self._trainer_spell_sql(200, 469))
+        dsl = _load_wp_t_class('from lib.dsl.registry import untrain\nuntrain(469, [200])\n')
+        blocks, report = spell_tables.render_removal_blocks(dsl)
+        self.assertEqual(len(blocks), 1)
+        warnings = [l for l in report if l.startswith("WARNING:")]
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("check for a typo", warnings[0])
+        self.assertFalse(any("phase_07" in l or l.startswith("note:") for l in report))
 
 
 class ShapeshiftFormEmissionTest(unittest.TestCase):
@@ -996,6 +1000,83 @@ class CreatureTablesTest(unittest.TestCase):
         blocks = spell_tables.render_creature_blocks(self._index(), dsl)
         self.assertEqual(len(blocks), 1)
         self.assertIn(", 194,", blocks[0])
+
+
+    # creature_template_columns(): owns only the named columns of an existing (stock) row - the pre-nerf raid
+    # HealthModifier declaration (source/world/raid_health_prenerf.py) is built on it.
+    def _edit_dsl(self, source: str) -> dict:
+        rows = {int(r["entry"]): r for r in self._index().live_rows("creature_template")}
+        return _load_creature_class(
+            "from lib.dsl.registry import creature_template_columns\n" + source, existing_creature_rows=rows
+        )
+
+    def test_columns_edit_matching_live_emits_nothing(self):
+        self._write_baseline_then_update(300001, "Frozen Orb", before=194, after=66)
+        dsl = self._edit_dsl("creature_template_columns(300001, flags_extra=66, HealthModifier=1)\n")
+        self.assertEqual(spell_tables.render_creature_blocks(self._index(), dsl), [])
+
+    def test_columns_edit_emits_a_column_limited_update(self):
+        self._write_baseline_then_update(300001, "Frozen Orb", before=194, after=66)
+        dsl = self._edit_dsl("creature_template_columns(300001, HealthModifier=50)\n")
+        self.assertEqual(
+            spell_tables.render_creature_blocks(self._index(), dsl),
+            ["UPDATE `creature_template` SET `HealthModifier` = 50 WHERE `entry` IN (300001);"],
+        )
+
+    def test_columns_edit_does_not_claim_other_columns(self):
+        self._write_baseline_then_update(300001, "Frozen Orb", before=194, after=66)
+        dsl = self._edit_dsl("creature_template_columns(300001, HealthModifier=1)\n")
+        # another source changes an unrelated column: the edit neither reports nor reverts it
+        self._promoted.joinpath("zz_other.sql").write_text(
+            "UPDATE `creature_template` SET `flags_extra` = 0, `name` = 'Renamed' WHERE `entry` = 300001;\n"
+        )
+        self.assertEqual(spell_tables.render_creature_blocks(self._index(), dsl), [])
+
+    def test_columns_edit_reemits_after_a_later_sql_changes_the_value(self):
+        # the pre-nerf raid health case: live equals the declaration (nothing emitted), then a later migration
+        # (an upstream merge) changes the value, and the next run restores the declared one
+        self._write_baseline_then_update(300001, "Frozen Orb", before=194, after=66)
+        self._promoted.joinpath("yy_pre.sql").write_text(
+            "UPDATE `creature_template` SET `HealthModifier` = 115 WHERE `entry` = 300001;\n"
+        )
+        dsl = self._edit_dsl("creature_template_columns(300001, HealthModifier=115)\n")
+        self.assertEqual(spell_tables.render_creature_blocks(self._index(), dsl), [])
+        self._promoted.joinpath("zz_upstream.sql").write_text(
+            "UPDATE `creature_template` SET `HealthModifier` = 40 WHERE `entry` = 300001;\n"
+        )
+        self.assertEqual(
+            spell_tables.render_creature_blocks(self._index(), dsl),
+            ["UPDATE `creature_template` SET `HealthModifier` = 115 WHERE `entry` IN (300001);"],
+        )
+
+    def test_columns_edit_rejects_bad_declarations(self):
+        self._write_baseline_then_update(300001, "Frozen Orb", before=194, after=66)
+        with self.assertRaises(ValueError):
+            self._edit_dsl("creature_template_columns(399999, HealthModifier=2)\n")  # not an existing row
+        with self.assertRaises(KeyError):
+            self._edit_dsl("creature_template_columns(300001, NoSuchColumn=2)\n")
+        with self.assertRaises(ValueError):
+            self._edit_dsl("creature_template_columns(300001)\n")
+        with self.assertRaises(registry.DuplicateIdError):
+            self._edit_dsl(
+                "creature_template_columns(300001, HealthModifier=2)\n"
+                "creature_template_columns(300001, HealthModifier=3)\n"
+            )
+
+    def test_conflict_check_flags_disagreeing_owners_only(self):
+        self._write_baseline_then_update(300001, "Frozen Orb", before=194, after=66)
+        rows = {int(r["entry"]): r for r in self._index().live_rows("creature_template")}
+        source = (
+            "from lib.dsl.registry import creature_template, creature_template_columns\n"
+            "creature_template(300001, 'Frozen Orb', HealthModifier=%d)\n"
+            "creature_template_columns(300001, HealthModifier=60)\n"
+        )
+        agree = _load_creature_class(source % 60, existing_creature_rows=rows)
+        self.assertEqual(spell_tables.check_creature_edit_conflicts(agree), [])
+        clash = _load_creature_class(source % 61, existing_creature_rows=rows)
+        (error,) = spell_tables.check_creature_edit_conflicts(clash)
+        self.assertIn("300001", error)
+        self.assertIn("HealthModifier", error)
 
 
 # Code review, 2026-09-28: _same_row assumed a column missing from a live row defaults to 0 (true

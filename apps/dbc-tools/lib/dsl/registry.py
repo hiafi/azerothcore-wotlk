@@ -136,6 +136,10 @@ class Registry:
     # never diffed as DELETE-then-INSERT the way the others are - see creature_template()'s
     # docstring and lib/spell_tables.py's CREATURE_TABLES for the upsert-only emission this implies.
     creature_templates: list[dict] = field(default_factory=list)
+    # creature_template_columns()'s column-limited edits of an *existing* (stock) creature_template row - see its
+    # docstring and lib/spell_tables.py's render_creature_blocks. Kept apart from creature_templates so the
+    # full-row consumers (the model lints, header_gen) never see a stock creature's row.
+    creature_template_edits: list[dict] = field(default_factory=list)
     creature_template_models: list[dict] = field(default_factory=list)
     # Shaman T1: creature_spell()'s creature_template_spell rows (a plain SPELL_TABLES entry: DELETE-then-INSERT
     # on the (CreatureID, Index) key, pruned when a declaration is dropped) and remove_creature_spell()'s removals.
@@ -197,7 +201,8 @@ MERGE_KEYS = (
     "linked_spells", "spell_groups", "spell_group_rules", "custom_attrs", "shapeshift_forms",
     "script_removals", "linked_spell_removals", "spell_group_removals", "trainer_removals", "spell_required_removals", "spell_rank_removals",
     "bonus_removals", "proc_removals", "spell_categories",
-    "creature_templates", "creature_template_models", "creature_template_spells", "creature_spell_removals",
+    "creature_templates", "creature_template_edits", "creature_template_models", "creature_template_spells",
+    "creature_spell_removals",
     "retired_talents", "pet_spell_retirements", "item_templates",
     "potency_corrections",
     "consts",
@@ -884,14 +889,9 @@ def untrain(spell: model.Spell | int, trainer_ids: list[int]) -> list[dict]:
     (a server's real, possibly module-rewired, trainer id - see `lib.trainer_state`'s module
     docstring - not necessarily the stock one), since each becomes its own key-exact DELETE.
 
-    Known limitation, inherent to removing a *module*-granted row this way, not something this
-    helper can fix: `DBUpdater` applies core `pending_db_world`/`db_world` SQL (this DELETE)
-    before `OnAfterDatabasesLoaded` applies module SQL (mod-progression's phase files). On a
-    fresh database, or when `Progression.Phase` later advances past a phase that (re)inserts this
-    exact row, the module's own INSERT runs *after* this DELETE and silently brings the grant
-    back - the removal only reads as "done" (via provenance) and is never re-emitted. The
-    hand-written migration this helper replaces (see the WP-T handoff) had the identical
-    limitation; there is no DB-update-ordering fix available from this tool."""
+    Many such rows come from mod-progression's phase 0 (2026-09-02), which the replay sees as a
+    frozen input at the position it ran (`lib/frozen_replay.py`); the module is retired, so no
+    phase SQL re-inserts a removed row any more."""
     spell_id = _spell_id_of(spell)
     if not trainer_ids:
         raise ValueError(f"untrain({spell_id}, ...): pass at least one trainer id")
@@ -1154,6 +1154,44 @@ def creature_template(entry: int, name: str, **columns) -> dict:
     row["entry"] = entry
     row["id"] = entry
     _require_active().creature_templates.append(row)
+    return row
+
+
+def creature_template_columns(entry: int, **columns) -> dict:
+    """Owns **only the named columns** of an **existing** `creature_template` row (a stock creature, e.g. a raid
+    boss's `HealthModifier`), without claiming the rest of the row: `creature_template()` builds a full row and
+    upserts every column, which on a stock entry would also own its name, flags and loot. `entry` must already exist
+    (base dump plus migrations), otherwise this raises; an unknown column name raises `KeyError`.
+
+    Emitted as a column-limited `UPDATE creature_template SET <the columns you passed> WHERE entry IN (...)`
+    (`lib.sql_out.render_update_block`, via the row's `_update_columns`), and only when the replayed live value of
+    one of those columns differs - so a declaration that already matches live emits nothing, and a later migration
+    that changes the column makes the next run re-emit the declared value (drift). Never pruned: a declaration
+    dropped from source leaves the value as it is. One call per entry (a second raises `DuplicateIdError`). If a
+    full `creature_template()` row for the same entry is also declared, a column both name must agree
+    (`lib.spell_tables.check_creature_edit_conflicts`)."""
+    all_columns = _require_creature_columns()
+    if not columns:
+        raise ValueError(f"creature_template_columns({entry}): name at least one column")
+    if _require_creature_rows().get(entry) is None:
+        raise ValueError(
+            f"creature_template_columns({entry}, ...): no live creature_template row with that entry (base dump plus "
+            f"migrations) - this helper only edits an existing creature; a new one is creature_template()"
+        )
+    unknown = sorted(c for c in columns if c not in all_columns)
+    if unknown:
+        raise KeyError(
+            f"creature_template_columns({entry}): no such column(s): {', '.join(unknown)} - see "
+            f"data/sql/base/db_world/creature_template.sql's CREATE TABLE for the real names"
+        )
+    registry = _require_active()
+    if any(row["entry"] == entry for row in registry.creature_template_edits):
+        raise DuplicateIdError(f"creature_template_columns({entry}): declared twice")
+    row = dict(columns)
+    row["entry"] = entry
+    row["id"] = entry
+    row["_update_columns"] = tuple(columns)
+    registry.creature_template_edits.append(row)
     return row
 
 

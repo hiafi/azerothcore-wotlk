@@ -356,22 +356,24 @@ leave_spell_group(1054, 200001)                          # spell_group (no id-ra
 untrain(50464, trainer_ids=[212, 213])                    # trainer_spell, one DELETE per trainer id
 ```
 
-**Removing a row mod-progression's phase SQL inserts** (most `untrain` targets - phase_00 is where
-this server's class trainers get their spells) only partly sticks. Core `db_world` SQL, the
-removal's `DELETE` included, is applied before mod-progression's `OnAfterDatabasesLoaded` applies
-`src/phase_NN/sql/`, so any phase that inserts the row puts it back afterwards:
+**Frozen replay inputs.** mod-progression applied its phase 0 SQL once, on 2026-09-02, and never a later
+phase; that is where this server's class trainers got their spells (most `untrain` targets). The module is
+retired and dbc-tools no longer reads any module phase files. The 42 files that ran are kept byte for byte in
+`replay/frozen/2026_09_02_mod_progression_phase_00/` (`MANIFEST`: their SHA1 = the live `updates` hashes) and
+replayed at the position they ran: `SLOT` puts them after `db_world/2026_08_21_01.sql` and before
+`2026_08_22_00.sql` (`lib/frozen_replay.py`; every table replay and the DBC-table state use it). A removal of a
+row phase 0 inserted is a plain removal: core SQL after the slot wins. Never edit these files; a change to that
+data is a new migration. The replay reads them normalised (`frozen_replay.normalise`: comments in `IN (...)` lists,
+multi-variable `SET`, column-name case), since its parsers skip those shapes.
 
-- a phase this realm has already applied (`<= Progression.Phase`): only a fresh world DB (a new
-  realm) gets the row back; a realm already past that phase keeps the removal. `generate.py` adds a
-  `note:` line naming the phase.
-- a phase this realm hasn't reached yet: the `DELETE` matches nothing today, and the row appears
-  when the realm reaches that phase. `generate.py` prints a `WARNING:` naming the phase instead of
-  the typo warning.
+`replay_diff.py` checks the slot against the live DB (read-only SELECTs): for every table phase 0 writes, the cells
+it wrote, replayed over the files the live `updates` table lists, must equal the live values, except the entries in
+the slot's `ALLOWED_DIFFS` (table, key, column, reason). It exits 1 on anything else.
 
-Either way the removal counts as done and is never emitted again. dbc-tools can't change that
-apply order - the hand-written `data/sql/updates/db_world/2026_09_23_02.sql` this helper replaces
-had the same limit - so a removal that has to hold on every realm and every phase means editing the
-phase file itself.
+```
+apps/dbc-tools/.venv/bin/python3 apps/dbc-tools/replay_diff.py \
+    --mysql "docker exec -i <ac-database container> mysql -uroot -p<password>" [--baseline] [--tables a,b]
+```
 
 ### Spell categories and `spell_proc` removals (Paladin T1)
 
@@ -425,6 +427,16 @@ exclusion listing exactly what it covers, and stops with an error for a map no d
 finder entry uses. Deleting a line re-enables the dungeon (the prune pass DELETEs the row, the last one
 included). Live on worldserver start or `.reload disables`. Needs the stock
 `var/extractors/dbc/LFGDungeons.dbc` (`DBFilesClient/LFGDungeons.dbc` from `patch-enUS-3.MPQ`, flattened).
+
+### Owning one column of a stock creature (`creature_template_columns`)
+
+`creature_template()` owns a whole row; for a **stock** creature where dbc-tools should own a single column (the
+pre-nerf TBC/WotLK raid `HealthModifier`, `source/world/raid_health_prenerf.py`) use
+`creature_template_columns(entry, HealthModifier=115)`. It needs the entry to exist, emits a column-limited
+`UPDATE creature_template SET <named columns> WHERE entry IN (...)` only when the replayed value differs (nothing on a
+run where live already matches), and re-emits the declared value after a later SQL file changes it. Other columns of
+the row are never read or written. It is never pruned. If a `creature_template()` full row also names the entry, a
+named column must agree (generate.py stops otherwise).
 
 ### Declaring a creature (T1)
 

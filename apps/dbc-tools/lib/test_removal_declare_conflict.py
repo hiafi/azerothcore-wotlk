@@ -45,7 +45,10 @@ def _removal_inputs() -> tuple[dict, dict]:
         dsl_classes = dsl_registry.load_classes_dir(source_dir / "classes", **kwargs)
         generate._merge_npc_declarations(dsl_classes, dsl_registry.load_classes_dir(source_dir / "npcs", **kwargs))
         generate._merge_npc_declarations(
-            dsl_classes, dsl_registry.load_classes_dir(source_dir / "world", ids_cfg=ids_cfg, live_data=live_data),
+            dsl_classes, dsl_registry.load_classes_dir(
+                source_dir / "world", ids_cfg=ids_cfg, live_data=live_data,
+                existing_creature_rows=kwargs["existing_creature_rows"], creature_columns=kwargs["creature_columns"],
+            ),
             "source/world/",
         )
         live_keys = {spec.name: spell_table_index.live_keys(spec.name) for spec in spell_tables.SPELL_TABLES}

@@ -1,0 +1,63 @@
+-- progression-slim PS3 D1: XP curve back to the stock WotLK curve.
+-- Reverses mod-progression phase 00 (phase_00-player_xp_for_level.sql, levels 11-69 set to the vanilla curve).
+-- Values: data/sql/base/db_world/player_xp_for_level.sql (no db_world update touches the table). 59 rows differ
+-- from live; levels 1-10 and 70-79 are already stock. Level 59 -> 60 becomes 172000 (was 209800).
+
+UPDATE `player_xp_for_level` SET `Experience` = 8700 WHERE `Level` = 11;
+UPDATE `player_xp_for_level` SET `Experience` = 9800 WHERE `Level` = 12;
+UPDATE `player_xp_for_level` SET `Experience` = 11000 WHERE `Level` = 13;
+UPDATE `player_xp_for_level` SET `Experience` = 12300 WHERE `Level` = 14;
+UPDATE `player_xp_for_level` SET `Experience` = 13600 WHERE `Level` = 15;
+UPDATE `player_xp_for_level` SET `Experience` = 15000 WHERE `Level` = 16;
+UPDATE `player_xp_for_level` SET `Experience` = 16400 WHERE `Level` = 17;
+UPDATE `player_xp_for_level` SET `Experience` = 17800 WHERE `Level` = 18;
+UPDATE `player_xp_for_level` SET `Experience` = 19300 WHERE `Level` = 19;
+UPDATE `player_xp_for_level` SET `Experience` = 20800 WHERE `Level` = 20;
+UPDATE `player_xp_for_level` SET `Experience` = 22400 WHERE `Level` = 21;
+UPDATE `player_xp_for_level` SET `Experience` = 24000 WHERE `Level` = 22;
+UPDATE `player_xp_for_level` SET `Experience` = 25500 WHERE `Level` = 23;
+UPDATE `player_xp_for_level` SET `Experience` = 27200 WHERE `Level` = 24;
+UPDATE `player_xp_for_level` SET `Experience` = 28900 WHERE `Level` = 25;
+UPDATE `player_xp_for_level` SET `Experience` = 30500 WHERE `Level` = 26;
+UPDATE `player_xp_for_level` SET `Experience` = 32200 WHERE `Level` = 27;
+UPDATE `player_xp_for_level` SET `Experience` = 33900 WHERE `Level` = 28;
+UPDATE `player_xp_for_level` SET `Experience` = 36300 WHERE `Level` = 29;
+UPDATE `player_xp_for_level` SET `Experience` = 38800 WHERE `Level` = 30;
+UPDATE `player_xp_for_level` SET `Experience` = 41600 WHERE `Level` = 31;
+UPDATE `player_xp_for_level` SET `Experience` = 44600 WHERE `Level` = 32;
+UPDATE `player_xp_for_level` SET `Experience` = 48000 WHERE `Level` = 33;
+UPDATE `player_xp_for_level` SET `Experience` = 51400 WHERE `Level` = 34;
+UPDATE `player_xp_for_level` SET `Experience` = 55000 WHERE `Level` = 35;
+UPDATE `player_xp_for_level` SET `Experience` = 58700 WHERE `Level` = 36;
+UPDATE `player_xp_for_level` SET `Experience` = 62400 WHERE `Level` = 37;
+UPDATE `player_xp_for_level` SET `Experience` = 66200 WHERE `Level` = 38;
+UPDATE `player_xp_for_level` SET `Experience` = 70200 WHERE `Level` = 39;
+UPDATE `player_xp_for_level` SET `Experience` = 74300 WHERE `Level` = 40;
+UPDATE `player_xp_for_level` SET `Experience` = 78500 WHERE `Level` = 41;
+UPDATE `player_xp_for_level` SET `Experience` = 82800 WHERE `Level` = 42;
+UPDATE `player_xp_for_level` SET `Experience` = 87100 WHERE `Level` = 43;
+UPDATE `player_xp_for_level` SET `Experience` = 91600 WHERE `Level` = 44;
+UPDATE `player_xp_for_level` SET `Experience` = 96300 WHERE `Level` = 45;
+UPDATE `player_xp_for_level` SET `Experience` = 101000 WHERE `Level` = 46;
+UPDATE `player_xp_for_level` SET `Experience` = 105800 WHERE `Level` = 47;
+UPDATE `player_xp_for_level` SET `Experience` = 110700 WHERE `Level` = 48;
+UPDATE `player_xp_for_level` SET `Experience` = 115700 WHERE `Level` = 49;
+UPDATE `player_xp_for_level` SET `Experience` = 120900 WHERE `Level` = 50;
+UPDATE `player_xp_for_level` SET `Experience` = 126100 WHERE `Level` = 51;
+UPDATE `player_xp_for_level` SET `Experience` = 131500 WHERE `Level` = 52;
+UPDATE `player_xp_for_level` SET `Experience` = 137000 WHERE `Level` = 53;
+UPDATE `player_xp_for_level` SET `Experience` = 142500 WHERE `Level` = 54;
+UPDATE `player_xp_for_level` SET `Experience` = 148200 WHERE `Level` = 55;
+UPDATE `player_xp_for_level` SET `Experience` = 154000 WHERE `Level` = 56;
+UPDATE `player_xp_for_level` SET `Experience` = 159900 WHERE `Level` = 57;
+UPDATE `player_xp_for_level` SET `Experience` = 165800 WHERE `Level` = 58;
+UPDATE `player_xp_for_level` SET `Experience` = 172000 WHERE `Level` = 59;
+UPDATE `player_xp_for_level` SET `Experience` = 290000 WHERE `Level` = 60;
+UPDATE `player_xp_for_level` SET `Experience` = 317000 WHERE `Level` = 61;
+UPDATE `player_xp_for_level` SET `Experience` = 349000 WHERE `Level` = 62;
+UPDATE `player_xp_for_level` SET `Experience` = 386000 WHERE `Level` = 63;
+UPDATE `player_xp_for_level` SET `Experience` = 428000 WHERE `Level` = 64;
+UPDATE `player_xp_for_level` SET `Experience` = 475000 WHERE `Level` = 65;
+UPDATE `player_xp_for_level` SET `Experience` = 527000 WHERE `Level` = 66;
+UPDATE `player_xp_for_level` SET `Experience` = 585000 WHERE `Level` = 67;
+UPDATE `player_xp_for_level` SET `Experience` = 648000 WHERE `Level` = 68;

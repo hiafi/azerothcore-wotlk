@@ -226,6 +226,40 @@ Not covered: the four secondary tables (durations, ranges, radii, cast times); a
 is unreferenced and harmless. The replay is ~45 s cold, cached like the other loaders after that.
 Tests: `lib/test_stale_overlay.py`.
 
+## Frozen replay inputs: mod-progression's applied phase 0 (progression-slim PS1)
+
+mod-progression applied `src/phase_00/sql/` once (2026-09-02 19:54, 42 `phase_00-*` rows in `acore_world.updates`)
+and never a later phase: `Progression.Reset` never ran in Docker (`AC_UPDATES_ENABLE_DATABASES=0`). The module is
+retired and dbc-tools reads no module phase files any more (`progression_phase*`, `load_phase_table_rows` and the
+phase warnings of `render_removal_blocks` are gone; the plain typo guard stays). Things that are not obvious:
+
+- **Where it lives.** `apps/dbc-tools/replay/frozen/2026_09_02_mod_progression_phase_00/`: the 42 files byte for byte
+  (hiafi/mod-progression 8c765a1), `MANIFEST` (SHA1 = the `updates` hashes, in apply order), `SLOT`
+  (`after = 2026_08_21_01.sql`, `before = 2026_08_22_00.sql`, read from the `updates` timestamps: every promoted file
+  up to `after` ran before it, every one from `before` on after it), `ALLOWED_DIFFS`, and a `.gitattributes` /
+  `.editorconfig` that stop git and editors from touching the bytes. `lib/test_frozen_replay.py` checks the hashes.
+- **Where it is spliced.** `lib/frozen_replay.splice` puts the files right after `after` in the sorted promoted list.
+  Readers: `trainer_state._migration_files_mentioning` (every table replay, `stale_overlay`, `spell_tables`) and
+  `state._promoted_paths` (the DBC-table state, so `map_dbc` 249 and `mapdifficulty_dbc` 26 / 323 are visible). A list
+  without either anchor (a test's temp dir) is left alone; a promoted file named inside the slot is an error.
+  `_split_stable` counts frozen files as stable, so the disk cache keeps them in the cached prefix.
+- **Not in the item overlay.** `apps/item-tools`' overlay does not read the slot (phase 0's 18 mount rows); the
+  progression-slim cutover SQL resets those columns anyway, and `item_template()` emits column-limited UPDATEs.
+- **Read normalised.** `sqlcorpus.read_text` returns a frozen file through `frozen_replay.normalise`: `-- comments`
+  inside `IN (...)` lists and between INSERT tuples stripped, `SET @a := 1, @b := 2;` split, backticked column names
+  in the schema's letter case. The shared parsers skip or misapply all three (an UPDATE guard on a column the row
+  does not hold counts as satisfied: phase 0 writes `` `entry` `` for `creature_loot_template.Entry`, so its emblem
+  swap hit every Emblem of Triumph row). Without it the replay lost ~1,000 `creature_template` cells of phase 0.
+  Pending files with commented `IN` lists (the progression-slim cutover SQL) are still skipped with a WARNING, and
+  `apps/item-tools`' overlay raises on them.
+- **Replay vs live.** `replay_diff.py` (logic in `lib/replay_diff.py`) replays each table phase 0 writes over the files
+  the live `updates` table lists and compares the cells phase 0 changed with the live DB (read-only). It applies the
+  same three fixes to every file, re-keys a row whose key column an UPDATE changed, and models `TRUNCATE`. Result at
+  PS1 (2026-11-05): 40,285 footprint cells on 5,353 rows match except the four `spell_dbc` cells in `ALLOWED_DIFFS`.
+  Not checked: statements the replay cannot apply at all (UPDATEs filtered only on a non-key column such as
+  `creature.id`, WHEREs with `@var+n`), listed per table in its output. Run time ~15 min (`smart_scripts` and
+  `spell_dbc` dominate).
+
 ## WP-T: five more declared tables, and declared removals
 
 `.agents/plans/druid-rework/druid-rework.WP-T-HANDOFF.md` (PLAN B11/§5.0) added five more world-DB
@@ -387,6 +421,24 @@ accounted for:
   `_same_row` checks before falling back to the old 0/`None` guess; every other table's `TableSpec`
   leaves it empty and is unaffected.
 
+## `creature_template_columns()`: one owned column of a stock creature (progression-slim PS1 WP-P)
+
+`creature_template()` builds and upserts a full row, which on a stock entry would own its name, flags and loot too.
+`creature_template_columns(entry, **columns)` (`lib/dsl/registry.py`) owns only the named columns: the row goes to
+`Registry.creature_template_edits` (a separate list, so the full-row lints and `header_gen` never see a stock
+creature), `spell_tables.render_creature_blocks` compares just `_update_columns` (`_same_row`) against the replayed
+live row and renders a column-limited `UPDATE` (`sql_out.render_update_block`, the `item_template()` shape) after the
+full-row upserts. Live equals declared: no output. A later SQL file that changes the column: the next run re-emits the
+declared value (this is the drift guard). Never pruned. `source/world/raid_health_prenerf.py` declares the 244 pre-nerf
+TBC/WotLK raid `HealthModifier` values phase 0 set (every TBC/WotLK raid boss and trash mob keeps them until its raid is
+reworked). `source/world/*.py` is loaded with `existing_creature_rows`/`creature_columns` for this.
+
+Meeting a future dungeon-creature extraction (`dungeon(...)`): a dungeon creature that is also in the list (Hellfire
+Channeler 17256 spawns in Magtheridon's Lair and the Blood Furnace) is the only overlap today. If the extraction
+declares it as a full `creature_template()` row, built from live it carries the same `HealthModifier`, so the two agree
+(`spell_tables.check_creature_edit_conflicts` stops generate.py on a disagreement, so the pre-nerf value cannot be lost
+silently); the edit's UPDATE is rendered after the upsert and wins a tie. Otherwise they are independent.
+
 ## Paladin T1: `spell_category()` and `remove_spell_proc()`
 
 `spell_category(id, flags)` declares a `spellcategory_dbc` row (a `SPELL_TABLES` entry, so diff/prune
@@ -424,8 +476,9 @@ not obvious:
 - **`flags` must be 1.** `LFGMgr::IsDungeonDisabled` calls `DisableMgr::IsDisabledFor(DISABLE_TYPE_LFG_MAP,
   map, nullptr)`: no unit and flags 0, so the difficulty checked is always normal and a row without
   `DUNGEON_STATUSFLAG_NORMAL` never matches. The same call means heroic cannot be excluded separately.
-- **No collision with mod-progression.** Its phase SQL owns `disables` sourceTypes 1-5, 9 and 10 (maps
-  are sourceType 2, which closes the instance itself), and the base dump has no sourceType 8 rows.
+- **No collision with the frozen phase 0.** mod-progression's applied phase 0 (a frozen replay input since
+  progression-slim, see "Frozen replay inputs") wrote `disables` sourceTypes 1-5, 9 and 10 (maps are sourceType 2,
+  which closes the instance itself), and the base dump has no sourceType 8 rows.
 - **The prune circuit breaker is off for this table** (`TableSpec.prune_when_empty`): an empty
   `lfg.py` is a normal state, and with the breaker on, removing the last exclusion would never DELETE it.
 - **`lint.check_lfg_exclusions` reads stock `LFGDungeons.dbc`** (`dbcfmt.LFGDUNGEONS`, read-only, not in
@@ -514,9 +567,9 @@ talents, pet spells and items" section has the call syntax; this is what to know
   differences from `creature_template`: the live rows come from `apps/item-tools`' overlay (it recurses into
   `itemization_templates_v2/`; `trainer_state` does not), and the statement is a column-limited
   `UPDATE ... SET <declared columns> WHERE entry IN (...)` (`sql_out.render_update_block` reads each row's
-  `_update_columns`; rows with the same assignments share one statement). Reason: mod-progression and other
-  runtime SQL rewrite price and level columns of these same rows, and a full-row update from a replayed copy
-  would revert them. An UPDATE, not a multi-row `INSERT ... ON DUPLICATE KEY UPDATE`, because the overlay
+  `_update_columns`; rows with the same assignments share one statement). Reason: SQL the overlay does not read
+  (the frozen phase 0's mount price and level columns, the progression-slim cutover SQL that resets them) writes
+  other columns of these same rows, and a full-row update from a replayed copy would revert them. An UPDATE, not a multi-row `INSERT ... ON DUPLICATE KEY UPDATE`, because the overlay
   reads only the first tuple of an INSERT (T-FIX T1-1). A rerun after the migration applied emits nothing
   (`test_item_template.RoundTripTest`).
 - **Item lints.** `check_item_dbc_consistency` (WARNING) and `check_ranged_ammo_type` (WARNING) run in the full

@@ -73,8 +73,8 @@ SPELL_THREAT_COLUMNS = ("entry", "flatMod", "pctMod", "apPctMod")
 PLAYERCREATEINFO_ACTION_COLUMNS = ("race", "class", "button", "action", "type")
 PLAYERCREATEINFO_CAST_SPELL_COLUMNS = ("raceMask", "classMask", "spell", "note")
 PLAYERCREATEINFO_SKILLS_COLUMNS = ("raceMask", "classMask", "skill", "rank", "comment")
-# lfg_exclude() (source/world/): sourceType 8 rows only. The base dump and mod-progression's phase
-# SQL (which owns sourceType 1-5/9/10) have no sourceType 8 rows, so nothing else writes these keys.
+# lfg_exclude() (source/world/): sourceType 8 rows only. The base dump and the frozen phase 0 replay input
+# (which wrote sourceType 1-5/9/10) have no sourceType 8 rows, so nothing else writes these keys.
 DISABLES_COLUMNS = ("sourceType", "entry", "flags", "params_0", "params_1", "comment")
 # Shaman T1: creature_template_spell (ObjectMgr::LoadCreatureTemplateSpells), a creature's spell slots
 # m_spells[0..7] - lib.dsl.registry.creature_spell(). Mirrors the base dump's CREATE TABLE; `Index` is the
@@ -359,7 +359,10 @@ def _same_row(existing: dict, declared: dict, spec: TableSpec) -> bool:
     `spec.defaults` (its real per-column schema DEFAULT, when the caller has one - see
     `TableSpec`'s own comment) is checked first; the old 0/None guess is still the fallback for
     every table that never needed anything else."""
+    only = declared.get("_update_columns")  # a column-limited declaration owns (and is compared on) those columns only
     for c in spec.columns:
+        if only is not None and c not in only:
+            continue
         if c in spec.defaults:
             default = spec.defaults[c]
         else:
@@ -654,15 +657,36 @@ def render_creature_blocks(index: SpellTableIndex, dsl_classes: dict[str, list[d
     blocks = []
     for spec in CREATURE_TABLES:
         rows = index.rows_to_emit(spec, dsl_classes.get(spec.registry_key, []))
-        if not rows:
-            continue
         if spec.name == "creature_template":
             block = sql_out.render_upsert_block(spec.name, spec.columns, spec.key_columns, rows)
+            # creature_template_columns() edits of stock rows: after the full-row upserts, so they win a tie
+            edits = index.rows_to_emit(spec, dsl_classes.get("creature_template_edits", []))
+            edit_block = sql_out.render_update_block(spec.name, spec.columns, spec.key_columns[0], edits)
+            block = "\n".join(part for part in (block, edit_block) if part)
         else:
             block = sql_out.render_generic_table_block(spec.name, spec.columns, spec.key_columns, rows)
         if block:
             blocks.append(block)
     return blocks
+
+
+def check_creature_edit_conflicts(dsl_classes: dict[str, list[dict]]) -> list[str]:
+    """Errors for an entry declared by both `creature_template()` (a full row) and `creature_template_columns()`
+    whose values differ in a column the edit names (two owners disagreeing). Equal values are fine: that is how a
+    later dungeon-creature extraction meets the raid-health declaration on a shared entry."""
+    full = {int(row["entry"]): row for row in dsl_classes.get("creature_templates", [])}
+    errors = []
+    for edit in dsl_classes.get("creature_template_edits", []):
+        other = full.get(int(edit["entry"]))
+        if other is None:
+            continue
+        for column in edit["_update_columns"]:
+            if _normalise(other.get(column)) != _normalise(edit[column]):
+                errors.append(
+                    f"creature_template {edit['entry']}: creature_template_columns() declares {column} = "
+                    f"{edit[column]!r} but creature_template() declares {other.get(column)!r}"
+                )
+    return errors
 
 
 def render_creature_retirement_report(
@@ -702,8 +726,8 @@ def render_creature_retirement_report(
 #     sees; the overlay walks them recursively in bare-filename order, as the real DBUpdater does.
 #   - the emitted statement is a column-limited `UPDATE ... SET <declared columns> WHERE entry IN (...)`
 #     (sql_out.render_update_block reads each row's `_update_columns`), so a column nobody declared is
-#     never rewritten from the replayed row - another migration or a module's runtime SQL
-#     (mod-progression rewrites price and level columns) can have changed it since - and the overlay
+#     never rewritten from the replayed row - another migration or SQL the overlay does not read
+#     (the frozen phase 0 set mount price and level columns) can have changed it since - and the overlay
 #     reads it back (a multi-row INSERT it only read the first tuple of; T-FIX T1-1).
 # ---------------------------------------------------------------------------
 
@@ -1015,22 +1039,6 @@ def _keys_of(rows: list[dict], key_columns: tuple[str, ...]) -> set[tuple]:
     return {tuple(_normalise(r[c]) for c in key_columns) for r in rows}
 
 
-def _phases_by_key(table_name: str, key_columns: tuple[str, ...]) -> dict[tuple, list[int]]:
-    """Which mod-progression phases INSERT each key of `table_name`, in phase
-    order - every phase on disk, not just the active ones
-    (`trainer_state.load_phase_table_rows`)."""
-    phases: dict[tuple, list[int]] = {}
-    for phase, rows in trainer_state.load_phase_table_rows(table_name).items():
-        keyed = [r for r in rows if all(c in r for c in key_columns)]
-        for key in _keys_of(keyed, key_columns):
-            phases.setdefault(key, []).append(phase)
-    return phases
-
-
-def _phase_list(phases: list[int]) -> str:
-    return ", ".join(f"phase_{p:02}" for p in phases)
-
-
 def render_removal_blocks(
     dsl_classes: dict[str, list[dict]], live_keys_by_table: dict[str, set[tuple]] | None = None,
 ) -> tuple[list[str], list[str]]:
@@ -1039,7 +1047,7 @@ def render_removal_blocks(
     `render_prune_blocks()` above for a row this tool never emitted itself.
     Every emitted key also gets a report line (never silent about a
     removal), a key with no match anywhere in the base dump/migrations/
-    module SQL gets a `WARNING:` line (almost always a
+    module SQL/the frozen phase 0 gets a `WARNING:` line (almost always a
     typo) but is still emitted - the DELETE is idempotent either way (it
     matches nothing, so it's a harmless no-op), and refusing outright would
     be worse than a false positive: the same key could legitimately have
@@ -1049,23 +1057,14 @@ def render_removal_blocks(
     *declares* raises `DeclareAndRemoveConflictError` rather than silently
     picking a side.
 
-    mod-progression phase SQL is applied after core `db_world` SQL, so a
-    key some phase INSERTs (`_phases_by_key`, every phase on disk) doesn't
-    stay removed: a phase above `Progression.Phase` gets its own `WARNING:`
-    in place of the typo one (the row isn't live *yet*, and comes back when
-    the realm reaches that phase), and an already-applied phase gets a
-    `note:` (only a fresh world DB gets the row back). Nothing here can fix
-    that ordering - see README.md's "Removing a row mod-progression's phase
-    SQL inserts".
-
     `live_keys_by_table` (optional): `{table_name: {key tuples}}` for tables the caller already
     scanned elsewhere - `generate.py` passes `SpellTableIndex.live_keys()` for the three
     `REMOVAL_TABLES` entries that are also `SPELL_TABLES` (`spell_script_names`,
     `spell_linked_spell`, `spell_group`) plus `TrainerIndex.existing_trainer_spells`'s own keys
     for `trainer_spell`, so this doesn't re-scan the base dump + every migration a second time per
     table on every run (review, 2026-09-23). Falls back to a fresh `trainer_state.load_table_rows`
-    scan per table (the original behavior, still covers module SQL - including mod-progression's
-    phase files - via `_migration_files_mentioning`) for any table not present in the map, so this
+    scan per table (the original behavior, still covers module SQL and the frozen phase 0 via
+    `_migration_files_mentioning`) for any table not present in the map, so this
     still works standalone (e.g. in tests) with no caller-side plumbing required."""
     blocks: list[str] = []
     report: list[str] = []
@@ -1092,30 +1091,11 @@ def render_removal_blocks(
         to_emit = sql_out.stable_key_sort(removal_keys - already_removed)
         if not to_emit:
             continue
-        active_phase = trainer_state.progression_phase()
-        phases_by_key = _phases_by_key(spec.table_name, spec.key_columns)
         for key in to_emit:
-            key_text = _key_text(spec.key_columns, key)
-            phases = phases_by_key.get(key, [])
-            later = [p for p in phases if p > active_phase]
-            applied = [p for p in phases if p <= active_phase]
-            if later:
+            if key not in live_keys:
                 report.append(
-                    f"WARNING: {spec.table_name} removal {key_text} is inserted by mod-progression "
-                    f"{_phase_list(later)}, which this realm hasn't applied yet (Progression.Phase = "
-                    f"{active_phase}) - the DELETE matches nothing now and the row comes back when the "
-                    f"realm reaches phase {later[0]}. Not a typo; see README's removal section."
-                )
-            elif key not in live_keys:
-                report.append(
-                    f"WARNING: {spec.table_name} removal {key_text} doesn't exist anywhere (base "
-                    f"dump, migrations, module SQL, any mod-progression phase) - check for a typo."
-                )
-            if applied:
-                report.append(
-                    f"note: {spec.table_name} removal {key_text} is also inserted by mod-progression "
-                    f"{_phase_list(applied)} - a fresh world DB applies this DELETE before phase SQL "
-                    f"and gets the row back; a realm already past that phase keeps the removal."
+                    f"WARNING: {spec.table_name} removal {_key_text(spec.key_columns, key)} doesn't exist "
+                    f"anywhere (base dump, migrations, module SQL, the frozen phase 0) - check for a typo."
                 )
         for key in to_emit:
             report.append(f"removal: {spec.table_name} {_key_text(spec.key_columns, key)} - {spec.why}")

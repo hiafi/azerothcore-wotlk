@@ -1,0 +1,5 @@
+# Verbatim copies of applied SQL (see MANIFEST): never reformat them.
+[*.sql]
+trim_trailing_whitespace = false
+insert_final_newline = false
+max_line_length = off
