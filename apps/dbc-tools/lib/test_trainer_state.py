@@ -21,7 +21,7 @@ from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from lib import trainer_state  # noqa: E402
+from lib import frozen_replay, trainer_state  # noqa: E402
 
 CREATE_TABLE_SQL = {
     "creature_default_trainer": (
@@ -88,22 +88,23 @@ class TrainerStateTest(unittest.TestCase):
             (base / f"{table}.sql").write_text(sql)
         modules = Path(self._tmp.name) / "modules"
         modules.mkdir()
-        self._modules = modules
+        frozen = Path(self._tmp.name) / "frozen"
+        frozen.mkdir()
+        self._modules, self._frozen = modules, frozen
         self._orig = (
             trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR,
-            trainer_state.MODULES_DIR, trainer_state.PROGRESSION_CONF, trainer_state.PROGRESSION_CONF_DIST,
+            trainer_state.MODULES_DIR, frozen_replay.FROZEN_ROOT,
         )
         trainer_state.BASE_SQL_DIR = base
         trainer_state.PROMOTED_SQL_DIR = promoted
         trainer_state.PENDING_SQL_DIR = pending
         trainer_state.MODULES_DIR = modules
-        trainer_state.PROGRESSION_CONF = modules / "mod_progression.conf"  # absent unless a test writes it
-        trainer_state.PROGRESSION_CONF_DIST = modules / "mod_progression.conf.dist"
+        frozen_replay.FROZEN_ROOT = frozen
 
     def tearDown(self):
         (
             trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR,
-            trainer_state.MODULES_DIR, trainer_state.PROGRESSION_CONF, trainer_state.PROGRESSION_CONF_DIST,
+            trainer_state.MODULES_DIR, frozen_replay.FROZEN_ROOT,
         ) = self._orig
         self._tmp.cleanup()
 
@@ -169,11 +170,9 @@ class TrainerStateTest(unittest.TestCase):
         idx = trainer_state.load_trainer_index()
         self.assertEqual(idx.trainer_problems(77), [])
 
-    def _progression_rewire(self, phase: int, creature_id: int, offset: int) -> None:
+    def _rewire_sql(self, creature_id: int, offset: int) -> str:
         # The exact shape of mod-progression's phase_00-creature_default_trainer.sql.
-        sql_dir = self._modules / "mod-progression" / "src" / f"phase_{phase:02}" / "sql"
-        sql_dir.mkdir(parents=True)
-        (sql_dir / f"phase_{phase:02}-creature_default_trainer.sql").write_text(
+        return (
             "SET @TrainerId := 200;\n"
             f"UPDATE `creature_default_trainer` SET `TrainerId` = @TrainerId+{offset} WHERE `CreatureId` IN (\n"
             f"    {creature_id}, -- Some Trainer <Mage Trainer>\n"
@@ -181,64 +180,57 @@ class TrainerStateTest(unittest.TestCase):
             ");\n"
         )
 
-    def test_progression_phase_update_rewires_trainer_id(self):
-        # Stock data says CreatureId 328 -> TrainerId 16; phase_00 moves it to 212 (200+12). The
+    def _frozen_phase_00(self, files: dict[str, str]) -> None:
+        slot = self._frozen / "2026_09_02_mod_progression_phase_00"
+        slot.mkdir()
+        (slot / "SLOT").write_text("after = 2026_08_21_01.sql\nbefore = 2026_08_22_00.sql\n")
+        for name, sql in files.items():
+            (slot / name).write_text(sql)
+
+    def test_frozen_phase_00_update_rewires_trainer_id(self):
+        # Stock data says CreatureId 328 -> TrainerId 16; phase_00 moved it to 212 (200+12). The
         # old id must read as dead and the new one as live - this is the exact false-negative
         # that blocked trained_by(..., 212) for Meteor.
         self._wire_up_trainer(16, 328, trainer_state.UNIT_NPC_FLAG_TRAINER, spawned=True)
-        self._progression_rewire(0, 328, 12)
+        (self._promoted / "cdt_328.sql").rename(self._promoted / "2026_08_21_01.sql")  # stock wiring before the slot
+        self._frozen_phase_00({"phase_00-creature_default_trainer.sql": self._rewire_sql(328, 12)})
         idx = trainer_state.load_trainer_index()
         self.assertEqual(idx.trainer_problems(212), [])
         self.assertIn("no creature_default_trainer row", idx.trainer_problems(16)[0])
 
-    def test_progression_phase_above_configured_phase_is_not_applied(self):
-        self._wire_up_trainer(16, 328, trainer_state.UNIT_NPC_FLAG_TRAINER, spawned=True)
-        self._progression_rewire(0, 328, 12)   # applied (phase 0 <= 2)
-        self._progression_rewire(13, 328, -199)  # phase_13 reverts to stock - NOT applied at phase 2
-        trainer_state.PROGRESSION_CONF.write_text("# comment\nProgression.Phase = 2\n")
-        idx = trainer_state.load_trainer_index()
-        self.assertEqual(trainer_state.progression_phase(), 2)
-        self.assertEqual(idx.trainer_problems(212), [])
-
-    def _progression_trainer_spells(self, phase: int, rows: list[tuple[int, int]]) -> None:
-        # The shape of mod-progression's phase_NN-trainer_spell.sql: range DELETE, then
-        # @TrainerId-relative INSERT rows (or no INSERT at all, like the real phase_13).
-        sql_dir = self._modules / "mod-progression" / "src" / f"phase_{phase:02}" / "sql"
-        sql_dir.mkdir(parents=True, exist_ok=True)
-        sql = (
-            "SET @TrainerId := 200;\n"
-            "DELETE FROM `trainer_spell` WHERE `TrainerId` BETWEEN @TrainerId+0 AND @TrainerId+17;\n"
+    def test_frozen_phase_00_sits_between_its_neighbours(self):
+        # A promoted file before the slot is overridden by phase 0, one after the slot overrides it.
+        (self._promoted / "2026_08_21_01.sql").write_text(
+            "INSERT INTO `creature_default_trainer` (`CreatureId`, `TrainerId`) VALUES (328, 16), (329, 16);\n"
+            "UPDATE `creature_default_trainer` SET `TrainerId` = 30 WHERE `CreatureId` IN (328, 329);\n"
         )
-        if rows:
-            values = ",\n".join(
-                f"(@TrainerId+{trainer_id - 200}, {spell_id}, 0, 0, 0, 0, 0, 0, 10, 0)"
-                for trainer_id, spell_id in rows
-            )
-            sql += (
-                "INSERT INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, "
-                "`ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, "
-                f"`VerifiedBuild`) VALUES\n{values};\n"
-            )
-        (sql_dir / f"phase_{phase:02}-trainer_spell.sql").write_text(sql)
-
-    def test_phase_table_rows_include_phases_above_configured_phase(self):
-        # load_table_rows stops at Progression.Phase (what's live); load_phase_table_rows must
-        # not - a removal's typo guard needs to know a phase_07 row exists before phase 7 is live.
-        self._progression_trainer_spells(0, [(208, 2060)])
-        self._progression_trainer_spells(7, [(200, 469)])
-        trainer_state.PROGRESSION_CONF.write_text("Progression.Phase = 2\n")
-        by_phase = trainer_state.load_phase_table_rows("trainer_spell")
+        (self._promoted / "2026_08_22_00.sql").write_text(
+            "UPDATE `creature_default_trainer` SET `TrainerId` = 40 WHERE `CreatureId` = 329;\n"
+        )
+        self._frozen_phase_00({"phase_00-creature_default_trainer.sql": self._rewire_sql(328, 12) + (
+            "UPDATE `creature_default_trainer` SET `TrainerId` = 50 WHERE `CreatureId` = 329;\n"
+        )})
+        rows = trainer_state.load_keyed_table_rows("creature_default_trainer", ("CreatureId", "TrainerId"))
+        self.assertEqual((rows[328]["TrainerId"], rows[329]["TrainerId"]), (212, 40))
+        files = trainer_state._migration_files_mentioning("creature_default_trainer")
         self.assertEqual(
-            {phase: [(r["TrainerId"], r["SpellId"]) for r in rows] for phase, rows in by_phase.items()},
-            {0: [(208, 2060)], 7: [(200, 469)]},
+            [p.name for p in files],
+            ["2026_08_21_01.sql", "phase_00-creature_default_trainer.sql", "2026_08_22_00.sql"],
         )
-        live = {(r["TrainerId"], r["SpellId"]) for r in trainer_state.load_table_rows("trainer_spell")}
-        self.assertEqual(live, {(208, 2060)})
+        stable, volatile = trainer_state._split_stable(files)
+        self.assertEqual((len(stable), volatile), (3, []))  # the frozen file is immutable: cacheable
 
-    def test_phase_with_no_insert_for_the_table_is_absent(self):
-        self._progression_trainer_spells(0, [(208, 2060)])
-        self._progression_trainer_spells(13, [])  # bare range DELETE, like the real phase_13
-        self.assertEqual(sorted(trainer_state.load_phase_table_rows("trainer_spell")), [0])
+    def test_mod_progression_phase_files_are_not_replayed(self):
+        # The phase replay is gone: a module checkout's phase SQL (any phase) is not live state.
+        self._wire_up_trainer(16, 328, trainer_state.UNIT_NPC_FLAG_TRAINER, spawned=True)
+        sql_dir = self._modules / "mod-progression" / "src" / "phase_00" / "sql"
+        sql_dir.mkdir(parents=True)
+        (sql_dir / "phase_00-creature_default_trainer.sql").write_text(self._rewire_sql(328, 12))
+        idx = trainer_state.load_trainer_index()
+        self.assertEqual(idx.trainer_problems(16), [])
+        self.assertIn("no creature_default_trainer row", idx.trainer_problems(212)[0])
+        for name in ("progression_phase", "progression_phase_files", "load_phase_table_rows", "PROGRESSION_CONF"):
+            self.assertFalse(hasattr(trainer_state, name), name)
 
     def test_module_db_world_sql_is_scanned(self):
         # A plain module's data/sql/db-world/ INSERT counts like a core migration would.

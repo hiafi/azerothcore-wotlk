@@ -1,0 +1,5 @@
+# Where this frozen input sits in the replay order (lib/frozen_replay.py). mod-progression applied its phase 0
+# once, on 2026-09-02 19:54:02-09 (42 phase_00-* rows in acore_world.updates). Every promoted db_world file named up
+# to and including `after` was applied before it, every one from `before` on after it.
+after = 2026_08_21_01.sql
+before = 2026_08_22_00.sql

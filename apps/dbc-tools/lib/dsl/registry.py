@@ -884,14 +884,9 @@ def untrain(spell: model.Spell | int, trainer_ids: list[int]) -> list[dict]:
     (a server's real, possibly module-rewired, trainer id - see `lib.trainer_state`'s module
     docstring - not necessarily the stock one), since each becomes its own key-exact DELETE.
 
-    Known limitation, inherent to removing a *module*-granted row this way, not something this
-    helper can fix: `DBUpdater` applies core `pending_db_world`/`db_world` SQL (this DELETE)
-    before `OnAfterDatabasesLoaded` applies module SQL (mod-progression's phase files). On a
-    fresh database, or when `Progression.Phase` later advances past a phase that (re)inserts this
-    exact row, the module's own INSERT runs *after* this DELETE and silently brings the grant
-    back - the removal only reads as "done" (via provenance) and is never re-emitted. The
-    hand-written migration this helper replaces (see the WP-T handoff) had the identical
-    limitation; there is no DB-update-ordering fix available from this tool."""
+    Many such rows come from mod-progression's phase 0 (2026-09-02), which the replay sees as a
+    frozen input at the position it ran (`lib/frozen_replay.py`); the module is retired, so no
+    phase SQL re-inserts a removed row any more."""
     spell_id = _spell_id_of(spell)
     if not trainer_ids:
         raise ValueError(f"untrain({spell_id}, ...): pass at least one trainer id")

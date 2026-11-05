@@ -9,7 +9,8 @@ fresh from `var/extractors/dbc` every run, never from a previous patch.
 
 `load_existing_rows`: `load_stock_rows`'s result further overlaid by every
 already-promoted migration under data/sql/updates/db_world/ that touches
-that table - mirroring DBCDatabaseLoader's own override-by-ID semantics.
+that table (plus the frozen replay inputs at their slot, `lib/frozen_replay.py`)
+- mirroring DBCDatabaseLoader's own override-by-ID semantics.
 This is "what the server's world DB actually has right now."
 
 ## Two baselines, two purposes
@@ -56,7 +57,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import dbcfile, sql_dump, sqlcorpus
+from . import dbcfile, frozen_replay, sql_dump, sqlcorpus
 from .dbcfmt import DbcTable
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -116,6 +117,12 @@ def load_stock_rows(table: DbcTable) -> dict[int, dict]:
 _promoted_sql_cache: list[tuple[Path, str]] | None = None
 
 
+def _promoted_paths() -> list[Path]:
+    """The promoted `db_world` files in apply order, with the frozen replay inputs (mod-progression's applied phase 0,
+    `lib/frozen_replay.py`) spliced in where they ran."""
+    return frozen_replay.splice(sorted(PROMOTED_SQL_DIR.glob("*.sql")))
+
+
 def _promoted_sql_files() -> list[tuple[Path, str]]:
     """Every `data/sql/updates/db_world/*.sql` file's path and full text, read
     from disk exactly once per process and reused across every
@@ -130,8 +137,8 @@ def _promoted_sql_files() -> list[tuple[Path, str]]:
     global _promoted_sql_cache
     if _promoted_sql_cache is None:
         _promoted_sql_cache = [
-            (path, path.read_text(encoding="utf-8"))
-            for path in sorted(PROMOTED_SQL_DIR.glob("*.sql"))
+            (path, sqlcorpus.read_text(path))  # a frozen input comes back normalised (lib/frozen_replay.py)
+            for path in _promoted_paths()
         ]
     return _promoted_sql_cache
 
@@ -157,7 +164,7 @@ def load_existing_rows(table: DbcTable) -> dict[int, dict]:
         promoted = list(texts)
         read = texts.__getitem__
     else:
-        promoted = [p for p in sorted(PROMOTED_SQL_DIR.glob("*.sql")) if corpus.mentions(p, table.sql_table)]
+        promoted = [p for p in _promoted_paths() if corpus.mentions(p, table.sql_table)]
         read = corpus.read_text
 
     def step(rows: dict[int, dict], path: Path) -> dict[int, dict]:

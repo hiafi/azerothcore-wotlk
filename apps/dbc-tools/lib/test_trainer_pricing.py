@@ -188,17 +188,15 @@ class ReplayFixture(unittest.TestCase):
         (self._base / "trainer_spell.sql").write_text(TRAINER_SPELL_DDL)
         self._orig = (
             trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR,
-            trainer_state.MODULES_DIR, trainer_state.PROGRESSION_CONF, trainer_state.PROGRESSION_CONF_DIST,
+            trainer_state.MODULES_DIR,
         )
         trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR = self._base, self._promoted
         trainer_state.PENDING_SQL_DIR, trainer_state.MODULES_DIR = self._pending, self._modules
-        trainer_state.PROGRESSION_CONF = self._modules / "absent.conf"
-        trainer_state.PROGRESSION_CONF_DIST = self._modules / "absent.conf.dist"
 
     def tearDown(self):
         (
             trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR,
-            trainer_state.MODULES_DIR, trainer_state.PROGRESSION_CONF, trainer_state.PROGRESSION_CONF_DIST,
+            trainer_state.MODULES_DIR,
         ) = self._orig
         self._tmp.cleanup()
 

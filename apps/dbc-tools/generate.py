@@ -525,7 +525,7 @@ def main() -> int:
 CACHE_DIR = REPO_ROOT / "var" / "dbc-tools-cache"
 CACHE_CODE_FILES = (
     "sqlcorpus.py", "sql_dump.py", "dbcfile.py", "dbcfmt.py", "state.py", "trainer_state.py", "spell_tables.py",
-    "trainer_pricing.py", "stale_overlay.py",
+    "trainer_pricing.py", "stale_overlay.py", "frozen_replay.py",
 )
 
 

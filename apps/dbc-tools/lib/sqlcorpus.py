@@ -276,7 +276,7 @@ class Corpus:
         text = self._texts.get(key)
         if text is None:
             data = self._read_bytes(path)
-            text = SqlText(_universal_newlines(data.decode("utf-8")))
+            text = SqlText(_universal_newlines(_frozen_normalised(Path(path), data.decode("utf-8"))))
             text.corpus, text.path, text.digest = self, Path(path), _digest(data)
             self._texts[key] = text
             self._digests[key] = text.digest
@@ -480,8 +480,16 @@ def deactivate() -> None:
 def read_text(path: Path) -> str:
     corpus = _ACTIVE
     if corpus is None:
-        return Path(path).read_text(encoding="utf-8")
+        return _frozen_normalised(Path(path), Path(path).read_text(encoding="utf-8"))
     return corpus.read_text(path)
+
+
+def _frozen_normalised(path: Path, text: str) -> str:
+    """A frozen replay input (`lib/frozen_replay.py`) comes back in the shapes the replay parsers read; any other file
+    as it is."""
+    from . import frozen_replay  # imports sql_dump, which imports this module
+
+    return frozen_replay.normalise(text) if frozen_replay.is_frozen(path) else text
 
 
 def mentions(path: Path, table: str, loose: bool = False) -> bool:

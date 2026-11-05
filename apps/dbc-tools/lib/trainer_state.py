@@ -18,16 +18,15 @@ see that module's docstring): a trainer wiring fix might already exist in a
 not-yet-promoted migration, and treating it as "still missing" here would be
 a false failure for exactly the case this is meant to help with.
 
-**Module SQL counts too.** `DBUpdater` applies every module's own
-`data/sql/db-world/*.sql` at worldserver start, and mod-progression applies
-`src/phase_NN/sql/*.sql` for every phase up to the configured
-`Progression.Phase` - and phase_00 is exactly where this server's class
-trainers get rewired (`UPDATE creature_default_trainer SET TrainerId =
+**Module SQL and the frozen phase 0 count too.** `DBUpdater` applies every
+module's own `data/sql/db-world/*.sql` at worldserver start (`module_sql_files`).
+mod-progression's phase 0, applied once on 2026-09-02, is where this server's
+class trainers got rewired (`UPDATE creature_default_trainer SET TrainerId =
 @TrainerId+N WHERE CreatureId IN (...)`: every mage trainer moves from the
 stock 16 to 212). Scanning only `data/sql/` made `trained_by()` reject the
 one TrainerId that actually works here (first hit: Meteor, Fire Mage
-rework, 2026-09-15), so both module locations are scanned as well - see
-`MODULE_SQL_FILES`.
+rework, 2026-09-15). The module is retired; the files that ran are kept as a
+frozen replay input at the position they ran (`lib/frozen_replay.py`).
 
 **Replay vs union.** `creature_default_trainer` (single-int PK, and the one
 table the rewiring above rewrites in place) is reconstructed by *replaying*
@@ -47,7 +46,7 @@ from typing import Callable
 
 import re
 
-from . import sql_dump, sqlcorpus
+from . import frozen_replay, sql_dump, sqlcorpus
 from .dbcfmt import DbcTable
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -55,32 +54,12 @@ BASE_SQL_DIR = REPO_ROOT / "data" / "sql" / "base" / "db_world"
 PROMOTED_SQL_DIR = REPO_ROOT / "data" / "sql" / "updates" / "db_world"
 PENDING_SQL_DIR = REPO_ROOT / "data" / "sql" / "updates" / "pending_db_world"
 MODULES_DIR = REPO_ROOT / "modules"
-# The worldserver.conf-side modules config this deployment actually runs with (docker bind-mounts
-# env/dist/etc); the .dist default is the fallback for a checkout with no env/ yet.
-PROGRESSION_CONF = REPO_ROOT / "env" / "dist" / "etc" / "modules" / "mod_progression.conf"
-PROGRESSION_CONF_DIST = MODULES_DIR / "mod-progression" / "conf" / "mod_progression.conf.dist"
-PROGRESSION_PHASE_DEFAULT = 18  # mod_progression_database.cpp's GetOption default
-
-_PROGRESSION_PHASE_RE = re.compile(r"^\s*Progression\.Phase\s*=\s*(\d+)", re.MULTILINE)
-
-
-def progression_phase() -> int:
-    """`Progression.Phase` as the live server sees it - mod-progression applies
-    `src/phase_NN/sql/` for every NN <= this (mod_progression_database.cpp's
-    GetActivePhases)."""
-    for conf in (PROGRESSION_CONF, PROGRESSION_CONF_DIST):
-        if conf.is_file():
-            m = _PROGRESSION_PHASE_RE.search(conf.read_text(encoding="utf-8"))
-            if m:
-                return int(m.group(1))
-    return PROGRESSION_PHASE_DEFAULT
 
 
 def module_sql_files() -> list[Path]:
     """Every module SQL file `DBUpdater` would apply to the world DB, in the
     order it applies them: each module's `data/sql/db-world/` (recursively -
-    some modules nest a `base/`/`updates/` split), then mod-progression's
-    active phases in phase order."""
+    some modules nest a `base/`/`updates/` split)."""
     if not MODULES_DIR.is_dir():
         return []
     files: list[Path] = []
@@ -88,60 +67,7 @@ def module_sql_files() -> list[Path]:
         world = module_dir / "data" / "sql" / "db-world"
         if world.is_dir():
             files.extend(sorted(world.rglob("*.sql")))
-    active_phase = progression_phase()
-    for phase, phase_files in progression_phase_files().items():
-        if phase <= active_phase:
-            files.extend(phase_files)
     return files
-
-
-def progression_phase_files() -> dict[int, list[Path]]:
-    """Every mod-progression phase's `src/phase_NN/sql/*.sql`, keyed by phase
-    number in phase order - *all* phases on disk, not just the active ones
-    `module_sql_files()` keeps (those `<= progression_phase()`)."""
-    phases_root = MODULES_DIR / "mod-progression" / "src"
-    if not phases_root.is_dir():
-        return {}
-    phases: dict[int, list[Path]] = {}
-    for phase_dir in sorted(phases_root.glob("phase_[0-9][0-9]")):
-        files = sorted((phase_dir / "sql").glob("*.sql"))
-        if files:
-            phases[int(phase_dir.name.removeprefix("phase_"))] = files
-    return phases
-
-
-def load_phase_table_rows(table_name: str) -> dict[int, list[dict]]:
-    """Every INSERT into `table_name` from each mod-progression phase's SQL,
-    keyed by phase number - including phases this realm hasn't reached yet,
-    which `load_table_rows` deliberately leaves out. Same union-of-INSERTs,
-    no-DELETE-replay reading as `load_table_rows`; a phase with no INSERT
-    for the table (e.g. phase_13-trainer_spell.sql, a bare range DELETE) is
-    simply absent.
-
-    Used by `spell_tables.render_removal_blocks` to tell a declared removal
-    whose row a phase (re)inserts apart from a typo: core `db_world` SQL -
-    the removal's DELETE - is applied before mod-progression's
-    `OnAfterDatabasesLoaded` applies phase SQL, so a phase that inserts the
-    row brings it back on a fresh world DB (active phase) or when the realm
-    reaches that phase (later phase)."""
-    base_path = BASE_SQL_DIR / f"{table_name}.sql"
-    fallback_columns: tuple[str, ...] = ()
-    if base_path.is_file():
-        fallback_columns = sql_dump.parse_create_table_columns(base_path, table_name)
-    needle = f"`{table_name}`"
-    rows_by_phase: dict[int, list[dict]] = {}
-    for phase, phase_files in progression_phase_files().items():
-        for path in phase_files:
-            if needle not in path.read_text(encoding="utf-8"):
-                continue
-            try:
-                rows = list(sql_dump.read_table_rows(path, table_name, fallback_columns))
-            except Exception as exc:  # pragma: no cover - defensive, same as load_table_rows
-                print(f"warning: trainer_state.py: skipping {path} for {table_name}: {exc}")
-                continue
-            if rows:
-                rows_by_phase.setdefault(phase, []).extend(rows)
-    return rows_by_phase
 
 # src/server/game/Entities/Unit/UnitDefines.h
 UNIT_NPC_FLAG_TRAINER = 0x00000010
@@ -218,11 +144,12 @@ def _INVISIBLE_RE_FOR(table_name: str) -> re.Pattern:
 
 def _migration_files_mentioning(table_name: str, loose: bool = False) -> list[Path]:
     """Every non-base SQL file that mentions `table_name`, in apply order:
-    promoted core updates, pending core updates, then module SQL (a cheap
+    promoted core updates with the frozen inputs spliced in at their slot
+    (`frozen_replay.splice`), pending core updates, then module SQL (a cheap
     substring check before bothering to parse each file). `loose` also opens a
     file that only names the table unquoted, so its statements can be warned about."""
     candidates = [
-        *(sorted(PROMOTED_SQL_DIR.glob("*.sql")) if PROMOTED_SQL_DIR.is_dir() else []),
+        *frozen_replay.splice(sorted(PROMOTED_SQL_DIR.glob("*.sql")) if PROMOTED_SQL_DIR.is_dir() else []),
         *(sorted(PENDING_SQL_DIR.glob("*.sql")) if PENDING_SQL_DIR.is_dir() else []),
         *module_sql_files(),
     ]
@@ -230,11 +157,11 @@ def _migration_files_mentioning(table_name: str, loose: bool = False) -> list[Pa
 
 
 def _split_stable(files: list[Path]) -> tuple[list[Path], list[Path]]:
-    """`files` (from `_migration_files_mentioning`) as `(promoted prefix, the rest)`. The promoted `db_world` files are
-    immutable history, so a replay of them can be cached (`sqlcorpus.checkpointed`); pending and module files change
-    from run to run and are replayed on top every time."""
+    """`files` (from `_migration_files_mentioning`) as `(promoted prefix, the rest)`. The promoted `db_world` files and
+    the frozen inputs spliced among them are immutable history, so a replay of them can be cached
+    (`sqlcorpus.checkpointed`); pending and module files change from run to run and are replayed on top every time."""
     n = 0
-    while n < len(files) and files[n].parent == PROMOTED_SQL_DIR:
+    while n < len(files) and (files[n].parent == PROMOTED_SQL_DIR or frozen_replay.is_frozen(files[n])):
         n += 1
     return files[:n], files[n:]
 

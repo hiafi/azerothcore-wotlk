@@ -64,8 +64,8 @@ def _read_value(
     SQL actually uses: a MySQL session variable, bare (`@TrainerId`) or with
     one integer offset (`@TrainerId+3`, `@CGUID + 0`), where the variable was
     assigned a plain integer by an earlier `SET @name := n;` (see
-    `apply_statements`). mod-progression's trainer rewiring is written
-    entirely this way. An unknown variable, or `variables=None`, raises like
+    `apply_statements`). The frozen phase 0's trainer rewiring
+    (`replay/frozen/`) is written entirely this way. An unknown variable, or `variables=None`, raises like
     any other unparseable token."""
     n = len(text)
     if text[i] == "@":
@@ -682,7 +682,7 @@ def read_table_statements(path: Path, table_name: str, columns: tuple[str, ...])
 
 def _parse_id_list(ids_text: str) -> list[int]:
     """The `(...)` body of a `WHERE col IN (...)`, one int per entry, with
-    `-- trailing comments` stripped line by line - mod-progression's trainer
+    `-- trailing comments` stripped line by line - the frozen phase 0's trainer
     rewiring annotates every CreatureId that way (`913, -- Lyria Du Lac
     <Warrior Trainer>`)."""
     cleaned = "\n".join(line.split("--", 1)[0] for line in ids_text.splitlines())
