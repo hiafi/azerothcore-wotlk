@@ -41,9 +41,11 @@ namespace
     char const* const MSG_OUTLAND_CLOSED = "Outland is not open yet. The Dark Portal will open in a later tier.";
     char const* const MSG_NORTHREND_CLOSED = "Northrend is not open yet. The ship turns back to port.";
 
+    // GM mode, not the account's GM level: a GM-level account playing with .gm off is gated like a player, the same
+    // as the instance gate (DisableMgr skips only GMs in GM mode).
     bool CanBypass(Player const* player)
     {
-        return player->GetSession()->HasPermission(rbac::RBAC_PERM_SKIP_CHECK_DISABLE_MAP);
+        return player->IsGameMaster();
     }
 
     uint32 ZoneOfArea(uint32 areaId)

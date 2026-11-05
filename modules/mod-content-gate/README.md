@@ -51,9 +51,10 @@ continent guard is a `PlayerScript`:
 
 - `OnPlayerBeforeTeleport` refuses a non-GM teleport into a closed continent: map 571 while Northrend is closed; map
   530 into an Outland-proper zone (Hellfire, Zangarmarsh, Terokkar, Nagrand, Blade's Edge, Netherstorm, Twisting
-  Nether, Shadowmoon, Auchindoun, Shattrath, Isle of Quel'Danas) while Outland is closed. That covers the Dark Portal areatrigger, portals,
-  hearthstones and summons. Players and bots alike (bots are `SEC_PLAYER`); GMs pass with
-  `RBAC_PERM_SKIP_CHECK_DISABLE_MAP`, the same permission that skips map disables.
+  Nether, Shadowmoon, Auchindoun, Shattrath, Isle of Quel'Danas) while Outland is closed. That covers the Dark Portal
+  areatrigger, portals, hearthstones and summons. Players and bots alike; only a GM in GM mode (`.gm on`) passes. The
+  account's GM level alone does not: a GM-level account grants `RBAC_PERM_SKIP_CHECK_DISABLE_MAP` even with `.gm off`,
+  which let a GM account's playtest character walk through the Dark Portal.
 - **Northrend transports:** the ship's map hop calls `TeleportTo(..., TELE_TO_NOT_LEAVE_TRANSPORT)`; a refusal
   would leave the passenger at sea, so the guard puts them back on the old-world dock of that transport (Menethil,
   Tirisfal tower, Orgrimmar tower, Stormwind harbor), or at their homebind for an unknown transport. Northrend is
