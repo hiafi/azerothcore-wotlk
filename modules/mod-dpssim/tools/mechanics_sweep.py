@@ -385,6 +385,10 @@ def member_line(mech: dict, base: dict | None) -> dict:
         "msChaseRefused": counters.get("msChaseRefused", 0),
         "chaseReleases": counters.get("chaseReleases", 0),
         "chaseSolves": counters.get("chaseSolves", 0),
+        "msChaseStranded": counters.get("msChaseStranded", 0),
+        "strandRoutes": counters.get("strandRoutes", 0),
+        "escapeFacingBlocks": counters.get("escapeFacingBlocks", 0),
+        "descriptorWakes": counters.get("descriptorWakes", 0),
         "forcedLeaks": [counters.get(k, 0) for k in ("forcedMoves", "forcedCasts", "forcedTurns")],
         # M5 boss descriptor (DESCRIPTOR_COUNTERS; reports from before M5 read as 0)
         "descriptor": {name: counters.get(name, 0) for name in DESCRIPTOR_COUNTERS},

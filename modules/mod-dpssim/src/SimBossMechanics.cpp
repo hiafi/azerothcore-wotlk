@@ -76,6 +76,7 @@ namespace
         out.emplace_back("lockCasts", c.lockCasts);
         out.emplace_back("castBreaks", c.castBreaks);
         out.emplace_back("wakes", c.wakes);
+        out.emplace_back("descriptorWakes", c.descriptorWakes);
         out.emplace_back("solveUsMax", c.solveUsMax);
         out.emplace_back("solveUsTotal", c.solveUsTotal);
         // M5 C4: the allies' refresh before a solve, timed apart from Solver::Solve (solveUsMax no longer holds it)
@@ -91,6 +92,7 @@ namespace
         out.emplace_back("facingsApplied", c.facingsApplied);
         out.emplace_back("facingBlocks", c.facingBlocks);
         out.emplace_back("facingBreaks", c.facingBreaks);
+        out.emplace_back("escapeFacingBlocks", c.escapeFacingBlocks);
         out.emplace_back("tankRefacings", c.tankRefacings);
         out.emplace_back("refacingStops", c.refacingStops);
         out.emplace_back("parks", c.parks);
@@ -116,6 +118,8 @@ namespace
         out.emplace_back("msChaseRefused", c.msChaseRefused);
         out.emplace_back("chaseReleases", c.chaseReleases);
         out.emplace_back("chaseSolves", c.chaseSolves);
+        out.emplace_back("msChaseStranded", c.msChaseStranded);
+        out.emplace_back("strandRoutes", c.strandRoutes);
         out.emplace_back("forcedMoves", c.forcedMoves);
         out.emplace_back("forcedCasts", c.forcedCasts);
         out.emplace_back("forcedTurns", c.forcedTurns);

@@ -215,7 +215,8 @@ footer { margin-top: 28px; color: var(--text-dim); font-size: 12px; }
 
   var bt = document.getElementById("brain");
   var names = ["solves", "pathChecks", "outcomeMove", "outcomeFallback", "outcomeNoPath", "lateArrivals", "releases",
-    "lockBlocks", "castBreaks", "routesFound", "routesFailed", "solveUsMax", "refreshUsMax", "routeUsMax"];
+    "lockBlocks", "castBreaks", "routesFound", "routesFailed", "solveUsMax", "refreshUsMax", "routeUsMax", "msChaseStranded", "strandRoutes",
+    "escapeFacingBlocks", "descriptorWakes"];
   row(bt, [{text: "#"}, {text: "profile"}].concat(names.map(function (n) { return {text: n, cls: "num"}; })), true);
   members.forEach(function (m) {
     row(bt, [{text: String(m.index)}, {text: m.profile}].concat(names.map(function (n) {
