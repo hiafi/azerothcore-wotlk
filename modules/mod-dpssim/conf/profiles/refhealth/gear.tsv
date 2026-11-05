@@ -1,0 +1,1048 @@
+profile	row	slot	entry	name	item level	stamina	primary
+RefHealth_Warrior_dps_n20	n20	neck	20442	Scout's Medallion	23	6	0
+RefHealth_Warrior_dps_n20	n20	shoulder	3231	Cutthroat Pauldrons	25	4	4
+RefHealth_Warrior_dps_n20	n20	back	14149	Subterranean Cape	18	6	2
+RefHealth_Warrior_dps_n20	n20	chest	6972	Fire Hardened Hauberk	30	11	14
+RefHealth_Warrior_dps_n20	n20	wrist	14147	Cavedweller Bracers	18	6	4
+RefHealth_Warrior_dps_n20	n20	hands	16978	Warsong Gauntlets	27	8	9
+RefHealth_Warrior_dps_n20	n20	waist	6460	Cobrahn's Grasp	24	8	6
+RefHealth_Warrior_dps_n20	n20	legs	6087	Chausses of Westfall	24	11	11
+RefHealth_Warrior_dps_n20	n20	feet	12982	Silver-linked Footguards	21	7	5
+RefHealth_Warrior_dps_n20	n20	finger	6414	Seal of Sylvanas	29	6	7
+RefHealth_Warrior_dps_n20	n20	finger	20429	Legionnaire's Band	23	6	3
+RefHealth_Warrior_dps_n20	n20	2h	3191	Arced War Axe	26	11	6
+RefHealth_Warrior_dps_n60	n60	head	12587	Eye of Rend	63	16	15
+RefHealth_Warrior_dps_n60	n60	neck	15411	Mark of Fordring	63	9	0
+RefHealth_Warrior_dps_n60	n60	shoulder	12927	Truestrike Shoulders	61	11	0
+RefHealth_Warrior_dps_n60	n60	back	13340	Cape of the Black Baron	63	9	0
+RefHealth_Warrior_dps_n60	n60	chest	11726	Savage Gladiator Chain	57	16	0
+RefHealth_Warrior_dps_n60	n60	wrist	13400	Vambraces of the Sadist	59	8	6
+RefHealth_Warrior_dps_n60	n60	hands	15063	Devilsaur Gauntlets	58	11	0
+RefHealth_Warrior_dps_n60	n60	waist	13959	Omokk's Girth Restrainer	60	11	17
+RefHealth_Warrior_dps_n60	n60	legs	15062	Devilsaur Leggings	60	14	0
+RefHealth_Warrior_dps_n60	n60	feet	12555	Battlechaser's Greaves	55	11	12
+RefHealth_Warrior_dps_n60	n60	finger	13098	Painweaver Band	63	9	0
+RefHealth_Warrior_dps_n60	n60	finger	17713	Blackstone Ring	54	8	0
+RefHealth_Warrior_dps_n60	n60	2h	12784	Arcanite Reaper	63	13	0
+RefHealth_Warrior_dps_h60	h60	head	16866	Helm of Might	66	35	15
+RefHealth_Warrior_dps_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	0
+RefHealth_Warrior_dps_h60	h60	shoulder	16868	Pauldrons of Might	66	22	15
+RefHealth_Warrior_dps_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_Warrior_dps_h60	h60	chest	16865	Breastplate of Might	66	28	20
+RefHealth_Warrior_dps_h60	h60	wrist	16861	Bracers of Might	66	23	11
+RefHealth_Warrior_dps_h60	h60	hands	22868	Blood Guard's Plate Gauntlets	66	14	32
+RefHealth_Warrior_dps_h60	h60	waist	16864	Belt of Might	66	15	21
+RefHealth_Warrior_dps_h60	h60	legs	16867	Legplates of Might	66	23	24
+RefHealth_Warrior_dps_h60	h60	feet	16862	Sabatons of Might	66	26	15
+RefHealth_Warrior_dps_h60	h60	finger	18879	Heavy Dark Iron Ring	66	20	0
+RefHealth_Warrior_dps_h60	h60	finger	21182	Band of Earthen Might	66	10	5
+RefHealth_Warrior_dps_h60	h60	2h	19167	Blackfury	66	20	21
+RefHealth_Warrior_dps_e1	e1	head	16963	Helm of Wrath	76	24	26
+RefHealth_Warrior_dps_e1	e1	neck	21678	Necklace of Purity	76	14	0
+RefHealth_Warrior_dps_e1	e1	shoulder	16961	Pauldrons of Wrath	76	18	21
+RefHealth_Warrior_dps_e1	e1	back	17107	Dragon's Blood Cape	73	13	31
+RefHealth_Warrior_dps_e1	e1	chest	16966	Breastplate of Wrath	76	24	26
+RefHealth_Warrior_dps_e1	e1	wrist	16959	Bracelets of Wrath	76	14	29
+RefHealth_Warrior_dps_e1	e1	hands	21674	Gauntlets of Steadfast Determination	76	18	16
+RefHealth_Warrior_dps_e1	e1	waist	16960	Waistband of Wrath	76	18	17
+RefHealth_Warrior_dps_e1	e1	legs	16962	Legplates of Wrath	76	24	16
+RefHealth_Warrior_dps_e1	e1	feet	16965	Sabatons of Wrath	76	18	21
+RefHealth_Warrior_dps_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_Warrior_dps_e1	e1	finger	21200	Signet Ring of the Bronze Dragonflight	80	14	19
+RefHealth_Warrior_dps_e1	e1	2h	17104	Spinal Reaper	76	0	0
+RefHealth_Warrior_dps_e2	e2	head	20138	90 Epic Warrior Helm	90	26	61
+RefHealth_Warrior_dps_e2	e2	neck	20143	90 Epic Warrior Neck	90	15	34
+RefHealth_Warrior_dps_e2	e2	shoulder	20140	90 Epic Warrior Pauldrons	90	20	46
+RefHealth_Warrior_dps_e2	e2	back	20145	90 Epic Warrior Cloak	90	15	34
+RefHealth_Warrior_dps_e2	e2	chest	20136	90 Epic Warrior Breastplate	90	26	61
+RefHealth_Warrior_dps_e2	e2	wrist	20135	90 Epic Warrior Bracelets	90	15	34
+RefHealth_Warrior_dps_e2	e2	hands	20137	90 Epic Warrior Gauntlets	90	20	46
+RefHealth_Warrior_dps_e2	e2	waist	20142	90 Epic Warrior Waistband	90	20	46
+RefHealth_Warrior_dps_e2	e2	legs	20139	90 Epic Warrior Legplates	90	26	61
+RefHealth_Warrior_dps_e2	e2	feet	20141	90 Epic Warrior Sabatons	90	20	46
+RefHealth_Warrior_dps_e2	e2	finger	20144	90 Epic Warrior Ring	90	15	34
+RefHealth_Warrior_dps_e2	e2	finger	20277	90 Epic Rogue Ring	90	15	16
+RefHealth_Warrior_dps_e2	e2	2h	20149	90 Epic Warrior Axe	90	26	27
+RefHealth_Warrior_tank_n20	n20	neck	20442	Scout's Medallion	23	6	0
+RefHealth_Warrior_tank_n20	n20	shoulder	3231	Cutthroat Pauldrons	25	4	4
+RefHealth_Warrior_tank_n20	n20	back	22990	Tranquillien Champion's Cloak	21	7	0
+RefHealth_Warrior_tank_n20	n20	chest	6972	Fire Hardened Hauberk	30	11	14
+RefHealth_Warrior_tank_n20	n20	wrist	5943	Rift Bracers	25	8	0
+RefHealth_Warrior_tank_n20	n20	hands	16978	Warsong Gauntlets	27	8	9
+RefHealth_Warrior_tank_n20	n20	waist	6460	Cobrahn's Grasp	24	8	6
+RefHealth_Warrior_tank_n20	n20	legs	6087	Chausses of Westfall	24	11	11
+RefHealth_Warrior_tank_n20	n20	feet	6459	Savage Trodders	23	9	0
+RefHealth_Warrior_tank_n20	n20	finger	6414	Seal of Sylvanas	29	6	7
+RefHealth_Warrior_tank_n20	n20	1h	3413	Doomspike	25	6	4
+RefHealth_Warrior_tank_n20	n20	shield	12997	Redbeard Crest	24	6	5
+RefHealth_Warrior_tank_n60	n60	head	12640	Lionheart Helm	61	17	13
+RefHealth_Warrior_tank_n60	n60	neck	21792	Necklace of the Diamond Tower	61	9	0
+RefHealth_Warrior_tank_n60	n60	shoulder	16733	Spaulders of Valor	60	11	16
+RefHealth_Warrior_tank_n60	n60	back	18495	Redoubt Cloak	63	9	0
+RefHealth_Warrior_tank_n60	n60	chest	16730	Breastplate of Valor	63	16	20
+RefHealth_Warrior_tank_n60	n60	wrist	16735	Bracers of Valor	57	8	9
+RefHealth_Warrior_tank_n60	n60	hands	16737	Gauntlets of Valor	59	11	14
+RefHealth_Warrior_tank_n60	n60	waist	16736	Belt of Valor	58	11	12
+RefHealth_Warrior_tank_n60	n60	legs	16732	Legplates of Valor	61	15	24
+RefHealth_Warrior_tank_n60	n60	feet	16734	Boots of Valor	59	11	13
+RefHealth_Warrior_tank_n60	n60	finger	22680	Band of Resolution	66	10	0
+RefHealth_Warrior_tank_n60	n60	1h	19104	Stormstrike Hammer	65	10	20
+RefHealth_Warrior_tank_n60	n60	shield	12602	Draconian Deflector	63	9	0
+RefHealth_Warrior_tank_h60	h60	head	16866	Helm of Might	66	35	15
+RefHealth_Warrior_tank_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	0
+RefHealth_Warrior_tank_h60	h60	shoulder	16868	Pauldrons of Might	66	22	15
+RefHealth_Warrior_tank_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_Warrior_tank_h60	h60	chest	16865	Breastplate of Might	66	28	20
+RefHealth_Warrior_tank_h60	h60	wrist	16861	Bracers of Might	66	23	11
+RefHealth_Warrior_tank_h60	h60	hands	16863	Gauntlets of Might	66	17	22
+RefHealth_Warrior_tank_h60	h60	waist	16864	Belt of Might	66	15	21
+RefHealth_Warrior_tank_h60	h60	legs	16867	Legplates of Might	66	23	24
+RefHealth_Warrior_tank_h60	h60	feet	16862	Sabatons of Might	66	26	15
+RefHealth_Warrior_tank_h60	h60	finger	18879	Heavy Dark Iron Ring	66	20	0
+RefHealth_Warrior_tank_h60	h60	1h	21498	Qiraji Sacrificial Dagger	66	15	0
+RefHealth_Warrior_tank_h60	h60	shield	19321	The Immovable Object	65	15	0
+RefHealth_Warrior_tank_e1	e1	head	16963	Helm of Wrath	76	24	26
+RefHealth_Warrior_tank_e1	e1	neck	21678	Necklace of Purity	76	14	0
+RefHealth_Warrior_tank_e1	e1	shoulder	16961	Pauldrons of Wrath	76	18	21
+RefHealth_Warrior_tank_e1	e1	back	21627	Cloak of Untold Secrets	77	21	0
+RefHealth_Warrior_tank_e1	e1	chest	16966	Breastplate of Wrath	76	24	26
+RefHealth_Warrior_tank_e1	e1	wrist	16959	Bracelets of Wrath	76	14	29
+RefHealth_Warrior_tank_e1	e1	hands	21674	Gauntlets of Steadfast Determination	76	18	16
+RefHealth_Warrior_tank_e1	e1	waist	16960	Waistband of Wrath	76	18	17
+RefHealth_Warrior_tank_e1	e1	legs	16962	Legplates of Wrath	76	24	16
+RefHealth_Warrior_tank_e1	e1	feet	16965	Sabatons of Wrath	76	18	21
+RefHealth_Warrior_tank_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_Warrior_tank_e1	e1	1h	21520	Ravencrest's Legacy	76	14	9
+RefHealth_Warrior_tank_e1	e1	shield	18825	Grand Marshal's Aegis	78	14	13
+RefHealth_Warrior_tank_e2	e2	head	20138	90 Epic Warrior Helm	90	26	61
+RefHealth_Warrior_tank_e2	e2	neck	20143	90 Epic Warrior Neck	90	15	34
+RefHealth_Warrior_tank_e2	e2	shoulder	20140	90 Epic Warrior Pauldrons	90	20	46
+RefHealth_Warrior_tank_e2	e2	back	20145	90 Epic Warrior Cloak	90	15	34
+RefHealth_Warrior_tank_e2	e2	chest	20136	90 Epic Warrior Breastplate	90	26	61
+RefHealth_Warrior_tank_e2	e2	wrist	20135	90 Epic Warrior Bracelets	90	15	34
+RefHealth_Warrior_tank_e2	e2	hands	20137	90 Epic Warrior Gauntlets	90	20	46
+RefHealth_Warrior_tank_e2	e2	waist	20142	90 Epic Warrior Waistband	90	20	46
+RefHealth_Warrior_tank_e2	e2	legs	20139	90 Epic Warrior Legplates	90	26	61
+RefHealth_Warrior_tank_e2	e2	feet	20141	90 Epic Warrior Sabatons	90	20	46
+RefHealth_Warrior_tank_e2	e2	finger	20144	90 Epic Warrior Ring	90	15	34
+RefHealth_Warrior_tank_e2	e2	1h	23362	Hammer of the Sun	90	15	16
+RefHealth_Warrior_tank_e2	e2	shield	22819	Shield of Condemnation	92	15	0
+RefHealth_Paladin_dps_n20	n20	neck	20442	Scout's Medallion	23	6	0
+RefHealth_Paladin_dps_n20	n20	shoulder	3231	Cutthroat Pauldrons	25	4	4
+RefHealth_Paladin_dps_n20	n20	back	14149	Subterranean Cape	18	6	2
+RefHealth_Paladin_dps_n20	n20	chest	6627	Mutant Scale Breastplate	28	11	12
+RefHealth_Paladin_dps_n20	n20	wrist	14147	Cavedweller Bracers	18	6	4
+RefHealth_Paladin_dps_n20	n20	hands	16978	Warsong Gauntlets	27	8	9
+RefHealth_Paladin_dps_n20	n20	waist	6460	Cobrahn's Grasp	24	8	6
+RefHealth_Paladin_dps_n20	n20	legs	6087	Chausses of Westfall	24	11	11
+RefHealth_Paladin_dps_n20	n20	feet	12982	Silver-linked Footguards	21	7	5
+RefHealth_Paladin_dps_n20	n20	finger	6414	Seal of Sylvanas	29	6	7
+RefHealth_Paladin_dps_n20	n20	finger	20429	Legionnaire's Band	23	6	3
+RefHealth_Paladin_dps_n20	n20	2h	3191	Arced War Axe	26	11	6
+RefHealth_Paladin_dps_n60	n60	head	12587	Eye of Rend	63	16	15
+RefHealth_Paladin_dps_n60	n60	neck	15411	Mark of Fordring	63	9	0
+RefHealth_Paladin_dps_n60	n60	shoulder	12927	Truestrike Shoulders	61	11	0
+RefHealth_Paladin_dps_n60	n60	back	13340	Cape of the Black Baron	63	9	0
+RefHealth_Paladin_dps_n60	n60	chest	11726	Savage Gladiator Chain	57	16	0
+RefHealth_Paladin_dps_n60	n60	wrist	13400	Vambraces of the Sadist	59	8	6
+RefHealth_Paladin_dps_n60	n60	hands	15063	Devilsaur Gauntlets	58	11	0
+RefHealth_Paladin_dps_n60	n60	waist	13959	Omokk's Girth Restrainer	60	11	17
+RefHealth_Paladin_dps_n60	n60	legs	15062	Devilsaur Leggings	60	14	0
+RefHealth_Paladin_dps_n60	n60	feet	12555	Battlechaser's Greaves	55	11	12
+RefHealth_Paladin_dps_n60	n60	finger	13098	Painweaver Band	63	9	0
+RefHealth_Paladin_dps_n60	n60	finger	17713	Blackstone Ring	54	8	0
+RefHealth_Paladin_dps_n60	n60	2h	12784	Arcanite Reaper	63	13	0
+RefHealth_Paladin_dps_h60	h60	head	16854	Lawbringer Helm	66	20	9
+RefHealth_Paladin_dps_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	0
+RefHealth_Paladin_dps_h60	h60	shoulder	16856	Lawbringer Spaulders	66	22	10
+RefHealth_Paladin_dps_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_Paladin_dps_h60	h60	chest	16853	Lawbringer Chestguard	66	26	8
+RefHealth_Paladin_dps_h60	h60	wrist	16857	Lawbringer Bracers	66	11	10
+RefHealth_Paladin_dps_h60	h60	hands	23274	Knight-Lieutenant's Lamellar Gauntlets	66	14	15
+RefHealth_Paladin_dps_h60	h60	waist	16858	Lawbringer Belt	66	15	13
+RefHealth_Paladin_dps_h60	h60	legs	22000	Legplates of Heroism	66	18	24
+RefHealth_Paladin_dps_h60	h60	feet	16859	Lawbringer Boots	66	20	7
+RefHealth_Paladin_dps_h60	h60	finger	18879	Heavy Dark Iron Ring	66	20	0
+RefHealth_Paladin_dps_h60	h60	finger	21182	Band of Earthen Might	66	10	5
+RefHealth_Paladin_dps_h60	h60	2h	19167	Blackfury	66	20	21
+RefHealth_Paladin_dps_e1	e1	head	16955	Judgement Crown	76	24	12
+RefHealth_Paladin_dps_e1	e1	neck	21678	Necklace of Purity	76	14	0
+RefHealth_Paladin_dps_e1	e1	shoulder	16953	Judgement Spaulders	76	18	11
+RefHealth_Paladin_dps_e1	e1	back	17107	Dragon's Blood Cape	73	13	31
+RefHealth_Paladin_dps_e1	e1	chest	16958	Judgement Breastplate	76	24	13
+RefHealth_Paladin_dps_e1	e1	wrist	16951	Judgement Bindings	76	14	8
+RefHealth_Paladin_dps_e1	e1	hands	21674	Gauntlets of Steadfast Determination	76	18	16
+RefHealth_Paladin_dps_e1	e1	waist	16952	Judgement Belt	76	18	6
+RefHealth_Paladin_dps_e1	e1	legs	16954	Judgement Legplates	76	24	9
+RefHealth_Paladin_dps_e1	e1	feet	16957	Judgement Sabatons	76	18	10
+RefHealth_Paladin_dps_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_Paladin_dps_e1	e1	finger	21200	Signet Ring of the Bronze Dragonflight	80	14	19
+RefHealth_Paladin_dps_e1	e1	2h	17104	Spinal Reaper	76	0	0
+RefHealth_Paladin_dps_e2	e2	head	24137	PH Plate Ramparts Reward	86	23	27
+RefHealth_Paladin_dps_e2	e2	neck	20275	90 Epic Rogue Neck	90	15	16
+RefHealth_Paladin_dps_e2	e2	shoulder	22419	Dreadnaught Pauldrons	86	19	17
+RefHealth_Paladin_dps_e2	e2	back	20145	90 Epic Warrior Cloak	90	15	34
+RefHealth_Paladin_dps_e2	e2	chest	31720	Battlemaster's Breastplate	88	23	35
+RefHealth_Paladin_dps_e2	e2	wrist	22423	Dreadnaught Bracers	88	15	20
+RefHealth_Paladin_dps_e2	e2	hands	21581	Gauntlets of Annihilation	88	20	27
+RefHealth_Paladin_dps_e2	e2	waist	22422	Dreadnaught Waistguard	88	20	18
+RefHealth_Paladin_dps_e2	e2	legs	22417	Dreadnaught Legplates	88	26	23
+RefHealth_Paladin_dps_e2	e2	feet	28069	Golden Cenarion Greaves	91	18	30
+RefHealth_Paladin_dps_e2	e2	finger	20144	90 Epic Warrior Ring	90	15	34
+RefHealth_Paladin_dps_e2	e2	finger	20277	90 Epic Rogue Ring	90	15	16
+RefHealth_Paladin_dps_e2	e2	2h	20149	90 Epic Warrior Axe	90	26	27
+RefHealth_Paladin_tank_n20	n20	neck	20442	Scout's Medallion	23	6	0
+RefHealth_Paladin_tank_n20	n20	shoulder	3231	Cutthroat Pauldrons	25	4	4
+RefHealth_Paladin_tank_n20	n20	back	22990	Tranquillien Champion's Cloak	21	7	0
+RefHealth_Paladin_tank_n20	n20	chest	6627	Mutant Scale Breastplate	28	11	12
+RefHealth_Paladin_tank_n20	n20	wrist	5943	Rift Bracers	25	8	0
+RefHealth_Paladin_tank_n20	n20	hands	16978	Warsong Gauntlets	27	8	9
+RefHealth_Paladin_tank_n20	n20	waist	6460	Cobrahn's Grasp	24	8	6
+RefHealth_Paladin_tank_n20	n20	legs	6087	Chausses of Westfall	24	11	11
+RefHealth_Paladin_tank_n20	n20	feet	6459	Savage Trodders	23	9	0
+RefHealth_Paladin_tank_n20	n20	finger	6414	Seal of Sylvanas	29	6	7
+RefHealth_Paladin_tank_n20	n20	1h	3413	Doomspike	25	6	4
+RefHealth_Paladin_tank_n20	n20	shield	12997	Redbeard Crest	24	6	5
+RefHealth_Paladin_tank_n60	n60	head	12640	Lionheart Helm	61	17	13
+RefHealth_Paladin_tank_n60	n60	neck	21792	Necklace of the Diamond Tower	61	9	0
+RefHealth_Paladin_tank_n60	n60	shoulder	16733	Spaulders of Valor	60	11	16
+RefHealth_Paladin_tank_n60	n60	back	18495	Redoubt Cloak	63	9	0
+RefHealth_Paladin_tank_n60	n60	chest	16730	Breastplate of Valor	63	16	20
+RefHealth_Paladin_tank_n60	n60	wrist	16735	Bracers of Valor	57	8	9
+RefHealth_Paladin_tank_n60	n60	hands	16737	Gauntlets of Valor	59	11	14
+RefHealth_Paladin_tank_n60	n60	waist	16736	Belt of Valor	58	11	12
+RefHealth_Paladin_tank_n60	n60	legs	16732	Legplates of Valor	61	15	24
+RefHealth_Paladin_tank_n60	n60	feet	16734	Boots of Valor	59	11	13
+RefHealth_Paladin_tank_n60	n60	finger	22680	Band of Resolution	66	10	0
+RefHealth_Paladin_tank_n60	n60	1h	19104	Stormstrike Hammer	65	10	20
+RefHealth_Paladin_tank_n60	n60	shield	12602	Draconian Deflector	63	9	0
+RefHealth_Paladin_tank_h60	h60	head	16854	Lawbringer Helm	66	20	9
+RefHealth_Paladin_tank_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	0
+RefHealth_Paladin_tank_h60	h60	shoulder	16856	Lawbringer Spaulders	66	22	10
+RefHealth_Paladin_tank_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_Paladin_tank_h60	h60	chest	16853	Lawbringer Chestguard	66	26	8
+RefHealth_Paladin_tank_h60	h60	wrist	16857	Lawbringer Bracers	66	11	10
+RefHealth_Paladin_tank_h60	h60	hands	23274	Knight-Lieutenant's Lamellar Gauntlets	66	14	15
+RefHealth_Paladin_tank_h60	h60	waist	16858	Lawbringer Belt	66	15	13
+RefHealth_Paladin_tank_h60	h60	legs	16855	Lawbringer Legplates	66	24	7
+RefHealth_Paladin_tank_h60	h60	feet	16859	Lawbringer Boots	66	20	7
+RefHealth_Paladin_tank_h60	h60	finger	18879	Heavy Dark Iron Ring	66	20	0
+RefHealth_Paladin_tank_h60	h60	1h	21498	Qiraji Sacrificial Dagger	66	15	0
+RefHealth_Paladin_tank_h60	h60	shield	19321	The Immovable Object	65	15	0
+RefHealth_Paladin_tank_e1	e1	head	16955	Judgement Crown	76	24	12
+RefHealth_Paladin_tank_e1	e1	neck	21678	Necklace of Purity	76	14	0
+RefHealth_Paladin_tank_e1	e1	shoulder	16953	Judgement Spaulders	76	18	11
+RefHealth_Paladin_tank_e1	e1	back	21627	Cloak of Untold Secrets	77	21	0
+RefHealth_Paladin_tank_e1	e1	chest	16958	Judgement Breastplate	76	24	13
+RefHealth_Paladin_tank_e1	e1	wrist	16951	Judgement Bindings	76	14	8
+RefHealth_Paladin_tank_e1	e1	hands	21674	Gauntlets of Steadfast Determination	76	18	16
+RefHealth_Paladin_tank_e1	e1	waist	16952	Judgement Belt	76	18	6
+RefHealth_Paladin_tank_e1	e1	legs	16954	Judgement Legplates	76	24	9
+RefHealth_Paladin_tank_e1	e1	feet	16957	Judgement Sabatons	76	18	10
+RefHealth_Paladin_tank_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_Paladin_tank_e1	e1	1h	21520	Ravencrest's Legacy	76	14	9
+RefHealth_Paladin_tank_e1	e1	shield	18825	Grand Marshal's Aegis	78	14	13
+RefHealth_Paladin_tank_e2	e2	head	22418	Dreadnaught Helmet	88	26	21
+RefHealth_Paladin_tank_e2	e2	neck	20275	90 Epic Rogue Neck	90	15	16
+RefHealth_Paladin_tank_e2	e2	shoulder	22419	Dreadnaught Pauldrons	86	19	17
+RefHealth_Paladin_tank_e2	e2	back	20145	90 Epic Warrior Cloak	90	15	34
+RefHealth_Paladin_tank_e2	e2	chest	31720	Battlemaster's Breastplate	88	23	35
+RefHealth_Paladin_tank_e2	e2	wrist	22423	Dreadnaught Bracers	88	15	20
+RefHealth_Paladin_tank_e2	e2	hands	21581	Gauntlets of Annihilation	88	20	27
+RefHealth_Paladin_tank_e2	e2	waist	22422	Dreadnaught Waistguard	88	20	18
+RefHealth_Paladin_tank_e2	e2	legs	22417	Dreadnaught Legplates	88	26	23
+RefHealth_Paladin_tank_e2	e2	feet	28069	Golden Cenarion Greaves	91	18	30
+RefHealth_Paladin_tank_e2	e2	finger	20144	90 Epic Warrior Ring	90	15	34
+RefHealth_Paladin_tank_e2	e2	1h	23362	Hammer of the Sun	90	15	16
+RefHealth_Paladin_tank_e2	e2	shield	22819	Shield of Condemnation	92	15	0
+RefHealth_Hunter_dps_n20	n20	neck	20442	Scout's Medallion	23	6	6
+RefHealth_Hunter_dps_n20	n20	shoulder	5404	Serpent's Shoulders	23	7	7
+RefHealth_Hunter_dps_n20	n20	back	2059	Sentry Cloak	24	6	6
+RefHealth_Hunter_dps_n20	n20	chest	2041	Tunic of Westfall	24	11	11
+RefHealth_Hunter_dps_n20	n20	wrist	3230	Black Wolf Bracers	26	8	0
+RefHealth_Hunter_dps_n20	n20	hands	10413	Gloves of the Fang	19	7	2
+RefHealth_Hunter_dps_n20	n20	waist	10412	Belt of the Fang	21	7	5
+RefHealth_Hunter_dps_n20	n20	legs	10410	Leggings of the Fang	23	10	6
+RefHealth_Hunter_dps_n20	n20	feet	16977	Warsong Boots	27	8	9
+RefHealth_Hunter_dps_n20	n20	finger	1491	Ring of Precision	25	6	4
+RefHealth_Hunter_dps_n20	n20	finger	20429	Legionnaire's Band	23	6	3
+RefHealth_Hunter_dps_n20	n20	2h	5200	Impaling Harpoon	22	10	6
+RefHealth_Hunter_dps_n20	n20	ranged	3021	Ranger Bow	25	6	2
+RefHealth_Hunter_dps_n60	n60	head	18325	Felhide Cap	58	14	32
+RefHealth_Hunter_dps_n60	n60	neck	15411	Mark of Fordring	63	9	0
+RefHealth_Hunter_dps_n60	n60	shoulder	12927	Truestrike Shoulders	61	11	0
+RefHealth_Hunter_dps_n60	n60	back	13340	Cape of the Black Baron	63	9	26
+RefHealth_Hunter_dps_n60	n60	chest	14637	Cadaverous Armor	61	15	20
+RefHealth_Hunter_dps_n60	n60	wrist	12966	Blackmist Armguards	63	9	11
+RefHealth_Hunter_dps_n60	n60	hands	15063	Devilsaur Gauntlets	58	11	0
+RefHealth_Hunter_dps_n60	n60	waist	13252	Cloudrunner Girdle	60	11	17
+RefHealth_Hunter_dps_n60	n60	legs	15062	Devilsaur Leggings	60	14	0
+RefHealth_Hunter_dps_n60	n60	feet	12553	Swiftwalker Boots	59	11	22
+RefHealth_Hunter_dps_n60	n60	finger	13098	Painweaver Band	63	9	0
+RefHealth_Hunter_dps_n60	n60	finger	17713	Blackstone Ring	54	8	0
+RefHealth_Hunter_dps_n60	n60	2h	22314	Huntsman's Harpoon	61	15	27
+RefHealth_Hunter_dps_n60	n60	ranged	18680	Ancient Bone Bow	61	9	14
+RefHealth_Hunter_dps_h60	h60	head	16846	Giantstalker's Helmet	66	23	16
+RefHealth_Hunter_dps_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	0
+RefHealth_Hunter_dps_h60	h60	shoulder	16848	Giantstalker's Epaulets	66	14	16
+RefHealth_Hunter_dps_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_Hunter_dps_h60	h60	chest	16845	Giantstalker's Breastplate	66	23	18
+RefHealth_Hunter_dps_h60	h60	wrist	16850	Giantstalker's Bracers	66	11	14
+RefHealth_Hunter_dps_h60	h60	hands	22862	Blood Guard's Chain Vices	66	14	32
+RefHealth_Hunter_dps_h60	h60	waist	16851	Giantstalker's Belt	66	16	12
+RefHealth_Hunter_dps_h60	h60	legs	22017	Beastmaster's Pants	66	18	29
+RefHealth_Hunter_dps_h60	h60	feet	22843	Blood Guard's Chain Greaves	66	14	32
+RefHealth_Hunter_dps_h60	h60	finger	18879	Heavy Dark Iron Ring	66	20	0
+RefHealth_Hunter_dps_h60	h60	finger	18543	Ring of Entropy	66	11	0
+RefHealth_Hunter_dps_h60	h60	2h	21492	Manslayer of the Qiraji	66	20	9
+RefHealth_Hunter_dps_h60	h60	ranged	20038	Mandokir's Sting	66	11	16
+RefHealth_Hunter_dps_e1	e1	head	16939	Dragonstalker's Helm	76	24	16
+RefHealth_Hunter_dps_e1	e1	neck	21678	Necklace of Purity	76	14	0
+RefHealth_Hunter_dps_e1	e1	shoulder	16937	Dragonstalker's Spaulders	76	18	14
+RefHealth_Hunter_dps_e1	e1	back	17102	Cloak of the Shrouded Mists	74	14	32
+RefHealth_Hunter_dps_e1	e1	chest	16942	Dragonstalker's Breastplate	76	24	21
+RefHealth_Hunter_dps_e1	e1	wrist	16935	Dragonstalker's Bracers	76	14	17
+RefHealth_Hunter_dps_e1	e1	hands	16940	Dragonstalker's Gauntlets	76	18	11
+RefHealth_Hunter_dps_e1	e1	waist	16936	Dragonstalker's Belt	76	18	10
+RefHealth_Hunter_dps_e1	e1	legs	16938	Dragonstalker's Legguards	76	24	16
+RefHealth_Hunter_dps_e1	e1	feet	16941	Dragonstalker's Greaves	76	18	24
+RefHealth_Hunter_dps_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_Hunter_dps_e1	e1	finger	20624	Ring of the Unliving	72	13	31
+RefHealth_Hunter_dps_e1	e1	2h	17104	Spinal Reaper	76	0	0
+RefHealth_Hunter_dps_e1	e1	ranged	21616	Huhuran's Stinger	78	14	17
+RefHealth_Hunter_dps_e2	e2	head	22438	Cryptstalker Headpiece	88	26	18
+RefHealth_Hunter_dps_e2	e2	neck	20275	90 Epic Rogue Neck	90	15	18
+RefHealth_Hunter_dps_e2	e2	shoulder	22439	Cryptstalker Spaulders	86	19	18
+RefHealth_Hunter_dps_e2	e2	back	25712	Perfectly Balanced Cape	88	13	30
+RefHealth_Hunter_dps_e2	e2	chest	22436	Cryptstalker Tunic	92	27	24
+RefHealth_Hunter_dps_e2	e2	wrist	21584	Bracers of Eternal Reckoning	88	15	34
+RefHealth_Hunter_dps_e2	e2	hands	22441	Cryptstalker Handguards	88	20	14
+RefHealth_Hunter_dps_e2	e2	waist	22442	Cryptstalker Girdle	88	20	13
+RefHealth_Hunter_dps_e2	e2	legs	22437	Cryptstalker Legguards	88	26	29
+RefHealth_Hunter_dps_e2	e2	feet	22440	Cryptstalker Boots	86	19	22
+RefHealth_Hunter_dps_e2	e2	finger	21596	Ring of the Godslayer	88	15	34
+RefHealth_Hunter_dps_e2	e2	finger	23067	Ring of the Cryptstalker	92	15	31
+RefHealth_Hunter_dps_e2	e2	2h	22632	Atiesh, Greatstaff of the Guardian	90	28	0
+RefHealth_Hunter_dps_e2	e2	ranged	20278	90 Epic Rogue Bow	90	15	17
+RefHealth_Rogue_dps_n20	n20	neck	20442	Scout's Medallion	23	6	6
+RefHealth_Rogue_dps_n20	n20	shoulder	5404	Serpent's Shoulders	23	7	7
+RefHealth_Rogue_dps_n20	n20	back	2059	Sentry Cloak	24	6	6
+RefHealth_Rogue_dps_n20	n20	chest	2041	Tunic of Westfall	24	11	11
+RefHealth_Rogue_dps_n20	n20	wrist	3230	Black Wolf Bracers	26	8	0
+RefHealth_Rogue_dps_n20	n20	hands	10413	Gloves of the Fang	19	7	2
+RefHealth_Rogue_dps_n20	n20	waist	10412	Belt of the Fang	21	7	5
+RefHealth_Rogue_dps_n20	n20	legs	10410	Leggings of the Fang	23	10	6
+RefHealth_Rogue_dps_n20	n20	feet	16977	Warsong Boots	27	8	9
+RefHealth_Rogue_dps_n20	n20	finger	1491	Ring of Precision	25	6	4
+RefHealth_Rogue_dps_n20	n20	finger	20429	Legionnaire's Band	23	6	3
+RefHealth_Rogue_dps_n20	n20	1h	6504	Wingblade	24	6	5
+RefHealth_Rogue_dps_n20	n20	1h	5192	Thief's Blade	22	6	6
+RefHealth_Rogue_dps_n20	n20	ranged	3021	Ranger Bow	25	6	2
+RefHealth_Rogue_dps_n60	n60	head	18325	Felhide Cap	58	14	32
+RefHealth_Rogue_dps_n60	n60	neck	15411	Mark of Fordring	63	9	0
+RefHealth_Rogue_dps_n60	n60	shoulder	12927	Truestrike Shoulders	61	11	0
+RefHealth_Rogue_dps_n60	n60	back	13340	Cape of the Black Baron	63	9	26
+RefHealth_Rogue_dps_n60	n60	chest	14637	Cadaverous Armor	61	15	20
+RefHealth_Rogue_dps_n60	n60	wrist	12966	Blackmist Armguards	63	9	11
+RefHealth_Rogue_dps_n60	n60	hands	15063	Devilsaur Gauntlets	58	11	0
+RefHealth_Rogue_dps_n60	n60	waist	13252	Cloudrunner Girdle	60	11	17
+RefHealth_Rogue_dps_n60	n60	legs	15062	Devilsaur Leggings	60	14	0
+RefHealth_Rogue_dps_n60	n60	feet	12553	Swiftwalker Boots	59	11	22
+RefHealth_Rogue_dps_n60	n60	finger	13098	Painweaver Band	63	9	0
+RefHealth_Rogue_dps_n60	n60	finger	17713	Blackstone Ring	54	8	0
+RefHealth_Rogue_dps_n60	n60	1h	12783	Heartseeker	63	9	0
+RefHealth_Rogue_dps_n60	n60	1h	5267	Scarlet Kris	63	9	17
+RefHealth_Rogue_dps_n60	n60	ranged	28972	Flightblade Throwing Axe	60	8	1
+RefHealth_Rogue_dps_h60	h60	head	16821	Nightslayer Cover	66	19	20
+RefHealth_Rogue_dps_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	0
+RefHealth_Rogue_dps_h60	h60	shoulder	16823	Nightslayer Shoulder Pads	66	12	26
+RefHealth_Rogue_dps_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_Rogue_dps_h60	h60	chest	16820	Nightslayer Chestpiece	66	20	29
+RefHealth_Rogue_dps_h60	h60	wrist	16825	Nightslayer Bracelets	66	15	20
+RefHealth_Rogue_dps_h60	h60	hands	16826	Nightslayer Gloves	66	17	18
+RefHealth_Rogue_dps_h60	h60	waist	16827	Nightslayer Belt	66	18	17
+RefHealth_Rogue_dps_h60	h60	legs	16822	Nightslayer Pants	66	15	33
+RefHealth_Rogue_dps_h60	h60	feet	16824	Nightslayer Boots	66	18	26
+RefHealth_Rogue_dps_h60	h60	finger	18879	Heavy Dark Iron Ring	66	20	0
+RefHealth_Rogue_dps_h60	h60	finger	18543	Ring of Entropy	66	11	0
+RefHealth_Rogue_dps_h60	h60	1h	18203	Eskhandar's Right Claw	66	11	15
+RefHealth_Rogue_dps_h60	h60	1h	18202	Eskhandar's Left Claw	66	11	15
+RefHealth_Rogue_dps_h60	h60	ranged	20038	Mandokir's Sting	66	11	16
+RefHealth_Rogue_dps_e1	e1	head	16908	Bloodfang Hood	76	24	23
+RefHealth_Rogue_dps_e1	e1	neck	21678	Necklace of Purity	76	14	0
+RefHealth_Rogue_dps_e1	e1	shoulder	16832	Bloodfang Spaulders	76	18	22
+RefHealth_Rogue_dps_e1	e1	back	17102	Cloak of the Shrouded Mists	74	14	32
+RefHealth_Rogue_dps_e1	e1	chest	16905	Bloodfang Chestpiece	76	24	18
+RefHealth_Rogue_dps_e1	e1	wrist	16911	Bloodfang Bracers	76	14	20
+RefHealth_Rogue_dps_e1	e1	hands	16907	Bloodfang Gloves	76	18	19
+RefHealth_Rogue_dps_e1	e1	waist	16910	Bloodfang Belt	76	18	16
+RefHealth_Rogue_dps_e1	e1	legs	16909	Bloodfang Pants	76	24	30
+RefHealth_Rogue_dps_e1	e1	feet	16906	Bloodfang Boots	76	18	22
+RefHealth_Rogue_dps_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_Rogue_dps_e1	e1	finger	20624	Ring of the Unliving	72	13	31
+RefHealth_Rogue_dps_e1	e1	1h	21522	Shadowsong's Sorrow	76	14	9
+RefHealth_Rogue_dps_e1	e1	1h	21520	Ravencrest's Legacy	76	14	7
+RefHealth_Rogue_dps_e1	e1	ranged	21616	Huhuran's Stinger	78	14	17
+RefHealth_Rogue_dps_e2	e2	head	20270	90 Epic Rogue Cap	90	26	31
+RefHealth_Rogue_dps_e2	e2	neck	20275	90 Epic Rogue Neck	90	15	18
+RefHealth_Rogue_dps_e2	e2	shoulder	20273	90 Epic Rogue Spaulders	90	20	24
+RefHealth_Rogue_dps_e2	e2	back	25712	Perfectly Balanced Cape	88	13	30
+RefHealth_Rogue_dps_e2	e2	chest	31718	Darkstorm Tunic	88	23	54
+RefHealth_Rogue_dps_e2	e2	wrist	22483	Bonescythe Bracers	88	15	20
+RefHealth_Rogue_dps_e2	e2	hands	20271	90 Epic Rogue Gloves	90	20	24
+RefHealth_Rogue_dps_e2	e2	waist	20267	90 Epic Rogue Belt	90	20	24
+RefHealth_Rogue_dps_e2	e2	legs	20272	90 Epic Rogue Pants	90	26	31
+RefHealth_Rogue_dps_e2	e2	feet	20268	90 Epic Rogue Boots	90	20	24
+RefHealth_Rogue_dps_e2	e2	finger	21596	Ring of the Godslayer	88	15	34
+RefHealth_Rogue_dps_e2	e2	finger	20277	90 Epic Rogue Ring	90	15	18
+RefHealth_Rogue_dps_e2	e2	1h	23362	Hammer of the Sun	90	15	16
+RefHealth_Rogue_dps_e2	e2	1h	20279	90 Epic Rogue Dagger	90	15	9
+RefHealth_Rogue_dps_e2	e2	ranged	20278	90 Epic Rogue Bow	90	15	17
+RefHealth_Rogue_tank_n20	n20	neck	20442	Scout's Medallion	23	6	6
+RefHealth_Rogue_tank_n20	n20	shoulder	5404	Serpent's Shoulders	23	7	7
+RefHealth_Rogue_tank_n20	n20	back	2059	Sentry Cloak	24	6	6
+RefHealth_Rogue_tank_n20	n20	chest	2041	Tunic of Westfall	24	11	11
+RefHealth_Rogue_tank_n20	n20	wrist	3230	Black Wolf Bracers	26	8	0
+RefHealth_Rogue_tank_n20	n20	hands	10413	Gloves of the Fang	19	7	2
+RefHealth_Rogue_tank_n20	n20	waist	10412	Belt of the Fang	21	7	5
+RefHealth_Rogue_tank_n20	n20	legs	10410	Leggings of the Fang	23	10	6
+RefHealth_Rogue_tank_n20	n20	feet	16977	Warsong Boots	27	8	9
+RefHealth_Rogue_tank_n20	n20	finger	1491	Ring of Precision	25	6	4
+RefHealth_Rogue_tank_n20	n20	finger	20429	Legionnaire's Band	23	6	3
+RefHealth_Rogue_tank_n20	n20	1h	6504	Wingblade	24	6	5
+RefHealth_Rogue_tank_n20	n20	1h	20441	Scout's Blade	23	6	5
+RefHealth_Rogue_tank_n60	n60	head	13404	Mask of the Unforgiven	57	14	0
+RefHealth_Rogue_tank_n60	n60	neck	22150	Beads of Ogre Might	63	9	0
+RefHealth_Rogue_tank_n60	n60	shoulder	12927	Truestrike Shoulders	61	11	0
+RefHealth_Rogue_tank_n60	n60	back	18689	Phantasmal Cloak	62	9	0
+RefHealth_Rogue_tank_n60	n60	chest	12757	Breastplate of Bloodthirst	62	17	0
+RefHealth_Rogue_tank_n60	n60	wrist	12966	Blackmist Armguards	63	9	11
+RefHealth_Rogue_tank_n60	n60	hands	15063	Devilsaur Gauntlets	58	11	0
+RefHealth_Rogue_tank_n60	n60	waist	13252	Cloudrunner Girdle	60	11	17
+RefHealth_Rogue_tank_n60	n60	legs	15062	Devilsaur Leggings	60	14	0
+RefHealth_Rogue_tank_n60	n60	feet	22472	Boots of Ferocity	61	11	17
+RefHealth_Rogue_tank_n60	n60	finger	2246	Myrmidon's Signet	58	9	8
+RefHealth_Rogue_tank_n60	n60	finger	17713	Blackstone Ring	54	8	0
+RefHealth_Rogue_tank_n60	n60	1h	12783	Heartseeker	63	9	0
+RefHealth_Rogue_tank_n60	n60	1h	5267	Scarlet Kris	63	9	17
+RefHealth_Rogue_tank_h60	h60	head	16821	Nightslayer Cover	66	19	20
+RefHealth_Rogue_tank_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	0
+RefHealth_Rogue_tank_h60	h60	shoulder	16823	Nightslayer Shoulder Pads	66	12	26
+RefHealth_Rogue_tank_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_Rogue_tank_h60	h60	chest	16820	Nightslayer Chestpiece	66	20	29
+RefHealth_Rogue_tank_h60	h60	wrist	16825	Nightslayer Bracelets	66	15	20
+RefHealth_Rogue_tank_h60	h60	hands	16826	Nightslayer Gloves	66	17	18
+RefHealth_Rogue_tank_h60	h60	waist	16827	Nightslayer Belt	66	18	17
+RefHealth_Rogue_tank_h60	h60	legs	22007	Darkmantle Pants	66	18	26
+RefHealth_Rogue_tank_h60	h60	feet	16824	Nightslayer Boots	66	18	26
+RefHealth_Rogue_tank_h60	h60	finger	18879	Heavy Dark Iron Ring	66	20	0
+RefHealth_Rogue_tank_h60	h60	finger	18543	Ring of Entropy	66	11	0
+RefHealth_Rogue_tank_h60	h60	1h	21498	Qiraji Sacrificial Dagger	66	15	0
+RefHealth_Rogue_tank_h60	h60	1h	18202	Eskhandar's Left Claw	66	11	15
+RefHealth_Rogue_tank_e1	e1	head	16908	Bloodfang Hood	76	24	23
+RefHealth_Rogue_tank_e1	e1	neck	21678	Necklace of Purity	76	14	0
+RefHealth_Rogue_tank_e1	e1	shoulder	16832	Bloodfang Spaulders	76	18	22
+RefHealth_Rogue_tank_e1	e1	back	17102	Cloak of the Shrouded Mists	74	14	32
+RefHealth_Rogue_tank_e1	e1	chest	16905	Bloodfang Chestpiece	76	24	18
+RefHealth_Rogue_tank_e1	e1	wrist	16911	Bloodfang Bracers	76	14	20
+RefHealth_Rogue_tank_e1	e1	hands	16907	Bloodfang Gloves	76	18	19
+RefHealth_Rogue_tank_e1	e1	waist	16910	Bloodfang Belt	76	18	16
+RefHealth_Rogue_tank_e1	e1	legs	16909	Bloodfang Pants	76	24	30
+RefHealth_Rogue_tank_e1	e1	feet	16906	Bloodfang Boots	76	18	22
+RefHealth_Rogue_tank_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_Rogue_tank_e1	e1	finger	20624	Ring of the Unliving	72	13	31
+RefHealth_Rogue_tank_e1	e1	1h	21522	Shadowsong's Sorrow	76	14	9
+RefHealth_Rogue_tank_e1	e1	1h	21520	Ravencrest's Legacy	76	14	7
+RefHealth_Rogue_tank_e2	e2	head	20270	90 Epic Rogue Cap	90	26	31
+RefHealth_Rogue_tank_e2	e2	neck	20275	90 Epic Rogue Neck	90	15	18
+RefHealth_Rogue_tank_e2	e2	shoulder	20273	90 Epic Rogue Spaulders	90	20	24
+RefHealth_Rogue_tank_e2	e2	back	21710	Cloak of the Fallen God	88	15	24
+RefHealth_Rogue_tank_e2	e2	chest	31718	Darkstorm Tunic	88	23	54
+RefHealth_Rogue_tank_e2	e2	wrist	22483	Bonescythe Bracers	88	15	20
+RefHealth_Rogue_tank_e2	e2	hands	20271	90 Epic Rogue Gloves	90	20	24
+RefHealth_Rogue_tank_e2	e2	waist	20267	90 Epic Rogue Belt	90	20	24
+RefHealth_Rogue_tank_e2	e2	legs	20272	90 Epic Rogue Pants	90	26	31
+RefHealth_Rogue_tank_e2	e2	feet	20268	90 Epic Rogue Boots	90	20	24
+RefHealth_Rogue_tank_e2	e2	finger	21596	Ring of the Godslayer	88	15	34
+RefHealth_Rogue_tank_e2	e2	finger	20277	90 Epic Rogue Ring	90	15	18
+RefHealth_Rogue_tank_e2	e2	1h	23362	Hammer of the Sun	90	15	16
+RefHealth_Rogue_tank_e2	e2	1h	20279	90 Epic Rogue Dagger	90	15	9
+RefHealth_Priest_dps_n20	n20	shoulder	12998	Magician's Mantle	25	8	5
+RefHealth_Priest_dps_n20	n20	back	22990	Tranquillien Champion's Cloak	21	7	0
+RefHealth_Priest_dps_n20	n20	chest	1486	Tree Bark Jacket	24	11	11
+RefHealth_Priest_dps_n20	n20	wrist	14148	Crystalline Cuffs	18	6	1
+RefHealth_Priest_dps_n20	n20	hands	5195	Gold-flecked Gloves	22	7	4
+RefHealth_Priest_dps_n20	n20	waist	16975	Warsong Sash	27	8	9
+RefHealth_Priest_dps_n20	n20	legs	23173	Abomination Skin Leggings	25	11	6
+RefHealth_Priest_dps_n20	n20	feet	4320	Spidersilk Boots	24	8	3
+RefHealth_Priest_dps_n20	n20	finger	1156	Lavishly Jeweled Ring	22	6	4
+RefHealth_Priest_dps_n20	n20	neck	20442	Scout's Medallion	23	6	0
+RefHealth_Priest_dps_n20	n20	finger	6463	Deep Fathom Ring	26	6	2
+RefHealth_Priest_dps_n20	n20	2h	890	Twisted Chanter's Staff	24	11	9
+RefHealth_Priest_dps_n60	n60	head	18727	Crimson Felt Hat	59	14	7
+RefHealth_Priest_dps_n60	n60	shoulder	22405	Mantle of the Scarlet Crusade	61	11	11
+RefHealth_Priest_dps_n60	n60	back	13386	Archivist Cape	61	0	0
+RefHealth_Priest_dps_n60	n60	chest	13346	Robes of the Exalted	63	16	5
+RefHealth_Priest_dps_n60	n60	wrist	18497	Sublime Wristguards	60	8	9
+RefHealth_Priest_dps_n60	n60	hands	12554	Hands of the Exalted Herald	59	11	8
+RefHealth_Priest_dps_n60	n60	waist	18327	Whipvine Cord	59	11	10
+RefHealth_Priest_dps_n60	n60	legs	11841	Senior Designer's Pantaloons	55	14	5
+RefHealth_Priest_dps_n60	n60	feet	22247	Faith Healer's Boots	63	12	11
+RefHealth_Priest_dps_n60	n60	finger	18395	Emerald Flame Ring	62	9	11
+RefHealth_Priest_dps_n60	n60	neck	18723	Animated Chain Necklace	62	9	0
+RefHealth_Priest_dps_n60	n60	finger	13178	Rosewine Circle	60	8	0
+RefHealth_Priest_dps_n60	n60	2h	22406	Redemption	61	15	0
+RefHealth_Priest_dps_h60	h60	head	16813	Circlet of Prophecy	66	17	27
+RefHealth_Priest_dps_h60	h60	shoulder	16816	Mantle of Prophecy	66	13	23
+RefHealth_Priest_dps_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_Priest_dps_h60	h60	chest	16815	Robes of Prophecy	66	20	27
+RefHealth_Priest_dps_h60	h60	wrist	19135	Blacklight Bracer	66	11	13
+RefHealth_Priest_dps_h60	h60	hands	16812	Gloves of Prophecy	66	10	15
+RefHealth_Priest_dps_h60	h60	waist	16817	Girdle of Prophecy	66	10	22
+RefHealth_Priest_dps_h60	h60	legs	22072	Deathmist Leggings	66	18	26
+RefHealth_Priest_dps_h60	h60	feet	16811	Boots of Prophecy	66	17	18
+RefHealth_Priest_dps_h60	h60	finger	18543	Ring of Entropy	66	11	13
+RefHealth_Priest_dps_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	11
+RefHealth_Priest_dps_h60	h60	finger	22681	Band of Piety	66	10	13
+RefHealth_Priest_dps_h60	h60	2h	19167	Blackfury	66	20	0
+RefHealth_Priest_dps_e1	e1	head	16921	Halo of Transcendence	76	24	19
+RefHealth_Priest_dps_e1	e1	shoulder	21686	Mantle of Phrenic Power	76	18	20
+RefHealth_Priest_dps_e1	e1	back	17078	Sapphiron Drape	72	13	18
+RefHealth_Priest_dps_e1	e1	chest	16923	Robes of Transcendence	76	24	20
+RefHealth_Priest_dps_e1	e1	wrist	16926	Bindings of Transcendence	76	14	9
+RefHealth_Priest_dps_e1	e1	hands	16920	Handguards of Transcendence	76	18	13
+RefHealth_Priest_dps_e1	e1	waist	16925	Belt of Transcendence	76	18	21
+RefHealth_Priest_dps_e1	e1	legs	21676	Leggings of the Festering Swarm	76	24	21
+RefHealth_Priest_dps_e1	e1	feet	21648	Recomposed Boots	76	18	19
+RefHealth_Priest_dps_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_Priest_dps_e1	e1	neck	21678	Necklace of Purity	76	14	21
+RefHealth_Priest_dps_e1	e1	finger	19138	Band of Sulfuras	78	14	22
+RefHealth_Priest_dps_e1	e1	2h	17104	Spinal Reaper	76	0	0
+RefHealth_Priest_dps_e2	e2	head	20327	90 Epic Frost Crown	90	26	43
+RefHealth_Priest_dps_e2	e2	shoulder	20330	90 Epic Frost Mantle	90	20	33
+RefHealth_Priest_dps_e2	e2	back	20336	90 Epic Frost Shroud	90	15	24
+RefHealth_Priest_dps_e2	e2	chest	20331	90 Epic Frost Robes	90	26	43
+RefHealth_Priest_dps_e2	e2	wrist	20325	90 Epic Frost Bindings	90	15	24
+RefHealth_Priest_dps_e2	e2	hands	20328	90 Epic Frost Gloves	90	20	33
+RefHealth_Priest_dps_e2	e2	waist	20324	90 Epic Frost Belt	90	20	33
+RefHealth_Priest_dps_e2	e2	legs	20329	90 Epic Frost Leggings	90	26	30
+RefHealth_Priest_dps_e2	e2	feet	20326	90 Epic Frost Boots	90	20	33
+RefHealth_Priest_dps_e2	e2	finger	20333	90 Epic Frost Ring	90	15	24
+RefHealth_Priest_dps_e2	e2	neck	20332	90 Epic Frost Neck	90	15	24
+RefHealth_Priest_dps_e2	e2	finger	25713	Holy Healing Band	88	13	15
+RefHealth_Priest_dps_e2	e2	2h	22632	Atiesh, Greatstaff of the Guardian	90	28	28
+RefHealth_DeathKnight_dps_n60	n60	head	12587	Eye of Rend	63	16	15
+RefHealth_DeathKnight_dps_n60	n60	neck	15411	Mark of Fordring	63	9	0
+RefHealth_DeathKnight_dps_n60	n60	shoulder	12927	Truestrike Shoulders	61	11	0
+RefHealth_DeathKnight_dps_n60	n60	back	13340	Cape of the Black Baron	63	9	0
+RefHealth_DeathKnight_dps_n60	n60	chest	11726	Savage Gladiator Chain	57	16	0
+RefHealth_DeathKnight_dps_n60	n60	wrist	13400	Vambraces of the Sadist	59	8	6
+RefHealth_DeathKnight_dps_n60	n60	hands	15063	Devilsaur Gauntlets	58	11	0
+RefHealth_DeathKnight_dps_n60	n60	waist	13959	Omokk's Girth Restrainer	60	11	17
+RefHealth_DeathKnight_dps_n60	n60	legs	15062	Devilsaur Leggings	60	14	0
+RefHealth_DeathKnight_dps_n60	n60	feet	12555	Battlechaser's Greaves	55	11	12
+RefHealth_DeathKnight_dps_n60	n60	finger	13098	Painweaver Band	63	9	0
+RefHealth_DeathKnight_dps_n60	n60	finger	17713	Blackstone Ring	54	8	0
+RefHealth_DeathKnight_dps_n60	n60	2h	12784	Arcanite Reaper	63	13	0
+RefHealth_DeathKnight_dps_h60	h60	head	19148	Dark Iron Helm	66	20	0
+RefHealth_DeathKnight_dps_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	0
+RefHealth_DeathKnight_dps_h60	h60	shoulder	38663	Blood-soaked Saronite Plated Spaulders	70	15	25
+RefHealth_DeathKnight_dps_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_DeathKnight_dps_h60	h60	chest	38665	Saronite War Plate	70	20	32
+RefHealth_DeathKnight_dps_h60	h60	wrist	18533	Gordok Bracers of Power	63	9	26
+RefHealth_DeathKnight_dps_h60	h60	hands	19057	Gloves of the Dawn	64	13	34
+RefHealth_DeathKnight_dps_h60	h60	waist	22197	Heavy Obsidian Belt	68	14	36
+RefHealth_DeathKnight_dps_h60	h60	legs	22000	Legplates of Heroism	66	18	24
+RefHealth_DeathKnight_dps_h60	h60	feet	13381	Master Cannoneer Boots	61	11	33
+RefHealth_DeathKnight_dps_h60	h60	finger	18879	Heavy Dark Iron Ring	66	20	0
+RefHealth_DeathKnight_dps_h60	h60	finger	21182	Band of Earthen Might	66	10	5
+RefHealth_DeathKnight_dps_h60	h60	2h	19167	Blackfury	66	20	21
+RefHealth_DeathKnight_dps_e1	e1	head	19372	Helm of Endless Rage	74	24	28
+RefHealth_DeathKnight_dps_e1	e1	neck	21678	Necklace of Purity	76	14	0
+RefHealth_DeathKnight_dps_e1	e1	shoulder	21683	Mantle of the Desert Crusade	76	18	8
+RefHealth_DeathKnight_dps_e1	e1	back	17107	Dragon's Blood Cape	73	13	31
+RefHealth_DeathKnight_dps_e1	e1	chest	22196	Thick Obsidian Breastplate	72	23	55
+RefHealth_DeathKnight_dps_e1	e1	wrist	21457	Bracers of Brutality	72	13	20
+RefHealth_DeathKnight_dps_e1	e1	hands	21674	Gauntlets of Steadfast Determination	76	18	16
+RefHealth_DeathKnight_dps_e1	e1	waist	20213	Belt of Shrunken Heads	70	15	28
+RefHealth_DeathKnight_dps_e1	e1	legs	21667	Legplates of Blazing Light	76	24	7
+RefHealth_DeathKnight_dps_e1	e1	feet	21688	Boots of the Fallen Hero	75	18	19
+RefHealth_DeathKnight_dps_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_DeathKnight_dps_e1	e1	finger	21200	Signet Ring of the Bronze Dragonflight	80	14	19
+RefHealth_DeathKnight_dps_e1	e1	2h	17104	Spinal Reaper	76	0	0
+RefHealth_DeathKnight_dps_e2	e2	head	24137	PH Plate Ramparts Reward	86	23	27
+RefHealth_DeathKnight_dps_e2	e2	neck	20275	90 Epic Rogue Neck	90	15	16
+RefHealth_DeathKnight_dps_e2	e2	shoulder	22419	Dreadnaught Pauldrons	86	19	17
+RefHealth_DeathKnight_dps_e2	e2	back	20145	90 Epic Warrior Cloak	90	15	34
+RefHealth_DeathKnight_dps_e2	e2	chest	31720	Battlemaster's Breastplate	88	23	35
+RefHealth_DeathKnight_dps_e2	e2	wrist	22423	Dreadnaught Bracers	88	15	20
+RefHealth_DeathKnight_dps_e2	e2	hands	21581	Gauntlets of Annihilation	88	20	27
+RefHealth_DeathKnight_dps_e2	e2	waist	22422	Dreadnaught Waistguard	88	20	18
+RefHealth_DeathKnight_dps_e2	e2	legs	22417	Dreadnaught Legplates	88	26	23
+RefHealth_DeathKnight_dps_e2	e2	feet	28069	Golden Cenarion Greaves	91	18	30
+RefHealth_DeathKnight_dps_e2	e2	finger	20144	90 Epic Warrior Ring	90	15	34
+RefHealth_DeathKnight_dps_e2	e2	finger	20277	90 Epic Rogue Ring	90	15	16
+RefHealth_DeathKnight_dps_e2	e2	2h	20149	90 Epic Warrior Axe	90	26	27
+RefHealth_DeathKnight_tank_n60	n60	head	12640	Lionheart Helm	61	17	13
+RefHealth_DeathKnight_tank_n60	n60	neck	21792	Necklace of the Diamond Tower	61	9	0
+RefHealth_DeathKnight_tank_n60	n60	shoulder	16733	Spaulders of Valor	60	11	16
+RefHealth_DeathKnight_tank_n60	n60	back	18495	Redoubt Cloak	63	9	0
+RefHealth_DeathKnight_tank_n60	n60	chest	16730	Breastplate of Valor	63	16	20
+RefHealth_DeathKnight_tank_n60	n60	wrist	16735	Bracers of Valor	57	8	9
+RefHealth_DeathKnight_tank_n60	n60	hands	16737	Gauntlets of Valor	59	11	14
+RefHealth_DeathKnight_tank_n60	n60	waist	16736	Belt of Valor	58	11	12
+RefHealth_DeathKnight_tank_n60	n60	legs	16732	Legplates of Valor	61	15	24
+RefHealth_DeathKnight_tank_n60	n60	feet	16734	Boots of Valor	59	11	13
+RefHealth_DeathKnight_tank_n60	n60	finger	22680	Band of Resolution	66	10	0
+RefHealth_DeathKnight_tank_n60	n60	2h	12784	Arcanite Reaper	63	13	0
+RefHealth_DeathKnight_tank_h60	h60	head	19148	Dark Iron Helm	66	20	0
+RefHealth_DeathKnight_tank_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	0
+RefHealth_DeathKnight_tank_h60	h60	shoulder	38663	Blood-soaked Saronite Plated Spaulders	70	15	25
+RefHealth_DeathKnight_tank_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_DeathKnight_tank_h60	h60	chest	12970	General's Ceremonial Plate	63	30	0
+RefHealth_DeathKnight_tank_h60	h60	wrist	19578	Berserker Bracers	65	11	20
+RefHealth_DeathKnight_tank_h60	h60	hands	19057	Gloves of the Dawn	64	13	34
+RefHealth_DeathKnight_tank_h60	h60	waist	22197	Heavy Obsidian Belt	68	14	36
+RefHealth_DeathKnight_tank_h60	h60	legs	22000	Legplates of Heroism	66	18	24
+RefHealth_DeathKnight_tank_h60	h60	feet	14537	Corpselight Greaves	62	22	0
+RefHealth_DeathKnight_tank_h60	h60	finger	18879	Heavy Dark Iron Ring	66	20	0
+RefHealth_DeathKnight_tank_h60	h60	2h	19167	Blackfury	66	20	21
+RefHealth_DeathKnight_tank_e1	e1	head	19372	Helm of Endless Rage	74	24	28
+RefHealth_DeathKnight_tank_e1	e1	neck	21678	Necklace of Purity	76	14	0
+RefHealth_DeathKnight_tank_e1	e1	shoulder	21683	Mantle of the Desert Crusade	76	18	8
+RefHealth_DeathKnight_tank_e1	e1	back	21627	Cloak of Untold Secrets	77	21	0
+RefHealth_DeathKnight_tank_e1	e1	chest	22196	Thick Obsidian Breastplate	72	23	55
+RefHealth_DeathKnight_tank_e1	e1	wrist	21618	Hive Defiler Wristguards	78	14	18
+RefHealth_DeathKnight_tank_e1	e1	hands	21674	Gauntlets of Steadfast Determination	76	18	16
+RefHealth_DeathKnight_tank_e1	e1	waist	19137	Onslaught Girdle	78	18	24
+RefHealth_DeathKnight_tank_e1	e1	legs	21667	Legplates of Blazing Light	76	24	7
+RefHealth_DeathKnight_tank_e1	e1	feet	21688	Boots of the Fallen Hero	75	18	19
+RefHealth_DeathKnight_tank_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_DeathKnight_tank_e1	e1	2h	17104	Spinal Reaper	76	0	0
+RefHealth_DeathKnight_tank_e2	e2	head	22418	Dreadnaught Helmet	88	26	21
+RefHealth_DeathKnight_tank_e2	e2	neck	20275	90 Epic Rogue Neck	90	15	16
+RefHealth_DeathKnight_tank_e2	e2	shoulder	22419	Dreadnaught Pauldrons	86	19	17
+RefHealth_DeathKnight_tank_e2	e2	back	20145	90 Epic Warrior Cloak	90	15	34
+RefHealth_DeathKnight_tank_e2	e2	chest	31720	Battlemaster's Breastplate	88	23	35
+RefHealth_DeathKnight_tank_e2	e2	wrist	22423	Dreadnaught Bracers	88	15	20
+RefHealth_DeathKnight_tank_e2	e2	hands	21581	Gauntlets of Annihilation	88	20	27
+RefHealth_DeathKnight_tank_e2	e2	waist	22422	Dreadnaught Waistguard	88	20	18
+RefHealth_DeathKnight_tank_e2	e2	legs	22417	Dreadnaught Legplates	88	26	23
+RefHealth_DeathKnight_tank_e2	e2	feet	28069	Golden Cenarion Greaves	91	18	30
+RefHealth_DeathKnight_tank_e2	e2	finger	20144	90 Epic Warrior Ring	90	15	34
+RefHealth_DeathKnight_tank_e2	e2	2h	20149	90 Epic Warrior Axe	90	26	27
+RefHealth_Shaman_dps_n20	n20	neck	20442	Scout's Medallion	23	6	0
+RefHealth_Shaman_dps_n20	n20	shoulder	5254	Rugged Spaulders	20	7	0
+RefHealth_Shaman_dps_n20	n20	back	22990	Tranquillien Champion's Cloak	21	7	0
+RefHealth_Shaman_dps_n20	n20	chest	2314	Toughened Leather Armor	24	13	0
+RefHealth_Shaman_dps_n20	n20	wrist	3230	Black Wolf Bracers	26	8	0
+RefHealth_Shaman_dps_n20	n20	hands	10413	Gloves of the Fang	19	7	0
+RefHealth_Shaman_dps_n20	n20	waist	6319	Girdle of the Blindwatcher	26	8	8
+RefHealth_Shaman_dps_n20	n20	legs	5199	Smelting Pants	21	10	0
+RefHealth_Shaman_dps_n20	n20	feet	1121	Feet of the Lynx	24	8	0
+RefHealth_Shaman_dps_n20	n20	finger	1156	Lavishly Jeweled Ring	22	6	4
+RefHealth_Shaman_dps_n20	n20	finger	6463	Deep Fathom Ring	26	6	2
+RefHealth_Shaman_dps_n20	n20	1h	2567	Evocator's Blade	23	6	3
+RefHealth_Shaman_dps_n20	n20	shield	6630	Seedcloud Buckler	25	6	3
+RefHealth_Shaman_dps_n60	n60	head	18807	Helm of Latent Power	62	15	12
+RefHealth_Shaman_dps_n60	n60	neck	18691	Dark Advisor's Pendant	61	9	9
+RefHealth_Shaman_dps_n60	n60	shoulder	14548	Royal Cap Spaulders	62	11	9
+RefHealth_Shaman_dps_n60	n60	back	18389	Cloak of the Cosmos	62	9	12
+RefHealth_Shaman_dps_n60	n60	chest	13123	Dreamwalker Armor	62	15	22
+RefHealth_Shaman_dps_n60	n60	wrist	13969	Loomguard Armbraces	61	9	8
+RefHealth_Shaman_dps_n60	n60	hands	18527	Harmonious Gauntlets	63	12	5
+RefHealth_Shaman_dps_n60	n60	waist	18676	Sash of the Windreaver	61	11	7
+RefHealth_Shaman_dps_n60	n60	legs	18378	Silvermoon Leggings	62	15	15
+RefHealth_Shaman_dps_n60	n60	feet	18318	Merciful Greaves	59	11	16
+RefHealth_Shaman_dps_n60	n60	finger	13001	Maiden's Circle	61	9	6
+RefHealth_Shaman_dps_n60	n60	finger	18395	Emerald Flame Ring	62	9	11
+RefHealth_Shaman_dps_n60	n60	1h	20666	Hardened Steel Warhammer	62	9	27
+RefHealth_Shaman_dps_n60	n60	shield	22336	Draconian Aegis of the Legion	63	9	0
+RefHealth_Shaman_dps_h60	h60	head	16842	Earthfury Helmet	66	24	23
+RefHealth_Shaman_dps_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	11
+RefHealth_Shaman_dps_h60	h60	shoulder	16844	Earthfury Epaulets	66	17	18
+RefHealth_Shaman_dps_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_Shaman_dps_h60	h60	chest	16841	Earthfury Vestments	66	17	27
+RefHealth_Shaman_dps_h60	h60	wrist	16840	Earthfury Bracers	66	10	17
+RefHealth_Shaman_dps_h60	h60	hands	16839	Earthfury Gauntlets	66	14	13
+RefHealth_Shaman_dps_h60	h60	waist	16838	Earthfury Belt	66	12	21
+RefHealth_Shaman_dps_h60	h60	legs	16843	Earthfury Legguards	66	18	19
+RefHealth_Shaman_dps_h60	h60	feet	22857	Blood Guard's Mail Greaves	66	14	15
+RefHealth_Shaman_dps_h60	h60	finger	18543	Ring of Entropy	66	11	13
+RefHealth_Shaman_dps_h60	h60	finger	22681	Band of Piety	66	10	13
+RefHealth_Shaman_dps_h60	h60	1h	22688	Verimonde's Last Resort	66	10	17
+RefHealth_Shaman_dps_h60	h60	shield	16998	Sacred Protector	62	9	19
+RefHealth_Shaman_dps_e1	e1	head	16947	Helmet of Ten Storms	76	24	20
+RefHealth_Shaman_dps_e1	e1	neck	21678	Necklace of Purity	76	14	21
+RefHealth_Shaman_dps_e1	e1	shoulder	21684	Mantle of the Desert's Fury	76	18	17
+RefHealth_Shaman_dps_e1	e1	back	17078	Sapphiron Drape	72	13	18
+RefHealth_Shaman_dps_e1	e1	chest	16950	Breastplate of Ten Storms	76	24	24
+RefHealth_Shaman_dps_e1	e1	wrist	16943	Bracers of Ten Storms	76	14	19
+RefHealth_Shaman_dps_e1	e1	hands	16948	Gauntlets of Ten Storms	76	18	16
+RefHealth_Shaman_dps_e1	e1	waist	16944	Belt of Ten Storms	76	18	12
+RefHealth_Shaman_dps_e1	e1	legs	21668	Scaled Leggings of Qiraji Fury	76	24	19
+RefHealth_Shaman_dps_e1	e1	feet	16949	Greaves of Ten Storms	76	18	12
+RefHealth_Shaman_dps_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_Shaman_dps_e1	e1	finger	19138	Band of Sulfuras	78	14	22
+RefHealth_Shaman_dps_e1	e1	1h	21523	Fang of Korialstrasz	76	14	11
+RefHealth_Shaman_dps_e1	e1	shield	17106	Malistar's Defender	75	14	24
+RefHealth_Shaman_dps_e2	e2	head	22466	Earthshatter Headpiece	88	26	27
+RefHealth_Shaman_dps_e2	e2	neck	20332	90 Epic Frost Neck	90	15	24
+RefHealth_Shaman_dps_e2	e2	shoulder	22467	Earthshatter Spaulders	86	19	20
+RefHealth_Shaman_dps_e2	e2	back	20336	90 Epic Frost Shroud	90	15	24
+RefHealth_Shaman_dps_e2	e2	chest	22464	Earthshatter Tunic	92	27	30
+RefHealth_Shaman_dps_e2	e2	wrist	22471	Earthshatter Wristguards	88	15	16
+RefHealth_Shaman_dps_e2	e2	hands	22469	Earthshatter Handguards	88	20	26
+RefHealth_Shaman_dps_e2	e2	waist	22470	Earthshatter Girdle	88	20	23
+RefHealth_Shaman_dps_e2	e2	legs	22465	Earthshatter Legguards	88	26	28
+RefHealth_Shaman_dps_e2	e2	feet	22468	Earthshatter Boots	86	19	24
+RefHealth_Shaman_dps_e2	e2	finger	20333	90 Epic Frost Ring	90	15	24
+RefHealth_Shaman_dps_e2	e2	finger	23065	Ring of the Earthshatterer	92	15	15
+RefHealth_Shaman_dps_e2	e2	1h	23056	Hammer of the Twisting Nether	89	15	6
+RefHealth_Shaman_dps_e2	e2	shield	22819	Shield of Condemnation	92	15	7
+RefHealth_Shaman_tank_n20	n20	neck	20442	Scout's Medallion	23	6	6
+RefHealth_Shaman_tank_n20	n20	shoulder	5404	Serpent's Shoulders	23	7	7
+RefHealth_Shaman_tank_n20	n20	back	2059	Sentry Cloak	24	6	6
+RefHealth_Shaman_tank_n20	n20	chest	2041	Tunic of Westfall	24	11	11
+RefHealth_Shaman_tank_n20	n20	wrist	3230	Black Wolf Bracers	26	8	0
+RefHealth_Shaman_tank_n20	n20	hands	10413	Gloves of the Fang	19	7	2
+RefHealth_Shaman_tank_n20	n20	waist	10412	Belt of the Fang	21	7	5
+RefHealth_Shaman_tank_n20	n20	legs	10410	Leggings of the Fang	23	10	6
+RefHealth_Shaman_tank_n20	n20	feet	16977	Warsong Boots	27	8	9
+RefHealth_Shaman_tank_n20	n20	finger	1491	Ring of Precision	25	6	4
+RefHealth_Shaman_tank_n20	n20	finger	20429	Legionnaire's Band	23	6	3
+RefHealth_Shaman_tank_n20	n20	1h	6504	Wingblade	24	6	5
+RefHealth_Shaman_tank_n20	n20	1h	20441	Scout's Blade	23	6	5
+RefHealth_Shaman_tank_n60	n60	head	18421	Backwood Helm	63	16	18
+RefHealth_Shaman_tank_n60	n60	neck	21792	Necklace of the Diamond Tower	61	9	0
+RefHealth_Shaman_tank_n60	n60	shoulder	18686	Bone Golem Shoulders	62	11	23
+RefHealth_Shaman_tank_n60	n60	back	18495	Redoubt Cloak	63	9	0
+RefHealth_Shaman_tank_n60	n60	chest	18530	Ogre Forged Hauberk	62	15	18
+RefHealth_Shaman_tank_n60	n60	wrist	18394	Demon Howl Wristguards	62	17	0
+RefHealth_Shaman_tank_n60	n60	hands	22410	Gauntlets of Deftness	63	12	34
+RefHealth_Shaman_tank_n60	n60	waist	18393	Warpwood Binding	61	11	13
+RefHealth_Shaman_tank_n60	n60	legs	12964	Tristam Legguards	63	16	46
+RefHealth_Shaman_tank_n60	n60	feet	18047	Flame Walkers	62	11	34
+RefHealth_Shaman_tank_n60	n60	finger	2246	Myrmidon's Signet	58	9	8
+RefHealth_Shaman_tank_n60	n60	finger	17713	Blackstone Ring	54	8	0
+RefHealth_Shaman_tank_n60	n60	1h	17016	Dark Iron Destroyer	65	10	0
+RefHealth_Shaman_tank_n60	n60	1h	18737	Bone Slicing Hatchet	62	9	16
+RefHealth_Shaman_tank_h60	h60	head	16842	Earthfury Helmet	66	24	0
+RefHealth_Shaman_tank_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	0
+RefHealth_Shaman_tank_h60	h60	shoulder	16844	Earthfury Epaulets	66	17	0
+RefHealth_Shaman_tank_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_Shaman_tank_h60	h60	chest	16841	Earthfury Vestments	66	17	0
+RefHealth_Shaman_tank_h60	h60	wrist	16840	Earthfury Bracers	66	10	0
+RefHealth_Shaman_tank_h60	h60	hands	16839	Earthfury Gauntlets	66	14	0
+RefHealth_Shaman_tank_h60	h60	waist	16838	Earthfury Belt	66	12	0
+RefHealth_Shaman_tank_h60	h60	legs	22017	Beastmaster's Pants	66	18	29
+RefHealth_Shaman_tank_h60	h60	feet	16837	Earthfury Boots	66	15	0
+RefHealth_Shaman_tank_h60	h60	finger	18879	Heavy Dark Iron Ring	66	20	0
+RefHealth_Shaman_tank_h60	h60	finger	18543	Ring of Entropy	66	11	0
+RefHealth_Shaman_tank_h60	h60	1h	21498	Qiraji Sacrificial Dagger	66	15	0
+RefHealth_Shaman_tank_h60	h60	1h	18202	Eskhandar's Left Claw	66	11	15
+RefHealth_Shaman_tank_e1	e1	head	16947	Helmet of Ten Storms	76	24	0
+RefHealth_Shaman_tank_e1	e1	neck	21678	Necklace of Purity	76	14	0
+RefHealth_Shaman_tank_e1	e1	shoulder	16945	Epaulets of Ten Storms	76	18	0
+RefHealth_Shaman_tank_e1	e1	back	17102	Cloak of the Shrouded Mists	74	14	32
+RefHealth_Shaman_tank_e1	e1	chest	16950	Breastplate of Ten Storms	76	24	0
+RefHealth_Shaman_tank_e1	e1	wrist	16943	Bracers of Ten Storms	76	14	0
+RefHealth_Shaman_tank_e1	e1	hands	16948	Gauntlets of Ten Storms	76	18	0
+RefHealth_Shaman_tank_e1	e1	waist	16944	Belt of Ten Storms	76	18	0
+RefHealth_Shaman_tank_e1	e1	legs	16946	Legplates of Ten Storms	76	24	0
+RefHealth_Shaman_tank_e1	e1	feet	16949	Greaves of Ten Storms	76	18	0
+RefHealth_Shaman_tank_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_Shaman_tank_e1	e1	finger	20624	Ring of the Unliving	72	13	31
+RefHealth_Shaman_tank_e1	e1	1h	21522	Shadowsong's Sorrow	76	14	9
+RefHealth_Shaman_tank_e1	e1	1h	21520	Ravencrest's Legacy	76	14	7
+RefHealth_Shaman_tank_e2	e2	head	22438	Cryptstalker Headpiece	88	26	18
+RefHealth_Shaman_tank_e2	e2	neck	20275	90 Epic Rogue Neck	90	15	18
+RefHealth_Shaman_tank_e2	e2	shoulder	22439	Cryptstalker Spaulders	86	19	18
+RefHealth_Shaman_tank_e2	e2	back	21710	Cloak of the Fallen God	88	15	24
+RefHealth_Shaman_tank_e2	e2	chest	22436	Cryptstalker Tunic	92	27	24
+RefHealth_Shaman_tank_e2	e2	wrist	21584	Bracers of Eternal Reckoning	88	15	34
+RefHealth_Shaman_tank_e2	e2	hands	22441	Cryptstalker Handguards	88	20	14
+RefHealth_Shaman_tank_e2	e2	waist	22442	Cryptstalker Girdle	88	20	13
+RefHealth_Shaman_tank_e2	e2	legs	22437	Cryptstalker Legguards	88	26	29
+RefHealth_Shaman_tank_e2	e2	feet	22440	Cryptstalker Boots	86	19	22
+RefHealth_Shaman_tank_e2	e2	finger	21596	Ring of the Godslayer	88	15	34
+RefHealth_Shaman_tank_e2	e2	finger	20277	90 Epic Rogue Ring	90	15	18
+RefHealth_Shaman_tank_e2	e2	1h	23362	Hammer of the Sun	90	15	16
+RefHealth_Shaman_tank_e2	e2	1h	20279	90 Epic Rogue Dagger	90	15	9
+RefHealth_Mage_dps_n20	n20	neck	20442	Scout's Medallion	23	6	0
+RefHealth_Mage_dps_n20	n20	shoulder	12998	Magician's Mantle	25	8	5
+RefHealth_Mage_dps_n20	n20	back	22990	Tranquillien Champion's Cloak	21	7	0
+RefHealth_Mage_dps_n20	n20	chest	1486	Tree Bark Jacket	24	11	11
+RefHealth_Mage_dps_n20	n20	wrist	14148	Crystalline Cuffs	18	6	1
+RefHealth_Mage_dps_n20	n20	hands	5195	Gold-flecked Gloves	22	7	4
+RefHealth_Mage_dps_n20	n20	waist	16975	Warsong Sash	27	8	9
+RefHealth_Mage_dps_n20	n20	legs	23173	Abomination Skin Leggings	25	11	6
+RefHealth_Mage_dps_n20	n20	feet	4320	Spidersilk Boots	24	8	3
+RefHealth_Mage_dps_n20	n20	finger	1156	Lavishly Jeweled Ring	22	6	4
+RefHealth_Mage_dps_n20	n20	finger	6463	Deep Fathom Ring	26	6	2
+RefHealth_Mage_dps_n20	n20	1h	2567	Evocator's Blade	23	6	3
+RefHealth_Mage_dps_n20	n20	holdable	16887	Witch's Finger	30	6	9
+RefHealth_Mage_dps_n20	n20	ranged	7001	Gravestone Scepter	29	6	0
+RefHealth_Mage_dps_n60	n60	head	22267	Spellweaver's Turban	63	16	9
+RefHealth_Mage_dps_n60	n60	neck	18691	Dark Advisor's Pendant	61	9	9
+RefHealth_Mage_dps_n60	n60	shoulder	11624	Kentic Amice	52	11	9
+RefHealth_Mage_dps_n60	n60	back	13386	Archivist Cape	61	0	0
+RefHealth_Mage_dps_n60	n60	chest	14136	Robe of Winter Night	57	14	10
+RefHealth_Mage_dps_n60	n60	wrist	18497	Sublime Wristguards	60	8	9
+RefHealth_Mage_dps_n60	n60	hands	13253	Hands of Power	60	11	6
+RefHealth_Mage_dps_n60	n60	waist	13956	Clutch of Andros	61	11	23
+RefHealth_Mage_dps_n60	n60	legs	13170	Skyshroud Leggings	60	14	9
+RefHealth_Mage_dps_n60	n60	feet	18507	Boots of the Full Moon	62	11	12
+RefHealth_Mage_dps_n60	n60	finger	12545	Eye of Orgrimmar	60	8	6
+RefHealth_Mage_dps_n60	n60	finger	13001	Maiden's Circle	61	9	6
+RefHealth_Mage_dps_n60	n60	1h	13964	Witchblade	62	9	20
+RefHealth_Mage_dps_n60	n60	holdable	10796	Drakestone	54	8	0
+RefHealth_Mage_dps_n60	n60	ranged	13396	Skul's Ghastly Touch	57	8	0
+RefHealth_Mage_dps_h60	h60	head	16795	Arcanist Crown	66	20	20
+RefHealth_Mage_dps_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	11
+RefHealth_Mage_dps_h60	h60	shoulder	16797	Arcanist Mantle	66	10	21
+RefHealth_Mage_dps_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_Mage_dps_h60	h60	chest	16798	Arcanist Robes	66	19	25
+RefHealth_Mage_dps_h60	h60	wrist	19135	Blacklight Bracer	66	11	13
+RefHealth_Mage_dps_h60	h60	hands	16801	Arcanist Gloves	66	14	15
+RefHealth_Mage_dps_h60	h60	waist	16802	Arcanist Belt	66	11	20
+RefHealth_Mage_dps_h60	h60	legs	22072	Deathmist Leggings	66	18	26
+RefHealth_Mage_dps_h60	h60	feet	16800	Arcanist Boots	66	13	14
+RefHealth_Mage_dps_h60	h60	finger	18543	Ring of Entropy	66	11	13
+RefHealth_Mage_dps_h60	h60	finger	22681	Band of Piety	66	10	13
+RefHealth_Mage_dps_h60	h60	1h	22688	Verimonde's Last Resort	66	10	17
+RefHealth_Mage_dps_h60	h60	holdable	19891	Jin'do's Bag of Whammies	66	8	11
+RefHealth_Mage_dps_h60	h60	ranged	19435	Essence Gatherer	70	12	16
+RefHealth_Mage_dps_e1	e1	head	16914	Netherwind Crown	76	24	22
+RefHealth_Mage_dps_e1	e1	neck	21678	Necklace of Purity	76	14	21
+RefHealth_Mage_dps_e1	e1	shoulder	21686	Mantle of Phrenic Power	76	18	20
+RefHealth_Mage_dps_e1	e1	back	17078	Sapphiron Drape	72	13	18
+RefHealth_Mage_dps_e1	e1	chest	16916	Netherwind Robes	76	24	18
+RefHealth_Mage_dps_e1	e1	wrist	16918	Netherwind Bindings	76	14	11
+RefHealth_Mage_dps_e1	e1	hands	16913	Netherwind Gloves	76	18	12
+RefHealth_Mage_dps_e1	e1	waist	16818	Netherwind Belt	76	18	14
+RefHealth_Mage_dps_e1	e1	legs	21676	Leggings of the Festering Swarm	76	24	21
+RefHealth_Mage_dps_e1	e1	feet	21648	Recomposed Boots	76	18	19
+RefHealth_Mage_dps_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_Mage_dps_e1	e1	finger	19138	Band of Sulfuras	78	14	22
+RefHealth_Mage_dps_e1	e1	1h	21523	Fang of Korialstrasz	76	14	11
+RefHealth_Mage_dps_e1	e1	holdable	17067	Ancient Cornerstone Grimoire	76	14	18
+RefHealth_Mage_dps_e1	e1	ranged	19367	Dragon's Touch	75	14	11
+RefHealth_Mage_dps_e2	e2	head	20327	90 Epic Frost Crown	90	26	43
+RefHealth_Mage_dps_e2	e2	neck	20332	90 Epic Frost Neck	90	15	24
+RefHealth_Mage_dps_e2	e2	shoulder	20330	90 Epic Frost Mantle	90	20	33
+RefHealth_Mage_dps_e2	e2	back	20336	90 Epic Frost Shroud	90	15	24
+RefHealth_Mage_dps_e2	e2	chest	20331	90 Epic Frost Robes	90	26	43
+RefHealth_Mage_dps_e2	e2	wrist	20325	90 Epic Frost Bindings	90	15	24
+RefHealth_Mage_dps_e2	e2	hands	20328	90 Epic Frost Gloves	90	20	33
+RefHealth_Mage_dps_e2	e2	waist	20324	90 Epic Frost Belt	90	20	33
+RefHealth_Mage_dps_e2	e2	legs	20329	90 Epic Frost Leggings	90	26	30
+RefHealth_Mage_dps_e2	e2	feet	20326	90 Epic Frost Boots	90	20	33
+RefHealth_Mage_dps_e2	e2	finger	20333	90 Epic Frost Ring	90	15	24
+RefHealth_Mage_dps_e2	e2	finger	25713	Holy Healing Band	88	13	15
+RefHealth_Mage_dps_e2	e2	1h	23056	Hammer of the Twisting Nether	89	15	6
+RefHealth_Mage_dps_e2	e2	holdable	23048	Sapphiron's Right Eye	90	15	9
+RefHealth_Mage_dps_e2	e2	ranged	20335	90 Epic Frost Wand	90	15	14
+RefHealth_Warlock_dps_n20	n20	head	3556	Dread Mage Hat	30	0	7
+RefHealth_Warlock_dps_n20	n20	neck	20442	Scout's Medallion	23	6	0
+RefHealth_Warlock_dps_n20	n20	shoulder	12998	Magician's Mantle	25	8	5
+RefHealth_Warlock_dps_n20	n20	back	22990	Tranquillien Champion's Cloak	21	7	0
+RefHealth_Warlock_dps_n20	n20	chest	1486	Tree Bark Jacket	24	11	11
+RefHealth_Warlock_dps_n20	n20	wrist	14148	Crystalline Cuffs	18	6	1
+RefHealth_Warlock_dps_n20	n20	hands	5195	Gold-flecked Gloves	22	7	4
+RefHealth_Warlock_dps_n20	n20	waist	16975	Warsong Sash	27	8	9
+RefHealth_Warlock_dps_n20	n20	legs	23173	Abomination Skin Leggings	25	11	6
+RefHealth_Warlock_dps_n20	n20	feet	4320	Spidersilk Boots	24	8	3
+RefHealth_Warlock_dps_n20	n20	finger	1156	Lavishly Jeweled Ring	22	6	4
+RefHealth_Warlock_dps_n20	n20	finger	6463	Deep Fathom Ring	26	6	2
+RefHealth_Warlock_dps_n20	n20	1h	2567	Evocator's Blade	23	6	3
+RefHealth_Warlock_dps_n20	n20	holdable	16887	Witch's Finger	30	6	9
+RefHealth_Warlock_dps_n20	n20	ranged	7001	Gravestone Scepter	29	6	0
+RefHealth_Warlock_dps_n60	n60	head	22267	Spellweaver's Turban	63	16	9
+RefHealth_Warlock_dps_n60	n60	neck	18691	Dark Advisor's Pendant	61	9	9
+RefHealth_Warlock_dps_n60	n60	shoulder	11624	Kentic Amice	52	11	9
+RefHealth_Warlock_dps_n60	n60	back	13386	Archivist Cape	61	0	0
+RefHealth_Warlock_dps_n60	n60	chest	14136	Robe of Winter Night	57	14	10
+RefHealth_Warlock_dps_n60	n60	wrist	18497	Sublime Wristguards	60	8	9
+RefHealth_Warlock_dps_n60	n60	hands	13253	Hands of Power	60	11	6
+RefHealth_Warlock_dps_n60	n60	waist	13956	Clutch of Andros	61	11	23
+RefHealth_Warlock_dps_n60	n60	legs	13170	Skyshroud Leggings	60	14	9
+RefHealth_Warlock_dps_n60	n60	feet	18507	Boots of the Full Moon	62	11	12
+RefHealth_Warlock_dps_n60	n60	finger	12545	Eye of Orgrimmar	60	8	6
+RefHealth_Warlock_dps_n60	n60	finger	13001	Maiden's Circle	61	9	6
+RefHealth_Warlock_dps_n60	n60	1h	13964	Witchblade	62	9	20
+RefHealth_Warlock_dps_n60	n60	holdable	10796	Drakestone	54	8	0
+RefHealth_Warlock_dps_n60	n60	ranged	13396	Skul's Ghastly Touch	57	8	0
+RefHealth_Warlock_dps_h60	h60	head	16808	Felheart Horns	66	27	20
+RefHealth_Warlock_dps_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	11
+RefHealth_Warlock_dps_h60	h60	shoulder	16807	Felheart Shoulder Pads	66	25	17
+RefHealth_Warlock_dps_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_Warlock_dps_h60	h60	chest	16809	Felheart Robes	66	31	20
+RefHealth_Warlock_dps_h60	h60	wrist	16804	Felheart Bracers	66	18	11
+RefHealth_Warlock_dps_h60	h60	hands	16805	Felheart Gloves	66	18	15
+RefHealth_Warlock_dps_h60	h60	waist	16806	Felheart Belt	66	18	15
+RefHealth_Warlock_dps_h60	h60	legs	22072	Deathmist Leggings	66	18	26
+RefHealth_Warlock_dps_h60	h60	feet	16803	Felheart Slippers	66	23	11
+RefHealth_Warlock_dps_h60	h60	finger	18543	Ring of Entropy	66	11	13
+RefHealth_Warlock_dps_h60	h60	finger	22681	Band of Piety	66	10	13
+RefHealth_Warlock_dps_h60	h60	1h	22688	Verimonde's Last Resort	66	10	17
+RefHealth_Warlock_dps_h60	h60	holdable	19891	Jin'do's Bag of Whammies	66	8	11
+RefHealth_Warlock_dps_h60	h60	ranged	19435	Essence Gatherer	70	12	16
+RefHealth_Warlock_dps_e1	e1	head	16929	Nemesis Skullcap	76	24	17
+RefHealth_Warlock_dps_e1	e1	neck	21678	Necklace of Purity	76	14	21
+RefHealth_Warlock_dps_e1	e1	shoulder	21686	Mantle of Phrenic Power	76	18	20
+RefHealth_Warlock_dps_e1	e1	back	17078	Sapphiron Drape	72	13	18
+RefHealth_Warlock_dps_e1	e1	chest	21671	Robes of the Battleguard	76	24	17
+RefHealth_Warlock_dps_e1	e1	wrist	16934	Nemesis Bracers	76	14	11
+RefHealth_Warlock_dps_e1	e1	hands	16928	Nemesis Gloves	76	18	14
+RefHealth_Warlock_dps_e1	e1	waist	16933	Nemesis Belt	76	18	6
+RefHealth_Warlock_dps_e1	e1	legs	21676	Leggings of the Festering Swarm	76	24	21
+RefHealth_Warlock_dps_e1	e1	feet	21648	Recomposed Boots	76	18	19
+RefHealth_Warlock_dps_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_Warlock_dps_e1	e1	finger	19138	Band of Sulfuras	78	14	22
+RefHealth_Warlock_dps_e1	e1	1h	21523	Fang of Korialstrasz	76	14	11
+RefHealth_Warlock_dps_e1	e1	holdable	17067	Ancient Cornerstone Grimoire	76	14	18
+RefHealth_Warlock_dps_e1	e1	ranged	19367	Dragon's Touch	75	14	11
+RefHealth_Warlock_dps_e2	e2	head	20327	90 Epic Frost Crown	90	26	43
+RefHealth_Warlock_dps_e2	e2	neck	20332	90 Epic Frost Neck	90	15	24
+RefHealth_Warlock_dps_e2	e2	shoulder	20330	90 Epic Frost Mantle	90	20	33
+RefHealth_Warlock_dps_e2	e2	back	20336	90 Epic Frost Shroud	90	15	24
+RefHealth_Warlock_dps_e2	e2	chest	20331	90 Epic Frost Robes	90	26	43
+RefHealth_Warlock_dps_e2	e2	wrist	20325	90 Epic Frost Bindings	90	15	24
+RefHealth_Warlock_dps_e2	e2	hands	20328	90 Epic Frost Gloves	90	20	33
+RefHealth_Warlock_dps_e2	e2	waist	20324	90 Epic Frost Belt	90	20	33
+RefHealth_Warlock_dps_e2	e2	legs	20329	90 Epic Frost Leggings	90	26	30
+RefHealth_Warlock_dps_e2	e2	feet	20326	90 Epic Frost Boots	90	20	33
+RefHealth_Warlock_dps_e2	e2	finger	20333	90 Epic Frost Ring	90	15	24
+RefHealth_Warlock_dps_e2	e2	finger	25713	Holy Healing Band	88	13	15
+RefHealth_Warlock_dps_e2	e2	1h	23056	Hammer of the Twisting Nether	89	15	6
+RefHealth_Warlock_dps_e2	e2	holdable	23048	Sapphiron's Right Eye	90	15	9
+RefHealth_Warlock_dps_e2	e2	ranged	20335	90 Epic Frost Wand	90	15	14
+RefHealth_Druid_dps_n20	n20	neck	20442	Scout's Medallion	23	6	6
+RefHealth_Druid_dps_n20	n20	shoulder	5404	Serpent's Shoulders	23	7	7
+RefHealth_Druid_dps_n20	n20	back	2059	Sentry Cloak	24	6	6
+RefHealth_Druid_dps_n20	n20	chest	2041	Tunic of Westfall	24	11	11
+RefHealth_Druid_dps_n20	n20	wrist	3230	Black Wolf Bracers	26	8	0
+RefHealth_Druid_dps_n20	n20	hands	10413	Gloves of the Fang	19	7	2
+RefHealth_Druid_dps_n20	n20	waist	10412	Belt of the Fang	21	7	5
+RefHealth_Druid_dps_n20	n20	legs	10410	Leggings of the Fang	23	10	6
+RefHealth_Druid_dps_n20	n20	feet	16977	Warsong Boots	27	8	9
+RefHealth_Druid_dps_n20	n20	finger	1491	Ring of Precision	25	6	4
+RefHealth_Druid_dps_n20	n20	finger	20429	Legionnaire's Band	23	6	3
+RefHealth_Druid_dps_n20	n20	2h	5200	Impaling Harpoon	22	10	6
+RefHealth_Druid_dps_n60	n60	head	8345	Wolfshead Helm	45	14	24
+RefHealth_Druid_dps_n60	n60	neck	15411	Mark of Fordring	63	9	0
+RefHealth_Druid_dps_n60	n60	shoulder	12927	Truestrike Shoulders	61	11	0
+RefHealth_Druid_dps_n60	n60	back	13340	Cape of the Black Baron	63	9	26
+RefHealth_Druid_dps_n60	n60	chest	14637	Cadaverous Armor	61	15	20
+RefHealth_Druid_dps_n60	n60	wrist	12966	Blackmist Armguards	63	9	11
+RefHealth_Druid_dps_n60	n60	hands	15063	Devilsaur Gauntlets	58	11	0
+RefHealth_Druid_dps_n60	n60	waist	13252	Cloudrunner Girdle	60	11	17
+RefHealth_Druid_dps_n60	n60	legs	15062	Devilsaur Leggings	60	14	0
+RefHealth_Druid_dps_n60	n60	feet	12553	Swiftwalker Boots	59	11	22
+RefHealth_Druid_dps_n60	n60	finger	13098	Painweaver Band	63	9	0
+RefHealth_Druid_dps_n60	n60	finger	17713	Blackstone Ring	54	8	0
+RefHealth_Druid_dps_n60	n60	2h	22314	Huntsman's Harpoon	61	15	27
+RefHealth_Druid_dps_h60	h60	head	16834	Cenarion Helm	66	26	0
+RefHealth_Druid_dps_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	0
+RefHealth_Druid_dps_h60	h60	shoulder	16836	Cenarion Spaulders	66	13	0
+RefHealth_Druid_dps_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_Druid_dps_h60	h60	chest	16833	Cenarion Vestments	66	23	0
+RefHealth_Druid_dps_h60	h60	wrist	16830	Cenarion Bracers	66	13	0
+RefHealth_Druid_dps_h60	h60	hands	22863	Blood Guard's Dragonhide Grips	66	14	10
+RefHealth_Druid_dps_h60	h60	waist	19149	Lava Belt	66	15	0
+RefHealth_Druid_dps_h60	h60	legs	22007	Darkmantle Pants	66	18	26
+RefHealth_Druid_dps_h60	h60	feet	21493	Boots of the Vanguard	66	11	22
+RefHealth_Druid_dps_h60	h60	finger	18879	Heavy Dark Iron Ring	66	20	0
+RefHealth_Druid_dps_h60	h60	finger	18543	Ring of Entropy	66	11	0
+RefHealth_Druid_dps_h60	h60	2h	21492	Manslayer of the Qiraji	66	20	9
+RefHealth_Druid_dps_e1	e1	head	16900	Stormrage Cover	76	24	0
+RefHealth_Druid_dps_e1	e1	neck	21678	Necklace of Purity	76	14	0
+RefHealth_Druid_dps_e1	e1	shoulder	16902	Stormrage Pauldrons	76	18	0
+RefHealth_Druid_dps_e1	e1	back	17102	Cloak of the Shrouded Mists	74	14	32
+RefHealth_Druid_dps_e1	e1	chest	16897	Stormrage Chestguard	76	24	0
+RefHealth_Druid_dps_e1	e1	wrist	16904	Stormrage Bracers	76	14	0
+RefHealth_Druid_dps_e1	e1	hands	21672	Gloves of Enforcement	76	18	15
+RefHealth_Druid_dps_e1	e1	waist	21675	Thick Qirajihide Belt	76	18	16
+RefHealth_Druid_dps_e1	e1	legs	16901	Stormrage Legguards	76	24	0
+RefHealth_Druid_dps_e1	e1	feet	16898	Stormrage Boots	76	18	0
+RefHealth_Druid_dps_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_Druid_dps_e1	e1	finger	20624	Ring of the Unliving	72	13	31
+RefHealth_Druid_dps_e1	e1	2h	17104	Spinal Reaper	76	0	0
+RefHealth_Druid_dps_e2	e2	head	20270	90 Epic Rogue Cap	90	26	31
+RefHealth_Druid_dps_e2	e2	neck	20275	90 Epic Rogue Neck	90	15	18
+RefHealth_Druid_dps_e2	e2	shoulder	20273	90 Epic Rogue Spaulders	90	20	24
+RefHealth_Druid_dps_e2	e2	back	25712	Perfectly Balanced Cape	88	13	30
+RefHealth_Druid_dps_e2	e2	chest	31718	Darkstorm Tunic	88	23	54
+RefHealth_Druid_dps_e2	e2	wrist	22483	Bonescythe Bracers	88	15	20
+RefHealth_Druid_dps_e2	e2	hands	20271	90 Epic Rogue Gloves	90	20	24
+RefHealth_Druid_dps_e2	e2	waist	20267	90 Epic Rogue Belt	90	20	24
+RefHealth_Druid_dps_e2	e2	legs	20272	90 Epic Rogue Pants	90	26	31
+RefHealth_Druid_dps_e2	e2	feet	20268	90 Epic Rogue Boots	90	20	24
+RefHealth_Druid_dps_e2	e2	finger	21596	Ring of the Godslayer	88	15	34
+RefHealth_Druid_dps_e2	e2	finger	20277	90 Epic Rogue Ring	90	15	18
+RefHealth_Druid_dps_e2	e2	2h	22632	Atiesh, Greatstaff of the Guardian	90	28	0
+RefHealth_Druid_tank_n20	n20	neck	20442	Scout's Medallion	23	6	6
+RefHealth_Druid_tank_n20	n20	shoulder	5404	Serpent's Shoulders	23	7	7
+RefHealth_Druid_tank_n20	n20	back	2059	Sentry Cloak	24	6	6
+RefHealth_Druid_tank_n20	n20	chest	2041	Tunic of Westfall	24	11	11
+RefHealth_Druid_tank_n20	n20	wrist	3230	Black Wolf Bracers	26	8	0
+RefHealth_Druid_tank_n20	n20	hands	10413	Gloves of the Fang	19	7	2
+RefHealth_Druid_tank_n20	n20	waist	10412	Belt of the Fang	21	7	5
+RefHealth_Druid_tank_n20	n20	legs	10410	Leggings of the Fang	23	10	6
+RefHealth_Druid_tank_n20	n20	feet	16977	Warsong Boots	27	8	9
+RefHealth_Druid_tank_n20	n20	finger	1491	Ring of Precision	25	6	4
+RefHealth_Druid_tank_n20	n20	finger	20429	Legionnaire's Band	23	6	3
+RefHealth_Druid_tank_n20	n20	2h	25464	Blood-Tempered Ranseur	27	11	0
+RefHealth_Druid_tank_n60	n60	head	13404	Mask of the Unforgiven	57	14	0
+RefHealth_Druid_tank_n60	n60	neck	22150	Beads of Ogre Might	63	9	0
+RefHealth_Druid_tank_n60	n60	shoulder	12927	Truestrike Shoulders	61	11	0
+RefHealth_Druid_tank_n60	n60	back	18689	Phantasmal Cloak	62	9	0
+RefHealth_Druid_tank_n60	n60	chest	12757	Breastplate of Bloodthirst	62	17	0
+RefHealth_Druid_tank_n60	n60	wrist	12966	Blackmist Armguards	63	9	11
+RefHealth_Druid_tank_n60	n60	hands	15063	Devilsaur Gauntlets	58	11	0
+RefHealth_Druid_tank_n60	n60	waist	13252	Cloudrunner Girdle	60	11	17
+RefHealth_Druid_tank_n60	n60	legs	15062	Devilsaur Leggings	60	14	0
+RefHealth_Druid_tank_n60	n60	feet	22472	Boots of Ferocity	61	11	17
+RefHealth_Druid_tank_n60	n60	finger	2246	Myrmidon's Signet	58	9	8
+RefHealth_Druid_tank_n60	n60	finger	17713	Blackstone Ring	54	8	0
+RefHealth_Druid_tank_n60	n60	2h	24155	Ursol's Claw	85	23	14
+RefHealth_Druid_tank_h60	h60	head	16834	Cenarion Helm	66	26	0
+RefHealth_Druid_tank_h60	h60	neck	19885	Jin'do's Evil Eye	66	5	0
+RefHealth_Druid_tank_h60	h60	shoulder	16836	Cenarion Spaulders	66	13	0
+RefHealth_Druid_tank_h60	h60	back	18204	Eskhandar's Pelt	66	20	0
+RefHealth_Druid_tank_h60	h60	chest	16833	Cenarion Vestments	66	23	0
+RefHealth_Druid_tank_h60	h60	wrist	16830	Cenarion Bracers	66	13	0
+RefHealth_Druid_tank_h60	h60	hands	16831	Cenarion Gloves	66	17	0
+RefHealth_Druid_tank_h60	h60	waist	19149	Lava Belt	66	15	0
+RefHealth_Druid_tank_h60	h60	legs	22007	Darkmantle Pants	66	18	26
+RefHealth_Druid_tank_h60	h60	feet	21493	Boots of the Vanguard	66	11	22
+RefHealth_Druid_tank_h60	h60	finger	18879	Heavy Dark Iron Ring	66	20	0
+RefHealth_Druid_tank_h60	h60	finger	18543	Ring of Entropy	66	11	0
+RefHealth_Druid_tank_h60	h60	2h	21492	Manslayer of the Qiraji	66	20	9
+RefHealth_Druid_tank_e1	e1	head	16900	Stormrage Cover	76	24	0
+RefHealth_Druid_tank_e1	e1	neck	21678	Necklace of Purity	76	14	0
+RefHealth_Druid_tank_e1	e1	shoulder	16902	Stormrage Pauldrons	76	18	0
+RefHealth_Druid_tank_e1	e1	back	17102	Cloak of the Shrouded Mists	74	14	32
+RefHealth_Druid_tank_e1	e1	chest	16897	Stormrage Chestguard	76	24	0
+RefHealth_Druid_tank_e1	e1	wrist	16904	Stormrage Bracers	76	14	0
+RefHealth_Druid_tank_e1	e1	hands	21672	Gloves of Enforcement	76	18	15
+RefHealth_Druid_tank_e1	e1	waist	21675	Thick Qirajihide Belt	76	18	16
+RefHealth_Druid_tank_e1	e1	legs	16901	Stormrage Legguards	76	24	0
+RefHealth_Druid_tank_e1	e1	feet	16898	Stormrage Boots	76	18	0
+RefHealth_Druid_tank_e1	e1	finger	21687	Ukko's Ring of Darkness	76	13	0
+RefHealth_Druid_tank_e1	e1	finger	20624	Ring of the Unliving	72	13	31
+RefHealth_Druid_tank_e1	e1	2h	17104	Spinal Reaper	76	0	0
+RefHealth_Druid_tank_e2	e2	head	20270	90 Epic Rogue Cap	90	26	31
+RefHealth_Druid_tank_e2	e2	neck	20275	90 Epic Rogue Neck	90	15	18
+RefHealth_Druid_tank_e2	e2	shoulder	20273	90 Epic Rogue Spaulders	90	20	24
+RefHealth_Druid_tank_e2	e2	back	21710	Cloak of the Fallen God	88	15	24
+RefHealth_Druid_tank_e2	e2	chest	31718	Darkstorm Tunic	88	23	54
+RefHealth_Druid_tank_e2	e2	wrist	22483	Bonescythe Bracers	88	15	20
+RefHealth_Druid_tank_e2	e2	hands	20271	90 Epic Rogue Gloves	90	20	24
+RefHealth_Druid_tank_e2	e2	waist	20267	90 Epic Rogue Belt	90	20	24
+RefHealth_Druid_tank_e2	e2	legs	20272	90 Epic Rogue Pants	90	26	31
+RefHealth_Druid_tank_e2	e2	feet	20268	90 Epic Rogue Boots	90	20	24
+RefHealth_Druid_tank_e2	e2	finger	21596	Ring of the Godslayer	88	15	34
+RefHealth_Druid_tank_e2	e2	finger	20277	90 Epic Rogue Ring	90	15	18
+RefHealth_Druid_tank_e2	e2	2h	22632	Atiesh, Greatstaff of the Guardian	90	28	0
