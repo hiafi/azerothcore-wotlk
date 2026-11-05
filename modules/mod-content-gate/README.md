@@ -50,8 +50,8 @@ Map 530 also holds the Blood Elf and Draenei starting zones and cities, so Outla
 continent guard is a `PlayerScript`:
 
 - `OnPlayerBeforeTeleport` refuses a non-GM teleport into a closed continent: map 571 while Northrend is closed; map
-  530 into an Outland-proper zone (Hellfire, Zangarmarsh, Terokkar, Nagrand, Blade's Edge, Netherstorm, Shadowmoon,
-  Shattrath, Isle of Quel'Danas) while Outland is closed. That covers the Dark Portal areatrigger, portals,
+  530 into an Outland-proper zone (Hellfire, Zangarmarsh, Terokkar, Nagrand, Blade's Edge, Netherstorm, Twisting
+  Nether, Shadowmoon, Auchindoun, Shattrath, Isle of Quel'Danas) while Outland is closed. That covers the Dark Portal areatrigger, portals,
   hearthstones and summons. Players and bots alike (bots are `SEC_PLAYER`); GMs pass with
   `RBAC_PERM_SKIP_CHECK_DISABLE_MAP`, the same permission that skips map disables.
 - **Northrend transports:** the ship's map hop calls `TeleportTo(..., TELE_TO_NOT_LEAVE_TRANSPORT)`; a refusal
@@ -82,11 +82,24 @@ content_gate_bundle_disable (bundle VARCHAR(32), sourceType TINYINT UNSIGNED, en
   is `TINYINT UNSIGNED` in this schema: bundle events use ids 200-255. One event per bundle.
 - Members (`sourceType` 1 quest, 4 achievement criteria, 10 loot) are disabled while the bundle is closed. A member
   must not also have a row in `disables`.
+- **Fails closed.** An event in the block 200-255 that no loaded bundle owns is kept closed whatever the conf says. If
+  the bundle tables are missing (the module SQL was not applied), every event 200-255 is kept closed, an ERROR is
+  logged and `.gate status` shows it; the first cutover SQL file also probes the tables, so such an import stops
+  before it changes anything.
 - Doors in front of a gated instance need no bundle: the instance's map gate already blocks entry.
 
 Examples of the day-one data (rows ship as pending world SQL, not with the module): `molten_core` opens with
 `map:409:N` (Lothos Riftwaker, Core Fragment), `zul_gurub` with `map:309:N` (the Yojamba camp and the world bosses
 Azuregos and Lord Kazzak), `karazhan` with `map:532:N`. `.gate reload` re-reads the tables.
+
+Onyxia's Lair (249) keeps two raid difficulty rows (10N and 25N, both 40 players): open it with `249:*` in
+`ContentGate.Open.Instances.*`, not `249:N`, or a leader on 25-player raid difficulty is refused. The `onyxia` bundle
+(`map:249:N`) opens with either.
+
+Arenas: the arena season events (75, 76, 55-60) follow bg 6. The core force-starts the current season's event at
+boot and on `.arena season set` (that skips the disable), so while 6 is closed the module stops it again after boot
+and on every watchdog check; opening 6 starts the current season's event. Any closed event a GM starts with
+`.event start` is stopped the same way.
 
 ## Conf
 

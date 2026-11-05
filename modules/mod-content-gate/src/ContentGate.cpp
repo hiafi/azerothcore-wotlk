@@ -16,6 +16,7 @@
  */
 
 #include "ContentGate.h"
+#include "ArenaSeasonMgr.h"
 #include "Chat.h"
 #include "Config.h"
 #include "DBCStores.h"
@@ -121,6 +122,15 @@ namespace ContentGate
             return out.empty() ? "-" : out;
         }
 
+        // game_event id of the active arena season (game_event_arena_seasons), 0 if unknown.
+        uint32 CurrentArenaSeasonEvent()
+        {
+            if (QueryResult result = WorldDatabase.Query("SELECT `eventEntry` FROM `game_event_arena_seasons` WHERE "
+                "`season` = {}", sArenaSeasonMgr->GetCurrentSeason()))
+                return result->Fetch()[0].Get<uint32>();
+            return 0;
+        }
+
         std::string JoinNames(std::set<std::string> const& names)
         {
             std::string out;
@@ -182,14 +192,28 @@ namespace ContentGate
     {
         _bundles.clear();
         _bundleErrors.clear();
+        _bundleBlockEvents.clear();
 
         QueryResult present = WorldDatabase.Query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = "
             "DATABASE() AND TABLE_NAME IN ('content_gate_bundle', 'content_gate_bundle_disable')");
         _bundleTablesPresent = present && present->Fetch()[0].Get<uint64>() == 2;
         if (!_bundleTablesPresent)
         {
-            _bundleErrors.push_back("bundle tables missing (module SQL not applied): no bundles loaded");
+            // Fail closed: without the tables nothing says which bundle-block event belongs to an open bundle, and
+            // the bundle events are always-on, so a partial deploy would spawn every gated world boss and camp.
+            _bundleBlockEvents = AllBundleEventIds();
+            _bundleErrors.push_back(Acore::StringFormat("bundle tables missing (module SQL not applied): no bundles "
+                "loaded, every game event {}-{} (the bundle block) is kept closed", BUNDLE_EVENT_FIRST,
+                BUNDLE_EVENT_LAST));
             return;
+        }
+
+        if (QueryResult result = WorldDatabase.Query("SELECT `eventEntry` FROM `game_event` WHERE `eventEntry` "
+            "BETWEEN {} AND {}", BUNDLE_EVENT_FIRST, BUNDLE_EVENT_LAST))
+        {
+            do
+                _bundleBlockEvents.insert(result->Fetch()[0].Get<uint32>());
+            while (result->NextRow());
         }
 
         MapLookup const lookup = LookupMap;
@@ -289,6 +313,10 @@ namespace ContentGate
                         bundle.name, type, entry));
             }
         }
+        if (_bundleTablesPresent)
+            for (uint32 eventId : UnownedBundleEvents(_bundleBlockEvents, _bundles))
+                _bundleErrors.push_back(Acore::StringFormat("game event {} is in the bundle block ({}-{}) but no "
+                    "bundle owns it: kept closed", eventId, BUNDLE_EVENT_FIRST, BUNDLE_EVENT_LAST));
         for (std::string const& name : _config.openBundles)
             if (std::none_of(_bundles.begin(), _bundles.end(), [&](Bundle const& b) { return b.name == name; }))
                 _bundleErrors.push_back("Open.Bundles names unknown bundle '" + name + "'");
@@ -385,6 +413,7 @@ namespace ContentGate
                         "disables row (a DB-closed battleground also has no template until a restart)", bg));
 
             sDisableMgr->AddDisable(DISABLE_TYPE_LOOT, SENTINEL_LOOT_ENTRY, 0, "", "");
+            StopActiveClosedEvents();
         }
 
         _outlandOpen = !_closed.outlandClosed;
@@ -408,7 +437,7 @@ namespace ContentGate
         }
 
         ParseAndLoad(true);
-        _closed = ComputeClosedSet(_config, AllGateMaps(), AllBattlegrounds(), _bundles);
+        _closed = ComputeClosedSet(_config, AllGateMaps(), AllBattlegrounds(), _bundles, _bundleBlockEvents);
         Apply(Scope::BootEarly);
     }
 
@@ -427,7 +456,7 @@ namespace ContentGate
             LOG_ERROR(LOG_CAT, "[content-gate] boot hook missed; applying now (quests miss boot post-processing)");
             _bootApplied = true;
             ParseAndLoad(true);
-            _closed = ComputeClosedSet(_config, AllGateMaps(), AllBattlegrounds(), _bundles);
+            _closed = ComputeClosedSet(_config, AllGateMaps(), AllBattlegrounds(), _bundles, _bundleBlockEvents);
             Apply(Scope::Full);
         }
         else
@@ -445,12 +474,38 @@ namespace ContentGate
             _closed.outlandClosed ? "closed" : "open", _closed.northrendClosed ? "closed" : "open");
     }
 
+    // A closed event can still be running: ArenaSeasonMgr::LoadActiveSeason (after the boot disables) and
+    // ChangeCurrentSeason (`.arena season set`) start the season's event with overwrite = true, which skips the
+    // disable check, and so does a GM's `.event start`. AddDisable stops an active event even when the key already
+    // exists (HandleDisableType runs before the insert), so re-adding the closed key stops it.
+    void Gate::StopActiveClosedEvents()
+    {
+        for (uint32 eventId : _closed.events)
+        {
+            if (!sGameEventMgr->IsActiveEvent(eventId))
+                continue;
+            sDisableMgr->AddDisable(DISABLE_TYPE_GAME_EVENT, eventId, 0, "", "");
+            LOG_INFO(LOG_CAT, "[content-gate] stopped game event {}: it was started although it is closed", eventId);
+        }
+    }
+
     void Gate::RestartOpenedEvents(ClosedSetDiff const& diff)
     {
+        uint32 const arenaSeasonEvent = diff.openedEvents.empty() ? 0 : CurrentArenaSeasonEvent();
         for (uint32 eventId : diff.openedEvents)
         {
             if (!IsGameEventValid(eventId) || IsKeyDisabled(DISABLE_TYPE_GAME_EVENT, eventId))
                 continue;
+            if (eventId == arenaSeasonEvent)
+            {
+                // Arena season events are not on a schedule (ArenaSeasonMgr force-starts the current one at boot).
+                if (!sGameEventMgr->IsActiveEvent(eventId))
+                {
+                    sGameEventMgr->StartEvent(eventId, true);
+                    LOG_INFO(LOG_CAT, "[content-gate] started arena season game event {} (opened)", eventId);
+                }
+                continue;
+            }
             if (sGameEventMgr->IsActiveEvent(eventId) || !sGameEventMgr->CheckOneGameEvent(eventId))
                 continue;
             sGameEventMgr->StartEvent(eventId);
@@ -478,7 +533,7 @@ namespace ContentGate
         {
             ParseAndLoad(true);
             ValidateBundles();
-            after = ComputeClosedSet(_config, AllGateMaps(), AllBattlegrounds(), _bundles);
+            after = ComputeClosedSet(_config, AllGateMaps(), AllBattlegrounds(), _bundles, _bundleBlockEvents);
         }
 
         // DisableMgr has no remove: rebuild the DB rows, then add the module's set on top.
@@ -541,7 +596,11 @@ namespace ContentGate
         _watchdogTimer = 0;
 
         if (IsKeyDisabled(DISABLE_TYPE_LOOT, SENTINEL_LOOT_ENTRY))
+        {
+            std::lock_guard<std::recursive_mutex> guard(_lock);
+            StopActiveClosedEvents();
             return;
+        }
 
         // Someone ran `.reload disables` (or anything else that calls LoadDisables): the DB rows are back, ours
         // are gone. Put ours back on top; no LoadDisables needed.
@@ -591,7 +650,11 @@ namespace ContentGate
         handler->PSendSysMessage("Events closed: {}", JoinIds(_closed.events));
 
         if (!_bundleTablesPresent)
-            handler->PSendSysMessage("Bundles: tables missing (module SQL not applied)");
+            handler->PSendSysMessage("Bundles: ERROR tables missing (module SQL not applied): no bundles loaded, "
+                "every game event {}-{} kept closed", BUNDLE_EVENT_FIRST, BUNDLE_EVENT_LAST);
+        else if (!_closed.unownedBundleEvents.empty())
+            handler->PSendSysMessage("Bundle-block events with no bundle (kept closed): {}",
+                JoinIds(_closed.unownedBundleEvents));
         for (Bundle const& bundle : _bundles)
         {
             bool const isOpen = _closed.openBundles.count(bundle.name) != 0;

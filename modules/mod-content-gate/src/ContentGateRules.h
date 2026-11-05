@@ -59,6 +59,11 @@ namespace ContentGate
     constexpr uint32_t MAX_OUTDOOR_PVP_TYPE = 7;    // OutdoorPvPTypes 1..7
     constexpr uint32_t BG_ALL_ARENAS = 6;           // BattlemasterList "All Arenas" (BATTLEGROUND_AA)
 
+    // game_event ids reserved for bundle events (apps/dbc-tools/source/ids.yaml `game_event_bundle`; eventEntry is a
+    // TINYINT UNSIGNED, so the block ends at 255).
+    constexpr uint32_t BUNDLE_EVENT_FIRST = 200;
+    constexpr uint32_t BUNDLE_EVENT_LAST = 255;
+
     // A map the gate knows about: every Map.dbc map with IsDungeon(). `available` has bit d set for each
     // difficulty d with a MapDifficulty row.
     struct MapShape
@@ -446,6 +451,7 @@ namespace ContentGate
                 { 21, { K::Battleground, 7, 0 }, "Call to Arms: Eye of the Storm" },
                 { 53, { K::Battleground, 9, 0 }, "Call to Arms: Strand of the Ancients" },
                 { 54, { K::Battleground, 30, 0 }, "Call to Arms: Isle of Conquest" },
+                { 75, { K::Battleground, BG_ALL_ARENAS, 0 }, "Arena Season 1" },
                 { 76, { K::Battleground, BG_ALL_ARENAS, 0 }, "Arena Season 2" },
                 { 63, { K::Northrend, 0, 0 }, "Kalu'ak Fishing Derby Turn-ins" },
                 { 64, { K::Northrend, 0, 0 }, "Kalu'ak Fishing Derby Fishing Pools" },
@@ -469,6 +475,7 @@ namespace ContentGate
         std::set<std::pair<uint8_t, uint32_t>> members;     // closed bundles' member disables
         std::set<std::string> openBundles;
         std::set<std::string> closedBundles;
+        std::set<uint32_t> unownedBundleEvents;             // bundle-block events no bundle owns (always closed)
         bool outlandClosed = true;
         bool northrendClosed = true;
 
@@ -483,8 +490,37 @@ namespace ContentGate
         }
     };
 
+    // Every id of the bundle event block, for when the existing game_event rows cannot be listed.
+    inline std::set<uint32_t> AllBundleEventIds()
+    {
+        std::set<uint32_t> ids;
+        for (uint32_t id = BUNDLE_EVENT_FIRST; id <= BUNDLE_EVENT_LAST; ++id)
+            ids.insert(id);
+        return ids;
+    }
+
+    // Events of the bundle block (`blockEvents`: the game_event rows that exist there) that no loaded bundle owns.
+    // The block is reserved for bundle events, so an unowned one is a bundle whose row is missing (the module's
+    // tables were never created, or an import stopped half way) and is kept closed: a missing row fails closed.
+    inline std::set<uint32_t> UnownedBundleEvents(std::set<uint32_t> const& blockEvents,
+        std::vector<Bundle> const& bundles)
+    {
+        std::set<uint32_t> out;
+        for (uint32_t id : blockEvents)
+        {
+            if (id < BUNDLE_EVENT_FIRST || id > BUNDLE_EVENT_LAST)
+                continue;
+            if (std::none_of(bundles.begin(), bundles.end(), [id](Bundle const& b) { return b.gameEvent == id; }))
+                out.insert(id);
+        }
+        return out;
+    }
+
+    // `blockEvents`: the existing game_event ids in the bundle block (AllBundleEventIds() when the bundle tables are
+    // missing); the unowned ones are closed whatever the conf says.
     inline ClosedSet ComputeClosedSet(Config const& cfg, std::vector<std::pair<uint32_t, MapShape>> const& allMaps,
-        std::vector<uint32_t> const& allBattlegrounds, std::vector<Bundle> const& bundles)
+        std::vector<uint32_t> const& allBattlegrounds, std::vector<Bundle> const& bundles,
+        std::set<uint32_t> const& blockEvents = {})
     {
         ClosedSet out;
         for (auto const& [mapId, shape] : allMaps)
@@ -519,6 +555,8 @@ namespace ContentGate
             for (auto const& member : bundle.members)
                 out.members.insert(member);
         }
+        out.unownedBundleEvents = UnownedBundleEvents(blockEvents, bundles);
+        out.events.insert(out.unownedBundleEvents.begin(), out.unownedBundleEvents.end());
         out.outlandClosed = !cfg.outlandOpen;
         out.northrendClosed = !cfg.northrendOpen;
         return out;
@@ -558,7 +596,9 @@ namespace ContentGate
     }
 
     // Outland proper on map 530: every zone but the Blood Elf and Draenei starting zones and their cities.
-    // Isle of Quel'Danas counts as Outland (TBC content).
+    // Isle of Quel'Danas counts as Outland (TBC content). Checked against AreaTable.dbc (top-level areas of map 530):
+    // the zones not listed are Eversong Woods 3430, Ghostlands 3433, Silvermoon City 3487, Azuremyst Isle 3524,
+    // Bloodmyst Isle 3525, The Exodar 3557 and the seas around the isles (The North Sea 3455, The Veiled Sea 3479).
     inline bool IsOutlandProperZone(uint32_t zoneId)
     {
         switch (zoneId)
@@ -570,7 +610,9 @@ namespace ContentGate
             case 3521:  // Zangarmarsh
             case 3522:  // Blade's Edge Mountains
             case 3523:  // Netherstorm
+            case 3540:  // Twisting Nether (the Netherstorm sky islands)
             case 3703:  // Shattrath City
+            case 3917:  // Auchindoun (top-level zone on map 530, no spawns today)
             case 4080:  // Isle of Quel'Danas
                 return true;
             default:

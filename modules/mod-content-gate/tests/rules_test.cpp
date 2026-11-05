@@ -6,8 +6,8 @@ using namespace ContentGate;
 
 namespace
 {
-    // A small fake Map.dbc: vanilla 5-mans (normal only), a TBC 5-man (N+H), vanilla raids (10N only), a WotLK raid
-    // (10N/25N) and ICC (all four).
+    // A small fake Map.dbc: vanilla 5-mans (normal only), a TBC 5-man (N+H), vanilla raids (10N only; Onyxia keeps
+    // its WotLK 10N and 25N MapDifficulty rows, both set to 40 players), a WotLK raid (10N/25N) and ICC (all four).
     std::map<uint32_t, MapShape> const& FakeMaps()
     {
         static std::map<uint32_t, MapShape> const maps = {
@@ -15,7 +15,7 @@ namespace
             { 349, { false, FLAG_DIFF_0 } },                                // Maraudon
             { 429, { false, FLAG_DIFF_0 } },                                // Dire Maul
             { 543, { false, FLAG_DIFF_0 | FLAG_DIFF_1 } },                  // Hellfire Ramparts
-            { 249, { true, FLAG_DIFF_0 } },                                 // Onyxia (40-player row only)
+            { 249, { true, FLAG_DIFF_0 | FLAG_DIFF_1 } },                   // Onyxia (two 40-player rows)
             { 309, { true, FLAG_DIFF_0 } },                                 // Zul'Gurub
             { 409, { true, FLAG_DIFF_0 } },                                 // Molten Core
             { 469, { true, FLAG_DIFF_0 } },                                 // Blackwing Lair
@@ -101,6 +101,20 @@ namespace
         CHECK(open.count(36) == 0);
         CHECK(open[409] == FLAG_DIFF_0);              // 409:N applied even though 25N failed
         CHECK(open.count(631) == 0);
+
+        // Onyxia: `249:*` opens both raid rows; `249:N` leaves the 25-player row (a raid-25 leader) closed.
+        open.clear();
+        errors.clear();
+        ParseInstances("249:*", Lookup(), open, errors);
+        CHECK(errors.empty());
+        CHECK(open[249] == (FLAG_DIFF_0 | FLAG_DIFF_1));
+        open.clear();
+        ParseInstances("249:N", Lookup(), open, errors);
+        CHECK(open[249] == FLAG_DIFF_0);
+        open.clear();
+        ParseInstances("249:10N,25N", Lookup(), open, errors);
+        CHECK(errors.empty());
+        CHECK(open[249] == (FLAG_DIFF_0 | FLAG_DIFF_1));
 
         // Several conf keys accumulate.
         open.clear();
@@ -213,7 +227,8 @@ namespace
         CHECK(closed.maps.at(409) == FLAG_DIFF_0);
         CHECK(closed.maps.at(631) == FLAG_ALL);
         CHECK(closed.maps.at(533) == (FLAG_DIFF_0 | FLAG_DIFF_1));
-        CHECK(closed.ClosedDifficultyCount() == 2 + 1 + 1 + 1 + 1 + 1 + 2 + 4);
+        CHECK(closed.ClosedDifficultyCount() == 2 + 2 + 1 + 1 + 1 + 1 + 2 + 4);
+        CHECK(closed.maps.at(249) == (FLAG_DIFF_0 | FLAG_DIFF_1));
 
         CHECK(closed.battlegrounds == std::set<uint32_t>({ 4, 5, 6, 7, 8, 9, 10, 11, 30, 32 }));
         CHECK(closed.outdoorPvP == std::set<uint32_t>({ 1, 2, 3, 4, 5, 6, 7 }));
@@ -223,6 +238,7 @@ namespace
         CHECK(!closed.events.count(18) && !closed.events.count(19) && !closed.events.count(20));
         CHECK(closed.events.count(21) && closed.events.count(53) && closed.events.count(54));
         CHECK(closed.events.count(55) && closed.events.count(60) && closed.events.count(76));
+        CHECK(closed.events.count(75));                                      // Arena Season 1 follows bg 6 too
         CHECK(closed.events.count(63) && closed.events.count(64));
         CHECK(closed.events.count(101) && closed.events.count(115));
         CHECK(closed.events.count(61));
@@ -303,14 +319,16 @@ namespace
 
     void TestZones()
     {
-        for (uint32_t zone : { 3483u, 3518u, 3519u, 3520u, 3521u, 3522u, 3523u, 3703u, 4080u })
+        for (uint32_t zone : { 3483u, 3518u, 3519u, 3520u, 3521u, 3522u, 3523u, 3540u, 3703u, 3917u, 4080u })
             CHECK(IsOutlandProperZone(zone));
-        // Blood Elf and Draenei zones, cities, and anything else on map 530 stay reachable.
-        for (uint32_t zone : { 3430u, 3433u, 3487u, 3524u, 3525u, 3557u, 0u, 1519u })
+        // Blood Elf and Draenei zones, cities, the seas around the isles, and anything else stay reachable.
+        for (uint32_t zone : { 3430u, 3433u, 3487u, 3524u, 3525u, 3557u, 3455u, 3479u, 0u, 1519u })
             CHECK(!IsOutlandProperZone(zone));
 
         CHECK(ClosedContinentAt(MAP_OUTLAND, 3483, false, false) == Continent::Outland);
         CHECK(ClosedContinentAt(MAP_OUTLAND, 3430, false, false) == Continent::Allowed);
+        CHECK(ClosedContinentAt(MAP_OUTLAND, 3540, false, false) == Continent::Outland);
+        CHECK(ClosedContinentAt(MAP_OUTLAND, 3917, false, false) == Continent::Outland);
         CHECK(ClosedContinentAt(MAP_OUTLAND, 3483, true, false) == Continent::Allowed);
         CHECK(ClosedContinentAt(MAP_NORTHREND, 0, false, false) == Continent::Northrend);
         CHECK(ClosedContinentAt(MAP_NORTHREND, 65, false, true) == Continent::Allowed);
@@ -341,7 +359,47 @@ namespace
         std::set<uint32_t> seen;
         for (LinkedEvent const& linked : LinkedEvents())
             CHECK(seen.insert(linked.event).second);
-        CHECK(seen.size() == 9 + 6 + 15);
+        CHECK(seen.size() == 10 + 6 + 15);
+    }
+
+    // S1: a bundle-block event no loaded bundle owns stays closed, whatever the conf opens.
+    void TestUnownedBundleEvents()
+    {
+        CHECK(AllBundleEventIds().size() == BUNDLE_EVENT_LAST - BUNDLE_EVENT_FIRST + 1);
+        CHECK(*AllBundleEventIds().begin() == 200 && *AllBundleEventIds().rbegin() == 255);
+
+        // Bundle tables missing: no bundles, the whole block is closed even with every switch open.
+        Config cfg = DayOneConfig();
+        cfg.openInstances[409] = FLAG_DIFF_0;
+        cfg.openInstances[309] = FLAG_DIFF_0;
+        cfg.openBattlegrounds.insert(BG_ALL_ARENAS);
+        cfg.outlandOpen = true;
+        cfg.openBundles.insert("zul_gurub");
+        ClosedSet const missing = ComputeClosedSet(cfg, AllMaps(), AllBattlegrounds(), {}, AllBundleEventIds());
+        for (uint32_t id = BUNDLE_EVENT_FIRST; id <= BUNDLE_EVENT_LAST; ++id)
+            CHECK(missing.events.count(id));
+        CHECK(missing.unownedBundleEvents.size() == 56);
+        CHECK(!missing.events.count(19));                                    // the rest of the conf still applies
+        CHECK(missing.openBundles.empty() && missing.closedBundles.empty());
+
+        // Tables present: only the existing block events without a bundle stay closed.
+        std::vector<Bundle> const bundles = DayOneBundles();
+        std::set<uint32_t> const existing = { 200, 201, 202, 203, 204, 205, 199, 256 };
+        CHECK(UnownedBundleEvents(existing, bundles) == std::set<uint32_t>({ 203 }));
+        ClosedSet const present = ComputeClosedSet(DayOneConfig(), AllMaps(), AllBattlegrounds(), bundles, existing);
+        CHECK(present.unownedBundleEvents == std::set<uint32_t>({ 203 }));
+        CHECK(present.events.count(203));
+        CHECK(!present.events.count(202));                                   // maraudon's event is owned and open
+        CHECK(!present.events.count(199) && !present.events.count(256));     // outside the block: untouched
+
+        // The default (no block events) closes nothing extra.
+        CHECK(ComputeClosedSet(DayOneConfig(), AllMaps(), AllBattlegrounds(), bundles).unownedBundleEvents.empty());
+
+        // Tables appear and `.gate reload`: the block events of open bundles open again.
+        ClosedSet const after = ComputeClosedSet(cfg, AllMaps(), AllBattlegrounds(), bundles, existing);
+        ClosedSetDiff const diff = Diff(missing, after);
+        CHECK(diff.openedEvents.count(200) && diff.openedEvents.count(204) && diff.openedEvents.count(202));
+        CHECK(!diff.openedEvents.count(201) && !diff.openedEvents.count(203));
     }
 }
 
@@ -357,5 +415,6 @@ int main()
     TestZones();
     TestBundleNames();
     TestLinkedEventsUnique();
+    TestUnownedBundleEvents();
     return Report("rules_test");
 }

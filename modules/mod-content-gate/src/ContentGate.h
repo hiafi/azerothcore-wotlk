@@ -29,6 +29,7 @@
 #include "Define.h"
 #include <atomic>
 #include <mutex>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -86,6 +87,7 @@ namespace ContentGate
         void Apply(Scope scope);
         void FullReapply(char const* reason);
         void RestartOpenedEvents(ClosedSetDiff const& diff);
+        void StopActiveClosedEvents();
         void LogConfigErrors() const;
 
         std::recursive_mutex _lock;             // guards the state below except the atomics; recursive because
@@ -95,6 +97,8 @@ namespace ContentGate
         Config _config;
         std::vector<Bundle> _bundles;
         std::vector<std::string> _bundleErrors;
+        std::set<uint32_t> _bundleBlockEvents;  // existing game_event ids in the bundle block (all of it if the
+                                                // bundle tables are missing)
         ClosedSet _closed;                      // what is applied now
         std::vector<std::string> _conflicts;    // DB `disables` rows that shadow the conf (cutover leftovers)
         std::vector<std::string> _restartNotes; // live changes the engine only reads at boot

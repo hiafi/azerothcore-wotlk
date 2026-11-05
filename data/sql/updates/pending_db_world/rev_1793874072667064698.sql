@@ -1,3 +1,11 @@
+-- Cutover guard (progression-slim): this is the first cutover file in name order. Fail here, before any change, if
+-- mod-content-gate's tables do not exist (a db-import image built without the module never runs the module's
+-- content_gate_tables.sql, which sorts ahead of this file when it does). db-import pipes each file through one mysql
+-- client run without --force, which stops at the first error; the non-zero exit makes the updater throw and stop the
+-- import, so neither this file nor any later one is applied or recorded (DBUpdater.cpp ApplyFile, UpdateFetcher.cpp
+-- Apply). Without the guard the cutover would open the phase 0 quests and loot and turn on every bundle spawn.
+SELECT 1 FROM `content_gate_bundle` LIMIT 0;
+
 -- progression-slim PS3 D1: mounts back to WotLK (3.3.5 stock) levels and prices.
 -- Reverses mod-progression phase 00's item_template block (MP 8c765a1 src/phase_00/sql/phase_00-item_template.sql).
 -- Each statement restores exactly the columns phase 0 changed on that entry, to the stock value in
