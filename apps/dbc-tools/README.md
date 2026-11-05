@@ -438,6 +438,24 @@ run where live already matches), and re-emits the declared value after a later S
 the row are never read or written. It is never pruned. If a `creature_template()` full row also names the entry, a
 named column must agree (generate.py stops otherwise).
 
+### Declaring a dungeon and its heroic (dungeon difficulties)
+
+One `dungeon()` per instance map, in `source/world/dungeons/<name>.py` (`lib/dsl/dungeon.py`):
+
+```python
+from lib.dsl.dungeon import dungeon, heroic
+
+dungeon(36, "Deadmines", heroic=heroic(map_difficulty_id=1000, access_id=122, min_level=60))
+```
+
+`heroic()` emits a `mapdifficulty_dbc` row (Difficulty 1: one-day reset, 5 players, a refusal message naming
+`min_level`, Utgarde Keep's mask and `DUNGEON_DIFFICULTY_5PLAYER_HEROIC`) that also ships in patch-Z's
+`MapDifficulty.dbc`, and a `dungeon_access_template` row (map, 1, `min_level`, `max_level`, `min_item_level`). The ids
+come from `ids.yaml`'s `mapdifficulty` and `dungeon_access` blocks and never move once shipped. A `dungeon()` without
+`heroic` emits nothing. `generate.py` (and `--check`) stops on a map with no stock MapDifficulty row, a (map,
+difficulty) another stock or live row already holds, and a missing `var/extractors/dbc/MapDifficulty.dbc` (copy it
+from `ac-worldserver:/azerothcore/env/dist/data/dbc/`). Dropping `heroic` prunes both rows.
+
 ### Declaring a creature (T1)
 
 A `source/classes/*.py` file can also declare a rework's own NPC - `creature_template` +

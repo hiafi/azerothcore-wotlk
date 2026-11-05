@@ -51,6 +51,7 @@ sys.path.insert(0, str(TOOL_ROOT))
 from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, source, sql_out, state  # noqa: E402
 from lib import gcd_haste, header_gen, potency_sheet, spell_tables, superseded_ranks  # noqa: E402
 from lib import sqlcorpus, stale_overlay, trainer_pricing, trainer_state  # noqa: E402
+from lib import dungeon_checks  # noqa: E402
 from bootstrap import load_spell_ranks_chains  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 from lib.lazy import Lazy  # noqa: E402
@@ -604,6 +605,10 @@ def _check_report(
     )
     # Potency audit S3: a weapon strike's percent and flat part must sit on potency (or be listed as deferred).
     check_errors += lint.check_weapon_potency(dsl_classes["spells"])
+    # Dungeon difficulties E1: declared heroics (stock MapDifficulty.dbc present, no (map, difficulty) clash).
+    check_errors += dungeon_checks.errors_for_run(dsl_classes, spell_table_index)
+    for note in dungeon_checks.summary_notes(dsl_classes["dungeons"]):
+        print(f"note: {note}")
     if check_errors:
         for problem in check_errors:
             print(f"ERROR: {problem}")
@@ -1328,6 +1333,10 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
     lfg_errors, lfg_notes = lint.check_lfg_exclusions(dsl_classes["lfg_disables"], lfg_dungeons)
     for note in lfg_notes:
         print(f"note: {note}")
+    # Dungeon difficulties E1 (shared with --check): declared heroics.
+    lfg_errors += dungeon_checks.errors_for_run(dsl_classes, spell_table_index)
+    for note in dungeon_checks.summary_notes(dsl_classes["dungeons"]):
+        print(f"note: {note}")
     percent_errors = lint.check_percent_field_potency(spell_entries)
     if tooltip_errors or bonus_errors or category_errors or lfg_errors or percent_errors:
         for error in tooltip_errors + bonus_errors + category_errors + lfg_errors + percent_errors:
@@ -1444,6 +1453,7 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         dbcfmt.SPELLDESCRIPTIONVARIABLES: _tooltip_var_rows(dsl_classes["tooltip_vars"]),
         dbcfmt.SPELLCATEGORY: _spell_category_rows(dsl_classes["spell_categories"]),
         dbcfmt.SPELLRUNECOST: _spell_rune_cost_rows(dsl_classes["spell_rune_costs"]),
+        dbcfmt.MAPDIFFICULTY: dungeon_checks.map_difficulty_client_rows(dsl_classes["map_difficulties"]),
     }
     for name, table in SECONDARY_TABLES.items():
         # Same reserved_rows switch as the SQL block above - the client patch must carry every

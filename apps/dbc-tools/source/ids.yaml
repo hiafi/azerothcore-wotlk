@@ -22,8 +22,8 @@
 #   - item:       the real client Item.dbc (var/extractors/dbc/Item.dbc, pulled
 #                 from patch-enUS-3.MPQ) tops out at 56806 (asserted in
 #                 DBCStores.cpp as "last client known item added in 3.3.5a") -
-#                 70000+ starts at the one pre-existing custom entry (70001)
-#                 rather than a fresh gap, since moving it wasn't worth it.
+#                 70000+ was picked to start at the one pre-existing custom entry (70001,
+#                 the Mythic Plus Keystone, removed 2026-11-05 with mod-mythic-plus).
 #   - spell_group: a DB-defined spell_group id must be above SPELL_GROUP_DB_RANGE_MIN (1000,
 #                 SpellMgr.h). The highest id anywhere in spell_group (base dump + every
 #                 migration, checked this session) is 1126, so this block starts at 1200 for a
@@ -86,9 +86,9 @@ skilllineability:
 
 # item_dbc rows for custom item_template entries above 56806 (the last real
 # client item - see DBCStores.cpp's own assert). Unlike every block above,
-# this one wasn't picked in a vacuum: entry 70001 (Mythic Plus Keystone)
-# already existed at this ID before this pipeline touched Item.dbc, so the
-# range starts there instead of at a fresh gap, to avoid moving it.
+# this one wasn't picked in a vacuum: entry 70001 (Mythic Plus Keystone, removed
+# 2026-11-05 with mod-mythic-plus) already existed at this ID before this pipeline
+# touched Item.dbc, so the range starts there. The bounds stay as they are.
 item:
   start: 70000
   end: 79999
@@ -236,6 +236,21 @@ spellrunecost:
 game_event_bundle:
   start: 200
   end: 255
+
+# Dungeon difficulties E1 (.agents/plans/dungeon-difficulties/dungeon-difficulties.STAGE-E0-E3-HANDOFF.md s3.8),
+# both read by lib/dsl/dungeon.py's heroic() (an id outside its block raises):
+#   - mapdifficulty: MapDifficulty.dbc / mapdifficulty_dbc row ids. The stock file has 187 rows with a maximum id of
+#     753 and the live overlay holds only phase 0's Onyxia rows 26 / 323, so 1000-1099 is clear of both. The
+#     client rows ship in patch-Z.
+#   - dungeon_access: dungeon_access_template.id, a tinyint unsigned: the base dump tops out at 121 (AUTO_INCREMENT
+#     122) and the frozen phase 0 SQL only UPDATEs rows, so 122-199 is clear and leaves 200-255 unreserved.
+mapdifficulty:
+  start: 1000
+  end: 1099
+
+dungeon_access:
+  start: 122
+  end: 199
 
 # Per-class reservations (and non-class owners, see `healsim` below), one entry per table the owner draws ids from,
 # each inside the tool-wide block of the same name above (or the spell/talent/... blocks earlier in this file).
