@@ -10,8 +10,8 @@ E1 (WP-T1) emits, for a dungeon with `heroic=heroic(...)`:
 - a `dungeon_access_template` row (map, difficulty 1): the level / item level gate `MapMgr::PlayerCannotEnter`
   checks (GMs skip it).
 
-A `dungeon(...)` without `heroic` emits nothing: the normal rows belong to stock data and mod-progression's phase
-SQL. Later stages extend the same two calls rather than adding a second declaration per dungeon: E2's T2 adds the
+A `dungeon(...)` without `heroic` emits nothing: the normal rows belong to stock data and the frozen phase 0 SQL.
+Later stages extend the same two calls rather than adding a second declaration per dungeon: E2's T2 adds the
 heroic DungeonEncounter / `instance_encounters` rows, spawnMask and `difficulty_entry_1` emission, and WP-G the
 creature list and the heroic template generator (tier, bosses, overrides) - see the E1-T1 report for the proposed
 shape. They read `Registry.dungeons` (one entry per call: `map_id`, `name`, `heroic` as a plain dict or None).
