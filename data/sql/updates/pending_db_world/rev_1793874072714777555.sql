@@ -1,10 +1,11 @@
 -- progression-slim PS3 D1: restore the vendor stock mod-progression phase 00 stripped (ungated, ruling 2026-11-05).
 -- Rows: every (entry, item, ExtendedCost) that phases 07-18 re-inserted (MP 8c765a1,
--- src/phase_NN/sql/phase_NN-npc_vendor.sql) and that the live table lacks, plus the 5 stripped rows no phase
--- re-inserted (vendor 1462 item 28053; vendor 32172 items 48954-48957). Values (slot, maxcount, incrtime,
+-- src/phase_NN/sql/phase_NN-npc_vendor.sql) and that the live table lacks, plus the 4 stripped rows no phase
+-- re-inserted (vendor 32172 items 48954-48957). Values (slot, maxcount, incrtime,
 -- VerifiedBuild) are the STOCK ones: data/sql/base/db_world/npc_vendor.sql with the db_world updates
 -- 2026_01_20_00, 2026_02_10_03, 2026_02_13_01, 2026_04_26_01, 2026_04_26_05 and 2026_09_24_01 applied.
--- Left out on purpose: the 220 rogue poison rows (items retired by 2026_10_31_25, rogue-rework RG0a).
+-- Left out on purpose: the 220 rogue poison rows (items retired by 2026_10_31_25, rogue-rework RG0a), and every
+-- ammo row (item class 6: arrows and shots; ammo is being dropped, user 2026-11-05).
 -- Every item below exists in item_template (checked against the live table, 0 missing).
 -- Idempotent: each vendor's rows are deleted by (entry, item) before the insert.
 
@@ -13,11 +14,6 @@ DELETE FROM `npc_vendor` WHERE `entry` = 66 AND `item` IN (10648, 39354);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (66, 0, 10648, 0, 0, 0, 0), -- Common Parchment
 (66, 0, 39354, 0, 0, 0, 0); -- Light Parchment
-
--- Avette Fellwood <Bowyer>
-DELETE FROM `npc_vendor` WHERE `entry` = 228 AND `item` IN (28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(228, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
 
 -- Karm Ironquill <Mining Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 372 AND `item` IN (20815, 20824);
@@ -32,22 +28,10 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (483, 0, 33443, 0, 0, 0, 0), -- Sour Goat Cheese
 (483, 0, 35952, 0, 0, 0, 0); -- Briny Hardcheese
 
--- Corporal Bluth <Camp Trader>
-DELETE FROM `npc_vendor` WHERE `entry` = 734 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(734, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(734, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
 -- Amy Davenport <Tradeswoman>
 DELETE FROM `npc_vendor` WHERE `entry` = 777 AND `item` IN (39354);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (777, 0, 39354, 0, 0, 0, 0); -- Light Parchment
-
--- Kimberly Hiett <Fletcher>
-DELETE FROM `npc_vendor` WHERE `entry` = 789 AND `item` IN (11285, 28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(789, 0, 11285, 0, 0, 0, 0), -- Jagged Arrow
-(789, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
 
 -- Karen Taylor <Blacksmithing & Mining Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 790 AND `item` IN (20815, 20824);
@@ -99,12 +83,6 @@ DELETE FROM `npc_vendor` WHERE `entry` = 1148 AND `item` IN (18256);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (1148, 0, 18256, 0, 0, 0, 0); -- Imbued Vial
 
--- Uthok <General Supplies>
-DELETE FROM `npc_vendor` WHERE `entry` = 1149 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(1149, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(1149, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
 -- Drake Lindgren <General & Trade Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 1250 AND `item` IN (10648, 39354);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
@@ -127,21 +105,10 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (1275, 0, 22148, 0, 0, 0, 0), -- Wild Quillvine
 (1275, 0, 37201, 0, 0, 0, 0); -- Corpse Dust
 
--- Thurman Mullby <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 1285 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(1285, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(1285, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
 -- Edna Mullby <Trade Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 1286 AND `item` IN (18256);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (1286, 0, 18256, 0, 0, 0, 0); -- Imbued Vial
-
--- Frederick Stover <Bow & Arrow Merchant>
-DELETE FROM `npc_vendor` WHERE `entry` = 1298 AND `item` IN (28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(1298, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
 
 -- Charys Yserian <Arcane Trinkets Vendor>
 DELETE FROM `npc_vendor` WHERE `entry` = 1307 AND `item` IN (22147, 22148, 37201);
@@ -203,11 +170,6 @@ DELETE FROM `npc_vendor` WHERE `entry` = 1456 AND `item` IN (39354);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (1456, 0, 39354, 0, 0, 0, 0); -- Light Parchment
 
--- Edwina Monzor <Fletcher>
-DELETE FROM `npc_vendor` WHERE `entry` = 1462 AND `item` IN (28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(1462, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
-
 -- Falkan Armonis <Reagents>
 DELETE FROM `npc_vendor` WHERE `entry` = 1463 AND `item` IN (22147, 22148, 37201);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
@@ -250,12 +212,6 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (1694, 0, 39684, 0, 0, 0, 0), -- Hair Trigger
 (1694, 0, 40533, 0, 0, 0, 0); -- Walnut Stock
 
--- Natheril Raincaller <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 2084 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(2084, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(2084, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
 -- Abigail Shiel <Trade Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 2118 AND `item` IN (10648, 39354);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
@@ -282,12 +238,6 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 DELETE FROM `npc_vendor` WHERE `entry` = 2394 AND `item` IN (38426);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (2394, 0, 38426, 0, 0, 0, 0); -- Eternium Thread
-
--- Kayren Soothallow <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 2401 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(2401, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(2401, 0, 28060, 0, 0, 0, 0); -- Impact Shot
 
 -- Bro'kin <Alchemy Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 2480 AND `item` IN (18256, 40411);
@@ -343,10 +293,9 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (2684, 0, 40533, 0, 0, 0, 0); -- Walnut Stock
 
 -- Mazk Snipeshot <Engineering Supplies>
-DELETE FROM `npc_vendor` WHERE `entry` = 2685 AND `item` IN (10648, 28060, 39684, 40533);
+DELETE FROM `npc_vendor` WHERE `entry` = 2685 AND `item` IN (10648, 39684, 40533);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (2685, 0, 10648, 0, 0, 0, 0), -- Common Parchment
-(2685, 0, 28060, 0, 0, 0, 0), -- Impact Shot
 (2685, 0, 39684, 0, 0, 0, 0), -- Hair Trigger
 (2685, 0, 40533, 0, 0, 0, 0); -- Walnut Stock
 
@@ -379,30 +328,12 @@ DELETE FROM `npc_vendor` WHERE `entry` = 2699 AND `item` IN (38426);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (2699, 0, 38426, 0, 0, 0, 0); -- Eternium Thread
 
--- Malygen <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 2803 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(2803, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(2803, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
 -- Deneb Walker <Reagents>
 DELETE FROM `npc_vendor` WHERE `entry` = 2805 AND `item` IN (22147, 22148, 37201);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (2805, 0, 22147, 0, 0, 0, 0), -- Flintweed Seed
 (2805, 0, 22148, 0, 0, 0, 0), -- Wild Quillvine
 (2805, 0, 37201, 0, 0, 0, 0); -- Corpse Dust
-
--- Bale <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 2806 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(2806, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(2806, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
--- Vikki Lonsav <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 2808 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(2808, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(2808, 0, 28060, 0, 0, 0, 0); -- Impact Shot
 
 -- Hammon Karwn <Superior Tradesman>
 DELETE FROM `npc_vendor` WHERE `entry` = 2810 AND `item` IN (18256);
@@ -425,21 +356,10 @@ DELETE FROM `npc_vendor` WHERE `entry` = 2819 AND `item` IN (38426);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (2819, 0, 38426, 0, 0, 0, 0); -- Eternium Thread
 
--- Graud <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 2820 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(2820, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(2820, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
 -- Keena <Trade Goods>
 DELETE FROM `npc_vendor` WHERE `entry` = 2821 AND `item` IN (18256);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (2821, 0, 18256, 0, 0, 0, 0); -- Imbued Vial
-
--- Haren Kanmae <Superior Bowyer>
-DELETE FROM `npc_vendor` WHERE `entry` = 2839 AND `item` IN (28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(2839, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
 
 -- Blixrez Goodstitch <Leatherworking Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 2846 AND `item` IN (38426);
@@ -451,12 +371,6 @@ DELETE FROM `npc_vendor` WHERE `entry` = 2848 AND `item` IN (18256, 40411);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (2848, 0, 18256, 0, 0, 0, 0), -- Imbued Vial
 (2848, 0, 40411, 0, 0, 0, 0); -- Enchanted Vial
-
--- Grawl <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 2908 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(2908, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(2908, 0, 28060, 0, 0, 0, 0); -- Impact Shot
 
 -- Kurm Stonehoof <Mining Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 3002 AND `item` IN (20815, 20824);
@@ -487,11 +401,6 @@ DELETE FROM `npc_vendor` WHERE `entry` = 3014 AND `item` IN (18256, 40411);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (3014, 0, 18256, 0, 0, 0, 0), -- Imbued Vial
 (3014, 0, 40411, 0, 0, 0, 0); -- Enchanted Vial
-
--- Kuna Thunderhorn <Bowyer & Fletching Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 3015 AND `item` IN (28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(3015, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
 
 -- Nan Mistrunner <Fruit Vendor>
 DELETE FROM `npc_vendor` WHERE `entry` = 3017 AND `item` IN (27856, 35948, 35949);
@@ -557,17 +466,6 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (3312, 0, 33454, 0, 0, 0, 0), -- Salted Venison
 (3312, 0, 35953, 0, 0, 0, 0); -- Mead Basted Caribou
 
--- Trak'gen <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 3313 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(3313, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(3313, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
--- Kaja <Guns & Ammunition>
-DELETE FROM `npc_vendor` WHERE `entry` = 3322 AND `item` IN (28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(3322, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
 -- Horthus <Reagents>
 DELETE FROM `npc_vendor` WHERE `entry` = 3323 AND `item` IN (22147, 22148, 37201);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
@@ -601,12 +499,6 @@ DELETE FROM `npc_vendor` WHERE `entry` = 3348 AND `item` IN (18256, 40411);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (3348, 0, 18256, 0, 0, 0, 0), -- Imbued Vial
 (3348, 0, 40411, 0, 0, 0, 0); -- Enchanted Vial
-
--- Asoran <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 3350 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(3350, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(3350, 0, 28060, 0, 0, 0, 0); -- Impact Shot
 
 -- Magenius <Reagents>
 DELETE FROM `npc_vendor` WHERE `entry` = 3351 AND `item` IN (22147, 22148, 37201);
@@ -654,11 +546,6 @@ DELETE FROM `npc_vendor` WHERE `entry` = 3405 AND `item` IN (18256, 40411);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (3405, 0, 18256, 0, 0, 0, 0), -- Imbued Vial
 (3405, 0, 40411, 0, 0, 0, 0); -- Enchanted Vial
-
--- Jin'sora <Bow Merchant>
-DELETE FROM `npc_vendor` WHERE `entry` = 3410 AND `item` IN (28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(3410, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
 
 -- Sovik <Engineering Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 3413 AND `item` IN (10648, 39684, 40533);
@@ -709,12 +596,6 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (3518, 0, 27855, 0, 0, 0, 0), -- Mag'har Grainbread
 (3518, 0, 33449, 0, 0, 0, 0), -- Crusty Flatbread
 (3518, 0, 35950, 0, 0, 0, 0); -- Sweet Potato Bread
-
--- Sarah Raycroft <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 3541 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(3541, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(3541, 0, 28060, 0, 0, 0, 0); -- Impact Shot
 
 -- Jaysin Lanyda <Poisons & Reagents>
 DELETE FROM `npc_vendor` WHERE `entry` = 3542 AND `item` IN (22147, 22148, 37201);
@@ -816,17 +697,6 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (4169, 0, 35953, 0, 0, 0, 0), -- Mead Basted Caribou
 (4169, 0, 35954, 0, 0, 0, 0); -- Sweetened Goat's Milk
 
--- Ellandrieth <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 4170 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(4170, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(4170, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
--- Landria <Bow Merchant>
-DELETE FROM `npc_vendor` WHERE `entry` = 4173 AND `item` IN (28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(4173, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
-
 -- Valdaron <Tailoring Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 4189 AND `item` IN (38426);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
@@ -872,12 +742,6 @@ DELETE FROM `npc_vendor` WHERE `entry` = 4229 AND `item` IN (18256);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (4229, 0, 18256, 0, 0, 0, 0); -- Imbued Vial
 
--- Mydrannul <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 4241 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(4241, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(4241, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
 -- Golnir Bouldertoe <Mining Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 4256 AND `item` IN (20815, 20824);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
@@ -901,12 +765,6 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (4554, 0, 33452, 0, 0, 0, 0), -- Honey-Spiced Lichen
 (4554, 0, 35947, 0, 0, 0, 0), -- Sparkling Frostcap
 (4554, 0, 35954, 0, 0, 0, 0); -- Sweetened Goat's Milk
-
--- Eleanor Rusk <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 4555 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(4555, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(4555, 0, 28060, 0, 0, 0, 0); -- Impact Shot
 
 -- Daniel Bartlett <Trade Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 4561 AND `item` IN (18256);
@@ -966,11 +824,6 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (4599, 0, 20815, 0, 0, 0, 0), -- Jeweler's Kit
 (4599, 0, 20824, 0, 0, 0, 0); -- Simple Grinder
 
--- Abigail Sawyer <Bow Merchant>
-DELETE FROM `npc_vendor` WHERE `entry` = 4604 AND `item` IN (28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(4604, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
-
 -- Algernon <Alchemy Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 4610 AND `item` IN (18256, 40411);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
@@ -999,17 +852,6 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (4878, 0, 22147, 0, 0, 0, 0), -- Flintweed Seed
 (4878, 0, 22148, 0, 0, 0, 0), -- Wild Quillvine
 (4878, 0, 37201, 0, 0, 0, 0); -- Corpse Dust
-
--- Jensen Farran <Bowyer>
-DELETE FROM `npc_vendor` WHERE `entry` = 4892 AND `item` IN (28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(4892, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
-
--- Charity Mipsy <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 4896 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(4896, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(4896, 0, 28060, 0, 0, 0, 0); -- Impact Shot
 
 -- Helenia Olden <Trade Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 4897 AND `item` IN (18256);
@@ -1061,12 +903,6 @@ DELETE FROM `npc_vendor` WHERE `entry` = 5100 AND `item` IN (39354);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (5100, 0, 39354, 0, 0, 0, 0); -- Light Parchment
 
--- Bryllia Ironbrand <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 5101 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(5101, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(5101, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
 -- Myra Tyrngaarde <Bread Vendor>
 DELETE FROM `npc_vendor` WHERE `entry` = 5109 AND `item` IN (27855, 33449, 35950);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
@@ -1091,11 +927,6 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (5111, 0, 33454, 0, 0, 0, 0), -- Salted Venison
 (5111, 0, 35953, 0, 0, 0, 0), -- Mead Basted Caribou
 (5111, 0, 35954, 0, 0, 0, 0); -- Sweetened Goat's Milk
-
--- Skolmin Goldfury <Bow Merchant>
-DELETE FROM `npc_vendor` WHERE `entry` = 5122 AND `item` IN (28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(5122, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
 
 -- Sognar Cliffbeard <Meat Vendor>
 DELETE FROM `npc_vendor` WHERE `entry` = 5124 AND `item` IN (27854, 33454, 35953);
@@ -1308,22 +1139,11 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (5944, 0, 38426, 0, 0, 0, 0); -- Eternium Thread
 
 -- Burkrum <Heavy Armor Merchant>
-DELETE FROM `npc_vendor` WHERE `entry` = 6028 AND `item` IN (2102, 2512, 2515, 2516, 2519, 3030, 3033, 5439, 11284);
-DELETE FROM `npc_vendor` WHERE `entry` = 6028 AND `item` IN (11285, 11363, 28053, 28060);
+DELETE FROM `npc_vendor` WHERE `entry` = 6028 AND `item` IN (2102, 5439, 11363);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (6028, 0, 2102, 0, 0, 0, 0), -- Small Ammo Pouch
-(6028, 0, 2512, 0, 0, 0, 0), -- Rough Arrow
-(6028, 0, 2515, 0, 0, 0, 0), -- Sharp Arrow
-(6028, 0, 2516, 0, 0, 0, 0), -- Light Shot
-(6028, 0, 2519, 0, 0, 0, 0), -- Heavy Shot
-(6028, 0, 3030, 0, 0, 0, 0), -- Razor Arrow
-(6028, 0, 3033, 0, 0, 0, 0), -- Solid Shot
 (6028, 0, 5439, 0, 0, 0, 0), -- Small Quiver
-(6028, 0, 11284, 0, 0, 0, 0), -- Accurate Slugs
-(6028, 0, 11285, 0, 0, 0, 0), -- Jagged Arrow
-(6028, 0, 11363, 0, 0, 0, 0), -- Medium Shot Pouch
-(6028, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(6028, 0, 28060, 0, 0, 0, 0); -- Impact Shot
+(6028, 0, 11363, 0, 0, 0, 0); -- Medium Shot Pouch
 
 -- Thelgrum Stonehammer <Mining Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 6298 AND `item` IN (20815, 20824);
@@ -1450,12 +1270,6 @@ DELETE FROM `npc_vendor` WHERE `entry` = 7940 AND `item` IN (38426);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (7940, 0, 38426, 0, 0, 0, 0); -- Eternium Thread
 
--- Faralorn <General Supplies>
-DELETE FROM `npc_vendor` WHERE `entry` = 7942 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(7942, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(7942, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
 -- Vivianna <Trade Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 7947 AND `item` IN (18256, 39354);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
@@ -1468,17 +1282,6 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (7978, 0, 27856, 0, 0, 0, 0), -- Skethyl Berries
 (7978, 0, 35948, 0, 0, 0, 0), -- Savory Snowplum
 (7978, 0, 35949, 0, 0, 0, 0); -- Tundra Berries
-
--- Blizrik Buckshot <Gunsmith>
-DELETE FROM `npc_vendor` WHERE `entry` = 8131 AND `item` IN (28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(8131, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
--- Jabbey <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 8139 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(8139, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(8139, 0, 28060, 0, 0, 0, 0); -- Impact Shot
 
 -- Sheendra Tallgrass <Trade Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 8145 AND `item` IN (18256, 39354);
@@ -1528,12 +1331,6 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (8361, 0, 22148, 0, 0, 0, 0), -- Wild Quillvine
 (8361, 0, 37201, 0, 0, 0, 0); -- Corpse Dust
 
--- Kuruk <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 8362 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(8362, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(8362, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
 -- Shadi Mistrunner <Trade Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 8363 AND `item` IN (18256);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
@@ -1571,42 +1368,10 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (9544, 0, 39684, 0, 0, 0, 0), -- Hair Trigger
 (9544, 0, 40533, 0, 0, 0, 0); -- Walnut Stock
 
--- Cawind Trueaim <Gunsmith & Bowyer>
-DELETE FROM `npc_vendor` WHERE `entry` = 9548 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(9548, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(9548, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
--- Starn <Gunsmith & Bowyer>
-DELETE FROM `npc_vendor` WHERE `entry` = 9551 AND `item` IN (28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(9551, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
-
--- Zanara <Bowyer>
-DELETE FROM `npc_vendor` WHERE `entry` = 9552 AND `item` IN (28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(9552, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
-
--- Mu'uta <Bowyer>
-DELETE FROM `npc_vendor` WHERE `entry` = 9555 AND `item` IN (28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(9555, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
-
 -- Kireena <Trade Goods>
 DELETE FROM `npc_vendor` WHERE `entry` = 9636 AND `item` IN (39354);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (9636, 0, 39354, 0, 0, 0, 0); -- Light Parchment
-
--- Caretaker Alen <The Argent Dawn>
-DELETE FROM `npc_vendor` WHERE `entry` = 11038 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(11038, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(11038, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
--- Wixxrak <Weaponsmith & Gunsmith>
-DELETE FROM `npc_vendor` WHERE `entry` = 11184 AND `item` IN (28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(11184, 0, 28060, 0, 0, 0, 0); -- Impact Shot
 
 -- Xizzer Fizzbolt <Engineering Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 11185 AND `item` IN (10648, 39684, 40533);
@@ -1632,12 +1397,6 @@ DELETE FROM `npc_vendor` WHERE `entry` = 11189 AND `item` IN (18256);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (11189, 0, 18256, 0, 0, 0, 0); -- Imbued Vial
 
--- Gorn One Eye
-DELETE FROM `npc_vendor` WHERE `entry` = 11555 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(11555, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(11555, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
 -- Meilosh
 DELETE FROM `npc_vendor` WHERE `entry` = 11557 AND `item` IN (38426);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
@@ -1648,23 +1407,11 @@ DELETE FROM `npc_vendor` WHERE `entry` = 11874 AND `item` IN (38426);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (11874, 0, 38426, 0, 0, 0, 0); -- Eternium Thread
 
--- Daeolyn Summerleaf <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 12021 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(12021, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(12021, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
 -- Lorelae Wintersong <Trade Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 12022 AND `item` IN (18256, 39354);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (12022, 0, 18256, 0, 0, 0, 0), -- Imbued Vial
 (12022, 0, 39354, 0, 0, 0, 0); -- Light Parchment
-
--- Tukk <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 12027 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(12027, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(12027, 0, 28060, 0, 0, 0, 0); -- Impact Shot
 
 -- Lah'Mawhani <Trade Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 12028 AND `item` IN (18256, 39354);
@@ -1712,35 +1459,12 @@ DELETE FROM `npc_vendor` WHERE `entry` = 12958 AND `item` IN (18256);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (12958, 0, 18256, 0, 0, 0, 0); -- Imbued Vial
 
--- Nergal <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 12959 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(12959, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(12959, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
--- Christi Galvanis <General Goods>
-DELETE FROM `npc_vendor` WHERE `entry` = 12960 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(12960, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(12960, 0, 28060, 0, 0, 0, 0); -- Impact Shot
-
 -- Balai Lok'Wein <Potions, Scrolls & Reagents>
 DELETE FROM `npc_vendor` WHERE `entry` = 13476 AND `item` IN (22147, 22148, 37201);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (13476, 0, 22147, 0, 0, 0, 0), -- Flintweed Seed
 (13476, 0, 22148, 0, 0, 0, 0), -- Wild Quillvine
 (13476, 0, 37201, 0, 0, 0, 0); -- Corpse Dust
-
--- Brinna Valanaar <Bowyer>
-DELETE FROM `npc_vendor` WHERE `entry` = 14301 AND `item` IN (28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(14301, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
-
--- Master Smith Burninate <The Thorium Brotherhood>
-DELETE FROM `npc_vendor` WHERE `entry` = 14624 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(14624, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(14624, 0, 28060, 0, 0, 0, 0); -- Impact Shot
 
 -- Zorbin Fandazzle
 DELETE FROM `npc_vendor` WHERE `entry` = 14637 AND `item` IN (10648, 39684, 40533);
@@ -1760,12 +1484,6 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 DELETE FROM `npc_vendor` WHERE `entry` = 15165 AND `item` IN (38426);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (15165, 0, 38426, 0, 0, 0, 0); -- Eternium Thread
-
--- Calandrath <Innkeeper>
-DELETE FROM `npc_vendor` WHERE `entry` = 15174 AND `item` IN (28053, 28060);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(15174, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
-(15174, 0, 28060, 0, 0, 0, 0); -- Impact Shot
 
 -- Khur Hornstriker <Reagents>
 DELETE FROM `npc_vendor` WHERE `entry` = 15175 AND `item` IN (22147, 22148, 37201);
@@ -1990,11 +1708,6 @@ DELETE FROM `npc_vendor` WHERE `entry` = 17490 AND `item` IN (10648, 39354);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (17490, 0, 10648, 0, 0, 0, 0), -- Common Parchment
 (17490, 0, 39354, 0, 0, 0, 0); -- Light Parchment
-
--- Renn'az <Ammunition Vendor>
-DELETE FROM `npc_vendor` WHERE `entry` = 17598 AND `item` IN (28053);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(17598, 0, 28053, 0, 0, 0, 0); -- Wicked Arrow
 
 -- Innkeeper Jovia <Innkeeper>
 DELETE FROM `npc_vendor` WHERE `entry` = 17630 AND `item` IN (27854, 27855, 27856, 27857, 33443, 33444, 33445, 33449);
@@ -2448,10 +2161,9 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 (19837, 0, 40411, 0, 0, 0, 0); -- Enchanted Vial
 
 -- Galgrom <Provisioner>
-DELETE FROM `npc_vendor` WHERE `entry` = 20080 AND `item` IN (27857, 28053, 28399);
+DELETE FROM `npc_vendor` WHERE `entry` = 20080 AND `item` IN (27857, 28399);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (20080, 0, 27857, 0, 0, 0, 0), -- Garadar Sharp
-(20080, 0, 28053, 0, 0, 0, 0), -- Wicked Arrow
 (20080, 0, 28399, 0, 0, 0, 0); -- Filtered Draenic Water
 
 -- Bortega <Reagents & Poison Supplies>
