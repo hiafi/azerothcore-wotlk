@@ -45,7 +45,9 @@ class HealRecorder : public UnitScript
 {
 public:
     // `groupGuids` are the group's members in target index order (the healer's own slot included)
-    HealRecorder(ObjectGuid actorGuid, std::vector<ObjectGuid> groupGuids);
+    // `healingOnly` keeps just the heal and absorb events (the mechanics sim wants output totals, not uptime or boss
+    // hit records, and runs one recorder per member)
+    HealRecorder(ObjectGuid actorGuid, std::vector<ObjectGuid> groupGuids, bool healingOnly = false);
 
     void OnHealFinal(Unit* healer, Unit* target, SpellInfo const* spellInfo, uint32 heal, uint32 effective,
         uint32 healAbsorbed, bool isCrit, bool isPeriodic) override;
@@ -82,6 +84,7 @@ private:
 
     ObjectGuid _actorGuid;
     std::vector<ObjectGuid> _groupGuids;
+    bool _healingOnly = false;
     std::vector<SimHeal::HealEvent> _healEvents;
     std::vector<SimHeal::AbsorbEvent> _absorbEvents;
     std::vector<SimHeal::DamageEvent> _damageEvents;

@@ -26,6 +26,7 @@
 #include "SimActor.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
+#include <algorithm>
 #include <set>
 
 namespace
@@ -323,11 +324,17 @@ void SimBot::UpdateAI(uint32 diff)
     // so it is sent here, through the same PlayerbotAI::HandleTeleportAck() (with its 1-2 s next-check delay, as
     // live). Only a living actor's near teleport: a far one (map change) or a dead actor's release is the iteration
     // reset's job.
+    AckNearTeleport();
+    _ai->UpdateAI(diff);
+}
+
+void SimBot::AckNearTeleport()
+{
+    if (!_ai)
+        return;
     Player* bot = _ai->GetBot();
     if (bot && bot->IsAlive() && bot->IsBeingTeleportedNear())
         _ai->HandleTeleportAck();
-
-    _ai->UpdateAI(diff);
 }
 
 void SimBot::SilenceAI()
@@ -448,6 +455,46 @@ void SimBot::HandleTeleportAck()
 {
     if (_ai)
         _ai->HandleTeleportAck();
+}
+
+std::vector<std::string> SimBot::RemoveStrategies(std::vector<std::string> const& names)
+{
+    std::vector<std::string> removed;
+    if (!_ai)
+        return removed;
+
+    for (BotState state : {BOT_STATE_COMBAT, BOT_STATE_NON_COMBAT})
+    {
+        std::string removals;
+        for (std::string const& name : _ai->GetStrategies(state))
+        {
+            if (std::find(names.begin(), names.end(), name) == names.end())
+                continue;
+
+            removals += (removals.empty() ? "-" : ",-") + name;
+            removed.push_back((state == BOT_STATE_COMBAT ? "combat:" : "non-combat:") + name);
+        }
+        if (!removals.empty())
+            _ai->ChangeStrategy(removals, state);
+    }
+
+    return removed;
+}
+
+std::string SimBot::DescribeStrategies() const
+{
+    if (!_ai)
+        return std::string();
+
+    auto const join = [](std::vector<std::string> const& names)
+    {
+        std::string joined;
+        for (std::string const& name : names)
+            joined += (joined.empty() ? "" : ", ") + name;
+        return joined;
+    };
+    return "combat [" + join(_ai->GetStrategies(BOT_STATE_COMBAT)) + "], non-combat [" +
+        join(_ai->GetStrategies(BOT_STATE_NON_COMBAT)) + "]";
 }
 
 namespace

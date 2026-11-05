@@ -75,6 +75,11 @@ public:
         // same map. Applied before the Player is added to the map, so no relocation or visibility update is involved.
         // Unset: the race's start position, as for every DPS-sim actor.
         bool HasPosition = false;
+        // With HasPosition: the map the position is on, when it is not the race's start map (the mechanics sim puts a
+        // whole group of mixed races on one map). The Player is moved to it before it is added to any map. Unset
+        // (MAP_ID_START_MAP): the start map of Race/Class.
+        static constexpr uint32 MAP_ID_START_MAP = 0xFFFFFFFF;
+        uint32 MapId = MAP_ID_START_MAP;
         float PositionX = 0.0f;
         float PositionY = 0.0f;
         float PositionZ = 0.0f;

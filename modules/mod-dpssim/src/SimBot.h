@@ -100,6 +100,11 @@ public:
     // reading its implementation, not assumed.
     void UpdateAI(uint32 diff);
 
+    // The near-teleport acknowledgement of UpdateAI() alone, without the AI tick (STAGE-M4-R-REPORT M-4). The
+    // mechanics mode calls this every step instead of UpdateAI(): mod-playerbots' OnPlayerAfterUpdate() already ticks
+    // the bot once inside Map::Update(), as live, so a second UpdateAI() made the bots think at twice the live rate.
+    void AckNearTeleport();
+
     // Tests only (RunConfig::HealStepHook): makes the bot's AI do nothing. PlayerbotAI::UpdateAI() is also driven by
     // mod-playerbots' own PlayerScript::OnPlayerAfterUpdate() on every Player::Update(), not only by UpdateAI() above,
     // so simply not calling UpdateAI() leaves the healer casting. A next-check delay that long (the AI counts it down
@@ -163,6 +168,14 @@ public:
     // a heal target (same map, not charmed, alive, within 2 * Playerbots.HealDistance, in line of sight), and what the
     // value picks
     void LogHealTargetVisibility(std::vector<Player*> const& members) const;
+
+    // Mechanics mode: removes every strategy named in `names` from both engines, and returns what it removed as
+    // "combat:<name>" / "non-combat:<name>". A group of real bots must not follow or hold position for each other
+    // (a spread or a soak needs each bot to go where its own brain sends it).
+    std::vector<std::string> RemoveStrategies(std::vector<std::string> const& names);
+
+    // "combat [a, b], non-combat [c, d]": the strategies both engines hold now (empty without an AI)
+    [[nodiscard]] std::string DescribeStrategies() const;
 
 private:
     // Every enemy count the bot strategies use is built from the bot's threat list ("attackers" walks

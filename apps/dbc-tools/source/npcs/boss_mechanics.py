@@ -1,4 +1,5 @@
-"""Boss mechanics registry data (mod-boss-mechanics, stage M1, WP-B): Weakened, the resolve spells and the two NPCs.
+"""Boss mechanics registry data (mod-boss-mechanics, stages M1 and M4): Weakened, the resolve spells, the drills'
+stand-in auras (Baited, Marked) and the NPCs.
 
 Ids are pinned in .agents/plans/dungeon-mechanics/dungeon-mechanics.STAGE-M1-HANDOFF.md section 3.1 and reserved under
 `bossmechanics` in source/ids.yaml (spells 205000-205099, creatures 300400-300419).
@@ -25,8 +26,23 @@ Ids are pinned in .agents/plans/dungeon-mechanics/dungeon-mechanics.STAGE-M1-HAN
                 the marker: SPELL_ATTR1_NO_REFLECTION (0x80) is required, ALWAYS_HIT does not stop the reflect roll
                 (Object.cpp, the Spell const* SpellHitResult overload). Physical (205001) stays armor-reduced and the
                 other schools ignore resistances; damage-taken auras and absorbs apply to all of them.
+  205008        Baited (drill) - a generic stand-in for a boss's bait rotation debuff in the `.mech drill fenrus`
+                drill: the rider (`.mech test rider=205008`) on every player the Bait hits, baiter included, and the
+                aura the Bait rule counts ("fewest stacks baits"). It does not model the real Fenrus debuff (+200%
+                damage taken from the leap): one DUMMY aura, no damage-taken, stat or damage effect, 10 stacks, 2 min
+                refreshed on every stack. Cast by the marker with the owner as original caster, so the stacks from
+                every leap collect on one aura; TARGET_UNIT_TARGET_ANY so a neutral owner (the training dummy, faction
+                31) can land it too. Dispel none.
+  205009        Marked (drill) - a generic stand-in for an eligibility or order aura in the drills (`.mech drill ras`:
+                Chill; `.mech drill soaks`: the ordered soak's stacks). The drill step `marker <stacks>` sets it on a
+                member (Player::AddAura, self as caster, then the exact stack count), so drill setup never hands out
+                Weakened (orchestrator ruling on STAGE-M4-R-REPORT M-2). Same harmless shape as 205008 (one DUMMY aura,
+                10 stacks, 2 min, Dispel none) with its own icon. Its own id, so the fenrus Baited stacks never count
+                for ras or soaks within one program slice.
   300400        Mechanic Marker - the telegraph stalker and resolve caster (npc_boss_mechanic_marker).
   300401        Mechanic Test Owner - the hostile owner of `.mech test` (same script).
+  300402        Mechanics Training Dummy - the stage M4 training dummy (npc_boss_mechanics_dummy, MechanicDummyAI): a
+                player engages it and it runs the `.mech drill` program on itself as the boss stand-in (row below).
 
 Marker flags: unit_flags 33554946 = NOT_SELECTABLE | IMMUNE_TO_NPC | NON_ATTACKABLE (no IMMUNE_TO_PC: an attacker with
 it cannot hit player-controlled units, so the stalker could not be the caster); flags_extra 66 = CIVILIAN | NO_XP and
@@ -96,6 +112,72 @@ weakened_205000 = spell(
 )
 scripted_by(weakened_205000, 'spell_boss_mechanics_weakened')
 
+# --- Baited (drill) 205008 (stage M4, user ruling 2026-11-04) ------------------------------------------------------
+# The baiter doing the job gets no Weakened, so the drill's Bait rotation needs its own stand-in rotation debuff: a
+# harmless stacking DUMMY aura the Bait rule counts (no damage-taken modifier; the drill does not model the real one).
+# Aura text number-free (custom-spells.md).
+_TARGET_UNIT_TARGET_ANY = 25
+_BAITED_DRILL_ICON = 538  # Ability_Hunter_SniperShot (Hunter's Mark), stock
+_BAITED_DRILL_TEXT = 'Drill stand-in for a bait rotation debuff; baits go to the fewest stacks. Lasts $d.'
+_BAITED_DRILL_AURA_TEXT = 'Drill stand-in for a bait rotation debuff; baits go to the fewest stacks.'
+
+baited_drill_205008 = spell(
+    id=205008, name='Baited (drill)', school=School.NORMAL, dispel=0, mechanic=0,
+    attributes=_ATTR0_AURA_IS_DEBUFF | _ATTR0_NO_IMMUNITIES, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,
+    mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=120000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.DUMMY, base_points=0,
+               implicit_target_a=_TARGET_UNIT_TARGET_ANY),
+    ],
+    spell_icon_id=_BAITED_DRILL_ICON,
+    notes=(
+        'mod-boss-mechanics M4: the drill stand-in for a bait rotation debuff. `.mech test rider=205008` casts it on '
+        'every player a Bait hits (the baiter too) and `aura=205008` makes the fewest-stacks rule count it, so the '
+        'pick rotates without Weakened on the baiter. One DUMMY aura, no damage-taken, stat or damage effect; '
+        'CumulativeAura 10, 2 min refreshed per stack, AURA_IS_DEBUFF + NO_IMMUNITIES, Dispel none. '
+        'TARGET_UNIT_TARGET_ANY: the marker casts it for a hostile or a neutral owner. Stock icon 538.'
+    ),
+    raw_overrides={
+        'SpellClassSet': 0, 'EquippedItemClass': -1, 'CastingTimeIndex': 1, 'SpellLevel': 0, 'CumulativeAura': 10,
+        'EffectChainAmplitude_1': 1.0,
+        'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '',
+        'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _BAITED_DRILL_TEXT,
+        'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': _BAITED_DRILL_AURA_TEXT,
+    },
+)
+
+# --- Marked (drill) 205009 (stage M4 WP-F, orchestrator ruling on STAGE-M4-R-REPORT M-2) ------------------------------
+# Drill setup selectors (ras's runners, the ordered soak) used Weakened stacks; Weakened is only for failures, so the
+# drills set this harmless stacking DUMMY aura instead (`marker <stacks>` steps). Separate from Baited 205008: the
+# fenrus rider stacks must not count for ras or soaks eligibility. Aura text number-free (custom-spells.md).
+_MARKED_DRILL_ICON = 133  # Spell_Frost_WizardMark, stock (205008 uses 538)
+_MARKED_DRILL_TEXT = 'Drill stand-in for an eligibility or order aura; the drill reads its stacks. Lasts $d.'
+_MARKED_DRILL_AURA_TEXT = 'Drill stand-in for an eligibility or order aura; the drill reads its stacks.'
+
+marked_drill_205009 = spell(
+    id=205009, name='Marked (drill)', school=School.NORMAL, dispel=0, mechanic=0,
+    attributes=_ATTR0_AURA_IS_DEBUFF | _ATTR0_NO_IMMUNITIES, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,
+    mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=120000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.DUMMY, base_points=0,
+               implicit_target_a=_TARGET_UNIT_TARGET_ANY),
+    ],
+    spell_icon_id=_MARKED_DRILL_ICON,
+    notes=(
+        'mod-boss-mechanics M4: the drill stand-in for an eligibility or order aura. The drill step `marker <stacks>` '
+        'sets it on a member (self as caster, exact stack count) and `aura=` / `self=` / `order=205009` read it, so '
+        'drill setup never hands out Weakened. One DUMMY aura, no damage-taken, stat or damage effect; CumulativeAura '
+        '10, 2 min, AURA_IS_DEBUFF + NO_IMMUNITIES, Dispel none. Stock icon 133 (205008 has 538).'
+    ),
+    raw_overrides={
+        'SpellClassSet': 0, 'EquippedItemClass': -1, 'CastingTimeIndex': 1, 'SpellLevel': 0, 'CumulativeAura': 10,
+        'EffectChainAmplitude_1': 1.0,
+        'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '',
+        'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _MARKED_DRILL_TEXT,
+        'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': _MARKED_DRILL_AURA_TEXT,
+    },
+)
+
 _SCHOOLS = (
     (0, School.NORMAL, 'Physical'), (1, School.HOLY, 'Holy'), (2, School.FIRE, 'Fire'), (3, School.NATURE, 'Nature'),
     (4, School.FROST, 'Frost'), (5, School.SHADOW, 'Shadow'), (6, School.ARCANE, 'Arcane'),
@@ -143,3 +225,29 @@ creature_template(300400, "Mechanic Marker", subname="", **{**_MARKER, "flags_ex
 creature_model(300400, display_id=11686)
 creature_template(300401, "Mechanic Test Owner", subname="", **_MARKER)
 creature_model(300401, display_id=11686)
+
+# --- Mechanics Training Dummy (300402, stage M4 WP-K) ----------------------------------------------------------------
+# .agents/plans/dungeon-mechanics/dungeon-mechanics.STAGE-M4-HANDOFF.md section 3.2. Spawned with `.npc add 300402`;
+# its AI (mod-boss-mechanics MechanicDummyAI.cpp) owns its own encounter and runs the drill program on itself. It never
+# dies, moves or attacks. Re-derived from the healsim boss (training_dummies.py, 900015-900017), with these changes:
+#   faction 31        the player training dummies' faction (900001-900003): neutral to everyone (FactionTemplate 31 has
+#                     no enemy or friend group), so any player can attack it and, unlike the healsim boss's hostile 14,
+#                     also talk to it: Player::GetNPCIfCanInteractWith refuses gossip at reaction unfriendly or worse.
+#   npcflag 1         UNIT_NPC_FLAG_GOSSIP: the program / damage / report menu (players need no GM).
+#   rank 3            boss rank; type_flags 4 is CREATURE_TYPE_FLAG_BOSS_MOB, so Creature::getLevelForTarget plays it
+#                     at the attacker's level + 3 (a level 20 player meets a boss of 23, not of 80) and boss-only
+#                     branches behave as on a dungeon boss. The AI also copies the engaging player's level into the
+#                     level field, which the reference-health provider reads for percent damage.
+#   level 80          the health pool of a level 80 boss times HealthModifier 23809.5, which player DPS cannot dent in
+#                     a session; RegenHealth 0. The AI clamps every hit so it never dies and keeps a 40% floor.
+#   type 5 (Giant)    deliberately inert, as on the healsim boss (not mechanical: bleeds and poisons land).
+#   DamageModifier 0, detection_range 0, CreatureImmunitiesId -362, flags_extra 100925504: the healsim boss's values
+#                     (it never swings or aggroes; immune to control, knockback, pull and taunt so nothing moves it; no
+#                     XP, no skill gains, no assistance calls). unit_flags stays 0.
+creature_template(
+    300402, "Mechanics Training Dummy", subname="Boss Mechanics", IconName="", faction=31, npcflag=1, rank=3,
+    minlevel=80, maxlevel=80, detection_range=0, DamageModifier=0, BaseAttackTime=2000, RangeAttackTime=2000,
+    unit_class=1, unit_flags2=2048, type=5, type_flags=4, HealthModifier=23809.5, RegenHealth=0,
+    CreatureImmunitiesId=-362, flags_extra=100925504, ScriptName="npc_boss_mechanics_dummy", VerifiedBuild=0,
+)
+creature_model(300402, display_id=3019)

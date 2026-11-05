@@ -109,6 +109,31 @@
 #   TANKSIM_PACK_HIT   each pack dummy's hit before armor (DpsSim.TankPackHitDamage), same syntax. 2+ targets only.
 #   TANKSIM_SWING_MS   the dummies' swing time, 500-10000 (DpsSim.TankSwingMs).
 #
+# Mechanics runs (STAGE-M4 dungeon mechanics; README "Mechanics sim"): MECHSIM=1 (or a profile with "Mode = Mechanics")
+# runs the profile as one member of a group of real bots (1 tank, 1 healer, 3 DPS by default; the other slots are fixed
+# reference profiles) that fights a boss stand-in while mod-boss-mechanics runs drills on it. [targets] must be 1 and
+# [race] is ignored (every member is Horde, at the Orc start). The image must be built with mod-boss-mechanics. The
+# scratch config turns BossMechanics.Enable / Bots.Enable / Bots.OpenWorldTestScope on and fallibility off. The reports
+# are named "<Profile>.mech-<tag>.g<size>[.f1]..." (tag: "rot" for the default program rotation, "base" for the paired
+# baseline, "x<hash>" for MECHSIM_PROGRAMS) and the baked page is
+# modules/mod-dpssim/reports/MechanicsProfileReport.html.
+# Environment, all optional:
+#   MECHSIM_BASELINE=1     the paired baseline: every iteration runs the program "none" (DpsSim.MechanicsBaseline)
+#   MECHSIM_PROGRAMS       ';'-separated programs, iteration i runs entry i mod n (DpsSim.MechanicsPrograms; default
+#                          the five-slice rotation in SimMechanics.h)
+#   MECHSIM_GROUP          group size 2-40, default 5 (DpsSim.MechanicsGroup)
+#   MECHSIM_SEED           first drill dice seed, iteration i uses seed + i (DpsSim.MechanicsSeed, default 1)
+#   MECHSIM_DAMAGE         flat damage of every drill hit (DpsSim.MechanicsDamage, default 1)
+#   MECHSIM_ROLE           tank | healer | dps: the slot of the profile under test (default: from its Mode)
+#   MECHSIM_TANKS / MECHSIM_HEALERS / MECHSIM_DPS   comma-separated reference profiles (DpsSim.Mechanics*Profiles)
+#   MECHSIM_BOSS_SWINGS    0 to keep the boss from swinging at the tank (DpsSim.MechanicsBossSwings, default 1)
+#   MECHSIM_FALLIBILITY=1  BossMechanics.Bots.Fallibility.Enable = 1 (adds ".f1" to the names)
+#   MECHSIM_DEBUG=1        BossMechanics.Bots.Debug = 1 (the module's debug solve counters; verbose)
+#
+# Any run: DPSSIM_BATCH_TAG=<[A-Za-z0-9_-]+> adds ".<tag>" to the batch name, so parallel runs of one profile (the
+# report timestamp has a 1 s resolution) never write the same files; DPSSIM_NO_HTML=1 skips the HTML page (parallel runs
+# would overwrite it) and prints only the report path.
+#
 # Examples:
 #   modules/mod-dpssim/tools/run-sim.sh ArcaneMageSim              # 180s @ level 60, avg of 10 @ 100ms (the defaults)
 #   modules/mod-dpssim/tools/run-sim.sh FrostMageSim 300
@@ -178,8 +203,12 @@ profile_key() {
 }
 short_hash() { printf '%s' "$1" | tr -d ' \t' | tr 'A-Z' 'a-z' | sha1sum | cut -c1-6; }
 
+# --- mechanics sim: MECHSIM=1 or a "Mode = Mechanics" profile; it wraps heal and tank profiles too ---------------
+IS_MECH=0
+if [[ "${MECHSIM:-0}" == 1 || "$(profile_key Mode | tr 'A-Z' 'a-z')" == "mechanics" ]]; then IS_MECH=1; fi
+
 IS_HEAL=0
-if [[ "$(profile_key Mode | tr 'A-Z' 'a-z')" == "heal" ]]; then IS_HEAL=1; fi
+if [[ "$IS_MECH" -eq 0 && "$(profile_key Mode | tr 'A-Z' 'a-z')" == "heal" ]]; then IS_HEAL=1; fi
 HEAL_CONF=""
 BATCH_SCENARIO=""
 if [[ "$IS_HEAL" -eq 1 ]]; then
@@ -294,10 +323,11 @@ IS_TANK=0
 TANK_CONF=""
 TANK_SCENARIO=""
 TANK_TAG=""
-if [[ "$(profile_key Mode | tr 'A-Z' 'a-z')" == "tank" ]]; then IS_TANK=1; fi
+if [[ "$IS_MECH" -eq 0 && "$(profile_key Mode | tr 'A-Z' 'a-z')" == "tank" ]]; then IS_TANK=1; fi
 if [[ "$IS_TANK" -eq 0 ]]; then
     for v in TANKSIM_SCENARIO TANKSIM_HIT TANKSIM_PACK_HIT TANKSIM_SWING_MS; do
-        if [[ -n "${!v:-}" ]]; then
+        # A mechanics run refuses them below, with its own message
+        if [[ -n "${!v:-}" && "$IS_MECH" -eq 0 ]]; then
             die "$v is set but '$PROFILE_NAME' is not a tank profile (Mode = Tank)"
         fi
     done
@@ -351,6 +381,100 @@ else
     if [[ -n "${TANKSIM_HIT:-}${TANKSIM_PACK_HIT:-}${TANKSIM_SWING_MS:-}" ]]; then
         TANK_TAG="x$(short_hash "hit=${TANKSIM_HIT:-};pack=${TANKSIM_PACK_HIT:-};swing=${TANKSIM_SWING_MS:-}")"
     fi
+fi
+
+MECH_CONF=""
+MECH_TAG=""
+MECH_GROUP=""
+MECH_FALLIBILITY=0
+if [[ "$IS_MECH" -eq 0 ]]; then
+    for v in MECHSIM_BASELINE MECHSIM_PROGRAMS MECHSIM_GROUP MECHSIM_SEED MECHSIM_DAMAGE MECHSIM_ROLE MECHSIM_TANKS \
+            MECHSIM_HEALERS MECHSIM_DPS MECHSIM_BOSS_SWINGS MECHSIM_FALLIBILITY MECHSIM_DEBUG; do
+        if [[ -n "${!v:-}" ]]; then
+            die "$v is set but this is not a mechanics run (set MECHSIM=1 or use a 'Mode = Mechanics' profile)"
+        fi
+    done
+else
+    if [[ "$TARGETS" -ne 1 ]]; then
+        die "[targets] must be 1 for a mechanics run (the boss stand-in is the one target), got $TARGETS"
+    fi
+    for v in HEALSIM_GROUP HEALSIM_TARGETS HEALSIM_INFINITE_MANA HEALSIM_DRAIN_NOISE HEALSIM_DRAIN_PULSE_MS \
+            TANKSIM_SCENARIO TANKSIM_HIT TANKSIM_PACK_HIT TANKSIM_SWING_MS; do
+        if [[ -n "${!v:-}" ]]; then die "$v is for heal / tank runs; this is a mechanics run"; fi
+    done
+    if printf '%b' "${DPSSIM_EXTRA_CONF:-}" | grep -qiE '^[[:space:]]*DpsSim\.Mechanics'; then
+        die "DPSSIM_EXTRA_CONF sets a DpsSim.Mechanics* key: use the MECHSIM_* variables, so the report file names" \
+            "carry the setting"
+    fi
+    MECH_CONF+="DpsSim.MechanicsMode = 1"$'\n'
+    MECH_GROUP="${MECHSIM_GROUP:-5}"
+    if ! [[ "$MECH_GROUP" =~ ^[0-9]+$ ]] || (( 10#$MECH_GROUP < 2 || 10#$MECH_GROUP > 40 )); then
+        die "MECHSIM_GROUP must be a whole number 2-40, got '$MECH_GROUP'"
+    fi
+    MECH_GROUP=$((10#$MECH_GROUP))
+    MECH_CONF+="DpsSim.MechanicsGroup = ${MECH_GROUP}"$'\n'
+    if [[ "${MECHSIM_BASELINE:-0}" == 1 ]]; then
+        if [[ -n "${MECHSIM_PROGRAMS:-}" ]]; then die "MECHSIM_BASELINE=1 and MECHSIM_PROGRAMS exclude each other"; fi
+        MECH_CONF+="DpsSim.MechanicsBaseline = 1"$'\n'
+        MECH_TAG="base"
+    elif [[ -n "${MECHSIM_PROGRAMS:-}" ]]; then
+        if [[ "$MECHSIM_PROGRAMS" =~ [\"\\] ]]; then die "MECHSIM_PROGRAMS may not hold quotes or backslashes"; fi
+        MECH_CONF+="DpsSim.MechanicsPrograms = \"${MECHSIM_PROGRAMS}\""$'\n'
+        if [[ "$(printf '%s' "$MECHSIM_PROGRAMS" | tr -d ' \t')" == "none" ]]; then MECH_TAG="base"
+        else MECH_TAG="x$(short_hash "$MECHSIM_PROGRAMS")"; fi
+    else
+        MECH_TAG="rot"
+    fi
+    for pair in "MECHSIM_SEED:DpsSim.MechanicsSeed" "MECHSIM_DAMAGE:DpsSim.MechanicsDamage"; do
+        v="${pair%%:*}"; key="${pair#*:}"
+        if [[ -n "${!v:-}" ]]; then
+            if ! [[ "${!v}" =~ ^[0-9]{1,9}$ ]]; then die "$v must be a whole number, got '${!v}'"; fi
+            MECH_CONF+="${key} = $((10#${!v}))"$'\n'
+        fi
+    done
+    # A seed or damage other than the defaults changes the numbers: it goes into the tag
+    if [[ -n "${MECHSIM_SEED:-}${MECHSIM_DAMAGE:-}" ]]; then
+        MECH_TAG+="-s$(short_hash "seed=${MECHSIM_SEED:-};dmg=${MECHSIM_DAMAGE:-}")"
+    fi
+    if [[ -n "${MECHSIM_ROLE:-}" ]]; then
+        case "$(printf '%s' "$MECHSIM_ROLE" | tr 'A-Z' 'a-z')" in
+            tank|healer|heal|dps) MECH_CONF+="DpsSim.MechanicsRole = ${MECHSIM_ROLE}"$'\n' ;;
+            *) die "MECHSIM_ROLE must be tank, healer or dps, got '$MECHSIM_ROLE'" ;;
+        esac
+    fi
+    for pair in "MECHSIM_TANKS:DpsSim.MechanicsTankProfiles" "MECHSIM_HEALERS:DpsSim.MechanicsHealerProfiles" \
+            "MECHSIM_DPS:DpsSim.MechanicsDpsProfiles"; do
+        v="${pair%%:*}"; key="${pair#*:}"
+        if [[ -n "${!v:-}" ]]; then
+            if ! [[ "${!v}" =~ ^[A-Za-z0-9_.,/\ -]+$ ]]; then die "$v must be a comma-separated profile list"; fi
+            MECH_CONF+="${key} = \"${!v}\""$'\n'
+        fi
+    done
+    # Other reference profiles make another group: they go into the tag
+    if [[ -n "${MECHSIM_TANKS:-}${MECHSIM_HEALERS:-}${MECHSIM_DPS:-}" ]]; then
+        MECH_TAG+="-r$(short_hash "${MECHSIM_TANKS:-}|${MECHSIM_HEALERS:-}|${MECHSIM_DPS:-}")"
+    fi
+    if [[ -n "${MECHSIM_BOSS_SWINGS:-}" ]]; then
+        case "$MECHSIM_BOSS_SWINGS" in
+            1) MECH_CONF+="DpsSim.MechanicsBossSwings = 1"$'\n' ;;
+            0) MECH_CONF+="DpsSim.MechanicsBossSwings = 0"$'\n'; MECH_TAG+="-ns" ;;
+            *) die "MECHSIM_BOSS_SWINGS must be 0 or 1, got '$MECHSIM_BOSS_SWINGS'" ;;
+        esac
+    fi
+    case "${MECHSIM_FALLIBILITY:-0}" in
+        0) MECH_FALLIBILITY=0 ;;
+        1) MECH_FALLIBILITY=1 ;;
+        *) die "MECHSIM_FALLIBILITY must be 0 or 1, got '$MECHSIM_FALLIBILITY'" ;;
+    esac
+    case "${MECHSIM_DEBUG:-0}" in
+        0|1) ;;
+        *) die "MECHSIM_DEBUG must be 0 or 1, got '$MECHSIM_DEBUG'" ;;
+    esac
+fi
+
+BATCH_TAG="${DPSSIM_BATCH_TAG:-}"
+if [[ -n "$BATCH_TAG" && ! "$BATCH_TAG" =~ ^[A-Za-z0-9_-]+$ ]]; then
+    die "DPSSIM_BATCH_TAG must hold only letters, digits, '_' and '-', got '$BATCH_TAG'"
 fi
 
 # --- discover the live stack's real network / image / volume / DB creds ------------------
@@ -487,6 +611,27 @@ if [[ -f "$SCRATCH/etc/modules/mod_dungeon_clear.conf" ]]; then
     fi
 fi
 
+# mod-boss-mechanics for a mechanics run: the module and its bot glue on, the open-world gate on (the sim group fights
+# in the open world), fallibility and debug as asked. The scratch file is created when the live config has none (the
+# module then reads its .dist defaults plus these keys). Only the scratch copy changes.
+set_conf_key() {
+    local conf="$1" key="$2" value="$3"
+    touch "$conf"
+    if grep -q "^${key//./\\.}\b" "$conf"; then
+        sed -i "s/^${key//./\\.}\b.*/${key} = ${value}/" "$conf"
+    else
+        printf '\n%s = %s\n' "$key" "$value" >> "$conf"
+    fi
+}
+if [[ "$IS_MECH" -eq 1 ]]; then
+    BM_CONF="$SCRATCH/etc/modules/mod_boss_mechanics.conf"
+    set_conf_key "$BM_CONF" BossMechanics.Enable 1
+    set_conf_key "$BM_CONF" BossMechanics.Bots.Enable 1
+    set_conf_key "$BM_CONF" BossMechanics.Bots.OpenWorldTestScope 1
+    set_conf_key "$BM_CONF" BossMechanics.Bots.Fallibility.Enable "$MECH_FALLIBILITY"
+    set_conf_key "$BM_CONF" BossMechanics.Bots.Debug "${MECHSIM_DEBUG:-0}"
+fi
+
 REPORT_CONTAINER_PATH="/azerothcore/env/dist/logs/${PROFILE_NAME}.report.json"
 cat > "$SCRATCH/etc/modules/dpssim.conf" <<EOF
 DpsSim.Enabled = 1
@@ -504,6 +649,7 @@ DpsSim.ReportPath = ${REPORT_CONTAINER_PATH}
 EOF
 if [[ -n "$HEAL_CONF" ]]; then printf '%s' "$HEAL_CONF" >> "$SCRATCH/etc/modules/dpssim.conf"; fi
 if [[ -n "$TANK_CONF" ]]; then printf '%s' "$TANK_CONF" >> "$SCRATCH/etc/modules/dpssim.conf"; fi
+if [[ -n "$MECH_CONF" ]]; then printf '%s' "$MECH_CONF" >> "$SCRATCH/etc/modules/dpssim.conf"; fi
 if [[ -n "${DPSSIM_EXTRA_CONF:-}" ]]; then printf '%b\n' "$DPSSIM_EXTRA_CONF" >> "$SCRATCH/etc/modules/dpssim.conf"; fi
 
 REPORTS_DIR="$REPO_ROOT/modules/mod-dpssim/reports"
@@ -517,8 +663,20 @@ if [[ "$IS_HEAL" -eq 1 ]]; then BATCH_NAME="${PROFILE_NAME}.${BATCH_SCENARIO}"; 
 # Tank batches carry the scenario and the dummy count ("<Profile>.tank-survive.5t.<ts>..."), plus "x<hash>" when
 # TANKSIM_HIT / TANKSIM_PACK_HIT / TANKSIM_SWING_MS override the profile ("<Profile>.tank-survive.5t.x1a2b3c.<ts>...")
 if [[ "$IS_TANK" -eq 1 ]]; then BATCH_NAME="${PROFILE_NAME}.tank-${TANK_SCENARIO}.${TARGETS}t${TANK_TAG:+.$TANK_TAG}"; fi
+# Mechanics batches carry the program tag and the group size ("<Profile>.mech-rot.g5...", ".mech-base.g5" for the
+# baseline), plus ".f1" with fallibility on
+if [[ "$IS_MECH" -eq 1 ]]; then
+    BATCH_NAME="${PROFILE_NAME}.mech-${MECH_TAG}.g${MECH_GROUP}"
+    if [[ "$MECH_FALLIBILITY" -eq 1 ]]; then BATCH_NAME+=".f1"; fi
+fi
+# DPSSIM_BATCH_TAG keeps parallel runs of one profile apart (the timestamp below has a 1 s resolution)
+if [[ -n "$BATCH_TAG" ]]; then BATCH_NAME+=".${BATCH_TAG}"; fi
 
-if [[ "$IS_HEAL" -eq 1 ]]; then
+if [[ "$IS_MECH" -eq 1 ]]; then
+    echo "Running mechanics profile '${PROFILE_NAME}' (${ITERATIONS} iteration(s), in one container)" \
+        "for ${DURATION_SECONDS}s (sim time) each at level ${LEVEL}, ${STEP_MS}ms step, group of ${MECH_GROUP}," \
+        "programs ${MECH_TAG}, fallibility ${MECH_FALLIBILITY}..." >&2
+elif [[ "$IS_HEAL" -eq 1 ]]; then
     echo "Running heal profile '${PROFILE_NAME}' (${ITERATIONS} iteration(s), in one container)" \
         "for ${DURATION_SECONDS}s (sim time) each at level ${LEVEL}, race ${RACE}, ${STEP_MS}ms step," \
         "group ${HEAL_GROUP}, scenario ${HEAL_TAG}${DRAIN_SEG:+.$DRAIN_SEG}," \
@@ -612,6 +770,12 @@ if [[ "$IS_TANK" -eq 1 ]]; then
         || true; } | sed -E 's/^.*mod-dpssim: *//' >&2
 fi
 
+# A mechanics run's group, per-iteration and per-member summary lines (the JSON reports carry the same numbers)
+if [[ "$IS_MECH" -eq 1 ]]; then
+    MECH_LINES="mechanics mode - |mechanics iteration [0-9]+/[0-9]+ - |member [0-9]+ \(.*DPS|program '.*' did not"
+    { grep -E "$MECH_LINES" "$RUN_LOG" || true; } | sed -E 's/^.*mod-dpssim: *//' >&2
+fi
+
 # Collect every iteration's report out of the scratch dir before the EXIT trap removes it, renaming
 # into $REPORTS_DIR under the same external naming convention (aggregate_reports.py, apps/
 # sim-reports) already expects - nothing downstream of this needs to know the container ran N
@@ -659,6 +823,12 @@ HTML_PATH="$REPORTS_DIR/SimProfileReport.html"
 if [[ "$IS_HEAL" -eq 1 ]]; then HTML_PATH="$REPORTS_DIR/HealProfileReport.html"; fi
 # ... and so are tank pages
 if [[ "$IS_TANK" -eq 1 ]]; then HTML_PATH="$REPORTS_DIR/TankProfileReport.html"; fi
+# ... and so are mechanics pages
+if [[ "$IS_MECH" -eq 1 ]]; then HTML_PATH="$REPORTS_DIR/MechanicsProfileReport.html"; fi
+if [[ "${DPSSIM_NO_HTML:-0}" == 1 ]]; then
+    echo "$FINAL_PATH"
+    exit 0
+fi
 python3 "$REPO_ROOT/modules/mod-dpssim/tools/build_report_html.py" "$HTML_PATH" \
     "$PROFILE_NAME" "$FINAL_PATH" >&2
 
