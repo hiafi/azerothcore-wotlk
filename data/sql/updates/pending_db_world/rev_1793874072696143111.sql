@@ -19,7 +19,8 @@ UPDATE `gameobject_template` SET `Data0` = 967 WHERE `entry` = 176310 AND `Data0
 -- Doors: Onyxia's Gate 177928 and the Maraudon Stone Door 177444 back to stock flags 32 (phase 00 added flag 4,
 -- gameobject_template_addon phase_00-gameobject_template_addon.sql). Stock: base gameobject_template_addon
 -- (177444 -> 32, 177928 -> 32). The instance gate now blocks entry, so the doors need no extra lock.
--- The AQ gate objects (176146-176148, 176996) and the Karazhan doors (176694, 184164) keep their locks.
+-- The AQ gate objects (176146-176148) and the Karazhan doors (176694, 184164) keep their locks; the Caverns of Time
+-- door spawn (176996, guid 5300003) is deleted by the PS7 fix file.
 -- 177444 Stone Door (Maraudon); 177928 Onyxia's Gate
 UPDATE `gameobject_template_addon` SET `flags` = 32 WHERE `entry` IN (
     177444, 177928

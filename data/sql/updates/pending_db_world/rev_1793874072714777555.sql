@@ -5,7 +5,8 @@
 -- VerifiedBuild) are the STOCK ones: data/sql/base/db_world/npc_vendor.sql with the db_world updates
 -- 2026_01_20_00, 2026_02_10_03, 2026_02_13_01, 2026_04_26_01, 2026_04_26_05 and 2026_09_24_01 applied.
 -- Left out on purpose: the 220 rogue poison rows (items retired by 2026_10_31_25, rogue-rework RG0a), and every
--- ammo row (item class 6: arrows and shots; ammo is being dropped, user 2026-11-05).
+-- ammo row (item class 6: arrows and shots; ammo is being dropped, user 2026-11-05), and Burkrum's (6028) 3 quivers
+-- and ammo pouches (user 2026-11-05).
 -- Every item below exists in item_template (checked against the live table, 0 missing).
 -- Idempotent: each vendor's rows are deleted by (entry, item) before the insert.
 
@@ -1137,13 +1138,6 @@ INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `Exte
 DELETE FROM `npc_vendor` WHERE `entry` = 5944 AND `item` IN (38426);
 INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
 (5944, 0, 38426, 0, 0, 0, 0); -- Eternium Thread
-
--- Burkrum <Heavy Armor Merchant>
-DELETE FROM `npc_vendor` WHERE `entry` = 6028 AND `item` IN (2102, 5439, 11363);
-INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`) VALUES
-(6028, 0, 2102, 0, 0, 0, 0), -- Small Ammo Pouch
-(6028, 0, 5439, 0, 0, 0, 0), -- Small Quiver
-(6028, 0, 11363, 0, 0, 0, 0); -- Medium Shot Pouch
 
 -- Thelgrum Stonehammer <Mining Supplies>
 DELETE FROM `npc_vendor` WHERE `entry` = 6298 AND `item` IN (20815, 20824);
