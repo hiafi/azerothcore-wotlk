@@ -1,5 +1,5 @@
 """
-Pre-nerf TBC/WotLK raid health: dbc-tools owns `creature_template.HealthModifier` of the 244 raid creatures
+Pre-nerf TBC/WotLK raid health: dbc-tools owns `creature_template.HealthModifier` of the 280 raid creatures
 mod-progression's phase 0 raised (progression-slim, user ruling: every TBC/WotLK raid boss and trash mob stays at its
 pre-nerf health until its raid is reworked; nothing may revert it).
 
@@ -12,7 +12,10 @@ new value in SQL.
 
 Entries are the phase 0 HealthModifier edits whose live spawns are on a TBC/WotLK raid map (Karazhan, Gruul's Lair,
 Magtheridon's Lair, Serpentshrine Cavern, The Eye, Hyjal Summit, Black Temple, Zul'Aman, Sunwell Plateau), grouped
-by raid. Hellfire Channeler (17256) also spawns in the Blood Furnace; it is listed under Magtheridon's Lair.
+by raid, plus the TBC raid creatures phase 0 edited that have no static spawn (summoned or event bosses and adds:
+Attumen, the Opera cast, Hyjal bosses and wave adds, The Lurker Below, Flame of Azzinoth, Kalecgos and the Sunwell
+bosses, ...) and the two Outland world raid bosses (Doomwalker, Doom Lord Kazzak).
+Hellfire Channeler (17256) also spawns in the Blood Furnace; it is listed under Magtheridon's Lair.
 """
 
 from lib.dsl.registry import creature_template_columns
@@ -21,6 +24,7 @@ RAID_HEALTH_PRENERF = {
     "Karazhan": (
         (15547, 9),  # Spectral Charger
         (15548, 9),  # Spectral Stallion
+        (15550, 50),  # Attumen the Huntsman
         (15551, 6),  # Spectral Stable Hand
         (15687, 51),  # Moroes <Tower Steward>
         (15688, 100),  # Terestian Illhoof
@@ -28,12 +32,16 @@ RAID_HEALTH_PRENERF = {
         (15690, 150),  # Prince Malchezaar
         (15691, 115),  # The Curator
         (16151, 50),  # Midnight
+        (16152, 50),  # Attumen the Huntsman
         (16171, 7),  # Coldmist Widow
         (16174, 8),  # Greater Shadowbat
         (16175, 6),  # Vampiric Shadowbat
         (16176, 6),  # Shadowbeast
         (16177, 7),  # Dreadbeast
         (16178, 4),  # Phase Hound
+        (16179, 35),  # Hyakiss the Lurker
+        (16180, 35),  # Shadikith the Glider
+        (16181, 30),  # Rokad the Ravager
         (16389, 6),  # Spectral Apprentice
         (16406, 6),  # Phantom Attendant
         (16407, 6),  # Spectral Servant
@@ -69,6 +77,13 @@ RAID_HEALTH_PRENERF = {
         (16595, 10),  # Fleshbeast
         (16596, 16),  # Greater Fleshbeast
         (17225, 175),  # Nightbane
+        (17229, 12),  # Kil'rek
+        (17533, 25),  # Romulo
+        (17534, 25),  # Julianne
+        (17535, 25),  # Dorothee
+        (17543, 15),  # Strawman
+        (17546, 15),  # Roar
+        (17547, 15),  # Tinhead
     ),
     "Gruul's Lair": (
         (18831, 100),  # High King Maulgar <Lord of the Ogres>
@@ -91,6 +106,7 @@ RAID_HEALTH_PRENERF = {
         (21214, 300),  # Fathom-Lord Karathress
         (21215, 500),  # Leotheras the Blind
         (21216, 450),  # Hydross the Unstable <Duke of Currents>
+        (21217, 500),  # The Lurker Below
         (21218, 35),  # Vashj'ir Honor Guard
         (21220, 25),  # Coilfang Priestess
         (21221, 35),  # Coilfang Beast-Tamer
@@ -114,6 +130,8 @@ RAID_HEALTH_PRENERF = {
         (21964, 150),  # Fathom-Guard Caribdis
         (21965, 150),  # Fathom-Guard Tidalvess
         (21966, 150),  # Fathom-Guard Sharkkis
+        (22055, 25),  # Coilfang Elite
+        (22056, 25),  # Coilfang Strider
     ),
     "Tempest Keep (The Eye)": (
         (18805, 500),  # High Astromancer Solarian
@@ -147,9 +165,19 @@ RAID_HEALTH_PRENERF = {
         (20064, 36),  # Thaladred the Darkener <Advisor to Kael'thas>
     ),
     "Hyjal Summit": (
+        (17767, 700),  # Rage Winterchill
+        (17808, 700),  # Anetheron
+        (17842, 700),  # Azgalor
+        (17888, 700),  # Kaz'rogal
         (17895, 20),  # Ghoul
+        (17897, 25),  # Crypt Fiend
         (17898, 25),  # Abomination
         (17899, 22),  # Shadowy Necromancer
+        (17905, 15),  # Banshee
+        (17906, 18),  # Gargoyle
+        (17907, 45),  # Frost Wyrm
+        (17908, 18),  # Giant Infernal
+        (17916, 15),  # Fel Stalker
         (17968, 750),  # Archimonde
     ),
     "Black Temple": (
@@ -197,6 +225,7 @@ RAID_HEALTH_PRENERF = {
         (22962, 90),  # Priestess of Delight
         (22964, 50),  # Sister of Pleasure
         (22965, 25),  # Enslaved Servant
+        (22997, 150),  # Flame of Azzinoth
         (23018, 35),  # Shadowmoon Houndmaster
         (23028, 30),  # Bonechewer Taskmaster
         (23030, 35),  # Dragonmaw Sky Stalker
@@ -244,6 +273,7 @@ RAID_HEALTH_PRENERF = {
         (24059, 12),  # Amani'shi Beast Tamer
         (24065, 12),  # Amani'shi Handler
         (24138, 4),  # Tamed Amani Crocolisk
+        (24143, 30.5),  # Spirit of the Lynx
         (24179, 10),  # Amani'shi Wind Walker
         (24180, 10),  # Amani'shi Protector
         (24239, 135),  # Hex Lord Malacrass
@@ -254,8 +284,13 @@ RAID_HEALTH_PRENERF = {
     "Sunwell Plateau": (
         (24850, 475),  # Kalecgos
         (24882, 1384),  # Brutallus
+        (24891, 195),  # Kalecgos
+        (24892, 475),  # Sathrovarr the Corruptor
+        (25038, 1154),  # Felmyst
+        (25160, 100),  # Madrigosa
         (25165, 475),  # Lady Sacrolash
         (25166, 475),  # Grand Warlock Alythess
+        (25315, 2200),  # Kil'jaeden <The Deceiver>
         (25363, 35),  # Sunblade Cabalist
         (25367, 35),  # Sunblade Arch Mage
         (25368, 35),  # Sunblade Slayer
@@ -277,8 +312,14 @@ RAID_HEALTH_PRENERF = {
         (25597, 35),  # Oblivion Mage
         (25599, 86),  # Cataclysm Hound
         (25741, 360),  # M'uru
+        (25772, 25),  # Void Sentinel
         (25837, 35),  # Shadowsword Commander
+        (25840, 270),  # Entropius
         (25867, 20),  # Sunblade Dragonhawk
+    ),
+    "Outland world raid bosses (no raid map)": (
+        (17711, 300),  # Doomwalker
+        (18728, 160),  # Doom Lord Kazzak
     ),
 }
 
