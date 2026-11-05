@@ -367,8 +367,8 @@ casts, failures by type and `"<Kind>/<tag>"`, hits, moving time and distance, de
 time, leaks with spell ids, counters and cost block), `groupFailures` (MissedSoak), `failureLog` (every failure in
 order, capped at 2,000).
 Files: `reports/<Profile>.mech-<tag>.g<size>[.f1][.<DPSSIM_BATCH_TAG>].<ts>...` with tag `rot` (default rotation),
-`base` (baseline) or `x<hash>` (`MECHSIM_PROGRAMS`); the page is `reports/MechanicsProfileReport.html`
-(`tools/mechanics-report-template.html`).
+`base` (baseline), `desc` (the descriptor slice) or `x<hash>` (other `MECHSIM_PROGRAMS`); the page is
+`reports/MechanicsProfileReport.html` (`tools/mechanics-report-template.html`).
 
 `tools/aggregate_reports.py` merges a run's iterations **without trimming** (5 iterations trim nothing anyway, and the
 iterations run different programs): per member `{mean, min, max, perIteration}` for DPS, damage, casts, moving time and
@@ -391,6 +391,55 @@ so a healer heals there too; reports from before the heal recorder read as 0 HPS
 baseline's, escape / hold / freeze time, leaks, solve and route maxima; specs with a failure of the member under test,
 a leak, a missing strategy, a program error (a start error or a failed entry) or a death come first. The reference
 members' failures are listed too (they are the same group in every spec).
+
+### The boss descriptor slice and counters (M5)
+
+The dungeon mechanics M5 descriptor (interrupts, dispels, purges, target priority, the ignore list) runs in the sim as
+the **descriptor slice**: mod-boss-mechanics' `descriptor` program (casts to kick, a do-not-kick cast, dispellable,
+urgent and deadline debuffs, purgeable and Enrage buffs on adds, a priority add, ignored copies and a break-out
+prison; 64 s) twice in a row, `descriptor:2`, so a 120 s iteration sees it start twice as the 300403 dummy's loop does.
+It is not in the default rotation; the M4 slices are unchanged. Its casts, adds and auras come from program entries on
+the owner, so they run on the sim's boss stand-in (`SimTarget` 900004-900006, immune to grips only: kicks and stuns
+land) as on the dummy; adds and prisons spawn 4-8 yd around it at its level.
+
+```
+MECHSIM=1 MECHSIM_PROGRAMS="descriptor:2" tools/run-sim.sh RetPaladinSim 120 60 2 5 100   # files tagged mech-desc
+tools/mechanics_sweep.py run --descriptor            # every reworked spec, descriptor slice + baseline
+tools/mechanics_sweep.py run --descriptor --specs shaman,warlock
+```
+
+Any single drill (`interrupts`, `dispels`, `purges`, `targets`, `ignore`) or `descriptor-drills` (all five in turn,
+424 s) runs through `--programs` / `MECHSIM_PROGRAMS` as any other program.
+
+Every member's module counters carry the M5 blocks of `MechanicBotCounters.h` (`stats.counters`, summed over the
+iterations; a name ending in `Max` takes the maximum):
+
+| Counter | Meaning |
+| --- | --- |
+| `kicksLanded` | kicks on a listed cast this bot held the claim of |
+| `kicksWasted` | kicks on an unlisted cast while a listed cast was due before the kick was back |
+| `doNotKickKicks` | kicks on a do-not-kick cast (a violation; the sweep flags a spec with any) |
+| `duplicateKicks` | kicks on a listed cast another bot had claimed |
+| `overloadHolds` | casts the bot could kick but held for a higher one due |
+| `listedMissed` | listed casts that completed; counted by **one bot per group**: only the group sum is whole |
+| `stockKicksDropped` | stock kick actions the descriptor's kick multiplier zeroed |
+| `urgentDispels`, `urgentLatencyMsMax` | cures of a listed loss-of-control aura; longest application-to-cure ms |
+| `deadlineDispels`, `deadlineMisses` | deadline auras cured in time, and the ones that ran out on this bot |
+| `listedDispels`, `purges` | other listed cures; listed enemy buffs stripped (the pet's Devour Magic included) |
+| `focusSwitches`, `msLowerTarget` | switches onto the pick; ms attacking something else while the pick lived |
+| `breakOutMsMax` | the longest a prison held its player, as this bot saw it |
+| `ignoredHits`, `ignoredDamage` | damage events and damage the bot dealt to ignored units |
+| `petIgnoredHits`, `petIgnoredDamage` | the same for its pets, guardians and totems |
+| `ignoreBlocks`, `ignoreDrops`, `petRecalls` | actions zeroed for an ignored target; targets dropped; pets recalled |
+| `solveRefreshes`, `refreshUsMax`, `refreshUsTotal` | M5 C4: the allies' refresh before a solve, timed apart (\*) |
+
+(\*) `solveUs` no longer holds the refresh: compare an older `solveUsMax` with `solveUsMax + refreshUsMax`.
+
+The report page has a "Boss descriptor" table (every member plus a group row) and `refreshUsMax` in the brain table.
+The sweep index puts the counters under each member line's `descriptor` and the group's sums under the spec's
+`descriptorGroup` (`index.json`), and `index.md` gets a "Boss descriptor" table (group totals, the member under test in
+brackets) when the sweep ran the slice or any run has a descriptor counter. Lower-priority target **time** stands in
+for damage on lower targets: the sim records damage on the boss only.
 
 ## The sim never touches the live characters DB
 

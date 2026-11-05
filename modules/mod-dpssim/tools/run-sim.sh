@@ -115,8 +115,8 @@
 # [race] is ignored (every member is Horde, at the Orc start). The image must be built with mod-boss-mechanics. The
 # scratch config turns BossMechanics.Enable / Bots.Enable / Bots.OpenWorldTestScope on and fallibility off. The reports
 # are named "<Profile>.mech-<tag>.g<size>[.f1]..." (tag: "rot" for the default program rotation, "base" for the paired
-# baseline, "x<hash>" for MECHSIM_PROGRAMS) and the baked page is
-# modules/mod-dpssim/reports/MechanicsProfileReport.html.
+# baseline, "desc" for the M5 descriptor slice MECHSIM_PROGRAMS="descriptor:2", "x<hash>" for any other
+# MECHSIM_PROGRAMS) and the baked page is modules/mod-dpssim/reports/MechanicsProfileReport.html.
 # Environment, all optional:
 #   MECHSIM_BASELINE=1     the paired baseline: every iteration runs the program "none" (DpsSim.MechanicsBaseline)
 #   MECHSIM_PROGRAMS       ';'-separated programs, iteration i runs entry i mod n (DpsSim.MechanicsPrograms; default
@@ -420,7 +420,9 @@ else
     elif [[ -n "${MECHSIM_PROGRAMS:-}" ]]; then
         if [[ "$MECHSIM_PROGRAMS" =~ [\"\\] ]]; then die "MECHSIM_PROGRAMS may not hold quotes or backslashes"; fi
         MECH_CONF+="DpsSim.MechanicsPrograms = \"${MECHSIM_PROGRAMS}\""$'\n'
-        if [[ "$(printf '%s' "$MECHSIM_PROGRAMS" | tr -d ' \t')" == "none" ]]; then MECH_TAG="base"
+        MECH_PROGRAMS_BARE="$(printf '%s' "$MECHSIM_PROGRAMS" | tr -d ' \t')"
+        if [[ "$MECH_PROGRAMS_BARE" == "none" ]]; then MECH_TAG="base"
+        elif [[ "$MECH_PROGRAMS_BARE" == "descriptor:2" ]]; then MECH_TAG="desc"    # the M5 descriptor slice
         else MECH_TAG="x$(short_hash "$MECHSIM_PROGRAMS")"; fi
     else
         MECH_TAG="rot"

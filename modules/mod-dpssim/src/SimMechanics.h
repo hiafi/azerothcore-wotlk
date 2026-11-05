@@ -49,7 +49,8 @@ namespace SimMechanics
     // Stack; the cookie cones, puddles and run-outs plus a short barrage; soaks and a random minefield; Alexei's rules
     // (one cycle is 156 s, so a 120 s fight sees the first ten slots: hold still, stack, spread, out of bounds, line
     // up, desks and four heroic pairs); a long barrage, a lane set and a U minefield. The program grammar is
-    // mod-boss-mechanics' Drill::ParseProgram (MechanicDrillPlan.h).
+    // mod-boss-mechanics' Drill::ParseProgram (MechanicDrillPlan.h). The M5 boss descriptor is a separate slice, not in
+    // this rotation: MECHSIM_PROGRAMS="descriptor:2" (tools/mechanics_sweep.py run --descriptor).
     constexpr char const* DEFAULT_PROGRAMS =
         "smite,fenrus,ras; cookie,barrage:15; soaks,minefield:30; alexei; barrage:60,lanes:3,uminefield:20";
 

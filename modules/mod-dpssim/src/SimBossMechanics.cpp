@@ -78,6 +78,10 @@ namespace
         out.emplace_back("wakes", c.wakes);
         out.emplace_back("solveUsMax", c.solveUsMax);
         out.emplace_back("solveUsTotal", c.solveUsTotal);
+        // M5 C4: the allies' refresh before a solve, timed apart from Solver::Solve (solveUsMax no longer holds it)
+        out.emplace_back("solveRefreshes", c.solveRefreshes);
+        out.emplace_back("refreshUsMax", c.refreshUsMax);
+        out.emplace_back("refreshUsTotal", c.refreshUsTotal);
         out.emplace_back("carrierSolves", c.carrierSolves);
         out.emplace_back("claimSolves", c.claimSolves);
         out.emplace_back("pickSolves", c.pickSolves);
@@ -118,6 +122,34 @@ namespace
         out.emplace_back("specificBlocks", c.specificBlocks);
         out.emplace_back("doBypasses", c.doBypasses);
         out.emplace_back("unknownCasts", c.unknownCasts);
+        // M5 WP-T: targets and the ignore list
+        out.emplace_back("focusSwitches", c.focusSwitches);
+        out.emplace_back("msLowerTarget", c.msLowerTarget);
+        out.emplace_back("breakOutMsMax", c.breakOutMsMax);
+        out.emplace_back("ignoredHits", c.ignoredHits);
+        out.emplace_back("ignoredDamage", c.ignoredDamage);
+        out.emplace_back("petIgnoredHits", c.petIgnoredHits);
+        out.emplace_back("petIgnoredDamage", c.petIgnoredDamage);
+        out.emplace_back("ignoreBlocks", c.ignoreBlocks);
+        out.emplace_back("ignoreDrops", c.ignoreDrops);
+        out.emplace_back("petRecalls", c.petRecalls);
+        // M5 WP-P: dispels and purges
+        out.emplace_back("urgentDispels", c.urgentDispels);
+        out.emplace_back("urgentLatencyMsMax", c.urgentLatencyMsMax);
+        out.emplace_back("deadlineDispels", c.deadlineDispels);
+        out.emplace_back("deadlineMisses", c.deadlineMisses);
+        out.emplace_back("listedDispels", c.listedDispels);
+        out.emplace_back("purges", c.purges);
+        // M5 WP-I: interrupts. listedMissed is counted by one bot of the group (the observer): sum it over the group.
+        out.emplace_back("kicksLanded", c.kicksLanded);
+        out.emplace_back("kicksWasted", c.kicksWasted);
+        out.emplace_back("doNotKickKicks", c.doNotKickKicks);
+        out.emplace_back("duplicateKicks", c.duplicateKicks);
+        out.emplace_back("overloadHolds", c.overloadHolds);
+        out.emplace_back("listedMissed", c.listedMissed);
+        out.emplace_back("stockKicksDropped", c.stockKicksDropped);
+        // A new counter: one line here (a name ending in "Max" is aggregated as a maximum, any other as a sum), then
+        // tools/mechanics_sweep.py DESCRIPTOR_COUNTERS (or member_line) and the report template's `names`.
     }
 
     // One UsHistogram as summable numbers: <name>Count, <name>Total (us), <name>Max (us) and the bucket counts

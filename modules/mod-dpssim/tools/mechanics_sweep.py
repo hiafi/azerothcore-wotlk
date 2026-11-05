@@ -18,10 +18,13 @@ Every run writes its reports through run-sim.sh with DPSSIM_BATCH_TAG=<sweep>-<s
 has a 1 s resolution, so parallel runs need their own names) and DPSSIM_NO_HTML=1 (parallel runs would overwrite the
 page); 5 iterations aggregate without trimming (aggregate_reports.py's mechanics merge).
 
+--descriptor runs the boss descriptor slice (STAGE-M5, DESCRIPTOR_PROGRAMS) instead of the M4 rotation; the index then
+adds a "Boss descriptor" table (kicks, dispels, purges, ignore list, target priority, break-out) per spec.
+
 Usage:
     mechanics_sweep.py run [--out DIR] [--sweep ID] [--specs A,B] [--profiles P1,P2] [--duration 120]
                            [--iterations 5] [--step 100] [--level 60] [--group 5] [--jobs 6] [--programs TEXT]
-                           [--fallibility] [--no-baseline] [--dry-run] [--run-sim PATH]
+                           [--descriptor] [--fallibility] [--no-baseline] [--dry-run] [--run-sim PATH]
     mechanics_sweep.py index <out-dir-or-manifest.json>
     mechanics_sweep.py list
 """
@@ -49,6 +52,36 @@ from aggregate_reports import aggregate_mechanics  # noqa: E402
 
 # Never more parallel sims than this (memory: about 2.4 GB each once running, dpssim-parallel-limit)
 MAX_JOBS = 6
+
+# The descriptor slice (STAGE-M5-HANDOFF section 3.7, `--descriptor`): mod-boss-mechanics' `descriptor` program
+# (interrupts, dispels, purges, target priority, the ignore list and a break-out prison; one run is 64 s) twice in a
+# row, so a 120 s iteration sees it start twice as the 300403 dummy's loop does. Not in the default rotation.
+DESCRIPTOR_PROGRAMS = "descriptor:2"
+
+# The M5 boss descriptor counters (MechanicBotCounters.h blocks "M5 WP-I / WP-P / WP-T"; FlattenCounters() in
+# SimBossMechanics.cpp exports each under this name). The index sums them over the group (a name ending in "Max" takes
+# the maximum); listedMissed is counted by one bot per group (the observer), so only its group sum means anything.
+# A new counter: add its name here.
+DESCRIPTOR_COUNTERS = [
+    # interrupts (WP-I)
+    "kicksLanded", "kicksWasted", "doNotKickKicks", "duplicateKicks", "overloadHolds", "listedMissed",
+    "stockKicksDropped",
+    # dispels and purges (WP-P)
+    "urgentDispels", "urgentLatencyMsMax", "deadlineDispels", "deadlineMisses", "listedDispels", "purges",
+    # targets and the ignore list (WP-T)
+    "focusSwitches", "msLowerTarget", "breakOutMsMax", "ignoredHits", "ignoredDamage", "petIgnoredHits",
+    "petIgnoredDamage", "ignoreBlocks", "ignoreDrops", "petRecalls",
+]
+
+
+def merge_descriptor(lines: list[dict]) -> dict:
+    """The descriptor counters of several member lines: summed, a name ending in "Max" as the maximum."""
+    out = {name: 0 for name in DESCRIPTOR_COUNTERS}
+    for line in lines:
+        for name, value in (line.get("descriptor") or {}).items():
+            out[name] = max(out.get(name, 0), value) if name.endswith("Max") else out.get(name, 0) + value
+    return out
+
 
 # Every reworked spec (all ten classes, Mage included: STAGE-M4-HANDOFF decision 7.1) and the profile that sims it.
 # One profile per spec: the variants (pack, cover, breath, minion, ...) are talent or target setups of the same spec.
@@ -116,6 +149,8 @@ def job_env(args, sweep: str, profile: str, kind: str) -> dict[str, str]:
         env["MECHSIM_BASELINE"] = "1"
     elif args.programs:
         env["MECHSIM_PROGRAMS"] = args.programs
+    elif args.descriptor:
+        env["MECHSIM_PROGRAMS"] = DESCRIPTOR_PROGRAMS
     if args.fallibility:
         env["MECHSIM_FALLIBILITY"] = "1"
     return env
@@ -157,7 +192,16 @@ def run_job(job: dict, out_dir: Path) -> dict:
     return result
 
 
+def programs_label(args) -> str:
+    if args.programs:
+        return args.programs
+    return f"descriptor slice ({DESCRIPTOR_PROGRAMS})" if args.descriptor else "default rotation"
+
+
 def cmd_run(args) -> int:
+    if args.programs and args.descriptor:
+        print("error: --programs and --descriptor exclude each other", file=sys.stderr)
+        return 1
     args.jobs = max(1, min(args.jobs, MAX_JOBS))
     sweep = args.sweep or datetime.datetime.now().strftime("ms%Y%m%d-%H%M%S")
     out_dir = Path(args.out) if args.out else REPORTS_DIR / f"mechsweep-{sweep}"
@@ -186,7 +230,7 @@ def cmd_run(args) -> int:
         "sweep": sweep,
         "started": datetime.datetime.now().isoformat(timespec="seconds"),
         "settings": {"duration": args.duration, "iterations": args.iterations, "step": args.step, "level": args.level,
-                     "group": args.group, "jobs": args.jobs, "programs": args.programs or "default rotation",
+                     "group": args.group, "jobs": args.jobs, "programs": programs_label(args),
                      "fallibility": args.fallibility},
         "runs": [],
     }
@@ -313,6 +357,9 @@ def member_line(mech: dict, base: dict | None) -> dict:
         "solves": counters.get("solves", 0),
         "fallbacks": counters.get("outcomeFallback", 0),
         "solveUsMax": max(counters.get("solveUsMax", 0), stats.get("cost", {}).get("solveUsMax", 0)),
+        # M5 C4: the allies' refresh before a solve, timed apart (older reports: solveUsMax included it, no refresh)
+        "refreshUsMax": counters.get("refreshUsMax", 0),
+        "solveRefreshes": counters.get("solveRefreshes", 0),
         "routeUsMax": max(counters.get("routeUsMax", 0), stats.get("cost", {}).get("routeUsMax", 0)),
         "costSummary": {name: histogram(stats.get("cost", {}), name)
                         for name in ("solveUs", "routeUs", "pathUs", "probeUs", "sightUs", "brainUs")},
@@ -339,6 +386,8 @@ def member_line(mech: dict, base: dict | None) -> dict:
         "chaseReleases": counters.get("chaseReleases", 0),
         "chaseSolves": counters.get("chaseSolves", 0),
         "forcedLeaks": [counters.get(k, 0) for k in ("forcedMoves", "forcedCasts", "forcedTurns")],
+        # M5 boss descriptor (DESCRIPTOR_COUNTERS; reports from before M5 read as 0)
+        "descriptor": {name: counters.get(name, 0) for name in DESCRIPTOR_COUNTERS},
         "strategyInstalled": mech.get("strategyInstalledAll", False),
         "deaths": mech.get("deaths", 0),
         "cost": stats.get("cost", {}),
@@ -375,6 +424,8 @@ def spec_entry(run_mech: dict | None, run_base: dict | None) -> dict:
     lines = [member_line(m, base_members.get(m["index"])) for m in mech["members"]]
     entry["actor"] = next((line for line in lines if line["underTest"]), None)
     entry["references"] = [line for line in lines if not line["underTest"]]
+    # The group's descriptor counters (every member, the one under test included); listedMissed is only whole here
+    entry["descriptorGroup"] = merge_descriptor(lines)
     summary = mech.get("summary", {})
     entry["groupFailures"] = mech.get("groupFailures", {})
     entry["programErrors"] = summary.get("programErrors", [])
@@ -394,6 +445,8 @@ def spec_entry(run_mech: dict | None, run_base: dict | None) -> dict:
         entry["problems"].append("lock leaks")
     if not all(line["strategyInstalled"] for line in lines):
         entry["problems"].append("a member without the boss mechanics strategy")
+    if entry["descriptorGroup"]["doNotKickKicks"]:
+        entry["problems"].append(f"{entry['descriptorGroup']['doNotKickKicks']} do-not-kick kick(s)")
     if entry["programErrors"]:
         entry["problems"].append(f"{len(entry['programErrors'])} program error(s): {entry['programErrors'][0]}")
     if any(line["deaths"] for line in lines):
@@ -414,6 +467,49 @@ def failures_text(by_type: dict) -> str:
     for ftype, by_key in sorted(by_type.items()):
         parts.append(ftype + " " + ", ".join(f"{k} x{int(n)}" for k, n in sorted(by_key.items())))
     return "; ".join(parts) if parts else "0"
+
+
+def descriptor_table(manifest: dict, entries: list[dict]) -> list[str]:
+    """index.md's boss descriptor table (M5): the group's counters per spec, the member under test's in brackets where
+    they tell specs apart. Left out when no run has a descriptor counter and the sweep did not run the slice."""
+    programs = str((manifest.get("settings") or {}).get("programs", ""))
+    shown = "descriptor" in programs or any(any((e.get("descriptorGroup") or {}).values()) for e in entries)
+    if not shown:
+        return []
+    lines = [
+        "## Boss descriptor",
+        "",
+        "Group totals over every iteration (the member under test in brackets). Kicks: landed / wasted (an unlisted "
+        "cast while a listed one was due) / missed (listed casts that completed). Do-not-kick kicks and duplicates "
+        "should stay 0. Urgent dispels with the longest application-to-cure latency; deadline misses are deadline "
+        "auras that ran out; ignored damage is the bots' own / their pets'; lower target is the time spent on "
+        "something else while the pick lived; break-out max is the longest a prison held its player.",
+        "",
+        "| Spec | Kicks L / W / M | Do-not-kick | Dup | Holds | Urgent dispels, max latency | Deadline ok / miss | "
+        "Listed dispels | Purges | Ignored dmg bot / pet | Focus switches | Lower target s | Break-out max s |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ]
+    for e in entries:
+        g = e.get("descriptorGroup")
+        if g is None:
+            continue
+        a = (e.get("actor") or {}).get("descriptor") or {}
+
+        def both(name: str, scale: float = 1.0, digits: int = 0) -> str:
+            return f"{fmt(g.get(name, 0) / scale, digits)} ({fmt(a.get(name, 0) / scale, digits)})"
+
+        lines.append(" | ".join([
+            f"| {e['class']} {e['spec']}",
+            f"{both('kicksLanded')} / {both('kicksWasted')} / {fmt(g['listedMissed'])}",
+            fmt(g["doNotKickKicks"]), fmt(g["duplicateKicks"]), fmt(g["overloadHolds"]),
+            f"{both('urgentDispels')}, {fmt(g['urgentLatencyMsMax'])} ms",
+            f"{fmt(g['deadlineDispels'])} / {fmt(g['deadlineMisses'])}",
+            both("listedDispels"), both("purges"),
+            f"{fmt(g['ignoredDamage'])} / {fmt(g['petIgnoredDamage'])}",
+            both("focusSwitches"), both("msLowerTarget", 1000.0, 1), fmt(g["breakOutMsMax"] / 1000.0, 1),
+        ]) + " |")
+    lines.append("")
+    return lines
 
 
 def write_index(manifest: dict, out_dir: Path) -> tuple[Path, Path]:
@@ -484,6 +580,7 @@ def write_index(manifest: dict, out_dir: Path) -> tuple[Path, Path]:
             refs or "0",
         ]) + " |")
     lines.append("")
+    lines.extend(descriptor_table(manifest, entries))
     md_path = out_dir / "index.md"
     md_path.write_text("\n".join(lines))
     return json_path, md_path
@@ -524,6 +621,8 @@ def main() -> int:
     run.add_argument("--group", type=int, default=5)
     run.add_argument("--jobs", type=int, default=MAX_JOBS, help=f"parallel sims, at most {MAX_JOBS}")
     run.add_argument("--programs", help="MECHSIM_PROGRAMS for the mechanics runs (default: the rotation)")
+    run.add_argument("--descriptor", action="store_true",
+                     help=f"run the boss descriptor slice ({DESCRIPTOR_PROGRAMS}) instead of the rotation")
     run.add_argument("--fallibility", action="store_true", help="BossMechanics.Bots.Fallibility.Enable = 1")
     run.add_argument("--no-baseline", action="store_true", help="skip the paired baseline runs (no DPS loss)")
     run.add_argument("--dry-run", action="store_true", help="print the run-sim.sh lines and exit")
