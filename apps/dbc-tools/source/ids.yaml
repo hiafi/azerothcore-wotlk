@@ -228,6 +228,15 @@ spellrunecost:
   start: 2600
   end: 2629
 
+# game_event.eventEntry for mod-content-gate bundle events (progression-slim WP-D2,
+# .agents/plans/progression-slim/progression-slim.D2-TABLE.md). Record only: no dbc-tools reader mints from it; the
+# bundle SQL is hand-written pending world SQL. eventEntry is TINYINT UNSIGNED (GameEventMgr reads it as uint8), so the
+# block ends at 255; stock and live top out at 190 (checked 2026-11-05). 200-215 are the day-one bundles (molten_core
+# ... wotlk_t9), 216-255 spare.
+game_event_bundle:
+  start: 200
+  end: 255
+
 # Per-class reservations (and non-class owners, see `healsim` below), one entry per table the owner draws ids from,
 # each inside the tool-wide block of the same name above (or the spell/talent/... blocks earlier in this file).
 # Kept under ONE key because every

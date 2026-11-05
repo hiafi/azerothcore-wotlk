@@ -194,6 +194,10 @@ class BlockShapeTest(unittest.TestCase):
         self.assertEqual(BLOCKS["spellicon"], {"start": 90100, "end": 90499})
         self.assertEqual(BLOCKS["spell"], {"start": 200000, "end": 209999})
 
+    def test_game_event_bundle_block_fits_a_tinyint_above_stock(self):
+        # progression-slim WP-D2: game_event.eventEntry is TINYINT UNSIGNED; stock/live events top out at 190.
+        self.assertEqual(BLOCKS["game_event_bundle"], {"start": 200, "end": 255})
+
     def test_every_id_already_used_is_inside_its_block(self):
         for name, (low, high) in USED_DISPLAY_IDS.items():
             with self.subTest(block=name):
