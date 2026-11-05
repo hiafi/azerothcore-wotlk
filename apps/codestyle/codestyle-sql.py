@@ -88,7 +88,8 @@ def parsing_file(files: list) -> None:
     changed_files = get_changed_files()
     # Iterate over all file paths
     for file_path in changed_files:
-        if "base" in file_path or "archive" in file_path:
+        # Only the core's own base/archive dirs are immutable; a module's data/sql/db-*/base/ is its install SQL.
+        if file_path.startswith(("data/sql/base/", "data/sql/archive/")):
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     directory_check(f, file_path)

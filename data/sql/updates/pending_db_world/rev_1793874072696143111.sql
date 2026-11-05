@@ -20,9 +20,9 @@ UPDATE `gameobject_template` SET `Data0` = 967 WHERE `entry` = 176310 AND `Data0
 -- gameobject_template_addon phase_00-gameobject_template_addon.sql). Stock: base gameobject_template_addon
 -- (177444 -> 32, 177928 -> 32). The instance gate now blocks entry, so the doors need no extra lock.
 -- The AQ gate objects (176146-176148, 176996) and the Karazhan doors (176694, 184164) keep their locks.
+-- 177444 Stone Door (Maraudon); 177928 Onyxia's Gate
 UPDATE `gameobject_template_addon` SET `flags` = 32 WHERE `entry` IN (
-    177444, -- Stone Door (Maraudon)
-    177928 -- Onyxia's Gate
+    177444, 177928
 );
 
 -- Archmage Timear: the phase 00 script npc_archmage_timear leaves with mod-progression; core has no such script
