@@ -5400,7 +5400,7 @@ ignite_12654 = spell(
 scripted_by(ignite_12654, 'spell_mage_ignite_dot')
 
 
-# ---- Phase 2: new talent-rank spells (200099-200110) ----------------------------------------
+# ---- Phase 2: new talent-rank spells (200099-200110; Lasting Flame rank 2 is 205100) ------------------
 
 
 lasting_flame_200099 = spell(
@@ -5423,8 +5423,10 @@ lasting_flame_200099 = spell(
 )
 
 
-lasting_flame_200100 = spell(
-    id=200100,
+# Rank 2 is 205100, not 200100: 200100 is mod-transmog's pet summon spell (ids.yaml `foreign`), so the rank moved
+# into the mage's spell reservation on 2026-11-06 (.agents/plans/dbc-replay-fix/spell-200100.REPORT.md).
+lasting_flame_205100 = spell(
+    id=205100,
     name='Lasting Flame',
     school=School.NORMAL,
     attributes=464,

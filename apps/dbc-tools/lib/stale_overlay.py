@@ -23,6 +23,8 @@ with what this run declares:
   has, is only reported (`kept_undeclared`), because deleting it would drop the whole row rather than restore stock.
 - **Inside the reserved block**: the block is a `DELETE ... BETWEEN` plus a full re-insert, so any difference (a row
   changed or no longer declared) only needs the block to be emitted (`reserved_changed`).
+- **A `foreign` id** (ids.yaml, `source.foreign_ids`: mod-transmog's spell 200100) is another owner's row and is
+  skipped, even when a generated file wrote it last (Lasting Flame rank 2 did, before it moved to 205100).
 
 Provenance is the same as the prune pass's (`spell_tables.GENERATED_MARKER`): only a row a generated file wrote last
 is ours to touch. A hand-written or module statement that writes the id afterwards (an INSERT, an UPDATE, or a DELETE
@@ -37,13 +39,15 @@ from pathlib import Path
 from . import sql_dump, sqlcorpus, trainer_state
 from .dbcfmt import DbcTable
 from .resolve import _rows_equal
+from .source import foreign_ids
 from .spell_tables import _is_generated
 
 
 class _Recorder:
-    """The three dict operations `sql_dump.apply_statements` uses (`rows[k] = row`, `rows.pop`, `rows.get`), passed
-    through to `rows`, with every existing or written key noted in `touched`. `get` counts because an UPDATE edits the
-    row it returns in place."""
+    """The dict operations `sql_dump.apply_statements` uses (`rows[k] = row`, `rows.pop`, `rows.get`, `rows.items`,
+    `rows.clear`), passed through to `rows`, with every existing or written key noted in `touched`. `get` counts
+    because an UPDATE edits the row it returns in place; `items` does not (a WHERE judged on every row then pops or
+    gets the ones it matches)."""
 
     def __init__(self, rows: dict[int, dict]):
         self.rows = rows
@@ -62,6 +66,14 @@ class _Recorder:
         if key in self.rows:
             self.touched.add(key)
         return self.rows.get(key, default)
+
+    def items(self):
+        return self.rows.items()
+
+    def clear(self) -> None:
+        """`TRUNCATE`: every row goes."""
+        self.touched.update(self.rows)
+        self.rows.clear()
 
 
 @dataclass
@@ -144,10 +156,11 @@ def find_stale(
         elif row_id in overlay.generated:
             result.drop.append(row_id)
             result.deletes.append(row_id)
+    foreign = foreign_ids(id_range)
     for row_id in sorted(overlay.generated):
         live = overlay.rows.get(row_id)
-        if live is None:
-            continue
+        if live is None or row_id in foreign:
+            continue  # a `foreign` id is another owner's (source.foreign_ids), whoever wrote it last
         want = declared.get(row_id)
         if id_range["start"] <= row_id <= id_range["end"]:
             if want is None or not _rows_equal(want, live):

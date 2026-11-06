@@ -109,6 +109,11 @@ def rogue_slice_problems(scanned: dict[str, list[tuple[int, str]]]) -> list[str]
     return class_slice_problems("rogue", ROGUE_VFX_SCRIPT, scanned)
 
 
+def _bounds(cfg: dict) -> dict:
+    """A block's `{start, end}` without its `foreign` ids."""
+    return {"start": cfg["start"], "end": cfg["end"]}
+
+
 def _overlap(a: dict, b: dict) -> bool:
     return a["start"] <= b["end"] and b["start"] <= a["end"]
 
@@ -117,7 +122,9 @@ class BlockShapeTest(unittest.TestCase):
     def test_every_block_is_an_ordered_start_end_pair(self):
         for name, cfg in BLOCKS.items():
             with self.subTest(block=name):
-                self.assertEqual(set(cfg), {"start", "end"})
+                # `foreign` (lib/source.py foreign_ids): the spell block's hole for mod-transmog's 200100, pinned in
+                # lib/test_foreign_ids.py. No other block has one.
+                self.assertEqual(set(cfg), {"start", "end", "foreign"} if name == "spell" else {"start", "end"})
                 self.assertIsInstance(cfg["start"], int)
                 self.assertIsInstance(cfg["end"], int)
                 self.assertLessEqual(cfg["start"], cfg["end"])
@@ -138,7 +145,7 @@ class BlockShapeTest(unittest.TestCase):
 
     def test_talent_tab_and_spell_blocks_are_unchanged(self):
         # The earlier blocks keep their numbers: a reader that hardcodes one must keep working.
-        self.assertEqual(BLOCKS["spell"], {"start": 200000, "end": 209999})
+        self.assertEqual(_bounds(BLOCKS["spell"]), {"start": 200000, "end": 209999})
         self.assertEqual(BLOCKS["creature"], {"start": 300000, "end": 300999})
         self.assertEqual(BLOCKS["spell_group"], {"start": 1200, "end": 1399})  # widened by Rogue T1 (was 1299)
         self.assertEqual(BLOCKS["spellicon"], {"start": 90100, "end": 90499})  # widened by Rogue T1 (was 90399)
@@ -204,7 +211,7 @@ class BlockShapeTest(unittest.TestCase):
         # no other block moved
         self.assertEqual(BLOCKS["spellvisual"], {"start": 90001, "end": 90399})
         self.assertEqual(BLOCKS["spellicon"], {"start": 90100, "end": 90499})
-        self.assertEqual(BLOCKS["spell"], {"start": 200000, "end": 209999})
+        self.assertEqual(_bounds(BLOCKS["spell"]), {"start": 200000, "end": 209999})
 
     def test_game_event_bundle_block_fits_a_tinyint_above_stock(self):
         # progression-slim WP-D2: game_event.eventEntry is TINYINT UNSIGNED; stock/live events top out at 190.
@@ -530,6 +537,10 @@ def out_of_reservation(class_name: str, ids_by_kind: dict[str, list[int]]) -> li
 # 200044) and talents 60003-60006 sit outside the warrior's slices (DATA-INVENTORY s7, T0 report s1.3 item 7). They
 # are grandfathered exactly; the spec stages replace them and shrink this set as they go.
 WARRIOR_LEGACY = {"spell": set(range(200028, 200067)) - {200037, 200044}, "talent": {60003, 60004, 60005, 60006}}
+# The mage's spells predate the reservations too: 200001-200027, 200037, 200044 and 200067-200129, less 200100 (mod-
+# transmog's, ids.yaml `foreign`; Lasting Flame rank 2 moved from it to 205100, the first id of the mage slice), plus
+# the warlock-rework A1/A2 crit-damage passives 200680-200688 the mage file declares for its own talents.
+MAGE_LEGACY_SPELLS = {*range(200001, 200028), 200037, 200044, *range(200067, 200130), *range(200680, 200689)} - {200100}
 
 
 class ClassDeclarationsTest(unittest.TestCase):
@@ -539,6 +550,7 @@ class ClassDeclarationsTest(unittest.TestCase):
         cls.deathknight = declared_ids(TOOL_ROOT / "source" / "classes" / "deathknight")
         cls.rogue = declared_ids(TOOL_ROOT / "source" / "classes" / "rogue")
         cls.warrior = declared_ids(TOOL_ROOT / "source" / "classes" / "warrior")
+        cls.mage = declared_ids(TOOL_ROOT / "source" / "classes" / "mage")
         cls.npcs = declared_ids(TOOL_ROOT / "source" / "npcs")
 
     def test_shaman_declares_only_inside_its_reservation(self):
@@ -613,6 +625,14 @@ class ClassDeclarationsTest(unittest.TestCase):
         self.assertEqual(out_of_reservation("rogue", {"creaturedisplayinfo": [90500]}), ["creaturedisplayinfo 90500"])
         self.assertEqual(BLOCKS["creaturedisplayinfo"], {"start": 90001, "end": 93999})
         self.assertEqual(BLOCKS["creaturemodeldata"], {"start": 90001, "end": 93999})
+
+    def test_mage_spells_are_the_legacy_ids_plus_its_slice(self):
+        # exact, like the warrior's: a new mage spell outside 205100-205199 fails, and so does one on 200100
+        minted = sorted(i for i in self.mage["spell"] if BLOCKS["spell"]["start"] <= i <= BLOCKS["spell"]["end"])
+        self.assertEqual(out_of_reservation("mage", {"spell": minted}),
+                         [f"spell {i}" for i in sorted(MAGE_LEGACY_SPELLS)])
+        self.assertEqual([i for i in minted if i >= 205100], [205100])
+        self.assertNotIn(200100, self.mage["spell"])
 
     def test_warrior_declares_only_inside_its_reservation_apart_from_the_legacy_ids(self):
         # exact equality, both ways: a new id outside the reservation fails this test, and a legacy id a spec stage

@@ -70,7 +70,7 @@ def _display_path(path: Path) -> str:
 def _coerce(raw: str, reference):
     """Parse a form field back to the same python type as `reference`
     (the column's current value, which is how types are known here - see
-    item_lib/overlay.py's read_table_dump, which already turns unquoted numeric
+    item_lib/replay.py (dbc-tools' SQL parser), which already turns unquoted numeric
     literals into int/float and quoted ones into str)."""
     raw = raw.strip()
     if isinstance(reference, float):

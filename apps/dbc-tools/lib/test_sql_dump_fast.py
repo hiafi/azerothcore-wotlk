@@ -63,6 +63,11 @@ class TupleParserTest(unittest.TestCase):
         "(99999999999999999999, -0, 007);",
         "('\\\\''', 1);",  # backslash-backslash then a doubled quote
         "(1, 'a'\n,2);",
+        # dbc-replay-fix: double-quoted strings and value expressions take the character-level parser
+        '("dq", "it\'s", "a""b", "", 1);',
+        "((@var+15), -@var, @var*100+1, -(@var+27), 100*@var, (2), ~1, 0x10|0x01);",
+        '(1, "unterminated);',
+        "(@unknown, 1);",
     ]
 
     def test_fast_matches_reference(self):
@@ -194,6 +199,13 @@ REPLACE INTO `widget_dbc` VALUES (4, 'four', 40);
 DELETE FROM `other` WHERE `id` = 1;
 INSERT INTO `widget_dbc` (`ID`, `Name`, `Value`) VALUES (@base + 5, 'var', 50);
 UPDATE `widget_dbc` SET `Name` = NULL WHERE `ID` = 3;
+SET @derived := @base * 2 + 1, @label := "dq";
+INSERT INTO `widget_dbc` (`ID`, `Name`, `Value`) VALUES ((@derived), @label, -(@base + 1)), (@derived + 1, "x;y", 0);
+UPDATE `widget_dbc` SET `Value` = (`Value` & ~1) | 4 WHERE `ID` = @derived - 196; -- 5
+DELETE FROM `widget_dbc` WHERE `ID` IN (@derived + 1) AND `Name` = "x;y";
+INSERT IGNORE INTO `widget_dbc` VALUES (1, 'ignored', 0);
+SET @gone := (SELECT 1);
+UPDATE `widget_dbc` SET `Value` = 1 WHERE `ID` = @gone;
 """
 
 
@@ -215,7 +227,9 @@ class HeadIndexTest(unittest.TestCase):
         sql_dump.apply_statements(rows_a, WIDGET, corpus_text)
         sql_dump.apply_statements(rows_b, WIDGET, plain)
         self.assertEqual(rows_a, rows_b)
-        self.assertEqual(set(rows_a), {1, 3, 4, 7, 105})  # a commented-out INSERT still replays, as before
+        self.assertEqual(set(rows_a), {1, 3, 4, 105, 201})  # a commented-out INSERT (7) is not replayed
+        self.assertEqual(rows_a[201], {"ID": 201, "Name": "dq", "Value": -101})
+        self.assertEqual(rows_a[1]["Name"], "one")  # INSERT IGNORE keeps the row
 
     def test_read_functions_match_on_corpus_text(self):
         for fn in (
@@ -266,6 +280,8 @@ class HeadIndexTest(unittest.TestCase):
             "İnsert into `x` values (1);\nINSERT INTO `y` VALUES (2);",  # U+0130 lowercases to two characters
             "SET @a := 1; SET @b = -2;\nUPDATE `t` SET `c` = 1;\nDELETE  FROM `t`  WHERE 1;",
             "offset reset setting charset update_x `update`",
+            "SET @a := (SELECT 1); SET @b := @a * 10 + 1;\nALTER TABLE `t` CHANGE COLUMN `x` `y` int;\n"
+            "TRUNCATE TABLE `t`; truncate `u`;\nINSERT IGNORE INTO `t` VALUES (1);\nalter table `v` add `z` int;",
             "",
         ]
         for text in texts:
@@ -284,12 +300,12 @@ class HeadIndexTest(unittest.TestCase):
                     m = sql_dump._STATEMENT_HEAD_RE.search(str(text), p)
                     if m is None:
                         break
-                    matched = m.group("ins_table") or m.group("del_table") or m.group("upd_table")
-                    if matched is None or matched == table:
+                    kind, matched = sqlcorpus.head_kind(m)
+                    if kind == "S" or matched == table:
                         expected = m
                         break
                     p = m.end()
-                got = index.first(pos, table, "IDUS")
+                got = index.first(pos, table, "IDUSAT")
                 self.assertEqual(None if got is None else (got.start(), got.end()),
                                  None if expected is None else (expected.start(), expected.end()))
 

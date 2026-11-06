@@ -245,6 +245,34 @@ class TrainerStateTest(unittest.TestCase):
         idx = trainer_state.load_trainer_index()
         self.assertEqual(idx.trainer_problems(88), [])
 
+    def test_update_files_follow_dbupdater_order(self):
+        # Review design question 4 / N8 (UpdateFetcher.cpp): pass 1 = the released db_world files by bare name
+        # (subdirectories too) with the frozen slot spliced in; pass 2 = pending, custom and module files together by
+        # bare name, so a module file named 2016_... runs before a pending rev_..., one named zz_... after it.
+        (self._promoted / "sub").mkdir()
+        for path in (self._promoted / "2026_08_21_01.sql", self._promoted / "sub" / "2026_08_23_00.sql",
+                     self._promoted / "2026_08_22_00.sql", self._pending / "rev_2.sql",
+                     self._pending / "2026_11_01_00.sql"):
+            path.write_text("-- x\n")
+        (self._pending / "deeper").mkdir()
+        (self._pending / "deeper" / "rev_1.sql").write_text("-- x\n")
+        for module, name in (("mod-b", "2016_11_17_transmog_npc.sql"), ("mod-a", "zz_last.sql")):
+            sql_dir = self._modules / module / "data" / "sql" / "db-world" / "base"
+            sql_dir.mkdir(parents=True)
+            (sql_dir / name).write_text("-- x\n")
+        (self._modules / "mod-a" / "data" / "sql" / "db-characters").mkdir(parents=True)
+        (self._modules / "mod-a" / "data" / "sql" / "db-characters" / "chars.sql").write_text("-- x\n")
+        self._frozen_phase_00({"phase_00-x.sql": "-- x\n"})
+        self.assertEqual([p.name for p in trainer_state.update_files()], [
+            "2026_08_21_01.sql", "phase_00-x.sql", "2026_08_22_00.sql", "2026_08_23_00.sql",
+            "2016_11_17_transmog_npc.sql", "2026_11_01_00.sql", "rev_1.sql", "rev_2.sql", "zz_last.sql",
+        ])
+        self.assertEqual([p.name for p in trainer_state.second_pass_files()][:2],
+                         ["2016_11_17_transmog_npc.sql", "2026_11_01_00.sql"])
+        (self._modules / "mod-b" / "data" / "sql" / "db-world" / "rev_2.sql").write_text("-- x\n")
+        with self.assertRaises(trainer_state.DuplicateUpdateName):  # DBUpdater refuses two files of one name
+            trainer_state.update_files()
+
     def test_existing_trainer_spells_indexed_by_composite_key(self):
         self._write(self._promoted, "ts.sql", "trainer_spell",
                     ("TrainerId", "SpellId", "ReqLevel"), [(13, 48266, 55)])

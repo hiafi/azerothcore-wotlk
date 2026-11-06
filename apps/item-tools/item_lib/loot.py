@@ -7,32 +7,31 @@ joined against `item_template`'s already-overlay-aware rows from
 `lib.overlay.get_rows()` so an edit made through this tool shows up here
 immediately.
 
-Base-dump only for the five tables above (no pending-SQL overlay replay
-the way `lib/overlay.py` does for `item_template`) - this repo's history
-hasn't added custom loot yet, and these tables are large enough
-(`creature.sql` alone is ~150k rows) that extending the replay machinery
-to them is deferred until it's actually needed; see the README's "Known
-limitations". `item_template` itself is always current, since it's read
-through `lib.overlay.get_rows()`, not read again here.
+All six tables are replayed the same way `item_template` is (`lib/replay.py`:
+base dump plus every migration, the frozen phase 0 and module SQL, in apply
+order, with dbc-tools' parser), so a pending loot or spawn change shows up
+here too. `creature`'s template column is `id` since 2026_06_16_00 renamed
+`id1` (and dropped `id2`/`id3`); the base dump's names are read as a fallback.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
+import sys
 
-from . import budget, shapes as shape_lib
+from . import budget, replay, shapes as shape_lib
 from .budget_overlay import get_all as get_budget_tables
 from .item_enums import ITEM_MOD_NAMES
-from .overlay import REPO_ROOT, get_rows
-from .sql_dump import parse_create_table_columns, read_table_dump, read_table_rows
+from .overlay import get_rows
 
-BASE_DIR = REPO_ROOT / "data/sql/base/db_world"
-INSTANCE_TEMPLATE = BASE_DIR / "instance_template.sql"
-CREATURE = BASE_DIR / "creature.sql"
-CREATURE_TEMPLATE = BASE_DIR / "creature_template.sql"
-CREATURE_LOOT_TEMPLATE = BASE_DIR / "creature_loot_template.sql"
-REFERENCE_LOOT_TEMPLATE = BASE_DIR / "reference_loot_template.sql"
-INSTANCE_ENCOUNTERS = BASE_DIR / "instance_encounters.sql"
+# The tables this module reads, each with the key it is replayed on (None: the table's primary key).
+TABLES: dict[str, tuple[str, ...] | None] = {
+    "instance_template": ("map",),
+    "instance_encounters": None,
+    "creature_template": ("entry",),
+    "creature": None,
+    "creature_loot_template": None,
+    "reference_loot_template": None,
+}
 
 # SharedDefines.h ITEM_QUALITY_* (0-7, standard client values, unmodified by
 # this fork). Also the .item-quality-N CSS classes in style.css.
@@ -76,80 +75,93 @@ def _pretty_instance_name(script: str, map_id: int) -> str:
     return " ".join(w.capitalize() for w in words)
 
 
-_cache: dict[str, tuple] = {}
+_cache: dict[str, object] = {"key": None}
 
 
-def _cached(key: str, path: Path, builder):
-    mtime = path.stat().st_mtime_ns
-    hit = _cache.get(key)
-    if hit is not None and hit[0] == mtime:
-        return hit[1]
-    value = builder()
-    _cache[key] = (mtime, value)
-    return value
+def _files_key() -> tuple:
+    """Every SQL file's mtime (base dumps included): any change rebuilds the replayed tables."""
+    paths = [replay.base_file(t) for t in TABLES] + replay.sql_files()
+    return tuple((str(p), p.stat().st_mtime_ns) for p in paths if p is not None)
+
+
+def _tables() -> dict[str, list[dict]]:
+    """`{table: [row, ...]}` for `TABLES`, replayed once (in one `replay.session`) and kept until a file changes.
+    Statements the replay skipped are printed to stderr."""
+    key = _files_key()
+    if _cache["key"] != key:
+        with replay.session(cache=True) as since:
+            tables = {table: list(replay.load_table(table, key_columns).values())
+                      for table, key_columns in TABLES.items()}
+            replay.warn_skips(set(TABLES), since=since, file=sys.stderr)
+        _cache.clear()
+        _cache.update(tables)
+        _cache["key"] = key
+        _cache["derived"] = {}
+    return _cache
+
+
+def _cached(key: str, builder):
+    """`builder(tables)`, computed once per replay of the tables."""
+    tables = _tables()
+    derived = tables["derived"]
+    if key not in derived:
+        derived[key] = builder(tables)
+    return derived[key]
 
 
 def dungeon_maps() -> dict[int, str]:
     """{map id: display name} for every row in instance_template - i.e.
     every actual dungeon/raid/instanced map, in this build's DB."""
-    def build():
-        cols = parse_create_table_columns(INSTANCE_TEMPLATE, "instance_template")
-        rows = read_table_dump(INSTANCE_TEMPLATE, "instance_template", cols, "map")
+    def build(tables):
         return {
             row["map"]: _pretty_instance_name(row["script"], row["map"])
-            for row in rows.values()
+            for row in tables["instance_template"]
         }
-    return _cached("dungeon_maps", INSTANCE_TEMPLATE, build)
+    return _cached("dungeon_maps", build)
 
 
 def _creature_templates() -> dict[int, dict]:
-    def build():
-        cols = parse_create_table_columns(CREATURE_TEMPLATE, "creature_template")
-        return read_table_dump(CREATURE_TEMPLATE, "creature_template", cols, "entry")
-    return _cached("creature_templates", CREATURE_TEMPLATE, build)
+    def build(tables):
+        return {row["entry"]: row for row in tables["creature_template"]}
+    return _cached("creature_templates", build)
 
 
 def _map_to_entries() -> dict[int, set[int]]:
-    """{map id: {creature_template entries spawned there}} - id1/id2/id3
-    are all folded in (a spawn row can randomly pick among up to 3
-    templates; see creature.sql's own column comments)."""
-    def build():
-        cols = parse_create_table_columns(CREATURE, "creature")
-        rows = read_table_rows(CREATURE, "creature", tuple(cols))
+    """{map id: {creature_template entries spawned there}} - `id` (the
+    base dump's `id1`/`id2`/`id3`, which a spawn row could randomly pick
+    among, are folded in too if a row still has them)."""
+    def build(tables):
         index: dict[int, set[int]] = {}
-        for row in rows:
+        for row in tables["creature"]:
             bucket = index.setdefault(row["map"], set())
-            for id_col in ("id1", "id2", "id3"):
+            for id_col in ("id", "id1", "id2", "id3"):
                 entry = row.get(id_col)
                 if entry:
                     bucket.add(entry)
         return index
-    return _cached("map_to_entries", CREATURE, build)
+    return _cached("map_to_entries", build)
 
 
-def _loot_table(path: Path, cache_key: str) -> dict[int, list[dict]]:
-    def build():
-        cols = parse_create_table_columns(path, cache_key)
-        rows = read_table_rows(path, cache_key, tuple(cols))
+def _loot_table(table: str) -> dict[int, list[dict]]:
+    def build(tables):
         index: dict[int, list[dict]] = {}
-        for row in rows:
+        for row in tables[table]:
             index.setdefault(row["Entry"], []).append(row)
         return index
-    return _cached(cache_key, path, build)
+    return _cached(table, build)
 
 
 def _creature_loot() -> dict[int, list[dict]]:
-    return _loot_table(CREATURE_LOOT_TEMPLATE, "creature_loot_template")
+    return _loot_table("creature_loot_template")
 
 
 def _reference_loot() -> dict[int, list[dict]]:
-    return _loot_table(REFERENCE_LOOT_TEMPLATE, "reference_loot_template")
+    return _loot_table("reference_loot_template")
 
 
 def _boss_creature_entries() -> set[int]:
     """creature_template entries that are a real encounter boss - built
-    from `instance_encounters` (`data/sql/base/db_world/
-    instance_encounters.sql`, achievement/kill-credit tracking data), not
+    from `instance_encounters` (achievement/kill-credit tracking data), not
     `rank`: a dungeon's own boss is rank Elite, identical to its trash, so
     rank can't tell them apart the way it can for a raid's rank-WORLDBOSS
     bosses (still folded in too, via CREATURE_ELITE_WORLDBOSS in
@@ -164,14 +176,12 @@ def _boss_creature_entries() -> set[int]:
     `creature` table spawn (e.g. ICC's Sindragosa) - creatures_on_map()
     itself never sees those rows either way, so they're missing from the
     dungeon browser entirely, not just misclassified."""
-    def build():
-        cols = parse_create_table_columns(INSTANCE_ENCOUNTERS, "instance_encounters")
-        rows = read_table_rows(INSTANCE_ENCOUNTERS, "instance_encounters", tuple(cols))
+    def build(tables):
         return {
-            row["creditEntry"] for row in rows
+            row["creditEntry"] for row in tables["instance_encounters"]
             if row["creditType"] == ENCOUNTER_CREDIT_KILL_CREATURE
         }
-    return _cached("boss_creature_entries", INSTANCE_ENCOUNTERS, build)
+    return _cached("boss_creature_entries", build)
 
 
 def creatures_on_map(map_id: int) -> list[dict]:

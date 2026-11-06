@@ -7,6 +7,27 @@ rebuild, so there's no `generate.py`/MPQ pipeline, just a read of
 base-dump-⊕-migrations (`item_lib/overlay.py`) and a write of one guarded SQL
 statement per save (`item_lib/emit.py`).
 
+## The replay is dbc-tools' parser (item-tools-replay)
+
+Every table item-tools reads is replayed by `item_lib/replay.py` with
+`apps/dbc-tools/lib/sql_dump.py` (no private copy any more): base dump, then
+the files in DBUpdater's order (`trainer_state.update_files`, shared with
+dbc-tools): `db_world/**` by bare file name with the frozen mod-progression
+phase 0 spliced in, then `pending_db_world/**`, `custom/db_world/**` and module
+SQL together by bare file name. Statement by statement with MySQL's semantics.
+Guards are evaluated: an UPDATE whose `AND col = <old>` / float
+`BETWEEN x±0.01` (older files: `ABS(col - x) < 0.01`) guard no longer holds
+changes nothing (the old item-tools reader ignored guards). An `INSERT ... ON
+DUPLICATE KEY UPDATE` on an existing row changes only the clause's columns
+(the old overlay's merge, now done by the shared parser). Skips go to dbc-tools' skip
+log and are printed to stderr on each fresh load. `replay_check.py` compares
+every table it reads with the live DB (allow list
+`apps/item-tools/replay/ALLOWED_TABLE_DIFFS`; a duplicate replayed key also
+fails it). The promoted-history replay is
+cached in `var/item-tools-cache/`; a cold load of the dungeon browser's tables
+takes ~2.5 minutes (~20 s warm). Report: `.agents/plans/dbc-replay-fix/item-tools-replay.REPORT.md`
+(local).
+
 ## Load-bearing gotcha: `item_template` can't be DELETE+INSERTed
 
 `item_template` (along with `creature_template`, `gameobject_template`,
@@ -49,8 +70,7 @@ flatten back out just to get merged). Purely organizational either way: both
 the real `DBUpdater` (`UpdateFetcher::Update` in
 `src/server/database/Updater/UpdateFetcher.cpp`, itself walking
 subdirectories up to depth 10 via `FillFileListRecursively()`) and this
-app's own base-⊕-overlay readers (`item_lib/overlay.py`'s and
-`item_lib/budget_overlay.py`'s `_contributing_files()`) key applied/replayed
+app's own base-⊕-overlay readers (`item_lib/replay.py`'s `sql_files()`) key applied/replayed
 migrations off bare filename, not directory path — confirmed live, moving
 Buckets 1-2's ~20 files into that subdirectory (and, later, renaming the
 subdirectory itself, and moving its merged files a second time into
@@ -77,10 +97,11 @@ Hand-authors the percentage-allocation itemization system's
 §9.1/§9.8), and regenerates an item's real `item_template` stats from them.
 Two new modules carry this, both still no-live-DB:
 
-- `item_lib/budget_overlay.py` - a generic DELETE+INSERT replay reader (this
-  table family's actual convention, unlike `item_template`'s guarded UPDATE
-  - see `item_lib/overlay.py`'s module docstring and this file's "Load-bearing
-  gotcha" above) for every budget-system table, reference tables included.
+- `item_lib/budget_overlay.py` - the reader for every budget-system table,
+  reference tables included (this table family uses DELETE+INSERT, unlike
+  `item_template`'s guarded UPDATE - see this file's "Load-bearing gotcha"
+  above); rows come from `item_lib/replay.py`, columns and defaults from its
+  own CREATE/RENAME/ALTER schema evolution.
 - `item_lib/budget.py` - a Python port of `ItemBudget.cpp`'s `ResolveBudget()`.
   A **separate implementation of the same formula**, not a call into the
   C++ - if that formula ever changes (the deferred custom-stat-ID fix
@@ -95,9 +116,10 @@ Two new modules carry this, both still no-live-DB:
 `creature_template` + `creature_loot_template`/`reference_loot_template`
 against `item_template` to show what drops where, with a link into each
 item's edit form. Those tables (plus `instance_encounters`, used for boss
-detection - see the next paragraph) are read from their **base dumps
-only** (no pending-SQL replay) - see the README's "Known limitations"
-before assuming a change to creature loot shows up there immediately.
+detection - see the next paragraph) are replayed like `item_template`
+(base dump plus every migration, pending and module file), so a pending
+loot or spawn change shows up. `creature`'s template column is `id` (the
+base dump's `id1`, renamed by 2026_06_16_00).
 
 **Boss vs "Trash Drops" isn't `rank`.** A dungeon's own boss is `rank ==
 CREATURE_ELITE_ELITE`, identical to its trash - only a raid's bosses are

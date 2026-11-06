@@ -77,6 +77,21 @@ the gitignored `var/dbc-tools-cache/` and reused while the files, the loader cod
 (see `.agents/docs/systems/dbc-tools.md`, "generate.py speed"). A run after a change that touches the cache's inputs
 is slower once. Timings and the harness that proves the output unchanged: `apps/dbc-tools/bench/equivalence.py`.
 
+The replay reads session variables and expressions over them (`SET @PATH := @CGUID * 10;`, `(@GUID+15)`, `-@GUID`
+in VALUES and WHERE), double-quoted strings, `INSERT IGNORE`, `TRUNCATE`, `ALTER TABLE` column renames and WHEREs on
+any column (`.agents/docs/systems/dbc-tools.md`, "What the SQL replay reads"). A statement it still cannot apply is
+skipped and listed: the run ends with `WARNING: replay: N SQL statement(s) could not be replayed ...` and one line
+per table. To see each one, or to check a table's replay against the live DB row by row:
+
+```
+apps/dbc-tools/.venv/bin/python3 apps/dbc-tools/replay_diff.py --whole --tables smart_scripts \
+    --mysql "docker exec -i <ac-database container> mysql -uroot -p<password>" [--json out.json]
+```
+
+Explained differences (rows SQL outside the update files wrote) are in `replay/ALLOWED_TABLE_DIFFS`. Live-only
+`spell_dbc` / `talent_dbc` / `talenttab_dbc` state from deleted pending migrations is recorded in
+`source/live_orphan_rows.sql`, which only the check reads (see its header).
+
 Reads `source/ids.yaml` plus every file under `source/spells/*.csv` and
 `source/talents/*.yaml` (merged together — see "Source files" below for why
 they're split), and produces:
@@ -100,7 +115,11 @@ Running it twice with unchanged source produces byte-identical output
 generator rather than a one-off script.
 
 Generated pending files accumulate — don't delete an earlier `rev_*.sql`
-after a run. The DBC tables are re-emitted in full each time, but
+after a run. A reserved block whose content already sits in a pending file
+is not written again, and the run names those files (`note:   Spell: not
+re-emitted because its content is in pending file(s) ...; they must ship`):
+they are the only place that content lives until db-import runs. The DBC
+tables are otherwise re-emitted in full each time, but
 `trainer_spell`/`spell_script_names`/`spell_bonus_data`/`spell_proc` are
 emitted as a *delta* against everything already in `pending_db_world/`, so
 an older file's rows are skipped as "already live" and exist nowhere else.
@@ -364,7 +383,8 @@ replayed at the position they ran: `SLOT` puts them after `db_world/2026_08_21_0
 `2026_08_22_00.sql` (`lib/frozen_replay.py`; every table replay and the DBC-table state use it). A removal of a
 row phase 0 inserted is a plain removal: core SQL after the slot wins. Never edit these files; a change to that
 data is a new migration. The replay reads them normalised (`frozen_replay.normalise`: comments in `IN (...)` lists,
-multi-variable `SET`, column-name case), since its parsers skip those shapes.
+multi-variable `SET`, column-name case); the shared parser reads those shapes itself since dbc-replay-fix, so the
+normalisation is kept only so the frozen files replay exactly as they were checked.
 
 `replay_diff.py` checks the slot against the live DB (read-only SELECTs): for every table phase 0 writes, the cells
 it wrote, replayed over the files the live `updates` table lists, must equal the live values, except the entries in
@@ -573,8 +593,8 @@ for entry, row in live_item_templates().items():
 ```
 
 Live state for `item_template()` comes from apps/item-tools' overlay (`item_lib.overlay`: base dump plus every
-merged and pending migration, recursing into `itemization_templates_v2/`), not from `trainer_state`'s replay,
-which only sees top-level `*.sql`.
+merged, pending and module file in DBUpdater's order, `trainer_state.update_files()`, which recurses into
+`itemization_templates_v2/` like every loader does now).
 
 **`item_template` class/subclass must agree with `Item.dbc`.** The server resets them from the DBC at boot
 (`DBC.EnforceItemAttributes`, default 1) and the client reads them from its own `Item.dbc`, so an edit that

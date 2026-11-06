@@ -31,26 +31,65 @@ in this repo's `pending_db_world` history before this tool existed.
 ## How "current state" is computed
 
 No live database connection, no auth, no build step - same LAN-tool shape
-as dbc-tools/webui. `item_lib/overlay.py` reads:
+as dbc-tools/webui. Every table item-tools reads (`item_template`, the
+itemization tables, and the dungeon browser's `creature`/`creature_template`/
+loot/instance tables) is replayed by `item_lib/replay.py` from:
 
-1. `data/sql/base/db_world/item_template.sql` - the full stock dump;
-2. every `data/sql/updates/db_world/*.sql` that touches `item_template`
-   (already-merged migrations);
-3. every `data/sql/updates/pending_db_world/*.sql` that touches
-   `item_template` (not yet merged);
+1. `data/sql/base/db_world/<table>.sql` - the stock dump (none for the
+   itemization tables, which migrations create);
+2. every `data/sql/updates/db_world/**.sql` that names the table, including
+   subdirectories such as `itemization_templates_v2/`, sorted by bare file
+   name the way DBUpdater keys them, with mod-progression's frozen phase 0
+   (`apps/dbc-tools/replay/frozen/`) spliced in where it ran;
+3. every `data/sql/updates/pending_db_world/**.sql`, `data/sql/custom/db_world/**.sql`
+   and module SQL file (`modules/*/data/sql/db-world/**`) that names it,
+   all together by bare file name: DBUpdater's second pass, so a module file
+   named `2016_...` runs before a pending `rev_...`.
 
-and replays the `UPDATE`/`INSERT` statements it finds, in filename order,
-on top of the base rows. This is enough to answer "what does the client
-actually see for this item right now" without a running worldserver or
-MySQL - the same base-⊕-overlay idea `apps/dbc-tools/lib/resolve.py` uses,
-just without a DBC layer. It only needs to know *which rows changed*, not
-evaluate real SQL - a WHERE clause's job here is "which entry/entries does
-this touch", not "does the guard still hold" (see the module docstring for
-why `AND col = <old value>` guards are parsed and ignored rather than
-evaluated), and only two shapes are understood: `` `entry` = N `` and
-`` `entry` IN (...) ``. Anything else is skipped with a `WARNING:` on
-stderr rather than guessed at - if you see one, check that migration by
-hand.
+The list is dbc-tools' `trainer_state.update_files()`, shared by both tools.
+
+The parser is dbc-tools' (`apps/dbc-tools/lib/sql_dump.py`), shared rather
+than copied (item-tools had its own narrower copy until item-tools-replay).
+It applies statements in order with MySQL's semantics: an `UPDATE`'s guard
+(`AND col = <old value>`, or a float column's `BETWEEN x-0.01 AND x+0.01` / older `ABS(col - x) < 0.01`) is
+evaluated, so an UPDATE whose guard no longer holds changes nothing; `DELETE`
+and `INSERT` interleave as written; an `INSERT ... ON DUPLICATE KEY UPDATE` on
+an existing row changes only the clause's columns; session variables, expressions,
+`INSERT IGNORE`, `TRUNCATE`, `ALTER TABLE` and `RENAME TABLE`
+(`item_budget_assign` -> `item_itemization`) are read. What it reads and what
+it still cannot: `.agents/docs/systems/dbc-tools.md`, "What the SQL replay
+reads, the skip log, and the whole-table check".
+
+**No skip is silent.** A statement the replay cannot apply is skipped, never
+guessed at, and recorded in dbc-tools' skip log; each fresh load prints
+`WARNING: replay: N SQL statement(s) could not be replayed ...` and one line
+per table to stderr. Treat one on a table you are editing as a bug.
+
+**Speed.** The replay of the immutable files (base dump, promoted, frozen) is
+cached on disk per table under `var/item-tools-cache/` (dbc-tools' snapshot
+cache, keyed by file content hashes and the parser's code), so only pending
+and module SQL is replayed after the first load. Measured cold (first load,
+or first after a parser change) / warm: `item_template` ~18 s / ~3 s, the
+itemization tables ~11 s / ~6 s, the dungeon browser's tables ~2.5 min /
+~20 s (`creature` alone is ~150k rows over ~700 files). Inside a dbc-tools
+`generate.py` run the overlay uses generate's own corpus and cache.
+
+**Checking it against live.** `replay_check.py` replays every table item-tools
+reads over the files the live `updates` table lists and compares every row
+and cell with the live world DB (read-only `SELECT`s; dbc-tools'
+whole-table comparison). Explained differences live in
+`replay/ALLOWED_TABLE_DIFFS` with a reason each; it exits 1 on anything else,
+on a duplicate replayed key or on a stale entry:
+
+```
+apps/dbc-tools/.venv/bin/python3 apps/item-tools/replay_check.py \
+    --mysql "docker exec -i <ac-database container> sh -c 'exec mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\" \"\$@\"' sh"
+```
+
+Add `--modules <main checkout>/modules` when running from a worktree that
+lacks the live server's modules, and `--also rev_x.sql` to replay a pending
+file not imported yet (e.g. one written to capture live state). Tests:
+`apps/dbc-tools/.venv/bin/python3 -m unittest discover -s apps/item-tools/tests`.
 
 ## Setup
 
@@ -128,12 +167,12 @@ dbc-tools/webui.
   `item_lib/loot.py` resolves `creature` (spawns)
   &rarr; `creature_template` (lootid) &rarr; `creature_loot_template` (+ one
   level of `Reference` expansion through `reference_loot_template`)
-  &rarr; `item_template`, joining that last step against the *same*
-  overlay-aware rows `/items` uses - editing an item's stats and coming
-  back to its dungeon page shows the edit immediately. The first request
-  after starting the app parses all of `creature.sql` (~150k rows) plus
-  both loot tables and is slow (several seconds); everything after that is
-  served from an in-memory cache.
+  &rarr; `item_template`, all replayed like `item_template` (base dump plus
+  every migration, pending and module file), so a pending loot or spawn
+  change shows up too. The first load replays ~150k spawns and both loot
+  tables and is slow (see "Speed" above; seconds once the disk cache is
+  warm); everything after that is served from an in-memory cache until a
+  SQL file changes.
 - **Browse** (`/items`) - search by entry ID or a name substring. The
   `subclass` column reads as "Type" and only shows a name (weapon type for
   class Weapon, armor type for class Armor) for those two classes - a
@@ -171,23 +210,15 @@ dbc-tools/webui.
   for the columns it doesn't model specially.
 - `item_template_locale` (localized name/description) isn't read or
   written - only the base `item_template` row.
-- The base-file WHERE-clause replay in `item_lib/overlay.py` understands
-  `` `entry` = N `` and `` `entry` IN (...) ``  only; anything more exotic
-  (a join, a subquery, `BETWEEN`) in a hand-written migration is skipped
-  with a warning rather than applied. None of this tool's own output ever
-  writes those shapes, so this only matters for interpreting old
-  hand-written migrations.
+- The replay (`item_lib/replay.py`) cannot read subqueries, function calls
+  other than the `ABS()` float guard, `INSERT ... SELECT` or an `UPDATE`
+  with a join; such a statement is skipped with a warning (see "No skip is
+  silent" above). None of this tool's own output writes those shapes.
+- Rows that exist only live (written by a pending file that was deleted
+  before commit, or by hand) cannot be replayed; `replay_check.py` lists
+  them in `replay/ALLOWED_TABLE_DIFFS`.
 - No concurrent-edit locking (single-user tool, same as dbc-tools/webui) -
   git is the safety net if two edits collide.
-- The dungeon/raid browser (`item_lib/loot.py`) reads `creature`,
-  `creature_template`, `creature_loot_template`, `reference_loot_template`,
-  and `instance_encounters` from their **base dumps only** - unlike
-  `item_template`, it doesn't replay `pending_db_world`/`updates/db_world`
-  changes to those five tables. Not an issue yet (no custom loot exists in
-  this repo's history), but a pending change to one of them won't show up
-  in the dungeon view until it's merged. `item_template` itself is always
-  current either way, since the dungeon view joins against
-  `item_lib.overlay.get_rows()`, not a fresh base-only read.
 - Boss detection (`item_lib/loot._boss_creature_entries`) only knows what
   `instance_encounters` (achievement/kill-credit data) and
   `CREATURE_ELITE_WORLDBOSS` rank actually cover. A boss with no

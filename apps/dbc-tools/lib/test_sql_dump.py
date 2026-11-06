@@ -18,7 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from lib import sql_dump  # noqa: E402
+from lib import sql_dump, sqlcorpus  # noqa: E402
 from lib.dbcfmt import DbcTable  # noqa: E402
 
 TABLE = DbcTable(
@@ -166,11 +166,22 @@ class ApplyStatementsTest(unittest.TestCase):
         sql_dump.apply_statements(rows, TABLE, sql)  # must not raise
         self.assertEqual(rows[1], {"ID": 1, "Value": 10})
 
-    def test_or_where_clause_is_skipped_not_raised(self):
-        rows = {1: {"ID": 1, "Value": 10}}
+    def test_or_where_clause_is_applied(self):
+        # dbc-replay-fix: any WHERE in parse_where_predicate's grammar is applied (it used to be skipped silently).
+        rows = {1: {"ID": 1, "Value": 10}, 3: {"ID": 3, "Value": 10}}
         sql = "UPDATE `widget_dbc` SET `Value` = 99 WHERE `ID` = 1 OR `ID` = 2;"
-        sql_dump.apply_statements(rows, TABLE, sql)  # must not raise
+        sql_dump.apply_statements(rows, TABLE, sql)
+        self.assertEqual(rows, {1: {"ID": 1, "Value": 99}, 3: {"ID": 3, "Value": 10}})
+
+    def test_unsupported_where_is_skipped_and_recorded(self):
+        rows = {1: {"ID": 1, "Value": 10}}
+        sqlcorpus.SKIPS.clear()
+        sql = "UPDATE `widget_dbc` SET `Value` = 99 WHERE `ID` = (SELECT 1);"
+        sql_dump.apply_statements(rows, TABLE, sql, source="x.sql")
         self.assertEqual(rows[1], {"ID": 1, "Value": 10})
+        [skip] = sqlcorpus.SKIPS.entries
+        self.assertEqual((skip.table, skip.source, skip.offset), ("widget_dbc", "x.sql", 0))
+        self.assertIn("UPDATE", skip.reason)
 
 
 class ReadTableRowsTest(unittest.TestCase):
@@ -541,14 +552,20 @@ class ApplyCompositeKeyStatementsTest(unittest.TestCase):
         )
         self.assertEqual(set(rows), {(300103, 0)})
 
-    def test_update_naming_no_key_column_is_skipped_not_guessed(self):
+    def test_update_naming_no_key_column_matches_on_the_values_rows_hold(self):
+        # dbc-replay-fix: a WHERE on non-key columns is applied the way MySQL would (core-dd's id-only spawn
+        # UPDATEs), but strictly: a row that does not hold the column (and no schema default) does not match.
         rows = self._replay(
             "INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, "
-            "`DisplayScale`, `Probability`, `VerifiedBuild`) VALUES (300102, 0, 15788, 1, 1, 0);\n"
+            "`DisplayScale`, `Probability`, `VerifiedBuild`) VALUES (300102, 0, 15788, 1, 1, 0), "
+            "(300102, 1, 15788, 1, 0, 0);\n"
+            "INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `DisplayScale`) VALUES (300103, 0, 1);\n"
             "UPDATE `creature_template_model` SET `DisplayScale` = 0.5 "
             "WHERE `Probability` = 1 AND `VerifiedBuild` = 0;\n"
         )
-        self.assertEqual(rows[(300102, 0)]["DisplayScale"], 1)  # unchanged - can't be sure which row(s)
+        self.assertEqual(rows[(300102, 0)]["DisplayScale"], 0.5)
+        self.assertEqual(rows[(300102, 1)]["DisplayScale"], 1)
+        self.assertEqual(rows[(300103, 0)]["DisplayScale"], 1)  # holds neither column: cannot be judged
 
 
 if __name__ == "__main__":

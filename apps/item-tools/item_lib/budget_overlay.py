@@ -1,43 +1,30 @@
 """
-Generic base-⊕-overlay reader for the shape-based itemization system's
-reference and content tables (`item_budget_curve`, `item_itemization`,
-`item_shape`, etc. - see `docs/itemization-phase-2.md` §3) - the same
-"what does this look like right now" idea as `lib/overlay.py`, but for a
-different SQL idiom.
+Base-⊕-overlay reader for the shape-based itemization system's reference and
+content tables (`item_budget_curve`, `item_itemization`, `item_shape`, etc. -
+see `docs/itemization-phase-2.md` §3) - the same "what does this look like
+right now" question as `lib/overlay.py`, answered the same way: the rows come
+from `lib/replay.py` (dbc-tools' SQL parser over every migration, in apply
+order, with MySQL's statement-by-statement semantics).
 
-Unlike `item_template` (on `codestyle-sql.py`'s `not_delete` list, so every
-real edit there is a guarded `UPDATE` or an upsert `INSERT` - see
-`lib/overlay.py`), none of these tables are protected, and every migration
-that's touched them so far (this fork's own budget-system work) uses the
-repo's other standard convention instead (`.agents/docs/sql-guidelines.md`:
-"every INSERT preceded by a matching DELETE"): `DELETE FROM `table` WHERE
-<key match>; INSERT INTO `table` (...) VALUES (...), (...), ...;`. None of
-these tables has a stock dump either - they're entirely this fork's own
-custom tables, created and populated purely through
-`data/sql/updates/{db_world,pending_db_world}/*.sql`, so there's no base file
-to start from, just an empty table replayed forward.
+None of these tables has a stock dump - they're this fork's own tables,
+created and populated purely through `data/sql/updates/{db_world,
+pending_db_world}/**.sql` (DELETE + INSERT, `.agents/docs/sql-guidelines.md`),
+so the replay starts from an empty table. Their column lists and defaults come
+from `_evolve_schemas()` below, which replays `CREATE TABLE`, `RENAME TABLE`
+and `ALTER TABLE ... ADD/DROP COLUMN` across the migrations (`item_itemization`
+began as `item_budget_assign`); the replay itself carries `item_budget_assign`'s
+rows over at the `RENAME TABLE`.
 
-Recognizes exactly the three WHERE shapes this repo's own budget-system
-migrations use: `` `col` = N ``, `` `col` IN (...) ``, `` `col` BETWEEN A AND
-B `` - single column only, even for a composite-key table like
-`item_armor_curve` (a `DELETE ... WHERE `ilvl` BETWEEN ...` there removes
-every `armor_class` row for those item levels, immediately before the
-following INSERT repopulates all of them - safe because within one file a
-DELETE is always followed by the INSERT that fully replaces what it just
-removed, so processing every DELETE in a file and then every INSERT in that
-same file, rather than interleaving them in document order, produces the
-same result). Anything else prints a WARNING to stderr and is skipped, same
-posture as `lib/overlay.py`.
+A statement the replay cannot read is skipped and recorded in dbc-tools' skip
+log, never guessed at; `get_all()` prints them to stderr (`replay.warn_skips`).
 """
 
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 
-from .overlay import _split_top_level_commas
-from .sql_dump import _INSERT_HEAD_RE, _read_tuples
+from . import replay
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 MERGED_DIR = REPO_ROOT / "data/sql/updates/db_world"
@@ -83,25 +70,20 @@ def _parse_default(text: str):
     except ValueError:
         return raw  # a real string default (none of this system's tables have one today)
 
-_EQ_RE = re.compile(r"`(?P<col>\w+)`\s*=\s*(?P<val>-?\d+)")
-_IN_RE = re.compile(r"`(?P<col>\w+)`\s*IN\s*\(\s*(?P<vals>[^)]+)\)")
-_BETWEEN_RE = re.compile(r"`(?P<col>\w+)`\s*BETWEEN\s*(?P<lo>-?\d+)\s*AND\s*(?P<hi>-?\d+)")
 
 
 def _contributing_files() -> list[Path]:
-    # Recursive glob + sort-by-bare-filename (not full path): pending
-    # migrations may live in a topic subdirectory (e.g. `itemization_templates_v2/`,
-    # keeping this fork's own budget-system work visually grouped) rather
-    # than flat in PENDING_DIR, and filename order is what actually matters
-    # here - it's what the real AzerothCore DBUpdater keys off of too
-    # (`UpdateFetcher::Update`'s `applied.find(filePath.filename()...)`),
-    # not directory placement.
-    files = []
-    if MERGED_DIR.is_dir():
-        files.extend(MERGED_DIR.glob("**/*.sql"))
-    if PENDING_DIR.is_dir():
-        files.extend(PENDING_DIR.glob("**/*.sql"))
-    return sorted(files, key=lambda p: p.name)
+    """Every migration and module SQL file, in apply order (`replay.sql_files()`: subdirectories such as
+    `itemization_templates_v2/` included, sorted by bare file name the way DBUpdater keys them)."""
+    return replay.sql_files()
+
+
+# A file without any of these has nothing for the schema evolution below (the cheap test before stripping comments).
+# Spelled out in upper, lower and title case rather than IGNORECASE: a case-insensitive search of the ~280 MB of SQL
+# took 13 s, this one well under a second.
+_SCHEMA_STATEMENT_RE = re.compile(
+    r"(?:CREATE|RENAME|ALTER|create|rename|alter|Create|Rename|Alter)\s+(?:TABLE|table|Table)\b"
+)
 
 
 def _strip_line_comments(text: str) -> str:
@@ -111,7 +93,7 @@ def _strip_line_comments(text: str) -> str:
     `(1, 5, 6000), -- Intellect 60%`) - real, valid SQL, but
     `lib.sql_dump._read_tuples` only expects a tuple or a terminating `;`
     between commas, not a comment, so it must be stripped before parsing.
-    Quote-aware for the same reason `lib.overlay._split_top_level_commas` is:
+    Quote-aware:
     a template name could in principle contain `--` inside its string."""
     out = []
     i, n = 0, len(text)
@@ -202,7 +184,9 @@ def _evolve_schemas() -> tuple[dict[str, list[str]], dict[str, dict[str, object]
     schemas: dict[str, list[str]] = {}
     defaults: dict[str, dict[str, object]] = {}
     for path in _contributing_files():
-        raw_text = path.read_text(encoding="utf-8")
+        raw_text = replay.sqlcorpus.read_text(path)
+        if not _SCHEMA_STATEMENT_RE.search(raw_text):
+            continue
         text = _strip_line_comments(raw_text)
 
         for m in _CREATE_TABLE_RE.finditer(text):
@@ -222,7 +206,7 @@ def _evolve_schemas() -> tuple[dict[str, list[str]], dict[str, dict[str, object]
                 continue
             columns = schemas[table]
             table_defaults = defaults[table]
-            for clause in _split_top_level_commas(m.group("clauses")):
+            for clause in replay.sql_dump._split_top_level_commas(m.group("clauses")):
                 clause = clause.strip()
                 add_m = _ADD_COLUMN_RE.match(clause)
                 if add_m:
@@ -268,92 +252,12 @@ def table_defaults(table: str) -> dict[str, object]:
     return defaults.get(table, {})
 
 
-def _matched_keys(where_text: str, key_columns: tuple[str, ...]):
-    """(column, set-of-matched-values) for a recognized single-column WHERE
-    shape, or None if this WHERE clause doesn't match one of the three known
-    shapes (or matches on a column that isn't one of `key_columns`)."""
-    m = _IN_RE.search(where_text)
-    if m and m.group("col") in key_columns:
-        return m.group("col"), {int(v) for v in m.group("vals").split(",")}
-    m = _BETWEEN_RE.search(where_text)
-    if m and m.group("col") in key_columns:
-        lo, hi = int(m.group("lo")), int(m.group("hi"))
-        return m.group("col"), set(range(lo, hi + 1))
-    m = _EQ_RE.search(where_text)
-    if m and m.group("col") in key_columns:
-        return m.group("col"), {int(m.group("val"))}
-    return None
-
-
 def resolve_table_rows(table: str, key_columns: tuple[str, ...]) -> dict[tuple, dict]:
-    """Every merged then pending migration touching `table`, filename order,
-    DELETE-then-INSERT replayed as a full key-range replace. Returns rows
-    keyed by a tuple of `key_columns`' values (in the order given), e.g.
-    `(66, 1)` for `item_armor_curve`'s `(ilvl, armor_class)`."""
-    columns = table_columns(table)
-    defaults = table_defaults(table)
-    rows: dict[tuple, dict] = {}
-    delete_re = re.compile(
-        rf"DELETE\s+FROM\s+`{re.escape(table)}`\s+WHERE\s+(?P<where>.+?);",
-        re.IGNORECASE | re.DOTALL,
-    )
-
-    for path in _contributing_files():
-        raw_text = path.read_text(encoding="utf-8")
-        if table not in raw_text:
-            continue
-        text = _strip_line_comments(raw_text)
-
-        for m in delete_re.finditer(text):
-            matched = _matched_keys(m.group("where"), key_columns)
-            if matched is None:
-                print(f"WARNING: {path}: couldn't recognize DELETE FROM `{table}` WHERE shape, "
-                      f"skipping: WHERE {m.group('where')[:120]}", file=sys.stderr)
-                continue
-            col, values = matched
-            idx = key_columns.index(col)
-            for key in [k for k in rows if k[idx] in values]:
-                del rows[key]
-
-        pos = 0
-        while True:
-            m = _INSERT_HEAD_RE.search(text, pos)
-            if not m:
-                break
-            if m.group("table") != table:
-                pos = m.end()
-                continue
-            # .strip().strip("`"), not .strip(" `") -- an explicit column list wrapped across
-            # multiple lines (this session's own SQL style, once the single-line form would blow
-            # the 120-col limit -- e.g. item_itemization's real INSERT header) leaves a literal
-            # newline at the front of every column after the first on its line, which .strip(" `")
-            # can't remove (it only strips the two literal characters given, not whitespace
-            # generally) -- confirmed necessary, not hypothetical: this produced a stray
-            # "\n  `absorbed_spell_slots`"-shaped key before the fix.
-            explicit_cols = (
-                [c.strip().strip("`") for c in m.group("cols").split(",")] if m.group("cols") else None
-            )
-            cols = explicit_cols or columns
-            tuples, pos = _read_tuples(text, m.end())
-            for values in tuples:
-                if len(values) != len(cols):
-                    print(f"WARNING: {path}: INSERT into `{table}` has {len(values)} values for "
-                          f"{len(cols)} columns, skipping", file=sys.stderr)
-                    continue
-                row = dict(zip(cols, values))
-                if explicit_cols is not None:
-                    # An older INSERT written before a later ALTER TABLE added a column lists a
-                    # shorter explicit column set - real MySQL backfills the missing column(s)
-                    # with their DEFAULT rather than leaving them unset, so this row must too
-                    # (confirmed necessary: item_weapon_dps_curve's is_single_slot, added after
-                    # some already-merged INSERTs that only ever named ilvl/quality/dps).
-                    for col in columns:
-                        if col not in row:
-                            row[col] = defaults.get(col, 0)
-                key = tuple(row[k] for k in key_columns)
-                rows[key] = row
-
-    return rows
+    """Every migration touching `table` (or an earlier name of it), replayed in apply order (`lib/replay.py`).
+    Returns rows keyed by a tuple of `key_columns`' values (in the order given), e.g. `(66, 1)` for
+    `item_armor_curve`'s `(ilvl, armor_class)`; every row holds every current column (an INSERT written before a
+    later `ALTER TABLE ... ADD` gets the column's DEFAULT, as MySQL backfills it)."""
+    return replay.load_table(table, key_columns)
 
 
 _cache: dict[str, dict] = {}
@@ -399,12 +303,15 @@ TABLES: dict[str, tuple[str, ...]] = {
 def get_all(force: bool = False) -> dict[str, dict[tuple, dict]]:
     """Cached `{table: {key: row}}` for every table in `TABLES`, same
     mtime-keyed invalidation as `lib.overlay.get_rows()`. `force=True` after
-    this process itself just wrote a new pending file."""
+    this process itself just wrote a new pending file. Statements the replay
+    skipped are printed to stderr after each fresh load."""
     global _cache_key
     key = _current_cache_key()
     if force or key != _cache_key or not _cache:
         _cache.clear()
-        for table, key_columns in TABLES.items():
-            _cache[table] = resolve_table_rows(table, key_columns)
+        with replay.session(cache=True) as since:
+            for table, key_columns in TABLES.items():
+                _cache[table] = resolve_table_rows(table, key_columns)
+            replay.warn_skips(set(TABLES), since=since)
         _cache_key = _current_cache_key()
     return _cache
