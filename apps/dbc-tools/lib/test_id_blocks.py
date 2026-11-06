@@ -473,6 +473,21 @@ class ReservationTest(unittest.TestCase):
                     self.assertFalse(_overlap(tables[table], {"start": 90500, "end": 90699}), (owner, table))
         self.assertGreater(RESERVATIONS["bossmechanics"]["spell"]["start"], RESERVATIONS["warrior"]["spell"]["end"])
 
+    def test_deadmines_reserves_its_slices(self):
+        # the Deadmines Pilot (deadmines-pilot.HANDOFF.md s3.3): a new top-level gameobject block, and slices that
+        # follow the earlier owners (the mage's spells end at 205199, the warrior's visuals at 90339, the DK's
+        # gameobject displays at 90019); the creature displays skip the markers' old 90500-90699
+        self.assertEqual(BLOCKS["gameobject"], {"start": 301000, "end": 301999})
+        dm = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["deadmines"].items()}
+        self.assertEqual(dm, {
+            "spell": (205200, 205399), "creature": (300420, 300449), "gameobject": (301000, 301099),
+            "spellvisual": (90340, 90369), "gameobjectdisplayinfo": (90020, 90029),
+            "creaturedisplayinfo": (90700, 90719), "creaturemodeldata": (90700, 90719),
+        })
+        self.assertEqual(dm["spell"][0], RESERVATIONS["mage"]["spell"]["end"] + 1)
+        self.assertEqual(dm["creature"][0], RESERVATIONS["bossmechanics"]["creature"]["end"] + 1)
+        self.assertEqual(dm["spellvisual"][0], RESERVATIONS["warrior"]["spellvisual"]["end"] + 1)
+
     def test_death_knights_spell_slice_does_not_overlap_the_healing_sims(self):
         # the T0 collision: DK's first spell block was 202900-203599 and swallowed 202900-202909
         self.assertFalse(_overlap(RESERVATIONS["deathknight"]["spell"], RESERVATIONS["healsim"]["spell"]))
