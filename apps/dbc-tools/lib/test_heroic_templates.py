@@ -9,8 +9,10 @@ full block, byte-for-byte keep); the generated row (copied columns, level, exp, 
 difficulty entries 0, loot and kill credit kept); the lints (engine refusals, exp, boss without an encounter row,
 normal-only SmartAI rows and their widening UPDATE, SpellDifficulty swaps, skipped creatures); expand() wiring
 (heroic_entries -> T2's difficulty_entry_1 edits, a second expand() replaces its rows); render, the real
-codestyle-sql.py and convergence (a second build over the read-back state emits nothing); the real Deadmines
-declaration against the live replay and the committed lock file.
+codestyle-sql.py and convergence (a second build over the read-back state emits nothing); override columns that
+would undo the solve raise; a shipped creature leaving the set (ERROR) or `retired=` (guarded revert, no copies); a
+heroic entry with no model row (ERROR); the real Deadmines declaration against the live replay and the committed lock
+file.
 
 Run directly:
 
@@ -72,6 +74,11 @@ TEMPLATES = {
     5002: _tpl(5002, "Holiday Elder", rank=0),
     5003: _tpl(5003, "Undeclared Pirate"),
 }
+# One model row per creature: a heroic entry without one is an ERROR (Creature::InitEntry refuses it).
+SIDE_ROWS = {"creature_template_model": [
+    {"CreatureID": e, "Idx": 0, "CreatureDisplayID": 1000 + i, "DisplayScale": 1, "Probability": 1,
+     "VerifiedBuild": 12340} for i, e in enumerate(sorted(TEMPLATES))
+]}
 SOURCE = '''
 from lib.dsl.dungeon import creature, dungeon, heroic
 
@@ -117,6 +124,7 @@ def _live(**kw) -> dungeon_heroic.LiveWorld:
                                           165: {"entry": 165, "creditType": 0, "creditEntry": 645}})
     kw.setdefault("class_level_stats", dict(STATS))
     kw.setdefault("spell_difficulty", {})
+    kw.setdefault("side_rows", SIDE_ROWS)
     return dungeon_heroic.LiveWorld(**kw)
 
 
@@ -162,6 +170,8 @@ dungeon(33, "SFK", creatures=X, extra=(creature(3, "C", "trash", summoned_by=("C
             'dungeon(33, "S", creatures=(creature(1, "A", "trash"),), roles={1: "elite"})',
             'dungeon(33, "S", creatures=((1, "A"),))',
             'dungeon(33, "S", skip=("x",))',
+            'dungeon(33, "S", retired=(0,))',
+            'dungeon(33, "S", retired=("3450",))',
         ):
             with self.subTest(body=body), self.assertRaises(ValueError):
                 load_dsl(f"from lib.dsl.dungeon import creature, dungeon\n{body}\n")
@@ -185,6 +195,13 @@ dungeon(33, "SFK", creatures=X, extra=(creature(3, "C", "trash", summoned_by=("C
                    dict(widen_smart_scripts=1), dict(tier="")):
             with self.subTest(kw=kw), self.assertRaises(ValueError):
                 dungeon_dsl.heroic(**base, **kw)
+
+    def test_override_columns_may_not_undo_the_solve(self):
+        base = dict(map_difficulty_id=1000, access_id=122, min_level=60)
+        for column in ("entry", "minlevel", "maxlevel", "exp", "HealthModifier", "DamageModifier", "BaseVariance"):
+            with self.subTest(column=column), self.assertRaisesRegex(ValueError, "set by the tier solve"):
+                dungeon_dsl.heroic(**base, overrides={644: dict(columns={column: 2})})
+        dungeon_dsl.heroic(**base, overrides={644: dict(columns={"ArmorModifier": 2, "BaseAttackTime": 1500})})
 
 
 class EntrySetTest(unittest.TestCase):
@@ -335,7 +352,7 @@ class BuildTest(unittest.TestCase):
     def test_overrides_and_tier_values(self):
         dsl, out = _expand(_source(heroic_args=(
             'tier_values={"elite": (40_000, 600)}, overrides={644: dict(health=320_000, melee=3_000), '
-            '598: dict(tier="rare"), 1729: dict(columns={"speed_run": 1.4, "HealthModifier": 2})}'
+            '598: dict(tier="rare"), 1729: dict(columns={"speed_run": 1.4, "ArmorModifier": 2})}'
         )))
         self.assertEqual(out.errors, [])
         rows, mapping = _rows(dsl), dsl["dungeons"][0]["heroic_entries"]
@@ -344,7 +361,8 @@ class BuildTest(unittest.TestCase):
         self.assertAlmostEqual((rz.solved.min_damage + rz.solved.max_damage) / 2, 3_000 * 3.5 / 2, delta=3)
         self.assertEqual(rows[mapping[598]]["HealthModifier"], HT.health_modifier(3052, 74_000))
         self.assertEqual(rows[mapping[5003]]["HealthModifier"], HT.health_modifier(3052, 40_000))
-        self.assertEqual((rows[mapping[1729]]["speed_run"], rows[mapping[1729]]["HealthModifier"]), (1.4, 2))
+        self.assertEqual((rows[mapping[1729]]["speed_run"], rows[mapping[1729]]["ArmorModifier"]), (1.4, 2))
+        self.assertEqual(rows[mapping[1729]]["HealthModifier"], HT.health_modifier(2136, 40_000))
 
     def test_override_errors(self):
         for args, text in (
@@ -409,6 +427,90 @@ class BuildTest(unittest.TestCase):
         out = dungeon_heroic.expand(dsl, lambda: self.fail("no live load without a heroic"), ids_cfg=IDS_CFG,
                                     lock="")
         self.assertEqual((dsl["creature_templates"], out.errors), ([], []))
+
+
+class RetireTest(unittest.TestCase):
+    """A shipped heroic creature (a lock line) that leaves the entry set: an ERROR unless retired=."""
+
+    LOCK = HT.LOCK_HEADER + "2520 310200 36 Remote-Controlled Golem\n"
+
+    def _retired_source(self, entries="2520"):
+        return _source(skip=True).replace("skip=(2520,) if True else (),", f"retired=({entries},),")
+
+    def test_leaving_the_set_is_an_error_naming_the_reason(self):
+        dsl, out = _expand(_source(skip=True), lock=self.LOCK)
+        errors = [e for e in out.errors if "creature 2520" in e]
+        self.assertEqual(len(errors), 1, out.errors)
+        self.assertIn("shipped heroic entry 310200", errors[0])
+        self.assertIn("left the heroic entry set (skip=)", errors[0])
+        self.assertIn("retired=(2520,)", errors[0])
+        self.assertNotIn(2520, dsl["dungeons"][0]["heroic_entries"])
+        # a role change and a creature gone from the map name their own reasons
+        source = _source().replace('roles={642: "boss", 3586: "boss"}',
+                                   'roles={642: "boss", 3586: "boss", 2520: "npc"}')
+        _, out = _expand(source, lock=self.LOCK)
+        self.assertTrue(any("creature 2520" in e and "set (npc)" in e for e in out.errors), out.errors)
+        _, out = _expand(lock=self.LOCK + "7777 310201 36 Gone\n")
+        self.assertTrue(any("creature 7777" in e and "no longer declared, spawned on the map" in e
+                            for e in out.errors), out.errors)
+        # a lock line of another map (no declared heroic) is not this dungeon's business
+        _, out = _expand(lock=self.LOCK.replace(" 36 ", " 33 "))
+        self.assertFalse(any("creature 2520" in e for e in out.errors), out.errors)
+
+    def test_retired_reverts_the_link_and_stops_the_copies(self):
+        templates = dict(TEMPLATES)
+        templates[2520] = _tpl(2520, "Remote-Controlled Golem", difficulty_entry_1=310200)
+        dsl, out = _expand(self._retired_source(), lock=self.LOCK, live=_live(creature_templates=templates))
+        self.assertEqual(out.errors, [])
+        self.assertNotIn(2520, dsl["dungeons"][0]["heroic_entries"])
+        self.assertEqual(out.retire_blocks, [
+            "-- Deadmines (map 36) heroic: 1 retired heroic creature(s) lose their difficulty link "
+            "(dungeon(retired=...))\n"
+            "UPDATE `creature_template` SET `difficulty_entry_1` = 0 WHERE `entry` = 2520 AND "
+            "`difficulty_entry_1` = 310200;"
+        ])
+        self.assertFalse(any(_int_of(r, "CreatureID") == 310200 for r in dsl["creature_template_models"]))
+        self.assertNotIn(2520, {int(r["entry"]) for r in dsl["creature_template_edits"]})
+        self.assertNotIn(310200, _rows(dsl))
+        self.assertNotIn("310200", out.lock_text.replace(self.LOCK, ""))  # the line stays, nothing new for it
+        self.assertTrue(out.lock_text.startswith(self.LOCK))
+        done = codestyle_sql(out.retire_blocks[0])
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        # the replay applies the guard: only a row still pointing at the heroic entry is cleared
+        replay = {(2520,): dict(templates[2520]), (2521,): _tpl(2521, difficulty_entry_1=310201)}
+        sql = out.retire_blocks[0] + "\nUPDATE `creature_template` SET `difficulty_entry_1` = 0 WHERE `entry` = 2521 " \
+            "AND `difficulty_entry_1` = 310200;"
+        sql_dump.apply_composite_key_statements(replay, spell_tables.CREATURE_TEMPLATE_COLUMNS, ("entry",),
+                                                "creature_template", sql)
+        self.assertEqual({k: r["difficulty_entry_1"] for k, r in replay.items()}, {(2520,): 0, (2521,): 310201})
+        # once the revert is live, nothing more to emit
+        templates[2520] = replay[(2520,)]
+        _, again = _expand(self._retired_source(), lock=self.LOCK, live=_live(creature_templates=templates))
+        self.assertEqual((again.errors, again.retire_blocks), ([], []))
+
+    def test_retired_without_a_lock_line_is_an_error(self):
+        _, out = _expand(self._retired_source("2520, 598"), lock=self.LOCK)
+        self.assertTrue(any("retired= names creature 598" in e and "use skip= instead" in e for e in out.errors),
+                        out.errors)
+        self.assertNotIn(598, _expand(self._retired_source("2520, 598"), lock=self.LOCK)[0]["dungeons"][0][
+            "heroic_entries"])
+
+
+class ModelLintTest(unittest.TestCase):
+    def test_a_heroic_entry_without_a_model_row_is_an_error(self):
+        side_rows = {"creature_template_model": [r for r in SIDE_ROWS["creature_template_model"]
+                                                 if r["CreatureID"] != 1729]}
+        dsl, out = _expand(live=_live(side_rows=side_rows))
+        heroic_entry = dsl["dungeons"][0]["heroic_entries"][1729]
+        self.assertEqual([e for e in out.errors if "creature_template_model" in e], [
+            f"dungeon(36) creature 1729 -> heroic {heroic_entry}: no creature_template_model row for the heroic entry "
+            f"(the normal entry has none to copy) - Creature::InitEntry refuses to load it, so its heroic spawns are "
+            f"empty"
+        ])
+
+
+def _int_of(row: dict, column: str) -> int:
+    return int(row.get(column) or 0)
 
 
 class SmartAndSpellTest(unittest.TestCase):
@@ -485,10 +587,13 @@ class RenderTest(unittest.TestCase):
     def test_render_codestyle_and_convergence(self):
         dsl, _ = _expand()
         live_normal = [dict(r) for r in TEMPLATES.values()]
+        # the heroic model copies as already live, so the render is the creature_template block alone
+        models = [{c: r[c] for c in spell_tables.CREATURE_TEMPLATE_MODEL_COLUMNS}
+                  for r in dsl["creature_template_models"]]
 
         def index(live):
             return spell_tables.SpellTableIndex(
-                {"creature_template": live, "creature_template_model": []},
+                {"creature_template": live, "creature_template_model": models},
                 emitted={t.name: [] for t in spell_tables.CREATURE_TABLES},
                 base={t.name: [] for t in spell_tables.CREATURE_TABLES}, tables=spell_tables.CREATURE_TABLES,
             )

@@ -17,6 +17,13 @@ the file holds (gaps are never reused); a full generate.py run appends its lines
 never moves, and a dropped creature keeps its line (its heroic row is never deleted: creature_template is never
 pruned).
 
+**Retiring**: a creature with a lock line for a declared heroic's map that is no longer in any heroic entry set (a
+later `skip=`, a role change to npc / critter / trigger, `event=True`, gone from the map) stops generate.py with an
+ERROR, also under `--check`: its normal row would keep `difficulty_entry_1` on a heroic row whose side rows (spells,
+auras, resistances, models) the next run prunes. Put it back, or list it in `dungeon(retired=...)`: the run then emits
+a guarded `UPDATE creature_template SET difficulty_entry_1 = 0 WHERE entry = N AND difficulty_entry_1 = H` (while the
+replayed normal row still points at H) and no longer copies its side rows. Its lock line stays.
+
 **Row**: every column of the live normal row (the replayed base dump, migrations and frozen phase 0), then the tier's
 level (`minlevel` = `maxlevel`), `exp` 0, `HealthModifier` and `DamageModifier` solved for the tier row of the role or
 rank (boss role: boss; rank 0 normal, 1 elite, 2 and 4 rare, 3 boss) or the creature's override, `flags_extra` |
@@ -177,6 +184,7 @@ class LockError(ValueError):
 class Lock:
     pairs: dict[int, int] = field(default_factory=dict)  # normal -> heroic
     text: str = ""
+    maps: dict[int, int] = field(default_factory=dict)  # normal -> the map of its line
 
 
 _LOCK_LINE = re.compile(r"^(\d+) (\d+) (\d+) (.*)$")
@@ -203,6 +211,7 @@ def parse_lock(text: str, block: dict | None = None) -> Lock:
             raise LockError(f"heroic_ids.lock line {number}: {heroic_entry} is outside source/ids.yaml's "
                             f"{LOCK_BLOCK} block ({block['start']}-{block['end']})")
         lock.pairs[normal] = heroic_entry
+        lock.maps[normal] = int(m.group(3))
         heroic_seen[heroic_entry] = normal
     return lock
 
@@ -253,6 +262,7 @@ def entry_set(
     out = EntrySet()
     declared = {int(c["entry"]): c for c in dungeon_entry.get("creatures") or ()}
     skip = set(dungeon_entry.get("skip") or ())
+    retired = set(dungeon_entry.get("retired") or ())
     candidates = sorted(set(declared) | set(spawned) | set(credits))
     for entry in candidates:
         template = templates.get(entry)
@@ -262,7 +272,9 @@ def entry_set(
             role = "boss" if entry in credits else _auto_role(template)
         else:
             role = listed["role"]
-        if entry in skip:
+        if entry in retired:
+            out.skipped[entry] = "retired="
+        elif entry in skip:
             out.skipped[entry] = "skip="
         elif template is None:
             out.skipped[entry] = "no live creature_template row"
@@ -443,6 +455,7 @@ class BuildResult:
     reports: list[HeroicReport] = field(default_factory=list)
     lock_appended: list[str] = field(default_factory=list)
     smart_blocks: list[str] = field(default_factory=list)
+    retire_blocks: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
@@ -552,7 +565,56 @@ def build(
                              + " (INSTANCE_BIND set; a kill sets no encounter bit)")
         _script_lints(entry, label, chosen, spawns, live, out)
         out.notes.append(f"dungeons: {name} (map {map_id}) heroic: {len(mapping)} heroic creature template(s)")
+    _retired(plans, lock, set(owner), live, out)
     return out
+
+
+def render_retire_revert(label: str, pairs: list[tuple[int, int]]) -> str:
+    """One guarded `UPDATE creature_template SET difficulty_entry_1 = 0` per retired (normal, heroic) pair: it only
+    clears the link while it still names that heroic row."""
+    if not pairs:
+        return ""
+    lines = [f"-- {label}: {len(pairs)} retired heroic creature(s) lose their difficulty link (dungeon(retired=...))"]
+    lines += [f"UPDATE `creature_template` SET `difficulty_entry_1` = 0 WHERE `entry` = {normal} AND "
+              f"`difficulty_entry_1` = {heroic_entry};" for normal, heroic_entry in pairs]
+    return "\n".join(lines)
+
+
+def _retired(plans: list, lock: Lock, mapped: set[int], live, out: BuildResult) -> None:
+    """The lock lines of each declared heroic's map whose creature left every heroic entry set: an ERROR unless the
+    declaration retires it (then a guarded revert of its normal row's difficulty_entry_1)."""
+    for entry, label, _tier, _rows, chosen, _overrides, _credits, _spawns in plans:
+        map_id, name = entry["map_id"], entry["name"]
+        retired = set(entry.get("retired") or ())
+        shipped = {n: h for n, h in lock.pairs.items() if lock.maps.get(n) == map_id}
+        for normal in sorted(retired):
+            if normal not in shipped:
+                out.errors.append(f"{label}: retired= names creature {normal}, which has no {LOCK_PATH.name} line for "
+                                  f"map {map_id} - it never shipped a heroic template; use skip= instead")
+            elif normal in mapped:
+                out.errors.append(f"{label}: retired= names creature {normal}, which another declared heroic still "
+                                  f"maps to {shipped[normal]} - drop it from retired=")
+        reverts = []
+        for normal, heroic_entry in sorted(shipped.items()):
+            if normal in mapped:
+                continue
+            template = live.creature_templates.get(normal) or {}
+            if normal in retired:
+                if _int(template.get("difficulty_entry_1")) == heroic_entry:
+                    reverts.append((normal, heroic_entry))
+                continue
+            why = chosen.skipped.get(normal) or "no longer declared, spawned on the map or an encounter kill credit"
+            out.errors.append(
+                f"{label}: creature {normal} {template.get('name', '?')} shipped heroic entry {heroic_entry} "
+                f"({LOCK_PATH.name}) but left the heroic entry set ({why}) - its normal row would keep "
+                f"difficulty_entry_1 = {heroic_entry} while the run prunes that heroic row's spells, auras, "
+                f"resistances and models. Put it back in the set, or declare dungeon(..., retired=({normal},)) to "
+                f"revert difficulty_entry_1 and stop copying its side rows (its lock line stays)"
+            )
+        if reverts:
+            out.retire_blocks.append(render_retire_revert(f"{name} (map {map_id}) heroic", reverts))
+            out.notes.append(f"dungeons: {name} (map {map_id}) heroic: reverting difficulty_entry_1 of retired "
+                             f"creature(s) " + ", ".join(str(n) for n, _ in reverts))
 
 
 def _entry_of(row: dict) -> int:

@@ -29,7 +29,8 @@ E2 (WP-G, generate.py's side in lib/heroic_templates.py) adds the creature list 
   `CREATURES` block `extract_dungeon_creatures.py` writes (spawned, encounter credit and summoned creatures, see
   lib/dungeon_extract.py). Reference data: a dungeon without `heroic` still emits nothing, and no declaration ever
   writes a normal creature row. Hand edits live outside the generated block: `extra=` (creatures the extraction cannot
-  see, e.g. C++ summons), `roles=` (role corrections) and `skip=` (entries that never get a heroic template).
+  see, e.g. C++ summons), `roles=` (role corrections), `skip=` (entries that never get a heroic template) and
+  `retired=` (shipped heroic creatures taken out of the set: their difficulty link is reverted).
 - with `heroic`: one level 60 heroic `creature_template` row per creature of the heroic entry set (lib/
   heroic_templates.py: the declared creatures plus whatever live spawns or credits on the map, minus skips, critters,
   triggers, friendly NPCs and event-only creatures), ids from the append-only lock file
@@ -37,7 +38,7 @@ E2 (WP-G, generate.py's side in lib/heroic_templates.py) adds the creature list 
   per-creature `heroic(overrides=...)`; `heroic_entries` then carries the normal -> heroic map to T2's emitters.
 
 Everything reads `Registry.dungeons` (one entry per call: `map_id`, `name`, `heroic` as a plain dict or None,
-`heroic_entries`, `creatures`, `skip`).
+`heroic_entries`, `creatures`, `skip`, `retired`).
 
     from lib.dsl.dungeon import creature, dungeon, heroic
 
@@ -71,6 +72,11 @@ ROLES = ("boss", "trash", "npc", "critter", "trigger")
 # `heroic(tier=...)` names a table in lib/heroic_templates.py's TIERS; these are its row names (by rank, plus boss).
 TIER_ROWS = ("normal", "elite", "rare", "boss")
 OVERRIDE_KEYS = ("health", "melee", "tier", "columns")
+# creature_template columns an override's `columns` may not set: the row's identity and the inputs and outputs of the
+# tier solve (lib/heroic_templates.py solves HealthModifier / DamageModifier for the tier's level, exp 0 and the normal
+# row's BaseVariance). The level is the tier's and the spell rule (mod-dungeon-difficulties) and reference health
+# assume it; health and melee have their own override keys.
+SOLVED_COLUMNS = ("entry", "minlevel", "maxlevel", "exp", "HealthModifier", "DamageModifier", "BaseVariance")
 
 
 def _plain_int(value) -> bool:
@@ -206,6 +212,12 @@ def _overrides(label: str, overrides: dict) -> tuple[tuple[int, tuple], ...]:
         columns = values.get("columns", {})
         if not isinstance(columns, dict) or not all(isinstance(c, str) for c in columns):
             raise ValueError(f"{where}: columns must be a dict of creature_template column -> value")
+        solved = sorted(set(columns) & set(SOLVED_COLUMNS))
+        if solved:
+            raise ValueError(
+                f"{where}: columns {solved} are set by the tier solve (level, exp 0, health and melee modifiers) - "
+                f"use health=, melee= or tier= instead"
+            )
         pairs = tuple(sorted((k, tuple(sorted(v.items())) if k == "columns" else v) for k, v in values.items()))
         out.append((entry, pairs))
     return tuple(out)
@@ -298,7 +310,7 @@ def access_row(map_id: int, name: str, spec: HeroicSpec) -> dict:
 
 def dungeon(
     map_id: int, name: str, *, heroic: HeroicSpec | None = None, creatures=(), extra=(), roles: dict | None = None,
-    skip=(),
+    skip=(), retired=(),
 ) -> dict:
     """Declares the dungeon on `map_id` (a Map.dbc id, e.g. 36 Deadmines) named `name`. With `heroic=heroic(...)` it
     emits that difficulty's MapDifficulty row (server overlay and client patch-Z) and its `dungeon_access_template`
@@ -312,7 +324,12 @@ def dungeon(
 
     `creatures` is the generated creature list (`creature(...)` lines, the `CREATURES` block), `extra` hand-added
     creatures (C++ summons), `roles={entry: role}` hand role corrections of either list, `skip` entries that never get
-    a heroic template. An entry may appear once across `creatures` and `extra`."""
+    a heroic template. An entry may appear once across `creatures` and `extra`.
+
+    `retired` names creatures that shipped with a heroic template (a `heroic_ids.lock` line for this map) and leave
+    the heroic entry set on purpose: generate.py reverts their normal row's `difficulty_entry_1` (a guarded UPDATE)
+    and stops copying their side rows; the lock line and the heroic row stay. A shipped creature that leaves the set
+    without being listed here stops generate.py with an ERROR."""
     caller = f"dungeon({map_id!r}, {name!r})"
     if not _plain_int(map_id) or map_id <= 0:
         raise ValueError(f"{caller}: map_id must be a Map.dbc id (positive int)")
@@ -337,12 +354,16 @@ def dungeon(
     skipped = tuple(sorted(set(skip)))
     if not all(_plain_int(e) and e > 0 for e in skipped):
         raise ValueError(f"{caller}: skip must be creature entries, got {skip!r}")
+    retired_entries = tuple(sorted(set(retired)))
+    if not all(_plain_int(e) and e > 0 for e in retired_entries):
+        raise ValueError(f"{caller}: retired must be creature entries, got {retired!r}")
     registry = _registry._require_active()
     # `heroic_entries` (normal creature entry -> heroic entry) is WP-G's: its lock file fills it; lib/dungeon_heroic.py
     # reads it for difficulty_entry_1 and the side-table copies, and does nothing while it is empty.
     entry = {
         "id": map_id, "map_id": map_id, "name": name, "heroic": asdict(heroic) if heroic else None,
         "heroic_entries": {}, "creatures": [listed[e] for e in listed], "skip": skipped,
+        "retired": retired_entries,
     }
     if heroic is not None:
         _check_block(f"{caller}: heroic map_difficulty_id", "mapdifficulty", heroic.map_difficulty_id)
