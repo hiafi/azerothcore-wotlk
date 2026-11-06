@@ -638,9 +638,11 @@ class DeadminesTest(unittest.TestCase):
     def test_it_is_clean_and_emits_the_encounter_and_heroic_creature_rows(self):
         self.assertEqual((self.out.errors, self.out.warnings), ([], []))
         self.assertEqual(self.out.spawn_blocks, [])  # WP-1D's spawnMask 3 is live
-        for table, count in (("dungeonencounter_dbc", 7), ("instance_encounters", 7)):
+        for table in ("dungeonencounter_dbc", "instance_encounters"):
             spec = spec_for(table)
-            self.assertEqual(len(self.index.rows_to_emit(spec, self.dsl[spec.registry_key])), count, table)
+            self.assertEqual(len(self.dsl[spec.registry_key]), 7, table)
+            # E2's generated rev (pending_db_world) already holds them, so a run has nothing left to emit
+            self.assertEqual(self.index.rows_to_emit(spec, self.dsl[spec.registry_key]), [], table)
         # WP-G's heroic templates: difficulty_entry_1 on each normal row of the entry map, from the lock file
         from lib import heroic_templates  # noqa: PLC0415
 

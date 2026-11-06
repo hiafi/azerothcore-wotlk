@@ -105,8 +105,13 @@ class ReplayTest(unittest.TestCase):
         rows = _replay("gameobject", text).by_guid()
         self.assertEqual(rows[26182], {"guid": 26182, "id": 16399, "map": 36, "spawnMask": 1})
 
+    def test_a_guidless_range_delete_applies_like_mysql(self):
+        state = _replay("creature", self.INSERT, "DELETE FROM `creature` WHERE `id` > 6;\n")
+        self.assertEqual(sorted(state.by_guid()), [1, 2])
+        self.assertEqual(len(state.skipped), 0)
+
     def test_an_unreadable_guidless_delete_is_counted_not_guessed(self):
-        state = _replay("creature", self.INSERT, "DELETE FROM `creature` WHERE `id` > 4;\n")
+        state = _replay("creature", self.INSERT, "DELETE FROM `creature` WHERE `id` > (SELECT 4);\n")
         self.assertEqual(len(state.by_guid()), 4)
         self.assertEqual(len(state.skipped), 1)
 
