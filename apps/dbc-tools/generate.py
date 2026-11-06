@@ -1557,7 +1557,8 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         out_path, blocks, header,
         extra_blocks=[
             *prune_blocks, *removal_blocks, trainer_spell_block, *spell_table_blocks,
-            *creature_blocks, *dungeon_expansion.spawn_blocks, *dungeon_expansion.smart_blocks, *item_blocks,
+            *creature_blocks, *dungeon_expansion.spawn_blocks, *dungeon_expansion.smart_blocks,
+            *dungeon_expansion.retire_blocks, *item_blocks,
             spell_data_block,
         ],
     )

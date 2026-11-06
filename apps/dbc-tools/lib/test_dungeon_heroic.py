@@ -383,6 +383,8 @@ class CreatureTest(unittest.TestCase):
         "creature_template_spell": [{"CreatureID": 646, "Index": 0, "Spell": 6432, "VerifiedBuild": 12340},
                                     {"CreatureID": 646, "Index": 1, "Spell": 3391, "VerifiedBuild": None}],
         "creature_template_model": [{"CreatureID": 646, "Idx": 0, "CreatureDisplayID": 2026, "DisplayScale": 1,
+                                     "Probability": 1, "VerifiedBuild": 51831},
+                                    {"CreatureID": 644, "Idx": 0, "CreatureDisplayID": 5694, "DisplayScale": 1,
                                      "Probability": 1, "VerifiedBuild": 51831}],
         "creature_template_resistance": [{"CreatureID": 644, "School": 2, "Resistance": 15}],  # VerifiedBuild left out
         "creature_template_movement": [{"CreatureId": 646, "Ground": 1, "Swim": 1, "Flight": 0, "Rooted": 0,
@@ -397,8 +399,9 @@ class CreatureTest(unittest.TestCase):
     def _expand(self, entries=None, templates=None, declared=(), dungeons=None, **lists):
         templates = dict(self.LIVE_TEMPLATES if templates is None else templates)
         spawns = {"creature": _spawns((1, 644, 36, 3), (2, 646, 36, 3)), "gameobject": {}}
-        live = _live(creature_templates=templates, side_rows=self.SIDE_ROWS, spawns=spawns,
-                     heroic_maps={36, 574}, **lists.pop("live", {}))
+        extra = dict(lists.pop("live", {}))
+        live = _live(creature_templates=templates, side_rows=extra.pop("side_rows", self.SIDE_ROWS), spawns=spawns,
+                     heroic_maps={36, 574}, **extra)
         dsl = _dsl(*(dungeons or [_heroic(entries=self.MAP if entries is None else entries)]),
                    creature_templates=[_creature(310001, **{"id": 310001})] + list(declared), **lists)
         return dsl, dungeon_heroic.expand(dsl, lambda: live)
@@ -434,8 +437,8 @@ class CreatureTest(unittest.TestCase):
             [(r["CreatureID"], r["Index"], r["Spell"], r["VerifiedBuild"]) for r in dsl["creature_template_spells"]],
             [(310001, 0, 6432, 12340), (310001, 1, 3391, None)],
         )
-        self.assertEqual(dsl["creature_template_models"][0]["CreatureDisplayID"], 2026)
-        self.assertEqual(dsl["creature_template_models"][0]["id"], "310001:0")
+        models = {r["id"]: r["CreatureDisplayID"] for r in dsl["creature_template_models"]}
+        self.assertEqual(models, {"310000:0": 5694, "310001:0": 2026})
         resistance = dsl["heroic_template_resistances"][0]
         self.assertEqual((resistance["CreatureID"], resistance["School"], resistance["Resistance"]), (310000, 2, 15))
         self.assertIsNone(resistance["VerifiedBuild"])  # the schema DEFAULT fills a column the live row lacks
@@ -446,7 +449,20 @@ class CreatureTest(unittest.TestCase):
         mine = {"id": "310001:0", "CreatureID": 310001, "Idx": 0, "CreatureDisplayID": 999, "DisplayScale": 1.0,
                 "Probability": 1.0, "VerifiedBuild": 0}
         dsl, _ = self._expand(creature_template_models=[mine])
-        self.assertEqual(dsl["creature_template_models"], [mine])
+        self.assertEqual([r for r in dsl["creature_template_models"] if r["CreatureID"] == 310001], [mine])
+
+    def test_a_heroic_entry_without_a_model_row_is_an_error(self):
+        side_rows = {**self.SIDE_ROWS, "creature_template_model": [
+            r for r in self.SIDE_ROWS["creature_template_model"] if r["CreatureID"] != 646]}
+        _, out = self._expand(live={"side_rows": side_rows})
+        self.assertEqual(out.errors, [
+            "dungeon(36) creature 646 -> heroic 310001: no creature_template_model row for the heroic entry (the "
+            "normal entry has none to copy) - Creature::InitEntry refuses to load it, so its heroic spawns are empty"
+        ])
+        mine = {"id": "310001:0", "CreatureID": 310001, "Idx": 0, "CreatureDisplayID": 999, "DisplayScale": 1.0,
+                "Probability": 1.0, "VerifiedBuild": 0}
+        _, out = self._expand(creature_template_models=[mine], live={"side_rows": side_rows})
+        self.assertEqual(out.errors, [])  # a declared model row is enough
 
     def test_a_second_expand_replaces_its_rows(self):
         dsl, _ = self._expand()
@@ -575,6 +591,7 @@ class WiringTest(unittest.TestCase):
         text = (TOOL_ROOT / "generate.py").read_text()
         self.assertEqual(text.count("expansion=dungeon_expansion)"), 2)
         self.assertIn("*dungeon_expansion.spawn_blocks", text)
+        self.assertIn("*dungeon_expansion.retire_blocks", text)
         self.assertIn("dbcfmt.DUNGEONENCOUNTER: dungeon_heroic.client_encounter_rows(", text)
         self.assertIn("spawn_state.py", generate.CACHE_CODE_FILES)
 

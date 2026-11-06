@@ -29,6 +29,7 @@ What it derives, per declared heroic (map M):
    - `difficulty_entry_1` on the normal row, as a one-column `creature_template_columns()`-style edit (joins
      `creature_template_edits`, so it renders as a column-limited UPDATE after the heroic templates' upserts and is
      diffed against the replayed live row). Never touches another column of a normal row.
+   - an ERROR when a heroic entry ends with no `creature_template_model` row (the engine refuses to load it).
    - copies of the normal entry's rows in every side table the engine reads by the **heroic** entry
      (`SIDE_TABLES`): `creature_template_addon`, `_spell`, `_model`, `_resistance`, `_movement` and
      `creature_onkill_reputation`. A table in which the run already declares a row for the heroic entry is not copied
@@ -116,6 +117,7 @@ class Expansion:
     notes: list[str] = field(default_factory=list)
     spawn_blocks: list[str] = field(default_factory=list)
     smart_blocks: list[str] = field(default_factory=list)  # SmartAI widening UPDATEs (heroic_templates)
+    retire_blocks: list[str] = field(default_factory=list)  # retired creatures' difficulty_entry_1 reverts
     lock_appended: list[str] = field(default_factory=list)  # new heroic_ids.lock lines (a full run writes them)
     lock_text: str = ""  # the lock file with them appended
     heroic_reports: list = field(default_factory=list)  # heroic_templates.HeroicReport per generated row
@@ -526,6 +528,20 @@ def side_table_copies(
     return out
 
 
+def _model_errors(entry_maps: dict[int, dict[int, int]], dsl_classes: dict) -> list[str]:
+    """ERRORs for a heroic entry left with no `creature_template_model` row (copied or declared):
+    `Creature::InitEntry` refuses to load such a creature, so every heroic spawn of it is empty."""
+    with_models = {_int(r.get("CreatureID")) for r in dsl_classes.get("creature_template_models", [])}
+    errors = []
+    for map_id, mapping in sorted(entry_maps.items()):
+        for normal, heroic_entry in sorted(mapping.items()):
+            if heroic_entry not in with_models:
+                errors.append(f"dungeon({map_id}) creature {normal} -> heroic {heroic_entry}: no "
+                              f"creature_template_model row for the heroic entry (the normal entry has none to copy) "
+                              f"- Creature::InitEntry refuses to load it, so its heroic spawns are empty")
+    return errors
+
+
 # ---------------------------------------------------------------------------------------------------------------------
 # The entry point
 
@@ -577,6 +593,7 @@ def _heroic_templates(
     out.warnings += result.warnings
     out.notes += result.notes
     out.smart_blocks += result.smart_blocks
+    out.retire_blocks += result.retire_blocks
     out.lock_appended = result.lock_appended
     out.lock_text = heroic_templates.lock_text(parsed, result.lock_appended)
     out.heroic_reports = result.reports
@@ -635,6 +652,7 @@ def expand(
         out.errors += _difficulty_entry_edits(dsl_classes, entry_maps)
         for key, rows in side_table_copies(entry_maps, live, dsl_classes).items():
             dsl_classes.setdefault(key, []).extend(rows)
+        out.errors += _model_errors(entry_maps, dsl_classes)
         out.notes.append(
             f"dungeons: heroic creatures - difficulty_entry_1 on {sum(len(m) for m in entry_maps.values())} normal "
             f"row(s), side-table copies: " + ", ".join(
