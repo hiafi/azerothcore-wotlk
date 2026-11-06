@@ -38,7 +38,7 @@ BLOCKS = {name: cfg for name, cfg in IDS.items() if name != "reservations"}
 
 # Blocks that hold ids of one underlying table. Everything else in the file is a table of its own.
 SAME_TABLE_BLOCKS = {
-    "creature_template": ("creature", "npc_tools"),
+    "creature_template": ("creature", "npc_tools", "creature_heroic"),
     "talent_dbc": ("talent",),
     "talenttab_dbc": ("talenttab",),
 }
@@ -177,6 +177,19 @@ class BlockShapeTest(unittest.TestCase):
         path = state.BASE_DBC_DIR / dbcfmt.DUNGEONENCOUNTER.dbc_filename
         if path.is_file():
             self.assertLess(max(state.load_stock_rows(dbcfmt.DUNGEONENCOUNTER)), BLOCKS["dungeonencounter"]["start"])
+
+    def test_dungeon_difficulty_e2_heroic_creature_block(self):
+        # creature_template had nothing in 310000-399999 (handoff s3.8); the heroic templates of the 19 vanilla
+        # dungeons need about 820 ids. The lock file's ids all sit inside the block.
+        self.assertEqual(BLOCKS["creature_heroic"], {"start": 310000, "end": 311999})
+        live = spell_tables.load_base_table_rows("creature_template", ("entry",))
+        self.assertFalse([r for r in live if 310000 <= int(r["entry"]) <= 399999])
+        lock = TOOL_ROOT / "source" / "world" / "heroic_ids.lock"
+        if lock.is_file():
+            from lib import heroic_templates  # noqa: PLC0415
+
+            parsed = heroic_templates.parse_lock(lock.read_text(), BLOCKS["creature_heroic"])
+            self.assertTrue(all(310000 <= h <= 311999 for h in parsed.pairs.values()))
 
     def test_death_knight_t1_widened_the_sound_and_visual_blocks(self):
         # shaman's slices filled the old ends (90100 / 90199); the widened ends hold Death Knight's slices. The visual

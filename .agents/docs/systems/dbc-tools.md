@@ -684,6 +684,30 @@ package by the `source/world/` pass). Things that are not obvious:
 - **`heroic_entries`** on the `dungeons` entry (normal -> heroic) is the heroic template generator's hand-off; empty,
   the per-creature emitters do nothing.
 
+### E2 (WP-G): the creature lists and `lib/heroic_templates.py`
+
+- **Two halves per file.** `extract_dungeon_creatures.py` (live DB, SELECTs only; logic in `lib/dungeon_extract.py`)
+  owns the `CREATURES` block between the markers and nothing else; `extra=` / `roles=` / `skip=` / `heroic=` live
+  outside it and survive a rerun. A file with zero or two blocks is refused, never rewritten.
+- **The generator runs inside `dungeon_heroic.expand()`** (step 3, before T2's `difficulty_entry_1` edits and
+  side-table copies read `heroic_entries`), only for a heroic whose entry carries `creatures` (every `dungeon()` call
+  does; T2's hand-built test entries do not). Its rows join `creature_templates` marked `_dungeon_heroic`, so a second
+  `expand()` replaces them and the full-row upsert path renders them.
+- **The lock file is the only source file generate.py writes** (`source/world/heroic_ids.lock`, after the SQL, full
+  run only). New creatures take the next id after the highest in the file; gaps are never reused. Assignment is
+  deterministic, so `--check` reports the same ids the full run writes.
+- **Damage math is swing independent**: the tier's melee is per hit at 2.0 sec and scales with BaseAttackTime, so
+  DamageModifier = melee / (2 x (1.25 x damage_base + attackpower / 14 x BaseVariance)) (creature_classlevelstats at
+  the tier level, `Creature::CalculateMinMaxDamage`). HealthModifier is the 4-decimal value whose
+  ceil(basehp0 x float(mod)) lands on the target (the plain rounded quotient is often one point high).
+- **The SmartAI widening is a pinned UPDATE, not a block rewrite.** Each row is matched on its full key plus its
+  current `event_flags` and gets `| 4`. The repo rule is to rewrite whole `smart_scripts` blocks, but the dbc-tools
+  replay of `smart_scripts` misses 241 live rows and differs on 9 `event_flags` cells (2026-11-05; Scarlet Monastery
+  4294-4303 and 4540 among them), so a DELETE + INSERT built from it could drop live rows. Deadmines has no
+  normal-only rows; BRS and BRD hold most of them.
+- **SpellDifficulty.dbc** (`dbcfmt.SPELLDIFFICULTY`, read-only, not in ALL_TABLES) feeds an informational note only;
+  without the file the check is skipped with a note (the shared checkout has no copy yet).
+
 ## Superseded ranks: generated `SkillLineAbility` and `CreatureSpellData` overrides
 
 Pets learn from `SkillLineAbility`, not trainers: `SpellMgr::LoadPetLevelupSpellMap` takes every row on a

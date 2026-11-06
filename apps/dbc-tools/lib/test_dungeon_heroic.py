@@ -618,13 +618,22 @@ class DeadminesTest(unittest.TestCase):
         self.assertEqual(heroic["encounter_ids"], tuple(range(1000, 1007)))
         self.assertTrue(heroic["spawn_mask"])
 
-    def test_it_is_clean_and_emits_only_the_encounter_rows(self):
+    def test_it_is_clean_and_emits_the_encounter_and_heroic_creature_rows(self):
         self.assertEqual((self.out.errors, self.out.warnings), ([], []))
         self.assertEqual(self.out.spawn_blocks, [])  # WP-1D's spawnMask 3 is live
         for table, count in (("dungeonencounter_dbc", 7), ("instance_encounters", 7)):
             spec = spec_for(table)
             self.assertEqual(len(self.index.rows_to_emit(spec, self.dsl[spec.registry_key])), count, table)
-        self.assertEqual(self.dsl["creature_template_edits"], [])  # inert until WP-G's entry map
+        # WP-G's heroic templates: difficulty_entry_1 on each normal row of the entry map, from the lock file
+        from lib import heroic_templates  # noqa: PLC0415
+
+        lock = heroic_templates.parse_lock(heroic_templates.LOCK_PATH.read_text())
+        self.assertEqual(
+            {r["entry"]: r["difficulty_entry_1"] for r in self.dsl["creature_template_edits"]},
+            {n: h for n, h in lock.pairs.items() if n in next(
+                e for e in self.dsl["dungeons"] if e["map_id"] == 36)["heroic_entries"]},
+        )
+        self.assertEqual(len(self.dsl["creature_template_edits"]), 25)
         self.assertEqual(
             [(r["entry"], r["creditEntry"]) for r in self.dsl["instance_encounters"]],
             [(1000 + i, c) for i, (c, _) in enumerate(DEADMINES_CREDITS.values())],

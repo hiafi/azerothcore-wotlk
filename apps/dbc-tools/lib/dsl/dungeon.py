@@ -23,15 +23,28 @@ E2 (WP-T2, generate.py's side in lib/dungeon_heroic.py) adds, for the same heroi
   `entry["heroic_entries"]` on the `Registry.dungeons` bookkeeping entry: `difficulty_entry_1` on each normal row (one
   column) and copies of the side tables the engine reads by the heroic entry.
 
-A `dungeon(...)` without `heroic` emits nothing: the normal rows belong to stock data and the frozen phase 0 SQL.
-Later stages extend the same two calls rather than adding a second declaration per dungeon: WP-G adds the creature
-list and the heroic template generator (tier, bosses, overrides) - see the E1-T1 report for the proposed shape. They
-read `Registry.dungeons` (one entry per call: `map_id`, `name`, `heroic` as a plain dict or None, `heroic_entries`).
+E2 (WP-G, generate.py's side in lib/heroic_templates.py) adds the creature list and the heroic templates:
 
-    from lib.dsl.dungeon import dungeon, heroic
+- `creatures=` (every declaration): the dungeon's creatures as `creature(entry, name, role, ...)` lines, the generated
+  `CREATURES` block `extract_dungeon_creatures.py` writes (spawned, encounter credit and summoned creatures, see
+  lib/dungeon_extract.py). Reference data: a dungeon without `heroic` still emits nothing, and no declaration ever
+  writes a normal creature row. Hand edits live outside the generated block: `extra=` (creatures the extraction cannot
+  see, e.g. C++ summons), `roles=` (role corrections) and `skip=` (entries that never get a heroic template).
+- with `heroic`: one level 60 heroic `creature_template` row per creature of the heroic entry set (lib/
+  heroic_templates.py: the declared creatures plus whatever live spawns or credits on the map, minus skips, critters,
+  triggers, friendly NPCs and event-only creatures), ids from the append-only lock file
+  `source/world/heroic_ids.lock` (`creature_heroic` block), stats from the tier table (`heroic(tier=...)`) and the
+  per-creature `heroic(overrides=...)`; `heroic_entries` then carries the normal -> heroic map to T2's emitters.
 
-    dungeon(36, "Deadmines", heroic=heroic(
+Everything reads `Registry.dungeons` (one entry per call: `map_id`, `name`, `heroic` as a plain dict or None,
+`heroic_entries`, `creatures`, `skip`).
+
+    from lib.dsl.dungeon import creature, dungeon, heroic
+
+    CREATURES = (creature(644, "Rhahk'Zor", "boss", spawns=1), ...)  # generated
+    dungeon(36, "Deadmines", creatures=CREATURES, roles={3586: "boss"}, heroic=heroic(
         map_difficulty_id=1000, access_id=122, min_level=60, encounter_ids=range(1000, 1007),
+        overrides={644: dict(health=320_000)},
     ))
 """
 
@@ -52,6 +65,12 @@ HEROIC_DIFFICULTY_STRING = "DUNGEON_DIFFICULTY_5PLAYER_HEROIC"  # the client's R
 MESSAGE_MAX_LENGTH = 200  # mapdifficulty_dbc.Message_Lang_enUS is varchar(200)
 ITEM_LEVEL_MAX = 0xFFFF  # dungeon_access_template.min_avg_item_level is smallint unsigned
 MAX_PLAYERS_MAX = 40
+# A creature's role in its dungeon (lib/dungeon_extract.py sets them; `dungeon(roles=...)` corrects them). boss: the
+# boss tier and INSTANCE_BIND on heroic; trash: the rank's tier; npc / critter / trigger: no heroic template.
+ROLES = ("boss", "trash", "npc", "critter", "trigger")
+# `heroic(tier=...)` names a table in lib/heroic_templates.py's TIERS; these are its row names (by rank, plus boss).
+TIER_ROWS = ("normal", "elite", "rare", "boss")
+OVERRIDE_KEYS = ("health", "melee", "tier", "columns")
 
 
 def _plain_int(value) -> bool:
@@ -73,12 +92,17 @@ class HeroicSpec:
     encounter_ids: tuple[int, ...] = ()
     spawn_mask: bool = True
     event_spawns: bool = False
+    tier: str = "vanilla"
+    tier_values: tuple[tuple[str, int, int], ...] = ()  # (row, health, melee) replacing a TIERS row for this dungeon
+    overrides: tuple[tuple[int, tuple], ...] = ()  # (entry, sorted (key, value) pairs); see heroic()
+    widen_smart_scripts: bool = True
 
 
 def heroic(
     *, map_difficulty_id: int, access_id: int, min_level: int, max_level: int = 0, min_item_level: int = 0,
     reset_seconds: int = HEROIC_RESET_SECONDS, max_players: int = HEROIC_MAX_PLAYERS, message: str | None = None,
-    encounter_ids=(), spawn_mask: bool = True, event_spawns: bool = False,
+    encounter_ids=(), spawn_mask: bool = True, event_spawns: bool = False, tier: str = "vanilla",
+    tier_values: dict | None = None, overrides: dict | None = None, widen_smart_scripts: bool = True,
 ) -> HeroicSpec:
     """The heroic difficulty (Difficulty 1) of a 5-man dungeon, for `dungeon(..., heroic=...)`.
 
@@ -138,11 +162,100 @@ def heroic(
             raise ValueError(f"{label}: {name} must be True or False, got {value!r}")
     if event_spawns and not spawn_mask:
         raise ValueError(f"{label}: event_spawns=True needs spawn_mask=True")
+    if not isinstance(widen_smart_scripts, bool):
+        raise ValueError(f"{label}: widen_smart_scripts must be True or False, got {widen_smart_scripts!r}")
+    if not isinstance(tier, str) or not tier:
+        raise ValueError(f"{label}: tier must be a tier table name, got {tier!r}")
+    values = []
+    for row, pair in sorted((tier_values or {}).items()):
+        if row not in TIER_ROWS or not isinstance(pair, tuple) or len(pair) != 2 \
+                or not all(_plain_int(v) and v > 0 for v in pair):
+            raise ValueError(
+                f"{label}: tier_values must map a row of {TIER_ROWS} to (health, melee) positive ints, got "
+                f"{row!r}: {pair!r}"
+            )
+        values.append((row, *pair))
     return HeroicSpec(
         map_difficulty_id=map_difficulty_id, access_id=access_id, min_level=min_level, max_level=max_level,
         min_item_level=min_item_level, reset_seconds=reset_seconds, max_players=max_players, message=message,
-        encounter_ids=encounters, spawn_mask=spawn_mask, event_spawns=event_spawns,
+        encounter_ids=encounters, spawn_mask=spawn_mask, event_spawns=event_spawns, tier=tier,
+        tier_values=tuple(values), overrides=_overrides(label, overrides or {}),
+        widen_smart_scripts=widen_smart_scripts,
     )
+
+
+def _overrides(label: str, overrides: dict) -> tuple[tuple[int, tuple], ...]:
+    if not isinstance(overrides, dict):
+        raise ValueError(f"{label}: overrides must be a dict of entry -> dict(...), got {overrides!r}")
+    out = []
+    for entry, values in sorted(overrides.items()):
+        where = f"{label}: overrides[{entry!r}]"
+        if not _plain_int(entry) or entry <= 0:
+            raise ValueError(f"{where}: the key must be a creature entry")
+        if not isinstance(values, dict) or not values:
+            raise ValueError(f"{where}: must be a non-empty dict of {OVERRIDE_KEYS}")
+        unknown = sorted(set(values) - set(OVERRIDE_KEYS))
+        if unknown:
+            raise ValueError(f"{where}: unknown key(s) {unknown} - one of {OVERRIDE_KEYS}")
+        for key in ("health", "melee"):
+            if key in values and (not isinstance(values[key], (int, float)) or isinstance(values[key], bool)
+                                  or values[key] <= 0):
+                raise ValueError(f"{where}: {key} must be a positive number, got {values[key]!r}")
+        if "tier" in values and values["tier"] not in TIER_ROWS:
+            raise ValueError(f"{where}: tier must be one of {TIER_ROWS}, got {values['tier']!r}")
+        columns = values.get("columns", {})
+        if not isinstance(columns, dict) or not all(isinstance(c, str) for c in columns):
+            raise ValueError(f"{where}: columns must be a dict of creature_template column -> value")
+        pairs = tuple(sorted((k, tuple(sorted(v.items())) if k == "columns" else v) for k, v in values.items()))
+        out.append((entry, pairs))
+    return tuple(out)
+
+
+def override_dict(spec: dict) -> dict[int, dict]:
+    """`heroic(overrides=...)` back as {entry: {"health": .., "melee": .., "tier": .., "columns": {..}}} from the
+    bookkeeping entry's plain-dict heroic."""
+    out = {}
+    for entry, pairs in spec.get("overrides") or ():
+        values = dict(pairs)
+        if "columns" in values:
+            values["columns"] = dict(values["columns"])
+        out[int(entry)] = values
+    return out
+
+
+@dataclass(frozen=True)
+class DungeonCreature:
+    """One creature of a dungeon (`creature(...)`): identity and how it gets there, never stats."""
+
+    entry: int
+    name: str
+    role: str
+    spawns: int = 0
+    summoned_by: tuple[str, ...] = ()
+    event: bool = False
+
+
+def creature(
+    entry: int, name: str, role: str, *, spawns: int = 0, summoned_by=(), event: bool = False,
+) -> DungeonCreature:
+    """A creature of a dungeon's `creatures=` / `extra=` list. `role` is one of `ROLES`; `spawns` how many spawns it
+    has on the map (0: summoned or credit only); `summoned_by` free text naming who brings it in ("creature 622 smart
+    cast 3605", "C++ boss_x"); `event=True` when every spawn there belongs to a game event (no heroic template unless
+    the heroic includes event spawns)."""
+    label = f"creature({entry!r}, {name!r})"
+    if not _plain_int(entry) or entry <= 0:
+        raise ValueError(f"{label}: entry must be a positive int")
+    if not isinstance(name, str):
+        raise ValueError(f"{label}: name must be a string")
+    if role not in ROLES:
+        raise ValueError(f"{label}: role must be one of {ROLES}, got {role!r}")
+    if not _plain_int(spawns) or spawns < 0:
+        raise ValueError(f"{label}: spawns must be an int >= 0")
+    if isinstance(summoned_by, str) or not all(isinstance(s, str) for s in summoned_by):
+        raise ValueError(f"{label}: summoned_by must be a tuple of strings")
+    if not isinstance(event, bool):
+        raise ValueError(f"{label}: event must be True or False")
+    return DungeonCreature(entry, name, role, spawns, tuple(summoned_by), event)
 
 
 def _check_block(caller: str, block_name: str, value: int) -> None:
@@ -183,7 +296,10 @@ def access_row(map_id: int, name: str, spec: HeroicSpec) -> dict:
     }
 
 
-def dungeon(map_id: int, name: str, *, heroic: HeroicSpec | None = None) -> dict:
+def dungeon(
+    map_id: int, name: str, *, heroic: HeroicSpec | None = None, creatures=(), extra=(), roles: dict | None = None,
+    skip=(),
+) -> dict:
     """Declares the dungeon on `map_id` (a Map.dbc id, e.g. 36 Deadmines) named `name`. With `heroic=heroic(...)` it
     emits that difficulty's MapDifficulty row (server overlay and client patch-Z) and its `dungeon_access_template`
     row; without it, nothing (a reference declaration later stages fill in). A map may be declared once.
@@ -192,7 +308,11 @@ def dungeon(map_id: int, name: str, *, heroic: HeroicSpec | None = None) -> dict
     id?), when a declared (map, difficulty) is already a stock or live MapDifficulty row under another id, when a live
     `dungeon_access_template` row already covers it under another id, and when the stock MapDifficulty.dbc is missing
     from var/extractors/dbc/. The heroic's encounter rows, spawn masks and per-creature rows are built by generate.py
-    from live state (lib/dungeon_heroic.py), which has its own ERRORs. Returns the bookkeeping entry."""
+    from live state (lib/dungeon_heroic.py), which has its own ERRORs. Returns the bookkeeping entry.
+
+    `creatures` is the generated creature list (`creature(...)` lines, the `CREATURES` block), `extra` hand-added
+    creatures (C++ summons), `roles={entry: role}` hand role corrections of either list, `skip` entries that never get
+    a heroic template. An entry may appear once across `creatures` and `extra`."""
     caller = f"dungeon({map_id!r}, {name!r})"
     if not _plain_int(map_id) or map_id <= 0:
         raise ValueError(f"{caller}: map_id must be a Map.dbc id (positive int)")
@@ -200,12 +320,29 @@ def dungeon(map_id: int, name: str, *, heroic: HeroicSpec | None = None) -> dict
         raise ValueError(f"{caller}: name (the dungeon's name) is required")
     if heroic is not None and not isinstance(heroic, HeroicSpec):
         raise ValueError(f"{caller}: heroic must come from heroic(...), got {heroic!r}")
+    listed: dict[int, dict] = {}
+    for source, group in (("extracted", creatures), ("extra", extra)):
+        for item in group:
+            if not isinstance(item, DungeonCreature):
+                raise ValueError(f"{caller}: {source} creatures must come from creature(...), got {item!r}")
+            if item.entry in listed:
+                raise ValueError(f"{caller}: creature {item.entry} is listed twice (creatures= and extra= together)")
+            listed[item.entry] = {**asdict(item), "source": source}
+    for entry, role in sorted((roles or {}).items()):
+        if entry not in listed:
+            raise ValueError(f"{caller}: roles names creature {entry!r}, which is in neither creatures= nor extra=")
+        if role not in ROLES:
+            raise ValueError(f"{caller}: roles[{entry}] must be one of {ROLES}, got {role!r}")
+        listed[entry]["role"] = role
+    skipped = tuple(sorted(set(skip)))
+    if not all(_plain_int(e) and e > 0 for e in skipped):
+        raise ValueError(f"{caller}: skip must be creature entries, got {skip!r}")
     registry = _registry._require_active()
     # `heroic_entries` (normal creature entry -> heroic entry) is WP-G's: its lock file fills it; lib/dungeon_heroic.py
     # reads it for difficulty_entry_1 and the side-table copies, and does nothing while it is empty.
     entry = {
         "id": map_id, "map_id": map_id, "name": name, "heroic": asdict(heroic) if heroic else None,
-        "heroic_entries": {},
+        "heroic_entries": {}, "creatures": [listed[e] for e in listed], "skip": skipped,
     }
     if heroic is not None:
         _check_block(f"{caller}: heroic map_difficulty_id", "mapdifficulty", heroic.map_difficulty_id)
