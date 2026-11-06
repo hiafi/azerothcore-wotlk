@@ -14,7 +14,7 @@ Every table item-tools reads is replayed by `item_lib/replay.py` with
 `db_world/**` (subdirectories by bare file name, the frozen mod-progression
 phase 0 spliced in), `pending_db_world/**`, then module SQL, statement by
 statement with MySQL's semantics. Guards are evaluated: an UPDATE whose
-`AND col = <old>` / `ABS(col - x) < 0.01` guard no longer holds changes
+`AND col = <old>` / float `BETWEEN x±0.01` (older files: `ABS(col - x) < 0.01`) guard no longer holds changes
 nothing (the old item-tools reader ignored guards). Skips go to dbc-tools' skip
 log and are printed to stderr on each fresh load. `replay_check.py` compares
 every table it reads with the live DB (allow list

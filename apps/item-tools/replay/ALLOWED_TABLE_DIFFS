@@ -2,21 +2,6 @@
 # key (values joined with ","; * = any key), column (* = row on one side only, *missing = live only, *extra = replay
 # only), reason. Entries for SQL another worktree applied live go stale once that SQL lands here: delete them then.
 # Longer explanations: .agents/plans/dbc-replay-fix/item-tools-replay.REPORT.md (local).
-item_template	70100	*missing	live-only: INSERT was in a deleted pending file
-item_template	70101	*missing	live-only: INSERT was in a deleted pending file
-item_template	70102	*missing	live-only: INSERT was in a deleted pending file
-item_template	70103	*missing	live-only: INSERT was in a deleted pending file
-item_template	30086	stat_type1	live-only edit; later guards expect it (deleted file)
-item_template	30086	stat_value1	live-only edit; later guards expect it (deleted file)
-item_template	30086	stat_type2	live-only edit; later guards expect it (deleted file)
-item_template	30086	stat_value2	live-only edit; later guards expect it (deleted file)
-item_template	30086	dmg_min1	live-only edit; later guards expect it (deleted file)
-item_template	30086	dmg_max1	live-only edit; later guards expect it (deleted file)
-item_template	30088	stat_value1	live-only edit; later guards expect it (deleted file)
-item_template	30088	dmg_min1	live-only edit; later guards expect it (deleted file)
-item_template	30088	dmg_max1	live-only edit; later guards expect it (deleted file)
-item_weapon_dps_cost	1	cost	live ran 2026_09_05_00b after _32 (not name order)
-item_weapon_dps_spread	1	spread	live ran 2026_09_05_00b after _07 (not name order)
 instance_encounters	1000	*missing	E2 SQL applied live, not in this checkout
 instance_encounters	1001	*missing	E2 SQL applied live, not in this checkout
 instance_encounters	1002	*missing	E2 SQL applied live, not in this checkout

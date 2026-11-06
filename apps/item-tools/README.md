@@ -47,7 +47,7 @@ loot/instance tables) is replayed by `item_lib/replay.py` from:
 The parser is dbc-tools' (`apps/dbc-tools/lib/sql_dump.py`), shared rather
 than copied (item-tools had its own narrower copy until item-tools-replay).
 It applies statements in order with MySQL's semantics: an `UPDATE`'s guard
-(`AND col = <old value>`, or `ABS(col - x) < 0.01` on a float column) is
+(`AND col = <old value>`, or a float column's `BETWEEN x-0.01 AND x+0.01` / older `ABS(col - x) < 0.01`) is
 evaluated, so an UPDATE whose guard no longer holds changes nothing; `DELETE`
 and `INSERT` interleave as written; session variables, expressions,
 `INSERT IGNORE`, `TRUNCATE`, `ALTER TABLE` and `RENAME TABLE`
@@ -82,7 +82,8 @@ apps/dbc-tools/.venv/bin/python3 apps/item-tools/replay_check.py \
 ```
 
 Add `--modules <main checkout>/modules` when running from a worktree that
-lacks the live server's modules. Tests:
+lacks the live server's modules, and `--also rev_x.sql` to replay a pending
+file not imported yet (e.g. one written to capture live state). Tests:
 `apps/dbc-tools/.venv/bin/python3 -m unittest discover -s apps/item-tools/tests`.
 
 ## Setup

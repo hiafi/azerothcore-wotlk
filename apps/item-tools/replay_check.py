@@ -15,7 +15,8 @@ default, numbers as floats with a FLOAT tolerance, strings exactly. Explained di
 `apps/item-tools/replay/ALLOWED_TABLE_DIFFS` (TSV `table`, `key`, `column`, `reason`; key `*` = any key; column `*`,
 `*missing` (live only) or `*extra` (replay only) for a row on one side). `--tables a,b` limits the run, `--json FILE`
 writes every difference and skipped statement, `--limit N` caps the unexplained differences printed per table,
-`--modules DIR` reads module SQL from another checkout's `modules/` (a worktree without the live server's modules).
+`--modules DIR` reads module SQL from another checkout's `modules/` (a worktree without the live server's modules),
+`--also a.sql,b.sql` replays those not-yet-imported files too (a pending file that captures live state).
 Exit status 1 on an unexplained difference or a stale allow-list entry (stale is judged on a full run only).
 """
 
@@ -88,6 +89,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--tables", help="comma-separated subset")
     parser.add_argument("--limit", type=int, default=20)
     parser.add_argument("--json", help="write every difference and skip to this file")
+    parser.add_argument("--also", help="comma-separated file names to replay as if applied live (a pending file "
+                                       "written to capture live state, before it is imported)")
     parser.add_argument("--modules", help="read module SQL from this modules/ directory (a worktree that lacks the "
                                           "live server's modules: point it at the main checkout's)")
     args = parser.parse_args(argv)
@@ -103,6 +106,7 @@ def main(argv: list[str] | None = None) -> int:
         replay.trainer_state.MODULES_DIR = Path(args.modules)
     allowed = replay_diff.load_allowed(ALLOWED_TABLE_DIFFS)
     applied = {r["name"] for r in run_sql(mysql, args.database, "SELECT `name` FROM `updates`;")}
+    applied |= set(args.also.split(",")) if args.also else set()
     replay.sqlcorpus.activate(None, "item-tools-replay-check")  # each file read once for every table, no disk cache
     report = []
     all_differences = []

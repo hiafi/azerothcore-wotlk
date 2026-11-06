@@ -11,7 +11,7 @@ SQL. See `lib/replay.py` for the file order and the parser: it is dbc-tools'
 so its migrations are guarded `UPDATE ... WHERE entry = N AND col = <old>`
 statements or `INSERT ... ON DUPLICATE KEY UPDATE` upserts (`lib/emit.py`
 writes both). The replay evaluates a guard the way MySQL does: an UPDATE
-whose guard no longer holds changes nothing (an `ABS(col - x) < 0.01` float
+whose guard no longer holds changes nothing (a `BETWEEN` or older `ABS(col - x) < 0.01` float
 guard included), so the replayed row is what the live DB holds, not what the
 migration's author expected it to hold. A statement the replay cannot read is
 skipped and recorded in dbc-tools' skip log (`get_rows()` prints a summary to
