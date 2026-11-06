@@ -199,6 +199,37 @@ class StatementShapeTest(unittest.TestCase):
         )
         self.assertEqual({k[0]: r["event_type"] for k, r in rows.items()}, {2: 5, 3: 6})
 
+    def test_abs_float_guard(self):
+        # item-tools' guard on a FLOAT column (item_lib/emit._guard_term): the UPDATE applies only when it holds.
+        columns, key = ("entry", "dmg_min1", "dmg_max1"), ("entry",)
+        rows = replay(
+            "INSERT INTO `item_template` (`entry`, `dmg_min1`, `dmg_max1`) VALUES (1, 180.457, 335.135), "
+            "(2, 100, 200);\n"
+            "UPDATE `item_template` SET `dmg_min1` = 181.2888, `dmg_max1` = 336.6792 WHERE `entry` = 1 "
+            "AND ABS(`dmg_min1` - 180.457) < 0.01 AND ABS(`dmg_max1` - 335.135) < 0.01;\n"
+            "UPDATE `item_template` SET `dmg_min1` = 1 WHERE `entry` = 2 AND ABS(`dmg_min1` - 99) < 0.01;\n"
+            "UPDATE `item_template` SET `dmg_max1` = 7 WHERE (ABS(`dmg_max1` + -200) <= 0.5);\n",
+            columns, key, "item_template", {"entry": 0, "dmg_min1": 0.0, "dmg_max1": 0.0},
+        )
+        self.assertEqual({k[0]: (r["dmg_min1"], r["dmg_max1"]) for k, r in rows.items()},
+                         {1: (181.2888, 336.6792), 2: (100, 7)})
+        self.assertIsNone(sql_dump.parse_where_predicate("ABS(`a` - 'x') < 1"))
+
+    def test_nested_or_group_in_an_and_chain(self):
+        # 2026_02_20_03.sql / 2026_09_09_04.sql (creature_loot_template): `A AND (B OR (C AND D))`.
+        columns, key = ("Entry", "Item", "Reference"), ("Entry", "Item")
+        rows = replay(
+            "INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`) VALUES (1, 1, 0), (1, 2, 15), "
+            "(1, 3, 35), (1, 4, 50), (2, 5, 15);\n"
+            "DELETE FROM `creature_loot_template` WHERE\n`Entry` IN (1)\nAND (\n`Reference` BETWEEN 10 AND 20 OR\n"
+            "`Reference` BETWEEN 30 AND 40\n);\n"
+            "DELETE FROM `creature_loot_template` WHERE `Entry` = 1 AND (`Item` IN (9) OR (`Item` IN (4) AND "
+            "`Reference` IN (50)));\n",
+            columns, key, "creature_loot_template", {"Entry": 0, "Item": 0, "Reference": 0},
+        )
+        self.assertEqual(sorted(rows), [(1, 1), (2, 5)])
+        self.assertIsNone(sql_dump.parse_where_predicate("`a` = 1 AND (`b` = 2 OR SIN(`c`) = 0)"))
+
     def test_column_names_are_case_insensitive(self):
         rows = replay(
             "INSERT INTO `smart_scripts` (`EntryOrGuid`, `Event_Type`) VALUES (1, 5), (2, 6);\n"

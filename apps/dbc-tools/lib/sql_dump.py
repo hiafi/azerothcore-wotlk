@@ -1538,6 +1538,13 @@ _COND_RE = re.compile(
 _MASK_COND_RE = re.compile(
     r"^\(\s*`(?P<col>\w+)`\s*&\s*(?P<mask>0[xX][0-9a-fA-F]+|\d+)\s*\)\s*(?P<op>!=|<>|=)\s*(?P<val>\d+)$"
 )
+# `ABS(`dmg_min1` - 141.647) < 0.01`: item-tools' guard on a FLOAT column (`item_lib/emit._guard_term`; MySQL keeps
+# FLOAT in 32 bits, so an exact `=` on a computed value can miss). 1,953 item_template UPDATEs use it.
+_ABS_COND_RE = re.compile(
+    rf"^ABS\(\s*`(?P<col>\w+)`\s*(?P<sign>[-+])\s*(?P<lit>{_LITERAL})\s*\)"
+    rf"\s*(?P<op><=|>=|<|>)\s*(?P<tol>{_LITERAL})$",
+    re.IGNORECASE,
+)
 _BETWEEN_RE = re.compile(r"BETWEEN\s+(-?\d+(?:\.\d+)?)\s+AND\s+(-?\d+(?:\.\d+)?)", re.IGNORECASE)
 _IN_ITEM_RE = re.compile(rf"\s*({_LITERAL})\s*(?:,|$)")
 
@@ -1640,12 +1647,13 @@ def _compare(op: str, a, b) -> bool:
 def parse_where_predicate(where_text: str, lenient: bool = False, defaults: dict | None = None):
     """A WHERE clause as a `row -> bool` callable, or None when any part is outside the supported
     grammar: OR of (parenthesised) AND chains of `` `col` <op> literal`` (`=`, `!=`, `<>`, `<`, `>`, `<=`, `>=`;
-    a number or a quoted string), `` `col` [NOT] IN (literal, ...)``, `` `col` BETWEEN a AND b`` and
-    `` `col` IS [NOT] NULL``. A column the row does not hold takes its value from `defaults` (the table's schema
-    defaults) when it is there; otherwise `lenient` makes the condition count as satisfied (an UPDATE's guard, where
-    "unknown" must not block the fix) and the default treats it as not matching (a DELETE must not remove what it
-    cannot judge). Built so a composite-key replay can apply the hand-written
-    DELETE/UPDATE shapes this repo actually contains (`TrainerId = 1 AND SpellId = 71` point
+    a number or a quoted string), `` `col` [NOT] IN (literal, ...)``, `` `col` BETWEEN a AND b``,
+    `` `col` IS [NOT] NULL`` and `` ABS(`col` - n) < tolerance`` (item-tools' FLOAT guard); a parenthesised OR group
+    inside an AND chain is a nested predicate. A column the row does not hold takes its value from `defaults` (the
+    table's schema defaults) when it is there; otherwise `lenient` makes the condition count as satisfied (an
+    UPDATE's guard, where "unknown" must not block the fix) and the default treats it as not matching (a DELETE must
+    not remove what it cannot judge). Built so a composite-key replay can
+    apply the hand-written DELETE/UPDATE shapes this repo actually contains (`TrainerId = 1 AND SpellId = 71` point
     deletes, `BETWEEN` ranges, the OR-of-AND form) instead of silently ignoring them."""
     text = _BETWEEN_RE.sub(lambda m: f"BETWEEN {m.group(1)}|{m.group(2)}", where_text.strip())
     defaults = defaults or {}
@@ -1655,8 +1663,27 @@ def parse_where_predicate(where_text: str, lenient: bool = False, defaults: dict
         conds = []
         pinned: dict[str, frozenset] = {}
         for and_part in _split_top_level(_strip_outer_parens(or_part), "AND"):
-            m = _COND_RE.match(_strip_outer_parens(and_part))
+            inner = _strip_outer_parens(and_part)
+            if len(_split_top_level(inner, "OR")) > 1:
+                # A parenthesised OR inside an AND chain (`Entry` IN (...) AND (`Reference` BETWEEN .. OR ..),
+                # 2026_02_20_03.sql; 2026_09_09_04.sql): a nested predicate, judged on the whole row.
+                nested = parse_where_predicate(inner, lenient=lenient, defaults=defaults)
+                if nested is None:
+                    return None
+                conds.append((None, nested))
+                continue
+            m = _COND_RE.match(inner)
             if not m:
+                near = _ABS_COND_RE.match(_strip_outer_parens(and_part))
+                if near:
+                    lit, tol = _where_literal(near.group("lit")), _where_literal(near.group("tol"))
+                    if isinstance(lit, str) or isinstance(tol, str):
+                        return None
+                    sign = -1 if near.group("sign") == "-" else 1
+                    conds.append((near.group("col"), lambda v, lit=lit, tol=tol, sign=sign, op=near.group("op"): (
+                        isinstance(v, (int, float)) and _compare(op, abs(v + sign * lit), tol)
+                    )))
+                    continue
                 mask = _MASK_COND_RE.match(and_part.strip())
                 if not mask:
                     return None
@@ -1700,7 +1727,9 @@ def parse_where_predicate(where_text: str, lenient: bool = False, defaults: dict
         disjuncts.append(conds)
         pins.append(pinned)
 
-    def holds(row: dict, col: str, test) -> bool:
+    def holds(row: dict, col: str | None, test) -> bool:
+        if col is None:  # a nested OR group
+            return test(row)
         if col in row:
             return test(row[col])
         if col in defaults:

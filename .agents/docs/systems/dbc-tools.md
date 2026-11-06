@@ -64,8 +64,9 @@ Plan and review notes: `.agents/plans/dbc-tools-generate-speed/` (local).
 - **A new cached loader** = a `step(state, path)` function plus `sqlcorpus.checkpointed(kind, params, stable, init,
   step)`, then replay the volatile (pending, module) files on the returned state yourself. `params` must name
   everything the replay depends on besides the files (columns, key columns, flags). A projection
-  (`load_table_rows(project=...)`) keeps a 150k-row dump out of the snapshot. `load_live_item_template_rows`
-  re-implements item-tools' replay loop on its private helpers: change `item_lib/overlay.py` and re-run the harness.
+  (`load_table_rows(project=...)`) keeps a 150k-row dump out of the snapshot. `load_live_item_template_rows` calls
+  item-tools' overlay, which replays with this `sql_dump` through `sqlcorpus.checkpointed` (`item_lib/replay.py`):
+  change `item_lib/` and re-run the harness.
 - **`--check --class NAME`** (`generate._run_scoped_check`) loads `source/classes/NAME` only and runs the same lint
   block (`_check_report`) over it, with the live state the DSL helpers need behind `lib/lazy.py`. It leaves out what
   is not one class's: the CSV/YAML sources (except their ids, so a CSV-declared stock spell is not called undeclared),
@@ -254,15 +255,15 @@ phase warnings of `render_removal_blocks` are gone; the plain typo guard stays).
   `state._promoted_paths` (the DBC-table state, so `map_dbc` 249 and `mapdifficulty_dbc` 26 / 323 are visible). A list
   without either anchor (a test's temp dir) is left alone; a promoted file named inside the slot is an error.
   `_split_stable` counts frozen files as stable, so the disk cache keeps them in the cached prefix.
-- **Not in the item overlay.** `apps/item-tools`' overlay does not read the slot (phase 0's 18 mount rows); the
-  progression-slim cutover SQL resets those columns anyway, and `item_template()` emits column-limited UPDATEs.
+- **Also in the item overlay** since item-tools-replay: `apps/item-tools/item_lib/replay.py` splices the slot into
+  its own (recursive) file list. `item_template()` emits column-limited UPDATEs either way.
 - **Read normalised.** `sqlcorpus.read_text` returns a frozen file through `frozen_replay.normalise`: `-- comments`
   inside `IN (...)` lists and between INSERT tuples stripped, `SET @a := 1, @b := 2;` split, backticked column names
   in the schema's letter case. The shared parsers skip or misapply all three (an UPDATE guard on a column the row
   does not hold counts as satisfied: phase 0 writes `` `entry` `` for `creature_loot_template.Entry`, so its emblem
   swap hit every Emblem of Triumph row). Without it the replay lost ~1,000 `creature_template` cells of phase 0.
-  Pending files with commented `IN` lists (the progression-slim cutover SQL) are still skipped with a WARNING, and
-  `apps/item-tools`' overlay raises on them.
+  Pending files with commented `IN` lists (the progression-slim cutover SQL) are still skipped with a WARNING (in
+  `apps/item-tools`' overlay too, which shares the parser).
 - **Replay vs live.** `replay_diff.py` (logic in `lib/replay_diff.py`) replays each table phase 0 writes over the files
   the live `updates` table lists and compares the cells phase 0 changed with the live DB (read-only). It applies the
   same three fixes to every file, re-keys a row whose key column an UPDATE changed, and models `TRUNCATE`. Result at
@@ -323,8 +324,16 @@ stale entry. About 15-20 minutes. At dbc-replay-fix: 0 unexplained over 49 table
 `smart_scripts` 53,890 = 53,890 rows, 0 cell differences.
 
 Not read (recorded as skips): subqueries, function calls (`SIN()`, `COALESCE()`, `UNIX_TIMESTAMP()`), `INSERT ...
-SELECT`, `UPDATE` with a join or an alias, `PREPARE`/`EXECUTE`. `apps/item-tools/item_lib/sql_dump.py` (the
-item_template overlay) is a separate parser and has none of the above.
+SELECT`, `UPDATE` with a join or an alias, `PREPARE`/`EXECUTE`. One function is read: `ABS(`col` - n) < tolerance`
+in a WHERE, item-tools' float guard (1,953 `item_template` UPDATEs).
+
+**item-tools replays with this parser** (item-tools-replay): `apps/item-tools/item_lib/replay.py` runs
+`apply_composite_key_statements` for every table item-tools reads (`item_template`, the itemization tables, the
+dungeon browser's `creature` / `creature_template` / loot / instance tables) over its own file list (this tool's
+order, plus `db_world/`/`pending_db_world/` subdirectories), records skips in `sqlcorpus.SKIPS`, and has its own
+whole-table check, `apps/item-tools/replay_check.py`, built on `lib/replay_diff.py` with its own allow list
+(`apps/item-tools/replay/ALLOWED_TABLE_DIFFS`). Its private copy of the parser is gone. Report:
+`.agents/plans/dbc-replay-fix/item-tools-replay.REPORT.md` (local).
 
 ### Unchanged reserved blocks are judged against pending revs too (dbc-replay-fix follow-up)
 
@@ -661,7 +670,7 @@ talents, pet spells and items" section has the call syntax; this is what to know
 - **`item_template()`** uses `spell_tables.ITEM_TABLES` (a sibling of `CREATURE_TABLES`): upsert only, never
   pruned (`render_item_retirement_report` lists a dropped declaration), unchanged rows emit nothing. Two
   differences from `creature_template`: the live rows come from `apps/item-tools`' overlay (it recurses into
-  `itemization_templates_v2/`; `trainer_state` does not), and the statement is a column-limited
+  `itemization_templates_v2/`; `trainer_state` does not; same `sql_dump` parser), and the statement is a column-limited
   `UPDATE ... SET <declared columns> WHERE entry IN (...)` (`sql_out.render_update_block` reads each row's
   `_update_columns`; rows with the same assignments share one statement). Reason: SQL the overlay does not read
   (the frozen phase 0's mount price and level columns, the progression-slim cutover SQL that resets them) writes

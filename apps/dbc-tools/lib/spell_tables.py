@@ -743,10 +743,10 @@ def render_creature_retirement_report(
 # item (the stock quivers become bags; every bow/gun/crossbow loses its ammo type). Same shape as
 # CREATURE_TABLES above (upsert only, never pruned, retired declarations reported) with two
 # differences:
-#   - live state comes from apps/item-tools' overlay (`item_lib.overlay.get_rows`), not
-#     trainer_state's replay. The item system keeps its migrations in `itemization_templates_v2/`
-#     subdirectories, which `trainer_state._migration_files_mentioning` (top-level *.sql only) never
-#     sees; the overlay walks them recursively in bare-filename order, as the real DBUpdater does.
+#   - live state comes from apps/item-tools' overlay (`item_lib.overlay`), not trainer_state's replay
+#     directly. The item system keeps its migrations in `itemization_templates_v2/` subdirectories, which
+#     `trainer_state._migration_files_mentioning` (top-level *.sql only) never sees; the overlay walks them
+#     recursively in bare-filename order, as the real DBUpdater does, and replays with this tool's `sql_dump`.
 #   - the emitted statement is a column-limited `UPDATE ... SET <declared columns> WHERE entry IN (...)`
 #     (sql_out.render_update_block reads each row's `_update_columns`), so a column nobody declared is
 #     never rewritten from the replayed row - another migration or SQL the overlay does not read
@@ -762,8 +762,10 @@ ITEM_TABLES = (
 
 
 def load_live_item_template_rows() -> dict[int, dict]:
-    """Every live `item_template` row by entry: base dump plus every merged and pending migration,
-    via apps/item-tools' `item_lib.overlay.get_rows()` (imported lazily - it lives outside this tool)."""
+    """Every live `item_template` row by entry: base dump plus every merged and pending migration (subdirectories
+    included), the frozen phase 0 and module SQL, via apps/item-tools' `item_lib.overlay.resolve_current_rows()`
+    (imported lazily - it lives outside this tool). The overlay replays with this tool's own `sql_dump` and, inside
+    a generate.py run, caches the promoted part through `sqlcorpus.checkpointed` like the other loaders."""
     import sys
 
     item_tools = str(trainer_state.REPO_ROOT / "apps" / "item-tools")
@@ -773,29 +775,7 @@ def load_live_item_template_rows() -> dict[int, dict]:
 
     if sqlcorpus.active() is None:
         return overlay.get_rows()
-
-    # Same replay as `overlay.resolve_current_rows()` (base dump, then every merged and pending file in file-name
-    # order), split so the merged history can be cached and the pending files replayed on top.
-    files = overlay._contributing_files()
-    merged = 0
-    while merged < len(files) and files[merged].is_relative_to(overlay.MERGED_DIR):
-        merged += 1
-
-    def step(rows: dict[int, dict], path: Path) -> dict[int, dict]:
-        if path == overlay.BASE_FILE:
-            columns = overlay.parse_create_table_columns(path, "item_template")
-            rows.update(overlay.read_table_dump(path, "item_template", columns, "entry"))
-            return rows
-        text = sqlcorpus.read_text(path)
-        if "item_template" in text:
-            overlay._apply_updates(text, rows, str(path))
-            overlay._apply_inserts(text, rows, str(path))
-        return rows
-
-    rows = sqlcorpus.checkpointed("item_overlay", None, [overlay.BASE_FILE, *files[:merged]], dict, step)
-    for path in files[merged:]:
-        step(rows, path)
-    return rows
+    return overlay.resolve_current_rows()
 
 
 _GENERATED_ITEM_UPDATE_RE = re.compile(

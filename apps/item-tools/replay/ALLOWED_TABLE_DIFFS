@@ -1,0 +1,84 @@
+# Whole-table replay vs live differences that are explained (apps/item-tools/replay_check.py). Tab-separated: table,
+# key (values joined with ","; * = any key), column (* = row on one side only, *missing = live only, *extra = replay
+# only), reason. Entries for SQL another worktree applied live go stale once that SQL lands here: delete them then.
+# Longer explanations: .agents/plans/dbc-replay-fix/item-tools-replay.REPORT.md (local).
+item_template	70100	*missing	live-only: INSERT was in a deleted pending file
+item_template	70101	*missing	live-only: INSERT was in a deleted pending file
+item_template	70102	*missing	live-only: INSERT was in a deleted pending file
+item_template	70103	*missing	live-only: INSERT was in a deleted pending file
+item_template	30086	stat_type1	live-only edit; later guards expect it (deleted file)
+item_template	30086	stat_value1	live-only edit; later guards expect it (deleted file)
+item_template	30086	stat_type2	live-only edit; later guards expect it (deleted file)
+item_template	30086	stat_value2	live-only edit; later guards expect it (deleted file)
+item_template	30086	dmg_min1	live-only edit; later guards expect it (deleted file)
+item_template	30086	dmg_max1	live-only edit; later guards expect it (deleted file)
+item_template	30088	stat_value1	live-only edit; later guards expect it (deleted file)
+item_template	30088	dmg_min1	live-only edit; later guards expect it (deleted file)
+item_template	30088	dmg_max1	live-only edit; later guards expect it (deleted file)
+item_weapon_dps_cost	1	cost	live ran 2026_09_05_00b after _32 (not name order)
+item_weapon_dps_spread	1	spread	live ran 2026_09_05_00b after _07 (not name order)
+instance_encounters	1000	*missing	E2 SQL applied live, not in this checkout
+instance_encounters	1001	*missing	E2 SQL applied live, not in this checkout
+instance_encounters	1002	*missing	E2 SQL applied live, not in this checkout
+instance_encounters	1003	*missing	E2 SQL applied live, not in this checkout
+instance_encounters	1004	*missing	E2 SQL applied live, not in this checkout
+instance_encounters	1005	*missing	E2 SQL applied live, not in this checkout
+instance_encounters	1006	*missing	E2 SQL applied live, not in this checkout
+creature_template	1725	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	1729	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	1731	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	1732	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	1763	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	2520	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	310000	*missing	E2 SQL applied live, not in this checkout
+creature_template	310001	*missing	E2 SQL applied live, not in this checkout
+creature_template	310002	*missing	E2 SQL applied live, not in this checkout
+creature_template	310003	*missing	E2 SQL applied live, not in this checkout
+creature_template	310004	*missing	E2 SQL applied live, not in this checkout
+creature_template	310005	*missing	E2 SQL applied live, not in this checkout
+creature_template	310006	*missing	E2 SQL applied live, not in this checkout
+creature_template	310007	*missing	E2 SQL applied live, not in this checkout
+creature_template	310008	*missing	E2 SQL applied live, not in this checkout
+creature_template	310009	*missing	E2 SQL applied live, not in this checkout
+creature_template	310010	*missing	E2 SQL applied live, not in this checkout
+creature_template	310011	*missing	E2 SQL applied live, not in this checkout
+creature_template	310012	*missing	E2 SQL applied live, not in this checkout
+creature_template	310013	*missing	E2 SQL applied live, not in this checkout
+creature_template	310014	*missing	E2 SQL applied live, not in this checkout
+creature_template	310015	*missing	E2 SQL applied live, not in this checkout
+creature_template	310016	*missing	E2 SQL applied live, not in this checkout
+creature_template	310017	*missing	E2 SQL applied live, not in this checkout
+creature_template	310018	*missing	E2 SQL applied live, not in this checkout
+creature_template	310019	*missing	E2 SQL applied live, not in this checkout
+creature_template	310020	*missing	E2 SQL applied live, not in this checkout
+creature_template	310021	*missing	E2 SQL applied live, not in this checkout
+creature_template	310022	*missing	E2 SQL applied live, not in this checkout
+creature_template	310023	*missing	E2 SQL applied live, not in this checkout
+creature_template	310024	*missing	E2 SQL applied live, not in this checkout
+creature_template	3450	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	3586	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	3947	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	4416	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	4417	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	4418	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	598	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	622	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	634	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	636	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	639	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	641	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	642	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	643	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	644	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	645	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	646	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	647	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature_template	657	difficulty_entry_1	E2 SQL applied live, not in this checkout
+creature	5300701	*missing	spawn added in game (.npc add)
+creature	5300702	*missing	spawn added in game (.npc add)
+creature	5300703	*missing	spawn added in game (.npc add)
+creature	5300704	*missing	spawn added in game (.npc add)
+creature	5300705	*missing	spawn added in game (.npc add)
+creature	5300706	*missing	spawn added in game (.npc add)
+creature	5300707	*missing	spawn added in game (.npc add)
+creature	5300722	*missing	spawn added in game (.npc add)

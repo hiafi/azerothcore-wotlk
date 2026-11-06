@@ -123,9 +123,9 @@ def render_update_block(
     migrations apps/item-tools' overlay replays. Each row carries `_update_columns`, the columns its
     declaration named (absent: every non-key column). Rows with identical assignments share one
     statement, so ~540 bows are one short `WHERE entry IN (...)` list; a column nobody declared is never
-    written. The overlay reads exactly this shape (`_UPDATE_RE` + `_ENTRY_IN_RE`) - the multi-row
-    `INSERT ... ON DUPLICATE KEY UPDATE` it replaced only had its first tuple read back, so a rerun
-    re-emitted every row (T-FIX T1-1). Idempotent, and an entry that does not exist is a no-op.
+    written. The overlay (`sql_dump` since item-tools-replay) reads this shape back - the multi-row
+    `INSERT ... ON DUPLICATE KEY UPDATE` it replaced only had its first tuple read back by the old item-tools
+    parser, so a rerun re-emitted every row (T-FIX T1-1). Idempotent, and an entry that does not exist is a no-op.
     Returns `""` for an empty `rows`."""
     groups: dict[tuple, list[int]] = {}
     for row in sorted(rows, key=lambda r: r[key_column]):
