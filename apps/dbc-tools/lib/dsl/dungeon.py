@@ -10,15 +10,29 @@ E1 (WP-T1) emits, for a dungeon with `heroic=heroic(...)`:
 - a `dungeon_access_template` row (map, difficulty 1): the level / item level gate `MapMgr::PlayerCannotEnter`
   checks (GMs skip it).
 
+E2 (WP-T2, generate.py's side in lib/dungeon_heroic.py) adds, for the same heroic:
+
+- `encounter_ids=`: one heroic DungeonEncounter row per normal encounter of the map (stock file plus live overlay),
+  copying its Bit, OrderIndex and names, server overlay and patch-Z, and the `instance_encounters` row that credits it
+  (the normal row's credit type and entry, no dungeon finder link). Without them `Map::UpdateEncounterState` finds no
+  heroic list: no completed-encounter bit, no boss list for mod-dungeon-clear.
+- `spawn_mask=True` (the default): every creature and gameobject spawn on the map gets the heroic bit, as a targeted
+  `UPDATE ... SET spawnMask = spawnMask | 2` of the spawns live does not already have it on. Game event spawns are left
+  out unless `event_spawns=True`.
+- the per-creature emitters, inert until WP-G hands over its normal -> heroic entry map (the lock file) as
+  `entry["heroic_entries"]` on the `Registry.dungeons` bookkeeping entry: `difficulty_entry_1` on each normal row (one
+  column) and copies of the side tables the engine reads by the heroic entry.
+
 A `dungeon(...)` without `heroic` emits nothing: the normal rows belong to stock data and the frozen phase 0 SQL.
-Later stages extend the same two calls rather than adding a second declaration per dungeon: E2's T2 adds the
-heroic DungeonEncounter / `instance_encounters` rows, spawnMask and `difficulty_entry_1` emission, and WP-G the
-creature list and the heroic template generator (tier, bosses, overrides) - see the E1-T1 report for the proposed
-shape. They read `Registry.dungeons` (one entry per call: `map_id`, `name`, `heroic` as a plain dict or None).
+Later stages extend the same two calls rather than adding a second declaration per dungeon: WP-G adds the creature
+list and the heroic template generator (tier, bosses, overrides) - see the E1-T1 report for the proposed shape. They
+read `Registry.dungeons` (one entry per call: `map_id`, `name`, `heroic` as a plain dict or None, `heroic_entries`).
 
     from lib.dsl.dungeon import dungeon, heroic
 
-    dungeon(36, "Deadmines", heroic=heroic(map_difficulty_id=1000, access_id=122, min_level=60))
+    dungeon(36, "Deadmines", heroic=heroic(
+        map_difficulty_id=1000, access_id=122, min_level=60, encounter_ids=range(1000, 1007),
+    ))
 """
 
 from __future__ import annotations
@@ -56,11 +70,15 @@ class HeroicSpec:
     reset_seconds: int = HEROIC_RESET_SECONDS
     max_players: int = HEROIC_MAX_PLAYERS
     message: str = ""
+    encounter_ids: tuple[int, ...] = ()
+    spawn_mask: bool = True
+    event_spawns: bool = False
 
 
 def heroic(
     *, map_difficulty_id: int, access_id: int, min_level: int, max_level: int = 0, min_item_level: int = 0,
     reset_seconds: int = HEROIC_RESET_SECONDS, max_players: int = HEROIC_MAX_PLAYERS, message: str | None = None,
+    encounter_ids=(), spawn_mask: bool = True, event_spawns: bool = False,
 ) -> HeroicSpec:
     """The heroic difficulty (Difficulty 1) of a 5-man dungeon, for `dungeon(..., heroic=...)`.
 
@@ -73,7 +91,16 @@ def heroic(
     entry gate. `reset_seconds` is the lockout (`RaidDuration`, a day like every stock heroic; non-zero, or a kill
     binds nothing); `max_players` the group size the client shows (5). `message` is what the client prints when the
     gate refuses a player; the default names `min_level` like the stock rows do ("Heroic Difficulty requires you to
-    be level 80.")."""
+    be level 80.").
+
+    `encounter_ids` (E2) are the DungeonEncounter ids of the heroic boss list, from the `dungeonencounter` block (stock
+    tops out at 894), one per normal encounter of the map in the stock file's order (`range(1000, 1007)` for the
+    seven Deadmines bosses); each heroic row copies its normal row. Empty: no heroic encounter rows. Like every id
+    here, never move them once shipped.
+
+    `spawn_mask` (E2, default on: a heroic with no spawns is an empty instance with no doors) puts every creature and
+    gameobject spawn of the map on heroic too; `event_spawns=True` includes the spawns a game event owns (holiday
+    bosses, Scourge Invasion), which stay normal-only by default."""
     if message is None:
         message = f"Heroic Difficulty requires you to be level {min_level}."
     label = f"heroic(map_difficulty_id={map_difficulty_id!r}, ...)"
@@ -100,9 +127,21 @@ def heroic(
             f"{label}: message must be a non-empty string of at most {MESSAGE_MAX_LENGTH} characters (an empty one "
             f"makes the server send no refusal text), got {message!r}"
         )
+    try:
+        encounters = tuple(encounter_ids)
+    except TypeError:
+        raise ValueError(f"{label}: encounter_ids must be a sequence of ints, got {encounter_ids!r}") from None
+    if not all(_plain_int(e) and e > 0 for e in encounters) or len(set(encounters)) != len(encounters):
+        raise ValueError(f"{label}: encounter_ids must be distinct positive ints, got {encounter_ids!r}")
+    for name, value in (("spawn_mask", spawn_mask), ("event_spawns", event_spawns)):
+        if not isinstance(value, bool):
+            raise ValueError(f"{label}: {name} must be True or False, got {value!r}")
+    if event_spawns and not spawn_mask:
+        raise ValueError(f"{label}: event_spawns=True needs spawn_mask=True")
     return HeroicSpec(
         map_difficulty_id=map_difficulty_id, access_id=access_id, min_level=min_level, max_level=max_level,
         min_item_level=min_item_level, reset_seconds=reset_seconds, max_players=max_players, message=message,
+        encounter_ids=encounters, spawn_mask=spawn_mask, event_spawns=event_spawns,
     )
 
 
@@ -152,7 +191,8 @@ def dungeon(map_id: int, name: str, *, heroic: HeroicSpec | None = None) -> dict
     generate.py stops (also under `--check`) when the map has no stock MapDifficulty row (not an instance map: wrong
     id?), when a declared (map, difficulty) is already a stock or live MapDifficulty row under another id, when a live
     `dungeon_access_template` row already covers it under another id, and when the stock MapDifficulty.dbc is missing
-    from var/extractors/dbc/. Returns the bookkeeping entry."""
+    from var/extractors/dbc/. The heroic's encounter rows, spawn masks and per-creature rows are built by generate.py
+    from live state (lib/dungeon_heroic.py), which has its own ERRORs. Returns the bookkeeping entry."""
     caller = f"dungeon({map_id!r}, {name!r})"
     if not _plain_int(map_id) or map_id <= 0:
         raise ValueError(f"{caller}: map_id must be a Map.dbc id (positive int)")
@@ -161,10 +201,17 @@ def dungeon(map_id: int, name: str, *, heroic: HeroicSpec | None = None) -> dict
     if heroic is not None and not isinstance(heroic, HeroicSpec):
         raise ValueError(f"{caller}: heroic must come from heroic(...), got {heroic!r}")
     registry = _registry._require_active()
-    entry = {"id": map_id, "map_id": map_id, "name": name, "heroic": asdict(heroic) if heroic else None}
+    # `heroic_entries` (normal creature entry -> heroic entry) is WP-G's: its lock file fills it; lib/dungeon_heroic.py
+    # reads it for difficulty_entry_1 and the side-table copies, and does nothing while it is empty.
+    entry = {
+        "id": map_id, "map_id": map_id, "name": name, "heroic": asdict(heroic) if heroic else None,
+        "heroic_entries": {},
+    }
     if heroic is not None:
         _check_block(f"{caller}: heroic map_difficulty_id", "mapdifficulty", heroic.map_difficulty_id)
         _check_block(f"{caller}: heroic access_id", "dungeon_access", heroic.access_id)
+        for encounter_id in heroic.encounter_ids:
+            _check_block(f"{caller}: heroic encounter_ids", "dungeonencounter", encounter_id)
         registry.map_difficulties.append(map_difficulty_row(map_id, heroic, f"{name} - Heroic"))
         registry.dungeon_access.append(access_row(map_id, name, heroic))
     registry.dungeons.append(entry)

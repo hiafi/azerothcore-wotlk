@@ -51,7 +51,7 @@ sys.path.insert(0, str(TOOL_ROOT))
 from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, source, sql_out, state  # noqa: E402
 from lib import gcd_haste, header_gen, potency_sheet, spell_tables, superseded_ranks  # noqa: E402
 from lib import sqlcorpus, stale_overlay, trainer_pricing, trainer_state  # noqa: E402
-from lib import dungeon_checks  # noqa: E402
+from lib import dungeon_checks, dungeon_heroic  # noqa: E402
 from bootstrap import load_spell_ranks_chains  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 from lib.lazy import Lazy  # noqa: E402
@@ -602,7 +602,7 @@ def main() -> int:
 CACHE_DIR = REPO_ROOT / "var" / "dbc-tools-cache"
 CACHE_CODE_FILES = (
     "sqlcorpus.py", "sql_dump.py", "dbcfile.py", "dbcfmt.py", "state.py", "trainer_state.py", "spell_tables.py",
-    "trainer_pricing.py", "stale_overlay.py", "frozen_replay.py",
+    "trainer_pricing.py", "stale_overlay.py", "frozen_replay.py", "spawn_state.py",
 )
 
 
@@ -619,14 +619,15 @@ def _check_report(
     corpus: sqlcorpus.Corpus, progress, ids_cfg: dict, spell_entries: list[dict], talents: dict, dsl_classes: dict,
     spell_table_index, existing_talents: dict, header_classes: tuple[str, ...],
     gcd_scope: tuple[str, ...] | None = None, family: int | None = None,
-    declared_elsewhere: frozenset[int] | set[int] = frozenset(),
+    declared_elsewhere: frozenset[int] | set[int] = frozenset(), dungeon_expansion=None,
 ) -> int:
     """The `--check` lints and header gate over a declared population, printed in this order. One function for the
     whole-tree `--check` and for `--check --class X` (which hands it one class's population and that class's header
     list); `gcd_scope` limits the GCD-haste dry run's messages to those that start with one of the given family names
     (a scoped run still sees every family's stock rows, but only its own family's verdict is its business); `family`
-    is the scoped class's SpellFamilyName/SpellClassSet number, which limits the undeclared-stock-spell scan to it, and
-    `declared_elsewhere` the ids that scan must treat as declared."""
+    is the scoped class's SpellFamilyName/SpellClassSet number, which limits the undeclared-stock-spell scan to it,
+    `declared_elsewhere` the ids that scan must treat as declared, and `dungeon_expansion` the run's
+    `dungeon_heroic.expand()` result (None for a scoped run, which loads no dungeons)."""
     # A fast, read-only staleness gate (PLAN P2b step 3) - everything below this point (SQL
     # diffing, DBC state, the client patch) is irrelevant to "is the committed header stale",
     # so --check returns here instead of running the rest of the ~130s pipeline.
@@ -681,9 +682,10 @@ def _check_report(
     )
     # Potency audit S3: a weapon strike's percent and flat part must sit on potency (or be listed as deferred).
     check_errors += lint.check_weapon_potency(dsl_classes["spells"])
-    # Dungeon difficulties E1: declared heroics (stock MapDifficulty.dbc present, no (map, difficulty) clash).
-    check_errors += dungeon_checks.errors_for_run(dsl_classes, spell_table_index)
-    for note in dungeon_checks.summary_notes(dsl_classes["dungeons"]):
+    # Dungeon difficulties E1: declared heroics (stock MapDifficulty.dbc present, no (map, difficulty) clash); E2: the
+    # derived encounter, spawnMask and per-creature rows (dungeon_heroic.expand, run before --check returns).
+    check_errors += dungeon_checks.errors_for_run(dsl_classes, spell_table_index, expansion=dungeon_expansion)
+    for note in dungeon_checks.summary_notes(dsl_classes["dungeons"], dungeon_expansion):
         print(f"note: {note}")
     if gcd_scope is None:  # the whole-tree check; a scoped one loads only part of the live state
         _print_replay_skips()
@@ -898,6 +900,16 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
     _merge_dsl_sources(spell_entries, talents, dsl_classes)
     if _foreign_id_errors(spell_entries, ids_cfg):
         return 1
+    # Dungeon difficulties E2: a declared heroic's derived rows (encounters, spawnMask, difficulty_entry_1, side-table
+    # copies), built from live state before anything renders or --check returns, so both see the same rows. The live
+    # spawn replay loads only when a heroic is declared.
+    dungeon_expansion = dungeon_heroic.expand(
+        dsl_classes, lambda: dungeon_heroic.load_live_world(existing_creature_rows, spell_table_index),
+    )
+    for warning in dungeon_expansion.warnings:
+        print(f"WARNING: {warning}")
+    if dungeon_heroic.needs_live_world(dsl_classes):
+        progress("expanded declared dungeon heroics (encounters, spawnMask, heroic creature rows)")
     if n_dsl:
         creature_counts = {
             **spell_tables.count_declared(dsl_classes),
@@ -924,7 +936,7 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
     if "--check" in sys.argv:
         return _check_report(
             corpus, progress, ids_cfg, spell_entries, talents, dsl_classes, spell_table_index, existing_talents,
-            CLASSES_WITH_GENERATED_HEADERS,
+            CLASSES_WITH_GENERATED_HEADERS, dungeon_expansion=dungeon_expansion,
         )
     else:
         for warning in header_gen.collect_warnings(dsl_classes, CLASSES_WITH_GENERATED_HEADERS):
@@ -1433,9 +1445,9 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
     lfg_errors, lfg_notes = lint.check_lfg_exclusions(dsl_classes["lfg_disables"], lfg_dungeons)
     for note in lfg_notes:
         print(f"note: {note}")
-    # Dungeon difficulties E1 (shared with --check): declared heroics.
-    lfg_errors += dungeon_checks.errors_for_run(dsl_classes, spell_table_index)
-    for note in dungeon_checks.summary_notes(dsl_classes["dungeons"]):
+    # Dungeon difficulties E1 + E2 (shared with --check): declared heroics and their derived rows.
+    lfg_errors += dungeon_checks.errors_for_run(dsl_classes, spell_table_index, expansion=dungeon_expansion)
+    for note in dungeon_checks.summary_notes(dsl_classes["dungeons"], dungeon_expansion):
         print(f"note: {note}")
     percent_errors = lint.check_percent_field_potency(spell_entries)
     if tooltip_errors or bonus_errors or category_errors or lfg_errors or percent_errors:
@@ -1544,7 +1556,7 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         out_path, blocks, header,
         extra_blocks=[
             *prune_blocks, *removal_blocks, trainer_spell_block, *spell_table_blocks,
-            *creature_blocks, *item_blocks, spell_data_block,
+            *creature_blocks, *dungeon_expansion.spawn_blocks, *item_blocks, spell_data_block,
         ],
     )
     print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
@@ -1565,6 +1577,7 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         dbcfmt.SPELLCATEGORY: _spell_category_rows(dsl_classes["spell_categories"]),
         dbcfmt.SPELLRUNECOST: _spell_rune_cost_rows(dsl_classes["spell_rune_costs"]),
         dbcfmt.MAPDIFFICULTY: dungeon_checks.map_difficulty_client_rows(dsl_classes["map_difficulties"]),
+        dbcfmt.DUNGEONENCOUNTER: dungeon_heroic.client_encounter_rows(dsl_classes["dungeon_encounters"]),
     }
     for name, table in SECONDARY_TABLES.items():
         # Same reserved_rows switch as the SQL block above - the client patch must carry every

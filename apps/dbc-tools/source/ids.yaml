@@ -262,6 +262,14 @@ dungeon_access:
   start: 122
   end: 199
 
+# Dungeon difficulties E2 (WP-T2), read by lib/dsl/dungeon.py's heroic(encounter_ids=...): DungeonEncounter.dbc /
+# dungeonencounter_dbc row ids (the heroic copies of each normal boss row; instance_encounters.entry is the same id).
+# The stock file has 612 rows with a maximum id of 894 and the live overlay is empty, so 1000-1199 is clear of both;
+# the 19 vanilla dungeon maps hold 167 normal encounters. The client rows ship in patch-Z.
+dungeonencounter:
+  start: 1000
+  end: 1199
+
 # Per-class reservations (and non-class owners, see `healsim` below), one entry per table the owner draws ids from,
 # each inside the tool-wide block of the same name above (or the spell/talent/... blocks earlier in this file).
 # Kept under ONE key because every

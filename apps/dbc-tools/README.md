@@ -476,6 +476,26 @@ come from `ids.yaml`'s `mapdifficulty` and `dungeon_access` blocks and never mov
 difficulty) another stock or live row already holds, and a missing `var/extractors/dbc/MapDifficulty.dbc` (copy it
 from `ac-worldserver:/azerothcore/env/dist/data/dbc/`). Dropping `heroic` prunes both rows.
 
+E2 adds, from the same `heroic()` (built from live state by `lib/dungeon_heroic.py`):
+
+```python
+heroic(map_difficulty_id=1000, access_id=122, min_level=60,
+       encounter_ids=range(1000, 1007),  # one per normal boss, in the stock file's order
+       spawn_mask=True)                   # the default; event_spawns=True also takes game event spawns
+```
+
+- `encounter_ids` (`ids.yaml` block `dungeonencounter`): a heroic `dungeonencounter_dbc` row per normal encounter
+  (same Bit, OrderIndex and names; also merged into patch-Z's `DungeonEncounter.dbc`) and its `instance_encounters`
+  row (the normal credit type and entry, no dungeon finder link). Needs `var/extractors/dbc/DungeonEncounter.dbc`.
+- `spawn_mask`: `UPDATE creature/gameobject SET spawnMask = spawnMask | 2 WHERE id IN (...) AND guid IN (...)` for
+  every spawn on the map that live does not already have on heroic; nothing for a map already at 3.
+- `dungeon(...)["heroic_entries"]` (normal -> heroic entry, filled by the heroic template generator's lock file):
+  `difficulty_entry_1` on each normal row (a one-column UPDATE) and copies of the normal entry's
+  `creature_template_addon`, `_spell`, `_model`, `_resistance`, `_movement` and `creature_onkill_reputation` rows.
+
+Every derived row is diffed against live (a rerun is silent) and the SPELL_TABLES ones are pruned when the heroic
+goes; spawn masks and `difficulty_entry_1` are never reverted.
+
 ### Declaring a creature (T1)
 
 A `source/classes/*.py` file can also declare a rework's own NPC - `creature_template` +

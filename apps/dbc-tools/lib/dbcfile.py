@@ -280,6 +280,9 @@ def pack_client_dbc(table: DbcTable, rows: list[dict], base_rows: list[dict]) ->
     - MapDifficulty.dbc: stock is ordered by (MapID, Difficulty), not by ID (Onyxia's 323 sits after its 26,
       ahead of 27). Whether the client depends on it is unknown, so a merged file keeps that order and a new row
       lands beside its map's other difficulties (dungeon difficulties E1).
+    - DungeonEncounter.dbc: stock is ordered by (MapID, signed OrderIndex, ID), so a heroic copy that keeps its normal
+      row's OrderIndex sits right after it, the way the stock TBC/WotLK heroic rows interleave (dungeon difficulties
+      E2). Same "keep the order" reasoning as MapDifficulty.
 
     lib/test_client_dbc_roundtrip.py checks that every client table repacks its stock file
     byte-identically through here, which also catches a string column read as an int."""
@@ -289,6 +292,14 @@ def pack_client_dbc(table: DbcTable, rows: list[dict], base_rows: list[dict]) ->
         return pack_dbc_bytes(table, sorted(rows, key=lambda r: (r["OrderIndex"], r["ID"])), sort=False)
     if table.name == "MapDifficulty":
         return pack_dbc_bytes(table, sorted(rows, key=lambda r: (r["MapID"], r["Difficulty"], r["ID"])), sort=False)
+    if table.name == "DungeonEncounter":
+        def order(value) -> int:
+            value = int(value or 0)
+            return value - 0x100000000 if value >= 0x80000000 else value
+
+        return pack_dbc_bytes(
+            table, sorted(rows, key=lambda r: (r["MapID"], order(r["OrderIndex"]), r["ID"])), sort=False,
+        )
     return pack_dbc_bytes(table, rows)
 
 
