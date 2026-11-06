@@ -53,6 +53,16 @@ spell:
   # 204400-204899: Warrior (`reservations: warrior`, warrior-rework.PLAN.md s4): shared 204400-204489, Arms
   # 204490-204629, Fury 204630-204769, Protection 204770-204799, spare 204800-204868, 204869-204899 = the P0 spike.
   # The September Protection build's 37 spells 200028-200066 (all but the mage's 200037 / 200044) stay below the slice.
+  # 205100-205199: Mage (`reservations: mage`): 205100 Lasting Flame rank 2 (moved off 200100, see `foreign`).
+  #
+  # `foreign`: ids inside this block that another owner's SQL holds, never ours (lib/source.py `foreign_ids`). The
+  # generated block DELETE skips them (split into ranges around each one), the stale-overlay and unchanged-block
+  # checks ignore them, next_free_id never suggests them, and declaring one is a generate.py ERROR naming the owner.
+  # 200100: mod-transmog's Ethereal Warpweaver pet summon (its conf's `Transmogrification.PetSpellId = 200100`),
+  # inserted by the stock module's data/sql/db-world/2016_11_17_transmog_npc.sql; Lasting Flame rank 2 sat on it
+  # until 2026-11-06 (.agents/plans/dbc-replay-fix/spell-200100.REPORT.md).
+  foreign:
+    200100: "mod-transmog (its Ethereal Warpweaver pet summon, Transmogrification.PetSpellId)"
 
 talent:
   start: 60000
@@ -367,9 +377,14 @@ reservations:
   warlock:
     spelldescriptionvariables: {start: 1430, end: 1439}
 
-  # Mage: only the SpellIcon slice, for the 10-31 bug-fix talent icon pass (build_patch_i.py ICON_ID_MAGE_*: 90450-90455).
-  # The mage's spell / talent / visual ids predate the reservations and stay outside them.
+  # Mage: the SpellIcon slice, for the 10-31 bug-fix talent icon pass (build_patch_i.py ICON_ID_MAGE_*: 90450-90455),
+  # and a spell slice for every mage spell minted from now on: 205100 Lasting Flame rank 2 (moved off mod-transmog's
+  # 200100 on 2026-11-06: the old mage range 200001-200129 had no free id left), 205101-205199 spare. Checked free
+  # 2026-11-06: no declaration, no SQL file (base, merged, pending, custom, modules) and no live spell_dbc row above
+  # 205023. The mage's older spell / talent / visual ids predate the reservations and stay outside them
+  # (lib/test_id_blocks.py's MAGE_LEGACY).
   mage:
+    spell: {start: 205100, end: 205199}
     spellicon: {start: 90450, end: 90499}
 
   # The healing sim (source/npcs/healsim_spells.py) is not a class, but its spells sit inside the spell block, so it

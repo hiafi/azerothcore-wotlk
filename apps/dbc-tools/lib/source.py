@@ -74,8 +74,29 @@ def load_ids(path: Path) -> dict:
         return yaml.safe_load(f) or {}
 
 
+def foreign_ids(id_range: dict) -> dict[int, str]:
+    """`{id: owner}` for the ids inside a reserved block that another owner's SQL holds (ids.yaml's `foreign:`, e.g.
+    mod-transmog's spell 200100). They are a permanent hole in the block: never declared, never deleted by the block
+    DELETE (`sql_out`), never compared or pruned as ours (`resolve`, `stale_overlay`), never suggested
+    (`ids.next_free_id`)."""
+    return {int(k): str(v) for k, v in (id_range.get("foreign") or {}).items()}
+
+
 def in_range(entry_id: int, id_range: dict) -> bool:
-    return id_range["start"] <= entry_id <= id_range["end"]
+    """Whether `entry_id` is ours to generate: inside the block and not one of its `foreign_ids`."""
+    return id_range["start"] <= entry_id <= id_range["end"] and entry_id not in foreign_ids(id_range)
+
+
+def foreign_id_errors(entries: list[dict], id_range: dict, kind: str = "spell") -> list[str]:
+    """One message per declared entry whose id is a `foreign_ids` hole, naming its owner (generate.py prints each as
+    an ERROR and stops before writing anything)."""
+    foreign = foreign_ids(id_range)
+    return [
+        f"{kind} {entry['id']} ({entry.get('name', '?')}) uses an id owned by {foreign[entry['id']]}: "
+        f"source/ids.yaml marks it `foreign`, so dbc-tools never emits, deletes or prunes it. Declare it with a free "
+        f"id from the class's reservation in source/ids.yaml instead"
+        for entry in entries if entry["id"] in foreign
+    ]
 
 
 def partition_by_range(entries: list[dict], id_range: dict) -> tuple[list[dict], list[dict]]:

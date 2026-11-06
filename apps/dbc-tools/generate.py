@@ -232,8 +232,18 @@ def _priced_trainer_spells(dsl_classes: dict, trainer_index: trainer_state.Train
 
 
 def _block_ids(id_range: dict, edited_ids: list[int]) -> set[int]:
-    """Every id a reserved block covers: its range and its edited (stock) ids."""
-    return {*range(int(id_range["start"]), int(id_range["end"]) + 1), *edited_ids}
+    """Every id a reserved block covers: its range less its `foreign` ids (`source.foreign_ids`), and its edited
+    (stock) ids."""
+    return {*range(int(id_range["start"]), int(id_range["end"]) + 1), *edited_ids} - source.foreign_ids(id_range).keys()
+
+
+def _foreign_id_errors(spell_entries: list[dict], ids_cfg: dict, prefix: str = "") -> bool:
+    """Prints an ERROR per spell declared on a `foreign` id of the spell block (another owner's, e.g. mod-transmog's
+    200100) and says whether there was one: the run stops before writing anything."""
+    errors = source.foreign_id_errors(spell_entries, ids_cfg["spell"])
+    for error in errors:
+        print(f"ERROR: {prefix}{error}")
+    return bool(errors)
 
 
 def _pending_dependency_notes(depends_on: dict[str, list[Path]]) -> list[str]:
@@ -737,6 +747,8 @@ def _run_scoped_check(corpus: sqlcorpus.Corpus, class_name: str) -> int:
     # Not check_retired_talent_tab(): the holding tab is declared once, by one class, for every class that retires a
     # talent - which another class's retire_talent() calls cannot see from here.
     _merge_dsl_sources(spell_entries, talents, dsl_classes)
+    if _foreign_id_errors(spell_entries, ids_cfg):
+        return 1
     progress(f"loaded source/classes/{class_name} ({sum(len(v) for v in dsl_classes.values())} entries)")
     print(
         f"note: scoped check of source/classes/{class_name}: {len(spell_entries)} spell(s), "
@@ -884,6 +896,8 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
     n_dsl = sum(len(v) for v in dsl_classes.values())
     progress(f"loaded source/classes/*.py + source/npcs/*.py + source/world/*.py DSL ({n_dsl} entries)")
     _merge_dsl_sources(spell_entries, talents, dsl_classes)
+    if _foreign_id_errors(spell_entries, ids_cfg):
+        return 1
     if n_dsl:
         creature_counts = {
             **spell_tables.count_declared(dsl_classes),
@@ -1105,6 +1119,8 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
             print(f"ERROR: gcd haste: aura spell ID {entry['id']} is already declared in source/")
             return 1
     spell_entries.extend(gcd_entries)
+    if _foreign_id_errors(gcd_entries, ids_cfg, "gcd haste: "):
+        return 1
     # Bind the runtime AuraScript to every generated aura like any scripted_by() binding, then render the
     # spell-table blocks once, so the new rows are diffed and pruned with the rest.
     dsl_classes["spell_script_names"].extend(gcd_haste.script_rows(gcd_entries))

@@ -296,11 +296,8 @@ reader). Since 2026-11-05 they read:
   name: a module file named `2016_...` runs before a pending `rev_...`. Two files with one name raise
   `DuplicateUpdateName`, as DBUpdater refuses to start. `data/sql/archive/` is older than the base dumps and is not
   read. Every loader, `state.load_applied_rows` and item-tools share this one list. Live ran files in the order they
-  appeared, not this order; the whole-table check shows where the two would differ. mod-transmog's
-  `2016_11_17_transmog_npc.sql` (spell 200100, which live ran on 2026-08-22, before the mage revs that own the id)
-  now sorts before the pending revs that re-insert the spell block, so the replay matches live. Watch out: once those
-  revs are promoted to `db_world`, a rebuilt DB runs mod-transmog's file after them (pass 2 after pass 1) and gets
-  its Ethereal Warpweaver at 200100 instead of Lasting Flame; the whole-table check will then show 26 cells.
+  appeared, not this order; the whole-table check shows where the two would differ. Spell 200100 belongs to
+  mod-transmog's `2016_11_17_transmog_npc.sql` and is a `foreign` hole in the spell block (see "Foreign ids" below).
 - **Session variables** (`_apply_set`, `_Expr`): `SET @x := <expr>[, @y := ...];` where the value is an integer or
   float literal, a quoted string, `NULL`, or an expression over earlier variables (`@CGUID * 10`, `-(@A + 3)`,
   `0x10 | 0x20`). Precedence is MySQL's (`unary - + ~`, `*`, `+ -`, `&`, `|`); names are case-insensitive and each file
@@ -389,8 +386,28 @@ block promoted state calls changed is now also checked against `state.load_appli
 DBUpdater's second pass: pending, custom and module SQL together by bare name) and dropped when it equals that.
 `load_existing_rows` itself stays promoted-only. The rev a run writes is written after the check, so it never counts;
 a row removed from source, a stale overlay delete or an edit the pending revs do not hold still emits. Module SQL is in
-the applied state in its DBUpdater slot: mod-transmog's `2016_11_17_transmog_npc.sql` (spell 200100) sorts before the
-pending revs, so a pending rev holding the spell block overwrites it.
+the applied state in its DBUpdater slot (a module file named `2016_...` sorts before a pending `rev_...`).
+
+### Foreign ids: another owner's id inside a reserved block (spell 200100, mod-transmog)
+
+`source/ids.yaml`'s spell block has `foreign: {200100: "mod-transmog (...)"}`. The stock mod-transmog module inserts
+its Ethereal Warpweaver pet summon at 200100 (`2016_11_17_transmog_npc.sql`, conf `Transmogrification.PetSpellId`), and
+the module stays stock, so the id is a permanent hole in our block (`lib/source.py`'s `foreign_ids`):
+
+- the block DELETE is split around it: `BETWEEN 200000 AND 200099` and `BETWEEN 200101 AND 209999`
+  (`sql_out.block_ranges`), both on `sql_dump`'s fast range path; a row or edit on the id raises in `sql_out`;
+- `source.in_range`, `resolve.reserved_range_changed`, `stale_overlay.find_stale`, generate.py's `_block_ids` (the
+  applied-state watch list) and `ids.next_free_id` leave it out, so its row never makes a block look changed, stale
+  or prunable;
+- declaring it (DSL, CSV or a GCD-haste aura) is `ERROR: spell 200100 (...) uses an id owned by mod-transmog ...` in
+  a full run, `--check` and `--check --class`.
+
+Lasting Flame rank 2 sat on 200100 until 2026-11-06 and moved to 205100, the first id of the new
+`reservations: mage` spell slice (205100-205199). The earlier generated revs left Lasting Flame at 200100, so a
+hand-written pending migration copies the module's DELETE + INSERT back over it; it sorts after every pending rev
+that writes 200100, so live and a rebuilt DB (pass 1, then the module file, then the pending revs) both end with the
+module's row. Pinned in `lib/test_foreign_ids.py`. Add a hole the same way when another stock module claims an id
+in one of our blocks: never edit the module.
 
 **Every pending file on disk counts** (db-import applies every one in the working tree, committed or not). So a block
 dropped this way depends on files that must ship: the run names them (`note:   Spell: not re-emitted because its

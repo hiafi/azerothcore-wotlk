@@ -9,6 +9,8 @@ block instead of the human eyeballing source/ids.yaml by hand.
 
 from __future__ import annotations
 
+from .source import foreign_ids
+
 
 class NoFreeIdError(ValueError):
     pass
@@ -19,10 +21,12 @@ def next_free_id(ids_cfg: dict, kind: str, used_ids: set[int]) -> int:
     used_ids. `used_ids` should be the merged set of IDs already present
     across every source file for this kind (e.g. every source/spells/*.csv
     row's "id", for kind="spell") — not just one class's file — so the
-    suggestion can never collide with another class's already-claimed ID."""
+    suggestion can never collide with another class's already-claimed ID.
+    A `foreign` id (another owner's, `source.foreign_ids`) is never suggested."""
     id_range = ids_cfg[kind]
+    taken = set(used_ids) | foreign_ids(id_range).keys()
     for candidate in range(id_range["start"], id_range["end"] + 1):
-        if candidate not in used_ids:
+        if candidate not in taken:
             return candidate
     raise NoFreeIdError(
         f"no free ID left in the '{kind}' reserved block "

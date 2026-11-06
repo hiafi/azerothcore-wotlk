@@ -5,7 +5,10 @@ Two DELETE shapes, per touched table, both idempotent on rerun:
   - `WHERE ID BETWEEN <reserved block>` for our reserved range — mirrors the
     idiom already used by the custom stat system's own migration, originally
     `rev_1787377390451498201.sql`, now folded into the merged custom-stat
-    migration `custom_stats.sql`.
+    migration `custom_stats.sql`. A block with `foreign` ids (ids.yaml,
+    `source.foreign_ids`) gets one such DELETE per range around them, so
+    `spell_dbc` is cleared as 200000-200099 and 200101-209999 and
+    mod-transmog's 200100 is never touched.
   - `WHERE ID IN (...)` for specific existing IDs this run is *editing*
     (see lib/resolve.py) — scattered, not contiguous, so a range delete
     would either miss them or (worse) sweep up unrelated rows.
@@ -16,6 +19,7 @@ edits alike).
 from __future__ import annotations
 
 from .dbcfmt import DbcTable
+from .source import foreign_ids
 
 
 def _sql_literal(value) -> str:
@@ -42,10 +46,27 @@ def _sql_literal(value) -> str:
     return f"'{escaped}'"
 
 
+def block_ranges(id_range: dict) -> list[tuple[int, int]]:
+    """The `(start, end)` ranges the block DELETE clears: the whole block, split around each `foreign` id
+    (`source.foreign_ids`, e.g. mod-transmog's spell 200100) so another owner's row survives every rewrite."""
+    ranges, start = [], int(id_range["start"])
+    for hole in sorted(foreign_ids(id_range)):
+        if start < hole:
+            ranges.append((start, hole - 1))
+        start = hole + 1
+    if start <= int(id_range["end"]):
+        ranges.append((start, int(id_range["end"])))
+    return ranges
+
+
 def _table_block(table: DbcTable, id_range: dict, rows: list[dict], edited_ids: list[int]) -> str:
+    foreign = foreign_ids(id_range)
+    clash = sorted(foreign.keys() & ({int(row[table.index_column]) for row in rows} | set(edited_ids)))
+    if clash:
+        raise ValueError(f"{table.sql_table}: refusing to write foreign id(s) {clash} ({foreign[clash[0]]})")
     lines = [
-        f"DELETE FROM `{table.sql_table}` WHERE `{table.index_column}` "
-        f"BETWEEN {id_range['start']} AND {id_range['end']};"
+        f"DELETE FROM `{table.sql_table}` WHERE `{table.index_column}` BETWEEN {start} AND {end};"
+        for start, end in block_ranges(id_range)
     ]
     if edited_ids:
         id_list = ", ".join(str(i) for i in sorted(edited_ids))

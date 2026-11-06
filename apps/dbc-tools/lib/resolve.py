@@ -125,13 +125,14 @@ def reserved_range_changed(
     migration for every table regardless of whether *this* run touched it."""
     if edited_ids:
         return True
+    # A `foreign` id (source.foreign_ids) is not ours: the block DELETE skips it, so its row is never compared.
     reserved_new = {
         row[index_column]: row for row in rows
-        if id_range["start"] <= row[index_column] <= id_range["end"]
+        if in_range(row[index_column], id_range)
     }
     reserved_existing = {
         id_: row for id_, row in existing_rows.items()
-        if id_range["start"] <= id_ <= id_range["end"]
+        if in_range(id_, id_range)
     }
     if reserved_new.keys() != reserved_existing.keys():
         return True
