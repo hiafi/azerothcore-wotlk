@@ -51,8 +51,9 @@ sys.path.insert(0, str(TOOL_ROOT))
 from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, source, sql_out, state  # noqa: E402
 from lib import gcd_haste, header_gen, potency_sheet, spell_tables, superseded_ranks  # noqa: E402
 from lib import sqlcorpus, stale_overlay, trainer_pricing, trainer_state  # noqa: E402
-from lib import dungeon_checks, dungeon_heroic, heroic_templates  # noqa: E402
+from lib import dungeon_checks, dungeon_heroic, heroic_templates, item_ids, item_variants  # noqa: E402
 from bootstrap import load_spell_ranks_chains  # noqa: E402
+from lib.dsl import items as dsl_items  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 from lib.lazy import Lazy  # noqa: E402
 
@@ -619,7 +620,7 @@ def _check_report(
     corpus: sqlcorpus.Corpus, progress, ids_cfg: dict, spell_entries: list[dict], talents: dict, dsl_classes: dict,
     spell_table_index, existing_talents: dict, header_classes: tuple[str, ...],
     gcd_scope: tuple[str, ...] | None = None, family: int | None = None,
-    declared_elsewhere: frozenset[int] | set[int] = frozenset(), dungeon_expansion=None,
+    declared_elsewhere: frozenset[int] | set[int] = frozenset(), dungeon_expansion=None, item_expansion=None,
 ) -> int:
     """The `--check` lints and header gate over a declared population, printed in this order. One function for the
     whole-tree `--check` and for `--check --class X` (which hands it one class's population and that class's header
@@ -627,7 +628,8 @@ def _check_report(
     (a scoped run still sees every family's stock rows, but only its own family's verdict is its business); `family`
     is the scoped class's SpellFamilyName/SpellClassSet number, which limits the undeclared-stock-spell scan to it,
     `declared_elsewhere` the ids that scan must treat as declared, and `dungeon_expansion` the run's
-    `dungeon_heroic.expand()` result (None for a scoped run, which loads no dungeons)."""
+    `dungeon_heroic.expand()` result (None for a scoped run, which loads no dungeons); `item_expansion` the run's
+    `item_variants.expand()` result (None for a scoped run, which loads no source/items)."""
     # A fast, read-only staleness gate (PLAN P2b step 3) - everything below this point (SQL
     # diffing, DBC state, the client patch) is irrelevant to "is the committed header stale",
     # so --check returns here instead of running the rest of the ~130s pipeline.
@@ -687,6 +689,9 @@ def _check_report(
     check_errors += dungeon_checks.errors_for_run(dsl_classes, spell_table_index, expansion=dungeon_expansion)
     for note in dungeon_checks.summary_notes(dsl_classes["dungeons"], dungeon_expansion):
         print(f"note: {note}")
+    # Item variants IV1: the item() checks, the lock and the retire guard (item_variants.expand, run before --check).
+    if item_expansion is not None:
+        check_errors += item_expansion.errors
     if gcd_scope is None:  # the whole-tree check; a scoped one loads only part of the live state
         _print_replay_skips()
     if check_errors:
@@ -887,6 +892,10 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
             existing_creature_rows=existing_creature_rows, creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
         )
         _merge_npc_declarations(dsl_classes, dsl_world, "source/world/")
+        # source/items/*.py: item() declarations with their loot ladders (item variants IV1), loaded as one package so
+        # a dungeon file can import the shared ladders; resolved below by lib/item_variants.py.
+        dsl_item_source = dsl_items.load_items_dir(SOURCE_DIR / "items", ids_cfg=ids_cfg, live_data=live_data)
+        _merge_npc_declarations(dsl_classes, dsl_item_source, "source/items/")
     except dsl_registry.MissingStockFileError as error:
         print(f"ERROR: {error}")
         return 1
@@ -896,7 +905,7 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         print(f"ERROR: {error}")
         return 1
     n_dsl = sum(len(v) for v in dsl_classes.values())
-    progress(f"loaded source/classes/*.py + source/npcs/*.py + source/world/*.py DSL ({n_dsl} entries)")
+    progress(f"loaded source/{{classes,npcs,world,items}}/*.py DSL ({n_dsl} entries)")
     _merge_dsl_sources(spell_entries, talents, dsl_classes)
     if _foreign_id_errors(spell_entries, ids_cfg):
         return 1
@@ -911,6 +920,20 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         print(f"WARNING: {warning}")
     if dungeon_heroic.needs_live_world(dsl_classes):
         progress("expanded declared dungeon heroics (encounters, spawnMask, heroic creature templates and rows)")
+    # Item variants IV1: every item()'s ladder tiers, checked and given their item_template entries (the lock file
+    # source/items/item_ids.lock). The itemization tables load only when an item is declared. Emission is IV2.
+    item_expansion = item_variants.expand(
+        dsl_classes["item_declarations"], ids_cfg=ids_cfg, live_rows=item_live_rows,
+        columns=spell_tables.ITEM_TEMPLATE_COLUMNS, items_csv_ids=[e["id"] for e in item_entries],
+        item_template_decl_ids=[r["entry"] for r in dsl_classes["item_templates"]],
+        item_dbc_ids_loader=lambda: state.load_existing_rows(dbcfmt.ITEM).keys(),
+    )
+    for warning in item_expansion.warnings:
+        print(f"WARNING: {warning}")
+    for note in item_expansion.notes + item_variants.summary_notes(item_expansion, check="--check" in sys.argv):
+        print(f"note: {note}")
+    if dsl_classes["item_declarations"]:
+        progress("resolved source/items declarations (ladder tiers, item ids)")
     if n_dsl:
         creature_counts = {
             **spell_tables.count_declared(dsl_classes),
@@ -937,8 +960,12 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
     if "--check" in sys.argv:
         return _check_report(
             corpus, progress, ids_cfg, spell_entries, talents, dsl_classes, spell_table_index, existing_talents,
-            CLASSES_WITH_GENERATED_HEADERS, dungeon_expansion=dungeon_expansion,
+            CLASSES_WITH_GENERATED_HEADERS, dungeon_expansion=dungeon_expansion, item_expansion=item_expansion,
         )
+    if item_expansion.errors:
+        for error in item_expansion.errors:
+            print(f"ERROR: {error}")
+        return 1
     else:
         for warning in header_gen.collect_warnings(dsl_classes, CLASSES_WITH_GENERATED_HEADERS):
             print(f"WARNING: {warning}")
@@ -1570,6 +1597,15 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         print(
             f"note: appended {len(dungeon_expansion.lock_appended)} heroic creature id(s) to "
             f"{heroic_templates.LOCK_PATH.relative_to(REPO_ROOT)} - commit it with the SQL"
+        )
+    # Item variants IV1: the (key, tier) -> item_template entry lines this run added (lib/item_ids.py), after the SQL.
+    if item_expansion.lock_appended:
+        item_ids.LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+        item_ids.LOCK_PATH.write_text(item_expansion.lock_text, encoding="utf-8")
+        print(
+            f"note: minted {len(item_expansion.minted)} item id(s) "
+            f"({len(item_expansion.assignment.bases)} stock base line(s)) into "
+            f"{item_ids.LOCK_PATH.relative_to(REPO_ROOT)} - commit it with the SQL"
         )
     progress("SQL emission done")
 

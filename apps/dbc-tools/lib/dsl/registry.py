@@ -204,6 +204,9 @@ class Registry:
     heroic_template_resistances: list[dict] = field(default_factory=list)
     heroic_template_movements: list[dict] = field(default_factory=list)
     heroic_onkill_reputations: list[dict] = field(default_factory=list)
+    # Item variants IV1 (lib/dsl/items.py, source/items/): one {"id": key, "_decl": ItemDecl} per item() call. Never
+    # emitted as is: lib/item_variants.py resolves each into its ladder's tiers and item_template entries.
+    item_declarations: list[dict] = field(default_factory=list)
     # P2b: {id: python_variable_name}, found by introspecting each loaded module's own namespace
     # after it finishes executing - see _collect_var_names(). Not in MERGE_KEYS: these are dicts,
     # not lists, and merged by lib.header_gen's caller with a plain dict.update() (ids are already
@@ -230,6 +233,7 @@ MERGE_KEYS = (
     "dungeons", "map_difficulties", "dungeon_access",
     "dungeon_encounters", "instance_encounters", "heroic_template_addons", "heroic_template_resistances",
     "heroic_template_movements", "heroic_onkill_reputations",
+    "item_declarations",
 )
 
 # The registry a class file's spell()/talent()/tab()/skill_line_ability()
