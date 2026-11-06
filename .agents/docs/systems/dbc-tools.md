@@ -659,6 +659,55 @@ package by the `source/world/` pass). Things that are not obvious:
 - **`dungeons`** is a bookkeeping merge key (one entry per map, `heroic` as a dict) that E2's encounter, spawnMask,
   `difficulty_entry_1` and heroic-template emitters read; it emits nothing itself.
 
+### E2 (WP-T2): derived rows, `lib/dungeon_heroic.py` and `lib/spawn_state.py`
+
+- **Derived, not declared.** `dungeon_heroic.expand()` runs once in `generate.py` right after the source loads (before
+  the `--check` return and every render) and appends rows to `dsl_classes`: `dungeon_encounters`,
+  `instance_encounters`, the `heroic_template_*` / `heroic_onkill_reputations` lists (new SPELL_TABLES entries,
+  `prune_when_empty`), and heroic copies inside the existing `creature_template_spells` / `creature_template_models`
+  lists (one owner per table, or each prune pass would delete the other's rows). Derived rows carry `_dungeon_heroic`
+  so a second `expand()` replaces them. Its ERRORs reach both paths through `dungeon_checks.errors_for_run(...,
+  expansion=)`.
+- **Kill credit stays the normal entry.** A heroic creature's `GetEntry()` is the normal entry (`Creature::InitEntry`),
+  so heroic `instance_encounters` rows copy the normal `creditEntry`; the table has no difficulty column (each row is
+  filed under its DungeonEncounter row's (MapID, Difficulty)).
+- **DungeonEncounter.dbc is ordered by (MapID, signed OrderIndex, ID)** (`OrderIndex` -1000 rows exist, so it is in
+  `signed`); `pack_client_dbc` keeps it, and a heroic copy lands right after its normal row.
+- **`difficulty_entry_1` rides `creature_template_edits`** (the `creature_template_columns()` path): a one-column
+  UPDATE diffed against the replayed live row, merged into an existing edit of the same entry. Never pruned.
+- **The spawn replay** (`spawn_state.load_spawn_state`, cached like the other loaders, `spawn_state.py` is in
+  `CACHE_CODE_FILES`) fixes three gaps the generic replay has on `creature` / `gameobject`: the `id1` -> `id` rename
+  (2026_06_16_00), double-quoted string literals (upstream's sniffed spawn files; `sql_dump` skipped those INSERTs
+  whole: 10 Deadmines doors and levers), and DELETE / UPDATE whose WHERE has no `guid` (applied in file order). Checked
+  against the live DB on 2026-11-05: no difference on the 19 vanilla dungeon maps (14 non-dungeon creature spawns
+  still missing elsewhere). `sql_dump` itself still drops double-quoted INSERTs for every other table.
+- **`heroic_entries`** on the `dungeons` entry (normal -> heroic) is the heroic template generator's hand-off; empty,
+  the per-creature emitters do nothing.
+
+### E2 (WP-G): the creature lists and `lib/heroic_templates.py`
+
+- **Two halves per file.** `extract_dungeon_creatures.py` (live DB, SELECTs only; logic in `lib/dungeon_extract.py`)
+  owns the `CREATURES` block between the markers and nothing else; `extra=` / `roles=` / `skip=` / `heroic=` live
+  outside it and survive a rerun. A file with zero or two blocks is refused, never rewritten.
+- **The generator runs inside `dungeon_heroic.expand()`** (step 3, before T2's `difficulty_entry_1` edits and
+  side-table copies read `heroic_entries`), only for a heroic whose entry carries `creatures` (every `dungeon()` call
+  does; T2's hand-built test entries do not). Its rows join `creature_templates` marked `_dungeon_heroic`, so a second
+  `expand()` replaces them and the full-row upsert path renders them.
+- **The lock file is the only source file generate.py writes** (`source/world/heroic_ids.lock`, after the SQL, full
+  run only). New creatures take the next id after the highest in the file; gaps are never reused. Assignment is
+  deterministic, so `--check` reports the same ids the full run writes.
+- **Damage math is swing independent**: the tier's melee is per hit at 2.0 sec and scales with BaseAttackTime, so
+  DamageModifier = melee / (2 x (1.25 x damage_base + attackpower / 14 x BaseVariance)) (creature_classlevelstats at
+  the tier level, `Creature::CalculateMinMaxDamage`). HealthModifier is the 4-decimal value whose
+  ceil(basehp0 x float(mod)) lands on the target (the plain rounded quotient is often one point high).
+- **The SmartAI widening is a pinned UPDATE, not a block rewrite.** Each row is matched on its full key plus its
+  current `event_flags` and gets `| 4`. The repo rule is to rewrite whole `smart_scripts` blocks, but the dbc-tools
+  replay of `smart_scripts` misses 241 live rows and differs on 9 `event_flags` cells (2026-11-05; Scarlet Monastery
+  4294-4303 and 4540 among them), so a DELETE + INSERT built from it could drop live rows. Deadmines has no
+  normal-only rows; BRS and BRD hold most of them.
+- **SpellDifficulty.dbc** (`dbcfmt.SPELLDIFFICULTY`, read-only, not in ALL_TABLES) feeds an informational note only;
+  without the file the check is skipped with a note (the shared checkout has no copy yet).
+
 ## Superseded ranks: generated `SkillLineAbility` and `CreatureSpellData` overrides
 
 Pets learn from `SkillLineAbility`, not trainers: `SpellMgr::LoadPetLevelupSpellMap` takes every row on a

@@ -88,6 +88,25 @@ MAPDIFFICULTY_COLUMNS = dbcfmt.MAPDIFFICULTY.columns
 DUNGEON_ACCESS_TEMPLATE_COLUMNS = (
     "id", "map_id", "difficulty", "min_level", "max_level", "min_avg_item_level", "comment",
 )
+# Dungeon difficulties E2 (WP-T2, lib/dungeon_heroic.py): a declared heroic's encounter rows (dungeonencounter_dbc, the
+# server overlay of DungeonEncounter.dbc, plus the instance_encounters kill credit that hangs on it) and the rows it
+# copies from each normal creature to its heroic entry - every table the engine reads by the heroic entry rather than
+# the normal one (handoff s2.1, 0G row 21). creature_template_spell and creature_template_model copies join the
+# existing creature_spell() / creature_model() lists instead (one owner per table, or each prune would delete the
+# other's rows). Column tuples mirror the base dump's CREATE TABLEs.
+DUNGEONENCOUNTER_COLUMNS = dbcfmt.DUNGEONENCOUNTER.columns
+INSTANCE_ENCOUNTERS_COLUMNS = ("entry", "creditType", "creditEntry", "lastEncounterDungeon", "comment")
+CREATURE_TEMPLATE_ADDON_COLUMNS = (
+    "entry", "path_id", "mount", "bytes1", "bytes2", "emote", "visibilityDistanceType", "auras",
+)
+CREATURE_TEMPLATE_RESISTANCE_COLUMNS = ("CreatureID", "School", "Resistance", "VerifiedBuild")
+CREATURE_TEMPLATE_MOVEMENT_COLUMNS = (
+    "CreatureId", "Ground", "Swim", "Flight", "Rooted", "Chase", "Random", "InteractionPauseTimer",
+)
+CREATURE_ONKILL_REPUTATION_COLUMNS = (
+    "creature_id", "RewOnKillRepFaction1", "RewOnKillRepFaction2", "MaxStanding1", "IsTeamAward1",
+    "RewOnKillRepValue1", "MaxStanding2", "IsTeamAward2", "RewOnKillRepValue2", "TeamDependent",
+)
 
 # T1 (.agents/plans/warlock-rework/warlock-rework.T1-HANDOFF.md): creature_template/
 # creature_template_model - a rework's own NPCs, previously always a hand-written migration (e.g.
@@ -353,6 +372,32 @@ SPELL_TABLES = (
         },
         prune_when_empty=True,
     ),
+    # Dungeon difficulties E2 (lib/dungeon_heroic.py): rows generate.py derives from a declared heroic, never declared
+    # by hand. "No heroic" is a legitimate end state, so all prune when empty. The copy tables' nullable columns
+    # (resistance, movement) default to NULL, the rest to 0 (the 0/None fallback is right but for the NULL ints).
+    TableSpec("dungeonencounter_dbc", DUNGEONENCOUNTER_COLUMNS, ("ID",), "dungeon_encounters", prune_when_empty=True),
+    TableSpec(
+        "instance_encounters", INSTANCE_ENCOUNTERS_COLUMNS, ("entry",), "instance_encounters",
+        defaults={"creditType": 0, "creditEntry": 0, "lastEncounterDungeon": 0, "comment": ""},
+        prune_when_empty=True,
+    ),
+    TableSpec(
+        "creature_template_addon", CREATURE_TEMPLATE_ADDON_COLUMNS, ("entry",), "heroic_template_addons",
+        defaults={"auras": None}, prune_when_empty=True,
+    ),
+    TableSpec(
+        "creature_template_resistance", CREATURE_TEMPLATE_RESISTANCE_COLUMNS, ("CreatureID", "School"),
+        "heroic_template_resistances", defaults={"Resistance": None, "VerifiedBuild": None}, prune_when_empty=True,
+    ),
+    TableSpec(
+        "creature_template_movement", CREATURE_TEMPLATE_MOVEMENT_COLUMNS, ("CreatureId",),
+        "heroic_template_movements",
+        defaults={c: None for c in CREATURE_TEMPLATE_MOVEMENT_COLUMNS[1:]}, prune_when_empty=True,
+    ),
+    TableSpec(
+        "creature_onkill_reputation", CREATURE_ONKILL_REPUTATION_COLUMNS, ("creature_id",),
+        "heroic_onkill_reputations", prune_when_empty=True,
+    ),
 )
 
 
@@ -518,6 +563,12 @@ _PRUNE_WHY = {
     "chrclasses_dbc": "Left in place, the whole class row stays overridden.",
     "mapdifficulty_dbc": "Left in place, the server keeps offering that dungeon difficulty.",
     "dungeon_access_template": "Left in place, the entry requirements of that difficulty keep applying.",
+    "dungeonencounter_dbc": "Left in place, the boss stays on that difficulty's encounter list.",
+    "instance_encounters": "Left in place, the kill keeps crediting that encounter.",
+    "creature_template_addon": "Left in place, the heroic creature keeps the copied auras and emote.",
+    "creature_template_resistance": "Left in place, the heroic creature keeps the copied resistance.",
+    "creature_template_movement": "Left in place, the heroic creature keeps the copied movement flags.",
+    "creature_onkill_reputation": "Left in place, the heroic kill keeps granting the copied reputation.",
 }
 _PRUNE_WHY_DEFAULT = "Left in place it keeps applying."
 

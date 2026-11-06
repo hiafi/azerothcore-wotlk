@@ -1,6 +1,8 @@
 """
 generate.py's side of lib/dsl/dungeon.py (dungeon difficulties E1): the client MapDifficulty.dbc rows a run merges
-into patch-Z, and the ERRORs both `--check` and the full run stop on.
+into patch-Z, and the ERRORs both `--check` and the full run stop on. E2's derived rows (encounters, spawnMask,
+per-creature rows) are lib/dungeon_heroic.py's; its `Expansion` reaches the same two call sites through
+`errors_for_run(expansion=...)` and `summary_notes(expansion=...)`.
 """
 
 from __future__ import annotations
@@ -91,8 +93,9 @@ def check_dungeons(
     return errors
 
 
-def summary_notes(dungeons: list[dict]) -> list[str]:
-    """One line per declared heroic, for the run's output."""
+def summary_notes(dungeons: list[dict], expansion=None) -> list[str]:
+    """One line per declared heroic, for the run's output, then the E2 expansion's notes (`dungeon_heroic.Expansion`,
+    or None)."""
     notes = []
     for entry in sorted(dungeons, key=lambda e: e["map_id"]):
         spec = entry.get("heroic")
@@ -104,12 +107,15 @@ def summary_notes(dungeons: list[dict]) -> list[str]:
             f"(reset {spec['reset_seconds']} s, {spec['max_players']} players), dungeon_access_template "
             f"{spec['access_id']} (level {spec['min_level']}{cap}, item level {spec['min_item_level']})"
         )
+    if expansion is not None:
+        notes += expansion.notes
     return notes
 
 
-def errors_for_run(dsl_classes: dict, live_index, base_dir: Path = state.BASE_DBC_DIR) -> list[str]:
+def errors_for_run(dsl_classes: dict, live_index, base_dir: Path = state.BASE_DBC_DIR, expansion=None) -> list[str]:
     """Every dungeon ERROR, wired the same way for `--check` and the full run. `live_index` is the run's
-    `spell_tables.SpellTableIndex` (its live rows of both tables); the stock rows come from `base_dir`."""
+    `spell_tables.SpellTableIndex` (its live rows of both tables); the stock rows come from `base_dir`. `expansion` is
+    the run's `dungeon_heroic.expand()` result (None: no E2 errors to add)."""
     errors = []
     path = base_dir / dbcfmt.MAPDIFFICULTY.dbc_filename
     stock_rows = (
@@ -122,4 +128,6 @@ def errors_for_run(dsl_classes: dict, live_index, base_dir: Path = state.BASE_DB
         dsl_classes["map_difficulties"], dsl_classes["dungeon_access"], stock_rows,
         live_index.live_rows("mapdifficulty_dbc"), live_index.live_rows("dungeon_access_template"),
     )
+    if expansion is not None:
+        errors += expansion.errors
     return errors

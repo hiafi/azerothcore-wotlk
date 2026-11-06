@@ -575,6 +575,25 @@ MAPDIFFICULTY = DbcTable(
     read_as_string=frozenset({f"Message_Lang_{loc}" for loc in LOCALE_SUFFIXES[1:]} | {"Difficultystring"}),
 )
 
+# DungeonEncounter.dbc - one row per boss of an instance difficulty (dungeon difficulties E2, WP-T2). Server: the
+# encounter index (`Bit`) of each (MapID, Difficulty) list that `instance_encounters` hangs a kill credit on
+# (ObjectMgr::LoadInstanceEncounters, Map::UpdateEncounterState). Client: the boss list of the instance lock warning
+# (SMSG_INSTANCE_LOCK_WARNING_QUERY carries the completed mask; GetInstanceLockTimeRemainingEncounter) and of the
+# dungeon finder proposal. A declared heroic's rows go out as both halves: the SPELL_TABLES `dungeonencounter_dbc`
+# entry and a merge over var/extractors/dbc/DungeonEncounter.dbc into patch-Z. fmt is DBCfmt.h's
+# DungeonEncounterfmt; columns from data/sql/base/db_world/dungeonencounter_dbc.sql (OrderIndex, Name_Lang_Mask and
+# SpellIconID are 'x' but real columns). OrderIndex is signed (stock -1000 rows sort first). The stock file (612
+# rows, max ID 894) is ordered by (MapID, OrderIndex, ID) - see dbcfile.pack_client_dbc. Stock file: the server's DBC
+# directory. Not in ALL_TABLES (the SQL would go out twice, as for MAPDIFFICULTY).
+DUNGEONENCOUNTER = DbcTable(
+    name="DungeonEncounter",
+    dbc_filename="DungeonEncounter.dbc",
+    sql_table="dungeonencounter_dbc",
+    fmt="niixi" + "s" * 16 + "xx",
+    columns=_cols("ID", "MapID", "Difficulty", "OrderIndex", "Bit", _locale_cols("Name"), "SpellIconID"),
+    signed=frozenset({"OrderIndex"}),
+)
+
 # CreatureSpellData.dbc - a tamed/summoned pet's default spells, looked up by
 # creature_template.PetSpellDataId (SpellMgr::LoadPetDefaultSpells). lib/superseded_ranks.py rewrites
 # the records that name a superseded rank of a collapsed chain (pet-stale-ranks). Server-only: the
@@ -609,6 +628,21 @@ CREATUREFAMILY = DbcTable(
     ),
     signed=frozenset({"PetTalentType"}),
     read_as_string=frozenset({"IconFile"}),
+)
+
+# SpellDifficulty.dbc - read-only reference for lib/heroic_templates.py's lint (dungeon difficulties E2, WP-G): the
+# spell a cast becomes on each difficulty (Spell::Spell -> SpellMgr::GetSpellIdForDifficulty; DifficultySpellID_2 is the
+# 5-man heroic). Never written. Server-loaded with the `spelldifficulty_dbc` overlay (DBCStores.cpp builds the
+# searcher from rows with slots 1 and 2 set). fmt from DBCfmt.h's SpellDifficultyfmt, columns from
+# data/sql/base/db_world/spelldifficulty_dbc.sql; SpellID[] is int32 (DBCStructure.h). Stock file: the server's DBC
+# directory (ac-worldserver:/azerothcore/env/dist/data/dbc/), flattened into var/extractors/dbc/. Not in ALL_TABLES.
+SPELLDIFFICULTY = DbcTable(
+    name="SpellDifficulty",
+    dbc_filename="SpellDifficulty.dbc",
+    sql_table="spelldifficulty_dbc",
+    fmt="niiii",
+    columns=_cols("ID", ("DifficultySpellID", 4)),
+    signed=frozenset({f"DifficultySpellID_{i}" for i in range(1, 5)}),
 )
 
 ALL_TABLES = (
