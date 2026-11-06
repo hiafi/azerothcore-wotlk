@@ -22,7 +22,8 @@ and produces:
      client actually renders (name, icon, tooltip, talent frame).
   3. The same bytes copied into env/dist/data/dbc/ if that directory exists.
 
-Usage: python3 apps/dbc-tools/generate.py [--no-prune] [--check [--class NAME]] [--no-cache] [--rebuild-cache]
+Usage: python3 apps/dbc-tools/generate.py [--no-prune] [--check [--class NAME]] [--only items] [--no-cache]
+                                          [--rebuild-cache]
 
   --no-prune       skip the prune pass (rows an earlier run emitted that source/classes/*
                    no longer declares are left live instead of being deleted)
@@ -32,6 +33,12 @@ Usage: python3 apps/dbc-tools/generate.py [--no-prune] [--check [--class NAME]] 
                    the legacy CSV/YAML sources, source/npcs or source/world, and cannot see duplicate ids across
                    classes. Refused for a run that writes anything: the reserved id blocks, the client patch and
                    the prune pass are global, so a write run always covers every class.
+  --only items     emit only the item blocks (item_template upserts and edits, item_itemization, item_budget_variant,
+                   item_dbc) and the item_ids.lock lines, and repack the DEPLOYED patch-Z.mpq replacing only Item.dbc,
+                   so in-flight spell, talent and creature edits reach neither the SQL nor the client. Refused up front
+                   with no deployed patch-Z (no lib/local_config.py, or no Data/patch-Z.mpq under DEPLOY_ROOT). With
+                   --check: the item checks and lints only, no spell lints or header gate (a missing deployed patch-Z
+                   is a WARNING there). Not combinable with --class.
   --no-cache       do not read or write the on-disk cache of replayed SQL state (var/dbc-tools-cache/)
   --rebuild-cache  ignore what the cache holds, replay everything, and write the cache afresh
   -h, --help       print this message and exit
@@ -41,6 +48,7 @@ from __future__ import annotations
 
 import hashlib
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -52,12 +60,16 @@ from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, so
 from lib import gcd_haste, header_gen, potency_sheet, spell_tables, superseded_ranks  # noqa: E402
 from lib import sqlcorpus, stale_overlay, trainer_pricing, trainer_state  # noqa: E402
 from lib import dungeon_checks, dungeon_heroic, heroic_templates, item_emit, item_ids, item_variants  # noqa: E402
+from lib import item_labels  # noqa: E402
+from lib import patch_repack  # noqa: E402
 from bootstrap import load_spell_ranks_chains  # noqa: E402
 from lib.dsl import items as dsl_items  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 from lib.lazy import Lazy  # noqa: E402
 
 KNOWN_FLAGS = {"--no-prune", "--check", "--no-cache", "--rebuild-cache"}
+# `--only NAME`: the run scopes that parse_args accepts. A valid one is returned in the flag set as `--only=NAME`.
+ONLY_SCOPES = ("items",)
 
 # PLAN P2b step 4: adopted class by class, inside each class's own pass - not a side effect of
 # every generate.py run. Extend this tuple when a pass is ready to start generating/relying on its
@@ -540,13 +552,26 @@ def known_classes() -> list[str]:
 def parse_args(args: list[str]) -> tuple[set[str], str | None, str | None]:
     """`(flags, class name, error)`. No argparse - hand-checked so an unknown flag (e.g. --help before this existed)
     can't silently fall through into a full multi-minute run that writes a pending SQL migration. `--class` is the
-    one option with a value (`--class NAME` or `--class=NAME`); it is accepted only together with `--check`."""
+    one option with a value (`--class NAME` or `--class=NAME`); it is accepted only together with `--check`.
+    `--only NAME` (or `--only=NAME`, one of ONLY_SCOPES) is the other: it scopes the run and comes back as the flag
+    `--only=NAME`."""
     flags: set[str] = set()
     class_names: list[str] = []
+    only_scopes: list[str] = []
     unknown: list[str] = []
     i = 0
     while i < len(args):
         arg = args[i]
+        if arg == "--only":
+            if i + 1 >= len(args) or args[i + 1].startswith("-"):
+                return flags, None, f"--only needs a scope ({', '.join(ONLY_SCOPES)})"
+            only_scopes.append(args[i + 1])
+            i += 2
+            continue
+        if arg.startswith("--only="):
+            only_scopes.append(arg.removeprefix("--only="))
+            i += 1
+            continue
         if arg == "--class":
             if i + 1 >= len(args) or args[i + 1].startswith("-"):
                 return flags, None, "--class needs a class name (e.g. --check --class warrior)"
@@ -562,6 +587,12 @@ def parse_args(args: list[str]) -> tuple[set[str], str | None, str | None]:
         i += 1
     if unknown:
         return flags, None, f"unknown argument(s): {' '.join(unknown)} (see --help)"
+    if only_scopes:
+        if len(only_scopes) > 1 or only_scopes[0] not in ONLY_SCOPES:
+            return flags, None, f"--only takes exactly one of: {', '.join(ONLY_SCOPES)}"
+        if class_names:
+            return flags, None, "--only and --class cannot be combined"
+        flags.add(f"--only={only_scopes[0]}")
     if not class_names:
         return flags, None, None
     if len(class_names) > 1 or not class_names[0]:
@@ -592,7 +623,9 @@ def main() -> int:
         None if "--no-cache" in flags else CACHE_DIR, cache_code_version(), rebuild="--rebuild-cache" in flags,
     )
     try:
-        return _run_scoped_check(corpus, class_name) if class_name else _run(corpus)
+        if class_name:
+            return _run_scoped_check(corpus, class_name)
+        return _run(corpus, only_items="--only=items" in flags)
     finally:
         sqlcorpus.deactivate()
 
@@ -794,7 +827,189 @@ def _cache_summary(corpus: sqlcorpus.Corpus) -> str:
     return f"{stats['hit']} hit, {stats['extend']} extended, {stats['miss']} miss, {stats['corrupt']} corrupt"
 
 
-def _run(corpus: sqlcorpus.Corpus) -> int:
+def _apply_stale_overlay(stale_inputs: tuple, ids_cfg: dict) -> tuple[dict[str, list[int]], set[str]]:
+    """lib/stale_overlay.py over `(ids key, table, entries, built rows, resolved, stock rows)` inputs: re-emits,
+    drops and deletes on each `resolved` (in place) and prints what it did. Returns `({table name: ids to delete},
+    {table names whose reserved block must be re-emitted})`. Shared by the full run and `--only items`."""
+    stale_deletes: dict[str, list[int]] = {}
+    stale_force: set[str] = set()
+    for ids_key, table, entries, built_rows, resolved, stock_rows in stale_inputs:
+        stale = stale_overlay.find_stale(
+            ids_cfg[ids_key], {int(r[table.index_column]): r for r in built_rows}, set(resolved.edited_ids),
+            stale_overlay.load_overlay_state(table), stock_rows, prune="--no-prune" not in sys.argv,
+        )
+        by_id = {e["id"]: e for e in entries}
+        for row_id in stale.reemit:
+            resolved.entries.append(by_id[row_id])
+            resolved.edited_ids.append(row_id)
+        if stale.drop:
+            dropped = set(stale.drop)
+            resolved.entries[:] = [e for e in resolved.entries if e["id"] not in dropped]
+            resolved.edited_ids[:] = [i for i in resolved.edited_ids if i not in dropped]
+        stale_deletes[table.name] = stale.deletes
+        if stale.reserved_changed:
+            stale_force.add(table.name)
+        if stale.deletes:
+            print(
+                f"stale overlay: {table.sql_table}: deleting {len(stale.deletes)} generated row(s) to fall back to "
+                f"stock {stale.deletes} (no longer declared: {stale.undeclared})"
+            )
+        if stale.drop:
+            print(f"stale overlay: {table.sql_table}: not re-inserting {len(stale.drop)} row(s) at stock {stale.drop}")
+        if stale.reemit:
+            print(f"stale overlay: {table.sql_table}: re-emitting {len(stale.reemit)} row(s) {stale.reemit}")
+        if stale.reserved_changed:
+            print(f"stale overlay: {table.sql_table}: live reserved-block rows differ, re-emitting the block")
+        if stale.kept_undeclared:
+            print(
+                f"note: stale overlay: {table.sql_table}: {len(stale.kept_undeclared)} undeclared generated row(s) "
+                f"left live (no stock row to fall back to, or --no-prune) {stale.kept_undeclared[:20]}"
+            )
+    return stale_deletes, stale_force
+
+
+def _run_only_items(
+    progress, *, check: bool, ids_cfg: dict, item_entries: list[dict], item_live_rows: dict, item_table_index,
+    dsl_classes: dict, item_expansion, item_emission, item_rendered, patch_base, corpus: sqlcorpus.Corpus,
+) -> int:
+    """`--only items` (item variants IV3, plan section 5.4): the SQL and the client patch for the item tables alone.
+
+    SQL: the `item_template` column edits (`render_item_blocks`), the minted rows, `item_itemization` and
+    `item_budget_variant` (`item_rendered`, built by lib/item_emit.py) and the `item_dbc` reserved block, in one rev
+    file, plus the new `item_ids.lock` lines. Nothing from the spell, talent, creature or dungeon tables is rendered,
+    so an in-flight edit to one of them stays out of the file. Client: the DEPLOYED patch-Z with only Item.dbc
+    replaced (lib/patch_repack.py); nothing else of the archive changes. `check`: the item checks and lints, no
+    writes."""
+    if item_expansion.errors:
+        for error in item_expansion.errors:
+            print(f"ERROR: {error}")
+        return 1
+    existing_items = state.load_existing_rows(dbcfmt.ITEM)
+    stock_items = state.load_stock_rows(dbcfmt.ITEM)
+    item_resolved = resolve.resolve_rows(item_entries, ids_cfg["item"], existing_items, build.build_item_row)
+    if item_resolved.unchanged:
+        print(f"note: {item_resolved.unchanged} item(s) in source/ are unchanged copies of existing data")
+    if item_resolved.edited_ids:
+        print(f"editing {len(item_resolved.edited_ids)} existing item(s) {item_resolved.edited_ids}")
+    stale_deletes, stale_force = _apply_stale_overlay(
+        (("item", dbcfmt.ITEM, item_entries, [build.build_item_row(e) for e in item_entries], item_resolved,
+          stock_items),),
+        ids_cfg,
+    )
+    item_rows = [build.build_item_row(e) for e in item_resolved.entries]
+    for warning in lint.check_item_dbc_consistency(
+        dsl_classes["item_templates"], {**existing_items, **{int(r["ID"]): r for r in item_rows}},
+    ):
+        print(f"WARNING: {warning}")
+    minted_item_rows = {int(r["entry"]): r for r in item_emission.template_rows} if item_emission else {}
+    for warning in lint.check_ranged_ammo_type(
+        dsl_classes["item_templates"], item_entries, {**item_live_rows, **minted_item_rows},
+    ):
+        print(f"WARNING: {warning}")
+    if patch_base is not None:
+        for line in patch_repack.describe(patch_base):
+            print(line)
+    if check:
+        progress(f"--check --only items done (cache: {_cache_summary(corpus)})")
+        return 0
+
+    # Item.dbc as the full run builds it (stock rows + every source row, resolved against pure stock), then the
+    # deployed archive with that one file swapped. Built and verified before any file is written.
+    client_item_resolved = resolve.resolve_rows(item_entries, ids_cfg["item"], stock_items, build.build_item_row)
+    client_item_rows = {int(r["ID"]): r for r in (build.build_item_row(e) for e in client_item_resolved.entries)}
+    item_dbc_bytes = None
+    if client_item_rows:
+        dbc_path = BASE_DBC_DIR / dbcfmt.ITEM.dbc_filename
+        if not dbc_path.is_file():
+            print(
+                f"ERROR: no stock {dbcfmt.ITEM.dbc_filename} in {BASE_DBC_DIR.relative_to(REPO_ROOT)} to build the "
+                f"client patch on"
+            )
+            return 1
+        base_rows = state.read_dbc_cached(dbc_path, dbcfmt.ITEM)
+        merged = {row[dbcfmt.ITEM.index_column]: row for row in base_rows}
+        merged.update(client_item_rows)
+        item_dbc_bytes = dbcfile.pack_client_dbc(dbcfmt.ITEM, list(merged.values()), base_rows)
+    progress("built Item.dbc for the client patch")
+
+    item_blocks = spell_tables.render_item_blocks(item_table_index, dsl_classes)
+    for line in spell_tables.render_item_retirement_report(item_table_index, dsl_classes):
+        print(line)
+    item_edited_ids = item_resolved.edited_ids + stale_deletes[dbcfmt.ITEM.name]
+    blocks = [(dbcfmt.ITEM, ids_cfg["item"], item_rows, item_edited_ids, existing_items)]
+    depends_on: dict[str, list[Path]] = {}
+    blocks, n_skipped_unchanged_tables = _drop_unchanged_blocks(
+        blocks, force=stale_force, dependencies=depends_on,
+        applied=lambda table: state.load_applied_rows(
+            table, existing_items, _block_ids(ids_cfg["item"], item_edited_ids),
+        ),
+    )
+    if n_skipped_unchanged_tables:
+        print(
+            "note: item_dbc reserved-block content is unchanged (already live, or already in a pending rev), "
+            "not re-emitted"
+        )
+    for line in _pending_dependency_notes(depends_on):
+        print(line)
+
+    with tempfile.TemporaryDirectory(prefix="dbc-only-items-") as tmp:
+        repacked = Path(tmp) / "patch-Z.mpq"
+        changed: list[str] = []
+        if item_dbc_bytes is not None:
+            try:
+                changed = patch_repack.repack(
+                    patch_base, {patch_repack.ITEM_DBC: item_dbc_bytes}, repacked,
+                )
+            except (patch_repack.RepackError, OSError) as error:
+                print(f"ERROR: --only items: could not repack {patch_base}: {error}")
+                return 1
+        header = (
+            "-- Generated by apps/dbc-tools/generate.py --only items — DO NOT hand-edit.\n"
+            "-- Source of truth: apps/dbc-tools/source/items/*, source/items.csv and item_template() declarations.\n"
+            "-- Regenerate with: python3 apps/dbc-tools/generate.py --only items"
+        )
+        rev = int(time.time() * 1_000_000_000)
+        out_path = PENDING_SQL_DIR / f"rev_{rev}.sql"
+        wrote_sql = sql_out.emit_pending_sql(
+            out_path, blocks, header,
+            extra_blocks=[*item_blocks, *(item_rendered.blocks if item_rendered else ())],
+        )
+        print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
+        if item_expansion.lock_appended:
+            item_ids.LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+            item_ids.LOCK_PATH.write_text(item_expansion.lock_text, encoding="utf-8")
+            print(
+                f"note: minted {len(item_expansion.minted)} item id(s) "
+                f"({len(item_expansion.assignment.bases)} stock base line(s)) into "
+                f"{item_ids.LOCK_PATH.relative_to(REPO_ROOT)} - commit it with the SQL"
+            )
+        if item_emission is not None and (label_note := item_labels.sync(item_emission.labels)):
+            print(f"note: items: {label_note}")
+        progress("SQL emission done")
+        if item_dbc_bytes is None:
+            print("patch: no Item.dbc rows to ship, deployed patch-Z left alone")
+        elif not changed:
+            print("patch: Item.dbc in the deployed patch-Z already equals this build, nothing to repack")
+        else:
+            report = patch_repack.install(repacked, {dbcfmt.ITEM.dbc_filename: item_dbc_bytes})
+            print(f"patch: repacked {patch_base} replacing only {', '.join(changed)} (every other file unchanged)")
+            print(f"patch: loose files -> {patch_out.LOOSE_DIR}")
+            print(f"patch: mpq -> {report['mpq']}")
+            if report["env_dbc"]:
+                print(f"patch: also copied into {patch_out.ENV_DBC_DIR}")
+            if report["deploy_mpq"]:
+                print(f"patch: deployed -> {report['deploy_mpq']} (patch-service's manifest-gen "
+                      f"picks this up on its next timer tick; run apps/patch-service/manifest_gen.py "
+                      f"by hand for an immediate manifest.txt refresh)")
+    _print_replay_skips()
+    progress(f"done (cache: {_cache_summary(corpus)})")
+    return 0
+
+
+def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
+    """The full run, or with `only_items` (`--only items`) the item blocks and the deployed patch-Z's Item.dbc only:
+    everything is still loaded (the DSL needs the live state), but it hands over to `_run_only_items` right after the
+    item expansion, so no other table's SQL is rendered and no other client file is built."""
     start = time.monotonic()
 
     def progress(label: str) -> None:
@@ -804,6 +1019,18 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         # this print is the only signal something is happening, and a piped/redirected run
         # (`generate.py > log.txt`) would otherwise buffer it invisibly until exit.
         print(f"[{time.monotonic() - start:6.1f}s] {label}", flush=True)
+
+    # `--only items` repacks the deployed patch-Z: refuse before anything loads or renders if there is none. A
+    # `--check` run only warns (it writes nothing, and the worktree it runs in may have no local_config.py).
+    patch_base = None
+    if only_items:
+        try:
+            patch_base = patch_repack.deployed_base()
+        except patch_repack.PatchBaseError as error:
+            if "--check" not in sys.argv:
+                print(f"ERROR: --only items: {error}")
+                return 1
+            print(f"WARNING: --only items: {error} (a write run would refuse)")
 
     ids_cfg = source.load_ids(SOURCE_DIR / "ids.yaml")
     spell_entries = source.load_spells_csv(SOURCE_DIR / "spells")
@@ -912,14 +1139,16 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
     # Dungeon difficulties E2: a declared heroic's derived rows (encounters, spawnMask, difficulty_entry_1, side-table
     # copies), built from live state before anything renders or --check returns, so both see the same rows. The live
     # spawn replay loads only when a heroic is declared.
-    dungeon_expansion = dungeon_heroic.expand(
-        dsl_classes, lambda: dungeon_heroic.load_live_world(existing_creature_rows, spell_table_index),
-        ids_cfg=ids_cfg,
-    )
-    for warning in dungeon_expansion.warnings:
-        print(f"WARNING: {warning}")
-    if dungeon_heroic.needs_live_world(dsl_classes):
-        progress("expanded declared dungeon heroics (encounters, spawnMask, heroic creature templates and rows)")
+    dungeon_expansion = None
+    if not only_items:  # nothing of the dungeon rows reaches an item-only run
+        dungeon_expansion = dungeon_heroic.expand(
+            dsl_classes, lambda: dungeon_heroic.load_live_world(existing_creature_rows, spell_table_index),
+            ids_cfg=ids_cfg,
+        )
+        for warning in dungeon_expansion.warnings:
+            print(f"WARNING: {warning}")
+        if dungeon_heroic.needs_live_world(dsl_classes):
+            progress("expanded declared dungeon heroics (encounters, spawnMask, heroic creature templates and rows)")
     # Item variants IV1: every item()'s ladder tiers, checked and given their item_template entries (the lock file
     # source/items/item_ids.lock). The itemization tables load only when an item is declared.
     item_expansion = item_variants.expand(
@@ -943,6 +1172,10 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
     if item_expansion.assignment is not None and not item_expansion.errors:
         item_emission = item_emit.build(item_expansion)
         item_expansion.errors += item_emission.errors
+        item_label_text, label_errors = item_labels.prepare(item_emission.labels)
+        item_expansion.errors += label_errors
+        if item_label_text is not None and "--check" in sys.argv:
+            print(f"note: items: {item_labels.finish(item_label_text, check=True) or 'ItemTierLabels.lua is current'}")
         item_entries, dbc_errors = item_emit.merge_dbc_entries(item_entries, item_emission)
         item_expansion.errors += dbc_errors
         dsl_classes["item_templates"] += item_emission.template_edits
@@ -950,6 +1183,13 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
             item_rendered = item_emit.render(item_emission, item_live_rows, item_expansion.tables or {})
             for note in item_emit.summary_notes(item_emission, item_rendered):
                 print(f"note: {note}")
+    if only_items:  # before the potency sheets and generated headers below: an item-only run writes neither
+        return _run_only_items(
+            progress, check="--check" in sys.argv, ids_cfg=ids_cfg, item_entries=item_entries,
+            item_live_rows=item_live_rows, item_table_index=item_table_index, dsl_classes=dsl_classes,
+            item_expansion=item_expansion, item_emission=item_emission, item_rendered=item_rendered,
+            patch_base=patch_base, corpus=corpus,
+        )
     if n_dsl:
         creature_counts = {
             **spell_tables.count_declared(dsl_classes),
@@ -1286,40 +1526,7 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
             stock_items,
         ),
     )
-    stale_deletes: dict[str, list[int]] = {}
-    stale_force: set[str] = set()
-    for ids_key, table, entries, built_rows, resolved, stock_rows in stale_inputs:
-        stale = stale_overlay.find_stale(
-            ids_cfg[ids_key], {int(r[table.index_column]): r for r in built_rows}, set(resolved.edited_ids),
-            stale_overlay.load_overlay_state(table), stock_rows, prune="--no-prune" not in sys.argv,
-        )
-        by_id = {e["id"]: e for e in entries}
-        for row_id in stale.reemit:
-            resolved.entries.append(by_id[row_id])
-            resolved.edited_ids.append(row_id)
-        if stale.drop:
-            dropped = set(stale.drop)
-            resolved.entries[:] = [e for e in resolved.entries if e["id"] not in dropped]
-            resolved.edited_ids[:] = [i for i in resolved.edited_ids if i not in dropped]
-        stale_deletes[table.name] = stale.deletes
-        if stale.reserved_changed:
-            stale_force.add(table.name)
-        if stale.deletes:
-            print(
-                f"stale overlay: {table.sql_table}: deleting {len(stale.deletes)} generated row(s) to fall back to "
-                f"stock {stale.deletes} (no longer declared: {stale.undeclared})"
-            )
-        if stale.drop:
-            print(f"stale overlay: {table.sql_table}: not re-inserting {len(stale.drop)} row(s) at stock {stale.drop}")
-        if stale.reemit:
-            print(f"stale overlay: {table.sql_table}: re-emitting {len(stale.reemit)} row(s) {stale.reemit}")
-        if stale.reserved_changed:
-            print(f"stale overlay: {table.sql_table}: live reserved-block rows differ, re-emitting the block")
-        if stale.kept_undeclared:
-            print(
-                f"note: stale overlay: {table.sql_table}: {len(stale.kept_undeclared)} undeclared generated row(s) "
-                f"left live (no stock row to fall back to, or --no-prune) {stale.kept_undeclared[:20]}"
-            )
+    stale_deletes, stale_force = _apply_stale_overlay(stale_inputs, ids_cfg)
     progress("checked live overlay rows for stale generated rows")
 
     # Real build pass (real ReuseContext this time) over just what survived
@@ -1626,6 +1833,9 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
             f"({len(item_expansion.assignment.bases)} stock base line(s)) into "
             f"{item_ids.LOCK_PATH.relative_to(REPO_ROOT)} - commit it with the SQL"
         )
+    # Item variants IV4: the client tier label table, rewritten only when it changed.
+    if item_emission is not None and (label_note := item_labels.sync(item_emission.labels)):
+        print(f"note: items: {label_note}")
     progress("SQL emission done")
 
     # -- client patch: needs a complete file (base + new), so any table with

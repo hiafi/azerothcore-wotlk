@@ -1,0 +1,88 @@
+"""`generate.py --only items` argument handling and its up-front refusal (item variants IV3).
+
+Like test_generate_class_flag.py, no real generate.py run happens here: the loaders are booby-trapped, so a refusal
+that stopped working fails the test instead of writing a pending SQL file or a patch.
+"""
+
+from __future__ import annotations
+
+import io
+import sys
+import unittest
+from contextlib import redirect_stdout
+from pathlib import Path
+from unittest import mock
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+import generate  # noqa: E402
+from lib import patch_out  # noqa: E402
+
+
+class Loaded(Exception):
+    """Raised by the booby-trapped loader: the run got past the refusal."""
+
+
+class ParseArgsTest(unittest.TestCase):
+    def test_only_items_is_accepted_in_both_spellings(self):
+        for args in (
+            ["--only", "items"], ["--only=items"], ["--only", "items", "--check"], ["--check", "--only=items"],
+        ):
+            with self.subTest(args=args):
+                flags, name, error = generate.parse_args(args)
+                self.assertIsNone(error)
+                self.assertIsNone(name)
+                self.assertIn("--only=items", flags)
+
+    def test_only_needs_exactly_one_known_scope(self):
+        for args in (["--only"], ["--only", "--check"], ["--only", "spells"], ["--only="],
+                     ["--only", "items", "--only", "items"]):
+            with self.subTest(args=args):
+                _flags, _name, error = generate.parse_args(args)
+                self.assertIn("--only", error)
+
+    def test_only_and_class_cannot_be_combined(self):
+        _flags, name, error = generate.parse_args(["--check", "--class", "warrior", "--only", "items"])
+        self.assertIsNone(name)
+        self.assertIn("cannot be combined", error)
+
+    def test_plain_runs_have_no_only_flag(self):
+        flags, _name, _error = generate.parse_args(["--check"])
+        self.assertNotIn("--only=items", flags)
+
+
+class RefusalTest(unittest.TestCase):
+    def run_only_items(self, argv: list[str]) -> tuple[int | None, str]:
+        out = io.StringIO()
+        with mock.patch.object(sys, "argv", ["generate.py", *argv]), \
+                mock.patch.object(generate.source, "load_ids", side_effect=Loaded), redirect_stdout(out):
+            try:
+                code = generate._run(mock.Mock(), only_items=True)
+            except Loaded:
+                code = None
+        return code, out.getvalue()
+
+    def test_write_run_without_local_config_stops_before_loading(self):
+        with mock.patch.object(patch_out, "DEPLOY_ROOT", None):
+            code, out = self.run_only_items(["--only", "items"])
+        self.assertEqual(code, 1)
+        self.assertIn("ERROR: --only items:", out)
+        self.assertIn("local_config.py", out)
+
+    def test_write_run_without_deployed_archive_names_the_path(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(patch_out, "DEPLOY_ROOT", Path(tmp)):
+            code, out = self.run_only_items(["--only", "items"])
+        self.assertEqual(code, 1)
+        self.assertIn(str(Path(tmp) / "Data" / "patch-Z.mpq"), out)
+
+    def test_check_run_only_warns_and_carries_on(self):
+        with mock.patch.object(patch_out, "DEPLOY_ROOT", None):
+            code, out = self.run_only_items(["--check", "--only", "items"])
+        self.assertIsNone(code)  # reached the (trapped) loader
+        self.assertIn("WARNING: --only items:", out)
+        self.assertIn("a write run would refuse", out)
+
+
+if __name__ == "__main__":
+    unittest.main()
