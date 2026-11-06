@@ -9,14 +9,12 @@ item-tools the same answer instead of a second parser with its own gaps. What th
 skips: `.agents/docs/systems/dbc-tools.md`, "What the SQL replay reads, the skip log, and the whole-table check".
 
 **Files, in apply order** (`contributing_files`): the base dump (when the table has one), then every SQL file that
-names the table:
+names the table, in DBUpdater's order (dbc-tools' `trainer_state.update_files`, the one list both tools share):
   1. `data/sql/updates/db_world/**` (subdirectories too, e.g. `itemization_templates_v2/`, sorted by bare file
-     name like DBUpdater), with dbc-tools' frozen replay inputs spliced in at the slot they ran
-     (`lib/frozen_replay.py`: mod-progression's phase 0 wrote `item_template` and the loot tables);
-  2. `data/sql/updates/pending_db_world/**`, same order;
-  3. module SQL (`modules/*/data/sql/db-world/`, `trainer_state.module_sql_files`).
-This is dbc-tools' order (`trainer_state._migration_files_mentioning`) plus the subdirectories, which dbc-tools'
-own listing does not walk.
+     name), with dbc-tools' frozen replay inputs spliced in at the slot they ran (`lib/frozen_replay.py`:
+     mod-progression's phase 0 wrote `item_template` and the loot tables);
+  2. `data/sql/updates/pending_db_world/**`, `data/sql/custom/db_world/**` and module SQL
+     (`modules/*/data/sql/db-world/**`) together, by bare file name: DBUpdater's second pass.
 
 **Semantics are MySQL's**: an UPDATE's guard (`AND col = <old value>`) is honoured, a DELETE + INSERT runs in
 statement order, `INSERT IGNORE`, `TRUNCATE`, `ALTER TABLE`, session variables and expressions are read.
@@ -75,9 +73,7 @@ def base_file(table: str) -> Path | None:
 
 def sql_files() -> list[Path]:
     """Every non-base SQL file a replay may read, in apply order (see the module docstring)."""
-    merged = sorted(MERGED_DIR.rglob("*.sql"), key=lambda p: p.name) if MERGED_DIR.is_dir() else []
-    pending = sorted(PENDING_DIR.rglob("*.sql"), key=lambda p: p.name) if PENDING_DIR.is_dir() else []
-    return [*frozen_replay.splice(merged), *pending, *trainer_state.module_sql_files()]
+    return trainer_state.update_files(MERGED_DIR, PENDING_DIR)
 
 
 def _is_stable(path: Path) -> bool:
@@ -117,11 +113,12 @@ class Schema:
     a migration created) from item-tools' schema evolution over the migrations (`budget_overlay`)."""
 
     def __init__(self, columns: tuple[str, ...], key_columns: tuple[str, ...], defaults: dict,
-                 string_columns: frozenset):
+                 string_columns: frozenset, int_columns: frozenset | None = None):
         self.columns = columns
         self.key_columns = key_columns
         self.defaults = defaults
         self.string_columns = string_columns
+        self.int_columns = int_columns  # None (a table with no base dump): not known, nothing is rounded
 
 
 def table_schema(table: str, key_columns: tuple[str, ...] | None = None) -> Schema:
@@ -137,7 +134,7 @@ def table_schema(table: str, key_columns: tuple[str, ...] | None = None) -> Sche
         # for NOT NULL text in non-strict mode); a numeric one with none is 0.
         for column in columns:
             defaults.setdefault(column, "" if column in strings else 0)
-        return Schema(columns, key_columns, defaults, strings)
+        return Schema(columns, key_columns, defaults, strings, sql_dump.parse_create_table_int_columns(base, table))
     from . import budget_overlay  # noqa: PLC0415 - budget_overlay imports this module
 
     columns = tuple(budget_overlay.table_columns(table))
@@ -196,7 +193,7 @@ def _step(rows: dict, path: Path, name: str, names: tuple[str, ...], schema: Sch
         report = (lambda s: on_skip(path.name, s)) if on_skip else None
         sql_dump.apply_composite_key_statements(
             rows, schema.columns, schema.key_columns, current, chunk, report, defaults=schema.defaults,
-            source=path.name,
+            source=path.name, int_columns=schema.int_columns,
         )
         if path.parent != BASE_DIR:
             trainer_state._record_invisible(current, path, chunk, report)

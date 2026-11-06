@@ -56,18 +56,77 @@ PENDING_SQL_DIR = REPO_ROOT / "data" / "sql" / "updates" / "pending_db_world"
 MODULES_DIR = REPO_ROOT / "modules"
 
 
+CUSTOM_SQL_DIR = REPO_ROOT / "data" / "sql" / "custom" / "db_world"
+
+
+def _sql_tree(directory: Path) -> list[Path]:
+    """Every `*.sql` under `directory`, subdirectories included (DBUpdater's `FillFileListRecursively`)."""
+    return list(directory.rglob("*.sql")) if directory.is_dir() else []
+
+
 def module_sql_files() -> list[Path]:
-    """Every module SQL file `DBUpdater` would apply to the world DB, in the
-    order it applies them: each module's `data/sql/db-world/` (recursively -
-    some modules nest a `base/`/`updates/` split)."""
+    """Every module SQL file `DBUpdater` would apply to the world DB: each module's `data/sql/<dir>/` whose name
+    contains `db-world` (`UpdateFetcher::ReceiveIncludedDirectories`), recursively, by bare file name."""
     if not MODULES_DIR.is_dir():
         return []
     files: list[Path] = []
     for module_dir in sorted(MODULES_DIR.iterdir()):
-        world = module_dir / "data" / "sql" / "db-world"
-        if world.is_dir():
-            files.extend(sorted(world.rglob("*.sql")))
-    return files
+        sql_dir = module_dir / "data" / "sql"
+        if not sql_dir.is_dir():
+            continue
+        for world in sorted(d for d in sql_dir.iterdir() if d.is_dir() and "db-world" in d.name):
+            files.extend(_sql_tree(world))
+    return sorted(files, key=lambda p: p.name)
+
+
+class DuplicateUpdateName(ValueError):
+    """Two update files with one bare name: DBUpdater refuses to start ("Duplicate filename"), since it orders and
+    tracks updates by file name alone."""
+
+
+def update_files(promoted_dir: Path | None = None, pending_dir: Path | None = None) -> list[Path]:
+    """Every world-DB update file, in the order DBUpdater applies them to a fresh database
+    (`src/server/database/Updater/UpdateFetcher.cpp`, `UpdateFetcher::Update`). All include directories go into one
+    `std::set` ordered by bare file name (`PathCompare`), subdirectories included, and the set is applied in two
+    passes:
+
+    1. the RELEASED (and ARCHIVED) files: `data/sql/updates/db_world/**`, with the frozen replay inputs
+       (`frozen_replay.splice`, mod-progression's phase 0, which the module itself applied outside DBUpdater) at
+       their slot;
+    2. the PENDING, CUSTOM and MODULE files together, by bare name: `data/sql/updates/pending_db_world/**`,
+       `data/sql/custom/db_world/**` and every module's `data/sql/db-world/**`. A module file named `2016_...` runs
+       before a pending `rev_...`, one named `zz_...` after it.
+
+    `data/sql/archive/db_world` is not read: its files are older than the base dumps, which already hold them (the
+    base dump's `updates` rows mark them applied). Raises `DuplicateUpdateName` where DBUpdater would.
+    `promoted_dir` / `pending_dir` replace the two update directories (`state.py` keeps its own, which tests point
+    elsewhere)."""
+    released = sorted(_sql_tree(promoted_dir or PROMOTED_SQL_DIR), key=lambda p: p.name)
+    second = sorted(
+        [*_sql_tree(pending_dir or PENDING_SQL_DIR), *_sql_tree(CUSTOM_SQL_DIR), *module_sql_files()],
+        key=lambda p: p.name,
+    )
+    seen: dict[str, Path] = {}
+    for path in (*released, *second):
+        if path.name in seen:
+            raise DuplicateUpdateName(f"update file name {path.name} is used twice ({seen[path.name]}, {path})")
+        seen[path.name] = path
+    return [*frozen_replay.splice(released), *second]
+
+
+def is_promoted(path: Path) -> bool:
+    """Whether `path` is a promoted `db_world` file (or under one of its subdirectories)."""
+    return PROMOTED_SQL_DIR in Path(path).parents
+
+
+def second_pass_files(pending_dir: Path | None = None) -> list[Path]:
+    """`update_files()`' second pass: pending, custom and module SQL, by bare name (what db-import applies on top of
+    the promoted state)."""
+    return [
+        p for p in update_files(pending_dir=pending_dir)
+        if not is_promoted(p) and not frozen_replay.is_frozen(p)
+    ]
+
 
 # src/server/game/Entities/Unit/UnitDefines.h
 UNIT_NPC_FLAG_TRAINER = 0x00000010
@@ -179,17 +238,11 @@ def _record_invisible(table_name: str, path: Path, text: str, warn: Callable[[st
 
 
 def _migration_files_mentioning(table_name: str, loose: bool = False) -> list[Path]:
-    """Every non-base SQL file that mentions `table_name`, in apply order:
-    promoted core updates with the frozen inputs spliced in at their slot
-    (`frozen_replay.splice`), pending core updates, then module SQL (a cheap
-    substring check before bothering to parse each file). `loose` also opens a
-    file that only names the table unquoted, so its statements can be warned about."""
-    candidates = [
-        *frozen_replay.splice(sorted(PROMOTED_SQL_DIR.glob("*.sql")) if PROMOTED_SQL_DIR.is_dir() else []),
-        *(sorted(PENDING_SQL_DIR.glob("*.sql")) if PENDING_SQL_DIR.is_dir() else []),
-        *module_sql_files(),
-    ]
-    return [p for p in candidates if sqlcorpus.mentions(p, table_name, loose)]
+    """Every non-base SQL file that mentions `table_name`, in DBUpdater's apply order (`update_files`: promoted core
+    updates with the frozen inputs spliced in at their slot, then pending, custom and module SQL by bare file name;
+    subdirectories included). A cheap substring check before bothering to parse each file; `loose` also opens a file
+    that only names the table unquoted, so its statements can be warned about."""
+    return [p for p in update_files() if sqlcorpus.mentions(p, table_name, loose)]
 
 
 def _split_stable(files: list[Path]) -> tuple[list[Path], list[Path]]:
@@ -197,7 +250,7 @@ def _split_stable(files: list[Path]) -> tuple[list[Path], list[Path]]:
     the frozen inputs spliced among them are immutable history, so a replay of them can be cached
     (`sqlcorpus.checkpointed`); pending and module files change from run to run and are replayed on top every time."""
     n = 0
-    while n < len(files) and (files[n].parent == PROMOTED_SQL_DIR or frozen_replay.is_frozen(files[n])):
+    while n < len(files) and (is_promoted(files[n]) or frozen_replay.is_frozen(files[n])):
         n += 1
     return files[:n], files[n:]
 
@@ -295,12 +348,13 @@ def load_replayed_table_rows(
         )
 
     defaults = sql_dump.parse_create_table_defaults(base_path, table_name) if base_path.is_file() else {}
+    int_columns = sql_dump.parse_create_table_int_columns(base_path, table_name) if base_path.is_file() else None
 
     def step(rows: dict[tuple, dict], path: Path) -> dict[tuple, dict]:
         text = sqlcorpus.read_text(path)
         sql_dump.apply_composite_key_statements(
             rows, columns, key_columns, table_name, text, reporter(path), fill_missing, defaults=defaults,
-            source=path.name,
+            source=path.name, int_columns=int_columns,
         )
         if path != base_path:
             _record_invisible(table_name, path, text, reporter(path))

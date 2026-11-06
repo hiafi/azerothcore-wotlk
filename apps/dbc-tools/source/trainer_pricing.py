@@ -5,8 +5,9 @@ level (`ReqLevel`) alone. Nothing is read from the old price, so the pass is ide
 retunable: edit a number here and regenerate.
 
 Every other stock trainer (`DISCOUNTED_TRAINER_IDS`): `STOCK_TRAINER_PRICE_FACTOR` of the
-hand-written price (base dump, hand-written migrations, module SQL; never this tool's own output,
-so it does not compound).
+hand-written price (base dump, hand-written migrations, module SQL; a price that is exactly the
+discount of the one before it is the discount, not a new price, so it never compounds). A price a
+`trained_by(..., money_cost=X)` declares is final and never discounted.
 """
 
 # `(ReqLevel, copper)` anchors. Between two anchors the price is interpolated linearly in integer
@@ -37,10 +38,17 @@ PRICE_OVERRIDES: dict[int, int] = {}
 # applied with MySQL's rounding (half away from zero).
 STOCK_TRAINER_PRICE_FACTOR = "0.2"
 
-# The stock trainers (data/sql/base/db_world/trainer.sql, 1-126) outside PRICED_TRAINER_IDS: class
-# 1-12, 14-17 and 31-34 (no spawned NPC today), riding 35-46, profession 47-124, pet 125-126. An
-# allow-list like PRICED_TRAINER_IDS, so a custom trainer is never discounted by accident.
-DISCOUNTED_TRAINER_IDS = (*range(1, 13), *range(14, 18), *range(31, 127))
+# Factors used before STOCK_TRAINER_PRICE_FACTOR. When you change the factor, add the old one here:
+# a price that is exactly an old factor's discount of the price before it is then still read as a
+# discount (generated output), not as a new hand-written price to discount again.
+PREVIOUS_STOCK_TRAINER_PRICE_FACTORS: tuple[str, ...] = ()
+
+# Every stock trainer id outside PRICED_TRAINER_IDS: today's (data/sql/base/db_world/trainer.sql,
+# 1-126: class 1-12, 14-17 and 31-34 with no spawned NPC, riding 35-46, profession 47-124, pet
+# 125-126) and any upstream adds later, up to 199 (user ruling 2026-11-06: hand-written and upstream
+# prices are discounted automatically). 200 and up is this server's own trainer range (the class
+# trainers 200-217 of the trainer snapshot), never discounted by accident.
+DISCOUNTED_TRAINER_IDS = (*range(1, 13), *range(14, 18), *range(31, 200))
 
 # Spells whose price is hand-set and must not be discounted: Apprentice / Journeyman Riding
 # (1g / 100g, data/sql/updates/db_world/2026_09_06_00.sql) and Expert Riding (800g, mod-progression

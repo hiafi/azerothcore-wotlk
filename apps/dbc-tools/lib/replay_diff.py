@@ -47,6 +47,7 @@ class Schema:
     key_columns: tuple[str, ...]
     defaults: dict
     string_columns: frozenset
+    int_columns: frozenset | None = None  # integer columns (rounding, quoted keys); None: not known
 
 
 @dataclass
@@ -99,7 +100,7 @@ def table_schema(table: str) -> Schema:
     key = tuple(c.strip().strip("`") for c in m.group("cols").split(",")) if m else columns
     return Schema(
         columns, key, sql_dump.parse_create_table_defaults(path, table),
-        sql_dump.parse_create_table_string_columns(path, table),
+        sql_dump.parse_create_table_string_columns(path, table), sql_dump.parse_create_table_int_columns(path, table),
     )
 
 
@@ -395,6 +396,7 @@ def replay_whole_table(
         _call(
             sql_dump.apply_composite_key_statements, rows, schema.columns, schema.key_columns, table,
             text, on_skip=on_skip(path.name), defaults=schema.defaults, source=path.name,
+            int_columns=schema.int_columns,
         )
         if hasattr(trainer_state, "_record_invisible") and path.parent != trainer_state.BASE_SQL_DIR:
             trainer_state._record_invisible(table, path, text, on_skip(path.name))
@@ -404,6 +406,7 @@ def replay_whole_table(
         _apply_live_orphan_rows(table, lambda text: _call(
             sql_dump.apply_composite_key_statements, rows, schema.columns, schema.key_columns, table, text,
             on_skip=on_skip(LIVE_ORPHAN_ROWS_SQL.name), defaults=schema.defaults, source=LIVE_ORPHAN_ROWS_SQL.name,
+            int_columns=schema.int_columns,
         ))
     return list(rows.values()), skipped, left_out
 
@@ -425,6 +428,10 @@ def _seed_live_secondary_rows(rows: dict, table: str, apply) -> None:
 # Live-only spell_dbc / talent_dbc / talenttab_dbc rows and index remaps from deleted pending migrations (see the
 # file's header). Applied as written, after everything else: its `INSERT IGNORE`s and guarded UPDATEs never override
 # what a file wrote. Only this check reads it; `state.load_existing_rows` keeps the client DBC's stock rows.
+# Known limit: it runs after every file, not at the slot its rows were written. A later file that DELETEs a seeded id
+# (a stale-overlay delete falling back to the client DBC, say) sees the row come back from the `INSERT IGNORE`, and the
+# check reports it as a false `*extra`. It never hides a real difference; do not "fix" such a report with an allow-list
+# entry: drop the id from the seed instead.
 LIVE_ORPHAN_ROWS_SQL = Path(__file__).resolve().parents[1] / "source" / "live_orphan_rows.sql"
 
 
@@ -447,8 +454,8 @@ def whole_table_compare(
 ) -> tuple[list[Difference], int]:
     """`(differences, duplicate keys)`: every key present on one side only (column `*`), and every cell of a row both
     sides hold that differs, over the live columns (`columns` narrows them: the DBC loader's curated subset). A
-    replayed row's key is read from its values; two replayed rows on one key count as a duplicate and the later one
-    is compared."""
+    replayed row's key is read from its values; two replayed rows on one key count as a duplicate (the live table
+    cannot hold that; both CLIs treat any as unexplained) and the later one is compared."""
     replayed: dict[str, dict] = {}
     duplicates = 0
     for row in rows:

@@ -93,6 +93,33 @@ class FileOrderTest(ScratchRepo):
         )
 
 
+class DbUpdaterOrderTest(ScratchRepo):
+    def test_module_sql_and_pending_interleave_by_bare_name(self):
+        # dbc-replay-fix review, design question 4: DBUpdater's second pass is one name order over pending, custom and
+        # module SQL. The module file named 2016_... runs before the pending rev that later sets the same row.
+        self.write(self.base / "item_template.sql", ITEM_DUMP)
+        self.write(self.pending / "rev_1.sql", "UPDATE `item_template` SET `Quality` = 5 WHERE `entry` = 1;\n")
+        self.write(self.modules / "mod-x/data/sql/db-world/2016_11_17_x.sql",
+                   "UPDATE `item_template` SET `Quality` = 9, `Flags` = 1 WHERE `entry` = 1;\n")
+        self.assertEqual([p.name for p in replay.sql_files()], ["2016_11_17_x.sql", "rev_1.sql"])
+        row = overlay.resolve_current_rows()[1]
+        self.assertEqual((row["Quality"], row["Flags"]), (5, 1))
+
+
+class UpsertTest(ScratchRepo):
+    def test_partial_upsert_keeps_the_other_columns(self):
+        # Review S5: item-tools' old overlay merged an upsert into the existing row; the shared parser now does what
+        # MySQL does (only the clause's columns change).
+        self.write(self.base / "item_template.sql", ITEM_DUMP)
+        self.write(self.merged / "2026_01_01_00.sql", (
+            "INSERT INTO `item_template` (`entry`, `Quality`) VALUES (2, 6), (4, 1) "
+            "ON DUPLICATE KEY UPDATE `Quality` = VALUES(`Quality`);\n"
+        ))
+        rows = overlay.resolve_current_rows()
+        self.assertEqual((rows[2]["name"], rows[2]["Quality"], rows[2]["stat_value1"]), ("Two", 6, 20))
+        self.assertEqual((rows[4]["name"], rows[4]["Quality"]), ("", 1))
+
+
 class ItemTemplateTest(ScratchRepo):
     def setUp(self):
         super().setUp()

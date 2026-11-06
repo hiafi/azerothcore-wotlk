@@ -41,15 +41,20 @@ loot/instance tables) is replayed by `item_lib/replay.py` from:
    subdirectories such as `itemization_templates_v2/`, sorted by bare file
    name the way DBUpdater keys them, with mod-progression's frozen phase 0
    (`apps/dbc-tools/replay/frozen/`) spliced in where it ran;
-3. every `data/sql/updates/pending_db_world/**.sql` that names it;
-4. module SQL (`modules/*/data/sql/db-world/`).
+3. every `data/sql/updates/pending_db_world/**.sql`, `data/sql/custom/db_world/**.sql`
+   and module SQL file (`modules/*/data/sql/db-world/**`) that names it,
+   all together by bare file name: DBUpdater's second pass, so a module file
+   named `2016_...` runs before a pending `rev_...`.
+
+The list is dbc-tools' `trainer_state.update_files()`, shared by both tools.
 
 The parser is dbc-tools' (`apps/dbc-tools/lib/sql_dump.py`), shared rather
 than copied (item-tools had its own narrower copy until item-tools-replay).
 It applies statements in order with MySQL's semantics: an `UPDATE`'s guard
 (`AND col = <old value>`, or a float column's `BETWEEN x-0.01 AND x+0.01` / older `ABS(col - x) < 0.01`) is
 evaluated, so an UPDATE whose guard no longer holds changes nothing; `DELETE`
-and `INSERT` interleave as written; session variables, expressions,
+and `INSERT` interleave as written; an `INSERT ... ON DUPLICATE KEY UPDATE` on
+an existing row changes only the clause's columns; session variables, expressions,
 `INSERT IGNORE`, `TRUNCATE`, `ALTER TABLE` and `RENAME TABLE`
 (`item_budget_assign` -> `item_itemization`) are read. What it reads and what
 it still cannot: `.agents/docs/systems/dbc-tools.md`, "What the SQL replay
@@ -73,8 +78,8 @@ itemization tables ~11 s / ~6 s, the dungeon browser's tables ~2.5 min /
 reads over the files the live `updates` table lists and compares every row
 and cell with the live world DB (read-only `SELECT`s; dbc-tools'
 whole-table comparison). Explained differences live in
-`replay/ALLOWED_TABLE_DIFFS` with a reason each; it exits 1 on anything else
-or on a stale entry:
+`replay/ALLOWED_TABLE_DIFFS` with a reason each; it exits 1 on anything else,
+on a duplicate replayed key or on a stale entry:
 
 ```
 apps/dbc-tools/.venv/bin/python3 apps/item-tools/replay_check.py \

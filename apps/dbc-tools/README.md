@@ -115,7 +115,11 @@ Running it twice with unchanged source produces byte-identical output
 generator rather than a one-off script.
 
 Generated pending files accumulate — don't delete an earlier `rev_*.sql`
-after a run. The DBC tables are re-emitted in full each time, but
+after a run. A reserved block whose content already sits in a pending file
+is not written again, and the run names those files (`note:   Spell: not
+re-emitted because its content is in pending file(s) ...; they must ship`):
+they are the only place that content lives until db-import runs. The DBC
+tables are otherwise re-emitted in full each time, but
 `trainer_spell`/`spell_script_names`/`spell_bonus_data`/`spell_proc` are
 emitted as a *delta* against everything already in `pending_db_world/`, so
 an older file's rows are skipped as "already live" and exist nowhere else.
@@ -589,8 +593,8 @@ for entry, row in live_item_templates().items():
 ```
 
 Live state for `item_template()` comes from apps/item-tools' overlay (`item_lib.overlay`: base dump plus every
-merged and pending migration, recursing into `itemization_templates_v2/`), not from `trainer_state`'s replay,
-which only sees top-level `*.sql`.
+merged, pending and module file in DBUpdater's order, `trainer_state.update_files()`, which recurses into
+`itemization_templates_v2/` like every loader does now).
 
 **`item_template` class/subclass must agree with `Item.dbc`.** The server resets them from the DBC at boot
 (`DBC.EnforceItemAttributes`, default 1) and the client reads them from its own `Item.dbc`, so an edit that

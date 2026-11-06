@@ -67,12 +67,23 @@ def _guard_term(col: str, value) -> str:
     Written as `` `col` BETWEEN lo AND hi `` (value +/- the epsilon), not
     `ABS(`col` - value) < epsilon`: `apps/codestyle/codestyle-sql.py`'s
     backtick check rejects the bare `ABS(` (item-tools-replay). Already-merged
-    migrations hold the `ABS` form; the replay reads both."""
+    migrations hold the `ABS` form; the replay reads both. A bound is never
+    written with an exponent (`5e-05` for a value near 0.01): it is plain
+    decimal (`_plain_decimal`)."""
     if isinstance(value, float):
         lo = round(value - _FLOAT_GUARD_EPSILON, 6)
         hi = round(value + _FLOAT_GUARD_EPSILON, 6)
-        return f"`{col}` BETWEEN {_quote_value(lo)} AND {_quote_value(hi)}"
+        return f"`{col}` BETWEEN {_plain_decimal(lo)} AND {_plain_decimal(hi)}"
     return f"`{col}` = {_quote_value(value)}"
+
+
+def _plain_decimal(value: float) -> str:
+    """`_quote_value(value)` (`repr`), or the same number as fixed-point decimal when `repr` would use an exponent."""
+    text = _quote_value(value)
+    if "e" in text or "E" in text:
+        text = f"{value:.6f}".rstrip("0")
+        text = text + "0" if text.endswith(".") else text
+    return text
 
 
 def _wrap_comment(text: str) -> list[str]:

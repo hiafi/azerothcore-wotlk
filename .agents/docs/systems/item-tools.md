@@ -11,14 +11,19 @@ statement per save (`item_lib/emit.py`).
 
 Every table item-tools reads is replayed by `item_lib/replay.py` with
 `apps/dbc-tools/lib/sql_dump.py` (no private copy any more): base dump, then
-`db_world/**` (subdirectories by bare file name, the frozen mod-progression
-phase 0 spliced in), `pending_db_world/**`, then module SQL, statement by
-statement with MySQL's semantics. Guards are evaluated: an UPDATE whose
-`AND col = <old>` / float `BETWEEN x±0.01` (older files: `ABS(col - x) < 0.01`) guard no longer holds changes
-nothing (the old item-tools reader ignored guards). Skips go to dbc-tools' skip
+the files in DBUpdater's order (`trainer_state.update_files`, shared with
+dbc-tools): `db_world/**` by bare file name with the frozen mod-progression
+phase 0 spliced in, then `pending_db_world/**`, `custom/db_world/**` and module
+SQL together by bare file name. Statement by statement with MySQL's semantics.
+Guards are evaluated: an UPDATE whose `AND col = <old>` / float
+`BETWEEN x±0.01` (older files: `ABS(col - x) < 0.01`) guard no longer holds
+changes nothing (the old item-tools reader ignored guards). An `INSERT ... ON
+DUPLICATE KEY UPDATE` on an existing row changes only the clause's columns
+(the old overlay's merge, now done by the shared parser). Skips go to dbc-tools' skip
 log and are printed to stderr on each fresh load. `replay_check.py` compares
 every table it reads with the live DB (allow list
-`apps/item-tools/replay/ALLOWED_TABLE_DIFFS`). The promoted-history replay is
+`apps/item-tools/replay/ALLOWED_TABLE_DIFFS`; a duplicate replayed key also
+fails it). The promoted-history replay is
 cached in `var/item-tools-cache/`; a cold load of the dungeon browser's tables
 takes ~2.5 minutes (~20 s warm). Report: `.agents/plans/dbc-replay-fix/item-tools-replay.REPORT.md`
 (local).

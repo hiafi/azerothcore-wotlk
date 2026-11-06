@@ -495,10 +495,12 @@ class DiscountTest(unittest.TestCase):
     def test_shipped_policy(self):
         pol = trainer_pricing.load_policy()
         self.assertEqual(pol.discount_factor, trainer_pricing.Fraction(1, 5))
-        self.assertEqual(pol.discounted_ids, frozenset(range(1, 127)) - pol.priced_ids)
+        # Every stock id below the server's own trainer range (200+), upstream's future ones included.
+        self.assertEqual(pol.discounted_ids, frozenset(range(1, 200)) - pol.priced_ids)
         self.assertEqual(pol.discount_excluded_spells, {33388, 33391, 34090})
+        self.assertEqual(pol.previous_discount_factors, ())
 
-    def test_live_rows_take_the_hand_written_price_declared_rows_their_money_cost(self):
+    def test_live_rows_take_the_hand_written_price_declared_rows_keep_their_money_cost(self):
         live = {(5, 1): row(5, 1, 200, 10), (5, 2): row(5, 2, 1000, 10), (5, 33388): row(5, 33388, 10000, 20),
                 (5, 4): row(5, 4, 70, 10), (7, 1): row(7, 1, 1000, 10), (6, 3): row(6, 3, 5, 10),
                 (5, 8): row(5, 8, 900, 10)}
@@ -508,9 +510,18 @@ class DiscountTest(unittest.TestCase):
         out = trainer_pricing.discount_stock_trainer_spells(declared, live, hand, {(5, 8)}, discount_policy())
         got = {(r["TrainerId"], r["SpellId"]): r["MoneyCost"] for r in out}
         # (5, 1): already at 1/5 of its hand-written 1000; (5, 2): written after the old discount;
-        # (5, 33388) excluded; (5, 4) has no hand-written source; (7, *) not discounted; (5, 8) untrained.
-        self.assertEqual(got, {(5, 1): 200, (5, 2): 200, (5, 33388): 10000, (6, 3): 1, (6, 9): 7000})
+        # (5, 33388) excluded (keeps its live price, nothing to emit); (5, 4) has no hand-written price;
+        # (7, *) not discounted; (5, 8) untrained; (6, 9) declared: a declared price is final (ruling 2026-11-06).
+        self.assertEqual(got, {(5, 1): 200, (5, 2): 200, (6, 3): 1, (6, 9): 35000})
         self.assertEqual(next(r for r in out if r["SpellId"] == 9)["ReqAbility1"], 7)
+
+    def test_is_discount_of_knows_previous_factors(self):
+        pol = trainer_pricing.Policy(CURVE, {}, (212,), "0.2", (5,), (), ("0.25",))
+        self.assertTrue(pol.is_discount_of(200, 1000))
+        self.assertTrue(pol.is_discount_of(250, 1000))  # an earlier factor's output
+        self.assertFalse(pol.is_discount_of(300, 1000))
+        with self.assertRaises(trainer_pricing.PricingPolicyError):
+            trainer_pricing.Policy(CURVE, {}, (212,), "0.2", (5,), (), ("2",))
 
 
 class DiscountWiringTest(ReplayFixture):
@@ -539,10 +550,72 @@ class DiscountWiringTest(ReplayFixture):
         self._write_generated(first)
         self.assertEqual(self._run(), [])
 
-    def test_a_generated_file_is_not_the_base(self):
+    def test_a_squashed_generated_block_is_not_the_base(self):
+        # Review S8: a generated trainer block squashed under a hand-written header no longer has the generator's
+        # marker on its first two lines. Its prices are 1/5 of the price before them, so they read as the
+        # discount, and the next run neither compounds (40) nor emits anything.
+        (self._promoted / "a.sql").write_text(insert_sql(row(5, 1, 1000, 10), row(5, 2, 50000, 10)))
+        first = self._run()
+        self.assertEqual({r["SpellId"]: r["MoneyCost"] for r in first}, {1: 200, 2: 10000})
+        keys = ", ".join(f"({r['TrainerId']}, {r['SpellId']})" for r in first)
+        (self._pending / "rev_1.sql").write_text(
+            "-- Squashed pending revs for the 2026-11 deploy (hand-written header)\n"
+            "-- Engineering recipe fix\n"
+            "UPDATE `trainer_spell` SET `ReqLevel` = 11 WHERE `TrainerId` = 5 AND `SpellId` = 2;\n"
+            + spell_tables.GENERATED_MARKER + " - DO NOT hand-edit.\n"
+            f"DELETE FROM `trainer_spell` WHERE (`TrainerId`, `SpellId`) IN ({keys});\n"
+            + insert_sql(*[dict(r, ReqLevel=11) if r["SpellId"] == 2 else r for r in first])
+        )
+        self.assertEqual(self._run(), [])
+        self.assertEqual(trainer_pricing.replay_hand_written_trainer_spells()[(5, 1)]["MoneyCost"], 1000)
+
+    def test_a_generated_block_without_any_marker_is_not_the_base(self):
+        # The same with the marker stripped altogether (a squash that kept no comment): still read from the values.
         (self._promoted / "a.sql").write_text(insert_sql(row(5, 1, 1000, 10)))
-        self._write_generated([row(5, 1, 40, 10)])  # an old generated price: replaced, not discounted again
+        (self._pending / "rev_1.sql").write_text(
+            "DELETE FROM `trainer_spell` WHERE (`TrainerId`, `SpellId`) IN ((5, 1));\n" + insert_sql(row(5, 1, 200, 10))
+        )
+        self.assertEqual(self._run(), [])
+
+    def test_a_hand_written_price_newer_than_the_discount_is_discounted(self):
+        # Base 1000, its discount 200 generated and pending, then a newer hand-written file sets 1500 (an upstream
+        # recipe fix): the base is 1500 and the row is emitted at 300.
+        (self._promoted / "a.sql").write_text(insert_sql(row(5, 1, 1000, 10)))
+        self._write_generated([row(5, 1, 200, 10)])
+        (self._pending / "rev_2.sql").write_text(
+            "UPDATE `trainer_spell` SET `MoneyCost` = 1500 WHERE `TrainerId` = 5 AND `SpellId` = 1;\n"
+        )
+        self.assertEqual([r["MoneyCost"] for r in self._run()], [300])
+
+    def test_a_hand_written_price_inside_a_generated_file_is_still_hand_written(self):
+        # Review S8, the other way round: a hand-written price change squashed into a file that starts with the
+        # generator's marker is still the base (provenance is read from the values, not the file).
+        (self._promoted / "a.sql").write_text(insert_sql(row(5, 1, 1000, 10)))
+        (self._pending / "rev_1.sql").write_text(
+            spell_tables.GENERATED_MARKER + " - DO NOT hand-edit.\n"
+            "DELETE FROM `trainer_spell` WHERE (`TrainerId`, `SpellId`) IN ((5, 1));\n" + insert_sql(row(5, 1, 200, 10))
+            + "UPDATE `trainer_spell` SET `MoneyCost` = 2500 WHERE `TrainerId` = 5 AND `SpellId` = 1;\n"
+        )
+        self.assertEqual([r["MoneyCost"] for r in self._run()], [500])
+
+    def test_an_earlier_compounded_discount_heals(self):
+        # 1000 -> 200 (discount) -> 40 (a discount of the discount, as the old file-marker rule could produce): 40 is
+        # the discount of the price before it, so the base stays 1000 and the row goes back to 200.
+        (self._promoted / "a.sql").write_text(insert_sql(row(5, 1, 1000, 10)))
+        self._write_generated([row(5, 1, 200, 10)])
+        (self._pending / "rev_2.sql").write_text(
+            "UPDATE `trainer_spell` SET `MoneyCost` = 40 WHERE `TrainerId` = 5 AND `SpellId` = 1;\n"
+        )
         self.assertEqual([r["MoneyCost"] for r in self._run()], [200])
+
+    def test_a_declared_price_on_a_discounted_trainer_is_final(self):
+        (self._promoted / "a.sql").write_text(insert_sql(row(5, 1, 1000, 10)))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rows = generate._priced_trainer_spells(
+                {"trainer_spells": [row(5, 1, 35000, 10), row(5, 9, 2000, 20)], "trainer_removals": []}, FakeIndex(),
+            )
+        self.assertEqual({(r["TrainerId"], r["SpellId"]): r["MoneyCost"] for r in rows}, {(5, 1): 35000, (5, 9): 2000})
 
 
 if __name__ == "__main__":

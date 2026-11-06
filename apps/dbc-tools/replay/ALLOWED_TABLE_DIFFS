@@ -1,120 +1,123 @@
 # Whole-table replay vs live differences that are explained (replay_diff.py --whole). Tab-separated: table, key
 # (values joined with ","; * = any key), column (* = row on one side only, *missing = live only, *extra = replay
 # only), reason. Entries for SQL another worktree applied live go stale once that SQL lands here: delete them then.
-creature_template	1725	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	1729	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	1731	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	1732	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	1763	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	2520	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310000	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310001	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310002	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310003	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310004	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310005	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310006	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310007	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310008	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310009	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310010	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310011	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310012	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310013	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310014	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310015	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310016	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310017	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310018	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310019	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310020	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310021	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310022	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310023	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	310024	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	3450	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	3586	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	3947	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	4416	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	4417	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	4418	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	598	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	622	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	634	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	636	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	639	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	641	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	642	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	643	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	644	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	645	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	646	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	647	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template	657	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310000,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310000,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310001,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310002,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310002,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310003,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310003,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310004,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310005,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310006,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310007,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310008,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310009,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310010,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310011,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310012,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310013,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310014,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310014,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310015,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310016,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310016,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310017,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310018,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310019,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310020,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310021,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310022,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310022,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310023,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310023,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310024,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_model	310024,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310000,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310002,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310003,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310003,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310003,2	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310003,3	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310004,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310006,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310006,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310007,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310008,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310009,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310009,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310010,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310010,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310010,2	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310011,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310011,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310013,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310014,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310014,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310014,2	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310016,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310016,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310016,2	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310022,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310023,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310023,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310024,0	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310024,1	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
-creature_template_spell	310024,2	*missing	E2 heroic row applied live from core-dd pending SQL, not in this checkout
+# E2-REMOVE entries: dungeon difficulties E2's pending rev_1793940658837859072.sql is applied live but not on this
+# branch. This branch merges first; when E2 rebases onto it, delete every E2-REMOVE line (the check flags them as
+# stale then).
+creature_template	1725	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	1729	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	1731	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	1732	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	1763	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	2520	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310000	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310001	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310002	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310003	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310004	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310005	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310006	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310007	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310008	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310009	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310010	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310011	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310012	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310013	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310014	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310015	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310016	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310017	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310018	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310019	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310020	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310021	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310022	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310023	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	310024	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	3450	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	3586	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	3947	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	4416	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	4417	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	4418	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	598	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	622	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	634	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	636	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	639	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	641	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	642	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	643	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	644	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	645	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	646	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	647	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template	657	difficulty_entry_1	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310000,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310000,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310001,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310002,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310002,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310003,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310003,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310004,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310005,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310006,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310007,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310008,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310009,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310010,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310011,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310012,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310013,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310014,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310014,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310015,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310016,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310016,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310017,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310018,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310019,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310020,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310021,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310022,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310022,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310023,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310023,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310024,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_model	310024,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310000,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310002,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310003,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310003,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310003,2	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310003,3	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310004,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310006,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310006,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310007,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310008,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310009,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310009,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310010,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310010,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310010,2	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310011,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310011,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310013,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310014,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310014,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310014,2	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310016,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310016,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310016,2	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310022,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310023,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310023,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310024,0	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310024,1	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
+creature_template_spell	310024,2	*missing	E2-REMOVE: E2 SQL applied live, not on this branch
 creature	5300701	*missing	runtime spawn added in game (.npc add), no SQL file inserts it
 creature	5300702	*missing	runtime spawn added in game (.npc add), no SQL file inserts it
 creature	5300703	*missing	runtime spawn added in game (.npc add), no SQL file inserts it
@@ -123,29 +126,3 @@ creature	5300705	*missing	runtime spawn added in game (.npc add), no SQL file in
 creature	5300706	*missing	runtime spawn added in game (.npc add), no SQL file inserts it
 creature	5300707	*missing	runtime spawn added in game (.npc add), no SQL file inserts it
 creature	5300722	*missing	runtime spawn added in game (.npc add), no SQL file inserts it
-spell_dbc	200100	Attributes	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	AttributesEx3	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	BaseLevel	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	Description_Lang_enUS	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	EffectAura_1	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	EffectBasePoints_1	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	EffectChainAmplitude_1	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	EffectChainAmplitude_2	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	EffectChainAmplitude_3	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	EffectDieSides_1	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	EffectMiscValueB_1	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	EffectMiscValue_1	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	EffectMultipleValue_1	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	Effect_1	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	ImplicitTargetA_1	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	InterruptFlags	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	NameSubtext_Lang_enUS	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	Name_Lang_enUS	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	SchoolMask	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	SpellClassSet	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	SpellIconID	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	SpellLevel	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	SpellPriority	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	SpellVisualID_1	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	StartRecoveryCategory	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last
-spell_dbc	200100	StartRecoveryTime	mod-transmog SQL ran 2026-08-22 before the mage revs; replay runs it last

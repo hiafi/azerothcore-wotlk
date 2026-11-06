@@ -44,8 +44,11 @@ from typing import Callable
 # evaluates it, `sql_dump._apply_set`), `ALTER TABLE` and `TRUNCATE` in one alternation, a distinctly named table group
 # per branch (Python's `re` forbids reusing a group name across alternatives). Lives here (not in `sql_dump`, which
 # imports it) so the head index and the per-table replays can never disagree about what a head is.
+# `INSERT ... SELECT` and `INSERT ... SET` (kind `X`) are heads too, only so the replays can record them as skipped:
+# their rows come from a query (or a SET list) the replay does not evaluate.
 STATEMENT_HEAD_RE = re.compile(
     r"(?P<ins_verb>INSERT(?:\s+IGNORE)?|REPLACE)\s+INTO\s+`(?P<ins_table>\w+)`\s*(?:\((?P<cols>[^)]*)\))?\s*VALUES?\s*"
+    r"|(?:INSERT(?:\s+IGNORE)?|REPLACE)\s+INTO\s+`(?P<sel_table>\w+)`\s*(?:\([^)]*\))?\s*\(?\s*(?:SELECT|SET)\b\s*"
     r"|DELETE\s+FROM\s+`(?P<del_table>\w+)`\s*"
     r"|UPDATE\s+`(?P<upd_table>\w+)`\s+SET\s+"
     r"|SET\s+(?P<set_name>@\w+)\s*:?=\s*"
@@ -125,7 +128,10 @@ SKIPS = SkipLog()
 
 
 # Head kind of each table group of `STATEMENT_HEAD_RE`.
-_KIND_GROUPS = (("ins_table", "I"), ("del_table", "D"), ("upd_table", "U"), ("alt_table", "A"), ("trunc_table", "T"))
+_KIND_GROUPS = (
+    ("ins_table", "I"), ("del_table", "D"), ("upd_table", "U"), ("alt_table", "A"), ("trunc_table", "T"),
+    ("sel_table", "X"),
+)
 
 
 def head_kind(m: re.Match) -> tuple[str, str]:
@@ -141,8 +147,8 @@ class HeadMatch:
     """The `re.Match` surface the replay loops use (`group`, `start`, `end`) over one entry of a `HeadIndex`.
 
     An entry is `(start, end, kind, table, cols, verb)`; `kind` is `I` (insert/replace, `verb` the statement's verb as
-    written), `D`, `U`, `S` (a `SET @var :=`, whose `table` slot holds the variable name), `A` (`ALTER TABLE`) or `T`
-    (`TRUNCATE`)."""
+    written), `D`, `U`, `S` (a `SET @var :=`, whose `table` slot holds the variable name), `A` (`ALTER TABLE`), `T`
+    (`TRUNCATE`) or `X` (`INSERT ... SELECT` / `INSERT ... SET`, which the replays record as skipped)."""
 
     __slots__ = ("_head",)
 

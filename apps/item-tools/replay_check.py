@@ -17,7 +17,8 @@ default, numbers as floats with a FLOAT tolerance, strings exactly. Explained di
 writes every difference and skipped statement, `--limit N` caps the unexplained differences printed per table,
 `--modules DIR` reads module SQL from another checkout's `modules/` (a worktree without the live server's modules),
 `--also a.sql,b.sql` replays those not-yet-imported files too (a pending file that captures live state).
-Exit status 1 on an unexplained difference or a stale allow-list entry (stale is judged on a full run only).
+Exit status 1 on an unexplained difference, a duplicate replayed key or a stale allow-list entry (stale is judged on
+a full run only).
 """
 
 from __future__ import annotations
@@ -159,8 +160,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         Path(args.json).write_text(json.dumps(report, indent=1), encoding="utf-8")
     bad = sum(1 for d in all_differences if d.reason is None)
-    print(f"total: {bad} unexplained difference(s) over {len(report)} table(s)")
-    return 1 if bad or stale else 0
+    duplicates = sum(r["duplicates"] for r in report)
+    for r in report:
+        if r["duplicates"]:
+            print(f"DUPLICATE KEYS: {r['table']}: {r['duplicates']} replayed row(s) share a key with another (the "
+                  f"live table cannot hold that: the replay is wrong somewhere)")
+    print(f"total: {bad} unexplained difference(s), {duplicates} duplicate replayed key(s) over {len(report)} table(s)")
+    return 1 if bad or stale or duplicates else 0
 
 
 if __name__ == "__main__":

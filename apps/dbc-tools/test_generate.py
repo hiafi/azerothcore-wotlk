@@ -210,7 +210,88 @@ class DropUnchangedAgainstPendingTest(unittest.TestCase):
         self.assertEqual(asked, ["Spell"])
 
 
+class PendingDependencyNoteTest(unittest.TestCase):
+    """Review S7 / ruling 1: a block dropped because its content sits in pending files names them, and says they must
+    ship (not that the content is already live)."""
+
+    def setUp(self):
+        self.table = _FakeTable()
+        self.table.name = "Spell"
+        self.promoted = {200000: {"ID": 200000, "v": 1}}
+
+    def test_dropped_block_names_its_pending_files(self):
+        from lib import state
+
+        pending = generate.PENDING_SQL_DIR
+        applied = state.AppliedRows({200000: {"ID": 200000, "v": 2}})
+        applied.sources = {200000: [pending / "rev_2.sql", pending / "rev_1.sql"], 116: [pending / "rev_1.sql"]}
+        deps: dict = {}
+        result = generate._drop_unchanged_blocks(
+            [(self.table, ID_RANGE, [{"ID": 200000, "v": 2}], [], self.promoted)], applied={"Spell": applied},
+            dependencies=deps,
+        )
+        self.assertEqual(result, ([], 1))
+        self.assertEqual([p.name for p in deps["Spell"]], ["rev_1.sql", "rev_2.sql"])
+        notes = generate._pending_dependency_notes(deps)
+        self.assertEqual(len(notes), 1)
+        self.assertIn("Spell: not re-emitted because its content is in pending file(s) rev_1.sql, rev_2.sql", notes[0])
+        self.assertIn("must ship", notes[0])
+
+    def test_a_kept_block_or_one_equal_to_promoted_state_names_nothing(self):
+        from lib import state
+
+        applied = state.AppliedRows({200000: {"ID": 200000, "v": 2}})
+        applied.sources = {200000: [generate.PENDING_SQL_DIR / "rev_1.sql"]}
+        deps: dict = {}
+        generate._drop_unchanged_blocks(
+            [(self.table, ID_RANGE, [{"ID": 200000, "v": 3}], [], self.promoted)], applied={"Spell": applied},
+            dependencies=deps,
+        )
+        generate._drop_unchanged_blocks(
+            [(self.table, ID_RANGE, [{"ID": 200000, "v": 1}], [], self.promoted)], applied={"Spell": applied},
+            dependencies=deps,
+        )
+        self.assertEqual(deps, {})
+
+    def test_module_files_are_not_named(self):
+        deps = {"Spell": [Path("/x/modules/mod-transmog/data/sql/db-world/2016_11_17_transmog_npc.sql")]}
+        self.assertEqual(generate._pending_dependency_notes(deps), [])
+
+    def test_block_ids(self):
+        self.assertEqual(generate._block_ids({"start": 5, "end": 7}, [116]), {5, 6, 7, 116})
+
+
 class LoadAppliedRowsTest(unittest.TestCase):
+    def test_module_sql_runs_in_dbupdater_name_order_and_sources_are_tracked(self):
+        # Review design question 4: DBUpdater's second pass orders pending and module files together by bare name. A
+        # module file that sorts first (mod-transmog's 2016_11_17_transmog_npc.sql) is overwritten by the pending rev
+        # after it, so the spell block it touches reads as unchanged; one that sorts last wins.
+        import tempfile
+        from unittest import mock
+
+        from lib import dbcfmt, state, trainer_state
+
+        table = dbcfmt.DbcTable(name="W", dbc_filename="W.dbc", sql_table="w_dbc", fmt="ni", columns=("ID", "v"))
+        existing = {1: {"ID": 1, "v": 1}}
+        with tempfile.TemporaryDirectory() as tmp:
+            pending, modules = Path(tmp) / "pending", Path(tmp) / "modules"
+            world = modules / "mod-transmog" / "data" / "sql" / "db-world"
+            world.mkdir(parents=True)
+            pending.mkdir()
+            (world / "2016_11_17_transmog_npc.sql").write_text("DELETE FROM `w_dbc` WHERE `ID` = 1;\n"
+                                                              "INSERT INTO `w_dbc` VALUES (1, 77);\n")
+            (world / "zz_late.sql").write_text("INSERT INTO `w_dbc` VALUES (9, 9);\n")
+            (pending / "rev_1.sql").write_text(
+                "DELETE FROM `w_dbc` WHERE `ID` = 1;\nINSERT INTO `w_dbc` VALUES (1, 5);\n"
+            )
+            with mock.patch.object(state, "PENDING_SQL_DIR", pending), \
+                    mock.patch.object(trainer_state, "MODULES_DIR", modules):
+                applied = state.load_applied_rows(table, existing, watch={1, 9})
+        self.assertEqual(dict(applied), {1: {"ID": 1, "v": 5}, 9: {"ID": 9, "v": 9}})
+        self.assertEqual({k: [p.name for p in v] for k, v in applied.sources.items()},
+                         {1: ["2016_11_17_transmog_npc.sql", "rev_1.sql"], 9: ["zz_late.sql"]})
+
+
     def test_pending_revs_replayed_in_name_order_on_a_copy(self):
         import tempfile
         from unittest import mock

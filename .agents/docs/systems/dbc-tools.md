@@ -89,13 +89,13 @@ Plan and review notes: `.agents/plans/dbc-tools-generate-speed/` (local).
 `generate.py` emits **delta** rows for `trainer_spell`, `spell_script_names`, `spell_bonus_data`
 and `spell_proc`: `lib/trainer_state.py` scans `base/` + `updates/db_world/` + **`pending_db_world/`**
 and anything already present there is "live" and skipped (`lib/spell_tables.py`'s
-`rows_to_emit`). The DBC tables (`spell_dbc`, `talent_dbc`, …) deliberately ignore `pending_db_world/`
-and are re-emitted in full every run. So generated pending files are meant to **accumulate**: each
-new one carries a full DBC rebuild plus only the secondary-table rows the previous files don't
-already have.
+`rows_to_emit`). Since dbc-replay-fix the DBC tables' reserved blocks are skipped too when a pending
+file already holds their content (the run prints `note:   <Table>: not re-emitted because its content
+is in pending file(s) ...; they must ship` and names them). So generated pending files are meant to
+**accumulate**: each new one carries only what the previous files don't already have.
 
 Deleting an earlier generated file *after* running `generate.py` silently drops every
-secondary-table row it alone carried — the new file skipped them as live, and now nothing has them.
+row it alone carried — the new file skipped them as live, and now nothing has them.
 Git will often show this as a rename (`R old.sql -> new.sql`) because the DBC blocks are near-
 identical, which hides that the small itemised blocks vanished. This shipped once (Priest Holy pass
 deleting the Disc pass's file: 10 Disc spells lost their script bindings, procs and trainer rows —
@@ -142,15 +142,24 @@ outside the allow-list, and on a listed one with no live NPC, which is skipped w
 emitted, so a rerun emits no `trainer_spell` rows. Nothing is read from the old price, so nothing can
 compound; retune by editing the curve and regenerating.
 
-**Stock-trainer discount.** Every other stock trainer, `DISCOUNTED_TRAINER_IDS` (1-12, 14-17, 31-126: dead
-class trainers, riding, profession, pet), sells at `STOCK_TRAINER_PRICE_FACTOR` (`"0.2"`) of its *hand-written*
-price, rounded half away from zero as MySQL stores `MoneyCost * 0.2`. The base is
-`trainer_pricing.replay_hand_written_trainer_spells()` (every file except those with `GENERATED_MARKER`), or a
-`trained_by()` declaration's `money_cost`, so the discount never compounds on its own output. Spells in
-`DISCOUNT_EXCLUDED_SPELL_IDS` (Apprentice / Journeyman / Expert Riding, hand-set by `2026_09_06_00`) keep their
-price. A live row only a generated file wrote, and nothing declares, is left alone. It replaces the one-off
-`UPDATE trainer_spell SET MoneyCost = MoneyCost * 0.2` that ran live on 2026-08-22 from the unmerged `init-server`
-branch (535ff98c0): the first run after it emitted all 4,612 discounted rows, 4,458 of them already at that price live.
+**Stock-trainer discount.** Every other stock trainer, `DISCOUNTED_TRAINER_IDS` (1-12, 14-17, 31-199: dead
+class trainers, riding, profession, pet, and any trainer upstream adds below the server's own range at 200),
+sells at `STOCK_TRAINER_PRICE_FACTOR` (`"0.2"`) of its *hand-written* price, rounded half away from zero as MySQL
+stores `MoneyCost * 0.2`. A hand-written or upstream price written later is discounted automatically (user ruling
+2026-11-06). The base is `trainer_pricing.replay_hand_written_trainer_spells()`: the replay of every file, generated
+ones included, followed statement by statement (`apply_composite_key_statements(after_statement=...)`). A key's
+first price is its base; a later price replaces it unless it is exactly the discount of the base or of the price
+right before it (`Policy.is_discount_of`, which also knows `PREVIOUS_STOCK_TRAINER_PRICE_FACTORS`): that is a
+discount, generated or the 2026-08-22 one. Provenance comes from the values, not from which file a statement sits
+in, so a squash can neither compound the discount (a generated block under a hand-written header) nor hide a newer
+hand-written price (a hand-written change inside a generated file). A hand-written price that is exactly 1/5 of the
+one before it reads as a discount; the row keeps that price either way. **A declared price is final**: a
+`trained_by(..., money_cost=X)` row on a discounted trainer is emitted at `X`, never discounted (ruling
+2026-11-06). Spells in `DISCOUNT_EXCLUDED_SPELL_IDS` (Apprentice / Journeyman / Expert Riding, hand-set by
+`2026_09_06_00`) keep their price. It replaces the one-off `UPDATE trainer_spell SET MoneyCost = MoneyCost * 0.2`
+that ran live on 2026-08-22 from the unmerged `init-server` branch (535ff98c0): the first run after it emits the
+discounted rows, most of them already at that price live. When you change the factor, add the old one to
+`PREVIOUS_STOCK_TRAINER_PRICE_FACTORS`.
 
 **The replay must be faithful**, because its output drives writes. `sql_dump.apply_composite_key_statements`
 applies `(TrainerId, SpellId) IN (...)`, single-column `=`/`IN`, AND-ed point, `BETWEEN` and OR-of-AND
@@ -159,9 +168,10 @@ DELETEs and UPDATEs (`parse_where_predicate`), honours every UPDATE condition (k
 time. A statement it cannot apply prints `WARNING: trainer_state.py: <file>: cannot replay ...`, including
 `UPDATE ... AS alias` and an unquoted table name (the statement scanner cannot see those, so a separate scan,
 `trainer_state.invisible_statements`, reports them). `TRUNCATE` and `INSERT IGNORE` are replayed since
-dbc-replay-fix. Treat any such WARNING as a bug in the replay or the
-SQL: the pass may re-insert a row that SQL removed. Not detected: a statement that merely mentions the
-table inside a larger construct (a subquery, `INSERT ... SELECT`).
+dbc-replay-fix; `INSERT ... SELECT` / `INSERT ... SET` into the table warn like any other unreadable statement.
+Treat any such WARNING as a bug in the replay or the SQL: the pass may re-insert a row that SQL removed. Not
+detected: a statement that merely mentions the table inside a larger construct (a subquery of another table's
+statement).
 
 The same replay serves `creature_template`/`creature_template_model` (`lib/spell_tables.py`), where the
 widened WHERE/expression support corrects stock values to live; those callers do not warn.
@@ -278,6 +288,19 @@ Plan and report: `.agents/plans/dbc-replay-fix/` (local). Every loader replays w
 (`apply_statements` for a one-column key, `apply_composite_key_statements` otherwise; `read_table_rows` is the union
 reader). Since 2026-11-05 they read:
 
+- **Files in DBUpdater's order** (`trainer_state.update_files`, verified against
+  `src/server/database/Updater/UpdateFetcher.cpp`): every include directory goes into one set ordered by bare file
+  name, subdirectories included, applied in two passes. Pass 1 is `data/sql/updates/db_world/**` with the frozen
+  phase 0 spliced in at its slot (mod-progression applied it itself, outside DBUpdater). Pass 2 is
+  `pending_db_world/**`, `data/sql/custom/db_world/**` and every module's `data/sql/db-world/**` *together*, by bare
+  name: a module file named `2016_...` runs before a pending `rev_...`. Two files with one name raise
+  `DuplicateUpdateName`, as DBUpdater refuses to start. `data/sql/archive/` is older than the base dumps and is not
+  read. Every loader, `state.load_applied_rows` and item-tools share this one list. Live ran files in the order they
+  appeared, not this order; the whole-table check shows where the two would differ. mod-transmog's
+  `2016_11_17_transmog_npc.sql` (spell 200100, which live ran on 2026-08-22, before the mage revs that own the id)
+  now sorts before the pending revs that re-insert the spell block, so the replay matches live. Watch out: once those
+  revs are promoted to `db_world`, a rebuilt DB runs mod-transmog's file after them (pass 2 after pass 1) and gets
+  its Ethereal Warpweaver at 200100 instead of Lasting Flame; the whole-table check will then show 26 cells.
 - **Session variables** (`_apply_set`, `_Expr`): `SET @x := <expr>[, @y := ...];` where the value is an integer or
   float literal, a quoted string, `NULL`, or an expression over earlier variables (`@CGUID * 10`, `-(@A + 3)`,
   `0x10 | 0x20`). Precedence is MySQL's (`unary - + ~`, `*`, `+ -`, `&`, `|`); names are case-insensitive and each file
@@ -289,12 +312,27 @@ reader). Since 2026-11-05 they read:
   own parentheses and a binary operator after a column). An UPDATE value may read the row's columns
   (`` `flags` & ~(1 | 2) ``, `_RowExpr`), a column assigned twice in one SET is applied left to right (`_Chain`).
 - **Double-quoted strings** everywhere, `-- ` / `#` / `/* */` comments inside a statement, a `;` inside a string, and
-  a statement head inside a line comment is not a statement (`_head_in_comment`).
+  a statement head inside a line comment or a `/* ... */` block is not a statement (`_head_in_comment`;
+  `/*! ... */` is MySQL's executable comment and is not a comment).
+- **Keys as MySQL holds them**: an UPDATE that assigns a key column moves the row to its new key, so a later INSERT
+  of the old key is a new row (S1 of the review; two rows on one key make MySQL refuse the statement, recorded as
+  skipped). With the table's integer columns (`parse_create_table_int_columns`, passed by every loader that has a
+  base dump) a key written as `'5'` is the integer 5 and a non-integer number an UPDATE writes is rounded half away
+  from zero (`SET MoneyCost = MoneyCost * 0.2` stores 2469, not 2469.4). `NULL`, `TRUE` and `FALSE` read in any
+  letter case.
+- **`INSERT ... ON DUPLICATE KEY UPDATE`**: a new key's row is inserted as written; an existing row gets only the
+  clause's assignments (`` `c` = VALUES(`c`) `` or an expression over the row), the other columns stay.
 - **WHERE** (`parse_where_predicate`): OR of AND chains of `= != <> < > <= >=` against numbers or quoted strings
-  (strings compare case-insensitively), `[NOT] IN (...)`, `BETWEEN`, `IS [NOT] NULL`, `(col & n) != 0`, on key or
-  non-key columns (core-dd's id-only spawn DELETEs). A condition on a column the row does not hold is judged on the
-  schema default (`defaults`, from the base dump's `CREATE TABLE`); without one it fails for a DELETE and for an
-  UPDATE that names no key column. An UPDATE with no WHERE touches every row.
+  (strings compare case-insensitively), `[NOT] IN (...)`, `BETWEEN` (bounds may carry an exponent), `IS [NOT] NULL`,
+  `(col & n) != 0`, on key or non-key columns (core-dd's id-only spawn DELETEs). A condition on a column the row does
+  not hold is judged on the schema default (`defaults`, from the base dump's `CREATE TABLE`); without one it fails
+  for a DELETE and for an UPDATE that names no key column. An UPDATE with no WHERE touches every row. Every
+  condition of an UPDATE is honoured in both replays (a guard `AND col = <old>` that fails leaves the row, as in
+  MySQL); `= NULL` is never true. In the keyed replay the `=` / `IN` / `BETWEEN` fast paths read row ids only on the
+  index column; the same shape on another column is a filter.
+- **Expressions on a column the INSERT left out** read its schema default; without one the assignment is recorded
+  as skipped. An expression on a column the table no longer has (an UPDATE of `mechanic_immune_mask` before upstream
+  dropped it) is not replayed at all.
 - **Schema statements**: `INSERT ... VALUE` (singular, mod-transmog) reads like `VALUES`, `INSERT IGNORE` keeps an
   existing key's row, `TRUNCATE` empties the table, `ALTER TABLE` `CHANGE`/`RENAME`/`DROP`/`ADD` columns rename or
   drop them in every row and move the positional INSERT layout for the rest of that file (`creature.id1` -> `id`, 2026_06_16_00). Column names are matched case-insensitively against
@@ -319,20 +357,27 @@ UPDATEs guarded by the value they replace, so they never override a file. Only t
 state the remaps would make a full run re-emit ~3,800 stock spells and the 200000 block pointing back at the stock
 indices (tested), and every orphan id is already there from the client DBC. Explained differences live in
 `apps/dbc-tools/replay/ALLOWED_TABLE_DIFFS` (TSV `table`, `key`, `column`, `reason`; key `*` = any key; column `*`,
-`*missing` (live only) or `*extra` (replay only) for a row on one side). It exits 1 on an unexplained difference or a
-stale entry. About 15-20 minutes. At dbc-replay-fix: 0 unexplained over 49 table checks;
-`smart_scripts` 53,890 = 53,890 rows, 0 cell differences.
+`*missing` (live only) or `*extra` (replay only) for a row on one side). It exits 1 on an unexplained difference, a
+stale entry or a duplicate replayed key (two replayed rows on one key: the live table cannot hold that, so the replay
+is wrong). About 15-20 minutes. At dbc-replay-fix: 0 unexplained over 49 table checks;
+`smart_scripts` 53,890 = 53,890 rows, 0 cell differences. Known limit of the orphan seed: it runs after every file,
+not at the slot its rows were written, so a later file that DELETEs a seeded id would see it come back from the
+`INSERT IGNORE` and the check would show a false `*extra`. Drop the id from the seed then; never allow-list it.
 
-Not read (recorded as skips): subqueries, function calls (`SIN()`, `COALESCE()`, `UNIX_TIMESTAMP()`), `INSERT ...
-SELECT`, `UPDATE` with a join or an alias, `PREPARE`/`EXECUTE`. One function is read: `ABS(`col` - n) < tolerance`
-in a WHERE, item-tools' float guard (1,953 `item_template` UPDATEs).
+Not read (recorded as skips): subqueries, function calls (`SIN()`, `COALESCE()`, `UNIX_TIMESTAMP()`), `/`, `DIV` and
+`%`, `INSERT ... SELECT` and `INSERT ... SET` (a statement head of their own, kind `X`, that every replay and the
+union reader record), `DELETE ... LIMIT`, `UPDATE` with a join or an alias (recorded by `_record_invisible`),
+`PREPARE`/`EXECUTE`. One function is read: `ABS(`col` - n) < tolerance` in a WHERE, item-tools' float guard
+(1,953 `item_template` UPDATEs). A plain `INSERT` of a key that already exists replaces the row (MySQL would refuse
+the file); the loaders depend on that for stock rows the client DBC seeds and the live table does not hold.
 
 **item-tools replays with this parser** (item-tools-replay): `apps/item-tools/item_lib/replay.py` runs
 `apply_composite_key_statements` for every table item-tools reads (`item_template`, the itemization tables, the
 dungeon browser's `creature` / `creature_template` / loot / instance tables) over its own file list (this tool's
 order, plus `db_world/`/`pending_db_world/` subdirectories), records skips in `sqlcorpus.SKIPS`, and has its own
 whole-table check, `apps/item-tools/replay_check.py`, built on `lib/replay_diff.py` with its own allow list
-(`apps/item-tools/replay/ALLOWED_TABLE_DIFFS`). Its private copy of the parser is gone. Report:
+(`apps/item-tools/replay/ALLOWED_TABLE_DIFFS`). Its file list is `trainer_state.update_files` too. Its private copy of
+the parser is gone. Report:
 `.agents/plans/dbc-replay-fix/item-tools-replay.REPORT.md` (local).
 
 ### Unchanged reserved blocks are judged against pending revs too (dbc-replay-fix follow-up)
@@ -340,12 +385,18 @@ whole-table check, `apps/item-tools/replay_check.py`, built on `lib/replay_diff.
 `_drop_unchanged_blocks` used to compare a reserved block only with `state.load_existing_rows` (promoted files), so
 every block whose current version sat in an unpromoted `pending_db_world` rev was re-emitted, and a no-change full run
 always wrote a rev (spell 200000-209999 plus the stock-id edits, skilllineability 30400-30999, item 70000-79999). A
-block promoted state calls changed is now also checked against `state.load_applied_rows` (promoted state plus every
-pending rev in name order, the db-import order) and dropped when it equals that. `load_existing_rows` itself stays
-promoted-only. The rev a run writes is written after the check, so it never counts; a row removed from source, a stale
-overlay delete or an edit the pending revs do not hold still emits. Module SQL is left out of the applied state:
-DBUpdater ran it when the module was installed (mod-transmog's `2016_11_17_transmog_npc.sql`, 2026-08-22, writes spell
-200100, which the later mage revs own).
+block promoted state calls changed is now also checked against `state.load_applied_rows` (promoted state plus
+DBUpdater's second pass: pending, custom and module SQL together by bare name) and dropped when it equals that.
+`load_existing_rows` itself stays promoted-only. The rev a run writes is written after the check, so it never counts;
+a row removed from source, a stale overlay delete or an edit the pending revs do not hold still emits. Module SQL is in
+the applied state in its DBUpdater slot: mod-transmog's `2016_11_17_transmog_npc.sql` (spell 200100) sorts before the
+pending revs, so a pending rev holding the spell block overwrites it.
+
+**Every pending file on disk counts** (db-import applies every one in the working tree, committed or not). So a block
+dropped this way depends on files that must ship: the run names them (`note:   Spell: not re-emitted because its
+content is in pending file(s) rev_..., ...; they must ship`). `state.load_applied_rows(watch=...)` records, per
+watched id, the second-pass files that changed its row (`AppliedRows.sources`). Never delete, squash away or
+regenerate a named file without its content, or that content is lost until someone reruns generate.py.
 
 ## WP-T: five more declared tables, and declared removals
 

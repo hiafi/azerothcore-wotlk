@@ -48,16 +48,20 @@ hand-written sections, and pure hand-written fixes - so it won't parse every
 shape perfectly; see that function's docstring for why an imperfect replay
 degrades safely instead of writing wrong data.
 
-Deliberately does not read data/sql/updates/pending_db_world/: this pipeline
+`load_existing_rows` deliberately does not read data/sql/updates/pending_db_world/: this pipeline
 regenerates its own reserved ranges from source on every run rather than
 diffing against its own prior output — see docs/dbc-build-pipeline.md.
+(`load_applied_rows` does, for one question only: is a block already in a
+pending rev, so writing it again would change nothing?)
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from . import dbcfile, frozen_replay, sql_dump, sqlcorpus
+from collections.abc import Collection
+
+from . import dbcfile, frozen_replay, sql_dump, sqlcorpus, trainer_state
 from .dbcfmt import DbcTable
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -118,9 +122,9 @@ _promoted_sql_cache: list[tuple[Path, str]] | None = None
 
 
 def _promoted_paths() -> list[Path]:
-    """The promoted `db_world` files in apply order, with the frozen replay inputs (mod-progression's applied phase 0,
-    `lib/frozen_replay.py`) spliced in where they ran."""
-    return frozen_replay.splice(sorted(PROMOTED_SQL_DIR.glob("*.sql")))
+    """The promoted `db_world` files (subdirectories included) in apply order, by bare file name like DBUpdater, with
+    the frozen replay inputs (mod-progression's applied phase 0, `lib/frozen_replay.py`) spliced in where they ran."""
+    return frozen_replay.splice(sorted(PROMOTED_SQL_DIR.rglob("*.sql"), key=lambda p: p.name))
 
 
 def _promoted_sql_files() -> list[tuple[Path, str]]:
@@ -146,19 +150,36 @@ def _promoted_sql_files() -> list[tuple[Path, str]]:
 PENDING_SQL_DIR = REPO_ROOT / "data" / "sql" / "updates" / "pending_db_world"
 
 
-def load_applied_rows(table: DbcTable, existing: dict[int, dict]) -> dict[int, dict]:
-    """`existing` (`load_existing_rows`' promoted state, not modified) with every `pending_db_world` rev that mentions
-    the table replayed on top in name order, the order db-import applies them: what the table holds once the pending
-    revs are applied. `generate._drop_unchanged_blocks` uses it so a block whose content already sits in a pending rev
-    is not written again. Module SQL is left out on purpose: DBUpdater ran it when the module was installed, not
-    after the pending revs (mod-transmog's `2016_11_17_transmog_npc.sql` ran on 2026-08-22 and writes spell 200100,
-    which the mage revs that ran later own). Not cached (pending files change every run)."""
-    rows = {row_id: dict(row) for row_id, row in existing.items()}
-    if not PENDING_SQL_DIR.is_dir():
-        return rows
-    for path in sorted(PENDING_SQL_DIR.glob("*.sql")):
-        if sqlcorpus.mentions(path, table.sql_table):
-            sql_dump.apply_statements(rows, table, sqlcorpus.read_text(path), source=path.name)
+class AppliedRows(dict):
+    """`load_applied_rows`' result: the rows, plus `sources`, `{id: [file, ...]}` for each watched id whose row a
+    second-pass file changed (inserted, updated or deleted), in apply order."""
+
+    sources: dict[int, list[Path]]
+
+
+def load_applied_rows(
+    table: DbcTable, existing: dict[int, dict], watch: Collection[int] | None = None,
+) -> AppliedRows:
+    """`existing` (`load_existing_rows`' promoted state, not modified) with DBUpdater's second pass replayed on top:
+    every `pending_db_world` rev, custom file and module SQL file that mentions the table, by bare file name
+    (`trainer_state.second_pass_files`, the order db-import applies them to a fresh database). What the table holds
+    once db-import has run. `generate._drop_unchanged_blocks` uses it so a block whose content already sits in a
+    pending rev is not written again.
+
+    `watch` (ids, e.g. a reserved block's range plus its edited ids): `sources` names, for each of them, the files
+    that changed its row, so the caller can say which pending revs the content depends on. Not cached (pending files
+    change every run)."""
+    rows = AppliedRows((row_id, dict(row)) for row_id, row in existing.items())
+    rows.sources = {}
+    for path in trainer_state.second_pass_files(pending_dir=PENDING_SQL_DIR):
+        if not sqlcorpus.mentions(path, table.sql_table):
+            continue
+        before = None if watch is None else {i: dict(rows[i]) for i in watch if i in rows}
+        sql_dump.apply_statements(rows, table, sqlcorpus.read_text(path), source=path.name)
+        if before is not None:
+            for row_id in watch:
+                if before.get(row_id) != rows.get(row_id):
+                    rows.sources.setdefault(row_id, []).append(path)
     return rows
 
 

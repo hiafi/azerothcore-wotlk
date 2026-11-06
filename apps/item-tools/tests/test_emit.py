@@ -27,6 +27,17 @@ class FloatGuardTest(unittest.TestCase):
         self.assertEqual(emit._guard_term("dmg_min1", 144.375), "`dmg_min1` BETWEEN 144.365 AND 144.385")
         self.assertEqual(emit._guard_term("Quality", 3), "`Quality` = 3")
 
+    def test_a_bound_near_zero_has_no_exponent_and_replays(self):
+        # dbc-replay-fix review N5: repr(round(0.01005 - 0.01, 6)) is `5e-05`.
+        self.assertEqual(emit._guard_term("dmg_min1", 0.01005), "`dmg_min1` BETWEEN 0.00005 AND 0.02005")
+        self.assertEqual(emit._guard_term("dmg_min1", 0.0), "`dmg_min1` BETWEEN -0.01 AND 0.01")
+        rows = {1: {"entry": 1, "dmg_min1": 0.01005}}
+        overlay.apply_text(
+            f"UPDATE `item_template` SET `dmg_min1` = 2 WHERE `entry` = 1 AND {emit._guard_term('dmg_min1', 0.01005)};",
+            rows,
+        )
+        self.assertEqual(rows[1]["dmg_min1"], 2)
+
     def test_emitted_float_update_passes_codestyle_and_replays(self):
         original = {"entry": 1, "dmg_min1": 144.375, "dmg_max1": 268.125, "Quality": 3}
         changes = {"dmg_min1": 181.2888, "dmg_max1": 336.6792}

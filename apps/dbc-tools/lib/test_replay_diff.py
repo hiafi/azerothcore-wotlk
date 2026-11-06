@@ -228,6 +228,43 @@ TALENTTAB_DDL = (
 )
 
 
+class DuplicateKeysFailTheCheckTest(unittest.TestCase):
+    """Review N6: two replayed rows on one key are a replay bug the live table cannot show; the CLI exits 1."""
+
+    def _cli(self):
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("replay_diff_cli", Path(__file__).resolve().parents[1]
+                                                      / "replay_diff.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_whole_exits_1_on_a_duplicate_key(self):
+        import argparse
+        import contextlib
+        import io
+        from unittest import mock
+
+        cli = self._cli()
+        schema = replay_diff.Schema(("entry", "v"), ("entry",), {}, frozenset())
+        live = [{"entry": "1", "v": "2"}]
+        args = argparse.Namespace(limit=5, json=None, database="db")
+        for replayed, want in (([{"entry": 1, "v": 2}], 0), ([{"entry": 1, "v": 2}, {"entry": 1, "v": 2}], 1)):
+            with self.subTest(replayed=replayed), \
+                    mock.patch.object(replay_diff, "REPLAYED_TABLES", ("widget",)), \
+                    mock.patch.object(replay_diff, "table_schema", return_value=schema), \
+                    mock.patch.object(replay_diff, "replay_whole_table", return_value=(replayed, [], [])), \
+                    mock.patch.object(replay_diff, "load_allowed", return_value={}), \
+                    mock.patch.object(cli, "_live_schema", return_value=schema), \
+                    mock.patch.object(cli, "_run_sql", return_value=live), \
+                    mock.patch.object(cli.sqlcorpus, "activate"), \
+                    contextlib.redirect_stdout(io.StringIO()) as out:
+                self.assertEqual(cli._whole(args, [], set(), {"widget"}), want)
+            if want:
+                self.assertIn("DUPLICATE KEYS: widget", out.getvalue())
+
+
 class LiveOrphanRowsTest(unittest.TestCase):
     """`source/live_orphan_rows.sql` as the whole-table replay's last step: it fills rows no file wrote and remaps a
     cell only while it holds the value the remap replaced, under both loaders."""
@@ -293,6 +330,14 @@ class LiveOrphanRowsTest(unittest.TestCase):
         for loader in ("composite", "keyed"):
             with self.subTest(loader=loader):
                 self.assertEqual(self._replay(loader), {1: ("file", 5), 2: ("two", 8), 3: ("from a file", 1)})
+
+    def test_known_limit_a_later_delete_of_a_seeded_id_comes_back(self):
+        # Review N7, pinned so a change to it is deliberate: the seed runs after every file, so a file that deletes a
+        # seeded id sees it re-added (a false `*extra` in the check; the fix is to drop the id from the seed).
+        (self.root / "pending" / "rev_1.sql").write_text("DELETE FROM `talenttab_dbc` WHERE `ID` = 3;\n")
+        self.assertEqual(self._replay("composite")[3], ("only live", 2))
+        self.assertIn("never add an allow-list entry",
+                      (Path(__file__).resolve().parents[1] / "source" / "live_orphan_rows.sql").read_text()[:4000])
 
     def test_without_the_seed_file_nothing_is_added(self):
         replay_diff.LIVE_ORPHAN_ROWS_SQL = self.root / "missing.sql"

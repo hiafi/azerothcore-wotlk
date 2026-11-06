@@ -32,6 +32,7 @@ from __future__ import annotations
 import bisect
 import functools
 import itertools
+import math
 import re
 from pathlib import Path
 from typing import Callable
@@ -237,9 +238,10 @@ class _Expr:
             if column not in self.row:
                 raise ReplaySkip(f"the row has no {column} to compute with")
             return self.row[column]
-        if text.startswith("NULL", self.pos) and not text[self.pos + 4:self.pos + 5].isalnum():
-            self.pos += 4
-            return None
+        keyword = _KEYWORD_RE.match(text, self.pos)
+        if keyword is not None:
+            self.pos = keyword.end()
+            return _KEYWORDS[keyword.group(0).upper()]
         m = _NUMBER_TOKEN_RE.match(text, self.pos)
         if m is None or text[m.start()] in "+-" or text[m.end():m.end() + 1].isalnum():
             self._fail("not a number, variable or parenthesis")
@@ -248,6 +250,9 @@ class _Expr:
 
 
 _VAR_NAME_RE = re.compile(r"@\w+")
+# The value keywords MySQL accepts in any letter case: `NULL`, and `TRUE` / `FALSE` (1 / 0).
+_KEYWORD_RE = re.compile(r"(?:NULL|TRUE|FALSE)(?![\w])", re.IGNORECASE)
+_KEYWORDS = {"NULL": None, "TRUE": 1, "FALSE": 0}
 _PROBE_ROW: dict = {}  # `_Expr(row=_PROBE_ROW)`: parse a column expression without a row (every column reads 1)
 
 
@@ -281,6 +286,10 @@ def _read_value(
         return _read_string(text, i)
     if text[i : i + 4] == "NULL":
         return None, i + 4
+    if ch in "nNtTfF":  # `null`, `true`, `false` in any letter case (`NULL` is the common case above)
+        keyword = _KEYWORD_RE.match(text, i)
+        if keyword is not None:
+            return _KEYWORDS[keyword.group(0).upper()], keyword.end()
     if ch == "@" or ch == "(" or ch == "~" or (ch in "-+" and _operand_follows(text, i + 1)):
         return _eval_expr(text, i, variables)
     j = i
@@ -331,9 +340,9 @@ def _skip_ws_and_comments(text: str, i: int) -> int:
 # `INSERT ... VALUES (...) ON DUPLICATE KEY UPDATE ...;` - the do-not-delete-table upsert shape
 # `sql_out.render_upsert_block` emits (see data/sql/updates/db_world/2026_09_23_12.sql's
 # `creature_template` block: a real, hand-written INSERT of this exact shape). `_read_tuples`
-# treats it as an alternate tuple-list terminator, same as a bare ';' - the UPDATE clause's own
-# `` `col` = VALUES(`col`) `` pairs are never read; only the VALUES(...) tuples matter, which
-# matches how the statement actually behaves against a brand-new row.
+# treats it as an alternate tuple-list terminator, same as a bare ';', and hands the clause's span back; a row
+# whose key is new is inserted as written, and an existing row gets only the clause's assignments
+# (`_upsert_assignments` / `_apply_upsert`), the way MySQL runs it.
 _ON_DUPLICATE_RE = re.compile(r"ON\s+DUPLICATE\s+KEY\s+UPDATE", re.IGNORECASE)
 
 
@@ -382,7 +391,8 @@ class _TokenValues(dict):
 
 
 def _read_tuples(
-    text: str, start: int, variables: dict[str, int] | None = None, *, fast: bool = True
+    text: str, start: int, variables: dict[str, int] | None = None, *, fast: bool = True,
+    upsert: list | None = None,
 ) -> tuple[list[list], int]:
     """Parse a comma-separated list of parenthesized value-tuples starting at
     `text[start]` (which must be '('), stopping at the terminating ';' - or,
@@ -392,7 +402,8 @@ def _read_tuples(
     terminating ';' via `_skip_statement` - safe because this repo's upsert
     shape never has an embedded ';' inside that clause. Returns (tuples,
     index_just_past_the_semicolon). `fast=False` forces the character-level parser for every tuple (the reference the
-    fast path is tested against)."""
+    fast path is tested against). `upsert` (a list): gets the `(start, end)` of the `ON DUPLICATE KEY UPDATE`
+    clause's assignments when there is one (`_upsert_assignments` reads them)."""
     tuples = []
     token_values = _TokenValues()
     i = start
@@ -428,8 +439,12 @@ def _read_tuples(
             continue
         if text[i] == ";":
             return tuples, i + 1
-        if _ON_DUPLICATE_RE.match(text, i):
-            return tuples, _skip_statement(text, i)
+        duplicate = _ON_DUPLICATE_RE.match(text, i)
+        if duplicate:
+            end = _skip_statement(text, i)
+            if upsert is not None:
+                upsert.append((duplicate.end(), end - 1 if text[end - 1:end] == ";" else end))
+            return tuples, end
     raise ValueError("unterminated INSERT statement (no trailing ';' found)")
 
 
@@ -467,18 +482,106 @@ class _Chain:
         return self.second(staged) if callable(self.second) else self.second
 
 
-def _assign(row: dict, assignments: dict) -> None:
+def _int_value(value):
+    """`value` as MySQL stores it in an integer column: a non-integer number rounded half away from zero (`SET
+    MoneyCost = MoneyCost * 0.2` stores 2469 for 2469.4, 13 for 12.6); anything else unchanged."""
+    if isinstance(value, float) and math.isfinite(value):
+        magnitude = math.floor(abs(value) + 0.5 + abs(value) * 1e-12)
+        return magnitude if value >= 0 else -magnitude
+    return value
+
+
+def _evaluate(value, row: dict, defaults: dict | None):
+    """An assignment's value for `row`: a literal as it is, a `_RowExpr` / `_Chain` evaluated over the row. A column
+    the row does not hold (an INSERT omitted it) reads its schema default from `defaults`, as MySQL's stored row
+    would; without one `ReplaySkip` propagates."""
+    if not callable(value):
+        return value
+    try:
+        return value(row)
+    except ReplaySkip:
+        if not defaults:
+            raise
+        return value({**defaults, **row})
+
+
+def _assign(
+    row: dict, assignments: dict, defaults: dict | None = None, int_columns: frozenset = frozenset(),
+    modeled: frozenset | None = None,
+) -> int:
     """Applies `_read_set_assignments(..., allow_expr=True)` output to `row`, left to right (an expression sees the
-    columns earlier assignments set, as in MySQL); an expression on a column the row does not hold (an INSERT omitted
-    it), or on a value that is not a number, cannot be evaluated and is left out."""
+    columns earlier assignments set, as in MySQL). A number written to an integer column (`int_columns`) is rounded
+    the way MySQL stores it (`_int_value`). Returns how many assignments to a column the replay models (`modeled`;
+    None: every column) could not be evaluated (a column neither the row nor `defaults` holds, a value that is not a
+    number); the caller records them, so none is left out silently. A column the table no longer has (an UPDATE of
+    `mechanic_immune_mask` before upstream dropped it) is not replayed at all."""
+    failures = 0
     for col, value in assignments.items():
-        if callable(value):
-            try:
-                row[col] = value(row)
-            except ReplaySkip:
-                continue
+        try:
+            value = _evaluate(value, row, defaults)
+        except ReplaySkip:
+            failures += modeled is None or col in modeled
+            continue
+        row[col] = _int_value(value) if col in int_columns else value
+    return failures
+
+
+def _not_assigned(failures: int) -> ReplaySkip:
+    return ReplaySkip(
+        f"{failures} assignment(s) not applied: an expression reads a column the row does not hold and the schema "
+        f"gives no default for"
+    )
+
+
+_UPSERT_PART_RE = re.compile(r"\s*`(?P<col>\w+)`\s*=\s*(?P<expr>[\s\S]*?)\s*$")
+_VALUES_FUNCTION_RE = re.compile(r"VALUES\s*\(\s*`(?P<col>\w+)`\s*\)$", re.IGNORECASE)
+
+
+def _upsert_assignments(
+    clause: str, variables: dict | None, case: "_ColumnCase | None" = None,
+) -> list[tuple[str, str, object]]:
+    """An `ON DUPLICATE KEY UPDATE` clause as `[(column, "values", source column) | (column, "expr", value)]`, in
+    order: `` `c` = VALUES(`c`) `` takes the value the INSERT would have written, any other value is a literal or an
+    expression over variables and the existing row's columns (`_RowExpr`). Raises `ReplaySkip` for anything else."""
+    parts = []
+    for part in _split_top_level_commas(_prepare_statement(clause, variables) if _NEEDS_PREPARING_RE.search(clause)
+                                        else clause):
+        m = _UPSERT_PART_RE.match(part)
+        if m is None or not m.group("expr"):
+            raise ReplaySkip(f"unsupported ON DUPLICATE KEY UPDATE assignment ({' '.join(part.split())[:40]})")
+        col = case.names_list([m.group("col")])[0] if case else m.group("col")
+        expr = m.group("expr")
+        source = _VALUES_FUNCTION_RE.match(expr)
+        if source is not None:
+            parts.append((col, "values", case.names_list([source.group("col")])[0] if case else source.group("col")))
+            continue
+        probe = _Expr(expr, 0, variables, _PROBE_ROW)
+        probe.parse()  # raises when it is not a value expression
+        if expr[probe.pos:].strip():
+            raise ReplaySkip(f"unsupported ON DUPLICATE KEY UPDATE value ({expr[:40]})")
+        parts.append((col, "expr", _RowExpr(expr, variables)))
+    return parts
+
+
+def _apply_upsert(
+    existing: dict, inserted: dict, parts: list[tuple[str, str, object]], defaults: dict | None,
+    int_columns: frozenset = frozenset(), modeled: frozenset | None = None,
+) -> int:
+    """What `INSERT ... ON DUPLICATE KEY UPDATE` does to the row that already holds the key: only the clause's
+    columns change, left to right; `VALUES(c)` is the INSERT's value of `c` (its schema default when the INSERT left
+    it out). Returns the number of assignments that could not be evaluated."""
+    failures = 0
+    for col, kind, payload in parts:
+        if kind == "values":
+            value = inserted[payload] if payload in inserted else (defaults or {}).get(payload)
         else:
-            row[col] = value
+            try:
+                value = _evaluate(payload, existing, defaults)
+            except ReplaySkip:
+                failures += modeled is None or col in modeled
+                continue
+        existing[col] = _int_value(value) if col in int_columns else value
+    return failures
 
 
 def _read_set_assignments(
@@ -706,6 +809,17 @@ def parse_create_table_string_columns(path: Path, table_name: str) -> frozenset[
     return frozenset(names)
 
 
+def parse_create_table_int_columns(path: Path, table_name: str) -> frozenset[str]:
+    """Column names whose SQL type is an integer family (`int`, `tinyint`, ...): where MySQL stores a quoted number
+    as an integer and rounds a non-integer one (`apply_composite_key_statements`' `int_columns`)."""
+    names = set()
+    for line in _create_table_body(path, table_name).splitlines():
+        m = _COLUMN_TYPE_RE.match(line)
+        if m and m.group("type").lower() in _INT_COLUMN_TYPES:
+            names.add(m.group("name"))
+    return frozenset(names)
+
+
 def read_table_rows(
     path: Path, table_name: str, columns: tuple[str, ...], tolerant: bool = False,
 ) -> list[dict]:
@@ -721,6 +835,11 @@ def read_table_rows(
     timeline = _VariableTimeline(text)
     out: list[dict] = []
     pos = 0
+    if tolerant:
+        query = _next_statement(text, 0, table_name, "X")
+        while query is not None:
+            _record(table_name, text, query.start(), _INSERT_QUERY_REASON, path.name)
+            query = _next_statement(text, _statement_end(text, query.end()), table_name, "X")
     while True:
         m = _next_match(_INSERT_HEAD_RE, text, pos, table_name)
         if not m:
@@ -1235,8 +1354,13 @@ def _next_match(pattern: re.Pattern, text: str, pos: int, table_name: str) -> re
 
 
 def _head_in_comment(text: str, start: int) -> bool:
-    """Whether a statement head at `start` sits in a line comment (`-- INSERT INTO ...` kept for reference: MySQL
-    never runs it). A `--` or `#` inside a quoted string earlier on the line does not count."""
+    """Whether a statement head at `start` sits in a comment MySQL never runs: a line comment (`-- INSERT INTO ...`
+    kept for reference) or a `/* ... */` block (`_in_block_comment`). A `--` or `#` inside a quoted string earlier on
+    the line does not count."""
+    return _in_line_comment_strict(text, start) or _in_block_comment(text, start)
+
+
+def _in_line_comment_strict(text: str, start: int) -> bool:
     line_start = text.rfind("\n", 0, start) + 1
     if line_start == start:
         return False
@@ -1247,6 +1371,46 @@ def _head_in_comment(text: str, start: int) -> bool:
         token = m.group()
         if token[0] == "#" or token.startswith("--"):
             return True
+    return False
+
+
+@functools.lru_cache(maxsize=4)
+def _block_comment_openers(text: str) -> list[int]:
+    """Where each `/*` of `text` starts, except MySQL's executable `/*! ... */` (a dump's `/*!40101 SET ... */`, which
+    MySQL runs). Cached per text: a str caches its hash, so a lookup is cheap for the corpus' shared texts."""
+    return [m.start() for m in _BLOCK_OPEN_RE.finditer(text)]
+
+
+_BLOCK_OPEN_RE = re.compile(r"/\*(?!!)")
+
+
+def _in_block_comment(text: str, pos: int) -> bool:
+    """Whether `pos` lies inside a `/* ... */` comment: the last `/*` before it is not closed before it, and is not
+    itself inside a quoted string or a line comment on its own line."""
+    openers = _block_comment_openers(text)
+    if not openers:
+        return False
+    i = bisect.bisect_left(openers, pos) - 1
+    while i >= 0:
+        opener = openers[i]
+        if text.find("*/", opener + 2, pos) != -1:
+            return False  # the last comment before `pos` is closed before it (an earlier one is too)
+        if not _opener_is_quoted_or_commented(text, opener):
+            return True
+        i -= 1  # a `/*` inside a string or a line comment opens nothing: look further back
+    return False
+
+
+def _opener_is_quoted_or_commented(text: str, opener: int) -> bool:
+    """Whether the `/*` at `opener` sits in a quoted string or a line comment of its line (judged on that line; a
+    string spanning lines is not seen)."""
+    line_start = text.rfind("\n", 0, opener) + 1
+    line_end = text.find("\n", opener)
+    for m in _END_SCAN_RE.finditer(text, line_start, len(text) if line_end == -1 else line_end):
+        if m.start() >= opener:
+            return False  # the scan reached the opener itself: it starts a comment
+        if m.end() > opener:
+            return True  # a string or a line comment that runs over it
     return False
 
 
@@ -1277,7 +1441,7 @@ def _next_match_any(pattern: re.Pattern, text: str, pos: int, table_name: str) -
 _STATEMENT_HEAD_RE = sqlcorpus.STATEMENT_HEAD_RE
 
 
-def _next_statement(text: str, pos: int, table_name: str, kinds: str = "IDUST") -> re.Match | None:
+def _next_statement(text: str, pos: int, table_name: str, kinds: str = "IDUSTX") -> re.Match | None:
     """`_next_match`'s counterpart for `_STATEMENT_HEAD_RE`: one combined scan per position
     instead of one per statement kind. `kinds` picks the head kinds (`sqlcorpus.HeadMatch`); a `SET` session-variable
     head is never table-filtered, and a head inside a line comment is passed over (`_head_in_comment`). On a corpus
@@ -1303,10 +1467,32 @@ def _next_statement_any(text: str, pos: int, table_name: str, kinds: str):
         pos = m.end()
 
 
+_INSERT_QUERY_REASON = "INSERT ... SELECT / INSERT ... SET: rows from a query the replay does not evaluate"
+
+
 def _is_ignore(m) -> bool:
     """Whether an INSERT head is `INSERT IGNORE` (an existing key keeps its row)."""
     verb = m.group("ins_verb")
     return verb is not None and "IGNORE" in verb.upper()
+
+
+@functools.lru_cache(maxsize=64)
+def _int_columns(table: DbcTable) -> frozenset:
+    """A DBC-backed table's integer columns (`n` / `i` in its fmt, not read as a string): where MySQL rounds a
+    non-integer number it stores."""
+    return frozenset(
+        col for ch, col in zip(table.fmt, table.columns) if ch in "ni" and col not in table.read_as_string
+    )
+
+
+def _int_key(value):
+    """A key value an INSERT wrote as a quoted number (`'5'`) as the integer MySQL stores in an integer column."""
+    if isinstance(value, str):
+        try:
+            return int(value.strip())
+        except ValueError:
+            return value
+    return value
 
 
 def _apply_insert(
@@ -1315,26 +1501,53 @@ def _apply_insert(
 ) -> int:
     explicit = _column_list(m.group("cols"))
     columns = (case.names_list(explicit) if case else explicit) if explicit else list(table.columns)
-    tuples, pos = _read_tuples(text, m.end(), variables)
+    upsert: list = []
+    tuples, pos = _read_tuples(text, m.end(), variables, upsert=upsert)
+    parts = _upsert_assignments(text[upsert[0][0]:upsert[0][1]], variables, case) if upsert else None
     string_columns = _string_columns(table)
     ignore = _is_ignore(m)
+    index_column = table.index_column
     mismatched: list[int] = []
+    failures = 0
     for values in tuples:
         if len(values) != len(columns):
             mismatched.append(len(values))  # not a shape we recognize for this table - skip, don't crash the replay
             continue
         row = dict(zip(columns, values))
         _fill_defaults(row, table, string_columns)
-        if ignore and rows.get(row[table.index_column]) is not None:
-            continue
-        rows[row[table.index_column]] = row
+        key = row[index_column]
+        if isinstance(key, str):
+            key = row[index_column] = _int_key(key)
+        existing = rows.get(key)
+        if existing is not None:
+            if ignore:
+                continue
+            if parts is not None:
+                failures += _apply_upsert(
+                    existing, row, parts, None, _int_columns(table), frozenset(table.columns),
+                )
+                continue
+        rows[key] = row
     if mismatched and report:
         report(f"{len(mismatched)} INSERT row(s) not applied: {mismatched[0]} values for {len(columns)} columns")
+    if failures and report:
+        report(str(_not_assigned(failures)))
     return pos
 
 
-def _apply_delete(rows: dict[int, dict], text: str, pos: int, defaults: dict | None = None) -> int:
+def _fast_column(m: re.Match) -> str:
+    """The one column a `_DELETE_WHERE_RANGE_RE` / `_WHERE_IN_RE` / `_WHERE_EQ_RE` match names."""
+    return _BACKTICKED_RE.search(m.group(0)).group(1)
+
+
+def _apply_delete(
+    rows: dict[int, dict], text: str, pos: int, defaults: dict | None = None, index_column: str | None = None,
+) -> int:
+    """One keyed DELETE. The `BETWEEN` / `IN` / `=` shapes on the index column (`index_column`) are read as row ids;
+    any WHERE on another column, and any other shape, is judged on each row (`parse_where_predicate`)."""
     m = _DELETE_WHERE_RANGE_RE.match(text, pos)
+    if m and index_column is not None and _fast_column(m) != index_column:
+        m = None
     if m:
         # Iterate the (small, fixed-width) target range, not every key currently in `rows` - a
         # `WHERE id BETWEEN 200000 AND 209999` range-clear is the standard first statement of
@@ -1350,19 +1563,19 @@ def _apply_delete(rows: dict[int, dict], text: str, pos: int, defaults: dict | N
             rows.pop(key, None)
         return m.end()
     m = _WHERE_IN_RE.match(text, pos)
-    if m:
+    if m and (index_column is None or _fast_column(m) == index_column):
         for id_ in _parse_id_list(m.group("ids")):
             rows.pop(id_, None)
         return m.end()
     m = _WHERE_EQ_RE.match(text, pos)
-    if m:
+    if m and (index_column is None or _fast_column(m) == index_column):
         rows.pop(int(m.group("id")), None)
         return m.end()
     # The tuple form lib/spell_tables.py emits for every declared table, here with a single key
     # column: `WHERE (`entry`) IN ((200134), (200136));`. Skipping it left deleted spell_bonus_data
     # rows looking live (docs/bugs-and-fixes.md, 2026-10-02).
     m = _DELETE_WHERE_TUPLE_IN_RE.match(text, pos)
-    if m and "," not in m.group("cols"):
+    if m and "," not in m.group("cols") and (index_column is None or _column_list(m.group("cols"))[0] == index_column):
         tuples, end = _read_key_tuples(text, m.end())
         for values in tuples:
             rows.pop(int(values[0]), None)
@@ -1381,70 +1594,114 @@ def _apply_update(
     rows: dict[int, dict], table: DbcTable, text: str, pos: int,
     variables: dict | None = None,
 ) -> int:
-    """`UPDATE ... SET col = val, ... WHERE \\`col\\` = n` (one row) or
-    `WHERE \\`col\\` IN (n, m, ...)` (several rows, same assignments applied
-    to each) - the second shape is a real one, not hypothetical: the
-    Glacial Spike/Fireball cast-time fix (`rev_1789232500000000000.sql`,
-    promoted as `2026_09_14_01.sql`) uses exactly this to repoint both
-    spells' `CastingTimeIndex` in one statement. Before this handled it,
-    that statement fell through to `_skip_statement` silently (per this
-    module's "degrade safely" contract) - safe (never wrote wrong data,
-    per `apply_statements`'s own docstring) but left `state.py`'s
-    reconstruction of "what's live" stale for every ID past the first,
-    surfacing as a spurious drift report from `generate.py`.
+    """One keyed UPDATE, the way MySQL runs it.
 
-    A third shape, `WHERE \\`col\\` = n AND \\`other\\` = v` (one row, a defensive "only if it
-    still has the value I expect" guard) falls back to `parse_and_equality_conditions` - real
-    precedent: Frozen Orb 300001's `flags_extra`/`CreatureDisplayID` point fixes in
-    `data/sql/updates/db_world/2026_09_01_01.sql`. Only the condition naming `table.index_column`
-    is used to find the row; a condition on any other column is the guard and isn't re-checked - a
-    replay processes migrations exactly once, in file order, so by the time it reaches this
-    statement the guard is expected to already hold.
+    `WHERE id = n` / `WHERE id IN (n, m, ...)` on the index column touch those rows (the second shape is real:
+    the Glacial Spike/Fireball cast-time fix, `2026_09_14_01.sql`, repoints both spells' `CastingTimeIndex` in one
+    statement). The same shapes on any other column are a filter like any other WHERE.
+
+    An AND of equalities naming the index column (`WHERE ID = n AND other = v`, a defensive "only if it
+    still has the value I expect" guard - Frozen Orb 300001's point fixes in `2026_09_01_01.sql`) uses the index
+    condition to find the row, and every condition must hold, as in MySQL: a guard that fails leaves the row alone
+    (db-import would too). `= NULL` is never true. A condition on a column this table does not model counts as
+    satisfied (the replay cannot judge it, and the index column names the row).
 
     Any other WHERE in `parse_where_predicate`'s grammar is applied to every row it matches (on a column the row
-    does not hold, a condition counts as satisfied when the WHERE also names the key column, else not). `SET col =
-    col | n` style self-expressions are evaluated."""
+    does not hold, a condition counts as satisfied when the WHERE also names the index column, else not). No WHERE:
+    every row. `SET col = col | n` style self-expressions are evaluated; a number written to an integer column is
+    rounded as MySQL stores it. Assigning the index column moves the row to its new id (a second row on that id
+    makes MySQL refuse the statement: skipped)."""
     assignments, pos = _read_set_assignments(text, pos, variables, allow_expr=True)
     if not assignments:
         raise ReplaySkip("UPDATE SET clause not understood")
-    m = _WHERE_EQ_RE.match(text, pos)
+    index_column = table.index_column
     if _at_statement_end(text, pos):  # no WHERE: every row
-        ids, end = [k for k, _ in rows.items()], _skip_statement(text, pos)
-    elif m:
+        _update_keyed(rows, table, [k for k, _ in rows.items()], assignments)
+        return _skip_statement(text, pos)
+    m = _WHERE_EQ_RE.match(text, pos)
+    if m and _fast_column(m) == index_column:
         ids, end = [int(m.group("id"))], m.end()
     else:
         m = _WHERE_IN_RE.match(text, pos)
-        if m:
+        if m and _fast_column(m) == index_column:
             ids, end = _parse_id_list(m.group("ids")), m.end()
         else:
             m = _WHERE_ANY_RE.match(text, pos)
             if m is None:
                 raise ReplaySkip("UPDATE without a WHERE the replay reads")
+            end = m.end()
             conditions = parse_and_equality_conditions(m.group("conds"))
             by_col = dict(conditions) if conditions else {}
-            if table.index_column in by_col:
-                ids, end = [by_col[table.index_column]], m.end()
+            if conditions and index_column in by_col and len(by_col) == len(conditions):
+                key = _int_key(by_col[index_column])
+                row = rows.get(key)
+                ids = [key] if row is not None and all(
+                    _equality_holds(row, c, v, None, lenient=True) for c, v in conditions
+                ) else []
             else:
-                names_key = f"`{table.index_column}`" in m.group("conds")
+                names_key = f"`{index_column}`" in m.group("conds")
                 predicate = parse_where_predicate(m.group("conds"), lenient=names_key)
                 if predicate is None:
                     raise ReplaySkip("unsupported UPDATE WHERE")
-                ids, end = [k for k, row in rows.items() if predicate(row)], m.end()
+                ids = [k for k, row in rows.items() if predicate(row)]
+    _update_keyed(rows, table, ids, assignments)
+    return end
+
+
+def _equality_holds(row: dict, col: str, value, defaults: dict | None, lenient: bool) -> bool:
+    """`col = value` (one condition of `parse_and_equality_conditions`) for a stored row, as MySQL judges it: `=
+    NULL` is never true; strings compare case-insensitively and a number with a numeric string by value (`_same`). A
+    column the row does not hold is judged on its schema default (`defaults`) and otherwise counts as `lenient`."""
+    if value is None:
+        return False
+    if col in row:
+        return _same(row[col], value)
+    if defaults and col in defaults:
+        return _same(defaults[col], value)
+    return lenient
+
+
+def _update_keyed(rows: dict[int, dict], table: DbcTable, ids: list, assignments: dict) -> None:
+    """`assignments` applied to the keyed rows `ids` (see `_apply_update`)."""
+    index_column = table.index_column
+    int_columns = _int_columns(table)
+    moves = index_column in assignments
+    failures = 0
+    staged: list[tuple[object, dict, dict]] = []
     for id_ in ids:
         row = rows.get(id_)
         if row is None:
             continue
+        target = dict(row) if moves else row
         for col, value in assignments.items():
-            if callable(value):
-                try:
-                    row[col] = value(row)
-                except ReplaySkip:
-                    pass
+            try:
+                value = _evaluate(value, target, None)
+            except ReplaySkip:
+                # A column this table does not model is not replayed at all; one it does model must not be left
+                # out silently.
+                failures += col in table.columns
                 continue
             if value is None and col in table.columns and _is_string_column(table, col):
                 value = ""
-            row[col] = value
-    return end
+            target[col] = _int_value(value) if col in int_columns else value
+        if moves:
+            staged.append((id_, row, target))
+    if moves and staged:
+        old_ids = {id_ for id_, _, _ in staged}
+        new_ids = [_int_key(target[index_column]) for _, _, target in staged]
+        if len(set(new_ids)) != len(new_ids) or any(
+            rows.get(i) is not None and i not in old_ids for i in new_ids
+        ):
+            raise ReplaySkip("UPDATE would give two rows one key (MySQL refuses the statement); not applied")
+        for id_, _, _ in staged:
+            rows.pop(id_, None)
+        for (_, row, target), new_id in zip(staged, new_ids):
+            row.clear()
+            row.update(target)
+            row[index_column] = new_id
+            rows[new_id] = row
+    if failures:
+        raise _not_assigned(failures)
 
 
 def apply_statements(
@@ -1493,6 +1750,8 @@ def apply_statements(
         try:
             if m.group("set_name") is not None:
                 pos = _apply_set(sql_text, m.end(), m.group("set_name"), variables)
+            elif m.group("sel_table") is not None:
+                raise ReplaySkip(_INSERT_QUERY_REASON)
             elif m.group("ins_table") is not None:
                 pos = _apply_insert(rows, table, sql_text, m, variables, report, case)
             elif m.group("trunc_table") is not None:
@@ -1501,7 +1760,7 @@ def apply_statements(
             else:
                 body, bpos, end = _prepared_body(sql_text, m.end(), variables, case)
                 if m.group("del_table") is not None:
-                    _apply_delete(rows, body, bpos)
+                    _apply_delete(rows, body, bpos, index_column=table.index_column)
                 else:
                     _apply_update(rows, table, body, bpos, variables)
                 pos = end
@@ -1529,7 +1788,7 @@ _COND_RE = re.compile(
     r"^`(?P<col>\w+)`\s*(?:"
     rf"(?P<op>=|!=|<>|<=|>=|<|>)\s*(?P<val>{_LITERAL})"
     r"|(?P<notin>NOT\s+)?IN\s*\((?P<in>[^)]*)\)"
-    r"|BETWEEN\s+(?P<lo>-?\d+(?:\.\d+)?)\s*\|\s*(?P<hi>-?\d+(?:\.\d+)?)"
+    r"|BETWEEN\s+(?P<lo>-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)\s*\|\s*(?P<hi>-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)"
     r"|IS\s+(?P<notnull>NOT\s+)?NULL"
     r")$",
     re.IGNORECASE,
@@ -1545,7 +1804,9 @@ _ABS_COND_RE = re.compile(
     rf"\s*(?P<op><=|>=|<|>)\s*(?P<tol>{_LITERAL})$",
     re.IGNORECASE,
 )
-_BETWEEN_RE = re.compile(r"BETWEEN\s+(-?\d+(?:\.\d+)?)\s+AND\s+(-?\d+(?:\.\d+)?)", re.IGNORECASE)
+# The bounds may carry an exponent (`5e-05`: item-tools' float guard around a value near 0.01, `emit._guard_term`).
+_BOUND = r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?"
+_BETWEEN_RE = re.compile(rf"BETWEEN\s+({_BOUND})\s+AND\s+({_BOUND})", re.IGNORECASE)
 _IN_ITEM_RE = re.compile(rf"\s*({_LITERAL})\s*(?:,|$)")
 
 
@@ -1776,7 +2037,8 @@ def _apply_composite_delete(
                     wanted = set(_parse_id_list(m.group("ids")))
                 else:
                     wanted = {int(m.group("id"))}
-                for key in [k for k in rows if k[idx] in wanted]:
+                # A key an INSERT wrote quoted (`'5'`) still matches `= 5`, as MySQL compares it.
+                for key in [k for k in rows if _int_key(k[idx]) in wanted]:
                     _pop(rows, key, index)
                 return m.end()
             break  # a non-key column: the general predicate below can still apply it
@@ -1955,18 +2217,17 @@ class _KeyIndex:
 def _apply_composite_update(
     rows: dict[tuple, dict], key_columns: tuple[str, ...], text: str, pos: int,
     variables: dict | None = None, index: _KeyIndex | None = None, defaults: dict | None = None,
+    int_columns: frozenset = frozenset(), modeled: frozenset | None = None,
 ) -> int:
     """One composite-key UPDATE. Every condition is honoured, key or not, the way MySQL would: a
-    row is touched only if all of them hold. A condition on a column the stored row does not hold
-    (an INSERT omitted it) is judged on the schema default when `defaults` has it; otherwise it counts as satisfied
-    when the WHERE names a key column, and as not matching when it does not (no key to narrow it). A WHERE outside
-    the supported grammar raises `ReplaySkip`."""
+    row is touched only if all of them hold (`= NULL` never does). A condition on a column the stored row does not
+    hold (an INSERT omitted it) is judged on the schema default when `defaults` has it; otherwise it counts as
+    satisfied when the WHERE names a key column, and as not matching when it does not (no key to narrow it). A WHERE
+    outside the supported grammar raises `ReplaySkip`. The assignments are applied by `_update_composite` (a key
+    column assigned moves the row to its new key)."""
     assignments, pos = _read_set_assignments(text, pos, variables, allow_expr=True)
     if assignments and _at_statement_end(text, pos):  # no WHERE: every row (`SET CreatureImmunitiesId = 0;`)
-        for row in rows.values():
-            _assign(row, assignments)
-        if index is not None and any(c in key_columns for c in assignments):
-            index.invalidate()
+        _update_composite(rows, key_columns, list(rows.values()), assignments, defaults, index, int_columns, modeled)
         return _skip_statement(text, pos)
     m = _WHERE_ANY_RE.match(text, pos) if assignments else None
     if m is None:
@@ -1976,39 +2237,76 @@ def _apply_composite_update(
     conditions = parse_and_equality_conditions(m.group("conds"))
     if conditions is not None and any(c in key_columns for c, _ in conditions):
         pinned = dict(conditions)
-        if index is not None and len(pinned) == len(conditions) and all(c in pinned for c in key_columns):
-            # Every key column is pinned by an equality (and none twice): only rows holding exactly that key can
-            # match, so test those instead of every row. The full condition list is still checked on each.
+        candidates = None
+        if index is not None and len(pinned) == len(conditions) and all(
+            c in pinned and pinned[c] is not None and not isinstance(pinned[c], str) for c in key_columns
+        ):
+            # Every key column is pinned by a numeric equality (and none twice): only rows holding exactly that key
+            # can match, so test those instead of every row. The full condition list is still checked on each. A
+            # quoted value (`a = '1'`) takes the scan, where it matches a number by value.
             candidates = index.lookup(tuple(pinned[c] for c in key_columns))
-            if candidates is None:
-                candidates = rows.values()
-        else:
+        if candidates is None:
             candidates = rows.values()
-
-        def holds(row: dict, c: str, v) -> bool:
-            if c in row:
-                return row[c] == v or (isinstance(v, str) and _same(row[c], v))
-            return c not in defaults or _same(defaults[c], v)
-
-        for row in candidates:
-            if all(holds(row, c, v) for c, v in conditions):
-                _assign(row, assignments)
-        if index is not None and any(c in key_columns for c in assignments):
-            index.invalidate()
-        return end
-    # Not an AND of equalities naming a key column: IN / BETWEEN / OR / comparisons, or a filter on non-key columns.
-    predicate = parse_where_predicate(
-        m.group("conds"), lenient=_names_key_column(m.group("conds"), key_columns), defaults=defaults,
-    )
-    if predicate is None:
-        raise ReplaySkip("unsupported UPDATE WHERE")
-    candidates = index.candidates(predicate.pins) if index is not None else None
-    for row in rows.values() if candidates is None else candidates:
-        if predicate(row):
-            _assign(row, assignments)
-    if index is not None and any(c in key_columns for c in assignments):
-        index.invalidate()
+        matched = [
+            row for row in candidates if all(_equality_holds(row, c, v, defaults, True) for c, v in conditions)
+        ]
+    else:
+        # Not an AND of equalities naming a key column: IN / BETWEEN / OR / comparisons, or a filter on non-key
+        # columns.
+        predicate = parse_where_predicate(
+            m.group("conds"), lenient=_names_key_column(m.group("conds"), key_columns), defaults=defaults,
+        )
+        if predicate is None:
+            raise ReplaySkip("unsupported UPDATE WHERE")
+        candidates = index.candidates(predicate.pins) if index is not None else None
+        matched = [row for row in (rows.values() if candidates is None else candidates) if predicate(row)]
+    _update_composite(rows, key_columns, matched, assignments, defaults, index, int_columns, modeled)
     return end
+
+
+def _content_key(row: dict, key_columns: tuple[str, ...], int_columns: frozenset) -> tuple:
+    """The key a row's values give it; a quoted number in an integer key column is the integer MySQL stores."""
+    return tuple(_int_key(row.get(c)) if c in int_columns else row.get(c) for c in key_columns)
+
+
+def _update_composite(
+    rows: dict[tuple, dict], key_columns: tuple[str, ...], matched: list[dict], assignments: dict,
+    defaults: dict | None, index: _KeyIndex | None, int_columns: frozenset, modeled: frozenset | None = None,
+) -> None:
+    """`assignments` applied to the `matched` rows. An assignment to a key column moves the row to the key its values
+    now give it, as MySQL does, so a later INSERT of the old key is a new row and a later WHERE finds it under the new
+    one. When two rows would end up on one key, MySQL refuses the whole statement: nothing is applied and it is
+    recorded as skipped. An expression the replay cannot evaluate is recorded too (`_not_assigned`)."""
+    failures = 0
+    moves = any(c in key_columns for c in assignments)
+    if not moves:
+        for row in matched:
+            failures += _assign(row, assignments, defaults, int_columns, modeled)
+    elif matched:
+        staged = []
+        for row in matched:
+            new = dict(row)
+            failures += _assign(new, assignments, defaults, int_columns, modeled)
+            staged.append((row, _content_key(row, key_columns, int_columns), new,
+                           _content_key(new, key_columns, int_columns)))
+        old_keys = {old for _, old, _, _ in staged}
+        new_keys = [new_key for _, _, _, new_key in staged]
+        if len(set(new_keys)) != len(new_keys) or any(k in rows and k not in old_keys for k in new_keys):
+            raise ReplaySkip("UPDATE would give two rows one key (MySQL refuses the statement); not applied")
+        for row, old, _, _ in staged:
+            if rows.get(old) is row:
+                del rows[old]
+            else:  # a caller's dict filed it under another key
+                for key in [k for k, r in rows.items() if r is row]:
+                    del rows[key]
+        for row, _, new, new_key in staged:
+            row.clear()
+            row.update(new)
+            rows[new_key] = row
+        if index is not None:
+            index.invalidate()
+    if failures:
+        raise _not_assigned(failures)
 
 
 # `ALTER TABLE` clauses that change what a later positional INSERT or a later WHERE means: a renamed, dropped, added
@@ -2089,16 +2387,17 @@ def _split_top_level_commas(text: str) -> list[str]:
 
 
 def _in_line_comment(text: str, pos: int) -> bool:
-    """Whether `pos` sits after a `--` or `#` on its own line."""
+    """Whether `pos` sits after a `--` or `#` on its own line, or inside a `/* ... */` block comment."""
     line_start = text.rfind("\n", 0, pos) + 1
     prefix = text[line_start:pos]
-    return "--" in prefix or "#" in prefix
+    return "--" in prefix or "#" in prefix or _in_block_comment(text, pos)
 
 
 def apply_composite_key_statements(
     rows: dict[tuple, dict], columns: tuple[str, ...], key_columns: tuple[str, ...],
     table_name: str, sql_text: str, on_skip: Callable[[str], None] | None = None,
     fill_missing: bool = False, defaults: dict | None = None, source: str | None = None,
+    int_columns: frozenset | None = None, after_statement: Callable[[], None] | None = None,
 ) -> None:
     """`apply_statements`'s composite-key cousin - see this section's module-level comment for why
     it exists. Handles exactly the statement shapes this repo's real migrations and `sql_out.py`'s
@@ -2129,15 +2428,26 @@ def apply_composite_key_statements(
     `trainer_spell`); the default leaves them out, which `TableSpec.defaults` relies on.
     `defaults` (the table's schema defaults, `parse_create_table_defaults`) fills a *key* column an INSERT omitted
     (upstream's Brewfest Reveler rows leave out `smart_scripts.link`, 2026_10_05_00_upstream.sql) and is what a WHERE
-    condition on any other omitted column is judged on; no other column is filled in."""
+    condition on any other omitted column is judged on; no other column is filled in.
+
+    `int_columns` (the table's integer columns, `parse_create_table_int_columns`; none when not given: a default's
+    type does not tell a FLOAT `DEFAULT '1'` from an INT) are where MySQL stores numbers: a key written as a quoted
+    number (`'5'`) is the integer 5, and a non-integer number an UPDATE writes is rounded (`_int_value`).
+
+    `INSERT ... ON DUPLICATE KEY UPDATE` inserts a new key's row as written and applies only the clause's
+    assignments to an existing one. An UPDATE that assigns a key column moves the row to its new key.
+
+    `after_statement` is called after each statement on the table (applied or skipped), for a caller that follows
+    how a value changes statement by statement (`trainer_pricing`'s hand-written price)."""
     pos = 0
     variables: dict = {}
     defaults = defaults or {}
+    int_columns = int_columns or frozenset()
     layout = list(columns)
     case = _ColumnCase(columns)
     index = _KeyIndex(rows, key_columns)
     while True:
-        m = _next_statement(sql_text, pos, table_name, "IDUSAT")
+        m = _next_statement(sql_text, pos, table_name, "IDUSATX")
         if m is None:
             return
         start = m.start()
@@ -2148,12 +2458,19 @@ def apply_composite_key_statements(
         try:
             if m.group("set_name") is not None:
                 pos = _apply_set(sql_text, m.end(), m.group("set_name"), variables)
+            elif m.group("sel_table") is not None:
+                raise ReplaySkip(_INSERT_QUERY_REASON)
             elif m.group("ins_table") is not None:
                 explicit = _column_list(m.group("cols"))
                 cols = case.names_list(explicit) if explicit else layout
-                tuples, pos = _read_tuples(sql_text, m.end(), variables)
+                upsert: list = []
+                tuples, pos = _read_tuples(sql_text, m.end(), variables, upsert=upsert)
+                parts = (
+                    _upsert_assignments(sql_text[upsert[0][0]:upsert[0][1]], variables, case) if upsert else None
+                )
                 ignore = _is_ignore(m)
                 bad: list[str] = []
+                failures = 0
                 for values in tuples:
                     if len(values) != len(cols):
                         bad.append(f"{len(values)} values for {len(cols)} columns")
@@ -2167,15 +2484,27 @@ def apply_composite_key_statements(
                     except KeyError as exc:
                         bad.append(f"no value for key column {exc.args[0]}")
                         continue
+                    if int_columns and any(isinstance(v, str) for v in key):
+                        key = tuple(_int_key(v) if c in int_columns else v for c, v in zip(key_columns, key))
                     for c, v in zip(key_columns, key):
-                        row.setdefault(c, v)
+                        row[c] = v
                     previous = rows.get(key)
-                    if ignore and previous is not None:
-                        continue
+                    if previous is not None:
+                        if ignore:
+                            continue
+                        if parts is not None:
+                            failures += _apply_upsert(
+                                previous, row, parts, defaults, int_columns, frozenset(layout) | frozenset(defaults),
+                            )
+                            if any(c in key_columns for c, _, _ in parts):
+                                index.invalidate()
+                            continue
                     rows[key] = row
                     index.replaced(previous, row)
                 if bad:
                     report(f"{len(bad)} INSERT row(s) not applied: {bad[0]}")
+                if failures:
+                    report(str(_not_assigned(failures)))
             elif m.group("trunc_table") is not None:
                 rows.clear()
                 index.invalidate()
@@ -2190,8 +2519,13 @@ def apply_composite_key_statements(
                 if m.group("del_table") is not None:
                     _apply_composite_delete(rows, key_columns, body, bpos, defaults, index)
                 else:
-                    _apply_composite_update(rows, key_columns, body, bpos, variables, index, defaults)
+                    _apply_composite_update(
+                        rows, key_columns, body, bpos, variables, index, defaults, int_columns,
+                        frozenset(layout) | frozenset(defaults),
+                    )
                 pos = end
         except Exception as exc:
             report(_reason(exc))
             pos = _skip_statement(sql_text, m.end())
+        if after_statement is not None and m.group("set_name") is None:
+            after_statement()

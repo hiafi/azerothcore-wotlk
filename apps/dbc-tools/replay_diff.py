@@ -17,7 +17,8 @@ or an `ALLOWED_DIFFS` entry matches nothing (stale).
 (`lib/replay_diff.REPLAYED_TABLES`, or `--tables`), replay vs live, keyed on each table's primary key. The DBC-backed
 tables are checked twice, once per replay function (`composite` and `keyed`). Explained differences are listed in
 `replay/ALLOWED_TABLE_DIFFS` (same TSV as `ALLOWED_DIFFS`; `*` as the key means every key of that column). `--json
-FILE` writes every difference and skipped statement. Exit status 1 on an unexplained difference or a stale entry.
+FILE` writes every difference and skipped statement. Exit status 1 on an unexplained difference, a stale entry or a
+duplicate replayed key.
 """
 
 from __future__ import annotations
@@ -164,13 +165,17 @@ def _live_schema(mysql: list[str], database: str, table: str) -> replay_diff.Sch
     key = tuple(r["COLUMN_NAME"] for r in rows if r["COLUMN_KEY"] == "PRI") or columns
     numeric = {"int", "tinyint", "smallint", "mediumint", "bigint", "float", "double", "decimal"}
     strings = frozenset(r["COLUMN_NAME"] for r in rows if r["DATA_TYPE"].lower() not in numeric)
+    integers = frozenset(
+        r["COLUMN_NAME"] for r in rows
+        if r["DATA_TYPE"].lower() in {"int", "tinyint", "smallint", "mediumint", "bigint"}
+    )
     defaults = {}
     for r in rows:
         value = r["COLUMN_DEFAULT"]
         if value is not None and r["COLUMN_NAME"] not in strings:
             value = float(value) if "." in value else int(value)
         defaults[r["COLUMN_NAME"]] = value
-    return replay_diff.Schema(columns, key, defaults, strings)
+    return replay_diff.Schema(columns, key, defaults, strings, integers)
 
 
 def _whole(args: argparse.Namespace, mysql: list[str], applied: set[str], only: set[str] | None) -> int:
@@ -226,8 +231,14 @@ def _whole(args: argparse.Namespace, mysql: list[str], applied: set[str], only: 
             for r in results
         ], indent=1), encoding="utf-8")
     bad = sum(1 for r in results for d in r.differences if d.reason is None)
-    print(f"total: {bad} unexplained difference(s) over {len(results)} table check(s)")
-    return 1 if bad or stale else 0
+    duplicates = sum(r.duplicate_keys for r in results)
+    for r in results:
+        if r.duplicate_keys:
+            print(f"DUPLICATE KEYS: {r.table} [{r.loader}]: {r.duplicate_keys} replayed row(s) share a key with "
+                  f"another (the live table cannot hold that: the replay is wrong somewhere)")
+    print(f"total: {bad} unexplained difference(s), {duplicates} duplicate replayed key(s) over {len(results)} "
+          f"table check(s)")
+    return 1 if bad or stale or duplicates else 0
 
 
 if __name__ == "__main__":
