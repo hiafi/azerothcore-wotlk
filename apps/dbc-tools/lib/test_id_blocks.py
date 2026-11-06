@@ -170,6 +170,14 @@ class BlockShapeTest(unittest.TestCase):
         stock = spell_tables.load_base_table_rows("dungeon_access_template", ("id",))
         self.assertEqual(max(int(r["id"]) for r in stock), BLOCKS["dungeon_access"]["start"] - 1)
 
+    def test_dungeon_difficulty_e2_encounter_block(self):
+        # DungeonEncounter.dbc has 612 rows with a maximum id of 894 and the live overlay is empty (handoff s3.8); the
+        # 19 vanilla dungeon maps hold 167 normal encounters
+        self.assertEqual(BLOCKS["dungeonencounter"], {"start": 1000, "end": 1199})
+        path = state.BASE_DBC_DIR / dbcfmt.DUNGEONENCOUNTER.dbc_filename
+        if path.is_file():
+            self.assertLess(max(state.load_stock_rows(dbcfmt.DUNGEONENCOUNTER)), BLOCKS["dungeonencounter"]["start"])
+
     def test_death_knight_t1_widened_the_sound_and_visual_blocks(self):
         # shaman's slices filled the old ends (90100 / 90199); the widened ends hold Death Knight's slices. The visual
         # block was widened again by Warrior T1 (see test_warrior_t1_...): from DK T1 on it reaches at least 90299

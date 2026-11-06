@@ -194,6 +194,16 @@ class Registry:
     dungeons: list[dict] = field(default_factory=list)
     map_difficulties: list[dict] = field(default_factory=list)
     dungeon_access: list[dict] = field(default_factory=list)
+    # Dungeon difficulties E2 (lib/dungeon_heroic.py): rows generate.py derives from a declared heroic after the source
+    # is loaded (no DSL helper fills them): the heroic DungeonEncounter / instance_encounters rows and the heroic
+    # entries' copies of the entry-keyed side tables. Plain SPELL_TABLES entries; the heroic copies of
+    # creature_template_spell / creature_template_model join creature_template_spells / creature_template_models.
+    dungeon_encounters: list[dict] = field(default_factory=list)
+    instance_encounters: list[dict] = field(default_factory=list)
+    heroic_template_addons: list[dict] = field(default_factory=list)
+    heroic_template_resistances: list[dict] = field(default_factory=list)
+    heroic_template_movements: list[dict] = field(default_factory=list)
+    heroic_onkill_reputations: list[dict] = field(default_factory=list)
     # P2b: {id: python_variable_name}, found by introspecting each loaded module's own namespace
     # after it finishes executing - see _collect_var_names(). Not in MERGE_KEYS: these are dicts,
     # not lists, and merged by lib.header_gen's caller with a plain dict.update() (ids are already
@@ -218,6 +228,8 @@ MERGE_KEYS = (
     "spell_rune_costs", "spell_threats", "spell_threat_removals", "creation_actions", "creation_action_removals",
     "creation_casts", "creation_cast_removals", "creation_skills", "creation_skill_removals", "chr_classes",
     "dungeons", "map_difficulties", "dungeon_access",
+    "dungeon_encounters", "instance_encounters", "heroic_template_addons", "heroic_template_resistances",
+    "heroic_template_movements", "heroic_onkill_reputations",
 )
 
 # The registry a class file's spell()/talent()/tab()/skill_line_ability()

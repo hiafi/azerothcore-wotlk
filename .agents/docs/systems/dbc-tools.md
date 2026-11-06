@@ -659,6 +659,31 @@ package by the `source/world/` pass). Things that are not obvious:
 - **`dungeons`** is a bookkeeping merge key (one entry per map, `heroic` as a dict) that E2's encounter, spawnMask,
   `difficulty_entry_1` and heroic-template emitters read; it emits nothing itself.
 
+### E2 (WP-T2): derived rows, `lib/dungeon_heroic.py` and `lib/spawn_state.py`
+
+- **Derived, not declared.** `dungeon_heroic.expand()` runs once in `generate.py` right after the source loads (before
+  the `--check` return and every render) and appends rows to `dsl_classes`: `dungeon_encounters`,
+  `instance_encounters`, the `heroic_template_*` / `heroic_onkill_reputations` lists (new SPELL_TABLES entries,
+  `prune_when_empty`), and heroic copies inside the existing `creature_template_spells` / `creature_template_models`
+  lists (one owner per table, or each prune pass would delete the other's rows). Derived rows carry `_dungeon_heroic`
+  so a second `expand()` replaces them. Its ERRORs reach both paths through `dungeon_checks.errors_for_run(...,
+  expansion=)`.
+- **Kill credit stays the normal entry.** A heroic creature's `GetEntry()` is the normal entry (`Creature::InitEntry`),
+  so heroic `instance_encounters` rows copy the normal `creditEntry`; the table has no difficulty column (each row is
+  filed under its DungeonEncounter row's (MapID, Difficulty)).
+- **DungeonEncounter.dbc is ordered by (MapID, signed OrderIndex, ID)** (`OrderIndex` -1000 rows exist, so it is in
+  `signed`); `pack_client_dbc` keeps it, and a heroic copy lands right after its normal row.
+- **`difficulty_entry_1` rides `creature_template_edits`** (the `creature_template_columns()` path): a one-column
+  UPDATE diffed against the replayed live row, merged into an existing edit of the same entry. Never pruned.
+- **The spawn replay** (`spawn_state.load_spawn_state`, cached like the other loaders, `spawn_state.py` is in
+  `CACHE_CODE_FILES`) fixes three gaps the generic replay has on `creature` / `gameobject`: the `id1` -> `id` rename
+  (2026_06_16_00), double-quoted string literals (upstream's sniffed spawn files; `sql_dump` skipped those INSERTs
+  whole: 10 Deadmines doors and levers), and DELETE / UPDATE whose WHERE has no `guid` (applied in file order). Checked
+  against the live DB on 2026-11-05: no difference on the 19 vanilla dungeon maps (14 non-dungeon creature spawns
+  still missing elsewhere). `sql_dump` itself still drops double-quoted INSERTs for every other table.
+- **`heroic_entries`** on the `dungeons` entry (normal -> heroic) is the heroic template generator's hand-off; empty,
+  the per-creature emitters do nothing.
+
 ## Superseded ranks: generated `SkillLineAbility` and `CreatureSpellData` overrides
 
 Pets learn from `SkillLineAbility`, not trainers: `SpellMgr::LoadPetLevelupSpellMap` takes every row on a
