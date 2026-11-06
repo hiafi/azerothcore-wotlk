@@ -496,6 +496,43 @@ heroic(map_difficulty_id=1000, access_id=122, min_level=60,
 Every derived row is diffed against live (a rerun is silent) and the SPELL_TABLES ones are pruned when the heroic
 goes; spawn masks and `difficulty_entry_1` are never reverted.
 
+E2 (WP-G) adds the creature list and the heroic creature templates (`lib/heroic_templates.py`). All 19 vanilla
+dungeons have a file; each holds a generated `CREATURES` block between `# BEGIN GENERATED CREATURES` and
+`# END GENERATED CREATURES` and a hand-written `dungeon(...)` call:
+
+```python
+CREATURES = (                                    # generated: never edit inside the markers
+    creature(644, "Rhahk'Zor", "boss", spawns=1),  # L19 elite warrior
+    creature(2520, "Remote-Controlled Golem", "trash", summoned_by=("creature 622 smart cast 3605",)),
+    ...
+)
+
+dungeon(36, "Deadmines", creatures=CREATURES,
+        extra=(creature(9001, "Boss Add", "trash", summoned_by=("C++ boss_x",)),),  # what the extraction misses
+        roles={3586: "boss"},                    # role corrections: boss, trash, npc, critter, trigger
+        skip=(3450,),                            # never a heroic template
+        heroic=heroic(..., tier="vanilla", tier_values={"elite": (40_000, 600)},
+                      overrides={644: dict(health=320_000, melee=3_000, tier="boss", columns={"speed_run": 1.4})}))
+```
+
+- **Refresh the lists** with `extract_dungeon_creatures.py --mysql "mysql -h127.0.0.1 -P3307 -uroot -p<password>"`
+  (`$DBC_TOOLS_MYSQL`; `--map 36` for one dungeon, `--check` to only report). It reads the live world DB
+  (SELECTs only): spawned entries, encounter credits and everything they summon (SmartAI summons, summon groups,
+  template swaps, spells that summon, action lists, guid scripts; rules in `lib/dungeon_extract.py`). It rewrites only
+  the block, so hand edits survive; a file without exactly one block is refused.
+- **Without `heroic`** a declaration emits nothing: normal creature rows belong to stock data and the frozen phase 0.
+- **With `heroic`** each creature of the entry set (declared plus live spawns outside events plus encounter credits,
+  minus `skip`, critters, triggers, NPCs and event-only creatures) gets a level 60 `creature_template` row: a copy of
+  the live normal row with `exp` 0, health and melee from the tier table (normal 12k / 200, elite 37k / 550, rare 74k /
+  900, boss 300k / 2,500; melee per hit at 2.0 sec, scaled by the creature's swing) or its override, INSTANCE_BIND on
+  bosses, no AIName / ScriptName, the normal loot. Ids come from `source/world/heroic_ids.lock` (block
+  `creature_heroic` 310000-311999, append-only: a full run appends new creatures, `--check` reports them; commit it).
+- **Lints**: an override naming a creature without a heroic row, columns the engine would refuse
+  (`unit_class`, `npcflag`, AIName, ScriptName: ERROR), a normal `exp` above 0 (WARNING), a boss role without an
+  encounter row, SpellDifficulty swaps among the creatures' spells and skipped creatures (notes), and a live spawn
+  missing from the declaration (WARNING: rerun the extraction). Normal-only SmartAI rows (`event_flags` 0x02 without
+  0x04) of the dungeon's scripts get `event_flags | 4` (`widen_smart_scripts=False` turns it into a WARNING).
+
 ### Declaring a creature (T1)
 
 A `source/classes/*.py` file can also declare a rework's own NPC - `creature_template` +

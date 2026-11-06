@@ -630,6 +630,21 @@ CREATUREFAMILY = DbcTable(
     read_as_string=frozenset({"IconFile"}),
 )
 
+# SpellDifficulty.dbc - read-only reference for lib/heroic_templates.py's lint (dungeon difficulties E2, WP-G): the
+# spell a cast becomes on each difficulty (Spell::Spell -> SpellMgr::GetSpellIdForDifficulty; DifficultySpellID_2 is the
+# 5-man heroic). Never written. Server-loaded with the `spelldifficulty_dbc` overlay (DBCStores.cpp builds the
+# searcher from rows with slots 1 and 2 set). fmt from DBCfmt.h's SpellDifficultyfmt, columns from
+# data/sql/base/db_world/spelldifficulty_dbc.sql; SpellID[] is int32 (DBCStructure.h). Stock file: the server's DBC
+# directory (ac-worldserver:/azerothcore/env/dist/data/dbc/), flattened into var/extractors/dbc/. Not in ALL_TABLES.
+SPELLDIFFICULTY = DbcTable(
+    name="SpellDifficulty",
+    dbc_filename="SpellDifficulty.dbc",
+    sql_table="spelldifficulty_dbc",
+    fmt="niiii",
+    columns=_cols("ID", ("DifficultySpellID", 4)),
+    signed=frozenset({f"DifficultySpellID_{i}" for i in range(1, 5)}),
+)
+
 ALL_TABLES = (
     SPELL, TALENT, TALENTTAB, SPELLCASTTIMES, SPELLDURATION, SPELLRANGE,
     SPELLRADIUS, SKILLLINEABILITY, ITEM,

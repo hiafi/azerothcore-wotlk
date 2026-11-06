@@ -19,8 +19,13 @@ What it derives, per declared heroic (map M):
    guid IN (...)` per table (the SQL linter's spawn shape). Diffed against the replayed live spawns
    (`lib/spawn_state.py`), so a map already at mask 3 (Deadmines after E1's WP-1D) emits nothing. Spawns a game event
    owns stay normal-only unless `event_spawns=True`. Never reverted: dropping the heroic leaves the masks.
-3. **Per creature** (inert until WP-G): `entry["heroic_entries"]` on the `Registry.dungeons` bookkeeping entry, the
-   normal -> heroic entry map WP-G's lock file supplies. For each pair:
+3. **Heroic creature templates** (WP-G, `lib/heroic_templates.py`): for a heroic whose declaration carries a creature
+   list (`dungeon(creatures=...)`), one level 60 `creature_template` row per creature of its entry set (ids from the
+   append-only `source/world/heroic_ids.lock`), appended to `creature_templates` before step 4 reads them, and the
+   normal -> heroic map written to `entry["heroic_entries"]`. Also the dungeon's creature lints and the SmartAI
+   widening UPDATEs (normal-only rows also run on heroic).
+4. **Per creature**: `entry["heroic_entries"]` on the `Registry.dungeons` bookkeeping entry, the normal -> heroic
+   entry map (step 3, or a test's hand-written map). For each pair:
    - `difficulty_entry_1` on the normal row, as a one-column `creature_template_columns()`-style edit (joins
      `creature_template_edits`, so it renders as a column-limited UPDATE after the heroic templates' upserts and is
      diffed against the replayed live row). Never touches another column of a normal row.
@@ -41,7 +46,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import dbcfmt, spawn_state, spell_tables, sql_dump, state, trainer_state
+from . import dbcfmt, heroic_templates, spawn_state, spell_tables, sql_dump, state, trainer_state
 
 DIFFICULTY_NORMAL = 0
 DIFFICULTY_HEROIC = 1
@@ -99,6 +104,9 @@ class LiveWorld:
     linked_respawn: list[dict] = field(default_factory=list)
     pools: dict[str, dict[int, int]] = field(default_factory=dict)  # spawn table -> guid -> pool_entry
     event_guids: dict[str, set[int]] = field(default_factory=dict)  # spawn table -> guids a game event owns
+    class_level_stats: dict[tuple[int, int], dict] = field(default_factory=dict)  # (level, class) -> row
+    smart_scripts: list[dict] = field(default_factory=list)
+    spell_difficulty: dict[int, dict] | None = None  # SpellDifficulty rows by ID (stock + overlay); None: file missing
 
 
 @dataclass
@@ -107,6 +115,10 @@ class Expansion:
     warnings: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     spawn_blocks: list[str] = field(default_factory=list)
+    smart_blocks: list[str] = field(default_factory=list)  # SmartAI widening UPDATEs (heroic_templates)
+    lock_appended: list[str] = field(default_factory=list)  # new heroic_ids.lock lines (a full run writes them)
+    lock_text: str = ""  # the lock file with them appended
+    heroic_reports: list = field(default_factory=list)  # heroic_templates.HeroicReport per generated row
 
 
 def _int(value) -> int:
@@ -183,11 +195,31 @@ def load_live_world(
             f"game_event_{table}", ("eventEntry", "guid"), ("guid", "eventEntry"),
         )
         events[table] = {_int(r.get("guid")) for r in event_rows}
+    stats_path = trainer_state.BASE_SQL_DIR / "creature_classlevelstats.sql"
+    stats = trainer_state.load_replayed_table_rows(
+        "creature_classlevelstats", tuple(sql_dump.parse_create_table_columns(stats_path, "creature_classlevelstats")),
+        ("level", "class"),
+    )
+    smart_path = trainer_state.BASE_SQL_DIR / "smart_scripts.sql"
+    smart = trainer_state.load_replayed_table_rows(
+        "smart_scripts", tuple(sql_dump.parse_create_table_columns(smart_path, "smart_scripts")),
+        ("entryorguid", "source_type", "id", "link"),
+    )
+    difficulty_path = base_dir / dbcfmt.SPELLDIFFICULTY.dbc_filename
+    spell_difficulty = None
+    if difficulty_path.is_file():
+        spell_difficulty = {int(r["ID"]): r for r in state.read_dbc_cached(difficulty_path, dbcfmt.SPELLDIFFICULTY)}
+        for row in trainer_state.load_replayed_table_rows(
+            "spelldifficulty_dbc", dbcfmt.SPELLDIFFICULTY.columns, ("ID",),
+        ):
+            spell_difficulty[_int(row.get("ID"))] = row
     return LiveWorld(
         creature_templates=creature_templates, side_rows=side_rows, stock_encounters=stock_encounters,
         live_encounters=spell_table_index.live_rows("dungeonencounter_dbc"),
         instance_encounters={_int(r.get("entry")): r for r in instance}, heroic_maps=heroic_maps, spawns=spawns,
         linked_respawn=linked, pools=pools, event_guids=events,
+        class_level_stats={(_int(r.get("level")), _int(r.get("class"))): r for r in stats}, smart_scripts=smart,
+        spell_difficulty=spell_difficulty,
     )
 
 
@@ -498,7 +530,8 @@ def side_table_copies(
 # The entry point
 
 def _clear_derived(dsl_classes: dict) -> None:
-    for key in ("dungeon_encounters", "instance_encounters", *(side.registry_key for side in SIDE_TABLES)):
+    for key in ("dungeon_encounters", "instance_encounters", "creature_templates",
+                *(side.registry_key for side in SIDE_TABLES)):
         dsl_classes[key] = [r for r in dsl_classes.get(key, []) if not r.get(DERIVED)]
     edits = []
     for row in dsl_classes.get("creature_template_edits", []):
@@ -511,10 +544,54 @@ def _clear_derived(dsl_classes: dict) -> None:
     dsl_classes["creature_template_edits"] = edits
 
 
-def expand(dsl_classes: dict, load_live: Callable[[], LiveWorld]) -> Expansion:
+def _heroic_templates(
+    dsl_classes: dict, heroics: list[dict], live: LiveWorld, out: Expansion, ids_cfg: dict | None, lock: str | None,
+) -> None:
+    """Step 3: the heroic creature templates of every heroic whose declaration carries a creature list."""
+    generated = [e for e in heroics if "creatures" in e]
+    if not generated:
+        return
+    if ids_cfg is None:
+        from . import source  # noqa: PLC0415 - needs ruamel (the venv); generate.py passes ids_cfg
+
+        ids_cfg = source.load_ids(heroic_templates.TOOL_ROOT / "source" / "ids.yaml")
+    if lock is None:
+        lock = heroic_templates.LOCK_PATH.read_text() if heroic_templates.LOCK_PATH.is_file() else ""
+    block = ids_cfg.get(heroic_templates.LOCK_BLOCK)
+    try:
+        parsed = heroic_templates.parse_lock(lock, block)
+    except heroic_templates.LockError as error:
+        out.errors.append(f"dungeons: {error}")
+        return
+    result = heroic_templates.build(
+        generated, live, parsed, block, spell_tables.CREATURE_TEMPLATE_COLUMNS, spell_tables.CREATURE_TEMPLATE_DEFAULTS,
+        DERIVED,
+    )
+    declared = {int(r["entry"]) for r in dsl_classes.get("creature_templates", [])}
+    for row in result.rows:
+        if int(row["entry"]) in declared:
+            out.errors.append(f"creature_template {row['entry']}: declared by creature_template() and generated as "
+                              f"a heroic template")
+    dsl_classes.setdefault("creature_templates", []).extend(result.rows)
+    out.errors += result.errors
+    out.warnings += result.warnings
+    out.notes += result.notes
+    out.smart_blocks += result.smart_blocks
+    out.lock_appended = result.lock_appended
+    out.lock_text = heroic_templates.lock_text(parsed, result.lock_appended)
+    out.heroic_reports = result.reports
+    if result.lock_appended:
+        out.notes.append(f"dungeons: {len(result.lock_appended)} new heroic creature id(s) for "
+                         f"{heroic_templates.LOCK_PATH.name} (a full run appends them; commit the file)")
+
+
+def expand(
+    dsl_classes: dict, load_live: Callable[[], LiveWorld], ids_cfg: dict | None = None, lock: str | None = None,
+) -> Expansion:
     """Fills the derived rows of every declared heroic into `dsl_classes` (replacing any an earlier call added) and
-    returns the run's ERRORs, WARNINGs, notes and spawnMask SQL blocks. `load_live` is only called when a heroic is
-    declared."""
+    returns the run's ERRORs, WARNINGs, notes and SQL blocks. `load_live` is only called when a heroic is declared.
+    `ids_cfg` is source/ids.yaml (read when None) and `lock` the text of source/world/heroic_ids.lock (read when
+    None); both only matter for a heroic whose declaration carries a creature list."""
     out = Expansion()
     for entry in dsl_classes.get("dungeons", []):
         if entry.get("heroic_entries") and not entry.get("heroic"):
@@ -546,6 +623,7 @@ def expand(dsl_classes: dict, load_live: Callable[[], LiveWorld]) -> Expansion:
             )
         planned = _spawn_masks(entry, live, out)
         _spawn_lints(entry, planned, live, out)
+    _heroic_templates(dsl_classes, heroics, live, out, ids_cfg, lock)
     entry_maps = heroic_entry_maps(dsl_classes)
     if entry_maps:
         declared_full = {int(r["entry"]): r for r in dsl_classes.get("creature_templates", [])}

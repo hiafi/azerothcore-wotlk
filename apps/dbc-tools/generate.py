@@ -51,7 +51,7 @@ sys.path.insert(0, str(TOOL_ROOT))
 from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, source, sql_out, state  # noqa: E402
 from lib import gcd_haste, header_gen, potency_sheet, spell_tables, superseded_ranks  # noqa: E402
 from lib import sqlcorpus, stale_overlay, trainer_pricing, trainer_state  # noqa: E402
-from lib import dungeon_checks, dungeon_heroic  # noqa: E402
+from lib import dungeon_checks, dungeon_heroic, heroic_templates  # noqa: E402
 from bootstrap import load_spell_ranks_chains  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 from lib.lazy import Lazy  # noqa: E402
@@ -905,11 +905,12 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
     # spawn replay loads only when a heroic is declared.
     dungeon_expansion = dungeon_heroic.expand(
         dsl_classes, lambda: dungeon_heroic.load_live_world(existing_creature_rows, spell_table_index),
+        ids_cfg=ids_cfg,
     )
     for warning in dungeon_expansion.warnings:
         print(f"WARNING: {warning}")
     if dungeon_heroic.needs_live_world(dsl_classes):
-        progress("expanded declared dungeon heroics (encounters, spawnMask, heroic creature rows)")
+        progress("expanded declared dungeon heroics (encounters, spawnMask, heroic creature templates and rows)")
     if n_dsl:
         creature_counts = {
             **spell_tables.count_declared(dsl_classes),
@@ -1556,10 +1557,19 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         out_path, blocks, header,
         extra_blocks=[
             *prune_blocks, *removal_blocks, trainer_spell_block, *spell_table_blocks,
-            *creature_blocks, *dungeon_expansion.spawn_blocks, *item_blocks, spell_data_block,
+            *creature_blocks, *dungeon_expansion.spawn_blocks, *dungeon_expansion.smart_blocks, *item_blocks,
+            spell_data_block,
         ],
     )
     print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
+    # Dungeon difficulties E2 (WP-G): the heroic creature ids this run minted, appended to the committed lock file so
+    # they never move (lib/heroic_templates.py). Written after the SQL that uses them.
+    if dungeon_expansion.lock_appended:
+        heroic_templates.LOCK_PATH.write_text(dungeon_expansion.lock_text)
+        print(
+            f"note: appended {len(dungeon_expansion.lock_appended)} heroic creature id(s) to "
+            f"{heroic_templates.LOCK_PATH.relative_to(REPO_ROOT)} - commit it with the SQL"
+        )
     progress("SQL emission done")
 
     # -- client patch: needs a complete file (base + new), so any table with
