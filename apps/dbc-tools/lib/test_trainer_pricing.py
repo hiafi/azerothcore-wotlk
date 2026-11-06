@@ -329,7 +329,8 @@ class PricedWiringTest(ReplayFixture):
             row(212, 1, 999, 30), row(212, 2, 999, 10), row(5, 3, 999, 30), row(212, 4, 999, 10)))
         rows, out = self._run(declared=[row(212, 9, 7, 40)], removed=[(212, 4)])
         got = {(r["TrainerId"], r["SpellId"]): r["MoneyCost"] for r in rows}
-        self.assertEqual(got, {(212, 1): 3200, (212, 2): 100, (212, 9): 6000})
+        # Trainer 5 is a discounted stock trainer in the shipped policy: 999 * 0.2 = 199.8 -> 200.
+        self.assertEqual(got, {(212, 1): 3200, (212, 2): 100, (212, 9): 6000, (5, 3): 200})
         self.assertEqual(out, "")
 
     def test_listed_but_dead_trainer_warns_is_skipped_and_keeps_declared_money_cost(self):
@@ -467,6 +468,81 @@ class CreatureReplayTest(unittest.TestCase):
         self.assertEqual((rows[2]["ExperienceModifier"], rows[2]["flags_extra"]), (1, 0))
         self.assertNotIn(3, rows)
         self.assertNotIn("flags_extra", rows[4])  # omitted columns stay omitted without fill_missing
+
+
+def discount_policy(factor="0.2", discounted=(5, 6), excluded=(33388,)):
+    return trainer_pricing.Policy(CURVE, {}, (212,), factor, discounted, excluded)
+
+
+class DiscountTest(unittest.TestCase):
+    def test_rounds_half_away_from_zero_like_mysql(self):
+        f = trainer_pricing.Policy(CURVE, {}, ()).discount_factor
+        self.assertEqual(f, 1)
+        fifth = discount_policy().discount_factor
+        # MySQL: 2 * 0.2 = 0.4 -> 0, 3 * 0.2 = 0.6 -> 1, 12.5 -> 13, 2.5 -> 3 (half away from zero).
+        self.assertEqual([trainer_pricing.discounted_price(b, fifth) for b in (0, 2, 3, 62, 63, 999, 12, 50000)],
+                         [0, 0, 1, 12, 13, 200, 2, 10000])
+        self.assertEqual(trainer_pricing.discounted_price(5, trainer_pricing.Fraction("0.5")), 3)
+
+    def test_invalid_policies_raise(self):
+        with self.assertRaises(trainer_pricing.PricingPolicyError):
+            discount_policy(factor="0")
+        with self.assertRaises(trainer_pricing.PricingPolicyError):
+            discount_policy(factor="1.5")
+        with self.assertRaises(trainer_pricing.PricingPolicyError):
+            discount_policy(discounted=(5, 212))
+
+    def test_shipped_policy(self):
+        pol = trainer_pricing.load_policy()
+        self.assertEqual(pol.discount_factor, trainer_pricing.Fraction(1, 5))
+        self.assertEqual(pol.discounted_ids, frozenset(range(1, 127)) - pol.priced_ids)
+        self.assertEqual(pol.discount_excluded_spells, {33388, 33391, 34090})
+
+    def test_live_rows_take_the_hand_written_price_declared_rows_their_money_cost(self):
+        live = {(5, 1): row(5, 1, 200, 10), (5, 2): row(5, 2, 1000, 10), (5, 33388): row(5, 33388, 10000, 20),
+                (5, 4): row(5, 4, 70, 10), (7, 1): row(7, 1, 1000, 10), (6, 3): row(6, 3, 5, 10),
+                (5, 8): row(5, 8, 900, 10)}
+        hand = {(5, 1): row(5, 1, 1000, 10), (5, 2): row(5, 2, 1000, 10), (5, 33388): row(5, 33388, 10000, 20),
+                (7, 1): row(7, 1, 1000, 10), (6, 3): row(6, 3, 5, 10), (5, 8): row(5, 8, 900, 10)}
+        declared = [dict(row(6, 9, 35000, 40), ReqAbility1=7)]
+        out = trainer_pricing.discount_stock_trainer_spells(declared, live, hand, {(5, 8)}, discount_policy())
+        got = {(r["TrainerId"], r["SpellId"]): r["MoneyCost"] for r in out}
+        # (5, 1): already at 1/5 of its hand-written 1000; (5, 2): written after the old discount;
+        # (5, 33388) excluded; (5, 4) has no hand-written source; (7, *) not discounted; (5, 8) untrained.
+        self.assertEqual(got, {(5, 1): 200, (5, 2): 200, (5, 33388): 10000, (6, 3): 1, (6, 9): 7000})
+        self.assertEqual(next(r for r in out if r["SpellId"] == 9)["ReqAbility1"], 7)
+
+
+class DiscountWiringTest(ReplayFixture):
+    """The discount through `generate._priced_trainer_spells` with the shipped policy (trainer 5 is a
+    discounted stock trainer, 33388 an excluded spell), including the run after its own output."""
+
+    def _run(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            return generate._priced_trainer_spells({"trainer_spells": [], "trainer_removals": []}, FakeIndex())
+
+    def _write_generated(self, rows):
+        keys = ", ".join(f"({r['TrainerId']}, {r['SpellId']})" for r in rows)
+        (self._pending / "rev_1.sql").write_text(
+            spell_tables.GENERATED_MARKER + " - DO NOT hand-edit.\n"
+            f"DELETE FROM `trainer_spell` WHERE (`TrainerId`, `SpellId`) IN ({keys});\n" + insert_sql(*rows)
+        )
+
+    def test_first_run_discounts_and_a_second_run_emits_nothing(self):
+        (self._promoted / "a.sql").write_text(insert_sql(
+            row(5, 1, 1000, 10), row(5, 2, 50000, 10), row(5, 33388, 10000, 20), row(5, 3, 0, 1)))
+        # (5, 33388) is an excluded spell, (5, 3) costs nothing either way.
+        first = self._run()
+        self.assertEqual({(r["TrainerId"], r["SpellId"]): r["MoneyCost"] for r in first},
+                         {(5, 1): 200, (5, 2): 10000})
+        self._write_generated(first)
+        self.assertEqual(self._run(), [])
+
+    def test_a_generated_file_is_not_the_base(self):
+        (self._promoted / "a.sql").write_text(insert_sql(row(5, 1, 1000, 10)))
+        self._write_generated([row(5, 1, 40, 10)])  # an old generated price: replaced, not discounted again
+        self.assertEqual([r["MoneyCost"] for r in self._run()], [200])
 
 
 if __name__ == "__main__":

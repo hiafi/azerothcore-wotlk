@@ -141,6 +141,16 @@ outside the allow-list, and on a listed one with no live NPC, which is skipped w
 emitted, so a rerun emits no `trainer_spell` rows. Nothing is read from the old price, so nothing can
 compound; retune by editing the curve and regenerating.
 
+**Stock-trainer discount.** Every other stock trainer, `DISCOUNTED_TRAINER_IDS` (1-12, 14-17, 31-126: dead
+class trainers, riding, profession, pet), sells at `STOCK_TRAINER_PRICE_FACTOR` (`"0.2"`) of its *hand-written*
+price, rounded half away from zero as MySQL stores `MoneyCost * 0.2`. The base is
+`trainer_pricing.replay_hand_written_trainer_spells()` (every file except those with `GENERATED_MARKER`), or a
+`trained_by()` declaration's `money_cost`, so the discount never compounds on its own output. Spells in
+`DISCOUNT_EXCLUDED_SPELL_IDS` (Apprentice / Journeyman / Expert Riding, hand-set by `2026_09_06_00`) keep their
+price. A live row only a generated file wrote, and nothing declares, is left alone. It replaces the one-off
+`UPDATE trainer_spell SET MoneyCost = MoneyCost * 0.2` that ran live on 2026-08-22 from the unmerged `init-server`
+branch (535ff98c0): the first run after it emitted all 4,612 discounted rows, 4,458 of them already at that price live.
+
 **The replay must be faithful**, because its output drives writes. `sql_dump.apply_composite_key_statements`
 applies `(TrainerId, SpellId) IN (...)`, single-column `=`/`IN`, AND-ed point, `BETWEEN` and OR-of-AND
 DELETEs and UPDATEs (`parse_where_predicate`), honours every UPDATE condition (key or not), evaluates

@@ -1,7 +1,6 @@
 # Whole-table replay vs live differences that are explained (replay_diff.py --whole). Tab-separated: table, key
 # (values joined with ","; * = any key), column (* = row on one side only, *missing = live only, *extra = replay
 # only), reason. Entries for SQL another worktree applied live go stale once that SQL lands here: delete them then.
-trainer_spell	*	MoneyCost	102 stock trainers live at 1/5 of every file's price; no SQL file on disk writes that
 creature_template	1725	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
 creature_template	1729	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
 creature_template	1731	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout

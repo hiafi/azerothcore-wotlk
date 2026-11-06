@@ -211,8 +211,9 @@ def _trainer_spells_to_emit(rows: list[dict], live: dict[tuple[int, int], dict])
 
 def _priced_trainer_spells(dsl_classes: dict, trainer_index: trainer_state.TrainerIndex) -> list[dict]:
     """The trainer_spell rows to emit after applying source/trainer_pricing.py: the live rows of every
-    priced trainer plus every trained_by() declaration, priced from the learn-level curve, minus what
-    is already live (a replay over all files). Warns about a listed trainer with no live NPC."""
+    priced trainer plus every trained_by() declaration, priced from the learn-level curve, and the
+    discounted stock trainers' rows at a fraction of their hand-written price, minus what is already
+    live (a replay over all files). Warns about a listed trainer with no live NPC."""
     policy = trainer_pricing.load_policy()
     live = trainer_pricing.replay_trainer_spells()
     removed = {(int(r["TrainerId"]), int(r["SpellId"])) for r in dsl_classes["trainer_removals"]}
@@ -223,6 +224,10 @@ def _priced_trainer_spells(dsl_classes: dict, trainer_index: trainer_state.Train
     priced = trainer_pricing.priced_trainer_spells(
         dsl_classes["trainer_spells"], live, priced_ids, removed, policy,
     )
+    if policy.discounted_ids:
+        priced = trainer_pricing.discount_stock_trainer_spells(
+            priced, live, trainer_pricing.replay_hand_written_trainer_spells(), removed, policy,
+        )
     return _trainer_spells_to_emit(priced, live)
 
 
