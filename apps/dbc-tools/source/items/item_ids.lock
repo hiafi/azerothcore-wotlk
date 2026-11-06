@@ -1,0 +1,8 @@
+# Minted item ids (item-variants plan s4; lib/item_ids.py): one line per (key, tier), in id order.
+#   <entry> <key> <tier>                      a minted tier; the entry sits in source/ids.yaml's item_minted block
+#   <entry> <key> <tier> base                 a stock item owned as its base tier (no id minted)
+#   <entry> <key> <tier> retired <date> <class> <subclass> <sound> <material> <display> <invtype> <sheath>
+#                                             a dropped tier: the id is never reused and its item_dbc row keeps being
+#                                             emitted from the seven Item.dbc fields recorded on the line
+# Append-only: a full generate.py run appends the ids it mints; never edit, reorder or delete a line (players can hold
+# the item, and item_template rows are never deleted). A merge conflict keeps both sides' lines; re-run generate.py.
