@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from lib import dbcfile, dbcfmt, lint, state  # noqa: E402
 
-CLIENT_TABLES = (*dbcfmt.ALL_TABLES, dbcfmt.SPELLDESCRIPTIONVARIABLES)
+CLIENT_TABLES = (*dbcfmt.ALL_TABLES, dbcfmt.SPELLDESCRIPTIONVARIABLES, dbcfmt.MAPDIFFICULTY)
 
 # Stock SkillLineAbility.dbc isn't ID-sorted and pack_client_dbc sorts it by ID. It has shipped
 # that way in every patch-Z without spellbook problems, so its order isn't load-bearing. Rows must

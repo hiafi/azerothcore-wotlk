@@ -80,6 +80,14 @@ DISABLES_COLUMNS = ("sourceType", "entry", "flags", "params_0", "params_1", "com
 # m_spells[0..7] - lib.dsl.registry.creature_spell(). Mirrors the base dump's CREATE TABLE; `Index` is the
 # slot (the table's own CHECK constraint is 0..7).
 CREATURE_TEMPLATE_SPELL_COLUMNS = ("CreatureID", "Index", "Spell", "VerifiedBuild")
+# Dungeon difficulties E1 (lib/dsl/dungeon.py's dungeon(heroic=heroic(...))): mapdifficulty_dbc is the server overlay
+# of MapDifficulty.dbc (dbcfmt's column list; the client half goes into patch-Z), dungeon_access_template the
+# (map, difficulty) entry requirements ObjectMgr::LoadAccessRequirements reads (base dump CREATE TABLE; `id` is a
+# tinyint, so the declaration names it from source/ids.yaml's dungeon_access block).
+MAPDIFFICULTY_COLUMNS = dbcfmt.MAPDIFFICULTY.columns
+DUNGEON_ACCESS_TEMPLATE_COLUMNS = (
+    "id", "map_id", "difficulty", "min_level", "max_level", "min_avg_item_level", "comment",
+)
 
 # T1 (.agents/plans/warlock-rework/warlock-rework.T1-HANDOFF.md): creature_template/
 # creature_template_model - a rework's own NPCs, previously always a hand-written migration (e.g.
@@ -332,6 +340,19 @@ SPELL_TABLES = (
         "playercreateinfo_skills", PLAYERCREATEINFO_SKILLS_COLUMNS, ("raceMask", "classMask", "skill"),
         "creation_skills", defaults={"rank": 0, "comment": None},
     ),
+    # Dungeon difficulties E1: one row of each per declared dungeon difficulty (lib/dsl/dungeon.py). "No heroic
+    # declared" is a legitimate end state, so a retired last declaration must still prune (as for disables). Neither
+    # table is on the SQL linter's do-not-delete list. mapdifficulty_dbc's columns are all NOT NULL DEFAULT 0 or
+    # nullable strings (the 0/None fallback is right); dungeon_access_template's are nullable apart from difficulty.
+    TableSpec("mapdifficulty_dbc", MAPDIFFICULTY_COLUMNS, ("ID",), "map_difficulties", prune_when_empty=True),
+    TableSpec(
+        "dungeon_access_template", DUNGEON_ACCESS_TEMPLATE_COLUMNS, ("id",), "dungeon_access",
+        defaults={
+            "map_id": None, "difficulty": 0, "min_level": None, "max_level": None, "min_avg_item_level": None,
+            "comment": None,
+        },
+        prune_when_empty=True,
+    ),
 )
 
 
@@ -495,6 +516,8 @@ _PRUNE_WHY = {
     "playercreateinfo_skills": "Left in place, new characters keep that skill at creation.",
     "spellrunecost_dbc": "Left in place, the row keeps overriding the spell's rune cost.",
     "chrclasses_dbc": "Left in place, the whole class row stays overridden.",
+    "mapdifficulty_dbc": "Left in place, the server keeps offering that dungeon difficulty.",
+    "dungeon_access_template": "Left in place, the entry requirements of that difficulty keep applying.",
 }
 _PRUNE_WHY_DEFAULT = "Left in place it keeps applying."
 

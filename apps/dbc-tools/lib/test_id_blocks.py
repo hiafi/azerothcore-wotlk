@@ -151,6 +151,18 @@ class BlockShapeTest(unittest.TestCase):
         self.assertEqual(BLOCKS["spellrunecost"], {"start": 2600, "end": 2629})
         self.assertGreater(BLOCKS["spellrunecost"]["start"], 2513)
 
+    def test_dungeon_difficulty_e1_blocks(self):
+        # MapDifficulty.dbc has 187 rows with a maximum id of 753; dungeon_access_template.id is a tinyint unsigned
+        # whose base dump tops out at 121 (handoff s3.8)
+        self.assertEqual(BLOCKS["mapdifficulty"], {"start": 1000, "end": 1099})
+        self.assertEqual(BLOCKS["dungeon_access"], {"start": 122, "end": 199})
+        self.assertLessEqual(BLOCKS["dungeon_access"]["end"], 255)
+        path = state.BASE_DBC_DIR / dbcfmt.MAPDIFFICULTY.dbc_filename
+        if path.is_file():
+            self.assertLess(max(state.load_stock_rows(dbcfmt.MAPDIFFICULTY)), BLOCKS["mapdifficulty"]["start"])
+        stock = spell_tables.load_base_table_rows("dungeon_access_template", ("id",))
+        self.assertEqual(max(int(r["id"]) for r in stock), BLOCKS["dungeon_access"]["start"] - 1)
+
     def test_death_knight_t1_widened_the_sound_and_visual_blocks(self):
         # shaman's slices filled the old ends (90100 / 90199); the widened ends hold Death Knight's slices. The visual
         # block was widened again by Warrior T1 (see test_warrior_t1_...): from DK T1 on it reaches at least 90299

@@ -187,6 +187,13 @@ class Registry:
     # table outside the spell system, declared from source/world/ (a SPELL_TABLES entry, so diff/prune
     # like custom_attr).
     lfg_disables: list[dict] = field(default_factory=list)
+    # Dungeon difficulties E1 (lib/dsl/dungeon.py, source/world/dungeons/): `dungeons` is one bookkeeping entry per
+    # dungeon() call (`id` = map id, so declaring a map twice is a DuplicateIdError; never emitted itself, later
+    # stages' generators read it), `map_difficulties` and `dungeon_access` the mapdifficulty_dbc (+ client
+    # MapDifficulty.dbc) and dungeon_access_template rows its heroic() emits. Plain SPELL_TABLES entries.
+    dungeons: list[dict] = field(default_factory=list)
+    map_difficulties: list[dict] = field(default_factory=list)
+    dungeon_access: list[dict] = field(default_factory=list)
     # P2b: {id: python_variable_name}, found by introspecting each loaded module's own namespace
     # after it finishes executing - see _collect_var_names(). Not in MERGE_KEYS: these are dicts,
     # not lists, and merged by lib.header_gen's caller with a plain dict.update() (ids are already
@@ -210,6 +217,7 @@ MERGE_KEYS = (
     "lfg_disables",
     "spell_rune_costs", "spell_threats", "spell_threat_removals", "creation_actions", "creation_action_removals",
     "creation_casts", "creation_cast_removals", "creation_skills", "creation_skill_removals", "chr_classes",
+    "dungeons", "map_difficulties", "dungeon_access",
 )
 
 # The registry a class file's spell()/talent()/tab()/skill_line_ability()

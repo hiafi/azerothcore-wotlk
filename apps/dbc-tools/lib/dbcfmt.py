@@ -552,6 +552,29 @@ LFGDUNGEONS = DbcTable(
     signed=frozenset({"Faction"}),
 )
 
+# MapDifficulty.dbc - one row per (map, difficulty) an instance supports: the entry-refused message, the lockout
+# reset (RaidDuration, seconds; 0 = no lockout) and the group size (dungeon difficulties E1, lib/dsl/dungeon.py's
+# heroic()). Server-loaded (DBCStores.cpp: LOAD_DBC(sMapDifficultyStore, "MapDifficulty.dbc", "mapdifficulty_dbc"))
+# AND read by the client, which shows its own Message text when entry fails (TRANSFER_ABORT_DIFFICULTY) and names
+# the save in Raid Info from Difficultystring, so a declared row goes out as both halves: the SPELL_TABLES
+# `mapdifficulty_dbc` entry and a merge over var/extractors/dbc/MapDifficulty.dbc into patch-Z. fmt is DBCfmt.h's
+# MapDifficultyEntryfmt ("diisxxxxxxxxxxxxxxxxiix") with the leading 'd' (index, not kept in the C++ struct) written
+# 'n', the index char this module and dbcfile read; columns from data/sql/base/db_world/mapdifficulty_dbc.sql.
+# The 15 non-enUS message locales and Difficultystring are 'x' in the fmt but string-table offsets in the file
+# (read_as_string). The stock file (187 rows, max ID 753) is ordered by (MapID, Difficulty), not by ID - see
+# dbcfile.pack_client_dbc. Stock file: the server's DBC directory (ac-worldserver:/azerothcore/env/dist/data/dbc/).
+# Not in ALL_TABLES (the SQL would go out twice, as for SPELLRUNECOST).
+MAPDIFFICULTY = DbcTable(
+    name="MapDifficulty",
+    dbc_filename="MapDifficulty.dbc",
+    sql_table="mapdifficulty_dbc",
+    fmt="niisxxxxxxxxxxxxxxxxiix",
+    columns=_cols(
+        "ID", "MapID", "Difficulty", _locale_cols("Message"), "RaidDuration", "MaxPlayers", "Difficultystring",
+    ),
+    read_as_string=frozenset({f"Message_Lang_{loc}" for loc in LOCALE_SUFFIXES[1:]} | {"Difficultystring"}),
+)
+
 # CreatureSpellData.dbc - a tamed/summoned pet's default spells, looked up by
 # creature_template.PetSpellDataId (SpellMgr::LoadPetDefaultSpells). lib/superseded_ranks.py rewrites
 # the records that name a superseded rank of a collapsed chain (pet-stale-ranks). Server-only: the

@@ -486,6 +486,25 @@ not obvious:
   entries have MapID 0), and DisableMgr rejects a continent map with flags anyway. With the file missing
   it errors only when something is declared.
 
+## Dungeon difficulties: `dungeon()` / `heroic()`, MapDifficulty and `dungeon_access_template`
+
+`lib/dsl/dungeon.py` (usage in `apps/dbc-tools/README.md`), declarations in `source/world/dungeons/` (loaded as one
+package by the `source/world/` pass). Things that are not obvious:
+
+- **Two halves, one declaration.** `mapdifficulty_dbc` and `dungeon_access_template` are `SPELL_TABLES` entries
+  (`prune_when_empty`); `generate.py` merges the same MapDifficulty rows over the stock file into patch-Z
+  (`dungeon_checks.map_difficulty_client_rows`). The server needs its row or `GetDownscaledMapDifficultyData` turns a
+  heroic request into normal; the client needs its row for the refusal text and the Raid Info difficulty name.
+- **Stock `MapDifficulty.dbc` is ordered by (MapID, Difficulty), not ID**, so `dbcfile.pack_client_dbc` keeps that
+  order (a new heroic row lands right after its map's normal row); an empty merge is byte-identical.
+- **`dbcfmt.MAPDIFFICULTY.fmt` is DBCfmt.h's with the leading `d` written `n`** (dbcfile's index char); the 15
+  non-enUS message locales and `Difficultystring` are `x` in DBCfmt.h but string offsets (`read_as_string`).
+- **One row per (map, difficulty).** `sMapDifficultyMap` keeps the last row the store visits and
+  `LoadAccessRequirements` the last loaded, so `dungeon_checks.check_dungeons` stops on a pair a stock or live row
+  already holds under another id (mod-progression's Onyxia 26 / 323 are such live rows).
+- **`dungeons`** is a bookkeeping merge key (one entry per map, `heroic` as a dict) that E2's encounter, spawnMask,
+  `difficulty_entry_1` and heroic-template emitters read; it emits nothing itself.
+
 ## Superseded ranks: generated `SkillLineAbility` and `CreatureSpellData` overrides
 
 Pets learn from `SkillLineAbility`, not trainers: `SpellMgr::LoadPetLevelupSpellMap` takes every row on a
