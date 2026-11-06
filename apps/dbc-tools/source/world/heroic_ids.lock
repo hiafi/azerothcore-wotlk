@@ -1,0 +1,29 @@
+# Heroic creature template ids (dungeon difficulties E2, WP-G; lib/heroic_templates.py): one line per
+# creature, `<normal entry> <heroic entry> <map> <name>`, from source/ids.yaml's creature_heroic block.
+# Append-only: a full generate.py run appends the new creatures of a declared heroic; never edit, reorder or
+# delete a line (an id must never move or be reused: the heroic creature_template row stays in the database).
+598 310000 36 Defias Miner
+622 310001 36 Goblin Engineer
+634 310002 36 Defias Overseer
+636 310003 36 Defias Blackguard
+639 310004 36 Edwin VanCleef
+641 310005 36 Goblin Woodcarver
+642 310006 36 Sneed's Shredder
+643 310007 36 Sneed
+644 310008 36 Rhahk'Zor
+645 310009 36 Cookie
+646 310010 36 Mr. Smite
+647 310011 36 Captain Greenskin
+657 310012 36 Defias Pirate
+1725 310013 36 Defias Watchman
+1729 310014 36 Defias Evoker
+1731 310015 36 Goblin Craftsman
+1732 310016 36 Defias Squallshaper
+1763 310017 36 Gilnid
+2520 310018 36 Remote-Controlled Golem
+3450 310019 36 Defias Companion
+3586 310020 36 Miner Johnson
+3947 310021 36 Goblin Shipbuilder
+4416 310022 36 Defias Strip Miner
+4417 310023 36 Defias Taskmaster
+4418 310024 36 Defias Wizard
