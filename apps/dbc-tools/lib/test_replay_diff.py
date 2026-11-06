@@ -7,6 +7,7 @@ is a dict, as `replay_diff.parse_mysql_batch` would return it.
 
 from __future__ import annotations
 
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -14,7 +15,9 @@ from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from lib import frozen_replay, replay_diff, trainer_state  # noqa: E402
+import yaml  # noqa: E402
+
+from lib import frozen_replay, replay_diff, state, trainer_state  # noqa: E402
 
 WIDGET_DDL = (
     "CREATE TABLE `widget` (\n"
@@ -213,6 +216,114 @@ class HelpersTest(unittest.TestCase):
 
     def test_key_text(self):
         self.assertEqual(replay_diff.key_text((10440, 2.0, "x")), "10440,2,x")
+
+
+TALENTTAB_DDL = (
+    "CREATE TABLE `talenttab_dbc` (\n"
+    "  `ID` int NOT NULL DEFAULT '0',\n"
+    "  `Name_Lang_enUS` varchar(100) DEFAULT NULL,\n"
+    "  `OrderIndex` int NOT NULL DEFAULT '0',\n"
+    "  PRIMARY KEY (`ID`)\n"
+    ") ENGINE=InnoDB;\n"
+)
+
+
+class LiveOrphanRowsTest(unittest.TestCase):
+    """`source/live_orphan_rows.sql` as the whole-table replay's last step: it fills rows no file wrote and remaps a
+    cell only while it holds the value the remap replaced, under both loaders."""
+
+    def setUp(self):
+        self._tmp = TemporaryDirectory()
+        root = Path(self._tmp.name)
+        for d in ("base", "promoted", "pending", "modules", "frozen"):
+            (root / d).mkdir(parents=True)
+        (root / "base" / "talenttab_dbc.sql").write_text(TALENTTAB_DDL)
+        (root / "promoted" / "2026_09_01_00.sql").write_text(
+            "INSERT INTO `talenttab_dbc` (`ID`, `Name_Lang_enUS`, `OrderIndex`) VALUES (1, 'file', 5), (2, 'two', 7);\n"
+        )
+        (root / "seed.sql").write_text(
+            "-- a comment\n"
+            "INSERT IGNORE INTO `talenttab_dbc` (`ID`, `Name_Lang_enUS`, `OrderIndex`) VALUES\n"
+            "(1, 'seed', 9),\n"
+            "(3, 'only live', 2);\n"
+            "UPDATE `talenttab_dbc` SET `OrderIndex` = 70 WHERE `OrderIndex` = 7 AND `ID` IN (\n    2, 3);\n"
+            "UPDATE `talenttab_dbc` SET `OrderIndex` = 50 WHERE `OrderIndex` = 4 AND `ID` IN (\n    1);\n"
+        )
+        (root / "secondary.sql").write_text("")
+        self._orig = (
+            trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR,
+            trainer_state.MODULES_DIR, frozen_replay.FROZEN_ROOT, replay_diff.LIVE_ORPHAN_ROWS_SQL,
+            state.LIVE_SECONDARY_ROWS_SQL,
+        )
+        trainer_state.BASE_SQL_DIR = root / "base"
+        trainer_state.PROMOTED_SQL_DIR = root / "promoted"
+        trainer_state.PENDING_SQL_DIR = root / "pending"
+        trainer_state.MODULES_DIR = root / "modules"
+        frozen_replay.FROZEN_ROOT = root / "frozen"
+        replay_diff.LIVE_ORPHAN_ROWS_SQL = root / "seed.sql"
+        state.LIVE_SECONDARY_ROWS_SQL = root / "secondary.sql"
+        self.root = root
+
+    def tearDown(self):
+        (
+            trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR,
+            trainer_state.MODULES_DIR, frozen_replay.FROZEN_ROOT, replay_diff.LIVE_ORPHAN_ROWS_SQL,
+            state.LIVE_SECONDARY_ROWS_SQL,
+        ) = self._orig
+        self._tmp.cleanup()
+
+    def _replay(self, loader: str) -> dict:
+        schema = replay_diff.table_schema("talenttab_dbc")
+        rows, skipped, _ = replay_diff.replay_whole_table("talenttab_dbc", schema, loader=loader)
+        self.assertEqual(skipped, [])
+        return {int(r["ID"]): (r["Name_Lang_enUS"], int(r["OrderIndex"])) for r in rows}
+
+    def test_fills_rows_no_file_wrote_and_remaps_guarded_cells(self):
+        for loader in ("composite", "keyed"):
+            with self.subTest(loader=loader):
+                # 1: a file wrote it, INSERT IGNORE keeps the file's row and the guard (4) does not match.
+                # 2: the file's 7 is remapped to 70. 3: only the seed has it; its 2 is not the guard's 7.
+                self.assertEqual(self._replay(loader), {1: ("file", 5), 2: ("two", 70), 3: ("only live", 2)})
+
+    def test_a_later_change_wins_over_the_remap(self):
+        (self.root / "pending" / "rev_1.sql").write_text(
+            "UPDATE `talenttab_dbc` SET `OrderIndex` = 8 WHERE `ID` = 2;\n"
+            "INSERT INTO `talenttab_dbc` (`ID`, `Name_Lang_enUS`, `OrderIndex`) VALUES (3, 'from a file', 1);\n"
+        )
+        for loader in ("composite", "keyed"):
+            with self.subTest(loader=loader):
+                self.assertEqual(self._replay(loader), {1: ("file", 5), 2: ("two", 8), 3: ("from a file", 1)})
+
+    def test_without_the_seed_file_nothing_is_added(self):
+        replay_diff.LIVE_ORPHAN_ROWS_SQL = self.root / "missing.sql"
+        self.assertEqual(self._replay("composite"), {1: ("file", 5), 2: ("two", 7)})
+
+
+class LiveOrphanRowsFileTest(unittest.TestCase):
+    """The shipped seed file: only the three tables, only the replay-safe statement shapes, and no id inside a block
+    dbc-tools owns (a reserved block is regenerated from source, so a seeded row there would be pruned)."""
+
+    def test_shapes_and_no_reserved_ids(self):
+        text = replay_diff.LIVE_ORPHAN_ROWS_SQL.read_text(encoding="utf-8")
+        blocks = yaml.safe_load((Path(__file__).resolve().parents[1] / "source" / "ids.yaml").read_text())
+        reserved = {"spell_dbc": blocks["spell"], "talent_dbc": blocks["talent"], "talenttab_dbc": blocks["talenttab"]}
+        heads = re.findall(r"^(INSERT IGNORE INTO|UPDATE|INSERT INTO|DELETE FROM|REPLACE INTO) `(\w+)`", text, re.M)
+        self.assertTrue(heads)
+        self.assertEqual({verb for verb, _ in heads}, {"INSERT IGNORE INTO", "UPDATE"})
+        self.assertEqual({table for _, table in heads}, set(reserved))
+        for update in re.findall(r"^UPDATE .*?;$", text, re.M | re.S):
+            self.assertRegex(update, r"^UPDATE `\w+` SET `(\w+)` = -?\d+ WHERE `\1` = -?\d+ AND `ID` IN \([\d,\s]+\);$")
+        for section in re.split(r"^(?=INSERT IGNORE INTO|UPDATE)", text, flags=re.M):
+            m = re.match(r"(?:INSERT IGNORE INTO|UPDATE) `(\w+)`", section)
+            if not m:
+                continue
+            block = reserved[m.group(1)]
+            ids = [int(i) for i in re.findall(r"^\((-?\d+),", section, re.M)]
+            if section.startswith("UPDATE"):
+                ids = [int(i) for i in re.findall(r"\d+", section.split("IN (", 1)[1])]
+            self.assertTrue(ids)
+            inside = [i for i in ids if block["start"] <= i <= block["end"]]
+            self.assertEqual(inside, [], m.group(1))
 
 
 if __name__ == "__main__":

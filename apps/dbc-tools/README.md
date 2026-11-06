@@ -88,7 +88,9 @@ apps/dbc-tools/.venv/bin/python3 apps/dbc-tools/replay_diff.py --whole --tables 
     --mysql "docker exec -i <ac-database container> mysql -uroot -p<password>" [--json out.json]
 ```
 
-Explained differences (rows SQL outside the update files wrote) are in `replay/ALLOWED_TABLE_DIFFS`.
+Explained differences (rows SQL outside the update files wrote) are in `replay/ALLOWED_TABLE_DIFFS`. Live-only
+`spell_dbc` / `talent_dbc` / `talenttab_dbc` state from deleted pending migrations is recorded in
+`source/live_orphan_rows.sql`, which only the check reads (see its header).
 
 Reads `source/ids.yaml` plus every file under `source/spells/*.csv` and
 `source/talents/*.yaml` (merged together — see "Source files" below for why

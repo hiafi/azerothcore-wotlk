@@ -384,6 +384,10 @@ def replay_whole_table(
                 if hasattr(trainer_state, "_record_invisible"):
                     trainer_state._record_invisible(table, path, text, on_skip(path.name))
         _seed_live_secondary_rows(keyed, table, lambda rows, text: sql_dump.apply_statements(rows, dbc_table, text))
+        _apply_live_orphan_rows(table, lambda text: _call(
+            sql_dump.apply_statements, keyed, dbc_table, text, on_skip=on_skip(LIVE_ORPHAN_ROWS_SQL.name),
+            source=LIVE_ORPHAN_ROWS_SQL.name,
+        ))
         return list(keyed.values()), skipped, left_out
     rows: dict = {}
     for path in files:
@@ -397,6 +401,10 @@ def replay_whole_table(
     if table in DBC_REPLAYED_TABLES:
         _seed_live_secondary_rows(rows, table, lambda target, text: sql_dump.apply_composite_key_statements(
             target, schema.columns, schema.key_columns, table, text))
+        _apply_live_orphan_rows(table, lambda text: _call(
+            sql_dump.apply_composite_key_statements, rows, schema.columns, schema.key_columns, table, text,
+            on_skip=on_skip(LIVE_ORPHAN_ROWS_SQL.name), defaults=schema.defaults, source=LIVE_ORPHAN_ROWS_SQL.name,
+        ))
     return list(rows.values()), skipped, left_out
 
 
@@ -412,6 +420,19 @@ def _seed_live_secondary_rows(rows: dict, table: str, apply) -> None:
     apply(seeded, text)
     for key, row in seeded.items():
         rows.setdefault(key, row)
+
+
+# Live-only spell_dbc / talent_dbc / talenttab_dbc rows and index remaps from deleted pending migrations (see the
+# file's header). Applied as written, after everything else: its `INSERT IGNORE`s and guarded UPDATEs never override
+# what a file wrote. Only this check reads it; `state.load_existing_rows` keeps the client DBC's stock rows.
+LIVE_ORPHAN_ROWS_SQL = Path(__file__).resolve().parents[1] / "source" / "live_orphan_rows.sql"
+
+
+def _apply_live_orphan_rows(table: str, apply: Callable[[str], None]) -> None:
+    """`apply(text)` with `LIVE_ORPHAN_ROWS_SQL`'s text when it writes `table` (the replay's last step)."""
+    text = LIVE_ORPHAN_ROWS_SQL.read_text(encoding="utf-8") if LIVE_ORPHAN_ROWS_SQL.is_file() else ""
+    if f"`{table}`" in text:
+        apply(text)
 
 
 def _call(function, *args, **kwargs):

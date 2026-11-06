@@ -1,15 +1,6 @@
 # Whole-table replay vs live differences that are explained (replay_diff.py --whole). Tab-separated: table, key
 # (values joined with ","; * = any key), column (* = row on one side only, *missing = live only, *extra = replay
 # only), reason. Entries for SQL another worktree applied live go stale once that SQL lands here: delete them then.
-spell_dbc	*	*missing	live-only row from early pending migrations deleted before commit (live_secondary_rows.sql)
-spell_dbc	*	DurationIndex	live points at a live-only 300xx secondary row from those deleted pending migrations
-spell_dbc	*	RangeIndex	live points at a live-only 300xx secondary row from those deleted pending migrations
-spell_dbc	*	EffectRadiusIndex_1	live points at a live-only 300xx secondary row from those deleted pending migrations
-spell_dbc	*	EffectRadiusIndex_2	live points at a live-only 300xx secondary row from those deleted pending migrations
-spell_dbc	*	EffectRadiusIndex_3	live points at a live-only 300xx secondary row from those deleted pending migrations
-spell_dbc	48815	CastingTimeIndex	live points at live-only spellcasttimes_dbc 30017 from a deleted pending migration
-talent_dbc	*	*missing	live-only row from early pending migrations deleted before commit (live_secondary_rows.sql)
-talenttab_dbc	*	*missing	live-only row from early pending migrations deleted before commit (live_secondary_rows.sql)
 trainer_spell	*	MoneyCost	102 stock trainers live at 1/5 of every file's price; no SQL file on disk writes that
 creature_template	1725	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout
 creature_template	1729	difficulty_entry_1	E2 heroic row applied live from core-dd pending SQL, not in this checkout

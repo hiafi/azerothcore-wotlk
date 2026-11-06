@@ -301,10 +301,15 @@ with an alias) are recorded by `trainer_state._record_invisible` for every `load
 **The whole-table check.** `replay_diff.py --whole [--tables a,b] [--json FILE]` replays every table in
 `lib/replay_diff.REPLAYED_TABLES` over the files the live `updates` table lists and compares every row (on the
 primary key, read from the row's values) and every live column with the live DB, read-only. DBC-backed tables are
-checked with both replay functions and get the `live_secondary_rows.sql` seed `state.py` adds. Explained differences
-live in `apps/dbc-tools/replay/ALLOWED_TABLE_DIFFS` (TSV `table`, `key`, `column`, `reason`; key `*` = any key;
-column `*`, `*missing` (live only) or `*extra` (replay only) for a row on one side). It exits 1 on an unexplained
-difference or a stale entry. About 15-20 minutes. At dbc-replay-fix: 0 unexplained over 49 table checks;
+checked with both replay functions and get the `live_secondary_rows.sql` seed `state.py` adds, then
+`apps/dbc-tools/source/live_orphan_rows.sql`: the live-only `spell_dbc` (2,273), `talent_dbc` (220) and
+`talenttab_dbc` (30) rows and 4,926 `spell_dbc` index remaps from deleted pending migrations, as `INSERT IGNORE` and
+UPDATEs guarded by the value they replace, so they never override a file. Only the check reads it: in `state.py`'s
+state the remaps would make a full run re-emit ~3,800 stock spells and the 200000 block pointing back at the stock
+indices (tested), and every orphan id is already there from the client DBC. Explained differences live in
+`apps/dbc-tools/replay/ALLOWED_TABLE_DIFFS` (TSV `table`, `key`, `column`, `reason`; key `*` = any key; column `*`,
+`*missing` (live only) or `*extra` (replay only) for a row on one side). It exits 1 on an unexplained difference or a
+stale entry. About 15-20 minutes. At dbc-replay-fix: 0 unexplained over 49 table checks;
 `smart_scripts` 53,890 = 53,890 rows, 0 cell differences.
 
 Not read (recorded as skips): subqueries, function calls (`SIN()`, `COALESCE()`, `UNIX_TIMESTAMP()`), `INSERT ...
