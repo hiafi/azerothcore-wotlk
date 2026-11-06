@@ -3,7 +3,7 @@ Item declarations with item-level variants (item-variants plan v2, .agents/plans
 `item(...)` per item in `source/items/*.py`, naming the loot `ladder` it climbs. `generate.py` resolves every
 non-deferred tier of the ladder to an `item_template` entry (`lib/item_ids.py`, the lock file
 `source/items/item_ids.lock`) and checks the declaration against the itemization catalog (`lib/item_variants.py`).
-Emission is stage IV2.
+`lib/item_emit.py` (IV2) emits the rows.
 
     from lib.dsl.items import Quality, item, ladder, tier
 
@@ -26,6 +26,7 @@ label belongs to the tier, so each ladder (each expansion) names its own; `heroi
 `ITEM_FLAG_HEROIC_TOOLTIP` (0x8), which the client prints as "Heroic" itself, so that tier gets no label table entry
 (IV4). `deferred=True` declares a tier without minting it (no id, no rows, no label); flipping it later mints it.
 The first non-deferred tier is the variant base; every other tier is a variant of it (`item_budget_variant`).
+`sockets=False` makes a tier drop the item's sockets and socket bonus (sockets start at Heroic, user 2026-11-06).
 
 **Items.** `base=<entry>` takes over a stock item as the ladder's first tier (its own id, name, icon, display, slot,
 set); only the higher tiers are minted. Without `base=` every tier is minted: `name=` is required, and `like=<entry>`
@@ -141,6 +142,7 @@ class Tier:
     required_level: int | None = None
     heroic_flag: bool = False
     deferred: bool = False
+    sockets: bool = True
     name: str = ""
 
     @property
@@ -150,11 +152,13 @@ class Tier:
 
 def tier(
     *, label: str, ilvl: int | None = None, quality: int | None = None, required_level: int | None = None,
-    heroic_flag: bool = False, deferred: bool = False,
+    heroic_flag: bool = False, deferred: bool = False, sockets: bool = True,
 ) -> Tier:
     """A ladder tier. `label` is the green tooltip line under the item name ("Normal", "Molten Empowered", ...); on a
     `heroic_flag=True` tier the client prints its own "Heroic" line from flag 0x8 and the label is not written to the
-    label table (IV4). `ilvl` / `quality` / `required_level` go together: all three, or (first tier only) none."""
+    label table (IV4). `ilvl` / `quality` / `required_level` go together: all three, or (first tier only) none.
+    `sockets=False` drops the item's sockets and socket bonus on this tier (and with them the budget's socket
+    discount): user ruling 2026-11-06, sockets start at Heroic, a leveling Normal tier has none."""
     if not isinstance(label, str) or not label.strip():
         raise ItemDeclarationError(f"tier(label={label!r}): the label must be a non-empty string")
     if label != label.strip() or any(ch in label for ch in LABEL_FORBIDDEN):
@@ -173,10 +177,10 @@ def tier(
             raise ItemDeclarationError(f"tier(label={label!r}): ilvl={ilvl!r} must be an int in 1-{MAX_ITEM_LEVEL}")
         _check_quality(f"tier(label={label!r})", quality)
         _check_required_level(f"tier(label={label!r})", required_level)
-    if not isinstance(heroic_flag, bool) or not isinstance(deferred, bool):
-        raise ItemDeclarationError(f"tier(label={label!r}): heroic_flag= and deferred= are True or False")
+    if not all(isinstance(v, bool) for v in (heroic_flag, deferred, sockets)):
+        raise ItemDeclarationError(f"tier(label={label!r}): heroic_flag=, deferred= and sockets= are True or False")
     return Tier(label=label, ilvl=ilvl, quality=None if quality is None else int(quality),
-                required_level=required_level, heroic_flag=heroic_flag, deferred=deferred)
+                required_level=required_level, heroic_flag=heroic_flag, deferred=deferred, sockets=sockets)
 
 
 def _check_quality(where: str, quality) -> None:

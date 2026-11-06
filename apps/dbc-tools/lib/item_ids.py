@@ -37,8 +37,9 @@ LOCK_BLOCK = "item_minted"
 LOCK_HEADER = (
     "# Item variant ids (item-variants plan s4; lib/item_ids.py): one line per (item key, ladder tier),\n"
     "# `<entry> <key> <tier> [base | retired <date> <class> <subclass> <sound> <material> <display> <invtype>\n"
-    "# <sheath>]`, minted from source/ids.yaml's item_minted block. Append-only: a full generate.py run appends new\n"
-    "# lines; never reorder, renumber or delete one (an id must never move or be reused).\n"
+    "# <sheath> | base retired <date>]`, minted from source/ids.yaml's item_minted block. Append-only: a full\n"
+    "# generate.py run appends new lines; never reorder, renumber or delete one (an id must never move or be\n"
+    "# reused).\n"
 )
 # The Item.dbc fields a retired line carries, in line order, as item_template columns.
 RETIRED_DBC_COLUMNS = ("class", "subclass", "SoundOverrideSubclass", "Material", "displayid", "InventoryType", "sheath")

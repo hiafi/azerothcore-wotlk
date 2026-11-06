@@ -51,7 +51,7 @@ sys.path.insert(0, str(TOOL_ROOT))
 from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, source, sql_out, state  # noqa: E402
 from lib import gcd_haste, header_gen, potency_sheet, spell_tables, superseded_ranks  # noqa: E402
 from lib import sqlcorpus, stale_overlay, trainer_pricing, trainer_state  # noqa: E402
-from lib import dungeon_checks, dungeon_heroic, heroic_templates, item_ids, item_variants  # noqa: E402
+from lib import dungeon_checks, dungeon_heroic, heroic_templates, item_emit, item_ids, item_variants  # noqa: E402
 from bootstrap import load_spell_ranks_chains  # noqa: E402
 from lib.dsl import items as dsl_items  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
@@ -921,7 +921,7 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
     if dungeon_heroic.needs_live_world(dsl_classes):
         progress("expanded declared dungeon heroics (encounters, spawnMask, heroic creature templates and rows)")
     # Item variants IV1: every item()'s ladder tiers, checked and given their item_template entries (the lock file
-    # source/items/item_ids.lock). The itemization tables load only when an item is declared. Emission is IV2.
+    # source/items/item_ids.lock). The itemization tables load only when an item is declared.
     item_expansion = item_variants.expand(
         dsl_classes["item_declarations"], ids_cfg=ids_cfg, live_rows=item_live_rows,
         columns=spell_tables.ITEM_TEMPLATE_COLUMNS, items_csv_ids=[e["id"] for e in item_entries],
@@ -934,6 +934,22 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         print(f"note: {note}")
     if dsl_classes["item_declarations"]:
         progress("resolved source/items declarations (ladder tiers, item ids)")
+    # Item variants IV2: the rows every tier owns (lib/item_emit.py). The stock entries' column edits join the
+    # item_template() rows (rendered by spell_tables.render_item_blocks); the minted rows, item_itemization and
+    # item_budget_variant render below; the Item.dbc entries join items.csv's, so the item block and patch-Z carry
+    # them. `item_emission.labels` is the tier label table (entry -> label) IV4 writes.
+    item_emission = None
+    item_rendered = None
+    if item_expansion.assignment is not None and not item_expansion.errors:
+        item_emission = item_emit.build(item_expansion)
+        item_expansion.errors += item_emission.errors
+        item_entries, dbc_errors = item_emit.merge_dbc_entries(item_entries, item_emission)
+        item_expansion.errors += dbc_errors
+        dsl_classes["item_templates"] += item_emission.template_edits
+        if not item_expansion.errors:
+            item_rendered = item_emit.render(item_emission, item_live_rows, item_expansion.tables or {})
+            for note in item_emit.summary_notes(item_emission, item_rendered):
+                print(f"note: {note}")
     if n_dsl:
         creature_counts = {
             **spell_tables.count_declared(dsl_classes),
@@ -1398,7 +1414,10 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         dsl_classes["item_templates"], {**existing_items, **{int(r["ID"]): r for r in item_rows}},
     ):
         print(f"WARNING: {warning}")
-    for warning in lint.check_ranged_ammo_type(dsl_classes["item_templates"], item_entries, item_live_rows):
+    minted_item_rows = {int(r["entry"]): r for r in item_emission.template_rows} if item_emission else {}
+    for warning in lint.check_ranged_ammo_type(
+        dsl_classes["item_templates"], item_entries, {**item_live_rows, **minted_item_rows},
+    ):
         print(f"WARNING: {warning}")
     progress("built rows for SQL emission and ran lint checks")
 
@@ -1585,7 +1604,7 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
         extra_blocks=[
             *prune_blocks, *removal_blocks, trainer_spell_block, *spell_table_blocks,
             *creature_blocks, *dungeon_expansion.spawn_blocks, *dungeon_expansion.smart_blocks,
-            *dungeon_expansion.retire_blocks, *item_blocks,
+            *dungeon_expansion.retire_blocks, *item_blocks, *(item_rendered.blocks if item_rendered else ()),
             spell_data_block,
         ],
     )

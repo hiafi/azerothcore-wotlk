@@ -20,7 +20,10 @@ Chance on hit effect (`spells=`, or a `keep_spells=True` stock item that has one
 spell slots are cleared through `absorbed_spell_slots` unless `keep_spells=True` or `spells=` replaces them. The
 `extra_*` fractions are resolved per tier against that tier's own baseline (Stamina, armor, weapon DPS, block value),
 rounded as `item_itemization` stores them. `itemization="live"` keeps the live row exactly on the first tier; on the
-higher tiers its absolute deltas become fractions of the first tier's baselines first, so they scale too.
+higher tiers its absolute deltas become fractions of the first tier's baselines first, so they scale too. A `base=`
+item without `extra_armor=` keeps its live row's `armor_delta` on its own tier (IV0b pins the itemized stock shields to
+their stock armor that way); its minted tiers take the armor curve. `ResolvedTier.number` is the
+`item_budget_variant.tier` value (`tier_number()`).
 """
 
 from __future__ import annotations
@@ -94,6 +97,8 @@ class ResolvedTier:
     itemization: dict  # ITEMIZATION_COLUMNS -> value
     columns: dict  # explicit item_template columns of this tier (the item's, then the tier's overrides)
     baselines: dict = field(default_factory=dict)  # stamina / armor / dps / block of this tier, for the deltas
+    sockets: bool = True  # False: this tier drops the item's sockets and socket bonus (tier(sockets=False))
+    number: int = 0  # item_budget_variant.tier: 0 Normal, 1 Heroic, 2.. the empowered tiers (tier_number())
 
     @property
     def writes_label(self) -> bool:
@@ -109,7 +114,7 @@ class ResolvedItem:
     inventory_type: int
     item_class: int
     subclass: int
-    sockets: tuple[int, ...]  # the socket colors every tier carries
+    sockets: tuple[int, ...]  # the item's socket colors (a `tier(sockets=False)` tier carries none)
     tiers: list[ResolvedTier] = field(default_factory=list)
 
 
@@ -123,6 +128,8 @@ class ItemExpansion:
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    tables: dict | None = None  # the itemization tables the tiers were resolved against (None: no item declared)
+    catalog: dict | None = None  # their shape catalog
 
     @property
     def minted(self) -> list[tuple[int, str, str]]:
@@ -208,6 +215,16 @@ def _curve_problems(tables: dict, ilvl: int, quality: int, inv_type: int, item_c
 
 def _scaled(fraction: float, baseline) -> float:
     return fraction * baseline if baseline else 0.0
+
+
+def tier_number(ladder: items_dsl.Ladder, spec: items_dsl.Tier) -> int:
+    """`item_budget_variant.tier` of `spec`: its position in the ladder (deferred tiers counted, so flipping one
+    never renumbers the others), shifted so the numbers mean the same step on every ladder - 0 Normal, 1 Heroic,
+    2.. the empowered tiers (IV0). A ladder whose first tier takes the item's own level starts at Normal (0); one
+    whose first tier is explicit (the hard mode ladder, heroic_hm at 71) starts at Heroic (1), so `empowered_1_hm`
+    is tier 2 like `empowered_1` and the empowered module looks both up as (base entry, 2)."""
+    offset = 1 if ladder.tiers[0].explicit else 0
+    return ladder.tiers.index(spec) + offset
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -378,11 +395,19 @@ def _resolve_item(
         if plan["spec"].deferred:
             continue
         for problem in _curve_problems(tables, plan["ilvl"], plan["quality"], inv_type, item_class, subclass,
-                                       len(sockets)):
+                                       len(sockets) if plan["spec"].sockets else 0):
             errors.append(f"{where} tier {plan['spec'].name!r}: {problem}")
     if len(errors) > start:
         return None
 
+    # A taken-over stock item keeps its live armor_delta on its own (first) tier unless extra_armor= is declared:
+    # IV0b pins every itemized stock shield to its stock armor that way, and a 0 here would retune it to the curve.
+    # The minted tiers above take the curve (armor_delta 0, or extra_armor= scaled).
+    stock_armor_delta = None
+    if decl.base is not None and live_row is None and not decl.extra_armor:
+        stock_row = tables["item_itemization"].get((decl.base,))
+        if stock_row is not None:
+            stock_armor_delta = _int(stock_row.get("armor_delta"))
     # Fractions of each delta: declared, or (live) the first tier's absolute delta over its baseline.
     fractions = {"stamina": decl.extra_stamina, "armor": decl.extra_armor, "dps": decl.extra_dps,
                  "block": decl.extra_block}
@@ -415,12 +440,14 @@ def _resolve_item(
                 "primary_share": share,
                 "block_value_delta": budget._round(_scaled(fractions["block"], base["block"])),
             }
+            if plan["first"] and stock_armor_delta is not None:
+                itemization["armor_delta"] = stock_armor_delta
         tier_columns = {**explicit, **decl.override_columns(spec.name)}
         # The budget must resolve on a stand-in row of this tier (the C++ would skip the item otherwise).
         stand_in = {**look, **tier_columns, "entry": decl.base or 0, "ItemLevel": plan["ilvl"],
                     "Quality": plan["quality"]}
         for n in range(1, 4):
-            stand_in[f"socketColor_{n}"] = sockets[n - 1] if n <= len(sockets) else 0
+            stand_in[f"socketColor_{n}"] = sockets[n - 1] if spec.sockets and n <= len(sockets) else 0
         try:
             budget.compute_breakdown(stand_in, {"entry": stand_in["entry"], **itemization}, tables, catalog)
         except budget.BudgetError as error:
@@ -429,6 +456,7 @@ def _resolve_item(
         tier_plans.append({
             "spec": spec, "ilvl": plan["ilvl"], "quality": plan["quality"], "required": plan["required"],
             "first": plan["first"], "itemization": itemization, "columns": tier_columns, "baselines": base,
+            "number": tier_number(decl.ladder, spec), "sockets": spec.sockets,
         })
     if len(errors) > start:
         return None
@@ -438,7 +466,7 @@ def _resolve_item(
 def expand(
     declarations: list[dict], *, ids_cfg: dict, live_rows: dict[int, dict], columns: tuple[str, ...],
     items_csv_ids=(), item_template_decl_ids=(), tables_loader=load_itemization_tables,
-    item_dbc_ids_loader=None, lock: item_ids.Lock | None = None, lock_path=item_ids.LOCK_PATH,
+    item_dbc_ids_loader=None, lock: item_ids.Lock | None = None, lock_path=None,
     today: str | None = None,
 ) -> ItemExpansion:
     """Resolves `declarations` (`dsl_classes["item_declarations"]`). `live_rows` are the live item_template rows by
@@ -450,7 +478,7 @@ def expand(
     decls = [entry["_decl"] for entry in declarations]
     try:
         if lock is None:
-            lock = item_ids.load_lock(lock_path, block)
+            lock = item_ids.load_lock(lock_path or item_ids.LOCK_PATH, block)
         elif block:
             lock = item_ids.parse_lock(lock.text, block)
     except item_ids.LockError as error:
@@ -505,6 +533,7 @@ def expand(
     resolved_items: list[tuple[ResolvedItem, list[dict]]] = []
     if decls:
         tables, catalog = tables_loader()
+        out.tables, out.catalog = tables, catalog
         shape_index = _shape_index(catalog)
         for decl in decls:
             result = _resolve_item(decl, live_rows, tables, catalog, shape_index, columns, out.errors, out.warnings)
@@ -542,6 +571,7 @@ def expand(
                 stock=decl.base is not None and entry == decl.base, ilvl=plan["ilvl"], quality=plan["quality"],
                 required_level=plan["required"], heroic_flag=spec.heroic_flag, variant_base=variant_base,
                 itemization=plan["itemization"], columns=plan["columns"], baselines=plan["baselines"],
+                number=plan["number"], sockets=plan["sockets"],
             ))
             if variant_base is None:
                 variant_base = entry
