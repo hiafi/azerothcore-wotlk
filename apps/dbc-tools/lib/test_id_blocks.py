@@ -53,7 +53,7 @@ USED_DISPLAY_IDS = {
 # name prefix of a module-level int constant -> the ids.yaml block it mints from. SOUND_* in the druid / priest
 # scripts also names stock sound ids (3087, ...), so only values in the custom 90000s count.
 CONSTANT_BLOCKS = {"ICON": "spellicon", "SOUND": "soundentries", "EFFECT": "spellvisual", "KIT": "spellvisual",
-                   "SV": "spellvisual"}
+                   "SV": "spellvisual", "GODI": "gameobjectdisplayinfo", "CDI": "creaturedisplayinfo"}
 
 
 def scanned_used_ids(scripts: list[Path] | None = None) -> dict[str, list[tuple[int, str]]]:
@@ -80,6 +80,7 @@ def scanned_used_ids(scripts: list[Path] | None = None) -> dict[str, list[tuple[
 
 ROGUE_VFX_SCRIPT = "patch_rogue_vfx_models.py"
 WARRIOR_VFX_SCRIPT = "patch_warrior_vfx_models.py"  # S1 echo visual 90300 first; stage V adds the rest
+DEADMINES_VFX_SCRIPT = "patch_deadmines_vfx_models.py"  # Deadmines Pilot WP-V: slag, puddle, wood chips, ball, mast
 # The one shared icon script: every class's Ascension SpellIcon rows are minted here (the rogue's 90370-90374 too), so a
 # spellicon constant of this script may sit in the rogue slice.
 ICON_SCRIPT = "build_patch_i.py"
@@ -103,6 +104,10 @@ def class_slice_problems(class_name: str, script_name: str, scanned: dict[str, l
             if not allowed:
                 problems.append(f"{where} = {value} ({block})")
     return problems
+
+
+def deadmines_slice_problems(scanned: dict[str, list[tuple[int, str]]]) -> list[str]:
+    return class_slice_problems("deadmines", DEADMINES_VFX_SCRIPT, scanned)
 
 
 def rogue_slice_problems(scanned: dict[str, list[tuple[int, str]]]) -> list[str]:
@@ -246,7 +251,8 @@ class BlockShapeTest(unittest.TestCase):
 
     def test_every_constant_the_patch_scripts_mint_is_inside_its_block(self):
         scanned = scanned_used_ids()
-        self.assertEqual(set(scanned), {"spellicon", "soundentries", "spellvisual"})  # the scan found the scripts
+        self.assertEqual(set(scanned), {"spellicon", "soundentries", "spellvisual", "gameobjectdisplayinfo",
+                                        "creaturedisplayinfo"})  # the scan found the scripts
         for block, found in scanned.items():
             for value, where in found:
                 with self.subTest(block=block, constant=where):
@@ -310,6 +316,40 @@ class BlockShapeTest(unittest.TestCase):
         self.assertEqual(class_slice_problems("warrior", WARRIOR_VFX_SCRIPT, scanned), [])
         # not vacuous: the real scan did run over the scripts and over the other classes' slices
         self.assertGreaterEqual(sum(len(found) for found in scanned.values()), 100)
+
+    def test_the_real_scan_finds_only_the_deadmines_script_in_the_deadmines_slices(self):
+        # patch_deadmines_vfx_models.py (Deadmines Pilot WP-V) is the only script that may name a constant in the
+        # deadmines spellvisual 90340-90369, gameobjectdisplayinfo 90020-90029 or creaturedisplayinfo 90700-90719
+        # slices, and it names nothing outside them
+        scanned = scanned_used_ids()
+        self.assertEqual(deadmines_slice_problems(scanned), [])
+        mine = {where.split(":")[1]: value for found in scanned.values() for value, where in found
+                if where.startswith(DEADMINES_VFX_SCRIPT)}
+        self.assertEqual(mine["EFFECT_HOT_SHOT_SLAG"], 90340)
+        self.assertEqual(mine["SV_SPLINTER_SPRAY"], 90344)
+        self.assertEqual(mine["GODI_MAINMAST"], 90020)
+        self.assertEqual(mine["CDI_IRON_SHOT"], 90700)
+        self.assertFalse([name for name in mine if name.startswith("STOCK_")])
+        self.assertGreaterEqual(len(mine), 14)  # not vacuous: every EFFECT / KIT / SV / GODI / CDI constant was seen
+
+    def test_the_scan_flags_a_deadmines_constant_outside_its_slices(self):
+        # planted scripts through the real scanner: 90339 is the warrior's last visual id, 90370 one past the
+        # deadmines slice, 90500 is below the creature display slice (the markers' old, unreserved 90500-90699 range)
+        with tempfile.TemporaryDirectory() as d:
+            script = Path(d) / DEADMINES_VFX_SCRIPT
+            script.write_text("SV_LOW = 90339\nSV_OK = 90340\nKIT_LAST = 90369\nKIT_HIGH = 90370\nGODI_OK = 90020\n"
+                              "GODI_BAD = 90030\nCDI_OK = 90719\nCDI_BAD = 90500\nSTOCK_X = 7538\n")
+            other = Path(d) / "patch_other_vfx_models.py"
+            other.write_text("EFFECT_Z = 90345\nCDI_FINE = 90600\n")
+            scanned = scanned_used_ids([script, other])
+        self.assertCountEqual(
+            deadmines_slice_problems(scanned),
+            [f"{DEADMINES_VFX_SCRIPT}:SV_LOW = 90339 (spellvisual)",
+             f"{DEADMINES_VFX_SCRIPT}:KIT_HIGH = 90370 (spellvisual)",
+             f"{DEADMINES_VFX_SCRIPT}:GODI_BAD = 90030 (gameobjectdisplayinfo)",
+             f"{DEADMINES_VFX_SCRIPT}:CDI_BAD = 90500 (creaturedisplayinfo)",
+             "patch_other_vfx_models.py:EFFECT_Z = 90345 (spellvisual)"],
+        )
 
     def test_the_warrior_script_may_only_name_constants_inside_the_warrior_slices(self):
         # planted scripts through the real scanner: 90299 (the rogue's last visual id) and 90340 (one past the warrior
@@ -514,6 +554,10 @@ class _AnyRows(dict):
     def __contains__(self, key):
         return True
 
+    def get(self, key, default=None):
+        # creature_template_columns() needs a live row for the stock entry it edits; an empty one is enough here
+        return super().get(key, {})
+
 
 class _AnySet(set):
     def __contains__(self, key):
@@ -588,6 +632,15 @@ class ClassDeclarationsTest(unittest.TestCase):
         cls.warrior = declared_ids(TOOL_ROOT / "source" / "classes" / "warrior")
         cls.mage = declared_ids(TOOL_ROOT / "source" / "classes" / "mage")
         cls.npcs = declared_ids(TOOL_ROOT / "source" / "npcs")
+        cls.deadmines = declared_ids(TOOL_ROOT / "source" / "npcs" / "deadmines")
+
+    def test_the_deadmines_package_declares_only_inside_its_reservation(self):
+        # the Deadmines Pilot (source/npcs/deadmines/, one file per boss WP): spells 205200-205399, creatures
+        # 300420-300449; the stock bosses it edits by column (644, 3586, ...) are outside every block
+        self.assertEqual(out_of_reservation("deadmines", self.deadmines), [])
+        self.assertTrue({205200, 205201, 205202} <= set(self.deadmines["spell"]))
+        self.assertTrue({300420, 300421, 300422, 300423, 300424, 300426, 300427, 300429}
+                        <= set(self.deadmines["creature"]))
 
     def test_shaman_declares_only_inside_its_reservation(self):
         self.assertEqual(out_of_reservation("shaman", self.shaman), [])

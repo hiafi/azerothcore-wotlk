@@ -44,7 +44,7 @@ pool half on heroic).
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from . import dbcfmt, heroic_templates, spawn_state, spell_tables, sql_dump, state, trainer_state
@@ -482,8 +482,11 @@ def _difficulty_entry_edits(dsl_classes: dict, entry_maps: dict[int, dict[int, i
     errors = []
     edits = dsl_classes.setdefault("creature_template_edits", [])
     by_entry = {int(r["entry"]): r for r in edits}
+    full = {int(r["entry"]) for r in dsl_classes.get("creature_templates", []) if not r.get(DERIVED)}
     for mapping in entry_maps.values():
         for normal, heroic_entry in sorted(mapping.items()):
+            if normal in full:
+                continue  # a creature_template() row owns the column (checked by _difficulty_entry_errors)
             row = by_entry.get(normal)
             if row is None:
                 row = {"entry": normal, "id": normal, "_update_columns": (), DERIVED: True}
@@ -512,10 +515,17 @@ def side_table_copies(
     pairs = sorted({(n, h) for mapping in entry_maps.values() for n, h in mapping.items()})
     for side in SIDE_TABLES:
         defaults = _schema_defaults(side.name)
-        owned = {_int(r.get(side.entry_column)) for r in declared.get(side.registry_key, []) if not r.get(DERIVED)}
+        own_rows = [r for r in declared.get(side.registry_key, []) if not r.get(DERIVED)]
+        owned = {_int(r.get(side.entry_column)) for r in own_rows}
         by_entry: dict[int, list[dict]] = {}
         for row in live.side_rows.get(side.name, []):
             by_entry.setdefault(_int(row.get(side.entry_column)), []).append(row)
+        # The run's own rows of a normal entry (a boss-kit add's creature_model() / creature_spell()) are what the run
+        # writes: each replaces the replayed row with its key, or joins them (a creature new this run has none).
+        for row in own_rows:
+            rows = by_entry.setdefault(_int(row.get(side.entry_column)), [])
+            key = tuple(_int(row.get(c)) for c in side.key_columns)
+            rows[:] = [r for r in rows if tuple(_int(r.get(c)) for c in side.key_columns) != key] + [row]
         for normal, heroic_entry in pairs:
             if heroic_entry in owned:
                 continue
@@ -544,6 +554,18 @@ def _model_errors(entry_maps: dict[int, dict[int, int]], dsl_classes: dict) -> l
 
 # ---------------------------------------------------------------------------------------------------------------------
 # The entry point
+
+def with_declared_templates(live: LiveWorld, dsl_classes: dict) -> LiveWorld:
+    """`live` with the run's own full `creature_template()` rows (source/npcs, source/classes) on top of the replayed
+    creature_template: a creature declared this run (a boss-kit add listed in a dungeon's `extra=`) gets its heroic
+    template, difficulty link and side-table copies in the same run, instead of only after its upsert reached the SQL
+    on disk. A declared row replaces the replayed one: it is what this run writes. Derived (heroic) rows are left
+    out."""
+    declared = {int(r["entry"]): r for r in dsl_classes.get("creature_templates", []) if not r.get(DERIVED)}
+    if not declared:
+        return live
+    return replace(live, creature_templates={**live.creature_templates, **declared})
+
 
 def _clear_derived(dsl_classes: dict) -> None:
     for key in ("dungeon_encounters", "instance_encounters", "creature_templates",
@@ -617,7 +639,7 @@ def expand(
     _clear_derived(dsl_classes)
     if not heroics:
         return out
-    live = load_live()
+    live = with_declared_templates(load_live(), dsl_classes)
     declared_ids: dict[int, int] = {}
     for entry in heroics:
         for encounter_id in entry["heroic"].get("encounter_ids") or ():

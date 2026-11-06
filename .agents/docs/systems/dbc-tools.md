@@ -705,6 +705,12 @@ package by the `source/world/` pass). Things that are not obvious:
   replay of `smart_scripts` misses 241 live rows and differs on 9 `event_flags` cells (2026-11-05; Scarlet Monastery
   4294-4303 and 4540 among them), so a DELETE + INSERT built from it could drop live rows. Deadmines has no
   normal-only rows; BRS and BRD hold most of them.
+- **A creature declared this run counts as live** (Deadmines Pilot WP-K, `dungeon_heroic.with_declared_templates`):
+  a boss-kit add declared with `creature_template()` (e.g. `source/npcs/deadmines/`) and listed in a dungeon's `extra=`
+  gets its heroic template, `overrides`, lock line and side-table copies (its declared `creature_model()` rows) in the
+  same run, not only after its upsert reached the SQL on disk. Its full row must name the heroic entry itself
+  (`difficulty_entry_1` = its `heroic_ids.lock` id; `--check` prints the id in the "declares the full row" ERROR), and
+  it gets no one-column `difficulty_entry_1` edit.
 - **SpellDifficulty.dbc** (`dbcfmt.SPELLDIFFICULTY`, read-only, not in ALL_TABLES) feeds an informational note only;
   without the file the check is skipped with a note (the shared checkout has no copy yet).
 

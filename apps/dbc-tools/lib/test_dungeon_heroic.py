@@ -625,6 +625,14 @@ class DeadminesTest(unittest.TestCase):
                     creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS, live_data={},
                 ).items()
             }
+            # The Deadmines Pilot's boss package (source/npcs/deadmines/): the boss-kit adds in deadmines.py's extra=
+            kit = registry.load_class_package(
+                generate.SOURCE_DIR / "npcs" / "deadmines", ids_cfg=ids_cfg, existing_creature_rows=existing,
+                creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
+                creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS, live_data={},
+            )
+            for key in ("creature_templates", "creature_template_models", "creature_template_edits"):
+                cls.dsl[key] = cls.dsl.get(key, []) + list(getattr(kit, key))
             cls.index = spell_tables.load_spell_table_index()
             cls.out = dungeon_heroic.expand(cls.dsl, lambda: dungeon_heroic.load_live_world(existing, cls.index))
         finally:
@@ -647,12 +655,17 @@ class DeadminesTest(unittest.TestCase):
         from lib import heroic_templates  # noqa: PLC0415
 
         lock = heroic_templates.parse_lock(heroic_templates.LOCK_PATH.read_text())
+        mapping = next(e for e in self.dsl["dungeons"] if e["map_id"] == 36)["heroic_entries"]
+        # a stock normal row takes a one-column edit; a boss-kit add (Deadmines Pilot) names it in its full row
+        kit = {int(r["entry"]): r for r in self.dsl["creature_templates"] if not r.get(dungeon_heroic.DERIVED)}
         self.assertEqual(
-            {r["entry"]: r["difficulty_entry_1"] for r in self.dsl["creature_template_edits"]},
-            {n: h for n, h in lock.pairs.items() if n in next(
-                e for e in self.dsl["dungeons"] if e["map_id"] == 36)["heroic_entries"]},
+            {r["entry"]: r["difficulty_entry_1"] for r in self.dsl["creature_template_edits"]
+             if "difficulty_entry_1" in r.get("_update_columns", ())},
+            {n: h for n, h in lock.pairs.items() if n in mapping and n not in kit},
         )
-        self.assertEqual(len(self.dsl["creature_template_edits"]), 25)
+        self.assertEqual({n: int(kit[n]["difficulty_entry_1"]) for n in mapping if n in kit},
+                         {300420: 310025, 300421: 310026, 300422: 310027, 300426: 310028})
+        self.assertEqual(len(mapping), 29)
         self.assertEqual(
             [(r["entry"], r["creditEntry"]) for r in self.dsl["instance_encounters"]],
             [(1000 + i, c) for i, (c, _) in enumerate(DEADMINES_CREDITS.values())],
