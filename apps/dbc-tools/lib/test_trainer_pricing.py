@@ -261,12 +261,15 @@ class ReplayTest(ReplayFixture):
         self._seed((212, 1))
         (self._promoted / "b_odd.sql").write_text(
             "DELETE FROM `trainer_spell` WHERE `SpellId` IN (SELECT 1);\n"
-            "UPDATE `trainer_spell` SET `MoneyCost` = `MoneyCost` * 2 WHERE `TrainerId` = 212;\n"
+            "UPDATE `trainer_spell` SET `MoneyCost` = CEIL(`MoneyCost` / 3) WHERE `TrainerId` = 212;\n"
+            # an expression over the row's own columns is evaluated (dbc-replay-fix)
+            "UPDATE `trainer_spell` SET `ReqLevel` = `ReqLevel` * 2 WHERE `TrainerId` = 212;\n"
         )
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             live = trainer_pricing.replay_trainer_spells()
         self.assertEqual(set(live), {(212, 1)})
+        self.assertEqual(live[(212, 1)]["ReqLevel"], 60)
         text = out.getvalue()
         self.assertEqual(text.count("WARNING"), 2, text)
         self.assertIn("b_odd.sql", text)
@@ -362,12 +365,22 @@ class ReplayHardeningTest(ReplayFixture):
         self._seed((212, 1))
         for sql in (
             "DELETE FROM trainer_spell WHERE `TrainerId` = 212;\n",
-            "INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`) VALUES (1, 2);\n",
+            "INSERT IGNORE INTO trainer_spell (`TrainerId`, `SpellId`) VALUES (1, 2);\n",
             "UPDATE `trainer_spell` AS ts SET `ReqLevel` = 1 WHERE ts.`TrainerId` = 212;\n",
-            "TRUNCATE `trainer_spell`;\n",
             "TRUNCATE TABLE trainer_spell;\n",
         ):
             self.assertEqual(self._warnings(sql).count("WARNING"), 1, sql)
+
+    def test_insert_ignore_and_truncate_are_replayed(self):
+        # dbc-replay-fix: both used to be reported and skipped; the replay now models them.
+        self._seed((212, 1))
+        self.assertEqual(self._warnings(
+            "INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `ReqLevel`) VALUES (212, 1, 99), (1, 2, 5);\n"
+        ), "")
+        live = trainer_pricing.replay_trainer_spells()
+        self.assertEqual({k: v["ReqLevel"] for k, v in live.items()}, {(212, 1): 30, (1, 2): 5})
+        self.assertEqual(self._warnings("TRUNCATE `trainer_spell`;\n"), "")
+        self.assertEqual(trainer_pricing.replay_trainer_spells(), {})
 
     def test_comments_and_recognised_forms_do_not_warn(self):
         self._seed((212, 1))
@@ -400,8 +413,12 @@ class ReplayHardeningTest(ReplayFixture):
         )
         live = trainer_pricing.replay_trainer_spells()
         self.assertEqual({k[0]: v["ReqLevel"] for k, v in live.items()}, {199: 30, 200: 5, 217: 5})
-        warned = self._warnings("UPDATE `trainer_spell` SET `ReqLevel` = 1 WHERE `ReqLevel` = 5;\n")
-        self.assertEqual(warned.count("WARNING"), 1)
+        # A WHERE on a non-key column only is applied (dbc-replay-fix), not warned about.
+        self.assertEqual(self._warnings("UPDATE `trainer_spell` SET `ReqLevel` = 1 WHERE `ReqLevel` = 5;\n"), "")
+        live = trainer_pricing.replay_trainer_spells()
+        self.assertEqual({k[0]: v["ReqLevel"] for k, v in live.items()}, {199: 30, 200: 1, 217: 1})
+        self.assertEqual(self._warnings("UPDATE `trainer_spell` SET `ReqLevel` = 1 WHERE `ReqLevel` > (5);\n")
+                         .count("WARNING"), 1)
 
 
 class CreatureReplayTest(unittest.TestCase):

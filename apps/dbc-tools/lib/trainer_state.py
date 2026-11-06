@@ -109,10 +109,13 @@ def load_table_rows(table_name: str, project: tuple[str, ...] | None = None) -> 
         if path == base_path:
             more = sql_dump.read_table_rows(base_path, table_name, fallback_columns)
         else:
+            # A statement it cannot read is recorded in the skip log (sqlcorpus.SKIPS) and the rest of the file is
+            # still read; anything else going wrong skips the file, loudly.
             try:
-                more = sql_dump.read_table_rows(path, table_name, fallback_columns)
+                more = sql_dump.read_table_rows(path, table_name, fallback_columns, tolerant=True)
             except Exception as exc:  # pragma: no cover - defensive, see docstring above
                 print(f"warning: trainer_state.py: skipping {path} for {table_name}: {exc}")
+                sqlcorpus.SKIPS.record(table_name, path.name, 0, f"whole file skipped: {exc}", "")
                 return rows
         if project is not None:
             more = [{c: row[c] for c in project if c in row} for row in more]
@@ -128,18 +131,51 @@ def load_table_rows(table_name: str, project: tuple[str, ...] | None = None) -> 
     return rows
 
 
-def _INVISIBLE_RE_FOR(table_name: str) -> re.Pattern:
-    """Statements on `table_name` the head scanner (`sql_dump._STATEMENT_HEAD_RE`) cannot match: an
-    unquoted table name, `INSERT IGNORE`, or `UPDATE t AS alias`. Never matches the recognised forms."""
-    t = re.escape(table_name)
-    return re.compile(
-        rf"(?:\bINSERT\s+IGNORE\s+INTO\s+`?{t}`?\b"
-        rf"|\b(?:INSERT|REPLACE)\s+INTO\s+{t}\b"
-        rf"|\bDELETE\s+FROM\s+{t}\b"
-        rf"|\bUPDATE\s+{t}\b"
-        rf"|\bUPDATE\s+`{t}`\s+(?:AS\s+)?(?!SET\b)\w+)",
-        re.IGNORECASE,
-    )
+# The statement words that can stand right before a table name, when the name is written without backticks.
+_BARE_HEAD_BEFORE_RE = re.compile(
+    r"(?:\bINSERT\s+(?:IGNORE\s+)?INTO|\bREPLACE\s+INTO|\bDELETE\s+FROM|\bUPDATE|\bTRUNCATE(?:\s+TABLE)?)\s+$",
+    re.IGNORECASE,
+)
+_ALIAS_AFTER_RE = re.compile(r"`\s+(?:AS\s+)?(?!SET\b)\w+", re.IGNORECASE)
+_UPDATE_BEFORE_RE = re.compile(r"\bUPDATE\s+$", re.IGNORECASE)
+
+
+def invisible_statements(table_name: str, text: str) -> list[tuple[int, str]]:
+    """`(offset, statement start)` of every statement on `table_name` the head scanner (`sql_dump._STATEMENT_HEAD_RE`)
+    cannot match: the table name written without backticks, or an `UPDATE` with a table alias. Statements in a
+    `--` / `#` line comment are left out. Found from the occurrences of the name (a plain search, case as written:
+    this repo's SQL spells table names in lower case), so a file pays for its mentions of the table, not for a scan
+    per kind."""
+    found = []
+    n = len(table_name)
+    pos = text.find(table_name)
+    while pos != -1:
+        before = text[pos - 1] if pos else " "
+        after = text[pos + n] if pos + n < len(text) else " "
+        if not (after.isalnum() or after == "_") and not (before.isalnum() or before == "_"):
+            offset = max(0, pos - 40)
+            if before == "`":
+                m = _UPDATE_BEFORE_RE.search(text, offset, pos - 1)
+                if m and _ALIAS_AFTER_RE.match(text, pos + n):
+                    found.append((m.start(), text[m.start():pos + n + 20]))
+            else:
+                m = _BARE_HEAD_BEFORE_RE.search(text, offset, pos)
+                if m:
+                    found.append((m.start(), text[m.start():pos + n]))
+        pos = text.find(table_name, pos + n)
+    return [(start, statement) for start, statement in found if not sql_dump._in_line_comment(text, start)]
+
+
+def _record_invisible(table_name: str, path: Path, text: str, warn: Callable[[str], None] | None) -> None:
+    """Records (and passes to `warn`) every statement on `table_name` in `text` the replay's head scanner cannot see
+    (`invisible_statements`): those are skipped too, and no skip is silent."""
+    for start, statement in invisible_statements(table_name, text):
+        sqlcorpus.SKIPS.record(
+            table_name, path.name, start, "statement the replay cannot see (unquoted table name or an alias)",
+            text[start:start + 160],
+        )
+        if warn:
+            warn(statement)
 
 
 def _migration_files_mentioning(table_name: str, loose: bool = False) -> list[Path]:
@@ -188,10 +224,13 @@ def load_keyed_table_rows(table_name: str, columns: tuple[str, ...]) -> dict[int
     table = DbcTable(name=table_name, dbc_filename="", sql_table=table_name, fmt=fmt, columns=tuple(columns))
 
     def step(rows: dict[int, dict], path: Path) -> dict[int, dict]:
-        sql_dump.apply_statements(rows, table, sqlcorpus.read_text(path))
+        text = sqlcorpus.read_text(path)
+        sql_dump.apply_statements(rows, table, text, source=path.name)
+        if path != base_path:
+            _record_invisible(table_name, path, text, None)
         return rows
 
-    stable, volatile = _split_stable(_migration_files_mentioning(table_name))
+    stable, volatile = _split_stable(_migration_files_mentioning(table_name, loose=True))
     rows = sqlcorpus.checkpointed(
         "keyed_rows", (table_name, tuple(columns)), ([base_path] if base_path.is_file() else []) + stable, dict, step,
     )
@@ -230,12 +269,15 @@ def load_replayed_table_rows(
     a statement didn't mention simply isn't in the row dict, exactly what `TableSpec.defaults`
     needs to see.
 
-    `warn_skipped` prints a WARNING (file name plus the start of the statement) for every statement
-    on `table_name` the replay could not apply, instead of skipping it silently. Opt-in because most
-    callers' tables tolerate an imperfect replay; `lib/trainer_pricing.py` writes rows derived from
-    this one, so an unapplied DELETE there could resurrect a row. With it on, a file is also scanned
-    for statements the replay's scanner cannot even see (unquoted table name, `INSERT IGNORE`,
-    `UPDATE ... AS alias`), and `TRUNCATE` is reported; each prints the same WARNING.
+    Every statement on `table_name` the replay could not apply is recorded in the run's skip log
+    (`sqlcorpus.SKIPS`, summarised by `generate.py`). `warn_skipped` also prints a WARNING (file name plus the start
+    of the statement) for each one right away. Opt-in because most callers' tables tolerate an imperfect replay;
+    `lib/trainer_pricing.py` writes rows derived from this one, so an unapplied DELETE there could resurrect a row.
+    With it on, a file is also scanned for statements the replay's scanner cannot even see (unquoted table name,
+    `UPDATE ... AS alias`); each prints the same WARNING.
+
+    The table's schema defaults (base dump `CREATE TABLE`) fill a key column an INSERT left out and judge a WHERE on
+    any other column an INSERT left out (`sql_dump.apply_composite_key_statements`'s `defaults`).
 
     `fill_missing` gives columns an INSERT omitted the value 0 at INSERT time (see
     `sql_dump.apply_composite_key_statements`); only for tables whose columns all default to 0.
@@ -252,23 +294,19 @@ def load_replayed_table_rows(
             f"live state may be wrong: {' '.join(snippet.split())[:100]}"
         )
 
-    def warn_invisible(path: Path, text: str) -> None:
-        """Statements on the table that `_STATEMENT_HEAD_RE` cannot see at all."""
-        if not warn_skipped:
-            return
-        for m in _INVISIBLE_RE_FOR(table_name).finditer(text):
-            if not sql_dump._in_line_comment(text, m.start()):
-                reporter(path)(m.group(0))
+    defaults = sql_dump.parse_create_table_defaults(base_path, table_name) if base_path.is_file() else {}
 
     def step(rows: dict[tuple, dict], path: Path) -> dict[tuple, dict]:
         text = sqlcorpus.read_text(path)
         sql_dump.apply_composite_key_statements(
-            rows, columns, key_columns, table_name, text, reporter(path), fill_missing,
+            rows, columns, key_columns, table_name, text, reporter(path), fill_missing, defaults=defaults,
+            source=path.name,
         )
-        warn_invisible(path, text)
+        if path != base_path:
+            _record_invisible(table_name, path, text, reporter(path))
         return rows
 
-    stable, volatile = _split_stable(_migration_files_mentioning(table_name, loose=warn_skipped))
+    stable, volatile = _split_stable(_migration_files_mentioning(table_name, loose=True))
     rows = sqlcorpus.checkpointed(
         "replayed_rows", (table_name, tuple(columns), tuple(key_columns), warn_skipped, fill_missing),
         ([base_path] if base_path.is_file() else []) + stable, dict, step,

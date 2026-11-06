@@ -143,6 +143,25 @@ def _promoted_sql_files() -> list[tuple[Path, str]]:
     return _promoted_sql_cache
 
 
+PENDING_SQL_DIR = REPO_ROOT / "data" / "sql" / "updates" / "pending_db_world"
+
+
+def load_applied_rows(table: DbcTable, existing: dict[int, dict]) -> dict[int, dict]:
+    """`existing` (`load_existing_rows`' promoted state, not modified) with every `pending_db_world` rev that mentions
+    the table replayed on top in name order, the order db-import applies them: what the table holds once the pending
+    revs are applied. `generate._drop_unchanged_blocks` uses it so a block whose content already sits in a pending rev
+    is not written again. Module SQL is left out on purpose: DBUpdater ran it when the module was installed, not
+    after the pending revs (mod-transmog's `2016_11_17_transmog_npc.sql` ran on 2026-08-22 and writes spell 200100,
+    which the mage revs that ran later own). Not cached (pending files change every run)."""
+    rows = {row_id: dict(row) for row_id, row in existing.items()}
+    if not PENDING_SQL_DIR.is_dir():
+        return rows
+    for path in sorted(PENDING_SQL_DIR.glob("*.sql")):
+        if sqlcorpus.mentions(path, table.sql_table):
+            sql_dump.apply_statements(rows, table, sqlcorpus.read_text(path), source=path.name)
+    return rows
+
+
 def load_existing_rows(table: DbcTable) -> dict[int, dict]:
     """`load_stock_rows` further overlaid by every already-promoted db_world/
     migration - "what the server's world DB actually has right now". Use
@@ -175,7 +194,7 @@ def load_existing_rows(table: DbcTable) -> dict[int, dict]:
             rows.update(sql_dump.read_table_dump(sql_path, table))
         else:
             try:
-                sql_dump.apply_statements(rows, table, read(path))
+                sql_dump.apply_statements(rows, table, read(path), source=path.name)
             except Exception as exc:  # pragma: no cover - defensive, see module docstring
                 print(f"warning: state.py: skipping {path} for {table.sql_table}: {exc}")
         return rows
@@ -185,7 +204,7 @@ def load_existing_rows(table: DbcTable) -> dict[int, dict]:
     seed = LIVE_SECONDARY_ROWS_SQL.read_text(encoding="utf-8")
     if needle in seed:
         live_rows: dict[int, dict] = {}
-        sql_dump.apply_statements(live_rows, table, seed)
+        sql_dump.apply_statements(live_rows, table, seed, source=LIVE_SECONDARY_ROWS_SQL.name)
         for row_id, row in live_rows.items():
             rows.setdefault(row_id, row)
     return rows

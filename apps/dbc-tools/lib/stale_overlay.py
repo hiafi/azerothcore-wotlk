@@ -41,9 +41,10 @@ from .spell_tables import _is_generated
 
 
 class _Recorder:
-    """The three dict operations `sql_dump.apply_statements` uses (`rows[k] = row`, `rows.pop`, `rows.get`), passed
-    through to `rows`, with every existing or written key noted in `touched`. `get` counts because an UPDATE edits the
-    row it returns in place."""
+    """The dict operations `sql_dump.apply_statements` uses (`rows[k] = row`, `rows.pop`, `rows.get`, `rows.items`,
+    `rows.clear`), passed through to `rows`, with every existing or written key noted in `touched`. `get` counts
+    because an UPDATE edits the row it returns in place; `items` does not (a WHERE judged on every row then pops or
+    gets the ones it matches)."""
 
     def __init__(self, rows: dict[int, dict]):
         self.rows = rows
@@ -62,6 +63,14 @@ class _Recorder:
         if key in self.rows:
             self.touched.add(key)
         return self.rows.get(key, default)
+
+    def items(self):
+        return self.rows.items()
+
+    def clear(self) -> None:
+        """`TRUNCATE`: every row goes."""
+        self.touched.update(self.rows)
+        self.rows.clear()
 
 
 @dataclass

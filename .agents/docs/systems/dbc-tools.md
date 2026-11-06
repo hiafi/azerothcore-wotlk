@@ -146,8 +146,9 @@ applies `(TrainerId, SpellId) IN (...)`, single-column `=`/`IN`, AND-ed point, `
 DELETEs and UPDATEs (`parse_where_predicate`), honours every UPDATE condition (key or not), evaluates
 `SET col = col | n` style expressions, and for `trainer_spell` fills omitted INSERT columns with 0 at INSERT
 time. A statement it cannot apply prints `WARNING: trainer_state.py: <file>: cannot replay ...`, including
-`TRUNCATE`, `INSERT IGNORE`, `UPDATE ... AS alias` and an unquoted table name (the statement scanner
-cannot see those, so a separate scan reports them). Treat any such WARNING as a bug in the replay or the
+`UPDATE ... AS alias` and an unquoted table name (the statement scanner cannot see those, so a separate scan,
+`trainer_state.invisible_statements`, reports them). `TRUNCATE` and `INSERT IGNORE` are replayed since
+dbc-replay-fix. Treat any such WARNING as a bug in the replay or the
 SQL: the pass may re-insert a row that SQL removed. Not detected: a statement that merely mentions the
 table inside a larger construct (a subquery, `INSERT ... SELECT`).
 
@@ -256,9 +257,71 @@ phase warnings of `render_removal_blocks` are gone; the plain typo guard stays).
   the live `updates` table lists and compares the cells phase 0 changed with the live DB (read-only). It applies the
   same three fixes to every file, re-keys a row whose key column an UPDATE changed, and models `TRUNCATE`. Result at
   PS1 (2026-11-05): 40,285 footprint cells on 5,353 rows match except the four `spell_dbc` cells in `ALLOWED_DIFFS`.
-  Not checked: statements the replay cannot apply at all (UPDATEs filtered only on a non-key column such as
-  `creature.id`, WHEREs with `@var+n`), listed per table in its output. Run time ~15 min (`smart_scripts` and
-  `spell_dbc` dominate).
+  Not checked: statements the replay cannot apply at all, listed per table in its output. Run time ~15 min
+  (`smart_scripts` and `spell_dbc` dominate). `replay_diff.py --whole` is the wider check, see "What the SQL replay
+  reads" below.
+
+## What the SQL replay reads, the skip log, and the whole-table check (dbc-replay-fix)
+
+Plan and report: `.agents/plans/dbc-replay-fix/` (local). Every loader replays with `lib/sql_dump.py`
+(`apply_statements` for a one-column key, `apply_composite_key_statements` otherwise; `read_table_rows` is the union
+reader). Since 2026-11-05 they read:
+
+- **Session variables** (`_apply_set`, `_Expr`): `SET @x := <expr>[, @y := ...];` where the value is an integer or
+  float literal, a quoted string, `NULL`, or an expression over earlier variables (`@CGUID * 10`, `-(@A + 3)`,
+  `0x10 | 0x20`). Precedence is MySQL's (`unary - + ~`, `*`, `+ -`, `&`, `|`); names are case-insensitive and each file
+  starts a fresh session (DBUpdater runs one client per file). A `SET` from a subquery or `IF()` leaves the variable
+  unresolved; a statement using it is skipped with that reason. The union readers use the value in effect at each
+  statement (`_VariableTimeline`).
+- **Expressions wherever a value goes**: VALUES (`(@GUID+15)`, `-@GUID`, `@ENTRY*100+1`), SET clauses, and WHERE
+  predicates, where `_prepare_statement` evaluates each arithmetic run holding a variable (keeping an `IN (...)` list's
+  own parentheses and a binary operator after a column). An UPDATE value may read the row's columns
+  (`` `flags` & ~(1 | 2) ``, `_RowExpr`), a column assigned twice in one SET is applied left to right (`_Chain`).
+- **Double-quoted strings** everywhere, `-- ` / `#` / `/* */` comments inside a statement, a `;` inside a string, and
+  a statement head inside a line comment is not a statement (`_head_in_comment`).
+- **WHERE** (`parse_where_predicate`): OR of AND chains of `= != <> < > <= >=` against numbers or quoted strings
+  (strings compare case-insensitively), `[NOT] IN (...)`, `BETWEEN`, `IS [NOT] NULL`, `(col & n) != 0`, on key or
+  non-key columns (core-dd's id-only spawn DELETEs). A condition on a column the row does not hold is judged on the
+  schema default (`defaults`, from the base dump's `CREATE TABLE`); without one it fails for a DELETE and for an
+  UPDATE that names no key column. An UPDATE with no WHERE touches every row.
+- **Schema statements**: `INSERT ... VALUE` (singular, mod-transmog) reads like `VALUES`, `INSERT IGNORE` keeps an
+  existing key's row, `TRUNCATE` empties the table, `ALTER TABLE` `CHANGE`/`RENAME`/`DROP`/`ADD` columns rename or
+  drop them in every row and move the positional INSERT layout for the rest of that file (`creature.id1` -> `id`, 2026_06_16_00). Column names are matched case-insensitively against
+  the loader's column list (`_ColumnCase`). An INSERT that leaves out a key column takes its schema default
+  (Brewfest Reveler's `smart_scripts` rows omit `link`).
+
+**The skip log.** A statement the replay cannot apply is still skipped, never guessed at, but never silently: it
+is recorded in `sqlcorpus.SKIPS` (table, file, offset, reason, statement start). A cached replay stores its skips in
+the snapshot and records them again on a hit, so a warm run reports what a cold one does. `generate.py --check` (whole
+tree) and the full run end with `WARNING: replay: N SQL statement(s) could not be replayed ...` and one line per
+table with the commonest reasons. Statements the head scanner cannot see at all (unquoted table name, `UPDATE`
+with an alias) are recorded by `trainer_state._record_invisible` for every `load_replayed_table_rows` /
+`load_keyed_table_rows` table, which now list files with a bare-word mention of the table too.
+
+**The whole-table check.** `replay_diff.py --whole [--tables a,b] [--json FILE]` replays every table in
+`lib/replay_diff.REPLAYED_TABLES` over the files the live `updates` table lists and compares every row (on the
+primary key, read from the row's values) and every live column with the live DB, read-only. DBC-backed tables are
+checked with both replay functions and get the `live_secondary_rows.sql` seed `state.py` adds. Explained differences
+live in `apps/dbc-tools/replay/ALLOWED_TABLE_DIFFS` (TSV `table`, `key`, `column`, `reason`; key `*` = any key;
+column `*`, `*missing` (live only) or `*extra` (replay only) for a row on one side). It exits 1 on an unexplained
+difference or a stale entry. About 15-20 minutes. At dbc-replay-fix: 0 unexplained over 49 table checks;
+`smart_scripts` 53,890 = 53,890 rows, 0 cell differences.
+
+Not read (recorded as skips): subqueries, function calls (`SIN()`, `COALESCE()`, `UNIX_TIMESTAMP()`), `INSERT ...
+SELECT`, `UPDATE` with a join or an alias, `PREPARE`/`EXECUTE`. `apps/item-tools/item_lib/sql_dump.py` (the
+item_template overlay) is a separate parser and has none of the above.
+
+### Unchanged reserved blocks are judged against pending revs too (dbc-replay-fix follow-up)
+
+`_drop_unchanged_blocks` used to compare a reserved block only with `state.load_existing_rows` (promoted files), so
+every block whose current version sat in an unpromoted `pending_db_world` rev was re-emitted, and a no-change full run
+always wrote a rev (spell 200000-209999 plus the stock-id edits, skilllineability 30400-30999, item 70000-79999). A
+block promoted state calls changed is now also checked against `state.load_applied_rows` (promoted state plus every
+pending rev in name order, the db-import order) and dropped when it equals that. `load_existing_rows` itself stays
+promoted-only. The rev a run writes is written after the check, so it never counts; a row removed from source, a stale
+overlay delete or an edit the pending revs do not hold still emits. Module SQL is left out of the applied state:
+DBUpdater ran it when the module was installed (mod-transmog's `2016_11_17_transmog_npc.sql`, 2026-08-22, writes spell
+200100, which the later mage revs own).
 
 ## WP-T: five more declared tables, and declared removals
 
@@ -381,9 +444,8 @@ hand-written REPLACEs do this): the first name on each line kept its newline, so
 `trainer_spell.ReqAbility2` in `2026_09_27_00.sql`; every value of that column is 0, so it can only
 remove false diffs.
 
-Known replay gap: `UPDATE ... WHERE entry IN (...) AND ScriptName = '...'` (the `IN (...)`
-list, which `parse_and_equality_conditions` rejects, `2026_09_29_03.sql`) is not replayed, so
-900001-900003 read as still on `npc_training_dummy` and re-emit one harmless `ScriptName` upsert.
+The old replay gap `UPDATE ... WHERE entry IN (...) AND ScriptName = '...'` (`2026_09_29_03.sql`) is closed by
+dbc-replay-fix: `parse_where_predicate` reads quoted literals.
 
 ### Three correctness fixes from code review (2026-09-28)
 

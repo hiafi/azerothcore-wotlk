@@ -36,17 +36,21 @@ import pickle
 import re
 import shutil
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-# `INSERT`/`REPLACE`, `DELETE`, `UPDATE .. SET` and an integer `SET @var := n;` in one alternation, a distinctly
-# named table group per branch (Python's `re` forbids reusing a group name across alternatives). Lives here (not in
-# `sql_dump`, which imports it) so the head index and the per-table replays can never disagree about what a head is.
+# `INSERT [IGNORE]`/`REPLACE`, `DELETE`, `UPDATE .. SET`, a session variable `SET @var :=` (any value: the replay
+# evaluates it, `sql_dump._apply_set`), `ALTER TABLE` and `TRUNCATE` in one alternation, a distinctly named table group
+# per branch (Python's `re` forbids reusing a group name across alternatives). Lives here (not in `sql_dump`, which
+# imports it) so the head index and the per-table replays can never disagree about what a head is.
 STATEMENT_HEAD_RE = re.compile(
-    r"(?:INSERT|REPLACE)\s+INTO\s+`(?P<ins_table>\w+)`\s*(?:\((?P<cols>[^)]*)\))?\s*VALUES\s*"
+    r"(?P<ins_verb>INSERT(?:\s+IGNORE)?|REPLACE)\s+INTO\s+`(?P<ins_table>\w+)`\s*(?:\((?P<cols>[^)]*)\))?\s*VALUES?\s*"
     r"|DELETE\s+FROM\s+`(?P<del_table>\w+)`\s*"
     r"|UPDATE\s+`(?P<upd_table>\w+)`\s+SET\s+"
-    r"|SET\s+(?P<set_name>@\w+)\s*:?=\s*(?P<set_value>-?\d+)\s*;",
+    r"|SET\s+(?P<set_name>@\w+)\s*:?=\s*"
+    r"|ALTER\s+TABLE\s+`(?P<alt_table>\w+)`\s*"
+    r"|TRUNCATE\s+(?:TABLE\s+)?`(?P<trunc_table>\w+)`\s*",
     re.IGNORECASE,
 )
 
@@ -54,11 +58,91 @@ FORMAT_VERSION = 1
 _MAGIC = b"DBCTOOLS-CACHE\n"
 
 
+@dataclass(frozen=True)
+class Skip:
+    """One statement a table replay could not apply (`sql_dump` records them; see `SkipLog`)."""
+
+    table: str
+    source: str  # the file name ("?" for text that did not come from a file)
+    offset: int  # where the statement starts in that text
+    reason: str
+    statement: str  # its start, whitespace collapsed
+
+
+class SkipLog:
+    """Every statement the replays skipped this run, with the reason. A replay never guesses at a statement it cannot
+    read, but it must not skip one silently either: the loaders' output drives generated SQL, and a skipped DELETE
+    leaves a row looking live. `generate.py` prints `summary()`; `replay_diff.py --whole` lists them all.
+
+    Kept here (not in `sql_dump`) because `Corpus.checkpointed` stores the skips a cached replay made with its snapshot
+    and records them again on a hit, so a warm run reports exactly what a cold one does. Entries are not deduplicated
+    on the way in (two loaders replaying one table each keep their own); `unique()` is."""
+
+    def __init__(self):
+        self.entries: list[Skip] = []
+
+    def record(self, table: str, source: str, offset: int, reason: str, statement: str) -> None:
+        self.entries.append(Skip(table, source, offset, reason, " ".join(statement.split())[:160]))
+
+    def clear(self) -> None:
+        self.entries.clear()
+
+    def unique(self) -> list[Skip]:
+        """One entry per (table, file, statement), the first reason recorded for it, in recording order."""
+        seen: set[tuple] = set()
+        out = []
+        for skip in self.entries:
+            key = (skip.table, skip.source, skip.offset)
+            if key not in seen:
+                seen.add(key)
+                out.append(skip)
+        return out
+
+    def summary(self, tables: set[str] | None = None) -> list[str]:
+        """One line per table: how many statements were skipped, in how many files, and why (the three most common
+        kinds of reason, a reason's detail in parentheses left out)."""
+        by_table: dict[str, list[Skip]] = {}
+        for skip in self.unique():
+            if tables is None or skip.table in tables:
+                by_table.setdefault(skip.table, []).append(skip)
+        lines = []
+        for table in sorted(by_table):
+            skips = by_table[table]
+            reasons: dict[str, int] = {}
+            for skip in skips:
+                kind = skip.reason.split(" (", 1)[0][:70]
+                reasons[kind] = reasons.get(kind, 0) + 1
+            ranked = sorted(reasons.items(), key=lambda kv: (-kv[1], kv[0]))
+            why = "; ".join(f"{n}x {r}" for r, n in ranked[:3])
+            if len(ranked) > 3:
+                why += f"; {sum(n for _, n in ranked[3:])}x other"
+            files = len({skip.source for skip in skips})
+            lines.append(f"{table}: {len(skips)} statement(s) in {files} file(s): {why}")
+        return lines
+
+
+SKIPS = SkipLog()
+
+
+# Head kind of each table group of `STATEMENT_HEAD_RE`.
+_KIND_GROUPS = (("ins_table", "I"), ("del_table", "D"), ("upd_table", "U"), ("alt_table", "A"), ("trunc_table", "T"))
+
+
+def head_kind(m: re.Match) -> tuple[str, str]:
+    """`(kind, table)` of a `STATEMENT_HEAD_RE` match; a `SET @var` head is `("S", the variable name)`."""
+    for group, kind in _KIND_GROUPS:
+        table = m.group(group)
+        if table is not None:
+            return kind, table
+    return "S", m.group("set_name")
+
+
 class HeadMatch:
     """The `re.Match` surface the replay loops use (`group`, `start`, `end`) over one entry of a `HeadIndex`.
 
-    An entry is `(start, end, kind, table, cols, set_value)`; `kind` is `I` (insert/replace), `D`, `U` or `S` (a
-    `SET @var := n;`, whose `table` slot holds the variable name)."""
+    An entry is `(start, end, kind, table, cols, verb)`; `kind` is `I` (insert/replace, `verb` the statement's verb as
+    written), `D`, `U`, `S` (a `SET @var :=`, whose `table` slot holds the variable name), `A` (`ALTER TABLE`) or `T`
+    (`TRUNCATE`)."""
 
     __slots__ = ("_head",)
 
@@ -72,35 +156,29 @@ class HeadMatch:
         return self._head[1]
 
     def group(self, name: str):
-        _start, _end, kind, table, cols, set_value = self._head
+        _start, _end, kind, table, cols, verb = self._head
         if name == "cols":
             return cols if kind == "I" else None
+        if name == "ins_verb":
+            return verb if kind == "I" else None
         if name == "table":  # the two single-purpose patterns (`_INSERT_HEAD_RE`, `_DELETE_HEAD_RE`)
             return table if kind in ("I", "D") else None
-        if name == "ins_table":
-            return table if kind == "I" else None
-        if name == "del_table":
-            return table if kind == "D" else None
-        if name == "upd_table":
-            return table if kind == "U" else None
         if name == "set_name":
             return table if kind == "S" else None
-        if name == "set_value":
-            return set_value if kind == "S" else None
+        for group, group_kind in _KIND_GROUPS:
+            if name == group:
+                return table if kind == group_kind else None
         raise IndexError(f"no such group {name!r}")
 
 
-_CANDIDATE_RE = re.compile(r"insert|replace|delete|update|set")
+_CANDIDATE_RE = re.compile(r"insert|replace|delete|update|set|alter|truncate")
 
 
 def _head_entry(m: re.Match) -> tuple:
-    if m.group("ins_table") is not None:
-        return (m.start(), m.end(), "I", m.group("ins_table"), m.group("cols"), None)
-    if m.group("del_table") is not None:
-        return (m.start(), m.end(), "D", m.group("del_table"), None, None)
-    if m.group("upd_table") is not None:
-        return (m.start(), m.end(), "U", m.group("upd_table"), None, None)
-    return (m.start(), m.end(), "S", m.group("set_name"), None, m.group("set_value"))
+    kind, table = head_kind(m)
+    if kind == "I":
+        return (m.start(), m.end(), "I", table, m.group("cols"), m.group("ins_verb"))
+    return (m.start(), m.end(), kind, table, None, None)
 
 
 def scan_heads(text: str) -> list[tuple]:
@@ -132,7 +210,7 @@ def scan_heads(text: str) -> list[tuple]:
 class HeadIndex:
     """Statement heads of one file, queryable per table.
 
-    `first(pos, table, kinds)` is the first head starting at or after `pos` that is one of `kinds` and (for I/D/U)
+    `first(pos, table, kinds)` is the first head starting at or after `pos` that is one of `kinds` and (all but `S`)
     names `table`; a `SET @var` head is never table-filtered, exactly like `sql_dump._next_statement`'s regex loop."""
 
     def __init__(self, heads: list[tuple]):
@@ -317,7 +395,8 @@ class Corpus:
         return heads
 
     def mentions(self, path: Path, table: str, loose: bool = False) -> bool:
-        """Whether the file names `table` in backticks (or, `loose`, also bare as a word)."""
+        """Whether the file names `table` in backticks (or, `loose`, anywhere: a bare name, lower case as this repo's
+        SQL writes it, may be a statement the replay must report; a false hit only opens one more file)."""
         key = (str(path), table, loose)
         found = self._mentions.get(key)
         if found is None:
@@ -328,7 +407,7 @@ class Corpus:
             if found is None:
                 text = self.read_text(path)
                 found = f"`{table}`" in text or (
-                    loose and re.search(rf"\b{re.escape(table)}\b", text, re.IGNORECASE) is not None
+                    loose and table in text
                 )
                 persisted[(table, loose)] = found
                 self._index_dirty = True
@@ -377,6 +456,7 @@ class Corpus:
         if cached is not None and done == len(files):
             self.stats["hit"] += 1
             sys.stderr.write(cached.get("err", ""))
+            SKIPS.entries.extend(cached.get("skips", ()))
             return cached["state"], cached["out"]
         # Label each file the replay is about to read with the hash of the very text it will read (the memoised copy
         # `step` gets), not of an earlier read of the same path: a file rewritten in between must not be stored under
@@ -385,6 +465,9 @@ class Corpus:
             if stable[i].suffix == ".sql":
                 files[i] = (str(stable[i]), self.read_text(stable[i]).digest)
         buf, err_buf = io.StringIO(), io.StringIO()
+        if cached is not None:
+            SKIPS.entries.extend(cached.get("skips", ()))
+        skips_from = len(SKIPS.entries) - (len(cached.get("skips", ())) if cached is not None else 0)
         try:
             with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(err_buf):
                 if cached is None:
@@ -404,7 +487,10 @@ class Corpus:
         sys.stderr.write(err)
         if path is not None:
             try:
-                _write_atomic(path, _pack({"files": files, "state": state, "out": out, "err": err}, header))
+                _write_atomic(path, _pack(
+                    {"files": files, "state": state, "out": out, "err": err, "skips": SKIPS.entries[skips_from:]},
+                    header,
+                ))
             except OSError as exc:  # a read-only or full cache dir must not fail the run
                 print(f"warning: dbc-tools cache: could not write {path.name}: {exc}", file=sys.stderr)
         # The caller mutates `state` (it replays pending files on top); the blob on disk stays as written above.
@@ -428,7 +514,7 @@ class Corpus:
 
 
 _ACTIVE: Corpus | None = None
-_RESETS: list[Callable[[], None]] = []
+_RESETS: list[Callable[[], None]] = [SKIPS.clear]
 
 
 def register_reset(fn: Callable[[], None]) -> None:
@@ -497,7 +583,7 @@ def mentions(path: Path, table: str, loose: bool = False) -> bool:
     if corpus is None:
         text = Path(path).read_text(encoding="utf-8")
         return f"`{table}`" in text or (
-            loose and re.search(rf"\b{re.escape(table)}\b", text, re.IGNORECASE) is not None
+            loose and table in text
         )
     return corpus.mentions(path, table, loose)
 

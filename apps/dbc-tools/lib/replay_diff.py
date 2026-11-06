@@ -23,6 +23,7 @@ else is reported as unexplained, and the CLI exits 1.
 
 from __future__ import annotations
 
+import inspect
 import math
 import re
 from dataclasses import dataclass, field
@@ -289,3 +290,193 @@ def _unescape_mysql(value: str) -> object:
     if "\\" not in value:
         return value
     return re.sub(r"\\(.)", lambda m: _MYSQL_ESCAPES.get(m.group(1), m.group(1)), value)
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Whole-table check (`replay_diff.py --tables-check`): every row of every table dbc-tools replays, replay vs live.
+#
+# The footprint check above only looks at the cells the frozen phase 0 wrote. This one asks the wider question: does
+# the replay the loaders use (`sql_dump.apply_composite_key_statements` over the base dump and every applied file, in
+# apply order; and `sql_dump.apply_statements` for the DBC-backed tables `state.load_existing_rows` reads) give the
+# live table, row for row and cell for cell? Rows are matched on the table's primary key (else its first unique key),
+# read from the row's own values, the way every loader's caller reads them.
+
+# Every table a dbc-tools loader replays (`trainer_state.load_replayed_table_rows` / `load_keyed_table_rows`,
+# `state.load_existing_rows`, `spell_tables`' declared and removal tables), plus the tables later stages replay with
+# the same parser (`smart_scripts`, the `creature` / `gameobject` spawns).
+DBC_REPLAYED_TABLES = (
+    "spell_dbc", "talent_dbc", "talenttab_dbc", "skilllineability_dbc", "item_dbc", "spellcasttimes_dbc",
+    "spellduration_dbc", "spellrange_dbc", "spellradius_dbc", "creaturespelldata_dbc",
+)
+REPLAYED_TABLES = (
+    *DBC_REPLAYED_TABLES,
+    "creature_template", "creature_template_model", "creature_default_trainer", "trainer_spell",
+    "spell_script_names", "spell_bonus_data", "spell_proc", "spell_linked_spell", "spell_group",
+    "spell_group_stack_rules", "spell_custom_attr", "spellshapeshiftform_dbc", "spellcategory_dbc",
+    "spell_potency_correction", "disables", "creature_template_spell", "spellrunecost_dbc", "chrclasses_dbc",
+    "spell_threat", "playercreateinfo_action", "playercreateinfo_cast_spell", "playercreateinfo_skills",
+    "mapdifficulty_dbc", "dungeon_access_template", "spell_required", "spell_ranks",
+    "smart_scripts", "creature", "gameobject",
+)
+ALLOWED_TABLE_DIFFS = Path(__file__).resolve().parents[1] / "replay" / "ALLOWED_TABLE_DIFFS"
+
+
+@dataclass
+class WholeTableResult:
+    table: str
+    loader: str  # "composite" (apply_composite_key_statements) or "keyed" (apply_statements, DBC tables)
+    key_columns: tuple[str, ...]
+    live_rows: int = 0
+    replay_rows: int = 0
+    duplicate_keys: int = 0  # replayed rows that hold the same key as another replayed row
+    skipped: list[str] = field(default_factory=list)
+    left_out: list[str] = field(default_factory=list)
+    differences: list[Difference] = field(default_factory=list)
+    seconds: float = 0.0
+
+    def count(self, kind: str, explained: bool | None = None) -> int:
+        """`kind`: "missing" (live only), "extra" (replay only) or "cells"; `explained` None counts both."""
+        def matches(d: Difference) -> bool:
+            if kind == "missing":
+                ok = d.column == "*" and d.live and not d.replayed
+            elif kind == "extra":
+                ok = d.column == "*" and d.replayed and not d.live
+            else:
+                ok = d.column != "*"
+            return ok and (explained is None or (d.reason is not None) == explained)
+        return sum(1 for d in self.differences if matches(d))
+
+
+def whole_table_files(table: str, applied: set[str] | None) -> tuple[list[Path], list[Path]]:
+    """`(files, left_out)`: the base dump and every file that mentions `table`, in apply order, minus the files whose
+    name the live `updates` table does not list (`applied`; None keeps them all; the base dump is always kept)."""
+    base = trainer_state.BASE_SQL_DIR / f"{table}.sql"
+    files = _call(trainer_state._migration_files_mentioning, table, loose=True)
+    left_out = [p for p in files if applied is not None and p.name not in applied]
+    return ([base] if base.is_file() else []) + [p for p in files if p not in left_out], left_out
+
+
+def replay_whole_table(
+    table: str, schema: Schema, applied: set[str] | None = None, loader: str = "composite",
+) -> tuple[list[dict], list[str], list[Path]]:
+    """`(rows, skipped, left_out)`: the table as the loaders replay it. `loader` "composite" is
+    `sql_dump.apply_composite_key_statements` on the schema's own columns and key (what `load_replayed_table_rows`
+    does); "keyed" is `sql_dump.apply_statements` on a synthetic one-key `DbcTable` (what `state.load_existing_rows`
+    does for a DBC-backed table, minus the client DBC seed: the live table holds only what the SQL wrote)."""
+    files, left_out = whole_table_files(table, applied)
+    skipped: list[str] = []
+
+    def on_skip(name: str):
+        return lambda s: skipped.append(f"{name}: {' '.join(s.split())}")
+
+    if loader == "keyed":
+        from .dbcfmt import DbcTable  # noqa: PLC0415 - only this mode needs it
+
+        fmt = "n" + "".join("s" if c in schema.string_columns else "i" for c in schema.columns[1:])
+        dbc_table = DbcTable(name=table, dbc_filename="", sql_table=table, fmt=fmt, columns=schema.columns)
+        keyed: dict = {}
+        for path in files:
+            if path.name == f"{table}.sql" and path.parent == trainer_state.BASE_SQL_DIR:
+                keyed.update(sql_dump.read_table_dump(path, dbc_table))
+            else:
+                text = sqlcorpus.read_text(path)
+                _call(sql_dump.apply_statements, keyed, dbc_table, text, on_skip=on_skip(path.name), source=path.name)
+                if hasattr(trainer_state, "_record_invisible"):
+                    trainer_state._record_invisible(table, path, text, on_skip(path.name))
+        _seed_live_secondary_rows(keyed, table, lambda rows, text: sql_dump.apply_statements(rows, dbc_table, text))
+        return list(keyed.values()), skipped, left_out
+    rows: dict = {}
+    for path in files:
+        text = sqlcorpus.read_text(path)
+        _call(
+            sql_dump.apply_composite_key_statements, rows, schema.columns, schema.key_columns, table,
+            text, on_skip=on_skip(path.name), defaults=schema.defaults, source=path.name,
+        )
+        if hasattr(trainer_state, "_record_invisible") and path.parent != trainer_state.BASE_SQL_DIR:
+            trainer_state._record_invisible(table, path, text, on_skip(path.name))
+    if table in DBC_REPLAYED_TABLES:
+        _seed_live_secondary_rows(rows, table, lambda target, text: sql_dump.apply_composite_key_statements(
+            target, schema.columns, schema.key_columns, table, text))
+    return list(rows.values()), skipped, left_out
+
+
+def _seed_live_secondary_rows(rows: dict, table: str, apply) -> None:
+    """`state.load_existing_rows`' last step for a DBC-backed table: the live-only reserved-block rows of
+    `source/live_secondary_rows.sql` fill the ids no migration wrote (they never override a replayed row)."""
+    from .state import LIVE_SECONDARY_ROWS_SQL  # noqa: PLC0415 - state imports the DBC reader
+
+    text = LIVE_SECONDARY_ROWS_SQL.read_text(encoding="utf-8") if LIVE_SECONDARY_ROWS_SQL.is_file() else ""
+    if f"`{table}`" not in text:
+        return
+    seeded: dict = {}
+    apply(seeded, text)
+    for key, row in seeded.items():
+        rows.setdefault(key, row)
+
+
+def _call(function, *args, **kwargs):
+    """`function(*args, **kwargs)` without the keyword arguments it does not take: the check also runs against the
+    replay code from before `on_skip`/`defaults`/`source` existed, to measure what a change fixed."""
+    accepted = inspect.signature(function).parameters
+    return function(*args, **{k: v for k, v in kwargs.items() if k in accepted})
+
+
+def whole_table_compare(
+    table: str, schema: Schema, rows: list[dict], live_rows: list[dict], columns: tuple[str, ...] | None = None,
+) -> tuple[list[Difference], int]:
+    """`(differences, duplicate keys)`: every key present on one side only (column `*`), and every cell of a row both
+    sides hold that differs, over the live columns (`columns` narrows them: the DBC loader's curated subset). A
+    replayed row's key is read from its values; two replayed rows on one key count as a duplicate and the later one
+    is compared."""
+    replayed: dict[str, dict] = {}
+    duplicates = 0
+    for row in rows:
+        text = key_text(tuple(row.get(c) for c in schema.key_columns))
+        duplicates += text in replayed
+        replayed[text] = row
+    live = {key_text(tuple(_live_key_part(r[c]) for c in schema.key_columns)): r for r in live_rows}
+    differences: list[Difference] = []
+    for text in sorted(replayed.keys() | live.keys()):
+        r, a = replayed.get(text), live.get(text)
+        key = tuple(text.split(","))
+        if r is None or a is None:
+            differences.append(Difference(table, key, "*", r is not None, a is not None))
+            continue
+        for column in a:
+            if columns is not None and column not in columns:
+                continue
+            value = r[column] if column in r else schema.defaults.get(column)
+            if not values_equal(value, a[column], column in schema.string_columns):
+                differences.append(Difference(table, key, column, value, a[column]))
+    return differences, duplicates
+
+
+def _live_key_part(value: object) -> object:
+    """A live key cell as the replay would hold it: `mysql -B` prints `1.0` floats as `1`, ints as digits."""
+    if isinstance(value, str):
+        try:
+            number = float(value)
+        except ValueError:
+            return value
+        return int(number) if number.is_integer() and "." not in value and "e" not in value.lower() else number
+    return value
+
+
+def explain_whole(
+    differences: list[Difference], allowed: dict[tuple[str, str, str], str],
+) -> set[tuple[str, str, str]]:
+    """`explain`, plus `*` in the key field of an allow-list entry: every key of that table and column. The column
+    `*` is a row present on one side only; `*missing` only a row live has and the replay lacks, `*extra` the other
+    way round. Returns the entries that matched nothing."""
+    used = set()
+    for d in differences:
+        kinds = [d.column]
+        if d.column == "*":
+            kinds.append("*missing" if d.live else "*extra")
+        entries = [(d.table, k, c) for c in kinds for k in (key_text(d.key), "*")]
+        for entry in entries:
+            if entry in allowed:
+                d.reason = allowed[entry]
+                used.add(entry)
+                break
+    return set(allowed) - used

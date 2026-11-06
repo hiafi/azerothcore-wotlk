@@ -228,6 +228,7 @@ def _priced_trainer_spells(dsl_classes: dict, trainer_index: trainer_state.Train
 
 def _drop_unchanged_blocks(
     blocks: list[tuple], force: set[str] | frozenset[str] = frozenset(),
+    applied=None,
 ) -> tuple[list[tuple[object, dict, list[dict], list[int]]], int]:
     """Filters a `(table, id_range, rows, edited_ids, existing_rows)` list
     (the 5-tuple shape - one extra element, `existing_rows`, over what
@@ -250,17 +251,50 @@ def _drop_unchanged_blocks(
     nothing).
 
     `force` names tables (`DbcTable.name`) kept regardless: the stale overlay check (lib/stale_overlay.py) found
-    live reserved-block rows that `existing_rows` (promoted state only) cannot show."""
+    live reserved-block rows that `existing_rows` (promoted state only) cannot show.
+
+    `applied` (`{DbcTable.name: rows}`, or a `table -> rows` function asked only for a block promoted state calls
+    changed): the table as db-import leaves it, the promoted files plus every
+    `pending_db_world` rev in update order (`state.load_applied_rows`). A block
+    that differs from promoted state but not from that is dropped too: its content already sits in a pending rev, which
+    db-import applies anyway. Without it every run re-emitted each block whose current version had not been promoted
+    yet (a no-change full run always wrote a rev: spell 200000-209999 plus the stock-id edits, skilllineability,
+    item; dbc-replay-fix). `existing_rows` stays promoted-only for every other question (state.py's docstring); a
+    rev this run writes is written after this check, so it is never part of `applied`. A table missing from
+    `applied` is judged on promoted state alone, as before."""
     filtered = []
     n_dropped = 0
     for table, id_range, rows, edited_ids, existing_rows in blocks:
-        if getattr(table, "name", None) in force or resolve.reserved_range_changed(
+        name = getattr(table, "name", None)
+        keep = name in force or resolve.reserved_range_changed(
             rows, table.index_column, id_range, edited_ids, existing_rows,
-        ):
+        )
+        if keep and name not in force and applied is not None:
+            applied_rows = applied(table) if callable(applied) else applied.get(name)
+            if applied_rows is not None:
+                keep = _changed_against_applied(table.index_column, id_range, rows, edited_ids, applied_rows)
+        if keep:
             filtered.append((table, id_range, rows, edited_ids))
         else:
             n_dropped += 1
     return filtered, n_dropped
+
+
+def _changed_against_applied(
+    index_column: str, id_range: dict, rows: list[dict], edited_ids: list[int], applied_rows: dict[int, dict],
+) -> bool:
+    """Whether a block would change the table as db-import leaves it (`_drop_unchanged_blocks`' `applied`): an edited
+    id whose built row differs from the applied one (or that is not applied at all), a stale-overlay delete of an id
+    still applied, or reserved-block content that differs (`resolve.reserved_range_changed`)."""
+    built = {row[index_column]: row for row in rows}
+    for row_id in edited_ids:
+        want, have = built.get(row_id), applied_rows.get(row_id)
+        if want is None:
+            if have is not None:
+                return True  # a delete (stale overlay) of a row still there
+        elif have is None or not resolve._rows_equal(want, have):
+            return True
+    return resolve.reserved_range_changed(rows, index_column, id_range, [], applied_rows)
 
 
 def _gcd_haste_entries(
@@ -609,6 +643,8 @@ def _check_report(
     check_errors += dungeon_checks.errors_for_run(dsl_classes, spell_table_index)
     for note in dungeon_checks.summary_notes(dsl_classes["dungeons"]):
         print(f"note: {note}")
+    if gcd_scope is None:  # the whole-tree check; a scoped one loads only part of the live state
+        _print_replay_skips()
     if check_errors:
         for problem in check_errors:
             print(f"ERROR: {problem}")
@@ -684,6 +720,22 @@ def _run_scoped_check(corpus: sqlcorpus.Corpus, class_name: str) -> int:
         gcd_scope=(f"{family_name}:", f"{family_name} (family") if family else (), family=family,
         declared_elsewhere={e["id"] for e in source.load_spells_csv(SOURCE_DIR / "spells")},
     )
+
+
+def _print_replay_skips() -> None:
+    """Every statement the SQL replays skipped this run (`sqlcorpus.SKIPS`), one WARNING line per table. A skipped
+    statement leaves the replayed live state wrong for the rows it touches (a skipped DELETE makes a row look live),
+    so none is skipped silently; `replay_diff.py --whole --tables <table>` lists each one with its file."""
+    lines = sqlcorpus.SKIPS.summary()
+    if not lines:
+        return
+    total = len(sqlcorpus.SKIPS.unique())
+    print(
+        f"WARNING: replay: {total} SQL statement(s) could not be replayed; the live state of the rows they touch may "
+        f"be wrong (details: apps/dbc-tools/replay_diff.py --whole --tables <table>):"
+    )
+    for line in lines:
+        print(f"WARNING: replay:   {line}")
 
 
 def _cache_summary(corpus: sqlcorpus.Corpus) -> str:
@@ -1407,7 +1459,11 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
             (table, ids_cfg[name], reuse.reserved_rows.get(name, []), [], existing_secondary_by_id[name])
         )
 
-    blocks, n_skipped_unchanged_tables = _drop_unchanged_blocks(blocks, force=stale_force)
+    # What db-import leaves once every pending rev is applied, per table: a block equal to that is no change.
+    existing_by_name = {block[0].name: block[4] for block in blocks}
+    blocks, n_skipped_unchanged_tables = _drop_unchanged_blocks(
+        blocks, force=stale_force, applied=lambda table: state.load_applied_rows(table, existing_by_name[table.name]),
+    )
     if n_skipped_unchanged_tables:
         print(
             f"note: {n_skipped_unchanged_tables} table(s) reserved-block content is already "
@@ -1506,6 +1562,7 @@ def _run(corpus: sqlcorpus.Corpus) -> int:
                   f"by hand for an immediate manifest.txt refresh)")
     else:
         print("patch: nothing to write (no base DBCs available yet)")
+    _print_replay_skips()
     progress(f"done (cache: {_cache_summary(corpus)})")
 
     return 0

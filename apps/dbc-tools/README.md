@@ -77,6 +77,19 @@ the gitignored `var/dbc-tools-cache/` and reused while the files, the loader cod
 (see `.agents/docs/systems/dbc-tools.md`, "generate.py speed"). A run after a change that touches the cache's inputs
 is slower once. Timings and the harness that proves the output unchanged: `apps/dbc-tools/bench/equivalence.py`.
 
+The replay reads session variables and expressions over them (`SET @PATH := @CGUID * 10;`, `(@GUID+15)`, `-@GUID`
+in VALUES and WHERE), double-quoted strings, `INSERT IGNORE`, `TRUNCATE`, `ALTER TABLE` column renames and WHEREs on
+any column (`.agents/docs/systems/dbc-tools.md`, "What the SQL replay reads"). A statement it still cannot apply is
+skipped and listed: the run ends with `WARNING: replay: N SQL statement(s) could not be replayed ...` and one line
+per table. To see each one, or to check a table's replay against the live DB row by row:
+
+```
+apps/dbc-tools/.venv/bin/python3 apps/dbc-tools/replay_diff.py --whole --tables smart_scripts \
+    --mysql "docker exec -i <ac-database container> mysql -uroot -p<password>" [--json out.json]
+```
+
+Explained differences (rows SQL outside the update files wrote) are in `replay/ALLOWED_TABLE_DIFFS`.
+
 Reads `source/ids.yaml` plus every file under `source/spells/*.csv` and
 `source/talents/*.yaml` (merged together — see "Source files" below for why
 they're split), and produces:
@@ -364,7 +377,8 @@ replayed at the position they ran: `SLOT` puts them after `db_world/2026_08_21_0
 `2026_08_22_00.sql` (`lib/frozen_replay.py`; every table replay and the DBC-table state use it). A removal of a
 row phase 0 inserted is a plain removal: core SQL after the slot wins. Never edit these files; a change to that
 data is a new migration. The replay reads them normalised (`frozen_replay.normalise`: comments in `IN (...)` lists,
-multi-variable `SET`, column-name case), since its parsers skip those shapes.
+multi-variable `SET`, column-name case); the shared parser reads those shapes itself since dbc-replay-fix, so the
+normalisation is kept only so the frozen files replay exactly as they were checked.
 
 `replay_diff.py` checks the slot against the live DB (read-only SELECTs): for every table phase 0 writes, the cells
 it wrote, replayed over the files the live `updates` table lists, must equal the live values, except the entries in
