@@ -23,7 +23,7 @@ and produces:
   3. The same bytes copied into env/dist/data/dbc/ if that directory exists.
 
 Usage: python3 apps/dbc-tools/generate.py [--no-prune] [--check [--class NAME]] [--only items] [--no-cache]
-                                          [--rebuild-cache]
+                                          [--rebuild-cache] [--allow-item-drop]
 
   --no-prune       skip the prune pass (rows an earlier run emitted that source/classes/*
                    no longer declares are left live instead of being deleted)
@@ -39,6 +39,11 @@ Usage: python3 apps/dbc-tools/generate.py [--no-prune] [--check [--class NAME]] 
                    with no deployed patch-Z (no lib/local_config.py, or no Data/patch-Z.mpq under DEPLOY_ROOT). With
                    --check: the item checks and lints only, no spell lints or header gate (a missing deployed patch-Z
                    is a WARNING there). Not combinable with --class.
+  --allow-item-drop
+                   write anyway when the deployed patch-Z's Item.dbc holds custom item ids (70000-79999) that this
+                   run's Item.dbc lacks. Without it such a run (full or --only items) stops before writing anything:
+                   shipping it blank-icons those items on every client (typically a checkout without newer item
+                   declarations, e.g. the minted item variants; merge that branch first). --check only warns.
   --no-cache       do not read or write the on-disk cache of replayed SQL state (var/dbc-tools-cache/)
   --rebuild-cache  ignore what the cache holds, replay everything, and write the cache afresh
   -h, --help       print this message and exit
@@ -67,7 +72,7 @@ from lib.dsl import items as dsl_items  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 from lib.lazy import Lazy  # noqa: E402
 
-KNOWN_FLAGS = {"--no-prune", "--check", "--no-cache", "--rebuild-cache"}
+KNOWN_FLAGS = {"--no-prune", "--check", "--no-cache", "--rebuild-cache", "--allow-item-drop"}
 # `--only NAME`: the run scopes that parse_args accepts. A valid one is returned in the flag set as `--only=NAME`.
 ONLY_SCOPES = ("items",)
 
@@ -868,6 +873,41 @@ def _apply_stale_overlay(stale_inputs: tuple, ids_cfg: dict) -> tuple[dict[str, 
     return stale_deletes, stale_force
 
 
+def _item_dbc_drop_guard(item_entries: list[dict], ids_cfg: dict, patch_base: Path | None) -> int:
+    """R1 B1 / S5: before anything is written, compare the deployed patch-Z's Item.dbc (`patch_base` under `--only
+    items`, else patch_out.DEPLOY_MPQ) with the custom item ids this run's Item.dbc carries (`item_entries`: items.csv
+    plus the item declarations' rows). Ids in the custom item block that the deployed file holds and this build lacks
+    would lose their client row (blank icon, cannot equip) on the next manifest tick, and the item_dbc block DELETE
+    would drop their server rows too. A write run stops (1) unless --allow-item-drop; --check only warns. 0 when there
+    is no deployed archive, nothing would be dropped, or the run is allowed to."""
+    archive = patch_base or patch_out.DEPLOY_MPQ
+    if archive is None or not Path(archive).is_file():
+        return 0
+    block = ids_cfg["item"]
+    try:
+        dropped = patch_repack.dropped_item_ids(archive, [e["id"] for e in item_entries], block)
+    except (patch_repack.PatchBaseError, patch_repack.RepackError, RuntimeError, OSError) as error:
+        print(f"WARNING: could not read Item.dbc from the deployed {archive} to check for dropped item ids: {error}")
+        return 0
+    if not dropped:
+        return 0
+    shown = ", ".join(map(str, dropped[:20])) + (" ..." if len(dropped) > 20 else "")
+    message = (
+        f"the deployed {archive} holds {len(dropped)} custom Item.dbc row(s) ({block['start']}-{block['end']}) that "
+        f"this checkout's build lacks: {shown}. Shipping it would give every client a blank icon for them (and they "
+        f"would not equip), and the item_dbc block would drop their server rows. Usually this checkout is missing "
+        f"another branch's item declarations (source/items/, item_ids.lock): merge it first"
+    )
+    if "--check" in sys.argv:
+        print(f"WARNING: items: {message} (a write run would stop; --allow-item-drop overrides)")
+        return 0
+    if "--allow-item-drop" in sys.argv:
+        print(f"WARNING: items: {message} (--allow-item-drop: writing anyway)")
+        return 0
+    print(f"ERROR: items: {message}. Nothing was written; pass --allow-item-drop to write anyway")
+    return 1
+
+
 def _run_only_items(
     progress, *, check: bool, ids_cfg: dict, item_entries: list[dict], item_live_rows: dict, item_table_index,
     dsl_classes: dict, item_expansion, item_emission, item_rendered, patch_base, corpus: sqlcorpus.Corpus,
@@ -909,6 +949,17 @@ def _run_only_items(
     if patch_base is not None:
         for line in patch_repack.describe(patch_base):
             print(line)
+        try:
+            foreign = patch_repack.foreign_members(patch_base, patch_out.LOOSE_DIR)
+        except (patch_repack.RepackError, RuntimeError, OSError) as error:
+            foreign = []
+            print(f"WARNING: --only items: could not compare {patch_base} with {patch_out.LOOSE_DIR}: {error}")
+        if foreign:
+            print(
+                f"WARNING: --only items: {len(foreign)} file(s) in the deployed {patch_base.name} differ from this "
+                f"checkout's last full build ({patch_out.LOOSE_DIR}): {', '.join(foreign)}. The base is stale or "
+                f"from another checkout; this run ships them again unchanged, with only Item.dbc replaced"
+            )
     if check:
         progress(f"--check --only items done (cache: {_cache_summary(corpus)})")
         return 0
@@ -1183,6 +1234,8 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
             item_rendered = item_emit.render(item_emission, item_live_rows, item_expansion.tables or {})
             for note in item_emit.summary_notes(item_emission, item_rendered):
                 print(f"note: {note}")
+    if not item_expansion.errors and _item_dbc_drop_guard(item_entries, ids_cfg, patch_base) != 0:
+        return 1
     if only_items:  # before the potency sheets and generated headers below: an item-only run writes neither
         return _run_only_items(
             progress, check="--check" in sys.argv, ids_cfg=ids_cfg, item_entries=item_entries,

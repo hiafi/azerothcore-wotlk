@@ -102,6 +102,61 @@ def extract_all(archive: Path, dest: Path) -> dict[str, bytes]:
     return files
 
 
+def read_members(archive: Path) -> dict[str, bytes]:
+    """Every member of `archive` (`extract_all` into a temporary directory), cached per path and file stamp, so the
+    guards below and `repack` read a deployed archive once per run."""
+    archive = Path(archive)
+    stat = archive.stat()
+    key = (str(archive.resolve()), stat.st_mtime_ns, stat.st_size)
+    if key not in _members_cache:
+        with tempfile.TemporaryDirectory(prefix="dbc-repack-read-") as tmp:
+            _members_cache[key] = extract_all(archive, Path(tmp))
+    return _members_cache[key]
+
+
+_members_cache: dict[tuple, dict[str, bytes]] = {}
+
+
+def item_dbc_ids(dbc_bytes: bytes) -> set[int]:
+    """The row ids of an Item.dbc image (Item.dbc has no strings, so the header and a fixed-size body)."""
+    from . import dbcfile, dbcfmt  # noqa: PLC0415
+
+    with tempfile.TemporaryDirectory(prefix="dbc-item-ids-") as tmp:
+        path = Path(tmp) / "Item.dbc"
+        path.write_bytes(dbc_bytes)
+        rows = dbcfile.read_dbc(path, dbcfmt.ITEM)
+    return {int(row[dbcfmt.ITEM.index_column]) for row in rows}
+
+
+def dropped_item_ids(archive: Path, new_ids, block: dict) -> list[int] | None:
+    """B1 / S5 guard: the ids in `block` (`{start, end}`, the custom item block 70000-79999) that the Item.dbc inside
+    the deployed `archive` holds but `new_ids` (the Item.dbc this run builds) lacks. Shipping the new build would
+    give every client those items' blank icon (and they would not equip): typically another checkout, without the
+    newer item declarations, about to replace a patch-Z deployed from a branch that had them. None when the archive
+    has no Item.dbc (nothing to lose)."""
+    member = next((blob for name, blob in read_members(archive).items() if _norm(name) == _norm(ITEM_DBC)), None)
+    if member is None:
+        return None
+    new = {int(i) for i in new_ids}
+    return sorted(i for i in item_dbc_ids(member) if block["start"] <= i <= block["end"] and i not in new)
+
+
+def foreign_members(archive: Path, loose_dir: Path, skip=(ITEM_DBC,)) -> list[str]:
+    """S5: the members of `archive` (except `skip`) whose bytes differ from this checkout's last full build of the
+    same file (`loose_dir/<file name>`, var/dbc-patch/DBFilesClient). A difference means the deployed base is stale
+    or came from another checkout; `--only items` would ship it again with only Item.dbc replaced. Members with no
+    local copy are not compared."""
+    skipped = {_norm(name) for name in skip}
+    out = []
+    for name, blob in read_members(archive).items():
+        if _norm(name) in skipped:
+            continue
+        local = Path(loose_dir) / name.replace("\\", "/").split("/")[-1]
+        if local.is_file() and local.read_bytes() != blob:
+            out.append(name)
+    return out
+
+
 def repack(base: Path, replacements: dict[str, bytes], out_path: Path) -> list[str]:
     """Write `out_path` = every member of `base` unchanged, except that each of `replacements`
     (`{"DBFilesClient\\\\Item.dbc": bytes}`) takes the place of the member of the same name. A replacement that `base`
@@ -110,8 +165,7 @@ def repack(base: Path, replacements: dict[str, bytes], out_path: Path) -> list[s
     that changed (replaced with different bytes, or added); when that is empty nothing is written (the base already
     holds them). `out_path` is written whole or not at all (a temp file next to it, then a rename)."""
     wanted = {_norm(name): (name, blob) for name, blob in replacements.items()}
-    with tempfile.TemporaryDirectory(prefix="dbc-repack-src-") as tmp:
-        before = extract_all(base, Path(tmp))
+    before = read_members(base)
     after: dict[str, bytes] = {}
     replaced: list[str] = []
     for name, blob in before.items():

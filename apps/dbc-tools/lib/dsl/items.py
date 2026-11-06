@@ -8,9 +8,9 @@ non-deferred tier of the ladder to an `item_template` entry (`lib/item_ids.py`, 
     from lib.dsl.items import Quality, item, ladder, tier
 
     VANILLA_DUNGEON = ladder("vanilla_dungeon",
-        normal=tier(label="Normal"),          # the stock row's level, quality, required level, or the item's own
-        heroic=tier(ilvl=66, quality=Quality.EPIC, required_level=60, heroic_flag=True, label="Heroic"),
-        empowered_1=tier(ilvl=76, quality=Quality.EPIC, required_level=60, label="Molten Empowered"),
+        normal=tier(step=0, label="Normal"),  # the stock row's level, quality, required level, or the item's own
+        heroic=tier(step=1, ilvl=66, quality=Quality.EPIC, required_level=60, heroic_flag=True, label="Heroic"),
+        empowered_1=tier(step=2, ilvl=76, quality=Quality.EPIC, required_level=60, label="Molten Empowered"),
     )
 
     item("dm_rhahkzors_hammer", base=5187, primary="Strength (Solo)", secondary="Crit (Solo)",
@@ -27,6 +27,10 @@ label belongs to the tier, so each ladder (each expansion) names its own; `heroi
 (IV4). `deferred=True` declares a tier without minting it (no id, no rows, no label); flipping it later mints it.
 The first non-deferred tier is the variant base; every other tier is a variant of it (`item_budget_variant`).
 `sockets=False` makes a tier drop the item's sockets and socket bonus (sockets start at Heroic, user 2026-11-06).
+`step=` is the tier's `item_budget_variant.tier` number, given explicitly on every tier: the same number means the same
+step on every ladder (0 Normal, 1 Heroic, 2.. the empowered tiers), so a hard mode ladder that starts at Heroic starts
+at step 1, and the empowered module looks every ladder up as (base entry, step). Steps strictly increase along a
+ladder; a deferred tier keeps its step, so flipping it never renumbers the others.
 
 **Items.** `base=<entry>` takes over a stock item as the ladder's first tier (its own id, name, icon, display, slot,
 set); only the higher tiers are minted. Without `base=` every tier is minted: `name=` is required, and `like=<entry>`
@@ -55,10 +59,14 @@ NULL_PRIMARY_SHAPE = "Null (jewelry, 100% secondary)"  # item_shape 0, the prima
 PRIMARY_SHARES = (0, 4000, 6000, 8000, 10000)
 DEFAULT_SHARE_BOTH = 6000
 EFFECT_BUDGET_MULT = 0.7  # itemization-changes.md s3: an item with a Use or Equip effect pays for it
+# Weapon roles for the weapon-tier budget defaults (lib/item_variants.py, RoleCells): the stock itemization's
+# per-(role, slot) correction (itemization-changes.md, Bucket 1 "Weapon role correction").
+WEAPON_ROLES = ("physical", "caster", "tank")
 MAX_SPELLS = 5
 MAX_SOCKETS = 3
 MAX_ITEM_LEVEL = 300  # every reference curve covers 1-300
 MAX_REQUIRED_LEVEL = 80
+MAX_TIER_STEP = 255  # item_budget_variant.tier is a tinyint unsigned
 NEW_ITEM_LEVEL_GAP = 5  # a new item's default required level: its item level minus this (the stock pattern)
 
 _KEY_RE = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -143,6 +151,7 @@ class Tier:
     heroic_flag: bool = False
     deferred: bool = False
     sockets: bool = True
+    step: int = 0  # item_budget_variant.tier: 0 Normal, 1 Heroic, 2.. empowered (explicit, see tier())
     name: str = ""
 
     @property
@@ -151,14 +160,21 @@ class Tier:
 
 
 def tier(
-    *, label: str, ilvl: int | None = None, quality: int | None = None, required_level: int | None = None,
+    *, step: int, label: str, ilvl: int | None = None, quality: int | None = None, required_level: int | None = None,
     heroic_flag: bool = False, deferred: bool = False, sockets: bool = True,
 ) -> Tier:
     """A ladder tier. `label` is the green tooltip line under the item name ("Normal", "Molten Empowered", ...); on a
     `heroic_flag=True` tier the client prints its own "Heroic" line from flag 0x8 and the label is not written to the
     label table (IV4). `ilvl` / `quality` / `required_level` go together: all three, or (first tier only) none.
     `sockets=False` drops the item's sockets and socket bonus on this tier (and with them the budget's socket
-    discount): user ruling 2026-11-06, sockets start at Heroic, a leveling Normal tier has none."""
+    discount): user ruling 2026-11-06, sockets start at Heroic, a leveling Normal tier has none. `step` is the
+    `item_budget_variant.tier` number (required): 0 Normal, 1 Heroic, 2.. the empowered tiers, the same number for the
+    same step on every ladder (R1 N1: explicit, never derived from the tier's position)."""
+    if not _plain_int(step) or not 0 <= step <= MAX_TIER_STEP:
+        raise ItemDeclarationError(
+            f"tier(label={label!r}): step={step!r} must be an int in 0-{MAX_TIER_STEP} (item_budget_variant.tier: "
+            f"0 Normal, 1 Heroic, 2.. the empowered tiers)"
+        )
     if not isinstance(label, str) or not label.strip():
         raise ItemDeclarationError(f"tier(label={label!r}): the label must be a non-empty string")
     if label != label.strip() or any(ch in label for ch in LABEL_FORBIDDEN):
@@ -180,7 +196,7 @@ def tier(
     if not all(isinstance(v, bool) for v in (heroic_flag, deferred, sockets)):
         raise ItemDeclarationError(f"tier(label={label!r}): heroic_flag=, deferred= and sockets= are True or False")
     return Tier(label=label, ilvl=ilvl, quality=None if quality is None else int(quality),
-                required_level=required_level, heroic_flag=heroic_flag, deferred=deferred, sockets=sockets)
+                required_level=required_level, heroic_flag=heroic_flag, deferred=deferred, sockets=sockets, step=step)
 
 
 def _check_quality(where: str, quality) -> None:
@@ -209,7 +225,7 @@ class Ladder:
 def ladder(name: str, **tiers: Tier) -> Ladder:
     """An ordered loot ladder: `ladder("vanilla_dungeon", normal=tier(...), heroic=tier(...), ...)`. Tier names are
     the lock file's tier column, so a shipped tier keeps its name forever (renaming one retires its ids). Only the
-    first tier may take the item's own level; the explicit item levels strictly increase."""
+    first tier may take the item's own level; the explicit item levels and the steps strictly increase."""
     if not isinstance(name, str) or not _KEY_RE.match(name):
         raise ItemDeclarationError(f"ladder({name!r}): the name must match {_KEY_RE.pattern}")
     if not tiers:
@@ -232,6 +248,12 @@ def ladder(name: str, **tiers: Tier) -> Ladder:
             raise ItemDeclarationError(
                 f"ladder({name!r}): item levels must strictly increase, but {high.name!r} ({high.ilvl}) follows "
                 f"{low.name!r} ({low.ilvl})"
+            )
+    for low, high in zip(named, named[1:]):
+        if high.step <= low.step:
+            raise ItemDeclarationError(
+                f"ladder({name!r}): tier steps must strictly increase, but {high.name!r} (step {high.step}) follows "
+                f"{low.name!r} (step {low.step})"
             )
     labels = [t.label for t in named]
     if len(set(labels)) != len(labels):
@@ -309,8 +331,9 @@ class ItemDecl:
     itemization: str | None = None
     extra_stamina: float = 0.0
     extra_armor: float = 0.0
-    extra_dps: float = 0.0
+    extra_dps: float | None = None  # None: a weapon takes its role cell's median DPS adjustment (item_variants)
     extra_block: float = 0.0
+    weapon_role: str | None = None
     spells: tuple[ItemSpell, ...] | None = None
     keep_spells: bool = False
     sockets: tuple[int, ...] | None = None
@@ -331,15 +354,18 @@ def item(
     ilvl: int | None = None, quality: int | None = None, required_level: int | None = None,
     primary: str | None = None, secondary: str | None = None, primary_share: int | None = None,
     budget_mult: float | None = None, itemization: str | None = None,
-    extra_stamina: float = 0.0, extra_armor: float = 0.0, extra_dps: float = 0.0, extra_block: float = 0.0,
-    spells=None, keep_spells: bool = False, sockets=None, socket_bonus: int | None = None,
-    overrides: dict | None = None, **columns,
+    extra_stamina: float = 0.0, extra_armor: float = 0.0, extra_dps: float | None = None, extra_block: float = 0.0,
+    weapon_role: str | None = None, spells=None, keep_spells: bool = False, sockets=None,
+    socket_bonus: int | None = None, overrides: dict | None = None, **columns,
 ) -> ItemDecl:
     """Declares an item on `ladder` (see the module docstring). `key` names it in the lock file forever: the ids of
     its tiers stay with the key whatever its name, level or shapes later become. `columns` are other `item_template`
     columns for every tier (a new item's look when there is no `like=`, `Flags`, `bonding`, ...); `overrides=
-    {"heroic": {...}}` sets columns on one tier (e.g. `itemset` 0 above Normal). Checks here are the ones that need
-    no live data; `lib/item_variants.py` checks the rest when generate.py resolves the item."""
+    {"heroic": {...}}` sets columns on one tier (e.g. `itemset` 0 above Normal). On a weapon-tier slot (weapons,
+    shields, held in off-hand) `budget_mult` and `extra_dps` default to the median of live items of the same role,
+    slot, quality and item level bucket (R1 S1, `lib/item_variants.py` RoleCells); the role comes from the shapes,
+    or `weapon_role=` ("physical", "caster", "tank") overrides it. Checks here are the ones that need no live data;
+    `lib/item_variants.py` checks the rest when generate.py resolves the item."""
     where = f"item({key!r})"
     if not isinstance(key, str) or not _KEY_RE.match(key):
         raise ItemDeclarationError(f"{where}: the key must match {_KEY_RE.pattern}")
@@ -405,8 +431,12 @@ def item(
             raise ItemDeclarationError(f"{where}: no secondary shape means primary_share 10000, not {primary_share}")
         if budget_mult is not None and (not _number(budget_mult) or not 0 < budget_mult <= 2):
             raise ItemDeclarationError(f"{where}: budget_mult={budget_mult!r} must be a number in (0, 2]")
+    if weapon_role is not None and weapon_role not in WEAPON_ROLES:
+        raise ItemDeclarationError(f"{where}: weapon_role={weapon_role!r} must be one of {WEAPON_ROLES}")
     for keyword, value in (("extra_stamina", extra_stamina), ("extra_armor", extra_armor),
                            ("extra_dps", extra_dps), ("extra_block", extra_block)):
+        if keyword == "extra_dps" and value is None:
+            continue
         if not _number(value) or not -1 < value <= 2:
             raise ItemDeclarationError(
                 f"{where}: {keyword}={value!r} is a fraction of the tier's baseline (e.g. 0.25 for +25%), in (-1, 2]"
@@ -441,8 +471,9 @@ def item(
         quality=None if quality is None else int(quality), required_level=required_level,
         primary=primary, secondary=secondary, primary_share=primary_share,
         budget_mult=None if budget_mult is None else float(budget_mult), itemization=itemization,
-        extra_stamina=float(extra_stamina), extra_armor=float(extra_armor), extra_dps=float(extra_dps),
-        extra_block=float(extra_block), spells=spell_tuple, keep_spells=keep_spells, sockets=socket_tuple,
+        extra_stamina=float(extra_stamina), extra_armor=float(extra_armor),
+        extra_dps=None if extra_dps is None else float(extra_dps), extra_block=float(extra_block),
+        weapon_role=weapon_role, spells=spell_tuple, keep_spells=keep_spells, sockets=socket_tuple,
         socket_bonus=socket_bonus, overrides=override_tuple, columns=tuple(sorted(columns.items())),
     )
     active = _registry._active

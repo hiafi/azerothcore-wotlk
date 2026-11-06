@@ -127,9 +127,11 @@ item("dm_rubbery_helmet", name="Rubbery Helmet", like=9420, ilvl=21, bonding=BOP
 item("dm_emberstone_staff", base=5201, itemization="live", ladder=VANILLA_DUNGEON)
 # Defias Leather set 161: Normal keeps the stock itemset, every higher tier clears it (a level 20 set bonus at item
 # level 66 and up would only cost budget). The stock +AP equip spell 9330 folds into the budget (absorbed).
+# Bind on Pickup from Heroic up (user 2026-11-06, R1 N5): Normal stays the stock Bind on Equip belt.
 item("dm_blackened_defias_belt", base=10403, ladder=VANILLA_DUNGEON,
      primary="Agility (Solo)", secondary="Haste (Solo)",
-     overrides={name: {"itemset": 0} for name in ("heroic", "empowered_1", "empowered_2", "empowered_3")})
+     overrides={name: {"itemset": 0, "bonding": BOP}
+                for name in ("heroic", "empowered_1", "empowered_2", "empowered_3")})
 # Agility / Mastery polearm: the second socket is yellow (Mastery is throughput).
 item("dm_impaling_harpoon", base=5200, ladder=VANILLA_DUNGEON,
      primary="Agility (Solo)", secondary="Mastery (Solo)",

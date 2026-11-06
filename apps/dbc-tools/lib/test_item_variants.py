@@ -117,17 +117,18 @@ def live_rows() -> dict[int, dict]:
 def ladder_dungeon(**extra) -> D.Ladder:
     return D.ladder(
         "vanilla_dungeon",
-        normal=D.tier(label="Normal"),
-        heroic=D.tier(ilvl=66, quality=D.Quality.EPIC, required_level=60, heroic_flag=True, label="Heroic"),
-        empowered_1=D.tier(ilvl=76, quality=D.Quality.EPIC, required_level=60, label="Molten Empowered",
+        normal=D.tier(step=0, label="Normal"),
+        heroic=D.tier(step=1, ilvl=66, quality=D.Quality.EPIC, required_level=60, heroic_flag=True, label="Heroic"),
+        empowered_1=D.tier(step=2, ilvl=76, quality=D.Quality.EPIC, required_level=60, label="Molten Empowered",
                            **extra),
     )
 
 
 HARD_MODE = D.ladder(
     "vanilla_hard_mode",
-    heroic_hm=D.tier(ilvl=71, quality=D.Quality.EPIC, required_level=60, label="Heroic Hard Mode"),
-    empowered_1_hm=D.tier(ilvl=81, quality=D.Quality.EPIC, required_level=60, label="Molten Empowered Hard Mode"),
+    heroic_hm=D.tier(step=1, ilvl=71, quality=D.Quality.EPIC, required_level=60, label="Heroic Hard Mode"),
+    empowered_1_hm=D.tier(step=2, ilvl=81, quality=D.Quality.EPIC, required_level=60,
+                          label="Molten Empowered Hard Mode"),
 )
 
 
@@ -137,6 +138,7 @@ def decls(*items: D.ItemDecl) -> list[dict]:
 
 def run(items, lock_text: str = "", rows=None, tables=None, **kwargs) -> item_variants.ItemExpansion:
     tables = tables or fixture_tables()
+    kwargs.setdefault("labels_loader", dict)  # never the real client label table
     from item_lib import shapes  # noqa: PLC0415 - on the path once item_variants._item_lib() ran
 
     return item_variants.expand(
@@ -173,25 +175,35 @@ class DslTest(unittest.TestCase):
     def test_tier_label_rules(self):
         for bad in ("", " Normal", "Nor\"mal", "a|b", "x\ny"):
             with self.assertRaises(D.ItemDeclarationError):
-                D.tier(label=bad)
+                D.tier(step=0, label=bad)
         with self.assertRaises(D.ItemDeclarationError):
-            D.tier(label="Heroic", ilvl=66)  # all three or none
+            D.tier(step=1, label="Heroic", ilvl=66)  # all three or none
         with self.assertRaises(D.ItemDeclarationError):
-            D.tier(label="Heroic", ilvl=301, quality=4, required_level=60)
+            D.tier(step=1, label="Heroic", ilvl=301, quality=4, required_level=60)
         with self.assertRaises(D.ItemDeclarationError):
-            D.tier(label="Heroic", ilvl=66, quality=9, required_level=60)
+            D.tier(step=1, label="Heroic", ilvl=66, quality=9, required_level=60)
+
+    def test_tier_step_is_explicit(self):
+        with self.assertRaises(TypeError):
+            D.tier(label="Normal")  # step= is required
+        for bad in (-1, 256, 1.0, True, "1"):
+            with self.assertRaisesRegex(D.ItemDeclarationError, "step="):
+                D.tier(step=bad, label="Normal")
+        self.assertEqual(D.tier(step=3, label="X", ilvl=86, quality=4, required_level=60).step, 3)
 
     def test_ladder_rules(self):
-        normal = D.tier(label="Normal")
-        heroic = D.tier(ilvl=66, quality=4, required_level=60, label="Heroic")
+        normal = D.tier(step=0, label="Normal")
+        heroic = D.tier(step=1, ilvl=66, quality=4, required_level=60, label="Heroic")
         with self.assertRaisesRegex(D.ItemDeclarationError, "only the first tier"):
             D.ladder("l", heroic=heroic, normal=normal)
         with self.assertRaisesRegex(D.ItemDeclarationError, "strictly increase"):
-            D.ladder("l", a=heroic, b=D.tier(ilvl=66, quality=4, required_level=60, label="B"))
+            D.ladder("l", a=heroic, b=D.tier(step=2, ilvl=66, quality=4, required_level=60, label="B"))
         with self.assertRaisesRegex(D.ItemDeclarationError, "share a label"):
-            D.ladder("l", a=normal, b=D.tier(ilvl=66, quality=4, required_level=60, label="Normal"))
+            D.ladder("l", a=normal, b=D.tier(step=1, ilvl=66, quality=4, required_level=60, label="Normal"))
         with self.assertRaises(D.ItemDeclarationError):
             D.ladder("Bad Name", a=normal)
+        with self.assertRaisesRegex(D.ItemDeclarationError, "steps must strictly increase"):
+            D.ladder("l", a=normal, b=D.tier(step=0, ilvl=66, quality=4, required_level=60, label="B"))
         lad = D.ladder("l", normal=normal, heroic=heroic)
         self.assertEqual(lad.names, ("normal", "heroic"))
         self.assertEqual(lad.tier("heroic").label, "Heroic")
@@ -366,7 +378,7 @@ class IdTest(unittest.TestCase):
             "71004 dm_girdle empowered_1\n", "71004 dm_girdle empowered_1 retired 2026-11-06 4 4 -1 6 4242 6 0\n",
         )
         ok = run([hammer(), D.item("dm_girdle", name="G", like=6087, ilvl=20, primary="Strength (Solo)",
-                                   ladder=D.ladder("other", normal=D.tier(label="Normal"),
+                                   ladder=D.ladder("other", normal=D.tier(step=0, label="Normal"),
                                                    heroic=ladder_dungeon().tier("heroic")))],
                  lock_text=retired_text, rows=rows)
         self.assertEqual(ok.errors, [])
@@ -422,8 +434,8 @@ class OwnerTest(unittest.TestCase):
         self.assertTrue(any("minted entry 71000" in e for e in exp.errors))
 
     def test_ladder_name_used_twice(self):
-        other = D.ladder("vanilla_dungeon", normal=D.tier(label="Normal"),
-                         heroic=D.tier(ilvl=70, quality=4, required_level=60, label="Heroic"))
+        other = D.ladder("vanilla_dungeon", normal=D.tier(step=0, label="Normal"),
+                         heroic=D.tier(step=1, ilvl=70, quality=4, required_level=60, label="Heroic"))
         exp = run([hammer(), girdle(ladder=other)])
         self.assertTrue(any("two different ladders" in e for e in exp.errors))
 
@@ -548,8 +560,8 @@ class LoadTest(unittest.TestCase):
             self.assertEqual(D.load_items_dir(root)["item_declarations"], [])
             (root / "ladders.py").write_text(textwrap.dedent("""
                 from lib.dsl.items import ladder, tier
-                LADDER = ladder("vanilla_dungeon", normal=tier(label="Normal"),
-                                heroic=tier(ilvl=66, quality=4, required_level=60, label="Heroic"))
+                LADDER = ladder("vanilla_dungeon", normal=tier(step=0, label="Normal"),
+                                heroic=tier(step=1, ilvl=66, quality=4, required_level=60, label="Heroic"))
             """))
             (root / "deadmines.py").write_text(textwrap.dedent("""
                 from lib.dsl.items import item

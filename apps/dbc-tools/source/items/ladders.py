@@ -13,6 +13,10 @@ ladder one half step above: 71, 81, 91, 101. The empowered tiers are minted now,
 wiring belongs to the empowered stage (dungeon-difficulties E4/E5).
 
 "Chthonic" spelling confirmed by the user 2026-11-06. Normal tiers carry no sockets (user 2026-11-06).
+
+`step=` is each tier's `item_budget_variant.tier` (R1 N1), the same number for the same step on every ladder:
+0 Normal, 1 Heroic, 2 / 3 / 4 the Molten / Draconic / Chthonic Empowered tiers. The hard mode ladder starts at Heroic,
+so its steps are 1-4 too, and the empowered module (E5) looks both ladders up as (base entry, step).
 """
 
 from lib.dsl.items import Quality, ladder, tier
@@ -20,28 +24,25 @@ from lib.dsl.items import Quality, ladder, tier
 REQUIRED_LEVEL = 60  # every Heroic and Empowered tier needs level 60 (the dungeon is a level 60 heroic)
 HARD_MODE_SUFFIX = " Hard Mode"
 
+EPIC = Quality.EPIC
+HM = HARD_MODE_SUFFIX
+
 VANILLA_DUNGEON = ladder(
     "vanilla_dungeon",
     # Normal: the dungeon at its stock level range. Level, quality (Rare) and required level are the item's own.
-    normal=tier(label="Normal", sockets=False),  # user 2026-11-06: sockets from heroic up
-    heroic=tier(ilvl=66, quality=Quality.EPIC, required_level=REQUIRED_LEVEL, heroic_flag=True, label="Heroic"),
-    empowered_1=tier(ilvl=76, quality=Quality.EPIC, required_level=REQUIRED_LEVEL, label="Molten Empowered"),
-    empowered_2=tier(ilvl=86, quality=Quality.EPIC, required_level=REQUIRED_LEVEL, label="Draconic Empowered"),
-    empowered_3=tier(ilvl=96, quality=Quality.EPIC, required_level=REQUIRED_LEVEL, label="Chthonic Empowered"),
+    normal=tier(step=0, label="Normal", sockets=False),  # user 2026-11-06: sockets from heroic up
+    heroic=tier(step=1, ilvl=66, quality=EPIC, required_level=REQUIRED_LEVEL, heroic_flag=True, label="Heroic"),
+    empowered_1=tier(step=2, ilvl=76, quality=EPIC, required_level=REQUIRED_LEVEL, label="Molten Empowered"),
+    empowered_2=tier(step=3, ilvl=86, quality=EPIC, required_level=REQUIRED_LEVEL, label="Draconic Empowered"),
+    empowered_3=tier(step=4, ilvl=96, quality=EPIC, required_level=REQUIRED_LEVEL, label="Chthonic Empowered"),
 )
 
 # Hard mode bonus list: separate items (not variants of the heroic list), no Heroic flag (decision 2), so every tier
-# gets a label of its own.
+# gets a label of its own. It starts at Heroic, so its first step is 1.
 VANILLA_HARD_MODE = ladder(
     "vanilla_hard_mode",
-    heroic_hm=tier(ilvl=71, quality=Quality.EPIC, required_level=REQUIRED_LEVEL, label="Heroic" + HARD_MODE_SUFFIX),
-    empowered_1_hm=tier(
-        ilvl=81, quality=Quality.EPIC, required_level=REQUIRED_LEVEL, label="Molten Empowered" + HARD_MODE_SUFFIX,
-    ),
-    empowered_2_hm=tier(
-        ilvl=91, quality=Quality.EPIC, required_level=REQUIRED_LEVEL, label="Draconic Empowered" + HARD_MODE_SUFFIX,
-    ),
-    empowered_3_hm=tier(
-        ilvl=101, quality=Quality.EPIC, required_level=REQUIRED_LEVEL, label="Chthonic Empowered" + HARD_MODE_SUFFIX,
-    ),
+    heroic_hm=tier(step=1, ilvl=71, quality=EPIC, required_level=REQUIRED_LEVEL, label="Heroic" + HM),
+    empowered_1_hm=tier(step=2, ilvl=81, quality=EPIC, required_level=REQUIRED_LEVEL, label="Molten Empowered" + HM),
+    empowered_2_hm=tier(step=3, ilvl=91, quality=EPIC, required_level=REQUIRED_LEVEL, label="Draconic Empowered" + HM),
+    empowered_3_hm=tier(step=4, ilvl=101, quality=EPIC, required_level=REQUIRED_LEVEL, label="Chthonic Empowered" + HM),
 )

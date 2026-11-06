@@ -24,10 +24,29 @@ higher tiers its absolute deltas become fractions of the first tier's baselines 
 item without `extra_armor=` keeps its live row's `armor_delta` on its own tier (IV0b pins the itemized stock shields to
 their stock armor that way); its minted tiers take the armor curve. `ResolvedTier.number` is the
 `item_budget_variant.tier` value (`tier_number()`).
+
+**Weapon-tier defaults** (R1 S1). On a weapon-tier slot (`WEAPON_TIER_INV_TYPES`: weapons, shields, held in off-hand)
+the stock budget is corrected per (role, slot): the stock conversion set every such item's `budget_mult` to its
+(role, InventoryType) cell target per item level bucket, and matched weapon DPS through `dps_delta`
+(itemization-changes.md, Buckets 1-2). So, unless `budget_mult=` / `extra_dps=` are declared, each tier takes the
+median `budget_mult` (times 0.7 with an effect) and the median `dps_delta / baseline DPS` of the live itemized items
+of the same role, InventoryType, Quality and item level bucket (`RoleCells`; with fewer than
+`ROLE_CELL_MIN_SAMPLES` samples the quality, then the bucket, is dropped; with none, 1.0 and 0). The role comes from
+the shapes (a Dodge / Parry / Block / Defense secondary = tank, else an Intellect / Spirit / Spell Power lead primary
+= caster, else physical) or `weapon_role=`. An `itemization="live"` item keeps its live row on its first tier; its
+higher tiers take their own cell's `budget_mult` (the live value is its own bucket's cell) and keep the live DPS
+fraction. The sample leaves out the custom item blocks and every entry an item declaration or lock line owns, so the
+generator's own rows never feed back into it.
+
+**Durability** (R1 S2). A minted tier's `MaxDurability` is the median of live items of the same class, subclass,
+InventoryType and Quality within 5 item levels (widened to 10, 20, then any level; at least
+`DURABILITY_MIN_SAMPLES`), else the donor's (`base=` / `like=` row). `ResolvedTier.max_durability`; an explicit
+`MaxDurability` column wins. A stock base tier keeps its own.
 """
 
 from __future__ import annotations
 
+import statistics
 import sys
 from dataclasses import dataclass, field
 
@@ -44,6 +63,21 @@ ITEMIZATION_COLUMNS = (
     "secondary_shape_id", "primary_share", "block_value_delta",
 )
 REQUIRED_NEW_COLUMNS = ("class", "subclass", "InventoryType", "displayid")
+# Weapon-tier slots whose stock budget was corrected per (role, slot) (itemization-changes.md Bucket 1): One-Hand,
+# Shield, Ranged, Two-Hand, Main Hand, Off Hand, Held In Off-hand, Thrown, Ranged Right, Relic.
+WEAPON_TIER_INV_TYPES = (13, 14, 15, 17, 21, 22, 23, 25, 26, 28)
+# The stock conversion's item level buckets (each bucket was fit on its own, so a cell never mixes two).
+ROLE_CELL_BUCKETS = ((1, 59), (60, 100), (101, 200), (201, 300))
+ROLE_CELL_MIN_SAMPLES = 3
+CASTER_LEAD_STATS = frozenset((5, 6, 45))  # Intellect, Spirit, Spell Power
+TANK_STATS = frozenset((12, 13, 14, 15, 48))  # Defense, Dodge, Parry, Block rating, Block value
+DURABILITY_WINDOWS = (5, 10, 20, None)  # item level distance; None = any level
+DURABILITY_MIN_SAMPLES = 3
+# Stock columns a minted copy inherits unpriced or unscaled (R1 N12): a WARNING names them on a base= item.
+INHERITED_WARN_COLUMNS = (
+    "holy_res", "fire_res", "nature_res", "frost_res", "shadow_res", "arcane_res", "RandomProperty", "RandomSuffix",
+    "ItemLimitCategory", "startquest", "ScriptName",
+)
 
 
 def _item_lib():
@@ -98,7 +132,9 @@ class ResolvedTier:
     columns: dict  # explicit item_template columns of this tier (the item's, then the tier's overrides)
     baselines: dict = field(default_factory=dict)  # stamina / armor / dps / block of this tier, for the deltas
     sockets: bool = True  # False: this tier drops the item's sockets and socket bonus (tier(sockets=False))
-    number: int = 0  # item_budget_variant.tier: 0 Normal, 1 Heroic, 2.. the empowered tiers (tier_number())
+    number: int = 0  # item_budget_variant.tier: the tier's step= (0 Normal, 1 Heroic, 2.. empowered)
+    max_durability: int | None = None  # MaxDurability of a minted tier (None: keep the row's); see the docstring
+    budget_source: str = ""  # where budget_mult / dps_delta came from (declared, a role cell, live, default)
 
     @property
     def writes_label(self) -> bool:
@@ -213,18 +249,108 @@ def _curve_problems(tables: dict, ilvl: int, quality: int, inv_type: int, item_c
     return missing
 
 
+def _bucket(ilvl: int) -> int | None:
+    return next((i for i, (low, high) in enumerate(ROLE_CELL_BUCKETS) if low <= ilvl <= high), None)
+
+
+def shape_role(primary: dict | None, secondary: dict | None) -> str:
+    """The weapon role of a (primary, secondary) shape pair, as the stock conversion classified it: tank when the
+    secondary carries Defense / Dodge / Parry / Block, caster when the primary leads with Intellect / Spirit / Spell
+    Power, else physical (a primary-less item too)."""
+    if secondary is not None and TANK_STATS & set(secondary["stats"]):
+        return "tank"
+    if primary is not None and primary["stats"] and primary["stats"][0] in CASTER_LEAD_STATS:
+        return "caster"
+    return "physical"
+
+
+@dataclass
+class RoleCells:
+    """Live (budget_mult, dps fraction) samples of the weapon-tier items, keyed (role, InventoryType, Quality,
+    bucket). `lookup` gives the medians of the most specific cell with enough samples (see the module docstring)."""
+
+    samples: dict = field(default_factory=dict)
+
+    def add(self, role: str, inv_type: int, quality: int, ilvl: int, mult: float, dps_fraction: float | None):
+        self.samples.setdefault((role, inv_type, quality, _bucket(ilvl)), []).append((mult, dps_fraction))
+
+    def lookup(self, role: str, inv_type: int, quality: int, ilvl: int) -> tuple[float, float, str] | None:
+        """(median budget_mult, median dps fraction, which cell) or None when no cell has enough samples."""
+        bucket = _bucket(ilvl)
+        for want_quality, want_bucket in ((quality, bucket), (None, bucket), (quality, None), (None, None)):
+            values = [
+                v for (r, inv, q, b), vs in self.samples.items() for v in vs
+                if r == role and inv == inv_type and (want_quality is None or q == want_quality)
+                and (want_bucket is None or b == want_bucket)
+            ]
+            if len(values) < ROLE_CELL_MIN_SAMPLES:
+                continue
+            mult = round(statistics.median(v[0] for v in values), 4)
+            fractions = [v[1] for v in values if v[1] is not None]
+            fraction = round(statistics.median(fractions), 4) if fractions else 0.0
+            span = "" if want_bucket is None else "-".join(map(str, ROLE_CELL_BUCKETS[want_bucket]))
+            where = (f"{role} InventoryType {inv_type}" + (f" Quality {want_quality}" if want_quality is not None
+                                                            else "") + (f" ilvl {span}" if span else ""))
+            return mult, fraction, f"{where} ({len(values)} live items)"
+        return None
+
+
+def build_role_cells(tables: dict, catalog: dict, live_rows: dict[int, dict], excluded) -> RoleCells:
+    """The `RoleCells` of every live itemized weapon-tier item whose entry `excluded(entry)` does not leave out."""
+    cells = RoleCells()
+    for (entry,), row in tables["item_itemization"].items():
+        item = live_rows.get(int(entry))
+        if item is None or excluded(int(entry)):
+            continue
+        inv_type = _int(item.get("InventoryType"))
+        if inv_type not in WEAPON_TIER_INV_TYPES:
+            continue
+        ilvl, quality = _int(item.get("ItemLevel")), _int(item.get("Quality"))
+        role = shape_role(catalog.get(_int(row.get("primary_shape_id"))),
+                          catalog.get(_int(row.get("secondary_shape_id"))))
+        base = _baselines(tables, ilvl, quality, inv_type, _int(item.get("class")), _int(item.get("subclass")))
+        fraction = float(row.get("dps_delta") or 0) / base["dps"] if base["dps"] else None
+        cells.add(role, inv_type, quality, ilvl, float(row.get("budget_mult") or 0), fraction)
+    return cells
+
+
+@dataclass
+class DurabilityIndex:
+    """Live `MaxDurability` by (class, subclass, InventoryType, Quality): `[(ilvl, durability), ...]`."""
+
+    rows: dict = field(default_factory=dict)
+
+    def lookup(self, item_class: int, subclass: int, inv_type: int, quality: int, ilvl: int) -> int | None:
+        values = self.rows.get((item_class, subclass, inv_type, quality), [])
+        for window in DURABILITY_WINDOWS:
+            near = [d for level, d in values if window is None or abs(level - ilvl) <= window]
+            if len(near) >= DURABILITY_MIN_SAMPLES:
+                return int(statistics.median_low(near))
+        return None
+
+
+def build_durability_index(live_rows: dict[int, dict], excluded) -> DurabilityIndex:
+    index = DurabilityIndex()
+    for entry, row in live_rows.items():
+        if excluded(int(entry)):
+            continue
+        key = (_int(row.get("class")), _int(row.get("subclass")), _int(row.get("InventoryType")),
+               _int(row.get("Quality")))
+        index.rows.setdefault(key, []).append((_int(row.get("ItemLevel")), _int(row.get("MaxDurability"))))
+    return index
+
+
 def _scaled(fraction: float, baseline) -> float:
     return fraction * baseline if baseline else 0.0
 
 
 def tier_number(ladder: items_dsl.Ladder, spec: items_dsl.Tier) -> int:
-    """`item_budget_variant.tier` of `spec`: its position in the ladder (deferred tiers counted, so flipping one
-    never renumbers the others), shifted so the numbers mean the same step on every ladder - 0 Normal, 1 Heroic,
-    2.. the empowered tiers (IV0). A ladder whose first tier takes the item's own level starts at Normal (0); one
-    whose first tier is explicit (the hard mode ladder, heroic_hm at 71) starts at Heroic (1), so `empowered_1_hm`
-    is tier 2 like `empowered_1` and the empowered module looks both up as (base entry, 2)."""
-    offset = 1 if ladder.tiers[0].explicit else 0
-    return ladder.tiers.index(spec) + offset
+    """`item_budget_variant.tier` of `spec`: the tier's explicit `step=` (R1 N1; it used to be derived from the
+    position). The numbers mean the same step on every ladder - 0 Normal, 1 Heroic, 2.. the empowered tiers - so
+    `empowered_1_hm` is 2 like `empowered_1` and the empowered module looks both up as (base entry, 2). A ladder's
+    base tier gets no variant row; a hard mode base (heroic_hm) is step 1."""
+    del ladder  # the step is the tier's own; kept in the signature for the callers
+    return spec.step
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -242,6 +368,7 @@ def _socket_colors(row: dict) -> tuple[int, ...]:
 def _resolve_item(
     decl: items_dsl.ItemDecl, live_rows: dict[int, dict], tables: dict, catalog: dict, shape_index: dict,
     columns: tuple[str, ...], errors: list[str], warnings: list[str],
+    role_cells: RoleCells | None = None, durability: DurabilityIndex | None = None,
 ) -> tuple[ResolvedItem, list[dict]] | None:
     """The item-level checks and the per-tier plan (entries are filled in later). Returns None when a check failed
     in a way that stops the tier plan (the errors say why)."""
@@ -259,6 +386,13 @@ def _resolve_item(
             errors.append(f"{where}: base={decl.base} has no live item_template row (base dump plus migrations)")
             return None
         like_columns = {}
+        inherited = [c for c in INHERITED_WARN_COLUMNS if source_row.get(c) not in (None, "", 0, "0", 0.0)]
+        if inherited:
+            warnings.append(
+                f"{where}: base={decl.base} carries {', '.join(f'{c}={source_row[c]!r}' for c in inherited)}; every "
+                f"minted tier copies it unchanged (the budget neither prices nor scales it) - override it per tier "
+                f"if that is wrong"
+            )
     else:
         like_row = {}
         if decl.like is not None:
@@ -300,6 +434,9 @@ def _resolve_item(
         errors.append(f"{where}: extra_armor= needs a slot with an armor curve")
     if decl.extra_dps and item_class != ITEM_CLASS_WEAPON:
         errors.append(f"{where}: extra_dps= needs a weapon")
+    weapon_tier = inv_type in WEAPON_TIER_INV_TYPES
+    if decl.weapon_role is not None and not weapon_tier:
+        errors.append(f"{where}: weapon_role= needs a weapon-tier slot (InventoryType {WEAPON_TIER_INV_TYPES})")
     if decl.extra_block and not (item_class == ITEM_CLASS_ARMOR and subclass == ARMOR_SUBCLASS_SHIELD):
         errors.append(f"{where}: extra_block= needs a shield")
 
@@ -324,6 +461,7 @@ def _resolve_item(
         primary_id, secondary_id = _int(live_row["primary_shape_id"]), _int(live_row["secondary_shape_id"])
         share, mult = _int(live_row["primary_share"]), float(live_row["budget_mult"])
         absorbed = _int(live_row["absorbed_spell_slots"])
+        role = decl.weapon_role or shape_role(catalog.get(primary_id), catalog.get(secondary_id))
     else:
         primary_name = decl.primary if decl.primary is not None else items_dsl.NULL_PRIMARY_SHAPE
         primary = _find_shape(f"{where} primary", primary_name, shapes.KIND_PRIMARY, shape_index, errors)
@@ -348,6 +486,7 @@ def _resolve_item(
         if primary is None or secondary is None:
             return None
         primary_id, secondary_id = primary["shape_id"], secondary["shape_id"]
+        role = decl.weapon_role or shape_role(primary, secondary)
         if decl.primary_share is not None:
             share = decl.primary_share
         elif decl.primary is None:
@@ -356,10 +495,7 @@ def _resolve_item(
             share = 10000
         else:
             share = items_dsl.DEFAULT_SHARE_BOTH
-        if decl.budget_mult is not None:
-            mult = decl.budget_mult
-        else:
-            mult = items_dsl.EFFECT_BUDGET_MULT if has_effect else 1.0
+        mult = decl.budget_mult  # None: per tier, the role cell (weapon-tier slot) or the plain default
     if len(errors) > start:
         return None
 
@@ -410,7 +546,7 @@ def _resolve_item(
             stock_armor_delta = _int(stock_row.get("armor_delta"))
     # Fractions of each delta: declared, or (live) the first tier's absolute delta over its baseline.
     fractions = {"stamina": decl.extra_stamina, "armor": decl.extra_armor, "dps": decl.extra_dps,
-                 "block": decl.extra_block}
+                 "block": decl.extra_block}  # dps None: per tier, the role cell's
     if live_row is not None:
         first_base = _baselines(tables, plans[0]["ilvl"], plans[0]["quality"], inv_type, item_class, subclass)
         for name, column in (("stamina", "stamina_delta"), ("armor", "armor_delta"), ("dps", "dps_delta"),
@@ -426,13 +562,29 @@ def _resolve_item(
         if spec.deferred:
             continue
         base = _baselines(tables, plan["ilvl"], plan["quality"], inv_type, item_class, subclass)
+        cell = None
+        if weapon_tier and role_cells is not None:
+            cell = role_cells.lookup(role, inv_type, plan["quality"], plan["ilvl"])
         if live_row is not None and plan["first"]:
             itemization = {c: live_row[c] for c in ITEMIZATION_COLUMNS}
+            source = "live row"
         else:
+            tier_mult, dps_fraction, source = mult, fractions["dps"], "declared"
+            if live_row is not None:
+                tier_mult, source = (cell[0], f"role cell {cell[2]}, live DPS") if cell else (mult, "live row")
+            elif tier_mult is None:
+                if cell is not None:
+                    effect = items_dsl.EFFECT_BUDGET_MULT if has_effect else 1.0
+                    tier_mult, source = round(cell[0] * effect, 4), f"role cell {cell[2]}"
+                else:
+                    tier_mult = items_dsl.EFFECT_BUDGET_MULT if has_effect else 1.0
+                    source = "default"
+            if dps_fraction is None:
+                dps_fraction = cell[1] if cell is not None and item_class == ITEM_CLASS_WEAPON else 0.0
             itemization = {
-                "budget_mult": mult,
+                "budget_mult": tier_mult,
                 "stamina_delta": budget._round(_scaled(fractions["stamina"], base["stamina"])),
-                "dps_delta": round(_scaled(fractions["dps"], base["dps"]), 4),
+                "dps_delta": round(_scaled(dps_fraction, base["dps"]), 4),
                 "absorbed_spell_slots": absorbed,
                 "armor_delta": budget._round(_scaled(fractions["armor"], base["armor"])),
                 "primary_shape_id": primary_id,
@@ -453,10 +605,18 @@ def _resolve_item(
         except budget.BudgetError as error:
             errors.append(f"{where} tier {spec.name!r}: the budget does not resolve: {error}")
             continue
+        max_durability = None
+        if not (decl.base is not None and plan["first"]) and "MaxDurability" not in tier_columns:
+            if durability is not None:
+                max_durability = durability.lookup(item_class, subclass, inv_type, plan["quality"], plan["ilvl"])
+            if max_durability is None:
+                donor = source_row if decl.base is not None else live_rows.get(decl.like) if decl.like else None
+                max_durability = _int(donor.get("MaxDurability")) if donor else None
         tier_plans.append({
             "spec": spec, "ilvl": plan["ilvl"], "quality": plan["quality"], "required": plan["required"],
             "first": plan["first"], "itemization": itemization, "columns": tier_columns, "baselines": base,
-            "number": tier_number(decl.ladder, spec), "sockets": spec.sockets,
+            "number": tier_number(decl.ladder, spec), "sockets": spec.sockets, "max_durability": max_durability,
+            "budget_source": source,
         })
     if len(errors) > start:
         return None
@@ -467,12 +627,14 @@ def expand(
     declarations: list[dict], *, ids_cfg: dict, live_rows: dict[int, dict], columns: tuple[str, ...],
     items_csv_ids=(), item_template_decl_ids=(), tables_loader=load_itemization_tables,
     item_dbc_ids_loader=None, lock: item_ids.Lock | None = None, lock_path=None,
-    today: str | None = None,
+    today: str | None = None, labels_loader=None,
 ) -> ItemExpansion:
     """Resolves `declarations` (`dsl_classes["item_declarations"]`). `live_rows` are the live item_template rows by
     entry, `columns` its column names; `items_csv_ids` and `item_template_decl_ids` the entries other declarations
     own. `tables_loader` gives (tables, catalog) and runs only when an item is declared; `item_dbc_ids_loader` gives
-    the live item_dbc ids a new id must skip (runs only when an id is minted). `lock` defaults to the file."""
+    the live item_dbc ids a new id must skip (runs only when an id is minted). `lock` defaults to the file.
+    `labels_loader` gives the current tooltip label table (`item_labels.read_table`, the default) for the retire
+    suggestion of a dropped tier."""
     out = ItemExpansion()
     block = ids_cfg.get(item_ids.LOCK_BLOCK)
     decls = [entry["_decl"] for entry in declarations]
@@ -535,8 +697,19 @@ def expand(
         tables, catalog = tables_loader()
         out.tables, out.catalog = tables, catalog
         shape_index = _shape_index(catalog)
+        # The live samples leave out the custom item blocks and every entry an item owns (declared or locked), so
+        # the generator's own rows never feed back into the defaults.
+        blocks = [ids_cfg[name] for name in ("item", item_ids.LOCK_BLOCK) if ids_cfg.get(name)]
+        owned = {d.base for d in decls if d.base is not None} | {line.entry for line in lock.lines}
+
+        def excluded(entry: int) -> bool:
+            return entry in owned or any(b["start"] <= entry <= b["end"] for b in blocks)
+
+        role_cells = build_role_cells(tables, catalog, live_rows, excluded)
+        durability = build_durability_index(live_rows, excluded)
         for decl in decls:
-            result = _resolve_item(decl, live_rows, tables, catalog, shape_index, columns, out.errors, out.warnings)
+            result = _resolve_item(decl, live_rows, tables, catalog, shape_index, columns, out.errors, out.warnings,
+                                   role_cells, durability)
             if result is not None:
                 resolved_items.append(result)
 
@@ -553,7 +726,15 @@ def expand(
     needs_mint = any(w.base is None and (w.key, w.tier) not in lock.by_pair for w in wanted)
     if needs_mint and item_dbc_ids_loader is not None:
         taken |= set(item_dbc_ids_loader())
-    assignment = item_ids.assign(lock, wanted, block, taken, live_rows, today)
+    wanted_pairs = {(w.key, w.tier) for w in wanted}
+    labels = {}
+    if any(line.pair not in wanted_pairs and not line.retired for line in lock.lines):  # a retire suggestion
+        if labels_loader is None:
+            from . import item_labels  # noqa: PLC0415
+
+            labels_loader = item_labels.read_table
+        labels = labels_loader()
+    assignment = item_ids.assign(lock, wanted, block, taken, live_rows, today, labels)
     out.assignment = assignment
     out.errors += assignment.errors
     out.notes += assignment.notes
@@ -571,7 +752,8 @@ def expand(
                 stock=decl.base is not None and entry == decl.base, ilvl=plan["ilvl"], quality=plan["quality"],
                 required_level=plan["required"], heroic_flag=spec.heroic_flag, variant_base=variant_base,
                 itemization=plan["itemization"], columns=plan["columns"], baselines=plan["baselines"],
-                number=plan["number"], sockets=plan["sockets"],
+                number=plan["number"], sockets=plan["sockets"], max_durability=plan["max_durability"],
+                budget_source=plan["budget_source"],
             ))
             if variant_base is None:
                 variant_base = entry

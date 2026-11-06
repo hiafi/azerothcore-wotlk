@@ -67,7 +67,7 @@ def run(items, rows=None, tbl=None, lock_text=""):
     exp = item_variants.expand(
         F.decls(*items), ids_cfg=F.IDS_CFG, live_rows=rows, columns=TEMPLATE_COLUMNS,
         tables_loader=lambda: (tbl, shapes.catalog(tbl)), lock=item_variants.item_ids.Lock(text=lock_text),
-        today=F.TODAY,
+        today=F.TODAY, labels_loader=dict,
     )
     return exp, item_emit.build(exp)
 
@@ -173,8 +173,8 @@ class EmissionRowsTest(unittest.TestCase):
     def test_tier_without_sockets(self):
         lad = D.ladder(
             "vanilla_dungeon",
-            normal=D.tier(label="Normal", sockets=False),
-            heroic=D.tier(ilvl=66, quality=D.Quality.EPIC, required_level=60, heroic_flag=True, label="Heroic"),
+            normal=D.tier(step=0, label="Normal", sockets=False),
+            heroic=D.tier(step=1, ilvl=66, quality=D.Quality.EPIC, required_level=60, heroic_flag=True, label="Heroic"),
         )
         socketed = F.girdle(sockets=(D.Socket.RED, D.Socket.BLUE), socket_bonus=3312, ladder=lad)
         exp, em = run([socketed])
@@ -197,7 +197,7 @@ class EmissionRowsTest(unittest.TestCase):
         self.assertEqual((tier.row["socketColor_1"], tier.row["socketBonus"]), (0, 0))
         self.assertEqual(stock.by_entry()[71000].row["socketColor_1"], 2)
         with self.assertRaises(D.ItemDeclarationError):
-            D.tier(label="Normal", sockets="no")
+            D.tier(step=0, label="Normal", sockets="no")
 
     def test_shield_takeover_keeps_its_pin_on_normal_only(self):
         _, em = run([shield()])

@@ -15,6 +15,7 @@ into a run error before any file is written).
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -27,6 +28,7 @@ HEADER = (
     "-- absent: the client prints its own \"Heroic\" line for the 0x8 item flag.\n"
 )
 FORBIDDEN = '|"\\'
+_ENTRY_RE = re.compile(r'^\s*\[(\d+)\] = "([^"]*)",$')
 
 
 def _check_label(entry: int, label: object) -> str:
@@ -47,6 +49,19 @@ def render_lua(labels: dict[int, str]) -> str:
         lines.append(f'    [{entry}] = "{_check_label(entry, labels[entry])}",')
     lines.append("}")
     return "\n".join(lines) + "\n"
+
+
+def read_table(path: Path = OUT_PATH) -> dict[int, str]:
+    """The labels the current generated table holds (`{entry: label}`; empty when the file is missing). Used to keep
+    a tier's label on its retire line (lib/item_ids.retire_suggestion)."""
+    if not path.is_file():
+        return {}
+    out = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        m = _ENTRY_RE.match(line)
+        if m:
+            out[int(m.group(1))] = m.group(2)
+    return out
 
 
 def is_stale(text: str, path: Path = OUT_PATH) -> bool:

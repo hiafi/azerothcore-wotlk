@@ -287,17 +287,24 @@ def materialized_item_fields(breakdown: dict) -> dict:
     Stamina, zero-padded), `armor` if `has_armor_curve`, `block` if
     `has_block_value_curve`, and `dmg_min1`/`dmg_max1` if it's a weapon with
     a resolved DPS curve entry. Doesn't touch anything else (spell slots are
-    a separate concern - see `absorb_spell_fields()`)."""
+    a separate concern - see `absorb_spell_fields()`).
+
+    A line whose value is 0 (an allocation that rounds to 0, or a 0
+    Stamina) is left out and the lines after it move up, as the C++ does:
+    the client would print it as "+0 <stat>"."""
     fields: dict = {}
     slot = 1
     for alloc in breakdown["allocations"]:
+        if alloc["rounded"] == 0:
+            continue
         fields[f"stat_type{slot}"] = alloc["stat_type"]
         fields[f"stat_value{slot}"] = alloc["rounded"]
         slot += 1
 
-    fields[f"stat_type{slot}"] = ITEM_MOD_STAMINA
-    fields[f"stat_value{slot}"] = breakdown["final_stamina"]
-    slot += 1
+    if breakdown["final_stamina"] != 0:
+        fields[f"stat_type{slot}"] = ITEM_MOD_STAMINA
+        fields[f"stat_value{slot}"] = breakdown["final_stamina"]
+        slot += 1
 
     for clear in range(slot, MAX_ITEM_PROTO_STATS + 1):
         fields[f"stat_type{clear}"] = 0

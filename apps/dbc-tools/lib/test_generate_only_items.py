@@ -84,5 +84,49 @@ class RefusalTest(unittest.TestCase):
         self.assertIn("a write run would refuse", out)
 
 
+class ItemDropGuardTest(unittest.TestCase):
+    """R1 B1 / S5: a run whose Item.dbc lacks custom ids the deployed patch-Z holds stops before writing, unless
+    --allow-item-drop; --check only warns."""
+
+    IDS = {"item": {"start": 70000, "end": 79999}}
+
+    def guard(self, argv, ids_in_build, dropped):
+        out = io.StringIO()
+        with mock.patch.object(sys, "argv", ["generate.py", *argv]), \
+                mock.patch.object(generate.patch_repack, "dropped_item_ids", return_value=dropped) as probe, \
+                redirect_stdout(out):
+            with mock.patch.object(Path, "is_file", return_value=True):
+                rc = generate._item_dbc_drop_guard([{"id": i} for i in ids_in_build], self.IDS, Path("/x/patch-Z.mpq"))
+        probe.assert_called_once()
+        return rc, out.getvalue()
+
+    def test_write_run_stops(self):
+        rc, text = self.guard([], [70100], [71000, 71001])
+        self.assertEqual(rc, 1)
+        self.assertIn("ERROR: items:", text)
+        self.assertIn("71000, 71001", text)
+        self.assertIn("--allow-item-drop", text)
+
+    def test_override_and_check_only_warn(self):
+        for argv in (["--allow-item-drop"], ["--check"], ["--only", "items", "--check"]):
+            with self.subTest(argv=argv):
+                rc, text = self.guard(argv, [70100], [71000])
+                self.assertEqual(rc, 0)
+                self.assertIn("WARNING: items:", text)
+
+    def test_nothing_dropped_is_silent(self):
+        rc, text = self.guard([], [70100, 71000], [])
+        self.assertEqual((rc, text), (0, ""))
+
+    def test_no_deployed_archive_is_skipped(self):
+        with mock.patch.object(patch_out, "DEPLOY_MPQ", None), \
+                mock.patch.object(generate.patch_repack, "dropped_item_ids") as probe:
+            self.assertEqual(generate._item_dbc_drop_guard([], self.IDS, None), 0)
+        probe.assert_not_called()
+
+    def test_flag_is_known(self):
+        self.assertIsNone(generate.parse_args(["--allow-item-drop"])[2])
+
+
 if __name__ == "__main__":
     unittest.main()

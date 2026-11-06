@@ -23,16 +23,21 @@ Per tier (`ResolvedTier`):
   block (`DELETE ... BETWEEN 70000 AND 79999` + INSERT, and the patch-Z merge) carries them. A duplicate id is an
   ERROR.
 - **Tier labels** (`ItemEmission.labels`, entry -> label) for IV4's `ItemTierLabels.lua`: every tier except a
-  `heroic_flag` one (the client prints "Heroic" from flag 0x8 itself).
+  `heroic_flag` one (the client prints "Heroic" from flag 0x8 itself), plus every retired lock line that carries a
+  label (players keep the item, so they keep the line).
 
 **Stat lines.** The materialized stat lines leave out every line whose value is 0 (a `secondary=None` item's
-zero-budget secondary, a Stamina line that rounds to 0): `materialized_stat_fields`. The server's own boot-time
-materializer (`ItemBudget.cpp` `ApplyItemizationAllocation`) still writes such a line in memory; the database row
-never carries one.
+zero-budget secondary, a Stamina line that rounds to 0): `budget.materialized_item_fields` and the server's own
+boot-time materializer (`ItemBudget.cpp` `ApplyItemizationAllocation`) both skip such a line (R1 S6), so the database
+row and the item the client sees agree.
 
 **Sockets** are the item's on every tier except a `tier(sockets=False)` one (user ruling 2026-11-06: the leveling
 Normal tier has none, they ate its whole budget), which writes no socket, no socket bonus and so gets no socket
 discount. On a stock entry the socket columns are owned only when declared or cleared that way.
+
+**Durability.** A minted tier gets `ResolvedTier.max_durability` (the median of live items of its class, subclass,
+slot and quality near its item level, else the donor's; `lib/item_variants.py`), unless it declares `MaxDurability`.
+Prices and disenchanting stay the copied / schema values for now (IV9).
 
 **Spells.** A minted tier of a `base=` item has the stock spell slots that `absorbed_spell_slots` folds into the
 budget cleared in its row (`budget.absorb_spell_fields`, what the server does in memory). The stock entry itself
@@ -116,20 +121,9 @@ class ItemEmission:
 
 
 def materialized_stat_fields(breakdown: dict) -> dict:
-    """`budget.materialized_item_fields` with every stat line of value 0 left out (the lines after it move up, the
-    free slots are zeroed): a `secondary=None` item gives its secondary shape no budget, and the database row must
-    not carry a `+0` line for it."""
-    budget = _budget()
-    fields = budget.materialized_item_fields(breakdown)
-    lines = [
-        (fields[f"stat_type{n}"], fields[f"stat_value{n}"]) for n in range(1, budget.MAX_ITEM_PROTO_STATS + 1)
-        if fields[f"stat_type{n}"] and fields[f"stat_value{n}"]
-    ]
-    for n in range(1, budget.MAX_ITEM_PROTO_STATS + 1):
-        stat_type, value = lines[n - 1] if n <= len(lines) else (0, 0)
-        fields[f"stat_type{n}"] = stat_type
-        fields[f"stat_value{n}"] = value
-    return fields
+    """`budget.materialized_item_fields`: the stat lines (0-value lines left out, as the C++ does), armor, block and
+    weapon damage the budget writes."""
+    return _budget().materialized_item_fields(breakdown)
 
 
 def _spell_columns(spells: tuple[items_dsl.ItemSpell, ...]) -> dict:
@@ -190,6 +184,8 @@ def _tier_row(item: item_variants.ResolvedItem, tier: item_variants.ResolvedTier
     elif decl.sockets is not None:
         row.update(_socket_columns(decl.sockets, decl.socket_bonus))
         set_columns += SOCKET_COLUMNS
+    if not tier.stock and tier.max_durability is not None:
+        row["MaxDurability"] = tier.max_durability  # R1 S2: a minted tier's durability from live data
     if decl.spells is not None:
         row.update(_spell_columns(decl.spells))
         set_columns += SPELL_COLUMNS
@@ -251,6 +247,8 @@ def build(
     if expansion.assignment is not None:
         for line in expansion.assignment.retired:
             out.dbc_entries.append(_dbc_entry(line.entry, line.dbc_row(), f"{line.key} {line.tier} (retired)"))
+            if line.label:  # owned copies keep their tooltip label (R1 N2)
+                out.labels[line.entry] = line.label
     out.labels = dict(sorted(out.labels.items()))
     return out
 
@@ -318,6 +316,12 @@ class Rendered:
     template_rows: list[dict]
     itemization_rows: list[dict]
     variant_rows: list[dict]
+    retuned: list[int] = field(default_factory=list)  # minted entries already live whose stats change (R1 N13)
+
+
+# The columns a client caches for an item it has seen: a change to one on a live minted row needs an
+# item_budget_version bump (plan s10), or players keep the old tooltip.
+RETUNE_COLUMNS = (*STAT_COLUMNS, "dmg_min1", "dmg_max1", "armor", "block", "ItemLevel", "Quality")
 
 
 def render(emission: ItemEmission, live_rows: dict[int, dict], tables: dict,
@@ -326,6 +330,11 @@ def render(emission: ItemEmission, live_rows: dict[int, dict], tables: dict,
     only the rows that differ from live. (The stock entries' column edits go out through
     `spell_tables.render_item_blocks`; see the module docstring.)"""
     template_rows = changed_template_rows(emission, live_rows)
+    retuned = sorted(
+        int(row["entry"]) for row in template_rows
+        if (live := live_rows.get(int(row["entry"]))) is not None
+        and any(spell_tables._normalise(live.get(c)) != spell_tables._normalise(row.get(c)) for c in RETUNE_COLUMNS)
+    )
     itemization_rows = changed_keyed_rows(
         emission.itemization_rows, tables.get(ITEMIZATION_TABLE, {}), ITEMIZATION_COLUMNS,
     )
@@ -338,7 +347,7 @@ def render(emission: ItemEmission, live_rows: dict[int, dict], tables: dict,
         render_keyed_block(ITEMIZATION_TABLE, ITEMIZATION_COLUMNS, itemization_rows),
         render_keyed_block(VARIANT_TABLE, variant_columns, variant_rows),
     ]
-    return Rendered([b for b in blocks if b], template_rows, itemization_rows, variant_rows)
+    return Rendered([b for b in blocks if b], template_rows, itemization_rows, variant_rows, retuned)
 
 
 def summary_notes(emission: ItemEmission, rendered: Rendered | None, edits: list[dict] | None = None) -> list[str]:
@@ -355,4 +364,10 @@ def summary_notes(emission: ItemEmission, rendered: Rendered | None, edits: list
             + (f", {len(edits)} stock edit(s)" if edits is not None else "")
             + f", {len(rendered.itemization_rows)} itemization row(s), {len(rendered.variant_rows)} variant row(s)"
         )
+        if rendered.retuned:
+            shown = ", ".join(map(str, rendered.retuned[:20])) + (" ..." if len(rendered.retuned) > 20 else "")
+            notes.append(
+                f"items: {len(rendered.retuned)} minted item(s) already live change stats or level ({shown}): "
+                f"clients keep the old tooltip until item_budget_version is bumped (plan s10)"
+            )
     return notes

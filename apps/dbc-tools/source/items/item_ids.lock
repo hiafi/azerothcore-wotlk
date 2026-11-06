@@ -1,10 +1,17 @@
 # Minted item ids (item-variants plan s4; lib/item_ids.py): one line per (key, tier), in id order.
 #   <entry> <key> <tier>                      a minted tier; the entry sits in source/ids.yaml's item_minted block
 #   <entry> <key> <tier> base                 a stock item owned as its base tier (no id minted)
-#   <entry> <key> <tier> retired <date> <class> <subclass> <sound> <material> <display> <invtype> <sheath>
-#                                             a dropped tier: the id is never reused and its item_dbc row keeps being
-#                                             emitted from the seven Item.dbc fields recorded on the line
+#   <entry> <key> <tier> retired <date> <class> <subclass> <sound> <material> <display> <invtype> <sheath> [<label>]
+#                                             a dropped tier: the id is never reused, its item_dbc row keeps being
+#                                             emitted from the seven Item.dbc fields recorded on the line, and its
+#                                             tooltip label (the rest of the line, none on a Heroic tier) stays in the
+#                                             label table, so owned copies keep it
 #   <entry> <key> <tier> base retired <date>  a dropped base= item: silences the "no longer declared" note; its stock
 #                                             rows stay as last written
 # Append-only: a full generate.py run appends the ids it mints; never edit, reorder or delete a line (players can hold
-# the item, and item_template rows are never deleted). A merge conflict keeps both sides' lines; re-run generate.py.
+# the item, and item_template rows are never deleted).
+# Merge conflict: two branches minting from the same high-water mark give the same ids to different (key, tier)s, so
+# keeping both sides' lines is refused ("entry N is already on line M"). Keep the merged (or deployed) side's lines,
+# drop the other side's minted lines, delete the other side's not-yet-imported rev_*.sql that carries them, then
+# re-run generate.py on the merged tree to re-mint them. If both sides were imported, stop: a human retires one set.
+# One item branch at a time.

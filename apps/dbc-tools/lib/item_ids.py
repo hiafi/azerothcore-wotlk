@@ -8,7 +8,7 @@ Lines (`#` comments and blank lines are skipped):
 
     <entry> <key> <tier>                    a minted entry, from source/ids.yaml's item_minted block
     <entry> <key> <tier> base               a stock item taken over by item(base=<entry>) as its first tier
-    <entry> <key> <tier> retired <date> <class> <subclass> <sound> <material> <display> <invtype> <sheath>
+    <entry> <key> <tier> retired <date> <class> <subclass> <sound> <material> <display> <invtype> <sheath> [<label>]
     <entry> <key> <tier> base retired <date>
 
 **Mint.** A (key, tier) without a line takes the next id after the highest minted id in the file (gaps are never
@@ -18,9 +18,18 @@ keeps its id forever, whatever its name, level or shapes later become.
 **Retire.** An id is never reused: players can hold the item, and `item_template` is never deleted. A minted line
 whose (key, tier) is no longer declared (the item, the tier, or a tier now `deferred=True`) stops the run unless the
 line is marked `retired <date>` with the 7 Item.dbc fields of its row, so IV2 keeps emitting its `item_dbc` row (the
-block DELETE would otherwise blank-icon an item players own). A `base` line whose declaration is gone is only reported
-(the stock rows stay as last written); `base retired <date>` silences that. A retired (key, tier) cannot be declared
-again: give the item a new key or the tier a new name.
+block DELETE would otherwise blank-icon an item players own). Everything after the 7 fields is the tier's tooltip
+label (R1 N2: owned copies keep their label, so it stays in ItemTierLabels.lua); a Heroic tier has none (the client
+prints its line from flag 0x8). The retire suggestion fills it in from the current label table. A `base` line whose
+declaration is gone is only reported (the stock rows stay as last written); `base retired <date>` silences that. A
+retired (key, tier) cannot be declared again: give the item a new key or the tier a new name.
+
+**Merge conflicts** (R1 S3). Two branches that each minted from the same high-water mark write the same entries for
+different (key, tier)s, so a file that keeps both sides' lines is refused (`entry N is already on line M`), and each
+side's committed rev SQL already carries those ids. Recovery: keep the merged (or deployed) side's lines, drop the
+other side's minted lines, delete the other side's not-yet-imported `rev_*.sql` that carries them, and re-run
+generate.py on the merged tree, which re-mints the dropped (key, tier)s after the high-water mark. If both sides were
+already imported, stop: a human retires one set (players may hold both). One item branch at a time stays the rule.
 """
 
 from __future__ import annotations
@@ -37,9 +46,10 @@ LOCK_BLOCK = "item_minted"
 LOCK_HEADER = (
     "# Item variant ids (item-variants plan s4; lib/item_ids.py): one line per (item key, ladder tier),\n"
     "# `<entry> <key> <tier> [base | retired <date> <class> <subclass> <sound> <material> <display> <invtype>\n"
-    "# <sheath> | base retired <date>]`, minted from source/ids.yaml's item_minted block. Append-only: a full\n"
-    "# generate.py run appends new lines; never reorder, renumber or delete one (an id must never move or be\n"
-    "# reused).\n"
+    "# <sheath> [<label>] | base retired <date>]`, minted from source/ids.yaml's item_minted block.\n"
+    "# Append-only: a full generate.py run appends new lines; never reorder, renumber or delete one (an id must\n"
+    "# never move or be reused). A merge conflict: keep the merged side's lines, drop the other side's minted\n"
+    "# lines and delete its not-yet-imported rev_*.sql, then re-run generate.py (lib/item_ids.py, Merge conflicts).\n"
 )
 # The Item.dbc fields a retired line carries, in line order, as item_template columns.
 RETIRED_DBC_COLUMNS = ("class", "subclass", "SoundOverrideSubclass", "Material", "displayid", "InventoryType", "sheath")
@@ -48,6 +58,7 @@ _KEY = r"[a-z][a-z0-9_]*"
 _LINE_RE = re.compile(rf"^(\d+) ({_KEY}) ({_KEY})(?: (.*))?$")
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _INT_RE = re.compile(r"^-?\d+$")
+LABEL_FORBIDDEN = ('"', "\\", "|")  # the label goes into a Lua string (lib/item_labels.py)
 
 
 class LockError(ValueError):
@@ -63,6 +74,7 @@ class LockLine:
     retired: str | None = None  # the date
     dbc_fields: tuple[int, ...] | None = None  # RETIRED_DBC_COLUMNS values of a retired minted line
     number: int = 0
+    label: str | None = None  # a retired minted line's tooltip label (the text after the 7 fields), if any
 
     @property
     def pair(self) -> tuple[str, str]:
@@ -108,6 +120,7 @@ def parse_lock(text: str, block: dict | None = None) -> Lock:
         base = False
         retired = None
         dbc_fields = None
+        label = None
         if rest[:1] == ["base"]:
             base = True
             rest = rest[1:]
@@ -120,12 +133,16 @@ def parse_lock(text: str, block: dict | None = None) -> Lock:
                 if fields:
                     raise LockError(f"{where}: a retired base line carries no Item.dbc fields (the stock row has them)")
             else:
-                if len(fields) != len(RETIRED_DBC_COLUMNS) or not all(_INT_RE.match(f) for f in fields):
+                count = len(RETIRED_DBC_COLUMNS)
+                if len(fields) < count or not all(_INT_RE.match(f) for f in fields[:count]):
                     raise LockError(
-                        f"{where}: a retired minted line carries its row's {len(RETIRED_DBC_COLUMNS)} Item.dbc fields "
-                        f"as integers ({' '.join(RETIRED_DBC_COLUMNS)})"
+                        f"{where}: a retired minted line carries its row's {count} Item.dbc fields as integers "
+                        f"({' '.join(RETIRED_DBC_COLUMNS)}), then optionally its tooltip label"
                     )
-                dbc_fields = tuple(int(f) for f in fields)
+                dbc_fields = tuple(int(f) for f in fields[:count])
+                label = " ".join(fields[count:]) or None
+                if label is not None and any(ch in label for ch in LABEL_FORBIDDEN):
+                    raise LockError(f"{where}: the label {label!r} contains one of {' '.join(LABEL_FORBIDDEN)}")
         if entry in entries:
             raise LockError(f"{where}: entry {entry} is already on line {entries[entry]}")
         if (key, tier) in pairs:
@@ -141,7 +158,7 @@ def parse_lock(text: str, block: dict | None = None) -> Lock:
                 )
         entries[entry] = number
         pairs[(key, tier)] = number
-        lock.lines.append(LockLine(entry, key, tier, base, retired, dbc_fields, number))
+        lock.lines.append(LockLine(entry, key, tier, base, retired, dbc_fields, number, label))
     return lock
 
 
@@ -169,8 +186,10 @@ class Assignment:
     notes: list[str] = field(default_factory=list)
 
 
-def retire_suggestion(line: LockLine, live_row: dict | None, today: str | None = None) -> str:
-    """The line to write instead of `line` to retire it."""
+def retire_suggestion(line: LockLine, live_row: dict | None, today: str | None = None,
+                      label: str | None = None) -> str:
+    """The line to write instead of `line` to retire it (`label`: the tier's current tooltip label, kept on the
+    line so owned copies keep it)."""
     today = today or datetime.date.today().isoformat()
     if line.base:
         return f"{line.entry} {line.key} {line.tier} base retired {today}"
@@ -178,16 +197,17 @@ def retire_suggestion(line: LockLine, live_row: dict | None, today: str | None =
         fields = " ".join(f"<{c}>" for c in RETIRED_DBC_COLUMNS)
     else:
         fields = " ".join(str(int(float(live_row.get(c) or 0))) for c in RETIRED_DBC_COLUMNS)
-    return f"{line.entry} {line.key} {line.tier} retired {today} {fields}"
+    return f"{line.entry} {line.key} {line.tier} retired {today} {fields}" + (f" {label}" if label else "")
 
 
 def assign(
     lock: Lock, wanted: list[Wanted], block: dict, taken: set[int] = frozenset(),
-    live_rows: dict[int, dict] | None = None, today: str | None = None,
+    live_rows: dict[int, dict] | None = None, today: str | None = None, labels: dict[int, str] | None = None,
 ) -> Assignment:
     """Entries for `wanted` (in order): the lock's, else a `base` line for a stock first tier, else the next free id
     of `block` after the highest minted id in the lock, skipping `taken` (ids other owners hold). Then the retire guard
-    over every lock line no wanted pair claims. Never raises for a content problem: they come back as `errors`."""
+    over every lock line no wanted pair claims (`labels`, the current label table, fills in a retire suggestion's
+    label). Never raises for a content problem: they come back as `errors`."""
     out = Assignment()
     live_rows = live_rows or {}
     by_pair = lock.by_pair
@@ -264,7 +284,7 @@ def assign(
             if not line.base:
                 out.retired.append(line)
             continue
-        suggestion = retire_suggestion(line, live_rows.get(line.entry), today)
+        suggestion = retire_suggestion(line, live_rows.get(line.entry), today, (labels or {}).get(line.entry))
         if line.base:
             out.notes.append(
                 f"items: stock entry {line.entry} ({line.key} {line.tier}) is no longer declared; its item_template "

@@ -107,6 +107,55 @@ class RepackTest(unittest.TestCase):
         self.assertEqual([p.name for p in (root / "Data").iterdir()], ["patch-Z.mpq"])
 
 
+def _item_dbc(ids) -> bytes:
+    from lib import dbcfile, dbcfmt  # noqa: PLC0415
+
+    rows = []
+    for i in ids:
+        row = dbcfile.empty_row(dbcfmt.ITEM)
+        row[dbcfmt.ITEM.index_column] = i
+        rows.append(row)
+    return dbcfile.pack_dbc_bytes(dbcfmt.ITEM, rows)
+
+
+BLOCK = {"start": 70000, "end": 79999}
+
+
+@unittest.skipUnless(HAVE_SMPQ, "smpq not installed")
+class DeployedGuardTest(unittest.TestCase):
+    """R1 B1 / S5: the deployed Item.dbc is compared with this run's build before anything is written."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+        self.addCleanup(self._tmp.cleanup)
+
+    def test_item_dbc_ids_round_trip(self):
+        self.assertEqual(patch_repack.item_dbc_ids(_item_dbc([25, 70100, 71000])), {25, 70100, 71000})
+
+    def test_dropped_custom_ids_are_reported(self):
+        files = dict(FILES)
+        files["DBFilesClient\\Item.dbc"] = _item_dbc([25, 5187, 70100, 71000, 71001, 80000])
+        archive = _archive(self.tmp / "deployed.mpq", files)
+        # This checkout lacks the minted 71000/71001 (and the stock / out-of-block ids do not count).
+        self.assertEqual(patch_repack.dropped_item_ids(archive, [70100], BLOCK), [71000, 71001])
+        self.assertEqual(patch_repack.dropped_item_ids(archive, [70100, 71000, 71001, 71002], BLOCK), [])
+
+    def test_no_item_dbc_in_the_archive(self):
+        files = {k: v for k, v in FILES.items() if "Item" not in k}
+        archive = _archive(self.tmp / "no_item.mpq", files)
+        self.assertIsNone(patch_repack.dropped_item_ids(archive, [], BLOCK))
+
+    def test_foreign_members(self):
+        archive = _archive(self.tmp / "deployed.mpq")
+        loose = self.tmp / "DBFilesClient"
+        loose.mkdir()
+        (loose / "Spell.dbc").write_bytes(FILES["DBFilesClient\\Spell.dbc"])  # same as deployed
+        (loose / "Talent.dbc").write_bytes(b"a newer local talent build")  # differs
+        (loose / "Item.dbc").write_bytes(b"skipped: --only items replaces it")
+        self.assertEqual(patch_repack.foreign_members(archive, loose), ["DBFilesClient/Talent.dbc"])
+
+
 class DeployedBaseTest(unittest.TestCase):
     def test_no_local_config_is_refused_by_name(self):
         with mock.patch.object(patch_out, "DEPLOY_ROOT", None):
