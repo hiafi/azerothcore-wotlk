@@ -103,6 +103,19 @@ item:
   start: 70000
   end: 79999
 
+# Minted item_template entries (item-variants plan s4, IV0): the ids lib/item_ids.py hands out, recorded in
+# source/items/item_ids.lock. A sub-range of `item` above, so the item_dbc block DELETE already covers it; 70000-70999
+# stays for hand-picked items.csv rows. Checked free 2026-11-06: no item_template row between 70104 and 899999.
+item_minted:
+  start: 71000
+  end: 79999
+
+# reference_loot_template entries for the declared boss loot tables (item-variants plan s7.3, IV7). Checked free
+# 2026-11-06: no reference_loot_template row above the stock maximum in the live DB, base dump or pending SQL.
+loot_reference:
+  start: 1700000
+  end: 1700999
+
 # spell_group ids for a brand-new DB-defined group (SpellMgr::LoadSpellGroups requires every
 # group id to be above SPELL_GROUP_DB_RANGE_MIN, 1000). See the "How the bounds were picked"
 # note above - this one wasn't picked in a vacuum either: 1200 leaves a clear gap above every
@@ -411,6 +424,12 @@ reservations:
   mage:
     spell: {start: 205100, end: 205199}
     spellicon: {start: 90450, end: 90499}
+
+  # Item variants (item-variants plan s4 / s9 IV0): spells the item tooling needs (item tier labels, helper auras).
+  # 205400-205599 sits between the Deadmines reservation (205200-205399) and the free rest of the block. Checked free
+  # 2026-11-06: no declaration, SQL file or live spell_dbc row at or above 205400.
+  items:
+    spell: {start: 205400, end: 205599}
 
   # The healing sim (source/npcs/healsim_spells.py) is not a class, but its spells sit inside the spell block, so it
   # reserves under its project name and the overlap test keeps every class out of them.

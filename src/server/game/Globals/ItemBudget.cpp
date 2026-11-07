@@ -856,17 +856,26 @@ namespace
                 continue;
             }
 
+            // A stat line that rounds to 0 is left out: StatsCount would count it and the item query would send a
+            // "+0 <stat>" tooltip line. Later lines move up (stat bonuses do not depend on slot positions).
+            // apps/item-tools/item_lib/budget.py materialized_item_fields() mirrors this.
             uint32 slot = 0;
             for (ItemBudget::AllocationDetail const& alloc : b.Allocations)
             {
+                if (alloc.RoundedValue == 0)
+                    continue;
+
                 tpl.ItemStat[slot].ItemStatType = alloc.StatType;
                 tpl.ItemStat[slot].ItemStatValue = alloc.RoundedValue;
                 ++slot;
             }
 
-            tpl.ItemStat[slot].ItemStatType = ITEM_MOD_STAMINA;
-            tpl.ItemStat[slot].ItemStatValue = b.FinalStamina;
-            ++slot;
+            if (b.FinalStamina != 0)
+            {
+                tpl.ItemStat[slot].ItemStatType = ITEM_MOD_STAMINA;
+                tpl.ItemStat[slot].ItemStatValue = b.FinalStamina;
+                ++slot;
+            }
 
             for (uint32 clear = slot; clear < static_cast<uint32>(MAX_ITEM_PROTO_STATS); ++clear)
             {

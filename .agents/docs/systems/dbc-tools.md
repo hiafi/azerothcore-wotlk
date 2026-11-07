@@ -21,7 +21,72 @@ table's use, entry 70001). If you're touching `var/extractors/dbc/Item.dbc`: it 
 `client/MPQs/enUS/`) — earlier patches (`patch-enUS.MPQ`, `patch-enUS-2.MPQ`) also contain an
 `Item.dbc` but it's shadowed/stale, smaller, and not what the client actually ends up using.
 
-## Watch out: `generate.py` has no per-table scope flag (a write run is always global)
+### Item tier labels on the tooltip (item variants, IV4)
+
+Every tier of an `item()` ladder except a `heroic_flag=True` one gets a green line directly under the item name
+("Normal", "Molten Empowered", "Heroic Hard Mode", ...). The stock flag 0x8 prints "Heroic" itself, so those tiers are
+left out of the table. The tooltip body is built inside Wow.exe, so the line is a FrameXML hook (UI-unlocked exe only),
+shipped in `patch-X.mpq` with the other whole-file UI overrides:
+
+- `lib/item_labels.py` writes `client/ui-overrides/Interface/FrameXML/ItemTierLabels.lua` (`ITEM_TIER_LABELS = {
+  [entry] = "label", ... }`, sorted, LF, from `ItemEmission.labels`) on a full run and on `--only items`; it rewrites
+  the file only when the text changed, and `--check` prints a "stale" note instead of writing. A label with `|`, a
+  quote, a backslash or a line break stops the run.
+- `client/ui-overrides/Interface/FrameXML/ItemTierLabel.lua` is the hand-written hook: `OnTooltipSetItem` on
+  `GameTooltip`, `ItemRefTooltip` and `ShoppingTooltip1-3`, nil-guarded and under `pcall`, no globals but the table.
+  The label color is the stock `GREEN_FONT_COLOR_CODE` / `GREEN_FONT_COLOR` (FrameXML `Constants.lua`), the color of
+  the exe's own "Heroic" line.
+  It merges the label into the line after the name (a ShoppingTooltip's name is line 2, under "Currently Equipped");
+  when that line has right-hand text or a socket icon it shifts the lines down instead. `FORCE_SHIFT` at the top of the
+  file forces the shifting insert if the merge looks wrong in game.
+- `client/ui-overrides/Interface/FrameXML/FrameXML.toc` is the stock toc (CRLF) with the two files added before
+  `## add new modules above here`. `client/ui-overrides/` is its own private repo
+  (hiafi/wow-client-ui, nested and ignored by this repo; its `.gitattributes` keeps the CRLF). Commit the regenerated
+  `ItemTierLabels.lua` there after a write run.
+- `apps/dbc-tools/build_patch_x.py` packs the UI files under `client/ui-overrides/Interface` (`.lua .xml .toc .blp
+  .tga`; no dotfiles, swap or `.orig` files) into `patch-X.mpq` (same packer as the other `build_patch_*.py`) and
+  refuses a toc that does not list an existing label file. By default it **only builds** (to
+  `var/dbc-patch/patch-X.mpq`) and prints the one-client test steps; it copies into `patch-root/Data` only with
+  `--deploy` (root from `lib/local_config.py` or `--deploy-root`). Then
+  `docker exec patch-manifest-gen python3 /manifest_gen.py`.
+
+A Lua error at load breaks the UI of every player, and manifest-gen ships `patch-root/Data` on a timer, so test a new
+patch-X on one client (copy the built archive into that client's `Data/` by hand) before `--deploy`.
+`client/ui-overrides/README.md` lists the files and what each changes.
+
+### Item variants: ids, defaults and the deployed Item.dbc guard
+
+- **Tier steps.** Every `tier()` takes an explicit `step=` (`item_budget_variant.tier`): 0 Normal, 1 Heroic, 2.. the
+  empowered tiers, the same number for the same step on every ladder (a hard mode ladder starts at 1). Steps strictly
+  increase along a ladder; a ladder's base tier has no variant row.
+- **Weapon-tier defaults.** On a weapon, shield or held-in-off-hand slot, `budget_mult` and the DPS adjustment default
+  per tier to the median of live itemized items of the same role, InventoryType, Quality and item level bucket (1-59,
+  60-100, 101-200, 201-300: the stock conversion's per-(role, slot) correction), widening to any quality, then any
+  level, below 3 samples; else 1.0 and 0. Role from the shapes (Dodge/Parry/Block/Defense secondary = tank,
+  Int/Spirit/SP lead = caster, else physical) or `weapon_role=`. Declared `budget_mult=` / `extra_dps=` win. The sample
+  leaves out the custom item blocks and every entry an item owns, so the generator's own rows never feed back.
+  Declaring a new `base=` weapon removes it from the sample and can move a cell's median a little; the run notes every
+  already-live minted item whose stats change ("clients keep the old tooltip until item_budget_version is bumped").
+- **Durability.** A minted tier's `MaxDurability` is the median of live items with the same class, subclass, slot and
+  quality within 5 item levels (widening to 10, 20, any), else the donor's (`base=` / `like=`). Prices and
+  disenchanting are not derived yet.
+- **Retired tiers keep their label.** A retired lock line may end with the tier's label (`... <sheath> Molten
+  Empowered`); the label table keeps it so owned copies keep their line. The retire suggestion fills it in from the
+  current `ItemTierLabels.lua`.
+- **Lock merge conflicts.** Two branches that minted from the same high-water mark give the same ids to different
+  (key, tier)s, so keeping both sides' lines is refused (`entry N is already on line M`), and each side's rev SQL
+  already carries those ids. Keep the merged (or deployed) side's lines, drop the other side's minted lines, delete
+  its not-yet-imported `rev_*.sql` that carries them, then re-run generate on the merged tree to re-mint. If both sides
+  were imported, stop: a human retires one set. One item branch at a time.
+- **Deployed Item.dbc guard** (`--allow-item-drop`). Before writing anything, a full run and `--only items` read the
+  deployed `patch-Z.mpq`'s `Item.dbc` and stop when it holds ids in the custom item block (70000-79999) that this run's
+  build lacks: shipping it would blank-icon those items on every client and the `item_dbc` block would drop their
+  server rows. This is the cross-checkout trap: once minted items are deployed, a full run from a checkout without
+  `source/items/` would remove them. Merge the item branch into every dbc-tools checkout first; `--allow-item-drop`
+  writes anyway; `--check` only warns. `--only items` also WARNs when another member of the deployed archive differs
+  from this checkout's last full build (`var/dbc-patch/DBFilesClient/`), i.e. a stale or foreign base.
+
+## Watch out: a write run is global, except `--only items`
 
 Running it regenerates the pending SQL for *every* table at once — `spell`/`talent`/`item`/etc. If
 `source/spells/*.csv` or `source/talents/*.yaml` have in-progress, not-yet-promoted edits sitting
@@ -31,7 +96,33 @@ spell(s) [...]" line before treating the generated SQL as ready to apply — if 
 didn't touch, hand-extract just the block(s) you actually meant to ship into their own migration
 file rather than applying (or discarding) the whole thing.
 
-`--check --class NAME` is the only scope flag, and it is read-only; see "generate.py speed" below.
+`--check --class NAME` is a read-only scope flag; see "generate.py speed" below. The one scope that **writes** is
+`--only items`, below.
+
+### `generate.py --only items` (item variants IV3)
+
+For an item-only change while other classes' spell, talent or creature edits sit unpromoted in the tree. Everything
+is still loaded (the item DSL needs the live state), but the run hands over to `generate._run_only_items` right after
+the item expansion, so nothing else is rendered:
+
+- **SQL** (one `rev_*.sql`): the `item_template` edits of stock entries and every `item_template()` declaration, the
+  minted `item_template` rows, `item_itemization`, `item_budget_variant` and the `item_dbc` reserved block; plus the new
+  `item_ids.lock` lines and the tier label Lua (IV4). No spell, talent, creature, dungeon, trainer or prune blocks, no
+  generated headers, no potency sheets. A rerun after db-import prints `SQL: nothing to emit`.
+- **Client**: patch-Z is one archive for every DBC, so building it from source would ship the in-flight spell rows
+  without their SQL. `--only items` instead repacks the **deployed** `DEPLOY_ROOT/Data/patch-Z.mpq`
+  (`lib/patch_repack.py`, `smpq`): every member stays byte for byte, only `DBFilesClient\Item.dbc` is replaced by
+  the same file a full run builds (stock rows plus every `items.csv` and minted row). It prints the base archive's
+  path, date and file list, and verifies the new archive (same members, every other file identical) before it writes
+  anything. Output: the local `var/dbc-patch/patch-Z.mpq`, the loose `Item.dbc` copy (and `env/dist/data/dbc/`), and
+  the deployed archive (replaced atomically). When the deployed `Item.dbc` already equals the build, nothing is
+  repacked.
+- **Refused up front** (before any loading), exit 1: no `lib/local_config.py` (no `DEPLOY_ROOT`), no
+  `Data/patch-Z.mpq` under it, or no `smpq`. There is deliberately no fallback to `var/dbc-patch/`.
+- **`--check --only items`** runs the item checks and lints only (about 13 s), not the spell lints or the header gate;
+  a missing deployed patch-Z is a WARNING there ("a write run would refuse"). It cannot be combined with `--class`.
+- The deployed archive keeps whatever its other files held: a spell change still needs a normal full run to reach the
+  client. Run a full generate when the in-flight work is ready to ship.
 
 ## generate.py speed: the SQL corpus, the disk cache, `--check --class`, the equivalence harness
 

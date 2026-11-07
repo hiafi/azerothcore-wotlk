@@ -548,6 +548,55 @@ class ReservationTest(unittest.TestCase):
         )
 
 
+class ItemVariantsIdsTest(unittest.TestCase):
+    """Item variants IV0 (item-variants plan s4 / s9): the minted-item and loot-reference blocks and the `items` spell
+    reservation, pinned exactly."""
+
+    # feat/deadmines-pilot's reservation, pinned here so the two branches cannot collide when they merge: the branch
+    # holds spell 205200-205399, creature 300420-300449, gameobject 301000-301099 (and a `gameobject` block).
+    DEADMINES = {"spell": (205200, 205399), "creature": (300420, 300449), "gameobject": (301000, 301099)}
+
+    def test_minted_item_block_sits_inside_item_and_above_the_hand_picked_rows(self):
+        self.assertEqual(BLOCKS["item_minted"], {"start": 71000, "end": 79999})
+        self.assertGreaterEqual(BLOCKS["item_minted"]["start"], BLOCKS["item"]["start"])
+        self.assertLessEqual(BLOCKS["item_minted"]["end"], BLOCKS["item"]["end"])
+        self.assertEqual(BLOCKS["item"], {"start": 70000, "end": 79999})  # 70000-70999 stays for items.csv rows
+
+    def test_minted_item_block_holds_no_items_csv_row(self):
+        import csv
+
+        with (TOOL_ROOT / "source" / "items.csv").open(newline="", encoding="utf-8") as fh:
+            ids = [int(r["id"]) for r in csv.DictReader(fh) if r.get("id")]
+        self.assertTrue(ids)
+        self.assertFalse([i for i in ids if BLOCKS["item_minted"]["start"] <= i <= BLOCKS["item_minted"]["end"]])
+
+    def test_loot_reference_block(self):
+        self.assertEqual(BLOCKS["loot_reference"], {"start": 1700000, "end": 1700999})
+        live = spell_tables.load_base_table_rows("reference_loot_template", ("Entry",))
+        self.assertFalse([r for r in live if BLOCKS["loot_reference"]["start"] <= int(r["Entry"])
+                          <= BLOCKS["loot_reference"]["end"]])
+
+    def test_items_reservation_is_the_plan_row(self):
+        self.assertEqual(RESERVATIONS["items"], {"spell": {"start": 205400, "end": 205599}})
+
+    def test_items_reservation_overlaps_no_other_reservation_nor_the_deadmines_one(self):
+        mine = RESERVATIONS["items"]["spell"]
+        for owner, tables in RESERVATIONS.items():
+            if owner != "items" and "spell" in tables:
+                with self.subTest(owner=owner):
+                    self.assertFalse(_overlap(mine, tables["spell"]))
+        for table, (low, high) in self.DEADMINES.items():
+            if table in RESERVATIONS["items"]:
+                self.assertFalse(_overlap(RESERVATIONS["items"][table], {"start": low, "end": high}))
+        self.assertLess(self.DEADMINES["spell"][1], mine["start"])
+
+    def test_the_lock_file_header_is_all_comments(self):
+        lock = TOOL_ROOT / "source" / "items" / "item_ids.lock"
+        lines = lock.read_text(encoding="utf-8").splitlines()
+        self.assertTrue(lines)
+        self.assertTrue(all(line.startswith("#") for line in lines))  # header only until IV1 mints the first id
+
+
 class _AnyRows(dict):
     """Accepts every creature entry / spell group id: this test collects ids, it does not validate them."""
 
