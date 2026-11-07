@@ -26,7 +26,7 @@ frost_talent_tooltip = tooltip_vars(
     arctic_all=talent_mult([31674, 31675, 31676], effect=1),
     arctic_fr=talent_mult([31674, 31675, 31676], effect=2),  # names cap at 12 chars, helper suffix included
     mult=product("piercing", "arctic_all", "arctic_fr"),
-    # Empowering Frostbolt's +5/10% (effect 2, balance 1107): Frostbolt's own tooltip only.
+    # Empowering Frostbolt's +7/15% (effect 2, balance 1107): Frostbolt's own tooltip only.
     empfb=talent_mult([31682, 31683], effect=2),
     fbmult=product("mult", "empfb"),
 )
@@ -3302,12 +3302,13 @@ empowered_frostbolt_31682 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200023),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=36,
     notes='Frost Mage rework (docs/frost-mage-redesign.md sec 4 Row 8, Empowering Frostbolt). effect2 (cast time -0.1/0.2 sec, SPELLMOD_CASTING_TIME) needed zero changes -- matched spec exactly already. effect1 was the OLD \'Empowered Frostbolt\' mechanic (a direct SPELLMOD_BONUS_MULTIPLIER damage bonus on Frostbolt itself) -- a different shape than the new spec\'s post-cast buff, replaced outright: native PROC_TRIGGER_SPELL (100%, on casting Frostbolt) to a new buff (200023/200024): crit-damage-bonus +7/14% (ADD_PCT_MODIFIER, SPELLMOD_CRIT_DAMAGE_BONUS, empty classmask = \'of your spells\' broadly, same convention as Winter\'s Chill\'s own crit% effect) + Frost damage +3/5% (MOD_DAMAGE_PERCENT_DONE, Frost school mask), 8 sec, pure data. Playtest bugfix (2026-08-27, second recurrence found via an automated sweep of every spell/talent CSV, built through lib/build.py and checked for a SPELLMOD-type effect whose own classmask came out all-zero): the SPELLMOD_CASTING_TIME modifier lives on effect index 1 (the second effect, letter B), but its Frostbolt-only classmask (32) was stored under EffectSpellClassMaskA_1 - effect index 0 (letter A, the PROC_TRIGGER_SPELL effect, which doesn\'t need one at all) - leaving effect 1\'s real classmask all-zero, i.e. "matches every mage spell," same root cause as Permafrost/Chilled to the Bone (frost_mage_rework.sql (merged Frost Mage rework migration; originally rev_1787820084006262155.sql) / docs/dbc-build-pipeline.md "Bug 3"). Moved to EffectSpellClassMaskB_1, which is what the engine actually reads for effect index 1.'
           ' | 2026-11-07 (balance 1107, user ruling): the cast time reduction is gone; effect 2 is now '
-          'ADD_PCT_MODIFIER DAMAGE +5% on Frostbolt (EffectSpellClassMaskB_1 = 32, Frostbolt only).',
+          'ADD_PCT_MODIFIER DAMAGE +7% (designer ruling 2026-11-07, was +5% in the first pass) on Frostbolt'
+          ' (EffectSpellClassMaskB_1 = 32, Frostbolt only).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Frostbolt by $s2%.  After casting Frostbolt, the critical strike damage bonus of your spells is increased by $200023s1% and your total Frost damage is increased by $200023s2% for $200023d.', 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'ProcTypeMask': 65536, 'EffectSpellClassMaskB_1': 32},
 )
 
@@ -3325,12 +3326,13 @@ empowered_frostbolt_31683 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200024),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=36,
     notes='Frost Mage rework (docs/frost-mage-redesign.md sec 4 Row 8, Empowering Frostbolt). effect2 (cast time -0.1/0.2 sec, SPELLMOD_CASTING_TIME) needed zero changes -- matched spec exactly already. effect1 was the OLD \'Empowered Frostbolt\' mechanic (a direct SPELLMOD_BONUS_MULTIPLIER damage bonus on Frostbolt itself) -- a different shape than the new spec\'s post-cast buff, replaced outright: native PROC_TRIGGER_SPELL (100%, on casting Frostbolt) to a new buff (200023/200024): crit-damage-bonus +7/14% (ADD_PCT_MODIFIER, SPELLMOD_CRIT_DAMAGE_BONUS, empty classmask = \'of your spells\' broadly, same convention as Winter\'s Chill\'s own crit% effect) + Frost damage +3/5% (MOD_DAMAGE_PERCENT_DONE, Frost school mask), 8 sec, pure data. Playtest bugfix (2026-08-27, second recurrence found via an automated sweep of every spell/talent CSV, built through lib/build.py and checked for a SPELLMOD-type effect whose own classmask came out all-zero): the SPELLMOD_CASTING_TIME modifier lives on effect index 1 (the second effect, letter B), but its Frostbolt-only classmask (32) was stored under EffectSpellClassMaskA_1 - effect index 0 (letter A, the PROC_TRIGGER_SPELL effect, which doesn\'t need one at all) - leaving effect 1\'s real classmask all-zero, i.e. "matches every mage spell," same root cause as Permafrost/Chilled to the Bone (frost_mage_rework.sql (merged Frost Mage rework migration; originally rev_1787820084006262155.sql) / docs/dbc-build-pipeline.md "Bug 3"). Moved to EffectSpellClassMaskB_1, which is what the engine actually reads for effect index 1.'
           ' | 2026-11-07 (balance 1107, user ruling): the cast time reduction is gone; effect 2 is now '
-          'ADD_PCT_MODIFIER DAMAGE +10% on Frostbolt (EffectSpellClassMaskB_1 = 32, Frostbolt only).',
+          'ADD_PCT_MODIFIER DAMAGE +15% (designer ruling 2026-11-07, was +10% in the first pass) on Frostbolt'
+          ' (EffectSpellClassMaskB_1 = 32, Frostbolt only).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Frostbolt by $s2%.  After casting Frostbolt, the critical strike damage bonus of your spells is increased by $200024s1% and your total Frost damage is increased by $200024s2% for $200024d.', 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'ProcTypeMask': 65536, 'EffectSpellClassMaskB_1': 32},
 )
 
