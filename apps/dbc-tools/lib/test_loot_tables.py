@@ -502,7 +502,8 @@ class DeadminesSourceTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         merged = D.load_items_dir(TOOL_ROOT / "source" / "items")
-        cls.items = {e["id"]: e["_decl"] for e in merged["item_declarations"]}
+        # Deadmines only (the dm_ keys): other dungeons declare items whose loot tables come with their boss builds.
+        cls.items = {e["id"]: e["_decl"] for e in merged["item_declarations"] if e["id"].startswith("dm_")}
         cls.loot = [e["_decl"] for e in merged["loot_declarations"]]
 
     def test_every_item_drops_once_per_difficulty(self):

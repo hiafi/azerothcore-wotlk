@@ -38,6 +38,10 @@ SCRIPT = MODULE_DIR / "hard_mode_items.cpp"
 
 KEG, KEG_LOOK, KEG_BLAST, SIGNET, STRIKE, AMBUSH, LANTERN, ZONE = range(205400, 205408)
 BLACKGUARD = 300430
+# The Deadmines slice of the `items` reservation (205400-205409). Other dungeons declare their item effects in
+# source/items too (wave 1: Shadowfang Keep, Scholomance, Stratholme), so every whole-package check below is scoped
+# to this slice; each dungeon pins its own spells in its own test file.
+DEADMINES_SPELLS = range(205400, 205410)
 
 SCHOOL_DAMAGE = 2
 PERSISTENT_AREA_AURA = 27
@@ -66,14 +70,20 @@ class HardModeItemEffectsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.reg = _load_items_registry()
-        cls.spells = {int(e["id"]): e for e in cls.reg.spells}
+        cls.spells = {int(e["id"]): e for e in cls.reg.spells if int(e["id"]) in DEADMINES_SPELLS}
         cls.decls = {e["id"]: e["_decl"] for e in cls.reg.item_declarations}
         cls.deadmines_ids = id_blocks.declared_ids(TOOL_ROOT / "source" / "npcs" / "deadmines")
 
     def test_ids_sit_in_their_reservations(self):
         self.assertEqual(sorted(self.spells), list(range(KEG, ZONE + 1)))
-        self.assertEqual(id_blocks.out_of_reservation("items", id_blocks.declared_ids(TOOL_ROOT / "source" / "items")),
-                         [])
+        # Every source/items spell sits in an item reservation: `items` (Deadmines, the copies), a dungeon's
+        # `<dungeon>_items` or the Haunted set's `haunted_set`.
+        owners = [name for name in id_blocks.RESERVATIONS
+                  if name in ("items", "haunted_set") or name.endswith("_items")]
+        declared = id_blocks.declared_ids(TOOL_ROOT / "source" / "items")
+        for value in declared.get("spell", []):
+            self.assertTrue(any(not id_blocks.out_of_reservation(owner, {"spell": [value]}) for owner in owners),
+                            f"spell {value} is in no item reservation ({owners})")
         self.assertIn(BLACKGUARD, self.deadmines_ids["creature"])
         self.assertEqual(id_blocks.out_of_reservation("deadmines", self.deadmines_ids), [])
 
@@ -89,7 +99,8 @@ class HardModeItemEffectsTest(unittest.TestCase):
 
     def test_every_binding_is_a_registered_script(self):
         registered = set(re.findall(r"RegisterSpellScript\((\w+)\)", SCRIPT.read_text()))
-        bound = {(int(r["spell_id"]), r["ScriptName"]) for r in self.reg.spell_script_names}
+        bound = {(int(r["spell_id"]), r["ScriptName"]) for r in self.reg.spell_script_names
+                 if int(r["spell_id"]) in DEADMINES_SPELLS}
         self.assertEqual(bound, {(KEG, "spell_dm_powder_keg_fuse"), (SIGNET, "spell_dm_blackguards_signet"),
                                  (LANTERN, "spell_dm_lantern_of_the_roaring_flame")})
         self.assertEqual({name for _, name in bound}, registered)
@@ -114,14 +125,16 @@ class HardModeItemEffectsTest(unittest.TestCase):
             self.assertEqual(effect["type"], SCHOOL_DAMAGE)
             self.assertTrue(effect.get("_potency"), spell_id)
             self.assertNotEqual(int(self.spells[spell_id]["raw_overrides"]["DefenseType"]), 0, spell_id)
-        self.assertEqual({int(r["entry"]) for r in self.reg.spell_bonus_data}, {KEG_BLAST, STRIKE})
+        self.assertEqual({int(r["entry"]) for r in self.reg.spell_bonus_data if int(r["entry"]) in DEADMINES_SPELLS},
+                         {KEG_BLAST, STRIKE})
         blast = next(r for r in self.reg.spell_bonus_data if int(r["entry"]) == KEG_BLAST)
         self.assertGreater(blast["direct_bonus"], 0)  # casters and melee both scale off the Crit trinket
         self.assertGreater(blast["ap_bonus"], 0)
         strike = next(r for r in self.reg.spell_bonus_data if int(r["entry"]) == STRIKE)
         self.assertEqual(strike["direct_bonus"], 0)
         self.assertGreater(strike["ap_bonus"], 0)
-        self.assertEqual({int(r["spell_id"]) for r in self.reg.potency_corrections}, {KEG_BLAST, STRIKE})
+        self.assertEqual({int(r["spell_id"]) for r in self.reg.potency_corrections
+                          if int(r["spell_id"]) in DEADMINES_SPELLS}, {KEG_BLAST, STRIKE})
 
     def test_tooltips(self):
         for spell_id, spell in self.spells.items():
@@ -156,7 +169,7 @@ class HardModeItemEffectsTest(unittest.TestCase):
         self.assertIn("where the enemy stood", self.spells[KEG]["raw_overrides"]["Description_Lang_enUS"])
 
     def test_proc_rows(self):
-        procs = {int(r["SpellId"]): r for r in self.reg.spell_procs}
+        procs = {int(r["SpellId"]): r for r in self.reg.spell_procs if int(r["SpellId"]) in DEADMINES_SPELLS}
         self.assertEqual(set(procs), {SIGNET, LANTERN})
         signet = procs[SIGNET]
         self.assertEqual(signet["ProcFlags"], 0x4 | 0x10)  # done melee auto attacks and melee-class spells

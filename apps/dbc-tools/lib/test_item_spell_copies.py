@@ -374,6 +374,135 @@ class RefusalTest(unittest.TestCase):
         self.assertTrue(any("declared in source/items" in e for e in out.errors), out.errors)
 
 
+class ReferenceTierTest(unittest.TestCase):
+    """Wave 1 integration: a ladder's `effect_reference` tier keeps the declared spells; every other tier, below it
+    too, gets a copy scaled by budget(tier) / budget(reference)."""
+
+    LADDER = D.ladder(
+        "dungeon", effect_reference="heroic",
+        normal=D.tier(step=0, label="Normal", sockets=False),
+        heroic=D.tier(step=1, ilvl=71, quality=EPIC, required_level=60, label="Heroic"),
+        empowered_1=D.tier(step=2, ilvl=81, quality=EPIC, required_level=60, label="Molten Empowered"),
+    )
+
+    def _item(self, family):
+        decl = D.item("dagger", name="Dagger", like=10587, ilvl=91, quality=EPIC, required_level=60,
+                      ladder=self.LADDER, primary=None, secondary="Crit (Solo)",
+                      spells=(D.use_spell(family.use, scale="budget"),))
+        item = resolved_item(decl, TRINKET, 73000)
+        item.tiers[0].ilvl, item.tiers[0].quality = 91, EPIC  # the "Normal" tier sits above the reference here
+        return item
+
+    def test_the_reference_tier_keeps_the_declared_spells_and_the_first_tier_gets_a_copy(self):
+        family = Family()
+        out, _ = run([self._item(family)], family=family)
+        self.assertFalse(out.errors, out.errors)
+        tiers = {t.tier: t for t in out.tiers}
+        self.assertEqual(set(tiers), {"normal", "empowered_1"})  # heroic keeps 100..105
+        self.assertEqual(tiers["normal"].ratio, round(61 / 55, 4))
+        self.assertEqual(tiers["empowered_1"].ratio, round(58 / 55, 4))
+        blast = by_id(out)[tiers["normal"].remap[102]]["_spell"]
+        self.assertAlmostEqual(blast.effects[0].sp_potency, 150.0 * round(61 / 55, 4))
+
+    def test_a_reference_below_one(self):
+        t = fixture_tables()
+        low = item_variants.ResolvedTier("k", "n", "n", 1, False, 71, EPIC, 60, False, None, {}, {})
+        ref = item_variants.ResolvedTier("k", "h", "h", 2, False, 101, EPIC, 60, False, None, {}, {})
+        self.assertEqual(C.tier_ratio(t, ref, low, TRINKET), round(55 / 69, 4))
+        self.assertLess(C.tier_ratio(t, ref, low, TRINKET), 1.0)
+
+    def test_the_ladder_checks_its_reference(self):
+        with self.assertRaises(D.ItemDeclarationError):
+            D.ladder("x", effect_reference="nope", a=D.tier(step=0, label="A"))
+        with self.assertRaises(D.ItemDeclarationError):  # deferred: never minted
+            D.ladder("x", effect_reference="b", a=D.tier(step=0, label="A"),
+                     b=D.tier(step=1, ilvl=70, quality=EPIC, required_level=60, label="B", deferred=True))
+        self.assertIsNone(D.ladder("x", a=D.tier(step=0, label="A")).effect_reference)
+        self.assertEqual(LADDER.effect_reference, None)
+
+    def test_the_real_ladders(self):
+        from source.items import ladders  # noqa: PLC0415
+
+        self.assertEqual(ladders.VANILLA_DUNGEON.effect_reference, "heroic")
+        self.assertEqual(ladders.VANILLA_HARD_MODE.effect_reference, "heroic_hm")
+
+
+class StatAuraTest(unittest.TestCase):
+    """Wave 1 integration: a copy scales stat-like aura amounts (STAT_AURAS) by the ratio; percentages and every
+    effect with potency stay as they are."""
+
+    MOD_RATING, MOD_STAT, MOD_RESISTANCE, MOD_INCREASE_SPEED, SCHOOL_ABSORB = 189, 29, 22, 31, 69
+
+    def _copy(self, effects, ratio=1.2545):
+        spell = Spell(id=110, name="Buff", duration_ms=15000, effects=effects, raw_overrides=_raw("$s1 rating."))
+        index = C.SpellIndex(spells={110: spell}, entries={110: spell.to_entry()})
+        return C.build_copies(index, [110], {110: 205500}, ratio, "test")[110]
+
+    def test_ratings_stats_and_armor_scale_and_percentages_stay(self):
+        copy = self._copy([
+            Effect(type=APPLY_AURA, apply_aura=self.MOD_RATING, base_points=79, misc_value=917504),  # +80
+            Effect(type=APPLY_AURA, apply_aura=self.MOD_INCREASE_SPEED, base_points=29),  # +30%
+            Effect(type=APPLY_AURA, apply_aura=self.MOD_RESISTANCE, base_points=999, misc_value=1),  # +1000 armor
+        ])
+        self.assertEqual([e.base_points for e in copy.effects], [round(80 * 1.2545) - 1, 29, round(1000 * 1.2545) - 1])
+        self.assertEqual(copy.effects[0].misc_value, 917504)
+
+    def test_a_ratio_below_one_shrinks_the_amount(self):
+        copy = self._copy([Effect(type=APPLY_AURA, apply_aura=self.MOD_STAT, base_points=9, misc_value=3)], 0.25)
+        self.assertEqual(copy.effects[0].base_points, round(10 * 0.25) - 1)
+
+    def test_a_potency_absorb_scales_by_potency_only(self):
+        copy = self._copy([Effect(type=APPLY_AURA, apply_aura=self.SCHOOL_ABSORB, base_potency=300.0,
+                                  potency_kind="absorb", implicit_target_a=1)])
+        self.assertAlmostEqual(copy.effects[0].base_potency, 300.0 * 1.2545)
+        self.assertEqual(copy.effects[0].base_points, 0)  # generated from potency by to_entry(), not scaled here
+
+    def test_a_flat_absorb_scales(self):
+        copy = self._copy([Effect(type=APPLY_AURA, apply_aura=self.SCHOOL_ABSORB, base_points=499,
+                                  potency_excluded="test")], 2.0)
+        self.assertEqual(copy.effects[0].base_points, 499)  # potency_excluded: a script sizes it, left alone
+        copy = self._copy([Effect(type=APPLY_AURA, apply_aura=self.SCHOOL_ABSORB, base_points=499)], 2.0)
+        self.assertEqual(copy.effects[0].base_points, 999)
+
+    def test_the_aura_list(self):
+        self.assertEqual(sorted(C.STAT_AURAS), [13, 22, 29, 34, 69, 83, 85, 97, 99, 101, 124, 135, 158, 189])
+
+
+class PotTextRefTest(unittest.TestCase):
+    """Wave 1 integration (the Stratholme trap): two spells with equal potency print the same pot_text() expression;
+    the registry records which one each text named, so a family no longer swallows the other."""
+
+    def test_equal_potency_spells_stay_apart(self):
+        from lib.dsl import registry  # noqa: PLC0415
+
+        reg = registry.Registry()
+        old = registry._active
+        registry._active = reg
+        try:
+            def strike(spell_id):
+                return registry.spell(id=spell_id, name=f"Strike {spell_id}", school=32, duration_ms=0, effects=[
+                    Effect(type=SCHOOL_DAMAGE, sp_potency=100.0, ap_potency=100.0, potency_kind=DIRECT,
+                           time_basis_ms=1500, implicit_target_a=6)],
+                    raw_overrides=_raw("Deals {pot1}.", DefenseType=1))
+
+            swarm, trample = strike(201), strike(202)
+            registry.spell(id=200, name="Signet", effects=[Effect(type=DUMMY)],
+                           raw_overrides=_raw("Swarm for " + pot_text(swarm) + "."))
+            registry.spell(id=203, name="Spur", effects=[Effect(type=DUMMY)],
+                           raw_overrides=_raw("Trample for " + pot_text(trample) + "."))
+        finally:
+            registry._active = old
+        for entry in reg.spells:
+            entry["_source_class"] = "items"
+        index = C.SpellIndex.build({"spells": reg.spells, "linked_spells": []})
+        self.assertEqual(index.family(200), [200, 201])
+        self.assertEqual(index.family(203), [202, 203])
+        # without the record (a text built outside the registry) the expression alone is ambiguous: both join
+        for entry in reg.spells:
+            entry.pop("_pot_text_refs", None)
+        self.assertEqual(index.family(203), [201, 202, 203])
+
+
 class RealSourceTest(unittest.TestCase):
     """The VanCleef hard mode items as declared, on stand-in tiers of their real ladder."""
 
@@ -402,8 +531,14 @@ class RealSourceTest(unittest.TestCase):
                                     "dm_lantern_of_the_roaring_flame": [205406, 205407]})
         self.assertEqual(sorted({t.ratio for t in self.out.tiers}), [1.0545, 1.1091, 1.2545])
 
-    def test_the_committed_header_matches(self):
-        self.assertIsNone(C.header_problem(self.out.header_text))
+    def test_the_committed_header_holds_these_copies(self):
+        # The committed header is rendered from every source/items file (other dungeons add rows of their own), so
+        # each Deadmines row must be in it, as rendered here.
+        committed = C.HEADER_PATH.read_text(encoding="utf-8")
+        rows = [line for line in self.out.header_text.splitlines() if line.strip().startswith("{ 2054")]
+        self.assertEqual(len(rows), 21)
+        for row in rows:
+            self.assertIn(row, committed)
 
     def test_copies_keep_the_tooltip_rules(self):
         for entry in self.out.spells:

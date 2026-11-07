@@ -219,6 +219,11 @@ class Registry:
     # guaranteed unique by the DuplicateIdError check every other table gets).
     spell_var_names: dict[int, str] = field(default_factory=dict)
     creature_var_names: dict[int, str] = field(default_factory=dict)
+    # Bookkeeping, never emitted: every pot_text() call as (the text it returned, the spell it was called for), in call
+    # order. spell() stashes the ones its own texts contain on its entry (`_pot_text_refs`), so a later pass knows
+    # which spell a pot_text names even when two spells print the same expression (equal potency): item variants IV10,
+    # lib/item_spell_copies.py's effect families.
+    pot_text_calls: list[tuple[str, int]] = field(default_factory=list)
 
 
 MERGE_KEYS = (
@@ -290,6 +295,9 @@ def spell(**kwargs) -> model.Spell:
     # changed copy of it (item variants IV10, lib/item_spell_copies.py: the per-tier copies of an item's effect spells).
     entry["_spell"] = s
     registry = _require_active()
+    pot_text_refs = _pot_text_refs(s, registry.pot_text_calls)
+    if pot_text_refs:
+        entry["_pot_text_refs"] = pot_text_refs
     registry.spells.append(entry)
     # Potency system (docs/potency-system.md, PLAN P2): to_entry() stashes these on `s` when the
     # spell has any potency effect - see model.Spell._resolve_potency. Declared the same automatic
@@ -774,7 +782,26 @@ def pot_text(
     ticks = pot.pop("ticks", 1.0)
     pot.pop("spell_level", None)
     placeholder = "{pot1" + (f".{variant}" if variant else "") + (f"*{var}" if var else "") + "}"
-    return _potency.expand_placeholders(placeholder, {1: _potency.ResolvedPotency(**pot)}, {1: ticks})
+    text = _potency.expand_placeholders(placeholder, {1: _potency.ResolvedPotency(**pot)}, {1: ticks})
+    if _active is not None:
+        _active.pot_text_calls.append((text, int(source.id)))
+    return text
+
+
+_POT_TEXT_KEYS = ("Description_Lang_enUS", "AuraDescription_Lang_enUS")
+
+
+def _pot_text_refs(spell: model.Spell, calls: list[tuple[str, int]]) -> list[tuple[str, int]]:
+    """The recorded pot_text() calls `spell`'s texts contain, as (text, source spell id): for each distinct text the
+    latest call that produced it (the one this spell's text was just built from, when two spells print the same
+    expression)."""
+    texts = [v for k, v in (spell.raw_overrides or {}).items() if k in _POT_TEXT_KEYS and isinstance(v, str)]
+    if not texts or not calls:
+        return []
+    latest: dict[str, int] = {}
+    for text, source in calls:
+        latest[text] = source
+    return sorted((text, source) for text, source in latest.items() if any(text in t for t in texts))
 
 
 def custom_attr(spell: model.Spell | int, attributes: int) -> dict:

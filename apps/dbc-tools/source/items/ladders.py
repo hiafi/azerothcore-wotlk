@@ -27,8 +27,12 @@ HARD_MODE_SUFFIX = " Hard Mode"
 EPIC = Quality.EPIC
 HM = HARD_MODE_SUFFIX
 
+# Effect scaling (IV10 per-tier copies, wave 1 integration 2026-11-06; user intent: effects scale with item level like the
+# item's stats): a `scale="budget"` effect's declared numbers are the Heroic tier's (66 Epic). The Normal tier, at each
+# item's own stock level, gets a copy scaled down by budget(normal) / budget(66), the empowered tiers copies scaled up.
 VANILLA_DUNGEON = ladder(
     "vanilla_dungeon",
+    effect_reference="heroic",
     # Normal: the dungeon at its stock level range. Level, quality (Rare) and required level are the item's own.
     normal=tier(step=0, label="Normal", sockets=False),  # user 2026-11-06: sockets from heroic up
     heroic=tier(step=1, ilvl=66, quality=EPIC, required_level=REQUIRED_LEVEL, heroic_flag=True, label="Heroic"),
@@ -38,9 +42,10 @@ VANILLA_DUNGEON = ladder(
 )
 
 # Hard mode bonus list: separate items (not variants of the heroic list), no Heroic flag (decision 2), so every tier
-# gets a label of its own. It starts at Heroic, so its first step is 1.
+# gets a label of its own. It starts at Heroic, so its first step is 1. Effects are declared at its 71 tier.
 VANILLA_HARD_MODE = ladder(
     "vanilla_hard_mode",
+    effect_reference="heroic_hm",
     heroic_hm=tier(step=1, ilvl=71, quality=EPIC, required_level=REQUIRED_LEVEL, label="Heroic" + HM),
     empowered_1_hm=tier(step=2, ilvl=81, quality=EPIC, required_level=REQUIRED_LEVEL, label="Molten Empowered" + HM),
     empowered_2_hm=tier(step=3, ilvl=91, quality=EPIC, required_level=REQUIRED_LEVEL, label="Draconic Empowered" + HM),

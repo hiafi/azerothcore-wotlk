@@ -42,9 +42,10 @@ its first tier. Deltas are fractions of the tier's own baseline (`extra_stamina=
 so they scale with the item level.
 
 **Effects.** `spells=(use_spell(...), equip_spell(...), hit_spell(...))` puts the same effect on every tier, unless it
-is declared with `scale="budget"` (IV10): then every tier above the item's first carries its own copy of the spell and
-of every spell it reaches, damage and healing potency times the tier's stat budget over the first tier's
-(`lib/item_spell_copies.py`; durations, cooldowns, chances, radii and aura amounts stay as declared).
+is declared with `scale="budget"` (IV10): then every tier but the ladder's effect reference tier (`ladder(...,
+effect_reference=)`, else its first) carries its own copy of the spell and of every spell it reaches, damage and
+healing potency and stat-like aura amounts times the tier's stat budget over the reference tier's
+(`lib/item_spell_copies.py`; durations, cooldowns, chances, radii and percentages stay as declared).
 
 **Unique-equipped across tiers** (IV10 follow-up 1, user 2026-11-06). Every tier of an item with an effect (`spells=`
 with at least one spell, or a `keep_spells=True` stock item whose row has one) shares one `ItemLimitCategory`, equip
@@ -77,9 +78,9 @@ MAX_SOCKETS = 3
 MAX_ITEM_LEVEL = 300  # every reference curve covers 1-300
 MAX_REQUIRED_LEVEL = 80
 MAX_TIER_STEP = 255  # item_budget_variant.tier is a tinyint unsigned
-# `use_spell(..., scale=...)` values (item variants IV10, lib/item_spell_copies.py). "budget": every tier above the
-# item's first gets its own copy of the effect spell and every spell it reaches, with the damage and healing potency
-# scaled by the tier's stat budget over the first tier's.
+# `use_spell(..., scale=...)` values (item variants IV10, lib/item_spell_copies.py). "budget": every tier but the
+# ladder's effect reference tier gets its own copy of the effect spell and every spell it reaches, with the damage and
+# healing potency and stat-like aura amounts scaled by the tier's stat budget over the reference tier's.
 SPELL_SCALES = ("budget",)
 NEW_ITEM_LEVEL_GAP = 5  # a new item's default required level: its item level minus this (the stock pattern)
 
@@ -227,6 +228,10 @@ def _check_required_level(where: str, level) -> None:
 class Ladder:
     name: str
     tiers: tuple[Tier, ...]
+    # The tier whose item level the per-tier effect copies are measured against (IV10, lib/item_spell_copies.py): it
+    # keeps the declared spells, every other tier gets a copy scaled by budget(tier) / budget(reference). None: the
+    # first tier.
+    effect_reference: str | None = None
 
     def tier(self, name: str) -> Tier | None:
         return next((t for t in self.tiers if t.name == name), None)
@@ -236,10 +241,15 @@ class Ladder:
         return tuple(t.name for t in self.tiers)
 
 
-def ladder(name: str, **tiers: Tier) -> Ladder:
+def ladder(name: str, *, effect_reference: str | None = None, **tiers: Tier) -> Ladder:
     """An ordered loot ladder: `ladder("vanilla_dungeon", normal=tier(...), heroic=tier(...), ...)`. Tier names are
     the lock file's tier column, so a shipped tier keeps its name forever (renaming one retires its ids). Only the
-    first tier may take the item's own level; the explicit item levels and the steps strictly increase."""
+    first tier may take the item's own level; the explicit item levels and the steps strictly increase.
+
+    `effect_reference="<tier>"` names the tier a `scale="budget"` effect's declared numbers belong to (IV10; wave 1
+    integration): every other tier's copy is scaled by its stat budget over that tier's, so a ladder whose first tier
+    takes each item's own (stock) level still scales effects from one fixed level. It must be a tier with an explicit
+    item level (or the first tier); left out, the first tier is the reference."""
     if not isinstance(name, str) or not _KEY_RE.match(name):
         raise ItemDeclarationError(f"ladder({name!r}): the name must match {_KEY_RE.pattern}")
     if not tiers:
@@ -272,7 +282,18 @@ def ladder(name: str, **tiers: Tier) -> Ladder:
     labels = [t.label for t in named]
     if len(set(labels)) != len(labels):
         raise ItemDeclarationError(f"ladder({name!r}): two tiers share a label ({labels})")
-    return Ladder(name=name, tiers=tuple(named))
+    if effect_reference is not None:
+        reference = next((t for t in named if t.name == effect_reference), None)
+        if reference is None:
+            raise ItemDeclarationError(
+                f"ladder({name!r}): effect_reference={effect_reference!r} names no tier ({[t.name for t in named]})"
+            )
+        if reference.deferred or not (reference.explicit or reference is named[0]):
+            raise ItemDeclarationError(
+                f"ladder({name!r}): effect_reference={effect_reference!r} must be a minted tier with its own ilvl= "
+                f"(or the first tier)"
+            )
+    return Ladder(name=name, tiers=tuple(named), effect_reference=effect_reference)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -334,8 +355,8 @@ def _scale(caller: str, spell, scale) -> dict:
 def use_spell(spell, cooldown: int = -1, category: int = 0, category_cooldown: int = -1, charges: int = 0,
               scale: str | None = None) -> ItemSpell:
     """A "Use:" effect (`spelltrigger` 0). Cooldowns in milliseconds, -1 = the spell's own. `scale="budget"` gives
-    every tier above the item's first its own copy of the spell, damage and healing scaled by the tier's stat budget
-    (IV10, lib/item_spell_copies.py)."""
+    every tier but the ladder's effect reference tier its own copy of the spell, damage, healing and stat auras scaled
+    by the tier's stat budget over the reference tier's (IV10, lib/item_spell_copies.py)."""
     return ItemSpell(_spell_id(spell), SpellTrigger.USE, charges=charges, cooldown=cooldown, category=category,
                      category_cooldown=category_cooldown, **_scale("use_spell", spell, scale))
 
@@ -555,6 +576,53 @@ def load_items_dir(dir_path: Path, **kwargs) -> dict:
     merged["spell_var_names"].update(reg.spell_var_names)
     merged["creature_var_names"].update(reg.creature_var_names)
     return merged
+
+
+ITEMS_DIR = Path(__file__).resolve().parents[2] / "source" / "items"
+
+
+def declared_item_bases(dir_path: Path = ITEMS_DIR) -> frozenset[int]:
+    """The stock entries `source/items/*.py` takes over with `item(..., base=<entry>)`, read from the files' syntax
+    trees without running them. A source/world file that edits stock items in bulk (ranged_weapons.py) skips these:
+    one owner per entry, and the item declaration carries the columns itself. Only a literal int `base=` counts; any
+    other form is not seen here, and the item resolver's one-owner check then reports the clash."""
+    import ast
+
+    bases: set[int] = set()
+    if not dir_path.is_dir():
+        return frozenset()
+    for path in sorted(dir_path.glob("*.py")):
+        if path.name.startswith("_"):
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            name = func.id if isinstance(func, ast.Name) else func.attr if isinstance(func, ast.Attribute) else None
+            if name != "item":
+                continue
+            for keyword in node.keywords:
+                value = keyword.value
+                if (keyword.arg == "base" and isinstance(value, ast.Constant) and isinstance(value.value, int)
+                        and not isinstance(value.value, bool)):
+                    bases.add(value.value)
+    return frozenset(bases)
+
+
+def item_owned_entries(dir_path: Path = ITEMS_DIR) -> frozenset[int]:
+    """Every `item_template` entry source/items owns: the stock `base=` entries (`declared_item_bases`) and every
+    entry of `item_ids.lock` (the minted tiers, the recorded bases, retired lines included). Once a write run has
+    minted a ranged weapon's tiers they are live rows too, so a bulk `item_template()` editor (ranged_weapons.py) skips
+    all of these."""
+    owned = set(declared_item_bases(dir_path))
+    lock = dir_path / "item_ids.lock"
+    if lock.is_file():
+        for raw in lock.read_text(encoding="utf-8").splitlines():
+            token = raw.split("#", 1)[0].split()[:1]
+            if token and token[0].isdigit():
+                owned.add(int(token[0]))
+    return frozenset(owned)
 
 
 def _check_spells(where: str, base, spells, keep_spells) -> tuple[ItemSpell, ...] | None:

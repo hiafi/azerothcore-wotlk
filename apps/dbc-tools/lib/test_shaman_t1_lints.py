@@ -252,6 +252,16 @@ class GroundEffectHasteTest(unittest.TestCase):
         self.assertEqual(_run(lint.check_ground_effect_haste, row), [])
         self.assertEqual(len(_run(lint.check_ground_effect_haste, row, allow=frozenset())), 1)
 
+    def test_an_item_tier_copy_of_an_allowed_spell_is_exempt(self):
+        # Specimen Acid 205626 (Scholomance, hasted by design) and an IV10 per-tier copy of it; a copy of a spell that
+        # is not allowed still warns.
+        self.assertIn(205626, lint.GROUND_HASTE_ALLOW)
+        copy = _ground([(self.PAA, 3)], spell_id=205500)
+        entry = {**_entry("Specimen Acid"), "_item_copy_of": 205626}
+        self.assertEqual(lint.check_ground_effect_haste([entry], [copy]), [])
+        other = {**_entry("Other Pool"), "_item_copy_of": 205999}
+        self.assertEqual(len(lint.check_ground_effect_haste([other], [copy])), 1)
+
     def test_the_p0_ground_spells_are_silent(self):
         # 202775: PERSISTENT_AREA_AURA dummy + PERIODIC_DUMMY, Ex5 0x08000000 (NO_CASTER_AURA_ICON), no 0x2000.
         healing_rain = _ground([(self.PAA, 4), (6, 226)], spell_id=202775, AttributesEx5=0x08000000)

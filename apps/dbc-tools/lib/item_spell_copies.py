@@ -6,20 +6,28 @@ damage or healing scale with the item level).
          spells=(use_spell(powder_keg_fuse_205400, scale="budget"),))
 
 **What gets copied.** For every `use_spell` / `equip_spell` / `hit_spell` declared with `scale="budget"`, every tier
-of the item above its first (resolved) tier gets its own copy of the spell and of every spell it reaches (its
-*family*). The first tier keeps the declared spells (ratio 1). A spell reaches another through:
+of the item other than its ladder's *effect reference* tier gets its own copy of the spell and of every spell it
+reaches (its *family*). The reference tier keeps the declared spells (ratio 1), so the declared numbers are that tier's
+numbers. A ladder names it with `ladder(..., effect_reference="<tier>")` (wave 1 integration, user intent "effects
+scale with item level like the item's stats"): the vanilla dungeon ladder's is Heroic (66 Epic), so its Normal tier
+gets a copy with a ratio below 1 and the empowered tiers ratios above 1, whatever the item's own Normal level; the hard
+mode ladder's is its first tier (71). A ladder without one uses its first tier. A spell reaches another through:
 
 - an effect's `trigger_spell` (or a raw `EffectTriggerSpell_N`);
 - a `$<id><token>` reference in its description or aura description (`$205401d`, `$205402a1`);
-- a `pot_text(...)` of the other spell in its description (matched by the other spell's tooltip expressions);
+- a `pot_text(...)` of the other spell in its description: the spell `pot_text()` was called for (the registry records
+  each call, `_pot_text_refs`; two spells with equal potency print the same expression, so the text alone cannot tell
+  them apart), else, for a text built without the registry, every spell whose tooltip expressions it contains;
 - a `linked_spell(trigger, effect)` row whose trigger it is.
 
 Only spells declared in `source/items/` are followed: a reference to a stock or class spell stays shared.
 
 **The copy** is the declaration with a new id, its damage and healing potency (`sp_potency`, `ap_potency`,
-`base_potency` and the per-combo-point ones) times the tier's ratio, every family id inside it remapped to the same
-tier's copy (trigger spells, `$<id>` tokens, `pot_text` expressions, linked spells), and everything else unchanged:
-name, icon, visuals, durations, cooldowns, ranges, radii, proc chance, aura amounts (a -10% stays -10%). Its own
+`base_potency` and the per-combo-point ones) times the tier's ratio, the amount of every stat-like aura without potency
+(`STAT_AURAS`: ratings, stats, armor and resistances, spell power, attack power, health, mana regeneration, block value,
+flat absorbs) times the ratio too, rounded, every family id inside it remapped to the same tier's copy (trigger spells,
+`$<id>` tokens, `pot_text` expressions, linked spells), and everything else unchanged: name, icon, visuals, durations,
+cooldowns, ranges, radii, proc chance, percentages (a -10% damage taken or +30% speed stays). Its own
 `{potN}` placeholders are expanded from the scaled effects by `Spell.to_entry()`, so every tooltip shows the tier's own
 numbers. The rows a spell owns by id are copied too: `spell_proc`, `spell_script_names` (the same C++ script runs for
 every copy), `spell_custom_attr`, `spell_linked_spell`, and the potency rows (`spell_bonus_data`,
@@ -27,7 +35,7 @@ every copy), `spell_custom_attr`, `spell_linked_spell`, and the potency rows (`s
 
 **Ratio** (one number per item tier, rounded to 4 decimals):
 
-    ratio(tier) = budget(tier) / budget(first tier)
+    ratio(tier) = budget(tier) / budget(reference tier)
     budget(t)   = item_budget_curve[ilvl_t].budget x item_quality_mult[quality_t].mult x item_slot_mult[slot].mult
 
 the step-1 base of `item_lib.budget.compute_breakdown` / `ItemBudget::ResolveBudget` without the item's own constant
@@ -71,8 +79,9 @@ RATIO_DIGITS = 4
 LOCK_HEADER = (
     "# Item effect spell copies (item variants IV10; lib/item_spell_copies.py): one line per (item key, tier, base\n"
     "# spell), `<spell id> <item key> <tier> <base spell id> [retired <date>]`, minted from source/ids.yaml's\n"
-    "# item_spell_copy block. Every tier above an item's first carries its own copy of each `scale=\"budget\"` spell\n"
-    "# and of every spell it reaches, damage and healing scaled by the tier's stat budget.\n"
+    "# item_spell_copy block. Every tier but the ladder's effect reference tier carries its own copy of each\n"
+    "# `scale=\"budget\"` spell and of every spell it reaches, damage, healing and stat auras scaled by the tier's stat\n"
+    "# budget over the reference tier's.\n"
     "# Append-only: a full generate.py run appends new lines; never reorder, renumber or delete one (an id must never\n"
     "# move or be reused). A merge conflict: keep the merged side's lines, drop the other side's new lines and delete\n"
     "# its not-yet-imported rev_*.sql, then re-run generate.py (same recovery as item_ids.lock).\n"
@@ -84,6 +93,25 @@ APPLY_AURA_EFFECTS = frozenset((6, 27, 35, 65, 119, 128, 129))  # apply aura, pe
 DAMAGE_HEAL_AURAS = frozenset((3, 8, 15, 43, 53, 69))  # periodic damage / heal, damage shield, proc damage, leech,
 # absorb
 SCALED_FIELDS = ("sp_potency", "ap_potency", "base_potency", "cp_sp_potency", "cp_ap_potency", "cp_base_potency")
+# Stat-like aura amounts a copy scales by the ratio (SpellAuraDefines.h AuraType): flat amounts an item's stats would
+# also carry. Percent auras (damage done / taken %, speed %, haste %), proc chances, durations, cooldowns and radii stay.
+# An effect with potency (or potency_excluded: a script sizes it) is never touched here.
+STAT_AURAS = {
+    13: "MOD_DAMAGE_DONE (flat spell power)",
+    22: "MOD_RESISTANCE (armor and resistances)",
+    29: "MOD_STAT",
+    34: "MOD_INCREASE_HEALTH",
+    69: "SCHOOL_ABSORB (a flat absorb without potency)",
+    83: "MOD_BASE_RESISTANCE",
+    85: "MOD_POWER_REGEN (mana per 5)",
+    97: "MANA_SHIELD (a flat absorb without potency)",
+    99: "MOD_ATTACK_POWER",
+    101: "MOD_RESISTANCE_EXCLUSIVE",
+    124: "MOD_RANGED_ATTACK_POWER",
+    135: "MOD_HEALING_DONE (flat healing power)",
+    158: "MOD_SHIELD_BLOCKVALUE",
+    189: "MOD_RATING (every combat rating, the custom stats included)",
+}
 TEXT_KEYS = ("Description_Lang_enUS", "AuraDescription_Lang_enUS")
 _ID_TOKEN_RE = re.compile(r"\$(\d+)(?=[a-zA-Z])")
 _KEY = r"[a-z][a-z0-9_]*"
@@ -183,12 +211,22 @@ def stat_budget(tables: dict, ilvl: int, quality: int, inv_type: int) -> float |
     return float(curve["budget"]) * float(qual["mult"]) * float(slot["mult"])
 
 
-def tier_ratio(tables: dict, first, tier, inv_type: int) -> float | None:
-    low = stat_budget(tables, first.ilvl, first.quality, inv_type)
+def tier_ratio(tables: dict, reference, tier, inv_type: int) -> float | None:
+    """budget(tier) / budget(reference), rounded; None when a reference row is missing."""
+    low = stat_budget(tables, reference.ilvl, reference.quality, inv_type)
     high = stat_budget(tables, tier.ilvl, tier.quality, inv_type)
     if not low or high is None:
         return None
     return round(high / low, RATIO_DIGITS)
+
+
+def reference_tier(item):
+    """The item's resolved tier that keeps the declared spells: its ladder's `effect_reference` tier, else its first;
+    None when the ladder names a tier the item does not have."""
+    name = getattr(item.decl.ladder, "effect_reference", None)
+    if not name:
+        return item.tiers[0]
+    return next((t for t in item.tiers if t.tier == name), None)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -282,9 +320,15 @@ class SpellIndex:
     def refs(self, spell_id: int) -> set[int]:
         spell = self.spells[spell_id]
         refs = _direct_refs(spell, self.linked)
+        # pot_text() calls the registry recorded for this spell's texts name their spell exactly; only text they do not
+        # cover falls back to matching tooltip expressions (equal potency, equal expression: ambiguous).
+        recorded = self.entries[spell_id].get("_pot_text_refs") or ()
+        refs.update(int(source) for _, source in recorded)
         pattern = _expression_re(self.expression_owner)
         if pattern is not None:
             for text in _texts(spell).values():
+                for snippet, _ in recorded:
+                    text = text.replace(snippet, "")
                 for m in pattern.finditer(text):
                     refs.update(self.expression_owner[m.group(1)])
         refs.discard(spell_id)
@@ -332,6 +376,19 @@ def family_problems(index: SpellIndex, family: list[int], dsl_classes: dict, whe
 # Copies
 
 
+def _scaled_amount(effect, ratio: float) -> dict:
+    """A stat aura's new `base_points` / `die_sides` (the amount is BasePoints + 1..DieSides), or {} to keep it."""
+    if (int(effect.type) not in APPLY_AURA_EFFECTS or int(effect.apply_aura) not in STAT_AURAS or effect.has_potency
+            or effect.potency_excluded):
+        return {}
+    offset = 1 if effect.die_sides >= 1 else 0
+    low = effect.base_points + offset
+    changes = {"base_points": int(round(low * ratio)) - offset}
+    if effect.die_sides > 1:
+        changes["die_sides"] = max(1, int(round(effect.die_sides * ratio)))
+    return {k: v for k, v in changes.items() if v != getattr(effect, k)}
+
+
 def _scaled_effect(effect, ratio: float, remap: dict[int, int]):
     if effect is None:
         return None
@@ -340,6 +397,7 @@ def _scaled_effect(effect, ratio: float, remap: dict[int, int]):
         value = getattr(effect, name)
         if value:
             changes[name] = value * ratio
+    changes.update(_scaled_amount(effect, ratio))
     if effect.trigger_spell and int(effect.trigger_spell) in remap:
         changes["trigger_spell"] = remap[int(effect.trigger_spell)]
     return dataclasses.replace(effect, **changes) if changes else effect
@@ -377,7 +435,7 @@ def build_copies(index: SpellIndex, family: list[int], remap: dict[int, int], ra
             trigger = raw.get(f"EffectTriggerSpell_{n}")
             if trigger and int(trigger) in remap:
                 raw[f"EffectTriggerSpell_{n}"] = remap[int(trigger)]
-        notes = f"{note}: copy of {base} ({copy.name}), damage and healing potency x {ratio:g}."
+        notes = f"{note}: copy of {base} ({copy.name}), damage and healing potency and stat aura amounts x {ratio:g}."
         if copy.notes:
             notes += f" Base notes: {copy.notes}"
         copies[base] = dataclasses.replace(copy, raw_overrides=raw or None, notes=notes)
@@ -468,7 +526,11 @@ def expand(
         decl = item.decl
         if len(item.tiers) < 2:
             continue
-        first = item.tiers[0]
+        reference = reference_tier(item)
+        if reference is None:
+            out.errors.append(f"{decl.where}: ladder {decl.ladder.name!r} scales effects against its "
+                              f"{decl.ladder.effect_reference!r} tier, which this item does not have")
+            continue
         families: dict[int, list[int]] = {}
         for item_spell in decl.spells:
             if not item_spell.scale:
@@ -481,11 +543,13 @@ def expand(
             out.errors += family_problems(index, family, dsl_classes, where)
             families[item_spell.spell_id] = family
         members = sorted({s for family in families.values() for s in family})
-        for tier in item.tiers[1:]:
-            ratio = tier_ratio(tables, first, tier, item.inventory_type)
+        for tier in item.tiers:
+            if tier is reference:
+                continue
+            ratio = tier_ratio(tables, reference, tier, item.inventory_type)
             if ratio is None:
                 out.errors.append(f"{decl.where} tier {tier.tier!r}: no stat budget for ilvl {tier.ilvl} / quality "
-                                  f"{tier.quality} (or the first tier's), so its spells cannot be scaled")
+                                  f"{tier.quality} (or the reference tier's), so its spells cannot be scaled")
                 continue
             plans.append((item, tier, ratio, members))
             wanted += [(decl.key, tier.tier, base) for base in members]
@@ -608,9 +672,9 @@ def render_header(tiers: list[TierCopies]) -> str:
     lines = [
         "/*",
         " * Generated by apps/dbc-tools/generate.py (lib/item_spell_copies.py) from source/items/item_spell_ids.lock -",
-        " * DO NOT hand-edit. Item variants IV10: every tier above an item's first carries its own copy of each",
-        " * scale=\"budget\" effect spell and of every spell it reaches. A script bound to a copy casts its own tier's",
-        " * copies: Resolve(the id of the spell being cast or the aura, the base id it would cast).",
+        " * DO NOT hand-edit. Item variants IV10: every tier but the ladder's effect reference tier carries its own",
+        " * copy of each scale=\"budget\" effect spell and of every spell it reaches. A script bound to a copy casts its",
+        " * own tier's copies: Resolve(the id of the spell being cast or the aura, the base id it would cast).",
         " *",
         " * Pure (no engine headers), so host tests can include it.",
         " */",

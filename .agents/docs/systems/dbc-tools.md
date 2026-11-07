@@ -119,19 +119,34 @@ wired in `generate._loot_blocks` after the item expansion, so a full run and `--
 ### Item effect spells that scale with the tier: `scale="budget"` (item variants IV10)
 
 `use_spell(spell, scale="budget")` (also `equip_spell` / `hit_spell`; pass the declared `spell(...)` object) gives
-every tier above the item's first its own copy of the spell and of every source/items spell it reaches (an effect's
-`trigger_spell`, a `$<id>` token or a `pot_text()` in its texts, a `linked_spell()` it triggers).
+every tier but the ladder's effect reference tier its own copy of the spell and of every source/items spell it reaches
+(an effect's `trigger_spell`, a `$<id>` token or a `pot_text()` in its texts, a `linked_spell()` it triggers).
 `lib/item_spell_copies.py`:
 
-- **Ratio** = `item_budget_curve[ilvl].budget x item_quality_mult x item_slot_mult` of the tier over the first tier's,
-  rounded to 4 decimals (`budget_mult`, set discount and socket cost left out: constant or not an effect's business).
-  The hard mode ladder 71 / 81 / 91 / 101 Epic: 1.0 / 1.0545 / 1.1091 / 1.2545 (curve 55 / 58 / 61 / 69).
+- **Reference tier**: `ladder(..., effect_reference="<tier>")` (default: the first tier). It keeps the declared spells,
+  so the declared numbers are that tier's. `vanilla_dungeon` uses `heroic` (66 Epic): the Normal tier, at each item's
+  own stock level, gets a copy with a ratio below 1, the empowered tiers ratios above 1. `vanilla_hard_mode` uses
+  `heroic_hm` (71). Declare an effect's numbers for the reference tier.
+- **Ratio** = `item_budget_curve[ilvl].budget x item_quality_mult x item_slot_mult` of the tier over the reference
+  tier's, rounded to 4 decimals (`budget_mult`, set discount and socket cost left out: constant or not an effect's
+  business). The hard mode ladder 71 / 81 / 91 / 101 Epic: 1.0 / 1.0545 / 1.1091 / 1.2545 (curve 55 / 58 / 61 / 69).
 - **Copy** = the declaration with `sp_potency` / `ap_potency` / `base_potency` / the combo-point potencies times the
-  ratio; every family id inside it remapped to the same tier's copy (trigger spells, `$<id>` tokens, `pot_text`
-  expressions, linked spells); its `spell_proc`, `spell_script_names`, `spell_custom_attr` rows copied; potency rows
-  from its own `to_entry()`. Everything else (durations, cooldowns, radius, proc chance, aura amounts) is unchanged.
-  A family damage or heal effect without potency, a `weapon_potency` effect or a hand `bonus_coefficients()` row is an
-  ERROR. The tier's item row names its copies (`ResolvedTier.spells`); the first tier keeps the declared ids.
+  ratio, and the amount (BasePoints + 1) of every stat-like aura without potency times the ratio, rounded
+  (`STAT_AURAS`: MOD_DAMAGE_DONE 13, MOD_RESISTANCE 22 (armor), MOD_STAT 29, MOD_INCREASE_HEALTH 34, SCHOOL_ABSORB 69
+  and MANA_SHIELD 97 without potency, MOD_BASE_RESISTANCE 83, MOD_POWER_REGEN 85, MOD_ATTACK_POWER 99,
+  MOD_RESISTANCE_EXCLUSIVE 101, MOD_RANGED_ATTACK_POWER 124, MOD_HEALING_DONE 135, MOD_SHIELD_BLOCKVALUE 158,
+  MOD_RATING 189); every family id inside it remapped to the same tier's copy (trigger spells, `$<id>` tokens,
+  `pot_text` expressions, linked spells); its `spell_proc`, `spell_script_names`, `spell_custom_attr` rows copied;
+  potency rows from its own `to_entry()`. Everything else (durations, cooldowns, radius, proc chance, percentages such
+  as damage taken %, speed %, an effect with `potency_excluded`) is unchanged. A family damage or heal effect without
+  potency, a `weapon_potency` effect or a hand `bonus_coefficients()` row is an ERROR. The tier's item row names its
+  copies (`ResolvedTier.spells`); the reference tier keeps the declared ids. Show aura amounts with `$s1` in the
+  texts (a typed number would not follow the copy).
+- **Families and equal potency**: two spells with the same potency print the same `pot_text()` expression. The
+  registry records which spell each `pot_text()` call was for and `spell()` keeps the ones its texts contain
+  (`_pot_text_refs`), so a family follows exactly the named spell; only a text built outside the registry falls back to
+  matching expressions (and then pulls in every spell with that expression). Build a description's `pot_text()` in
+  the `spell(...)` call (or just before it), not in a shared string reused by several spells.
 - **Ids**: `source/items/item_spell_ids.lock` (`<spell id> <key> <tier> <base spell id> [retired <date>]`), minted
   from the `item_spell_copy` block (205410-205599, inside the `items` spell reservation), same append-only, retire
   and merge rules as `item_ids.lock`; a full run writes it, `--check` lists the lines.

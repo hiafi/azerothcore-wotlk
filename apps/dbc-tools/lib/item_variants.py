@@ -389,10 +389,19 @@ def _resolve_item(
             errors.append(f"{where}: base={decl.base} has no live item_template row (base dump plus migrations)")
             return None
         like_columns = {}
-        inherited = [c for c in INHERITED_WARN_COLUMNS if source_row.get(c) not in (None, "", 0, "0", 0.0)]
+        # A column the declaration sets itself (columns=, every tier) is what the tiers carry, not the stock value.
+        declared = dict(decl.columns)
+        effective = {c: declared.get(c, source_row.get(c)) for c in INHERITED_WARN_COLUMNS}
+        # A unique-equipped item gets its own ItemLimitCategory on every tier (lib/item_limits.py), whatever the stock
+        # row (or an earlier run's row) carries.
+        if decl.unique_equip if decl.unique_equip is not None else (
+                bool(decl.spells) if decl.spells is not None
+                else decl.keep_spells and any(source_row.get(f"spellid_{n}") for n in range(1, 6))):
+            effective["ItemLimitCategory"] = None
+        inherited = [c for c in INHERITED_WARN_COLUMNS if effective[c] not in (None, "", 0, "0", 0.0)]
         if inherited:
             warnings.append(
-                f"{where}: base={decl.base} carries {', '.join(f'{c}={source_row[c]!r}' for c in inherited)}; every "
+                f"{where}: base={decl.base} carries {', '.join(f'{c}={effective[c]!r}' for c in inherited)}; every "
                 f"minted tier copies it unchanged (the budget neither prices nor scales it) - override it per tier "
                 f"if that is wrong"
             )

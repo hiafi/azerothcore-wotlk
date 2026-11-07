@@ -1983,6 +1983,10 @@ _PERIODIC_DAMAGE_OR_HEAL_AURAS = frozenset({3, 8, 20, 53, 89})
 FIXED_CADENCE_PERIODIC_SPELLS: frozenset[int] = frozenset({200218, 200219})
 GROUND_HASTE_ALLOW: frozenset[int] = frozenset({
     200096,  # mage Meteor: the ground burn is a persistent area aura carrying PERIODIC_DAMAGE, so it ticks hasted
+    # Scholomance item Polkelt's Specimen Launcher, Specimen Acid (wave 1 dungeon items): the 6 s acid pool ticks
+    # hasted on purpose, the wearer's spell haste speeds the pool up like any of their periodic damage ("spell haste is
+    # THE haste", user 2026-10-19). Its per-tier copies (item variants IV10) follow the base id.
+    205626,
 })
 
 
@@ -1995,13 +1999,16 @@ def check_ground_effect_haste(
     `SpellInfo::HasPeriodicDamageOrHealEffect` matches (SpellAuraEffects.cpp:660-680). Fixed-tick ground effects
     (Healing Rain, Earthquake, Blizzard) use the trigger shape instead: a persistent area aura + a PERIODIC_DUMMY
     aura + a script casting one single-target spell per target, which is not hasted and draws the ground kit.
-    Spells in `GROUND_HASTE_ALLOW` are exempt (existing effects whose owner has not ruled yet), and so are the core's
-    fixed-cadence ids (`FIXED_CADENCE_PERIODIC_SPELLS`, mirroring `IsFixedCadencePeriodic`)."""
+    Spells in `GROUND_HASTE_ALLOW` are exempt (existing effects whose owner has not ruled yet, or a hasted pool by
+    design), and so are an item effect's per-tier copies of an exempt spell (`_item_copy_of`, item variants IV10) and
+    the core's fixed-cadence ids (`FIXED_CADENCE_PERIODIC_SPELLS`, mirroring `IsFixedCadencePeriodic`)."""
     allowed = GROUND_HASTE_ALLOW if allow is None else allow
     warnings = []
     for entry, row in zip(entries, rows):
         spell_id = int(row["ID"])
         if spell_id < _CUSTOM_SPELL_ID_START or spell_id in allowed or spell_id in FIXED_CADENCE_PERIODIC_SPELLS:
+            continue
+        if entry.get("_item_copy_of") is not None and int(entry["_item_copy_of"]) in allowed:
             continue
         effects = [(int(row.get(f"Effect_{i}") or 0), int(row.get(f"EffectAura_{i}") or 0)) for i in (1, 2, 3)]
         if not any(effect == _EFFECT_PERSISTENT_AREA_AURA for effect, _ in effects):

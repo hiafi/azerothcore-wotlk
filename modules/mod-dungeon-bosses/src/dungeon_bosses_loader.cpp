@@ -22,6 +22,21 @@ void AddSC_vancleef_hard_mode();            // B9: go_dm_powder_keg
 void AddSC_dm_hard_mode_items();            // spell_dm_powder_keg_fuse, spell_dm_blackguards_signet,
                                             // spell_dm_lantern_of_the_roaring_flame
 
+// Stratholme hard mode items (wave 1 dungeon items): the Balnazzar and Baron Rivendare hard mode item effects
+void AddSC_strat_hard_mode_items();         // spell_strat_dust_of_the_nathrezim, spell_strat_two_faced_tome,
+                                            // spell_strat_ysidas_locket, spell_strat_blade_of_the_condemned,
+                                            // spell_strat_deathchargers_spur, StratholmeCondemnedDamage
+
+// Shadowfang Keep hard mode items (wave 1 dungeon items): the Archmage Arugal hard mode item effects
+void AddSC_sfk_hard_mode_items();           // spell_sfk_arugals_shadow_tome, spell_sfk_arugals_voidwalker
+
+// Scholomance items (wave 1 dungeon items): the scripted Scholomance item effects
+void AddSC_scholo_items();                  // spell_scholo_phylactery_shard, spell_scholo_bonechill_blade,
+                                            // spell_scholo_transfer_papers, spell_scholo_darkmasters_portal_rod
+
+// Dungeon sets (item variants, Haunted set track): the Haunted set bonuses
+void AddSC_haunted_set_bonuses();           // spell_haunted_* bonus scripts, HauntedSetSpellHooks, HauntedSetUnitHooks
+
 void Addmod_dungeon_bossesScripts()
 {
     AddSC_instance_deadmines_rework();
@@ -35,6 +50,10 @@ void Addmod_dungeon_bossesScripts()
     AddSC_boss_edwin_vancleef_rework();
     AddSC_vancleef_hard_mode();
     AddSC_dm_hard_mode_items();
+    AddSC_scholo_items();
+    AddSC_strat_hard_mode_items();
+    AddSC_sfk_hard_mode_items();
+    AddSC_haunted_set_bonuses();
     // after the boss files: they register their `.dmtest` tables from their AddSC_ functions
     AddSC_dungeon_bosses_dmtest_commandscript();
 }

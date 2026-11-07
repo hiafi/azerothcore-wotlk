@@ -16,13 +16,22 @@ Thrown (16) and Wands (19) are out of scope.
 
 The live rows come from the same overlay `item_template()` edits against (`live_item_templates()`), so a
 weapon added by a later migration is picked up on the next run with no list to maintain.
+
+A weapon `source/items` owns (an `item(..., base=<entry>)` declaration, or a tier minted into item_ids.lock: item
+variants) is skipped: an entry has one owner, and the item declaration sets `ammo_type=0` itself, so every minted tier
+keeps it.
 """
 
+from lib.dsl.items import item_owned_entries
 from lib.dsl.registry import item_template, live_item_templates
 
 BOW, GUN, CROSSBOW = 2, 3, 18
 ITEM_CLASS_WEAPON = 2
 
+_ITEM_OWNED = item_owned_entries()
+
 for _entry, _row in sorted(live_item_templates().items()):
+    if _entry in _ITEM_OWNED:
+        continue
     if _row["class"] == ITEM_CLASS_WEAPON and _row["subclass"] in (BOW, GUN, CROSSBOW):
         item_template(_entry, ammo_type=0)
