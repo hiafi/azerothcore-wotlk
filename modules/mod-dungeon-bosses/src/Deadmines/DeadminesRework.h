@@ -151,6 +151,10 @@ namespace DeadminesRework
         SPELL_DM_HARD_MODE_TIMER    = 205202,   // Burn It Down's 3:00 timer aura (B9)
         // 205203-205209 spare (shared)
     };
+    // 205200 and 205201 are the shared dungeon kit's (WP-K0): every reworked dungeon uses them.
+    static_assert(std::uint32_t(SPELL_DM_CAST_BAR) == std::uint32_t(DungeonKit::SPELL_KIT_CAST_BAR), "kit cast bar");
+    static_assert(std::uint32_t(SPELL_DM_STANDING_IN_IT) == std::uint32_t(DungeonKit::SPELL_KIT_STANDING_IN_IT),
+        "kit slow rider");
 
     struct IdSlice
     {

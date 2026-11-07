@@ -1,7 +1,9 @@
 /*
- * mod-dungeon-bosses, Deadmines: the `.dmtest <boss> <mechanic>` GM command shell (handoff section 7 #18). Each boss
- * file registers its own subcommand table from its AddSC_ function; the shell owns `.dmtest` itself plus
- * `.dmtest list` (the registered bosses and their subcommands) and `.dmtest state` (the instance's boss states).
+ * mod-dungeon-bosses, Deadmines: the `.dmtest <boss> <mechanic>` GM command shell (handoff section 7 #18), now the
+ * shared kit's generic shell (Kit/DungeonTestCommand.h) registered for map 36 under "dmtest"; these wrappers keep the
+ * Pilot's calls. Each boss file registers its own subcommand table from its AddSC_ function; the shell owns `.dmtest`
+ * itself plus `.dmtest list` (the registered bosses and their subcommands) and `.dmtest state` (the instance's boss
+ * states and the Deadmines data fields).
  *
  * A boss WP adds its subcommands like this (in its own boss_<name>_rework.cpp):
  *
@@ -42,12 +44,15 @@
 
 #include "ChatCommand.h"
 #include "Define.h"
+#include "DungeonTestCommand.h"
 
 class ChatHandler;
 class Creature;
 
 namespace DeadminesTest
 {
+    char constexpr kCommand[] = "dmtest";
+
     // `boss` must be a string literal (the command map keeps the pointer); `subcommands` must live for the process
     // (a function-local static). Call from the boss's AddSC_ function: the command map is built after the scripts load.
     // A second registration of the same name is ignored with an error log.

@@ -15,6 +15,7 @@
 
 #include "DeadminesKitMath.h"
 #include "DeadminesRework.h"
+#include "DungeonKitArena.h"
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -115,77 +116,20 @@ namespace Greenskin
     // window count as one volley. Every lane of a volley resolves on the same registry tick; volleys are 20 s apart.
     inline constexpr std::uint64_t kVolleyWindowMs = 1000;
 
-    // The deck as a rectangle frame (mod-boss-mechanics' RoomFrame math: origin a corner, X along `angle` for sizeX,
-    // Y along angle + 90 degrees for sizeY).
-    struct FrameRect
-    {
-        Vec2 origin;
-        float angle = 0.f;
-        float sizeX = 0.f;
-        float sizeY = 0.f;
-    };
+    // The deck as a rectangle frame (the shared kit's FrameRect, DungeonKitMath.h: origin a corner, X along `angle` for
+    // sizeX, Y along angle + 90 degrees for sizeY; the frame helpers and the lane math moved there with WP-K0).
+    using DungeonKit::FramePoint;
+    using DungeonKit::FrameRect;
+    using DungeonKit::InsideFrame;
+    using DungeonKit::LaneAxis;     // Along: bow to stern (Axis::X); Across: rail to rail (Axis::Y)
+    using DungeonKit::LaneOnFrame;
+    using DungeonKit::LaneSegment;
+    using DungeonKit::LanesFit;
+    using DungeonKit::SpanFor;
+    using DungeonKit::ToFrame;
 
     inline constexpr FrameRect kDeck{ DeadminesRework::kDeckOrigin, DeadminesRework::kDeckAngle,
         DeadminesRework::kDeckLength, DeadminesRework::kDeckWidth };
-
-    inline Vec2 FramePoint(FrameRect const& f, float fx, float fy)
-    {
-        float const c = std::cos(f.angle);
-        float const s = std::sin(f.angle);
-        return { f.origin.x + c * fx - s * fy, f.origin.y + s * fx + c * fy };
-    }
-
-    // A map point in frame coordinates (x along X, y along Y).
-    inline Vec2 ToFrame(FrameRect const& f, Vec2 p)
-    {
-        float const c = std::cos(f.angle);
-        float const s = std::sin(f.angle);
-        float const dx = p.x - f.origin.x;
-        float const dy = p.y - f.origin.y;
-        return { c * dx + s * dy, -s * dx + c * dy };
-    }
-
-    inline bool InsideFrame(FrameRect const& f, Vec2 p, float eps = 0.01f)
-    {
-        Vec2 const q = ToFrame(f, p);
-        return q.x >= -eps && q.x <= f.sizeX + eps && q.y >= -eps && q.y <= f.sizeY + eps;
-    }
-
-    enum class LaneAxis : std::uint8_t
-    {
-        Along,      // bow to stern: Axis::X (runs sizeX, offsets across sizeY)
-        Across      // rail to rail: Axis::Y (runs sizeY, offsets across sizeX)
-    };
-
-    // The span the lane offsets of `axis` spread over.
-    inline float SpanFor(FrameRect const& f, LaneAxis axis)
-    {
-        return axis == LaneAxis::Along ? f.sizeY : f.sizeX;
-    }
-
-    // `count` lanes of `width` with gaps >= minGap fit across `span` (else the registry spaces them evenly and warns).
-    inline bool LanesFit(float span, std::uint32_t count, float width, float minGap)
-    {
-        if (count == 0)
-            return true;
-        return count * width + (count - 1) * minGap <= span + 1e-4f;
-    }
-
-    // A lane's centreline on the map (mod-boss-mechanics PlaceLane): `offset` is its low edge across the axis.
-    struct LaneSegment
-    {
-        Vec2 from;
-        Vec2 to;
-        float width = 0.f;
-    };
-
-    inline LaneSegment LaneOnFrame(FrameRect const& f, LaneAxis axis, float offset, float width)
-    {
-        float const mid = offset + width * 0.5f;
-        if (axis == LaneAxis::Along)
-            return { FramePoint(f, 0.f, mid), FramePoint(f, f.sizeX, mid), width };
-        return { FramePoint(f, mid, 0.f), FramePoint(f, mid, f.sizeY), width };
-    }
 
     // Who a volley already hit (the once-per-volley rule at crossings). Keys are raw guids.
     class VolleyMemory
@@ -282,15 +226,7 @@ namespace Greenskin
     // Distance from p to the segment a-b; `along` (optional) gets the distance from a to p's projection, clamped.
     inline float DistanceToSegment(Vec2 a, Vec2 b, Vec2 p, float* along = nullptr)
     {
-        float const dx = b.x - a.x;
-        float const dy = b.y - a.y;
-        float const len2 = dx * dx + dy * dy;
-        float t = 0.f;
-        if (len2 > 1e-6f)
-            t = std::clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / len2, 0.f, 1.f);
-        if (along)
-            *along = t * std::sqrt(len2);
-        return DeadminesKit::Distance(p, { a.x + t * dx, a.y + t * dy });
+        return DungeonKit::SegmentDistance(a, b, p, along);
     }
 
     // `p` stands on the rope from the boss to the target: within kRopeStandYd of it, away from both ends.
@@ -388,7 +324,9 @@ namespace Greenskin
     // ----------------------------------------------------------------------------------------------------------------
     // Playtest 1: the fight stays on the ship. Greenskin stands still (no patrol), everyone in combat with him who is
     // off the ship is gripped onto the deck at the pull, anyone who stays off it during the fight for kGripGraceMs is
-    // gripped back, and he never follows his victim off it (he holds, and evades if he is ever off it himself).
+    // gripped back, and he never follows his victim off it (he holds, and evades if he is ever off it himself). Since
+    // WP-K0 the engine half is the shared kit's DungeonKit::ArenaGuard (Kit/ArenaGuard.h) on ShipArena(); the numbers
+    // and the tests stay here.
     // ----------------------------------------------------------------------------------------------------------------
 
     // "On the ship", in deck frame coordinates (kDeck: x from the sterncastle face toward the bow, y from the west rail
@@ -404,6 +342,13 @@ namespace Greenskin
     inline constexpr float kShipFrameMaxY = 40.f;       // map y -842
     inline constexpr float kShipMinZ = 36.f;
     inline constexpr float kShipMaxZ = 48.f;
+
+    // The ship as a kit arena: one region, the frame box above in deck frame coordinates, z 36 to 48 (ArenaGuard).
+    inline DungeonKit::Arena ShipArena()
+    {
+        return DungeonKit::Arena(DungeonKit::ArenaRegion::Frame(kDeck,
+            DungeonKit::Box2{ kShipFrameMinX, kShipFrameMaxX, kShipFrameMinY, kShipFrameMaxY }, kShipMinZ, kShipMaxZ));
+    }
 
     inline bool OnShip(Vec2 p, float z)
     {
@@ -432,57 +377,15 @@ namespace Greenskin
 
     inline Vec2 GripLanding(Vec2 boss, Vec2 from)
     {
-        float const dx = from.x - boss.x;
-        float const dy = from.y - boss.y;
-        float const d = std::hypot(dx, dy);
-        Vec2 p = d > 0.01f ? Vec2{ boss.x + dx / d * kGripLandYd, boss.y + dy / d * kGripLandYd } : boss;
-        p.x = std::clamp(p.x, kGripLandBox.minX, kGripLandBox.maxX);
-        p.y = std::clamp(p.y, kGripLandBox.minY, kGripLandBox.maxY);
-        return p;
+        return DungeonKit::LandingToward(boss, from, kGripLandYd, kGripLandBox);
     }
 
-    // Per unit: how long it has been off the ship, and its post-grip cooldown. Keys are raw guids.
-    class GripTracker
+    // Per unit: how long it has been off the ship, and its post-grip cooldown (the shared kit's tracker with
+    // Greenskin's grace and cooldown). Keys are raw guids.
+    class GripTracker : public DungeonKit::GripTracker
     {
     public:
-        // `unit` was seen on (or off) the ship `diff` ms after its last update. True: grip it now (then call Gripped).
-        bool Update(std::uint64_t unit, bool onShip, std::uint32_t diff)
-        {
-            Entry& e = _units[unit];
-            e.cooldownMs = e.cooldownMs > diff ? e.cooldownMs - diff : 0;
-            if (onShip)
-            {
-                e.offMs = 0;
-                return false;
-            }
-            e.offMs += diff;
-            return !e.cooldownMs && e.offMs >= kGripGraceMs;
-        }
-
-        // The pull: grip anyone off the ship at once (no grace), unless just gripped.
-        bool PullNow(std::uint64_t unit, bool onShip) const
-        {
-            auto const it = _units.find(unit);
-            return !onShip && (it == _units.end() || !it->second.cooldownMs);
-        }
-
-        void Gripped(std::uint64_t unit)
-        {
-            Entry& e = _units[unit];
-            e.offMs = 0;
-            e.cooldownMs = kGripCooldownMs;
-        }
-
-        void Clear() { _units.clear(); }
-        std::size_t Size() const { return _units.size(); }
-
-    private:
-        struct Entry
-        {
-            std::uint32_t offMs = 0;
-            std::uint32_t cooldownMs = 0;
-        };
-        std::unordered_map<std::uint64_t, Entry> _units;
+        GripTracker() : DungeonKit::GripTracker(kGripGraceMs, kGripCooldownMs) { }
     };
 }
 

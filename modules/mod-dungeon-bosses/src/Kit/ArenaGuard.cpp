@@ -1,0 +1,313 @@
+/*
+ * mod-dungeon-bosses, the shared dungeon kit: the arena guard and cell confinement (ArenaGuard.h). The guard is the
+ * Deadmines Pilot's Greenskin "aboard" code (PT1 fix: PullAboard, KeepAboard, Grip) with the deck replaced by an Arena.
+ */
+
+#include "ArenaGuard.h"
+#include "Creature.h"
+#include "CreatureAI.h"
+#include "DungeonKit.h"
+#include "Log.h"
+#include "Map.h"
+#include "MotionMaster.h"
+#include "ObjectAccessor.h"
+#include "Pet.h"
+#include "Player.h"
+#include "ThreatManager.h"
+#include "Unit.h"
+#include <utility>
+
+namespace DungeonKit
+{
+    namespace
+    {
+        // Everyone in combat with `boss`: his threat list (players, pets, guardians, bots; DoZoneInCombat adds every
+        // player and their pets at the pull).
+        std::vector<Unit*> CombatUnits(Creature const* boss)
+        {
+            std::vector<Unit*> out;
+            for (ThreatReference const* ref : boss->GetThreatMgr().GetUnsortedThreatList())
+                if (Unit* unit = ref->GetVictim())
+                    out.push_back(unit);
+            return out;
+        }
+    }
+
+    ArenaGuard::ArenaGuard(Arena arena, ArenaGuardOptions options)
+    {
+        Configure(std::move(arena), std::move(options));
+    }
+
+    void ArenaGuard::Configure(Arena arena, ArenaGuardOptions options)
+    {
+        _arena = std::move(arena);
+        _options = std::move(options);
+        _grip = GripTracker(_options.graceMs, _options.cooldownMs);
+        _checkMs = 0;
+        _emptyMs = 0;
+        _holding = false;
+    }
+
+    bool ArenaGuard::Contains(WorldObject const* o) const
+    {
+        return o && _arena.Contains(PlaneOf(o), o->GetPositionZ());
+    }
+
+    bool ArenaGuard::Grippable(Creature const* boss, Unit const* unit) const
+    {
+        return unit && unit->IsInWorld() && unit->IsAlive() && unit->IsInMap(boss) && !unit->IsTotem()
+            && !unit->IsVehicle() && !unit->GetVehicle() && boss->GetExactDist2d(unit) <= _options.maxGripYd;
+    }
+
+    void ArenaGuard::Engage(Creature* boss)
+    {
+        if (!boss || !_options.gripOnPull || _arena.Empty())
+            return;
+        uint32 gripped = 0;
+        for (Unit* unit : CombatUnits(boss))
+            if (Grippable(boss, unit) && _grip.PullNow(unit->GetGUID().GetRawValue(), Contains(unit)))
+            {
+                Grip(boss, unit, "pull");
+                ++gripped;
+            }
+        LOG_INFO(kLogCategory, "{} grip pull units={} gripped={}", _options.logPrefix, CombatUnits(boss).size(),
+            gripped);
+    }
+
+    bool ArenaGuard::Update(Creature* boss, uint32 diff)
+    {
+        if (!boss || _arena.Empty())
+            return true;
+        _checkMs += diff;
+        if (_checkMs < _options.checkMs)
+            return true;
+        uint32 const elapsed = _checkMs;
+        _checkMs = 0;
+
+        if (_options.evadeWhenBossOff && !Contains(boss))
+        {
+            LOG_INFO(kLogCategory, "{} grip leash at=({:.1f}, {:.1f}, {:.1f})", _options.logPrefix,
+                boss->GetPositionX(), boss->GetPositionY(), boss->GetPositionZ());
+            if (boss->IsAIEnabled && boss->AI())
+                boss->AI()->EnterEvadeMode(CreatureAI::EVADE_REASON_BOUNDARY);
+            return false;
+        }
+
+        if (_options.evadeNoTargetInsideMs)
+        {
+            bool anyInside = false;
+            for (Unit* unit : CombatUnits(boss))
+                if (unit->IsAlive() && Contains(unit))
+                {
+                    anyInside = true;
+                    break;
+                }
+            _emptyMs = anyInside ? 0 : _emptyMs + elapsed;
+            if (_emptyMs >= _options.evadeNoTargetInsideMs)
+            {
+                LOG_INFO(kLogCategory, "{} grip leash nobody-inside ms={}", _options.logPrefix, _emptyMs);
+                _emptyMs = 0;
+                if (boss->IsAIEnabled && boss->AI())
+                    boss->AI()->EnterEvadeMode(CreatureAI::EVADE_REASON_BOUNDARY);
+                return false;
+            }
+        }
+
+        if (_options.gripBack)
+            for (Unit* unit : CombatUnits(boss))
+                if (Grippable(boss, unit) && _grip.Update(unit->GetGUID().GetRawValue(), Contains(unit), elapsed))
+                    Grip(boss, unit, _options.offArenaReason.c_str());
+
+        if (!_options.holdWhileVictimOff)
+            return true;
+        // Never dragged off: no chasing a victim who is off the arena (the grip brings it back).
+        Unit* victim = boss->GetVictim();
+        bool const victimOff = victim && !Contains(victim);
+        if (victimOff && boss->GetMotionMaster()->GetCurrentMovementGeneratorType() == CHASE_MOTION_TYPE)
+        {
+            boss->GetMotionMaster()->Clear(false);
+            boss->StopMoving();
+            if (!_holding)
+                LOG_INFO(kLogCategory, "{} grip hold victim={}", _options.logPrefix, victim->GetName());
+            _holding = true;
+        }
+        else if (!victimOff && _holding)
+        {
+            _holding = false;
+            if (victim)
+                boss->GetMotionMaster()->MoveChase(victim);
+        }
+        return true;
+    }
+
+    void ArenaGuard::Grip(Creature* boss, Unit* unit, char const* why)
+    {
+        if (!boss || !unit)
+            return;
+        Vec2 const from = PlaneOf(unit);
+        float const fromZ = unit->GetPositionZ();
+
+        // The floor band to land in: the boss's region, else the whole arena.
+        ArenaRegion const* region = _arena.RegionAt(PlaneOf(boss), boss->GetPositionZ());
+        float const searchZ = region ? region->zMax : _arena.ZMax();
+        float const minZ = region ? region->zMin : _arena.ZMin();
+
+        Vec2 dest;
+        std::optional<float> fixedZ;
+        if (_options.landing)
+        {
+            Position const p = _options.landing(boss, unit);
+            dest = { p.GetPositionX(), p.GetPositionY() };
+            if (_options.landingKeepsZ)
+                fixedZ = p.GetPositionZ();
+        }
+        else
+            dest = LandingToward(PlaneOf(boss), from, _options.landYd, _options.landBox);
+
+        float z = 0.f;
+        if (fixedZ)
+            z = *fixedZ;
+        else
+        {
+            z = boss->GetMapHeight(dest.x, dest.y, searchZ);
+            if (z <= INVALID_HEIGHT || z < minZ)
+                z = boss->GetPositionZ();
+        }
+        float const dist = Distance(from, dest);
+        JumpTo(unit, Position(dest.x, dest.y, z + 0.5f), _options.jumpSpeedXY, _options.minJumpSpeedZ,
+            _options.gripSpell, boss);
+        _grip.Gripped(unit->GetGUID().GetRawValue());
+        LOG_INFO(kLogCategory, "{} grip {} unit={} from=({:.1f}, {:.1f}, {:.1f}) to=({:.1f}, {:.1f}, {:.1f}) "
+            "dist={:.1f}", _options.logPrefix, why, unit->GetName(), from.x, from.y, fromZ, dest.x, dest.y, z, dist);
+    }
+
+    void ArenaGuard::Reset()
+    {
+        _grip.Clear();
+        _checkMs = 0;
+        _emptyMs = 0;
+        _holding = false;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Confinement
+    // ----------------------------------------------------------------------------------------------------------------
+
+    Confinement::Confinement(ConfineOptions options)
+        : _options(std::move(options)), _jailTracker(_options.graceMs, _options.cooldownMs)
+    {
+    }
+
+    void Confinement::ConfineIn(Unit const* unit, Arena cell, Position const& putBack)
+    {
+        if (!unit)
+            return;
+        ObjectGuid const guid = unit->GetGUID();
+        for (Jail& j : _jails)
+            if (j.unit == guid)
+            {
+                j.cell = std::move(cell);
+                j.putBack = putBack;
+                return;
+            }
+        _jails.push_back({ guid, std::move(cell), putBack });
+    }
+
+    uint32 Confinement::KeepOut(Arena cell, Position const& putOut)
+    {
+        Fence f;
+        f.id = _nextFence++;
+        f.cell = std::move(cell);
+        f.putOut = putOut;
+        f.tracker = GripTracker(_options.graceMs, _options.cooldownMs);
+        _fences.push_back(std::move(f));
+        return _fences.back().id;
+    }
+
+    void Confinement::Release(ObjectGuid unit)
+    {
+        std::erase_if(_jails, [unit](Jail const& j) { return j.unit == unit; });
+        _jailTracker.Forget(unit.GetRawValue());
+    }
+
+    void Confinement::ReleaseKeepOut(uint32 id)
+    {
+        std::erase_if(_fences, [id](Fence const& f) { return f.id == id; });
+    }
+
+    void Confinement::Clear()
+    {
+        _jails.clear();
+        _fences.clear();
+        _jailTracker.Clear();
+        _checkMs = 0;
+    }
+
+    bool Confinement::IsConfined(ObjectGuid unit) const
+    {
+        for (Jail const& j : _jails)
+            if (j.unit == unit)
+                return true;
+        return false;
+    }
+
+    void Confinement::PutAt(Unit* unit, Position const& at, char const* why)
+    {
+        if (_options.jump)
+            JumpTo(unit, at, _options.jumpSpeedXY, _options.minJumpSpeedZ);
+        else
+            unit->NearTeleportTo(at.GetPositionX(), at.GetPositionY(), at.GetPositionZ(), unit->GetOrientation());
+        LOG_INFO(kLogCategory, "{} {} unit={} to=({:.1f}, {:.1f}, {:.1f})", _options.logPrefix, why, unit->GetName(),
+            at.GetPositionX(), at.GetPositionY(), at.GetPositionZ());
+    }
+
+    void Confinement::Update(WorldObject* owner, uint32 diff)
+    {
+        if (!owner || !owner->IsInWorld() || (_jails.empty() && _fences.empty()))
+            return;
+        _checkMs += diff;
+        if (_checkMs < _options.checkMs)
+            return;
+        uint32 const elapsed = _checkMs;
+        _checkMs = 0;
+        Map* map = owner->GetMap();
+
+        for (Jail const& j : _jails)
+        {
+            Unit* unit = ObjectAccessor::GetUnit(*owner, j.unit);
+            if (!unit || !unit->IsAlive() || !unit->IsInMap(owner))
+                continue;
+            bool const inside = j.cell.Contains(PlaneOf(unit), unit->GetPositionZ());
+            if (_jailTracker.Update(j.unit.GetRawValue(), inside, elapsed))
+            {
+                PutAt(unit, j.putBack, "put-back");
+                _jailTracker.Gripped(j.unit.GetRawValue());
+            }
+        }
+
+        if (_fences.empty())
+            return;
+        std::vector<Unit*> units;
+        for (auto const& ref : map->GetPlayers())
+            if (Player* player = ref.GetSource())
+            {
+                if (!player->IsAlive() || player->IsGameMaster())
+                    continue;
+                units.push_back(player);
+                if (Pet* pet = player->GetPet())
+                    units.push_back(pet);
+            }
+        for (Fence& f : _fences)
+            for (Unit* unit : units)
+            {
+                if (IsConfined(unit->GetGUID()))
+                    continue;
+                bool const outside = !f.cell.Contains(PlaneOf(unit), unit->GetPositionZ());
+                if (f.tracker.Update(unit->GetGUID().GetRawValue(), outside, elapsed))
+                {
+                    PutAt(unit, f.putOut, "put-out");
+                    f.tracker.Gripped(unit->GetGUID().GetRawValue());
+                }
+            }
+    }
+}
