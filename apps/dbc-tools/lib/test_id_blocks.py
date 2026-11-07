@@ -587,6 +587,28 @@ class WaveOneItemReservationsTest(unittest.TestCase):
             self.assertEqual(out_of_reservation(name, {"creature": ids["creature"]}), [], directory)
 
 
+class ShadowfangKeepIdsTest(unittest.TestCase):
+    """Shadowfang Keep build WP-0 (2026-11-07): the dungeon's reservation, pinned exactly."""
+
+    def test_shadowfang_keep_reservation(self):
+        got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["shadowfang_keep"].items()}
+        self.assertEqual(got, {
+            "spell": (205900, 206099),
+            "creature": (300500, 300529),
+            "gameobject": (301100, 301149),
+            "spellvisual": (90400, 90449),
+            "gameobjectdisplayinfo": (90030, 90034),
+            "creaturedisplayinfo": (90720, 90729),
+            "creaturemodeldata": (90720, 90729),
+        })
+
+    def test_shadowfang_keep_overlaps_no_other_reservation(self):
+        for table, cfg in RESERVATIONS["shadowfang_keep"].items():
+            for owner, tables in RESERVATIONS.items():
+                if owner != "shadowfang_keep" and table in tables:
+                    self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
+
+
 class DungeonKitIdsTest(unittest.TestCase):
     """The shared dungeon kit (WP-K0, 2026-11-07): the spellvisual block widened from 90399 to 90699 and one 50-id
     SpellVisual slice per reworked dungeon after Deadmines (Deadmines held 90340-90369, leaving 30 ids for three
