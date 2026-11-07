@@ -6,8 +6,10 @@
  * the door now opens through instance_deadmines_rework's door data on BOSS_GILNID DONE).
  *
  *   GI1 Molten Metal   stock 5213 on the victim, 1-6 s then 15-25 s; an interrupt entry in the descriptor
- *   GI2 Roll Out       yell, a random pot pours, one iron shot per target rolls from the pot through the target to the
- *                      measured wall (Line + Projectile + ProjectileUnit(ball), 30% Physical + Weakened)
+ *   GI2 Roll Out       yell, a random pot pours, one shot per target rolls from the pot through the target to the
+ *                      measured wall and 30 yd on (playtest 1; Line + Projectile + ProjectileUnit(ball), 30% Physical
+ *                      + Weakened). The shot looks like stock Flame Blast (an invisible carrier, a Flame Blast burst at
+ *                      its feet every 0.4 s) and rolls along the floor (a ground-sampled spline path)
  *   GI3 Bowled Over    a rolling ball passing through Gilnid: 2 s stun (mechanic 0) + 5% of his health, once per ball
  *   GI4 Hot shot (H)   4 yd persistent segments of each lane, registered as the ball passes each (DeadminesKit::Linger)
  *   GI5 Double shift   heroic below 50%: the shot every 10 s
@@ -60,20 +62,13 @@ namespace
     {
         return { p.GetPositionX(), p.GetPositionY() };
     }
-
-    // The floor height under a lane point (the pot dais is about 2 yd above the floor); the frame's floor z when the
-    // map has none.
-    float FloorZ(WorldObject const* probe, DeadminesKit::Vec2 p, float fallback)
-    {
-        float const z = probe->GetMapHeight(p.x, p.y, kFoundryPotZ + 2.f);
-        return z > INVALID_HEIGHT ? z : fallback;
-    }
 }
 
-// iron shot 300423 (summoned by Gilnid at a pot). Sits at the pot while its lane marker shows (pour visual), then
-// rolls straight to the lane's end at 10 yd per s (a spline, no pathing: the pot block is a navmesh hole) and goes
-// shortly after. Gilnid's script reads its position every update (Bowled Over, the mine sweep, Hot shot segments);
-// the registry tracks it as the lane's projectile.
+// iron shot 300423 (summoned by Gilnid at a pot; an invisible carrier since playtest 1). Sits at the pot while its lane
+// marker shows (pour visual), then rolls to the lane's end at 10 yd per s along the floor path Gilnid gives it (a
+// spline through ground-sampled points, no pathing: the pot block is a navmesh hole), casting a Flame Blast burst at
+// its feet every 0.4 s on the way (the projectile's look), and goes shortly after. Gilnid's script reads its position
+// every update (Bowled Over, the mine sweep, Hot shot segments); the registry tracks it as the lane's projectile.
 struct npc_dm_iron_shot : public ScriptedAI
 {
     explicit npc_dm_iron_shot(Creature* creature) : ScriptedAI(creature)
@@ -85,20 +80,30 @@ struct npc_dm_iron_shot : public ScriptedAI
     void AttackStart(Unit* /*who*/) override { }
     void MoveInLineOfSight(Unit* /*who*/) override { }
 
-    // Shows the pour now and rolls to `end` after `warn` (the lane marker's warning).
-    void Launch(Position const& end, Milliseconds warn)
+    // Shows the pour now and rolls along `path` (its first point is the pot) after `warn` (the lane marker's warning).
+    void Launch(std::vector<Gilnid::PathPoint> const& path, Milliseconds warn)
     {
-        _end = end;
+        _path.clear();
+        for (Gilnid::PathPoint const& p : path)
+            _path.emplace_back(p.x, p.y, p.z);
         DoCastSelf(Gilnid::SPELL_RED_HOT, true);
         DoCastSelf(Gilnid::SPELL_SHOT_POUR, true);
         scheduler.Schedule(warn, [this](TaskContext /*ctx*/)
         {
             DoCastSelf(Gilnid::SPELL_SHOT_LAUNCH, true);
+            FlameBlast();
+            if (_path.size() < 2)
+            {
+                _atWall = true;
+                me->DespawnOrUnsummon(Ms(Gilnid::kShotLingerMs));
+                return;
+            }
             Movement::MoveSplineInit init(me);
-            init.MoveTo(_end.GetPositionX(), _end.GetPositionY(), _end.GetPositionZ(), false, true);
+            init.MovebyPath(_path);
             init.SetVelocity(Gilnid::kShotSpeed);
             init.Launch();
             _rolling = true;
+            _pulseMs = Gilnid::kFlameBlastPulseMs;
         });
     }
 
@@ -108,16 +113,34 @@ struct npc_dm_iron_shot : public ScriptedAI
     void UpdateAI(uint32 diff) override
     {
         scheduler.Update(diff);
-        if (_rolling && me->movespline->Finalized())
+        if (!_rolling)
+            return;
+        if (me->movespline->Finalized())
         {
             _rolling = false;
             _atWall = true;
+            FlameBlast();
             me->DespawnOrUnsummon(Ms(Gilnid::kShotLingerMs));
+            return;
         }
+        if (_pulseMs > diff)
+        {
+            _pulseMs -= diff;
+            return;
+        }
+        _pulseMs = Gilnid::kFlameBlastPulseMs;
+        FlameBlast();
     }
 
 private:
-    Position _end;
+    // The projectile's look: stock Flame Blast's visual at its feet (a point cast, so the burst sits on the floor).
+    void FlameBlast()
+    {
+        me->CastSpell(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), Gilnid::SPELL_SHOT_FLAME_BLAST, true);
+    }
+
+    Movement::PointsArray _path;
+    uint32 _pulseMs = 0;
     bool _rolling = false;
     bool _atWall = false;
 };
@@ -293,8 +316,8 @@ struct boss_gilnid_rework : public BossAI
         for (Position const& point : points)
             if (LaunchBall(pot, ToVec(point), hot))
                 ++launched;
-        Log("roll-out", Acore::StringFormat("{} ball(s) from pot ({:.1f}, {:.1f}){}", launched, pot.x, pot.y,
-            hot ? ", hot shot" : ""));
+        Log("roll-out", Acore::StringFormat("{} ball(s) from pot ({:.1f}, {:.1f}){}, lanes +{:.0f} yd past the wall",
+            launched, pot.x, pot.y, hot ? ", hot shot" : "", Gilnid::kLaneExtraYd));
     }
 
     // One ball from `pot` through `target` to the wall. False when the lane or the ball cannot be made.
@@ -304,8 +327,15 @@ struct boss_gilnid_rework : public BossAI
         if (!lane)
             return false;
         float const facing = DeadminesKit::BearingTo(lane->from, lane->to);
+        // The rolling path hugs the floor (the old straight spline from the dais floated over the floor below it).
+        std::vector<Gilnid::PathPoint> const path = Gilnid::FloorPath(*lane, kFoundryPotZ,
+            [this](float x, float y, float z) -> Optional<float>
+            {
+                float const h = me->GetMapHeight(x, y, z + Gilnid::kFloorPathMaxStepZ);
+                return h > INVALID_HEIGHT ? Optional<float>(h) : std::nullopt;
+            });
         Position const from = DeadminesKit::ToPosition(lane->from, kFoundryPotZ, facing);
-        Position const to = DeadminesKit::ToPosition(lane->to, FloorZ(me, lane->to, kFoundryFloorZ), facing);
+        Position const to = DeadminesKit::ToPosition(lane->to, path.back().z, facing);
 
         TempSummon* ball = me->SummonCreature(NPC_DM_IRON_SHOT, from, TEMPSUMMON_TIMED_DESPAWN, 15000);
         npc_dm_iron_shot* ballAI = ball ? CAST_AI(npc_dm_iron_shot, ball->AI()) : nullptr;
@@ -324,15 +354,16 @@ struct boss_gilnid_rework : public BossAI
             ball->DespawnOrUnsummon();
             return false;
         }
-        ballAI->Launch(to, Ms(Gilnid::kLaneWarnMs));
+        ballAI->Launch(path, Ms(Gilnid::kLaneWarnMs));
 
         Ball state;
         state.guid = ball->GetGUID();
         state.lane = *lane;
         state.hot = hot;
         state.last = lane->from;
+        // Hot shot trails cover the in-room part only (the extension past the wall has no floor to burn).
         if (hot)
-            state.segments = Gilnid::HotShotSegments(lane->length, Gilnid::BlockExit(*lane, kPotBlock));
+            state.segments = Gilnid::HotShotSegments(lane->wallLength, Gilnid::BlockExit(*lane, kPotBlock));
         _balls.push_back(std::move(state));
         return true;
     }

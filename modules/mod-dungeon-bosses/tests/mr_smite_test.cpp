@@ -31,7 +31,7 @@ namespace
     {
         CHECK(kSlice.first == 205290u);
         CHECK(kSlice.last == 205319u);
-        for (std::uint32_t id = SPELL_SMITE_SWEEPING_SLASH; id <= SPELL_SMITE_SLASH_TANK; ++id)
+        for (std::uint32_t id = SPELL_SMITE_SWEEPING_SLASH; id <= SPELL_SMITE_HARPOON_LANDING; ++id)
             CHECK(kSlice.Contains(id));
     }
 

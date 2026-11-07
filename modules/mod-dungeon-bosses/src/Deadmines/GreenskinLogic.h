@@ -42,7 +42,8 @@ namespace Greenskin
         SPELL_REEL_EM_IN            = 205345,   // GS5 cast: 2 s, interruptible, the harpoon throw (stock 5208's hit)
         SPELL_HARPOONED             = 205346,   // GS5 rope: channeled beam from the rope anchor, the target's debuff
         SPELL_REEL_HIT              = 205347,   // GS5 reel: resolve copy (Physical) of the RunOut's 30%
-        // 205348-205359 spare
+        SPELL_GRAPPLING_HOOK        = 205348,   // playtest 1: the grip onto the deck (Death Grip's look, no effect)
+        // 205349-205359 spare
     };
 
     // The invisible unit the rope beam is channeled from (it follows Greenskin): creature 300425, the handoff's
@@ -383,6 +384,106 @@ namespace Greenskin
         }
         return "?";
     }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Playtest 1: the fight stays on the ship. Greenskin stands still (no patrol), everyone in combat with him who is
+    // off the ship is gripped onto the deck at the pull, anyone who stays off it during the fight for kGripGraceMs is
+    // gripped back, and he never follows his victim off it (he holds, and evades if he is ever off it himself).
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // "On the ship", in deck frame coordinates (kDeck: x from the sterncastle face toward the bow, y from the west rail
+    // toward the east rail), plus a z band. Stern: the side walkways beside the sterncastle reach x -39.2 (frame
+    // -14.3); bow: the tip at x -107.5 (frame 54). West: the rail at y -802.5 (the gangplank and the scaffold beyond
+    // it, y -800 and west, are off); east: the deck reaches y -840 at x -59..-64 (frame 38), past the 36 yd frame. Each
+    // side gets about 1.5 yd past the navmesh edge (the real rail is ~0.5 yd past it). z: the deck runs 37.8 (bow) to
+    // 44 (stern walkways); 36 to 48 keeps a jump on the deck and puts the water, the dock, the rigging (44-64, not
+    // floor) and the sterncastle top (50-53, not linked) off. Navmesh report section 2.
+    inline constexpr float kShipFrameMinX = -16.f;      // map x -37.5
+    inline constexpr float kShipFrameMaxX = 56.f;       // map x -109.5
+    inline constexpr float kShipFrameMinY = -1.5f;      // map y -800.5
+    inline constexpr float kShipFrameMaxY = 40.f;       // map y -842
+    inline constexpr float kShipMinZ = 36.f;
+    inline constexpr float kShipMaxZ = 48.f;
+
+    inline bool OnShip(Vec2 p, float z)
+    {
+        if (z < kShipMinZ || z > kShipMaxZ)
+            return false;
+        Vec2 const q = ToFrame(kDeck, p);
+        return q.x >= kShipFrameMinX && q.x <= kShipFrameMaxX && q.y >= kShipFrameMinY && q.y <= kShipFrameMaxY;
+    }
+
+    // A unit off the ship this long (continuously) is gripped back. 1.5 s: Greenskin's own kit has no knockback (the
+    // reel lands on the deck), so this only forgives a class's own leap or blink over the rail and a stray knockback;
+    // someone who jumps overboard is still mid-fall when it fires (a 40 yd drop takes about 2 s).
+    inline constexpr std::uint32_t kGripGraceMs = 1500;
+    // After a grip the unit is left alone this long (the jump takes about 1 to 2 s; no second grip mid-air).
+    inline constexpr std::uint32_t kGripCooldownMs = 3000;
+    // How often the script sweeps everyone in combat with him.
+    inline constexpr std::uint32_t kGripCheckMs = 250;
+    inline constexpr float kGripJumpSpeedXY = 25.f;     // as the reel
+    inline constexpr float kGripMinSpeedZ = 8.f;        // a short grip still arcs
+
+    // Where a gripped unit lands: kGripLandYd from Greenskin toward where it was, clamped into the open stern deck
+    // (x -56..-74, y -811..-837: full-width deck, no holes and no overhead structure; navmesh map), so it always lands
+    // on planks even if he stands by the forward holes.
+    inline constexpr float kGripLandYd = 8.f;
+    inline constexpr DeadminesKit::Box2 kGripLandBox{ -74.f, -56.f, -837.f, -811.f };
+
+    inline Vec2 GripLanding(Vec2 boss, Vec2 from)
+    {
+        float const dx = from.x - boss.x;
+        float const dy = from.y - boss.y;
+        float const d = std::hypot(dx, dy);
+        Vec2 p = d > 0.01f ? Vec2{ boss.x + dx / d * kGripLandYd, boss.y + dy / d * kGripLandYd } : boss;
+        p.x = std::clamp(p.x, kGripLandBox.minX, kGripLandBox.maxX);
+        p.y = std::clamp(p.y, kGripLandBox.minY, kGripLandBox.maxY);
+        return p;
+    }
+
+    // Per unit: how long it has been off the ship, and its post-grip cooldown. Keys are raw guids.
+    class GripTracker
+    {
+    public:
+        // `unit` was seen on (or off) the ship `diff` ms after its last update. True: grip it now (then call Gripped).
+        bool Update(std::uint64_t unit, bool onShip, std::uint32_t diff)
+        {
+            Entry& e = _units[unit];
+            e.cooldownMs = e.cooldownMs > diff ? e.cooldownMs - diff : 0;
+            if (onShip)
+            {
+                e.offMs = 0;
+                return false;
+            }
+            e.offMs += diff;
+            return !e.cooldownMs && e.offMs >= kGripGraceMs;
+        }
+
+        // The pull: grip anyone off the ship at once (no grace), unless just gripped.
+        bool PullNow(std::uint64_t unit, bool onShip) const
+        {
+            auto const it = _units.find(unit);
+            return !onShip && (it == _units.end() || !it->second.cooldownMs);
+        }
+
+        void Gripped(std::uint64_t unit)
+        {
+            Entry& e = _units[unit];
+            e.offMs = 0;
+            e.cooldownMs = kGripCooldownMs;
+        }
+
+        void Clear() { _units.clear(); }
+        std::size_t Size() const { return _units.size(); }
+
+    private:
+        struct Entry
+        {
+            std::uint32_t offMs = 0;
+            std::uint32_t cooldownMs = 0;
+        };
+        std::unordered_map<std::uint64_t, Entry> _units;
+    };
 }
 
 #endif

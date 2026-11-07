@@ -2,9 +2,10 @@
 Deadmines Pilot WP-B7: Captain Greenskin (.agents/plans/deadmines-pilot/deadmines-pilot.HANDOFF.md s3.5; build spec
 docs/dungeons/deadmines-rework.md "Captain Greenskin"). WP-B7 owns this file (its spells: 205340-205359 only).
 
-- 647 Captain Greenskin: bound to boss_captain_greenskin_rework (SmartAI off; keep his patrol 793330 and his two
-  formation followers), normal 14.2k (HealthModifier 29.2), the new stun immunity set. Heroic 377k is deadmines.py's
-  override. The harpoon rope is gameobject 301001 (core pending SQL, WP-K's rev; script go_dm_harpoon_rope).
+- 647 Captain Greenskin: bound to boss_captain_greenskin_rework (SmartAI off; since playtest 1 he stands still:
+  the core pending SQL clears spawn 79333's patrol 793330, his two formation followers stay), normal 14.2k
+  (HealthModifier 29.2), the new stun immunity set. Heroic 377k is deadmines.py's override. The harpoon rope is
+  gameobject 301001 (core pending SQL, WP-K's rev; script go_dm_harpoon_rope).
 - 300425 Harpoon Rope: the invisible unit the rope beam is channeled from (it follows Greenskin while a rope is out;
   the handoff's "harpoon rope unit" slot). The mod-boss-mechanics stalker display 11686 WITHOUT the trigger bit
   (0x80 hides a unit from non-GMs, and a hidden unit draws no beam), like the registry's markers. Not selectable,
@@ -31,6 +32,10 @@ Spells (modules/mod-dungeon-bosses GreenskinLogic.h `GreenskinSpells`):
                             9759. ALLOW_ACTION_DURING_CHANNEL so the anchor can follow him. The target's debuff, aura
                             text "Harpooned. Get away to snap the rope." (DM "Debuff and buff text", approved).
   205347  Reel 'Em In       GS5 reel: resolve copy, Physical: the RunOut's 30% (and Weakened) when he reels a target in.
+  205348  Grappling Hook    playtest 1: the grip that keeps the fight on the ship. Greenskin casts it (triggered) on a
+                            unit he pulls onto the deck (at the pull, or after 1.5 s off the ship); the script does
+                            the jump. DUMMY on the target, no damage; stock Death Grip 49576's SpellVisual 10906 (the
+                            grip anim, the chain and the ghoul-hand impact), icon 2723.
 """
 
 from lib.dsl import RANGE_SELF, AuraType, Effect, EffectType, School
@@ -216,4 +221,26 @@ reel_hit_205347 = _resolve_copy(
     'Deadmines Pilot WP-B7 GS5: the reel. The RunOut (25 yd, measured from Greenskin) resolves with this copy of the '
     'resolve spell (Physical): 30% of the reference row and 1 Weakened on a target still within 25 yd after 4 s; the '
     "script's OnHit then pulls the target to his feet.",
+)
+
+# --- Playtest 1: the grip back onto the deck --------------------------------------------------------------------------
+_VISUAL_DEATH_GRIP = 10906      # stock Death Grip 49576 / 57602
+_ICON_DEATH_GRIP = 2723
+
+grappling_hook_205348 = spell(
+    id=205348, name='Grappling Hook', school=School.NORMAL, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,
+    mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=0,
+    effects=[Effect(type=EffectType.DUMMY, implicit_target_a=TARGET_UNIT_TARGET_ANY)],
+    spell_icon_id=_ICON_DEATH_GRIP,
+    notes='Deadmines Pilot playtest 1: Greenskin keeps the fight on his ship. He casts this (triggered) on everyone in '
+          'combat with him who is off the ship at the pull, and on anyone off it for 1.5 s during the fight (players, '
+          'bots, pets); the script then jumps the unit onto the open stern deck near him (MoveJump, as the reel). '
+          'DUMMY on the target, no damage, no threat; ignores LoS, always hits, suppresses procs. Stock Death Grip '
+          '49576\'s SpellVisual 10906 and icon 2723 (the grip look the playtest asked for).',
+    raw_overrides=_raw('Hooks an enemy and hauls it back aboard.', CastingTimeIndex=1, InterruptFlags=0,
+                       PreventionType=0, AttributesEx=_ATTR1_NO_THREAT,
+                       AttributesEx2=_ATTR2_IGNORE_LINE_OF_SIGHT,
+                       AttributesEx3=_ATTR3_SUPPRESS_CASTER_PROCS | _ATTR3_SUPPRESS_TARGET_PROCS
+                       | _ATTR3_ALWAYS_HIT,
+                       AttributesEx4=ATTR4_NO_CAST_LOG, SpellVisualID_1=_VISUAL_DEATH_GRIP),
 )
