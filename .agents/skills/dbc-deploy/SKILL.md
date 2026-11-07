@@ -56,6 +56,16 @@ git status --short -- src/
 
 ## Step 3 — Apply the migration
 
+First check the pending revs against the live DB. A rev written before another branch's rows went live
+would delete or revert them:
+
+```bash
+apps/dbc-tools/.venv/bin/python3 apps/dbc-tools/check_pending.py
+```
+
+Exit 0 means import. Exit 1 means stop: rebase and regenerate the stale branch (it names the rev and the rows).
+Exit 2 means the DB command failed; fix that first. Pass `--allow-drop` only when the removal is deliberate.
+
 `ac-db-import`'s image bind-mounts the host `./data` directory (see
 `docker-compose.override.yml`'s comment on this), so a new `pending_db_world/*.sql` file takes
 effect on a plain run — **no image rebuild needed for this step even when Step 2 also rebuilt
