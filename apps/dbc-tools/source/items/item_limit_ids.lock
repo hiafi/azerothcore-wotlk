@@ -1,0 +1,8 @@
+# Item limit categories (item variants IV10 follow-up 1; lib/item_limits.py): one line per item whose tiers
+# share a unique-equip limit of 1, `<category id> <item key> [retired <date> [<name>]]`, minted from
+# source/ids.yaml's item_limit_category block. Append-only: a full generate.py run appends new lines; never
+# reorder, renumber or delete one. A merge conflict: keep the merged side's lines, drop the other side's new
+# lines and delete its not-yet-imported rev_*.sql, then re-run generate.py (same recovery as item_ids.lock).
+1000 dm_powder_keg_fuse
+1001 dm_blackguards_signet
+1002 dm_lantern_of_the_roaring_flame

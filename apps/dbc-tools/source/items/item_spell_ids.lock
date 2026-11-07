@@ -1,0 +1,28 @@
+# Item effect spell copies (item variants IV10; lib/item_spell_copies.py): one line per (item key, tier, base
+# spell), `<spell id> <item key> <tier> <base spell id> [retired <date>]`, minted from source/ids.yaml's
+# item_spell_copy block. Every tier above an item's first carries its own copy of each `scale="budget"` spell
+# and of every spell it reaches, damage and healing scaled by the tier's stat budget.
+# Append-only: a full generate.py run appends new lines; never reorder, renumber or delete one (an id must never
+# move or be reused). A merge conflict: keep the merged side's lines, drop the other side's new lines and delete
+# its not-yet-imported rev_*.sql, then re-run generate.py (same recovery as item_ids.lock).
+205410 dm_powder_keg_fuse empowered_1_hm 205400
+205411 dm_powder_keg_fuse empowered_1_hm 205401
+205412 dm_powder_keg_fuse empowered_1_hm 205402
+205413 dm_powder_keg_fuse empowered_2_hm 205400
+205414 dm_powder_keg_fuse empowered_2_hm 205401
+205415 dm_powder_keg_fuse empowered_2_hm 205402
+205416 dm_powder_keg_fuse empowered_3_hm 205400
+205417 dm_powder_keg_fuse empowered_3_hm 205401
+205418 dm_powder_keg_fuse empowered_3_hm 205402
+205419 dm_blackguards_signet empowered_1_hm 205403
+205420 dm_blackguards_signet empowered_1_hm 205404
+205421 dm_blackguards_signet empowered_2_hm 205403
+205422 dm_blackguards_signet empowered_2_hm 205404
+205423 dm_blackguards_signet empowered_3_hm 205403
+205424 dm_blackguards_signet empowered_3_hm 205404
+205425 dm_lantern_of_the_roaring_flame empowered_1_hm 205406
+205426 dm_lantern_of_the_roaring_flame empowered_1_hm 205407
+205427 dm_lantern_of_the_roaring_flame empowered_2_hm 205406
+205428 dm_lantern_of_the_roaring_flame empowered_2_hm 205407
+205429 dm_lantern_of_the_roaring_flame empowered_3_hm 205406
+205430 dm_lantern_of_the_roaring_flame empowered_3_hm 205407
