@@ -590,11 +590,26 @@ class ItemVariantsIdsTest(unittest.TestCase):
                 self.assertFalse(_overlap(RESERVATIONS["items"][table], {"start": low, "end": high}))
         self.assertLess(self.DEADMINES["spell"][1], mine["start"])
 
-    def test_the_lock_file_header_is_all_comments(self):
+    def test_the_lock_file_starts_with_its_comment_header(self):
         lock = TOOL_ROOT / "source" / "items" / "item_ids.lock"
         lines = lock.read_text(encoding="utf-8").splitlines()
         self.assertTrue(lines)
-        self.assertTrue(all(line.startswith("#") for line in lines))  # header only until IV1 mints the first id
+        self.assertTrue(lines[0].startswith("#"))  # the header, then the minted lines (IV5w / IV8 write runs)
+
+    def test_item_limit_category_block_sits_above_the_stock_ids(self):
+        # IV10 follow-up 1 (lib/item_limits.py): stock ItemLimitCategory.dbc ends at 85; the column is a signed smallint
+        self.assertEqual(BLOCKS["item_limit_category"], {"start": 1000, "end": 1999})
+        self.assertFalse(spell_tables.load_base_table_rows("itemlimitcategory_dbc", ("ID",)))
+
+    def test_item_spell_copy_block_sits_inside_the_items_reservation_above_the_declared_effects(self):
+        # IV10: the per-tier copies of item effect spells (lib/item_spell_copies.py); 205400-205409 stay hand-declared
+        block = BLOCKS["item_spell_copy"]
+        self.assertEqual(block, {"start": 205410, "end": 205599})
+        mine = RESERVATIONS["items"]["spell"]
+        self.assertTrue(mine["start"] < block["start"] and block["end"] <= mine["end"])
+        self.assertTrue(BLOCKS["spell"]["start"] <= block["start"] and block["end"] <= BLOCKS["spell"]["end"])
+        declared = declared_ids(TOOL_ROOT / "source" / "items").get("spell", [])
+        self.assertFalse([i for i in declared if block["start"] <= i <= block["end"]])
 
 
 class _AnyRows(dict):

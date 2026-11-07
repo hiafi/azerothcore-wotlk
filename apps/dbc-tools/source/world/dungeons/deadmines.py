@@ -23,6 +23,13 @@ from lib.dsl.dungeon import creature, dungeon, heroic
 # The reworked bosses' stun immunity set (source/npcs/deadmines/_common.py IMMUNITY_BOSS_STUN).
 _STUN_IMMUNE = {"CreatureImmunitiesId": 1972}
 
+
+def _heroic_loot(heroic_entry: int, columns: dict | None = None) -> dict:
+    """A heroic boss drops its own loot: `lootid` = its own heroic entry (heroic_ids.lock), whose groups hold the
+    Heroic tiers (source/items/deadmines_loot.py, item variants IV7). Sneed's Shredder keeps the normal lootid 642:
+    after the IV7 removal of its group 1 it drops only its group 0 (cloth, food, the quest item)."""
+    return {**(columns or {}), "lootid": heroic_entry}
+
 # BEGIN GENERATED CREATURES (extract_dungeon_creatures.py) - do not edit inside this block by hand
 CREATURES = (
     creature(639, "Edwin VanCleef", "boss", spawns=1),  # L20 elite warrior
@@ -85,15 +92,16 @@ deadmines = dungeon(
         # the new stun immunity set (-229 + STUN, id 1972, core pending SQL) like their normal rows (handoff s7 #5);
         # Rhahk'Zor keeps -159.
         overrides={
-            639: dict(health=340_000, columns=_STUN_IMMUNE),  # Edwin VanCleef (hard mode's 500k: his script)
+            # Edwin VanCleef (hard mode's 500k: his script)
+            639: dict(health=340_000, columns=_heroic_loot(310004, _STUN_IMMUNE)),
             642: dict(health=220_000, columns=_STUN_IMMUNE),  # Sneed's Shredder
-            643: dict(health=142_000, columns=_STUN_IMMUNE),  # Sneed
-            644: dict(health=320_000),  # Rhahk'Zor
-            645: dict(health=330_000, columns=_STUN_IMMUNE),  # Cookie
-            646: dict(health=472_000, columns=_STUN_IMMUNE),  # Mr. Smite
-            647: dict(health=377_000, columns=_STUN_IMMUNE),  # Captain Greenskin
-            1763: dict(health=311_000, columns=_STUN_IMMUNE),  # Gilnid
-            3586: dict(health=240_000, columns=_STUN_IMMUNE),  # Miner Johnson
+            643: dict(health=142_000, columns=_heroic_loot(310007, _STUN_IMMUNE)),  # Sneed
+            644: dict(health=320_000, columns=_heroic_loot(310008)),  # Rhahk'Zor
+            645: dict(health=330_000, columns=_heroic_loot(310009, _STUN_IMMUNE)),  # Cookie
+            646: dict(health=472_000, columns=_heroic_loot(310010, _STUN_IMMUNE)),  # Mr. Smite
+            647: dict(health=377_000, columns=_heroic_loot(310011, _STUN_IMMUNE)),  # Captain Greenskin
+            1763: dict(health=311_000, columns=_heroic_loot(310017, _STUN_IMMUNE)),  # Gilnid
+            3586: dict(health=240_000, columns=_heroic_loot(310020, _STUN_IMMUNE)),  # Miner Johnson
             300420: dict(health=80_000),  # Defias Watchman (boss kit)
             300421: dict(health=80_000),  # Defias Evoker (boss kit)
             300422: dict(health=30_000),  # Working Miner (boss kit)

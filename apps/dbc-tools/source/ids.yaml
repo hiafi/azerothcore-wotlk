@@ -110,6 +110,22 @@ item_minted:
   start: 71000
   end: 79999
 
+# Per-tier copies of item effect spells (item variants IV10; lib/item_spell_copies.py): the spell ids minted into
+# source/items/item_spell_ids.lock. A sub-range of `spell` and of the `items` spell reservation below; 205400-205409
+# stay for the hand-declared effect spells. Checked free 2026-11-06: no declaration, SQL file or live spell_dbc row at
+# or above 205408.
+item_spell_copy:
+  start: 205410
+  end: 205599
+
+# ItemLimitCategory ids (item variants IV10 follow-up 1; lib/item_limits.py): one unique-equip category per item with
+# an effect, shared by all its tiers, recorded in source/items/item_limit_ids.lock. Server overlay itemlimitcategory_dbc
+# plus the client ItemLimitCategory.dbc in patch-Z. Stock ids end at 85 (83 rows); item_template.ItemLimitCategory is a
+# signed smallint. Checked free 2026-11-06: itemlimitcategory_dbc is empty live and in the base dump.
+item_limit_category:
+  start: 1000
+  end: 1999
+
 # reference_loot_template entries for the declared boss loot tables (item-variants plan s7.3, IV7). Checked free
 # 2026-11-06: no reference_loot_template row above the stock maximum in the live DB, base dump or pending SQL.
 loot_reference:
@@ -426,6 +442,8 @@ reservations:
     spellicon: {start: 90450, end: 90499}
 
   # Item variants (item-variants plan s4 / s9 IV0): spells the item tooling needs (item tier labels, helper auras).
+  # 205400-205409: the Edwin VanCleef hard mode item effects (stage IV6, source/items/deadmines_hard_mode_effects.py).
+  # 205410-205599: the per-tier copies of item effect spells (stage IV10, the top-level `item_spell_copy` block).
   # 205400-205599 sits between the Deadmines reservation (205200-205399) and the free rest of the block. Checked free
   # 2026-11-06: no declaration, SQL file or live spell_dbc row at or above 205400.
   items:
@@ -460,7 +478,8 @@ reservations:
   # 205210-205229, Miner Johnson 205230-205239, Sneed 205240-205269, Gilnid 205270-205289, Mr. Smite 205290-205319,
   # Cookie 205320-205339, Greenskin 205340-205359, VanCleef 205360-205389, spare 205390-205399. Creatures: Watchman
   # 300420, Evoker 300421, Working Miner 300422, Iron shot 300423, Land mine 300424, Harpoon rope 300425, Blackguard
-  # 300426, Shadow image 300427, Mainmast 300428, Powder blast stalker 300429, spare 300430-300449. Gameobjects: Powder
+  # 300426, Shadow image 300427, Mainmast 300428, Powder blast stalker 300429, Blackguard's Signet look-alike 300430
+  # (item variants IV6, source/npcs/deadmines/hard_mode_items.py), spare 300431-300449. Gameobjects: Powder
   # keg 301000, Harpoon rope 301001, Mainmast 301002. Display rows only for visuals mined into patch-M (stage V). The
   # creature display slice starts at 90700, not 90500: the boss mechanics markers' old slice 90500-90699 stays
   # unreserved (test_bossmechanics_overlaps_no_earlier_owner). Checked free 2026-11-06 (handoff s2.6).

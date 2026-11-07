@@ -18,6 +18,10 @@ void AddSC_boss_captain_greenskin_rework(); // B7: boss_captain_greenskin_rework
 void AddSC_boss_edwin_vancleef_rework();    // B8: boss_edwin_vancleef_rework, npc_dm_blackguard, npc_dm_shadow_image
 void AddSC_vancleef_hard_mode();            // B9: go_dm_powder_keg
 
+// Deadmines hard mode items (item variants IV6): the VanCleef hard mode item effects
+void AddSC_dm_hard_mode_items();            // spell_dm_powder_keg_fuse, spell_dm_blackguards_signet,
+                                            // spell_dm_lantern_of_the_roaring_flame
+
 void Addmod_dungeon_bossesScripts()
 {
     AddSC_instance_deadmines_rework();
@@ -30,6 +34,7 @@ void Addmod_dungeon_bossesScripts()
     AddSC_boss_captain_greenskin_rework();
     AddSC_boss_edwin_vancleef_rework();
     AddSC_vancleef_hard_mode();
+    AddSC_dm_hard_mode_items();
     // after the boss files: they register their `.dmtest` tables from their AddSC_ functions
     AddSC_dungeon_bosses_dmtest_commandscript();
 }

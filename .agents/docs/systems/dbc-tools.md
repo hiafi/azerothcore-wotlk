@@ -54,6 +54,36 @@ A Lua error at load breaks the UI of every player, and manifest-gen ships `patch
 patch-X on one client (copy the built archive into that client's `Data/` by hand) before `--deploy`.
 `client/ui-overrides/README.md` lists the files and what each changes.
 
+### Boss loot: `boss_loot()` / `remove_loot_group()` (item variants IV7)
+
+`lib/dsl/loot.py` (declarations in `source/items/<dungeon>_loot.py`), `lib/loot_tables.py` (rows, rules, rendering),
+wired in `generate._loot_blocks` after the item expansion, so a full run and `--only items` both carry the loot.
+
+- **One list = one group.** `boss_loot(lootid, items, tier=..., group=1)` owns that (Entry, GroupId) of
+  `creature_loot_template`: every row Chance 0, MinCount = MaxCount = 1, so the group always yields one item
+  (`LootGroup::Roll`). `DELETE ... WHERE Entry = X AND GroupId = N` + INSERT, only when the declared rows differ from
+  the replayed group; a rerun after import is silent. Other groups of the Entry (cloth, food, quest items, a generic
+  reference) are never touched; the run stops if a declared group's live rows hold anything that is not a declared
+  item (a generic pool rolls in its own group, never instead).
+- **`picks=N, reference=R`** (Sneed's two distinct items): one reference row (MaxCount N) in the group, the list in
+  `reference_loot_template` R group 1 (ids.yaml `loot_reference`, 1700000-1700999). The group roll's duplicate skip
+  makes the N items distinct, but only for equippable items (checked).
+- **Tiers by difficulty.** A heroic creature's lootid (any entry in `source/world/heroic_ids.lock`) drops the ladder's
+  first explicit-level tier (Heroic, Heroic Hard Mode), any other lootid the own-level tier (Normal). The heroic row's
+  `lootid` must be its own entry: set it in the dungeon file's heroic `overrides` columns (an ERROR on a full run, a
+  WARNING under `--only items`, which renders no creature row).
+- **Hard mode** (`loot_mode=2`, `LOOT_MODE_HARD_MODE_1`): a group next to a default list on the same Entry; it rolls
+  only when the boss script added the bit with `AddLootMode` before the kill (`Unit::Kill` fills the loot with
+  `GetLootMode()` before `JustDied`). Deadmines: `instance_deadmines_rework.cpp` `ApplyHardModeLoot()` follows
+  `DATA_HARD_MODE`.
+- **Heroic copies.** A heroic lootid with a declared list also gets every other group of its normal boss's lootid
+  (cloth, food, quest items, a world loot reference) copied unchanged into the same GroupId
+  (`loot_tables.derive_heroic_copies`, derived from the replayed normal rows each run, so a rerun is silent). A copy
+  on a GroupId a heroic declaration owns is an ERROR; a stale heroic group is a WARNING, never pruned.
+- `remove_loot_group(lootid, group=, why=)` deletes a stock group whose items all moved to another list.
+- Replay note: the replayed loot rows omit columns an INSERT left out; `loot_tables.load_live` fills the schema
+  defaults so a declared row compares equal to the live one.
+
 ### Item variants: ids, defaults and the deployed Item.dbc guard
 
 - **Tier steps.** Every `tier()` takes an explicit `step=` (`item_budget_variant.tier`): 0 Normal, 1 Heroic, 2.. the
@@ -85,6 +115,45 @@ patch-X on one client (copy the built archive into that client's `Data/` by hand
   `source/items/` would remove them. Merge the item branch into every dbc-tools checkout first; `--allow-item-drop`
   writes anyway; `--check` only warns. `--only items` also WARNs when another member of the deployed archive differs
   from this checkout's last full build (`var/dbc-patch/DBFilesClient/`), i.e. a stale or foreign base.
+
+### Item effect spells that scale with the tier: `scale="budget"` (item variants IV10)
+
+`use_spell(spell, scale="budget")` (also `equip_spell` / `hit_spell`; pass the declared `spell(...)` object) gives
+every tier above the item's first its own copy of the spell and of every source/items spell it reaches (an effect's
+`trigger_spell`, a `$<id>` token or a `pot_text()` in its texts, a `linked_spell()` it triggers).
+`lib/item_spell_copies.py`:
+
+- **Ratio** = `item_budget_curve[ilvl].budget x item_quality_mult x item_slot_mult` of the tier over the first tier's,
+  rounded to 4 decimals (`budget_mult`, set discount and socket cost left out: constant or not an effect's business).
+  The hard mode ladder 71 / 81 / 91 / 101 Epic: 1.0 / 1.0545 / 1.1091 / 1.2545 (curve 55 / 58 / 61 / 69).
+- **Copy** = the declaration with `sp_potency` / `ap_potency` / `base_potency` / the combo-point potencies times the
+  ratio; every family id inside it remapped to the same tier's copy (trigger spells, `$<id>` tokens, `pot_text`
+  expressions, linked spells); its `spell_proc`, `spell_script_names`, `spell_custom_attr` rows copied; potency rows
+  from its own `to_entry()`. Everything else (durations, cooldowns, radius, proc chance, aura amounts) is unchanged.
+  A family damage or heal effect without potency, a `weapon_potency` effect or a hand `bonus_coefficients()` row is an
+  ERROR. The tier's item row names its copies (`ResolvedTier.spells`); the first tier keeps the declared ids.
+- **Ids**: `source/items/item_spell_ids.lock` (`<spell id> <key> <tier> <base spell id> [retired <date>]`), minted
+  from the `item_spell_copy` block (205410-205599, inside the `items` spell reservation), same append-only, retire
+  and merge rules as `item_ids.lock`; a full run writes it, `--check` lists the lines.
+- **C++**: the copies run the same scripts, so a script casting another family spell must cast its tier's copy. A full
+  run writes `modules/mod-dungeon-bosses/src/Generated/ItemSpellCopies.h` (pure; `ItemSpellCopies::Resolve(cast or
+  aura id, base id)`); `--check` errors on a stale one.
+- **`--only items`** cannot ship spell rows: it stops (`--check` warns) while a copy is neither live nor in a pending
+  rev, its lock line is unwritten or the header is stale. Run a full generate for a new or retuned copy.
+
+### Unique-equipped across tiers: `ItemLimitCategory` (item variants IV10 follow-up 1)
+
+Every tier of an item with an effect (`spells=` with a spell, scaled or not, or `keep_spells=True` on a stock row that
+has one) shares one `ItemLimitCategory` with an equip limit of 1 (`lib/item_limits.py`); plain stat items stay
+unrestricted. `item(..., unique_equip=False)` turns it off, `True` forces it; `ItemLimitCategory` is not a column you
+pass. One row per item: `itemlimitcategory_dbc` (a SPELL_TABLES entry, prune when empty) for the server, which zeroes
+an item's unknown category at boot, plus `ItemLimitCategory.dbc` in patch-Z for the client's "Unique-Equipped: <name>
+(1)" line (Name = the item's name, Quantity 1, Flags 1 = equip mode). Ids: `source/items/item_limit_ids.lock`
+(`<id> <item key> [retired <date> [<name>]]`) from the `item_limit_category` block (1000-1999; stock ends at 85), a lock
+because an entry-based derivation fails for `base=` items and a key hash can collide; a retired line keeps emitting its
+row. The base file `var/extractors/dbc/ItemLimitCategory.dbc` is not in the client extract: copy it from
+`ac-worldserver:/azerothcore/env/dist/data/dbc/` (a full run stops without it). `--only items` refuses while a
+category row is not live.
 
 ## Watch out: a write run is global, except `--only items`
 

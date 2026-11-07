@@ -135,6 +135,9 @@ class ResolvedTier:
     number: int = 0  # item_budget_variant.tier: the tier's step= (0 Normal, 1 Heroic, 2.. empowered)
     max_durability: int | None = None  # MaxDurability of a minted tier (None: keep the row's); see the docstring
     budget_source: str = ""  # where budget_mult / dps_delta came from (declared, a role cell, live, default)
+    # IV10 (lib/item_spell_copies.py): this tier's own spells, the declaration's with each `scale=` spell swapped for
+    # the tier's copy. None: the declaration's spells as they are.
+    spells: tuple | None = None
 
     @property
     def writes_label(self) -> bool:

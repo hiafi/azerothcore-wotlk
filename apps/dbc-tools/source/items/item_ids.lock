@@ -15,3 +15,160 @@
 # drop the other side's minted lines, delete the other side's not-yet-imported rev_*.sql that carries them, then
 # re-run generate.py on the merged tree to re-mint them. If both sides were imported, stop: a human retires one set.
 # One item branch at a time.
+5187 dm_rhahkzors_hammer normal base
+71000 dm_rhahkzors_hammer heroic
+71001 dm_rhahkzors_hammer empowered_1
+71002 dm_rhahkzors_hammer empowered_2
+71003 dm_rhahkzors_hammer empowered_3
+872 dm_rockslicer normal base
+71004 dm_rockslicer heroic
+71005 dm_rockslicer empowered_1
+71006 dm_rockslicer empowered_2
+71007 dm_rockslicer empowered_3
+71008 dm_doormans_girdle normal
+71009 dm_doormans_girdle heroic
+71010 dm_doormans_girdle empowered_1
+71011 dm_doormans_girdle empowered_2
+71012 dm_doormans_girdle empowered_3
+71013 dm_evokers_boots normal
+71014 dm_evokers_boots heroic
+71015 dm_evokers_boots empowered_1
+71016 dm_evokers_boots empowered_2
+71017 dm_evokers_boots empowered_3
+5444 dm_miners_cape normal base
+71018 dm_miners_cape heroic
+71019 dm_miners_cape empowered_1
+71020 dm_miners_cape empowered_2
+71021 dm_miners_cape empowered_3
+5443 dm_gold_plated_buckler normal base
+71022 dm_gold_plated_buckler heroic
+71023 dm_gold_plated_buckler empowered_1
+71024 dm_gold_plated_buckler empowered_2
+71025 dm_gold_plated_buckler empowered_3
+2169 dm_buzzer_blade normal base
+71026 dm_buzzer_blade heroic
+71027 dm_buzzer_blade empowered_1
+71028 dm_buzzer_blade empowered_2
+71029 dm_buzzer_blade empowered_3
+1937 dm_buzz_saw normal base
+71030 dm_buzz_saw heroic
+71031 dm_buzz_saw empowered_1
+71032 dm_buzz_saw empowered_2
+71033 dm_buzz_saw empowered_3
+5195 dm_gold_flecked_gloves normal base
+71034 dm_gold_flecked_gloves heroic
+71035 dm_gold_flecked_gloves empowered_1
+71036 dm_gold_flecked_gloves empowered_2
+71037 dm_gold_flecked_gloves empowered_3
+5194 dm_taskmaster_axe normal base
+71038 dm_taskmaster_axe heroic
+71039 dm_taskmaster_axe empowered_1
+71040 dm_taskmaster_axe empowered_2
+71041 dm_taskmaster_axe empowered_3
+71042 dm_insulated_tazer_bracers normal
+71043 dm_insulated_tazer_bracers heroic
+71044 dm_insulated_tazer_bracers empowered_1
+71045 dm_insulated_tazer_bracers empowered_2
+71046 dm_insulated_tazer_bracers empowered_3
+5199 dm_smelting_pants normal base
+71047 dm_smelting_pants heroic
+71048 dm_smelting_pants empowered_1
+71049 dm_smelting_pants empowered_2
+71050 dm_smelting_pants empowered_3
+1156 dm_lavishly_jeweled_ring normal base
+71051 dm_lavishly_jeweled_ring heroic
+71052 dm_lavishly_jeweled_ring empowered_1
+71053 dm_lavishly_jeweled_ring empowered_2
+71054 dm_lavishly_jeweled_ring empowered_3
+71055 dm_forge_scarred_sabatons normal
+71056 dm_forge_scarred_sabatons heroic
+71057 dm_forge_scarred_sabatons empowered_1
+71058 dm_forge_scarred_sabatons empowered_2
+71059 dm_forge_scarred_sabatons empowered_3
+5196 dm_smites_reaver normal base
+71060 dm_smites_reaver heroic
+71061 dm_smites_reaver empowered_1
+71062 dm_smites_reaver empowered_2
+71063 dm_smites_reaver empowered_3
+5192 dm_thiefs_blade normal base
+71064 dm_thiefs_blade heroic
+71065 dm_thiefs_blade empowered_1
+71066 dm_thiefs_blade empowered_2
+71067 dm_thiefs_blade empowered_3
+7230 dm_smites_mighty_hammer normal base
+71068 dm_smites_mighty_hammer heroic
+71069 dm_smites_mighty_hammer empowered_1
+71070 dm_smites_mighty_hammer empowered_2
+71071 dm_smites_mighty_hammer empowered_3
+71072 dm_first_mates_pauldrons normal
+71073 dm_first_mates_pauldrons heroic
+71074 dm_first_mates_pauldrons empowered_1
+71075 dm_first_mates_pauldrons empowered_2
+71076 dm_first_mates_pauldrons empowered_3
+5197 dm_cookies_tenderizer normal base
+71077 dm_cookies_tenderizer heroic
+71078 dm_cookies_tenderizer empowered_1
+71079 dm_cookies_tenderizer empowered_2
+71080 dm_cookies_tenderizer empowered_3
+5198 dm_cookies_stirring_rod normal base
+71081 dm_cookies_stirring_rod heroic
+71082 dm_cookies_stirring_rod empowered_1
+71083 dm_cookies_stirring_rod empowered_2
+71084 dm_cookies_stirring_rod empowered_3
+71085 dm_rubbery_helmet normal
+71086 dm_rubbery_helmet heroic
+71087 dm_rubbery_helmet empowered_1
+71088 dm_rubbery_helmet empowered_2
+71089 dm_rubbery_helmet empowered_3
+5201 dm_emberstone_staff normal base
+71090 dm_emberstone_staff heroic
+71091 dm_emberstone_staff empowered_1
+71092 dm_emberstone_staff empowered_2
+71093 dm_emberstone_staff empowered_3
+10403 dm_blackened_defias_belt normal base
+71094 dm_blackened_defias_belt heroic
+71095 dm_blackened_defias_belt empowered_1
+71096 dm_blackened_defias_belt empowered_2
+71097 dm_blackened_defias_belt empowered_3
+5200 dm_impaling_harpoon normal base
+71098 dm_impaling_harpoon heroic
+71099 dm_impaling_harpoon empowered_1
+71100 dm_impaling_harpoon empowered_2
+71101 dm_impaling_harpoon empowered_3
+71102 dm_harpooneers_coif normal
+71103 dm_harpooneers_coif heroic
+71104 dm_harpooneers_coif empowered_1
+71105 dm_harpooneers_coif empowered_2
+71106 dm_harpooneers_coif empowered_3
+5193 dm_cape_of_the_brotherhood normal base
+71107 dm_cape_of_the_brotherhood heroic
+71108 dm_cape_of_the_brotherhood empowered_1
+71109 dm_cape_of_the_brotherhood empowered_2
+71110 dm_cape_of_the_brotherhood empowered_3
+5202 dm_corsairs_overshirt normal base
+71111 dm_corsairs_overshirt heroic
+71112 dm_corsairs_overshirt empowered_1
+71113 dm_corsairs_overshirt empowered_2
+71114 dm_corsairs_overshirt empowered_3
+5191 dm_cruel_barb normal base
+71115 dm_cruel_barb heroic
+71116 dm_cruel_barb empowered_1
+71117 dm_cruel_barb empowered_2
+71118 dm_cruel_barb empowered_3
+10399 dm_blackened_defias_armor normal base
+71119 dm_blackened_defias_armor heroic
+71120 dm_blackened_defias_armor empowered_1
+71121 dm_blackened_defias_armor empowered_2
+71122 dm_blackened_defias_armor empowered_3
+71123 dm_powder_keg_fuse heroic_hm
+71124 dm_powder_keg_fuse empowered_1_hm
+71125 dm_powder_keg_fuse empowered_2_hm
+71126 dm_powder_keg_fuse empowered_3_hm
+71127 dm_blackguards_signet heroic_hm
+71128 dm_blackguards_signet empowered_1_hm
+71129 dm_blackguards_signet empowered_2_hm
+71130 dm_blackguards_signet empowered_3_hm
+71131 dm_lantern_of_the_roaring_flame heroic_hm
+71132 dm_lantern_of_the_roaring_flame empowered_1_hm
+71133 dm_lantern_of_the_roaring_flame empowered_2_hm
+71134 dm_lantern_of_the_roaring_flame empowered_3_hm
