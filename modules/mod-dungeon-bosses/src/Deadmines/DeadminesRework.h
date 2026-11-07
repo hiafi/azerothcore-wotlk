@@ -101,7 +101,7 @@ namespace DeadminesRework
         NPC_DM_SHADOW_IMAGE     = 300427,   // npc_dm_shadow_image (B8)
         // 300428 reserved: the mainmast is a gameobject (GO_DM_MAINMAST)
         NPC_DM_POWDER_STALKER   = 300429,   // invisible stalker for hard mode effects (B9), no script
-        // 300430-300449 spare
+        // 300430 Blackguard (hard mode Signet look, item-variants IV6); 300431-300449 spare
 
         // stock creatures the scripts refer to
         NPC_DEFIAS_MINER        = 598,

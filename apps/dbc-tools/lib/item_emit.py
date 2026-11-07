@@ -42,6 +42,8 @@ Prices and disenchanting stay the copied / schema values for now (IV9).
 **Spells.** A minted tier of a `base=` item has the stock spell slots that `absorbed_spell_slots` folds into the
 budget cleared in its row (`budget.absorb_spell_fields`, what the server does in memory). The stock entry itself
 keeps them in the database (the server clears them at boot), so `keep_spells=True` can still bring them back.
+A tier whose item spells were copied (`use_spell(..., scale="budget")`, IV10 `lib/item_spell_copies.py`) carries its
+own copy ids (`ResolvedTier.spells`); the first tier keeps the declared spells.
 
 A second run over the replayed overlay (the first run's pending file applied) renders nothing.
 """
@@ -187,7 +189,8 @@ def _tier_row(item: item_variants.ResolvedItem, tier: item_variants.ResolvedTier
     if not tier.stock and tier.max_durability is not None:
         row["MaxDurability"] = tier.max_durability  # R1 S2: a minted tier's durability from live data
     if decl.spells is not None:
-        row.update(_spell_columns(decl.spells))
+        # IV10: a tier with `scale=` spells carries its own copies (lib/item_spell_copies.py).
+        row.update(_spell_columns(tier.spells if tier.spells is not None else decl.spells))
         set_columns += SPELL_COLUMNS
     elif not tier.stock:
         # A minted copy of a stock item: the spells the budget absorbs are cleared, as the server does in memory.

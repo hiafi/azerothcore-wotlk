@@ -41,6 +41,16 @@ whole budget), checked at resolve time. `itemization="live"` adopts a stock item
 its first tier. Deltas are fractions of the tier's own baseline (`extra_stamina=0.25` is +25% of the tier's Stamina),
 so they scale with the item level.
 
+**Effects.** `spells=(use_spell(...), equip_spell(...), hit_spell(...))` puts the same effect on every tier, unless it
+is declared with `scale="budget"` (IV10): then every tier above the item's first carries its own copy of the spell and
+of every spell it reaches, damage and healing potency times the tier's stat budget over the first tier's
+(`lib/item_spell_copies.py`; durations, cooldowns, chances, radii and aura amounts stay as declared).
+
+**Unique-equipped across tiers** (IV10 follow-up 1, user 2026-11-06). Every tier of an item with an effect (`spells=`
+with at least one spell, or a `keep_spells=True` stock item whose row has one) shares one `ItemLimitCategory`, equip
+limit 1, so a player cannot wear two tiers of the same effect at once (`lib/item_limits.py`). `unique_equip=False`
+turns it off, `unique_equip=True` puts it on an item without an effect; plain stat items stay unrestricted.
+
 Registered into `Registry.item_declarations` (`id` = the key), so two `item()` calls with one key are a
 `DuplicateIdError` like any other declared table.
 """
@@ -48,7 +58,7 @@ Registered into `Registry.item_declarations` (`id` = the key), so two `item()` c
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from enum import IntEnum
 from pathlib import Path
 
@@ -67,6 +77,10 @@ MAX_SOCKETS = 3
 MAX_ITEM_LEVEL = 300  # every reference curve covers 1-300
 MAX_REQUIRED_LEVEL = 80
 MAX_TIER_STEP = 255  # item_budget_variant.tier is a tinyint unsigned
+# `use_spell(..., scale=...)` values (item variants IV10, lib/item_spell_copies.py). "budget": every tier above the
+# item's first gets its own copy of the effect spell and every spell it reaches, with the damage and healing potency
+# scaled by the tier's stat budget over the first tier's.
+SPELL_SCALES = ("budget",)
 NEW_ITEM_LEVEL_GAP = 5  # a new item's default required level: its item level minus this (the stock pattern)
 
 _KEY_RE = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -88,7 +102,7 @@ STAT_COLUMNS = frozenset(
 # Columns the DSL sets through its own keywords: pass the keyword instead.
 KEYWORD_COLUMNS = {
     "entry": "the key / base=", "name": "name=", "ItemLevel": "ilvl=", "Quality": "quality=",
-    "RequiredLevel": "required_level=", "socketBonus": "socket_bonus=",
+    "RequiredLevel": "required_level=", "socketBonus": "socket_bonus=", "ItemLimitCategory": "unique_equip=",
     **{f"socketColor_{n}": "sockets=" for n in range(1, 4)},
     **{f"socketContent_{n}": "sockets=" for n in range(1, 4)},
     **{f"spell{part}_{n}": "spells=" for n in range(1, 6) for part in (
@@ -274,6 +288,14 @@ class ItemSpell:
     cooldown: int = -1
     category: int = 0
     category_cooldown: int = -1
+    # IV10: "budget" mints per-tier copies of the spell (lib/item_spell_copies.py); `spell` is the declared Spell
+    # the copies are built from (bookkeeping, not part of the row).
+    scale: str | None = None
+    spell: object | None = field(default=None, compare=False, repr=False)
+
+    def with_spell_id(self, spell_id: int) -> ItemSpell:
+        """The same effect on another spell id (a tier's copy)."""
+        return replace(self, spell_id=spell_id)
 
     def columns(self, slot: int) -> dict:
         """The `item_template` spell columns of slot `slot` (1-5)."""
@@ -292,22 +314,44 @@ def _spell_id(spell) -> int:
     return spell_id
 
 
-def use_spell(spell, cooldown: int = -1, category: int = 0, category_cooldown: int = -1, charges: int = 0) -> ItemSpell:
-    """A "Use:" effect (`spelltrigger` 0). Cooldowns in milliseconds, -1 = the spell's own."""
+def _scale(caller: str, spell, scale) -> dict:
+    """The `scale=` fields of an ItemSpell. "budget" needs the declared Spell (not a bare id): the copies are built
+    from its declaration."""
+    if scale is None:
+        return {}
+    if scale not in SPELL_SCALES:
+        raise ItemDeclarationError(f"{caller}({spell!r}): scale={scale!r} must be one of {SPELL_SCALES} or None")
+    from .model import Spell  # noqa: PLC0415
+
+    if not isinstance(spell, Spell):
+        raise ItemDeclarationError(
+            f"{caller}({spell!r}): scale={scale!r} copies the spell's declaration per tier, so pass the declared "
+            f"spell(...) object, not a bare id"
+        )
+    return {"scale": scale, "spell": spell}
+
+
+def use_spell(spell, cooldown: int = -1, category: int = 0, category_cooldown: int = -1, charges: int = 0,
+              scale: str | None = None) -> ItemSpell:
+    """A "Use:" effect (`spelltrigger` 0). Cooldowns in milliseconds, -1 = the spell's own. `scale="budget"` gives
+    every tier above the item's first its own copy of the spell, damage and healing scaled by the tier's stat budget
+    (IV10, lib/item_spell_copies.py)."""
     return ItemSpell(_spell_id(spell), SpellTrigger.USE, charges=charges, cooldown=cooldown, category=category,
-                     category_cooldown=category_cooldown)
+                     category_cooldown=category_cooldown, **_scale("use_spell", spell, scale))
 
 
-def equip_spell(spell) -> ItemSpell:
-    """An "Equip:" effect (`spelltrigger` 1)."""
-    return ItemSpell(_spell_id(spell), SpellTrigger.ON_EQUIP)
+def equip_spell(spell, scale: str | None = None) -> ItemSpell:
+    """An "Equip:" effect (`spelltrigger` 1). `scale=` as in `use_spell`."""
+    return ItemSpell(_spell_id(spell), SpellTrigger.ON_EQUIP, **_scale("equip_spell", spell, scale))
 
 
-def hit_spell(spell, ppm: float = 0.0) -> ItemSpell:
-    """A "Chance on hit:" effect (`spelltrigger` 2), `ppm` procs per minute (0 = the spell's own proc data)."""
+def hit_spell(spell, ppm: float = 0.0, scale: str | None = None) -> ItemSpell:
+    """A "Chance on hit:" effect (`spelltrigger` 2), `ppm` procs per minute (0 = the spell's own proc data).
+    `scale=` as in `use_spell`."""
     if not _number(ppm) or ppm < 0:
         raise ItemDeclarationError(f"hit_spell({spell!r}): ppm={ppm!r} must be a number >= 0")
-    return ItemSpell(_spell_id(spell), SpellTrigger.CHANCE_ON_HIT, ppm=float(ppm))
+    return ItemSpell(_spell_id(spell), SpellTrigger.CHANCE_ON_HIT, ppm=float(ppm),
+                     **_scale("hit_spell", spell, scale))
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -340,6 +384,7 @@ class ItemDecl:
     socket_bonus: int | None = None
     overrides: tuple[tuple[str, tuple[tuple[str, object], ...]], ...] = ()
     columns: tuple[tuple[str, object], ...] = ()
+    unique_equip: bool | None = None  # None: True when the item has an effect (IV10 follow-up 1, lib/item_limits.py)
 
     @property
     def where(self) -> str:
@@ -356,7 +401,7 @@ def item(
     budget_mult: float | None = None, itemization: str | None = None,
     extra_stamina: float = 0.0, extra_armor: float = 0.0, extra_dps: float | None = None, extra_block: float = 0.0,
     weapon_role: str | None = None, spells=None, keep_spells: bool = False, sockets=None,
-    socket_bonus: int | None = None, overrides: dict | None = None, **columns,
+    socket_bonus: int | None = None, overrides: dict | None = None, unique_equip: bool | None = None, **columns,
 ) -> ItemDecl:
     """Declares an item on `ladder` (see the module docstring). `key` names it in the lock file forever: the ids of
     its tiers stay with the key whatever its name, level or shapes later become. `columns` are other `item_template`
@@ -431,6 +476,8 @@ def item(
             raise ItemDeclarationError(f"{where}: no secondary shape means primary_share 10000, not {primary_share}")
         if budget_mult is not None and (not _number(budget_mult) or not 0 < budget_mult <= 2):
             raise ItemDeclarationError(f"{where}: budget_mult={budget_mult!r} must be a number in (0, 2]")
+    if unique_equip is not None and not isinstance(unique_equip, bool):
+        raise ItemDeclarationError(f"{where}: unique_equip= is True, False or None (None: True for an effect item)")
     if weapon_role is not None and weapon_role not in WEAPON_ROLES:
         raise ItemDeclarationError(f"{where}: weapon_role={weapon_role!r} must be one of {WEAPON_ROLES}")
     for keyword, value in (("extra_stamina", extra_stamina), ("extra_armor", extra_armor),
@@ -475,6 +522,7 @@ def item(
         extra_dps=None if extra_dps is None else float(extra_dps), extra_block=float(extra_block),
         weapon_role=weapon_role, spells=spell_tuple, keep_spells=keep_spells, sockets=socket_tuple,
         socket_bonus=socket_bonus, overrides=override_tuple, columns=tuple(sorted(columns.items())),
+        unique_equip=unique_equip,
     )
     active = _registry._active
     if active is not None:

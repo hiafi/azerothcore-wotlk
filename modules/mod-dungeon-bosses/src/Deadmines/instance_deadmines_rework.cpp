@@ -29,6 +29,7 @@
 #include "InstanceScript.h"
 #include "Map.h"
 #include "Random.h"
+#include "SharedDefines.h"
 #include "UnitDefines.h"
 
 using namespace DeadminesRework;
@@ -106,6 +107,7 @@ public:
                     // until Greenskin is DONE. With Greenskin stored DONE he simply appears.
                     if (GetBossState(BOSS_CAPTAIN_GREENSKIN) != DONE && GetBossState(BOSS_EDWIN_VANCLEEF) != DONE)
                         SetVanCleefHidden(creature, true);
+                    ApplyHardModeLoot(creature);
                     break;
                 default:
                     break;
@@ -162,7 +164,9 @@ public:
                     if (_hardMode && state == DONE)
                     {
                         // The hard mode kill flag (E5 loot reads BOSS_BURN_IT_DOWN DONE / DATA_HARD_MODE_KILLED).
+                        // His loot is already filled (Unit::Kill, before JustDied), hard mode item included.
                         _hardMode = 0;
+                        ApplyHardModeLoot();
                         SetBossState(BOSS_BURN_IT_DOWN, DONE);
                         // A first-time state on a TO_BE_DECIDED slot is stored but not saved (InstanceScript treats
                         // it as loading), so save explicitly or a reload loses the kill flag.
@@ -171,6 +175,7 @@ public:
                     else if (_hardMode && (state == NOT_STARTED || state == FAIL))
                     {
                         _hardMode = 0;
+                        ApplyHardModeLoot();
                         SaveToDB();
                     }
                     break;
@@ -191,6 +196,7 @@ public:
                     break;
                 case DATA_HARD_MODE:
                     _hardMode = data ? 1 : 0;
+                    ApplyHardModeLoot();
                     SaveToDB();
                     break;
                 case DATA_JOHNSON_ROLL: // `.dmtest johnson present`: force the saved roll
@@ -298,6 +304,22 @@ public:
             SetVanCleefHidden(vanCleef, false);
             if (vanCleef->IsAIEnabled && vanCleef->AI())
                 vanCleef->AI()->Talk(YELL_VANCLEEF_ARRIVAL);
+        }
+
+        // Item variants IV7: VanCleef's heroic lootid holds the hard mode list in group 2 with LootMode 2
+        // (LOOT_MODE_HARD_MODE_1, Ulduar's mechanism). Unit::Kill fills the loot with the creature's loot mode before
+        // JustDied, so the bit rides his loot mode exactly while DATA_HARD_MODE is lit: a lit kill rolls one hard mode
+        // item on top of his heroic item, an unlit one never does.
+        void ApplyHardModeLoot(Creature* vanCleef = nullptr)
+        {
+            if (!vanCleef)
+                vanCleef = GetCreature(DATA_VANCLEEF_GUID);
+            if (!vanCleef)
+                return;
+            if (_hardMode)
+                vanCleef->AddLootMode(LOOT_MODE_HARD_MODE_1);
+            else
+                vanCleef->RemoveLootMode(LOOT_MODE_HARD_MODE_1);
         }
 
         uint32 _cannon = NOT_STARTED;

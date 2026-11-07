@@ -65,7 +65,10 @@ from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, so
 from lib import gcd_haste, header_gen, potency_sheet, spell_tables, superseded_ranks  # noqa: E402
 from lib import sqlcorpus, stale_overlay, trainer_pricing, trainer_state  # noqa: E402
 from lib import dungeon_checks, dungeon_heroic, heroic_templates, item_emit, item_ids, item_variants  # noqa: E402
+from lib import loot_tables  # noqa: E402
 from lib import item_labels  # noqa: E402
+from lib import item_spell_copies  # noqa: E402
+from lib import item_limits  # noqa: E402
 from lib import patch_repack  # noqa: E402
 from bootstrap import load_spell_ranks_chains  # noqa: E402
 from lib.dsl import items as dsl_items  # noqa: E402
@@ -873,6 +876,44 @@ def _apply_stale_overlay(stale_inputs: tuple, ids_cfg: dict) -> tuple[dict[str, 
     return stale_deletes, stale_force
 
 
+def _loot_blocks(
+    dsl_classes: dict, item_expansion, item_rendered, ids_cfg: dict, existing_creature_rows: dict, only_items: bool,
+) -> list[str]:
+    """Item variants IV7: resolves `boss_loot()` / `remove_loot_group()` (lib/loot_tables.py), runs the loot rules
+    (the live ones need the replayed loot tables) and appends the groups that differ from live to
+    `item_rendered.blocks`. Returns the errors. The heroic creatures come from source/world/heroic_ids.lock; their
+    rows from this run's declared and generated creature_template rows over the live ones (an `--only items` run
+    renders no creature row, so a heroic row whose lootid is not yet its own is a WARNING there)."""
+    try:
+        heroic_pairs = heroic_templates.parse_lock(heroic_templates.LOCK_PATH.read_text()).pairs \
+            if heroic_templates.LOCK_PATH.is_file() else {}
+    except heroic_templates.LockError as error:
+        return [f"loot: {error}"]
+    creature_rows = dict(existing_creature_rows)
+    for row in dsl_classes["creature_templates"]:
+        creature_rows[int(row["entry"])] = row
+    for edit in dsl_classes["creature_template_edits"]:
+        entry = int(edit["entry"])
+        creature_rows[entry] = {**creature_rows.get(entry, {}), **edit}
+    plan = loot_tables.build(
+        dsl_classes["loot_declarations"], item_expansion, ids_cfg=ids_cfg, heroic_pairs=heroic_pairs,
+        creature_rows=creature_rows, strict_lootid=not only_items,
+    )
+    if not plan.errors:
+        live_creature, live_reference = loot_tables.load_live()
+        loot_tables.derive_heroic_copies(plan, live_creature)
+        loot_tables.check_live(plan, live_creature, live_reference, ids_cfg)
+    for warning in plan.warnings:
+        print(f"WARNING: {warning}")
+    rendered = None
+    if not plan.errors and item_rendered is not None:
+        rendered = loot_tables.render(plan, live_creature, live_reference)
+        item_rendered.blocks += rendered.blocks
+    for note in loot_tables.summary_notes(plan, rendered):
+        print(f"note: {note}")
+    return plan.errors
+
+
 def _item_dbc_drop_guard(item_entries: list[dict], ids_cfg: dict, patch_base: Path | None) -> int:
     """R1 B1 / S5: before anything is written, compare the deployed patch-Z's Item.dbc (`patch_base` under `--only
     items`, else patch_out.DEPLOY_MPQ) with the custom item ids this run's Item.dbc carries (`item_entries`: items.csv
@@ -908,9 +949,57 @@ def _item_dbc_drop_guard(item_entries: list[dict], ids_cfg: dict, patch_base: Pa
     return 1
 
 
+def _item_spell_copy_problems(expansion) -> list[str]:
+    """Why `--only items` cannot write the item rows that name the item effect spell copies (IV10): a copy that is
+    neither live nor in a pending rev, a lock line not written yet, or a stale `ItemSpellCopies.h`. Each needs a full
+    run, which ships the spell rows, Spell.dbc and the header with them."""
+    if expansion is None or not (expansion.copy_ids or expansion.lock_appended):
+        return []
+    problems = []
+    if expansion.lock_appended:
+        problems.append(
+            f"{len(expansion.lock_appended)} new item spell copy id(s) are not in "
+            f"{item_spell_copies.LOCK_PATH.name} yet; run a full generate.py (it ships the spell rows with them)"
+        )
+    applied = state.load_applied_rows(dbcfmt.SPELL, state.load_existing_rows(dbcfmt.SPELL))
+    missing = [spell_id for spell_id in expansion.copy_ids if spell_id not in applied]
+    if missing:
+        problems.append(
+            f"item spell copies {missing} are not live or in a pending rev, but the item rows name them; run a full "
+            f"generate.py"
+        )
+    header_problem = item_spell_copies.header_problem(expansion.header_text)
+    if header_problem:
+        problems.append(f"{header_problem} (a full run writes it)")
+    return problems
+
+
+def _item_limit_problems(expansion, spell_table_index, dsl_classes: dict) -> list[str]:
+    """Why `--only items` cannot write item rows naming the item limit categories (IV10 follow-up 1): a category row
+    not live (nor in a pending rev) or changed, or a lock line not written yet. The server zeroes an item's unknown
+    category at boot and the client needs the ItemLimitCategory.dbc row, so both need a full run."""
+    if expansion is None or expansion.errors:
+        return []
+    problems = []
+    if expansion.lock_appended:
+        problems.append(
+            f"{len(expansion.lock_appended)} new item limit categor(ies) are not in {item_limits.LOCK_PATH.name} yet; "
+            f"run a full generate.py (it ships the itemlimitcategory_dbc rows and ItemLimitCategory.dbc with them)"
+        )
+    spec = next(s for s in spell_tables.SPELL_TABLES if s.name == "itemlimitcategory_dbc")
+    pending = spell_table_index.rows_to_emit(spec, dsl_classes["item_limit_categories"])
+    if pending:
+        problems.append(
+            f"item limit categories {sorted(int(r['ID']) for r in pending)} are not live or in a pending rev (or "
+            f"changed), but the item rows name them; run a full generate.py"
+        )
+    return problems
+
+
 def _run_only_items(
     progress, *, check: bool, ids_cfg: dict, item_entries: list[dict], item_live_rows: dict, item_table_index,
     dsl_classes: dict, item_expansion, item_emission, item_rendered, patch_base, corpus: sqlcorpus.Corpus,
+    item_spell_expansion=None, limit_problems: list[str] | None = None,
 ) -> int:
     """`--only items` (item variants IV3, plan section 5.4): the SQL and the client patch for the item tables alone.
 
@@ -919,10 +1008,19 @@ def _run_only_items(
     file, plus the new `item_ids.lock` lines. Nothing from the spell, talent, creature or dungeon tables is rendered,
     so an in-flight edit to one of them stays out of the file. Client: the DEPLOYED patch-Z with only Item.dbc
     replaced (lib/patch_repack.py); nothing else of the archive changes. `check`: the item checks and lints, no
-    writes."""
+    writes.
+
+    Item effect spell copies (IV10) are spell rows, so this run cannot ship them: the item rows it writes name them,
+    so it stops (`check`: warns) unless every copy is already live or in a pending rev, its lock line is written and
+    the generated header is current (`_item_spell_copy_problems`)."""
     if item_expansion.errors:
         for error in item_expansion.errors:
             print(f"ERROR: {error}")
+        return 1
+    copy_problems = _item_spell_copy_problems(item_spell_expansion) + list(limit_problems or ())
+    for problem in copy_problems:
+        print(f"{'WARNING' if check else 'ERROR'}: --only items: {problem}")
+    if copy_problems and not check:
         return 1
     existing_items = state.load_existing_rows(dbcfmt.ITEM)
     stock_items = state.load_stock_rows(dbcfmt.ITEM)
@@ -1214,6 +1312,41 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
         print(f"note: {note}")
     if dsl_classes["item_declarations"]:
         progress("resolved source/items declarations (ladder tiers, item ids)")
+    # Item variants IV10: every tier above an item's first gets its own copy of each `scale="budget"` effect spell
+    # and of every spell it reaches, damage and healing scaled by the tier's stat budget (lib/item_spell_copies.py).
+    # Added to the declarations before anything renders, so the spell blocks, the client Spell.dbc, the --check lints
+    # and the item rows (each tier names its own copy, ResolvedTier.spells) all see them.
+    item_spell_expansion = None
+    if item_expansion.assignment is not None and not item_expansion.errors:
+        item_spell_expansion = item_spell_copies.expand(
+            item_expansion, dsl_classes, ids_cfg,
+            taken_loader=lambda: state.load_existing_rows(dbcfmt.SPELL).keys(),
+        )
+        item_expansion.errors += item_spell_expansion.errors
+        for note in item_spell_copies.summary_notes(item_spell_expansion, check="--check" in sys.argv):
+            print(f"note: {note}")
+        if not item_spell_expansion.errors:
+            item_spell_expansion.apply(dsl_classes, spell_entries)
+            header_problem = item_spell_copies.header_problem(item_spell_expansion.header_text)
+            if header_problem and "--check" in sys.argv and not only_items:
+                item_expansion.errors.append(header_problem)
+    # Item variants IV10 follow-up 1: every tier of an effect item shares one unique-equip ItemLimitCategory
+    # (lib/item_limits.py): the tiers' column (before item_emit.build below), the itemlimitcategory_dbc rows (a
+    # SPELL_TABLES entry) and the client ItemLimitCategory.dbc rows (the patch-Z merge).
+    item_limit_expansion = None
+    if item_expansion.assignment is not None and not item_expansion.errors:
+        item_limit_expansion = item_limits.expand(
+            item_expansion, ids_cfg,
+            taken_loader=lambda: [int(k[0]) for k in spell_table_index.live_keys("itemlimitcategory_dbc")],
+        )
+        item_expansion.errors += item_limit_expansion.errors
+        for note in item_limits.summary_notes(item_limit_expansion, check="--check" in sys.argv):
+            print(f"note: {note}")
+        if not item_limit_expansion.errors:
+            dsl_classes["item_limit_categories"].extend(item_limit_expansion.rows)
+            if not only_items and (base_error := item_limits.base_file_error(item_limit_expansion.rows,
+                                                                               BASE_DBC_DIR)):
+                item_expansion.errors.append(base_error)
     # Item variants IV2: the rows every tier owns (lib/item_emit.py). The stock entries' column edits join the
     # item_template() rows (rendered by spell_tables.render_item_blocks); the minted rows, item_itemization and
     # item_budget_variant render below; the Item.dbc entries join items.csv's, so the item block and patch-Z carry
@@ -1234,6 +1367,12 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
             item_rendered = item_emit.render(item_emission, item_live_rows, item_expansion.tables or {})
             for note in item_emit.summary_notes(item_emission, item_rendered):
                 print(f"note: {note}")
+        # Item variants IV7: the declared boss loot (lib/loot_tables.py), its rules, and the groups that differ from
+        # the replayed live loot tables, rendered with the item blocks (so `--only items` carries them too).
+        if dsl_classes["loot_declarations"] and not item_expansion.errors:
+            item_expansion.errors += _loot_blocks(
+                dsl_classes, item_expansion, item_rendered, ids_cfg, existing_creature_rows, only_items,
+            )
     if not item_expansion.errors and _item_dbc_drop_guard(item_entries, ids_cfg, patch_base) != 0:
         return 1
     if only_items:  # before the potency sheets and generated headers below: an item-only run writes neither
@@ -1241,7 +1380,8 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
             progress, check="--check" in sys.argv, ids_cfg=ids_cfg, item_entries=item_entries,
             item_live_rows=item_live_rows, item_table_index=item_table_index, dsl_classes=dsl_classes,
             item_expansion=item_expansion, item_emission=item_emission, item_rendered=item_rendered,
-            patch_base=patch_base, corpus=corpus,
+            patch_base=patch_base, corpus=corpus, item_spell_expansion=item_spell_expansion,
+            limit_problems=_item_limit_problems(item_limit_expansion, spell_table_index, dsl_classes),
         )
     if n_dsl:
         creature_counts = {
@@ -1886,6 +2026,24 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
             f"({len(item_expansion.assignment.bases)} stock base line(s)) into "
             f"{item_ids.LOCK_PATH.relative_to(REPO_ROOT)} - commit it with the SQL"
         )
+    # Item variants IV10: the item effect spell copy ids this run minted (lib/item_spell_copies.py) and the C++ lookup
+    # header the scripts use, after the SQL.
+    if item_spell_expansion is not None and not item_spell_expansion.errors:
+        if item_spell_expansion.lock_appended:
+            item_spell_copies.LOCK_PATH.write_text(item_spell_expansion.lock_text, encoding="utf-8")
+            print(
+                f"note: minted {len(item_spell_expansion.lock_appended)} item spell copy id(s) into "
+                f"{item_spell_copies.LOCK_PATH.relative_to(REPO_ROOT)} - commit it with the SQL"
+            )
+        if item_spell_copies.write_header(item_spell_expansion.header_text):
+            print(f"note: wrote {item_spell_copies.HEADER_PATH.relative_to(REPO_ROOT)} - commit it with the SQL")
+    # Item variants IV10 follow-up 1: the item limit category ids this run minted (lib/item_limits.py), after the SQL.
+    if item_limit_expansion is not None and not item_limit_expansion.errors and item_limit_expansion.lock_appended:
+        item_limits.LOCK_PATH.write_text(item_limit_expansion.lock_text, encoding="utf-8")
+        print(
+            f"note: minted {len(item_limit_expansion.lock_appended)} item limit categor(ies) into "
+            f"{item_limits.LOCK_PATH.relative_to(REPO_ROOT)} - commit it with the SQL"
+        )
     # Item variants IV4: the client tier label table, rewritten only when it changed.
     if item_emission is not None and (label_note := item_labels.sync(item_emission.labels)):
         print(f"note: items: {label_note}")
@@ -1907,6 +2065,7 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
         dbcfmt.SPELLRUNECOST: _spell_rune_cost_rows(dsl_classes["spell_rune_costs"]),
         dbcfmt.MAPDIFFICULTY: dungeon_checks.map_difficulty_client_rows(dsl_classes["map_difficulties"]),
         dbcfmt.DUNGEONENCOUNTER: dungeon_heroic.client_encounter_rows(dsl_classes["dungeon_encounters"]),
+        dbcfmt.ITEMLIMITCATEGORY: item_limits.client_rows(dsl_classes["item_limit_categories"]),
     }
     for name, table in SECONDARY_TABLES.items():
         # Same reserved_rows switch as the SQL block above - the client patch must carry every

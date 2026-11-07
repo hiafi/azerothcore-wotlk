@@ -594,6 +594,23 @@ DUNGEONENCOUNTER = DbcTable(
     signed=frozenset({"OrderIndex"}),
 )
 
+# ItemLimitCategory.dbc - "Unique-Equipped: <name> (N)" groups (item variants IV10 follow-up 1, lib/item_limits.py:
+# every tier of an item with an effect shares one category, Quantity 1, Flags 1 = equip mode). Server-loaded
+# (DBCStores.cpp: LOAD_DBC(sItemLimitCategoryStore, "ItemLimitCategory.dbc", "itemlimitcategory_dbc"); ObjectMgr zeroes
+# an item_template.ItemLimitCategory it cannot find) AND read by the client for the tooltip line, so a row goes out as
+# both halves: the SPELL_TABLES `itemlimitcategory_dbc` entry and a merge over var/extractors/dbc/ItemLimitCategory.dbc
+# into patch-Z. fmt is DBCfmt.h's ItemLimitCategoryEntryfmt ("nxxxxxxxxxxxxxxxxxii") with the 16 name locales written
+# 's' (string-table offsets) and Name_Lang_Mask 'x'; columns from data/sql/base/db_world/itemlimitcategory_dbc.sql.
+# Stock file (83 rows, max ID 85): the server's DBC directory (ac-worldserver:/azerothcore/env/dist/data/dbc/).
+# Not in ALL_TABLES (the SQL would go out twice, as for MAPDIFFICULTY).
+ITEMLIMITCATEGORY = DbcTable(
+    name="ItemLimitCategory",
+    dbc_filename="ItemLimitCategory.dbc",
+    sql_table="itemlimitcategory_dbc",
+    fmt="n" + "s" * 16 + "xii",
+    columns=_cols("ID", _locale_cols("Name"), "Quantity", "Flags"),
+)
+
 # CreatureSpellData.dbc - a tamed/summoned pet's default spells, looked up by
 # creature_template.PetSpellDataId (SpellMgr::LoadPetDefaultSpells). lib/superseded_ranks.py rewrites
 # the records that name a superseded rank of a collapsed chain (pet-stale-ranks). Server-only: the

@@ -23,14 +23,20 @@ enchant exists for Mastery, Versatility, Cooldown Haste or Proc Chance (the cust
 SpellItemEnchantment rows yet), so Rockslicer (Versatility) and Impaling Harpoon (Mastery) take a stock throughput
 rating instead (Crit and Haste). The bonus is one enchant per item, so it does not scale with the tier.
 
-**Hard mode items** (VanCleef, ladder `vanilla_hard_mode`, 71 / 81 / 91 / 101) are declared without their spells:
-the three effects are stage IV6 (spells from the `items` reservation 205400-205599 in source/ids.yaml). Each carries
-`budget_mult` 0.7 for the effect it will have (itemization-changes.md section 3). Only the Signet is socketed (one
-red, plan section 7.1); trinkets never are.
+**Hard mode items** (VanCleef, ladder `vanilla_hard_mode`, 71 / 81 / 91 / 101) carry the three effects of stage IV6
+(deadmines_hard_mode_effects.py, spells from the `items` reservation 205400-205599 in source/ids.yaml). Each carries
+`budget_mult` 0.7 for its effect (itemization-changes.md section 3). Only the Signet is socketed (one
+red, plan section 7.1); trinkets never are. The effects scale with the tier (stage IV10, `scale="budget"`): each tier
+above 71 carries its own copies of the effect spells, damage and healing times its stat budget over the 71 tier's.
 """
 
-from lib.dsl.items import Socket, item
+from lib.dsl.items import Socket, equip_spell, item, use_spell
 
+from .deadmines_hard_mode_effects import (
+    blackguards_signet_205403,
+    lantern_of_the_roaring_flame_205406,
+    powder_keg_fuse_205400,
+)
 from .ladders import VANILLA_DUNGEON, VANILLA_HARD_MODE
 
 # Socket bonus enchants (stock SpellItemEnchantment ids, see the module docstring).
@@ -157,18 +163,22 @@ item("dm_blackened_defias_armor", base=10399, ladder=VANILLA_DUNGEON,
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Edwin VanCleef, hard mode (heroic hard mode 71, then 81 / 91 / 101). New items, no stock level: the ladder sets
-# every tier. TODO(IV6): add `spells=(use_spell(...))` / `equip_spell(...)` once the three effect spells exist (ids
-# from the `items` reservation 205400-205599); `budget_mult` 0.7 is already set for them. Until then the items have
-# no effect line.
+# every tier. The effect spells (damage from potency) are deadmines_hard_mode_effects.py, `items` reservation
+# 205400-205599 (stage IV6); `budget_mult` 0.7 pays for them. scale="budget" (stage IV10, user 2026-11-06): the 71
+# tier carries the declared spells, every higher tier its own copies with damage and healing scaled by its stat
+# budget (lib/item_spell_copies.py, ids in item_spell_ids.lock).
 
-# Use: lob a lit keg at the target's position, a 6 yd Fire explosion 2 sec later. TODO(IV6): use_spell(keg).
+# Use (2 min): lob a lit keg at the target's position, a 6 yd Fire explosion 2 sec later.
 item("dm_powder_keg_fuse", name="Powder Keg Fuse", like=10587, bonding=BOP, ladder=VANILLA_HARD_MODE,
-     primary=None, secondary="Crit (Solo)", primary_share=0, budget_mult=0.7)
+     primary=None, secondary="Crit (Solo)", primary_share=0, budget_mult=0.7,
+     spells=(use_spell(powder_keg_fuse_205400, scale="budget"),))
 # Equip: melee hits have a chance to call a Defias Blackguard, who strikes once. Ring: secondaries only. One red
-# socket (plan section 7.1), Haste bonus. TODO(IV6): equip_spell(signet).
+# socket (plan section 7.1), Haste bonus.
 item("dm_blackguards_signet", name="Blackguard's Signet", like=1076, bonding=BOP, ladder=VANILLA_HARD_MODE,
      primary=None, secondary="Haste/Proc", primary_share=0, budget_mult=0.7,
-     sockets=(Socket.RED,), socket_bonus=BONUS_HASTE_4)
-# Use (90 sec): the next direct heal leaves a 10 sec zone, -10% damage taken. TODO(IV6): use_spell(lantern).
+     sockets=(Socket.RED,), socket_bonus=BONUS_HASTE_4,
+     spells=(equip_spell(blackguards_signet_205403, scale="budget"),))
+# Use (90 sec): the next direct heal leaves a 10 sec zone, -10% damage taken.
 item("dm_lantern_of_the_roaring_flame", name="Lantern of the Roaring Flame", like=3791, bonding=BOP,
-     ladder=VANILLA_HARD_MODE, primary="Spirit (Solo)", secondary="Versatility (Solo)", budget_mult=0.7)
+     ladder=VANILLA_HARD_MODE, primary="Spirit (Solo)", secondary="Versatility (Solo)", budget_mult=0.7,
+     spells=(use_spell(lantern_of_the_roaring_flame_205406, scale="budget"),))

@@ -95,6 +95,8 @@ DUNGEON_ACCESS_TEMPLATE_COLUMNS = (
 # existing creature_spell() / creature_model() lists instead (one owner per table, or each prune would delete the
 # other's rows). Column tuples mirror the base dump's CREATE TABLEs.
 DUNGEONENCOUNTER_COLUMNS = dbcfmt.DUNGEONENCOUNTER.columns
+# Item variants IV10 follow-up 1 (lib/item_limits.py): the unique-equip category every tier of an effect item shares.
+ITEMLIMITCATEGORY_COLUMNS = dbcfmt.ITEMLIMITCATEGORY.columns
 INSTANCE_ENCOUNTERS_COLUMNS = ("entry", "creditType", "creditEntry", "lastEncounterDungeon", "comment")
 CREATURE_TEMPLATE_ADDON_COLUMNS = (
     "entry", "path_id", "mount", "bytes1", "bytes2", "emote", "visibilityDistanceType", "auras",
@@ -376,6 +378,10 @@ SPELL_TABLES = (
     # by hand. "No heroic" is a legitimate end state, so all prune when empty. The copy tables' nullable columns
     # (resistance, movement) default to NULL, the rest to 0 (the 0/None fallback is right but for the NULL ints).
     TableSpec("dungeonencounter_dbc", DUNGEONENCOUNTER_COLUMNS, ("ID",), "dungeon_encounters", prune_when_empty=True),
+    # Item variants IV10 follow-up 1 (lib/item_limits.py): derived from the item declarations and their lock, never
+    # declared by hand; "no effect item" is a legitimate end state.
+    TableSpec("itemlimitcategory_dbc", ITEMLIMITCATEGORY_COLUMNS, ("ID",), "item_limit_categories",
+              prune_when_empty=True),
     TableSpec(
         "instance_encounters", INSTANCE_ENCOUNTERS_COLUMNS, ("entry",), "instance_encounters",
         defaults={"creditType": 0, "creditEntry": 0, "lastEncounterDungeon": 0, "comment": ""},
@@ -564,6 +570,7 @@ _PRUNE_WHY = {
     "mapdifficulty_dbc": "Left in place, the server keeps offering that dungeon difficulty.",
     "dungeon_access_template": "Left in place, the entry requirements of that difficulty keep applying.",
     "dungeonencounter_dbc": "Left in place, the boss stays on that difficulty's encounter list.",
+    "itemlimitcategory_dbc": "Left in place, items naming the category keep its equip limit.",
     "instance_encounters": "Left in place, the kill keeps crediting that encounter.",
     "creature_template_addon": "Left in place, the heroic creature keeps the copied auras and emote.",
     "creature_template_resistance": "Left in place, the heroic creature keeps the copied resistance.",
