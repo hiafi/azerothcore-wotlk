@@ -23,13 +23,14 @@ Run directly:
 from __future__ import annotations
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 TOOL_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOL_ROOT))
 
-from lib import dbcfile, item_sets, spell_tables, state  # noqa: E402
+from lib import dbcfile, item_set_members, item_sets, spell_tables, state  # noqa: E402
 from lib import test_item_emit as E  # noqa: E402
 from lib import test_item_variants as F  # noqa: E402
 from lib.dsl import items as D  # noqa: E402
@@ -171,6 +172,14 @@ class ItemSetTest(unittest.TestCase):
         first = exp.items[0].tiers[0].entry
         self.assertEqual((out.set_rows[0]["Name_Lang_enUS"], out.set_rows[0]["ItemID_1"]), ("Protector's", first))
 
+    def test_members_list_every_tier_of_every_piece(self):
+        exp, _, out, _ = run([girdle()], [S.item_set(1000, name="Protector's", items=("dm_girdle",),
+                                                     bonuses=((1, 205701), (1, 205700)))])
+        self.assertFalse(out.errors, out.errors)
+        entries = [t.entry for t in exp.items[0].tiers]
+        self.assertGreater(len(entries), 1)
+        self.assertEqual(out.members, {1000: {"bonuses": [(1, 205700), (1, 205701)], "pieces": [entries]}})
+
     def test_new_set_rules(self):
         _, _, out, _ = run([girdle()], [S.item_set(1000, items=("dm_girdle",), bonuses=((1, 205700),))])
         self.assertIn("needs name=", " ".join(out.errors))
@@ -304,6 +313,55 @@ class VendorTest(unittest.TestCase):
         _, em, out, dsl = run([belt()], [])
         self.assertFalse(out.declared)
         self.assertNotIn("item_set_rows", dsl)
+
+
+class MembersTableTest(unittest.TestCase):
+    """lib/item_set_members.py: the client set member table (ItemSetMembers.lua)."""
+
+    MEMBERS = {
+        182: {"bonuses": [(3, 205710), (5, 205712)], "pieces": [[16693, 71847], [16695, 71851, 71852]]},
+        181: {"bonuses": [(2, 205700)], "pieces": [[16686, 71815, 71816]]},
+    }
+
+    def test_sorted_deterministic_lf(self):
+        text = item_set_members.render_lua(self.MEMBERS)
+        self.assertEqual(text, item_set_members.render_lua(dict(reversed(list(self.MEMBERS.items())))))
+        body = text.split("ITEM_SET_MEMBERS = {\n")[1]
+        want = (
+            "    [181] = {\n        bonuses = { { 2, 205700 } },\n        pieces = {\n"
+            "            { 16686, 71815, 71816 },\n        },\n    },\n"
+            "    [182] = {\n        bonuses = { { 3, 205710 }, { 5, 205712 } },\n        pieces = {\n"
+            "            { 16693, 71847 },\n            { 16695, 71851, 71852 },\n        },\n    },\n}\n"
+        )
+        self.assertEqual(body, want)
+        self.assertNotIn("\r", text)
+        self.assertTrue(all(len(line) <= 120 for line in text.splitlines()))
+
+    def test_empty_table(self):
+        self.assertTrue(item_set_members.render_lua({}).endswith("ITEM_SET_MEMBERS = {\n}\n"))
+
+    def test_bad_ids_rejected(self):
+        for bad in ({0: {"bonuses": [], "pieces": []}},
+                    {1: {"bonuses": [(0, 5)], "pieces": [[1]]}},
+                    {1: {"bonuses": [(3, -5)], "pieces": [[1]]}},
+                    {1: {"bonuses": [(3, 5)], "pieces": [[0]]}},
+                    {1: {"bonuses": [(3, 5)], "pieces": [[]]}}):
+            with self.assertRaises(ValueError, msg=repr(bad)):
+                item_set_members.render_lua(bad)
+        text, errors = item_set_members.prepare({1: {"bonuses": [], "pieces": [[]]}})
+        self.assertIsNone(text)
+        self.assertEqual(len(errors), 1)
+
+    def test_write_only_when_changed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "Interface" / "FrameXML" / "ItemSetMembers.lua"
+            text = item_set_members.render_lua(self.MEMBERS)
+            self.assertIn("stale", item_set_members.finish(text, check=True, path=path))
+            self.assertFalse(path.exists())  # a check never writes
+            self.assertIn("wrote", item_set_members.finish(text, path=path))
+            self.assertIsNone(item_set_members.finish(text, path=path))
+            self.assertIsNone(item_set_members.finish(text, check=True, path=path))
+            self.assertEqual(path.read_text(encoding="utf-8"), text)
 
 
 class RenderTest(unittest.TestCase):

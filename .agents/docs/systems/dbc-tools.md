@@ -39,10 +39,19 @@ shipped in `patch-X.mpq` with the other whole-file UI overrides:
   It merges the label into the line after the name (a ShoppingTooltip's name is line 2, under "Currently Equipped");
   when that line has right-hand text or a socket icon it shifts the lines down instead. `FORCE_SHIFT` at the top of the
   file forces the shifting insert if the merge looks wrong in game.
-- `client/ui-overrides/Interface/FrameXML/FrameXML.toc` is the stock toc (CRLF) with the two files added before
+- Tiered set tooltips: ItemSet.dbc lists at most 17 ids per set (each piece's first tier), so the client's set section
+  miscounts a worn Heroic or Empowered copy while the server (counting by `item_template.itemset`) grants the bonus.
+  `lib/item_set_members.py` writes `ItemSetMembers.lua` (`ITEM_SET_MEMBERS = { [set id] = { bonuses = { { pieces,
+  spell }, ... }, pieces = { { every tier's entry of one piece }, ... } } }`, from `SetExpansion.members` of
+  lib/item_sets.py) on a full run and on `--only items`, like the label table (`--check` prints a "stale" note and
+  never writes). `ItemSetTooltip.lua` (hand-written, same hook points) recounts the worn pieces from the player's
+  equipment (each piece once, any tier), rewrites the "(n/m)" header and colors the piece list and bonus lines (green
+  when active). Items outside the table, other units' items (inspect) and set sections it cannot match line for line
+  are left alone.
+- `client/ui-overrides/Interface/FrameXML/FrameXML.toc` is the stock toc (CRLF) with the four files added before
   `## add new modules above here`. `client/ui-overrides/` is its own private repo
   (hiafi/wow-client-ui, nested and ignored by this repo; its `.gitattributes` keeps the CRLF). Commit the regenerated
-  `ItemTierLabels.lua` there after a write run.
+  `ItemTierLabels.lua` and `ItemSetMembers.lua` there after a write run.
 - `apps/dbc-tools/build_patch_x.py` packs the UI files under `client/ui-overrides/Interface` (`.lua .xml .toc .blp
   .tga`; no dotfiles, swap or `.orig` files) into `patch-X.mpq` (same packer as the other `build_patch_*.py`) and
   refuses a toc that does not list an existing label file. By default it **only builds** (to

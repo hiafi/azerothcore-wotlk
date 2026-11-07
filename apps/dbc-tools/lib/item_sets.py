@@ -116,6 +116,9 @@ class SetExpansion:
     cost_rows: list[dict] = field(default_factory=list)
     vendor_rows: list[dict] = field(default_factory=list)
     token_rows: list[dict] = field(default_factory=list)
+    # {set id: {"bonuses": [(pieces, spell id)], "pieces": [[item_template entry of every tier of one piece]]}}: the
+    # client tooltip's view of the set (lib/item_set_members.py), whole piece list, every tier.
+    members: dict[int, dict] = field(default_factory=dict)
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
@@ -244,6 +247,7 @@ def _expand_sets(out, sets, items, tier_rows, ids_cfg, stock_sets, declared_spel
                 out.errors.append(f"{where}: a new set needs name=")
                 continue
         first_entries = []
+        pieces: list[list[int]] = []
         for key in decl.items:
             if key in owner:
                 out.errors.append(f"{where}: item {key!r} is already in item_set({owner[key]})")
@@ -267,6 +271,7 @@ def _expand_sets(out, sets, items, tier_rows, ids_cfg, stock_sets, declared_spel
                         f"tier must name the set (a base= piece keeps its stock itemset, a new one passes itemset=)"
                     )
             first_entries.append(item.tiers[0].entry)
+            pieces.append([tier.entry for tier in item.tiers])
         for threshold, spell_id in decl.bonuses:
             if spell_id not in declared_spells:
                 out.warnings.append(f"{where}: bonus spell {spell_id} ({threshold} pieces) is not declared in source/")
@@ -284,6 +289,7 @@ def _expand_sets(out, sets, items, tier_rows, ids_cfg, stock_sets, declared_spel
             row[f"SetSpellID_{n}"], row[f"SetThreshold_{n}"] = spell_id, threshold
         row["RequiredSkill"], row["RequiredSkillRank"] = 0, 0
         out.set_rows.append(row)
+        out.members[set_id] = {"bonuses": bonuses, "pieces": pieces}
 
 
 def _expand_tokens(out, tokens, ids_cfg, live_item_rows, item_expansion, items_csv_ids) -> dict[int, str]:

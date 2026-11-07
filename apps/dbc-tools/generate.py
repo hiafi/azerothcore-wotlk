@@ -67,6 +67,7 @@ from lib import sqlcorpus, stale_overlay, trainer_pricing, trainer_state  # noqa
 from lib import dungeon_checks, dungeon_heroic, heroic_templates, item_emit, item_ids, item_variants  # noqa: E402
 from lib import loot_tables  # noqa: E402
 from lib import item_labels  # noqa: E402
+from lib import item_set_members  # noqa: E402
 from lib import item_spell_copies  # noqa: E402
 from lib import item_limits  # noqa: E402
 from lib import item_sets  # noqa: E402
@@ -1030,7 +1031,7 @@ def _item_limit_problems(expansion, spell_table_index, dsl_classes: dict) -> lis
 def _run_only_items(
     progress, *, check: bool, ids_cfg: dict, item_entries: list[dict], item_live_rows: dict, item_table_index,
     dsl_classes: dict, item_expansion, item_emission, item_rendered, patch_base, corpus: sqlcorpus.Corpus,
-    item_spell_expansion=None, limit_problems: list[str] | None = None,
+    item_spell_expansion=None, limit_problems: list[str] | None = None, set_expansion=None,
 ) -> int:
     """`--only items` (item variants IV3, plan section 5.4): the SQL and the client patch for the item tables alone.
 
@@ -1171,6 +1172,9 @@ def _run_only_items(
             )
         if item_emission is not None and (label_note := item_labels.sync(item_emission.labels)):
             print(f"note: items: {label_note}")
+        if set_expansion is not None and set_expansion.members:
+            if member_note := item_set_members.sync(set_expansion.members):
+                print(f"note: items: {member_note}")
         progress("SQL emission done")
         if item_dbc_bytes is None:
             print("patch: no Item.dbc rows to ship, deployed patch-Z left alone")
@@ -1402,6 +1406,12 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
         item_expansion.errors += label_errors
         if item_label_text is not None and "--check" in sys.argv:
             print(f"note: items: {item_labels.finish(item_label_text, check=True) or 'ItemTierLabels.lua is current'}")
+        if "--check" in sys.argv and set_expansion is not None and set_expansion.members:
+            member_text, member_errors = item_set_members.prepare(set_expansion.members)
+            item_expansion.errors += member_errors
+            if member_text is not None:
+                member_note = item_set_members.finish(member_text, check=True)
+                print(f"note: items: {member_note or 'ItemSetMembers.lua is current'}")
         item_entries, dbc_errors = item_emit.merge_dbc_entries(item_entries, item_emission)
         item_expansion.errors += dbc_errors
         dsl_classes["item_templates"] += item_emission.template_edits
@@ -1424,6 +1434,7 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
             item_expansion=item_expansion, item_emission=item_emission, item_rendered=item_rendered,
             patch_base=patch_base, corpus=corpus, item_spell_expansion=item_spell_expansion,
             limit_problems=_item_limit_problems(item_limit_expansion, spell_table_index, dsl_classes),
+            set_expansion=set_expansion,
         )
     if n_dsl:
         creature_counts = {
@@ -2103,6 +2114,10 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
     # Item variants IV4: the client tier label table, rewritten only when it changed.
     if item_emission is not None and (label_note := item_labels.sync(item_emission.labels)):
         print(f"note: items: {label_note}")
+    # Set tooltip fix: the client set member table (every tier of every set piece), rewritten only when it changed.
+    if set_expansion is not None and set_expansion.members:
+        if member_note := item_set_members.sync(set_expansion.members):
+            print(f"note: items: {member_note}")
     progress("SQL emission done")
 
     # -- client patch: needs a complete file (base + new), so any table with
