@@ -231,6 +231,7 @@ class Registry:
     # which spell a pot_text names even when two spells print the same expression (equal potency): item variants IV10,
     # lib/item_spell_copies.py's effect families.
     pot_text_calls: list[tuple[str, int]] = field(default_factory=list)
+    pot_text_cursor: int = 0  # pot_text_calls[cursor:] are the calls made since the previous spell()
 
 
 MERGE_KEYS = (
@@ -303,7 +304,8 @@ def spell(**kwargs) -> model.Spell:
     # changed copy of it (item variants IV10, lib/item_spell_copies.py: the per-tier copies of an item's effect spells).
     entry["_spell"] = s
     registry = _require_active()
-    pot_text_refs = _pot_text_refs(s, registry.pot_text_calls)
+    pot_text_refs = _pot_text_refs(s, registry.pot_text_calls, registry.pot_text_cursor)
+    registry.pot_text_cursor = len(registry.pot_text_calls)
     if pot_text_refs:
         entry["_pot_text_refs"] = pot_text_refs
     registry.spells.append(entry)
@@ -799,17 +801,22 @@ def pot_text(
 _POT_TEXT_KEYS = ("Description_Lang_enUS", "AuraDescription_Lang_enUS")
 
 
-def _pot_text_refs(spell: model.Spell, calls: list[tuple[str, int]]) -> list[tuple[str, int]]:
-    """The recorded pot_text() calls `spell`'s texts contain, as (text, source spell id): for each distinct text the
-    latest call that produced it (the one this spell's text was just built from, when two spells print the same
-    expression)."""
+def _pot_text_refs(spell: model.Spell, calls: list[tuple[str, int]], since: int = 0) -> list[tuple[str, int]]:
+    """The recorded pot_text() calls `spell`'s texts contain, as (text, source spell id). For each distinct text: the
+    one source the calls made since the previous spell() (`calls[since:]`, the description built for this spell)
+    produced it from; when that window names no source or more than one (two equal-potency descriptions built before
+    either spell() call), every source any call produced it from. Ambiguity is over-inclusive on purpose: a family
+    with one spell too many only copies a spell that did not need it, a missing one leaves a copy's tooltip unscaled
+    (R-W1 N4)."""
     texts = [v for k, v in (spell.raw_overrides or {}).items() if k in _POT_TEXT_KEYS and isinstance(v, str)]
     if not texts or not calls:
         return []
-    latest: dict[str, int] = {}
-    for text, source in calls:
-        latest[text] = source
-    return sorted((text, source) for text, source in latest.items() if any(text in t for t in texts))
+    refs = set()
+    for text in {text for text, _ in calls if any(text in t for t in texts)}:
+        recent = {source for t, source in calls[since:] if t == text}
+        sources = recent if len(recent) == 1 else {source for t, source in calls if t == text}
+        refs.update((text, source) for source in sources)
+    return sorted(refs)
 
 
 def custom_attr(spell: model.Spell | int, attributes: int) -> dict:

@@ -57,6 +57,9 @@ ARMOR_SLOTS = {1: "head", 3: "shoulders", 5: "chest", 20: "chest (robe)", 6: "wa
 _KEY_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 # Columns a token takes from the declaration or the tier, never from `columns=`.
 _TOKEN_OWNED = frozenset({"entry", "name", "ItemLevel", "Quality", "RequiredLevel", "description"})
+# A token is a trade good every class and race can loot and carry: the piece it buys carries the class check
+# (BuyItemFromVendorSlot reads the bought item's AllowableClass), so a like= token's own restriction never applies.
+TOKEN_FORCED = {"AllowableClass": -1, "AllowableRace": -1}
 
 
 class SetDeclarationError(ValueError):
@@ -204,6 +207,9 @@ def set_token(
     owned = sorted(c for c in columns if c in _TOKEN_OWNED)
     if owned:
         raise SetDeclarationError(f"{where}: {', '.join(owned)} come from the declaration or the tier")
+    forced = sorted(c for c in columns if c in TOKEN_FORCED)
+    if forced:
+        raise SetDeclarationError(f"{where}: {', '.join(forced)} are always -1 on a token (every class and race)")
     decl = SetTokenDecl(
         key=key, name=name, slots=slots, ladder=ladder, like=like, entries=ordered[0], costs=ordered[1],
         ilvl=ilvl, quality=None if quality is None else int(quality), required_level=required_level,

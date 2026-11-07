@@ -75,13 +75,19 @@ namespace
         int spellA = 0;
         int spellB = 0;
         CastStamp const none{};
-        CastStamp const cast{ &spellA, 116, 3 };
-        CHECK(!SameCast(none, cast));                           // the first cast rolls
-        CHECK(SameCast(cast, cast));                            // its second target does not
-        CHECK(!SameCast(cast, CastStamp{ &spellB, 116, 3 }));   // another cast object rolls
-        CHECK(!SameCast(cast, CastStamp{ &spellA, 116, 4 }));   // the address reused by the next cast rolls
-        CHECK(!SameCast(cast, CastStamp{ &spellA, 133, 3 }));   // another spell rolls
-        CHECK(!SameCast(none, none));                           // no spell, no match
+        CastStamp const cast{ &spellA, 116, 3, 5000 };
+        CHECK(!SameCast(none, cast));                               // the first cast rolls
+        CHECK(SameCast(cast, cast));                                // its second target does not
+        CHECK(!SameCast(cast, CastStamp{ &spellB, 116, 3, 5000 })); // another cast object rolls
+        CHECK(!SameCast(cast, CastStamp{ &spellA, 116, 4, 5000 })); // the address reused by the next cast rolls
+        CHECK(!SameCast(cast, CastStamp{ &spellA, 133, 3, 5000 })); // another spell rolls
+        // a triggered spell (cast count 0) recast later at a reused address: another moment, so it rolls
+        CastStamp const triggered{ &spellA, 205731, 0, 5000 };
+        CHECK(!SameCast(triggered, CastStamp{ &spellA, 205731, 0, 5400 }));
+        CHECK(!SameCast(none, none));                               // no spell, no match
+        // a delayed spell keeps its launch moment for every target it reaches later; an immediate one the update's
+        static_assert(CastMoment(1200, 5400) == 1200);
+        static_assert(CastMoment(0, 5400) == 5400);
     }
 
     void TestTransferPapers()

@@ -129,6 +129,61 @@ class RoleCellTest(unittest.TestCase):
         self.assertAlmostEqual(heroic.itemization["dps_delta"], round(-0.5 / normal_dps * heroic.baselines["dps"], 4))
 
 
+class FrozenCellTest(unittest.TestCase):
+    """R-W1 S2: a cell's values are frozen the first time a declaration asks for it, so a later declaration that
+    takes over another sample of the cell never retunes an earlier item."""
+
+    def other(self):
+        return F.D.item("dm_other", base=9003, primary="Strength (Solo)", ladder=F.ladder_dungeon())
+
+    def rows_by_entry(self, exp, key):
+        return {t.entry: t.itemization for item in exp.items for t in item.tiers if t.key == key}
+
+    def test_adding_a_declaration_never_changes_another_items_row(self):
+        rows, tables = with_cell([9001, 9002, 9003, 9004], ilvl=60, mult=0.8, dps_delta=0.05)
+        first = F.run([F.hammer()], rows=rows, tables=tables, labels_loader=dict)
+        self.assertEqual(first.errors, [])
+        self.assertTrue(first.cells_lock_appended)
+        self.assertTrue(first.cells_lock_text.startswith(item_variants.CELLS_LOCK_HEADER))
+        before = self.rows_by_entry(first, "dm_hammer")
+        self.assertEqual(before[71000]["budget_mult"], 0.815)  # median of 0.80 0.81 0.82 0.83
+        # Unfrozen, the new declaration takes 9003 out of the sample and moves the hammer's median.
+        moved = F.run([F.hammer(), self.other()], rows=rows, tables=tables, labels_loader=dict)
+        self.assertNotEqual(self.rows_by_entry(moved, "dm_hammer"), before)
+        # Frozen by the first run's lock: the hammer's rows stay exactly as they were.
+        frozen = F.run([F.hammer(), self.other()], rows=rows, tables=tables, labels_loader=dict,
+                       cells_lock_text=first.cells_lock_text)
+        self.assertEqual(frozen.errors, [])
+        self.assertEqual(self.rows_by_entry(frozen, "dm_hammer"), before)
+        self.assertIn("(frozen)", tier(frozen, "dm_hammer", "heroic").budget_source)
+        self.assertEqual(frozen.cells_lock_text, first.cells_lock_text)  # the same cells: nothing appended
+        self.assertEqual(frozen.cells_lock_appended, [])
+
+    def test_no_cell_is_frozen_too(self):
+        exp = F.run([F.hammer()], labels_loader=dict)
+        self.assertTrue(exp.cells_lock_appended)
+        self.assertTrue(all(line.endswith(" none") for line in exp.cells_lock_appended))
+        # A later sample in that cell does not retune the item: the plain default stays.
+        rows, tables = with_cell([9001, 9002, 9003], mult=0.8, dps_delta=0.05)
+        again = F.run([F.hammer()], rows=rows, tables=tables, labels_loader=dict,
+                      cells_lock_text=exp.cells_lock_text)
+        heroic = tier(again, "dm_hammer", "heroic")
+        self.assertEqual((heroic.itemization["budget_mult"], heroic.itemization["dps_delta"]), (1.0, 0.0))
+
+    def test_lock_round_trip_and_errors(self):
+        text = item_variants.render_cells_lock("", ["physical 17 4 60-100 0.8150 0.0500  # cell 2026-11-07",
+                                                    "tank 14 3 any none"])
+        cells = item_variants.parse_cells_lock(text)
+        self.assertEqual(cells[("physical", 17, 4, 1)][:2], (0.815, 0.05))
+        self.assertIsNone(cells[("tank", 14, 3, None)])
+        for bad, message in (("physical 17 4 60-100 0.8", "malformed"), ("healer 17 4 any none", "unknown role"),
+                             ("tank 14 3 any none\ntank 14 3 any none", "already frozen")):
+            with self.assertRaisesRegex(item_variants.CellsLockError, message):
+                item_variants.parse_cells_lock(bad)
+        exp = F.run([F.hammer()], labels_loader=dict, cells_lock_text="physical 17 4 1-2 none\n")
+        self.assertTrue(any("malformed" in e for e in exp.errors))
+
+
 class DurabilityTest(unittest.TestCase):
     def test_minted_tiers_take_the_live_median(self):
         plate_waist = {"class": 4, "subclass": 4, "InventoryType": 6}

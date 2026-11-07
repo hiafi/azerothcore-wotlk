@@ -120,11 +120,10 @@ item("scholo_corpselight_greaves", base=14537, ladder=VANILLA_DUNGEON,
      primary="Intellect (Solo)", secondary="Haste (Solo)", shadow_res=0,
      sockets=(R,), socket_bonus=BONUS_HASTE_4)
 # New tank trinket: Dodge only, Use: +armor (205620). Rattlegore's lowest stock item level on the list is 59
-# (Frightskull Shaft). Workaround: the Dodge shapes require a Strength or Agility primary (item_shape_rule), so the
-# Null primary is refused; Agility (Solo) at primary_share 0 satisfies the rule and puts the whole budget on Dodge,
-# which is the list's "Dodge" (the primary line rounds to nothing and is not written).
+# (Frightskull Shaft). No primary: the "Dodge (Solo, Any)" shape (80, plan s13) takes the Null primary that the stock
+# Dodge shapes refuse, so the whole budget is the list's "Dodge".
 item("scholo_spare_rib", name="Spare Rib", like=19992, ilvl=59, bonding=BOP, ladder=VANILLA_DUNGEON,
-     primary="Agility (Solo)", secondary="Dodge (Solo)", primary_share=0,
+     primary=None, secondary="Dodge (Solo, Any)", primary_share=0,
      spells=(use_spell(spare_rib_205620, scale="budget"),))
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -206,11 +205,11 @@ item("scholo_cadaverous_walkers", base=14641, ladder=VANILLA_DUNGEON,
 # New name, replaces the Bloodmail Gauntlets (2026-11-02); a mail wrist look (Demon Howl Wristguards 18394).
 item("scholo_bloodmail_bracers", name="Bloodmail Bracers", like=18394, ilvl=61, bonding=BOP, ladder=VANILLA_DUNGEON,
      primary="Agility (Solo)", secondary="Crit (Solo)")
-# The list says Spirit and MP5, but every MP5 shape forbids a Spirit primary (item_shape_rule): provisional Haste
-# secondary (designer question), red then yellow (Haste); the MP5 stays as the socket bonus.
+# Spirit and MP5 (the list): the "MP5 (Solo, Spirit)" shape (79, plan s13), the one MP5 shape that takes a Spirit
+# primary. Red, then blue (MP5); MP5 bonus.
 item("scholo_ghoul_skin_leggings", base=18682, ladder=VANILLA_DUNGEON,
-     primary="Spirit (Solo)", secondary="Haste (Solo)",
-     sockets=(R, Y), socket_bonus=BONUS_MP5_4)
+     primary="Spirit (Solo)", secondary="MP5 (Solo, Spirit)",
+     sockets=(R, B), socket_bonus=BONUS_MP5_4)
 # New gun, Equip: an acid pool on ranged hits (205625, ranged attack power potency).
 item("scholo_polkelts_specimen_launcher", name="Polkelt's Specimen Launcher", like=16992, ilvl=61, bonding=BOP,
      ladder=VANILLA_DUNGEON, primary="Agility (Solo)", secondary="Haste (Solo)", ammo_type=0,

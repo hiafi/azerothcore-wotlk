@@ -53,7 +53,7 @@ namespace HauntedSet
         SPELL_GRAVE_BLOOM_DAMAGE        = 205723,
         // The Elements (Mail Intellect, 187)
         SPELL_FROZEN_CHORUS             = 205730,   // 3 piece (spell_haunted_frozen_chorus)
-        SPELL_FROZEN_CHORUS_DAMAGE      = 205731,   // (spell_haunted_frozen_chorus_payout)
+        SPELL_FROZEN_CHORUS_DAMAGE      = 205731,   // (spell_haunted_frozen_chorus_payout, _jump)
         SPELL_FROZEN_CHORUS_HEAL        = 205732,   // (spell_haunted_frozen_chorus_payout)
         SPELL_GATHERING_CHORUS          = 205733,   // 5 piece, data only
         SPELL_GATHERING_CHORUS_STACK    = 205734,
@@ -65,7 +65,7 @@ namespace HauntedSet
         SPELL_SOUL_RELEASED_DAMAGE      = 205744,
         // Valor (Plate Strength, 189)
         SPELL_BONE_SHATTER              = 205750,   // 3 piece (spell_haunted_bone_shatter)
-        SPELL_BONE_SHATTER_BURST        = 205751,
+        SPELL_BONE_SHATTER_BURST        = 205751,   // (spell_haunted_bone_shatter_burst)
         SPELL_BROKEN_BONES              = 205752,   // 5 piece, a marker
         SPELL_BROKEN_BONES_BUFF         = 205753,
         // Beaststalker's (Mail Agility, 186)

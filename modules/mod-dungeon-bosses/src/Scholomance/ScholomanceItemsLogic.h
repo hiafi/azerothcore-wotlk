@@ -109,20 +109,30 @@ namespace ScholomanceItems
     }
 
     // Bonechill Blade: one cast, as the proc check sees it. An area spell reaches the check once per target it hits,
-    // all with the same Spell object; its id and the caster's cast counter tell a later cast that reuses the address
-    // apart from it.
+    // all with the same Spell object, so the object's address groups the hits; it never identifies a cast alone,
+    // because the allocator reuses a freed Spell's address and triggered spells all carry cast count 0. `moment`
+    // pins the cast in time: a delayed (travelling) spell's launch moment (Spell::GetDelayStart, the same for every
+    // target it reaches later), else the game time of the update the immediate spell hits in (all its targets land
+    // in that one update). A later cast that reuses the address has another moment, so it rolls.
     struct CastStamp
     {
         void const* spell = nullptr;
         std::uint32_t spellId = 0;
         std::uint8_t castCount = 0;
+        std::uint64_t moment = 0;
     };
+
+    // The `moment` of a cast: the delayed spell's launch moment when it has one, else the current game time.
+    constexpr std::uint64_t CastMoment(std::uint64_t delayStart, std::uint64_t nowMs)
+    {
+        return delayStart != 0 ? delayStart : nowMs;
+    }
 
     // True when `now` is the cast the Blade already rolled for (so it does not roll again).
     constexpr bool SameCast(CastStamp const& last, CastStamp const& now)
     {
         return now.spell != nullptr && last.spell == now.spell && last.spellId == now.spellId
-            && last.castCount == now.castCount;
+            && last.castCount == now.castCount && last.moment == now.moment;
     }
 
     // Transfer Papers: what the swap needs to know about the two sides.

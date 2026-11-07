@@ -26,6 +26,7 @@
  * Every effect logs one DEBUG line, "scholo-items <effect> ...", in module.dungeonbosses.
  */
 
+#include "GameTime.h"
 #include "ItemSpellCopies.h"
 #include "Log.h"
 #include "Player.h"
@@ -100,7 +101,8 @@ class spell_scholo_bonechill_blade : public AuraScript
         if (!spell || !target || !target->IsAlive())
             return false;
 
-        CastStamp const now{ spell, spell->GetSpellInfo()->Id, spell->m_cast_count };
+        CastStamp const now{ spell, spell->GetSpellInfo()->Id, spell->m_cast_count,
+            CastMoment(spell->GetDelayStart(), static_cast<std::uint64_t>(GameTime::GetGameTimeMS().count())) };
         if (SameCast(_rolled, now))
             return false;
         _rolled = now;

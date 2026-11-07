@@ -409,7 +409,8 @@ class IdTest(unittest.TestCase):
     def test_check_mode_reports_the_lines_a_full_run_writes(self):
         exp = run([hammer()])
         notes = item_variants.summary_notes(exp, check=True)
-        self.assertEqual([n.split(": ", 2)[2] for n in notes if "would append" in n], exp.lock_appended)
+        self.assertEqual([n.split(": ", 2)[2] for n in notes if "would append" in n],
+                         exp.lock_appended + exp.cells_lock_appended)
         self.assertFalse(any("would append" in n for n in item_variants.summary_notes(exp, check=False)))
 
     def test_empty_source_and_lock_is_a_no_op(self):

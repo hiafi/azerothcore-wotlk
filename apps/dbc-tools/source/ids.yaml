@@ -486,9 +486,9 @@ reservations:
     spell: {start: 205660, end: 205699}
     creature: {start: 300470, end: 300474}
 
-  # Haunted dungeon set (item variants, 2026-11-06; source/items/haunted*.py): the set bonus spells 205700-205899 and the
-  # set's wraith look-alike creatures 300480-300499. Checked free 2026-11-06: no declaration, SQL file (base, pending)
-  # or live spell_dbc / creature_template row in either range.
+  # Haunted dungeon set (item variants, 2026-11-06; source/items/haunted*.py): the set bonus spells 205700-205899
+  # and the set's token vendors 300480-300499 (16 used, source/npcs/haunted_set/vendors.py). Checked free
+  # 2026-11-06: no declaration, SQL file (base, pending) or live spell_dbc / creature_template row in either range.
   haunted_set:
     spell: {start: 205700, end: 205899}
     creature: {start: 300480, end: 300499}

@@ -39,7 +39,8 @@ modules/mod-dungeon-bosses/src/DungeonSets/haunted_set_bonuses.cpp (ids mirrored
   Mail Intellect, The Elements (187)
   205730  Frozen Chorus (3)      damaging spell or direct heal cast, 10%, 6 s ICD: 205731 (a damaging cast) or 205732
                                  (a heal) at the spell's target.
-  205731  Frozen Chorus          Frost damage that arcs between 3 enemies, spell power potency 80 each.
+  205731  Frozen Chorus          Frost damage that arcs between 3 enemies, spell power potency 80 each; the arcs
+                                 reach only enemies already in combat (spell_haunted_frozen_chorus_jump).
   205732  Frozen Chorus          healing that arcs between 3 injured allies, spell power potency 80 each.
   205733  Gathering Chorus (5)   spell critical strikes (direct damage or heal, hit phase) trigger 205734.
   205734  Gathering Chorus       a stack, up to 5, 30 s: the next Frozen Chorus is 20% stronger per stack; all are
@@ -54,7 +55,8 @@ modules/mod-dungeon-bosses/src/DungeonSets/haunted_set_bonuses.cpp (ids mirrored
   Plate Strength, Valor (189)
   205750  Bone Shatter (3)       melee ability cast, 10%, 5 s ICD: 205751 around the ability's target.
   205751  Bone Shatter           Physical, every enemy within 8 yd of the target, attack power potency 100 each,
-                                 cannot be dodged, parried or blocked.
+                                 cannot be dodged, parried or blocked; only enemies already in combat (and the target
+                                 itself: spell_haunted_bone_shatter_burst).
   205752  Broken Bones (5)       marker: each Bone Shatter also casts 205753 on you.
   205753  Broken Bones           armor penetration +10%, 15 s (Physical only: armor reduces nothing else).
   Mail Agility, Beaststalker's (186)
@@ -343,12 +345,14 @@ scripted_by(wraith_of_solace_205712, 'spell_haunted_wraith_of_solace')
 
 lingering_death_205720 = _bonus(
     205720, 'Lingering Death',
-    f'Your heal-over-time and damage-over-time effects last {LINGERING_DEATH_PCT}% longer.',
+    f'Your heal-over-time and damage-over-time effects have +{LINGERING_DEATH_PCT}% increased base duration.',
     _ICON_REJUVENATION,
     'Haunted set, Wildheart 3 piece (Leather Spirit): a marker. HauntedSetSpellHooks::OnCalcMaxDuration lengthens '
     'every aura the wearer casts that has a periodic damage, leech or heal effect (not channels, not passives) by 10%, '
     'on creation and on every refresh. The engine folds the leftover part of a tick into the last tick '
-    '(AuraEffect::GetFinalTickBonusMultiplier), so 10% longer is 10% more.',
+    '(AuraEffect::GetFinalTickBonusMultiplier), so 10% longer is 10% more. The 10% applies to the base duration, '
+    'before flat duration talents (SPELLMOD_DURATION), and also reaches persistent ground effects with periodic '
+    'damage: kept as is, the tooltip says "base duration" (user 2026-11-07, R-W1 N2).',
 )
 
 grave_bloom_heal_205722 = _payout(
@@ -410,7 +414,7 @@ frozen_chorus_heal_205732 = _payout(
     'T 1.5 s; Gathering Chorus applies. Look: stock Chain Heal SV 3659.',
     desc='Healing that arcs between up to $x1 injured allies, {pot1} each.', visual=_SV_CHAIN_HEAL,
 )
-scripted_by(frozen_chorus_damage_205731, 'spell_haunted_frozen_chorus_payout')
+scripted_by(frozen_chorus_damage_205731, 'spell_haunted_frozen_chorus_payout', 'spell_haunted_frozen_chorus_jump')
 scripted_by(frozen_chorus_heal_205732, 'spell_haunted_frozen_chorus_payout')
 
 frozen_chorus_205730 = _bonus(
@@ -523,7 +527,8 @@ bone_shatter_burst_205751 = _payout(
     [_direct('direct', ap=100.0, target=_TARGET_DEST_TARGET_ENEMY, implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY,
              radius_yards=8.0)],
     _ICON_BONE_SHIELD,
-    'Haunted set, Valor 3 piece: the shards. Physical, every enemy within 8 yd of the ability\'s target (uncapped), '
+    'Haunted set, Valor 3 piece: the shards. Physical, every enemy within 8 yd of the ability\'s target (uncapped; '
+    'spell_haunted_bone_shatter_burst keeps only enemies already in combat, and the target itself), '
     'attack power potency 100 each, T 1.5 s. DefenseType MELEE (melee crit, armor applies), NO_ACTIVE_DEFENSE. Look: '
     'stock Thunder Clap SV 145.',
     desc='Bone shards burst from the target, dealing {pot1} Physical damage to every enemy within $a1 yards of it.',
@@ -557,6 +562,7 @@ bone_shatter_205750 = _bonus(
 procs_on(bone_shatter_205750, proc_flags=_PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS, spell_phase_mask=_PROC_SPELL_PHASE_CAST,
          chance=10.0, cooldown_ms=5000)
 scripted_by(bone_shatter_205750, 'spell_haunted_bone_shatter')
+scripted_by(bone_shatter_burst_205751, 'spell_haunted_bone_shatter_burst')
 
 broken_bones_205752 = _bonus(
     205752, 'Broken Bones',

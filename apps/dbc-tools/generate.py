@@ -1163,6 +1163,12 @@ def _run_only_items(
                 f"({len(item_expansion.assignment.bases)} stock base line(s)) into "
                 f"{item_ids.LOCK_PATH.relative_to(REPO_ROOT)} - commit it with the SQL"
             )
+        if item_expansion.cells_lock_appended:
+            item_variants.CELLS_LOCK_PATH.write_text(item_expansion.cells_lock_text, encoding="utf-8")
+            print(
+                f"note: froze {len(item_expansion.cells_lock_appended)} weapon role cell(s) into "
+                f"{item_variants.CELLS_LOCK_PATH.relative_to(REPO_ROOT)} - commit it with the SQL"
+            )
         if item_emission is not None and (label_note := item_labels.sync(item_emission.labels)):
             print(f"note: items: {label_note}")
         progress("SQL emission done")
@@ -2068,6 +2074,13 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
             f"note: minted {len(item_expansion.minted)} item id(s) "
             f"({len(item_expansion.assignment.bases)} stock base line(s)) into "
             f"{item_ids.LOCK_PATH.relative_to(REPO_ROOT)} - commit it with the SQL"
+        )
+    # Item variants R-W1 S2: the weapon role cells this run resolved for the first time, frozen for every later run.
+    if item_expansion.cells_lock_appended:
+        item_variants.CELLS_LOCK_PATH.write_text(item_expansion.cells_lock_text, encoding="utf-8")
+        print(
+            f"note: froze {len(item_expansion.cells_lock_appended)} weapon role cell(s) into "
+            f"{item_variants.CELLS_LOCK_PATH.relative_to(REPO_ROOT)} - commit it with the SQL"
         )
     # Item variants IV10: the item effect spell copy ids this run minted (lib/item_spell_copies.py) and the C++ lookup
     # header the scripts use, after the SQL.

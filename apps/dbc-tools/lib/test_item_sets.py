@@ -46,8 +46,9 @@ TOKEN_LOOK = 22353
 def live_rows() -> dict[int, dict]:
     rows = E.live_rows()
     rows[TOKEN_LOOK] = F._row(TOKEN_LOOK, name="Desecrated Helmet", Quality=4, ItemLevel=60, RequiredLevel=60,
-                              bonding=1, stackable=1, **{"class": 15, "subclass": 0, "InventoryType": 0,
-                                                         "displayid": 35336, "Material": -1})
+                              bonding=1, stackable=1, AllowableClass=9,  # the Warrior/Rogue look
+                              **{"class": 15, "subclass": 0, "InventoryType": 0, "displayid": 35336,
+                                 "Material": -1})
     return rows
 
 
@@ -116,6 +117,8 @@ class DslTest(unittest.TestCase):
             token(slots=(12,))
         with self.assertRaisesRegex(S.SetDeclarationError, "come from the declaration"):
             token(ItemLevel=60)
+        with self.assertRaisesRegex(S.SetDeclarationError, "always -1"):
+            token(AllowableClass=1)
         with self.assertRaisesRegex(S.SetDeclarationError, "first tier"):
             token(ilvl=None)
         with self.assertRaisesRegex(S.SetDeclarationError, "distinct"):
@@ -207,6 +210,8 @@ class TokenTest(unittest.TestCase):
         for row in rows.values():
             self.assertEqual((row["name"], row["class"], row["displayid"], row["bonding"], row["description"]),
                              ("Haunted Belt", 15, 35336, 1, "Trade it."))
+            # usable by every class and race, even when the like= token is class-restricted
+            self.assertEqual((row["AllowableClass"], row["AllowableRace"]), (-1, -1))
         minted = {r["entry"] for r in em.template_rows}
         self.assertTrue(set(rows) <= minted)
         self.assertEqual({e["id"] for e in em.dbc_entries} & set(rows), set(rows))

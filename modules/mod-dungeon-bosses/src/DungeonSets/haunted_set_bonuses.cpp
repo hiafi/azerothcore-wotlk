@@ -15,11 +15,13 @@
  *   spell_haunted_frozen_chorus        205730 The Elements 3 piece: a damaging cast or a direct heal arcs 205731 or
  *                                      205732.
  *   spell_haunted_frozen_chorus_payout 205731 / 205732: Gathering Chorus 205734 stacks make it stronger, then go.
+ *   spell_haunted_frozen_chorus_jump   205731: the arcs reach only enemies already in combat.
  *   spell_haunted_unbroken_faith       205740 Lightforge 3 piece: 205741 while above 80% mana.
  *   spell_haunted_soul_released        205742 Lightforge 5 piece: heals the most injured ally (205743) and strikes the
  *                                      nearest enemy (205744).
  *   spell_haunted_bone_shatter         205750 Valor 3 piece: shards 205751 around the ability's target; Broken Bones
  *                                      205753 with the 5 piece 205752.
+ *   spell_haunted_bone_shatter_burst   205751: only enemies already in combat (and the ability's target).
  *   spell_haunted_grasp_of_the_dead    205762 Beaststalker's 5 piece: 205763 after a melee ability, 205764 (ranged
  *                                      attack power) after a ranged one.
  *   spell_haunted_bone_ward            205782 Protector's 5 piece: the ward absorbs 3% of maximum health per stack.
@@ -185,6 +187,18 @@ namespace
         else
             consider(player);
         return best;
+    }
+
+    // An area or chain payout's extra targets, as EnemiesNear picks them: living units already in combat (a bonus
+    // never pulls a pack). `keep` (the payout's own explicit target, which the triggering ability may only now be
+    // pulling) always stays.
+    void RemoveIdleTargets(std::list<WorldObject*>& targets, Unit const* keep)
+    {
+        targets.remove_if([keep](WorldObject* object)
+        {
+            Unit const* unit = object->ToUnit();
+            return !unit || (unit != keep && (!unit->IsAlive() || !unit->IsInCombat()));
+        });
     }
 }
 
@@ -485,6 +499,24 @@ class spell_haunted_frozen_chorus_payout : public SpellScript
     int32 _pct = 100;
 };
 
+// 205731 Frozen Chorus jumps: the engine's chain search does not look at combat, so the arcs past the cast's own
+// target only reach enemies already in combat, like every other Haunted payout.
+class spell_haunted_frozen_chorus_jump : public SpellScript
+{
+    PrepareSpellScript(spell_haunted_frozen_chorus_jump);
+
+    void FilterTargets(std::list<WorldObject*>& targets)
+    {
+        RemoveIdleTargets(targets, GetExplTargetUnit());
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_haunted_frozen_chorus_jump::FilterTargets,
+            EFFECT_0, TARGET_UNIT_TARGET_ENEMY);
+    }
+};
+
 // 205740 Unbroken Faith (Lightforge 3 piece): every second, 205741 is on the wearer while mana is above 80% and gone
 // otherwise; it goes with the bonus.
 class spell_haunted_unbroken_faith : public AuraScript
@@ -619,6 +651,24 @@ class spell_haunted_bone_shatter : public AuraScript
     }
 
     ObjectGuid _target;
+};
+
+// 205751 Bone Shatter shards: every enemy within 8 yd of the ability's target that is already in combat (the target
+// itself always), so a burst never pulls a pack.
+class spell_haunted_bone_shatter_burst : public SpellScript
+{
+    PrepareSpellScript(spell_haunted_bone_shatter_burst);
+
+    void FilterTargets(std::list<WorldObject*>& targets)
+    {
+        RemoveIdleTargets(targets, GetExplTargetUnit());
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_haunted_bone_shatter_burst::FilterTargets,
+            EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
+    }
 };
 
 // 205762 Grasp of the Dead (Beaststalker's 5 piece): the claw after a ranged ability is 205764 (ranged attack power),
@@ -903,9 +953,11 @@ void AddSC_haunted_set_bonuses()
     RegisterSpellScript(spell_haunted_grave_bloom);
     RegisterSpellScript(spell_haunted_frozen_chorus);
     RegisterSpellScript(spell_haunted_frozen_chorus_payout);
+    RegisterSpellScript(spell_haunted_frozen_chorus_jump);
     RegisterSpellScript(spell_haunted_unbroken_faith);
     RegisterSpellScript(spell_haunted_soul_released);
     RegisterSpellScript(spell_haunted_bone_shatter);
+    RegisterSpellScript(spell_haunted_bone_shatter_burst);
     RegisterSpellScript(spell_haunted_grasp_of_the_dead);
     RegisterSpellScript(spell_haunted_bone_ward);
     RegisterSpellScript(spell_haunted_deathless);

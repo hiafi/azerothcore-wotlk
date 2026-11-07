@@ -41,6 +41,7 @@ HEADER = MODULE_DIR / "SfkHardModeItemsLogic.h"
 SCRIPT = MODULE_DIR / "sfk_hard_mode_items.cpp"
 
 VIAL, TOME, VOIDWALKER, LOCKET, FIREBOLT = range(205600, 205605)
+NORMAL_RATIO = 0.2423  # Meteor Shard Normal stat budget / Heroic (the copy 205485 note in the generated rev)
 MINE = range(205600, 205620)
 TOME_VOIDWALKER = 300460
 
@@ -142,6 +143,16 @@ class ShadowfangKeepItemsTest(unittest.TestCase):
             if key not in expected:
                 self.assertIsNone(decl.spells, key)
                 self.assertFalse(decl.keep_spells, key)
+
+    def test_meteor_shard_normal_matches_the_stock_firebolt(self):
+        # User 2026-11-07 (plan s13): the Normal tier (level 29 Rare, budget ratio 0.2423 to the Heroic reference,
+        # wave 1 integration) hits for about the stock Firebolt 13442's 35 at level 25, base line before attack power.
+        from lib import potency  # noqa: PLC0415
+
+        declared = self.spells[FIREBOLT]["effect1"]["_potency"]["total_potency"]
+        self.assertEqual(declared, 250.0)
+        normal_average = declared * NORMAL_RATIO * potency.c_of_level(25)
+        self.assertAlmostEqual(normal_average, 35, delta=1)
 
     def test_damage_comes_from_potency_only(self):
         for spell_id, kind in ((VOIDWALKER, "periodic"), (FIREBOLT, "direct")):

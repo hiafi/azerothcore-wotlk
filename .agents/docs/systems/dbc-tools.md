@@ -95,8 +95,10 @@ wired in `generate._loot_blocks` after the item expansion, so a full run and `--
   level, below 3 samples; else 1.0 and 0. Role from the shapes (Dodge/Parry/Block/Defense secondary = tank,
   Int/Spirit/SP lead = caster, else physical) or `weapon_role=`. Declared `budget_mult=` / `extra_dps=` win. The sample
   leaves out the custom item blocks and every entry an item owns, so the generator's own rows never feed back.
-  Declaring a new `base=` weapon removes it from the sample and can move a cell's median a little; the run notes every
-  already-live minted item whose stats change ("clients keep the old tooltip until item_budget_version is bumped").
+  Each cell is frozen the first time a declaration asks for it: `source/items/item_role_cells.lock` (append-only,
+  commit it with the SQL) records the cell's `budget_mult` and DPS fraction (or `none`, the plain default), and later
+  runs read the line instead of the live median. So declaring a new `base=` weapon (which leaves the sample) never
+  retunes an earlier item of the same cell; retune one item through its declaration, never by editing a line.
 - **Durability.** A minted tier's `MaxDurability` is the median of live items with the same class, subclass, slot and
   quality within 5 item levels (widening to 10, 20, any), else the donor's (`base=` / `like=`). Prices and
   disenchanting are not derived yet.

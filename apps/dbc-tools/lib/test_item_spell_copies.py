@@ -502,6 +502,46 @@ class PotTextRefTest(unittest.TestCase):
             entry.pop("_pot_text_refs", None)
         self.assertEqual(index.family(203), [201, 202, 203])
 
+    def test_texts_built_before_either_spell_are_over_inclusive(self):
+        # R-W1 N4: both equal-potency descriptions are built before either spell() call. The family of each must
+        # still hold its own source (an extra one is the safe failure), and a description built before an unrelated
+        # spell() still names its one source.
+        from lib.dsl import registry  # noqa: PLC0415
+
+        reg = registry.Registry()
+        old = registry._active
+        registry._active = reg
+        try:
+            def strike(spell_id):
+                return registry.spell(id=spell_id, name=f"Strike {spell_id}", school=32, duration_ms=0, effects=[
+                    Effect(type=SCHOOL_DAMAGE, sp_potency=100.0, ap_potency=100.0, potency_kind=DIRECT,
+                           time_basis_ms=1500, implicit_target_a=6)],
+                    raw_overrides=_raw("Deals {pot1}.", DefenseType=1))
+
+            swarm, trample = strike(201), strike(202)
+            swarm_text, trample_text = "Swarm for " + pot_text(swarm) + ".", "Trample for " + pot_text(trample) + "."
+            registry.spell(id=200, name="Signet", effects=[Effect(type=DUMMY)], raw_overrides=_raw(swarm_text))
+            registry.spell(id=203, name="Spur", effects=[Effect(type=DUMMY)], raw_overrides=_raw(trample_text))
+        finally:
+            registry._active = old
+        for entry in reg.spells:
+            entry["_source_class"] = "items"
+        index = C.SpellIndex.build({"spells": reg.spells, "linked_spells": []})
+        self.assertEqual(index.family(200), [200, 201, 202])
+        self.assertEqual(index.family(203), [201, 202, 203])
+
+        reg = registry.Registry()
+        registry._active = reg
+        try:
+            lone = strike(301)
+            lone_text = "Burn for " + pot_text(lone) + "."
+            registry.spell(id=302, name="Unrelated", effects=[Effect(type=DUMMY)], raw_overrides=_raw("Nothing."))
+            registry.spell(id=300, name="Brand", effects=[Effect(type=DUMMY)], raw_overrides=_raw(lone_text))
+        finally:
+            registry._active = old
+        refs = next(e for e in reg.spells if e["id"] == 300)["_pot_text_refs"]
+        self.assertEqual([source for _, source in refs], [301])
+
 
 class RealSourceTest(unittest.TestCase):
     """The VanCleef hard mode items as declared, on stand-in tiers of their real ladder."""

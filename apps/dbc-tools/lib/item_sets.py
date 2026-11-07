@@ -322,6 +322,7 @@ def _expand_tokens(out, tokens, ids_cfg, live_item_rows, item_expansion, items_c
             defaults = spell_tables.ITEM_TEMPLATE_DEFAULTS
             row = {c: like.get(c, defaults.get(c)) for c in spell_tables.ITEM_TEMPLATE_COLUMNS}
             row.update(dict(token.columns))
+            row.update(sets_dsl.TOKEN_FORCED)
             if spec.explicit:
                 ilvl, quality, required = spec.ilvl, spec.quality, spec.required_level
             else:
