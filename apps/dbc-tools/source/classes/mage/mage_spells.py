@@ -76,9 +76,10 @@ frostbolt_116 = spell(
     ],
     spell_icon_id=188,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass, anchor spell): converted to sp_potency=123.6 (mage-potency-proposals.txt - the live 2.0s cast time this spell carries from an earlier Frost Mage rework, not the design doc's 3.0s/100-potency hypothetical, is real, documented tuning drift, not a bug - see docs/potency-system.md's reference table note). mana_cost_pct 11 -> 9 (2026-10-08, DPS balance pass, user ruling: Frost mana). Effect 2 sp_potency 123.6 -> 136.0 (2026-10-08, DPS balance pass, user ruling: Frost damage). mana_cost_pct 9 -> 8 (2026-10-08, DPS balance pass, user ruling: Frost damage and mana). Effect 2 sp_potency 136.0 -> 142.8 (2026-10-08, DPS balance pass, user ruling: Frost +5%)."
-          ' Effect 2 sp_potency 142.8 -> 85.68 (2026-10-31, DPS balance pass 1031, user ruling: Frost damage -40%).',
+          ' Effect 2 sp_potency 142.8 -> 85.68 (2026-10-31, DPS balance pass 1031, user ruling: Frost damage -40%).'
+          ' Tooltip {pot2*mult} -> {pot2*fbmult} (2026-11-07, balance 1107: shows Empowering Frostbolt\'s +7/15%).',
     tooltip_vars=frost_talent_tooltip,
-    raw_overrides={'AttributesEx6': 2097152, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement slowed by $s1%.', 'BaseLevel': 4, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a bolt of frost at the enemy, causing {pot2*mult} Frost damage and slowing movement speed by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 28.0, 'SpellClassMask_1': 32, 'SpellClassSet': 3, 'SpellLevel': 4, 'SpellPriority': 50, 'SpellVisualID_1': 13, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx6': 2097152, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement slowed by $s1%.', 'BaseLevel': 4, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a bolt of frost at the enemy, causing {pot2*fbmult} Frost damage and slowing movement speed by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 28.0, 'SpellClassMask_1': 32, 'SpellClassSet': 3, 'SpellLevel': 4, 'SpellPriority': 50, 'SpellVisualID_1': 13, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -192,13 +193,20 @@ fireball_133 = spell(
     range_yards=35.0,
     duration_ms=4000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=48.672, potency_kind='direct', implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, sp_potency=1.824, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=65.2, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=14.75, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=185,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): eff1 converted to sp_potency=126.7 (mage-potency-proposals.txt), eff2 to sp_potency=4.8 (potency-report default, base/coef already agreed). 2026-10-07: mana_cost_pct 19 -> 15 (DPS balance pass, user ruling: Fire mana). mana_cost_pct 15 -> 13 (2026-10-08, DPS balance pass, user ruling: Fire mana). mana_cost_pct 13 -> 11 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana). Effect 1 sp_potency 126.7 -> 101.4 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana). Effect 2 sp_potency 4.8 -> 3.8 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana).'
           ' Effect 1 sp_potency 101.4 -> 60.84 (2026-10-31, DPS balance pass 1031, user ruling: Fire damage -40%). Effect 2 sp_potency 3.8 -> 2.28 (2026-10-31, DPS balance pass 1031, user ruling: Fire damage -40%).'
-          ' Effect 1 sp_potency 60.84 -> 48.672, effect 2 sp_potency 2.28 -> 1.824 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Fireball -20%).',
+          ' Effect 1 sp_potency 60.84 -> 48.672, effect 2 sp_potency 2.28 -> 1.824 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Fireball -20%).'
+          ' Effect 1 sp_potency 48.672 -> 60.84, effect 2 sp_potency 1.824 -> 2.28 (x1.25, back to the pre-B3 values) (2026-11-06, balance 1107, user ruling: Fireball damage up, paid for by Fire Blast; damage-neutral at 1 target, see .agents/plans/dps-balance-1031/balance-1107.REPORT.md).'
+          ' 2026-11-07: that neutrality assumed the old flat Empowered Fire (+0.20 coefficient); with Empowered'
+          ' Fire now +20% damage the same swap is about +9 DPS at 1 target (a neutral Fire Blast would be ~86.0),'
+          ' see the report\'s "2026-11-07 talents" section.'
+          ' Effect 1 sp_potency 60.84 -> 65.2, effect 2 sp_potency 2.28 -> 14.75 (2026-11-07, balance 1107 follow-up,'
+          ' designer ruling: Fire back to ~996 at 1 target after Empowered Fire became +20%; the DoT gets back the'
+          ' share the old flat +0.20 coefficient gave it, the direct hit also carries Living Bomb\'s lost share).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} Fire damage every $t2 seconds.', 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls a fiery ball that causes {pot1} Fire damage and an additional {pot2.total} Fire damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 24.0, 'SpellClassMask_1': 1, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 67, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -566,11 +574,15 @@ fire_blast_2136 = spell(
     mana_cost_pct=10,
     range_yards=20.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=145.88, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=95.24, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=12,
     notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 sec 3.1: category cooldown 12 sec (was 8). 'Always critically strikes' is Mage::ApplySpellCritChanceMods (Phase 3) - there is no DBC attribute for a guaranteed crit. Potency system P5 (Mage pass): converted to sp_potency=347.3 (mage-potency-proposals.txt). 2026-10-07: mana_cost_pct 21 -> 12 (DPS balance pass, user ruling: Fire mana). mana_cost_pct 12 -> 10 (2026-10-08, DPS balance pass, user ruling: Fire mana). Effect 1 sp_potency 347.3 -> 208.4 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana)."
-          ' Effect 1 sp_potency 208.4 -> 145.88 (2026-10-31, DPS balance pass 1031, user ruling: Fire damage -30%).',
+          ' Effect 1 sp_potency 208.4 -> 145.88 (2026-10-31, DPS balance pass 1031, user ruling: Fire damage -30%).'
+          ' Effect 1 sp_potency 145.88 -> 95.24 (x0.6529) (2026-11-06, balance 1107, user ruling: Fireball damage up, paid for by Fire Blast; damage-neutral at 1 target incl. Ignite, see .agents/plans/dps-balance-1031/balance-1107.REPORT.md).'
+          ' 2026-11-07: that neutrality assumed the old flat Empowered Fire (+0.20 coefficient); with Empowered'
+          ' Fire now +20% damage the same swap is about +9 DPS at 1 target (a neutral Fire Blast would be ~86.0),'
+          ' see the report\'s "2026-11-07 talents" section.',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the enemy for {pot1} Fire damage. Always critically strikes.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2, 'SpellClassSet': 3, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 143, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -2075,12 +2087,15 @@ pyroblast_11366 = spell(
     range_yards=35.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=52.38, potency_kind='direct', implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, sp_potency=7.74, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=52.2, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=15.0, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
     ],
     spell_icon_id=184,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): eff1 converted to sp_potency=72.7, eff2 to sp_potency=10.7 (both mage-potency-proposals.txt). 2026-10-07: mana_cost_pct 22 -> 18 (DPS balance pass, user ruling: Fire mana). mana_cost_pct 18 -> 15 (2026-10-08, DPS balance pass, user ruling: Fire mana). Effect 1 sp_potency 72.7 -> 58.2 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana). Effect 2 sp_potency 10.7 -> 8.6 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana).'
-          ' Effect 1 sp_potency 58.2 -> 52.38 (2026-10-31, DPS balance pass 1031, user ruling: Fire damage -10%). Effect 2 sp_potency 8.6 -> 7.74 (2026-10-31, DPS balance pass 1031, user ruling: Fire damage -10%).',
+          ' Effect 1 sp_potency 58.2 -> 52.38 (2026-10-31, DPS balance pass 1031, user ruling: Fire damage -10%). Effect 2 sp_potency 8.6 -> 7.74 (2026-10-31, DPS balance pass 1031, user ruling: Fire damage -10%).'
+          ' Effect 1 sp_potency 52.38 -> 52.2, effect 2 sp_potency 7.74 -> 15.0 (2026-11-07, balance 1107 follow-up,'
+          ' designer ruling: Fire back to ~996 at 1 target after Empowered Fire became +20%; the DoT gets back the'
+          ' share the old flat +0.20 coefficient gave it, the direct hit also carries Living Bomb\'s lost share).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} Fire damage every $t2 seconds.', 'BaseLevel': 20, 'CastingTimeIndex': 6, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls an immense fiery boulder that causes {pot1} Fire damage and an additional {pot2.total} Fire damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 24.0, 'SpellClassMask_1': 4194304, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 2253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

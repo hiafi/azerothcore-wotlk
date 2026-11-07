@@ -717,7 +717,7 @@ consecration_26573 = spell(
     cooldown_ms=0,
     category_cooldown_ms=8000,
     mana_cost=0,
-    mana_cost_pct=22,
+    mana_cost_pct=14,
     range_yards=0.0,
     duration_ms=8000,
     effects=[
@@ -729,7 +729,7 @@ consecration_26573 = spell(
     ],
     spell_icon_id=51,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
-    'Potency system P7 (paladin pass), PLAN F13 fix: this effect is a PERSISTENT_AREA_AURA whose own apply_aura is PERIODIC_DAMAGE - potency_report.py\'s classify_effect() only recognizes a bare APPLY_AURA+PERIODIC_DAMAGE shape, so this row never appeared in paladin-potency-report.md even though it is one of the six F13 "mixed" rows (data/sql/updates/db_world/2026_09_01_26.sql:445 zeroed its spell_bonus_data dot_bonus, same bug as Exorcism/Holy Wrath/Hammer of Wrath/Avenger\'s Shield/Holy Shield). Base-implied potency (from V60=77.3 at level 60) was 43.7 against the pre-bug coefficient-implied 14/14 - since this row never made it into paladin-potency-report.md for the user to review alongside the other five F13 spells, the user set it directly to an even 35/35 (70 total) rather than either derived value. Full potency conversion chosen over a narrower spell_bonus_data-only fix since the effect shape fully supports it (same mechanism as the other five, just a different effect type).',
+    'Potency system P7 (paladin pass), PLAN F13 fix: this effect is a PERSISTENT_AREA_AURA whose own apply_aura is PERIODIC_DAMAGE - potency_report.py\'s classify_effect() only recognizes a bare APPLY_AURA+PERIODIC_DAMAGE shape, so this row never appeared in paladin-potency-report.md even though it is one of the six F13 "mixed" rows (data/sql/updates/db_world/2026_09_01_26.sql:445 zeroed its spell_bonus_data dot_bonus, same bug as Exorcism/Holy Wrath/Hammer of Wrath/Avenger\'s Shield/Holy Shield). Base-implied potency (from V60=77.3 at level 60) was 43.7 against the pre-bug coefficient-implied 14/14 - since this row never made it into paladin-potency-report.md for the user to review alongside the other five F13 spells, the user set it directly to an even 35/35 (70 total) rather than either derived value. Full potency conversion chosen over a narrower spell_bonus_data-only fix since the effect shape fully supports it (same mechanism as the other five, just a different effect type). mana_cost_pct 22 -> 14 (2026-11-06, balance 1107, user ruling: Consecration mana cost cut; 332 -> 211 mana at level 60, see .agents/plans/dps-balance-1031/balance-1107.REPORT.md).',
     raw_overrides={'AttributesEx': 268435592, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Consecrates the land beneath you, dealing {pot1*mult_cons} Holy damage every sec for $d to enemies in the area.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 32, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1104, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 5600, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

@@ -3053,7 +3053,9 @@ class spell_mage_empowered_fire : public AuraScript
     void Register() override
     {
         DoCheckProc += AuraCheckProcFn(spell_mage_empowered_fire::CheckProc);
-        OnEffectProc += AuraEffectProcFn(spell_mage_empowered_fire::HandleProc, EFFECT_0, SPELL_AURA_ADD_FLAT_MODIFIER);
+        // EFFECT_0 is the +7/14/20% direct damage modifier since balance 1107 (2026-11-07); it was the flat
+        // BONUS_MULTIPLIER coefficient bonus before.
+        OnEffectProc += AuraEffectProcFn(spell_mage_empowered_fire::HandleProc, EFFECT_0, SPELL_AURA_ADD_PCT_MODIFIER);
     }
 };
 
