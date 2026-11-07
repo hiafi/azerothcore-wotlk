@@ -33,7 +33,8 @@
  *   SM7  Shockwave         line 25 x 4 yd ahead, 2 s           SM8  aftershocks (H): +-30 degrees, 1.5 s
  *   SM9  Smite Slam        205298, a 1.5 s tank hit, no stun (stock 6435 is instant and stuns: see the DT file)
  *   SM10 Harpoon Sweep     donut 5 / 14 yd, 2 s                SM11 Haft Slam (H): circle 6 yd on him, 1.5 s
- *   SM12 Harpoon Volley    Spread 6 yd (H 8) on every non-tank, 2.5 s; each carrier takes 15% (RefFlat)
+ *   SM12 Harpoon Volley    Spread 6 yd (H 8) on every non-tank, 2.5 s; each carrier takes 15% (RefFlat) and a
+ *                          harpoon impact at their feet (205304)
  *   SM13 Thrash            stock aura 3417 from creature_template_addon (untouched)
  *
  * Every mechanic firing logs one INFO line "dm-pilot smite <mechanic> ..." (module.dungeonbosses).
@@ -659,6 +660,8 @@ struct boss_mr_smite_rework : public BossAI
     }
 
     // The carriers' own hits: 15% each, unavoidable (no Weakened), through the 205302 copy; the registration's set.
+    // Each carrier also gets the harpoon's ground impact at their feet (205304; 205302's own missile visual cannot
+    // show on an instant hit), so the resolve reads in game (playtest 1).
     void VolleyLanded(GuidSet const& carriers)
     {
         int32 const damage = static_cast<int32>(DeadminesKit::RefFlat(me, kVolleyCarrierPct));
@@ -668,6 +671,8 @@ struct boss_mr_smite_rework : public BossAI
             Player* carrier = ObjectAccessor::GetPlayer(*me, guid);
             if (!carrier || !carrier->IsAlive() || carrier->GetMap() != me->GetMap())
                 continue;
+            me->CastSpell(carrier->GetPositionX(), carrier->GetPositionY(), carrier->GetPositionZ(),
+                SPELL_SMITE_HARPOON_LANDING, true);
             me->CastCustomSpell(SPELL_SMITE_HARPOON_IMPACT, SPELLVALUE_BASE_POINT0, damage, carrier,
                 TRIGGERED_FULL_MASK);
             ++hit;

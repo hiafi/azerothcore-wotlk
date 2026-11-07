@@ -117,8 +117,10 @@ namespace
                 if (!lane)
                     continue;
                 ++lanes;
-                // the end point stays inside the measured floor polygon
-                CHECK(PointInPolygon(kFoundryWalls, lane->to));
+                // the wall point stays inside the measured floor polygon; the lane runs kLaneExtraYd past it
+                CHECK(PointInPolygon(kFoundryWalls, PointOnLane(*lane, lane->wallLength)));
+                CHECK(Near(lane->length, lane->wallLength + kLaneExtraYd, 1e-3f));
+                CHECK(Near(Distance(lane->from, lane->to), lane->length, 1e-2f));
                 // the lane reaches the target (a target on the floor is never beyond the wall it ends at; the
                 // inset may stop it at most half a yard short of a target hugging the wall)
                 CHECK(lane->length + kLaneWallInset + 1e-3f >= Distance(pot, target));
@@ -126,23 +128,30 @@ namespace
                 float const s = AlongLane(*lane, target);
                 Vec2 const onLane = PointOnLane(*lane, s);
                 CHECK(Distance(pot, target) < 0.5f || Distance(onLane, target) < 1e-2f);
-                longest = std::max(longest, lane->length);
+                longest = std::max(longest, lane->wallLength);
                 float const skip = BlockExit(*lane, kPotBlock);
                 CHECK(skip <= 12.8f);   // the pot block is 9 x 9 yd: no lane spends more than its diagonal in it
-                maxSegments = std::max(maxSegments, HotShotSegments(lane->length, skip).size());
+                maxSegments = std::max(maxSegments, HotShotSegments(lane->wallLength, skip).size());
             }
         }
         CHECK(lanes == floor.size() * origins.size());
         CHECK(longest < 45.f);          // the room spans 40 yd at most, the far pot adds a little
         CHECK(maxSegments <= 11);
 
-        // the measured lane through Gilnid: pot center -> wall at 36.0 yd (NAVMESH-REPORT), minus the inset
+        // the measured lane through Gilnid: pot center -> wall at 36.0 yd (NAVMESH-REPORT), minus the inset, then
+        // 30 yd on (playtest 1): 65.5 yd in all
         std::optional<Lane> const throughGilnid = ComputeLane(kPotCenter, kGilnidSpawn, kGilnidSpawn);
-        CHECK(throughGilnid && Near(throughGilnid->length, 36.0f - kLaneWallInset, 0.5f));
+        CHECK(throughGilnid && Near(throughGilnid->wallLength, 36.0f - kLaneWallInset, 0.5f));
+        CHECK(throughGilnid && Near(throughGilnid->length, 36.0f - kLaneWallInset + 30.f, 0.5f));
+        std::printf("gilnid lane through Gilnid: %.1f yd to the wall, %.1f yd in all\n",
+            throughGilnid ? throughGilnid->wallLength : 0.f, throughGilnid ? throughGilnid->length : 0.f);
+        // no extension: the old lane
+        std::optional<Lane> const old = ComputeLane(kPotCenter, kGilnidSpawn, kGilnidSpawn, 0.f);
+        CHECK(old && Near(old->length, old->wallLength, 1e-4f));
         CHECK(throughGilnid && Near(AlongLane(*throughGilnid, kGilnidSpawn), 28.7f, 0.2f));
         // a lane aimed east of the pots is short (8 to 17 yd)
         std::optional<Lane> const east = ComputeLane(kPotCenter, { -205.7f, -590.f }, kGilnidSpawn);
-        CHECK(east && east->length < 17.f);
+        CHECK(east && east->wallLength < 17.f && east->length < 17.f + kLaneExtraYd);
         // a target on the pot aims through the fallback (Gilnid)
         std::optional<Lane> const onPot = ComputeLane(kPots[0], kPots[0], kGilnidSpawn);
         CHECK(onPot && SweptWithin(onPot->from, onPot->to, kGilnidSpawn, 0.01f));
@@ -175,6 +184,31 @@ namespace
         CHECK(next == 4);
         next = SegmentsPassed(segs, next, 22.f, true);
         CHECK(next == segs.size());
+    }
+
+    // The rolling path: a point every 2 yd, both ends, at the floor (the dais drop followed, a wild probe ignored).
+    void TestFloorPath()
+    {
+        Lane const lane{ { 0.f, 0.f }, { 9.f, 0.f }, 9.f, 9.f };
+        auto probe = [](float x, float /*y*/, float /*z*/) -> std::optional<float>
+        {
+            if (x > 5.5f && x < 6.5f)
+                return 60.f;                    // the top of something (a wall, another level): ignored
+            if (x > 7.5f)
+                return std::nullopt;            // no floor at all: keep the last height
+            return x < 3.f ? 21.f : 19.3f;      // the dais, then the floor
+        };
+        std::vector<PathPoint> const path = FloorPath(lane, 21.f, probe);
+        CHECK(path.size() == 6);                // 0, 2, 4, 6, 8, 9
+        CHECK(Near(path.front().x, 0.f, 1e-3f) && Near(path.front().z, 21.f, 1e-3f));
+        CHECK(Near(path[1].z, 21.f, 1e-3f));
+        CHECK(Near(path[2].z, 19.3f, 1e-3f) && Near(path[3].z, 19.3f, 1e-3f));
+        CHECK(Near(path[4].x, 8.f, 1e-3f) && Near(path[4].z, 19.3f, 1e-3f));
+        CHECK(Near(path.back().x, 9.f, 1e-3f) && Near(path.back().z, 19.3f, 1e-3f));
+        // a probe that jumps 2.5 yd or less is followed
+        std::vector<PathPoint> const steep = FloorPath(lane, 21.f,
+            [](float x, float, float) -> std::optional<float> { return 21.f - x * 0.5f; });
+        CHECK(Near(steep.back().z, 16.5f, 1e-3f));
     }
 
     void TestSweeps()
@@ -238,6 +272,7 @@ int main()
     TestIds();
     TestTimers();
     TestTargets();
+    TestFloorPath();
     TestLanes();
     TestSegments();
     TestSweeps();

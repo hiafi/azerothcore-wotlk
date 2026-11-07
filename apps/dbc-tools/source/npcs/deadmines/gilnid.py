@@ -28,7 +28,12 @@ Spells (modules/mod-dungeon-bosses/src/Deadmines/GilnidLogic.h `GilnidSpells` na
   205280  Toss Landmine      visual: Gilnid tosses a mine (SV 74, Goblin Land Mine 4100)
   205281  Hot Shot           GI4 heroic, visual: the molten slag on a trail segment (a 6 s dynamic object at the
                              segment's middle, SV 90340, WP-V's goo_flow_stateyellow pool, PersistentAreaKit)
-  205282-205289 spare.
+  205282  Flame Blast        GI2 playtest 1: the rolling shot's look, cast by the shot at its own feet (a point,
+                             TARGET_DEST_DEST) at launch, every 0.4 s while it rolls and at the lane's end; stock Flame
+                             Blast 7101's SpellVisual 33 (its InstantAreaKit 9173 is Flamestrike_Impact_Base on the
+                             ground). No stock "Flame Blast" (7101, 40631, 55878) has a missile, so the look is a trail
+                             of Flame Blast bursts on an invisible carrier instead of a missile.
+  205283-205289 spare.
 
 Registry damage (Damage(pct) through the resolve copies) carries SPELL_ATTR3_IGNORE_CASTER_MODIFIERS like the
 module's own resolve spells. Stock Molten Metal 5213 (GI1) stays: DD scales it on heroic.
@@ -55,7 +60,11 @@ creature_template_columns(
 # handoff s3.10 gap 3b, no client patch needed). WP-V mints the stock demolisher cannonball as a new
 # CreatureDisplayInfo in 90700-90719; the orchestrator repoints this one constant to it. Never 15435 (the Fiery
 # Boulder's display is the invisible man, handoff s2.7).
-IRON_SHOT_DISPLAY = 90700  # WP-V: stock demolishercannonball.m2 (placeholder was 22814)
+# Playtest 1 (2026-11-06): the projectile reads as Flame Blast, low on the ground, so the iron ball model is gone: the
+# shot is the mod-boss-mechanics stalker display 11686 without the trigger bit (an invisible model on a visible unit,
+# like the harpoon rope anchor 300425), and its look is 205282's Flame Blast bursts at its feet. WP-V's cannonball
+# display 90700 stays minted (patch-M) for a later use.
+IRON_SHOT_DISPLAY = 11686
 LAND_MINE_DISPLAY = 6271    # stock Goblin Land Mine 7527
 
 iron_shot_300423 = creature_template(
@@ -106,6 +115,9 @@ _SV_TOSS = 74               # Goblin Land Mine 4100
 # StateKit form 90341 (an aura on a stalker) stays unused: a dynamic object needs no stalker.
 _SV_HOT_SHOT_AREA = 90340
 _TARGET_DEST_DYNOBJ_ENEMY = 28
+_TARGET_DEST_DEST = 87
+_SV_FLAME_BLAST = 33            # stock Flame Blast 7101 (Fire_Cast_Hand casts, Immolate_State_Base, InstantAreaKit
+                                # 9173 = Flamestrike_Impact_Base: the burst on the ground)
 _TARGET_FLAG_DEST_LOCATION = 0x40
 
 _MECHANIC_NONE = 0
@@ -251,3 +263,20 @@ land_mine_fizzle_205279 = _self_visual(
 toss_landmine_205280 = _self_visual(
     205280, 'Toss Landmine', School.NORMAL, _SV_TOSS, _ICON_LAND_MINE,
     'Gilnid tosses a mine (SV 74, Goblin Land Mine 4100), with the emote "Gilnid tosses a landmine!".')
+
+# --- GI2 the shot's look (playtest 1) ---------------------------------------------------------------------------------
+shot_flame_blast_205282 = spell(
+    id=205282, name='Flame Blast', school=School.FIRE, attributes=_ATTR0_DO_NOT_DISPLAY | _ATTR0_DO_NOT_LOG,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0,
+    duration_ms=0, effects=[Effect(type=EffectType.DUMMY, implicit_target_a=_TARGET_DEST_DEST)],
+    spell_icon_id=_ICON_FIRE,
+    notes='Deadmines Pilot playtest 1, GI2: the rolling shot\'s look. The shot (300423, now an invisible carrier) '
+          'casts it triggered at its own feet (a point, TARGET_DEST_DEST) at launch, every 0.4 s while it rolls along '
+          'its floor-following path and once at the lane\'s end, so a trail of Flame Blast bursts runs down the lane '
+          'on the floor. Stock Flame Blast 7101\'s SpellVisual 33 (InstantAreaKit 9173, Flamestrike_Impact_Base). '
+          'DUMMY with no handler, DO_NOT_DISPLAY | DO_NOT_LOG: the registry lane owns the hit. No stock Flame Blast '
+          '(7101, 40631, 55878) has a missile, hence the burst trail.',
+    raw_overrides=_raw('Flame Blast.', SpellVisualID_1=_SV_FLAME_BLAST, Targets=_TARGET_FLAG_DEST_LOCATION,
+                       AttributesEx=_ATTR1_NO_THREAT, AttributesEx2=_ATTR2_IGNORE_LINE_OF_SIGHT,
+                       AttributesEx4=ATTR4_NO_CAST_LOG),
+)

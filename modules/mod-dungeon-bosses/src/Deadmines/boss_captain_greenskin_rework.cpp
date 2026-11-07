@@ -3,8 +3,14 @@
  * Build spec GS1-GS5 (docs/dungeons/deadmines-rework.md); handoff .agents/plans/deadmines-pilot/
  * deadmines-pilot.HANDOFF.md sections 3.4 (GS rows), 3.5 (B7), 3.8 (the deck frame).
  *
- * Replaces SmartAI 647 (stock: Cleave 40505 and Poisoned Harpoon 5208); the patrol (path 793330) and the two formation
- * followers (79334, 79335) stay as data.
+ * Replaces SmartAI 647 (stock: Cleave 40505 and Poisoned Harpoon 5208). Since playtest 1 he stands still (spawn 79333
+ * MovementType 0, its addon path 793330 cleared in SQL; the two formation followers 79334 and 79335 stay as data and
+ * wander at their own spawns), and the fight stays on the ship:
+ *
+ *   Aboard                  at the pull everyone in combat with him (players, pets, bots) who is off the ship is
+ *                           gripped onto the deck; during the fight anyone off it for 1.5 s is gripped back (205348,
+ *                           Death Grip's look, then a jump onto the open stern deck); he holds while his victim is off
+ *                           the ship and evades if he is ever off it himself (Greenskin::OnShip, GreenskinLogic.h)
  *
  *   GS1 Cleave              stock 40505 on the victim, 1 to 7 s, then every 10 to 15 s
  *   GS2 Fire on My Mark     yell 0 + cast bar, 4 lanes rail to rail on the deck frame (GreenskinLanes::Fire), 2 s,
@@ -72,7 +78,12 @@ namespace
         ACTION_TEST_VOLLEY      = 4,    // DoAction: this map's volley now (.dmtest greenskin volley)
         ACTION_TEST_CROSSFIRE   = 5,    // DoAction: the heroic volley now, any difficulty (.dmtest greenskin crossfire)
         ACTION_TEST_HARPOON     = 6,    // DoAction: the full Reel 'Em In cast now (.dmtest greenskin harpoon)
+        ACTION_TEST_GRIP        = 7,    // SetGUID(unit): grip it onto the deck now (.dmtest greenskin grip)
     };
+
+    // A unit farther than this from him is never gripped (DoZoneInCombat engages players up to 250 yd away: someone
+    // still at the cove entrance is not yanked across the map).
+    constexpr float kGripMaxYd = 120.f;
 
     // The rope object lives at most this long (it is removed with its rope; this is the safety net).
     constexpr uint32 kRopeObjectLifeSec = (kRopeMs + kRopeCleanupMs) / 1000 + 3;
@@ -226,12 +237,14 @@ struct boss_captain_greenskin_rework : public BossAI
         _Reset();
         GreenskinLanes::ForgetOwner(me);
         _reelYellCooldownMs = 0;
+        ClearGrip();
     }
 
     void JustEngagedWith(Unit* who) override
     {
         BossAI::JustEngagedWith(who);
         Talk(YELL_GREENSKIN_AGGRO);
+        PullAboard();
 
         BossMechanics::EncounterOptions options;
         options.bossStateId = BOSS_CAPTAIN_GREENSKIN;
@@ -252,6 +265,7 @@ struct boss_captain_greenskin_rework : public BossAI
     void EnterEvadeMode(EvadeReason why) override
     {
         ClearRopes();
+        ClearGrip();
         GreenskinLanes::ForgetOwner(me);
         BossAI::EnterEvadeMode(why);
     }
@@ -259,6 +273,7 @@ struct boss_captain_greenskin_rework : public BossAI
     void JustDied(Unit* killer) override
     {
         ClearRopes();
+        ClearGrip();
         GreenskinLanes::ForgetOwner(me);
         BossAI::JustDied(killer);
         LOG_INFO(kLog, "dm-pilot greenskin died");
@@ -320,6 +335,10 @@ struct boss_captain_greenskin_rework : public BossAI
                 if (Player* player = ObjectAccessor::GetPlayer(*me, guid))
                     StartRope(player);
                 break;
+            case ACTION_TEST_GRIP:
+                if (Unit* unit = ObjectAccessor::GetUnit(*me, guid))
+                    Grip(unit, "test");
+                break;
             default:
                 break;
         }
@@ -351,6 +370,9 @@ struct boss_captain_greenskin_rework : public BossAI
 
         if (!UpdateVictim())
             return;
+
+        if (!KeepAboard(diff))
+            return;     // he left the ship: evading
 
         events.Update(diff);
         if (me->IsActionPreventedByCasting())
@@ -389,6 +411,114 @@ struct boss_captain_greenskin_rework : public BossAI
     }
 
 private:
+    // -----------------------------------------------------------------------------------------------------------------
+    // Aboard (playtest 1)
+    // -----------------------------------------------------------------------------------------------------------------
+
+    static bool UnitOnShip(Unit const* unit)
+    {
+        return Greenskin::OnShip(PlaneOf(unit), unit->GetPositionZ());
+    }
+
+    bool Grippable(Unit const* unit) const
+    {
+        return unit && unit->IsInWorld() && unit->IsAlive() && unit->IsInMap(me) && !unit->IsTotem()
+            && !unit->IsVehicle() && !unit->GetVehicle() && me->GetExactDist2d(unit) <= kGripMaxYd;
+    }
+
+    // Everyone in combat with him: his threat list (players, pets, guardians, bots; DoZoneInCombat adds every player
+    // and their pets at the pull).
+    std::vector<Unit*> CombatUnits() const
+    {
+        std::vector<Unit*> out;
+        for (ThreatReference const* ref : me->GetThreatMgr().GetUnsortedThreatList())
+            if (Unit* unit = ref->GetVictim())
+                out.push_back(unit);
+        return out;
+    }
+
+    // The pull: grip everyone off the ship onto the deck now.
+    void PullAboard()
+    {
+        uint32 gripped = 0;
+        for (Unit* unit : CombatUnits())
+            if (Grippable(unit) && _grip.PullNow(unit->GetGUID().GetRawValue(), UnitOnShip(unit)))
+            {
+                Grip(unit, "pull");
+                ++gripped;
+            }
+        LOG_INFO(kLog, "dm-pilot greenskin grip pull units={} gripped={}", CombatUnits().size(), gripped);
+    }
+
+    // Every kGripCheckMs: grip back whoever has been off the ship for the grace, hold while the victim is off it, and
+    // evade if he is off it himself (false: evading).
+    bool KeepAboard(uint32 diff)
+    {
+        _gripCheckMs += diff;
+        if (_gripCheckMs < kGripCheckMs)
+            return true;
+        uint32 const elapsed = _gripCheckMs;
+        _gripCheckMs = 0;
+
+        if (!UnitOnShip(me))
+        {
+            LOG_INFO(kLog, "dm-pilot greenskin grip leash at=({:.1f}, {:.1f}, {:.1f})", me->GetPositionX(),
+                me->GetPositionY(), me->GetPositionZ());
+            EnterEvadeMode(EVADE_REASON_BOUNDARY);
+            return false;
+        }
+
+        for (Unit* unit : CombatUnits())
+            if (Grippable(unit) && _grip.Update(unit->GetGUID().GetRawValue(), UnitOnShip(unit), elapsed))
+                Grip(unit, "off-ship");
+
+        // Never dragged off: no chasing a victim who is off the ship (the grip brings it back).
+        Unit* victim = me->GetVictim();
+        bool const victimOff = victim && !UnitOnShip(victim);
+        if (victimOff && me->GetMotionMaster()->GetCurrentMovementGeneratorType() == CHASE_MOTION_TYPE)
+        {
+            me->GetMotionMaster()->Clear(false);
+            me->StopMoving();
+            if (!_holding)
+                LOG_INFO(kLog, "dm-pilot greenskin grip hold victim={}", victim->GetName());
+            _holding = true;
+        }
+        else if (!victimOff && _holding)
+        {
+            _holding = false;
+            if (victim)
+                me->GetMotionMaster()->MoveChase(victim);
+        }
+        return true;
+    }
+
+    // Death Grip style: the hook's look on the unit, then a jump onto the open stern deck near him.
+    void Grip(Unit* unit, char const* why)
+    {
+        Vec2 const from = PlaneOf(unit);
+        Vec2 const dest = GripLanding(PlaneOf(me), from);
+        float z = me->GetMapHeight(dest.x, dest.y, kShipMaxZ);
+        if (z <= INVALID_HEIGHT || z < kShipMinZ)
+            z = me->GetPositionZ();
+        float const dist = DeadminesKit::Distance(from, dest);
+        float const speedZ = std::max(kGripMinSpeedZ,
+            static_cast<float>(dist / kGripJumpSpeedXY * 0.5 * Movement::gravity));
+        me->CastSpell(unit, SPELL_GRAPPLING_HOOK, true);
+        unit->GetMotionMaster()->MoveJump(dest.x, dest.y, z + 0.5f, kGripJumpSpeedXY, speedZ);
+        if (Player* player = unit->ToPlayer())
+            sScriptMgr->AnticheatSetUnderACKmount(player);
+        _grip.Gripped(unit->GetGUID().GetRawValue());
+        LOG_INFO(kLog, "dm-pilot greenskin grip {} unit={} from=({:.1f}, {:.1f}, {:.1f}) to=({:.1f}, {:.1f}, {:.1f}) "
+            "dist={:.1f}", why, unit->GetName(), from.x, from.y, unit->GetPositionZ(), dest.x, dest.y, z, dist);
+    }
+
+    void ClearGrip()
+    {
+        _grip.Clear();
+        _gripCheckMs = 0;
+        _holding = false;
+    }
+
     // GS2 (+ GS3, GS4 with `heroic`): yell 0, the cast bar naming it, the lanes.
     void FireOnMyMark(bool heroic)
     {
@@ -498,9 +628,13 @@ private:
         // OnHit reels him in (guids only in the lambda).
         Map* map = me->GetMap();
         ObjectGuid const ownerGuid = me->GetGUID();
+        // NoFillTimer (playtest 1): the 25 yd ring around him drew a growing fill that read as a zone for everyone; now
+        // it is an unfilled outline (the snap range) plus the small ring on the carrier, with the rope beam, the
+        // emote and the Harpooned debuff. Markers show to every viewer (mod-boss-mechanics has no per-player marker),
+        // and the dashed ring is an armed mine's only (no option for other kinds). Resolution and range unchanged.
         rope.runOut = Mechanic::RunOut(me, target, kSnapYd, Milliseconds(kRopeMs))
             .From(BossMechanics::MeasuredFrom::Owner).Damage(kReelPct(heroic)).Weakened().Spell(SPELL_REEL_HIT)
-            .Tag(TAG_REEL_EM_IN)
+            .Tag(TAG_REEL_EM_IN).NoFillTimer()
             .OnHit([map, ownerGuid](Unit* hit)
             {
                 if (!hit || !map)
@@ -670,6 +804,9 @@ private:
     std::vector<Rope> _ropes;
     std::vector<ObjectGuid> _pendingHarpoon;
     uint32 _reelYellCooldownMs = 0;
+    Greenskin::GripTracker _grip;
+    uint32 _gripCheckMs = 0;
+    bool _holding = false;
 };
 
 // harpoon rope gameobject 301001: a click cuts the rope it marks (GS5, out 3)
@@ -762,6 +899,24 @@ namespace
         return true;
     }
 
+    // `.dmtest greenskin grip`: grip the selected unit (a player, a bot or a pet), else you, onto the deck now (no
+    // grace), and say whether it counted as on the ship. Works in or out of combat.
+    bool HandleGrip(ChatHandler* handler)
+    {
+        Creature* boss = FindGreenskin(handler);
+        if (!boss)
+            return false;
+        Unit* target = handler->getSelectedUnit();
+        if (!target || target == boss)
+            target = handler->GetPlayer();
+        bool const onShip = Greenskin::OnShip({ target->GetPositionX(), target->GetPositionY() },
+            target->GetPositionZ());
+        boss->AI()->SetGUID(target->GetGUID(), ACTION_TEST_GRIP);
+        handler->PSendSysMessage("Grip: {} was {} the ship; gripped onto the deck (see the server log).",
+            target->GetName(), onShip ? "on" : "off");
+        return true;
+    }
+
     ChatCommandTable const& GreenskinTestCommands()
     {
         static ChatCommandTable const commands =
@@ -771,6 +926,7 @@ namespace
             { "crossfire",  HandleCrossfire,    SEC_GAMEMASTER, Console::No },
             { "harpoon",    HandleHarpoon,      SEC_GAMEMASTER, Console::No },
             { "reel",       HandleReel,         SEC_GAMEMASTER, Console::No },
+            { "grip",       HandleGrip,         SEC_GAMEMASTER, Console::No },
         };
         return commands;
     }

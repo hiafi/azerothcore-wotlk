@@ -49,8 +49,9 @@ namespace MrSmite
         SPELL_SMITE_HARPOON_VOLLEY      = 205301,   // SM12 cast bar, 2.5 s
         SPELL_SMITE_HARPOON_IMPACT      = 205302,   // SM12 the carrier's own hit (unavoidable, no Weakened)
         SPELL_SMITE_SLASH_TANK          = 205303,   // SM2 / SM3 the tank's own 30% of the tank row (the cones skip it)
+        SPELL_SMITE_HARPOON_LANDING     = 205304,   // SM12 the impact look at each carrier's feet (instant, no effect)
     };
-    static_assert(kSlice.Contains(SPELL_SMITE_SWEEPING_SLASH) && kSlice.Contains(SPELL_SMITE_SLASH_TANK),
+    static_assert(kSlice.Contains(SPELL_SMITE_SWEEPING_SLASH) && kSlice.Contains(SPELL_SMITE_HARPOON_LANDING),
         "Mr. Smite's spells stay inside his slice");
 
     // ----------------------------------------------------------------------------------------------------------------

@@ -129,11 +129,12 @@ namespace
         CHECK(Near(toFrame(kDeckBowTip).x, kDeckLength, 0.1f));
         CHECK(inFrame(kGreenskinSpawn));
         CHECK(inFrame(kVanCleefSpawn));
-        CHECK(inFrame(kPowderKegSpot));
+        CHECK(!inFrame(kPowderKegSpot));       // playtest 1: the keg is on the stern walkway, aft of the frame
+        CHECK(toFrame(kPowderKegSpot).x > -15.f && toFrame(kPowderKegSpot).x < 0.f);
         CHECK(Near(Distance(kGreenskinSpawn, kVanCleefSpawn), 27.8f, 0.2f));
         // the fire front: 16 stripes by 2:40 leave about 10 yd of bow (section 3.8)
-        float const kegToBow = kPowderKegSpot.x - kDeckBowTip.x;
-        CHECK(Near(kegToBow - 16.f * kFireFrontStripeDepth, 10.f, 1.5f));
+        float const faceToBow = kDeckSternCenter.x - kDeckBowTip.x;
+        CHECK(Near(faceToBow - 16.f * kFireFrontStripeDepth, 10.f, 1.5f));
     }
 
     void TestSave()

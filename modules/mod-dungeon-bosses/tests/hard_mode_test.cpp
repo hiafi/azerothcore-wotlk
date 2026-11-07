@@ -113,11 +113,12 @@ namespace
     void TestFireFront()
     {
         CHECK(Near(kStripeDepth, 2.73f));
-        // stripe 0 starts at the sterncastle face and holds the keg
+        // stripe 0 starts at the sterncastle face; the keg (playtest 1: on the stern walkway) is aft of it, on the
+        // walkway that burns with stripe 0
         Strip const s0 = StripeRect(0);
         CHECK(Near(s0.xHi, -53.5f));
         CHECK(Near(s0.width, kStripeDepth));
-        CHECK(s0.Contains(DeadminesRework::kPowderKegSpot));
+        CHECK(DeadminesRework::kPowderKegSpot.x > s0.xHi && DeadminesRework::kPowderKegSpot.x < kAftWalkwayX);
         // each stripe lands just ahead (bow-ward) of the last: no gap, no overlap
         for (std::uint32_t k = 0; k + 1 < kStripeCount; ++k)
         {
@@ -195,7 +196,8 @@ namespace
         }
         CHECK(OnDeck(DeadminesRework::kVanCleefSpawn));      // on the centre strip
         CHECK(OnDeck(DeadminesRework::kGreenskinSpawn));
-        CHECK(OnDeck(DeadminesRework::kPowderKegSpot));      // the keg stands on the deck
+        CHECK(OnShip(DeadminesRework::kPowderKegSpot.x, DeadminesRework::kPowderKegSpot.y,
+            DeadminesRework::kPowderKegZ));                     // the keg (stern walkway, off the mask) is aboard
         CHECK(OnDeck({ -106.f, -819.5f }));                  // the bow
         CHECK(!OnDeck({ -95.f, -820.f }));                   // the 10 yd hole in the centre (x -89.5..-98)
         CHECK(!OnDeck({ -70.f, -806.f }));                   // overhead structure, west side

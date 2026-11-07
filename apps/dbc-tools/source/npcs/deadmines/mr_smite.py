@@ -28,6 +28,8 @@ heroic hook never scales them (ids >= 200000) and the heroic reference row gives
   205301  Harpoon Volley     SM12 cast bar, 2.5 s    SpellVisual 9899 (Harpoon Volley 44187)
   205302  Harpoon Volley     SM12 the carrier's own 15%, instant, unavoidable; SpellVisual 9862 (Harpoon 43993)
   205303  Sweeping Slash     SM2 / SM3 the tank's own 30% of the tank row, instant; SpellVisual 219 (Wide Slash 7342)
+  205304  Harpoon Volley     SM12 impact look at each carrier's feet when the Spread resolves (playtest 1), instant,
+                             TARGET_DEST_DEST; SpellVisual 9863 (Fiery Harpoon 43990: onyxia_impact_base)
 
 SM9, why a copy and not stock 6435 (handoff s7 #3: "copies only where the damage or effect changes, and those take
 RefFlat"). Stock Smite Slam (Spell.dbc) is instant (CastingTimeIndex 1), effect 1 a 3 s stun aura (DurationIndex 27),
@@ -122,6 +124,13 @@ hammer_drop_205293 = _cast_bar(
 hammer_landing_205294 = _visual(
     205294, 'Hammer Drop', 2355, 50, TARGET_UNIT_CASTER, 'Slams the ground.',
     'SM5 landing, cast on himself at the circle\'s resolve. War Stomp 45 visual 2355, icon 50.')
+harpoon_impact_look_205304 = _visual(
+    205304, 'Harpoon Volley', 9863, 185, _TARGET_DEST_DEST, 'A harpoon slams into the ground.',
+    'SM12 playtest 1 fix: the volley "just deals damage with no feedback". 205302 carries stock Harpoon 43993\'s '
+    'visual 9862, whose look is its missile, and a speed 0 spell never shows a missile, so only a small chest flash '
+    'played. When the Spread resolves the script casts this at each carrier\'s feet (TARGET_DEST_DEST), together '
+    'with the 205302 hit: Fiery Harpoon 43990\'s visual 9863, an InstantAreaKit with a ground impact '
+    '(onyxia_impact_base), the impact of the harpoons Skadi drops in Utgarde Pinnacle. Icon 185 (205302\'s).')
 debris_205295 = _visual(
     205295, 'Debris', 8455, 132, _TARGET_DEST_DEST, 'Rocks fall.',
     'SM6 debris (heroic), cast at each 4 yd circle\'s point when it resolves (TARGET_DEST_DEST). Cave In 36240 '

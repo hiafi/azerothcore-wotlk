@@ -344,10 +344,12 @@ namespace DeadminesRework
     Vec2 constexpr kDeckBowTip{ -107.5f, -819.5f };
     Vec2 constexpr kGreenskinSpawn{ -59.6f, -820.1f };      // z 41.6
     Vec2 constexpr kVanCleefSpawn{ -87.4f, -819.9f };       // z 39.3, on the 9 yd center strip (dead-ends at x -89.5)
-    // Hard mode (B9): the keg on the main deck against the sterncastle face; the fire front's stripe depth for about
-    // 10 yd of bow left at 2:40 with the keg there (section 3.8, section 7 #10).
-    Vec2 constexpr kPowderKegSpot{ -55.0f, -820.0f };
-    float constexpr kPowderKegZ = 42.5f;
+    // Hard mode (B9): the fire front's stripe depth for about 10 yd of bow left at 2:40, measured from the sterncastle
+    // face where the first stripe lands (section 3.8, section 7 #10). The keg (spawn 3010000) stands on the west stern
+    // walkway beside the sterncastle since playtest 1 (the user's spot), aft of the first stripe: the walkway burns
+    // with stripe 0 (HardModeLogic kAftWalkwayX).
+    Vec2 constexpr kPowderKegSpot{ -48.148335f, -812.0548f };
+    float constexpr kPowderKegZ = 42.69199f;
     float constexpr kFireFrontStripeDepth = 2.73f;
 
     // Mr. Smite's chest (weapon swaps).

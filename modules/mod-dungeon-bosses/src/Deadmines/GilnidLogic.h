@@ -46,9 +46,10 @@ namespace Gilnid
         SPELL_LAND_MINE_FIZZLE      = 205279,   // the oldest mine fizzles at the cap (SV 1931, Spawn Smoke 10389)
         SPELL_TOSS_LANDMINE         = 205280,   // Gilnid tosses a mine (SV 74, Goblin Land Mine 4100)
         SPELL_HOT_SHOT_GROUND       = 205281,   // GI4 a trail segment's slag look: 6 s dynamic object (SV 90340)
-        // 205282-205289 spare
+        SPELL_SHOT_FLAME_BLAST      = 205282,   // GI2 the rolling shot's look: Flame Blast 7101's SV 33 at a point
+        // 205283-205289 spare
     };
-    static_assert(kSlice.Contains(SPELL_ROLL_OUT_THE_SHOT) && kSlice.Contains(SPELL_HOT_SHOT_GROUND),
+    static_assert(kSlice.Contains(SPELL_ROLL_OUT_THE_SHOT) && kSlice.Contains(SPELL_SHOT_FLAME_BLAST),
         "Gilnid's spells stay inside his slice");
 
     // Registry tags (ledger and failure listing): the build spec's mechanic numbers.
@@ -79,9 +80,19 @@ namespace Gilnid
     inline constexpr float kLaneWidth = 4.f;
     inline constexpr float kShotSpeed = 10.f;                           // yd per s
     inline constexpr float kShotPct = 30.f;
-    inline constexpr float kLaneWallInset = 0.5f;                       // the lane ends this far inside the wall
+    inline constexpr float kLaneWallInset = 0.5f;                       // the wall point: this far inside the wall
+    // Playtest 1: every lane runs this much further than the wall point (marker, roll and hitbox alike). The measured
+    // room ends 34 to 37.5 yd from the pots on the north and west (8 to 17 yd east and south), so the extra length
+    // lies past the navmesh wall except through the Foundry Door; NAVMESH-REPORT section 1.
+    inline constexpr float kLaneExtraYd = 30.f;
     inline constexpr float kShotTargetRange = 60.f;                     // players this close to Gilnid are targets
-    inline constexpr std::uint32_t kShotLingerMs = 1000;                // the ball rests at the wall, then goes
+    inline constexpr std::uint32_t kShotLingerMs = 1000;                // the ball rests at the lane end, then goes
+    // The shot's look (playtest 1): a Flame Blast burst at its feet this often while it rolls (4 yd apart at 10 yd
+    // per s), along a path that follows the floor (a point every kFloorPathStepYd at the floor height, so it never
+    // floats off the dais edge). A floor probe further than kFloorPathMaxStepZ from the last point is ignored.
+    inline constexpr std::uint32_t kFlameBlastPulseMs = 400;
+    inline constexpr float kFloorPathStepYd = 2.f;
+    inline constexpr float kFloorPathMaxStepZ = 2.5f;
 
     // GI3 Bowled Over: a ball whose center passes this close to Gilnid's center (half a lane plus a little of his
     // body) knocks him down for 2 s (the spell's duration) and takes 5% of his health. Once per ball.
@@ -186,22 +197,26 @@ namespace Gilnid
         Vec2 from;
         Vec2 to;
         float length = 0.f;
+        float wallLength = 0.f;     // from the pot to the wall point (kLaneWallInset inside kFoundryWalls)
     };
 
-    // The lane from `pot` through `target`, clipped to kFoundryWalls (kLaneWallInset inside it). A target on top of
-    // the pot (closer than 0.5 yd) aims through `fallback` instead (Gilnid). nullopt when the ray meets no wall (a pot
-    // outside the polygon: never with the measured frame) or the lane would be shorter than 1 yd.
-    inline std::optional<Lane> ComputeLane(Vec2 pot, Vec2 target, Vec2 fallback)
+    // The lane from `pot` through `target` to the wall point on kFoundryWalls (kLaneWallInset inside it), then
+    // `extra` yd further on the same bearing (kLaneExtraYd: the playtest 1 length). A target on top of the pot
+    // (closer than 0.5 yd) aims through `fallback` instead (Gilnid). nullopt when the ray meets no wall (a pot outside
+    // the polygon: never with the measured frame) or the in-room part would be shorter than 1 yd.
+    inline std::optional<Lane> ComputeLane(Vec2 pot, Vec2 target, Vec2 fallback, float extra = kLaneExtraYd)
     {
         Vec2 const through = DeadminesKit::Distance(pot, target) < 0.5f ? fallback : target;
-        std::optional<Vec2> const end =
+        std::optional<Vec2> const wall =
             DeadminesKit::LaneEndAtWall(DeadminesRework::kFoundryWalls, pot, through, kLaneWallInset);
-        if (!end)
+        if (!wall)
             return std::nullopt;
-        float const length = DeadminesKit::Distance(pot, *end);
-        if (length < 1.f)
+        float const wallLength = DeadminesKit::Distance(pot, *wall);
+        if (wallLength < 1.f)
             return std::nullopt;
-        return Lane{ pot, *end, length };
+        float const length = wallLength + std::max(0.f, extra);
+        Vec2 const end = DeadminesKit::Advance(pot, DeadminesKit::BearingTo(pot, through), length);
+        return Lane{ pot, end, length, wallLength };
     }
 
     // Distance along `lane` of the point `p` projected on it (negative before the start, past `length` beyond it).
@@ -220,6 +235,41 @@ namespace Gilnid
             return lane.from;
         float const t = s / lane.length;
         return { lane.from.x + (lane.to.x - lane.from.x) * t, lane.from.y + (lane.to.y - lane.from.y) * t };
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // The rolling path: the lane's points every `step` yd (both ends included) at the floor height. `probe(x, y, z)`
+    // returns the floor at or below about z (nullopt: none); a probe more than `maxStepZ` from the last point's z (a
+    // wall's top, another level, nothing) keeps the last z. The first point is at `startZ` (the pot dais).
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct PathPoint
+    {
+        float x = 0.f;
+        float y = 0.f;
+        float z = 0.f;
+    };
+
+    template <typename Probe>
+    std::vector<PathPoint> FloorPath(Lane const& lane, float startZ, Probe&& probe, float step = kFloorPathStepYd,
+        float maxStepZ = kFloorPathMaxStepZ)
+    {
+        std::vector<PathPoint> out;
+        out.push_back({ lane.from.x, lane.from.y, startZ });
+        if (lane.length <= 0.f || step <= 0.f)
+            return out;
+        float z = startZ;
+        float s = 0.f;
+        while (s < lane.length - 1e-3f)
+        {
+            s = std::min(lane.length, s + step);
+            Vec2 const p = PointOnLane(lane, s);
+            std::optional<float> const floor = probe(p.x, p.y, z);
+            if (floor && std::fabs(*floor - z) <= maxStepZ)
+                z = *floor;
+            out.push_back({ p.x, p.y, z });
+        }
+        return out;
     }
 
     // How far along the lane it leaves `block` (the pot block, a hole nobody stands in): 0 when it starts outside.

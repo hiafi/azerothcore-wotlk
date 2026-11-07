@@ -1,5 +1,6 @@
 // Host tests for GreenskinLogic.h (WP-B7): the deck frame and the lanes inside it, the volley specs, the
-// once-per-volley memory, the harpoon target pick and the rope's geometry.
+// once-per-volley memory, the harpoon target pick and the rope's geometry; the ship's bounds and the grip
+// (playtest 1).
 #include "GreenskinLogic.h"
 #include "check.h"
 #include <cmath>
@@ -27,7 +28,8 @@ namespace
         CHECK(kSlice.first == 205340u);
         CHECK(kSlice.Contains(kSlice.last));
         for (std::uint32_t id : { SPELL_FIRE_ON_MY_MARK_HIT, SPELL_CROSSFIRE_HIT, SPELL_BURNING_DECK,
-                 SPELL_FIRE_ON_MY_MARK_CAST, SPELL_CROSSFIRE_CAST, SPELL_REEL_EM_IN, SPELL_HARPOONED, SPELL_REEL_HIT })
+                 SPELL_FIRE_ON_MY_MARK_CAST, SPELL_CROSSFIRE_CAST, SPELL_REEL_EM_IN, SPELL_HARPOONED, SPELL_REEL_HIT,
+                 SPELL_GRAPPLING_HOOK })
             CHECK(kSlice.Contains(id));
         // the rope anchor is the reservation's "harpoon rope unit" slot, inside creature 300420-300449
         CHECK(kNpcRopeAnchor >= 300420u && kNpcRopeAnchor <= 300449u);
@@ -288,6 +290,93 @@ namespace
         CHECK(std::string(RopeEndName(RopeEnd::Clicked)) == "cut-by-click");
         CHECK(std::string(RopeEndName(RopeEnd::Stood)) == "cut-by-standing");
     }
+    // Playtest 1: "on the ship" (frame box + z band), checked on the measured deck (NAVMESH-REPORT section 2).
+    void TestShipBounds()
+    {
+        float const deckZ = 41.f;
+        // every boss spot, the corners of the open deck, the side walkways, the bow
+        CHECK(OnShip(DeadminesRework::kGreenskinSpawn, 41.6f));
+        CHECK(OnShip(DeadminesRework::kVanCleefSpawn, 39.3f));
+        CHECK(OnShip({ -55.f, -802.5f }, 42.f));        // west rail at the sterncastle face
+        CHECK(OnShip({ -63.f, -840.f }, 42.f));         // east rail at the widest station
+        CHECK(OnShip({ -45.f, -805.f }, 43.f));         // west stern walkway
+        CHECK(OnShip({ -45.f, -834.f }, 43.f));         // east stern walkway
+        CHECK(OnShip(DeadminesRework::kDeckBowTip, 38.f));
+        CHECK(OnShip({ -59.f, -803.f }, 44.5f));        // the gangplank's deck end
+        CHECK(OnShip(DeadminesRework::kPowderKegSpot, DeadminesRework::kPowderKegZ));
+        // jumping on the deck stays aboard
+        CHECK(OnShip(DeadminesRework::kGreenskinSpawn, 41.6f + 2.5f));
+        // off: the scaffold past the gangplank, the dock, the water, the bowsprit, past the east rail
+        CHECK(!OnShip({ -60.f, -795.f }, 39.f));        // scaffold (y -783..-800)
+        CHECK(!OnShip({ -60.f, -799.5f }, 44.5f));      // the gangplank over the scaffold
+        CHECK(!OnShip({ -22.8f, -797.3f }, 20.4f));     // Mr. Smite's dock
+        CHECK(!OnShip(DeadminesRework::kGreenskinSpawn, 0.1f));    // the water under the ship
+        CHECK(!OnShip({ -120.f, -822.f }, 39.f));       // the bowsprit
+        CHECK(!OnShip({ -63.f, -845.f }, deckZ));       // overboard, east
+        CHECK(!OnShip({ -67.6f, -853.7f }, 17.1f));     // Cookie's spot on the cove floor
+        // the rigging and the sterncastle top are off (above the band)
+        CHECK(!OnShip({ -80.f, -820.f }, 55.f));
+        CHECK(!OnShip({ -40.f, -820.f }, 51.f));
+    }
+
+    void TestGripLanding()
+    {
+        Vec2 const boss = DeadminesRework::kGreenskinSpawn;
+        // from the scaffold (west): lands 8 yd west of him, inside the stern landing box
+        Vec2 const west = GripLanding(boss, { -60.f, -790.f });
+        CHECK(kGripLandBox.Contains(west));
+        CHECK(Near(DeadminesKit::Distance(boss, west), kGripLandYd, 0.6f) || west.y == kGripLandBox.maxY);
+        // from the water far off the bow, or from the dock: always inside the box, always on the ship
+        for (Vec2 const from : { Vec2{ -130.f, -820.f }, Vec2{ -22.8f, -797.3f }, Vec2{ -67.6f, -853.7f },
+                 Vec2{ boss.x, boss.y } })
+        {
+            Vec2 const land = GripLanding(boss, from);
+            CHECK(kGripLandBox.Contains(land));
+            CHECK(OnShip(land, 41.f));
+        }
+        // Greenskin at the forward holes (he chased someone there): the landing is still the open stern deck
+        Vec2 const fromHoles = GripLanding({ -95.f, -820.f }, { -95.f, -850.f });
+        CHECK(kGripLandBox.Contains(fromHoles));
+        // the box is inside the ship bounds
+        CHECK(OnShip({ kGripLandBox.minX, kGripLandBox.minY }, 41.f) && OnShip({ kGripLandBox.maxX, kGripLandBox.maxY },
+            41.f));
+    }
+
+    void TestGripTracker()
+    {
+        GripTracker t;
+        // on the ship: never
+        for (int i = 0; i < 20; ++i)
+            CHECK(!t.Update(1, true, kGripCheckMs));
+        // off: after the grace (1.5 s), not before
+        std::uint32_t off = 0;
+        bool fired = false;
+        while (!fired && off < 10000)
+        {
+            off += kGripCheckMs;
+            fired = t.Update(1, false, kGripCheckMs);
+        }
+        CHECK(fired && off == kGripGraceMs);
+        t.Gripped(1);
+        // mid-air: still off, but the cooldown holds it
+        CHECK(!t.Update(1, false, kGripCheckMs));
+        CHECK(!t.Update(1, false, kGripCooldownMs - 2 * kGripCheckMs));
+        // the cooldown ran out and it stayed off past the grace: again
+        CHECK(t.Update(1, false, kGripCheckMs));
+        // a knockback that lands back on deck within the grace: nothing
+        GripTracker k;
+        CHECK(!k.Update(2, false, 1000));
+        CHECK(!k.Update(2, true, kGripCheckMs));
+        CHECK(!k.Update(2, false, 1000));
+        // the pull grips anyone off at once, unless just gripped
+        GripTracker pull;
+        CHECK(pull.PullNow(3, false));
+        CHECK(!pull.PullNow(3, true));
+        pull.Gripped(3);
+        CHECK(!pull.PullNow(3, false));
+        pull.Clear();
+        CHECK(pull.Size() == 0 && pull.PullNow(3, false));
+    }
 }
 
 int main()
@@ -302,5 +391,8 @@ int main()
     TestRopeStanders();
     TestTimeline();
     TestRopeEndNames();
+    TestShipBounds();
+    TestGripLanding();
+    TestGripTracker();
     return Report("greenskin_test");
 }
