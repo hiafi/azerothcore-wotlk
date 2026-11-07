@@ -636,6 +636,10 @@ class _AnyRows(dict):
     def __contains__(self, key):
         return True
 
+    def get(self, key, default=None):
+        # creature_template_columns() (source/npcs/deadmines/) needs a live row for the stock entry it edits
+        return super().get(key, {})
+
 
 class _AnySet(set):
     def __contains__(self, key):

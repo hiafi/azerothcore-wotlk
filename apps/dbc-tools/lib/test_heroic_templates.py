@@ -22,6 +22,7 @@ Run directly:
 from __future__ import annotations
 
 import math
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -509,6 +510,70 @@ class ModelLintTest(unittest.TestCase):
         ])
 
 
+class DeclaredKitAddTest(unittest.TestCase):
+    """A creature this run declares with creature_template() (a boss-kit add, Deadmines Pilot WP-K) and lists in
+    `extra=` gets its heroic template, override and model copy in the same run (dungeon_heroic.with_declared_templates),
+    not only once its upsert reached the SQL on disk. Its full row carries difficulty_entry_1 itself."""
+
+    KIT = 300420
+    HEROIC = 310008     # after the eight creatures of SOURCE, the lock being empty
+
+    def _source(self):
+        return _source(heroic_args="overrides={300420: dict(health=80_000)}").replace(
+            "skip=(2520,) if False else (),",
+            'skip=(2520,) if False else (), extra=(creature(300420, "Watchman", "trash"),),',
+        )
+
+    def _expand(self, difficulty_entry_1):
+        dsl = load_dsl(self._source(), ids_cfg=IDS_CFG)
+        dsl = {k: list(v) if isinstance(v, list) else v for k, v in dsl.items()}
+        dsl["creature_templates"].append({**_tpl(self.KIT, "Watchman", AIName="", ScriptName="npc_dm_watchman"),
+                                          "id": self.KIT, "difficulty_entry_1": difficulty_entry_1})
+        dsl["creature_template_models"].append({"id": f"{self.KIT}:0", "CreatureID": self.KIT, "Idx": 0,
+                                                "CreatureDisplayID": 184, "DisplayScale": 1.0, "Probability": 1.0,
+                                                "VerifiedBuild": 0})
+        out = dungeon_heroic.expand(dsl, _live, ids_cfg=IDS_CFG, lock="")
+        return dsl, out
+
+    def test_same_run_heroic_template(self):
+        dsl, out = self._expand(self.HEROIC)
+        self.assertEqual(out.errors, [])
+        mapping = dsl["dungeons"][0]["heroic_entries"]
+        self.assertEqual(mapping[self.KIT], self.HEROIC)
+        self.assertIn(f"{self.KIT} {self.HEROIC} 36 Watchman", out.lock_appended)
+        row = _rows(dsl)[self.HEROIC]
+        self.assertTrue(row[dungeon_heroic.DERIVED])
+        self.assertEqual((row["minlevel"], row["ScriptName"]), (60, ""))
+        self.assertEqual(row["HealthModifier"], HT.health_modifier(3052, 80_000))
+        models = [r for r in dsl["creature_template_models"] if r["CreatureID"] == self.HEROIC]
+        self.assertEqual([(r["CreatureDisplayID"], r[dungeon_heroic.DERIVED]) for r in models], [(184, True)])
+        # the declared full row owns difficulty_entry_1: no one-column edit for it
+        self.assertNotIn(self.KIT, {r["entry"] for r in dsl["creature_template_edits"]})
+
+    def test_the_full_row_must_name_its_heroic_entry(self):
+        _, out = self._expand(0)
+        self.assertTrue(any(f"creature {self.KIT} -> heroic {self.HEROIC}" in e and "declares the full row" in e
+                            for e in out.errors), out.errors)
+
+    def test_without_the_declaration_it_waits_for_the_live_row(self):
+        dsl = load_dsl(self._source(), ids_cfg=IDS_CFG)
+        dsl = {k: list(v) if isinstance(v, list) else v for k, v in dsl.items()}
+        out = dungeon_heroic.expand(dsl, _live, ids_cfg=IDS_CFG, lock="")
+        self.assertTrue(any("overrides[300420] names a creature without a heroic template (no live creature_template "
+                            "row)" in e for e in out.errors), out.errors)
+
+    def test_a_declared_model_row_replaces_the_replayed_one_by_key(self):
+        live = dungeon_heroic.LiveWorld(creature_templates={}, side_rows={"creature_template_model": [
+            {"CreatureID": 7, "Idx": 0, "CreatureDisplayID": 1, "DisplayScale": 1, "Probability": 1},
+            {"CreatureID": 7, "Idx": 1, "CreatureDisplayID": 2, "DisplayScale": 1, "Probability": 1},
+        ]})
+        mine = {"id": "7:1", "CreatureID": 7, "Idx": 1, "CreatureDisplayID": 9, "DisplayScale": 1.0,
+                "Probability": 1.0, "VerifiedBuild": 0}
+        copies = dungeon_heroic.side_table_copies({36: {7: 310500}}, live, {"creature_template_models": [mine]})
+        models = sorted((r["Idx"], r["CreatureDisplayID"]) for r in copies["creature_template_models"])
+        self.assertEqual(models, [(0, 1), (1, 9)])
+
+
 def _int_of(row: dict, column: str) -> int:
     return int(row.get(column) or 0)
 
@@ -633,6 +698,14 @@ class DeadminesTest(unittest.TestCase):
                     creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS, live_data={},
                 ).items()
             }
+            # The Deadmines Pilot's boss package (source/npcs/deadmines/): the boss-kit adds in deadmines.py's extra=
+            kit = registry.load_class_package(
+                generate.SOURCE_DIR / "npcs" / "deadmines", ids_cfg=ids_cfg, existing_creature_rows=existing,
+                creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
+                creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS, live_data={},
+            )
+            for key in ("creature_templates", "creature_template_models", "creature_template_edits"):
+                cls.dsl[key] = cls.dsl.get(key, []) + list(getattr(kit, key))
             cls.index = spell_tables.load_spell_table_index()
             cls.out = dungeon_heroic.expand(
                 cls.dsl, lambda: dungeon_heroic.load_live_world(existing, cls.index), ids_cfg=ids_cfg,
@@ -655,7 +728,9 @@ class DeadminesTest(unittest.TestCase):
         lock = HT.parse_lock(HT.LOCK_PATH.read_text())
         mapping = next(e for e in self.dsl["dungeons"] if e["map_id"] == 36)["heroic_entries"]
         self.assertEqual(mapping, lock.pairs)
-        self.assertEqual(len(mapping), 25)
+        self.assertEqual(len(mapping), 29)  # E2's 25 plus the Deadmines Pilot's 4 boss-kit combat adds
+        self.assertEqual({e: mapping[e] for e in (300420, 300421, 300422, 300426)},
+                         {300420: 310025, 300421: 310026, 300422: 310027, 300426: 310028})
         self.assertNotIn(4075, mapping)  # the rat, a critter
         self.assertTrue({643, 2520, 3450, 4417, 1732} <= set(mapping))  # summoned or summoned-and-spawned
 
@@ -673,13 +748,26 @@ class DeadminesTest(unittest.TestCase):
         self.assertEqual(reports[598].solved.health, 12_000)  # normal trash
 
     def test_normal_rows_only_get_difficulty_entry_1(self):
+        # E2 writes only difficulty_entry_1 on a stock normal row. The Deadmines Pilot's boss package
+        # (source/npcs/deadmines/) also owns ScriptName, AIName, HealthModifier and CreatureImmunitiesId of the reworked
+        # bosses, and declares its boss-kit creatures (300420-300449) as full rows.
+        pilot_columns = {"ScriptName", "AIName", "HealthModifier", "CreatureImmunitiesId"}
+        bosses = {639, 642, 643, 644, 645, 646, 647, 1763, 3586}
         blocks = spell_tables.render_creature_blocks(self.creature_index, self.dsl)
         sql = "\n".join(blocks)
         for line in sql.splitlines():
             if line.startswith("UPDATE"):
-                self.assertRegex(line, r"^UPDATE `creature_template` SET `difficulty_entry_1` = 3100\d\d WHERE")
+                match = re.match(r"^UPDATE `creature_template` SET (.*) WHERE `entry` IN \(([\d, ]+)\);$", line)
+                self.assertIsNotNone(match, line)
+                columns = set(re.findall(r"`(\w+)` = ", match.group(1)))
+                entries = {int(e) for e in match.group(2).split(",")}
+                if columns == {"difficulty_entry_1"}:
+                    self.assertRegex(line, r"`difficulty_entry_1` = 3100\d\d WHERE")
+                else:
+                    self.assertTrue(columns <= pilot_columns | {"difficulty_entry_1"}, line)
+                    self.assertTrue(entries <= bosses, line)
             elif line.startswith("("):
-                self.assertRegex(line, r"^\(3100\d\d, ")
+                self.assertRegex(line, r"^\((3100\d\d|3004[2-4]\d), ")
 
 
 if __name__ == "__main__":

@@ -153,6 +153,10 @@ modules/mod-dpssim/conf/profiles/.stat-weights-scratch/
 # the content scripts kept from mod-progression (see .agents/plans/progression-slim/) — tracked in this repo.
 !modules/mod-content-gate
 
+# mod-dungeon-bosses: the reworked dungeon bosses (Deadmines first; see .agents/plans/deadmines-pilot/), built on
+# mod-boss-mechanics and mod-dungeon-difficulties — tracked in this repo, not a separate module repo.
+!modules/mod-dungeon-bosses
+
 # Live-stack e2e private / local tooling (scratch tests stay uncommitted)
 e2e/local/**
 !e2e/local/README.md

@@ -10,9 +10,18 @@ with difficulty_entry_1 on the normal rows and the side-table copies (T2).
 
 MapDifficulty 1000, dungeon_access_template 122 and DungeonEncounter 1000-1006 are the first ids of their blocks
 (source/ids.yaml); the heroic creature ids live in source/world/heroic_ids.lock. Never move any of them once shipped.
+
+Deadmines Pilot (.agents/plans/deadmines-pilot/, WP-K): the reworked bosses' normal rows (ScriptName, health,
+immunities) and the boss-kit creatures are declared in source/npcs/deadmines/ (one file per boss). The boss-kit combat
+adds the C++ summons or a boss WP's spawn edit bring in are invisible to the extraction, so they are listed in `extra=`
+below with their heroic health in `overrides`; the summoned helpers (iron shot, land mine, shadow image, the powder
+stalker) get no heroic template and run on their normal entry.
 """
 
 from lib.dsl.dungeon import creature, dungeon, heroic
+
+# The reworked bosses' stun immunity set (source/npcs/deadmines/_common.py IMMUNITY_BOSS_STUN).
+_STUN_IMMUNE = {"CreatureImmunitiesId": 1972}
 
 # BEGIN GENERATED CREATURES (extract_dungeon_creatures.py) - do not edit inside this block by hand
 CREATURES = (
@@ -59,23 +68,36 @@ deadmines = dungeon(
     # Sneed's Shredder (the fight's first phase; Sneed rides it) and Miner Johnson (the rare elite) have no encounter
     # row, but docs/dungeons/deadmines-rework.md builds both as bosses: the boss tier and INSTANCE_BIND on heroic.
     roles={642: "boss", 3586: "boss"},
+    # Boss-kit combat adds (source/npcs/deadmines/): not on the map until the Pilot's scripts and SQL bring them in.
+    extra=(
+        creature(300420, "Defias Watchman", "trash", summoned_by=("spawn 79165, WP-B1 SQL",)),  # L19 elite warrior
+        creature(300421, "Defias Evoker", "trash", summoned_by=("spawn 79167, WP-B1 SQL",)),  # L19 elite mage
+        creature(300422, "Working Miner", "trash", summoned_by=("C++ boss_miner_johnson_rework",)),  # L18 warrior
+        creature(300426, "Defias Blackguard", "trash", summoned_by=("C++ boss_edwin_vancleef_rework",)),  # L19 elite
+    ),
     heroic=heroic(
         map_difficulty_id=1000, access_id=122, min_level=60,
         encounter_ids=range(1000, 1007),  # Rhahk'Zor, Sneed, Gilnid, Mr. Smite, Cookie, Captain Greenskin, VanCleef
         spawn_mask=True,
         # Heroic health from the dungeon doc's build specs (approved; its "Unit | Entry | Normal | Heroic" tables).
-        # The doc names no heroic melee, so every creature takes the tier's. Its new boss-kit adds (Watchman and
-        # Evoker 80k, Blackguard 40k, Working Miner 30k) are new entries, declared when those bosses are built.
+        # The doc names no heroic melee, so every creature takes the tier's. The boss-kit adds (Watchman and Evoker
+        # 80k, Working Miner 30k, Blackguard 40k) are the `extra=` entries above. The reworked bosses' heroic rows take
+        # the new stun immunity set (-229 + STUN, id 1972, core pending SQL) like their normal rows (handoff s7 #5);
+        # Rhahk'Zor keeps -159.
         overrides={
-            639: dict(health=340_000),  # Edwin VanCleef (the hard mode's 500k is set by his script)
-            642: dict(health=220_000),  # Sneed's Shredder
-            643: dict(health=142_000),  # Sneed
+            639: dict(health=340_000, columns=_STUN_IMMUNE),  # Edwin VanCleef (hard mode's 500k: his script)
+            642: dict(health=220_000, columns=_STUN_IMMUNE),  # Sneed's Shredder
+            643: dict(health=142_000, columns=_STUN_IMMUNE),  # Sneed
             644: dict(health=320_000),  # Rhahk'Zor
-            645: dict(health=330_000),  # Cookie
-            646: dict(health=472_000),  # Mr. Smite
-            647: dict(health=377_000),  # Captain Greenskin
-            1763: dict(health=311_000),  # Gilnid
-            3586: dict(health=240_000),  # Miner Johnson
+            645: dict(health=330_000, columns=_STUN_IMMUNE),  # Cookie
+            646: dict(health=472_000, columns=_STUN_IMMUNE),  # Mr. Smite
+            647: dict(health=377_000, columns=_STUN_IMMUNE),  # Captain Greenskin
+            1763: dict(health=311_000, columns=_STUN_IMMUNE),  # Gilnid
+            3586: dict(health=240_000, columns=_STUN_IMMUNE),  # Miner Johnson
+            300420: dict(health=80_000),  # Defias Watchman (boss kit)
+            300421: dict(health=80_000),  # Defias Evoker (boss kit)
+            300422: dict(health=30_000),  # Working Miner (boss kit)
+            300426: dict(health=40_000),  # Defias Blackguard (boss kit)
         },
     ),
 )

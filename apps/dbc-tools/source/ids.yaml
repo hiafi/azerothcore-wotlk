@@ -279,6 +279,14 @@ creature_heroic:
   start: 310000
   end: 311999
 
+# gameobject_template entries for a rework's own objects (Deadmines Pilot, .agents/plans/deadmines-pilot/
+# deadmines-pilot.HANDOFF.md s3.3 / s7 #7). Record only: no dbc-tools reader mints from it yet; the rows are hand-written
+# pending world SQL. The custom gameobject_template rows below it (300077, 300085, 300101) predate the block; checked
+# free 2026-11-06: no gameobject_template row in 301000-301999 (live DB, base, merged and pending SQL).
+gameobject:
+  start: 301000
+  end: 301999
+
 # Per-class reservations (and non-class owners, see `healsim` below), one entry per table the owner draws ids from,
 # each inside the tool-wide block of the same name above (or the spell/talent/... blocks earlier in this file).
 # Kept under ONE key because every
@@ -427,3 +435,21 @@ reservations:
     creature: {start: 300400, end: 300419}
     creaturedisplayinfo: {start: 91000, end: 93999}
     creaturemodeldata: {start: 91000, end: 93999}
+
+  # Deadmines Pilot (.agents/plans/deadmines-pilot/deadmines-pilot.HANDOFF.md s3.3): the reworked bosses' spells, the
+  # boss-kit creatures and gameobjects (modules/mod-dungeon-bosses). Spells: shared 205200-205209, Rhahk'Zor
+  # 205210-205229, Miner Johnson 205230-205239, Sneed 205240-205269, Gilnid 205270-205289, Mr. Smite 205290-205319,
+  # Cookie 205320-205339, Greenskin 205340-205359, VanCleef 205360-205389, spare 205390-205399. Creatures: Watchman
+  # 300420, Evoker 300421, Working Miner 300422, Iron shot 300423, Land mine 300424, Harpoon rope 300425, Blackguard
+  # 300426, Shadow image 300427, Mainmast 300428, Powder blast stalker 300429, spare 300430-300449. Gameobjects: Powder
+  # keg 301000, Harpoon rope 301001, Mainmast 301002. Display rows only for visuals mined into patch-M (stage V). The
+  # creature display slice starts at 90700, not 90500: the boss mechanics markers' old slice 90500-90699 stays
+  # unreserved (test_bossmechanics_overlaps_no_earlier_owner). Checked free 2026-11-06 (handoff s2.6).
+  deadmines:
+    spell: {start: 205200, end: 205399}
+    creature: {start: 300420, end: 300449}
+    gameobject: {start: 301000, end: 301099}
+    spellvisual: {start: 90340, end: 90369}  # SpellVisual, Kit and EffectName
+    gameobjectdisplayinfo: {start: 90020, end: 90029}
+    creaturedisplayinfo: {start: 90700, end: 90719}
+    creaturemodeldata: {start: 90700, end: 90719}
