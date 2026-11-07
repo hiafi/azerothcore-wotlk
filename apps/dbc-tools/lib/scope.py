@@ -49,7 +49,7 @@ from pathlib import Path
 
 import yaml
 
-from . import dbcfile, resolve
+from . import dbcfile, resolve, sql_out
 from .dsl import registry as _registry
 from .source import foreign_ids
 
@@ -209,10 +209,13 @@ TABLE_IDS: dict[str, tuple[str, str]] = {
     "itemextendedcost_dbc": ("ID", "item_extended_cost"),
     "npc_vendor": ("entry", "creature"),
     "trainer_spell": ("SpellId", "spell"),
-    "creature": ("id", "creature"),  # spawn rows, by template entry (the heroic spawnMask UPDATEs)
-    "gameobject": ("id", "gameobject"),
-    "smart_scripts": ("entryorguid", "creature"),
+    # Spawn rows by guid (the heroic spawnMask UPDATEs): a dungeon scope owns the spawns on its map (map_spawns).
+    "creature": ("guid", "creature_guid"),
+    "gameobject": ("guid", "gameobject_guid"),
+    # smart_scripts: by its (entryorguid, source_type) key, see Ownership.row_owners.
 }
+# smart_scripts.source_type -> the id space of a positive (template entry) / negative (spawn guid) entryorguid.
+SMART_SOURCE_SPACES = {0: ("creature", "creature_guid"), 1: ("gameobject", "gameobject_guid")}
 
 
 @dataclass
@@ -255,6 +258,12 @@ class Ownership:
             scopes = self.keys.get(table, {}).get(tuple(_norm(row[c]) for c in columns))
             if scopes:
                 return frozenset(scopes)
+        if table == "smart_scripts":
+            spaces = SMART_SOURCE_SPACES.get(_norm(row.get("source_type")))
+            value = _norm(row.get("entryorguid"))
+            if spaces is None or not isinstance(value, int) or value == 0:
+                return frozenset()
+            return self.owners(spaces[0], value) if value > 0 else self.owners(spaces[1], -value)
         id_column = TABLE_IDS.get(table)
         if id_column and id_column[0] in row:
             return self.owners(id_column[1], row[id_column[0]])
@@ -351,7 +360,7 @@ FAMILY_CLASSES = {
 def build_ownership(
     scopes: Scopes, ids_cfg: dict, selected, *, dsl_classes: dict, spell_entries: list[dict], talents: dict,
     table_specs, item_expansion=None, item_spell_expansion=None, item_limit_expansion=None, heroic_lock=None,
-    gcd_aura_ids: dict[int, int] | None = None,
+    gcd_aura_ids: dict[int, int] | None = None, map_spawns: dict | None = None,
 ) -> Ownership:
     """Every declared and derived id of every scope (not only the selected ones: the holes in a scope's ranges are
     the other scopes' ids). `table_specs`: the TableSpecs whose declared rows are owned by their exact key."""
@@ -402,6 +411,30 @@ def build_ownership(
             scope = map_scope.get(heroic_lock.maps.get(normal))
             own.declare("creature", normal, scope)
             own.declare("creature", heroic, scope)
+    # The spawns on a scope's dungeon map and the SmartAI scripts that run there (their entries and spawn guids, by
+    # source_type) belong to it too (`map_spawns`: map -> spawn table -> guid -> template entry, from the dungeon
+    # expansion's live world).
+    own.key_columns.setdefault("smart_scripts", ("entryorguid", "source_type"))
+    creatures_of_map = {
+        int(entry["map_id"]): {int(c["entry"]) for c in entry.get("creatures") or () if c.get("entry")}
+        for entry in dsl_classes.get("dungeons", ())
+    }
+    for map_id, tables in (map_spawns or {}).items():
+        scope = map_scope.get(int(map_id))
+        if scope is None:
+            continue
+        creature_guids = set(tables.get("creature", {}))
+        gameobject_guids = set(tables.get("gameobject", {}))
+        for guid in creature_guids:
+            own.declare("creature_guid", guid, scope)
+        for guid in gameobject_guids:
+            own.declare("gameobject_guid", guid, scope)
+        entries = creatures_of_map.get(int(map_id), set()) | set(tables.get("creature", {}).values())
+        gameobject_ids = set(tables.get("gameobject", {}).values())
+        keys = ({(e, 0) for e in entries} | {(-g, 0) for g in creature_guids}
+                | {(e, 1) for e in gameobject_ids} | {(-g, 1) for g in gameobject_guids})
+        for key in keys:
+            own.declare_key("smart_scripts", key, scope)
     for key in ("dungeon_encounters", "map_difficulties"):
         for row in dsl_classes.get(key, ()):
             own.declare({"dungeon_encounters": "dungeonencounter", "map_difficulties": "mapdifficulty"}[key],
@@ -584,6 +617,34 @@ def _tuples(text: str) -> list[tuple[str, str]]:
             i += 1
         out.append((text[start:i], ""))
     return out
+
+
+def first_group(text: str) -> str | None:
+    """The balanced `( ... )` group `text` starts with (quotes honoured), or None."""
+    if not text.startswith("("):
+        return None
+    depth, quote, i, n = 0, None, 0, len(text)
+    while i < n:
+        ch = text[i]
+        if quote:
+            if ch == "\\":
+                i += 2
+                continue
+            if ch == quote:
+                if i + 1 < n and text[i + 1] == quote:
+                    i += 2
+                    continue
+                quote = None
+        elif ch == "'":
+            quote = ch
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return text[:i + 1]
+        i += 1
+    return None
 
 
 def _values(group: str) -> list:
@@ -785,6 +846,21 @@ def _disjunct_rows(conjuncts: list[Conjunct]) -> tuple[list[dict], Conjunct | No
     return [{**base, **dict(zip(varying.columns, t))} for t in varying.values], varying
 
 
+def _owner_list(table: str, conjuncts: list[Conjunct], own: Ownership) -> Conjunct | None:
+    """The one `IN` list that decides a row's owner when an AND-group has several lists (else None): the table's id
+    column (TABLE_IDS), when no declared key of the table is named in full."""
+    lists = [c for c in conjuncts if c.kind in ("in", "tuple_in")]
+    if len(lists) < 2 or table not in TABLE_IDS:
+        return None
+    named = {c.columns[0] for c in conjuncts if c.kind in ("eq", "in")}
+    key = own.key_columns.get(table)
+    if key and set(key) <= named:
+        return None
+    column = TABLE_IDS[table][0]
+    owner_lists = [c for c in lists if c.kind == "in" and c.columns[0] == column]
+    return owner_lists[0] if len(owner_lists) == 1 else None
+
+
 def _rewrite_list(conjunct: Conjunct, keep: list[bool]) -> str:
     """`conjunct`'s text with only the kept items of its list."""
     if conjunct.kind == "in":
@@ -818,6 +894,30 @@ def filter_statement(stmt: Statement, own: Ownership, report: FilterReport) -> s
     kept_disjuncts: list[str] = []
     changed = False
     for conjuncts in stmt.disjuncts:
+        id_list = _owner_list(table, conjuncts, own)
+        if id_list is not None:
+            # Several lists, ownership decided by one of them (a spawnMask UPDATE: `id IN (...) AND guid IN (...)`,
+            # owned by guid): keep that list's own items; the other lists only narrow it further.
+            space = TABLE_IDS[table][1]
+            decisions = []
+            for value in id_list.values:
+                owners = own.owners(space, value)
+                if own.conflict(owners):
+                    report.errors.append(f"{table}: {id_list.columns[0]} {value} is owned by {own.label(owners)}")
+                decisions.append(own.mine(owners) and not own.conflict(owners))
+                if decisions[-1]:
+                    report.kept[table] += 1
+                else:
+                    report.left_out[(table, own.label(owners))] += 1
+            if all(decisions):
+                kept_disjuncts.append(" AND ".join(c.text.strip() for c in conjuncts))
+            else:
+                changed = True
+                if any(decisions):
+                    kept_disjuncts.append(" AND ".join(
+                        _rewrite_list(c, decisions) if c is id_list else c.text.strip() for c in conjuncts
+                    ))
+            continue
         rows, varying = _disjunct_rows(conjuncts)
         decisions = []
         for row in rows:
@@ -949,6 +1049,9 @@ class BlockResult:
     changed: dict[str, set[int]] = field(default_factory=dict)  # space -> ids whose built row differs from applied
     left_out: Counter = field(default_factory=Counter)  # (table, owner label) -> changed rows left out
     spell_rows: list[dict] = field(default_factory=list)  # the built spell_dbc rows the run owns
+    # Shared secondary rows a scope spell needs, as plain INSERTs (no DELETE): if another branch's rev has meanwhile
+    # put a different row at the same id, db-import fails loudly instead of one branch overwriting the other.
+    insert_blocks: list[str] = field(default_factory=list)
 
 
 def _changed_ids(built: dict[int, dict], applied: dict[int, dict], ids) -> set[int]:
@@ -1031,10 +1134,8 @@ def scoped_dbc_blocks(blocks: list[tuple], own: Ownership, applied, secondary_na
                     f"checkout minted this id): merge that work first, or run a full generate.py"
                 )
         if add:
-            scoped_range = {"start": id_range["start"], "end": id_range["end"], "ranges": [],
-                            "foreign": id_range.get("foreign") or {}}
-            result.blocks.append((table, scoped_range, [built[i] for i in add], add))
-            result.notes.append(f"{table.sql_table}: adding shared row(s) {add} a scope spell needs")
+            result.insert_blocks.append(sql_out.render_insert_block(table, [built[i] for i in add]))
+            result.notes.append(f"{table.sql_table}: adding shared row(s) {add} a scope spell needs (plain INSERT)")
     return result
 
 

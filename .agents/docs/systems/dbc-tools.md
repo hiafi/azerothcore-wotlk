@@ -259,20 +259,26 @@ python3 apps/dbc-tools/generate.py --scope warrior --deployed-patch /path/to/pat
   file matches two scopes. A new dungeon's WP-0 adds its reservation (and a scope line if the names differ).
 - **Ownership.** A scoped run records which file's top-level code declared each DSL entry (`registry.declared_in`,
   kept beside the entries, never in them; a helper in `items/ladders.py` or `_common.py` counts for its caller). An id
-  is owned by the scope whose file declared it or whose declaration it derives from (an item's tier entries, effect spell copies and
-  limit category; a set's tokens and costs; a vendor; a loot group and its reference; a dungeon's creatures, their
-  heroic copies and its encounters, map difficulty and access row; a class's GCD-haste aura via its family), else by
+  is owned by the scope whose file declared it or whose declaration it derives from (an item's tier entries, effect
+  spell copies and limit category; a set's tokens and costs; a vendor; a loot group and its reference; a dungeon's
+  creatures, their heroic copies and its encounters, map difficulty and access row, and every creature and gameobject
+  spawn on its map; a class's GCD-haste aura via its family), else by
   the scope whose reservation range holds it, else by nobody (only a full run writes it). A keyed row
   (`spell_script_names`, a loot group, `trainer_spell`) is owned by the scope that declared that exact key, else by
   the owner of its id column (`spell_proc.SpellId`, `creature_template_model.CreatureID`, ...;
-  `scope.TABLE_IDS`).
+  `scope.TABLE_IDS`). Spawn rows (`creature`, `gameobject`) go by guid, so a heroic spawnMask UPDATE
+  (`id IN (...) AND guid IN (...)`) is split by its guid list. `smart_scripts` goes by `(entryorguid, source_type)`:
+  the scripts of a dungeon's creatures and gameobjects and of the spawn guids on its map (negative `entryorguid`)
+  are the dungeon's; otherwise source_type 0 is the creature's (or creature spawn's) owner, 1 the gameobject's.
 - **Client.** The deployed patch-Z (`DEPLOY_ROOT/Data/patch-Z.mpq`, or `--deployed-patch`) is the base, as for
   `--only items`: in each DBC the full run would ship, the scope's ids take the full build's row (or go when the
   build has none) and every other row stays as deployed; members it does not touch stay byte for byte. The shared
-  secondary rows (cast time, duration, range, radius) a scope spell names are added when the base lacks them.
+  secondary rows (cast time, duration, range, radius) a scope spell names are added when the base lacks them; in
+  the SQL they go out as a plain INSERT (no DELETE), so if two branches minted the same id, the second import fails
+  loudly instead of silently overwriting the first branch's row.
   Refused up front with no deployed archive. `--deployed-patch` never deploys.
-- **What stops it** (exit 1, nothing written): a statement shape the narrowing cannot read or split (e.g. a spawnMask
-  UPDATE whose `id` and `guid` lists would both need cutting); an id owned by the run's scope and another one; a
+- **What stops it** (exit 1, no SQL or patch written): a statement shape the narrowing cannot read or split (an
+  AND-group with several lists none of which is the owner column); an id owned by the run's scope and another one; a
   scope spell that triggers (`EffectTriggerSpell_N`) or summons (`SPELL_EFFECT_SUMMON` MiscValue), or a scope
   `spell_linked_spell` / `creature_template_spell` row that names, a spell or creature of another owner that the run
   would write as new or changed (ship that owner first: a shared spell must be in its own scope or a full run); a
@@ -289,33 +295,67 @@ python3 apps/dbc-tools/generate.py --scope warrior --deployed-patch /path/to/pat
   CreatureSpellData) is never written by a scoped run. A declaration removed from a scope with no reservation (a
   stock spell edit, a class without a slice) is no longer owned, so its old row stays live until a full run. The
   prune comment above a narrowed statement still counts the full run's rows (a note line says so). The reference
-  check covers trigger, summon, linked-spell and creature-spell references, not every column that can name an id.
+  check covers trigger, summon, linked-spell and creature-spell references, not Talent / SkillLineAbility spell
+  columns, ItemSet bonus spells or `item_template.spellid_N`: an item effect spell must be live (or in the same
+  scope) before the item rows that name it ship. The potency sheets and the scope's generated class headers are
+  written before the checks (they only mirror this checkout's source).
 
 ### The drop guard (every write run): `--allow-drop`
 
 Code: `lib/drop_guard.py`; tests `lib/test_drop_guard.py`. After the SQL and the client files are built and before
-anything is written, a write run (full or `--scope`; `--only items` keeps only its own Item.dbc guard) checks two
-things:
+any SQL or patch is written, every write run (full, `--scope`, `--only items` / `--scope items`) checks:
 
-- **Live DB.** The rendered SQL is read back (the same statement reader): for `spell_dbc`, `talent_dbc`,
+- **Live DB: drops.** The rendered SQL is read back (the same statement reader): for `spell_dbc`, `talent_dbc`,
   `talenttab_dbc`, `skilllineability_dbc`, `item_dbc`, `item_template`, `itemset_dbc`, `itemextendedcost_dbc`,
   `creature_template` and `creature_template_model`, a live id in the custom blocks that a DELETE covers (range,
-  list or key tuple) and no INSERT puts back is a drop. Live ids come from read-only SELECTs through
-  `$DBC_TOOLS_MYSQL` (as for `replay_diff.py`), else `LIVE_DB_MYSQL` in `lib/local_config.py` (see
-  `local_config.py.example`), e.g. `docker exec -i <ac-database container> mysql -uroot -p<password>`. Neither set:
-  the half is skipped with a note. A configured command that fails stops the run.
-- **Deployed patch-Z** (`DEPLOY_ROOT/Data/patch-Z.mpq` or `--deployed-patch`; none: skipped with a note). A custom
-  id that the deployed Spell, Talent, TalentTab, SkillLineAbility, ItemSet or ItemExtendedCost DBC holds and this
-  run's archive lacks is a drop. A full run replaces the archive, so a DBC it does not ship loses every row; a scoped
-  run repacks, and also checks Item.dbc (a full run leaves Item.dbc to the stricter `--allow-item-drop` guard).
-- **Only foreign drops stop the run.** A dropped id that some SQL file of this checkout wrote as a row's first value
-  (`INSERT INTO <table> ... (<id>, ...`: base dump, merged and pending updates, custom and module SQL) is this
-  checkout's own removal and only gets a `note: drop guard: ... deleting N live row(s) this checkout wrote and no
-  longer declares`. An id no file of the checkout ever wrote belongs to another branch: `ERROR: drop guard: ...`,
-  nothing written. The fix is to merge or rebase onto the branch that shipped it and regenerate; `--allow-drop`
-  writes anyway. `--check` renders no SQL, so the guard does not run there.
-- Recommended setup for the shared checkout: `LIVE_DB_MYSQL` in its `lib/local_config.py`. Without it a full run
-  is still guarded by the deployed patch-Z half (which is what caught the 2026-11-07 spells: they were deployed).
+  list or key tuple) and no INSERT puts back is a drop.
+- **Live DB: rewrites.** A live custom row the SQL re-inserts with other content (an older copy of a row another
+  branch changed, a creature upsert that blanks a ScriptName) is refused when no INSERT of this checkout ever wrote
+  the live content of that row and no UPDATE of it names the id: the run would revert another branch's change.
+- **Deployed patch-Z.** In every DBC of the deployed archive the guard knows (Spell, Talent, TalentTab,
+  SkillLineAbility, ItemSet, ItemExtendedCost, MapDifficulty, DungeonEncounter, ItemLimitCategory, SpellRuneCost,
+  SpellCategory, SpellDescriptionVariables, the four secondary DBCs; Item.dbc in repack runs), a custom id the
+  deployed file holds and this run's archive lacks is a drop. A full run replaces the archive, so a DBC it does not
+  build loses every row, and a deployed DBC member the guard has no definition for is reported by name; a repack
+  (`--scope`, `--only items`) leaves the members it does not replace alone. A full run leaves Item.dbc to the
+  stricter `--allow-item-drop` guard.
+- **Only foreign changes stop the run.** A dropped id that some SQL file of this checkout INSERTed (a row's first
+  value right after `VALUES` or `),`: base dump, merged and pending updates, custom and module SQL) is this
+  checkout's own removal and only gets a note. Anything else is `ERROR: drop guard: ...`, no SQL or patch written.
+  The fix is to merge or rebase onto the branch that shipped the rows and regenerate; `--allow-drop` writes anyway.
+  A client-only table (SpellDescriptionVariables) has no SQL history, so any removal of a deployed row needs
+  `--allow-drop`. `--check` renders no SQL, so the guard does not run there.
+- **Inputs, read-only.** Live ids and rows come from SELECTs through `$DBC_TOOLS_MYSQL` (as for `replay_diff.py`),
+  else `LIVE_DB_MYSQL` in this checkout's `lib/local_config.py` (see `local_config.py.example`), else, in a git
+  worktree (no `local_config.py`), the main checkout's (`git rev-parse --git-common-dir`). The deployed archive is
+  `--deployed-patch`, else `$DBC_TOOLS_DEPLOYED_PATCH`, else this checkout's `DEPLOY_ROOT/Data/patch-Z.mpq`, else the
+  main checkout's. The main checkout's settings are read by the guard only and never make a run deploy;
+  `--deployed-patch` / `$DBC_TOOLS_DEPLOYED_PATCH` also never deploy, and they are the repack base of `--scope` and
+  `--only items` in a worktree. A half with no input is skipped with a note; when both are skipped the run prints a
+  `WARNING`. A configured DB command that fails stops the run.
+- **What it does not see.** The guard judges the run being made against what is live and deployed *now*. A rev
+  written before another branch's rows went live (the first of the two 2026-11-07 wave 1 revs) passes every
+  write-time check and does the damage at db-import; so does any rev written by a checkout that could not see the
+  live DB. That is `check_pending.py`'s job (below). The 2026-11-07 revs were caught by a human review, not by this
+  guard, which did not exist yet; the second of them (written after #96 went live) is the kind it now refuses.
+
+### Before db-import: `check_pending.py`
+
+```
+python3 apps/dbc-tools/check_pending.py [--pending-dir DIR] [--allow-drop]
+```
+
+Read-only (SELECTs through the same DB command). It takes the second-pass files (pending revs, custom and module SQL)
+the live `updates` table has not applied yet and reads back what they would do, together, in apply order, to the
+guarded custom rows: a live row deleted and not re-inserted, or re-inserted with other content. Each is refused when
+no SQL file of this checkout wrote that row (or its live content, or an UPDATE of it), or when the file that wrote
+the live row is a second-pass file named *after* the rev: the rev predates the row, so it comes from a stale branch
+(the 2026-11-07 case: the wave 1 rev `rev_1794030639...` would have deleted #96's spells, written by the later-named
+`rev_1794036373...`). Everything else is this checkout's own change (a note). Exit 0 ok, 1 refused (do not import:
+regenerate the rev on a tree with the other branch merged), 2 no DB command or a DB error. Run it right before every
+`ac-db-import` (the dbc-deploy skill). Limit: a rev written by a stale checkout *after* the other branch's row went
+live, deleting it, has the later name and reads as a deliberate removal; the write-time guard refuses that run when
+it can see the live DB.
 
 ### `generate.py --only items` (item variants IV3)
 

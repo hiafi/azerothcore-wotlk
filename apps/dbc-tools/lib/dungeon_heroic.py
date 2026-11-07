@@ -121,6 +121,9 @@ class Expansion:
     lock_appended: list[str] = field(default_factory=list)  # new heroic_ids.lock lines (a full run writes them)
     lock_text: str = ""  # the lock file with them appended
     heroic_reports: list = field(default_factory=list)  # heroic_templates.HeroicReport per generated row
+    # map -> spawn table -> guid -> template entry of every spawn on a declared heroic's map (generate.py --scope: a
+    # dungeon scope owns the spawns and SmartAI of its map, lib/scope.py)
+    map_spawns: dict[int, dict[str, dict[int, int]]] = field(default_factory=dict)
 
 
 def _int(value) -> int:
@@ -344,6 +347,7 @@ def _spawn_masks(entry: dict, live: LiveWorld, out: Expansion) -> dict[str, dict
     summary = []
     for table in spawn_state.SPAWN_TABLES:
         rows = [r for r in live.spawns.get(table, {}).values() if _int(r.get("map")) == map_id]
+        out.map_spawns.setdefault(map_id, {})[table] = {_int(r["guid"]): spawn_state.spawn_entry(r) for r in rows}
         planned[table] = {_int(r["guid"]): spawn_state.spawn_mask(r) for r in rows}
         if not spec.get("spawn_mask"):
             continue

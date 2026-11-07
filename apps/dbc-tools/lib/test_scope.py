@@ -173,8 +173,13 @@ class OwnershipTest(unittest.TestCase):
         own = scope.build_ownership(
             scopes, ids_cfg, ["deadmines"], dsl_classes=dsl, spell_entries=[], talents={}, table_specs=(),
             item_expansion=expansion, item_spell_expansion=copies, item_limit_expansion=limits, heroic_lock=lock,
-            gcd_aura_ids={4: 201560},
+            gcd_aura_ids={4: 201560}, map_spawns={36: {"creature": {5000: 644}, "gameobject": {6000: 1234}}},
         )
+        self.assertEqual(own.owners("creature_guid", 5000), {"deadmines"})
+        self.assertEqual(own.owners("gameobject_guid", 6000), {"deadmines"})
+        for key in ((644, 0), (-5000, 0), (1234, 1), (-6000, 1)):
+            self.assertEqual(own.row_owners("smart_scripts", {"entryorguid": key[0], "source_type": key[1]}),
+                             {"deadmines"})
         for space, entry_id, want in (
             ("item", 71000, "deadmines"), ("spell", 205410, "deadmines"), ("item_limit_category", 1000, "deadmines"),
             ("creature", 644, "deadmines"), ("creature", 310001, "deadmines"), ("creature", 300420, "deadmines"),
@@ -249,14 +254,29 @@ class FilterTest(unittest.TestCase):
         self.assertIn("300421", out)
         self.assertNotIn("300370", out)
 
-    def test_two_lists_that_need_splitting_are_an_error(self):
-        text = "UPDATE `creature` SET `spawnMask` = 3 WHERE `id` IN (300420, 300370) AND `guid` IN (1, 2);"
-        self.run_filter(text)
-        self.assertTrue(any("cannot split" in e for e in self.report.errors))
-
-    def test_all_own_rows_keep_the_text(self):
-        text = "UPDATE `creature` SET `spawnMask` = 3 WHERE `id` IN (300420, 300421) AND `guid` IN (1, 2);"
+    def test_spawn_mask_update_splits_by_guid(self):
+        self.own.declare("creature_guid", 1, "deadmines")
+        self.own.declare("creature_guid", 3, "deadmines")
+        self.own.declare("creature_guid", 2, "warrior")
+        text = "UPDATE `creature` SET `spawnMask` = 3 WHERE `id` IN (300420, 300370) AND `guid` IN (\n1, 2\n);"
+        self.assertEqual(self.run_filter(text),
+                         "UPDATE `creature` SET `spawnMask` = 3 WHERE `id` IN (300420, 300370) AND `guid` IN (1);")
+        text = "UPDATE `creature` SET `spawnMask` = 3 WHERE `id` IN (300420, 300421) AND `guid` IN (1, 3);"
         self.assertEqual(self.run_filter(text), text)
+        self.assertEqual(self.report.errors, [])
+
+    def test_smart_scripts_follow_source_type(self):
+        self.own.declare("creature_guid", 77, "deadmines")
+        self.own.declare("gameobject", 300421, "warrior")
+        text = ("UPDATE `smart_scripts` SET `event_flags` = `event_flags` | 4 WHERE\n"
+                "    (`entryorguid` = 300421 AND `source_type` = 1 AND `id` = 0) OR\n"
+                "    (`entryorguid` = -77 AND `source_type` = 0 AND `id` = 0);")
+        out = self.run_filter(text)
+        self.assertNotIn("300421", out)  # source_type 1: the gameobject 300421, not the Deadmines creature
+        self.assertIn("-77", out)  # a spawn guid script on the scope's map
+        self.own.key_columns["smart_scripts"] = ("entryorguid", "source_type")
+        self.own.declare_key("smart_scripts", (300421, 1), "deadmines")
+        self.assertIn("300421", self.run_filter(text))
 
 
 class DeletedInsertedTest(unittest.TestCase):
@@ -323,14 +343,14 @@ class DbcBlockTest(unittest.TestCase):
         extra = {205214: {"DurationIndex": 30157}}
         rows = [{"ID": 30157, "v": 2345}]
         result = self.blocks(built={205214: 2}, applied={205214: 1}, secondary_rows=rows, spell_extra=extra)
-        added = [b for b in result.blocks if b[0].name == "SpellDuration"]
-        self.assertEqual(added[0][3], [30157])
+        self.assertFalse([b for b in result.blocks if b[0].name == "SpellDuration"])
+        self.assertEqual(result.insert_blocks, ["INSERT INTO `spellduration_dbc` (`ID`, `v`) VALUES\n(30157, 2345);"])
         result = self.blocks(built={205214: 2}, applied={205214: 1}, secondary_rows=rows, spell_extra=extra,
                              secondary_applied={30157: {"ID": 30157, "v": 999}})
         self.assertTrue(any("another checkout minted" in e for e in result.errors))
         result = self.blocks(built={205214: 2}, applied={205214: 1}, secondary_rows=rows, spell_extra=extra,
                              secondary_applied={30157: {"ID": 30157, "v": 2345}})
-        self.assertFalse([b for b in result.blocks if b[0].name == "SpellDuration"])
+        self.assertEqual(result.insert_blocks, [])
 
 
 class ReferenceTest(unittest.TestCase):

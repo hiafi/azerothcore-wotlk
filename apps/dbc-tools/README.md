@@ -74,7 +74,9 @@ python3 apps/dbc-tools/generate.py --scope shadowfang_keep  # one scope's rows o
 ```
 
 Dungeon and class work writes with `--scope <name>` (source/scopes.yaml); a plain full run is for shared changes and
-is done last, right before a merge or deploy. Every write run, full or scoped, runs the drop guard first.
+is done last, right before a merge or deploy. Every write run (full, scoped, `--only items`) runs the drop guard
+first; it judges that run against what is live and deployed now, so revs already written are checked again right
+before db-import with `python3 apps/dbc-tools/check_pending.py`.
 
 Flags: `--no-prune`, `--check`, `--check --class NAME` (refused without `--check`), `--only items` (see
 `.agents/docs/systems/dbc-tools.md`; needs a deployed patch-Z, works with `--check`), `--no-cache`, `--rebuild-cache`,

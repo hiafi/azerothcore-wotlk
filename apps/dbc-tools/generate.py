@@ -50,13 +50,16 @@ Usage: python3 apps/dbc-tools/generate.py [--no-prune] [--check [--class NAME]] 
                    or when a whole-file output (a lock, ItemSpellCopies.h, the client Lua tables) changes outside the
                    scope. `--scope items` is `--only items`. Refused up front without a deployed patch-Z (or
                    --deployed-patch), and with --check or --class.
-  --allow-drop     write anyway when the drop guard finds that this run would delete a custom spell, talent,
-                   creature, item, item set or cost row that is live (world DB via $DBC_TOOLS_MYSQL or LIVE_DB_MYSQL in
-                   lib/local_config.py) or deployed (patch-Z) but that no SQL file of this checkout ever wrote:
-                   typically a stale branch about to wipe another branch's rows. Every write run checks this.
+  --allow-drop     write anyway when the drop guard finds that this run would delete a custom row that is live
+                   (world DB via $DBC_TOOLS_MYSQL or LIVE_DB_MYSQL in this or, in a worktree, the main checkout's
+                   lib/local_config.py) or deployed (patch-Z) but that no SQL file of this checkout ever wrote, or
+                   rewrite a live row whose live content no SQL file of this checkout wrote: typically a stale branch
+                   about to wipe or revert another branch's rows. Every write run checks this. Revs already written
+                   are checked before db-import by check_pending.py.
   --deployed-patch PATH
                    the patch-Z.mpq to treat as deployed (the drop guard's client half, and the archive --scope and
                    --only items repack) instead of DEPLOY_ROOT/Data/patch-Z.mpq; a run given this deploys nothing.
+                   $DBC_TOOLS_DEPLOYED_PATCH does the same (the worktree way).
   --allow-item-drop
                    write anyway when the deployed patch-Z's Item.dbc holds custom item ids (70000-79999) that this
                    run's Item.dbc lacks. Without it such a run (full or --only items) stops before writing anything:
@@ -707,6 +710,10 @@ def main() -> int:
     scope_value = _flag_value(flags, "--scope")
     deployed_value = _flag_value(flags, "--deployed-patch")
     deployed_patch = Path(deployed_value).resolve() if deployed_value else None
+    if deployed_patch is None and (env_patch := drop_guard.env_deployed_patch()) is not None:
+        # $DBC_TOOLS_DEPLOYED_PATCH: the worktree way to name the deployed archive, read-only, like --deployed-patch.
+        deployed_patch, deployed_value = env_patch, f"$DBC_TOOLS_DEPLOYED_PATCH={env_patch}"
+        print(f"note: deployed patch-Z (read-only, nothing is deployed): {env_patch}")
     if deployed_patch is not None and not deployed_patch.is_file():
         print(f"generate.py: --deployed-patch {deployed_value}: no such file", file=sys.stderr)
         return 2
@@ -1007,6 +1014,16 @@ def _loot_blocks(
     return plan.errors
 
 
+def _guard_archive(deployed_patch: Path | None) -> Path | None:
+    """The deployed patch-Z the guards compare with: `--deployed-patch` / `$DBC_TOOLS_DEPLOYED_PATCH`, this checkout's
+    DEPLOY_ROOT archive, else (a worktree) the main checkout's, read-only."""
+    if deployed_patch is not None:
+        return deployed_patch
+    if patch_out.DEPLOY_MPQ is not None and Path(patch_out.DEPLOY_MPQ).is_file():
+        return Path(patch_out.DEPLOY_MPQ)
+    return drop_guard.fallback_deployed_patch()
+
+
 def _item_dbc_drop_guard(item_entries: list[dict], ids_cfg: dict, patch_base: Path | None) -> int:
     """R1 B1 / S5: before anything is written, compare the deployed patch-Z's Item.dbc (`patch_base` under `--only
     items`, else patch_out.DEPLOY_MPQ) with the custom item ids this run's Item.dbc carries (`item_entries`: items.csv
@@ -1242,10 +1259,21 @@ def _run_only_items(
         )
         rev = int(time.time() * 1_000_000_000)
         out_path = PENDING_SQL_DIR / f"rev_{rev}.sql"
-        wrote_sql = sql_out.emit_pending_sql(
-            out_path, blocks, header,
-            extra_blocks=[*item_blocks, *(item_rendered.blocks if item_rendered else ())],
+        sql_text = sql_out.render_pending_sql(
+            blocks, header, extra_blocks=[*item_blocks, *(item_rendered.blocks if item_rendered else ())],
         )
+        # The general drop guard, as for a full or scoped run: this run repacks, shipping only Item.dbc.
+        guard = drop_guard.check(
+            sql_text=sql_text, shipped={dbcfmt.ITEM.dbc_filename: item_dbc_bytes} if changed else {},
+            replaces_archive=False, deployed_archive=patch_base, tables=None, ids_cfg=ids_cfg,
+            pending_dir=PENDING_SQL_DIR, allow="--allow-drop" in sys.argv, live_command=drop_guard.mysql_command(),
+            include_item=True,
+        )
+        for line in guard.lines:
+            print(line)
+        if guard.refused:
+            return 1
+        wrote_sql = sql_out.write_pending_sql(out_path, sql_text)
         print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
         if item_expansion.lock_appended:
             item_ids.LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -1534,7 +1562,7 @@ def _run(
     # The Item.dbc guard compares the full build's custom items with the deployed file; a scoped run keeps every item
     # row it does not own as deployed, so the general drop guard below covers it instead.
     if not scope_names and not item_expansion.errors and \
-            _item_dbc_drop_guard(item_entries, ids_cfg, patch_base or deployed_patch) != 0:
+            _item_dbc_drop_guard(item_entries, ids_cfg, patch_base or _guard_archive(deployed_patch)) != 0:
         return 1
     if only_items:  # before the potency sheets and generated headers below: an item-only run writes neither
         return _run_only_items(
@@ -2198,10 +2226,11 @@ def _run(
             own, scope_blocks, extra_blocks, dungeon_expansion, item_expansion, item_spell_expansion,
             item_limit_expansion, item_emission, set_expansion,
         )
+        extra_blocks = [*scope_blocks.insert_blocks, *extra_blocks]
         if scope_errors:
             for error in scope_errors:
                 print(f"ERROR: scope: {error}")
-            print("ERROR: scope: nothing was written")
+            print(f"ERROR: scope: {drop_guard.NOT_WRITTEN}")
             return 1
 
     rev = int(time.time() * 1_000_000_000)
@@ -2279,20 +2308,17 @@ def _run(
         if scoped_client.errors:
             for error in scoped_client.errors:
                 print(f"ERROR: scope: patch: {error}")
-            print("ERROR: scope: nothing was written")
+            print(f"ERROR: scope: {drop_guard.NOT_WRITTEN}")
             return 1
 
     # Drop guard (dbc-tools-scoped-generate plan section 2): nothing is written when this run would delete live or
     # deployed custom rows this checkout never wrote.
-    guard_tables = dict(dbc_tables)
-    if scopes is not None:
-        guard_tables.setdefault(dbcfmt.ITEM.dbc_filename, dbcfmt.ITEM)
     guard = drop_guard.check(
         sql_text=sql_text,
         shipped=scoped_client.loose if scoped_client is not None else dbc_files,
         replaces_archive=scoped_client is None,
-        deployed_archive=patch_base if scopes is not None else (deployed_patch or patch_out.DEPLOY_MPQ),
-        tables=guard_tables, ids_cfg=ids_cfg, pending_dir=PENDING_SQL_DIR,
+        deployed_archive=patch_base if scopes is not None else _guard_archive(deployed_patch),
+        tables=None, ids_cfg=ids_cfg, pending_dir=PENDING_SQL_DIR,
         allow="--allow-drop" in sys.argv, live_command=drop_guard.mysql_command(),
         include_item=scopes is not None,
     )
@@ -2415,6 +2441,7 @@ def _scope_ownership(scopes, scope_names, ids_cfg, dsl_classes, spell_entries, t
                      *item_sets.SET_TABLES),
         item_expansion=item_expansion, item_spell_expansion=item_spell_expansion,
         item_limit_expansion=item_limit_expansion, heroic_lock=heroic_lock, gcd_aura_ids=gcd_ids,
+        map_spawns=dungeon_expansion.map_spawns if dungeon_expansion is not None else None,
     )
 
 

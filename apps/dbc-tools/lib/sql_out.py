@@ -88,6 +88,17 @@ def _table_block(table: DbcTable, id_range: dict, rows: list[dict], edited_ids: 
     return "\n".join(lines)
 
 
+def render_insert_block(table: DbcTable, rows: list[dict]) -> str:
+    """A bare INSERT of `rows` (no DELETE first): a scoped run's shared secondary rows (lib/scope.py), so a row another
+    rev already put at the same id makes db-import fail instead of being overwritten. "" for no rows."""
+    if not rows:
+        return ""
+    rows = sorted(rows, key=lambda r: r[table.index_column])
+    cols = ", ".join(f"`{c}`" for c in table.columns)
+    tuples = ",\n".join("(" + ", ".join(_sql_literal(row.get(c)) for c in table.columns) + ")" for row in rows)
+    return f"INSERT INTO `{table.sql_table}` ({cols}) VALUES\n{tuples};"
+
+
 def render_generic_table_block(
     table_name: str, columns: tuple[str, ...], key_columns: tuple[str, ...], rows: list[dict]
 ) -> str:
