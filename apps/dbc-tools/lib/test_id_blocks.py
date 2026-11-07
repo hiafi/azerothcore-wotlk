@@ -548,6 +548,34 @@ class ReservationTest(unittest.TestCase):
         )
 
 
+class WaveOneItemReservationsTest(unittest.TestCase):
+    """Wave 1 dungeon items (2026-11-06): the hard mode item effect spell reservations, pinned exactly."""
+
+    def test_wave_one_item_effect_reservations(self):
+        for name, spells, creatures in (
+            ("shadowfang_items", (205600, 205619), (300460, 300464)),
+            ("scholomance_items", (205620, 205659), (300465, 300469)),
+            ("stratholme_items", (205660, 205699), (300470, 300474)),
+            ("haunted_set", (205700, 205899), (300480, 300499)),
+        ):
+            got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS[name].items()}
+            self.assertEqual(got, {"spell": spells, "creature": creatures}, name)
+
+    def test_wave_one_reservations_overlap_no_other_reservation(self):
+        mine = ("shadowfang_items", "scholomance_items", "stratholme_items", "haunted_set")
+        for name in mine:
+            for table, cfg in RESERVATIONS[name].items():
+                for owner, tables in RESERVATIONS.items():
+                    if owner != name and table in tables:
+                        self.assertFalse(_overlap(cfg, tables[table]), f"{name} {table} vs {owner}")
+
+    def test_the_wave_one_npcs_sit_in_their_dungeons_creature_slice(self):
+        for directory, name in (("shadowfang_keep", "shadowfang_items"), ("scholomance", "scholomance_items")):
+            ids = declared_ids(TOOL_ROOT / "source" / "npcs" / directory)
+            self.assertTrue(ids.get("creature"), directory)
+            self.assertEqual(out_of_reservation(name, {"creature": ids["creature"]}), [], directory)
+
+
 class ItemVariantsIdsTest(unittest.TestCase):
     """Item variants IV0 (item-variants plan s4 / s9): the minted-item and loot-reference blocks and the `items` spell
     reservation, pinned exactly."""

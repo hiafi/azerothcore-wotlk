@@ -213,12 +213,25 @@ class Registry:
     # Item variants IV10 follow-up 1 (lib/item_limits.py): itemlimitcategory_dbc rows generate.py derives from the item
     # declarations (no DSL helper fills it). A plain SPELL_TABLES entry.
     item_limit_categories: list[dict] = field(default_factory=list)
+    # Dungeon sets (lib/dsl/sets.py, lib/item_sets.py): one {"id": ("set" | "token" | "vendor", id), "_decl": ...} per
+    # item_set() / set_token() / set_vendor() call, and the itemset_dbc, itemextendedcost_dbc and npc_vendor rows
+    # generate.py derives from them (lib/item_sets.SET_TABLES).
+    item_set_declarations: list[dict] = field(default_factory=list)
+    item_set_rows: list[dict] = field(default_factory=list)
+    item_extended_cost_rows: list[dict] = field(default_factory=list)
+    npc_vendor_rows: list[dict] = field(default_factory=list)
     # P2b: {id: python_variable_name}, found by introspecting each loaded module's own namespace
     # after it finishes executing - see _collect_var_names(). Not in MERGE_KEYS: these are dicts,
     # not lists, and merged by lib.header_gen's caller with a plain dict.update() (ids are already
     # guaranteed unique by the DuplicateIdError check every other table gets).
     spell_var_names: dict[int, str] = field(default_factory=dict)
     creature_var_names: dict[int, str] = field(default_factory=dict)
+    # Bookkeeping, never emitted: every pot_text() call as (the text it returned, the spell it was called for), in call
+    # order. spell() stashes the ones its own texts contain on its entry (`_pot_text_refs`), so a later pass knows
+    # which spell a pot_text names even when two spells print the same expression (equal potency): item variants IV10,
+    # lib/item_spell_copies.py's effect families.
+    pot_text_calls: list[tuple[str, int]] = field(default_factory=list)
+    pot_text_cursor: int = 0  # pot_text_calls[cursor:] are the calls made since the previous spell()
 
 
 MERGE_KEYS = (
@@ -240,6 +253,7 @@ MERGE_KEYS = (
     "dungeon_encounters", "instance_encounters", "heroic_template_addons", "heroic_template_resistances",
     "heroic_template_movements", "heroic_onkill_reputations",
     "item_declarations", "loot_declarations", "item_limit_categories",
+    "item_set_declarations", "item_set_rows", "item_extended_cost_rows", "npc_vendor_rows",
 )
 
 # The registry a class file's spell()/talent()/tab()/skill_line_ability()
@@ -290,6 +304,10 @@ def spell(**kwargs) -> model.Spell:
     # changed copy of it (item variants IV10, lib/item_spell_copies.py: the per-tier copies of an item's effect spells).
     entry["_spell"] = s
     registry = _require_active()
+    pot_text_refs = _pot_text_refs(s, registry.pot_text_calls, registry.pot_text_cursor)
+    registry.pot_text_cursor = len(registry.pot_text_calls)
+    if pot_text_refs:
+        entry["_pot_text_refs"] = pot_text_refs
     registry.spells.append(entry)
     # Potency system (docs/potency-system.md, PLAN P2): to_entry() stashes these on `s` when the
     # spell has any potency effect - see model.Spell._resolve_potency. Declared the same automatic
@@ -774,7 +792,31 @@ def pot_text(
     ticks = pot.pop("ticks", 1.0)
     pot.pop("spell_level", None)
     placeholder = "{pot1" + (f".{variant}" if variant else "") + (f"*{var}" if var else "") + "}"
-    return _potency.expand_placeholders(placeholder, {1: _potency.ResolvedPotency(**pot)}, {1: ticks})
+    text = _potency.expand_placeholders(placeholder, {1: _potency.ResolvedPotency(**pot)}, {1: ticks})
+    if _active is not None:
+        _active.pot_text_calls.append((text, int(source.id)))
+    return text
+
+
+_POT_TEXT_KEYS = ("Description_Lang_enUS", "AuraDescription_Lang_enUS")
+
+
+def _pot_text_refs(spell: model.Spell, calls: list[tuple[str, int]], since: int = 0) -> list[tuple[str, int]]:
+    """The recorded pot_text() calls `spell`'s texts contain, as (text, source spell id). For each distinct text: the
+    one source the calls made since the previous spell() (`calls[since:]`, the description built for this spell)
+    produced it from; when that window names no source or more than one (two equal-potency descriptions built before
+    either spell() call), every source any call produced it from. Ambiguity is over-inclusive on purpose: a family
+    with one spell too many only copies a spell that did not need it, a missing one leaves a copy's tooltip unscaled
+    (R-W1 N4)."""
+    texts = [v for k, v in (spell.raw_overrides or {}).items() if k in _POT_TEXT_KEYS and isinstance(v, str)]
+    if not texts or not calls:
+        return []
+    refs = set()
+    for text in {text for text, _ in calls if any(text in t for t in texts)}:
+        recent = {source for t, source in calls[since:] if t == text}
+        sources = recent if len(recent) == 1 else {source for t, source in calls if t == text}
+        refs.update((text, source) for source in sources)
+    return sorted(refs)
 
 
 def custom_attr(spell: model.Spell | int, attributes: int) -> dict:

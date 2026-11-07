@@ -1,7 +1,8 @@
 # Item effect spell copies (item variants IV10; lib/item_spell_copies.py): one line per (item key, tier, base
 # spell), `<spell id> <item key> <tier> <base spell id> [retired <date>]`, minted from source/ids.yaml's
-# item_spell_copy block. Every tier above an item's first carries its own copy of each `scale="budget"` spell
-# and of every spell it reaches, damage and healing scaled by the tier's stat budget.
+# item_spell_copy block. Every tier but the ladder's effect reference tier carries its own copy of each
+# `scale="budget"` spell and of every spell it reaches, damage, healing and stat auras scaled by the tier's stat
+# budget over the reference tier's.
 # Append-only: a full generate.py run appends new lines; never reorder, renumber or delete one (an id must never
 # move or be reused). A merge conflict: keep the merged side's lines, drop the other side's new lines and delete
 # its not-yet-imported rev_*.sql, then re-run generate.py (same recovery as item_ids.lock).
@@ -26,3 +27,91 @@
 205428 dm_lantern_of_the_roaring_flame empowered_2_hm 205407
 205429 dm_lantern_of_the_roaring_flame empowered_3_hm 205406
 205430 dm_lantern_of_the_roaring_flame empowered_3_hm 205407
+205431 scholo_spare_rib normal 205620
+205432 scholo_spare_rib empowered_1 205620
+205433 scholo_spare_rib empowered_2 205620
+205434 scholo_spare_rib empowered_3 205620
+205435 scholo_jar_of_torn_souls normal 205621
+205436 scholo_jar_of_torn_souls normal 205622
+205437 scholo_jar_of_torn_souls empowered_1 205621
+205438 scholo_jar_of_torn_souls empowered_1 205622
+205439 scholo_jar_of_torn_souls empowered_2 205621
+205440 scholo_jar_of_torn_souls empowered_2 205622
+205441 scholo_jar_of_torn_souls empowered_3 205621
+205442 scholo_jar_of_torn_souls empowered_3 205622
+205443 scholo_krastinovs_suture_kit normal 205629
+205444 scholo_krastinovs_suture_kit normal 205630
+205445 scholo_krastinovs_suture_kit empowered_1 205629
+205446 scholo_krastinovs_suture_kit empowered_1 205630
+205447 scholo_krastinovs_suture_kit empowered_2 205629
+205448 scholo_krastinovs_suture_kit empowered_2 205630
+205449 scholo_krastinovs_suture_kit empowered_3 205629
+205450 scholo_krastinovs_suture_kit empowered_3 205630
+205451 scholo_rib_spreader normal 205623
+205452 scholo_rib_spreader normal 205624
+205453 scholo_rib_spreader empowered_1 205623
+205454 scholo_rib_spreader empowered_1 205624
+205455 scholo_rib_spreader empowered_2 205623
+205456 scholo_rib_spreader empowered_2 205624
+205457 scholo_rib_spreader empowered_3 205623
+205458 scholo_rib_spreader empowered_3 205624
+205459 scholo_polkelts_specimen_launcher normal 205625
+205460 scholo_polkelts_specimen_launcher normal 205626
+205461 scholo_polkelts_specimen_launcher empowered_1 205625
+205462 scholo_polkelts_specimen_launcher empowered_1 205626
+205463 scholo_polkelts_specimen_launcher empowered_2 205625
+205464 scholo_polkelts_specimen_launcher empowered_2 205626
+205465 scholo_polkelts_specimen_launcher empowered_3 205625
+205466 scholo_polkelts_specimen_launcher empowered_3 205626
+205467 scholo_bonechill_blade empowered_1_hm 205635
+205468 scholo_bonechill_blade empowered_1_hm 205636
+205469 scholo_bonechill_blade empowered_2_hm 205635
+205470 scholo_bonechill_blade empowered_2_hm 205636
+205471 scholo_bonechill_blade empowered_3_hm 205635
+205472 scholo_bonechill_blade empowered_3_hm 205636
+205473 scholo_honor_roll_ribbon empowered_1_hm 205638
+205474 scholo_honor_roll_ribbon empowered_1_hm 205639
+205475 scholo_honor_roll_ribbon empowered_2_hm 205638
+205476 scholo_honor_roll_ribbon empowered_2_hm 205639
+205477 scholo_honor_roll_ribbon empowered_3_hm 205638
+205478 scholo_honor_roll_ribbon empowered_3_hm 205639
+205479 scholo_darkmasters_portal_rod empowered_1_hm 205640
+205480 scholo_darkmasters_portal_rod empowered_1_hm 205641
+205481 scholo_darkmasters_portal_rod empowered_2_hm 205640
+205482 scholo_darkmasters_portal_rod empowered_2_hm 205641
+205483 scholo_darkmasters_portal_rod empowered_3_hm 205640
+205484 scholo_darkmasters_portal_rod empowered_3_hm 205641
+205485 sfk_meteor_shard normal 205604
+205486 sfk_meteor_shard empowered_1 205604
+205487 sfk_meteor_shard empowered_2 205604
+205488 sfk_meteor_shard empowered_3 205604
+205489 sfk_vial_of_the_worgens_curse empowered_1_hm 205600
+205490 sfk_vial_of_the_worgens_curse empowered_2_hm 205600
+205491 sfk_vial_of_the_worgens_curse empowered_3_hm 205600
+205492 sfk_arugals_shadow_tome empowered_1_hm 205601
+205493 sfk_arugals_shadow_tome empowered_1_hm 205602
+205494 sfk_arugals_shadow_tome empowered_2_hm 205601
+205495 sfk_arugals_shadow_tome empowered_2_hm 205602
+205496 sfk_arugals_shadow_tome empowered_3_hm 205601
+205497 sfk_arugals_shadow_tome empowered_3_hm 205602
+205498 strat_carrion_signet empowered_1_hm 205660
+205499 strat_carrion_signet empowered_1_hm 205661
+205500 strat_carrion_signet empowered_2_hm 205660
+205501 strat_carrion_signet empowered_2_hm 205661
+205502 strat_carrion_signet empowered_3_hm 205660
+205503 strat_carrion_signet empowered_3_hm 205661
+205504 strat_ysidas_locket empowered_1_hm 205665
+205505 strat_ysidas_locket empowered_1_hm 205666
+205506 strat_ysidas_locket empowered_1_hm 205667
+205507 strat_ysidas_locket empowered_2_hm 205665
+205508 strat_ysidas_locket empowered_2_hm 205666
+205509 strat_ysidas_locket empowered_2_hm 205667
+205510 strat_ysidas_locket empowered_3_hm 205665
+205511 strat_ysidas_locket empowered_3_hm 205666
+205512 strat_ysidas_locket empowered_3_hm 205667
+205513 strat_deathchargers_spur empowered_1_hm 205670
+205514 strat_deathchargers_spur empowered_1_hm 205671
+205515 strat_deathchargers_spur empowered_2_hm 205670
+205516 strat_deathchargers_spur empowered_2_hm 205671
+205517 strat_deathchargers_spur empowered_3_hm 205670
+205518 strat_deathchargers_spur empowered_3_hm 205671

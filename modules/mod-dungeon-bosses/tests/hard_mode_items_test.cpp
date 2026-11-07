@@ -94,15 +94,20 @@ namespace
         CHECK(Resolve(0, SPELL_BLACKGUARD_STRIKE) == SPELL_BLACKGUARD_STRIKE);
 
         // three tiers (81 / 91 / 101) of three families: keg (use, look, blast), signet (aura, strike), lantern
-        // (use, zone)
-        CHECK(ItemSpellCopies::kCopyCount == 21u);
+        // (use, zone). The header holds every dungeon's copies; these checks take the Deadmines ones.
+        int deadmines = 0;
+        for (std::size_t i = 0; i < ItemSpellCopies::kCopyCount; ++i)
+            if (kSpellsDeadminesHardModeItems.Contains(ItemSpellCopies::kCopies[i].base))
+                ++deadmines;
+        CHECK(deadmines == 21);
         int roots = 0;
         for (std::size_t i = 0; i < ItemSpellCopies::kCopyCount; ++i)
         {
             ItemSpellCopies::Copy const& c = ItemSpellCopies::kCopies[i];
             CHECK(c.copy > kSpellsDeadminesHardModeItems.last);         // a copy never takes a declared id
             CHECK(kSpellsItems.Contains(c.copy));
-            CHECK(kSpellsDeadminesHardModeItems.Contains(c.base));
+            if (!kSpellsDeadminesHardModeItems.Contains(c.base))
+                continue;                                               // another dungeon's copy
             CHECK(c.base != SPELL_BLACKGUARD_AMBUSH_LOOK);               // the Blackguard's own look is not copied
             CHECK(ItemSpellCopies::GroupOf(c.copy) == c.group);
             CHECK(Resolve(c.copy, c.base) == c.copy);                   // a copy resolves itself

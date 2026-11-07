@@ -33,6 +33,10 @@ tests=(
   vancleef_test
   hard_mode_test
   hard_mode_items_test
+  scholomance_items_test
+  stratholme_hard_mode_items_test
+  shadowfang_keep_hard_mode_items_test
+  haunted_set_test
 )
 
 status=0

@@ -25,6 +25,7 @@ REPO_ROOT = TOOL_ROOT.parents[1]
 sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import build, dbcfile, dbcfmt, lint, resolve, source, spell_tables, sql_out, state  # noqa: E402
+from lib.dsl import items as items_dsl  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 
 COLUMNS = ("entry", "name", "class", "subclass", "ammo_type", "BagFamily", "ContainerSlots")
@@ -218,9 +219,13 @@ class RealQuiverAndRangedContentTest(_RealItemData):
             self.assertEqual(row["ContainerSlots"], self.rows[row["entry"]]["ContainerSlots"])
 
     def test_every_live_bow_gun_and_crossbow_is_declared_with_ammo_type_zero(self):
+        # ...except the ones a source/items item(base=...) declaration owns (one owner per entry; the item sets
+        # ammo_type=0 itself).
+        owned = items_dsl.item_owned_entries()
         selected = {e for e, r in self.rows.items() if r["class"] == 2 and r["subclass"] in (2, 3, 18)}
         declared = {r["entry"] for r in self.ranged.item_templates}
-        self.assertEqual(declared, selected)
+        self.assertEqual(declared, selected - owned)
+        self.assertTrue({13380, 18680, 18729, 18738} <= owned & selected)
         self.assertGreater(len(selected), 700)
         self.assertTrue(all(r["ammo_type"] == 0 for r in self.ranged.item_templates))
         self.assertTrue(all(r["_update_columns"] == ("ammo_type",) for r in self.ranged.item_templates))
@@ -319,6 +324,39 @@ class RoundTripTest(_RealItemData):
             with mock.patch.object(trainer_state, "_migration_files_mentioning", return_value=[path]):
                 entries = {r["entry"] for r in spell_tables.load_generated_item_entries()}
         self.assertEqual(entries, {r["entry"] for r in self.index.rows_to_emit(self.spec, dsl["item_templates"])})
+
+
+class DeclaredItemBasesTest(unittest.TestCase):
+    """lib.dsl.items.declared_item_bases: the stock entries source/items takes over, read without running the files
+    (source/world/ranged_weapons.py skips them, wave 1 integration)."""
+
+    def test_reads_literal_bases_of_item_calls_only(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "a.py").write_text(
+                "from lib.dsl.items import item\n"
+                "item('x_bow', base=18680, ladder=L)\n"
+                "items.item('x_gun', base=13380, ladder=L)\n"
+                "item('x_new', name='New', ilvl=60, ladder=L)\n"
+                "other('x_other', base=1234)\n"
+                "item('x_flag', base=True, ladder=L)\n",
+                encoding="utf-8",
+            )
+            (Path(d) / "_private.py").write_text("item('x_hidden', base=999, ladder=L)\n", encoding="utf-8")
+            self.assertEqual(items_dsl.declared_item_bases(Path(d)), {18680, 13380})
+
+    def test_a_missing_directory_owns_nothing(self):
+        self.assertEqual(items_dsl.declared_item_bases(Path("/nonexistent/items")), frozenset())
+
+    def test_the_real_source_owns_the_wave_one_ranged_weapons(self):
+        self.assertTrue({13380, 18680, 18729, 18738} <= items_dsl.declared_item_bases())
+
+    def test_owned_entries_add_every_lock_entry(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "a.py").write_text("item('x_bow', base=18680, ladder=L)\n", encoding="utf-8")
+            (Path(d) / "item_ids.lock").write_text(
+                "# header 123\n18680 x_bow normal base\n71000 x_bow heroic\n"
+                "71001 x_old heroic retired 2026-11-06 2 2 0 0 1 15 0\n\n", encoding="utf-8")
+            self.assertEqual(items_dsl.item_owned_entries(Path(d)), {18680, 71000, 71001})
 
 
 if __name__ == "__main__":

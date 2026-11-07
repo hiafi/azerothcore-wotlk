@@ -38,6 +38,15 @@ higher tiers take their own cell's `budget_mult` (the live value is its own buck
 fraction. The sample leaves out the custom item blocks and every entry an item declaration or lock line owns, so the
 generator's own rows never feed back into it.
 
+**Frozen cells** (R-W1 S2). That sample shrinks every time a declaration takes over another stock weapon, so a live
+median would silently retune every earlier item of the same cell. A cell's values are therefore frozen the first time
+any declaration asks for it: `source/items/item_role_cells.lock` (`CELLS_LOCK_PATH`, append-only like the id lock)
+records (role, InventoryType, Quality, bucket) -> (budget_mult, dps fraction), or `none` for "no cell, the plain
+default", and every later run reads the recorded values instead of the live sample. A full run appends the cells it
+resolved for the first time (`ItemExpansion.cells_lock_appended`); `--check` names them. Adding a declaration can only
+add cells, never change one another item already uses. Retuning a cell is a deliberate act: change a declaration
+(`budget_mult=` / `extra_dps=` / `weapon_role=`), never the line.
+
 **Durability** (R1 S2). A minted tier's `MaxDurability` is the median of live items of the same class, subclass,
 InventoryType and Quality within 5 item levels (widened to 10, 20, then any level; at least
 `DURABILITY_MIN_SAMPLES`), else the donor's (`base=` / `like=` row). `ResolvedTier.max_durability`; an explicit
@@ -46,6 +55,7 @@ InventoryType and Quality within 5 item levels (widened to 10, 20, then any leve
 
 from __future__ import annotations
 
+import datetime
 import statistics
 import sys
 from dataclasses import dataclass, field
@@ -73,6 +83,7 @@ CASTER_LEAD_STATS = frozenset((5, 6, 45))  # Intellect, Spirit, Spell Power
 TANK_STATS = frozenset((12, 13, 14, 15, 48))  # Defense, Dodge, Parry, Block rating, Block value
 DURABILITY_WINDOWS = (5, 10, 20, None)  # item level distance; None = any level
 DURABILITY_MIN_SAMPLES = 3
+CELLS_LOCK_PATH = item_ids.LOCK_PATH.parent / "item_role_cells.lock"
 # Stock columns a minted copy inherits unpriced or unscaled (R1 N12): a WARNING names them on a base= item.
 INHERITED_WARN_COLUMNS = (
     "holy_res", "fire_res", "nature_res", "frost_res", "shadow_res", "arcane_res", "RandomProperty", "RandomSuffix",
@@ -164,6 +175,8 @@ class ItemExpansion:
     assignment: item_ids.Assignment | None = None
     lock_appended: list[str] = field(default_factory=list)
     lock_text: str = ""
+    cells_lock_appended: list[str] = field(default_factory=list)  # new frozen role cells (CELLS_LOCK_PATH)
+    cells_lock_text: str = ""
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
@@ -298,6 +311,88 @@ class RoleCells:
         return None
 
 
+CELLS_LOCK_HEADER = """\
+# Frozen weapon-tier role cells (item-variants R-W1 S2; lib/item_variants.py FrozenRoleCells): the budget_mult and
+# weapon DPS fraction (dps_delta / baseline DPS) a weapon-tier item takes when it declares neither, per
+# (role, InventoryType, Quality, item level bucket), frozen the first time any declaration asks for the cell.
+#   <role> <InventoryType> <Quality> <bucket> <budget_mult> <dps fraction>   # <the live cell it came from> <date>
+#   <role> <InventoryType> <Quality> <bucket> none                           # no live cell: the plain default
+# <bucket> is the stock conversion's item level bucket (1-59, 60-100, 101-200, 201-300) or "any".
+# Append-only: a full generate.py run appends the cells it resolved for the first time; never edit or delete a line
+# (every item of the cell would change: retune one item through its declaration instead).
+"""
+_CELL_LINE_FIELDS = 6
+
+
+class CellsLockError(ValueError):
+    pass
+
+
+def _bucket_text(bucket: int | None) -> str:
+    return "any" if bucket is None else "-".join(map(str, ROLE_CELL_BUCKETS[bucket]))
+
+
+def parse_cells_lock(text: str) -> dict:
+    """{(role, InventoryType, Quality, bucket): (budget_mult, dps fraction, where) or None}; raises CellsLockError."""
+    buckets = {_bucket_text(b): b for b in (None, *range(len(ROLE_CELL_BUCKETS)))}
+    cells: dict = {}
+    for number, raw in enumerate(text.splitlines(), 1):
+        line = raw.split("#", 1)[0].split()
+        if not line:
+            continue
+        where = f"{CELLS_LOCK_PATH.name} line {number}"
+        try:
+            role, inv_type, quality, bucket = line[0], int(line[1]), int(line[2]), buckets[line[3]]
+            if line[4:] == ["none"]:
+                value = None
+            elif len(line) == _CELL_LINE_FIELDS:
+                value = (float(line[4]), float(line[5]), raw.split("#", 1)[1].strip() if "#" in raw else "")
+            else:
+                raise ValueError
+        except (IndexError, KeyError, ValueError):
+            raise CellsLockError(f"{where}: malformed cell line {raw.strip()!r}") from None
+        if role not in ("physical", "caster", "tank"):
+            raise CellsLockError(f"{where}: unknown role {role!r}")
+        key = (role, inv_type, quality, bucket)
+        if key in cells:
+            raise CellsLockError(f"{where}: cell {' '.join(line[:4])} is already frozen above")
+        cells[key] = value
+    return cells
+
+
+@dataclass
+class FrozenRoleCells:
+    """`RoleCells.lookup` through the frozen cells lock: a recorded cell answers from the lock, an unrecorded one
+    from the live sample and is queued for appending (`appended`)."""
+
+    live: RoleCells
+    frozen: dict = field(default_factory=dict)
+    today: str = ""
+    appended: dict = field(default_factory=dict)  # key -> lock line
+
+    def lookup(self, role: str, inv_type: int, quality: int, ilvl: int) -> tuple[float, float, str] | None:
+        key = (role, inv_type, quality, _bucket(ilvl))
+        if key in self.frozen:
+            value = self.frozen[key]
+            return None if value is None else (value[0], value[1], f"{value[2] or 'frozen'} (frozen)")
+        value = self.live.lookup(role, inv_type, quality, ilvl)
+        self.frozen[key] = value
+        head = f"{role} {inv_type} {quality} {_bucket_text(key[3])}"
+        self.appended[key] = (f"{head} none" if value is None
+                              else f"{head} {value[0]:.4f} {value[1]:.4f}  # {value[2]} {self.today}".rstrip())
+        return value
+
+    def lines(self) -> list[str]:
+        return [self.appended[k] for k in sorted(self.appended, key=lambda k: (k[0], k[1], k[2], _bucket_text(k[3])))]
+
+
+def render_cells_lock(current: str, appended: list[str]) -> str:
+    text = current if current.strip() else CELLS_LOCK_HEADER
+    if not appended:
+        return text
+    return text + ("" if text.endswith("\n") else "\n") + "".join(f"{line}\n" for line in appended)
+
+
 def build_role_cells(tables: dict, catalog: dict, live_rows: dict[int, dict], excluded) -> RoleCells:
     """The `RoleCells` of every live itemized weapon-tier item whose entry `excluded(entry)` does not leave out."""
     cells = RoleCells()
@@ -371,7 +466,7 @@ def _socket_colors(row: dict) -> tuple[int, ...]:
 def _resolve_item(
     decl: items_dsl.ItemDecl, live_rows: dict[int, dict], tables: dict, catalog: dict, shape_index: dict,
     columns: tuple[str, ...], errors: list[str], warnings: list[str],
-    role_cells: RoleCells | None = None, durability: DurabilityIndex | None = None,
+    role_cells: RoleCells | FrozenRoleCells | None = None, durability: DurabilityIndex | None = None,
 ) -> tuple[ResolvedItem, list[dict]] | None:
     """The item-level checks and the per-tier plan (entries are filled in later). Returns None when a check failed
     in a way that stops the tier plan (the errors say why)."""
@@ -389,10 +484,23 @@ def _resolve_item(
             errors.append(f"{where}: base={decl.base} has no live item_template row (base dump plus migrations)")
             return None
         like_columns = {}
-        inherited = [c for c in INHERITED_WARN_COLUMNS if source_row.get(c) not in (None, "", 0, "0", 0.0)]
+        # A column the declaration sets itself (columns=, every tier) is what the tiers carry, not the stock value.
+        declared = dict(decl.columns)
+        effective = {c: declared.get(c, source_row.get(c)) for c in INHERITED_WARN_COLUMNS}
+        # A unique-equipped item gets its own ItemLimitCategory on every tier (lib/item_limits.py), whatever the stock
+        # row (or an earlier run's row) carries.
+        if decl.unique_equip is not None:
+            unique = decl.unique_equip
+        elif decl.spells is not None:
+            unique = bool(decl.spells)
+        else:
+            unique = decl.keep_spells and any(source_row.get(f"spellid_{n}") for n in range(1, 6))
+        if unique:
+            effective["ItemLimitCategory"] = None
+        inherited = [c for c in INHERITED_WARN_COLUMNS if effective[c] not in (None, "", 0, "0", 0.0)]
         if inherited:
             warnings.append(
-                f"{where}: base={decl.base} carries {', '.join(f'{c}={source_row[c]!r}' for c in inherited)}; every "
+                f"{where}: base={decl.base} carries {', '.join(f'{c}={effective[c]!r}' for c in inherited)}; every "
                 f"minted tier copies it unchanged (the budget neither prices nor scales it) - override it per tier "
                 f"if that is wrong"
             )
@@ -630,15 +738,25 @@ def expand(
     declarations: list[dict], *, ids_cfg: dict, live_rows: dict[int, dict], columns: tuple[str, ...],
     items_csv_ids=(), item_template_decl_ids=(), tables_loader=load_itemization_tables,
     item_dbc_ids_loader=None, lock: item_ids.Lock | None = None, lock_path=None,
-    today: str | None = None, labels_loader=None,
+    today: str | None = None, labels_loader=None, cells_lock_text: str | None = None,
 ) -> ItemExpansion:
     """Resolves `declarations` (`dsl_classes["item_declarations"]`). `live_rows` are the live item_template rows by
     entry, `columns` its column names; `items_csv_ids` and `item_template_decl_ids` the entries other declarations
     own. `tables_loader` gives (tables, catalog) and runs only when an item is declared; `item_dbc_ids_loader` gives
     the live item_dbc ids a new id must skip (runs only when an id is minted). `lock` defaults to the file.
     `labels_loader` gives the current tooltip label table (`item_labels.read_table`, the default) for the retire
-    suggestion of a dropped tier."""
+    suggestion of a dropped tier. `cells_lock_text` is the frozen role cells lock; None reads `CELLS_LOCK_PATH` when
+    `lock` is None too (the real run), else starts empty (a test passing its own id lock)."""
     out = ItemExpansion()
+    if cells_lock_text is None:
+        cells_lock_text = (CELLS_LOCK_PATH.read_text(encoding="utf-8")
+                           if lock is None and CELLS_LOCK_PATH.is_file() else "")
+    out.cells_lock_text = cells_lock_text
+    try:
+        frozen_cells = parse_cells_lock(cells_lock_text)
+    except CellsLockError as error:
+        out.errors.append(f"items: {error}")
+        return out
     block = ids_cfg.get(item_ids.LOCK_BLOCK)
     decls = [entry["_decl"] for entry in declarations]
     try:
@@ -708,7 +826,8 @@ def expand(
         def excluded(entry: int) -> bool:
             return entry in owned or any(b["start"] <= entry <= b["end"] for b in blocks)
 
-        role_cells = build_role_cells(tables, catalog, live_rows, excluded)
+        role_cells = FrozenRoleCells(build_role_cells(tables, catalog, live_rows, excluded), frozen_cells,
+                                     today or datetime.date.today().isoformat())
         durability = build_durability_index(live_rows, excluded)
         for decl in decls:
             result = _resolve_item(decl, live_rows, tables, catalog, shape_index, columns, out.errors, out.warnings,
@@ -765,6 +884,12 @@ def expand(
     if out.errors:
         out.lock_text = lock.text
         return out
+    if decls:
+        out.cells_lock_appended = role_cells.lines()
+        out.cells_lock_text = render_cells_lock(out.cells_lock_text, out.cells_lock_appended)
+        if out.cells_lock_appended:
+            out.notes.append(f"items: {len(out.cells_lock_appended)} new frozen role cell(s) for "
+                             f"{CELLS_LOCK_PATH.name} (a full run appends them; commit the file)")
     out.lock_appended = assignment.appended
     out.lock_text = item_ids.lock_text(lock, assignment.appended)
     if assignment.minted or assignment.bases:
@@ -785,4 +910,5 @@ def summary_notes(expansion: ItemExpansion, check: bool) -> list[str]:
         notes.append(f"items: {len(expansion.items)} item(s), {tiers} tier(s) on {len(expansion.ladders)} ladder(s)")
     if check:
         notes += [f"items: would append to {item_ids.LOCK_PATH.name}: {line}" for line in expansion.lock_appended]
+        notes += [f"items: would append to {CELLS_LOCK_PATH.name}: {line}" for line in expansion.cells_lock_appended]
     return notes

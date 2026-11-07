@@ -47,7 +47,7 @@ class Iv0ShapesTest(unittest.TestCase):
                 self.assertTrue(shapes.rules_satisfied(self.catalog[shape_id], primary))
 
     def test_shape_ids_are_unique_and_the_old_catalog_is_intact(self):
-        self.assertEqual(max(self.catalog), 73)
+        self.assertGreaterEqual(max(self.catalog), 73)  # later stages add shapes above 73 (74 wave 1, 75-78 Haunted)
         for shape_id in range(0, 74):
             self.assertIn(shape_id, self.catalog)
 

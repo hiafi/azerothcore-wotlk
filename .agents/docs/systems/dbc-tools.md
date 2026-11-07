@@ -39,10 +39,19 @@ shipped in `patch-X.mpq` with the other whole-file UI overrides:
   It merges the label into the line after the name (a ShoppingTooltip's name is line 2, under "Currently Equipped");
   when that line has right-hand text or a socket icon it shifts the lines down instead. `FORCE_SHIFT` at the top of the
   file forces the shifting insert if the merge looks wrong in game.
-- `client/ui-overrides/Interface/FrameXML/FrameXML.toc` is the stock toc (CRLF) with the two files added before
+- Tiered set tooltips: ItemSet.dbc lists at most 17 ids per set (each piece's first tier), so the client's set section
+  miscounts a worn Heroic or Empowered copy while the server (counting by `item_template.itemset`) grants the bonus.
+  `lib/item_set_members.py` writes `ItemSetMembers.lua` (`ITEM_SET_MEMBERS = { [set id] = { bonuses = { { pieces,
+  spell }, ... }, pieces = { { every tier's entry of one piece }, ... } } }`, from `SetExpansion.members` of
+  lib/item_sets.py) on a full run and on `--only items`, like the label table (`--check` prints a "stale" note and
+  never writes). `ItemSetTooltip.lua` (hand-written, same hook points) recounts the worn pieces from the player's
+  equipment (each piece once, any tier), rewrites the "(n/m)" header and colors the piece list and bonus lines (green
+  when active). Items outside the table, other units' items (inspect) and set sections it cannot match line for line
+  are left alone.
+- `client/ui-overrides/Interface/FrameXML/FrameXML.toc` is the stock toc (CRLF) with the four files added before
   `## add new modules above here`. `client/ui-overrides/` is its own private repo
   (hiafi/wow-client-ui, nested and ignored by this repo; its `.gitattributes` keeps the CRLF). Commit the regenerated
-  `ItemTierLabels.lua` there after a write run.
+  `ItemTierLabels.lua` and `ItemSetMembers.lua` there after a write run.
 - `apps/dbc-tools/build_patch_x.py` packs the UI files under `client/ui-overrides/Interface` (`.lua .xml .toc .blp
   .tga`; no dotfiles, swap or `.orig` files) into `patch-X.mpq` (same packer as the other `build_patch_*.py`) and
   refuses a toc that does not list an existing label file. By default it **only builds** (to
@@ -95,8 +104,10 @@ wired in `generate._loot_blocks` after the item expansion, so a full run and `--
   level, below 3 samples; else 1.0 and 0. Role from the shapes (Dodge/Parry/Block/Defense secondary = tank,
   Int/Spirit/SP lead = caster, else physical) or `weapon_role=`. Declared `budget_mult=` / `extra_dps=` win. The sample
   leaves out the custom item blocks and every entry an item owns, so the generator's own rows never feed back.
-  Declaring a new `base=` weapon removes it from the sample and can move a cell's median a little; the run notes every
-  already-live minted item whose stats change ("clients keep the old tooltip until item_budget_version is bumped").
+  Each cell is frozen the first time a declaration asks for it: `source/items/item_role_cells.lock` (append-only,
+  commit it with the SQL) records the cell's `budget_mult` and DPS fraction (or `none`, the plain default), and later
+  runs read the line instead of the live median. So declaring a new `base=` weapon (which leaves the sample) never
+  retunes an earlier item of the same cell; retune one item through its declaration, never by editing a line.
 - **Durability.** A minted tier's `MaxDurability` is the median of live items with the same class, subclass, slot and
   quality within 5 item levels (widening to 10, 20, any), else the donor's (`base=` / `like=`). Prices and
   disenchanting are not derived yet.
@@ -119,19 +130,34 @@ wired in `generate._loot_blocks` after the item expansion, so a full run and `--
 ### Item effect spells that scale with the tier: `scale="budget"` (item variants IV10)
 
 `use_spell(spell, scale="budget")` (also `equip_spell` / `hit_spell`; pass the declared `spell(...)` object) gives
-every tier above the item's first its own copy of the spell and of every source/items spell it reaches (an effect's
-`trigger_spell`, a `$<id>` token or a `pot_text()` in its texts, a `linked_spell()` it triggers).
+every tier but the ladder's effect reference tier its own copy of the spell and of every source/items spell it reaches
+(an effect's `trigger_spell`, a `$<id>` token or a `pot_text()` in its texts, a `linked_spell()` it triggers).
 `lib/item_spell_copies.py`:
 
-- **Ratio** = `item_budget_curve[ilvl].budget x item_quality_mult x item_slot_mult` of the tier over the first tier's,
-  rounded to 4 decimals (`budget_mult`, set discount and socket cost left out: constant or not an effect's business).
-  The hard mode ladder 71 / 81 / 91 / 101 Epic: 1.0 / 1.0545 / 1.1091 / 1.2545 (curve 55 / 58 / 61 / 69).
+- **Reference tier**: `ladder(..., effect_reference="<tier>")` (default: the first tier). It keeps the declared spells,
+  so the declared numbers are that tier's. `vanilla_dungeon` uses `heroic` (66 Epic): the Normal tier, at each item's
+  own stock level, gets a copy with a ratio below 1, the empowered tiers ratios above 1. `vanilla_hard_mode` uses
+  `heroic_hm` (71). Declare an effect's numbers for the reference tier.
+- **Ratio** = `item_budget_curve[ilvl].budget x item_quality_mult x item_slot_mult` of the tier over the reference
+  tier's, rounded to 4 decimals (`budget_mult`, set discount and socket cost left out: constant or not an effect's
+  business). The hard mode ladder 71 / 81 / 91 / 101 Epic: 1.0 / 1.0545 / 1.1091 / 1.2545 (curve 55 / 58 / 61 / 69).
 - **Copy** = the declaration with `sp_potency` / `ap_potency` / `base_potency` / the combo-point potencies times the
-  ratio; every family id inside it remapped to the same tier's copy (trigger spells, `$<id>` tokens, `pot_text`
-  expressions, linked spells); its `spell_proc`, `spell_script_names`, `spell_custom_attr` rows copied; potency rows
-  from its own `to_entry()`. Everything else (durations, cooldowns, radius, proc chance, aura amounts) is unchanged.
-  A family damage or heal effect without potency, a `weapon_potency` effect or a hand `bonus_coefficients()` row is an
-  ERROR. The tier's item row names its copies (`ResolvedTier.spells`); the first tier keeps the declared ids.
+  ratio, and the amount (BasePoints + 1) of every stat-like aura without potency times the ratio, rounded
+  (`STAT_AURAS`: MOD_DAMAGE_DONE 13, MOD_RESISTANCE 22 (armor), MOD_STAT 29, MOD_INCREASE_HEALTH 34, SCHOOL_ABSORB 69
+  and MANA_SHIELD 97 without potency, MOD_BASE_RESISTANCE 83, MOD_POWER_REGEN 85, MOD_ATTACK_POWER 99,
+  MOD_RESISTANCE_EXCLUSIVE 101, MOD_RANGED_ATTACK_POWER 124, MOD_HEALING_DONE 135, MOD_SHIELD_BLOCKVALUE 158,
+  MOD_RATING 189); every family id inside it remapped to the same tier's copy (trigger spells, `$<id>` tokens,
+  `pot_text` expressions, linked spells); its `spell_proc`, `spell_script_names`, `spell_custom_attr` rows copied;
+  potency rows from its own `to_entry()`. Everything else (durations, cooldowns, radius, proc chance, percentages such
+  as damage taken %, speed %, an effect with `potency_excluded`) is unchanged. A family damage or heal effect without
+  potency, a `weapon_potency` effect or a hand `bonus_coefficients()` row is an ERROR. The tier's item row names its
+  copies (`ResolvedTier.spells`); the reference tier keeps the declared ids. Show aura amounts with `$s1` in the
+  texts (a typed number would not follow the copy).
+- **Families and equal potency**: two spells with the same potency print the same `pot_text()` expression. The
+  registry records which spell each `pot_text()` call was for and `spell()` keeps the ones its texts contain
+  (`_pot_text_refs`), so a family follows exactly the named spell; only a text built outside the registry falls back to
+  matching expressions (and then pulls in every spell with that expression). Build a description's `pot_text()` in
+  the `spell(...)` call (or just before it), not in a shared string reused by several spells.
 - **Ids**: `source/items/item_spell_ids.lock` (`<spell id> <key> <tier> <base spell id> [retired <date>]`), minted
   from the `item_spell_copy` block (205410-205599, inside the `items` spell reservation), same append-only, retire
   and merge rules as `item_ids.lock`; a full run writes it, `--check` lists the lines.
@@ -154,6 +180,41 @@ because an entry-based derivation fails for `base=` items and a key hash can col
 row. The base file `var/extractors/dbc/ItemLimitCategory.dbc` is not in the client extract: copy it from
 `ac-worldserver:/azerothcore/env/dist/data/dbc/` (a full run stops without it). `--only items` refuses while a
 category row is not live.
+
+### Dungeon sets: `item_set()` / `set_token()` / `set_vendor()` (Haunted set track)
+
+`lib/dsl/sets.py` (declarations in `source/items/haunted_set.py`), `lib/item_sets.py` (rows, checks, rendering), wired
+in `generate._item_set_expansion` right after `item_emit.build` (so the tokens join the minted rows, the label table
+and the Item.dbc merge before they are used) and in the full run's SQL and patch-Z blocks.
+
+- **Item sets** (`ItemSet.dbc`, server overlay `itemset_dbc`). `item_set(set_id, items=(item keys), bonuses=((3,
+  spell), (5, spell)), name=)`: a stock id (181-189) keeps its stock name and item list and loses its stock bonuses; a
+  new id comes from ids.yaml `item_set` and needs `name=`. The server counts worn pieces by `item_template.itemset`
+  (`AddItemsSetItem`), so every tier of a piece must carry the set's id (checked on the built rows): a `base=` piece
+  keeps the stock row's, a new one passes `itemset=`. Every tier also pays the budget's set discount (0.9). The row's
+  item list is each piece's first tier; whether the client marks a worn Heroic or Empowered piece in the tooltip list
+  is a playtest check (the bonus lines follow the server count).
+- **Tokens.** `set_token(key, name=, slots=(InventoryTypes), ladder=, like=<stock class 15 token>, entries={tier:
+  entry}, costs={tier: ItemExtendedCost id}, ilvl=/quality=/required_level= for the first tier)`: one `item_template`
+  row per non-deferred ladder tier, copied whole from `like=`, the tier's level and quality, the Heroic flag on a
+  `heroic_flag` tier and the tier label on the others; one `ItemExtendedCost` row per tier (one token). Explicit ids
+  (`item_set_token` 70500-70599 inside the `item` block, `item_extended_cost` 3000-3199); a shipped id never moves.
+- **Vendors.** `set_vendor(entry, sets=, tokens=, tiers=)`: `npc_vendor` rows for the given ladder tiers (all when
+  None) of every piece of the sets, priced by the token of the piece's slot at the same tier, ordered tier, token
+  order, set (Haunted: 16 vendors, four per armor type: Normal & Heroic, then one per empowered tier). A list sends
+  at most 150 items
+  (`MAX_VENDOR_ITEMS`, a warning) and keeps at most 255 rows (`VendorItemData::GetItemCount` is a uint8, an error).
+  The vendor creature is a `creature_template()` declaration with npcflag 128; its spawn is hand SQL.
+- **Tables.** `itemset_dbc`, `itemextendedcost_dbc` and `npc_vendor` are declared tables with their own index
+  (`item_sets.SET_TABLES`, `load_index`, `render_blocks`): DELETE + INSERT of the rows that differ from live, a prune of
+  rows an earlier run emitted that nothing declares (circuit breaker on), silent on a rerun. `--check` prints how many
+  differ from live; `--only items` ships the token rows and warns while a set, cost or vendor row is not live.
+- **Client files.** A full run merges the rows into `ItemSet.dbc` and `ItemExtendedCost.dbc` in patch-Z; their stock
+  files are not in the client extract: copy them from the worldserver (`docker cp
+  ac-worldserver:/azerothcore/env/dist/data/dbc/ItemSet.dbc var/extractors/dbc/`, the same for ItemExtendedCost.dbc).
+  A full write run stops without them; `--check` warns.
+- **Not wired yet:** `boss_loot()` resolves `item()` keys only, so a token cannot be put on a boss list until the loot
+  resolver also accepts `set_token()` keys (the dungeons' loot stage).
 
 ## Watch out: a write run is global, except `--only items`
 

@@ -43,7 +43,7 @@ Prices and disenchanting stay the copied / schema values for now (IV9).
 budget cleared in its row (`budget.absorb_spell_fields`, what the server does in memory). The stock entry itself
 keeps them in the database (the server clears them at boot), so `keep_spells=True` can still bring them back.
 A tier whose item spells were copied (`use_spell(..., scale="budget")`, IV10 `lib/item_spell_copies.py`) carries its
-own copy ids (`ResolvedTier.spells`); the first tier keeps the declared spells.
+own copy ids (`ResolvedTier.spells`); the ladder's effect reference tier (else the first) keeps the declared spells.
 
 A second run over the replayed overlay (the first run's pending file applied) renders nothing.
 """

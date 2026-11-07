@@ -170,7 +170,8 @@ class RealSourceTest(unittest.TestCase):
         from lib import test_hard_mode_item_effects as hm  # noqa: PLC0415
 
         reg = hm._load_items_registry()
-        decls = [e["_decl"] for e in reg.item_declarations]
+        # Deadmines only (the dm_ keys): every other dungeon's items pin their own unique-equip list in their own test.
+        decls = [e["_decl"] for e in reg.item_declarations if e["_decl"].key.startswith("dm_")]
         unique = sorted(d.key for d in decls if (d.unique_equip if d.unique_equip is not None else bool(d.spells)
                                                  or d.keep_spells))
         self.assertEqual(unique, ["dm_blackguards_signet", "dm_lantern_of_the_roaring_flame", "dm_powder_keg_fuse"])

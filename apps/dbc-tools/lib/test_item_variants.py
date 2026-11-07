@@ -409,7 +409,8 @@ class IdTest(unittest.TestCase):
     def test_check_mode_reports_the_lines_a_full_run_writes(self):
         exp = run([hammer()])
         notes = item_variants.summary_notes(exp, check=True)
-        self.assertEqual([n.split(": ", 2)[2] for n in notes if "would append" in n], exp.lock_appended)
+        self.assertEqual([n.split(": ", 2)[2] for n in notes if "would append" in n],
+                         exp.lock_appended + exp.cells_lock_appended)
         self.assertFalse(any("would append" in n for n in item_variants.summary_notes(exp, check=False)))
 
     def test_empty_source_and_lock_is_a_no_op(self):
@@ -486,6 +487,23 @@ class CheckTest(unittest.TestCase):
         })
         self.assertEqual(warned.errors, [])
         self.assertTrue(any("lowers the quality (5 -> 4)" in w for w in warned.warnings))
+
+    def test_the_inherited_column_warning_honors_declared_columns(self):
+        rows = live_rows()
+        rows[5187] = {**rows[5187], "fire_res": 10, "RandomProperty": 3306}
+        warned = run([hammer()], rows=rows)
+        self.assertTrue(any("carries fire_res=10, RandomProperty=3306" in w for w in warned.warnings), warned.warnings)
+        cleared = run([hammer(fire_res=0, RandomProperty=0)], rows=rows)
+        self.assertFalse(any("carries" in w for w in cleared.warnings), cleared.warnings)
+        half = run([hammer(fire_res=0)], rows=rows)
+        self.assertTrue(any("carries RandomProperty=3306;" in w for w in half.warnings), half.warnings)
+        changed = run([hammer(fire_res=5, RandomProperty=0)], rows=rows)
+        self.assertTrue(any("carries fire_res=5;" in w for w in changed.warnings), changed.warnings)
+        # a unique-equipped item replaces the stock (or an earlier run's) category on every tier: no warning
+        rows[5187] = {**rows[5187], "fire_res": 0, "RandomProperty": 0, "ItemLimitCategory": 1003}
+        self.assertTrue(any("carries ItemLimitCategory=1003" in w for w in run([hammer()], rows=rows).warnings))
+        unique = run([hammer(unique_equip=True)], rows=rows)
+        self.assertFalse(any("carries" in w for w in unique.warnings), unique.warnings)
 
     def test_missing_curve_rows(self):
         tables = fixture_tables()
