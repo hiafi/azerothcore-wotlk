@@ -144,15 +144,16 @@ class ShadowfangKeepItemsTest(unittest.TestCase):
                 self.assertIsNone(decl.spells, key)
                 self.assertFalse(decl.keep_spells, key)
 
-    def test_meteor_shard_normal_matches_the_stock_firebolt(self):
-        # User 2026-11-07 (plan s13): the Normal tier (level 29 Rare, budget ratio 0.2423 to the Heroic reference,
-        # wave 1 integration) hits for about the stock Firebolt 13442's 35 at level 25, base line before attack power.
+    def test_meteor_shard_normal_is_a_slightly_weaker_stock_firebolt(self):
+        # User 2026-11-07 (plan s13, then "a slightly weaker Normal"): the Normal tier (level 29 Rare, budget ratio
+        # 0.2423 to the Heroic reference) hits for about 28 at level 25 (80% of the stock Firebolt 13442's 35), base
+        # line before attack power.
         from lib import potency  # noqa: PLC0415
 
         declared = self.spells[FIREBOLT]["effect1"]["_potency"]["total_potency"]
-        self.assertEqual(declared, 250.0)
+        self.assertEqual(declared, 200.0)
         normal_average = declared * NORMAL_RATIO * potency.c_of_level(25)
-        self.assertAlmostEqual(normal_average, 35, delta=1)
+        self.assertAlmostEqual(normal_average, 28, delta=1)
 
     def test_damage_comes_from_potency_only(self):
         for spell_id, kind in ((VOIDWALKER, "periodic"), (FIREBOLT, "direct")):

@@ -187,17 +187,17 @@ ashcrombes_locket_205603 = spell(
 meteor_shard_firebolt_205604 = spell(
     id=205604, name='Firebolt', school=School.FIRE, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,
     mana_cost=0, mana_cost_pct=0, range_yards=30.0, duration_ms=0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=250.0, potency_kind='direct', time_basis_ms=1500,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=200.0, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_FIREBOLT,
     notes='Shadowfang Keep, Meteor Shard (Archmage Arugal, the kept "Chance on hit: Firebolt"): stock Firebolt 13442 '
           'dealt a flat 35 Fire damage, so it is rebuilt on potency here. Fire, DefenseType MAGIC, attack power '
-          'potency 250 (an Agility dagger), T 1.5 s (an off-GCD payout). A missile (Speed 19, the stock bolt). The '
-          'item rolls it at the stock 2 procs per minute (hit_spell ppm). scale="budget": 250 is the Heroic (66) '
+          'potency 200 (an Agility dagger), T 1.5 s (an off-GCD payout). A missile (Speed 19, the stock bolt). The '
+          'item rolls it at the stock 2 procs per minute (hit_spell ppm). scale="budget": 200 is the Heroic (66) '
           'number, the vanilla dungeon ladder\'s effect reference; the Normal tier (level 29 Rare) gets a copy '
-          'scaled down by its stat budget (x0.2423 = potency 60.6, base line about 35 at level 25: the stock '
-          'Firebolt, user 2026-11-07), the empowered tiers copies scaled up (wave 1 integration). Look: stock '
-          'SV 28.',
+          'scaled down by its stat budget (x0.2423 = potency 48.5, base line about 28 at level 25: a slightly weaker '
+          'Normal than the stock Firebolt\'s 35, user 2026-11-07), the empowered tiers copies scaled up (wave 1 '
+          'integration). Look: stock SV 28.',
     raw_overrides=_raw('Blasts a target for {pot1} Fire damage.', spell_level=1, DefenseType=_DMG_CLASS_MAGIC,
                        Speed=_FIREBOLT_SPEED, SpellVisualID_1=_SV_FIREBOLT),
 )
