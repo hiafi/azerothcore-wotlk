@@ -192,13 +192,14 @@ fireball_133 = spell(
     range_yards=35.0,
     duration_ms=4000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=48.672, potency_kind='direct', implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, sp_potency=1.824, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=60.84, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=2.28, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=185,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): eff1 converted to sp_potency=126.7 (mage-potency-proposals.txt), eff2 to sp_potency=4.8 (potency-report default, base/coef already agreed). 2026-10-07: mana_cost_pct 19 -> 15 (DPS balance pass, user ruling: Fire mana). mana_cost_pct 15 -> 13 (2026-10-08, DPS balance pass, user ruling: Fire mana). mana_cost_pct 13 -> 11 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana). Effect 1 sp_potency 126.7 -> 101.4 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana). Effect 2 sp_potency 4.8 -> 3.8 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana).'
           ' Effect 1 sp_potency 101.4 -> 60.84 (2026-10-31, DPS balance pass 1031, user ruling: Fire damage -40%). Effect 2 sp_potency 3.8 -> 2.28 (2026-10-31, DPS balance pass 1031, user ruling: Fire damage -40%).'
-          ' Effect 1 sp_potency 60.84 -> 48.672, effect 2 sp_potency 2.28 -> 1.824 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Fireball -20%).',
+          ' Effect 1 sp_potency 60.84 -> 48.672, effect 2 sp_potency 2.28 -> 1.824 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Fireball -20%).'
+          ' Effect 1 sp_potency 48.672 -> 60.84, effect 2 sp_potency 1.824 -> 2.28 (x1.25, back to the pre-B3 values) (2026-11-06, balance 1107, user ruling: Fireball damage up, paid for by Fire Blast; damage-neutral at 1 target, see .agents/plans/dps-balance-1031/balance-1107.REPORT.md).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} Fire damage every $t2 seconds.', 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls a fiery ball that causes {pot1} Fire damage and an additional {pot2.total} Fire damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 24.0, 'SpellClassMask_1': 1, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 67, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -566,11 +567,12 @@ fire_blast_2136 = spell(
     mana_cost_pct=10,
     range_yards=20.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=145.88, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=95.24, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=12,
     notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 sec 3.1: category cooldown 12 sec (was 8). 'Always critically strikes' is Mage::ApplySpellCritChanceMods (Phase 3) - there is no DBC attribute for a guaranteed crit. Potency system P5 (Mage pass): converted to sp_potency=347.3 (mage-potency-proposals.txt). 2026-10-07: mana_cost_pct 21 -> 12 (DPS balance pass, user ruling: Fire mana). mana_cost_pct 12 -> 10 (2026-10-08, DPS balance pass, user ruling: Fire mana). Effect 1 sp_potency 347.3 -> 208.4 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana)."
-          ' Effect 1 sp_potency 208.4 -> 145.88 (2026-10-31, DPS balance pass 1031, user ruling: Fire damage -30%).',
+          ' Effect 1 sp_potency 208.4 -> 145.88 (2026-10-31, DPS balance pass 1031, user ruling: Fire damage -30%).'
+          ' Effect 1 sp_potency 145.88 -> 95.24 (x0.6529) (2026-11-06, balance 1107, user ruling: Fireball damage up, paid for by Fire Blast; damage-neutral at 1 target incl. Ignite, see .agents/plans/dps-balance-1031/balance-1107.REPORT.md).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the enemy for {pot1} Fire damage. Always critically strikes.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2, 'SpellClassSet': 3, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 143, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
