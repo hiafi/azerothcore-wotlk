@@ -449,6 +449,16 @@ reservations:
   items:
     spell: {start: 205400, end: 205599}
 
+  # Wave 1 dungeon items (item variants, 2026-11-06): the hand-declared hard mode item effect spells of Shadowfang Keep,
+  # Scholomance and Stratholme (source/items/<dungeon>_hard_mode_effects.py); their per-tier copies mint from the
+  # `item_spell_copy` block. Checked free 2026-11-06: no declaration, SQL file or live spell_dbc row in 205600-205699.
+  shadowfang_items:
+    spell: {start: 205600, end: 205619}
+  scholomance_items:
+    spell: {start: 205620, end: 205659}
+  stratholme_items:
+    spell: {start: 205660, end: 205699}
+
   # The healing sim (source/npcs/healsim_spells.py) is not a class, but its spells sit inside the spell block, so it
   # reserves under its project name and the overlap test keeps every class out of them.
   healsim:

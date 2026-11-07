@@ -548,6 +548,16 @@ class ReservationTest(unittest.TestCase):
         )
 
 
+class WaveOneItemReservationsTest(unittest.TestCase):
+    """Wave 1 dungeon items (2026-11-06): the hard mode item effect spell reservations, pinned exactly."""
+
+    def test_wave_one_item_effect_reservations(self):
+        for name, span in (("shadowfang_items", (205600, 205619)), ("scholomance_items", (205620, 205659)),
+                           ("stratholme_items", (205660, 205699))):
+            got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS[name].items()}
+            self.assertEqual(got, {"spell": span}, name)
+
+
 class ItemVariantsIdsTest(unittest.TestCase):
     """Item variants IV0 (item-variants plan s4 / s9): the minted-item and loot-reference blocks and the `items` spell
     reservation, pinned exactly."""
