@@ -238,7 +238,10 @@ class CommittedFilesTest(unittest.TestCase):
             with self.subTest(map_id=map_id):
                 text = (cli.DUNGEON_DIR / f"{stem}.py").read_text()
                 self.assertEqual((text.count(dx.BLOCK_BEGIN), text.count(dx.BLOCK_END)), (1, 1))
-                self.assertIn(f'dungeon({map_id}, "{name}"' if map_id != 36 else 'dungeon(\n    36, "Deadmines"', text)
+                # a one-line call, or the multi-line one of a dungeon with hand declarations (Deadmines, Shadowfang Keep)
+                self.assertTrue(
+                    f'dungeon({map_id}, "{name}"' in text or f'dungeon(\n    {map_id}, "{name}"' in text, stem,
+                )
                 self.assertTrue(all(len(line) <= dx.WIDTH for line in text.splitlines()))
 
 
