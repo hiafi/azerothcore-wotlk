@@ -6,7 +6,11 @@
  *   PickFrom           one random (or the farthest) candidate with the common filters (PickPlayer's rule)
  *   SpeedFor           a run-speed rate from a percent of a player's run speed (7 yd/s)
  *   ClampStacks        a stacking meter's new count after +/- delta, clamped to [0, max]
+ *   StackCap           AddStacks' cap: the caller's max, else the spell's own StackAmount
  *   ClampLethal        the damage that leaves a unit at 1 health (InterceptLethal)
+ *   LethalLatch        LethalGuard's state: armed / fired, Reset for the next pull
+ *   QuietTimer         time in combat with no hit taken (BreakableDoorAI's evade path)
+ *   InPickupRange      a pickup's reach: 2D radius plus a z band
  *   LineStrikePath     a line from the source through the target, `overrun` past it, clipped to the arena walls
  *   DwellTracker       who has stood in a pickup for how long (Pickups: the first eligible player inside for `dwell`)
  */
@@ -147,12 +151,89 @@ namespace DungeonKit
         return static_cast<std::uint32_t>(v);
     }
 
+    // AddStacks' cap: `max` when given, else the spell's own StackAmount (0 there too: no cap).
+    constexpr std::uint32_t StackCap(std::uint32_t max, std::uint32_t spellStackAmount)
+    {
+        return max ? max : spellStackAmount;
+    }
+
     // The damage a unit at `health` may take and keep 1 health: `damage` itself when it is not lethal.
     constexpr std::uint32_t ClampLethal(std::uint32_t health, std::uint32_t damage)
     {
         if (damage < health)
             return damage;
         return health > 1 ? health - 1 : 0;
+    }
+
+    // LethalGuard's state (DungeonKit.h). Armed: every lethal hit is clamped to leave 1 health; the first one after
+    // Arm / Reset also fires (the phase change). It stays armed after firing (every later lethal hit is still clamped)
+    // until Disarm. Reset re-arms and clears `fired`: call it from the boss's Reset, or a wipe leaves him unkillable.
+    class LethalLatch
+    {
+    public:
+        struct Result
+        {
+            bool clamped = false;
+            bool fire = false;              // the first lethal hit since Arm / Reset: call onZero
+            std::uint32_t damage = 0;       // the damage to deal
+        };
+
+        void Arm()
+        {
+            _armed = true;
+            _fired = false;
+        }
+
+        void Reset() { Arm(); }
+        void Disarm() { _armed = false; }
+        bool Armed() const { return _armed; }
+        bool Fired() const { return _fired; }
+
+        Result Apply(std::uint32_t health, std::uint32_t damage)
+        {
+            if (!_armed || damage < health)
+                return { false, false, damage };
+            bool const fire = !_fired;
+            _fired = true;
+            return { true, fire, ClampLethal(health, damage) };
+        }
+
+    private:
+        bool _armed = true;
+        bool _fired = false;
+    };
+
+    // Time in combat without taking a hit: true once `quietMs` passed since the last Hit (or since combat began).
+    // Out of combat it rests at 0.
+    class QuietTimer
+    {
+    public:
+        explicit QuietTimer(std::uint32_t quietMs = 10000) : _quietMs(quietMs) { }
+
+        void Hit() { _ms = 0; }
+
+        bool Update(bool inCombat, std::uint32_t diff)
+        {
+            if (!inCombat)
+            {
+                _ms = 0;
+                return false;
+            }
+            _ms += diff;
+            return _ms >= _quietMs;
+        }
+
+        void Reset() { _ms = 0; }
+
+    private:
+        std::uint32_t _quietMs;
+        std::uint32_t _ms = 0;
+    };
+
+    // A pickup's reach: within `radius` on the plane and `zBand` yd above or below the spot.
+    constexpr bool InPickupRange(float dist2d, float dz, float radius, float zBand)
+    {
+        return dist2d <= radius && (dz < 0.f ? -dz : dz) <= zBand;
     }
 
     // ----------------------------------------------------------------------------------------------------------------

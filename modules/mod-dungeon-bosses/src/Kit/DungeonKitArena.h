@@ -8,13 +8,17 @@
  * grip back after a grace, hold the chase, evade off the arena, and confine units to (or out of) a cell.
  *
  *   GripTracker        per unit: how long it has been off the arena, and its post-grip cooldown
+ *   GripCooldownMs     a grip's cooldown: at least its flight time plus a margin (no second grip mid-air)
+ *   LeashTimer         the boss's own leash: off the arena for a grace (not counted while he jumps or falls)
  *   LandingToward      where a gripped unit lands: `landYd` from the boss toward where it was, clamped into a box
+ *   LandingOrBoss      a landing outside the arena falls back to the boss's own spot
  */
 
 #ifndef MOD_DUNGEON_BOSSES_KIT_DUNGEON_KIT_ARENA_H
 #define MOD_DUNGEON_BOSSES_KIT_DUNGEON_KIT_ARENA_H
 
 #include "DungeonKitMath.h"
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -222,12 +226,25 @@ namespace DungeonKit
 
         void Gripped(std::uint64_t unit)
         {
+            Gripped(unit, _cooldownMs);
+        }
+
+        // A grip with its own cooldown (GripCooldownMs: a long grip is left alone until it lands).
+        void Gripped(std::uint64_t unit, std::uint32_t cooldownMs)
+        {
             Entry& e = _units[unit];
             e.offMs = 0;
-            e.cooldownMs = _cooldownMs;
+            e.cooldownMs = cooldownMs;
         }
 
         void Forget(std::uint64_t unit) { _units.erase(unit); }
+
+        // Forgets every unit `gone(unit)` says left (the map, the fight). Returns how many.
+        template <class Pred>
+        std::size_t ForgetIf(Pred&& gone)
+        {
+            return std::erase_if(_units, [&gone](auto const& kv) { return gone(kv.first); });
+        }
         void Clear() { _units.clear(); }
         std::size_t Size() const { return _units.size(); }
         std::uint32_t GraceMs() const { return _graceMs; }
@@ -245,6 +262,44 @@ namespace DungeonKit
         std::unordered_map<std::uint64_t, Entry> _units;
     };
 
+    // A grip's cooldown: `cooldownMs`, or the jump's flight time (2D distance / speedXY, the MoveJump spline's
+    // duration) plus `marginMs` when that is longer, so a unit still in the air is never gripped again (R-K0 S3).
+    // Greenskin's 3 s covers his grips up to 62.5 yd at 25 yd/s.
+    inline std::uint32_t GripCooldownMs(std::uint32_t cooldownMs, float distYd, float speedXY,
+        std::uint32_t marginMs = 500)
+    {
+        if (speedXY <= 0.f || distYd <= 0.f)
+            return cooldownMs;
+        std::uint32_t const flightMs = static_cast<std::uint32_t>(std::ceil(distYd / speedXY * 1000.f));
+        return std::max(cooldownMs, flightMs + marginMs);
+    }
+
+    // The boss's own leash (R-K0 S2): true when he has been off his arena for `graceMs` (0: at the first check off
+    // it, Greenskin's leash). A check while he is airborne (his own leap, a fall between floors) neither counts nor
+    // evades; it keeps the time already counted.
+    class LeashTimer
+    {
+    public:
+        bool Update(bool onArena, bool airborne, std::uint32_t diff, std::uint32_t graceMs)
+        {
+            if (onArena)
+            {
+                _offMs = 0;
+                return false;
+            }
+            if (airborne)
+                return false;
+            _offMs += diff;
+            return _offMs >= graceMs;
+        }
+
+        void Reset() { _offMs = 0; }
+        std::uint32_t OffMs() const { return _offMs; }
+
+    private:
+        std::uint32_t _offMs = 0;
+    };
+
     // Where a gripped unit lands: `landYd` from the boss toward where it was (the boss itself when they stand on each
     // other), clamped into `box` when given, so it always lands on a known-good floor.
     inline Vec2 LandingToward(Vec2 boss, Vec2 from, float landYd, std::optional<Box2> const& box = std::nullopt)
@@ -256,6 +311,15 @@ namespace DungeonKit
         if (box)
             p = box->Clamp(p);
         return p;
+    }
+
+    // The default landing checked against the arena (R-K0 S4): (`dest`, `z`) when the arena holds it, else the boss's
+    // own spot (a polygon or multi-region arena with no landBox can put the line's point over a gap or a ledge).
+    inline std::pair<Vec2, float> LandingOrBoss(Arena const& arena, Vec2 dest, float z, Vec2 boss, float bossZ)
+    {
+        if (arena.Contains(dest, z))
+            return { dest, z };
+        return { boss, bossZ };
     }
 }
 

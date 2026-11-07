@@ -17,6 +17,8 @@
 #include "Random.h"
 #include "ScriptMgr.h"
 #include "SpellAuras.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
 #include "TemporarySummon.h"
 #include "Unit.h"
 #include <algorithm>
@@ -257,12 +259,15 @@ namespace DungeonKit
 
     bool LethalGuard::Intercept(Unit* unit, uint32& damage, std::function<void()> const& onZero)
     {
-        if (!_armed)
+        if (!unit)
             return false;
-        bool fired = _fired;
-        bool const clamped = InterceptLethal(unit, damage, fired, onZero);
-        _fired = fired;
-        return clamped;
+        LethalLatch::Result const r = _latch.Apply(unit->GetHealth(), damage);
+        if (!r.clamped)
+            return false;
+        damage = r.damage;
+        if (r.fire && onZero)
+            onZero();
+        return true;
     }
 
     bool InterceptLethal(Unit* unit, uint32& damage, bool& fired, std::function<void()> const& onZero)
@@ -286,14 +291,17 @@ namespace DungeonKit
         float totalPct, float capPct)
     {
         std::vector<std::pair<ObjectGuid, uint32>> out;
-        if (!owner || inside.empty())
+        std::vector<Unit const*> units;
+        for (Unit const* unit : inside)
+            if (unit)
+                units.push_back(unit);
+        if (!owner || units.empty())
             return out;
         uint32 const total = RefFlat(owner, totalPct);
         uint32 const cap = capPct > 0.f ? RefFlat(owner, capPct) : 0;
-        std::vector<uint32> const shares = SplitDamage(total, static_cast<uint32>(inside.size()), cap);
-        for (std::size_t i = 0; i < inside.size(); ++i)
-            if (inside[i])
-                out.emplace_back(inside[i]->GetGUID(), shares[i]);
+        std::vector<uint32> const shares = SplitDamage(total, static_cast<uint32>(units.size()), cap);
+        for (std::size_t i = 0; i < units.size(); ++i)
+            out.emplace_back(units[i]->GetGUID(), shares[i]);
         return out;
     }
 
@@ -304,7 +312,8 @@ namespace DungeonKit
         Unit* source = caster ? caster : target;
         Aura* aura = target->GetAura(spellId, source->GetGUID());
         uint32 const current = aura ? aura->GetStackAmount() : 0;
-        uint32 const want = ClampStacks(current, delta, max);
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(spellId);
+        uint32 const want = ClampStacks(current, delta, StackCap(max, info ? info->StackAmount : 0));
         if (!want)
         {
             if (aura)
@@ -354,11 +363,22 @@ namespace DungeonKit
             boss->RemoveLootMode(LOOT_MODE_HARD_MODE_1);
     }
 
-    Creature* SpawnBreakableDoor(WorldObject* owner, GameObject* door, uint32 standInEntry, uint32 health)
+    Creature* SpawnBreakableDoor(GameObject* door, uint32 standInEntry, uint32 health, WorldObject* summoner)
     {
-        if (!owner || !door || !standInEntry)
+        if (!door || !door->IsInWorld() || !standInEntry)
             return nullptr;
-        TempSummon* standIn = owner->SummonCreature(standInEntry, door->GetPosition(), TEMPSUMMON_MANUAL_DESPAWN);
+        if (summoner)
+            if (Creature const* creature = summoner->ToCreature())
+                if (creature->IsAIEnabled && dynamic_cast<BossAI const*>(creature->AI()))
+                {
+                    LOG_ERROR(kLogCategory, "dungeon-kit breakable door {}: boss {} may not summon stand-in {} (its "
+                        "summons despawn on death and evade); the door summons it", door->GetEntry(),
+                        creature->GetEntry(), standInEntry);
+                    summoner = nullptr;
+                }
+        if (!summoner)
+            summoner = door;
+        TempSummon* standIn = summoner->SummonCreature(standInEntry, door->GetPosition(), TEMPSUMMON_MANUAL_DESPAWN);
         if (!standIn)
             return nullptr;
         if (health)
@@ -380,6 +400,31 @@ namespace DungeonKit
     {
         me->SetReactState(REACT_PASSIVE);
         me->SetControlled(true, UNIT_STATE_ROOT);
+        me->SetRegeneratingHealth(!keepDamage);
+        _quiet.Reset();
+    }
+
+    void BreakableDoorAI::DamageTaken(Unit* /*attacker*/, uint32& /*damage*/, DamageEffectType /*damageType*/,
+        SpellSchoolMask /*schoolMask*/)
+    {
+        _quiet.Hit();
+    }
+
+    void BreakableDoorAI::EnterEvadeMode(EvadeReason why)
+    {
+        uint32 const health = me->GetHealth();
+        ScriptedAI::EnterEvadeMode(why);
+        if (keepDamage && me->IsAlive() && health)
+            me->SetHealth(health);
+    }
+
+    void BreakableDoorAI::UpdateAI(uint32 diff)
+    {
+        // Passive: UpdateVictim never picks a victim, only ends an engagement whose combat is over.
+        if (!UpdateVictim())
+            return;
+        if (_quiet.Update(me->IsInCombat(), diff))
+            EnterEvadeMode(EVADE_REASON_NO_HOSTILES);
     }
 
     void BreakableDoorAI::SetGUID(ObjectGuid const& guid, int32 id)
@@ -412,8 +457,9 @@ namespace DungeonKit
         e.id = _nextId++;
         e.at = at;
         e.dwell = DwellTracker(static_cast<uint32>(spec.dwell.count()));
-        // The Soak never resolves: Update cancels it at `life`, a poll before its warn ends (no MissedSoak).
-        Milliseconds const warn = spec.life + Milliseconds(kPollMs * 4);
+        // The Soak never resolves: Update cancels it at `life`, 5 s before its warn ends (no MissedSoak, even after a
+        // long map stall).
+        Milliseconds const warn = spec.life + Milliseconds(5000);
         {
             BossMechanics::MechanicRef ref = Mechanic::Soak(owner, at, spec.radius, std::max<uint8>(1, spec.count),
                 warn);
@@ -466,6 +512,7 @@ namespace DungeonKit
         for (Entry const& e : _pickups)
             ids.push_back(e.id);
         Map* map = owner->GetMap();
+        BossMechanics::Registry const* reg = BossMechanics::Registry::Get(map);
         for (uint32 const id : ids)
         {
             auto it = std::find_if(_pickups.begin(), _pickups.end(), [id](Entry const& e) { return e.id == id; });
@@ -473,6 +520,9 @@ namespace DungeonKit
                 continue;
             it->ageMs += elapsed;
 
+            // The Soak's own eligibility (roles, carriers, stacks, test scope): the rule the bots follow. Without it
+            // (the registry refused the Soak) only carriers and stacks can be checked here.
+            BossMechanics::ActiveMechanic const* soak = reg ? reg->Find(it->soak.id) : nullptr;
             std::vector<uint64> inside;
             std::vector<Player*> players;
             for (auto const& ref : map->GetPlayers())
@@ -480,16 +530,24 @@ namespace DungeonKit
                 Player* player = ref.GetSource();
                 if (!player || !player->IsAlive() || player->IsGameMaster())
                     continue;
-                if (player->GetExactDist2d(it->at) > it->spec.radius
-                    || std::fabs(player->GetPositionZ() - it->at.GetPositionZ()) > 6.f)
+                if (!InPickupRange(player->GetExactDist2d(it->at), player->GetPositionZ() - it->at.GetPositionZ(),
+                        it->spec.radius, it->spec.zBand))
                     continue;
-                if (!it->spec.who.carriers.empty() && !it->spec.who.carriers.count(player->GetGUID()))
-                    continue;
-                if (it->spec.who.auraSpell)
+                if (soak)
                 {
-                    uint32 const stacks = Stacks(player, it->spec.who.auraSpell);
-                    if (stacks < it->spec.who.minStacks || stacks > it->spec.who.maxStacks)
+                    if (!reg->IsEligible(*soak, player))
                         continue;
+                }
+                else
+                {
+                    if (!it->spec.who.carriers.empty() && !it->spec.who.carriers.count(player->GetGUID()))
+                        continue;
+                    if (it->spec.who.auraSpell)
+                    {
+                        uint32 const stacks = Stacks(player, it->spec.who.auraSpell);
+                        if (stacks < it->spec.who.minStacks || stacks > it->spec.who.maxStacks)
+                            continue;
+                    }
                 }
                 inside.push_back(player->GetGUID().GetRawValue());
                 players.push_back(player);

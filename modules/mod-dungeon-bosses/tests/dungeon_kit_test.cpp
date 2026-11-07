@@ -379,6 +379,157 @@ namespace
         CHECK(broken.Update({ 1 }, 500) == 0u);
         CHECK(broken.Update({ 1 }, 500) == 1u);
     }
+    // ---- R-K0 review fixes ----------------------------------------------------------------------------------------
+
+    // S1: a guard that fired re-arms on Reset (a wipe after the phase change no longer leaves the boss at 1 health).
+    void TestLethalLatch()
+    {
+        LethalLatch l;
+        CHECK(l.Armed() && !l.Fired());
+        LethalLatch::Result r = l.Apply(100, 50);
+        CHECK(!r.clamped && !r.fire && r.damage == 50u);
+        r = l.Apply(100, 150);
+        CHECK(r.clamped && r.fire && r.damage == 99u && l.Fired());
+        r = l.Apply(99, 500);                           // still armed: clamped, but fires once only
+        CHECK(r.clamped && !r.fire && r.damage == 98u);
+        l.Reset();                                      // the boss's Reset: the next pull fires again
+        CHECK(l.Armed() && !l.Fired());
+        r = l.Apply(1000, 1000);
+        CHECK(r.clamped && r.fire && r.damage == 999u);
+        l.Disarm();
+        r = l.Apply(999, 5000);
+        CHECK(!r.clamped && !r.fire && r.damage == 5000u);
+        l.Arm();
+        CHECK(l.Apply(10, 10).fire);
+    }
+
+    // S2: the boss's own leash. Grace 0 and on the ground: Greenskin's leash (the first check off the arena).
+    void TestLeashTimer()
+    {
+        LeashTimer t;
+        CHECK(!t.Update(true, false, 250, 0));
+        CHECK(t.Update(false, false, 250, 0));          // Greenskin: at once
+        t.Reset();
+        CHECK(!t.Update(false, true, 250, 0));          // his own leap: no leash mid-air
+        CHECK(!t.Update(false, true, 5000, 0));
+        CHECK(t.OffMs() == 0u);
+        CHECK(t.Update(false, false, 250, 0));          // landed off it: leash
+        LeashTimer g;
+        CHECK(!g.Update(false, false, 250, 1000));
+        CHECK(!g.Update(false, true, 250, 1000));       // airborne: not counted
+        CHECK(!g.Update(false, false, 250, 1000));
+        CHECK(!g.Update(false, false, 250, 1000));
+        CHECK(g.Update(false, false, 250, 1000));       // 1 s off on the ground
+        CHECK(!g.Update(true, false, 250, 1000) && g.OffMs() == 0u);
+    }
+
+    // S3: a long grip is not gripped again mid-air; Greenskin's 3 s still covers his grips up to 62.5 yd.
+    void TestGripCooldown()
+    {
+        CHECK(GripCooldownMs(3000, 50.f, 25.f) == 3000u);
+        CHECK(GripCooldownMs(3000, 62.5f, 25.f) == 3000u);
+        CHECK(GripCooldownMs(3000, 75.f, 25.f) == 3500u);
+        CHECK(GripCooldownMs(3000, 112.f, 25.f) == 4980u);
+        CHECK(GripCooldownMs(3000, 100.f, 0.f) == 3000u);
+        CHECK(GripCooldownMs(0, 20.f, 20.f, 0) == 1000u);
+        // the review's scenario: a 100 yd grip at 25 yd/s (4 s in the air), still off the arena while it flies
+        GripTracker t(1500, 3000);
+        t.Gripped(9, GripCooldownMs(t.CooldownMs(), 100.f, 25.f));
+        std::uint32_t ms = 0;
+        bool regripped = false;
+        while (ms < 4250)
+        {
+            ms += 250;
+            if (t.Update(9, false, 250))
+            {
+                regripped = true;
+                break;
+            }
+        }
+        CHECK(!regripped && ms == 4250u);               // not before it lands (4 s) plus the margin
+        CHECK(t.Update(9, false, 250));                 // 4.5 s, still off the arena: gripped again
+        // the plain Gripped keeps the tracker's cooldown (Greenskin's tests)
+        t.Gripped(10);
+        CHECK(!t.Update(10, false, 2999));
+        CHECK(t.Update(10, false, 1));
+    }
+
+    // S4: a default landing the arena does not hold falls back to the boss's spot.
+    void TestLandingOrBoss()
+    {
+        Arena const ring(ArenaRegion::Circle({ 0.f, 0.f }, 10.f, 0.f, 5.f));
+        auto [inDest, inZ] = LandingOrBoss(ring, { 3.f, 0.f }, 1.f, { 0.f, 0.f }, 2.f);
+        CHECK(inDest.x == 3.f && inZ == 1.f);
+        auto [outDest, outZ] = LandingOrBoss(ring, { 30.f, 0.f }, 1.f, { 1.f, 2.f }, 2.f);
+        CHECK(outDest.x == 1.f && outDest.y == 2.f && outZ == 2.f);
+        auto [lowDest, lowZ] = LandingOrBoss(ring, { 3.f, 0.f }, -20.f, { 1.f, 2.f }, 2.f);   // under a ledge
+        CHECK(lowDest.x == 1.f && lowZ == 2.f);
+        // a two-floor arena: the upper floor's point is kept, a gap between the floors is not
+        Arena floors(ArenaRegion::Circle({ 0.f, 0.f }, 10.f, 0.f, 5.f));
+        floors.Add(ArenaRegion::Circle({ 30.f, 0.f }, 10.f, 15.f, 20.f));
+        CHECK(LandingOrBoss(floors, { 30.f, 0.f }, 16.f, { 0.f, 0.f }, 1.f).second == 16.f);
+        CHECK(LandingOrBoss(floors, { 15.f, 0.f }, 1.f, { 0.f, 0.f }, 1.f).first.x == 0.f);
+        // Greenskin: his land box lies on the ship, so the fallback never moves his grips (his z search stays in the
+        // deck band or falls back to his own z)
+        Arena const ship = Greenskin::ShipArena();
+        Box2 const box = Greenskin::kGripLandBox;
+        for (float x = box.minX; x <= box.maxX; x += 0.5f)
+            for (float y = box.minY; y <= box.maxY; y += 0.5f)
+                CHECK(ship.Contains({ x, y }, 41.f));
+    }
+
+    // N1, N3, S6: stack caps, the pickup reach, the stand-in's quiet timer.
+    void TestStackCapReachQuiet()
+    {
+        CHECK(StackCap(0, 5) == 5u);                   // max 0: the spell's own StackAmount
+        CHECK(StackCap(3, 5) == 3u);
+        CHECK(StackCap(0, 0) == 0u);                   // no cap anywhere
+        CHECK(ClampStacks(4, 3, StackCap(0, 5)) == 5u);
+        CHECK(ClampStacks(4, 3, StackCap(0, 0)) == 7u);
+
+        CHECK(InPickupRange(1.9f, 5.9f, 2.f, 6.f));
+        CHECK(InPickupRange(2.f, -6.f, 2.f, 6.f));
+        CHECK(!InPickupRange(2.1f, 0.f, 2.f, 6.f));
+        CHECK(!InPickupRange(1.f, -6.1f, 2.f, 6.f));
+        CHECK(InPickupRange(1.f, 9.f, 2.f, 10.f));     // a taller band (stairs, a ramp)
+
+        QuietTimer q(10000);
+        CHECK(!q.Update(false, 60000));                 // out of combat: never
+        CHECK(!q.Update(true, 9000));
+        q.Hit();
+        CHECK(!q.Update(true, 9000));
+        CHECK(q.Update(true, 1000));                    // 10 s in combat without a hit: evade
+        q.Reset();
+        CHECK(!q.Update(true, 9999));
+    }
+
+    // N5: a legacy reader that resizes the arrays cannot change their counts.
+    void TestLegacyReaderResize()
+    {
+        LegacySaveReader const greedy = [](std::string const&, StateSave& out)
+        {
+            out.states.assign(2, State::Done);
+            out.extras.assign(9, 4);
+            return true;
+        };
+        StateSave s;
+        CHECK(ParseStates("Q Q 1", "SR", 5, 3, s, greedy));
+        CHECK(s.states.size() == 5u && s.extras.size() == 3u);
+        CHECK(s.states[0] == State::Done && s.states[4] == State::NotStarted && s.extras[2] == 4u);
+    }
+
+    // N8: trackers forget units that left.
+    void TestTrackerForget()
+    {
+        GripTracker t;
+        t.Update(1, false, 250);
+        t.Update(2, false, 250);
+        t.Gripped(3);
+        CHECK(t.Size() == 3u);
+        CHECK(t.ForgetIf([](std::uint64_t unit) { return unit != 2; }) == 2u);
+        CHECK(t.Size() == 1u);
+        CHECK(t.PullNow(3, false));                     // forgotten: no cooldown left
+    }
 }
 
 int main()
@@ -397,5 +548,12 @@ int main()
     TestSpeedStacksLethal();
     TestLineStrike();
     TestDwell();
+    TestLethalLatch();
+    TestLeashTimer();
+    TestGripCooldown();
+    TestLandingOrBoss();
+    TestStackCapReachQuiet();
+    TestLegacyReaderResize();
+    TestTrackerForget();
     return Report("dungeon_kit_test");
 }

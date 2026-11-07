@@ -227,41 +227,46 @@ namespace DungeonKit
     // ----------------------------------------------------------------------------------------------------------------
 
     // Keeps a unit at 1 health instead of dying while armed (a fake death: no kill credit, no loot). Call Intercept
-    // from DamageTaken; the first lethal hit after Arm calls `onZero` once (the phase change).
+    // from DamageTaken; the first lethal hit after Arm / Reset calls `onZero` once (the phase change). Armed by
+    // default, and still armed after firing: every later lethal hit is clamped too until Disarm (call it when the
+    // boss may die). Reset (re-arm, not fired) belongs in the boss's Reset, or a wipe after the phase change leaves
+    // him at 1 health forever.
     //
+    //     void Reset() override { BossAI::Reset(); _lethal.Reset(); }
     //     void DamageTaken(Unit*, uint32& damage, DamageEffectType, SpellSchoolMask) override
     //     {
     //         _lethal.Intercept(me, damage, [this]() { StartPhaseTwo(); });
     //     }
+    //     void StartPhaseTwo() { ...; _lethal.Disarm(); }     // the second death is real
     class LethalGuard
     {
     public:
-        void Arm() { _armed = true; _fired = false; }
-        void Disarm() { _armed = false; }
-        bool Armed() const { return _armed; }
-        bool Fired() const { return _fired; }
+        void Arm() { _latch.Arm(); }
+        void Reset() { _latch.Reset(); }
+        void Disarm() { _latch.Disarm(); }
+        bool Armed() const { return _latch.Armed(); }
+        bool Fired() const { return _latch.Fired(); }
 
         // True when it clamped `damage`.
         bool Intercept(Unit* unit, uint32& damage, std::function<void()> const& onZero = {});
 
     private:
-        bool _armed = true;
-        bool _fired = false;
+        LethalLatch _latch;
     };
 
     // One-shot form of the SFK proposal: clamps a lethal `damage` and calls `onZero` the first time (`fired` keeps the
     // once-only state in the caller).
     bool InterceptLethal(Unit* unit, uint32& damage, bool& fired, std::function<void()> const& onZero = {});
 
-    // The players in `inside` each get a share of `totalPct` % of `owner`'s reference non-tank row, at most `capPct` %
-    // each (0 = no cap): SplitDamage's even split. Deal the shares with a SpellScript of your own (SetEffectValue in
-    // OnEffectLaunchTarget, so the target's defensives count).
+    // The players in `inside` (null entries skipped) each get a share of `totalPct` % of `owner`'s reference non-tank
+    // row, at most `capPct` % each (0 = no cap): SplitDamage's even split. Deal the shares with a SpellScript of your
+    // own (SetEffectValue in OnEffectLaunchTarget, so the target's defensives count).
     std::vector<std::pair<ObjectGuid, uint32>> SplitShares(Unit const* owner, std::vector<Unit*> const& inside,
         float totalPct, float capPct = 0.f);
 
     // Adds `delta` stacks (negative removes) of `spellId` from `caster` (nullptr: the target itself) on `target`,
-    // clamped to [0, max] (max 0: the spell's own cap); 0 removes the aura. Returns the new count. A new aura is
-    // applied with Unit::AddAura; every change refreshes its duration.
+    // clamped to [0, max] (max 0: the spell's own StackAmount; no cap when that is 0 too); 0 removes the aura.
+    // Returns the new count. A new aura is applied with Unit::AddAura; every change refreshes its duration.
     uint32 AddStacks(Unit* target, uint32 spellId, int32 delta, Unit* caster = nullptr, uint32 max = 0);
     // The current count (any caster when `caster` is empty).
     uint32 Stacks(Unit const* target, uint32 spellId, ObjectGuid caster = ObjectGuid::Empty);
@@ -284,21 +289,37 @@ namespace DungeonKit
     // Summons `standInEntry` on `door`'s position (the door line), passive and rooted, with `health` (0: its template
     // health), and hands it the door (BreakableDoorAI::SetGUID). The stand-in's script should be (or derive from)
     // BreakableDoorAI. Returns nullptr when the summon fails.
-    Creature* SpawnBreakableDoor(WorldObject* owner, GameObject* door, uint32 standInEntry, uint32 health = 0);
+    //
+    // The summoner is the door itself, or `summoner` when given: an instance-owned helper, never a boss. A BossAI
+    // summoner zones the stand-in into combat (JustSummoned) and despawns it with his summons on death, evade and
+    // reset, which leaves jailed players behind a closed door with nothing to break; such a summoner is refused
+    // (logged) and the door summons it instead. An instance DoorData entry on the same door re-closes it on the next
+    // boss state change.
+    Creature* SpawnBreakableDoor(GameObject* door, uint32 standInEntry, uint32 health = 0,
+        WorldObject* summoner = nullptr);
 
     // The stand-in's AI: never moves or attacks; on death it opens its door (GO_STATE_ACTIVE) and despawns. A dungeon
     // registers it under its own script name (RegisterDungeonReworkCreatureAI(npc_sfk_cell_door, ...)) with a class of
-    // its own that derives from this one.
+    // its own that derives from this one (an override of DamageTaken or UpdateAI calls this one's).
+    //
+    // Evade path: in combat with no hit taken for kQuietMs it evades (EVADE_REASON_NO_HOSTILES), so a player who hit
+    // it once leaves combat. With `keepDamage` (default) it does not regenerate and keeps its health through the
+    // evade: the damage on a door persists.
     struct BreakableDoorAI : public ScriptedAI
     {
         static int32 constexpr kSetDoorGuid = 0x4B444F52;   // SetGUID id: the door this stand-in opens
 
         explicit BreakableDoorAI(Creature* creature);
 
+        static uint32 constexpr kQuietMs = 10000;
+
         void Reset() override;
         void SetGUID(ObjectGuid const& guid, int32 id) override;
         void JustDied(Unit* killer) override;
-        void UpdateAI(uint32 /*diff*/) override { }
+        void DamageTaken(Unit* attacker, uint32& damage, DamageEffectType damageType,
+            SpellSchoolMask schoolMask) override;
+        void EnterEvadeMode(EvadeReason why) override;
+        void UpdateAI(uint32 diff) override;
         void AttackStart(Unit* /*who*/) override { }
         void MoveInLineOfSight(Unit* /*who*/) override { }
 
@@ -309,6 +330,8 @@ namespace DungeonKit
 
     protected:
         ObjectGuid _door;
+        bool keepDamage = true;         // set in the derived constructor; Reset applies it
+        QuietTimer _quiet{ kQuietMs };
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -320,7 +343,8 @@ namespace DungeonKit
         float radius = 2.f;
         Milliseconds life{ 20000 };             // then onExpire (and it is gone)
         Milliseconds dwell{ 0 };                // an eligible player inside this long takes it (0: on touch)
-        BossMechanics::Eligibility who;         // who may take it (and which bots go for it)
+        float zBand = 6.f;                      // yd above or below the spot that still count as on it
+        BossMechanics::Eligibility who;         // who may take it (and which bots go for it): Registry::IsEligible
         uint8 count = 1;                        // bodies the bots send (the registry Soak's count)
         std::optional<BossMechanics::Color> color;
         uint32 visualEntry = 0;                 // a creature summoned on the spot for the look (0: none)
@@ -332,7 +356,9 @@ namespace DungeonKit
 
     // Walk-over pickups owned by one boss AI: Add registers a registry Soak on the spot (the telegraph, and a job for
     // the bots; outline only, cancelled before it could resolve) and Update polls every 250 ms for the first eligible
-    // player inside for `dwell`, who takes it (onPick), or the pickup expires after `life` (onExpire). Call Update from
+    // player inside for `dwell`, who takes it (onPick), or the pickup expires after `life` (onExpire). Eligible is the
+    // registry's own check on the Soak (roles, carriers, stacks, `.mech test` scope), so a human taker obeys the same
+    // rule as the bots. Call Update from
     // the AI's UpdateAI (in or out of combat) and Clear from Reset / JustDied / EnterEvadeMode.
     class Pickups
     {

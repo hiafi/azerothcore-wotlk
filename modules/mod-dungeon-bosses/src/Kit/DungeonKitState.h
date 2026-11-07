@@ -101,7 +101,8 @@ namespace DungeonKit
     };
 
     // A reader for a save written by another script of the same map (the stock one): fills `out` (already sized and
-    // zeroed) and returns true, or false to ignore the save.
+    // zeroed; a resize is undone) and returns true, or false to ignore
+    // the save.
     using LegacySaveReader = std::function<bool(std::string const& in, StateSave& out)>;
 
     // "<header> <state 0> .. <state N-1> <extra 0> .. <extra M-1>". A TO_BE_DECIDED state is written as NOT_STARTED.
@@ -133,6 +134,9 @@ namespace DungeonKit
             {
                 if (!legacy(in, out))
                     return false;
+                // The reader may have resized them; callers index by count.
+                out.states.resize(stateCount, State::NotStarted);
+                out.extras.resize(extraCount, 0);
                 for (std::uint32_t& s : out.states)
                     s = SanitizeLoadedState(s);
                 return true;

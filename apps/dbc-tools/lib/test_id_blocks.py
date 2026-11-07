@@ -624,9 +624,12 @@ class DungeonKitIdsTest(unittest.TestCase):
         for dungeon, script in DUNGEON_VFX_SCRIPTS.items():
             with self.subTest(dungeon=dungeon):
                 self.assertEqual(class_slice_problems(dungeon, script, scanned), [])
-        # 90345-90699 holds no constant at all today (the free range checked when the block was widened)
+        # the unreserved part of 90345-90699 (the free range checked when the block was widened) holds no constant: a
+        # dungeon's own slice fills up as its VFX lands, so only ids outside every reservation are pinned
+        reserved = [t["spellvisual"] for t in RESERVATIONS.values() if "spellvisual" in t]
         used = [value for value, _ in scanned.get("spellvisual", [])]
-        self.assertFalse([v for v in used if 90345 <= v <= 90699])
+        self.assertFalse([v for v in used if 90345 <= v <= 90699
+                          and not any(r["start"] <= v <= r["end"] for r in reserved)])
 
     def test_a_planted_constant_in_another_dungeons_slice_is_flagged(self):
         with tempfile.TemporaryDirectory() as d:

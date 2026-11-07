@@ -20,17 +20,21 @@
  *   - the pull (Engage, with gripOnPull): everyone in combat with the boss (his threat list: players, pets, guardians,
  *     bots) who is off the arena is gripped onto it at once;
  *   - during the fight (gripBack): a unit off the arena for graceMs (continuously) is gripped back, then left alone for
- *     cooldownMs (no second grip mid-air);
+ *     cooldownMs, or its flight time + 0.5 s when that is longer (no second grip mid-air: GripCooldownMs);
  *   - holdWhileVictimOff: the boss never chases a victim who is off the arena (he holds; the grip brings it back);
- *   - evadeWhenBossOff: the boss evades (EVADE_REASON_BOUNDARY) if he is ever off it himself (the leash);
+ *   - evadeWhenBossOff: the boss evades (EVADE_REASON_BOUNDARY) once he has been off it himself for bossGraceMs (0:
+ *     at the first check; the leash). With leashSkipAirborne a check while he jumps or falls (his own leap, a drop
+ *     between floors) neither counts nor evades;
  *   - evadeNoTargetInsideMs: ... or when nobody in combat with him has been on it that long (a grip-less arena).
  *   A grip: the boss casts `gripSpell` (the look; triggered) on the unit, then the unit jumps (JumpTo) to `landing`
  *   (default: landYd from the boss toward where it was, clamped into landBox; the floor height under it, searched
- *   from the top of the boss's region). Units farther than maxGripYd, totems and vehicles are never gripped.
+ *   from the top of the boss's region; a point the arena does not hold falls back to the boss's own spot, so a
+ *   polygon or multi-region arena should give landBox or `landing`). Units farther than maxGripYd, totems and
+ *   vehicles are never gripped. Units that left the map are forgotten at the next check.
  *
  * Confinement, for cells and jails ("server-side movement ignores closed doors", SFK handoff kit #1b): ConfineIn
  * keeps a unit inside a cell (off it for the grace: put back), KeepOut keeps everyone else out of one (inside for the
- * grace: put out). Update sweeps the map's players and their pets.
+ * grace: put out). Update sweeps the map's players and their pets; a fence forgets units it no longer sees.
  */
 
 #ifndef MOD_DUNGEON_BOSSES_KIT_ARENA_GUARD_H
@@ -60,6 +64,8 @@ namespace DungeonKit
         bool gripBack = true;
         bool holdWhileVictimOff = true;
         bool evadeWhenBossOff = true;
+        uint32 bossGraceMs = 0;                                 // the boss off his arena this long: the leash
+        bool leashSkipAirborne = true;                          // no leash check while the boss jumps or falls
         // > 0: the boss also evades when nobody in combat with him has been on the arena this long (Scholomance's
         // "hold at the edge, evade after 10 s with no target inside", for an arena with no grips).
         uint32 evadeNoTargetInsideMs = 0;
@@ -107,6 +113,7 @@ namespace DungeonKit
         Arena _arena;
         ArenaGuardOptions _options;
         GripTracker _grip;
+        LeashTimer _leash;
         uint32 _checkMs = 0;
         uint32 _emptyMs = 0;
         bool _holding = false;
@@ -159,7 +166,8 @@ namespace DungeonKit
             GripTracker tracker;
         };
 
-        void PutAt(Unit* unit, Position const& at, char const* why);
+        // Returns the cooldown for the tracker (a jump: at least its flight time + 0.5 s).
+        uint32 PutAt(Unit* unit, Position const& at, char const* why);
 
         ConfineOptions _options;
         std::vector<Jail> _jails;

@@ -148,7 +148,11 @@ def resolve_copy(spell_id: int, name: str, school: School, desc: str, notes: str
     """A dungeon copy of the mod-boss-mechanics resolve spell (205001-205007): SCHOOL_DAMAGE from the caster's spot on
     every enemy in 100 yd, the resolve attribute set, bound to spell_boss_mechanics_resolve (plus `scripts`), which
     filters the targets to the shape and sets the damage per target. Pass it to the registry with `.Spell(id)` (C++
-    ImpactSpec / LingerSpec / LineStrikeSpec `spellId`)."""
+    ImpactSpec / LingerSpec / LineStrikeSpec `spellId`). `visual` (a SpellVisual id) is set only when non-zero, as for
+    cast_bar."""
+    raw = kit_raw(desc, **RESOLVE_RAW)
+    if visual:
+        raw['SpellVisualID_1'] = visual
     s = spell(
         id=spell_id, name=name, school=school, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0,
         mana_cost_pct=0, range_yards=RANGE_SELF, duration_ms=0,
@@ -156,7 +160,7 @@ def resolve_copy(spell_id: int, name: str, school: School, desc: str, notes: str
                         implicit_target_b=TARGET_UNIT_SRC_AREA_ENEMY, radius_yards=100.0,
                         potency_excluded=excluded)],
         spell_icon_id=icon, notes=notes,
-        raw_overrides=kit_raw(desc, **RESOLVE_RAW, SpellVisualID_1=visual),
+        raw_overrides=raw,
     )
     scripted_by(s, RESOLVE_SCRIPT, *scripts)
     return s

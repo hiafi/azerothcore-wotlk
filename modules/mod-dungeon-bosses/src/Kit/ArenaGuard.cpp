@@ -15,6 +15,8 @@
 #include "Player.h"
 #include "ThreatManager.h"
 #include "Unit.h"
+#include <tuple>
+#include <unordered_set>
 #include <utility>
 
 namespace DungeonKit
@@ -31,6 +33,13 @@ namespace DungeonKit
                     out.push_back(unit);
             return out;
         }
+
+        // The unit behind a tracker key is gone from `owner`'s map (logged out, left the instance, despawned).
+        bool LeftMap(WorldObject const* owner, std::uint64_t raw)
+        {
+            Unit const* unit = ObjectAccessor::GetUnit(*owner, ObjectGuid(raw));
+            return !unit || !unit->IsInWorld() || !unit->IsInMap(owner);
+        }
     }
 
     ArenaGuard::ArenaGuard(Arena arena, ArenaGuardOptions options)
@@ -43,6 +52,7 @@ namespace DungeonKit
         _arena = std::move(arena);
         _options = std::move(options);
         _grip = GripTracker(_options.graceMs, _options.cooldownMs);
+        _leash.Reset();
         _checkMs = 0;
         _emptyMs = 0;
         _holding = false;
@@ -84,8 +94,11 @@ namespace DungeonKit
         uint32 const elapsed = _checkMs;
         _checkMs = 0;
 
-        if (_options.evadeWhenBossOff && !Contains(boss))
+        if (_options.evadeWhenBossOff
+            && _leash.Update(Contains(boss), _options.leashSkipAirborne
+                && (boss->HasUnitState(UNIT_STATE_JUMPING) || boss->IsFalling()), elapsed, _options.bossGraceMs))
         {
+            _leash.Reset();
             LOG_INFO(kLogCategory, "{} grip leash at=({:.1f}, {:.1f}, {:.1f})", _options.logPrefix,
                 boss->GetPositionX(), boss->GetPositionY(), boss->GetPositionZ());
             if (boss->IsAIEnabled && boss->AI())
@@ -113,6 +126,7 @@ namespace DungeonKit
             }
         }
 
+        _grip.ForgetIf([boss](std::uint64_t raw) { return LeftMap(boss, raw); });
         if (_options.gripBack)
             for (Unit* unit : CombatUnits(boss))
                 if (Grippable(boss, unit) && _grip.Update(unit->GetGUID().GetRawValue(), Contains(unit), elapsed))
@@ -173,10 +187,13 @@ namespace DungeonKit
             if (z <= INVALID_HEIGHT || z < minZ)
                 z = boss->GetPositionZ();
         }
+        // The default landing must be on the arena (a gap, a ledge, outside every region): else the boss's spot.
+        if (!_options.landing)
+            std::tie(dest, z) = LandingOrBoss(_arena, dest, z, PlaneOf(boss), boss->GetPositionZ());
         float const dist = Distance(from, dest);
         JumpTo(unit, Position(dest.x, dest.y, z + 0.5f), _options.jumpSpeedXY, _options.minJumpSpeedZ,
             _options.gripSpell, boss);
-        _grip.Gripped(unit->GetGUID().GetRawValue());
+        _grip.Gripped(unit->GetGUID().GetRawValue(), GripCooldownMs(_options.cooldownMs, dist, _options.jumpSpeedXY));
         LOG_INFO(kLogCategory, "{} grip {} unit={} from=({:.1f}, {:.1f}, {:.1f}) to=({:.1f}, {:.1f}, {:.1f}) "
             "dist={:.1f}", _options.logPrefix, why, unit->GetName(), from.x, from.y, fromZ, dest.x, dest.y, z, dist);
     }
@@ -184,6 +201,7 @@ namespace DungeonKit
     void ArenaGuard::Reset()
     {
         _grip.Clear();
+        _leash.Reset();
         _checkMs = 0;
         _emptyMs = 0;
         _holding = false;
@@ -251,14 +269,19 @@ namespace DungeonKit
         return false;
     }
 
-    void Confinement::PutAt(Unit* unit, Position const& at, char const* why)
+    uint32 Confinement::PutAt(Unit* unit, Position const& at, char const* why)
     {
+        uint32 cooldown = _options.cooldownMs;
         if (_options.jump)
+        {
+            cooldown = GripCooldownMs(cooldown, unit->GetExactDist2d(&at), _options.jumpSpeedXY);
             JumpTo(unit, at, _options.jumpSpeedXY, _options.minJumpSpeedZ);
+        }
         else
             unit->NearTeleportTo(at.GetPositionX(), at.GetPositionY(), at.GetPositionZ(), unit->GetOrientation());
         LOG_INFO(kLogCategory, "{} {} unit={} to=({:.1f}, {:.1f}, {:.1f})", _options.logPrefix, why, unit->GetName(),
             at.GetPositionX(), at.GetPositionY(), at.GetPositionZ());
+        return cooldown;
     }
 
     void Confinement::Update(WorldObject* owner, uint32 diff)
@@ -280,8 +303,7 @@ namespace DungeonKit
             bool const inside = j.cell.Contains(PlaneOf(unit), unit->GetPositionZ());
             if (_jailTracker.Update(j.unit.GetRawValue(), inside, elapsed))
             {
-                PutAt(unit, j.putBack, "put-back");
-                _jailTracker.Gripped(j.unit.GetRawValue());
+                _jailTracker.Gripped(j.unit.GetRawValue(), PutAt(unit, j.putBack, "put-back"));
             }
         }
 
@@ -297,17 +319,21 @@ namespace DungeonKit
                 if (Pet* pet = player->GetPet())
                     units.push_back(pet);
             }
+        std::unordered_set<uint64> seen;
+        for (Unit* unit : units)
+            seen.insert(unit->GetGUID().GetRawValue());
         for (Fence& f : _fences)
+        {
+            // Units that left the map (or died, or turned GM) start over when they come back.
+            f.tracker.ForgetIf([&seen](std::uint64_t raw) { return !seen.count(raw); });
             for (Unit* unit : units)
             {
                 if (IsConfined(unit->GetGUID()))
                     continue;
                 bool const outside = !f.cell.Contains(PlaneOf(unit), unit->GetPositionZ());
                 if (f.tracker.Update(unit->GetGUID().GetRawValue(), outside, elapsed))
-                {
-                    PutAt(unit, f.putOut, "put-out");
-                    f.tracker.Gripped(unit->GetGUID().GetRawValue());
-                }
+                    f.tracker.Gripped(unit->GetGUID().GetRawValue(), PutAt(unit, f.putOut, "put-out"));
             }
+        }
     }
 }

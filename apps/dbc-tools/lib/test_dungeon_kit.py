@@ -103,6 +103,20 @@ class DungeonKitBuildersTest(unittest.TestCase):
         """)
         self._assert_same(205343, built)
 
+    def test_resolve_copy_and_cast_bar_write_a_visual_only_when_given(self):
+        built = self._build("""
+            from lib.dsl.dungeon_kit import cast_bar, resolve_copy
+            a = resolve_copy(205340, 'Probe Hit', 0, 'd', 'n')
+            b = cast_bar(205343, 'Probe Bar', 2000, 'd', 'n')
+            c = resolve_copy(205341, 'Probe Lit Hit', 0, 'd', 'n', visual=612)
+            d = cast_bar(205344, 'Probe Lit Bar', 2000, 'd', 'n', visual=612)
+        """)
+        raws = {i: e["_spell"].raw_overrides for i, e in _spells(built).items()}
+        self.assertNotIn("SpellVisualID_1", raws[205340])
+        self.assertNotIn("SpellVisualID_1", raws[205343])
+        self.assertEqual(raws[205341]["SpellVisualID_1"], 612)
+        self.assertEqual(raws[205344]["SpellVisualID_1"], 612)
+
     def test_self_visual_is_vancleefs(self):
         s = self.dm_spells[205360]
         built = self._build(f"""
