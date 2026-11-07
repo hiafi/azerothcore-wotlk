@@ -1,0 +1,53 @@
+# Scopes for `generate.py --scope NAME[,NAME...]` (lib/scope.py; .agents/docs/systems/dbc-tools.md "Scoped write
+# runs"). A scoped write run builds everything a full run builds, then writes only the rows its scope owns, so another
+# scope's in-flight work never reaches the SQL or the client patch.
+#
+# A scope owns, by convention (nothing to list):
+#   - the ids.yaml reservation of the same name (when there is one);
+#   - the source files classes/NAME, npcs/NAME, npcs/NAME_*.py, world/NAME, world/dungeons/NAME.py, items/NAME.py and
+#     items/NAME_*.py (a directory covers everything under it).
+# `reservations:` and `sources:` add more of either. A source file may belong to one scope at most
+# (lib/test_scope.py); a file that belongs to none (source/spells/*.csv, world/lfg.py, items/ladders.py, ...) is shared:
+# only a full run writes its rows.
+#
+# What a scope owns: every id a source file of it declares, and everything derived from those declarations (an item's
+# tier entries, effect spell copies and limit category, a set's tokens and costs, a dungeon's creatures, their heroic
+# copies and its encounters, a class's GCD-haste aura); then every other id inside its reservation ranges.
+#
+# Add a scope (or a line to one) when a dungeon's or class's work starts writing rows: its own WP-0 adds the
+# reservation in ids.yaml and, if the names differ, the mapping here.
+
+scopes:
+  # Classes (source/classes/<class>/; the warrior's Skull Banner models are npcs/warrior_npcs.py by convention).
+  deathknight:
+  druid:
+  hunter:
+  mage:
+  paladin:
+  priest:
+  rogue:
+  shaman:
+  warlock:
+  warrior:
+
+  # Reworked dungeons: the boss spells and creatures (npcs/<dungeon>/), the items and their loot
+  # (items/<dungeon>*.py), the heroic declaration (world/dungeons/<dungeon>.py).
+  deadmines:
+  shadowfang_keep:
+    reservations: [shadowfang_items]
+  scholomance:
+    reservations: [scholomance_items]
+  stratholme:
+    reservations: [stratholme_items]
+
+  # Dungeon sets and tools.
+  haunted_set:
+  bossmechanics:
+    sources: [npcs/boss_mechanics.py]
+  healsim:
+  npc_tools:  # the training and healing dummies (ids.yaml npc_tools block, no reservation)
+    sources: [npcs/training_dummies.py]
+
+# Reservations no scope owns: a pool whose ids belong to whichever declaration minted them (the item effect spell
+# copies of `item_spell_copy` sit in `items`, each owned by the dungeon whose item declared it).
+pools: [items]

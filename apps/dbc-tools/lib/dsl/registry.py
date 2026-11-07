@@ -45,6 +45,81 @@ from .tooltip import has_aura, knows, product, talent_mult  # noqa: F401 - re-ex
 _package_load_counter = itertools.count()
 
 
+# Provenance for `generate.py --scope` (lib/scope.py): the source file whose module-level code declared each entry, as
+# an absolute path, recorded only while a caller asked for it (`record_provenance()`): kept beside the entries, never in
+# them, so an entry stays the plain dict every consumer and test compares. `{id(entry): (entry, path)}`; the entry is
+# held so its id cannot be reused while the map lives.
+_provenance: dict[int, tuple[dict, str]] | None = None
+_DSL_DIR = str(Path(__file__).resolve().parent)
+
+
+def record_provenance() -> None:
+    """Start (or restart, empty) recording which file declared each entry the registry lists receive."""
+    global _provenance
+    _provenance = {}
+
+
+def stop_provenance() -> None:
+    global _provenance
+    _provenance = None
+
+
+def declared_in(entry) -> str | None:
+    """The file that declared `entry` (an absolute path), or None (not recorded, or a row derived after loading)."""
+    record = _provenance.get(id(entry)) if _provenance is not None else None
+    return record[1] if record is not None and record[0] is entry else None
+
+
+def set_declared_in(entry: dict, path: str) -> None:
+    """Records `entry` as declared by `path` (tests, and callers that build entries outside a source file)."""
+    if _provenance is not None:
+        _provenance[id(entry)] = (entry, str(path))
+
+
+def _declaring_file() -> str | None:
+    """The file of the innermost module-level frame outside this package: the source file being executed when a
+    declaration helper registers an entry. A helper function of another source file (source/items/ladders.py, a
+    class's `_common.py`) runs in a function frame, so the file whose top-level code called it is the one named; a
+    sibling a relative import pulls in mid-file runs in its own module frame and is named itself."""
+    frame = sys._getframe(2)
+    while frame is not None:
+        code = frame.f_code
+        if code.co_name == "<module>" and not code.co_filename.startswith(_DSL_DIR):
+            return code.co_filename
+        frame = frame.f_back
+    return None
+
+
+def _tag_declared(item) -> None:
+    if _provenance is not None and isinstance(item, dict) and id(item) not in _provenance:
+        path = _declaring_file()
+        if path is not None:
+            _provenance[id(item)] = (item, path)
+
+
+class _DeclaredList(list):
+    """A `Registry` list that records the declaring file of each dict appended to it (`record_provenance()`; a no-op
+    otherwise). Only the registration paths are wrapped (append / extend / insert / +=); the rest is a plain list's."""
+
+    def append(self, item) -> None:
+        _tag_declared(item)
+        super().append(item)
+
+    def extend(self, items) -> None:
+        items = list(items)
+        for item in items:
+            _tag_declared(item)
+        super().extend(items)
+
+    def insert(self, index, item) -> None:
+        _tag_declared(item)
+        super().insert(index, item)
+
+    def __iadd__(self, items):
+        self.extend(items)
+        return self
+
+
 class DuplicateIdError(ValueError):
     """Same shape/name as `lib.source.DuplicateIdError` - kept as a
     separate class (not imported from there) so this package has no
@@ -232,6 +307,11 @@ class Registry:
     # lib/item_spell_copies.py's effect families.
     pot_text_calls: list[tuple[str, int]] = field(default_factory=list)
     pot_text_cursor: int = 0  # pot_text_calls[cursor:] are the calls made since the previous spell()
+
+    def __post_init__(self) -> None:
+        # Every declared-entry list records its entries' declaring file (`declared_in`, for generate.py --scope).
+        for key in MERGE_KEYS:
+            setattr(self, key, _DeclaredList(getattr(self, key)))
 
 
 MERGE_KEYS = (

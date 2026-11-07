@@ -70,12 +70,20 @@ python3 apps/dbc-tools/generate.py
 python3 apps/dbc-tools/generate.py --check                  # read-only lints + generated-header gate
 python3 apps/dbc-tools/generate.py --check --class warrior  # the same for one class only (seconds)
 python3 apps/dbc-tools/generate.py --only items            # item SQL + the deployed patch-Z with only Item.dbc replaced
+python3 apps/dbc-tools/generate.py --scope shadowfang_keep  # one scope's rows only (SQL + deployed patch-Z repack)
 ```
+
+Dungeon and class work writes with `--scope <name>` (source/scopes.yaml); a plain full run is for shared changes and
+is done last, right before a merge or deploy. Every write run, full or scoped, runs the drop guard first.
 
 Flags: `--no-prune`, `--check`, `--check --class NAME` (refused without `--check`), `--only items` (see
 `.agents/docs/systems/dbc-tools.md`; needs a deployed patch-Z, works with `--check`), `--no-cache`, `--rebuild-cache`,
 `--allow-item-drop` (a write run stops before writing when the deployed patch-Z's Item.dbc holds custom item ids this
-build lacks, e.g. minted item variants from a branch this checkout has not merged; the flag writes anyway).
+build lacks, e.g. minted item variants from a branch this checkout has not merged; the flag writes anyway),
+`--scope NAME[,NAME]` (`--scope items` = `--only items`), `--allow-drop` (the drop guard: a write run stops before
+writing when it would delete a live or deployed custom row no SQL file of this checkout ever wrote) and
+`--deployed-patch PATH` (the archive to treat as deployed; nothing is deployed). See
+`.agents/docs/systems/dbc-tools.md`, "Scoped write runs" and "The drop guard".
 `build_patch_x.py` (the FrameXML overrides, patch-X) only builds unless given `--deploy`.
 A run replays the base dumps and every promoted `db_world` file to learn what is live; that replay is cached under
 the gitignored `var/dbc-tools-cache/` and reused while the files, the loader code and the parameters are unchanged
