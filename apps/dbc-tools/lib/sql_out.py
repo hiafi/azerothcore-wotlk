@@ -48,7 +48,11 @@ def _sql_literal(value) -> str:
 
 def block_ranges(id_range: dict) -> list[tuple[int, int]]:
     """The `(start, end)` ranges the block DELETE clears: the whole block, split around each `foreign` id
-    (`source.foreign_ids`, e.g. mod-transmog's spell 200100) so another owner's row survives every rewrite."""
+    (`source.foreign_ids`, e.g. mod-transmog's spell 200100) so another owner's row survives every rewrite. A scoped
+    run (`generate.py --scope`, lib/scope.py) passes its own narrowed `ranges` (already split around every id it does
+    not own, foreign ones included)."""
+    if "ranges" in id_range:
+        return [(int(a), int(b)) for a, b in id_range["ranges"]]
     ranges, start = [], int(id_range["start"])
     for hole in sorted(foreign_ids(id_range)):
         if start < hole:
@@ -82,6 +86,17 @@ def _table_block(table: DbcTable, id_range: dict, rows: list[dict], edited_ids: 
         )
         lines.append(f"INSERT INTO `{table.sql_table}` ({cols}) VALUES\n{tuples};")
     return "\n".join(lines)
+
+
+def render_insert_block(table: DbcTable, rows: list[dict]) -> str:
+    """A bare INSERT of `rows` (no DELETE first): a scoped run's shared secondary rows (lib/scope.py), so a row another
+    rev already put at the same id makes db-import fail instead of being overwritten. "" for no rows."""
+    if not rows:
+        return ""
+    rows = sorted(rows, key=lambda r: r[table.index_column])
+    cols = ", ".join(f"`{c}`" for c in table.columns)
+    tuples = ",\n".join("(" + ", ".join(_sql_literal(row.get(c)) for c in table.columns) + ")" for row in rows)
+    return f"INSERT INTO `{table.sql_table}` ({cols}) VALUES\n{tuples};"
 
 
 def render_generic_table_block(
@@ -198,6 +213,35 @@ def render_delete_only_block(
     return f"{comment}\n{sql}" if comment else sql
 
 
+def render_pending_sql(
+    blocks: list[tuple[DbcTable, dict, list[dict], list[int]]],
+    header: str,
+    extra_blocks: list[str] | None = None,
+) -> str | None:
+    """The text `emit_pending_sql` writes, or None when there is nothing to emit (so a caller can check it, e.g. the
+    drop guard, before anything is written)."""
+    extra_blocks = [b for b in (extra_blocks or []) if b]
+    if not any(rows or edited_ids for _, _, rows, edited_ids in blocks) and not extra_blocks:
+        return None
+    # Note: no extra "\n" here — the "\n\n".join below already inserts one
+    # blank line between the header and the first block; adding another
+    # would leave two (codestyle-sql.py's "no multiple blank lines" rule).
+    parts = [header.rstrip()]
+    for table, id_range, rows, edited_ids in blocks:
+        parts.append(_table_block(table, id_range, rows, edited_ids))
+    parts.extend(extra_blocks)
+    return "\n\n".join(parts) + "\n"
+
+
+def write_pending_sql(output_path, text: str | None) -> bool:
+    """Writes `render_pending_sql`'s text; False (nothing written) for None."""
+    if text is None:
+        return False
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(text, encoding="utf-8")
+    return True
+
+
 def emit_pending_sql(
     output_path,
     blocks: list[tuple[DbcTable, dict, list[dict], list[int]]],
@@ -210,16 +254,4 @@ def emit_pending_sql(
     in the order given. Writes nothing and returns False if everything is
     empty (nothing new/changed to emit). A block with explicit `edited_ids` but no rows still counts: its
     `DELETE ... IN` is a stale overlay row's removal (lib/stale_overlay.py)."""
-    extra_blocks = [b for b in (extra_blocks or []) if b]
-    if not any(rows or edited_ids for _, _, rows, edited_ids in blocks) and not extra_blocks:
-        return False
-    # Note: no extra "\n" here — the "\n\n".join below already inserts one
-    # blank line between the header and the first block; adding another
-    # would leave two (codestyle-sql.py's "no multiple blank lines" rule).
-    parts = [header.rstrip()]
-    for table, id_range, rows, edited_ids in blocks:
-        parts.append(_table_block(table, id_range, rows, edited_ids))
-    parts.extend(extra_blocks)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text("\n\n".join(parts) + "\n", encoding="utf-8")
-    return True
+    return write_pending_sql(output_path, render_pending_sql(blocks, header, extra_blocks))

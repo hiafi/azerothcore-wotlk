@@ -23,7 +23,8 @@ and produces:
   3. The same bytes copied into env/dist/data/dbc/ if that directory exists.
 
 Usage: python3 apps/dbc-tools/generate.py [--no-prune] [--check [--class NAME]] [--only items] [--no-cache]
-                                          [--rebuild-cache] [--allow-item-drop]
+                                          [--rebuild-cache] [--allow-item-drop] [--scope NAME[,NAME...]]
+                                          [--allow-drop] [--deployed-patch PATH]
 
   --no-prune       skip the prune pass (rows an earlier run emitted that source/classes/*
                    no longer declares are left live instead of being deleted)
@@ -39,6 +40,26 @@ Usage: python3 apps/dbc-tools/generate.py [--no-prune] [--check [--class NAME]] 
                    with no deployed patch-Z (no lib/local_config.py, or no Data/patch-Z.mpq under DEPLOY_ROOT). With
                    --check: the item checks and lints only, no spell lints or header gate (a missing deployed patch-Z
                    is a WARNING there). Not combinable with --class.
+  --scope NAME[,NAME...]
+                   a write run for one scope (source/scopes.yaml: a dungeon such as deadmines or shadowfang_keep, a
+                   class, a tool NPC set), or several. Everything is loaded and built as in a full run, then only the
+                   rows the scope owns are written: the reserved-block DELETEs narrow to its reservation ranges, every
+                   other statement keeps only its rows, and the DEPLOYED patch-Z is repacked with only its rows
+                   swapped in (every other row stays as deployed). Rows of other scopes (in-flight work) reach neither
+                   the SQL nor the client. Stops when a scope row needs a row of another owner that is not live yet,
+                   or when a whole-file output (a lock, ItemSpellCopies.h, the client Lua tables) changes outside the
+                   scope. `--scope items` is `--only items`. Refused up front without a deployed patch-Z (or
+                   --deployed-patch), and with --check or --class.
+  --allow-drop     write anyway when the drop guard finds that this run would delete a custom row that is live
+                   (world DB via $DBC_TOOLS_MYSQL or LIVE_DB_MYSQL in this or, in a worktree, the main checkout's
+                   lib/local_config.py) or deployed (patch-Z) but that no SQL file of this checkout ever wrote, or
+                   rewrite a live row whose live content no SQL file of this checkout wrote: typically a stale branch
+                   about to wipe or revert another branch's rows. Every write run checks this. Revs already written
+                   are checked before db-import by check_pending.py.
+  --deployed-patch PATH
+                   the patch-Z.mpq to treat as deployed (the drop guard's client half, and the archive --scope and
+                   --only items repack) instead of DEPLOY_ROOT/Data/patch-Z.mpq; a run given this deploys nothing.
+                   $DBC_TOOLS_DEPLOYED_PATCH does the same (the worktree way).
   --allow-item-drop
                    write anyway when the deployed patch-Z's Item.dbc holds custom item ids (70000-79999) that this
                    run's Item.dbc lacks. Without it such a run (full or --only items) stops before writing anything:
@@ -72,12 +93,13 @@ from lib import item_spell_copies  # noqa: E402
 from lib import item_limits  # noqa: E402
 from lib import item_sets  # noqa: E402
 from lib import patch_repack  # noqa: E402
+from lib import drop_guard, scope as scope_lib  # noqa: E402
 from bootstrap import load_spell_ranks_chains  # noqa: E402
 from lib.dsl import items as dsl_items  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 from lib.lazy import Lazy  # noqa: E402
 
-KNOWN_FLAGS = {"--no-prune", "--check", "--no-cache", "--rebuild-cache", "--allow-item-drop"}
+KNOWN_FLAGS = {"--no-prune", "--check", "--no-cache", "--rebuild-cache", "--allow-item-drop", "--allow-drop"}
 # `--only NAME`: the run scopes that parse_args accepts. A valid one is returned in the flag set as `--only=NAME`.
 ONLY_SCOPES = ("items",)
 
@@ -564,14 +586,28 @@ def parse_args(args: list[str]) -> tuple[set[str], str | None, str | None]:
     can't silently fall through into a full multi-minute run that writes a pending SQL migration. `--class` is the
     one option with a value (`--class NAME` or `--class=NAME`); it is accepted only together with `--check`.
     `--only NAME` (or `--only=NAME`, one of ONLY_SCOPES) is the other: it scopes the run and comes back as the flag
-    `--only=NAME`."""
+    `--only=NAME`. `--scope NAMES` (a comma list of source/scopes.yaml names) comes back as `--scope=NAMES`, except
+    `--scope items`, which is `--only=items`; `--deployed-patch PATH` as `--deployed-patch=PATH`."""
     flags: set[str] = set()
     class_names: list[str] = []
     only_scopes: list[str] = []
+    scope_args: list[str] = []
+    deployed: list[str] = []
     unknown: list[str] = []
     i = 0
     while i < len(args):
         arg = args[i]
+        if arg in ("--scope", "--deployed-patch"):
+            if i + 1 >= len(args) or args[i + 1].startswith("-"):
+                return flags, None, f"{arg} needs a value"
+            (scope_args if arg == "--scope" else deployed).append(args[i + 1])
+            i += 2
+            continue
+        if arg.startswith(("--scope=", "--deployed-patch=")):
+            name, _, value = arg.partition("=")
+            (scope_args if name == "--scope" else deployed).append(value)
+            i += 1
+            continue
         if arg == "--only":
             if i + 1 >= len(args) or args[i + 1].startswith("-"):
                 return flags, None, f"--only needs a scope ({', '.join(ONLY_SCOPES)})"
@@ -597,6 +633,14 @@ def parse_args(args: list[str]) -> tuple[set[str], str | None, str | None]:
         i += 1
     if unknown:
         return flags, None, f"unknown argument(s): {' '.join(unknown)} (see --help)"
+    if len(deployed) > 1 or (deployed and not deployed[0]):
+        return flags, None, "--deployed-patch takes exactly one path"
+    if deployed:
+        flags.add(f"--deployed-patch={deployed[0]}")
+    if scope_args:
+        error = _scope_flag(flags, scope_args, bool(only_scopes), bool(class_names))
+        if error:
+            return flags, None, error
     if only_scopes:
         if len(only_scopes) > 1 or only_scopes[0] not in ONLY_SCOPES:
             return flags, None, f"--only takes exactly one of: {', '.join(ONLY_SCOPES)}"
@@ -619,6 +663,40 @@ def parse_args(args: list[str]) -> tuple[set[str], str | None, str | None]:
     return flags, name, None
 
 
+def _scope_flag(flags: set[str], scope_args: list[str], has_only: bool, has_class: bool) -> str | None:
+    """Validates `--scope` and adds `--scope=a,b` (or `--only=items` for `--scope items`) to `flags`; the error."""
+    if len(scope_args) > 1:
+        return "--scope takes one value (a comma list for several scopes)"
+    names = scope_lib.parse_names(scope_args[0])
+    if not names or len(set(names)) != len(names):
+        return "--scope needs one or more distinct scope names (e.g. --scope shadowfang_keep)"
+    if has_only or has_class:
+        return "--scope cannot be combined with --only or --class"
+    if scope_lib.ITEMS_ALIAS in names:
+        if len(names) > 1:
+            return "--scope items is --only items and cannot be combined with other scopes"
+        flags.add("--only=items")
+        return None
+    if "--check" in flags:
+        return (
+            "--scope is for write runs (a scoped run computes everything a full run does, then writes only the "
+            "scope's rows); use --check, or --check --class NAME for one class's lints"
+        )
+    try:
+        known = scope_lib.load_scopes()
+    except (OSError, scope_lib.ScopeError) as error:
+        return f"cannot read {scope_lib.SCOPES_PATH}: {error}"
+    missing = [n for n in names if n not in known.defs]
+    if missing:
+        return f"unknown scope(s) {', '.join(missing)} (source/scopes.yaml knows: {', '.join(known.names())}, items)"
+    flags.add(f"--scope={','.join(names)}")
+    return None
+
+
+def _flag_value(flags: set[str], name: str) -> str | None:
+    return next((f.split("=", 1)[1] for f in flags if f.startswith(name + "=")), None)
+
+
 def main() -> int:
     args = sys.argv[1:]
     if "-h" in args or "--help" in args:
@@ -629,15 +707,35 @@ def main() -> int:
         print(f"generate.py: {error}", file=sys.stderr)
         return 2
 
+    scope_value = _flag_value(flags, "--scope")
+    deployed_value = _flag_value(flags, "--deployed-patch")
+    deployed_patch = Path(deployed_value).resolve() if deployed_value else None
+    if deployed_patch is None and (env_patch := drop_guard.env_deployed_patch()) is not None:
+        # $DBC_TOOLS_DEPLOYED_PATCH: the worktree way to name the deployed archive, read-only, like --deployed-patch.
+        deployed_patch, deployed_value = env_patch, f"$DBC_TOOLS_DEPLOYED_PATCH={env_patch}"
+        print(f"note: deployed patch-Z (read-only, nothing is deployed): {env_patch}")
+    if deployed_patch is not None and not deployed_patch.is_file():
+        print(f"generate.py: --deployed-patch {deployed_value}: no such file", file=sys.stderr)
+        return 2
+    saved_deploy = (patch_out.DEPLOY_ROOT, patch_out.DEPLOY_MPQ)
+    if deployed_patch is not None:
+        # A run given its own "deployed" archive deploys nothing (it may not be what the patch service serves).
+        patch_out.DEPLOY_ROOT, patch_out.DEPLOY_MPQ = None, None
     corpus = sqlcorpus.activate(
         None if "--no-cache" in flags else CACHE_DIR, cache_code_version(), rebuild="--rebuild-cache" in flags,
     )
     try:
         if class_name:
             return _run_scoped_check(corpus, class_name)
-        return _run(corpus, only_items="--only=items" in flags)
+        return _run(
+            corpus, only_items="--only=items" in flags,
+            scope_names=scope_lib.parse_names(scope_value) if scope_value else None,
+            deployed_patch=deployed_patch,
+        )
     finally:
         sqlcorpus.deactivate()
+        dsl_registry.stop_provenance()
+        patch_out.DEPLOY_ROOT, patch_out.DEPLOY_MPQ = saved_deploy
 
 
 # The files whose code decides what a cached replay holds: the SQL parser, the corpus, the table loaders and the DBC
@@ -916,6 +1014,16 @@ def _loot_blocks(
     return plan.errors
 
 
+def _guard_archive(deployed_patch: Path | None) -> Path | None:
+    """The deployed patch-Z the guards compare with: `--deployed-patch` / `$DBC_TOOLS_DEPLOYED_PATCH`, this checkout's
+    DEPLOY_ROOT archive, else (a worktree) the main checkout's, read-only."""
+    if deployed_patch is not None:
+        return deployed_patch
+    if patch_out.DEPLOY_MPQ is not None and Path(patch_out.DEPLOY_MPQ).is_file():
+        return Path(patch_out.DEPLOY_MPQ)
+    return drop_guard.fallback_deployed_patch()
+
+
 def _item_dbc_drop_guard(item_entries: list[dict], ids_cfg: dict, patch_base: Path | None) -> int:
     """R1 B1 / S5: before anything is written, compare the deployed patch-Z's Item.dbc (`patch_base` under `--only
     items`, else patch_out.DEPLOY_MPQ) with the custom item ids this run's Item.dbc carries (`item_entries`: items.csv
@@ -1151,10 +1259,21 @@ def _run_only_items(
         )
         rev = int(time.time() * 1_000_000_000)
         out_path = PENDING_SQL_DIR / f"rev_{rev}.sql"
-        wrote_sql = sql_out.emit_pending_sql(
-            out_path, blocks, header,
-            extra_blocks=[*item_blocks, *(item_rendered.blocks if item_rendered else ())],
+        sql_text = sql_out.render_pending_sql(
+            blocks, header, extra_blocks=[*item_blocks, *(item_rendered.blocks if item_rendered else ())],
         )
+        # The general drop guard, as for a full or scoped run: this run repacks, shipping only Item.dbc.
+        guard = drop_guard.check(
+            sql_text=sql_text, shipped={dbcfmt.ITEM.dbc_filename: item_dbc_bytes} if changed else {},
+            replaces_archive=False, deployed_archive=patch_base, tables=None, ids_cfg=ids_cfg,
+            pending_dir=PENDING_SQL_DIR, allow="--allow-drop" in sys.argv, live_command=drop_guard.mysql_command(),
+            include_item=True,
+        )
+        for line in guard.lines:
+            print(line)
+        if guard.refused:
+            return 1
+        wrote_sql = sql_out.write_pending_sql(out_path, sql_text)
         print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
         if item_expansion.lock_appended:
             item_ids.LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -1196,10 +1315,15 @@ def _run_only_items(
     return 0
 
 
-def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
+def _run(
+    corpus: sqlcorpus.Corpus, only_items: bool = False, scope_names: list[str] | None = None,
+    deployed_patch: Path | None = None,
+) -> int:
     """The full run, or with `only_items` (`--only items`) the item blocks and the deployed patch-Z's Item.dbc only:
     everything is still loaded (the DSL needs the live state), but it hands over to `_run_only_items` right after the
-    item expansion, so no other table's SQL is rendered and no other client file is built."""
+    item expansion, so no other table's SQL is rendered and no other client file is built. With `scope_names`
+    (`--scope`), the full run's output narrowed to those scopes' rows (lib/scope.py). `deployed_patch`
+    (`--deployed-patch`): the archive to treat as deployed instead of DEPLOY_ROOT's."""
     start = time.monotonic()
 
     def progress(label: str) -> None:
@@ -1213,14 +1337,24 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
     # `--only items` repacks the deployed patch-Z: refuse before anything loads or renders if there is none. A
     # `--check` run only warns (it writes nothing, and the worktree it runs in may have no local_config.py).
     patch_base = None
-    if only_items:
+    if only_items or scope_names:
+        label = "--only items" if only_items else "--scope"
         try:
-            patch_base = patch_repack.deployed_base()
+            patch_base = deployed_patch or patch_repack.deployed_base()
         except patch_repack.PatchBaseError as error:
             if "--check" not in sys.argv:
-                print(f"ERROR: --only items: {error}")
+                print(f"ERROR: {label}: {error}")
                 return 1
-            print(f"WARNING: --only items: {error} (a write run would refuse)")
+            print(f"WARNING: {label}: {error} (a write run would refuse)")
+    scopes = None
+    if scope_names:
+        try:
+            scopes = scope_lib.load_scopes(ids_cfg=source.load_ids(SOURCE_DIR / "ids.yaml"))
+        except (OSError, scope_lib.ScopeError) as error:
+            print(f"ERROR: --scope: {error}")
+            return 1
+        print(f"note: scope: {', '.join(scope_names)} (patch base {patch_base})")
+        dsl_registry.record_provenance()  # which source file declared each entry (ownership); main() stops it
 
     ids_cfg = source.load_ids(SOURCE_DIR / "ids.yaml")
     spell_entries = source.load_spells_csv(SOURCE_DIR / "spells")
@@ -1425,7 +1559,10 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
             item_expansion.errors += _loot_blocks(
                 dsl_classes, item_expansion, item_rendered, ids_cfg, existing_creature_rows, only_items,
             )
-    if not item_expansion.errors and _item_dbc_drop_guard(item_entries, ids_cfg, patch_base) != 0:
+    # The Item.dbc guard compares the full build's custom items with the deployed file; a scoped run keeps every item
+    # row it does not own as deployed, so the general drop guard below covers it instead.
+    if not scope_names and not item_expansion.errors and \
+            _item_dbc_drop_guard(item_entries, ids_cfg, patch_base or _guard_archive(deployed_patch)) != 0:
         return 1
     if only_items:  # before the potency sheets and generated headers below: an item-only run writes neither
         return _run_only_items(
@@ -1471,9 +1608,10 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
     else:
         for warning in header_gen.collect_warnings(dsl_classes, CLASSES_WITH_GENERATED_HEADERS):
             print(f"WARNING: {warning}")
-        written_headers = header_gen.write_headers(
-            dsl_classes, GENERATED_HEADER_DIR, CLASSES_WITH_GENERATED_HEADERS
-        )
+        header_classes = CLASSES_WITH_GENERATED_HEADERS
+        if scope_names:  # a scoped run writes its own classes' headers only
+            header_classes = tuple(c for c in CLASSES_WITH_GENERATED_HEADERS if c in scope_names)
+        written_headers = header_gen.write_headers(dsl_classes, GENERATED_HEADER_DIR, header_classes)
         if written_headers:
             print(f"note: wrote {len(written_headers)} generated header(s): {', '.join(written_headers)}")
     for warning in lint.check_linked_spell_key_collisions(
@@ -2028,27 +2166,47 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
 
     # What db-import leaves once every pending rev is applied, per table: a block equal to that is no change.
     existing_by_name = {block[0].name: block[4] for block in blocks}
-    watch_by_name = {block[0].name: _block_ids(block[1], block[3]) for block in blocks}
-    depends_on: dict[str, list[Path]] = {}
-    blocks, n_skipped_unchanged_tables = _drop_unchanged_blocks(
-        blocks, force=stale_force, dependencies=depends_on,
-        applied=lambda table: state.load_applied_rows(
-            table, existing_by_name[table.name], watch_by_name[table.name],
-        ),
-    )
-    if n_skipped_unchanged_tables:
-        print(
-            f"note: {n_skipped_unchanged_tables} table(s) reserved-block content is unchanged (already live, "
-            f"or already in a pending rev) - not re-emitted"
+    scope_blocks = None
+    if scopes is not None:
+        own = _scope_ownership(
+            scopes, scope_names, ids_cfg, dsl_classes, spell_entries, talents, item_expansion, item_spell_expansion,
+            item_limit_expansion, dungeon_expansion,
         )
-    for line in _pending_dependency_notes(depends_on):
-        print(line)
+        scope_blocks = scope_lib.scoped_dbc_blocks(
+            blocks, own, lambda table, _watch: state.load_applied_rows(table, existing_by_name[table.name]),
+            {table.name: name for name, table in SECONDARY_TABLES.items()},
+        )
+        blocks = scope_blocks.blocks
+        for note in scope_blocks.notes:
+            print(f"note: scope: {note}")
+    else:
+        watch_by_name = {block[0].name: _block_ids(block[1], block[3]) for block in blocks}
+        depends_on: dict[str, list[Path]] = {}
+        blocks, n_skipped_unchanged_tables = _drop_unchanged_blocks(
+            blocks, force=stale_force, dependencies=depends_on,
+            applied=lambda table: state.load_applied_rows(
+                table, existing_by_name[table.name], watch_by_name[table.name],
+            ),
+        )
+        if n_skipped_unchanged_tables:
+            print(
+                f"note: {n_skipped_unchanged_tables} table(s) reserved-block content is unchanged (already live, "
+                f"or already in a pending rev) - not re-emitted"
+            )
+        for line in _pending_dependency_notes(depends_on):
+            print(line)
 
     header = (
         "-- Generated by apps/dbc-tools/generate.py — DO NOT hand-edit.\n"
         "-- Source of truth: apps/dbc-tools/source/{spells,talents}/*.\n"
         "-- Regenerate with: python3 apps/dbc-tools/generate.py"
     )
+    if scope_names:
+        header = (
+            f"-- Generated by apps/dbc-tools/generate.py --scope {','.join(scope_names)} — DO NOT hand-edit.\n"
+            f"-- Only the rows these scopes own (source/scopes.yaml); every other row is left as it is.\n"
+            f"-- Regenerate with: python3 apps/dbc-tools/generate.py --scope {','.join(scope_names)}"
+        )
     trainer_spell_block = sql_out.render_generic_table_block(
         "trainer_spell", TRAINER_SPELL_COLUMNS, ("TrainerId", "SpellId"), trainer_spell_rows,
     )
@@ -2056,18 +2214,120 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
         dbcfmt.CREATURESPELLDATA.sql_table, dbcfmt.CREATURESPELLDATA.columns, ("ID",),
         spell_data_overrides.to_emit,
     )
+    extra_blocks = [
+        *prune_blocks, *removal_blocks, trainer_spell_block, *spell_table_blocks,
+        *creature_blocks, *dungeon_expansion.spawn_blocks, *dungeon_expansion.smart_blocks,
+        *dungeon_expansion.retire_blocks, *item_blocks, *(item_rendered.blocks if item_rendered else ()),
+        *set_blocks, spell_data_block,
+    ]
+    skip_files: set[Path] = set()  # whole-file outputs a scoped run leaves alone
+    if scopes is not None:
+        extra_blocks, scope_errors, skip_files = _scope_sql(
+            own, scope_blocks, extra_blocks, dungeon_expansion, item_expansion, item_spell_expansion,
+            item_limit_expansion, item_emission, set_expansion,
+        )
+        extra_blocks = [*scope_blocks.insert_blocks, *extra_blocks]
+        if scope_errors:
+            for error in scope_errors:
+                print(f"ERROR: scope: {error}")
+            print(f"ERROR: scope: {drop_guard.NOT_WRITTEN}")
+            return 1
 
     rev = int(time.time() * 1_000_000_000)
     out_path = PENDING_SQL_DIR / f"rev_{rev}.sql"
-    wrote_sql = sql_out.emit_pending_sql(
-        out_path, blocks, header,
-        extra_blocks=[
-            *prune_blocks, *removal_blocks, trainer_spell_block, *spell_table_blocks,
-            *creature_blocks, *dungeon_expansion.spawn_blocks, *dungeon_expansion.smart_blocks,
-            *dungeon_expansion.retire_blocks, *item_blocks, *(item_rendered.blocks if item_rendered else ()),
-            *set_blocks, spell_data_block,
-        ],
+    sql_text = sql_out.render_pending_sql(blocks, header, extra_blocks=extra_blocks)
+
+    # -- client patch: needs a complete file (base + new), so any table with
+    # new/changed rows but no extracted base file gets skipped, not
+    # half-written. Uses the *_client_rows sets (diffed against pure vanilla)
+    # so already-promoted content keeps getting baked into every patch build,
+    # not just the first one after it was promoted — see state.py. Built before anything is written, so the drop
+    # guard can see it; its messages print where they always did, after the SQL.
+    new_rows_by_table = {
+        dbcfmt.SPELL: {r["ID"]: r for r in client_spell_rows},
+        dbcfmt.TALENT: {r["ID"]: r for r in client_talent_rows},
+        dbcfmt.TALENTTAB: {r["ID"]: r for r in client_talenttab_rows},
+        dbcfmt.SKILLLINEABILITY: {r["ID"]: r for r in client_skilllineability_rows},
+        dbcfmt.ITEM: {r["ID"]: r for r in client_item_rows},
+        dbcfmt.SPELLDESCRIPTIONVARIABLES: _tooltip_var_rows(dsl_classes["tooltip_vars"]),
+        dbcfmt.SPELLCATEGORY: _spell_category_rows(dsl_classes["spell_categories"]),
+        dbcfmt.SPELLRUNECOST: _spell_rune_cost_rows(dsl_classes["spell_rune_costs"]),
+        dbcfmt.MAPDIFFICULTY: dungeon_checks.map_difficulty_client_rows(dsl_classes["map_difficulties"]),
+        dbcfmt.DUNGEONENCOUNTER: dungeon_heroic.client_encounter_rows(dsl_classes["dungeon_encounters"]),
+        dbcfmt.ITEMLIMITCATEGORY: item_limits.client_rows(dsl_classes["item_limit_categories"]),
+        **(set_expansion.client_rows() if set_expansion is not None else {}),
+    }
+    for name, table in SECONDARY_TABLES.items():
+        # Same reserved_rows switch as the SQL block above - the client patch must carry every
+        # reused row too, not just this run's fresh mints, or it silently regresses previously-
+        # shipped custom cast times/durations/ranges/radii out of the patch.
+        rows_needed = reuse.reserved_rows.get(name, [])
+        if rows_needed:
+            new_rows_by_table[table] = {r["ID"]: r for r in rows_needed}
+
+    dbc_files: dict[str, bytes] = {}
+    dbc_tables: dict[str, dbcfmt.DbcTable] = {}
+    stock_by_file: dict[str, list[dict]] = {}
+    patch_messages: list[str] = []
+    for table, new_rows in new_rows_by_table.items():
+        if not new_rows:
+            continue
+        dbc_path = BASE_DBC_DIR / table.dbc_filename
+        if not dbc_path.is_file():
+            patch_messages.append(
+                f"patch: SKIPPING {table.dbc_filename} — no base client DBC at "
+                f"{dbc_path.relative_to(REPO_ROOT)}; server SQL overlay is still "
+                f"complete, but a client patch needs the full stock file as a base "
+                f"layer (see docs/dbc-build-pipeline.md)."
+            )
+            continue
+        base_rows = state.read_dbc_cached(dbc_path, table)  # read-only: shared with the stock-row loaders
+        merged = {row[table.index_column]: row for row in base_rows}
+        merged.update(new_rows)
+        # Talent.dbc's and TalentTab.dbc's physical row order is load-bearing to the client - see
+        # dbcfile.pack_client_dbc.
+        dbc_files[table.dbc_filename] = dbcfile.pack_client_dbc(table, list(merged.values()), base_rows)
+        dbc_tables[table.dbc_filename] = table
+        stock_by_file[table.dbc_filename] = base_rows
+
+    scoped_client = None
+    if scopes is not None:
+        for line in patch_repack.describe(patch_base):
+            print(line)
+        try:
+            base_members = patch_repack.read_members(patch_base)
+        except (patch_repack.RepackError, RuntimeError, OSError) as error:
+            print(f"ERROR: --scope: could not read {patch_base}: {error}")
+            return 1
+        scoped_client = scope_lib.scoped_client_files(
+            base_members, dbc_files, dbc_tables, own, stock_by_file,
+            {table.name: name for name, table in SECONDARY_TABLES.items()}, ids_cfg,
+        )
+        for note in scoped_client.notes:
+            print(f"note: scope: patch: {note}")
+        if scoped_client.errors:
+            for error in scoped_client.errors:
+                print(f"ERROR: scope: patch: {error}")
+            print(f"ERROR: scope: {drop_guard.NOT_WRITTEN}")
+            return 1
+
+    # Drop guard (dbc-tools-scoped-generate plan section 2): nothing is written when this run would delete live or
+    # deployed custom rows this checkout never wrote.
+    guard = drop_guard.check(
+        sql_text=sql_text,
+        shipped=scoped_client.loose if scoped_client is not None else dbc_files,
+        replaces_archive=scoped_client is None,
+        deployed_archive=patch_base if scopes is not None else _guard_archive(deployed_patch),
+        tables=None, ids_cfg=ids_cfg, pending_dir=PENDING_SQL_DIR,
+        allow="--allow-drop" in sys.argv, live_command=drop_guard.mysql_command(),
+        include_item=scopes is not None,
     )
+    for line in guard.lines:
+        print(line)
+    if guard.refused:
+        return 1
+
+    wrote_sql = sql_out.write_pending_sql(out_path, sql_text)
     print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
     # Dungeon difficulties E2 (WP-G): the heroic creature ids this run minted, appended to the committed lock file so
     # they never move (lib/heroic_templates.py). Written after the SQL that uses them.
@@ -2102,7 +2362,8 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
                 f"note: minted {len(item_spell_expansion.lock_appended)} item spell copy id(s) into "
                 f"{item_spell_copies.LOCK_PATH.relative_to(REPO_ROOT)} - commit it with the SQL"
             )
-        if item_spell_copies.write_header(item_spell_expansion.header_text):
+        if item_spell_copies.HEADER_PATH not in skip_files and \
+                item_spell_copies.write_header(item_spell_expansion.header_text):
             print(f"note: wrote {item_spell_copies.HEADER_PATH.relative_to(REPO_ROOT)} - commit it with the SQL")
     # Item variants IV10 follow-up 1: the item limit category ids this run minted (lib/item_limits.py), after the SQL.
     if item_limit_expansion is not None and not item_limit_expansion.errors and item_limit_expansion.lock_appended:
@@ -2112,60 +2373,22 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
             f"{item_limits.LOCK_PATH.relative_to(REPO_ROOT)} - commit it with the SQL"
         )
     # Item variants IV4: the client tier label table, rewritten only when it changed.
-    if item_emission is not None and (label_note := item_labels.sync(item_emission.labels)):
+    if item_emission is not None and item_labels.OUT_PATH not in skip_files and \
+            (label_note := item_labels.sync(item_emission.labels)):
         print(f"note: items: {label_note}")
     # Set tooltip fix: the client set member table (every tier of every set piece), rewritten only when it changed.
-    if set_expansion is not None and set_expansion.members:
+    if set_expansion is not None and set_expansion.members and item_set_members.OUT_PATH not in skip_files:
         if member_note := item_set_members.sync(set_expansion.members):
             print(f"note: items: {member_note}")
     progress("SQL emission done")
 
-    # -- client patch: needs a complete file (base + new), so any table with
-    # new/changed rows but no extracted base file gets skipped, not
-    # half-written. Uses the *_client_rows sets (diffed against pure vanilla)
-    # so already-promoted content keeps getting baked into every patch build,
-    # not just the first one after it was promoted — see state.py.
-    new_rows_by_table = {
-        dbcfmt.SPELL: {r["ID"]: r for r in client_spell_rows},
-        dbcfmt.TALENT: {r["ID"]: r for r in client_talent_rows},
-        dbcfmt.TALENTTAB: {r["ID"]: r for r in client_talenttab_rows},
-        dbcfmt.SKILLLINEABILITY: {r["ID"]: r for r in client_skilllineability_rows},
-        dbcfmt.ITEM: {r["ID"]: r for r in client_item_rows},
-        dbcfmt.SPELLDESCRIPTIONVARIABLES: _tooltip_var_rows(dsl_classes["tooltip_vars"]),
-        dbcfmt.SPELLCATEGORY: _spell_category_rows(dsl_classes["spell_categories"]),
-        dbcfmt.SPELLRUNECOST: _spell_rune_cost_rows(dsl_classes["spell_rune_costs"]),
-        dbcfmt.MAPDIFFICULTY: dungeon_checks.map_difficulty_client_rows(dsl_classes["map_difficulties"]),
-        dbcfmt.DUNGEONENCOUNTER: dungeon_heroic.client_encounter_rows(dsl_classes["dungeon_encounters"]),
-        dbcfmt.ITEMLIMITCATEGORY: item_limits.client_rows(dsl_classes["item_limit_categories"]),
-        **(set_expansion.client_rows() if set_expansion is not None else {}),
-    }
-    for name, table in SECONDARY_TABLES.items():
-        # Same reserved_rows switch as the SQL block above - the client patch must carry every
-        # reused row too, not just this run's fresh mints, or it silently regresses previously-
-        # shipped custom cast times/durations/ranges/radii out of the patch.
-        rows_needed = reuse.reserved_rows.get(name, [])
-        if rows_needed:
-            new_rows_by_table[table] = {r["ID"]: r for r in rows_needed}
-
-    dbc_files: dict[str, bytes] = {}
-    for table, new_rows in new_rows_by_table.items():
-        if not new_rows:
-            continue
-        dbc_path = BASE_DBC_DIR / table.dbc_filename
-        if not dbc_path.is_file():
-            print(
-                f"patch: SKIPPING {table.dbc_filename} — no base client DBC at "
-                f"{dbc_path.relative_to(REPO_ROOT)}; server SQL overlay is still "
-                f"complete, but a client patch needs the full stock file as a base "
-                f"layer (see docs/dbc-build-pipeline.md)."
-            )
-            continue
-        base_rows = state.read_dbc_cached(dbc_path, table)  # read-only: shared with the stock-row loaders
-        merged = {row[table.index_column]: row for row in base_rows}
-        merged.update(new_rows)
-        # Talent.dbc's and TalentTab.dbc's physical row order is load-bearing to the client - see
-        # dbcfile.pack_client_dbc.
-        dbc_files[table.dbc_filename] = dbcfile.pack_client_dbc(table, list(merged.values()), base_rows)
+    for line in patch_messages:
+        print(line)
+    if scoped_client is not None:
+        _install_scoped_patch(patch_base, scoped_client)
+        _print_replay_skips()
+        progress(f"done (cache: {_cache_summary(corpus)})")
+        return 0
 
     # Flag client tables that need an in-game look, and tables that appeared in or dropped out of
     # the patch since the last build (lint.check_client_patch).
@@ -2195,6 +2418,123 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
 
     return 0
 
+
+def _scope_ownership(scopes, scope_names, ids_cfg, dsl_classes, spell_entries, talents, item_expansion,
+                     item_spell_expansion, item_limit_expansion, dungeon_expansion) -> scope_lib.Ownership:
+    """lib/scope.py's ownership of every declared and derived id, for a `--scope` run."""
+    heroic_lock = None
+    lock_text = dungeon_expansion.lock_text if dungeon_expansion is not None and dungeon_expansion.lock_text else None
+    if lock_text is None and heroic_templates.LOCK_PATH.is_file():
+        lock_text = heroic_templates.LOCK_PATH.read_text()
+    if lock_text:
+        try:
+            heroic_lock = heroic_templates.parse_lock(lock_text)
+        except heroic_templates.LockError:
+            heroic_lock = None
+    try:
+        gcd_ids = gcd_haste.load_policy().aura_ids
+    except (gcd_haste.GcdHasteError, OSError):
+        gcd_ids = {}
+    return scope_lib.build_ownership(
+        scopes, ids_cfg, scope_names, dsl_classes=dsl_classes, spell_entries=spell_entries, talents=talents,
+        table_specs=(*spell_tables.SPELL_TABLES, *spell_tables.CREATURE_TABLES, *spell_tables.ITEM_TABLES,
+                     *item_sets.SET_TABLES),
+        item_expansion=item_expansion, item_spell_expansion=item_spell_expansion,
+        item_limit_expansion=item_limit_expansion, heroic_lock=heroic_lock, gcd_aura_ids=gcd_ids,
+        map_spawns=dungeon_expansion.map_spawns if dungeon_expansion is not None else None,
+    )
+
+
+def _scope_sql(own, scope_blocks, extra_blocks, dungeon_expansion, item_expansion, item_spell_expansion,
+               item_limit_expansion, item_emission, set_expansion) -> tuple[list[str], list[str], set[Path]]:
+    """A `--scope` run's keyed blocks narrowed to the scope's rows, plus every reason it must stop: an unsplittable
+    statement, an ownership conflict, a reference to another owner's row that is not live yet, and a whole-file
+    output (a lock file, ItemSpellCopies.h, the client Lua tables) that changes outside the scope. Prints what it
+    left out."""
+    report = scope_lib.FilterReport()
+    scoped = [scope_lib.filter_sql(block, own, report) for block in extra_blocks if block]
+    scoped = [block for block in scoped if block]
+    errors = list(scope_blocks.errors) + list(report.errors)
+    full_changed = scope_lib.inserted_ids("\n".join(b for b in extra_blocks if b))
+    errors += scope_lib.reference_errors(
+        scope_blocks.spell_rows, own, scope_blocks.changed, "\n".join(scoped), full_changed,
+    )
+    left_out = scope_blocks.left_out + report.left_out
+    if left_out:
+        by_owner: dict[str, int] = {}
+        for (table, label), n in left_out.items():
+            by_owner[label] = by_owner.get(label, 0) + n
+        tables = sorted({table for table, _label in left_out})
+        print(
+            f"note: scope: left out {sum(left_out.values())} changed row(s) of other owners "
+            f"({', '.join(f'{label}: {n}' for label, n in sorted(by_owner.items()))}) in {', '.join(tables)}; a "
+            f"full run (or their own --scope) ships them"
+        )
+    if report.kept:
+        print(f"note: scope: keyed rows kept: {', '.join(f'{t} {n}' for t, n in sorted(report.kept.items()))}")
+
+    locks = [
+        ("heroic_ids.lock", dungeon_expansion.lock_appended if dungeon_expansion else [], "creature", 1),
+        ("item_ids.lock", item_expansion.lock_appended, "item", 0),
+        ("item_spell_ids.lock", item_spell_expansion.lock_appended if item_spell_expansion else [], "spell", 0),
+        ("item_limit_ids.lock", item_limit_expansion.lock_appended if item_limit_expansion else [],
+         "item_limit_category", 0),
+    ]
+    for name, lines, space, column in locks:
+        foreign = [
+            line for line in lines
+            if line.split() and not own.mine(own.owners(space, line.split()[column]))
+        ]
+        if foreign:
+            errors.append(
+                f"{name}: {len(foreign)} new line(s) belong to other owners ({foreign[0]!r} ...); the lock is one file "
+                f"for every scope: run their scope first, or a full run"
+            )
+    files = []
+    if item_spell_expansion is not None and not item_spell_expansion.errors:
+        path = item_spell_copies.HEADER_PATH
+        files.append((path, item_spell_expansion.header_text, "copies"))
+    if item_emission is not None:
+        text, _errors = item_labels.prepare(item_emission.labels)
+        if text is not None:
+            files.append((item_labels.OUT_PATH, text, "labels"))
+    if set_expansion is not None and set_expansion.members:
+        text, _errors = item_set_members.prepare(set_expansion.members)
+        if text is not None:
+            files.append((item_set_members.OUT_PATH, text, "sets"))
+    skip_files: set[Path] = set()
+    for path, text, kind in files:
+        if not path.is_file():
+            # Nothing to compare the scope's part with (e.g. client/ is not in this checkout): a full run creates it.
+            print(f"note: scope: {path.name} does not exist here; not written (a full run creates it)")
+            skip_files.add(path)
+            continue
+        old = path.read_text(encoding="utf-8")
+        for problem in scope_lib.foreign_file_changes(old, text, kind, own):
+            errors.append(f"{path.name}: {problem}; it is one file for every scope: run a full generate.py")
+    return scoped, list(dict.fromkeys(errors)), skip_files
+
+
+def _install_scoped_patch(patch_base: Path, scoped_client) -> None:
+    """Repacks `patch_base` with a scoped run's members and installs it where a full run's patch goes."""
+    if not scoped_client.replacements:
+        print("patch: the base archive already holds this scope's rows, nothing to repack")
+        return
+    with tempfile.TemporaryDirectory(prefix="dbc-scope-") as tmp:
+        repacked = Path(tmp) / "patch-Z.mpq"
+        changed = patch_repack.repack(patch_base, scoped_client.replacements, repacked)
+        if not changed:
+            print("patch: the base archive already holds this scope's rows, nothing to repack")
+            return
+        report = patch_repack.install(repacked, scoped_client.loose)
+    print(f"patch: repacked {patch_base} replacing only this scope's rows in {', '.join(changed)}")
+    print(f"patch: loose files -> {patch_out.LOOSE_DIR}")
+    print(f"patch: mpq -> {report['mpq']}")
+    if report["env_dbc"]:
+        print(f"patch: also copied into {patch_out.ENV_DBC_DIR}")
+    if report["deploy_mpq"]:
+        print(f"patch: deployed -> {report['deploy_mpq']} (patch-service's manifest-gen picks this up on its next "
+              f"timer tick; run apps/patch-service/manifest_gen.py by hand for an immediate manifest.txt refresh)")
 
 if __name__ == "__main__":
     raise SystemExit(main())

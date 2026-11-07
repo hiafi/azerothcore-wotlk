@@ -15,3 +15,9 @@ either way, and build_patch_m.py/patch_gt_tables.py also take a --deploy-root
 from pathlib import Path
 
 DEPLOY_ROOT = Path("/path/to/your/patch-root")
+
+# Optional: the world DB client command generate.py's drop guard reads live ids with (read-only SELECTs, the query goes
+# in on stdin; `$DBC_TOOLS_MYSQL` wins over this). Without it the guard checks the deployed patch-Z only. A git
+# worktree without its own local_config.py reads this file's LIVE_DB_MYSQL and DEPLOY_ROOT from the main checkout
+# for the guard (read-only; a worktree never deploys).
+# LIVE_DB_MYSQL = "docker exec -i <ac-database container> mysql -uroot -p<password>"
