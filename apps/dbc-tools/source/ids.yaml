@@ -126,6 +126,26 @@ item_limit_category:
   start: 1000
   end: 1999
 
+# Dungeon sets (lib/item_sets.py, lib/dsl/sets.py; Haunted set track 2026-11-06). Checked free 2026-11-06:
+#   item_set_token: set token item_template entries (explicit per tier in source/items/haunted_set.py), inside the
+#     `item` block so the item_dbc block DELETE covers them; only 70100-70103 (items.csv) are taken in 70000-70999.
+#     Haunted 70500-70539 (8 slots x 5 tiers), Molten 70540-70579 (reserved for Blackrock Spire / Depths).
+#   item_set: new ItemSet.dbc ids (stock ends at 901, itemset_dbc is empty): Haunted Protector's 1000, Shadowguard
+#     1001; Molten Guardian's 1002, Impenetrable 1003.
+#   item_extended_cost: ItemExtendedCost.dbc ids, one per token tier (stock ends at 2997, itemextendedcost_dbc is
+#     empty): Haunted 3000-3039, Molten 3040-3079.
+item_set_token:
+  start: 70500
+  end: 70599
+
+item_set:
+  start: 1000
+  end: 1099
+
+item_extended_cost:
+  start: 3000
+  end: 3199
+
 # reference_loot_template entries for the declared boss loot tables (item-variants plan s7.3, IV7). Checked free
 # 2026-11-06: no reference_loot_template row above the stock maximum in the live DB, base dump or pending SQL.
 loot_reference:

@@ -170,6 +170,41 @@ row. The base file `var/extractors/dbc/ItemLimitCategory.dbc` is not in the clie
 `ac-worldserver:/azerothcore/env/dist/data/dbc/` (a full run stops without it). `--only items` refuses while a
 category row is not live.
 
+### Dungeon sets: `item_set()` / `set_token()` / `set_vendor()` (Haunted set track)
+
+`lib/dsl/sets.py` (declarations in `source/items/haunted_set.py`), `lib/item_sets.py` (rows, checks, rendering), wired
+in `generate._item_set_expansion` right after `item_emit.build` (so the tokens join the minted rows, the label table
+and the Item.dbc merge before they are used) and in the full run's SQL and patch-Z blocks.
+
+- **Item sets** (`ItemSet.dbc`, server overlay `itemset_dbc`). `item_set(set_id, items=(item keys), bonuses=((3,
+  spell), (5, spell)), name=)`: a stock id (181-189) keeps its stock name and item list and loses its stock bonuses; a
+  new id comes from ids.yaml `item_set` and needs `name=`. The server counts worn pieces by `item_template.itemset`
+  (`AddItemsSetItem`), so every tier of a piece must carry the set's id (checked on the built rows): a `base=` piece
+  keeps the stock row's, a new one passes `itemset=`. Every tier also pays the budget's set discount (0.9). The row's
+  item list is each piece's first tier; whether the client marks a worn Heroic or Empowered piece in the tooltip list
+  is a playtest check (the bonus lines follow the server count).
+- **Tokens.** `set_token(key, name=, slots=(InventoryTypes), ladder=, like=<stock class 15 token>, entries={tier:
+  entry}, costs={tier: ItemExtendedCost id}, ilvl=/quality=/required_level= for the first tier)`: one `item_template`
+  row per non-deferred ladder tier, copied whole from `like=`, the tier's level and quality, the Heroic flag on a
+  `heroic_flag` tier and the tier label on the others; one `ItemExtendedCost` row per tier (one token). Explicit ids
+  (`item_set_token` 70500-70599 inside the `item` block, `item_extended_cost` 3000-3199); a shipped id never moves.
+- **Vendors.** `set_vendor(entry, sets=, tokens=, tiers=)`: `npc_vendor` rows for the given ladder tiers (all when
+  None) of every piece of the sets, priced by the token of the piece's slot at the same tier, ordered tier, token
+  order, set (Haunted: 16 vendors, four per armor type: Normal & Heroic, then one per empowered tier). A list sends
+  at most 150 items
+  (`MAX_VENDOR_ITEMS`, a warning) and keeps at most 255 rows (`VendorItemData::GetItemCount` is a uint8, an error).
+  The vendor creature is a `creature_template()` declaration with npcflag 128; its spawn is hand SQL.
+- **Tables.** `itemset_dbc`, `itemextendedcost_dbc` and `npc_vendor` are declared tables with their own index
+  (`item_sets.SET_TABLES`, `load_index`, `render_blocks`): DELETE + INSERT of the rows that differ from live, a prune of
+  rows an earlier run emitted that nothing declares (circuit breaker on), silent on a rerun. `--check` prints how many
+  differ from live; `--only items` ships the token rows and warns while a set, cost or vendor row is not live.
+- **Client files.** A full run merges the rows into `ItemSet.dbc` and `ItemExtendedCost.dbc` in patch-Z; their stock
+  files are not in the client extract: copy them from the worldserver (`docker cp
+  ac-worldserver:/azerothcore/env/dist/data/dbc/ItemSet.dbc var/extractors/dbc/`, the same for ItemExtendedCost.dbc).
+  A full write run stops without them; `--check` warns.
+- **Not wired yet:** `boss_loot()` resolves `item()` keys only, so a token cannot be put on a boss list until the loot
+  resolver also accepts `set_token()` keys (the dungeons' loot stage).
+
 ## Watch out: a write run is global, except `--only items`
 
 Running it regenerates the pending SQL for *every* table at once — `spell`/`talent`/`item`/etc. If

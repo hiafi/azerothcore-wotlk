@@ -69,6 +69,7 @@ from lib import loot_tables  # noqa: E402
 from lib import item_labels  # noqa: E402
 from lib import item_spell_copies  # noqa: E402
 from lib import item_limits  # noqa: E402
+from lib import item_sets  # noqa: E402
 from lib import patch_repack  # noqa: E402
 from bootstrap import load_spell_ranks_chains  # noqa: E402
 from lib.dsl import items as dsl_items  # noqa: E402
@@ -974,6 +975,36 @@ def _item_spell_copy_problems(expansion) -> list[str]:
     return problems
 
 
+def _item_set_expansion(dsl_classes, item_expansion, item_emission, ids_cfg, item_live_rows, item_entries,
+                        only_items: bool):
+    """Dungeon sets (lib/item_sets.py): resolves the item_set() / set_token() / set_vendor() declarations, adds the
+    token rows to `item_emission` and prints what they emit. Its errors join `item_expansion.errors`."""
+    check = "--check" in sys.argv
+    expansion = item_sets.expand(
+        dsl_classes, item_expansion, item_emission, ids_cfg=ids_cfg, live_item_rows=item_live_rows,
+        base_dir=BASE_DBC_DIR, items_csv_ids=[e["id"] for e in item_entries],
+    )
+    item_expansion.errors += expansion.errors
+    for warning in expansion.warnings:
+        print(f"WARNING: {warning}")
+    if expansion.errors or not expansion.declared:
+        return expansion
+    for note in expansion.notes:
+        print(f"note: {note}")
+    for problem in item_sets.base_file_errors(expansion, BASE_DBC_DIR):
+        if check or only_items:
+            print(f"WARNING: {problem} (a full write run stops here)")
+        else:
+            item_expansion.errors.append(problem)
+    if check or only_items:
+        index = item_sets.load_index()
+        for note in item_sets.differ_notes(index, dsl_classes):
+            print(f"note: {note}")
+        if only_items and (warning := item_sets.not_live_warning(index, dsl_classes)):
+            print(f"WARNING: {warning}")
+    return expansion
+
+
 def _item_limit_problems(expansion, spell_table_index, dsl_classes: dict) -> list[str]:
     """Why `--only items` cannot write item rows naming the item limit categories (IV10 follow-up 1): a category row
     not live (nor in a pending rev) or changed, or a lock line not written yet. The server zeroes an item's unknown
@@ -1353,9 +1384,14 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
     # them. `item_emission.labels` is the tier label table (entry -> label) IV4 writes.
     item_emission = None
     item_rendered = None
+    set_expansion = None
     if item_expansion.assignment is not None and not item_expansion.errors:
         item_emission = item_emit.build(item_expansion)
         item_expansion.errors += item_emission.errors
+        # Dungeon sets (lib/item_sets.py): the set tokens join the minted rows (before the labels and the Item.dbc
+        # merge below); the itemset_dbc, itemextendedcost_dbc and npc_vendor rows go to dsl_classes (a full run).
+        set_expansion = _item_set_expansion(dsl_classes, item_expansion, item_emission, ids_cfg, item_live_rows,
+                                            item_entries, only_items)
         item_label_text, label_errors = item_labels.prepare(item_emission.labels)
         item_expansion.errors += label_errors
         if item_label_text is not None and "--check" in sys.argv:
@@ -1625,6 +1661,13 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
     else:
         prune_blocks, prune_report = spell_tables.render_prune_blocks(spell_table_index, dsl_classes)
     for line in prune_report:
+        print(line)
+    # Dungeon sets (lib/item_sets.py): the itemset_dbc, itemextendedcost_dbc and npc_vendor rows, diffed and pruned
+    # against their own index.
+    set_blocks, set_prune_report = item_sets.render_blocks(
+        item_sets.load_index(), dsl_classes, prune="--no-prune" not in sys.argv,
+    )
+    for line in set_prune_report:
         print(line)
     progress("computed GCD-haste auras")
 
@@ -2005,7 +2048,7 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
             *prune_blocks, *removal_blocks, trainer_spell_block, *spell_table_blocks,
             *creature_blocks, *dungeon_expansion.spawn_blocks, *dungeon_expansion.smart_blocks,
             *dungeon_expansion.retire_blocks, *item_blocks, *(item_rendered.blocks if item_rendered else ()),
-            spell_data_block,
+            *set_blocks, spell_data_block,
         ],
     )
     print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
@@ -2066,6 +2109,7 @@ def _run(corpus: sqlcorpus.Corpus, only_items: bool = False) -> int:
         dbcfmt.MAPDIFFICULTY: dungeon_checks.map_difficulty_client_rows(dsl_classes["map_difficulties"]),
         dbcfmt.DUNGEONENCOUNTER: dungeon_heroic.client_encounter_rows(dsl_classes["dungeon_encounters"]),
         dbcfmt.ITEMLIMITCATEGORY: item_limits.client_rows(dsl_classes["item_limit_categories"]),
+        **(set_expansion.client_rows() if set_expansion is not None else {}),
     }
     for name, table in SECONDARY_TABLES.items():
         # Same reserved_rows switch as the SQL block above - the client patch must carry every

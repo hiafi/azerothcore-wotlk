@@ -213,6 +213,13 @@ class Registry:
     # Item variants IV10 follow-up 1 (lib/item_limits.py): itemlimitcategory_dbc rows generate.py derives from the item
     # declarations (no DSL helper fills it). A plain SPELL_TABLES entry.
     item_limit_categories: list[dict] = field(default_factory=list)
+    # Dungeon sets (lib/dsl/sets.py, lib/item_sets.py): one {"id": ("set" | "token" | "vendor", id), "_decl": ...} per
+    # item_set() / set_token() / set_vendor() call, and the itemset_dbc, itemextendedcost_dbc and npc_vendor rows
+    # generate.py derives from them (lib/item_sets.SET_TABLES).
+    item_set_declarations: list[dict] = field(default_factory=list)
+    item_set_rows: list[dict] = field(default_factory=list)
+    item_extended_cost_rows: list[dict] = field(default_factory=list)
+    npc_vendor_rows: list[dict] = field(default_factory=list)
     # P2b: {id: python_variable_name}, found by introspecting each loaded module's own namespace
     # after it finishes executing - see _collect_var_names(). Not in MERGE_KEYS: these are dicts,
     # not lists, and merged by lib.header_gen's caller with a plain dict.update() (ids are already
@@ -245,6 +252,7 @@ MERGE_KEYS = (
     "dungeon_encounters", "instance_encounters", "heroic_template_addons", "heroic_template_resistances",
     "heroic_template_movements", "heroic_onkill_reputations",
     "item_declarations", "loot_declarations", "item_limit_categories",
+    "item_set_declarations", "item_set_rows", "item_extended_cost_rows", "npc_vendor_rows",
 )
 
 # The registry a class file's spell()/talent()/tab()/skill_line_ability()
