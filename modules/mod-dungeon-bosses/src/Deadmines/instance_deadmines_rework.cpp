@@ -24,6 +24,7 @@
 #include "CreatureAI.h"
 #include "DeadminesKitMath.h"
 #include "DeadminesRework.h"
+#include "DungeonKit.h"
 #include "GameObject.h"
 #include "InstanceMapScript.h"
 #include "InstanceScript.h"
@@ -316,10 +317,7 @@ public:
                 vanCleef = GetCreature(DATA_VANCLEEF_GUID);
             if (!vanCleef)
                 return;
-            if (_hardMode)
-                vanCleef->AddLootMode(LOOT_MODE_HARD_MODE_1);
-            else
-                vanCleef->RemoveLootMode(LOOT_MODE_HARD_MODE_1);
+            DungeonKit::SetHardModeLoot(vanCleef, _hardMode != 0);
         }
 
         uint32 _cannon = NOT_STARTED;

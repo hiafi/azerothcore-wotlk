@@ -110,6 +110,15 @@ def deadmines_slice_problems(scanned: dict[str, list[tuple[int, str]]]) -> list[
     return class_slice_problems("deadmines", DEADMINES_VFX_SCRIPT, scanned)
 
 
+# The reworked dungeons after the Deadmines Pilot (WP-K0): each one's VFX script (none exists yet) is the only script
+# that may name a constant in its spellvisual slice.
+DUNGEON_VFX_SCRIPTS = {
+    "shadowfang_keep": "patch_shadowfang_keep_vfx_models.py",
+    "scholomance": "patch_scholomance_vfx_models.py",
+    "stratholme": "patch_stratholme_vfx_models.py",
+}
+
+
 def rogue_slice_problems(scanned: dict[str, list[tuple[int, str]]]) -> list[str]:
     return class_slice_problems("rogue", ROGUE_VFX_SCRIPT, scanned)
 
@@ -215,8 +224,10 @@ class BlockShapeTest(unittest.TestCase):
     def test_warrior_t1_widened_the_visual_and_category_blocks(self):
         # spellvisual 90299 -> 90399 (the rogue slice filled 90250-90299, the warrior takes 90300-90339) and
         # spellcategory 1309 -> 1319 (the Death Knight slice ends at 1309, the warrior takes 1313-1319); every other
-        # block stays where the earlier classes left it
-        self.assertEqual(BLOCKS["spellvisual"], {"start": 90001, "end": 90399})
+        # block stays where the earlier classes left it (the dungeon kit WP-K0 widened spellvisual again, see
+        # DungeonKitIdsTest: from Warrior T1 on it reaches at least 90399)
+        self.assertEqual(BLOCKS["spellvisual"]["start"], 90001)
+        self.assertGreaterEqual(BLOCKS["spellvisual"]["end"], 90399)
         self.assertEqual(BLOCKS["spellcategory"], {"start": 1300, "end": 1319})
         self.assertEqual(BLOCKS["soundentries"], {"start": 90001, "end": 90199})
         self.assertEqual(BLOCKS["spellicon"], {"start": 90100, "end": 90499})
@@ -234,8 +245,8 @@ class BlockShapeTest(unittest.TestCase):
         # line-fill fix widened them to 93999 (the line ladders' own blocks 92000-92856 / 93000-93856).
         self.assertEqual(BLOCKS["creaturedisplayinfo"], {"start": 90001, "end": 93999})
         self.assertEqual(BLOCKS["creaturemodeldata"], {"start": 90001, "end": 93999})
-        # no other block moved
-        self.assertEqual(BLOCKS["spellvisual"], {"start": 90001, "end": 90399})
+        # no other block moved (spellvisual moved later, with the dungeon kit WP-K0: DungeonKitIdsTest)
+        self.assertGreaterEqual(BLOCKS["spellvisual"]["end"], 90399)
         self.assertEqual(BLOCKS["spellicon"], {"start": 90100, "end": 90499})
         self.assertEqual(_bounds(BLOCKS["spell"]), {"start": 200000, "end": 209999})
 
@@ -574,6 +585,61 @@ class WaveOneItemReservationsTest(unittest.TestCase):
             ids = declared_ids(TOOL_ROOT / "source" / "npcs" / directory)
             self.assertTrue(ids.get("creature"), directory)
             self.assertEqual(out_of_reservation(name, {"creature": ids["creature"]}), [], directory)
+
+
+class DungeonKitIdsTest(unittest.TestCase):
+    """The shared dungeon kit (WP-K0, 2026-11-07): the spellvisual block widened from 90399 to 90699 and one 50-id
+    SpellVisual slice per reworked dungeon after Deadmines (Deadmines held 90340-90369, leaving 30 ids for three
+    dungeons; stratholme-build.HANDOFF.md s3.3)."""
+
+    SLICES = {"shadowfang_keep": (90400, 90449), "scholomance": (90450, 90499), "stratholme": (90500, 90549)}
+
+    def test_the_spellvisual_block_reaches_90699(self):
+        self.assertEqual(BLOCKS["spellvisual"], {"start": 90001, "end": 90699})
+        # the scan of the patch scripts' constants still covers it (90000-90999)
+        self.assertLess(BLOCKS["spellvisual"]["end"], 91000)
+
+    def test_each_dungeon_reserves_its_slice(self):
+        for dungeon, (low, high) in self.SLICES.items():
+            with self.subTest(dungeon=dungeon):
+                self.assertIn(dungeon, RESERVATIONS)
+                sv = RESERVATIONS[dungeon]["spellvisual"]
+                self.assertEqual((sv["start"], sv["end"]), (low, high))
+                self.assertEqual(high - low + 1, 50)
+
+    def test_the_slices_follow_deadmines_in_build_order_and_overlap_nothing(self):
+        ordered = [self.SLICES[d] for d in ("shadowfang_keep", "scholomance", "stratholme")]
+        self.assertGreater(ordered[0][0], RESERVATIONS["deadmines"]["spellvisual"]["end"])
+        for (_, high), (low, _) in zip(ordered, ordered[1:]):
+            self.assertEqual(low, high + 1)
+        for dungeon in self.SLICES:
+            mine = RESERVATIONS[dungeon]["spellvisual"]
+            for owner, tables in RESERVATIONS.items():
+                if owner != dungeon and "spellvisual" in tables:
+                    with self.subTest(dungeon=dungeon, other=owner):
+                        self.assertFalse(_overlap(mine, tables["spellvisual"]))
+
+    def test_no_script_names_a_constant_in_a_dungeon_slice_yet(self):
+        scanned = scanned_used_ids()
+        for dungeon, script in DUNGEON_VFX_SCRIPTS.items():
+            with self.subTest(dungeon=dungeon):
+                self.assertEqual(class_slice_problems(dungeon, script, scanned), [])
+        # the unreserved part of 90345-90699 (the free range checked when the block was widened) holds no constant: a
+        # dungeon's own slice fills up as its VFX lands, so only ids outside every reservation are pinned
+        reserved = [t["spellvisual"] for t in RESERVATIONS.values() if "spellvisual" in t]
+        used = [value for value, _ in scanned.get("spellvisual", [])]
+        self.assertFalse([v for v in used if 90345 <= v <= 90699
+                          and not any(r["start"] <= v <= r["end"] for r in reserved)])
+
+    def test_a_planted_constant_in_another_dungeons_slice_is_flagged(self):
+        with tempfile.TemporaryDirectory() as d:
+            script = Path(d) / DUNGEON_VFX_SCRIPTS["shadowfang_keep"]
+            script.write_text("SV_OK = 90400\nKIT_LAST = 90449\nSV_SCHOLO = 90450\n")
+            scanned = scanned_used_ids([script])
+        self.assertEqual(
+            class_slice_problems("shadowfang_keep", DUNGEON_VFX_SCRIPTS["shadowfang_keep"], scanned),
+            [f"{DUNGEON_VFX_SCRIPTS['shadowfang_keep']}:SV_SCHOLO = 90450 (spellvisual)"],
+        )
 
 
 class ItemVariantsIdsTest(unittest.TestCase):

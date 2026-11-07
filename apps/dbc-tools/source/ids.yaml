@@ -234,6 +234,14 @@ spellcategory:
 #                 by Death Knight T1 (shaman's slice filled 90130-90179); Death Knight reserves 90180-90249 and the
 #                 Rogue 90250-90299, which filled the block. Widened from 90299 to
 #                 90399 by Warrior T1 (the warrior reserves 90300-90339).
+#                 Widened from 90399 to 90699 by the shared dungeon kit (WP-K0, 2026-11-07): Deadmines holds
+#                 90340-90369 and only 90370-90399 were left for the next three dungeons. Each reworked dungeon gets a
+#                 50-id slice in build order (`reservations:` shadowfang_keep 90400-90449, scholomance 90450-90499,
+#                 stratholme 90500-90549); 90370-90399 and 90550-90699 stay unreserved for later dungeons. Checked
+#                 free 2026-11-07: no SpellVisual / SpellVisualKit / SpellVisualEffectName row in 90345-90999 in
+#                 the working-copy DBCs (shared checkout, boss-mechanics-m1 and -markers worktrees), no
+#                 spellvisual_dbc row and no spell_dbc.SpellVisualID_1/_2 in 90370-90999 in the live DB, no
+#                 constant or SQL above 90344 in any checkout's patch scripts, source/ or pending SQL.
 #   - creaturedisplayinfo / creaturemodeldata: used 90001-90321 / 90001-90310 (mage 90001-90003, the shapeshift
 #                 appearances 90100-90399 of build_patch_f.py), and the boss mechanics markers 91000-91833,
 #                 92000-92856 and 93000-93856 (plus the opt-in diagnostics 91990-91995 and line-render probes
@@ -250,7 +258,7 @@ soundentries:
 
 spellvisual:
   start: 90001
-  end: 90399
+  end: 90699
 
 # Widened from 90499 to 90699 by boss mechanics M1 (mod-boss-mechanics marker displays: the bossmechanics slice
 # 90500-90699, handoff dungeon-mechanics.STAGE-M1-HANDOFF.md s3.1; the rogue slice 90490-90499 ended the old block),
@@ -535,3 +543,14 @@ reservations:
     gameobjectdisplayinfo: {start: 90020, end: 90029}
     creaturedisplayinfo: {start: 90700, end: 90719}
     creaturemodeldata: {start: 90700, end: 90719}
+
+  # Reworked dungeons after the Deadmines Pilot (WP-K0, the shared dungeon kit, 2026-11-07): the SpellVisual slices
+  # (SpellVisual, SpellVisualKit and SpellVisualEffectName share the numbers), one 50-id slice per dungeon in build
+  # order. Each dungeon's WP-0 adds its spell / creature / gameobject / display rows here (handoffs:
+  # shadowfang-keep-build s3.4, scholomance-build s3.3, stratholme-build s3.3).
+  shadowfang_keep:
+    spellvisual: {start: 90400, end: 90449}  # SpellVisual, Kit and EffectName
+  scholomance:
+    spellvisual: {start: 90450, end: 90499}  # SpellVisual, Kit and EffectName
+  stratholme:
+    spellvisual: {start: 90500, end: 90549}  # SpellVisual, Kit and EffectName
