@@ -19,6 +19,7 @@
 #include "Creature.h"
 #include "Formulas.h"
 #include "Group.h"
+#include "KillRewardMechanics.h" // Custom: dead group members still earn dungeon boss XP + kill credit
 #include "Pet.h"
 #include "Player.h"
 #include "ScriptMgr.h"
@@ -154,7 +155,8 @@ void KillRewarder::_RewardXP(Player* player, float rate)
         // 4.2.1. If player is in group, adjust XP:
         //        * set to 0 if player's level is more than maximum level of not gray member;
         //        * cut XP in half if _isFullXP is false.
-        if (_maxNotGrayMember && player->IsAlive() &&
+        // Custom: a dead member still earns a dungeon boss's XP (KillRewardMechanics.h).
+        if (_maxNotGrayMember && (player->IsAlive() || KillReward::RewardsDeadGroupMembers(_victim)) &&
             _maxNotGrayMemberLevel >= _GetPlayerLevel(player))
             xp = _isFullXP ?
                  uint32(xp * rate) :             // Reward FULL XP if all group members are not gray.
@@ -199,7 +201,8 @@ void KillRewarder::_RewardReputation(Player* player)
 void KillRewarder::_RewardKillCredit(Player* player)
 {
     // 4.4. Give kill credit (player must not be in group, or he must be alive or without corpse).
-    if (!_group || player->IsAlive() || !player->GetCorpse())
+    // Custom: or the victim is a dungeon boss, which credits released members too (KillRewardMechanics.h).
+    if (!_group || player->IsAlive() || !player->GetCorpse() || KillReward::RewardsDeadGroupMembers(_victim))
         if (Creature* target = _victim->ToCreature())
         {
             player->KilledMonster(target->GetCreatureTemplate(), target->GetGUID());
