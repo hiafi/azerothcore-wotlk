@@ -723,8 +723,8 @@ class DeadminesTest(unittest.TestCase):
 
         maps = {e["map_id"]: e for e in self.declared}
         self.assertEqual(set(maps), set(dungeon_extract.VANILLA_DUNGEONS))
-        # Deadmines (E1) and Shadowfang Keep (WP-H); Scholomance and Stratholme join in their turn
-        self.assertEqual(sorted(m for m, e in maps.items() if e["heroic"]), [33, 36])
+        # Deadmines (E1), Shadowfang Keep and Scholomance (their WP-H); Stratholme joins in its turn
+        self.assertEqual(sorted(m for m, e in maps.items() if e["heroic"]), [33, 36, 289])
         self.assertTrue(all(e["creatures"] for e in maps.values()))
 
     def test_clean_with_the_committed_lock(self):

@@ -581,10 +581,11 @@ class WaveOneItemReservationsTest(unittest.TestCase):
                         self.assertFalse(_overlap(cfg, tables[table]), f"{name} {table} vs {owner}")
 
     def test_the_wave_one_npcs_sit_in_their_dungeons_creature_slice(self):
-        # The Shadowfang Keep package also holds the dungeon build's own creatures (the `shadowfang_keep` reservation,
-        # shadowfang-keep-build WP-K): an id may sit in either reservation there.
+        # The Shadowfang Keep and Scholomance packages also hold the dungeon builds' own creatures (the
+        # `shadowfang_keep` and `scholomance` reservations, shadowfang-keep-build WP-K, scholomance-build WP-KS): an
+        # id may sit in either reservation there.
         for directory, names in (("shadowfang_keep", ("shadowfang_items", "shadowfang_keep")),
-                                 ("scholomance", ("scholomance_items",))):
+                                 ("scholomance", ("scholomance_items", "scholomance"))):
             ids = declared_ids(TOOL_ROOT / "source" / "npcs" / directory)
             self.assertTrue(ids.get("creature"), directory)
             outside = [value for value in sorted(set(ids["creature"]))

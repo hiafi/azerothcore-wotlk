@@ -1,0 +1,22 @@
+"""
+Scholomance build WP-S6: Doctor Theolen Krastinov (11261)
+(.agents/plans/scholomance-build/scholomance-build.HANDOFF.md s3.5 row S6; build spec
+docs/dungeons/scholomance-rework.md SC 1703-1764). WP-S6 owns this file; WP-KS wrote the skeleton.
+
+Skeleton (WP-KS, handoff s4 row KS): the boss is bound to its C++ script (modules/mod-dungeon-bosses
+src/Scholomance/boss_doctor_theolen_krastinov_rework.cpp), SmartAI off, the build spec's normal health
+(160k: HealthModifier 52.425 on the level 60 class base 3,052), stun immunity 1972 and
+flags_extra 3 (INSTANCE_BIND | CIVILIAN). Heroic health and its
+overrides are WP-H's (source/world/dungeons/scholomance.py). Its solo lesson (detention) and examiner mode are
+C++; the Graduate Examiner entry (300548-300554) is declared by WP-S13.
+
+TODO(WP-S6): spells in its slice (kSpellsKrastinov of ScholomanceRework.h), the boss-kit creatures named in the
+header's ScholomanceCreatures enum, DamageModifier, the visual ids from ._visuals (WP-V). The SQL rev
+(data/sql/updates/pending_db_world/) drops the SmartAI rows and adds the texts.
+"""
+
+from lib.dsl.registry import creature_template_columns
+
+from ._common import boss_columns
+
+creature_template_columns(11261, **boss_columns('boss_doctor_theolen_krastinov_rework', 52.425, flags_extra=3))
