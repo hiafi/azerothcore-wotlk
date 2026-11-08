@@ -672,11 +672,10 @@ namespace ScholomanceRework
     // Corvane's landing, at least 15 yd from the Ravenian's fighting spot: recommended, farther, nearer.
     inline std::array<Point3, 3> constexpr kCorvaneLandings{ { { 128.0f, -1.0f, 75.4f }, { 140.0f, -1.0f, 75.4f },
         { 122.0f, 0.0f, 75.4f } } };
-    // User 2026-11-08 (handoff section 10): "Rivian can be sitting here", read as the Ravenian's phase 1 spot (the
-    // orchestrator asked the user to confirm). NOTE for S8: this point is NOT in the Vault of the Ravenian (x 89 to
-    // 162): x 175.8 is past the vault's gate (159.7) on the floor of Gandling's study (x 162-200, z 75.6), inside
-    // Gandling's arena below. Confirm with the user whose spot it is before using it.
-    Point4 constexpr kRavenianUserSpot{ 175.81657f, -14.00992f, 75.53823f, -1.5790018f };
+    // User 2026-11-08 (handoff section 10): a seat "right behind the Ravenian" (his spawn is (103.3, -1.7)), at the
+    // vault's west end. Whose seat it is (Corvane sitting before he takes his perch, or the Ravenian himself) is
+    // confirmed with the user before S8 uses it. The user's first point (175.8, -14.0) was on Gandling's study floor.
+    Point4 constexpr kRavenianUserSpot{ 91.4206f, -0.7772341f, 75.558846f, 6.282406f };
 
     // --- The Barov Family Vault: Lord Alexei Barov (S9) --------------------------------------------------------------
     FrameRect constexpr kBarovVault{ { 168.0f, -93.0f }, 0.f, 29.0f, 58.0f };     // z 72 (east) to 75 (gate side)

@@ -19,8 +19,8 @@
  *   DamageModifier (the live value is a mod-progression leftover, handoff section 2.3).
  * - Adds: Master Corvane 300542 (display 23277, 1972, unattackable until the Ravenian is below half), perch
  *   kCorvanePerch (no navmesh, height in game), landing kCorvaneLandings.
- * - User 2026-11-08: "Rivian can be sitting here" = kRavenianUserSpot (ScholomanceRework.h). It lies in Gandling's
- *   study, not the vault: confirm with the user whose spot it is before using it.
+ * - User 2026-11-08: a seat "right behind the Ravenian" = kRavenianUserSpot (ScholomanceRework.h), at the vault's west
+ *   end: confirm with the user whose seat it is (Corvane before his perch, or the Ravenian) before using it.
  * - Detention (S11, handoff section 3.7): write this room's solo lesson as a ScholomanceRework::TimedSoloLesson
  *   (SoloLesson.h) and register it from AddSC_ with RegisterSoloLesson(Classroom::RavenianVault, ...).
  * - Hard mode (S13): an examiner mode of this AI for the Graduate Examiner entry (ScholomanceRework.h

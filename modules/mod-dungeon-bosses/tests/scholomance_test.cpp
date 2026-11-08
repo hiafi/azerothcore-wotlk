@@ -189,9 +189,8 @@ namespace
             CHECK(JandiceArena().Contains(v, kJandiceFloorZ));
         for (Vec2 const& v : kBarovDesks)
             CHECK(AlexeiArena().Contains(v, 75.0f));
-        // The user's "Rivian" spot is on the study floor, not in the Ravenian's vault (flagged for S8).
-        CHECK(In(GandlingArena(), kRavenianUserSpot));
-        CHECK(!In(RavenianArena(), kRavenianUserSpot));
+        // The user's seat "right behind the Ravenian" lies in his vault.
+        CHECK(In(RavenianArena(), kRavenianUserSpot));
         // Page 3 lies in the Viewing Room; the book, the table and the honors paper are in no boss arena.
         CHECK(In(ViewingRoomArena(), kKeepsakePages[2]));
         for (std::uint32_t boss = 0; boss < kBossCount; ++boss)
