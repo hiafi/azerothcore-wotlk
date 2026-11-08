@@ -504,7 +504,8 @@ class DeadminesSourceTest(unittest.TestCase):
         merged = D.load_items_dir(TOOL_ROOT / "source" / "items")
         # Deadmines only (the dm_ keys): other dungeons declare items whose loot tables come with their boss builds.
         cls.items = {e["id"]: e["_decl"] for e in merged["item_declarations"] if e["id"].startswith("dm_")}
-        cls.loot = [e["_decl"] for e in merged["loot_declarations"]]
+        cls.loot = [e["_decl"] for e in merged["loot_declarations"]
+                    if e["_decl"].removal or e["_decl"].items[0].startswith("dm_")]
 
     def test_every_item_drops_once_per_difficulty(self):
         normal = [k for d in self.loot if not d.removal and d.tier == "normal" for k in d.items]
@@ -527,6 +528,36 @@ class DeadminesSourceTest(unittest.TestCase):
         self.assertEqual((hard_mode.loot_mode, hard_mode.tier), (L.LOOT_MODE_HARD_MODE_1, "heroic_hm"))
         self.assertFalse(any(d.loot_mode != 1 for d in self.loot if d.lootid != 310004))
         self.assertEqual(len(self.loot), 18)
+
+
+class ShadowfangKeepSourceTest(unittest.TestCase):
+    """The real declarations in source/items/shadowfang_keep_loot.py (item keys from shadowfang_keep.py)."""
+
+    @classmethod
+    def setUpClass(cls):
+        merged = D.load_items_dir(TOOL_ROOT / "source" / "items")
+        cls.items = {e["id"]: e["_decl"] for e in merged["item_declarations"] if e["id"].startswith("sfk_")}
+        cls.loot = [e["_decl"] for e in merged["loot_declarations"]
+                    if not e["_decl"].removal and e["_decl"].items[0].startswith("sfk_")]
+
+    def test_every_item_drops_once_per_difficulty(self):
+        normal = [k for d in self.loot if d.tier == "normal" for k in d.items]
+        heroic = [k for d in self.loot if d.tier == "heroic" for k in d.items]
+        hard_mode = [k for d in self.loot if d.tier == "heroic_hm" for k in d.items]
+        self.assertEqual(len(normal), 24)
+        self.assertEqual(sorted(normal), sorted(set(normal)))
+        self.assertEqual(sorted(normal), sorted(heroic))
+        self.assertEqual(sorted(hard_mode), ["sfk_arugals_shadow_tome", "sfk_ashcrombes_locket",
+                                             "sfk_vial_of_the_worgens_curse"])
+        self.assertEqual(set(normal) | set(hard_mode), set(self.items))
+
+    def test_arugals_hard_mode_group_is_the_only_special_one(self):
+        by_key = {(d.lootid, d.group): d for d in self.loot}
+        hard_mode = by_key[(310051, 2)]
+        self.assertEqual((hard_mode.loot_mode, hard_mode.tier), (L.LOOT_MODE_HARD_MODE_1, "heroic_hm"))
+        self.assertFalse(any(d.loot_mode != 1 for d in self.loot if (d.lootid, d.group) != (310051, 2)))
+        self.assertTrue(all(d.group == 1 for d in self.loot if (d.lootid, d.group) != (310051, 2)))
+        self.assertEqual(len(self.loot), 19)
 
 
 if __name__ == "__main__":

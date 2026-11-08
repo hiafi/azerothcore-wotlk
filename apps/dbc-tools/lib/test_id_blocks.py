@@ -658,6 +658,19 @@ class DungeonKitIdsTest(unittest.TestCase):
         self.assertFalse([v for v in used if 90345 <= v <= 90699
                           and not any(r["start"] <= v <= r["end"] for r in reserved)])
 
+    def test_the_real_scan_finds_the_shadowfang_keep_script_in_its_slices(self):
+        # patch_shadowfang_keep_vfx_models.py (Shadowfang Keep build WP-V) mints the purple shadow lightning (90400)
+        # and the Cell Key display (90030) and nothing else; 90720-90729 (creature display / model data) stays free
+        scanned = scanned_used_ids()
+        script = DUNGEON_VFX_SCRIPTS["shadowfang_keep"]
+        mine = {where.split(":")[1]: value for found in scanned.values() for value, where in found
+                if where.startswith(script)}
+        self.assertEqual(mine["EFFECT_SHADOW_LIGHTNING"], 90400)
+        self.assertEqual(mine["KIT_SHADOW_LIGHTNING"], 90400)
+        self.assertEqual(mine["SV_SHADOW_LIGHTNING"], 90400)
+        self.assertEqual(mine["GODI_CELL_KEY"], 90030)
+        self.assertFalse([name for name in mine if name.startswith("CDI_")])
+
     def test_a_planted_constant_in_another_dungeons_slice_is_flagged(self):
         with tempfile.TemporaryDirectory() as d:
             script = Path(d) / DUNGEON_VFX_SCRIPTS["shadowfang_keep"]

@@ -208,8 +208,8 @@ public:
                                 HandleGameObject(ObjectGuid::Empty, true, go);
                     break;
                 case BOSS_NANDOS:
-                    // The lair prisoner waits at the lair door once Nandos is dead (handoff section 3.3; a load with
-                    // him DONE summons it again, Update checks Arugal).
+                    // The lair prisoner waits at the lair door once Nandos is dead (handoff section 3.3). A load never
+                    // reaches this switch (the base stores a loaded state and returns false), so Load asks again.
                     if (state == DONE)
                         _lairPrisonerPending = true;
                     break;
@@ -268,8 +268,9 @@ public:
                     }
                     break;
                 case DATA_HARD_MODE:
-                    // Face Him Alone (S10): chosen once, before Arugal dies; an instance reset clears it.
-                    if (GetBossState(BOSS_ARUGAL) == DONE)
+                    // Face Him Alone (S10): chosen once, before Arugal dies; an instance reset clears it. Lighting it
+                    // is refused while he fights too (S10 section 6, R2 N-6): his wards are already placed.
+                    if (!HardModeChangeAllowed(GetBossState(BOSS_ARUGAL), data))
                         break;
                     _hardMode = data ? 1 : 0;
                     ApplyHardModeLoot();
@@ -323,7 +324,7 @@ public:
 
             if (!_lairPrisonerPending)
                 return;
-            if (GetBossState(BOSS_ARUGAL) == DONE || GetBossState(BOSS_NANDOS) != DONE)
+            if (!LairPrisonerWaits(GetBossState(BOSS_NANDOS), GetBossState(BOSS_ARUGAL), _hardMode))
             {
                 _lairPrisonerPending = false;
                 return;
@@ -368,6 +369,8 @@ public:
                 SetBossState(i, EncounterState(save.states[i]));
             // After the states: the flag never re-fires BOSS_ARUGAL's DONE branch while loading.
             _hardMode = save.hardMode;
+            // R1 S-1: the lair prisoner is a manual-despawn summon a map unload drops; summon it again (Update).
+            _lairPrisonerPending = LairPrisonerWaits(GetBossState(BOSS_NANDOS), GetBossState(BOSS_ARUGAL), _hardMode);
         }
 
     private:

@@ -30,7 +30,8 @@
  *   (default: landYd from the boss toward where it was, clamped into landBox; the floor height under it, searched
  *   from the top of the boss's region; a point the arena does not hold falls back to the boss's own spot, so a
  *   polygon or multi-region arena should give landBox or `landing`). Units farther than maxGripYd, totems and
- *   vehicles are never gripped. Units that left the map are forgotten at the next check.
+ *   vehicles are never gripped, nor units the skipGrip option names (SkipEngagedWithOtherBoss: a unit in combat with
+ *   another guarded boss). Units that left the map are forgotten at the next check.
  *
  * Confinement, for cells and jails ("server-side movement ignores closed doors", SFK handoff kit #1b): ConfineIn
  * keeps a unit inside a cell (off it for the grace: put back), KeepOut keeps everyone else out of one (inside for the
@@ -80,7 +81,15 @@ namespace DungeonKit
         bool landingKeepsZ = false;
         std::string logPrefix = "dungeon-kit arena";            // "<prefix> grip pull units=.. gripped=..", ...
         std::string offArenaReason = "off-arena";               // "<prefix> grip <reason> unit=..": a grip back
+        // Units this guard never grips (the pull, a grip back, Grip through Grippable); empty: none.
+        // SkipEngagedWithOtherBoss builds the usual one.
+        std::function<bool(Creature const* boss, Unit const* unit)> skipGrip;
     };
+
+    // A skipGrip for an instance whose guarded bosses can overlap (SFK R2 S-2: Odo and the Deathsworn Captain): a
+    // unit in combat with another live creature whose entry `isBossEntry` names is left to that boss, so two guards
+    // never grip it back and forth.
+    std::function<bool(Creature const*, Unit const*)> SkipEngagedWithOtherBoss(std::function<bool(uint32)> isBossEntry);
 
     class ArenaGuard
     {

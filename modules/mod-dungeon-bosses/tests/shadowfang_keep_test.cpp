@@ -56,6 +56,31 @@ namespace
         CHECK(LairPrisonerEntry(Prisoner::Ashcrombe) == NPC_SFK_LAIR_ASHCROMBE);
         CHECK(LairPrisonerEntry(Prisoner::Adamant) == NPC_SFK_LAIR_ADAMANT);
         CHECK(LairPrisonerEntry(Prisoner::None) == 0);
+
+        // R2 S-2: the guards' "another live boss" set: the nine bosses, nothing else.
+        for (std::uint32_t const boss : { NPC_RETHILGORE, NPC_RAZORCLAW, NPC_SILVERLAINE, NPC_SPRINGVALE, NPC_ODO,
+                 NPC_DEATHSWORN_CAPTAIN, NPC_FENRUS, NPC_NANDOS, NPC_ARUGAL })
+            CHECK(IsSfkBossEntry(boss));
+        for (std::uint32_t const other : { std::uint32_t(NPC_ADAMANT), std::uint32_t(NPC_SFK_LAIR_ASHCROMBE),
+                 std::uint32_t(NPC_ARUGALS_VOIDWALKER), std::uint32_t(NPC_SFK_PACK_BLEAK_WORG), 0u })
+            CHECK(!IsSfkBossEntry(other));
+
+        // R1 S-1: the wait rule, asked on Nandos's DONE and after a load.
+        CHECK(LairPrisonerWaits(DungeonKit::State::Done, DungeonKit::State::NotStarted, 0));
+        CHECK(LairPrisonerWaits(DungeonKit::State::Done, DungeonKit::State::Fail, 0));
+        CHECK(LairPrisonerWaits(DungeonKit::State::Done, DungeonKit::State::InProgress, 0));
+        CHECK(!LairPrisonerWaits(DungeonKit::State::Done, DungeonKit::State::Done, 0));
+        CHECK(!LairPrisonerWaits(DungeonKit::State::Done, DungeonKit::State::NotStarted, 1));
+        CHECK(!LairPrisonerWaits(DungeonKit::State::NotStarted, DungeonKit::State::NotStarted, 0));
+        CHECK(!LairPrisonerWaits(DungeonKit::State::ToBeDecided, DungeonKit::State::NotStarted, 0));
+
+        // R2 N-6: the hard mode flag is not lit mid-fight, and never changes once Arugal is dead.
+        CHECK(HardModeChangeAllowed(DungeonKit::State::NotStarted, 1));
+        CHECK(HardModeChangeAllowed(DungeonKit::State::Fail, 1));
+        CHECK(!HardModeChangeAllowed(DungeonKit::State::InProgress, 1));
+        CHECK(HardModeChangeAllowed(DungeonKit::State::InProgress, 0));
+        CHECK(!HardModeChangeAllowed(DungeonKit::State::Done, 0));
+        CHECK(!HardModeChangeAllowed(DungeonKit::State::Done, 1));
         CHECK(kCaptainPresentChancePct == 15);
     }
 
@@ -295,10 +320,10 @@ namespace
         Arena const arugal = ArugalArena();
         CHECK(In(arugal, arugalSideOfDoor));
         CHECK(!In(arugal, kLairPrisonerWait));
-        for (Point3 const& p : kShadowPortSpots)
-            CHECK(In(arugal, p));
-        for (Point3 const& p : kLowerFloorWardPoints)
-            CHECK(In(arugal, p));
+        // The two spots S9 uses (7587 is dropped as unreachable and lies outside the arena).
+        CHECK(In(arugal, kShadowPortSpots[0]));
+        CHECK(In(arugal, kShadowPortSpots[1]));
+        CHECK(!In(arugal, kShadowPortSpots[2]));
         CHECK(In(arugal, kLairPrisonerGallery));
         // Fenrus's room is right below Nandos's; neither arena reaches the other's floor.
         CHECK(!nandos.Contains(kFenrusSpawn.XY(), kFenrusSpawn.z));

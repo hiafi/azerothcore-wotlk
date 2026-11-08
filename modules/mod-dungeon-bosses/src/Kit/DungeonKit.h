@@ -93,6 +93,9 @@ namespace DungeonKit
     // clamped like Damage(pct) / TankDamage(pct). A null owner or one not in the world returns 0. Call it at cast or
     // hit time, e.g. in a SpellScript:  SetHitDamage(DungeonKit::RefFlat(GetCaster(), 40.f));
     uint32 RefFlat(Unit const* owner, float pct, bool tank = false);
+    // RefFlat for a hit on `target`: the tank row when the registry's role provider names that player the tank (a
+    // combat log spot check then matches the tank's numbers), else the non-tank row.
+    uint32 RefFlatOn(Unit const* owner, Unit const* target, float pct);
 
     // The map is a heroic difficulty (Map::IsHeroic). False without a map.
     bool IsHeroicMap(WorldObject const* me);

@@ -978,15 +978,19 @@ def _apply_stale_overlay(stale_inputs: tuple, ids_cfg: dict) -> tuple[dict[str, 
 
 def _loot_blocks(
     dsl_classes: dict, item_expansion, item_rendered, ids_cfg: dict, existing_creature_rows: dict, only_items: bool,
+    lock_text: str | None = None,
 ) -> list[str]:
     """Item variants IV7: resolves `boss_loot()` / `remove_loot_group()` (lib/loot_tables.py), runs the loot rules
     (the live ones need the replayed loot tables) and appends the groups that differ from live to
     `item_rendered.blocks`. Returns the errors. The heroic creatures come from source/world/heroic_ids.lock; their
     rows from this run's declared and generated creature_template rows over the live ones (an `--only items` run
-    renders no creature row, so a heroic row whose lootid is not yet its own is a WARNING there)."""
+    renders no creature row, so a heroic row whose lootid is not yet its own is a WARNING there). `lock_text` is the
+    lock as this run will leave it (the dungeon expansion's new heroic ids included), so loot on a heroic creature
+    minted by the same run is checked against its heroic tier."""
     try:
-        heroic_pairs = heroic_templates.parse_lock(heroic_templates.LOCK_PATH.read_text()).pairs \
-            if heroic_templates.LOCK_PATH.is_file() else {}
+        if lock_text is None and heroic_templates.LOCK_PATH.is_file():
+            lock_text = heroic_templates.LOCK_PATH.read_text()
+        heroic_pairs = heroic_templates.parse_lock(lock_text).pairs if lock_text is not None else {}
     except heroic_templates.LockError as error:
         return [f"loot: {error}"]
     creature_rows = dict(existing_creature_rows)
@@ -1558,6 +1562,8 @@ def _run(
         if dsl_classes["loot_declarations"] and not item_expansion.errors:
             item_expansion.errors += _loot_blocks(
                 dsl_classes, item_expansion, item_rendered, ids_cfg, existing_creature_rows, only_items,
+                lock_text=dungeon_expansion.lock_text if dungeon_expansion and dungeon_expansion.lock_appended
+                else None,
             )
     # The Item.dbc guard compares the full build's custom items with the deployed file; a scoped run keeps every item
     # row it does not own as deployed, so the general drop guard below covers it instead.

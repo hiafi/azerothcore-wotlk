@@ -114,8 +114,8 @@ namespace
         if (!instance)
             return false;
         instance->SetData(DATA_HARD_MODE, lit ? 1 : 0);
-        handler->PSendSysMessage("Face Him Alone (hard mode) is now {} (ignored once Arugal is dead).",
-            instance->GetData(DATA_HARD_MODE) ? "chosen" : "off");
+        handler->PSendSysMessage("Face Him Alone (hard mode) is now {} (not lit while Arugal fights, ignored once "
+            "he is dead).", instance->GetData(DATA_HARD_MODE) ? "chosen" : "off");
         return true;
     }
 
@@ -124,9 +124,10 @@ namespace
         InstanceScript* instance = GmInstance(handler);
         if (!instance)
             return false;
-        if (id >= kBossCount || state > TO_BE_DECIDED)
+        // TO_BE_DECIDED (5) is the loading state: a slot set to it skips the next change's save and switch (R1 N-6).
+        if (id >= kBossCount || state >= TO_BE_DECIDED)
         {
-            handler->SendErrorMessage("Usage: .sfktest instance boss <0..{}> <0..5>", kBossCount - 1);
+            handler->SendErrorMessage("Usage: .sfktest instance boss <0..{}> <0..4>", kBossCount - 1);
             return false;
         }
         instance->SetBossState(id, EncounterState(state));

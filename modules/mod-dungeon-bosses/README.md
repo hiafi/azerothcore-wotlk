@@ -54,6 +54,10 @@ so db-import and the dbc-tools replay see one history.
 | `src/ShadowfangKeep/instance_shadowfang_keep_rework.cpp` | Instance (stock name, replaced at load; Hummel kept) |
 | `src/ShadowfangKeep/ShadowfangKeepTestCommand.{h,cpp}` | The `.sfktest` shell, its `instance` and `cells` tables |
 | `src/ShadowfangKeep/boss_<name>_rework.cpp`, `<Boss>Logic.h` | One pair per SFK boss WP; S10 `face_him_alone.cpp` |
+| `src/ShadowfangKeep/MeatHook.{h,cpp}` | Meat Hook (Razorclaw RC1, Silverlaine's Echo of Razorclaw) |
+| `src/ShadowfangKeep/Hunt.{h,cpp}`, `HuntLogic.h` | The Hunt chase (Odo OD1, Silverlaine's Echo of Odo) |
+| `src/ShadowfangKeep/SoulDrain.h` | Soul Drain (Rethilgore, Silverlaine's Echo of Rethilgore) |
+| `src/ShadowfangKeep/LairPrisoner.h` | The lair prisoner's gossip hooks (Arugal S9, Face Him Alone S10) |
 | `src/Stratholme/hard_mode_items.cpp` | Balnazzar and Baron hard mode item scripts, the Condemned damage hook |
 | `src/Stratholme/StratholmeHardModeItemsLogic.h` | Pure: Stratholme item effect ids (205660-205672), shares, picks |
 | `src/DungeonSets/haunted_set_bonuses.cpp` | Haunted set bonus scripts (10 sets x 3 and 5 pieces) and their hooks |

@@ -4,6 +4,7 @@
  */
 
 #include "ArenaGuard.h"
+#include "CombatManager.h"
 #include "Creature.h"
 #include "CreatureAI.h"
 #include "DungeonKit.h"
@@ -66,7 +67,25 @@ namespace DungeonKit
     bool ArenaGuard::Grippable(Creature const* boss, Unit const* unit) const
     {
         return unit && unit->IsInWorld() && unit->IsAlive() && unit->IsInMap(boss) && !unit->IsTotem()
-            && !unit->IsVehicle() && !unit->GetVehicle() && boss->GetExactDist2d(unit) <= _options.maxGripYd;
+            && !unit->IsVehicle() && !unit->GetVehicle() && boss->GetExactDist2d(unit) <= _options.maxGripYd
+            && !(_options.skipGrip && _options.skipGrip(boss, unit));
+    }
+
+    std::function<bool(Creature const*, Unit const*)> SkipEngagedWithOtherBoss(std::function<bool(uint32)> isBossEntry)
+    {
+        return [isBossEntry = std::move(isBossEntry)](Creature const* boss, Unit const* unit)
+        {
+            if (!unit || !isBossEntry)
+                return false;
+            for (auto const& [guid, ref] : unit->GetCombatManager().GetPvECombatRefs())
+            {
+                Unit const* other = ref ? ref->GetOther(unit) : nullptr;
+                if (other && other != boss && other->IsCreature() && other->IsAlive()
+                    && isBossEntry(other->GetEntry()))
+                    return true;
+            }
+            return false;
+        };
     }
 
     void ArenaGuard::Engage(Creature* boss)

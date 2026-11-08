@@ -127,8 +127,10 @@ def _declared_kit_entries() -> set[int]:
 _declared = _declared_kit_entries()
 
 
-def _boss(health: int) -> dict:
-    return dict(health=health, columns=_STUN_IMMUNE)
+def _boss(health: int, heroic_entry: int) -> dict:
+    """A heroic boss drops its own loot: `lootid` = its own heroic entry (heroic_ids.lock), whose groups hold the
+    Heroic tiers (source/items/shadowfang_keep_loot.py, WP-L)."""
+    return dict(health=health, columns={**_STUN_IMMUNE, "lootid": heroic_entry})
 
 
 shadowfang_keep = dungeon(
@@ -167,15 +169,15 @@ shadowfang_keep = dungeon(
         spawn_mask=True,
         event_spawns=False,  # Apothecary Hummel's Love is in the Air event and Sever's invasion stay normal-only
         overrides={
-            3914: _boss(265_524),  # Rethilgore (HealthModifier 87 x warrior 3,052)
-            3886: _boss(350_980),  # Razorclaw the Butcher (115)
-            3887: _boss(305_200),  # Baron Silverlaine (100)
-            4278: _boss(305_250),  # Commander Springvale (125 x paladin 2,442)
-            4279: _boss(320_460),  # Odo the Blindwatcher (105)
-            3872: _boss(244_160),  # Deathsworn Captain (80)
-            4274: _boss(259_420),  # Fenrus the Devourer (85; phase 2 at 40% is the script's)
-            3927: _boss(244_160),  # Wolf Master Nandos (80)
-            4275: _boss(405_840),  # Archmage Arugal (handoff s7 #7: SK's 190 x 2,136; hard mode shares it)
+            3914: _boss(265_524, 310048),  # Rethilgore (HealthModifier 87 x warrior 3,052)
+            3886: _boss(350_980, 310046),  # Razorclaw the Butcher (115)
+            3887: _boss(305_200, 310047),  # Baron Silverlaine (100)
+            4278: _boss(305_250, 310052),  # Commander Springvale (125 x paladin 2,442)
+            4279: _boss(320_460, 310053),  # Odo the Blindwatcher (105)
+            3872: _boss(244_160, 310042),  # Deathsworn Captain (80)
+            4274: _boss(259_420, 310050),  # Fenrus the Devourer (85; phase 2 at 40% is the script's)
+            3927: _boss(244_160, 310049),  # Wolf Master Nandos (80)
+            4275: _boss(405_840, 310051),  # Archmage Arugal (handoff s7 #7: SK's 190 x 2,136; hard mode shares it)
             4627: dict(health=12_000),  # Arugal's Voidwalker (Fenrus's summon)
             **{entry: values for entry, values in _KIT_ADD_HEROIC.items() if entry in _declared},
         },

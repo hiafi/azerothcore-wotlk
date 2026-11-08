@@ -60,6 +60,11 @@ def _sfk_entry() -> dict:
     return {e["map_id"]: e for e in reg.dungeons}[33], reg
 
 
+# WP-L: each heroic boss drops its own loot (lootid = its own heroic entry, heroic_ids.lock).
+HEROIC_LOOTID = {3914: 310048, 3886: 310046, 3887: 310047, 4278: 310052, 4279: 310053, 3872: 310042, 4274: 310050,
+                 3927: 310049, 4275: 310051}
+
+
 class DeclarationTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -99,7 +104,8 @@ class DeclarationTest(unittest.TestCase):
         for entry, health in BOSS_HEALTH.items():
             with self.subTest(entry=entry):
                 self.assertEqual(overrides[entry]["health"], health)
-                self.assertEqual(dict(overrides[entry]["columns"]), {"CreatureImmunitiesId": 1972})
+                self.assertEqual(dict(overrides[entry]["columns"]),
+                                 {"CreatureImmunitiesId": 1972, "lootid": HEROIC_LOOTID[entry]})
         self.assertEqual(overrides[4627]["health"], 12_000)  # Arugal's Voidwalker
 
     def test_kit_add_overrides_follow_the_declared_templates(self):

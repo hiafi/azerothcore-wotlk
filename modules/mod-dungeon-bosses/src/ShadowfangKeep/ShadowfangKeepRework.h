@@ -195,11 +195,47 @@ namespace ShadowfangKeepRework
         // 300517-300529 spare (ask the orchestrator)
     };
 
+    // The nine rework bosses (a heroic copy's GetEntry() is its base entry). Every boss's ArenaGuard skips a unit in
+    // combat with another live one of them (DungeonKit::SkipEngagedWithOtherBoss; R2 S-2: Odo and the Captain).
+    constexpr bool IsSfkBossEntry(std::uint32_t entry)
+    {
+        switch (entry)
+        {
+            case NPC_RETHILGORE:
+            case NPC_RAZORCLAW:
+            case NPC_SILVERLAINE:
+            case NPC_SPRINGVALE:
+            case NPC_ODO:
+            case NPC_DEATHSWORN_CAPTAIN:
+            case NPC_FENRUS:
+            case NPC_NANDOS:
+            case NPC_ARUGAL:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     // The lair prisoner the instance summons for a DATA_PRISONER value (0 for Prisoner::None).
     constexpr std::uint32_t LairPrisonerEntry(std::uint32_t prisoner)
     {
         return prisoner == Prisoner::Ashcrombe ? std::uint32_t(NPC_SFK_LAIR_ASHCROMBE)
             : prisoner == Prisoner::Adamant ? std::uint32_t(NPC_SFK_LAIR_ADAMANT) : 0u;
+    }
+
+    // Whether the lair prisoner waits at the lair door: Nandos is dead, Arugal is not, and Face Him Alone was not
+    // chosen (the prisoner leaves for good then). The instance asks on Nandos's DONE and again after a load, which
+    // stores the saved states without running SetBossState's switch (R1 S-1).
+    constexpr bool LairPrisonerWaits(std::uint32_t nandosState, std::uint32_t arugalState, std::uint32_t hardMode)
+    {
+        return nandosState == DungeonKit::State::Done && arugalState != DungeonKit::State::Done && hardMode == 0;
+    }
+
+    // Whether the instance accepts SetData(DATA_HARD_MODE, value): never once Arugal is dead, and the flag is never lit
+    // while he fights (S10 section 6, R2 N-6; `.sfktest instance hardmode` included). Clearing it mid-fight is allowed.
+    constexpr bool HardModeChangeAllowed(std::uint32_t arugalState, std::uint32_t value)
+    {
+        return arugalState != DungeonKit::State::Done && !(value && arugalState == DungeonKit::State::InProgress);
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -224,7 +260,8 @@ namespace ShadowfangKeepRework
         // new (gameobject 301100-301149, ids.yaml reservation `shadowfang_keep`; templates in WP-K's core rev)
         GO_SFK_CELL_KEY             = 301100,   // S1: the Cell Key's look (a Pickups goEntry, no script)
         GO_SFK_ALARM_BELL           = 301101,   // S5: go_sfk_alarm_bell (spawns: S5's rev, spawnMask 3)
-        // 301102 reserved: a cracked bell look if handoff section 7 #16 picks one; 301103-301149 spare
+        GO_SFK_OFFAL_SLICK          = 301103,   // S2: the heroic Offal Slick's blood pools (template in S2's rev)
+        // 301102 and 301104-301149 spare
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -290,7 +327,8 @@ namespace ShadowfangKeepRework
         SAY_ASHCROMBE_CELLMATE          = 5,    // Sorcerer Ashcrombe: a player lands in his cell (S1)
         SAY_LANDEN_CELLMATE             = 0,    // Landen Stilwell: a player lands in his cell (S1)
         SAY_PRISONER_LAIR_PULL          = 6,    // lair prisoner copies 300513 / 300514: Arugal's pull (S9)
-        SAY_PRISONER_HARD_MODE          = 7,    // lair prisoner copies: Face Him Alone chosen (S10)
+        SAY_PRISONER_HARD_MODE          = 7,    // lair prisoner copies: Face Him Alone chosen; inserted by S9's
+                                                // rev, said by S10 through SfkLairPrisoner::LeaveForHardMode
         SAY_PRISONER_FAREWELL           = 8,    // stock prisoners at the Courtyard Door, replaces stock 2 / 3 (S9)
     };
     enum RazorclawTexts : std::uint8_t
@@ -571,22 +609,12 @@ namespace ShadowfangKeepRework
     Point3 constexpr kArugalsLairDoor{ -118.1f, 2161.9f, 155.7f };
     // Shadow Port spots (spell_target_position, DB): 7136 next to the antechamber floor, 7586 on his platform, 7587
     // 9.7 yd above the lower floor, off the mesh (user ruling 2026-11-07, handoff section 10: he keeps his stock
-    // spots; S9 redesigns around them).
+    // spots; S9 redesigns around them). S9 uses 7136 and 7586 plus his spawn; 7587 is dropped (unreachable) and kept
+    // here for reference only.
     inline std::array<Point3, 3> constexpr kShadowPortSpots{ { { -105.654f, 2154.98f, 156.43f },    // 7136
         { -84.99f, 2151.01f, 155.62f },                                                           // 7586
         { -103.46f, 2122.1f, 155.655f } } };                                                      // 7587
     inline std::array<std::uint32_t, 3> constexpr kShadowPortSpells{ { 7136, 7586, 7587 } };
-    // Ward points on the lower floor (5 yd circles fit whole; W3-W5 serve all three spots). S9 places the wards for
-    // the level Arugal is on (handoff section 10).
-    inline std::array<Point3, 9> constexpr kLowerFloorWardPoints{ { { -105.8f, 2131.2f, 145.2f },   // W1
-        { -98.8f, 2128.2f, 145.0f },                                                                // W2
-        { -102.8f, 2138.2f, 145.4f },                                                               // W3
-        { -99.8f, 2145.2f, 145.7f },                                                                // W4
-        { -95.8f, 2135.2f, 145.5f },                                                                // W5
-        { -96.8f, 2152.2f, 145.2f },                                                                // W6
-        { -90.8f, 2128.2f, 145.2f },                                                                // W7
-        { -117.8f, 2134.2f, 145.7f },                                                               // W8
-        { -91.8f, 2146.2f, 145.2f } } };                                                            // W9
     // The lair prisoner: summoned at the wait point on Nandos's side of the lair door (the instance, on Nandos DONE);
     // S9 moves it to the gallery over the lower floor for the fight.
     Point3 constexpr kLairPrisonerWait{ -121.2f, 2165.2f, 156.0f };
@@ -601,7 +629,6 @@ namespace ShadowfangKeepRework
         };
         Arena arena(rect(-118.5f, -66.5f, 2137.5f, 2174.5f, 152.5f, 159.f));    // platform, gallery, antechamber
         arena.Add(rect(-125.5f, -74.f, 2112.f, 2172.5f, 143.5f, 153.f));        // ramps and the lower floor
-        arena.Add(ArenaRegion::Circle(kShadowPortSpots[2].XY(), 4.f, 152.5f, 159.f));   // the 7587 ledge
         return arena;
     }
 
