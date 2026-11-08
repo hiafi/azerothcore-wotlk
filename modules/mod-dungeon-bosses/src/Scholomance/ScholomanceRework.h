@@ -343,7 +343,7 @@ namespace ScholomanceRework
     //   boss_darkmaster_gandling opens and closes them, and the entrance follows DATA_DARKMASTER_GANDLING).
     // ----------------------------------------------------------------------------------------------------------------
     inline constexpr bool kWaveBBound = true;
-    inline constexpr bool kWaveCBound = false;
+    inline constexpr bool kWaveCBound = true;
 
     // The boss state of an instructor's creature entry (a heroic copy's GetEntry() is its base entry).
     constexpr std::optional<std::uint32_t> InstructorBossOfEntry(std::uint32_t entry)

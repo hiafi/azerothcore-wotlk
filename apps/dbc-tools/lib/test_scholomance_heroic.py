@@ -151,9 +151,9 @@ class DeclarationTest(unittest.TestCase):
         self.assertEqual(copy["health"], BOSS_HEALTH[10503])  # her health
         self.assertEqual(dict(copy["columns"])["unit_class"], 2)
 
-    def test_wave_b_holds_wave_c_back(self):
-        # R-A S-11: wave B ships with BIND_WAVE_C off (flip it with the C++ kWaveCBound).
-        self.assertEqual(BOUND, {"A", "B"})
+    def test_all_waves_bound(self):
+        # R-A S-11: wave C flips BIND_WAVE_C with the C++ kWaveCBound; every reworked boss is bound.
+        self.assertEqual(BOUND, {"A", "B", "C"})
         self.assertFalse(OWN_LOOT)
 
     def test_kit_add_overrides_follow_the_declared_templates(self):

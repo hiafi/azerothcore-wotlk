@@ -70,7 +70,7 @@ KIT_HELPER = kit_helper(KIT_CREATURE)
 # are kWaveBBound / kWaveCBound in modules/mod-dungeon-bosses src/Scholomance/ScholomanceRework.h; both sides must
 # agree (lib/test_scholomance_kit.py). The wave's WPs flip them (True) when they land.
 BIND_WAVE_B = True
-BIND_WAVE_C = False
+BIND_WAVE_C = True
 
 # creature_template.flags_extra bits (SharedDefines / CreatureData.h): no stock Scholomance boss has INSTANCE_BIND
 # (DB-REPORT 0.2); Krastinov keeps CIVILIAN (he only fights when attacked).
