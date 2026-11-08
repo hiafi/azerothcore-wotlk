@@ -69,7 +69,7 @@ KIT_HELPER = kit_helper(KIT_CREATURE)
 # source/world/dungeons/scholomance.py holds their heroic overrides back too (it reads these two lines). The C++ twins
 # are kWaveBBound / kWaveCBound in modules/mod-dungeon-bosses src/Scholomance/ScholomanceRework.h; both sides must
 # agree (lib/test_scholomance_kit.py). The wave's WPs flip them (True) when they land.
-BIND_WAVE_B = False
+BIND_WAVE_B = True
 BIND_WAVE_C = False
 
 # creature_template.flags_extra bits (SharedDefines / CreatureData.h): no stock Scholomance boss has INSTANCE_BIND

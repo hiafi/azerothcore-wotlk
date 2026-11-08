@@ -341,7 +341,7 @@ namespace ScholomanceRework
     // - wave C (S11, Gandling): his gates keep the stock behavior (no door data row on BOSS_GANDLING; the stock
     //   boss_darkmaster_gandling opens and closes them, and the entrance follows DATA_DARKMASTER_GANDLING).
     // ----------------------------------------------------------------------------------------------------------------
-    inline constexpr bool kWaveBBound = false;
+    inline constexpr bool kWaveBBound = true;
     inline constexpr bool kWaveCBound = false;
 
     // The boss state of an instructor's creature entry (a heroic copy's GetEntry() is its base entry).
