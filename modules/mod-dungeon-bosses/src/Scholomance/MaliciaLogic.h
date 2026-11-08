@@ -13,6 +13,7 @@
 
 #include "DungeonKitMath.h"
 #include "ScholomanceRework.h"
+#include "SoloLessonLogic.h"
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -126,8 +127,9 @@ namespace ScholoMalicia
     float constexpr kSoulFlySpeed = 14.f;               // a faded soul flies to her (yd/s), then is gone
     std::uint32_t constexpr kSoulFlyMs = 2500;
     // The bots' Soak per soul (BM Soak + Order): lowest Soul first, nobody at the cap; it never resolves (cancelled at
-    // the pickup or the fade; its warning runs this long past the fade).
-    std::uint32_t constexpr kSoulSoakSlackMs = 5000;
+    // the pickup or the fade; its warning runs this long past the fade, one poll and a little more, so a bot never
+    // plans an arrival long after the soul is gone).
+    std::uint32_t constexpr kSoulSoakSlackMs = 1000;
 
     // ----------------------------------------------------------------------------------------------------------------
     // MA5 Bound Soul: a faded soul is 1, a shade that walks in is 4; +2% damage a stack, cap 20 (+40%).
@@ -428,12 +430,38 @@ namespace ScholoMalicia
 
     // ----------------------------------------------------------------------------------------------------------------
     // Detention: the Coven's solo lesson (SC 2965; handoff section 3.7): drained on landing, 3 / 4 souls spill around
-    // the student and fade in 10 / 6 s; the student passes by picking up all of them. A fade is a failure: the lesson's
-    // failure hit (15% / 25% + Weakened, SoloLesson.h LessonFailurePct). It works with or without her.
+    // the student and fade from 10 / 6 s on, staggered (ruling 4); the student passes by picking up all of them. A fade
+    // is a failure: the lesson's failure hit (15% / 25% + Weakened, SoloLesson.h LessonFailurePct), one per soul. It
+    // works with or without her.
     // ----------------------------------------------------------------------------------------------------------------
 
     inline constexpr NH<std::uint32_t> kLessonSouls{ 3, 4 };
     inline constexpr NH<std::uint32_t> kLessonFadeMs{ 10000, 6000 };
+    // User ruling 4 (2026-11-08): one hit per miss, staggered. The first soul fades at kLessonFadeMs, each next one
+    // this much later, so two misses never land in one tick and a healer-less student recovers between them.
+    std::uint32_t constexpr kLessonFadeStaggerMs = 1750;
+
+    constexpr std::uint32_t LessonSoulFadeMs(bool heroic, std::uint32_t index)
+    {
+        return kLessonFadeMs(heroic) + index * kLessonFadeStaggerMs;
+    }
+
+    // Soul Lost's percent rides the cast (CastCustomSpell base point 0 = percent x 100), so the hit follows the
+    // lesson's own heroic flag, not the map's. The engine may take 1 off a base point (SpellEffectInfo::CalcBaseValue
+    // with die sides), so the read rounds; under one percent (a plain cast: base point 0) means "not passed".
+    std::int32_t constexpr kSoulLostPctScale = 100;
+
+    constexpr std::int32_t SoulLostBasePoints(bool heroic)
+    {
+        return std::int32_t(heroic ? ScholomanceRework::kLessonFailurePctHeroic
+            : ScholomanceRework::kLessonFailurePctNormal) * kSoulLostPctScale;
+    }
+
+    constexpr float SoulLostPctFromBasePoints(std::int32_t basePoints)
+    {
+        return basePoints >= kSoulLostPctScale / 2
+            ? float((basePoints + kSoulLostPctScale / 2) / kSoulLostPctScale) : 0.f;
+    }
     // The lesson's souls land closer than the fight's (10-15 yd): four souls in 6 s must be a walk, not a sprint. The
     // student lands in her apse (17943's point, 5 yd wide), so the souls spill around the apse's mouth, in the room.
     float constexpr kLessonSpillMinYd = 3.f;

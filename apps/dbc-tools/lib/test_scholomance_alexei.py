@@ -4,14 +4,15 @@ Scholomance build WP-S9, Lord Alexei Barov: source/npcs/scholomance/lord_alexei_
 
 Checks:
   - the spells sit in his slice (206290-206314) and AlexeiLogic.h names the same ids;
-  - the six rule icons are DUMMY debuffs nobody dispels; the Demerit stacks to the header's cap for the fight;
+  - the six rule icons are DUMMY debuffs nobody dispels; the Demerit stacks to the header's cap for the fight and
+    nothing past it (persists through death, leaves with the map, never saved);
   - the two rule hits are resolve copies (no damage: the ledger entry); the Dean's Rod takes its damage from the base
     point (DieSides 0) and ignores caster modifiers; Ill-Gotten Gains is +40% damage and healing for 15 s;
   - Veil of Shadow is the tank-only copy of 17820: 1.5 s, kickable, a Curse, -50% healing taken for 10 s;
   - the fortune 300543 is an invisible, unselectable prop bound to npc_sc_barov_fortune, registered in the C++;
   - the looks are WP-V's picks;
   - 10504 is bound to boss_lord_alexei_barov_rework with SmartAI off, HealthModifier 52.425, DamageModifier 6 and
-    immunity set 1972.
+    immunity set 1972; the examiner has its own script, registered only behind kWaveCBound.
 
 Run directly:
 
@@ -47,6 +48,9 @@ SCHOOL_DAMAGE, APPLY_AURA = 2, 6
 AURA_DUMMY, AURA_MOD_DAMAGE_PERCENT_DONE, AURA_MOD_HEALING_PCT, AURA_MOD_HEALING_DONE_PERCENT = 4, 79, 118, 136
 ATTR0_AURA_IS_DEBUFF = 0x04000000
 ATTR3_IGNORE_CASTER_MODIFIERS = 0x20000000
+ATTR3_ALLOW_AURA_WHILE_DEAD = 0x00100000
+AURA_INTERRUPT_FLAG_CHANGE_MAP = 0x00080000
+CU_AURA_CANNOT_BE_SAVED = 0x01000000
 UNIT_FLAG_NOT_SELECTABLE = 0x02000000
 UNIT_FLAG_NON_ATTACKABLE = 0x2
 RESOLVE = "spell_boss_mechanics_resolve"
@@ -89,6 +93,8 @@ class AlexeiDeclarationTest(unittest.TestCase):
         cls.creatures = {int(e["entry"]): e for e in reg.creature_templates if int(e["entry"]) == FORTUNE}
         cls.models = {int(e["CreatureID"]): e for e in reg.creature_template_models if int(e["CreatureID"]) == FORTUNE}
         cls.edits = [e for e in reg.creature_template_edits if int(e["entry"]) == ALEXEI]
+        cls.custom_attrs = {int(e["spell_id"]): int(e["attributes"]) for e in reg.custom_attrs
+                            if int(e["spell_id"]) in SLICE}
         cls.cpp = SCRIPT.read_text(encoding="utf-8")
 
     def test_spells_sit_in_the_slice_and_match_the_header(self):
@@ -111,6 +117,12 @@ class AlexeiDeclarationTest(unittest.TestCase):
         self.assertEqual(_raw(demerit, "CumulativeAura"), _header_int("kDemeritCap"))
         self.assertEqual(demerit["duration_ms"], -1)
         self.assertEqual(demerit["dispel"], 0)
+        # The fight and nothing past it (R-B N9-1): a battle resurrection keeps the ladder, a player who leaves the
+        # instance (or logs out) carries no stale stacks into the world or the next pull.
+        self.assertTrue(_raw(demerit, "AttributesEx3") & ATTR3_ALLOW_AURA_WHILE_DEAD)
+        self.assertTrue(_raw(demerit, "AuraInterruptFlags") & AURA_INTERRUPT_FLAG_CHANGE_MAP)
+        self.assertTrue(self.custom_attrs.get(DEMERIT, 0) & CU_AURA_CANNOT_BE_SAVED)
+        self.assertEqual(sorted(self.custom_attrs), [DEMERIT])
 
     def test_the_rule_hits_and_the_rod(self):
         for spell_id in (OUT_OF_BOUNDS, KEEP_DISTANCE):
@@ -165,6 +177,14 @@ class AlexeiDeclarationTest(unittest.TestCase):
         self.assertAlmostEqual(float(row["HealthModifier"]) * 3052, 160000, delta=2)
         self.assertEqual(float(row["DamageModifier"]), 6.0)
         self.assertEqual(row["CreatureImmunitiesId"], 1972)
+
+    def test_the_examiner_has_its_own_script_behind_wave_c(self):
+        # R-B S-3 / user ruling 5: npc_sc_examiner_alexei, registered only once wave C binds (no "not assigned").
+        name = re.search(r'kExaminerScriptName\[\] = "(\w+)"', HEADER.read_text(encoding="utf-8")).group(1)
+        self.assertEqual(name, "npc_sc_examiner_alexei")
+        self.assertRegex(self.cpp, r"if \(kWaveCBound\)\s*RegisterDungeonReworkCreatureAI\(npc_sc_examiner_alexei,")
+        self.assertNotIn("NPC_SC_EXAMINER_ALEXEI)", self.cpp.split("struct boss_lord_alexei_barov_rework")[1]
+                         .split("struct npc_sc_examiner_alexei")[0])
 
 
 if __name__ == "__main__":

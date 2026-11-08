@@ -22,6 +22,12 @@ namespace ScholomanceRework
     std::uint32_t constexpr kLessonFailurePctNormal = 15;   // any failure hit: 15% / 25% of the reference row,
     std::uint32_t constexpr kLessonFailurePctHeroic = 25;   // plus Weakened (ruling 21)
 
+    // A lesson's failure hit, percent of the reference row (SC GD1): 15% normal, 25% heroic.
+    constexpr float LessonFailurePct(bool heroic)
+    {
+        return float(heroic ? kLessonFailurePctHeroic : kLessonFailurePctNormal);
+    }
+
     enum class LessonEnd : std::uint8_t
     {
         None,               // still running

@@ -39,8 +39,8 @@ the script sets, auras, cast bars and looks:
   206264  Ripening            PK4 the 30 s clock on a specimen (the bots read it: about to ripen)
   206265-206269 spare
 
-Visual ids are WP-V's (._visuals) except Corrosive Acid 8245's SV 856 (Corroded) and Noxious Catalyst 18151's SV 800,
-wired here by hand (stock; every look is unconfirmed until seen in game).
+Visual ids are WP-V's (._visuals; PK_CORRODED 856 and PK_NOXIOUS_CATALYST 800 added there by F-B4), all stock; every
+look is unconfirmed until seen in game.
 """
 
 from lib.dsl import RANGE_SELF, AuraType, Effect, EffectType, School
@@ -76,8 +76,10 @@ from ._common import (
 from ._visuals import (
     PK_ACID_POOL,
     PK_BURST,
+    PK_CORRODED,
     PK_FUSE_SWELL,
     PK_HARDENED,
+    PK_NOXIOUS_CATALYST,
     PK_RAISE,
     PK_ROOTED,
 )
@@ -106,8 +108,6 @@ _ICON_CORROSIVE_ACID = 636  # Corrosive Acid 8245
 _ICON_ROOTS = 20            # Entangling Roots 339
 _ICON_HARDENED_BARK = 689   # Hardened Bark 62663
 _ICON_NOXIOUS = 203         # Noxious Catalyst 18151, Volatile Infection 18149
-_SV_CORROSIVE_ACID = 856    # Corrosive Acid 8245 (Spell.dbc 3.3.5): Corroded is his own acid
-_SV_NOXIOUS_CATALYST = 800  # Noxious Catalyst 18151 (Spell.dbc 3.3.5): the stock name's own look
 
 _SCRIPT_DAMAGE = 'Scholomance: a percent of reference health, set by the script (DungeonKit::RefFlat)'
 _SCRIPT_HIT = 'Scholomance: 1.5% of his own health, base point 0 set by boss_lorekeeper_polkelt_rework'
@@ -204,7 +204,7 @@ def _declare():
               "Corrosive Acid 8245's SpellVisual 856 and icon 636.",
         raw_overrides=kit_raw('Damage taken increased by $s1%.', 'Damage taken increased by $s1%.', instant=True,
                               CumulativeAura=10, AttributesEx=ATTR1_NO_THREAT, AttributesEx4=ATTR4_NO_CAST_LOG,
-                              SpellVisualID_1=_SV_CORROSIVE_ACID),
+                              SpellVisualID_1=PK_CORRODED),
     )
 
     # --- PK4 Ripe, PK5 Acid Pool ----------------------------------------------------------------------------------
@@ -300,7 +300,7 @@ def _declare():
                               'Taking Nature damage every second.', instant=True, CumulativeAura=255,
                               DefenseType=_DEFENSE_MAGIC, AttributesEx=ATTR1_NO_REDIRECTION | ATTR1_NO_REFLECTION,
                               AttributesEx3=ATTR3_ALWAYS_HIT | ATTR3_IGNORE_CASTER_MODIFIERS,
-                              AttributesEx4=ATTR4_NO_CAST_LOG, SpellVisualID_1=_SV_NOXIOUS_CATALYST),
+                              AttributesEx4=ATTR4_NO_CAST_LOG, SpellVisualID_1=PK_NOXIOUS_CATALYST),
     )
     scripted_by(noxious, 'spell_sc_polkelt_noxious_catalyst')
 

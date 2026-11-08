@@ -57,6 +57,7 @@ ATTR0_NO_IMMUNITIES = 0x20000000
 ATTR0_NO_AURA_CANCEL = 0x80000000
 ATTR2_CANT_CRIT = 0x20000000
 ATTR3_IGNORE_CASTER_MODIFIERS = 0x20000000
+AURA_INTERRUPT_FLAG_CHANGE_MAP = 0x00080000
 UNIT_FLAG_NOT_SELECTABLE = 0x02000000
 UNIT_FLAG_NON_ATTACKABLE = 0x2
 CREATURE_FLAG_EXTRA_NO_XP = 0x40
@@ -166,6 +167,12 @@ class MaliciaDeclarationTest(unittest.TestCase):
                                  AURA_MOD_INCREASE_HEALTH_PERCENT])
         self.assertEqual(weight["effect1"]["misc_value"], 127)
 
+    def test_soul_never_leaves_the_map(self):
+        # R-B S5 SF-1: a logout or a map change drops the meter and its weight (no +100% / -50% outside the fight).
+        for spell_id in (SOUL, SOUL_WEIGHT):
+            self.assertTrue(_raw(self.spells[spell_id], "AuraInterruptFlags") & AURA_INTERRUPT_FLAG_CHANGE_MAP,
+                            spell_id)
+
     def test_bound_soul(self):
         bound = self.spells[BOUND]
         self.assertEqual(_raw(bound, "CumulativeAura"), _header_int("kBoundCap"))
@@ -180,6 +187,8 @@ class MaliciaDeclarationTest(unittest.TestCase):
         self.assertEqual(self.spells[STORM_CAST]["cast_time_ms"], 3500)
         for spell_id in (DRAIN_CAST, STORM_CAST):
             self.assertEqual(_raw(self.spells[spell_id], "InterruptFlags"), 0)
+            # Physical: a kick on Shadow Heal (or Corruption) locks Shadow; a Shadow bar would then be refused.
+            self.assertEqual(int(self.spells[spell_id]["school"]), 1, spell_id)
         heal = self.spells[SHADOW_HEAL]
         self.assertEqual(heal["cast_time_ms"], _header_int("kHealCastMs"))
         self.assertEqual(_raw(heal, "InterruptFlags"), 15)
@@ -214,6 +223,8 @@ class MaliciaDeclarationTest(unittest.TestCase):
         self.assertEqual(own, set(OWN_SCRIPTS.values()))
         for ai in ("boss_instructor_malicia_rework", "npc_sc_examiner_malicia", "npc_sc_malicias_shade"):
             self.assertIn(f"RegisterDungeonReworkCreatureAI({ai},", self.cpp)
+        # The examiner is bound in wave C (S13): registered only then, so wave B boots with no unassigned name.
+        self.assertRegex(self.cpp, r"if \(kWaveCBound\)\s*RegisterDungeonReworkCreatureAI\(npc_sc_examiner_malicia,")
         self.assertIn('kExaminerScriptName[] = "npc_sc_examiner_malicia"', FIGHT_HEADER.read_text(encoding="utf-8"))
         self.assertIn("RegisterSoloLesson(Classroom::Coven,", self.cpp)
 

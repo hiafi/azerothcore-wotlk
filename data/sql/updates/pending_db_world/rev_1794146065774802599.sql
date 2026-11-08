@@ -14,8 +14,11 @@ DELETE FROM `smart_scripts` WHERE `entryorguid` = 10505 AND `source_type` = 0;
 -- Texts (SC "Text"; she has none stock): boss emotes (41), so each names its mechanic on screen. $n is the drained
 -- player (line 0, normal).
 DELETE FROM `creature_text` WHERE `CreatureID` = 10505;
-INSERT INTO `creature_text` (`CreatureID`, `GroupID`, `ID`, `Text`, `Type`, `Language`, `Probability`, `Emote`, `Duration`, `Sound`, `BroadcastTextId`, `TextRange`, `comment`) VALUES
+INSERT INTO `creature_text` (`CreatureID`, `GroupID`, `ID`, `Text`, `Type`, `Language`, `Probability`, `Emote`,
+    `Duration`, `Sound`, `BroadcastTextId`, `TextRange`, `comment`) VALUES
 (10505, 0, 0, '%s tears the soul from $n!', 41, 0, 100, 0, 0, 0, 0, 0, 'Instructor Malicia - Soul Drain (MA2)'),
-(10505, 1, 0, '%s tears at the souls of the whole class!', 41, 0, 100, 0, 0, 0, 0, 0, 'Instructor Malicia - Soul Drain, heroic (MA2)'),
-(10505, 2, 0, '%s calls a student\'s soul to the front of the class!', 41, 0, 100, 0, 0, 0, 0, 0, 'Instructor Malicia - Call a Student (MA4)'),
+(10505, 1, 0, '%s tears at the souls of the whole class!', 41, 0, 100, 0, 0, 0, 0, 0,
+    'Instructor Malicia - Soul Drain, heroic (MA2)'),
+(10505, 2, 0, '%s calls a student\'s soul to the front of the class!', 41, 0, 100, 0, 0, 0, 0, 0,
+    'Instructor Malicia - Call a Student (MA4)'),
 (10505, 3, 0, '%s unleashes a storm of souls!', 41, 0, 100, 0, 0, 0, 0, 0, 'Instructor Malicia - Soulstorm (MA6)');

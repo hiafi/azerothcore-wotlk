@@ -20,8 +20,10 @@ INSERT INTO `creature_text` (`CreatureID`, `GroupID`, `ID`, `Text`, `Type`, `Lan
 (11261, 7, 0, '%s sews a fresh heart into his chest!', 41, 0, 100, 0, 0, 0, 0, 0, 'Doctor Theolen Krastinov - Grafted heart (KR6)');
 
 -- The Work Bench's seat (Vehicle 6, VehicleSeat 441; no stock creature uses either): the seat has no exit of its own,
--- so every eject sets the patient down 2 yd in front of the bench and 2 yd to its left (ExitParamValue 1 = an offset
--- in the vehicle's frame; a point out of sight or under the floor falls back to the bench's own spot).
+-- so every eject sets the patient down at (180.5, -98.1, 85.4), 2 yd in front of the bench and 2 yd to its left
+-- (KrastinovLogic.h kBenchExit). ExitParamValue 2 = an absolute spot, lifted to the floor by the engine. Not an
+-- offset (1): it keeps the bench's z 85.2, under the 85.31 floor there, so the engine would drop the patient on the
+-- bench's own spot; an offset also turns with the bench.
 DELETE FROM `vehicle_seat_addon` WHERE `SeatEntry` = 441;
 INSERT INTO `vehicle_seat_addon` (`SeatEntry`, `SeatOrientation`, `ExitParamX`, `ExitParamY`, `ExitParamZ`, `ExitParamO`, `ExitParamValue`) VALUES
-(441, 0, 2, 2, 0, 0, 1);
+(441, 0, 180.5, -98.1, 85.4, 1.59, 2);

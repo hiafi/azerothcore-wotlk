@@ -40,23 +40,29 @@ namespace ScholomanceRework
     {
         _who = who;
         _active = boss != nullptr;
-        _failed = std::make_shared<std::unordered_set<uint64>>();
+        _ledger = std::make_shared<GradeLedger>();
         if (!boss)
             return;
-        std::shared_ptr<std::unordered_set<uint64>> const failed = _failed;
-        Mechanic::OnFailure(boss, [failed, chain = std::move(chain)](BossMechanics::FailureEvent const& ev)
+        std::shared_ptr<GradeLedger> const ledger = _ledger;
+        Mechanic::OnFailure(boss, [ledger, chain = std::move(chain)](BossMechanics::FailureEvent const& ev)
         {
-            // Group failures (a missed soak: no player) never cost a grade (handoff section 7 #18).
-            if (!ev.player.IsEmpty())
-                failed->insert(ev.player.GetRawValue());
+            // Group failures (a missed soak: no player) never cost a grade (handoff section 7 #18); nor does a hit
+            // the boss exempted for that player (Exempt).
+            ledger->Record(ev.mechanicId, ev.player.GetRawValue());
             if (chain)
                 chain(ev);
         });
     }
 
+    void GradeWatch::Exempt(BossMechanics::MechanicHandle mechanic, ObjectGuid player)
+    {
+        if (_active && _ledger)
+            _ledger->Exempt(mechanic.id, player.GetRawValue());
+    }
+
     bool GradeWatch::HasFailed(ObjectGuid player) const
     {
-        return _failed && _failed->count(player.GetRawValue());
+        return _ledger && _ledger->HasFailed(player.GetRawValue());
     }
 
     uint32 GradeWatch::AwardAtDeath(Creature* boss)
@@ -86,7 +92,7 @@ namespace ScholomanceRework
     void GradeWatch::Reset()
     {
         _active = false;
-        _failed.reset();
+        _ledger.reset();
     }
 
     InstanceApi* GetInstanceApi(InstanceScript* instance)

@@ -6,6 +6,7 @@
 #include "check.h"
 #include <cmath>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 using namespace ScholomanceRework;
@@ -289,10 +290,60 @@ namespace
         CHECK(best.size() == 1);
         // No floor at all: nothing.
         CHECK(PickSpots(rooted, 2, crowd, {}, {}, corner, [](Vec2) { return false; }).empty());
+
+        // The rules: 13 yd within a batch, 7 yd from the rooted ones still up (R-B S7 SF-2, the orchestrator default).
+        CHECK(Near(rooted.minFromOlder, kRootedMinFromOlder) && Near(kRootedMinFromOlder, 7.f));
+        CHECK(kRootedMinFromOlder > kBurstRadius);              // an older one's burst never reaches a new one
+        CHECK(Near(RaiseRules(false).minApart, kWalkerMinApart) && Near(RaiseRules(false).minFromOlder, 3.f));
+        // A point next to an older one but apart from this batch outranks a point inside this batch's 13 yd.
+        {
+            std::vector<Vec2> const older{ { 240.f, 0.f } };
+            std::vector<Vec2> const batch{ { 260.f, 0.f } };
+            SpotScore const nearOlder = ScoreSpot(rooted, { 243.f, 0.f }, {}, older, {}, batch);
+            SpotScore const nearBatch = ScoreSpot(rooted, { 265.f, 0.f }, {}, older, {}, batch);
+            CHECK(nearOlder.apart && !nearOlder.older && !nearBatch.apart && nearBatch.older);
+            CHECK(nearOlder.Value() > nearBatch.Value());
+        }
+
+        // The heroic steady state (R-B S7 SF-2's case): three rooted from earlier batches still up, the tank and melee
+        // at him around x 260-262, two ranged at x 245. A new batch of three never rises within 13 yd of each other,
+        // and almost never within the older ones' 7 yd.
+        std::vector<Vec2> const group{ { 260.f, 0.f }, { 261.f, 2.f }, { 262.f, -2.f }, { 245.f, 4.f },
+            { 245.f, -4.f } };
+        std::uint32_t batches = 0;
+        std::uint32_t batchBroken = 0;
+        std::uint32_t olderBroken = 0;
+        for (std::uint32_t seed = 1; seed <= 400; ++seed)
+        {
+            Lcg rng;
+            rng.state = seed * 2654435761u;
+            // The earlier batch: a valid batch of three on the same hall (its own 13 yd).
+            std::vector<Vec2> const older = PickSpots(rooted, 3, group, {}, {}, rng, AnyFloor, fixed);
+            std::vector<Vec2> const r = PickSpots(rooted, 3, group, older, {}, rng, AnyFloor, fixed);
+            CHECK(r.size() == 3);
+            ++batches;
+            bool brokeBatch = false;
+            bool brokeOlder = false;
+            for (std::size_t i = 0; i < r.size(); ++i)
+            {
+                for (std::size_t j = i + 1; j < r.size(); ++j)
+                    brokeBatch = brokeBatch || DungeonKit::Distance(r[i], r[j]) < kRootedMinApart;
+                for (Vec2 const& o : older)
+                    brokeOlder = brokeOlder || DungeonKit::Distance(r[i], o) < kRootedMinFromOlder;
+            }
+            batchBroken += brokeBatch ? 1 : 0;
+            olderBroken += brokeOlder ? 1 : 0;
+        }
+        CHECK(batches == 400);
+        CHECK(batchBroken == 0);
+        CHECK(olderBroken * 20 <= batches);     // under 5%
     }
 
     void TestBots()
     {
+        // The bot tank parks him only off a ring within its radius + 8 yd (R-B S7 late S-3).
+        CHECK(ShouldPark(0.f, kBurstRadius) && ShouldPark(14.f, kBurstRadius));
+        CHECK(!ShouldPark(14.1f, kBurstRadius) && !ShouldPark(30.f, kBurstRadius));
         CHECK(IsKillTarget(6.f, 20000));
         CHECK(IsKillTarget(30.f, 3000));
         CHECK(!IsKillTarget(6.5f, 3001));
@@ -344,9 +395,46 @@ namespace
             CHECK(d >= kLessonMinFromStudent && d <= kLessonMaxFromStudent);
             CHECK(OnHallFloor(rules, spots[0]));
         }
-        CHECK(!LessonCleared(2, 3, 0));
-        CHECK(!LessonCleared(3, 3, 1));
-        CHECK(LessonCleared(3, 3, 0));
+        CHECK(!LessonCleared(2, 3, 0, false));
+        CHECK(!LessonCleared(3, 3, 1, false));
+        CHECK(LessonCleared(3, 3, 0, false));
+        // R-B S7 late B-1: the last specimen is gone, but its ring has not resolved yet (the registry resolves after
+        // the AI's update): the lesson must not end, or the last burst is cancelled and a student in it passes.
+        CHECK(!LessonCleared(3, 3, 0, true));
+
+        // User ruling 4: one hit per miss, staggered. Two walkers reach the student together: their kill fuses would
+        // resolve in one tick; the lesson's chain spaces them 1.5 s apart, and a chained fuse too.
+        CHECK(kLessonRingGapMs >= 1500 && LessonChain().minResolveGapMs == kLessonRingGapMs);
+        CHECK(ChainTuning{}.minResolveGapMs == 0);      // the fight's chain is not spaced
+        {
+            SpecimenChain lesson(LessonChain());
+            std::uint32_t const a = lesson.Add({ 0.f, 0.f }, false, 0);
+            std::uint32_t const b = lesson.Add({ 1.f, 0.f }, false, 0);
+            std::uint32_t const c = lesson.Add({ 20.f, 0.f }, false, 0);
+            std::optional<FuseStart> const fa = lesson.Kill(a, 1000);
+            std::optional<FuseStart> const fc = lesson.Kill(c, 1000);
+            CHECK(fa && fa->warnMs == kFuseMs);
+            CHECK(fc && fc->warnMs == kFuseMs + kLessonRingGapMs);
+            std::vector<Burst> first = lesson.TakeBursts(3000);
+            CHECK(first.size() == 1 && first[0].id == a);
+            // B is lit at 3 s: its 1 s chained fuse would land at 4 s, inside C's gap: it lands 1.5 s after C.
+            CHECK(first[0].lit.size() == 1 && first[0].lit[0].id == b);
+            CHECK(first[0].lit[0].warnMs == 3000);         // lands at 6 s: C's 4.5 s plus the gap
+            CHECK(lesson.TakeBursts(4499).empty());
+            std::vector<Burst> second = lesson.TakeBursts(4500);
+            CHECK(second.size() == 1 && second[0].id == c);
+            CHECK(lesson.TakeBursts(5999).empty());
+            std::vector<Burst> third = lesson.TakeBursts(6000);
+            CHECK(third.size() == 1 && third[0].id == b);
+        }
+        // The fight's chain keeps its own timings: two kills at once resolve together (their rings stack).
+        {
+            SpecimenChain fight;
+            std::uint32_t const a = fight.Add({ 0.f, 0.f }, false, 0);
+            std::uint32_t const b = fight.Add({ 30.f, 0.f }, false, 0);
+            CHECK(fight.Kill(a, 0)->warnMs == kFuseMs && fight.Kill(b, 0)->warnMs == kFuseMs);
+            CHECK(fight.TakeBursts(2000).size() == 2);
+        }
     }
 }
 

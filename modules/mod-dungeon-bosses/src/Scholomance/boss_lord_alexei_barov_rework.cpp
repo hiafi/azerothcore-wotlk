@@ -27,8 +27,8 @@
  *   AB12 Unholy Aura     stock 17467 on aggro, removed on the reset
  *   Arena                ScholomanceRework::LeashOptions on AlexeiArena() (no grips; the gate is the instance's)
  *   Detention            the Barov Family Vault's solo lesson (BarovVaultLesson, SoloLesson.h; S11 runs it)
- *   Examiner             the same AI on NPC_SC_EXAMINER_ALEXEI (300553, S13 binds this script name to it): heroic
- *                        rules and fortunes, 80k, no boss state, no Veil or aura, no Passing Grade
+ *   Examiner             npc_sc_examiner_alexei (S13 binds 300553 to it; registered once wave C binds, kWaveCBound):
+ *                        the same rule book at heroic values, 80k, no boss state, no Veil or aura, no Passing Grade
  *
  * Every timer runs on the rule book's own clock, never on BossAI's scheduler (the Veil's cast bar pauses that one):
  * the rules, the windows and the fortunes keep running through the cast. Every firing logs one INFO line
@@ -78,6 +78,7 @@ using DungeonKit::IsHeroicMap;
 namespace
 {
     char const* const kLogBoss = "alexei";
+    char const* const kLogExaminer = "alexei-examiner";
 
     Milliseconds Ms(uint64 ms)
     {
@@ -182,15 +183,20 @@ namespace
         return f;
     }
 
-    void RemoveFortune(Creature* owner, Fortune& f)
+    // `map`: where the pile lies when the owner is gone (the lesson's end after its stalker left); the registry soak
+    // then simply runs out.
+    void RemoveFortune(Creature* owner, Fortune& f, Map* map = nullptr)
     {
         if (!f.live)
             return;
         f.live = false;
-        if (!owner)
+        if (owner)
+        {
+            Mechanic::Cancel(owner, f.soak);
+            map = owner->GetMap();
+        }
+        if (!map)
             return;
-        Mechanic::Cancel(owner, f.soak);
-        Map* map = owner->GetMap();
         if (GameObject* go = map->GetGameObject(f.look))
             go->Delete();
         if (Creature* unit = map->GetCreature(f.unit))
@@ -330,7 +336,13 @@ public:
     void Announce(Creature* owner, RuleSet set)
     {
         if (_set != RULE_NONE && !_closed)
+        {
+            // A `.dbtest` rule over a running one: the old rule's mechanics go too (they could no longer punish).
             Close(owner);
+            for (MechanicHandle const& h : _live)
+                if (_ruleMechanics.count(h.id))
+                    Mechanic::Cancel(owner, h);
+        }
         ++_serial;
         ++_announced;
         _previous = set;
@@ -350,51 +362,57 @@ public:
         std::vector<Player*> const players = VaultPlayers(owner);
         std::vector<Vec2> spots;
         float sumY = 0.f;
+        // Only the players in the vault are judged (they get the icon; in an instance the registry would otherwise
+        // judge every living player on the map, a revived runner at the entrance included).
+        BossMechanics::Eligibility vault;
         for (Player* p : players)
         {
             spots.push_back(DungeonKit::PlaneOf(p));
             sumY += p->GetPositionY();
+            vault.carriers.insert(p->GetGUID());
         }
         float const groupY = players.empty() ? owner->GetPositionY() : sumY / float(players.size());
 
         uint32 const warn = _times.warnMs;
         uint32 const atClose = warn + _times.windowMs;
         owner->CastSpell(owner, SPELL_AX_ANNOUNCE, true);
+        // Nobody in the vault (a `.dbtest` from outside): the yell, no rule mechanic (empty carriers mean everyone).
+        bool const judged = !vault.carriers.empty();
         // Out of bounds first: Line up and the desks are placed around its third.
-        if (Has(set, RULE_OUT_OF_BOUNDS))
+        if (judged && Has(set, RULE_OUT_OF_BOUNDS))
         {
             _forbidden = PickForbiddenThird(spots, Rand01());
             MechanicRef ref = Mechanic::Zone(owner, StripSpec(owner, ThirdZone(*_forbidden)), Ms(warn));
-            ref.Persistent(Ms(_times.windowMs), Ms(kOutOfBoundsTickMs)).ZTolerance(kVaultZTolerance)
+            ref.Persistent(Ms(_times.windowMs), Ms(kOutOfBoundsTickMs)).ZTolerance(kVaultZTolerance).Eligible(vault)
                 .Spell(SPELL_AX_OUT_OF_BOUNDS).OnHit([](Unit*) { }).Tag(TAG_OUT_OF_BOUNDS);
             Keep(ref.Handle());
         }
-        if (Has(set, RULE_NO_RUNNING))
+        if (judged && Has(set, RULE_NO_RUNNING))
         {
-            MechanicRef ref = Mechanic::HoldStill(owner, GuidSet(), Ms(_times.windowMs), Ms(warn));
+            MechanicRef ref = Mechanic::HoldStill(owner, vault.carriers, Ms(_times.windowMs), Ms(warn));
             ref.Tolerance(kNoRunningToleranceYd).Tag(TAG_NO_RUNNING);
             Keep(ref.Handle());
         }
-        if (Has(set, RULE_ASSEMBLY))
+        if (judged && Has(set, RULE_ASSEMBLY))
         {
             MechanicRef ref = Mechanic::Stack(owner, owner, kAssemblyRadius, Ms(atClose));
-            ref.Cluster(kAssemblyMinOthers).Tag(TAG_ASSEMBLY);
+            ref.Cluster(kAssemblyMinOthers).Eligible(vault).Tag(TAG_ASSEMBLY);
             Keep(ref.Handle());
         }
-        if (Has(set, RULE_KEEP_DISTANCE))
+        if (judged && Has(set, RULE_KEEP_DISTANCE))
         {
             MechanicRef ref = Mechanic::Spread(owner, kKeepDistanceRadius, Ms(atClose));
-            ref.Spell(SPELL_AX_KEEP_DISTANCE).OnHit([](Unit*) { }).Tag(TAG_KEEP_DISTANCE);
+            ref.Eligible(vault).Spell(SPELL_AX_KEEP_DISTANCE).OnHit([](Unit*) { }).Tag(TAG_KEEP_DISTANCE);
             Keep(ref.Handle());
         }
-        if (Has(set, RULE_LINE_UP))
+        if (judged && Has(set, RULE_LINE_UP))
         {
             _lane = LaneFor(_forbidden, groupY);
             MechanicRef ref = Mechanic::Stack(owner, StripSpec(owner, LaneStrip(*_lane)), Ms(atClose));
-            ref.ZTolerance(kVaultZTolerance).Tag(TAG_LINE_UP);
+            ref.ZTolerance(kVaultZTolerance).Eligible(vault).Tag(TAG_LINE_UP);
             Keep(ref.Handle());
         }
-        if (Has(set, RULE_DESKS))
+        if (judged && Has(set, RULE_DESKS))
         {
             std::vector<Vec2> const candidates = DeskCandidates(_forbidden, players.size());
             std::vector<std::size_t> const picks = AssignDesks(spots, candidates);
@@ -595,100 +613,64 @@ namespace
     }
 }
 
-// Lord Alexei Barov 10504, and his Graduate Examiner 300553 (S13 gives the examiner's template this script name; the
-// examiner mode follows the entry).
+// Lord Alexei Barov 10504 (his Graduate Examiner is npc_sc_examiner_alexei below).
 struct boss_lord_alexei_barov_rework : public BossAI, public BarovRulesHost
 {
     explicit boss_lord_alexei_barov_rework(Creature* creature)
-        : BossAI(creature, BOSS_ALEXEI), _arena(AlexeiArena(), LeashOptions(kLogBoss)),
-        _examiner(creature->GetEntry() == NPC_SC_EXAMINER_ALEXEI) { }
+        : BossAI(creature, BOSS_ALEXEI), _arena(AlexeiArena(), LeashOptions(kLogBoss)) { }
 
     BarovRuleBook& Rules() override { return _rules; }
 
     void Reset() override
     {
-        if (_examiner)
-        {
-            // No boss state: Alexei's own is DONE by the time the exam runs (S13).
-            events.Reset();
-            summons.DespawnAll();
-            me->SetMaxHealth(kExaminerHealth);
-            me->SetHealth(kExaminerHealth);
-        }
-        else
-            _Reset();
+        _Reset();
         Cleanup();
     }
 
     void JustEngagedWith(Unit* who) override
     {
-        if (!_examiner)
-        {
-            BossAI::JustEngagedWith(who);
-            if (!me->IsEngaged())
-                return;     // BossAI evaded
-        }
+        BossAI::JustEngagedWith(who);
+        if (!me->IsEngaged())
+            return;     // BossAI evaded
 
         Cleanup();      // a `.dbtest` rule out of combat may have left something behind
-        bool const heroic = _examiner ? kExaminerHeroic : IsHeroicMap(me);
+        bool const heroic = IsHeroicMap(me);
         BossMechanics::EncounterOptions options;
-        if (!_examiner)
-            options.bossStateId = BOSS_ALEXEI;
+        options.bossStateId = BOSS_ALEXEI;
         Mechanic::BeginEncounter(me, options);
         Describe();
-        if (_examiner)
-            Mechanic::OnFailure(me, RuleFailureHandler(me));
-        else
-            _grades.Begin(me, Instructor::Alexei, RuleFailureHandler(me));    // the Rod rides the grades' handler
+        _grades.Begin(me, Instructor::Alexei, RuleFailureHandler(me));    // the Rod rides the grades' handler
         _arena.Engage(me);
 
         BarovRuleBook::Options rules;
         rules.heroic = heroic;
-        rules.firstMs = _examiner ? kExaminerFirstRuleMs : kRuleFirstMs;
-        rules.everyMs = _examiner ? kExaminerRuleEveryMs : kRuleEveryMs;
+        rules.firstMs = kRuleFirstMs;
+        rules.everyMs = kRuleEveryMs;
         _rules.Begin(me, rules);
 
-        if (!_examiner)
-        {
-            Talk(YELL_ALEXEI_AGGRO);
-            me->CastSpell(me, SPELL_UNHOLY_AURA, true);     // AB12: on aggro, not on reset
-            _nextVeilMs = urand(kVeilFirstMinMs, kVeilFirstMaxMs);
-        }
+        Talk(YELL_ALEXEI_AGGRO);
+        me->CastSpell(me, SPELL_UNHOLY_AURA, true);     // AB12: on aggro, not on reset
+        _nextVeilMs = urand(kVeilFirstMinMs, kVeilFirstMaxMs);
         DungeonKit::LogMechanic(kLogDungeon, kLogBoss, "engage",
-            Acore::StringFormat("heroic={} examiner={} at=({:.1f}, {:.1f}, {:.1f}) health={}", heroic ? 1 : 0,
-                _examiner ? 1 : 0, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetMaxHealth()));
+            Acore::StringFormat("heroic={} at=({:.1f}, {:.1f}, {:.1f}) health={}", heroic ? 1 : 0,
+                me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetMaxHealth()));
     }
 
     void EnterEvadeMode(EvadeReason why) override
     {
         Cleanup();
         _grades.Reset();
-        if (_examiner)
-        {
-            Mechanic::EndEncounter(me);
-            CreatureAI::EnterEvadeMode(why);
-        }
-        else
-            BossAI::EnterEvadeMode(why);
+        BossAI::EnterEvadeMode(why);
     }
 
     void JustDied(Unit* killer) override
     {
-        if (_examiner)
-        {
-            Cleanup();
-            Mechanic::EndEncounter(me);
-            summons.DespawnAll();
-        }
-        else
-        {
-            _grades.AwardAtDeath(me);
-            Talk(YELL_ALEXEI_DEATH);
-            BossAI::JustDied(killer);   // DONE (the gate opens, Gandling's count), the summons despawn
-            Cleanup();
-        }
+        _grades.AwardAtDeath(me);
+        Talk(YELL_ALEXEI_DEATH);
+        BossAI::JustDied(killer);   // DONE (the gate opens, Gandling's count), the summons despawn
+        Cleanup();
         DungeonKit::LogMechanic(kLogDungeon, kLogBoss, "death",
-            Acore::StringFormat("examiner={} killer={}", _examiner ? 1 : 0, killer ? killer->GetName() : "none"));
+            Acore::StringFormat("killer={}", killer ? killer->GetName() : "none"));
     }
 
     // The fortunes are props: never zoned into combat (BossAI::JustSummoned would).
@@ -711,8 +693,7 @@ struct boss_lord_alexei_barov_rework : public BossAI, public BarovRulesHost
         if (me->HasUnitState(UNIT_STATE_CASTING))
             return;
 
-        if (!_examiner)
-            UpdateVeil();
+        UpdateVeil();
         DoMeleeAttackIfReady();
     }
 
@@ -745,11 +726,8 @@ struct boss_lord_alexei_barov_rework : public BossAI, public BarovRulesHost
     {
         using BossMechanics::Who;
         BossMechanics::Descriptor d;
-        if (!_examiner)
-        {
-            d.interrupts.emplace_back(NPC_ALEXEI, SPELL_AX_VEIL_OF_SHADOW, 1, Ms(kVeilEveryMinMs));
-            d.dispels.emplace_back(SPELL_AX_VEIL_OF_SHADOW, 1);
-        }
+        d.interrupts.emplace_back(NPC_ALEXEI, SPELL_AX_VEIL_OF_SHADOW, 1, Ms(kVeilEveryMinMs));
+        d.dispels.emplace_back(SPELL_AX_VEIL_OF_SHADOW, 1);
         d.targets.emplace_back(me->GetEntry(), 1, Who::Any);
         d.ignores.emplace_back(NPC_SC_BAROV_FORTUNE);
         Mechanic::Describe(me, std::move(d));
@@ -793,8 +771,7 @@ struct boss_lord_alexei_barov_rework : public BossAI, public BarovRulesHost
 
     std::string TestState() const
     {
-        return Acore::StringFormat("examiner={} veilAt={}s {}", _examiner ? 1 : 0, _nextVeilMs / 1000,
-            _rules.State());
+        return Acore::StringFormat("veilAt={}s {}", _nextVeilMs / 1000, _rules.State());
     }
 
 private:
@@ -803,15 +780,86 @@ private:
         _rules.Clear(me);
         _arena.Reset();
         _nextVeilMs = 0;
-        if (!_examiner)
-            me->RemoveAurasDueToSpell(SPELL_UNHOLY_AURA);
+        me->RemoveAurasDueToSpell(SPELL_UNHOLY_AURA);
     }
 
     DungeonKit::ArenaGuard _arena;
     GradeWatch _grades;
     BarovRuleBook _rules;
     uint64 _nextVeilMs = 0;
-    bool const _examiner;
+};
+
+// The Graduate Examiner, Alexei (300553, S13's gauntlet; ScriptName kExaminerScriptName, registered once wave C binds):
+// the Code of Conduct and the Bargain at heroic values on any map, 80k. No boss state, no Veil, no Unholy Aura, no
+// Passing Grade, no lines unless S13 copies them; its own registry encounter, ended at its evade and death.
+struct npc_sc_examiner_alexei : public ScriptedAI, public BarovRulesHost
+{
+    explicit npc_sc_examiner_alexei(Creature* creature)
+        : ScriptedAI(creature), _arena(AlexeiArena(), LeashOptions(kLogExaminer)) { }
+
+    BarovRuleBook& Rules() override { return _rules; }
+
+    void Reset() override
+    {
+        _rules.Clear(me);
+        _arena.Reset();
+        me->SetMaxHealth(kExaminerHealth);
+        me->SetHealth(kExaminerHealth);
+    }
+
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        _rules.Clear(me);
+        Mechanic::BeginEncounter(me);
+        BossMechanics::Descriptor d;
+        d.targets.emplace_back(me->GetEntry(), 1, BossMechanics::Who::Any);
+        d.ignores.emplace_back(NPC_SC_BAROV_FORTUNE);
+        Mechanic::Describe(me, std::move(d));
+        Mechanic::OnFailure(me, RuleFailureHandler(me));
+        _arena.Engage(me);
+
+        BarovRuleBook::Options rules;
+        rules.heroic = kExaminerHeroic;
+        rules.firstMs = kExaminerFirstRuleMs;
+        rules.everyMs = kExaminerRuleEveryMs;
+        _rules.Begin(me, rules);
+        DungeonKit::LogMechanic(kLogDungeon, kLogExaminer, "engage",
+            Acore::StringFormat("at=({:.1f}, {:.1f}, {:.1f}) health={}", me->GetPositionX(), me->GetPositionY(),
+                me->GetPositionZ(), me->GetMaxHealth()));
+    }
+
+    void EnterEvadeMode(EvadeReason why) override
+    {
+        _rules.Clear(me);
+        _arena.Reset();
+        Mechanic::EndEncounter(me);
+        ScriptedAI::EnterEvadeMode(why);
+    }
+
+    void JustDied(Unit* killer) override
+    {
+        _rules.Clear(me);
+        _arena.Reset();
+        Mechanic::EndEncounter(me);
+        DungeonKit::LogMechanic(kLogDungeon, kLogExaminer, "death",
+            Acore::StringFormat("killer={}", killer ? killer->GetName() : "none"));
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (!UpdateVictim())
+            return;
+        _rules.Update(me, diff);
+        if (!_arena.Update(me, diff))
+            return;
+        if (me->HasUnitState(UNIT_STATE_CASTING))
+            return;
+        DoMeleeAttackIfReady();
+    }
+
+private:
+    DungeonKit::ArenaGuard _arena;
+    BarovRuleBook _rules;
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -823,8 +871,9 @@ public:
     BarovVaultLesson() : TimedSoloLesson(Classroom::BarovVault) { }
 
 protected:
-    void OnStart(Creature* /*owner*/, Player* /*student*/, bool /*heroic*/) override
+    void OnStart(Creature* owner, Player* /*student*/, bool /*heroic*/) override
     {
+        _map = owner->GetMap();
         _ms = 0;
         for (Step& s : _steps)
             s = Step();
@@ -877,7 +926,7 @@ protected:
         Player* student = Student();
         for (std::size_t i = 0; i < kLessonRules.size(); ++i)
         {
-            RemoveFortune(owner, _steps[i].fortune);
+            RemoveFortune(owner, _steps[i].fortune, _map);     // the owner may be gone: the pile goes anyway
             if (student)
                 student->RemoveAurasDueToSpell(RuleAura(kLessonRules[i].rule));
         }
@@ -966,6 +1015,7 @@ private:
                 student->GetName(), why, damage));
     }
 
+    Map* _map = nullptr;
     uint32 _ms = 0;
     std::array<Step, kLessonRules.size()> _steps{};
 };
@@ -1178,6 +1228,9 @@ void AddSC_boss_lord_alexei_barov_rework()
 {
     RegisterDungeonReworkCreatureAI(boss_lord_alexei_barov_rework, ScholomanceRework::kInstanceScriptName);
     RegisterDungeonReworkCreatureAI(npc_sc_barov_fortune, ScholomanceRework::kInstanceScriptName);
+    // The examiner's script name is AlexeiLogic.h kExaminerScriptName; S13 binds the entry in wave C.
+    if (kWaveCBound)
+        RegisterDungeonReworkCreatureAI(npc_sc_examiner_alexei, ScholomanceRework::kInstanceScriptName);
     RegisterSoloLesson(Classroom::BarovVault, []() -> std::unique_ptr<SoloLesson>
     {
         return std::make_unique<BarovVaultLesson>();

@@ -530,6 +530,153 @@ namespace
         CHECK(t.Size() == 1u);
         CHECK(t.PullNow(3, false));                     // forgotten: no cooldown left
     }
+
+    bool NearV(Vec2 a, Vec2 b, float tolerance = 0.01f)
+    {
+        return Near(a.x, b.x, tolerance) && Near(a.y, b.y, tolerance);
+    }
+
+    // A mover sampled every kMotionSampleEveryMs for `samples` samples from `start` at `speed` yd/s along `heading`.
+    MotionTrack Walk(Vec2 start, float heading, float speed, int samples, std::uint32_t t0 = 1000)
+    {
+        MotionTrack track;
+        for (int i = 0; i < samples; ++i)
+        {
+            float const d = speed * float(kMotionSampleEveryMs) / 1000.f * float(i);
+            track.Add(t0 + std::uint32_t(i) * kMotionSampleEveryMs, Advance(start, heading, d));
+        }
+        return track;
+    }
+
+    // MotionTrack / PredictSpot (moved from Scholomance's IlluciaLogic.h with their tests): still = on the mover.
+    void TestMotionTrack()
+    {
+        CHECK(kMotionSampleEveryMs == 200 && kMotionVelocityWindowMs == 400);
+        MotionTrack empty;
+        CHECK(PredictSpot(empty, 1500).still);
+
+        // Standing: on the mover.
+        Prediction const p0 = PredictSpot(Walk({ 240.f, 0.f }, 0.f, 0.f, 5), 1500);
+        CHECK(p0.still);
+        CHECK(NearV(p0.at, Vec2{ 240.f, 0.f }));
+
+        // One sample: no heading yet.
+        MotionTrack one;
+        one.Add(1000, { 230.f, 2.f });
+        CHECK(PredictSpot(one, 1500).still);
+
+        // Running east at 7 yd/s: 10.5 yd ahead in 1.5 s.
+        MotionTrack run = Walk({ 220.f, 0.f }, 0.f, 7.f, 6);
+        Vec2 const now = run.Latest().p;
+        Prediction const p1 = PredictSpot(run, 1500);
+        CHECK(!p1.still);
+        CHECK(Near(p1.speed, 7.f, 0.05f));
+        CHECK(Near(p1.heading, 0.f, 0.01f));
+        CHECK(NearV(p1.at, Vec2{ now.x + 10.5f, now.y }, 0.05f));
+
+        // Running north-west: the heading follows.
+        float const nw = 3.f * kPi / 4.f;
+        MotionTrack diag = Walk({ 240.f, -5.f }, nw, 7.f, 4);
+        Prediction const p2 = PredictSpot(diag, 1500);
+        CHECK(!p2.still);
+        CHECK(Near(p2.heading, nw, 0.01f));
+        CHECK(Near(Distance(diag.Latest().p, p2.at), 10.5f, 0.05f));
+
+        // A turn shows within the 400 ms window: east for 1 s, then north for 0.4 s.
+        MotionTrack turn = Walk({ 220.f, 0.f }, 0.f, 7.f, 6, 1000);
+        Vec2 const corner = turn.Latest().p;
+        turn.Add(2200, { corner.x, corner.y + 1.4f });
+        turn.Add(2400, { corner.x, corner.y + 2.8f });
+        Prediction const p3 = PredictSpot(turn, 1500);
+        CHECK(!p3.still);
+        CHECK(Near(p3.heading, kPi / 2.f, 0.01f));
+
+        // Stopping: the newest 400 ms show no movement, so the prediction is on the mover again.
+        MotionTrack stop = Walk({ 220.f, 0.f }, 0.f, 7.f, 6, 1000);
+        Vec2 const halt = stop.Latest().p;
+        stop.Add(2200, halt);
+        stop.Add(2400, halt);
+        Prediction const p4 = PredictSpot(stop, 1500);
+        CHECK(p4.still);
+        CHECK(NearV(p4.at, halt));
+
+        // Walking slowly still counts as moving; creeping does not; 40 yd/s is a jump, not a heading.
+        CHECK(!PredictSpot(Walk({ 220.f, 0.f }, 0.f, 2.5f, 4), 1500).still);
+        CHECK(PredictSpot(Walk({ 220.f, 0.f }, 0.f, 0.5f, 4), 1500).still);
+        CHECK(PredictSpot(Walk({ 220.f, 0.f }, 0.f, 40.f, 4), 1500).still);
+
+        // Samples closer than 50 ms replace the newest; a clock going back starts over.
+        MotionTrack close;
+        close.Add(1000, { 0.f, 0.f });
+        close.Add(1200, { 1.f, 0.f });
+        close.Add(1220, { 1.5f, 0.f });
+        CHECK(close.Size() == 2);
+        CHECK(NearV(close.Latest().p, Vec2{ 1.5f, 0.f }));
+        close.Add(500, { 9.f, 9.f });
+        CHECK(close.Size() == 1);
+
+        // The ring keeps its newest kSize samples.
+        MotionTrack many = Walk({ 0.f, 0.f }, 0.f, 7.f, 20);
+        CHECK(many.Size() == MotionTrack::kSize);
+        CHECK(many.Latest().t == 1000 + 19 * kMotionSampleEveryMs);
+    }
+
+    // TrailRecorder (moved from Scholomance's IlluciaLogic.h with its tests): 4 yd pieces, released 2.5 yd behind the
+    // mover, restarted by a jump over 12 yd (Illucia's Memory trail values).
+    void TestTrailRecorder()
+    {
+        float constexpr segment = 4.f;
+        float constexpr clear = 2.5f;
+        float constexpr maxStep = 12.f;
+
+        // A straight 7 yd/s run sampled every 200 ms (1.4 yd a sample): the pieces tile the path end to end, each
+        // released once the runner is `clear` past its end.
+        TrailRecorder trail(segment, clear, maxStep);
+        std::vector<TrailSegment> laid;
+        for (int i = 0; i <= 30; ++i)
+        {
+            Vec2 const p{ 210.f + 1.4f * float(i), 0.f };
+            for (TrailSegment const& s : trail.Feed(p))
+            {
+                CHECK(Distance(p, s.to) >= clear - 0.001f);
+                laid.push_back(s);
+            }
+        }
+        CHECK(laid.size() >= 8);
+        for (std::size_t i = 0; i < laid.size(); ++i)
+        {
+            float const len = Distance(laid[i].from, laid[i].to);
+            CHECK(len >= segment - 0.001f && len < segment + 1.4f);
+            if (i)
+                CHECK(NearV(laid[i].from, laid[i - 1].to));
+        }
+        CHECK(NearV(laid.front().from, Vec2{ 210.f, 0.f }));
+
+        // Flush lays only what the runner has left behind.
+        for (TrailSegment const& s : trail.Flush({ 252.f, 0.f }))
+            CHECK(Distance(Vec2{ 252.f, 0.f }, s.to) >= clear);
+        CHECK(!trail.Started());
+
+        // Standing still lays nothing.
+        TrailRecorder idle(segment, clear, maxStep);
+        std::size_t idleLaid = 0;
+        for (int i = 0; i < 10; ++i)
+            idleLaid += idle.Feed({ 240.f, 1.f }).size();
+        CHECK(idleLaid == 0);
+        CHECK(idle.Flush({ 240.f, 1.f }).empty());
+
+        // A teleport starts over: no piece across the jump.
+        TrailRecorder jump(segment, clear, maxStep);
+        for (int i = 0; i <= 6; ++i)
+            jump.Feed({ 210.f + 1.4f * float(i), 0.f });
+        CHECK(jump.Feed({ 260.f, 5.f }).empty());
+        CHECK(jump.Pending() == 0);
+        bool crossed = false;
+        for (int i = 1; i <= 10; ++i)
+            for (TrailSegment const& s : jump.Feed({ 260.f + 1.4f * float(i), 5.f }))
+                crossed = crossed || s.from.x < 259.f;
+        CHECK(!crossed);
+    }
 }
 
 int main()
@@ -555,5 +702,7 @@ int main()
     TestStackCapReachQuiet();
     TestLegacyReaderResize();
     TestTrackerForget();
+    TestMotionTrack();
+    TestTrailRecorder();
     return Report("dungeon_kit_test");
 }

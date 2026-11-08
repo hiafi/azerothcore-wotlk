@@ -75,10 +75,14 @@ namespace ScholoPolkelt
     {
         DATA_SPECIMEN_COLLAPSED = 1,    // GetData: 1 once a lethal hit dropped it (it never dies on its own)
         DATA_SPECIMEN_FROZEN    = 2,    // SetData(.., 1): fusing or ripening, stands still and takes no damage
+        DATA_SPECIMEN_NO_MELEE  = 3,    // SetData(.., 1): a lesson's walker never swings (its ring is the hit)
     };
 
     // The boss AI's data (S13's examiner hook): GetData(DATA_EXAMINER_MODE) is 1 on the Graduate Examiner.
     inline constexpr std::uint32_t DATA_EXAMINER_MODE = 0x5C07;
+    // The Graduate Examiner's script (S13 binds NPC_SC_EXAMINER_POLKELT 300550 to it in wave C; registered only once
+    // kWaveCBound): the boss AI in examiner mode, its own ScriptName (the user's examiner convention, 2026-11-08).
+    char constexpr kExaminerScriptName[] = "npc_sc_examiner_polkelt";
 
     // ----------------------------------------------------------------------------------------------------------------
     // Tuning (SC 1985-2036; percents of the reference row: N 3,670 / 3,710, H 4,120 / 4,110)
@@ -91,7 +95,10 @@ namespace ScholoPolkelt
     inline constexpr NH<std::uint32_t> kRootedPerBatch{ 1, 3 };
     inline constexpr NH<std::uint32_t> kSpecimenHealth{ 6000, 9000 };     // the DT rows (normal; heroic templates)
     inline constexpr float kRaiseMinFromPlayers = 8.f;
-    inline constexpr float kRootedMinApart = 13.f;                        // heroic: a 6 yd burst never reaches two
+    inline constexpr float kRootedMinApart = 13.f;                        // one batch: a 6 yd burst never reaches two
+    // From the rooted specimens still up (earlier batches): the burst's 6 yd plus a step. The 21 yd hall cannot keep 13
+    // yd across batches (R-B S7 SF-2; orchestrator default 2026-11-08: 13 yd hard within a batch, ~7 yd from older).
+    inline constexpr float kRootedMinFromOlder = 7.f;
     inline constexpr float kWalkerMinApart = 3.f;
     inline constexpr float kRaiseMinFromPool = 7.f;                       // a pool's 6 yd and a step: not in a pool
 
@@ -163,6 +170,9 @@ namespace ScholoPolkelt
 
     struct ChainTuning
     {
+        // User ruling 4 (detention): one hit per miss, staggered. Every ring resolves at least this long after the
+        // chain's previous one (0: no spacing, the fight's chain).
+        std::uint32_t minResolveGapMs = 0;
         std::uint32_t fuseMs = kFuseMs;
         std::uint32_t chainedFuseMs = kChainedFuseMs;
         float burstRadius = kBurstRadius;
@@ -222,6 +232,8 @@ namespace ScholoPolkelt
             _t = tuning;
             _specimens.clear();
             _nextId = 1;
+            _lastResolveMs = 0;
+            _anyResolve = false;
         }
 
         std::uint32_t Add(Vec2 pos, bool rooted, std::uint64_t nowMs)
@@ -381,11 +393,17 @@ namespace ScholoPolkelt
             Specimen* s = Get(id);
             if (!s || s->phase != SpecimenPhase::Standing)
                 return std::nullopt;
-            std::uint32_t const warn = kind == BurstKind::Kill ? _t.fuseMs
+            std::uint32_t warn = kind == BurstKind::Kill ? _t.fuseMs
                 : kind == BurstKind::Chained ? _t.chainedFuseMs : _t.ripeWarnMs;
+            // The detention lesson spaces its rings (ruling 4): never two resolves closer than minResolveGapMs.
+            if (_t.minResolveGapMs && _anyResolve && nowMs + warn < _lastResolveMs + _t.minResolveGapMs)
+                warn = static_cast<std::uint32_t>(_lastResolveMs + _t.minResolveGapMs - nowMs);
             s->phase = kind == BurstKind::Ripe ? SpecimenPhase::Ripening : SpecimenPhase::Fusing;
             s->kind = kind;
             s->resolveMs = nowMs + warn;
+            if (!_anyResolve || s->resolveMs > _lastResolveMs)
+                _lastResolveMs = s->resolveMs;
+            _anyResolve = true;
             FuseStart f;
             f.id = s->id;
             f.pos = s->pos;
@@ -398,6 +416,8 @@ namespace ScholoPolkelt
         ChainTuning _t;
         std::vector<Specimen> _specimens;
         std::uint32_t _nextId = 1;
+        std::uint64_t _lastResolveMs = 0;       // the latest resolve scheduled (minResolveGapMs)
+        bool _anyResolve = false;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -460,7 +480,8 @@ namespace ScholoPolkelt
         float arenaRadius = 32.f;
         float arenaMargin = 2.f;
         float minFromPlayers = kRaiseMinFromPlayers;
-        float minApart = kWalkerMinApart;       // from this call's picks and `apartFrom`
+        float minApart = kWalkerMinApart;       // from this call's picks (the batch)
+        float minFromOlder = kWalkerMinApart;   // from `apartFrom` (the specimens still up)
         float minFromAvoid = kRaiseMinFromPool; // from `avoid` (live pools)
         std::optional<Vec2> center;             // the lesson: a ring around the student
         float maxFromCenter = 0.f;
@@ -478,20 +499,23 @@ namespace ScholoPolkelt
             && DungeonKit::Distance(rules.arenaCenter, p) <= rules.arenaRadius - rules.arenaMargin;
     }
 
-    // How well a point fits the rules.
+    // How well a point fits the rules. The terms, most important first: the lesson's ring, apart from this batch (a
+    // burst never reaches two of one batch), the players' 8 yd, apart from the ones still up, the pools, then the
+    // farthest from a player.
     struct SpotScore
     {
         bool players = false;
-        bool apart = false;
+        bool apart = false;                     // from this batch's picks
+        bool older = false;                     // from the specimens still up
         bool avoid = false;
         bool ring = false;
         float nearestPlayer = 0.f;
 
-        bool Full() const { return players && apart && avoid && ring; }
+        bool Full() const { return players && apart && older && avoid && ring; }
         float Value() const
         {
-            return (ring ? 100000.f : 0.f) + (players ? 10000.f : 0.f) + (apart ? 1000.f : 0.f)
-                + (avoid ? 100.f : 0.f) + std::min(nearestPlayer, 50.f);
+            return (ring ? 1000000.f : 0.f) + (apart ? 100000.f : 0.f) + (players ? 10000.f : 0.f)
+                + (older ? 1000.f : 0.f) + (avoid ? 100.f : 0.f) + std::min(nearestPlayer, 50.f);
         }
     };
 
@@ -504,10 +528,11 @@ namespace ScholoPolkelt
             s.nearestPlayer = std::min(s.nearestPlayer, DungeonKit::Distance(p, q));
         s.players = s.nearestPlayer >= rules.minFromPlayers;
         s.apart = true;
-        for (Vec2 const& q : apartFrom)
-            s.apart = s.apart && DungeonKit::Distance(p, q) >= rules.minApart;
         for (Vec2 const& q : picks)
             s.apart = s.apart && DungeonKit::Distance(p, q) >= rules.minApart;
+        s.older = true;
+        for (Vec2 const& q : apartFrom)
+            s.older = s.older && DungeonKit::Distance(p, q) >= rules.minFromOlder;
         s.avoid = true;
         for (Vec2 const& q : avoid)
             s.avoid = s.avoid && DungeonKit::Distance(p, q) >= rules.minFromAvoid;
@@ -518,7 +543,7 @@ namespace ScholoPolkelt
     // `count` raise points. Each candidate is uniform on the inset hall frame (rand01() in [0, 1)), inside the arena,
     // and accepted by `valid(p)` (the engine's floor height check). Per point, the first candidate that keeps every
     // rule is taken; else the first of `fixed` that keeps every rule (the measured rooted spots); else the best scored
-    // candidate (ring, players, apart, pools, then the farthest from a player), so a batch always rises while the
+    // candidate (SpotScore::Value: ring, batch, players, older, pools, farthest), so a batch always rises while the
     // floor has a point. A greedy batch can block its own last point (13 yd apart on a 21 yd hall), so the whole batch
     // is drawn up to `rules.attempts` times and the first one that keeps every rule, else the one with the most, wins.
     template <class Rand01, class Valid>
@@ -584,11 +609,12 @@ namespace ScholoPolkelt
         return bestBatch;
     }
 
-    // A batch's rules: heroic rooted specimens 13 yd apart (from each other and from the rooted ones still up).
+    // A batch's rules: rooted specimens 13 yd apart within the batch and 7 yd from the rooted ones still up.
     inline SpotRules RaiseRules(bool rooted)
     {
         SpotRules rules;
         rules.minApart = rooted ? kRootedMinApart : kWalkerMinApart;
+        rules.minFromOlder = rooted ? kRootedMinFromOlder : kWalkerMinApart;
         return rules;
     }
 
@@ -610,6 +636,15 @@ namespace ScholoPolkelt
     constexpr bool IsKillTarget(float distanceToBoss, std::uint64_t msToRipe)
     {
         return distanceToBoss <= kKillTargetNearBossYd || msToRipe <= kKillTargetRipeSoonMs;
+    }
+
+    // The bot tank parks him off a kill / chained ring only when the ring is close enough to matter (its radius plus
+    // this): a ring across the hall never drags him over (R-B S7 late S-3).
+    inline constexpr float kParkSlackYd = 8.f;
+
+    constexpr bool ShouldPark(float ringToBossYd, float radius)
+    {
+        return ringToBossYd <= radius + kParkSlackYd;
     }
 
     // PK3: the reaction's base points, 1.5% of his maximum health. His Corroded stacks raise every damage he takes,
@@ -696,6 +731,8 @@ namespace ScholoPolkelt
     inline constexpr float kLessonMaxFromStudent = 14.f;
     inline constexpr float kLessonReachYd = 2.5f;                         // this close to the student: it bursts
     inline constexpr float kLessonMinApart = 2.f;
+    // User ruling 4: one hit per miss, staggered: the lesson's rings resolve at least this far apart.
+    inline constexpr std::uint32_t kLessonRingGapMs = 1500;
 
     // When the `index`th specimen rises, ms from the lesson's start.
     constexpr std::uint32_t LessonSpawnAtMs(std::uint32_t index) { return index * kLessonSpawnGapMs; }
@@ -714,13 +751,15 @@ namespace ScholoPolkelt
     {
         ChainTuning t;
         t.ripens = false;
+        t.minResolveGapMs = kLessonRingGapMs;
         return t;
     }
 
-    // The lesson has nothing left to do: every specimen rose and is gone.
-    constexpr bool LessonCleared(std::uint32_t risen, std::uint32_t planned, std::size_t live)
+    // The lesson has nothing left to do: every specimen rose and is gone, and no ring is still to resolve (the registry
+    // resolves a ring after the AI's update, so the last burst must land before the lesson ends; R-B S7 late B-1).
+    constexpr bool LessonCleared(std::uint32_t risen, std::uint32_t planned, std::size_t live, bool ringsPending)
     {
-        return risen >= planned && live == 0;
+        return risen >= planned && live == 0 && !ringsPending;
     }
 }
 

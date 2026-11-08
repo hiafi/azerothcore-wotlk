@@ -26,6 +26,7 @@
 #include "DungeonKitArena.h"
 #include "DungeonKitMath.h"
 #include "DungeonKitState.h"
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -447,6 +448,9 @@ namespace ScholomanceRework
         SPELL_STRIKE                = 18368,
         SPELL_SUMMON_JOURNAL        = 26096,    // Jandice's death: the journal GO 180794
         SPELL_SHADOW_PORTAL         = 17950,    // Gandling's stock detention cast (retired by S11)
+        // Ghost Visual (alpha 0.5, pale tint; SV 886): every Graduate Examiner and the Ravenian's lesson echo (WP-V
+        // _visuals.py AURA_GHOST_VISUAL)
+        SPELL_GHOST_VISUAL          = 9617,
         // The six stock detention landings (spell_target_position; the portal spells themselves are never cast by
         // the rework, S11 copies the points: kClassroomLandings)
         SPELL_SHADOW_PORTAL_UP_NORTH    = 17863,
@@ -696,15 +700,13 @@ namespace ScholomanceRework
     // --- The Vault of the Ravenian (S8) ------------------------------------------------------------------------------
     FrameRect constexpr kRavenianVault{ { 92.0f, -11.5f }, 0.f, 58.0f, 19.5f };    // z 74.5-76 (the central band)
     FrameRect constexpr kRavenianNorthHall{ { 128.0f, -18.0f }, 0.f, 22.0f, 34.0f };
-    // Corvane's perch: on top of the block at (108.6, 13.8), x 107-111, y 7-21; no navmesh, top height unknown
-    // (read it in game with .gps; guessed z 78 to 81). Second choice: the block at (123.1, 10.8).
-    Vec2 constexpr kCorvanePerch{ 108.6f, 13.8f };
     // Corvane's landing, at least 15 yd from the Ravenian's fighting spot: recommended, farther, nearer.
     inline std::array<Point3, 3> constexpr kCorvaneLandings{ { { 128.0f, -1.0f, 75.4f }, { 140.0f, -1.0f, 75.4f },
         { 122.0f, 0.0f, 75.4f } } };
-    // User 2026-11-08 (handoff section 10): a seat "right behind the Ravenian" (his spawn is (103.3, -1.7)), at the
-    // vault's west end. Whose seat it is (Corvane sitting before he takes his perch, or the Ravenian himself) is
-    // confirmed with the user before S8 uses it. The user's first point (175.8, -14.0) was on Gandling's study floor.
+    // User 2026-11-08 (handoff section 10; ruling on section 7 #15): Master Corvane's phase 1 seat, "right behind the
+    // Ravenian" (his spawn is (103.3, -1.7)), at the vault's west end, inside RavenianArena(). He stands there
+    // unselectable until the 50% transition (RavenianLogic.h kCorvaneSeat). The block perch (108.6, 13.8) is retired.
+    // The user's first point (175.8, -14.0) was on Gandling's study floor.
     Point4 constexpr kRavenianUserSpot{ 91.4206f, -0.7772341f, 75.558846f, 6.282406f };
 
     // --- The Barov Family Vault: Lord Alexei Barov (S9) --------------------------------------------------------------
@@ -770,11 +772,18 @@ namespace ScholomanceRework
     // 28: her apse runs back to x 80 (32 yd out) and the stock Coven landing (17943, x 83.3) must be inside; the gate
     // corridor (x 146 on) stays out.
     inline Arena MaliciaArena() { return CircleArena({ 112.0f, -1.0f }, 32.5f, 83.0f, 93.0f); }
-    // The Hall of the Damned, over the Barov Family Vault.
-    inline Arena KrastinovArena() { return CircleArena({ 181.0f, -70.0f }, 30.f, 83.0f, 91.0f); }
+    // The Hall of the Damned, over the Barov Family Vault, plus Krastinov's apse (x 178.5-186.5, y -102 to -92.5: the
+    // Work Bench 30.1 yd from the circle's center, his operating spot and the bench's eject spot; S6).
+    inline Arena KrastinovArena()
+    {
+        Arena arena = CircleArena({ 181.0f, -70.0f }, 30.f, 83.0f, 91.0f);
+        arena.Add(ArenaRegion::Polygon({ { 178.5f, -102.0f }, { 186.5f, -102.0f }, { 186.5f, -92.5f },
+            { 178.5f, -92.5f } }, 83.0f, 91.0f));
+        return arena;
+    }
     // The Hall of Secrets, over the Shadow Vault.
     inline Arena PolkeltArena() { return CircleArena({ 250.0f, 0.5f }, 32.f, 83.0f, 91.0f); }
-    // The Vault of the Ravenian (under the Coven; Corvane's perch block top is about z 78 to 81).
+    // The Vault of the Ravenian (under the Coven).
     inline Arena RavenianArena() { return CircleArena({ 122.0f, -1.0f }, 32.f, 72.0f, 82.0f); }
     // The Barov Family Vault: two tiers (72, 75) and the central pit (down to about z 66).
     inline Arena AlexeiArena() { return CircleArena({ 182.5f, -63.0f }, 33.f, 64.0f, 79.0f); }
@@ -879,6 +888,47 @@ namespace ScholomanceRework
             return true;
         return honorsOpen && heroic && revealed && gandlingState != DungeonKit::State::InProgress;
     }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // GradeWatch's ledger (ScholomanceKit.h): the players who failed a registry mechanic during an instructor's heroic
+    // fight. A boss may exempt one player from one mechanic (Illucia's Fear end marker on the feared player, who could
+    // not dodge it: F-B ruling 2026-11-08); the mechanic still fails everyone else it hits. Raw guids.
+    // ----------------------------------------------------------------------------------------------------------------
+    class GradeLedger
+    {
+    public:
+        void Exempt(std::uint32_t mechanicId, std::uint64_t player)
+        {
+            if (mechanicId && player)
+                _exempt.emplace_back(mechanicId, player);
+        }
+
+        // A failure of `mechanicId` by `player`; a group failure (player 0) never counts. True when it costs the grade.
+        bool Record(std::uint32_t mechanicId, std::uint64_t player)
+        {
+            if (!player || IsExempt(mechanicId, player))
+                return false;
+            if (std::find(_failed.begin(), _failed.end(), player) == _failed.end())
+                _failed.push_back(player);
+            return true;
+        }
+
+        bool IsExempt(std::uint32_t mechanicId, std::uint64_t player) const
+        {
+            return std::find(_exempt.begin(), _exempt.end(), std::make_pair(mechanicId, player)) != _exempt.end();
+        }
+
+        bool HasFailed(std::uint64_t player) const
+        {
+            return std::find(_failed.begin(), _failed.end(), player) != _failed.end();
+        }
+
+        std::size_t FailedCount() const { return _failed.size(); }
+
+    private:
+        std::vector<std::uint64_t> _failed;
+        std::vector<std::pair<std::uint32_t, std::uint64_t>> _exempt;
+    };
 
     // ----------------------------------------------------------------------------------------------------------------
     // Passing Grades (ruling 22, handoff section 7 #18): per player, a bit per instructor; saved in instance data, so

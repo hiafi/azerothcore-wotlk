@@ -15,8 +15,8 @@ src/Scholomance/ScholomanceRework.h only; RavenianLogic.h names the same ids; it
   model 23277 (WP-V DISPLAY_CORVANE), stun immune (1972, handoff s7 #9: silence and interrupts work), elite, humanoid,
   no loot. Not selectable and not attackable as he spawns (unit_flags 0x02000002): the Ravenian's script seats him
   behind the Ravenian (the user's spot kRavenianUserSpot) and makes him attackable at the 50% transition.
-  npc_sc_master_corvane only reports his casts and death to the Ravenian's script (and fights on alone if the Ravenian
-  falls first). He never melees (passive, rooted on the floor).
+  npc_sc_master_corvane only reports his casts and death to the Ravenian's script (and fights on alone while the
+  Ravenian lies collapsed at 1 HP: user ruling 1, 2026-11-08). He never melees (passive, rooted on the floor).
 - The two Graduate Examiners (S13, 300551 / 300552) run the same C++ in examiner mode (npc_sc_examiner_ravenian,
   npc_sc_examiner_corvane: 60k / 20k by script); WP-S13 declares the entries. The detention lesson (the Vault of the
   Ravenian) is C++ too and uses 206271-206276; its echo 300545 is WP-S11's entry.
@@ -309,8 +309,9 @@ driven_206282 = _damage_stacks(
 
 bereaved_206284 = _damage_stacks(
     206284, 'Bereaved', _ICON_UNHOLY_FRENZY, RV_BEREAVED, 'Grief turns to fury.',
-    f'{_RV}, RV10: the survivor when one of the two dies first: a stack every 5 s, +10% damage done a stack, uncapped '
-    '(CumulativeAura 255). Corvane\'s bolt and the Ravenian\'s orders are scaled by the script by the same factor. '
+    f'{_RV}, RV10: the survivor when one of the two falls first (Corvane dies, or the Ravenian collapses): a stack '
+    'every 5 s, +10% damage done a stack, uncapped (CumulativeAura 255). Corvane\'s bolt and the Ravenian\'s orders '
+    'are scaled by the script by the same factor (Driven x Bereaved, multiplied as the engine does on his melee). '
     'Unholy Frenzy 8699\'s SV 47 (BloodLust_State_Hand).')
 
 # --- RV9 Shadow Bolt -------------------------------------------------------------------------------------------------

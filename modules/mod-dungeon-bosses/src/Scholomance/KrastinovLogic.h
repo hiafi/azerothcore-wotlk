@@ -12,8 +12,10 @@
  *                      after the eyes), the success (3 landed, heroic 2, or the 25 s cap) and the heroic claws; the
  *                      same machine runs the detention lesson (three cuts, no escape, no success)
  *   GraftFor           KR6 the graft order: hands, eyes, then a heart for every later success
- *   ClawTicker         KR7 heroic: a Failed Patient at the bench undoes one interrupt every 3 s
+ *   ClawTicker         KR7 heroic: a Failed Patient at the bench undoes one interrupt every 3 s (ClawsWork: not
+ *                      while crowd-controlled)
  *   NextOperationAt    KR1 first at 15 s, every 30 s start to start, never sooner than 5 s after the last one ended
+ *                      (a refused seat: he picks another patient at once)
  */
 
 #ifndef MOD_DUNGEON_BOSSES_SCHOLOMANCE_KRASTINOV_LOGIC_H
@@ -77,6 +79,7 @@ namespace ScholoKrastinov
     inline constexpr std::uint32_t kApproachTimeoutMs = 6000;          // a blocked walk: he cuts from where he is
     inline constexpr std::uint32_t kFirstCutDelayMs = 500;             // after he reached the bench
     inline constexpr std::uint32_t kOperationCapMs = 25000;            // from the seat: then a success
+    inline constexpr std::uint32_t kSeatGiveUpMs = 3000;               // a seat refused this long after it was due
 
     // KR2 Wrench Free / KR3 Incision
     inline constexpr std::uint32_t kWrenchFreeCooldownMs = 3000;
@@ -105,6 +108,11 @@ namespace ScholoKrastinov
     inline constexpr float kInfectedClawsPct = 1.f;                    // per 2 s tick, 10 s (section 7 #24)
     inline constexpr std::uint32_t kInfectedClawsEveryMinMs = 6000;
     inline constexpr std::uint32_t kInfectedClawsEveryMaxMs = 9000;
+    // They shamble: about 6 s from the rise spot to the bench (21.7 yd at 3.6 yd/s). Their chase runs, so the speed
+    // is creature_template speed_run (0.514286 x 7 yd/s), not a walk (apps/dbc-tools doctor_theolen_krastinov.py).
+    inline constexpr float kFailedPatientYdPerSec = 3.6f;
+    // Orphan check: a Failed Patient whose summoner (him or his examiner) is gone despawns.
+    inline constexpr std::uint32_t kFailedPatientOwnerCheckMs = 1000;
 
     // KR8 Backhand (tank buster): first at 10 s, then every 15 s; never during an operation
     inline constexpr std::uint32_t kBackhandFirstMs = 10000;
@@ -113,6 +121,9 @@ namespace ScholoKrastinov
     inline constexpr NH<float> kBackhandPct{ 40.f, 55.f };             // of the tank row, Physical (armor applies)
     inline constexpr std::uint32_t kBackhandAfterOperationMs = 3000;   // a due one waits this long after an operation
     inline constexpr std::uint32_t kBackhandOperationGuardMs = 2500;   // no Backhand this close before an operation
+    inline constexpr std::uint32_t kBackhandRetryMs = 1000;            // a cast that did not start: try again
+    // The spell's range (DT backhand_206238): far past melee, so a step back during the bar never dodges it.
+    inline constexpr float kBackhandRangeYd = 40.f;
 
     // KR9 Butcher's Rend: stock timer 3-7 s, then 14-18 s; 2% of the tank row per stack per 3 s, 5 stacks, 15 s
     inline constexpr std::uint32_t kRendFirstMinMs = 3000;
@@ -128,6 +139,9 @@ namespace ScholoKrastinov
     inline constexpr NH<std::uint32_t> kLessonAllowedLanded{ 1, 0 };
     inline constexpr std::uint32_t kLessonSeatDelayMs = 1000;          // after the landing (the teleport settles)
     inline constexpr std::uint32_t kLessonFirstCutDelayMs = 1000;
+    // A student the bench could not seat (kSeatGiveUpMs after it was due) fails the lesson: one more failure than the
+    // lesson allows (no hits: no cut came down).
+    constexpr std::uint32_t RefusedSeatFailures(bool heroic) { return kLessonAllowedLanded(heroic) + 1; }
     // The three cuts with every pause at its longest end inside the 15 s lesson (12.5 s).
     static_assert(kLessonSeatDelayMs + kLessonFirstCutDelayMs + kLessonCuts * kIncisionCastMs
         + (kLessonCuts - 1) * kIncisionPauseMaxMs < ScholomanceRework::kLessonMs, "the saw must finish in the lesson");
@@ -149,19 +163,17 @@ namespace ScholoKrastinov
 
     // Where he stands to operate: in front of the bench, between it and the hall (2.7 yd from the bench).
     inline constexpr ScholomanceRework::Point3 kOperatingSpot{ 182.4f, -97.4f, 85.3f };
-    // Where the patient lands on an eject (vehicle_seat_addon 441, an offset in the bench's frame: 2 yd forward, 2 yd
-    // to its left).
-    inline constexpr float kBenchExitForward = 2.f;
-    inline constexpr float kBenchExitLeft = 2.f;
+    // Where the patient lands on an eject: vehicle_seat_addon 441 with ExitParamValue 2 (an absolute spot; the engine
+    // lifts it to the floor), 2 yd in front of the bench and 2 yd to its left. Not an offset (ExitParamValue 1): the
+    // offset keeps the bench's z 85.2, under the 85.31 floor there, and the engine then drops the patient on the
+    // bench's own spot; it also turns with the bench.
+    inline constexpr ScholomanceRework::Point3 kBenchExit{ 180.5f, -98.1f, 85.4f };
 
-    // His fight arena: the room's leash circle plus the apse box, so the bench (30.1 yd from the circle's center) and
-    // his operating spot are on it.
+    // His fight arena: ScholomanceRework::KrastinovArena(), the room's leash circle plus his apse (the bench, 30.1 yd
+    // from the circle's center, his operating spot and the eject spot).
     inline DungeonKit::Arena KrastinovFightArena()
     {
-        DungeonKit::Arena arena = ScholomanceRework::KrastinovArena();
-        arena.Add(DungeonKit::ArenaRegion::Polygon({ { 178.5f, -102.0f }, { 186.5f, -102.0f }, { 186.5f, -92.5f },
-            { 178.5f, -92.5f } }, 83.0f, 91.0f));
-        return arena;
+        return ScholomanceRework::KrastinovArena();
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -384,6 +396,7 @@ namespace ScholoKrastinov
             if (_phase != OpPhase::Seating)
                 return;
             _seatedMs = 0;
+            _wasSeated = true;
             if (_rules.approachTimeoutMs)
             {
                 _phase = OpPhase::Approach;
@@ -456,6 +469,7 @@ namespace ScholoKrastinov
             return _phase == OpPhase::Approach || _phase == OpPhase::Pause || _phase == OpPhase::Casting;
         }
         bool Cutting() const { return _phase == OpPhase::Casting; }
+        bool WasSeated() const { return _wasSeated; }                     // the patient made it onto the bench
         std::uint32_t Interrupts() const { return _interrupts; }          // standing (claws take them back)
         std::uint32_t TotalInterrupts() const { return _totalInterrupts; }
         std::uint32_t Landed() const { return _landed; }
@@ -505,6 +519,7 @@ namespace ScholoKrastinov
         std::uint32_t _cuts = 0;
         std::uint32_t _wasted = 0;
         std::uint32_t _claws = 0;
+        bool _wasSeated = false;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -531,6 +546,14 @@ namespace ScholoKrastinov
     // ----------------------------------------------------------------------------------------------------------------
     // KR7 heroic claws
     // ----------------------------------------------------------------------------------------------------------------
+
+    // A Failed Patient's claws work only at the bench and only while it is free to act: stunned, incapacitated
+    // (polymorph, Shackle Undead), feared or pacified, it stops (SC KR7 "slows, roots and stops work"); the count
+    // starts over (ClawTicker::Update with false).
+    constexpr bool ClawsWork(bool atBench, bool crowdControlled)
+    {
+        return atBench && !crowdControlled;
+    }
 
     // One Failed Patient's claws: every 3 s spent at the bench, one claw. Leaving the bench restarts the count.
     class ClawTicker

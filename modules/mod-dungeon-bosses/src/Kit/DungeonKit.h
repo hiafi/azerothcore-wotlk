@@ -26,6 +26,8 @@
  *   Pickups             walk-over pickups: a registry Soak for the bots plus a proximity poll
  *   LogMechanic         one INFO line per firing in `module.dungeonbosses`
  *   SetRunSpeedPct      a chaser's run speed as a percent of a player's (SpeedFor)
+ *   SeatInVehicle       a player into a scripted vehicle's seat (stuns and Ice Block do not refuse it); EjectAll,
+ *                       HasPassenger and ReleaseOrphanedVehicle (the dead-man switch) for every way out
  *   SetHardModeLoot     the hard mode loot bit on a boss (LOOT_MODE_HARD_MODE_1)
  */
 
@@ -178,6 +180,26 @@ namespace DungeonKit
 
     // A chaser's run speed as a percent of a player's 7 yd/s (Hunt at 80 / 95%): SetSpeed(MOVE_RUN, SpeedFor(pct)).
     void SetRunSpeedPct(Creature* creature, float pctOfPlayerRun);
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Scripted vehicles (kit helper #8, from Scholomance S6's Work Bench)
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // Puts `player` into `vehicle`'s seat `seat`: Unit::EnterVehicle's hardcoded ride aura (46598, the Kologarn /
+    // Ignis way), cast with TRIGGERED_IGNORE_CASTER_AURAS too, so a stunned, feared or Ice Blocked player is seated
+    // anyway. False when the player cannot ride now (dead, not in the world, teleporting, on a taxi; the seat taken
+    // or missing) or the ride did not take. A player already on another vehicle is taken off it first.
+    bool SeatInVehicle(Player* player, Creature* vehicle, int8 seat);
+    // Every passenger off `vehicle` now (each lands by its seat's vehicle_seat_addon exit). Call it on every path out
+    // of the mechanic: its end, evade, death, despawn, wipe. (A despawn also ejects through Vehicle::Uninstall; this
+    // makes the order explicit.)
+    void EjectAll(Creature* vehicle);
+    // Anyone in `vehicle`'s seats.
+    bool HasPassenger(Creature const* vehicle);
+    // The dead-man switch of a scripted vehicle whose seat has no exit of its own: when the mechanic that owns it is
+    // gone (`ownerGone`: its driver object expired, its summoner left the map) and someone is still aboard, everyone
+    // is ejected and the vehicle despawns. True when it acted. Poll it from the vehicle's own AI (every 500 ms or so).
+    bool ReleaseOrphanedVehicle(Creature* vehicle, bool ownerGone);
 
     // ----------------------------------------------------------------------------------------------------------------
     // Target picks

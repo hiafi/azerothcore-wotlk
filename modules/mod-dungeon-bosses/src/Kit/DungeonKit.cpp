@@ -21,6 +21,7 @@
 #include "SpellMgr.h"
 #include "TemporarySummon.h"
 #include "Unit.h"
+#include "Vehicle.h"
 #include <algorithm>
 
 static_assert(DungeonKit::State::NotStarted == NOT_STARTED && DungeonKit::State::InProgress == IN_PROGRESS
@@ -159,6 +160,54 @@ namespace DungeonKit
     {
         if (creature)
             creature->SetSpeed(MOVE_RUN, SpeedFor(pctOfPlayerRun));
+    }
+
+    bool SeatInVehicle(Player* player, Creature* vehicle, int8 seat)
+    {
+        if (!player || !vehicle || !player->IsAlive() || !vehicle->IsAlive() || !player->IsInWorld()
+            || player->IsBeingTeleported() || player->IsInFlight())
+            return false;
+        Vehicle* kit = vehicle->GetVehicleKit();
+        if (!kit || !kit->HasEmptySeat(seat))
+            return false;
+        if (player->GetVehicle())
+            player->ExitVehicle();
+        // Unit::EnterVehicle's cast, plus TRIGGERED_IGNORE_CASTER_AURAS: the ride spell's caster checks would refuse
+        // a stunned, feared or Ice Blocked player.
+        player->CastCustomSpell(VEHICLE_SPELL_RIDE_HARDCODED, SPELLVALUE_BASE_POINT0, seat + 1, vehicle,
+            TriggerCastFlags(TRIGGERED_IGNORE_CASTER_MOUNTED_OR_ON_VEHICLE | TRIGGERED_IGNORE_CASTER_AURAS));
+        sScriptMgr->AnticheatSetUnderACKmount(player);
+        return player->GetVehicleBase() == vehicle;
+    }
+
+    void EjectAll(Creature* vehicle)
+    {
+        if (!vehicle)
+            return;
+        if (Vehicle* kit = vehicle->GetVehicleKit())
+            kit->RemoveAllPassengers();
+    }
+
+    bool HasPassenger(Creature const* vehicle)
+    {
+        Vehicle const* kit = vehicle ? vehicle->GetVehicleKit() : nullptr;
+        if (!kit)
+            return false;
+        for (auto const& entry : kit->Seats)
+            if (!entry.second.IsEmpty())
+                return true;
+        return false;
+    }
+
+    bool ReleaseOrphanedVehicle(Creature* vehicle, bool ownerGone)
+    {
+        if (!vehicle || !ownerGone || !HasPassenger(vehicle))
+            return false;
+        LOG_INFO(kLogCategory, "kit vehicle orphaned entry={} guid={}: ejecting and despawning", vehicle->GetEntry(),
+            vehicle->GetGUID().ToString());
+        EjectAll(vehicle);
+        vehicle->DespawnOrUnsummon();
+        return true;
     }
 
     namespace

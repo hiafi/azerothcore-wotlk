@@ -146,11 +146,7 @@ namespace ScholomanceRework
     std::unique_ptr<SoloLesson> CreateSoloLesson(Classroom room);
     bool HasSoloLesson(Classroom room);
 
-    // A lesson's failure hit, percent of the reference row (SC GD1): 15% normal, 25% heroic.
-    constexpr float LessonFailurePct(bool heroic)
-    {
-        return float(heroic ? kLessonFailurePctHeroic : kLessonFailurePctNormal);
-    }
+    // LessonFailurePct (a lesson's failure hit, 15% / 25%) is pure: SoloLessonLogic.h.
 }
 
 #endif

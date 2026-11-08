@@ -8,7 +8,7 @@ docs/dungeons/scholomance-rework.md SC 2460-2533, design SC 2275-2459). WP-S9 ow
   his formation), the build spec's normal health (160k: HealthModifier 52.425 on the level 60 warrior base 3,052),
   DamageModifier 6.0 (the live 6 was a mod-progression leftover; his own now, WP-T tunes it), stun immunity 1972,
   INSTANCE_BIND. Heroic 250k and the tier's melee are WP-H's heroic template 310094 (source/world/dungeons/
-  scholomance.py). His Graduate Examiner (300553, S13's template) runs the same script name in examiner mode.
+  scholomance.py). His Graduate Examiner (300553, S13's template) gets its own script, npc_sc_examiner_alexei.
 - 300543 The Barov Fortune: an invisible, unselectable prop (KIT_HELPER, the Blizzard anchor's shape) the rule book
   summons under each gold pile for the window: the summoner of the pile's look, the stock "Gold Coins" chest 186634
   (GODI 2614 GoldPilesmall01, VISUALS-REPORT gap 13 rank 1), made not selectable so it never opens.
@@ -47,7 +47,7 @@ from lib.dsl.dungeon_kit import (
     TARGET_UNIT_TARGET_ENEMY,
     self_visual,
 )
-from lib.dsl.registry import creature_model, creature_template, creature_template_columns, spell
+from lib.dsl.registry import creature_model, creature_template, creature_template_columns, custom_attr, spell
 
 from ._common import (
     ATTR0_AURA_IS_DEBUFF,
@@ -76,6 +76,9 @@ _INTERRUPT_FLAGS_STANDARD = 15     # movement, pushback, interrupt, auto-attack:
 _PREVENTION_SILENCE = 1
 _DEFENSE_MAGIC = 1
 _SV_VEIL_OF_SHADOW = 561           # Veil of Shadow 17820's own
+_ATTR3_ALLOW_AURA_WHILE_DEAD = 0x00100000     # SharedDefines.h: the aura persists through death
+_AURA_INTERRUPT_CHANGE_MAP = 0x00080000      # SpellDefines.h AURA_INTERRUPT_FLAG_CHANGE_MAP: leaving the map
+_CU_AURA_CANNOT_BE_SAVED = 0x01000000        # SpellInfo.h SPELL_ATTR0_CU_AURA_CANNOT_BE_SAVED
 
 _ICON_NO_RUNNING = 180             # Chains of Ice 45524 (feet held)
 _ICON_ASSEMBLY = 456               # Battle Shout 6673 (gather)
@@ -179,11 +182,16 @@ if BIND_WAVE_B:
         notes=f'{_S9}, AB9: one stack per break (one per player per announcement: a broken rule, either rule of a '
               'heroic pair, or a fortune taken), cap 5 (CumulativeAura), for the fight (removed on his death, evade '
               'and reset). Alexei adds it (DungeonKit::AddStacks, caster Alexei); the Dean\'s Rod reads the stacks '
-              'held before the new one. Dispel none, NO_IMMUNITIES.',
+              'held before the new one. Dispel none, NO_IMMUNITIES. It lasts the fight and nothing past it (R-B '
+              'N9-1): persists through death (a battle resurrection keeps the ladder), leaves with the map '
+              '(AuraInterruptFlags CHANGE_MAP: a hearth or a release out of the instance) and is never saved '
+              '(CU_AURA_CANNOT_BE_SAVED: a logout keeps no stale stacks).',
         raw_overrides=kit_raw('Stacks up to $u times. Each Demerit makes the Dean\'s Rod hit harder.',
                               'The Dean\'s Rod hits harder for each Demerit.', CastingTimeIndex=1, CumulativeAura=5,
-                              AttributesEx4=ATTR4_NO_CAST_LOG),
+                              AttributesEx3=_ATTR3_ALLOW_AURA_WHILE_DEAD, AttributesEx4=ATTR4_NO_CAST_LOG,
+                              AuraInterruptFlags=_AURA_INTERRUPT_CHANGE_MAP),
     )
+    custom_attr(demerit_206299, _CU_AURA_CANNOT_BE_SAVED)
 
     deans_rod_206300 = spell(
         id=206300, name='Dean\'s Rod', school=School.SHADOW, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,

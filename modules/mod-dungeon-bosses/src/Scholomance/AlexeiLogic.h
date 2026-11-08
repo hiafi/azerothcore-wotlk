@@ -352,7 +352,7 @@ namespace ScholoAlexei
 
     // AB5 the forbidden third, "the part the group stands in or next to": the third that holds the most players, ties
     // broken by `rand01`; nobody in any third (all outside the vault's y range): the third nearest the group's
-    // centre. No players: Alexei's third.
+    // center. No players: Alexei's third.
     inline std::size_t PickForbiddenThird(std::vector<Vec2> const& players, float rand01)
     {
         if (players.empty())
@@ -390,7 +390,7 @@ namespace ScholoAlexei
         return ties[std::min(ties.size() - 1, static_cast<std::size_t>(rand01 * float(ties.size())))];
     }
 
-    // A rectangle on the floor: from the centre of its start edge, `length` along `facing` (radians), `width` across
+    // A rectangle on the floor: from the center of its start edge, `length` along `facing` (radians), `width` across
     // (mod-boss-mechanics Shapes::LineFacing).
     struct Strip
     {
@@ -412,7 +412,7 @@ namespace ScholoAlexei
     }
 
     // AB6 the lane: 4 yd wide along the vault's north side (ScholomanceRework.h kBarovLaneMinX/MaxX, x 186-197, the
-    // only side that runs the full length; at y -61 to -74 the pit reaches x 192), so its centre is x 194.5
+    // only side that runs the full length; at y -61 to -74 the pit reaches x 192), so its center is x 194.5
     // (192.5-196.5: clear of the pit, 0.5 yd off the wall). The full lane runs y -35 to -93. With Out of bounds the
     // lane stops kLaneZoneGap yd short of the forbidden third, on the side nearer the group (a tie: the longer piece).
     float constexpr kLaneCenterX = 194.5f;
@@ -676,10 +676,12 @@ namespace ScholoAlexei
     // The Graduate Examiner (S13's hard mode gauntlet, SC 3046; handoff section 3.6): "both mechanics at H values"
     // ----------------------------------------------------------------------------------------------------------------
 
-    // The examiner (NPC_SC_EXAMINER_ALEXEI 300553, declared by S13, ScriptName npc_sc_examiner_alexei) runs the Code of
-    // Conduct and the Bargain on the heroic numbers whatever the map: rules (a single first, then pairs), 4 s warnings,
-    // two fortunes, the heroic Rod ladder, at 80k health. No Veil, no Unholy Aura, no boss state, no Passing Grade.
-    // A gauntlet room lasts about 22 s (SC), so the first rule comes at 6 s and the next 18 s later (S9's reading).
+    // The examiner (NPC_SC_EXAMINER_ALEXEI 300553, declared by S13, ScriptName kExaminerScriptName: its own AI,
+    // registered once wave C binds, kWaveCBound) runs the Code of Conduct and the Bargain on the heroic numbers
+    // whatever the map: rules (a single first, then pairs), 4 s warnings, two fortunes, the heroic Rod ladder, at 80k
+    // health. No Veil, no Unholy Aura, no boss state, no Passing Grade. A gauntlet room lasts about 22 s (SC), so the
+    // first rule comes at 6 s and the next 18 s later (S9's reading).
+    char constexpr kExaminerScriptName[] = "npc_sc_examiner_alexei";
     std::uint32_t constexpr kExaminerHealth = 80000;
     std::uint32_t constexpr kExaminerFirstRuleMs = 6000;
     std::uint32_t constexpr kExaminerRuleEveryMs = 18000;

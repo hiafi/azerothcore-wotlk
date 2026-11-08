@@ -115,6 +115,19 @@ class PinnedPicksTest(unittest.TestCase):
             self.assertIn(sv, v.STOCK_SPELL_VISUALS)
         self.assertIn(v.DISPLAY_INVISIBLE_STALKER, v.STOCK_CREATURE_DISPLAYS)
 
+    def test_wave_b_boss_additions(self):
+        # Filed by F-B4 from the S7, S8 and S9 reports: the stock looks the boss files kept as local constants.
+        v = self.v
+        self.assertEqual((v.PK_CORRODED, v.PK_NOXIOUS_CATALYST), (856, 800))
+        self.assertEqual((v.RV_ORDER_TRAMPLE, v.RV_ORDER_SWEEP, v.RV_ORDER_SMASH, v.RV_SHADOW_BOLT),
+                         (672, 219, 2069, 64))
+        self.assertEqual(v.AX_VEIL_OF_SHADOW, 561)
+        self.assertEqual(v.MV_SHADOW_BOLT_VOLLEY, 2318)     # Malicia's shade volley look: already here
+        self.assertEqual(v.AURA_GHOST_VISUAL, 9617)         # C++: ScholomanceRework.h SPELL_GHOST_VISUAL
+        for sv in (v.PK_CORRODED, v.PK_NOXIOUS_CATALYST, v.RV_ORDER_TRAMPLE, v.RV_ORDER_SWEEP, v.RV_ORDER_SMASH,
+                   v.RV_SHADOW_BOLT, v.AX_VEIL_OF_SHADOW):
+            self.assertIn(sv, v.STOCK_SPELL_VISUALS)
+
     def test_the_corrected_looks_replace_the_wrong_ones(self):
         v = self.v
         wired = set(v.STOCK_SPELL_VISUALS)

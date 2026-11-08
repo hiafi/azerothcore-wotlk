@@ -8,7 +8,8 @@
  *
  *   MA1 Soul             every player of the fight gets Soul 206205 at 20 stacks (the meter) and its hidden weight
  *                        206206: each stack above or below 20 is +-5% damage done, healing done and max health
- *                        (floor 10, cap 40). A player who comes back from the dead gets their last count back.
+ *                        (floor 10, cap 40). A player who comes back from the dead gets their last count back. Both
+ *                        drop on a logout or a map change (AURA_INTERRUPT_FLAG_CHANGE_MAP, the DT file).
  *   MA2 Soul Drain       10 s, then every 20 s (normal) / 30 s (heroic): a 2 s cast (206207). Normal: one random
  *                        non-tank (two below 50% of her health), emote line 0. Heroic: every player, the tank too,
  *                        emote line 1. Each loses 4 stacks (never under 10) and that many Loose Souls land 10 to 15 yd
@@ -34,7 +35,8 @@
  *                        within 10 yd.
  *   Melee                DamageModifier 3.5 (the AC base value, set by the DT file); heroic is the heroic template's.
  *   Arena                MaliciaArena() with LeashOptions (no grips; holds at the edge, evades after 10 s with nobody
- *                        on it). The Coven's gate is the instance's door data on BOSS_MALICIA.
+ *                        on it). The Coven's gate is the instance's door data on BOSS_MALICIA. Only the players on her
+ *                        arena are in her fight (meters, drains, storm marks): one shut outside is left alone.
  *   Grades               GradeWatch (heroic): a Soulstorm hit costs the grade; a faded soul never does (its Soak never
  *                        resolves, so no group failure either).
  *
@@ -96,6 +98,8 @@ namespace
 
     // How far up and down a floor point looks for the ground (her slab rises 6 yd over the floor).
     float constexpr kFloorSearchUp = 7.f;
+    // A bar she could not start (a kick's school lockout, a silence): the beat tries again this soon.
+    uint32 constexpr kCastRetryMs = 1000;
 
     // The ground under a point (souls, shades and markers stand on it); falls back to the given height.
     float FloorZ(WorldObject const* ref, float x, float y, float z)
@@ -221,7 +225,7 @@ namespace
                 MechanicRef ref = Mechanic::Soak(owner, at, kSoulRadius, 1,
                     Milliseconds(spec.fadeMs + kSoulSoakSlackMs));
                 ref.Eligible(spec.botsWho).Order(BossMechanics::Ordering{ SPELL_MA_SOUL, true, uint8(kSoulCap) })
-                    .NoFillTimer().Tag(TAG_LOOSE_SOUL);
+                    .NoFillTimer().Tag(TAG_LOOSE_SOUL).OneClaimPerBot();    // one soul a bot at a time (F-B5)
                 soul.soak = ref.Handle();
             }
             _souls.push_back(std::move(soul));
@@ -238,6 +242,8 @@ namespace
             _pollMs = 0;
 
             Map* map = owner->GetMap();
+            // The stacks each player takes in this poll: a player at 39 inside two souls takes one, the other stays.
+            std::unordered_map<ObjectGuid, uint32> gained;
             std::vector<std::pair<ObjectGuid, Soul>> picked;
             std::vector<Soul> faded;
             std::vector<Soul> kept;
@@ -262,7 +268,10 @@ namespace
                     if (!DungeonKit::InPickupRange(player->GetExactDist2d(soul.at),
                             player->GetPositionZ() - soul.at.GetPositionZ(), kSoulRadius, kSoulZBand))
                         continue;
-                    uint32 const stacks = ScholoMalicia::SoulOf(player);
+                    uint32 stacks = ScholoMalicia::SoulOf(player);
+                    if (stacks)
+                        if (auto const it = gained.find(player->GetGUID()); it != gained.end())
+                            stacks += it->second;
                     if (!CanTakeSoul(stacks))
                         continue;
                     if (!taker || stacks < takerStacks
@@ -273,7 +282,10 @@ namespace
                     }
                 }
                 if (taker)
+                {
+                    ++gained[taker->GetGUID()];
                     picked.emplace_back(taker->GetGUID(), soul);
+                }
                 else
                     kept.push_back(soul);
             }
@@ -455,6 +467,7 @@ namespace
             Describe();
             _souls.onPick = [this](Player* taker, uint32 now)
             {
+                _lastSoul[taker->GetGUID()] = now;
                 Log("soul-pick", Acore::StringFormat("player={} soul={}", taker->GetName(), now));
             };
             _souls.onFade = [this](Position const& /*at*/, bool fromDrain)
@@ -480,12 +493,14 @@ namespace
             _drains.clear();
             _waves.clear();
             _falls.clear();
+            // Only the meters this fight gave (a detention lesson's student keeps theirs); a player who left the map
+            // lost theirs already (CHANGE_MAP interrupt flag).
+            for (auto const& [guid, last] : _lastSoul)
+                if (Player* player = ObjectAccessor::GetPlayer(map, guid))
+                    ScholoMalicia::ClearSoul(player);
             _lastSoul.clear();
             _timeline = Timeline{};
             _beatMs = 0;
-            for (auto const& ref : map->GetPlayers())
-                if (Player* player = ref.GetSource())
-                    ScholoMalicia::ClearSoul(player);
             _engaged = false;
             _me->RemoveAurasDueToSpell(SPELL_MA_BOUND_SOUL);
         }
@@ -605,7 +620,7 @@ namespace
                 return;
             uint32 const before = ScholoMalicia::SoulOf(player);
             if (uint32 const loss = BlastLoss(before))
-                AddSoul(player, -int32(loss));
+                _lastSoul[player->GetGUID()] = AddSoul(player, -int32(loss));
             Log("soulstorm-hit", Acore::StringFormat("player={} soul={}", player->GetName(),
                 ScholoMalicia::SoulOf(player)));
         }
@@ -618,6 +633,8 @@ namespace
                 Log("soulstorm-destroy", Acore::StringFormat("souls={}", destroyed));
         }
 
+        // The players of her fight: alive, in the Coven arena (with its Z band). DoZoneInCombat engages the whole
+        // instance, so combat alone would count a player shut outside the gate (R-B S5 SF-2).
         std::vector<Player*> FightPlayers() const
         {
             std::vector<Player*> out;
@@ -627,11 +644,21 @@ namespace
                 Player* player = ref.GetSource();
                 if (!player || !player->IsAlive() || player->IsGameMaster() || !player->IsInWorld())
                     continue;
-                if (!_me->IsInCombatWith(player) && !room.Contains(DungeonKit::PlaneOf(player), player->GetPositionZ()))
+                if (!room.Contains(DungeonKit::PlaneOf(player), player->GetPositionZ()))
                     continue;
                 out.push_back(player);
             }
             return out;
+        }
+
+        // A threat-list pick never takes a player outside the Coven arena.
+        void ExcludeOffArena(DungeonKit::PickRule& rule) const
+        {
+            Arena const room = MaliciaArena();
+            for (auto const& ref : _me->GetMap()->GetPlayers())
+                if (Player* player = ref.GetSource();
+                    player && !room.Contains(DungeonKit::PlaneOf(player), player->GetPositionZ()))
+                    rule.exclude.push_back(player->GetGUID().GetRawValue());
         }
 
         // ---- `.dbtest scholo malicia` entry points ------------------------------------------------------------------
@@ -806,6 +833,7 @@ namespace
                 DungeonKit::PickRule rule;
                 rule.nonTank = true;
                 rule.tankIfAlone = false;       // never the tank on normal (SC MA2)
+                ExcludeOffArena(rule);
                 targets = DungeonKit::PickPlayers(_me, rule, NormalDrainTargets(_me->GetHealthPct()));
             }
             if (targets.empty())
@@ -813,18 +841,20 @@ namespace
                 _timeline.Retry(Beat::Drain);
                 return false;
             }
+            // The bar first: a refused bar (a school lockout, a silence) drains nobody and tries again shortly.
+            if (_me->CastSpell(all ? static_cast<Unit*>(_me) : targets.front(), SPELL_MA_SOUL_DRAIN_CAST, false)
+                != SPELL_CAST_OK)
+            {
+                _timeline.Retry(Beat::Drain, kCastRetryMs);
+                Log("soul-drain-refused");
+                return false;
+            }
             _timeline.Done(Beat::Drain, kDrainEveryMs(_heroic));
             if (all)
-            {
-                _me->CastSpell(_me, SPELL_MA_SOUL_DRAIN_CAST, false);
                 Talk(EMOTE_MALICIA_DRAIN_ALL);
-            }
             else
-            {
-                _me->CastSpell(targets.front(), SPELL_MA_SOUL_DRAIN_CAST, false);
                 for (Player* target : targets)
                     Talk(EMOTE_MALICIA_SOUL_DRAIN, target);
-            }
             PendingDrain drain;
             drain.at = _clockMs + kDrainCastMs;
             std::string names;
@@ -853,7 +883,7 @@ namespace
                 _me->CastSpell(player, SPELL_MA_SOUL_DRAIN, true);
                 if (!loss)
                     continue;
-                AddSoul(player, -int32(loss));
+                _lastSoul[player->GetGUID()] = AddSoul(player, -int32(loss));
                 for (Position const& at : ScatterAround(_me, player->GetPosition(), loss, kSoulSpillMinYd,
                     kSoulSpillMaxYd, kSoulsApartYd))
                     _souls.Spill(_me, at, true, spec);
@@ -894,8 +924,14 @@ namespace
                 _timeline.Retry(Beat::Soulstorm, kStormWaitRetryMs);
                 return false;
             }
+            // The bar first: the waves land inside it, so a refused bar (a lockout, a silence) storms nothing yet.
+            if (_me->CastSpell(_me, SPELL_MA_SOULSTORM_CAST, false) != SPELL_CAST_OK)
+            {
+                _timeline.Retry(Beat::Soulstorm, kCastRetryMs);
+                Log("soulstorm-refused");
+                return false;
+            }
             _timeline.Done(Beat::Soulstorm, kStormEveryMs);
-            DungeonKit::CastBar(_me, SPELL_MA_SOULSTORM_CAST);
             Talk(EMOTE_MALICIA_SOULSTORM);
             for (uint32 k = 0; k < kStormWaves; ++k)
                 _waves.push_back(_clockMs + k * kStormWaveGapMs);
@@ -914,6 +950,7 @@ namespace
                 DungeonKit::PickRule rule;
                 rule.nonTank = true;
                 rule.tankIfAlone = true;        // a solo tank (a test) is still marked
+                ExcludeOffArena(rule);
                 if (Player* p = DungeonKit::PickPlayer(_me, rule))
                     marked.push_back(p);
                 else if (!players.empty())
@@ -967,7 +1004,7 @@ namespace
             SpellCastResult const result = _me->CastSpell(_me, SPELL_MA_SHADOW_HEAL, false);
             if (result != SPELL_CAST_OK)
             {
-                _timeline.Retry(Beat::ShadowHeal, 1000);     // a kick's school lockout: try again shortly
+                _timeline.Retry(Beat::ShadowHeal, kCastRetryMs);    // a kick's school lockout: try again shortly
                 return;
             }
             _timeline.Done(Beat::ShadowHeal, kHealEveryMs);
@@ -1002,7 +1039,11 @@ namespace
                 _timeline.Retry(Beat::Corruption);
                 return;
             }
-            _me->CastSpell(_me, SPELL_MA_CORRUPTION, false);
+            if (_me->CastSpell(_me, SPELL_MA_CORRUPTION, false) != SPELL_CAST_OK)
+            {
+                _timeline.Retry(Beat::Corruption, kCastRetryMs);    // a Shadow lockout: try again shortly
+                return;
+            }
             _timeline.Done(Beat::Corruption, urand(kCorruptionEveryMinMs, kCorruptionEveryMaxMs));
             Log("corruption");
         }
@@ -1337,7 +1378,7 @@ private:
     {
         _repathMs = 0;
         if (Creature* her = Host())
-            me->GetMotionMaster()->MovePoint(1, her->GetPosition());
+            me->GetMotionMaster()->MovePoint(1, her->GetPosition(), FORCED_MOVEMENT_WALK);
     }
 
     ObjectGuid _host;
@@ -1351,8 +1392,9 @@ namespace
 {
     // ---------------------------------------------------------------------------------------------------------------
     // Detention: the Coven (SC 2965, handoff section 3.7). Drained on landing: 3 / 4 souls spill 3 to 6 yd around the
-    // student (around the apse's mouth when they landed in her apse) and fade in 10 / 6 s; every soul picked up
-    // passes, a fade fails (the lesson's failure hit, 15% / 25% and Weakened, through Soul Lost 206217). With or
+    // student (around the apse's mouth when they landed in her apse) and fade from 10 / 6 s on, one every 1.75 s (user
+    // ruling 4: one hit per miss, never two at once); every soul picked up passes, each fade is a failure (the
+    // lesson's failure hit, 15% / 25% and Weakened, through Soul Lost 206217, at the lesson's own heroic flag). With or
     // without her: the lesson's stalker owns the souls and their Soaks (only the student may take them). The meter is
     // the lesson's own: it goes when the lesson ends.
     // ---------------------------------------------------------------------------------------------------------------
@@ -1376,7 +1418,8 @@ namespace
                 Creature* stalker = Owner();
                 Player* who = Student();
                 if (stalker && who && who->IsAlive())
-                    stalker->CastSpell(who, SPELL_MA_SOUL_LOST, true);
+                    stalker->CastCustomSpell(SPELL_MA_SOUL_LOST, SPELLVALUE_BASE_POINT0, SoulLostBasePoints(Heroic()),
+                        who, true);
                 DungeonKit::LogMechanic(kLogDungeon, kLessonLogName, "soul-fade",
                     Acore::StringFormat("student={}", who ? who->GetName() : std::string("?")));
             };
@@ -1388,7 +1431,6 @@ namespace
             AddSoul(student, -int32(loss));
 
             SoulField::Spec spec;
-            spec.fadeMs = kLessonFadeMs(heroic);
             spec.botsWho.carriers.insert(studentGuid);
             spec.botsWho.auraSpell = SPELL_MA_SOUL;
             spec.botsWho.minStacks = 1;
@@ -1397,9 +1439,14 @@ namespace
             spec.flyToOwner = false;
             Vec2 const center = LessonSpillCenter(DungeonKit::PlaneOf(student));
             Position const around(center.x, center.y, student->GetPositionZ(), 0.f);
+            uint32 index = 0;
             for (Position const& at : ScatterAround(owner, around, loss, kLessonSpillMinYd, kLessonSpillMaxYd,
                 kLessonSoulsApartYd))
+            {
+                // Ruling 4: the fades (and so the misses) come one at a time, kLessonFadeStaggerMs apart.
+                spec.fadeMs = LessonSoulFadeMs(heroic, index++);
                 _souls.Spill(owner, at, true, spec);
+            }
             DungeonKit::LogMechanic(kLogDungeon, kLessonLogName, "start",
                 Acore::StringFormat("student={} souls={} fade={}ms heroic={}", student->GetName(), loss, spec.fadeMs,
                     heroic ? 1 : 0));
@@ -1541,16 +1588,22 @@ class spell_scholo_malicia_shadow_nova : public SpellScript
 };
 
 // Detention, Soul Lost 206217: a soul faded in the Coven's lesson: the lesson's failure hit, 15% / 25% of the
-// reference row (RefFlat at launch) and one Weakened stack (ruling 21; SoloLesson.h LessonFailurePct).
+// reference row (RefFlat at launch) and one Weakened stack (ruling 21; SoloLesson.h LessonFailurePct). The lesson
+// passes its percent in base point 0 (SoulLostBasePoints, its own heroic flag); a plain cast falls back to the map's.
 class spell_scholo_malicia_soul_lost : public SpellScript
 {
     PrepareSpellScript(spell_scholo_malicia_soul_lost);
 
     void SetDamage(SpellEffIndex /*effIndex*/)
     {
-        if (Unit* caster = GetCaster())
-            SetEffectValue(static_cast<int32>(DungeonKit::RefFlatOn(caster, GetHitUnit(),
-                LessonFailurePct(DungeonKit::IsHeroicMap(caster)))));
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+        SpellValue const* value = GetSpellValue();
+        float pct = value ? SoulLostPctFromBasePoints(value->EffectBasePoints[EFFECT_0]) : 0.f;
+        if (pct <= 0.f)
+            pct = LessonFailurePct(DungeonKit::IsHeroicMap(caster));
+        SetEffectValue(static_cast<int32>(DungeonKit::RefFlatOn(caster, GetHitUnit(), pct)));
     }
 
     void AddWeakened()
@@ -1753,7 +1806,9 @@ namespace
 void AddSC_boss_instructor_malicia_rework()
 {
     RegisterDungeonReworkCreatureAI(boss_instructor_malicia_rework, ScholomanceRework::kInstanceScriptName);
-    RegisterDungeonReworkCreatureAI(npc_sc_examiner_malicia, ScholomanceRework::kInstanceScriptName);
+    // The examiner's script name is MaliciaFight.h kExaminerScriptName; S13 binds the entry in wave C.
+    if (kWaveCBound)
+        RegisterDungeonReworkCreatureAI(npc_sc_examiner_malicia, ScholomanceRework::kInstanceScriptName);
     RegisterDungeonReworkCreatureAI(npc_sc_malicias_shade, ScholomanceRework::kInstanceScriptName);
     RegisterSpellScript(spell_scholo_malicia_soul);
     RegisterSpellScript(spell_scholo_malicia_soul_weight);

@@ -1,6 +1,6 @@
 // Host tests for IlluciaLogic.h (S10: Lady Illucia Barov (10502)): the ids, the build spec numbers, the timeline, the
-// Foresight chain schedule, the motion track's prediction (still = on the player), the Memory trail recorder, the
-// Fear's run, the step out to the hall and the arena.
+// Foresight chain schedule, her tuning of the kit's motion track and trail recorder (their rules are in
+// dungeon_kit_test.cpp), the Fear's run, the Passing Grade exemption, the step out to the hall and the arena.
 #include "IlluciaLogic.h"
 #include "check.h"
 #include <cmath>
@@ -114,133 +114,30 @@ int main()
         CHECK(!c.Ended(5499) && c.Ended(5500));
     }
 
-    // ---- motion track and prediction (handoff section 5: still = on the player) -------------------------------------
+    // ---- motion track and Memory trail: her tuning of the kit pieces (their rules: dungeon_kit_test.cpp) ------------
     {
-        MotionTrack empty;
-        Prediction const none = PredictSpot(empty, 1500);
-        CHECK(none.still);
-
-        // Standing: on the player.
-        MotionTrack still = Walk({ 240.f, 0.f }, 0.f, 0.f, 5);
-        Prediction const p0 = PredictSpot(still, 1500);
-        CHECK(p0.still);
-        CHECK(Near(p0.at, Vec2{ 240.f, 0.f }));
-
-        // One sample: no heading yet, on the player.
-        MotionTrack one;
-        one.Add(1000, { 230.f, 2.f });
-        CHECK(PredictSpot(one, 1500).still);
-
-        // Running east at 7 yd/s: 10.5 yd ahead in 1.5 s.
+        CHECK(kSampleEveryMs == 200);
+        // A 7 yd/s runner: 10.5 yd ahead after one marker's warning.
         MotionTrack run = Walk({ 220.f, 0.f }, 0.f, 7.f, 6);
-        Vec2 const now = run.Latest().p;
-        Prediction const p1 = PredictSpot(run, 1500);
-        CHECK(!p1.still);
-        CHECK(Near(p1.speed, 7.f, 0.05f));
-        CHECK(Near(p1.heading, 0.f, 0.01f));
-        CHECK(Near(p1.at, Vec2{ now.x + 10.5f, now.y }, 0.05f));
+        Prediction const p = PredictSpot(run, kForesightMarkerMs);
+        CHECK(!p.still);
+        CHECK(Near(p.at, Vec2{ run.Latest().p.x + 10.5f, 0.f }, 0.05f));
 
-        // Running north-west: the heading follows.
-        float const nw = 3.f * DungeonKit::kPi / 4.f;
-        MotionTrack diag = Walk({ 240.f, -5.f }, nw, 7.f, 4);
-        Prediction const p2 = PredictSpot(diag, 1500);
-        CHECK(!p2.still);
-        CHECK(Near(p2.heading, nw, 0.01f));
-        CHECK(Near(DungeonKit::Distance(diag.Latest().p, p2.at), 10.5f, 0.05f));
-
-        // A turn shows within the 400 ms window: east for 1 s, then north for 0.4 s.
-        MotionTrack turn = Walk({ 220.f, 0.f }, 0.f, 7.f, 6, 1000);
-        Vec2 corner = turn.Latest().p;
-        turn.Add(2200, { corner.x, corner.y + 1.4f });
-        turn.Add(2400, { corner.x, corner.y + 2.8f });
-        Prediction const p3 = PredictSpot(turn, 1500);
-        CHECK(!p3.still);
-        CHECK(Near(p3.heading, DungeonKit::kPi / 2.f, 0.01f));
-
-        // Stopping: the newest 400 ms show no movement, so the next marker is on the player again.
-        MotionTrack stop = Walk({ 220.f, 0.f }, 0.f, 7.f, 6, 1000);
-        Vec2 const halt = stop.Latest().p;
-        stop.Add(2200, halt);
-        stop.Add(2400, halt);
-        Prediction const p4 = PredictSpot(stop, 1500);
-        CHECK(p4.still);
-        CHECK(Near(p4.at, halt));
-
-        // Walking slowly still counts as moving; creeping does not.
-        CHECK(!PredictSpot(Walk({ 220.f, 0.f }, 0.f, 2.5f, 4), 1500).still);
-        CHECK(PredictSpot(Walk({ 220.f, 0.f }, 0.f, 0.5f, 4), 1500).still);
-
-        // A teleport or a knockback (40 yd/s) is not a heading: on the player.
-        CHECK(PredictSpot(Walk({ 220.f, 0.f }, 0.f, 40.f, 4), 1500).still);
-
-        // Samples closer than 50 ms replace the newest; a clock going back starts over.
-        MotionTrack close;
-        close.Add(1000, { 0.f, 0.f });
-        close.Add(1200, { 1.f, 0.f });
-        close.Add(1220, { 1.5f, 0.f });
-        CHECK(close.Size() == 2);
-        CHECK(Near(close.Latest().p, Vec2{ 1.5f, 0.f }));
-        close.Add(500, { 9.f, 9.f });
-        CHECK(close.Size() == 1);
-
-        // The ring keeps its newest kSize samples.
-        MotionTrack many = Walk({ 0.f, 0.f }, 0.f, 7.f, 20);
-        CHECK(many.Size() == MotionTrack::kSize);
-        CHECK(many.Latest().t == 1000 + 19 * kSampleEveryMs);
-    }
-
-    // ---- Memory trail recorder ------------------------------------------------------------------------------------
-    {
-        // A straight 7 yd/s run, sampled every 200 ms (1.4 yd a sample): 4 yd pieces, each released once the runner is
-        // 2.5 yd past its end; pieces tile the path end to end.
-        TrailRecorder trail;
-        std::vector<TrailSegment> laid;
+        // The Memory trail's recorder: 4 yd pieces, never under the runner (2.5 yd behind > half its 3 yd width).
+        TrailRecorder trail = MemoryTrailRecorder();
+        std::size_t laid = 0;
         for (int i = 0; i <= 30; ++i)
         {
-            Vec2 const p{ 210.f + 1.4f * float(i), 0.f };
-            for (TrailSegment const& s : trail.Feed(p))
+            Vec2 const at{ 210.f + 1.4f * float(i), 0.f };
+            for (TrailSegment const& s : trail.Feed(at))
             {
-                // Never under the runner: the piece ends at least 2.5 yd behind it.
-                CHECK(DungeonKit::Distance(p, s.to) >= kTrailClearYd - 0.001f);
-                laid.push_back(s);
+                CHECK(DungeonKit::Distance(at, s.to) >= kTrailClearYd - 0.001f);
+                CHECK(DungeonKit::Distance(s.from, s.to) >= kTrailSegmentYd - 0.001f);
+                ++laid;
             }
         }
-        CHECK(laid.size() >= 8);
-        for (std::size_t i = 0; i < laid.size(); ++i)
-        {
-            float const len = DungeonKit::Distance(laid[i].from, laid[i].to);
-            CHECK(len >= kTrailSegmentYd - 0.001f && len < kTrailSegmentYd + 1.4f);
-            if (i)
-                CHECK(Near(laid[i].from, laid[i - 1].to));
-        }
-        CHECK(Near(laid.front().from, Vec2{ 210.f, 0.f }));
-
-        // Flush lays only what the runner has left behind.
-        std::vector<TrailSegment> const tail = trail.Flush({ 252.f, 0.f });
-        for (TrailSegment const& s : tail)
-            CHECK(DungeonKit::Distance(Vec2{ 252.f, 0.f }, s.to) >= kTrailClearYd);
-        CHECK(!trail.Started());
-
-        // Standing still lays nothing.
-        TrailRecorder idle;
-        std::size_t idleLaid = 0;
-        for (int i = 0; i < 10; ++i)
-            idleLaid += idle.Feed({ 240.f, 1.f }).size();
-        CHECK(idleLaid == 0);
-        CHECK(idle.Flush({ 240.f, 1.f }).empty());
-
-        // A teleport starts over: no piece across the jump.
-        TrailRecorder jump;
-        for (int i = 0; i <= 6; ++i)
-            jump.Feed({ 210.f + 1.4f * float(i), 0.f });
-        std::vector<TrailSegment> const after = jump.Feed({ 260.f, 5.f });
-        CHECK(after.empty());
-        CHECK(jump.Pending() == 0);
-        bool crossed = false;
-        for (int i = 1; i <= 10; ++i)
-            for (TrailSegment const& s : jump.Feed({ 260.f + 1.4f * float(i), 5.f }))
-                crossed = crossed || s.from.x < 259.f;
-        CHECK(!crossed);
+        CHECK(laid >= 8);
+        CHECK(kTrailClearYd > kTrailWidth / 2.f);
 
         // Budget: two heroic runners at 7 yd/s keep 7 pieces each.
         CHECK(PeakTrailPieces(7.f) == 7);
@@ -249,6 +146,15 @@ int main()
 
     // ---- Fear's run ---------------------------------------------------------------------------------------------
     {
+        // Ranges: the Fear 40 yd (the hall), the Curse its stock 30 yd.
+        CHECK(kFearRange == 40.f && kCurseRange == 30.f);
+        // The end marker costs the feared player no Passing Grade; a bystander in it still fails (F-B ruling).
+        GradeLedger grades;
+        std::uint32_t const marker = 42;
+        grades.Exempt(marker, 1001);
+        CHECK(!grades.Record(marker, 1001) && !grades.HasFailed(1001));
+        CHECK(grades.Record(marker, 1002) && grades.HasFailed(1002));
+
         CHECK(Near(FearRunYd(7.f), 14.f));
         CHECK(Near(FearRunYd(14.f), kFearMaxRunYd));
         CHECK(Near(FearRunYd(0.f), 0.f));

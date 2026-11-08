@@ -10,18 +10,22 @@
  *   IB1 Foresight        8 s, then every 20 s: a 1.5 s cast names the read player (yell line 1; the read debuff
  *                        206316); as it ends a 4 yd marker lands on them in 1.5 s, and as each marker lands the next
  *                        appears where they will be 1.5 s later at their heading and speed (on them when they stand),
- *                        sampled every 200 ms (IlluciaLogic.h MotionTrack). 30% / 40% Shadow (206317) and Weakened per
- *                        marker (ruling 20). Normal 1 player x 3 markers, heroic 2 x 5; any player, the tank too.
+ *                        sampled every 200 ms (the kit's MotionTrack). 30% / 40% Shadow (206317) and Weakened per
+ *                        marker (ruling 20). Normal 1 player x 3 markers, heroic 2 x 5; any player, the tank too. The
+ *                        yell names every read player.
  *   IB2 Memory trail     heroic: a read player's path during their chain lingers behind them, 3 yd wide, 4 s, 10%
- *                        Shadow a second (206318), laid in 4 yd pieces once they are 2.5 yd past each (IlluciaLogic.h
+ *                        Shadow a second (206318), laid in 4 yd pieces once they are 2.5 yd past each (the kit's
  *                        TrailRecorder; DungeonKit::Linger).
- *   IB3 Fear             18 s, then every 20 s: a 1.5 s interruptible cast (206319) on a random non-tank not being
- *                        read, emote line 2; it lands a 2 s Magic fear whose run is scripted straight away from her
- *                        (spell_scholo_illucia_fear: a point move in the controlled slot), and a 4 yd marker lands at
- *                        the run's end as the fear ends: 15% / 50% Shadow (206320), no Weakened. A kick stops the
- *                        cast; a dispel stops the run short. Bots: the interrupt and dispel lists.
+ *   IB3 Fear             18 s, then every 20 s: a 1.5 s interruptible cast (206319) on a random non-tank in sight,
+ *                        not being read, emote line 2; it lands a 2 s Magic fear whose run is scripted straight away
+ *                        from her (spell_scholo_illucia_fear: a point move in the controlled slot that keeps the
+ *                        fear's fleeing flag and state, so the player cannot act), and a 4 yd marker lands at the
+ *                        run's end as the fear ends: 15% / 50% Shadow (206320), no Weakened, and it never costs the
+ *                        feared player the Passing Grade (GradeWatch::Exempt). A kick stops the cast; a dispel stops
+ *                        the run short. Bots: the interrupt and dispel lists.
  *   IB4 Shadow Shock     stock 19460 on the tank: 1 to 2 s, then every 10 s.
- *   IB5 Curse of Agony   stock 18266 on a random player: 1 to 10 s, then every 14 to 24 s (the dispel list).
+ *   IB5 Curse of Agony   stock 18266 on a random player within 30 yd and in sight: 1 to 10 s, then every 14 to 24 s
+ *                        (the dispel list). A cast that fails (any of the three) tries again 2 s later.
  *   Melee                DamageModifier 3.5 (the stock value, set by the DT file); heroic is the heroic template's.
  *   Arena                IlluciaArena() with LeashOptions (no grips; holds at the edge, evades after 10 s with nobody
  *                        on it). Pulled in her inner room, she first steps out to kIlluciaHallPoint (section 7 #14).
@@ -50,6 +54,7 @@
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "PointMovementGenerator.h"
 #include "Random.h"
 #include "ScholomanceKit.h"
 #include "ScholomanceRework.h"
@@ -62,6 +67,7 @@
 #include "StringFormat.h"
 #include "TemporarySummon.h"
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -106,15 +112,17 @@ namespace
         return unit && unit->GetEntry() == NPC_SC_EXAMINER_ILLUCIA;
     }
 
-    // The players of the map who may carry her auras (a cleanup sweep that works without an instance script).
-    void RemoveAurasFromMapPlayers(Map* map, std::initializer_list<uint32> spells)
+    // The auras `caster` put on the map's players (a cleanup sweep that works without an instance script); another
+    // owner's (the Shadow Vault lesson's stalker, an examiner) stay.
+    void RemoveAurasFromMapPlayers(Unit* caster, std::initializer_list<uint32> spells)
     {
+        Map* map = caster ? caster->GetMap() : nullptr;
         if (!map)
             return;
         for (auto const& ref : map->GetPlayers())
             if (Player* player = ref.GetSource())
                 for (uint32 spell : spells)
-                    player->RemoveAurasDueToSpell(spell);
+                    player->RemoveAurasDueToSpell(spell, caster->GetGUID());
     }
 }
 
@@ -199,15 +207,17 @@ public:
         }
     }
 
-    // The fight is over: every live marker and trail piece cancelled, every read debuff gone. `owner` may be null.
+    // The fight is over: every live marker and trail piece cancelled, every read debuff gone. `owner` may be null
+    // (then any caster's read on a chain's player goes).
     void Clear(Creature* owner)
     {
         if (owner)
             for (MechanicHandle const& handle : _live)
                 Mechanic::Cancel(owner, handle);
+        ObjectGuid const caster = owner ? owner->GetGUID() : ObjectGuid::Empty;
         for (Chain const& chain : _chains)
             if (Player* player = _map ? ObjectAccessor::GetPlayer(_map, chain.player) : nullptr)
-                player->RemoveAurasDueToSpell(SPELL_IB_READ);
+                player->RemoveAurasDueToSpell(SPELL_IB_READ, caster);
         _live.clear();
         _chains.clear();
         _tracks.clear();
@@ -245,7 +255,7 @@ private:
         ObjectGuid player;
         ChainSchedule schedule;
         MarkerSpec spec;
-        TrailRecorder trail;
+        TrailRecorder trail = MemoryTrailRecorder();
     };
 
     void PlaceMarker(Creature* owner, Player* player, Chain& chain)
@@ -305,7 +315,7 @@ private:
             if (owner && landed && chain.spec.trail && chain.trail.Started())
                 LayTrail(owner, chain.trail.Flush(DungeonKit::PlaneOf(player)), player->GetPositionZ(),
                     chain.spec.logName);
-            player->RemoveAurasDueToSpell(SPELL_IB_READ);
+            player->RemoveAurasDueToSpell(SPELL_IB_READ, owner ? owner->GetGUID() : ObjectGuid::Empty);
         }
         DungeonKit::LogMechanic(kLogDungeon, chain.spec.logName, "foresight-end",
             Acore::StringFormat("player={} placed={}/{} reason={}",
@@ -373,7 +383,7 @@ public:
         _timeline = Timeline{};
         _engaged = false;
         if (me)
-            RemoveAurasFromMapPlayers(me->GetMap(), { uint32(SPELL_IB_READ), uint32(SPELL_IB_FEAR) });
+            RemoveAurasFromMapPlayers(me, { uint32(SPELL_IB_READ), uint32(SPELL_IB_FEAR) });
     }
 
     // IB1: `forced` empty picks the build spec's reads; `markers` 0 and `trail` empty use the difficulty's.
@@ -401,11 +411,15 @@ public:
         uint8 const count = markers ? markers : kForesightMarkers(heroic);
 
         DungeonKit::CastBar(me, SPELL_IB_FORESIGHT_CAST);
-        Talk(me, YELL_ILLUCIA_FORESIGHT, reads.front());
+        std::vector<Player*> started;
         std::string names;
         for (Player* player : reads)
             if (_chains.Start(me, player, kForesightCastMs, count, spec))
+            {
+                started.push_back(player);
                 names += (names.empty() ? "" : ",") + player->GetName();
+            }
+        YellReads(me, started.empty() ? reads : started);
         DungeonKit::LogMechanic(kLogDungeon, spec.logName, "foresight",
             Acore::StringFormat("reads={} markers={} heroic={}", names, count, heroic ? 1 : 0));
         return true;
@@ -421,6 +435,7 @@ public:
             rule.nonTank = true;
             rule.tankIfAlone = false;       // SC IB3: never the tank
             rule.maxRange = kFearRange;
+            rule.requireLos = true;         // a pillar or the inner room's neck would fail the cast
             DungeonKit::ExcludeGuids(rule, _chains.ReadGuids());
             target = DungeonKit::PickPlayer(me, rule);
         }
@@ -429,11 +444,17 @@ public:
             _timeline.Retry(Beat::Fear);
             return false;
         }
-        _timeline.Done(Beat::Fear, kFearEveryMs);
         SpellCastResult const result = me->CastSpell(target, SPELL_IB_FEAR, false);
-        Mechanic::NoteNextCastIn(me, SPELL_IB_FEAR, Milliseconds(kFearEveryMs));
+        // A failed cast tries again soon; a silence is the counterplay and costs her the Fear.
+        if (result == SPELL_CAST_OK || result == SPELL_FAILED_SILENCED)
+            _timeline.Done(Beat::Fear, kFearEveryMs);
+        else
+            _timeline.Retry(Beat::Fear);
         if (result == SPELL_CAST_OK)
+        {
+            Mechanic::NoteNextCastIn(me, SPELL_IB_FEAR, Milliseconds(kFearEveryMs));
             Talk(me, EMOTE_ILLUCIA_FEAR, target);
+        }
         DungeonKit::LogMechanic(kLogDungeon, _examiner ? kExaminerLogName : kBossLogName, "fear-cast",
             Acore::StringFormat("target={} result={}", target->GetName(), uint32(result)));
         return result == SPELL_CAST_OK;
@@ -459,22 +480,28 @@ private:
             _timeline.Retry(Beat::ShadowShock);
             return;
         }
-        _timeline.Done(Beat::ShadowShock, kShadowShockEveryMs);
-        me->CastSpell(victim, SPELL_SHADOW_SHOCK, false);
+        if (me->CastSpell(victim, SPELL_SHADOW_SHOCK, false) == SPELL_CAST_OK)
+            _timeline.Done(Beat::ShadowShock, kShadowShockEveryMs);
+        else
+            _timeline.Retry(Beat::ShadowShock);
     }
 
     void Curse(Creature* me)
     {
         DungeonKit::PickRule rule;
         rule.nonTank = false;
+        rule.maxRange = kCurseRange;
+        rule.requireLos = true;
         Player* target = DungeonKit::PickPlayer(me, rule);
         if (!target)
         {
             _timeline.Retry(Beat::Curse);
             return;
         }
-        _timeline.Done(Beat::Curse, urand(kCurseEveryMinMs, kCurseEveryMaxMs));
-        me->CastSpell(target, SPELL_CURSE_OF_AGONY, false);
+        if (me->CastSpell(target, SPELL_CURSE_OF_AGONY, false) == SPELL_CAST_OK)
+            _timeline.Done(Beat::Curse, urand(kCurseEveryMinMs, kCurseEveryMaxMs));
+        else
+            _timeline.Retry(Beat::Curse);
     }
 
     // Boss data (build spec): no target priority; interrupt the Fear; dispel the Fear (Magic, a loss of control) and
@@ -493,6 +520,19 @@ private:
     {
         if (!_examiner && me->IsAIEnabled && me->AI())
             me->AI()->Talk(group, target);
+    }
+
+    // IB1's yell names the read player (line 1, "I know where you will go, $n."); with two reads (heroic) both are
+    // named, in the same words (creature_text's $n takes one target).
+    void YellReads(Creature* me, std::vector<Player*> const& reads)
+    {
+        if (_examiner || reads.empty())
+            return;
+        if (reads.size() == 1)
+            Talk(me, YELL_ILLUCIA_FORESIGHT, reads.front());
+        else
+            me->Yell(Acore::StringFormat("I know where you will go, {} and {}.", reads[0]->GetName(),
+                reads[1]->GetName()), LANG_UNIVERSAL);
     }
 
     ForesightChains _chains;
@@ -646,6 +686,13 @@ struct boss_lady_illucia_barov_rework : public BossAI
     IlluciaFight& Fight() { return _fight; }
     Creature* Me() const { return me; }
 
+    // IB3: the feared player keeps the Passing Grade through their own end marker (they could not dodge it; F-B
+    // ruling 2026-11-08). Everyone else it hits still fails.
+    void ExemptFearEnd(MechanicHandle marker, ObjectGuid feared)
+    {
+        _grades.Exempt(marker, feared);
+    }
+
     // The Shadow Vault lesson on `student`, owned by a temporary trigger the GM summons; this AI ticks it.
     bool TestLesson(Creature* owner, Player* student, bool heroic)
     {
@@ -756,8 +803,8 @@ private:
 
 // IB3 Fear 206319: a 2 s Magic fear whose run is scripted: straight away from the caster, at the player's run speed,
 // stopped at the first wall (a point move in the controlled slot, in place of the random flee). A 4 yd marker owned by
-// the caster's encounter lands at the run's end as the fear ends (15% / 50%; heroic values for the examiner). A
-// dispel ends the run where the player stands.
+// the caster's encounter lands at the run's end as the fear ends (15% / 50%; heroic values for the examiner); it never
+// costs the feared player the Passing Grade. A dispel ends the run where the player stands.
 class spell_scholo_illucia_fear : public AuraScript
 {
     PrepareAuraScript(spell_scholo_illucia_fear);
@@ -777,8 +824,16 @@ class spell_scholo_illucia_fear : public AuraScript
         MotionMaster* motion = target->GetMotionMaster();
         bool const running = motion->GetMotionSlotType(MOTION_SLOT_CONTROLLED) == FLEEING_MOTION_TYPE;
         if (running)
+        {
             motion->MovePoint(kPointFearRun, end.GetPositionX(), end.GetPositionY(), end.GetPositionZ(),
                 FORCED_MOVEMENT_NONE, 0.f, bearing, true, true, MOTION_SLOT_CONTROLLED);
+            // The flee generator's finalize lifted the fear's loss of control (the flag blocks casting, the state
+            // gates bots and the client): the run keeps both until the fear ends (AfterRemove).
+            target->SetUnitFlag(UNIT_FLAG_FLEEING);
+            target->AddUnitState(UNIT_STATE_FLEEING);
+            _scripted = true;
+            _runEnd = end;
+        }
 
         Creature* owner = caster->ToCreature();
         if (!owner || !owner->IsAlive())
@@ -786,27 +841,62 @@ class spell_scholo_illucia_fear : public AuraScript
         bool const heroic = HeroicValues(DungeonKit::IsHeroicMap(owner), IsExaminer(owner));
         MechanicRef ref = Mechanic::Circle(owner, end, kFearRadius, Milliseconds(kFearMs));
         ref.Damage(kFearEndPct(heroic)).Spell(SPELL_IB_FEAR_END).Tag(TAG_FEAR_END);
+        if (ref.IsValid() && owner->IsAIEnabled)
+            if (auto* ai = dynamic_cast<boss_lady_illucia_barov_rework*>(owner->AI()))
+                ai->ExemptFearEnd(ref.Handle(), target->GetGUID());
         DungeonKit::LogMechanic(kLogDungeon, IsExaminer(owner) ? kExaminerLogName : kBossLogName, "fear",
             Acore::StringFormat("target={} run={:.1f}yd scripted={} end=({:.1f}, {:.1f}) pct={:.0f}",
                 target->GetName(), target->GetExactDist2d(&end), running ? 1 : 0, end.GetPositionX(),
                 end.GetPositionY(), kFearEndPct(heroic)));
     }
 
-    // Unit::SetFeared(false) only stops a flee generator: a dispel (or the end) stops the scripted run too.
+    // Unit::SetFeared(false) has already given control back (it only stops a flee generator): stop the scripted run
+    // (only this aura's own, never a charge or another point move that holds the slot now) and lift the loss of
+    // control this script kept, unless another fear holds the player.
     void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         Unit* target = GetTarget();
-        if (!target || !target->IsAlive())
+        if (!target || !_scripted)
             return;
+        _scripted = false;
         MotionMaster* motion = target->GetMotionMaster();
-        if (motion->GetMotionSlotType(MOTION_SLOT_CONTROLLED) == POINT_MOTION_TYPE)
+        if (target->IsAlive() && OwnRunHoldsSlot(target))
         {
             motion->MovementExpired();
             target->StopMoving();
         }
+        if (!target->HasAuraType(SPELL_AURA_MOD_FEAR))
+        {
+            target->RemoveUnitFlag(UNIT_FLAG_FLEEING);
+            target->ClearUnitState(UNIT_STATE_FLEEING);
+        }
+        else if (target->IsAlive() && !target->HasUnitState(UNIT_STATE_STUNNED | UNIT_STATE_CONFUSED)
+            && motion->GetMotionSlotType(MOTION_SLOT_CONTROLLED) == NULL_MOTION_TYPE)
+        {
+            // Another fear still holds them: its random flee takes over where the run stopped.
+            Unit* source = ObjectAccessor::GetUnit(*target,
+                target->GetAuraEffectsByType(SPELL_AURA_MOD_FEAR).front()->GetCasterGUID());
+            motion->MoveFleeing(source ? source : target->getAttackerForHelper(), 0);
+        }
         if (GetTargetApplication() && GetTargetApplication()->GetRemoveMode() == AURA_REMOVE_BY_ENEMY_SPELL)
-            DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "fear-dispelled",
-                Acore::StringFormat("target={}", target->GetName()));
+            DungeonKit::LogMechanic(kLogDungeon, GetCasterGUID().GetEntry() == NPC_SC_EXAMINER_ILLUCIA
+                ? kExaminerLogName : kBossLogName, "fear-dispelled", Acore::StringFormat("target={}",
+                target->GetName()));
+    }
+
+    // The controlled slot still holds this aura's point move (its destination is the run's end).
+    bool OwnRunHoldsSlot(Unit* target) const
+    {
+        MotionMaster* motion = target->GetMotionMaster();
+        if (!target->IsPlayer() || motion->GetMotionSlotType(MOTION_SLOT_CONTROLLED) != POINT_MOTION_TYPE)
+            return false;
+        auto const* point = dynamic_cast<PointMovementGenerator<Player> const*>(
+            motion->GetMotionSlot(MOTION_SLOT_CONTROLLED));
+        float x = 0.f;
+        float y = 0.f;
+        float z = 0.f;
+        return point && point->GetDestination(x, y, z) && std::fabs(x - _runEnd.GetPositionX()) < 0.1f
+            && std::fabs(y - _runEnd.GetPositionY()) < 0.1f;
     }
 
     void Register() override
@@ -816,6 +906,9 @@ class spell_scholo_illucia_fear : public AuraScript
         AfterEffectRemove += AuraEffectRemoveFn(spell_scholo_illucia_fear::AfterRemove, EFFECT_0, SPELL_AURA_MOD_FEAR,
             AURA_EFFECT_HANDLE_REAL);
     }
+
+    bool _scripted = false;
+    Position _runEnd;
 };
 
 // ---- The Shadow Vault's solo lesson (S11's detention; handoff section 3.7, SC 2960-2971) ----------------------------

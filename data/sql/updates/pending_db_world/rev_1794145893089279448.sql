@@ -13,7 +13,8 @@ DELETE FROM `smart_scripts` WHERE `entryorguid` = 10901 AND `source_type` = 0;
 -- His lines (SC "Text"; he has none stock): the raise is a boss emote (41), so it names the mechanic on screen; the
 -- aggro and death lines are yells.
 DELETE FROM `creature_text` WHERE `CreatureID` = 10901;
-INSERT INTO `creature_text` (`CreatureID`, `GroupID`, `ID`, `Text`, `Type`, `Language`, `Probability`, `Emote`, `Duration`, `Sound`, `BroadcastTextId`, `TextRange`, `comment`) VALUES
+INSERT INTO `creature_text` (`CreatureID`, `GroupID`, `ID`, `Text`, `Type`, `Language`, `Probability`, `Emote`,
+    `Duration`, `Sound`, `BroadcastTextId`, `TextRange`, `comment`) VALUES
 (10901, 0, 0, '%s raises fresh specimens!', 41, 0, 100, 0, 0, 0, 0, 0, 'Lorekeeper Polkelt - Raise Specimens (PK1)'),
 (10901, 1, 0, 'The formulae demand fresh samples.', 14, 0, 100, 0, 0, 0, 0, 0, 'Lorekeeper Polkelt - aggro'),
 (10901, 2, 0, 'The reaction... was... unstable...', 14, 0, 100, 0, 0, 0, 0, 0, 'Lorekeeper Polkelt - death');

@@ -32,14 +32,14 @@
  *
  * The same operation runs the detention lesson of the Hall of the Damned (HallOfTheDamnedLesson, SC 2966): the bench
  * operates itself (its own saw window aura, three cuts), the student interrupts with the same button. The hard mode
- * examiner (S13) runs this fight on a ScriptedAI (npc_sc_examiner_krastinov, RegisterKrastinovExaminer) at heroic
- * values.
+ * examiner (S13) runs this fight on a ScriptedAI (npc_sc_examiner_krastinov, registered once wave C binds:
+ * kWaveCBound) at heroic values.
  *
  * Every timer runs on the AI's own clock, never on BossAI's scheduler (a cast bar pauses that one). Every firing logs
  * one INFO line "scholo krastinov <mechanic> ..." (module.dungeonbosses).
  *
- * Kit helper #8 (handoff section 3.2): SeatInVehicle / EjectAll live here (KrastinovSeat) until the kit takes them
- * (WP-S6 report, shared-file requests).
+ * The seat and every eject are the kit's (DungeonKit::SeatInVehicle / EjectAll, kit helper #8); the bench's own AI is
+ * the dead-man switch (DungeonKit::ReleaseOrphanedVehicle) when the operation that owns it is gone.
  */
 
 #include "ArenaGuard.h"
@@ -54,6 +54,7 @@
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "PassiveAI.h"
+#include "Pet.h"
 #include "Player.h"
 #include "Random.h"
 #include "ScholomanceKit.h"
@@ -82,41 +83,6 @@ using namespace ScholomanceRework;
 using namespace ScholoKrastinov;
 using DungeonKit::IsHeroicMap;
 
-// ---------------------------------------------------------------------------------------------------------------------
-// Kit helper #8 (handoff section 3.2): a seat in a scripted vehicle and the guaranteed eject. To move into the kit
-// (DungeonKit::SeatInVehicle / EjectAll) as asked in the WP-S6 report.
-// ---------------------------------------------------------------------------------------------------------------------
-namespace KrastinovSeat
-{
-    // Puts `player` into `vehicle`'s seat `seat` (the Kologarn / Ignis way: Unit::EnterVehicle, the hardcoded ride
-    // aura). False when the player cannot ride now (dead, teleporting, on a taxi, the seat taken or missing) or the
-    // ride was refused (a stun or other caster state the ride spell checks). A player already on another vehicle is
-    // taken off it first.
-    bool SeatInVehicle(Player* player, Creature* vehicle, int8 seat)
-    {
-        if (!player || !vehicle || !player->IsAlive() || !vehicle->IsAlive() || !player->IsInWorld()
-            || player->IsBeingTeleported() || player->IsInFlight())
-            return false;
-        Vehicle* kit = vehicle->GetVehicleKit();
-        if (!kit || !kit->HasEmptySeat(seat))
-            return false;
-        if (player->GetVehicle())
-            player->ExitVehicle();
-        player->EnterVehicle(vehicle, seat);
-        return player->GetVehicleBase() == vehicle;
-    }
-
-    // Every passenger off `vehicle` now. Call it on every path out: the mechanic's end, evade, death, despawn, wipe.
-    // (A despawn also ejects through Vehicle::Uninstall; this makes the order explicit.)
-    void EjectAll(Creature* vehicle)
-    {
-        if (!vehicle)
-            return;
-        if (Vehicle* kit = vehicle->GetVehicleKit())
-            kit->RemoveAllPassengers();
-    }
-}
-
 namespace
 {
     char const* const kLogBoss = "krastinov";
@@ -124,7 +90,7 @@ namespace
     char const* const kLogLesson = "krastinov-lesson";
 
     uint32 constexpr POINT_OPERATE = 1;
-    uint32 constexpr kSeatGiveUpMs = 3000;      // a seat refused this long after it was due: the operation is off
+    uint32 constexpr kBenchWatchMs = 500;       // the bench's dead-man switch poll
 
     float Rand01()
     {
@@ -217,6 +183,7 @@ public:
         _heroic = heroic;
         _logBoss = logBoss;
         _endHandled = false;
+        _seatRefused = false;
         _op.Start(rules);
         Log("operation-begin", Acore::StringFormat("mode={} heroic={} patient={} escape={} succeed={} maxCuts={}",
             mode == Mode::Boss ? "boss" : "lesson", heroic ? 1 : 0, patient ? patient->GetName() : "none",
@@ -264,7 +231,7 @@ public:
                 tick.ended = true;
                 return tick;
             }
-            if (KrastinovSeat::SeatInVehicle(patient, bench, kBenchSeat))
+            if (DungeonKit::SeatInVehicle(patient, bench, kBenchSeat))
             {
                 _op.Seated();
                 tick.seated = true;
@@ -276,6 +243,7 @@ public:
             }
             else if (_op.ElapsedMs() >= _op.Rules().seatDelayMs + kSeatGiveUpMs)
             {
+                _seatRefused = true;
                 Abort("the seat was refused");
                 tick.ended = true;
                 return tick;
@@ -353,6 +321,10 @@ public:
     }
 
     bool Active() const { return _op.Active(); }
+    // The patient could not be seated (kSeatGiveUpMs after it was due): the boss picks someone else, the lesson fails.
+    bool SeatRefused() const { return _seatRefused; }
+    // The end (the eject) has run.
+    bool EndHandled() const { return _endHandled; }
     Operation const& State() const { return _op; }
     ObjectGuid PatientGuid() const { return _patient; }
     ObjectGuid BenchGuid() const { return _bench; }
@@ -440,7 +412,10 @@ private:
         Player* patient = Patient();
         if (bench)
             bench->RemoveAurasDueToSpell(SPELL_KR_STRAPPED_DOWN);
-        KrastinovSeat::EjectAll(bench);
+        DungeonKit::EjectAll(bench);
+        // The patient held a control seat (the root stops moving, not turning): the bench faces the hall again.
+        if (bench && bench->IsAlive())
+            bench->SetFacingTo(kWorkBenchGo.o);
 
         OpOutcome const outcome = _op.Outcome();
         Creature* surgeon = Operator();
@@ -468,6 +443,7 @@ private:
     ObjectGuid _hitCaster;
     bool _heroic = false;
     bool _endHandled = false;
+    bool _seatRefused = false;
     char const* _logBoss = kLogBoss;
     Operation _op;
 };
@@ -475,6 +451,11 @@ private:
 // The Work Bench (300538): the vehicle. Never fights, never evades, stays itself while charmed (NullCreatureAI: the
 // default CreatureAI::OnCharmed would swap in a PossessedAI and engage its last charmer). Holds the running operation
 // for Wrench Free and the claws.
+//
+// The dead-man switch (R-B K-1): the seat has no exit of its own, so only the server frees the patient. Every 500 ms:
+// someone aboard while no running operation owns the bench (the fight or the lesson that held it went away without
+// its cleanup: a GM despawn, a dropped lesson) ejects them and despawns the bench; an empty bench whose summoner left
+// the map despawns too.
 struct npc_sc_work_bench : public NullCreatureAI
 {
     explicit npc_sc_work_bench(Creature* creature) : NullCreatureAI(creature) { }
@@ -482,8 +463,32 @@ struct npc_sc_work_bench : public NullCreatureAI
     void Bind(std::shared_ptr<BenchOperation> const& op) { _op = op; }
     std::shared_ptr<BenchOperation> Op() const { return _op.lock(); }
 
+    void UpdateAI(uint32 diff) override
+    {
+        _watchMs += diff;
+        if (_watchMs < kBenchWatchMs)
+            return;
+        _watchMs = 0;
+        std::shared_ptr<BenchOperation> const op = _op.lock();
+        // An operation that ended inside the bench's own spell (the escape) is ejected by its driver's next tick: only
+        // a gone one, or one whose end already ran, leaves the passenger to this switch.
+        if (DungeonKit::ReleaseOrphanedVehicle(me, !op || op->EndHandled()))
+        {
+            DungeonKit::LogMechanic(kLogDungeon, kLogBoss, "bench-orphaned", "passenger ejected, bench despawned");
+            return;
+        }
+        TempSummon* summon = me->ToTempSummon();
+        Unit* summoner = summon ? summon->GetSummonerUnit() : nullptr;
+        if (!op && (!summoner || !summoner->IsInWorld()))
+        {
+            DungeonKit::LogMechanic(kLogDungeon, kLogBoss, "bench-orphaned", "summoner gone, bench despawned");
+            me->DespawnOrUnsummon();
+        }
+    }
+
 private:
     std::weak_ptr<BenchOperation> _op;
+    uint32 _watchMs = 0;
 };
 
 namespace
@@ -509,16 +514,18 @@ namespace
     {
         if (Creature* bench = map && !guid.IsEmpty() ? map->GetCreature(guid) : nullptr)
         {
-            KrastinovSeat::EjectAll(bench);
+            DungeonKit::EjectAll(bench);
             bench->DespawnOrUnsummon();
         }
         guid.Clear();
     }
 }
 
-// The Failed Patient (300539), KR7: a past patient. Normal: attacks the player it is sent at, tauntable. Heroic (The
+// The Failed Patient (300539), KR7: a past patient. Normal: engaged on the player it is sent at, tauntable. Heroic (The
 // Waiting Room Wants In): fixated on the patient on the bench, not tauntable, and at the bench each one claws back an
-// interrupt every 3 s; once the operation ends it turns on a random player. Melee with a light bleed.
+// interrupt every 3 s unless crowd-controlled; once the operation ends it turns on a random player. Melee with a light
+// bleed. Its pace (about 6 s to the bench) is its template's speed_run: the chase runs. Despawns when its summoner is
+// gone.
 struct npc_sc_failed_patient : public ScriptedAI
 {
     explicit npc_sc_failed_patient(Creature* creature) : ScriptedAI(creature) { }
@@ -530,7 +537,6 @@ struct npc_sc_failed_patient : public ScriptedAI
         _bench = bench;
         _fixated = fixate;
         _claws.Reset();
-        me->SetWalk(true);      // they shamble: about 6 s from the alcove to the bench
         _bleedMs = InRange(kInfectedClawsEveryMinMs, kInfectedClawsEveryMaxMs, Rand01()) / 2;
         if (fixate)
         {
@@ -540,7 +546,11 @@ struct npc_sc_failed_patient : public ScriptedAI
                 Fixate(p);
         }
         else if (target)
+        {
+            // Unit::Attack adds no threat, and UpdateVictim ends a fight that has none: engage first.
+            me->EngageWithTarget(target);
             AttackStart(target);
+        }
     }
 
     // The operation ended: survivors turn on a random player, as on normal (tauntable again).
@@ -574,6 +584,19 @@ struct npc_sc_failed_patient : public ScriptedAI
 
     void UpdateAI(uint32 diff) override
     {
+        _ownerCheckMs += diff;
+        if (_ownerCheckMs >= kFailedPatientOwnerCheckMs)
+        {
+            _ownerCheckMs = 0;
+            TempSummon* summon = me->ToTempSummon();
+            Unit* summoner = summon ? summon->GetSummonerUnit() : nullptr;
+            if (!summoner || !summoner->IsAlive())
+            {
+                me->DespawnOrUnsummon();
+                return;
+            }
+        }
+
         if (_fixated)
         {
             Player* patient = Patient();
@@ -584,7 +607,7 @@ struct npc_sc_failed_patient : public ScriptedAI
                 if (me->GetVictim() != patient)
                     Fixate(patient);
                 bool const atBench = me->GetExactDist2d(bench) <= kClawReach;
-                uint32 const claws = _claws.Update(diff, atBench);
+                uint32 const claws = _claws.Update(diff, ClawsWork(atBench, CrowdControlled()));
                 if (claws)
                     if (npc_sc_work_bench* ai = BenchAI(bench))
                         if (std::shared_ptr<BenchOperation> op = ai->Op())
@@ -610,6 +633,13 @@ private:
     Player* Patient() const { return ObjectAccessor::GetPlayer(me->GetMap(), _patient); }
     Creature* Bench() const { return me->GetMap()->GetCreature(_bench); }
 
+    // KR7: stunned (Shackle Undead too), incapacitated (polymorph), feared or pacified: no claws.
+    bool CrowdControlled() const
+    {
+        return me->HasUnitState(UNIT_STATE_STUNNED | UNIT_STATE_CONFUSED | UNIT_STATE_FLEEING)
+            || me->HasAuraType(SPELL_AURA_MOD_PACIFY) || me->HasAuraType(SPELL_AURA_MOD_PACIFY_SILENCE);
+    }
+
     void Fixate(Player* patient)
     {
         me->EngageWithTarget(patient);
@@ -622,6 +652,7 @@ private:
     bool _fixated = false;
     ClawTicker _claws;
     uint32 _bleedMs = 0;
+    uint32 _ownerCheckMs = 0;
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -677,19 +708,32 @@ public:
         {
             if (StartOperation(nullptr, Heroic()))
                 return false;
-            _nextOperationMs = _clockMs + kOperationMinGapMs;     // nobody to operate on: try again shortly
+            if (_repick)
+            {
+                // Nobody left to re-pick after a refused seat: the slot is spent, the next one comes on time.
+                _nextOperationMs = NextOperationAt(_opStartMs, _clockMs);
+                _repick = false;
+                _refused.clear();
+            }
+            else
+                _nextOperationMs = _clockMs + kOperationMinGapMs;     // nobody to operate on: try again shortly
         }
 
         Unit* victim = _me->GetVictim();
         if (BackhandMayStart(_clockMs, _nextBackhandMs, false, _nextOperationMs) && victim)
         {
             // Not triggered: the 2 s bar shows. Base point 0 is the percent of the tank row
-            // (spell_sc_krastinov_ref_hit).
-            _me->CastCustomSpell(SPELL_KR_BACKHAND, SPELLVALUE_BASE_POINT0,
+            // (spell_sc_krastinov_ref_hit). The timer moves on only for a cast that started (R-A S-8).
+            SpellCastResult const result = _me->CastCustomSpell(SPELL_KR_BACKHAND, SPELLVALUE_BASE_POINT0,
                 static_cast<int32>(kBackhandPct(Heroic())), victim, TRIGGERED_NONE);
-            _nextBackhandMs = _clockMs + kBackhandEveryMs;
-            Log("backhand", Acore::StringFormat("{} pct={}", victim->GetName(), kBackhandPct(Heroic())));
-            return false;
+            if (result == SPELL_CAST_OK)
+            {
+                _nextBackhandMs = _clockMs + kBackhandEveryMs;
+                Log("backhand", Acore::StringFormat("{} pct={}", victim->GetName(), kBackhandPct(Heroic())));
+                return false;
+            }
+            _nextBackhandMs = _clockMs + kBackhandRetryMs;
+            Log("backhand-refused", Acore::StringFormat("{} result={}", victim->GetName(), int(result)));
         }
         if (_clockMs >= _nextRendMs && victim && _me->IsWithinMeleeRange(victim))
         {
@@ -727,6 +771,12 @@ public:
                 p->RemoveAurasDueToSpell(SPELL_KR_STITCHED_WOUND);
                 p->RemoveAurasDueToSpell(SPELL_KR_BUTCHERS_REND);
                 p->RemoveAurasDueToSpell(SPELL_KR_INFECTED_CLAWS);
+                // A pet tank keeps no bleed past the fight either.
+                if (Pet* pet = p->GetPet())
+                {
+                    pet->RemoveAurasDueToSpell(SPELL_KR_BUTCHERS_REND);
+                    pet->RemoveAurasDueToSpell(SPELL_KR_INFECTED_CLAWS);
+                }
             }
         _me->RemoveAurasDueToSpell(SPELL_KR_KILLING_FRENZY);
         _me->RemoveAurasDueToSpell(SPELL_KR_GRAFTED_EYES);
@@ -735,6 +785,8 @@ public:
         _eyes = false;
         _walking = false;
         _opStartMs = 0;
+        _repick = false;
+        _refused.clear();
         if (_me->IsAlive() && _me->HasReactState(REACT_PASSIVE))
             _me->SetReactState(REACT_AGGRESSIVE);
     }
@@ -761,7 +813,8 @@ public:
             return false;
         }
         _opHeroic = heroic;
-        _opStartMs = _clockMs;
+        if (!_repick)
+            _opStartMs = _clockMs;      // a re-pick keeps its slot's start (the next one comes on time)
         _walking = false;
         _patientsOut = false;
         _me->InterruptNonMeleeSpells(false);
@@ -798,8 +851,13 @@ public:
                 continue;
             _patients.push_back(ghoul->GetGUID());
             if (auto* ai = dynamic_cast<npc_sc_failed_patient*>(ghoul->AI()))
-                ai->Configure(patient ? patient->GetGUID() : ObjectGuid::Empty, _bench, heroic && patient,
-                    RandomPlayer(players, patient ? patient->GetGUID() : ObjectGuid::Empty));
+            {
+                // Normal: a random player off the bench; nobody else on the arena: the patient.
+                Unit* target = RandomPlayer(players, patient ? patient->GetGUID() : ObjectGuid::Empty);
+                if (!target)
+                    target = patient;
+                ai->Configure(patient ? patient->GetGUID() : ObjectGuid::Empty, _bench, heroic && patient, target);
+            }
         }
         Log("failed-patients", Acore::StringFormat("count={} heroic={} fixated={}", count, heroic ? 1 : 0,
             heroic && patient ? 1 : 0));
@@ -887,7 +945,8 @@ private:
             c.isVictim = _me->GetVictim() == p;
             c.tankSpec = p->HasTankSpec();
             c.healSpec = p->HasHealSpec();
-            c.unavailable = p->GetVehicle() || p->IsBeingTeleported() || p->IsInFlight();
+            c.unavailable = p->GetVehicle() || p->IsBeingTeleported() || p->IsInFlight()
+                || std::find(_refused.begin(), _refused.end(), p->GetGUID()) != _refused.end();
             candidates.push_back(c);
         }
         std::optional<uint64> const id = PickPatient(candidates, heroic, Rand01());
@@ -936,6 +995,19 @@ private:
         std::shared_ptr<BenchOperation> const op = _op;
         _op.reset();
         OpOutcome const outcome = op->State().Outcome();
+        // A refused seat (R-B K-3): no penalty for the group, and he picks another patient at once.
+        bool const refused = op->SeatRefused();
+        if (refused)
+        {
+            _refused.push_back(op->PatientGuid());
+            _repick = true;
+            Log("operation-repick", Acore::StringFormat("refused={}", _refused.size()));
+        }
+        else
+        {
+            _repick = false;
+            _refused.clear();
+        }
         if (outcome == OpOutcome::Success && _me->IsAlive())
         {
             Say(YELL_KRASTINOV_SUCCESS);
@@ -948,7 +1020,7 @@ private:
                 if (auto* ai = dynamic_cast<npc_sc_failed_patient*>(ghoul->AI()))
                     if (ai->Fixated())
                         ai->Release(RandomPlayer(players, ObjectGuid::Empty));
-        _nextOperationMs = NextOperationAt(_opStartMs, _clockMs);
+        _nextOperationMs = refused ? _clockMs : NextOperationAt(_opStartMs, _clockMs);
         _nextBackhandMs = std::max<uint64>(_nextBackhandMs, _clockMs + kBackhandAfterOperationMs);
         _walking = false;
         if (!_me->IsAlive())
@@ -974,6 +1046,8 @@ private:
     bool _walking = false;
     bool _patientsOut = false;
     bool _opHeroic = false;
+    bool _repick = false;                   // the last operation's seat was refused: the next pick is now
+    std::vector<ObjectGuid> _refused;       // refused this slot: not picked again in it
 };
 
 namespace
@@ -1056,6 +1130,7 @@ struct boss_doctor_theolen_krastinov_rework : public BossAI
 
     void JustDied(Unit* killer) override
     {
+        AbortTestLesson();
         _fight.Cleanup();
         Talk(YELL_KRASTINOV_DEATH);
         _grades.AwardAtDeath(me);
@@ -1124,7 +1199,7 @@ private:
     bool _oocEmoteDone = false;
 };
 
-// The Graduate Examiner Krastinov (S13's 300549; S13 binds it with RegisterKrastinovExaminer and its own template):
+// The Graduate Examiner Krastinov (S13's 300549, ScriptName npc_sc_examiner_krastinov; registered once wave C binds):
 // the same fight at heroic values, on no boss state (the instructor is already dead), no grades, no texts of the boss.
 struct npc_sc_examiner_krastinov : public ScriptedAI
 {
@@ -1237,10 +1312,19 @@ protected:
         BenchOperation::Tick const tick = op->Update(diff);
         for (uint32 i = 0; i < tick.landed; ++i)
             FailStudent();
-        // The three cuts are resolved: the lesson ends with its verdict. An aborted operation (the seat refused)
-        // leaves the lesson to its clock (a safety end comes from the base when the student died or left).
+        // The three cuts are resolved: the lesson ends with its verdict.
         if (!op->Active() && op->State().Outcome() == OpOutcome::Finished)
             FinishEarly();
+        // A student the bench could not seat fails the lesson (R-B K-3: never a free pass). No hits: no cut came down.
+        // Any other abort leaves the lesson to its clock (a safety end comes from the base when the student died or
+        // left).
+        else if (!op->Active() && op->SeatRefused() && !_refusalCounted)
+        {
+            _refusalCounted = true;
+            for (uint32 i = 0; i < RefusedSeatFailures(Heroic()); ++i)
+                FailStudent();
+            FinishEarly();
+        }
     }
 
     void OnEnd(LessonEnd /*why*/, Creature* /*owner*/) override
@@ -1254,6 +1338,7 @@ private:
     std::shared_ptr<BenchOperation> _op;
     ObjectGuid _bench;
     Map* _map = nullptr;
+    bool _refusalCounted = false;
 };
 
 std::string boss_doctor_theolen_krastinov_rework::StartTestLesson(Player* student, bool heroic)
@@ -1551,13 +1636,6 @@ namespace
     }
 }
 
-// S13 (the Graduate Exam): binds the examiner AI under `npc_sc_examiner_krastinov` (call once, from its AddSC_, with
-// creature_template 300549 bound to that ScriptName). Not registered here, so a wave B boot logs no unassigned name.
-void RegisterKrastinovExaminer()
-{
-    RegisterDungeonReworkCreatureAI(npc_sc_examiner_krastinov, ScholomanceRework::kInstanceScriptName);
-}
-
 void AddSC_boss_doctor_theolen_krastinov_rework()
 {
     RegisterDungeonReworkCreatureAI(boss_doctor_theolen_krastinov_rework, ScholomanceRework::kInstanceScriptName);
@@ -1569,4 +1647,8 @@ void AddSC_boss_doctor_theolen_krastinov_rework()
     ScholomanceRework::RegisterSoloLesson(Classroom::HallOfTheDamned,
         [] { return std::unique_ptr<SoloLesson>(new HallOfTheDamnedLesson()); });
     ScholoTest::RegisterBoss("krastinov", KrastinovTestCommands());
+    // The Graduate Exam's examiner (S13 binds creature_template 300549 to this name): registered only once wave C
+    // binds, so a wave B boot names no unassigned script.
+    if (kWaveCBound)
+        RegisterDungeonReworkCreatureAI(npc_sc_examiner_krastinov, ScholomanceRework::kInstanceScriptName);
 }

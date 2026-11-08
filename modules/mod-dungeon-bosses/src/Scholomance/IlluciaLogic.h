@@ -1,13 +1,13 @@
 /*
  * mod-dungeon-bosses, Scholomance S10: Lady Illucia Barov (10502), the pure, host-testable part (no engine headers):
  * the spell ids, the per-difficulty tuning, the never-paused fight timeline, the Foresight chain schedule, the motion
- * track that predicts where a read player will be, the Memory trail recorder and the Fear's run. Build spec: SC
- * 2695-2741 (build spec), SC 2548-2694 (design: pitch A "Foresight", round 4 and the side questions), IB1-IB5; handoff
- * section 3.4 rows IB, section 3.5 row S10, section 3.6 (normal 160k, heroic 250k, examiner 80k), section 3.7 (the
- * Shadow Vault's solo lesson), section 3.8 (the fight belongs in the hall, section 7 #14).
+ * track's sampling, the Memory trail's tuning and the Fear's run. Build spec: SC 2695-2741 (build spec), SC 2548-2694
+ * (design: pitch A "Foresight", round 4 and the side questions), IB1-IB5; handoff section 3.4 rows IB, section 3.5 row
+ * S10, section 3.6 (normal 160k, heroic 250k, examiner 80k), section 3.7 (the Shadow Vault's solo lesson), section 3.8
+ * (the fight belongs in the hall, section 7 #14).
  *
  * MotionTrack / PredictSpot (handoff section 3.2 kit #5, MotionSampler) and TrailRecorder (kit #6) are generic: they
- * live here until the orchestrator moves them into the shared kit (DungeonKitLogic.h; STAGE-S10 report).
+ * live in the shared kit (DungeonKitLogic.h, moved by F-B4); this file names Illucia's tuning for them.
  *
  * Damage percentages are of the reference health row (normal 3,670 / heroic 4,120 non-tank at level 60).
  */
@@ -15,6 +15,7 @@
 #ifndef MOD_DUNGEON_BOSSES_SCHOLOMANCE_ILLUCIA_LOGIC_H
 #define MOD_DUNGEON_BOSSES_SCHOLOMANCE_ILLUCIA_LOGIC_H
 
+#include "DungeonKitLogic.h"
 #include "DungeonKitMath.h"
 #include "ScholomanceRework.h"
 #include "SoloLessonLogic.h"
@@ -23,9 +24,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <deque>
-#include <optional>
-#include <vector>
 
 namespace ScholoIllucia
 {
@@ -116,7 +114,9 @@ namespace ScholoIllucia
     std::uint32_t constexpr kShadowShockFirstMinMs = 1000;
     std::uint32_t constexpr kShadowShockFirstMaxMs = 2000;
     std::uint32_t constexpr kShadowShockEveryMs = 10000;
-    // IB5 Curse of Agony (stock 18266) on a random player: 1 to 10 s, then every 14 to 24 s (the stock timers).
+    // IB5 Curse of Agony (stock 18266) on a random player in reach and in sight (the spell's 30 yd): 1 to 10 s, then
+    // every 14 to 24 s (the stock timers).
+    float constexpr kCurseRange = 30.f;
     std::uint32_t constexpr kCurseFirstMinMs = 1000;
     std::uint32_t constexpr kCurseFirstMaxMs = 10000;
     std::uint32_t constexpr kCurseEveryMinMs = 14000;
@@ -146,7 +146,7 @@ namespace ScholoIllucia
 
     constexpr float LessonMarkerPct(bool heroic)
     {
-        return float(heroic ? ScholomanceRework::kLessonFailurePctHeroic : ScholomanceRework::kLessonFailurePctNormal);
+        return ScholomanceRework::LessonFailurePct(heroic);
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -162,7 +162,7 @@ namespace ScholoIllucia
         Curse = 3,
     };
     std::size_t constexpr kBeatCount = 4;
-    std::uint32_t constexpr kRetryMs = 2000;                // nobody to target: try again this soon
+    std::uint32_t constexpr kRetryMs = 2000;                // no target, or the cast failed: try again this soon
 
     struct Timeline
     {
@@ -242,211 +242,23 @@ namespace ScholoIllucia
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-    // MotionTrack: a mover's recent positions (handoff section 3.2 kit #5, MotionSampler: 200 ms samples, heading and
-    // speed). PredictSpot: where it will be `aheadMs` from now at its current heading and speed; on it while it stands.
+    // The motion track, its prediction and the Memory trail recorder live in the shared kit (DungeonKitLogic.h:
+    // MotionTrack, PredictSpot, TrailRecorder); Illucia samples every kSampleEveryMs.
     // ----------------------------------------------------------------------------------------------------------------
 
-    std::uint32_t constexpr kSampleEveryMs = 200;
-    std::uint32_t constexpr kVelocityWindowMs = 400;        // the newest 400 ms set the heading (a turn shows quickly)
-    std::uint32_t constexpr kVelocityMinSpanMs = 150;       // less than this between samples: no velocity yet
-    float constexpr kStillSpeed = 1.0f;                     // yd/s: slower is standing (on them)
-    float constexpr kMaxPlausibleSpeed = 30.f;              // yd/s: faster is a teleport, a charge or a knockback
+    using DungeonKit::MotionTrack;
+    using DungeonKit::PredictSpot;
+    using DungeonKit::Prediction;
+    using DungeonKit::TrailRecorder;
+    using DungeonKit::TrailSegment;
+    std::uint32_t constexpr kSampleEveryMs = DungeonKit::kMotionSampleEveryMs;
 
-    struct MotionSample
+    // The Memory trail's recorder: kTrailSegmentYd pieces, released kTrailClearYd behind the player, restarted by a
+    // jump over kTrailMaxStepYd.
+    inline TrailRecorder MemoryTrailRecorder()
     {
-        std::uint32_t t = 0;
-        Vec2 p;
-    };
-
-    class MotionTrack
-    {
-    public:
-        static std::size_t constexpr kSize = 8;
-        static std::uint32_t constexpr kMinGapMs = 50;      // a newer sample this close replaces the newest
-
-        void Add(std::uint32_t t, Vec2 p)
-        {
-            if (_count && t < Latest().t)
-                Clear();                                    // the clock went back: start over
-            if (_count && t - Latest().t < kMinGapMs)
-            {
-                _ring[(_head + kSize - 1) % kSize] = { t, p };
-                return;
-            }
-            _ring[_head] = { t, p };
-            _head = (_head + 1) % kSize;
-            _count = std::min(_count + 1, kSize);
-        }
-
-        void Clear()
-        {
-            _head = 0;
-            _count = 0;
-        }
-
-        std::size_t Size() const { return _count; }
-
-        // i = 0 is the newest.
-        MotionSample const& At(std::size_t i) const
-        {
-            return _ring[(_head + kSize - 1 - i) % kSize];
-        }
-
-        MotionSample const& Latest() const { return At(0); }
-
-        // Velocity in yd/s from the oldest sample at most `windowMs` before the newest (or, when none is that recent,
-        // the next older one) to the newest; nullopt with fewer than two samples or a span under kVelocityMinSpanMs.
-        std::optional<Vec2> Velocity(std::uint32_t windowMs = kVelocityWindowMs) const
-        {
-            if (_count < 2)
-                return std::nullopt;
-            MotionSample const& now = Latest();
-            std::optional<MotionSample> from;
-            for (std::size_t i = 1; i < _count; ++i)
-            {
-                MotionSample const& s = At(i);
-                if (now.t - s.t > windowMs)
-                {
-                    if (!from)
-                        from = s;
-                    break;
-                }
-                from = s;
-            }
-            if (!from)
-                return std::nullopt;
-            std::uint32_t const span = now.t - from->t;
-            if (span < kVelocityMinSpanMs)
-                return std::nullopt;
-            float const secs = float(span) / 1000.f;
-            return Vec2{ (now.p.x - from->p.x) / secs, (now.p.y - from->p.y) / secs };
-        }
-
-    private:
-        std::array<MotionSample, kSize> _ring{};
-        std::size_t _head = 0;
-        std::size_t _count = 0;
-    };
-
-    struct Prediction
-    {
-        Vec2 at;
-        bool still = true;      // on the player: standing, too few samples, or an implausible jump
-        float speed = 0.f;      // yd/s
-        float heading = 0.f;    // radians [0, 2pi), when moving
-    };
-
-    // Where the track's mover will be `aheadMs` after its newest sample.
-    inline Prediction PredictSpot(MotionTrack const& track, std::uint32_t aheadMs, float stillSpeed = kStillSpeed,
-        float maxSpeed = kMaxPlausibleSpeed)
-    {
-        Prediction out;
-        if (!track.Size())
-            return out;
-        out.at = track.Latest().p;
-        std::optional<Vec2> const v = track.Velocity();
-        if (!v)
-            return out;
-        float const speed = std::hypot(v->x, v->y);
-        out.speed = speed;
-        if (speed < stillSpeed || speed > maxSpeed)
-            return out;
-        out.still = false;
-        out.heading = std::atan2(v->y, v->x);
-        if (out.heading < 0.f)
-            out.heading += DungeonKit::kTwoPi;
-        float const secs = float(aheadMs) / 1000.f;
-        out.at = { out.at.x + v->x * secs, out.at.y + v->y * secs };
-        return out;
+        return TrailRecorder(kTrailSegmentYd, kTrailClearYd, kTrailMaxStepYd);
     }
-
-    // ----------------------------------------------------------------------------------------------------------------
-    // TrailRecorder (handoff section 3.2 kit #6): a mover's path cut into pieces of `segment` yd, each released once
-    // the mover stands `clear` yd past its end (so a piece never appears under its maker). A jump of more than
-    // `maxStep` between two samples starts a new trail (a teleport or a knockback leaves no line across the room).
-    // ----------------------------------------------------------------------------------------------------------------
-
-    struct TrailSegment
-    {
-        Vec2 from;
-        Vec2 to;
-    };
-
-    class TrailRecorder
-    {
-    public:
-        explicit TrailRecorder(float segment = kTrailSegmentYd, float clear = kTrailClearYd,
-            float maxStep = kTrailMaxStepYd)
-            : _segment(segment), _clear(clear), _maxStep(maxStep) { }
-
-        void Reset()
-        {
-            _has = false;
-            _ends.clear();
-        }
-
-        bool Started() const { return _has; }
-        std::size_t Pending() const { return _ends.size(); }
-
-        // The mover is at `p` now: the pieces ready to lay.
-        std::vector<TrailSegment> Feed(Vec2 p)
-        {
-            std::vector<TrailSegment> out;
-            if (!_has || DungeonKit::Distance(_lastSample, p) > _maxStep)
-            {
-                Restart(p);
-                return out;
-            }
-            _lastSample = p;
-            if (DungeonKit::Distance(OpenEnd(), p) >= _segment)
-                _ends.push_back(p);
-            Release(p, out);
-            return out;
-        }
-
-        // The recording ends with the mover at `p`: the pieces it has already left (`clear` behind it); the rest,
-        // under or next to it, are dropped.
-        std::vector<TrailSegment> Flush(Vec2 p)
-        {
-            std::vector<TrailSegment> out;
-            if (_has)
-                Release(p, out);
-            Reset();
-            return out;
-        }
-
-    private:
-        void Restart(Vec2 p)
-        {
-            _has = true;
-            _start = p;
-            _lastSample = p;
-            _ends.clear();
-        }
-
-        Vec2 OpenEnd() const
-        {
-            return _ends.empty() ? _start : _ends.back();
-        }
-
-        void Release(Vec2 p, std::vector<TrailSegment>& out)
-        {
-            while (!_ends.empty() && DungeonKit::Distance(p, _ends.front()) >= _clear)
-            {
-                out.push_back({ _start, _ends.front() });
-                _start = _ends.front();
-                _ends.pop_front();
-            }
-        }
-
-        float _segment;
-        float _clear;
-        float _maxStep;
-        bool _has = false;
-        Vec2 _start;
-        Vec2 _lastSample;
-        std::deque<Vec2> _ends;
-    };
 
     // The trail pieces one read player keeps alive at once: one every kTrailSegmentYd at `speed` yd/s, each living
     // kTrailLingerMs (the registry budget: heroic, two players at 7 yd/s, 7 each).

@@ -79,8 +79,11 @@ int main()
     // ---- the room -------------------------------------------------------------------------------------------------
     CHECK(KrastinovArena().Contains(kKrastinovSpawn.XY(), kKrastinovSpawn.z));
     CHECK(ArenaFor(BOSS_KRASTINOV).Contains(kKrastinovSpawn.XY(), kKrastinovSpawn.z));
-    // The bench sits 30.1 yd from the leash circle's center: off the circle, on the fight arena (the apse box).
-    CHECK(!KrastinovArena().Contains(kWorkBenchGo.XY(), kWorkBenchGo.z));
+    // The bench sits 30.1 yd from the leash circle's center: off the circle, on the room's arena through his apse
+    // box (KrastinovArena: the leash, detention and the gauntlet all hold the bench).
+    CHECK(DungeonKit::Distance(kWorkBenchGo.XY(), Vec2{ 181.0f, -70.0f }) > 30.f);
+    CHECK(KrastinovArena().Contains(kWorkBenchGo.XY(), kWorkBenchGo.z));
+    CHECK(ClassroomArena(Classroom::HallOfTheDamned).Contains(kWorkBenchGo.XY(), kWorkBenchGo.z));
     CHECK(KrastinovFightArena().Contains(kWorkBenchGo.XY(), kWorkBenchGo.z));
     CHECK(KrastinovFightArena().Contains(kOperatingSpot.XY(), kOperatingSpot.z));
     CHECK(KrastinovFightArena().Contains(kKrastinovSpawn.XY(), kKrastinovSpawn.z));
@@ -95,14 +98,21 @@ int main()
     CHECK(riseToBench > 19.f && riseToBench < 24.f);
     // The fight arena stays clear of the gate (the room's gate is the instance's, outside the arena).
     CHECK(!KrastinovFightArena().Contains(Vec2{ 181.2f, -29.1f }, 88.9f));
-    // The eject spot (2 yd forward and 2 yd left of the bench facing +y, i.e. toward -x) is on the arena and in the
-    // apse.
+    // The eject spot (vehicle_seat_addon 441, an absolute spot) is 2 yd forward and 2 yd left of the bench facing +y
+    // (toward -x), on the arena, in the apse, and above the 85.31 floor there.
     {
         float const o = kWorkBenchGo.o;
-        Vec2 const exitAt{ kWorkBenchGo.x + kBenchExitForward * std::cos(o) - kBenchExitLeft * std::sin(o),
-            kWorkBenchGo.y + kBenchExitForward * std::sin(o) + kBenchExitLeft * std::cos(o) };
-        CHECK(KrastinovFightArena().Contains(exitAt, 85.3f));
-        CHECK(exitAt.x > 179.f && exitAt.x < 186.f && exitAt.y > -100.f && exitAt.y < -93.f);
+        Vec2 const offsetAt{ kWorkBenchGo.x + 2.f * std::cos(o) - 2.f * std::sin(o),
+            kWorkBenchGo.y + 2.f * std::sin(o) + 2.f * std::cos(o) };
+        CHECK(DungeonKit::Distance(offsetAt, kBenchExit.XY()) < 0.1f);
+        CHECK(KrastinovFightArena().Contains(kBenchExit.XY(), kBenchExit.z));
+        CHECK(kBenchExit.x > 179.f && kBenchExit.x < 186.f && kBenchExit.y > -100.f && kBenchExit.y < -93.f);
+        CHECK(kBenchExit.z > 85.31f);
+    }
+    // The Failed Patients' pace: about 6 s from the rise spot to the bench.
+    {
+        float const seconds = DungeonKit::Distance(kWorkBenchGo.XY(), kFailedPatientRise.XY()) / kFailedPatientYdPerSec;
+        CHECK(seconds > 5.f && seconds < 7.f);
     }
 
     // ---- KR1 the patient pick ---------------------------------------------------------------------------------------
@@ -323,6 +333,17 @@ int main()
         }
         CHECK(op.Active());
     }
+    // KR7: crowd control stops the claws (and restarts the count), like stepping away.
+    CHECK(ClawsWork(true, false));
+    CHECK(!ClawsWork(true, true));
+    CHECK(!ClawsWork(false, false));
+    {
+        ClawTicker t;
+        CHECK(t.Update(2900, ClawsWork(true, false)) == 0);
+        CHECK(t.Update(2000, ClawsWork(true, true)) == 0);     // shackled: nothing, and the count starts over
+        CHECK(t.Update(2900, ClawsWork(true, false)) == 0);
+        CHECK(t.Update(100, ClawsWork(true, false)) == 1);
+    }
     // ClawTicker: one claw per 3 s at the bench; stepping away restarts it.
     {
         ClawTicker t;
@@ -342,7 +363,30 @@ int main()
         op.Abort();
         CHECK(op.Outcome() == OpOutcome::Aborted);
         CHECK(op.Done());
+        CHECK(!op.WasSeated());
         CHECK(op.WrenchFree(0.f) == WrenchResult::NotSeated);
+    }
+    // A refused seat: the glue never confirms; it gives up kSeatGiveUpMs after the seat was due and aborts. The
+    // operation was never seated (the boss re-picks, the lesson fails).
+    {
+        Operation op;
+        op.Start(LessonOperationRules());
+        Run const r = Advance(op, kLessonSeatDelayMs + kSeatGiveUpMs, 0.f, false);
+        CHECK(r.seats > 1);                                     // asked every tick
+        CHECK(op.ElapsedMs() >= op.Rules().seatDelayMs + kSeatGiveUpMs);
+        CHECK(op.Phase() == OpPhase::Seating);
+        op.Abort();
+        CHECK(!op.WasSeated());
+        CHECK(RefusedSeatFailures(false) == 2 && RefusedSeatFailures(true) == 1);
+        CHECK(!LessonPassed(RefusedSeatFailures(false), false));
+        CHECK(!LessonPassed(RefusedSeatFailures(true), true));
+        // A seated patient who leaves the bench is still an abort, but WasSeated tells them apart.
+        Operation seated;
+        seated.Start(BossOperationRules(false, false));
+        ToFirstPause(seated);
+        seated.Abort();
+        CHECK(seated.WasSeated());
+        CHECK(seated.Outcome() == OpOutcome::Aborted);
     }
 
     // ---- KR6 the graft order -------------------------------------------------------------------------------------
@@ -369,6 +413,9 @@ int main()
     CHECK(!BackhandMayStart(13000, 10000, false, 15000));       // too close to the operation: it waits
     CHECK(!BackhandMayStart(20000, 10000, true, 45000));        // never during an operation
     CHECK(!BackhandMayStart(9999, 10000, false, 45000));
+    // A Backhand that did not start retries soon, inside the guard; its range is far past any step back.
+    CHECK(kBackhandRetryMs < kBackhandEveryMs && kBackhandRetryMs <= 1000);
+    CHECK(kBackhandRangeYd >= 40.f);
 
     // ---- detention (SC 2966) ---------------------------------------------------------------------------------------
     {

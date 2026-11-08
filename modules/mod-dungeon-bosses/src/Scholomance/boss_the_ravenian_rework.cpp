@@ -22,21 +22,27 @@
  *   RV7 Driven       heroic phase 2: an order nobody kicks gives the Ravenian +10% damage for the fight (uncapped).
  *   RV8 Mend         phase 2: a 3 s kickable heal, 10 s after landing then every 20 s, 6% / 10% (the must-kick).
  *   RV9 Shadow Bolt  Corvane's filler between orders and heals, 15% / 20% Shadow.
- *   RV10 Bereaved    whichever dies first enrages the other: +10% damage every 5 s, uncapped; the unleashed Ravenian
+ *   RV10 Bereaved    whichever falls first enrages the other: +10% damage every 5 s, uncapped; the unleashed Ravenian
  *                    does a random order on his own every 10 s. The encounter ends when both are dead.
  *   RV11 Cleave      Sundering Cleave on the tank only (a copy of 25174 with one target), the stock timers.
  *   Arena            RavenianArena() with LeashOptions (no grips). The vault's gate is the instance's door data.
  *
  * Who owns what. The Ravenian is the BossAI on BOSS_RAVENIAN and the registry encounter's owner; his AI runs the
  * fight (RavenianFight) and commands Corvane, his summon (outside BossAI's summon list, so the Ravenian's death does
- * not despawn him). Corvane's AI only reports his casts and his death back. If the Ravenian dies first, Corvane takes
- * over: his own registry encounter on the same boss state, his bolts and his Bereaved stacks; his death then ends the
- * encounter (DONE, the Passing Grades read from the Ravenian's GradeWatch: Corvane alone has no registry mechanic, so
- * nobody can fail one then). A wipe while Corvane stands alone resets the boss state and respawns the Ravenian.
+ * not despawn him). Corvane's AI only reports his casts and his death back.
+ *
+ * The Ravenian never dies first (user ruling 1, 2026-11-08; RavenianLogic.h Pair). Lethal damage while Corvane stands
+ * leaves him at 1 HP, collapsed: inert, not selectable, not attackable, his registry encounter re-described with
+ * Corvane as the only target. Corvane fights on alone (his bolts, his Bereaved stacks); his death kills the collapsed
+ * Ravenian for real on the Ravenian's next tick (Corvane's killer, else the loot recipient, as the killer), so the
+ * credit, the loot, the Passing Grades and DONE land together. A wipe while he is collapsed (Corvane alone finds nobody
+ * left), or Corvane gone without a death, makes the Ravenian evade: both reset, nothing respawns. A forced death (a GM
+ * kill past the collapse) ends the encounter as it stands and sends Corvane away.
  *
  * Examiner mode (S13, the Graduate Exam): npc_sc_examiner_ravenian (300551, 60k) runs the same fight at heroic values
  * on any map and summons its own examiner Corvane npc_sc_examiner_corvane (300552, 20k); no boss state, no Passing
- * Grade, no text. Registered once wave C binds (kWaveCBound).
+ * Grade, no text; the same collapse, and its registry encounter ends at its evade and death. Registered once wave C
+ * binds (kWaveCBound).
  *
  * Solo lesson (S11's detention, SoloLesson.h): RavenianVaultLesson, registered for Classroom::RavenianVault. The echo
  * (300545, S11's entry; summoned by the lesson when its template exists) calls 3 orders on the student, each a 2 s bar
@@ -130,10 +136,11 @@ namespace
         return walls;
     }
 
-    // Driven and Bereaved: the damage factor of `unit`'s stacks.
+    // Driven and Bereaved: the damage factor of `unit`'s stacks (multiplied, as the engine does on his melee).
     float StackScale(Unit const* unit)
     {
-        return DamageScale(DungeonKit::Stacks(unit, SPELL_RV_DRIVEN) + DungeonKit::Stacks(unit, SPELL_RV_BEREAVED));
+        return StackedDamageScale(DungeonKit::Stacks(unit, SPELL_RV_DRIVEN),
+            DungeonKit::Stacks(unit, SPELL_RV_BEREAVED));
     }
 
     void SetCreatureHealth(Creature* me, uint32 health)
@@ -218,8 +225,6 @@ class RavenianDirector
 public:
     virtual ~RavenianDirector() = default;
     virtual RavenianFight& Fight() = 0;
-    // Both are dead: the encounter is over (the boss: DONE and the Passing Grades).
-    virtual void FinishEncounter(Creature* ravenian) = 0;
 };
 
 namespace
@@ -276,6 +281,7 @@ public:
     void Engage(Creature* rav)
     {
         ClearState(rav);
+        ResetPair();
         _heroic = HeroicValues(DungeonKit::IsHeroicMap(rav), _examiner);
         _engaged = true;
         _stage = Stage::Leash;
@@ -361,16 +367,83 @@ public:
             Cleave(rav);
     }
 
-    // Reset, evade, death: every marker cancelled, the stand and the stacks off. Corvane stays (the caller decides).
+    // Reset, evade: every marker cancelled, the stand and the stacks off, a collapse undone (full health again).
+    // Corvane stays (the caller decides).
     void Cleanup(Creature* rav)
     {
         ClearState(rav);
         if (rav)
         {
-            rav->RemoveAurasDueToSpell(SPELL_RV_DRIVEN);
-            rav->RemoveAurasDueToSpell(SPELL_RV_BEREAVED);
-            rav->RemoveAurasDueToSpell(SPELL_RV_UNBOUND);
+            if (_pair == Pair::Collapsed)
+                Uncollapse(rav, true);
+            RemoveStacks(rav);
         }
+        ResetPair();
+    }
+
+    bool Collapsed() const { return _pair == Pair::Collapsed; }
+
+    // Every hit on the Ravenian (his AI's DamageTaken): what lands. Lethal while Corvane stands collapses him.
+    uint32 RavenianDamage(Creature* rav, uint32 damage)
+    {
+        if (_pair == Pair::Both && !_engaged)
+            return damage;      // out of the fight (a `.dbtest`, a GM): stock rules
+        Creature* corv = Corvane(rav);
+        bool const corvaneStanding = corv && corv->IsAlive() && !_corvaneDead;
+        RavenianHit const hit = ScholoRavenian::RavenianDamage(_pair, rav->GetHealth(), damage, corvaneStanding);
+        if (hit.collapse)
+        {
+            // The state now (every later hit lands nothing); the rest on his next tick, off the damage's own call.
+            _pair = Pair::Collapsed;
+            _collapseDue = true;
+        }
+        return hit.damage;
+    }
+
+    // The collapsed Ravenian's tick (his AI, in place of the fight): the collapse itself first, then Hold, Kill
+    // (KillCollapsed) or Reset (his evade).
+    CollapsedStep UpdateCollapsed(Creature* rav)
+    {
+        if (_collapseDue)
+        {
+            _collapseDue = false;
+            Collapse(rav);
+        }
+        Creature* corv = Corvane(rav);
+        bool const died = _corvaneDead || (corv && !corv->IsAlive());
+        return NextCollapsedStep(died, _wipeDue, corv != nullptr);
+    }
+
+    // Corvane alone found nobody left (his wipe): the Ravenian resets both on his next tick.
+    void RequestReset()
+    {
+        _wipeDue = true;
+    }
+
+    // Corvane is dead: the collapsed Ravenian dies for real. The killer: Corvane's (a pet's owner), else the
+    // Ravenian's loot recipient, else any living player on the map; the kill carries the credit, the loot and DONE.
+    void KillCollapsed(Creature* rav)
+    {
+        Unit* killer = _corvaneKiller.IsEmpty() ? nullptr : ObjectAccessor::GetUnit(*rav, _corvaneKiller);
+        Player* player = killer ? killer->GetCharmerOrOwnerPlayerOrPlayerItself() : nullptr;
+        if (!player || !player->IsInMap(rav))
+            player = rav->GetLootRecipient();
+        if (!player || !player->IsInMap(rav))
+        {
+            player = nullptr;
+            for (auto const& ref : rav->GetMap()->GetPlayers())
+                if (Player* p = ref.GetSource())
+                    if (p->IsAlive() && !p->IsGameMaster())
+                    {
+                        player = p;
+                        break;
+                    }
+        }
+        DungeonKit::LogMechanic(kLogDungeon, LogName(), "ravenian-kill", Acore::StringFormat("killer={}",
+            player ? player->GetName() : "-"));
+        Uncollapse(rav, false);
+        _pair = Pair::Over;
+        Unit::Kill(player ? static_cast<Unit*>(player) : static_cast<Unit*>(rav), rav);
     }
 
     // ---- reports from Corvane's AI (queued: handled on the Ravenian's next tick) ------------------------------------
@@ -384,42 +457,40 @@ public:
         _reports.push_back({ spellId, completed });
     }
 
-    // Corvane died. True when the encounter is over (the Ravenian was dead already).
-    bool CorvaneDied(Creature* rav)
+    // Corvane died (`killer` may be null). Collapsed Ravenian: he dies for real on his next tick (KillCollapsed).
+    // Both standing: RV10 on the Ravenian.
+    void CorvaneDied(Creature* rav, Unit* killer)
     {
         if (_corvaneDead)
-            return false;
+            return;
+        if (_pair == Pair::Collapsed)
+        {
+            _corvaneDead = true;
+            _corvaneKiller = killer ? killer->GetGUID() : ObjectGuid::Empty;
+            DungeonKit::LogMechanic(kLogDungeon, LogName(), "corvane-death", "last=1 ravenian=collapsed");
+            return;
+        }
         if (!rav || !rav->IsAlive())
         {
             _corvaneDead = true;
             DungeonKit::LogMechanic(kLogDungeon, LogName(), "corvane-death", "last=1");
-            return true;
+            return;
         }
         CorvaneGone(rav, "died");
-        return false;
     }
 
-    // The Ravenian died. True when Corvane fights on (the encounter goes on); Corvane lands now if he had not yet.
-    bool RavenianDied(Creature* rav)
+    // The Ravenian died: the collapse's kill (Corvane already dead), Corvane dead first (RV10), or a forced death past
+    // the collapse (a GM kill), which ends the encounter as it stands: Corvane leaves.
+    void RavenianDied(Creature* rav)
     {
         Creature* corv = Corvane(rav);
-        bool const corvaneOn = corv && corv->IsAlive() && !_corvaneDead;
-        CancelLive(rav);
-        if (!corvaneOn)
+        if (corv && corv->IsAlive() && !_corvaneDead)
         {
-            ClearState(rav);
-            return false;
+            DungeonKit::LogMechanic(kLogDungeon, LogName(), "ravenian-death", "forced=1 corvane=sent-away");
+            DespawnCorvane(rav);
         }
-        Say(corv, YELL_CORVANE_RAVENIAN_DIES);
-        _selfCancel = true;
-        corv->InterruptNonMeleeSpells(true);
-        _selfCancel = false;
-        if (_stage == Stage::Leash || _stage == Stage::Transition)
-            Land(rav, corv, "ravenian-died");
         ClearState(rav);
-        DungeonKit::LogMechanic(kLogDungeon, LogName(), "ravenian-death", "first=1 corvane=on");
-        BecomeAlone(corv);
-        return true;
+        _pair = Pair::Over;
     }
 
     // ---- `.dbtest` hooks --------------------------------------------------------------------------------------------
@@ -427,6 +498,8 @@ public:
     // An order now: Corvane calls it (in combat, alive), else the Ravenian does it at once on `forced`.
     bool ForceOrder(Creature* rav, Order o, Player* forced)
     {
+        if (_pair != Pair::Both)
+            return false;       // collapsed or dead: no moves
         Creature* corv = Corvane(rav);
         if (_engaged && corv && corv->IsAlive() && !Busy(corv) && (_stage == Stage::Leash || _stage == Stage::Hand))
             return StartOrder(corv, o, false);
@@ -465,12 +538,13 @@ public:
     {
         static char const* const stages[] = { "?", "leash", "transition", "hand", "bereaved" };
         return Acore::StringFormat("engaged={} heroic={} examiner={} stage={} t={}ms next order/mend/bolt/cleave/"
-            "bereaved={}/{}/{}/{}/{} last={} pair={} stand={}ms corvane={} dead={} driven={} bereaved={} live={}",
+            "bereaved={}/{}/{}/{}/{} last={} pair={} stand={}ms corvane={} dead={} driven={} bereaved={} live={} "
+            "collapse={}",
             _engaged ? 1 : 0, _heroic ? 1 : 0, _examiner ? 1 : 0, stages[std::size_t(_stage)], _timeline.now,
             Next(Beat::Order), Next(Beat::Mend), Next(Beat::Bolt), Next(Beat::Cleave), Next(Beat::Bereaved),
             _lastOrder ? OrderName(*_lastOrder) : "-", _pairDue ? 1 : 0, _standMs, Corvane(rav) ? 1 : 0,
             _corvaneDead ? 1 : 0, rav ? DungeonKit::Stacks(rav, SPELL_RV_DRIVEN) : 0,
-            rav ? DungeonKit::Stacks(rav, SPELL_RV_BEREAVED) : 0, _live.size());
+            rav ? DungeonKit::Stacks(rav, SPELL_RV_BEREAVED) : 0, _live.size(), uint32(_pair));
     }
 
 private:
@@ -502,6 +576,76 @@ private:
         _corvaneDead = false;
         _transitionAt = 0;
         _reports.clear();
+    }
+
+    void ResetPair()
+    {
+        _pair = Pair::Both;
+        _wipeDue = false;
+        _collapseDue = false;
+        _corvaneKiller.Clear();
+    }
+
+    static void RemoveStacks(Creature* rav)
+    {
+        rav->RemoveAurasDueToSpell(SPELL_RV_DRIVEN);
+        rav->RemoveAurasDueToSpell(SPELL_RV_BEREAVED);
+        rav->RemoveAurasDueToSpell(SPELL_RV_UNBOUND);
+    }
+
+    // Lethal damage while Corvane stands (user ruling 1): the Ravenian lies at 1 HP, inert, not selectable, not
+    // attackable; Corvane lands if he had not yet and fights on alone (Bereaved); the registry encounter stays (the
+    // boss state stays IN_PROGRESS, the gate shut) with Corvane as the only target.
+    void Collapse(Creature* rav)
+    {
+        Creature* corv = Corvane(rav);
+        bool const reported = _corvaneDead;                                     // he may have died the same moment
+        bool const corvaneDead = reported || !corv || !corv->IsAlive();
+        CancelLive(rav);
+        if (!corvaneDead)
+        {
+            Say(corv, YELL_CORVANE_RAVENIAN_DIES);
+            _selfCancel = true;
+            corv->InterruptNonMeleeSpells(true);
+            _selfCancel = false;
+            if (_stage == Stage::Leash || _stage == Stage::Transition)
+                Land(rav, corv, "ravenian-collapsed");
+        }
+        ClearState(rav);
+        _corvaneDead = reported || (corv && !corv->IsAlive());     // ClearState forgot it; a corpse counts too
+        RemoveStacks(rav);
+
+        rav->InterruptNonMeleeSpells(false);
+        rav->AttackStop();
+        rav->SetReactState(REACT_PASSIVE);
+        rav->StopMoving();
+        rav->GetMotionMaster()->Clear();
+        rav->GetMotionMaster()->MoveIdle();
+        rav->SetControlled(true, UNIT_STATE_ROOT);
+        rav->SetUnitFlag(UnitFlags(UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE));
+        rav->SetStandState(UNIT_STAND_STATE_DEAD);
+        rav->SetRegeneratingHealth(false);
+        rav->RemoveEvadeAuras();        // nothing ticks on a body that cannot be hit
+        Describe(rav);
+        if (!corvaneDead)
+            BecomeAlone(corv);
+        DungeonKit::LogMechanic(kLogDungeon, LogName(), "ravenian-collapse", Acore::StringFormat("health={} "
+            "corvane={}", rav->GetHealth(), corvaneDead ? "dead" : "alone"));
+    }
+
+    // The collapse undone: before the real kill (`wipe` false: the body must be lootable and selectable), or on a
+    // wipe (`wipe` true: full health, back on his feet; his evade takes him home).
+    static void Uncollapse(Creature* rav, bool wipe)
+    {
+        rav->RemoveUnitFlag(UnitFlags(UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE));
+        rav->SetStandState(UNIT_STAND_STATE_STAND);
+        rav->SetControlled(false, UNIT_STATE_ROOT);
+        rav->SetRegeneratingHealth(rav->GetCreatureTemplate()->RegenHealth);
+        if (!wipe)
+            return;
+        rav->SetReactState(REACT_AGGRESSIVE);
+        if (rav->IsAlive())
+            rav->SetFullHealth();
     }
 
     void CancelLive(Creature* rav)
@@ -575,7 +719,14 @@ private:
     {
         BossMechanics::Descriptor d;
         uint32 const corvane = CorvaneEntry();
-        if (_stage == Stage::Leash || _stage == Stage::Transition)
+        if (_pair == Pair::Collapsed)
+        {
+            // The collapsed Ravenian is no target; Corvane alone, nothing to kick (no Mend, no orders).
+            d.phase = 3;
+            d.targets.push_back(BossMechanics::TargetEntry(corvane, 1));
+            d.ignores.emplace_back(rav->GetEntry());
+        }
+        else if (_stage == Stage::Leash || _stage == Stage::Transition)
         {
             d.phase = 1;
             d.ignores.emplace_back(corvane, BossMechanics::Condition::Phase(1));
@@ -859,6 +1010,10 @@ private:
     bool _landDue = false;
     bool _corvaneDead = false;
     bool _selfCancel = false;
+    Pair _pair = Pair::Both;
+    bool _wipeDue = false;          // collapsed: Corvane alone wiped
+    ObjectGuid _corvaneKiller;      // collapsed: who killed Corvane (the Ravenian's killer)
+    bool _collapseDue = false;      // the lethal hit came: the collapse runs on his next tick
 };
 
 // ---- Master Corvane 300542 (and his examiner 300552) ----------------------------------------------------------------
@@ -873,7 +1028,6 @@ struct npc_sc_master_corvane : public ScriptedAI
     void Reset() override
     {
         _alone = false;
-        _beginEncounter = false;
         _landed = false;
         _wiping = false;
         _orphanMs = 0;
@@ -913,21 +1067,20 @@ struct npc_sc_master_corvane : public ScriptedAI
             Report(spell->Id, false);
     }
 
-    void JustDied(Unit* /*killer*/) override
+    void JustDied(Unit* killer) override
     {
         _arena.Reset();
         if (!_examiner)
             Talk(YELL_CORVANE_DEATH);
         Creature* rav = Ravenian();
         if (RavenianDirector* director = DirectorOf(rav))
-            if (director->Fight().CorvaneDied(rav))
-                director->FinishEncounter(rav);
+            director->Fight().CorvaneDied(rav, killer);
         DungeonKit::LogMechanic(kLogDungeon, LogTag(), "corvane-death", Acore::StringFormat("alone={}",
             _alone ? 1 : 0));
     }
 
-    // While the Ravenian leads, his AI decides the fight's end (his evade despawns Corvane); alone, Corvane's wipe
-    // resets the vault.
+    // While the Ravenian leads, his AI decides the fight's end (his evade despawns Corvane); alone (the Ravenian
+    // collapsed), Corvane's wipe makes the Ravenian reset both.
     void EnterEvadeMode(EvadeReason why) override
     {
         if (!_alone)
@@ -937,13 +1090,9 @@ struct npc_sc_master_corvane : public ScriptedAI
 
     void UpdateAI(uint32 diff) override
     {
-        if (!_alone)
-        {
-            UpdateOrphan(diff);
+        UpdateOrphan(diff);
+        if (!_alone || _wiping)
             return;
-        }
-        if (_beginEncounter)
-            BeginOwnEncounter();
         if (!me->IsInCombat())
         {
             WipeAlone(uint32(EVADE_REASON_NO_HOSTILES));
@@ -986,11 +1135,11 @@ struct npc_sc_master_corvane : public ScriptedAI
         _arena.Engage(me);
     }
 
-    // The Ravenian died first: Corvane fights on alone (RV10).
+    // The Ravenian collapsed: Corvane fights on alone (RV10), under the Ravenian's registry encounter (re-described
+    // with Corvane as the only target).
     void BecomeAlone()
     {
         _alone = true;
-        _beginEncounter = true;
         _timeline = Timeline{};
         _timeline.Set(Beat::Bolt, kRetryMs);
         _timeline.Set(Beat::Bereaved, kBereavedEveryMs);
@@ -1021,7 +1170,7 @@ private:
             director->Fight().CorvaneCast(spellId, completed);
     }
 
-    // His Ravenian is gone from the map (an examiner the gauntlet despawned): he goes too.
+    // His Ravenian is gone from the map (an examiner the gauntlet despawned, a GM): he goes too.
     void UpdateOrphan(uint32 diff)
     {
         if (Ravenian())
@@ -1034,23 +1183,8 @@ private:
             me->DespawnOrUnsummon();
     }
 
-    void BeginOwnEncounter()
-    {
-        _beginEncounter = false;
-        BossMechanics::EncounterOptions options;
-        if (!_examiner)
-            options.bossStateId = BOSS_RAVENIAN;
-        Mechanic::BeginEncounter(me, options);
-        BossMechanics::Descriptor d;
-        d.phase = 3;
-        d.targets.push_back(BossMechanics::TargetEntry(me->GetEntry(), 1));
-        Mechanic::Describe(me, std::move(d));
-        DungeonKit::LogMechanic(kLogDungeon, LogTag(), "corvane-alone", Acore::StringFormat("health={}/{}",
-            me->GetHealth(), me->GetMaxHealth()));
-    }
-
-    // A wipe while he stood alone: the vault resets (the boss state, the Ravenian back), and he leaves; the respawned
-    // Ravenian seats a new Corvane. An examiner's wipe is S13's (the gauntlet resets).
+    // A wipe while he stood alone: the collapsed Ravenian resets both on his next tick (his evade: the boss state
+    // NOT_STARTED, full health, this Corvane despawned and a fresh one seated). Nothing respawns.
     void WipeAlone(uint32 why)
     {
         if (_wiping)
@@ -1058,18 +1192,10 @@ private:
         _wiping = true;
         _arena.Reset();
         DungeonKit::LogMechanic(kLogDungeon, LogTag(), "wipe-alone", Acore::StringFormat("reason={}", why));
-        if (!_examiner)
-        {
-            if (InstanceScript* instance = me->GetInstanceScript())
-            {
-                instance->SetBossState(BOSS_RAVENIAN, NOT_STARTED);
-                instance->SaveToDB();
-            }
-            if (Creature* rav = Ravenian())
-                if (!rav->IsAlive())
-                    rav->Respawn(true);
-        }
-        me->DespawnOrUnsummon();
+        if (RavenianDirector* director = DirectorOf(Ravenian()))
+            director->Fight().RequestReset();
+        else
+            me->DespawnOrUnsummon();    // no Ravenian AI to reset with (UpdateOrphan would send him away anyway)
     }
 
     DungeonKit::ArenaGuard _arena;
@@ -1078,7 +1204,6 @@ private:
     uint32 _orphanMs = 0;
     bool _examiner;
     bool _alone = false;
-    bool _beginEncounter = false;
     bool _landed = false;
     bool _wiping = false;
 };
@@ -1116,7 +1241,7 @@ void RavenianFight::Land(Creature* rav, Creature* corv, char const* why)
     corv->CastSpell(corv, SPELL_RV_TELEPORT, true);
     if (npc_sc_master_corvane* ai = CorvaneAI(corv))
         ai->Landed();
-    if (rav->IsAlive())
+    if (rav->IsAlive() && _pair != Pair::Collapsed)
     {
         _stage = Stage::Hand;
         _timeline.Land();
@@ -1185,32 +1310,21 @@ struct boss_the_ravenian_rework : public BossAI, public RavenianDirector
         BossAI::EnterEvadeMode(why);
     }
 
+    // He never dies first (the collapse); his death ends the encounter: DONE, saved, the Passing Grades (his
+    // GradeWatch holds every failure, Corvane's alone phase included: it runs under his registry encounter).
     void JustDied(Unit* killer) override
     {
         _arena.Reset();
-        if (_fight.RavenianDied(me))
-        {
-            // Corvane fights on: the boss state stays IN_PROGRESS (the gate stays shut); his death ends it.
-            events.Reset();
-            DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "death", "first=1");
-            return;
-        }
+        _fight.RavenianDied(me);
         _grades.AwardAtDeath(me);
         BossAI::JustDied(killer);
-        DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "death", "last=1");
+        DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "death", Acore::StringFormat("killer={}",
+            killer ? killer->GetName() : "-"));
     }
 
-    // Corvane died last: DONE, saved, and the Passing Grades (the Ravenian's GradeWatch holds every failure: Corvane
-    // alone has no registry mechanic).
-    void FinishEncounter(Creature* /*ravenian*/) override
+    void DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType /*type*/, SpellSchoolMask /*mask*/) override
     {
-        _grades.AwardAtDeath(me);
-        if (instance)
-        {
-            instance->SetBossState(BOSS_RAVENIAN, DONE);
-            instance->SaveToDB();
-        }
-        DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "encounter-done", "last=corvane");
+        damage = _fight.RavenianDamage(me, damage);
     }
 
     RavenianFight& Fight() override { return _fight; }
@@ -1218,6 +1332,11 @@ struct boss_the_ravenian_rework : public BossAI, public RavenianDirector
     void UpdateAI(uint32 diff) override
     {
         UpdateTestLesson(diff);
+        if (_fight.Collapsed())
+        {
+            UpdateCollapsed();
+            return;
+        }
         if (!me->IsEngaged())
             _fight.Idle(me, diff);
 
@@ -1254,6 +1373,22 @@ struct boss_the_ravenian_rework : public BossAI, public RavenianDirector
     }
 
 private:
+    // Collapsed (user ruling 1): inert until Corvane dies (the real kill) or the group wipes (both reset).
+    void UpdateCollapsed()
+    {
+        switch (_fight.UpdateCollapsed(me))
+        {
+            case CollapsedStep::Hold:
+                break;
+            case CollapsedStep::Kill:
+                _fight.KillCollapsed(me);
+                break;
+            case CollapsedStep::Reset:
+                EnterEvadeMode(EVADE_REASON_OTHER);
+                break;
+        }
+    }
+
     void UpdateTestLesson(uint32 diff)
     {
         if (_testLesson && !_testLesson->Done())
@@ -1289,30 +1424,48 @@ struct npc_sc_examiner_ravenian : public ScriptedAI, public RavenianDirector
             "{:.1f}, {:.1f})", me->GetMaxHealth(), me->GetPositionX(), me->GetPositionY(), me->GetPositionZ()));
     }
 
+    // No boss state ends his registry encounter: the evade and the death do (Weakened comes off; RV-2).
     void EnterEvadeMode(EvadeReason why) override
     {
         _fight.Cleanup(me);
         _fight.DespawnCorvane(me);
         _arena.Reset();
+        Mechanic::EndEncounter(me);
         ScriptedAI::EnterEvadeMode(why);
     }
 
     void JustDied(Unit* /*killer*/) override
     {
         _arena.Reset();
-        bool const corvaneOn = _fight.RavenianDied(me);
-        DungeonKit::LogMechanic(kLogDungeon, kExaminerLogName, "death", corvaneOn ? "first=1" : "last=1");
+        _fight.RavenianDied(me);
+        Mechanic::EndEncounter(me);
+        DungeonKit::LogMechanic(kLogDungeon, kExaminerLogName, "death", "last=1");
     }
 
-    void FinishEncounter(Creature* /*ravenian*/) override
+    void DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType /*type*/, SpellSchoolMask /*mask*/) override
     {
-        DungeonKit::LogMechanic(kLogDungeon, kExaminerLogName, "encounter-done", "last=corvane");
+        damage = _fight.RavenianDamage(me, damage);
     }
 
     RavenianFight& Fight() override { return _fight; }
 
     void UpdateAI(uint32 diff) override
     {
+        if (_fight.Collapsed())
+        {
+            switch (_fight.UpdateCollapsed(me))
+            {
+                case CollapsedStep::Hold:
+                    break;
+                case CollapsedStep::Kill:
+                    _fight.KillCollapsed(me);
+                    break;
+                case CollapsedStep::Reset:
+                    EnterEvadeMode(EVADE_REASON_OTHER);
+                    break;
+            }
+            return;
+        }
         if (!me->IsEngaged())
             _fight.Idle(me, diff);
         if (!UpdateVictim())

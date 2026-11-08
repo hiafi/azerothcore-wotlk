@@ -186,7 +186,10 @@ class PolkeltDeclarationTest(unittest.TestCase):
 
     def test_the_lesson_and_the_examiner(self):
         self.assertIn("RegisterSoloLesson(Classroom::HallOfSecrets,", self.cpp)
-        self.assertIn("NPC_SC_EXAMINER_POLKELT", self.cpp)
+        # The examiner has its own ScriptName (the user's convention, 2026-11-08), registered only once wave C binds.
+        self.assertIn('kExaminerScriptName[] = "npc_sc_examiner_polkelt"', self.header)
+        self.assertIn("struct npc_sc_examiner_polkelt : public boss_lorekeeper_polkelt_rework", self.cpp)
+        self.assertRegex(self.cpp, r"if \(kWaveCBound\)\s*RegisterDungeonReworkCreatureAI\(npc_sc_examiner_polkelt,")
         self.assertRegex(self.header, r"kExaminerHealth = 80000;")
 
 

@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <set>
+#include <string>
 #include <vector>
 
 using namespace ScholomanceRework;
@@ -350,6 +351,7 @@ int main()
 
     // ---- The Graduate Examiner (S13) --------------------------------------------------------------------------------
     CHECK(kExaminerHealth == 80000);
+    CHECK(std::string(kExaminerScriptName) == "npc_sc_examiner_alexei");     // its own script (user ruling 5)
     CHECK(kExaminerHeroic);
     CHECK(kExaminerFirstRuleMs < 22000);            // a gauntlet room lasts about 22 s
     CHECK(kExaminerFirstRuleMs + kRuleWarnMs(true) + kRuleWindowMs <= kExaminerRuleEveryMs + kExaminerFirstRuleMs);

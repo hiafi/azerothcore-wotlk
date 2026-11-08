@@ -275,9 +275,10 @@ namespace ScholoRavenian
         return nextOrder >= clear && nextMend >= clear;
     }
 
-    // RV10 Bereaved: whichever dies first enrages the other: +10% damage every 5 s, stacking, uncapped. The Ravenian
-    // unleashed also does a random order on his own every 10 s at random players (no cast: his 2 s marker is the
-    // warning), the first kUnleashedOrderFirstMs after Corvane's death.
+    // RV10 Bereaved: whichever falls first (Corvane's death, the Ravenian's collapse: see Pair below) enrages the
+    // other: +10% damage every 5 s, stacking, uncapped. The Ravenian unleashed also does a random order on his own
+    // every 10 s at random players (no cast: his 2 s marker is the warning), the first kUnleashedOrderFirstMs after
+    // Corvane's death.
     std::uint32_t constexpr kBereavedEveryMs = 5000;
     std::uint32_t constexpr kUnleashedOrderFirstMs = 5000;
     std::uint32_t constexpr kUnleashedOrderEveryMs = 10000;
@@ -287,6 +288,64 @@ namespace ScholoRavenian
     constexpr float DamageScale(std::uint32_t stacks)
     {
         return 1.f + float(stacks) * kStackDamagePct / 100.f;
+    }
+
+    // Driven and Bereaved are two auras, so the engine multiplies them on his melee (two MOD_DAMAGE_PERCENT_DONE
+    // auras); the script's orders and bolts do the same, so a move and a swing scale alike.
+    constexpr float StackedDamageScale(std::uint32_t driven, std::uint32_t bereaved)
+    {
+        return DamageScale(driven) * DamageScale(bereaved);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // The pair's lives (user ruling 1, 2026-11-08). The Ravenian never dies before Corvane: lethal damage while
+    // Corvane stands leaves him at 1 HP, collapsed (inert, not selectable, not attackable), and Corvane fights on
+    // alone (Bereaved). Corvane's death then kills the collapsed Ravenian for real (a player killer: the credit, the
+    // loot and DONE land together). A wipe while he is collapsed resets both (his evade); Corvane gone without a death
+    // (a despawn) does the same. Corvane dying first is the other order (the Ravenian unleashed, RV10).
+    // ----------------------------------------------------------------------------------------------------------------
+
+    enum class Pair : std::uint8_t
+    {
+        Both = 0,           // both stand (phases 1 and 2), or the Ravenian fights on alone after Corvane (Bereaved)
+        Collapsed = 1,      // the Ravenian lies at 1 HP; Corvane fights alone
+        Over = 2,           // the Ravenian is dead
+    };
+
+    struct RavenianHit
+    {
+        std::uint32_t damage = 0;       // what lands
+        bool collapse = false;          // this hit collapses him
+    };
+
+    // A hit of `damage` on the Ravenian at `health`. Lethal while Corvane stands: he keeps 1 HP and collapses.
+    // Collapsed: nothing lands (he is not attackable; a damage over time effect still ticking does nothing).
+    constexpr RavenianHit RavenianDamage(Pair pair, std::uint32_t health, std::uint32_t damage, bool corvaneStanding)
+    {
+        if (pair == Pair::Collapsed)
+            return { 0, false };
+        if (pair == Pair::Both && corvaneStanding && damage >= health)
+            return { health > 1 ? health - 1 : 0, true };
+        return { damage, false };
+    }
+
+    // The collapsed Ravenian's tick: what happens next.
+    enum class CollapsedStep : std::uint8_t
+    {
+        Hold = 0,           // Corvane still fights
+        Kill = 1,           // Corvane is dead: the Ravenian dies for real
+        Reset = 2,          // a wipe, or Corvane gone without a death: both reset (the Ravenian evades)
+    };
+
+    // `corvaneDied`: his death was reported (or he lies dead); `wipe`: Corvane alone found nobody left to fight;
+    // `corvanePresent`: his unit is still on the map.
+    constexpr CollapsedStep NextCollapsedStep(bool corvaneDied, bool wipe, bool corvanePresent)
+    {
+        if (corvaneDied)
+            return CollapsedStep::Kill;
+        if (wipe || !corvanePresent)
+            return CollapsedStep::Reset;
+        return CollapsedStep::Hold;
     }
 
     // Boss data (build spec): in phase 2 both are targets, kept close (kill together: DPS hit whichever has more health

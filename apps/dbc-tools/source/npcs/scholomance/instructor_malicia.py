@@ -39,7 +39,7 @@ Spells (Spell.dbc 3.3.5 for every stock id quoted; looks from WP-V's ._visuals, 
   206216  Shadow Nova          MA7 the burst on every player (spell_scholo_malicia_shadow_nova, Shadow Nova 32711's
                                SV 7951)
   206217  Soul Lost            detention: a soul faded in the Coven's lesson (spell_scholo_malicia_soul_lost: 15% / 25%
-                               and Weakened)
+                               and Weakened; the lesson passes its percent in base point 0)
   206218-206224 spare.
 """
 
@@ -82,6 +82,7 @@ from ._visuals import (
     ML_SOUL_DRAIN,
     ML_SOULSTORM_HANDS,
     ML_SPIRIT_BURST,
+    MV_SHADOW_BOLT_VOLLEY,
 )
 
 # Held back until wave B binds this boss (_common.py BIND_WAVE_B; R-A S-11): stock until then.
@@ -102,6 +103,10 @@ _PREVENTION_SILENCE = 1
 _DEFENSE_MAGIC = 1
 _SCHOOL_MASK_ALL = 127
 _AURA_MOD_INCREASE_HEALTH_PERCENT = 133
+# AURA_INTERRUPT_FLAG_CHANGE_MAP (SpellDefines.h): AC drops it before the logout save, after the login load and on a
+# cross-map teleport, so the meter and its weight never leave Scholomance (R-B S5 SF-1). A same-map teleport (detention)
+# keeps them.
+_AURA_INTERRUPT_CHANGE_MAP = 0x00080000
 
 _ICON_SOUL_FRAGMENT = 1693         # Soul Fragment 71905
 _ICON_SOUL_GEM = 2027              # Spell_Shadow_SoulGem's alternate (WP-V: Malicia's Passing Grade keeps 92)
@@ -111,7 +116,6 @@ _ICON_SOULSTORM = 458              # Soulstorm 68872
 _ICON_SPIRIT_BURST = 87            # Spirit Burst 24050
 _ICON_SHADOW_MEND = 1942           # Shadow Mend 25531
 _ICON_SHADOW_NOVA = 1988           # Shadow Nova 32711
-_SV_SHADOW_BOLT_VOLLEY = 2318      # Shadow Bolt Volley 17228 (the shadow hands while the shade casts)
 
 _STOCK_SHADOW_BOLT_VOLLEY = 17228
 
@@ -148,10 +152,11 @@ soul_206205 = spell(
           'cancellable (the weight rides it), Dispel none, NO_IMMUNITIES. spell_scholo_malicia_soul removes the '
           'weight 206206 with it. The bots\' soul Soaks order by its stacks (lowest first, nobody at 40). Number-free '
           'text (SC MA1). Soul Fragment 71905\'s icon; no body tint (a glow on every player for the whole fight would '
-          'bury the markers).',
+          'bury the markers). AuraInterruptFlags CHANGE_MAP: a logout or a map change drops it.',
     raw_overrides=kit_raw('Your soul, pried loose and held together. The more of it you keep, the stronger you are.',
                           'Your soul. More makes you stronger; less makes you weaker.', CastingTimeIndex=1,
-                          CumulativeAura=40, AttributesEx4=ATTR4_NO_CAST_LOG),
+                          CumulativeAura=40, AttributesEx4=ATTR4_NO_CAST_LOG,
+                          AuraInterruptFlags=_AURA_INTERRUPT_CHANGE_MAP),
 )
 scripted_by(soul_206205, 'spell_scholo_malicia_soul')
 
@@ -170,8 +175,10 @@ soul_weight_206206 = spell(
           '(stacks - 20) x 5% of the owner\'s Soul 206205 (spell_scholo_malicia_soul_weight sets the three amounts; '
           'the script recalculates them on every meter change). One stack of its own, so the engine\'s stack multiply '
           'leaves the amount alone. 10 stacks = -50% (no player under half health), 40 = +100%. Max health keeps its '
-          'percent through a change (MOD_INCREASE_HEALTH_PERCENT).',
-    raw_overrides=kit_raw(instant=True, AttributesEx4=ATTR4_NO_CAST_LOG),
+          'percent through a change (MOD_INCREASE_HEALTH_PERCENT). AuraInterruptFlags CHANGE_MAP: a logout or a map '
+          'change drops it (never +100% / -50% outside the fight).',
+    raw_overrides=kit_raw(instant=True, AttributesEx4=ATTR4_NO_CAST_LOG,
+                          AuraInterruptFlags=_AURA_INTERRUPT_CHANGE_MAP),
 )
 scripted_by(soul_weight_206206, 'spell_scholo_malicia_soul_weight')
 
@@ -182,8 +189,9 @@ soul_drain_cast_206207 = cast_bar(
     f'{_MA}, MA2: the 2 s cast bar, at the drained player on normal (emote line 0 names them; two below 50% of her '
     'health), at herself on heroic (every player, the tank too; emote line 1). Not interruptible (not on her interrupt '
     'list). The AI drains on its own clock when the bar ends: up to 4 stacks each (never under 10), that many Loose '
-    'Souls 10 to 15 yd around them.',
-    icon=_ICON_DRAIN_SOUL, school=School.SHADOW)
+    'Souls 10 to 15 yd around them. School Physical: a kick on her Shadow casts locks Shadow, and a Shadow bar would '
+    'then fail (Spell.cpp school lockout) while the beat goes on.',
+    icon=_ICON_DRAIN_SOUL, school=School.NORMAL)
 
 soul_drain_206208 = spell(
     id=206208, name='Soul Drain', school=School.SHADOW, attributes=ATTR0_NO_IMMUNITIES, cast_time_ms=0, cooldown_ms=0,
@@ -230,7 +238,7 @@ shade_volley_206210 = spell(
           'build spec puts it on the interrupt list. Shadow Bolt Volley\'s SV 2318 (shadow hands during the cast).',
     raw_overrides=kit_raw('Gathers shadow for a volley of bolts.', InterruptFlags=_INTERRUPT_FLAGS_STANDARD,
                           PreventionType=_PREVENTION_SILENCE, DefenseType=_DEFENSE_MAGIC,
-                          SpellVisualID_1=_SV_SHADOW_BOLT_VOLLEY),
+                          SpellVisualID_1=MV_SHADOW_BOLT_VOLLEY),
 )
 
 # --- MA6 Soulstorm ---------------------------------------------------------------------------------------------------
@@ -238,8 +246,9 @@ shade_volley_206210 = spell(
 soulstorm_cast_206211 = cast_bar(
     206211, 'Soulstorm', 3500, 'Unleashes a storm of souls.',
     f'{_MA}, MA6: the 3.5 s cast bar (emote line 3): three waves of 4 yd registry circles 1 s apart, each 1.5 s, all '
-    'landing inside the bar. Not interruptible. Soulstorm 68872\'s SV 14509 (banish_chest_purple on both hands).',
-    icon=_ICON_SOULSTORM, school=School.SHADOW, visual=ML_SOULSTORM_HANDS)
+    'landing inside the bar. Not interruptible. School Physical (a Shadow lockout from a kick must not refuse the '
+    'bar). Soulstorm 68872\'s SV 14509 (banish_chest_purple on both hands).',
+    icon=_ICON_SOULSTORM, school=School.NORMAL, visual=ML_SOULSTORM_HANDS)
 
 soulstorm_fall_206212 = spell(
     id=206212, name='Soulstorm', school=School.SHADOW, attributes=ATTR0_DO_NOT_LOG | ATTR0_NO_IMMUNITIES,
@@ -325,9 +334,10 @@ soul_lost_206217 = spell(
                     potency_excluded=_SCRIPT_EXCLUDED)],
     spell_icon_id=_ICON_DRAIN_SOUL,
     notes=f'{_MA}, detention (the Coven, SC 2965): a soul faded before the student took it. The lesson\'s stalker '
-          'casts it on the student (triggered): 15% normal / 25% heroic of the reference row (SoloLesson.h '
-          'LessonFailurePct, RefFlatOn at launch) and one Weakened stack (ruling 21), by '
-          'spell_scholo_malicia_soul_lost. Ignores caster modifiers and line of sight, cannot crit, always hits, no '
+          'casts it on the student (triggered, base point 0 = the lesson\'s percent x 100): 15% normal / 25% heroic of '
+          'the reference row (SoloLesson.h LessonFailurePct, RefFlatOn at launch; a plain cast reads the map) and one '
+          'Weakened stack (ruling 21), by spell_scholo_malicia_soul_lost. One per faded soul, the fades 1.75 s apart '
+          '(user ruling 4). Ignores caster modifiers and line of sight, cannot crit, always hits, no '
           'threat. Drain Soul Visual 60857\'s SV 12656.',
     raw_overrides=kit_raw('Your soul slips away.', instant=True, SpellVisualID_1=ML_SOUL_DRAIN,
                           DefenseType=_DEFENSE_MAGIC, Attributes=ATTR0_NO_ACTIVE_DEFENSE,

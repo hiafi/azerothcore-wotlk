@@ -113,7 +113,8 @@ int main()
     CHECK(Near(kSoulRadius, 2.f));
     CHECK(kSoulFadeMs(false) == 8000 && kSoulFadeMs(true) == 5000);
     CHECK(Near(kSoulSpillMinYd, 10.f) && Near(kSoulSpillMaxYd, 15.f));
-    CHECK(kSoulSoakSlackMs > 0);    // the Soak's warning runs past the fade: it never resolves
+    CHECK(kSoulSoakSlackMs > kSoulPollMs);      // the Soak's warning runs past the fade: it never resolves
+    CHECK(kSoulSoakSlackMs <= 1000);            // but not long past it: no bot plans an arrival at a gone soul
 
     // MA6: a blast destroys one stack (in place of Weakened), never under the floor.
     CHECK(BlastLoss(20) == 1);
@@ -184,7 +185,7 @@ int main()
     CHECK(FallLaunchDelayMs(30.f) == 0);
     CHECK(FallLaunchDelayMs(45.f) == 0);
 
-    // ---- The timeline ------------------------------------------------------------------------------------------------
+    // ---- The timeline -----------------------------------------------------------------------------------------------
     {
         Timeline t;
         CHECK(t.In(Beat::Drain) == kDrainFirstMs);
@@ -299,12 +300,28 @@ int main()
         }
     }
 
-    // ---- Detention: the Coven (SC 2965) ------------------------------------------------------------------------------
+    // ---- Detention: the Coven (SC 2965) -----------------------------------------------------------------------------
     CHECK(kLessonSouls(false) == 3 && kLessonSouls(true) == 4);
     CHECK(kLessonFadeMs(false) == 10000 && kLessonFadeMs(true) == 6000);
     CHECK(DrainLoss(kSoulStart, kLessonSouls(true)) == 4);       // the student, given 20, loses exactly the lesson's
     CHECK(DrainLoss(kSoulStart, kLessonSouls(false)) == 3);
     CHECK(kLessonSpillMaxYd < kSoulSpillMinYd);
+    // User ruling 4: one hit per miss, staggered. The fades come 1.5-2 s apart, the first at the lesson's fade time,
+    // and the last inside the 15 s lesson.
+    CHECK(kLessonFadeStaggerMs >= 1500 && kLessonFadeStaggerMs <= 2000);
+    for (bool const heroic : { false, true })
+    {
+        CHECK(LessonSoulFadeMs(heroic, 0) == kLessonFadeMs(heroic));
+        for (std::uint32_t i = 1; i < kLessonSouls(heroic); ++i)
+            CHECK(LessonSoulFadeMs(heroic, i) - LessonSoulFadeMs(heroic, i - 1) >= 1500);
+        CHECK(LessonSoulFadeMs(heroic, kLessonSouls(heroic) - 1) + kSoulPollMs < kLessonMs);
+    }
+    CHECK(LessonSoulFadeMs(false, 2) == 13500 && LessonSoulFadeMs(true, 3) == 11250);
+    // Soul Lost follows the lesson's own flag (base point 0 = percent x 100; the engine may take 1 off).
+    CHECK(SoulLostBasePoints(false) == 1500 && SoulLostBasePoints(true) == 2500);
+    CHECK(Near(SoulLostPctFromBasePoints(2500), 25.f) && Near(SoulLostPctFromBasePoints(2499), 25.f));
+    CHECK(Near(SoulLostPctFromBasePoints(1499), 15.f) && Near(SoulLostPctFromBasePoints(1500), 15.f));
+    CHECK(Near(SoulLostPctFromBasePoints(0), 0.f) && Near(SoulLostPctFromBasePoints(-1), 0.f));
     {
         // The student lands in her apse: the souls spill around the apse's mouth, in the room.
         Vec2 const landing = kClassroomLandings[std::size_t(Classroom::Coven)].XY();

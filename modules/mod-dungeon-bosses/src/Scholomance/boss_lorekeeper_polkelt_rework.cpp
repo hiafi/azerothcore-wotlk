@@ -5,14 +5,15 @@
  * the rows); bound by apps/dbc-tools source/npcs/scholomance/lorekeeper_polkelt.py. Pure rules: PolkeltLogic.h.
  *
  *   PK1  Raise Specimens   10 s, then every 15 s (emote line 0): 2 walking + 1 rooted (heroic 3 + 3) Unstable (300540)
- *                          and Rooted (300541) Specimens at floor points 8+ yd from every player (heroic rooted 13+ yd
- *                          apart; the measured spots are the fallback). Walkers fight on threat; rooted ones melee only
- *                          what stands in reach
+ *                          and Rooted (300541) Specimens at floor points 8+ yd from every player (rooted 13+ yd apart
+ *                          within a batch, 7+ yd from the rooted ones still up; the measured spots are the fallback).
+ *                          Walkers fight on threat; rooted ones melee only what stands in reach
  *   PK2  Fuse and burst    a lethal hit drops a specimen at 1 health: a 2 s fuse (206255), then a 6 yd ring, 30% / 40%
  *                          Nature + Weakened (206250). A specimen inside the ring lights a 1 s chained fuse (206256,
  *                          ruling 18) at any health. Every ring is its own registry circle: overlaps stack
  *   PK3  Catalyst Reaction a kill or chained ring that holds him: 1.5% of his health (206259) and a Corroded stack
- *                          (206260: +5% damage taken, 20 s, refreshes, 10). Rings carry Park() for the bot tank
+ *                          (206260: +5% damage taken, 20 s, refreshes, 10). A ring within its radius + 8 yd of him
+ *                          carries Park() for the bot tank (a ring across the hall never drags him over)
  *   PK4  Ripe              30 s after its raise (the Ripening clock 206264, a visible swell to 150%), a specimen
  *                          burns a 3 s fuse (206257), then a 12 yd ring, 40% / 55% (206251), lights every specimen in
  *                          it, never reacts with him, and leaves a pool
@@ -25,9 +26,13 @@
  *   Arena                  ScholomanceRework::LeashOptions on PolkeltArena() (no grips; holds at the edge). The Hall of
  *                          Secrets gate is the instance's door data on BOSS_POLKELT
  *   Detention              the Hall of Secrets solo lesson (HallOfSecretsLesson, registered for S11): 3 / 4 specimens
- *                          walk at the student and burst on reaching them or on death
- *   Examiner (S13)         bind this ScriptName on the Graduate Examiner 300550: the same AI in examiner mode (80k,
- *                          heroic values for both mechanics, no enrage, texts, grades or boss state)
+ *                          walk at the student (no melee) and burst on reaching them or on death; its rings resolve
+ *                          1.5 s apart at least (user ruling 4: one hit per miss, staggered)
+ *   Bots                   DPS hold fire on the specimens (priority -1) until one is within 6 yd of him or ripe in
+ *                          under 3 s (priority 2)
+ *   Examiner (S13)         npc_sc_examiner_polkelt (PolkeltLogic.h kExaminerScriptName, registered once wave C
+ *                          binds: kWaveCBound) on the Graduate Examiner 300550: this AI in examiner mode (80k, heroic
+ *                          values for both mechanics, no enrage, texts, grades or boss state)
  *
  * The specimens' chain is the SpecimenLab below, one per fight (the boss, the examiner, a detention lesson): it runs
  * on its owner's own clock, never on BossAI's scheduler (a cast bar pauses that one), and owns every specimen, ring
@@ -35,13 +40,17 @@
  */
 
 #include "ArenaGuard.h"
+#include "CellImpl.h"
 #include "Chat.h"
 #include "Creature.h"
 #include "DungeonKit.h"
 #include "DynamicObject.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "Map.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
+#include "Pet.h"
 #include "Player.h"
 #include "PolkeltLogic.h"
 #include "Random.h"
@@ -58,6 +67,7 @@
 #include "TemporarySummon.h"
 #include <algorithm>
 #include <cmath>
+#include <list>
 #include <memory>
 #include <optional>
 #include <string>
@@ -180,6 +190,11 @@ struct npc_sc_polkelt_specimen : public ScriptedAI
     {
         if (!value)
             return;
+        if (id == DATA_SPECIMEN_NO_MELEE)
+        {
+            _noMelee = true;        // a detention lesson's walker: its ring is the hit, never its claws
+            return;
+        }
         if (id == DATA_SPECIMEN_COLLAPSED && !_frozen)
             _collapsed = true;      // `.dbtest scholo polkelt kill`: as if a lethal hit dropped it
         if (id == DATA_SPECIMEN_FROZEN || id == DATA_SPECIMEN_COLLAPSED)
@@ -219,7 +234,8 @@ struct npc_sc_polkelt_specimen : public ScriptedAI
         }
         if (!UpdateVictim())
             return;
-        DoMeleeAttackIfReady();
+        if (!_noMelee)
+            DoMeleeAttackIfReady();
     }
 
 private:
@@ -240,6 +256,7 @@ private:
 
     bool _collapsed = false;
     bool _frozen = false;
+    bool _noMelee = false;
 };
 
 namespace ScholoPolkelt
@@ -333,6 +350,7 @@ namespace ScholoPolkelt
 
             if (Player* student = _cfg.fixate.IsEmpty() ? nullptr : ObjectAccessor::GetPlayer(c->GetMap(), _cfg.fixate))
             {
+                c->AI()->SetData(DATA_SPECIMEN_NO_MELEE, 1);
                 c->AddThreat(student, 100000.f);
                 c->AI()->AttackStart(student);
             }
@@ -391,7 +409,7 @@ namespace ScholoPolkelt
             if (_cfg.catalyst && owner->IsAlive())
                 boss = DungeonKit::PlaneOf(owner);
             uint32 const generation = _generation;
-            for (Burst const& b : _chain.TakeBursts(_clockMs, boss, owner->GetObjectSize()))
+            for (Burst const& b : _chain.TakeBursts(_clockMs, boss, owner->GetFloatValue(UNIT_FIELD_BOUNDINGRADIUS)))
             {
                 DoBurst(owner, b);
                 if (generation != _generation)
@@ -410,6 +428,7 @@ namespace ScholoPolkelt
                 return r.resolveMs + 1000 < _clockMs;
             }), _rings.end());
             _pools.Expire(_clockMs);
+            ForgetDriedLooks();
         }
 
         // Everything gone: specimens despawned, rings and pools cancelled, the pool looks removed.
@@ -431,6 +450,7 @@ namespace ScholoPolkelt
             _recs.clear();
             _rings.clear();
             _pools.Clear();
+            _poolLooks.clear();
             _chain.Reset(_cfg.chain);
             ++_generation;
         }
@@ -489,6 +509,9 @@ namespace ScholoPolkelt
             return _chain.Count(SpecimenPhase::Fusing) + _chain.Count(SpecimenPhase::Ripening);
         }
         std::size_t Pools() const { return _pools.Size(); }
+        // A ring registered by this lab has not resolved yet, or resolved under a second ago (the registry resolves it
+        // after the owner's update).
+        bool RingsPending() const { return !_rings.empty(); }
         uint32 Bursts() const { return _bursts; }
         uint32 Reactions() const { return _reactions; }
         uint64 ClockMs() const { return _clockMs; }
@@ -536,6 +559,51 @@ namespace ScholoPolkelt
             uint64 resolveMs = 0;
         };
 
+        // A pool's floor look (206253's DynamicObject) by its registry handle id: the cap removes that one.
+        struct PoolLook
+        {
+            uint32 handle = 0;
+            ObjectGuid look;
+        };
+
+        // The look the lab just cast at `at`: the DynamicObject of 206253 by this owner on that spot that no pool
+        // owns yet. Empty when none is found (the cap then falls back to the owner's oldest look).
+        struct PoolLookAt
+        {
+            ObjectGuid caster;
+            Position at;
+
+            bool operator()(WorldObject* object) const
+            {
+                DynamicObject const* look = object ? object->ToDynObject() : nullptr;
+                return look && look->GetSpellId() == SPELL_PK_ACID_POOL_LOOK && look->GetCasterGUID() == caster
+                    && look->GetExactDist2d(at.GetPositionX(), at.GetPositionY()) <= 0.5f;
+            }
+        };
+
+        ObjectGuid FindNewLook(Creature* owner, Position const& at) const
+        {
+            std::list<WorldObject*> found;
+            PoolLookAt check{ owner->GetGUID(), at };
+            Acore::WorldObjectListSearcher<PoolLookAt> searcher(owner, found, check, GRID_MAP_TYPE_MASK_DYNAMICOBJECT);
+            Cell::VisitObjects(at.GetPositionX(), at.GetPositionY(), owner->GetMap(), searcher, 2.f);
+            for (WorldObject* object : found)
+                if (std::none_of(_poolLooks.begin(), _poolLooks.end(),
+                    [object](PoolLook const& l) { return l.look == object->GetGUID(); }))
+                    return object->GetGUID();
+            return ObjectGuid::Empty;
+        }
+
+        // Drops the looks of the pools that dried by themselves (their DynamicObject ended with its own duration).
+        void ForgetDriedLooks()
+        {
+            _poolLooks.erase(std::remove_if(_poolLooks.begin(), _poolLooks.end(), [this](PoolLook const& l)
+            {
+                return std::none_of(_pools.All().begin(), _pools.All().end(),
+                    [&l](PoolQueue::Pool const& p) { return p.handle == l.handle; });
+            }), _poolLooks.end());
+        }
+
         Creature* Owner() const
         {
             return _map ? _map->GetCreature(_owner) : nullptr;
@@ -571,7 +639,7 @@ namespace ScholoPolkelt
                 uint32 const tag = _cfg.burstTag != TAG_KILL_BURST ? _cfg.burstTag
                     : f.kind == BurstKind::Kill ? TAG_KILL_BURST : TAG_CHAINED_BURST;
                 ref.Damage(_cfg.burstPct).Weakened().Spell(SPELL_PK_SPECIMEN_BURST).Tag(tag);
-                if (_cfg.park)
+                if (_cfg.park && ShouldPark(owner->GetExactDist2d(at.GetPositionX(), at.GetPositionY()), f.radius))
                     ref.Park();
             }
             _rings.push_back({ ref.Handle(), _clockMs + f.warnMs });
@@ -615,18 +683,37 @@ namespace ScholoPolkelt
             if (!handle)
                 return;
             owner->CastSpell(at.GetPositionX(), at.GetPositionY(), at.GetPositionZ(), SPELL_PK_ACID_POOL_LOOK, true);
+            ObjectGuid const look = FindNewLook(owner, at);
             // A pool about to dry by itself is not the one a new pool pushes out (its look may already be gone).
             _pools.Expire(_clockMs + 250);
+            ForgetDriedLooks();
             std::vector<PoolQueue::Pool> const dried = _pools.Push(handle.id, pos, _clockMs, _cfg.poolCap);
             for (PoolQueue::Pool const& old : dried)
             {
                 Mechanic::Cancel(owner, MechanicHandle{ old.handle });
-                if (DynamicObject* look = owner->GetDynObject(SPELL_PK_ACID_POOL_LOOK))
-                    look->Remove();         // the oldest look: the lab casts them in the queue's order
+                RemoveLook(owner, old.handle);
             }
+            if (!look.IsEmpty())
+                _poolLooks.push_back({ handle.id, look });
             DungeonKit::LogMechanic(kLogDungeon, kLogBoss, "acid-pool",
                 Acore::StringFormat("at=({:.1f}, {:.1f}) pools={} cap={} dried={}", pos.x, pos.y, _pools.Size(),
                     _cfg.poolCap, dried.size()));
+        }
+
+        // The dried pool's own look (by guid); unknown (none found at the cast), the owner's oldest look.
+        void RemoveLook(Creature* owner, uint32 handle)
+        {
+            auto const it = std::find_if(_poolLooks.begin(), _poolLooks.end(),
+                [handle](PoolLook const& l) { return l.handle == handle; });
+            if (it == _poolLooks.end())
+            {
+                if (DynamicObject* oldest = owner->GetDynObject(SPELL_PK_ACID_POOL_LOOK))
+                    oldest->Remove();
+                return;
+            }
+            if (DynamicObject* look = _map ? _map->GetDynamicObject(it->look) : nullptr)
+                look->Remove();
+            _poolLooks.erase(it);
         }
 
         Map* _map = nullptr;
@@ -634,6 +721,7 @@ namespace ScholoPolkelt
         LabConfig _cfg;
         SpecimenChain _chain;
         PoolQueue _pools;
+        std::vector<PoolLook> _poolLooks;
         std::vector<Rec> _recs;
         std::vector<Ring> _rings;
         uint64 _clockMs = 0;
@@ -661,17 +749,22 @@ namespace
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Lorekeeper Polkelt 10901 (and, in examiner mode, the Graduate Examiner 300550 that S13 binds to this ScriptName)
+// Lorekeeper Polkelt 10901 (and, in examiner mode, the Graduate Examiner 300550: npc_sc_examiner_polkelt below, the
+// same AI with every boss-state path skipped)
 // ---------------------------------------------------------------------------------------------------------------------
 struct boss_lorekeeper_polkelt_rework : public BossAI
 {
-    explicit boss_lorekeeper_polkelt_rework(Creature* creature)
-        : BossAI(creature, BOSS_POLKELT), _arena(PolkeltArena(), LeashOptions(kLogBoss)) { }
+    explicit boss_lorekeeper_polkelt_rework(Creature* creature, bool examiner = false)
+        : BossAI(creature, BOSS_POLKELT), _arena(PolkeltArena(), LeashOptions(kLogBoss)), _examiner(examiner)
+    {
+        _profile = ProfileFor(false, _examiner);      // Reset reads the map
+    }
 
-    bool Examiner() const { return me->GetEntry() == NPC_SC_EXAMINER_POLKELT; }
+    bool Examiner() const { return _examiner; }
 
     void Reset() override
     {
+        _profile = ProfileFor(IsHeroicMap(me), Examiner());
         if (Examiner())
         {
             summons.DespawnAll();
@@ -861,7 +954,8 @@ struct boss_lorekeeper_polkelt_rework : public BossAI
 
     // ----------------------------------------------------------------------------------------------------------------
     // Boss data (SC): target priority, the walking (normal: and rooted) specimens above him once within 6 yd of him or
-    // ripe in under 3 s, never otherwise; heroic rooted (Hardened) on the ignore list. Dispel: Volatile Infection.
+    // ripe in under 3 s, below him otherwise (hold fire); heroic rooted (Hardened) on the ignore list. Dispel: Volatile
+    // Infection.
     // ----------------------------------------------------------------------------------------------------------------
 
     void Describe()
@@ -881,13 +975,19 @@ struct boss_lorekeeper_polkelt_rework : public BossAI
                 msToRipe = static_cast<uint64>(std::max(0, clock->GetDuration()));
             return IsKillTarget(unit->GetExactDist2d(boss), msToRipe);
         };
+        // Not ready: listed below him (-1), so the focus stays on him and the stock assist and AoE stand down (hold
+        // fire until the pile is on him; R-B S7 SF-1, Arugal's pattern). MatchTarget takes the highest that holds.
         BossMechanics::Descriptor d;
         d.dispels.emplace_back(SPELL_VOLATILE_INFECTION, 1);
         d.targets.emplace_back(NPC_SC_UNSTABLE_SPECIMEN, 2, Who::Dps, Condition::Custom(ready));
+        d.targets.emplace_back(NPC_SC_UNSTABLE_SPECIMEN, -1, Who::Dps);
         if (_profile.hardened)
             d.ignores.emplace_back(NPC_SC_ROOTED_SPECIMEN);
         else
+        {
             d.targets.emplace_back(NPC_SC_ROOTED_SPECIMEN, 2, Who::Dps, Condition::Custom(ready));
+            d.targets.emplace_back(NPC_SC_ROOTED_SPECIMEN, -1, Who::Dps);
+        }
         Mechanic::Describe(me, std::move(d));
     }
 
@@ -984,6 +1084,7 @@ private:
     {
         _lab.Clear();
         RemoveNoxious();
+        RemoveVolatileInfection();
         me->RemoveAurasDueToSpell(SPELL_PK_CORRODED);
         _clockMs = 0;
         _nextBatchMs = kFirstBatchMs;
@@ -992,7 +1093,21 @@ private:
         _arena.Reset();
     }
 
+    // PK8's disease (stock 18149, 120 s, it splashes allies) leaves with the fight: on a wipe or an evade a survivor or
+    // a pet does not carry it out (R-B S7 N-2). Any caster: the splash copies are cast by the infected.
+    void RemoveVolatileInfection()
+    {
+        for (auto const& ref : me->GetMap()->GetPlayers())
+            if (Player* p = ref.GetSource())
+            {
+                p->RemoveAurasDueToSpell(SPELL_VOLATILE_INFECTION);
+                if (Pet* pet = p->GetPet())
+                    pet->RemoveAurasDueToSpell(SPELL_VOLATILE_INFECTION);
+            }
+    }
+
     DungeonKit::ArenaGuard _arena;
+    bool _examiner = false;
     GradeWatch _grades;
     SpecimenLab _lab;
     FightProfile _profile;
@@ -1003,11 +1118,20 @@ private:
     uint64 _nextVolatileMs = 0;
 };
 
+// The Graduate Examiner 300550 (S13 binds it in wave C): Polkelt's AI in examiner mode (PolkeltLogic.h ProfileFor: 80k,
+// heroic values for both mechanics, no enrage, texts, grades or boss state). Its own ScriptName, so S13 only binds a
+// template (the user's examiner convention, 2026-11-08); the logic stays shared.
+struct npc_sc_examiner_polkelt : public boss_lorekeeper_polkelt_rework
+{
+    explicit npc_sc_examiner_polkelt(Creature* creature) : boss_lorekeeper_polkelt_rework(creature, true) { }
+};
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Detention: the Hall of Secrets (SC 2967; handoff section 3.7). 3 / 4 Unstable Specimens rise one every 2 s, 10-14 yd
 // from the student, walk at them and burst on reaching them or on death (a 6 yd ring after a 2 s fuse; a burst lights
 // any specimen in its ring, 1 s). Each ring that catches the student is a failure (15% / 25% + Weakened): pass = never
-// in a burst. It ends early once every specimen has burst.
+// in a burst. The rings resolve at least 1.5 s apart (user ruling 4: one hit per miss, staggered), and the walkers
+// never melee. It ends early once every specimen has burst and the last ring has resolved.
 // ---------------------------------------------------------------------------------------------------------------------
 class HallOfSecretsLesson final : public TimedSoloLesson
 {
@@ -1029,7 +1153,7 @@ protected:
         _elapsedMs += diff;
         SpawnDue(owner, student);
         _lab.Update(diff);
-        if (LessonCleared(_risen, _planned, _lab.Live()))
+        if (LessonCleared(_risen, _planned, _lab.Live(), _lab.RingsPending()))
             FinishEarly();
     }
 
@@ -1203,6 +1327,9 @@ namespace
 void AddSC_boss_lorekeeper_polkelt_rework()
 {
     RegisterDungeonReworkCreatureAI(boss_lorekeeper_polkelt_rework, ScholomanceRework::kInstanceScriptName);
+    // The examiner's script name is PolkeltLogic.h kExaminerScriptName; S13 binds the entry in wave C.
+    if (kWaveCBound)
+        RegisterDungeonReworkCreatureAI(npc_sc_examiner_polkelt, ScholomanceRework::kInstanceScriptName);
     RegisterDungeonReworkCreatureAI(npc_sc_polkelt_specimen, ScholomanceRework::kInstanceScriptName);
     RegisterSpellScript(spell_sc_polkelt_noxious_catalyst);
     RegisterSoloLesson(Classroom::HallOfSecrets, [] { return std::unique_ptr<SoloLesson>(new HallOfSecretsLesson()); });

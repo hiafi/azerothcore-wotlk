@@ -1,10 +1,12 @@
 // Host tests for RavenianLogic.h (S8: The Ravenian (10507) and Master Corvane (300542)): the ids, the build spec
 // numbers, the order rotation (never the same twice), the order outcomes (Unbound, Driven), the transition, the filler
 // rule, Bereaved and Driven scaling, the timeline, Corvane's seat and landing (the user's spot, at least 15 yd from the
-// Ravenian, both inside his arena), Trample's lanes ending at the vault's walls, and the solo lesson's plan.
+// Ravenian, both inside his arena), Trample's lanes ending at the vault's walls, the solo lesson's plan, and the pair's
+// lives (user ruling 1: the collapse at 1 HP, the real kill with Corvane, the reset on a wipe).
 #include "DungeonKitLogic.h"
 #include "RavenianLogic.h"
 #include "check.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <set>
@@ -164,6 +166,127 @@ int main()
     CHECK(Near(DamageScale(1), 1.1f));
     CHECK(Near(DamageScale(12), 2.2f));
     CHECK(Near(DamageScale(100), 11.f));
+    // Driven and Bereaved multiply, as the engine does with the two auras on his melee (R-B RV-N2).
+    CHECK(Near(StackedDamageScale(0, 0), 1.f));
+    CHECK(Near(StackedDamageScale(3, 0), 1.3f));
+    CHECK(Near(StackedDamageScale(0, 6), 1.6f));
+    CHECK(Near(StackedDamageScale(3, 6), 2.08f));      // 1.3 x 1.6, not the additive 1.9
+    CHECK(Near(StackedDamageScale(3, 6), StackedDamageScale(6, 3)));
+
+    // ---- user ruling 1: the Ravenian collapses at 1 HP while Corvane stands, dies for real with him -----------------
+    {
+        // A lethal hit while Corvane stands: 1 HP left, the collapse.
+        RavenianHit h = RavenianDamage(Pair::Both, 5000, 7000, true);
+        CHECK(h.collapse && h.damage == 4999);
+        h = RavenianDamage(Pair::Both, 5000, 5000, true);
+        CHECK(h.collapse && h.damage == 4999);
+        h = RavenianDamage(Pair::Both, 1, 300, true);
+        CHECK(h.collapse && h.damage == 0);
+        // Not lethal: it lands whole.
+        h = RavenianDamage(Pair::Both, 5000, 4999, true);
+        CHECK(!h.collapse && h.damage == 4999);
+        // Corvane already dead (RV10, the Ravenian unleashed): the Ravenian dies normally.
+        h = RavenianDamage(Pair::Both, 5000, 7000, false);
+        CHECK(!h.collapse && h.damage == 7000);
+        // Collapsed: nothing lands, whatever Corvane does.
+        h = RavenianDamage(Pair::Collapsed, 1, 7000, true);
+        CHECK(!h.collapse && h.damage == 0);
+        h = RavenianDamage(Pair::Collapsed, 1, 7000, false);
+        CHECK(!h.collapse && h.damage == 0);
+        // Over (dead): untouched (the engine's own rules).
+        h = RavenianDamage(Pair::Over, 0, 10, true);
+        CHECK(!h.collapse && h.damage == 10);
+
+        // The collapsed tick: Corvane's death kills him (even a corpse not yet reported, even a wipe the same tick),
+        // a wipe or Corvane gone without a death resets both, else he lies still.
+        CHECK(NextCollapsedStep(false, false, true) == CollapsedStep::Hold);
+        CHECK(NextCollapsedStep(true, false, true) == CollapsedStep::Kill);
+        CHECK(NextCollapsedStep(true, true, true) == CollapsedStep::Kill);
+        CHECK(NextCollapsedStep(true, false, false) == CollapsedStep::Kill);
+        CHECK(NextCollapsedStep(false, true, true) == CollapsedStep::Reset);
+        CHECK(NextCollapsedStep(false, false, false) == CollapsedStep::Reset);
+
+        // A whole fight in the two orders: the pair's state through the hits and Corvane's death.
+        struct Sim
+        {
+            Pair pair = Pair::Both;
+            std::uint32_t ravenian = 160000;
+            bool corvaneUp = true;
+            bool corvaneDied = false;
+            bool wipe = false;
+            bool ravenianDead = false;
+
+            void HitRavenian(std::uint32_t damage)
+            {
+                RavenianHit const h = RavenianDamage(pair, ravenian, damage, corvaneUp);
+                if (h.collapse)
+                    pair = Pair::Collapsed;
+                ravenian -= std::min(ravenian, h.damage);
+                if (!ravenian)
+                {
+                    ravenianDead = true;
+                    pair = Pair::Over;
+                }
+            }
+
+            void Tick()
+            {
+                if (pair != Pair::Collapsed)
+                    return;
+                switch (NextCollapsedStep(corvaneDied, wipe, corvaneUp || corvaneDied))
+                {
+                    case CollapsedStep::Hold:
+                        break;
+                    case CollapsedStep::Kill:
+                        ravenian = 0;
+                        ravenianDead = true;
+                        pair = Pair::Over;
+                        break;
+                    case CollapsedStep::Reset:
+                        pair = Pair::Both;
+                        ravenian = 160000;
+                        corvaneUp = true;       // a fresh Corvane on his seat
+                        wipe = false;
+                        break;
+                }
+            }
+        };
+
+        // The Ravenian first: he collapses, stays at 1 HP under any damage, and dies only with Corvane.
+        Sim a;
+        a.HitRavenian(159000);
+        a.HitRavenian(5000);
+        CHECK(a.pair == Pair::Collapsed && a.ravenian == 1 && !a.ravenianDead);
+        a.HitRavenian(100000);
+        a.Tick();
+        CHECK(a.pair == Pair::Collapsed && a.ravenian == 1);
+        a.corvaneUp = false;
+        a.corvaneDied = true;
+        a.Tick();
+        CHECK(a.ravenianDead && a.pair == Pair::Over);
+
+        // The Ravenian first, then a wipe on Corvane alone: both reset, the Ravenian whole, nothing dead.
+        Sim b;
+        b.HitRavenian(170000);
+        CHECK(b.pair == Pair::Collapsed && b.ravenian == 1);
+        b.wipe = true;
+        b.Tick();
+        CHECK(b.pair == Pair::Both && b.ravenian == 160000 && !b.ravenianDead);
+
+        // Corvane gone without a death (a GM despawn, the examiner's gauntlet): the same reset.
+        Sim c;
+        c.HitRavenian(170000);
+        c.corvaneUp = false;
+        c.Tick();
+        CHECK(c.pair == Pair::Both && !c.ravenianDead);
+
+        // Corvane first (RV10): the Ravenian is never clamped and dies to the next lethal hit.
+        Sim d;
+        d.corvaneUp = false;
+        d.corvaneDied = true;
+        d.HitRavenian(170000);
+        CHECK(d.ravenianDead && d.pair == Pair::Over);
+    }
 
     // ---- RV9: the bolt only between orders and heals --------------------------------------------------------------
     CHECK(BoltFits(1000, 1000 + kShadowBoltCastMs + kShadowBoltMarginMs, kNever));

@@ -15,8 +15,9 @@ modules/mod-dungeon-bosses src/Scholomance/ScholomanceRework.h only; KrastinovLo
   Wrench Free: the passenger's one button. Summoned by the fight on the pull (and by the detention lesson), never
   spawned. No heroic template (handoff s3.3).
 - 300539 Failed Patient: a combat add (Diseased Ghoul display 519), 6,000 health on normal (warrior base 3,052 x
-  1.96593), heroic 9,000 via WP-H's heroic template 310115 (_KIT_ADD_HEROIC); walk speed 1.45 (3.6 yd/s: about 6 s
-  from the south alcove to the bench). npc_sc_failed_patient.
+  1.96593), heroic 9,000 via WP-H's heroic template 310115 (_KIT_ADD_HEROIC; it copies the speeds); run speed
+  0.514286 (3.6 yd/s: about 6 s from the south alcove to the bench; their chase runs, so speed_run sets the pace, not
+  speed_walk). npc_sc_failed_patient.
 
 Spells. The damage spells' numbers are set by the script (DungeonKit::RefFlatOn: a percent of the reference row, carried
 in base point 0; the escape stab's exact amount), so every one ignores caster modifiers:
@@ -30,7 +31,7 @@ in base point 0; the escape stab's exact amount), so every one ignores caster mo
   206230  Incision           KR3 a landed cut: 20% / 30% (detention 15% / 25%), a bleed cut (no armor)
   206231  Saw Descending     KR3 the bench's 1.5 s aura: the window Wrench Free must hit
   206232  Scalpel Stab       KR4 the escape: the patient stabs him for 5% of his maximum health
-  206233  Stitched Wound     KR5 the patient after a success: max health -15% per stack, the fight
+  206233  Stitched Wound     KR5 the patient after a success: max health -15% per stack, the fight (never saved)
   206234  Killing Frenzy     KR6 hands: attack speed +25% (heroic +40% from the script)
   206235  Grafted Eyes       KR6 eyes: the look (the script makes escapes need 4 interrupts)
   206236  Grafted Heart      KR6 heart: heals 10% / 15% of his maximum health (base point 0 from the script)
@@ -51,6 +52,7 @@ from lib.dsl.registry import (
     creature_spell,
     creature_template,
     creature_template_columns,
+    custom_attr,
     scripted_by,
     spell,
 )
@@ -99,6 +101,10 @@ _MECHANIC_BLEED = 15
 _DEFENSE_MAGIC = 1
 _DEFENSE_MELEE = 2
 _VEHICLE_WORK_BENCH = 6                     # Vehicle.dbc 6: one seat, VehicleSeat 441 (control and cast, no exit)
+_SPELL_ATTR0_CU_AURA_CANNOT_BE_SAVED = 0x01000000   # SpellInfo.h SpellCustomAttributes
+# The Failed Patients' pace: 3.6 yd/s (about 6 s over the 21.7 yd from the rise spot to the bench), as a fraction of
+# the 7 yd/s base run speed. Their chase runs (creature_template_movement Chase 0), so speed_run is the pace.
+_SPEED_RUN_FAILED_PATIENT = 0.514286
 
 _ICON_HOOK = 2735           # INV_Misc_Hook_01
 _ICON_CHAINS = 180          # Spell_Frost_ChainsOfIce
@@ -145,6 +151,7 @@ if BIND_WAVE_B:
         300539, 'Failed Patient', **{
             **KIT_CREATURE, 'minlevel': 60, 'maxlevel': 60, 'rank': 1, 'type': 6, 'unit_class': 1, 'unit_flags': 0,
             'HealthModifier': 1.96593, 'DamageModifier': 1.5, 'BaseAttackTime': 2000, 'speed_walk': 1.45,
+            'speed_run': _SPEED_RUN_FAILED_PATIENT,
             'ExperienceModifier': 1.0, 'lootid': 0, 'pickpocketloot': 0, 'skinloot': 0, 'mingold': 0, 'maxgold': 0,
             'ScriptName': 'npc_sc_failed_patient', 'difficulty_entry_1': 310115,
         },
@@ -289,10 +296,12 @@ stitched_wound_206233 = spell(
           '(SPELL_AURA_MOD_INCREASE_HEALTH_PERCENT -15, the engine multiplies by the stacks), stacking on a second '
           'operation, for the rest of the fight (the script removes it on his death, evade or reset). Added with '
           "DungeonKit::AddStacks. Not dispellable. Necrotic Strike 70659's SpellVisual 15205 (DeathKnight_"
-          'PlagueStrikeState, a state kit on the aura).',
+          'PlagueStrikeState, a state kit on the aura). Never saved (SPELL_ATTR0_CU_AURA_CANNOT_BE_SAVED): a patient '
+          "who logs out mid-fight misses the script's cleanup, and a saved -1 duration aura would stay until death.",
     raw_overrides=kit_raw('An organ was taken. Maximum health reduced.', 'Maximum health reduced.', instant=True,
                           CumulativeAura=10, AttributesEx=_ATTR1_NO_THREAT, SpellVisualID_1=KR_STITCHED_WOUND),
 )
+custom_attr(stitched_wound_206233, _SPELL_ATTR0_CU_AURA_CANNOT_BE_SAVED)
 
 killing_frenzy_206234 = spell(
     id=206234, name='Killing Frenzy', school=School.NORMAL, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,
@@ -355,7 +364,7 @@ grafted_heart_206237 = spell(
 # --- KR8 Backhand / KR9 Butcher's Rend -------------------------------------------------------------------------------
 backhand_206238 = spell(
     id=206238, name='Backhand', school=School.NORMAL, cast_time_ms=2000, cooldown_ms=0, category_cooldown_ms=0,
-    mana_cost=0, mana_cost_pct=0, range_yards=10.0, duration_ms=0,
+    mana_cost=0, mana_cost_pct=0, range_yards=40.0, duration_ms=0,
     effects=[Effect(type=EffectType.SCHOOL_DAMAGE, base_points=40, die_sides=0,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY, potency_excluded=_SCRIPT_REF)],
     spell_icon_id=_ICON_BACKHAND,
@@ -363,8 +372,9 @@ backhand_206238 = spell(
           'be interrupted (InterruptFlags 0, PreventionType 0), then 40% (heroic 55%, base point 0 from the script) of '
           "the reference tank row (1,484 / 2,261 before armor), Physical: the tank's armor and defensives apply (set "
           'at launch, spell_sc_krastinov_ref_hit), it cannot crit (no crit in stance) and cannot be dodged, parried '
-          'or blocked. First at 10 s, then every 15 s, never during an operation. Range 10 yd (a step back does not '
-          "dodge it). Backhand 18103's SpellVisual 1184.",
+          'or blocked. First at 10 s, then every 15 s, never during an operation. Range 40 yd '
+          '(KrastinovLogic.h kBackhandRangeYd): the range is checked again when the bar ends, so a 10 yd range let a '
+          "tank step out of it; a cast that does not start retries 1 s later. Backhand 18103's SpellVisual 1184.",
     raw_overrides=kit_raw('A brutal backhand.', DefenseType=_DEFENSE_MELEE, InterruptFlags=0, PreventionType=0,
                           SpellVisualID_1=_SV_BACKHAND, **_HIT_RAW),
 )
