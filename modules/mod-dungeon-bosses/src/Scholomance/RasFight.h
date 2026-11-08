@@ -34,6 +34,8 @@ class Unit;
 
 namespace ScholoRas
 {
+    class RasHardMode;
+
     // S4's AI, as the hard mode sees it during one pull.
     class RasFight
     {
@@ -42,6 +44,9 @@ namespace ScholoRas
 
         virtual Creature* Ras() = 0;
         virtual bool Heroic() const = 0;
+        // The pull's hard mode object (nullptr on a pull without it, or out of combat): S12's `.dbtest scholo keepsake`
+        // and its Ice Tomb reach it through Ras's AI (dynamic_cast<RasFight*>(ras->AI())).
+        virtual RasHardMode* ActiveHardMode() = 0;
 
         // The players of the fight: alive, not game masters, in combat with Ras or on his arena.
         virtual std::vector<Player*> FightPlayers() = 0;

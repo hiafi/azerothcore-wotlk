@@ -235,6 +235,11 @@ struct boss_ras_frostwhisper_rework : public BossAI, public RasFight
         return _heroic;
     }
 
+    RasHardMode* ActiveHardMode() override
+    {
+        return _hardMode.get();
+    }
+
     std::vector<Player*> FightPlayers() override
     {
         std::vector<Player*> out;
