@@ -24,14 +24,25 @@ namespace DungeonKit
 {
     namespace
     {
+        // A prop on the threat list that is nobody's target: a non-player unit that cannot be attacked or selected (a
+        // scripted vehicle with a player aboard picks up threat for its passenger: Vehicle.cpp, ThreatManager's
+        // redirect to the vehicle). It never counts as "inside" and is never gripped. Not IsControlledByPlayer(): a
+        // vehicle charmed by its passenger reports true; not offline references: those also drop feigning hunters.
+        bool IsProp(Unit const* unit)
+        {
+            return !unit->IsPlayer()
+                && (unit->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) || unit->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE));
+        }
+
         // Everyone in combat with `boss`: his threat list (players, pets, guardians, bots; DoZoneInCombat adds every
-        // player and their pets at the pull).
+        // player and their pets at the pull), less the props (IsProp).
         std::vector<Unit*> CombatUnits(Creature const* boss)
         {
             std::vector<Unit*> out;
             for (ThreatReference const* ref : boss->GetThreatMgr().GetUnsortedThreatList())
                 if (Unit* unit = ref->GetVictim())
-                    out.push_back(unit);
+                    if (!IsProp(unit))
+                        out.push_back(unit);
             return out;
         }
 

@@ -9,8 +9,9 @@
  *   ApplyGandlingReveal  Gandling hidden (invisible, faction 35) or revealed (visible, faction 21); the instance and
  *                      S11's Reset both call it, from the instance's DATA_GANDLING_REVEALED
  *   GradeWatch         an instructor's Passing Grades (ruling 22, section 7 #18): every registry failure with a
- *                      player during the heroic fight costs that player the grade; at the death, every other player
- *                      in the instance earns it (SetGuidData(DataPassingGrade(i), player))
+ *                      player during the heroic fight costs that player the grade (less a hit the boss exempted with
+ *                      Exempt); at the death, every other player in the instance earns it
+ *                      (SetGuidData(DataPassingGrade(i), player))
  *   InstanceApi        what the instance exposes beyond Get/SetData (the grades table), via GetInstanceApi
  *
  * A Scholomance boss, in short (the KS stubs already do this):
@@ -36,7 +37,6 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <unordered_set>
 
 class Creature;
 class InstanceScript;
@@ -74,12 +74,16 @@ namespace ScholomanceRework
         uint32 AwardAtDeath(Creature* boss);
         void Reset();
 
+        // `player` keeps the grade through a hit of this one mechanic (GradeLedger: Illucia's Fear end marker on the
+        // feared player). Call before the mechanic resolves; a no-op outside an active watch.
+        void Exempt(BossMechanics::MechanicHandle mechanic, ObjectGuid player);
+
         bool Active() const { return _active; }
-        std::size_t FailedCount() const { return _failed ? _failed->size() : 0; }
+        std::size_t FailedCount() const { return _ledger ? _ledger->FailedCount() : 0; }
         bool HasFailed(ObjectGuid player) const;
 
     private:
-        std::shared_ptr<std::unordered_set<uint64>> _failed;
+        std::shared_ptr<GradeLedger> _ledger;
         Instructor _who = Instructor::Malicia;
         bool _active = false;
     };

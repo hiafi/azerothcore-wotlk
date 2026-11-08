@@ -202,6 +202,8 @@ PK_HARDENED_ALT = 7425
 # deployed 2026-11-07 (live spellvisual_dbc row + patch-M SpellVisual / SpellVisualKit / SpellVisualEffectName rows).
 SV_ACID_POOL = 90342
 PK_ACID_POOL = SV_ACID_POOL
+PK_CORRODED = 856                   # (S7) Corrosive Acid 8245's own: the Corroded debuff
+PK_NOXIOUS_CATALYST = 800           # (S7) Noxious Catalyst 18151's own
 
 # Ravenian and Corvane (S8)
 RV_LEASH_BEAM = 9843                # (doc) Shadow Channeling 43897: RitualSummoning precast + shadow hands
@@ -209,6 +211,10 @@ RV_LEASH_BEAM_ALT = 7597            # Chains of Kel'Thuzad 28410: missile streak
 RV_MEND_CONSTRUCT = 27              # (doc) Dark Mending 16588: ShadowProtection_Chest
 RV_TELEPORT_DOWN = 9343             # (doc) Teleport Visual 41236
 RV_BEREAVED = 47                    # (doc) Unholy Frenzy 8699 (BloodLust_State_Hand)
+RV_ORDER_TRAMPLE = 672              # (S8) Trample 15550
+RV_ORDER_SWEEP = 219                # (S8) Sundering Cleave 25174 (and Cleave 20691)
+RV_ORDER_SMASH = 2069               # (S8) Knock Away 10101
+RV_SHADOW_BOLT = 64                 # (S8) Shadow Bolt 686 (the bolt and its missile): Corvane
 
 # Alexei (S9)
 # Fortune pickup: Coin Toss 60450 / SV 12794 is a yellow crystal missile, not a coin (the pile GODI is the visible
@@ -218,6 +224,7 @@ AX_RULE_ANNOUNCEMENT = 246          # (doc) Commanding Shout 469
 AX_DEANS_ROD = 792
 AX_ILL_GOTTEN_GAINS = 12473         # Ill-Gotten Gains 57718 loot sparkles (lootfx, scale 1.5)
 AX_ILL_GOTTEN_GAINS_ALT = 11903     # AuraYellow 54273 (yellow glow column); alt 2 SV 6592 Glowy (Yellow) 22580
+AX_VEIL_OF_SHADOW = 561             # (S9) Veil of Shadow 17820's own
 
 # Illucia (S10)
 IL_THE_READ = 4839                  # (doc) Mind Vision 2096: eyesofbeast_impact_head
@@ -264,8 +271,10 @@ STOCK_SPELL_VISUALS = tuple(sorted({
     KR_DRAG_ONTO_BENCH, KR_INCISION, KR_WRENCH_FREE, KR_WRENCH_FREE_IMPACT, KR_STITCHED_WOUND, KR_STITCHED_WOUND_ALT,
     KR_GRAFT_HANDS, KR_GRAFT_EYES, KR_GRAFT_HEART, KR_KILLING_FRENZY,
     PK_RAISE, PK_EMERGE, PK_FUSE_SWELL, PK_BURST, PK_ROOTED, PK_ROOTED_ALT, PK_HARDENED, PK_HARDENED_ALT,
-    RV_LEASH_BEAM, RV_LEASH_BEAM_ALT, RV_MEND_CONSTRUCT, RV_TELEPORT_DOWN, RV_BEREAVED,
-    AX_RULE_ANNOUNCEMENT, AX_DEANS_ROD, AX_ILL_GOTTEN_GAINS, AX_ILL_GOTTEN_GAINS_ALT,
+    PK_CORRODED, PK_NOXIOUS_CATALYST,
+    RV_LEASH_BEAM, RV_LEASH_BEAM_ALT, RV_MEND_CONSTRUCT, RV_TELEPORT_DOWN, RV_BEREAVED, RV_ORDER_TRAMPLE, RV_ORDER_SWEEP,
+    RV_ORDER_SMASH, RV_SHADOW_BOLT,
+    AX_RULE_ANNOUNCEMENT, AX_DEANS_ROD, AX_ILL_GOTTEN_GAINS, AX_ILL_GOTTEN_GAINS_ALT, AX_VEIL_OF_SHADOW,
     IL_THE_READ, IL_FORESIGHT_IMPACT, IL_FORESIGHT_IMPACT_ALT, IL_MEMORY_TRAIL, IL_FEAR,
     GD_PORTAL_STATE, GD_PORTAL_VOLLEY, GD_PORTAL_VOLLEY_2, GD_PORTAL_VOLLEY_SHADOW, GD_TRANSFER_FLASH,
     GD_TRANSFER_LINK, GD_HONOR_ROLL, GD_HONOR_ROLL_ALT, GD_HONOR_ROLL_FLASH, GD_EXAMINER_TINT, GD_EXAMINER_TINT_ALT,

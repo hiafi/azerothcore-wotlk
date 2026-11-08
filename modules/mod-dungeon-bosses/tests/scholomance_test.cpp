@@ -258,6 +258,28 @@ namespace
         CHECK(GandlingHardModeChangeAllowed(0, false, false, false, InProgress));
     }
 
+    // GradeWatch's ledger: a player's failure costs the grade, a group failure never does, and an exempted (mechanic,
+    // player) pair (Illucia's Fear end marker on the feared player) costs only the others it hits.
+    void TestGradeLedger()
+    {
+        CHECK(SPELL_GHOST_VISUAL == 9617u);             // the examiners' tint (WP-V AURA_GHOST_VISUAL)
+        GradeLedger ledger;
+        CHECK(!ledger.Record(7, 0));                    // a missed soak: no player
+        CHECK(ledger.FailedCount() == 0);
+        ledger.Exempt(9, 100);
+        CHECK(ledger.IsExempt(9, 100) && !ledger.IsExempt(9, 101) && !ledger.IsExempt(10, 100));
+        CHECK(!ledger.Record(9, 100));                  // the feared player at their own end marker
+        CHECK(!ledger.HasFailed(100));
+        CHECK(ledger.Record(9, 101));                   // a bystander in the same marker
+        CHECK(ledger.HasFailed(101));
+        CHECK(ledger.Record(10, 100));                  // the feared player in another mechanic
+        CHECK(ledger.HasFailed(100));
+        CHECK(ledger.Record(10, 100) && ledger.FailedCount() == 2);
+        ledger.Exempt(0, 100);                          // no mechanic, no player: ignored
+        ledger.Exempt(11, 0);
+        CHECK(!ledger.IsExempt(0, 100) && !ledger.IsExempt(11, 0));
+    }
+
     void TestPassingGrades()
     {
         PassingGrades g;
@@ -465,6 +487,7 @@ int main()
     TestArenas();
     TestReveal();
     TestKeepsakeAndHardModes();
+    TestGradeLedger();
     TestPassingGrades();
     TestSave();
     TestStockSave();
