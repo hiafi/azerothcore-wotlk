@@ -633,6 +633,9 @@ class DeadminesTest(unittest.TestCase):
             )
             for key in ("creature_templates", "creature_template_models", "creature_template_edits"):
                 cls.dsl[key] = cls.dsl.get(key, []) + list(getattr(kit, key))
+            # This class checks the Deadmines' expansion: the other dungeons' heroics (Shadowfang Keep's, WP-H) have
+            # their own tests and, until their scoped write run, pending rows that are not Deadmines'.
+            cls.dsl["dungeons"] = [e if e["map_id"] == 36 else dict(e, heroic=None) for e in cls.dsl["dungeons"]]
             cls.index = spell_tables.load_spell_table_index()
             cls.out = dungeon_heroic.expand(cls.dsl, lambda: dungeon_heroic.load_live_world(existing, cls.index))
         finally:

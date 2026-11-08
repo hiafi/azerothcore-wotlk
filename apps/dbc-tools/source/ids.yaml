@@ -548,8 +548,17 @@ reservations:
   # (SpellVisual, SpellVisualKit and SpellVisualEffectName share the numbers), one 50-id slice per dungeon in build
   # order. Each dungeon's WP-0 adds its spell / creature / gameobject / display rows here (handoffs:
   # shadowfang-keep-build s3.4, scholomance-build s3.3, stratholme-build s3.3).
+  # Shadowfang Keep build WP-0 (2026-11-07, shadowfang-keep-build.HANDOFF.md s3.4; checked free in the live DB).
+  # Shared heroic ids, assigned in build order: SFK mapdifficulty 1001, dungeon_access 123, dungeonencounter
+  # 1007-1014; Scholomance and Stratholme take the next free ids in their turn.
   shadowfang_keep:
+    spell: {start: 205900, end: 206099}
+    creature: {start: 300500, end: 300529}
+    gameobject: {start: 301100, end: 301149}
     spellvisual: {start: 90400, end: 90449}  # SpellVisual, Kit and EffectName
+    gameobjectdisplayinfo: {start: 90030, end: 90034}
+    creaturedisplayinfo: {start: 90720, end: 90729}
+    creaturemodeldata: {start: 90720, end: 90729}
   scholomance:
     spellvisual: {start: 90450, end: 90499}  # SpellVisual, Kit and EffectName
   stratholme:

@@ -36,6 +36,13 @@ namespace DungeonKit
         return Mechanic::RefFlat(owner, pct, tank);
     }
 
+    uint32 RefFlatOn(Unit const* owner, Unit const* target, float pct)
+    {
+        Player const* player = target ? target->ToPlayer() : nullptr;
+        bool const tank = player && BossMechanics::GetRoleProvider().Get(owner, player) == BossMechanics::Role::Tank;
+        return RefFlat(owner, pct, tank);
+    }
+
     bool IsHeroicMap(WorldObject const* me)
     {
         Map const* map = me ? me->FindMap() : nullptr;

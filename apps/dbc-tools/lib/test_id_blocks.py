@@ -581,10 +581,37 @@ class WaveOneItemReservationsTest(unittest.TestCase):
                         self.assertFalse(_overlap(cfg, tables[table]), f"{name} {table} vs {owner}")
 
     def test_the_wave_one_npcs_sit_in_their_dungeons_creature_slice(self):
-        for directory, name in (("shadowfang_keep", "shadowfang_items"), ("scholomance", "scholomance_items")):
+        # The Shadowfang Keep package also holds the dungeon build's own creatures (the `shadowfang_keep` reservation,
+        # shadowfang-keep-build WP-K): an id may sit in either reservation there.
+        for directory, names in (("shadowfang_keep", ("shadowfang_items", "shadowfang_keep")),
+                                 ("scholomance", ("scholomance_items",))):
             ids = declared_ids(TOOL_ROOT / "source" / "npcs" / directory)
             self.assertTrue(ids.get("creature"), directory)
-            self.assertEqual(out_of_reservation(name, {"creature": ids["creature"]}), [], directory)
+            outside = [value for value in sorted(set(ids["creature"]))
+                       if all(out_of_reservation(name, {"creature": [value]}) for name in names)]
+            self.assertEqual(outside, [], directory)
+
+
+class ShadowfangKeepIdsTest(unittest.TestCase):
+    """Shadowfang Keep build WP-0 (2026-11-07): the dungeon's reservation, pinned exactly."""
+
+    def test_shadowfang_keep_reservation(self):
+        got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["shadowfang_keep"].items()}
+        self.assertEqual(got, {
+            "spell": (205900, 206099),
+            "creature": (300500, 300529),
+            "gameobject": (301100, 301149),
+            "spellvisual": (90400, 90449),
+            "gameobjectdisplayinfo": (90030, 90034),
+            "creaturedisplayinfo": (90720, 90729),
+            "creaturemodeldata": (90720, 90729),
+        })
+
+    def test_shadowfang_keep_overlaps_no_other_reservation(self):
+        for table, cfg in RESERVATIONS["shadowfang_keep"].items():
+            for owner, tables in RESERVATIONS.items():
+                if owner != "shadowfang_keep" and table in tables:
+                    self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
 
 
 class DungeonKitIdsTest(unittest.TestCase):
@@ -630,6 +657,19 @@ class DungeonKitIdsTest(unittest.TestCase):
         used = [value for value, _ in scanned.get("spellvisual", [])]
         self.assertFalse([v for v in used if 90345 <= v <= 90699
                           and not any(r["start"] <= v <= r["end"] for r in reserved)])
+
+    def test_the_real_scan_finds_the_shadowfang_keep_script_in_its_slices(self):
+        # patch_shadowfang_keep_vfx_models.py (Shadowfang Keep build WP-V) mints the purple shadow lightning (90400)
+        # and the Cell Key display (90030) and nothing else; 90720-90729 (creature display / model data) stays free
+        scanned = scanned_used_ids()
+        script = DUNGEON_VFX_SCRIPTS["shadowfang_keep"]
+        mine = {where.split(":")[1]: value for found in scanned.values() for value, where in found
+                if where.startswith(script)}
+        self.assertEqual(mine["EFFECT_SHADOW_LIGHTNING"], 90400)
+        self.assertEqual(mine["KIT_SHADOW_LIGHTNING"], 90400)
+        self.assertEqual(mine["SV_SHADOW_LIGHTNING"], 90400)
+        self.assertEqual(mine["GODI_CELL_KEY"], 90030)
+        self.assertFalse([name for name in mine if name.startswith("CDI_")])
 
     def test_a_planted_constant_in_another_dungeons_slice_is_flagged(self):
         with tempfile.TemporaryDirectory() as d:
