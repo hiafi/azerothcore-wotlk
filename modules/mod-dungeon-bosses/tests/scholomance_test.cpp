@@ -451,7 +451,8 @@ namespace
         CHECK(LessonEndCheck(false, false, false, true) == LessonEnd::StudentLeft);
         CHECK(LessonEndCheck(true, false, true, true) == LessonEnd::StudentDied);
         CHECK(LessonEndCheck(true, true, false, true) == LessonEnd::LastAlive);
-        CHECK(IsSafetyEnd(LessonEnd::LastAlive) && !IsSafetyEnd(LessonEnd::TimeUp) && !IsSafetyEnd(LessonEnd::Finished));
+        CHECK(IsSafetyEnd(LessonEnd::LastAlive) && !IsSafetyEnd(LessonEnd::TimeUp)
+            && !IsSafetyEnd(LessonEnd::Finished));
     }
 }
 

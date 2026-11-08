@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdint>
 #include <set>
+#include <utility>
 #include <string>
 #include <vector>
 
@@ -203,16 +204,88 @@ namespace
 
     void TestFinds()
     {
-        CHECK(FindOutcome(false, 1) == FindResult::UnmaskAndEnd);
-        CHECK(FindOutcome(true, 1) == FindResult::UnmaskAndShuffle);
-        CHECK(FindOutcome(true, 2) == FindResult::End);
         CHECK(kFindsToEnd(false) == 1 && kFindsToEnd(true) == 2);
-        // Direct hits: a swing, or a harmful spell aimed at the unit; never an area spell, never a buff.
-        CHECK(CountsAsDirectHit(true, false, false, false));
-        CHECK(CountsAsDirectHit(false, true, false, true));
-        CHECK(!CountsAsDirectHit(false, true, true, true));
-        CHECK(!CountsAsDirectHit(false, true, false, false));
-        CHECK(!CountsAsDirectHit(false, false, false, true));
+        CHECK(FindOutcome(false, 1) == FindResult::UnmaskAndEnd);
+        // Q4 (provisional): heroic Unmasked lands at the game's end, the second find.
+        CHECK(kHeroicUnmaskAtEnd);
+        CHECK(FindOutcome(true, 1) == FindResult::Shuffle);
+        CHECK(FindOutcome(true, 2) == FindResult::UnmaskAndEnd);
+
+        // Direct hits (R-A B-1, Q3): a swing, or a harmful damaging spell aimed at the unit, from a player or a pet,
+        // on the unit the caster has selected.
+        auto spell = [](HitSource src, bool selected)
+        {
+            HitFacts h;
+            h.source = src;
+            h.onSelected = selected;
+            h.harmful = true;
+            h.needsUnitTarget = true;
+            h.damage = true;
+            return h;
+        };
+        HitFacts swing;
+        swing.source = HitSource::Player;
+        swing.onSelected = true;
+        swing.melee = true;
+        CHECK(CountsAsDirectHit(swing));
+        HitFacts petSwing = swing;
+        petSwing.source = HitSource::Pet;
+        CHECK(CountsAsDirectHit(petSwing));
+        CHECK(CountsAsDirectHit(spell(HitSource::Player, true)));      // Frostbolt on her
+        CHECK(CountsAsDirectHit(spell(HitSource::Pet, true)));         // the imp's Firebolt
+        // A proc or trigger landing on a figure the caster has not selected: Deep Wounds from a Whirlwind crit,
+        // Ignite from a Flamestrike, Pestilence's Blood Plague, a seal proc on a Divine Storm target.
+        CHECK(!CountsAsDirectHit(spell(HitSource::Player, false)));
+        HitFacts offSwing = swing;
+        offSwing.onSelected = false;
+        CHECK(!CountsAsDirectHit(offSwing));
+        // Totems and guardians never count (Searing Totem, Fire Elemental, Feral Spirits).
+        CHECK(!kTotemsAndGuardiansCount);
+        CHECK(!CountsAsDirectHit(spell(HitSource::Other, true)));
+        HitFacts guardianSwing = swing;
+        guardianSwing.source = HitSource::Other;
+        CHECK(!CountsAsDirectHit(guardianSwing));
+        // Chains (Cleave, Multi-Shot, Chain Lightning) and area spells never count, even on her.
+        HitFacts chain = spell(HitSource::Player, true);
+        chain.chain = true;
+        CHECK(!CountsAsDirectHit(chain));
+        HitFacts area = spell(HitSource::Player, true);
+        area.area = true;
+        CHECK(!CountsAsDirectHit(area));
+        // Harmful spells that deal no damage (Taunt, Hunter's Mark, Faerie Fire) never count; nor a buff, nor a
+        // spell with no unit target.
+        HitFacts taunt = spell(HitSource::Player, true);
+        taunt.damage = false;
+        CHECK(!CountsAsDirectHit(taunt));
+        HitFacts buff = spell(HitSource::Player, true);
+        buff.harmful = false;
+        CHECK(!CountsAsDirectHit(buff));
+        HitFacts ground = spell(HitSource::Player, true);
+        ground.needsUnitTarget = false;
+        CHECK(!CountsAsDirectHit(ground));
+        CHECK(kSpellFindDealsDamage && kHitsOnSelectedTargetOnly && !kNonDamageSpellsCount);
+    }
+
+    // Q5 (provisional): a bot's guess. On her it stays; else it switches to her under the chance; a guess that is
+    // gone picks again. About a 25% chance per second.
+    void TestBotGuesses()
+    {
+        CHECK(kBotFindChance == 0.25f && kBotGuessEveryMs == 1000);
+        CHECK(NextGuess(true, true, 0.0f, kBotFindChance) == GuessStep::Keep);
+        CHECK(NextGuess(true, true, 0.9f, kBotFindChance) == GuessStep::Keep);
+        CHECK(NextGuess(false, true, 0.1f, kBotFindChance) == GuessStep::Her);
+        CHECK(NextGuess(false, true, 0.3f, kBotFindChance) == GuessStep::Keep);
+        CHECK(NextGuess(false, false, 0.3f, kBotFindChance) == GuessStep::Random);
+        CHECK(NextGuess(false, false, 0.1f, kBotFindChance) == GuessStep::Her);
+        // Over many seconds one bot finds her at about the chance per second (no instant find).
+        Lcg lcg;
+        std::uint32_t firstSecond = 0;
+        std::uint32_t const trials = 20000;
+        for (std::uint32_t t = 0; t < trials; ++t)
+            if (NextGuess(false, true, lcg.Unit01(), kBotFindChance) == GuessStep::Her)
+                ++firstSecond;
+        float const rate = float(firstSecond) / float(trials);
+        CHECK(rate > 0.23f && rate < 0.27f);
     }
 
     void TestRing()
@@ -277,13 +350,40 @@ namespace
     void TestHeroicGrid()
     {
         // Any grid point can be the decoy and stays safe ground: no other grid circle, nor the alcove's, covers it.
+        CHECK(kGridSigilRadius == 9.f);
         for (std::size_t d = 0; d < kJandiceSigilGrid.size(); ++d)
         {
             CHECK(DungeonKit::InsideFrame(kJandiceAisle, kJandiceSigilGrid[d]));
             for (std::size_t i = 0; i < kJandiceSigilGrid.size(); ++i)
                 if (i != d)
-                    CHECK(DungeonKit::Distance(kJandiceSigilGrid[i], kJandiceSigilGrid[d]) > kSigilRadius);
-            CHECK(DungeonKit::Distance(kJandiceAlcoveSigil, kJandiceSigilGrid[d]) > kSigilRadius);
+                    CHECK(DungeonKit::Distance(kJandiceSigilGrid[i], kJandiceSigilGrid[d]) > kGridSigilRadius + 1.f);
+            CHECK(DungeonKit::Distance(kJandiceAlcoveSigil, kJandiceSigilGrid[d]) > kSigilRadius + 1.f);
+        }
+        // R-A N-5: the grid leaves no pocket. With any decoy, every floor point no real circle covers lies closer to
+        // the decoy's grid point than to any other: the decoy is the only safe ground.
+        for (std::size_t d = 0; d < kJandiceSigilGrid.size(); ++d)
+        {
+            std::uint32_t uncovered = 0;
+            for (float fx = 0.f; fx <= kJandiceAisle.sizeX + 0.001f; fx += 0.25f)
+                for (float fy = 0.f; fy <= kJandiceAisle.sizeY + 0.001f; fy += 0.25f)
+                {
+                    Vec2 const p = DungeonKit::FramePoint(kJandiceAisle, fx, fy);
+                    bool covered = false;
+                    std::size_t nearest = 0;
+                    for (std::size_t i = 0; i < kJandiceSigilGrid.size(); ++i)
+                    {
+                        float const dist = DungeonKit::Distance(p, kJandiceSigilGrid[i]);
+                        if (i != d && dist <= kGridSigilRadius)
+                            covered = true;
+                        if (dist < DungeonKit::Distance(p, kJandiceSigilGrid[nearest]))
+                            nearest = i;
+                    }
+                    if (covered)
+                        continue;
+                    ++uncovered;
+                    CHECK(nearest == d);
+                }
+            CHECK(uncovered > 0);
         }
         // The alcove circle stays off the aisle frame (y 84 on).
         CHECK(kJandiceAlcoveSigil.y + kSigilRadius < 84.f);
@@ -372,6 +472,22 @@ namespace
         CHECK(Near(LaneFacing(kJandiceAisle, false, true), DungeonKit::kPi * 1.5f));
         for (Vec2 const p : { nearX, farX, nearY, farY })
             CHECK(DungeonKit::InsideFrame(kJandiceAisle, p) && JandiceArena().Contains(p, kJandiceFloorZ));
+
+        // R-A S-9: the boss's lane width tiles each axis with whole lanes, so no lane is clamped over its neighbor
+        // and every free lane is a full lane wide (9 of 6.17 yd across the 55.5 yd aisle, 4 of 5.25 yd along).
+        float const wAcross = LaneWidthFor(kJandiceAisle.sizeX, kLaneWidth);
+        float const wAlong = LaneWidthFor(kJandiceAisle.sizeY, kLaneWidth);
+        CHECK(Near(wAcross, 55.5f / 9.f) && Near(wAlong, 5.25f));
+        for (auto const& [span, w] : { std::pair{ kJandiceAisle.sizeX, wAcross }, std::pair{ kJandiceAisle.sizeY,
+            wAlong } })
+        {
+            std::vector<float> const layout = CoverOffsets(span, w);
+            CHECK(layout.size() == std::size_t(std::lround(span / w)));
+            for (std::size_t i = 0; i < layout.size(); ++i)
+                CHECK(Near(layout[i], float(i) * w));     // no clamp
+            CHECK(Near(layout.back() + w, span));
+            CHECK(w >= 5.f);
+        }
     }
 }
 
@@ -382,6 +498,7 @@ int main()
     TestCadence();
     TestGameClock();
     TestFinds();
+    TestBotGuesses();
     TestRing();
     TestSigilPoints();
     TestHeroicGrid();

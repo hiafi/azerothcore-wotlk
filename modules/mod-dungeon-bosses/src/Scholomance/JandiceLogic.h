@@ -76,6 +76,9 @@ namespace ScholoJandice
 
     // --- JB1 Blood Sigil ---------------------------------------------------------------------------------------------
     float constexpr kSigilRadius = 8.f;
+    // Heroic grid circles (R-A N-5): 9 yd, so the 8 grid circles leave no pocket (cell half-diagonal 8.74 yd); the
+    // decoy's own ground stays safe (its neighbors are 10.6 yd away or more).
+    float constexpr kGridSigilRadius = 9.f;
     inline constexpr NH<std::uint32_t> kSigilWarnMs{ 5000, 6000 };
     inline constexpr NH<float> kSigilPct{ 40.f, 60.f };
     std::uint32_t constexpr kNormalSigils = 3;
@@ -103,6 +106,7 @@ namespace ScholoJandice
     std::uint32_t constexpr kThreadMs = 1000;
     std::uint32_t constexpr kSwapMs = 750;              // the swap run
     float constexpr kSwapMinSpeed = 7.f;
+    std::uint32_t constexpr kSwapLandSlackMs = 150;     // a swap run has landed this long after kSwapMs
     // Heroic, the shuffle after the first find: her pair blinks (both gone this long) and trades places, so no player
     // keeps her selected through it; finds wait until it is over.
     std::uint32_t constexpr kBlinkMs = 300;
@@ -271,29 +275,109 @@ namespace ScholoJandice
         bool _running = false;
     };
 
-    // A find (a direct hit on the real Jandice): normal ends the game and Unmasks her; heroic Unmasks her on the first
-    // find and she shuffles once more, the second find ends the game (no second Unmask).
+    // ----------------------------------------------------------------------------------------------------------------
+    // PROVISIONAL orchestrator calls on R-A's designer questions (F-A, 2026-11-08). The designer may change any of
+    // them; each is one switch here.
+    // ----------------------------------------------------------------------------------------------------------------
+    // Q3: only a hit on the unit the caster has selected counts (a pet: its owner's selection or its own victim).
+    // False: any direct hit counts, as first built (chain bounces and procs on other figures excluded either way).
+    inline constexpr bool kHitsOnSelectedTargetOnly = true;
+    // Q3: totems and guardians (Searing Totem, Fire Elemental, Feral Spirits) never find her nor shatter a copy.
+    inline constexpr bool kTotemsAndGuardiansCount = false;
+    // Q3: harmful spells that deal no damage (Taunt, Hunter's Mark, Faerie Fire) never find her nor shatter a copy.
+    inline constexpr bool kNonDamageSpellsCount = false;
+    // Q3: a spell that finds her deals its normal damage (false: 0, as first built; a melee find always deals its).
+    inline constexpr bool kSpellFindDealsDamage = true;
+    // Q4: heroic Unmasked lands when the game ends (the second find), not on the first find.
+    inline constexpr bool kHeroicUnmaskAtEnd = true;
+    // Q5: bots get no guid to follow. Each bot guesses a figure at random when the ring forms (and after the heroic
+    // blink); every kBotGuessEveryMs it switches to her with this chance, and a guess that shattered re-picks at
+    // random.
+    inline constexpr float kBotFindChance = 0.25f;
+    std::uint32_t constexpr kBotGuessEveryMs = 1000;
+
+    // A find (a direct hit on the real Jandice): normal ends the game and Unmasks her. Heroic: the first find makes
+    // her shuffle once more (kHeroicUnmaskAtEnd: no Unmask yet), the second ends the game (and Unmasks her).
     enum class FindResult : std::uint8_t
     {
         UnmaskAndEnd,
         UnmaskAndShuffle,
+        Shuffle,
         End,
     };
 
     constexpr FindResult FindOutcome(bool heroic, std::uint32_t findsSoFar)
     {
-        if (!heroic)
-            return FindResult::UnmaskAndEnd;
-        return findsSoFar <= 1 ? FindResult::UnmaskAndShuffle : FindResult::End;
+        if (findsSoFar < kFindsToEnd(heroic))
+            return kHeroicUnmaskAtEnd ? FindResult::Shuffle : FindResult::UnmaskAndShuffle;
+        if (heroic && !kHeroicUnmaskAtEnd)
+            return FindResult::End;
+        return FindResult::UnmaskAndEnd;
     }
 
-    // What counts as a direct hit on a figure (JB3 / JB2): a melee swing from a player or a pet, or a harmful spell
-    // aimed at that unit (it needs an explicit unit target and is not an area spell). Area damage never does.
-    constexpr bool CountsAsDirectHit(bool meleeSwing, bool spellHarmful, bool spellArea, bool spellNeedsUnitTarget)
+    // Who struck a figure.
+    enum class HitSource : std::uint8_t
     {
-        if (meleeSwing)
+        Player,
+        Pet,        // a player's pet (kTotemsAndGuardiansCount: any unit a player controls)
+        Other,      // totems, guardians, charmed units, creatures
+    };
+
+    // What the engine knows about one hit on a figure (JB2 / JB3).
+    struct HitFacts
+    {
+        HitSource source = HitSource::Other;
+        bool onSelected = false;        // the struck figure is the caster's selected target (a pet: see above)
+        bool melee = false;             // an auto-attack swing
+        bool harmful = false;           // a spell: not positive
+        bool area = false;              // a spell: an area spell
+        bool needsUnitTarget = false;   // a spell: aimed at a unit
+        bool chain = false;             // a spell: chains to more targets (Cleave, Multi-Shot, Chain Lightning)
+        bool damage = false;            // a spell: deals damage (direct, weapon or over time)
+    };
+
+    // What counts as a direct hit on a figure (a find on her, a shatter on a copy; R-A B-1 and the Q3 calls): a hit
+    // from a player or a player's pet, on the figure the caster has selected, that is a melee swing or a harmful
+    // damaging spell aimed at that unit (not an area spell, not a chain). Procs and triggers landing on other figures
+    // (Deep Wounds from a Whirlwind, Pestilence, seal procs) fail the selection rule.
+    constexpr bool CountsAsDirectHit(HitFacts const& h)
+    {
+        if (h.source == HitSource::Other)
+            return false;
+        if (kHitsOnSelectedTargetOnly && !h.onSelected)
+            return false;
+        if (h.melee)
             return true;
-        return spellHarmful && !spellArea && spellNeedsUnitTarget;
+        return h.harmful && (h.damage || kNonDamageSpellsCount) && !h.area && !h.chain && h.needsUnitTarget;
+    }
+
+    // Q5, one bot's guess every kBotGuessEveryMs: keep it, switch to her (roll in [0, 1) under `chance`), or pick a
+    // figure at random (its guess is gone: shattered or dissolved).
+    enum class GuessStep : std::uint8_t
+    {
+        Keep,
+        Her,
+        Random,
+    };
+
+    constexpr GuessStep NextGuess(bool onHer, bool guessStanding, float roll, float chance)
+    {
+        if (onHer && guessStanding)
+            return GuessStep::Keep;
+        if (roll < chance)
+            return GuessStep::Her;
+        return guessStanding ? GuessStep::Keep : GuessStep::Random;
+    }
+
+    // Bloodlines' lane width on an axis spanning `span` yd: the nominal width stretched or shrunk so whole lanes tile
+    // the span exactly (R-A S-9: no lane clamped over its neighbor, so the free lane is never a 1.5 yd strip). The
+    // 55.5 yd aisle takes 9 lanes of 6.17 yd, the 21 yd width 4 of 5.25 yd.
+    inline float LaneWidthFor(float span, float nominal)
+    {
+        if (span <= 0.f || nominal <= 0.f)
+            return nominal;
+        float const n = std::max(1.f, std::round(span / nominal));
+        return span / n;
     }
 
     // ----------------------------------------------------------------------------------------------------------------

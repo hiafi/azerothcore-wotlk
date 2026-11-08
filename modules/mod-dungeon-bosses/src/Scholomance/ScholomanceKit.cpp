@@ -19,6 +19,7 @@ namespace ScholomanceRework
         o.gripOnPull = false;
         o.gripBack = false;
         o.holdWhileVictimOff = true;
+        o.switchWhenVictimOff = kLeashSwitchToInside;
         o.evadeWhenBossOff = true;
         o.bossGraceMs = kLeashBossGraceMs;
         o.evadeNoTargetInsideMs = kLeashNoTargetMs;
@@ -60,7 +61,9 @@ namespace ScholomanceRework
 
     uint32 GradeWatch::AwardAtDeath(Creature* boss)
     {
-        if (!_active || !boss || !DungeonKit::IsHeroicMap(boss))
+        // Grades come from a real instructor fight only: never from a stub before wave B binds the instructors
+        // (kWaveBBound, R-A S-11).
+        if (!kWaveBBound || !_active || !boss || !DungeonKit::IsHeroicMap(boss))
             return 0;
         InstanceScript* instance = boss->GetInstanceScript();
         if (!instance)

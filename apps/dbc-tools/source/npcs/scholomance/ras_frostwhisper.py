@@ -55,6 +55,7 @@ from ._common import (
     resolve_copy,
 )
 from ._visuals import (
+    DISPLAY_INVISIBLE_STALKER,
     RF_BLIZZARD,
     RF_CHILL,
     RF_CHILL_12_STACKS,
@@ -69,8 +70,6 @@ creature_template_columns(10508, **boss_columns('boss_ras_frostwhisper_rework', 
 
 _RF = 'Scholomance build WP-S4 (Ras Frostwhisper)'
 _SCRIPT_EXCLUDED = 'Scholomance: a percent of reference health, set by the script (DungeonKit::RefFlat)'
-
-_DISPLAY_INVISIBLE_STALKER = 11686     # the SFK ward stalker's display (shadow_fang_keep _visuals)
 
 _TARGET_DEST_CASTER = 18
 _TARGET_SRC_CASTER = 22
@@ -102,7 +101,7 @@ blizzard_anchor_300534 = creature_template(
     300534, 'Blizzard', **{**KIT_HELPER, 'minlevel': 62, 'maxlevel': 62, 'rank': 0, 'unit_class': 1, 'type': 10,
                            'flags_extra': 0x40 | 0x80, 'ScriptName': ''},
 )
-creature_model(300534, display_id=_DISPLAY_INVISIBLE_STALKER)
+creature_model(300534, display_id=DISPLAY_INVISIBLE_STALKER)
 
 # --- RF1 Chill / RF2 Warmth -----------------------------------------------------------------------------------------
 

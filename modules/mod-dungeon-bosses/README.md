@@ -52,6 +52,7 @@ so db-import and the dbc-tools replay see one history.
 | `src/Scholomance/SoloLesson{.h,.cpp,Logic.h}` | Detention's solo lesson interface and per-room factories |
 | `src/Scholomance/ScholomanceTestCommand.{h,cpp}` | The `.dbtest scholo` shell and its `instance` table |
 | `src/Scholomance/boss_<name>_rework.cpp`, `<Boss>Logic.h` | One pair per Scholomance boss WP; S12/S13 hard modes |
+| `src/Scholomance/RasFight.h` | Ras's hard mode hooks into his fight (S4 -> S12) |
 | `src/Scholomance/scholomance_items.cpp` | Scholomance item scripts: Phylactery, Bonechill, Papers, Portal Rod |
 | `src/Scholomance/ScholomanceItemsLogic.h` | Pure: Scholomance item effect ids (205620-205642), tally, swap rules |
 | `src/ShadowfangKeep/sfk_hard_mode_items.cpp` | Arugal hard mode item scripts: the Shadow Tome's Voidwalker |

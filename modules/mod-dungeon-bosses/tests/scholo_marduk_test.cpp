@@ -55,9 +55,22 @@ int main()
         DungeonKit::Arena const arena = MardukVectusArena();
         CHECK(arena.Contains(kMardukSpawn.XY(), kMardukSpawn.z));
         CHECK(arena.Contains(kVectusSpawn.XY(), kVectusSpawn.z));
-        // Marduk's stage corner (outside the report's circle) is in.
-        CHECK(!ViewingRoomArena().Contains({ 154.5f, 122.5f }, 104.3f));
+        // Marduk's stage corner (outside the report's circle) is in; `.dbtest scholo where` (ArenaFor) agrees with
+        // the leash (S3 request, R-A N-13).
+        CHECK(ViewingRoomArena().Contains({ 154.5f, 122.5f }, 104.3f));
         CHECK(arena.Contains({ 154.5f, 122.5f }, 104.3f));
+        CHECK(ArenaFor(BOSS_MARDUK_VECTUS).Contains({ 154.5f, 122.5f }, 104.3f));
+        // R-A N-9: the south-west desks (spawns 48460, 91320, 48465, 48463, 48468, 32 to 39.5 yd from the circle's
+        // centre) and the hall's north-west corner are in.
+        for (Point3 const p : { Point3{ 94.90f, 73.51f, 97.78f }, Point3{ 95.29f, 76.51f, 97.79f },
+            Point3{ 97.92f, 75.09f, 97.96f }, Point3{ 111.24f, 64.84f, 99.04f }, Point3{ 109.25f, 68.80f, 98.94f },
+            Point3{ 90.0f, 120.0f, 100.0f } })
+            CHECK(arena.Contains(p.XY(), p.z));
+        // Every drill floor point is on the arena (a melee player killing a quiz student is never off it).
+        for (float x = kViewingFloorBox.minX; x <= kViewingFloorBox.maxX; x += 1.f)
+            for (float y = kViewingFloorBox.minY; y <= kViewingFloorBox.maxY; y += 1.f)
+                if (OnViewingFloor({ x, y }))
+                    CHECK(arena.Contains({ x, y }, 101.0f));
         // The hall's far corners are in; both Iron Gates and the Viewing Room Door are out.
         CHECK(arena.Contains({ 110.0f, 70.0f }, 98.0f));
         CHECK(!arena.Contains({ 91.1f, 100.7f }, 99.0f));     // Iron Gate 175617 (south)

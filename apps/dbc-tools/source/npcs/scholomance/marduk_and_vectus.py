@@ -103,7 +103,16 @@ from ._common import (
     kit_raw,
     resolve_copy,
 )
-from ._visuals import MV_EBON_SWEEP, MV_FLAMESTRIKE_DRILL, MV_SHADOW_BOLT_VOLLEY, MV_WHIRLWIND
+from ._visuals import (
+    MV_DRILL_IMPACT,
+    MV_EBON_SWEEP,
+    MV_FIREBALL,
+    MV_FLAMESTRIKE_DRILL,
+    MV_GROUP_EXERCISE_MARK,
+    MV_SHADOW_BOLT_VOLLEY,
+    MV_WHIRLWIND,
+    MV_WHIRLWIND_IMPACT,
+)
 
 creature_template_columns(10433, **boss_columns('boss_marduk_blackpool_rework', 130.605, DamageModifier=3.5))
 creature_template_columns(10432, **boss_columns('boss_vectus_rework', 122.85, DamageModifier=3.5))
@@ -149,10 +158,6 @@ _ICON_SHADOW_CLEAVE = 277   # Shadow Cleave 29832
 _ICON_FIREBALL = 183        # Fireball 9053
 _ICON_WHIRLWIND = 83        # Whirlwind 1680
 
-_SV_FIRE_IMPACT = 796       # an impact-only kit (Fire_ImpactDD_Chest): the Drill's hit on each player
-_SV_HUNTERS_MARK = 3239     # Hunter's Mark 1130 (the red arrow), as Nandos's Marked Prey
-_SV_FIREBALL = 67           # Fireball 9053 (missile, MoltenBlast impact)
-_SV_WHIRLWIND_IMPACT = 3362  # an impact-only kit (DecisiveStrike_Impact_Chest): the spin's tick on each player
 
 _MV = 'Scholomance WP-S3'
 _SCRIPT_EXCLUDED = 'Scholomance: a percent of reference health, set by the script (DungeonKit::RefFlat)'
@@ -191,14 +196,14 @@ drill_206152 = resolve_copy(
     206152, 'Flamestrike Drill', School.FIRE, 'The class practices Flamestrike.',
     f'{_MV}, MV1 the registry\'s resolve copy (Fire): 45% normal, 60% heroic, no Weakened, on everyone in a 6 yd '
     'circle as a student\'s cast ends. SV 796 (Fire_ImpactDD_Chest) for the impact on each player hit.',
-    icon=_ICON_FLAMESTRIKE, visual=_SV_FIRE_IMPACT,
+    icon=_ICON_FLAMESTRIKE, visual=MV_DRILL_IMPACT,
 )
 
 drill_burn_206153 = resolve_copy(
     206153, 'Flamestrike Drill', School.FIRE, 'Standing in the fire hurts.',
     f'{_MV}, MV1 heroic: the burning circle\'s tick (DungeonKit::ImpactThenLinger), 10% of the reference row every '
     '1 s for 10 s, with the kit\'s Standing in It slow. SV 796 on each player hit.',
-    icon=_ICON_FLAMESTRIKE, visual=_SV_FIRE_IMPACT,
+    icon=_ICON_FLAMESTRIKE, visual=MV_DRILL_IMPACT,
 )
 
 # --- MV2 Group Exercise --------------------------------------------------------------------------------------------
@@ -214,7 +219,7 @@ group_exercise_mark_206154 = spell(
           'Shield), Dispel none: the ring is the job.',
     raw_overrides=kit_raw('The class volleys at you in $d. Gather your allies around you to share the bolts.',
                           'The class volleys at you soon. Gather your allies.', CastingTimeIndex=1,
-                          SpellVisualID_1=_SV_HUNTERS_MARK),
+                          SpellVisualID_1=MV_GROUP_EXERCISE_MARK),
 )
 
 group_exercise_206155 = spell(
@@ -325,7 +330,7 @@ fireball_206162 = spell(
           '(InterruptFlags 15), but do-not-kick on the descriptor so the bots keep their kicks for the Pop Quiz. '
           'Ignores caster modifiers, cannot crit. Fireball 9053\'s SV 67 and speed 24.',
     raw_overrides=kit_raw('Hurls a fiery ball at an enemy.', InterruptFlags=_INTERRUPT_FLAGS_STANDARD,
-                          PreventionType=_PREVENTION_SILENCE, DefenseType=1, SpellVisualID_1=_SV_FIREBALL, Speed=24.0,
+                          PreventionType=_PREVENTION_SILENCE, DefenseType=1, SpellVisualID_1=MV_FIREBALL, Speed=24.0,
                           AttributesEx2=ATTR2_CANT_CRIT, AttributesEx3=ATTR3_IGNORE_CASTER_MODIFIERS),
 )
 scripted_by(fireball_206162, 'spell_sc_mv_ref_flat')
@@ -354,7 +359,7 @@ whirlwind_206165 = resolve_copy(
     206165, 'Whirlwind', School.NORMAL, 'A spinning runeblade.',
     f'{_MV}, MV6 (heroic) the spin tick (resolve copy, Physical): 20% every 1 s on the 8 yd circle on Marduk for 4 s, '
     'one Weakened on a player\'s first tick per spin. SV 3362 (DecisiveStrike_Impact_Chest) on each player hit.',
-    icon=_ICON_WHIRLWIND, visual=_SV_WHIRLWIND_IMPACT,
+    icon=_ICON_WHIRLWIND, visual=MV_WHIRLWIND_IMPACT,
 )
 
 # --- The Graduate's Shadow Bolt ------------------------------------------------------------------------------------

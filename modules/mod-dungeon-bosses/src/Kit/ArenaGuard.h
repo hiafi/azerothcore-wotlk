@@ -22,6 +22,9 @@
  *   - during the fight (gripBack): a unit off the arena for graceMs (continuously) is gripped back, then left alone for
  *     cooldownMs, or its flight time + 0.5 s when that is longer (no second grip mid-air: GripCooldownMs);
  *   - holdWhileVictimOff: the boss never chases a victim who is off the arena (he holds; the grip brings it back);
+ *   - switchWhenVictimOff: while the top of his threat list is off the arena, the boss turns to the highest-threat
+ *     unit on it (a threat fixate the guard sets and clears; a fixate the script set itself is left alone); with
+ *     nobody on it he holds as above;
  *   - evadeWhenBossOff: the boss evades (EVADE_REASON_BOUNDARY) once he has been off it himself for bossGraceMs (0:
  *     at the first check; the leash). With leashSkipAirborne a check while he jumps or falls (his own leap, a drop
  *     between floors) neither counts nor evades;
@@ -64,6 +67,7 @@ namespace DungeonKit
         bool gripOnPull = true;
         bool gripBack = true;
         bool holdWhileVictimOff = true;
+        bool switchWhenVictimOff = false;                       // turn to the top-threat unit on the arena instead
         bool evadeWhenBossOff = true;
         uint32 bossGraceMs = 0;                                 // the boss off his arena this long: the leash
         bool leashSkipAirborne = true;                          // no leash check while the boss jumps or falls
@@ -115,10 +119,14 @@ namespace DungeonKit
         bool Contains(WorldObject const* o) const;
         bool Grippable(Creature const* boss, Unit const* unit) const;
         bool Holding() const { return _holding; }
+        ObjectGuid SwitchedTo() const { return _switchedTo; }
         Arena const& GetArena() const { return _arena; }
         ArenaGuardOptions const& Options() const { return _options; }
 
     private:
+        // switchWhenVictimOff: fixate the top-threat unit on the arena while the top one is off it.
+        void UpdateSwitch(Creature* boss);
+
         Arena _arena;
         ArenaGuardOptions _options;
         GripTracker _grip;
@@ -126,6 +134,7 @@ namespace DungeonKit
         uint32 _checkMs = 0;
         uint32 _emptyMs = 0;
         bool _holding = false;
+        ObjectGuid _switchedTo;                                 // the unit the guard fixated (switchWhenVictimOff)
     };
 
     struct ConfineOptions

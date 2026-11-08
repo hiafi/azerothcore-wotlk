@@ -102,6 +102,12 @@ _STUN_IMMUNE = {"CreatureImmunitiesId": 1972}
 # Loose part 300531, Unfinished Construct 300532, Blizzard anchor 300534, Loose Soul 300537, Work Bench 300538,
 # Barov fortune 300543, the Ravenian's echo 300545 and the lesson / portal stalkers 300546-300547. Ice Tomb 300535
 # and the Graduate Examiners 300548-300554 exist only on heroic and join in WP-S12 / WP-S13.
+#
+# Mint order (R-A N-2): a scoped write run mints the adds it finds next-after-highest, in entry order. The predicted
+# ids (lib/test_scholomance_heroic.py KIT_HEROIC_ID, and each add's difficulty_entry_1) hold only if every wave mints
+# its own adds in entry order after the earlier waves' ones: an add with a lower entry than one already predicted
+# (the Ice Tomb 300535 against the Expelled Student 300544) must not join the same mint, or the later ids shift.
+# --check and the test catch a drift.
 _KIT_ADD_HEROIC = {
     300533: dict(health=22_000),  # Graduate (Marduk and Vectus)
     300536: dict(health=18_000),  # Malicia's Shade
@@ -127,13 +133,49 @@ def _declared_kit_entries() -> set[int]:
 _declared = _declared_kit_entries()
 
 
+# R-A S-2: until WP-L (wave C) declares the heroic bosses' loot (boss_loot(), which copies group 0 to the heroic
+# lootid), a heroic boss keeps its normal lootid like the trash: the heroic copy then drops the stock list, Rattlegore's
+# Viewing Room Key 13873 included, and the boot logs no missing loot table. WP-L flips this (True) as its loot lands.
+_HEROIC_BOSS_OWN_LOOT = False
+
+
 def _boss(health: int, heroic_entry: int | None = None) -> dict:
     """A heroic boss drops its own loot: `lootid` = its own heroic entry (heroic_ids.lock), whose groups hold the
-    Heroic tiers (WP-L)."""
+    Heroic tiers (WP-L; held back by `_HEROIC_BOSS_OWN_LOOT` until then)."""
     columns = dict(_STUN_IMMUNE)
-    if heroic_entry is not None:
+    if heroic_entry is not None and _HEROIC_BOSS_OWN_LOOT:
         columns["lootid"] = heroic_entry
     return dict(health=health, columns=columns)
+
+
+# The wave switches of source/npcs/scholomance/_common.py (BIND_WAVE_B, BIND_WAVE_C; R-A S-11), read from its text
+# (the dungeon files never import the npc packages): a later wave's boss keeps its stock heroic copy until its wave
+# binds it.
+_WAVE_SWITCH = re.compile(r"^BIND_WAVE_([BC])\s*=\s*(True|False)\s*$", re.MULTILINE)
+
+
+def _bound_waves() -> set[str]:
+    path = _KIT_NPCS / "_common.py"
+    text = path.read_text(encoding="utf-8") if path.is_file() else ""
+    return {"A"} | {wave for wave, value in _WAVE_SWITCH.findall(text) if value == "True"}
+
+
+_bound = _bound_waves()
+
+
+def _wave(wave: str, overrides: dict) -> dict:
+    """`overrides` once `wave` is bound, else nothing."""
+    return overrides if wave in _bound else {}
+
+
+# S-1: the Shell Game copy mirrors Jandice, so its heroic copy must match her heroic row, not the stock 11439 row the
+# generator copies (it reads the replayed row, not jandice_barov.py's creature_template_columns edits): her class (2,
+# the mana bar), name, mana, the stun immunity set 1972, her unit_flags, walk speed and stillness, no regeneration and
+# no loot or XP (flags_extra 0x40), and her heroic health. Its melee stays the tier's (the solve owns DamageModifier):
+# the copy never swings (npc_sc_shell_game_copy).
+_SHELL_GAME_COPY = dict(health=265_000, columns=dict(
+    _STUN_IMMUNE, name="Jandice Barov", unit_class=2, unit_flags=32832, ManaModifier=3.0, speed_walk=1.0,
+    MovementType=0, RegenHealth=0, ExperienceModifier=0.0, flags_extra=0x40))
 
 
 scholomance = dungeon(
@@ -168,14 +210,20 @@ scholomance = dungeon(
             10433: _boss(425_000, 310070),  # Marduk Blackpool (one shared pool with Vectus)
             10432: _boss(425_000, 310069),  # Vectus
             10508: _boss(270_000, 310098),  # Ras Frostwhisper
-            10505: _boss(250_000, 310095),  # Instructor Malicia
-            11261: _boss(240_000, 310103),  # Doctor Theolen Krastinov
-            10901: _boss(360_000, 310100),  # Lorekeeper Polkelt
-            10507: _boss(210_000, 310097),  # The Ravenian
-            10504: _boss(250_000, 310094),  # Lord Alexei Barov
-            10502: _boss(250_000, 310092),  # Lady Illucia Barov
-            1853: _boss(400_000, 310068),  # Darkmaster Gandling
-            10475: dict(health=12_000),  # Scholomance Student (the quiz student)
+            **_wave("B", {
+                10505: _boss(250_000, 310095),  # Instructor Malicia
+                11261: _boss(240_000, 310103),  # Doctor Theolen Krastinov
+                10901: _boss(360_000, 310100),  # Lorekeeper Polkelt
+                10507: _boss(210_000, 310097),  # The Ravenian
+                10504: _boss(250_000, 310094),  # Lord Alexei Barov
+                10502: _boss(250_000, 310092),  # Lady Illucia Barov
+            }),
+            **_wave("C", {
+                1853: _boss(400_000, 310068),  # Darkmaster Gandling
+            }),
+            11439: _SHELL_GAME_COPY,  # Illusion of Jandice Barov: the Shell Game copy (WP-S1)
+            # The quiz student: a prop (not selectable, not attackable) until its quiz, like the normal row (WP-S3).
+            10475: dict(health=12_000, columns=dict(unit_flags=0x2000042)),
             **{entry: values for entry, values in _KIT_ADD_HEROIC.items() if entry in _declared},
         },
     ),

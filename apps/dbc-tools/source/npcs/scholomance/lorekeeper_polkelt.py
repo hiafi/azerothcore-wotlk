@@ -17,6 +17,8 @@ header's ScholomanceCreatures enum, DamageModifier, the visual ids from ._visual
 
 from lib.dsl.registry import creature_template_columns
 
-from ._common import boss_columns
+from ._common import BIND_WAVE_B, boss_columns
 
-creature_template_columns(10901, **boss_columns('boss_lorekeeper_polkelt_rework', 57.339))
+# Held back until wave B binds this boss (_common.py BIND_WAVE_B; R-A S-11): stock until then.
+if BIND_WAVE_B:
+    creature_template_columns(10901, **boss_columns('boss_lorekeeper_polkelt_rework', 57.339))

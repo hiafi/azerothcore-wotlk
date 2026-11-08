@@ -64,6 +64,7 @@ DISPLAY_PORTAL = 27735
 PORTAL_SIZE = 0.2
 DISPLAY_PORTAL_ALT = 22742          # Creature_SpellPortalLarge_Purple (creature 24925)
 DISPLAY_PORTAL_ALT_2 = 23718        # MagePortal_Blank (scale 6)
+DISPLAY_INVISIBLE_STALKER = 11686   # (S4) an invisible stalker: Ras's Blizzard anchor 300534 (the SFK ward stalker's)
 
 # --- Stock GameObjectDisplayInfo (a goober / generic template's displayId) ---------
 
@@ -133,6 +134,10 @@ MV_EBON_SWEEP = 7684                # (doc) Shadow Cleave 29832: cleave_cast_bas
 MV_EBON_SWEEP_ALT = 11713
 MV_WHIRLWIND = 10704                # (doc) Bladestorm 46924: STATE warrior_bladestorm
 MV_KILLING_FRENZY = 870             # Vectus frenzy (Frenzy 8269)
+MV_DRILL_IMPACT = 796               # (S3) impact-only kit Fire_ImpactDD_Chest: the Drill's hit on each player
+MV_GROUP_EXERCISE_MARK = 3239       # (S3) Hunter's Mark 1130, the red arrow (as Nandos's Marked Prey): the marked one
+MV_FIREBALL = 67                    # (S3) Fireball 9053 (missile, MoltenBlast impact): Vectus's Fireball
+MV_WHIRLWIND_IMPACT = 3362          # (S3) impact-only kit DecisiveStrike_Impact_Chest: the spin's tick on each player
 
 # Ras Frostwhisper (S4, S12)
 # Chill stacks: Mystic Buffet 70127 / SV 8796 is a one-shot arcane burst and Frost Aura 28531 / SV 7606 draws NOTHING.
@@ -250,6 +255,7 @@ STOCK_SPELL_VISUALS = tuple(sorted({
     RG_PART_FLUNG, RG_PART_FLUNG_ALT, RG_LANDING, RG_GRINDING_A_PILE, RG_PILE_BOLTS_BACK_ON, RG_PILE_BOLTS_BACK_ON_ALT,
     RG_ERUPTION_RING, RG_SALVAGE_CHANNEL, RG_FRENZY,
     MV_FLAMESTRIKE_DRILL, MV_SHADOW_BOLT_VOLLEY, MV_EBON_SWEEP, MV_EBON_SWEEP_ALT, MV_WHIRLWIND, MV_KILLING_FRENZY,
+    MV_DRILL_IMPACT, MV_GROUP_EXERCISE_MARK, MV_FIREBALL, MV_WHIRLWIND_IMPACT,
     RF_CHILL, RF_CHILL_12_STACKS, RF_CHILL_ALT, RF_WARMTH, RF_WARMTH_ALT, RF_FROST_MARK, RF_FROST_NOVA, RF_BLIZZARD,
     RF_BLIZZARD_ALT, RF_ENTOMBED, RF_ENTOMBED_ALT, RF_TOMB_THAW, RF_TOMB_THAW_ALT, RF_SIPHON_WARMTH, RF_MORTAL_DECAY,
     RF_MORTAL_DECAY_ALT,
@@ -273,7 +279,7 @@ STOCK_CREATURE_DISPLAYS = tuple(sorted({
     DISPLAY_RAS_HUMAN, DISPLAY_RAS_HUMAN_ALT, DISPLAY_ICE_TOMB, DISPLAY_LOOSE_SOUL, DISPLAY_LOOSE_SOUL_SMALL,
     DISPLAY_DARK_SHADE, DISPLAY_WORK_BENCH, DISPLAY_FAILED_PATIENT, DISPLAY_CORVANE, DISPLAY_CORVANE_ALT,
     DISPLAY_CORVANE_FALLBACK, DISPLAY_EXPELLED_STUDENT, DISPLAY_ECHO_RAVENIAN, DISPLAY_PORTAL, DISPLAY_PORTAL_ALT,
-    DISPLAY_PORTAL_ALT_2,
+    DISPLAY_PORTAL_ALT_2, DISPLAY_INVISIBLE_STALKER,
 }))
 STOCK_GAMEOBJECT_DISPLAYS = tuple(sorted({
     GODI_TORN_PAGE, GODI_TORN_PAGE_ALT, GODI_EMPTY_BOOK, GODI_EMPTY_BOOK_ALT, GODI_BONE_PILE_LANDING,

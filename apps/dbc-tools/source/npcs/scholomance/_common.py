@@ -63,6 +63,15 @@ KIT_CREATURE = kit_creature(faction=FACTION_SCHOLOMANCE, type=6)
 # faction 14, no loot, no XP (flags_extra 0x40), no melee (lib/dsl/dungeon_kit.py kit_helper).
 KIT_HELPER = kit_helper(KIT_CREATURE)
 
+# Wave switches. PROVISIONAL (orchestrator call on R-A Q12 / S-11, F-A 2026-11-08): deploying wave A must not change the
+# bosses of later waves. Until its wave flips its switch, a boss file declares nothing: the six instructors (wave B,
+# S5-S10) and Gandling (wave C, S11) keep their stock ScriptName, AIName, SmartAI and health, and
+# source/world/dungeons/scholomance.py holds their heroic overrides back too (it reads these two lines). The C++ twins
+# are kWaveBBound / kWaveCBound in modules/mod-dungeon-bosses src/Scholomance/ScholomanceRework.h; both sides must
+# agree (lib/test_scholomance_kit.py). The wave's WPs flip them (True) when they land.
+BIND_WAVE_B = False
+BIND_WAVE_C = False
+
 # creature_template.flags_extra bits (SharedDefines / CreatureData.h): no stock Scholomance boss has INSTANCE_BIND
 # (DB-REPORT 0.2); Krastinov keeps CIVILIAN (he only fights when attacked).
 FLAGS_EXTRA_INSTANCE_BIND = 0x1

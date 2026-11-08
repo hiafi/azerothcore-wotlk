@@ -104,6 +104,17 @@ class PinnedPicksTest(unittest.TestCase):
         self.assertEqual((v.GD_PORTAL_VOLLEY, v.GD_PORTAL_VOLLEY_2), (269, 270))
         self.assertEqual((v.GD_TRANSFER_FLASH, v.GD_TRANSFER_LINK), (9343, 7597))
 
+    def test_boss_wp_additions(self):
+        # Filed by F-A from the S3 and S4 reports: the Marduk and Vectus looks the boss file wired by hand, and Ras's
+        # Blizzard anchor's invisible stalker.
+        v = self.v
+        self.assertEqual((v.MV_DRILL_IMPACT, v.MV_GROUP_EXERCISE_MARK, v.MV_FIREBALL, v.MV_WHIRLWIND_IMPACT),
+                         (796, 3239, 67, 3362))
+        self.assertEqual(v.DISPLAY_INVISIBLE_STALKER, 11686)
+        for sv in (v.MV_DRILL_IMPACT, v.MV_GROUP_EXERCISE_MARK, v.MV_FIREBALL, v.MV_WHIRLWIND_IMPACT):
+            self.assertIn(sv, v.STOCK_SPELL_VISUALS)
+        self.assertIn(v.DISPLAY_INVISIBLE_STALKER, v.STOCK_CREATURE_DISPLAYS)
+
     def test_the_corrected_looks_replace_the_wrong_ones(self):
         v = self.v
         wired = set(v.STOCK_SPELL_VISUALS)

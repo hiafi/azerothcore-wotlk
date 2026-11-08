@@ -190,16 +190,17 @@ unmasked_206114 = spell(
 blood_sigil_206115 = resolve_copy(
     206115, 'Blood Sigil', School.SHADOW, 'A blood sigil bursts beneath you.',
     'Scholomance WP-S1, JB1 / JB5: a copy of the registry resolve spell 205001 under its own name (Shadow), bound to '
-    'spell_boss_mechanics_resolve: the 8 yd circle around a real reflection (JB1: 40% normal / 60% heroic) and around '
-    'every copy left standing when the Shell Game runs out (JB5: the same numbers). No Weakened (penalty none). Blood '
-    'Nova 72379\'s SpellVisual 9312 on whoever is hit.',
+    'spell_boss_mechanics_resolve: the 8 yd circle around a real reflection (JB1: 40% normal / 60% heroic; the '
+    'heroic grid\'s circles are 9 yd) and around every copy left standing when the Shell Game runs out (JB5: the '
+    'same numbers). No Weakened (penalty none). Blood Nova 72379\'s SpellVisual 9312 on whoever is hit.',
     icon=_ICON_BLOOD_MIRROR, visual=JB_SIGIL_BURST)
 
 bloodlines_206116 = resolve_copy(
     206116, 'Bloodlines', School.SHADOW, 'Blood floods your lane.',
     'Scholomance WP-S1, JB6: a copy of the registry resolve spell 205001 under its own name (Shadow), bound to '
-    'spell_boss_mechanics_resolve: every real 6 yd lane on the aisle frame and the alcove\'s circle, 50% normal / '
-    '70% heroic. No Weakened (penalty none). SpellVisual 9312 on whoever is hit.',
+    'spell_boss_mechanics_resolve: every real lane on the aisle frame (whole lanes: 6.17 yd across, 5.25 yd along) '
+    'and the alcove\'s circle, 50% normal / 70% heroic. No Weakened (penalty none). SpellVisual 9312 on whoever is '
+    'hit.',
     icon=_ICON_BLOOD_MIRROR, visual=JB_SIGIL_BURST)
 
 blood_price_206117 = spell(

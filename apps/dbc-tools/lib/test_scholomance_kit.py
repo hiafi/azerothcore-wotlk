@@ -55,6 +55,24 @@ BOSSES = {
     1853: ("boss_darkmaster_gandling_rework", 280_000, 61, 2515),
 }
 
+# The wave that binds each boss (R-A S-11): the six instructors are wave B, Gandling wave C.
+WAVE = {10505: "B", 11261: "B", 10901: "B", 10507: "B", 10504: "B", 10502: "B", 1853: "C"}
+
+
+def _dt_switches() -> dict[str, bool]:
+    text = (PACKAGE / "_common.py").read_text(encoding="utf-8")
+    return {w: v == "True" for w, v in re.findall(r"^BIND_WAVE_([BC])\s*=\s*(True|False)\s*$", text, re.M)}
+
+
+def _cpp_switches() -> dict[str, bool]:
+    return {w: v == "true" for w, v in re.findall(r"constexpr bool kWave([BC])Bound = (true|false);",
+                                                   HEADER.read_text())}
+
+
+def _bound(entry: int) -> bool:
+    wave = WAVE.get(entry, "A")
+    return wave == "A" or _dt_switches().get(wave, False)
+
 
 def _load():
     t = id_blocks
@@ -90,13 +108,21 @@ class ScholomanceSkeletonTest(unittest.TestCase):
         cls.edits = {int(r["entry"]): r for r in cls.reg.creature_template_edits}
         cls.scripts = _registered_scripts()
 
+    def test_the_wave_switches_agree(self):
+        # R-A S-11: the DT side (BIND_WAVE_B / BIND_WAVE_C) and the C++ side (kWaveBBound / kWaveCBound) flip together.
+        self.assertEqual(_dt_switches(), _cpp_switches())
+        self.assertEqual(set(_dt_switches()), {"B", "C"})
+
     def test_every_boss_is_bound(self):
         for entry, (script, _health, _level, _base) in BOSSES.items():
             with self.subTest(entry=entry):
+                self.assertIn(script, self.scripts, "no C++ registers this name")
                 row = self.edits.get(entry)
+                if not _bound(entry):
+                    self.assertIsNone(row, "a later wave's boss stays stock until its wave")
+                    continue
                 self.assertIsNotNone(row, "no creature_template_columns() edit")
                 self.assertEqual(row["ScriptName"], script)
-                self.assertIn(script, self.scripts, "no C++ registers this name")
                 self.assertEqual(row["AIName"], "")
                 self.assertEqual(row["CreatureImmunitiesId"], IMMUNITY_BOSS_STUN)
                 want = INSTANCE_BIND | (CIVILIAN if entry == 11261 else 0)
@@ -104,6 +130,8 @@ class ScholomanceSkeletonTest(unittest.TestCase):
 
     def test_normal_health_is_the_build_spec(self):
         for entry, (_script, health, _level, base) in BOSSES.items():
+            if not _bound(entry):
+                continue
             with self.subTest(entry=entry):
                 got = float(self.edits[entry]["HealthModifier"]) * base
                 self.assertLessEqual(abs(got - health), 2, f"{got:.0f} vs {health}")

@@ -17,6 +17,8 @@ from ._visuals (WP-V); the Risen Guardian 11598 is retired.
 
 from lib.dsl.registry import creature_template_columns
 
-from ._common import boss_columns
+from ._common import BIND_WAVE_C, boss_columns
 
-creature_template_columns(1853, **boss_columns('boss_darkmaster_gandling_rework', 111.332))
+# Held back until wave C binds this boss (_common.py BIND_WAVE_C; R-A S-11): stock until then.
+if BIND_WAVE_C:
+    creature_template_columns(1853, **boss_columns('boss_darkmaster_gandling_rework', 111.332))

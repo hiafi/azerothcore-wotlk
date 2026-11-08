@@ -49,6 +49,7 @@
 #include "Player.h"
 #include "ScholomanceKit.h"
 #include "ScholomanceRework.h"
+#include "ScriptedCreature.h"
 #include "StringFormat.h"
 #include "TemporarySummon.h"
 
@@ -82,6 +83,19 @@ namespace
         { GO_GATE_GANDLING_UP_EAST,    BOSS_GANDLING,  DOOR_TYPE_ROOM },
         { GO_GATE_GANDLING_UP_SOUTH,   BOSS_GANDLING,  DOOR_TYPE_ROOM },
         { GO_GATE_GANDLING_ENTRANCE,   BOSS_GANDLING,  DOOR_TYPE_ROOM },
+        { 0,                           0,              DOOR_TYPE_ROOM }
+    };
+
+    // Until wave C binds Gandling's rework (kWaveCBound): the instructors' rows only, so the stock
+    // boss_darkmaster_gandling (a BossAI on the same slot 3) keeps the stock gates: it opens and closes them itself.
+    DoorData const doorDataStockGandling[] =
+    {
+        { GO_GATE_GANDLING_DOWN_NORTH, BOSS_ILLUCIA,   DOOR_TYPE_ROOM },
+        { GO_GATE_GANDLING_DOWN_EAST,  BOSS_ALEXEI,    DOOR_TYPE_ROOM },
+        { GO_GATE_GANDLING_DOWN_SOUTH, BOSS_RAVENIAN,  DOOR_TYPE_ROOM },
+        { GO_GATE_GANDLING_UP_NORTH,   BOSS_POLKELT,   DOOR_TYPE_ROOM },
+        { GO_GATE_GANDLING_UP_EAST,    BOSS_KRASTINOV, DOOR_TYPE_ROOM },
+        { GO_GATE_GANDLING_UP_SOUTH,   BOSS_MALICIA,   DOOR_TYPE_ROOM },
         { 0,                           0,              DOOR_TYPE_ROOM }
     };
 
@@ -135,7 +149,7 @@ public:
         {
             SetHeaders(kSaveHeader);
             SetBossNumber(kBossCount);
-            LoadDoorData(doorData);
+            LoadDoorData(kWaveCBound ? doorData : doorDataStockGandling);
             LoadObjectData(creatureData, gameObjectData);
         }
 
@@ -234,6 +248,23 @@ public:
                 return;
             }
             InstanceScript::SetGuidData(type, data);
+        }
+
+        // Until wave B binds the instructors (kWaveBBound): a stock instructor (SmartAI, no BossAI) sets no boss state,
+        // so its death does it here; Gandling's reveal and DATA_MINI_BOSSES read the six states.
+        void OnUnitDeath(Unit* unit) override
+        {
+            Creature* creature = unit ? unit->ToCreature() : nullptr;
+            if (!creature)
+                return;
+            std::optional<uint32> const boss = InstructorBossOfEntry(creature->GetEntry());
+            if (!boss || GetBossState(*boss) == DONE)
+                return;
+            if (creature->IsAIEnabled && dynamic_cast<BossAI*>(creature->AI()))
+                return;     // a rework instructor: its own BossAI::_JustDied sets DONE
+            LOG_INFO(kLog, "scholo instance stock instructor {} died: boss state {} DONE", creature->GetEntry(),
+                *boss);
+            SetBossState(*boss, DONE);
         }
 
         // ------------------------------------------------------------------------------------------------------------

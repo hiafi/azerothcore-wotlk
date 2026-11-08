@@ -15,8 +15,12 @@
  *                     15) 12 yd around where she stood (moved into the aisle). She does nothing while hidden; only a
  *                     direct hit finds her (area damage and old damage over time deal her nothing in the game).
  *   JB3 Shatter       a direct hit on a copy shatters it: 25% / 40% Shadow to the attacker (a pet's owner). Area
- *                     damage never touches a copy (every copy takes 0 from everything).
- *   JB4 Unmasked      damage taken +20% for 8 s, on the hit that ends the game (heroic: on the first find).
+ *                     damage never touches a copy (every copy takes 0 from everything). A direct hit (JandiceLogic.h
+ *                     CountsAsDirectHit, R-A B-1 and the provisional Q3 calls): from a player or a player's pet (no
+ *                     totem, no guardian), on the figure the caster has selected, a melee swing or a harmful damaging
+ *                     spell aimed at it (no area spell, no chain, no proc landing on another figure).
+ *   JB4 Unmasked      damage taken +20% for 8 s, on the hit that ends the game (heroic: the second find; provisional
+ *                     Q4 call kHeroicUnmaskAtEnd).
  *   JB5 Failed game   at 20 s / 25 s every copy still standing bursts an 8 yd circle (5 s / 6 s, 40% / 60%), then
  *                     dissolves; she fights again at once.
  *   JB6 Bloodlines    6 yd lanes tiling the aisle frame (kJandiceAisle, 55.5 x 21), a reflection at each lane's end
@@ -31,9 +35,10 @@
  * Cast order (JandiceLogic.h JandiceClock): one outside cast every 10 s, alternating sigils and lines (8 s, 18 s), the
  * game at 25 s; after a game, sigils 6 s after it ends. A due game waits for the outside cast before it to resolve.
  *
- * Registry: every zone is on her encounter. Bots: target priority on her (follows her guid through the shuffles),
- * the copies and the reflections on the ignore list, Curse of Blood on the dispel list. Arena: KS's JandiceArena()
- * with LeashOptions (no grips). Timers and looks run on _timers (never paused by a cast bar).
+ * Registry: every zone is on her encounter. Bots: the reflections on the ignore list, Curse of Blood on the dispel
+ * list; in the game each damage dealer and tank guesses (provisional Q5 call: a random figure, then kBotFindChance
+ * per second to switch to her; OnlyFor target entries per player), with no guid to follow. Arena: KS's
+ * JandiceArena() with LeashOptions (no grips). Timers and looks run on _timers (never paused by a cast bar).
  *
  * Every firing logs one "scholo jandice <mechanic>" line (module.dungeonbosses, INFO). `.dbtest scholo jandice ...`
  * fires one mechanic on demand.
@@ -43,6 +48,7 @@
 #include "Chat.h"
 #include "Creature.h"
 #include "DungeonKit.h"
+#include "Group.h"
 #include "JandiceLogic.h"
 #include "Map.h"
 #include "MechanicRegistry.h"
@@ -105,17 +111,91 @@ namespace
         return m && !m->finished && !m->cancelled;
     }
 
-    // Players and their pets (the group's side).
-    bool PlayerSide(Unit const* unit)
+    // Who struck a figure (Q3: totems and guardians never count unless kTotemsAndGuardiansCount).
+    HitSource SourceOf(Unit const* unit)
     {
-        return unit && (unit->IsPlayer() || unit->IsControlledByPlayer());
+        if (!unit)
+            return HitSource::Other;
+        if (unit->IsPlayer())
+            return HitSource::Player;
+        if (unit->IsControlledByPlayer() && !unit->IsCharmed()
+            && (unit->IsPet() || (kTotemsAndGuardiansCount && (unit->IsTotem() || unit->IsGuardian()))))
+            return HitSource::Pet;
+        return HitSource::Other;
     }
 
-    // JB2 / JB3: a harmful spell aimed at this unit (not an area spell).
-    bool DirectSpell(SpellInfo const* spell)
+    // The struck figure is the caster's selection: a player's target; a pet's own victim or its owner's target.
+    bool OnSelected(Unit const* caster, Unit const* struck)
     {
-        return spell && CountsAsDirectHit(false, !spell->IsPositive(), spell->IsAffectingArea(),
-            spell->NeedsExplicitUnitTarget());
+        if (!caster || !struck)
+            return false;
+        if (caster->IsPlayer())
+            return caster->GetTarget() == struck->GetGUID();
+        if (caster->GetVictim() == struck)
+            return true;
+        Unit const* owner = caster->GetCharmerOrOwnerPlayerOrPlayerItself();
+        return owner && owner != caster && owner->GetTarget() == struck->GetGUID();
+    }
+
+    // A spell that deals damage: direct, weapon, drain, or over time.
+    bool DealsDamage(SpellInfo const* spell)
+    {
+        for (SpellEffectInfo const& eff : spell->GetEffects())
+        {
+            switch (eff.Effect)
+            {
+                case SPELL_EFFECT_SCHOOL_DAMAGE:
+                case SPELL_EFFECT_WEAPON_DAMAGE:
+                case SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL:
+                case SPELL_EFFECT_NORMALIZED_WEAPON_DMG:
+                case SPELL_EFFECT_WEAPON_PERCENT_DAMAGE:
+                case SPELL_EFFECT_HEALTH_LEECH:
+                case SPELL_EFFECT_ENVIRONMENTAL_DAMAGE:
+                    return true;
+                case SPELL_EFFECT_APPLY_AURA:
+                    if (eff.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE
+                        || eff.ApplyAuraName == SPELL_AURA_PERIODIC_LEECH
+                        || eff.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE_PERCENT)
+                        return true;
+                    break;
+                default:
+                    break;
+            }
+        }
+        return false;
+    }
+
+    // A spell that chains to more targets (Cleave, Multi-Shot, Chain Lightning): never a direct hit.
+    bool Chains(SpellInfo const* spell)
+    {
+        for (SpellEffectInfo const& eff : spell->GetEffects())
+            if (eff.ChainTarget > 1)
+                return true;
+        return false;
+    }
+
+    // JB2 / JB3: a direct hit on `struck` (CountsAsDirectHit): a melee swing (`spell` null) or a spell.
+    bool DirectHit(Unit const* caster, Unit const* struck, SpellInfo const* spell)
+    {
+        HitFacts h;
+        h.source = SourceOf(caster);
+        h.onSelected = OnSelected(caster, struck);
+        h.melee = !spell;
+        if (spell)
+        {
+            h.harmful = !spell->IsPositive();
+            h.area = spell->IsAffectingArea();
+            h.needsUnitTarget = spell->NeedsExplicitUnitTarget();
+            h.chain = Chains(spell);
+            h.damage = DealsDamage(spell);
+        }
+        return CountsAsDirectHit(h);
+    }
+
+    // A hit from the group's side that may count as a find (the spell's own check comes in SpellHit).
+    bool MayFind(Unit const* caster, Unit const* struck)
+    {
+        return SourceOf(caster) != HitSource::Other && (!kHitsOnSelectedTargetOnly || OnSelected(caster, struck));
     }
 
     // A unit on the aisle floor at `at` (the floor height there, else the measured floor).
@@ -203,21 +283,34 @@ struct boss_jandice_barov_rework : public BossAI
     void DamageTaken(Unit* attacker, uint32& damage, DamageEffectType type, SpellSchoolMask mask) override
     {
         BossAI::DamageTaken(attacker, damage, type, mask);
-        if (!_game.active)
+        if (!_game.active || _dealingFind)
             return;
-        if (type == DIRECT_DAMAGE && PlayerSide(attacker) && FindsCount())
+        if (type == DIRECT_DAMAGE && FindsCount() && DirectHit(attacker, me, nullptr))
         {
             Found(attacker, "melee");
             return;
         }
+        // A spell's damage lands before SpellHit decides whether it found her: held, and dealt there if it did
+        // (kSpellFindDealsDamage).
+        if (type == SPELL_DIRECT_DAMAGE && damage && attacker && FindsCount() && MayFind(attacker, me))
+            _heldHit = { attacker->GetGUID(), damage, mask };
         damage = 0;
     }
 
     void SpellHit(Unit* caster, SpellInfo const* spell) override
     {
         BossAI::SpellHit(caster, spell);
-        if (_game.active && PlayerSide(caster) && DirectSpell(spell) && FindsCount())
-            Found(caster, "spell");
+        HeldHit const held = _heldHit;
+        _heldHit = HeldHit();
+        if (!_game.active || !spell || !FindsCount() || !DirectHit(caster, me, spell))
+            return;
+        Found(caster, "spell");
+        if (kSpellFindDealsDamage && caster && held.damage && held.attacker == caster->GetGUID() && me->IsAlive())
+        {
+            _dealingFind = true;
+            Unit::DealDamage(caster, me, held.damage, nullptr, SPELL_DIRECT_DAMAGE, held.mask, spell, false);
+            _dealingFind = false;
+        }
     }
 
     void UpdateAI(uint32 diff) override
@@ -225,12 +318,13 @@ struct boss_jandice_barov_rework : public BossAI
         // Looks, reflections, the curse's cadence and the game's steps run every update, also while she casts (a
         // cast bar never pauses them) and out of combat (for .dbtest).
         _timers.Update(diff);
+        _heldHit = HeldHit();
         if (!me->IsEngaged())
             return;
 
-        JandiceCast const due = _clock.Update(diff, CastsLive());
         if (_game.active)
         {
+            _clock.Update(diff, CastsLive());   // the 50 s to the next game runs on; nothing else is due in a game
             UpdateGame(diff);
             if (!me->IsInCombat())
             {
@@ -246,6 +340,9 @@ struct boss_jandice_barov_rework : public BossAI
         if (!_arena.Update(me, diff))
             return;     // off her arena, or nobody on it for 10 s: evading
 
+        // The clock runs only once the gates pass (R-A S-8): a cast never comes due and is dropped while she has no
+        // victim, and a game is never marked started without starting.
+        JandiceCast const due = _clock.Update(diff, CastsLive());
         switch (due)
         {
             case JandiceCast::BloodSigil:
@@ -283,7 +380,8 @@ struct boss_jandice_barov_rework : public BossAI
         {
             std::size_t const decoy = RandomBelow(uint32(kJandiceSigilGrid.size()));
             for (std::size_t i = 0; i < kJandiceSigilGrid.size(); ++i)
-                if (SigilAt(kJandiceSigilGrid[i], i == decoy, warn, pct, kTagBloodSigil))
+                if (SigilAt(kJandiceSigilGrid[i], i == decoy, warn, pct, kTagBloodSigil, SPELL_JB_BLOOD_SIGIL,
+                    kGridSigilRadius))
                 {
                     ++placed;
                     decoys += i == decoy ? 1 : 0;
@@ -320,7 +418,9 @@ struct boss_jandice_barov_rework : public BossAI
         {
             BossMechanics::LaneBuilder lanes = Mechanic::RoomFrame(me, DungeonKit::ToRoomFrame(kJandiceAisle,
                 kJandiceFloorZ));
-            lanes.ExceptOne(kLaneWidth, Ms(warn), axis);
+            // Whole lanes tile the axis (R-A S-9): 9 of 6.17 yd across, 4 of 5.25 yd along.
+            lanes.ExceptOne(LaneWidthFor(alongX ? kJandiceAisle.sizeY : kJandiceAisle.sizeX, kLaneWidth), Ms(warn),
+                axis);
             if (heroic)
                 lanes.DecoyFree();
             lanes.Each([pct](BossMechanics::MechanicRef& lane)
@@ -396,11 +496,8 @@ struct boss_jandice_barov_rework : public BossAI
         me->GetMotionMaster()->Clear(false);
         me->GetMotionMaster()->MoveIdle();
         me->StopMoving();
-        me->RemoveAppliedAuras([](AuraApplication const* app)
-        {
-            ObjectGuid const caster = app->GetBase()->GetCasterGUID();
-            return !app->IsPositive() && (caster.IsPlayer() || caster.IsPet());
-        });
+        StripGroupAuras();
+        ClearRaidIcons();
 
         // The ring: where she stood, moved into the aisle; her place in it is random.
         uint32 const copies = kCopies(heroic);
@@ -421,10 +518,12 @@ struct boss_jandice_barov_rework : public BossAI
             Position const spot = FloorPosition(me, ring[mine], DungeonKit::BearingTo(ring[mine], center));
             me->NearTeleportTo(spot.GetPositionX(), spot.GetPositionY(), spot.GetPositionZ(), spot.GetOrientation());
             me->SetVisible(true);
+            DoCastSelf(SPELL_JB_REFLECTION_POOF, true);     // every copy poofs in as it appears; so does she
             for (std::size_t i = 0; i < ring.size(); ++i)
                 if (i != mine)
                     SpawnCopy(ring[i], DungeonKit::BearingTo(ring[i], center));
             Mirror();
+            RollGuesses("ring");
             _game.vanishing = false;
             _game.graceMs = kFindGraceMs;
             LogJb("shell-game-ring", Acore::StringFormat("copies={} center=({:.1f}, {:.1f}) her=({:.1f}, {:.1f})",
@@ -461,7 +560,18 @@ struct boss_jandice_barov_rework : public BossAI
     // instead of running, so nobody keeps her selected through it.
     void Shuffle(bool forceHer, char const* why)
     {
-        std::vector<Creature*> const figures = Figures();
+        if (forceHer)
+        {
+            // R-A S-7: she trades places now, even mid-run: a swap she was in is dropped and she stops where she is.
+            std::erase_if(_pendingSwaps, [this](Swap const& swap)
+            {
+                return swap.a == me->GetGUID() || swap.b == me->GetGUID();
+            });
+            me->GetMotionMaster()->Clear(false);
+            me->GetMotionMaster()->MoveIdle();
+            me->StopMoving();
+        }
+        std::vector<Creature*> const figures = Figures(forceHer);
         std::optional<std::size_t> forced;
         if (forceHer)
             for (std::size_t i = 0; i < figures.size(); ++i)
@@ -475,16 +585,20 @@ struct boss_jandice_barov_rework : public BossAI
             Creature* a = figures[pairs[i].first];
             Creature* b = figures[pairs[i].second];
             a->CastSpell(b, SPELL_JB_BLOOD_THREAD, true);
-            swaps.push_back({ a->GetGUID(), b->GetGUID(), forced && i == 0 });
+            swaps.push_back({ _nextSwapId++, a->GetGUID(), b->GetGUID(), forced && i == 0 });
             mine = mine || a == me || b == me;
         }
         if (swaps.empty())
             return;
+        // Paired figures sit out of new pairs until their swap lands.
+        _pendingSwaps.insert(_pendingSwaps.end(), swaps.begin(), swaps.end());
         _timers.Schedule(Ms(kThreadMs), [this, swaps](TaskContext /*ctx*/)
         {
-            if (_game.active)
-                for (Swap const& swap : swaps)
+            for (Swap const& swap : swaps)
+                if (_game.active && IsPending(swap.id))
                     TradePlaces(swap);
+                else
+                    DropPending(swap.id);
         });
         LogJb("shuffle", Acore::StringFormat("why={} pairs={} her={} figures={}", why, swaps.size(), mine ? 1 : 0,
             figures.size()));
@@ -571,6 +685,7 @@ struct boss_jandice_barov_rework : public BossAI
     }
 
     bool InGame() const { return _game.active; }
+    bool Engaged() const { return me->IsEngaged(); }
 
     // `.dbtest`: the find, as if `who` had hit her.
     void ForceFind(Unit* who)
@@ -595,26 +710,41 @@ private:
 
     struct Swap
     {
+        uint32 id = 0;
         ObjectGuid a;
         ObjectGuid b;
         bool blink = false;
     };
 
+    // A spell's damage on her in the game, held until SpellHit says whether it found her.
+    struct HeldHit
+    {
+        ObjectGuid attacker;
+        uint32 damage = 0;
+        SpellSchoolMask mask = SPELL_SCHOOL_MASK_NONE;
+    };
+
     // JB7: a pair trades places: a run to each other's spots, or (blink) both gone for a moment and back swapped.
+    // The pair stays out of new pairs until it has landed.
     void TradePlaces(Swap const& swap)
     {
         Map* map = me->GetMap();
         Creature* a = map->GetCreature(swap.a);
         Creature* b = map->GetCreature(swap.b);
         if (!a || !b || !a->IsAlive() || !b->IsAlive())
+        {
+            DropPending(swap.id);
             return;
+        }
         Position const pa = a->GetPosition();
         Position const pb = b->GetPosition();
+        uint32 const id = swap.id;
         if (!swap.blink)
         {
             float const speed = std::max(kSwapMinSpeed, pa.GetExactDist2d(&pb) * 1000.f / float(kSwapMs));
             a->GetMotionMaster()->MoveCharge(pb.GetPositionX(), pb.GetPositionY(), pb.GetPositionZ(), speed);
             b->GetMotionMaster()->MoveCharge(pa.GetPositionX(), pa.GetPositionY(), pa.GetPositionZ(), speed);
+            _timers.Schedule(Ms(kSwapMs + kSwapLandSlackMs), [this, id](TaskContext /*ctx*/) { DropPending(id); });
             return;
         }
         for (Creature* c : { a, b })
@@ -622,24 +752,171 @@ private:
             c->CastSpell(c, SPELL_JB_REFLECTION_POOF, true);
             c->SetVisible(false);
         }
+        // R-A S-6: nothing she wore before the blink gives her away after it.
+        if (a == me || b == me)
+        {
+            StripGroupAuras();
+            ClearRaidIcons();
+        }
         a->NearTeleportTo(pb.GetPositionX(), pb.GetPositionY(), pb.GetPositionZ(), pb.GetOrientation());
         b->NearTeleportTo(pa.GetPositionX(), pa.GetPositionY(), pa.GetPositionZ(), pa.GetOrientation());
-        _timers.Schedule(Ms(kBlinkMs), [map, swap](TaskContext /*ctx*/)
+        _timers.Schedule(Ms(kBlinkMs), [this, map, swap](TaskContext /*ctx*/)
         {
             for (ObjectGuid const& g : { swap.a, swap.b })
                 if (Creature* c = map->GetCreature(g))
                     c->SetVisible(true);
+            DropPending(swap.id);
+            RollGuesses("blink");   // every selection dropped with her: the bots guess again
         });
+    }
+
+    bool IsPending(uint32 id) const
+    {
+        return std::any_of(_pendingSwaps.begin(), _pendingSwaps.end(), [id](Swap const& s) { return s.id == id; });
+    }
+
+    bool InPendingSwap(ObjectGuid g) const
+    {
+        return std::any_of(_pendingSwaps.begin(), _pendingSwaps.end(),
+            [g](Swap const& s) { return s.a == g || s.b == g; });
+    }
+
+    void DropPending(uint32 id)
+    {
+        std::erase_if(_pendingSwaps, [id](Swap const& s) { return s.id == id; });
+    }
+
+    // Harmful auras a player or pet put on her (the vanish, the heroic blink).
+    void StripGroupAuras()
+    {
+        me->RemoveAppliedAuras([](AuraApplication const* app)
+        {
+            ObjectGuid const caster = app->GetBase()->GetCasterGUID();
+            return !app->IsPositive() && (caster.IsPlayer() || caster.IsPet());
+        });
+    }
+
+    // R-A S-6: no raid target icon stays on her through the game (hand marks, or a bot's `mark rti`).
+    void ClearRaidIcons()
+    {
+        ObjectGuid const mine = me->GetGUID();
+        std::vector<Group*> groups;
+        for (auto const& ref : me->GetMap()->GetPlayers())
+            if (Player* player = ref.GetSource())
+                if (Group* group = player->GetGroup())
+                    if (std::find(groups.begin(), groups.end(), group) == groups.end())
+                        groups.push_back(group);
+        for (Group* group : groups)
+            for (uint8 i = 0; i < TARGETICONCOUNT; ++i)
+                if (group->GetTargetIcon(i) == mine)
+                    group->SetTargetIcon(i, ObjectGuid::Empty, ObjectGuid::Empty);
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // Q5: the bots' guesses. Every player in the map gets one (only bots read the descriptor): a figure picked at
+    // random when the ring forms and after the heroic blink, then every kBotGuessEveryMs a kBotFindChance switch to
+    // her; a guess that shattered picks again. Published as OnlyFor target entries per player (damage dealers and
+    // tanks; healers get none and keep healing).
+    // ---------------------------------------------------------------------------------------------------------------
+    ObjectGuid RandomFigure() const
+    {
+        std::vector<ObjectGuid> standing;
+        if (me->IsAlive())
+            standing.push_back(me->GetGUID());
+        for (ObjectGuid const& g : _copies)
+            if (Creature const* copy = me->GetMap()->GetCreature(g))
+                if (copy->IsAlive())
+                    standing.push_back(g);
+        return standing.empty() ? ObjectGuid::Empty : standing[RandomBelow(uint32(standing.size()))];
+    }
+
+    bool Standing(ObjectGuid g) const
+    {
+        if (g == me->GetGUID())
+            return me->IsAlive();
+        if (std::find(_copies.begin(), _copies.end(), g) == _copies.end())
+            return false;
+        Creature const* copy = me->GetMap()->GetCreature(g);
+        return copy && copy->IsAlive();
+    }
+
+    void RollGuesses(char const* why)
+    {
+        if (!_game.active)
+            return;
+        _guesses.clear();
+        _guessMs = 0;
+        for (auto const& ref : me->GetMap()->GetPlayers())
+            if (Player const* player = ref.GetSource())
+                if (player->IsAlive() && !player->IsGameMaster())
+                    _guesses.emplace_back(player->GetGUID(), RandomFigure());
+        PublishGuesses();
+        LogJb("bot-guesses", Acore::StringFormat("why={} players={} chance={:.2f}/{}ms", why, _guesses.size(),
+            kBotFindChance, kBotGuessEveryMs));
+    }
+
+    void UpdateGuesses(uint32 diff)
+    {
+        if (_guesses.empty())
+            return;
+        _guessMs += diff;
+        if (_guessMs < kBotGuessEveryMs)
+            return;
+        _guessMs = 0;
+        bool changed = false;
+        for (auto& [player, guess] : _guesses)
+        {
+            switch (NextGuess(guess == me->GetGUID(), Standing(guess), Rand01(), kBotFindChance))
+            {
+                case GuessStep::Her:
+                    changed = changed || guess != me->GetGUID();
+                    guess = me->GetGUID();
+                    break;
+                case GuessStep::Random:
+                    guess = RandomFigure();
+                    changed = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+        if (changed)
+            PublishGuesses();
+    }
+
+    void PublishGuesses()
+    {
+        // Damage dealers and tanks hunt; healers keep healing (no entry for them).
+        std::vector<BossMechanics::TargetEntry> entries;
+        for (auto const& [player, guess] : _guesses)
+            if (guess)
+                for (BossMechanics::Who who : { BossMechanics::Who::Dps, BossMechanics::Who::Tank })
+                    entries.push_back(BossMechanics::TargetEntry::ForUnit(guess.GetRawValue(), 2, who)
+                        .OnlyFor(player.GetRawValue()));
+        Mechanic::EditDescriptor(me, [entries = std::move(entries)](BossMechanics::Descriptor& d)
+        {
+            std::erase_if(d.targets, [](BossMechanics::TargetEntry const& e) { return e.bot != 0; });
+            d.targets.insert(d.targets.end(), entries.begin(), entries.end());
+        });
+    }
+
+    void ClearGuesses()
+    {
+        bool const had = !_guesses.empty();
+        _guesses.clear();
+        _guessMs = 0;
+        if (had && me->IsInWorld())
+            Mechanic::EditDescriptor(me, [](BossMechanics::Descriptor& d)
+            {
+                std::erase_if(d.targets, [](BossMechanics::TargetEntry const& e) { return e.bot != 0; });
+            });
     }
 
     void Describe()
     {
         BossMechanics::Descriptor d;
-        // Boss data (build spec): the real Jandice first, followed through the shuffles by her guid; never the copies
-        // or the reflections (pets included, out of AoE counts); cure Curse of Blood.
-        d.targets.push_back(BossMechanics::TargetEntry::ForUnit(me->GetGUID().GetRawValue(), 2,
-            BossMechanics::Who::Any));
-        d.ignores.push_back(BossMechanics::IgnoreEntry(NPC_ILLUSION_OF_JANDICE));
+        // Boss data: never the reflections (pets included, out of AoE counts); cure Curse of Blood. In the game each
+        // bot has only its own guess (Q5, RollGuesses): no entry follows her guid, so bots know what players know.
         d.ignores.push_back(BossMechanics::IgnoreEntry(NPC_SC_REFLECTION));
         d.dispels.emplace_back(SPELL_JB_CURSE_OF_BLOOD, 1);
         Mechanic::Describe(me, std::move(d));
@@ -677,6 +954,7 @@ private:
             _mirrorMs = 0;
             Mirror();
         }
+        UpdateGuesses(diff);
         GameTick const tick = _gameClock.Update(diff);
         for (uint32 i = 0; i < tick.prices && _game.active; ++i)
             BloodPrice();
@@ -696,6 +974,7 @@ private:
         switch (result)
         {
             case FindResult::UnmaskAndShuffle:
+            case FindResult::Shuffle:
                 // Nobody keeps swinging at her: the second find has to track her through the shuffle. (Next update:
                 // a melee find lands here in the middle of the attacker's own swing.)
                 _game.graceMs = kFoundGraceMs;
@@ -704,7 +983,8 @@ private:
                     me->RemoveAllAttackers();
                     me->AttackStop();
                 });
-                Unmask();
+                if (result == FindResult::UnmaskAndShuffle)
+                    Unmask();
                 Shuffle(true, "found");
                 break;
             case FindResult::UnmaskAndEnd:
@@ -740,30 +1020,38 @@ private:
     {
         _game = GameState();
         _gameClock.Stop();
+        _pendingSwaps.clear();
+        _heldHit = HeldHit();
+        ClearGuesses();
         if (!me->IsVisible())
             me->SetVisible(true);
         me->SetReactState(REACT_AGGRESSIVE);
     }
 
-    // The figures in the game: her and every copy standing still.
-    std::vector<Creature*> Figures() const
+    // The figures free to pair: her and every copy standing still with no swap pending (`withHer`: her always,
+    // the forced shuffle after the first find).
+    std::vector<Creature*> Figures(bool withHer) const
     {
         std::vector<Creature*> out;
-        auto still = [](Creature const* c) { return c && c->IsAlive() && c->movespline->Finalized(); };
-        if (still(me))
+        auto free = [this](Creature const* c)
+        {
+            return c && c->IsAlive() && c->movespline->Finalized() && !InPendingSwap(c->GetGUID());
+        };
+        if (withHer ? me->IsAlive() : free(me))
             out.push_back(me);
         for (ObjectGuid const& g : _copies)
         {
             Creature* copy = me->GetMap()->GetCreature(g);
-            if (still(copy))
+            if (free(copy))
                 out.push_back(copy);
         }
         return out;
     }
 
-    // Copies show her health and mana (the frames never give her away).
+    // Copies show her health and mana (the frames never give her away); no raid icon finds her either.
     void Mirror()
     {
+        ClearRaidIcons();
         for (ObjectGuid const& g : _copies)
             if (Creature* copy = me->GetMap()->GetCreature(g))
             {
@@ -803,14 +1091,15 @@ private:
 
     // One reflection and its 8 yd circle (`decoy`: drawn, harmless, absent from the bot view). False when the
     // reflection could not be summoned.
-    bool SigilAt(Vec2 at, bool decoy, uint32 warnMs, float pct, uint32 tag, uint32 spell = SPELL_JB_BLOOD_SIGIL)
+    bool SigilAt(Vec2 at, bool decoy, uint32 warnMs, float pct, uint32 tag, uint32 spell = SPELL_JB_BLOOD_SIGIL,
+        float radius = kSigilRadius)
     {
         Creature* r = SpawnReflection(at, DungeonKit::BearingTo(at, DungeonKit::PlaneOf(me)), !decoy, warnMs);
         if (!r)
             return false;
         Map* map = me->GetMap();
         ObjectGuid const g = r->GetGUID();
-        BossMechanics::MechanicRef ref = Mechanic::Circle(me, BossMechanics::Anchor(r), kSigilRadius, Ms(warnMs));
+        BossMechanics::MechanicRef ref = Mechanic::Circle(me, BossMechanics::Anchor(r), radius, Ms(warnMs));
         if (decoy)
             ref.Decoy().Tag(kTagBloodSigilDecoy)
                 .OnResolve([map, g](BossMechanics::ResolveResult const&) { Dissolve(map, g, SPELL_JB_FAKE_POP); });
@@ -833,6 +1122,7 @@ private:
         }
         copy->LoadEquipment(0, true);
         copy->CastSpell(copy, SPELL_JB_REFLECTION_POOF, true);
+        Mechanic::TrackUnit(me, copy);      // a target candidate for the bots' guesses (Q5)
         _copies.push_back(copy->GetGUID());
     }
 
@@ -850,7 +1140,12 @@ private:
         if (me->IsInWorld())
             for (auto const& ref : me->GetMap()->GetPlayers())
                 if (Player* player = ref.GetSource())
+                {
                     player->RemoveAurasDueToSpell(SPELL_JB_CURSE_OF_BLOOD, me->GetGUID());
+                    for (Unit* controlled : player->m_Controlled)     // pets and guardians caught in the 10 yd
+                        if (controlled)
+                            controlled->RemoveAurasDueToSpell(SPELL_JB_CURSE_OF_BLOOD, me->GetGUID());
+                }
         _clock.Start();
         _arena.Reset();
     }
@@ -863,6 +1158,12 @@ private:
     std::vector<ObjectGuid> _copies;            // the copies still standing in the game
     std::vector<BossMechanics::MechanicHandle> _live;
     uint32 _mirrorMs = 0;
+    std::vector<Swap> _pendingSwaps;            // paired, not landed yet (out of new pairs)
+    uint32 _nextSwapId = 1;
+    std::vector<std::pair<ObjectGuid, ObjectGuid>> _guesses;    // Q5: player, the figure it guesses
+    uint32 _guessMs = 0;
+    HeldHit _heldHit;
+    bool _dealingFind = false;                  // a spell find's held damage going through
 };
 
 namespace
@@ -907,13 +1208,13 @@ struct npc_sc_shell_game_copy : public ScriptedAI
     void DamageTaken(Unit* attacker, uint32& damage, DamageEffectType type, SpellSchoolMask /*mask*/) override
     {
         damage = 0;
-        if (type == DIRECT_DAMAGE && PlayerSide(attacker))
+        if (type == DIRECT_DAMAGE && DirectHit(attacker, me, nullptr))
             Struck(attacker, "melee");
     }
 
     void SpellHit(Unit* caster, SpellInfo const* spell) override
     {
-        if (PlayerSide(caster) && DirectSpell(spell))
+        if (spell && DirectHit(caster, me, spell))
             Struck(caster, "spell");
     }
 
@@ -1077,6 +1378,11 @@ namespace
         boss_jandice_barov_rework* ai = JandiceAI(handler);
         if (!ai)
             return false;
+        if (!ai->Engaged())
+        {
+            handler->SendErrorMessage("Pull Jandice first: the Shell Game runs in her combat update.");
+            return false;
+        }
         if (!ai->StartGame("test"))
         {
             handler->SendErrorMessage("The Shell Game is already on.");

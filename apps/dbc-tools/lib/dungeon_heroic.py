@@ -564,11 +564,26 @@ def with_declared_templates(live: LiveWorld, dsl_classes: dict) -> LiveWorld:
     creature_template: a creature declared this run (a boss-kit add listed in a dungeon's `extra=`) gets its heroic
     template, difficulty link and side-table copies in the same run, instead of only after its upsert reached the SQL
     on disk. A declared row replaces the replayed one: it is what this run writes. Derived (heroic) rows are left
-    out."""
+    out. The run's `creature_template_columns()` edits apply on top of the replayed (or declared) row as well."""
     declared = {int(r["entry"]): r for r in dsl_classes.get("creature_templates", []) if not r.get(DERIVED)}
-    if not declared:
+    # The run's column edits (creature_template_columns(), e.g. a stock creature a boss script reuses) on top of the
+    # replayed row too: the heroic copy and the refusal check then see what this run writes (Scholomance R-A S-1: the
+    # Shell Game copy's class edit never reached its heroic row, which the engine would refuse to link). The
+    # difficulty link columns are this module's own.
+    edited = {}
+    for row in dsl_classes.get("creature_template_edits", []):
+        if row.get(DERIVED):
+            continue
+        entry = int(row["entry"])
+        base = declared.get(entry) or edited.get(entry) or live.creature_templates.get(entry)
+        if base is None:
+            continue
+        columns = {c: row[c] for c in row.get("_update_columns", ()) if c in row and c not in DIFFICULTY_ENTRY_COLUMNS}
+        if columns:
+            edited[entry] = {**base, **columns}
+    if not declared and not edited:
         return live
-    return replace(live, creature_templates={**live.creature_templates, **declared})
+    return replace(live, creature_templates={**live.creature_templates, **declared, **edited})
 
 
 def _clear_derived(dsl_classes: dict) -> None:

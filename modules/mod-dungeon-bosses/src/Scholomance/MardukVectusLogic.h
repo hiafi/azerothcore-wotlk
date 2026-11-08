@@ -257,9 +257,10 @@ namespace ScholoMardukVectus
     // wall west of it (the two small hall holes are under 8 sq yd and need no rule). The box stops at y 63, short of
     // the east Iron Gate 175618 (136, 59).
     inline constexpr DungeonKit::Box2 kViewingFloorBox{ 88.0f, 156.0f, 63.0f, 123.0f };
-    inline constexpr std::array<DungeonKit::Box2, 2> kViewingFloorHoles{ {
+    inline constexpr std::array<DungeonKit::Box2, 3> kViewingFloorHoles{ {
         { 136.0f, 149.0f, 90.0f, 111.0f },      // the lectern block (Vectus stands on its north edge)
-        { 129.0f, 141.0f, 86.0f, 90.0f } } };   // the low wall west of it
+        { 129.0f, 141.0f, 86.0f, 90.0f },       // the low wall west of it
+        { 88.0f, 94.0f, 97.0f, 104.0f } } };    // the south gate's notch, off the arena (ViewingRoomArena)
     inline constexpr float kViewingFloorZMin = 95.0f;
     inline constexpr float kViewingFloorZMax = 106.0f;
     inline constexpr float kViewingFloorProbeZ = 107.0f;   // GetHeight from above the highest floor (105)
@@ -274,16 +275,12 @@ namespace ScholoMardukVectus
         return true;
     }
 
-    // The fight's arena: the report's circle (128, 95) r 32 holds the student hall and Vectus's lectern, but Marduk's
-    // stage (x 136-155, y 106-123) reaches past it (its corner is 38.9 yd out), so a box over the north part (x 131 to
-    // 157, y 63 to 124, z 100 to 108) is added. Both gates (91.1, 100.7) and (136, 59) and the Viewing Room Door
-    // (174.4, 77.9) stay outside (tests).
+    // The fight's arena: the Viewing Room (ScholomanceRework.h ViewingRoomArena: the report's circle, Marduk's stage
+    // box and the south-west seats). Both gates (91.1, 100.7) and (136, 59) and the Viewing Room Door (174.4, 77.9)
+    // stay outside (tests).
     inline DungeonKit::Arena MardukVectusArena()
     {
-        DungeonKit::Arena arena = ScholomanceRework::ViewingRoomArena();
-        arena.Add(DungeonKit::ArenaRegion::Polygon({ { 131.0f, 63.0f }, { 157.0f, 63.0f }, { 157.0f, 124.0f },
-            { 131.0f, 124.0f } }, 100.0f, 108.0f));
-        return arena;
+        return ScholomanceRework::ViewingRoomArena();
     }
 
     // A candidate drill center: on the floor, clear of every player and of the circles picked so far.

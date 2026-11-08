@@ -330,6 +330,36 @@ namespace ScholomanceRework
     }
 
     // ----------------------------------------------------------------------------------------------------------------
+    // Wave switches. PROVISIONAL (orchestrator call on R-A Q12 / S-11, F-A 2026-11-08): deploying wave A must not
+    // change the bosses of later waves. Until its wave flips the switch, a boss keeps its stock ScriptName, AIName,
+    // SmartAI and health (the DT switches BIND_WAVE_B / BIND_WAVE_C in apps/dbc-tools source/npcs/scholomance/
+    // _common.py, which must agree: lib/test_scholomance_kit.py), its stub C++ stays registered but bound to nothing,
+    // and the instance treats it as stock:
+    // - wave B (S5-S10, the six instructors): a stock instructor's death sets its boss state DONE (OnUnitDeath; the
+    //   stock SmartAI only bumps the retired DATA_MINI_BOSSES), so Gandling still shows himself after the sixth, and no
+    //   Passing Grade is ever awarded (GradeWatch::AwardAtDeath: grades come from a real instructor fight only);
+    // - wave C (S11, Gandling): his gates keep the stock behavior (no door data row on BOSS_GANDLING; the stock
+    //   boss_darkmaster_gandling opens and closes them, and the entrance follows DATA_DARKMASTER_GANDLING).
+    // ----------------------------------------------------------------------------------------------------------------
+    inline constexpr bool kWaveBBound = false;
+    inline constexpr bool kWaveCBound = false;
+
+    // The boss state of an instructor's creature entry (a heroic copy's GetEntry() is its base entry).
+    constexpr std::optional<std::uint32_t> InstructorBossOfEntry(std::uint32_t entry)
+    {
+        switch (entry)
+        {
+            case NPC_MALICIA:   return BOSS_MALICIA;
+            case NPC_KRASTINOV: return BOSS_KRASTINOV;
+            case NPC_POLKELT:   return BOSS_POLKELT;
+            case NPC_RAVENIAN:  return BOSS_RAVENIAN;
+            case NPC_ALEXEI:    return BOSS_ALEXEI;
+            case NPC_ILLUCIA:   return BOSS_ILLUCIA;
+            default:            return std::nullopt;
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
     // Gameobjects
     // ----------------------------------------------------------------------------------------------------------------
     enum ScholomanceGameObjects : std::uint32_t
@@ -445,8 +475,8 @@ namespace ScholomanceRework
     };
     enum VectusTexts : std::uint8_t
     {
-        SAY_VECTUS_IDLE                 = 0,    // stock group 0: 7 lecture says plus one stray type 16 emote row
-                                                // (DB-REPORT 0.7): S3 fixes the row or talks by id
+        SAY_VECTUS_IDLE                 = 0,    // stock group 0: the 7 lecture says (S3's rev moved the stray
+                                                // type 16 emote row, DB-REPORT 0.7, to group 6)
         YELL_VECTUS_AGGRO               = 1,    // stock
         YELL_VECTUS_FLAMESTRIKE         = 2,
         YELL_VECTUS_GROUP_EXERCISE      = 3,
@@ -720,8 +750,20 @@ namespace ScholomanceRework
     inline Arena JandiceArena() { return CircleArena({ 256.0f, 94.5f }, 30.f, 93.0f, 101.0f); }
     // z <= 98: the north stair foot (151, 171) is inside the circle; above z 98 he would be on the stair.
     inline Arena RattlegoreArena() { return CircleArena({ 130.5f, 173.5f }, 35.f, 85.0f, 98.0f); }
-    // The tiered student hall and the stage; both gates and the door are outside.
-    inline Arena ViewingRoomArena() { return CircleArena({ 128.0f, 95.0f }, 32.f, 95.0f, 108.0f); }
+    // The tiered student hall and the stage; both gates and the door are outside. The report's circle (128, 95) r 32
+    // holds the hall and Vectus's lectern; Marduk's stage (x 136-155, y 106-123) reaches past it (its corner is 38.9 yd
+    // out), so a box over the north part (x 131 to 157, y 63 to 124) is added (S3); so is the whole student hall
+    // (x 88 to 131, y 58 to 124: five south-west desks are 32 to 39.5 yd out, R-A N-9), less a notch at the south
+    // gate (x 88 to 94, y 97 to 104) so the gate (91.1, 100.7) stays out.
+    inline Arena ViewingRoomArena()
+    {
+        Arena arena = CircleArena({ 128.0f, 95.0f }, 32.f, 95.0f, 108.0f);
+        arena.Add(ArenaRegion::Polygon({ { 131.0f, 63.0f }, { 157.0f, 63.0f }, { 157.0f, 124.0f }, { 131.0f, 124.0f } },
+            100.0f, 108.0f));
+        arena.Add(ArenaRegion::Polygon({ { 88.0f, 58.0f }, { 131.0f, 58.0f }, { 131.0f, 124.0f }, { 88.0f, 124.0f },
+            { 88.0f, 104.0f }, { 94.0f, 104.0f }, { 94.0f, 97.0f }, { 88.0f, 97.0f } }, 95.0f, 108.0f));
+        return arena;
+    }
     // The study and the west part of the Kormok hall (no door between them).
     inline Arena RasArena() { return CircleArena({ -35.0f, 138.0f }, 28.f, 81.0f, 89.0f); }
     // The Coven, over the Vault of the Ravenian (z 85 over 75); the slab rises to z 91. Radius 32.5, not the report's

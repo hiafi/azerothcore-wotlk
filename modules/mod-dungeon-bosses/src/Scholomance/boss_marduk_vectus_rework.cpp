@@ -261,7 +261,8 @@ struct npc_sc_student : public ScriptedAI
 
     void OnSpellFailed(SpellInfo const* spell) override
     {
-        if (spell->Id == SPELL_MV_POP_QUIZ && _state == State::Quiz)
+        // A kill interrupts the cast first (health 0, still alive): JustDied reports it as killed.
+        if (spell->Id == SPELL_MV_POP_QUIZ && _state == State::Quiz && me->IsAlive() && me->GetHealth() > 0)
             Report(kGuidQuizStopped);
     }
 
@@ -292,15 +293,28 @@ private:
     void BackToDesk()
     {
         _state = State::Prop;
+        _hideInMs = 0;
+        me->SetVisible(true);       // a hidden graduate killed by a lingering DoT respawns visible (R-A N-10)
         if (me->IsNonMeleeSpellCast(false))
             me->InterruptNonMeleeSpells(false);
         me->RemoveAurasDueToSpell(SPELL_MV_ON_THE_SPOT);
         ApplyPropFlags();
-        if (me->IsAlive())
+        if (!me->IsAlive())
+            return;
+        me->SetFullHealth();
+        // A quiz student a fear, a grip, a knockback or a mind control moved goes back to its own desk (R-A N-8).
+        if (me->GetDefaultMovementType() == IDLE_MOTION_TYPE)
         {
-            me->SetFullHealth();
-            me->SetStandState(_homeStand);
+            Position const& home = me->GetHomePosition();
+            if (me->GetExactDist(&home) > kDeskSlackYd)
+            {
+                me->GetMotionMaster()->Clear(false);
+                me->GetMotionMaster()->MoveIdle();
+                me->NearTeleportTo(home.GetPositionX(), home.GetPositionY(), home.GetPositionZ(),
+                    home.GetOrientation());
+            }
         }
+        me->SetStandState(_homeStand);
     }
 
     // MV3: stand, become the class's target and cast the volley (5 s, interruptible).
@@ -326,6 +340,7 @@ private:
     }
 
     static uint32 constexpr kGraduateHideMs = 800;
+    static float constexpr kDeskSlackYd = 1.0f;
 
     State _state = State::Prop;
     uint8 _homeStand = UNIT_STAND_STATE_STAND;
@@ -466,7 +481,12 @@ struct boss_marduk_vectus_rework_base : public BossAI
             events.Reset();
             scheduler.CancelAll();
             summons.DespawnAll();
-            Unit::Kill(killer ? killer : partner, partner);
+            // The kill credit goes to the killer, else the loot recipient (R-A N-12), never the partner itself while
+            // a recipient is known: the encounter bit and the reward follow it.
+            Unit* credit = killer;
+            if (!credit)
+                credit = me->GetLootRecipient();
+            Unit::Kill(credit ? credit : partner, partner);
             return;
         }
         BossAI::JustDied(killer);
@@ -487,6 +507,17 @@ protected:
     Creature* Partner() const
     {
         return instance ? instance->GetCreature(_partnerGuidData) : nullptr;
+    }
+
+    // R-A S-10: a partner still walking home from an evade when the pull came (it cannot attack while evading) joins
+    // as soon as it is home. Every tick after UpdateVictim.
+    void PullPartner()
+    {
+        Creature* partner = Partner();
+        Unit* victim = me->GetVictim();
+        if (victim && partner && partner->IsAlive() && !partner->IsInCombat() && !partner->IsInEvadeMode()
+            && partner->IsAIEnabled)
+            partner->AI()->AttackStart(victim);
     }
 
 public:
@@ -546,6 +577,7 @@ struct boss_marduk_blackpool_rework : public boss_marduk_vectus_rework_base
             return;
         if (!_arena.Update(me, diff))
             return;     // off the Viewing Room, or nobody in it for 10 s: evading
+        PullPartner();
         SyncHealth();
 
         if (_spinning || me->IsActionPreventedByCasting())
@@ -756,6 +788,7 @@ struct boss_vectus_rework : public boss_marduk_vectus_rework_base
             return;
         if (!_arena.Update(me, diff))
             return;     // nobody in the Viewing Room for 10 s: evading
+        PullPartner();
         SyncHealth();
         UpdateBlastWave(diff);
         UpdateFireball(diff);
@@ -888,20 +921,52 @@ struct boss_vectus_rework : public boss_marduk_vectus_rework_base
             heroic ? 1 : 0, kExerciseTotalPct(heroic)));
     }
 
-    // MV3: a free student stands and casts the volley.
+    // MV3: a free student stands and casts the volley (the one picked ahead, NoteNextQuiz, when it is still free).
+    // A student that cannot start it (a school lockout from an earlier kick) sits back down and another tries
+    // (R-A N-10).
     void PopQuiz()
     {
         std::vector<Creature*> students = FreeStudents();
-        if (students.empty())
+        ObjectGuid const picked = _nextQuizStudent;
+        _nextQuizStudent.Clear();
+        for (uint32 attempt = 0; attempt < kQuizAttempts && !students.empty(); ++attempt)
         {
-            LogMV("vectus", "pop-quiz", "skipped (no free student)");
-            return;
+            auto it = std::find_if(students.begin(), students.end(), [picked, attempt](Creature const* c)
+            {
+                return attempt == 0 && c->GetGUID() == picked;
+            });
+            if (it == students.end())
+                it = students.begin() + urand(0, static_cast<uint32>(students.size() - 1));
+            Creature* student = *it;
+            students.erase(it);
+            Mechanic::TrackUnit(me, student);
+            student->AI()->DoAction(kActionStudentQuiz);
+            npc_sc_student const* ai = dynamic_cast<npc_sc_student const*>(student->AI());
+            if (ai && ai->InQuiz())
+            {
+                LogMV("vectus", "pop-quiz", Acore::StringFormat("student={} at=({:.1f}, {:.1f}) graduates={} "
+                    "attempt={}", student->GetSpawnId(), student->GetPositionX(), student->GetPositionY(),
+                    LivingGraduates(), attempt + 1));
+                return;
+            }
         }
+        LogMV("vectus", "pop-quiz", "skipped (no free student could start it)");
+    }
+
+    // R-A N-11: when the next call names the Pop Quiz, its student is picked now and the bots hear when it will
+    // cast (the heroic syllabus is a shuffled bag, so no fixed cadence predicts it).
+    void NoteNextQuiz(Milliseconds in)
+    {
+        _nextQuizStudent.Clear();
+        std::optional<Lesson> const next = _syllabus.Peek();
+        if (!next || *next != Lesson::PopQuiz)
+            return;
+        std::vector<Creature*> const students = FreeStudents();
+        if (students.empty())
+            return;
         Creature* student = students[urand(0, static_cast<uint32>(students.size() - 1))];
-        Mechanic::TrackUnit(me, student);
-        student->AI()->DoAction(kActionStudentQuiz);
-        LogMV("vectus", "pop-quiz", Acore::StringFormat("student={} at=({:.1f}, {:.1f}) graduates={}",
-            student->GetSpawnId(), student->GetPositionX(), student->GetPositionY(), LivingGraduates()));
+        _nextQuizStudent = student->GetGUID();
+        Mechanic::NoteNextCastIn(student, SPELL_MV_POP_QUIZ, in);
     }
 
     // MV5
@@ -951,7 +1016,9 @@ private:
         {
             CallLesson();
             context.Repeat(Ms(kLessonEveryMs(heroic)));
+            NoteNextQuiz(Ms(kLessonEveryMs(heroic)));
         });
+        NoteNextQuiz(Ms(kLessonFirstMs));
     }
 
     // Boss data: the quiz student first, then graduates, then either boss (one shared pool); ignore the props; kick
@@ -965,7 +1032,9 @@ private:
         d.targets.emplace_back(NPC_MARDUK, 0);
         d.targets.emplace_back(NPC_VECTUS, 0, BossMechanics::Who::Ranged);
         d.ignores.emplace_back(NPC_SCHOLOMANCE_STUDENT, BossMechanics::Condition::LacksAura(SPELL_MV_ON_THE_SPOT));
-        uint32 const cycle = kLessonEveryMs(heroic) * static_cast<uint32>(kLessonCount);
+        // Normal's fixed cycle predicts the quiz; heroic's shuffled bag does not, so heroic relies on the notes alone
+        // (NoteNextQuiz, R-A N-11).
+        uint32 const cycle = heroic ? 0 : kLessonEveryMs(heroic) * static_cast<uint32>(kLessonCount);
         d.interrupts.emplace_back(NPC_SCHOLOMANCE_STUDENT, SPELL_MV_POP_QUIZ, kQuizInterruptPriority, Ms(cycle));
         d.interrupts.emplace_back(NPC_VECTUS, SPELL_MV_FIREBALL, 0);
         Mechanic::Describe(me, std::move(d));
@@ -974,6 +1043,7 @@ private:
     void OnEndFight() override
     {
         _doubleAnnounced = false;
+        _nextQuizStudent.Clear();
     }
 
     // MV2 resolve: the shares (160% / 240% split among the players inside, 75% cap), each a bolt from a student; the
@@ -1146,6 +1216,8 @@ private:
 
     Syllabus _syllabus;
     bool _doubleAnnounced = false;
+    ObjectGuid _nextQuizStudent;        // picked ahead for the next Pop Quiz (NoteNextQuiz)
+    static uint32 constexpr kQuizAttempts = 3;
     uint32 _lectureMs = kLectureFirstMaxMs;
     uint32 _fireballMs = kFireballFirstMs;
     uint32 _blastWaveMs = kBlastWaveFirstMaxMs;
