@@ -559,7 +559,12 @@ reservations:
     gameobjectdisplayinfo: {start: 90030, end: 90034}
     creaturedisplayinfo: {start: 90720, end: 90729}
     creaturemodeldata: {start: 90720, end: 90729}
+  # Scholomance build WP-0 (2026-11-08, scholomance-build.HANDOFF.md s3.3; checked free in the live DB). Shared heroic
+  # ids after SFK: mapdifficulty 1002, dungeon_access 124, dungeonencounter 1015 on (13 encounters).
   scholomance:
+    spell: {start: 206100, end: 206399}
+    creature: {start: 300530, end: 300579}
+    gameobject: {start: 301150, end: 301199}
     spellvisual: {start: 90450, end: 90499}  # SpellVisual, Kit and EffectName
   stratholme:
     spellvisual: {start: 90500, end: 90549}  # SpellVisual, Kit and EffectName

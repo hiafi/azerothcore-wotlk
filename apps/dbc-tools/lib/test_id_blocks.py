@@ -614,6 +614,25 @@ class ShadowfangKeepIdsTest(unittest.TestCase):
                     self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
 
 
+class ScholomanceIdsTest(unittest.TestCase):
+    """Scholomance build WP-0 (2026-11-08): the dungeon's reservation, pinned exactly."""
+
+    def test_scholomance_reservation(self):
+        got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["scholomance"].items()}
+        self.assertEqual(got, {
+            "spell": (206100, 206399),
+            "creature": (300530, 300579),
+            "gameobject": (301150, 301199),
+            "spellvisual": (90450, 90499),
+        })
+
+    def test_scholomance_overlaps_no_other_reservation(self):
+        for table, cfg in RESERVATIONS["scholomance"].items():
+            for owner, tables in RESERVATIONS.items():
+                if owner != "scholomance" and table in tables:
+                    self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
+
+
 class DungeonKitIdsTest(unittest.TestCase):
     """The shared dungeon kit (WP-K0, 2026-11-07): the spellvisual block widened from 90399 to 90699 and one 50-id
     SpellVisual slice per reworked dungeon after Deadmines (Deadmines held 90340-90369, leaving 30 ids for three
