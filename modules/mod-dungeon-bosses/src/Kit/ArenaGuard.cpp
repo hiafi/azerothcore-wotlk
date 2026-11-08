@@ -57,6 +57,7 @@ namespace DungeonKit
         _checkMs = 0;
         _emptyMs = 0;
         _holding = false;
+        _switchedTo.Clear();
     }
 
     bool ArenaGuard::Contains(WorldObject const* o) const
@@ -151,6 +152,9 @@ namespace DungeonKit
                 if (Grippable(boss, unit) && _grip.Update(unit->GetGUID().GetRawValue(), Contains(unit), elapsed))
                     Grip(boss, unit, _options.offArenaReason.c_str());
 
+        if (_options.switchWhenVictimOff)
+            UpdateSwitch(boss);
+
         if (!_options.holdWhileVictimOff)
             return true;
         // Never dragged off: no chasing a victim who is off the arena (the grip brings it back).
@@ -171,6 +175,48 @@ namespace DungeonKit
                 boss->GetMotionMaster()->MoveChase(victim);
         }
         return true;
+    }
+
+    void ArenaGuard::UpdateSwitch(Creature* boss)
+    {
+        ThreatManager& threat = boss->GetThreatMgr();
+        Unit* top = nullptr;        // the top of the threat list (what he would attack with no fixate)
+        Unit* inside = nullptr;     // the highest-threat unit on the arena
+        for (ThreatReference const* ref : threat.GetSortedThreatList())
+        {
+            Unit* unit = ref->IsAvailable() ? ref->GetVictim() : nullptr;
+            if (!unit || !unit->IsAlive())
+                continue;
+            if (!top)
+                top = unit;
+            if (!inside && Contains(unit))
+                inside = unit;
+            if (inside)
+                break;
+        }
+        Unit* const fixed = threat.GetFixateTarget();
+        bool const ours = fixed && !_switchedTo.IsEmpty() && fixed->GetGUID() == _switchedTo;
+        if (fixed && !ours)
+            return;                 // the script's own fixate wins
+        Unit* const want = top && !Contains(top) ? inside : nullptr;
+        if (want && want == fixed)
+            return;
+        if (want)
+        {
+            threat.FixateTarget(want);
+            _switchedTo = want->GetGUID();
+            LOG_INFO(kLogCategory, "{} grip switch victim={} to={}", _options.logPrefix, top->GetName(),
+                want->GetName());
+        }
+        else
+        {
+            if (ours)
+            {
+                threat.ClearFixate();
+                LOG_INFO(kLogCategory, "{} grip switch back", _options.logPrefix);
+            }
+            _switchedTo.Clear();
+        }
     }
 
     void ArenaGuard::Grip(Creature* boss, Unit* unit, char const* why)
@@ -224,6 +270,7 @@ namespace DungeonKit
         _checkMs = 0;
         _emptyMs = 0;
         _holding = false;
+        _switchedTo.Clear();
     }
 
     // ----------------------------------------------------------------------------------------------------------------

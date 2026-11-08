@@ -39,6 +39,27 @@ void AddSC_boss_wolf_master_nandos_rework();    // S8: boss_wolf_master_nandos_r
 void AddSC_boss_archmage_arugal_rework();       // S9: boss_archmage_arugal_rework, npc_sfk_lair_prisoner
 void AddSC_sfk_face_him_alone();                // S10: Arugal's hard mode (`.sfktest hardmode`)
 
+// Scholomance (map 289): the Scholomance kit (WP-KS): the instance (registered under the stock name
+// instance_scholomance, replacing the stock one; the stock Kirtonos, Kormok and Occultist AIs keep working) and the
+// `.dbtest scholo` shell
+void AddSC_instance_scholomance_rework();
+void AddSC_dungeon_bosses_scholo_commandscript();
+
+// Scholomance bosses (one file per boss WP)
+void AddSC_boss_jandice_barov_rework();             // S1: boss_jandice_barov_rework
+void AddSC_boss_rattlegore_rework();                // S2: boss_rattlegore_rework
+void AddSC_boss_marduk_vectus_rework();             // S3: boss_marduk_blackpool_rework, boss_vectus_rework
+void AddSC_boss_ras_frostwhisper_rework();          // S4: boss_ras_frostwhisper_rework
+void AddSC_boss_instructor_malicia_rework();        // S5: boss_instructor_malicia_rework
+void AddSC_boss_doctor_theolen_krastinov_rework();  // S6: boss_doctor_theolen_krastinov_rework
+void AddSC_boss_lorekeeper_polkelt_rework();        // S7: boss_lorekeeper_polkelt_rework
+void AddSC_boss_the_ravenian_rework();              // S8: boss_the_ravenian_rework
+void AddSC_boss_lord_alexei_barov_rework();         // S9: boss_lord_alexei_barov_rework
+void AddSC_boss_lady_illucia_barov_rework();        // S10: boss_lady_illucia_barov_rework
+void AddSC_boss_darkmaster_gandling_rework();       // S11: boss_darkmaster_gandling_rework
+void AddSC_scholo_ras_hard_mode();                  // S12: Ras's hard mode (`.dbtest scholo keepsake`)
+void AddSC_scholo_graduate_exam();                  // S13: Gandling's hard mode (`.dbtest scholo exam`)
+
 // Stratholme hard mode items (wave 1 dungeon items): the Balnazzar and Baron Rivendare hard mode item effects
 void AddSC_strat_hard_mode_items();         // spell_strat_dust_of_the_nathrezim, spell_strat_two_faced_tome,
                                             // spell_strat_ysidas_locket, spell_strat_blade_of_the_condemned,
@@ -78,11 +99,27 @@ void Addmod_dungeon_bossesScripts()
     AddSC_boss_wolf_master_nandos_rework();
     AddSC_boss_archmage_arugal_rework();
     AddSC_sfk_face_him_alone();
+    AddSC_instance_scholomance_rework();
+    AddSC_boss_jandice_barov_rework();
+    AddSC_boss_rattlegore_rework();
+    AddSC_boss_marduk_vectus_rework();
+    AddSC_boss_ras_frostwhisper_rework();
+    AddSC_boss_instructor_malicia_rework();
+    AddSC_boss_doctor_theolen_krastinov_rework();
+    AddSC_boss_lorekeeper_polkelt_rework();
+    AddSC_boss_the_ravenian_rework();
+    AddSC_boss_lord_alexei_barov_rework();
+    AddSC_boss_lady_illucia_barov_rework();
+    AddSC_boss_darkmaster_gandling_rework();
+    AddSC_scholo_ras_hard_mode();
+    AddSC_scholo_graduate_exam();
     AddSC_scholo_items();
     AddSC_strat_hard_mode_items();
     AddSC_sfk_hard_mode_items();
     AddSC_haunted_set_bonuses();
-    // after the boss files: they register their `.dmtest` / `.sfktest` tables from their AddSC_ functions
+    // after the boss files: they register their `.dmtest` / `.sfktest` / `.dbtest scholo` tables from their AddSC_
+    // functions
     AddSC_dungeon_bosses_dmtest_commandscript();
     AddSC_dungeon_bosses_sfktest_commandscript();
+    AddSC_dungeon_bosses_scholo_commandscript();
 }

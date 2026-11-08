@@ -1,0 +1,24 @@
+"""
+Scholomance build WP-S9: Lord Alexei Barov (10504)
+(.agents/plans/scholomance-build/scholomance-build.HANDOFF.md s3.5 row S9; build spec
+docs/dungeons/scholomance-rework.md SC 2460-2533). WP-S9 owns this file; WP-KS wrote the skeleton.
+
+Skeleton (WP-KS, handoff s4 row KS): the boss is bound to its C++ script (modules/mod-dungeon-bosses
+src/Scholomance/boss_lord_alexei_barov_rework.cpp), SmartAI off, the build spec's normal health
+(160k: HealthModifier 52.425 on the level 60 class base 3,052), stun immunity 1972 and
+flags_extra 1 (INSTANCE_BIND). Heroic health and its
+overrides are WP-H's (source/world/dungeons/scholomance.py). Its solo lesson (detention) and examiner mode are
+C++; the Graduate Examiner entry (300548-300554) is declared by WP-S13.
+
+TODO(WP-S9): spells in its slice (kSpellsAlexei of ScholomanceRework.h), the boss-kit creatures named in the
+header's ScholomanceCreatures enum, DamageModifier, the visual ids from ._visuals (WP-V). The SQL rev
+(data/sql/updates/pending_db_world/) drops the SmartAI rows and adds the texts.
+"""
+
+from lib.dsl.registry import creature_template_columns
+
+from ._common import BIND_WAVE_B, boss_columns
+
+# Held back until wave B binds this boss (_common.py BIND_WAVE_B; R-A S-11): stock until then.
+if BIND_WAVE_B:
+    creature_template_columns(10504, **boss_columns('boss_lord_alexei_barov_rework', 52.425))

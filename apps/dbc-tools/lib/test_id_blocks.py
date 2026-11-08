@@ -581,10 +581,11 @@ class WaveOneItemReservationsTest(unittest.TestCase):
                         self.assertFalse(_overlap(cfg, tables[table]), f"{name} {table} vs {owner}")
 
     def test_the_wave_one_npcs_sit_in_their_dungeons_creature_slice(self):
-        # The Shadowfang Keep package also holds the dungeon build's own creatures (the `shadowfang_keep` reservation,
-        # shadowfang-keep-build WP-K): an id may sit in either reservation there.
+        # The Shadowfang Keep and Scholomance packages also hold the dungeon builds' own creatures (the
+        # `shadowfang_keep` and `scholomance` reservations, shadowfang-keep-build WP-K, scholomance-build WP-KS): an
+        # id may sit in either reservation there.
         for directory, names in (("shadowfang_keep", ("shadowfang_items", "shadowfang_keep")),
-                                 ("scholomance", ("scholomance_items",))):
+                                 ("scholomance", ("scholomance_items", "scholomance"))):
             ids = declared_ids(TOOL_ROOT / "source" / "npcs" / directory)
             self.assertTrue(ids.get("creature"), directory)
             outside = [value for value in sorted(set(ids["creature"]))
@@ -611,6 +612,25 @@ class ShadowfangKeepIdsTest(unittest.TestCase):
         for table, cfg in RESERVATIONS["shadowfang_keep"].items():
             for owner, tables in RESERVATIONS.items():
                 if owner != "shadowfang_keep" and table in tables:
+                    self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
+
+
+class ScholomanceIdsTest(unittest.TestCase):
+    """Scholomance build WP-0 (2026-11-08): the dungeon's reservation, pinned exactly."""
+
+    def test_scholomance_reservation(self):
+        got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["scholomance"].items()}
+        self.assertEqual(got, {
+            "spell": (206100, 206399),
+            "creature": (300530, 300579),
+            "gameobject": (301150, 301199),
+            "spellvisual": (90450, 90499),
+        })
+
+    def test_scholomance_overlaps_no_other_reservation(self):
+        for table, cfg in RESERVATIONS["scholomance"].items():
+            for owner, tables in RESERVATIONS.items():
+                if owner != "scholomance" and table in tables:
                     self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
 
 

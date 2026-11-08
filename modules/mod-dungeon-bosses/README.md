@@ -46,6 +46,13 @@ so db-import and the dbc-tools replay see one history.
 | `src/Deadmines/<Boss>Logic.h` | Pure, host-testable part of one boss (spell ids, tuning, timers, picks, geometry) |
 | `src/Deadmines/hard_mode_items.cpp` | VanCleef hard mode item effects: Powder Keg Fuse, Blackguard's Signet, Lantern |
 | `src/Deadmines/HardModeItemsLogic.h` | Pure: their spell and creature ids (205400-205409, 300430) |
+| `src/Scholomance/ScholomanceRework.h` | Pure: Scholomance entries, states, data ids, rooms, points, arenas, save |
+| `src/Scholomance/instance_scholomance_rework.cpp` | Instance (stock name, replaced at load; Kirtonos kept) |
+| `src/Scholomance/ScholomanceKit.{h,cpp}` | Scholomance glue: the grip-less leash, Gandling's reveal, Passing Grades |
+| `src/Scholomance/SoloLesson{.h,.cpp,Logic.h}` | Detention's solo lesson interface and per-room factories |
+| `src/Scholomance/ScholomanceTestCommand.{h,cpp}` | The `.dbtest scholo` shell and its `instance` table |
+| `src/Scholomance/boss_<name>_rework.cpp`, `<Boss>Logic.h` | One pair per Scholomance boss WP; S12/S13 hard modes |
+| `src/Scholomance/RasFight.h` | Ras's hard mode hooks into his fight (S4 -> S12) |
 | `src/Scholomance/scholomance_items.cpp` | Scholomance item scripts: Phylactery, Bonechill, Papers, Portal Rod |
 | `src/Scholomance/ScholomanceItemsLogic.h` | Pure: Scholomance item effect ids (205620-205642), tally, swap rules |
 | `src/ShadowfangKeep/sfk_hard_mode_items.cpp` | Arugal hard mode item scripts: the Shadow Tome's Voidwalker |

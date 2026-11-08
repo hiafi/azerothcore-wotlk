@@ -574,6 +574,44 @@ class DeclaredKitAddTest(unittest.TestCase):
         self.assertEqual(models, [(0, 1), (1, 9)])
 
 
+class ColumnEditTest(unittest.TestCase):
+    """A creature_template_columns() edit of a stock creature reaches its heroic copy in the same run, and the refusal
+    check compares against the edited row (Scholomance R-A S-1: the Shell Game copy 11439's class edit stayed off its
+    heroic row, so the engine would have refused the link while --check passed)."""
+
+    ENTRY = 598     # Defias Miner (rank 0, warrior class in TEMPLATES)
+
+    def _expand(self, edit: dict | None, override: str = ""):
+        dsl = load_dsl(_source(heroic_args=override), ids_cfg=IDS_CFG)
+        dsl = {k: list(v) if isinstance(v, list) else v for k, v in dsl.items()}
+        if edit:
+            dsl["creature_template_edits"].append({**edit, "entry": self.ENTRY, "id": self.ENTRY,
+                                                   "_update_columns": tuple(edit)})
+        out = dungeon_heroic.expand(dsl, _live, ids_cfg=IDS_CFG, lock="")
+        heroic_entry = dsl["dungeons"][0]["heroic_entries"][self.ENTRY]
+        return _rows(dsl)[heroic_entry], out
+
+    def test_the_edit_reaches_the_heroic_row(self):
+        row, out = self._expand({"unit_class": 2, "unit_flags": 64, "ScriptName": "npc_x"})
+        self.assertEqual(out.errors, [])
+        self.assertEqual((row["unit_class"], row["unit_flags"]), (2, 64))
+        self.assertEqual((row["ScriptName"], row["difficulty_entry_1"]), ("", 0))   # never the script nor a link
+
+    def test_the_refusal_check_reads_the_edited_row(self):
+        # an override matching the edit is clean; the same override with no edit is refused
+        override = f"overrides={{{self.ENTRY}: dict(columns=dict(unit_class=2))}}"
+        _, edited = self._expand({"unit_class": 2}, override)
+        self.assertEqual(edited.errors, [])
+        _, stock = self._expand(None, override)
+        self.assertTrue(any(f"creature {self.ENTRY} ->" in e and "unit_class 2 differs" in e for e in stock.errors),
+                        stock.errors)
+
+    def test_no_edit_leaves_the_replayed_row(self):
+        row, out = self._expand(None)
+        self.assertEqual(out.errors, [])
+        self.assertEqual(row["unit_class"], 1)
+
+
 def _int_of(row: dict, column: str) -> int:
     return int(row.get(column) or 0)
 
@@ -723,8 +761,8 @@ class DeadminesTest(unittest.TestCase):
 
         maps = {e["map_id"]: e for e in self.declared}
         self.assertEqual(set(maps), set(dungeon_extract.VANILLA_DUNGEONS))
-        # Deadmines (E1) and Shadowfang Keep (WP-H); Scholomance and Stratholme join in their turn
-        self.assertEqual(sorted(m for m, e in maps.items() if e["heroic"]), [33, 36])
+        # Deadmines (E1), Shadowfang Keep and Scholomance (their WP-H); Stratholme joins in its turn
+        self.assertEqual(sorted(m for m, e in maps.items() if e["heroic"]), [33, 36, 289])
         self.assertTrue(all(e["creatures"] for e in maps.values()))
 
     def test_clean_with_the_committed_lock(self):

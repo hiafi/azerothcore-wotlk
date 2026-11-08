@@ -115,9 +115,14 @@ class ScholomanceItemsTest(unittest.TestCase):
         self.assertEqual(sorted(self.spells), list(range(SPARE_RIB, PORTAL_LOOK + 1)))
         ids = {"spell": set(self.spells)}
         self.assertEqual(id_blocks.out_of_reservation("scholomance_items", ids), [])
+        # The package is shared with the Scholomance build (300530 on, the `scholomance` reservation): this wave's one
+        # creature is the portal, and every creature of the package sits in one of the two reservations.
         npcs = id_blocks.declared_ids(TOOL_ROOT / "source" / "npcs" / "scholomance")
-        self.assertEqual(sorted(set(npcs["creature"])), [PORTAL_NPC])
-        self.assertEqual(id_blocks.out_of_reservation("scholomance_items", {"creature": npcs["creature"]}), [])
+        creatures = sorted(set(npcs["creature"]))
+        items = [c for c in creatures if not id_blocks.out_of_reservation("scholomance_items", {"creature": [c]})]
+        self.assertEqual(items, [PORTAL_NPC])
+        self.assertEqual([c for c in creatures if c not in items
+                          and id_blocks.out_of_reservation("scholomance", {"creature": [c]})], [])
 
     def test_the_cpp_header_names_the_same_ids(self):
         named = {name: int(value) for name, value in re.findall(r"\b(SPELL_[A-Z_]+)\s*=\s*(\d+)", HEADER.read_text())}
