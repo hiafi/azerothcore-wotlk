@@ -75,6 +75,9 @@ namespace ScholoGandling
     std::uint32_t constexpr kExpelledGrowthEveryMs = 10000; // SC GD3 heroic: +10% damage every 10 s alive
     std::uint32_t constexpr kPortalStreamMissiles = 3;      // GD4: missiles per portal as its lane fires
     std::uint32_t constexpr kPortalStreamGapMs = 150;
+    // R-C GANDLING N-5: the player he hit until this long ago still counts as the tank (a DPS who pulls him for a
+    // moment as a Detention bar starts never makes the real tank a student).
+    std::uint32_t constexpr kRecentTankMs = 2000;
 
     // ---- Numbers (SC "Numbers", handoff 3.6) ------------------------------------------------------------------------
     inline constexpr NH<std::uint32_t> kVolleyPortals{ 2, 3 };
@@ -98,6 +101,7 @@ namespace ScholoGandling
         DungeonKit::Arena clip;
         std::vector<DungeonKit::Vec2> portalPoints;
         float floorZ = 0.f;
+        float zTolerance = 6.f;     // how far above or below floorZ a lane hits (the registry's shape band)
     };
 
     // The study floor as a box (the lanes run to its walls; GandlingArena() is his leash circle).
@@ -164,9 +168,10 @@ namespace ScholoGandling
 
     // ---- GD1: the room cycle ----------------------------------------------------------------------------------------
     // Each detention takes a room that has not held detention this cycle; once all six have, a new cycle starts in a
-    // new random order (its first room never the room just used, so no room runs twice in a row). A room that cannot
-    // take a student now (eligible() false) is passed over; when every room left in the cycle is blocked, the cycle
-    // restarts early rather than stall (the blocked rooms come round again later).
+    // new random order. No room runs twice in a row unless it is the only room that can take a student (R-C GANDLING
+    // N-1: the room just used is passed over in a new cycle wherever it falls, not only at its front). A room that
+    // cannot take a student now (eligible() false) is passed over; when every room left in the cycle is blocked, the
+    // cycle restarts early rather than stall (the blocked rooms come round again later).
     class RoomCycle
     {
     public:
@@ -184,23 +189,32 @@ namespace ScholoGandling
             {
                 if (_left.empty() || pass == 1)
                     NewCycle(rand);
-                for (std::size_t i = 0; i < _left.size(); ++i)
-                {
-                    if (!eligible(_left[i]))
-                        continue;
-                    Classroom const room = _left[i];
-                    _left.erase(_left.begin() + static_cast<std::ptrdiff_t>(i));
-                    _last = room;
+                if (std::optional<Classroom> const room = Take(eligible, false))
                     return room;
-                }
             }
-            return std::nullopt;
+            // Only the room just used can take a student: it runs again rather than nobody.
+            return Take(eligible, true);
         }
 
         std::vector<Classroom> const& Left() const { return _left; }
         std::optional<Classroom> Last() const { return _last; }
 
     private:
+        template <class Eligible>
+        std::optional<Classroom> Take(Eligible& eligible, bool allowLast)
+        {
+            for (std::size_t i = 0; i < _left.size(); ++i)
+            {
+                if ((!allowLast && _last && _left[i] == *_last) || !eligible(_left[i]))
+                    continue;
+                Classroom const room = _left[i];
+                _left.erase(_left.begin() + static_cast<std::ptrdiff_t>(i));
+                _last = room;
+                return room;
+            }
+            return std::nullopt;
+        }
+
         template <class Rand>
         void NewCycle(Rand&& rand)
         {
@@ -255,7 +269,9 @@ namespace ScholoGandling
     struct Candidate
     {
         std::uint64_t id = 0;
-        bool inRegion = false;      // in the study (or S13's region), on its floor
+        bool inRegion = false;      // in the study (or S13's region)
+        bool onFloor = false;       // on the region's floor box, where a lane reaches (R-C GANDLING N-6)
+        bool passenger = false;     // a vehicle passenger (the Work Bench patient): never moved (F-C ruling)
         bool alive = false;
         bool tank = false;          // his victim
         bool detained = false;      // in a classroom now
@@ -264,17 +280,25 @@ namespace ScholoGandling
     };
 
     // GD1: a living player in the study, never the tank, never the player just back, never one under Honor Roll, never
-    // one already detained. nullopt: nobody qualifies (no detention this time).
+    // one already detained, never a vehicle passenger. nullopt: nobody qualifies (no detention this time).
     template <class Rand>
     std::optional<std::size_t> PickDetentionStudent(std::vector<Candidate> const& c, Rand&& rand)
     {
         std::vector<std::size_t> pool;
         for (std::size_t i = 0; i < c.size(); ++i)
-            if (c[i].inRegion && c[i].alive && !c[i].tank && !c[i].detained && !c[i].justBack && !c[i].honorRoll)
+            if (c[i].inRegion && c[i].alive && !c[i].tank && !c[i].detained && !c[i].justBack && !c[i].honorRoll
+                && !c[i].passenger)
                 pool.push_back(i);
         if (pool.empty())
             return std::nullopt;
         return pool[rand(pool.size())];
+    }
+
+    // A player a lane may aim through: in the region and on its floor (a lane stops at the floor's walls, so it never
+    // reaches a player in a gate alcove), alive, not detained, not strapped into a vehicle (they cannot step out).
+    constexpr bool LaneTarget(Candidate const& c)
+    {
+        return c.inRegion && c.onFloor && c.alive && !c.detained && !c.passenger;
     }
 
     // GD4: the players the lanes aim through, one per lane: `lanes` distinct players while they last (then repeats),
@@ -285,7 +309,7 @@ namespace ScholoGandling
     {
         std::vector<std::size_t> pool;
         for (std::size_t i = 0; i < c.size(); ++i)
-            if (c[i].inRegion && c[i].alive && !c[i].detained && (tankToo || !c[i].tank))
+            if (LaneTarget(c[i]) && (tankToo || !c[i].tank))
                 pool.push_back(i);
         std::vector<std::size_t> out;
         if (pool.empty())
@@ -307,19 +331,20 @@ namespace ScholoGandling
     {
         std::vector<std::size_t> out;
         for (std::size_t i = 0; i < c.size(); ++i)
-            if (c[i].inRegion && c[i].alive && !c[i].detained)
+            if (LaneTarget(c[i]))
                 out.push_back(i);
         return out;
     }
 
-    // GD4b: two distinct players in the region (the tank too when `tankToo`). nullopt: fewer than two qualify.
+    // GD4b: two distinct players in the region (the tank too when `tankToo`), never a vehicle passenger (F-C ruling:
+    // the Work Bench patient stays strapped in). nullopt: fewer than two qualify.
     template <class Rand>
     std::optional<std::pair<std::size_t, std::size_t>> PickTransferPair(std::vector<Candidate> const& c, bool tankToo,
         Rand&& rand)
     {
         std::vector<std::size_t> pool;
         for (std::size_t i = 0; i < c.size(); ++i)
-            if (c[i].inRegion && c[i].alive && !c[i].detained && (tankToo || !c[i].tank))
+            if (c[i].inRegion && c[i].alive && !c[i].detained && !c[i].passenger && (tankToo || !c[i].tank))
                 pool.push_back(i);
         if (pool.size() < 2)
             return std::nullopt;
@@ -361,6 +386,13 @@ namespace ScholoGandling
             if (fire >= nowMs && fire - nowMs <= kLaneGapAfterSwapMs)
                 hold = std::max(hold, fire - nowMs + 100);
         return hold;
+    }
+
+    // GD1: a detention's return is a forced move too (R-C GANDLING S-3): the student waits in the room until no lane
+    // fires within kLaneGapAfterSwapMs of their landing. Same rule as the swap; 0 = send them back now.
+    inline std::uint32_t ReturnHoldMs(std::uint32_t nowMs, std::vector<std::uint32_t> const& laneFireMs)
+    {
+        return SwapHoldMs(nowMs, laneFireMs);
     }
 
     // ---- GD4: one lane ------------------------------------------------------------------------------------------

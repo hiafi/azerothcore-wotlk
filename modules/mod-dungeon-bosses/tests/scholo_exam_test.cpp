@@ -5,6 +5,7 @@
 #include "PolkeltLogic.h"
 #include "check.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <set>
 #include <string>
@@ -65,6 +66,45 @@ namespace
         g.Award(42, Instructor::Alexei);
         CHECK(GradeAuraDiff(g.MaskOf(42), 0).add == ((1u << 2) | (1u << 4)));
         CHECK(GradeAuraDiff(g.MaskOf(7), 0).add == 0);
+    }
+
+    // Who earns a Passing Grade at the instructor's death (orchestrator ruling 2026-11-08; GradeWatch::AwardAtDeath):
+    // inside the instructor's arena, alive or an unreleased body; never a released ghost, a player elsewhere, a GM or
+    // a player who failed.
+    void TestGradeEligibility()
+    {
+        GradeCandidate in;
+        in.inArena = true;
+        CHECK(EarnsPassingGrade(in));                   // alive in the room, or dead and not released there
+        GradeCandidate c = in;
+        c.released = true;
+        CHECK(!EarnsPassingGrade(c));                   // a released ghost
+        c = in;
+        c.inArena = false;
+        CHECK(!EarnsPassingGrade(c));                   // elsewhere on the map
+        c = in;
+        c.failed = true;
+        CHECK(!EarnsPassingGrade(c));                   // failures still disqualify
+        c = in;
+        c.gameMaster = true;
+        CHECK(!EarnsPassingGrade(c));
+        CHECK(!EarnsPassingGrade(GradeCandidate{}));
+
+        // The arena is the instructor's own: their spawn is in it, the other instructors' spawns and the study are not.
+        std::array<Point4, kInstructorCount> const spawns{ { kMaliciaSpawn, kKrastinovSpawn, kPolkeltSpawn,
+            kRavenianSpawn, kAlexeiSpawn, kIlluciaSpawn } };
+        for (std::size_t i = 0; i < kInstructorCount; ++i)
+        {
+            Arena const arena = GradeArena(Instructor(i));
+            CHECK(InArena(arena, spawns[i]));
+            for (std::size_t j = 0; j < kInstructorCount; ++j)
+                if (j != i)
+                    CHECK(!InArena(arena, spawns[j]));
+            CHECK(!InArena(arena, kGandlingSpawn));
+            CHECK(!InArena(arena, kStudyReturn));
+        }
+        // Alexei's arena takes the pit of his vault (down to about z 66).
+        CHECK(GradeArena(Instructor::Alexei).Contains({ 182.0f, -67.0f }, 66.0f));
     }
 
     void TestPaper()
@@ -162,6 +202,13 @@ namespace
             }
             CHECK(DungeonKit::Distance(r.groupLanding.XY(), r.examinerSpawn.XY()) >= 20.f);
             CHECK(r.floorZ >= arena.ZMin() && r.floorZ <= arena.ZMax());
+            // R-C EXAM N-6: the lanes' band reaches the room's lowest floor and never the room stacked above it (the
+            // upper classrooms sit 10 yd or more over the lower ones).
+            CHECK(r.laneZTolerance >= kLaneZToleranceYd);
+            CHECK(r.floorZ - r.laneZTolerance <= arena.ZMin() + 2.f);
+            for (std::size_t j = 0; j < kClassroomCount; ++j)
+                if (j != i && ExamRoomOf(Classroom(j)).floorZ > r.floorZ + 5.f)
+                    CHECK(ExamRoomOf(Classroom(j)).floorZ - r.floorZ > r.laneZTolerance);
 
             // Gandling's region in the room: its players are the room's arena, 8 distinct portal points on the walls of
             // its floor, and a lane from every portal through the landing has length and stays on the floor.
@@ -274,8 +321,12 @@ namespace
             ExamInputs arrived;
             arrived.arrived = true;
             CHECK(run.Update(100, arrived) == ExamAction::PullExaminer);
-            CHECK(run.Phase() == ExamPhase::Examining);
-            CHECK(run.Update(30000, none) == ExamAction::None);   // no clock while the examiner fights
+            CHECK(run.Phase() == ExamPhase::Examining && !run.Engaged());
+            ExamInputs fighting;
+            fighting.examinerEngaged = true;
+            CHECK(run.Update(100, fighting) == ExamAction::None);
+            CHECK(run.Engaged());
+            CHECK(run.Update(30000, fighting) == ExamAction::None);   // no clock while the examiner fights
             ExamInputs dead;
             dead.examinerDead = true;
             CHECK(run.Update(100, dead) == ExamAction::RoomCleared);
@@ -287,18 +338,59 @@ namespace
         CHECK(run.Phase() == ExamPhase::Returning && run.RoomsCleared() == kClassroomCount);
         CHECK(run.Update(kArrivalTimeoutMs - 1, none) == ExamAction::None);
         CHECK(run.Update(1, none) == ExamAction::StartFinal);     // the arrival times out: he is pulled anyway
-        CHECK(run.Phase() == ExamPhase::Final);
-        CHECK(run.Update(60000, none) == ExamAction::None);
+        CHECK(run.Phase() == ExamPhase::Final && !run.Engaged());
+        CHECK(run.Update(100, none) == ExamAction::RetryPull);    // nobody in reach yet: pulled again
+        ExamInputs inFinal;
+        inFinal.gandlingEngaged = true;
+        CHECK(run.Update(100, inFinal) == ExamAction::None && run.Engaged());
+        CHECK(run.Update(60000, inFinal) == ExamAction::None);
         ExamInputs won;
         won.gandlingDead = true;
         CHECK(run.Update(100, won) == ExamAction::Passed);
         CHECK(!run.Running() && run.Phase() == ExamPhase::Passed);
         CHECK(run.Update(100, won) == ExamAction::None);
 
-        // The arrival times out into the pull.
+        // The arrival times out into the pull (R-C EXAM SF-1): nobody is in the room yet, so the pull is retried every
+        // tick, never read as a wipe, until the examiner engages; leaving combat counts only after that.
         run.Start(Order());
         run.Update(kOpenDelayMs, none);
         CHECK(run.Update(kArrivalTimeoutMs, none) == ExamAction::PullExaminer);
+        for (std::uint32_t t = 0; t + 1000 < kPullTimeoutMs; t += 1000)
+            CHECK(run.Update(1000, none) == ExamAction::RetryPull);
+        ExamInputs fighting;
+        fighting.examinerEngaged = true;
+        CHECK(run.Update(100, fighting) == ExamAction::None && run.Engaged());
+        CHECK(run.Update(100, none) == ExamAction::Wipe);         // engaged once, then out of combat: an evade
+        CHECK(!run.Running());
+
+        // Never engaged: with nobody living inside, a wipe at kPullTimeoutMs; with someone inside (the pull should
+        // take them), at twice that.
+        ExamInputs empty;
+        empty.anyInside = false;
+        run.Start(Order());
+        run.Update(kOpenDelayMs, none);
+        run.Update(kArrivalTimeoutMs, none);
+        CHECK(run.Update(kPullTimeoutMs - 1, empty) == ExamAction::RetryPull);
+        CHECK(run.Update(1, empty) == ExamAction::Wipe);
+        run.Start(Order());
+        run.Update(kOpenDelayMs, none);
+        run.Update(kArrivalTimeoutMs, none);
+        CHECK(run.Update(kPullTimeoutMs, none) == ExamAction::RetryPull);
+        CHECK(run.Update(kPullTimeoutMs - 1, none) == ExamAction::RetryPull);
+        CHECK(run.Update(1, none) == ExamAction::Wipe);
+        CHECK(kPullTimeoutMs > kArrivalTimeoutMs);
+
+        // The engaged flag belongs to one step: the next room's examiner starts unengaged.
+        run.Start(Order());
+        run.Update(kOpenDelayMs, none);
+        run.Update(kArrivalTimeoutMs, none);
+        run.Update(10, fighting);
+        ExamInputs cleared;
+        cleared.examinerDead = true;
+        CHECK(run.Update(10, cleared) == ExamAction::RoomCleared && !run.Engaged());
+        run.Update(kPortalDelayMs, none);
+        CHECK(run.Update(kArrivalTimeoutMs, none) == ExamAction::PullExaminer);
+        CHECK(run.Update(10, none) == ExamAction::RetryPull);
 
         // Wipes: nobody alive in any phase, an examiner lost, Gandling lost in the final phase.
         ExamInputs wiped;
@@ -311,16 +403,16 @@ namespace
         run.Update(kOpenDelayMs, none);
         run.Update(kArrivalTimeoutMs, none);
         ExamInputs lost;
-        lost.examinerLost = true;
+        lost.examinerGone = true;               // gone without dying: a wipe at once, engaged or not
         CHECK(run.Update(10, lost) == ExamAction::Wipe);
         CHECK(!run.Running());
 
         run.Start(Order());
         run.Update(kOpenDelayMs, none);
         run.Update(kArrivalTimeoutMs, none);
+        run.Update(10, fighting);
         ExamInputs both;                        // a kill on the same tick as an evade counts as the kill
         both.examinerDead = true;
-        both.examinerLost = true;
         CHECK(run.Update(10, both) == ExamAction::RoomCleared);
 
         run.SkipToStudy();
@@ -328,9 +420,17 @@ namespace
         run.Update(kArrivalTimeoutMs, none);
         CHECK(run.Phase() == ExamPhase::Final);
         ExamInputs gone;
-        gone.gandlingLost = true;
+        gone.gandlingGone = true;
         CHECK(run.Update(10, gone) == ExamAction::Wipe);
         CHECK(!run.Running());
+
+        // Gandling engaged, then out of combat in the final phase: a wipe.
+        run.Start(Order());
+        run.SkipToStudy();
+        run.Update(1, none);
+        run.Update(kArrivalTimeoutMs, none);
+        CHECK(run.Update(10, inFinal) == ExamAction::None);
+        CHECK(run.Update(10, none) == ExamAction::Wipe);
 
         // A wipe while the portal is open, or on the way back.
         run.Start(Order());
@@ -338,7 +438,7 @@ namespace
         run.Update(kArrivalTimeoutMs, none);
         ExamInputs killed;
         killed.examinerDead = true;
-        run.Update(10, killed);
+        run.Update(10, killed);                 // a kill before any engage still clears the room
         CHECK(run.Phase() == ExamPhase::Portal);
         CHECK(run.Update(10, wiped) == ExamAction::Wipe);
 
@@ -350,6 +450,7 @@ int main()
 {
     TestSpells();
     TestGradeAuras();
+    TestGradeEligibility();
     TestPaper();
     TestNumbers();
     TestRooms();

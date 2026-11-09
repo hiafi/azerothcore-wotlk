@@ -97,6 +97,11 @@ namespace ScholoRasHardMode
     std::uint32_t constexpr kDecayEveryMs = 10000;
     float constexpr kDecayPctPerStack = 0.5f;
     std::uint32_t constexpr kDecayMaxStacks = 99;                   // the spell's CumulativeAura
+    // The aura's own duration (DT 206196): every 10 s step refreshes it (DungeonKit::AddStacks), so it never runs out
+    // in the fight, but a stray aura on a player who left the fight expires. It also carries the CHANGE_MAP interrupt
+    // flag (dropped on a logout or a map change).
+    std::uint32_t constexpr kDecayDurationMs = 15000;
+    static_assert(kDecayDurationMs > kDecayEveryMs, "each 10 s step refreshes Mortal Decay before it runs out");
 
     // ----------------------------------------------------------------------------------------------------------------
     // The hard mode clock: the transition and phase 2 (Siphon Warmth, Mortal Decay), on the hard mode's own clock
@@ -236,6 +241,9 @@ namespace ScholoRasHardMode
         bool HoldsTimeline() const { return phase == Phase::Transition; }
         bool HoldsFrostMark() const { return siphon != SiphonStage::Idle; }
         bool HoldsChillBeat() const { return siphon == SiphonStage::Channel; }
+        // S4's warm Stack (the bots' Cluster) is cancelled for the whole Siphon, cast bar and channel, so it never
+        // pulls a bot into the Siphon's 8 yd Spread; S4 registers it again after.
+        bool SuspendsWarmStack() const { return siphon != SiphonStage::Idle; }
         // The lethal guard stays armed until the human form is up (the lich never dies).
         bool Mortal() const { return phase == Phase::Human; }
     };
@@ -333,13 +341,25 @@ namespace ScholoRasHardMode
         return TableRefusal::None;
     }
 
+    // Every keepsake gameobject's line once Ras is dead (a page or a bind the instance refuses, the books, the table).
+    inline constexpr char const* kRasGoneText = "Ras Frostwhisper is gone. The keepsake no longer matters.";
+
+    // The bound book's line to the player who clicks it.
+    constexpr char const* BoundBookText(bool lit, std::uint32_t rasState)
+    {
+        if (rasState == DungeonKit::State::Done)
+            return kRasGoneText;
+        return lit ? "The keepsake calls to Ras Frostwhisper."
+                   : "Frostwhisper's keepsake is whole again. The alchemy apparatus down the hall awaits it.";
+    }
+
     constexpr char const* TableRefusalText(TableRefusal why)
     {
         switch (why)
         {
             case TableRefusal::None: return "";
             case TableRefusal::NotHeroic: return "The apparatus is cold and empty.";
-            case TableRefusal::RasDead: return "Ras Frostwhisper is gone. The keepsake no longer matters.";
+            case TableRefusal::RasDead: return kRasGoneText;
             case TableRefusal::AlreadyLit: return "The keepsake already calls to Ras Frostwhisper.";
             case TableRefusal::NotBound: return "Something is missing: a keepsake, bound whole again.";
             case TableRefusal::RasFighting: return "Not while Ras Frostwhisper is fighting.";

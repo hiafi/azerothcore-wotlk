@@ -15,9 +15,13 @@
  *                       student lands on the stock landing point of a classroom (spell_target_position of 17863,
  *                       17939, 17943, 17944, 17946, 17948; kClassroomLandings) that has not held detention this cycle,
  *                       behind its shut gate. The room's lesson (the instructor WPs' TimedSoloLesson, CreateSoloLesson)
- *                       runs 15 s under a lesson stalker (300546), then a portal brings the student back. The six
- *                       rooms reopen in a new random order once all six were used. A room is passed over while its
- *                       instructor or a Graduate Examiner fights in it (F-B1) or another player stands in it.
+ *                       runs 15 s under a lesson stalker (300546), then a portal brings the student back to the spot
+ *                       they left, held until no lane fires within 1.5 s of their landing (R-C GANDLING S-3). The
+ *                       six rooms reopen in a new random order once all six were used. A room is passed over while
+ *                       its instructor or a Graduate Examiner fights in it (F-B1) or another player stands on its
+ *                       side of the gate (its arena or the corridor to it, ClassroomSide). The student's pet and
+ *                       guardians go with them as they land and come back with them (a creature would walk through
+ *                       the shut gate). Never a vehicle passenger (the Work Bench patient).
  *   GD2 Honor Roll      a passed lesson: +100% damage and healing done for 15 s (206332, self-applied).
  *   GD3 Expelled        a failed lesson: an Expelled Student (300544; heroic copy 310119) rises beside the student,
  *                       fixated on them and not tauntable, until killed. Heroic: +10% damage every 10 s alive.
@@ -25,13 +29,14 @@
  *                       the study's edge, each lane (4 yd) aimed through a random non-tank player to the far wall,
  *                       2 s warning, 30% / 40% Arcane + Weakened. Heroic: the lanes linger 4 s.
  *   GD4b Transfer (H)   first at 20 s, every 30 s: two random players in the study (the tank too) are marked (2 s,
- *                       emote line 3), then swap places; a swapped tank takes Gandling along. No lane fires within
- *                       1.5 s after a swap (the swap waits).
+ *                       emote line 3), then swap places; a swapped tank takes Gandling along (onto the study's
+ *                       floor). No lane fires within 1.5 s after a swap (the swap waits). Never a vehicle passenger.
  *
  * Detention safety (handoff 3.7): who is detained where is the instance's DataDetained(room), written before the
  * teleport and cleared when the lesson ends (the playerbots strategy vanilla-scholo keys on it). A lesson that ends
  * with no verdict (the student died, left, is the last one alive) opens the room's gate. A wipe, his evade or his death
- * aborts the lesson (its OnEnd ejects the Work Bench seat and despawns its units) and the door data opens every gate.
+ * aborts the lesson (its OnEnd ejects the Work Bench seat and despawns its units), sends a living student (and their
+ * pets) back to the spot they left at once, and the door data opens every gate.
  * The lesson stalker is summoned but never zoned into combat, and its own summons (the fortunes, specimens, the bench,
  * the echo) are never zoned either (F-B3): npc_sc_lesson_stalker does nothing at all.
  *
@@ -269,6 +274,8 @@ struct boss_darkmaster_gandling_rework : public BossAI, public GandlingFightApi
         _arena.Reset();
         _cycle.Reset();
         _lastBack.Clear();
+        _victim.Clear();
+        _prevVictim.Clear();
         _region = StudyRegion();
         _mode = FightMode(DungeonKit::IsHeroicMap(me));
         _engageMode.reset();
@@ -342,6 +349,7 @@ struct boss_darkmaster_gandling_rework : public BossAI, public GandlingFightApi
         {
             if (!UpdateVictim())
                 return;
+            NoteVictim();
             if (!_arena.Update(me, diff))
                 return;     // off the study, or nobody in it for 10 s: evading
         }
@@ -382,7 +390,10 @@ struct boss_darkmaster_gandling_rework : public BossAI, public GandlingFightApi
         _forcedRoom.reset();
         if (room)
             _forcedRoom = Classroom(*room);
-        return BeginDetention(student) ? std::string() : std::string("No student or room qualifies now.");
+        if (BeginDetention(student))
+            return std::string();
+        _forcedRoom.reset();        // R-C GANDLING N-7: a failed force never restricts the next natural detention
+        return std::string("No student or room qualifies now.");
     }
 
     void ForceVolley() { events.RescheduleEvent(EVENT_VOLLEY, 0ms); }
@@ -402,6 +413,7 @@ private:
         Casting,        // his 1 s bar on the student
         Arriving,       // teleported, not yet in the room
         Running,        // the lesson runs
+        Holding,        // the verdict is in; the return waits for the lane gap (ReturnHoldMs), still detained
         Returning,      // back through the portal, not yet in the study
     };
 
@@ -413,6 +425,7 @@ private:
             case DetentionPhase::Casting:   return "casting";
             case DetentionPhase::Arriving:  return "arriving";
             case DetentionPhase::Running:   return "running";
+            case DetentionPhase::Holding:   return "holding";
             case DetentionPhase::Returning: return "returning";
         }
         return "?";
@@ -456,9 +469,35 @@ private:
         return victim ? victim->GetGUID() : ObjectGuid::Empty;
     }
 
+    // R-C GANDLING N-5: whom he hit until a moment ago (the real tank, while a DPS holds him for a second).
+    void NoteVictim()
+    {
+        Unit const* victim = me->GetVictim();
+        ObjectGuid const now = victim ? victim->GetGUID() : ObjectGuid::Empty;
+        if (now == _victim)
+            return;
+        _prevVictim = _victim;
+        _victim = now;
+        _victimChangedMs = _clockMs;
+    }
+
+    // The tank for the picks: TankGuid(), or (his own fight) the victim he had until kRecentTankMs ago.
+    bool CountsAsTank(ObjectGuid guid, ObjectGuid tank) const
+    {
+        if (guid == tank)
+            return true;
+        return !_tankProvider && _prevVictim && guid == _prevVictim && _clockMs - _victimChangedMs < kRecentTankMs;
+    }
+
     bool InRegion(WorldObject const* o) const
     {
         return o && _region.players.Contains(DungeonKit::PlaneOf(o), o->GetPositionZ());
+    }
+
+    // On the classroom's side of its gate (its arena or the corridor to it), alive or dead.
+    static bool OnRoomSide(WorldObject const* o, Classroom room)
+    {
+        return o && ClassroomSide(room).Contains(DungeonKit::PlaneOf(o), o->GetPositionZ());
     }
 
     bool IsDetainedNow(ObjectGuid guid) const
@@ -487,8 +526,10 @@ private:
             Candidate c;
             c.id = p->GetGUID().GetRawValue();
             c.inRegion = InRegion(p) && !p->IsBeingTeleported();
+            c.onFloor = _region.clip.Contains(DungeonKit::PlaneOf(p), p->GetPositionZ());
+            c.passenger = p->GetVehicle() != nullptr;
             c.alive = p->IsAlive();
-            c.tank = p->GetGUID() == tank;
+            c.tank = CountsAsTank(p->GetGUID(), tank);
             c.detained = IsDetainedNow(p->GetGUID());
             c.justBack = p->GetGUID() == _lastBack;
             c.honorRoll = p->HasAura(SPELL_GD_HONOR_ROLL);
@@ -510,12 +551,13 @@ private:
             for (uint32 const entry : ExaminersOf(room))
                 if (Creature* examiner = me->FindNearestCreature(entry, 250.f, true))
                     s.examinerFighting = s.examinerFighting || examiner->IsInCombat();
-        Arena const arena = ClassroomArena(room);
+        // Its side of the gate, the corridor too (R-C GANDLING S-2: a healer gone through an opened gate to a body).
+        Arena const side = ClassroomSide(room);
         for (auto const& ref : me->GetMap()->GetPlayers())
         {
             Player* p = ref.GetSource();
             if (p && p->IsAlive() && !p->IsGameMaster() && p->GetGUID() != student
-                && arena.Contains(DungeonKit::PlaneOf(p), p->GetPositionZ()))
+                && side.Contains(DungeonKit::PlaneOf(p), p->GetPositionZ()))
                 s.othersInside = true;
         }
         return s;
@@ -539,7 +581,7 @@ private:
                 return false;
             student = ObjectAccessor::GetPlayer(*me, guids[*i]);
         }
-        if (!student || !student->IsAlive())
+        if (!student || !student->IsAlive() || student->GetVehicle())
             return false;
         // Some room must be able to take them (the room itself is picked as they go).
         bool anyRoom = false;
@@ -560,10 +602,11 @@ private:
     void SendStudent()
     {
         Player* student = ObjectAccessor::GetPlayer(*me, _det.student);
-        if (!student || !student->IsAlive() || !InRegion(student) || student->IsBeingTeleported())
+        if (!student || !student->IsAlive() || !InRegion(student) || student->IsBeingTeleported()
+            || student->GetVehicle())
         {
             DungeonKit::LogMechanic(kLogDungeon, kDetentionLogName, "cancelled", "the student is gone");
-            _det = Detention();
+            CancelSend();
             return;
         }
 
@@ -579,7 +622,7 @@ private:
         if (!room)
         {
             DungeonKit::LogMechanic(kLogDungeon, kDetentionLogName, "cancelled", "no room open");
-            _det = Detention();
+            CancelSend();
             return;
         }
 
@@ -605,6 +648,14 @@ private:
             Acore::StringFormat("student={} room={}", student->GetName(), kClassroomNames[std::size_t(*room)]));
     }
 
+    // R-C GANDLING N-4: a send that found no student or room looks again soon, not a whole cooldown later.
+    void CancelSend()
+    {
+        _det = Detention();
+        if (_mode.detention)
+            events.RescheduleEvent(EVENT_DETENTION, Milliseconds(kDetentionRetryMs));
+    }
+
     void UpdateDetention(uint32 diff)
     {
         switch (_det.phase)
@@ -626,6 +677,9 @@ private:
                     && arena.Contains(DungeonKit::PlaneOf(student), student->GetPositionZ());
                 if (landed)
                 {
+                    // Their pet and guardians join them now (the server moves the student only here, so until now
+                    // the pets had no reason to walk at the gate).
+                    MovePets(student, student->GetPosition());
                     StartLesson(student);
                     return;
                 }
@@ -645,6 +699,22 @@ private:
                     LessonDone();
                 return;
             }
+            case DetentionPhase::Holding:
+            {
+                Player* student = ObjectAccessor::GetPlayer(*me, _det.student);
+                if (!student || !student->IsAlive())
+                {
+                    ClearDetained();
+                    OpenGate();
+                    DungeonKit::LogMechanic(kLogDungeon, kDetentionLogName, "ended",
+                        "the student died or left before the return: the gate opens");
+                    _det = Detention();
+                    return;
+                }
+                if (ReturnHoldMs(_clockMs, _laneFires) == 0)
+                    ReturnStudent(student);
+                return;
+            }
             case DetentionPhase::Returning:
             {
                 _det.timerMs += diff;
@@ -655,8 +725,25 @@ private:
                     return;
                 }
                 bool const back = !student->IsBeingTeleported() && InRegion(student);
-                if (back || _det.timerMs >= kArrivalTimeoutMs)
+                if (back)
+                {
+                    MovePets(student, student->GetPosition());
                     ReportCard(student);
+                    return;
+                }
+                if (_det.timerMs < kArrivalTimeoutMs)
+                    return;
+                // R-C GANDLING N-3: the return never landed (a client stall). Still behind the gate: open it, and no
+                // report card (an Expelled Student would rise in the room and run through the gate).
+                if (_det.room && OnRoomSide(student, *_det.room))
+                {
+                    OpenGate();
+                    DungeonKit::LogMechanic(kLogDungeon, kDetentionLogName, "ended",
+                        "the return never landed: the gate opens");
+                    _det = Detention();
+                    return;
+                }
+                ReportCard(student);
                 return;
             }
         }
@@ -681,21 +768,33 @@ private:
         bool const verdict = passed || _lesson->Failed();
         _lesson.reset();
         DespawnStalker();
-        ClearDetained();
 
         Player* student = ObjectAccessor::GetPlayer(*me, _det.student);
         if (!verdict || !student || !student->IsAlive())
         {
             // A safety end (the student died, left, is the last one alive): no report card; the gate opens so the
             // group can reach them (or they can walk out).
+            ClearDetained();
             OpenGate();
             DungeonKit::LogMechanic(kLogDungeon, kDetentionLogName, "ended", "no verdict: the gate opens");
             _det = Detention();
             return;
         }
 
-        // The portal back to where they stood.
+        // The verdict is in: they go back once no lane fires within 1.5 s of their landing (R-C GANDLING S-3). They
+        // stay detained meanwhile (the bots keep still), at most a lane's 1.6 s.
         _det.passed = passed;
+        _det.phase = DetentionPhase::Holding;
+        if (ReturnHoldMs(_clockMs, _laneFires) == 0)
+            ReturnStudent(student);
+        else
+            DungeonKit::LogMechanic(kLogDungeon, kDetentionLogName, "return-held", student->GetName());
+    }
+
+    // The portal back to where they stood. The detained slot clears before the teleport (PB contract).
+    void ReturnStudent(Player* student)
+    {
+        ClearDetained();
         _det.phase = DetentionPhase::Returning;
         _det.timerMs = 0;
         Position const& back = _det.departure;
@@ -705,7 +804,26 @@ private:
         student->CastSpell(student, SPELL_GD_PORTAL_FLASH, true);
         student->NearTeleportTo(back.GetPositionX(), back.GetPositionY(), back.GetPositionZ(), back.GetOrientation());
         DungeonKit::LogMechanic(kLogDungeon, kDetentionLogName, "return",
-            Acore::StringFormat("student={} verdict={}", student->GetName(), passed ? "pass" : "fail"));
+            Acore::StringFormat("student={} verdict={}", student->GetName(), _det.passed ? "pass" : "fail"));
+    }
+
+    // F-C ruling: a detained student's pet and guardians go with them and come back with them (a creature walks
+    // through a shut gate: the navmesh does not know it). Called once the student has landed (the server moves
+    // them only then), or at once on an abort. Their totems stay; a charmed unit is not theirs.
+    void MovePets(Player* student, Position const& to)
+    {
+        if (!student)
+            return;
+        std::vector<Unit*> const units(student->m_Controlled.begin(), student->m_Controlled.end());
+        for (Unit* u : units)
+        {
+            Creature* c = u ? u->ToCreature() : nullptr;
+            if (!c || !c->IsInWorld() || !c->IsAlive() || c->IsTotem() || c->GetOwnerGUID() != student->GetGUID()
+                || c->GetMap() != student->GetMap())
+                continue;
+            c->AttackStop();        // never chase a target on the other side of the gate
+            c->NearTeleportTo(to.GetPositionX(), to.GetPositionY(), to.GetPositionZ(), to.GetOrientation());
+        }
     }
 
     // GD2 / GD3 once the student stands in the study again.
@@ -735,27 +853,45 @@ private:
         _lesson.reset();
         DespawnStalker();
         ClearDetained();
-        OpenGate();
+        // R-C GANDLING N-2: the gate opens only for a student behind it (alive or not); a lower gate is inside his
+        // arena, so an open one lets the group kite him into an empty vault.
+        Player* student = ObjectAccessor::GetPlayer(*me, _det.student);
+        if (_det.room && OnRoomSide(student, *_det.room))
+            OpenGate();
         DungeonKit::LogMechanic(kLogDungeon, kDetentionLogName, "ended", why);
         _det = Detention();
     }
 
     // A wipe, his evade or death, a phase change (S13): the lesson stops now (its OnEnd ejects the bench and despawns
-    // its units); the student stays where they are, and their gate opens (the door data opens every gate as well when
-    // his boss state leaves IN_PROGRESS).
+    // its units). F-C ruling: a living student goes back to the spot they left at once, with their pets; a dead one
+    // stays, and their gate opens (the door data opens every gate as well when his boss state leaves IN_PROGRESS).
     void AbortDetention(char const* why)
     {
         events.CancelEvent(EVENT_DETENTION_SEND);
         if (_det.phase == DetentionPhase::Idle)
             return;
-        bool const sent = _det.phase == DetentionPhase::Arriving || _det.phase == DetentionPhase::Running;
+        bool const sent = _det.phase == DetentionPhase::Arriving || _det.phase == DetentionPhase::Running
+            || _det.phase == DetentionPhase::Holding;
         if (_lesson && !_lesson->Done())
             _lesson->Abort();
         _lesson.reset();
         DespawnStalker();
         ClearDetained();
         if (sent)
-            OpenGate();
+        {
+            Player* student = ObjectAccessor::GetPlayer(*me, _det.student);
+            if (student && student->IsAlive() && student->IsInWorld())
+            {
+                Position const& back = _det.departure;
+                student->CastSpell(student, SPELL_GD_PORTAL_FLASH, true);
+                student->NearTeleportTo(back.GetPositionX(), back.GetPositionY(), back.GetPositionZ(),
+                    back.GetOrientation());
+                MovePets(student, back);
+                DungeonKit::LogMechanic(kLogDungeon, kDetentionLogName, "sent-back", student->GetName());
+            }
+            else
+                OpenGate();
+        }
         DungeonKit::LogMechanic(kLogDungeon, kDetentionLogName, "aborted", why);
         _det = Detention();
         _forcedRoom.reset();
@@ -799,6 +935,7 @@ private:
     // ---- GD4 Portal Volley ------------------------------------------------------------------------------------------
     void OpenPortals()
     {
+        PruneLaneFires();       // R-C GANDLING N-8: the list stays short without a Transfer too
         std::vector<ObjectGuid> guids;
         std::vector<Candidate> const c = Candidates(guids);
         std::vector<std::size_t> const targets = _mode.lanesThroughEveryone ? EveryLaneTarget(c)
@@ -839,6 +976,7 @@ private:
             {
                 DungeonKit::ImpactSpec impact;
                 impact.shape = BossMechanics::Shapes::LineFacing(start, path.facing, path.length, kLaneWidthYd);
+                impact.shape.shape.zTolerance = _region.zTolerance;    // the linger copies impact.shape
                 impact.warn = Milliseconds(kVolleyWarnMs);
                 impact.pct = kVolleyPct(heroic);
                 impact.school = SPELL_SCHOOL_ARCANE;
@@ -856,8 +994,8 @@ private:
             }
             else
                 Mechanic::Line(me, start, path.facing, path.length, kLaneWidthYd, Milliseconds(kVolleyWarnMs))
-                    .Damage(kVolleyPct(heroic)).School(SPELL_SCHOOL_ARCANE).Spell(SPELL_GD_VOLLEY_HIT).Weakened()
-                    .Tag(TAG_GD_VOLLEY).OnHit(onHit);
+                    .ZTolerance(_region.zTolerance).Damage(kVolleyPct(heroic)).School(SPELL_SCHOOL_ARCANE)
+                    .Spell(SPELL_GD_VOLLEY_HIT).Weakened().Tag(TAG_GD_VOLLEY).OnHit(onHit);
             _volleyPortals.push_back({ portalGuid, ToPos(path.end, z, path.facing) });
         }
         _laneFires.push_back(_clockMs + kVolleyWarnMs);
@@ -926,7 +1064,7 @@ private:
         Player* b = ObjectAccessor::GetPlayer(*me, _transferB);
         bool const ok = a && b && a->IsAlive() && b->IsAlive() && InRegion(a) && InRegion(b)
             && !a->IsBeingTeleported() && !b->IsBeingTeleported() && !IsDetainedNow(a->GetGUID())
-            && !IsDetainedNow(b->GetGUID());
+            && !IsDetainedNow(b->GetGUID()) && !a->GetVehicle() && !b->GetVehicle();
         if (!ok)
         {
             ClearTransferMarks();
@@ -940,14 +1078,15 @@ private:
         a->NearTeleportTo(pb.GetPositionX(), pb.GetPositionY(), pb.GetPositionZ(), a->GetOrientation());
         b->NearTeleportTo(pa.GetPositionX(), pa.GetPositionY(), pa.GetPositionZ(), b->GetOrientation());
 
-        // A swapped tank takes him along (SC GD4b): the same offset from the tank's new spot, inside the study.
+        // A swapped tank takes him along (SC GD4b): the same offset from the tank's new spot, on the study's floor
+        // (R-C GANDLING S-1: the leash circle runs past the walls and into the gate alcoves; the floor box does not).
         if (_mode.needsVictim && (a->GetGUID() == tank || b->GetGUID() == tank))
         {
             Position const& tankFrom = a->GetGUID() == tank ? pa : pb;
             Position const& tankTo = a->GetGUID() == tank ? pb : pa;
             Position dest(tankTo.GetPositionX() + (me->GetPositionX() - tankFrom.GetPositionX()),
                 tankTo.GetPositionY() + (me->GetPositionY() - tankFrom.GetPositionY()), tankTo.GetPositionZ());
-            if (!_region.players.Contains({ dest.GetPositionX(), dest.GetPositionY() }, dest.GetPositionZ()))
+            if (!_region.clip.Contains({ dest.GetPositionX(), dest.GetPositionY() }, dest.GetPositionZ()))
                 dest = tankTo;
             dest.SetOrientation(dest.GetAbsoluteAngle(&tankTo));
             me->NearTeleportTo(dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(), dest.GetOrientation());
@@ -1042,6 +1181,9 @@ private:
     std::unique_ptr<SoloLesson> _lesson;
     RoomCycle _cycle;
     ObjectGuid _lastBack;
+    ObjectGuid _victim;             // his victim now and the one before it (CountsAsTank)
+    ObjectGuid _prevVictim;
+    uint32 _victimChangedMs = 0;
     std::optional<Classroom> _forcedRoom;
 
     std::vector<VolleyPortal> _volleyPortals;

@@ -49,8 +49,8 @@ namespace ScholoGandling
         // Who counts as the tank (never detained, never a lane target unless the mode says so). Default: his victim.
         // An empty function restores the default.
         virtual void SetTankProvider(std::function<ObjectGuid()> tank) = 0;
-        // Ends a running detention (no verdict; the gate opens if the student is still in the room), the pending
-        // Volley and Transfer, and clears their markers.
+        // Ends a running detention (no verdict; a living student and their pets go back to the spot they left at
+        // once, a dead one's gate opens), the pending Volley and Transfer, and clears their markers.
         virtual void Abort() = 0;
         virtual bool DetentionRunning() const = 0;
         // Raises an Expelled Student fixated on `student` beside them (GD3; the final phase's swaps use it too).

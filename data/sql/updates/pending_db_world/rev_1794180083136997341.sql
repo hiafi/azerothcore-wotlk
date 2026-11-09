@@ -4,8 +4,8 @@
 -- the spells 206190-206197 are apps/dbc-tools source/npcs/scholomance/ras_hard_mode.py.
 
 -- The keepsake gameobjects (ids.yaml reservation `scholomance` 301150-301199; ScholomanceRework.h
--- ScholomanceGameObjects). All goobers (type 10, the stock quest scroll shape) whose script owns the click, so the stock
--- goober use never runs. Upserts: gameobject_template rows are never deleted (codestyle-sql not_delete).
+-- ScholomanceGameObjects). All goobers (type 10, the stock quest scroll shape) whose script owns the click, so the
+-- stock goober use never runs. Upserts: gameobject_template rows are never deleted (codestyle-sql not_delete).
 -- 301150 Torn Page (go_sc_torn_page): a flat paper scrap with no glow (GODI 7752, UldamanScrollDebris03, WP-V's pick
 --        for gap 4: the hunt is the puzzle). A click collects the page its spawn spot names (DATA_KEEPSAKE_PAGE).
 -- 301151 Frostwhisper's Keepsake (go_sc_keepsake_book): the empty book, the Keepsake of Remembrance look (GODI 4431,
@@ -23,8 +23,8 @@ INSERT INTO `gameobject_template` (`entry`, `type`, `displayId`, `name`, `IconNa
 (301152, 10, 6893, 'Bound Keepsake', '', '', '', 2.5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 'go_sc_keepsake_book', 0),
 (301154, 10, 345, 'Frostwhisper''s Apparatus', '', '', '', 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 'go_sc_alchemy_table', 0) ON DUPLICATE KEY UPDATE `type` = VALUES(`type`), `displayId` = VALUES(`displayId`), `name` = VALUES(`name`), `size` = VALUES(`size`), `AIName` = VALUES(`AIName`), `ScriptName` = VALUES(`ScriptName`);
 
--- The spawns, heroic only (spawnMask 2: the keepsake does nothing on normal), at the user's measured spots (handoff s10,
--- ScholomanceRework.h kKeepsakePages, kKeepsakeBook, kHardModeTable; exact). Guids 3011500-3011540 (the entry x 10
+-- The spawns, heroic only (spawnMask 2: the keepsake does nothing on normal), at the user's measured spots (handoff
+-- s10, ScholomanceRework.h kKeepsakePages, kKeepsakeBook, kHardModeTable; exact). Guids 3011500-3011540 (the entry x 10
 -- convention of the Deadmines and SFK kit spawns; free in the live DB, read-only check 2026-11-08). Rotation = the
 -- orientation about z (rotation2 = sin(o/2), rotation3 = cos(o/2)). The book's two gameobjects share one spot.
 DELETE FROM `gameobject` WHERE `id` = 301150 AND `guid` IN (3011500, 3011501, 3011502);

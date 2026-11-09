@@ -9,9 +9,11 @@ honors program paper (GO 301153), its heroic spawn, the examiners' ghost tint (c
 copied texts are WP-S13's SQL rev (dbc-tools does not declare gameobjects).
 
 - The Passing Grades (ruling 22): six display auras, one per instructor (the instance holds the grades, saved; the
-  driver shows each on every player of the map who holds it, every 2 s). Not cancellable, kept through death
-  (ALLOW_AURA_WHILE_DEAD), dropped on a map change (AuraInterruptFlags CHANGE_MAP) and on a login outside Scholomance
-  (graduate_exam.cpp's PlayerScript). Icons: WP-V's PASSING_GRADE_ICONS.
+  driver shows each on every player of the map who holds it, every 2 s). Earned at the instructor's death by the
+  players inside the instructor's arena (an unreleased body counts, a released ghost does not) with no failure
+  (orchestrator ruling 2026-11-08). Not cancellable, kept through death (ALLOW_AURA_WHILE_DEAD), dropped on a map change
+  (AuraInterruptFlags CHANGE_MAP; the engine also strips CHANGE_MAP auras at every logout and login, and the 2 s sweep
+  shows them again inside Scholomance). Icons: WP-V's PASSING_GRADE_ICONS.
 - The seven Graduate Examiners: each instructor's own AI in examiner mode (heroic values on any map, no boss state, no
   grades), bound to its separate ScriptName (user ruling 2026-11-08; registered behind kWaveCBound by the instructors'
   files). Heroic only and summoned directly at these entries by the gauntlet: NO heroic template and no
@@ -77,11 +79,12 @@ passing_grades = [
         effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.DUMMY,
                         implicit_target_a=TARGET_UNIT_CASTER)],
         spell_icon_id=icon,
-        notes=f'{_GE}: the Passing Grade display for {instructor} (ruling 22). A player who got through the heroic '
-              'fight without a failure the registry records holds the grade in instance data (saved; a death, a '
-              'release or a logout never loses it); graduate_exam.cpp shows this aura on them (self-applied, '
-              'triggered, every 2 s). No effect. Not cancellable, kept through death, dropped on a map change and on '
-              'a login outside Scholomance. When every instructor has grades from 3 of 5 players, the honors '
+        notes=f'{_GE}: the Passing Grade display for {instructor} (ruling 22). A player inside the instructor\'s '
+              'arena at the death (alive, or dead and not released) without a failure the registry records holds the '
+              'grade in instance data (saved; a death, a release or a logout never loses it); graduate_exam.cpp '
+              'shows this aura on them (self-applied, triggered, every 2 s). No effect. Not cancellable, kept '
+              'through death, dropped on a map change and at a logout (the engine strips CHANGE_MAP auras; the '
+              'sweep shows it again inside). When every instructor has grades from 3 of 5 players, the honors '
               'program paper in the study can be signed (the Graduate Exam). Number-free text.',
         raw_overrides=kit_raw(f'Passed {instructor}\'s class without a failing mark.',
                               f'Passed {instructor}\'s class without a failing mark.', instant=True,

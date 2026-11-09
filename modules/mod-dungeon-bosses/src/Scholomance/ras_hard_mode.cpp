@@ -62,6 +62,7 @@
 #include "SpellScriptLoader.h"
 #include "StringFormat.h"
 #include "TemporarySummon.h"
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <string>
@@ -139,9 +140,13 @@ public:
         _lethal.Arm();
         Mechanic::EditDescriptor(ras, [](BossMechanics::Descriptor& d)
         {
-            // RF3 HM: break the tombs first, the tank's and the healer's before the others (BreakOut).
+            // RF3 HM: break the tombs first, the tank's and the healer's before the others (BreakOut). A cracking
+            // tomb (1 health, not selectable, waiting out its 1.5 s bar) drops out, so the DPS move on at once.
             d.targets.push_back(BossMechanics::TargetEntry(NPC_SC_ICE_TOMB, kTombTargetPriority,
-                BossMechanics::Who::Dps).BreakOut());
+                BossMechanics::Who::Dps, BossMechanics::Condition::Custom([](Unit const* u)
+                {
+                    return u && !u->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+                })).BreakOut());
         });
         fight.Log("hm-engage", Acore::StringFormat("health={} was_create={} loot_mode={}", ras->GetMaxHealth(),
             _baseCreateHealth, uint32(ras->GetLootMode())));
@@ -241,6 +246,7 @@ public:
     bool HoldsTimeline(RasFight const& /*fight*/) const override { return _clock.HoldsTimeline(); }
     bool HoldsFrostMark(RasFight const& /*fight*/) const override { return _clock.HoldsFrostMark(); }
     bool HoldsChillBeat(RasFight const& /*fight*/) const override { return _clock.HoldsChillBeat(); }
+    bool SuspendsWarmStack(RasFight const& /*fight*/) const override { return _clock.SuspendsWarmStack(); }
 
     // ---- `.dbtest scholo keepsake` ---------------------------------------------------------------------------------
 
@@ -326,6 +332,8 @@ private:
 
     // ---- RF11 Mortal Decay -----------------------------------------------------------------------------------------
 
+    // Every step also refreshes the aura's 15 s (AddStacks refreshes on every call, a zero change included), so a
+    // player who leaves the fight loses it within 15 s.
     void Decay(RasFight& fight, uint32 stacks)
     {
         Creature* ras = fight.Ras();
@@ -355,7 +363,10 @@ private:
         Creature* ras = fight.Ras();
         DungeonKit::CastBar(ras, SPELL_RK_SIPHON_CAST, nullptr, EMOTE_RAS_SIPHON_WARMTH);
         // Bots: spread 8 yd (go cold) for the bar and the channel. No damage of its own (no ledger entry): the Siphon
-        // is the cost. A ring outline per player, no fill (a range cue, not a hit).
+        // is the cost. A ring outline per player, no fill (a range cue, not a hit). One Spread that resolves with the
+        // last tick: the registry takes Persistent only on Zones, Frontals, Stacks and Soaks, and the bots' 10 s
+        // horizon holds them apart from the bar to the last tick. S4's warm Stack is suspended meanwhile
+        // (SuspendsWarmStack), so nothing pulls them back in.
         MechanicRef ref = Mechanic::Spread(ras, kSiphonSpreadRadius, Milliseconds(kSiphonCastMs + kSiphonChannelMs));
         ref.NoFillTimer().Tag(TAG_SIPHON);
         fight.Track(ref.Handle());
@@ -588,6 +599,28 @@ class spell_sc_ras_mortal_decay : public AuraScript
 };
 
 // -------------------------------------------------------------------------------------------------------------------
+// RF10 Siphon Backfire 206195: the hit is exactly base point 0 (1.3% of his bar). The spell already ignores the
+// player's (caster) modifiers and resistances; this replaces the damage after Ras's damage-taken modifiers (Curse of
+// the Elements and the like), which the launch applies. Absorbs still apply.
+// -------------------------------------------------------------------------------------------------------------------
+
+class spell_sc_ras_siphon_backfire : public SpellScript
+{
+    PrepareSpellScript(spell_sc_ras_siphon_backfire);
+
+    void ExactDamage(SpellEffIndex /*effIndex*/)
+    {
+        SetHitDamage(std::max(0, GetEffectValue()));
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_sc_ras_siphon_backfire::ExactDamage, EFFECT_0,
+            SPELL_EFFECT_SCHOOL_DAMAGE);
+    }
+};
+
+// -------------------------------------------------------------------------------------------------------------------
 // The keepsake gameobjects (heroic spawns only). Each one reads the instance data live (CanBeSeen) and polls once a
 // second to refresh its visibility and selectability when the data changes.
 // -------------------------------------------------------------------------------------------------------------------
@@ -667,7 +700,9 @@ struct go_sc_torn_page : public KeepsakeGameObjectAI
         instance->SetData(DATA_KEEPSAKE_PAGE, uint32(page));
         if (!(instance->GetData(DATA_KEEPSAKE_PAGE) & (1u << page)))
         {
+            NotifyPlayer(player, kRasGoneText);        // the instance refuses a page only once Ras is dead
             LogKeepsake("page-refused", Acore::StringFormat("page={} by={}", page + 1, player->GetName()));
+            Sync();
             return true;
         }
         uint32 const found = instance->GetData(DATA_KEEPSAKE_PAGE_COUNT);
@@ -708,9 +743,12 @@ struct go_sc_keepsake_book : public KeepsakeGameObjectAI
             return true;
         if (BoundBook())
         {
-            NotifyPlayer(player, instance->GetData(DATA_RAS_HARD_MODE)
-                ? "The keepsake calls to Ras Frostwhisper."
-                : "Frostwhisper's keepsake is whole again. The alchemy apparatus down the hall awaits it.");
+            NotifyPlayer(player, BoundBookText(instance->GetData(DATA_RAS_HARD_MODE) != 0, RasState()));
+            return true;
+        }
+        if (RasState() == DungeonKit::State::Done)
+        {
+            NotifyPlayer(player, kRasGoneText);
             return true;
         }
         uint32 const found = instance->GetData(DATA_KEEPSAKE_PAGE_COUNT);
@@ -723,6 +761,7 @@ struct go_sc_keepsake_book : public KeepsakeGameObjectAI
         instance->SetData(DATA_KEEPSAKE_BOUND, 1);
         if (!instance->GetData(DATA_KEEPSAKE_BOUND))
         {
+            NotifyPlayer(player, kRasGoneText);        // the instance refuses the bind only once Ras is dead
             LogKeepsake("bind-refused", Acore::StringFormat("by={} ras_state={}", player->GetName(), RasState()));
             return true;
         }
@@ -966,5 +1005,6 @@ void AddSC_scholo_ras_hard_mode()
     RegisterDungeonReworkGameObjectAI(go_sc_keepsake_book, ScholomanceRework::kInstanceScriptName);
     RegisterDungeonReworkGameObjectAI(go_sc_alchemy_table, ScholomanceRework::kInstanceScriptName);
     RegisterSpellScript(spell_sc_ras_mortal_decay);
+    RegisterSpellScript(spell_sc_ras_siphon_backfire);
     ScholoTest::RegisterBoss("keepsake", KeepsakeTestCommands());
 }

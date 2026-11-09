@@ -1,6 +1,8 @@
 // Host tests for GandlingLogic.h (S11: Darkmaster Gandling): the room cycle, the never-tank / never-just-back rules,
-// the lane picks, the 1.5 s lane gap after a swap, the Volley geometry and the fight modes.
+// the lane picks, the 1.5 s lane gap after a swap (and before a detention's return), the Volley geometry, the
+// classrooms' gate sides and the fight modes.
 #include "GandlingLogic.h"
+#include "GraduateExamLogic.h"
 #include "SoloLessonLogic.h"
 #include "check.h"
 #include <cmath>
@@ -28,6 +30,7 @@ namespace
         Candidate c;
         c.id = id;
         c.inRegion = true;
+        c.onFloor = true;
         c.alive = true;
         return c;
     }
@@ -53,6 +56,51 @@ namespace
             CHECK(study.clip.Contains(p, kStudyFloorZ));
         for (Point4 const& l : kClassroomLandings)
             CHECK(!study.clip.Contains(l.XY(), l.z));
+        // R-C EXAM N-6 (F-C2's data): the lanes' z band is the region's; the study keeps the registry's 6 yd, each
+        // exam room hands its own (the Barov Family Vault's reaches its pit).
+        CHECK(study.zTolerance == 6.f);
+        for (std::size_t i = 0; i < kClassroomCount; ++i)
+        {
+            Classroom const room = Classroom(i);
+            CHECK(ScholoGraduateExam::RoomRegion(room).zTolerance
+                == ScholoGraduateExam::ExamRoomOf(room).laneZTolerance);
+        }
+        CHECK(ScholoGraduateExam::RoomRegion(Classroom::BarovVault).zTolerance > 6.f);
+    }
+
+    // R-C GANDLING S-2: a classroom's side of its gate holds its arena and the corridor to it, never the study.
+    void TestClassroomSides()
+    {
+        for (std::size_t i = 0; i < kClassroomCount; ++i)
+        {
+            Classroom const room = Classroom(i);
+            Arena const side = ClassroomSide(room);
+            Point3 const& g = kClassroomGatePoints[i];
+            Vec2 const out = ClassroomGateOutward(room);
+            // The landing, and the corridor all the way from the gate to the arena's edge.
+            CHECK(side.Contains(kClassroomLandings[i].XY(), kClassroomLandings[i].z));
+            for (float d = 0.f; d <= 30.f; d += 1.f)
+            {
+                Vec2 const p{ g.x + out.x * d, g.y + out.y * d };
+                CHECK(side.Contains(p, g.z));
+            }
+            // The corridor past the gate is outside the arena itself (why the side is needed).
+            Vec2 const corridor{ g.x + out.x * 3.f, g.y + out.y * 3.f };
+            CHECK(!ClassroomArena(room).Contains(corridor, g.z));
+            // 2 yd on the study's side of the gate: not the room's side.
+            CHECK(!side.Contains({ g.x - out.x * 2.f, g.y - out.y * 2.f }, g.z));
+            // Nothing of the study: his spot, the portal points, the study floor's corners.
+            CHECK(!side.Contains(kGandlingSpawn.XY(), kGandlingSpawn.z));
+            for (Vec2 const& p : kStudyPortalPoints)
+                CHECK(!side.Contains(p, kStudyFloorZ));
+            for (Vec2 const& p : { Vec2{ 162.5f, -19.5f }, Vec2{ 199.5f, -19.5f }, Vec2{ 162.5f, 18.5f },
+                Vec2{ 199.5f, 18.5f } })
+                CHECK(!side.Contains(p, kStudyFloorZ));
+            // No other classroom's landing (the stacked rooms keep apart by z).
+            for (std::size_t j = 0; j < kClassroomCount; ++j)
+                if (j != i)
+                    CHECK(!side.Contains(kClassroomLandings[j].XY(), kClassroomLandings[j].z));
+        }
     }
 
     void TestRoomCycle()
@@ -106,6 +154,27 @@ namespace
         // Nothing open: nullopt.
         auto const none = [](Classroom) { return false; };
         CHECK(!c3.Next(none, rand));
+
+        // R-C GANDLING N-1: in a new cycle the room just used is passed over wherever it falls (its front room
+        // blocked too), unless it is the only room open.
+        for (int round = 0; round < 50; ++round)
+        {
+            RoomCycle c4;
+            std::optional<Classroom> used;
+            for (std::size_t k = 0; k < kClassroomCount; ++k)
+                used = c4.Next(all, rand);
+            CHECK(used.has_value() && c4.Left().empty());
+            if (!used)
+                continue;
+            Classroom const other = Classroom((std::size_t(*used) + 1 + std::size_t(round) % 5) % kClassroomCount);
+            Classroom const usedRoom = *used;
+            auto const twoOpen = [usedRoom, other](Classroom r) { return r == usedRoom || r == other; };
+            std::optional<Classroom> const next = c4.Next(twoOpen, rand);
+            CHECK(next && *next == other);
+            auto const onlyOther = [other](Classroom r) { return r == other; };
+            std::optional<Classroom> const again = c4.Next(onlyOther, rand);
+            CHECK(again && *again == other);        // the only room open: it runs again
+        }
     }
 
     void TestRoomGate()
@@ -152,6 +221,16 @@ namespace
         std::vector<Candidate> solo{ Player(9) };
         solo[0].tank = true;
         CHECK(!PickDetentionStudent(solo, rand));
+        // F-C ruling: never a vehicle passenger (the Work Bench patient).
+        std::vector<Candidate> bench{ Player(1), Player(2) };
+        bench[0].passenger = true;
+        for (int k = 0; k < 20; ++k)
+        {
+            std::optional<std::size_t> const i = PickDetentionStudent(bench, rand);
+            CHECK(i && *i == 1);
+        }
+        bench[1].passenger = true;
+        CHECK(!PickDetentionStudent(bench, rand));
     }
 
     void TestLanePicks()
@@ -182,6 +261,14 @@ namespace
         empty[0].tank = true;
         CHECK(PickLaneTargets(empty, 2, false, rand).empty());
         CHECK(PickLaneTargets(empty, 2, true, rand).size() == 2);
+        // R-C GANDLING N-6: a player off the floor box (a gate alcove) is never aimed at, nor a vehicle passenger.
+        std::vector<Candidate> alcove{ Player(1), Player(2), Player(3) };
+        alcove[0].onFloor = false;
+        alcove[1].passenger = true;
+        for (int k = 0; k < 20; ++k)
+            for (std::size_t i : PickLaneTargets(alcove, 2, true, rand))
+                CHECK(i == 2);
+        CHECK(EveryLaneTarget(alcove).size() == 1);
 
         // Portal points: distinct while they last.
         for (int k = 0; k < 50; ++k)
@@ -217,6 +304,16 @@ namespace
         c[2].detained = true;
         CHECK(!PickTransferPair(c, false, rand));       // one left: no swap
         CHECK(PickTransferPair(c, true, rand).has_value());
+        // F-C ruling (R-C EXAM N-1): the Work Bench patient is never swapped off the bench.
+        std::vector<Candidate> bench{ Player(1), Player(2), Player(3) };
+        bench[1].passenger = true;
+        for (int k = 0; k < 50; ++k)
+        {
+            auto const pair = PickTransferPair(bench, true, rand);
+            CHECK(pair && pair->first != 1 && pair->second != 1);
+        }
+        bench[2].passenger = true;
+        CHECK(!PickTransferPair(bench, true, rand));
     }
 
     void TestSwapGap()
@@ -238,6 +335,15 @@ namespace
         }
         // The Volley's own spacing: lanes fire 2 s after the portals open, so a swap before the portals is fine.
         CHECK(kVolleyWarnMs > kLaneGapAfterSwapMs);
+
+        // R-C GANDLING S-3: a detention's return keeps the same gap (the student waits in the room).
+        CHECK(ReturnHoldMs(20000, {}) == 0);
+        CHECK(ReturnHoldMs(20000, { 21400 }) == 1500);
+        CHECK(ReturnHoldMs(20000, { 21600 }) == 0);
+        CHECK(ReturnHoldMs(20000, { 19000 }) == 0);
+        std::uint32_t const held = ReturnHoldMs(20000, { 20300 });
+        CHECK(held == 400 && ReturnHoldMs(20000 + held, { 20300 }) == 0);
+        CHECK(ReturnHoldMs(0, { 0 }) <= kLaneGapAfterSwapMs + 100);     // never more than one lane's gap
     }
 
     void TestVolleyLane()
@@ -289,12 +395,16 @@ namespace
         CHECK(std::fabs(ExpelledDamageFactor(3) - 1.3f) < 0.001f);
         // A lesson ends (15 s) before the next detention is due (25 s), with the 1 s cast and the arrival allowance.
         CHECK(kDetentionCastMs + kArrivalTimeoutMs + kLessonMs + kArrivalTimeoutMs < kDetentionEveryMs);
+        // ... and with the lane hold before the return (S-3) and one slow landing.
+        CHECK(kDetentionCastMs + kLessonMs + kLaneGapAfterSwapMs + 100 + kArrivalTimeoutMs < kDetentionEveryMs);
+        CHECK(kRecentTankMs == 2000);
     }
 }
 
 int main()
 {
     TestSlicesAndArenas();
+    TestClassroomSides();
     TestRoomCycle();
     TestRoomGate();
     TestDetentionPick();

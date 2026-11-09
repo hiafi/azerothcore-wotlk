@@ -5,6 +5,7 @@
 #include "check.h"
 #include <cmath>
 #include <cstdint>
+#include <string>
 
 using namespace ScholomanceRework;
 using namespace ScholoRasHardMode;
@@ -81,6 +82,8 @@ int main()
     CHECK(Near(kSiphonBackfirePctPerCold, 1.3f));
     CHECK(Near(kSiphonSpreadRadius, 8.f));
     CHECK(Near(kDecayPctPerStack, 0.5f) && kDecayEveryMs == 10000);
+    // F-C3 S-1: a finite Decay, refreshed by every 10 s step before it runs out (DT 206196 duration_ms).
+    CHECK(kDecayDurationMs == 15000 && kDecayDurationMs > kDecayEveryMs);
     // The tomb's thaw is S4's (6 yd, 45% heroic, +3 Chill); the crack is shorter than S4's own 2 s tomb.
     CHECK(Near(ScholoRas::kThawRadius, 6.f) && Near(ScholoRas::kThawPct(true), 45.f));
     CHECK(ScholoRas::kThawChill(true) == 3);
@@ -93,6 +96,7 @@ int main()
         CHECK(c.phase == Phase::Lich);
         CHECK(t.siphonCasts == 0 && t.ticks == 0 && t.decayTo == 0 && !t.transitionDone);
         CHECK(!c.HoldsTimeline() && !c.HoldsFrostMark() && !c.HoldsChillBeat() && !c.Mortal());
+        CHECK(!c.SuspendsWarmStack());
     }
 
     // ---- The transition: 3 s, S4's clock held, then phase 2 ---------------------------------------------------------
@@ -127,14 +131,17 @@ int main()
         t = Run(c, 100);                        // 10 s
         CHECK(t.siphonCasts == 1 && c.siphon == SiphonStage::Warning);
         CHECK(c.HoldsFrostMark() && !c.HoldsChillBeat());
+        CHECK(c.SuspendsWarmStack());           // F-C3 S-2: from the bar on, the warm Stack is off
         t = Run(c, 1900);
         CHECK(t.channels == 0);
         t = Run(c, 100);                        // 12 s: the channel
         CHECK(t.channels == 1 && c.siphon == SiphonStage::Channel);
         CHECK(c.HoldsFrostMark() && c.HoldsChillBeat());
+        CHECK(c.SuspendsWarmStack());
         t = Run(c, 5000);                       // 17 s
         CHECK(t.ticks == kSiphonTicks && t.ends == 1 && c.siphon == SiphonStage::Idle);
         CHECK(!c.HoldsFrostMark() && !c.HoldsChillBeat());
+        CHECK(!c.SuspendsWarmStack());          // back after the last tick
         t = Run(c, 22900);                      // 39.9 s
         CHECK(t.siphonCasts == 0);
         t = Run(c, 100);                        // 40 s
@@ -274,6 +281,13 @@ int main()
         TableRefusal::NotBound, TableRefusal::RasFighting })
         CHECK(TableRefusalText(why)[0] != '\0');
     CHECK(TableRefusalText(TableRefusal::None)[0] == '\0');
+    // F-C3 N-2: once Ras is dead every keepsake line says so (the bound book no longer "calls to" him).
+    CHECK(std::string(TableRefusalText(TableRefusal::RasDead)) == kRasGoneText);
+    CHECK(std::string(BoundBookText(true, Done)) == kRasGoneText);
+    CHECK(std::string(BoundBookText(false, Done)) == kRasGoneText);
+    CHECK(std::string(BoundBookText(true, NotStarted)) != BoundBookText(false, NotStarted));
+    for (std::uint32_t state : { NotStarted, InProgress, DungeonKit::State::Fail })
+        CHECK(std::string(BoundBookText(true, state)) != kRasGoneText);
 
     // The book and the table stand outside Ras's arena (KS's scholomance_test checks every arena).
     CHECK(!RasArena().Contains(kKeepsakeBook.XY(), kKeepsakeBook.z));

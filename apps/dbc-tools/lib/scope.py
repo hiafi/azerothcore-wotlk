@@ -264,6 +264,12 @@ class Ownership:
             if spaces is None or not isinstance(value, int) or value == 0:
                 return frozenset()
             return self.owners(spaces[0], value) if value > 0 else self.owners(spaces[1], -value)
+        if table == "conditions":
+            space = CONDITION_SOURCE_SPACES.get(_norm(row.get("SourceTypeOrReferenceId")))
+            value = _norm(row.get("SourceGroup"))
+            if space is None or not isinstance(value, int) or value <= 0:
+                return frozenset()
+            return self.owners(space, value)
         id_column = TABLE_IDS.get(table)
         if id_column and id_column[0] in row:
             return self.owners(id_column[1], row[id_column[0]])
@@ -349,6 +355,10 @@ _DECLARED_ID_LISTS = (
     ("dungeon_access", "id", "dungeon_access"),
     ("dungeon_encounters", "ID", "dungeonencounter"),
 )
+
+# conditions.SourceTypeOrReferenceId -> the id space of its SourceGroup, for the loot conditions lib/loot_tables.py
+# writes (creature loot: the lootid; reference loot: the pool's Entry).
+CONDITION_SOURCE_SPACES = {1: "creature", 10: "loot_reference"}
 
 # SpellFamilyName -> class scope, for the generated GCD-haste auras (lib/gcd_haste.py, source/gcd_haste.py).
 FAMILY_CLASSES = {
@@ -466,6 +476,9 @@ def build_ownership(
             own.declare("item_limit_category", category, key_scope.get(key))
     for entry in dsl_classes.get("loot_declarations", ()):
         scope, decl = scope_of(entry), entry["_decl"]
+        if getattr(decl, "pool_removal", False):
+            own.declare("loot_reference", decl.reference, scope)  # a stock pool the scope deletes
+            continue
         own.declare("creature", decl.lootid, scope)
         own.declare_key("creature_loot_template", (decl.lootid, decl.group), scope)
         if decl.reference:

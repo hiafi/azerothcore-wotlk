@@ -7,8 +7,8 @@
  *
  *   Passing Grades   (ruling 22) the instance holds them (the instructors' GradeWatch awards them, saved); this file
  *                    only shows them: one aura per instructor (206365-206370) on every player of the map who holds
- *                    it, re-shown every kGradeSweepMs (a death keeps them, a map change drops them, a login outside
- *                    Scholomance clears them).
+ *                    it, re-shown every kGradeSweepMs (a death keeps them; a map change drops them, and the engine
+ *                    strips CHANGE_MAP auras at every logout and login, so the sweep shows them again inside).
  *   The paper        go_sc_honors_paper, GO 301153 on the study's upper floor (kHonorsPaper, heroic spawn only): a
  *                    click with the honors program open (every instructor graded by 3 players), Gandling revealed and
  *                    idle signs it (DATA_GANDLING_HARD_MODE) and starts the gauntlet; otherwise it says why not.
@@ -18,17 +18,21 @@
  *                    5 s later the group is portaled into the first of the six classrooms (a random order) and that
  *                    room's Graduate Examiner (300548-300554, the instructor's own AI in examiner mode: heroic values,
  *                    80k; the Ravenian 60k with his own Corvane 20k) is raised and pulled once the whole group is in
- *                    the room (F-B1). Gandling's Portal Volley and Transfer reach into the room at heroic values
- *                    (GauntletMode: lanes from the room's walls, the examiner's victim as the tank); no Detention.
- *                    5 s after each kill a portal takes the group on.
+ *                    the room (F-B1; the pull is retried every tick until it engages, R-C EXAM SF-1). Gandling's
+ *                    Portal Volley and Transfer reach into the room at heroic values (GauntletMode: lanes from the
+ *                    room's walls, the examiner's victim as the tank); no Detention. 5 s after each kill a portal
+ *                    takes the group on, and the lanes' Weakened is cleared (orchestrator ruling 2026-11-08). A
+ *                    player who missed a portal (offline, released, a late zone-in) is brought to the group's room
+ *                    (or the study) as soon as they are back on the map, alive or not yet released.
  *   GD6 the final    after the sixth room the portal returns the group to the study: yell line 5, Gandling at 200k
  *                    and attackable, pulled at once in FinalExamMode (no Detention, a lane through every player every
  *                    20 s, a swap every 15 s raising an Expelled Student).
- *   A wipe           (nobody alive, an examiner or Gandling out of combat) puts everything back: the examiner's fight
- *                    is ended before it despawns (F-B1), Gandling's flags, health and mode return, his state goes
- *                    NOT_STARTED (the gates open) and the signature is cleared, so the paper can be signed again; the
- *                    grades stay. The hard mode loot bit rides Gandling while the signature is lit (the instance and
- *                    his Reset), so only a kill in the final phase drops it.
+ *   A wipe           (nobody alive; an examiner or Gandling out of combat after its pull engaged, or never engaged
+ *                    within kPullTimeoutMs) puts everything back: the examiner's fight is ended before it despawns
+ *                    (F-B1), Gandling's flags, health and mode return, his state goes NOT_STARTED (the gates open)
+ *                    and the signature is cleared, so the paper can be signed again; the grades stay. The hard mode
+ *                    loot bit rides Gandling while the signature is lit (the instance and his Reset), so only a kill
+ *                    in the final phase drops it.
  */
 
 #include "BossMechanics.h"
@@ -42,6 +46,7 @@
 #include "GraduateExam.h"
 #include "GraduateExamLogic.h"
 #include "InstanceScript.h"
+#include "MechanicWeakened.h"
 #include "Map.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
@@ -54,7 +59,9 @@
 #include "StringFormat.h"
 #include "TemporarySummon.h"
 #include "WorldSession.h"
+#include <algorithm>
 #include <memory>
+#include <vector>
 
 using namespace Acore::ChatCommands;
 using namespace ScholomanceRework;
@@ -111,6 +118,17 @@ namespace
         creature->SetStatFlatModifier(UNIT_MOD_HEALTH, BASE_VALUE, float(health));
         creature->UpdateMaxHealth();
         creature->SetHealth(creature->GetMaxHealth());
+    }
+
+    bool AnyFightingIn(Map* map, Arena const& arena)
+    {
+        for (auto const& ref : map->GetPlayers())
+        {
+            Player* player = ref.GetSource();
+            if (Fighting(player) && arena.Contains(DungeonKit::PlaneOf(player), player->GetPositionZ()))
+                return true;
+        }
+        return false;
     }
 
     // Every player of `arena` goes on `unit`'s threat list (its pull), the nearest first as its victim.
@@ -177,6 +195,7 @@ public:
         {
             case ExamAction::SendToRoom:    SendToRoom();          break;
             case ExamAction::PullExaminer:  PullExaminer();        break;
+            case ExamAction::RetryPull:     RetryPull();           break;
             case ExamAction::RoomCleared:   RoomCleared();         break;
             case ExamAction::ReturnToStudy: ReturnToStudy();       break;
             case ExamAction::StartFinal:    StartFinal();          break;
@@ -184,6 +203,8 @@ public:
             case ExamAction::Passed:        Passed();              break;
             case ExamAction::None:                                 break;
         }
+        if (_run.Running())
+            CollectStragglers();
     }
 
     void SyncGrades(Player* player) override
@@ -218,7 +239,8 @@ public:
             s.gandlingState = DungeonKit::State::Done;
         // Not loaded (his grid asleep): nothing to start yet, read as not revealed.
         s.revealed = s.revealed && gandling;
-        s.gandlingEngaged = gandling && gandling->IsEngaged();
+        // Busy while he walks home from a wipe too (R-C EXAM N-4: JustReachedHome would undo setActive mid-exam).
+        s.gandlingEngaged = gandling && (gandling->IsEngaged() || gandling->IsInEvadeMode());
         s.examRunning = _run.Running();
         s.honorsOpen = _instance->GetData(DATA_HONORS_OPEN) != 0;
         return CheckPaper(s);
@@ -370,14 +392,18 @@ private:
             {
                 Creature* examiner = Examiner();
                 in.examinerDead = examiner && examiner->isDead();
-                in.examinerLost = !examiner || (examiner->IsAlive() && !examiner->IsEngaged());
+                in.examinerGone = !examiner;
+                in.examinerEngaged = examiner && examiner->IsAlive() && examiner->IsEngaged();
+                in.anyInside = AnyFightingIn(GetMap(), ClassroomArena(_run.Room()));
                 break;
             }
             case ExamPhase::Final:
             {
                 Creature* gandling = Gandling();
                 in.gandlingDead = _instance->GetBossState(BOSS_GANDLING) == DONE || (gandling && gandling->isDead());
-                in.gandlingLost = !gandling || (gandling->IsAlive() && !gandling->IsEngaged());
+                in.gandlingGone = !gandling;
+                in.gandlingEngaged = gandling && gandling->IsAlive() && gandling->IsEngaged();
+                in.anyInside = AnyFightingIn(GetMap(), GandlingArena());
                 break;
             }
             default:
@@ -404,19 +430,65 @@ private:
     void SendGroup(Point4 const& at)
     {
         _sent.clear();
-        std::size_t index = 0;
         for (auto const& ref : GetMap()->GetPlayers())
+            if (Player* player = ref.GetSource(); Movable(player))
+                SendOne(player, at);
+    }
+
+    void SendOne(Player* player, Point4 const& at)
+    {
+        if (player->GetVehicle())
+            player->ExitVehicle();
+        Point4 const spot = SpreadLanding(at, _sent.size());
+        if (player->IsAlive())
+            player->CastSpell(player, ScholoGandling::SPELL_GD_PORTAL_FLASH, true);
+        player->NearTeleportTo(spot.x, spot.y, spot.z, spot.o);
+        _sent.push_back(player->GetGUID());
+    }
+
+    // R-C EXAM N-5: a player who missed a portal (offline or released at the time, or a late zone-in) joins the group
+    // as soon as they are back on the map, alive or not yet released, so nobody waits behind a shut gate. Players who
+    // left the map or released drop off the list (they are collected again when they come back); one already in the
+    // group's arena only joins the list.
+    void CollectStragglers()
+    {
+        Point4 at;
+        Arena arena;
+        switch (_run.Phase())
+        {
+            case ExamPhase::Arriving:
+            case ExamPhase::Examining:
+                at = ExamRoomOf(_run.Room()).groupLanding;
+                arena = ClassroomArena(_run.Room());
+                break;
+            case ExamPhase::Returning:
+            case ExamPhase::Final:
+                at = kStudyReturn;
+                arena = GandlingArena();
+                break;
+            default:
+                return;     // Opening and Portal: the next send takes everyone
+        }
+        Map* map = GetMap();
+        std::erase_if(_sent, [map](ObjectGuid const& guid)
+        {
+            Player* player = ObjectAccessor::GetPlayer(map, guid);
+            return !player || player->HasPlayerFlag(PLAYER_FLAGS_GHOST);
+        });
+        for (auto const& ref : map->GetPlayers())
         {
             Player* player = ref.GetSource();
-            if (!Movable(player))
+            if (!Movable(player) || player->IsBeingTeleported()
+                || std::find(_sent.begin(), _sent.end(), player->GetGUID()) != _sent.end())
                 continue;
-            if (player->GetVehicle())
-                player->ExitVehicle();
-            Point4 const spot = SpreadLanding(at, index++);
-            if (player->IsAlive())
-                player->CastSpell(player, ScholoGandling::SPELL_GD_PORTAL_FLASH, true);
-            player->NearTeleportTo(spot.x, spot.y, spot.z, spot.o);
-            _sent.push_back(player->GetGUID());
+            if (arena.Contains(DungeonKit::PlaneOf(player), player->GetPositionZ()))
+            {
+                _sent.push_back(player->GetGUID());
+                continue;
+            }
+            SendOne(player, at);
+            ExamLog("straggler", Acore::StringFormat("player={} phase={}", player->GetName(),
+                PhaseName(_run.Phase())));
         }
     }
 
@@ -461,7 +533,7 @@ private:
         examiner->setActive(true);
         if (!examiner->HasAura(SPELL_GHOST_VISUAL))
             examiner->AddAura(SPELL_GHOST_VISUAL, examiner);
-        bool const pulled = PullInto(examiner, ClassroomArena(room));
+        bool const pulled = PullInto(examiner, ClassroomArena(room));   // nobody in yet: RetryPull, every tick
         if (GandlingFightApi* fight = GetGandlingFight(gandling))
         {
             fight->SetRegion(RoomRegion(room));
@@ -469,6 +541,17 @@ private:
         }
         ExamLog("pull", Acore::StringFormat("room={} examiner={} health={} pulled={}",
             kClassroomNames[std::size_t(room)], r.examiner, examiner->GetMaxHealth(), pulled ? 1 : 0));
+    }
+
+    // SF-1: the step's unit was never engaged yet (nobody was in the arena at its pull): pull the arena again.
+    void RetryPull()
+    {
+        Creature* unit = _run.Phase() == ExamPhase::Final ? Gandling() : Examiner();
+        if (!unit || !unit->IsAlive() || unit->IsEngaged())
+            return;
+        Arena const arena = _run.Phase() == ExamPhase::Final ? GandlingArena() : ClassroomArena(_run.Room());
+        if (PullInto(unit, arena))
+            ExamLog("pull-retry", Acore::StringFormat("phase={} unit={}", PhaseName(_run.Phase()), unit->GetEntry()));
     }
 
     void RoomCleared()
@@ -480,6 +563,9 @@ private:
             fight->Abort();
             fight->SetMode(IdleMode());
         }
+        // Orchestrator ruling 2026-11-08: his lanes' Weakened ends with each room (as each examiner's does), never
+        // stacking across the exam. The examiner's own encounter ended at its death; no other encounter runs here.
+        BossMechanics::Weakened::Clear(GetMap());
         Point4 const& at = ExamRoomOf(room).groupLanding;
         if (gandling)
             gandling->SummonCreature(NPC_SC_PORTAL_STALKER, Position(at.x, at.y, at.z, at.o),
@@ -696,22 +782,6 @@ private:
     uint32 _pollMs = 0;
 };
 
-// The grade auras never outlive Scholomance: a map change drops them (AuraInterruptFlags), and a login anywhere else
-// (a logout inside, the instance gone) clears them here.
-class scholo_passing_grade_cleanup : public PlayerScript
-{
-public:
-    scholo_passing_grade_cleanup() : PlayerScript("scholo_passing_grade_cleanup", { PLAYERHOOK_ON_LOGIN }) { }
-
-    void OnPlayerLogin(Player* player) override
-    {
-        if (!player || player->GetMapId() == kMapScholomance)
-            return;
-        for (std::size_t i = 0; i < kInstructorCount; ++i)
-            player->RemoveAurasDueToSpell(PassingGradeSpell(Instructor(i)));
-    }
-};
-
 // ---- `.dbtest scholo exam` ------------------------------------------------------------------------------------------
 namespace
 {
@@ -753,6 +823,13 @@ namespace
         {
             handler->SendErrorMessage("{}", "Room 0-5 (ShadowVault, BarovVault, RavenianVault, HallOfSecrets, "
                 "HallOfTheDamned, Coven).");
+            return false;
+        }
+        // R-C EXAM N-2: the gauntlet moves and counts no GM (a lone tester in GM mode would wipe it on its first tick).
+        if (handler->GetPlayer()->IsGameMaster())
+        {
+            handler->SendErrorMessage("{}", "Turn GM mode off first (.gm off): the gauntlet neither moves nor counts "
+                "GMs.");
             return false;
         }
         PaperRefusal const why = exam->Check();
@@ -842,6 +919,5 @@ namespace
 void AddSC_scholo_graduate_exam()
 {
     RegisterDungeonReworkGameObjectAI(go_sc_honors_paper, ScholomanceRework::kInstanceScriptName);
-    new scholo_passing_grade_cleanup();
     ScholoTest::RegisterBoss("exam", ExamTestCommands());
 }

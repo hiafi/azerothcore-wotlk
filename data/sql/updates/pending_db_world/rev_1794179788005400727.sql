@@ -11,14 +11,16 @@ DELETE FROM `smart_scripts` WHERE `entryorguid` = 1853 AND `source_type` = 0;
 
 -- Texts (SC "Text", approved 2026-11-01; group 0 "School is in session!" is stock and kept). Yells are type 14, the
 -- mechanic emotes boss emotes (41), so each names its mechanic on screen. Groups 4 and 5 are the Graduate Exam's
--- (WP-S13 says them). $n is the detained player (group 1).
+-- (WP-S13 says them). $n is the detained player (group 1). The Volley and Transfer emotes (groups 2 and 3) reach the
+-- whole map (TextRange 3): in the Graduate Exam's gauntlet he stays in the study, 59 to 70 yd from the classroom the
+-- group fights in, past the 40 yd text emote range (R-C EXAM SF-2).
 DELETE FROM `creature_text` WHERE `CreatureID` = 1853 AND `GroupID` BETWEEN 1 AND 6;
 INSERT INTO `creature_text` (`CreatureID`, `GroupID`, `ID`, `Text`, `Type`, `Language`, `Probability`, `Emote`,
     `Duration`, `Sound`, `BroadcastTextId`, `TextRange`, `comment`) VALUES
 (1853, 1, 0, 'Detention, $n!', 14, 0, 100, 0, 0, 0, 0, 0, 'Darkmaster Gandling - Detention (GD1)'),
-(1853, 2, 0, '%s tears open portals around the room!', 41, 0, 100, 0, 0, 0, 0, 0,
+(1853, 2, 0, '%s tears open portals around the room!', 41, 0, 100, 0, 0, 0, 0, 3,
     'Darkmaster Gandling - Portal Volley (GD4)'),
-(1853, 3, 0, '%s shuffles his students through the portals!', 41, 0, 100, 0, 0, 0, 0, 0,
+(1853, 3, 0, '%s shuffles his students through the portals!', 41, 0, 100, 0, 0, 0, 0, 3,
     'Darkmaster Gandling - Transfer (GD4b)'),
 (1853, 4, 0, 'Honor students? Try our graduate program.', 14, 0, 100, 0, 0, 0, 0, 0,
     'Darkmaster Gandling - hard mode start (GD5, WP-S13)'),

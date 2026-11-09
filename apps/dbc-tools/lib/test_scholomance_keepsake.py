@@ -52,6 +52,7 @@ ATTR3_IGNORE_CASTER_MODIFIERS = 0x20000000
 ATTR3_ALWAYS_HIT = 0x00040000
 ATTR4_IGNORE_RESISTANCES = 0x00000001
 CREATURE_FLAG_EXTRA_NO_XP = 0x40
+AURA_INTERRUPT_FLAG_CHANGE_MAP = 0x00080000
 WARRIOR_BASE_60 = 3052
 
 
@@ -148,6 +149,9 @@ class KeepsakeDeclarationTest(unittest.TestCase):
         self.assertTrue(_raw(backfire, "AttributesEx4") & ATTR4_IGNORE_RESISTANCES)
         self.assertIn("SPELL_RK_SIPHON_HEAL, SPELLVALUE_BASE_POINT0", self.cpp)
         self.assertIn("SPELL_RK_SIPHON_BACKFIRE, SPELLVALUE_BASE_POINT0", self.cpp)
+        # F-C3 N-3: the backfire's hit is set to base point 0 past Ras's damage-taken modifiers.
+        self.assertIn((BACKFIRE, "spell_sc_ras_siphon_backfire"), self.scripts)
+        self.assertIn("RegisterSpellScript(spell_sc_ras_siphon_backfire)", self.cpp)
         self.assertEqual(self.spells[SIPHONED]["effect1"]["apply_aura"], AURA_DUMMY)
 
     def test_mortal_decay(self):
@@ -155,12 +159,22 @@ class KeepsakeDeclarationTest(unittest.TestCase):
         self.assertEqual(decay["effect1"]["apply_aura"], AURA_PERIODIC_DAMAGE)
         self.assertEqual(decay["effect1"]["amplitude"], 1000)
         self.assertEqual(decay["dispel"], 0)
-        self.assertEqual(decay["duration_ms"], -1)
+        # F-C3 S-1: finite (refreshed by each 10 s step) and dropped on a logout or a map change.
+        self.assertEqual(decay["duration_ms"], _header_int("kDecayDurationMs"))
+        self.assertGreater(decay["duration_ms"], _header_int("kDecayEveryMs"))
         self.assertEqual(_raw(decay, "CumulativeAura"), _header_int("kDecayMaxStacks"))
         self.assertTrue(_raw(decay, "AttributesEx3") & ATTR3_IGNORE_CASTER_MODIFIERS)
         self.assertIn((DECAY, "spell_sc_ras_mortal_decay"), self.scripts)
         self.assertIn("RegisterSpellScript(spell_sc_ras_mortal_decay)", self.cpp)
-        self.assertEqual({name for _, name in self.scripts}, {"spell_sc_ras_mortal_decay"})
+        self.assertEqual({name for _, name in self.scripts},
+                         {"spell_sc_ras_mortal_decay", "spell_sc_ras_siphon_backfire"})
+
+    def test_player_auras_never_leave_the_map(self):
+        # R-C KEEPSAKE S-1: Mortal Decay and the drain are dropped before the logout save, after the login load and
+        # on a map change, so none outlives the fight on the character.
+        for spell_id in (DECAY, SIPHONED):
+            self.assertTrue(_raw(self.spells[spell_id], "AuraInterruptFlags") & AURA_INTERRUPT_FLAG_CHANGE_MAP,
+                            spell_id)
 
     def test_looks_are_the_visual_picks(self):
         for spell_id in (SIPHON_CHANNEL, SIPHONED, BACKFIRE):

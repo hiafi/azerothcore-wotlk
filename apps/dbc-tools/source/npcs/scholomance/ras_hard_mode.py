@@ -29,10 +29,12 @@ Spells (Spell.dbc 3.3.5 for every stock id quoted; looks from WP-V's ._visuals, 
                              (base point 0 = the exact amount, from the script)
   206195  Siphon Backfire    RF10 each cold player's backfire on Ras: 1.3% of his bar per tick (base point 0 = the
                              amount; cast by the player, so the damage is theirs: no threat, always hits, no crit, no
-                             caster modifiers or resistances)
+                             caster modifiers or resistances; spell_sc_ras_siphon_backfire makes the hit exact
+                             past his damage-taken modifiers too)
   206196  Mortal Decay       RF11 the phase 2 enrage: a Frost DoT stacking on every player every 10 s, 0.5% of the
                              heroic reference row per second per stack (spell_sc_ras_mortal_decay; ignores caster
-                             modifiers, no crit, not dispellable); Blood Plague 55264's SV 11624
+                             modifiers, no crit, not dispellable); 15 s, refreshed at each 10 s step, dropped on a
+                             logout or a map change; Blood Plague 55264's SV 11624
   206197  Thawing            RF3 HM: the broken tomb's 1.5 s cast bar while the 6 yd thaw circle warns
   206198-206204 spare.
 """
@@ -71,6 +73,10 @@ _ICON_BLOOD_PLAGUE = 2623       # Blood Plague 55264 (Mortal Decay)
 _ICON_ICE_TOMB = 35             # Ice Tomb 16869
 
 _DECAY_MAX_STACKS = 99          # RasHardModeLogic.h kDecayMaxStacks
+_DECAY_DURATION_MS = 15000      # RasHardModeLogic.h kDecayDurationMs: longer than the 10 s step that refreshes it
+# AURA_INTERRUPT_FLAG_CHANGE_MAP (SpellDefines.h): AC drops the aura before the logout save, after the login load and on
+# a cross-map teleport (a same-map teleport keeps it), so a stray Decay never ticks on a player back on the map.
+_AURA_INTERRUPT_CHANGE_MAP = 0x00080000
 
 # --- 300535 Ice Tomb -------------------------------------------------------------------------------------------------
 
@@ -132,7 +138,8 @@ siphoned_206193 = spell(
           'the script\'s. Ignores LoS (a triggered cast still checks it). Life Drain 28542\'s SV 7607.',
     raw_overrides=kit_raw('Your warmth is being drained.', 'Your warmth is being drained. Step away from your allies.',
                           instant=True, AttributesEx=_ATTR1_NO_THREAT, AttributesEx2=_ATTR2_IGNORE_LINE_OF_SIGHT,
-                          SpellVisualID_1=RF_SIPHON_WARMTH, AttributesEx4=ATTR4_NO_CAST_LOG),
+                          SpellVisualID_1=RF_SIPHON_WARMTH, AttributesEx4=ATTR4_NO_CAST_LOG,
+                          AuraInterruptFlags=_AURA_INTERRUPT_CHANGE_MAP),
 )
 
 siphon_heal_206194 = spell(
@@ -160,8 +167,9 @@ siphon_backfire_206195 = spell(
           'not entombed) casts this on Ras (triggered, queued on his event list so a killing backfire never runs '
           'inside the hard mode\'s own update): 1.3% of his bar (5,200) each; five cold players for the full 5 s is '
           'about 32%. Base point 0 is the exact amount. The damage is the player\'s (credit) but makes no threat, '
-          'always hits, cannot crit and ignores caster modifiers and resistances, so the number is the build spec\'s. '
-          'Ignores LoS. Life Drain 28542\'s SV 7607 (the impact on Ras).',
+          'always hits, cannot crit and ignores caster modifiers and resistances, and spell_sc_ras_siphon_backfire '
+          'sets the hit to base point 0 after Ras\'s damage-taken modifiers (Curse of the Elements and the like), so '
+          'the number is the build spec\'s. Ignores LoS. Life Drain 28542\'s SV 7607 (the impact on Ras).',
     raw_overrides=kit_raw('The warmth he reaches for is not there.', instant=True, InterruptFlags=0, PreventionType=0,
                           AttributesEx=_ATTR1_NO_THREAT,
                           AttributesEx2=_ATTR2_IGNORE_LINE_OF_SIGHT | _ATTR2_CANT_CRIT,
@@ -169,13 +177,14 @@ siphon_backfire_206195 = spell(
                           AttributesEx4=ATTR4_NO_CAST_LOG | _ATTR4_IGNORE_RESISTANCES,
                           SpellVisualID_1=RF_SIPHON_WARMTH),
 )
+scripted_by(siphon_backfire_206195, 'spell_sc_ras_siphon_backfire')
 
 # --- RF11 Mortal Decay -----------------------------------------------------------------------------------------------
 
 mortal_decay_206196 = spell(
     id=206196, name='Mortal Decay', school=School.FROST, dispel=0, mechanic=0, attributes=ATTR0_AURA_IS_DEBUFF,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0,
-    duration_ms=-1,
+    duration_ms=_DECAY_DURATION_MS,
     effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DAMAGE, base_points=1, die_sides=0,
                     amplitude=1000, implicit_target_a=TARGET_UNIT_TARGET_ANY, potency_excluded=_SCRIPT_REF)],
     spell_icon_id=_ICON_BLOOD_PLAGUE,
@@ -184,12 +193,14 @@ mortal_decay_206196 = spell(
           'gets the full count. Each stack deals 0.5% of the heroic reference row a second (spell_sc_ras_mortal_decay '
           'sets the per-stack amount; the engine multiplies by the stacks): 2.5% a second at 5, 6% at 12. Frost; '
           'ignores caster modifiers, always hits, cannot crit; not dispellable (Dispel none). Removed at his death, '
-          'evade or reset (and on the player\'s death). Blood Plague 55264\'s SV 11624.',
+          'evade or reset (and on the player\'s death). 15 s, refreshed at every 10 s step, and AuraInterruptFlags '
+          'CHANGE_MAP: a player who leaves the fight or logs out loses it. Blood Plague 55264\'s SV 11624.',
     raw_overrides=kit_raw('The mortal body is failing.', 'Frost damage every second, more with each stack.',
                           instant=True, CumulativeAura=_DECAY_MAX_STACKS, AttributesEx=_ATTR1_NO_THREAT,
                           AttributesEx2=_ATTR2_IGNORE_LINE_OF_SIGHT | _ATTR2_CANT_CRIT,
                           AttributesEx3=_ATTR3_NOT_A_PROC | _ATTR3_ALWAYS_HIT | ATTR3_IGNORE_CASTER_MODIFIERS,
-                          SpellVisualID_1=RF_MORTAL_DECAY, AttributesEx4=ATTR4_NO_CAST_LOG),
+                          SpellVisualID_1=RF_MORTAL_DECAY, AttributesEx4=ATTR4_NO_CAST_LOG,
+                          AuraInterruptFlags=_AURA_INTERRUPT_CHANGE_MAP),
 )
 scripted_by(mortal_decay_206196, 'spell_sc_ras_mortal_decay')
 

@@ -8,8 +8,9 @@ haunted_set.py. The shape is the Deadmines and Shadowfang Keep one (deadmines_lo
 - **Group 1** of each boss is the list. The stock group 1 held the instructors' 30% roll on the shared pool (reference
   35031; Alexei's own copy 35095, Ras's 35030 with two rolls), each boss's Tier 0 piece and the boss's own stock items.
   The per-boss lists replace all of it (build spec, Structure 1: "Per-boss lists replace the shared pool"), so the
-  declarations name the stock rows they drop (`replaces_items`, `replaces_references`). The references stay in
-  `reference_loot_template`: Kirtonos (10506, stock, out of scope) and other creatures still use them.
+  declarations name the stock rows they drop (`replaces_items`, `replaces_references`). Nothing else uses the three
+  pools (Kirtonos's loot does not; checked over every loot table), and the engine logs an unused reference Entry at
+  boot (`LootStore::ReportUnusedIds`), so they are deleted (`remove_reference_pool()`).
 - **Two drops** (Ras, Gandling): a reference row (`MaxCount` 2) into a pool of the boss's list, ids 1700002-1700005 of
   source/ids.yaml's `loot_reference` block (Deadmines took 1700000-1700001). The two items are distinct.
 - **Haunted tokens** (build spec, Scholomance's Haunted tokens): Jandice the belt, Vectus the gloves (the Marduk and
@@ -17,13 +18,16 @@ haunted_set.py. The shape is the Deadmines and Shadowfang Keep one (deadmines_lo
   3, one entry, so it always drops) on top of the list item: the token of the kill's tier (Normal on a normal lootid,
   Heroic on a heroic one; the empowered tiers belong to the empowered stage).
 - **Marduk and Vectus** are one encounter with one shared pool (Vectus owns it): the merged list of four, one item per
-  kill, is on Vectus (10432, heroic 310069). Marduk (10433, heroic 310070) has no loot table (`lootid` 0, set with his
-  gold in marduk_and_vectus.py and the heroic overrides of source/world/dungeons/scholomance.py): his stock rows go,
-  and Vectus carries the encounter's one purse (the sum of the two stock purses).
+  kill, is on Vectus (10432, heroic 310069). Marduk keeps his own lootid 10433 with his stock group 0 (Scourgestone,
+  Runecloth, with their conditions) and his stock gold; only his group 1 (the two items now in Vectus's list) goes.
+  Vectus keeps his own stock gold (orchestrator ruling 2026-11-08: "the quest items and the reagents stay as they
+  are"). Heroic Marduk (310070) drops his own lootid, which holds only the copy of 10433's group 0
+  (`copy_normal_loot()`).
 - **Group 0** (cloth, the quest items, Scourgestones, recipes, the Viewing Room Key, Blood of Innocents, Ras's head)
   and the green pools (Jandice's reference 24016 in group 0, Alexei's world loot reference 1000360 in group 5) stay on
   the normal lootids untouched: a generic pool rolls on top, never instead (docs/dungeons/boss-rework-systems.md
-  section 2). Heroic bodies keep them as copies (lib/loot_tables.py derive_heroic_copies). The two Remove-listed
+  section 2). Heroic bodies keep them as copies, with their loot conditions (lib/loot_tables.py derive_heroic_copies):
+  Ras's head still needs his human form, a Scourgestone the Argent Dawn Commission. The two Remove-listed
   ungrouped rows (Jandice's Darkshade Gloves, Gandling's Detention Strap, now in his list) are deleted.
 - **Tier 0 trash drops** (build spec: "Stock trash rows for Tier 0 pieces are removed, since the entries now come from
   the vendor"): the 12 trash lootids below lose their Tier 0 rows. Heroic trash shares the normal lootid.
@@ -36,7 +40,14 @@ haunted_set.py. The shape is the Deadmines and Shadowfang Keep one (deadmines_lo
   stock loot.
 """
 
-from lib.dsl.loot import LOOT_MODE_HARD_MODE_1, boss_loot, remove_loot_group, remove_loot_rows
+from lib.dsl.loot import (
+    LOOT_MODE_HARD_MODE_1,
+    boss_loot,
+    copy_normal_loot,
+    remove_loot_group,
+    remove_loot_rows,
+    remove_reference_pool,
+)
 
 TOKEN_GROUP = 3  # a Haunted token: one entry, always drops, apart from the list (group 1) and the hard mode (group 2)
 
@@ -86,12 +97,17 @@ for normal_lootid, heroic_lootid, items, token, (replaced_items, replaced_refere
         boss_loot(normal_lootid, (token,), tier="normal", group=TOKEN_GROUP)
         boss_loot(heroic_lootid, (token,), tier="heroic", group=TOKEN_GROUP)
 
-# Marduk: one encounter, one list (Vectus's). His corpse drops nothing (lootid 0): the stock rows go. Both bosses
-# dropped a Scourgestone and Runecloth at 100% / 20%; the encounter now drops Vectus's.
+# Marduk: one encounter, one list (Vectus's). Marduk keeps his group 0 (Scourgestone, Runecloth) and his gold; his
+# heroic body drops the copy of it.
 remove_loot_group(10433, group=1, why="Ebon Hilt of Marduk and Death Knight Sabatons moved into Vectus's list (one "
                                       "item per encounter)")
-remove_loot_rows(10433, (12843, 14047), group=0, why="Marduk has no loot table (lootid 0); Vectus drops the "
-                                                      "encounter's Scourgestone and Runecloth")
+copy_normal_loot(310070, why="the Marduk and Vectus list is on Vectus (310069); Marduk keeps his reagents")
+
+# The stock pools the lists replace (group 1 above): the instructors' shared pool, Alexei's copy of it, Ras's.
+remove_reference_pool(35031, why="the per-boss lists of Malicia, Krastinov, Polkelt, the Ravenian and Illucia "
+                                 "replace it")
+remove_reference_pool(35095, why="Alexei's list replaces it")
+remove_reference_pool(35030, why="Ras's list replaces his two rolls on it")
 
 # Ras (10508, heroic 310098) and Gandling (1853, heroic 310068): two distinct items of the list.
 RAS_POOL = (

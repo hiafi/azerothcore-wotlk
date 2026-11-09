@@ -978,7 +978,7 @@ def _apply_stale_overlay(stale_inputs: tuple, ids_cfg: dict) -> tuple[dict[str, 
 
 def _loot_blocks(
     dsl_classes: dict, item_expansion, item_rendered, ids_cfg: dict, existing_creature_rows: dict, only_items: bool,
-    lock_text: str | None = None,
+    lock_text: str | None = None, item_entries=None,
 ) -> list[str]:
     """Item variants IV7: resolves `boss_loot()` / `remove_loot_group()` (lib/loot_tables.py), runs the loot rules
     (the live ones need the replayed loot tables) and appends the groups that differ from live to
@@ -986,7 +986,8 @@ def _loot_blocks(
     rows from this run's declared and generated creature_template rows over the live ones (an `--only items` run
     renders no creature row, so a heroic row whose lootid is not yet its own is a WARNING there). `lock_text` is the
     lock as this run will leave it (the dungeon expansion's new heroic ids included), so loot on a heroic creature
-    minted by the same run is checked against its heroic tier."""
+    minted by the same run is checked against its heroic tier. `item_entries` (the live item_template entries) lets the
+    loot rules refuse a hand-named item id that does not exist."""
     try:
         if lock_text is None and heroic_templates.LOCK_PATH.is_file():
             lock_text = heroic_templates.LOCK_PATH.read_text()
@@ -1009,13 +1010,17 @@ def _loot_blocks(
     )
     if not plan.errors:
         live_creature, live_reference = loot_tables.load_live()
-        loot_tables.derive_heroic_copies(plan, live_creature)
-        loot_tables.check_live(plan, live_creature, live_reference, ids_cfg)
+        live_conditions = loot_tables.load_live_conditions()
+        loot_tables.derive_heroic_copies(plan, live_creature, live_conditions)
+        loot_tables.check_live(
+            plan, live_creature, live_reference, ids_cfg, item_entries=item_entries,
+            other_loot=loot_tables.load_other_loot() if plan.pool_removals else None,
+        )
     for warning in plan.warnings:
         print(f"WARNING: {warning}")
     rendered = None
     if not plan.errors and item_rendered is not None:
-        rendered = loot_tables.render(plan, live_creature, live_reference)
+        rendered = loot_tables.render(plan, live_creature, live_reference, live_conditions)
         item_rendered.blocks += rendered.blocks
     for note in loot_tables.summary_notes(plan, rendered):
         print(f"note: {note}")
@@ -1567,7 +1572,7 @@ def _run(
             item_expansion.errors += _loot_blocks(
                 dsl_classes, item_expansion, item_rendered, ids_cfg, existing_creature_rows, only_items,
                 lock_text=dungeon_expansion.lock_text if dungeon_expansion and dungeon_expansion.lock_appended
-                else None,
+                else None, item_entries=item_live_rows.keys(),
             )
     # The Item.dbc guard compares the full build's custom items with the deployed file; a scoped run keeps every item
     # row it does not own as deployed, so the general drop guard below covers it instead.

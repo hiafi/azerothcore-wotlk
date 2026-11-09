@@ -2,13 +2,15 @@
 Boss loot declarations (item-variants plan v2 section 7.3, stage IV7): a boss's list as one loot group of `item()`
 keys at one ladder tier, emitted by lib/loot_tables.py as `creature_loot_template` rows keyed (Entry, GroupId).
 
-    from lib.dsl.loot import boss_loot, remove_loot_group
+    from lib.dsl.loot import boss_loot, copy_normal_loot, remove_loot_group, remove_reference_pool
 
     boss_loot(644, ("dm_rhahkzors_hammer", "dm_rockslicer"), tier="normal")              # Rhahk'Zor, normal
     boss_loot(310008, ("dm_rhahkzors_hammer", "dm_rockslicer"), tier="heroic")           # his heroic body
     boss_loot(643, SNEED_POOL, tier="normal", picks=2, reference=1700000)               # two distinct items
     boss_loot(310004, VANCLEEF_HARD_MODE, tier="heroic_hm", group=2, loot_mode=2)       # lit kills only
     remove_loot_group(642, group=1, why="the Shredder's items moved into Sneed's pool")
+    remove_reference_pool(35030, why="Ras's list replaced his two rolls on it")         # a stock pool, unused now
+    copy_normal_loot(310070, why="the encounter's list is on Vectus")                   # heroic Marduk: copies only
 
 **The loot rule** (docs/dungeons/boss-rework-systems.md section 2, Loot lists): every boss list is one loot group of
 equal-chance entries (Chance 0), so the group always yields an item; a stock generic pool kept on the boss rolls in a
@@ -49,8 +51,16 @@ rows without the removed ones.
 token's entry at the declared tier, which is the token the kill gives (Normal on a normal lootid, Heroic on a heroic
 one). A token drops from a group of its own (one equal-chance entry always drops).
 
+`remove_reference_pool()` deletes a whole stock `reference_loot_template` Entry that nothing uses once the lists
+replace it (an unused Entry is a boot ERROR). lib/loot_tables.py refuses it while a loot row of any loot table still
+references it after the run.
+
+`copy_normal_loot()` gives a heroic lootid with no list of its own (Marduk, whose encounter list Vectus carries) the
+copies of its normal boss's groups. Every heroic copy carries the normal rows' loot `conditions` (a quest step, a
+reputation aura, a profession), and a loot row a declaration drops takes its conditions with it.
+
 Registered into `Registry.loot_declarations` keyed on (lootid, group): one declaration per group (row removals are keyed
-on ("loot-rows", lootid, group)).
+on ("loot-rows", lootid, group), pool removals on ("loot-pool", reference, 0), copies on ("loot-copy", lootid, 0)).
 """
 
 from __future__ import annotations
@@ -84,9 +94,20 @@ class LootDecl:
     replaces_references: tuple[int, ...] = ()  # live reference rows of the group it drops on purpose
     row_removal: bool = False  # remove_loot_rows(): DELETE the item rows `rows` of the group
     rows: tuple[int, ...] = ()
+    pool_removal: bool = False  # remove_reference_pool(): DELETE reference_loot_template Entry `reference`
+    copy_only: bool = False  # copy_normal_loot(): a heroic lootid with no list, only the copies of its normal loot
+
+    @property
+    def listing(self) -> bool:
+        """A boss_loot() or remove_loot_group() declaration (one (lootid, group) of creature_loot_template)."""
+        return not (self.row_removal or self.pool_removal or self.copy_only)
 
     @property
     def where(self) -> str:
+        if self.pool_removal:
+            return f"remove_reference_pool({self.reference})"
+        if self.copy_only:
+            return f"copy_normal_loot({self.lootid})"
         if self.removal:
             return f"remove_loot_group({self.lootid}, group={self.group})"
         if self.row_removal:
@@ -111,9 +132,14 @@ def _check_target(where: str, lootid, group) -> None:
 def _register(decl: LootDecl) -> LootDecl:
     active = _registry._active
     if active is not None:
-        key = ("loot-rows" if decl.row_removal else "loot", decl.lootid, decl.group)
+        if decl.pool_removal:
+            key = ("loot-pool", decl.reference, 0)
+        elif decl.copy_only:
+            key = ("loot-copy", decl.lootid, 0)
+        else:
+            key = ("loot-rows" if decl.row_removal else "loot", decl.lootid, decl.group)
         if any(entry["id"] == key for entry in active.loot_declarations):
-            raise _registry.DuplicateIdError(f"{decl.where}: the group is declared twice")
+            raise _registry.DuplicateIdError(f"{decl.where}: declared twice")
         active.loot_declarations.append({"id": key, "_decl": decl})
     return decl
 
@@ -205,3 +231,28 @@ def remove_loot_rows(lootid: int, items, *, group: int = 0, why: str) -> LootDec
     return _register(LootDecl(
         lootid=lootid, group=group, row_removal=True, rows=tuple(items), why=why.strip(),
     ))
+
+
+def remove_reference_pool(reference: int, *, why: str) -> LootDecl:
+    """Deletes the whole `reference_loot_template` Entry `reference` (a stock pool every user of which a list now
+    replaces; the engine logs an unused reference Entry at boot, `LootStore::ReportUnusedIds`). lib/loot_tables.py
+    refuses it while any loot row this run leaves in place still references the pool; its loot conditions go with it.
+    `why` is printed with the removal."""
+    where = f"remove_reference_pool({reference!r})"
+    if not _plain_int(reference) or reference <= 0:
+        raise LootDeclarationError(f"{where}: reference must be a positive int (a reference_loot_template Entry)")
+    if not isinstance(why, str) or not why.strip():
+        raise LootDeclarationError(f"{where}: why= (why nothing uses the pool any more) is required")
+    return _register(LootDecl(lootid=0, group=0, reference=reference, pool_removal=True, why=why.strip()))
+
+
+def copy_normal_loot(lootid: int, *, why: str) -> LootDecl:
+    """Heroic lootid `lootid` (a heroic creature's own entry) drops no list of its own, only the copies of its normal
+    boss's groups (lib/loot_tables.py derive_heroic_copies, conditions included): a boss whose encounter list another
+    boss carries, who keeps his own reagents and quest items. `why` says where the list is."""
+    where = f"copy_normal_loot({lootid!r})"
+    if not _plain_int(lootid) or lootid <= 0:
+        raise LootDeclarationError(f"{where}: lootid must be a positive int (a heroic creature's own entry)")
+    if not isinstance(why, str) or not why.strip():
+        raise LootDeclarationError(f"{where}: why= (where the boss's list is) is required")
+    return _register(LootDecl(lootid=lootid, group=0, copy_only=True, why=why.strip()))

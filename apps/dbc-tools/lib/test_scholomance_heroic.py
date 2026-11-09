@@ -52,13 +52,9 @@ HEROIC_LOOTID = {
     1853: 310068, 10432: 310069, 10433: 310070, 10502: 310092, 10503: 310093, 10504: 310094, 10505: 310095,
     10507: 310097, 10508: 310098, 10901: 310100, 11261: 310103, 11622: 310110,
 }
-# WP-L: Marduk has no loot table and no gold (lootid 0); Vectus carries the encounter's list and the sum of the two
-# stock purses (1,073-1,406 + 1,162-1,522 copper). The normal rows say the same (marduk_and_vectus.py).
-MARDUK, VECTUS = 10433, 10432
-HEROIC_COLUMNS = {
-    MARDUK: {"lootid": 0, "mingold": 0, "maxgold": 0},
-    VECTUS: {"mingold": 2235, "maxgold": 2928},
-}
+# F-C4 (orchestrator ruling 2026-11-08): Marduk keeps his own lootid (heroic: his own entry, holding only the copy of
+# his group 0) and his stock gold, as does Vectus, so no boss overrides a column besides its lootid.
+HEROIC_COLUMNS: dict[int, dict] = {}
 KIT_HEALTH = {
     300533: 22_000, 300536: 18_000, 300539: 9_000, 300540: 9_000, 300541: 9_000, 300542: 65_000, 300544: 25_000,
 }
@@ -296,13 +292,15 @@ class ExpansionTest(unittest.TestCase):
                     continue  # a later wave's boss: the tier and its stock row (R-A S-11)
                 self.assertEqual(report.solved.health, health)
                 self.assertEqual(int(row["CreatureImmunitiesId"]), 1972)
-                # Its own heroic loot (WP-L); Marduk has none (lootid 0, no gold), Vectus carries the encounter's purse
+                # Its own heroic loot (WP-L; Marduk's holds only the copy of his group 0, F-C4)
                 lootid = HEROIC_LOOTID[boss] if OWN_LOOT else int(self.existing[boss]["lootid"])
                 lootid = HEROIC_COLUMNS.get(boss, {}).get("lootid", lootid)
                 self.assertEqual(int(row["lootid"]), lootid)
                 for column in ("mingold", "maxgold"):
                     if column in HEROIC_COLUMNS.get(boss, {}):
                         self.assertEqual(int(row[column]), HEROIC_COLUMNS[boss][column], (boss, column))
+                    elif boss in (10432, 10433):  # Marduk and Vectus keep their own stock purses (F-C4)
+                        self.assertEqual(int(row[column]), int(self.existing[boss][column]), (boss, column))
         kirtonos = rows[heroic_entry[10506]]
         self.assertEqual(self.reports[10506].role, "boss")
         self.assertEqual(int(kirtonos["flags_extra"]) & 1, 1)

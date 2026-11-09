@@ -10,8 +10,9 @@
  *                      S11's Reset both call it, from the instance's DATA_GANDLING_REVEALED
  *   GradeWatch         an instructor's Passing Grades (ruling 22, section 7 #18): every registry failure with a
  *                      player during the heroic fight costs that player the grade (less a hit the boss exempted with
- *                      Exempt); at the death, every other player in the instance earns it
- *                      (SetGuidData(DataPassingGrade(i), player))
+ *                      Exempt); at the death, every other player inside the instructor's arena earns it (an unreleased
+ *                      body counts, a released ghost or a player elsewhere does not: orchestrator ruling 2026-11-08,
+ *                      GraduateExamLogic.h EarnsPassingGrade) (SetGuidData(DataPassingGrade(i), player))
  *   InstanceApi        what the instance exposes beyond Get/SetData (the grades table, the Graduate Exam's driver),
  *                      via GetInstanceApi
  *
@@ -75,8 +76,9 @@ namespace ScholomanceRework
         // a boss that needs its own (Alexei's Dean's Rod) passes it as `chain`, never calls OnFailure itself.
         void Begin(Creature* boss, Instructor who,
             std::function<void(BossMechanics::FailureEvent const&)> chain = {});
-        // At the death (call before BossAI::JustDied): heroic only, every player in the instance (not a GM) with no
-        // failure recorded earns the grade. Returns how many were awarded.
+        // At the death (call before BossAI::JustDied): heroic only, every player (not a GM) inside the instructor's
+        // arena (GradeArena; alive, or dead and not released) with no failure recorded earns the grade. Returns how
+        // many were awarded.
         uint32 AwardAtDeath(Creature* boss);
         void Reset();
 

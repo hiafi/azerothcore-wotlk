@@ -114,13 +114,10 @@ from ._visuals import (
     MV_WHIRLWIND_IMPACT,
 )
 
-# One encounter, one drop (WP-L, source/items/scholomance_loot.py): Vectus carries the merged list, the Haunted gloves
-# and the encounter's one purse (the sum of the two stock purses, 1,073-1,406 and 1,162-1,522 copper); Marduk's corpse
-# has no loot table and no gold.
-creature_template_columns(10433, **boss_columns('boss_marduk_blackpool_rework', 130.605, DamageModifier=3.5,
-                                                lootid=0, mingold=0, maxgold=0))
-creature_template_columns(10432, **boss_columns('boss_vectus_rework', 122.85, DamageModifier=3.5,
-                                                mingold=2235, maxgold=2928))
+# One encounter, one list (WP-L, source/items/scholomance_loot.py): Vectus carries the merged list and the Haunted
+# gloves. Both keep their own stock lootid, group 0 (reagents, Scourgestone) and gold (orchestrator ruling 2026-11-08).
+creature_template_columns(10433, **boss_columns('boss_marduk_blackpool_rework', 130.605, DamageModifier=3.5))
+creature_template_columns(10432, **boss_columns('boss_vectus_rework', 122.85, DamageModifier=3.5))
 
 # --- The students (props) and the Graduate -------------------------------------------------------------------------
 

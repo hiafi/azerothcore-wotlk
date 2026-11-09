@@ -72,6 +72,29 @@ namespace ScholoGraduateExam
 
     std::uint32_t constexpr kGradeSweepMs = 2000;       // the instance re-shows the grades on every player this often
 
+    // ---- Who earns a Passing Grade (GradeWatch::AwardAtDeath, ScholomanceKit.cpp) ----------------------------------
+    // Orchestrator ruling 2026-11-08 (R-C EXAM designer question 2): at the instructor's death, a player earns the
+    // grade when they are inside the instructor's arena (a body that has not released counts; a released ghost or a
+    // player elsewhere on the map does not), recorded no failure of the fight, and are not a GM.
+    struct GradeCandidate
+    {
+        bool gameMaster = false;
+        bool failed = false;        // GradeWatch's ledger recorded a failure for them
+        bool released = false;      // a ghost (PLAYER_FLAGS_GHOST)
+        bool inArena = false;       // inside GradeArena(instructor) at the death (alive, or their unreleased body)
+    };
+
+    constexpr bool EarnsPassingGrade(GradeCandidate const& p)
+    {
+        return !p.gameMaster && !p.failed && !p.released && p.inArena;
+    }
+
+    // The arena a grade is earned in: the instructor's own (ArenaGuard's leash arena).
+    inline DungeonKit::Arena GradeArena(Instructor i)
+    {
+        return ScholomanceRework::ArenaFor(ScholomanceRework::InstructorBoss(i));
+    }
+
     // ---- The honors program paper (GO 301153) -----------------------------------------------------------------------
     enum class PaperRefusal : std::uint8_t
     {
@@ -135,11 +158,18 @@ namespace ScholoGraduateExam
     std::uint32_t constexpr kOpenDelayMs = 5000;        // the paper signed: yell line 4, then the first portal
     std::uint32_t constexpr kPortalDelayMs = 5000;      // SC: "a portal on each kill takes the group on after 5 sec"
     std::uint32_t constexpr kArrivalTimeoutMs = 4000;   // the group must land in the room (or the study) by then
+    // R-C EXAM SF-1: after the arrival, the pull is retried every tick until the unit (the examiner, or Gandling in the
+    // final phase) is engaged; only then does leaving combat count as a wipe. Never engaged this long with nobody
+    // living inside the arena: a wipe. Never engaged after twice as long: a wipe whatever the reason (the gates are
+    // shut; nobody waits forever).
+    std::uint32_t constexpr kPullTimeoutMs = 15000;
     float constexpr kGroupSpreadYd = 2.5f;              // the group lands in a ring this wide, not on one spot
     float constexpr kPortalInsetYd = 1.5f;              // Gandling's portals sit this far inside the room's walls
     std::size_t constexpr kPortalsPerSide = 2;          // 8 portal points per room
 
     // ---- The rooms --------------------------------------------------------------------------------------------------
+    float constexpr kLaneZToleranceYd = 6.f;            // the registry's default shape band (MechanicGeometry.h)
+    float constexpr kBarovLaneZToleranceYd = 9.5f;      // z 64.5 to 83.5 around the vault's lane height 74
     // Each gauntlet room: the examiner Gandling raises there (the Vault of the Ravenian's examiner brings his own
     // Corvane), where it stands (the instructor's spawn), where the group lands (inside the room's arena, 20 yd or more
     // from the examiner, on open floor: NAVMESH-REPORT), and the floor his lanes cross (the room's frame and floor z).
@@ -151,6 +181,10 @@ namespace ScholoGraduateExam
         Point4 groupLanding;
         FrameRect floor;
         float floorZ = 0.f;
+        // How far above or below floorZ his lanes reach (the registry's shape zTolerance, 6 by default). R-C EXAM N-6:
+        // the Barov Family Vault's pit goes down to about z 66, 8 yd under its lane height; another floor never comes
+        // this close (Krastinov's hall above it is at z 85).
+        float laneZTolerance = kLaneZToleranceYd;
     };
 
     inline std::array<ExamRoom, kClassroomCount> const& ExamRooms()
@@ -159,21 +193,21 @@ namespace ScholoGraduateExam
         static std::array<ExamRoom, kClassroomCount> const rooms{ {
             // the Shadow Vault: she fights in the hall (handoff 7 #14); the group lands in the hall's middle
             { Classroom::ShadowVault, NPC_SC_EXAMINER_ILLUCIA, kIlluciaSpawn, { 240.0f, 0.5f, 74.9f, 0.f },
-                kShadowVaultHall, 74.6f },
+                kShadowVaultHall, 74.6f, kLaneZToleranceYd },
             // the Barov Family Vault: the group lands on the gate-side tier (z 75); the floor drops to z 72 at his end,
-            // so one lane height serves both tiers [navmesh estimate]
+            // so one lane height serves both tiers [navmesh estimate]; its pit (about z 66) needs the deeper band
             { Classroom::BarovVault, NPC_SC_EXAMINER_ALEXEI, kAlexeiSpawn, { 181.0f, -48.0f, 75.5f, 4.71239f },
-                kBarovVault, 74.0f },
+                kBarovVault, 74.0f, kBarovLaneZToleranceYd },
             // the Vault of the Ravenian: clear of the blocks and pillars of the middle cross
             { Classroom::RavenianVault, NPC_SC_EXAMINER_RAVENIAN, kRavenianSpawn, { 124.0f, -1.0f, 75.6f, 3.14159f },
-                kRavenianVault, 75.4f },
+                kRavenianVault, 75.4f, kLaneZToleranceYd },
             { Classroom::HallOfSecrets, NPC_SC_EXAMINER_POLKELT, kPolkeltSpawn, { 252.0f, 0.5f, 85.4f, 0.f },
-                kHallOfSecrets, 85.3f },
+                kHallOfSecrets, 85.3f, kLaneZToleranceYd },
             // the Hall of the Damned: the open hall in front of his apse (NAVMESH-REPORT option B, 8 yd further)
             { Classroom::HallOfTheDamned, NPC_SC_EXAMINER_KRASTINOV, kKrastinovSpawn,
-                { 181.0f, -72.0f, 85.4f, 4.71239f }, kKrastinovHall, 85.3f },
+                { 181.0f, -72.0f, 85.4f, 4.71239f }, kKrastinovHall, 85.3f, kLaneZToleranceYd },
             { Classroom::Coven, NPC_SC_EXAMINER_MALICIA, kMaliciaSpawn, { 110.0f, -1.0f, 85.4f, 3.14159f },
-                kCovenFloor, 85.3f },
+                kCovenFloor, 85.3f, kLaneZToleranceYd },
         } };
         return rooms;
     }
@@ -222,6 +256,7 @@ namespace ScholoGraduateExam
         region.clip = RoomFloorArena(c);
         region.portalPoints = FrameEdgePoints(r.floor, kPortalsPerSide, kPortalInsetYd);
         region.floorZ = r.floorZ;
+        region.zTolerance = r.laneZTolerance;
         return region;
     }
 
@@ -292,6 +327,7 @@ namespace ScholoGraduateExam
         None,
         SendToRoom,     // teleport the group into Room()
         PullExaminer,   // raise Room()'s examiner and pull it; Gandling's lanes and swaps reach in (GauntletMode)
+        RetryPull,      // the examiner (Examining) or Gandling (Final) was never engaged yet: pull the arena again
         RoomCleared,    // Gandling stops (IdleMode); the portal opens
         ReturnToStudy,  // teleport the group back; Gandling at 200k, attackable, yell line 5
         StartFinal,     // pull Gandling (FinalExamMode)
@@ -303,10 +339,13 @@ namespace ScholoGraduateExam
     {
         bool anyAlive = true;           // a living player (not a GM) on the map
         bool arrived = false;           // every player sent is there (or gone, or dead)
+        bool anyInside = true;          // a living player (not a GM) in the arena of the step (the room, the study)
         bool examinerDead = false;      // Room()'s examiner died (the Ravenian: his real death, after Corvane's)
-        bool examinerLost = false;      // it evaded, or is gone without dying
+        bool examinerGone = false;      // there is no examiner (never summoned, or gone without dying)
+        bool examinerEngaged = false;   // it is in combat now
         bool gandlingDead = false;
-        bool gandlingLost = false;      // he left combat in the final phase (a wipe), or is gone
+        bool gandlingGone = false;      // he is gone
+        bool gandlingEngaged = false;   // he is in combat now
     };
 
     class GauntletRun
@@ -318,12 +357,14 @@ namespace ScholoGraduateExam
             _index = 0;
             _phase = ExamPhase::Opening;
             _timerMs = 0;
+            _engaged = false;
         }
 
         void Stop()
         {
             _phase = ExamPhase::Idle;
             _timerMs = 0;
+            _engaged = false;
         }
 
         // A test command: the room under way counts as cleared and the rest are skipped; the next step returns the
@@ -333,6 +374,7 @@ namespace ScholoGraduateExam
             _index = kClassroomCount - 1;
             _phase = ExamPhase::Portal;
             _timerMs = kPortalDelayMs;
+            _engaged = false;
         }
 
         ExamAction Update(std::uint32_t diff, ExamInputs const& in)
@@ -357,12 +399,7 @@ namespace ScholoGraduateExam
                 case ExamPhase::Examining:
                     if (in.examinerDead)
                         return Enter(ExamPhase::Portal, ExamAction::RoomCleared);
-                    if (in.examinerLost)
-                    {
-                        Stop();
-                        return ExamAction::Wipe;
-                    }
-                    return ExamAction::None;
+                    return Hold(diff, in.examinerGone, in.examinerEngaged, in.anyInside);
                 case ExamPhase::Portal:
                     if (!Tick(diff, kPortalDelayMs))
                         return ExamAction::None;
@@ -382,12 +419,7 @@ namespace ScholoGraduateExam
                         _phase = ExamPhase::Passed;
                         return ExamAction::Passed;
                     }
-                    if (in.gandlingLost)
-                    {
-                        Stop();
-                        return ExamAction::Wipe;
-                    }
-                    return ExamAction::None;
+                    return Hold(diff, in.gandlingGone, in.gandlingEngaged, in.anyInside);
                 default:
                     return ExamAction::None;
             }
@@ -395,6 +427,8 @@ namespace ScholoGraduateExam
 
         bool Running() const { return _phase != ExamPhase::Idle && _phase != ExamPhase::Passed; }
         ExamPhase Phase() const { return _phase; }
+        // The step's unit (the examiner, Gandling in the final phase) has been engaged since its pull.
+        bool Engaged() const { return _engaged; }
         std::size_t RoomIndex() const { return _index; }
         Classroom Room() const { return _order[_index]; }
         std::array<Classroom, kClassroomCount> const& Order() const { return _order; }
@@ -426,13 +460,35 @@ namespace ScholoGraduateExam
         {
             _phase = phase;
             _timerMs = 0;
+            _engaged = false;
             return action;
+        }
+
+        // A fight step (Examining, Final) with its unit alive: gone is a wipe; once engaged, out of combat is a wipe
+        // (an evade: the leash, an empty threat list); until then the pull is retried, up to kPullTimeoutMs with
+        // nobody living inside, or twice that in any case.
+        ExamAction Hold(std::uint32_t diff, bool gone, bool engaged, bool anyInside)
+        {
+            if (!gone && engaged)
+            {
+                _engaged = true;
+                return ExamAction::None;
+            }
+            bool const timedOut = !_engaged && Tick(diff, kPullTimeoutMs)
+                && (!anyInside || _timerMs >= 2 * kPullTimeoutMs);
+            if (gone || _engaged || timedOut)
+            {
+                Stop();
+                return ExamAction::Wipe;
+            }
+            return ExamAction::RetryPull;
         }
 
         std::array<Classroom, kClassroomCount> _order{};
         std::size_t _index = 0;
         ExamPhase _phase = ExamPhase::Idle;
         std::uint32_t _timerMs = 0;
+        bool _engaged = false;
     };
 
     inline char const* PhaseName(ExamPhase p)

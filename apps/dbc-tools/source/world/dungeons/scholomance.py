@@ -134,14 +134,13 @@ _declared = _declared_kit_entries()
 
 
 # R-A S-2 / WP-L: a heroic boss drops its own loot: `lootid` = its own heroic entry, whose groups source/items/
-# scholomance_loot.py declares (copying group 0 from the normal lootid). Marduk is the exception (see `_boss`).
+# scholomance_loot.py declares (copying group 0 from the normal lootid; Marduk's holds only that copy).
 _HEROIC_BOSS_OWN_LOOT = True
 
 
 def _boss(health: int, heroic_entry: int | None = None, **columns) -> dict:
     """A heroic boss drops its own loot: `lootid` = its own heroic entry (heroic_ids.lock), whose groups hold the
-    Heroic tiers (source/items/scholomance_loot.py). `columns` override it: Marduk has no loot table (lootid 0) and
-    no gold, Vectus carries the encounter's one purse (marduk_and_vectus.py; the normal rows say the same)."""
+    Heroic tiers (source/items/scholomance_loot.py). `columns` override any of the values."""
     values = dict(_STUN_IMMUNE)
     if heroic_entry is not None and _HEROIC_BOSS_OWN_LOOT:
         values["lootid"] = heroic_entry
@@ -208,10 +207,10 @@ scholomance = dungeon(
         overrides={
             10503: _boss(265_000, 310093),  # Jandice Barov
             11622: _boss(280_000, 310110),  # Rattlegore
-            # Marduk Blackpool (one shared pool with Vectus): no loot, no gold; Vectus drops the encounter's loot and
-            # purse
-            10433: _boss(425_000, 310070, lootid=0, mingold=0, maxgold=0),
-            10432: _boss(425_000, 310069, mingold=2235, maxgold=2928),  # Vectus
+            # Marduk Blackpool (one shared pool with Vectus): his own lootid holds only the copy of his group 0 (the
+            # encounter's list is on Vectus); both keep their stock gold
+            10433: _boss(425_000, 310070),
+            10432: _boss(425_000, 310069),  # Vectus
             10508: _boss(270_000, 310098),  # Ras Frostwhisper
             **_wave("B", {
                 10505: _boss(250_000, 310095),  # Instructor Malicia

@@ -182,6 +182,10 @@ class GandlingDeclarationTest(unittest.TestCase):
         self.assertRegex(text, r"\(1853, 2, 0, '[^']*', 41,")      # mechanic emotes are boss emotes
         self.assertRegex(text, r"\(1853, 3, 0, '[^']*', 41,")
         self.assertRegex(text, r"\(300544, 0, 0, .*, 41,")
+        # R-C EXAM SF-2: the Volley and Transfer emotes reach the gauntlet's classrooms (TextRange 3, the map).
+        for group in (2, 3):
+            with self.subTest(group=group):
+                self.assertRegex(text, rf"\(1853, {group}, 0, '[^']*', 41, 0, 100, 0, 0, 0, 0, 3,")
 
     def test_every_classroom_has_a_lesson(self):
         for name, room in LESSONS.items():
