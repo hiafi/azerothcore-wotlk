@@ -1,13 +1,17 @@
 // Host tests for the shared dungeon kit's pure part (WP-K0): DungeonKitMath.h, DungeonKitState.h, DungeonKitArena.h,
 // DungeonKitLogic.h and DungeonKitIds.h, plus the parity of the Deadmines aliases (DeadminesKit, Greenskin) with the
-// generic pieces they now name.
+// generic pieces they now name. Stratholme WP-KT-1: DungeonKitFloor.h (FloorPath and its parity with Gilnid's, floor
+// spots, puddles, the inside clock) and DungeonKitFlow.h (weighted split, wave cap, cast queue, holds, percents).
 #include "DeadminesKitMath.h"
 #include "DeadminesRework.h"
 #include "DungeonKitArena.h"
+#include "DungeonKitFloor.h"
+#include "DungeonKitFlow.h"
 #include "DungeonKitIds.h"
 #include "DungeonKitLogic.h"
 #include "DungeonKitMath.h"
 #include "DungeonKitState.h"
+#include "GilnidLogic.h"
 #include "GreenskinLogic.h"
 #include "check.h"
 #include <cmath>
@@ -677,6 +681,391 @@ namespace
                 crossed = crossed || s.from.x < 259.f;
         CHECK(!crossed);
     }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Stratholme WP-KT-1
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // A fixed run of [0, 1) numbers, repeating.
+    struct SeqRand01
+    {
+        std::vector<float> values;
+        std::size_t next = 0;
+
+        float operator()()
+        {
+            if (values.empty())
+                return 0.f;
+            float const v = values[next % values.size()];
+            ++next;
+            return v;
+        }
+    };
+
+    void TestFloorPath()
+    {
+        auto flat = [](float, float, float) -> std::optional<float> { return 10.f; };
+        std::vector<FloorPathPoint> const path = FloorPath(Vec2{ 0.f, 0.f }, Vec2{ 7.f, 0.f }, 12.f, flat);
+        // Both ends, a point every 2 yd: 0, 2, 4, 6, 7.
+        CHECK(path.size() == 5);
+        CHECK(Near(path.front().x, 0.f, 1e-4f) && Near(path.front().z, 12.f, 1e-4f));
+        CHECK(Near(path.back().x, 7.f, 1e-4f) && Near(path.back().y, 0.f, 1e-4f));
+        CHECK(Near(path[1].x, 2.f, 1e-4f) && Near(path[1].z, 10.f, 1e-4f));     // 2 yd below the start: taken
+        CHECK(Near(FloorPathLength(path), 7.f, 1e-3f));
+
+        // A probe more than maxStepZ from the last point (a wall top) or no floor keeps the last height.
+        auto wall = [](float x, float, float) -> std::optional<float>
+        {
+            if (x > 3.f && x < 5.f)
+                return 20.f;
+            if (x > 5.f)
+                return std::nullopt;
+            return 0.5f;
+        };
+        std::vector<FloorPathPoint> const walled = FloorPath(Vec2{ 0.f, 0.f }, Vec2{ 8.f, 0.f }, 0.f, wall);
+        for (FloorPathPoint const& p : walled)
+            CHECK(p.z <= 0.5f + 1e-4f);
+        CHECK(Near(walled[1].z, 0.5f, 1e-4f));
+
+        // A ramp: every step within maxStepZ follows it.
+        auto ramp = [](float x, float, float) -> std::optional<float> { return x * 0.5f; };
+        std::vector<FloorPathPoint> const up = FloorPath(Vec2{ 0.f, 0.f }, Vec2{ 0.f, 10.f }, 0.f, ramp, 1.f);
+        CHECK(up.size() == 11);
+        CHECK(Near(up.back().z, 0.f, 1e-4f));                   // x stays 0 on a north-south lane
+        std::vector<FloorPathPoint> const east = FloorPath(Vec2{ 0.f, 0.f }, Vec2{ 10.f, 0.f }, 0.f, ramp, 1.f);
+        CHECK(Near(east.back().z, 5.f, 1e-4f));
+
+        // A zero-length lane or step: the start only.
+        CHECK(FloorPath(Vec2{ 1.f, 1.f }, Vec2{ 1.f, 1.f }, 3.f, flat).size() == 1);
+        CHECK(FloorPath(Vec2{ 1.f, 1.f }, Vec2{ 5.f, 1.f }, 3.f, flat, 0.f).size() == 1);
+
+        // Parity: the kit's FloorPath is Gilnid's (kit #12, lifted unchanged) on the same lane and probe.
+        Gilnid::Lane lane;
+        lane.from = { -40.f, -380.f };
+        lane.to = { -12.f, -401.f };
+        lane.length = Distance(lane.from, lane.to);
+        auto bumpy = [](float x, float y, float z) -> std::optional<float>
+        {
+            float const h = 20.f + std::sin(x * 0.3f) * 1.5f + (y < -395.f ? 4.f : 0.f);
+            return std::fabs(h - z) < 10.f ? std::optional<float>(h) : std::nullopt;
+        };
+        std::vector<Gilnid::PathPoint> const theirs = Gilnid::FloorPath(lane, 21.f, bumpy);
+        std::vector<FloorPathPoint> const ours = FloorPath(lane.from, lane.to, 21.f, bumpy);
+        CHECK(theirs.size() == ours.size());
+        for (std::size_t i = 0; i < std::min(theirs.size(), ours.size()); ++i)
+            CHECK(Near(theirs[i].x, ours[i].x, 1e-3f) && Near(theirs[i].y, ours[i].y, 1e-3f)
+                && Near(theirs[i].z, ours[i].z, 1e-3f));
+        CHECK(kFloorPathStepYd == Gilnid::kFloorPathStepYd && kFloorPathMaxStepZ == Gilnid::kFloorPathMaxStepZ);
+    }
+
+    void TestFloorSpots()
+    {
+        Vec2 const near{ 100.f, 100.f };
+
+        // RingPoint stays in its ring.
+        for (float u : { 0.f, 0.25f, 0.5f, 0.99f })
+            for (float v : { 0.f, 0.3f, 0.7f })
+            {
+                float const d = Distance(near, RingPoint(near, 4.f, 9.f, u, v));
+                CHECK(d >= 4.f - 1e-3f && d <= 9.f + 1e-3f);
+            }
+        CHECK(Near(Distance(near, RingPoint(near, 4.f, 9.f, 0.f, 0.f)), 4.f, 1e-3f));
+
+        auto anyFloor = [](Vec2) -> std::optional<float> { return 5.f; };
+
+        // No rules in the way: the first candidate, full, on the floor height.
+        FloorSpotRules rules;
+        rules.near = near;
+        rules.minRange = 5.f;
+        rules.maxRange = 10.f;
+        SeqRand01 rand{ { 0.5f, 0.25f } };
+        std::optional<FloorSpot> const first = PickFloorSpotFrom(rules, rand, anyFloor);
+        CHECK(first && first->full && Near(first->z, 5.f, 1e-4f));
+        CHECK(first && Distance(near, first->p) >= 5.f && Distance(near, first->p) <= 10.f);
+
+        // An avoid circle over the whole east half: every pick lands west of it (or on its margin's far side).
+        FloorSpotRules avoidEast = rules;
+        avoidEast.avoid.push_back({ Vec2{ 120.f, 100.f }, 19.f });
+        avoidEast.avoidMargin = 1.f;
+        SeqRand01 sweep{ { 0.1f, 0.05f, 0.9f, 0.5f, 0.3f, 0.45f, 0.7f, 0.55f, 0.2f, 0.95f } };
+        for (int i = 0; i < 6; ++i)
+        {
+            std::optional<FloorSpot> const s = PickFloorSpotFrom(avoidEast, sweep, anyFloor);
+            CHECK(s && s->full);
+            CHECK(s && Distance(s->p, Vec2{ 120.f, 100.f }) >= 20.f - 1e-3f);
+        }
+
+        // Away from the players: never within minFromAway of one.
+        FloorSpotRules away = rules;
+        away.awayFrom = { Vec2{ 107.f, 100.f }, Vec2{ 93.f, 100.f } };
+        away.minFromAway = 4.f;
+        SeqRand01 spread{ { 0.1f, 0.05f, 0.9f, 0.5f, 0.6f, 0.25f, 0.3f, 0.45f, 0.4f, 0.75f, 0.2f, 0.95f } };
+        for (int i = 0; i < 6; ++i)
+        {
+            std::optional<FloorSpot> const s = PickFloorSpotFrom(away, spread, anyFloor);
+            CHECK(s && s->full);
+            for (Vec2 const& q : away.awayFrom)
+                CHECK(s && Distance(s->p, q) >= 4.f - 1e-3f);
+        }
+
+        // No floor anywhere: nothing.
+        auto noFloor = [](Vec2) -> std::optional<float> { return std::nullopt; };
+        CHECK(!PickFloorSpotFrom(rules, sweep, noFloor));
+
+        // Every random candidate blocked: the first fixed fallback that keeps the rules.
+        FloorSpotRules blocked = rules;
+        blocked.avoid.push_back({ near, 11.f });
+        std::vector<Vec2> const fixed{ Vec2{ 105.f, 100.f }, Vec2{ 130.f, 100.f }, Vec2{ 140.f, 100.f } };
+        std::optional<FloorSpot> const fb = PickFloorSpotFrom(blocked, sweep, anyFloor, fixed);
+        CHECK(fb && fb->full && Near(fb->p.x, 130.f, 1e-4f));
+
+        // Nothing keeps the rules: best effort gives the candidate with the most room, without it nothing.
+        std::optional<FloorSpot> const best = PickFloorSpotFrom(blocked, sweep, anyFloor);
+        CHECK(best && !best->full);
+        FloorSpotRules strict = blocked;
+        strict.bestEffort = false;
+        CHECK(!PickFloorSpotFrom(strict, sweep, anyFloor));
+
+        // A floor test that only takes the west half (the arena): every pick is west.
+        auto westOnly = [](Vec2 p) -> std::optional<float>
+        {
+            return p.x < 100.f ? std::optional<float>(1.f) : std::nullopt;
+        };
+        for (int i = 0; i < 5; ++i)
+        {
+            std::optional<FloorSpot> const s = PickFloorSpotFrom(rules, sweep, westOnly);
+            CHECK(!s || s->p.x < 100.f);
+        }
+
+        // Scores: an avoid hit costs more than any room.
+        FloorSpotRules scoring = rules;
+        scoring.avoid.push_back({ Vec2{ 0.f, 0.f }, 5.f });
+        CHECK(ScoreFloorSpot(scoring, Vec2{ 1.f, 0.f }).avoidHits == 1);
+        CHECK(ScoreFloorSpot(scoring, Vec2{ 60.f, 0.f }).Full());
+        CHECK(ScoreFloorSpot(scoring, Vec2{ 60.f, 0.f }).Value() > ScoreFloorSpot(scoring, Vec2{ 1.f, 0.f }).Value());
+    }
+
+    void TestPuddles()
+    {
+        PuddleSet set(3.f);
+        PuddleSet::AddResult const a = set.Add(0, { 0.f, 0.f }, 10.f, 5.f, 1000, 0, true);
+        CHECK(a.id == 1 && !a.merged);
+
+        // Arming: outline first, the puddle counts from armAfter.
+        CHECK(!set.Contains(500, { 1.f, 0.f }, 10.f));
+        CHECK(set.Contains(500, { 1.f, 0.f }, 10.f, true));
+        CHECK(set.Contains(1000, { 1.f, 0.f }, 10.f));
+        CHECK(!set.Contains(1000, { 5.5f, 0.f }, 10.f));
+        CHECK(!set.Contains(1000, { 1.f, 0.f }, 14.f));        // another floor: out of the z band
+
+        // The merge rule: a center inside a live puddle adds nothing; just outside it, a new one.
+        PuddleSet::AddResult const merged = set.Add(2000, { 4.f, 0.f }, 10.f, 7.f, 1000, 0, true);
+        CHECK(merged.merged && merged.id == a.id && set.Size() == 1);
+        PuddleSet::AddResult const apart = set.Add(2000, { 6.f, 0.f }, 10.f, 5.f, 1000, 0, true);
+        CHECK(!apart.merged && apart.id == 2 && set.Size() == 2);
+        // Without the merge rule, a puddle on a puddle is its own.
+        PuddleSet::AddResult const stacked = set.Add(2000, { 0.f, 0.f }, 10.f, 5.f, 0, 3000, false);
+        CHECK(!stacked.merged && set.Size() == 3);
+        // Another floor never merges.
+        CHECK(!set.Add(2000, { 0.f, 0.f }, 20.f, 5.f, 0, 1000, true).merged);
+        CHECK(set.Size() == 4);
+
+        // The union: a spot under two puddles is one puddle (the first added).
+        CHECK(set.PuddleAt(3000, { 0.5f, 0.f }, 10.f) == a.id);
+        CHECK(set.PuddleAt(3000, { 9.f, 0.f }, 10.f) == apart.id);
+
+        // Life: expired puddles leave; Prune names them.
+        std::vector<std::uint32_t> gone = set.Prune(3500);
+        CHECK(gone.size() == 1);                                // the z 20 one (life 1000 from 2000)
+        gone = set.Prune(5000);
+        CHECK(gone.size() == 1 && gone.front() == stacked.id);
+        CHECK(set.Size() == 2 && !set.Find(stacked.id) && set.Find(a.id));
+        CHECK(set.Remove(apart.id) && !set.Remove(apart.id) && set.Size() == 1);
+
+        // Area: one 5 yd puddle is pi r^2; an identical one on top adds nothing; one apart doubles it.
+        PuddleSet area;
+        area.Add(0, { 0.f, 0.f }, 0.f, 5.f, 0, 0, false);
+        float const one = area.CoveredArea(0);
+        CHECK(Near(one, kPi * 25.f, kPi * 25.f * 0.03f));
+        area.Add(0, { 0.f, 0.f }, 0.f, 5.f, 0, 0, false);
+        CHECK(Near(area.CoveredArea(0), one, 0.01f));
+        area.Add(0, { 30.f, 0.f }, 0.f, 5.f, 0, 0, false);
+        CHECK(Near(area.CoveredArea(0), 2.f * one, one * 0.02f));
+        // Two half-overlapping (centers 5 yd apart): the lens counts once.
+        PuddleSet lens;
+        lens.Add(0, { 0.f, 0.f }, 0.f, 5.f, 0, 0, false);
+        lens.Add(0, { 5.f, 0.f }, 0.f, 5.f, 0, 0, false);
+        float const overlap = 2.f * 25.f * std::acos(0.5f) - 2.5f * std::sqrt(100.f - 25.f);
+        CHECK(Near(lens.CoveredArea(0), 2.f * kPi * 25.f - overlap, 2.f));
+        area.Clear();
+        CHECK(area.CoveredArea(0) == 0.f && area.Size() == 0);
+    }
+
+    void TestInsideClock()
+    {
+        InsideClock clock;
+        auto times = clock.Update({ 1, 2 }, 250);
+        CHECK(times.size() == 2 && times[0].second == 250 && times[1].second == 250);
+        times = clock.Update({ 1, 2 }, 250);
+        CHECK(clock.Of(1) == 500 && clock.Of(2) == 500);
+        // Player 2 steps out for one poll: their time starts over.
+        clock.Update({ 1 }, 250);
+        CHECK(clock.Of(1) == 750 && clock.Of(2) == 0);
+        clock.Update({ 1, 2 }, 250);
+        CHECK(clock.Of(1) == 1000 && clock.Of(2) == 250);
+        clock.Clear();
+        CHECK(clock.Of(1) == 0);
+    }
+
+    void TestWeightedSplit()
+    {
+        // No stacks: exactly SplitDamage's even split.
+        std::vector<std::uint32_t> const even = WeightedSplit(1000, { 0, 0, 0 }, 1.f);
+        CHECK(even == SplitDamage(1000, 3, 0));
+        CHECK(WeightedSplit(1000, {}, 1.f).empty());
+
+        // The Death Knell (ruling 40: +100% per Death's Echo stack): 90% of 3,670 = 3,303 among three, stacks 0, 1, 2.
+        std::uint32_t const total = RefFlatValue(3670, 3710, 90.f, false);
+        CHECK(total == 3303);
+        std::vector<std::uint32_t> const knell = WeightedSplit(total, { 0, 1, 2 }, 1.f);
+        CHECK(knell.size() == 3);
+        CHECK(knell[0] == 1101 && knell[1] == 2202 && knell[2] == 3303);
+        // Alone with one stack: the whole hit twice over.
+        CHECK(WeightedSplit(total, { 1 }, 1.f).front() == 2 * total);
+
+        // Half a share per stack, and a cap per share.
+        std::vector<std::uint32_t> const half = WeightedSplit(1000, { 0, 1 }, 0.5f);
+        CHECK(half[0] == 500 && half[1] == 750);
+        std::vector<std::uint32_t> const capped = WeightedSplit(1000, { 0, 3 }, 1.f, 1200);
+        CHECK(capped[0] == 500 && capped[1] == 1200);
+        // The remainder lands on the first shares, then each is weighted.
+        std::vector<std::uint32_t> const rest = WeightedSplit(10, { 1, 0, 0 }, 1.f);
+        CHECK(rest[0] == 8 && rest[1] == 3 && rest[2] == 3);
+    }
+
+    void TestCappedWave()
+    {
+        CHECK(CappedWaveSize(3, 0, 0) == 3);        // no cap
+        CHECK(CappedWaveSize(3, 4, 6) == 2);        // the Baron's 6
+        CHECK(CappedWaveSize(3, 6, 6) == 0);
+        CHECK(CappedWaveSize(3, 9, 6) == 0);
+        CHECK(CappedWaveSize(2, 1, 6) == 2);
+    }
+
+    void TestCastQueue()
+    {
+        enum : std::uint32_t
+        {
+            FILLER = 1,
+            COCOON = 2,
+            BROOD = 3,
+            SKITTER = 4,
+        };
+
+        CastQueue q(1000);
+        CHECK(!q.Next(0));
+        q.Schedule(COCOON, 10000, 2);
+        q.Schedule(BROOD, 10000, 3);
+        q.Schedule(FILLER, 9000, 0);
+        CHECK(q.Size() == 3 && q.Queued(BROOD) && q.DueAt(COCOON) == 10000u);
+        CHECK(q.Next(9000) == FILLER);                  // only the filler is due
+        q.Started(FILLER, 9000, 2000, false);           // a 2 s filler, unspaced
+        CHECK(!q.Queued(FILLER));
+        CHECK(!q.Next(10000));                          // the caster is still busy
+        // Both mechanics due together: the higher priority first, the other waits for its end plus the spacing.
+        CHECK(q.Next(11000) == BROOD);
+        q.Started(BROOD, 11000, 3000);
+        CHECK(!q.Next(13999));
+        CHECK(!q.Next(14500));                          // the spacing after the brood call
+        CHECK(q.Next(15000) == COCOON);
+        q.Started(COCOON, 15000, 0);
+        CHECK(!q.Next(15500) && q.Size() == 0);
+
+        // Ties in priority: the earlier due, then the lower id.
+        q.Reset();
+        q.Schedule(SKITTER, 500, 1);
+        q.Schedule(COCOON, 400, 1);
+        CHECK(q.Next(600) == COCOON);
+        q.Schedule(COCOON, 500, 1);                     // rescheduled: replaces
+        CHECK(q.Size() == 2 && q.Next(600) == COCOON);
+        q.Cancel(COCOON);
+        CHECK(q.Next(600) == SKITTER);
+
+        // A filler with dropAfter: skipped while it waits too long, then dropped.
+        q.Reset();
+        q.Schedule(FILLER, 1000, 0, 2000);
+        q.SetBusy(true);
+        CHECK(!q.Next(1500) && q.Waiting(1500));
+        q.SetBusy(false);
+        CHECK(!q.Next(3000));
+        std::vector<std::uint32_t> const dropped = q.DropStale(3000);
+        CHECK(dropped.size() == 1 && dropped.front() == FILLER && q.Size() == 0);
+
+        // An interrupted cast frees the caster at once; the spacing counts from the interrupt.
+        q.Reset();
+        q.Schedule(SKITTER, 0, 1);
+        q.Schedule(COCOON, 0, 1);
+        CHECK(q.Next(0) == COCOON);                     // a tie: the lower id
+        q.Started(COCOON, 0, 5000);
+        q.Interrupted(1000);
+        CHECK(!q.Next(1500));
+        CHECK(q.Next(2000) == SKITTER);
+    }
+
+    void TestHoldBook()
+    {
+        HoldBook book;
+        CHECK(book.Add(100, 1, 6000));
+        CHECK(!book.Add(101, 1, 6000));                 // one hold per unit
+        CHECK(!book.Add(2, 2, 6000));                   // nobody holds themselves
+        CHECK(book.Add(101, 2, 3000));
+        CHECK(book.HolderOf(1) == 100 && book.HolderOf(3) == 0 && book.Size() == 2);
+
+        auto all = [](std::uint64_t) { return true; };
+        CHECK(book.Update(2000, all, all).empty());
+        // Holder 101 broken: its hold ends with HolderGone; 100's runs on.
+        std::vector<HoldBook::Ended> ended = book.Update(500, [](std::uint64_t h) { return h != 101; }, all);
+        CHECK(ended.size() == 1 && ended[0].held == 2 && ended[0].why == HoldEnd::HolderGone);
+        // A gone holder outranks a gone held unit.
+        HoldBook both;
+        both.Add(7, 8, 1000);
+        auto none = [](std::uint64_t) { return false; };
+        ended = both.Update(10, none, none);
+        CHECK(ended.size() == 1 && ended[0].why == HoldEnd::HolderGone);
+        // The held unit gone.
+        both.Add(7, 8, 1000);
+        ended = both.Update(10, all, none);
+        CHECK(ended.size() == 1 && ended[0].why == HoldEnd::HeldGone);
+        // Timeout at maxHold: 6,000 ms in all for unit 1 (2,500 spent).
+        ended = book.Update(3499, all, all);
+        CHECK(ended.empty());
+        ended = book.Update(1, all, all);
+        CHECK(ended.size() == 1 && ended[0].held == 1 && ended[0].why == HoldEnd::Timeout && book.Size() == 0);
+        // Release and Clear.
+        book.Add(100, 5, 1000);
+        book.Add(100, 6, 1000);
+        std::optional<HoldBook::Ended> const let = book.Release(5);
+        CHECK(let && let->why == HoldEnd::Released && !book.Release(5));
+        ended = book.Clear();
+        CHECK(ended.size() == 1 && ended[0].held == 6 && ended[0].why == HoldEnd::Cleared && book.Size() == 0);
+        CHECK(std::string(HoldEndName(HoldEnd::Timeout)) == "timeout");
+    }
+
+    void TestEffectPercent()
+    {
+        // DBC base points are stored one lower with DieSides 1 (the shown value = base + 1).
+        CHECK(EffectShownValue(2999, 1) == 3000);
+        CHECK(EffectShownValue(3000, 0) == 3000);
+        CHECK(EffectShownValue(3000, 5) == 3001);       // a range: its low end
+        CHECK(Near(EffectPercent(3000, 0, false), 30.f, 1e-4f));
+        CHECK(Near(EffectPercent(3000, 0, true), 30.f, 1e-4f));     // no heroic value: the normal one
+        CHECK(Near(EffectPercent(3000, 4500, true), 45.f, 1e-4f));
+        CHECK(Near(EffectPercent(3000, 4500, false), 30.f, 1e-4f));
+        CHECK(Near(EffectPercent(50, 0, false), 0.5f, 1e-4f));
+        CHECK(EffectPercent(-5, 0, false) == 0.f);
+        // 30% of the normal pin: the registry's own rounding.
+        CHECK(RefFlatValue(3670, 3710, EffectPercent(3000, 0, false), false) == 1101);
+    }
 }
 
 int main()
@@ -704,5 +1093,14 @@ int main()
     TestTrackerForget();
     TestMotionTrack();
     TestTrailRecorder();
+    TestFloorPath();
+    TestFloorSpots();
+    TestPuddles();
+    TestInsideClock();
+    TestWeightedSplit();
+    TestCappedWave();
+    TestCastQueue();
+    TestHoldBook();
+    TestEffectPercent();
     return Report("dungeon_kit_test");
 }

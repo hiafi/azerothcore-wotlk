@@ -3,6 +3,9 @@
  * file and never needs to edit this one. The module needs mod-boss-mechanics (mod-dungeon-bosses.cmake checks it).
  */
 
+// The shared dungeon kit (KT-1): spell_dungeon_refflat_damage / spell_dungeon_refflat_periodic
+void AddSC_dungeon_kit_spells();
+
 // Deadmines (map 36): the shared kit
 void AddSC_instance_deadmines_rework();
 void AddSC_dungeon_bosses_dmtest_commandscript();
@@ -60,6 +63,30 @@ void AddSC_boss_darkmaster_gandling_rework();       // S11: boss_darkmaster_gand
 void AddSC_scholo_ras_hard_mode();                  // S12: Ras's hard mode (`.dbtest scholo keepsake`)
 void AddSC_scholo_graduate_exam();                  // S13: Gandling's hard mode (`.dbtest scholo exam`)
 
+// Stratholme (map 329): the Stratholme skeleton (WP-S0): the instance (registered under the stock name
+// instance_stratholme, replacing the stock one; the stock Jarien, Sothos and scarlet thread scripts keep working) and
+// the `.dbtest strat` shell
+void AddSC_instance_stratholme_rework();
+void AddSC_dungeon_bosses_strat_commandscript();
+
+// Stratholme bosses (one file per boss WP). Wave 1, the Service Entrance:
+void AddSC_boss_magistrate_barthilas_rework();      // S9: boss_magistrate_barthilas_rework
+void AddSC_boss_baroness_anastari_rework();         // S10: boss_baroness_anastari_rework
+void AddSC_boss_nerubenkan_rework();                // S11: boss_nerubenkan_rework
+void AddSC_boss_maleki_the_pallid_rework();         // S12: boss_maleki_the_pallid_rework
+void AddSC_boss_ramstein_the_gorger_rework();       // S13: boss_ramstein_the_gorger_rework
+void AddSC_boss_baron_rivendare_rework();           // S14: boss_baron_rivendare_rework
+void AddSC_strat_baron_hard_mode();                 // S15: the Baron's hard mode (`.dbtest strat ultimatum`)
+// Wave 2, the Main Gate (registered, bound to nothing until wave 2 flips kWave2Bound / BIND_WAVE_2):
+void AddSC_boss_the_unforgiven_rework();            // S1: boss_the_unforgiven_rework
+void AddSC_boss_hearthsinger_forresten_rework();    // S2: boss_hearthsinger_forresten_rework
+void AddSC_boss_timmy_the_cruel_rework();           // S3: boss_timmy_the_cruel_rework
+void AddSC_boss_malor_the_zealous_rework();         // S4: boss_malor_the_zealous_rework
+void AddSC_boss_cannon_master_willey_rework();      // S5: boss_cannon_master_willey_rework
+void AddSC_boss_archivist_galford_rework();         // S6: boss_archivist_galford_rework
+void AddSC_boss_dathrohan_balnazzar_rework();       // S7: boss_dathrohan_balnazzar_rework (10812 and 10813)
+void AddSC_strat_balnazzar_hard_mode();             // S8: Balnazzar's hard mode (`.dbtest strat grandlie`)
+
 // Stratholme hard mode items (wave 1 dungeon items): the Balnazzar and Baron Rivendare hard mode item effects
 void AddSC_strat_hard_mode_items();         // spell_strat_dust_of_the_nathrezim, spell_strat_two_faced_tome,
                                             // spell_strat_ysidas_locket, spell_strat_blade_of_the_condemned,
@@ -77,6 +104,7 @@ void AddSC_haunted_set_bonuses();           // spell_haunted_* bonus scripts, Ha
 
 void Addmod_dungeon_bossesScripts()
 {
+    AddSC_dungeon_kit_spells();
     AddSC_instance_deadmines_rework();
     AddSC_boss_rhahk_zor_rework();
     AddSC_boss_miner_johnson_rework();
@@ -114,12 +142,29 @@ void Addmod_dungeon_bossesScripts()
     AddSC_scholo_ras_hard_mode();
     AddSC_scholo_graduate_exam();
     AddSC_scholo_items();
+    AddSC_instance_stratholme_rework();
+    AddSC_boss_magistrate_barthilas_rework();
+    AddSC_boss_baroness_anastari_rework();
+    AddSC_boss_nerubenkan_rework();
+    AddSC_boss_maleki_the_pallid_rework();
+    AddSC_boss_ramstein_the_gorger_rework();
+    AddSC_boss_baron_rivendare_rework();
+    AddSC_strat_baron_hard_mode();
+    AddSC_boss_the_unforgiven_rework();
+    AddSC_boss_hearthsinger_forresten_rework();
+    AddSC_boss_timmy_the_cruel_rework();
+    AddSC_boss_malor_the_zealous_rework();
+    AddSC_boss_cannon_master_willey_rework();
+    AddSC_boss_archivist_galford_rework();
+    AddSC_boss_dathrohan_balnazzar_rework();
+    AddSC_strat_balnazzar_hard_mode();
     AddSC_strat_hard_mode_items();
     AddSC_sfk_hard_mode_items();
     AddSC_haunted_set_bonuses();
-    // after the boss files: they register their `.dmtest` / `.sfktest` / `.dbtest scholo` tables from their AddSC_
-    // functions
+    // after the boss files: they register their `.dmtest` / `.sfktest` / `.dbtest scholo` / `.dbtest strat` tables
+    // from their AddSC_ functions
     AddSC_dungeon_bosses_dmtest_commandscript();
     AddSC_dungeon_bosses_sfktest_commandscript();
     AddSC_dungeon_bosses_scholo_commandscript();
+    AddSC_dungeon_bosses_strat_commandscript();
 }

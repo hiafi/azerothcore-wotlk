@@ -33,9 +33,13 @@ so db-import and the dbc-tools replay see one history.
 | --- | --- |
 | `mod-dungeon-bosses.cmake` | Configure-time dependency check (included by `modules/CMakeLists.txt`) |
 | `src/dungeon_bosses_loader.cpp` | `Addmod_dungeon_bossesScripts()`: calls every boss file's `AddSC_` |
-| `src/Kit/DungeonKit*.h` (Math, State, Arena, Logic, Ids) | The shared dungeon kit's pure part (`DungeonKit`) |
+| `src/Kit/DungeonKit*.h` (Math, State, Arena, Logic, Ids, Floor, Flow) | The shared kit's pure part (`DungeonKit`) |
 | `src/Kit/DungeonKit.{h,cpp}` | Kit engine glue: AI factory, `RefFlat`, `ImpactThenLinger`, `JumpTo`, ... |
-| `src/Kit/ArenaGuard.{h,cpp}` | The arena guard (pull grip, grip back, hold, leash) and cell `Confinement` |
+| `src/Kit/DungeonKitFloor.h` | Pure: `FloorPath`, floor spot picks, `PuddleSet` (union, merge rule, area) |
+| `src/Kit/DungeonKitFlow.h` | Pure: `WeightedSplit`, `CappedWaveSize`, `CastQueue`, `HoldBook`, percent encoding |
+| `src/Kit/DungeonKitFields.{h,cpp}` | Engine: `PuddleField`, `RegistryHit`, `FollowThenLand`, `SummonWave`, ... |
+| `src/Kit/DungeonKitSpells.cpp` | `spell_dungeon_refflat_damage` / `_periodic`: generic percent spells |
+| `src/Kit/ArenaGuard.{h,cpp}` | The arena guard (grips, hold, leash), `LeashPreset`, cell `Confinement` |
 | `src/Kit/DungeonTestCommand.{h,cpp}` | The generic `.<x>test` GM command shell, one per dungeon |
 | `src/Deadmines/DeadminesRework.h` | Pure: entries, boss states, data ids, text groups, spell slices, measured frames |
 | `src/Deadmines/DeadminesKitMath.h` | Pure: `DeadminesKit` = the kit's names, plus Johnson's roll and the save string |
@@ -70,6 +74,11 @@ so db-import and the dbc-tools replay see one history.
 | `src/ShadowfangKeep/Hunt.{h,cpp}`, `HuntLogic.h` | The Hunt chase (Odo OD1, Silverlaine's Echo of Odo) |
 | `src/ShadowfangKeep/SoulDrain.h` | Soul Drain (Rethilgore, Silverlaine's Echo of Rethilgore) |
 | `src/ShadowfangKeep/LairPrisoner.h` | The lair prisoner's gossip hooks (Arugal S9, Face Him Alone S10) |
+| `src/Stratholme/StratholmeRework.h` | Pure: entries, 17 states, data ids, texts, slices, points, arenas, save |
+| `src/Stratholme/instance_stratholme_rework.cpp` | Instance (stock name, replaced at load; Jarien, Sothos on 2, 3) |
+| `src/Stratholme/StratholmeKit.{h,cpp}` | Stratholme glue: the leash options (the kit's `LeashPreset`) |
+| `src/Stratholme/StratholmeTestCommand.{h,cpp}` | The `.dbtest strat` shell and its `instance` table |
+| `src/Stratholme/boss_<name>_rework.cpp`, `<Boss>Logic.h` | One pair per Stratholme boss WP; S8/S15 hard modes |
 | `src/Stratholme/hard_mode_items.cpp` | Balnazzar and Baron hard mode item scripts, the Condemned damage hook |
 | `src/Stratholme/StratholmeHardModeItemsLogic.h` | Pure: Stratholme item effect ids (205660-205672), shares, picks |
 | `src/DungeonSets/haunted_set_bonuses.cpp` | Haunted set bonus scripts (10 sets x 3 and 5 pieces) and their hooks |
@@ -78,6 +87,7 @@ so db-import and the dbc-tools replay see one history.
 | `tests/run.sh` | Host tests (g++ and clang++), no server build needed |
 | `tests/dungeon_kit_test.cpp` | The shared kit's pure part, and the Deadmines aliases' parity with it |
 | `tests/kit_test.cpp`, `tests/<boss>_test.cpp` | Suites for the Deadmines kit and each boss's `<Boss>Logic.h` |
+| `tests/stratholme_test.cpp`, `tests/strat_<boss>_test.cpp` | The Stratholme skeleton and each boss |
 
 ## Adding a dungeon
 
