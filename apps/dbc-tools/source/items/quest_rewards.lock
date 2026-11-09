@@ -15,8 +15,8 @@
 710 14 2 16 24 27 8000 -  # Bracers of the People's Militia -- Int / Mastery; white->green; ilvl 14->16; type Int
 #   (cloth)
 719 1 2 5 24 73 8000 -  # Rabbit Handler Gloves -- Int / Proc; white->green; ilvl 5 kept (target 3); type Int (cloth)
-744 44 2 49 0 25 0 all  # Thunderbrew's Boot Flask -- - / Crit; green; ilvl 44->49; keeps spell 1; FB no stock primary,
-#   uncovered armor 0/12: Null primary
+744 44 2 49 0 25 0 all  # Thunderbrew's Boot Flask -- - / Crit; green; ilvl 44->49; no primary (trinket, ruling 22);
+#   keeps spell 1
 860 11 2 13 24 27 8000 -  # Cavalier's Boots -- Int / Mastery; white->green; ilvl 13 kept (target 13); type Int (cloth)
 864 5 2 38 22 25 8000 -  # Knightly Longsword -- Str / Crit; green; ilvl 38 kept (target 10); FB no stock primary: type
 #   Str (one-handed sword, even entry)
@@ -28,8 +28,8 @@
 1010 8 2 10 24 27 8000 -  # Gnarled Short Staff -- Int / Mastery; white->green; ilvl 8->10; type Int (staff)
 1011 8 2 10 22 28 8000 -  # Sharp Axe -- Str / Vers; white->green; ilvl 8->10; type Str (one-handed axe)
 1116 30 2 35 0 25 0 -  # Ring of Pure Silver -- - / Crit; green; ilvl 31->35; no primary (jewelry/cloak)
-1131 25 2 30 0 28 0 all  # Totem of Infliction -- - / Vers; green; ilvl 25->30; keeps spell 1; FB no stock primary,
-#   uncovered armor 0/23: Null primary
+1131 25 2 30 24 28 8000 all  # Totem of Infliction -- Int / Vers; green; ilvl 25->30; type Int (held in off-hand, ruling
+#   25); keeps spell 1
 1154 14 2 16 23 27 8000 -  # Belt of the People's Militia -- Agi / Mastery; white->green; ilvl 14->16; type Agi (mail,
 #   even entry)
 1158 10 2 12 22 25 8000 -  # Solid Metal Club -- Str / Crit; white->green; ilvl 10->12; type Str (one-handed mace, even
@@ -63,8 +63,8 @@
 1449 22 2 27 0 28 0 -  # Minor Channeling Ring -- - / Vers; green; ilvl 24->27; no primary (jewelry/cloak)
 1479 13 2 15 24 28 8000 -  # Salma's Oven Mitts -- Int / Vers; white->green; ilvl 12->15; type Int (cloth)
 1480 17 2 22 22 72 8000 -  # Fist of the People's Militia -- Str / CDH; green; ilvl 17->22
-1490 50 2 55 0 27 0 all  # Guardian Talisman -- - / Mastery; green; ilvl 50->55; keeps spell 1; FB no stock primary,
-#   uncovered armor 0/12: Null primary
+1490 50 2 55 0 27 0 all  # Guardian Talisman -- - / Mastery; green; ilvl 50->55; no primary (trinket, ruling 22); keeps
+#   spell 1
 1547 31 2 36 71 73 8000 -  # Shield of the Faith -- Spi / Proc; green; ilvl 30->36
 1557 20 2 25 71 28 8000 -  # Buckler of the Seas -- Spi / Vers; green; ilvl 20->25
 1561 15 2 20 71 26 8000 -  # Harvester's Robe -- Spi / Haste; green; ilvl 15->20
@@ -110,8 +110,8 @@
 2545 26 2 31 22 26 8000 -  # Malleable Chain Leggings -- Str / Haste; green; ilvl 26->31
 2547 1 2 5 24 28 8000 -  # Boar Handler Gloves -- Int / Vers; white->green; ilvl 5 kept (target 3); type Int (mail, odd
 #   entry)
-2562 24 2 26 0 25 0 -  # Bouquet of Scarlet Begonias -- - / Crit; white->green; ilvl 23->26; FB white, uncovered armor
-#   0/23: Null primary
+2562 24 2 26 24 25 8000 -  # Bouquet of Scarlet Begonias -- Int / Crit; white->green; ilvl 23->26; type Int (held in
+#   off-hand, ruling 25)
 2571 7 2 9 24 28 8000 -  # Viny Wrappings -- Int / Vers; white->green; ilvl 7->9; type Int (cloth)
 2690 4 2 6 23 27 8000 -  # Latched Belt -- Agi / Mastery; white->green; ilvl 5->6; type Agi (mail, even entry)
 2691 5 2 7 24 28 8000 -  # Outfitter Boots -- Int / Vers; white->green; ilvl 5->7; type Int (mail, odd entry)
@@ -120,8 +120,8 @@
 2817 12 2 17 23 28 8000 -  # Soft Leather Tunic -- Agi / Vers; green; ilvl 12->17; FB no stock primary: type Agi
 #   (leather)
 2818 15 2 20 12 72 8000 -  # Stretched Leather Trousers -- Str+AP / CDH; green; ilvl 15->20
-2820 45 2 50 0 25 0 all  # Nifty Stopwatch -- - / Crit; green; ilvl 50 kept (target 50); keeps spell 1; FB no stock
-#   primary, uncovered armor 0/12: Null primary
+2820 45 2 50 0 25 0 all  # Nifty Stopwatch -- - / Crit; green; ilvl 50 kept (target 50); no primary (trinket, ruling
+#   22); keeps spell 1
 2900 9 2 11 22 27 8000 -  # Stone Buckler -- Str / Mastery; white->green; ilvl 10->11; type Str (shield)
 2902 31 2 36 0 72 0 -  # Cloak of the Faith -- - / CDH; green; ilvl 30->36; no primary (jewelry/cloak)
 2903 16 2 21 23 73 8000 -  # Daryl's Hunting Bow -- Agi / Proc; green; ilvl 15->21; FB no stock primary: type Agi (bow)
@@ -266,8 +266,8 @@
 4127 40 2 45 23 73 8000 -  # Shrapnel Blaster -- Agi / Proc; green; ilvl 40->45; FB no stock primary: type Agi (gun)
 4128 41 2 46 71 25 8000 -  # Silver Spade -- Spi / Crit; green; ilvl 41->46
 4129 44 2 49 22 26 8000 -  # Collection Plate -- Str / Haste; green; ilvl 44->49
-4130 42 2 50 0 80 0 -  # Smotts' Compass -- - / Dodge; green; ilvl 50 kept (target 47); tank Dodge; FB no stock primary,
-#   uncovered armor 0/12: Null primary; FB Dodge needs Str/Agi: Dodge (Solo, Any)
+4130 42 2 50 0 28 0 -  # Smotts' Compass -- - / Vers; green; ilvl 50 kept (target 47); no primary (trinket, ruling 22);
+#   tank Dodge dropped, no Str/Agi (ruling 24): Vers
 4131 44 2 49 24 28 8000 -  # Belt of Corruption -- Int / Vers; green; ilvl 44->49
 4132 37 2 42 22 72 8000 -  # Darkspear Armsplints -- Str / CDH; green; ilvl 37->42
 4133 37 2 42 24 73 8000 -  # Darkspear Cuffs -- Int / Proc; green; ilvl 37->42
@@ -325,6 +325,7 @@
 4922 5 2 7 23 27 8000 -  # Jagged Chain Vest -- Agi / Mastery; white->green; ilvl 5->7; type Agi (mail, even entry)
 4923 4 2 6 22 28 8000 -  # Primitive Hatchet -- Str / Vers; white->green; ilvl 5->6; type Str (one-handed axe)
 4924 4 2 6 22 72 8000 -  # Primitive Club -- Str / CDH; white->green; ilvl 5->6; type Str (one-handed mace, even entry)
+4925 1 2 5 23 73 8000 -  # Primitive Hand Blade -- Agi / Proc; white->green; ilvl 5 kept (target 3); type Agi (dagger)
 4928 8 2 10 23 27 8000 -  # Sandrunner Wristguards -- Agi / Mastery; white->green; ilvl 8->10; type Agi (leather)
 4929 9 2 11 23 28 8000 -  # Light Scorpid Armor -- Agi / Vers; white->green; ilvl 9->11; type Agi (leather)
 4931 11 2 13 23 73 8000 -  # Hickory Shortbow -- Agi / Proc; white->green; ilvl 11->13; type Agi (bow)
@@ -471,6 +472,7 @@
 5761 4 2 6 22 26 8000 -  # Anvilmar Sledge -- Str / Haste; white->green; ilvl 5->6; type Str (two-handed mace)
 5776 4 2 6 24 72 8000 -  # Elder's Cane -- Int / CDH; white->green; ilvl 5->6; type Int (staff)
 5777 4 2 6 22 73 8000 -  # Brave's Axe -- Str / Proc; white->green; ilvl 5->6; type Str (two-handed axe)
+5778 1 2 5 24 25 8000 -  # Primitive Walking Stick -- Int / Crit; white->green; ilvl 5 kept (target 3); type Int (staff)
 5779 4 2 6 22 26 8000 -  # Forsaken Bastard Sword -- Str / Haste; white->green; ilvl 5->6; type Str (two-handed sword)
 5812 25 2 30 71 72 8000 -  # Robes of Antiquity -- Spi / CDH; green; ilvl 25->30
 5813 32 2 37 22 73 8000 -  # Emil's Brand -- Str / Proc; green; ilvl 32->37
@@ -520,7 +522,6 @@
 #   type Str (one-handed axe)
 6215 11 2 16 23 73 8000 -  # Balanced Fighting Stick -- Agi / Proc; green; ilvl 13->16
 6223 30 2 35 22 26 8000 -  # Crest of Darkshire -- Str / Haste; green; ilvl 35 kept (target 35)
-6256 6 2 8 0 72 0 -  # Fishing Pole -- - / CDH; white->green; ilvl 1->8; FB white, uncovered weapon 20: Null primary
 6282 32 2 37 9 25 8000 -  # Sacred Burial Trousers -- Spi+Int+SP / Crit; green; ilvl 32->37
 6335 26 2 31 22 73 8000 -  # Grizzled Boots -- Str / Proc; green; ilvl 29->31
 6414 27 3 32 0 35 0 -  # Seal of Sylvanas -- - / Haste+Vers; blue; ilvl 29->32; no primary (jewelry/cloak)
@@ -717,6 +718,8 @@
 9603 9 2 14 24 28 8000 -  # Gritroot Staff -- Int / Vers; green; ilvl 10->14; FB no stock primary: type Int (staff)
 9604 30 2 35 24 72 8000 -  # Mechanic's Pipehammer -- Int / CDH; green; ilvl 30->35
 9605 30 2 35 0 73 0 -  # Repairman's Cape -- - / Proc; green; ilvl 30->35; no primary (jewelry/cloak)
+9607 20 2 25 22 56 8000 -  # Bastion of Stormwind -- Str / Block; green; ilvl 25 kept (target 25); Defense->Block; tank
+#   Block; FB no stock primary: type Str (shield)
 9608 30 2 35 22 27 8000 all  # Shoni's Disarming Tool -- Str / Mastery; green; ilvl 31->35; keeps spell 1; FB no stock
 #   primary: type Str (one-handed axe)
 9609 30 2 35 8 28 8000 -  # Shilly Mitts -- Int+Spi+SP / Vers; green; ilvl 31->35
@@ -779,12 +782,10 @@
 10043 31 2 36 71 73 8000 -  # Pious Legwraps -- Spi / Proc; green; ilvl 31->36
 10358 36 2 41 23 27 8000 -  # Duracin Bracers -- Agi / Mastery; green; ilvl 36->41
 10359 36 2 41 71 28 8000 -  # Everlast Boots -- Spi / Vers; green; ilvl 36->41
-10455 55 2 60 0 28 0 all  # Chained Essence of Eranikus -- - / Vers; green; ilvl 60 kept (target 55); keeps spell 1; FB
-#   no stock primary, uncovered armor 0/12: Null primary
+10455 55 2 60 0 28 0 all  # Chained Essence of Eranikus -- - / Vers; green; ilvl 60 kept (target 55); no primary
+#   (trinket, ruling 22); keeps spell 1
 10461 50 2 55 8 28 8000 -  # Shadowy Bracers -- Int+Spi+SP / Vers; green; ilvl 45->55
 10462 50 2 55 8 72 8000 -  # Shadowy Belt -- Int+Spi+SP / CDH; green; ilvl 47->55
-10515 50 2 52 0 28 0 all  # Torch of Retribution -- - / Vers; white->green; ilvl 1->52; keeps spell 1; FB white,
-#   uncovered armor 0/17: Null primary
 10544 4 2 6 22 27 8000 -  # Thistlewood Maul -- Str / Mastery; white->green; ilvl 5->6; type Str (one-handed mace, even
 #   entry)
 10547 8 2 10 23 73 8000 -  # Camping Knife -- Agi / Proc; white->green; ilvl 8->10; type Agi (dagger)
@@ -802,8 +803,8 @@
 10657 25 2 30 24 26 8000 -  # Talbar Mantle -- Int / Haste; green; ilvl 26->30
 10658 25 2 30 23 27 8000 -  # Quagmire Galoshes -- Agi / Mastery; green; ilvl 25->30; FB no stock primary: type Agi
 #   (mail, even entry)
-10659 57 2 57 0 28 0 2  # Shard of Afrasa -- - / Vers; green; ilvl 57 kept (target 55); keeps spell 2; FB no stock
-#   primary, uncovered armor 0/12: Null primary; FB MP5 lost: blues only (green)
+10659 57 2 57 0 28 0 2  # Shard of Afrasa -- - / Vers; green; ilvl 57 kept (target 55); no primary (trinket, ruling 22);
+#   keeps spell 2; FB MP5 lost: blues only (green)
 10686 55 3 60 22 59 6000 -  # Aegis of Battle -- Str / Dodge+Mastery; blue; ilvl 55->60; tank Dodge; FB no stock
 #   primary: type Str (shield)
 10696 58 2 60 22 72 8000 all  # Enchanted Azsharite Felbane Sword -- Str / CDH; green; ilvl 60 kept (target 55); keeps
@@ -840,8 +841,8 @@
 10751 53 3 58 9 34 6000 -  # Gemburst Circlet -- Spi+Int+SP / Haste+Mastery; blue; ilvl 54->58
 10778 60 2 60 0 27 0 -  # Necklace of Sanctuary -- - / Mastery; green; ilvl 60 kept (target 55); no primary
 #   (jewelry/cloak)
-10779 60 2 60 0 28 0 all  # Demon's Blood -- - / Vers; green; ilvl 60 kept (target 55); keeps spell 1; FB no stock
-#   primary, uncovered armor 0/12: Null primary
+10779 60 2 60 0 28 0 all  # Demon's Blood -- - / Vers; green; ilvl 60 kept (target 55); no primary (trinket, ruling 22);
+#   keeps spell 1
 10820 15 2 20 24 27 8000 -  # Jackseed Belt -- Int / Mastery; green; ilvl 15->20
 10821 15 2 20 0 28 0 -  # Sower's Cloak -- - / Vers; green; ilvl 15->20; no primary (jewelry/cloak)
 10823 37 3 44 11 34 6000 -  # Vanquisher's Sword -- AP+Str / Haste+Mastery; blue; ilvl 44 kept (target 42)
@@ -851,8 +852,8 @@
 10827 48 2 53 6 28 8000 -  # Surveyor's Tunic -- Spi+SP / Vers; green; ilvl 48->53
 10919 18 2 23 8 73 8000 -  # Apothecary Gloves -- Int+Spi+SP / Proc; green; ilvl 18->23
 11120 56 2 55 22 27 8000 -  # Belgrom's Hammer -- Str / Mastery; green; ilvl 55 kept (target 55)
-11122 50 2 55 0 72 0 all  # Carrot on a Stick -- - / CDH; green; ilvl 50->55; keeps spell 1; FB no stock primary,
-#   uncovered armor 0/12: Null primary
+11122 50 2 55 0 72 0 all  # Carrot on a Stick -- - / CDH; green; ilvl 50->55; no primary (trinket, ruling 22); keeps
+#   spell 1
 11123 53 3 58 6 75 6000 -  # Rainstrider Leggings -- Spi+SP / Mastery+Proc; blue; ilvl 55->58
 11124 53 3 58 8 29 6000 -  # Helm of Exile -- Int+Spi+SP / Crit+Haste; blue; ilvl 55->58
 11187 2 2 5 24 28 8000 -  # Stemleaf Bracers -- Int / Vers; white->green; ilvl 5 kept (target 4); type Int (cloth)
@@ -913,16 +914,16 @@
 11902 56 2 56 22 72 8000 all  # Linken's Sword of Mastery -- Str / CDH; green; ilvl 56 kept (target 55); keeps spell 1;
 #   FB no stock primary: type Str (one-handed sword, even entry)
 11904 56 2 56 2 25 8000 -  # Spirit of Aquementas -- SP+Int / Crit; green; ilvl 56 kept (target 55)
-11905 56 2 56 0 26 0 all  # Linken's Boomerang -- - / Haste; green; ilvl 56 kept (target 55); keeps spell 1; FB no stock
-#   primary, uncovered armor 0/12: Null primary
+11905 56 2 56 0 26 0 all  # Linken's Boomerang -- - / Haste; green; ilvl 56 kept (target 55); no primary (trinket,
+#   ruling 22); keeps spell 1
 11906 55 2 55 22 27 8000 all  # Beastsmasher -- Str / Mastery; green; ilvl 55 kept (target 55); keeps spell 1; FB no
 #   stock primary: type Str (one-handed mace, even entry)
 11907 55 2 55 22 28 8000 all  # Beastslayer -- Str / Vers; green; ilvl 55 kept (target 55); keeps spell 1; FB no stock
 #   primary: type Str (two-handed axe)
 11908 51 2 55 1 72 8000 -  # Archaeologist's Quarry Boots -- Int+SP / CDH; green; ilvl 55 kept (target 55)
 11909 51 2 55 24 73 8000 -  # Excavator's Utility Belt -- Int / Proc; green; ilvl 55 kept (target 55)
-11910 55 2 55 71 80 8000 -  # Bejeweled Legguards -- Spi / Dodge; green; ilvl 55 kept (target 55); tank Dodge; FB Dodge
-#   needs Str/Agi: Dodge (Solo, Any)
+11910 55 2 55 71 28 8000 -  # Bejeweled Legguards -- Spi / Vers; green; ilvl 55 kept (target 55); tank Dodge dropped, no
+#   Str/Agi (ruling 24): Vers
 11911 55 2 55 6 26 8000 -  # Treetop Leggings -- Spi+SP / Haste; green; ilvl 55 kept (target 55)
 11913 55 2 55 15 28 8000 -  # Clayridge Helm -- Agi+AP / Vers; green; ilvl 55 kept (target 55)
 11915 51 2 55 22 73 8000 -  # Shizzle's Drizzle Blocker -- Str / Proc; green; ilvl 55 kept (target 55)
@@ -946,8 +947,8 @@
 12061 58 2 60 11 26 8000 -  # Blade of Reckoning -- AP+Str / Haste; green; ilvl 60 kept (target 55)
 12062 58 2 60 23 27 8000 -  # Skilled Fighting Blade -- Agi / Mastery; green; ilvl 60 kept (target 55); FB no stock
 #   primary: type Agi (dagger)
-12065 58 2 60 0 73 0 -  # Ward of the Elements -- - / Proc; green; ilvl 60 kept (target 55); FB no stock primary,
-#   uncovered armor 0/12: Null primary
+12065 58 2 60 0 73 0 -  # Ward of the Elements -- - / Proc; green; ilvl 60 kept (target 55); no primary (trinket, ruling
+#   22)
 12066 58 2 58 0 25 0 -  # Shaleskin Cape -- - / Crit; green; ilvl 58 kept (target 55); no primary (jewelry/cloak)
 12082 58 2 58 23 72 8000 -  # Wyrmhide Spaulders -- Agi / CDH; green; ilvl 58 kept (target 55); FB no stock primary:
 #   type Agi (leather)
@@ -964,8 +965,6 @@
 #   Parry; FB no stock primary: type Str (plate)
 12185 60 2 60 24 73 8000 all  # Bloodsail Admiral's Hat -- Int / Proc; green; ilvl 60 kept (target 55); keeps spell 1,2;
 #   FB no stock primary: type Int (cloth)
-12225 14 2 16 0 28 0 all  # Blump Family Fishing Pole -- - / Vers; white->green; ilvl 10->16; keeps spell 1; FB white,
-#   uncovered weapon 20: Null primary
 12295 15 2 20 4 26 8000 -  # Leggings of the People's Militia -- Spi+SP / Haste; green; ilvl 15->20
 12296 17 2 22 24 27 8000 -  # Spark of the People's Militia -- Int / Mastery; green; ilvl 17->22; FB no stock primary:
 #   type Int (wand)
@@ -984,15 +983,15 @@
 12752 60 4 62 24 31 6000 -  # Cap of the Scarlet Savant -- Int / Crit+Mastery; epic; ilvl 62 kept (epic)
 12756 60 4 62 9 35 6000 -  # Leggings of Arcana -- Spi+Int+SP / Haste+Vers; epic; ilvl 62 kept (epic)
 12757 60 4 62 22 58 6000 -  # Breastplate of Bloodthirst -- Str / Dodge+Haste; epic; ilvl 62 kept (epic); tank Dodge
-12846 55 2 55 0 25 0 all  # Argent Dawn Commission -- - / Crit; white->green; ilvl 1->55; keeps spell 1; FB white,
-#   uncovered armor 0/12: Null primary
+12846 55 2 55 0 25 0 all  # Argent Dawn Commission -- - / Crit; white->green; ilvl 1->55; no primary (trinket, ruling
+#   22); keeps spell 1
 12895 60 4 62 12 67 6000 -  # Breastplate of the Chromatic Flight -- Str+AP / Mastery+Vers; epic; ilvl 62 kept (epic)
 12903 60 4 62 23 32 6000 -  # Legguards of the Chromatic Defier -- Agi / Crit+Vers; epic; ilvl 62 kept (epic)
 12945 60 4 62 9 67 6000 -  # Legplates of the Chromatic Defier -- Spi+Int+SP / Mastery+Vers; epic; ilvl 62 kept (epic)
-13171 60 2 61 0 26 0 all  # Smokey's Lighter -- - / Haste; green; ilvl 61 kept (target 55); keeps spell 1; FB no stock
-#   primary, uncovered armor 0/12: Null primary
-13209 60 3 61 0 67 0 all  # Seal of the Dawn -- - / Mastery+Vers; blue; ilvl 61 kept (target 60); keeps spell 1,2; FB no
-#   stock primary, uncovered armor 0/12: Null primary
+13171 60 2 61 0 26 0 all  # Smokey's Lighter -- - / Haste; green; ilvl 61 kept (target 55); no primary (trinket, ruling
+#   22); keeps spell 1
+13209 60 3 61 0 67 0 all  # Seal of the Dawn -- - / Mastery+Vers; blue; ilvl 61 kept (target 60); no primary (trinket,
+#   ruling 22); keeps spell 1,2
 13216 60 2 61 24 72 8000 -  # Crown of the Penitent -- Int / CDH; green; ilvl 61 kept (target 55); FB MP5 lost: blues
 #   only (green)
 13217 60 2 61 0 73 0 -  # Band of the Penitent -- - / Proc; green; ilvl 61 kept (target 55); no primary (jewelry/cloak)
@@ -1007,8 +1006,8 @@
 #   primary: type Agi (gun)
 13475 55 2 55 0 73 0 -  # Dalson Family Wedding Ring -- - / Proc; green; ilvl 55 kept (target 55); no primary
 #   (jewelry/cloak)
-13544 60 2 60 0 27 0 all  # Spectral Essence -- - / Mastery; green; ilvl 60 kept (target 55); keeps spell 1; FB no stock
-#   primary, uncovered armor 0/12: Null primary
+13544 60 2 60 0 27 0 all  # Spectral Essence -- - / Mastery; green; ilvl 60 kept (target 55); no primary (trinket,
+#   ruling 22); keeps spell 1
 13811 60 2 60 0 73 0 -  # Necklace of the Dawn -- - / Proc; green; ilvl 60 kept (target 55); no primary (jewelry/cloak)
 13812 58 2 58 0 25 0 -  # Ring of the Dawn -- - / Crit; green; ilvl 58 kept (target 55); no primary (jewelry/cloak)
 13958 60 3 60 9 37 6000 -  # Wyrmthalak's Shackles -- Spi+Int+SP / Crit+CDH; blue; ilvl 60 kept (target 60)
@@ -1022,10 +1021,10 @@
 #   stock primary: type Agi (dagger)
 13986 60 3 63 8 29 6000 -  # Crown of Caer Darrow -- Int+Spi+SP / Crit+Haste; blue; ilvl 63 kept (target 60)
 14002 60 3 63 71 74 6000 -  # Darrowshire Strongguard -- Spi / CDH+Vers; blue; ilvl 63 kept (target 60)
-14022 60 3 62 0 29 0 all  # Barov Peasant Caller -- - / Crit+Haste; blue; ilvl 62 kept (target 60); keeps spell 1; FB no
-#   stock primary, uncovered armor 0/12: Null primary
-14023 60 3 62 0 30 0 all  # Barov Peasant Caller -- - / Crit+Mastery; blue; ilvl 62 kept (target 60); keeps spell 1; FB
-#   no stock primary, uncovered armor 0/12: Null primary
+14022 60 3 62 0 29 0 all  # Barov Peasant Caller -- - / Crit+Haste; blue; ilvl 62 kept (target 60); no primary (trinket,
+#   ruling 22); keeps spell 1
+14023 60 3 62 0 30 0 all  # Barov Peasant Caller -- - / Crit+Mastery; blue; ilvl 62 kept (target 60); no primary
+#   (trinket, ruling 22); keeps spell 1
 15104 39 3 44 9 31 6000 -  # Wingborne Boots -- Spi+Int+SP / Crit+Mastery; blue; ilvl 39->44
 15105 40 2 45 2 28 8000 -  # Staff of Noh'Orahil -- SP+Int / Vers; green; ilvl 40->45
 15106 40 2 45 2 72 8000 -  # Staff of Dar'Orahil -- SP+Int / CDH; green; ilvl 40->45
@@ -1139,24 +1138,27 @@
 15855 60 3 60 0 67 0 -  # Ring of Protection -- - / Mastery+Vers; blue; ilvl 60 kept (target 60); no primary
 #   (jewelry/cloak)
 15856 60 3 60 0 74 0 -  # Archlight Talisman -- - / CDH+Vers; blue; ilvl 60 kept (target 60); no primary (jewelry/cloak)
-15857 60 3 60 0 75 0 -  # Magebane Scion -- - / Mastery+Proc; blue; ilvl 60 kept (target 60); FB no stock primary,
-#   uncovered armor 0/23: Null primary
+15857 60 3 60 24 75 6000 -  # Magebane Scion -- Int / Mastery+Proc; blue; ilvl 60 kept (target 60); type Int (held in
+#   off-hand, ruling 25)
 15858 59 2 59 71 25 8000 -  # Freewind Gloves -- Spi / Crit; green; ilvl 59 kept (target 55)
 15859 59 2 59 9 26 8000 -  # Seapost Girdle -- Spi+Int+SP / Haste; green; ilvl 59 kept (target 55)
 15862 54 2 55 11 72 8000 -  # Blitzcleaver -- AP+Str / CDH; green; ilvl 54->55
 15863 54 2 55 8 73 8000 -  # Grave Scepter -- Int+Spi+SP / Proc; green; ilvl 54->55
 15864 39 2 44 71 25 8000 -  # Condor Bracers -- Spi / Crit; green; ilvl 39->44
 15865 39 2 44 8 26 8000 -  # Anchorhold Buckler -- Int+Spi+SP / Haste; green; ilvl 39->44
-15867 60 2 60 0 28 0 all  # Prismcharm -- - / Vers; green; ilvl 60 kept (target 55); keeps spell 1; FB no stock primary,
-#   uncovered armor 0/12: Null primary
-15873 60 3 60 0 67 0 all  # Ragged John's Neverending Cup -- - / Mastery+Vers; blue; ilvl 60 kept (target 60); keeps
-#   spell 1; FB no stock primary, uncovered armor 0/12: Null primary
+15866 14 2 19 8 27 8000 all  # Veildust Medicine Bag -- Int+Spi+SP / Mastery; green; ilvl 15->19; keeps spell 1
+15867 60 2 60 0 28 0 all  # Prismcharm -- - / Vers; green; ilvl 60 kept (target 55); no primary (trinket, ruling 22);
+#   keeps spell 1
+15873 60 3 60 0 67 0 all  # Ragged John's Neverending Cup -- - / Mastery+Vers; blue; ilvl 60 kept (target 60); no
+#   primary (trinket, ruling 22); keeps spell 1
 16058 60 3 63 0 31 0 -  # Fordring's Seal -- - / Crit+Mastery; blue; ilvl 63 kept (target 60); no primary
 #   (jewelry/cloak)
 16604 4 2 9 71 27 8000 -  # Moon Robes of Elune -- Spi / Mastery; green; ilvl 5->9
 16605 4 2 9 71 28 8000 -  # Friar's Robes of the Light -- Spi / Vers; green; ilvl 5->9
 16606 4 2 9 71 72 8000 -  # Juju Hex Robes -- Spi / CDH; green; ilvl 5->9
 16607 4 2 9 71 73 8000 -  # Acolyte's Sacrificial Robes -- Spi / Proc; green; ilvl 5->9
+16608 16 3 21 23 41 6000 all  # Aquarius Belt -- Agi / Crit+Haste; blue; ilvl 21 kept (target 21); keeps spell 1; FB no
+#   stock primary: type Agi (leather)
 16622 57 2 57 23 27 8000 -  # Thornflinger -- Agi / Mastery; green; ilvl 57 kept (target 55); FB no stock primary: type
 #   Agi (bow)
 16623 57 2 57 0 28 0 -  # Opaline Medallion -- - / Vers; green; ilvl 57 kept (target 55); no primary (jewelry/cloak)
@@ -1227,14 +1229,14 @@
 #   primary: type Int (staff)
 17753 51 3 56 23 34 6000 all  # Verdant Keeper's Aim -- Agi / Haste+Mastery; blue; ilvl 53->56; keeps spell 1; FB no
 #   stock primary: type Agi (bow)
-17759 60 3 60 0 40 0 all  # Mark of Resolution -- - / Haste+Proc; blue; ilvl 60 kept (target 60); keeps spell 1,2; FB no
-#   stock primary, uncovered armor 0/12: Null primary
+17759 60 3 60 0 40 0 all  # Mark of Resolution -- - / Haste+Proc; blue; ilvl 60 kept (target 60); no primary (trinket,
+#   ruling 22); keeps spell 1,2
 17768 47 2 52 0 27 0 -  # Woodseed Hoop -- - / Mastery; green; ilvl 47->52; no primary (jewelry/cloak)
 17770 47 2 52 22 72 8000 all  # Branchclaw Gauntlets -- Str / CDH; green; ilvl 47->52; keeps spell 1
 17772 42 2 47 0 25 0 -  # Zealous Shadowshard Pendant -- - / Crit; green; ilvl 42->47; no primary (jewelry/cloak)
 17773 42 2 47 0 26 0 -  # Prodigious Shadowshard Pendant -- - / Haste; green; ilvl 42->47; no primary (jewelry/cloak)
-17774 48 2 53 0 27 0 all  # Mark of the Chosen -- - / Mastery; green; ilvl 48->53; keeps spell 1; FB no stock primary,
-#   uncovered armor 0/12: Null primary
+17774 48 2 53 0 27 0 all  # Mark of the Chosen -- - / Mastery; green; ilvl 48->53; no primary (trinket, ruling 22);
+#   keeps spell 1
 17775 47 2 52 24 28 8000 -  # Acumen Robes -- Int / Vers; green; ilvl 47->52
 17776 47 2 52 23 72 8000 -  # Sprightring Helm -- Agi / CDH; green; ilvl 47->52
 17777 47 2 52 3 73 8000 -  # Relentless Chain -- Int+SP / Proc; green; ilvl 47->52
@@ -1253,22 +1255,22 @@
 18403 60 4 74 0 32 0 -  # Dragonslayer's Signet -- - / Crit+Vers; epic; ilvl 74 kept (epic); no primary (jewelry/cloak)
 18404 60 4 74 0 33 0 -  # Onyxia Tooth Pendant -- - / Haste+Mastery; epic; ilvl 74 kept (epic); no primary
 #   (jewelry/cloak)
-18406 60 4 74 0 80 0 3  # Onyxia Blood Talisman -- - / Dodge; epic; ilvl 74 kept (epic); Defense->Dodge; tank Dodge;
-#   keeps spell 3; FB no stock primary, uncovered armor 0/12: Null primary; FB Parry needs Str: Dodge; FB Dodge needs
-#   Str/Agi: Dodge (Solo, Any), one stat not two
+18406 60 4 74 0 35 0 3  # Onyxia Blood Talisman -- - / Haste+Vers; epic; ilvl 74 kept (epic); no primary (trinket,
+#   ruling 22); Defense->Dodge; tank Dodge dropped, no Str/Agi (ruling 24): Vers; keeps spell 3; FB Parry needs Str:
+#   Dodge
 18410 58 2 57 22 27 8000 all  # Sprinter's Sword -- Str / Mastery; green; ilvl 57 kept (target 55); keeps spell 1; FB no
 #   stock primary: type Str (two-handed sword)
 18411 58 2 57 23 54 8000 -  # Spry Boots -- Agi / Dodge; green; ilvl 57 kept (target 55); tank Dodge
 18420 60 3 63 22 35 6000 -  # Bonecrusher -- Str / Haste+Vers; blue; ilvl 63 kept (target 60)
 18421 60 3 63 20 36 6000 -  # Backwood Helm -- Agi+Int+SP / Mastery+Vers; blue; ilvl 63 kept (target 60)
 18424 60 3 63 24 39 6000 -  # Sedge Boots -- Int / Crit+Proc; blue; ilvl 63 kept (target 60)
-18465 60 3 62 0 67 0 -  # Royal Seal of Eldre'Thalas -- - / Mastery+Vers; blue; ilvl 62 kept (target 60); FB no stock
-#   primary, uncovered armor 0/12: Null primary
-18466 60 3 62 0 74 0 all  # Royal Seal of Eldre'Thalas -- - / CDH+Vers; blue; ilvl 62 kept (target 60); keeps spell 1;
-#   FB no stock primary, uncovered armor 0/12: Null primary
+18465 60 3 62 0 67 0 -  # Royal Seal of Eldre'Thalas -- - / Mastery+Vers; blue; ilvl 62 kept (target 60); no primary
+#   (trinket, ruling 22)
+18466 60 3 62 0 74 0 all  # Royal Seal of Eldre'Thalas -- - / CDH+Vers; blue; ilvl 62 kept (target 60); no primary
+#   (trinket, ruling 22); keeps spell 1
 18467 60 3 62 2 75 6000 -  # Royal Seal of Eldre'Thalas -- SP+Int / Mastery+Proc; blue; ilvl 62 kept (target 60)
-18468 60 3 62 0 48 0 -  # Royal Seal of Eldre'Thalas -- - / MP5+Crit; blue; ilvl 62 kept (target 60); MP5 kept; FB no
-#   stock primary, uncovered armor 0/12: Null primary
+18468 60 3 62 0 48 0 -  # Royal Seal of Eldre'Thalas -- - / MP5+Crit; blue; ilvl 62 kept (target 60); no primary
+#   (trinket, ruling 22); MP5 kept
 18469 60 3 62 2 49 6000 -  # Royal Seal of Eldre'Thalas -- SP+Int / MP5+Haste; blue; ilvl 62 kept (target 60); MP5 kept
 18470 60 3 62 2 31 6000 -  # Royal Seal of Eldre'Thalas -- SP+Int / Crit+Mastery; blue; ilvl 62 kept (target 60)
 18471 60 3 62 2 32 6000 -  # Royal Seal of Eldre'Thalas -- SP+Int / Crit+Vers; blue; ilvl 62 kept (target 60)
@@ -1281,13 +1283,14 @@
 18536 60 3 60 24 50 6000 -  # Milli's Lexicon -- Int / MP5+Mastery; blue; ilvl 59->60; MP5 kept
 18585 40 3 45 0 38 0 -  # Band of Allegiance -- - / Haste+CDH; blue; ilvl 35->45; no primary (jewelry/cloak)
 18586 40 3 45 0 39 0 -  # Lonetree's Circle -- - / Crit+Proc; blue; ilvl 35->45; no primary (jewelry/cloak)
+18602 60 3 60 24 37 6000 all  # Tome of Sacrifice -- Int / Crit+CDH; blue; ilvl 60 kept (target 60); type Int (held in
+#   off-hand, ruling 25); keeps spell 1
+18762 50 3 55 2 35 6000 -  # Shard of the Green Flame -- SP+Int / Haste+Vers; blue; ilvl 54->55
 18807 60 3 62 7 67 6000 -  # Helm of Latent Power -- Int+Spi+SP / Mastery+Vers; blue; ilvl 62 kept (target 60)
-18951 50 2 55 0 28 0 all  # Evonice's Landin' Pilla -- - / Vers; green; ilvl 50->55; keeps spell 1; FB no stock primary,
-#   uncovered armor 0/12: Null primary
+18951 50 2 55 0 28 0 all  # Evonice's Landin' Pilla -- - / Vers; green; ilvl 50->55; no primary (trinket, ruling 22);
+#   keeps spell 1
 18957 10 2 15 23 28 8000 -  # Brushwood Blade -- Agi / Vers; green; ilvl 10->15; FB no stock primary: type Agi (one-
 #   handed sword, odd entry)
-19022 50 2 55 0 27 0 all  # Nat Pagle's Extreme Angler FC-5000 -- - / Mastery; green; ilvl 50->55; keeps spell 1; FB no
-#   stock primary, uncovered weapon 20: Null primary
 19037 48 2 53 12 73 8000 -  # Emerald Peak Spaulders -- Str+AP / Proc; green; ilvl 48->53
 19038 48 2 53 0 25 0 -  # Ring of Subtlety -- - / Crit; green; ilvl 48->53; no primary (jewelry/cloak); FB MP5 lost:
 #   blues only (green)
@@ -1310,53 +1313,52 @@
 19127 50 2 55 23 73 8000 -  # Charred Leather Tunic -- Agi / Proc; green; ilvl 50->55
 19128 50 2 55 20 25 8000 -  # Seared Mail Vest -- Agi+Int+SP / Crit; green; ilvl 50->55
 19129 49 2 54 7 26 8000 -  # Everglowing Robe -- Int+Spi+SP / Haste; green; ilvl 49->54
-19141 49 2 54 0 26 0 all  # Luffa -- - / Haste; green; ilvl 50->54; keeps spell 1; FB no stock primary, uncovered armor
-#   0/12: Null primary
+19141 49 2 54 0 26 0 all  # Luffa -- - / Haste; green; ilvl 50->54; no primary (trinket, ruling 22); keeps spell 1
 19159 51 3 56 0 36 0 -  # Woven Ivy Necklace -- - / Mastery+Vers; blue; ilvl 51->56; no primary (jewelry/cloak)
 19366 60 4 83 2 45 4000 -  # Master Dragonslayer's Orb -- SP+Int / Crit+Mastery+Vers; epic; ilvl 83 kept (epic)
-19383 60 4 83 0 80 0 -  # Master Dragonslayer's Medallion -- - / Dodge; epic; ilvl 83 kept (epic); no primary
-#   (jewelry/cloak); Defense->Dodge; tank Dodge; FB Dodge needs Str/Agi: Dodge (Solo, Any), one stat not two
+19383 60 4 83 0 67 0 -  # Master Dragonslayer's Medallion -- - / Mastery+Vers; epic; ilvl 83 kept (epic); no primary
+#   (jewelry/cloak); Defense->Dodge; tank Dodge dropped, no Str/Agi (ruling 24): Vers
 19384 60 4 83 0 38 0 -  # Master Dragonslayer's Ring -- - / Haste+CDH; epic; ilvl 83 kept (epic); no primary
 #   (jewelry/cloak)
-19812 60 3 61 0 41 0 all  # Rune of the Dawn -- - / Crit+Haste; blue; ilvl 61 kept (target 60); keeps spell 1,2; FB no
-#   stock primary, uncovered armor 0/12: Null primary
-19948 60 4 68 0 74 0 all  # Zandalarian Hero Badge -- - / CDH+Vers; epic; ilvl 68 kept (epic); keeps spell 1; FB no
-#   stock primary, uncovered armor 0/12: Null primary
-19949 60 4 68 0 75 0 all  # Zandalarian Hero Medallion -- - / Mastery+Proc; epic; ilvl 68 kept (epic); keeps spell 1; FB
-#   no stock primary, uncovered armor 0/12: Null primary
-19950 60 4 68 0 29 0 all  # Zandalarian Hero Charm -- - / Crit+Haste; epic; ilvl 68 kept (epic); keeps spell 1; FB no
-#   stock primary, uncovered armor 0/12: Null primary
+19812 60 3 61 0 41 0 all  # Rune of the Dawn -- - / Crit+Haste; blue; ilvl 61 kept (target 60); no primary (trinket,
+#   ruling 22); keeps spell 1,2
+19948 60 4 68 0 74 0 all  # Zandalarian Hero Badge -- - / CDH+Vers; epic; ilvl 68 kept (epic); no primary (trinket,
+#   ruling 22); keeps spell 1
+19949 60 4 68 0 75 0 all  # Zandalarian Hero Medallion -- - / Mastery+Proc; epic; ilvl 68 kept (epic); no primary
+#   (trinket, ruling 22); keeps spell 1
+19950 60 4 68 0 29 0 all  # Zandalarian Hero Charm -- - / Crit+Haste; epic; ilvl 68 kept (epic); no primary (trinket,
+#   ruling 22); keeps spell 1
 19982 52 3 57 0 31 0 -  # Duskbat Drape -- - / Crit+Mastery; blue; ilvl 52->57; no primary (jewelry/cloak)
 19984 52 3 57 11 33 6000 -  # Ebon Mask -- AP+Str / Haste+Mastery; blue; ilvl 52->57
-19990 52 3 57 0 39 0 all  # Blessed Prayer Beads -- - / Crit+Proc; blue; ilvl 52->57; keeps spell 1; FB no stock
-#   primary, uncovered armor 0/12: Null primary
-19991 52 3 57 0 40 0 all  # Devilsaur Eye -- - / Haste+Proc; blue; ilvl 52->57; keeps spell 1; FB no stock primary,
-#   uncovered armor 0/12: Null primary
+19990 52 3 57 0 39 0 all  # Blessed Prayer Beads -- - / Crit+Proc; blue; ilvl 52->57; no primary (trinket, ruling 22);
+#   keeps spell 1
+19991 52 3 57 0 40 0 all  # Devilsaur Eye -- - / Haste+Proc; blue; ilvl 52->57; no primary (trinket, ruling 22); keeps
+#   spell 1
 19992 52 3 57 23 41 6000 all  # Devilsaur Tooth -- Agi / Crit+Haste; blue; ilvl 52->57; keeps spell 1
 20006 52 3 57 0 37 0 -  # Circle of Hope -- - / Crit+CDH; blue; ilvl 52->57; no primary (jewelry/cloak)
 20035 52 3 57 24 30 6000 all  # Glacial Spike -- Int / Crit+Mastery; blue; ilvl 52->57; keeps spell 1
-20036 52 3 57 0 31 0 all  # Fire Ruby -- - / Crit+Mastery; blue; ilvl 52->57; keeps spell 1; FB no stock primary,
-#   uncovered armor 0/12: Null primary
+20036 52 3 57 0 31 0 all  # Fire Ruby -- - / Crit+Mastery; blue; ilvl 52->57; no primary (trinket, ruling 22); keeps
+#   spell 1
 20037 52 3 57 0 32 0 -  # Arcane Crystal Pendant -- - / Crit+Vers; blue; ilvl 52->57; no primary (jewelry/cloak)
 20082 52 3 57 2 41 6000 -  # Woestave -- SP+Int / Crit+Haste; blue; ilvl 52->57
 20083 52 3 57 23 49 6000 -  # Hunting Spear -- Agi / MP5+Haste; blue; ilvl 52->57; MP5 kept; FB no stock primary: type
 #   Agi (polearm)
-20130 52 3 57 0 35 0 all  # Diamond Flask -- - / Haste+Vers; blue; ilvl 52->57; keeps spell 1; FB no stock primary,
-#   uncovered armor 0/12: Null primary
+20130 52 3 57 0 35 0 all  # Diamond Flask -- - / Haste+Vers; blue; ilvl 52->57; no primary (trinket, ruling 22); keeps
+#   spell 1
 20134 60 4 62 12 38 6000 -  # Skyfury Helm -- Str+AP / Haste+CDH; epic; ilvl 62 kept (epic)
 20255 52 3 57 23 34 6000 all  # Whisperwalk Boots -- Agi / Haste+Mastery; blue; ilvl 52->57; keeps spell 1
 20369 52 3 57 8 40 6000 -  # Azurite Fists -- Int+Spi+SP / Haste+Proc; blue; ilvl 52->57
-20503 52 3 57 0 30 0 all  # Enamored Water Spirit -- - / Crit+Mastery; blue; ilvl 52->57; keeps spell 1; FB no stock
-#   primary, uncovered armor 0/12: Null primary
+20503 52 3 57 0 30 0 all  # Enamored Water Spirit -- - / Crit+Mastery; blue; ilvl 52->57; no primary (trinket, ruling
+#   22); keeps spell 1
 20504 52 3 57 12 31 6000 -  # Lightforged Blade -- Str+AP / Crit+Mastery; blue; ilvl 52->57
 20505 52 3 57 0 32 0 -  # Chivalrous Signet -- - / Crit+Vers; blue; ilvl 52->57; no primary (jewelry/cloak)
-20512 52 3 57 0 39 0 all  # Sanctified Orb -- - / Crit+Proc; blue; ilvl 52->57; keeps spell 1; FB no stock primary,
-#   uncovered armor 0/12: Null primary
+20512 52 3 57 0 39 0 all  # Sanctified Orb -- - / Crit+Proc; blue; ilvl 52->57; no primary (trinket, ruling 22); keeps
+#   spell 1
 20517 52 3 57 12 67 6000 -  # Razorsteel Shoulders -- Str+AP / Mastery+Vers; blue; ilvl 52->57
 20521 52 3 57 22 30 6000 -  # Fury Visor -- Str / Crit+Mastery; blue; ilvl 52->57
 20530 52 3 57 2 39 6000 -  # Robes of Servitude -- SP+Int / Crit+Proc; blue; ilvl 52->57
-20534 52 3 57 0 66 0 all  # Abyss Shard -- - / Crit+Proc; blue; ilvl 52->57; keeps spell 1; FB no stock primary,
-#   uncovered armor 0/12: Null primary
+20534 52 3 57 0 66 0 all  # Abyss Shard -- - / Crit+Proc; blue; ilvl 52->57; no primary (trinket, ruling 22); keeps
+#   spell 1
 20536 52 3 57 2 74 6000 -  # Soul Harvester -- SP+Int / CDH+Vers; blue; ilvl 52->57
 20556 52 3 57 17 29 6000 -  # Wildstaff -- Str+Int+SP / Crit+Haste; blue; ilvl 52->57
 20600 60 4 72 0 29 0 -  # Malfurion's Signet Ring -- - / Crit+Haste; epic; ilvl 72 kept (epic); no primary
@@ -1399,10 +1401,10 @@
 21178 60 3 62 2 39 6000 -  # Gloves of Earthen Power -- SP+Int / Crit+Proc; blue; ilvl 62 kept (target 60)
 21179 60 3 62 0 50 0 -  # Band of Earthen Wrath -- - / MP5+Mastery; blue; ilvl 62 kept (target 60); no primary
 #   (jewelry/cloak); MP5 kept
-21180 60 4 66 0 34 0 all  # Earthstrike -- - / Haste+Mastery; epic; ilvl 66 kept (epic); keeps spell 1; FB no stock
-#   primary, uncovered armor 0/12: Null primary
-21181 60 3 66 0 65 0 all  # Grace of Earth -- - / Haste+CDH; blue; ilvl 66 kept (target 60); keeps spell 1; FB no stock
-#   primary, uncovered armor 0/12: Null primary
+21180 60 4 66 0 34 0 all  # Earthstrike -- - / Haste+Mastery; epic; ilvl 66 kept (epic); no primary (trinket, ruling
+#   22); keeps spell 1
+21181 60 3 66 0 65 0 all  # Grace of Earth -- - / Haste+CDH; blue; ilvl 66 kept (target 60); no primary (trinket, ruling
+#   22); keeps spell 1
 21182 60 3 66 0 66 0 -  # Band of Earthen Might -- - / Crit+Proc; blue; ilvl 66 kept (target 60); no primary
 #   (jewelry/cloak)
 21183 60 3 66 1 67 6000 -  # Earthpower Vest -- Int+SP / Mastery+Vers; blue; ilvl 66 kept (target 60)
@@ -1417,14 +1419,14 @@
 #   (jewelry/cloak); keeps spell 1
 21190 60 4 66 0 44 0 all  # Wrath of Cenarius -- - / Crit+Haste+Vers; epic; ilvl 66 kept (epic); no primary
 #   (jewelry/cloak); keeps spell 1
-21196 60 4 60 0 80 0 -  # Signet Ring of the Bronze Dragonflight -- - / Dodge; epic; ilvl 60 kept (epic); no primary
-#   (jewelry/cloak); Defense->Dodge; tank Dodge; FB Dodge needs Str/Agi: Dodge (Solo, Any), one stat not two
-21197 60 4 65 0 80 0 -  # Signet Ring of the Bronze Dragonflight -- - / Dodge; epic; ilvl 65 kept (epic); no primary
-#   (jewelry/cloak); Defense->Dodge; tank Dodge; FB Dodge needs Str/Agi: Dodge (Solo, Any), one stat not two
-21198 60 4 70 0 80 0 -  # Signet Ring of the Bronze Dragonflight -- - / Dodge; epic; ilvl 70 kept (epic); no primary
-#   (jewelry/cloak); Defense->Dodge; tank Dodge; FB Dodge needs Str/Agi: Dodge (Solo, Any), one stat not two
-21199 60 4 75 0 80 0 -  # Signet Ring of the Bronze Dragonflight -- - / Dodge; epic; ilvl 75 kept (epic); no primary
-#   (jewelry/cloak); Defense->Dodge; tank Dodge; FB Dodge needs Str/Agi: Dodge (Solo, Any), one stat not two
+21196 60 4 60 0 35 0 -  # Signet Ring of the Bronze Dragonflight -- - / Haste+Vers; epic; ilvl 60 kept (epic); no
+#   primary (jewelry/cloak); Defense->Dodge; tank Dodge dropped, no Str/Agi (ruling 24): Vers
+21197 60 4 65 0 36 0 -  # Signet Ring of the Bronze Dragonflight -- - / Mastery+Vers; epic; ilvl 65 kept (epic); no
+#   primary (jewelry/cloak); Defense->Dodge; tank Dodge dropped, no Str/Agi (ruling 24): Vers
+21198 60 4 70 0 67 0 -  # Signet Ring of the Bronze Dragonflight -- - / Mastery+Vers; epic; ilvl 70 kept (epic); no
+#   primary (jewelry/cloak); Defense->Dodge; tank Dodge dropped, no Str/Agi (ruling 24): Vers
+21199 60 4 75 0 74 0 -  # Signet Ring of the Bronze Dragonflight -- - / CDH+Vers; epic; ilvl 75 kept (epic); no primary
+#   (jewelry/cloak); Defense->Dodge; tank Dodge dropped, no Str/Agi (ruling 24): Vers
 21201 60 4 60 0 30 0 -  # Signet Ring of the Bronze Dragonflight -- - / Crit+Mastery; epic; ilvl 60 kept (epic); no
 #   primary (jewelry/cloak)
 21202 60 4 65 0 31 0 -  # Signet Ring of the Bronze Dragonflight -- - / Crit+Mastery; epic; ilvl 65 kept (epic); no
@@ -1451,8 +1453,8 @@
 21320 58 2 58 23 27 8000 -  # Vest of the Den Watcher -- Agi / Mastery; green; ilvl 58 kept (target 55)
 21322 58 2 58 23 54 8000 -  # Ursa's Embrace -- Agi / Dodge; green; ilvl 58 kept (target 55); Defense->Parry; tank
 #   Dodge; FB Parry needs Str: Dodge
-21326 60 4 62 0 30 0 all  # Defender of the Timbermaw -- - / Crit+Mastery; epic; ilvl 62 kept (epic); keeps spell 1; FB
-#   no stock primary, uncovered armor 0/12: Null primary
+21326 60 4 62 0 30 0 all  # Defender of the Timbermaw -- - / Crit+Mastery; epic; ilvl 62 kept (epic); no primary
+#   (trinket, ruling 22); keeps spell 1
 21520 60 4 76 12 67 6000 -  # Ravencrest's Legacy -- Str+AP / Mastery+Vers; epic; ilvl 76 kept (epic)
 21521 60 4 76 2 68 4000 -  # Runesword of the Red -- SP+Int / Proc+Crit+Mastery; epic; ilvl 76 kept (epic)
 21522 60 4 76 15 69 4000 -  # Shadowsong's Sorrow -- Agi+AP / Haste+CDH+Mastery; epic; ilvl 76 kept (epic)
@@ -1584,10 +1586,10 @@
 22996 20 2 25 22 72 8000 -  # Reforged Quel'dorei Crest -- Str / CDH; green; ilvl 20->25
 22997 20 2 25 24 73 8000 -  # Ley-Keeper's Wand -- Int / Proc; green; ilvl 20->25; FB no stock primary: type Int (wand)
 22998 20 2 25 23 25 8000 -  # Ghostclaw Leggings -- Agi / Crit; green; ilvl 20->25
-23206 60 4 90 0 35 0 all  # Mark of the Champion -- - / Haste+Vers; epic; ilvl 90 kept (epic); keeps spell 1; FB no
-#   stock primary, uncovered armor 0/12: Null primary
-23207 60 4 90 0 36 0 all  # Mark of the Champion -- - / Mastery+Vers; epic; ilvl 90 kept (epic); keeps spell 1; FB no
-#   stock primary, uncovered armor 0/12: Null primary
+23206 60 4 90 0 35 0 all  # Mark of the Champion -- - / Haste+Vers; epic; ilvl 90 kept (epic); no primary (trinket,
+#   ruling 22); keeps spell 1
+23207 60 4 90 0 36 0 all  # Mark of the Champion -- - / Mastery+Vers; epic; ilvl 90 kept (epic); no primary (trinket,
+#   ruling 22); keeps spell 1
 23265 11 2 13 24 28 8000 -  # Blackened Chain Girdle -- Int / Vers; white->green; ilvl 11->13; type Int (mail, odd
 #   entry)
 23266 11 2 13 23 72 8000 -  # Ranger's Vest -- Agi / CDH; white->green; ilvl 11->13; type Agi (leather)
@@ -1658,6 +1660,9 @@
 24133 4 2 6 24 26 8000 -  # Weathered Mail Tunic -- Int / Haste; white->green; ilvl 5->6; type Int (mail, odd entry)
 24134 4 2 6 23 27 8000 -  # Weathered Leather Vest -- Agi / Mastery; white->green; ilvl 5->6; type Agi (leather)
 24135 4 2 6 24 28 8000 -  # Weathered Cloth Armor -- Int / Vers; white->green; ilvl 5->6; type Int (cloth)
+24136 10 2 15 23 72 8000 -  # Farstrider's Bow -- Agi / CDH; green; ilvl 12->15; FB no stock primary: type Agi (bow)
+24138 10 2 15 23 25 8000 -  # Silver Crossbow -- Agi / Crit; green; ilvl 12->15; FB no stock primary: type Agi
+#   (crossbow)
 24141 7 2 9 24 28 8000 -  # Battle Worn Gauntlets -- Int / Vers; white->green; ilvl 8->9; type Int (mail, odd entry)
 24142 7 2 9 23 72 8000 -  # Battle Worn Gloves -- Agi / CDH; white->green; ilvl 8->9; type Agi (leather)
 24144 7 2 9 24 25 8000 -  # Battle Worn Handguards -- Int / Crit; white->green; ilvl 8->9; type Int (cloth)
@@ -1867,17 +1872,16 @@
 #   (jewelry/cloak)
 38672 55 3 70 0 37 0 -  # Keleseth's Signet Ring -- - / Crit+CDH; blue; ilvl 70 kept (target 60); no primary
 #   (jewelry/cloak)
-38674 55 3 70 0 39 0 all  # Soul Harvester's Charm -- - / Crit+Proc; blue; ilvl 70 kept (target 60); keeps spell 1; FB
-#   no stock primary, uncovered armor 0/12: Null primary
-38675 55 3 70 0 80 0 all  # Signet of the Dark Brotherhood -- - / Dodge; blue; ilvl 70 kept (target 60); tank Dodge;
-#   keeps spell 1; FB no stock primary, uncovered armor 0/12: Null primary; FB Parry needs Str: Dodge; FB Dodge needs
-#   Str/Agi: Dodge (Solo, Any), one stat not two
+38674 55 3 70 0 39 0 all  # Soul Harvester's Charm -- - / Crit+Proc; blue; ilvl 70 kept (target 60); no primary
+#   (trinket, ruling 22); keeps spell 1
+38675 55 3 70 0 32 0 all  # Signet of the Dark Brotherhood -- - / Crit+Vers; blue; ilvl 70 kept (target 60); no primary
+#   (trinket, ruling 22); tank Dodge dropped, no Str/Agi (ruling 24): Vers; keeps spell 1; FB Parry needs Str: Dodge
 38707 55 3 65 22 36 6000 -  # Runed Soulblade -- Str / Mastery+Vers; blue; ilvl 65 kept (target 60)
-39208 55 3 70 0 33 0 all  # Sigil of the Dark Rider -- - / Haste+Mastery; blue; ilvl 70 kept (target 60); keeps spell 1;
-#   FB no stock primary, uncovered armor 10/28: Null primary
+39208 55 3 70 0 33 0 all  # Sigil of the Dark Rider -- - / Haste+Mastery; blue; ilvl 70 kept (target 60); no primary
+#   (relic); keeps spell 1
 39320 55 3 70 0 37 0 -  # Sky Darkener's Shroud of Blood -- - / Crit+CDH; blue; ilvl 70 kept (target 60); no primary
 #   (jewelry/cloak)
 39322 55 3 70 0 39 0 -  # Shroud of the North Wind -- - / Crit+Proc; blue; ilvl 70 kept (target 60); no primary
 #   (jewelry/cloak)
-40483 55 3 60 0 30 0 all  # Insignia of the Scourge -- - / Crit+Mastery; blue; ilvl 0->60; keeps spell 1; FB no stock
-#   primary, uncovered armor 0/12: Null primary
+40483 55 3 60 0 30 0 all  # Insignia of the Scourge -- - / Crit+Mastery; blue; ilvl 0->60; no primary (trinket, ruling
+#   22); keeps spell 1

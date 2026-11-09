@@ -15,17 +15,13 @@ need a client ItemLimitCategory.dbc row (quest rewards ship as server data only)
 
 Keys are `qr_<entry>`. One owner per entry: to move a reward into a dungeon's item list, delete its lock line first.
 
-**Uncommon weapons wait** (`lib/quest_rewards.py` `UNCOMMON_WEAPONS_WAIT`). `item_weapon_dps_curve` has rows for
-Rare and Epic only (2026-11-09), so a green weapon cannot resolve its budget: item_variants refuses it and the server
-would skip its itemization row (ItemBudget.cpp, "no item_weapon_dps_curve entry"). Their lock lines are seeded and
-kept (the decisions are frozen), but no item() is declared for them until a Quality 2 weapon DPS curve exists; flip
-the flag then. Meanwhile this file
-still owns the entries, so it keeps the ranged ones at `ammo_type` 0 through `item_template()`.
+Green weapons (and the white ones that become green) resolve their DPS against the Quality 2 rows of
+`item_weapon_dps_curve` (ruling 21, stage QR1b's pending SQL).
 """
 
 from lib.dsl.items import ItemSpell, item
-from lib.dsl.registry import item_template, live_item_templates
-from lib.quest_rewards import LOCK_PATH, parse_lock, waits_for_weapon_curve
+from lib.dsl.registry import live_item_templates
+from lib.quest_rewards import LOCK_PATH, parse_lock
 
 from .ladders import QUEST_REWARD
 
@@ -53,17 +49,13 @@ try:
     _ROWS = live_item_templates()
 except RuntimeError:
     # Loaded without the live rows (a unit test loading source/items for another file's items): the declarations
-    # need each item's live row (its class for the weapon gate, its spell columns), so this file declares nothing.
+    # need each item's live row (its class and subclass, its spell columns), so this file declares nothing.
     # generate.py always passes them.
     _ROWS = None
 
 for _line in parse_lock(LOCK_PATH.read_text(encoding="utf-8")).values() if _ROWS is not None else ():
     _row = _ROWS.get(_line.entry, {})
     _ranged = _int(_row.get("class")) == ITEM_CLASS_WEAPON and _int(_row.get("subclass")) in AMMO_WEAPON_SUBCLASSES
-    if waits_for_weapon_curve(_line, _row):
-        if _ranged:
-            item_template(_line.entry, ammo_type=NO_AMMO)
-        continue
     _extra: dict = {}
     _kept = _line.kept_slots
     if _kept is None:

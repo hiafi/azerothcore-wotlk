@@ -6,16 +6,19 @@ one-tier `quest_reward` ladder (QR1).
 
 Everything below `load_inputs()` is a pure function of plain dicts (the replayed world tables, the stock Spell.dbc
 rows, the shape catalog and `item_stat_cost`), so the host tests (`lib/test_quest_rewards.py`) build them by hand.
-The rules are PLAN section 3 (rulings 1-20 of the REQUIREMENTS):
+The rules are PLAN section 3 (rulings 1-27 of the REQUIREMENTS):
 
 1. **Scope.** Equippable rewards (`class` 2 weapon or 4 armor, not InventoryType 0, shirts 4 or tabards 19) of
    quests at `QuestLevel` 1-60 that are not repeatable (`SpecialFlags & 1`), daily (`Flags & 0x1000`) or weekly
    (`Flags & 0x8000`) and not raid (`QuestInfoID` 62) or PvP (41) quests. Rewards are `RewardItem1-4` and
-   `RewardChoiceItemID1-6`. An item that any out-of-scope quest also rewards is out (a scaled `QuestLevel` -1 quest
-   counts as out of scope: it has no quest level). Legendary and Poor items are skipped (rulings 16, 17). An entry
+   `RewardChoiceItemID1-6`. An item that any out-of-scope quest also rewards is out. A scaled (`QuestLevel` -1) class
+   quest (`AllowableClasses` set or a class `QuestSortID`) counts at its `MinLevel` (round 5 default; above 60 it is
+   out); any other scaled quest is out of scope. Fishing poles and 10515 Torch of Retribution stay stock (ruling 25).
+   Legendary and Poor items are skipped (rulings 16, 17). An entry
    another declaration owns (`source/items/*.py` `item(base=...)`, `item_ids.lock`, `items.csv`, a literal
    `item_template(<entry>, ...)`) is skipped and reported (`owned_elsewhere()`): one owner per entry.
-2. **Quest level**: the lowest `QuestLevel` of the quests that reward it.
+2. **Quest level**: the lowest quest level (`QuestLevel`, or `MinLevel` for a scaled class quest) of the quests
+   that reward it.
 3. **Item level and quality.** White becomes green at min(quest level + 2, 55); green min(quest level + 5, 55); blue
    min(quest level + 5, 60); epic keeps its level; then max(current item level, target) (never lower). Required level
    0 (set by the declaration).
@@ -29,14 +32,18 @@ The rules are PLAN section 3 (rulings 1-20 of the REQUIREMENTS):
 5. **Primary shape.** The nearest primary shape (least squares over the cost-weighted, renormalized primary stats,
    itemization-phase-2.md s9.1 step 3). Whites: by item type (ruling 18, `type_main_stat()`; "alternating by entry"
    = even entry the first stat, odd the second). A non-white item with no primary stat in its stock read takes the
-   type main stat too (a reported fallback). Cloaks, rings and necks: no primary shape (Null, share 0).
+   type main stat too (a reported fallback; ruled for held-in-off-hand items, Intellect, ruling 25). Cloaks, rings,
+   necks and relics: no primary shape (Null, share 0; rulings 18 and 25). Trinkets with no main stat: Null (ruling
+   22).
 6. **Secondary shape.** Generic shapes over Crit, Haste, Mastery, Versatility, Cooldown Haste and Proc Chance: green
    one stat (Solo), blue two (pairs), epic two or three (pairs and trios), picked by `entry MOD pool size` over the
    eligible pool sorted by shape id. Tank stats (ruling 12): Dodge, Parry, Block or Defense in the stock read keep
    their stat (Defense becomes Block on a shield, Parry on other plate, Dodge on everything else; the heaviest tank
    stat wins); green takes that stat's Solo shape, blue and epic a pair of that stat and a generic companion. Parry
-   and Block shapes need a Strength primary: else Dodge. Dodge shapes need Strength or Agility: else "Dodge (Solo,
-   Any)", even on a blue or epic (one secondary stat; reported). MP5 (ruling 13): a blue whose stock read has MP5
+   and Block shapes need a Strength primary: else Dodge. Dodge shapes need Strength or Agility: an item that cannot
+   take one (rings, necks, cloaks, trinkets, relics, Intellect or Spirit items) drops the tank stat (ruling 24); it
+   takes "Versatility (Solo)" on a green, else a generic pair with Versatility (`entry MOD pool size` over the
+   Versatility pairs). MP5 (ruling 13): a blue whose stock read has MP5
    takes an MP5 pair; a Spirit primary forbids MP5, so that item keeps Spirit and loses the MP5 (reported). Greens
    and epics lose MP5 (the ruling keeps it on blues only; reported).
 7. **Primary share**: green 8000, blue 6000, epic 6000 with a pair secondary and 4000 with a trio; Null primary 0.
@@ -90,8 +97,16 @@ QUEST_INFO_RAID, QUEST_INFO_PVP, QUEST_INFO_DUNGEON = 62, 41, 81
 REWARD_COLUMNS = tuple(f"RewardItem{n}" for n in range(1, 5)) + tuple(f"RewardChoiceItemID{n}" for n in range(1, 7))
 ITEM_CLASS_WEAPON, ITEM_CLASS_ARMOR = 2, 4
 EXCLUDED_INV_TYPES = (0, 4, 19)  # not equippable, shirt, tabard
-INV_NECK, INV_FINGER, INV_TRINKET, INV_SHIELD, INV_CLOAK, INV_HOLDABLE = 2, 11, 12, 14, 16, 23
-NO_MAIN_STAT_INV_TYPES = (INV_NECK, INV_FINGER, INV_CLOAK)  # ruling 18: all secondary
+INV_NECK, INV_FINGER, INV_TRINKET, INV_SHIELD, INV_CLOAK, INV_HOLDABLE, INV_RELIC = 2, 11, 12, 14, 16, 23, 28
+NO_MAIN_STAT_INV_TYPES = (INV_NECK, INV_FINGER, INV_CLOAK, INV_RELIC)  # rulings 18 and 25: all secondary
+WEAPON_FISHING_POLE = 20
+STOCK_ENTRIES = {10515: "Torch of Retribution (ruling 25)"}  # in-scope rewards that stay stock
+# QuestSortID of the class quest sorts (QuestSort.dbc): Warlock, Warrior, Shaman, Paladin, Mage, Rogue, Hunter, Priest,
+# Druid, Death Knight. The other negative sorts are professions, holidays and other non-zone groups.
+CLASS_QUEST_SORTS = {-61: "Warlock", -81: "Warrior", -82: "Shaman", -141: "Paladin", -161: "Mage", -162: "Rogue",
+                     -261: "Hunter", -262: "Priest", -263: "Druid", -372: "Death Knight"}
+CLASS_NAMES = {1: "Warrior", 2: "Paladin", 3: "Hunter", 4: "Rogue", 5: "Priest", 6: "Death Knight", 7: "Shaman",
+               8: "Mage", 9: "Warlock", 11: "Druid"}  # ChrClasses ids (AllowableClasses bit = id - 1)
 ARMOR_CLOTH, ARMOR_LEATHER, ARMOR_MAIL, ARMOR_PLATE, ARMOR_SHIELD = 1, 2, 3, 4, 6
 
 # Stats (ItemModType)
@@ -126,13 +141,11 @@ RATING_BITS = {
 }
 
 SPELL_SLOTS = 5
-# item_weapon_dps_curve has Rare and Epic rows only (2026-11-09): a green weapon's budget cannot resolve, so its lock
-# line is kept but source/items/quest_rewards.py declares no item() for it until a Quality 2 curve exists.
-UNCOMMON_WEAPONS_WAIT = True
 SHARE_GREEN, SHARE_BLUE, SHARE_EPIC_PAIR, SHARE_EPIC_TRIO = 8000, 6000, 6000, 4000
 
 PRIMARY_SOLO = {STR: "Strength (Solo)", AGI: "Agility (Solo)", INT: "Intellect (Solo)"}
 DODGE_ANY = "Dodge (Solo, Any)"
+VERSATILITY_SOLO = "Versatility (Solo)"
 
 
 def _int(value, default: int = 0) -> int:
@@ -155,6 +168,7 @@ class Quest:
     level: int
     title: str
     kind: str  # "zone", "dungeon" or "class" (QuestSortID < 0 or AllowableClasses set)
+    scaled: bool = False  # a QuestLevel -1 class quest: `level` is its MinLevel
 
 
 def reward_map(quests: dict[int, dict]) -> dict[int, set[int]]:
@@ -168,11 +182,24 @@ def reward_map(quests: dict[int, dict]) -> dict[int, set[int]]:
     return out
 
 
+def is_class_quest(quest: dict, addon: dict | None) -> bool:
+    """A real class quest: `AllowableClasses` set, or a class `QuestSortID` (not a profession or holiday sort)."""
+    return bool(_int((addon or {}).get("AllowableClasses"))) or _int(quest.get("QuestSortID")) in CLASS_QUEST_SORTS
+
+
+def quest_level(quest: dict, addon: dict | None) -> tuple[int, bool]:
+    """(quest level, scaled): `QuestLevel`, or for a scaled (-1) class quest its `MinLevel` (round 5 default)."""
+    level = _int(quest.get("QuestLevel"))
+    if level == -1 and is_class_quest(quest, addon):
+        return _int(quest.get("MinLevel")), True
+    return level, False
+
+
 def quest_out_of_scope(quest: dict, addon: dict | None) -> str | None:
     """Why a quest is out of scope (None: in scope)."""
-    level = _int(quest.get("QuestLevel"))
+    level, scaled = quest_level(quest, addon)
     if not MIN_QUEST_LEVEL <= level <= MAX_QUEST_LEVEL:
-        return f"quest level {level}"
+        return f"scaled class quest, MinLevel {level}" if scaled else f"quest level {level}"
     if _int((addon or {}).get("SpecialFlags")) & QUEST_SPECIAL_REPEATABLE:
         return "repeatable"
     flags = _int(quest.get("Flags"))
@@ -207,6 +234,11 @@ class Scope:
     skipped: dict[int, str] = field(default_factory=dict)  # equippable quest rewards left out, entry -> why
 
 
+def _level_and(quest: dict, addon: dict | None) -> tuple[int, str, str, bool]:
+    level, scaled = quest_level(quest, addon)
+    return level, str(quest.get("LogTitle") or ""), quest_kind(quest, addon), scaled
+
+
 def scope(quests: dict[int, dict], addons: dict[int, dict], rows: dict[int, dict],
           owned: dict[int, str] | None = None) -> Scope:
     """Rule 1. `rows` are the current (replayed) item rows; `owned` is {entry: owner} of the entries another
@@ -221,6 +253,12 @@ def scope(quests: dict[int, dict], addons: dict[int, dict], rows: dict[int, dict
         if reasons:
             out.skipped[entry] = "also rewarded by an out-of-scope quest (" + ", ".join(reasons) + ")"
             continue
+        if _int(row.get("class")) == ITEM_CLASS_WEAPON and _int(row.get("subclass")) == WEAPON_FISHING_POLE:
+            out.skipped[entry] = "fishing pole (ruling 25)"
+            continue
+        if entry in STOCK_ENTRIES:
+            out.skipped[entry] = STOCK_ENTRIES[entry]
+            continue
         quality = _int(row.get("Quality"))
         if quality == POOR:
             out.skipped[entry] = "Poor (ruling 17)"
@@ -232,8 +270,7 @@ def scope(quests: dict[int, dict], addons: dict[int, dict], rows: dict[int, dict
             out.skipped[entry] = f"owned by {owned[entry]}"
             continue
         out.items[entry] = sorted(
-            (Quest(q, _int(quests[q].get("QuestLevel")), str(quests[q].get("LogTitle") or ""),
-                   quest_kind(quests[q], addons.get(q))) for q in qids),
+            (Quest(q, *_level_and(quests[q], addons.get(q))) for q in qids),
             key=lambda quest: (quest.level, quest.id),
         )
     return out
@@ -430,13 +467,20 @@ def nearest_primary(stats: dict[int, int], catalog: Catalog, keep_role: bool = T
 
 
 def type_main_stat(row: dict) -> tuple[int | None, str]:
-    """Ruling 18: (main stat, how) by item type; None with "no main stat" for cloaks, rings and necks, and None with
-    "uncovered ..." for a type the ruling does not name. Alternating = even entry the first stat, odd the second."""
+    """Rulings 18, 22 and 25: (main stat, how) by item type; None for cloaks, rings, necks, relics and trinkets (all
+    secondary), and None with "uncovered ..." for a type no ruling names. Alternating = even entry the first stat, odd
+    the second. `how` names the ruling when one covers every quality (`ruled_type()`)."""
     entry, item_class = _int(row.get("entry")), _int(row.get("class"))
     subclass, inv_type = _int(row.get("subclass")), _int(row.get("InventoryType"))
     even = entry % 2 == 0
+    if inv_type == INV_RELIC:
+        return None, "relic, ruling 25"
     if inv_type in NO_MAIN_STAT_INV_TYPES:
         return None, "cloak, ring or neck"
+    if inv_type == INV_HOLDABLE:
+        return INT, "held in off-hand, ruling 25"
+    if inv_type == INV_TRINKET:
+        return None, "trinket, ruling 22"
     if item_class == ITEM_CLASS_ARMOR:
         if subclass == ARMOR_CLOTH:
             return INT, "cloth"
@@ -462,6 +506,11 @@ def type_main_stat(row: dict) -> tuple[int | None, str]:
             return (STR, "one-handed sword, even entry") if even else (AGI, "one-handed sword, odd entry")
         return None, f"uncovered weapon {subclass}"
     return None, f"uncovered class {item_class}"
+
+
+def ruled_type(how: str) -> bool:
+    """True when `type_main_stat()`'s answer is ruled for every quality (rulings 22 and 25), not only for whites."""
+    return ", ruling " in how
 
 
 @dataclass
@@ -494,6 +543,12 @@ class Decision:
 
 def _shape_ids(catalog: Catalog, pred) -> list[int]:
     return [s["shape_id"] for s in catalog.secondaries() if pred(s)]
+
+
+def generic_pairs(catalog: Catalog) -> set[int]:
+    """The generic two-stat secondary shapes (no rules, both stats generic): the blue pool."""
+    return set(_shape_ids(catalog, lambda s: not s["rules"] and len(s["stats"]) == 2
+                          and set(s["stats"]) <= GENERIC_SECONDARY_STATS))
 
 
 def _pick(pool: list[int], entry: int) -> int:
@@ -541,12 +596,13 @@ def decide(entry: int, quests: list[Quest], row: dict, base_row: dict, spells: d
     inv_type = _int(row.get("InventoryType"))
     if inv_type in NO_MAIN_STAT_INV_TYPES:
         primary = 0
-        d.paths.append("no primary (jewelry/cloak)")
+        d.paths.append("no primary (relic)" if inv_type == INV_RELIC else "no primary (jewelry/cloak)")
     elif stock_quality == COMMON:
         stat, how = type_main_stat(row)
         if stat is None:
             primary = 0
-            d.fallbacks.append(f"white, {how}: Null primary")
+            (d.paths.append(f"no primary ({how})") if ruled_type(how)
+             else d.fallbacks.append(f"white, {how}: Null primary"))
         else:
             primary = catalog.by_name(PRIMARY_SOLO[stat])
             d.paths.append(f"type {STAT_NAMES[stat]} ({how})")
@@ -556,14 +612,18 @@ def decide(entry: int, quests: list[Quest], row: dict, base_row: dict, spells: d
             primary = nearest
         else:
             stat, how = type_main_stat(row)
-            if stat not in (None, STR, AGI) and tank_stat(stock, row)[0] is not None:
+            if (stat not in (None, STR, AGI) and inv_type != INV_HOLDABLE
+                    and tank_stat(stock, row)[0] is not None):
                 stat, how = AGI, f"{how}, a tank item: Agi"  # a tank stat needs a Strength or Agility primary
+            ruled = ruled_type(how)
             if stat is None:
                 primary = 0
-                d.fallbacks.append(f"no stock primary, {how}: Null primary")
+                (d.paths.append(f"no primary ({how})") if ruled
+                 else d.fallbacks.append(f"no stock primary, {how}: Null primary"))
             else:
                 primary = catalog.by_name(PRIMARY_SOLO[stat])
-                d.fallbacks.append(f"no stock primary: type {STAT_NAMES[stat]} ({how})")
+                (d.paths.append(f"type {STAT_NAMES[stat]} ({how})") if ruled
+                 else d.fallbacks.append(f"no stock primary: type {STAT_NAMES[stat]} ({how})"))
     d.primary = primary
     primary_stats = set(catalog.stats(primary))
 
@@ -588,13 +648,15 @@ def decide(entry: int, quests: list[Quest], row: dict, base_row: dict, spells: d
                               and set(s["stats"][1:]) <= GENERIC_SECONDARY_STATS and rules_ok(s, primary_stats))
         if pool:
             secondary = _pick(pool, entry)
+            d.paths.append(f"tank {STAT_NAMES[catalog.stats(secondary)[0]]}")
         else:
-            secondary = catalog.by_name(DODGE_ANY)
-            if wanted != DODGE:
-                d.fallbacks.append(f"no {STAT_NAMES[wanted]} shape fits: Dodge")
-            d.fallbacks.append(f"Dodge needs Str/Agi: {DODGE_ANY}"
-                               + ("" if quality == UNCOMMON else ", one stat not two"))
-        d.paths.append(f"tank {STAT_NAMES[catalog.stats(secondary)[0]]}")
+            # Ruling 24: no Dodge shape fits (no Strength or Agility primary): drop the tank stat for Versatility.
+            if quality == UNCOMMON:
+                secondary = catalog.by_name(VERSATILITY_SOLO)
+            else:
+                secondary = _pick(_shape_ids(catalog, lambda s: s["shape_id"] in generic_pairs(catalog)
+                                             and VERSATILITY in s["stats"]), entry)
+            d.paths.append(f"tank {STAT_NAMES[wanted]} dropped, no Str/Agi (ruling 24): Vers")
         if stock.get(MP5, 0) > 0:
             d.fallbacks.append("MP5 lost to the tank stat")
     elif stock.get(MP5, 0) > 0:
@@ -742,11 +804,6 @@ class LockLine:
         return tuple(int(s) for s in self.spells.split(","))
 
 
-def waits_for_weapon_curve(line: LockLine, row: dict) -> bool:
-    """True when the declaration must skip `line` for now: a green weapon while `UNCOMMON_WEAPONS_WAIT`."""
-    return UNCOMMON_WEAPONS_WAIT and _int(row.get("class")) == ITEM_CLASS_WEAPON and line.quality == UNCOMMON
-
-
 def parse_lock(text: str, where: str = "quest_rewards.lock") -> dict[int, LockLine]:
     """{entry: LockLine}; raises LockError on a malformed or repeated line."""
     out: dict[int, LockLine] = {}
@@ -831,6 +888,48 @@ def load_inputs() -> Inputs:
     spells = {r["ID"]: r for r in dbcfile.read_dbc(spell_path, dbcfmt.SPELL)}
     tables, shape_catalog = item_variants.load_itemization_tables()
     return Inputs(quests, addons, rows, base_rows, spells, Catalog.from_tables(shape_catalog, tables), tables)
+
+
+@dataclass
+class Materialized:
+    rows: dict[int, dict]  # entry -> the emitted item_template row (new stats, item level, damage, armor)
+    itemization: dict[int, dict]  # entry -> its item_itemization row
+    errors: list[str]  # expansion and emit errors about a quest reward (qr_) item
+    labels: dict  # tooltip labels the emit would add (ruling 20: none)
+
+
+def materialize(lock: dict[int, LockLine], rows: dict[int, dict], tables: dict, shape_catalog: dict) -> Materialized:
+    """Expand and emit every lock line as source/items/quest_rewards.py declares it (without the registry): the rows a
+    write run would produce, for the real-data test and the designer review lists (quest_rewards_review.py). `rows`
+    are the current item rows (`item_lib.overlay.resolve_current_rows()`)."""
+    from . import item_emit, item_variants, spell_tables  # noqa: PLC0415
+    from .dsl import items as D  # noqa: PLC0415
+
+    ladder = D.ladder("quest_reward", normal=D.tier(step=0, label=None))
+    decls = []
+    for line in lock.values():
+        row = rows[line.entry]
+        extra: dict = {"keep_spells": True} if line.kept_slots is None else {}
+        if line.kept_slots:
+            extra["spells"] = tuple(D.ItemSpell(_int(row[f"spellid_{n}"]), _int(row[f"spelltrigger_{n}"]))
+                                    for n in line.kept_slots)
+        decls.append({"id": line.key, "_decl": D.item(
+            line.key, base=line.entry, ladder=ladder, ilvl=line.ilvl, quality=line.quality, required_level=0,
+            primary=line.primary or None, secondary=line.secondary, primary_share=line.share, unique_equip=False,
+            **extra)})
+    exp = item_variants.expand(
+        decls, ids_cfg={"item": {"start": 70000, "end": 79999}, "item_minted": {"start": 71000, "end": 79999}},
+        live_rows=rows, columns=tuple(spell_tables.ITEM_TEMPLATE_COLUMNS),
+        tables_loader=lambda: (tables, shape_catalog), lock=item_variants.item_ids.Lock(text=""),
+        labels_loader=dict, cells_lock_text=item_variants.CELLS_LOCK_PATH.read_text(encoding="utf-8"),
+    )
+    # Only these items are declared, so errors about other source/items lock lines are not this caller's business.
+    errors = [e for e in exp.errors if KEY_PREFIX in e]
+    exp.errors = []
+    em = item_emit.build(exp)
+    return Materialized({t.row["entry"]: t.row for t in em.tiers},
+                        {t.row["entry"]: {"entry": t.row["entry"], **t.tier.itemization} for t in em.tiers},
+                        errors + list(em.errors), em.labels)
 
 
 def run(inputs: Inputs, owned: dict[int, str] | None = None) -> tuple[Scope, list[Decision]]:

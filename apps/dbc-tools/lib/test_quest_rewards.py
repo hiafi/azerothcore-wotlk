@@ -1,16 +1,20 @@
 """
-Quest reward itemization QR0/QR1 (docs/plans/quest-reward-itemization/): the rules of lib/quest_rewards.py over
+Quest reward itemization QR0/QR1/QR1b (docs/plans/quest-reward-itemization/): the rules of lib/quest_rewards.py over
 hand-built tables, the lock, and the `label=None` tier of the item DSL.
 
-Covered: scope (zone, dungeon and class quests; repeatable, daily, weekly, raid, PvP and out-of-range quests; an item
-an out-of-scope quest also rewards; shirts, tabards and non-equippable items; Legendary and Poor skipped; an entry
-owned by another declaration skipped with its owner); the quest level of a multi-quest item (the lowest); every
+Covered: scope (zone, dungeon and class quests; repeatable, daily, weekly, raid, PvP and out-of-range quests; scaled
+(-1) class quests at their MinLevel, other scaled quests and scaled class quests above 60 out; an item an
+out-of-scope quest also rewards; shirts, tabards and non-equippable items; fishing poles and Torch of Retribution
+stay stock; Legendary and Poor skipped; an entry owned by another declaration skipped with its owner); the quest
+level of a multi-quest item (the lowest); every
 quality path (white to green, green, blue, epic) with the caps and never-lower; the stock stat read (base dump
 columns plus Equip spells through the classifier, never the live row); the white main stat of ruling 18 (each type,
-alternating by entry, no main stat on cloaks, rings and necks); the nearest primary shape; the generic secondary
+alternating by entry, no main stat on cloaks, rings and necks), held-in-off-hand items Intellect, relics and
+primary-less trinkets Null (rulings 22, 25); the nearest primary shape; the generic secondary
 pools (green one stat, blue two, epic two or three) and the shares of ruling 19; each tank stat and the Defense
 conversion (shield Block, plate Parry, else Dodge; Parry and Block fall back to Dodge without a Strength primary;
-Dodge (Solo, Any) without Strength or Agility); MP5 on blues and its Spirit fallback, MP5 dropped on greens and epics;
+without Strength or Agility the tank stat is dropped for Versatility, ruling 24); MP5 on blues and its Spirit
+fallback, MP5 dropped on greens and epics;
 absorbed and kept spell slots; owned_elsewhere() over a temporary source tree; the lock (parse, render, append-only
 seed that keeps hand edits); `tier(label=None)` (no label row) and int shape ids in item().
 
@@ -59,7 +63,11 @@ _SHAPES = [
     (72, 1, "CDH (Solo)", [CDH], [10000], []),
     (73, 1, "Proc (Solo)", [PROC], [10000], []),
     (29, 1, "Crit/Haste", [CRIT, HASTE], [5000, 5000], []),
+    (32, 1, "Crit/Versatility", [CRIT, VERS], [5000, 5000], []),
+    (35, 1, "Haste/Versatility", [HASTE, VERS], [5000, 5000], []),
     (36, 1, "Mastery/Versatility", [MASTERY, VERS], [5000, 5000], []),
+    (67, 1, "Mastery/Versatility, Mastery lead", [MASTERY, VERS], [6667, 3333], []),
+    (74, 1, "CDH/Versatility", [CDH, VERS], [5000, 5000], []),
     (42, 1, "Crit/Haste/Mastery", [CRIT, HASTE, MASTERY], [3334, 3333, 3333], []),
     (48, 1, "MP5/Crit", [MP5, CRIT], [5000, 5000], [(2, SPI)]),
     (49, 1, "MP5/Haste", [MP5, HASTE], [5000, 5000], [(2, SPI)]),
@@ -76,8 +84,9 @@ _SHAPES = [
 ]
 COSTS = {STR: 1.0, AGI: 1.0, INT: 1.0, SPI: 1.0, AP: 0.5, SP: 0.855}
 GREEN_POOL = [25, 26, 27, 28, 72, 73]
-BLUE_POOL = [29, 36]
-EPIC_POOL = [29, 36, 42]
+BLUE_POOL = [29, 32, 35, 36, 67, 74]
+EPIC_POOL = [29, 32, 35, 36, 42, 67, 74]
+VERS_PAIRS = [32, 35, 36, 67, 74]
 
 
 def catalog() -> qr.Catalog:
@@ -133,9 +142,9 @@ SPELLS = {
 }
 
 
-def quest(qid, level, title=None, sort=12, info=0, flags=0, **cols) -> dict:
+def quest(qid, level, title=None, sort=12, info=0, flags=0, min_level=0, **cols) -> dict:
     row = {"ID": qid, "QuestLevel": level, "LogTitle": title or f"Quest {qid}", "QuestSortID": sort,
-           "QuestInfoID": info, "Flags": flags}
+           "QuestInfoID": info, "Flags": flags, "MinLevel": min_level}
     for c in qr.REWARD_COLUMNS:
         row[c] = 0
     row.update(cols)
@@ -148,7 +157,9 @@ def decide(row, base=None, quest_level=10, spells=SPELLS):
 
 class ScopeTest(unittest.TestCase):
     def setUp(self):
-        self.rows = {e: item_row(e) for e in range(100, 120)}
+        self.rows = {e: item_row(e) for e in range(100, 126)}
+        self.rows[121] = item_row(121, quality=1, cls=2, subclass=20, inv=17)  # a fishing pole
+        self.rows[10515] = item_row(10515, quality=1, cls=4, subclass=0, inv=17)  # Torch of Retribution
         self.rows[110] = item_row(110, inv=4)  # shirt
         self.rows[111] = item_row(111, inv=19)  # tabard
         self.rows[112] = item_row(112, cls=12, inv=0)  # a quest item
@@ -172,18 +183,27 @@ class ScopeTest(unittest.TestCase):
             14: quest(14, 15, RewardItem1=117),
             15: quest(15, 15, RewardItem1=101, flags=qr.QUEST_FLAGS_DAILY),  # 101 is also a daily reward
             16: quest(16, 30, RewardItem1=118),
+            17: quest(17, -1, sort=-263, min_level=16, RewardItem1=119),  # scaled druid quest: MinLevel 16
+            18: quest(18, -1, sort=12, min_level=20, RewardItem1=120),  # scaled, class by AllowableClasses
+            19: quest(19, -1, sort=-263, min_level=70, RewardItem1=122),  # scaled class quest above 60
+            20: quest(20, -1, sort=-101, min_level=10, RewardItem1=123),  # scaled fishing quest: not a class quest
+            21: quest(21, 10, RewardItem1=121, RewardItem2=10515),
+            22: quest(22, 8, RewardItem1=124),  # 124 also from scaled quest 23 at MinLevel 5: the lowest
+            23: quest(23, -1, sort=-61, min_level=5, RewardItem1=124),
         }
-        self.addons = {4: {"AllowableClasses": 1}, 5: {"SpecialFlags": 1}}
+        self.addons = {4: {"AllowableClasses": 1}, 5: {"SpecialFlags": 1}, 18: {"AllowableClasses": 2}}
 
     def test_scope_and_kinds(self):
         s = qr.scope(self.quests, self.addons, self.rows, owned={118: "source/items/deadmines.py"})
-        self.assertEqual(sorted(s.items), [100, 102, 103, 104, 117])
+        self.assertEqual(sorted(s.items), [100, 102, 103, 104, 117, 119, 120, 124])
         self.assertEqual(s.items[102][0].kind, "dungeon")
         self.assertEqual(s.items[103][0].kind, "class")
         self.assertEqual(s.items[104][0].kind, "class")
         self.assertEqual(s.items[117][0].kind, "zone")
         for entry, word in ((105, "repeatable"), (106, "daily"), (107, "weekly"), (108, "raid"), (109, "PvP"),
-                            (115, "quest level 70"), (116, "quest level -1"), (101, "daily")):
+                            (115, "quest level 70"), (116, "quest level -1"), (101, "daily"),
+                            (122, "scaled class quest, MinLevel 70"), (123, "quest level -1"),
+                            (121, "fishing pole (ruling 25)"), (10515, "Torch of Retribution (ruling 25)")):
             self.assertIn(word, s.skipped[entry], entry)
         self.assertIn("ruling 16", s.skipped[113])
         self.assertIn("ruling 17", s.skipped[114])
@@ -191,6 +211,15 @@ class ScopeTest(unittest.TestCase):
         for entry in (110, 111, 112):  # not equippable rewards: neither in scope nor listed
             self.assertNotIn(entry, s.items)
             self.assertNotIn(entry, s.skipped)
+
+    def test_scaled_class_quests_count_at_their_min_level(self):
+        s = qr.scope(self.quests, self.addons, self.rows)
+        self.assertEqual([(q.level, q.kind, q.scaled) for q in s.items[119]], [(16, "class", True)])
+        self.assertEqual([(q.level, q.scaled) for q in s.items[120]], [(20, True)])
+        self.assertEqual([(q.id, q.level) for q in s.items[124]], [(23, 5), (22, 8)])
+        self.assertTrue(qr.is_class_quest(self.quests[17], None))
+        self.assertFalse(qr.is_class_quest(self.quests[20], None))
+        self.assertEqual(qr.quest_level(self.quests[20], None), (-1, False))
 
     def test_multi_quest_item_takes_the_lowest_quest_level(self):
         s = qr.scope(self.quests, self.addons, self.rows)
@@ -316,9 +345,26 @@ class PrimaryTest(unittest.TestCase):
         d = decide(with_stats(item_row(9625, quality=3, ilvl=37, subclass=3, inv=7), (DEF, 7)), quest_level=35)
         self.assertEqual(catalog().shapes[d.primary]["name"], "Agility (Solo)")
         self.assertEqual(catalog().stats(d.secondary)[0], DODGE)
-        d = decide(with_stats(item_row(7, quality=2, subclass=0, inv=12), (STA, 5)))  # a trinket
-        self.assertEqual((d.primary, d.share), (0, 0))
-        self.assertTrue(any("uncovered" in f for f in d.fallbacks))
+        d = decide(with_stats(item_row(7, quality=2, subclass=0, inv=12), (STA, 5)))  # a trinket: ruling 22
+        self.assertEqual((d.primary, d.share, d.fallbacks), (0, 0, []))
+        self.assertIn("no primary (trinket, ruling 22)", d.paths)
+        d = decide(with_stats(item_row(8, quality=3, ilvl=30, subclass=0, inv=12), (AGI, 5)))  # a trinket with Agi
+        self.assertEqual(catalog().shapes[d.primary]["name"], "Agility (Solo)")
+
+    def test_held_in_off_hand_and_relics(self):
+        cat = catalog()
+        for quality in (1, 2, 3):  # ruling 25: Intellect, white or not, when there is no stock main stat
+            d = decide(item_row(9, quality=quality, ilvl=20, subclass=0, inv=23), quest_level=18)
+            self.assertEqual(cat.shapes[d.primary]["name"], "Intellect (Solo)", quality)
+            self.assertEqual(d.fallbacks, [])
+            self.assertIn("type Int (held in off-hand, ruling 25)", d.paths)
+        d = decide(with_stats(item_row(9, quality=3, ilvl=20, subclass=0, inv=23), (SPI, 7)))
+        self.assertEqual(cat.shapes[d.primary]["name"], "Spirit (Solo)")  # a stock main stat: the nearest shape
+        for quality in (1, 2, 3, 4):  # relics: Null, all secondary, even with a stock main stat
+            d = decide(with_stats(item_row(10, quality=quality, ilvl=62, subclass=8, inv=28), (STR, 5)),
+                       quest_level=60)
+            self.assertEqual((d.primary, d.share, d.fallbacks), (0, 0, []), quality)
+            self.assertIn("no primary (relic)", d.paths)
 
 
 class SecondaryTest(unittest.TestCase):
@@ -328,10 +374,10 @@ class SecondaryTest(unittest.TestCase):
             self.assertEqual(green.secondary, GREEN_POOL[entry % 6])
             self.assertEqual(green.share, 8000)
             blue = decide(with_stats(item_row(entry, quality=3, ilvl=20), (STR, 5)))
-            self.assertEqual(blue.secondary, BLUE_POOL[entry % 2])
+            self.assertEqual(blue.secondary, BLUE_POOL[entry % len(BLUE_POOL)])
             self.assertEqual(blue.share, 6000)
             epic = decide(with_stats(item_row(entry, quality=4, ilvl=62), (STR, 5)), quest_level=60)
-            self.assertEqual(epic.secondary, EPIC_POOL[entry % 3])
+            self.assertEqual(epic.secondary, EPIC_POOL[entry % len(EPIC_POOL)])
             self.assertEqual(epic.share, 4000 if epic.secondary == 42 else 6000)
             self.assertEqual(epic.ilvl, 62)
 
@@ -359,16 +405,40 @@ class SecondaryTest(unittest.TestCase):
 
     def test_parry_and_block_need_strength(self):
         cat = catalog()
-        d = decide(with_stats(item_row(52, quality=3, ilvl=30, subclass=4, inv=10), (INT, 6), (DEF, 5)))
-        self.assertEqual(d.primary, 24)
-        self.assertEqual(cat.shapes[d.secondary]["name"], "Dodge (Solo, Any)")  # Dodge pairs need Str or Agi
-        self.assertTrue(any("Parry needs Str" in f for f in d.fallbacks))
-        self.assertTrue(any("one stat not two" in f for f in d.fallbacks))
         d = decide(with_stats(item_row(53, quality=3, ilvl=30, subclass=6, inv=14), (AGI, 6), (DEF, 5)))
         self.assertEqual(cat.stats(d.secondary)[0], DODGE)  # a shield with an Agility primary: Dodge pair
         self.assertEqual(len(cat.stats(d.secondary)), 2)
-        d = decide(with_stats(item_row(54, quality=2, ilvl=30, inv=16), (DEF, 5)))  # a cloak, Null primary
-        self.assertEqual(cat.shapes[d.secondary]["name"], "Dodge (Solo, Any)")
+        d = decide(with_stats(item_row(55, quality=4, ilvl=62, subclass=2, inv=5), (AGI, 6), (PARRY, 5)),
+                   quest_level=60)
+        self.assertEqual(cat.stats(d.secondary)[0], DODGE)  # Parry without Str, but Agility: a Dodge pair
+        self.assertTrue(any("Parry needs Str" in f for f in d.fallbacks))
+
+    def test_no_dodge_shape_drops_the_tank_stat_for_versatility(self):
+        cat = catalog()
+        # Ruling 24: an Intellect item, a ring, a trinket, a cloak cannot take a Dodge shape.
+        d = decide(with_stats(item_row(52, quality=3, ilvl=30, subclass=4, inv=10), (INT, 6), (DEF, 5)))
+        self.assertEqual(d.primary, 24)
+        self.assertEqual(d.secondary, VERS_PAIRS[52 % len(VERS_PAIRS)])
+        self.assertIn(VERS, cat.stats(d.secondary))
+        self.assertTrue(any("Parry needs Str" in f for f in d.fallbacks))  # plate Defense -> Parry -> Dodge -> Vers
+        self.assertIn("tank Dodge dropped, no Str/Agi (ruling 24): Vers", d.paths)
+        for entry, inv, quality in ((60, 11, 4), (61, 12, 4), (62, 2, 3), (63, 11, 3), (64, 16, 4)):
+            d = decide(with_stats(item_row(entry, quality=quality, ilvl=62, subclass=0, inv=inv), (DODGE, 9)),
+                       quest_level=60)
+            self.assertEqual(d.secondary, VERS_PAIRS[entry % len(VERS_PAIRS)], (entry, inv))
+            self.assertEqual((d.primary, d.share), (0, 0))
+            self.assertFalse(set(cat.stats(d.secondary)) & {DODGE, PARRY, BLOCK, DEF})
+        d = decide(with_stats(item_row(54, quality=2, ilvl=30, inv=16), (DEF, 5)))  # a green cloak: Vers alone
+        self.assertEqual(cat.shapes[d.secondary]["name"], "Versatility (Solo)")
+        d = decide(with_stats(item_row(56, quality=2, ilvl=30, subclass=0, inv=12), (PARRY, 5)))  # a green trinket
+        self.assertEqual(cat.shapes[d.secondary]["name"], "Versatility (Solo)")
+        for d in (decide(with_stats(item_row(n, quality=q, ilvl=62, inv=11), (DODGE, 9)), quest_level=60)
+                  for n in range(70, 80) for q in (2, 3, 4)):
+            self.assertNotEqual(cat.shapes[d.secondary]["name"], "Dodge (Solo, Any)")
+        # An item that can take a Dodge pair keeps it (9625: no stock primary, odd mail: Agility + Dodge pair).
+        d = decide(with_stats(item_row(9625, quality=3, ilvl=37, subclass=3, inv=7), (DEF, 7)), quest_level=35)
+        self.assertEqual(catalog().shapes[d.primary]["name"], "Agility (Solo)")
+        self.assertEqual(cat.stats(d.secondary)[0], DODGE)
 
     def test_mp5(self):
         cat = catalog()
@@ -387,14 +457,6 @@ class SecondaryTest(unittest.TestCase):
             d = decide(row, quest_level=60)
             self.assertNotIn(MP5, cat.stats(d.secondary))
             self.assertTrue(any("blues only" in f for f in d.fallbacks))
-
-
-class WeaponCurveGateTest(unittest.TestCase):
-    def test_green_weapons_wait_for_a_curve(self):
-        line = qr.LockLine(1, 10, 2, 15, 22, 25, 8000, "-")
-        self.assertTrue(qr.waits_for_weapon_curve(line, {"class": 2}))
-        self.assertFalse(qr.waits_for_weapon_curve(line, {"class": 4}))
-        self.assertFalse(qr.waits_for_weapon_curve(qr.LockLine(1, 10, 3, 15, 22, 29, 6000, "-"), {"class": 2}))
 
 
 class OwnedElsewhereTest(unittest.TestCase):
@@ -493,8 +555,7 @@ class RealDataTest(unittest.TestCase):
     tables and rows)."""
 
     def test_real_lock_expands_and_stats_equal_compute_breakdown(self):
-        from lib import item_emit, item_variants, spell_tables  # noqa: PLC0415
-        from lib.dsl import registry  # noqa: PLC0415
+        from lib import item_variants  # noqa: PLC0415
 
         item_variants._item_lib()
         from item_lib import budget, overlay  # noqa: PLC0415
@@ -502,47 +563,22 @@ class RealDataTest(unittest.TestCase):
         rows = overlay.resolve_current_rows(cache=True)
         tables, shape_catalog = item_variants.load_itemization_tables()
         lock = qr.parse_lock(qr.LOCK_PATH.read_text(encoding="utf-8"))
-        ladder = D.ladder("quest_reward", normal=D.tier(step=0, label=None))
-        decls = []
-        waiting = [line for line in lock.values() if qr.waits_for_weapon_curve(line, rows[line.entry])]
-        self.assertTrue(all(rows[line.entry]["class"] == 2 and line.quality == 2 for line in waiting))
-        lock = {e: line for e, line in lock.items() if line not in waiting}
-        for line in lock.values():
-            extra = {"keep_spells": True} if line.kept_slots is None else {}
-            if line.kept_slots:
-                row = rows[line.entry]
-                extra["spells"] = tuple(D.ItemSpell(int(row[f"spellid_{n}"]), int(row[f"spelltrigger_{n}"]))
-                                        for n in line.kept_slots)
-            decls.append({"id": line.key, "_decl": D.item(
-                line.key, base=line.entry, ladder=ladder, ilvl=line.ilvl, quality=line.quality, required_level=0,
-                primary=line.primary or None, secondary=line.secondary, primary_share=line.share,
-                unique_equip=False, **extra)})
-        del registry
-        exp = item_variants.expand(
-            decls, ids_cfg={"item": {"start": 70000, "end": 79999}, "item_minted": {"start": 71000, "end": 79999}},
-            live_rows=rows, columns=tuple(spell_tables.ITEM_TEMPLATE_COLUMNS),
-            tables_loader=lambda: (tables, shape_catalog), lock=item_variants.item_ids.Lock(text=""),
-            labels_loader=dict, cells_lock_text=item_variants.CELLS_LOCK_PATH.read_text(encoding="utf-8"),
-        )
-        # Only this file's items are declared here, so the other source/items lock lines (and their live rows in the
-        # minted block) are not this test's business: every error about a qr_ item is.
-        mine = [e for e in exp.errors if "qr_" in e]
-        self.assertEqual(mine, [], "\n".join(mine))
-        exp.errors = []
-        em = item_emit.build(exp)
-        self.assertEqual(em.errors, [])
-        self.assertEqual(em.labels, {})  # ruling 20: no tooltip line
-        self.assertEqual(len(em.tiers), len(lock))
-        for tier_rows in em.tiers:
-            row = tier_rows.row
-            b = budget.compute_breakdown(row, {"entry": row["entry"], **tier_rows.tier.itemization}, tables,
-                                         shape_catalog)
+        # Ruling 21: green weapons resolve against the Quality 2 rows of item_weapon_dps_curve (pending SQL).
+        self.assertTrue(any(key[1] == 2 for key in tables["item_weapon_dps_curve"]))
+        self.assertTrue(any(rows[e]["class"] == 2 and line.quality == 2 for e, line in lock.items()))
+        mat = qr.materialize(lock, rows, tables, shape_catalog)
+        self.assertEqual(mat.errors, [], "\n".join(mat.errors))
+        self.assertEqual(mat.labels, {})  # ruling 20: no tooltip line
+        self.assertEqual(sorted(mat.rows), sorted(lock))
+        for entry, row in mat.rows.items():
+            b = budget.compute_breakdown(row, mat.itemization[entry], tables, shape_catalog)
             want = [(a["stat_type"], a["rounded"]) for a in b["allocations"]] + [(STA, b["final_stamina"])]
             got = [(row[f"stat_type{n}"], row[f"stat_value{n}"]) for n in range(1, 11) if row[f"stat_type{n}"]]
-            self.assertEqual(got, [w for w in want if w[1]], row["entry"])
+            self.assertEqual(got, [w for w in want if w[1]], entry)
             self.assertEqual((row["ItemLevel"], row["Quality"], row["RequiredLevel"]),
-                             (lock[row["entry"]].ilvl, lock[row["entry"]].quality, 0))
-
+                             (lock[entry].ilvl, lock[entry].quality, 0))
+            if row["class"] == 2:  # every weapon resolves a curve DPS (none left at zero damage)
+                self.assertGreater(b["final_dps"], 0, entry)
 
 if __name__ == "__main__":
     unittest.main()
