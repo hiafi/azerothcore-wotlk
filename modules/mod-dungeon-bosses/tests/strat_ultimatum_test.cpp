@@ -33,7 +33,7 @@ namespace
             CHECK(kSpellSlice.Contains(id));
             CHECK(!StratBaron::kSpellSlice.Contains(id));
         }
-        CHECK_EQ(uint32_t(SPELL_HM_RISEN_LOOK - SPELL_HM_EXECUTION + 1), uint32_t(15));
+        CHECK((uint32_t(SPELL_HM_RISEN_LOOK - SPELL_HM_EXECUTION + 1)) == (uint32_t(15)));
         // Handoff 11 #1: the boss's Condemned is its own id, never the W1 item's 205669.
         CHECK(SPELL_HM_CONDEMNED != 205669u);
         CHECK(SPELL_HM_CONDEMNED_DOT != 205669u);
@@ -47,23 +47,23 @@ namespace
         CHECK(uint32_t(CAST_DEATHCHARGER) > uint32_t(StratBaron::CAST_SHADOW_BOLT));
         CHECK(kCastPriority > 0);       // above the Shadow Bolt filler
         // The entries.
-        CHECK_EQ(uint32_t(NPC_ST_YSIDA_RISEN), uint32_t(300589));
-        CHECK_EQ(uint32_t(NPC_YSIDA), uint32_t(16031));
+        CHECK((uint32_t(NPC_ST_YSIDA_RISEN)) == (uint32_t(300589)));
+        CHECK((uint32_t(NPC_YSIDA)) == (uint32_t(16031)));
     }
 
     void Tuning()
     {
         // ST: 500k, executions 15 s / 25 s with a 3 s cast, lanes 22 s / 30 s with a 3 s marker, the 45 s rot.
-        CHECK_EQ(kHardModeHealth, uint32_t(500000));
-        CHECK_EQ(kExecutionFirstMs, uint32_t(15000));
-        CHECK_EQ(kExecutionEveryMs, uint32_t(25000));
-        CHECK_EQ(kExecutionCastMs, uint32_t(3000));
-        CHECK_EQ(kChargeFirstMs, uint32_t(22000));
-        CHECK_EQ(kChargeEveryMs, uint32_t(30000));
-        CHECK_EQ(kLaneWarnMs, uint32_t(3000));
-        CHECK_EQ(kRotLifeMs, uint32_t(45000));
-        CHECK_EQ(kTrailLifeMs, uint32_t(20000));
-        CHECK_EQ(kRisenHealth, uint32_t(40000));
+        CHECK((kHardModeHealth) == (uint32_t(500000)));
+        CHECK((kExecutionFirstMs) == (uint32_t(15000)));
+        CHECK((kExecutionEveryMs) == (uint32_t(25000)));
+        CHECK((kExecutionCastMs) == (uint32_t(3000)));
+        CHECK((kChargeFirstMs) == (uint32_t(22000)));
+        CHECK((kChargeEveryMs) == (uint32_t(30000)));
+        CHECK((kLaneWarnMs) == (uint32_t(3000)));
+        CHECK((kRotLifeMs) == (uint32_t(45000)));
+        CHECK((kTrailLifeMs) == (uint32_t(20000)));
+        CHECK((kRisenHealth) == (uint32_t(40000)));
         CHECK(Near(kLaneWidth, 6.f));
         CHECK(Near(kExecutionLineWidth, 2.f));
         CHECK(Near(kPriceOfDefiancePct, 200.f));
@@ -71,13 +71,13 @@ namespace
         uint32_t executions = 0;
         for (uint32_t t = kExecutionFirstMs; t <= 210000; t += kExecutionEveryMs)
             ++executions;
-        CHECK_EQ(executions, uint32_t(8));
+        CHECK((executions) == (uint32_t(8)));
         // The rot heal: 1% of 500k a second is 5,000 (about 2 s of the fight's DPS on him, ST tuning note).
-        CHECK_EQ(RotHealAmount(kHardModeHealth, kRotHealBossPct), uint32_t(5000));
-        CHECK_EQ(RotHealAmount(7500, kRotHealServantPct), uint32_t(375));
-        CHECK_EQ(RotHealAmount(kRisenHealth, kRotHealServantPct), uint32_t(2000));
-        CHECK_EQ(RotHealAmount(10, 1.f), uint32_t(1));
-        CHECK_EQ(RotHealAmount(0, 5.f), uint32_t(0));
+        CHECK((RotHealAmount(kHardModeHealth, kRotHealBossPct)) == (uint32_t(5000)));
+        CHECK((RotHealAmount(7500, kRotHealServantPct)) == (uint32_t(375)));
+        CHECK((RotHealAmount(kRisenHealth, kRotHealServantPct)) == (uint32_t(2000)));
+        CHECK((RotHealAmount(10, 1.f)) == (uint32_t(1)));
+        CHECK((RotHealAmount(0, 5.f)) == (uint32_t(0)));
     }
 
     void Execution()
@@ -94,7 +94,7 @@ namespace
         std::vector<Vec2> players{ { 6.f, 0.5f }, { 3.f, -0.9f }, { 8.f, 2.f }, { -1.f, 0.f } };
         auto first = FirstOnLine(baron, ysida, kExecutionLineWidth, players);
         CHECK(first.has_value());
-        CHECK_EQ(*first, std::size_t(1));       // the nearest on the line takes it
+        CHECK((*first) == (std::size_t(1)));       // the nearest on the line takes it
         // Off the side (1.1 yd), behind him, past her: nobody.
         std::vector<Vec2> off{ { 5.f, 1.1f }, { -0.5f, 0.f }, { 10.5f, 0.f } };
         CHECK(!FirstOnLine(baron, ysida, kExecutionLineWidth, off).has_value());
@@ -104,13 +104,14 @@ namespace
         // A diagonal line.
         std::vector<Vec2> diag{ { 5.f, 5.f }, { 2.f, 2.6f } };
         auto d = FirstOnLine(baron, { 10.f, 10.f }, kExecutionLineWidth, diag);
+        // (2, 2.6): along 3.25, across 0.42 -> on the line and nearer than (5, 5), so it takes it.
         CHECK(d.has_value());
-        CHECK_EQ(*d, std::size_t(0));           // (2, 2.6) is 0.42 yd across... and nearer
-        // (2, 2.6): along = 3.25, across = 0.42 -> on the line, and nearer than (5, 5): it takes it.
-        std::vector<Vec2> diag2{ { 5.f, 5.f }, { 2.f, 2.6f } };
-        auto d2 = FirstOnLine(baron, { 10.f, 10.f }, kExecutionLineWidth, { diag2[1], diag2[0] });
+        CHECK((*d) == (std::size_t(1)));
+        // Just off the side: (2, 3.6) is 1.13 yd across, so (5, 5) takes it.
+        std::vector<Vec2> const diag2{ { 2.f, 3.6f }, { 5.f, 5.f } };
+        auto d2 = FirstOnLine(baron, { 10.f, 10.f }, kExecutionLineWidth, diag2);
         CHECK(d2.has_value());
-        CHECK_EQ(*d2, std::size_t(0));
+        CHECK((*d2) == (std::size_t(1)));
         // Degenerate: Ysida on his spot.
         CHECK(!FirstOnLine(baron, baron, kExecutionLineWidth, players).has_value());
         // Empty group.
@@ -156,23 +157,23 @@ namespace
 
         // Trail spots every 5 yd, the end added unless the last spot is within 2.5 yd of it.
         std::vector<Vec2> t = TrailSpots(start, { 20.f, 0.f });
-        CHECK_EQ(t.size(), std::size_t(5));
+        CHECK((t.size()) == (std::size_t(5)));
         CHECK(NearV(t.front(), start));
         CHECK(NearV(t.back(), { 20.f, 0.f }));
         std::vector<Vec2> t2 = TrailSpots(start, { 13.f, 0.f });
-        CHECK_EQ(t2.size(), std::size_t(4));    // 0, 5, 10, then 13 (3 yd from 10)
+        CHECK((t2.size()) == (std::size_t(4)));    // 0, 5, 10, then 13 (3 yd from 10)
         CHECK(NearV(t2.back(), { 13.f, 0.f }));
         std::vector<Vec2> t3 = TrailSpots(start, { 12.f, 0.f });
-        CHECK_EQ(t3.size(), std::size_t(3));    // 0, 5, 10 (12 is within 2.5 of 10)
+        CHECK((t3.size()) == (std::size_t(3)));    // 0, 5, 10 (12 is within 2.5 of 10)
         CHECK(TrailSpots(start, { 0.5f, 0.f }).empty());
         // Neighbouring spots' 3 yd circles touch (raise reach along the whole lane).
         for (std::size_t i = 1; i < t.size(); ++i)
             CHECK(DungeonKit::Distance(t[i - 1], t[i]) <= kTrailRadius * 2.f + 0.01f);
 
         // Travel at 42 yd/s.
-        CHECK_EQ(ChargeTravelMs(42.f), uint32_t(1000));
-        CHECK_EQ(ChargeTravelMs(21.f), uint32_t(500));
-        CHECK_EQ(ChargeTravelMs(0.f), uint32_t(0));
+        CHECK((ChargeTravelMs(42.f)) == (uint32_t(1000)));
+        CHECK((ChargeTravelMs(21.f)) == (uint32_t(500)));
+        CHECK((ChargeTravelMs(0.f)) == (uint32_t(0)));
 
         // The Baron's room: a lane clamped by his arena never ends outside it.
         Arena const arena = BaronArena();
