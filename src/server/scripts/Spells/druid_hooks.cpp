@@ -466,6 +466,28 @@ public:
     }
 };
 
+// Bear Form, Dire Bear Form and Bestial Fury add 1 melee attack power per point of Agility, the same as
+// Cat Form (user 2026-11-09). Stock Player::UpdateAttackPowerAndDamage puts Agility into the Cat Form
+// base value only; adding it here scaled by BASE_PCT gives the same result for both bear forms without
+// touching the upstream formula. Strength keeps its 2 attack power per point.
+class DruidBearAgilityAttackPower : public PlayerScript
+{
+public:
+    DruidBearAgilityAttackPower()
+        : PlayerScript("DruidBearAgilityAttackPower", { PLAYERHOOK_ON_AFTER_UPDATE_ATTACK_POWER_AND_DAMAGE })
+    {
+    }
+
+    void OnPlayerAfterUpdateAttackPowerAndDamage(Player* player, float& /*level*/, float& base_attPower,
+        float& /*attPowerMod*/, float& /*attPowerMultiplier*/, bool ranged) override
+    {
+        if (ranged || !player || !player->IsClass(CLASS_DRUID, CLASS_CONTEXT_STATS) || !Druid::IsInBearForm(player))
+            return;
+
+        base_attPower += player->GetStat(STAT_AGILITY) * player->GetPctModifierValue(UNIT_MOD_ATTACK_POWER, BASE_PCT);
+    }
+};
+
 // CORE-AUDIT row 24 (PLAN C5): Rend and Tear's Ferocious Bite crit counts only the caster's own Rip or
 // Lacerate. Adds the hidden 1-charge crit aura 200436 (ADD_FLAT_MODIFIER CRITICAL_CHANCE on the
 // Rip/Ferocious Bite bit) right before a qualifying Ferocious Bite is cast; any other Ferocious Bite
@@ -515,5 +537,6 @@ void AddSC_druid_hooks()
     new DruidFeralUnitHooks();
     new DruidFeralExternalHealing();
     new DruidHeartOfTheWildMaxHealth();
+    new DruidBearAgilityAttackPower();
     new DruidRendAndTearCrit();
 }
