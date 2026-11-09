@@ -222,6 +222,7 @@ WI_MUZZLE_BLAST_ALT_2 = 30          # Cannon Fire 17278: Bomb_ExplosionA, instan
 WI_BALL_IN_FLIGHT = 11537           # Cannonball 52539: Boulder_Missile x1.5 + a muzzle blast + a fire burst
 WI_MERCY_GLOW = 14914               # Holy Zone Visual 70571: HolyZone gold disc, 3.3 yd at scale 1, STATE (stock row)
 WI_ZEAL_GLOW = 15672                # Combustion Periodic 74629: FlameZone orange disc, 3.7 yd at scale 1, STATE
+WI_SHOOT_GUN = 10208                # the rifle volley's stock Shoot Gun look (S5 shared-file request)
 GODI_CANNON = 245                   # G_Cannon01 (Mercy and Zeal), fire anim 153; NOT the invisible 1287
 GODI_CANNONBALL = 153               # CatapultBall01, a 2.5 yd ball at scale 1: gameobject 301202, size about 0.4-0.5
 GODI_CANNONBALL_PILE = 4177         # DeadMineCannonBallStack, a 1.8 yd pile (the second choice)

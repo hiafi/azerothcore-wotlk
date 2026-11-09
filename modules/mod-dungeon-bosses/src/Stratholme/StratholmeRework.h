@@ -390,6 +390,13 @@ namespace StratholmeRework
         kSpellsDathrohan, kSpellsGrandLie, kSpellsBarthilas, kSpellsBaroness, kSpellsNerubenkan, kSpellsMaleki,
         kSpellsRamstein, kSpellsBaron, kSpellsUltimatum, kSpellsSpare } };
 
+    // Shared spells (kSpellsShared; apps/dbc-tools source/npcs/stratholme/shared.py).
+    enum StratholmeSharedSpells : std::uint32_t
+    {
+        SPELL_ST_CROSSED_THE_LINE   = 206400,   // the lethal walls' strike (UF12, GF10): LethalWall's killSpell
+    };
+    static_assert(kSpellsShared.Contains(SPELL_ST_CROSSED_THE_LINE), "the strike sits in the shared slice");
+
     IdSlice constexpr kCreaturesReservation{ 300580, 300649 };
     IdSlice constexpr kCreaturesWave1{ 300580, 300599 };
     IdSlice constexpr kCreaturesWave2{ 300600, 300649 };
@@ -412,8 +419,8 @@ namespace StratholmeRework
         SPELL_CRUSADER_STRIKE       = 17281,
         SPELL_HOLY_STRIKE           = 17284,
         SPELL_MIND_BLAST_BALNAZZAR  = 17287,
-        SPELL_SHADOW_SHOCK_BALNAZZAR = 17288,
-        SPELL_SLEEP_BALNAZZAR       = 17398,
+        SPELL_BALNAZZAR_TRANSFORM   = 17288,
+        SPELL_BALNAZZAR_TRANSFORM_STUN = 17398,
         SPELL_MIGHTY_BLOW           = 14099,
         SPELL_DRAINING_BLOW         = 16793,
         SPELL_TRANSFORMATION        = 16794,    // Barthilas

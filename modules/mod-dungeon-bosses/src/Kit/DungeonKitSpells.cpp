@@ -13,6 +13,14 @@
  * SpellScript calling RefFlatOn (the SFK / Scholomance precedent) remains the way for anything these do not cover:
  * stacks, splits, a percent that changes during the fight. The periodic script caches its per-stack amount, so a
  * recalculation after the caster despawned (a stack change, a one-stack dispel) keeps the tick (R-1-KIT F1).
+ *
+ * Stratholme WP-KT-2 adds the lethal walls' strike (DungeonKitWalls.h LethalWall, handoff section 3.11 #15):
+ *
+ *   spell_dungeon_lethal_strike     every SPELL_EFFECT_SCHOOL_DAMAGE effect: SetEffectValue(the target's maximum
+ *                                   health) at launch. The spell carries NO_IMMUNITIES (Divine Shield and Ice Block do
+ *                                   not stop a wall), ALWAYS_HIT, IGNORE_CASTER_MODIFIERS, a school with no resistance
+ *                                   (Holy) and TARGET_UNIT_TARGET_ENEMY; an absorb or a damage-taken reduction can
+ *                                   leave someone standing, and the wall strikes again on its next tick.
  */
 
 #include "DungeonKit.h"
@@ -22,6 +30,7 @@
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
 #include "Unit.h"
+#include <algorithm>
 #include <array>
 #include <optional>
 
@@ -93,8 +102,27 @@ class spell_dungeon_refflat_periodic : public AuraScript
     std::array<DungeonKit::PerStackAmount, MAX_SPELL_EFFECTS> _perStack;
 };
 
+// Stratholme WP-KT-2: the lethal walls' strike, damage equal to the target's maximum health (ST UF12 / GF10).
+class spell_dungeon_lethal_strike : public SpellScript
+{
+    PrepareSpellScript(spell_dungeon_lethal_strike);
+
+    void SetDamage(SpellEffIndex /*effIndex*/)
+    {
+        if (Unit* target = GetHitUnit())
+            SetEffectValue(static_cast<int32>(std::min<uint32>(target->GetMaxHealth(), 0x7FFFFFFF)));
+    }
+
+    void Register() override
+    {
+        OnEffectLaunchTarget += SpellEffectFn(spell_dungeon_lethal_strike::SetDamage, EFFECT_ALL,
+            SPELL_EFFECT_SCHOOL_DAMAGE);
+    }
+};
+
 void AddSC_dungeon_kit_spells()
 {
     RegisterSpellScript(spell_dungeon_refflat_damage);
     RegisterSpellScript(spell_dungeon_refflat_periodic);
+    RegisterSpellScript(spell_dungeon_lethal_strike);
 }
