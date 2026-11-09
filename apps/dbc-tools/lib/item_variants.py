@@ -131,7 +131,7 @@ def _int(value, default: int = 0) -> int:
 class ResolvedTier:
     key: str
     tier: str
-    label: str
+    label: str | None  # None: no tooltip line
     entry: int
     stock: bool  # the base= item's own stock entry (edited in place, never minted)
     ilvl: int
@@ -152,8 +152,9 @@ class ResolvedTier:
 
     @property
     def writes_label(self) -> bool:
-        """Heroic tiers get the client's own line from flag 0x8, so no label table entry (IV4)."""
-        return not self.heroic_flag
+        """Heroic tiers get the client's own line from flag 0x8, so no label table entry (IV4); a `label=None` tier
+        has no line at all (quest reward itemization ruling 20)."""
+        return not self.heroic_flag and self.label is not None
 
 
 @dataclass
@@ -196,9 +197,16 @@ def _shape_index(catalog: dict) -> dict[str, dict]:
     return {shape["name"]: shape for shape in catalog.values()}
 
 
-def _find_shape(where: str, name: str, kind: int, index: dict, errors: list[str]) -> dict | None:
+def _find_shape(where: str, name: str | int, kind: int, index: dict, errors: list[str]) -> dict | None:
+    """The shape `name` names: an `item_shape.name`, or its `shape_id` (an int)."""
     _, shapes = _item_lib()
-    shape = index.get(name)
+    if isinstance(name, int):
+        shape = next((s for s in index.values() if s["shape_id"] == name), None)
+        if shape is None:
+            errors.append(f"{where}: no item_shape with shape_id {name}")
+            return None
+    else:
+        shape = index.get(name)
     if shape is None:
         import difflib  # noqa: PLC0415
 
@@ -498,7 +506,8 @@ def _resolve_item(
         if unique:
             effective["ItemLimitCategory"] = None
         inherited = [c for c in INHERITED_WARN_COLUMNS if effective[c] not in (None, "", 0, "0", 0.0)]
-        if inherited:
+        # Only a ladder with tiers above the stock one mints copies (a one-tier ladder, quest_reward, mints none).
+        if inherited and sum(not t.deferred for t in decl.ladder.tiers) > 1:
             warnings.append(
                 f"{where}: base={decl.base} carries {', '.join(f'{c}={effective[c]!r}' for c in inherited)}; every "
                 f"minted tier copies it unchanged (the budget neither prices nor scales it) - override it per tier "

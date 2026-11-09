@@ -36,8 +36,9 @@ ladder; a deferred tier keeps its step, so flipping it never renumbers the other
 set); only the higher tiers are minted. Without `base=` every tier is minted: `name=` is required, and `like=<entry>`
 copies `LIKE_COLUMNS` from a stock item (or they are passed as columns). Stats are never passed (`stat_type*`,
 `stat_value*`, `dmg_*`, `block`; `armor` on a slot with an armor curve): they come from the budget. Shapes are
-`item_shape.name` strings (`primary=None` is the Null shape, 100% secondary; `secondary=None` gives the primary the
-whole budget), checked at resolve time. `itemization="live"` adopts a stock item's live `item_itemization` row on
+`item_shape.name` strings, or `item_shape.shape_id` ints for a declaration read from a lock file
+(source/items/quest_rewards.py); `primary=None` is the Null shape, 100% secondary; `secondary=None` gives the primary
+the whole budget; checked at resolve time. `itemization="live"` adopts a stock item's live `item_itemization` row on
 its first tier. Deltas are fractions of the tier's own baseline (`extra_stamina=0.25` is +25% of the tier's Stamina),
 so they scale with the item level.
 
@@ -159,7 +160,7 @@ def _number(value) -> bool:
 class Tier:
     """One tier of a ladder. `name` is set by `ladder()` (the keyword it was passed under)."""
 
-    label: str
+    label: str | None  # None: no tooltip line (no label table row)
     ilvl: int | None = None
     quality: int | None = None
     required_level: int | None = None
@@ -175,8 +176,8 @@ class Tier:
 
 
 def tier(
-    *, step: int, label: str, ilvl: int | None = None, quality: int | None = None, required_level: int | None = None,
-    heroic_flag: bool = False, deferred: bool = False, sockets: bool = True,
+    *, step: int, label: str | None, ilvl: int | None = None, quality: int | None = None,
+    required_level: int | None = None, heroic_flag: bool = False, deferred: bool = False, sockets: bool = True,
 ) -> Tier:
     """A ladder tier. `label` is the green tooltip line under the item name ("Normal", "Molten Empowered", ...); on a
     `heroic_flag=True` tier the client prints its own "Heroic" line from flag 0x8 and the label is not written to the
@@ -184,15 +185,17 @@ def tier(
     `sockets=False` drops the item's sockets and socket bonus on this tier (and with them the budget's socket
     discount): user ruling 2026-11-06, sockets start at Heroic, a leveling Normal tier has none. `step` is the
     `item_budget_variant.tier` number (required): 0 Normal, 1 Heroic, 2.. the empowered tiers, the same number for the
-    same step on every ladder (R1 N1: explicit, never derived from the tier's position)."""
+    same step on every ladder (R1 N1: explicit, never derived from the tier's position). `label=None` writes no
+    tooltip line at all (no label table row): a tier that needs no name, e.g. the single `quest_reward` tier (quest
+    reward itemization ruling 20)."""
     if not _plain_int(step) or not 0 <= step <= MAX_TIER_STEP:
         raise ItemDeclarationError(
             f"tier(label={label!r}): step={step!r} must be an int in 0-{MAX_TIER_STEP} (item_budget_variant.tier: "
             f"0 Normal, 1 Heroic, 2.. the empowered tiers)"
         )
-    if not isinstance(label, str) or not label.strip():
-        raise ItemDeclarationError(f"tier(label={label!r}): the label must be a non-empty string")
-    if label != label.strip() or any(ch in label for ch in LABEL_FORBIDDEN):
+    if label is not None and (not isinstance(label, str) or not label.strip()):
+        raise ItemDeclarationError(f"tier(label={label!r}): the label must be a non-empty string, or None for none")
+    if label is not None and (label != label.strip() or any(ch in label for ch in LABEL_FORBIDDEN)):
         raise ItemDeclarationError(
             f"tier(label={label!r}): no leading or trailing space and none of {' '.join(map(repr, LABEL_FORBIDDEN))} "
             f"(it is written into a Lua string and a tooltip line)"
@@ -279,7 +282,7 @@ def ladder(name: str, *, effect_reference: str | None = None, **tiers: Tier) -> 
                 f"ladder({name!r}): tier steps must strictly increase, but {high.name!r} (step {high.step}) follows "
                 f"{low.name!r} (step {low.step})"
             )
-    labels = [t.label for t in named]
+    labels = [t.label for t in named if t.label is not None]
     if len(set(labels)) != len(labels):
         raise ItemDeclarationError(f"ladder({name!r}): two tiers share a label ({labels})")
     if effect_reference is not None:
@@ -389,8 +392,8 @@ class ItemDecl:
     ilvl: int | None = None
     quality: int | None = None
     required_level: int | None = None
-    primary: str | None = None
-    secondary: str | None = None
+    primary: str | int | None = None  # an item_shape name, or its shape_id (a lock-driven declaration)
+    secondary: str | int | None = None
     primary_share: int | None = None
     budget_mult: float | None = None
     itemization: str | None = None
@@ -418,7 +421,7 @@ class ItemDecl:
 def item(
     key: str, *, ladder: Ladder, base: int | None = None, name: str | None = None, like: int | None = None,
     ilvl: int | None = None, quality: int | None = None, required_level: int | None = None,
-    primary: str | None = None, secondary: str | None = None, primary_share: int | None = None,
+    primary: str | int | None = None, secondary: str | int | None = None, primary_share: int | None = None,
     budget_mult: float | None = None, itemization: str | None = None,
     extra_stamina: float = 0.0, extra_armor: float = 0.0, extra_dps: float | None = None, extra_block: float = 0.0,
     weapon_role: str | None = None, spells=None, keep_spells: bool = False, sockets=None,
@@ -485,8 +488,9 @@ def item(
             )
     else:
         for keyword, value in (("primary", primary), ("secondary", secondary)):
-            if value is not None and (not isinstance(value, str) or not value):
-                raise ItemDeclarationError(f"{where}: {keyword}={value!r} must be an item_shape name")
+            if value is not None and not ((isinstance(value, str) and value)
+                                          or (_plain_int(value) and value > 0)):
+                raise ItemDeclarationError(f"{where}: {keyword}={value!r} must be an item_shape name or shape_id")
         if primary is None and secondary is None:
             raise ItemDeclarationError(f"{where}: give primary= and/or secondary= (or itemization=\"live\")")
         if primary_share is not None and primary_share not in PRIMARY_SHARES:
@@ -611,17 +615,21 @@ def declared_item_bases(dir_path: Path = ITEMS_DIR) -> frozenset[int]:
 
 
 def item_owned_entries(dir_path: Path = ITEMS_DIR) -> frozenset[int]:
-    """Every `item_template` entry source/items owns: the stock `base=` entries (`declared_item_bases`) and every
-    entry of `item_ids.lock` (the minted tiers, the recorded bases, retired lines included). Once a write run has
+    """Every `item_template` entry source/items owns: the stock `base=` entries (`declared_item_bases`), every
+    entry of `item_ids.lock` (the minted tiers, the recorded bases, retired lines included) and every entry of
+    `quest_rewards.lock` (the quest rewards source/items/quest_rewards.py takes over). Once a write run has
     minted a ranged weapon's tiers they are live rows too, so a bulk `item_template()` editor (ranged_weapons.py) skips
     all of these."""
     owned = set(declared_item_bases(dir_path))
-    lock = dir_path / "item_ids.lock"
-    if lock.is_file():
-        for raw in lock.read_text(encoding="utf-8").splitlines():
-            token = raw.split("#", 1)[0].split()[:1]
-            if token and token[0].isdigit():
-                owned.add(int(token[0]))
+    # item_ids.lock, and quest_rewards.lock: source/items/quest_rewards.py declares one item(base=<entry>) per line of
+    # it in a loop, which declared_item_bases' syntax read cannot see.
+    for name in ("item_ids.lock", "quest_rewards.lock"):
+        lock = dir_path / name
+        if lock.is_file():
+            for raw in lock.read_text(encoding="utf-8").splitlines():
+                token = raw.split("#", 1)[0].split()[:1]
+                if token and token[0].isdigit():
+                    owned.add(int(token[0]))
     return frozenset(owned)
 
 
