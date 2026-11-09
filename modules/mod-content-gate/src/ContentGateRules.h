@@ -333,6 +333,7 @@ namespace ContentGate
         std::set<uint32_t> closedEvents;                // extra stock game events kept closed
         std::set<std::string> openBundles;              // bundles opened by name
         bool wintergraspFollowsNorthrend = true;
+        bool randomQueuesFollowExpansions = true;
         uint32_t watchdogMs = 5000;
         bool debug = false;
         std::vector<std::string> errors;
@@ -350,6 +351,7 @@ namespace ContentGate
         std::string closedEvents;
         std::string openBundles;
         bool wintergraspFollowsNorthrend = true;
+        bool randomQueuesFollowExpansions = true;
         uint32_t watchdogMs = 5000;
         bool debug = false;
     };
@@ -384,6 +386,7 @@ namespace ContentGate
                 cfg.errors.push_back("Open.Bundles: '" + name + "' is not a valid bundle name ([a-z0-9_], 1-32)");
         }
         cfg.wintergraspFollowsNorthrend = raw.wintergraspFollowsNorthrend;
+        cfg.randomQueuesFollowExpansions = raw.randomQueuesFollowExpansions;
         cfg.watchdogMs = std::max<uint32_t>(raw.watchdogMs, 1000);
         cfg.debug = raw.debug;
         return cfg;
@@ -635,6 +638,50 @@ namespace ContentGate
         if (mapId == MAP_OUTLAND && !outlandOpen && IsOutlandProperZone(zoneId))
             return Continent::Outland;
         return Continent::Allowed;
+    }
+
+    // A random dungeon finder queue (LFGDungeons.dbc TypeID 6, not seasonal) with its stock level window.
+    struct RandomQueue
+    {
+        uint32_t id = 0;
+        uint8_t expansion = 0;                          // 0 Classic, 1 Burning Crusade, 2 Lich King
+        bool heroic = false;
+        uint8_t minLevel = 0;
+        uint8_t maxLevel = 0;
+    };
+
+    // The level window the queue gets. A hidden queue has an empty window, so the dungeon finder neither lists it nor
+    // lets anyone join it (the lock reason is "level too low").
+    struct RandomWindow
+    {
+        bool hidden = false;
+        uint8_t minLevel = 0;
+        uint8_t maxLevel = 0;
+
+        bool operator==(RandomWindow const&) const = default;
+    };
+
+    constexpr uint8_t RANDOM_HIDDEN_MIN_LEVEL = 255;
+
+    // Random queues follow the expansion switches (designer 2026-11-09): a closed expansion's random queues are
+    // hidden, and the highest open expansion's normal random queue runs up to the level cap. Stock Random Classic
+    // stops at 58 and Random Burning Crusade at 68, so without this a level 59-60 player (Outland closed) or a level
+    // 69-70 player (Northrend closed) has no random queue. Classic is always open.
+    inline RandomWindow RandomQueueWindow(RandomQueue const& queue, bool outlandOpen, bool northrendOpen,
+        uint8_t levelCap)
+    {
+        auto const isOpen = [&](uint8_t expansion)
+        {
+            return expansion == 0 || (expansion == 1 && outlandOpen) || (expansion == 2 && northrendOpen);
+        };
+        if (!isOpen(queue.expansion))
+            return { true, RANDOM_HIDDEN_MIN_LEVEL, 0 };
+
+        uint8_t const highestOpen = northrendOpen ? 2 : outlandOpen ? 1 : 0;
+        RandomWindow window = { false, queue.minLevel, queue.maxLevel };
+        if (queue.expansion == highestOpen && !queue.heroic)
+            window.maxLevel = std::max(queue.maxLevel, levelCap);
+        return window;
     }
 
     struct Spot

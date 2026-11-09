@@ -65,6 +65,21 @@ continent guard is a `PlayerScript`:
 - `ContentGate.Wintergrasp.FollowNorthrend = 1` keeps `Wintergrasp.Enable = 2` (all processing off) while Northrend is
   closed.
 
+### Random dungeon finder queues
+
+`ContentGate.RandomQueues.FollowExpansions = 1` ties the random queues to the continent switches: a closed expansion's
+random queues are hidden, and the highest open expansion's normal random queue runs up to `MaxPlayerLevel` (stock
+Random Classic stops at 58, Random Burning Crusade at 68). So at a level 60 cap with Outland closed, Random Classic is
+the only random queue and covers 15-60; at 70 with Northrend closed, Random Burning Crusade covers 59-70.
+
+- LFGMgr has no setter: the module writes the level window into LFGMgr's dungeon data (`ApplyRandomQueues`, at boot
+  and on every re-apply), always starting from the DBC row. A hidden queue gets minimum level 255, so it is neither
+  listed (`GetRandomAndSeasonalDungeons`) nor joinable (lock reason "level too low").
+- The 3.3.5 client also filters the random menu by its own LFGDungeons.dbc level range. `client/ui-overrides`
+  (patch-X) overrides `LFDFrame.lua` so the menu follows the server's lock instead: a joinable random shows, a random
+  the server locks for level is hidden. Without it a level 59-60 player cannot pick Random Classic.
+- The reward tiers already exist: `lfg_dungeon_rewards` has Random Classic 56-60 and Random Burning Crusade 65-70.
+
 ## Bundles
 
 A bundle is one row in `content_gate_bundle` plus member rows in `content_gate_bundle_disable`:
@@ -111,6 +126,7 @@ Other modules can ask the gate whether a map difficulty is open: `sContentGate->
 ## Commands (GM, console too)
 
 - `.gate status`: open instances, closed counts, battlegrounds, outdoor PvP, continents, Wintergrasp, closed events,
+  random queue windows,
   every bundle (open/closed, event active, members), conf and bundle errors, DB conflicts, restart notes, sentinel and
   watchdog state.
 - `.gate reload`: re-read the bundle tables and re-apply the cached conf on the next world tick (conf edits need

@@ -88,6 +88,7 @@ namespace ContentGate
         void FullReapply(char const* reason);
         void RestartOpenedEvents(ClosedSetDiff const& diff);
         void StopActiveClosedEvents();
+        void ApplyRandomQueues();
         void LogConfigErrors() const;
 
         std::recursive_mutex _lock;             // guards the state below except the atomics; recursive because

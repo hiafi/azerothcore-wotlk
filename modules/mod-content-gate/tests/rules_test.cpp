@@ -401,6 +401,46 @@ namespace
         CHECK(diff.openedEvents.count(200) && diff.openedEvents.count(204) && diff.openedEvents.count(202));
         CHECK(!diff.openedEvents.count(201) && !diff.openedEvents.count(203));
     }
+
+    void TestRandomQueues()
+    {
+        // Stock LFGDungeons.dbc random queues (TypeID 6, not seasonal).
+        RandomQueue const classic = { 258, 0, false, 15, 58 };
+        RandomQueue const tbc = { 259, 1, false, 59, 68 };
+        RandomQueue const tbcHeroic = { 260, 1, true, 70, 73 };
+        RandomQueue const wotlk = { 261, 2, false, 69, 80 };
+        RandomQueue const wotlkHeroic = { 262, 2, true, 80, 83 };
+        RandomWindow const hidden = { true, RANDOM_HIDDEN_MIN_LEVEL, 0 };
+
+        // Level 60 cap, both closed: Random Classic 15-60 is the only random queue.
+        CHECK(RandomQueueWindow(classic, false, false, 60) == RandomWindow({ false, 15, 60 }));
+        CHECK(RandomQueueWindow(tbc, false, false, 60) == hidden);
+        CHECK(RandomQueueWindow(tbcHeroic, false, false, 60) == hidden);
+        CHECK(RandomQueueWindow(wotlk, false, false, 60) == hidden);
+        CHECK(RandomQueueWindow(wotlkHeroic, false, false, 60) == hidden);
+
+        // Level 70 cap, Outland open: Classic back to stock, Burning Crusade normal to 70, its heroic stock.
+        CHECK(RandomQueueWindow(classic, true, false, 70) == RandomWindow({ false, 15, 58 }));
+        CHECK(RandomQueueWindow(tbc, true, false, 70) == RandomWindow({ false, 59, 70 }));
+        CHECK(RandomQueueWindow(tbcHeroic, true, false, 70) == RandomWindow({ false, 70, 73 }));
+        CHECK(RandomQueueWindow(wotlk, true, false, 70) == hidden);
+        CHECK(RandomQueueWindow(wotlkHeroic, true, false, 70) == hidden);
+
+        // Everything open: stock windows (Lich King already reaches the cap).
+        CHECK(RandomQueueWindow(classic, true, true, 80) == RandomWindow({ false, 15, 58 }));
+        CHECK(RandomQueueWindow(tbc, true, true, 80) == RandomWindow({ false, 59, 68 }));
+        CHECK(RandomQueueWindow(wotlk, true, true, 80) == RandomWindow({ false, 69, 80 }));
+        CHECK(RandomQueueWindow(wotlkHeroic, true, true, 80) == RandomWindow({ false, 80, 83 }));
+
+        // A cap below the stock window never narrows it.
+        CHECK(RandomQueueWindow(classic, false, false, 50) == RandomWindow({ false, 15, 58 }));
+
+        // The conf flag reaches the parsed config.
+        RawConfig raw;
+        CHECK(ParseConfig(raw, Lookup()).randomQueuesFollowExpansions);
+        raw.randomQueuesFollowExpansions = false;
+        CHECK(!ParseConfig(raw, Lookup()).randomQueuesFollowExpansions);
+    }
 }
 
 int main()
@@ -416,5 +456,6 @@ int main()
     TestBundleNames();
     TestLinkedEventsUnique();
     TestUnownedBundleEvents();
+    TestRandomQueues();
     return Report("rules_test");
 }
