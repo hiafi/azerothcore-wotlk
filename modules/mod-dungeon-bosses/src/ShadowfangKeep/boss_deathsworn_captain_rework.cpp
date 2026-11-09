@@ -18,10 +18,11 @@
  *   DC4  Last Stand (H)     below 30% health, +30% attack speed for the rest of the fight (206016)
  *   DC5  Melee              stock (DamageModifier 1.7, 2.0 s); heroic from the heroic template (boss tier)
  *
- * The arena (section 7 #25, ShadowfangKeepRework.h DeathswornCaptainArena()): the north hall plus the walkway. A
- * charge that starts on the walkway runs only along it, and every line stops short of the arena's edge (never over the
- * 16-20 yd drop into the inner yard). DungeonKit::ArenaGuard grips back anyone off it for 1.5 s (a fall into the yard,
- * a step into Odo's room) onto the nearest point of his patrol line, holds his chase of a victim who is off it, and
+ * The arena (section 7 #25, ShadowfangKeepRework.h DeathswornCaptainArena()): the north hall, the walkway and Odo's
+ * ESE alcove behind the door he turns in. A charge that starts on the walkway runs only along it, and every line stops
+ * short of the arena's edge (never over the 16-20 yd drop into the inner yard). DungeonKit::ArenaGuard grips back
+ * anyone off it for 1.5 s (a fall into the yard, a step past the alcove toward Odo) onto the nearest point of his
+ * patrol line, holds his chase of a victim who is off it, and
  * evades him if he leaves it. Nothing links him to Odo (the stock Call for Help is gone with the SmartAI); while Odo
  * fights, an unpulled Captain holds his patrol short of Odo's doorway, passive and immune to players (R2 S-2,
  * UpdateOdoHold), and neither guard grips a unit in combat with the other boss (IsSfkBossEntry).
