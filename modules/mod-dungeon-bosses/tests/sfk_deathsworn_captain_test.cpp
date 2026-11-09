@@ -49,6 +49,12 @@ namespace
         return false;
     }
 
+    // On the hall or the walkway (plane only): the floor plan of a charge from either.
+    bool OnHallOrWalkway(Arena const& arena, Vec2 p)
+    {
+        return arena.regions[kHallRegion].ContainsPlane(p) || arena.regions[kWalkwayRegion].ContainsPlane(p);
+    }
+
     // A fixed pick sequence: returns `seq[i++ % size] % n`.
     struct SeqPick
     {
@@ -81,7 +87,7 @@ namespace
     void TestArenaAndPatrol()
     {
         Arena const arena = DeathswornCaptainArena();
-        CHECK(arena.regions.size() == 2);
+        CHECK(arena.regions.size() == 3);
         CHECK(arena.Contains(kCaptainSpawn.XY(), kCaptainSpawn.z));
         // Every patrol point is on his arena (a pull anywhere on the path starts on it, he never leashes on a pull).
         for (Point3 const& p : kPatrol)
@@ -148,7 +154,7 @@ namespace
         CHECK(AngleGap(down.facing, axis + DungeonKit::kPi) < 1e-3f);
         CHECK(down.clipped);
         CHECK(OnPlan(arena, down.end));
-        CHECK(!OnPlan(arena, DungeonKit::Advance(down.end, down.facing, kChargeEdgeInset + 0.3f)));
+        CHECK(!OnHallOrWalkway(arena, DungeonKit::Advance(down.end, down.facing, kChargeEdgeInset + 0.3f)));
         CHECK(down.length < kChargeMinDistance + kChargeOverrun);
 
         // A target in Odo's room (off the arena) beyond the walkway's end: the same, the line never leaves the arena.
@@ -301,6 +307,72 @@ namespace
             == std::optional<std::size_t>(0));
     }
 
+    // Bot clear 2026-11-08: he turns in Odo's door, so a pull there fights in Odo's ESE alcove behind it; units there
+    // (x -250 to -257, y 2110 to 2117, z 100) were gripped 38 times in 77 s. The alcove is on the arena now.
+    void TestOdoAlcove()
+    {
+        Arena const arena = DeathswornCaptainArena();
+        for (float x : { -250.f, -253.5f, -257.f })
+            for (float y : { 2110.f, 2113.5f, 2117.f })
+            {
+                Vec2 const p{ x, y };
+                CHECK(arena.Contains(p, 100.f));
+                CHECK(arena.Contains(p, 101.2f));
+                CHECK(InOdoAlcove(arena, p));
+                CHECK(!OnWalkway(arena, p));
+                CHECK(!arena.Contains(p, 87.f));            // the jail's upper level under it
+            }
+        // The navmesh floor of the alcove (u 33 to 39.75, v -16 to 3), its corners.
+        for (Vec2 const p : { MapPoint(33.f, -15.5f), MapPoint(39.75f, -15.5f), MapPoint(33.f, 3.f),
+                 MapPoint(39.75f, 3.f), MapPoint(36.5f, -8.f) })
+            CHECK(arena.Contains(p, 100.6f));
+        // The door strip counts as walkway (his patrol point 5 is in it).
+        CHECK(OnWalkway(arena, kPatrol[4].XY()));
+        CHECK(!InOdoAlcove(arena, kPatrol[4].XY()));
+        // Odo's end of the room stays off: his spawn, the middle bell, the room 10 yd short of the partition.
+        CHECK(!arena.Contains(kOdoSpawn.XY(), kOdoSpawn.z));
+        CHECK(!arena.Contains(kBellSpots[1].XY(), kBellSpots[1].z));
+        CHECK(!arena.Contains(MapPoint(21.f, -5.f), 100.6f));
+        // The walkway floor (navmesh u 33.75 to 38.5) and its east niches (u 40, z up to 99.5) are on it.
+        for (Vec2 const p : { MapPoint(33.75f, 8.f), MapPoint(38.5f, 8.f), MapPoint(33.75f, 30.f),
+                 MapPoint(38.5f, 37.f), MapPoint(33.f, 17.5f), MapPoint(40.f, 17.5f), MapPoint(40.f, 23.5f) })
+        {
+            CHECK(arena.Contains(p, 98.8f));
+            CHECK(OnWalkway(arena, p));
+        }
+        // The inner yard below the walkway (z 77 to 81), under it and beside it, is off.
+        for (Vec2 const p : { MapPoint(36.f, 20.f), MapPoint(25.f, 20.f), MapPoint(30.f, 15.f), MapPoint(36.f, 11.f) })
+        {
+            CHECK(!arena.Contains(p, 79.f));
+            CHECK(!arena.Contains(p, 81.f));
+        }
+
+        // A charge from the alcove stays in it, along the room (straight at the target) and toward the walkway (cut
+        // at the alcove's door line, never through the wall beside the door).
+        Vec2 const in = MapPoint(36.5f, -2.f);
+        ChargePath const along = ChargeLine(arena, in, MapPoint(36.5f, -14.f), 0.f);
+        CHECK(!along.alongWalkway);
+        CHECK(InOdoAlcove(arena, along.end));
+        CHECK(Near(along.length, 12.f + kChargeOverrun, 0.01f) || along.clipped);
+        ChargePath const out = ChargeLine(arena, MapPoint(34.f, -2.f), MapPoint(34.f, 20.f), 0.f);
+        CHECK(out.clipped);
+        CHECK(InOdoAlcove(arena, out.end));
+        for (int k = 0; k < 72; ++k)
+        {
+            float const o = k * DungeonKit::kTwoPi / 72.f;
+            ChargePath const p = ChargeLine(arena, in, DungeonKit::Advance(in, o, 12.f), 0.f);
+            CHECK(InOdoAlcove(arena, p.end));
+            CHECK(arena.regions[kOdoAlcoveRegion].ContainsPlane(
+                DungeonKit::Advance(p.end, p.facing, kChargeEdgeInset - 0.3f)));
+        }
+        // A charge from the walkway toward a player in the alcove stops short of the walkway's end, as before.
+        ChargePath const down = ChargeLine(arena, kPatrol[3].XY(), MapPoint(36.5f, -8.f), 0.f);
+        CHECK(down.alongWalkway);
+        CHECK(down.clipped);
+        CHECK(!InOdoAlcove(arena, down.end));
+        CHECK(OnHallOrWalkway(arena, down.end));
+    }
+
     void TestTimings()
     {
         CHECK(ChargeTravelMs(21.f) == 500);
@@ -374,6 +446,7 @@ int main()
     TestArenaAndPatrol();
     TestPatrolLanding();
     TestWalkwayCharges();
+    TestOdoAlcove();
     TestHallCharges();
     TestChainedCharge();
     TestPicks();

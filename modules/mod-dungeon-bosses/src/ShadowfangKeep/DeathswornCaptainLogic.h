@@ -12,9 +12,11 @@
  * fixed sequence), so every rule here runs on the host.
  *
  * The arena (handoff section 7 #25): the north hall plus his walkway (ShadowfangKeepRework.h
- * DeathswornCaptainArena(): region 0 the hall, region 1 the walkway). A charge that starts on the walkway runs only
- * along it (the walkway's long axis, toward the side its target is on); every charge line stops short of the arena's
- * edge, so he never charges off the walkway's 16-20 yd drop.
+ * DeathswornCaptainArena(): region 0 the hall, region 1 the walkway, region 2 Odo's ESE alcove behind the door he
+ * turns in). A charge that starts on the walkway runs only along it (the walkway's long axis, toward the side its
+ * target is on); every charge line stops short of the arena's edge, so he never charges off the walkway's 16-20 yd
+ * drop. The alcove is its own pocket: a charge that starts in it stays in it, a charge from the hall or the walkway
+ * never enters it (the wall between them has only the 3.4 yd door).
  */
 
 #ifndef MOD_DUNGEON_BOSSES_SFK_DEATHSWORNCAPTAIN_LOGIC_H
@@ -220,6 +222,7 @@ namespace DeathswornCaptain
 
     inline constexpr std::size_t kHallRegion = 0;       // DeathswornCaptainArena(): the north hall
     inline constexpr std::size_t kWalkwayRegion = 1;    // ... then the walkway
+    inline constexpr std::size_t kOdoAlcoveRegion = 2;  // ... then Odo's ESE alcove, behind the door he turns in
 
     // On the walkway proper: inside its region and not in the hall (the two overlap where the walkway meets the hall).
     // Plane only: both are one floor (the arena's z bands hold the heights).
@@ -242,14 +245,26 @@ namespace DeathswornCaptain
         return DungeonKit::ToFrame(arena.regions[kWalkwayRegion].frame, p).x;
     }
 
-    // How far a ray from `from` along `facing` stays on the arena's floor plan (the union of its regions, plane only),
-    // up to `maxLen`, in `step` yd steps. 0 when `from` itself is off it.
+    // In Odo's alcove proper: inside its region and on neither the walkway nor the hall (the walkway's end overlaps the
+    // alcove's door line by 0.75 yd; that strip counts as walkway).
+    inline bool InOdoAlcove(Arena const& arena, Vec2 p)
+    {
+        if (arena.regions.size() <= kOdoAlcoveRegion)
+            return false;
+        return arena.regions[kOdoAlcoveRegion].ContainsPlane(p) && !OnWalkway(arena, p)
+            && !arena.regions[kHallRegion].ContainsPlane(p);
+    }
+
+    // How far a ray from `from` along `facing` stays on the charge's floor plan (plane only), up to `maxLen`, in `step`
+    // yd steps; 0 when `from` itself is off it. The floor plan is the alcove alone for a ray from inside it, else the
+    // hall plus the walkway (the wall beside Odo's door would let a line cross from one to the other).
     inline float CaptainRayInside(Arena const& arena, Vec2 from, float facing, float maxLen, float step = 0.25f)
     {
-        auto onFloor = [&arena](Vec2 p)
+        bool const alcove = InOdoAlcove(arena, from);
+        auto onFloor = [&arena, alcove](Vec2 p)
         {
-            for (ArenaRegion const& r : arena.regions)
-                if (r.ContainsPlane(p))
+            for (std::size_t i = 0; i < arena.regions.size(); ++i)
+                if ((i == kOdoAlcoveRegion) == alcove && arena.regions[i].ContainsPlane(p))
                     return true;
             return false;
         };
@@ -371,8 +386,9 @@ namespace DeathswornCaptain
         return DungeonKit::Distance(at, door) < DungeonKit::Distance(OdoHoldPoint().XY(), door);
     }
 
-    // Where ArenaGuard lands a gripped unit (a fall into the inner yard, a step into Odo's room): the nearest point of
-    // his patrol line (the floor he walks, so never over the drop), its height interpolated along the leg.
+    // Where ArenaGuard lands a gripped unit (a fall into the inner yard, a step past the alcove toward Odo): the
+    // nearest point of his patrol line (the floor he walks, so never over the drop), its height interpolated along the
+    // leg.
     inline Point3 PatrolLanding(Vec2 p)
     {
         Point3 best = kPatrol[0];

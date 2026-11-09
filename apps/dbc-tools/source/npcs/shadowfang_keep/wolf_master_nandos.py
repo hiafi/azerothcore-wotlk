@@ -128,7 +128,7 @@ creature_model(300512, display_id=246)
 
 # --- Spells --------------------------------------------------------------------------------------------------------
 
-_TARGET_UNIT_SRC_AREA_ALLY = 31
+_TARGET_UNIT_SRC_AREA_ALLY = 30
 _TARGET_UNIT_TARGET_ENEMY = 6
 
 _DISPEL_MAGIC = 1

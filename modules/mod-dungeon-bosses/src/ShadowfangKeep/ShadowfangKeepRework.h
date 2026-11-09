@@ -549,11 +549,18 @@ namespace ShadowfangKeepRework
     Point3 constexpr kCaptainSpawn{ -192.0f, 2124.5f, 97.4f };
     std::uint32_t constexpr kCaptainPathId = 1345170;           // 10 points, kept; he turns in Odo's doorway
 
+    // Region 0 the north hall; 1 the walkway (navmesh floor u 33.75 to 38.5, v 3 to 44, z 97.3 to 100.2; side niches
+    // reach u 32.25 and 40, the west ones over the drop are left 0.5 yd out so no hall charge cuts across the void);
+    // 2 Odo's ESE alcove (floor u 33 to 39.75, v -16 to 3, z 100.2 to 101.2): he turns in Odo's door, so a pull there
+    // fights in the alcove behind it (bot clear 2026-11-08: 38 grips in 77 s). Odo's own end of the room (his spawn,
+    // u 0) stays off. The inner yard under the walkway (z 77 to 81) and the jail under the alcove (z 81 to 87) are
+    // below the z bands.
     inline Arena DeathswornCaptainArena()
     {
         FrameRect const frame = ReportFrame(kOdoSpawn.XY(), kKeepUp);
         Arena arena(ArenaRegion::Frame(frame, ReportBox(-31.f, 39.f, 39.25f, 52.75f), 95.5f, 99.f));      // north hall
         arena.Add(ArenaRegion::Frame(frame, ReportBox(32.75f, 40.75f, 2.75f, 41.f), 95.5f, 101.5f));     // walkway
+        arena.Add(ArenaRegion::Frame(frame, ReportBox(31.25f, 41.25f, -17.25f, 3.5f), 99.f, 103.5f));    // Odo's alcove
         return arena;
     }
 
