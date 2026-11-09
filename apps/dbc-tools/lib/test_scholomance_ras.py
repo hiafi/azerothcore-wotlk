@@ -48,6 +48,7 @@ SCHOOL_DAMAGE, APPLY_AURA, KNOCK_BACK, PERSISTENT_AREA_AURA = 2, 6, 98, 27
 AURA_DUMMY, AURA_MOD_STUN, AURA_MOD_DECREASE_SPEED = 4, 12, 33
 ATTR0_DO_NOT_DISPLAY = 0x00000080
 ATTR0_NO_IMMUNITIES = 0x20000000
+AURA_INTERRUPT_FLAG_CHANGE_MAP = 0x00080000
 ATTR0_NO_AURA_CANCEL = 0x80000000
 ATTR2_CANT_CRIT = 0x20000000
 ATTR3_IGNORE_CASTER_MODIFIERS = 0x20000000
@@ -146,6 +147,13 @@ class RasDeclarationTest(unittest.TestCase):
         self.assertEqual(tomb["effect1"].get("mechanic", 0), 0)
         self.assertEqual(tomb["dispel"], 0)
         self.assertTrue(tomb["attributes"] & ATTR0_NO_IMMUNITIES)
+
+    def test_fight_auras_never_leave_the_map(self):
+        # R-C KEEPSAKE B-1 / N-5: Chill, Deep Chill, Warmth and Entombed (which S12 makes permanent) are dropped before
+        # the logout save, after the login load and on a map change; a same-map teleport (detention) keeps them.
+        for spell_id in (CHILL, DEEP_CHILL, WARMTH, ENTOMBED):
+            self.assertTrue(_raw(self.spells[spell_id], "AuraInterruptFlags") & AURA_INTERRUPT_FLAG_CHANGE_MAP,
+                            spell_id)
 
     def test_frost_mark_and_the_nova(self):
         self.assertEqual(self.spells[FROST_MARK]["duration_ms"], _header_int("kFrostMarkWarnMs"))

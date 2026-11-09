@@ -806,7 +806,7 @@ struct boss_lorekeeper_polkelt_rework : public BossAI
             _grades.Begin(me, Instructor::Polkelt);
         _arena.Engage(me);
         _lab.Start(me, LabConfig::Fight(_profile));
-        _nextBatchMs = kFirstBatchMs;
+        _nextBatchMs = _profile.firstBatchMs;
         _nextNoxiousMs = _profile.noxious ? kNoxiousEveryMs : 0;
         _nextVolatileMs = InRange(kVolatileFirstMinMs, kVolatileFirstMaxMs, Rand01());
         if (_profile.talks)

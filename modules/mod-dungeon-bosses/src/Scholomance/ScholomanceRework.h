@@ -343,7 +343,7 @@ namespace ScholomanceRework
     //   boss_darkmaster_gandling opens and closes them, and the entrance follows DATA_DARKMASTER_GANDLING).
     // ----------------------------------------------------------------------------------------------------------------
     inline constexpr bool kWaveBBound = true;
-    inline constexpr bool kWaveCBound = false;
+    inline constexpr bool kWaveCBound = true;
 
     // The boss state of an instructor's creature entry (a heroic copy's GetEntry() is its base entry).
     constexpr std::optional<std::uint32_t> InstructorBossOfEntry(std::uint32_t entry)
@@ -817,6 +817,43 @@ namespace ScholomanceRework
     inline Arena ClassroomArena(Classroom c)
     {
         return ArenaFor(InstructorBoss(ClassroomInstructor(c)));
+    }
+
+    // A classroom's side of its Gandling gate: its arena plus the corridor from the gate to it (R-C GANDLING S-2: each
+    // gate stands 7 to 11 yd outside its classroom's arena, so a player in that corridor is behind the gate too). The
+    // corridor is a box from 1 yd in front of the gate (a player under it counts) kGateCorridorDepthYd deep into the
+    // room side, kGateCorridorHalfWidthYd each way, in the gate's z band. The gates face the study on one axis: the
+    // vault gates and the upper gates east (+x), south (-y) or west (-x) of it, see kClassroomGatePoints.
+    float constexpr kGateCorridorDepthYd = 14.f;
+    float constexpr kGateCorridorHalfWidthYd = 6.f;
+
+    inline Vec2 ClassroomGateOutward(Classroom c)
+    {
+        switch (c)
+        {
+            case Classroom::ShadowVault:
+            case Classroom::HallOfSecrets:   return { 1.f, 0.f };
+            case Classroom::BarovVault:
+            case Classroom::HallOfTheDamned: return { 0.f, -1.f };
+            case Classroom::RavenianVault:
+            case Classroom::Coven:           return { -1.f, 0.f };
+        }
+        return { 0.f, 0.f };
+    }
+
+    inline Arena ClassroomSide(Classroom c)
+    {
+        Point3 const& g = kClassroomGatePoints[std::size_t(c)];
+        Vec2 const d = ClassroomGateOutward(c);
+        Vec2 const n{ -d.y, d.x };
+        float const w = kGateCorridorHalfWidthYd;
+        Vec2 const nearMid{ g.x - d.x, g.y - d.y };
+        Vec2 const farMid{ g.x + d.x * kGateCorridorDepthYd, g.y + d.y * kGateCorridorDepthYd };
+        Arena side = ClassroomArena(c);
+        side.Add(ArenaRegion::Polygon({ { nearMid.x + n.x * w, nearMid.y + n.y * w },
+            { farMid.x + n.x * w, farMid.y + n.y * w }, { farMid.x - n.x * w, farMid.y - n.y * w },
+            { nearMid.x - n.x * w, nearMid.y - n.y * w } }, g.z - 7.f, g.z + 5.f));
+        return side;
     }
 
     // ----------------------------------------------------------------------------------------------------------------

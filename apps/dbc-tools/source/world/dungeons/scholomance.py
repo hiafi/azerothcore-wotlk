@@ -20,8 +20,8 @@ Herald (an instance summon with a DungeonEncounter row, stock per SC ruling 2) i
 tier and INSTANCE_BIND; it keeps its stock loot and its stock stun behavior.
 
 Hard mode (Ras's keepsake, Gandling's honors program) is heroic only and is not a map difficulty: it needs no row
-here. Its units (the Ice Tomb 300535, the Graduate Examiners 300548-300554) exist only on heroic and are declared by
-their own WPs (S12, S13); they join `extra=` and `_KIT_ADD_HEROIC` when those WPs land.
+here. Its units (the Ice Tomb 300535, the Graduate Examiners 300548-300554) exist only on heroic, are declared by
+their own WPs (S12, S13) and get no heroic template: they spawn at their own entry (wave C mint rule).
 
 The boss kit's combat adds (source/npcs/scholomance/, built by the boss WPs; ids 300530-300579) are invisible to the
 extraction, so `extra=` lists them. A heroic override needs a creature_template this run declares, and the adds do not
@@ -101,7 +101,7 @@ _STUN_IMMUNE = {"CreatureImmunitiesId": 1972}
 # file declares. Not listed on purpose (no heroic template; they run on their normal entry): Reflection 300530,
 # Loose part 300531, Unfinished Construct 300532, Blizzard anchor 300534, Loose Soul 300537, Work Bench 300538,
 # Barov fortune 300543, the Ravenian's echo 300545 and the lesson / portal stalkers 300546-300547. Ice Tomb 300535
-# and the Graduate Examiners 300548-300554 exist only on heroic and join in WP-S12 / WP-S13.
+# and the Graduate Examiners 300548-300554 exist only on heroic and spawn at their own entry (no heroic template).
 #
 # Mint order (R-A N-2): a scoped write run mints the adds it finds next-after-highest, in entry order. The predicted
 # ids (lib/test_scholomance_heroic.py KIT_HEROIC_ID, and each add's difficulty_entry_1) hold only if every wave mints
@@ -133,19 +133,19 @@ def _declared_kit_entries() -> set[int]:
 _declared = _declared_kit_entries()
 
 
-# R-A S-2: until WP-L (wave C) declares the heroic bosses' loot (boss_loot(), which copies group 0 to the heroic
-# lootid), a heroic boss keeps its normal lootid like the trash: the heroic copy then drops the stock list, Rattlegore's
-# Viewing Room Key 13873 included, and the boot logs no missing loot table. WP-L flips this (True) as its loot lands.
-_HEROIC_BOSS_OWN_LOOT = False
+# R-A S-2 / WP-L: a heroic boss drops its own loot: `lootid` = its own heroic entry, whose groups source/items/
+# scholomance_loot.py declares (copying group 0 from the normal lootid; Marduk's holds only that copy).
+_HEROIC_BOSS_OWN_LOOT = True
 
 
-def _boss(health: int, heroic_entry: int | None = None) -> dict:
+def _boss(health: int, heroic_entry: int | None = None, **columns) -> dict:
     """A heroic boss drops its own loot: `lootid` = its own heroic entry (heroic_ids.lock), whose groups hold the
-    Heroic tiers (WP-L; held back by `_HEROIC_BOSS_OWN_LOOT` until then)."""
-    columns = dict(_STUN_IMMUNE)
+    Heroic tiers (source/items/scholomance_loot.py). `columns` override any of the values."""
+    values = dict(_STUN_IMMUNE)
     if heroic_entry is not None and _HEROIC_BOSS_OWN_LOOT:
-        columns["lootid"] = heroic_entry
-    return dict(health=health, columns=columns)
+        values["lootid"] = heroic_entry
+    values.update(columns)
+    return dict(health=health, columns=values)
 
 
 # The wave switches of source/npcs/scholomance/_common.py (BIND_WAVE_B, BIND_WAVE_C; R-A S-11), read from its text
@@ -207,7 +207,9 @@ scholomance = dungeon(
         overrides={
             10503: _boss(265_000, 310093),  # Jandice Barov
             11622: _boss(280_000, 310110),  # Rattlegore
-            10433: _boss(425_000, 310070),  # Marduk Blackpool (one shared pool with Vectus)
+            # Marduk Blackpool (one shared pool with Vectus): his own lootid holds only the copy of his group 0 (the
+            # encounter's list is on Vectus); both keep their stock gold
+            10433: _boss(425_000, 310070),
             10432: _boss(425_000, 310069),  # Vectus
             10508: _boss(270_000, 310098),  # Ras Frostwhisper
             **_wave("B", {

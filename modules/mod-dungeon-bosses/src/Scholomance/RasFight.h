@@ -13,9 +13,9 @@
  *                 the Chill meter, warmth, the thaw, the handle list.
  *
  * Hook order: OnEngage after S4's own engage (encounter begun, descriptor set, the warm Stack registered); OnUpdate
- * every AI tick in combat before S4's beats; OnDamageTaken before BossAI's; OnFreeze when a player reaches 20 Chill
- * (S4 has already emptied the meter); OnEnd from S4's cleanup (death, evade, reset; `died` on the death). The hold
- * queries are read every tick.
+ * every AI tick in combat before S4's beats (S4 then cancels or restores its warm Stack per SuspendsWarmStack);
+ * OnDamageTaken before BossAI's; OnFreeze when a player reaches 20 Chill (S4 has already emptied the meter); OnEnd
+ * from S4's cleanup (death, evade, reset; `died` on the death). The hold queries are read every tick.
  */
 
 #ifndef MOD_DUNGEON_BOSSES_SCHOLOMANCE_RAS_FIGHT_H
@@ -34,6 +34,8 @@ class Unit;
 
 namespace ScholoRas
 {
+    class RasHardMode;
+
     // S4's AI, as the hard mode sees it during one pull.
     class RasFight
     {
@@ -42,6 +44,9 @@ namespace ScholoRas
 
         virtual Creature* Ras() = 0;
         virtual bool Heroic() const = 0;
+        // The pull's hard mode object (nullptr on a pull without it, or out of combat): S12's `.dbtest scholo keepsake`
+        // and its Ice Tomb reach it through Ras's AI (dynamic_cast<RasFight*>(ras->AI())).
+        virtual RasHardMode* ActiveHardMode() = 0;
 
         // The players of the fight: alive, not game masters, in combat with Ras or on his arena.
         virtual std::vector<Player*> FightPlayers() = 0;
@@ -97,6 +102,9 @@ namespace ScholoRas
         virtual bool HoldsFrostMark(RasFight const& /*fight*/) const { return false; }
         // True: S4's per-second Chill beat is skipped (the Siphon builds Chill itself through AddChill).
         virtual bool HoldsChillBeat(RasFight const& /*fight*/) const { return false; }
+        // True: S4's warm Stack (the bots' Cluster, RF2) is cancelled, and registered again once this turns false: a
+        // Siphon Warmth, whose 8 yd Spread asks the opposite.
+        virtual bool SuspendsWarmStack(RasFight const& /*fight*/) const { return false; }
     };
 
     using RasHardModeFactory = std::function<std::unique_ptr<RasHardMode>(Creature* ras)>;

@@ -52,6 +52,9 @@ HEROIC_LOOTID = {
     1853: 310068, 10432: 310069, 10433: 310070, 10502: 310092, 10503: 310093, 10504: 310094, 10505: 310095,
     10507: 310097, 10508: 310098, 10901: 310100, 11261: 310103, 11622: 310110,
 }
+# F-C4 (orchestrator ruling 2026-11-08): Marduk keeps his own lootid (heroic: his own entry, holding only the copy of
+# his group 0) and his stock gold, as does Vectus, so no boss overrides a column besides its lootid.
+HEROIC_COLUMNS: dict[int, dict] = {}
 KIT_HEALTH = {
     300533: 22_000, 300536: 18_000, 300539: 9_000, 300540: 9_000, 300541: 9_000, 300542: 65_000, 300544: 25_000,
 }
@@ -143,6 +146,7 @@ class DeclarationTest(unittest.TestCase):
                 expected = {"CreatureImmunitiesId": 1972}
                 if OWN_LOOT:
                     expected["lootid"] = HEROIC_LOOTID[entry]
+                expected.update(HEROIC_COLUMNS.get(entry, {}))
                 self.assertEqual(dict(overrides[entry]["columns"]), expected)
         self.assertNotIn(10506, overrides)  # Kirtonos stays stock, loot included
         self.assertEqual(overrides[QUIZ_STUDENT]["health"], 12_000)  # the quiz student
@@ -151,10 +155,10 @@ class DeclarationTest(unittest.TestCase):
         self.assertEqual(copy["health"], BOSS_HEALTH[10503])  # her health
         self.assertEqual(dict(copy["columns"])["unit_class"], 2)
 
-    def test_wave_b_holds_wave_c_back(self):
-        # R-A S-11: wave B ships with BIND_WAVE_C off (flip it with the C++ kWaveCBound).
-        self.assertEqual(BOUND, {"A", "B"})
-        self.assertFalse(OWN_LOOT)
+    def test_all_waves_bound(self):
+        # R-A S-11: wave C flips BIND_WAVE_C with the C++ kWaveCBound; every reworked boss is bound.
+        self.assertEqual(BOUND, {"A", "B", "C"})
+        self.assertTrue(OWN_LOOT)  # WP-L: every heroic boss drops its own loot (source/items/scholomance_loot.py)
 
     def test_kit_add_overrides_follow_the_declared_templates(self):
         overrides = {entry: dict(pairs) for entry, pairs in self.heroic["overrides"]}
@@ -288,9 +292,15 @@ class ExpansionTest(unittest.TestCase):
                     continue  # a later wave's boss: the tier and its stock row (R-A S-11)
                 self.assertEqual(report.solved.health, health)
                 self.assertEqual(int(row["CreatureImmunitiesId"]), 1972)
-                # Its own heroic loot once WP-L lands; until then the normal lootid (R-A S-2)
+                # Its own heroic loot (WP-L; Marduk's holds only the copy of his group 0, F-C4)
                 lootid = HEROIC_LOOTID[boss] if OWN_LOOT else int(self.existing[boss]["lootid"])
+                lootid = HEROIC_COLUMNS.get(boss, {}).get("lootid", lootid)
                 self.assertEqual(int(row["lootid"]), lootid)
+                for column in ("mingold", "maxgold"):
+                    if column in HEROIC_COLUMNS.get(boss, {}):
+                        self.assertEqual(int(row[column]), HEROIC_COLUMNS[boss][column], (boss, column))
+                    elif boss in (10432, 10433):  # Marduk and Vectus keep their own stock purses (F-C4)
+                        self.assertEqual(int(row[column]), int(self.existing[boss][column]), (boss, column))
         kirtonos = rows[heroic_entry[10506]]
         self.assertEqual(self.reports[10506].role, "boss")
         self.assertEqual(int(kirtonos["flags_extra"]) & 1, 1)

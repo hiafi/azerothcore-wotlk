@@ -196,6 +196,7 @@ struct boss_ras_frostwhisper_rework : public BossAI, public RasFight
             _hardMode->OnUpdate(*this, diff);
             if (!_engaged || !me->IsAlive())
                 return;     // the hook ended the fight
+            SyncWarmStack();
         }
 
         for (uint32 beats = _timeline.TakeChillBeats(); beats; --beats)
@@ -233,6 +234,11 @@ struct boss_ras_frostwhisper_rework : public BossAI, public RasFight
     bool Heroic() const override
     {
         return _heroic;
+    }
+
+    RasHardMode* ActiveHardMode() override
+    {
+        return _hardMode.get();
     }
 
     std::vector<Player*> FightPlayers() override
@@ -636,6 +642,24 @@ private:
         ref.Cluster(uint8(kWarmAllies)).Eligible(eligible)
             .Persistent(Milliseconds(kWarmStackMs), Milliseconds(kWarmStackTickMs)).NoTelegraph().Tag(TAG_WARMTH);
         _warmStack = ref.Handle();
+    }
+
+    // S12's Siphon Warmth asks the bots to spread (8 yd) against this Stack: no spot satisfies both, so the Stack is
+    // cancelled for the Siphon (RasHardMode::SuspendsWarmStack) and registered again after it.
+    void SyncWarmStack()
+    {
+        bool const suspend = _hardMode && _hardMode->SuspendsWarmStack(*this);
+        if (suspend && _warmStack)
+        {
+            Mechanic::Cancel(me, _warmStack);
+            _warmStack = {};
+            DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "warm-stack", "suspended");
+        }
+        else if (!suspend && !_warmStack)
+        {
+            RegisterWarmStack();
+            DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "warm-stack", "restored");
+        }
     }
 
     // RF1 for the bots: a RunOut keyed to the player's own Chill (17+), replaced before it resolves. No telegraph:

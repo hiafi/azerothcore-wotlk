@@ -5,6 +5,7 @@
 #include "ScholomanceKit.h"
 #include "Creature.h"
 #include "DungeonKit.h"
+#include "GraduateExamLogic.h"
 #include "InstanceScript.h"
 #include "Map.h"
 #include "Player.h"
@@ -74,17 +75,32 @@ namespace ScholomanceRework
         InstanceScript* instance = boss->GetInstanceScript();
         if (!instance)
             return 0;
+        // Only the players in the instructor's arena at the death (an unreleased body counts; orchestrator ruling
+        // 2026-11-08): ScholoGraduateExam::EarnsPassingGrade.
+        DungeonKit::Arena const arena = ScholoGraduateExam::GradeArena(_who);
         uint32 awarded = 0;
+        uint32 away = 0;
         for (auto const& ref : boss->GetMap()->GetPlayers())
         {
             Player* player = ref.GetSource();
-            if (!player || player->IsGameMaster() || HasFailed(player->GetGUID()))
+            if (!player)
                 continue;
+            ScholoGraduateExam::GradeCandidate c;
+            c.gameMaster = player->IsGameMaster();
+            c.failed = HasFailed(player->GetGUID());
+            c.released = player->HasPlayerFlag(PLAYER_FLAGS_GHOST);
+            c.inArena = player->IsInWorld() && arena.Contains(DungeonKit::PlaneOf(player), player->GetPositionZ());
+            if (!ScholoGraduateExam::EarnsPassingGrade(c))
+            {
+                if (!c.gameMaster && !c.failed)
+                    ++away;
+                continue;
+            }
             instance->SetGuidData(DataPassingGrade(_who), player->GetGUID());
             ++awarded;
         }
         DungeonKit::LogMechanic(kLogDungeon, kInstructorNames[std::size_t(_who)], "passing-grades",
-            Acore::StringFormat("awarded={} failed={}", awarded, FailedCount()));
+            Acore::StringFormat("awarded={} failed={} away={}", awarded, FailedCount(), away));
         _active = false;
         return awarded;
     }

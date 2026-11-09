@@ -81,6 +81,10 @@ _ATTR3_ALWAYS_HIT = 0x00040000
 _INTERRUPT_FLAGS_STANDARD = 15     # movement, pushback, interrupt, auto-attack: a kickable cast
 _PREVENTION_SILENCE = 1
 _DEFENSE_MAGIC = 1
+# AURA_INTERRUPT_FLAG_CHANGE_MAP (SpellDefines.h): AC drops the aura before the logout save, after the login load and on
+# a cross-map teleport; a same-map teleport (detention) keeps it. The fight's player auras last for the fight (-1), so
+# without it a logout, a crash or a summon out would keep them, and a permanent hard mode tomb would stun for good.
+_AURA_INTERRUPT_CHANGE_MAP = 0x00080000
 
 _ICON_CHILLED = 181                # Chilled 6136
 _ICON_AURA_OF_FROST = 182          # Aura of Frost 23186
@@ -119,7 +123,7 @@ chill_206170 = spell(
           '(17+) and the warm Stack\'s eligibility (below 17) read its stacks. Chilled 6136\'s SV 675 (the head mist).',
     raw_overrides=kit_raw('Stacks up to $u times. At $u stacks you freeze solid.', 'Freezing. Stay near your allies.',
                           CastingTimeIndex=1, CumulativeAura=20, SpellVisualID_1=RF_CHILL,
-                          AttributesEx4=ATTR4_NO_CAST_LOG),
+                          AttributesEx4=ATTR4_NO_CAST_LOG, AuraInterruptFlags=_AURA_INTERRUPT_CHANGE_MAP),
 )
 
 deep_chill_206171 = spell(
@@ -131,7 +135,8 @@ deep_chill_206171 = spell(
     notes=f'{_RF}, RF1: the look from 12 Chill stacks (VISUALS-REPORT, Ras: the two-step swap is the cheapest tell): '
           'a hidden DUMMY aura the AI adds (the player on itself) and removes with the meter. Aura of Frost 23186\'s '
           'SV 6778 (icebarrier_state).',
-    raw_overrides=kit_raw(instant=True, SpellVisualID_1=RF_CHILL_12_STACKS, AttributesEx4=ATTR4_NO_CAST_LOG),
+    raw_overrides=kit_raw(instant=True, SpellVisualID_1=RF_CHILL_12_STACKS, AttributesEx4=ATTR4_NO_CAST_LOG,
+                          AuraInterruptFlags=_AURA_INTERRUPT_CHANGE_MAP),
 )
 
 warmth_206172 = spell(
@@ -145,7 +150,8 @@ warmth_206172 = spell(
           'heroic: a third of the cold rate. Not cancellable (the next second would put it back). Glowy (Orange) '
           '22579\'s SV 6591 (the body glow).',
     raw_overrides=kit_raw('Two or more allies close by keep you warm.', 'Warm. Chill builds slowly or not at all.',
-                          instant=True, SpellVisualID_1=RF_WARMTH, AttributesEx4=ATTR4_NO_CAST_LOG),
+                          instant=True, SpellVisualID_1=RF_WARMTH, AttributesEx4=ATTR4_NO_CAST_LOG,
+                          AuraInterruptFlags=_AURA_INTERRUPT_CHANGE_MAP),
 )
 
 # --- RF3 Entombed / RF4 Thaw -----------------------------------------------------------------------------------------
@@ -161,9 +167,10 @@ entombed_206173 = spell(
           'caster, after the meter empties. No mechanic (no trinket or Freedom breaks it), Dispel none, '
           'NO_IMMUNITIES. As it ends the tomb bursts (the registry thaw, 206174). Ice Tomb 16869\'s SV 4340 '
           '(icebarrier_state). S12\'s permanent tomb (the hard mode\'s OnFreeze) holds the player with this aura '
-          'made permanent (RasFight.h).',
+          'made permanent (RasFight.h). AuraInterruptFlags CHANGE_MAP: a logout, a crash or a summon out drops it, so '
+          'a permanent tomb never outlives the fight on the character (as Chill, Deep Chill and Warmth).',
     raw_overrides=kit_raw('Frozen solid.', 'Frozen solid.', CastingTimeIndex=1, SpellVisualID_1=RF_ENTOMBED,
-                          AttributesEx4=ATTR4_NO_CAST_LOG),
+                          AttributesEx4=ATTR4_NO_CAST_LOG, AuraInterruptFlags=_AURA_INTERRUPT_CHANGE_MAP),
 )
 
 thaw_206174 = resolve_copy(
