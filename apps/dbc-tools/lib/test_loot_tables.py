@@ -850,6 +850,201 @@ class EngineModelTest(unittest.TestCase):
             self.assertEqual(len(set(lit) & self.hard_mode), 1)
 
 
+class LootChanceTest(unittest.TestCase):
+    """Stratholme WP-L-1: `loot_chance()` (a row at an explicit chance, a repeated item as a grouped reference row
+    into a one-item pool), `remove_loot_rows(references=)`, their rules, rendering and an engine model of the group
+    roll (the Baron's Deathcharger's Reins: 1% normal, 2% heroic, 10% hard mode, never two)."""
+
+    REINS = 13335
+
+    def setUp(self):
+        self.hammer = _item("sc_hammer", base=5187)
+        self.exp = _expansion(self.hammer)
+        self.live = [
+            _row(639, 5187, chance=30.0), _row(639, self.REINS, group=0, chance=1.0, comment="stock Reins"),
+            _row(639, 35028, group=0, chance=100.0, reference=35028, max_count=2),
+        ]
+        self.live_reference = [_row(35028, 4445, chance=0.0)]
+        self.decls = self.declare()
+
+    def declare(self, *extra):
+        calls = [
+            (L.boss_loot, (639, ("sc_hammer",)), dict(tier="normal")),
+            (L.boss_loot, (310004, ("sc_hammer",)), dict(tier="heroic")),
+            (L.remove_loot_rows, (639, (self.REINS,)), dict(group=0, why="the Reins move to group 4",
+                                                           references=(35028,))),
+            (L.remove_reference_pool, (35028,), dict(why="the list replaces it")),
+            (L.loot_chance, (639, self.REINS, 1, 4), dict(name="Reins")),
+            (L.loot_chance, (310004, self.REINS, 2, 4), dict(name="Reins")),
+            (L.loot_chance, (310004, self.REINS, 8, 4, 2), dict(reference=1700008, name="Reins")),
+        ]
+        return _declare(*calls, *extra)
+
+    def plan(self, decls=None, live=None, reference=None, items=None, other_loot=None):
+        plan = _build(decls or self.decls, self.exp)
+        live = self.live if live is None else live
+        loot_tables.derive_heroic_copies(plan, live)
+        loot_tables.check_live(plan, live, self.live_reference if reference is None else reference, IDS_CFG,
+                               item_entries=items, other_loot=other_loot)
+        return plan
+
+    def test_dsl_checks(self):
+        bad = [
+            dict(args=(639, self.REINS, 0, 4)), dict(args=(639, self.REINS, 101, 4)),
+            dict(args=(639, self.REINS, True, 4)), dict(args=(639, self.REINS, "2", 4)),
+            dict(args=(639, 0, 2, 4)), dict(args=(639, "13335", 2, 4)), dict(args=(0, self.REINS, 2, 4)),
+            dict(args=(639, self.REINS, 2, 0)), dict(args=(639, self.REINS, 2, 128)),
+            dict(args=(639, self.REINS, 2, 4, 0)), dict(args=(639, self.REINS, 2, 4), kwargs=dict(reference=0)),
+            dict(args=(639, self.REINS, 2, 4), kwargs=dict(name=5)),
+            dict(args=(639, self.REINS, 2, 4), kwargs=dict(replaces_items=(0,))),
+        ]
+        for case in bad:
+            with self.subTest(case=case), self.assertRaises(L.LootDeclarationError):
+                L.loot_chance(*case["args"], **case.get("kwargs", {}))
+        with self.assertRaises(L.LootDeclarationError):
+            L.remove_loot_rows(639, (), group=0, why="x", references=())
+        with self.assertRaises(L.LootDeclarationError):
+            L.remove_loot_rows(639, (), group=0, why="x", references=(35028, 35028))
+        with self.assertRaises(registry.DuplicateIdError) as caught:  # one item twice in a group: the table key
+            _declare((L.loot_chance, (639, self.REINS, 1, 4), {}), (L.loot_chance, (639, self.REINS, 2, 4), {}))
+        self.assertIn("needs its own reference=", str(caught.exception))
+        keys = [d["id"] for d in _declare((L.loot_chance, (639, self.REINS, 1, 4), {}),
+                                          (L.loot_chance, (639, self.REINS, 2, 4), dict(reference=1700008)))]
+        self.assertEqual(keys, [("loot-chance", 639, 4, self.REINS, 0), ("loot-chance", 639, 4, self.REINS, 1700008)])
+
+    def test_rows_of_the_reins_group(self):
+        plan = self.plan()
+        self.assertEqual(plan.errors, [])
+        self.assertEqual(plan.chance_groups, {(639, 4), (310004, 4)})
+        normal = plan.groups[(639, 4)]
+        self.assertEqual([(r["Item"], r["Reference"], r["Chance"], r["LootMode"], r["GroupId"], r["MinCount"],
+                           r["MaxCount"]) for r in normal], [(self.REINS, 0, 1.0, 1, 4, 1, 1)])
+        heroic = sorted(plan.groups[(310004, 4)], key=lambda r: r["Item"])
+        self.assertEqual([(r["Item"], r["Reference"], r["Chance"], r["LootMode"], r["GroupId"], r["MinCount"],
+                           r["MaxCount"]) for r in heroic],
+                         [(self.REINS, 0, 2.0, 1, 4, 1, 1), (1700008, 1700008, 8.0, 2, 4, 1, 1)])
+        self.assertEqual([(r["Item"], r["Reference"], r["Chance"], r["LootMode"], r["GroupId"])
+                          for r in plan.references[1700008]], [(self.REINS, 0, 100, 2, 0)])
+        self.assertEqual(plan.chance_refs, {1700008})
+        self.assertEqual(loot_tables.lint_rows(plan), [])
+        # the stock 1% row and the stock pool row leave group 0, and neither reaches the heroic copy
+        self.assertEqual(plan.row_ref_removals, {(639, 0): (35028,)})
+        self.assertNotIn((310004, 0), plan.copies)
+
+    def test_rules(self):
+        both = self.declare((L.boss_loot, (639, ("sc_hammer",)), dict(tier="normal", group=4)))
+        self.assertTrue(any("also declared by boss_loot(639, group=4)" in e for e in _build(both, self.exp).errors))
+        over = _declare((L.boss_loot, (639, ("sc_hammer",)), dict(tier="normal")),
+                        (L.loot_chance, (639, 111, 60, 5), {}), (L.loot_chance, (639, 222, 50, 5), {}))
+        self.assertTrue(any("the chances add up to 110%" in e for e in _build(over, self.exp).errors))
+        for reference, text in ((1799999, "outside source/ids.yaml's loot_reference block"),
+                                (1700008, "already another declaration's pool")):
+            decls = _declare((L.boss_loot, (639, ("sc_hammer",)), dict(tier="normal")),
+                             (L.loot_chance, (639, 111, 5, 6), dict(reference=1700008)),
+                             (L.loot_chance, (639, 111, 5, 7), dict(reference=reference)))
+            errors = _build(decls, self.exp).errors
+            self.assertTrue(any(text in e for e in errors), errors)
+        no_default = _declare((L.loot_chance, (639, 111, 5, 6, 2), {}))
+        self.assertTrue(any("declares no default group" in e for e in _build(no_default, self.exp).errors))
+        mixed = _declare((L.boss_loot, (639, ("sc_hammer",)), dict(tier="normal")),
+                         (L.loot_chance, (639, 111, 5, 6, 3), {}))
+        self.assertTrue(any("beside other bits" in e for e in _build(mixed, self.exp).errors))
+        hand_built = loot_tables.LootPlan(
+            groups={(639, 4): [_row(639, 111, group=4, chance=0.0), _row(639, 112, group=4, chance=5.0, reference=9)]},
+            chance_groups={(639, 4)})
+        errors = loot_tables.lint_rows(hand_built)
+        self.assertTrue(any("item 111 has Chance 0.0" in e for e in errors), errors)
+        self.assertTrue(any("reference 9 is not a declared loot_chance() pool" in e for e in errors), errors)
+        pool = loot_tables.LootPlan(references={1700008: [_row(1700008, 13335, group=1, chance=50.0)]},
+                                    chance_refs={1700008})
+        self.assertTrue(any("holds its one item ungrouped at Chance 100" in e for e in loot_tables.lint_rows(pool)))
+
+    def test_live_rules(self):
+        # a stock row in the group the declaration rewrites is foreign unless it is a declared row or named
+        stray = self.live + [_row(639, 7777, group=4, chance=5.0)]
+        errors = self.plan(live=stray).errors
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("639 group 4: the declaration would drop item 7777", errors[0])
+        decls = _declare(
+            (L.boss_loot, (639, ("sc_hammer",)), dict(tier="normal")),
+            (L.boss_loot, (310004, ("sc_hammer",)), dict(tier="heroic")),
+            (L.remove_loot_rows, (639, (self.REINS,)), dict(group=0, why="x", references=(35028,))),
+            (L.remove_reference_pool, (35028,), dict(why="x")),
+            (L.loot_chance, (639, self.REINS, 1, 4), dict(replaces_items=(7777,))),
+            (L.loot_chance, (310004, self.REINS, 2, 4), {}),
+            (L.loot_chance, (310004, self.REINS, 8, 4, 2), dict(reference=1700008)),
+        )
+        self.assertEqual(self.plan(decls=decls, live=stray).errors, [])
+        # the Reins' own live row in the group is a row the declaration rewrites, not a foreign one
+        own = self.live + [_row(639, self.REINS, group=4, chance=1.0)]
+        self.assertEqual(self.plan(live=own).errors, [])
+        # hand-named ids exist: the chance item, the removed reference row
+        known = {5187, self.REINS}
+        self.assertEqual(self.plan(items=known).errors, [])
+        errors = self.plan(items={5187}).errors
+        self.assertTrue(any(f"loot_chance(): [{self.REINS}] has no item_template row" in e for e in errors), errors)
+        typo = _declare(
+            (L.boss_loot, (639, ("sc_hammer",)), dict(tier="normal")),
+            (L.remove_loot_rows, (639, (self.REINS,)), dict(group=0, why="x", references=(35099,))),
+        )
+        self.assertTrue(any("references= names [35099]" in e for e in self.plan(decls=typo).errors))
+        # the removed pool is still used by a row the run keeps
+        used = self.live + [_row(640, 35028, group=0, chance=100.0, reference=35028)]
+        self.assertTrue(any("remove_reference_pool(35028): still referenced by creature_loot_template 640 group 0" in e
+                            for e in self.plan(live=used).errors))
+
+    def test_render_replays_to_the_declared_state_and_reruns_silent(self):
+        plan = self.plan()
+        first = loot_tables.render(plan, self.live, self.live_reference)
+        self.assertEqual(first.groups, [(639, 1), (639, 4), (310004, 1), (310004, 4)])
+        self.assertEqual(first.references, [1700008])
+        self.assertEqual(first.row_removals, [(639, 0)])
+        self.assertEqual(first.pool_removals, [35028])
+        text = "\n\n".join(first.blocks) + "\n"
+        self.assertIn("DELETE FROM `creature_loot_template` WHERE `Entry` = 639 AND `GroupId` = 0 AND `Reference` = 0 "
+                      "AND `Item` IN (13335);\nDELETE FROM `creature_loot_template` WHERE `Entry` = 639 AND "
+                      "`GroupId` = 0 AND `Reference` IN (35028);", text)
+        after = _replay({loot_tables.CREATURE_LOOT: self.live, loot_tables.REFERENCE_LOOT: self.live_reference}, text)
+        creature = {(r["Entry"], r["Item"], r["Reference"], r["GroupId"]) for r in after[loot_tables.CREATURE_LOOT]}
+        self.assertNotIn((639, self.REINS, 0, 0), creature)
+        self.assertNotIn((639, 35028, 35028, 0), creature)
+        self.assertEqual({k for k in creature if k[0] == 639 and k[3] == 4}, {(639, self.REINS, 0, 4)})
+        self.assertEqual({k for k in creature if k[0] == 310004 and k[3] == 4},
+                         {(310004, self.REINS, 0, 4), (310004, 1700008, 1700008, 4)})
+        self.assertEqual({(r["Entry"], r["Item"], r["Chance"], r["LootMode"])
+                          for r in after[loot_tables.REFERENCE_LOOT]}, {(1700008, self.REINS, 100, 2)})
+        replan = self.plan(live=after[loot_tables.CREATURE_LOOT], reference=after[loot_tables.REFERENCE_LOOT])
+        self.assertEqual(replan.errors, [])
+        second = loot_tables.render(replan, after[loot_tables.CREATURE_LOOT], after[loot_tables.REFERENCE_LOOT])
+        self.assertEqual(second.blocks, [])
+
+    def kill(self, plan, lootid, loot_mode, rng):
+        """LootGroup::Roll for the explicit-chance rows of group 4: the LootMode filter, then the chances in turn;
+        a grouped reference row processes its pool (ungrouped, Chance 100, the same LootMode filter)."""
+        drops = []
+        rows = [r for r in plan.groups[(lootid, 4)] if r["LootMode"] & loot_mode]
+        roll = rng.random() * 100
+        for row in rows:
+            roll -= row["Chance"]
+            if roll < 0:
+                if row["Reference"]:
+                    drops += [p["Item"] for p in plan.references[row["Reference"]] if p["LootMode"] & loot_mode]
+                else:
+                    drops.append(row["Item"])
+                break
+        return drops
+
+    def test_engine_model_one_reins_at_one_two_and_ten_percent(self):
+        plan = self.plan()
+        rng = random.Random(20261109)
+        n = 200000
+        for lootid, loot_mode, want in ((639, 1, 0.01), (310004, 1, 0.02), (310004, 1 | 2, 0.10)):
+            drops = Counter(len(self.kill(plan, lootid, loot_mode, rng)) for _ in range(n))
+            with self.subTest(lootid=lootid, loot_mode=loot_mode):
+                self.assertEqual(set(drops), {0, 1})  # never two Reins from one kill
+                self.assertAlmostEqual(drops[1] / n, want, delta=0.003)
+
+
 def _loot_of(file_name: str) -> tuple[dict, list[L.LootDecl]]:
     """source/items/ loaded once, and the loot declarations `file_name` (e.g. "deadmines_loot.py") made: the file
     that declared each one, not an item-key prefix or a hard-coded lootid."""

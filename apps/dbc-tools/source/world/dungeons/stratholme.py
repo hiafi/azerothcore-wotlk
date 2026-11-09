@@ -230,14 +230,15 @@ _declared = _declared_kit_entries()
 
 
 # A heroic boss drops its own loot: `lootid` = its own heroic entry, whose groups source/items/stratholme_loot.py
-# declares (L-1, copying the normal groups and adding the Heroic tiers). Off until L-1 declares them (Scholomance R-A
-# S-2): a lootid with no loot_template rows behind it drops nothing.
-_HEROIC_BOSS_OWN_LOOT = False
+# declares (L-1, copying the normal groups and adding the Heroic tiers). It was off until L-1 declared them (Scholomance
+# R-A S-2): a lootid with no loot_template rows behind it drops nothing. A Main Gate boss (wave 2) takes this switch
+# too, but its entry is only an override while BIND_WAVE_2 is off, so its loot arrives with L-2.
+_HEROIC_BOSS_OWN_LOOT = True
 
 
 def _boss(health: int, heroic_entry: int | None = None, **columns) -> dict:
-    """A heroic boss: stun immune (1972) and, once L-1 lands, its own heroic loot (heroic_ids.lock). `columns`
-    override any of the values (the Baron's -419)."""
+    """A heroic boss: stun immune (1972) and its own heroic loot (heroic_ids.lock). `columns` override any of the
+    values (the Baron's -419)."""
     values = dict(_STUN_IMMUNE)
     if heroic_entry is not None and _HEROIC_BOSS_OWN_LOOT:
         values["lootid"] = heroic_entry
