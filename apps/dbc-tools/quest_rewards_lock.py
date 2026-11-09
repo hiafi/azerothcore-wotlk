@@ -5,6 +5,8 @@ Seeds and checks `source/items/quest_rewards.lock` (quest reward itemization, li
     python3 apps/dbc-tools/quest_rewards_lock.py                        # dry run: counts, what a seed would append
     python3 apps/dbc-tools/quest_rewards_lock.py --seed-quest-rewards   # append the missing lines to the lock
     python3 apps/dbc-tools/quest_rewards_lock.py --json out.json        # every decision and skip, for a report
+    python3 apps/dbc-tools/quest_rewards_lock.py --step-down-zero       # round 6: lower the share of a line whose
+                                                                        # secondary stat materializes to 0
 
 Read-only on everything but the lock (and the `--json` file). The lock is append-only: a seed run appends a line for
 every in-scope item without one and never rewrites or removes a line, so hand edits stay. A locked entry that has left
@@ -43,7 +45,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--seed-quest-rewards", action="store_true", help="append the missing lines to the lock")
     parser.add_argument("--json", type=Path, help="write every decision and skip to this JSON file")
+    parser.add_argument("--step-down-zero", action="store_true",
+                        help="step down the primary share of every lock line whose secondary stat materializes to 0 "
+                             "(round 6) and rewrite those lines; prints the list")
     args = parser.parse_args(argv)
+    if args.step_down_zero and args.seed_quest_rewards:
+        parser.error("--step-down-zero and --seed-quest-rewards are separate runs")
 
     inputs = qr.load_inputs()
     owned = qr.owned_elsewhere()
@@ -72,6 +79,24 @@ def main(argv: list[str] | None = None) -> int:
         }
         args.json.write_text(json.dumps(payload, indent=1), encoding="utf-8")
         print(f"wrote {args.json}")
+    if args.step_down_zero:
+        from lib import item_variants  # noqa: PLC0415
+
+        tables, shape_catalog = item_variants.load_itemization_tables()
+        stepped, changes, stuck, blocked = qr.step_down_zero(current, inputs.rows, tables, shape_catalog,
+                                                             inputs.catalog)
+        for entry, (old, new, stats) in sorted(changes.items()):
+            print(f"step-down {entry} {inputs.rows[entry]['name']}: share {old}->{new} ("
+                  + "/".join(qr.STAT_NAMES[s] for s in stats) + " was 0)")
+        for entry, stats in sorted(stuck.items()):
+            print(f"still 0 (no share helps, share kept): {entry} {inputs.rows[entry]['name']}: "
+                  + "/".join(qr.STAT_NAMES[s] for s in stats))
+        for entry, stats in sorted(blocked.items()):
+            print(f"still 0 (a lower share loses the main stat, share kept): {entry} {inputs.rows[entry]['name']}: "
+                  + "/".join(qr.STAT_NAMES[s] for s in stats))
+        qr.LOCK_PATH.write_text(stepped, encoding="utf-8")
+        print(f"{qr.LOCK_PATH.name}: {len(changes)} line(s) stepped down, {len(stuck)} still 0 at any share, "
+              f"{len(blocked)} only at the cost of the main stat")
     if args.seed_quest_rewards:
         if appended:
             qr.LOCK_PATH.write_text(text, encoding="utf-8")

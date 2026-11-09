@@ -26,6 +26,7 @@ from lib import quest_rewards as qr  # noqa: E402
 
 I = qr._int
 NOTE_MARK = "//"
+GREEN_CURVE_FIRST_REAL = 11  # round 6: the Quality 2 weapon curve changed below ilvl 11 (paired) / 10 (single)
 
 STAT_WORDS = {
     qr.STR: "Strength", qr.AGI: "Agility", qr.INT: "Intellect", qr.SPI: "Spirit", qr.STA: "Stamina",
@@ -132,12 +133,30 @@ def plain(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def note_text(d: qr.Decision | None, line: qr.LockLine) -> str:
-    if d is None or (d.quality, d.ilvl, d.primary, d.secondary, d.share, d.spells_field) != (
-            line.quality, line.ilvl, line.primary, line.secondary, line.share, line.spells):
-        why = line.comment.split(" -- ", 1)[-1]
-        return plain(f"hand-edited lock line ({why})")
-    return plain("; ".join([p for p in d.paths if p] + [f"FB {f}" for f in d.fallbacks]))
+ROUND = "round 6"
+ROUND_PREFIXES = ("round 6: ", "designer 2026-11-09 (round 6, ruling 29): ", "round 6 step-down: ")
+
+
+def note_text(d: qr.Decision | None, line: qr.LockLine, comment: str, stats_changed: str = "") -> str:
+    """The Note: what round 6 changed first (`**round 6**: ...`: a designer edit or a step-down from the lock
+    comment, a ruling 28 or 30 rule path, or `stats_changed` when only the materialized stats moved), then the rule
+    path. A lock line whose fields differ from the rules is a hand edit: its comment is the rule path."""
+    hand = d is None or (d.quality, d.ilvl, d.primary, d.secondary, d.share, d.spells_field) != (
+        line.quality, line.ilvl, line.primary, line.secondary, line.share, line.spells)
+    if hand:
+        why = comment.split(" -- ", 1)[-1]
+        parts = why.split("; ")[1:]  # the first part is the shapes as stats
+    else:
+        parts = [p for p in d.paths if p] + [f"FB {f}" for f in d.fallbacks]
+    changed = [p for p in parts if ROUND in p]
+    rest = [p for p in parts if ROUND not in p]
+    for prefix in ROUND_PREFIXES:
+        changed = [p.replace(prefix, "designer: " if "designer" in prefix else
+                             "step-down: " if "step-down" in prefix else "") for p in changed]
+    if not changed and stats_changed:
+        changed = [stats_changed]
+    head = f"**{ROUND}**: " + "; ".join(changed) + ". " if changed else ""
+    return head + plain("; ".join((["hand-edited lock line"] if hand else []) + rest))
 
 
 def quests_text(d: qr.Decision, quests: dict) -> str:
@@ -162,6 +181,18 @@ def class_names(d: qr.Decision, quests: dict, addons: dict) -> set[str]:
     return names
 
 
+def old_new_stats(path: Path | None) -> dict[int, str]:
+    """{entry: its New stats cell} of an earlier review file (the baseline a re-run marks changes against)."""
+    out = {}
+    if path is None or not path.is_file():
+        return out
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        cells = [c.strip() for c in re.split(r"(?<!\\)\|", raw)[1:-1]]
+        if len(cells) >= 10 and cells[0].isdigit():
+            out[int(cells[0])] = cells[7]
+    return out
+
+
 def old_notes(path: Path) -> dict[int, str]:
     """{entry: designer text after the `//`} of an earlier review file."""
     notes = {}
@@ -183,6 +214,9 @@ HEADER = ("| Entry | Name | Quest (id, level) | Quality (stock -> new) | Slot / 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--out", type=Path, required=True, help="the review markdown file to (re)write")
+    parser.add_argument("--baseline", type=Path,
+                        help="an earlier review file: a row whose New stats differ from it is marked as changed by "
+                             "round 6 even when its lock line did not change (a curve change)")
     args = parser.parse_args(argv)
 
     from lib import item_variants  # noqa: PLC0415
@@ -197,6 +231,8 @@ def main(argv: list[str] | None = None) -> int:
         print("\n".join(mat.errors), file=sys.stderr)
         return 1
     notes = old_notes(args.out)
+    baseline = old_new_stats(args.baseline)
+    comments = qr.lock_comments(qr.LOCK_PATH.read_text(encoding="utf-8"))
 
     part1, part2, other = [], collections.defaultdict(list), []
     for entry in sorted(lock):
@@ -219,7 +255,14 @@ def main(argv: list[str] | None = None) -> int:
             base = inputs.base_rows.get(d.entry, cur)
             new_stats = {I(new[f"stat_type{n}"]): I(new[f"stat_value{n}"]) for n in range(1, 11)
                          if I(new[f"stat_type{n}"])}
-            note = note_text(d, line)
+            new_cell = item_side(stat_text(new_stats), new, base)
+            moved = ""
+            if d.entry in baseline and baseline[d.entry] != cell(new_cell):
+                curve = (I(cur.get("class")) == qr.ITEM_CLASS_WEAPON and line.quality == qr.UNCOMMON
+                         and line.ilvl < GREEN_CURVE_FIRST_REAL)
+                moved = ("new stats changed: the green weapon curve's low end (option B)" if curve
+                         else "new stats changed")
+            note = note_text(d, line, comments.get(d.entry, line.comment), moved)
             if I(cur.get("RandomProperty")) or I(cur.get("RandomSuffix")):
                 note += (f"; keeps its random enchant (RandomProperty {I(cur.get('RandomProperty'))}, RandomSuffix "
                          f"{I(cur.get('RandomSuffix'))}) on top of the budget (ruling 26)")
@@ -230,7 +273,7 @@ def main(argv: list[str] | None = None) -> int:
                 d.entry, d.name, quests_text(d, inputs.quests),
                 f"{QUALITY_WORDS[d.stock_quality]} -> {QUALITY_WORDS[line.quality]}", slot_text(cur),
                 f"{d.stock_ilvl} -> {line.ilvl}", item_side(stat_text(d.stock), base, new),
-                item_side(stat_text(new_stats), new, base), spells_text(line, cur, base, inputs.spells),
+                new_cell, spells_text(line, cur, base, inputs.spells),
                 note)) + " |")
         return out
 
@@ -242,7 +285,8 @@ def main(argv: list[str] | None = None) -> int:
         "# Quest reward itemization: review of epics and class quest rewards",
         "",
         "Generated by `apps/dbc-tools/quest_rewards_review.py` from `apps/dbc-tools/source/items/quest_rewards.lock`"
-        " (branch `feat/quest-reward-itemization`). Stage QR1b, rulings 1-27.",
+        " (branch `feat/quest-reward-itemization`). Stage QR1c, rulings 1-30. A row round 6 changed starts its Note"
+        " with **round 6**.",
         "",
         "**How to annotate:** write your notes in the Note cell after the `//`. To change an item, edit its lock "
         "line (or tell me), then re-run the script: it keeps whatever follows the `//` of each entry.",

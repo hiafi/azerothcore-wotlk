@@ -16,7 +16,10 @@ conversion (shield Block, plate Parry, else Dodge; Parry and Block fall back to 
 without Strength or Agility the tank stat is dropped for Versatility, ruling 24); MP5 on blues and its Spirit
 fallback, MP5 dropped on greens and epics;
 absorbed and kept spell slots; owned_elsewhere() over a temporary source tree; the lock (parse, render, append-only
-seed that keeps hand edits); `tier(label=None)` (no label row) and int shape ids in item().
+seed that keeps hand edits); `tier(label=None)` (no label row) and int shape ids in item(). Round 6 (QR1c): ruling 28
+(same name and quest share the lowest entry's shapes; role variants keep their primary), ruling 30 (Warrior gear:
+Agility to Crit, Intellect to Proc Chance), the Argent Dawn gloves at MinLevel, the hand-only shapes kept out of the
+rules, and the lock edit helpers (`replace_lines`, `lock_comments`, `step_down`).
 
 Optional (slow, real data): QUEST_REWARDS_REAL=1 also expands every real quest_rewards.lock line against the replayed
 tables and checks the emitted stats equal `compute_breakdown`.
@@ -89,9 +92,22 @@ EPIC_POOL = [29, 32, 35, 36, 42, 67, 74]
 VERS_PAIRS = [32, 35, 36, 67, 74]
 
 
-def catalog() -> qr.Catalog:
+# Round 6: the three new shapes, and the pairs ruling 30 reaches (kept out of the default catalog so the generic
+# pools of the older tests stay as they are).
+_ROUND6_SHAPES = [
+    (81, 0, "Spell Power (Solo)", [SP], [10000], []),
+    (82, 0, "Attack Power (Solo)", [AP], [10000], []),
+    (83, 1, "Parry/Versatility (Any)", [PARRY, VERS], [5000, 5000], []),
+    (30, 1, "Crit/Mastery", [CRIT, MASTERY], [5000, 5000], []),
+    (39, 1, "Crit/Proc", [CRIT, PROC], [5000, 5000], []),
+    (40, 1, "Haste/Proc", [HASTE, PROC], [5000, 5000], []),
+    (41, 1, "Crit/Haste, Crit lead", [CRIT, HASTE], [6667, 3333], []),
+]
+
+
+def catalog(round6: bool = False) -> qr.Catalog:
     shapes = {sid: {"shape_id": sid, "kind": kind, "name": name, "stats": stats, "alloc": alloc, "rules": rules}
-              for sid, kind, name, stats, alloc, rules in _SHAPES}
+              for sid, kind, name, stats, alloc, rules in _SHAPES + (_ROUND6_SHAPES if round6 else [])}
     return qr.Catalog(shapes, COSTS)
 
 
@@ -151,8 +167,9 @@ def quest(qid, level, title=None, sort=12, info=0, flags=0, min_level=0, **cols)
     return row
 
 
-def decide(row, base=None, quest_level=10, spells=SPELLS):
-    return qr.decide(row["entry"], [qr.Quest(1, quest_level, "Q", "zone")], row, base or row, spells, catalog())
+def decide(row, base=None, quest_level=10, spells=SPELLS, classes=frozenset(), cat=None):
+    quests = [qr.Quest(1, quest_level, "Q", "class" if classes else "zone", classes=frozenset(classes))]
+    return qr.decide(row["entry"], quests, row, base or row, spells, cat or catalog())
 
 
 class ScopeTest(unittest.TestCase):
@@ -160,6 +177,8 @@ class ScopeTest(unittest.TestCase):
         self.rows = {e: item_row(e) for e in range(100, 126)}
         self.rows[121] = item_row(121, quality=1, cls=2, subclass=20, inv=17)  # a fishing pole
         self.rows[10515] = item_row(10515, quality=1, cls=4, subclass=0, inv=17)  # Torch of Retribution
+        self.rows[3567] = item_row(3567, quality=2, cls=2, subclass=3, inv=26)  # Dwarven Fishing Pole (a gun)
+        self.rows[864] = item_row(864, quality=2, cls=2, subclass=7, inv=13)  # Knightly Longsword
         self.rows[110] = item_row(110, inv=4)  # shirt
         self.rows[111] = item_row(111, inv=19)  # tabard
         self.rows[112] = item_row(112, cls=12, inv=0)  # a quest item
@@ -187,7 +206,7 @@ class ScopeTest(unittest.TestCase):
             18: quest(18, -1, sort=12, min_level=20, RewardItem1=120),  # scaled, class by AllowableClasses
             19: quest(19, -1, sort=-263, min_level=70, RewardItem1=122),  # scaled class quest above 60
             20: quest(20, -1, sort=-101, min_level=10, RewardItem1=123),  # scaled fishing quest: not a class quest
-            21: quest(21, 10, RewardItem1=121, RewardItem2=10515),
+            21: quest(21, 10, RewardItem1=121, RewardItem2=10515, RewardItem3=3567, RewardItem4=864),
             22: quest(22, 8, RewardItem1=124),  # 124 also from scaled quest 23 at MinLevel 5: the lowest
             23: quest(23, -1, sort=-61, min_level=5, RewardItem1=124),
         }
@@ -203,7 +222,8 @@ class ScopeTest(unittest.TestCase):
         for entry, word in ((105, "repeatable"), (106, "daily"), (107, "weekly"), (108, "raid"), (109, "PvP"),
                             (115, "quest level 70"), (116, "quest level -1"), (101, "daily"),
                             (122, "scaled class quest, MinLevel 70"), (123, "quest level -1"),
-                            (121, "fishing pole (ruling 25)"), (10515, "Torch of Retribution (ruling 25)")):
+                            (121, "fishing pole (ruling 25)"), (10515, "Torch of Retribution (ruling 25)"),
+                            (3567, "Dwarven Fishing Pole"), (864, "Knightly Longsword")):
             self.assertIn(word, s.skipped[entry], entry)
         self.assertIn("ruling 16", s.skipped[113])
         self.assertIn("ruling 17", s.skipped[114])
@@ -549,6 +569,115 @@ class DslTest(unittest.TestCase):
                 D.item("qr_6", base=6, ladder=lad, primary=bad, secondary=25)
 
 
+class RoundSixTest(unittest.TestCase):
+    """Round 6 (QR1c): rulings 28 and 30, the Argent Dawn gloves at MinLevel, the hand-only shapes, the lock edit
+    helpers."""
+
+    def test_quest_classes(self):
+        self.assertEqual(qr.quest_classes(quest(1, 10, sort=-81), None), {"Warrior"})
+        self.assertEqual(qr.quest_classes(quest(1, 10), {"AllowableClasses": 1 | 2}), {"Warrior", "Paladin"})
+        self.assertEqual(qr.quest_classes(quest(1, 10, sort=-101), None), frozenset())  # fishing: no class
+        self.assertEqual(qr.quest_classes(quest(1, 10), None), frozenset())
+
+    def test_ruling_30_warrior_agility_becomes_crit(self):
+        cat = catalog(round6=True)
+        dagger = item_row(6001, quality=1, ilvl=10, cls=2, subclass=15, inv=13)  # white dagger: Agi; 6001 % 6 -> Haste
+        plain = decide(dagger, quest_level=10, cat=cat)
+        self.assertEqual((cat.shapes[plain.primary]["name"], cat.stats(plain.secondary)), ("Agility (Solo)", [HASTE]))
+        d = decide(dagger, quest_level=10, classes={"Warrior"}, cat=cat)
+        self.assertEqual((d.primary, d.share, cat.shapes[d.secondary]["name"]), (0, 0, "Crit/Haste"))
+        self.assertTrue(any("ruling 30" in p for p in d.paths))
+        crit = decide(item_row(6000, quality=1, ilvl=10, cls=2, subclass=15, inv=13), classes={"Warrior"}, cat=cat)
+        self.assertEqual(cat.shapes[crit.secondary]["name"], "Crit (Solo)")  # already Crit: Crit alone
+        # Another class, or a quest for several classes: unchanged.
+        for classes in ({"Rogue"}, {"Warrior", "Paladin"}):
+            self.assertEqual(decide(dagger, classes=classes, cat=cat).primary, plain.primary, classes)
+
+    def test_ruling_30_warrior_intellect_becomes_proc(self):
+        cat = catalog(round6=True)
+        mace = item_row(6005, quality=1, ilvl=10, cls=2, subclass=4, inv=13)  # odd one-handed mace: Int; % 6 -> Proc
+        d = decide(mace, classes={"Warrior"}, cat=cat)
+        self.assertEqual((d.primary, d.share, cat.shapes[d.secondary]["name"]), (0, 0, "Proc (Solo)"))
+        mace = item_row(6007, quality=1, ilvl=10, cls=2, subclass=4, inv=13)  # % 6 -> Haste
+        d = decide(mace, classes={"Warrior"}, cat=cat)
+        self.assertEqual(cat.shapes[d.secondary]["name"], "Haste/Proc")
+        # Strength gear is untouched.
+        axe = decide(item_row(6002, quality=1, ilvl=10, cls=2, subclass=0, inv=13), classes={"Warrior"}, cat=cat)
+        self.assertEqual(cat.shapes[axe.primary]["name"], "Strength (Solo)")
+
+    def test_ruling_28_same_name_and_quest_share_the_lowest_entry(self):
+        cat = catalog()
+        rows = {
+            7000: with_stats(item_row(7000, quality=3, ilvl=60, inv=11, subclass=0, name="Signet"), (STA, 5)),
+            7001: with_stats(item_row(7001, quality=3, ilvl=65, inv=11, subclass=0, name="Signet"), (STA, 5)),
+            7002: with_stats(item_row(7002, quality=3, ilvl=70, inv=11, subclass=0, name="Signet"), (STA, 5)),
+            7003: with_stats(item_row(7003, quality=3, ilvl=60, inv=11, subclass=0, name="Signet"), (STA, 5)),
+            7010: with_stats(item_row(7010, quality=2, ilvl=20, subclass=4, inv=8, name="Kickers"), (STR, 5)),
+            7011: with_stats(item_row(7011, quality=2, ilvl=20, subclass=2, inv=8, name="Kickers"), (AGI, 5)),
+            7012: with_stats(item_row(7012, quality=2, ilvl=20, subclass=4, inv=8, name="Kickers"), (STR, 5)),
+        }
+        path = [qr.Quest(1, 60, "The Path", "zone")]
+        other = [qr.Quest(2, 60, "Another Path", "zone")]
+        kick = [qr.Quest(3, 17, "Escape", "zone")]
+        s = qr.Scope(items={7000: path, 7001: path, 7002: path, 7003: other, 7010: kick, 7011: kick, 7012: kick})
+        alone = {e: decide(rows[e]) for e in rows}
+        self.assertNotEqual(alone[7000].secondary, alone[7001].secondary)  # entry MOD pool: different picks
+        d = {x.entry: x for x in qr.decide_all(s, rows, rows, SPELLS, cat)}
+        for e in (7001, 7002):
+            self.assertEqual((d[e].primary, d[e].secondary, d[e].share),
+                             (d[7000].primary, d[7000].secondary, d[7000].share), e)
+            self.assertTrue(any("ruling 28" in p for p in d[e].paths))
+        self.assertEqual([d[e].ilvl for e in (7000, 7001, 7002)], [60, 65, 70])  # item level stays its own
+        self.assertEqual(d[7003].secondary, alone[7003].secondary)  # another quest: not grouped
+        # Role variants (a choice of Str / Agi boots) keep their own primary and take only the secondary.
+        self.assertEqual(cat.shapes[d[7011].primary]["name"], "Agility (Solo)")
+        self.assertEqual(d[7011].secondary, d[7010].secondary)
+        self.assertEqual((d[7012].primary, d[7012].secondary), (d[7010].primary, d[7010].secondary))
+        groups = qr.same_name_groups(list(d.values()))
+        self.assertEqual(sorted([x.entry for x in g] for g in groups), [[7000, 7001, 7002], [7010, 7011, 7012]])
+
+    def test_argent_dawn_gloves_at_min_level(self):
+        rows = {23078: item_row(23078, quality=3, ilvl=63, subclass=4, inv=10)}
+        quests = {9094: quest(9094, -1, title="Argent Dawn Gloves", sort=0, min_level=50, RewardChoiceItemID1=23078),
+                  9333: quest(9333, -1, title="Argent Dawn Gloves", sort=0, min_level=50, RewardChoiceItemID1=23078)}
+        s = qr.scope(quests, {9094: {"SpecialFlags": 1}}, rows)  # 9094 is the repeatable copy
+        self.assertEqual([(q.id, q.level, q.scaled, q.kind) for q in s.items[23078]],
+                         [(9094, 50, True, "zone"), (9333, 50, True, "zone")])
+
+    def test_hand_only_shapes_stay_out_of_the_rules(self):
+        cat = catalog(round6=True)
+        sp_only = decide(with_stats(item_row(8000, quality=3, ilvl=60, spellid_1=9416, spelltrigger_1=1)),
+                         quest_level=55, cat=cat)
+        self.assertNotIn(cat.shapes[sp_only.primary]["name"], qr.HAND_ONLY_PRIMARIES)
+        self.assertEqual(cat.shapes[sp_only.primary]["name"], "Int/SpellPower, SpellPower lead")
+        for entry in range(8100, 8110):  # a Parry tank item never draws Parry/Versatility (Any)
+            d = decide(with_stats(item_row(entry, quality=3, ilvl=60, subclass=4), (STR, 10), (PARRY, 5)),
+                       quest_level=55, cat=cat)
+            self.assertEqual(cat.stats(d.secondary)[0], PARRY)
+            self.assertNotIn(cat.shapes[d.secondary]["name"], qr.HAND_ONLY_SECONDARIES)
+
+    def test_lock_edit_helpers(self):
+        text = (qr.LOCK_HEADER + "10 5 2 7 23 25 8000 -  # Short\n"
+                "11 5 2 7 23 26 8000 -  # " + "word " * 30 + "\n" + "#   tail of 11\n"
+                "12 5 2 7 23 27 8000 -  # Last\n")
+        comments = qr.lock_comments(text)
+        self.assertTrue(comments[11].endswith("tail of 11"))
+        hyphen = qr.lock_comments("13 5 2 7 23 27 8000 -  # Mace -- type Int (one-\n#   handed mace)\n")
+        self.assertEqual(hyphen[13], "Mace -- type Int (one-handed mace)")  # an old hyphen break rejoins
+        self.assertEqual(comments[12], "Last")
+        edited = qr.replace_lines(text, {11: qr.LockLine(11, 5, 2, 7, 24, 25, 6000, "-", "Edited -- designer: x")})
+        lines = qr.parse_lock(edited)
+        self.assertEqual((lines[11].primary, lines[11].share, lines[11].comment), (24, 6000, "Edited -- designer: x"))
+        self.assertNotIn("tail of 11", edited)  # its continuation lines go with it
+        self.assertEqual((lines[10].comment, lines[12].comment), ("Short", "Last"))
+        with self.assertRaises(qr.LockError):
+            qr.replace_lines(text, {99: lines[10]})
+        line, shares = lines[10], []
+        while (line := qr.step_down(line)) is not None:
+            shares.append(line.share)
+        self.assertEqual(shares, [6000, 4000, 0])
+
+
 @unittest.skipUnless(os.environ.get("QUEST_REWARDS_REAL"), "set QUEST_REWARDS_REAL=1 (replays the world DB, ~2 min)")
 class RealDataTest(unittest.TestCase):
     """Every real lock line expands, emits no error, and its stats equal compute_breakdown (the IV2 test, on the real
@@ -566,6 +695,12 @@ class RealDataTest(unittest.TestCase):
         # Ruling 21: green weapons resolve against the Quality 2 rows of item_weapon_dps_curve (pending SQL).
         self.assertTrue(any(key[1] == 2 for key in tables["item_weapon_dps_curve"]))
         self.assertTrue(any(rows[e]["class"] == 2 and line.quality == 2 for e, line in lock.items()))
+        # Round 6: the green curve's low end follows the first fitted segment (option B), the three new shapes.
+        curve = tables["item_weapon_dps_curve"]
+        self.assertAlmostEqual(float(curve[(5, 2, 0)]["dps"]), 3.4284, places=3)
+        self.assertAlmostEqual(float(curve[(5, 2, 1)]["dps"]), 4.3684, places=3)
+        self.assertEqual({shape_catalog[s]["name"] for s in (81, 82, 83)},
+                         {"Spell Power (Solo)", "Attack Power (Solo)", "Parry/Versatility (Any)"})
         mat = qr.materialize(lock, rows, tables, shape_catalog)
         self.assertEqual(mat.errors, [], "\n".join(mat.errors))
         self.assertEqual(mat.labels, {})  # ruling 20: no tooltip line

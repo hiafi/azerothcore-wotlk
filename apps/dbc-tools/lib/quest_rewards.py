@@ -6,14 +6,17 @@ one-tier `quest_reward` ladder (QR1).
 
 Everything below `load_inputs()` is a pure function of plain dicts (the replayed world tables, the stock Spell.dbc
 rows, the shape catalog and `item_stat_cost`), so the host tests (`lib/test_quest_rewards.py`) build them by hand.
-The rules are PLAN section 3 (rulings 1-27 of the REQUIREMENTS):
+The rules are PLAN section 3 (rulings 1-30 of the REQUIREMENTS; ruling 29's per-item edits are hand edits of the
+lock, not rules):
 
 1. **Scope.** Equippable rewards (`class` 2 weapon or 4 armor, not InventoryType 0, shirts 4 or tabards 19) of
    quests at `QuestLevel` 1-60 that are not repeatable (`SpecialFlags & 1`), daily (`Flags & 0x1000`) or weekly
    (`Flags & 0x8000`) and not raid (`QuestInfoID` 62) or PvP (41) quests. Rewards are `RewardItem1-4` and
    `RewardChoiceItemID1-6`. An item that any out-of-scope quest also rewards is out. A scaled (`QuestLevel` -1) class
    quest (`AllowableClasses` set or a class `QuestSortID`) counts at its `MinLevel` (round 5 default; above 60 it is
-   out); any other scaled quest is out of scope. Fishing poles and 10515 Torch of Retribution stay stock (ruling 25).
+   out); any other scaled quest is out of scope, except the Argent Dawn gloves' quests (`RULED_SCALED_QUESTS`, round
+   6 default: at MinLevel 50, 9094's repeatable flag ignored). Fishing poles and 10515 Torch of Retribution stay
+   stock (ruling 25), as do 3567 Dwarven Fishing Pole and 864 Knightly Longsword (round 6 defaults; `STOCK_ENTRIES`).
    Legendary and Poor items are skipped (rulings 16, 17). An entry
    another declaration owns (`source/items/*.py` `item(base=...)`, `item_ids.lock`, `items.csv`, a literal
    `item_template(<entry>, ...)`) is skipped and reported (`owned_elsewhere()`): one owner per entry.
@@ -52,6 +55,15 @@ The rules are PLAN section 3 (rulings 1-27 of the REQUIREMENTS):
    on hit and every other Equip spell (procs, slaying, resistances, skills, ...) is kept. A kept effect gives the
    DSL's `budget_mult` 0.7 default.
 9. **Resistances** are never written by the materializer: untouched, free (ruling 14).
+10. **Warrior class quest gear** (ruling 30, the literal reading; `warrior_swap()`): when every class the item's
+    quests are for is Warrior, a primary with Agility (Intellect) goes: Null primary, share 0, and a secondary of
+    Crit (Proc Chance) plus the current secondary stat.
+11. **Same name, same quest** (ruling 28, `apply_same_name()`): items sharing a name and their rewarding quest titles
+    take the lowest entry's primary, secondary and share; a role variant (other main stats) keeps its primary.
+
+The round 6 shapes (`HAND_ONLY_PRIMARIES`, `HAND_ONLY_SECONDARIES`) are for hand edits only; the rules never pick
+them. `step_down_zero()` (`quest_rewards_lock.py --step-down-zero`) lowers the primary share of a lock line whose
+secondary stat materializes to 0 while the primary keeps a point.
 
 **The lock.** `source/items/quest_rewards.lock`, one line per item:
 
@@ -100,7 +112,14 @@ EXCLUDED_INV_TYPES = (0, 4, 19)  # not equippable, shirt, tabard
 INV_NECK, INV_FINGER, INV_TRINKET, INV_SHIELD, INV_CLOAK, INV_HOLDABLE, INV_RELIC = 2, 11, 12, 14, 16, 23, 28
 NO_MAIN_STAT_INV_TYPES = (INV_NECK, INV_FINGER, INV_CLOAK, INV_RELIC)  # rulings 18 and 25: all secondary
 WEAPON_FISHING_POLE = 20
-STOCK_ENTRIES = {10515: "Torch of Retribution (ruling 25)"}  # in-scope rewards that stay stock
+STOCK_ENTRIES = {  # in-scope rewards that stay stock
+    10515: "Torch of Retribution (ruling 25)",
+    3567: "Dwarven Fishing Pole (a gun by type; round 6 default)",
+    864: "Knightly Longsword (test quest only; round 6 default)",
+}
+# Scaled (QuestLevel -1) quests that are not class quests but are in scope at their MinLevel (round 6 default): the
+# Argent Dawn gloves (23078, 23081, 23082, 23084). 9094 is the repeatable copy of 9333; its repeatable flag is ignored.
+RULED_SCALED_QUESTS = {9094: "Argent Dawn Gloves", 9333: "Argent Dawn Gloves"}
 # QuestSortID of the class quest sorts (QuestSort.dbc): Warlock, Warrior, Shaman, Paladin, Mage, Rogue, Hunter, Priest,
 # Druid, Death Knight. The other negative sorts are professions, holidays and other non-zone groups.
 CLASS_QUEST_SORTS = {-61: "Warlock", -81: "Warrior", -82: "Shaman", -141: "Paladin", -161: "Mage", -162: "Rogue",
@@ -144,6 +163,10 @@ SPELL_SLOTS = 5
 SHARE_GREEN, SHARE_BLUE, SHARE_EPIC_PAIR, SHARE_EPIC_TRIO = 8000, 6000, 6000, 4000
 
 PRIMARY_SOLO = {STR: "Strength (Solo)", AGI: "Agility (Solo)", INT: "Intellect (Solo)"}
+# Round 6 shapes for the designer's hand edits (ruling 29), kept out of the nearest-primary search so the rules'
+# picks for Spell Power or Attack Power only items stay as they were.
+HAND_ONLY_PRIMARIES = frozenset(("Spell Power (Solo)", "Attack Power (Solo)"))
+HAND_ONLY_SECONDARIES = frozenset(("Parry/Versatility (Any)",))  # likewise out of the tank pools
 DODGE_ANY = "Dodge (Solo, Any)"
 VERSATILITY_SOLO = "Versatility (Solo)"
 
@@ -168,7 +191,8 @@ class Quest:
     level: int
     title: str
     kind: str  # "zone", "dungeon" or "class" (QuestSortID < 0 or AllowableClasses set)
-    scaled: bool = False  # a QuestLevel -1 class quest: `level` is its MinLevel
+    scaled: bool = False  # a QuestLevel -1 class quest (or RULED_SCALED_QUESTS): `level` is its MinLevel
+    classes: frozenset[str] = frozenset()  # the classes it is for (`quest_classes()`); empty for any class
 
 
 def reward_map(quests: dict[int, dict]) -> dict[int, set[int]]:
@@ -187,10 +211,20 @@ def is_class_quest(quest: dict, addon: dict | None) -> bool:
     return bool(_int((addon or {}).get("AllowableClasses"))) or _int(quest.get("QuestSortID")) in CLASS_QUEST_SORTS
 
 
+def quest_classes(quest: dict, addon: dict | None) -> frozenset[str]:
+    """The classes a quest is for: the `AllowableClasses` bits, else a class `QuestSortID`'s class; empty for any."""
+    mask = _int((addon or {}).get("AllowableClasses"))
+    if mask:
+        return frozenset(name for cid, name in CLASS_NAMES.items() if mask & (1 << (cid - 1)))
+    sort = _int(quest.get("QuestSortID"))
+    return frozenset((CLASS_QUEST_SORTS[sort],)) if sort in CLASS_QUEST_SORTS else frozenset()
+
+
 def quest_level(quest: dict, addon: dict | None) -> tuple[int, bool]:
-    """(quest level, scaled): `QuestLevel`, or for a scaled (-1) class quest its `MinLevel` (round 5 default)."""
+    """(quest level, scaled): `QuestLevel`, or for a scaled (-1) class quest its `MinLevel` (round 5 default; round 6
+    adds the RULED_SCALED_QUESTS)."""
     level = _int(quest.get("QuestLevel"))
-    if level == -1 and is_class_quest(quest, addon):
+    if level == -1 and (is_class_quest(quest, addon) or _int(quest.get("ID")) in RULED_SCALED_QUESTS):
         return _int(quest.get("MinLevel")), True
     return level, False
 
@@ -200,7 +234,8 @@ def quest_out_of_scope(quest: dict, addon: dict | None) -> str | None:
     level, scaled = quest_level(quest, addon)
     if not MIN_QUEST_LEVEL <= level <= MAX_QUEST_LEVEL:
         return f"scaled class quest, MinLevel {level}" if scaled else f"quest level {level}"
-    if _int((addon or {}).get("SpecialFlags")) & QUEST_SPECIAL_REPEATABLE:
+    if (_int((addon or {}).get("SpecialFlags")) & QUEST_SPECIAL_REPEATABLE
+            and _int(quest.get("ID")) not in RULED_SCALED_QUESTS):
         return "repeatable"
     flags = _int(quest.get("Flags"))
     if flags & QUEST_FLAGS_DAILY:
@@ -234,9 +269,9 @@ class Scope:
     skipped: dict[int, str] = field(default_factory=dict)  # equippable quest rewards left out, entry -> why
 
 
-def _level_and(quest: dict, addon: dict | None) -> tuple[int, str, str, bool]:
+def _level_and(quest: dict, addon: dict | None) -> tuple[int, str, str, bool, frozenset[str]]:
     level, scaled = quest_level(quest, addon)
-    return level, str(quest.get("LogTitle") or ""), quest_kind(quest, addon), scaled
+    return level, str(quest.get("LogTitle") or ""), quest_kind(quest, addon), scaled, quest_classes(quest, addon)
 
 
 def scope(quests: dict[int, dict], addons: dict[int, dict], rows: dict[int, dict],
@@ -453,7 +488,7 @@ def nearest_primary(stats: dict[int, int], catalog: Catalog, keep_role: bool = T
     if total <= 0:
         return None
     vector = {s: w / total for s, w in weights.items()}
-    candidates = catalog.primaries()
+    candidates = [s for s in catalog.primaries() if s["name"] not in HAND_ONLY_PRIMARIES]
     if keep_role:
         allowed = allowed_primary_stats(stats)
         candidates = [s for s in candidates if set(s["stats"]) <= allowed] or candidates
@@ -542,7 +577,7 @@ class Decision:
 
 
 def _shape_ids(catalog: Catalog, pred) -> list[int]:
-    return [s["shape_id"] for s in catalog.secondaries() if pred(s)]
+    return [s["shape_id"] for s in catalog.secondaries() if s["name"] not in HAND_ONLY_SECONDARIES and pred(s)]
 
 
 def generic_pairs(catalog: Catalog) -> set[int]:
@@ -683,16 +718,84 @@ def decide(entry: int, quests: list[Quest], row: dict, base_row: dict, spells: d
         d.share = SHARE_BLUE
     else:
         d.share = SHARE_EPIC_TRIO if len(catalog.stats(secondary)) == 3 else SHARE_EPIC_PAIR
+    if set().union(*(q.classes for q in quests)) == {WARRIOR}:
+        warrior_swap(d, catalog)
     if kept:
         d.paths.append("keeps spell " + ",".join(map(str, kept)))
     return d
 
 
+WARRIOR = "Warrior"
+WARRIOR_SWAPS = ((AGI, CRIT), (INT, PROC))  # ruling 30: on Warrior class quest gear
+
+
+def _secondary_with(catalog: Catalog, stats: list[int]) -> int | None:
+    """The rule-free secondary shape whose stats are exactly `stats` (lowest id: the Even shape before a lead one)."""
+    found = [s["shape_id"] for s in catalog.secondaries()
+             if set(s["stats"]) == set(stats) and len(s["stats"]) == len(set(stats)) and rules_ok(s, set())]
+    return min(found) if found else None
+
+
+def warrior_swap(d: Decision, catalog: Catalog) -> None:
+    """Ruling 30, the literal reading: on Warrior class quest gear a primary with Agility (Intellect) gives it up for
+    Crit (Proc Chance). The item takes the Null primary (share 0) and a secondary of the new stat plus its current
+    secondary stats (a pair from a Solo, Crit Solo when the current one is Crit already); when no shape has them all,
+    the new stat plus the first current one, else the new stat alone."""
+    primary_stats = catalog.stats(d.primary)
+    new = [stat for old, stat in WARRIOR_SWAPS if old in primary_stats]
+    if not new:
+        return
+    current = [s for s in catalog.stats(d.secondary) if s not in new]
+    secondary = (_secondary_with(catalog, new + current) or (current and _secondary_with(catalog, new + current[:1]))
+                 or _secondary_with(catalog, new))
+    if secondary is None:
+        d.fallbacks.append("ruling 30: no secondary shape for " + "+".join(STAT_NAMES[s] for s in new))
+        return
+    swaps = ", ".join(f"{STAT_NAMES[old]}->{STAT_NAMES[stat]}" for old, stat in WARRIOR_SWAPS if stat in new)
+    d.paths.append(f"round 6: Warrior gear {swaps} (ruling 30): no primary, "
+                   f"{shape_text(catalog, d.secondary)} -> {shape_text(catalog, secondary)}")
+    d.primary, d.secondary, d.share = 0, secondary, 0
+
+
+def same_name_groups(decisions: list[Decision]) -> list[list[Decision]]:
+    """Ruling 28's groups: two or more items with the same name and the same rewarding quest titles, lowest entry
+    first."""
+    groups: dict[tuple, list[Decision]] = {}
+    for d in sorted(decisions, key=lambda x: x.entry):
+        groups.setdefault((d.name, frozenset(q.title for q in d.quests)), []).append(d)
+    return [members for members in groups.values() if len(members) > 1]
+
+
+def apply_same_name(decisions: list[Decision], catalog: Catalog) -> list[list[Decision]]:
+    """Ruling 28: in each `same_name_groups()` group every item takes the lowest entry's primary shape, secondary shape
+    and share (item level and quality stay its own). A member whose own primary has other main stats than the lowest
+    entry's (a choice of role variants, e.g. Troll Kickers Str / Int+SP / Agi) keeps its primary and share and takes
+    only the secondary. Returns the groups."""
+    groups = same_name_groups(decisions)
+    for lead, *rest in groups:
+        lead_stats = set(catalog.stats(lead.primary))
+        for d in rest:
+            before = (d.primary, d.secondary, d.share)
+            if set(catalog.stats(d.primary)) == lead_stats:
+                d.primary, d.share = lead.primary, lead.share
+                how = ""
+            else:
+                how = f"; keeps its own primary ({shape_text(catalog, d.primary)} variant)"
+            if rules_ok(catalog.shapes[lead.secondary], set(catalog.stats(d.primary))):
+                d.secondary = lead.secondary
+            if (d.primary, d.secondary, d.share) != before:
+                d.paths.append(f"round 6: as {lead.entry}, same name and quest (ruling 28){how}")
+    return groups
+
+
 def decide_all(scoped: Scope, rows: dict[int, dict], base_rows: dict[int, dict], spells: dict[int, dict],
                catalog: Catalog) -> list[Decision]:
-    """Every in-scope item's decision. An item missing from the base dump (a custom row) reads its current row."""
-    return [decide(entry, quests, rows[entry], base_rows.get(entry, rows[entry]), spells, catalog)
-            for entry, quests in sorted(scoped.items.items())]
+    """Every in-scope item's decision, then ruling 28 (`apply_same_name()`). An item missing from the base dump (a
+    custom row) reads its current row."""
+    decisions = [decide(entry, quests, rows[entry], base_rows.get(entry, rows[entry]), spells, catalog)
+                 for entry, quests in sorted(scoped.items.items())]
+    apply_same_name(decisions, catalog)
+    return decisions
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -836,10 +939,139 @@ def render_line(d: Decision, catalog: Catalog) -> str:
     head = (f"{d.entry} {d.quest_level} {d.quality} {d.ilvl} {d.primary} {d.secondary} {d.share} "
             f"{d.spells_field}")
     comment = f"{d.name} -- {shape_text(catalog, d.primary)} / {shape_text(catalog, d.secondary)}; {why}"
-    first = textwrap.wrap(comment, width=MAX_LINE - len(head) - 4, break_long_words=False)
+    return _wrap(head, comment)
+
+
+def _wrap(head: str, comment: str) -> str:
+    first = textwrap.wrap(comment, width=MAX_LINE - len(head) - 4, break_long_words=False, break_on_hyphens=False)
     rest = textwrap.wrap(comment[len(first[0]):].strip(), width=MAX_LINE - len(CONTINUATION),
-                         break_long_words=False) if len(first) > 1 else []
+                         break_long_words=False, break_on_hyphens=False) if len(first) > 1 else []
     return "\n".join([f"{head}  # {first[0]}"] + [f"{CONTINUATION}{part}" for part in rest])
+
+
+def render_lock_line(line: LockLine) -> str:
+    """A LockLine as lock text (its comment wrapped like `render_line()`)."""
+    head = (f"{line.entry} {line.quest_level} {line.quality} {line.ilvl} {line.primary} {line.secondary} "
+            f"{line.share} {line.spells}")
+    return _wrap(head, line.comment) if line.comment else head
+
+
+def replace_lines(text: str, lines: dict[int, LockLine]) -> str:
+    """`text` with the line of each entry in `lines` (and its `#   ` continuation lines) replaced in place; raises
+    LockError for an entry that has no line. The hand-edit path: a seed run never rewrites a line."""
+    out: list[str] = []
+    done: set[int] = set()
+    skipping = False
+    for raw in text.splitlines():
+        if skipping and raw.startswith(CONTINUATION):
+            continue
+        skipping = False
+        fields = raw.partition("#")[0].split()
+        if fields and fields[0].isdigit() and int(fields[0]) in lines:
+            entry = int(fields[0])
+            out.append(render_lock_line(lines[entry]))
+            done.add(entry)
+            skipping = True
+            continue
+        out.append(raw)
+    missing = sorted(set(lines) - done)
+    if missing:
+        raise LockError(f"no lock line for {missing}")
+    return "\n".join(out) + ("\n" if text.endswith("\n") else "")
+
+
+def lock_comments(text: str) -> dict[int, str]:
+    """{entry: the whole comment, continuation lines joined (a line that ends in a word and a hyphen joins the next
+    without a space: the wrap broke a hyphenated word there)}."""
+    out: dict[int, str] = {}
+    current = None
+    for raw in text.splitlines():
+        if raw.startswith(CONTINUATION) and current is not None:
+            part = raw[len(CONTINUATION):].strip()
+            # Older lines were wrapped at hyphens ("one-" / "handed"): rejoin those without a space.
+            glue = "" if re.search(r"[A-Za-z]-$", out[current]) and part[:1].isalpha() else " "
+            out[current] += glue + part
+            continue
+        body, _, comment = raw.partition("#")
+        fields = body.split()
+        current = int(fields[0]) if fields and fields[0].isdigit() else None
+        if current is not None:
+            out[current] = comment.strip()
+    return out
+
+
+SHARE_STEPS = (8000, 6000, 4000, 0)  # PRIMARY_SHARES below a green's 8000, high to low
+
+
+def zero_secondaries(lock: dict[int, LockLine], mat: Materialized, catalog: Catalog) -> dict[int, list[int]]:
+    """{entry: the secondary shape's stats that materialize to 0 points} (a stat at 0 is left off the item)."""
+    out: dict[int, list[int]] = {}
+    for entry, line in lock.items():
+        row = mat.rows.get(entry)
+        if row is None:
+            continue
+        have = _positive_stats(row)
+        zero = [s for s in catalog.stats(line.secondary) if s not in have]
+        if zero:
+            out[entry] = zero
+    return out
+
+
+def step_down_zero(text: str, rows: dict[int, dict], tables: dict, shape_catalog: dict, catalog: Catalog,
+                   max_rounds: int = len(SHARE_STEPS)) -> tuple[str, dict[int, tuple[int, int, list[int]]],
+                                                               dict[int, list[int]], dict[int, list[int]]]:
+    """Round 6 (ruling 29, the Primitive weapons, and every other lock line like them): a line whose secondary shape
+    materializes a stat to 0 points steps its primary share down (`step_down()`) until every secondary stat is at
+    least 1 or the share is 0. A line whose stat is still 0 at share 0, or whose primary stats all fall to 0 at the
+    first share that lifts it, keeps its share. Returns (new lock text, {entry: (old share, new share, the stats that
+    were 0)}, {entry: the stats still 0 at share 0, share kept}, {entry: the stats a step-down would only buy with
+    the main stat, share kept}). The changed lines' comments say so."""
+    first: dict[int, tuple[int, list[int]]] = {}
+    stuck: dict[int, list[int]] = {}
+    for _ in range(max_rounds):
+        lock = parse_lock(text)
+        zero = zero_secondaries(lock, materialize(lock, rows, tables, shape_catalog), catalog)
+        lower = {e: line for e, stats in zero.items() if (line := step_down(lock[e])) is not None}
+        stuck = {e: stats for e, stats in zero.items() if e not in lower}
+        if not lower:
+            break
+        for e in lower:
+            first.setdefault(e, (lock[e].share, zero[e]))
+        comments = lock_comments(text)
+        text = replace_lines(text, {e: LockLine(e, line.quest_level, line.quality, line.ilvl, line.primary,
+                                                line.secondary, line.share, line.spells, comments[e])
+                                    for e, line in lower.items()})
+    # A line still at 0 with share 0 gained nothing from stepping down (its whole budget is too small), and one whose
+    # primary stats all fell to 0 only swapped its main stat for the secondary (ruling 6 keeps the main stat; a lower
+    # share only lowers the primary further): both keep their share. The others say what changed.
+    lock = parse_lock(text)
+    comments = lock_comments(text)
+    stepped = {e: lock[e] for e in first if e not in stuck}
+    mat = materialize(stepped, rows, tables, shape_catalog) if stepped else None
+    blocked = {e: first[e][1] for e in stepped if catalog.stats(lock[e].primary)
+               and not set(catalog.stats(lock[e].primary)) & _positive_stats(mat.rows[e])}
+    keep = set(stuck) | set(blocked)
+    changes = {e: (old, lock[e].share, stats) for e, (old, stats) in first.items() if e not in keep}
+    lines = {e: LockLine(e, lock[e].quest_level, lock[e].quality, lock[e].ilvl, lock[e].primary, lock[e].secondary,
+                         first[e][0], lock[e].spells, comments[e]) for e in keep if e in first}
+    lines.update({e: LockLine(
+        e, lock[e].quest_level, lock[e].quality, lock[e].ilvl, lock[e].primary, lock[e].secondary, lock[e].share,
+        lock[e].spells, f"{comments[e]}; round 6 step-down: share {old}->{new} so "
+        + "/".join(STAT_NAMES[s] for s in stats) + " is at least 1") for e, (old, new, stats) in changes.items()})
+    return replace_lines(text, lines) if lines else text, changes, stuck, blocked
+
+
+def _positive_stats(row: dict) -> set[int]:
+    return {_int(row.get(f"stat_type{n}")) for n in range(1, 11) if _int(row.get(f"stat_value{n}")) > 0}
+
+
+def step_down(line: LockLine) -> LockLine | None:
+    """The line with its primary share one step lower (`SHARE_STEPS`), None when it is at 0 already."""
+    lower = [s for s in SHARE_STEPS if s < line.share]
+    if not lower:
+        return None
+    return LockLine(line.entry, line.quest_level, line.quality, line.ilvl, line.primary, line.secondary, lower[0],
+                    line.spells, line.comment)
 
 
 def seed(current: str, decisions: list[Decision], catalog: Catalog) -> tuple[str, list[str], list[int]]:
