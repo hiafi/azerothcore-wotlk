@@ -32,6 +32,19 @@ from lib import dbcfile, dbcfmt, dungeon_checks, dungeon_heroic, heroic_template
 from lib import sqlcorpus, state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 
+
+_MARKER = "-- Stratholme (map 329) heroic:"
+_PENDING = TOOL_ROOT.parents[1] / "data" / "sql" / "updates" / "pending_db_world"
+
+
+def _rendered_or_committed(blocks: list[str]) -> tuple[str, bool]:
+    """The rendered blocks, or (after the scoped write run made them live) the committed rev that carries them."""
+    sql = "\n".join(blocks)
+    if _MARKER in sql:
+        return sql, False
+    texts = [f.read_text() for f in sorted(_PENDING.glob("rev_*.sql"))]
+    return "\n".join(t for t in texts if _MARKER in t), True
+
 ST_FILE = TOOL_ROOT / "source" / "world" / "dungeons" / "stratholme.py"
 KIT_DIR = TOOL_ROOT / "source" / "npcs" / "stratholme"
 IDS = source.load_ids(TOOL_ROOT / "source" / "ids.yaml")
@@ -329,18 +342,20 @@ class ExpansionTest(unittest.TestCase):
         self.assertEqual(self.reports[10381].solved.health, 37_000)  # elite trash: the tier
 
     def test_the_smart_ai_of_the_normal_only_units_is_widened_to_heroic(self):
-        sql = "\n".join(self.out.smart_blocks)
-        self.assertIn("-- Stratholme (map 329) heroic:", sql)
+        sql, _ = _rendered_or_committed(self.out.smart_blocks)
+        self.assertIn(_MARKER, sql)
         for entry in SMART_WIDENED:
             self.assertIn(f"`entryorguid` = {entry} AND `source_type` = 0", sql)
         self.assertEqual(sql.count("UPDATE `smart_scripts`"), 4)  # 10409, 10411 and the two out-of-scope smiths
         self.assertIn("`event_flags` | 4", sql)
 
     def test_spawn_masks_cover_the_boss_spawns_and_skip_the_game_event_ones(self):
-        sql = "\n".join(self.out.spawn_blocks)
-        self.assertIn("-- Stratholme (map 329) heroic:", sql)
-        self.assertIn(329, self.out.map_spawns)
-        creature_block = next(b for b in self.out.spawn_blocks if "UPDATE `creature` " in b)
+        sql, committed = _rendered_or_committed(self.out.spawn_blocks)
+        self.assertIn(_MARKER, sql)
+        if not committed:
+            self.assertIn(329, self.out.map_spawns)
+        blocks = sql.split(_MARKER)[1:] if committed else self.out.spawn_blocks
+        creature_block = next(b for b in blocks if "UPDATE `creature` " in b)
         guids = {int(g) for g in re.findall(r"\d+", creature_block.split(") AND `guid` IN (")[1])}
         for guid in BOSS_SPAWN_GUIDS:
             self.assertIn(guid, guids)
