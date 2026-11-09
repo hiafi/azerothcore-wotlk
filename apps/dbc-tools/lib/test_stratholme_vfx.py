@@ -1,11 +1,12 @@
 """
-Stratholme visuals (Stratholme build, WP V-1, wave 1): patch_stratholme_vfx_models.py and
+Stratholme visuals (Stratholme build, WP V-1 wave 1, V-2 wave 2): patch_stratholme_vfx_models.py and
 source/npcs/stratholme/_visuals.py.
 
 Covered: every minted id sits inside the `stratholme` reservation and nowhere else, the row builders (the Web_State
 patch at both radii, the gut puddle, the lasting Keened skull), the constants module agreeing with the patch script,
 none of the wrong looks (handoff s3.10) coming back as a wired id, the stock ids existing in the working-copy DBCs, and
-the SQL overlay.
+the SQL overlay. Wave 2 adds the FlameZone / HolyZone rings, the Carrion fan, the lie judgment and the Main Gate stock
+picks.
 
 Run directly:
 
@@ -108,13 +109,59 @@ class RowTest(unittest.TestCase):
         sv = self.visuals[patch.SV_KEENED_SKULL_STATE]
         self.assertEqual(sv["StateKit"], patch.KIT_KEENED_SKULL_STATE)
 
-    def test_each_spellvisual_carries_exactly_one_kit(self):
+    def test_each_spellvisual_carries_exactly_one_kit_except_the_two_composed_ones(self):
         slots = ("PrecastKit", "CastKit", "ImpactKit", "StateKit", "ChannelKit", "PersistentAreaKit")
+        composed = {patch.SV_CARRION_FAN, patch.SV_LIE_JUDGMENT}
         for sv_id, row in self.visuals.items():
             with self.subTest(sv=sv_id):
-                self.assertEqual(sum(1 for s in slots if row[s]), 1)
+                if sv_id not in composed:
+                    self.assertEqual(sum(1 for s in slots if row[s]), 1)
                 self.assertEqual(row["HasMissile"], 0)
                 self.assertEqual(row["MissileAttachment"], -1)
+
+    def test_the_zone_glows_are_flat_quads_at_a_fixed_scale_for_each_radius(self):
+        rows = ((patch.EFFECT_FLAMEZONE_10, "flamezone", patch.FLAMEZONE_RADIUS_PER_SCALE, 10),
+                (patch.EFFECT_FLAMEZONE_8, "flamezone", patch.FLAMEZONE_RADIUS_PER_SCALE, 8),
+                (patch.EFFECT_HOLYZONE_4, "holyzone", patch.HOLYZONE_RADIUS_PER_SCALE, 4),
+                (patch.EFFECT_HOLYZONE_5, "holyzone", patch.HOLYZONE_RADIUS_PER_SCALE, 5),
+                (patch.EFFECT_HOLYZONE_6, "holyzone", patch.HOLYZONE_RADIUS_PER_SCALE, 6),
+                (patch.EFFECT_HOLYZONE_8, "holyzone", patch.HOLYZONE_RADIUS_PER_SCALE, 8))
+        for effect_id, model, per_scale, radius in rows:
+            row = self.effects[effect_id]
+            with self.subTest(model=model, radius=radius):
+                self.assertEqual(row["FileName"], f"SPELLS\\{model}.mdx")
+                self.assertEqual(row["AreaEffectSize"], 0.0)
+                self.assertAlmostEqual(row["Scale"] * per_scale, radius, delta=0.5)
+
+    def test_every_zone_state_look_is_a_state_kit_on_the_base_effect(self):
+        for sv_id, kit_id, effect_id in (
+                (patch.SV_FLAMEZONE_10_STATE, patch.KIT_FLAMEZONE_10_STATE, patch.EFFECT_FLAMEZONE_10),
+                (patch.SV_FLAMEZONE_8_STATE, patch.KIT_FLAMEZONE_8_STATE, patch.EFFECT_FLAMEZONE_8),
+                (patch.SV_HOLYZONE_4_STATE, patch.KIT_HOLYZONE_4_STATE, patch.EFFECT_HOLYZONE_4),
+                (patch.SV_HOLYZONE_5_STATE, patch.KIT_HOLYZONE_5_STATE, patch.EFFECT_HOLYZONE_5),
+                (patch.SV_HOLYZONE_6_STATE, patch.KIT_HOLYZONE_6_STATE, patch.EFFECT_HOLYZONE_6),
+                (patch.SV_HOLYZONE_8_STATE, patch.KIT_HOLYZONE_8_STATE, patch.EFFECT_HOLYZONE_8)):
+            with self.subTest(sv=sv_id):
+                self.assertEqual(self.visuals[sv_id]["StateKit"], kit_id)
+                self.assertEqual(self.kits[kit_id]["BaseEffect"], effect_id)
+
+    def test_the_carrion_fan_plays_through_the_cast_at_the_cone_length(self):
+        effect = self.effects[patch.EFFECT_CARRION_FAN]
+        self.assertEqual(effect["FileName"], "SPELLS\\dreadlord_carrion_swarm_cast.mdx")
+        self.assertEqual(effect["AreaEffectSize"], 0.0)
+        self.assertAlmostEqual(effect["Scale"] * patch.CARRION_FAN_YARDS, 30.0, delta=0.5)   # BZ1's 30 yd cone
+        sv = self.visuals[patch.SV_CARRION_FAN]
+        self.assertEqual(self.kits[sv["PrecastKit"]]["BaseEffect"], patch.EFFECT_CARRION_FAN)
+        # the cast kit must not replay the fan (the stock cast kit 7721 would play the 40 yd one at the cast end)
+        self.assertFalse(self.kits[sv["CastKit"]]["BaseEffect"])
+        self.assertFalse(sv["StateKit"])      # the stock SV 9099's stun swirl state stays out
+
+    def test_the_lie_judgment_is_shadow_hands_with_a_red_flash(self):
+        sv = self.visuals[patch.SV_LIE_JUDGMENT]
+        self.assertEqual(sv["CastKit"], patch.STOCK_SHADOW_HANDS_CAST_KIT)
+        self.assertEqual(self.kits[sv["ImpactKit"]]["ChestEffect"], patch.STOCK_JUDGEMENT_RED_EFFECT)
+        self.assertEqual(sv["TargetImpactKit"], patch.STOCK_SHADOW_CHEST_IMPACT_KIT)
+        self.assertFalse(sv["StateKit"])
 
     def test_area_looks_are_persistent_area_and_state_looks_are_state(self):
         for sv_id in (patch.SV_WEB_PATCH_5_AREA, patch.SV_WEB_PATCH_7_AREA, patch.SV_GUT_PUDDLE_AREA):
@@ -125,7 +172,7 @@ class RowTest(unittest.TestCase):
 
     def test_the_pending_sql_deletes_exactly_the_minted_ids(self):
         sql = patch.build_pending_sql()
-        self.assertIn("DELETE FROM `spellvisual_dbc` WHERE `ID` BETWEEN 90500 AND 90506;", sql)
+        self.assertIn("DELETE FROM `spellvisual_dbc` WHERE `ID` BETWEEN 90500 AND 90514;", sql)
         for table in ("creaturedisplayinfo", "gameobjectdisplayinfo", "soundentries"):
             self.assertNotIn(table, sql)
 
@@ -136,7 +183,9 @@ class VisualsModuleTest(unittest.TestCase):
 
     def test_the_minted_ids_match_the_patch_script(self):
         for name in ("SV_WEB_PATCH_5_AREA", "SV_WEB_PATCH_5_STATE", "SV_WEB_PATCH_7_AREA", "SV_WEB_PATCH_7_STATE",
-                     "SV_GUT_PUDDLE_AREA", "SV_GUT_PUDDLE_STATE", "SV_KEENED_SKULL_STATE"):
+                     "SV_GUT_PUDDLE_AREA", "SV_GUT_PUDDLE_STATE", "SV_KEENED_SKULL_STATE",
+                     "SV_FLAMEZONE_10_STATE", "SV_FLAMEZONE_8_STATE", "SV_HOLYZONE_4_STATE", "SV_HOLYZONE_5_STATE",
+                     "SV_HOLYZONE_6_STATE", "SV_HOLYZONE_8_STATE", "SV_CARRION_FAN", "SV_LIE_JUDGMENT"):
             with self.subTest(name=name):
                 self.assertEqual(getattr(self.v, name), getattr(patch, name))
         self.assertEqual(set(self.v.MINTED_SPELL_VISUALS), {r["ID"] for r in patch.build_spellvisual_rows()})
@@ -151,6 +200,33 @@ class VisualsModuleTest(unittest.TestCase):
                          (7785, 25355, 11514))
         self.assertEqual((v.BR_CONDEMNED, v.BR_PRICE_OF_DEFIANCE), (11095, 47))
         self.assertEqual((v.NE_STUCK, v.DISPLAY_WEB_COCOON), (684, 16213))                             # gap 19
+
+    def test_the_wave_2_picks(self):
+        v = self.v
+        self.assertEqual((v.UF_ACCUSED_ARROW, v.UF_ACCUSED_FLASH), (10201, 11826))                     # gap 5
+        self.assertEqual((v.TM_JUMP_ROPE, v.TM_SWEEP_BURST), (9275, 9612))                             # gap 8
+        self.assertEqual((v.DA_TRUE_GROUND, v.DA_LIE_GROUND, v.DA_TRUE_JUDGMENT), (5600, 8506, 5651))  # gap 13
+        self.assertEqual((v.DA_METEOR, v.DA_IMMOLATION, v.DA_SLEEP), (4859, 8313, 7320))
+        self.assertEqual((v.BZ_SWARM_CLOUD, v.BZ_VAMPIRIC_HEAL), (7620, 9310))                         # gap 14
+        self.assertEqual((v.ML_BLAZE_BEAM, v.WI_MUZZLE_BLAST, v.GODI_CANNONBALL), (11500, 612, 153))   # Added A, B
+        self.assertEqual((v.GODI_HOUSE_FIRE, v.GODI_HOUSE_FIRE_ALT), (4452, 4251))                     # Added C
+        self.assertEqual((v.GF_KINDLED, v.EMOTE_STATE_DANCE), (46, 10))                                # Added D
+        self.assertEqual(v.DISPLAY_SPECTRAL_FOOTMAN, 30978)
+
+    def test_the_wave_2_wrong_looks_are_not_wired(self):
+        v = self.v
+        wired_sv = set(v.STOCK_SPELL_VISUALS) | set(v.MINTED_SPELL_VISUALS) | set(v.MINTED_ELSEWHERE_SPELL_VISUALS)
+        # Piccolo (a sound), Judgement of Light's heal 5560, Ground Smash 2643, Fire Cannon 180, Holy Channeling 11274,
+        # Holy Ground 7667, Enchanting Lullaby's hearts 2576 (already above), the 40 yd stock Carrion fan 9099
+        for sv, why in ((4682, "Piccolo: a sound only"), (5560, "the Judgement of Light heal sparkle"),
+                        (2643, "Ground Smash: a shake"), (180, "Fire Cannon: no model"),
+                        (11274, "Holy Channeling: no beam"), (7667, "Holy Ground: a one-shot"),
+                        (9099, "Carrion Swarm: the 40 yd fan at the cast end plus a stun swirl")):
+            with self.subTest(sv=sv):
+                self.assertNotIn(sv, wired_sv, why)
+        self.assertNotIn(v.GODI_INVISIBLE_TRAP_DO_NOT_USE, v.STOCK_GAMEOBJECT_DISPLAYS)
+        self.assertEqual(v.GODI_INVISIBLE_TRAP_DO_NOT_USE, 1287)
+        self.assertNotIn(v.FO_LULLABY_HEARTS, wired_sv)
 
     def test_the_corrected_looks_replace_the_wrong_ones(self):
         wired = set(self.v.STOCK_SPELL_VISUALS) | set(self.v.MINTED_SPELL_VISUALS)

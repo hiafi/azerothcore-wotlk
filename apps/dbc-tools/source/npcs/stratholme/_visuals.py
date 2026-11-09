@@ -1,9 +1,9 @@
 """
 Stratholme build, WP-V (wave 1: the Service Entrance, S9-S15): the visual ids the boss files use, one place (not loaded
 on its own: the leading underscore keeps the package loader from treating it as a declaration file; boss files import
-it with `from ._visuals import ...`, like `_common.py` and scholomance/_visuals.py). Created by V-1; V-2 appends the
-wave 2 constants (FlameZone, HolyZone, the Carrion fan, the lie judgment, the Main Gate picks). A boss WP asks for a
-change in its report.
+it with `from ._visuals import ...`, like `_common.py` and scholomance/_visuals.py). Created by V-1; V-2 appended the
+wave 2 constants (FlameZone, HolyZone, the Carrion fan, the lie judgment, the Main Gate picks; the last section of each
+list below). A boss WP asks for a change in its report.
 
 Source: .agents/plans/stratholme-build/stratholme-build.VISUALS-REPORT.md (ids, kits, mesh bounds and textures read;
 nothing rendered, so every look is unconfirmed until seen in game), the top pick of each wave 1 row (handoff s3.10, s7
@@ -13,8 +13,9 @@ originals where the spec's pick draws nothing or something else.
 Two kinds of constant:
 
 - MINTED (client patch-M, by apps/dbc-tools/patch_stratholme_vfx_models.py, ids.yaml reservation `stratholme`,
-  spellvisual 90500-90549): the `SV_*` names in the first section. They must equal the patch script's constants of the
-  same name (lib/test_stratholme_vfx.py pins it). All sit on stock models; no model or texture ships.
+  spellvisual 90500-90549): the `SV_*` names in the first section (wave 1 90500-90506, wave 2 90507-90514). They
+  must equal the patch script's constants of the same name (lib/test_stratholme_vfx.py pins it).
+  All sit on stock models; no model or texture ships.
 - STOCK: ids that already exist in the 3.3.5 client (SpellVisual.dbc, CreatureDisplayInfo.dbc,
   GameObjectDisplayInfo.dbc, SoundEntries.dbc) or, for SV_ACID_POOL / SV_ACID_POOL_STATE, in patch-M since the Deadmines
   work (shipped). Nothing ships for them and no id is minted. The test checks they exist in the working-copy DBCs.
@@ -23,7 +24,9 @@ How to wire a SpellVisual: put the id in the custom spell's `SpellVisualID_1`. A
 every unit that carries the aura, so only put it on an aura (a stalker aura for a ground patch). A PersistentArea look
 (marked AREA) is for a spell with a dynamic object (the area aura). A ChannelKit look shows only on a channeled spell.
 An impact kit plays once. Names are `<boss code>_<what>`; boss codes: BT Barthilas, BA Baroness Anastari, NE
-Nerub'enkan, MK Maleki, RG Ramstein, BR Baron Rivendare, HM the hard mode (Ysida, Risen).
+Nerub'enkan, MK Maleki, RG Ramstein, BR Baron Rivendare, HM the hard mode (Ysida, Risen); wave 2: UF The Unforgiven,
+FO Hearthsinger Forresten, TM Timmy the Cruel, ML Malor the Zealous, WI Cannon Master Willey, GF Archivist Galford, DA
+Dathrohan, BZ Balnazzar (and the Grand Lie's shared looks).
 """
 
 # --- Minted (patch-M) -------------------------------------------------------------------------------------------------
@@ -43,6 +46,25 @@ SV_GUT_PUDDLE_STATE = 90505
 # instead of Curse of Doom's 3 s impact kit. An aura look: put it on the Keened aura. No sound (kit 311's curse sound
 # is a one-shot).
 SV_KEENED_SKULL_STATE = 90506
+
+# Wave 2 (V-2). The zone glows are one flat quad each (a spawn anim, then a loop), sized by a fixed scale: STATE looks
+# for a stalker's aura (one stalker per ring or puddle; put the SV in the aura spell's SpellVisualID_1). The visible
+# disc reaches about 0.8 of the half quad, so each ring is a glow just past the hitbox, not an exact hit shape (draw
+# the hit with the telegraph kit). Unconfirmed in game: the scales are first guesses.
+SV_FLAMEZONE_10_STATE = 90507       # FlameZone orange disc, 10 yd radius: the Unforgiven's firelight ring (UF)
+SV_FLAMEZONE_8_STATE = 90508        # FlameZone orange disc, 8 yd radius: Forresten's hearth glow (FO)
+SV_HOLYZONE_4_STATE = 90509         # HolyZone gold disc, 4 yd radius: a Galford holy-fire puddle (GF)
+SV_HOLYZONE_5_STATE = 90510         # 5 yd
+SV_HOLYZONE_6_STATE = 90511         # 6 yd
+SV_HOLYZONE_8_STATE = 90512         # 8 yd; also Dathrohan's true-ground glow if the telegraph is not enough (DA)
+# Carrion Swarm fan, 30 yd long and about 58 degrees wide at the apex on the caster, in a PrecastKit so it plays through
+# the 2.5 s cast (the stock SV 9099 plays the 40 yd fan when the cast ends). Put it on BZ1's cast spell. The model
+# follows the caster's facing; the script turns Balnazzar to the target every update, so the fan tracks. No stun
+# swirl state (the stock SV 9099 has one). The 60 degree hit cone is wider than the drawn fan by about 2 degrees.
+SV_CARRION_FAN = 90513
+# The lie judgment (Judgement of Darkness): shadow hands on the cast, a red judgement flash on the target (the gold one
+# of the true judgment, SV 5651, reads as a heal), and the stock shadow chest impact as the target impact.
+SV_LIE_JUDGMENT = 90514
 
 # --- Stock displays, sizes and sounds ---------------------------------------------------------------------------------
 
@@ -138,6 +160,107 @@ BR_PRICE_OF_DEFIANCE = 47           # Unholy Frenzy 8699: glowing hands STATE + 
 BR_PRICE_OF_DEFIANCE_ALT = 11514    # Hysteria 49016, if Ysida does not use it
 HM_YSIDA_RISEN_AURA = 11514         # Hysteria 49016: DeathKnight_Hysteria, a persistent blood frenzy STATE on Ysida
 
+# --- Wave 2: the Main Gate (stock ids; the top pick of each row, handoff s3.10 gaps 4, 5, 8, 13, 14 and Added A-F) ----
+
+# The Unforgiven (S1)
+UF_ACCUSED_ARROW = 10201            # Target Indicator (Cosmetic) 46901: a lasting red arrow over the head, STATE
+UF_ACCUSED_FLASH = 11826            # Wrongfully Accused 51703: a 2.6 s ring of flame rays, IMPACT (the apply flash)
+UF_ACCUSED_MARK_ALT = 7262          # Mark of Shame 6767: CatMark over the head + Hunter's Mark on the chest, STATE
+UF_SOUL_FREED = 4501                # Soul Freed 17370: icy star burst + icebarrier_state (3.9 yd mesh; check the size)
+UF_HAUNTING_PHANTOMS = 335          # Haunting Phantoms 16336: hands + a rising spirit
+UF_FROST_NOVA = 17                  # Frost Nova 14907 (same as MK_SHATTER)
+UF_GHOST_VISUAL = 886               # Ghost Visual 9617: four flame-wisp emitters, a faint haze, STATE
+UF_BUILDING_FIRE = 6821             # Building Fire 21650: a 0.7 s body-sized flame, IMPACT: only a landing flash
+UF_FLAME_PATCH = 8313               # Flame Patch Periodic 35380: a ring of flames + fire reflect state, STATE
+# The firelight ring is SV_FLAMEZONE_10_STATE above. The house fire is a temporary gameobject:
+GODI_HOUSE_FIRE = 4452              # StratholmeFireSmokeEmberM (particle-only; size by the gameobject scale)
+GODI_HOUSE_FIRE_ALT = 4251          # StratholmeFireSmokeEmberS (stock "Small Chapel Fire")
+GODI_HOUSE_FIRE_ALT_2 = 398         # UndeadFireLarge (stock "Consecrated Earth": a plain flame)
+DISPLAY_SPECTRAL_FOOTMAN = 30978    # Footman 300600: human male ext. 20681, scale 1.4, alpha 184 (about 2.8 yd tall)
+DISPLAYS_SPECTRAL_CITIZEN = (10483, 10484, 10485, 10486)   # phantom 10387: human male and female ghosts, alpha 128
+SOUND_FOOTMAN_MARCH = 7054          # HornOfAwakening, optional march horn on the rank
+
+# Hearthsinger Forresten (S2)
+FO_DROWSY = 87                      # Sleep 12098: hands + Sleep_State_Head (green Zs), STATE; alt 4999 Hibernate
+FO_DROWSY_ALT = 4999
+FO_SIREN_SONG = 371                 # Siren's Song 25678: green hands, bubbles and a gold ribbon
+FO_BLACK_ROT = 717                  # Black Rot 16448: a green puff on the chest + a tint
+FO_LISTENING_MUSIC = 11381          # Listening to Music 50493: gold heal stars, 1.9 s (a stand-in: no music notes)
+FO_LULLABY_HEARTS = 2576            # Enchanting Lullaby: RED HEARTS, kept out of the boss (the test pins it unused)
+DISPLAYS_FORRESTEN_RATS = (1141, 1418, 2176)   # Rat.mdx, black, brown and white skins
+EMOTE_STATE_DANCE = 10              # the Jig: no SpellVisual (Piccolo SV 4682 is a sound only, never wired)
+# The hearth glow is SV_FLAMEZONE_8_STATE above.
+
+# Timmy the Cruel (S3)
+TM_FREEZE = 2335                    # Freeze 5276: ice hands + icebarrier_state, STATE
+TM_THUNDER_CLAP = 145               # Thunder Clap 6343: a 6.9 yd ground crack + a slow
+TM_TRIP = 413                       # Trip 101: shake, thud sound, stun stars
+TM_JUMP_ROPE = 9275                 # Wrangling Rope 40856: chain 190 RopeBeam, 0.17 wide, channel only (the top pick)
+TM_JUMP_ROPE_ALT = 9759             # Rope Beam 43368: chain 267, 0.08 wide (thin)
+TM_JUMP_ROPE_ALT_2 = 11270          # Freya's Vines 51354: chain 526, 0.38 wide + an Entangling Roots state at the end
+TM_SWEEP_BURST = 9612               # Smash 42669: warrior_shockwave_area dust ring at the caster's feet
+TM_SWEEP_BURST_ALT = 10703          # Shockwave 46968: the same model as a world effect
+DISPLAY_TIMMY_PLAYMATE = 571        # Ghoul.mdx, GhoulSkinWhite, display scale 1.5
+EMOTE_ONESHOT_EMERGE = 449          # Emotes row 449 (anim 224, falls back to Birth on the ghoul)
+
+# Malor the Zealous (S4)
+ML_BLAZE_BEAM = 11500               # WotLK Prologue Light Beam 52407: chain 568 HealBeam, 0.35 wide, gold (NOT 11274)
+ML_BLAZE_BEAM_ALT = 8407            # Blade's Edge Multi Gold Beam 35960: chain 2, 0.25 wide
+ML_BLAZE_BEAM_ALT_2 = 10165         # Spirit Shackle 45581: Beam_ChainGold, 0.17 wide
+ML_ZEAL = 211                       # Zeal 8191 (shared with Inner Fire): hands + a crown rune
+ML_HOLY_FIRE = 3400                 # Holy Fire 14914: gold hands + burst + an orange plume (one-shot)
+ML_TAINTED_MIND = 339               # Tainted Mind 16567: shadow hands + a rune ring + a chest state
+ML_JUDGMENT = 5651                  # Judgement of Light 20271 (the HIT, not 20267's heal sparkle SV 5560)
+ML_LAY_ON_HANDS = 132               # Lay on Hands 10310
+ML_SMASH_BURST = 9612               # the visible piece of Ground Smash (SV 2643 is a shake): Smash 42669; alt 145
+
+# Cannon Master Willey (S5)
+WI_AIM_ARROW = 5646                 # Tag: Arrow 20374: a red arrow STATE over the head (lasts the aim)
+WI_MUZZLE_BLAST = 612               # Southsea Cannon Fire 6252: Bomb_ExplosionA at the breath attach + a fire head
+WI_MUZZLE_BLAST_ALT = 10032         # Cannon Assault 44939: a muzzle blast + Canon_Impact_Dust at the target
+WI_MUZZLE_BLAST_ALT_2 = 30          # Cannon Fire 17278: Bomb_ExplosionA, instant area
+WI_BALL_IN_FLIGHT = 11537           # Cannonball 52539: Boulder_Missile x1.5 + a muzzle blast + a fire burst
+WI_MERCY_GLOW = 14914               # Holy Zone Visual 70571: HolyZone gold disc, 3.3 yd at scale 1, STATE (stock row)
+WI_ZEAL_GLOW = 15672                # Combustion Periodic 74629: FlameZone orange disc, 3.7 yd at scale 1, STATE
+GODI_CANNON = 245                   # G_Cannon01 (Mercy and Zeal), fire anim 153; NOT the invisible 1287
+GODI_CANNONBALL = 153               # CatapultBall01, a 2.5 yd ball at scale 1: gameobject 301202, size about 0.4-0.5
+GODI_CANNONBALL_PILE = 4177         # DeadMineCannonBallStack, a 1.8 yd pile (the second choice)
+GODI_INVISIBLE_TRAP_DO_NOT_USE = 1287    # SpellObject_InvisibleTrap: the stock cannonball 176211's display
+
+# Archivist Galford (S6)
+GF_HOLY_FIRE = 3400                 # Holy Fire 14914 on the target (as ML_HOLY_FIRE)
+GF_PYROBLAST = 2253                 # Pyroblast: fire hands + a molten impact + PyroBlast_Missile
+GF_FIRE_NOVA = 963                  # Fire Nova: fire hands + FireNova_Area ring + FireNova_State
+GF_FIRE_WALL = 9701                 # Fire Wall 43113: Missile_Wave_Fire 6.0 x 6.1 x 3.8 yd, STATE (4 stalkers per wall)
+GF_BURNING_WINDS = 4486             # a fire twister STATE (5 x 4 x 6.9 yd); RISKY on a carrier with no aura, test it
+GF_KINDLED = 46                     # Immolate 348: Immolate_State_Base on the target, STATE (Combustion SV 7634 is a
+                                    # one-shot); alt UF_FLAME_PATCH
+GF_COMBUSTION_FLASH = 7634          # Combustion 11129: fire ribbons on the chest, IMPACT (re-cast every 2 s, or skip)
+GF_CONSECRATION = 5600              # Consecration 20116 as a dynamic object (untested whether it scales to the radius)
+# The puddles are SV_HOLYZONE_4/5/6/8_STATE above (Holy Ground SV 7667 is a one-shot, never wired).
+
+# Dathrohan / Balnazzar (S7, S8) and the Grand Lie
+DA_TRUE_GROUND = 5600               # Consecration 26573 as the true ground (a PersistentArea 23 yd gold quad)
+DA_LIE_GROUND = 8506                # Desecration 36473 (a 16 x 17 yd bone crack) on the same spot, with DA_TRUE_GROUND
+DA_LIE_GROUND_ALT = 9735            # Death and Decay under SV 5600 (violet runes)
+DA_TRUE_JUDGMENT = 5651             # Judgement of Light 20271 (holy hands + the gold flash)
+DA_TRUE_JUDGMENT_ALT = 90040        # Light's Hammer impact (shipped, Paladin): a holy area burst
+DA_HOLY_WRATH = 126                 # Holy Wrath 2812: gold hands, a missile, a gold burst, stun stars
+DA_METEOR = 4859                    # Inferno 31299: infernal_impact_base, a falling rock + a crater (2.5 s): start it
+                                    # 2.5 s before the damage lands
+DA_IMMOLATION = 8313                # Flame Patch Periodic 35380: a ring of flames on the Infernal, STATE; alt 2519
+DA_IMMOLATION_ALT = 2519            # Immolation 20153: a one-shot chest puff per tick (31304 itself has SV 0)
+DA_SLEEP = 7320                     # Sleep 31298: green Zs + banish ribbons + a fog burst; alt 87
+DA_SLEEP_ALT = 87
+DA_HOLY_WATER = 1243                # Holy Water 17291: a gold boomerang + green Zs state (odd as a blast; RISKY)
+DISPLAY_INFERNAL = 7029             # Infernal.mdx, InfernalSkin, display scale 2.0
+BZ_SWARM_CLOUD = 7620               # Locust Swarm 28786: GiantInsectSwarm_State_Chest on a stalker (insects, not bats)
+BZ_VAMPIRIC_HEAL = 9310             # Blood Siphon 41068: red-drop chain 195 from the victim to Balnazzar (1 s cast)
+BZ_VAMPIRIC_HEAL_ALT = 3582         # Vampiric Embrace 15286: hands + a SoothingKiss head impact, no beam
+BZ_VAMPIRIC_HEAL_ALT_2 = 7301       # Blood Funnel 24617: red-drop channel chain 13 + a blood bolt on the chest
+# The Carrion fan is SV_CARRION_FAN and the lie judgment SV_LIE_JUDGMENT above. The half-room glow (a 180 degree cone,
+# Color(Yellow)) and the donut are telegraph kit pieces (BM Cone / Donut), no id here.
+
 # --- Shipped elsewhere, in patch-M already (Deadmines, SV 90340-90344) ------------------------------------------------
 
 SV_ACID_POOL = 90342                # Fish Stew goo puddle, area aura, 4 yd radius (8 yd across)
@@ -155,18 +278,42 @@ STOCK_SPELL_VISUALS = tuple(sorted({
     RG_CANNIBALIZE, RG_GORE, RG_EXPOSE_WEAKNESS, RG_TRAMPLE,
     BR_DEATH_AND_DECAY, BR_EXECUTION_BEAM, BR_EXECUTION_BEAM_ALT, BR_CHARGE, BR_CONDEMNED, BR_PRICE_OF_DEFIANCE,
     BR_PRICE_OF_DEFIANCE_ALT, HM_YSIDA_RISEN_AURA,
+    # wave 2
+    UF_ACCUSED_ARROW, UF_ACCUSED_FLASH, UF_ACCUSED_MARK_ALT, UF_SOUL_FREED, UF_HAUNTING_PHANTOMS, UF_FROST_NOVA,
+    UF_GHOST_VISUAL, UF_BUILDING_FIRE, UF_FLAME_PATCH,
+    FO_DROWSY, FO_DROWSY_ALT, FO_SIREN_SONG, FO_BLACK_ROT, FO_LISTENING_MUSIC,
+    TM_FREEZE, TM_THUNDER_CLAP, TM_TRIP, TM_JUMP_ROPE, TM_JUMP_ROPE_ALT, TM_JUMP_ROPE_ALT_2, TM_SWEEP_BURST,
+    TM_SWEEP_BURST_ALT,
+    ML_BLAZE_BEAM, ML_BLAZE_BEAM_ALT, ML_BLAZE_BEAM_ALT_2, ML_ZEAL, ML_HOLY_FIRE, ML_TAINTED_MIND, ML_JUDGMENT,
+    ML_LAY_ON_HANDS, ML_SMASH_BURST,
+    WI_AIM_ARROW, WI_MUZZLE_BLAST, WI_MUZZLE_BLAST_ALT, WI_MUZZLE_BLAST_ALT_2, WI_BALL_IN_FLIGHT, WI_MERCY_GLOW,
+    WI_ZEAL_GLOW,
+    GF_HOLY_FIRE, GF_PYROBLAST, GF_FIRE_NOVA, GF_FIRE_WALL, GF_BURNING_WINDS, GF_KINDLED, GF_COMBUSTION_FLASH,
+    GF_CONSECRATION,
+    DA_TRUE_GROUND, DA_LIE_GROUND, DA_LIE_GROUND_ALT, DA_TRUE_JUDGMENT, DA_HOLY_WRATH, DA_METEOR, DA_IMMOLATION,
+    DA_IMMOLATION_ALT, DA_SLEEP, DA_SLEEP_ALT, DA_HOLY_WATER,
+    BZ_SWARM_CLOUD, BZ_VAMPIRIC_HEAL, BZ_VAMPIRIC_HEAL_ALT, BZ_VAMPIRIC_HEAL_ALT_2,
 }))
+
 # Minted by this work (checked against the patch script's rows, not the stock DBCs)
 MINTED_SPELL_VISUALS = (
     SV_WEB_PATCH_5_AREA, SV_WEB_PATCH_5_STATE, SV_WEB_PATCH_7_AREA, SV_WEB_PATCH_7_STATE, SV_GUT_PUDDLE_AREA,
     SV_GUT_PUDDLE_STATE, SV_KEENED_SKULL_STATE,
+    SV_FLAMEZONE_10_STATE, SV_FLAMEZONE_8_STATE, SV_HOLYZONE_4_STATE, SV_HOLYZONE_5_STATE, SV_HOLYZONE_6_STATE,
+    SV_HOLYZONE_8_STATE, SV_CARRION_FAN, SV_LIE_JUDGMENT,
 )
 # Stock-client-absent but already shipped in patch-M (Deadmines)
-MINTED_ELSEWHERE_SPELL_VISUALS = (SV_ACID_POOL, SV_ACID_POOL_STATE)
+# (DA_TRUE_JUDGMENT_ALT 90040 is the Paladin work's Light's Hammer impact, shipped in patch-M.)
+MINTED_ELSEWHERE_SPELL_VISUALS = (SV_ACID_POOL, SV_ACID_POOL_STATE, DA_TRUE_JUDGMENT_ALT)
 
 STOCK_CREATURE_DISPLAYS = tuple(sorted({
     DISPLAY_WEB_COCOON, DISPLAY_INVISIBLE_STALKER, DISPLAY_ICE_TOMB, DISPLAY_CRAWLER, DISPLAY_CRAWLER_ALT,
     DISPLAY_BARON_DEATHCHARGER, DISPLAY_YSIDA_RISEN, DISPLAY_YSIDA_RISEN_ALT,
+    DISPLAY_SPECTRAL_FOOTMAN, *DISPLAYS_SPECTRAL_CITIZEN, *DISPLAYS_FORRESTEN_RATS, DISPLAY_TIMMY_PLAYMATE,
+    DISPLAY_INFERNAL,
 }))
-STOCK_GAMEOBJECT_DISPLAYS = tuple(sorted({GODI_BONE_PILE, GODI_BONE_PILE_ALT, GODI_BONE_PILE_SKELETON}))
-STOCK_SOUND_ENTRIES = tuple(sorted({SOUND_KEENING, SOUND_KEENING_ALT}))
+STOCK_GAMEOBJECT_DISPLAYS = tuple(sorted({
+    GODI_BONE_PILE, GODI_BONE_PILE_ALT, GODI_BONE_PILE_SKELETON,
+    GODI_HOUSE_FIRE, GODI_HOUSE_FIRE_ALT, GODI_HOUSE_FIRE_ALT_2, GODI_CANNON, GODI_CANNONBALL, GODI_CANNONBALL_PILE,
+}))
+STOCK_SOUND_ENTRIES = tuple(sorted({SOUND_KEENING, SOUND_KEENING_ALT, SOUND_FOOTMAN_MARCH}))
