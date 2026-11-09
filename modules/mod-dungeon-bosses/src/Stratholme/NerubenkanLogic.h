@@ -56,10 +56,8 @@ namespace StratNerubenkan
     };
     static_assert(SPELL_NE_POISON_BURST <= kSpellSlice.last, "Nerub'enkan's spells must stay in his slice");
 
-    // Stock spells kept: Pierce Armor 6016 on the tank (NE8; DD scales it on heroic), the scarab's Poison Proc 13299
-    // (its own SmartAI reset row). StratholmeRework.h names 6016 SPELL_PIERCE_ARMOR too (Encasing Webs
-    // is 4962, retired here), so this file uses its own name.
-    inline constexpr std::uint32_t SPELL_PIERCE_ARMOR = 6016;
+    // Stock spells kept: Pierce Armor 6016 on the tank (NE8; DD scales it on heroic; StratholmeRework.h's
+    // SPELL_PIERCE_ARMOR), the scarab's Poison Proc 13299 (its own SmartAI reset row).
 
     // Registry tags (one per mechanic; the failure ledger and the playtest greps key on them).
     enum NerubenkanTags : std::uint32_t
