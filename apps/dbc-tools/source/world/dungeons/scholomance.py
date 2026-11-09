@@ -133,19 +133,20 @@ def _declared_kit_entries() -> set[int]:
 _declared = _declared_kit_entries()
 
 
-# R-A S-2: until WP-L (wave C) declares the heroic bosses' loot (boss_loot(), which copies group 0 to the heroic
-# lootid), a heroic boss keeps its normal lootid like the trash: the heroic copy then drops the stock list, Rattlegore's
-# Viewing Room Key 13873 included, and the boot logs no missing loot table. WP-L flips this (True) as its loot lands.
-_HEROIC_BOSS_OWN_LOOT = False
+# R-A S-2 / WP-L: a heroic boss drops its own loot: `lootid` = its own heroic entry, whose groups source/items/
+# scholomance_loot.py declares (copying group 0 from the normal lootid). Marduk is the exception (see `_boss`).
+_HEROIC_BOSS_OWN_LOOT = True
 
 
-def _boss(health: int, heroic_entry: int | None = None) -> dict:
+def _boss(health: int, heroic_entry: int | None = None, **columns) -> dict:
     """A heroic boss drops its own loot: `lootid` = its own heroic entry (heroic_ids.lock), whose groups hold the
-    Heroic tiers (WP-L; held back by `_HEROIC_BOSS_OWN_LOOT` until then)."""
-    columns = dict(_STUN_IMMUNE)
+    Heroic tiers (source/items/scholomance_loot.py). `columns` override it: Marduk has no loot table (lootid 0) and
+    no gold, Vectus carries the encounter's one purse (marduk_and_vectus.py; the normal rows say the same)."""
+    values = dict(_STUN_IMMUNE)
     if heroic_entry is not None and _HEROIC_BOSS_OWN_LOOT:
-        columns["lootid"] = heroic_entry
-    return dict(health=health, columns=columns)
+        values["lootid"] = heroic_entry
+    values.update(columns)
+    return dict(health=health, columns=values)
 
 
 # The wave switches of source/npcs/scholomance/_common.py (BIND_WAVE_B, BIND_WAVE_C; R-A S-11), read from its text
@@ -207,8 +208,10 @@ scholomance = dungeon(
         overrides={
             10503: _boss(265_000, 310093),  # Jandice Barov
             11622: _boss(280_000, 310110),  # Rattlegore
-            10433: _boss(425_000, 310070),  # Marduk Blackpool (one shared pool with Vectus)
-            10432: _boss(425_000, 310069),  # Vectus
+            # Marduk Blackpool (one shared pool with Vectus): no loot, no gold; Vectus drops the encounter's loot and
+            # purse
+            10433: _boss(425_000, 310070, lootid=0, mingold=0, maxgold=0),
+            10432: _boss(425_000, 310069, mingold=2235, maxgold=2928),  # Vectus
             10508: _boss(270_000, 310098),  # Ras Frostwhisper
             **_wave("B", {
                 10505: _boss(250_000, 310095),  # Instructor Malicia

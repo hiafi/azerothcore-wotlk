@@ -999,9 +999,13 @@ def _loot_blocks(
     for edit in dsl_classes["creature_template_edits"]:
         entry = int(edit["entry"])
         creature_rows[entry] = {**creature_rows.get(entry, {}), **edit}
+    set_tokens = {
+        entry["id"][1]: entry["_decl"] for entry in dsl_classes.get("item_set_declarations", [])
+        if entry["id"][0] == "token"
+    }
     plan = loot_tables.build(
         dsl_classes["loot_declarations"], item_expansion, ids_cfg=ids_cfg, heroic_pairs=heroic_pairs,
-        creature_rows=creature_rows, strict_lootid=not only_items,
+        creature_rows=creature_rows, strict_lootid=not only_items, tokens=set_tokens,
     )
     if not plan.errors:
         live_creature, live_reference = loot_tables.load_live()

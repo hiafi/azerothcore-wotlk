@@ -12,6 +12,11 @@ removal as a lone DELETE) and a rerun after replaying the rendered SQL emits not
 group roll (each list drops exactly one item at equal chance, Sneed's pool two distinct items, the hard mode item only
 with the loot mode bit); and the real source/items/deadmines_loot.py declarations.
 
+Scholomance (WP-L): `replaces_items=` / `replaces_references=` (a list drops the named stock rows on purpose, any other
+foreign row is still an ERROR), `remove_loot_rows()` (single item rows, rendered as one DELETE, silent on a rerun,
+kept out of the heroic copies), `set_token()` keys in a list (resolved to the token of the kill's tier), and the real
+source/items/scholomance_loot.py declarations.
+
 Run directly:
 
     apps/dbc-tools/.venv/bin/python3 apps/dbc-tools/lib/test_loot_tables.py
@@ -32,6 +37,7 @@ from lib import item_variants, loot_tables, sql_dump  # noqa: E402
 from lib.dsl import items as D  # noqa: E402
 from lib.dsl import loot as L  # noqa: E402
 from lib.dsl import registry  # noqa: E402
+from lib.dsl import sets as S  # noqa: E402
 
 IDS_CFG = {"loot_reference": {"start": 1700000, "end": 1700999}}
 DUNGEON = D.ladder(
@@ -134,6 +140,15 @@ class DslTest(unittest.TestCase):
             L.remove_loot_group(642, group=1, why=" ")
         with self.assertRaises(L.LootDeclarationError):
             L.remove_loot_group(642, group=0, why="x")
+        for kwargs in (dict(replaces_items=(0,)), dict(replaces_items=(5, 5)), dict(replaces_references="35031"),
+                       dict(replaces_references=(True,))):
+            with self.subTest(kwargs=kwargs), self.assertRaises(L.LootDeclarationError):
+                L.boss_loot(644, ("a",), tier="normal", **kwargs)
+        for args, kwargs in (((644, ()), dict(why="x")), ((644, (5, 5)), dict(why="x")), ((644, (5,)), dict(why=" ")),
+                             ((644, (5,)), dict(why="x", group=128)), ((0, (5,)), dict(why="x")),
+                             ((644, ("5",)), dict(why="x"))):
+            with self.subTest(args=args, kwargs=kwargs), self.assertRaises(L.LootDeclarationError):
+                L.remove_loot_rows(*args, **kwargs)
 
     def test_one_declaration_per_group(self):
         with self.assertRaises(registry.DuplicateIdError):
@@ -336,6 +351,137 @@ class LiveTest(unittest.TestCase):
         self.assertEqual(second.blocks, [])
 
 
+class ReplacesAndRowsTest(unittest.TestCase):
+    """WP-L: the stock rows a list replaces, single row removals, and set tokens in a list."""
+
+    def setUp(self):
+        self.hammer = _item("sc_hammer", base=5187)
+        self.rock = _item("sc_rock", base=872)
+        self.exp = _expansion(self.hammer, self.rock)
+        self.live = [
+            _row(639, 2589, group=0, chance=13.0, comment="cloth"), _row(639, 7777, group=0, chance=1.0),
+            _row(639, 5187, chance=30.0), _row(639, 4444, chance=17.0), _row(639, 1, reference=35031, chance=30.0),
+        ]
+        self.decls = _declare(
+            (L.boss_loot, (639, ("sc_hammer", "sc_rock")), dict(tier="normal", replaces_items=(4444,),
+                                                                replaces_references=(35031,))),
+            (L.boss_loot, (310004, ("sc_hammer", "sc_rock")), dict(tier="heroic")),
+            (L.remove_loot_rows, (639, (7777,)), dict(group=0, why="cut")),
+        )
+
+    def plan(self, live, decls=None, exp=None):
+        plan = _build(decls or self.decls, exp or self.exp)
+        loot_tables.derive_heroic_copies(plan, live)
+        loot_tables.check_live(plan, live, [], IDS_CFG)
+        return plan
+
+    def test_named_stock_rows_may_go_and_any_other_foreign_row_may_not(self):
+        plan = self.plan(self.live)
+        self.assertEqual(plan.errors, [])
+        self.assertEqual(plan.replaces[(639, 1)], (frozenset({4444}), frozenset({35031})))
+        for extra, text in ((_row(639, 5555, chance=1.0), "item 5555"),
+                            (_row(639, 1, reference=1000319), "reference 1000319")):
+            errors = self.plan(self.live + [extra]).errors
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn(f"would drop {text}", errors[0])
+            self.assertIn("replaces_items=", errors[0])
+        # without the allow-list the same stock rows are foreign
+        bare = _declare((L.boss_loot, (639, ("sc_hammer", "sc_rock")), dict(tier="normal")))
+        errors = self.plan(self.live, bare).errors
+        self.assertTrue(any("item 4444, reference 35031" in e for e in errors), errors)
+
+    def test_a_group_removal_takes_replaces_too(self):
+        live = self.live + [_row(639, 6666, group=2, chance=2.0), _row(639, 5187, group=2, chance=0.0)]
+        decls = _declare(
+            (L.boss_loot, (639, ("sc_hammer",)), dict(tier="normal", replaces_items=(4444,),
+                                                      replaces_references=(35031,))),
+            (L.remove_loot_group, (639,), dict(group=2, why="x", replaces_items=(6666,))),
+        )
+        self.assertEqual(self.plan(live, decls).errors, [])
+        bare = _declare(
+            (L.boss_loot, (639, ("sc_hammer",)), dict(tier="normal", replaces_items=(4444,),
+                                                      replaces_references=(35031,))),
+            (L.remove_loot_group, (639,), dict(group=2, why="x")),
+        )
+        self.assertTrue(any("639 group 2: the declaration would drop item 6666" in e
+                            for e in self.plan(live, bare).errors))
+
+    def test_row_removal_renders_once_and_keeps_the_heroic_copy_clean(self):
+        plan = self.plan(self.live)
+        self.assertEqual(plan.row_removals, {(639, 0): ((7777,), "cut")})
+        self.assertEqual({r["Item"] for r in plan.copies[(310004, 0)]}, {2589})
+        first = loot_tables.render(plan, self.live, [])
+        self.assertEqual(first.row_removals, [(639, 0)])
+        text = "\n\n".join(first.blocks) + "\n"
+        self.assertIn("DELETE FROM `creature_loot_template` WHERE `Entry` = 639 AND `GroupId` = 0 AND `Reference` = 0 "
+                      "AND `Item` IN (7777);", text)
+        creature = {tuple(r[c] for c in loot_tables.KEY_COLUMNS): dict(r) for r in self.live}
+        sql_dump.apply_composite_key_statements(creature, loot_tables.COLUMNS, loot_tables.KEY_COLUMNS,
+                                                loot_tables.CREATURE_LOOT, text)
+        self.assertNotIn((639, 7777, 0, 0), creature)
+        self.assertIn((639, 2589, 0, 0), creature)  # the rest of the group stays
+        live = list(creature.values())
+        second = loot_tables.render(self.plan(live), live, [])
+        self.assertEqual(second.blocks, [])
+        notes = loot_tables.summary_notes(self.plan(live), second)
+        self.assertIn("1 row removal group(s) (1 row(s))", notes[0])
+
+    def test_row_removal_cannot_target_a_declared_group(self):
+        decls = _declare(
+            (L.boss_loot, (639, ("sc_hammer",)), dict(tier="normal", replaces_items=(4444,),
+                                                      replaces_references=(35031,))),
+            (L.remove_loot_rows, (639, (5187,)), dict(group=1, why="x")),
+        )
+        self.assertTrue(any("also declared by boss_loot()" in e for e in self.plan(self.live, decls).errors))
+
+    def test_a_list_item_in_a_removed_row_is_no_double_drop(self):
+        live = self.live + [_row(639, 872, group=0, chance=1.0)]
+        decls = _declare(
+            (L.boss_loot, (639, ("sc_hammer", "sc_rock")), dict(tier="normal", replaces_items=(4444,),
+                                                                replaces_references=(35031,))),
+            (L.remove_loot_rows, (639, (872, 7777)), dict(group=0, why="in the list now")),
+        )
+        plan = self.plan(live, decls)
+        self.assertEqual(plan.errors, [])
+        self.assertFalse(any("also drop from live group" in w for w in plan.warnings), plan.warnings)
+
+    def test_set_tokens_resolve_to_the_kills_tier(self):
+        token = S.set_token(
+            "tok_belt", name="Haunted Belt", slots=(6,), ladder=DUNGEON, like=22356, ilvl=60, quality=D.Quality.RARE,
+            required_level=0, entries={"normal": 70520, "heroic": 70521, "empowered_1": 70522},
+            costs={"normal": 3020, "heroic": 3021, "empowered_1": 3022},
+        )
+        decls = _declare(
+            (L.boss_loot, (639, ("sc_hammer",)), dict(tier="normal")),
+            (L.boss_loot, (639, ("tok_belt",)), dict(tier="normal", group=3)),
+            (L.boss_loot, (310004, ("sc_hammer",)), dict(tier="heroic")),
+            (L.boss_loot, (310004, ("tok_belt",)), dict(tier="heroic", group=3)),
+        )
+        plan = loot_tables.build(decls, self.exp, ids_cfg=IDS_CFG, heroic_pairs=HEROIC_PAIRS,
+                                 creature_rows=_creatures(), tokens={"tok_belt": token})
+        self.assertEqual(plan.errors, [])
+        self.assertEqual([(r["Item"], r["GroupId"], r["Chance"]) for r in plan.groups[(639, 3)]], [(70520, 3, 0)])
+        self.assertEqual([r["Item"] for r in plan.groups[(310004, 3)]], [70521])
+        self.assertIn("Haunted Belt (Normal)", plan.groups[(639, 3)][0]["Comment"])
+        self.assertTrue({70520, 70521, 70522} <= plan.owned_items)
+        # a token tier that does not fit the difficulty, and an unknown key
+        bad = _declare(
+            (L.boss_loot, (639, ("tok_belt",)), dict(tier="heroic", group=3)),
+            (L.boss_loot, (644, ("tok_missing",)), dict(tier="normal", group=3)),
+        )
+        plan = loot_tables.build(bad, self.exp, ids_cfg=IDS_CFG, heroic_pairs=HEROIC_PAIRS,
+                                 creature_rows=_creatures(), tokens={"tok_belt": token})
+        self.assertEqual(len(plan.errors), 2, plan.errors)
+        self.assertIn("a normal lootid drops 'normal'", plan.errors[0])
+        self.assertIn("not a resolved item() key", plan.errors[1])
+        # a live token row in its own group is no foreign row once the declaration owns it
+        live = [_row(639, 70520, group=3)]
+        plan = loot_tables.build(decls[:2], self.exp, ids_cfg=IDS_CFG, heroic_pairs=HEROIC_PAIRS,
+                                 creature_rows=_creatures(), tokens={"tok_belt": token})
+        loot_tables.check_live(plan, live, [], IDS_CFG)
+        self.assertEqual(plan.errors, [])
+
+
 class HeroicCopyTest(unittest.TestCase):
     """Follow-up 1: a heroic lootid keeps every non-list group of its normal boss, copied unchanged."""
 
@@ -505,7 +651,8 @@ class DeadminesSourceTest(unittest.TestCase):
         # Deadmines only (the dm_ keys): other dungeons declare items whose loot tables come with their boss builds.
         cls.items = {e["id"]: e["_decl"] for e in merged["item_declarations"] if e["id"].startswith("dm_")}
         cls.loot = [e["_decl"] for e in merged["loot_declarations"]
-                    if e["_decl"].removal or e["_decl"].items[0].startswith("dm_")]
+                    if (e["_decl"].removal and e["_decl"].lootid == 642)
+                    or (e["_decl"].items and e["_decl"].items[0].startswith("dm_"))]
 
     def test_every_item_drops_once_per_difficulty(self):
         normal = [k for d in self.loot if not d.removal and d.tier == "normal" for k in d.items]
@@ -538,7 +685,7 @@ class ShadowfangKeepSourceTest(unittest.TestCase):
         merged = D.load_items_dir(TOOL_ROOT / "source" / "items")
         cls.items = {e["id"]: e["_decl"] for e in merged["item_declarations"] if e["id"].startswith("sfk_")}
         cls.loot = [e["_decl"] for e in merged["loot_declarations"]
-                    if not e["_decl"].removal and e["_decl"].items[0].startswith("sfk_")]
+                    if e["_decl"].items and e["_decl"].items[0].startswith("sfk_")]
 
     def test_every_item_drops_once_per_difficulty(self):
         normal = [k for d in self.loot if d.tier == "normal" for k in d.items]
@@ -558,6 +705,112 @@ class ShadowfangKeepSourceTest(unittest.TestCase):
         self.assertFalse(any(d.loot_mode != 1 for d in self.loot if (d.lootid, d.group) != (310051, 2)))
         self.assertTrue(all(d.group == 1 for d in self.loot if (d.lootid, d.group) != (310051, 2)))
         self.assertEqual(len(self.loot), 19)
+
+
+class ScholomanceSourceTest(unittest.TestCase):
+    """The real declarations in source/items/scholomance_loot.py (item keys from scholomance.py, tokens from
+    haunted_set.py)."""
+
+    # normal lootid -> heroic lootid -> expected list size; Ras and Gandling drop two
+    BOSSES = {  # name: (normal, heroic, list size, picks, token key)
+        "Jandice": (10503, 310093, 5, 1, "haunted_token_waist"),
+        "Rattlegore": (11622, 310110, 4, 1, None),
+        "Vectus": (10432, 310069, 4, 1, "haunted_token_hands"),
+        "Ras": (10508, 310098, 6, 2, "haunted_token_shoulders"),
+        "Malicia": (10505, 310095, 4, 1, None),
+        "Krastinov": (11261, 310103, 5, 1, None),
+        "Polkelt": (10901, 310100, 4, 1, None),
+        "Ravenian": (10507, 310097, 4, 1, None),
+        "Alexei": (10504, 310094, 4, 1, None),
+        "Illucia": (10502, 310092, 4, 1, None),
+        "Gandling": (1853, 310068, 8, 2, "haunted_token_head"),
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        merged = D.load_items_dir(TOOL_ROOT / "source" / "items")
+        cls.items = {e["id"]: e["_decl"] for e in merged["item_declarations"] if e["id"].startswith("scholo_")}
+        cls.tokens = {e["id"][1] for e in merged["item_set_declarations"] if e["id"][0] == "token"}
+        scholo = [e["_decl"] for e in merged["loot_declarations"]]
+        cls.lists = [d for d in scholo if not d.removal and not d.row_removal
+                     and (d.items[0].startswith("scholo_") or d.items[0].startswith("haunted_token_"))]
+        cls.removals = [d for d in scholo if d.removal and d.lootid in (10433, 1853)]
+        cls.row_removals = [d for d in scholo if d.row_removal]
+
+    def groups(self, group):
+        return {(d.lootid, d.group): d for d in self.lists if d.group == group}
+
+    def test_every_item_drops_once_per_difficulty(self):
+        normal = [k for d in self.lists if d.tier == "normal" and d.group == 1 for k in d.items]
+        heroic = [k for d in self.lists if d.tier == "heroic" and d.group == 1 for k in d.items]
+        hard_mode = [k for d in self.lists if d.tier == "heroic_hm" for k in d.items]
+        self.assertEqual(len(normal), 52)
+        self.assertEqual(sorted(normal), sorted(set(normal)))
+        self.assertEqual(sorted(normal), sorted(heroic))
+        self.assertEqual(len(hard_mode), 6)
+        self.assertEqual(set(normal) | set(hard_mode), set(self.items))
+
+    def test_each_boss_list_and_picks(self):
+        by_key = self.groups(1)
+        for name, (normal, heroic, size, picks, _token) in self.BOSSES.items():
+            for lootid, tier in ((normal, "normal"), (heroic, "heroic")):
+                with self.subTest(boss=name, lootid=lootid):
+                    decl = by_key[(lootid, 1)]
+                    self.assertEqual((decl.tier, len(decl.items), decl.picks, decl.loot_mode), (tier, size, picks, 1))
+                    self.assertEqual(decl.reference is not None, picks > 1)
+            self.assertEqual(by_key[(normal, 1)].items, by_key[(heroic, 1)].items)
+        refs = sorted(d.reference for d in by_key.values() if d.reference)
+        self.assertEqual(refs, [1700002, 1700003, 1700004, 1700005])
+
+    def test_the_four_haunted_tokens_are_their_own_group_at_the_kills_tier(self):
+        by_key = self.groups(3)
+        wanted = {name: spec for name, spec in self.BOSSES.items() if spec[4]}
+        self.assertEqual(sorted(wanted), ["Gandling", "Jandice", "Ras", "Vectus"])
+        for name, (normal, heroic, _size, _picks, token) in wanted.items():
+            self.assertIn(token, self.tokens)
+            for lootid, tier in ((normal, "normal"), (heroic, "heroic")):
+                decl = by_key[(lootid, 3)]
+                self.assertEqual((decl.items, decl.tier, decl.picks, decl.loot_mode), ((token,), tier, 1, 1), name)
+        self.assertEqual(len(by_key), 8)
+
+    def test_hard_mode_is_group_two_of_the_heroic_lootids_only(self):
+        by_key = self.groups(2)
+        self.assertEqual(sorted(by_key), [(310068, 2), (310098, 2)])
+        for key, expected in (((310098, 2), {"scholo_phylactery_shard", "scholo_frostwhispers_chillband",
+                                             "scholo_bonechill_blade"}),
+                              ((310068, 2), {"scholo_transfer_papers", "scholo_honor_roll_ribbon",
+                                             "scholo_darkmasters_portal_rod"})):
+            decl = by_key[key]
+            self.assertEqual((decl.loot_mode, decl.tier, decl.picks, set(decl.items)),
+                             (L.LOOT_MODE_HARD_MODE_1, "heroic_hm", 1, expected))
+        self.assertFalse(any(d.loot_mode != 1 for d in self.lists if d.group != 2))
+        # Gandling's stock group 2 (his list) is removed so the heroic lootid's group 2 is the hard mode one
+        removed = {(d.lootid, d.group): d for d in self.removals}
+        self.assertEqual(sorted(removed), [(1853, 2), (10433, 1)])
+        self.assertEqual(removed[(1853, 2)].replaces_items, (13944,))
+
+    def test_marduk_has_no_list_and_the_stock_rows_are_the_only_ones_removed(self):
+        lootids = {d.lootid for d in self.lists}
+        self.assertNotIn(10433, lootids)
+        self.assertNotIn(310070, lootids)
+        rows = {(d.lootid, d.group): d.rows for d in self.row_removals}
+        self.assertEqual(rows[(10433, 0)], (12843, 14047))
+        self.assertEqual(rows[(1853, 0)], (13950,))
+        self.assertEqual(rows[(10503, 0)], (14543,))
+        trash = {k: v for k, v in rows.items() if k[0] not in (10433, 1853, 10503)}
+        self.assertEqual(len(trash), 12)
+        self.assertEqual(sum(len(v) for v in trash.values()), 14)
+        self.assertTrue(all(group == 0 for _, group in rows))
+        # the Tier 0 trash drops are sets 181-189 items, the group 1 replacements only on the normal lootids
+        tier_0 = {16684, 16685, 16710, 16702, 16705, 16671, 16722, 16714, 16716}
+        self.assertTrue(all(set(v) <= tier_0 for v in trash.values()))
+        replaced = {d.lootid: d for d in self.lists if d.group == 1 and d.tier == "normal"}
+        self.assertEqual(replaced[10508].replaces_references, (35030,))
+        self.assertEqual(replaced[10504].replaces_references, (35095,))
+        for lootid in (10505, 11261, 10901, 10507, 10502):
+            self.assertEqual(replaced[lootid].replaces_references, (35031,), lootid)
+        self.assertEqual(len(replaced[1853].replaces_items), 9)
+        self.assertFalse(any(d.replaces_items or d.replaces_references for d in self.lists if d.tier != "normal"))
 
 
 if __name__ == "__main__":

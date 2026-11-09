@@ -13,6 +13,14 @@ are never touched; a `remove_loot_group()` is the DELETE alone.
 or the deterministic ids `--check` reports before a full run writes them): a `base=` item's Normal tier is its stock
 entry.
 
+**Set tokens.** A list key may be a `set_token()` key (source/items/haunted_set.py; the Haunted tokens): it resolves to
+the token's entry for the declared tier through the same difficulty rule as an item (`build(tokens=...)`).
+
+**Stock rows a list replaces.** `boss_loot(replaces_items=, replaces_references=)` and `remove_loot_group(...)` name the
+live rows of the group they drop on purpose (a shared pool reference, the Tier 0 helms, cut pieces); any other live
+row that no `item()` declares is still an ERROR. `remove_loot_rows()` deletes single item rows (also of group 0), and
+the heroic copies are made without them.
+
 **The rules** (docs/dungeons/boss-rework-systems.md section 2, Loot lists; `lint_rows` and `check_live`):
 
 - a list is one group of equal-chance entries: Chance 0, MinCount = MaxCount = 1, GroupId 1-127, no item twice, so
@@ -59,10 +67,21 @@ class LootPlan:
     # Follow-up 1: a heroic lootid with a declared list keeps every other group its normal boss drops (cloth, food,
     # quest items, generic world loot references), copied unchanged (derive_heroic_copies, from the live normal rows).
     heroic_sources: dict[int, int] = field(default_factory=dict)  # heroic lootid -> the normal boss's lootid
+    # (Entry, GroupId) -> (items, references) of the live rows the declaration drops on purpose (replaces_*)
+    replaces: dict[tuple[int, int], tuple[frozenset[int], frozenset[int]]] = field(default_factory=dict)
+    row_removals: dict[tuple[int, int], tuple[tuple[int, ...], str]] = field(default_factory=dict)  # remove_loot_rows
     copies: dict[tuple[int, int], list[dict]] = field(default_factory=dict)  # (heroic Entry, GroupId) -> rows
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class _Drop:
+    """One resolved list entry: an item tier or a set token at the declared tier."""
+    entry: int
+    name: str
+    label: str
 
 
 def _int(value, default: int = 0) -> int:
@@ -106,21 +125,34 @@ def _row(entry: int, item: int, comment: str, *, group: int, loot_mode: int = lo
 def build(
     declarations: list[dict], expansion: item_variants.ItemExpansion, *, ids_cfg: dict,
     heroic_pairs: dict[int, int], creature_rows: dict[int, dict], strict_lootid: bool = True,
+    tokens: dict | None = None,
 ) -> LootPlan:
     """Resolves `declarations` (`dsl_classes["loot_declarations"]`) against the item expansion. `heroic_pairs` is
     normal -> heroic creature entry (heroic_ids.lock); `creature_rows` the creature_template rows by entry as this run
     will leave them (live, with the declared and generated heroic rows over them). `strict_lootid=False` (an
     `--only items` run, which renders no creature_template row) makes a heroic row whose lootid is not its own entry
-    a WARNING instead of an ERROR."""
+    a WARNING instead of an ERROR. `tokens` is the `set_token()` declarations by key (lib/dsl/sets.py)."""
     plan = LootPlan()
-    decls: list[loot_dsl.LootDecl] = [entry["_decl"] for entry in declarations]
-    if not decls:
+    all_decls: list[loot_dsl.LootDecl] = [entry["_decl"] for entry in declarations]
+    if not all_decls:
         return plan
+    decls = [d for d in all_decls if not d.row_removal]
+    tokens = tokens or {}
     items = {item.decl.key: item for item in expansion.items}
     for item in expansion.items:
         for tier in item.tiers:
             plan.owned_items.add(tier.entry)
             plan.equippable[tier.entry] = item.inventory_type != 0
+    for token in tokens.values():
+        plan.owned_items.update(entry for _, entry in token.entries)
+    for decl in all_decls:
+        if decl.row_removal:
+            key = (decl.lootid, decl.group)
+            if any(d.lootid == decl.lootid and d.group == decl.group for d in decls):
+                plan.errors.append(f"{decl.where}: the group is also declared by boss_loot()/remove_loot_group(); "
+                                   f"remove its rows there (replaces_items=) instead")
+                continue
+            plan.row_removals[key] = (decl.rows, decl.why)
     heroic_entries = set(heroic_pairs.values())
     block = ids_cfg.get(REFERENCE_BLOCK)
     by_entry: dict[int, list[loot_dsl.LootDecl]] = {}
@@ -133,37 +165,44 @@ def build(
         if decl.removal:
             plan.groups[key] = []
             plan.removals[key] = decl.why
+            if decl.replaces_items or decl.replaces_references:
+                plan.replaces[key] = (frozenset(decl.replaces_items), frozenset(decl.replaces_references))
             continue
         heroic = decl.lootid in heroic_entries
         boss = _boss_name(decl.lootid, creature_rows)
-        resolved: list[tuple[item_variants.ResolvedItem, item_variants.ResolvedTier]] = []
+        resolved: list[_Drop] = []
         for item_key in decl.items:
             item = items.get(item_key)
-            if item is None:
-                plan.errors.append(f"{where}: {item_key!r} is not a resolved item() key (unknown, or its declaration "
-                                   f"has errors)")
+            token = tokens.get(item_key) if item is None else None
+            if item is None and token is None:
+                plan.errors.append(f"{where}: {item_key!r} is not a resolved item() key (nor a set_token() key; "
+                                   f"unknown, or its declaration has errors)")
                 continue
-            spec = item.decl.ladder.tier(decl.tier)
+            ladder = item.decl.ladder if item is not None else token.ladder
+            spec = ladder.tier(decl.tier)
             if spec is None or spec.deferred:
                 plan.errors.append(
                     f"{where}: item {item_key!r} has no {'minted ' if spec else ''}tier {decl.tier!r} on ladder "
-                    f"{item.decl.ladder.name!r} ({', '.join(item.decl.ladder.names)})"
+                    f"{ladder.name!r} ({', '.join(ladder.names)})"
                 )
                 continue
-            want = first_explicit_tier(item.decl.ladder) if heroic else own_level_tier(item.decl.ladder)
+            want = first_explicit_tier(ladder) if heroic else own_level_tier(ladder)
             if want is None or want.name != spec.name:
                 kind = "a heroic creature's lootid" if heroic else "a normal lootid"
                 plan.errors.append(
                     f"{where}: item {item_key!r} drops tier {decl.tier!r}, but {kind} drops "
-                    f"{repr(want.name) if want else 'no tier'} of ladder {item.decl.ladder.name!r} "
+                    f"{repr(want.name) if want else 'no tier'} of ladder {ladder.name!r} "
                     f"(normal: the items' own level; heroic: the first explicit item level)"
                 )
                 continue
-            tier = next((t for t in item.tiers if t.tier == decl.tier), None)
-            if tier is None:
-                plan.errors.append(f"{where}: item {item_key!r} tier {decl.tier!r} has no item_template entry")
-                continue
-            resolved.append((item, tier))
+            if item is not None:
+                tier = next((t for t in item.tiers if t.tier == decl.tier), None)
+                if tier is None:
+                    plan.errors.append(f"{where}: item {item_key!r} tier {decl.tier!r} has no item_template entry")
+                    continue
+                resolved.append(_Drop(tier.entry, _item_name(item, tier), tier.label))
+            else:
+                resolved.append(_Drop(token.entry(decl.tier), token.name, spec.label))
         if len(resolved) != len(decl.items):
             continue
 
@@ -189,20 +228,22 @@ def build(
                 plan.errors.append(f"{where}: reference={ref} is already another list's pool")
                 continue
             plan.references[ref] = [
-                _row(ref, tier.entry, f"{boss} pool - {_item_name(item, tier)} ({tier.label})",
+                _row(ref, drop.entry, f"{boss} pool - {drop.name} ({drop.label})",
                      group=REFERENCE_POOL_GROUP, loot_mode=decl.loot_mode)
-                for item, tier in resolved
+                for drop in resolved
             ]
             plan.picks[ref] = decl.picks
-            rows.append(_row(decl.lootid, ref, f"{boss} - {decl.picks} of the {boss} pool ({resolved[0][1].label})",
+            rows.append(_row(decl.lootid, ref, f"{boss} - {decl.picks} of the {boss} pool ({resolved[0].label})",
                              group=decl.group, loot_mode=decl.loot_mode, reference=ref, max_count=decl.picks))
         else:
             rows += [
-                _row(decl.lootid, tier.entry, f"{boss} - {_item_name(item, tier)} ({tier.label})",
+                _row(decl.lootid, drop.entry, f"{boss} - {drop.name} ({drop.label})",
                      group=decl.group, loot_mode=decl.loot_mode)
-                for item, tier in resolved
+                for drop in resolved
             ]
         plan.groups[key] = rows
+        if decl.replaces_items or decl.replaces_references:
+            plan.replaces[key] = (frozenset(decl.replaces_items), frozenset(decl.replaces_references))
 
     _check_creatures(plan, decls, heroic_pairs, creature_rows, strict_lootid)
     normal_of = {h: n for n, h in heroic_pairs.items()}
@@ -235,11 +276,19 @@ def derive_heroic_copies(plan: LootPlan, live_creature: list[dict]) -> None:
                     f"the heroic lootid, but a declaration already owns that group; give one of them another GroupId"
                 )
                 continue
-            plan.copies[(heroic, group)] = [{**{c: r.get(c) for c in COLUMNS}, "Entry": heroic} for r in rows]
+            rows = _without_removed(plan, (normal, group), rows)
+            if rows:
+                plan.copies[(heroic, group)] = [{**{c: r.get(c) for c in COLUMNS}, "Entry": heroic} for r in rows]
         for (entry, group) in sorted(live):
             if entry == heroic and (heroic, group) not in plan.groups and (heroic, group) not in plan.copies:
                 plan.warnings.append(f"{CREATURE_LOOT} {heroic} group {group}: live, but neither declared nor a "
                                      f"copy of normal lootid {normal} any more; left in place")
+
+
+def _without_removed(plan: LootPlan, key: tuple[int, int], rows: list[dict]) -> list[dict]:
+    """`rows` of group `key` without the item rows a `remove_loot_rows()` deletes."""
+    removed = set(plan.row_removals.get(key, ((), ""))[0])
+    return [r for r in rows if _int(r.get("Reference")) or _int(r.get("Item")) not in removed]
 
 
 def _check_creatures(plan: LootPlan, decls: list[loot_dsl.LootDecl], heroic_pairs: dict[int, int],
@@ -366,18 +415,20 @@ def check_live(plan: LootPlan, live_creature: list[dict], live_reference: list[d
     for key, rows in sorted(plan.groups.items()):
         entry, group = key
         foreign = []
+        replaced_items, replaced_refs = plan.replaces.get(key, (frozenset(), frozenset()))
         for row in live.get(key, []):
             item, ref = _int(row.get("Item")), _int(row.get("Reference"))
             if ref:
-                if ref not in declared_refs:
+                if ref not in declared_refs and ref not in replaced_refs:
                     foreign.append(f"reference {ref}")
-            elif item not in plan.owned_items:
+            elif item not in plan.owned_items and item not in replaced_items:
                 foreign.append(f"item {item}")
         if foreign:
             plan.errors.append(
                 f"{CREATURE_LOOT} {entry} group {group}: the declaration would drop {', '.join(foreign)}, which no "
                 f"item() declares; a generic pool rolls in a group of its own, never instead - move it to its own "
-                f"group first"
+                f"group first (or name the stock row in replaces_items= / replaces_references= when the list "
+                f"replaces it)"
             )
         listed = {r["Item"] for r in rows if not r["Reference"]}
         listed |= {p["Item"] for r in rows if r["Reference"] for p in plan.references.get(r["Reference"], [])}
@@ -385,6 +436,7 @@ def check_live(plan: LootPlan, live_creature: list[dict], live_reference: list[d
             if other_entry != entry or (other_entry, other_group) in plan.groups \
                     or (other_entry, other_group) in plan.copies:
                 continue
+            other_rows = _without_removed(plan, (other_entry, other_group), other_rows)
             twice = sorted(listed & {_int(r.get("Item")) for r in other_rows if not _int(r.get("Reference"))})
             if twice:
                 plan.warnings.append(f"{CREATURE_LOOT} {entry}: list item(s) {twice} also drop from live group "
@@ -443,11 +495,13 @@ class Rendered:
     groups: list[tuple[int, int]]  # the (Entry, GroupId) groups written (removals included)
     references: list[int]
     copies: list[tuple[int, int]] = field(default_factory=list)  # the heroic copies written
+    row_removals: list[tuple[int, int]] = field(default_factory=list)  # the remove_loot_rows() groups written
 
 
 def render(plan: LootPlan, live_creature: list[dict], live_reference: list[dict]) -> Rendered:
     """One DELETE (+ INSERT) per declared group or reference pool whose rows differ from live; nothing when equal."""
-    live = _group_index(live_creature, {entry for entry, _ in plan.groups} | {entry for entry, _ in plan.copies})
+    live = _group_index(live_creature, {entry for entry, _ in plan.groups} | {entry for entry, _ in plan.copies}
+                        | {entry for entry, _ in plan.row_removals})
     live_refs: dict[int, list[dict]] = {}
     for row in live_reference:
         entry = _int(row.get("Entry"))
@@ -483,6 +537,18 @@ def render(plan: LootPlan, live_creature: list[dict], live_reference: list[dict]
             f"{_insert(CREATURE_LOOT, rows)}"
         )
         out.copies.append(key)
+    for key, (items, why) in sorted(plan.row_removals.items()):
+        entry, group = key
+        present = sorted({_int(r.get("Item")) for r in live.get(key, [])
+                          if not _int(r.get("Reference")) and _int(r.get("Item")) in set(items)})
+        if not present:
+            continue
+        out.blocks.append(
+            f"-- {CREATURE_LOOT} {entry} group {group}: rows removed ({why})\n"
+            f"DELETE FROM `{CREATURE_LOOT}` WHERE `Entry` = {entry} AND `GroupId` = {group} AND `Reference` = 0 AND "
+            f"`Item` IN ({', '.join(map(str, present))});"
+        )
+        out.row_removals.append(key)
     return out
 
 
@@ -491,9 +557,10 @@ def summary_notes(plan: LootPlan, rendered: Rendered | None) -> list[str]:
     notes = [
         f"loot: {lists} list group(s), {len(plan.removals)} removed group(s), {len(plan.references)} reference "
         f"pool(s) on {len({e for e, _ in plan.groups})} lootid(s), {len(plan.copies)} heroic copy group(s) of "
-        f"normal loot"
+        f"normal loot, {len(plan.row_removals)} row removal group(s) "
+        f"({sum(len(items) for items, _ in plan.row_removals.values())} row(s))"
     ]
     if rendered is not None:
         notes.append(f"loot: differ from live: {len(rendered.groups)} group(s), {len(rendered.references)} pool(s), "
-                     f"{len(rendered.copies)} heroic copy group(s)")
+                     f"{len(rendered.copies)} heroic copy group(s), {len(rendered.row_removals)} row removal(s)")
     return notes
