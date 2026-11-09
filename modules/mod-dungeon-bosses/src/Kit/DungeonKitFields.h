@@ -115,6 +115,13 @@ namespace DungeonKit
         std::vector<std::pair<uint64, uint32>> const& Inside() const { return _inside; }
         uint64 ClockMs() const { return _clockMs; }
 
+        // The registry zone of puddle `id` (empty once it is gone): a DropSpotRule's enterable preferred spot.
+        BossMechanics::MechanicHandle ZoneOf(uint32 id) const
+        {
+            auto it = _zones.find(id);
+            return it == _zones.end() ? BossMechanics::MechanicHandle{} : it->second;
+        }
+
     private:
         void CancelZone(Creature* owner, uint32 id);
 

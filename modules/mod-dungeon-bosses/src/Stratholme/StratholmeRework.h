@@ -413,10 +413,10 @@ namespace StratholmeRework
         SPELL_DRAINING_BLOW         = 16793,
         SPELL_TRANSFORMATION        = 16794,    // Barthilas
         SPELL_BANSHEE_WAIL          = 16565,
-        SPELL_ENCASING_WEBS         = 6016,     // Nerub'enkan (kept stock id per handoff section 3.6)
+        SPELL_PIERCE_ARMOR          = 6016,     // Nerub'enkan's stock Pierce Armor (handoff section 3.6)
         SPELL_POISON_PROC           = 13299,    // Undead Scarab
         SPELL_FROSTBOLT_MALEKI      = 17503,
-        SPELL_KNOCKOUT              = 15088,    // Ramstein (kept per handoff section 3.6)
+        SPELL_FLURRY                = 15088,    // Ramstein's Flurry (handoff section 3.6)
         SPELL_SHADOW_BOLT_BARON     = 17393,
         SPELL_MORTAL_STRIKE         = 15708,
         SPELL_CLEAVE                = 15284,    // live at 10% weapon damage (ST note 4; not this build's to fix)

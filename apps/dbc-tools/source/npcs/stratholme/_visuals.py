@@ -105,6 +105,8 @@ NE_WEB_WRAP = 7610                  # Web Wrap 28622: the webspin egg on the pla
 NE_WEB_PATCH_VENOM_SPRAY = 12013    # Venom Web Spray 54706: Web_State 2.3 yd + a plague state (a stalker aura)
 NE_SKITTER_LEAP = 11441             # Heroic Leap 54506: a 6.9 yd ground crack at the landing + stun stars
 NE_POISON_CLOUD = 139               # Poison Cloud 3815: green puffs on the chest, STATE (RISKY: no ground cloud)
+NE_PLAGUE_FOG = 761                 # S11's Plague Fog look
+NE_RAISE_SCARAB = 634               # S11's Raise Scarab look
 
 # Maleki (S12)
 MK_ICY_DEATH_CAST = 12328           # Chains of Ice 45524: ice hands, 3 yd chain mesh, path of frost
@@ -147,6 +149,7 @@ STOCK_SPELL_VISUALS = tuple(sorted({
     BT_FEVER_ALT, BT_FURIOUS_ANGER_FLASH,
     BA_KEEN_SKULL_FLASH, BA_DEATH_KNELL, BA_WAIL, BA_WAIL_ALT, BA_TERRIFIED, BA_VISAGE, BA_BANSHEE_SHRIEK,
     NE_VENOM_SPIT, NE_STUCK, NE_STUCK_ALT, NE_WEB_WRAP, NE_WEB_PATCH_VENOM_SPRAY, NE_SKITTER_LEAP, NE_POISON_CLOUD,
+    NE_PLAGUE_FOG, NE_RAISE_SCARAB,
     MK_ICY_DEATH_CAST, MK_ICY_DEATH_STATE, MK_SHATTER, MK_SIPHON_BEAM, MK_EYE_OF_BLIZZARD, MK_ICE_TOMB_CAST,
     MK_ICE_TOMB_SHELL, MK_FROSTBITE_SEED,
     RG_CANNIBALIZE, RG_GORE, RG_EXPOSE_WEAKNESS, RG_TRAMPLE,
