@@ -20,7 +20,8 @@
  *   BA4  Wail of the Banshee 16 s, then every 20 s: a 3 s cast (206628, emote line 2), a registry circle of 12 yd on
  *                           her:
  *                           45% (heroic 50%) Shadow + Terrified (206630, 2 s fear); no Weakened
- *   BA5  The Wail's echo    heroic: 2 s after BA4 lands, a registry donut 8 / 32 yd on her: 40% + Terrified (206631)
+ *   BA5  The Wail's echo    heroic: 2 s after BA4 lands, a hidden registry donut 8 / 60 yd on her: 40% + Terrified
+ *                           (206631); the drawn marker is an 8 / 32 yd Decoy donut
  *   BA6  Horrifying Visage  12 s, then every 20 s: a 2 s cast (heroic 1.5 s, emote line 3): she turns to a random
  *                           non-tank and a registry cone (60 degrees, 30 yd) is fixed at that spot at the cast start:
  *                           30% (heroic 35%) Shadow + 1 Weakened + Terrified; heroic: two cones at two players
@@ -414,16 +415,20 @@ struct boss_baroness_anastari_rework : public BossAI
             Acore::StringFormat("heroic={} pct={:.0f} radius={:.0f}", heroic ? 1 : 0, kWailPct(heroic), kWailRadius));
     }
 
-    // BA5 (heroic): 2 s after the Wail landed, everyone beyond 8 yd from her.
+    // BA5 (heroic): 2 s after the Wail landed, everyone beyond 8 yd from her. The hit is a hidden 8 / 60 yd donut
+    // (bots read only this one); humans see the drawn 8 / 32 yd Decoy, which keeps the marker's hole.
     void RegisterWailEcho(std::size_t wailHits)
     {
-        MechanicRef ref = Mechanic::Donut(me, me, kWailEchoInner, kWailEchoOuter, Ms(kWailEchoWarnMs));
+        MechanicRef drawn = Mechanic::Donut(me, me, kWailEchoInner, kWailEchoDrawnOuter, Ms(kWailEchoWarnMs));
+        drawn.Decoy().Tag(TAG_WAIL_ECHO_DRAWN);
+        Track(drawn.Handle());
+        MechanicRef ref = Mechanic::Donut(me, me, kWailEchoInner, kWailEchoReachYd, Ms(kWailEchoWarnMs));
         ref.Damage(kWailEchoPct).TankDamage(kWailEchoPct).School(SPELL_SCHOOL_SHADOW).Spell(SPELL_BA_WAIL_ECHO_HIT)
-            .Rider(SPELL_BA_TERRIFIED).Tag(TAG_WAIL_ECHO);
+            .Rider(SPELL_BA_TERRIFIED).NoTelegraph().Tag(TAG_WAIL_ECHO);
         Track(ref.Handle());
         DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "wail-echo",
-            Acore::StringFormat("pct={:.0f} donut={:.0f}-{:.0f} wailHits={}", kWailEchoPct, kWailEchoInner,
-                kWailEchoOuter, wailHits));
+            Acore::StringFormat("pct={:.0f} donut={:.0f}-{:.0f} drawn={:.0f} wailHits={}", kWailEchoPct,
+                kWailEchoInner, kWailEchoReachYd, kWailEchoDrawnOuter, wailHits));
     }
 
     // BA6: she turns to a random non-tank and lifts her veil; the cone is fixed at that spot at the cast start (heroic:

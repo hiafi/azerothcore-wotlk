@@ -20,6 +20,7 @@
 #include "DungeonKitMath.h"
 #include "StratholmeRework.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -91,10 +92,24 @@ namespace StratNerubenkan
     inline constexpr std::uint32_t kStuckImmuneMs = 3000;           // then immune to Stuck for 3 s
     inline constexpr std::uint32_t kSlowRefreshBelowMs = 500;       // re-cast the slow when it has less left
     // X2's drop spot rule: a carrier bot may step into an old web this long before its glob lands (MaxDwell), so it
-    // stands in it about this long plus its way out (the landing centre needs to be only 0.5 yd inside the old web).
+    // stands in it about this long plus its way out (the landing center needs to be only 0.5 yd inside the old web).
     // Kept under the Stuck timer (orchestrator note on X2).
-    inline constexpr std::uint32_t kDropMaxDwellMs = 1200;
-    static_assert(kDropMaxDwellMs + 500 < kStuckAfterMs, "a carrier dropping onto an old web must never get Stuck");
+    inline constexpr std::uint32_t kDropMaxDwellMs = 800;
+    static_assert(kDropMaxDwellMs + 1000 < kStuckAfterMs, "a carrier dropping onto an old web must never get Stuck");
+
+    // X2's drop spot room (DropSpotRule::Room, the polygon form): the floor of his arena circle, not the circle (R-1-A
+    // m-2: the circle's west rim runs past his door into the ziggurat, so a carrier's edge candidates sat on walls).
+    // A star outline from the arena center (3858, -3540), one point every 15 degrees from bearing 0: the farthest
+    // navmesh floor along that ray reachable from the center (z 137.3 to 145.3, at most 30 yd), 1.5 yd in; the stoop
+    // rays (90 to 120 degrees) stop at his spawn, so the outline never wraps behind him to his door. [navmesh estimate,
+    // F-1c: 1,552 sq yd, 95% of it floor; the circle is 2,827, 67% floor]
+    inline constexpr std::array<Vec2, 24> kDropRoom{ {
+        { 3886.5f, -3540.0f }, { 3885.0f, -3532.8f }, { 3881.8f, -3526.2f }, { 3878.2f, -3519.8f },
+        { 3870.0f, -3519.2f }, { 3860.6f, -3530.3f }, { 3858.0f, -3529.0f }, { 3855.0f, -3528.9f },
+        { 3852.2f, -3530.0f }, { 3852.7f, -3534.7f }, { 3844.6f, -3532.2f }, { 3831.0f, -3532.8f },
+        { 3837.0f, -3540.0f }, { 3843.0f, -3544.0f }, { 3842.0f, -3549.2f }, { 3842.8f, -3555.2f },
+        { 3848.2f, -3556.9f }, { 3852.7f, -3559.8f }, { 3858.0f, -3568.5f }, { 3865.2f, -3567.0f },
+        { 3871.8f, -3563.8f }, { 3878.2f, -3560.2f }, { 3881.8f, -3553.8f }, { 3885.0f, -3547.2f } } };
     static_assert(kWebGraceMs < kStuckAfterMs, "the slow comes before Stuck");
 
     // NE4 Cocoon / NE5 hatch
@@ -163,6 +178,19 @@ namespace StratNerubenkan
     constexpr std::uint64_t StuckImmuneUntil(std::uint64_t now)
     {
         return now + kStuckRootMs + kStuckImmuneMs;
+    }
+
+    // A player released from a Cocoon gets a fresh web window (R-1-A m-1): their web clock counts from the last tick
+    // they were held (`lastHeldAt`, on the AI clock; kNeverHeld: never), not from when they stepped in, so the slow
+    // comes 1 s and Stuck 2 s after the release, never at once. Leaving the web resets `msInside` as before.
+    inline constexpr std::uint64_t kNeverHeld = ~std::uint64_t(0);
+
+    constexpr std::uint32_t WebClockAfterHold(std::uint32_t msInside, std::uint64_t now, std::uint64_t lastHeldAt)
+    {
+        if (lastHeldAt == kNeverHeld || now < lastHeldAt)
+            return msInside;
+        std::uint64_t const sinceRelease = now - lastHeldAt;
+        return sinceRelease < msInside ? static_cast<std::uint32_t>(sinceRelease) : msInside;
     }
 
     // ----------------------------------------------------------------------------------------------------------------

@@ -169,8 +169,8 @@ struct boss_baron_rivendare_rework : public BossAI, public BaronFight
     void JustDied(Unit* killer) override
     {
         Talk(YELL_BARON_DEATH);
+        Cleanup(true);      // first: the hard mode settles a fallen (hidden, living) Ysida, so she is never freed
         FreeYsida();
-        Cleanup(true);
         BossAI::JustDied(killer);           // BOSS_BARON DONE: the instance settles the Ultimatum and the exit gate
         DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "death");
     }
@@ -409,8 +409,11 @@ struct boss_baron_rivendare_rework : public BossAI, public BaronFight
 
     void ScheduleCast(uint32 id, uint32 inMs, uint8 priority) override
     {
-        if (id >= kHardModeCastBase)
-            _queue.Schedule(id, _timeline.now + inMs, priority);
+        if (id < kHardModeCastBase)
+            return;
+        _queue.Schedule(id, _timeline.now + inMs, priority);
+        if (std::find(_hardModeCasts.begin(), _hardModeCasts.end(), id) == _hardModeCasts.end())
+            _hardModeCasts.push_back(id);
     }
 
     void CancelCast(uint32 id) override
@@ -769,6 +772,11 @@ private:
             return;
         if (*next == CAST_SHADOW_BOLT)
         {
+            // It waits for the hard mode's casts (R-1-B N-1): never started when one falls due within its cast time,
+            // so the execution and the charge start on time and their cadence never drifts.
+            for (uint32 id : _hardModeCasts)
+                if (std::optional<uint64> const due = _queue.DueAt(id); due && FillerWaits(now, *due))
+                    return;
             Unit* victim = me->GetVictim();
             SpellCastResult const result = victim ? me->CastSpell(victim, SPELL_SHADOW_BOLT_BARON, false)
                 : SPELL_FAILED_BAD_TARGETS;
@@ -853,6 +861,7 @@ private:
         _servants.clear();
         summons.DespawnAll();
         _queue.Reset();
+        _hardModeCasts.clear();
         _timeline = Timeline{};
         _nextWall = Wall::South;
         _holdUntil = 0;
@@ -871,6 +880,7 @@ private:
     DungeonKit::CastQueue _queue;
     Timeline _timeline;
     std::unique_ptr<BaronHardMode> _hardMode;
+    std::vector<uint32> _hardModeCasts;     // the cast queue ids the hard mode has scheduled (the Shadow Bolt's wait)
     std::vector<MechanicHandle> _live;
     std::vector<Pile> _piles;
     std::vector<Rot> _rots;

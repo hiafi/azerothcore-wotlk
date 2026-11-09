@@ -66,6 +66,7 @@ namespace StratBaroness
         TAG_WAIL        = 3,    // BA4
         TAG_WAIL_ECHO   = 4,    // BA5
         TAG_VISAGE      = 5,    // BA6
+        TAG_WAIL_ECHO_DRAWN = 6,    // BA5 the drawn donut (a Decoy: no hit, bots never see it)
     };
 
     // BA1: her keening sound (SoundEntries 1171, BansheeDeath), played at the keen's start.
@@ -106,11 +107,13 @@ namespace StratBaroness
     inline constexpr float kWailRadius = 12.f;
     inline constexpr NH<float> kWailPct{ 45.f, 50.f };
 
-    // BA5 The Wail's echo (heroic): 2 s after BA4 lands, beyond 8 yd from her, 40% + Terrified, no Weakened. The
-    // donut is 8 / 32 yd, not 8 / 60: below an inner / outer ratio of 0.25 the marker draws no hole (orchestrator
-    // ruling), and the plaza beyond 32 yd from her is not floor anyone stands on.
+    // BA5 The Wail's echo (heroic): 2 s after BA4 lands, beyond 8 yd from her, 40% + Terrified, no Weakened. The hit
+    // is a hidden 8 / 60 yd donut (everyone beyond 8 yd, ST BA5; her arena runs to about 41 yd from her on the plaza
+    // side); below an inner / outer ratio of 0.25 the marker draws no hole, so the drawn donut is a separate 8 / 32 yd
+    // Decoy (F-1 ruling, Maleki's eye pattern).
     inline constexpr float kWailEchoInner = 8.f;
-    inline constexpr float kWailEchoOuter = 32.f;
+    inline constexpr float kWailEchoReachYd = 60.f;
+    inline constexpr float kWailEchoDrawnOuter = 32.f;
     inline constexpr std::uint32_t kWailEchoWarnMs = 2000;
     inline constexpr float kWailEchoPct = 40.f;
 

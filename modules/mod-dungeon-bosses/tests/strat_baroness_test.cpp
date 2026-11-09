@@ -105,8 +105,13 @@ int main()
     CHECK(kWail.first == 16000 && kWail.every == 20000 && kWailCastMs == 3000 && kWailRadius == 12.f);
     CHECK(kWailPct(false) == 45.f && kWailPct(true) == 50.f);
     CHECK(kWailEchoInner == 8.f && kWailEchoWarnMs == 2000 && kWailEchoPct == 40.f);
-    // The donut keeps the marker's hole: an inner / outer ratio of 0.25 or more (orchestrator ruling).
-    CHECK(kWailEchoInner / kWailEchoOuter >= 0.25f);
+    // The hit reaches everyone beyond 8 yd (ST BA5): out to 60 yd, past her arena's far rim (about 41 yd from her).
+    CHECK(kWailEchoReachYd == 60.f);
+    // The drawn Decoy keeps the marker's hole: an inner / outer ratio of 0.25 or more (orchestrator ruling); the hit
+    // must never stop at the drawn rim (R-1-A M-1).
+    CHECK(kWailEchoInner / kWailEchoDrawnOuter >= 0.25f);
+    CHECK(kWailEchoReachYd > kWailEchoDrawnOuter);
+    CHECK(TAG_WAIL_ECHO_DRAWN != TAG_WAIL_ECHO);
     CHECK(kVisage.first == 12000 && kVisage.every == 20000);
     CHECK(kVisageCastMs(false) == 2000 && kVisageCastMs(true) == 1500);
     CHECK(kVisageAngleDeg == 60.f && kVisageLengthYd == 30.f);

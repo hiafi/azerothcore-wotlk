@@ -180,6 +180,10 @@ class UltimatumDeclarationTest(unittest.TestCase):
         self.assertEqual(self.spells[MARK]["duration_ms"], int(_header_number("kLaneWarnMs")))
         for spell_id in (LANE, TRAIL):
             self.assertEqual(self.spells[spell_id]["effect1"]["type"], SCHOOL_DAMAGE)
+        # R-1-B B-5: the lane's hit has a visible impact (Gore 4102's hit flash) and lands as the charge passes (the
+        # script's projectile line at the charge's speed, never a hit at the lock).
+        self.assertEqual(_raw(self.spells[LANE], "SpellVisualID_1"), 39)
+        self.assertRegex(self.cpp, r"\.Projectile\(kChargeSpeed\)[^;]*\.Spell\(SPELL_HM_LANE\)")
         look = self.spells[TRAIL_LOOK]
         self.assertEqual(look["effect1"]["type"], PERSISTENT_AREA_AURA)
         self.assertEqual(look["effect1"]["radius_yards"], _header_number("kTrailRadius"))

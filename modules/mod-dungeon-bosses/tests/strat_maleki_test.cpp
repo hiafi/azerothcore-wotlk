@@ -227,7 +227,7 @@ namespace
 
     void TestEye()
     {
-        // The aim from his spawn: toward his arena's centre, 12 yd; the measured eye centres fit 10-14 yd.
+        // The aim from his spawn: toward his arena's center, 12 yd; the measured eye centers fit 10-14 yd.
         Vec2 const spawn = kMalekiSpawn.XY();
         Vec2 const plaza = MalekiArena().regions.front().center;
         Vec2 const aim = EyeAim(spawn, plaza, kMalekiSpawn.o);
@@ -240,7 +240,7 @@ namespace
             CHECK(EyeSpotFits(spawn, c.XY()));
             CHECK(MalekiArena().Contains(c.XY(), c.z));
         }
-        // Standing on the plaza's centre: along his spawn facing.
+        // Standing on the plaza's center: along his spawn facing.
         Vec2 const onCenter = EyeAim(plaza, plaza, kMalekiSpawn.o);
         CHECK(Near(DungeonKit::Distance(plaza, onCenter), kEyeAimYd));
         // The aim lies toward the plaza (south-west of the stoop: x down, y up).
@@ -278,6 +278,33 @@ namespace
             CHECK(Near(DungeonKit::Distance({ 1.f, 2.f }, p), 12.f));
         CHECK(Near(DungeonKit::Distance(ring[0], ring[1]), 12.f));     // a hexagon: side = radius
     }
+
+    // R-1-B B-3: Weakened once per player per storm. The registry's hit gives it (once per player, registered once
+    // per Eye); a Siphon carrier who took the storm only through the script's ticks owes one at the storm's end.
+    void TestStormWeakened()
+    {
+        StormWeakenedBook book;
+        CHECK(book.Owed().empty());
+        book.RegistryHit(1);                // hit by the registry before the Siphon picked them
+        book.CarrierTick(1);                // then the carrier, ticked by the script
+        book.CarrierTick(2);                // a carrier the registry never hit
+        book.CarrierTick(2);
+        book.RegistryHit(3);                // never a carrier
+        std::vector<std::uint64_t> owed = book.Owed();
+        CHECK((owed.size()) == (std::size_t(1)));
+        CHECK(!owed.empty() && owed.front() == 2u);
+        book.RegistryHit(2);                // the Siphon ended mid-storm, the registry hit them: nothing owed
+        CHECK(book.Owed().empty());
+        book.Clear();
+        book.CarrierTick(4);
+        CHECK((book.Owed().size()) == (std::size_t(1)));
+
+        // The marker and the drawn outline outlast the Siphon (cast + channel), so neither lapses nor fills mid-Siphon.
+        CHECK(kSiphonMarkMs > kSiphonCastMs + kSiphonChannelMs);
+        CHECK(kSiphonDrawnMs > kSiphonCastMs + kSiphonChannelMs);
+        CHECK(kSpellSlice.Contains(SPELL_MK_SIPHON_MARK));
+        CHECK(TAG_SIPHON_DRAWN != TAG_SIPHON && TAG_SIPHON_DRAWN != TAG_EYE_DRAWN && TAG_SIPHON_DRAWN != TAG_EYE);
+    }
 }
 
 int main()
@@ -289,5 +316,6 @@ int main()
     TestTimeline();
     TestFrostboltWait();
     TestEye();
+    TestStormWeakened();
     return Report("strat_maleki_test");
 }

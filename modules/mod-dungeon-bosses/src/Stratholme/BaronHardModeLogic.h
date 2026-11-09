@@ -60,9 +60,10 @@ namespace StratUltimatum
     enum UltimatumTags : std::uint32_t
     {
         TAG_EXECUTION   = StratBaron::kHardModeTagBase,         // HM1 the line soak (telegraph only)
-        TAG_LANE        = StratBaron::kHardModeTagBase + 1,     // HM3 the following lane (50% at the lock)
+        TAG_LANE        = StratBaron::kHardModeTagBase + 1,     // HM3 the lane's hit (50% as the charge passes)
         TAG_TRAIL       = StratBaron::kHardModeTagBase + 2,     // HM3 the trail's persistent line (5% a second)
         TAG_TRAIL_ROT   = StratBaron::kHardModeTagBase + 3,     // HM3 the trail's rot stalkers (OnRotTick)
+        TAG_LANE_WARN   = StratBaron::kHardModeTagBase + 4,     // HM3 the following lane (telegraph only, 3 s)
     };
 
     // S14's cast queue ids (StratBaron::kHardModeCastBase and up). Same priority: when both fall due together the
@@ -74,6 +75,19 @@ namespace StratUltimatum
     };
     std::uint8_t constexpr kCastPriority = 1;
     std::uint32_t constexpr kCastRetryMs = 2000;        // nobody to target, or Ysida not there: try again this soon
+
+    // The next cast on a fixed cadence (R-1-B N-1): `due` + `every`, stepped past `now` (a cast held past a whole
+    // cycle skips that turn), so a cast that started late (the other one's hold, the spacing) never pushes the ones
+    // after it.
+    constexpr std::uint64_t NextOnCadence(std::uint64_t due, std::uint64_t now, std::uint32_t every)
+    {
+        if (!every)
+            return now;
+        std::uint64_t next = due + every;
+        if (next <= now)
+            next += ((now - next) / every + 1) * every;
+        return next;
+    }
 
     // ----------------------------------------------------------------------------------------------------------------
     // Tuning (ST "Hard mode" and "Build spec", approved 2026-11-05, rulings 54-60)
@@ -260,6 +274,26 @@ namespace StratUltimatum
     constexpr std::uint32_t ChargeTravelMs(float dist)
     {
         return dist <= 0.f ? 0u : std::uint32_t(dist / kChargeSpeed * 1000.f + 0.5f);
+    }
+
+    // The lane's hit (R-1-B B-5): a static line from his start along the charge, swept at his charge speed (the
+    // registry's projectile line, its body the lane's width), so each player is hit as he reaches them. It reaches as
+    // far as he runs plus the drawn lane's reach past his stop (kChargeStopShortYd + kLaneSlackYd): the whole drawn
+    // lane when nothing clamps him, shorter when the clamp stops him early (nobody past his stop is ridden down).
+    constexpr float LaneHitLength(float run, float laneLength)
+    {
+        return std::min(laneLength, std::max(0.f, run) + kChargeStopShortYd + kLaneSlackYd);
+    }
+
+    // The charge's facing (radians, [0, 2 pi)) from `start` toward `target`; 0 when they coincide.
+    inline float LaneFacing(Vec2 start, Vec2 target)
+    {
+        float const dx = target.x - start.x;
+        float const dy = target.y - start.y;
+        if (std::fabs(dx) < 0.001f && std::fabs(dy) < 0.001f)
+            return 0.f;
+        float const a = std::atan2(dy, dx);
+        return a < 0.f ? a + DungeonKit::kTwoPi : a;
     }
 
     // ----------------------------------------------------------------------------------------------------------------

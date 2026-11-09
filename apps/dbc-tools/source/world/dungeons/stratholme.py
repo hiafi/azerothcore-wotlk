@@ -285,7 +285,8 @@ stratholme = dungeon(
     ),
     heroic=heroic(
         map_difficulty_id=1003, access_id=125, min_level=60,
-        # The Unforgiven .. Baron in the stock file's order (the thirteen normal encounters 472-484).
+        # Minted by the stock OrderIndex of the thirteen normal encounters 472-484: 1028 Forresten ... 1034 The
+        # Unforgiven ... 1040 the Baron (test_stratholme_heroic pins it).
         encounter_ids=range(1028, 1041),
         spawn_mask=True,
         event_spawns=False,

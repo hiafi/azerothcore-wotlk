@@ -289,7 +289,7 @@ namespace DungeonKit
         return count * width + (count - 1) * minGap <= span + 1e-4f;
     }
 
-    // A lane's centreline on the map (mod-boss-mechanics PlaceLane): `offset` is its low edge across the axis.
+    // A lane's centerline on the map (mod-boss-mechanics PlaceLane): `offset` is its low edge across the axis.
     struct LaneSegment
     {
         Vec2 from;

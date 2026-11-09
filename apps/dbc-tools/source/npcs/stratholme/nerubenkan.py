@@ -42,9 +42,8 @@ the percent in hundredths in the effect value); the rest are auras, cast bars an
   206660  Poison Burst       NE6 the landing's poison fog (look only)
   206661-206664 spare
 
-Visual ids are WP-V's (._visuals) except two stock looks named here (_SV_PLAGUE_FOG, _SV_RAISE_SCARAB; both checked in
-the working-copy SpellVisual.dbc; a shared-file request asks to move them into _visuals.py). Every look is unconfirmed
-until seen in game.
+Visual ids are WP-V's (._visuals), the two stock looks S11 found included (NE_PLAGUE_FOG, NE_RAISE_SCARAB; both
+checked in the working-copy SpellVisual.dbc). Every look is unconfirmed until seen in game.
 """
 
 from lib.dsl import RANGE_SELF, AuraType, Effect, EffectType, School
@@ -68,6 +67,8 @@ from ._common import (
 from ._visuals import (
     DISPLAY_INVISIBLE_STALKER,
     DISPLAY_WEB_COCOON,
+    NE_PLAGUE_FOG,
+    NE_RAISE_SCARAB,
     NE_SKITTER_LEAP,
     NE_STUCK,
     NE_VENOM_SPIT,
@@ -132,10 +133,6 @@ _ICON_ENCASING_WEBS = 174   # Encasing Webs 4962 (the cast it replaces)
 _ICON_WEB_WRAP = 272        # Web Wrap 28622
 _ICON_HEROIC_LEAP = 129     # Heroic Leap 54506
 _ICON_RAISE_SCARAB = 1494   # Raise Undead Scarab 17235 (the summon it replaces)
-
-# Stock looks this file names itself (checked in the working-copy SpellVisual.dbc; shared-file request: _visuals.py).
-_SV_PLAGUE_FOG = 761        # Plague Cloud: an InstantArea fog (kit 9180) at the caster, impact 805 (VISUALS-REPORT NE)
-_SV_RAISE_SCARAB = 634      # Raise Undead Scarab 17235: precast and cast kits, InstantArea 9193
 
 _PERCENT_SPELL = 'spell_dungeon_refflat_damage'
 _PERCENT_EXCLUDED = ('Stratholme: a percent of reference health in hundredths, set at launch by the kit\'s '
@@ -310,7 +307,7 @@ skitter_landing_206657 = self_visual(
 )
 
 poison_burst_206660 = self_visual(
-    206660, 'Poison Burst', _SV_PLAGUE_FOG,
+    206660, 'Poison Burst', NE_PLAGUE_FOG,
     f'{_S11} NE6: the burst\'s poison fog at his landing spot, cast by Nerub\'enkan on himself (triggered) with '
     '206657. Plague Cloud\'s SpellVisual 761 (an InstantArea fog, the VISUALS-REPORT pick for a ground cloud; Poison '
     'Cloud 3815\'s SV 139 is a chest state only). Look only.',
@@ -324,5 +321,5 @@ brood_call_206658 = cast_bar(
     'from 30 s; when it ends every web hatches 2 Undead Scarabs, no cap (the heroic\'s soft enrage). Not '
     'interruptible (the kit\'s cast bar: InterruptFlags 0, PreventionType 0; priority 0 in the descriptor). Raise '
     'Undead Scarab\'s SpellVisual 634 and icon.',
-    icon=_ICON_RAISE_SCARAB, visual=_SV_RAISE_SCARAB, school=School.NATURE,
+    icon=_ICON_RAISE_SCARAB, visual=NE_RAISE_SCARAB, school=School.NATURE,
 )

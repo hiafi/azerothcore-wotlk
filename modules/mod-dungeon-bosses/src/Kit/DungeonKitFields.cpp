@@ -197,7 +197,11 @@ namespace DungeonKit
             return {};
         // A RunOut measured from the owner hits exactly its carrier (its resolve pass is limited to that player) when
         // the carrier is within its radius of the owner: the radius covers the farthest target (plus a margin for a
-        // tick of movement), the z tolerance the highest one.
+        // tick of movement), the z tolerance the highest one. R-1-KIT F2: BM's bot view shows a RunOut measured from
+        // the owner to each carrier as a circle hazard on the owner (MechanicBotView.cpp Carriers()) from the resolve
+        // until postResolveHold (500 ms) after it, so a targeted tank inside that (reach + 10) yd circle may plan a
+        // step off the boss. This warn-0 NoTelegraph hit cannot be dodged; BM leaves such script hits out of the bot
+        // view (requested of F-1b; no kit-side handle exists: Detonate and a 0 ms warn still resolve on the next tick).
         GuidSet found;
         float reach = 0.f;
         float dz = 0.f;

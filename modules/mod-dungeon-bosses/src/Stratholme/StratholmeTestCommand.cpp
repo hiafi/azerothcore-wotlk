@@ -185,10 +185,11 @@ void AddSC_dungeon_bosses_strat_commandscript()
             instance->GetData(DATA_ZIGGURAT1), (pending & 1u) ? "p" : "", instance->GetData(DATA_ZIGGURAT2),
             (pending & 2u) ? "p" : "", instance->GetData(DATA_ZIGGURAT3), (pending & 4u) ? "p" : "",
             SlaughterStageName(instance->GetData(DATA_SLAUGHTER_STAGE)));
-        handler->PSendSysMessage("Ultimatum {} (kill {}); Grand Lie {} (kill {}); postboxes {}; wave 2 {}",
+        handler->PSendSysMessage("Ultimatum {} (kill {}); Grand Lie {} (kill {}); Ysida {}; postboxes {}; wave 2 {}",
             instance->GetData(DATA_ULTIMATUM), DungeonTest::StateName(instance->GetBossState(BOSS_ULTIMATUM)),
             instance->GetData(DATA_GRAND_LIE), DungeonTest::StateName(instance->GetBossState(BOSS_GRAND_LIE)),
-            instance->GetData(DATA_MALLOW), kWave2Bound ? "bound" : "stock");
+            YsidaFateName(instance->GetData(DATA_YSIDA_FATE)), instance->GetData(DATA_MALLOW),
+            kWave2Bound ? "bound" : "stock");
     };
     DungeonTest::RegisterDungeon(std::move(shell));
     StratTest::RegisterBoss("instance", InstanceTestCommands());

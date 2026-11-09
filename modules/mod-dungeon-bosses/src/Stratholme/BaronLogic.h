@@ -92,6 +92,15 @@ namespace StratBaron
     // handoff section 3.8), so the edge candidates stay on the floor; the leash circle (r 25) reaches into the walls.
     inline constexpr Vec2 kDropRoomCenter{ 4032.0f, -3348.0f };
     float constexpr kDropRoomRadius = 20.f;
+    // The room's real shape (NAVMESH-REPORT section 13): the oval x 4008-4058, y -3327.5 to -3370, widest at the ends
+    // (y -3328 to -3370 at x 4016 and 4052), its east wall pulled in to y -3363 from x 4024 to 4040 where the door
+    // 175796 (4032.69, -3364.54) is. Map coordinates, in order around the room. For the room-shape drop spot rule and
+    // the Park pick (R-1-B B-1, waiting on mod-boss-mechanics' room-shape API); unused until then.
+    inline constexpr std::array<Vec2, 10> kBaronRoomShape{ {
+        { 4016.0f, -3327.5f }, { 4008.0f, -3335.5f }, { 4008.0f, -3362.0f }, { 4016.0f, -3370.0f },
+        { 4024.0f, -3363.0f }, { 4040.0f, -3363.0f }, { 4052.0f, -3370.0f }, { 4058.0f, -3362.0f },
+        { 4058.0f, -3335.5f }, { 4052.0f, -3327.5f },
+    } };
     // A pile and a rot share the floor when their heights differ by at most this.
     float constexpr kPileZBand = 4.f;
 
@@ -141,6 +150,15 @@ namespace StratBaron
     };
     std::uint32_t constexpr kHardModeCastBase = 100;
     std::uint64_t constexpr kCastSpacingMs = 500;       // between two spaced casts (the hard mode's)
+
+    // The Shadow Bolt waits for the hard mode's casts (ST "Shadow Bolt waits for both"; R-1-B N-1): it never starts
+    // while one of them falls due within its own cast time (it would hold him past that cast's turn, and the cadence
+    // counted from the late start would drift).
+    constexpr bool FillerWaits(std::uint64_t now, std::uint64_t mechanicDueAt,
+        std::uint32_t castMs = kShadowBoltCastMs)
+    {
+        return mechanicDueAt <= now + castMs;
+    }
 
     // BR2 for the bots (ST "Bots": "the bot tank steps him a few yards off the piles after each wave"): when a pile
     // lies within kParkTriggerYd of him, a hidden Park zone (tank only) on a clean floor spot kParkMinYd..kParkMaxYd

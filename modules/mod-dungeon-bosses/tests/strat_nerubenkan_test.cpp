@@ -62,7 +62,7 @@ int main()
         float const r = kWebRadius(false);
         auto const a = webs.Add(0, { 3860.f, -3540.f }, 138.5f, r, kWebArmMs, 0, true);
         CHECK(a.id != 0 && !a.merged);
-        // A glob whose centre lands inside the old patch merges: no new floor.
+        // A glob whose center lands inside the old patch merges: no new floor.
         auto const b = webs.Add(500, { 3863.f, -3542.f }, 138.5f, r, kWebArmMs, 0, true);
         CHECK(b.merged && b.id == a.id);
         CHECK(webs.Size() == 1);
@@ -70,7 +70,7 @@ int main()
         auto const c = webs.Add(600, { 3865.2f, -3540.f }, 138.5f, r, kWebArmMs, 0, true);
         CHECK(!c.merged && c.id != a.id);
         CHECK(webs.Size() == 2);
-        // On the edge exactly: merges (centre inside or on the rim).
+        // On the edge exactly: merges (center inside or on the rim).
         auto const d = webs.Add(700, { 3855.f, -3540.f }, 138.5f, r, kWebArmMs, 0, true);
         CHECK(d.merged && d.id == a.id);
         // Another floor (the stoop is 6 yd up): never merges into the plaza's web.
@@ -102,9 +102,50 @@ int main()
         CHECK(!StuckDue(6750, 14750, immune));
         CHECK(StuckDue(7000, 15000, immune));
     }
+    // A player released from a Cocoon gets a fresh window (R-1-A m-1): held at 9.75 s after 8 s inside, the first
+    // tick after the release counts 250 ms, not 8.25 s; slowed 1 s and Stuck 2 s after the release.
+    {
+        std::uint32_t const inside = 8250;
+        CHECK(WebClockAfterHold(inside, 10000, kNeverHeld) == inside);
+        CHECK(WebClockAfterHold(inside, 10000, 9750) == 250);
+        CHECK(!SlowDue(WebClockAfterHold(inside, 10000, 9750)));
+        CHECK(!StuckDue(WebClockAfterHold(inside, 10000, 9750), 10000, 0));
+        CHECK(SlowDue(WebClockAfterHold(inside + 750, 10750, 9750)));
+        CHECK(!StuckDue(WebClockAfterHold(inside + 1500, 11500, 9750), 11500, 0));
+        CHECK(StuckDue(WebClockAfterHold(inside + 1750, 11750, 9750), 11750, 0));
+        // Left the web and came back: the inside clock restarted and is the smaller one.
+        CHECK(WebClockAfterHold(500, 30000, 9750) == 500);
+        // A hold recorded ahead of the clock (never on one clock) changes nothing.
+        CHECK(WebClockAfterHold(inside, 9000, 9750) == inside);
+    }
     // A carrier bot that steps into an old web MaxDwell before its glob lands is out before Stuck.
-    CHECK(kDropMaxDwellMs == 1200);
-    CHECK(!StuckDue(kDropMaxDwellMs + 500, 50000, 0));
+    CHECK(kDropMaxDwellMs == 800);
+    CHECK(!StuckDue(kDropMaxDwellMs + 1000, 50000, 0));
+
+    // ---- NE1 the drop spot room: his arena's floor, not the circle (R-1-A m-2) -------------------------------------
+    {
+        Vec2 const center{ 3858.f, -3540.f };
+        CHECK(DungeonKit::PointInPolygon(kDropRoom, center));
+        for (Vec2 const& p : kDropRoom)
+            CHECK(DungeonKit::Distance(center, p) <= 30.f && OnArena(p));
+        // Behind him: his stoop, his door 175379 and the ziggurat west of the circle are out.
+        CHECK(!DungeonKit::PointInPolygon(kDropRoom, kNerubenkanSpawn.XY()));
+        CHECK(!DungeonKit::PointInPolygon(kDropRoom, { kNerubenkanDoor.x, kNerubenkanDoor.y }));
+        CHECK(!DungeonKit::PointInPolygon(kDropRoom, { 3850.f, -3515.f }));
+        CHECK(!DungeonKit::PointInPolygon(kDropRoom, { 3840.f, -3520.f }));
+        // The plaza in front of him stays in, rim to rim.
+        CHECK(DungeonKit::PointInPolygon(kDropRoom, { 3880.f, -3540.f }));
+        CHECK(DungeonKit::PointInPolygon(kDropRoom, { 3858.f, -3565.f }));
+        // A star outline: one point every 15 degrees round the center, in order.
+        for (std::size_t i = 0; i < kDropRoom.size(); ++i)
+        {
+            float const want = DungeonKit::kTwoPi * float(i) / float(kDropRoom.size());
+            float got = std::atan2(kDropRoom[i].y - center.y, kDropRoom[i].x - center.x);
+            if (got < -0.01f)
+                got += DungeonKit::kTwoPi;
+            CHECK(Near(got, want, 0.05f));
+        }
+    }
 
     // ---- NE6 Skitter: the farthest patch within 30 yd, on his arena -----------------------------------------------
     {

@@ -15,20 +15,24 @@
  * flag lit):
  *   pull             500k (create health, restored on a wipe), mounted on the Deathcharger (display 10718), yell 11,
  *                    the loot bit, Ysida, Risen above the skeletons in the kill order.
- *   HM1 Execution    first at 15 s, then every 25 s (S14's cast queue; the charge waits for it and it for the charge):
+ *   HM1 Execution    first at 15 s, then every 25 s on a fixed cadence (S14's cast queue; the charge waits for it
+ *                    and it for the charge, the Shadow Bolt for both; a late start never pushes the next one):
  *                    a 3 s channel at Ysida (emote line 12, the purple beam) and a registry line Soak (2 yd, him to
  *                    her; the fewest Condemned stacks first) for the bots. At its end the first player on the line (by
  *                    distance from him) takes 30% Shadow x (1 + their Condemned stacks) (206721) and a Condemned
- *                    stack. Nobody: Ysida loses a third of her life (206722's look). The third miss kills her: her
- *                    body is hidden, her cage opens, Ysida, Risen (300589, 40k) rises at her spot (yell 14) and he
- *                    gains the Price of Defiance (+200% damage, 206725). No executions after that.
+ *                    stack. Nobody: Ysida loses a third of her life (206722's look). The third miss and she falls:
+ *                    she is hidden (alive, out of sight: never killed mid-attempt, so a wipe needs no corpse and no
+ *                    respawn), her cage opens, Ysida, Risen (300589, 40k) rises at her spot (yell 14) and he gains
+ *                    the Price of Defiance (+200% damage, 206725). No executions after that.
  *   HM2 Condemned    206723, a stack per execution taken, the whole fight, no cap; 206724, 1% Shadow a second, 10 s.
- *   HM3 Deathcharger first at 22 s, then every 30 s: the farthest non-tank is marked (206726, emote line 13) and a
- *                    6 yd lane follows them from him for 3 s (a registry line Zone aimed at them, X2's drop spot: the
- *                    room's edge, away from the group, off the bone piles; everyone but the target eligible, 50%
- *                    Physical and Weakened at the lock). At the lock he charges down the drawn lane (a charge, not a
+ *   HM3 Deathcharger first at 22 s, then every 30 s (a fixed cadence): the farthest non-tank is marked (206726,
+ *                    emote line 13) and a 6 yd lane follows them from him for 3 s (a telegraph-only registry line
+ *                    Zone aimed at them, X2's drop spot: the room's edge, away from the group, off the bone piles;
+ *                    everyone but the target eligible). At the lock he charges down the drawn lane (a charge, not a
  *                    teleport; the end clamped with S14's CanStandAt along the whole path, so he never leaves his
- *                    arena or trips the stock leash), the target takes 20% (206727, lands as he does), and when he
+ *                    arena or trips the stock leash): the lane's hit rides with him (a static registry projectile
+ *                    line at his charge speed, 50% Physical and Weakened on everyone else as he passes, 206728's
+ *                    hit flash on each), the target takes 20% (206727, lands as he does), and when he
  *                    lands the lane rots for 20 s: rot stalkers every 5 yd (S14's SpawnRot, 3 yd: they raise the
  *                    piles there and heal, HM4) and a persistent 6 yd line (5% Shadow a second, one Weakened per
  *                    player, a 1 s grace).
@@ -36,8 +40,9 @@
  *                    trail's) heals him 1% of his maximum health and each undead of his (skeletons, Ysida, Risen) 5%
  *                    of theirs a second while they stand inside, once a second per unit (206731).
  *   cleanup          death, evade, reset: the Price, the mount, the 500k (a wipe only), Condemned on every player; on
- *                    a wipe Ysida comes back in her closed cage at full health (S14 despawns Ysida, Risen, the piles,
- *                    the rots and the skeletons). The flag stays with the instance (ruling 60).
+ *                    a wipe a fallen Ysida shows again in her closed cage at full health (S14 despawns Ysida, Risen,
+ *                    the piles, the rots and the skeletons); on a kill a fallen Ysida dies before the instance reads
+ *                    her (the exit gate). The flag stays with the instance (ruling 60).
  *
  * Every firing logs one INFO line "strat baron hm-<mechanic> ..." (S14's BaronFight::Log, module.dungeonbosses).
  * `.dbtest strat ultimatum <sub>` drives it.
@@ -83,9 +88,6 @@ using StratBaron::RotSpec;
 
 namespace
 {
-    // Her corpse stays (hidden) for the whole attempt, so a wipe can bring her back where she stood: the default spawn
-    // group is not in respawn compatibility mode, so a removed corpse would leave the map for her 24 h respawn.
-    uint32 constexpr kYsidaCorpseHoldSecs = 4 * 3600;
     float constexpr kFloorProbeUpYd = 2.f;
     float constexpr kFloorMaxDropYd = 4.f;
     float constexpr kNearestPlayerYd = 100.f;
@@ -162,8 +164,6 @@ public:
         _heal.Reset();
         if (Creature* ysida = Ysida())
         {
-            _ysidaRegen = ysida->isRegeneratingHealth();
-            _ysidaCorpseDelay = ysida->GetCorpseDelay();
             ysida->SetRegeneratingHealth(false);    // a third per miss must stick (out of combat she regenerates fast)
             if (ysida->IsAlive())
                 ysida->SetHealth(ysida->GetMaxHealth());
@@ -313,6 +313,13 @@ private:
         return _instance ? _instance->GetCreature(DATA_YSIDA_GUID) : nullptr;
     }
 
+    // A cast that could not start now: queued again kCastRetryMs from now, off the cadence (its due time stays).
+    void RetryCast(BaronFight& fight, uint32 id, bool& queued)
+    {
+        fight.ScheduleCast(id, kCastRetryMs, kCastPriority);
+        queued = true;
+    }
+
     // Queues the next execution and charge when the queue holds none of ours (they start from the queue).
     void QueueCasts(BaronFight& fight)
     {
@@ -343,16 +350,17 @@ private:
             return std::nullopt;     // no prisoner left: no more executions
         if (_execution)
         {
-            _nextExecutionAt = now + kCastRetryMs;  // one still running (a test): this one waits
+            RetryCast(fight, CAST_EXECUTION, _executionQueued);     // one still running (a test): this one waits
             return std::nullopt;
         }
         if (!ysida || !ysida->IsAlive() || !ysida->IsInWorld())
         {
-            _nextExecutionAt = now + kCastRetryMs;
+            RetryCast(fight, CAST_EXECUTION, _executionQueued);
             fight.Log("hm-execution", "no prisoner (retry)");
             return std::nullopt;
         }
-        _nextExecutionAt = now + kExecutionEveryMs;
+        // The cadence counts from when it was due, not from this start (a cast that waited never pushes the next).
+        _nextExecutionAt = NextOnCadence(_nextExecutionAt, now, kExecutionEveryMs);
 
         // The bar and the beam: a channel at her (not triggered, so the bar shows); the hit is the script's at 3 s.
         SpellCastResult result = baron->CastSpell(ysida, SPELL_HM_EXECUTION, false);
@@ -415,6 +423,7 @@ private:
     {
         Creature* baron = fight.Baron();
         ++_misses;
+        ysida->SetRegeneratingHealth(false);    // she may have been missing at the pull (OnEngage)
         baron->CastSpell(ysida, SPELL_HM_EXECUTION_YSIDA, true);
         if (YsidaFalls(_misses))
         {
@@ -427,7 +436,10 @@ private:
             ysida->GetMaxHealth()));
     }
 
-    // The third miss: she dies, her body is hidden, her cage opens, Ysida, Risen rises there and he gains the Price.
+    // The third miss: she falls. She is hidden, alive (R-1-B B-2): never killed mid-attempt, so a wipe shows her again
+    // where she stood (no corpse to keep, no respawn queue) and the instance's own execution at the clock's end still
+    // finds her; a kill settles her (SettleYsidaOnKill). Her cage opens, Ysida, Risen rises there and he gains the
+    // Price.
     void Fall(BaronFight& fight, Creature* ysida)
     {
         Creature* baron = fight.Baron();
@@ -438,10 +450,7 @@ private:
             _executionQueued = false;
         }
         Position const spot = ysida->GetPosition();
-        _ysidaSpawnId = ysida->GetSpawnId();
-        ysida->SetCorpseDelay(kYsidaCorpseHoldSecs);
-        if (ysida->IsAlive())
-            Unit::Kill(baron, ysida);
+        ysida->SetHealth(1);
         ysida->SetVisible(false);
         if (_instance)
             if (GameObject* cage = _instance->GetGameObject(DATA_YSIDA_CAGE_GUID))
@@ -469,7 +478,7 @@ private:
         Creature* baron = fight.Baron();
         if (_lane)
         {
-            _nextChargeAt = now + kCastRetryMs;     // one still running (a test): this one waits
+            RetryCast(fight, CAST_DEATHCHARGER, _chargeQueued);     // one still running (a test): this one waits
             return std::nullopt;
         }
         Player* target = forced;
@@ -483,12 +492,12 @@ private:
         }
         if (!target)
         {
-            _nextChargeAt = now + kCastRetryMs;
+            RetryCast(fight, CAST_DEATHCHARGER, _chargeQueued);
             fight.Log("hm-deathcharger", "no target (retry)");
             return std::nullopt;
         }
         if (!forced)
-            _nextChargeAt = now + kChargeEveryMs;
+            _nextChargeAt = NextOnCadence(_nextChargeAt, now, kChargeEveryMs);
 
         float const dist = baron->GetDistance2d(target);
         Lane lane;
@@ -501,24 +510,30 @@ private:
         baron->AI()->Talk(EMOTE_BARON_DEATHCHARGER, target);
 
         // The lane: a 6 yd line from him aimed at the target (it follows them; its length fixed now), everyone but
-        // the target eligible; 50% and Weakened at the lock. The target's bot carries it by X2's drop spot rule (the
-        // room's edge, away from the group, off the piles).
-        BossMechanics::Eligibility others;
-        for (Player* p : fight.FightPlayers())
-            if (p->GetGUID() != target->GetGUID())
-                others.carriers.insert(p->GetGUID());
-        if (others.carriers.empty())
-            others.carriers.insert(ObjectGuid::Empty);     // nobody else: an empty set would mean everyone
+        // the target eligible. Telegraph only: the hit rides with the charge (LockLane). The target's bot carries it
+        // by X2's drop spot rule (the room's edge, away from the group, off the piles); the others' bots leave it
+        // before the lock, so they are clear when he passes.
         BossMechanics::ZoneSpec spec{ BossMechanics::Anchor(baron),
             BossMechanics::Shape::Line(lane.length, kLaneWidth), BossMechanics::Anchor(target) };
         MechanicRef ref = Mechanic::Zone(baron, spec, Milliseconds(kLaneWarnMs));
-        ref.Damage(kLaneHitPct).School(SPELL_SCHOOL_NORMAL).Spell(SPELL_HM_LANE).Weakened().Eligible(others)
-            .DropSpot(fight.RoomDropRule(true)).Tag(TAG_LANE);
+        ref.Eligible(Others(fight, target->GetGUID())).DropSpot(fight.RoomDropRule(true)).Tag(TAG_LANE_WARN);
         fight.Track(ref.Handle());
         _lane = lane;
         fight.Log("hm-deathcharger", Acore::StringFormat("target={} dist={:.1f} lane={:.1f} piles={}",
             target->GetName(), dist, lane.length, fight.Piles().size()));
         return kLaneWarnMs + ChargeTravelMs(lane.length) + kChargeHoldExtraMs;
+    }
+
+    // Everyone in the fight but `target` (a lane's eligibility).
+    BossMechanics::Eligibility Others(BaronFight& fight, ObjectGuid target)
+    {
+        BossMechanics::Eligibility others;
+        for (Player* p : fight.FightPlayers())
+            if (p->GetGUID() != target)
+                others.carriers.insert(p->GetGUID());
+        if (others.carriers.empty())
+            others.carriers.insert(ObjectGuid::Empty);     // nobody else: an empty set would mean everyone
+        return others;
     }
 
     // The lock: he charges down the drawn lane toward where the target stands, clamped to where he may stand.
@@ -542,12 +557,32 @@ private:
         Player* target = ObjectAccessor::GetPlayer(*baron, lane.target);
         if (target && target->IsAlive() && target->IsInWorld())
             baron->CastSpell(target, SPELL_HM_TRAMPLE, true);     // not avoidable; its speed lands it as he does
+        float hitLength = 0.f;
         if (run >= kLaneProbeStepYd)
+        {
             baron->GetMotionMaster()->MoveCharge(lane.end.GetPositionX(), lane.end.GetPositionY(),
                 lane.end.GetPositionZ(), kChargeSpeed);
+            hitLength = LaneHitLength(run, lane.length);
+            LaneHit(fight, lane, Position(start.x, start.y, z, 0.f), LaneFacing(start, lane.lastTarget), hitLength);
+        }
         fight.Log("hm-charge", Acore::StringFormat("target={} from=({:.1f},{:.1f}) to=({:.1f},{:.1f}) run={:.1f} "
-            "wanted={:.1f} clamped={}", target ? target->GetName() : std::string("gone"), start.x, start.y, end.x,
-            end.y, run, DungeonKit::Distance(start, wanted), DungeonKit::Distance(end, wanted) > 0.05f ? 1 : 0));
+            "wanted={:.1f} clamped={} hit={:.1f}", target ? target->GetName() : std::string("gone"), start.x, start.y,
+            end.x, end.y, run, DungeonKit::Distance(start, wanted), DungeonKit::Distance(end, wanted) > 0.05f ? 1 : 0,
+            hitLength));
+    }
+
+    // The lane's hit (R-1-B B-5, ORCH ruling): it lands as the charge reaches each player, not at the lock. A static
+    // line from his start along the charge, swept at his charge speed (a registry projectile line: the body is the
+    // lane's width), as far as he runs plus the lane's reach past his stop; 50% Physical and Weakened on everyone but
+    // the target (who takes 206727), 206728's hit flash on each.
+    void LaneHit(BaronFight& fight, Lane const& lane, Position const& from, float facing, float length)
+    {
+        Creature* baron = fight.Baron();
+        MechanicRef ref = Mechanic::Line(baron, BossMechanics::Anchor(from), facing, length, kLaneWidth,
+            Milliseconds(0));
+        ref.Projectile(kChargeSpeed).Damage(kLaneHitPct).School(SPELL_SCHOOL_NORMAL).Spell(SPELL_HM_LANE).Weakened()
+            .Eligible(Others(fight, lane.target)).Tag(TAG_LANE);
+        fight.Track(ref.Handle());
     }
 
     // He landed: the lane rots for 20 s (rot stalkers every 5 yd and the trail's persistent line), then he goes back
@@ -607,37 +642,39 @@ private:
 
     // ---- Ysida at the fight's end --------------------------------------------------------------------------------
 
-    // His death: S14 frees a living Ysida (her SmartAI); a fallen one stays dead (the instance opens the exit gate) and
-    // her hidden corpse goes now (no wipe will need it back).
-    void SettleYsidaOnKill(BaronFight& /*fight*/)
+    // His death (S14 calls OnEnd before it frees a living Ysida and before BossAI::JustDied): a fallen Ysida dies now,
+    // so S14 does not free her and the instance finds her dead (the exit gate), and her body goes (no wipe will need
+    // it back). A living one keeps her life for S14's free. Her regeneration is her template's again.
+    void SettleYsidaOnKill(BaronFight& fight)
     {
-        if (Creature* ysida = Ysida())
+        Creature* ysida = Ysida();
+        if (ysida)
         {
-            ysida->SetRegeneratingHealth(_ysidaRegen);
-            ysida->SetCorpseDelay(_ysidaCorpseDelay);
-            if (_ysidaFell && !ysida->IsAlive())
+            ysida->SetRegeneratingHealth(ysida->GetCreatureTemplate()->RegenHealth);
+            if (_ysidaFell)
+            {
+                if (ysida->IsAlive())
+                    ysida->KillSelf();      // he is already dead: no killer
                 ysida->DespawnOrUnsummon();
+            }
         }
+        fight.Log("hm-ysida-settled", Acore::StringFormat("found={} fell={}", ysida ? 1 : 0, _ysidaFell ? 1 : 0));
     }
 
-    // A wipe (ruling 60): Ysida back in her closed cage at full health; Ysida, Risen is S14's to despawn.
+    // A wipe (ruling 60): a fallen Ysida shows again in her closed cage at full health (she was only hidden); Ysida,
+    // Risen is S14's to despawn. A dead Ysida is not this attempt's doing (the hard mode never kills her before his
+    // death): she stays dead.
     void RestoreYsida(BaronFight& fight)
     {
         Creature* ysida = Ysida();
         if (ysida)
         {
-            ysida->SetRegeneratingHealth(_ysidaRegen);
-            ysida->SetCorpseDelay(_ysidaCorpseDelay);
-            if (!ysida->IsAlive())
-                ysida->Respawn(true);
-            ysida->SetVisible(true);
+            ysida->SetRegeneratingHealth(ysida->GetCreatureTemplate()->RegenHealth);
             if (ysida->IsAlive())
+            {
+                ysida->SetVisible(true);
                 ysida->SetHealth(ysida->GetMaxHealth());
-        }
-        else if (_ysidaFell && _ysidaSpawnId && _instance)
-        {
-            // Her corpse left the map after all: her spawn comes back on the map's next respawn pass.
-            _instance->instance->ForceCreatureRespawn(_ysidaSpawnId);
+            }
         }
         if (_ysidaFell && _instance)
             if (GameObject* cage = _instance->GetGameObject(DATA_YSIDA_CAGE_GUID))
@@ -654,9 +691,6 @@ private:
     bool _chargeQueued = false;
     uint32 _misses = 0;
     bool _ysidaFell = false;
-    bool _ysidaRegen = true;
-    uint32 _ysidaCorpseDelay = 0;
-    ObjectGuid::LowType _ysidaSpawnId = 0;
     std::optional<Execution> _execution;
     std::optional<Lane> _lane;
     RotHealBook _heal;

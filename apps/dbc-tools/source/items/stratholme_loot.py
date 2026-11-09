@@ -20,7 +20,7 @@ stratholme.py, the Haunted tokens in haunted_set.py. The shape is the Scholomanc
 - **Haunted tokens** (build spec, Structure 2): Ramstein the Haunted Bracers, the Baron the Haunted Leggings. Each is a
   group of its own (group 3, one entry, so it always drops) on top of the list item: the token of the kill's tier
   (Normal on a normal lootid, Heroic on a heroic one).
-- **Group 0** (greys, reagents, the quest items, Scourgestones, the heads, Key to the City, Ramstein's green pool 24016)
+- **Group 0** (grays, reagents, the quest items, Scourgestones, the heads, Key to the City, Ramstein's green pool 24016)
   stays on the normal lootids untouched: a generic pool rolls on top, never instead. Heroic bodies keep them as
   copies, with their loot conditions (lib/loot_tables.py derive_heroic_copies). The Baron's group 0 also held his
   stock two rolls on the pool 35028 (a reference row), Cape of the Black Baron (8.7%, a list item now) and the Reins

@@ -11,6 +11,7 @@ Checks:
   - the cast bars are 3 s (Wail), 2 s and 1.5 s (Visage) and not interruptible; the Lament is a real 2.5 s cast that a
     kick or a silence stops;
   - the Wail, its echo and the Visage hits are resolve copies bound to spell_boss_mechanics_resolve;
+  - the heroic echo's hit is a hidden 8 / 60 yd donut, drawn by a separate 8 / 32 yd Decoy (F-1 ruling);
   - Terrified is a 2 s mechanic-Fear aura that is not a cure target;
   - the looks are WP-V-1's picks;
   - 10436 is bound to boss_baroness_anastari_rework with SmartAI off, HealthModifier 71.76, DamageModifier 3.5 and
@@ -94,6 +95,12 @@ def _header_int(name: str) -> int:
     match = re.search(rf"{name}\s*=\s*(-?\d+)", HEADER.read_text(encoding="utf-8"))
     assert match, name
     return int(match.group(1))
+
+
+def _header_float(name: str) -> float:
+    match = re.search(rf"\b{name}\s*=\s*(-?[\d.]+)f?;", HEADER.read_text(encoding="utf-8"))
+    assert match, name
+    return float(match.group(1))
 
 
 def _header_pair(name: str) -> tuple[int, int]:
@@ -189,6 +196,21 @@ class BaronessDeclarationTest(unittest.TestCase):
         self.assertNotRegex(self.cpp, r"Spell\(SPELL_BA_WAIL_ECHO_HIT\)\s*\.Weakened")
         # Every hit carries the Terrified rider.
         self.assertEqual(self.cpp.count("Rider(SPELL_BA_TERRIFIED)"), 3)
+
+    def test_the_echo_is_a_hidden_hit_and_a_drawn_decoy(self):
+        # F-1 ruling (R-1-A M-1): the hit reaches everyone beyond 8 yd (a hidden 8 / 60 donut); the drawn 8 / 32
+        # donut is a Decoy that hits nobody (the marker's hole needs an inner / outer ratio of 0.25 or more).
+        self.assertEqual(_header_float("kWailEchoInner"), 8.0)
+        self.assertEqual(_header_float("kWailEchoReachYd"), 60.0)
+        self.assertEqual(_header_float("kWailEchoDrawnOuter"), 32.0)
+        self.assertGreaterEqual(_header_float("kWailEchoInner") / _header_float("kWailEchoDrawnOuter"), 0.25)
+        self.assertRegex(self.cpp, r"Donut\(me, me, kWailEchoInner, kWailEchoDrawnOuter, [^;]*;\s*"
+                                   r"drawn\.Decoy\(\)")
+        hit = re.search(r"Donut\(me, me, kWailEchoInner, kWailEchoReachYd, [^;]*;\s*ref\.([^;]*);", self.cpp)
+        self.assertIsNotNone(hit)
+        self.assertIn("Spell(SPELL_BA_WAIL_ECHO_HIT)", hit.group(1))
+        self.assertIn(".NoTelegraph()", hit.group(1))
+        self.assertNotIn("Decoy", hit.group(1))
 
     def test_terrified_is_a_two_second_fear(self):
         fear = self.spells[TERRIFIED]

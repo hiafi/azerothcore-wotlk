@@ -188,6 +188,36 @@ class StratholmeLootSourceTest(unittest.TestCase):
         pools = [d.reference for d in self.decls if d.reference and d.pool_removal is False]
         self.assertEqual(sorted(pools), [1700006, 1700007, 1700008])
 
+    def test_stock_resistances_and_random_properties_are_cleared_on_every_tier(self):
+        # The list names a primary and a secondary only; the budget neither prices nor scales the stock extras, so a
+        # minted tier would copy them for free (the Scholomance precedent, scholomance.py docstring). The pairs are
+        # what `generate.py --check` warned about on the unedited declarations.
+        cleared = {
+            "strat_wailing_nightbane_pauldrons": ("shadow_res",),
+            "strat_plaguebat_fur_gloves": ("shadow_res",),
+            "strat_archivist_cape": ("RandomProperty",),
+            "strat_foresight_girdle": ("RandomProperty",),
+            "strat_grand_crusaders_helm": ("shadow_res",),
+            "strat_banshee_finger": ("frost_res",),
+            "strat_windshrieker_pauldrons": ("arcane_res",),
+            "strat_banshees_touch": ("frost_res", "arcane_res"),
+            "strat_screeching_bow": ("shadow_res",),
+            "strat_shadowy_laced_handwraps": ("shadow_res",),
+            "strat_husk_of_nerubenkan": ("nature_res",),
+            "strat_darkspinner_claws": ("nature_res", "shadow_res"),
+            "strat_acid_etched_pauldrons": ("nature_res",),
+            "strat_skull_of_burning_shadows": ("fire_res", "shadow_res"),
+            "strat_darkbind_fingers": ("shadow_res",),
+            "strat_flamescarred_girdle": ("fire_res",),
+            "strat_pale_moon_cloak": ("shadow_res",),
+        }
+        decls = {e["id"]: e["_decl"] for e in self.merged["item_declarations"] if e["id"].startswith("strat_")}
+        for key, columns in cleared.items():
+            with self.subTest(item=key):
+                declared = dict(decls[key].columns)
+                for column in columns:
+                    self.assertEqual(declared.get(column), 0, column)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -142,10 +142,10 @@ deaths_echo_206627 = spell(
     notes=f'{_BA}, BA3 Death\'s Echo: every player a Death Knell hits gains a stack (heroic: the Lament, completed, '
           'gives everyone one), +100% damage taken from the Death Knell per stack (the script reads the stack count, '
           'DungeonKit::Stacks, and raises the share; the aura itself has no number), 45 s, each new stack refreshes '
-          'it, no cap (CumulativeAura 255, DungeonKit::AddStacks; Odo\'s Frenzy is the precedent). Not dispellable: Dispel '
-          'none and NO_IMMUNITIES. The bots\' soak eligibility reads its stacks (players without it join the stack on '
-          'the doomed; holders keep out of the 6 yd). AuraInterruptFlags CHANGE_MAP; the script removes it from '
-          'everyone on her death, evade and reset.',
+          'it, no cap (CumulativeAura 255, DungeonKit::AddStacks; Odo\'s Frenzy is the precedent). Not dispellable: '
+          'Dispel none and NO_IMMUNITIES. The bots\' soak eligibility reads its stacks (players without it join the '
+          'stack on the doomed; holders keep out of the 6 yd). AuraInterruptFlags CHANGE_MAP; the script removes it '
+          'from everyone on her death, evade and reset.',
     raw_overrides=kit_raw('Death has heard your name. The Death Knell hurts you more.',
                           'Death has heard your name. The Death Knell hurts you more.',
                           CastingTimeIndex=1, CumulativeAura=_STACKS_NO_CAP, AttributesEx=_ATTR1_NO_THREAT,
@@ -194,10 +194,11 @@ terrified_206630 = spell(
 
 wail_echo_hit_206631 = resolve_copy(
     206631, "Wail's Echo", School.SHADOW, 'The scream comes back.',
-    f'{_BA}, BA5 (heroic): the donut\'s hit, 2 s after the Wail lands: 40% of the row on everyone between 8 and 32 yd '
-    'from her (an 8 / 32 yd donut: below an inner / outer ratio of 0.25 the marker draws no hole, orchestrator '
-    'ruling), the tank too, no Weakened (over 30%), with the Terrified rider, through the registry. Copy of the '
-    'resolve spell 205001 (Shadow). The Wail of Souls impact SV 4341 on every unit hit.',
+    f'{_BA}, BA5 (heroic): the donut\'s hit, 2 s after the Wail lands: 40% of the row on everyone beyond 8 yd from '
+    'her (a hidden 8 / 60 yd donut, NoTelegraph; the drawn marker is a separate 8 / 32 yd Decoy, since below an '
+    'inner / outer ratio of 0.25 the marker draws no hole: F-1 ruling, Maleki\'s eye pattern), the tank too, no '
+    'Weakened (over 30%), with the Terrified rider, through the registry. Copy of the resolve spell 205001 '
+    '(Shadow). The Wail of Souls impact SV 4341 on every unit hit.',
     icon=_ICON_DEATH_SCREAM, visual=BA_WAIL,
 )
 

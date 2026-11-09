@@ -3,7 +3,7 @@
  * spell ids, the per-difficulty tuning, the target picks, the never-paused fight timeline, the Icy Death growth clock,
  * the Siphon's snap and eat rules, the eye spot and the heroic drift. Build spec: ST 3160-3211 (build spec), ST
  * 2915-3159 (design, rulings 48-50), MK1-MK6; handoff section 3.4 rows MK, section 3.5 row S12, section 3.6 (normal
- * 170k, heroic 210k), section 3.8 (his arena and eye centres).
+ * 170k, heroic 210k), section 3.8 (his arena and eye centers).
  *
  * Damage percentages are of the reference health row (normal 3,670 / heroic 4,120 non-tank at level 60, the 329:60
  * pins): the build spec gives N / H percents, and the row makes the rest of the difference.
@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <unordered_set>
 #include <vector>
 
 namespace StratMaleki
@@ -48,20 +49,22 @@ namespace StratMaleki
         SPELL_MK_EYE_STORM_LOOK     = 206678,   // MK5 the falling ice on a storm stalker (Blizzard 26607's SV 8787)
         SPELL_MK_ICE_TOMB_LOOK      = 206679,   // MK4 the freeze's look on the prisoner (Ice Tomb 16869's SV 4340)
         SPELL_MK_FROSTBITE_LOOK     = 206680,   // MK2 heroic: a Frostbite stack's look (Seed of Corruption's SV 8339)
-        // 206681-206684 spare
+        SPELL_MK_SIPHON_MARK        = 206681,   // MK3 the carrier's hidden marker for the Siphon's life (Eye's hit)
+        // 206682-206684 spare
     };
     static_assert(kSpellSlice.Contains(SPELL_MK_ICY_DEATH), "Maleki's spells sit in his slice");
-    static_assert(kSpellSlice.Contains(SPELL_MK_FROSTBITE_LOOK), "Maleki's spells sit in his slice");
+    static_assert(kSpellSlice.Contains(SPELL_MK_SIPHON_MARK), "Maleki's spells sit in his slice");
 
     // Registry tags (the build spec's MK numbers; 10+ for the helpers).
     enum MalekiTags : std::uint32_t
     {
         TAG_ICY_DEATH       = 1,    // MK1 the rolling self-keyed RunOut (carriers at 2+ stacks keep 8 yd)
         TAG_SHATTER         = 2,
-        TAG_SIPHON          = 3,    // MK3 the carrier's spot (bots: get out 12 yd)
+        TAG_SIPHON          = 3,    // MK3 the carrier's spot (bots: get out 12 yd; hidden, the carrier only)
+        TAG_SIPHON_DRAWN    = 13,   // MK3 the spot's drawn outline (a Decoy: humans read it, bots never see it)
         TAG_EYE             = 5,    // MK5 the storm outside the eye (hidden: the real hit)
         TAG_EYE_DRAWN       = 15,   // MK5 the eye's drawn donut (a Decoy: humans read it, bots never see it)
-        TAG_EYE_CARRIER     = 16,   // MK5 the Siphon carrier's storm ticks (RegistryHit)
+        TAG_EYE_CARRIER     = 16,   // MK5 the Siphon carrier's storm ticks and owed Weakened (RegistryHit)
     };
 
     // The descriptor phase while the Eye is marked or storming: no bot dispels Icy Death then (ST MK1 "Bots").
@@ -117,6 +120,13 @@ namespace StratMaleki
     inline constexpr NH<float> kSiphonDrainPct{ 6.f, 8.f };     // per stack eaten, to the carrier
     inline constexpr NH<float> kSiphonHealPct{ 2.f, 3.f };      // per stack eaten, of his maximum health
     std::uint8_t constexpr kSiphonKickPriority = 1;
+    // The carrier's marker (SPELL_MK_SIPHON_MARK, a hidden aura) and the spot's drawn outline both outlast the
+    // Siphon's longest life (the cast and the channel): the script removes and cancels them when it ends, so the
+    // marker never lapses mid-Siphon and the outline (a Decoy with no fill timer) never resolves into a fill.
+    std::uint32_t constexpr kSiphonMarkMs = kSiphonCastMs + kSiphonChannelMs + 1000;
+    std::uint32_t constexpr kSiphonDrawnMs = kSiphonMarkMs;
+    static_assert(kSiphonMarkMs > kSiphonCastMs + kSiphonChannelMs, "the marker covers the whole Siphon");
+    static_assert(kSiphonDrawnMs > kSiphonCastMs + kSiphonChannelMs, "the outline is cancelled before it resolves");
 
     // MK4 Ice Tomb: Icy Death at 5 stacks freezes the carrier (the stacks are gone) in an Ice Tomb, 8,000 / 12,000
     // health, for at most 8 s. Each second: 3% / 4% Shadow to the prisoner, 1% / 1.5% of his maximum health to him.
@@ -141,7 +151,7 @@ namespace StratMaleki
     inline constexpr NH<float> kEyeStormPct{ 10.f, 15.f };
     float constexpr kEyeMinFromBossYd = 10.f;
     float constexpr kEyeMaxFromBossYd = 14.f;
-    float constexpr kEyeAimYd = 12.f;               // the pick's centre: 12 yd from him toward the plaza
+    float constexpr kEyeAimYd = 12.f;               // the pick's center: 12 yd from him toward the plaza
     float constexpr kEyeAimSlackYd = 2.f;
     // The storm reaches the whole plaza: the real hit is a hidden donut out to kEyeStormReachYd; the drawn donut (a
     // Decoy) keeps the inner / outer ratio at 0.25, the smallest the marker draws with a hole (BM README "Donut
@@ -159,6 +169,40 @@ namespace StratMaleki
     float constexpr kStormLookHalfWidthYd = 3.f;
     inline constexpr NH<float> kStormLookRingYd{ 8.f + kStormLookHalfWidthYd + 1.f,
         6.f + kEyeDriftYd + kStormLookHalfWidthYd };
+
+    // MK5 Weakened, once per player per storm (R-1-B B-3). The Eye's hit is registered once per Eye with
+    // WeakenedOncePerPlayer and leaves out whoever carries the Siphon's marker (a live aura check), so a Siphon that
+    // starts or ends mid-storm never re-registers it (a re-registration would reset the registry's once-per-player
+    // memory for everyone). The carrier's own ticks (the script's) carry no Weakened: a carrier the registry never hit
+    // during the storm owes one stack, settled when the storm ends; one the registry hit already has theirs. Keys are
+    // raw guids.
+    class StormWeakenedBook
+    {
+    public:
+        // The registry's storm hit landed on `guid` (its OnHit): the registry gave them their Weakened.
+        void RegistryHit(std::uint64_t guid) { _registry.insert(guid); }
+        // A script tick hit the Siphon's carrier `guid` outside the eye.
+        void CarrierTick(std::uint64_t guid) { _carrier.insert(guid); }
+        // At the storm's end: the carriers that took a script tick and never the registry's hit (owe one Weakened).
+        std::vector<std::uint64_t> Owed() const
+        {
+            std::vector<std::uint64_t> out;
+            for (std::uint64_t guid : _carrier)
+                if (!_registry.count(guid))
+                    out.push_back(guid);
+            std::sort(out.begin(), out.end());
+            return out;
+        }
+        void Clear()
+        {
+            _registry.clear();
+            _carrier.clear();
+        }
+
+    private:
+        std::unordered_set<std::uint64_t> _registry;
+        std::unordered_set<std::uint64_t> _carrier;
+    };
 
     // MK6: Frostbolt 17503 (stock, DD-scaled on heroic) on the tank every 2.9 to 3.7 s; it waits for his mechanic
     // casts and never starts in the kFrostboltClearMs before one (a 2 s cast and a margin).
@@ -386,8 +430,8 @@ namespace StratMaleki
     // MK5 the eye
     // ----------------------------------------------------------------------------------------------------------------
 
-    // The eye's aim: kEyeAimYd from him toward his plaza (his arena's centre), or along his spawn facing when he stands
-    // on the centre itself. The pick (PickFloorSpot) takes a floor point within kEyeAimSlackYd of it.
+    // The eye's aim: kEyeAimYd from him toward his plaza (his arena's center), or along his spawn facing when he stands
+    // on the center itself. The pick (PickFloorSpot) takes a floor point within kEyeAimSlackYd of it.
     inline Vec2 EyeAim(Vec2 boss, Vec2 plaza, float spawnFacing)
     {
         float const bearing = DungeonKit::Distance(boss, plaza) > 1.f ? DungeonKit::BearingTo(boss, plaza)

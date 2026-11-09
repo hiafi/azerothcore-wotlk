@@ -11,7 +11,8 @@
  * tank row for the tank, so a combat log spot check matches the registry's own hits. The spell still needs
  * SPELL_ATTR3_IGNORE_CASTER_MODIFIERS (and a target-side school of its own); nothing here sets attributes. A per-boss
  * SpellScript calling RefFlatOn (the SFK / Scholomance precedent) remains the way for anything these do not cover:
- * stacks, splits, a percent that changes during the fight.
+ * stacks, splits, a percent that changes during the fight. The periodic script caches its per-stack amount, so a
+ * recalculation after the caster despawned (a stack change, a one-stack dispel) keeps the tick (R-1-KIT F1).
  */
 
 #include "DungeonKit.h"
@@ -21,6 +22,8 @@
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
 #include "Unit.h"
+#include <array>
+#include <optional>
 
 namespace
 {
@@ -58,14 +61,26 @@ class spell_dungeon_refflat_periodic : public AuraScript
 {
     PrepareAuraScript(spell_dungeon_refflat_periodic);
 
+    // R-1-KIT F1: `amount` arrives as the raw hundredths on every (re)calculation, and the engine multiplies the
+    // result by the stack count. A stack change or a one-stack dispel after the caster despawned recalculates without
+    // a caster, so the per-stack amount is cached per effect (DungeonKit::PerStackAmount) and reused then; with no
+    // cache yet it is computed from the aura's owner (same dungeon map, same reference row), never the raw value.
     void CalcAmount(AuraEffect const* aurEff, int32& amount, bool& canBeRecalculated)
     {
+        if (!aurEff || aurEff->GetEffIndex() >= MAX_SPELL_EFFECTS)
+            return;
+        uint8 const effIndex = aurEff->GetEffIndex();
         Unit* caster = GetCaster();
         Unit* owner = GetUnitOwner();
-        if (!caster || !aurEff)
-            return;
-        float const pct = PercentOf(GetSpellInfo(), aurEff->GetEffIndex(), caster);
-        amount = static_cast<int32>(DungeonKit::RefFlatOn(caster, owner, pct));
+        std::optional<int32> withCaster;
+        std::optional<int32> fromOwner;
+        if (caster)
+            withCaster = static_cast<int32>(DungeonKit::RefFlatOn(caster, owner,
+                PercentOf(GetSpellInfo(), effIndex, caster)));
+        else if (owner)
+            fromOwner = static_cast<int32>(DungeonKit::RefFlatOn(owner, owner,
+                PercentOf(GetSpellInfo(), effIndex, owner)));
+        amount = _perStack[effIndex].Resolve(withCaster, fromOwner);
         canBeRecalculated = true;
     }
 
@@ -74,6 +89,8 @@ class spell_dungeon_refflat_periodic : public AuraScript
         DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_dungeon_refflat_periodic::CalcAmount, EFFECT_ALL,
             SPELL_AURA_PERIODIC_DAMAGE);
     }
+
+    std::array<DungeonKit::PerStackAmount, MAX_SPELL_EFFECTS> _perStack;
 };
 
 void AddSC_dungeon_kit_spells()

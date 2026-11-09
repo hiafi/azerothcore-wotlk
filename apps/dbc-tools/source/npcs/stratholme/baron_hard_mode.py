@@ -30,7 +30,8 @@ amount from the script. The rest are auras, casts and looks:
   206725  Price of Defiance    HM1 on him once Ysida falls: +200% damage done (Unholy Frenzy 8699's SV 47)
   206726  Deathcharger         HM3 the 3 s mark on the lane's target
   206727  Deathcharger         HM3 the target's 20% (not avoidable), Charge 22911's look, lands as he does
-  206728  Deathcharger         HM3 the lane's 50% Physical on everyone else inside: resolve copy (Physical)
+  206728  Deathcharger         HM3 the lane's 50% Physical on everyone else as he passes: resolve copy (Physical),
+                               Gore 4102's hit flash (SV 39) on each
   206729  Unholy Ground        HM3 the trail's 1 s tick: resolve copy (Shadow), 5%
   206730  Unholy Ground        HM3 the trail's look on a rot stalker (3 yd, Death and Decay 49936's SV 9735)
   206731  Rotting Vigor        HM4 the rot's heal: him 1%, his undead 5% of their health a second (exact amount)
@@ -104,6 +105,7 @@ _ICON_HYSTERIA = 2731               # Hysteria 49016
 _SV_DEATH_COIL = 9152               # Death Coil 6789 (the missile and its impact)
 _SV_STRIKE = 39                     # Strike 11976 (the swing)
 _SV_EXECUTION_HIT = 45              # Shadow Burst 28447: the shadow burst on the taker's chest
+_SV_LANE_IMPACT = 39                # Gore 4102 / Strike 11976 (DecisiveStrike): a physical hit flash and a sound
 
 # Percents in hundredths (KT-1's generic percent spells): the shown value is EffectBasePoints + 1 as stored, the heroic
 # value EffectMiscValueB. The hard mode is heroic only: both carry BaronHardModeLogic.h's number.
@@ -284,10 +286,12 @@ trample_206727 = _refflat(
 
 lane_206728 = resolve_copy(
     206728, 'Deathcharger', School.NORMAL, 'Caught in the Deathcharger\'s path.',
-    f'{_HM}, HM3: the lane\'s hit on everyone else inside it (the target is not eligible) as it locks: a 6 yd registry '
-    'line from him toward the target, 50% of the heroic non-tank row, Weakened. Copy of the resolve spell 205000 '
-    '(Physical). No visual (the charge is the look).',
-    icon=_ICON_CHARGE,
+    f'{_HM}, HM3: the lane\'s hit on everyone else inside it (the target is not eligible) as he reaches them (R-1-B '
+    'B-5): at the lock a static 6 yd registry projectile line from his start along the charge, swept at his charge '
+    'speed (42 yd/s), as far as he runs plus the drawn lane\'s 3 yd past his stop; 50% of the heroic non-tank row, '
+    'Weakened. Copy of the resolve spell 205000 (Physical). Gore 4102\'s SV 39 (a hit flash and a sound) on every '
+    'player hit: the visible impact.',
+    icon=_ICON_CHARGE, visual=_SV_LANE_IMPACT,
 )
 
 trail_206729 = resolve_copy(

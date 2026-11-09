@@ -17,16 +17,19 @@
  *   MK3 The Siphon    15 s, then every 20 s on the grid: the carrier with the most stacks (none: skipped); a 2 s cast
  *                     (emote line 2) then a 5 s channel tether, both kickable (a reward, priority 1). Each second it
  *                     eats a stack: 6% / 8% Shadow to the carrier, 2% / 3% of his health to him. The carrier 12 yd
- *                     from their spot at the cast's start snaps it, and the stacks left shatter out there. Bots: a
- *                     telegraph-only 12 yd circle on that spot, for the carrier only; the Eye's hit leaves the
- *                     carrier out while it runs (the Siphon wins), the carrier's storm ticks go through RegistryHit.
+ *                     from their spot at the cast's start snaps it, and the stacks left shatter out there. Humans
+ *                     see a 12 yd outline on that spot (a Decoy, never filled: it threatens nobody standing in it);
+ *                     bots: a hidden telegraph-only 12 yd circle there, for the carrier only. The carrier wears a
+ *                     hidden marker (206681) for the Siphon's life: the Eye's hit leaves them out by it (the Siphon
+ *                     wins), and the carrier's storm ticks go through RegistryHit.
  *   MK4 Ice Tomb      Icy Death at 5 stacks: the carrier freezes in an Ice Tomb 300584 (8k / 12k; emote line 4), held
  *                     by the kit's HoldInUnit (206673, a stun) for at most 8 s; each second 3% / 4% Shadow to the
  *                     prisoner and 1% / 1.5% of his health to him. Bots: the tomb first (BreakOut).
  *   MK5 The Eye       27 s, then every 30 s: yell line 3 and a 3 s marker on an 8 yd / 6 yd eye 10 to 14 yd from him
  *                     toward the plaza (PickFloorSpot; the eye stalker 300585 anchors it), then a 6 s storm: 10% /
  *                     15% Frost a second outside the eye, Weakened once per player (a hidden registry donut out to 60
- *                     yd; the drawn donut is a Decoy at the 0.25 ratio, 8 / 32 and 6 / 24). He channels the storm
+ *                     yd, registered once per Eye; a Siphon carrier owes theirs at the storm's end, StormWeakenedBook;
+ *                     the drawn donut is a Decoy at the 0.25 ratio, 8 / 32 and 6 / 24). He channels the storm
  *                     (206677) when he is free. Heroic: the eye drifts 1.5 yd/s, turning back at the first wall or
  *                     his arena's edge. The falling ice is six storm stalkers (206678) in a ring outside the eye.
  *   MK6 Frostbolt     stock 17503 on the tank every 2.9 to 3.7 s; it waits for his mechanic casts.
@@ -398,7 +401,8 @@ struct boss_maleki_the_pallid_rework : public BossAI
         uint32 snapMs = 0;
         uint32 eatMs = 0;
         uint32 eaten = 0;
-        MechanicHandle zone;
+        MechanicHandle zone;        // the carrier's (bots)
+        MechanicHandle drawn;       // the outline (humans)
     };
 
     // `forced`: that player (`.dbtest`), else the carrier with the most stacks. False: nobody (skipped).
@@ -432,25 +436,27 @@ struct boss_maleki_the_pallid_rework : public BossAI
         _siphon.carrier = carrier->GetGUID();
         _siphon.spot = carrier->GetPosition();
 
-        // Bots: the carrier gets out of a 12 yd circle on their spot (the cast, then the channel). Telegraph-only, for
-        // the carrier alone; an outline until the channel starts (a range cue), then the tether's reach.
+        // The Siphon wins over the Eye: the carrier's marker for the Siphon's life leaves them out of the Eye's hit (a
+        // live aura check; their storm ticks are the script's). Removed when the Siphon ends.
+        me->CastSpell(carrier, SPELL_MK_SIPHON_MARK, true);
+
+        // Bots: the carrier gets out of a 12 yd circle on their spot (the cast, then the channel). Hidden and
+        // telegraph-only, for the carrier alone.
         BossMechanics::Eligibility onlyCarrier;
         onlyCarrier.carriers.insert(carrier->GetGUID());
         MechanicRef ref = Mechanic::Circle(me, _siphon.spot, kSiphonSnapYd, Milliseconds(kSiphonCastMs));
         ref.Persistent(Milliseconds(kSiphonChannelMs), Milliseconds(kSiphonSnapCheckMs * 2)).Eligible(onlyCarrier)
-            .NoFillTimer().Color(BossMechanics::Color::Purple).Tag(TAG_SIPHON);
+            .NoTelegraph().Tag(TAG_SIPHON);
         _siphon.zone = ref.Handle();
+        // Humans: the tether's reach as an outline only (ORCH ruling: no fill, it threatens nobody standing in it). A
+        // Decoy with no fill timer that outlasts the Siphon (kSiphonDrawnMs); EndSiphon cancels it before it resolves.
+        MechanicRef drawn = Mechanic::Circle(me, _siphon.spot, kSiphonSnapYd, Milliseconds(kSiphonDrawnMs));
+        drawn.NoFillTimer().Decoy().Color(BossMechanics::Color::Purple).Tag(TAG_SIPHON_DRAWN);
+        _siphon.drawn = drawn.Handle();
 
-        // The Siphon wins over the Eye: while it runs, the Eye's hit leaves the carrier out (their storm ticks are the
-        // script's).
-        if (_timeline.eye != EyeStage::Idle)
-        {
-            _eyeExcluded.insert(carrier->GetGUID());
-            RegisterEyeHit();
-        }
-        Log("siphon", Acore::StringFormat("carrier={} stacks={} spot=({:.1f}, {:.1f}) eye={}", carrier->GetName(),
-            DungeonKit::Stacks(carrier, SPELL_MK_ICY_DEATH), _siphon.spot.GetPositionX(), _siphon.spot.GetPositionY(),
-            uint32(_timeline.eye)));
+        Log("siphon", Acore::StringFormat("carrier={} stacks={} spot=({:.1f}, {:.1f}) eye={} marked={}",
+            carrier->GetName(), DungeonKit::Stacks(carrier, SPELL_MK_ICY_DEATH), _siphon.spot.GetPositionX(),
+            _siphon.spot.GetPositionY(), uint32(_timeline.eye), carrier->HasAura(SPELL_MK_SIPHON_MARK) ? 1 : 0));
         return true;
     }
 
@@ -557,13 +563,18 @@ struct boss_maleki_the_pallid_rework : public BossAI
             if (channel->GetSpellInfo()->Id == SPELL_MK_SIPHON_CHANNEL && channel->getState() != SPELL_STATE_FINISHED)
                 me->InterruptSpell(CURRENT_CHANNELED_SPELL, true);
         _ownInterrupt = false;
-        if (ended.zone)
-            Mechanic::Cancel(me, ended.zone);
+        for (MechanicHandle const& handle : { ended.zone, ended.drawn })
+            if (handle)
+                Mechanic::Cancel(me, handle);
 
+        // The carrier is back under the Eye's hit (its eligibility reads the marker live: nothing re-registers).
         Player* carrier = ObjectAccessor::GetPlayer(*me, ended.carrier);
         uint32 const left = carrier ? DungeonKit::Stacks(carrier, SPELL_MK_ICY_DEATH) : 0;
         if (carrier)
+        {
             carrier->RemoveAurasDueToSpell(SPELL_MK_SIPHON_CHANNEL, me->GetGUID());
+            carrier->RemoveAurasDueToSpell(SPELL_MK_SIPHON_MARK, me->GetGUID());
+        }
         if (snap && carrier && left)
         {
             carrier->RemoveAurasDueToSpell(SPELL_MK_ICY_DEATH, me->GetGUID());
@@ -573,10 +584,6 @@ struct boss_maleki_the_pallid_rework : public BossAI
         Log("siphon-end", Acore::StringFormat("why={} carrier={} eaten={} left={} stage={} health={}", why,
             carrier ? carrier->GetName() : ended.carrier.ToString(), ended.eaten, snap ? 0 : left,
             uint32(ended.stage), me->GetHealth()));
-
-        // The carrier is back under the Eye's hit.
-        if (_eyeExcluded.erase(ended.carrier) && _timeline.eye != EyeStage::Idle)
-            RegisterEyeHit();
     }
 
     // ---- MK4 Ice Tomb -----------------------------------------------------------------------------------------------
@@ -720,8 +727,6 @@ struct boss_maleki_the_pallid_rework : public BossAI
         Talk(YELL_MALEKI_COLD);
         Mechanic::SetPhase(me, kPhaseEye);
         SuspendCurseRunOut();
-        if (_siphon.stage != SiphonStage::Idle)
-            _eyeExcluded.insert(_siphon.carrier);
 
         // The drawn eye: a Decoy donut (humans read it; bots never see it) at the 0.25 ratio, so the hole shows.
         MechanicRef drawn = Mechanic::Donut(me, eye, _eye.radius, EyeDrawnOuter(_eye.radius),
@@ -736,7 +741,7 @@ struct boss_maleki_the_pallid_rework : public BossAI
         return true;
     }
 
-    // 10 to 14 yd from him toward his plaza, on its floor (navmesh-reachable, inside his arena); the measured centres
+    // 10 to 14 yd from him toward his plaza, on its floor (navmesh-reachable, inside his arena); the measured centers
     // (StratholmeRework.h kMalekiEyeCenters) are the fallback.
     Position PickEyeSpot()
     {
@@ -762,8 +767,9 @@ struct boss_maleki_the_pallid_rework : public BossAI
     }
 
     // The real hit: a hidden donut out to 60 yd on the eye stalker, 10% / 15% a second, Weakened once per player;
-    // registered at the marker and again whenever the Siphon's carrier leaves it or comes back (the rest of the marker
-    // and the storm, on the storm's 1 s rhythm).
+    // registered once per Eye, at the marker (the rest of the marker and the storm, on the storm's 1 s rhythm). Whoever
+    // carries the Siphon's marker is left out by a live aura check (R-1-B B-3: never re-registered mid-storm, so the
+    // registry's once-per-player memory holds for the whole storm). Its OnHit feeds the StormWeakenedBook.
     void RegisterEyeHit()
     {
         if (_eye.hit)
@@ -790,21 +796,25 @@ struct boss_maleki_the_pallid_rework : public BossAI
             life = left - warn;
         }
 
-        BossMechanics::Eligibility who;
-        if (!_eyeExcluded.empty())
-        {
-            for (Player* p : FightPlayers())
-                if (!_eyeExcluded.count(p->GetGUID()))
-                    who.carriers.insert(p->GetGUID());
-            if (who.carriers.empty())
-                return;     // nobody but the carrier: the script's ticks are the storm
-        }
+        BossMechanics::Eligibility notCarrying;
+        notCarrying.auraSpell = SPELL_MK_SIPHON_MARK;
+        notCarrying.maxStacks = 0;
+        Map* map = me->GetMap();
+        ObjectGuid const guid = me->GetGUID();
         MechanicRef ref = Mechanic::Donut(me, eye, _eye.radius, kEyeStormReachYd, Milliseconds(warn));
         ref.Persistent(Milliseconds(life), Milliseconds(kEyeTickMs)).Damage(kEyeStormPct(_eye.heroic))
-            .Spell(SPELL_MK_EYE_STORM).WeakenedOncePerPlayer().ZTolerance(kStormZTolerance).NoTelegraph()
-            .Tag(TAG_EYE);
-        if (!who.carriers.empty())
-            ref.Eligible(who);
+            .Spell(SPELL_MK_EYE_STORM).WeakenedOncePerPlayer().Eligible(notCarrying).ZTolerance(kStormZTolerance)
+            .NoTelegraph().Tag(TAG_EYE);
+        // Captures the map and guid only, never a Unit*.
+        ref.OnHit([map, guid](Unit* hit)
+        {
+            Player* player = hit ? hit->ToPlayer() : nullptr;
+            Creature* maleki = map ? map->GetCreature(guid) : nullptr;
+            if (!player || !maleki || !maleki->IsAIEnabled)
+                return;
+            if (auto* ai = dynamic_cast<boss_maleki_the_pallid_rework*>(maleki->AI()))
+                ai->_eye.weakened.RegistryHit(player->GetGUID().GetRawValue());
+        });
         _eye.hit = ref.Handle();
     }
 
@@ -865,23 +875,21 @@ struct boss_maleki_the_pallid_rework : public BossAI
 
         if (_eye.heroic && eye)
             StartDrift(eye);
-        Log("eye-storm", Acore::StringFormat("looks={} channel={} excluded={} heroic={}", looks, channel ? 1 : 0,
-            _eyeExcluded.size(), _eye.heroic ? 1 : 0));
+        Log("eye-storm", Acore::StringFormat("looks={} channel={} carrier={} heroic={}", looks, channel ? 1 : 0,
+            _siphon.stage != SiphonStage::Idle ? 1 : 0, _eye.heroic ? 1 : 0));
     }
 
-    // The Siphon's carrier, left out of the Eye's hit while the Siphon runs: their own storm ticks when outside the
-    // eye (the build spec's collision: "runs out into the storm"), Weakened once.
+    // The Siphon's carrier (their marker leaves them out of the Eye's hit): their own storm ticks when outside the
+    // eye (the build spec's collision: "runs out into the storm"). No Weakened here: the book settles it at the storm's
+    // end, once, unless the registry's hit already gave it (StormWeakenedBook).
     void CarrierStormTick()
     {
-        if (_eyeExcluded.empty())
-            return;
         Creature* eye = me->GetMap()->GetCreature(_eye.stalker);
         if (!eye)
             return;
-        for (ObjectGuid const& guid : _eyeExcluded)
+        for (Player* player : FightPlayers())
         {
-            Player* player = ObjectAccessor::GetPlayer(*me, guid);
-            if (!player || !player->IsAlive() || _holds.IsHeld(guid))
+            if (!player->HasAura(SPELL_MK_SIPHON_MARK, me->GetGUID()) || _holds.IsHeld(player->GetGUID()))
                 continue;
             if (player->GetExactDist2d(eye) <= _eye.radius)
                 continue;
@@ -889,11 +897,31 @@ struct boss_maleki_the_pallid_rework : public BossAI
             spec.pct = kEyeStormPct(_eye.heroic);
             spec.school = kSchoolFrost;
             spec.spellId = SPELL_MK_EYE_STORM;
-            spec.weakened = _eye.carrierWeakened.insert(guid).second;
+            spec.weakened = false;
+            spec.tag = TAG_EYE_CARRIER;
+            Track(DungeonKit::RegistryHit(me, GuidSet{ player->GetGUID() }, spec));
+            _eye.weakened.CarrierTick(player->GetGUID().GetRawValue());
+            Log("eye-carrier-tick", Acore::StringFormat("player={}", player->GetName()));
+        }
+    }
+
+    // The storm is over: each Siphon carrier who took the storm only through the script's ticks gets their one
+    // Weakened stack now (no damage; the registry's ledger and cleanup, as for any hit).
+    void SettleStormWeakened()
+    {
+        for (uint64 raw : _eye.weakened.Owed())
+        {
+            ObjectGuid const guid(raw);
+            Player* player = ObjectAccessor::GetPlayer(*me, guid);
+            if (!player || !player->IsAlive())
+                continue;
+            DungeonKit::RegistryHitSpec spec;
+            spec.pct = 0.f;
+            spec.spellId = SPELL_MK_EYE_STORM;
+            spec.weakened = true;
             spec.tag = TAG_EYE_CARRIER;
             Track(DungeonKit::RegistryHit(me, GuidSet{ guid }, spec));
-            Log("eye-carrier-tick", Acore::StringFormat("player={} weakened={}", player->GetName(),
-                spec.weakened ? 1 : 0));
+            Log("eye-carrier-weakened", Acore::StringFormat("player={}", player->GetName()));
         }
     }
 
@@ -964,10 +992,10 @@ struct boss_maleki_the_pallid_rework : public BossAI
             Mechanic::Cancel(me, _eye.hit);
         if (_eye.drawn)
             Mechanic::Cancel(me, _eye.drawn);
+        SettleStormWeakened();
         if (Creature* eye = me->GetMap()->GetCreature(_eye.stalker))
             eye->DespawnOrUnsummon();
         _eye = EyeState{};
-        _eyeExcluded.clear();
         RefreshCurseRunOut();
         Log("eye-end");
     }
@@ -1028,9 +1056,9 @@ struct boss_maleki_the_pallid_rework : public BossAI
     std::string TestState()
     {
         std::string out = Acore::StringFormat("engaged={} heroic={} t={}ms next curse/siphon/eye={}/{}/{}ms eye={} "
-            "siphon={} tombs={} excluded={}", _engaged ? 1 : 0, _heroic ? 1 : 0, _timeline.now, _timeline.nextCurse,
+            "siphon={} tombs={} owed={}", _engaged ? 1 : 0, _heroic ? 1 : 0, _timeline.now, _timeline.nextCurse,
             _timeline.nextSiphon, _timeline.nextEye, uint32(_timeline.eye), uint32(_siphon.stage), _tombs.size(),
-            _eyeExcluded.size());
+            _eye.weakened.Owed().size());
         for (Player* p : FightPlayers())
             out += Acore::StringFormat("\n  {}: icy death {} held {}", p->GetName(),
                 DungeonKit::Stacks(p, SPELL_MK_ICY_DEATH), _holds.IsHeld(p->GetGUID()) ? 1 : 0);
@@ -1047,7 +1075,7 @@ private:
         MechanicHandle drawn;
         MechanicHandle hit;
         uint32 nextTickMs = 0;          // into the storm
-        GuidSet carrierWeakened;
+        StormWeakenedBook weakened;     // Weakened once per player per storm (registry hits, carrier ticks)
         float driftBearing = 0.f;
         float driftBack = 0.f;
         uint32 turnAtMs = 0;            // into the storm: the forward leg's end
@@ -1137,7 +1165,6 @@ private:
         summons.DespawnAll();
         _clocks.clear();
         _eye = EyeState{};
-        _eyeExcluded.clear();
         _siphon = SiphonState{};
         _timeline = Timeline{};
         _runOutMs = 0;
@@ -1145,7 +1172,7 @@ private:
         _arena.Reset();
         if (instance)
             for (uint32 spell : { uint32(SPELL_MK_ICY_DEATH), uint32(SPELL_MK_SIPHON_CHANNEL),
-                uint32(SPELL_MK_ICE_TOMB_HOLD), uint32(SPELL_MK_SHATTER_ROOT) })
+                uint32(SPELL_MK_SIPHON_MARK), uint32(SPELL_MK_ICE_TOMB_HOLD), uint32(SPELL_MK_SHATTER_ROOT) })
                 instance->DoRemoveAurasDueToSpellOnPlayers(spell);
     }
 
@@ -1157,7 +1184,6 @@ private:
     std::unordered_map<ObjectGuid, CurseClock> _clocks;
     SiphonState _siphon;
     EyeState _eye;
-    GuidSet _eyeExcluded;           // the Siphon's carrier while it runs under the Eye
     std::vector<MechanicHandle> _live;
     MechanicHandle _curseRunOut;
     uint32 _runOutMs = 0;

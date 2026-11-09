@@ -44,7 +44,8 @@ are auras the AI applies, casts and looks:
   206678  Eye of the Blizzard  MK5 the falling ice on a storm stalker (Blizzard 26607's SV 8787, 6 s)
   206679  Ice Tomb          MK4 the freeze's look on the prisoner (Ice Tomb 16869's SV 4340)
   206680  Frostbite         MK2 heroic: the look on an ally the nova gives a stack (Seed of Corruption 27243's SV 8339)
-  206681-206684 spare.
+  206681  The Siphon        MK3 the carrier's hidden marker for the Siphon's life: the Eye's hit leaves them out by it
+  206682-206684 spare.
 
 Tooltips are number-free (ST checklist item 8, Systems.md s10).
 """
@@ -124,6 +125,7 @@ _ICY_DEATH_TICK = 100               # 1% per stack, both difficulties (MalekiLog
 _ICY_DEATH_SLOW = 10                # % per stack (kCurseSlowPct)
 _SIPHON_DRAIN = (600, 800)          # kSiphonDrainPct 6 / 8
 _TOMB_DRAIN = (300, 400)            # kTombDrainPct 3 / 4
+_SIPHON_MARK_MS = 8000              # kSiphonMarkMs: the 2 s cast + the 5 s channel + 1 s
 
 
 def _look(spell_id: int, name: str, visual: int, icon: int, notes: str):
@@ -291,6 +293,24 @@ siphon_channel_206670 = spell(
                           AttributesEx2=ATTR2_IGNORE_LINE_OF_SIGHT, AuraInterruptFlags=_AURA_INTERRUPT_CHANGE_MAP),
 )
 
+siphon_mark_206681 = spell(
+    id=206681, name='The Siphon', school=School.SHADOW, dispel=0, mechanic=0,
+    attributes=ATTR0_DO_NOT_DISPLAY | ATTR0_AURA_IS_DEBUFF | ATTR0_NO_IMMUNITIES, cast_time_ms=0, cooldown_ms=0,
+    category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=_SIPHON_MARK_MS,
+    effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.DUMMY, implicit_target_a=TARGET_UNIT_TARGET_ANY)],
+    spell_icon_id=_ICON_DRAIN_LIFE,
+    notes=f'{_MK}, MK3: the carrier\'s marker for the Siphon\'s whole life (the 2 s cast and the 5 s channel), cast by '
+          'Maleki (triggered) as the cast starts and removed when the Siphon ends; 8 s (MalekiLogic.h kSiphonMarkMs) '
+          'only bounds a Siphon the script forgot. A hidden DUMMY aura (not shown, not logged): the Eye\'s registry '
+          'hit leaves its bearer out by a live aura check (Eligibility auraSpell, at most 0 stacks), so the hit is '
+          'registered once per Eye and its once-per-player Weakened holds the whole storm (R-1-B B-3); the carrier\'s '
+          'own storm ticks are the script\'s. A debuff (never cancelled), NO_IMMUNITIES (an immunity never strips it '
+          'mid-Siphon), dispel none; dropped on a map change.',
+    raw_overrides=kit_raw(instant=True, AttributesEx=ATTR1_NO_THREAT, AttributesEx2=ATTR2_IGNORE_LINE_OF_SIGHT,
+                          AttributesEx3=ATTR3_ALWAYS_HIT, AttributesEx4=ATTR4_NO_CAST_LOG,
+                          AuraInterruptFlags=_AURA_INTERRUPT_CHANGE_MAP),
+)
+
 siphon_drain_206671 = _refflat_hit(
     206671, 'The Siphon', _SIPHON_DRAIN, _ICON_DRAIN_LIFE, 'Drinks a stack of Icy Death.',
     f'{_MK}, MK3: a stack eaten, each second of the channel: 6% normal / 8% heroic of the reference row on the carrier '
@@ -342,9 +362,10 @@ eye_storm_206676 = resolve_copy(
     206676, 'Eye of the Blizzard', School.FROST, 'The storm outside the eye.',
     f'{_MK}, MK5: the storm\'s 1 s tick on everyone outside the eye (a hidden registry donut on the eye stalker, 8 yd '
     '/ 6 yd hole, out to 60 yd: the whole plaza) for the 6 s storm: 10% normal / 15% heroic of the non-tank row, '
-    'Weakened once per player. The Siphon\'s carrier while the Siphon runs takes the same tick through the kit\'s '
-    'RegistryHit. Copy of the resolve spell 205001 (Frost). No visual (a tick every second; the falling ice of 206678 '
-    'is the look).',
+    'Weakened once per player (registered once per Eye). The Siphon\'s carrier (206681\'s bearer, left out of the '
+    'registry hit) takes the same tick through the kit\'s RegistryHit while the Siphon runs, and owes one Weakened at '
+    'the storm\'s end unless the registry hit them. Copy of the resolve spell 205001 (Frost). No visual (a tick every '
+    'second; the falling ice of 206678 is the look).',
     icon=_ICON_BLIZZARD,
 )
 

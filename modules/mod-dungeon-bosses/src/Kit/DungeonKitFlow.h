@@ -10,6 +10,7 @@
  *                      first", stock fillers wait for the mechanics (kit #24)
  *   HoldBook           who holds whom, until when, and why each hold ended (kit #23: HoldInUnit's state)
  *   EffectPercent      the percent a generic percent spell carries in its effect (kit #17: spell_dungeon_refflat_*)
+ *   PerStackAmount     spell_dungeon_refflat_periodic's cached per-stack tick for a recalculation without a caster
  */
 
 #ifndef MOD_DUNGEON_BOSSES_KIT_DUNGEON_KIT_FLOW_H
@@ -348,6 +349,34 @@ namespace DungeonKit
         std::int32_t const hundredths = heroic && miscValueB ? miscValueB : shownValue;
         return hundredths > 0 ? float(hundredths) / 100.f : 0.f;
     }
+
+    // spell_dungeon_refflat_periodic's per-stack tick (R-1-KIT F1). The engine starts every (re)calculation from the
+    // effect's raw value (the hundredths: 400 for 4%) and multiplies the hook's result by the stack count. A
+    // recalculation without a caster (a summoned stalker despawned, then a stack change or a one-stack dispel) must not
+    // leave the hundredths in place: it reuses the amount the last calculation with a caster made, or, when there was
+    // none, the amount computed from the aura's owner, or 0. Never the raw value.
+    class PerStackAmount
+    {
+    public:
+        // `withCaster`: the amount computed from the caster this time, if it was there.
+        // `fromOwner`: the amount computed from the aura's owner (used only when nothing was cached), if possible.
+        std::int32_t Resolve(std::optional<std::int32_t> withCaster, std::optional<std::int32_t> fromOwner)
+        {
+            if (withCaster)
+            {
+                _cached = *withCaster;
+                return *_cached;
+            }
+            if (_cached)
+                return *_cached;
+            return fromOwner ? *fromOwner : 0;
+        }
+
+        std::optional<std::int32_t> Cached() const { return _cached; }
+
+    private:
+        std::optional<std::int32_t> _cached;
+    };
 }
 
 #endif

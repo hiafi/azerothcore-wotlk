@@ -1066,6 +1066,22 @@ namespace
         // 30% of the normal pin: the registry's own rounding.
         CHECK(RefFlatValue(3670, 3710, EffectPercent(3000, 0, false), false) == 1101);
     }
+
+    void TestPerStackAmount()
+    {
+        // R-1-KIT F1: a recalculation without a caster never falls back to the raw hundredths.
+        PerStackAmount fresh;
+        CHECK(fresh.Resolve(std::nullopt, std::nullopt) == 0);                // nothing known: 0, not 400
+        CHECK(fresh.Resolve(std::nullopt, 147) == 147);                        // the owner's row
+        CHECK(!fresh.Cached());                                                 // the owner's value is not kept
+        PerStackAmount amount;
+        CHECK(amount.Resolve(147, 999) == 147);                                 // the caster's value wins
+        CHECK(amount.Cached() && *amount.Cached() == 147);
+        CHECK(amount.Resolve(std::nullopt, 999) == 147);                       // the stalker despawned: cached
+        CHECK(amount.Resolve(std::nullopt, std::nullopt) == 147);
+        CHECK(amount.Resolve(150, std::nullopt) == 150);                       // a later caster recalculation
+        CHECK(amount.Resolve(std::nullopt, std::nullopt) == 150);
+    }
 }
 
 int main()
@@ -1102,5 +1118,6 @@ int main()
     TestCastQueue();
     TestHoldBook();
     TestEffectPercent();
+    TestPerStackAmount();
     return Report("dungeon_kit_test");
 }

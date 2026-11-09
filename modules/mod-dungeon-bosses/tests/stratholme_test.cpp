@@ -82,8 +82,8 @@ namespace
         CHECK(DATA_SCARLET_THREAD_LOOTED == 7);
         std::set<std::uint32_t> const data{ DATA_BARON_RUN, DATA_ZIGGURAT1, DATA_ZIGGURAT2, DATA_ZIGGURAT3,
             DATA_BARON_FIGHT, DATA_MALLOW, DATA_BARTHILAS_RUN, DATA_SCARLET_THREAD_LOOTED, DATA_ULTIMATUM,
-            DATA_GRAND_LIE, DATA_SLAUGHTER_STAGE, DATA_BARON_RUN_MINUTES, DATA_ZIGGURAT_PENDING };
-        CHECK(data.size() == 13);
+            DATA_GRAND_LIE, DATA_SLAUGHTER_STAGE, DATA_BARON_RUN_MINUTES, DATA_ZIGGURAT_PENDING, DATA_YSIDA_FATE };
+        CHECK(data.size() == 14);
         std::set<std::uint32_t> const guids{ DATA_UNFORGIVEN_GUID, DATA_FORRESTEN_GUID, DATA_TIMMY_GUID,
             DATA_WILLEY_GUID, DATA_MALOR_GUID, DATA_GALFORD_GUID, DATA_DATHROHAN_GUID, DATA_BARONESS_GUID,
             DATA_NERUBENKAN_GUID, DATA_MALEKI_GUID, DATA_BARTHILAS_GUID, DATA_BARON_GUID, DATA_YSIDA_GUID,
@@ -281,7 +281,61 @@ namespace
         // The exit gate opens on the Baron's death only when Ysida is dead (ST note 9).
         CHECK(ExitGateOpensOnBaronDeath(false));
         CHECK(!ExitGateOpensOnBaronDeath(true));
+        // Her saved fate decides first (R-1-B B-2): a fallen or executed Ysida opens it even if a respawned creature
+        // stands alive.
+        CHECK(!ExitGateOpensOnBaronDeath(true, YSIDA_ALIVE));
+        CHECK(ExitGateOpensOnBaronDeath(true, YSIDA_FALLEN));
+        CHECK(ExitGateOpensOnBaronDeath(true, YSIDA_EXECUTED));
+        CHECK(ExitGateOpensOnBaronDeath(false, YSIDA_ALIVE));
         CHECK(kBaronRunMinutes == 45);
+    }
+
+    void TestYsidaFate()
+    {
+        // R-1-B B-2 / F-1 ruling: the instance keeps her fate; the hard mode may write FALLEN and ALIVE only.
+        CHECK(YsidaFateChangeAllowed(YSIDA_ALIVE, YSIDA_FALLEN, State::InProgress));
+        CHECK(YsidaFateChangeAllowed(YSIDA_FALLEN, YSIDA_ALIVE, State::NotStarted));     // a wipe restores her
+        CHECK(YsidaFateChangeAllowed(YSIDA_FALLEN, YSIDA_ALIVE, State::InProgress));
+        CHECK(!YsidaFateChangeAllowed(YSIDA_ALIVE, YSIDA_EXECUTED, State::NotStarted));  // the instance's alone
+        CHECK(!YsidaFateChangeAllowed(YSIDA_EXECUTED, YSIDA_ALIVE, State::NotStarted));  // final
+        CHECK(!YsidaFateChangeAllowed(YSIDA_EXECUTED, YSIDA_FALLEN, State::InProgress));
+        CHECK(!YsidaFateChangeAllowed(YSIDA_FALLEN, YSIDA_ALIVE, State::Done));          // settled with his death
+        CHECK(!YsidaFateChangeAllowed(YSIDA_ALIVE, 7, State::NotStarted));
+
+        CHECK(SanitizeYsidaFate(YSIDA_FALLEN, State::NotStarted) == YSIDA_ALIVE);       // a restart mid-attempt
+        CHECK(SanitizeYsidaFate(YSIDA_FALLEN, State::Done) == YSIDA_FALLEN);
+        CHECK(SanitizeYsidaFate(YSIDA_EXECUTED, State::NotStarted) == YSIDA_EXECUTED);
+        CHECK(SanitizeYsidaFate(9, State::NotStarted) == YSIDA_ALIVE);
+
+        // The execution a restart interrupted is still owed (the clock out, not executed, the Baron alive).
+        CHECK(ExecutionOwed(1, 0, YSIDA_ALIVE, State::NotStarted));
+        CHECK(ExecutionOwed(1, 0, YSIDA_FALLEN, State::NotStarted));
+        CHECK(!ExecutionOwed(1, 0, YSIDA_EXECUTED, State::NotStarted));
+        CHECK(!ExecutionOwed(1, 5, YSIDA_ALIVE, State::NotStarted));
+        CHECK(!ExecutionOwed(0, 0, YSIDA_ALIVE, State::NotStarted));
+        CHECK(!ExecutionOwed(1, 0, YSIDA_ALIVE, State::Done));
+
+        CHECK(std::string(YsidaFateName(YSIDA_ALIVE)) == "alive");
+        CHECK(std::string(YsidaFateName(YSIDA_FALLEN)) == "fallen");
+        CHECK(std::string(YsidaFateName(YSIDA_EXECUTED)) == "executed");
+
+        // Saved and read back; an older 14-extra save reads ALIVE.
+        StratSave s;
+        s.baronRunProgress = 1;
+        s.ysidaFate = YSIDA_EXECUTED;
+        StratSave back;
+        CHECK(ParseStratSave(FormatStratSave(s), back));
+        CHECK(back.ysidaFate == YSIDA_EXECUTED);
+        std::string older = FormatStratSave(s);
+        older.erase(older.rfind(' '));
+        CHECK(ParseStratSave(older, back));
+        CHECK(back.ysidaFate == YSIDA_ALIVE);
+        s.ysidaFate = YSIDA_FALLEN;
+        CHECK(ParseStratSave(FormatStratSave(s), back));
+        CHECK(back.ysidaFate == YSIDA_ALIVE);
+        s.states[BOSS_BARON] = State::Done;
+        CHECK(ParseStratSave(FormatStratSave(s), back));
+        CHECK(back.ysidaFate == YSIDA_FALLEN);
     }
 
     StratSave SampleSave()
@@ -355,6 +409,8 @@ namespace
         dead.grandLie = 1;
         CHECK(ParseStratSave(FormatStratSave(dead), out));
         CHECK(out.ultimatum == 0 && out.grandLie == 0);
+        // R-1-KIT F3: the clock ends with the Baron (s has 31 minutes left).
+        CHECK(out.baronRunMinutes == 0 && out.baronRunProgress == 1);
 
         // A short tail (an older build of this script) keeps the defaults.
         CHECK(ParseStratSave("S R 3 0 0", out));
@@ -392,6 +448,8 @@ namespace
         CHECK(ParseStratSave(full, masked, (1u << 10) | (1u << 12) | (1u << 6)));
         CHECK(masked.states[BOSS_BARTHILAS] == State::Done);
         CHECK(masked.states[BOSS_BARON] == State::Done);
+        CHECK(masked.baronRunMinutes == 0);     // stock kept 22 minutes after his kill (R-1-KIT F3)
+        CHECK(s.ysidaFate == YSIDA_ALIVE);
         CHECK(masked.states[BOSS_BALNAZZAR] == State::Done);
         CHECK(masked.states[BOSS_UNFORGIVEN] == State::NotStarted);
         CHECK(masked.states[BOSS_JARIEN] == State::NotStarted);
@@ -439,6 +497,7 @@ int main()
     TestZiggurats();
     TestSlaughter();
     TestHardModes();
+    TestYsidaFate();
     TestSaveRoundTrip();
     TestStockSave();
 

@@ -7,11 +7,11 @@
  *
  *   NE1  Web Spray     8 s, then every 15 s: a random non-tank (emote line 1, the 3 s mark 206645); a 5 yd circle
  *                      follows them 3 s (DungeonKit::FollowThenLand), with X2's drop spot rule for a carrier bot:
- *                      onto an old web (enterable, MaxDwell 1.2 s, under the 2 s Stuck timer), else the plaza's edge,
+ *                      onto an old web (enterable, MaxDwell 0.8 s, under the 2 s Stuck timer), else the plaza's edge,
  *                      away from the group. The glob missile (206646, look only) homes on them to arrive on time
  *   NE2  Glob landing  where they stand: the carrier 15% (206647, the kit's percent spell, not avoidable), anyone
  *                      else within 5 yd 25% / 30% Nature + Weakened (206648, the registry)
- *   NE3  Web patch     5 / 7 yd for the whole fight (DungeonKit::PuddleField, merge rule: a glob whose centre lands
+ *   NE3  Web patch     5 / 7 yd for the whole fight (DungeonKit::PuddleField, merge rule: a glob whose center lands
  *                      in an old web makes none). A new web counts 1 s after it lands. Inside: slowed 50% (206649)
  *                      from 1 s, Stuck after 2 s (RegistryHit: Weakened + the 2 s root 206650), then 3 s immune. A
  *                      patch stalker (300583) carries the web look (206651 / 206652)
@@ -61,6 +61,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 using namespace Acore::ChatCommands;
@@ -318,14 +319,15 @@ struct boss_nerubenkan_rework : public BossAI
     }
 
     // X2's drop spot rule for the carrier bot: onto an old web (it may step in MaxDwell before the landing), else the
-    // plaza's edge, away from the group (the arena circle is the room).
+    // plaza's edge, away from the group (the room is the floor of his arena, kDropRoom, not the circle).
     BossMechanics::DropSpotRule DropRule() const
     {
-        Arena const arena = NerubenkanArena();
-        Vec2 const c = arena.regions.front().center;
+        std::vector<Position> room;
+        room.reserve(kDropRoom.size());
+        for (Vec2 const& p : kDropRoom)
+            room.emplace_back(p.x, p.y, kNerubenkanPlazaZ);
         BossMechanics::DropSpotRule rule;
-        rule.Room(Position(c.x, c.y, kNerubenkanPlazaZ), arena.regions.front().radius).Edge().Away()
-            .MaxDwell(Ms(kDropMaxDwellMs));
+        rule.Room(std::move(room)).Edge().Away().MaxDwell(Ms(kDropMaxDwellMs));
         for (Web const& web : _webList)
             rule.Prefer(web.center, web.radius, web.zoneId);
         return rule;
@@ -388,7 +390,7 @@ struct boss_nerubenkan_rework : public BossAI
         ObjectGuid stalker;
     };
 
-    // A web at `spot` (the merge rule: its centre inside an old web adds nothing). `why`: the log's reason.
+    // A web at `spot` (the merge rule: its center inside an old web adds nothing). `why`: the log's reason.
     void AddWeb(Position const& spot, bool heroic, char const* why)
     {
         DungeonKit::PuddleSpec spec;
@@ -412,7 +414,7 @@ struct boss_nerubenkan_rework : public BossAI
         web.puddleId = added.id;
         web.center = spot;
         web.radius = spec.radius;
-        web.zoneId = WebZoneId(spot);
+        web.zoneId = _webs.ZoneOf(added.id).id;
         if (TempSummon* stalker = me->SummonCreature(NPC_ST_WEB_PATCH, spot, TEMPSUMMON_MANUAL_DESPAWN))
         {
             stalker->CastSpell(stalker, heroic ? SPELL_NE_WEB_LOOK_7 : SPELL_NE_WEB_LOOK_5, true);
@@ -424,32 +426,16 @@ struct boss_nerubenkan_rework : public BossAI
                 spot.GetPositionX(), spot.GetPositionY(), spec.radius, _webList.size(), _webs.CoveredArea(0.5f)));
     }
 
-    // The registry id of the web zone PuddleField registered at `center` (its telegraph-only persistent Zone, tagged
-    // TAG_WEB): X2's DropSpotRule::Prefer needs it to let a carrier bot step into that web. 0: not found (the web is
-    // then a plain preferred spot).
-    uint32 WebZoneId(Position const& center) const
-    {
-        BossMechanics::Registry const* reg = Mechanic::Read(me->GetMap());
-        if (!reg)
-            return 0;
-        uint32 found = 0;
-        ObjectGuid const owner = me->GetGUID();
-        reg->ForEachActive(Milliseconds(0), [&found, &owner, &center](BossMechanics::ActiveMechanic const& m)
-        {
-            if (m.owner != owner || m.tag != TAG_WEB || m.anchor.IsUnit() || m.id <= found)
-                return;
-            if (std::fabs(m.anchor.point.GetPositionX() - center.GetPositionX()) < 0.05f
-                && std::fabs(m.anchor.point.GetPositionY() - center.GetPositionY()) < 0.05f)
-                found = m.id;
-        });
-        return found;
-    }
-
     // Once per tick (250 ms) for each player inside the union of armed webs, with their time inside.
     void OnWebTick(Player* player, uint32 msInside)
     {
         if (_cocoons.count(player->GetGUID()))
-            return;     // wrapped: immune, and not walking anywhere
+        {
+            _lastHeldAt[player->GetGUID()] = _clockMs;      // wrapped: immune; the window restarts at the release
+            return;
+        }
+        if (auto held = _lastHeldAt.find(player->GetGUID()); held != _lastHeldAt.end())
+            msInside = WebClockAfterHold(msInside, _clockMs, held->second);
         if (SlowDue(msInside))
         {
             Aura const* slow = player->GetAura(SPELL_NE_STICKY_WEB, me->GetGUID());
@@ -852,6 +838,7 @@ private:
         _cocoonCast.reset();
         _broodAt.reset();
         _stuckImmuneUntil.clear();
+        _lastHeldAt.clear();
         _queue.Reset();
         _clockMs = 0;
         _nextSprayMs = kWebSprayFirstMs;
@@ -871,6 +858,7 @@ private:
     std::vector<Web> _webList;
     std::unordered_map<ObjectGuid, ObjectGuid> _cocoons;     // held player -> cocoon
     std::unordered_map<ObjectGuid, uint64> _stuckImmuneUntil;
+    std::unordered_map<ObjectGuid, uint64> _lastHeldAt;     // the last web tick each cocooned player was held
     std::optional<CocoonCast> _cocoonCast;
     std::optional<uint64> _broodAt;
     std::optional<Skitter> _skitter;

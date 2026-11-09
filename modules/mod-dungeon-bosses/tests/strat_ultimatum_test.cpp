@@ -186,6 +186,52 @@ namespace
         CHECK(DungeonKit::Distance(center, clamped) >= 23.f);
     }
 
+    // R-1-B N-1: the execution and the charge keep their cadence when a start comes late (the other's hold, the
+    // spacing): the next is due a whole period after the last one was due, never after its late start.
+    void Cadence()
+    {
+        CHECK((NextOnCadence(15000, 15000, kExecutionEveryMs)) == (uint64_t(40000)));
+        CHECK((NextOnCadence(15000, 17000, kExecutionEveryMs)) == (uint64_t(40000)));    // 2 s late: still 40 s
+        CHECK((NextOnCadence(40000, 40500, kExecutionEveryMs)) == (uint64_t(65000)));
+        // Held past a whole period: that turn is skipped, the grid stays.
+        CHECK((NextOnCadence(15000, 41000, kExecutionEveryMs)) == (uint64_t(65000)));
+        CHECK((NextOnCadence(15000, 40000, kExecutionEveryMs)) == (uint64_t(65000)));
+        CHECK((NextOnCadence(22000, 25500, kChargeEveryMs)) == (uint64_t(52000)));
+        // Over a fight of late starts the grid never drifts.
+        uint64_t due = kExecutionFirstMs;
+        for (int i = 0; i < 10; ++i)
+            due = NextOnCadence(due, due + 1900, kExecutionEveryMs);
+        CHECK((due) == (uint64_t(kExecutionFirstMs + 10 * kExecutionEveryMs)));
+        CHECK((NextOnCadence(5000, 7000, 0)) == (uint64_t(7000)));
+    }
+
+    // R-1-B B-5: the lane's hit sweeps at his charge speed from his start, as far as he runs plus the drawn lane's
+    // reach past his stop.
+    void LaneHit()
+    {
+        // Unclamped: the target 20 yd away, the drawn lane 22 yd, he runs 19: the hit covers the whole drawn lane.
+        float const lane = LaneLength(20.f);
+        Vec2 const start{ 0.f, 0.f };
+        Vec2 const end = ChargeEnd(start, { 20.f, 0.f }, lane);
+        float const run = DungeonKit::Distance(start, end);
+        CHECK(Near(run, 19.f));
+        CHECK(Near(LaneHitLength(run, lane), lane));
+        // Clamped at 8 yd: nobody past 11 yd is ridden down.
+        CHECK(Near(LaneHitLength(8.f, lane), 11.f));
+        CHECK(Near(LaneHitLength(0.f, lane), kChargeStopShortYd + kLaneSlackYd));
+        CHECK(LaneHitLength(60.f, kLaneMaxYd) <= kLaneMaxYd);
+        // The sweep reaches a player as the charge does (the same speed): 21 yd down the lane at 500 ms.
+        CHECK((ChargeTravelMs(21.f)) == (uint32_t(500)));
+        // The facing is the charge's.
+        CHECK(Near(LaneFacing(start, { 0.f, 10.f }), DungeonKit::kPi / 2.f, 0.001f));
+        CHECK(Near(LaneFacing(start, { 0.f, -10.f }), 3.f * DungeonKit::kPi / 2.f, 0.001f));
+        CHECK(Near(LaneFacing(start, { -10.f, 0.f }), DungeonKit::kPi, 0.001f));
+        CHECK(Near(LaneFacing(start, start), 0.f));
+        // The following lane and the hit are told apart in the ledger.
+        CHECK(TAG_LANE_WARN != TAG_LANE);
+        CHECK(TAG_LANE_WARN != TAG_TRAIL && TAG_LANE_WARN != TAG_TRAIL_ROT && TAG_LANE_WARN != TAG_EXECUTION);
+    }
+
     void HealBook()
     {
         RotHealBook book;
@@ -206,6 +252,8 @@ int main()
     Tuning();
     Execution();
     Lane();
+    Cadence();
+    LaneHit();
     HealBook();
     return Report("strat_ultimatum_test");
 }

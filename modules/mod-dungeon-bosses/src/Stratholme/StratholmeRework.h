@@ -166,6 +166,11 @@ namespace StratholmeRework
                                             // `.dbtest strat instance clock`): set the minutes left while it runs
         DATA_ZIGGURAT_PENDING       = 24,   // GetData only: a mask of ziggurats whose crystal broke before their boss
                                             // died (the softlock fix, bit 0 = ziggurat 1)
+        DATA_YSIDA_FATE             = 25,   // GetData: Ysida's fate (YsidaFate), the instance's own saved state, never
+                                            // read off her creature. SetData from the Baron's hard mode: FALLEN when
+                                            // the third miss kills her, ALIVE when a wipe restores her
+                                            // (YsidaFateChangeAllowed). EXECUTED is the instance's alone (the clock
+                                            // ran out) and final: a living Ysida is killed whenever it holds
     };
 
     // SetGuidData / GetGuidData ids. ObjectData ids for units and objects that are never summoned twice
@@ -945,11 +950,61 @@ namespace StratholmeRework
         return heroic && wave2Bound;
     }
 
-    // The exit gate 176424 opens through Ysida (her SmartAI) when she lives; when she is dead (executed by the clock,
-    // or the Ultimatum killed her) the Baron's death opens it (ST implementation note 9, ruling 60).
-    inline bool ExitGateOpensOnBaronDeath(bool ysidaAlive)
+    // Ysida's fate (DATA_YSIDA_FATE, R-1-B B-2, F-1 ruling): kept in the instance's saved state so the clock's
+    // execution never depends on finding her creature (a hard mode wipe respawns her through the map's respawn queue,
+    // up to 5 s after the instance looked for her).
+    enum YsidaFate : std::uint32_t
     {
-        return !ysidaAlive;
+        YSIDA_ALIVE     = 0,    // caged and alive (freed by her SmartAI on the Baron's death)
+        YSIDA_FALLEN    = 1,    // the Ultimatum's third miss killed her; a wipe restores her (back to ALIVE)
+        YSIDA_EXECUTED  = 2,    // the clock ran out: final, she is killed whenever her creature is alive
+    };
+
+    // SetData(DATA_YSIDA_FATE, to) from the Baron's hard mode: FALLEN or ALIVE while he is not dead. EXECUTED is never
+    // written from outside (the instance sets it itself) and never left.
+    inline bool YsidaFateChangeAllowed(std::uint32_t from, std::uint32_t to, std::uint32_t baronState)
+    {
+        if (from == YSIDA_EXECUTED || (to != YSIDA_ALIVE && to != YSIDA_FALLEN))
+            return false;
+        return baronState != DungeonKit::State::Done;
+    }
+
+    // A loaded fate: an unknown value is ALIVE, and a FALLEN Ysida whose Baron is not dead was mid-attempt when the
+    // server stopped (the fight is gone: that is a wipe, which restores her).
+    inline std::uint32_t SanitizeYsidaFate(std::uint32_t fate, std::uint32_t baronState)
+    {
+        if (fate > YSIDA_EXECUTED)
+            return YSIDA_ALIVE;
+        if (fate == YSIDA_FALLEN && baronState != DungeonKit::State::Done)
+            return YSIDA_ALIVE;
+        return fate;
+    }
+
+    inline char const* YsidaFateName(std::uint32_t fate)
+    {
+        switch (fate)
+        {
+            case YSIDA_ALIVE: return "alive";
+            case YSIDA_FALLEN: return "fallen";
+            case YSIDA_EXECUTED: return "executed";
+            default: return "?";
+        }
+    }
+
+    // The execution at the end of the clock is still owed after a restart: the clock ran (progress 1) and is out, she
+    // is not executed yet and the Baron is not dead (stock: a dead Baron executes nobody).
+    inline bool ExecutionOwed(std::uint32_t baronRunProgress, std::uint32_t clockMinutes, std::uint32_t fate,
+        std::uint32_t baronState)
+    {
+        return baronRunProgress && !clockMinutes && fate != YSIDA_EXECUTED && baronState != DungeonKit::State::Done;
+    }
+
+    // The exit gate 176424 opens through Ysida (her SmartAI) when she lives; when she is dead (executed by the clock,
+    // or the Ultimatum killed her) the Baron's death opens it (ST implementation note 9, ruling 60). Her saved fate
+    // decides first; a creature found dead (or not found) also opens it.
+    inline bool ExitGateOpensOnBaronDeath(bool ysidaAlive, std::uint32_t fate = YSIDA_ALIVE)
+    {
+        return fate != YSIDA_ALIVE || !ysidaAlive;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -987,8 +1042,9 @@ namespace StratholmeRework
         EXTRA_ZIGGURAT_PENDING      = 11,
         EXTRA_ULTIMATUM             = 12,
         EXTRA_GRAND_LIE             = 13,
+        EXTRA_YSIDA_FATE            = 14,   // a 14-extra save (before F-1) reads it as 0: ALIVE
     };
-    std::size_t constexpr kSaveExtraCount = 14;
+    std::size_t constexpr kSaveExtraCount = 15;
 
     std::uint32_t constexpr kScarletThreadLocations = 4;
     std::uint32_t constexpr kAllScarletThreads = (1u << kScarletThreadLocations) - 1;
@@ -1006,6 +1062,7 @@ namespace StratholmeRework
         std::array<std::uint32_t, 2> gateTrapEnd{};     // unix time each trap's cooldown ends (0: ready)
         std::uint32_t ultimatum = 0;
         std::uint32_t grandLie = 0;
+        std::uint32_t ysidaFate = YSIDA_ALIVE;
     };
 
     inline std::uint32_t ZigguratPendingMask(std::array<Ziggurat, kZigguratCount> const& z)
@@ -1034,6 +1091,7 @@ namespace StratholmeRework
         extras[EXTRA_ZIGGURAT_PENDING] = ZigguratPendingMask(s.ziggurats);
         extras[EXTRA_ULTIMATUM] = s.ultimatum;
         extras[EXTRA_GRAND_LIE] = s.grandLie;
+        extras[EXTRA_YSIDA_FATE] = s.ysidaFate;
         return DungeonKit::FormatStates(kSaveHeader, states, extras);
     }
 
@@ -1085,6 +1143,11 @@ namespace StratholmeRework
         s.baronRunProgress = s.baronRunProgress ? 1 : 0;
         if (s.baronRunMinutes > kBaronRunMinutes)
             s.baronRunMinutes = kBaronRunMinutes;
+        // R-1-KIT F3: the clock ends with the Baron (no stale countdown for a player entering after the kill, no
+        // restarted clock after a reload).
+        if (s.states[BOSS_BARON] == DungeonKit::State::Done)
+            s.baronRunMinutes = 0;
+        s.ysidaFate = SanitizeYsidaFate(s.ysidaFate, s.states[BOSS_BARON]);
         for (std::uint32_t i = 0; i < kZigguratCount; ++i)
         {
             Ziggurat& z = s.ziggurats[i];
@@ -1154,6 +1217,7 @@ namespace StratholmeRework
         out.gateTrapEnd[1] = raw.extras[EXTRA_GATE_TRAP_UNDEAD_END];
         out.ultimatum = raw.extras[EXTRA_ULTIMATUM];
         out.grandLie = raw.extras[EXTRA_GRAND_LIE];
+        out.ysidaFate = raw.extras[EXTRA_YSIDA_FATE];
         SanitizeStratSave(out, false);
         return true;
     }

@@ -16,7 +16,8 @@ DELETE FROM `smart_scripts` WHERE `entryorguid` = 10876 AND `source_type` = 0 AN
 
 -- His texts (ST "Text"; he has none stock): yells 14, boss emotes 41 (they name the mechanic on screen).
 DELETE FROM `creature_text` WHERE `CreatureID` = 10437;
-INSERT INTO `creature_text` (`CreatureID`, `GroupID`, `ID`, `Text`, `Type`, `Language`, `Probability`, `Emote`, `Duration`, `Sound`, `BroadcastTextId`, `TextRange`, `comment`) VALUES
+INSERT INTO `creature_text` (`CreatureID`, `GroupID`, `ID`, `Text`, `Type`, `Language`, `Probability`, `Emote`,
+    `Duration`, `Sound`, `BroadcastTextId`, `TextRange`, `comment`) VALUES
 (10437, 0, 0, 'The web trembles. Prey has come.', 14, 0, 100, 0, 0, 0, 0, 0, 'Nerub''enkan - Aggro'),
 (10437, 1, 0, '%s spits a web at $n!', 41, 0, 100, 0, 0, 0, 0, 0, 'Nerub''enkan - Web Spray (NE1)'),
 (10437, 2, 0, '%s wraps $n in a cocoon!', 41, 0, 100, 0, 0, 0, 0, 0, 'Nerub''enkan - Cocoon (NE4)'),

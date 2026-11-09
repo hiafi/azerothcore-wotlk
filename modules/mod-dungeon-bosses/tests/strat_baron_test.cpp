@@ -2,6 +2,7 @@
 // 6, the Unholy Aura percent per servant, the piles a rot raises, the bot tank's reposition trigger, the stock leash
 // and the never-paused timeline.
 #include "BaronLogic.h"
+#include "DungeonKitFlow.h"
 #include "check.h"
 #include <cmath>
 #include <vector>
@@ -181,6 +182,41 @@ int main()
         }
         CHECK(waves == 8);
         CHECK(rots == 10);
+    }
+
+    // R-1-B N-1: the Shadow Bolt waits for a hard mode cast due within its 2 s cast time, so that cast starts on time.
+    {
+        CHECK(FillerWaits(10000, 12000));
+        CHECK(FillerWaits(10000, 9000));
+        CHECK(!FillerWaits(10000, 12001));
+        DungeonKit::CastQueue queue(kCastSpacingMs);
+        std::uint32_t constexpr kExecution = kHardModeCastBase;
+        queue.Schedule(CAST_SHADOW_BOLT, 5000, 0);
+        queue.Schedule(kExecution, 6500, 1);
+        // At 5 s the bolt is the only due cast, but the execution falls due inside its cast time: it waits.
+        CHECK((queue.Next(5000).value_or(0)) == (std::uint32_t(CAST_SHADOW_BOLT)));
+        CHECK(FillerWaits(5000, queue.DueAt(kExecution).value_or(0)));
+        // At 6.5 s the execution starts on time; the bolt follows its hold.
+        CHECK((queue.Next(6500).value_or(0)) == (kExecution));
+        queue.Started(kExecution, 6500, 3000);
+        CHECK(!queue.Next(9000));
+        CHECK((queue.Next(10000).value_or(0)) == (std::uint32_t(CAST_SHADOW_BOLT)));
+        CHECK(!queue.DueAt(kExecution));
+    }
+
+    // The room's real shape (R-1-B B-1, for the room-shape drop spot rule): the spawn, the Gift, the cage and every
+    // Raise Dead point are inside; the door 175796 and the corridor beyond the east wall are not.
+    {
+        CHECK(DungeonKit::PointInPolygon(kBaronRoomShape, kBaronSpawn.XY()));
+        CHECK(DungeonKit::PointInPolygon(kBaronRoomShape, kMenethilsGift.XY()));
+        CHECK(DungeonKit::PointInPolygon(kBaronRoomShape, kYsidaCage.XY()));
+        CHECK(DungeonKit::PointInPolygon(kBaronRoomShape, kDropRoomCenter));
+        for (Point3 const& p : kRaiseDeadPoints)
+            CHECK(DungeonKit::PointInPolygon(kBaronRoomShape, p.XY()));
+        CHECK(!DungeonKit::PointInPolygon(kBaronRoomShape, kBaronDoor.XY()));
+        CHECK(!DungeonKit::PointInPolygon(kBaronRoomShape, { 4032.f, -3368.f }));      // R-1-B's r 20 circle's reach
+        CHECK(!DungeonKit::PointInPolygon(kBaronRoomShape, kRamsteinDoor.XY()));
+        CHECK(DungeonKit::PointInPolygon(kBaronRoomShape, { 4032.f, -3361.f }));       // just inside the east wall
     }
 
     return Report("strat_baron_test");

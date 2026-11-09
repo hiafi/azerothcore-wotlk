@@ -195,6 +195,12 @@ public:
                 case NPC_BARON:
                     ApplyHardModeLoot(creature, _ultimatum, BOSS_BARON);
                     break;
+                case NPC_YSIDA:
+                    // R-1-B B-2: an executed Ysida stays dead, however her creature came back (a hard mode wipe's
+                    // respawn, the map's respawn queue): the kill waits a second, out of the create hook.
+                    if (_ysidaFate == YSIDA_EXECUTED)
+                        events.ScheduleEvent(EVENT_EXECUTE_PRISONER, 1s);
+                    break;
                 case NPC_DATHROHAN:
                     ApplyHardModeLoot(creature, _grandLie, BOSS_BALNAZZAR);
                     break;
@@ -305,7 +311,10 @@ public:
                         AdvanceSlaughterEvent();
                     break;
                 case NPC_BARON:
+                    // The clock ends with him (R-1-KIT F3): no stale countdown for a player who enters after the
+                    // kill, no clock restarted by a reload (OnBaronDone's save carries the 0).
                     events.CancelEvent(EVENT_BARON_TIME);
+                    _baronRunTime = 0;
                     DoRemoveAurasDueToSpellOnPlayers(SPELL_BARON_ULTIMATUM);
                     break;
                 default:
@@ -440,6 +449,17 @@ public:
                     ApplyHardModeLoot(GetCreature(DATA_DATHROHAN_GUID), _grandLie, BOSS_BALNAZZAR);
                     LOG_INFO(kLog, "strat instance grand-lie={}", _grandLie);
                     break;
+                case DATA_YSIDA_FATE:
+                    if (!YsidaFateChangeAllowed(_ysidaFate, data, GetBossState(BOSS_BARON)))
+                    {
+                        LOG_DEBUG(kLog, "strat instance ysida fate {} -> {} refused", _ysidaFate, data);
+                        return;
+                    }
+                    if (_ysidaFate == data)
+                        return;
+                    LOG_INFO(kLog, "strat instance ysida fate {} -> {}", _ysidaFate, data);
+                    _ysidaFate = data;
+                    break;
                 case DATA_BARON_RUN_MINUTES:
                     // GM test (`.dbtest strat instance clock <minutes>`): the minutes left, while the clock runs.
                     if (!_baronRunTime)
@@ -481,6 +501,8 @@ public:
                     return _baronRunTime;
                 case DATA_ZIGGURAT_PENDING:
                     return ZigguratPendingMask(_ziggurats);
+                case DATA_YSIDA_FATE:
+                    return _ysidaFate;
                 default:
                     return 0;
             }
@@ -580,6 +602,7 @@ public:
             save.gateTrapEnd[GATE_TRAP_UNDEAD] = uint32(_gateTrapCooldownEnd[GATE_TRAP_UNDEAD]);
             save.ultimatum = _ultimatum;
             save.grandLie = _grandLie;
+            save.ysidaFate = _ysidaFate;
             return FormatStratSave(save);
         }
 
@@ -608,6 +631,7 @@ public:
             _gateTrapCooldownEnd[GATE_TRAP_UNDEAD] = time_t(save.gateTrapEnd[GATE_TRAP_UNDEAD]);
             _ultimatum = save.ultimatum;
             _grandLie = save.grandLie;
+            _ysidaFate = save.ysidaFate;
             // Loading: each slot is TO_BE_DECIDED, so the base stores the state and skips our switch (no ziggurat
             // write, no kill flag); the doors and the loot bits follow from the create hooks.
             for (uint32 i = 0; i < kBossCount; ++i)
@@ -615,6 +639,8 @@ public:
 
             if (_baronRunTime)
                 events.ScheduleEvent(EVENT_BARON_TIME, 60s);
+            else if (ExecutionOwed(_baronRunProgress, _baronRunTime, _ysidaFate, save.states[BOSS_BARON]))
+                events.ScheduleEvent(EVENT_EXECUTE_PRISONER, 5s);   // the clock ran out and a restart came first
             if (_slaughter > SLAUGHTER_ABOMINATIONS && _slaughter < SLAUGHTER_COMPLETE)
                 events.ScheduleEvent(EVENT_FORCE_SLAUGHTER_EVENT, 5s);
             RestoreGateTrapCooldown(GATE_TRAP_SCARLET);
@@ -687,21 +713,29 @@ public:
         }
 
         // Stock EVENT_EXECUTE_PRISONER: held while he fights (an Ultimatum attempt still going at 0 plays out); the
-        // execution ends the Ultimatum (ruling 60: the next pull is the heroic fight).
+        // execution ends the Ultimatum (ruling 60: the next pull is the heroic fight). R-1-B B-2 / F-1 ruling: the
+        // execution is Ysida's saved fate (YSIDA_EXECUTED), not a kill that needs her creature: it is recorded even
+        // when she is not on the map (a hard mode wipe's respawn still queued), and her creature is killed whenever it
+        // is (or comes back) alive (OnCreatureCreate runs this again).
         void ExecutePrisoner()
         {
             Creature* baron = GetCreature(DATA_BARON_GUID);
-            if (!baron || !baron->IsAlive())
+            if (_ysidaFate == YSIDA_EXECUTED)
+            {
+                KillYsida(baron, false);
                 return;
-            if (baron->IsInCombat())
+            }
+            if (GetBossState(BOSS_BARON) == DONE || (baron && !baron->IsAlive()))
+                return;     // stock: a dead Baron executes nobody
+            if (baron && baron->IsInCombat())
             {
                 events.ScheduleEvent(EVENT_EXECUTE_PRISONER, 1s);
                 return;
             }
-            baron->HandleEmoteCommand(EMOTE_ONESHOT_ATTACK1H);
-            if (Creature* ysida = GetCreature(DATA_YSIDA_GUID))
-                if (ysida->IsAlive())
-                    Unit::Kill(baron, ysida);
+            _ysidaFate = YSIDA_EXECUTED;
+            LOG_INFO(kLog, "strat instance ysida executed: the clock ran out (baron {})",
+                baron ? "found" : "not found");
+            KillYsida(baron, true);
             if (_ultimatum)
             {
                 _ultimatum = 0;
@@ -709,6 +743,24 @@ public:
                 LOG_INFO(kLog, "strat instance ultimatum cleared: the clock ran out");
             }
             SaveToDB();
+        }
+
+        // Kills a living Ysida, if her creature is on the map: by the Baron's hand with the stock emote when he stands
+        // out of combat, else (a later respawn while he fights, or no Baron) quietly.
+        void KillYsida(Creature* baron, bool withEmote)
+        {
+            Creature* ysida = GetCreature(DATA_YSIDA_GUID);
+            if (!ysida || !ysida->IsAlive())
+                return;
+            if (baron && baron->IsAlive() && !baron->IsInCombat())
+            {
+                if (withEmote)
+                    baron->HandleEmoteCommand(EMOTE_ONESHOT_ATTACK1H);
+                Unit::Kill(baron, ysida);
+            }
+            else
+                ysida->KillSelf();
+            LOG_INFO(kLog, "strat instance ysida killed (fate executed)");
         }
 
         // The Baron's death: the Ultimatum's kill slot, and the exit gate when Ysida is dead (ST note 9).
@@ -721,7 +773,7 @@ public:
                 SetBossState(BOSS_ULTIMATUM, DONE);
             }
             Creature* ysida = GetCreature(DATA_YSIDA_GUID);
-            if (ExitGateOpensOnBaronDeath(ysida && ysida->IsAlive()))
+            if (ExitGateOpensOnBaronDeath(ysida && ysida->IsAlive(), _ysidaFate))
                 if (GameObject* gate = GetGameObject(DATA_EXIT_GATE_GUID))
                 {
                     gate->SetGoState(GO_STATE_ACTIVE);
@@ -1012,6 +1064,7 @@ public:
         // The hard modes
         uint32 _ultimatum = 0;
         uint32 _grandLie = 0;
+        uint32 _ysidaFate = YSIDA_ALIVE;    // YsidaFate, saved (R-1-B B-2)
     };
 
     InstanceScript* GetInstanceScript(InstanceMap* map) const override

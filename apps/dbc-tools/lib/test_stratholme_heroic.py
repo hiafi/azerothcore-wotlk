@@ -94,7 +94,8 @@ def _bound_waves() -> set[str]:
 
 
 def _own_heroic_loot() -> bool:
-    """stratholme.py's `_HEROIC_BOSS_OWN_LOOT` (off until L-1 declares the heroic loot, Scholomance R-A S-2)."""
+    """stratholme.py's `_HEROIC_BOSS_OWN_LOOT` (on since L-1 declared the heroic loot; it was off until then, the
+    Scholomance R-A S-2 rule: a lootid with no loot_template rows behind it drops nothing)."""
     m = re.search(r"^_HEROIC_BOSS_OWN_LOOT\s*=\s*(True|False)\s*$", ST_FILE.read_text(encoding="utf-8"), re.M)
     return bool(m) and m.group(1) == "True"
 
