@@ -252,6 +252,8 @@ struct boss_darkmaster_gandling_rework : public BossAI, public GandlingFightApi
 
     bool DetentionRunning() const override { return _det.phase != DetentionPhase::Idle; }
 
+    void SetEngageMode(std::optional<GandlingMode> mode) override { _engageMode = mode; }
+
     void RaiseExpelled(ObjectGuid studentGuid) override
     {
         Player* student = ObjectAccessor::GetPlayer(*me, studentGuid);
@@ -269,6 +271,7 @@ struct boss_darkmaster_gandling_rework : public BossAI, public GandlingFightApi
         _lastBack.Clear();
         _region = StudyRegion();
         _mode = FightMode(DungeonKit::IsHeroicMap(me));
+        _engageMode.reset();
         _clockMs = 0;
         // Hidden until the six instructors are DONE (stock: Reset read the raw counter).
         ApplyGandlingReveal(me, instance && instance->GetData(DATA_GANDLING_REVEALED));
@@ -296,7 +299,8 @@ struct boss_darkmaster_gandling_rework : public BossAI, public GandlingFightApi
         _arena.Engage(me);
         bool const heroic = DungeonKit::IsHeroicMap(me);
         _region = StudyRegion();
-        SetMode(FightMode(heroic));
+        // S13's final phase hands its own mode (FinalExamMode) before the pull.
+        SetMode(_engageMode ? *_engageMode : FightMode(heroic));
         DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "engage",
             Acore::StringFormat("heroic={} hardmode={} at=({:.1f}, {:.1f}, {:.1f})", heroic ? 1 : 0,
                 instance ? instance->GetData(DATA_GANDLING_HARD_MODE) : 0, me->GetPositionX(), me->GetPositionY(),
@@ -1030,6 +1034,7 @@ private:
     DungeonKit::ArenaGuard _arena;
     GandlingRegion _region;
     GandlingMode _mode;
+    std::optional<GandlingMode> _engageMode;
     std::function<ObjectGuid()> _tankProvider;
     uint32 _clockMs = 0;
 

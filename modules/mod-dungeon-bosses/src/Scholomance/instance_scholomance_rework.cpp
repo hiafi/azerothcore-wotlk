@@ -35,17 +35,20 @@
 // gates (each closes while its instructor fights, user ruling 2026-11-08, and all six plus the entrance while Gandling
 // fights, handoff section 3.8); Gandling's reveal by the six instructor states (section 7 #11; the stock raw counter
 // DATA_MINI_BOSSES is read-only now); the detention rooms (who is detained where, S11's gate control); the Passing
-// Grades (ruling 22); Ras's keepsake pages, the bound book and both hard mode flags and kill flags with their loot bit;
+// Grades (ruling 22) and the Graduate Exam's driver that shows them and runs Gandling's hard mode (S13,
+// GraduateExam.h); Ras's keepsake pages, the bound book and both hard mode flags and kill flags with their loot bit;
 // and the "S C" save string, which still reads the stock "<kirtonos> <miniBosses>".
 
 #include "Creature.h"
 #include "CreatureAI.h"
 #include "DungeonKit.h"
 #include "GameObject.h"
+#include "GraduateExam.h"
 #include "InstanceMapScript.h"
 #include "InstanceScript.h"
 #include "Log.h"
 #include "Map.h"
+#include "ObjectAccessor.h"
 #include "Player.h"
 #include "ScholomanceKit.h"
 #include "ScholomanceRework.h"
@@ -151,6 +154,16 @@ public:
             SetBossNumber(kBossCount);
             LoadDoorData(kWaveCBound ? doorData : doorDataStockGandling);
             LoadObjectData(creatureData, gameObjectData);
+            _exam = ScholoGraduateExam::CreateGraduateExam(this);
+        }
+
+        // The Graduate Exam (S13, graduate_exam.cpp): the Passing Grade displays and the gauntlet tick here, so they
+        // run whichever creature or grid is loaded.
+        void Update(uint32 diff) override
+        {
+            InstanceScript::Update(diff);
+            if (_exam)
+                _exam->Update(diff);
         }
 
         // ------------------------------------------------------------------------------------------------------------
@@ -162,6 +175,11 @@ public:
         {
             _grades.Clear();
             SaveToDB();
+        }
+
+        ScholoGraduateExam::GraduateExam* Exam() override
+        {
+            return _exam.get();
         }
 
         // ------------------------------------------------------------------------------------------------------------
@@ -566,6 +584,10 @@ public:
                 kInstructorNames[std::size_t(who)], player.ToString(), _grades.Holders(who),
                 _grades.HonorsOpen() ? 1 : 0);
             SaveToDB();
+            // The display (S13): the grade's aura now, not at the next sweep.
+            if (_exam)
+                if (Player* holder = ObjectAccessor::GetPlayer(instance, player))
+                    _exam->SyncGrades(holder);
         }
 
         // Item variants IV7 (the Deadmines pattern): the heroic lootid holds the hard mode list in group 2 at LootMode
@@ -592,6 +614,7 @@ public:
         uint32 _gandlingHardModeKilled = 0;
         PassingGrades _grades;
         std::array<ObjectGuid, kClassroomCount> _detained{};
+        std::unique_ptr<ScholoGraduateExam::GraduateExam> _exam;
     };
 
     InstanceScript* GetInstanceScript(InstanceMap* map) const override

@@ -12,7 +12,8 @@
  *                      player during the heroic fight costs that player the grade (less a hit the boss exempted with
  *                      Exempt); at the death, every other player in the instance earns it
  *                      (SetGuidData(DataPassingGrade(i), player))
- *   InstanceApi        what the instance exposes beyond Get/SetData (the grades table), via GetInstanceApi
+ *   InstanceApi        what the instance exposes beyond Get/SetData (the grades table, the Graduate Exam's driver),
+ *                      via GetInstanceApi
  *
  * A Scholomance boss, in short (the KS stubs already do this):
  *
@@ -40,6 +41,11 @@
 
 class Creature;
 class InstanceScript;
+
+namespace ScholoGraduateExam
+{
+    class GraduateExam;
+}
 
 namespace ScholomanceRework
 {
@@ -95,6 +101,8 @@ namespace ScholomanceRework
         virtual ~InstanceApi() = default;
         virtual PassingGrades const& Grades() const = 0;
         virtual void ClearGrades() = 0;
+        // The Graduate Exam's driver (S13, GraduateExam.h): the grade displays and the gauntlet.
+        virtual ScholoGraduateExam::GraduateExam* Exam() = 0;
     };
 
     // nullptr when `instance` is not the Scholomance rework instance.

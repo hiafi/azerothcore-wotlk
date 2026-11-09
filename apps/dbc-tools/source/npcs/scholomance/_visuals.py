@@ -32,7 +32,7 @@ UNFINISHED_CONSTRUCT_SIZE = 0.7
 DISPLAY_UNFINISHED_CONSTRUCT_ALT = 21305  # Bony Construct (1.75), the other skin scale
 
 # Ras (S4, S12)
-DISPLAY_RAS_HUMAN = 3975            # stock Boon of Life human form; HumanMale, NO extended display row: `.morph 3975`
+DISPLAY_RAS_HUMAN = 3975            # stock Boon of Life human form: HumanMale, extra 2226 (shirt, trousers), as 5680
 DISPLAY_RAS_HUMAN_ALT = 11155       # robed human (male), Scholomance Necromancer (creature 10477); unconfirmed look
 DISPLAY_ICE_TOMB = 30890            # tomb unit: Sindragosa's Ice Tomb (creature 36980), 9.6 x 9.5 x 5.8 yd at scale 1
 ICE_TOMB_SIZE = 0.35                # template scale 0.3-0.4 to wrap one player

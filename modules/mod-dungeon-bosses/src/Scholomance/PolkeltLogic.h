@@ -90,6 +90,9 @@ namespace ScholoPolkelt
 
     // PK1 Raise Specimens: first at 10 s, then every 15 s; never within 8 yd of a player
     inline constexpr std::uint32_t kFirstBatchMs = 10000;
+    // The Graduate Examiner's first batch (S13, orchestrator default 2026-11-08, S7 Q2: a 22 s exam would otherwise see
+    // one batch and no Ripe).
+    inline constexpr std::uint32_t kExaminerFirstBatchMs = 4000;
     inline constexpr std::uint32_t kBatchEveryMs = 15000;
     inline constexpr NH<std::uint32_t> kWalkersPerBatch{ 2, 3 };
     inline constexpr NH<std::uint32_t> kRootedPerBatch{ 1, 3 };
@@ -699,6 +702,7 @@ namespace ScholoPolkelt
         std::uint32_t rooted = 1;
         std::uint32_t poolCap = 6;
         std::uint32_t maxHealth = 0;            // 0: the template's
+        std::uint32_t firstBatchMs = kFirstBatchMs;     // PK1's first batch after the pull
     };
 
     // The examiner (SC 2997-3001: 80,000, both mechanics at heroic values; hard mode is heroic only).
@@ -718,6 +722,7 @@ namespace ScholoPolkelt
         p.rooted = kRootedPerBatch(h);
         p.poolCap = kPoolCap(h);
         p.maxHealth = examiner ? kExaminerHealth : 0;
+        p.firstBatchMs = examiner ? kExaminerFirstBatchMs : kFirstBatchMs;
         return p;
     }
 

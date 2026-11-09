@@ -57,6 +57,7 @@ so db-import and the dbc-tools replay see one history.
 | `src/Scholomance/GandlingFight.h` | Gandling's fight engine for the Graduate Exam: modes, region (S11 -> S13) |
 | `src/Scholomance/ras_hard_mode.cpp`, `RasHardModeLogic.h` | Ras's hard mode, the Torn Keepsake (S12) |
 | `src/Scholomance/graduate_exam.cpp`, `GraduateExamLogic.h` | Gandling's hard mode, the Graduate Exam (S13) |
+| `src/Scholomance/GraduateExam.h` | The Graduate Exam's driver as the instance owns it: grade auras, the gauntlet |
 | `src/Scholomance/scholomance_items.cpp` | Scholomance item scripts: Phylactery, Bonechill, Papers, Portal Rod |
 | `src/Scholomance/ScholomanceItemsLogic.h` | Pure: Scholomance item effect ids (205620-205642), tally, swap rules |
 | `src/ShadowfangKeep/sfk_hard_mode_items.cpp` | Arugal hard mode item scripts: the Shadow Tome's Voidwalker |

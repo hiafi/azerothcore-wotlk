@@ -20,8 +20,8 @@ Herald (an instance summon with a DungeonEncounter row, stock per SC ruling 2) i
 tier and INSTANCE_BIND; it keeps its stock loot and its stock stun behavior.
 
 Hard mode (Ras's keepsake, Gandling's honors program) is heroic only and is not a map difficulty: it needs no row
-here. Its units (the Ice Tomb 300535, the Graduate Examiners 300548-300554) exist only on heroic and are declared by
-their own WPs (S12, S13); they join `extra=` and `_KIT_ADD_HEROIC` when those WPs land.
+here. Its units (the Ice Tomb 300535, the Graduate Examiners 300548-300554) exist only on heroic, are declared by
+their own WPs (S12, S13) and get no heroic template: they spawn at their own entry (wave C mint rule).
 
 The boss kit's combat adds (source/npcs/scholomance/, built by the boss WPs; ids 300530-300579) are invisible to the
 extraction, so `extra=` lists them. A heroic override needs a creature_template this run declares, and the adds do not
@@ -101,7 +101,7 @@ _STUN_IMMUNE = {"CreatureImmunitiesId": 1972}
 # file declares. Not listed on purpose (no heroic template; they run on their normal entry): Reflection 300530,
 # Loose part 300531, Unfinished Construct 300532, Blizzard anchor 300534, Loose Soul 300537, Work Bench 300538,
 # Barov fortune 300543, the Ravenian's echo 300545 and the lesson / portal stalkers 300546-300547. Ice Tomb 300535
-# and the Graduate Examiners 300548-300554 exist only on heroic and join in WP-S12 / WP-S13.
+# and the Graduate Examiners 300548-300554 exist only on heroic and spawn at their own entry (no heroic template).
 #
 # Mint order (R-A N-2): a scoped write run mints the adds it finds next-after-highest, in entry order. The predicted
 # ids (lib/test_scholomance_heroic.py KIT_HEROIC_ID, and each add's difficulty_entry_1) hold only if every wave mints

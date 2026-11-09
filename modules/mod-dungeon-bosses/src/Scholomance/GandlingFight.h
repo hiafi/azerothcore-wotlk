@@ -16,7 +16,8 @@
  *     fight->SetTankProvider([] { return examinerVictim; });      // who counts as the tank (never a lane / Detention)
  *     ...
  *     fight->SetRegion(StudyRegion());
- *     fight->SetMode(FinalExamMode());                            // GD6: lanes through everyone, swaps raise GD3
+ *     fight->SetEngageMode(FinalExamMode());                      // GD6 at his pull: lanes through everyone, swaps
+ *                                                                 // raise GD3 (or SetMode once he fights)
  *
  * Gandling's own health (200k in the final phase), visibility, flags, his yells 4 and 5, the examiners, the gauntlet
  * portals and the reset of all of it on a wipe are S13's. Abort() ends every running detention, Volley and Transfer
@@ -29,6 +30,7 @@
 #include "GandlingLogic.h"
 #include "ObjectGuid.h"
 #include <functional>
+#include <optional>
 
 class Creature;
 
@@ -53,6 +55,9 @@ namespace ScholoGandling
         virtual bool DetentionRunning() const = 0;
         // Raises an Expelled Student fixated on `student` beside them (GD3; the final phase's swaps use it too).
         virtual void RaiseExpelled(ObjectGuid student) = 0;
+        // The mode his next pull starts in (S13's final phase: FinalExamMode()); empty: FightMode(heroic), as S11's
+        // fight. His Reset (a wipe, an evade) clears it.
+        virtual void SetEngageMode(std::optional<GandlingMode> mode) = 0;
     };
 
     // Gandling's fight engine, or nullptr when `gandling` does not run boss_darkmaster_gandling_rework.
