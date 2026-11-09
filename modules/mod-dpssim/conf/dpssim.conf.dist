@@ -472,10 +472,11 @@ DpsSim.MechanicsDpsProfiles =
 #        Description: Mechanics mode: the drill programs, ';' separated; iteration i runs entry i mod n. Each entry
 #                      is mod-boss-mechanics' program grammar (Drill::ParseProgram): "all", "none", or
 #                      "<entry>[:<n>],..." with drill names (smite, cookie, fenrus, soaks, ras, alexei, lanes,
-#                      deadmines-followups, sfk-hunt, scholomance-shapes; n = cycles) and barrage, minefield,
-#                      uminefield (n = seconds). A program runs once per iteration (no loop) and is stopped at the
-#                      iteration's end, so a 120 s run of a 30 s drill takes ":4" (the chase sweep: "sfk-hunt:4";
-#                      the Scholomance shapes sweep: "scholomance-shapes:3"). The M5 boss descriptor slice is
+#                      deadmines-followups, sfk-hunt, scholomance-shapes, stratholme-followups; n = cycles) and
+#                      barrage, minefield, uminefield (n = seconds). A program runs once per iteration (no loop) and
+#                      is stopped at the iteration's end, so a 120 s run of a 30 s drill takes ":4" (the chase sweep:
+#                      "sfk-hunt:4"; the Scholomance shapes sweep: "scholomance-shapes:3"; the Stratholme follow-ups
+#                      sweep: "stratholme-followups:3"). The M5 boss descriptor slice is
 #                      "descriptor:2" (descriptor drills: interrupts, dispels, purges, targets, ignore,
 #                      descriptor, descriptor-drills); it is not in the default rotation.
 #        Default:     "" - (The five-slice rotation that covers every kind in 120 s fights: "smite,fenrus,ras;
