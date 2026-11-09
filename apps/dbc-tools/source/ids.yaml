@@ -566,5 +566,11 @@ reservations:
     creature: {start: 300530, end: 300579}
     gameobject: {start: 301150, end: 301199}
     spellvisual: {start: 90450, end: 90499}  # SpellVisual, Kit and EffectName
+  # Stratholme build WP-0 (2026-11-09, stratholme-build.HANDOFF.md s3.3; checked free in the live DB, source/ and
+  # pending SQL). Shared heroic ids after Scholomance: mapdifficulty 1003, dungeon_access 125, dungeonencounter
+  # 1028-1040. Creatures are sliced by wave for the heroic mint order: wave 1 300580-300599, wave 2 300600-300649.
   stratholme:
+    spell: {start: 206400, end: 206799}
+    creature: {start: 300580, end: 300649}
+    gameobject: {start: 301200, end: 301249}
     spellvisual: {start: 90500, end: 90549}  # SpellVisual, Kit and EffectName
