@@ -645,6 +645,7 @@ class StratholmeIdsTest(unittest.TestCase):
             "creature": (300580, 300649),
             "gameobject": (301200, 301249),
             "spellvisual": (90500, 90549),
+            "item": (70600, 70603),
         })
 
     def test_stratholme_overlaps_no_other_reservation(self):
