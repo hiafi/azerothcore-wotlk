@@ -111,7 +111,7 @@ namespace StratholmeRework
     // stub C++ stays registered but bound to nothing, and the instance treats them as stock: a stock boss's death sets
     // its boss state DONE (OnUnitDeath), and the wave 2 instance code (DATA_GRAND_LIE, the relic spawns) stays off.
     // ----------------------------------------------------------------------------------------------------------------
-    inline constexpr bool kWave2Bound = false;
+    inline constexpr bool kWave2Bound = true;
 
     constexpr bool IsWave2Boss(std::uint32_t bossId)
     {

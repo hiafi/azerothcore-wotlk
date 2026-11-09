@@ -79,7 +79,7 @@ KIT_HELPER = kit_helper(KIT_CREATURE)
 # their heroic overrides back too (it reads this line). The C++ twin is kWave2Bound in modules/mod-dungeon-bosses
 # src/Stratholme/StratholmeRework.h; both sides must agree (lib/test_stratholme_kit.py). The orchestrator flips both
 # in one commit at wave 2's setup (WP 0-2).
-BIND_WAVE_2 = False
+BIND_WAVE_2 = True
 
 # creature_template.flags_extra bits (CreatureData.h): no stock Stratholme boss has INSTANCE_BIND (handoff s2.3);
 # Maleki keeps his stock CREATURE_FLAG_EXTRA_IGNORE_ALL_ASSISTANCE_CALLS.

@@ -95,7 +95,7 @@ namespace
 
     void TestWaveSwitch()
     {
-        CHECK(!kWave2Bound);       // wave 1
+        CHECK(kWave2Bound);        // wave 2 bound
         std::set<std::uint32_t> const wave2{ BOSS_UNFORGIVEN, BOSS_FORRESTEN, BOSS_TIMMY, BOSS_WILLEY, BOSS_MALOR,
             BOSS_GALFORD, BOSS_BALNAZZAR, BOSS_GRAND_LIE };
         for (std::uint32_t id = 0; id < kBossCount; ++id)
