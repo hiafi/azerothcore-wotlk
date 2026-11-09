@@ -360,7 +360,7 @@ struct boss_baron_rivendare_rework : public BossAI, public BaronFight
             linger.slow = false;
             linger.tag = spec.tag;
             MechanicRef ref = DungeonKit::Linger(me, BossMechanics::Shapes::Circle(at, spec.radius), linger);
-            ref.WeakenedOncePerPlayer();
+            ref.WeakenedOncePerPlayer().Within(RoomBounds());
             Track(ref.Handle());
         }
 
@@ -391,10 +391,24 @@ struct boss_baron_rivendare_rework : public BossAI, public BaronFight
         return false;
     }
 
+    BossMechanics::SpotBounds RoomBounds() const override
+    {
+        std::vector<Position> points;
+        for (Vec2 const& p : BoundsPolygon())
+            points.emplace_back(p.x, p.y, kFloorZ, 0.f);
+        BossMechanics::SpotBounds bounds;
+        bounds.Polygon(std::move(points), kBoundsZMin, kBoundsZMax)
+            .KeepOut(Position(kBaronDoor.x, kBaronDoor.y, kBaronDoor.z, 0.f), kOwnDoorKeepOutYd)
+            .KeepOut(Position(kRamsteinDoor.x, kRamsteinDoor.y, kRamsteinDoor.z, 0.f), kRamsteinDoorKeepOutYd)
+            .PathInside();
+        return bounds;
+    }
+
     BossMechanics::DropSpotRule RoomDropRule(bool avoidPiles) const override
     {
+        // No Room: the bounds' single polygon is the drop's room (its edge candidates follow the real walls).
         BossMechanics::DropSpotRule rule;
-        rule.Room(Position(kDropRoomCenter.x, kDropRoomCenter.y, kFloorZ, 0.f), kDropRoomRadius).Edge().Away();
+        rule.Edge().Away().Within(RoomBounds());
         if (avoidPiles)
             for (Pile const& pile : _piles)
                 rule.Avoid(Position(pile.at.x, pile.at.y, pile.at.z, 0.f), kPileAvoidRadius);
@@ -404,7 +418,7 @@ struct boss_baron_rivendare_rework : public BossAI, public BaronFight
     bool CanStandAt(Position const& p) const override
     {
         Vec2 const at{ p.GetPositionX(), p.GetPositionY() };
-        return _arena.GetArena().Contains(at, p.GetPositionZ()) && !StockLeashBreached(at);
+        return p.GetPositionZ() >= kBoundsZMin && p.GetPositionZ() <= kBoundsZMax && InBounds(at);
     }
 
     void ScheduleCast(uint32 id, uint32 inMs, uint8 priority) override
@@ -519,7 +533,7 @@ struct boss_baron_rivendare_rework : public BossAI, public BaronFight
                     ai->LandDeathAndDecay(spot, heroicForm);
             });
         // X2's drop spot: the carrier takes it to the room's edge, away from the group; on heroic off the piles too.
-        ref.DropSpot(RoomDropRule(heroicForm));
+        ref.DropSpot(RoomDropRule(heroicForm)).Within(RoomBounds());
         Track(ref.Handle());
         Log("death-and-decay", Acore::StringFormat("target={} heroic={} piles={}", target->GetName(),
             heroicForm ? 1 : 0, _piles.size()));
@@ -714,29 +728,27 @@ private:
         if (!force && !ShouldPark(DungeonKit::PlaneOf(me), spots))
             return false;
 
-        DungeonKit::FloorSpotRules rules;
-        rules.near = DungeonKit::PlaneOf(me);
-        rules.minRange = kParkMinYd;
-        rules.maxRange = kParkMaxYd;
-        for (Point3 const& p : spots)
-            rules.avoid.push_back({ p.XY(), kParkClearYd });
+        // R-1-B B-1: on the room's floor inside the bounds (ParkArena, not the r 25 leash circle that reaches through
+        // the east wall), reachable on the navmesh, off both doors; a best-effort pick outside the bounds is refused.
+        std::vector<DungeonKit::AvoidCircle> rots;
         for (Rot const& rot : _rots)
-            rules.avoid.push_back({ Vec2{ rot.info.center.GetPositionX(), rot.info.center.GetPositionY() },
-                rot.info.radius + 1.f });
-        rules.bestEffort = true;
+            rots.push_back({ Vec2{ rot.info.center.GetPositionX(), rot.info.center.GetPositionY() }, rot.info.radius });
+        DungeonKit::FloorSpotRules const rules = ParkRules(DungeonKit::PlaneOf(me), spots, rots);
         DungeonKit::FloorProbe probe;
         probe.z = me->GetPositionZ();
-        std::optional<Position> const spot = DungeonKit::PickFloorSpot(me, &_arena.GetArena(), rules, probe);
+        probe.reachable = true;
+        DungeonKit::Arena const room = ParkArena();
+        std::optional<Position> const spot = DungeonKit::PickFloorSpot(me, &room, rules, probe);
         _parkUntil = _timeline.now + kParkHoldMs + kParkCooldownMs;
-        if (!spot)
+        if (!spot || !InBounds(Vec2{ spot->GetPositionX(), spot->GetPositionY() }))
         {
-            Log("park", "no floor spot");
+            Log("park", spot ? "spot out of bounds" : "no floor spot");
             return false;
         }
         BossMechanics::Eligibility tankOnly;
         tankOnly.roles = BossMechanics::Role::Tank;
         MechanicRef ref = Mechanic::Circle(me, *spot, kParkRadius, Milliseconds(kParkHoldMs));
-        ref.Park(me).NoTelegraph().Eligible(tankOnly).Tag(TAG_PARK);
+        ref.Park(me).NoTelegraph().Eligible(tankOnly).Within(RoomBounds()).Tag(TAG_PARK);
         Track(ref.Handle());
         Log("park", Acore::StringFormat("to=({:.1f},{:.1f}) piles={}", spot->GetPositionX(), spot->GetPositionY(),
             _piles.size()));

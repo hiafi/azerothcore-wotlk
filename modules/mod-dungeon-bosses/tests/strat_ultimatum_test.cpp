@@ -232,6 +232,22 @@ namespace
         CHECK(TAG_LANE_WARN != TAG_TRAIL && TAG_LANE_WARN != TAG_TRAIL_ROT && TAG_LANE_WARN != TAG_EXECUTION);
     }
 
+    // R-1-B B-1: the charge's stop (CanStandAt = StratBaron::InBounds on the engine side) never leaves the room's
+    // bounds, aimed through his door, past the east wall or out of either end.
+    void ChargeKeepsTheRoom()
+    {
+        auto canStand = [](Vec2 p) { return StratBaron::InBounds(p); };
+        Vec2 const gift = kMenethilsGift.XY();
+        for (Vec2 const target : { kBaronDoor.XY(), Vec2{ 4032.f, -3380.f }, Vec2{ 4070.f, -3348.f },
+            Vec2{ 4000.f, -3370.f }, Vec2{ 4032.f, -3320.f } })
+        {
+            Vec2 const stop = ClampCharge(gift, ChargeEnd(gift, target, kLaneMaxYd), canStand);
+            CHECK(StratBaron::InBounds(stop));
+            CHECK(!(stop.x >= 4023.f && stop.x <= 4042.f && stop.y < -3361.5f));
+            CHECK(!StratBaron::StockLeashBreached(stop));
+        }
+    }
+
     void HealBook()
     {
         RotHealBook book;
@@ -253,6 +269,7 @@ int main()
     Execution();
     Lane();
     Cadence();
+    ChargeKeepsTheRoom();
     LaneHit();
     HealBook();
     return Report("strat_ultimatum_test");

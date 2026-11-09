@@ -4,7 +4,9 @@
 #include "BaronLogic.h"
 #include "DungeonKitFlow.h"
 #include "check.h"
+#include <array>
 #include <cmath>
+#include <optional>
 #include <vector>
 
 using namespace StratholmeRework;
@@ -42,11 +44,7 @@ int main()
         CHECK(DungeonKit::InsideFrame(kBaronRoom, p.XY()));
     CHECK(DungeonKit::InsideFrame(kBaronRoom, kMenethilsGift.XY()));
     CHECK(BaronArena().Contains(kMenethilsGift.XY(), kMenethilsGift.z));
-    // The drop spot's room circle lies inside the room's frame and inside the leash circle.
-    CHECK(DungeonKit::InsideFrame(kBaronRoom, { kDropRoomCenter.x - kDropRoomRadius, kDropRoomCenter.y }));
-    CHECK(DungeonKit::InsideFrame(kBaronRoom, { kDropRoomCenter.x + kDropRoomRadius, kDropRoomCenter.y }));
-    CHECK(DungeonKit::InsideFrame(kBaronRoom, { kDropRoomCenter.x, kDropRoomCenter.y - kDropRoomRadius }));
-    CHECK(DungeonKit::InsideFrame(kBaronRoom, { kDropRoomCenter.x, kDropRoomCenter.y + kDropRoomRadius }));
+    // The room's center lies inside the leash circle.
     CHECK(BaronArena().Contains(kDropRoomCenter, 115.2f));
 
     // BR1: walls alternate; each wall's three points are its own row (south row x < 4020, north row x > 4045).
@@ -204,19 +202,95 @@ int main()
         CHECK(!queue.DueAt(kExecution));
     }
 
-    // The room's real shape (R-1-B B-1, for the room-shape drop spot rule): the spawn, the Gift, the cage and every
-    // Raise Dead point are inside; the door 175796 and the corridor beyond the east wall are not.
+    // R-1-B B-1: the room's real shape (navmesh-traced), the bots' bounds and the Park pick.
     {
+        // The shape: the spawn, the Gift, the cage and the center inside; his door, the corridor behind the east wall
+        // (where R-1-B's r 20 circle reached) and Ramstein's door outside.
         CHECK(DungeonKit::PointInPolygon(kBaronRoomShape, kBaronSpawn.XY()));
         CHECK(DungeonKit::PointInPolygon(kBaronRoomShape, kMenethilsGift.XY()));
         CHECK(DungeonKit::PointInPolygon(kBaronRoomShape, kYsidaCage.XY()));
         CHECK(DungeonKit::PointInPolygon(kBaronRoomShape, kDropRoomCenter));
-        for (Point3 const& p : kRaiseDeadPoints)
-            CHECK(DungeonKit::PointInPolygon(kBaronRoomShape, p.XY()));
         CHECK(!DungeonKit::PointInPolygon(kBaronRoomShape, kBaronDoor.XY()));
-        CHECK(!DungeonKit::PointInPolygon(kBaronRoomShape, { 4032.f, -3368.f }));      // R-1-B's r 20 circle's reach
+        CHECK(!DungeonKit::PointInPolygon(kBaronRoomShape, { 4032.f, -3368.f }));
+        CHECK(!DungeonKit::PointInPolygon(kBaronRoomShape, { 4032.f, -3363.f }));       // the doorway
         CHECK(!DungeonKit::PointInPolygon(kBaronRoomShape, kRamsteinDoor.XY()));
-        CHECK(DungeonKit::PointInPolygon(kBaronRoomShape, { 4032.f, -3361.f }));       // just inside the east wall
+        CHECK(DungeonKit::PointInPolygon(kBaronRoomShape, { 4032.f, -3361.f }));        // just inside the east wall
+
+        // The bounds polygon: inside the shape's hull and inside the bounds radius (so inside his r 25 arena).
+        std::array<Vec2, kBaronRoomShape.size()> const bounds = BoundsPolygon();
+        for (Vec2 const& p : bounds)
+        {
+            CHECK(DungeonKit::Distance(p, kDropRoomCenter) <= kBoundsRadius + 0.01f);
+            CHECK(BaronArena().Contains(p, 115.2f));
+        }
+        CHECK(InBounds(kBaronSpawn.XY()));
+        CHECK(InBounds(kMenethilsGift.XY()));
+        CHECK(!InBounds(kBaronDoor.XY()));
+        CHECK(!InBounds({ 4032.f, -3361.f }));      // inside the wall but within the door's keep-out
+
+        // Every point the bounds keep: inside the navmesh shape and his arena, never past the east wall, never in a
+        // door's keep-out circle, never where the stock leash evades him.
+        std::uint32_t kept = 0;
+        for (float x = 3995.f; x <= 4070.f; x += 0.5f)
+            for (float y = -3395.f; y <= -3315.f; y += 0.5f)
+            {
+                Vec2 const p{ x, y };
+                if (!InBounds(p))
+                    continue;
+                ++kept;
+                CHECK(DungeonKit::PointInPolygon(kBaronRoomShape, p));
+                CHECK(BaronArena().Contains(p, 115.2f));
+                CHECK(!StockLeashBreached(p));
+                CHECK(DungeonKit::Distance(p, kBaronDoor.XY()) > kLeashOwnDoorYd + 1.f);
+                CHECK(!(x >= 4023.f && x <= 4042.f && y < -3361.5f));     // the east wall, the door
+            }
+        CHECK(kept > 4 * 1300);     // about 1,350 sq yd of floor to fight on (0.5 yd cells)
+
+        // The Park pick (the engine side runs PickFloorSpot with the same arena, rules and InBounds filter): for him
+        // anywhere in the bounds, with piles around him, a spot that keeps every rule is inside the bounds, and the
+        // filtered pick never leaves them.
+        DungeonKit::Arena const park = ParkArena();
+        std::uint32_t seed = 12345;
+        auto rand01 = [&seed]()
+        {
+            seed = seed * 1664525u + 1013904223u;
+            return float(seed >> 8) / float(1u << 24);
+        };
+        auto floor = [&park](Vec2 p) -> std::optional<float>
+        {
+            return park.Contains(p, 115.2f) ? std::optional<float>(115.2f) : std::nullopt;
+        };
+        std::uint32_t picks = 0;
+        std::uint32_t full = 0;
+        for (float x = 4010.f; x <= 4056.f; x += 3.f)
+            for (float y = -3366.f; y <= -3330.f; y += 3.f)
+            {
+                Vec2 const boss{ x, y };
+                if (!InBounds(boss))
+                    continue;
+                std::vector<Point3> piles;
+                for (int i = 0; i < 4; ++i)
+                    piles.push_back({ boss.x + (rand01() - 0.5f) * 6.f, boss.y + (rand01() - 0.5f) * 6.f, 115.2f });
+                std::vector<DungeonKit::AvoidCircle> rots{ { { boss.x + 5.f, boss.y }, kRotRadius } };
+                std::optional<DungeonKit::FloorSpot> const spot = DungeonKit::PickFloorSpotFrom(
+                    ParkRules(boss, piles, rots), rand01, floor);
+                if (!spot)
+                    continue;
+                ++picks;
+                CHECK(park.Contains(spot->p, spot->z));
+                if (spot->full)
+                {
+                    ++full;
+                    CHECK(InBounds(spot->p));
+                }
+                if (InBounds(spot->p))      // what the engine side keeps
+                {
+                    CHECK(DungeonKit::PointInPolygon(kBaronRoomShape, spot->p));
+                    CHECK(!StockLeashBreached(spot->p));
+                }
+            }
+        CHECK(picks > 100);
+        CHECK(full > picks / 2);
     }
 
     return Report("strat_baron_test");

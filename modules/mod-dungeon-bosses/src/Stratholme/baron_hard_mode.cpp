@@ -453,6 +453,8 @@ private:
         ysida->SetHealth(1);
         ysida->SetVisible(false);
         if (_instance)
+            _instance->SetData(DATA_YSIDA_FATE, YSIDA_FALLEN);     // her saved fate (the exit gate on his death)
+        if (_instance)
             if (GameObject* cage = _instance->GetGameObject(DATA_YSIDA_CAGE_GUID))
                 cage->SetGoState(GO_STATE_ACTIVE);
 
@@ -516,7 +518,8 @@ private:
         BossMechanics::ZoneSpec spec{ BossMechanics::Anchor(baron),
             BossMechanics::Shape::Line(lane.length, kLaneWidth), BossMechanics::Anchor(target) };
         MechanicRef ref = Mechanic::Zone(baron, spec, Milliseconds(kLaneWarnMs));
-        ref.Eligible(Others(fight, target->GetGUID())).DropSpot(fight.RoomDropRule(true)).Tag(TAG_LANE_WARN);
+        ref.Eligible(Others(fight, target->GetGUID())).DropSpot(fight.RoomDropRule(true)).Within(fight.RoomBounds())
+            .Tag(TAG_LANE_WARN);
         fight.Track(ref.Handle());
         _lane = lane;
         fight.Log("hm-deathcharger", Acore::StringFormat("target={} dist={:.1f} lane={:.1f} piles={}",
@@ -581,7 +584,7 @@ private:
         MechanicRef ref = Mechanic::Line(baron, BossMechanics::Anchor(from), facing, length, kLaneWidth,
             Milliseconds(0));
         ref.Projectile(kChargeSpeed).Damage(kLaneHitPct).School(SPELL_SCHOOL_NORMAL).Spell(SPELL_HM_LANE).Weakened()
-            .Eligible(Others(fight, lane.target)).Tag(TAG_LANE);
+            .Eligible(Others(fight, lane.target)).Within(fight.RoomBounds()).Tag(TAG_LANE);
         fight.Track(ref.Handle());
     }
 
@@ -622,7 +625,7 @@ private:
             linger.tag = TAG_TRAIL;
             MechanicRef ref = DungeonKit::Linger(baron, BossMechanics::Shapes::Line(BossMechanics::Anchor(lane.start),
                 BossMechanics::Anchor(lane.end), kLaneWidth), linger);
-            ref.WeakenedOncePerPlayer();
+            ref.WeakenedOncePerPlayer().Within(fight.RoomBounds());
             fight.Track(ref.Handle());
         }
         fight.Log("hm-trail", Acore::StringFormat("spots={} length={:.1f} raised={}", spots.size(),
@@ -661,16 +664,28 @@ private:
         fight.Log("hm-ysida-settled", Acore::StringFormat("found={} fell={}", ysida ? 1 : 0, _ysidaFell ? 1 : 0));
     }
 
-    // A wipe (ruling 60): a fallen Ysida shows again in her closed cage at full health (she was only hidden); Ysida,
-    // Risen is S14's to despawn. A dead Ysida is not this attempt's doing (the hard mode never kills her before his
-    // death): she stays dead.
+    // A wipe (ruling 60): her saved fate decides. EXECUTED (the clock ran out): she is the instance's, never shown
+    // or respawned here. Otherwise a fallen Ysida shows again in her closed cage at full health (she was only
+    // hidden), a dead one respawns (the F-1f ruling: fate ALIVE means she lives), and her fate is ALIVE again. Not on
+    // the map at all: the instance brings her spawn back (RestoreYsidaIfAlive, by entry). Ysida, Risen is S14's to
+    // despawn.
     void RestoreYsida(BaronFight& fight)
     {
+        uint32 const fate = _instance ? _instance->GetData(DATA_YSIDA_FATE) : uint32(YSIDA_ALIVE);
         Creature* ysida = Ysida();
         if (ysida)
-        {
             ysida->SetRegeneratingHealth(ysida->GetCreatureTemplate()->RegenHealth);
-            if (ysida->IsAlive())
+        if (fate == YSIDA_EXECUTED)
+        {
+            fight.Log("hm-ysida-restored", Acore::StringFormat("fate=executed found={} (left to the instance)",
+                ysida ? 1 : 0));
+            return;
+        }
+        if (ysida)
+        {
+            if (!ysida->IsAlive())
+                ysida->Respawn(true);
+            else
             {
                 ysida->SetVisible(true);
                 ysida->SetHealth(ysida->GetMaxHealth());
@@ -679,8 +694,10 @@ private:
         if (_ysidaFell && _instance)
             if (GameObject* cage = _instance->GetGameObject(DATA_YSIDA_CAGE_GUID))
                 cage->SetGoState(GO_STATE_READY);
-        fight.Log("hm-ysida-restored", Acore::StringFormat("found={} alive={} fell={}", ysida ? 1 : 0,
-            ysida && ysida->IsAlive() ? 1 : 0, _ysidaFell ? 1 : 0));
+        if (_instance)
+            _instance->SetData(DATA_YSIDA_FATE, YSIDA_ALIVE);
+        fight.Log("hm-ysida-restored", Acore::StringFormat("fate={} found={} alive={} fell={}", YsidaFateName(fate),
+            ysida ? 1 : 0, ysida && ysida->IsAlive() ? 1 : 0, _ysidaFell ? 1 : 0));
     }
 
     InstanceScript* _instance = nullptr;

@@ -168,7 +168,7 @@ namespace StratholmeRework
                                             // died (the softlock fix, bit 0 = ziggurat 1)
         DATA_YSIDA_FATE             = 25,   // GetData: Ysida's fate (YsidaFate), the instance's own saved state, never
                                             // read off her creature. SetData from the Baron's hard mode: FALLEN when
-                                            // the third miss kills her, ALIVE when a wipe restores her
+                                            // the third miss hides her, ALIVE when a wipe restores her
                                             // (YsidaFateChangeAllowed). EXECUTED is the instance's alone (the clock
                                             // ran out) and final: a living Ysida is killed whenever it holds
     };
@@ -951,12 +951,14 @@ namespace StratholmeRework
     }
 
     // Ysida's fate (DATA_YSIDA_FATE, R-1-B B-2, F-1 ruling): kept in the instance's saved state so the clock's
-    // execution never depends on finding her creature (a hard mode wipe respawns her through the map's respawn queue,
-    // up to 5 s after the instance looked for her).
+    // execution never depends on finding her creature. The hard mode never kills her mid-attempt: her fall hides her,
+    // alive, and a wipe shows her again; she dies only on the Baron's death (fallen) or by the clock (executed). A
+    // fate-ALIVE Ysida found dead or hidden while he is out of combat is brought back (RestoreYsidaIfAlive, F-1f).
     enum YsidaFate : std::uint32_t
     {
         YSIDA_ALIVE     = 0,    // caged and alive (freed by her SmartAI on the Baron's death)
-        YSIDA_FALLEN    = 1,    // the Ultimatum's third miss killed her; a wipe restores her (back to ALIVE)
+        YSIDA_FALLEN    = 1,    // the Ultimatum's third miss hid her (alive); a wipe shows her again (back to ALIVE),
+                                // the Baron's death kills her (the exit gate)
         YSIDA_EXECUTED  = 2,    // the clock ran out: final, she is killed whenever her creature is alive
     };
 
@@ -1000,8 +1002,8 @@ namespace StratholmeRework
     }
 
     // The exit gate 176424 opens through Ysida (her SmartAI) when she lives; when she is dead (executed by the clock,
-    // or the Ultimatum killed her) the Baron's death opens it (ST implementation note 9, ruling 60). Her saved fate
-    // decides first; a creature found dead (or not found) also opens it.
+    // or fallen in the Ultimatum, killed on his death) the Baron's death opens it (ST implementation note 9, ruling
+    // 60). Her saved fate decides first; a creature found dead (or not found) also opens it.
     inline bool ExitGateOpensOnBaronDeath(bool ysidaAlive, std::uint32_t fate = YSIDA_ALIVE)
     {
         return fate != YSIDA_ALIVE || !ysidaAlive;

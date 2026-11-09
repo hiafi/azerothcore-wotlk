@@ -54,6 +54,7 @@
 #include "Log.h"
 #include "Map.h"
 #include "ObjectAccessor.h"
+#include "ObjectMgr.h"
 #include "Player.h"
 #include "ScriptedCreature.h"
 #include "SpellAuras.h"
@@ -123,6 +124,7 @@ namespace
         EVENT_GATE2_TRAP            = 9,
         EVENT_GATE2_DELAY           = 10,
         EVENT_GATE2_CRITTER_DELAY   = 11,
+        EVENT_YSIDA_RESTORE         = 12,   // F-1f: a fate-ALIVE Ysida found dead or hidden is brought back
     };
 
     enum GateTrapIndexes
@@ -375,6 +377,8 @@ public:
                     UpdateBaronDoor();
                     if (state == DONE)
                         OnBaronDone();
+                    else if (state == NOT_STARTED || state == FAIL)
+                        events.ScheduleEvent(EVENT_YSIDA_RESTORE, 2s);     // a wipe or reset: she must stand caged
                     ApplyHardModeLoot(GetCreature(DATA_BARON_GUID), _ultimatum, BOSS_BARON);
                     break;
                 case BOSS_BALNAZZAR:
@@ -459,6 +463,8 @@ public:
                         return;
                     LOG_INFO(kLog, "strat instance ysida fate {} -> {}", _ysidaFate, data);
                     _ysidaFate = data;
+                    if (_ysidaFate == YSIDA_ALIVE)
+                        events.ScheduleEvent(EVENT_YSIDA_RESTORE, 1s);
                     break;
                 case DATA_BARON_RUN_MINUTES:
                     // GM test (`.dbtest strat instance clock <minutes>`): the minutes left, while the clock runs.
@@ -565,6 +571,9 @@ public:
                     case EVENT_EXECUTE_PRISONER:
                         ExecutePrisoner();
                         break;
+                    case EVENT_YSIDA_RESTORE:
+                        RestoreYsidaIfAlive();
+                        break;
                     case EVENT_FORCE_SLAUGHTER_EVENT:
                         if (AnyPlayerNearSlaughter())
                             ProcessSlaughterEvent();
@@ -643,6 +652,8 @@ public:
                 events.ScheduleEvent(EVENT_EXECUTE_PRISONER, 5s);   // the clock ran out and a restart came first
             if (_slaughter > SLAUGHTER_ABOMINATIONS && _slaughter < SLAUGHTER_COMPLETE)
                 events.ScheduleEvent(EVENT_FORCE_SLAUGHTER_EVENT, 5s);
+            // A restart mid-attempt after she fell reloads her fate as ALIVE (SanitizeYsidaFate): make sure she is.
+            events.ScheduleEvent(EVENT_YSIDA_RESTORE, 5s);
             RestoreGateTrapCooldown(GATE_TRAP_SCARLET);
             RestoreGateTrapCooldown(GATE_TRAP_UNDEAD);
         }
@@ -743,6 +754,52 @@ public:
                 LOG_INFO(kLog, "strat instance ultimatum cleared: the clock ran out");
             }
             SaveToDB();
+        }
+
+        // F-1f (orchestrator ruling): while her fate is ALIVE and the Baron is neither dead nor fighting, her creature
+        // must stand alive and visible in her cage. Found by entry on the map (not the ObjectData slot, which a removed
+        // corpse empties): dead, she respawns now; hidden (a hard mode attempt cut short, a restart), she shows again
+        // at full health; not on the map at all, her spawn is forced back on the map's next respawn pass.
+        void RestoreYsidaIfAlive()
+        {
+            if (_ysidaFate != YSIDA_ALIVE || GetBossState(BOSS_BARON) == DONE)
+                return;
+            Creature* baron = GetCreature(DATA_BARON_GUID);
+            if (baron && baron->IsInCombat())
+            {
+                events.ScheduleEvent(EVENT_YSIDA_RESTORE, 5s);     // after the fight (its own wipe path runs first)
+                return;
+            }
+            Creature* ysida = nullptr;
+            for (auto const& [spawnId, creature] : instance->GetCreatureBySpawnIdStore())
+                if (creature && creature->GetEntry() == NPC_YSIDA)
+                {
+                    ysida = creature;
+                    break;
+                }
+            if (!ysida)
+            {
+                for (auto const& [spawnId, data] : sObjectMgr->GetAllCreatureData())
+                    if (data.id == NPC_YSIDA && data.mapid == instance->GetId())
+                    {
+                        instance->ForceCreatureRespawn(spawnId);
+                        LOG_INFO(kLog, "strat instance ysida restored (fate alive): spawn {} forced back", spawnId);
+                        break;
+                    }
+                return;
+            }
+            if (!ysida->IsAlive())
+            {
+                ysida->Respawn(true);
+                LOG_INFO(kLog, "strat instance ysida restored (fate alive): respawned");
+                return;
+            }
+            if (!ysida->IsVisible())
+            {
+                ysida->SetVisible(true);
+                ysida->SetHealth(ysida->GetMaxHealth());
+                LOG_INFO(kLog, "strat instance ysida restored (fate alive): shown");
+            }
         }
 
         // Kills a living Ysida, if her creature is on the map: by the Baron's hand with the stock emote when he stands

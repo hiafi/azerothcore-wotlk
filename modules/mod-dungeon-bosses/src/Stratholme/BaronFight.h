@@ -114,12 +114,16 @@ namespace StratBaron
         virtual std::vector<RotInfo> Rots() const = 0;
         virtual bool InAnyRot(Position const& p) const = 0;
 
-        // The room's drop spot rule (X2): the room (BaronLogic.h kDropRoomCenter / kDropRoomRadius), its edge, away
-        // from the group; with `avoidPiles` every pile is an avoid point (heroic Death and Decay, S15's lane).
+        // The bots' spot bounds in his fight (R-1-B B-1, BM SpotBounds): the room's navmesh shape inside his arena,
+        // minus both doors (BaronLogic.h BoundsPolygon / InBounds), the walked path kept inside. Every mechanic of the
+        // fight carries it (MechanicRef::Within): no bot spot, and no stop the tank drags him to, leaves the room.
+        virtual BossMechanics::SpotBounds RoomBounds() const = 0;
+        // The room's drop spot rule (X2): the bounds as its room (Within), its edge, away from the group; with
+        // `avoidPiles` every pile is an avoid point (heroic Death and Decay, S15's lane).
         virtual BossMechanics::DropSpotRule RoomDropRule(bool avoidPiles) const = 0;
-        // He may stand at `p`: inside his arena (the r 25 leash circle; off it he evades after the 2 s grace) and clear
-        // of the stock leash (BaronLogic.h StockLeashBreached: near his door or Ramstein's he evades at once). S15
-        // clamps a Deathcharger lane's end with it.
+        // He may stand at `p`: inside the bounds (BaronLogic.h InBounds: his room, inside his arena, off both doors, so
+        // neither the arena nor the stock leash evades him) on the room's floor band. S15 clamps a Deathcharger lane's
+        // end with it.
         virtual bool CanStandAt(Position const& p) const = 0;
 
         // The cast queue: ids from kHardModeCastBase. When `id` comes up S14 calls BaronHardMode::OnCast. Higher

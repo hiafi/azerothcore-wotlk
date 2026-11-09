@@ -14,6 +14,8 @@
 #ifndef MOD_DUNGEON_BOSSES_STRATHOLME_BARON_LOGIC_H
 #define MOD_DUNGEON_BOSSES_STRATHOLME_BARON_LOGIC_H
 
+#include "DungeonKitArena.h"
+#include "DungeonKitFloor.h"
 #include "DungeonKitMath.h"
 #include "StratholmeRework.h"
 #include <algorithm>
@@ -88,19 +90,52 @@ namespace StratBaron
     std::uint32_t constexpr kPileLifeSecs = 3600;
     // The drop spot's avoid circle around a pile (a point on the floor; the landing's own radius counts, X2).
     float constexpr kPileAvoidRadius = 1.f;
-    // The drop spot's room (X2 `Room`): a circle inside the oval room (48 x 40 yd, x 4008-4056, y -3327 to -3369;
-    // handoff section 3.8), so the edge candidates stay on the floor; the leash circle (r 25) reaches into the walls.
+    // The room's center (the leash circle's, NAVMESH-REPORT section 13).
     inline constexpr Vec2 kDropRoomCenter{ 4032.0f, -3348.0f };
-    float constexpr kDropRoomRadius = 20.f;
-    // The room's real shape (NAVMESH-REPORT section 13): the oval x 4008-4058, y -3327.5 to -3370, widest at the ends
-    // (y -3328 to -3370 at x 4016 and 4052), its east wall pulled in to y -3363 from x 4024 to 4040 where the door
-    // 175796 (4032.69, -3364.54) is. Map coordinates, in order around the room. For the room-shape drop spot rule and
-    // the Park pick (R-1-B B-1, waiting on mod-boss-mechanics' room-shape API); unused until then.
-    inline constexpr std::array<Vec2, 10> kBaronRoomShape{ {
-        { 4016.0f, -3327.5f }, { 4008.0f, -3335.5f }, { 4008.0f, -3362.0f }, { 4016.0f, -3370.0f },
-        { 4024.0f, -3363.0f }, { 4040.0f, -3363.0f }, { 4052.0f, -3370.0f }, { 4058.0f, -3362.0f },
-        { 4058.0f, -3335.5f }, { 4052.0f, -3327.5f },
+    // The room's real shape (R-1-B B-1), traced off the navmesh (map 329 tiles, the floor polygons at z 113-119, read
+    // on a 0.5 yd grid; F-1f): the oval x 4008-4058, y -3327 to -3368, its east wall pulled in to y -3362 from x 4021
+    // to 4043 where door 175796 (4032.69, -3364.54) opens on the corridor. Each point sits about 0.5 yd inside the
+    // mesh edge (the mesh itself is shrunk by the agent radius): no point of it is off the navmesh. Map coordinates,
+    // in order around the room.
+    inline constexpr std::array<Vec2, 22> kBaronRoomShape{ {
+        { 4057.0f, -3347.0f }, { 4055.0f, -3342.5f }, { 4052.5f, -3338.5f }, { 4049.0f, -3334.5f },
+        { 4045.0f, -3331.5f }, { 4040.0f, -3330.0f }, { 4024.0f, -3330.0f }, { 4019.0f, -3331.5f },
+        { 4015.5f, -3335.0f }, { 4012.5f, -3339.5f }, { 4010.0f, -3344.0f }, { 4009.0f, -3347.5f },
+        { 4009.0f, -3357.5f }, { 4010.5f, -3362.5f }, { 4014.0f, -3366.5f }, { 4019.5f, -3367.0f },
+        { 4022.0f, -3361.5f }, { 4042.5f, -3361.5f }, { 4045.5f, -3367.0f }, { 4050.5f, -3367.0f },
+        { 4054.0f, -3363.0f }, { 4057.0f, -3357.5f },
     } };
+    // The bots' spot bounds in his fight (BaronFight::RoomBounds, F-1b's SpotBounds): the room's shape with every
+    // corner pulled inside kBoundsRadius of the center, so a spot (and the boss's stop when the tank moves him) also
+    // stays inside his arena (the r 25 leash circle: off it he evades after 2 s; the disc is convex, so every edge
+    // between two points inside it is inside it too), minus a keep-out circle at each door: his own (the stock leash
+    // evades him within 4 yd of it) and Ramstein's (the stock leash's 21 yd, plus a yard).
+    float constexpr kBoundsRadius = 24.f;
+    float constexpr kBoundsZMin = 112.f;
+    float constexpr kBoundsZMax = 120.f;
+    float constexpr kOwnDoorKeepOutYd = 6.f;
+    float constexpr kRamsteinDoorKeepOutYd = 22.f;
+
+    inline std::array<Vec2, kBaronRoomShape.size()> BoundsPolygon()
+    {
+        std::array<Vec2, kBaronRoomShape.size()> out{};
+        for (std::size_t i = 0; i < kBaronRoomShape.size(); ++i)
+        {
+            Vec2 const p = kBaronRoomShape[i];
+            float const d = DungeonKit::Distance(p, kDropRoomCenter);
+            out[i] = d <= kBoundsRadius ? p : Vec2{ kDropRoomCenter.x + (p.x - kDropRoomCenter.x) * kBoundsRadius / d,
+                kDropRoomCenter.y + (p.y - kDropRoomCenter.y) * kBoundsRadius / d };
+        }
+        return out;
+    }
+
+    // A bot spot (or the boss's stop) keeps the bounds: inside the bounds polygon and out of both doors' circles.
+    inline bool InBounds(Vec2 p)
+    {
+        return DungeonKit::PointInPolygon(BoundsPolygon(), p)
+            && DungeonKit::Distance(p, StratholmeRework::kBaronDoor.XY()) > kOwnDoorKeepOutYd
+            && DungeonKit::Distance(p, StratholmeRework::kRamsteinDoor.XY()) > kRamsteinDoorKeepOutYd;
+    }
     // A pile and a rot share the floor when their heights differ by at most this.
     float constexpr kPileZBand = 4.f;
 
@@ -263,6 +298,35 @@ namespace StratBaron
     inline bool ShouldPark(Vec2 boss, std::vector<Point3> const& piles)
     {
         return NearestPileYd(boss, piles) <= kParkTriggerYd;
+    }
+
+    // BR2 the Park spot's floor (R-1-B B-1): the bounds polygon as an arena (the kit's PickFloorSpot keeps a candidate
+    // only inside it), on the room's floor band.
+    inline DungeonKit::Arena ParkArena()
+    {
+        std::array<Vec2, kBaronRoomShape.size()> const poly = BoundsPolygon();
+        return DungeonKit::Arena(DungeonKit::ArenaRegion::Polygon(std::vector<Vec2>(poly.begin(), poly.end()),
+            kBoundsZMin, kBoundsZMax));
+    }
+
+    // BR2 the Park pick's rules: kParkMinYd..kParkMaxYd from him, kParkClearYd off every pile, a yard off every rot
+    // (`rots`: center and radius), and both doors' keep-out circles. A pick that is not a full keep (best effort) must
+    // still pass InBounds before it is used (the engine side refuses it otherwise).
+    inline DungeonKit::FloorSpotRules ParkRules(Vec2 boss, std::vector<Point3> const& piles,
+        std::vector<DungeonKit::AvoidCircle> const& rots)
+    {
+        DungeonKit::FloorSpotRules rules;
+        rules.near = boss;
+        rules.minRange = kParkMinYd;
+        rules.maxRange = kParkMaxYd;
+        for (Point3 const& p : piles)
+            rules.avoid.push_back({ p.XY(), kParkClearYd });
+        for (DungeonKit::AvoidCircle const& rot : rots)
+            rules.avoid.push_back({ rot.center, rot.radius + 1.f });
+        rules.avoid.push_back({ StratholmeRework::kBaronDoor.XY(), kOwnDoorKeepOutYd });
+        rules.avoid.push_back({ StratholmeRework::kRamsteinDoor.XY(), kRamsteinDoorKeepOutYd });
+        rules.bestEffort = true;
+        return rules;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
