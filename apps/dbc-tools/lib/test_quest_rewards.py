@@ -21,7 +21,8 @@ seed that keeps hand edits); `tier(label=None)` (no label row) and int shape ids
 MinLevel, Parry/Versatility (Any) kept out of the rules, and the lock edit helpers (`replace_lines`, `lock_comments`,
 `step_down`). Round 7 (QR1d): ruling 32 (Warrior gear: a Strength primary, Agility comes back as Crit and Intellect
 as Proc Chance), ruling 33 (Spell Power (Solo) for caster items, Attack Power (Solo) for Attack Power only items) and
-ruling 35 (`step_down_zero`: share 8000 -> 6000 only, no main stat guard).
+ruling 35 (`step_down_zero`, no main stat guard). Round 8 (QR1e): ruling 37 (step-down to 6000, else 4000, never
+lower; ruling 39 keeps a 1-point Warrior item's Strength) and ruling 38 (Warrior greens: one secondary).
 
 Optional (slow, real data): QUEST_REWARDS_REAL=1 also expands every real quest_rewards.lock line against the replayed
 tables and checks the emitted stats equal `compute_breakdown`.
@@ -589,8 +590,8 @@ class RoundSixTest(unittest.TestCase):
         self.assertEqual((cat.shapes[plain.primary]["name"], cat.stats(plain.secondary)), ("Agility (Solo)", [HASTE]))
         d = decide(dagger, quest_level=10, classes={"Warrior"}, cat=cat)
         self.assertEqual((cat.shapes[d.primary]["name"], d.share, cat.shapes[d.secondary]["name"]),
-                         ("Strength (Solo)", 8000, "Crit/Haste"))
-        self.assertTrue(any("ruling 32" in p for p in d.paths))
+                         ("Strength (Solo)", 8000, "Crit (Solo)"))  # a green: one secondary (ruling 38)
+        self.assertTrue(any("rulings 32, 38" in p for p in d.paths))  # the green drops the pair
         crit = decide(item_row(6000, quality=1, ilvl=10, cls=2, subclass=15, inv=13), classes={"Warrior"}, cat=cat)
         self.assertEqual(cat.shapes[crit.secondary]["name"], "Crit (Solo)")  # already Crit: Crit alone
         # An Agi/AttackPower primary keeps its Attack Power: the nearest Strength shape is Str/AttackPower; a blue
@@ -613,7 +614,12 @@ class RoundSixTest(unittest.TestCase):
                          ("Strength (Solo)", 8000, "Proc (Solo)"))
         mace = item_row(6007, quality=1, ilvl=10, cls=2, subclass=4, inv=13)  # % 6 -> Haste
         d = decide(mace, classes={"Warrior"}, cat=cat)
-        self.assertEqual(cat.shapes[d.secondary]["name"], "Haste/Proc")
+        self.assertEqual(cat.shapes[d.secondary]["name"], "Proc (Solo)")  # a green: Proc alone (ruling 38)
+        blue = with_stats(item_row(6011, quality=3, ilvl=30, cls=2, subclass=4, inv=13), (INT, 10))
+        d = decide(blue, quest_level=25, classes={"Warrior"}, cat=cat)  # a blue keeps the pair
+        self.assertEqual((cat.shapes[d.primary]["name"], d.share), ("Strength (Solo)", 6000))
+        self.assertIn(PROC, cat.stats(d.secondary))
+        self.assertEqual(len(cat.stats(d.secondary)), 2)
         # Strength gear is untouched.
         axe = item_row(6002, quality=1, ilvl=10, cls=2, subclass=0, inv=13)
         warrior, plain = decide(axe, classes={"Warrior"}, cat=cat), decide(axe, cat=cat)
@@ -686,17 +692,19 @@ class RoundSixTest(unittest.TestCase):
             self.assertEqual(cat.stats(d.secondary)[0], PARRY)
             self.assertNotIn(cat.shapes[d.secondary]["name"], qr.HAND_ONLY_SECONDARIES)
 
-    def test_ruling_35_step_down_zero(self):
+    def test_ruling_37_step_down_zero(self):
         """`step_down_zero` with a stand-in materializer: {(entry, share): stats}."""
         cat = catalog(round6=True)
         text = (qr.LOCK_HEADER
-                + "1 10 2 15 22 25 8000 -  # Fixed\n"  # Crit 0 at 8000, 1 at 6000 (Str to 0: no guard any more)
-                + "2 10 2 15 22 29 8000 -  # Partial\n"  # Crit/Haste: Haste comes up at 6000, Crit still 0
-                + "3 10 2 15 22 25 8000 -  # Unchanged\n"  # still 0 at 6000, nothing comes up: 8000 kept
+                + "1 10 2 15 22 25 8000 -  # Sixty\n"  # Crit 0 at 8000, 1 at 6000
+                + "2 10 2 15 22 25 8000 -  # Forty\n"  # 1 Str at 8000 and 6000; 1 Crit, 0 Str at 4000 (no guard)
+                + "3 10 2 15 22 29 8000 -  # Pair\n"  # Crit/Haste: Haste at 4000, Crit still 0: never below 4000
                 + "4 10 3 15 22 25 6000 -  # Blue\n"  # 0 at 6000 (not a share-8000 line): not touched
-                + "5 10 2 15 22 26 8000 -  # Fine\n")
-        stats = {(1, 8000): {STR: 1}, (1, 6000): {CRIT: 1}, (2, 8000): {STR: 2}, (2, 6000): {STR: 1, HASTE: 1},
-                 (3, 8000): {STR: 1}, (3, 6000): {STR: 1}, (4, 6000): {STR: 1}, (5, 8000): {STR: 3, HASTE: 1}}
+                + "5 10 2 15 22 26 8000 -  # Fine\n"
+                + "6 10 2 15 22 25 8000 -  # Warrior\n")  # ruling 39: a 1-point Warrior item keeps its Strength
+        stats = {(1, 8000): {STA: 4, STR: 2}, (1, 6000): {STR: 1, CRIT: 1}, (2, 8000): {STR: 1}, (2, 6000): {STR: 1},
+                 (2, 4000): {CRIT: 1}, (3, 8000): {STR: 2}, (3, 6000): {STR: 2}, (3, 4000): {STR: 1, HASTE: 1},
+                 (4, 6000): {STR: 1}, (5, 8000): {STR: 3, HASTE: 1}, (6, 8000): {STA: 4, STR: 1}}
 
         def fake(lock, rows, tables, shape_catalog):
             out = {}
@@ -709,16 +717,16 @@ class RoundSixTest(unittest.TestCase):
 
         real, qr.materialize = qr.materialize, fake
         try:
-            r = qr.step_down_zero(text, {}, {}, {}, cat)
+            r = qr.step_down_zero(text, {}, {}, {}, cat, warrior={1, 6})
         finally:
             qr.materialize = real
-        self.assertEqual((r.fixed, r.partial, r.unchanged, r.other_share),
-                         ({1: [CRIT]}, {2: [CRIT]}, {3: [CRIT]}, {4: [CRIT]}))
+        self.assertEqual(r.stepped, {1: (6000, [CRIT]), 2: (4000, [CRIT])})  # 1 is Warrior gear with 2 points: stepped
+        self.assertEqual((r.unchanged, r.one_point_warrior, r.other_share),
+                         ({3: [CRIT, HASTE]}, {6: [CRIT]}, {4: [CRIT]}))
         lines = qr.parse_lock(r.text)
-        self.assertEqual([lines[e].share for e in range(1, 6)], [6000, 6000, 8000, 6000, 8000])
-        self.assertIn("round 7 step-down (ruling 35): share 8000->6000 so Crit is at least 1", lines[1].comment)
-        self.assertIn("so Haste is at least 1 (Crit still 0)", lines[2].comment)
-        self.assertEqual(lines[3].comment, "Unchanged")
+        self.assertEqual([lines[e].share for e in range(1, 7)], [6000, 4000, 8000, 6000, 8000, 8000])
+        self.assertIn("round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1", lines[2].comment)
+        self.assertEqual((lines[3].comment, lines[6].comment), ("Pair", "Warrior"))
 
     def test_lock_edit_helpers(self):
         text = (qr.LOCK_HEADER + "10 5 2 7 23 25 8000 -  # Short\n"

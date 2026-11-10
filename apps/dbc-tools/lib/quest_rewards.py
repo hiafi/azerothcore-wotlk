@@ -58,8 +58,8 @@ edits of the lock, not rules):
 10. **Warrior class quest gear** (ruling 32, replacing ruling 30's literal reading; `warrior_strength()`): when
     every class the item's quests are for is Warrior, a primary with Agility (Intellect) becomes the Strength primary
     the nearest-primary rule picks for it (Agility, Intellect folded into Strength; Attack Power kept; Spirit and
-    Spell Power dropped), with the quality's normal share, and the secondary becomes Crit (Proc Chance) paired with
-    the current secondary stat when a shape has both, else Crit (Proc Chance) alone.
+    Spell Power dropped), with the quality's normal share, and the secondary becomes Crit (Proc Chance): alone on a
+    green (ruling 38), on a blue or epic paired with the current secondary stat when a shape has both.
 11. **Same name, same quest** (ruling 28, `apply_same_name()`): items sharing a name and their rewarding quest titles
     take the lowest entry's primary, secondary and share; a role variant (other main stats) keeps its primary.
 12. **Spell Power (Solo), Attack Power (Solo)** (ruling 33, `solo_power_ok()`): the nearest-primary rule may pick
@@ -67,8 +67,8 @@ edits of the lock, not rules):
     Attack Power (Solo) only for items whose only stock primary stat is Attack Power.
 
 Parry/Versatility (Any) (`HAND_ONLY_SECONDARIES`) is for hand edits only; the rules never pick it.
-`step_down_zero()` (`quest_rewards_lock.py --step-down-zero`, ruling 35) lowers the primary share of a share-8000
-lock line whose secondary stat materializes to 0 to 6000.
+`step_down_zero()` (`quest_rewards_lock.py --step-down-zero`, ruling 37) lowers the primary share of a share-8000
+lock line whose secondary stat materializes to 0 to the first of 6000 / 4000 that shows it (never below 4000).
 
 **The lock.** `source/items/quest_rewards.lock`, one line per item:
 
@@ -771,9 +771,10 @@ def warrior_strength(d: Decision, catalog: Catalog) -> None:
     - Primary: the current primary shape's allocation with Agility and Intellect folded into Strength, Attack Power
       kept, Spirit and Spell Power dropped, run through the nearest-primary rule (`nearest_primary()`): Agility (Solo)
       or Intellect (Solo) -> Strength (Solo), an Agi/AttackPower shape -> the same Str/AttackPower shape.
-    - Secondary: Crit (Proc Chance) paired with the current secondary's other stat when a shape has them both (a pair
-      from a Solo, Crit Solo when the current one is Crit already), else the new stat alone.
-    - Share: the quality's normal share (rule 7); ruling 35's step-down follows in the lock (`step_down_zero()`)."""
+    - Secondary: on a green (ruling 38: one secondary, ruling 11) Crit (Proc Chance) alone; on a blue or epic Crit
+      (Proc Chance) paired with the current secondary's other stat when a shape has them both (Crit Solo when the
+      current one is Crit already), else the new stat alone.
+    - Share: the quality's normal share (rule 7); ruling 37's step-down follows in the lock (`step_down_zero()`)."""
     primary_stats = catalog.stats(d.primary)
     new = [stat for old, stat in WARRIOR_SWAPS if old in primary_stats]
     if not new:
@@ -789,15 +790,20 @@ def warrior_strength(d: Decision, catalog: Catalog) -> None:
         d.fallbacks.append("ruling 32: no Strength primary shape")
         return
     strength = set(catalog.stats(primary))
-    current = [s for s in catalog.stats(d.secondary) if s not in new]
-    secondary = ((current and _secondary_with(catalog, new + current, strength))
-                 or (current and _secondary_with(catalog, new + current[:1], strength))
-                 or _secondary_with(catalog, new, strength))
+    def pick(current: list[int]) -> int | None:
+        return ((current and _secondary_with(catalog, new + current, strength))
+                or (current and _secondary_with(catalog, new + current[:1], strength))
+                or _secondary_with(catalog, new, strength))
+
+    paired = pick([s for s in catalog.stats(d.secondary) if s not in new])
+    secondary = pick([]) if d.quality == UNCOMMON else paired
     if secondary is None:
         d.fallbacks.append("ruling 32: no secondary shape for " + "+".join(STAT_NAMES[s] for s in new))
         return
     swaps = ", ".join(f"{STAT_NAMES[old]}->{STAT_NAMES[stat]}" for old, stat in WARRIOR_SWAPS if stat in new)
-    d.paths.append(f"round 7: Warrior gear {swaps} (ruling 32): {shape_text(catalog, d.primary)} / "
+    when = ("round 8: Warrior gear {} (rulings 32, 38)" if secondary != paired
+            else "round 7: Warrior gear {} (ruling 32)")
+    d.paths.append(f"{when.format(swaps)}: {shape_text(catalog, d.primary)} / "
                    f"{shape_text(catalog, d.secondary)} -> {shape_text(catalog, primary)} / "
                    f"{shape_text(catalog, secondary)}")
     d.primary, d.secondary = primary, secondary
@@ -1048,7 +1054,7 @@ def lock_comments(text: str) -> dict[int, str]:
 
 
 SHARE_STEPS = (8000, 6000, 4000, 0)  # PRIMARY_SHARES below a green's 8000, high to low
-STEP_DOWN_FROM, STEP_DOWN_TO = SHARE_GREEN, SHARE_BLUE  # ruling 35: 80% -> 60%, one step only
+STEP_DOWN_FROM, STEP_DOWN_TO = SHARE_GREEN, (6000, 4000)  # ruling 37: 80% -> 60%, else 40%; never below 40%
 
 
 def zero_secondaries(lock: dict[int, LockLine], mat: Materialized, catalog: Catalog) -> dict[int, list[int]]:
@@ -1070,48 +1076,48 @@ class StepDown:
     """`step_down_zero()`'s result: the new lock text and what happened to each line whose secondary showed a 0."""
 
     text: str
-    fixed: dict[int, list[int]]  # stepped to 6000, every secondary stat now at least 1 (value: the stats that were 0)
-    partial: dict[int, list[int]]  # stepped to 6000, a secondary stat came up but another is still 0 (value: still 0)
-    unchanged: dict[int, list[int]]  # still 0 at 6000 and no secondary stat came up: share 8000 kept
+    stepped: dict[int, tuple[int, list[int]]]  # entry -> (new share, the stats that were 0); every stat now >= 1
+    unchanged: dict[int, list[int]]  # still 0 at 4000: share 8000 kept (value: the stats 0 at 8000)
+    one_point_warrior: dict[int, list[int]]  # ruling 39: Warrior gear with a 1-point budget keeps its Strength
     other_share: dict[int, list[int]]  # a 0 at a share other than 8000 (blues, epics, earlier step-downs): not touched
 
 
-def step_down_zero(text: str, rows: dict[int, dict], tables: dict, shape_catalog: dict,
-                   catalog: Catalog) -> StepDown:
-    """Ruling 35: every lock line at share 8000 whose secondary shape materializes a stat to 0 points steps its primary
-    share to 6000, whether or not the primary keeps a point (a main stat point traded for a secondary point is fine;
-    round 6's guard is gone). One step only: a line still at 0 at 6000 keeps 6000 when the step brought another
-    secondary stat up from 0 (a pair that showed nothing now shows one stat), else it stays at 8000 (nothing a
-    player would see except a lost main stat point). Designer hand-edited lines are stepped like any other (the
-    designer set their shapes, not the share). The changed lines' comments say so."""
+def one_point(row: dict) -> bool:
+    """The materialized row's non-Stamina stats add up to 1 point (the whole budget past Stamina)."""
+    return sum(_int(row.get(f"stat_value{n}")) for n in range(1, 11)
+               if _int(row.get(f"stat_type{n}")) != STA and _int(row.get(f"stat_value{n}")) > 0) == 1
+
+
+def step_down_zero(text: str, rows: dict[int, dict], tables: dict, shape_catalog: dict, catalog: Catalog,
+                   warrior: set[int] = frozenset()) -> StepDown:
+    """Ruling 37 (replaces ruling 35's single 60% step): every lock line at share 8000 whose secondary shape
+    materializes a stat to 0 points takes the first share of `STEP_DOWN_TO` (6000, then 4000) at which every
+    secondary stat is at least 1, whether or not the primary keeps a point (a main stat point traded for a secondary
+    point is fine). A line still at 0 at 4000 keeps 8000 (never below 40%; ruling 31's tiny items). `warrior` are the
+    Warrior class quest gear entries (`warrior_strength()`); one whose stats at 8000 are a single point keeps it as
+    Strength (ruling 39). Designer hand-edited lines are stepped like any other (the designer set their shapes, not
+    the share). The changed lines' comments say so."""
     lock = parse_lock(text)
-    zero = zero_secondaries(lock, materialize(lock, rows, tables, shape_catalog), catalog)
+    mat = materialize(lock, rows, tables, shape_catalog)
+    zero = zero_secondaries(lock, mat, catalog)
     other = {e: s for e, s in zero.items() if lock[e].share != STEP_DOWN_FROM}
-    lowered = {e: _with_share(lock[e], STEP_DOWN_TO) for e in zero if e not in other}
-    fixed: dict[int, list[int]] = {}
-    partial: dict[int, list[int]] = {}
-    unchanged: dict[int, list[int]] = {}
-    if lowered:
+    kept = {e: s for e, s in zero.items() if e not in other and e in warrior and one_point(mat.rows[e])}
+    pending = {e: zero[e] for e in zero if e not in other and e not in kept}
+    stepped: dict[int, tuple[int, list[int]]] = {}
+    for share in STEP_DOWN_TO:
+        if not pending:
+            break
+        lowered = {e: _with_share(lock[e], share) for e in pending}
         still = zero_secondaries(lowered, materialize(lowered, rows, tables, shape_catalog), catalog)
-        for e in lowered:
+        for e in list(pending):
             if e not in still:
-                fixed[e] = zero[e]
-            elif len(still[e]) < len(zero[e]):
-                partial[e] = still[e]
-            else:
-                unchanged[e] = still[e]
+                stepped[e] = (share, pending.pop(e))
     comments = lock_comments(text)
-    lines = {}
-    for e in list(fixed) + list(partial):
-        if e in fixed:
-            why = "/".join(STAT_NAMES[s] for s in fixed[e]) + " is at least 1"
-        else:
-            came = [s for s in zero[e] if s not in partial[e]]
-            why = ("/".join(STAT_NAMES[s] for s in came) + " is at least 1 ("
-                   + "/".join(STAT_NAMES[s] for s in partial[e]) + " still 0)")
-        lines[e] = _with_share(lock[e], STEP_DOWN_TO, f"{comments[e]}; round 7 step-down (ruling 35): share "
-                                                     f"{STEP_DOWN_FROM}->{STEP_DOWN_TO} so {why}")
-    return StepDown(replace_lines(text, lines) if lines else text, fixed, partial, unchanged, other)
+    lines = {e: _with_share(lock[e], share, f"{comments[e]}; round 8 step-down (ruling 37): share "
+                                           f"{STEP_DOWN_FROM}->{share} so " + "/".join(STAT_NAMES[s] for s in stats)
+                            + " is at least 1")
+             for e, (share, stats) in stepped.items()}
+    return StepDown(replace_lines(text, lines) if lines else text, stepped, pending, kept, other)
 
 
 def _with_share(line: LockLine, share: int, comment: str | None = None) -> LockLine:

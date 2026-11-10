@@ -5,8 +5,8 @@ Seeds and checks `source/items/quest_rewards.lock` (quest reward itemization, li
     python3 apps/dbc-tools/quest_rewards_lock.py                        # dry run: counts, what a seed would append
     python3 apps/dbc-tools/quest_rewards_lock.py --seed-quest-rewards   # append the missing lines to the lock
     python3 apps/dbc-tools/quest_rewards_lock.py --json out.json        # every decision and skip, for a report
-    python3 apps/dbc-tools/quest_rewards_lock.py --step-down-zero       # ruling 35: share 8000 -> 6000 on a line
-                                                                        # whose secondary stat materializes to 0
+    python3 apps/dbc-tools/quest_rewards_lock.py --step-down-zero       # ruling 37: share 8000 -> 6000 or 4000 on a
+                                                                        # line whose secondary stat materializes to 0
 
 Read-only on everything but the lock (and the `--json` file). The lock is append-only: a seed run appends a line for
 every in-scope item without one and never rewrites or removes a line, so hand edits stay. A locked entry that has left
@@ -47,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", type=Path, help="write every decision and skip to this JSON file")
     parser.add_argument("--step-down-zero", action="store_true",
                         help="step the primary share of every share-8000 lock line whose secondary stat materializes "
-                             "to 0 down to 6000 (ruling 35) and rewrite those lines; prints the list")
+                             "to 0 down to 6000 or 4000 (ruling 37) and rewrite those lines; prints the list")
     args = parser.parse_args(argv)
     if args.step_down_zero and args.seed_quest_rewards:
         parser.error("--step-down-zero and --seed-quest-rewards are separate runs")
@@ -83,24 +83,27 @@ def main(argv: list[str] | None = None) -> int:
         from lib import item_variants  # noqa: PLC0415
 
         tables, shape_catalog = item_variants.load_itemization_tables()
-        result = qr.step_down_zero(current, inputs.rows, tables, shape_catalog, inputs.catalog)
+        warrior = {d.entry for d in decisions if any("Warrior gear" in path for path in d.paths)}
+        result = qr.step_down_zero(current, inputs.rows, tables, shape_catalog, inputs.catalog, warrior)
 
         def names(stats: list[int]) -> str:
             return "/".join(qr.STAT_NAMES[s] for s in stats)
 
-        for entry, stats in sorted(result.fixed.items()):
-            print(f"step-down {entry} {inputs.rows[entry]['name']}: share 8000->6000 ({names(stats)} was 0)")
-        for entry, stats in sorted(result.partial.items()):
-            print(f"step-down {entry} {inputs.rows[entry]['name']}: share 8000->6000 ({names(stats)} still 0)")
+        for entry, (share, stats) in sorted(result.stepped.items()):
+            print(f"step-down {entry} {inputs.rows[entry]['name']}: share 8000->{share} ({names(stats)} was 0)")
         for entry, stats in sorted(result.unchanged.items()):
-            print(f"still 0 at 6000, nothing comes up (share 8000 kept): {entry} {inputs.rows[entry]['name']}: "
+            print(f"still 0 at 4000 (share 8000 kept): {entry} {inputs.rows[entry]['name']}: {names(stats)}")
+        for entry, stats in sorted(result.one_point_warrior.items()):
+            print(f"Warrior gear, 1-point budget (ruling 39, share 8000 kept): {entry} {inputs.rows[entry]['name']}: "
                   + names(stats))
         for entry, stats in sorted(result.other_share.items()):
             print(f"0 at share {qr.parse_lock(current)[entry].share} (not a share-8000 line, not touched): {entry} "
                   f"{inputs.rows[entry]['name']}: {names(stats)}")
         qr.LOCK_PATH.write_text(result.text, encoding="utf-8")
-        print(f"{qr.LOCK_PATH.name}: {len(result.fixed) + len(result.partial)} line(s) stepped down "
-              f"({len(result.partial)} with a stat still 0), {len(result.unchanged)} kept at 8000, "
+        by_share = collections.Counter(share for share, _ in result.stepped.values())
+        print(f"{qr.LOCK_PATH.name}: {len(result.stepped)} line(s) stepped down ("
+              + ", ".join(f"{n} to {s}" for s, n in sorted(by_share.items(), reverse=True))
+              + f"), {len(result.unchanged)} still 0 at 4000, {len(result.one_point_warrior)} Warrior 1-point lines, "
               f"{len(result.other_share)} at another share")
     if args.seed_quest_rewards:
         if appended:
