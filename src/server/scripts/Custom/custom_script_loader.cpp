@@ -26,6 +26,7 @@ void AddSC_custom_spell_potency();
 void AddSC_custom_weapon_proficiency();
 void AddSC_custom_haste_gcd();
 void AddSC_custom_professions();
+void AddSC_custom_gathering_ranks();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -40,4 +41,5 @@ void AddCustomScripts()
     AddSC_custom_weapon_proficiency();
     AddSC_custom_haste_gcd();
     AddSC_custom_professions();
+    AddSC_custom_gathering_ranks();
 }

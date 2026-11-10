@@ -554,6 +554,12 @@ enum CharacterDatabaseStatements : uint32
     CHAR_DEL_SHAPESHIFT_APPEARANCE,
     CHAR_DEL_SHAPESHIFT_APPEARANCES,
 
+    // Custom: gathering ranks (Scripts/Custom/custom_gathering_ranks.cpp)
+    CHAR_SEL_GATHERING_RANKS,
+    CHAR_REP_GATHERING_RANK,
+    CHAR_DEL_GATHERING_RANK,
+    CHAR_DEL_GATHERING_RANKS,
+
     MAX_CHARACTERDATABASE_STATEMENTS
 };
 
