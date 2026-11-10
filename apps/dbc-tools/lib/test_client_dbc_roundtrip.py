@@ -24,6 +24,7 @@ from lib import dbcfile, dbcfmt, lint, state  # noqa: E402
 
 CLIENT_TABLES = (
     *dbcfmt.ALL_TABLES, dbcfmt.SPELLDESCRIPTIONVARIABLES, dbcfmt.MAPDIFFICULTY, dbcfmt.DUNGEONENCOUNTER,
+    dbcfmt.LFGDUNGEONS, dbcfmt.LFGDUNGEONGROUP,
 )
 
 # Stock SkillLineAbility.dbc isn't ID-sorted and pack_client_dbc sorts it by ID. It has shipped

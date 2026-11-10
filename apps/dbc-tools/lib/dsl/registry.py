@@ -275,6 +275,17 @@ class Registry:
     # creature_template_spell / creature_template_model join creature_template_spells / creature_template_models.
     dungeon_encounters: list[dict] = field(default_factory=list)
     instance_encounters: list[dict] = field(default_factory=list)
+    # Dungeon finder declarations (lib/dsl/lfg.py, source/world/): `lfg_group_declarations` one entry per lfg_group()
+    # (`id` = LFGDungeonGroup id), `lfg_dungeon_declarations` one per lfg_random() / lfg_heroic() (`id` = LFGDungeons
+    # id). Never emitted as is: lib/lfg_dungeons.py builds the full rows from the stock files after loading into
+    # `lfg_dungeons` (lfgdungeons_dbc + client LFGDungeons.dbc), `lfg_dungeon_templates` (lfg_dungeon_template) and
+    # `lfg_groups` (client LFGDungeonGroup.dbc only), and points the heroic final bosses' instance_encounters rows at
+    # their heroic finder entry.
+    lfg_group_declarations: list[dict] = field(default_factory=list)
+    lfg_dungeon_declarations: list[dict] = field(default_factory=list)
+    lfg_dungeons: list[dict] = field(default_factory=list)
+    lfg_dungeon_templates: list[dict] = field(default_factory=list)
+    lfg_groups: list[dict] = field(default_factory=list)
     heroic_template_addons: list[dict] = field(default_factory=list)
     heroic_template_resistances: list[dict] = field(default_factory=list)
     heroic_template_movements: list[dict] = field(default_factory=list)
@@ -332,6 +343,7 @@ MERGE_KEYS = (
     "dungeons", "map_difficulties", "dungeon_access",
     "dungeon_encounters", "instance_encounters", "heroic_template_addons", "heroic_template_resistances",
     "heroic_template_movements", "heroic_onkill_reputations",
+    "lfg_group_declarations", "lfg_dungeon_declarations", "lfg_dungeons", "lfg_dungeon_templates", "lfg_groups",
     "item_declarations", "loot_declarations", "item_limit_categories",
     "item_set_declarations", "item_set_rows", "item_extended_cost_rows", "npc_vendor_rows",
 )

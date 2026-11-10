@@ -194,6 +194,10 @@ TABLE_IDS: dict[str, tuple[str, str]] = {
     "dungeonencounter_dbc": ("ID", "dungeonencounter"),
     "itemlimitcategory_dbc": ("ID", "item_limit_category"),
     "instance_encounters": ("entry", "dungeonencounter"),
+    # Dungeon finder entries (lfg-classic-heroic): declared in a shared world file, so no scope owns them (a full run
+    # writes them); listed so a scope's heroic final boss that names one not yet live stops the run (reference_errors).
+    "lfgdungeons_dbc": ("ID", "lfgdungeons"),
+    "lfg_dungeon_template": ("dungeonId", "lfgdungeons"),
     "creature_template_addon": ("entry", "creature"),
     "creature_template_resistance": ("CreatureID", "creature"),
     "creature_template_movement": ("CreatureId", "creature"),
@@ -1044,6 +1048,7 @@ DBC_SPACES = {
     "Item": "item", "SpellDescriptionVariables": "spelldescriptionvariables", "SpellCategory": "spellcategory",
     "SpellRuneCost": "spellrunecost", "MapDifficulty": "mapdifficulty", "DungeonEncounter": "dungeonencounter",
     "ItemLimitCategory": "item_limit_category", "ItemSet": "item_set", "ItemExtendedCost": "item_extended_cost",
+    "LFGDungeons": "lfgdungeons", "LFGDungeonGroup": "lfgdungeongroup",
 }
 # The shared secondary tables: no owner, added when a scope's spell needs one the base lacks. Spell column(s) -> table.
 SECONDARY_COLUMNS = {
@@ -1168,8 +1173,8 @@ def reference_errors(scope_spell_rows: list[dict], own: Ownership, changed: dict
     """A scope's spell triggers (EffectTriggerSpell_N) or summons (SPELL_EFFECT_SUMMON's MiscValue) an id it does not
     own, whose row this run would write as new or changed (`changed` for the DBC spaces, `full_sql_changed` for the
     keyed tables of the full run): shipping the scope alone would point at a row that is not live. The same check
-    covers the scope's `spell_linked_spell.spell_effect` and `creature_template_spell.Spell` rows (in
-    `scoped_sql`)."""
+    covers the scope's `spell_linked_spell.spell_effect`, `creature_template_spell.Spell` and
+    `instance_encounters.lastEncounterDungeon` rows (in `scoped_sql`)."""
     errors = []
 
     def check(where: str, space: str, entry_id) -> None:
@@ -1201,6 +1206,10 @@ def reference_errors(scope_spell_rows: list[dict], own: Ownership, changed: dict
                       abs(effect) if isinstance(effect, int) else effect)
             elif stmt.table == "creature_template_spell":
                 check(f"creature_template_spell {row.get('CreatureID')}", "spell", row.get("Spell"))
+            elif stmt.table == "instance_encounters":
+                # A heroic final boss names its dungeon finder entry (lib/lfg_dungeons.py); ObjectMgr skips the whole
+                # encounter row when that entry is not loaded, so it must be live first.
+                check(f"instance_encounters {row.get('entry')}", "lfgdungeons", row.get("lastEncounterDungeon"))
     return list(dict.fromkeys(errors))
 
 

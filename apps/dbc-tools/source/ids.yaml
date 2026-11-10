@@ -99,6 +99,9 @@ skilllineability:
 # this one wasn't picked in a vacuum: entry 70001 (Mythic Plus Keystone, removed
 # 2026-11-05 with mod-mythic-plus) already existed at this ID before this pipeline
 # touched Item.dbc, so the range starts there. The bounds stay as they are.
+# Hand-picked items.csv rows in 70000-70999 so far: 70100-70103 (test rings), 70500-70599 (set tokens, below), 70600-70603
+# (Stratholme relics, `reservations: stratholme`), 70700 (Satchel of Heroic Supplies, the Random Classic Heroic reward;
+# item_template and loot in hand-written pending world SQL, lfg-classic-heroic).
 item:
   start: 70000
   end: 79999
@@ -326,6 +329,28 @@ dungeon_access:
 dungeonencounter:
   start: 1000
   end: 1199
+
+# Dungeon finder entries (lfg-classic-heroic, .agents/plans/lfg-classic-heroic/; lib/dsl/lfg.py). Checked free
+# 2026-11-10 (stock files, live DB, base dump, merged and pending SQL):
+#   - lfgdungeons: LFGDungeons.dbc / lfgdungeons_dbc ids (lfg_random(), lfg_heroic()), also lfg_dungeon_template's
+#     dungeonId and instance_encounters.lastEncounterDungeon (a smallint unsigned). The stock file tops out at 294 and
+#     the overlay is empty. Random Classic Heroic 300; its heroic entries from 301 (Deadmines 301, Shadowfang Keep 302,
+#     Scholomance 303, Stratholme Main Gate 304, Service Entrance 305). The client patch carries them.
+#   - lfgdungeongroup: LFGDungeonGroup.dbc ids (lfg_group(), client only). Stock ids are 1-9 and 11; Classic Heroic 12.
+#   - quest: quest_template ids of custom quests. Record only: no dbc-tools reader mints from it; the dungeon finder
+#     reward quests are hand-written pending world SQL. quest_template tops out at 26034. 90000 / 90001: Random Classic
+#     Heroic first-of-the-day / repeat reward.
+lfgdungeons:
+  start: 300
+  end: 399
+
+lfgdungeongroup:
+  start: 12
+  end: 31
+
+quest:
+  start: 90000
+  end: 90099
 
 # Dungeon difficulties E2 (WP-G), read by lib/heroic_templates.py: the heroic creature_template entries of every
 # declared heroic dungeon (one per normal creature, a level 60 copy; the normal row's difficulty_entry_1 points at it).
