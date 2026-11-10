@@ -45,7 +45,8 @@ DEFAULT_SOURCE = REPO_ROOT / "client" / "ui-overrides"
 LOCAL_OUT = Path(__file__).resolve().parent / "var" / "dbc-patch" / "patch-X.mpq"
 TOC = "Interface/FrameXML/FrameXML.toc"
 # Files the toc override must list when they exist: a Lua file the toc forgets never loads, silently.
-TOC_LISTED = ("ItemTierLabels.lua", "ItemTierLabel.lua", "ItemSetMembers.lua", "ItemSetTooltip.lua")
+TOC_LISTED = ("ItemTierLabels.lua", "ItemTierLabel.lua", "ItemSetMembers.lua", "ItemSetTooltip.lua",
+              "ProfessionsFrame.xml")
 # What a UI override can be (R1 N11): anything else under Interface/ (swap files, .orig, notes) is left out.
 PACKED_SUFFIXES = (".lua", ".xml", ".toc", ".blp", ".tga")
 
