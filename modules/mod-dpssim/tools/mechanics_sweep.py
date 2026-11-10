@@ -11,8 +11,20 @@ running), and the two runs of a spec are queued next to each other so they run t
     index  pairs the runs of a manifest and writes <out>/index.json and <out>/index.md: per spec the failures of the
            member under test by type and mechanic, DPS with and without mechanics and the loss, the time it spent
            moving, escaping, holding and frozen, the lock leaks, the module's solve and route maxima, and the same
-           for the reference members. Specs with a failure, a leak, a missing strategy, a program error or a death
-           come first.
+           for the reference members. Specs with a problem (see below), a leak, a missing strategy, a program error
+           or a death come first.
+
+Each build drill has its own pass bar (DRILL_BARS): gated tags with a per-spec-run limit, reported tags that are only
+listed, a cross-spec limit, and for some drills limits on the reference members and on group failures. When every
+drill of --programs has a bar, "Problems" lists only what breaks it; otherwise every failure of the member under test
+is a problem. The index also flags a comma program longer than the fight and a program that started on a stale game
+clock.
+
+--programs: ';' separates programs and ',' chains entries inside one program. "a;b" alternates, iteration i runs
+program i mod n, so a run of 2n iterations runs each program twice. "a,b" runs a and then b (4 s apart) inside every
+iteration, so the second entry starts only after the first one's cycles and never runs if the fight ends first (run
+warns at launch, the index flags it). For several build drills, sweep each one alone (`--programs sfk-hunt:4`), or
+alternate them: `--programs 'deadmines-followups;sfk-hunt:4;scholomance-shapes:3' --iterations 6`.
 
 Every run writes its reports through run-sim.sh with DPSSIM_BATCH_TAG=<sweep>-<spec>-<mech|base> (the report timestamp
 has a 1 s resolution, so parallel runs need their own names) and DPSSIM_NO_HTML=1 (parallel runs would overwrite the
@@ -73,6 +85,186 @@ DESCRIPTOR_COUNTERS = [
     "focusSwitches", "msLowerTarget", "breakOutMsMax", "ignoredHits", "ignoredDamage", "petIgnoredHits",
     "petIgnoredDamage", "ignoreBlocks", "ignoreDrops", "petRecalls",
 ]
+
+
+# ---- drill pass bars -------------------------------------------------------------------------------------------------
+# Each build drill's own pass bar (Stratholme SWEEP-1 D1: the index used to flag every ledger hit, so a by-design
+# "reported" tag read as a failure). Mirrored from mod-boss-mechanics src/MechanicDrill.h (kFollowupTags,
+# kScholoBarTags, kStratBarTags, kDropBarTags and the tag comments) and the build reports that set each bar:
+# deadmines-pilot STAGE-G8, shadowfang-keep-build STAGE-GD (sfk-hunt), scholomance-build STAGE-G, stratholme-build
+# STAGE-G (followups), X2 (drops) and X3 (jump). test_mechanics_sweep.py checks the tags and cycle lengths against
+# MechanicDrill.h when the module source is next to this repo.
+#
+# A bar is per spec run (every iteration of the run summed; the bars were set for 5 x 120 s). Keys are the ledger's
+# "<Kind>/<tag>"; a bar names tags, which are unique within a drill.
+#   gated        tag -> the most hits the member under test may take in a spec run
+#   reported     tags listed for information, never a problem
+#   cross_specs  no gated tag may hit the member under test on more than this many specs of the sweep (None: no rule)
+#   references   tag -> the most hits each reference member may take in a run (they are the same bots in every spec)
+#   group        tag -> the most group failures (MissedSoak) of that tag in a run
+#   cycle_ms, default_cycles: the drill's Def, for the program length (Drill::RunLengthMs)
+DRILL_BARS: dict[str, dict] = {
+    "deadmines-followups": {
+        "gated": {2: 1, 3: 1, 5: 1, 7: 1, 9: 1, 10: 1, 12: 1}, "reported": {1, 4, 6, 8, 11}, "cross_specs": 3,
+        "references": {}, "group": {}, "cycle_ms": 30000, "default_cycles": 2,
+    },
+    "sfk-hunt": {
+        # Zone/1 the 80% catch, Zone/3 the landing on anyone but the ringer; Zone/4 the ringer in the landing and
+        # Zone/5 the 95% catch (a rate out of 20) are reported; the bell rung on at least 90% of hunts (MissedSoak 2)
+        "gated": {1: 1, 3: 0}, "reported": {4, 5}, "cross_specs": None,
+        "references": {1: 1, 3: 0}, "group": {2: 2}, "cycle_ms": 30000, "default_cycles": 2,
+    },
+    "scholomance-shapes": {
+        "gated": {2: 1, 3: 1, 4: 1, 5: 1, 7: 1, 8: 1, 9: 1, 10: 1}, "reported": {1, 6}, "cross_specs": 3,
+        "references": {}, "group": {}, "cycle_ms": 40000, "default_cycles": 3,
+    },
+    "stratholme-followups": {
+        "gated": {2: 1, 4: 1, 6: 1, 8: 1, 9: 1}, "reported": {1, 3, 5, 7}, "cross_specs": 3,
+        "references": {}, "group": {}, "cycle_ms": 40000, "default_cycles": 3,
+    },
+    "stratholme-drops": {
+        # tag 1, the old webs: a carrier that steps in for the drop takes a tick by design
+        "gated": {2: 1, 3: 1, 4: 1, 5: 1}, "reported": {1}, "cross_specs": 3,
+        "references": {}, "group": {}, "cycle_ms": 30000, "default_cycles": 4,
+    },
+    "stratholme-jump": {
+        # the bar is no Jump hit at all (1, 3, 4); Freeze Tag's RunOut (2) is reported
+        "gated": {1: 0, 3: 0, 4: 0}, "reported": {2}, "cross_specs": None,
+        "references": {}, "group": {}, "cycle_ms": 20000, "default_cycles": 6,
+    },
+}
+# Drill::kProgramGapMs: the quiet time after each comma entry of a program
+PROGRAM_GAP_MS = 4000
+
+
+def program_entries(program: str) -> list[tuple[str, int | None]]:
+    """The comma entries of one program text (Drill::ParseProgramText): (name, count or None)."""
+    out = []
+    for item in program.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        name, _, count = item.partition(":")
+        name = name.split(" ")[0]
+        try:
+            n = int(count) if count else None
+        except ValueError:
+            n = None
+        out.append((name, n))
+    return out
+
+
+def split_programs(text: str | None) -> list[str]:
+    """MECHSIM_PROGRAMS / --programs: ';' separates programs (iteration i runs program i mod n), ',' chains entries
+    inside one program (they run one after another in the same iteration)."""
+    return [p.strip() for p in (text or "").split(";") if p.strip()]
+
+
+def program_length_ms(program: str) -> tuple[int, list[tuple[str, int]]] | None:
+    """When the program's last entry ends and each entry's start (ms), for a program of barred drills only; None
+    when an entry is not a drill this table knows (its length lives in mod-boss-mechanics)."""
+    at = 0
+    end = 0
+    starts = []
+    for name, n in program_entries(program):
+        bar = DRILL_BARS.get(name)
+        if bar is None:
+            return None
+        cycles = min(max(n or bar["default_cycles"], 1), 20)
+        starts.append((name, at))
+        end = at + bar["cycle_ms"] * cycles
+        at = end + PROGRAM_GAP_MS
+    return end, starts
+
+
+def late_entries(program: str, duration_ms: int) -> list[str] | None:
+    """The entries of a program that start at or after the fight's end (they never run), or None when unknown."""
+    known = program_length_ms(program)
+    if known is None:
+        return None
+    return [f"{name} at {start / 1000:.0f} s" for name, start in known[1] if start >= duration_ms]
+
+
+def program_warnings(programs_text: str | None, duration_ms: int, iterations: int | None = None) -> list[str]:
+    """Before a launch: each comma program that runs longer than the fight, with the entries that never start, and
+    ';' programs that the iterations do not split evenly."""
+    out = []
+    programs = split_programs(programs_text)
+    if iterations and len(programs) > 1 and iterations % len(programs):
+        out.append(f"{len(programs)} ';' programs over {iterations} iterations: iteration i runs program i mod "
+                   f"{len(programs)}, so they do not run equally often (use a multiple of {len(programs)})")
+    for program in split_programs(programs_text):
+        known = program_length_ms(program)
+        if known is None or known[0] <= duration_ms:
+            continue
+        late = late_entries(program, duration_ms) or []
+        out.append(f"program '{program}' runs {known[0] / 1000:.0f} s, longer than the {duration_ms / 1000:.0f} s "
+                   "fight: its comma entries run one after another in each iteration"
+                   + (f", so {', '.join(late)} never runs" if late else "")
+                   + ". To alternate drills per iteration, separate them with ';' (iteration i runs program i mod n).")
+    return out
+
+
+def program_bar(programs_text: str | None) -> dict | None:
+    """The bar of a sweep's programs: every drill of every program must have one, else None (the legacy rule: every
+    failure of the member under test is a problem). Several drills: their tags share one ledger key space, so a tag is
+    gated if any drill gates it (the strictest limit wins) and reported only if no drill gates it."""
+    names = [name for p in split_programs(programs_text) for name, _ in program_entries(p)]
+    if not names or any(n not in DRILL_BARS for n in names):
+        return None
+    out = {"drills": sorted(set(names)), "gated": {}, "reported": set(), "cross_specs": None, "references": {},
+           "group": {}}
+    for name in names:
+        bar = DRILL_BARS[name]
+        for field in ("gated", "references", "group"):
+            for tag, limit in bar[field].items():
+                out[field][tag] = min(limit, out[field].get(tag, limit))
+        out["reported"] |= bar["reported"]
+        if bar["cross_specs"] is not None:
+            out["cross_specs"] = bar["cross_specs"] if out["cross_specs"] is None else min(out["cross_specs"],
+                                                                                          bar["cross_specs"])
+    out["reported"] -= set(out["gated"])
+    return out
+
+
+def key_tag(key: str) -> int | None:
+    """The tag of a ledger key "<Kind>/<tag>"."""
+    _, _, tag = key.rpartition("/")
+    return int(tag) if tag.isdigit() else None
+
+
+def counts_by_key(by_type: dict) -> dict[str, int]:
+    """A failure map {type: {key: n}} summed per key over the types."""
+    out: dict[str, int] = {}
+    for by_key in (by_type or {}).values():
+        for key, n in by_key.items():
+            out[key] = out.get(key, 0) + int(n)
+    return out
+
+
+def judge_against_bar(bar: dict | None, by_type: dict, limits_field: str = "gated") -> tuple[list[str], dict, dict]:
+    """(bar failures as text, gated hits {key: n}, reported hits {key: n}) of one failure map. A key the bar does not
+    know is gated at 0 (a tag the drill does not use)."""
+    counts = counts_by_key(by_type)
+    if bar is None:
+        return [], counts, {}
+    failures, gated, reported = [], {}, {}
+    limits = bar[limits_field]
+    for key, n in sorted(counts.items()):
+        tag = key_tag(key)
+        if limits_field == "gated" and tag in bar["reported"]:
+            reported[key] = n
+            continue
+        if tag not in limits:
+            if limits_field != "gated":
+                continue    # the reference and group bars only name what they gate
+            failures.append(f"{key} x{n} (not a tag of {', '.join(bar['drills'])})")
+            gated[key] = n
+            continue
+        gated[key] = n
+        if n > limits[tag]:
+            failures.append(f"{key} x{n} (bar {limits[tag]})")
+    return failures, gated, reported
 
 
 def merge_descriptor(lines: list[dict]) -> dict:
@@ -219,6 +411,9 @@ def cmd_run(args) -> int:
             jobs.append({"class": cls, "spec": spec, "profile": profile, "kind": kind, "env": env, "cmd": cmd,
                          "shell": shell_line(env, [str(Path(cmd[0]).relative_to(REPO_ROOT))
                                                    if Path(cmd[0]).is_relative_to(REPO_ROOT) else cmd[0]] + cmd[1:])})
+
+    for warning in program_warnings(args.programs, args.duration * 1000, args.iterations):
+        log(f"warning: {warning}")
 
     if args.dry_run:
         print(f"# sweep {sweep}: {len(jobs)} run(s), at most {args.jobs} at once, from {REPO_ROOT}")
@@ -371,6 +566,9 @@ def member_line(mech: dict, base: dict | None) -> dict:
                      / stats.get("cost", {}).get("mechanicsSeen", 1)) if stats.get("cost", {}).get("mechanicsSeen")
             else 0,
         },
+        # Stratholme SWEEP-2 D6: Moves only the pocket pass found, and its oracle calls (older reports read as 0)
+        "pocketMoves": counters.get("pocketMoves", 0),
+        "pocketPathChecks": counters.get("pocketPathChecks", 0),
         "fallbackClear": counters.get("fallbackClear", 0),
         "fallbackHot": counters.get("fallbackHot", 0),
         "fallbackKept": counters.get("fallbackKept", 0),
@@ -399,7 +597,9 @@ def member_line(mech: dict, base: dict | None) -> dict:
     }
 
 
-def spec_entry(run_mech: dict | None, run_base: dict | None) -> dict:
+def spec_entry(run_mech: dict | None, run_base: dict | None, bar: dict | None = None) -> dict:
+    """One spec's index entry. `bar` is program_bar() of the sweep (None: every failure of the member under test is a
+    problem)."""
     any_run = run_mech or run_base
     entry = {"class": any_run["class"], "spec": any_run["spec"], "profile": any_run["profile"], "problems": []}
     mech = base = None
@@ -444,8 +644,48 @@ def spec_entry(run_mech: dict | None, run_base: dict | None) -> dict:
                         "base": run_base.get("report") if run_base else None}
 
     actor = entry["actor"] or {}
-    if actor.get("failures"):
-        entry["problems"].append(f"{int(actor['failures'])} failure(s) of the member under test")
+    bar_failures, entry["gatedHits"], entry["reportedHits"] = judge_against_bar(bar, actor.get("failuresByType", {}))
+    entry["barFailures"] = bar_failures
+    if bar is None:
+        if actor.get("failures"):
+            entry["problems"].append(f"{int(actor['failures'])} failure(s) of the member under test")
+    else:
+        if bar_failures:
+            entry["problems"].append("bar: " + ", ".join(bar_failures))
+        for ref in entry["references"]:
+            ref_failures, _, _ = judge_against_bar(bar, ref.get("failuresByType", {}), "references")
+            if ref_failures:
+                entry["problems"].append(f"reference {ref['profile']} bar: " + ", ".join(ref_failures))
+        group_failures, _, _ = judge_against_bar(bar, entry["groupFailures"], "group")
+        if group_failures:
+            entry["problems"].append("group bar: " + ", ".join(group_failures))
+    # Stratholme SWEEP-1 D2: a comma program longer than the fight (its later entries never run)
+    config = mech.get("config", {})
+    duration_ms = config.get("durationMs") or 0
+    lengths = config.get("programLengthsMs")
+    late = config.get("programLateEntries")
+    if lengths is None or late is None:     # reports from before the sim wrote them: this table's estimate
+        lengths, late = [], []
+        for program in config.get("programs", []):
+            known = program_length_ms(program)
+            lengths.append(known[0] if known else 0)
+            late.extend(late_entries(program, duration_ms) or [])
+    entry["programLengthsMs"] = lengths
+    # A single entry longer than the fight is a choice (alexei, 156 s); a chain that runs past it cuts its last entry
+    # short or never starts it
+    chained_over = [length for program, length in zip(config.get("programs", []), lengths)
+                    if duration_ms and length > duration_ms and len(program_entries(program)) > 1]
+    if late or chained_over:
+        names = ", ".join(late[:5]) + (f" and {len(late) - 5} more" if len(late) > 5 else "")
+        entry["problems"].append(f"program longer than the fight ({max(lengths) / 1000:.0f} s of "
+                                 f"{duration_ms / 1000:.0f} s)" + (": never runs " + names if late else
+                                                                   ": its last entry is cut short"))
+    # Stratholme SWEEP-1 D3: the program started on a stale game clock (its later entries run early)
+    lag = summary.get("programStartLagMs")
+    lag_values = lag.get("perIteration", []) if isinstance(lag, dict) else ([] if lag is None else [lag])
+    if any(lag_values):
+        entry["problems"].append(f"program start lag up to {max(lag_values, key=abs)} ms (stale game clock: its "
+                                 "later entries run early)")
     if any(actor.get("leaks", {}).get(k) for k in ("moves", "casts", "turns")):
         entry["problems"].append("lock leaks")
     if not all(line["strategyInstalled"] for line in lines):
@@ -517,11 +757,59 @@ def descriptor_table(manifest: dict, entries: list[dict]) -> list[str]:
     return lines
 
 
+def cross_spec_problems(bar: dict | None, entries: list[dict]) -> list[str]:
+    """The bar's sweep-wide rule: no gated tag hits the member under test on more than `cross_specs` specs."""
+    if bar is None or bar["cross_specs"] is None:
+        return []
+    specs_by_key: dict[str, list[str]] = {}
+    for e in entries:
+        for key, n in (e.get("gatedHits") or {}).items():
+            if n:
+                specs_by_key.setdefault(key, []).append(f"{e['class']} {e['spec']}")
+    return [f"{key} hits the member under test on {len(specs)} specs (bar {bar['cross_specs']}): "
+            + ", ".join(specs) for key, specs in sorted(specs_by_key.items()) if len(specs) > bar["cross_specs"]]
+
+
+def bar_json(bar: dict | None) -> dict | None:
+    if bar is None:
+        return None
+    return {"drills": bar["drills"], "gated": {str(t): n for t, n in sorted(bar["gated"].items())},
+            "reported": sorted(bar["reported"]), "crossSpecs": bar["cross_specs"],
+            "references": {str(t): n for t, n in sorted(bar["references"].items())},
+            "group": {str(t): n for t, n in sorted(bar["group"].items())}}
+
+
+def bar_text(bar: dict | None, sweep_problems: list[str]) -> list[str]:
+    """index.md's lines on the pass bar the problems were judged against."""
+    if bar is None:
+        return ["Bar: none known for these programs, so every failure of the member under test is a problem.", ""]
+
+    def limits(d: dict) -> str:
+        return ", ".join(f"{t} at most {n}" for t, n in sorted(d.items())) or "none"
+
+    lines = [
+        f"Bar ({', '.join(bar['drills'])}; per spec run, every iteration summed): gated tags {limits(bar['gated'])}; "
+        f"reported only {', '.join(str(t) for t in sorted(bar['reported'])) or 'none'}"
+        + (f"; no gated tag on more than {bar['cross_specs']} specs" if bar["cross_specs"] is not None else "")
+        + (f"; each reference member: {limits(bar['references'])}" if bar["references"] else "")
+        + (f"; group failures: {limits(bar['group'])}" if bar["group"] else "") + ".",
+        "",
+    ]
+    if len(bar["drills"]) > 1:
+        lines[0:0] = ["Several drills share the ledger's tags here: a tag is gated if any of them gates it.", ""]
+    if sweep_problems:
+        lines.extend(["Sweep problems:", ""] + [f"- {p}" for p in sweep_problems] + [""])
+    return lines
+
+
 def write_index(manifest: dict, out_dir: Path) -> tuple[Path, Path]:
     by_profile: dict[str, dict] = {}
     for run in manifest.get("runs", []):
         by_profile.setdefault(run["profile"], {})[run["kind"]] = run
-    entries = [spec_entry(runs.get("mech"), runs.get("base")) for runs in by_profile.values()]
+    settings = manifest.get("settings") or {}
+    bar = program_bar(settings.get("programs"))
+    entries = [spec_entry(runs.get("mech"), runs.get("base"), bar) for runs in by_profile.values()]
+    sweep_problems = cross_spec_problems(bar, entries)
     order = {s[2]: i for i, s in enumerate(SPECS)}
     entries.sort(key=lambda e: (0 if e["problems"] else 1, -(e.get("actor") or {}).get("failures", 0),
                                 order.get(e["profile"], 999)))
@@ -536,6 +824,8 @@ def write_index(manifest: dict, out_dir: Path) -> tuple[Path, Path]:
         "settings": manifest.get("settings"),
         "specs": len(entries),
         "specsWithProblems": sum(1 for e in entries if e["problems"]),
+        "bar": bar_json(bar),
+        "sweepProblems": sweep_problems,
         "solveUsMax": worst_solve,
         "routeUsMax": worst_route,
         "costTargets": {
@@ -558,11 +848,14 @@ def write_index(manifest: dict, out_dir: Path) -> tuple[Path, Path]:
         f"{SOLVE_US_TARGET}), worst route {worst_route} µs (target {ROUTE_US_TARGET}) over every member; the targets "
         f"hold from 10 bots up, this group has {group}.",
         "",
-        "| Spec | Profile | Problems | Failures (under test) | Output | Mech | Base | Loss % (min-max) | Group HPS "
-        "mech / base | Moving s (base) | Escape / hold / freeze s | Leaks m/c/t | Solve / route max µs | "
-        "Reference failures |",
-        "| --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
     ]
+    lines.extend(bar_text(bar, sweep_problems))
+    lines.extend([
+        "| Spec | Profile | Problems | Failures (under test) | Reported (not gated) | Output | Mech | Base | "
+        "Loss % (min-max) | Group HPS mech / base | Moving s (base) | Escape / hold / freeze s | Leaks m/c/t | "
+        "Solve / route max µs | Reference failures |",
+        "| --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+    ])
     for e in entries:
         a = e.get("actor") or {}
         refs = "; ".join(f"{r['profile']} {int(r['failures'])}" for r in e.get("references", []) if r["failures"])
@@ -574,6 +867,7 @@ def write_index(manifest: dict, out_dir: Path) -> tuple[Path, Path]:
         lines.append(" | ".join([
             f"| {e['class']} {e['spec']}", e["profile"], "; ".join(e["problems"]) or "clean",
             failures_text(a.get("failuresByType", {})) if a else "-",
+            ", ".join(f"{k} x{n}" for k, n in sorted((e.get("reportedHits") or {}).items())) or "-",
             pre.upper() if a else "-", fmt(a.get(pre)), fmt(a.get("baselineHps" if pre == "hps" else "baselineDps")),
             loss, f"{fmt(e.get('groupHps'))} / {fmt(e.get('baselineGroupHps'))}",
             f"{fmt((a.get('movingMs') or 0) / 1000, 1)} ({fmt((a.get('baselineMovingMs') or 0) / 1000, 1)})"
@@ -625,7 +919,10 @@ def main() -> int:
     run.add_argument("--level", type=int, default=60)
     run.add_argument("--group", type=int, default=5)
     run.add_argument("--jobs", type=int, default=MAX_JOBS, help=f"parallel sims, at most {MAX_JOBS}")
-    run.add_argument("--programs", help="MECHSIM_PROGRAMS for the mechanics runs (default: the rotation)")
+    run.add_argument("--programs",
+                     help="MECHSIM_PROGRAMS for the mechanics runs (default: the rotation). ';' alternates programs "
+                          "per iteration; ',' chains entries one after another inside every iteration (a chain "
+                          "longer than --duration never reaches its later entries)")
     run.add_argument("--descriptor", action="store_true",
                      help=f"run the boss descriptor slice ({DESCRIPTOR_PROGRAMS}) instead of the rotation")
     run.add_argument("--fallibility", action="store_true", help="BossMechanics.Bots.Fallibility.Enable = 1")
