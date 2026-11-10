@@ -33,6 +33,8 @@ namespace
         "HolyPaladinHealSim";
     constexpr char const* DEFAULT_DPS_PROFILES = "ArmsWarriorSim, FireMageSim, CombatRogueSim, ShadowPriestSim, "
         "ShamanEleSim, FuryWarriorSim";
+    // The program entries past the fight that the WARN line names (the report keeps them all)
+    constexpr size_t MAX_LATE_NAMES = 5;
 
     std::string ProfileName(std::string const& path)
     {
@@ -272,16 +274,37 @@ bool SimMechanicsConfig::Build(std::string const& profilePath, SimProfile::Profi
         error = "DpsSim.MechanicsPrograms holds no program";
         return false;
     }
+    config.MechProgramLengthsMs.clear();
+    config.MechProgramLateEntries.clear();
     for (std::string const& program : programs)
     {
         uint32 lengthMs = 0;
+        std::vector<std::string> late;
         std::string programError;
-        if (!SimMech::CheckProgram(program, lengthMs, programError))
+        if (!SimMech::CheckProgram(program, config.DurationMs, lengthMs, late, programError))
         {
             error = Acore::StringFormat("program '{}': {}", program, programError);
             return false;
         }
-        if (lengthMs > config.DurationMs)
+        config.MechProgramLengthsMs.push_back(lengthMs);
+        // Stratholme SWEEP-1 D2: ',' chains entries inside one iteration (';' alternates programs), so a chain
+        // longer than the fight never starts its later entries; the report carries both, the sweep index flags them.
+        // One entry longer than the fight (alexei, a descriptor drill) is a choice: an iteration sees its start.
+        if (program.find(',') == std::string::npos)
+            late.clear();
+        if (!late.empty())
+        {
+            std::string names;
+            for (size_t i = 0; i < late.size() && i < MAX_LATE_NAMES; ++i)
+                names += (names.empty() ? "" : ", ") + late[i];
+            if (late.size() > MAX_LATE_NAMES)
+                names += Acore::StringFormat(" and {} more", late.size() - MAX_LATE_NAMES);
+            LOG_WARN("server.dpssim", "mod-dpssim: mechanics program '{}' runs {} ms, longer than the {} ms fight: "
+                "its ',' entries run one after another, so {} never run(s). Separate programs with ';' to alternate "
+                "them per iteration.", program, lengthMs, config.DurationMs, names);
+            config.MechProgramLateEntries.insert(config.MechProgramLateEntries.end(), late.begin(), late.end());
+        }
+        else if (lengthMs > config.DurationMs)
             LOG_INFO("server.dpssim", "mod-dpssim: mechanics program '{}' runs {} ms, longer than the {} ms fight: an "
                 "iteration sees its first {} ms.", program, lengthMs, config.DurationMs, config.DurationMs);
     }

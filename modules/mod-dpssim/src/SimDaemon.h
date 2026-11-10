@@ -232,6 +232,10 @@ namespace SimDaemon
         std::vector<SimMechanics::MemberSpec> MechMembers;
         // Iteration i runs MechPrograms[i % size] (Drill::ParseProgram text); {"none"} is the paired baseline
         std::vector<std::string> MechPrograms;
+        // Per program: when its last entry ends (ms); and every entry of a ',' chain that starts at or after the
+        // fight's end, "<drill> at <s> s" (it never runs; SimMech::CheckProgram)
+        std::vector<uint32> MechProgramLengthsMs;
+        std::vector<std::string> MechProgramLateEntries;
         // Iteration i's drill dice seed is MechSeed + i, the same in the mechanics run and its baseline
         uint32 MechSeed = 1;
         // Flat damage of every damage step (DrillOptions::dmg)
@@ -442,6 +446,9 @@ namespace SimDaemon
         // the slice did not run. The count, and the module's messages (capped). STAGE-M4-R-REPORT M-1.
         uint32 MechProgramEntryErrors = 0;
         std::vector<std::string> MechProgramEntryErrorMessages;
+        // GameTime::GetGameTimeMS() minus the pull's sim time when the program started (the program schedules every
+        // entry from that clock): 0 unless the cached game clock was stale (Stratholme SWEEP-1 D3)
+        int64 MechProgramStartLagMs = 0;
         std::vector<SimMechanics::MemberResult> MechMembers;
         // Failures without a player (MissedSoak), by type and "<Kind>/<tag>"
         std::map<std::string, std::map<std::string, uint32>> MechGroupFailures;
