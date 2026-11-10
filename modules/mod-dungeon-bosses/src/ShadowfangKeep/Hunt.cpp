@@ -48,14 +48,15 @@ namespace SfkHunt
                 reg->Cancel(zone);
         }
 
-        // One resolve pass of the circle (the drill's: a hit is the catch, else re-aim at the player).
+        // One resolve pass of the circle (the drill's: a hit on the hunted player is the catch, else re-aim at the
+        // player).
         void OnPass(std::weak_ptr<Hunt::State> const& weak, BossMechanics::ResolveResult const& r)
         {
             std::shared_ptr<Hunt::State> const s = weak.lock();
             if (!s || !s->live || r.fizzled)
                 return;
             Creature* chaser = s->map->GetCreature(s->chaser);
-            if (!r.hits.empty())
+            if (IsCatch(r.hits, s->target))
             {
                 // The catch: the resolve copy and the Maul rider have landed on the player this pass. No later pass.
                 s->caught = true;
@@ -97,9 +98,11 @@ namespace SfkHunt
         state->chaser = chaser->GetGUID();
         state->target = target->GetGUID();
 
-        // The catch circle (drill: `hunt <radius> <warn> persist=<chase> tick=<tick>`, eligible = the hunted only).
+        // The catch circle (drill: `hunt <radius> <warn> persist=<chase> tick=<tick>`, eligible = the hunted only;
+        // players only, so the hunted player's pet is neither hit nor the catch).
         BossMechanics::Eligibility eligibility;
         eligibility.carriers = { target->GetGUID() };
+        eligibility.playersOnly = true;
         {
             BossMechanics::MechanicRef ref = Mechanic::Circle(owner, chaser, tuning.radius,
                 Milliseconds(tuning.warnMs));

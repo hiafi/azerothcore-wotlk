@@ -16,7 +16,9 @@
 #define MOD_DUNGEON_BOSSES_SFK_HUNT_LOGIC_H
 
 #include "DungeonKitLogic.h"
+#include <algorithm>
 #include <cstdint>
+#include <vector>
 
 namespace SfkHunt
 {
@@ -102,6 +104,15 @@ namespace SfkHunt
     {
         std::uint32_t const ticks = MaulTicks(durationMs, amplitudeMs);
         return ticks ? totalPct / static_cast<float>(ticks) : 0.f;
+    }
+
+    // A pass of the catch circle is the catch only when it hit the hunted player (Stratholme SWEEP-2 D5: the hunted
+    // player's pet, standing on Odo where the hunt starts, ended the hunt and took the Maul). The circle is players
+    // only as well (Eligibility::playersOnly), so the pet is not hit at all.
+    template <class Id>
+    bool IsCatch(std::vector<Id> const& hits, Id const& hunted)
+    {
+        return std::find(hits.begin(), hits.end(), hunted) != hits.end();
     }
 
     // Why a hunt ended (Hunt::Update reports it once).

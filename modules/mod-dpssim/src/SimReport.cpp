@@ -1361,6 +1361,14 @@ bool SimReport::WriteMechanicsJson(std::string const& path, SimDaemon::RunConfig
     for (size_t i = 0; i < config.MechPrograms.size(); ++i)
         file << (i == 0 ? "" : ", ") << JsonString(config.MechPrograms[i]);
     file << "],\n";
+    file << "    \"programLengthsMs\": [";
+    for (size_t i = 0; i < config.MechProgramLengthsMs.size(); ++i)
+        file << (i == 0 ? "" : ", ") << config.MechProgramLengthsMs[i];
+    file << "],\n";
+    file << "    \"programLateEntries\": [";
+    for (size_t i = 0; i < config.MechProgramLateEntries.size(); ++i)
+        file << (i == 0 ? "" : ", ") << JsonString(config.MechProgramLateEntries[i]);
+    file << "],\n";
     file << "    \"seed\": " << result.MechSeed << ",\n";
     file << "    \"damage\": " << config.MechDamage << ",\n";
     file << "    \"anchor\": {\"race\": " << uint32(config.MechAnchorRace) << "},\n";
@@ -1418,6 +1426,7 @@ bool SimReport::WriteMechanicsJson(std::string const& path, SimDaemon::RunConfig
     file << "    \"programError\": "
          << (result.MechProgramStarted ? std::string("null") : JsonString(result.MechProgramError)) << ",\n";
     // Program entries that failed (their slices did not run): the count and the module's messages (capped)
+    file << "    \"programStartLagMs\": " << result.MechProgramStartLagMs << ",\n";
     file << "    \"programEntryErrors\": " << result.MechProgramEntryErrors << ",\n";
     file << "    \"programEntryErrorMessages\": [";
     for (size_t i = 0; i < result.MechProgramEntryErrorMessages.size(); ++i)

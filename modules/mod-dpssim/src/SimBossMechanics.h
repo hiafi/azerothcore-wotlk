@@ -91,8 +91,10 @@ namespace SimMech
     void SetSink(Sink sink);
 
     // Drill::ParseProgram: false with `err` for a program text the module would refuse (always false without the
-    // module). `lengthMs` is when the program's last entry ends (0 for `none`).
-    bool CheckProgram(std::string const& program, uint32& lengthMs, std::string& err);
+    // module). `lengthMs` is when the program's last entry ends (0 for `none`); `lateEntries` names each entry that
+    // starts at or after `fightMs` ("<drill> at <s> s"): a comma chain longer than the fight never runs them.
+    bool CheckProgram(std::string const& program, uint32 fightMs, uint32& lengthMs,
+        std::vector<std::string>& lateEntries, std::string& err);
 
     // Sim::StartProgram with the sim's options: the drill dice `seed`, flat damage `damage`, the scope player as a
     // member like the others (includeScopePlayer), and no loop (an iteration runs its program once)

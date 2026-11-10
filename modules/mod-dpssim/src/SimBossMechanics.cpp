@@ -20,6 +20,7 @@
 #if DPSSIM_WITH_BOSS_MECHANICS
 #include "BossMechanicsSim.h"
 #include "Map.h"
+#include "StringFormat.h"
 #include <algorithm>
 #include <atomic>
 #include <iterator>
@@ -65,6 +66,8 @@ namespace
         for (size_t i = 0; i < c.outcomes.size(); ++i)
             out.emplace_back(OUTCOMES[i], c.outcomes[i]);
         out.emplace_back("tightMoves", c.tightMoves);
+        out.emplace_back("pocketMoves", c.pocketMoves);
+        out.emplace_back("pocketPathChecks", c.pocketPathChecks);
         out.emplace_back("lateArrivals", c.lateArrivals);
         out.emplace_back("lateFallbacks", c.lateFallbacks);
         out.emplace_back("stuckResolves", c.stuckResolves);
@@ -226,7 +229,8 @@ void SimMech::SetSink(Sink sink)
     BossMechanics::Sim::SetFailureSink(sink ? &ForwardFailure : nullptr);
 }
 
-bool SimMech::CheckProgram(std::string const& program, uint32& lengthMs, std::string& err)
+bool SimMech::CheckProgram(std::string const& program, uint32 fightMs, uint32& lengthMs,
+    std::vector<std::string>& lateEntries, std::string& err)
 {
     std::optional<BossMechanics::Drill::Program> const parsed = BossMechanics::Drill::ParseProgram(program, err);
     if (!parsed)
@@ -234,8 +238,15 @@ bool SimMech::CheckProgram(std::string const& program, uint32& lengthMs, std::st
 
     // The end of the last entry (loopMs adds the quiet gap after it)
     lengthMs = 0;
-    for (BossMechanics::Drill::ProgramEntry const& entry : parsed->entries)
+    lateEntries.clear();
+    for (size_t i = 0; i < parsed->entries.size(); ++i)
+    {
+        BossMechanics::Drill::ProgramEntry const& entry = parsed->entries[i];
         lengthMs = std::max(lengthMs, entry.startMs + entry.lengthMs);
+        if (entry.startMs >= fightMs)
+            lateEntries.push_back(Acore::StringFormat("{} at {} s", entry.drill ? std::string(entry.drill->name)
+                : Acore::StringFormat("entry {}", i + 1), entry.startMs / 1000));
+    }
     return true;
 }
 
@@ -311,9 +322,11 @@ void SimMech::SetSink(Sink /*sink*/)
 {
 }
 
-bool SimMech::CheckProgram(std::string const& /*program*/, uint32& lengthMs, std::string& err)
+bool SimMech::CheckProgram(std::string const& /*program*/, uint32 /*fightMs*/, uint32& lengthMs,
+    std::vector<std::string>& lateEntries, std::string& err)
 {
     lengthMs = 0;
+    lateEntries.clear();
     err = "mod-boss-mechanics is not built with this worldserver";
     return false;
 }

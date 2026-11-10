@@ -281,6 +281,19 @@ namespace
     }
 
     // The fight shape on heroic: Hunts at 10, 35, 60, 85 s (about 87 s): 4 Hunts against 3 bells.
+    // Stratholme SWEEP-2 D5: a pass that hit only the hunted player's pet is not the catch; one that hit the player
+    // is.
+    void TestCatchIsTheHuntedPlayer()
+    {
+        using Id = std::uint64_t;
+        Id const hunted = 11;
+        Id const pet = 12;
+        CHECK(!SfkHunt::IsCatch(std::vector<Id>{}, hunted));
+        CHECK(!SfkHunt::IsCatch(std::vector<Id>{ pet }, hunted));
+        CHECK(SfkHunt::IsCatch(std::vector<Id>{ hunted }, hunted));
+        CHECK(SfkHunt::IsCatch(std::vector<Id>{ pet, hunted }, hunted));
+    }
+
     void TestHeroicShape()
     {
         std::uint32_t hunts = 0;
@@ -305,6 +318,7 @@ int main()
     TestBellPoints();
     TestCanRing();
     TestChooseBell();
+    TestCatchIsTheHuntedPlayer();
     TestBellBoard();
     TestHowls();
     TestGripLanding();
