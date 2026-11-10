@@ -31,11 +31,13 @@ import itertools
 import re
 import sys
 from dataclasses import dataclass, field
+from enum import IntEnum
 from pathlib import Path
 
 from .. import potency as _potency
 from . import model, tooltip
 from .constants import AcquireMethod  # noqa: F401 - re-exported for class files (skill_line_ability(acquire_method=...))
+from .constants import SkillCategory  # noqa: F401 - re-exported for source files (override_skill_line(CategoryID=...))
 from .tooltip import has_aura, knows, product, talent_mult  # noqa: F401 - re-exported for class files
 
 # Unique-ifies the synthetic package name `load_class_package` registers in
@@ -299,6 +301,9 @@ class Registry:
     # Item variants IV10 follow-up 1 (lib/item_limits.py): itemlimitcategory_dbc rows generate.py derives from the item
     # declarations (no DSL helper fills it). A plain SPELL_TABLES entry.
     item_limit_categories: list[dict] = field(default_factory=list)
+    # Crafting rework C2 (override_skill_line()): skillline_dbc full-row overrides of stock SkillLine rows, which
+    # generate.py also merges into patch-Z's SkillLine.dbc. A plain SPELL_TABLES entry.
+    skill_lines: list[dict] = field(default_factory=list)
     # Dungeon sets (lib/dsl/sets.py, lib/item_sets.py): one {"id": ("set" | "token" | "vendor", id), "_decl": ...} per
     # item_set() / set_token() / set_vendor() call, and the itemset_dbc, itemextendedcost_dbc and npc_vendor rows
     # generate.py derives from them (lib/item_sets.SET_TABLES).
@@ -344,7 +349,7 @@ MERGE_KEYS = (
     "dungeon_encounters", "instance_encounters", "heroic_template_addons", "heroic_template_resistances",
     "heroic_template_movements", "heroic_onkill_reputations",
     "lfg_group_declarations", "lfg_dungeon_declarations", "lfg_dungeons", "lfg_dungeon_templates", "lfg_groups",
-    "item_declarations", "loot_declarations", "item_limit_categories",
+    "item_declarations", "loot_declarations", "item_limit_categories", "skill_lines",
     "item_set_declarations", "item_set_rows", "item_extended_cost_rows", "npc_vendor_rows",
 )
 
@@ -1880,6 +1885,70 @@ def override_skill_line_ability(sla_id: int, **changed_columns) -> model.SkillLi
         superseded_by=row["SupercededBySpell"],
         raw_overrides={column: value for column, value in row.items() if column not in typed_sql},
     )
+
+
+# DBCStructure.h's SkillLineEntry field names for the columns that differ from the SQL column name.
+_SKILLLINE_FRIENDLY_COLUMNS = {
+    "categoryId": "CategoryID",
+    "spellIcon": "SpellIconID",
+    "canLink": "CanLink",
+}
+
+
+def override_skill_line(skill_id: int, **changed_columns) -> dict:
+    """Declares a full-row override of the stock `SkillLine.dbc` row `skill_id` (crafting rework C2): every column
+    starts at the stock value (`var/extractors/dbc/SkillLine.dbc`) and `changed_columns` overwrites just the named
+    ones, so dropping a keyword later restores the stock value and dropping the call prunes the overlay row. Accepts
+    the SQL column names (`lib.dbcfmt.SKILLLINE.columns`) and `DBCStructure.h`'s `categoryId` / `spellIcon` /
+    `canLink`. An overlay row replaces the WHOLE row (names, icon, CanLink), which is why this starts from the stock
+    row rather than hand SQL.
+
+    Both halves go out: the server `skillline_dbc` overlay (DBCStores.cpp LOAD_DBC(sSkillLineStore, ...)) and the
+    row merged over the stock file into patch-Z's `SkillLine.dbc`, because the client groups its Skills tab by
+    `CategoryID` and shows the Unlearn button for category 11 from its own copy.
+
+    The use: `override_skill_line(186, CategoryID=SkillCategory.SECONDARY)` moves Mining out of the primary
+    profession category, so `IsPrimaryProfessionSkill` (SpellMgr.cpp) no longer counts it against
+    `MaxPrimaryTradeSkill`. `skill_id` must be a stock row; an unknown column raises `KeyError`, a non-int value or
+    a changed ID `ValueError`. Without the stock file `generate.py` stops with an ERROR naming it."""
+    stock_rows = _require_live("skillline_rows", "override_skill_line")
+    if not stock_rows:
+        raise MissingStockFileError(
+            "override_skill_line(): the stock SkillLine index is empty - var/extractors/dbc/SkillLine.dbc is missing "
+            "on this checkout. Copy it from the worldserver's DBC directory "
+            "(ac-worldserver:/azerothcore/env/dist/data/dbc/SkillLine.dbc) into var/extractors/dbc/."
+        )
+    stock = stock_rows.get(skill_id)
+    if stock is None:
+        raise ValueError(
+            f"override_skill_line({skill_id}, ...): no stock SkillLine row for id {skill_id} ({len(stock_rows)} stock "
+            f"rows are loaded, so this isn't a missing-extraction problem)"
+        )
+    row = dict(stock)
+    unknown = [key for key in changed_columns if key not in _SKILLLINE_FRIENDLY_COLUMNS and key not in row]
+    if unknown:
+        raise KeyError(
+            f"override_skill_line({skill_id}): no such column(s): {', '.join(sorted(unknown))} - see "
+            f"lib.dbcfmt.SKILLLINE.columns for the real names, or _SKILLLINE_FRIENDLY_COLUMNS for the DBCStructure.h "
+            f"aliases this accepts"
+        )
+    for key, value in changed_columns.items():
+        column = _SKILLLINE_FRIENDLY_COLUMNS.get(key, key)
+        if column == "ID":
+            raise ValueError(f"override_skill_line({skill_id}): the ID column is the key and cannot be changed")
+        if isinstance(value, IntEnum):
+            value = int(value)
+        if isinstance(stock[column], str) != isinstance(value, str) or (
+            not isinstance(value, str) and not _plain_int(value)
+        ):
+            raise ValueError(
+                f"override_skill_line({skill_id}): {column} must be "
+                f"{'a str' if isinstance(stock[column], str) else 'an int'}, got {value!r}"
+            )
+        row[column] = value
+    row["id"] = skill_id
+    _require_active().skill_lines.append(row)
+    return row
 
 
 # --- Hunter T1: existing-row edits that need live data (retire_talent, item_template) -------------------

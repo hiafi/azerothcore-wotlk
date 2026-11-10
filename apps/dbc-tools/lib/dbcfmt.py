@@ -683,6 +683,30 @@ SPELLDIFFICULTY = DbcTable(
     signed=frozenset({f"DifficultySpellID_{i}" for i in range(1, 5)}),
 )
 
+# SkillLine.dbc - one row per skill (crafting rework C2, lib/dsl/registry.py's override_skill_line()). Server-loaded
+# (DBCStores.cpp: LOAD_DBC(sSkillLineStore, "SkillLine.dbc", "skillline_dbc")): `CategoryID` decides what counts as a
+# primary profession (SKILL_CATEGORY_PROFESSION 11; SpellMgr.cpp IsPrimaryProfessionSkill) against
+# MaxPrimaryTradeSkill. The client reads its own copy too: the Skills tab groups skills by CategoryID and shows the
+# Unlearn button for category 11. So a declared row goes out as both halves: the SPELL_TABLES `skillline_dbc` entry
+# and a merge over var/extractors/dbc/SkillLine.dbc into patch-Z. fmt is DBCfmt.h's SkillLinefmt, columns from
+# data/sql/base/db_world/skillline_dbc.sql (56 each). SkillCostsID, the masks, Description and AlternateVerb are 'x'
+# in the fmt; the two string groups are string-table offsets in the file (read_as_string). Stock file: the server's
+# DBC directory (ac-worldserver:/azerothcore/env/dist/data/dbc/SkillLine.dbc), flattened into var/extractors/dbc/.
+# Not in ALL_TABLES (the SQL would go out twice, as for MAPDIFFICULTY).
+SKILLLINE = DbcTable(
+    name="SkillLine",
+    dbc_filename="SkillLine.dbc",
+    sql_table="skillline_dbc",
+    fmt="nix" + "s" * 16 + "x" + "x" * 17 + "i" + "x" * 17 + "i",
+    columns=_cols(
+        "ID", "CategoryID", "SkillCostsID", _locale_cols("DisplayName"), _locale_cols("Description"), "SpellIconID",
+        _locale_cols("AlternateVerb"), "CanLink",
+    ),
+    read_as_string=frozenset(
+        {f"{base}_Lang_{loc}" for base in ("Description", "AlternateVerb") for loc in LOCALE_SUFFIXES}
+    ),
+)
+
 ALL_TABLES = (
     SPELL, TALENT, TALENTTAB, SPELLCASTTIMES, SPELLDURATION, SPELLRANGE,
     SPELLRADIUS, SKILLLINEABILITY, ITEM,

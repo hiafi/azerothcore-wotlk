@@ -286,6 +286,22 @@ class AcquireMethod(IntEnum):
     LEARNED_ON_SKILL_LEARN = 2
 
 
+class SkillCategory(IntEnum):
+    """`SkillLine.dbc`'s `CategoryID` column - transcribed from `SkillCategory` in
+    src/server/shared/SharedDefines.h. `PROFESSION` (11) is what `IsPrimaryProfessionSkill` (SpellMgr.cpp) counts
+    against `MaxPrimaryTradeSkill`; `SECONDARY` (9) is Cooking, First Aid, Fishing and Riding. The client groups the
+    Skills tab by this column and offers Unlearn for category 11 only (crafting rework C2, `override_skill_line()`)."""
+
+    ATTRIBUTES = 5
+    WEAPON = 6
+    CLASS = 7
+    ARMOR = 8
+    SECONDARY = 9
+    LANGUAGES = 10
+    PROFESSION = 11
+    GENERIC = 12
+
+
 class ShapeshiftForm(IntEnum):
     """`ShapeshiftMask`/`ShapeshiftExclude` bit source and `spellshapeshiftform_dbc`'s
     `form_id` - transcribed from `ShapeShiftForm` in

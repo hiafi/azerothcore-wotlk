@@ -97,6 +97,9 @@ DUNGEON_ACCESS_TEMPLATE_COLUMNS = (
 DUNGEONENCOUNTER_COLUMNS = dbcfmt.DUNGEONENCOUNTER.columns
 # Item variants IV10 follow-up 1 (lib/item_limits.py): the unique-equip category every tier of an effect item shares.
 ITEMLIMITCATEGORY_COLUMNS = dbcfmt.ITEMLIMITCATEGORY.columns
+# Crafting rework C2 (lib/dsl/registry.py's override_skill_line()): skillline_dbc is the empty server overlay of
+# SkillLine.dbc (dbcfmt's column list; the client half goes into patch-Z).
+SKILLLINE_COLUMNS = dbcfmt.SKILLLINE.columns
 INSTANCE_ENCOUNTERS_COLUMNS = ("entry", "creditType", "creditEntry", "lastEncounterDungeon", "comment")
 # Dungeon finder (lib/dsl/lfg.py, lib/lfg_dungeons.py; lfg-classic-heroic): lfgdungeons_dbc is the server overlay of
 # LFGDungeons.dbc (dbcfmt's column list; the client half goes into patch-Z), lfg_dungeon_template the finder's entrance
@@ -389,6 +392,9 @@ SPELL_TABLES = (
     # declared by hand; "no effect item" is a legitimate end state.
     TableSpec("itemlimitcategory_dbc", ITEMLIMITCATEGORY_COLUMNS, ("ID",), "item_limit_categories",
               prune_when_empty=True),
+    # Crafting rework C2: override_skill_line()'s full-row overrides of stock SkillLine rows. "No skill line
+    # overridden" is a legitimate end state (the stock row comes back), so the last dropped declaration still prunes.
+    TableSpec("skillline_dbc", SKILLLINE_COLUMNS, ("ID",), "skill_lines", prune_when_empty=True),
     TableSpec(
         "instance_encounters", INSTANCE_ENCOUNTERS_COLUMNS, ("entry",), "instance_encounters",
         defaults={"creditType": 0, "creditEntry": 0, "lastEncounterDungeon": 0, "comment": ""},
@@ -589,6 +595,7 @@ _PRUNE_WHY = {
     "dungeon_access_template": "Left in place, the entry requirements of that difficulty keep applying.",
     "dungeonencounter_dbc": "Left in place, the boss stays on that difficulty's encounter list.",
     "itemlimitcategory_dbc": "Left in place, items naming the category keep its equip limit.",
+    "skillline_dbc": "Left in place, the skill keeps the overridden category (profession slot, Skills tab group).",
     "instance_encounters": "Left in place, the kill keeps crediting that encounter.",
     "creature_template_addon": "Left in place, the heroic creature keeps the copied auras and emote.",
     "creature_template_resistance": "Left in place, the heroic creature keeps the copied resistance.",
@@ -883,14 +890,16 @@ def dsl_live_data(
     skilllineability_rows: dict[int, dict] | Callable[[], dict[int, dict]] | None = None,
     chrclasses_rows: dict[int, dict] | Callable[[], dict[int, dict]] | None = None,
     skilllineability_stock_rows: dict[int, dict] | Callable[[], dict[int, dict]] | None = None,
+    skillline_rows: dict[int, dict] | Callable[[], dict[int, dict]] | None = None,
 ) -> dict:
     """The `live_data` bundle `lib.dsl.registry.load_classes_dir` hands `retire_talent()`, `item_template()`,
-    `override_skill_line_ability()` and `chr_class()` (see `registry._active_live_data`).
+    `override_skill_line_ability()`, `chr_class()` and `override_skill_line()` (see `registry._active_live_data`).
 
     `skilllineability_rows` (the live SkillLineAbility rows, base file plus promoted migrations),
     `skilllineability_stock_rows` (the stock SkillLineAbility rows `override_skill_line_ability()` edits, so removing
     a keyword restores the stock value; when it is None the live rows are the base) and
-    `chrclasses_rows` (the stock ChrClasses rows) are keyword arguments with a `None` default so every caller that
+    `chrclasses_rows` (the stock ChrClasses rows) and `skillline_rows` (the stock SkillLine rows
+    `override_skill_line()` edits) are keyword arguments with a `None` default so every caller that
     predates them (test_id_blocks.declared_ids, pull_dsl.py, potency_report.py, pull_talents.py --dsl) keeps working:
     the two helpers raise a clear error when their rows were not passed. Either value may be a zero-argument callable
     instead of a dict: `registry._require_live` calls it on first use, so a tool that never calls the helper does
@@ -903,6 +912,7 @@ def dsl_live_data(
         "skilllineability_rows": skilllineability_rows,
         "chrclasses_rows": chrclasses_rows,
         "skilllineability_stock_rows": skilllineability_stock_rows,
+        "skillline_rows": skillline_rows,
     }
 
 
@@ -915,7 +925,7 @@ def load_dsl_live_data() -> dict:
     return dsl_live_data(
         state.load_existing_rows(dbcfmt.TALENT), load_live_item_template_rows(),
         lambda: state.load_existing_rows(dbcfmt.SKILLLINEABILITY), lambda: state.load_stock_rows(dbcfmt.CHRCLASSES),
-        lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY),
+        lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY), lambda: state.load_stock_rows(dbcfmt.SKILLLINE),
     )
 
 
