@@ -574,3 +574,4 @@ reservations:
     creature: {start: 300580, end: 300649}
     gameobject: {start: 301200, end: 301249}
     spellvisual: {start: 90500, end: 90549}  # SpellVisual, Kit and EffectName
+    item: {start: 70600, end: 70603}  # Grand Lie relics (S8: source/items/stratholme_relics.py, items.csv rows)

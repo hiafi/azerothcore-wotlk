@@ -39,6 +39,8 @@ so db-import and the dbc-tools replay see one history.
 | `src/Kit/DungeonKitFlow.h` | Pure: `WeightedSplit`, `CappedWaveSize`, `CastQueue`, `HoldBook`, percent encoding |
 | `src/Kit/DungeonKitFields.{h,cpp}` | Engine: `PuddleField`, `RegistryHit`, `FollowThenLand`, `SummonWave`, ... |
 | `src/Kit/DungeonKitSpells.cpp` | `spell_dungeon_refflat_damage` / `_periodic`: generic percent spells |
+| `src/Kit/DungeonKitWallLogic.h` | Pure: walls, 5 yd placement, crossings, strike book, outright kill, dispensing |
+| `src/Kit/DungeonKitWalls.{h,cpp}` | Engine: `LethalWall(s)`, `FinishLethalStrike`, `RelicDispenserAI`, `Dispense` |
 | `src/Kit/ArenaGuard.{h,cpp}` | The arena guard (grips, hold, leash), `LeashPreset`, cell `Confinement` |
 | `src/Kit/DungeonTestCommand.{h,cpp}` | The generic `.<x>test` GM command shell, one per dungeon |
 | `src/Deadmines/DeadminesRework.h` | Pure: entries, boss states, data ids, text groups, spell slices, measured frames |
@@ -79,6 +81,7 @@ so db-import and the dbc-tools replay see one history.
 | `src/Stratholme/StratholmeKit.{h,cpp}` | Stratholme glue: the leash options (the kit's `LeashPreset`) |
 | `src/Stratholme/StratholmeTestCommand.{h,cpp}` | The `.dbtest strat` shell and its `instance` table |
 | `src/Stratholme/boss_<name>_rework.cpp`, `<Boss>Logic.h` | One pair per Stratholme boss WP; S8/S15 hard modes |
+| `src/Stratholme/DathrohanFight.h` | Balnazzar's hard mode hooks (S7 to S8, the `BaronFight.h` pattern) |
 | `src/Stratholme/hard_mode_items.cpp` | Balnazzar and Baron hard mode item scripts, the Condemned damage hook |
 | `src/Stratholme/StratholmeHardModeItemsLogic.h` | Pure: Stratholme item effect ids (205660-205672), shares, picks |
 | `src/DungeonSets/haunted_set_bonuses.cpp` | Haunted set bonus scripts (10 sets x 3 and 5 pieces) and their hooks |

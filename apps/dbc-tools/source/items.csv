@@ -36,3 +36,7 @@ id,class_id,subclass_id,sound_override_subclass_id,material,display_info_id,inve
 34106,1,0,-1,8,47559,18,0,"hunter-rework Q4: stock quiver/ammo pouch 34106 is now a Container (class 1, subclass 0); copy of the stock Item.dbc row with class/subclass changed (item_template via source/world/quivers.py)"
 44447,1,0,-1,8,56652,18,0,"hunter-rework Q4: stock quiver/ammo pouch 44447 is now a Container (class 1, subclass 0); copy of the stock Item.dbc row with class/subclass changed (item_template via source/world/quivers.py)"
 44448,1,0,-1,8,56653,18,0,"hunter-rework Q4: stock quiver/ammo pouch 44448 is now a Container (class 1, subclass 0); copy of the stock Item.dbc row with class/subclass changed (item_template via source/world/quivers.py)"
+70600,15,4,-1,-1,3093,0,0,"stratholme-build S8: Letter of Proof (Balnazzar's hard mode opt-in); Singed Letter 10443's look; item_template in rev_balnazzar_hard_mode_stratholme.sql, use spell 206585 (source/items/stratholme_relics.py)"
+70601,15,4,-1,-1,31257,0,0,"stratholme-build S8: Scarlet Standard (Grand Lie relic); Horde Battle Standard 18607's look; item_template in rev_balnazzar_hard_mode_stratholme.sql, use spell 206587"
+70602,15,4,-1,-1,23731,0,0,"stratholme-build S8: Blessed Holy Water (Grand Lie relic); Stratholme Holy Water 13180's look; item_template in rev_balnazzar_hard_mode_stratholme.sql, use spell 206586"
+70603,15,4,-1,-1,9857,0,0,"stratholme-build S8: Relic of the Medallion (Grand Lie relic); Medallion of Faith 12845's look; item_template in rev_balnazzar_hard_mode_stratholme.sql, use spell 206588"

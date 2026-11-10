@@ -2,7 +2,7 @@
 # Builds and runs the standalone mod-dungeon-bosses tests with every available host compiler (g++ and clang++).
 # Pure headers only (src/<Dungeon>/*Logic.h, DeadminesKitMath.h, DeadminesRework.h, ShadowfangKeepRework.h,
 # ScholomanceRework.h, SoloLessonLogic.h, StratholmeRework.h, the shared kit's pure
-# src/Kit/DungeonKit{Math,State,Arena,Logic,Ids,Floor,Flow}.h, the generated src/Generated/ItemSpellCopies.h): no
+# src/Kit/DungeonKit{Math,State,Arena,Logic,Ids,Floor,Flow,WallLogic}.h, the generated src/Generated/ItemSpellCopies.h): no
 # server build needed.
 # A boss WP adds nothing here: every tests/<boss>_test.cpp is listed below already (one per boss file).
 set -euo pipefail
@@ -81,6 +81,7 @@ tests=(
   strat_galford_test
   strat_dathrohan_test
   strat_grand_lie_test
+  kit_walls_test
 )
 
 status=0

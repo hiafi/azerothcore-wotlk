@@ -30,8 +30,10 @@ creature ids in its StratholmeCreatures enum, gameobject ids in StratholmeGameOb
   dathrohan_balnazzar.py      S7   spells 206545-206574, creature 300608
   balnazzar_hard_mode.py      S8   spells 206575-206604, creature 300609, gameobjects 301203-301206, relic items
                                    70600-70603 (source/items/stratholme_relics.py)
-  shared spells 206400-206419 (lethal wall strike, Terrified, shared cast bars; none declared yet), spare spells
-  206735-206799, creatures 300590-300599 (wave 1) and 300610-300649 (wave 2), gameobjects 301208-301249: ask the
+  shared spells 206400-206419 (shared.py: 206400 Crossed the Line, the lethal walls' strike; Terrified and shared
+  cast bars spare), spare spells
+  206735-206799, creatures 300590-300599 (wave 1) and 300611-300649 (wave 2; 300610 is Willey's glow stalker),
+  gameobjects 301208-301249: ask the
   orchestrator. The W1 dungeon items' `stratholme_items` reservation (205660-205699, 300470-300474) is
   source/items/stratholme_hard_mode_effects.py's.
 
@@ -79,7 +81,7 @@ KIT_HELPER = kit_helper(KIT_CREATURE)
 # their heroic overrides back too (it reads this line). The C++ twin is kWave2Bound in modules/mod-dungeon-bosses
 # src/Stratholme/StratholmeRework.h; both sides must agree (lib/test_stratholme_kit.py). The orchestrator flips both
 # in one commit at wave 2's setup (WP 0-2).
-BIND_WAVE_2 = False
+BIND_WAVE_2 = True
 
 # creature_template.flags_extra bits (CreatureData.h): no stock Stratholme boss has INSTANCE_BIND (handoff s2.3);
 # Maleki keeps his stock CREATURE_FLAG_EXTRA_IGNORE_ALL_ASSISTANCE_CALLS.
