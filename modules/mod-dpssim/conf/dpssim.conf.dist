@@ -469,7 +469,8 @@ DpsSim.MechanicsDpsProfiles =
 
 #
 #    DpsSim.MechanicsPrograms
-#        Description: Mechanics mode: the drill programs, ';' separated; iteration i runs entry i mod n. Each entry
+#        Description: Mechanics mode: the drill programs, ';' separated; iteration i runs entry i mod n (';'
+#                      alternates programs, ',' chains entries one after another inside every iteration). Each entry
 #                      is mod-boss-mechanics' program grammar (Drill::ParseProgram): "all", "none", or
 #                      "<entry>[:<n>],..." with drill names (smite, cookie, fenrus, soaks, ras, alexei, lanes,
 #                      deadmines-followups, sfk-hunt, scholomance-shapes, stratholme-followups, stratholme-drops;

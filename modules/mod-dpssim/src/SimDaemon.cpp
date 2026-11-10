@@ -450,6 +450,9 @@ namespace
         // ResetForNextIteration() time without a buff phase: iteration 2+ then opened with combat_time() already
         // past 10 s and every combat_time() hold fired at the pull. Start it at the first measured ms instead.
         Acore::Time::SetSimClockOverride(Milliseconds(measuredStartMs));
+        // The cached game clock too (GameTime::GetGameTimeMS), which only UpdateGameTimers refreshes: nothing before
+        // the first tick may read the last buff tick's time
+        GameTime::UpdateGameTimers();
         bot.RestartCombatClock();
         LogAurasAtPull(player);
         // The primary dummy's armor at the pull: a recalculation restoring the template armor would show here.
@@ -2044,6 +2047,10 @@ namespace
             tankRecorder->Reset();
 
         Acore::Time::SetSimClockOverride(Milliseconds(measuredStartMs));
+        // Stratholme SWEEP-1 D3: refresh the cached game clock as well. The program schedules every entry from
+        // GameTime::GetGameTimeMS(); left at the last buff tick (a buff phase that ended early: up to PrePullBuffMs
+        // before the pull), every entry after the first ran that much early.
+        GameTime::UpdateGameTimers();
         for (size_t i = 0; i < size; ++i)
             scenario.GetBot(i).RestartCombatClock();
 
@@ -2062,6 +2069,12 @@ namespace
         result.MechProgram = config.MechPrograms[iteration % config.MechPrograms.size()];
         result.MechSeed = config.MechSeed + iteration;
         std::string error;
+        result.MechProgramStartLagMs = static_cast<int64>(GameTime::GetGameTimeMS().count())
+            - static_cast<int64>(measuredStartMs);
+        if (result.MechProgramStartLagMs)
+            LOG_ERROR("server.dpssim", "mod-dpssim: mechanics iteration {} - the game clock is {} ms off the pull "
+                "when the program starts: its later entries run that much off.", iteration + 1,
+                result.MechProgramStartLagMs);
         result.MechProgramStarted = SimMech::StartProgram(boss, actor->GetGUID(), result.MechProgram, result.MechSeed,
             config.MechDamage, error);
         if (!result.MechProgramStarted)

@@ -339,8 +339,12 @@ tools/mechanics_sweep.py index reports/mechsweep-<sweep>    # re-pair a sweep, w
   counted as `tankSaves`: the healer did not keep up). Without health drain the boss is refilled every step.
 - **The program** (`DpsSim.MechanicsPrograms`, `MECHSIM_PROGRAMS`): `;`-separated mod-boss-mechanics programs
   (`Drill::ParseProgram`: drill names with cycles, `lanes`, `barrage` / `minefield` / `uminefield` with seconds),
-  iteration i runs entry i mod n, once (no loop). The default rotation covers every kind in five 120 s fights:
-  `smite,fenrus,ras` (Frontal, Spread, Bait, RunOut, Stack), `cookie,barrage:15` (cones, puddles, run-outs),
+  iteration i runs entry i mod n, once (no loop). **`;` alternates, `,` chains**: `a;b` runs a in even iterations and
+  b in odd ones; `a,b` runs a, then b 4 s after a's last cycle, inside every iteration, so b never runs when a fills
+  the fight (`deadmines-followups,sfk-hunt,scholomance-shapes` is 248 s: a 120 s fight never reaches the third). A
+  program whose entries never start is logged at WARN with their names, and the report carries
+  `config.programLengthsMs` and `config.programLateEntries`. The default rotation covers every kind in five 120 s
+  fights: `smite,fenrus,ras` (Frontal, Spread, Bait, RunOut, Stack), `cookie,barrage:15` (cones, puddles, run-outs),
   `soaks,minefield:30`, `alexei` (156 s; a 120 s fight sees hold still, stack, spread, out of bounds, line up, desks and
   four heroic pairs), `barrage:60,lanes:3,uminefield:20`. The drill dice of iteration i are seeded `MechanicsSeed + i`,
   the same in the baseline; drill hits deal `MechanicsDamage` (1).
@@ -359,7 +363,9 @@ tools/mechanics_sweep.py index reports/mechsweep-<sweep>    # re-pair a sweep, w
 ### Mechanics reports (`"kind": "mechanics"`)
 
 One file per iteration (`src/SimReport.h` has the schema): `config` (the group, the programs, this iteration's program
-and seed, the boss settings, fallibility), `summary` (program started or its error, the program entry errors, actor
+and seed, the boss settings, fallibility, each program's length and the entries past the fight), `summary` (program
+started or its error, `programStartLagMs` (the game clock against the pull when the program started: 0, else its later
+entries ran that much off; the sweep index flags it), the program entry errors, actor
 and group DPS, failures, group failures, stray failures, actor and group HPS, deaths, members without the strategy, the
 tank's damage taken and saves), `members[]` (per member: role, profile, class, spec tab, strategies, damage and DPS on
 the boss, healing done (`healEffective`, `healOverheal`, `healAbsorb`) and `hps` = (effective + absorbs) / duration,
@@ -391,6 +397,20 @@ so a healer heals there too; reports from before the heal recorder read as 0 HPS
 baseline's, escape / hold / freeze time, leaks, solve and route maxima; specs with a failure of the member under test,
 a leak, a missing strategy, a program error (a start error or a failed entry) or a death come first. The reference
 members' failures are listed too (they are the same group in every spec).
+
+**Each build drill's own pass bar** (`DRILL_BARS` in the tool, mirrored from mod-boss-mechanics `MechanicDrill.h` and
+the build reports; `tools/test_mechanics_sweep.py` checks the mirror against the module source): gated tags with a per
+spec run limit (usually at most 1), reported tags that are listed in their own column and never fail, no gated tag on
+more than 3 specs (a sweep problem at the top of `index.md`), and for `sfk-hunt` limits on the reference members
+(`Zone/1` at most 1, `Zone/3` none) and on the missed bells (group `Soak/2` at most 2). When every drill of the
+programs has a bar, "Problems" lists only what breaks it; a program with any other entry (the default rotation,
+`barrage`, ...) keeps the old rule, every failure of the member under test. Several barred drills in one sweep share
+the ledger's tags, so a tag is gated if any of them gates it. The index also flags a program longer than the fight
+(older reports: estimated from the bar table's cycle lengths) and a nonzero `summary.programStartLagMs` (the program
+started on a stale game clock, so its later entries ran early). `run` warns before launching a comma program longer
+than `--duration` and `;` programs the iterations do not split evenly. To sweep several build drills, run each alone
+(`--programs sfk-hunt:4`) or alternate them (`--programs 'deadmines-followups;sfk-hunt:4;scholomance-shapes:3'
+--iterations 6`).
 
 ### The boss descriptor slice and counters (M5)
 
