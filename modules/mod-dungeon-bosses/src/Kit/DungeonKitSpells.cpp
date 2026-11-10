@@ -20,8 +20,7 @@
  *                                   absorb or damage-taken reduction applies) with NO_IMMUNITIES (Divine Shield and
  *                                   Ice Block do not stop a wall), ALWAYS_HIT and TARGET_UNIT_TARGET_ENEMY; after the
  *                                   hit the script kills a target still standing (DungeonKitWalls.h
- *                                   FinishLethalStrike). A SCHOOL_DAMAGE effect, if a spell still has one, is set to
- *                                   the target's maximum health at launch.
+ *                                   FinishLethalStrike).
  */
 
 #include "DungeonKit.h"
@@ -109,12 +108,6 @@ class spell_dungeon_lethal_strike : public SpellScript
 {
     PrepareSpellScript(spell_dungeon_lethal_strike);
 
-    void SetDamage(SpellEffIndex /*effIndex*/)
-    {
-        if (Unit* target = GetHitUnit())
-            SetEffectValue(static_cast<int32>(std::min<uint32>(target->GetMaxHealth(), 0x7FFFFFFF)));
-    }
-
     void Finish()
     {
         DungeonKit::FinishLethalStrike(GetCaster(), GetHitUnit());
@@ -122,8 +115,6 @@ class spell_dungeon_lethal_strike : public SpellScript
 
     void Register() override
     {
-        OnEffectLaunchTarget += SpellEffectFn(spell_dungeon_lethal_strike::SetDamage, EFFECT_ALL,
-            SPELL_EFFECT_SCHOOL_DAMAGE);
         AfterHit += SpellHitFn(spell_dungeon_lethal_strike::Finish);
     }
 };
