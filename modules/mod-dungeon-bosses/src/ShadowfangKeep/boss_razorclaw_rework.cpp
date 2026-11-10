@@ -57,6 +57,8 @@ namespace
         DungeonKit::ArenaGuardOptions o;
         // A unit in combat with another live boss is left to that boss: no two guards grip it to and fro (R2 S-2).
         o.skipGrip = DungeonKit::SkipEngagedWithOtherBoss(ShadowfangKeepRework::IsSfkBossEntry);
+        DungeonKit::ApplyPlaytestPullRule(o);
+        o.teleport = false;                 // the one SFK guard that still jumps: the meat hook reels them in
         o.gripSpell = SPELL_RC_MEAT_HOOK_CHAIN;
         o.logPrefix = "sfk razorclaw";
         o.offArenaReason = "off-kitchen";

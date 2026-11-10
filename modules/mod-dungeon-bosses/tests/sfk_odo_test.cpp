@@ -117,7 +117,7 @@ namespace
         CHECK(Near(SfkHunt::MaulTickPct(35.f, 3000, 0), 0.f));
     }
 
-    // OD3 / OD4: the bell points (handoff section 7 #24) in the room, at least 19 yd apart; the landing numbers.
+    // OD3 / OD4: the bell points (playtest 2026-11-09) in the room, at least 17.5 yd apart; the landing numbers.
     void TestBellPoints()
     {
         Arena const room = OdoArena();
@@ -127,13 +127,13 @@ namespace
             CHECK(room.Contains(p.XY(), p.z));
             CHECK(Odo::NearestBellSpot(p.XY()) == std::optional<std::size_t>(i));
             for (std::size_t j = i + 1; j < Odo::kBellCount; ++j)
-                CHECK(DungeonKit::Distance(p.XY(), kBellSpots[j].XY()) >= 19.f);
+                CHECK(DungeonKit::Distance(p.XY(), kBellSpots[j].XY()) >= 17.5f);
         }
         CHECK(Odo::kBellCount == 3);
-        // The navmesh report's distances from Odo: 12.2, 19.1, 37.6 yd.
-        CHECK(Near(DungeonKit::Distance(kOdoSpawn.XY(), kBellSpots[0].XY()), 12.2f, 0.1f));
-        CHECK(Near(DungeonKit::Distance(kOdoSpawn.XY(), kBellSpots[1].XY()), 19.1f, 0.1f));
-        CHECK(Near(DungeonKit::Distance(kOdoSpawn.XY(), kBellSpots[2].XY()), 37.6f, 0.1f));
+        // The playtest points' distances from Odo: 12.7, 15.2, 31.8 yd.
+        CHECK(Near(DungeonKit::Distance(kOdoSpawn.XY(), kBellSpots[0].XY()), 12.7f, 0.1f));
+        CHECK(Near(DungeonKit::Distance(kOdoSpawn.XY(), kBellSpots[1].XY()), 15.2f, 0.1f));
+        CHECK(Near(DungeonKit::Distance(kOdoSpawn.XY(), kBellSpots[2].XY()), 31.8f, 0.1f));
         // A spawned bell maps to its spot within 5 yd, a far point to none.
         CHECK(Odo::NearestBellSpot({ kBellSpots[1].x + 1.f, kBellSpots[1].y - 1.f }) == std::optional<std::size_t>(1));
         CHECK(!Odo::NearestBellSpot(kOdoSpawn.XY()).has_value());
@@ -148,8 +148,8 @@ namespace
         // The bound lands 2 s after leaving, from any bell distance.
         CHECK(Near(Odo::BoundSpeedXY(37.6f), 18.8f));
         CHECK(Near(Odo::BoundSpeedXY(0.f), 1.f));
-        // A bell soak (2 yd) never overlaps another bell's landing (6 yd): the bells are 19 yd apart.
-        CHECK(Odo::kLandingRadius + Odo::kBellRadius < 19.f);
+        // A bell soak (2 yd) never overlaps another bell's landing (6 yd): the bells are 17.5+ yd apart.
+        CHECK(Odo::kLandingRadius + Odo::kBellRadius < 17.5f);
         // The bots' soak resolves just inside the hunt.
         CHECK(Odo::kBellSoakEarlyMs < SfkHunt::OdoHunt(false).tickMs * 2);
     }

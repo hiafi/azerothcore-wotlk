@@ -68,6 +68,13 @@ namespace DungeonKit
         return o;
     }
 
+    void ApplyPlaytestPullRule(ArenaGuardOptions& o)
+    {
+        o.pullGraceMs = kPlaytestPullGraceMs;
+        o.pullMaxYd = kPlaytestPullMaxYd;
+        o.teleport = true;
+    }
+
     ArenaGuard::ArenaGuard(Arena arena, ArenaGuardOptions options)
     {
         Configure(std::move(arena), std::move(options));
@@ -81,6 +88,7 @@ namespace DungeonKit
         _leash.Reset();
         _checkMs = 0;
         _emptyMs = 0;
+        _pullLeftMs = 0;
         _holding = false;
         _switchedTo.Clear();
     }
@@ -118,15 +126,30 @@ namespace DungeonKit
     {
         if (!boss || !_options.gripOnPull || _arena.Empty())
             return;
+        if (_options.pullGraceMs)
+        {
+            _pullLeftMs = _options.pullGraceMs;
+            LOG_INFO(kLogCategory, "{} grip pull deferred ms={}", _options.logPrefix, _pullLeftMs);
+            return;
+        }
+        PullGrip(boss);
+    }
+
+    void ArenaGuard::PullGrip(Creature* boss)
+    {
         uint32 gripped = 0;
-        for (Unit* unit : CombatUnits(boss))
-            if (Grippable(boss, unit) && _grip.PullNow(unit->GetGUID().GetRawValue(), Contains(unit)))
+        std::vector<Unit*> const units = CombatUnits(boss);
+        for (Unit* unit : units)
+        {
+            bool const inPlace = Contains(unit)
+                && (_options.pullMaxYd <= 0.f || boss->GetExactDist2d(unit) <= _options.pullMaxYd);
+            if (Grippable(boss, unit) && _grip.PullNow(unit->GetGUID().GetRawValue(), inPlace))
             {
                 Grip(boss, unit, "pull");
                 ++gripped;
             }
-        LOG_INFO(kLogCategory, "{} grip pull units={} gripped={}", _options.logPrefix, CombatUnits(boss).size(),
-            gripped);
+        }
+        LOG_INFO(kLogCategory, "{} grip pull units={} gripped={}", _options.logPrefix, units.size(), gripped);
     }
 
     bool ArenaGuard::Update(Creature* boss, uint32 diff)
@@ -172,7 +195,13 @@ namespace DungeonKit
         }
 
         _grip.ForgetIf([boss](std::uint64_t raw) { return LeftMap(boss, raw); });
-        if (_options.gripBack)
+        if (_pullLeftMs)
+        {
+            _pullLeftMs = _pullLeftMs > elapsed ? _pullLeftMs - elapsed : 0;
+            if (!_pullLeftMs)
+                PullGrip(boss);
+        }
+        else if (_options.gripBack)
             for (Unit* unit : CombatUnits(boss))
                 if (Grippable(boss, unit) && _grip.Update(unit->GetGUID().GetRawValue(), Contains(unit), elapsed))
                     Grip(boss, unit, _options.offArenaReason.c_str());
@@ -281,11 +310,23 @@ namespace DungeonKit
         if (!_options.landing)
             std::tie(dest, z) = LandingOrBoss(_arena, dest, z, PlaneOf(boss), boss->GetPositionZ());
         float const dist = Distance(from, dest);
-        JumpTo(unit, Position(dest.x, dest.y, z + 0.5f), _options.jumpSpeedXY, _options.minJumpSpeedZ,
-            _options.gripSpell, boss);
-        _grip.Gripped(unit->GetGUID().GetRawValue(), GripCooldownMs(_options.cooldownMs, dist, _options.jumpSpeedXY));
+        if (_options.teleport)
+        {
+            if (_options.gripSpell)
+                boss->CastSpell(unit, _options.gripSpell, true);
+            unit->NearTeleportTo(dest.x, dest.y, z + 0.5f, unit->GetOrientation());
+            _grip.Gripped(unit->GetGUID().GetRawValue(), _options.cooldownMs);
+        }
+        else
+        {
+            JumpTo(unit, Position(dest.x, dest.y, z + 0.5f), _options.jumpSpeedXY, _options.minJumpSpeedZ,
+                _options.gripSpell, boss);
+            _grip.Gripped(unit->GetGUID().GetRawValue(),
+                GripCooldownMs(_options.cooldownMs, dist, _options.jumpSpeedXY));
+        }
         LOG_INFO(kLogCategory, "{} grip {} unit={} from=({:.1f}, {:.1f}, {:.1f}) to=({:.1f}, {:.1f}, {:.1f}) "
-            "dist={:.1f}", _options.logPrefix, why, unit->GetName(), from.x, from.y, fromZ, dest.x, dest.y, z, dist);
+            "dist={:.1f}{}", _options.logPrefix, why, unit->GetName(), from.x, from.y, fromZ, dest.x, dest.y, z, dist,
+            _options.teleport ? " teleport=1" : "");
     }
 
     void ArenaGuard::Reset()
@@ -294,6 +335,7 @@ namespace DungeonKit
         _leash.Reset();
         _checkMs = 0;
         _emptyMs = 0;
+        _pullLeftMs = 0;
         _holding = false;
         _switchedTo.Clear();
     }

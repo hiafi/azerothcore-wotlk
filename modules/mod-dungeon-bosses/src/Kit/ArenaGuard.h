@@ -18,7 +18,8 @@
  *     void Reset() / EnterEvadeMode() / JustDied(): _arena.Reset();
  *
  *   - the pull (Engage, with gripOnPull): everyone in combat with the boss (his threat list: players, pets, guardians,
- *     bots) who is off the arena is gripped onto it at once;
+ *     bots) who is off the arena is gripped onto it at once; with pullGraceMs, only those still off it (or farther
+ *     than pullMaxYd from the boss) when the grace ends, and no grip back before then;
  *   - during the fight (gripBack): a unit off the arena for graceMs (continuously) is gripped back, then left alone for
  *     cooldownMs, or its flight time + 0.5 s when that is longer (no second grip mid-air: GripCooldownMs);
  *   - holdWhileVictimOff: the boss never chases a victim who is off the arena (he holds; the grip brings it back);
@@ -29,7 +30,8 @@
  *     at the first check; the leash). With leashSkipAirborne a check while he jumps or falls (his own leap, a drop
  *     between floors) neither counts nor evades;
  *   - evadeNoTargetInsideMs: ... or when nobody in combat with him has been on it that long (a grip-less arena).
- *   A grip: the boss casts `gripSpell` (the look; triggered) on the unit, then the unit jumps (JumpTo) to `landing`
+ *   A grip: the boss casts `gripSpell` (the look; triggered) on the unit, then the unit jumps (JumpTo; with teleport:
+ *   a near teleport) to `landing`
  *   (default: landYd from the boss toward where it was, clamped into landBox; the floor height under it, searched
  *   from the top of the boss's region; a point the arena does not hold falls back to the boss's own spot, so a
  *   polygon or multi-region arena should give landBox or `landing`). Units farther than maxGripYd, totems and
@@ -65,6 +67,11 @@ namespace DungeonKit
         uint32 checkMs = 250;                                   // how often Update sweeps
         float maxGripYd = 120.f;                                // never grip a unit farther than this from the boss
         bool gripOnPull = true;
+        // > 0: the pull grip waits this long (no grip back meanwhile), then brings in whoever is still off the arena.
+        uint32 pullGraceMs = 0;
+        // > 0: that pull grip also brings in a unit on the arena but farther than this from the boss.
+        float pullMaxYd = 0.f;
+        bool teleport = false;                                  // a grip is a near teleport, not a jump
         bool gripBack = true;
         bool holdWhileVictimOff = true;
         bool switchWhenVictimOff = false;                       // turn to the top-threat unit on the arena instead
@@ -111,6 +118,13 @@ namespace DungeonKit
     // `logPrefix` names the guard's log lines ("strat baron arena").
     ArenaGuardOptions LeashPreset(std::string const& logPrefix, LeashSpec const& spec = {});
 
+    // The playtest pull rule (SFK and Stratholme, 2026-11-09): whoever is still off the arena, or farther than 50 yd
+    // from the boss, 5 s after the pull is brought in, and every grip is a near teleport, not a jump. A boss that
+    // seals his room at the pull (lethal walls) seals it once PullPending() turns false.
+    uint32 constexpr kPlaytestPullGraceMs = 5000;
+    float constexpr kPlaytestPullMaxYd = 50.f;
+    void ApplyPlaytestPullRule(ArenaGuardOptions& o);
+
     class ArenaGuard
     {
     public:
@@ -135,6 +149,8 @@ namespace DungeonKit
         bool Contains(WorldObject const* o) const;
         bool Grippable(Creature const* boss, Unit const* unit) const;
         bool Holding() const { return _holding; }
+        // True from a deferred pull (pullGraceMs) until its grip has run.
+        bool PullPending() const { return _pullLeftMs > 0; }
         ObjectGuid SwitchedTo() const { return _switchedTo; }
         Arena const& GetArena() const { return _arena; }
         ArenaGuardOptions const& Options() const { return _options; }
@@ -142,6 +158,8 @@ namespace DungeonKit
     private:
         // switchWhenVictimOff: fixate the top-threat unit on the arena while the top one is off it.
         void UpdateSwitch(Creature* boss);
+        // The pull grip (Engage at once, or Update when pullGraceMs runs out).
+        void PullGrip(Creature* boss);
 
         Arena _arena;
         ArenaGuardOptions _options;
@@ -149,6 +167,7 @@ namespace DungeonKit
         LeashTimer _leash;
         uint32 _checkMs = 0;
         uint32 _emptyMs = 0;
+        uint32 _pullLeftMs = 0;                                 // pullGraceMs: the deferred pull grip's countdown
         bool _holding = false;
         ObjectGuid _switchedTo;                                 // the unit the guard fixated (switchWhenVictimOff)
     };

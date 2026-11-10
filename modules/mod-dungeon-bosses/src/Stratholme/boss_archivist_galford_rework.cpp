@@ -27,7 +27,9 @@
  *                        in or by a puddle
  *   GF10 The walls       at the pull the Pyre (the hall's south end, x 3444) and the north wall (x 3500) light: KT-2's
  *                        DungeonKit::LethalWall on X4's never-cross, the shared strike 206400, armed 2 s after the pull
- *                        grip (section 10); a row of Pyre stalkers (300607) carries the fire and delivers the strike
+ *                        grip (section 10; DungeonKit::ApplyPlaytestPullRule: the grip is a teleport 5 s after the
+ *                        pull, so the walls light then); a row of Pyre stalkers (300607) carries the fire and
+ *                        delivers the strike
  *   GF11 Burning Winds   heroic, 20 s, then every 25 s: a 2 s cast (206529, yell line 5); while he casts every puddle
  *                        reaches 8 yd north as a telegraph-only zone; then everyone is thrown 8 yd south (no damage),
  *                        each throw cut 2 yd short of the Pyre's strip (KT-2: a wall strikes any crossing,
@@ -120,6 +122,7 @@ namespace
         DungeonKit::ArenaGuardOptions o = LeashOptions(kBossLogName);
         o.gripOnPull = true;
         o.gripBack = false;
+        DungeonKit::ApplyPlaytestPullRule(o);   // playtest 2026-11-09: 5 s, then a teleport; the walls follow it
         o.maxGripYd = kPullRadiusYd;    // the pull's reach (JustEngagedWith): no one in combat beyond the grip
         o.landing = [](Creature const* /*boss*/, Unit const* unit)
         {
@@ -166,8 +169,8 @@ struct boss_archivist_galford_rework : public BossAI
         Cleanup();      // a `.dbtest` mechanic out of combat may have left something behind
         _heroic = IsHeroicMap(me);
         Describe();
-        _arena.Engage(me);      // the pull grip first: the walls arm 2 s after it (section 10)
-        RaiseWalls();
+        _arena.Engage(me);      // the pull grip first (deferred 5 s): the walls arm 2 s after it (section 10)
+        SealHall();
 
         _nextHolyFireMs = kHolyFireFirstMs;
         _queue.Schedule(CAST_PYROBLAST, kPyroFirstMs, kPriorityPyro);
@@ -250,6 +253,7 @@ struct boss_archivist_galford_rework : public BossAI
 
         if (!_arena.Update(me, diff))
             return;     // off his arena, or nobody on it for 10 s: evading
+        SealHall();
 
         if (_clockMs >= _nextHolyFireMs)
         {
@@ -678,6 +682,15 @@ struct boss_archivist_galford_rework : public BossAI
     // GF10 the walls
     // ----------------------------------------------------------------------------------------------------------------
 
+    // Once the guard's pull grip has run (5 s after the pull): the walls, once per fight.
+    void SealHall()
+    {
+        if (_sealed || _arena.PullPending())
+            return;
+        _sealed = true;
+        RaiseWalls();
+    }
+
     void RaiseWalls()
     {
         RaiseWall(PyreLine(), kPyreFloorZ, "pyre");
@@ -843,6 +856,7 @@ private:
                 }
         _queue.Reset();
         _clockMs = 0;
+        _sealed = false;
         _nextHolyFireMs = kHolyFireFirstMs;
         _kindledPollMs = 0;
         _parkCheckMs = 0;
@@ -866,6 +880,7 @@ private:
     uint32 _generation = 0;
     uint32 _pyroCasts = 0;
     bool _heroic = false;
+    bool _sealed = false;                       // the walls are up (SealHall)
     bool _kindled = false;
     bool _yelledKindled = false;
     bool _yelledArchive = false;

@@ -535,9 +535,10 @@ namespace ShadowfangKeepRework
     // --- Odo the Blindwatcher's room (map origin: Odo) ---------------------------------------------------------------
     Point3 constexpr kOdoSpawn{ -236.7f, 2146.1f, 100.1f };
     Point3 constexpr kOdoDoor{ -247.3f, 2110.8f, 100.2f };      // the room's one door, 42 yd from him
-    // Bell spots (handoff section 7 #24: at least 19 yd apart, only 3.4 to 3.9 yd clear).
-    inline std::array<Point3, 3> constexpr kBellSpots{ { { -248.8f, 2148.2f, 100.7f },
-        { -245.8f, 2129.2f, 101.3f }, { -260.8f, 2117.2f, 101.1f } } };
+    // Bell spots: the playtest's points (2026-11-09, replacing handoff section 7 #24's): 1 by Odo, 2 mid-room, 3 by
+    // the door; 17.9 to 35.3 yd apart, 12.7 / 15.2 / 31.8 yd from him.
+    inline std::array<Point3, 3> constexpr kBellSpots{ { { -247.4f, 2153.0f, 100.3f },
+        { -239.3f, 2131.1f, 100.0f }, { -251.4f, 2117.9f, 100.0f } } };
 
     inline Arena OdoArena()
     {
