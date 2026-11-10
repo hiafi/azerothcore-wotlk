@@ -191,8 +191,9 @@ rat_line_206444 = resolve_copy(
     f'{_HF}, HF7: a rat line\'s hit, the 2 yd line a Gutter Rat runs out and back (the registry tracks the rat) in '
     'The Piper\'s Tune: 15% of the reference row, the tank too (its own row), 1 Weakened, through the registry. Copy '
     'of the resolve spell 205001 (Physical). Gore 4102\'s SV 39 (a hit flash and a sound, V-1 RG_GORE) on every unit '
-    'hit: the visible impact.',
-    icon=_ICON_BLACK_ROT, visual=RG_GORE,
+    'hit: the visible impact. One hit per player per line (ORCH F-2 ruling, ST HF7): spell_st_forresten_rat_line '
+    'drops from the return pass everyone the out pass took.',
+    icon=_ICON_BLACK_ROT, visual=RG_GORE, scripts=('spell_st_forresten_rat_line',),
 )
 
 crescendo_line_206445 = resolve_copy(

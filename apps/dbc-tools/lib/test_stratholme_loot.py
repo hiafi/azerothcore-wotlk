@@ -258,7 +258,8 @@ MAIN_GATE_LISTS = {
                           "strat_shroud_of_the_nathrezim", "strat_book_of_the_dead"},
             "haunted_token_chest", set()),
     11032: ("Malor", {"strat_gauntlets_of_the_zealot", "strat_inquisitors_girdle", "strat_libram_of_zeal",
-                      "strat_totem_of_the_storm", "strat_idol_of_the_moon"},
+                      "strat_totem_of_the_storm", "strat_idol_of_the_moon",
+                      "strat_stratholme_militia_shoulderguard"},
             None, set()),
 }
 BALNAZZAR_HARD_MODE = {"strat_carrion_signet", "strat_dust_of_the_nathrezim", "strat_two_faced_tome"}
@@ -281,7 +282,9 @@ class MainGateLootTest(unittest.TestCase):
         return 2 if lootid == 11032 else 1  # Malor's group 1 is his shared world pools
 
     def test_each_boss_list_is_the_approved_one_at_both_difficulties(self):
-        self.assertEqual(sum(len(v[1]) for v in MAIN_GATE_LISTS.values()), 37)
+        self.assertEqual(sum(len(v[1]) for v in MAIN_GATE_LISTS.values()), 38)
+        # the build spec's 73 list items across both waves (ST "73 list items"): wave 1's 35 plus the Main Gate's 38
+        self.assertEqual(sum(len(v) for v in LISTS.values()) + sum(len(v[1]) for v in MAIN_GATE_LISTS.values()), 73)
         for normal, (name, keys, _token, _cut) in MAIN_GATE_LISTS.items():
             picks = 2 if normal == 10813 else 1
             group = self.list_group(normal)
@@ -295,11 +298,11 @@ class MainGateLootTest(unittest.TestCase):
                     self.assertEqual(decl.reference is not None, picks > 1)
 
     def test_every_main_gate_item_has_a_drop(self):
-        # the 37 list items plus the three hard mode items are the 40 Main Gate items of W1 that a boss drops (the
-        # Militia Shoulderguard drops from Malor's stock 0.02% row, the Plaguebat Fur Gloves also from the BoE pool)
+        # the 38 list items plus the three hard mode items are the 41 Main Gate items of W1 that a boss drops (the
+        # Plaguebat Fur Gloves also drop from the BoE pool)
         listed = {key for v in MAIN_GATE_LISTS.values() for key in v[1]}
         main_gate_items = {k for k in self.items} - {k for v in LISTS.values() for k in v} - HARD_MODE
-        self.assertEqual(main_gate_items - listed - BALNAZZAR_HARD_MODE, {"strat_stratholme_militia_shoulderguard"})
+        self.assertEqual(main_gate_items - listed - BALNAZZAR_HARD_MODE, set())
         self.assertTrue(BALNAZZAR_HARD_MODE <= self.items)
 
     def test_the_heroic_lootids_are_the_bosses_own_heroic_entries(self):
@@ -369,6 +372,14 @@ class MainGateLootTest(unittest.TestCase):
             self.assertEqual((d.item_entry, d.group, d.chance, d.loot_mode, d.reference), (23203, 6, 0.17, 1, None))
         self.assertIn("strat_totem_of_the_storm", MAIN_GATE_LISTS[11032][1])
         self.assertIn("strat_idol_of_the_moon", MAIN_GATE_LISTS[11032][1])
+
+    def test_malors_stock_shoulderguard_row_is_removed_on_normal_and_kept_out_of_the_heroic_copy(self):
+        # the Shoulderguard is on his list (ST: "Add (from his 0.02% row)"), so the stock 0.02% row 18742 goes
+        self.assertIn("strat_stratholme_militia_shoulderguard", MAIN_GATE_LISTS[11032][1])
+        removal = self.row_removals[(11032, 0)]
+        self.assertEqual((set(removal.rows), removal.ref_rows), ({18742}, ()))
+        self.assertNotIn((310175, 0), self.row_removals)  # the removal is declared on the normal lootid only
+        self.assertNotIn((11032, 0), self.lists)  # the list is group 2, never his group 0
 
     def test_no_new_group_collides_with_a_stock_group_that_stays(self):
         # Forresten's lists/tokens (groups 1, 3) and Balnazzar's (1, 2, 3) sit beside the kept group 0 rows; Malor's

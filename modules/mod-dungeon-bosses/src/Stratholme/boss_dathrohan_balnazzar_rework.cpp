@@ -162,19 +162,20 @@ struct boss_dathrohan_balnazzar_rework : public BossAI, public DathrohanFight
         Mechanic::BeginEncounter(me, options);
         _arena.Engage(me);
 
+        bool const hardMode = _heroic && instance && instance->GetData(DATA_GRAND_LIE) != 0;
+        if (hardMode)
+            _hardMode = CreateGrandLie(me);
         bool const unmasked = me->GetEntry() == NPC_BALNAZZAR;
         if (unmasked)
             StartStageTwo();
         else
         {
             _stage = Stage::Dathrohan;
-            Talk(YELL_DATHROHAN_AGGRO);
+            if (!_hardMode)
+                Talk(YELL_DATHROHAN_AGGRO);     // a hard mode retry pull yells only its own line (S8's OnEngage)
             StartStageOne();
         }
 
-        bool const hardMode = _heroic && instance && instance->GetData(DATA_GRAND_LIE) != 0;
-        if (hardMode)
-            _hardMode = CreateGrandLie(me);
         DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "engage",
             Acore::StringFormat("heroic={} stage={} hardmode={} handler={} at=({:.1f}, {:.1f}, {:.1f})",
                 _heroic ? 1 : 0, StageName(_stage), hardMode ? 1 : 0, _hardMode ? 1 : 0, me->GetPositionX(),
@@ -202,11 +203,17 @@ struct boss_dathrohan_balnazzar_rework : public BossAI, public DathrohanFight
         me->SummonCreatureGroup(kDeathSummonGroup);
     }
 
-    // The Infernals join his fight; the death skeletons are stock trash (never in his summon list).
+    // The Infernals join his fight; the death skeletons are stock trash (never in his summon list); the hard mode's
+    // swarm stalkers are props: his summons (they go with his reset and death) but never zoned into combat.
     void JustSummoned(Creature* summon) override
     {
         if (summon->GetEntry() == kSkeletalGuardianEntry || summon->GetEntry() == kSkeletalBerserkerEntry)
             return;
+        if (summon->GetEntry() == NPC_ST_SWARM)
+        {
+            summons.Summon(summon);
+            return;
+        }
         BossAI::JustSummoned(summon);
     }
 

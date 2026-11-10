@@ -4,7 +4,7 @@
  * halves are DungeonKitWalls.h (LethalWall, LethalWalls, RelicDispenserAI) and DungeonKitSpells.cpp
  * (spell_dungeon_lethal_strike).
  *
- *   WallLine           a wall: the centre line from `from` to `to` and its width (the registry Line's hitbox)
+ *   WallLine           a wall: the center line from `from` to `to` and its width (the registry Line's hitbox)
  *   WallClearance      how far a point stands from the wall's strip (negative inside it)
  *   KeepClear          a place a wall must keep clear of: a point with a radius (a shelter, a fire spot) or a path
  *                      with a half width (a March lane, a bot route)
@@ -13,8 +13,12 @@
  *   CrossesWall        a step from one poll to the next went across the wall's line (a blink, a charge, a sprint
  *                      faster than the strip is wide): the registry's tick sees only where a unit stands
  *   WallWatch          the last position of every unit near one wall; Observe reports a crossing
- *   StrikeBook         at most one strike per unit per kRestrikeMs (a shielded survivor is struck again, not spammed)
+ *   StrikeBook         at most one strike per unit per kRestrikeMs (a safety net: the strike is an outright kill)
+ *   LethalStrikeKills  whether a strike ends with the victim dead: always, whatever absorbs, shields, damage-taken
+ *                      reductions or immunities it carries (user ruling, F-2), unless it is in god mode or already
+ *                      in Spirit of Redemption
  *   PlanDispense       who gets a relic copy: the user's party members on the same map who lack it
+ *   DispensesOnClick   only the use dispenses, never the report-use that follows some goober clicks
  */
 
 #ifndef MOD_DUNGEON_BOSSES_KIT_DUNGEON_KIT_WALL_LOGIC_H
@@ -41,7 +45,7 @@ namespace DungeonKit
     float constexpr kWallMaxStepYd = 30.f;          // a longer step between two polls is a teleport, not a crossing
     std::uint32_t constexpr kWallTickMs = 250;      // the registry tick (X4's API)
     std::uint32_t constexpr kWallArmMs = 2000;      // section 10: the walls arm 2 s after the pull grip
-    std::uint32_t constexpr kRestrikeMs = 500;      // a survivor (an absorb) is struck again after this long
+    std::uint32_t constexpr kRestrikeMs = 500;      // a survivor (a failed cast) is struck again after this long
 
     struct WallLine
     {
@@ -53,7 +57,7 @@ namespace DungeonKit
         float HalfWidth() const { return width * 0.5f; }
     };
 
-    // Distance from `p` to the edge of the wall's strip (the capsule round the centre line): negative inside.
+    // Distance from `p` to the edge of the wall's strip (the capsule round the center line): negative inside.
     inline float WallClearance(WallLine const& w, Vec2 p)
     {
         return SegmentDistance(w.from, w.to, p) - w.HalfWidth();
@@ -201,6 +205,25 @@ namespace DungeonKit
     };
 
     // At most one strike per unit per `restrikeMs`.
+    // What a wall's strike sees of its victim. GMs never reach a strike (the wall skips them before); the rest of the
+    // fields are what could have saved someone from a damage strike and are ignored on purpose.
+    struct LethalStrikeTarget
+    {
+        bool alive = true;
+        bool godMode = false;               // .cheat god: the engine's INSTAKILL spares them too
+        bool spiritOfRedemption = false;    // already "dead" (the form ends in death; killing it again can loop)
+        std::uint32_t absorbLeft = 0;       // Power Word: Shield, Ice Barrier, Sacred Shield...
+        bool immunityAura = false;          // Divine Shield, Ice Block (the spell has NO_IMMUNITIES too)
+        float damageTakenPct = 100.f;       // Pain Suppression, Shield Wall...
+    };
+
+    // User ruling (F-2): a lethal wall's strike is an outright kill. The kit casts the strike (its look and the combat
+    // log), then kills a victim this returns true for and who is still standing.
+    inline bool LethalStrikeKills(LethalStrikeTarget const& t)
+    {
+        return t.alive && !t.godMode && !t.spiritOfRedemption;
+    }
+
     class StrikeBook
     {
     public:
@@ -253,6 +276,14 @@ namespace DungeonKit
         std::uint32_t had = 0;              // on the map, already carrying one
         std::uint32_t away = 0;             // not on the map
     };
+
+    // Whether a click on the dispenser hands out copies. A goober click reaches GossipHello twice: once from
+    // GameObject::Use (reportUse false) and once from the client's report-use (reportUse true); only the use itself
+    // dispenses, or the group gets "Everyone here already carries one." (and a full bag its error twice) right after.
+    inline bool DispensesOnClick(bool hasUser, bool reportUse)
+    {
+        return hasUser && !reportUse;
+    }
 
     inline DispensePlan PlanDispense(std::span<RelicCandidate const> candidates)
     {

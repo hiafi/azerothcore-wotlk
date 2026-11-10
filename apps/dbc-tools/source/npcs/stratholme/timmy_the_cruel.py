@@ -237,8 +237,10 @@ if BIND_WAVE_2:
             'end it trips everyone on the ground (206467 + 206468) and spares whoever is in the air (a jump, or a '
             'bot\'s hop). Smash 42669\'s SV 9612 (a dust ring burst at his feet as the rope comes round, V-2 '
             'TM_SWEEP_BURST). The rope beam (V-2 TM_JUMP_ROPE, a channel chain) is not wired: it needs a stalker to '
-            'draw to and a second cast slot.',
-            icon=_ICON_ROPE, visual=TM_SWEEP_BURST,
+            'draw to and a second cast slot. Shadow (R-2-A A-3, ORCH F-2 ruling): a kicked Patty Cake locks his '
+            'Physical school, and a Physical skip would wait out the lockout (the rope pushed into the next slot); '
+            'none of his kickable casts is Shadow.',
+            icon=_ICON_ROPE, visual=TM_SWEEP_BURST, school=School.SHADOW,
         )
 
     jump_rope_206465 = _skip(206465, 2000, 'a 2 s skip')

@@ -718,11 +718,14 @@ namespace StratholmeRework
     // Fire spots and shelters (the report's F1-F4 and F6; F5 was not kept).
     inline std::array<Vec2, 5> constexpr kUnforgivenFireSpots{ { { 3712.0f, -3401.5f }, { 3719.5f, -3426.5f },
         { 3676.0f, -3396.5f }, { 3684.0f, -3415.5f }, { 3709.5f, -3383.5f } } };
-    // The plaza polygon (counterclockwise from the east cordon's north end; wall points 1-2 yd outside the mesh).
-    inline std::array<Vec2, 13> constexpr kUnforgivenPlaza{ { { 3723.5f, -3440.6f }, { 3724.0f, -3425.0f },
-        { 3719.0f, -3405.0f }, { 3719.0f, -3378.0f }, { 3700.0f, -3374.0f }, { 3697.5f, -3368.5f },
-        { 3670.5f, -3380.5f }, { 3669.0f, -3392.0f }, { 3671.0f, -3405.0f }, { 3676.0f, -3419.0f },
-        { 3704.0f, -3420.0f }, { 3706.0f, -3432.0f }, { 3711.0f, -3442.1f } } };
+    // The plaza polygon (counterclockwise from the east cordon's north end; wall points 1-2 yd outside the mesh). Its
+    // two cordon edges run 3.2 yd inside the cordon lines (the cordon edge moved inward along its neighbors), so the
+    // arena stops 2 yd short of each 2 yd strip: a unit standing in a strip at the pull is off the arena and gripped
+    // in before the wall arms (kArenaWallGapYd; vertices 1, 6, 7 and 13 are the moved ones).
+    inline std::array<Vec2, 13> constexpr kUnforgivenPlaza{ { { 3723.6f, -3437.4f }, { 3724.0f, -3425.0f },
+        { 3719.0f, -3405.0f }, { 3719.0f, -3378.0f }, { 3700.0f, -3374.0f }, { 3698.8f, -3371.4f },
+        { 3670.0f, -3384.2f }, { 3669.0f, -3392.0f }, { 3671.0f, -3405.0f }, { 3676.0f, -3419.0f },
+        { 3704.0f, -3420.0f }, { 3706.0f, -3432.0f }, { 3709.5f, -3439.1f } } };
 
     // --- Hearthsinger Forresten (S2, wave 2) -------------------------------------------------------------------------
     inline std::array<Vec2, 3> constexpr kForrestenHearths{ { { 3608.0f, -3510.0f }, { 3602.0f, -3499.2f },
@@ -771,6 +774,10 @@ namespace StratholmeRework
     // lethal walls). Each is a leash circle (or the report's polygon / frame) with its z band. StratholmeKit.h
     // LeashOptions() builds the guard's options.
     // ----------------------------------------------------------------------------------------------------------------
+    // An arena next to a lethal wall stops this far short of the wall's strip (F-2 ruling): the pull grip only takes
+    // units off the arena, so anyone standing in a strip at the pull is gripped in before the wall arms.
+    float constexpr kArenaWallGapYd = 2.f;
+
     inline Arena CircleArena(Vec2 center, float radius, float zMin, float zMax)
     {
         return Arena(ArenaRegion::Circle(center, radius, zMin, zMax));
@@ -801,10 +808,12 @@ namespace StratholmeRework
             124.0f, 127.0f));
     }
     // The hall between the seals. His spawn and the Scarlet Archive's corner lie 11 to 15 yd east of the frame's
-    // Y = 0 edge, so the box reaches to Y -13 (y -3105) to hold his spawn; S6 checks the east wall in game.
+    // Y = 0 edge, so the box reaches to Y -13 (y -3105) to hold his spawn; S6 checks the east wall in game. X stops
+    // kArenaWallGapYd short of both lethal walls' strips: the Pyre (the measured line X 0 drawn 2 yd south, its strip
+    // X -3..-1) and the north wall (X 54, its strip X 53..55). The fight's own guard is GalfordLogic.h GuardArena().
     inline Arena GalfordArena()
     {
-        return Arena(ArenaRegion::Frame(kGalfordHall, Box2{ 0.f, kGalfordHall.sizeX, -13.f, kGalfordHall.sizeY },
+        return Arena(ArenaRegion::Frame(kGalfordHall, Box2{ 1.f, kGalfordHall.sizeX - 3.f, -13.f, kGalfordHall.sizeY },
             135.0f, 139.0f));
     }
     inline Arena DathrohanArena() { return CircleArena({ 3423.47f, -3055.73f }, 22.f, 136.0f, 139.0f); }

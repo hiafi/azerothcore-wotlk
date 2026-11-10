@@ -221,18 +221,25 @@ namespace StratGalford
     }
 
     // The arena the guard holds (the leash and the pull grip): the hall frame (StratholmeRework::GalfordArena's box,
-    // Y to -13 for his spawn by the archive) cut 2 yd short of the north wall's line, so a player standing in the
-    // north wall's strip at the pull is gripped out of it before it arms (the Pyre's strip, x 3443..3445, lies south
-    // of the frame already), and reaching Y 46 (y -3046): the sealed floor's west bay (x 3470..3494, y -3049..-3060,
+    // Y to -13 for his spawn by the archive) cut kArenaWallGapYd (2 yd) short of both walls' strips (F-2 ruling): the
+    // Pyre's strip x 3443..3445 (frame X -3..-1) and the north wall's x 3499..3501 (X 53..55), so the guard holds X
+    // 1..51 and a player standing in a strip (or within 2 yd of it) at the pull is gripped clear before it arms; and
+    // reaching Y 46 (y -3046): the sealed floor's west bay (x 3470..3494, y -3049..-3060,
     // the report's "closed side room") is hall too, so a tank who walks him there is not leashed.
-    inline constexpr float kGuardMaxX = 52.f;                       // frame X 52: x 3498, a yard short of the strip
+    inline constexpr float kGuardMinX = 1.f;                        // frame X 1: x 3447, 2 yd off the Pyre's strip
+    inline constexpr float kGuardMaxX = 51.f;                       // frame X 51: x 3497, 2 yd off the north strip
     inline constexpr float kGuardMaxY = 46.f;                       // frame Y 46: y -3046
     inline DungeonKit::Arena GuardArena()
     {
         using StratholmeRework::kGalfordHall;
         return DungeonKit::Arena(DungeonKit::ArenaRegion::Frame(kGalfordHall,
-            Box2{ 0.f, kGuardMaxX, -13.f, kGuardMaxY }, 135.0f, 139.0f));
+            Box2{ kGuardMinX, kGuardMaxX, -13.f, kGuardMaxY }, 135.0f, 139.0f));
     }
+
+    // The pull's reach (F-2 ruling): the pull puts in combat only the units its grip reaches (the guard's maxGripYd
+    // is this too). BossAI's zone-in (250 yd, and its 5 s combat pulse) would leave a player 120-250 yd away in
+    // combat, never gripped, and locked out by the north wall. It covers the whole guarded hall from anywhere in it.
+    inline constexpr float kPullRadiusYd = 120.f;
 
     // The hall's floor outline (the navmesh flood between the seals, z 133..140, read every 2 yd of x), kept 2 yd off
     // both walls' strips: the drop spot rule's room (its edge is the hall's walls) and the tank's Park floor. It

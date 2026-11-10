@@ -44,7 +44,7 @@ TIMMY, PLAYMATE = 10808, 300604
 PLAYMATE_HEROIC = 310193
 LEVEL_58_WARRIOR_BASE = 2871
 
-SCHOOL_NORMAL, SCHOOL_FROST = 1, 16
+SCHOOL_NORMAL, SCHOOL_FROST, SCHOOL_SHADOW = 1, 16, 32
 SCHOOL_DAMAGE, APPLY_AURA = 2, 6
 AURA_DUMMY, AURA_MOD_STUN, AURA_PERIODIC_DAMAGE, AURA_PERIODIC_TRIGGER_SPELL, AURA_MOD_DECREASE_SPEED = 4, 12, 3, 23, 33
 ATTR0_NO_IMMUNITIES = 0x20000000
@@ -86,6 +86,21 @@ def _raw(spell: dict, column: str) -> int:
     return int((spell.get("raw_overrides") or {}).get(column, 0) or 0)
 
 
+def _kickable(spell: dict) -> bool:
+    """A kick or a silence stops it: InterruptFlags or ChannelInterruptFlags INTERRUPT (0x08), or PreventionType 1."""
+    return bool(_raw(spell, "InterruptFlags") & 0x08 or _raw(spell, "ChannelInterruptFlags") & 0x08
+                or _raw(spell, "PreventionType") == 1)
+
+
+def _school_clash(spells: dict) -> list[tuple[int, int]]:
+    """R-2-A A-3 (ORCH F-2 ruling): a kick locks the kicked cast's school, and a creature's untriggered cast in a
+    locked school is refused. The (bar, kickable) pairs where a cast bar that must play (a cast time, not kickable)
+    shares a school with one of the boss's kickable casts."""
+    kickable = [s for s in spells.values() if _kickable(s)]
+    bars = [s for s in spells.values() if int(s.get("cast_time_ms") or 0) > 0 and not _kickable(s)]
+    return [(int(b["id"]), int(k["id"])) for b in bars for k in kickable if int(b["school"]) & int(k["school"])]
+
+
 def _header() -> str:
     return HEADER.read_text(encoding="utf-8")
 
@@ -110,6 +125,17 @@ class TimmyDeclarationTest(unittest.TestCase):
         cls.edits = [e for e in reg.creature_template_edits if int(e["entry"]) == TIMMY]
         cls.cpp = SCRIPT.read_text(encoding="utf-8")
         cls.header = _header()
+
+    def test_must_play_bars_never_share_a_kickable_school(self):
+        self.assertTrue(_kickable(self.spells[PATTY_CAKE]))
+        self.assertEqual(_school_clash(self.spells), [])
+        for spell_id in (JUMP_ROPE, JUMP_ROPE_FAST):
+            self.assertEqual(self.spells[spell_id]["school"], SCHOOL_SHADOW)
+        # The yell and the emote go out with the first skip that really starts, never at the rope's queueing.
+        start = self.cpp[self.cpp.index("bool StartRope(bool doubleDutch)"):self.cpp.index("void UpdateRope()")]
+        self.assertNotIn("Talk(YELL_TIMMY_JUMP)", start)
+        self.assertRegex(self.cpp, r"if \(_rope\.index == 0\)\s*\{\s*Talk\(YELL_TIMMY_JUMP\);\s*"
+                                   r"Talk\(EMOTE_TIMMY_JUMP_ROPE\);\s*\}\s*RegisterSweep")
 
     def test_spells_sit_in_the_slice_and_match_the_header(self):
         mine = sorted(self.spells)

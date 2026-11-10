@@ -202,6 +202,36 @@ namespace
         // Even through Shaken the capped hit stays below his health.
         CHECK(static_cast<std::uint32_t>(ShotDamage(185001, 3000, 3) * 1.3) < 3000u);
         CHECK(kShakenMaxStacks == 3u);
+        // F-2: a player's +damage-taken debuff on top (Curse of the Elements' 13%) would push the capped hit past his
+        // health; the after-modifier clamp holds it at health - 1 whatever it became.
+        std::uint32_t const raised = static_cast<std::uint32_t>(ShotDamage(185001, 3000, 3) * 1.3 * 1.13 + 0.5);
+        CHECK(raised >= 3000u);
+        CHECK(SelfDamageCap(3000, raised) == 2999u);
+        CHECK(SelfDamageCap(3000, 1200) == 1200u);
+        CHECK(SelfDamageCap(3000, 2999) == 2999u);
+        CHECK(SelfDamageCap(3000, 3000) == 2999u);
+        CHECK(SelfDamageCap(1, 50) == 0u && SelfDamageCap(0, 50) == 0u);
+    }
+
+    // The bots' spot bounds (F-2): the hall, never the yard its far end opens into.
+    void TestSpotBounds()
+    {
+        std::array<Vec2, 4> const hall = HallSpotCorners();
+        auto inside = [&hall](Vec2 p) { return DungeonKit::PointInPolygon(hall, p); };
+        // The yard opening's ends and the yard beyond it (the tunnel portcullis, frame (27.4, 48.8)) are out.
+        CHECK(!inside(kYardOpeningA));
+        CHECK(!inside(kYardOpeningB));
+        CHECK(!inside(DungeonKit::FramePoint(kWilleyHall, 49.f, 22.f)));
+        CHECK(!inside({ 3575.01f, -2984.0f }));
+        // Every spot a dodge wants is in: both halves down the whole hall, the rank spots, the load spots, his own.
+        for (float x : { 2.f, 16.f, 30.f, 44.f, 56.f })
+            for (Gun gun : { Gun::Mercy, Gun::Zeal })
+                CHECK(inside(LanePoint(gun, x)));
+        for (StratholmeRework::Point3 const& p : kWilleyRank4)
+            CHECK(inside(p.XY()));
+        CHECK(inside(LoadSpot(Gun::Mercy)) && inside(LoadSpot(Gun::Zeal)));
+        CHECK(inside(kWilleySpawn.XY()));
+        CHECK(kSpotZMin < kRankZ && kRankZ < kSpotZMax && kSpotZMin < kWilleySpawn.z && kWilleySpawn.z < kSpotZMax);
     }
 
     void TestTimers()
@@ -226,6 +256,7 @@ int main()
     TestHalvesAndGuns();
     TestBarrage();
     TestShot();
+    TestSpotBounds();
     TestTimers();
     return Report("strat_willey_test");
 }

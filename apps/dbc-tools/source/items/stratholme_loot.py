@@ -198,8 +198,9 @@ for _lootid, _items, _what in TIER_0_TRASH:
 #   which stay. The list goes into group 2. Totem of the Storm and Idol of the Moon leave his share of world pool
 #   24021 (the pool also holds Libram of Fervor, one of three equal members at 0.5%, so 0.17% each), so his row on the
 #   pool is removed and Libram of Fervor keeps its 0.17% as a row of its own (group 6, `loot_chance()`). The pool is a
-#   shared one and stays as it is for every other creature. His 0.02% Stratholme Militia Shoulderguard row (group 0)
-#   stays.
+#   shared one and stays as it is for every other creature. His stock 0.02% Stratholme Militia Shoulderguard row
+#   (group 0, entry 18742) is removed: the Shoulderguard is on his list now (build spec: "Add (from his 0.02% row)"),
+#   so it does not drop twice.
 #
 # - **Galford**'s stock group 1 had the Tome at 12% and four equal rows; the list is four equal rows (no weights in a
 #   list), so the Tome rises from 12% to 25% of a kill.
@@ -280,8 +281,9 @@ MALOR_NORMAL, MALOR_HEROIC = 11032, 310175
 MALOR_LIST_GROUP = 2
 MALOR_LIST = (
     "strat_gauntlets_of_the_zealot", "strat_inquisitors_girdle", "strat_libram_of_zeal", "strat_totem_of_the_storm",
-    "strat_idol_of_the_moon",
+    "strat_idol_of_the_moon", "strat_stratholme_militia_shoulderguard",
 )
+STRATHOLME_MILITIA_SHOULDERGUARD = 18742  # his stock 0.02% row, group 0
 RELIC_WORLD_POOL = 24021  # Idol of the Moon, Totem of the Storm, Libram of Fervor: 0.5% in group 1, a third each
 LIBRAM_OF_FERVOR = 23203
 LIBRAM_GROUP = 6  # a row of its own: the stock group 1 is the world pools, the list is group 2
@@ -291,5 +293,7 @@ boss_loot(MALOR_HEROIC, MALOR_LIST, tier="heroic", group=MALOR_LIST_GROUP)
 remove_loot_rows(MALOR_NORMAL, group=1, references=(RELIC_WORLD_POOL,),
                  why="Totem of the Storm and Idol of the Moon are on his list; Libram of Fervor keeps its share "
                      "as a row of its own")
+remove_loot_rows(MALOR_NORMAL, (STRATHOLME_MILITIA_SHOULDERGUARD,), group=0,
+                 why="the Shoulderguard is on his list (build spec: Keep, alter or add)")
 loot_chance(MALOR_NORMAL, LIBRAM_OF_FERVOR, LIBRAM_CHANCE, LIBRAM_GROUP, name="Libram of Fervor")
 loot_chance(MALOR_HEROIC, LIBRAM_OF_FERVOR, LIBRAM_CHANCE, LIBRAM_GROUP, name="Libram of Fervor")

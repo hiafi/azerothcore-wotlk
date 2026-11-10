@@ -277,12 +277,15 @@ standard_206587 = spell(
           '/ TARGET_DEST_DYNOBJ_ALLY, a persistent area aura): every ally inside carries this spell\'s DUMMY aura, the '
           'ward. The Carrion Swarm cones (S7 CarrionSpec::wardAura) and the moving swarms (eligibility maxStacks 0 on '
           'this aura) never hit a warded player, the cone\'s target included; leaving the ring drops it. Consecration '
-          '26573\'s SV 5600 (V-2 DA_TRUE_GROUND; the hard mode has no Sacred Ground to confuse it with). The item\'s '
-          '20 s cooldown is per copy.',
+          '26573\'s SV 5600 (V-2 DA_TRUE_GROUND; the hard mode has no Sacred Ground to confuse it with). '
+          'spell_strat_grand_lie_standard (AfterCast) registers a 5 s Stack on the ring for the bots while the hard '
+          'mode runs and the ring is in the chamber (F-2 MIN-1, ST 2017). The item\'s 20 s cooldown is per copy.',
     raw_overrides=kit_raw('Raise the Scarlet Standard. The swarms pass over allies within its ring of light.',
                           'Under the Scarlet Standard: the swarms pass you over.', instant=True,
                           SpellVisualID_1=DA_TRUE_GROUND, AttributesEx=ATTR1_NO_THREAT),
 )
+
+scripted_by(standard_206587, 'spell_strat_grand_lie_standard')
 
 medallion_206588 = spell(
     id=206588, name='Faith of the Medallion', school=School.HOLY, cast_time_ms=0, cooldown_ms=0,

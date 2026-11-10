@@ -1,6 +1,7 @@
 // Host tests for UnforgivenLogic.h (S1: The Unforgiven): the street lanes inside their frames, the cordon placement
 // rule (5 yd from every shelter, fire spot and march path, handoff section 3.8), the freed / bound rule, the Last Soul
 // count, the fire picks and cap, the nova's gate.
+#include "DungeonKitArena.h"
 #include "UnforgivenLogic.h"
 #include "check.h"
 #include <cmath>
@@ -147,6 +148,66 @@ int main()
         float const gap = wall.Length() / static_cast<float>(kCordonFootmen[c]);
         CHECK(gap >= 2.f && gap <= 3.f);
     }
+    // F-2 ruling (R-2-A question 1): every firelight ring, where the accused stands, keeps 5 yd from both strips (F2
+    // moved 2 yd north along its bay for the east cordon), and F2 is still a shelter on the plaza.
+    for (std::size_t c = 0; c < kCordonCount; ++c)
+        for (std::size_t i = 0; i < kFireSpotCount; ++i)
+        {
+            std::array<KeepClear, 1> const ring{ FirelightKeepClear(i) };
+            CHECK(DungeonKit::KeepsClear(CordonWall(c), ring));
+        }
+    {
+        std::array<KeepClear, 1> const f2{ FirelightKeepClear(1) };
+        float const gap = DungeonKit::CheckPlacement(CordonWall(kCordonEast), f2).minYd;
+        std::printf("strat_unforgiven_test: F2's firelight ring keeps %.2f yd from the east cordon\n", gap);
+        CHECK(gap >= 5.f && gap < 6.f);
+        // Still inside the measured bay (x 3716..3722, y -3421..-3432).
+        CHECK(FireSpot(1).x >= 3716.f && FireSpot(1).x <= 3722.f);
+        CHECK(FireSpot(1).y >= -3432.f && FireSpot(1).y <= -3421.f);
+        // The other four are the report's spots.
+        for (std::size_t i : { 0u, 2u, 3u, 4u })
+            CHECK(FireSpot(i).x == kUnforgivenFireSpots[i].x && FireSpot(i).y == kUnforgivenFireSpots[i].y);
+    }
+
+    // R-2-A A-1 (acceptance #8): a unit standing in a strip or within 1 yd of it at the pull is gripped onto the plaza
+    // (off the polygon: the guard's own pull grip; on it: GripOffTheCordon's safety net), and the grip lands it well
+    // clear of both strips.
+    for (std::size_t c = 0; c < kCordonCount; ++c)
+    {
+        WallLine const wall = CordonWall(c);
+        float const len = wall.Length();
+        Vec2 const dir{ (wall.to.x - wall.from.x) / len, (wall.to.y - wall.from.y) / len };
+        // The plaza side of the line: the side his spawn is on.
+        float const side = DungeonKit::WallSide(wall, kUnforgivenSpawn.XY()) > 0.f ? 1.f : -1.f;
+        Vec2 const normal{ -dir.y * side, dir.x * side };
+        for (float t : { 0.1f, 0.3f, 0.5f, 0.7f, 0.9f })
+        {
+            Vec2 const on{ wall.from.x + (wall.to.x - wall.from.x) * t, wall.from.y + (wall.to.y - wall.from.y) * t };
+            for (float in : { 0.f, 0.5f, 0.9f, 1.5f, 1.9f })
+            {
+                Vec2 const p{ on.x + normal.x * in, on.y + normal.y * in };
+                CHECK(DungeonKit::WallSide(wall, p) * side >= -1e-3f);
+                bool const offArena = !UnforgivenArena().Contains(p, kCordonZ[c]);
+                CHECK(NeedsCordonGrip(p) || offArena);
+                // The grip's default landing (8 yd from him toward the unit) is clear of both strips.
+                Vec2 const land = DungeonKit::LandingToward(kUnforgivenSpawn.XY(), p, 8.f);
+                CHECK(!NeedsCordonGrip(land));
+                CHECK(UnforgivenArena().Contains(land, kUnforgivenSpawn.z));
+            }
+        }
+    }
+    // 0.5 yd plaza side of each line is a grip (the R-2-A scenario), 3 yd in is not.
+    CHECK(NeedsCordonGrip(DungeonKit::Advance(CordonPoint(kCordonEast, 2), DungeonKit::BearingTo(
+        CordonPoint(kCordonEast, 2), kPlazaCenter), 0.5f)));
+    CHECK(NeedsCordonGrip(DungeonKit::Advance(CordonPoint(kCordonSouthWest, 5), DungeonKit::BearingTo(
+        CordonPoint(kCordonSouthWest, 5), kPlazaCenter), 0.5f)));
+    CHECK(!NeedsCordonGrip(DungeonKit::Advance(CordonPoint(kCordonEast, 2), DungeonKit::BearingTo(
+        CordonPoint(kCordonEast, 2), kPlazaCenter), 3.f)));
+    CHECK(!NeedsCordonGrip(kUnforgivenSpawn.XY()) && !NeedsCordonGrip(kPlazaCenter));
+    for (std::size_t i = 0; i < kFireSpotCount; ++i)
+        CHECK(!NeedsCordonGrip(FireSpot(i)));
+    CHECK(kCordonGripClearanceYd == 1.f);
+
     // The strips really cover the street: a point in the middle of each marched lane is inside one of them.
     for (MarchLane const& lane : kLanes)
     {

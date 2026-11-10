@@ -86,15 +86,16 @@ namespace DungeonKit
         void Strike(Unit* owner, WallState& w, ObjectGuid victimGuid, bool crossed)
         {
             Unit* victim = ObjectAccessor::GetUnit(*owner, victimGuid);
-            if (!victim || !victim->IsAlive() || !victim->IsInWorld())
+            if (!CountsForWall(victim, owner->GetMap()))        // alive, here, and never a GM (nor a GM's pet)
                 return;
             if (!w.book.Due(victimGuid.GetRawValue(), GameTime::GetGameTimeMS().count()))
                 return;
             Unit* caster = NearestStriker(owner, w, victim);
             if (w.spec.killSpell)
                 caster->CastSpell(victim, w.spec.killSpell, TRIGGERED_FULL_MASK, nullptr, nullptr, owner->GetGUID());
-            else
-                Unit::Kill(owner, victim);
+            // User ruling (F-2): an outright kill. The spell's script already killed a survivor; this catches a cast
+            // that did not land (no spell, a refused cast, a caster gone mid-cast).
+            FinishLethalStrike(caster->IsInMap(victim) ? caster : owner, victim);
             LogMechanic(w.spec.dungeon, w.spec.boss, "lethal-wall",
                 "victim=" + victim->GetName() + (victim->IsPlayer() ? "" : " pet=1") + (crossed ? " crossed=1" : ""));
             if (w.spec.onStrike)
@@ -162,6 +163,21 @@ namespace DungeonKit
             }
             w.book.Prune(GameTime::GetGameTimeMS().count());
         }
+    }
+
+    bool FinishLethalStrike(Unit* killer, Unit* victim)
+    {
+        if (!victim || !victim->IsInWorld())
+            return false;
+        LethalStrikeTarget t;
+        t.alive = victim->IsAlive() && victim->GetHealth() > 0;
+        Player const* player = victim->ToPlayer();
+        t.godMode = player && player->GetCommandStatus(CHEAT_GOD);
+        t.spiritOfRedemption = victim->HasAuraType(SPELL_AURA_SPIRIT_OF_REDEMPTION);
+        if (!LethalStrikeKills(t))
+            return false;
+        Unit::Kill(killer, victim);
+        return true;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -293,10 +309,11 @@ namespace DungeonKit
     {
     }
 
-    bool RelicDispenserAI::GossipHello(Player* player, bool /*reportUse*/)
+    bool RelicDispenserAI::GossipHello(Player* player, bool reportUse)
     {
         // Handled either way (true): the click never reaches GameObject::Use (no loot, no state change, no despawn).
-        if (!player || !CanDispense(player))
+        // The use itself only (a report-use follows some clicks).
+        if (!DispensesOnClick(player != nullptr, reportUse) || !CanDispense(player))
             return true;
         DispenseResult const result = Dispense(me, player, _itemId, _dungeon);
         if (result.given.empty() && !result.noRoom)

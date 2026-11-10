@@ -353,8 +353,10 @@ miracle_206492 = cast_bar(
     206492, 'Miracle', _MIRACLE_CAST_MS, 'He kneels toward the medallion and begs for a miracle.',
     f'{_MZ}, MZ10: once per fight at 10% health, the 3 s cast (yell line 4): he kneels toward the strongbox. Not '
     'interruptible (cast_bar). Finished (OnSpellCast) it heals him through 206493 by his Faith. Lay on Hands 10310\'s '
-    'SV 132 (holy hands and a light).',
-    icon=_ICON_LAY_ON_HANDS, visual=SV_MIRACLE, school=School.HOLY,
+    'SV 132 (holy hands and a light). Physical, like the Smash bar (R-2-A A-3, ORCH F-2 ruling): a kicked Holy Light '
+    'locks his Holy school, and a Holy bar would be refused for the lockout (the failing-path heal skipped by timing '
+    'a kick); none of his kickable casts is Physical.',
+    icon=_ICON_LAY_ON_HANDS, visual=SV_MIRACLE, school=School.NORMAL,
 )
 
 miracle_heal_206493 = _heal(

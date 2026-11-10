@@ -4,6 +4,8 @@
 #include "check.h"
 #include <array>
 #include <cmath>
+#include <cstdint>
+#include <initializer_list>
 #include <vector>
 
 using namespace DungeonKit;
@@ -125,6 +127,33 @@ namespace
         CHECK(kWallArmMs == 2000);                      // section 10
     }
 
+    // User ruling (F-2): a strike is an outright kill; no absorb, shield, reduction or immunity leaves a survivor.
+    void TestOutrightKill()
+    {
+        LethalStrikeTarget plain;
+        CHECK(LethalStrikeKills(plain));
+        for (std::uint32_t absorb : { 0u, 1u, 5000u, 1000000u })
+            for (bool immune : { false, true })
+                for (float taken : { 100.f, 60.f, 10.f, 0.f })
+                {
+                    LethalStrikeTarget t;
+                    t.absorbLeft = absorb;
+                    t.immunityAura = immune;
+                    t.damageTakenPct = taken;
+                    CHECK(LethalStrikeKills(t));
+                }
+        LethalStrikeTarget dead;
+        dead.alive = false;
+        CHECK(!LethalStrikeKills(dead));                // never killed twice
+        LethalStrikeTarget god;
+        god.godMode = true;
+        god.absorbLeft = 5000;
+        CHECK(!LethalStrikeKills(god));                 // .cheat god (a GM tool) is spared, like the engine's INSTAKILL
+        LethalStrikeTarget redemption;
+        redemption.spiritOfRedemption = true;
+        CHECK(!LethalStrikeKills(redemption));          // the form already ends in death
+    }
+
     void TestDispense()
     {
         std::vector<RelicCandidate> const party{
@@ -144,6 +173,12 @@ namespace
         DispensePlan const again = PlanDispense(solo);
         CHECK(again.give.empty() && again.had == 1 && again.away == 0);
         CHECK(PlanDispense(std::span<RelicCandidate const>()).give.empty());
+
+        // R-2-FW m-3: a click calls GossipHello from the use and again from the report-use; only the use dispenses.
+        CHECK(DispensesOnClick(true, false));
+        CHECK(!DispensesOnClick(true, true));
+        CHECK(!DispensesOnClick(false, false));
+        CHECK(!DispensesOnClick(false, true));
     }
 }
 
@@ -154,6 +189,7 @@ int main()
     TestCrossings();
     TestWatch();
     TestStrikeBook();
+    TestOutrightKill();
     TestDispense();
     return Report("kit_walls_test");
 }

@@ -61,6 +61,8 @@ namespace StratGrandLie
         TAG_GL_MARK     = 22,   // HM3 the real Stack or Spread (NoTelegraph)
         TAG_GL_CLAIM    = 23,   // the claimed marker of a call piece (a Decoy, drawn alike for truth and lie)
         TAG_GL_SWARM    = 24,   // HM5 a swarm's persistent circle
+        TAG_GL_PARK     = 25,   // the tank rule: hold him on the brazier (hidden, tank-only Park)
+        TAG_GL_STANDARD = 26,   // HM9 a raised Scarlet Standard: the bots' Stack on its ring (no damage)
     };
 
     // The cast queue id of Dread Slumber (StratDathrohan::kHardModeCastBase 100 on).
@@ -261,6 +263,22 @@ namespace StratGrandLie
         return tieToA ? Half::A : Half::B;
     }
 
+    // The struck half of a call (F-2 MAJ-1). The lie Ring's safe floor is the 10 yd disc on him (the donut strikes
+    // the rest), and the Cleave strikes a half through the brazier: when he stands off the middle, a donut paired
+    // with a Cleave on his half would leave almost nothing. So with a lie Ring in the call and him more than
+    // kDonutSlackYd off the middle, the Cleave spares the half he stands in (the larger part of his disc); otherwise
+    // the swarm rule. `bossSide` is his signed distance from the split line (SideOfMiddle, + on half B). A true Ring
+    // (the 10 yd circle struck) leaves 220+ sq yd of a half wherever he stands, so it never needs the override.
+    float constexpr kDonutSlackYd = 0.5f;
+
+    inline Half StruckHalfFor(std::uint32_t swarmsInA, std::uint32_t swarmsInB, bool tieToA, bool lieRing,
+        float bossSide)
+    {
+        if (lieRing && std::fabs(bossSide) > kDonutSlackYd)
+            return bossSide > 0.f ? Half::A : Half::B;
+        return StruckHalf(swarmsInA, swarmsInB, tieToA);
+    }
+
     // The half the marker shows: the struck one when the call is true, the other when it lies.
     constexpr Half ClaimedHalf(Half struck, bool isTrue)
     {
@@ -293,6 +311,12 @@ namespace StratGrandLie
     Vec2 constexpr kChamberEntrance{ 3438.0f, -3076.0f };
     float constexpr kEntranceAvoidRad = 0.6109f;        // 35 degrees either side of the doorway's bearing
     float constexpr kMiddleEpsYd = 0.3f;                // a swarm turning off the middle stops this short of it
+    // The swarm's center keeps this far off the split line while the middle is closed: its whole 2.5 yd cloud stays
+    // on its own side (F-2 MIN-2; ST 2115 "never crosses the middle in a call's last 4 s").
+    float constexpr kMiddleClearYd = kSwarmRadius + kMiddleEpsYd;
+    // A swarm already inside that band when the middle closes leaves it at least this fast across (cosine of its
+    // heading to the split line's normal): out of the band within (kMiddleClearYd / kSwarmSpeed) / kLeaveMinCos.
+    float constexpr kLeaveMinCos = 0.6f;
 
     inline Vec2 Brazier()
     {
@@ -304,6 +328,29 @@ namespace StratGrandLie
     {
         float const a = StratholmeRework::kDathrohanHalves.angle;
         return { -std::sin(a), std::cos(a) };
+    }
+
+    // A point's signed distance from the split line (through the brazier): + on half B, - on half A.
+    inline float SideOfMiddle(Vec2 p)
+    {
+        Vec2 const c = Brazier();
+        Vec2 const m = MiddleNormal();
+        return (p.x - c.x) * m.x + (p.y - c.y) * m.y;
+    }
+
+    // ---- The tank rule (ST 1931, F-2 MAJ-1) ------------------------------------------------------------------------
+
+    // The tank holds him on the brazier (Scholomance addition 7): while he stands more than kParkTriggerYd off it, a
+    // hidden tank-only Park circle on it (checked every kParkCheckMs; each holds kParkHoldMs, under the bots' 8 s
+    // hold cap a zone; a new one follows while he is still off it).
+    std::uint32_t constexpr kParkCheckMs = 1000;
+    std::uint32_t constexpr kParkHoldMs = 5000;
+    float constexpr kParkRadius = 3.f;
+    float constexpr kParkTriggerYd = 3.f;
+
+    inline bool ShouldPark(Vec2 boss)
+    {
+        return DungeonKit::Distance(boss, Brazier()) > kParkTriggerYd;
     }
 
     inline float EntranceBearing()
@@ -356,8 +403,9 @@ namespace StratGrandLie
     }
 
     // One straight leg of a swarm: from its spot along `dir` to the wall circle, or (with the middle closed, HM5: no
-    // swarm crosses the middle in a call's last 4 s) to just short of the split line when that comes first. At the
-    // end it turns off what it met (a mirror bounce).
+    // swarm crosses the middle in a call's last 4 s) to where its cloud's edge is just short of the split line when
+    // that comes first. At the end it turns off what it met (a mirror bounce). A swarm whose cloud already reaches
+    // over the line when the middle closes turns away at once (a zero-length leg), leaving at kLeaveMinCos or faster.
     struct SwarmLeg
     {
         Vec2 end;
@@ -395,10 +443,32 @@ namespace StratGrandLie
         {
             Vec2 const m = MiddleNormal();
             float const side = ox * m.x + oy * m.y;
-            float const toward = dir.x * m.x + dir.y * m.y;
-            if (std::fabs(side) > kMiddleEpsYd && side * toward < 0.f)
+            // The side it is on (on the line itself: the side it heads for, else B), and its heading off the line.
+            float const away = side > 0.f ? 1.f : (side < 0.f ? -1.f : (dir.x * m.x + dir.y * m.y < 0.f ? -1.f : 1.f));
+            Vec2 const nAway{ m.x * away, m.y * away };
+            float const leaving = dir.x * nAway.x + dir.y * nAway.y;
+            if (std::fabs(side) <= kMiddleClearYd)
             {
-                float const tMid = (std::fabs(side) - kMiddleEpsYd) / std::fabs(toward);
+                // Inside the band: turn away now (its cloud reaches over the line), back to the side it is on.
+                if (leaving < kLeaveMinCos)
+                {
+                    Vec2 par{ dir.x - leaving * nAway.x, dir.y - leaving * nAway.y };
+                    float const pl = std::sqrt(par.x * par.x + par.y * par.y);
+                    float const along = std::sqrt(1.f - kLeaveMinCos * kLeaveMinCos);
+                    par = pl > 0.001f ? Vec2{ par.x / pl * along, par.y / pl * along } : Vec2{ 0.f, 0.f };
+                    Vec2 turned{ par.x + nAway.x * kLeaveMinCos, par.y + nAway.y * kLeaveMinCos };
+                    float const tl = std::sqrt(turned.x * turned.x + turned.y * turned.y);
+                    leg.end = pos;
+                    leg.dirAfter = { turned.x / tl, turned.y / tl };
+                    leg.length = 0.f;
+                    leg.offMiddle = true;
+                    return leg;
+                }
+            }
+            else if (leaving < 0.f)
+            {
+                // Heading for the line: it stops with its cloud's edge just short of it and turns off it.
+                float const tMid = (std::fabs(side) - kMiddleClearYd) / -leaving;
                 if (tMid < tWall)
                 {
                     leg.end = { pos.x + dir.x * tMid, pos.y + dir.y * tMid };

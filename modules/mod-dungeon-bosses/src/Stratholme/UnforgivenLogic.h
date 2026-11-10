@@ -277,6 +277,20 @@ namespace StratUnforgiven
         return { line[0], line[1], kCordonWidth };
     }
 
+    // R-2-A A-1: the pull's safety net. A unit closer than this to a cordon's strip when he is pulled (the plaza
+    // polygon's edge lies inside the strip, or a pet parked in the inner half of it) is gripped onto the plaza before
+    // the walls arm, whether or not the guard's own pull grip saw it as off the arena.
+    inline constexpr float kCordonGripClearanceYd = 1.f;
+
+    // Is `p` within kCordonGripClearanceYd of either cordon's strip (inside it included)?
+    inline bool NeedsCordonGrip(Vec2 p)
+    {
+        for (std::size_t c = 0; c < kCordonCount; ++c)
+            if (DungeonKit::WallClearance(CordonWall(c), p) < kCordonGripClearanceYd)
+                return true;
+        return false;
+    }
+
     // The footman `k` of cordon `i`, evenly along it (half a spacing in from each end).
     inline Vec2 CordonPoint(std::size_t i, std::uint32_t k)
     {
@@ -297,9 +311,14 @@ namespace StratUnforgiven
     // larger (F2, the passage north bay, 6 x 10 yd).
     inline constexpr std::array<float, kFireSpotCount> kBayKeepClearYd{ { 5.f, 6.f, 5.f, 5.f, 5.f } };
 
+    // The fire spots: the report's bays (StratholmeRework::kUnforgivenFireSpots), F2 moved 2 yd north along its bay
+    // (y -3426.5 -> -3424.5, still inside the bay's -3421..-3432) so its 10 yd firelight ring, the accused's place,
+    // keeps section 3.8's 5 yd from the east cordon's strip (R-2-A question 1, ORCH F-2 ruling: 3.48 -> 5.46 yd).
+    inline constexpr Vec2 kFireSpotF2Moved{ 3719.5f, -3424.5f };
+
     inline Vec2 FireSpot(std::size_t i)
     {
-        return StratholmeRework::kUnforgivenFireSpots[i];
+        return i == 1 ? kFireSpotF2Moved : StratholmeRework::kUnforgivenFireSpots[i];
     }
 
     // A random free bay (rand(n) in [0, n)); nullopt when every bay burns.
@@ -351,12 +370,21 @@ namespace StratUnforgiven
         return out;
     }
 
-    // The five bays (fire spots and shelters) and both march lanes.
+    // The firelight ring of fire spot `i` (UF4: the accused stands in it, so the wall keeps 5 yd from its outer edge).
+    inline KeepClear FirelightKeepClear(std::size_t i)
+    {
+        return KeepClear::Point(FireSpot(i), kFirelightOuter);
+    }
+
+    // The five bays (fire spots and shelters), their firelight rings and both march lanes.
     inline std::vector<KeepClear> CordonKeepClear()
     {
         std::vector<KeepClear> out;
         for (std::size_t i = 0; i < kFireSpotCount; ++i)
+        {
             out.push_back(KeepClear::Point(FireSpot(i), kBayKeepClearYd[i]));
+            out.push_back(FirelightKeepClear(i));
+        }
         for (MarchLane const& lane : kLanes)
             for (KeepClear const& k : MarchPathKeepClear(lane))
                 out.push_back(k);

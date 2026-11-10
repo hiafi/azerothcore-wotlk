@@ -540,7 +540,8 @@ struct boss_timmy_the_cruel_rework : public BossAI
         unfrozen.auraSpell = SPELL_TC_FROZEN;
         unfrozen.maxStacks = 0;
         ref.AnchorOn(player).Persistent(Ms(static_cast<uint32>(left) + 500), Ms(kThawTickMs)).Eligible(unfrozen)
-            .OneClaimPerBot().Tag(TAG_THAW);
+            .OneClaimPerBot().MissedSoak(BossMechanics::MissedSoakMode::Never)  // the Shatter is the failure, not this
+            .Tag(TAG_THAW);
         Map* map = me->GetMap();
         ObjectGuid const bossGuid = me->GetGUID();
         ObjectGuid const frozenGuid = player->GetGUID();
@@ -670,8 +671,6 @@ struct boss_timmy_the_cruel_rework : public BossAI
         _rope.active = true;
         _rope.skips = SkipsOf(doubleDutch);
         _rope.nextMs = _clockMs;
-        Talk(YELL_TIMMY_JUMP);
-        Talk(EMOTE_TIMMY_JUMP_ROPE);
         Log("jump-rope", Acore::StringFormat("skips={} double-dutch={} total={}ms", _rope.skips.size(),
             doubleDutch ? 1 : 0, RopeMs(doubleDutch)));
         UpdateRope();
@@ -694,6 +693,12 @@ struct boss_timmy_the_cruel_rework : public BossAI
         {
             _rope.nextMs = _clockMs + 250;      // try again shortly
             return;
+        }
+        // The yell and the emote with the first skip that really starts (R-2-A A-3: never ahead of a refused cast).
+        if (_rope.index == 0)
+        {
+            Talk(YELL_TIMMY_JUMP);
+            Talk(EMOTE_TIMMY_JUMP_ROPE);
         }
         RegisterSweep(castMs, _rope.index);
         ++_rope.index;

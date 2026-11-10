@@ -120,6 +120,8 @@ class WilleyDeclarationTest(unittest.TestCase):
         self.assertEqual(willey["ScriptName"], "boss_cannon_master_willey_rework")
         self.assertEqual(willey["AIName"], "")
         self.assertEqual(math.ceil(WARRIOR_60_BASE * willey["HealthModifier"]), 185001)
+        # Stock 3.5, not the live 7 the retired mod-progression left (F-2 ruling, the rest of wave 2's precedent).
+        self.assertAlmostEqual(float(willey["DamageModifier"]), 3.5)
         rifleman = self.edits[RIFLEMAN]
         self.assertEqual(rifleman["ScriptName"], "npc_st_crimson_rifleman")
         self.assertEqual(rifleman["AIName"], "")

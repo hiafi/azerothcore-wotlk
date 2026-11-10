@@ -39,8 +39,8 @@ so db-import and the dbc-tools replay see one history.
 | `src/Kit/DungeonKitFlow.h` | Pure: `WeightedSplit`, `CappedWaveSize`, `CastQueue`, `HoldBook`, percent encoding |
 | `src/Kit/DungeonKitFields.{h,cpp}` | Engine: `PuddleField`, `RegistryHit`, `FollowThenLand`, `SummonWave`, ... |
 | `src/Kit/DungeonKitSpells.cpp` | `spell_dungeon_refflat_damage` / `_periodic`: generic percent spells |
-| `src/Kit/DungeonKitWallLogic.h` | Pure: wall lines, the 5 yd placement rule, crossings, strike book, dispense plan |
-| `src/Kit/DungeonKitWalls.{h,cpp}` | Engine: `LethalWall`, `LethalWalls`, `RelicDispenserAI`, `Dispense` |
+| `src/Kit/DungeonKitWallLogic.h` | Pure: walls, 5 yd placement, crossings, strike book, outright kill, dispensing |
+| `src/Kit/DungeonKitWalls.{h,cpp}` | Engine: `LethalWall(s)`, `FinishLethalStrike`, `RelicDispenserAI`, `Dispense` |
 | `src/Kit/ArenaGuard.{h,cpp}` | The arena guard (grips, hold, leash), `LeashPreset`, cell `Confinement` |
 | `src/Kit/DungeonTestCommand.{h,cpp}` | The generic `.<x>test` GM command shell, one per dungeon |
 | `src/Deadmines/DeadminesRework.h` | Pure: entries, boss states, data ids, text groups, spell slices, measured frames |

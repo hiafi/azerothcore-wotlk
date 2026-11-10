@@ -1,12 +1,15 @@
 /*
  * mod-dungeon-bosses, the shared dungeon kit: lethal walls and relic dispensers (Stratholme WP-KT-2,
  * .agents/plans/stratholme-build/stratholme-build.HANDOFF.md section 3.11 #15 and #26). The pure rules are
- * DungeonKitWallLogic.h; the strike's damage is spell_dungeon_lethal_strike (DungeonKitSpells.cpp).
+ * DungeonKitWallLogic.h; the strike's kill is spell_dungeon_lethal_strike (DungeonKitSpells.cpp).
  *
  *   LethalWall          an arena wall (The Unforgiven's Cordon, Galford's Pyre and north wall): a telegraph-only
  *                       persistent registry Line, `.Lethal()` (mod-boss-mechanics X4: bots never plan a way across),
  *                       armed `armAfter` after it registers; every tick the kit strikes each player and pet inside it,
- *                       and each one that crossed its line since the last tick (a blink, a charge, a mount)
+ *                       and each one that crossed its line since the last tick (a blink, a charge, a mount); the
+ *                       strike is an outright kill (user ruling, F-2): absorbs, shields and reductions never save
+ *   FinishLethalStrike  kills a struck victim still standing (LethalStrikeKills); the strike spell's script and the
+ *                       wall's tick both call it
  *   LethalWalls         the walls one boss AI raised: Add, Clear (Reset / JustDied / EnterEvadeMode)
  *   RelicDispenserAI    a GameObjectAI base: a click gives one copy of an item to the user and every member of the
  *                       user's group on the same map who lacks it (bots too); Dispense does the same from any script
@@ -43,8 +46,8 @@ namespace DungeonKit
         Position from;                                  // the wall's ends on the floor (z: the floor height there)
         Position to;
         float width = kWallDefaultWidthYd;              // the hitbox and the marker: the whole width kills
-        // The strike (a spell bound to spell_dungeon_lethal_strike: damage equal to the victim's maximum health).
-        // 0: Unit::Kill, a fallback for a test before the spell exists.
+        // The strike (an INSTAKILL spell bound to spell_dungeon_lethal_strike), cast for its look and the combat log;
+        // a victim still standing after it is killed outright (FinishLethalStrike). 0: Unit::Kill only.
         uint32 killSpell = 0;
         Milliseconds armAfter{ kWallArmMs };            // the warning: drawn and seen by bots at once, kills from then
         Milliseconds lifetime{ 4 * 3600 * 1000 };       // the whole fight (it ends with the encounter or Clear)
@@ -73,6 +76,11 @@ namespace DungeonKit
     // The handoff's short form (section 3.11 #15).
     BossMechanics::MechanicRef LethalWall(Unit* owner, Position const& from, Position const& to, float width,
         uint32 killSpell, Milliseconds armAfter = Milliseconds(kWallArmMs));
+
+    // User ruling (F-2): a wall's strike is an outright kill. Kills `victim` when it is still standing and
+    // LethalStrikeKills says so (not in god mode, not in Spirit of Redemption), whatever absorbs, shields, damage-taken
+    // reductions or immunities it carries. True when it killed.
+    bool FinishLethalStrike(Unit* killer, Unit* victim);
 
     // The pure line of a spec (for host-side placement checks: KeepsClear, CheckPlacement).
     inline WallLine WallLineOf(LethalWallSpec const& spec)

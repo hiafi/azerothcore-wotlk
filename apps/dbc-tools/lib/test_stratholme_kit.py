@@ -11,7 +11,8 @@ Checks:
   - its normal HealthModifier times its class base (level, unit_class; creature_classlevelstats basehp0) is the build
     spec's normal health (handoff s3.6);
   - StratholmeRework.h's spell slices tile the `stratholme` spell reservation, and its new creature and gameobject ids
-    sit in the reservation's blocks, wave 1 creatures below wave 2's.
+    sit in the reservation's blocks, wave 1 creatures below wave 2's;
+  - the lethal walls' strike 206400 is an outright kill (INSTAKILL, NO_IMMUNITIES, spell_dungeon_lethal_strike).
 
 Only the skeleton's columns are looked at: the boss WPs add their own declarations to the same package.
 
@@ -42,6 +43,9 @@ IMMUNITY_BOSS_STUN = 1972
 IMMUNITY_BARON_STOCK = -419
 INSTANCE_BIND = 0x1
 MALEKI_STOCK_FLAGS = 0x4000000
+CROSSED_THE_LINE = 206400           # the lethal walls' strike (shared.py)
+SPELL_EFFECT_INSTAKILL = 1
+ATTR0_NO_IMMUNITIES = 0x20000000
 
 # entry: (script name, normal health, level, class base basehp0 at that level and unit_class, wave; live 2026-11-09)
 BOSSES = {
@@ -146,6 +150,17 @@ class StratholmeSkeletonTest(unittest.TestCase):
             self.skipTest("wave 2 is bound")
         wave2 = {entry for entry, row in BOSSES.items() if row[4] == 2}
         self.assertFalse(wave2 & set(self.edits))
+
+    def test_the_lethal_strike_is_an_outright_kill(self):
+        # User ruling (F-2): the walls' strike 206400 is SPELL_EFFECT_INSTAKILL (no absorb or reduction applies), not
+        # damage, with NO_IMMUNITIES, and bound to the kit's spell_dungeon_lethal_strike (it kills a survivor).
+        spell = next(e for e in self.reg.spells if int(e["id"]) == CROSSED_THE_LINE)
+        self.assertEqual(spell["effect1"]["type"], SPELL_EFFECT_INSTAKILL)
+        self.assertIsNone(spell["effect2"])
+        self.assertIsNone(spell["effect3"])
+        self.assertTrue(int(spell["attributes"]) & ATTR0_NO_IMMUNITIES)
+        bound = {e["ScriptName"] for e in self.reg.spell_script_names if int(e["spell_id"]) == CROSSED_THE_LINE}
+        self.assertEqual(bound, {"spell_dungeon_lethal_strike"})
 
     def test_slices_tile_the_reservation(self):
         spell = id_blocks.RESERVATIONS["stratholme"]["spell"]

@@ -16,15 +16,17 @@
  *
  * Stratholme WP-KT-2 adds the lethal walls' strike (DungeonKitWalls.h LethalWall, handoff section 3.11 #15):
  *
- *   spell_dungeon_lethal_strike     every SPELL_EFFECT_SCHOOL_DAMAGE effect: SetEffectValue(the target's maximum
- *                                   health) at launch. The spell carries NO_IMMUNITIES (Divine Shield and Ice Block do
- *                                   not stop a wall), ALWAYS_HIT, IGNORE_CASTER_MODIFIERS, a school with no resistance
- *                                   (Holy) and TARGET_UNIT_TARGET_ENEMY; an absorb or a damage-taken reduction can
- *                                   leave someone standing, and the wall strikes again on its next tick.
+ *   spell_dungeon_lethal_strike     an outright kill (user ruling, F-2): the spell is SPELL_EFFECT_INSTAKILL (no
+ *                                   absorb or damage-taken reduction applies) with NO_IMMUNITIES (Divine Shield and
+ *                                   Ice Block do not stop a wall), ALWAYS_HIT and TARGET_UNIT_TARGET_ENEMY; after the
+ *                                   hit the script kills a target still standing (DungeonKitWalls.h
+ *                                   FinishLethalStrike). A SCHOOL_DAMAGE effect, if a spell still has one, is set to
+ *                                   the target's maximum health at launch.
  */
 
 #include "DungeonKit.h"
 #include "DungeonKitFlow.h"
+#include "DungeonKitWalls.h"
 #include "SpellAuraEffects.h"
 #include "SpellInfo.h"
 #include "SpellScript.h"
@@ -102,7 +104,7 @@ class spell_dungeon_refflat_periodic : public AuraScript
     std::array<DungeonKit::PerStackAmount, MAX_SPELL_EFFECTS> _perStack;
 };
 
-// Stratholme WP-KT-2: the lethal walls' strike, damage equal to the target's maximum health (ST UF12 / GF10).
+// Stratholme WP-KT-2: the lethal walls' strike (ST UF12 / GF10), an outright kill (user ruling, F-2).
 class spell_dungeon_lethal_strike : public SpellScript
 {
     PrepareSpellScript(spell_dungeon_lethal_strike);
@@ -113,10 +115,16 @@ class spell_dungeon_lethal_strike : public SpellScript
             SetEffectValue(static_cast<int32>(std::min<uint32>(target->GetMaxHealth(), 0x7FFFFFFF)));
     }
 
+    void Finish()
+    {
+        DungeonKit::FinishLethalStrike(GetCaster(), GetHitUnit());
+    }
+
     void Register() override
     {
         OnEffectLaunchTarget += SpellEffectFn(spell_dungeon_lethal_strike::SetDamage, EFFECT_ALL,
             SPELL_EFFECT_SCHOOL_DAMAGE);
+        AfterHit += SpellHitFn(spell_dungeon_lethal_strike::Finish);
     }
 };
 

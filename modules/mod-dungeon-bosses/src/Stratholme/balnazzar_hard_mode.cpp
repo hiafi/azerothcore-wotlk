@@ -22,13 +22,15 @@
  *                after the call's first yell. The real hit is registered NoTelegraph (bots read it); the claimed
  *                marker is a Decoy drawn alike for truth and lie (the S7 heroic pattern: the yell is the only tell).
  *                Cleave: a 180 degree cone from the brazier over half the room (the measured frame), the half with
- *                more swarms struck (true: the claimed half; lie: the other). Ring: a 10 yd circle on him (true) or
- *                the 10-40 yd donut (lie). Mark: a 6 yd Stack on a random non-tank, 100% split (true) or a 7 yd Spread
- *                on every non-tank, 50% (lie). 50% to the non-tanks; the tank is exempt from all three.
+ *                more swarms struck (true: the claimed half; lie: the other); with a lie Ring in the same call and
+ *                him off the middle, the half he stands in is spared (safe floor, F-2). Ring: a 10 yd circle on him
+ *                (true) or the 10-40 yd donut (lie). Mark: a 6 yd Stack on a random non-tank, 100% split (true) or a
+ *                7 yd Spread on every non-tank, 50% (lie). 50% to the non-tanks; the tank is exempt from all three.
  *   HM5 swarms   a stalker (300609) out of the wall every 20 s from 15 s (cap 2 / 3 / 4 by act), crawling in
  *                straight lines at 3 yd/s and turning off the wall, gone at 30 s; a persistent 5 yd circle (2.5 yd
  *                radius) on it, 10% a second and Weakened on everyone inside after a 1 s grace; the Standard's ward
- *                spares its holders. During a call (its last 4 s) no swarm crosses the middle: it turns off it.
+ *                spares its holders. During a call (its last 4 s) no swarm's cloud crosses the middle: it turns off
+ *                it 2.8 yd short (its center), or at once when it is already that close.
  *                Blessed Holy Water's splash disperses a swarm.
  *   HM6 cones    act 2 on: S7's Carrion Swarm, two cones, 25% / 50%, every 20 s on its own timer; the Standard's ward.
  *   HM7 meteor   act 2 on: S7's Inferno every 30 s, the 25k stoking Infernal; never landing in a call's window.
@@ -36,13 +38,15 @@
  *                be interrupted, landing 2 s after a call: every player without the Medallion's ward sleeps 5 s
  *                (S7's Sleep aura, then Nightmare); the next call's first yell 3 s after it lands.
  *   HM10         Vampiric Aura heals 3% per hit landed (every twin, swarm, cone and Infernal hit).
+ *   tank rule    a hidden tank-only Park on the brazier while he stands more than 3 yd off it (ST 1931).
  *   cleanup      death, evade, reset: the swarms and their zones, the marks, the 600k (a wipe only). The flag stays
  *                with the instance (section 7 #10).
  *
  * The relics (HM9; heroic only, spawnMask 2, shown when their boss is dead): the Scarlet Standard (301204, Willey's
  * yard), the Medallion's light (301205, Malor's strongbox) and the blessed crate (301206, Crusaders' Square, from the
  * start). A click gives one copy to everyone in the group on the map (KT-2's RelicDispenserAI; bots get theirs and
- * never use them, section 7 #9). Each copy keeps its own cooldown (ruling 33).
+ * never use them, section 7 #9). Each copy keeps its own cooldown (ruling 33). A raised Standard in the chamber
+ * registers a 5 s Stack on its ring for the bots (they step into the ward; ST 2017).
  *
  * Every firing logs one INFO line "strat balnazzar hm-<mechanic> ..." (S7's DathrohanFight::Log, module.dungeonbosses).
  * `.dbtest strat grandlie <sub>` drives it.
@@ -236,7 +240,12 @@ private:
         uint32 const ms = std::max<uint32>(kMinLegMs, uint32(_leg.length / kSwarmSpeed * 1000.f));
         _legEndAt = _clockMs + ms;
         if (_leg.length < 0.05f)
+        {
+            // A turn on the spot (its cloud over a closed middle): stop the leg it was on now, not 200 ms later.
+            me->GetMotionMaster()->Clear();
+            me->StopMoving();
             return;
+        }
         float const z = FloorZ(me, _leg.end.x, _leg.end.y, kChamberFloorZ);
         me->GetMotionMaster()->Clear();
         me->GetMotionMaster()->MovePoint(1, _leg.end.x, _leg.end.y, z, FORCED_MOVEMENT_NONE, kSwarmSpeed, 0.f, false,
@@ -302,11 +311,14 @@ public:
         _slumberLandAt.reset();
         _slumberQueued = false;
         _swarms.clear();
+        _park = {};
+        _parkCheckMs = kParkCheckMs;    // the first check on the first update
+        _parkUntil = 0;
         fight.Log("hm-engage", Acore::StringFormat("health={} was_create={} loot_mode={}", boss->GetMaxHealth(),
             _baseCreateHealth, uint32(boss->GetLootMode())));
     }
 
-    void OnUpdate(DathrohanFight& fight, uint32 /*diff*/) override
+    void OnUpdate(DathrohanFight& fight, uint32 diff) override
     {
         if (!_active)
             return;
@@ -317,6 +329,7 @@ public:
         if (act != _act)
             EnterAct(fight, act);
 
+        UpdatePark(fight, diff);
         UpdateSwarms(fight);
         if (now >= _nextSwarmAt)
             _nextSwarmAt = now + (SpawnSwarm(fight, nullptr) ? kSwarmEveryMs : kSwarmRetryMs);
@@ -429,6 +442,9 @@ public:
             if (Creature* swarm = ObjectAccessor::GetCreature(*boss, s.guid))
                 swarm->DespawnOrUnsummon();
         }
+        if (_park)
+            Mechanic::Cancel(boss, _park);
+        _park = {};
         if (_instance)
             _instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_GL_MARK);
         if (_active && !died && boss->IsAlive() && _baseCreateHealth)
@@ -599,7 +615,15 @@ private:
         for (Swarm const& s : _swarms)
             if (Creature* swarm = ObjectAccessor::GetCreature(*boss, s.guid))
                 ++(HalfOf(DungeonKit::PlaneOf(swarm)) == Half::A ? inA : inB);
-        Half const struck = StruckHalf(inA, inB, urand(0, 1) == 0);
+        // A lie Ring in the same call: its safe floor is the disc on him, so the Cleave spares the half he stands in
+        // (MAJ-1; the call's truths are all rolled at its start).
+        bool lieRing = false;
+        if (_call)
+            for (Piece const& piece : _call->pieces)
+                if (piece.twin == Twin::Ring && !piece.isTrue)
+                    lieRing = true;
+        float const bossSide = SideOfMiddle(DungeonKit::PlaneOf(boss));
+        Half const struck = StruckHalfFor(inA, inB, urand(0, 1) == 0, lieRing, bossSide);
         Half const claimed = ClaimedHalf(struck, isTrue);
         boss->AI()->Talk(YellOf(Twin::Cleave, isTrue));
 
@@ -616,8 +640,9 @@ private:
             kCleaveLengthYd), warn);
         claim.Decoy().Color(BossMechanics::Color::Yellow).Tag(TAG_GL_CLAIM);
         fight.Track(claim.Handle());
-        fight.Log("hm-cleave", Acore::StringFormat("{} struck={} claimed={} swarms A={} B={} warn={}ms",
-            isTrue ? "true" : "lie", HalfName(struck), HalfName(claimed), inA, inB, warn.count()));
+        fight.Log("hm-cleave", Acore::StringFormat("{} struck={} claimed={} swarms A={} B={} lie_ring={} side={:.1f} "
+            "warn={}ms", isTrue ? "true" : "lie", HalfName(struck), HalfName(claimed), inA, inB, lieRing ? 1 : 0,
+            bossSide, warn.count()));
     }
 
     // HM2: the 10 yd circle on him (true) or the 10-40 yd donut (lie); the claim is the circle either way.
@@ -742,7 +767,48 @@ public:
         return dispersed;
     }
 
+    // HM9 a raised Scarlet Standard (MIN-1, ST 2017 Bots): a 5 s Stack on its 6 yd ring for the non-tanks, so the bots
+    // step into the ward. No damage (its resolve only ends it); a ring raised outside the chamber is not theirs.
+    bool StandardRaised(DathrohanFight& fight, Position const& at, Player* by)
+    {
+        if (!StratDathrohan::InBounds({ at.GetPositionX(), at.GetPositionY() }))
+            return false;
+        MechanicRef ref = Mechanic::Stack(fight.Boss(), at, kStandardRadiusYd, Milliseconds(kStandardMs));
+        ref.Eligible(NonTanks()).Within(fight.RoomBounds()).NoTelegraph().Tag(TAG_GL_STANDARD);
+        fight.Track(ref.Handle());
+        fight.Log("hm-standard", Acore::StringFormat("by={} at=({:.1f}, {:.1f})", by ? by->GetName() : "?",
+            at.GetPositionX(), at.GetPositionY()));
+        return true;
+    }
+
 private:
+    // ---- The tank rule (ST 1931) ------------------------------------------------------------------------------------
+
+    // The bots' tank holds him on the brazier: while he stands off it, a hidden tank-only Park circle on it (Galford's
+    // pattern). A new one follows each hold while he is still off it.
+    void UpdatePark(DathrohanFight& fight, uint32 diff)
+    {
+        _parkCheckMs += diff;
+        if (_parkCheckMs < kParkCheckMs)
+            return;
+        _parkCheckMs = 0;
+        uint64 const now = fight.FightMs();
+        Creature* boss = fight.Boss();
+        if (now < _parkUntil || !ShouldPark(DungeonKit::PlaneOf(boss)))
+            return;
+        if (_park)
+            Mechanic::Cancel(boss, _park);
+        BossMechanics::Eligibility tankOnly;
+        tankOnly.roles = BossMechanics::Role::Tank;
+        Position const spot(kDathrohanBrazier.x, kDathrohanBrazier.y, kChamberFloorZ, 0.f);
+        MechanicRef ref = Mechanic::Circle(boss, spot, kParkRadius, Milliseconds(kParkHoldMs));
+        ref.Park(boss).NoTelegraph().Eligible(tankOnly).Within(fight.RoomBounds()).Tag(TAG_GL_PARK);
+        _park = ref.Handle();
+        _parkUntil = now + kParkHoldMs;
+        fight.Log("hm-park", Acore::StringFormat("off the brazier {:.1f} yd",
+            DungeonKit::Distance(DungeonKit::PlaneOf(boss), Brazier())));
+    }
+
     // ---- HM5 the swarms --------------------------------------------------------------------------------------------
 
     npc_st_moving_swarm* SwarmAI(DathrohanFight& fight, ObjectGuid guid)
@@ -855,6 +921,9 @@ private:
     }
 
     InstanceScript* _instance = nullptr;
+    MechanicHandle _park;
+    uint32 _parkCheckMs = 0;
+    uint64 _parkUntil = 0;
     bool _active = false;
     Act _act = Act::Lies;
     std::optional<Call> _call;
@@ -1069,6 +1138,28 @@ class spell_strat_grand_lie_holy_water : public SpellScript
     }
 };
 
+// 206587 the Scarlet Standard raised: the ward is the spell's own persistent area aura (a 6 yd ring at the user's feet
+// for 5 s); while the hard mode runs, the bots get a Stack on the ring (TheGrandLie::StandardRaised).
+class spell_strat_grand_lie_standard : public SpellScript
+{
+    PrepareSpellScript(spell_strat_grand_lie_standard);
+
+    void Raised()
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+        DathrohanFight* fight = nullptr;
+        if (TheGrandLie* gl = GrandLieOf(*caster, fight))
+            gl->StandardRaised(*fight, caster->GetPosition(), caster->ToPlayer());
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_strat_grand_lie_standard::Raised);
+    }
+};
+
 // 206588 the Medallion's pulse: the 4 s sleep ward is the aura (mechanic immunity, Sleep); it also wakes every sleeper
 // it reaches (S7's Sleep aura removed as a dispel would: Nightmare still follows).
 class spell_strat_grand_lie_medallion : public SpellScript
@@ -1249,6 +1340,7 @@ void AddSC_strat_balnazzar_hard_mode()
     RegisterDungeonReworkGameObjectAI(go_st_grand_lie_relic, StratholmeRework::kInstanceScriptName);
     RegisterSpellScript(spell_strat_grand_lie_letter);
     RegisterSpellScript(spell_strat_grand_lie_holy_water);
+    RegisterSpellScript(spell_strat_grand_lie_standard);
     RegisterSpellScript(spell_strat_grand_lie_medallion);
     StratTest::RegisterBoss("grandlie", GrandLieTestCommands());
 }

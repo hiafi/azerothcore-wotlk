@@ -1,9 +1,9 @@
 -- Stratholme build WP-S8: Balnazzar's hard mode, the Grand Lie (heroic only), the rows dbc-tools cannot declare
 -- (.agents/plans/stratholme-build/stratholme-build.HANDOFF.md s3.7, s3.5 row S8, s7 #7, #9, #10; build spec
 -- docs/dungeons/stratholme-rework.md ST 1920-1999, 2107-2120; modules/mod-dungeon-bosses
--- src/Stratholme/balnazzar_hard_mode.cpp). The boss's spells 206575-206584 and the swarm stalker 300609 are
--- apps/dbc-tools source/npcs/stratholme/balnazzar_hard_mode.py; the relics' use spells 206585-206588 are
--- source/items/stratholme_relics.py; the relics' client Item.dbc and server item_dbc rows are source/items.csv
+-- src/Stratholme/balnazzar_hard_mode.cpp). The boss's spells 206575-206584, the relics' use spells 206585-206588
+-- and the swarm stalker 300609 are apps/dbc-tools source/npcs/stratholme/balnazzar_hard_mode.py; the relics' table is
+-- source/items/stratholme_relics.py, and their client Item.dbc and server item_dbc rows are source/items.csv
 -- (70600-70603). This rev: the texts, the four items' item_template rows, the four gameobjects and their spawns.
 
 -- Texts (ST "Text", handoff s7 #14: the rows go on the entry that speaks). Dathrohan 10812: groups 8 (say, the Letter

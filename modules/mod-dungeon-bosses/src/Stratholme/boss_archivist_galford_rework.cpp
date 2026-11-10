@@ -120,6 +120,7 @@ namespace
         DungeonKit::ArenaGuardOptions o = LeashOptions(kBossLogName);
         o.gripOnPull = true;
         o.gripBack = false;
+        o.maxGripYd = kPullRadiusYd;    // the pull's reach (JustEngagedWith): no one in combat beyond the grip
         o.landing = [](Creature const* /*boss*/, Unit const* unit)
         {
             return At(GripLanding(DungeonKit::PlaneOf(unit)), kHallFloorZ);
@@ -140,11 +141,24 @@ struct boss_archivist_galford_rework : public BossAI
         Cleanup();
     }
 
-    void JustEngagedWith(Unit* who) override
+    // Not BossAI::JustEngagedWith: its zone-in and its 5 s combat pulse reach 250 yd, past the pull grip (F-2
+    // ruling: the pull reaches as far as the grip, kPullRadiusYd). The rest is BossAI's: active, the required
+    // bosses, IN_PROGRESS.
+    void JustEngagedWith(Unit* /*who*/) override
     {
-        BossAI::JustEngagedWith(who);
+        me->setActive(true);
+        DoZoneInCombat(me, kPullRadiusYd);
+        if (instance)
+        {
+            if (!instance->CheckRequiredBosses(BOSS_GALFORD))
+            {
+                EnterEvadeMode(EVADE_REASON_OTHER);
+                return;
+            }
+            instance->SetBossState(BOSS_GALFORD, IN_PROGRESS);
+        }
         if (!me->IsEngaged())
-            return;     // BossAI evaded
+            return;     // evaded
 
         BossMechanics::EncounterOptions options;
         options.bossStateId = BOSS_GALFORD;

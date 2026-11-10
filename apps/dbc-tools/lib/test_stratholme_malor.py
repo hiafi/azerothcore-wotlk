@@ -98,6 +98,21 @@ def _raw(spell: dict, column: str) -> int:
     return int((spell.get("raw_overrides") or {}).get(column, 0) or 0)
 
 
+def _kickable(spell: dict) -> bool:
+    """A kick or a silence stops it: InterruptFlags or ChannelInterruptFlags INTERRUPT (0x08), or PreventionType 1."""
+    return bool(_raw(spell, "InterruptFlags") & 0x08 or _raw(spell, "ChannelInterruptFlags") & 0x08
+                or _raw(spell, "PreventionType") == 1)
+
+
+def _school_clash(spells: dict) -> list[tuple[int, int]]:
+    """R-2-A A-3 (ORCH F-2 ruling): a kick locks the kicked cast's school, and a creature's untriggered cast in a
+    locked school is refused. The (bar, kickable) pairs where a cast bar that must play (a cast time, not kickable)
+    shares a school with one of the boss's kickable casts."""
+    kickable = [s for s in spells.values() if _kickable(s)]
+    bars = [s for s in spells.values() if int(s.get("cast_time_ms") or 0) > 0 and not _kickable(s)]
+    return [(int(b["id"]), int(k["id"])) for b in bars for k in kickable if int(b["school"]) & int(k["school"])]
+
+
 def _header() -> str:
     return HEADER.read_text(encoding="utf-8")
 
@@ -124,6 +139,11 @@ class MalorDeclarationTest(unittest.TestCase):
         cls.creatures = {int(e["entry"]): e for e in reg.creature_templates if int(e["entry"]) == STALKER}
         cls.edits = [e for e in reg.creature_template_edits if int(e["entry"]) == MALOR]
         cls.cpp = SCRIPT.read_text(encoding="utf-8")
+
+    def test_must_play_bars_never_share_a_kickable_school(self):
+        self.assertTrue(_kickable(self.spells[HOLY_LIGHT]))
+        self.assertEqual(_school_clash(self.spells), [])
+        self.assertEqual(self.spells[MIRACLE]["school"], SCHOOL_PHYSICAL)
 
     def test_spells_sit_in_the_slice_and_match_the_header(self):
         mine = sorted(self.spells)

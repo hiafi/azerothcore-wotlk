@@ -1,4 +1,5 @@
 // Host tests for GrandLieLogic.h (S8: Balnazzar's hard mode, the Grand Lie).
+#include "DathrohanLogic.h"
 #include "GrandLieLogic.h"
 #include "check.h"
 #include <cmath>
@@ -25,6 +26,73 @@ namespace
         Vec2 const m = MiddleNormal();
         return (p.x - c.x) * m.x + (p.y - c.y) * m.y;
     }
+
+    // Walks a swarm with the middle closed for `yd` of crawl (a call's 4 s is 12 yd), leg by leg, and returns the
+    // smallest |side| its center reaches after `graceYd` of crawl, and whether it ever changed side.
+    struct Walk
+    {
+        float minSide = 1000.f;
+        bool flipped = false;
+    };
+
+    Walk WalkClosed(Vec2 pos, Vec2 dir, float yd, float graceYd)
+    {
+        Walk w;
+        float const startSide = MiddleSide(pos);
+        float walked = 0.f;
+        for (int legs = 0; legs < 64 && walked < yd; ++legs)
+        {
+            SwarmLeg const leg = PlanLeg(pos, dir, true);
+            float const len = std::min(leg.length, yd - walked);
+            for (float t = 0.f; t <= len; t += 0.05f)
+            {
+                Vec2 const p{ pos.x + dir.x * t, pos.y + dir.y * t };
+                float const side = MiddleSide(p);
+                if (walked + t >= graceYd)
+                    w.minSide = std::min(w.minSide, std::fabs(side));
+                if (startSide != 0.f && side * startSide < 0.f)
+                    w.flipped = true;
+            }
+            walked += leg.length;
+            pos = leg.end;
+            dir = leg.dirAfter;
+        }
+        return w;
+    }
+
+    // The safe floor of a call (F-2 MAJ-1): the room's floor (StratDathrohan::kBoundsRadius around the brazier) off
+    // the struck half and off the Ring's struck part, on a 0.5 yd grid. `clear`: whether a spot with `clearYd` of safe
+    // floor all around exists.
+    struct Floor
+    {
+        float area = 0.f;
+        bool clear = false;
+    };
+
+    Floor SafeFloor(Vec2 boss, Half struck, bool lieRing, float clearYd)
+    {
+        Floor f;
+        float const R = StratDathrohan::kBoundsRadius;
+        float const step = 0.5f;
+        Vec2 const c = Brazier();
+        for (float dx = -R; dx <= R; dx += step)
+            for (float dy = -R; dy <= R; dy += step)
+            {
+                Vec2 const p{ c.x + dx, c.y + dy };
+                float const fromCenter = Dist(p, c);
+                if (fromCenter > R || HalfOf(p) == struck)
+                    continue;
+                float const fromBoss = Dist(p, boss);
+                if (lieRing ? fromBoss > kRingRadius : fromBoss <= kRingRadius)
+                    continue;
+                f.area += step * step;
+                float const side = MiddleSide(p) * (struck == Half::A ? 1.f : -1.f);    // + into the spared half
+                bool const roomy = fromCenter <= R - clearYd && side >= clearYd
+                    && (lieRing ? fromBoss <= kRingRadius - clearYd : fromBoss >= kRingRadius + clearYd);
+                f.clear = f.clear || roomy;
+            }
+        return f;
+    }
 }
 
 int main()
@@ -42,6 +110,7 @@ int main()
     CHECK(!ArenaFor(BOSS_GRAND_LIE).Empty());
     // Tags and the cast id stay clear of S7's (below 20, queue ids below 100).
     CHECK(TAG_GL_CLEAVE >= 20);
+    CHECK(TAG_GL_PARK != TAG_GL_STANDARD && TAG_GL_STANDARD > TAG_GL_SWARM);
     CHECK(CAST_DREAD_SLUMBER >= 100);
 
     // ---- Acts -------------------------------------------------------------------------------------------------------
@@ -142,7 +211,8 @@ int main()
         Vec2 const across{ -m.x, -m.y };
         SwarmLeg const closed = PlanLeg(start, across, true);
         CHECK(closed.offMiddle);
-        CHECK(Near(closed.length, 8.f - kMiddleEpsYd, 0.01f));
+        CHECK(Near(closed.length, 8.f - kMiddleClearYd, 0.01f));      // its cloud's edge stops short (MIN-2)
+        CHECK(MiddleSide(closed.end) - kSwarmRadius > 0.f);
         CHECK(MiddleSide(closed.end) > 0.f);
         CHECK(closed.dirAfter.x * m.x + closed.dirAfter.y * m.y > 0.f);
         // Open, it crosses to the far wall.
@@ -151,6 +221,39 @@ int main()
         // Moving away from the middle, a closed middle changes nothing.
         SwarmLeg const away = PlanLeg(start, m, true);
         CHECK(!away.offMiddle);
+        // Already within its cloud's reach of the line when the middle closes (MIN-2): it turns at once, back to its
+        // own side, leaving at kLeaveMinCos or faster; a swarm already leaving fast enough keeps its line.
+        for (float side : { 2.f, 0.4f, -1.5f })
+        {
+            Vec2 const near{ Brazier().x + side * m.x, Brazier().y + side * m.y };
+            float const own = side > 0.f ? 1.f : -1.f;
+            for (Vec2 d : { Vec2{ -m.x * own, -m.y * own }, Vec2{ MiddleNormal().y, -MiddleNormal().x } })
+            {
+                SwarmLeg const turn = PlanLeg(near, d, true);
+                CHECK(turn.offMiddle && turn.length == 0.f);
+                CHECK((turn.dirAfter.x * m.x + turn.dirAfter.y * m.y) * own >= kLeaveMinCos - 0.001f);
+            }
+            SwarmLeg const leaving = PlanLeg(near, { m.x * own, m.y * own }, true);
+            CHECK(!leaving.offMiddle && leaving.length > 1.f);
+        }
+        // On the line itself: it leaves toward the side it heads for.
+        SwarmLeg const onLine = PlanLeg(Brazier(), { -m.x * 0.2f + 0.98f * m.y, -m.y * 0.2f - 0.98f * m.x }, true);
+        CHECK(onLine.length == 0.f && onLine.dirAfter.x * m.x + onLine.dirAfter.y * m.y <= -kLeaveMinCos + 0.001f);
+        // Walked over a call's 4 s from anywhere in the room, any heading: a swarm whose cloud starts clear of the
+        // line never reaches it; one starting over it is clear of it once it has had time to leave, and never
+        // changes side.
+        float const leaveYd = kMiddleClearYd / kLeaveMinCos + 0.1f;
+        for (float a = 0.f; a < 6.28f; a += 0.39f)
+            for (float r : { 0.f, 1.f, 2.6f, 3.5f, 8.f, 16.f })
+                for (float h = 0.f; h < 6.28f; h += 0.52f)
+                {
+                    Vec2 const at{ Brazier().x + r * std::cos(a), Brazier().y + r * std::sin(a) };
+                    Vec2 const d{ std::cos(h), std::sin(h) };
+                    bool const startsClear = std::fabs(MiddleSide(at)) >= kMiddleClearYd;
+                    Walk const w = WalkClosed(at, d, kCallLandMs / 1000.f * kSwarmSpeed, startsClear ? 0.f : leaveYd);
+                    CHECK(w.minSide >= kSwarmRadius - 0.01f);
+                    CHECK(!w.flipped);
+                }
         // A stray outside the circle comes back toward the brazier.
         Vec2 const stray{ Brazier().x + 25.f, Brazier().y };
         SwarmLeg const home = PlanLeg(stray, { 1.f, 0.f }, false);
@@ -159,6 +262,56 @@ int main()
         // The 5 yd cloud brushes the wall, never far past it (the mesh's rim is 19-20 yd).
         CHECK(kSwarmPathRadius + kSwarmRadius <= 20.f);
         CHECK(Near(kSwarmRadius * 2.f, 5.f));
+    }
+
+    // ---- The tank rule and the safe floor (F-2 MAJ-1) ---------------------------------------------------------------
+    {
+        // A hidden Park on the brazier while he stands off it; each zone ends inside the bots' 8 s hold cap.
+        CHECK(!ShouldPark(Brazier()));
+        CHECK(!ShouldPark({ Brazier().x + 2.9f, Brazier().y }));
+        CHECK(ShouldPark({ Brazier().x + 3.1f, Brazier().y }));
+        CHECK(kParkHoldMs < 8000 && kParkRadius <= kParkTriggerYd);
+        CHECK(StratDathrohan::InBounds(Brazier()));
+        // Wherever he stands in the room, every Ring / Cleave pair leaves a usable safe floor: 60+ sq yd and a spot
+        // with 3 yd of safe floor all round (at the brazier: a half disc, 157 sq yd, for the donut).
+        float worst = 1000.f;
+        bool allClear = true;
+        bool oldRuleFails = false;
+        float const R = StratDathrohan::kBoundsRadius;
+        for (float dx = -R; dx <= R; dx += 1.f)
+            for (float dy = -R; dy <= R; dy += 1.f)
+            {
+                Vec2 const boss{ Brazier().x + dx, Brazier().y + dy };
+                if (Dist(boss, Brazier()) > R)
+                    continue;
+                for (bool lieRing : { false, true })
+                    for (bool moreInA : { false, true })
+                    {
+                        std::uint32_t const inA = moreInA ? 2 : 0;
+                        std::uint32_t const inB = moreInA ? 0 : 2;
+                        Half const struck = StruckHalfFor(inA, inB, true, lieRing, SideOfMiddle(boss));
+                        Floor const f = SafeFloor(boss, struck, lieRing, 3.f);
+                        worst = std::min(worst, f.area);
+                        allClear = allClear && f.clear;
+                        // The swarm rule alone (as built before F-2) can leave none.
+                        if (lieRing && SafeFloor(boss, StruckHalf(inA, inB, true), true, 3.f).area < 1.f)
+                            oldRuleFails = true;
+                    }
+            }
+        CHECK(worst >= 60.f);
+        CHECK(allClear);
+        CHECK(oldRuleFails);
+        // Parked on the brazier the donut leaves its half disc.
+        CHECK(SafeFloor(Brazier(), Half::A, true, 3.f).area >= 150.f);
+        // Off the middle with a lie Ring, the half he stands in is spared; near it, the swarm rule decides.
+        Vec2 const m = MiddleNormal();
+        Vec2 const onB{ Brazier().x + 6.f * m.x, Brazier().y + 6.f * m.y };
+        CHECK(StruckHalfFor(0, 3, true, true, SideOfMiddle(onB)) == Half::A);
+        CHECK(StruckHalfFor(0, 3, true, false, SideOfMiddle(onB)) == Half::B);
+        CHECK(StruckHalfFor(0, 3, true, true, 0.2f) == Half::B);
+        CHECK(StruckHalfFor(3, 0, false, true, -4.f) == Half::B);
+        CHECK(Near(SideOfMiddle(onB), 6.f, 0.01f));
+        CHECK(SideOfMiddle(onB) > 0.f && HalfOf(onB) == Half::B);
     }
 
     // ---- Meteor windows and Dread Slumber ---------------------------------------------------------------------------

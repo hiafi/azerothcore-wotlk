@@ -40,6 +40,7 @@
 #include "DungeonKitFields.h"
 #include "ForrestenLogic.h"
 #include "Map.h"
+#include "MechanicRegistry.h"
 #include "MotionMaster.h"
 #include "MoveSplineInit.h"
 #include "PassiveAI.h"
@@ -287,6 +288,42 @@ class spell_st_forresten_dance : public AuraScript
             AURA_EFFECT_HANDLE_REAL);
         AfterEffectRemove += AuraEffectRemoveFn(spell_st_forresten_dance::OnRemove, EFFECT_0, SPELL_AURA_DUMMY,
             AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// HF7 one hit per rat line (ORCH F-2 ruling on R-2-A question 2): the line's resolve copy 206444 (beside the
+// registry's spell_boss_mechanics_resolve) drops every unit the line's out pass already took, so the return pass hits
+// only who it finds new: 15% plus Weakened per player per line. The registry passes the mechanic id and the pass in
+// MiscVal 0 and 1.
+class spell_st_forresten_rat_line : public SpellScript
+{
+    PrepareSpellScript(spell_st_forresten_rat_line);
+
+    void FilterTargets(std::list<WorldObject*>& targets)
+    {
+        Unit* caster = GetCaster();
+        SpellValue const* value = GetSpellValue();
+        if (!caster || !caster->IsInWorld() || !value || !value->MiscVal[0] || value->MiscVal[1] <= 0)
+            return;     // not a registry cast, or the out pass: nothing to drop
+        BossMechanics::Registry const* reg = BossMechanics::Registry::Get(caster->GetMap());
+        BossMechanics::ActiveMechanic const* m = reg ? reg->Find(static_cast<uint32>(value->MiscVal[0])) : nullptr;
+        if (!m)
+            return;
+        uint32 const pass = static_cast<uint32>(value->MiscVal[1]);
+        std::size_t const before = targets.size();
+        targets.remove_if([m, pass](WorldObject const* obj)
+        {
+            return obj && HitOnEarlierPass(m->hitPerPass, pass, obj->GetGUID());
+        });
+        if (targets.size() != before)
+            DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "rat-line-once",
+                Acore::StringFormat("mechanic={} pass={} spared={}", m->id, pass, before - targets.size()));
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_st_forresten_rat_line::FilterTargets, EFFECT_0,
+            TARGET_UNIT_SRC_AREA_ENEMY);
     }
 };
 
@@ -1388,5 +1425,6 @@ void AddSC_boss_hearthsinger_forresten_rework()
     RegisterDungeonReworkCreatureAI(npc_st_gutter_rat, StratholmeRework::kInstanceScriptName);
     RegisterDungeonReworkCreatureAI(npc_st_hearth_stalker, StratholmeRework::kInstanceScriptName);
     RegisterSpellScript(spell_st_forresten_dance);
+    RegisterSpellScript(spell_st_forresten_rat_line);
     StratTest::RegisterBoss("forresten", ForrestenTestCommands());
 }

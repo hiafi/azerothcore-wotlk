@@ -335,6 +335,18 @@ int main()
     CHECK(kRatLineSpeed < kRatRunSpeed);
     CHECK(kRatLineWidth == 2.f && kRatLineWarnMs == 2000 && kRatLinePct == 15.f && kRatLineCapYd == 30.f);
     CHECK(kRatLineWarnMs >= 2 * kVolleyLineEveryMs);
+    // One hit per player per line (ORCH F-2 ruling, ST HF7): the return pass spares whoever the out pass took.
+    {
+        std::map<std::uint32_t, std::set<std::uint64_t>> hit;
+        CHECK(!HitOnEarlierPass(hit, 1, std::uint64_t(7)));
+        hit[0] = { 7, 8 };
+        CHECK(!HitOnEarlierPass(hit, 0, std::uint64_t(7)));     // the out pass itself: never spared
+        CHECK(HitOnEarlierPass(hit, 1, std::uint64_t(7)));
+        CHECK(HitOnEarlierPass(hit, 1, std::uint64_t(8)));
+        CHECK(!HitOnEarlierPass(hit, 1, std::uint64_t(9)));     // new on the way back: hit
+        hit[1] = { 9 };
+        CHECK(!HitOnEarlierPass(hit, 1, std::uint64_t(9)));     // its own pass does not count
+    }
 
     // ---- the stock bow ---------------------------------------------------------------------------------------------
     CHECK(SPELL_SHOOT_FORRESTEN == 16100 && SPELL_MULTI_SHOT == 14443);

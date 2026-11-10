@@ -12,8 +12,9 @@ these sit in the boss's; GrandLieLogic.h names the same ids):
   70600  Letter of Proof         206585  Read it to Dathrohan within 30 yd, out of combat, on heroic: the hard mode
                                          (spell_strat_grand_lie_letter). Not consumed (handoff s7 #10).
   70601  Scarlet Standard        206587  A 6 yd ring of light around the user for 5 s; allies inside carry the ward
-                                         (its own aura): the Carrion Swarm cones and the moving swarms pass them over.
-                                         20 s cooldown.
+                                         (its own aura): the Carrion Swarm cones and the moving swarms pass them over;
+                                         the bots get a Stack on the ring (spell_strat_grand_lie_standard). 20 s
+                                         cooldown.
   70602  Blessed Holy Water      206586  Thrown at a spot within 10 yd: a moving swarm in its 5 yd splash disperses
                                          (spell_strat_grand_lie_holy_water). 3 min cooldown.
   70603  Relic of the Medallion  206588  A 30 yd pulse of faith: wakes every sleeping ally and wards them from sleep

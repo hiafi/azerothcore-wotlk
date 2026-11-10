@@ -286,6 +286,18 @@ namespace StratForresten
     inline constexpr std::uint32_t kRatFocusEveryMs = 1000;     // how often the Lullaby retargets the rats
     static_assert(kRatLineSpeed < kRatRunSpeed, "the registry's expiry must not end a line before its rat is back");
 
+    // HF7 "15% plus Weakened per line" (ORCH F-2 ruling on R-2-A question 2): the out-and-back run is one line, so a
+    // player hit on the way out is not hit again on the way back. `hitPerPass` maps a pass (0 out, 1 back) to the set
+    // of units its resolve took (the registry's ActiveMechanic::hitPerPass); true when `who` is in an earlier pass's.
+    template <class PassMap, class Key>
+    bool HitOnEarlierPass(PassMap const& hitPerPass, std::uint32_t pass, Key const& who)
+    {
+        for (auto const& [p, hit] : hitPerPass)
+            if (p < pass && hit.count(who))
+                return true;
+        return false;
+    }
+
     // His back wall (navmesh report: (3590, -3492) through (3596, -3514) to (3612, -3525)), extended 10 yd at both
     // ends along its own direction. A line that meets it stops there (the rats' lines are short on that side).
     inline constexpr std::array<Vec2, 5> kBackWall{ {

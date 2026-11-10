@@ -52,6 +52,7 @@
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
 #include "SpellInfo.h"
+#include "SpellMgr.h"
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
 #include "StratholmeKit.h"
@@ -160,6 +161,7 @@ struct boss_the_unforgiven_rework : public BossAI
         _nextNovaMs = urand(kNovaMinMs, kNovaMaxMs);
 
         _arena.Engage(me);      // the pull grip: everyone in the fight onto the plaza
+        GripOffTheCordon();     // the safety net: nobody left standing in (or by) a strip
         RaiseCordon();          // the walls arm 2 s after the grip
         Describe(_heroic);
         Talk(YELL_UNFORGIVEN_AGGRO);
@@ -269,6 +271,27 @@ struct boss_the_unforgiven_rework : public BossAI
             return nullptr;
         footman->SetReactState(REACT_PASSIVE);
         return footman;
+    }
+
+    // R-2-A A-1 (acceptance #8, "never kill a player who stood inside at the pull"): after the guard's pull grip,
+    // grip every unit of the fight it left on the plaza that stands within kCordonGripClearanceYd of a cordon's strip
+    // (the polygon edge inside a strip, a pet parked by the line): the walls arm 2 s later and would strike it.
+    void GripOffTheCordon()
+    {
+        std::vector<Unit*> near;
+        for (ThreatReference const* ref : me->GetThreatMgr().GetUnsortedThreatList())
+        {
+            Unit* unit = ref ? ref->GetVictim() : nullptr;
+            // Off the arena: the guard's pull grip has it (a second grip would cut that jump short).
+            if (unit && _arena.Grippable(me, unit) && _arena.Contains(unit)
+                && NeedsCordonGrip(DungeonKit::PlaneOf(unit)))
+                near.push_back(unit);
+        }
+        for (Unit* unit : near)
+            _arena.Grip(me, unit, "cordon");
+        if (!near.empty())
+            DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "cordon-grip", Acore::StringFormat("units={}",
+                near.size()));
     }
 
     void RaiseCordon()
@@ -608,7 +631,7 @@ struct boss_the_unforgiven_rework : public BossAI
         MechanicRef ref = Mechanic::Soak(me, BossMechanics::Shapes::Donut(BossMechanics::Anchor(pos), kFirelightInner,
             kFirelightOuter), kFirelightSoakers, Ms(kFirelightSoakWarnMs));
         ref.Eligible(AccusedOnly()).Persistent(Ms(kFireBurnMs - kFirelightSoakWarnMs), Ms(kFireTickMs))
-            .OneClaimPerBot().Tag(TAG_FIRELIGHT);
+            .OneClaimPerBot().MissedSoak(BossMechanics::MissedSoakMode::OnChange).Tag(TAG_FIRELIGHT);
         fire.soak = ref.Handle();
         Track(fire.soak);
         DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "fire-landed",
@@ -766,6 +789,22 @@ struct boss_the_unforgiven_rework : public BossAI
             Acore::StringFormat("{} phantom={}", player->GetName(), raised ? 1 : 0));
     }
 
+    // UF6: the tear, taken by the script and logged under Freed (R-2-A A-4): the exact amount from his maximum health,
+    // never scaled by a damage-taken debuff on him (a spell cast goes through his taken modifiers, DealDamage through
+    // the damage hooks) and never his last point (FreedAmount caps it at his health - 1; ModifyHealth cannot kill).
+    void TearFreed(uint32 tear)
+    {
+        if (!tear)
+            return;
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(SPELL_UF_FREED);
+        if (!info)
+            return;
+        SpellNonMeleeDamage log(me, me, info, info->GetSchoolMask());
+        log.damage = tear;
+        me->SendSpellNonMeleeDamageLog(&log);
+        me->ModifyHealth(-static_cast<int32>(tear));
+    }
+
     // How a phantom ends (UnforgivenLogic.h Outcome). `phantom` may be null (gone).
     void EndPhantom(ObjectGuid guid, PhantomEnd end, Creature* phantom)
     {
@@ -781,9 +820,7 @@ struct boss_the_unforgiven_rework : public BossAI
         {
             ++_freed;
             tear = FreedAmount(me->GetMaxHealth(), me->GetHealth());
-            if (tear)
-                me->CastCustomSpell(SPELL_UF_FREED, SPELLVALUE_BASE_POINT0, static_cast<int32>(tear), me,
-                    TRIGGERED_FULL_MASK);
+            TearFreed(tear);
         }
         else
             ++_bound;

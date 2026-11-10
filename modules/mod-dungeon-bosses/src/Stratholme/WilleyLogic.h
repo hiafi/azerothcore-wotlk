@@ -12,7 +12,9 @@
  *   Gun, halves    WY8 / WY9 Mercy (east half, on the stock 176216's spot) and Zeal (west half, on 176217's) on the
  *                  hall frame kWilleyHall; each lane is its half, the full length
  *   BarrageOrder   WY9 heroic: five blasts, three on one half and two on the other, in a random order, and the call
- *   ShotDamage     WY6 the loaded gun's shot at him: 5% of his maximum health, never lethal
+ *   ShotDamage     WY6 the loaded gun's shot at him: 5% of his maximum health, never lethal (SelfDamageCap holds
+ *                  it after every damage-taken modifier)
+ *   HallSpotCorners the bots' spot bounds: the hall, never the yard
  */
 
 #ifndef MOD_DUNGEON_BOSSES_STRATHOLME_WILLEY_LOGIC_H
@@ -345,6 +347,23 @@ namespace StratWilley
         return (roll & 1u) ? Gun::Zeal : Gun::Mercy;
     }
 
+    // The bots' spot bounds (F-2): the hall frame, a yard inside each side, so no dodge from a lane plans a spot in the
+    // yard (the hall's far end opens east into it at frame X 44..54, Y 20; NAVMESH-REPORT section 5). Z: the hall's
+    // flat floor (125.1..126.5) with room.
+    inline constexpr float kSpotInsetYd = 1.f;
+    inline constexpr float kSpotZMin = 124.f;
+    inline constexpr float kSpotZMax = 128.f;
+
+    inline std::array<Vec2, 4> HallSpotCorners()
+    {
+        using StratholmeRework::kWilleyHall;
+        float const lo = kSpotInsetYd;
+        float const hiX = kWilleyHall.sizeX - kSpotInsetYd;
+        float const hiY = kWilleyHall.sizeY - kSpotInsetYd;
+        return { { DungeonKit::FramePoint(kWilleyHall, lo, lo), DungeonKit::FramePoint(kWilleyHall, hiX, lo),
+            DungeonKit::FramePoint(kWilleyHall, hiX, hiY), DungeonKit::FramePoint(kWilleyHall, lo, hiY) } };
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
     // WY9 the Barrage (heroic)
     // ----------------------------------------------------------------------------------------------------------------
@@ -414,6 +433,15 @@ namespace StratWilley
         auto const value = static_cast<std::uint32_t>(static_cast<double>(maxHealth) * kShotPct / 100.0 / taken + 0.5);
         auto const cap = static_cast<std::uint32_t>(static_cast<double>(health - 1) / taken);
         return value < cap ? value : cap;
+    }
+
+    // F-2: whatever else raises his damage taken (a player's curse or debuff; ShotDamage only knows Shaken), his own
+    // damage (the shot is the only damage he deals himself) is held, after every modifier, to leave him at 1 health.
+    constexpr std::uint32_t SelfDamageCap(std::uint32_t health, std::uint32_t damage)
+    {
+        if (health <= 1)
+            return 0;
+        return damage < health ? damage : health - 1;
     }
 }
 

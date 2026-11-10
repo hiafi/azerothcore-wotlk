@@ -93,6 +93,21 @@ def _raw(spell: dict, column: str) -> int:
     return int((spell.get("raw_overrides") or {}).get(column, 0) or 0)
 
 
+def _kickable(spell: dict) -> bool:
+    """A kick or a silence stops it: InterruptFlags or ChannelInterruptFlags INTERRUPT (0x08), or PreventionType 1."""
+    return bool(_raw(spell, "InterruptFlags") & 0x08 or _raw(spell, "ChannelInterruptFlags") & 0x08
+                or _raw(spell, "PreventionType") == 1)
+
+
+def _school_clash(spells: dict) -> list[tuple[int, int]]:
+    """R-2-A A-3 (ORCH F-2 ruling): a kick locks the kicked cast's school, and a creature's untriggered cast in a
+    locked school is refused. The (bar, kickable) pairs where a cast bar that must play (a cast time, not kickable)
+    shares a school with one of the boss's kickable casts."""
+    kickable = [s for s in spells.values() if _kickable(s)]
+    bars = [s for s in spells.values() if int(s.get("cast_time_ms") or 0) > 0 and not _kickable(s)]
+    return [(int(b["id"]), int(k["id"])) for b in bars for k in kickable if int(b["school"]) & int(k["school"])]
+
+
 def _header() -> str:
     return HEADER.read_text(encoding="utf-8")
 
@@ -121,6 +136,18 @@ class ForrestenDeclarationTest(unittest.TestCase):
         cls.edits = [e for e in reg.creature_template_edits if int(e["entry"]) == FORRESTEN]
         cls.cpp = SCRIPT.read_text(encoding="utf-8")
         cls.header = _header()
+
+    def test_must_play_bars_never_share_a_kickable_school(self):
+        self.assertTrue(_kickable(self.spells[CRESCENDO]))
+        self.assertEqual(_school_clash(self.spells), [])
+
+    def test_a_rat_line_hits_each_player_once(self):
+        # ORCH F-2 ruling (ST HF7): the out-and-back run is one line: 15% plus Weakened once per player.
+        self.assertIn((RAT_LINE, "spell_st_forresten_rat_line"), self.scripts)
+        self.assertIn((RAT_LINE, RESOLVE), self.scripts)
+        self.assertIn("class spell_st_forresten_rat_line : public SpellScript", self.cpp)
+        self.assertIn("RegisterSpellScript(spell_st_forresten_rat_line);", self.cpp)
+        self.assertIn("HitOnEarlierPass(m->hitPerPass, pass, obj->GetGUID())", self.cpp)
 
     def test_spells_sit_in_the_slice_and_match_the_header(self):
         mine = sorted(self.spells)

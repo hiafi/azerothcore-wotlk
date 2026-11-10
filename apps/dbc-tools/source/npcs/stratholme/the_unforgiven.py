@@ -334,9 +334,10 @@ freed_206428 = spell(
                     potency_excluded=_SCRIPT_EXACT)],
     spell_icon_id=_ICON_FREED,
     notes=f'{_UF}, UF6: a Vengeful Phantom killed in the firelight is freed and tears 2% of his maximum health away '
-          '(3,700 on normal, 5,000 on heroic; never his last point: the tear is not a kill). He casts it on himself '
-          '(triggered, CastCustomSpell base point 0 = the exact amount, the Shadow Word: Death backlash shape), so '
-          'the combat log names it. Ignores his modifiers, always hits, cannot crit, no threat.',
+          '(3,700 on normal, 5,000 on heroic; never his last point: the tear is not a kill). Never cast: the script '
+          'takes the exact amount off his health (ModifyHealth) and sends the combat log line under this spell, so no '
+          'damage-taken debuff on him scales it and it cannot kill him (R-2-A A-4). The attributes stay for a stray '
+          'cast: ignores his modifiers, always hits, cannot crit, no threat.',
     raw_overrides=kit_raw('A freed soul tears away part of the Unforgiven.', instant=True, InterruptFlags=0,
                           PreventionType=0, AttributesEx=ATTR1_NO_THREAT,
                           AttributesEx2=ATTR2_IGNORE_LINE_OF_SIGHT | ATTR2_CANT_CRIT,

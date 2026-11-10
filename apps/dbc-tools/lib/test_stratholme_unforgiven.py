@@ -98,6 +98,21 @@ def _raw(spell: dict, column: str) -> int:
     return int((spell.get("raw_overrides") or {}).get(column, 0) or 0)
 
 
+def _kickable(spell: dict) -> bool:
+    """A kick or a silence stops it: InterruptFlags or ChannelInterruptFlags INTERRUPT (0x08), or PreventionType 1."""
+    return bool(_raw(spell, "InterruptFlags") & 0x08 or _raw(spell, "ChannelInterruptFlags") & 0x08
+                or _raw(spell, "PreventionType") == 1)
+
+
+def _school_clash(spells: dict) -> list[tuple[int, int]]:
+    """R-2-A A-3 (ORCH F-2 ruling): a kick locks the kicked cast's school, and a creature's untriggered cast in a
+    locked school is refused. The (bar, kickable) pairs where a cast bar that must play (a cast time, not kickable)
+    shares a school with one of the boss's kickable casts."""
+    kickable = [s for s in spells.values() if _kickable(s)]
+    bars = [s for s in spells.values() if int(s.get("cast_time_ms") or 0) > 0 and not _kickable(s)]
+    return [(int(b["id"]), int(k["id"])) for b in bars for k in kickable if int(b["school"]) & int(k["school"])]
+
+
 def _header() -> str:
     return HEADER.read_text(encoding="utf-8")
 
@@ -127,6 +142,9 @@ class UnforgivenDeclarationTest(unittest.TestCase):
         cls.models = [m for m in reg.creature_template_models
                       if int(m["CreatureID"]) in (PHANTOM, FOOTMAN, FIRE_STALKER)]
         cls.cpp = SCRIPT.read_text(encoding="utf-8")
+
+    def test_must_play_bars_never_share_a_kickable_school(self):
+        self.assertEqual(_school_clash(self.spells), [])
 
     def test_spells_sit_in_the_slice_and_match_the_header(self):
         mine = sorted(self.spells)
@@ -201,7 +219,11 @@ class UnforgivenDeclarationTest(unittest.TestCase):
         freed = self.spells[FREED]
         self.assertEqual(freed["effect1"]["type"], SCHOOL_DAMAGE)
         self.assertEqual(freed["effect1"]["base_points"], 0)
-        self.assertIn("SPELL_UF_FREED, SPELLVALUE_BASE_POINT0", self.cpp)
+        # R-2-A A-4: never cast (his damage-taken debuffs would scale it): the script takes the exact amount and logs
+        # it under Freed.
+        self.assertNotIn("SPELL_UF_FREED, SPELLVALUE_BASE_POINT0", self.cpp)
+        self.assertIn("GetSpellInfo(SPELL_UF_FREED)", self.cpp)
+        self.assertIn("me->ModifyHealth(-static_cast<int32>(tear))", self.cpp)
         grudge = self.spells[GRUDGE]
         self.assertEqual(grudge["effect1"]["apply_aura"], AURA_MOD_DAMAGE_PERCENT_DONE)
         self.assertEqual(grudge["effect1"]["base_points"], int(_header_number("kGrudgeDamagePct")))

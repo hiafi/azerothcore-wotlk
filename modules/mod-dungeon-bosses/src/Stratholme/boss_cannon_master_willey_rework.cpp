@@ -30,7 +30,8 @@
  *   WY10            melee, Knock Away 10101 on his victim, Pummel 15615 on a caster within 5 yd (stock, DD-scaled)
  *   Guns            a glow ring under each gun for the fight (stalker 300610: Mercy gold 206509, Zeal orange
  *                   206510)
- *   Arena           StratholmeRework::LeashOptions on WilleyArena() (the hall frame; no grips; holds at the edge)
+ *   Arena           StratholmeRework::LeashOptions on WilleyArena() (the hall frame; no grips; holds at the edge);
+ *                   the lanes' spot bounds keep the bots' dodges in the hall, never the yard (HallBounds)
  *
  * Every timer runs on the AI's own clock, never on BossAI's scheduler. Every firing logs one INFO line
  * "strat willey <mechanic> ..." (module.dungeonbosses).
@@ -92,6 +93,17 @@ namespace
     Position HallPos(Vec2 p, float orientation = 0.f)
     {
         return DungeonKit::ToPosition(p, kWilleySpawn.z, orientation);
+    }
+
+    // Where a bot may plan to stand for his lanes: the hall, never the yard its far end opens into (F-2).
+    BossMechanics::SpotBounds HallBounds()
+    {
+        std::vector<Position> corners;
+        for (Vec2 const& p : HallSpotCorners())
+            corners.push_back(HallPos(p));
+        BossMechanics::SpotBounds b;
+        b.Polygon(std::move(corners), kSpotZMin, kSpotZMax);
+        return b;
     }
 
     BossMechanics::ZoneSpec LaneShape(Gun gun)
@@ -172,6 +184,14 @@ struct boss_cannon_master_willey_rework : public BossAI
             return;
         }
         BossAI::JustSummoned(summon);
+    }
+
+    // WY6 never the killing blow (F-2): the cannon shot is the only damage he deals himself; after every damage-taken
+    // modifier (ShotDamage divides out Shaken only, not a player's curse or debuff) it leaves him at 1 health.
+    void DamageTaken(Unit* attacker, uint32& damage, DamageEffectType /*type*/, SpellSchoolMask /*school*/) override
+    {
+        if (attacker == me)
+            damage = SelfDamageCap(me->GetHealth(), damage);
     }
 
     void SummonedCreatureDies(Creature* summon, Unit* killer) override
@@ -547,7 +567,7 @@ struct boss_cannon_master_willey_rework : public BossAI
     {
         Talk(gun == Gun::Mercy ? YELL_WILLEY_MERCY_FIRE : YELL_WILLEY_ZEAL_FIRE);
         MechanicRef ref = Mechanic::Zone(me, LaneShape(gun), Ms(kCannonFireWarnMs));
-        ref.Damage(kCannonFirePct).Spell(SPELL_WY_CANNON_FIRE).Tag(TAG_CANNON_FIRE);
+        ref.Damage(kCannonFirePct).Spell(SPELL_WY_CANNON_FIRE).Within(HallBounds()).Tag(TAG_CANNON_FIRE);
         ref.OnResolve(OnWilley([gun](boss_cannon_master_willey_rework& ai, BossMechanics::ResolveResult const& r)
         {
             ai.GunFired(gun, r.hits.size(), "cannon-fire-lands");
@@ -567,7 +587,8 @@ struct boss_cannon_master_willey_rework : public BossAI
         {
             Gun const gun = order[i];
             MechanicRef ref = Mechanic::Zone(me, LaneShape(gun), Ms(BlastDelayMs(i)));
-            ref.NoTelegraph().Damage(kBarragePct).Spell(SPELL_WY_BARRAGE).Weakened().Tag(TAG_BARRAGE);
+            ref.NoTelegraph().Damage(kBarragePct).Spell(SPELL_WY_BARRAGE).Weakened().Within(HallBounds())
+                .Tag(TAG_BARRAGE);
             ref.OnResolve(OnWilley([gun](boss_cannon_master_willey_rework& ai, BossMechanics::ResolveResult const& r)
             {
                 ai.GunFired(gun, r.hits.size(), "barrage-blast");
@@ -791,8 +812,8 @@ private:
     uint32 _ranksFormed = 0;
 };
 
-// A Crimson Rifleman (11054): stands where its rank formed (no chasing), shoots its stock Shoot 17353 at a random player
-// every 2 s, never while aiming (Willey drives Aim and Fire), and swings at anyone in melee range.
+// A Crimson Rifleman (11054): stands where its rank formed (no chasing), shoots its stock Shoot 17353 at a random
+// player every 2 s, never while aiming (Willey drives Aim and Fire), and swings at anyone in melee range.
 struct npc_st_crimson_rifleman : public ScriptedAI
 {
     // No combat movement from the start: the summon is put into combat before its first update (Creature.h: changing
@@ -922,7 +943,8 @@ namespace
         if (!ai || !gm)
             return false;
         ai->TestBall(gm->GetPosition());
-        handler->PSendSysMessage("Willey: a Scarlet Cannonball lies at your feet for 20 s (WY4; `.gm off` to take it).");
+        handler->PSendSysMessage("Willey: a Scarlet Cannonball lies at your feet for 20 s (WY4; `.gm off` to take "
+            "it).");
         return true;
     }
 

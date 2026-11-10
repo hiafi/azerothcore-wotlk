@@ -2,8 +2,11 @@
 // slots, data ids, entries, the wave switch, slices, measured points, arenas, the ziggurat softlock fix, the slaughter
 // event without the Mindless stage, the Ultimatum and Grand Lie rules, the save string and its stock "STR" reader).
 // DB positions (spawns, gates) are exact; the rest is the NAVMESH-REPORT's.
+#include "GalfordLogic.h"
 #include "StratholmeRework.h"
+#include "UnforgivenLogic.h"
 #include "check.h"
+#include <algorithm>
 #include <cstdint>
 #include <set>
 #include <string>
@@ -188,6 +191,55 @@ namespace
         // The Unforgiven's lanes meet on the plaza; the fire spots lie in it.
         for (Vec2 const& f : kUnforgivenFireSpots)
             CHECK(UnforgivenArena().Contains(f, 132.f));
+    }
+
+    // The closest an arena point (sampled every 0.1 yd at height z) comes to a wall's strip: negative when part of the
+    // strip itself is on the arena. Only the band within `reach` of the strip is sampled.
+    float ArenaWallGap(Arena const& arena, DungeonKit::WallLine const& wall, float z, float reach)
+    {
+        float const pad = wall.HalfWidth() + reach;
+        float const minX = std::min(wall.from.x, wall.to.x) - pad;
+        float const maxX = std::max(wall.from.x, wall.to.x) + pad;
+        float const minY = std::min(wall.from.y, wall.to.y) - pad;
+        float const maxY = std::max(wall.from.y, wall.to.y) + pad;
+        float gap = reach;
+        for (int i = 0; minX + 0.1f * static_cast<float>(i) <= maxX; ++i)
+            for (int j = 0; minY + 0.1f * static_cast<float>(j) <= maxY; ++j)
+            {
+                Vec2 const p{ minX + 0.1f * static_cast<float>(i), minY + 0.1f * static_cast<float>(j) };
+                if (arena.Contains(p, z))
+                    gap = std::min(gap, DungeonKit::WallClearance(wall, p));
+            }
+        return gap;
+    }
+
+    // F-2 ruling (R-2-A A-1, R-2-FW m-5): an arena stops kArenaWallGapYd short of every lethal wall's strip, so the
+    // pull grip (which only takes units off the arena) takes anyone standing in a strip before the wall arms.
+    void TestArenaWallGap()
+    {
+        float constexpr kReach = 4.f;
+        for (std::size_t c = 0; c < StratUnforgiven::kCordonCount; ++c)
+        {
+            DungeonKit::WallLine const wall = StratUnforgiven::CordonWall(c);
+            CHECK(ArenaWallGap(UnforgivenArena(), wall, 131.f, kReach) >= kArenaWallGapYd);
+            // A player half a yard inside the line at the pull (the reviewers' case) is off the arena: gripped in.
+            Vec2 const mid{ (wall.from.x + wall.to.x) * 0.5f, (wall.from.y + wall.to.y) * 0.5f };
+            Vec2 const inside = DungeonKit::Advance(mid, DungeonKit::BearingTo(mid, StratUnforgiven::kPlazaCenter),
+                0.5f);
+            CHECK(!UnforgivenArena().Contains(inside, 131.f));
+            // The plaza still holds his spawn and the fire spots well clear of the cordons.
+            CHECK(DungeonKit::WallClearance(wall, kUnforgivenSpawn.XY()) > 10.f);
+        }
+
+        // Galford: the shared arena (the test command's) keeps the full gap from the Pyre (drawn 2 yd south) and the
+        // north wall. The fight's guard (GalfordLogic.h GuardArena) keeps the same 2 yd gap from both strips (F-2d), so
+        // the pull grip takes anyone in a strip.
+        for (DungeonKit::WallLine const& wall : { StratGalford::PyreLine(), StratGalford::NorthLine() })
+        {
+            CHECK(ArenaWallGap(GalfordArena(), wall, 137.f, kReach) >= kArenaWallGapYd);
+            CHECK(ArenaWallGap(StratGalford::GuardArena(), wall, 137.f, kReach) >= kArenaWallGapYd);
+        }
+        CHECK(In(GalfordArena(), kGalfordSpawn));
     }
 
     void TestZiggurats()
@@ -494,6 +546,7 @@ int main()
     TestWaveSwitch();
     TestIds();
     TestArenas();
+    TestArenaWallGap();
     TestZiggurats();
     TestSlaughter();
     TestHardModes();

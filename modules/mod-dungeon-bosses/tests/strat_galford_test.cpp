@@ -172,6 +172,36 @@ int main()
         CHECK(InHallRoom(p));
         CHECK(DungeonKit::WallClearance(pyre, p) >= 5.f && DungeonKit::WallClearance(north, p) >= 5.f);
     }
+    // F-2 ruling: the guard stops kArenaWallGapYd short of both lethal strips (Pyre x 3443..3445, north x
+    // 3499..3501), and everything it must hold stays inside it: his spawn, the tank spots, the grip landings (each
+    // still at least kArenaWallGapYd off both strips).
+    {
+        float const pyreStripMaxX = PyreLine().from.x + kWallWidthYd * 0.5f;
+        float const northStripMinX = NorthLine().from.x - kWallWidthYd * 0.5f;
+        float const minX = kGalfordHall.origin.x + kGuardMinX;
+        float const maxX = kGalfordHall.origin.x + kGuardMaxX;
+        CHECK(minX - pyreStripMaxX >= kArenaWallGapYd - 0.001f);
+        CHECK(northStripMinX - maxX >= kArenaWallGapYd - 0.001f);
+        CHECK(!guard.Contains({ pyreStripMaxX + kArenaWallGapYd - 0.1f, -3085.f }, 135.4f));
+        CHECK(!guard.Contains({ northStripMinX - kArenaWallGapYd + 0.1f, -3080.f }, 135.4f));
+        for (Vec2 const& p : kTankSpots)
+            CHECK(guard.Contains(p, kHallFloorZ));
+        for (Vec2 const& p : kGripLandings)
+            CHECK(DungeonKit::WallClearance(pyre, p) >= kArenaWallGapYd
+                && DungeonKit::WallClearance(north, p) >= kArenaWallGapYd);
+    }
+    // The pull reaches as far as the grip (F-2): from anywhere in the guarded hall it covers the whole hall, so no
+    // one the walls lock in or out stands in combat beyond it.
+    for (float fx : { kGuardMinX, kGuardMaxX })
+        for (float fy : { -13.f, kGuardMaxY })
+        {
+            Vec2 const corner = DungeonKit::FramePoint(kGalfordHall, fx, fy);
+            CHECK(DungeonKit::Distance(corner, kGalfordSpawn.XY()) < kPullRadiusYd);
+            for (float gx : { kGuardMinX, kGuardMaxX })
+                for (float gy : { -13.f, kGuardMaxY })
+                    CHECK(DungeonKit::Distance(corner, DungeonKit::FramePoint(kGalfordHall, gx, gy)) < kPullRadiusYd);
+        }
+    CHECK(kPullRadiusYd <= 120.f);      // ArenaGuardOptions' maxGripYd default: never past the kit's grip
     CHECK(Near(GripLanding({ 3510.f, -3080.f }).x, 3492.f));   // from the north: the north stand
     CHECK(Near(GripLanding({ 3423.f, -3055.f }).x, 3452.5f));  // from Dathrohan's chamber: the archive's mouth
     float const hallArea = PolygonArea(std::span<Vec2 const>(kHallRoom));

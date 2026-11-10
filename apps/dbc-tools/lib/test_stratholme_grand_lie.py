@@ -162,7 +162,7 @@ class GrandLieDeclarationTest(unittest.TestCase):
             self.assertTrue(_raw(self.spells[spell_id], "SpellVisualID_1"), spell_id)      # a visible impact
         expected = {
             (LETTER, "spell_strat_grand_lie_letter"), (HOLY_WATER, "spell_strat_grand_lie_holy_water"),
-            (MEDALLION, "spell_strat_grand_lie_medallion"),
+            (MEDALLION, "spell_strat_grand_lie_medallion"), (STANDARD, "spell_strat_grand_lie_standard"),
         }
         self.assertTrue(expected <= self.scripts)
         self.assertEqual(len(self.scripts), 6 + len(expected))
@@ -184,6 +184,8 @@ class GrandLieDeclarationTest(unittest.TestCase):
                          (TARGET_SRC_CASTER, TARGET_UNIT_SRC_AREA_ALLY))
         self.assertIn("SpellEffectFn(spell_strat_grand_lie_medallion::Wake, EFFECT_0, SPELL_EFFECT_APPLY_AURA)",
                       self.cpp)
+        # The Standard's bots' Stack (F-2 MIN-1) hooks the cast, not an effect.
+        self.assertIn("AfterCast += SpellCastFn(spell_strat_grand_lie_standard::Raised);", self.cpp)
         # The relics' gameobjects and the boss AI's hooks are registered.
         self.assertIn("RegisterDungeonReworkGameObjectAI(go_st_grand_lie_relic", self.cpp)
         self.assertIn("StratDathrohan::RegisterGrandLie(", self.cpp)

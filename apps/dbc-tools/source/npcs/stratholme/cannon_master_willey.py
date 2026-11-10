@@ -92,10 +92,11 @@ _VOLLEY_HEROIC_HUNDREDTHS = 2000     # kVolleyPct.heroic (20%)
 _SCRIPT_EXCLUDED = 'Stratholme: a percent of reference health, set by the script (DungeonKit::RefFlat)'
 _SCRIPT_SHOT = 'Stratholme: 5% of his own maximum health, base point 0 set by boss_cannon_master_willey_rework'
 
-# Held back until wave 2 binds this boss (_common.py BIND_WAVE_2).
+# Held back until wave 2 binds this boss (_common.py BIND_WAVE_2). DamageModifier: stock 3.5, not the live 7 the
+# retired mod-progression left (F-2 ruling; S4/S6/S7 precedent).
 if BIND_WAVE_2:
     creature_template_columns(10997, **boss_columns(
-        'boss_cannon_master_willey_rework', 60.616, damage_modifier=7,
+        'boss_cannon_master_willey_rework', 60.616, damage_modifier=3.5,
     ))
 
     # 11054 Crimson Rifleman: 5,000 on normal (ceil(3,052 x 1.638269) = 5,000).
@@ -142,12 +143,12 @@ if BIND_WAVE_2:
         effects=[Effect(type=EffectType.SCHOOL_DAMAGE, base_points=_VOLLEY_NORMAL_HUNDREDTHS - 1, die_sides=1,
                         implicit_target_a=_TARGET_UNIT_TARGET_ENEMY, potency_excluded=_SCRIPT_EXCLUDED)],
         spell_icon_id=_ICON_SHOOT,
-        notes=f'{_S5}, WY3 Fire: an aiming rifleman shoots its mark 3 s (heroic 2 s) after Aim, with Willey\'s "Fire!": '
-              '15% (heroic 20%) of the reference row, the tank row on the tank (the kit\'s spell_dungeon_refflat_damage '
-              'reads the hundredths: shown value 1500, EffectMiscValueB 2000 on heroic). Not avoidable: DmgClass none '
-              '(no dodge, parry or miss), always hits, ignores line of sight; it ignores caster modifiers and cannot '
-              'crit. Physical, so armor applies (as on the kit\'s other Physical hits). A stunned, feared or '
-              'polymorphed rifleman does not fire (the script). The bullet: the stock "Shoot Gun" look WI_SHOOT_GUN '
+        notes=f'{_S5}, WY3 Fire: an aiming rifleman shoots its mark 3 s (heroic 2 s) after Aim, with Willey\'s '
+              '"Fire!": 15% (heroic 20%) of the reference row, the tank row on the tank (the kit\'s '
+              'spell_dungeon_refflat_damage reads the hundredths: shown value 1500, EffectMiscValueB 2000 on heroic). '
+              'Not avoidable: DmgClass none (no dodge, parry or miss), always hits, ignores line of sight; it ignores '
+              'caster modifiers and cannot crit. Physical, so armor applies (as on the kit\'s other Physical hits). A '
+              'stunned, feared or polymorphed rifleman does not fire (the script). The bullet: the stock "Shoot Gun" look WI_SHOOT_GUN '
               '(SV 10208) at 40 yd/s (unchecked).',
         raw_overrides=kit_raw('Fires a rifle shot at the marked enemy.', instant=True, DefenseType=0, Speed=40.0,
                               SpellVisualID_1=WI_SHOOT_GUN, EffectMiscValueB_1=_VOLLEY_HEROIC_HUNDREDTHS,
