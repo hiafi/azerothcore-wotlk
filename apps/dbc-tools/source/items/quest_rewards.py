@@ -17,11 +17,15 @@ Keys are `qr_<entry>`. One owner per entry: to move a reward into a dungeon's it
 
 Green weapons (and the white ones that become green) resolve their DPS against the Quality 2 rows of
 `item_weapon_dps_curve` (ruling 21, stage QR1b's pending SQL).
+
+Wands are full-strength weapons with free DPS (ruling 40): `extra_dps=0.0` instead of the caster role cell's -20%
+DPS, and `free_dps=True` raises the wand's `budget_mult` by what that DPS costs (item_weapon_dps_cost), so its stats
+stay the role-cell version's while the DPS is the curve's full value (`lib/quest_rewards.weapon_extras`).
 """
 
 from lib.dsl.items import ItemSpell, item
 from lib.dsl.registry import live_item_templates
-from lib.quest_rewards import LOCK_PATH, parse_lock
+from lib.quest_rewards import LOCK_PATH, parse_lock, weapon_extras
 
 from .ladders import QUEST_REWARD
 
@@ -64,6 +68,7 @@ for _line in parse_lock(LOCK_PATH.read_text(encoding="utf-8")).values() if _ROWS
         _extra["spells"] = tuple(_stock_spell(_row, slot) for slot in _kept)
     if _ranged:
         _extra["ammo_type"] = NO_AMMO
+    _extra.update(weapon_extras(_row))  # wands: full DPS for free (ruling 40)
     item(_line.key, base=_line.entry, ladder=QUEST_REWARD, ilvl=_line.ilvl, quality=_line.quality,
          required_level=REQUIRED_LEVEL, primary=_line.primary or None, secondary=_line.secondary,
          primary_share=_line.share, unique_equip=False, **_extra)

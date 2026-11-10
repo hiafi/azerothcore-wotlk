@@ -117,6 +117,7 @@ EXCLUDED_INV_TYPES = (0, 4, 19)  # not equippable, shirt, tabard
 INV_NECK, INV_FINGER, INV_TRINKET, INV_SHIELD, INV_CLOAK, INV_HOLDABLE, INV_RELIC = 2, 11, 12, 14, 16, 23, 28
 NO_MAIN_STAT_INV_TYPES = (INV_NECK, INV_FINGER, INV_CLOAK, INV_RELIC)  # rulings 18 and 25: all secondary
 WEAPON_FISHING_POLE = 20
+WEAPON_WAND = 19
 STOCK_ENTRIES = {  # in-scope rewards that stay stock
     10515: "Torch of Retribution (ruling 25)",
     3567: "Dwarven Fishing Pole (a gun by type; round 6 default)",
@@ -1194,6 +1195,14 @@ class Materialized:
     labels: dict  # tooltip labels the emit would add (ruling 20: none)
 
 
+def weapon_extras(row: dict) -> dict:
+    """The `item()` keywords a reward weapon adds by its type: a wand is a full-strength weapon with free DPS (ruling
+    40): no caster role cell DPS cut (`extra_dps=0.0`), its stats still the role cell's (`free_dps=True`)."""
+    if _int(row.get("class")) == ITEM_CLASS_WEAPON and _int(row.get("subclass")) == WEAPON_WAND:
+        return {"extra_dps": 0.0, "free_dps": True}
+    return {}
+
+
 def materialize(lock: dict[int, LockLine], rows: dict[int, dict], tables: dict, shape_catalog: dict) -> Materialized:
     """Expand and emit every lock line as source/items/quest_rewards.py declares it (without the registry): the rows a
     write run would produce, for the real-data test and the designer review lists (quest_rewards_review.py). `rows`
@@ -1209,6 +1218,7 @@ def materialize(lock: dict[int, LockLine], rows: dict[int, dict], tables: dict, 
         if line.kept_slots:
             extra["spells"] = tuple(D.ItemSpell(_int(row[f"spellid_{n}"]), _int(row[f"spelltrigger_{n}"]))
                                     for n in line.kept_slots)
+        extra.update(weapon_extras(row))
         decls.append({"id": line.key, "_decl": D.item(
             line.key, base=line.entry, ladder=ladder, ilvl=line.ilvl, quality=line.quality, required_level=0,
             primary=line.primary or None, secondary=line.secondary, primary_share=line.share, unique_equip=False,

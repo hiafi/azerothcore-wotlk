@@ -47,6 +47,11 @@ resolved for the first time (`ItemExpansion.cells_lock_appended`); `--check` nam
 add cells, never change one another item already uses. Retuning a cell is a deliberate act: change a declaration
 (`budget_mult=` / `extra_dps=` / `weapon_role=`), never the line.
 
+**Free DPS** (quest reward ruling 40). `free_dps=True` keeps the role cell's stats while `extra_dps=` sets the DPS:
+the DPS over the cell's fraction costs `item_weapon_dps_cost` budget per point, so the tier's `budget_mult` is raised
+by exactly that (`_free_dps_mult`, the same arithmetic as ItemBudget.cpp). It needs a weapon with a role cell, and the
+raised multiplier must stay in the DSL's (0, 2].
+
 **Durability** (R1 S2). A minted tier's `MaxDurability` is the median of live items of the same class, subclass,
 InventoryType and Quality within 5 item levels (widened to 10, 20, then any level; at least
 `DURABILITY_MIN_SAMPLES`), else the donor's (`base=` / `like=` row). `ResolvedTier.max_durability`; an explicit
@@ -56,6 +61,7 @@ InventoryType and Quality within 5 item levels (widened to 10, 20, then any leve
 from __future__ import annotations
 
 import datetime
+import math
 import statistics
 import sys
 from dataclasses import dataclass, field
@@ -450,6 +456,47 @@ def _scaled(fraction: float, baseline) -> float:
     return fraction * baseline if baseline else 0.0
 
 
+FREE_DPS_MULT_DIGITS = 6  # item_itemization.budget_mult is a FLOAT column (~7 significant digits)
+
+
+def _free_dps_mult(stand_in: dict, itemization: dict, cell_fraction: float, baseline_dps, tables: dict,
+                   catalog: dict) -> float:
+    """`budget_mult` for a `free_dps=True` tier: the integer budget of the role-cell version (its `dps_delta` the
+    cell's fraction of `baseline_dps`) plus the DPS the declared `dps_delta` adds over it, times
+    `item_weapon_dps_cost`, so the effective budget after the DPS is paid for (ItemBudget.cpp: `lround(curve * slot *
+    quality * budget_mult * set discount - socket costs) - dps_delta * cost`) matches the role-cell version's. The
+    new budget is an integer where the cut version's effective budget carries the cut's fraction, so the integer
+    budgets either side of it are tried (nearest first) and the first whose stat line equals the role-cell version's
+    wins; when neither does, the nearest (a stat line can then move one point between two stats)."""
+    budget, _ = _item_lib()
+    cell_delta = round(_scaled(cell_fraction, baseline_dps), 4)
+    cut = budget.compute_breakdown(stand_in, {"entry": stand_in["entry"], **itemization, "dps_delta": cell_delta},
+                                   tables, catalog)
+    cost_row = tables["item_weapon_dps_cost"].get((1,))
+    cost = cost_row["cost"] if cost_row else 1.0
+    exact = cut["budget"] + (itemization["dps_delta"] - cell_delta) * cost
+    scale = (tables["item_budget_curve"][(cut["item_level"],)]["budget"] * cut["slot_mult"] * cut["quality_mult"]
+             * cut["set_discount"])
+
+    def stat_line(b: dict) -> list:
+        return [(a["stat_type"], a["rounded"]) for a in b["allocations"]] + [b["final_stamina"]]
+
+    want = stat_line(cut)
+    nearest = budget._round(exact)
+    # Nearest first (lround's half-up on an x.5 tie): the fallback keeps the cut version's total budget.
+    candidates = sorted({nearest, math.floor(exact), math.ceil(exact)}, key=lambda t: (abs(t - exact), t != nearest))
+    mults = []
+    for target in candidates:
+        # Aimed at the integer budget exactly (an x.5 left to the float32 multiplier could round either way).
+        mult = round((target + cut["socket_budget_cost"] + cut["socket_bonus_value"]) / scale, FREE_DPS_MULT_DIGITS)
+        mults.append(mult)
+        free = budget.compute_breakdown(stand_in, {"entry": stand_in["entry"], **itemization, "budget_mult": mult},
+                                        tables, catalog)
+        if stat_line(free) == want:
+            return mult
+    return mults[0]
+
+
 def tier_number(ladder: items_dsl.Ladder, spec: items_dsl.Tier) -> int:
     """`item_budget_variant.tier` of `spec`: the tier's explicit `step=` (R1 N1; it used to be derived from the
     position). The numbers mean the same step on every ladder - 0 Normal, 1 Heroic, 2.. the empowered tiers - so
@@ -554,6 +601,8 @@ def _resolve_item(
         errors.append(f"{where}: extra_armor= needs a slot with an armor curve")
     if decl.extra_dps and item_class != ITEM_CLASS_WEAPON:
         errors.append(f"{where}: extra_dps= needs a weapon")
+    if decl.free_dps and item_class != ITEM_CLASS_WEAPON:
+        errors.append(f"{where}: free_dps=True needs a weapon")
     weapon_tier = inv_type in WEAPON_TIER_INV_TYPES
     if decl.weapon_role is not None and not weapon_tier:
         errors.append(f"{where}: weapon_role= needs a weapon-tier slot (InventoryType {WEAPON_TIER_INV_TYPES})")
@@ -721,6 +770,21 @@ def _resolve_item(
         for n in range(1, 4):
             stand_in[f"socketColor_{n}"] = sockets[n - 1] if spec.sockets and n <= len(sockets) else 0
         try:
+            if decl.free_dps and not (live_row is not None and plan["first"]):
+                if cell is None:
+                    errors.append(
+                        f"{where} tier {spec.name!r}: free_dps=True needs a role cell (a weapon-tier slot whose "
+                        f"role, InventoryType, Quality and bucket resolve to one)"
+                    )
+                    continue
+                free_mult = _free_dps_mult(stand_in, itemization, cell[1], base["dps"], tables, catalog)
+                if not 0 < free_mult <= 2:
+                    errors.append(
+                        f"{where} tier {spec.name!r}: free_dps=True needs budget_mult {free_mult}, outside (0, 2]"
+                    )
+                    continue
+                itemization["budget_mult"] = free_mult
+                source += ", free DPS"
             budget.compute_breakdown(stand_in, {"entry": stand_in["entry"], **itemization}, tables, catalog)
         except budget.BudgetError as error:
             errors.append(f"{where} tier {spec.name!r}: the budget does not resolve: {error}")

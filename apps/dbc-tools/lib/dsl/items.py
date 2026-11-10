@@ -401,6 +401,9 @@ class ItemDecl:
     extra_armor: float = 0.0
     extra_dps: float | None = None  # None: a weapon takes its role cell's median DPS adjustment (item_variants)
     extra_block: float = 0.0
+    # True: the DPS above the role cell's (extra_dps= minus the cell's fraction) is funded by raising budget_mult, so
+    # the stats stay the role-cell version's (lib/item_variants.py `_free_dps_mult`).
+    free_dps: bool = False
     weapon_role: str | None = None
     spells: tuple[ItemSpell, ...] | None = None
     keep_spells: bool = False
@@ -424,7 +427,7 @@ def item(
     primary: str | int | None = None, secondary: str | int | None = None, primary_share: int | None = None,
     budget_mult: float | None = None, itemization: str | None = None,
     extra_stamina: float = 0.0, extra_armor: float = 0.0, extra_dps: float | None = None, extra_block: float = 0.0,
-    weapon_role: str | None = None, spells=None, keep_spells: bool = False, sockets=None,
+    free_dps: bool = False, weapon_role: str | None = None, spells=None, keep_spells: bool = False, sockets=None,
     socket_bonus: int | None = None, overrides: dict | None = None, unique_equip: bool | None = None, **columns,
 ) -> ItemDecl:
     """Declares an item on `ladder` (see the module docstring). `key` names it in the lock file forever: the ids of
@@ -433,7 +436,10 @@ def item(
     {"heroic": {...}}` sets columns on one tier (e.g. `itemset` 0 above Normal). On a weapon-tier slot (weapons,
     shields, held in off-hand) `budget_mult` and `extra_dps` default to the median of live items of the same role,
     slot, quality and item level bucket (R1 S1, `lib/item_variants.py` RoleCells); the role comes from the shapes,
-    or `weapon_role=` ("physical", "caster", "tank") overrides it. Checks here are the ones that need no live data;
+    or `weapon_role=` ("physical", "caster", "tank") overrides it. `free_dps=True` (needs `extra_dps=` and a role
+    cell) funds the DPS difference between `extra_dps=` and the role cell's DPS fraction by raising `budget_mult`, so
+    the item keeps the role-cell version's stats with the declared DPS (quest reward ruling 40: full-strength wands
+    at the caster cell's stats). Checks here are the ones that need no live data;
     `lib/item_variants.py` checks the rest when generate.py resolves the item."""
     where = f"item({key!r})"
     if not isinstance(key, str) or not _KEY_RE.match(key):
@@ -480,7 +486,8 @@ def item(
         given = [k for k, v in (("primary", primary), ("secondary", secondary), ("primary_share", primary_share),
                                 ("budget_mult", budget_mult)) if v is not None]
         given += [k for k, v in (("extra_stamina", extra_stamina), ("extra_armor", extra_armor),
-                                 ("extra_dps", extra_dps), ("extra_block", extra_block)) if v]
+                                 ("extra_dps", extra_dps), ("extra_block", extra_block),
+                                 ("free_dps", free_dps)) if v]
         if given:
             raise ItemDeclarationError(
                 f"{where}: itemization=\"live\" keeps the live row's shapes, share, multiplier and deltas; drop "
@@ -503,6 +510,12 @@ def item(
             raise ItemDeclarationError(f"{where}: budget_mult={budget_mult!r} must be a number in (0, 2]")
     if unique_equip is not None and not isinstance(unique_equip, bool):
         raise ItemDeclarationError(f"{where}: unique_equip= is True, False or None (None: True for an effect item)")
+    if not isinstance(free_dps, bool):
+        raise ItemDeclarationError(f"{where}: free_dps= is True or False")
+    if free_dps and extra_dps is None:
+        raise ItemDeclarationError(
+            f"{where}: free_dps=True funds the DPS of extra_dps= over the role cell's; declare extra_dps="
+        )
     if weapon_role is not None and weapon_role not in WEAPON_ROLES:
         raise ItemDeclarationError(f"{where}: weapon_role={weapon_role!r} must be one of {WEAPON_ROLES}")
     for keyword, value in (("extra_stamina", extra_stamina), ("extra_armor", extra_armor),
@@ -545,7 +558,7 @@ def item(
         budget_mult=None if budget_mult is None else float(budget_mult), itemization=itemization,
         extra_stamina=float(extra_stamina), extra_armor=float(extra_armor),
         extra_dps=None if extra_dps is None else float(extra_dps), extra_block=float(extra_block),
-        weapon_role=weapon_role, spells=spell_tuple, keep_spells=keep_spells, sockets=socket_tuple,
+        free_dps=free_dps, weapon_role=weapon_role, spells=spell_tuple, keep_spells=keep_spells, sockets=socket_tuple,
         socket_bonus=socket_bonus, overrides=override_tuple, columns=tuple(sorted(columns.items())),
         unique_equip=unique_equip,
     )

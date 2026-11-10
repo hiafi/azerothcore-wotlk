@@ -777,6 +777,7 @@ class RealDataTest(unittest.TestCase):
         self.assertEqual(mat.errors, [], "\n".join(mat.errors))
         self.assertEqual(mat.labels, {})  # ruling 20: no tooltip line
         self.assertEqual(sorted(mat.rows), sorted(lock))
+        wands = 0
         for entry, row in mat.rows.items():
             b = budget.compute_breakdown(row, mat.itemization[entry], tables, shape_catalog)
             want = [(a["stat_type"], a["rounded"]) for a in b["allocations"]] + [(STA, b["final_stamina"])]
@@ -786,6 +787,11 @@ class RealDataTest(unittest.TestCase):
                              (lock[entry].ilvl, lock[entry].quality, 0))
             if row["class"] == 2:  # every weapon resolves a curve DPS (none left at zero damage)
                 self.assertGreater(b["final_dps"], 0, entry)
+            if row["class"] == 2 and row["subclass"] == qr.WEAPON_WAND:  # ruling 40: full DPS, free
+                wands += 1
+                self.assertEqual(b["final_dps"], b["baseline_dps"], entry)
+                self.assertGreater(mat.itemization[entry]["budget_mult"], 0.627, entry)
+        self.assertGreater(wands, 40)
 
 if __name__ == "__main__":
     unittest.main()
