@@ -129,6 +129,62 @@ class RoleCellTest(unittest.TestCase):
         self.assertAlmostEqual(heroic.itemization["dps_delta"], round(-0.5 / normal_dps * heroic.baselines["dps"], 4))
 
 
+class FreeDpsTest(unittest.TestCase):
+    """`free_dps=True` (quest reward ruling 40): the declared DPS over the role cell's is funded by budget_mult, so the
+    stat line is the role-cell version's."""
+
+    @staticmethod
+    def breakdown(exp, rows, tables, key, name):
+        from item_lib import budget, shapes  # noqa: PLC0415
+
+        t = tier(exp, key, name)
+        row = {**rows[5187], "ItemLevel": t.ilvl, "Quality": t.quality}
+        return budget.compute_breakdown(row, {"entry": 5187, **t.itemization}, tables, shapes.catalog(tables))
+
+    @staticmethod
+    def stats(b):
+        return [(a["stat_type"], a["rounded"]) for a in b["allocations"]]
+
+    def test_free_dps_keeps_the_cell_stats_with_full_dps(self):
+        rows, tables = with_cell([9001, 9002, 9003], mult=0.8, dps_delta=-0.2)
+        cut = run([F.hammer()], rows=rows, tables=tables)
+        free = run([F.hammer(extra_dps=0.0, free_dps=True)], rows=rows, tables=tables)
+        paid = run([F.hammer(extra_dps=0.0)], rows=rows, tables=tables)
+        for exp in (cut, free, paid):
+            self.assertEqual(exp.errors, [])
+        for name in ("normal", "heroic", "empowered_1"):
+            b_cut = self.breakdown(cut, rows, tables, "dm_hammer", name)
+            b_free = self.breakdown(free, rows, tables, "dm_hammer", name)
+            b_paid = self.breakdown(paid, rows, tables, "dm_hammer", name)
+            self.assertEqual(tier(free, "dm_hammer", name).itemization["dps_delta"], 0.0)
+            self.assertEqual(b_free["final_dps"], b_free["baseline_dps"])
+            self.assertGreater(b_free["final_dps"], b_cut["final_dps"])
+            self.assertGreater(tier(free, "dm_hammer", name).itemization["budget_mult"],
+                               tier(cut, "dm_hammer", name).itemization["budget_mult"])
+            self.assertLessEqual(abs(b_free["effective_budget"] - b_cut["effective_budget"]), 1)
+            self.assertEqual(self.stats(b_free), self.stats(b_cut), name)
+            self.assertEqual(b_free["final_stamina"], b_cut["final_stamina"], name)
+            # Without free_dps the DPS is paid out of the stats.
+            self.assertLess(b_paid["effective_budget"], b_free["effective_budget"])
+            self.assertIn("free DPS", tier(free, "dm_hammer", name).budget_source)
+
+    def test_errors(self):
+        with self.assertRaises(D.ItemDeclarationError):
+            F.hammer(free_dps=True)  # no extra_dps=
+        with self.assertRaises(D.ItemDeclarationError):
+            F.hammer(extra_dps=0.0, free_dps="yes")
+        with self.assertRaises(D.ItemDeclarationError):
+            D.item("dm_thief", base=5192, itemization="live", free_dps=True, ladder=F.ladder_dungeon())
+        no_cell = run([F.hammer(extra_dps=0.0, free_dps=True)])
+        self.assertTrue(any("free_dps=True needs a role cell" in e for e in no_cell.errors), no_cell.errors)
+        armor = run([F.girdle(extra_dps=0.0, free_dps=True)])
+        self.assertTrue(any("free_dps=True needs a weapon" in e for e in armor.errors), armor.errors)
+        # A cut so deep the raised multiplier leaves (0, 2].
+        rows, tables = with_cell([9001, 9002, 9003], mult=1.9, dps_delta=-0.9)
+        over = run([F.hammer(extra_dps=0.0, free_dps=True)], rows=rows, tables=tables)
+        self.assertTrue(any("outside (0, 2]" in e for e in over.errors), over.errors)
+
+
 class FrozenCellTest(unittest.TestCase):
     """R-W1 S2: a cell's values are frozen the first time a declaration asks for it, so a later declaration that
     takes over another sample of the cell never retunes an earlier item."""

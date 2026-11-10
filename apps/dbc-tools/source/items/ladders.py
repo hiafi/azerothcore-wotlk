@@ -51,3 +51,8 @@ VANILLA_HARD_MODE = ladder(
     empowered_2_hm=tier(step=3, ilvl=91, quality=EPIC, required_level=REQUIRED_LEVEL, label="Draconic Empowered" + HM),
     empowered_3_hm=tier(step=4, ilvl=101, quality=EPIC, required_level=REQUIRED_LEVEL, label="Chthonic Empowered" + HM),
 )
+
+# Quest rewards (docs/plans/quest-reward-itemization/, stage QR1): one tier, the stock item itself re-leveled and
+# re-statted in place (source/items/quest_rewards.py, one item(base=...) per quest_rewards.lock line). The item level,
+# quality and required level are each item's own (its lock line). No tooltip line (ruling 20): label=None.
+QUEST_REWARD = ladder("quest_reward", normal=tier(step=0, label=None))

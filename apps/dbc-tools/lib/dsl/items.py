@@ -36,8 +36,9 @@ ladder; a deferred tier keeps its step, so flipping it never renumbers the other
 set); only the higher tiers are minted. Without `base=` every tier is minted: `name=` is required, and `like=<entry>`
 copies `LIKE_COLUMNS` from a stock item (or they are passed as columns). Stats are never passed (`stat_type*`,
 `stat_value*`, `dmg_*`, `block`; `armor` on a slot with an armor curve): they come from the budget. Shapes are
-`item_shape.name` strings (`primary=None` is the Null shape, 100% secondary; `secondary=None` gives the primary the
-whole budget), checked at resolve time. `itemization="live"` adopts a stock item's live `item_itemization` row on
+`item_shape.name` strings, or `item_shape.shape_id` ints for a declaration read from a lock file
+(source/items/quest_rewards.py); `primary=None` is the Null shape, 100% secondary; `secondary=None` gives the primary
+the whole budget; checked at resolve time. `itemization="live"` adopts a stock item's live `item_itemization` row on
 its first tier. Deltas are fractions of the tier's own baseline (`extra_stamina=0.25` is +25% of the tier's Stamina),
 so they scale with the item level.
 
@@ -159,7 +160,7 @@ def _number(value) -> bool:
 class Tier:
     """One tier of a ladder. `name` is set by `ladder()` (the keyword it was passed under)."""
 
-    label: str
+    label: str | None  # None: no tooltip line (no label table row)
     ilvl: int | None = None
     quality: int | None = None
     required_level: int | None = None
@@ -175,8 +176,8 @@ class Tier:
 
 
 def tier(
-    *, step: int, label: str, ilvl: int | None = None, quality: int | None = None, required_level: int | None = None,
-    heroic_flag: bool = False, deferred: bool = False, sockets: bool = True,
+    *, step: int, label: str | None, ilvl: int | None = None, quality: int | None = None,
+    required_level: int | None = None, heroic_flag: bool = False, deferred: bool = False, sockets: bool = True,
 ) -> Tier:
     """A ladder tier. `label` is the green tooltip line under the item name ("Normal", "Molten Empowered", ...); on a
     `heroic_flag=True` tier the client prints its own "Heroic" line from flag 0x8 and the label is not written to the
@@ -184,15 +185,17 @@ def tier(
     `sockets=False` drops the item's sockets and socket bonus on this tier (and with them the budget's socket
     discount): user ruling 2026-11-06, sockets start at Heroic, a leveling Normal tier has none. `step` is the
     `item_budget_variant.tier` number (required): 0 Normal, 1 Heroic, 2.. the empowered tiers, the same number for the
-    same step on every ladder (R1 N1: explicit, never derived from the tier's position)."""
+    same step on every ladder (R1 N1: explicit, never derived from the tier's position). `label=None` writes no
+    tooltip line at all (no label table row): a tier that needs no name, e.g. the single `quest_reward` tier (quest
+    reward itemization ruling 20)."""
     if not _plain_int(step) or not 0 <= step <= MAX_TIER_STEP:
         raise ItemDeclarationError(
             f"tier(label={label!r}): step={step!r} must be an int in 0-{MAX_TIER_STEP} (item_budget_variant.tier: "
             f"0 Normal, 1 Heroic, 2.. the empowered tiers)"
         )
-    if not isinstance(label, str) or not label.strip():
-        raise ItemDeclarationError(f"tier(label={label!r}): the label must be a non-empty string")
-    if label != label.strip() or any(ch in label for ch in LABEL_FORBIDDEN):
+    if label is not None and (not isinstance(label, str) or not label.strip()):
+        raise ItemDeclarationError(f"tier(label={label!r}): the label must be a non-empty string, or None for none")
+    if label is not None and (label != label.strip() or any(ch in label for ch in LABEL_FORBIDDEN)):
         raise ItemDeclarationError(
             f"tier(label={label!r}): no leading or trailing space and none of {' '.join(map(repr, LABEL_FORBIDDEN))} "
             f"(it is written into a Lua string and a tooltip line)"
@@ -279,7 +282,7 @@ def ladder(name: str, *, effect_reference: str | None = None, **tiers: Tier) -> 
                 f"ladder({name!r}): tier steps must strictly increase, but {high.name!r} (step {high.step}) follows "
                 f"{low.name!r} (step {low.step})"
             )
-    labels = [t.label for t in named]
+    labels = [t.label for t in named if t.label is not None]
     if len(set(labels)) != len(labels):
         raise ItemDeclarationError(f"ladder({name!r}): two tiers share a label ({labels})")
     if effect_reference is not None:
@@ -389,8 +392,8 @@ class ItemDecl:
     ilvl: int | None = None
     quality: int | None = None
     required_level: int | None = None
-    primary: str | None = None
-    secondary: str | None = None
+    primary: str | int | None = None  # an item_shape name, or its shape_id (a lock-driven declaration)
+    secondary: str | int | None = None
     primary_share: int | None = None
     budget_mult: float | None = None
     itemization: str | None = None
@@ -398,6 +401,9 @@ class ItemDecl:
     extra_armor: float = 0.0
     extra_dps: float | None = None  # None: a weapon takes its role cell's median DPS adjustment (item_variants)
     extra_block: float = 0.0
+    # True: the DPS above the role cell's (extra_dps= minus the cell's fraction) is funded by raising budget_mult, so
+    # the stats stay the role-cell version's (lib/item_variants.py `_free_dps_mult`).
+    free_dps: bool = False
     weapon_role: str | None = None
     spells: tuple[ItemSpell, ...] | None = None
     keep_spells: bool = False
@@ -418,10 +424,10 @@ class ItemDecl:
 def item(
     key: str, *, ladder: Ladder, base: int | None = None, name: str | None = None, like: int | None = None,
     ilvl: int | None = None, quality: int | None = None, required_level: int | None = None,
-    primary: str | None = None, secondary: str | None = None, primary_share: int | None = None,
+    primary: str | int | None = None, secondary: str | int | None = None, primary_share: int | None = None,
     budget_mult: float | None = None, itemization: str | None = None,
     extra_stamina: float = 0.0, extra_armor: float = 0.0, extra_dps: float | None = None, extra_block: float = 0.0,
-    weapon_role: str | None = None, spells=None, keep_spells: bool = False, sockets=None,
+    free_dps: bool = False, weapon_role: str | None = None, spells=None, keep_spells: bool = False, sockets=None,
     socket_bonus: int | None = None, overrides: dict | None = None, unique_equip: bool | None = None, **columns,
 ) -> ItemDecl:
     """Declares an item on `ladder` (see the module docstring). `key` names it in the lock file forever: the ids of
@@ -430,7 +436,10 @@ def item(
     {"heroic": {...}}` sets columns on one tier (e.g. `itemset` 0 above Normal). On a weapon-tier slot (weapons,
     shields, held in off-hand) `budget_mult` and `extra_dps` default to the median of live items of the same role,
     slot, quality and item level bucket (R1 S1, `lib/item_variants.py` RoleCells); the role comes from the shapes,
-    or `weapon_role=` ("physical", "caster", "tank") overrides it. Checks here are the ones that need no live data;
+    or `weapon_role=` ("physical", "caster", "tank") overrides it. `free_dps=True` (needs `extra_dps=` and a role
+    cell) funds the DPS difference between `extra_dps=` and the role cell's DPS fraction by raising `budget_mult`, so
+    the item keeps the role-cell version's stats with the declared DPS (quest reward ruling 40: full-strength wands
+    at the caster cell's stats). Checks here are the ones that need no live data;
     `lib/item_variants.py` checks the rest when generate.py resolves the item."""
     where = f"item({key!r})"
     if not isinstance(key, str) or not _KEY_RE.match(key):
@@ -477,7 +486,8 @@ def item(
         given = [k for k, v in (("primary", primary), ("secondary", secondary), ("primary_share", primary_share),
                                 ("budget_mult", budget_mult)) if v is not None]
         given += [k for k, v in (("extra_stamina", extra_stamina), ("extra_armor", extra_armor),
-                                 ("extra_dps", extra_dps), ("extra_block", extra_block)) if v]
+                                 ("extra_dps", extra_dps), ("extra_block", extra_block),
+                                 ("free_dps", free_dps)) if v]
         if given:
             raise ItemDeclarationError(
                 f"{where}: itemization=\"live\" keeps the live row's shapes, share, multiplier and deltas; drop "
@@ -485,8 +495,9 @@ def item(
             )
     else:
         for keyword, value in (("primary", primary), ("secondary", secondary)):
-            if value is not None and (not isinstance(value, str) or not value):
-                raise ItemDeclarationError(f"{where}: {keyword}={value!r} must be an item_shape name")
+            if value is not None and not ((isinstance(value, str) and value)
+                                          or (_plain_int(value) and value > 0)):
+                raise ItemDeclarationError(f"{where}: {keyword}={value!r} must be an item_shape name or shape_id")
         if primary is None and secondary is None:
             raise ItemDeclarationError(f"{where}: give primary= and/or secondary= (or itemization=\"live\")")
         if primary_share is not None and primary_share not in PRIMARY_SHARES:
@@ -499,6 +510,12 @@ def item(
             raise ItemDeclarationError(f"{where}: budget_mult={budget_mult!r} must be a number in (0, 2]")
     if unique_equip is not None and not isinstance(unique_equip, bool):
         raise ItemDeclarationError(f"{where}: unique_equip= is True, False or None (None: True for an effect item)")
+    if not isinstance(free_dps, bool):
+        raise ItemDeclarationError(f"{where}: free_dps= is True or False")
+    if free_dps and extra_dps is None:
+        raise ItemDeclarationError(
+            f"{where}: free_dps=True funds the DPS of extra_dps= over the role cell's; declare extra_dps="
+        )
     if weapon_role is not None and weapon_role not in WEAPON_ROLES:
         raise ItemDeclarationError(f"{where}: weapon_role={weapon_role!r} must be one of {WEAPON_ROLES}")
     for keyword, value in (("extra_stamina", extra_stamina), ("extra_armor", extra_armor),
@@ -541,7 +558,7 @@ def item(
         budget_mult=None if budget_mult is None else float(budget_mult), itemization=itemization,
         extra_stamina=float(extra_stamina), extra_armor=float(extra_armor),
         extra_dps=None if extra_dps is None else float(extra_dps), extra_block=float(extra_block),
-        weapon_role=weapon_role, spells=spell_tuple, keep_spells=keep_spells, sockets=socket_tuple,
+        free_dps=free_dps, weapon_role=weapon_role, spells=spell_tuple, keep_spells=keep_spells, sockets=socket_tuple,
         socket_bonus=socket_bonus, overrides=override_tuple, columns=tuple(sorted(columns.items())),
         unique_equip=unique_equip,
     )
@@ -611,17 +628,21 @@ def declared_item_bases(dir_path: Path = ITEMS_DIR) -> frozenset[int]:
 
 
 def item_owned_entries(dir_path: Path = ITEMS_DIR) -> frozenset[int]:
-    """Every `item_template` entry source/items owns: the stock `base=` entries (`declared_item_bases`) and every
-    entry of `item_ids.lock` (the minted tiers, the recorded bases, retired lines included). Once a write run has
+    """Every `item_template` entry source/items owns: the stock `base=` entries (`declared_item_bases`), every
+    entry of `item_ids.lock` (the minted tiers, the recorded bases, retired lines included) and every entry of
+    `quest_rewards.lock` (the quest rewards source/items/quest_rewards.py takes over). Once a write run has
     minted a ranged weapon's tiers they are live rows too, so a bulk `item_template()` editor (ranged_weapons.py) skips
     all of these."""
     owned = set(declared_item_bases(dir_path))
-    lock = dir_path / "item_ids.lock"
-    if lock.is_file():
-        for raw in lock.read_text(encoding="utf-8").splitlines():
-            token = raw.split("#", 1)[0].split()[:1]
-            if token and token[0].isdigit():
-                owned.add(int(token[0]))
+    # item_ids.lock, and quest_rewards.lock: source/items/quest_rewards.py declares one item(base=<entry>) per line of
+    # it in a loop, which declared_item_bases' syntax read cannot see.
+    for name in ("item_ids.lock", "quest_rewards.lock"):
+        lock = dir_path / name
+        if lock.is_file():
+            for raw in lock.read_text(encoding="utf-8").splitlines():
+                token = raw.split("#", 1)[0].split()[:1]
+                if token and token[0].isdigit():
+                    owned.add(int(token[0]))
     return frozenset(owned)
 
 

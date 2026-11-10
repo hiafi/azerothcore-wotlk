@@ -1,0 +1,2186 @@
+# Quest reward itemization (docs/plans/quest-reward-itemization/, lib/quest_rewards.py): one stock quest reward per
+# line, declared by source/items/quest_rewards.py as item(base=<entry>) on the one-tier quest_reward ladder.
+#   <entry> <quest level> <quality> <ilvl> <primary shape id> <secondary shape id> <share> <spells>  # <name> -- <why>
+# <quality> and <ilvl> are the new ones; shape ids are item_shape.shape_id (0 = Null, no primary); <share> is
+# primary_share (0/4000/6000/8000/10000); <spells> is - (stock spell slots absorbed), all (keep_spells=True) or the
+# kept slot numbers (1,3: the other slots are absorbed). The comment (shapes as stats, the rule path, FB = a
+# fallback; a long one continues on the `#   ` lines below) is for the reader; only the fields are read.
+# Seeded by `python3 apps/dbc-tools/quest_rewards_lock.py --seed-quest-rewards`; append-only afterwards: a seed run
+# appends new entries and never rewrites a line, so hand edits stay. To hand an entry to another declaration (a
+# dungeon item file), delete its line first: one owner per entry.
+60 5 2 7 23 25 4000 -  # Layered Tunic -- Agi / Crit; white->green; ilvl 5->7; type Agi (leather); round 8 step-down
+#   (ruling 37): share 8000->4000 so Crit is at least 1
+61 3 2 5 23 26 4000 -  # Dwarven Leather Pants -- Agi / Haste; white->green; ilvl 5 kept (target 5); type Agi (leather);
+#   round 8 step-down (ruling 37): share 8000->4000 so Haste is at least 1
+79 3 2 5 24 26 4000 -  # Dwarven Cloth Britches -- Int / Haste; white->green; ilvl 5 kept (target 5); type Int (cloth);
+#   round 8 step-down (ruling 37): share 8000->4000 so Haste is at least 1
+80 2 2 5 24 27 4000 -  # Soft Fur-lined Shoes -- Int / Mastery; white->green; ilvl 5 kept (target 4); type Int (cloth);
+#   round 8 step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+710 14 2 16 24 27 6000 -  # Bracers of the People's Militia -- Int / Mastery; white->green; ilvl 14->16; type Int
+#   (cloth); round 6 step-down: share 8000->6000 so Mastery is at least 1
+719 1 2 5 24 73 4000 -  # Rabbit Handler Gloves -- Int / Proc; white->green; ilvl 5 kept (target 3); type Int (cloth);
+#   round 8 step-down (ruling 37): share 8000->4000 so Proc is at least 1
+744 44 2 49 0 25 0 all  # Thunderbrew's Boot Flask -- - / Crit; green; ilvl 44->49; no primary (trinket, ruling 22);
+#   keeps spell 1
+860 11 2 13 24 27 6000 -  # Cavalier's Boots -- Int / Mastery; white->green; ilvl 13 kept (target 13); type Int (cloth);
+#   round 6 step-down: share 8000->6000 so Mastery is at least 1
+983 9 2 11 24 73 4000 -  # Red Linen Sash -- Int / Proc; white->green; ilvl 9->11; type Int (cloth); round 8 step-down
+#   (ruling 37): share 8000->4000 so Proc is at least 1
+1008 10 2 12 22 25 4000 -  # Well-used Sword -- Str / Crit; white->green; ilvl 10->12; type Str (one-handed sword, even
+#   entry); round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1
+1009 11 2 16 24 26 8000 -  # Compact Hammer -- Int / Haste; green; ilvl 13->16; FB no stock primary: type Int (one-
+#   handed mace, odd entry)
+1010 8 2 10 24 27 6000 -  # Gnarled Short Staff -- Int / Mastery; white->green; ilvl 8->10; type Int (staff); round 6
+#   step-down: share 8000->6000 so Mastery is at least 1
+1011 8 2 10 22 28 8000 -  # Sharp Axe -- Str / Vers; white->green; ilvl 8->10; type Str (one-handed axe)
+1116 30 2 35 0 25 0 -  # Ring of Pure Silver -- - / Crit; green; ilvl 31->35; no primary (jewelry/cloak)
+1131 25 2 30 24 28 8000 all  # Totem of Infliction -- Int / Vers; green; ilvl 25->30; type Int (held in off-hand, ruling
+#   25); keeps spell 1
+1154 14 2 16 23 27 8000 -  # Belt of the People's Militia -- Agi / Mastery; white->green; ilvl 14->16; type Agi (mail,
+#   even entry)
+1158 10 2 12 22 25 4000 -  # Solid Metal Club -- Str / Crit; white->green; ilvl 10->12; type Str (one-handed mace, even
+#   entry); round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1
+1159 4 2 6 24 26 6000 -  # Militia Quarterstaff -- Int / Haste; white->green; ilvl 5->6; type Int (staff); round 6
+#   step-down: share 8000->6000 so Haste is at least 1
+1161 4 2 6 23 28 8000 -  # Militia Shortsword -- Agi / Vers; white->green; ilvl 5->6; type Agi (one-handed sword, odd
+#   entry)
+1171 10 2 12 24 26 6000 -  # Well-stitched Robe -- Int / Haste; white->green; ilvl 10->12; type Int (cloth); round 6
+#   step-down: share 8000->6000 so Haste is at least 1
+1172 20 2 25 71 27 8000 -  # Grayson's Torch -- Spi / Mastery; green; ilvl 21->25
+1173 9 2 11 23 28 4000 -  # Weather-worn Boots -- Agi / Vers; white->green; ilvl 10->11; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Vers is at least 1
+1182 9 2 11 23 25 8000 -  # Brass-studded Bracers -- Agi / Crit; white->green; ilvl 10->11; type Agi (mail, even entry)
+1183 10 2 12 24 26 4000 -  # Elastic Wristguards -- Int / Haste; white->green; ilvl 10->12; type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Haste is at least 1
+1264 27 2 32 22 72 8000 -  # Headbasher -- Str / CDH; green; ilvl 26->32
+1270 15 2 20 0 72 0 -  # Finely Woven Cloak -- - / CDH; green; ilvl 15->20; no primary (jewelry/cloak)
+1273 26 2 31 71 26 8000 -  # Forest Chain -- Spi / Haste; green; ilvl 25->31
+1275 25 2 30 71 28 8000 -  # Deputy Chain Coat -- Spi / Vers; green; ilvl 25->30
+1276 25 2 30 71 72 8000 -  # Fire Hardened Buckler -- Spi / CDH; green; ilvl 27->30
+1282 32 2 37 22 72 8000 -  # Sparkmetal Coif -- Str / CDH; green; ilvl 33->37
+1302 18 2 23 15 25 8000 -  # Black Whelp Gloves -- Agi+AP / Crit; green; ilvl 18->23
+1303 20 2 25 12 26 8000 -  # Bridgeworker's Gloves -- Str+AP / Haste; green; ilvl 20->25
+1304 20 2 25 1 27 8000 -  # Riding Gloves -- Int+SP / Mastery; green; ilvl 20->25
+1306 20 2 25 23 72 8000 -  # Wolfmane Wristguards -- Agi / CDH; green; ilvl 20->25
+1310 20 2 25 12 27 8000 -  # Smith's Trousers -- Str+AP / Mastery; green; ilvl 20->25
+1317 25 2 30 71 28 8000 -  # Hardened Root Staff -- Spi / Vers; green; ilvl 25->30
+1319 21 2 26 0 73 0 -  # Ring of Iron Will -- - / Proc; green; ilvl 25->26; no primary (jewelry/cloak)
+1359 8 2 10 23 28 4000 -  # Lion-stamped Gloves -- Agi / Vers; white->green; ilvl 8->10; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Vers is at least 1
+1360 10 2 12 23 72 6000 -  # Stormwind Chain Gloves -- Agi / CDH; white->green; ilvl 10->12; type Agi (mail, even
+#   entry); round 6 step-down: share 8000->6000 so CDH is at least 1
+1382 4 2 6 22 27 8000 -  # Rock Mace -- Str / Mastery; white->green; ilvl 5->6; type Str (one-handed mace, even entry)
+1383 4 2 6 22 28 8000 -  # Stone Tomahawk -- Str / Vers; white->green; ilvl 5->6; type Str (one-handed axe)
+1436 17 2 22 12 27 8000 -  # Frontier Britches -- Str+AP / Mastery; green; ilvl 17->22
+1449 22 2 27 0 28 0 -  # Minor Channeling Ring -- - / Vers; green; ilvl 24->27; no primary (jewelry/cloak)
+1479 13 2 15 24 28 8000 -  # Salma's Oven Mitts -- Int / Vers; white->green; ilvl 12->15; type Int (cloth)
+1480 17 2 22 22 72 8000 -  # Fist of the People's Militia -- Str / CDH; green; ilvl 17->22
+1490 50 2 55 0 27 0 all  # Guardian Talisman -- - / Mastery; green; ilvl 50->55; no primary (trinket, ruling 22); keeps
+#   spell 1
+1547 31 2 36 71 73 8000 -  # Shield of the Faith -- Spi / Proc; green; ilvl 30->36
+1557 20 2 25 71 28 8000 -  # Buckler of the Seas -- Spi / Vers; green; ilvl 20->25
+1561 15 2 20 71 26 8000 -  # Harvester's Robe -- Spi / Haste; green; ilvl 15->20
+1566 17 2 22 22 25 8000 -  # Edge of the People's Militia -- Str / Crit; green; ilvl 17->22; FB no stock primary: type
+#   Str (two-handed sword)
+1832 17 2 22 6 27 8000 -  # Lucky Trousers -- Spi+SP / Mastery; green; ilvl 17->22
+1893 20 2 25 71 28 8000 -  # Miner's Revenge -- Spi / Vers; green; ilvl 20->25
+2000 30 2 35 22 27 8000 all  # Archeus -- Str / Mastery; green; ilvl 35 kept (target 35); keeps spell 1; FB no stock
+#   primary: type Str (two-handed sword)
+2032 36 2 41 24 72 8000 -  # Gallan Cuffs -- Int / CDH; green; ilvl 36->41
+2033 26 2 31 23 73 8000 -  # Ambassador's Boots -- Agi / Proc; green; ilvl 25->31
+2036 18 2 23 12 27 8000 -  # Dusty Mining Gloves -- Str+AP / Mastery; green; ilvl 18->23
+2037 18 2 23 71 28 8000 -  # Tunneler's Boots -- Spi / Vers; green; ilvl 18->23
+2041 22 3 27 23 36 6000 -  # Tunic of Westfall -- Agi / Mastery+Vers; blue; ilvl 24->27
+2042 22 3 27 9 37 6000 -  # Staff of Westfall -- Spi+Int+SP / Crit+CDH; blue; ilvl 24->27
+2043 32 3 37 0 48 0 -  # Ring of Forlorn Spirits -- - / MP5+Crit; blue; ilvl 35->37; no primary (jewelry/cloak); MP5
+#   kept
+2044 32 3 37 22 39 6000 -  # Crescent of Forlorn Spirits -- Str / Crit+Proc; blue; ilvl 35->37; FB no stock primary:
+#   type Str (one-handed axe)
+2047 4 2 6 22 26 8000 -  # Anvilmar Hand Axe -- Str / Haste; white->green; ilvl 5->6; type Str (one-handed axe)
+2048 4 2 6 22 27 8000 -  # Anvilmar Hammer -- Str / Mastery; white->green; ilvl 5->6; type Str (one-handed mace, even
+#   entry)
+2074 17 2 22 22 72 8000 -  # Solid Shortblade -- Str / CDH; green; ilvl 18->22
+2089 17 2 22 23 26 8000 -  # Scrimshaw Dagger -- Agi / Haste; green; ilvl 18->22; FB no stock primary: type Agi (dagger)
+2137 4 2 6 23 26 8000 -  # Whittling Knife -- Agi / Haste; white->green; ilvl 5->6; type Agi (dagger)
+2165 14 2 16 0 73 0 -  # Old Blanchy's Blanket -- - / Proc; white->green; ilvl 10->16; no primary (jewelry/cloak)
+2172 2 2 5 23 25 4000 -  # Rustic Belt -- Agi / Crit; white->green; ilvl 5 kept (target 4); type Agi (mail, even entry);
+#   round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1
+2173 2 2 5 23 26 4000 -  # Old Leather Belt -- Agi / Haste; white->green; ilvl 5 kept (target 4); type Agi (leather);
+#   round 8 step-down (ruling 37): share 8000->4000 so Haste is at least 1
+2186 5 2 7 23 27 4000 -  # Outfitter Belt -- Agi / Mastery; white->green; ilvl 5->7; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+2195 4 2 6 23 73 8000 -  # Anvilmar Knife -- Agi / Proc; white->green; ilvl 5->6; type Agi (dagger)
+2218 11 2 16 23 72 4000 -  # Craftsman's Dagger -- Agi / CDH; green; ilvl 13->16; round 8 step-down (ruling 37): share
+#   8000->4000 so CDH is at least 1
+2224 4 2 6 23 72 8000 -  # Militia Dagger -- Agi / CDH; white->green; ilvl 5->6; type Agi (dagger)
+2225 13 2 15 23 73 4000 -  # Sharp Kitchen Knife -- Agi / Proc; white->green; ilvl 11->15; type Agi (dagger); round 8
+#   step-down (ruling 37): share 8000->4000 so Proc is at least 1
+2230 24 2 29 22 72 8000 -  # Gloves of Brawn -- Str / CDH; green; ilvl 24->29
+2231 40 2 45 81 73 8000 -  # Inferno Robe -- SP / Proc; green; ilvl 40->45; round 7: Spell Power (Solo) (ruling 33) (was
+#   SP+Int / Proc share 8000)
+2237 10 2 12 23 73 6000 -  # Patched Pants -- Agi / Proc; white->green; ilvl 10->12; type Agi (leather); round 6
+#   step-down: share 8000->6000 so Proc is at least 1
+2238 10 2 12 24 25 6000 -  # Urchin's Pants -- Int / Crit; white->green; ilvl 10->12; type Int (cloth); round 6
+#   step-down: share 8000->6000 so Crit is at least 1
+2240 15 2 17 0 27 0 -  # Rugged Cape -- - / Mastery; white->green; ilvl 15->17; no primary (jewelry/cloak)
+2249 10 2 12 22 73 4000 -  # Militia Buckler -- Str / Proc; white->green; ilvl 10->12; type Str (shield); round 8
+#   step-down (ruling 37): share 8000->4000 so Proc is at least 1
+2263 26 2 31 23 26 8000 all  # Phytoblade -- Agi / Haste; green; ilvl 25->31; keeps spell 1; FB no stock primary: type
+#   Agi (one-handed sword, odd entry)
+2326 9 2 11 24 72 8000 -  # Ivy-weave Bracers -- Int / CDH; white->green; ilvl 10->11; type Int (cloth)
+2545 26 2 31 22 26 8000 -  # Malleable Chain Leggings -- Str / Haste; green; ilvl 26->31
+2547 1 2 5 24 28 4000 -  # Boar Handler Gloves -- Int / Vers; white->green; ilvl 5 kept (target 3); type Int (mail, odd
+#   entry); round 8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+2562 24 2 26 24 25 8000 -  # Bouquet of Scarlet Begonias -- Int / Crit; white->green; ilvl 23->26; type Int (held in
+#   off-hand, ruling 25)
+2571 7 2 9 24 28 4000 -  # Viny Wrappings -- Int / Vers; white->green; ilvl 7->9; type Int (cloth); round 8 step-down
+#   (ruling 37): share 8000->4000 so Vers is at least 1
+2690 4 2 6 23 27 4000 -  # Latched Belt -- Agi / Mastery; white->green; ilvl 5->6; type Agi (mail, even entry); round 8
+#   step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+2691 5 2 7 24 28 4000 -  # Outfitter Boots -- Int / Vers; white->green; ilvl 5->7; type Int (mail, odd entry); round 8
+#   step-down (ruling 37): share 8000->4000 so Vers is at least 1
+2694 18 2 23 6 25 8000 -  # Settler's Leggings -- Spi+SP / Crit; green; ilvl 17->23
+2805 34 2 39 0 28 0 -  # Yeti Fur Cloak -- - / Vers; green; ilvl 34->39; no primary (jewelry/cloak)
+2817 12 2 17 23 28 8000 -  # Soft Leather Tunic -- Agi / Vers; green; ilvl 12->17; FB no stock primary: type Agi
+#   (leather)
+2818 15 2 20 12 72 8000 -  # Stretched Leather Trousers -- Str+AP / CDH; green; ilvl 15->20
+2820 45 2 50 0 25 0 all  # Nifty Stopwatch -- - / Crit; green; ilvl 50 kept (target 50); no primary (trinket, ruling
+#   22); keeps spell 1
+2900 9 2 11 22 27 8000 -  # Stone Buckler -- Str / Mastery; white->green; ilvl 10->11; type Str (shield)
+2902 31 2 36 0 72 0 -  # Cloak of the Faith -- - / CDH; green; ilvl 30->36; no primary (jewelry/cloak)
+2903 16 2 21 23 73 8000 -  # Daryl's Hunting Bow -- Agi / Proc; green; ilvl 15->21; FB no stock primary: type Agi (bow)
+2904 16 2 21 23 25 8000 -  # Daryl's Hunting Rifle -- Agi / Crit; green; ilvl 16->21; FB no stock primary: type Agi
+#   (gun)
+2905 9 2 11 0 26 0 -  # Goat Fur Cloak -- - / Haste; white->green; ilvl 10->11; no primary (jewelry/cloak)
+2906 26 2 31 6 27 8000 -  # Darkshire Mail Leggings -- Spi+SP / Mastery; green; ilvl 26->31
+2907 20 2 25 22 28 8000 -  # Dwarven Tree Chopper -- Str / Vers; green; ilvl 20->25; FB no stock primary: type Str (two-
+#   handed axe)
+2908 20 2 25 23 72 8000 -  # Thornblade -- Agi / CDH; green; ilvl 20->25
+2910 21 2 26 22 25 8000 -  # Gold Militia Boots -- Str / Crit; green; ilvl 25->26
+2913 28 2 33 8 28 8000 -  # Silk Mantle of Gamn -- Int+Spi+SP / Vers; green; ilvl 28->33
+2916 31 2 36 6 25 8000 -  # Gold Lion Shield -- Spi+SP / Crit; green; ilvl 34->36
+2917 31 2 36 0 26 0 -  # Tranquil Ring -- - / Haste; green; ilvl 33->36; no primary (jewelry/cloak)
+2933 31 3 36 0 75 0 -  # Seal of Wrynn -- - / Mastery+Proc; blue; ilvl 31->36; no primary (jewelry/cloak)
+2943 30 2 35 81 28 8000 -  # Eye of Paleth -- SP / Vers; green; ilvl 31->35; round 7: Spell Power (Solo) (ruling 33)
+#   (was SP+Int / Vers share 8000)
+2949 25 2 30 23 28 8000 -  # Mariner Boots -- Agi / Vers; green; ilvl 25->30
+2950 25 2 30 2 72 8000 -  # Icicle Rod -- SP+Int / CDH; green; ilvl 25->30
+2953 32 2 37 0 26 0 -  # Watch Master's Cloak -- - / Haste; green; ilvl 33->37; no primary (jewelry/cloak)
+2954 32 2 37 1 27 8000 -  # Night Watch Pantaloons -- Int+SP / Mastery; green; ilvl 33->37
+3070 5 2 7 0 72 0 -  # Ensign Cloak -- - / CDH; white->green; ilvl 5->7; no primary (jewelry/cloak)
+3071 12 2 14 22 73 4000 -  # Striking Hatchet -- Str / Proc; white->green; ilvl 12->14; type Str (one-handed axe); round
+#   8 step-down (ruling 37): share 8000->4000 so Proc is at least 1
+3079 12 2 17 23 26 6000 -  # Skorn's Rifle -- Agi / Haste; green; ilvl 12->17; FB no stock primary: type Agi (gun);
+#   round 6 step-down: share 8000->6000 so Haste is at least 1
+3103 12 2 17 6 26 8000 -  # Coldridge Hammer -- Spi+SP / Haste; green; ilvl 12->17
+3151 10 2 12 24 26 6000 -  # Siege Brigade Vest -- Int / Haste; white->green; ilvl 10->12; type Int (mail, odd entry);
+#   round 6 step-down: share 8000->6000 so Haste is at least 1
+3152 10 2 12 23 27 6000 -  # Driving Gloves -- Agi / Mastery; white->green; ilvl 9->12; type Agi (leather); round 6
+#   step-down: share 8000->6000 so Mastery is at least 1
+3153 10 2 12 0 28 0 -  # Oil-stained Cloak -- - / Vers; white->green; ilvl 9->12; no primary (jewelry/cloak)
+3154 18 2 23 23 72 8000 -  # Thelsamar Axe -- Agi / CDH; green; ilvl 18->23
+3158 11 2 13 23 27 4000 -  # Burnt Hide Bracers -- Agi / Mastery; white->green; ilvl 12->13; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+3160 15 2 20 71 72 6000 -  # Ironplate Buckler -- Spi / CDH; green; ilvl 15->20; round 6 step-down: share 8000->6000 so
+#   CDH is at least 1
+3161 15 2 20 24 73 8000 -  # Robe of the Keeper -- Int / Proc; green; ilvl 15->20; FB no stock primary: type Int (cloth)
+3166 15 2 20 23 72 8000 -  # Ironheart Chain -- Agi / CDH; green; ilvl 15->20; FB no stock primary: type Agi (mail, even
+#   entry)
+3209 26 2 32 22 73 8000 -  # Ancient War Sword -- Str / Proc; green; ilvl 32 kept (target 31)
+3216 9 2 11 24 25 4000 -  # Warm Winter Robe -- Int / Crit; white->green; ilvl 10->11; type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Crit is at least 1
+3217 15 2 20 71 26 8000 -  # Foreman Belt -- Spi / Haste; green; ilvl 15->20
+3235 20 2 25 0 26 0 -  # Ring of Scorn -- - / Haste; green; ilvl 20->25; no primary (jewelry/cloak)
+3267 4 2 6 23 28 8000 -  # Forsaken Shortsword -- Agi / Vers; white->green; ilvl 5->6; type Agi (one-handed sword, odd
+#   entry)
+3268 4 2 6 23 72 8000 -  # Forsaken Dagger -- Agi / CDH; white->green; ilvl 5->6; type Agi (dagger)
+3269 4 2 6 24 73 4000 -  # Forsaken Maul -- Int / Proc; white->green; ilvl 5->6; type Int (one-handed mace, odd entry);
+#   round 8 step-down (ruling 37): share 8000->4000 so Proc is at least 1
+3270 4 2 6 24 25 4000 -  # Flax Vest -- Int / Crit; white->green; ilvl 5->6; type Int (cloth); round 8 step-down (ruling
+#   37): share 8000->4000 so Crit is at least 1
+3272 4 2 6 23 27 4000 -  # Zombie Skin Leggings -- Agi / Mastery; white->green; ilvl 5->6; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+3273 4 2 6 24 28 4000 -  # Rugged Mail Vest -- Int / Vers; white->green; ilvl 5->6; type Int (mail, odd entry); round 8
+#   step-down (ruling 37): share 8000->4000 so Vers is at least 1
+3274 3 2 5 24 72 4000 -  # Flax Boots -- Int / CDH; white->green; ilvl 5 kept (target 5); type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so CDH is at least 1
+3275 2 2 5 24 73 4000 -  # Flax Gloves -- Int / Proc; white->green; ilvl 5 kept (target 4); type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Proc is at least 1
+3276 5 2 7 22 25 8000 -  # Deathguard Buckler -- Str / Crit; white->green; ilvl 5->7; type Str (shield)
+3277 5 2 7 24 26 6000 -  # Executor Staff -- Int / Haste; white->green; ilvl 5->7; type Int (staff); round 6 step-down:
+#   share 8000->6000 so Haste is at least 1
+3324 25 2 30 8 25 8000 -  # Ghostly Mantle -- Int+Spi+SP / Crit; green; ilvl 28->30
+3344 16 2 21 71 27 8000 -  # Captain Sanders' Sash -- Spi / Mastery; green; ilvl 15->21
+3400 25 2 30 22 72 8000 -  # Lucine Longsword -- Str / CDH; green; ilvl 25->30; FB no stock primary: type Str (one-
+#   handed sword, even entry)
+3431 25 2 30 22 73 8000 -  # Bone-studded Leather -- Str / Proc; green; ilvl 25->30
+3435 7 2 9 23 28 8000 -  # Zombie Skin Bracers -- Agi / Vers; white->green; ilvl 8->9; type Agi (leather)
+3437 7 2 9 24 73 4000 -  # Clasped Belt -- Int / Proc; white->green; ilvl 8->9; type Int (mail, odd entry); round 8
+#   step-down (ruling 37): share 8000->4000 so Proc is at least 1
+3439 8 2 10 23 26 4000 -  # Zombie Skin Boots -- Agi / Haste; white->green; ilvl 8->10; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Haste is at least 1
+3440 13 2 18 22 27 8000 -  # Bonecracker -- Str / Mastery; green; ilvl 13->18
+3442 11 2 13 24 72 6000 -  # Apprentice Sash -- Int / CDH; white->green; ilvl 12->13; type Int (cloth); round 6
+#   step-down: share 8000->6000 so CDH is at least 1
+3443 10 2 12 22 73 4000 -  # Ceremonial Tomahawk -- Str / Proc; white->green; ilvl 10->12; type Str (one-handed axe);
+#   round 8 step-down (ruling 37): share 8000->4000 so Proc is at least 1
+3444 10 2 12 23 25 6000 -  # Tiller's Vest -- Agi / Crit; white->green; ilvl 11->12; type Agi (leather); round 6
+#   step-down: share 8000->6000 so Crit is at least 1
+3445 12 2 14 23 26 4000 -  # Ceremonial Knife -- Agi / Haste; white->green; ilvl 12->14; type Agi (dagger); round 8
+#   step-down (ruling 37): share 8000->4000 so Haste is at least 1
+3446 13 2 18 24 27 8000 -  # Darkwood Staff -- Int / Mastery; green; ilvl 13->18; FB no stock primary: type Int (staff)
+3447 8 2 10 24 28 4000 -  # Cryptwalker Boots -- Int / Vers; white->green; ilvl 8->10; type Int (mail, odd entry); round
+#   8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+3449 15 2 20 0 73 0 -  # Mystic Shawl -- - / Proc; green; ilvl 15->20; no primary (jewelry/cloak)
+3450 15 2 20 22 25 8000 -  # Faerleia's Shield -- Str / Crit; green; ilvl 15->20
+3451 18 2 23 71 26 8000 -  # Nightglow Concoction -- Spi / Haste; green; ilvl 18->23
+3452 22 2 27 24 27 8000 -  # Ceranium Rod -- Int / Mastery; green; ilvl 22->27; FB no stock primary: type Int (staff)
+3453 12 2 14 24 28 4000 -  # Quilted Bracers -- Int / Vers; white->green; ilvl 12->14; type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Vers is at least 1
+3454 14 2 16 24 72 8000 -  # Reconnaissance Boots -- Int / CDH; white->green; ilvl 14->16; type Int (cloth)
+3455 11 2 13 23 73 4000 -  # Deathstalker Shortsword -- Agi / Proc; white->green; ilvl 11->13; type Agi (one-handed
+#   sword, odd entry); round 8 step-down (ruling 37): share 8000->4000 so Proc is at least 1
+3457 18 2 23 8 26 8000 -  # Stamped Trousers -- Int+Spi+SP / Haste; green; ilvl 18->23
+3458 18 2 23 22 27 8000 -  # Rugged Mail Gloves -- Str / Mastery; green; ilvl 18->23
+3461 20 2 25 71 73 8000 -  # High Robe of the Adjudicator -- Spi / Proc; green; ilvl 24->25
+3462 20 2 25 23 25 8000 -  # Talonstrike -- Agi / Crit; green; ilvl 24->25
+3493 29 2 34 23 26 8000 -  # Raptor's End -- Agi / Haste; green; ilvl 30->34; FB no stock primary: type Agi (bow)
+3511 15 2 20 0 26 0 -  # Cloak of the People's Militia -- - / Haste; green; ilvl 15->20; no primary (jewelry/cloak)
+3555 25 2 30 71 28 8000 -  # Robe of Solomon -- Spi / Vers; green; ilvl 25->30
+3556 30 2 35 3 37 8000 -  # Dread Mage Hat -- Int+SP / Crit+CDH; designer 2026-11-09 (round 6, ruling 29): Crit instead
+#   of Spirit: Int/SP, Int lead, then Crit plus its CDH (Crit/CDH, two stats on a green as asked) (was Int+Spi+SP / CDH
+#   share 8000)
+3558 26 2 31 71 25 8000 -  # Fen Keeper Robe -- Spi / Crit; green; ilvl 25->31
+3559 21 2 26 22 26 8000 -  # Night Watch Gauntlets -- Str / Haste; green; ilvl 21->26
+3560 30 2 35 8 27 8000 -  # Mantle of Honor -- Int+Spi+SP / Mastery; green; ilvl 35 kept (target 35)
+3561 26 2 31 0 28 0 -  # Resilient Poncho -- - / Vers; green; ilvl 26->31; no primary (jewelry/cloak)
+3562 27 2 32 23 72 8000 -  # Belt of Vindication -- Agi / CDH; green; ilvl 27->32
+3565 22 2 27 81 26 8000 -  # Beerstained Gloves -- SP / Haste; green; ilvl 20->27; round 7: Spell Power (Solo) (ruling
+#   33) (was SP+Int / Haste share 8000)
+3566 29 2 34 23 27 8000 all  # Raptorbane Armor -- Agi / Mastery; green; ilvl 29->34; keeps spell 1; FB no stock
+#   primary: type Agi (leather)
+3570 15 2 20 22 25 6000 -  # Bonegrinding Pestle -- Str / Crit; green; ilvl 16->20; round 6 step-down: share 8000->6000
+#   so Crit is at least 1
+3572 17 2 22 23 27 8000 -  # Daryl's Shortsword -- Agi / Mastery; green; ilvl 17->22
+3578 15 2 20 6 27 8000 -  # Harvester's Pants -- Spi+SP / Mastery; green; ilvl 15->20
+3581 18 2 23 23 73 8000 -  # Serrated Knife -- Agi / Proc; green; ilvl 18->23
+3582 18 2 23 0 25 0 -  # Acidproof Cloak -- - / Crit; green; ilvl 18->23; no primary (jewelry/cloak)
+3583 12 2 14 23 26 6000 -  # Weathered Belt -- Agi / Haste; white->green; ilvl 12->14; type Agi (leather); round 6
+#   step-down: share 8000->6000 so Haste is at least 1
+3585 22 2 27 23 28 8000 -  # Camouflaged Tunic -- Agi / Vers; green; ilvl 22->27
+3586 15 2 20 22 72 8000 -  # Logsplitter -- Str / CDH; green; ilvl 16->20
+3732 28 2 30 24 25 8000 -  # Hooded Cowl -- Int / Crit; white->green; ilvl 30 kept (target 30); type Int (cloth)
+3733 22 2 27 22 26 8000 -  # Orcish War Chain -- Str / Haste; green; ilvl 23->27
+3739 25 2 30 0 26 0 -  # Skull Ring -- - / Haste; green; ilvl 25->30; no primary (jewelry/cloak)
+3741 24 2 29 12 28 8000 -  # Stomping Boots -- Str+AP / Vers; green; ilvl 24->29
+3742 28 2 33 23 72 8000 -  # Bow of Plunder -- Agi / CDH; green; ilvl 28->33; FB no stock primary: type Agi (bow)
+3743 28 2 33 71 73 8000 -  # Sentry Buckler -- Spi / Proc; green; ilvl 28->33
+3747 30 2 35 71 28 8000 -  # Meditative Sash -- Spi / Vers; green; ilvl 30->35
+3749 30 2 35 0 73 0 -  # High Apothecary Cloak -- - / Proc; green; ilvl 30->35; no primary (jewelry/cloak)
+3750 30 2 35 6 25 8000 -  # Ribbed Breastplate -- Spi+SP / Crit; green; ilvl 30->35
+3751 30 2 35 12 26 8000 -  # Mercenary Leggings -- Str+AP / Haste; green; ilvl 30->35
+3752 22 2 27 4 27 8000 -  # Grunt Vest -- Spi+SP / Mastery; green; ilvl 22->27
+3753 34 2 39 24 28 8000 -  # Shepherd's Girdle -- Int / Vers; green; ilvl 34->39
+3754 34 2 39 12 72 8000 -  # Shepherd's Gloves -- Str+AP / CDH; green; ilvl 33->39
+3755 32 2 37 71 73 8000 -  # Fish Gutter -- Spi / Proc; green; ilvl 32->37
+3758 33 2 38 22 27 8000 -  # Crusader Belt -- Str / Mastery; green; ilvl 33->38
+3759 33 2 38 24 28 8000 -  # Insulated Sage Gloves -- Int / Vers; green; ilvl 33->38
+3760 32 2 37 0 72 0 -  # Band of the Undercity -- - / CDH; green; ilvl 32->37; no primary (jewelry/cloak)
+3761 32 2 37 22 73 8000 -  # Deadskull Shield -- Str / Proc; green; ilvl 32->37
+3763 40 2 45 71 26 8000 -  # Lunar Buckler -- Spi / Haste; green; ilvl 40->45
+3764 40 2 45 9 27 8000 -  # Mantis Boots -- Spi+Int+SP / Mastery; green; ilvl 40->45
+3765 40 2 45 22 28 8000 -  # Brigand's Pauldrons -- Str / Vers; green; ilvl 40->45
+3822 32 2 37 22 25 8000 all  # Runic Darkblade -- Str / Crit; green; ilvl 32->37; keeps spell 1; FB no stock primary:
+#   type Str (two-handed sword)
+3833 8 2 10 0 73 0 -  # Adept's Cloak -- - / Proc; white->green; ilvl 8->10; no primary (jewelry/cloak)
+3834 8 2 10 24 25 4000 -  # Sturdy Cloth Trousers -- Int / Crit; white->green; ilvl 8->10; type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Crit is at least 1
+4086 37 2 42 23 25 8000 -  # Flash Rifle -- Agi / Crit; green; ilvl 37->42; FB no stock primary: type Agi (gun)
+4107 37 2 42 15 28 8000 -  # Tiger Hunter Gloves -- Agi+AP / Vers; green; ilvl 37->42
+4108 40 2 45 23 72 8000 -  # Panther Hunter Leggings -- Agi / CDH; green; ilvl 40->45
+4109 38 2 43 15 73 8000 -  # Excelsior Boots -- Agi+AP / Proc; green; ilvl 41->43
+4112 44 2 49 0 27 0 -  # Choker of the High Shaman -- - / Mastery; green; ilvl 44->49; no primary (jewelry/cloak)
+4113 45 2 50 0 28 0 -  # Medicine Blanket -- - / Vers; green; ilvl 45->50; no primary (jewelry/cloak)
+4114 42 2 47 0 72 0 -  # Darktide Cape -- - / CDH; green; ilvl 42->47; no primary (jewelry/cloak)
+4115 37 2 42 71 73 8000 -  # Grom'gol Buckler -- Spi / Proc; green; ilvl 37->42
+4117 43 2 48 4 26 8000 -  # Scorching Sash -- Spi+SP / Haste; green; ilvl 44->48
+4118 42 2 50 23 27 8000 -  # Poobah's Nose Ring -- Agi / Mastery; green; ilvl 50 kept (target 47); FB no stock primary:
+#   type Agi (mail, even entry)
+4119 43 2 48 12 28 8000 -  # Raptor Hunter Tunic -- Str+AP / Vers; green; ilvl 43->48
+4120 40 3 45 24 74 6000 -  # Robe of Crystal Waters -- Int / CDH+Vers; blue; ilvl 40->45
+4121 36 2 41 7 73 8000 -  # Gemmed Gloves -- Int+Spi+SP / Proc; green; ilvl 35->41
+4122 37 2 42 24 25 8000 -  # Bookmaker's Scepter -- Int / Crit; green; ilvl 37->42
+4123 37 2 42 24 26 8000 -  # Frost Metal Pauldrons -- Int / Haste; green; ilvl 37->42; FB no stock primary: type Int
+#   (mail, odd entry)
+4124 37 2 42 71 27 8000 -  # Cap of Harmony -- Spi / Mastery; green; ilvl 40->42
+4125 46 2 51 71 28 8000 -  # Tranquil Orb -- Spi / Vers; green; ilvl 43->51
+4126 34 2 39 23 72 8000 -  # Guerrilla Cleaver -- Agi / CDH; green; ilvl 34->39
+4127 40 2 45 23 73 8000 -  # Shrapnel Blaster -- Agi / Proc; green; ilvl 40->45; FB no stock primary: type Agi (gun)
+4128 41 2 46 71 25 8000 -  # Silver Spade -- Spi / Crit; green; ilvl 41->46
+4129 44 2 49 22 26 8000 -  # Collection Plate -- Str / Haste; green; ilvl 44->49
+4130 42 2 50 0 28 0 -  # Smotts' Compass -- - / Vers; green; ilvl 50 kept (target 47); no primary (trinket, ruling 22);
+#   tank Dodge dropped, no Str/Agi (ruling 24): Vers
+4131 44 2 49 24 28 8000 -  # Belt of Corruption -- Int / Vers; green; ilvl 44->49
+4132 37 2 42 22 72 8000 -  # Darkspear Armsplints -- Str / CDH; green; ilvl 37->42
+4133 37 2 42 24 73 8000 -  # Darkspear Cuffs -- Int / Proc; green; ilvl 37->42
+4134 46 3 51 7 41 6000 -  # Nimboya's Mystical Staff -- Int+Spi+SP / Crit+Haste; blue; ilvl 46->51
+4135 37 2 42 0 26 0 -  # Bloodbone Band -- - / Haste; green; ilvl 35->42; no primary (jewelry/cloak)
+4136 42 2 47 12 27 8000 -  # Darkspear Boots -- Str+AP / Mastery; green; ilvl 42->47
+4137 42 2 47 8 28 8000 -  # Darkspear Shoes -- Int+Spi+SP / Vers; green; ilvl 42->47
+4138 42 2 47 71 72 8000 -  # Blackwater Tunic -- Spi / CDH; green; ilvl 45->47
+4139 37 2 42 8 73 8000 -  # Junglewalker Sandals -- Int+Spi+SP / Proc; green; ilvl 37->42
+4140 34 2 39 8 25 8000 -  # Palm Frond Mantle -- Int+Spi+SP / Crit; green; ilvl 34->39
+4197 27 3 36 8 32 6000 -  # Berylline Pads -- Int+Spi+SP / Crit+Vers; blue; ilvl 36 kept (target 32)
+4430 43 2 48 0 27 0 -  # Ethereal Talisman -- - / Mastery; green; ilvl 43->48; no primary (jewelry/cloak)
+4443 36 2 41 6 28 8000 -  # Grim Pauldrons -- Spi+SP / Vers; green; ilvl 36->41
+4504 31 2 36 0 72 0 -  # Dwarven Guard Cloak -- - / CDH; green; ilvl 31->36; no primary (jewelry/cloak)
+4505 31 2 36 24 73 8000 -  # Swampland Trousers -- Int / Proc; green; ilvl 31->36
+4507 42 3 47 22 36 6000 -  # Pit Fighter's Shield -- Str / Mastery+Vers; blue; ilvl 42->47
+4508 42 3 47 22 37 6000 -  # Blood-tinged Armor -- Str / Crit+CDH; blue; ilvl 42->47
+4509 40 2 45 22 28 8000 -  # Seawolf Gloves -- Str / Vers; green; ilvl 40->45
+4511 40 2 45 22 73 8000 -  # Black Water Hammer -- Str / Proc; green; ilvl 40->45
+4534 26 2 31 71 72 8000 -  # Steel-clasped Bracers -- Spi / CDH; green; ilvl 29->31
+4535 31 2 36 0 73 0 -  # Ironforge Memorial Ring -- - / Proc; green; ilvl 31->36; no primary (jewelry/cloak)
+4543 40 2 45 8 26 8000 -  # White Drakeskin Cap -- Int+Spi+SP / Haste; green; ilvl 40->45
+4545 40 2 45 24 28 8000 -  # Radiant Silver Bracers -- Int / Vers; green; ilvl 40->45
+4547 40 2 45 24 73 8000 -  # Gnomish Zapper -- Int / Proc; green; ilvl 40->45; FB no stock primary: type Int (wand)
+4548 40 2 45 22 25 8000 -  # Servomechanic Sledgehammer -- Str / Crit; green; ilvl 41->45; FB no stock primary: type Str
+#   (two-handed mace)
+4549 44 2 49 0 26 0 -  # Seafire Band -- - / Haste; green; ilvl 46->49; no primary (jewelry/cloak)
+4550 44 2 49 0 27 0 -  # Coldwater Ring -- - / Mastery; green; ilvl 46->49; no primary (jewelry/cloak)
+4643 33 2 38 0 73 0 -  # Grimsteel Cape -- - / Proc; green; ilvl 33->38; no primary (jewelry/cloak)
+4652 40 2 45 22 27 8000 -  # Salbac Shield -- Str / Mastery; green; ilvl 45 kept (target 45)
+4653 40 2 45 22 28 8000 -  # Ironheel Boots -- Str / Vers; green; ilvl 45 kept (target 45)
+4741 37 2 42 22 26 8000 -  # Stromgarde Cavalry Leggings -- Str / Haste; green; ilvl 37->42
+4743 50 3 55 0 38 0 -  # Pulsating Crystalline Shard -- - / Haste+CDH; blue; ilvl 50->55; no primary (jewelry/cloak)
+4744 39 2 44 24 72 8000 -  # Arcane Runed Bracers -- Int / CDH; green; ilvl 39->44
+4745 40 2 45 23 73 8000 -  # War Rider Bracers -- Agi / Proc; green; ilvl 40->45
+4746 40 2 45 71 25 8000 -  # Doomsayer's Robe -- Spi / Crit; green; ilvl 40->45
+4840 10 2 12 23 72 4000 -  # Long Bayonet -- Agi / CDH; white->green; ilvl 10->12; type Agi (dagger); round 8 step-down
+#   (ruling 37): share 8000->4000 so CDH is at least 1
+4906 7 2 9 23 72 4000 -  # Rainwalker Boots -- Agi / CDH; white->green; ilvl 7->9; type Agi (leather); round 8 step-down
+#   (ruling 37): share 8000->4000 so CDH is at least 1
+4907 5 2 7 23 73 4000 -  # Woodland Tunic -- Agi / Proc; white->green; ilvl 5->7; type Agi (leather); round 8 step-down
+#   (ruling 37): share 8000->4000 so Proc is at least 1
+4908 3 2 5 23 25 8000 -  # Nomadic Bracers -- Agi / Crit; white->green; ilvl 5 kept (target 5); type Agi (leather)
+4909 14 2 19 23 26 8000 -  # Kodo Hunter's Leggings -- Agi / Haste; green; ilvl 15->19
+4910 2 2 5 23 27 4000 -  # Painted Chain Gloves -- Agi / Mastery; white->green; ilvl 5 kept (target 4); type Agi (mail,
+#   even entry); round 8 step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+4911 4 2 6 22 28 8000 -  # Thick Bark Buckler -- Str / Vers; white->green; ilvl 5->6; type Str (shield)
+4913 3 2 5 24 73 4000 -  # Painted Chain Belt -- Int / Proc; white->green; ilvl 5 kept (target 5); type Int (mail, odd
+#   entry); round 8 step-down (ruling 37): share 8000->4000 so Proc is at least 1
+4914 2 2 5 23 25 4000 -  # Battleworn Leather Gloves -- Agi / Crit; white->green; ilvl 5 kept (target 4); type Agi
+#   (leather); round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1
+4915 2 2 5 24 26 4000 -  # Soft Wool Boots -- Int / Haste; white->green; ilvl 5 kept (target 4); type Int (cloth); round
+#   8 step-down (ruling 37): share 8000->4000 so Haste is at least 1
+4916 5 2 7 24 27 4000 -  # Soft Wool Vest -- Int / Mastery; white->green; ilvl 5->7; type Int (cloth); round 8 step-down
+#   (ruling 37): share 8000->4000 so Mastery is at least 1
+4917 5 2 7 24 28 4000 -  # Battleworn Chain Leggings -- Int / Vers; white->green; ilvl 5->7; type Int (mail, odd entry);
+#   round 8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+4919 3 2 5 24 73 4000 -  # Soft Wool Belt -- Int / Proc; white->green; ilvl 5 kept (target 5); type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Proc is at least 1
+4920 3 2 5 0 25 0 -  # Battleworn Cape -- - / Crit; white->green; ilvl 5 kept (target 5); no primary (jewelry/cloak)
+4921 5 2 7 23 26 4000 -  # Dust-covered Leggings -- Agi / Haste; white->green; ilvl 5->7; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Haste is at least 1
+4922 5 2 7 23 27 4000 -  # Jagged Chain Vest -- Agi / Mastery; white->green; ilvl 5->7; type Agi (mail, even entry);
+#   round 8 step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+4923 4 2 6 22 28 8000 -  # Primitive Hatchet -- Str / Vers; white->green; ilvl 5->6; type Str (one-handed axe)
+4924 4 2 6 22 72 8000 -  # Primitive Club -- Str / CDH; white->green; ilvl 5->6; type Str (one-handed mace, even entry)
+4925 1 2 5 23 25 8000 -  # Primitive Hand Blade -- Agi / Crit; designer 2026-11-09 (round 6, ruling 29): add Crit: Crit
+#   (Solo) (was Agi / Proc share 8000)
+4928 8 2 10 23 27 8000 -  # Sandrunner Wristguards -- Agi / Mastery; white->green; ilvl 8->10; type Agi (leather)
+4929 9 2 11 23 28 4000 -  # Light Scorpid Armor -- Agi / Vers; white->green; ilvl 9->11; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Vers is at least 1
+4931 11 2 13 23 73 4000 -  # Hickory Shortbow -- Agi / Proc; white->green; ilvl 11->13; type Agi (bow); round 8
+#   step-down (ruling 37): share 8000->4000 so Proc is at least 1
+4932 11 2 13 22 25 4000 -  # Harpy Wing Clipper -- Str / Crit; white->green; ilvl 11->13; type Str (one-handed sword,
+#   even entry); round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1
+4933 8 2 10 0 26 0 -  # Seasoned Fighter's Cloak -- - / Haste; white->green; ilvl 9->10; no primary (jewelry/cloak)
+4935 8 2 10 24 28 4000 -  # Wide Metal Girdle -- Int / Vers; white->green; ilvl 8->10; type Int (mail, odd entry); round
+#   8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+4936 8 2 10 24 72 4000 -  # Dirt-trodden Boots -- Int / CDH; white->green; ilvl 8->10; type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so CDH is at least 1
+4937 9 2 11 22 73 8000 -  # Charging Buckler -- Str / Proc; white->green; ilvl 9->11; type Str (shield)
+4938 11 2 13 24 25 8000 -  # Blemished Wooden Staff -- Int / Crit; white->green; ilvl 11->13; type Int (staff)
+4939 12 2 17 23 26 6000 -  # Steady Bastard Sword -- Agi / Haste; green; ilvl 11->17; round 6 step-down: share
+#   8000->6000 so Haste is at least 1
+4940 10 2 12 23 27 6000 -  # Veiled Grips -- Agi / Mastery; white->green; ilvl 10->12; type Agi (leather); round 6
+#   step-down: share 8000->6000 so Mastery is at least 1
+4942 12 2 14 23 72 6000 -  # Tiger Hide Boots -- Agi / CDH; white->green; ilvl 12->14; type Agi (leather); round 6
+#   step-down: share 8000->6000 so CDH is at least 1
+4944 11 2 13 0 25 0 -  # Handsewn Cloak -- - / Crit; white->green; ilvl 12->13; no primary (jewelry/cloak)
+4946 10 2 12 23 27 6000 -  # Lightweight Boots -- Agi / Mastery; white->green; ilvl 10->12; type Agi (mail, even entry);
+#   round 6 step-down: share 8000->6000 so Mastery is at least 1
+4947 12 2 17 22 28 6000 -  # Jagged Dagger -- Str / Vers; green; ilvl 11->17; round 6 step-down: share 8000->6000 so
+#   Vers is at least 1
+4948 12 2 17 22 72 6000 -  # Stinging Mace -- Str / CDH; green; ilvl 11->17; round 6 step-down: share 8000->6000 so CDH
+#   is at least 1
+4954 2 2 5 23 72 4000 -  # Nomadic Belt -- Agi / CDH; white->green; ilvl 5 kept (target 4); type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so CDH is at least 1
+4958 7 2 9 0 27 0 -  # Sun-beaten Cloak -- - / Mastery; white->green; ilvl 8->9; no primary (jewelry/cloak)
+4961 10 2 12 24 73 8000 -  # Dreamwatcher Staff -- Int / Proc; white->green; ilvl 10->12; type Int (staff)
+4962 8 2 10 23 25 4000 -  # Double-layered Gloves -- Agi / Crit; white->green; ilvl 8->10; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Crit is at least 1
+4963 8 2 10 0 26 0 -  # Thunderhorn Cloak -- - / Haste; white->green; ilvl 8->10; no primary (jewelry/cloak)
+4964 12 2 17 22 27 6000 -  # Goblin Smasher -- Str / Mastery; green; ilvl 12->17; round 6 step-down: share 8000->6000 so
+#   Mastery is at least 1
+4967 11 2 13 22 73 4000 -  # Tribal Warrior's Shield -- Str / Proc; white->green; ilvl 11->13; type Str (shield); round
+#   8 step-down (ruling 37): share 8000->4000 so Proc is at least 1
+4968 11 2 13 23 25 6000 -  # Bound Harness -- Agi / Crit; white->green; ilvl 11->13; type Agi (leather); round 6
+#   step-down: share 8000->6000 so Crit is at least 1
+4969 8 2 10 24 26 8000 -  # Fortified Bindings -- Int / Haste; white->green; ilvl 10 kept (target 10); type Int (mail,
+#   odd entry)
+4970 8 2 10 23 27 4000 -  # Rough-hewn Kodo Leggings -- Agi / Mastery; white->green; ilvl 9->10; type Agi (leather);
+#   round 8 step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+4971 12 2 17 22 28 6000 -  # Skorn's Hammer -- Str / Vers; green; ilvl 12->17; round 6 step-down: share 8000->6000 so
+#   Vers is at least 1
+4972 8 2 10 23 72 4000 -  # Cliff Runner Boots -- Agi / CDH; white->green; ilvl 10 kept (target 10); type Agi (mail,
+#   even entry); round 8 step-down (ruling 37): share 8000->4000 so CDH is at least 1
+4973 8 2 10 23 73 8000 -  # Plains Hunter Wristguards -- Agi / Proc; white->green; ilvl 10 kept (target 10); type Agi
+#   (leather)
+4974 12 2 17 23 25 6000 -  # Compact Fighting Knife -- Agi / Crit; green; ilvl 12->17; round 6 step-down: share
+#   8000->6000 so Crit is at least 1
+4975 39 3 44 22 61 6000 -  # Vigilant Buckler -- Str / Block+Crit; blue; ilvl 39->44; tank Block; FB no stock primary:
+#   type Str (shield)
+4976 40 2 45 71 27 8000 -  # Mistspray Kilt -- Spi / Mastery; green; ilvl 40->45
+4977 40 2 45 22 28 8000 -  # Sword of Hammerfall -- Str / Vers; green; ilvl 41->45
+4978 35 2 40 22 72 8000 -  # Ryedol's Hammer -- Str / CDH; green; ilvl 36->40
+4979 42 2 47 24 73 8000 -  # Enchanted Stonecloth Bracers -- Int / Proc; green; ilvl 42->47
+4980 38 2 43 20 25 8000 -  # Prospector Gloves -- Agi+Int+SP / Crit; green; ilvl 37->43
+4983 42 2 47 82 28 8000 -  # Rock Pulverizer -- AP / Vers; green; ilvl 42->47; round 7: Attack Power (Solo) (ruling 33)
+#   (was AP+Str / Vers share 8000)
+4984 40 2 45 24 72 8000 all  # Skull of Impending Doom -- Int / CDH; green; ilvl 41->45; keeps spell 1
+4987 44 2 49 23 26 8000 -  # Dwarf Captain's Sword -- Agi / Haste; green; ilvl 45->49; FB no stock primary: type Agi
+#   (one-handed sword, odd entry)
+5016 35 2 40 4 25 8000 -  # Artisan's Trousers -- Spi+SP / Crit; green; ilvl 35->40
+5240 20 2 25 24 27 8000 -  # Torchlight Wand -- Int / Mastery; green; ilvl 21->25; FB no stock primary: type Int (wand)
+5241 18 2 23 24 28 8000 -  # Dwarven Flamestick -- Int / Vers; green; ilvl 18->23; FB no stock primary: type Int (wand)
+5242 15 2 20 24 72 8000 -  # Cinder Wand -- Int / CDH; green; ilvl 16->20; FB no stock primary: type Int (wand)
+5244 31 2 36 24 25 8000 -  # Consecrated Wand -- Int / Crit; green; ilvl 30->36; FB no stock primary: type Int (wand)
+5246 29 2 34 24 27 8000 -  # Excavation Rod -- Int / Mastery; green; ilvl 30->34; FB no stock primary: type Int (wand)
+5247 40 2 45 24 28 8000 -  # Rod of Sorrow -- Int / Vers; green; ilvl 39->45; FB no stock primary: type Int (wand)
+5248 37 2 42 24 72 8000 -  # Flash Wand -- Int / CDH; green; ilvl 37->42; FB no stock primary: type Int (wand)
+5249 40 2 45 24 73 8000 -  # Burning Sliver -- Int / Proc; green; ilvl 40->45; FB no stock primary: type Int (wand)
+5250 28 2 33 24 25 8000 -  # Charred Wand -- Int / Crit; green; ilvl 28->33; FB no stock primary: type Int (wand)
+5252 21 2 26 24 27 8000 -  # Wand of Decay -- Int / Mastery; green; ilvl 21->26; FB no stock primary: type Int (wand)
+5253 41 2 46 24 28 8000 -  # Goblin Igniter -- Int / Vers; green; ilvl 40->46; FB no stock primary: type Int (wand)
+5274 26 2 31 8 25 8000 -  # Rose Mantle -- Int+Spi+SP / Crit; green; ilvl 27->31
+5275 15 2 20 24 26 8000 -  # Binding Girdle -- Int / Haste; green; ilvl 15->20
+5279 20 2 25 23 73 8000 -  # Harpy Skinner -- Agi / Proc; green; ilvl 20->25
+5299 20 2 25 23 26 8000 -  # Gloves of the Moon -- Agi / Haste; green; ilvl 20->25
+5302 20 2 25 22 72 8000 -  # Cobalt Buckler -- Str / CDH; green; ilvl 20->25; FB no stock primary: type Str (shield)
+5306 20 2 25 71 27 8000 -  # Wind Rider Staff -- Spi / Mastery; green; ilvl 20->25
+5309 20 2 25 23 73 8000 -  # Privateer Musket -- Agi / Proc; green; ilvl 20->25; FB no stock primary: type Agi (gun)
+5310 20 2 25 4 25 8000 -  # Sea Dog Britches -- Spi+SP / Crit; green; ilvl 20->25
+5311 20 2 25 8 26 8000 -  # Buckled Boots -- Int+Spi+SP / Haste; green; ilvl 21->25
+5312 20 2 25 22 27 8000 -  # Riveted Gauntlets -- Str / Mastery; green; ilvl 20->25
+5313 26 2 31 0 28 0 -  # Totemic Clan Ring -- - / Vers; green; ilvl 25->31; no primary (jewelry/cloak)
+5314 20 2 25 0 72 0 -  # Boar Hunter's Cape -- - / CDH; green; ilvl 20->25; no primary (jewelry/cloak)
+5315 18 2 23 71 73 8000 -  # Timberland Armguards -- Spi / Proc; green; ilvl 18->23
+5316 25 2 30 24 25 8000 -  # Barkshell Tunic -- Int / Crit; green; ilvl 25->30
+5317 25 2 30 23 26 8000 -  # Dry Moss Tunic -- Agi / Haste; green; ilvl 25->30
+5318 20 2 25 22 27 8000 -  # Zhovur Axe -- Str / Mastery; green; ilvl 20->25; FB no stock primary: type Str (two-handed
+#   axe)
+5320 16 2 21 22 72 8000 -  # Padded Lamellar Boots -- Str / CDH; green; ilvl 16->21
+5321 20 2 25 23 73 8000 -  # Elegant Shortsword -- Agi / Proc; green; ilvl 20->25; FB no stock primary: type Agi (one-
+#   handed sword, odd entry)
+5322 24 2 29 22 25 8000 -  # Demolition Hammer -- Str / Crit; green; ilvl 26->29
+5323 24 2 29 71 26 8000 all  # Everglow Lantern -- Spi / Haste; green; ilvl 25->29; keeps spell 1
+5324 16 2 21 22 27 6000 -  # Engineer's Hammer -- Str / Mastery; green; ilvl 16->21; FB no stock primary: type Str
+#   (one-handed mace, even entry); round 6 step-down: share 8000->6000 so Mastery is at least 1
+5325 16 2 21 22 28 8000 -  # Welding Shield -- Str / Vers; green; ilvl 16->21; FB no stock primary: type Str (shield)
+5326 18 2 23 24 72 8000 -  # Flaring Baton -- Int / CDH; green; ilvl 18->23; FB no stock primary: type Int (wand)
+5327 18 2 23 12 73 8000 -  # Greasy Tinker's Pants -- Str+AP / Proc; green; ilvl 18->23
+5328 15 2 20 22 25 8000 -  # Cinched Belt -- Str / Crit; green; ilvl 15->20
+5337 16 2 21 71 28 8000 -  # Wayfaring Gloves -- Spi / Vers; green; ilvl 16->21
+5340 15 2 20 24 25 8000 -  # Cauldron Stirrer -- Int / Crit; green; ilvl 15->20; FB no stock primary: type Int (staff)
+5341 16 2 21 71 26 8000 -  # Spore-covered Tunic -- Spi / Haste; green; ilvl 15->21
+5343 18 2 23 0 28 0 -  # Barkeeper's Cloak -- - / Vers; green; ilvl 18->23; no primary (jewelry/cloak)
+5344 14 2 19 23 72 6000 -  # Pointed Axe -- Agi / CDH; green; ilvl 14->19; round 6 step-down: share 8000->6000 so CDH is
+#   at least 1
+5345 14 2 19 22 73 8000 -  # Stonewood Hammer -- Str / Proc; green; ilvl 14->19; FB no stock primary: type Str (two-
+#   handed mace)
+5346 14 2 19 23 25 8000 -  # Orcish Battle Bow -- Agi / Crit; green; ilvl 14->19; FB no stock primary: type Agi (bow)
+5351 19 2 24 0 73 0 -  # Bounty Hunter's Ring -- - / Proc; green; ilvl 20->24; no primary (jewelry/cloak)
+5355 27 2 32 23 28 8000 -  # Beastmaster's Girdle -- Agi / Vers; green; ilvl 28->32
+5356 27 2 32 24 72 8000 -  # Branding Rod -- Int / CDH; green; ilvl 27->32; FB no stock primary: type Int (wand)
+5357 27 2 32 71 73 8000 -  # Ward of the Vale -- Spi / Proc; green; ilvl 27->32
+5392 4 2 6 23 72 8000 -  # Thistlewood Dagger -- Agi / CDH; white->green; ilvl 5->6; type Agi (dagger)
+5393 4 2 6 24 73 6000 -  # Thistlewood Staff -- Int / Proc; white->green; ilvl 5->6; type Int (staff); round 6
+#   step-down: share 8000->6000 so Proc is at least 1
+5394 2 2 5 23 25 4000 -  # Archery Training Gloves -- Agi / Crit; white->green; ilvl 5 kept (target 4); type Agi
+#   (leather); round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1
+5395 5 2 7 22 26 8000 -  # Woodland Shield -- Str / Haste; white->green; ilvl 5->7; type Str (shield)
+5398 3 2 5 23 72 4000 -  # Canopy Leggings -- Agi / CDH; white->green; ilvl 5 kept (target 5); type Agi (leather); round
+#   8 step-down (ruling 37): share 8000->4000 so CDH is at least 1
+5399 3 2 5 24 73 4000 -  # Tracking Boots -- Int / Proc; white->green; ilvl 5 kept (target 5); type Int (mail, odd
+#   entry); round 8 step-down (ruling 37): share 8000->4000 so Proc is at least 1
+5405 3 2 5 0 73 0 -  # Draped Cloak -- - / Proc; white->green; ilvl 5 kept (target 5); no primary (jewelry/cloak)
+5419 7 2 9 23 26 8000 -  # Feral Bracers -- Agi / Haste; white->green; ilvl 7->9; type Agi (leather)
+5420 14 2 19 24 27 8000 -  # Banshee Armor -- Int / Mastery; green; ilvl 14->19; FB no stock primary: type Int (cloth)
+5458 9 2 11 24 72 4000 -  # Dirtwood Belt -- Int / CDH; white->green; ilvl 10->11; type Int (cloth); round 8 step-down
+#   (ruling 37): share 8000->4000 so CDH is at least 1
+5459 12 2 17 22 73 6000 -  # Defender Axe -- Str / Proc; green; ilvl 13->17; FB no stock primary: type Str (one-handed
+#   axe); round 6 step-down: share 8000->6000 so Proc is at least 1
+5579 4 2 6 22 73 4000 -  # Militia Warhammer -- Str / Proc; white->green; ilvl 5->6; type Str (two-handed mace); round 8
+#   step-down (ruling 37): share 8000->4000 so Proc is at least 1
+5580 4 2 6 22 25 8000 -  # Militia Hammer -- Str / Crit; white->green; ilvl 5->6; type Str (one-handed mace, even entry)
+5581 5 2 7 24 26 6000 -  # Smooth Walking Staff -- Int / Haste; white->green; ilvl 5->7; type Int (staff); round 6
+#   step-down: share 8000->6000 so Haste is at least 1
+5586 4 2 6 22 25 8000 -  # Thistlewood Blade -- Str / Crit; white->green; ilvl 5->6; type Str (one-handed sword, even
+#   entry)
+5587 12 2 17 24 26 8000 -  # Thornroot Club -- Int / Haste; green; ilvl 13->17; FB no stock primary: type Int (one-
+#   handed mace, odd entry)
+5589 9 2 11 24 28 4000 -  # Moss-covered Gauntlets -- Int / Vers; white->green; ilvl 10->11; type Int (mail, odd entry);
+#   round 8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+5590 12 2 14 24 72 4000 -  # Cord Bracers -- Int / CDH; white->green; ilvl 11->14; type Int (cloth); round 8 step-down
+#   (ruling 37): share 8000->4000 so CDH is at least 1
+5591 11 2 13 0 73 0 -  # Rain-spotted Cape -- - / Proc; white->green; ilvl 11->13; no primary (jewelry/cloak)
+5592 11 2 13 23 25 6000 -  # Shackled Girdle -- Agi / Crit; white->green; ilvl 11->13; type Agi (mail, even entry);
+#   round 6 step-down: share 8000->6000 so Crit is at least 1
+5593 12 2 14 22 26 4000 -  # Crag Buckler -- Str / Haste; white->green; ilvl 11->14; type Str (shield); round 8
+#   step-down (ruling 37): share 8000->4000 so Haste is at least 1
+5595 11 2 13 22 28 8000 -  # Thicket Hammer -- Str / Vers; white->green; ilvl 11->13; type Str (two-handed mace)
+5596 11 2 13 23 72 4000 -  # Ashwood Bow -- Agi / CDH; white->green; ilvl 11->13; type Agi (bow); round 8 step-down
+#   (ruling 37): share 8000->4000 so CDH is at least 1
+5604 13 2 18 24 25 8000 -  # Elven Wand -- Int / Crit; green; ilvl 13->18; FB no stock primary: type Int (wand)
+5605 9 2 11 23 26 8000 -  # Pruning Knife -- Agi / Haste; white->green; ilvl 10->11; type Agi (dagger)
+5606 7 2 9 24 27 4000 -  # Gardening Gloves -- Int / Mastery; white->green; ilvl 9 kept (target 9); type Int (cloth);
+#   round 8 step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+5609 22 2 27 22 73 8000 -  # Steadfast Cinch -- Str / Proc; green; ilvl 22->27
+5610 17 2 22 0 25 0 -  # Gustweald Cloak -- - / Crit; green; ilvl 15->22; no primary (jewelry/cloak)
+5611 16 2 21 24 26 8000 -  # Tear of Grief -- Int / Haste; green; ilvl 16->21
+5612 12 2 14 23 27 4000 -  # Ivy Cuffs -- Agi / Mastery; white->green; ilvl 13->14; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+5613 24 2 29 71 28 8000 all  # Staff of the Purifier -- Spi / Vers; green; ilvl 23->29; keeps spell 1
+5614 31 2 36 71 72 8000 -  # Seraph's Strike -- Spi / CDH; green; ilvl 31->36
+5615 20 2 25 23 73 8000 -  # Woodsman Sword -- Agi / Proc; green; ilvl 20->25
+5617 13 2 18 12 26 8000 -  # Vagabond Leggings -- Str+AP / Haste; green; ilvl 13->18
+5618 12 2 14 0 27 0 -  # Scout's Cloak -- - / Mastery; white->green; ilvl 11->14; no primary (jewelry/cloak)
+5622 24 2 29 0 25 0 -  # Clergy Ring -- - / Crit; green; ilvl 22->29; no primary (jewelry/cloak)
+5626 24 2 29 22 72 8000 -  # Skullchipper -- Str / CDH; green; ilvl 20->29
+5627 24 2 29 23 73 8000 -  # Relic Blade -- Agi / Proc; green; ilvl 20->29; FB no stock primary: type Agi (dagger)
+5629 20 2 25 12 26 8000 -  # Hammerfist Gloves -- Str+AP / Haste; green; ilvl 20->25
+5630 20 2 25 8 27 8000 -  # Windfelt Gloves -- Int+Spi+SP / Mastery; green; ilvl 20->25
+5757 20 2 25 22 28 8000 -  # Hardwood Cudgel -- Str / Vers; green; ilvl 20->25
+5761 4 2 6 22 26 4000 -  # Anvilmar Sledge -- Str / Haste; white->green; ilvl 5->6; type Str (two-handed mace); round 8
+#   step-down (ruling 37): share 8000->4000 so Haste is at least 1
+5776 4 2 6 24 72 6000 -  # Elder's Cane -- Int / CDH; white->green; ilvl 5->6; type Int (staff); round 6 step-down:
+#   share 8000->6000 so CDH is at least 1
+5777 4 2 6 22 73 4000 -  # Brave's Axe -- Str / Proc; white->green; ilvl 5->6; type Str (two-handed axe); round 8
+#   step-down (ruling 37): share 8000->4000 so Proc is at least 1
+5778 1 2 5 24 26 6000 -  # Primitive Walking Stick -- Int / Haste; designer 2026-11-09 (round 6, ruling 29): add Haste:
+#   Haste (Solo) (was Int / Crit share 8000); round 6 step-down: share 8000->6000 so Haste is at least 1
+5779 4 2 6 22 26 4000 -  # Forsaken Bastard Sword -- Str / Haste; white->green; ilvl 5->6; type Str (two-handed sword);
+#   round 8 step-down (ruling 37): share 8000->4000 so Haste is at least 1
+5812 25 2 30 71 72 8000 -  # Robes of Antiquity -- Spi / CDH; green; ilvl 25->30
+5813 32 2 37 22 73 8000 -  # Emil's Brand -- Str / Proc; green; ilvl 32->37
+5814 30 2 35 71 25 8000 -  # Snapbrook Armor -- Spi / Crit; green; ilvl 30->35
+5815 30 2 35 22 26 8000 all  # Glacial Stone -- Str / Haste; green; ilvl 31->35; keeps spell 1; FB no stock primary:
+#   type Str (two-handed mace)
+5817 30 2 35 23 28 8000 -  # Lunaris Bow -- Agi / Vers; green; ilvl 30->35; FB no stock primary: type Agi (bow)
+5818 30 2 35 24 72 8000 -  # Moonbeam Wand -- Int / CDH; green; ilvl 30->35; FB no stock primary: type Int (wand)
+5820 32 2 37 8 25 8000 -  # Faerie Mantle -- Int+Spi+SP / Crit; green; ilvl 32->37
+5936 8 2 10 23 27 4000 -  # Animal Skin Belt -- Agi / Mastery; white->green; ilvl 8->10; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+5939 8 2 10 23 73 4000 -  # Sewing Gloves -- Agi / Proc; white->green; ilvl 8->10; type Agi (leather); round 8 step-down
+#   (ruling 37): share 8000->4000 so Proc is at least 1
+5940 12 2 14 22 25 4000 -  # Bone Buckler -- Str / Crit; white->green; ilvl 12->14; type Str (shield); round 8 step-down
+#   (ruling 37): share 8000->4000 so Crit is at least 1
+5941 10 2 12 24 26 6000 -  # Brass Scale Pants -- Int / Haste; white->green; ilvl 11->12; type Int (mail, odd entry);
+#   round 6 step-down: share 8000->6000 so Haste is at least 1
+5944 15 2 20 23 72 8000 -  # Greaves of the People's Militia -- Agi / CDH; green; ilvl 15->20; FB no stock primary: type
+#   Agi (mail, even entry)
+6058 3 2 5 23 72 4000 -  # Blackened Leather Belt -- Agi / CDH; white->green; ilvl 5 kept (target 5); type Agi
+#   (leather); round 8 step-down (ruling 37): share 8000->4000 so CDH is at least 1
+6059 4 2 6 23 73 4000 -  # Nomadic Vest -- Agi / Proc; white->green; ilvl 5->6; type Agi (leather); round 8 step-down
+#   (ruling 37): share 8000->4000 so Proc is at least 1
+6060 2 2 5 24 25 8000 -  # Flax Bracers -- Int / Crit; white->green; ilvl 5 kept (target 4); type Int (cloth)
+6061 7 2 9 24 26 8000 -  # Graystone Bracers -- Int / Haste; white->green; ilvl 8->9; type Int (mail, odd entry)
+6062 8 2 10 24 27 8000 -  # Heavy Cord Bracers -- Int / Mastery; white->green; ilvl 10 kept (target 10); type Int
+#   (cloth)
+6063 8 2 10 24 28 4000 -  # Cold Steel Gauntlets -- Int / Vers; white->green; ilvl 8->10; type Int (mail, odd entry);
+#   round 8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+6070 2 2 5 23 72 8000 -  # Wolfskin Bracers -- Agi / CDH; white->green; ilvl 5 kept (target 4); type Agi (leather)
+6076 5 2 7 24 72 4000 -  # Tapered Pants -- Int / CDH; white->green; ilvl 5->7; type Int (cloth); round 8 step-down
+#   (ruling 37): share 8000->4000 so CDH is at least 1
+6078 5 2 7 22 25 8000 -  # Pikeman Shield -- Str / Crit; white->green; ilvl 5->7; type Str (shield)
+6084 11 2 16 22 25 8000 -  # Stormwind Guard Leggings -- Str / Crit; green; ilvl 13->16
+6085 11 2 16 23 26 8000 -  # Footman Tunic -- Agi / Haste; green; ilvl 13->16
+6087 22 3 27 22 32 6000 -  # Chausses of Westfall -- Str / Crit+Vers; blue; ilvl 24->27
+6092 18 2 23 23 27 8000 -  # Black Whelp Boots -- Agi / Mastery; green; ilvl 18->23; FB no stock primary: type Agi
+#   (leather)
+6093 25 2 30 22 28 8000 -  # Orc Crusher -- Str / Vers; green; ilvl 27->30
+6094 17 2 22 23 72 8000 -  # Piercing Axe -- Agi / CDH; green; ilvl 18->22
+6095 24 2 29 24 73 8000 -  # Wandering Boots -- Int / Proc; green; ilvl 24->29
+6171 1 2 5 23 28 4000 -  # Wolf Handler Gloves -- Agi / Vers; white->green; ilvl 5 kept (target 3); type Agi (leather);
+#   round 8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+6173 2 2 5 24 73 4000 -  # Snow Boots -- Int / Proc; white->green; ilvl 5 kept (target 4); type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Proc is at least 1
+6176 5 2 7 22 27 8000 -  # Dwarven Kite Shield -- Str / Mastery; white->green; ilvl 5->7; type Str (shield)
+6177 12 2 14 24 28 4000 -  # Ironwrought Bracers -- Int / Vers; white->green; ilvl 12->14; type Int (mail, odd entry);
+#   round 8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+6185 2 2 5 0 73 0 -  # Bear Shawl -- - / Proc; white->green; ilvl 5 kept (target 4); no primary (jewelry/cloak)
+6186 18 2 23 71 25 8000 -  # Trogg Slicer -- Spi / Crit; green; ilvl 18->23
+6187 17 2 22 22 26 8000 -  # Dwarven Defender -- Str / Haste; green; ilvl 17->22; FB no stock primary: type Str (shield)
+6188 15 2 20 23 27 8000 -  # Mud Stompers -- Agi / Mastery; green; ilvl 15->20; FB no stock primary: type Agi (mail,
+#   even entry)
+6189 22 2 24 24 28 8000 -  # Durable Chain Shoulders -- Int / Vers; white->green; ilvl 24 kept (target 24); type Int
+#   (mail, odd entry)
+6191 22 2 27 5 73 8000 -  # Kimbra Boots -- SP+Spi / Proc; green; ilvl 23->27
+6194 26 2 32 22 27 8000 -  # Barreling Reaper -- Str / Mastery; green; ilvl 32 kept (target 31); FB no stock primary:
+#   type Str (one-handed axe)
+6215 11 2 16 23 73 6000 -  # Balanced Fighting Stick -- Agi / Proc; green; ilvl 13->16; round 6 step-down: share
+#   8000->6000 so Proc is at least 1
+6223 30 2 35 22 26 8000 -  # Crest of Darkshire -- Str / Haste; green; ilvl 35 kept (target 35)
+6282 32 2 37 9 25 8000 -  # Sacred Burial Trousers -- Spi+Int+SP / Crit; green; ilvl 32->37
+6335 26 2 31 22 73 8000 -  # Grizzled Boots -- Str / Proc; green; ilvl 29->31
+6414 27 3 32 0 35 0 -  # Seal of Sylvanas -- - / Haste+Vers; blue; ilvl 29->32; no primary (jewelry/cloak)
+6477 20 2 25 24 28 8000 -  # Grassland Sash -- Int / Vers; green; ilvl 20->25
+6480 17 2 22 23 25 8000 -  # Slick Deviate Leggings -- Agi / Crit; green; ilvl 20->22
+6481 21 2 26 22 26 8000 -  # Dagmire Gauntlets -- Str / Haste; green; ilvl 23->26
+6482 24 2 29 6 27 8000 -  # Firewalker Boots -- Spi+SP / Mastery; green; ilvl 24->29
+6502 22 2 27 71 72 8000 -  # Violet Scale Armor -- Spi / CDH; green; ilvl 22->27
+6503 22 2 27 9 73 8000 -  # Harlequin Robes -- Spi+Int+SP / Proc; green; ilvl 22->27
+6504 22 3 27 23 35 6000 -  # Wingblade -- Agi / Haste+Vers; blue; ilvl 24->27
+6505 22 3 27 8 36 6000 -  # Crescent Staff -- Int+Spi+SP / Mastery+Vers; blue; ilvl 24->27
+6659 20 2 25 71 73 8000 -  # Scarab Trousers -- Spi / Proc; green; ilvl 20->25
+6664 26 2 31 71 72 8000 -  # Voodoo Mantle -- Spi / CDH; green; ilvl 26->31
+6665 26 2 31 23 73 8000 -  # Hexed Bracers -- Agi / Proc; green; ilvl 26->31
+6666 22 2 27 23 25 8000 -  # Dredge Boots -- Agi / Crit; green; ilvl 22->27
+6667 27 2 32 0 26 0 -  # Engineer's Cloak -- - / Haste; green; ilvl 27->32; no primary (jewelry/cloak)
+6668 27 2 32 22 27 8000 -  # Draftsman Boots -- Str / Mastery; green; ilvl 27->32
+6669 29 2 34 0 28 0 -  # Sacred Band -- - / Vers; green; ilvl 25->34; no primary (jewelry/cloak)
+6670 29 2 34 23 72 8000 -  # Panther Armor -- Agi / CDH; green; ilvl 27->34
+6671 29 2 34 22 73 8000 -  # Juggernaut Leggings -- Str / Proc; green; ilvl 27->34
+6675 27 2 32 71 28 8000 -  # Tempered Bracers -- Spi / Vers; green; ilvl 27->32
+6676 27 2 32 71 72 8000 -  # Constable Buckler -- Spi / CDH; green; ilvl 27->32
+6677 26 2 31 24 73 8000 -  # Spellcrafter Wand -- Int / Proc; green; ilvl 26->31; FB no stock primary: type Int (wand)
+6678 28 2 33 0 25 0 -  # Band of Elven Grace -- - / Crit; green; ilvl 28->33; no primary (jewelry/cloak)
+6713 5 2 7 24 73 4000 -  # Ripped Pants -- Int / Proc; white->green; ilvl 5->7; type Int (cloth); round 8 step-down
+#   (ruling 37): share 8000->4000 so Proc is at least 1
+6719 30 2 35 23 73 8000 -  # Windborne Belt -- Agi / Proc; green; ilvl 30->35
+6720 37 2 42 15 25 8000 -  # Spirit Hunter Headdress -- Agi+AP / Crit; green; ilvl 37->42
+6721 24 2 29 6 26 8000 -  # Chestplate of Kor -- Spi+SP / Haste; green; ilvl 24->29
+6722 30 2 35 22 27 8000 -  # Beastial Manacles -- Str / Mastery; green; ilvl 30->35
+6723 45 3 50 0 38 0 -  # Medal of Courage -- - / Haste+CDH; blue; ilvl 45->50; no primary (jewelry/cloak)
+6725 27 3 36 6 40 6000 -  # Marbled Buckler -- Spi+SP / Haste+Proc; blue; ilvl 36 kept (target 32)
+6726 41 2 46 24 25 8000 -  # Razzeric's Customized Seatbelt -- Int / Crit; green; ilvl 41->46
+6727 41 2 46 23 26 8000 -  # Razzeric's Racing Grips -- Agi / Haste; green; ilvl 41->46
+6729 38 2 43 24 28 8000 -  # Fizzle's Zippy Lighter -- Int / Vers; green; ilvl 38->43; FB no stock primary: type Int
+#   (wand)
+6732 38 2 43 17 25 8000 -  # Gnomish Mechanic's Gloves -- Str+Int+SP / Crit; green; ilvl 38->43
+6737 35 2 40 71 73 8000 -  # Dryleaf Pants -- Spi / Proc; green; ilvl 35->40
+6738 35 2 40 22 25 8000 all  # Bleeding Crescent -- Str / Crit; green; ilvl 35->40; keeps spell 1; FB no stock primary:
+#   type Str (one-handed axe)
+6739 29 2 34 23 26 8000 -  # Cliffrunner's Aim -- Agi / Haste; green; ilvl 29->34; FB no stock primary: type Agi (bow)
+6740 29 2 34 24 27 8000 -  # Azure Sash -- Int / Mastery; green; ilvl 29->34
+6741 29 2 31 22 28 8000 -  # Orcish War Sword -- Str / Vers; white->green; ilvl 29->31; type Str (two-handed sword)
+6742 27 3 36 22 39 6000 -  # Stonefist Girdle -- Str / Crit+Proc; blue; ilvl 36 kept (target 32)
+6743 23 2 28 0 73 0 -  # Sustaining Ring -- - / Proc; green; ilvl 25->28; no primary (jewelry/cloak)
+6744 33 2 38 1 25 8000 -  # Gloves of Kapelan -- Int+SP / Crit; green; ilvl 33->38
+6745 33 2 38 0 26 0 -  # Swiftrunner Cape -- - / Haste; green; ilvl 33->38; no primary (jewelry/cloak)
+6746 40 2 45 24 27 8000 -  # Basalt Buckler -- Int / Mastery; green; ilvl 40->45
+6747 40 2 45 22 28 8000 -  # Enforcer Pauldrons -- Str / Vers; green; ilvl 40->45
+6748 30 2 35 0 72 0 -  # Monkey Ring -- - / CDH; green; ilvl 31->35; no primary (jewelry/cloak)
+6749 30 2 35 0 73 0 -  # Tiger Band -- - / Proc; green; ilvl 31->35; no primary (jewelry/cloak)
+6750 30 2 35 0 25 0 -  # Snake Hoop -- - / Crit; green; ilvl 31->35; no primary (jewelry/cloak)
+6751 30 2 35 0 26 0 -  # Mourning Shawl -- - / Haste; green; ilvl 30->35; no primary (jewelry/cloak)
+6752 30 2 35 23 27 8000 -  # Lancer Boots -- Agi / Mastery; green; ilvl 30->35
+6757 38 2 43 0 26 0 -  # Jaina's Signet Ring -- - / Haste; green; ilvl 38->43; no primary (jewelry/cloak)
+6773 42 2 47 12 73 8000 -  # Gelkis Marauder Chain -- Str+AP / Proc; green; ilvl 42->47
+6774 42 2 47 8 25 8000 -  # Uthek's Finger -- Int+Spi+SP / Crit; green; ilvl 42->47
+6780 31 2 36 8 25 8000 -  # Lilac Sash -- Int+Spi+SP / Crit; green; ilvl 36 kept (target 36)
+6784 31 2 36 23 72 8000 -  # Braced Handguards -- Agi / CDH; green; ilvl 36 kept (target 36)
+6788 42 2 47 23 27 8000 -  # Magram Hunter's Belt -- Agi / Mastery; green; ilvl 42->47
+6789 42 2 47 0 28 0 -  # Ceremonial Centaur Blanket -- - / Vers; green; ilvl 42->47; no primary (jewelry/cloak)
+6790 31 2 36 0 72 0 -  # Ring of Calm -- - / CDH; green; ilvl 32->36; no primary (jewelry/cloak)
+6791 39 2 44 9 73 8000 -  # Hellion Boots -- Spi+Int+SP / Proc; green; ilvl 40->44
+6792 39 2 44 6 25 8000 -  # Sanguine Pauldrons -- Spi+SP / Crit; green; ilvl 40->44
+6793 40 2 45 24 26 8000 -  # Auric Bracers -- Int / Haste; green; ilvl 40->45
+6794 40 2 45 22 27 8000 -  # Stormfire Gauntlets -- Str / Mastery; green; ilvl 40->45
+6797 37 2 42 24 73 8000 -  # Eyepoker -- Int / Proc; green; ilvl 37->42; FB no stock primary: type Int (wand)
+6798 37 2 42 23 25 8000 -  # Blasting Hackbut -- Agi / Crit; green; ilvl 37->42; FB no stock primary: type Agi (gun)
+6801 40 2 45 4 28 8000 -  # Baroque Apron -- Spi+SP / Vers; green; ilvl 40->45
+6802 42 3 47 22 74 6000 -  # Sword of Omen -- Str / CDH+Vers; blue; ilvl 44->47
+6803 42 3 47 24 75 6000 -  # Prophetic Cane -- Int / Mastery+Proc; blue; ilvl 44->47
+6804 36 3 41 22 29 6000 -  # Windstorm Hammer -- Str / Crit+Haste; blue; ilvl 34->41
+6806 36 3 41 24 31 6000 -  # Dancing Flame -- Int / Crit+Mastery; blue; ilvl 40->41; FB no stock primary: type Int
+#   (wand)
+6828 38 2 43 71 25 8000 -  # Visionary Buckler -- Spi / Crit; green; ilvl 38->43
+6829 40 3 45 71 36 6000 -  # Sword of Serenity -- Spi / Mastery+Vers; blue; ilvl 44->45
+6830 40 3 45 22 37 6000 -  # Bonebiter -- Str / Crit+CDH; blue; ilvl 44->45
+6831 40 3 45 23 38 6000 all  # Black Menace -- Agi / Haste+CDH; blue; ilvl 44->45; keeps spell 1; FB no stock primary:
+#   type Agi (dagger)
+6832 42 2 47 0 72 0 -  # Cloak of Blight -- - / CDH; green; ilvl 42->47; no primary (jewelry/cloak)
+6898 25 2 30 81 72 8000 3  # Orb of Soran'ruk -- SP / CDH; green; ilvl 25->30; round 7: Spell Power (Solo) (ruling 33);
+#   keeps spell 3 (was SP+Int / CDH share 8000)
+6900 38 3 43 24 35 6000 -  # Enchanted Gold Bloodrobe -- Int / Haste+Vers; blue; ilvl 38->43
+6953 22 3 31 1 49 6000 -  # Verigan's Fist -- Int+SP / MP5+Haste; designer 2026-11-09 (round 6, ruling 29): no Spirit:
+#   Int/SP, Even (the Spirit lead's other two stats are even), then add MP5: MP5/Haste keeps its Haste (was Spi+Int+SP /
+#   Haste+Mastery share 6000)
+6966 10 2 15 22 25 4000 -  # Elunite Axe -- Str / Crit; green; ilvl 15 kept (target 15); FB no stock primary: type Str
+#   (one-handed axe); round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1
+6967 10 2 15 22 25 8000 -  # Elunite Sword -- Str / Crit; green; ilvl 15 kept (target 15); round 8: Warrior gear
+#   Agi->Crit (rulings 32, 38): Agi / Haste -> Str / Crit; FB no stock primary: type Agi (one-handed sword, odd entry)
+#   (was Str / Crit+Haste share 8000)
+6968 10 2 15 22 27 4000 -  # Elunite Hammer -- Str / Mastery; green; ilvl 15 kept (target 15); FB no stock primary: type
+#   Str (one-handed mace, even entry); round 8 step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+6969 10 2 15 22 25 8000 -  # Elunite Dagger -- Str / Crit; green; ilvl 15 kept (target 15); round 8: Warrior gear
+#   Agi->Crit (rulings 32, 38): Agi / Vers -> Str / Crit; FB no stock primary: type Agi (dagger) (was Str / Crit+Vers
+#   share 8000)
+6970 22 2 27 22 72 8000 -  # Furen's Favor -- Str / CDH; green; ilvl 20->27
+6971 30 2 35 22 25 8000 -  # Fire Hardened Coif -- Str / Crit; green; ilvl 31->35; round 8: Warrior gear Agi->Crit
+#   (rulings 32, 38): Agi / Proc -> Str / Crit (was Str / Crit+Proc share 8000)
+6972 28 3 33 22 35 6000 all  # Fire Hardened Hauberk -- Str / Haste+Vers; blue; ilvl 30->33; keeps spell 1
+6973 30 2 35 22 26 8000 -  # Fire Hardened Leggings -- Str / Haste; green; ilvl 29->35
+6974 30 2 35 22 27 8000 -  # Fire Hardened Gauntlets -- Str / Mastery; green; ilvl 31->35
+6975 40 3 45 22 38 6000 -  # Whirlwind Axe -- Str / Haste+CDH; blue; ilvl 40->45
+6976 40 3 45 22 39 6000 -  # Whirlwind Warhammer -- Str / Crit+Proc; blue; ilvl 40->45
+6977 40 3 45 22 40 6000 -  # Whirlwind Sword -- Str / Haste+Proc; blue; ilvl 40->45
+6978 10 2 15 22 25 4000 -  # Umbral Axe -- Str / Crit; green; ilvl 15 kept (target 15); FB no stock primary: type Str
+#   (one-handed axe); round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1
+6979 10 2 15 22 26 4000 -  # Haggard's Axe -- Str / Haste; green; ilvl 15 kept (target 15); FB no stock primary: type
+#   Str (one-handed axe); round 8 step-down (ruling 37): share 8000->4000 so Haste is at least 1
+6980 10 2 15 22 25 8000 -  # Haggard's Dagger -- Str / Crit; green; ilvl 15 kept (target 15); round 8: Warrior gear
+#   Agi->Crit (rulings 32, 38): Agi / Mastery -> Str / Crit; FB no stock primary: type Agi (dagger) (was Str /
+#   Crit+Mastery share 8000)
+6981 10 2 15 22 25 8000 -  # Umbral Dagger -- Str / Crit; green; ilvl 15 kept (target 15); round 8: Warrior gear
+#   Agi->Crit (rulings 32, 38): Agi / Vers -> Str / Crit; FB no stock primary: type Agi (dagger) (was Str / Crit+Vers
+#   share 8000)
+6982 10 2 15 22 72 4000 -  # Umbral Mace -- Str / CDH; green; ilvl 15 kept (target 15); FB no stock primary: type Str
+#   (one-handed mace, even entry); round 8 step-down (ruling 37): share 8000->4000 so CDH is at least 1
+6983 10 2 15 22 73 8000 -  # Haggard's Hammer -- Str / Proc; green; ilvl 15 kept (target 15); round 7: Warrior gear
+#   Int->Proc (ruling 32): Int / Proc -> Str / Proc; FB no stock primary: type Int (one-handed mace, odd entry) (was - /
+#   Proc share 0)
+6984 10 2 15 22 25 4000 -  # Umbral Sword -- Str / Crit; green; ilvl 15 kept (target 15); FB no stock primary: type Str
+#   (one-handed sword, even entry); round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1
+6985 10 2 15 22 25 8000 -  # Haggard's Sword -- Str / Crit; green; ilvl 15 kept (target 15); round 8: Warrior gear
+#   Agi->Crit (rulings 32, 38): Agi / Haste -> Str / Crit; FB no stock primary: type Agi (one-handed sword, odd entry)
+#   (was Str / Crit+Haste share 8000)
+6998 25 2 30 6 27 8000 -  # Nimbus Boots -- Spi+SP / Mastery; green; ilvl 25->30
+7000 25 2 30 71 72 8000 -  # Heartwood Girdle -- Spi / CDH; green; ilvl 25->30
+7001 27 3 32 71 75 6000 -  # Gravestone Scepter -- Spi / Mastery+Proc; blue; ilvl 29->32
+7002 27 3 32 71 29 6000 -  # Arctic Buckler -- Spi / Crit+Haste; blue; ilvl 29->32
+7003 24 2 29 23 26 8000 -  # Beetle Clasps -- Agi / Haste; green; ilvl 27->29
+7004 24 2 29 0 27 0 -  # Prelacy Cape -- - / Mastery; green; ilvl 27->29; no primary (jewelry/cloak)
+7106 30 2 35 9 27 8000 -  # Zodiac Gloves -- Spi+Int+SP / Mastery; green; ilvl 33->35
+7107 30 2 35 22 28 8000 -  # Belt of the Stars -- Str / Vers; green; ilvl 33->35
+7115 11 2 16 22 73 4000 -  # Heirloom Axe -- Str / Proc; green; ilvl 15->16; FB no stock primary: type Str (one-handed
+#   axe); round 8 step-down (ruling 37): share 8000->4000 so Proc is at least 1
+7116 11 2 16 22 25 8000 -  # Heirloom Dagger -- Str / Crit; green; ilvl 15->16; round 7: Warrior gear Agi->Crit (ruling
+#   32): Agi / Crit -> Str / Crit; FB no stock primary: type Agi (dagger) (was - / Crit share 0)
+7117 11 2 16 22 73 8000 -  # Heirloom Hammer -- Str / Proc; green; ilvl 15->16; round 8: Warrior gear Int->Proc (rulings
+#   32, 38): Int / Haste -> Str / Proc; FB no stock primary: type Int (one-handed mace, odd entry) (was Str / Haste+Proc
+#   share 8000)
+7118 11 2 16 22 27 4000 -  # Heirloom Sword -- Str / Mastery; green; ilvl 15->16; FB no stock primary: type Str
+#   (one-handed sword, even entry); round 8 step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+7120 20 2 25 22 72 8000 -  # Ruga's Bulwark -- Str / CDH; green; ilvl 20->25
+7129 30 2 35 22 26 8000 -  # Brutal Gauntlets -- Str / Haste; green; ilvl 31->35
+7130 30 2 35 22 25 8000 -  # Brutal Helm -- Str / Crit; green; ilvl 31->35; round 8: Warrior gear Agi->Crit (rulings 32,
+#   38): Agi / Mastery -> Str / Crit (was Str / Crit+Mastery share 8000)
+7132 30 2 35 22 72 8000 -  # Brutal Legguards -- Str / CDH; green; ilvl 29->35
+7133 30 3 35 22 34 6000 all  # Brutal Hauberk -- Str / Haste+Mastery; blue; ilvl 30->35; keeps spell 1
+7229 13 2 18 24 73 8000 -  # Explorer's Vest -- Int / Proc; green; ilvl 13->18
+7298 10 2 15 23 27 4000 -  # Blade of Cunning -- Agi / Mastery; green; ilvl 13->15; round 8 step-down (ruling 37): share
+#   8000->4000 so Mastery is at least 1
+7326 10 2 15 22 25 4000 -  # Thun'grim's Axe -- Str / Crit; green; ilvl 15 kept (target 15); FB no stock primary: type
+#   Str (one-handed axe); round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1
+7327 10 2 15 22 25 8000 -  # Thun'grim's Dagger -- Str / Crit; green; ilvl 15 kept (target 15); round 8: Warrior gear
+#   Agi->Crit (rulings 32, 38): Agi / Haste -> Str / Crit; FB no stock primary: type Agi (dagger) (was Str / Crit+Haste
+#   share 8000)
+7328 10 2 15 22 27 4000 -  # Thun'grim's Mace -- Str / Mastery; green; ilvl 15 kept (target 15); FB no stock primary:
+#   type Str (one-handed mace, even entry); round 8 step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+7329 10 2 15 22 25 8000 -  # Thun'grim's Sword -- Str / Crit; green; ilvl 15 kept (target 15); round 8: Warrior gear
+#   Agi->Crit (rulings 32, 38): Agi / Vers -> Str / Crit; FB no stock primary: type Agi (one-handed sword, odd entry)
+#   (was Str / Crit+Vers share 8000)
+7334 28 2 33 24 27 8000 -  # Efflorescent Robe -- Int / Mastery; green; ilvl 28->33
+7335 28 2 33 23 28 8000 -  # Grizzly Tunic -- Agi / Vers; green; ilvl 28->33; FB no stock primary: type Agi (leather)
+7336 28 2 33 22 72 8000 -  # Wildwood Chain -- Str / CDH; green; ilvl 24->33
+7344 32 2 37 4 25 8000 -  # Torch of Holy Flame -- Spi+SP / Crit; green; ilvl 33->37
+7507 10 2 15 24 26 6000 all  # Arcane Orb -- Int / Haste; designer 2026-11-09 (round 6, ruling 29): Intellect instead of
+#   Spirit (was Spi / Haste share 8000); round 6 step-down: share 8000->6000 so Haste is at least 1
+7508 10 2 15 24 27 6000 all  # Ley Orb -- Int / Mastery; designer 2026-11-09 (round 6, ruling 29): Intellect instead of
+#   Spirit (was Spi / Mastery share 8000); round 6 step-down: share 8000->6000 so Mastery is at least 1
+7509 15 2 20 24 28 8000 -  # Manaweave Robe -- Int / Vers; green; ilvl 20 kept (target 20)
+7510 15 2 20 24 72 8000 -  # Lesser Spellfire Robes -- Int / CDH; green; ilvl 20 kept (target 20)
+7511 26 2 31 3 73 8000 -  # Astral Knot Robe -- Int+SP / Proc; designer 2026-11-09 (round 6, ruling 29): no Spirit:
+#   Int/SP, Int lead (was Int+Spi+SP / Proc share 8000)
+7512 26 2 31 3 25 8000 -  # Nether-lace Robe -- Int+SP / Crit; designer 2026-11-09 (round 6, ruling 29): no Spirit:
+#   Int/SP, Int lead (was Int+Spi+SP / Crit share 8000)
+7513 40 3 45 2 36 6000 -  # Ragefire Wand -- SP+Int / Mastery+Vers; blue; ilvl 40->45
+7514 40 3 45 2 37 6000 -  # Icefury Wand -- SP+Int / Crit+CDH; blue; ilvl 40->45
+7515 40 3 45 2 38 6000 all  # Celestial Orb -- SP+Int / Haste+CDH; blue; ilvl 40->45; keeps spell 2
+7606 20 2 25 22 72 8000 -  # Polar Gauntlets -- Str / CDH; green; ilvl 22->25
+7607 20 2 25 24 73 8000 -  # Sable Wand -- Int / Proc; green; ilvl 22->25; FB no stock primary: type Int (wand)
+7673 44 3 49 0 34 0 -  # Talvash's Enhancing Necklace -- - / Haste+Mastery; blue; ilvl 47->49; no primary
+#   (jewelry/cloak)
+7738 18 2 23 8 72 8000 -  # Evergreen Gloves -- Int+Spi+SP / CDH; green; ilvl 18->23
+7739 18 2 23 0 73 0 -  # Timberland Cape -- - / Proc; green; ilvl 18->23; no primary (jewelry/cloak)
+7746 38 2 43 0 25 0 -  # Explorers' League Commendation -- - / Crit; green; ilvl 41->43; no primary (jewelry/cloak)
+7747 38 2 43 22 26 8000 all  # Vile Protector -- Str / Haste; green; ilvl 41->43; keeps spell 1
+7749 38 2 43 81 28 8000 -  # Omega Orb -- SP / Vers; green; ilvl 41->43; round 7: Spell Power (Solo) (ruling 33) (was
+#   SP+Int / Vers share 8000)
+7750 33 2 38 8 72 8000 -  # Mantle of Woe -- Int+Spi+SP / CDH; green; ilvl 33->38
+7751 33 2 38 23 73 8000 -  # Vorrel's Boots -- Agi / Proc; green; ilvl 30->38
+7888 44 3 49 0 33 0 -  # Jarkal's Enhancing Necklace -- - / Haste+Mastery; blue; ilvl 47->49; no primary (jewelry/cloak)
+8071 21 2 26 24 26 8000 -  # Sizzle Stick -- Int / Haste; green; ilvl 23->26; FB no stock primary: type Int (wand)
+9513 10 2 15 3 28 8000 -  # Ley Staff -- Int+SP / Vers; designer 2026-11-09 (round 6, ruling 29): no Spirit: Int/SP, Int
+#   lead (was Int+Spi+SP / Vers share 8000)
+9514 10 2 15 3 72 8000 -  # Arcane Staff -- Int+SP / CDH; designer 2026-11-09 (round 6, ruling 29): no Spirit: Int/SP,
+#   Int lead (was Int+Spi+SP / CDH share 8000)
+9515 26 2 31 24 73 8000 -  # Nether-lace Tunic -- Int / Proc; green; ilvl 31 kept (target 31)
+9516 26 2 31 24 25 8000 -  # Astral Knot Blouse -- Int / Crit; green; ilvl 31 kept (target 31)
+9517 40 3 45 2 65 6000 -  # Celestial Stave -- SP+Int / Haste+CDH; blue; ilvl 40->45
+9518 36 2 41 22 27 8000 -  # Mud's Crushers -- Str / Mastery; green; ilvl 36->41
+9519 36 2 41 9 28 8000 -  # Durtfeet Stompers -- Spi+Int+SP / Vers; green; ilvl 36->41
+9520 40 2 45 23 72 8000 -  # Silent Hunter -- Agi / CDH; green; ilvl 41->45
+9521 40 2 45 22 73 8000 -  # Skullsplitter -- Str / Proc; green; ilvl 41->45
+9522 36 2 41 71 25 8000 -  # Energized Stone Circle -- Spi / Crit; green; ilvl 36->41
+9527 46 2 51 24 73 8000 -  # Spellshifter Rod -- Int / Proc; green; ilvl 46->51
+9531 46 2 51 22 28 8000 -  # Gemshale Pauldrons -- Str / Vers; green; ilvl 46->51
+9533 47 3 52 0 40 0 -  # Masons Fraternity Ring -- - / Haste+Proc; blue; ilvl 47->52; no primary (jewelry/cloak)
+9534 47 3 52 8 41 6000 -  # Engineer's Guild Headpiece -- Int+Spi+SP / Crit+Haste; blue; ilvl 47->52
+9535 30 2 35 23 26 8000 -  # Fire-welded Bracers -- Agi / Haste; green; ilvl 30->35
+9536 30 2 35 24 27 8000 -  # Fairywing Mantle -- Int / Mastery; green; ilvl 30->35
+9538 35 3 40 0 74 0 -  # Talvash's Gold Ring -- - / CDH+Vers; blue; ilvl 35->40; no primary (jewelry/cloak)
+9588 35 3 40 0 41 0 -  # Nogg's Gold Ring -- - / Crit+Haste; blue; ilvl 35->40; no primary (jewelry/cloak)
+9598 10 2 15 24 72 8000 -  # Sleeping Robes -- Int / CDH; green; ilvl 10->15; FB no stock primary: type Int (cloth)
+9599 9 2 14 24 73 6000 -  # Barkmail Leggings -- Int / Proc; green; ilvl 10->14; FB no stock primary: type Int (mail,
+#   odd entry); round 6 step-down: share 8000->6000 so Proc is at least 1
+9600 12 2 14 24 25 6000 -  # Lace Pants -- Int / Crit; white->green; ilvl 12->14; type Int (cloth); round 6 step-down:
+#   share 8000->6000 so Crit is at least 1
+9601 12 2 14 23 26 6000 -  # Cushioned Boots -- Agi / Haste; white->green; ilvl 12->14; type Agi (leather); round 6
+#   step-down: share 8000->6000 so Haste is at least 1
+9603 9 2 14 24 28 8000 -  # Gritroot Staff -- Int / Vers; green; ilvl 10->14; FB no stock primary: type Int (staff)
+9604 30 2 35 24 72 8000 -  # Mechanic's Pipehammer -- Int / CDH; green; ilvl 30->35
+9605 30 2 35 0 73 0 -  # Repairman's Cape -- - / Proc; green; ilvl 30->35; no primary (jewelry/cloak)
+9607 20 2 25 22 56 8000 -  # Bastion of Stormwind -- Str / Block; green; ilvl 25 kept (target 25); Defense->Block; tank
+#   Block; FB no stock primary: type Str (shield)
+9608 30 2 35 22 27 6000 all  # Shoni's Disarming Tool -- Str / Mastery; green; ilvl 31->35; keeps spell 1; FB no stock
+#   primary: type Str (one-handed axe); round 6 step-down: share 8000->6000 so Mastery is at least 1
+9609 30 2 35 8 28 8000 -  # Shilly Mitts -- Int+Spi+SP / Vers; green; ilvl 31->35
+9622 35 2 40 0 72 0 -  # Reedknot Ring -- - / CDH; green; ilvl 35->40; no primary (jewelry/cloak)
+9623 35 3 40 71 40 6000 -  # Civinad Robes -- Spi / Haste+Proc; blue; ilvl 37->40
+9624 35 3 40 23 41 6000 -  # Triprunner Dungarees -- Agi / Crit+Haste; blue; ilvl 37->40
+9625 35 3 40 23 58 6000 -  # Dual Reinforced Leggings -- Agi / Dodge+Haste; blue; ilvl 37->40; Defense->Dodge; tank
+#   Dodge; FB no stock primary: type Agi (mail, odd entry, a tank item: Agi)
+9626 40 2 45 22 27 8000 -  # Dwarven Charge -- Str / Mastery; green; ilvl 42->45
+9627 40 2 45 71 28 8000 -  # Explorers' League Lodestar -- Spi / Vers; green; ilvl 42->45
+9630 46 2 51 23 25 8000 -  # Pratt's Handcrafted Boots -- Agi / Crit; green; ilvl 45->51
+9631 46 2 51 12 26 8000 -  # Pratt's Handcrafted Gloves -- Str+AP / Haste; green; ilvl 45->51
+9632 46 2 51 12 27 8000 -  # Jangdor's Handcrafted Gloves -- Str+AP / Mastery; green; ilvl 45->51
+9633 46 2 51 23 28 8000 -  # Jangdor's Handcrafted Boots -- Agi / Vers; green; ilvl 45->51
+9634 46 2 51 3 72 8000 -  # Skilled Handling Gloves -- Int+SP / CDH; green; ilvl 46->51
+9635 46 2 51 0 73 0 -  # Master Apothecary Cape -- - / Proc; green; ilvl 45->51; no primary (jewelry/cloak)
+9636 45 2 50 81 25 8000 -  # Swashbuckler Sash -- SP / Crit; green; ilvl 45->50; round 7: Spell Power (Solo) (ruling 33)
+#   (was SP+Int / Crit share 8000)
+9637 45 2 50 12 26 8000 -  # Shinkicker Boots -- Str+AP / Haste; green; ilvl 45->50
+9638 50 2 55 24 27 8000 -  # Chelonian Cuffs -- Int / Mastery; green; ilvl 50->55
+9642 50 2 55 0 25 0 -  # Band of the Great Tortoise -- - / Crit; green; ilvl 50->55; no primary (jewelry/cloak)
+9643 48 2 53 22 56 8000 -  # Optomatic Deflector -- Str / Block; green; ilvl 51->53; tank Block
+9644 48 2 53 71 27 8000 -  # Thermotastic Egg Timer -- Spi / Mastery; green; ilvl 51->53
+9645 48 2 53 71 28 8000 -  # Gnomish Inventor Boots -- Spi / Vers; green; ilvl 49->53
+9646 48 2 53 22 72 8000 -  # Gnomish Water Sinking Device -- Str / CDH; green; ilvl 49->53; FB no stock primary: type
+#   Str (plate)
+9647 45 2 50 12 73 8000 -  # Failed Flying Experiment -- Str+AP / Proc; green; ilvl 48->50
+9648 45 2 50 0 25 0 -  # Chainlink Towel -- - / Crit; green; ilvl 48->50; no primary (jewelry/cloak)
+9649 55 3 60 4 30 6000 -  # Royal Highmark Vestments -- Spi+SP / Crit+Mastery; blue; ilvl 55->60
+9650 55 3 60 13 31 6000 -  # Honorguard Chestpiece -- Agi+AP / Crit+Mastery; blue; ilvl 55->60
+9651 51 3 56 22 32 6000 all  # Gryphon Rider's Stormhammer -- Str / Crit+Vers; blue; ilvl 53->56; keeps spell 1
+9652 51 3 56 12 33 6000 -  # Gryphon Rider's Leggings -- Str+AP / Haste+Mastery; blue; ilvl 53->56
+9654 50 2 55 24 25 8000 -  # Cairnstone Sliver -- Int / Crit; green; ilvl 50->55; FB no stock primary: type Int (wand)
+9655 50 2 55 0 26 0 -  # Seedtime Hoop -- - / Haste; green; ilvl 50->55; no primary (jewelry/cloak)
+9656 49 2 54 22 27 8000 -  # Granite Grips -- Str / Mastery; green; ilvl 49->54
+9657 49 2 54 22 28 8000 -  # Vinehedge Cinch -- Str / Vers; green; ilvl 49->54
+9658 43 2 48 8 72 8000 -  # Boots of the Maharishi -- Int+Spi+SP / CDH; green; ilvl 43->48
+9660 43 2 48 0 25 0 -  # Stargazer Cloak -- - / Crit; green; ilvl 43->48; no primary (jewelry/cloak)
+9661 43 2 48 71 26 8000 -  # Earthclasp Barrier -- Spi / Haste; green; ilvl 43->48
+9662 43 2 48 23 27 8000 -  # Rushridge Boots -- Agi / Mastery; green; ilvl 43->48
+9663 45 2 50 23 28 8000 -  # Dawnrider's Chestpiece -- Agi / Vers; green; ilvl 45->50
+9664 45 2 50 15 72 8000 -  # Sentinel's Guard -- Agi+AP / CDH; green; ilvl 45->50
+9665 50 2 55 24 73 8000 -  # Wingcrest Gloves -- Int / Proc; green; ilvl 50->55
+9666 50 2 55 24 25 8000 -  # Stronghorn Girdle -- Int / Crit; green; ilvl 50->55
+9678 43 2 48 22 25 8000 -  # Tok'kar's Murloc Basher -- Str / Crit; green; ilvl 43->48; FB no stock primary: type Str
+#   (two-handed mace)
+9679 43 2 48 22 26 8000 -  # Tok'kar's Murloc Chopper -- Str / Haste; green; ilvl 43->48
+9680 43 2 48 23 27 8000 -  # Tok'kar's Murloc Shanker -- Agi / Mastery; green; ilvl 43->48
+9682 44 2 49 24 72 8000 -  # Leather Chef's Belt -- Int / CDH; green; ilvl 44->49
+9683 50 3 55 24 75 6000 -  # Strength of the Treant -- Int / Mastery+Proc; blue; ilvl 51->55
+9684 50 3 55 23 29 6000 -  # Force of the Hippogryph -- Agi / Crit+Haste; blue; ilvl 51->55
+9686 50 3 55 22 31 6000 -  # Spirit of the Faerie Dragon -- Str / Crit+Mastery; blue; ilvl 51->55; FB no stock primary:
+#   type Str (one-handed mace, even entry)
+9687 33 2 38 22 28 8000 -  # Grappler's Belt -- Str / Vers; green; ilvl 33->38
+9698 33 2 38 24 27 8000 -  # Gloves of Insight -- Int / Mastery; green; ilvl 33->38
+9699 33 2 38 0 28 0 -  # Garrison Cloak -- - / Vers; green; ilvl 33->38; no primary (jewelry/cloak)
+9703 41 2 46 0 26 0 -  # Scorched Cape -- - / Haste; green; ilvl 43->46; no primary (jewelry/cloak)
+9704 41 2 46 17 27 8000 -  # Rustler Gloves -- Str+Int+SP / Mastery; green; ilvl 43->46
+9705 41 2 46 22 28 8000 -  # Tharg's Shoelace -- Str / Vers; green; ilvl 43->46
+9706 41 2 46 22 72 8000 -  # Tharg's Disk -- Str / CDH; green; ilvl 43->46; FB no stock primary: type Str (shield)
+10043 31 2 36 71 73 8000 -  # Pious Legwraps -- Spi / Proc; green; ilvl 31->36
+10358 36 2 41 23 27 8000 -  # Duracin Bracers -- Agi / Mastery; green; ilvl 36->41
+10359 36 2 41 71 28 8000 -  # Everlast Boots -- Spi / Vers; green; ilvl 36->41
+10455 55 2 60 0 28 0 all  # Chained Essence of Eranikus -- - / Vers; green; ilvl 60 kept (target 55); no primary
+#   (trinket, ruling 22); keeps spell 1
+10461 50 2 55 8 28 8000 -  # Shadowy Bracers -- Int+Spi+SP / Vers; green; ilvl 45->55
+10462 50 2 55 8 72 8000 -  # Shadowy Belt -- Int+Spi+SP / CDH; green; ilvl 47->55
+10544 4 2 6 22 27 8000 -  # Thistlewood Maul -- Str / Mastery; white->green; ilvl 5->6; type Str (one-handed mace, even
+#   entry)
+10547 8 2 10 23 73 8000 -  # Camping Knife -- Agi / Proc; white->green; ilvl 8->10; type Agi (dagger)
+10549 12 2 17 71 26 8000 -  # Rancher's Trousers -- Spi / Haste; green; ilvl 12->17
+10550 12 2 14 24 27 6000 -  # Wooly Mittens -- Int / Mastery; white->green; ilvl 12->14; type Int (cloth); round 6
+#   step-down: share 8000->6000 so Mastery is at least 1
+10635 5 2 7 24 28 4000 -  # Painted Chain Leggings -- Int / Vers; white->green; ilvl 5->7; type Int (mail, odd entry);
+#   round 8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+10636 5 2 7 23 72 4000 -  # Nomadic Gloves -- Agi / CDH; white->green; ilvl 5->7; type Agi (leather); round 8 step-down
+#   (ruling 37): share 8000->4000 so CDH is at least 1
+10637 15 2 20 1 73 8000 -  # Brewer's Gloves -- Int+SP / Proc; green; ilvl 15->20
+10638 15 2 20 0 25 0 -  # Long Draping Cape -- - / Crit; green; ilvl 15->20; no primary (jewelry/cloak)
+10652 50 3 55 22 66 6000 -  # Will of the Mountain Giant -- Str / Crit+Proc; blue; ilvl 51->55
+10653 29 2 34 23 28 8000 -  # Trailblazer Boots -- Agi / Vers; green; ilvl 30->34
+10654 29 2 34 1 72 8000 -  # Jutebraid Gloves -- Int+SP / CDH; green; ilvl 31->34
+10655 4 2 6 24 73 4000 -  # Sedgeweed Britches -- Int / Proc; white->green; ilvl 5->6; type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Proc is at least 1
+10656 4 2 6 23 25 4000 -  # Barkmail Vest -- Agi / Crit; white->green; ilvl 5->6; type Agi (mail, even entry); round 8
+#   step-down (ruling 37): share 8000->4000 so Crit is at least 1
+10657 25 2 30 24 26 8000 -  # Talbar Mantle -- Int / Haste; green; ilvl 26->30
+10658 25 2 30 23 27 8000 -  # Quagmire Galoshes -- Agi / Mastery; green; ilvl 25->30; FB no stock primary: type Agi
+#   (mail, even entry)
+10659 57 2 57 0 28 0 2  # Shard of Afrasa -- - / Vers; green; ilvl 57 kept (target 55); no primary (trinket, ruling 22);
+#   keeps spell 2; FB MP5 lost: blues only (green)
+10686 55 3 60 22 59 6000 -  # Aegis of Battle -- Str / Dodge+Mastery; blue; ilvl 55->60; tank Dodge; FB no stock
+#   primary: type Str (shield)
+10696 58 2 60 22 72 8000 all  # Enchanted Azsharite Felbane Sword -- Str / CDH; green; ilvl 60 kept (target 55); keeps
+#   spell 1,2; FB no stock primary: type Str (one-handed sword, even entry)
+10697 58 2 60 23 73 8000 all  # Enchanted Azsharite Felbane Dagger -- Agi / Proc; green; ilvl 60 kept (target 55); keeps
+#   spell 1,2; FB no stock primary: type Agi (dagger)
+10698 58 2 60 24 25 8000 all  # Enchanted Azsharite Felbane Staff -- Int / Crit; green; ilvl 60 kept (target 55); keeps
+#   spell 1,2; FB no stock primary: type Int (staff)
+10700 41 2 46 3 27 8000 -  # Encarmine Boots -- Int+SP / Mastery; green; ilvl 45->46
+10701 41 2 46 71 28 8000 -  # Boots of Zua'tec -- Spi / Vers; green; ilvl 45->46
+10702 41 2 46 22 72 8000 -  # Enormous Ogre Boots -- Str / CDH; green; ilvl 43->46
+10703 45 2 50 22 73 8000 -  # Fiendish Skiv -- Str / Proc; green; ilvl 45->50
+10704 45 2 50 24 25 8000 -  # Chillnail Splinter -- Int / Crit; green; ilvl 46->50; FB no stock primary: type Int (wand)
+10705 47 2 52 24 26 8000 -  # Firwillow Wristbands -- Int / Haste; green; ilvl 47->52
+10706 47 2 52 22 27 8000 -  # Nightscale Girdle -- Str / Mastery; green; ilvl 47->52
+10707 52 2 55 22 28 8000 -  # Steelsmith Greaves -- Str / Vers; green; ilvl 52->55
+10708 52 2 55 24 72 8000 -  # Skullspell Orb -- Int / CDH; green; ilvl 52->55
+10709 56 2 55 71 73 8000 -  # Pyrestone Orb -- Spi / Proc; green; ilvl 55 kept (target 55)
+10710 37 3 42 0 29 0 -  # Dragonclaw Ring -- - / Crit+Haste; blue; ilvl 38->42; no primary (jewelry/cloak)
+10711 42 3 47 0 30 0 -  # Dragon's Blood Necklace -- - / Crit+Mastery; blue; ilvl 44->47; no primary (jewelry/cloak)
+10739 46 2 53 0 73 0 -  # Ring of Fortitude -- - / Proc; green; ilvl 53 kept (target 51); no primary (jewelry/cloak)
+10740 46 2 53 12 25 8000 -  # Centurion Legplates -- Str+AP / Crit; green; ilvl 53 kept (target 51)
+10741 46 2 53 23 26 8000 -  # Lordrec Helmet -- Agi / Haste; green; ilvl 53 kept (target 51)
+10742 52 2 55 9 27 8000 -  # Dragonflight Leggings -- Spi+Int+SP / Mastery; green; ilvl 51->55
+10743 52 2 55 9 28 8000 -  # Drakefire Headguard -- Spi+Int+SP / Vers; green; ilvl 51->55
+10744 52 2 55 22 72 8000 -  # Axe of the Ebon Drake -- Str / CDH; green; ilvl 51->55
+10745 50 2 55 22 73 8000 -  # Kaylari Shoulders -- Str / Proc; green; ilvl 50->55
+10746 50 2 55 22 25 8000 -  # Runesteel Vambraces -- Str / Crit; green; ilvl 50->55
+10747 41 2 46 24 26 8000 -  # Teacher's Sash -- Int / Haste; green; ilvl 41->46
+10748 41 2 46 15 27 8000 -  # Wanderlust Boots -- Agi+AP / Mastery; green; ilvl 41->46
+10749 53 3 58 6 32 6000 -  # Avenguard Helm -- Spi+SP / Crit+Vers; blue; ilvl 54->58
+10750 53 3 58 23 33 6000 -  # Lifeforce Dirk -- Agi / Haste+Mastery; blue; ilvl 54->58; FB no stock primary: type Agi
+#   (dagger)
+10751 53 3 58 9 34 6000 -  # Gemburst Circlet -- Spi+Int+SP / Haste+Mastery; blue; ilvl 54->58
+10778 60 2 60 0 27 0 -  # Necklace of Sanctuary -- - / Mastery; green; ilvl 60 kept (target 55); no primary
+#   (jewelry/cloak)
+10779 60 2 60 0 28 0 all  # Demon's Blood -- - / Vers; green; ilvl 60 kept (target 55); no primary (trinket, ruling 22);
+#   keeps spell 1
+10820 15 2 20 24 27 8000 -  # Jackseed Belt -- Int / Mastery; green; ilvl 15->20
+10821 15 2 20 0 28 0 -  # Sower's Cloak -- - / Vers; green; ilvl 15->20; no primary (jewelry/cloak)
+10823 37 3 44 82 34 6000 -  # Vanquisher's Sword -- AP / Haste+Mastery; blue; ilvl 44 kept (target 42); round 7: Attack
+#   Power (Solo) (ruling 33) (was AP+Str / Haste+Mastery share 6000)
+10824 37 3 44 0 35 0 -  # Amberglow Talisman -- - / Haste+Vers; blue; ilvl 44 kept (target 42); no primary
+#   (jewelry/cloak)
+10826 48 2 53 71 27 8000 -  # Staff of Lore -- Spi / Mastery; green; ilvl 48->53
+10827 48 2 53 6 28 8000 -  # Surveyor's Tunic -- Spi+SP / Vers; green; ilvl 48->53
+10919 18 2 23 8 73 8000 -  # Apothecary Gloves -- Int+Spi+SP / Proc; green; ilvl 18->23
+11120 56 2 55 22 27 8000 -  # Belgrom's Hammer -- Str / Mastery; green; ilvl 55 kept (target 55)
+11122 50 2 55 0 72 0 all  # Carrot on a Stick -- - / CDH; green; ilvl 50->55; no primary (trinket, ruling 22); keeps
+#   spell 1
+11123 53 3 58 6 75 6000 -  # Rainstrider Leggings -- Spi+SP / Mastery+Proc; blue; ilvl 55->58
+11124 53 3 58 8 29 6000 -  # Helm of Exile -- Int+Spi+SP / Crit+Haste; blue; ilvl 55->58
+11187 2 2 5 24 28 8000 -  # Stemleaf Bracers -- Int / Vers; white->green; ilvl 5 kept (target 4); type Int (cloth)
+11189 5 2 7 24 73 4000 -  # Woodland Robes -- Int / Proc; white->green; ilvl 5->7; type Int (cloth); round 8 step-down
+#   (ruling 37): share 8000->4000 so Proc is at least 1
+11190 3 2 5 24 25 4000 -  # Viny Gloves -- Int / Crit; white->green; ilvl 5 kept (target 5); type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Crit is at least 1
+11191 9 2 11 24 26 4000 -  # Farmer's Boots -- Int / Haste; white->green; ilvl 10->11; type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Haste is at least 1
+11192 5 2 7 24 27 4000 -  # Outfitter Gloves -- Int / Mastery; white->green; ilvl 5->7; type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+11193 50 2 57 23 28 8000 -  # Blazewind Breastplate -- Agi / Vers; green; ilvl 57 kept (target 55)
+11194 50 2 57 71 72 8000 -  # Prismscale Hauberk -- Spi / CDH; green; ilvl 57 kept (target 55)
+11195 50 2 57 22 73 8000 -  # Warforged Chestplate -- Str / Proc; green; ilvl 57 kept (target 55)
+11196 50 2 57 0 25 0 -  # Mindburst Medallion -- - / Crit; green; ilvl 57 kept (target 55); no primary (jewelry/cloak)
+11229 32 2 37 22 28 8000 -  # Brightscale Girdle -- Str / Vers; green; ilvl 32->37
+11262 40 3 45 9 41 6000 -  # Orb of Lorica -- Spi+Int+SP / Crit+Haste; blue; ilvl 44->45
+11263 40 3 45 2 65 6000 -  # Nether Force Wand -- SP+Int / Haste+CDH; blue; ilvl 40->45
+11265 42 2 47 22 28 8000 -  # Cragwood Maul -- Str / Vers; green; ilvl 42->47; FB no stock primary: type Str (two-handed
+#   mace)
+11469 42 2 47 8 28 8000 -  # Bloodband Bracers -- Int+Spi+SP / Vers; green; ilvl 46->47
+11475 4 2 6 0 28 0 -  # Wine-stained Cloak -- - / Vers; white->green; ilvl 5->6; no primary (jewelry/cloak)
+11502 46 2 51 12 25 8000 -  # Loreskin Shoulders -- Str+AP / Crit; green; ilvl 46->51
+11847 2 2 5 0 28 0 -  # Battered Cloak -- - / Vers; white->green; ilvl 5 kept (target 4); no primary (jewelry/cloak)
+11848 3 2 5 24 72 4000 -  # Flax Belt -- Int / CDH; white->green; ilvl 5 kept (target 5); type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so CDH is at least 1
+11849 3 2 5 24 73 8000 -  # Rustmetal Bracers -- Int / Proc; white->green; ilvl 5 kept (target 5); type Int (mail, odd
+#   entry)
+11850 3 2 5 0 25 0 -  # Short Duskbat Cape -- - / Crit; white->green; ilvl 5 kept (target 5); no primary (jewelry/cloak)
+11851 3 2 5 23 26 4000 -  # Scavenger Tunic -- Agi / Haste; white->green; ilvl 5 kept (target 5); type Agi (leather);
+#   round 8 step-down (ruling 37): share 8000->4000 so Haste is at least 1
+11852 3 2 5 23 27 4000 -  # Roamer's Leggings -- Agi / Mastery; white->green; ilvl 5 kept (target 5); type Agi (mail,
+#   even entry); round 8 step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+11853 18 2 23 23 28 8000 -  # Rambling Boots -- Agi / Vers; green; ilvl 18->23
+11854 19 2 24 71 72 8000 -  # Samophlange Screwdriver -- Spi / CDH; green; ilvl 19->24
+11855 19 2 24 17 73 8000 -  # Tork Wrench -- Str+Int+SP / Proc; green; ilvl 19->24
+11856 46 2 51 23 25 8000 -  # Ceremonial Elven Blade -- Agi / Crit; green; ilvl 45->51
+11857 46 2 51 71 26 8000 -  # Sanctimonial Rod -- Spi / Haste; green; ilvl 46->51
+11858 45 2 50 0 27 0 -  # Battlehard Cape -- - / Mastery; green; ilvl 45->50; no primary (jewelry/cloak)
+11859 45 2 50 9 28 8000 -  # Jademoon Orb -- Spi+Int+SP / Vers; green; ilvl 45->50
+11860 46 2 51 24 72 8000 -  # Charged Lightning Rod -- Int / CDH; green; ilvl 46->51; FB no stock primary: type Int
+#   (wand)
+11861 46 2 51 22 73 8000 all  # Girdle of Reprisal -- Str / Proc; green; ilvl 46->51; keeps spell 1
+11862 52 2 55 0 25 0 -  # White Bone Band -- - / Crit; green; ilvl 52->55; no primary (jewelry/cloak)
+11863 52 2 55 15 26 8000 -  # White Bone Shredder -- Agi+AP / Haste; green; ilvl 52->55
+11864 52 2 55 24 27 8000 -  # White Bone Spear -- Int / Mastery; green; ilvl 52->55
+11865 53 2 55 1 28 8000 -  # Rancor Boots -- Int+SP / Vers; green; ilvl 53->55
+11866 54 3 59 6 33 6000 -  # Nagmara's Whipping Belt -- Spi+SP / Haste+Mastery; blue; ilvl 55->59
+11867 53 2 55 22 73 8000 -  # Maddening Gauntlets -- Str / Proc; green; ilvl 53->55
+11868 53 2 55 0 25 0 -  # Choking Band -- - / Crit; green; ilvl 53->55; no primary (jewelry/cloak)
+11869 53 2 55 0 26 0 -  # Sha'ni's Ring -- - / Haste; green; ilvl 53->55; no primary (jewelry/cloak)
+11870 54 2 55 71 27 8000 -  # Oblivion Orb -- Spi / Mastery; green; ilvl 54->55
+11871 54 2 55 22 28 8000 -  # Snarkshaw Spaulders -- Str / Vers; green; ilvl 54->55
+11872 54 2 55 22 54 8000 -  # Eschewal Greaves -- Str / Dodge; green; ilvl 54->55; tank Dodge; FB no stock primary: type
+#   Str (plate)
+11873 56 2 56 0 73 0 -  # Ethereal Mist Cape -- - / Proc; green; ilvl 56 kept (target 55); no primary (jewelry/cloak)
+11874 56 2 56 12 25 8000 -  # Clouddrift Mantle -- Str+AP / Crit; green; ilvl 56 kept (target 55)
+11875 54 2 55 24 26 8000 -  # Breezecloud Bracers -- Int / Haste; green; ilvl 54->55
+11876 56 2 56 23 27 8000 -  # Plainstalker Tunic -- Agi / Mastery; green; ilvl 56 kept (target 55)
+11882 56 2 56 22 27 8000 -  # Outrider Leggings -- Str / Mastery; green; ilvl 56 kept (target 55)
+11884 33 2 38 71 72 8000 -  # Moonlit Amice -- Spi / CDH; green; ilvl 33->38
+11888 50 2 55 8 27 8000 -  # Quintis' Research Gloves -- Int+Spi+SP / Mastery; green; ilvl 50->55
+11889 50 2 55 12 28 8000 -  # Bark Iron Pauldrons -- Str+AP / Vers; green; ilvl 50->55
+11902 56 2 56 22 72 8000 all  # Linken's Sword of Mastery -- Str / CDH; green; ilvl 56 kept (target 55); keeps spell 1;
+#   FB no stock primary: type Str (one-handed sword, even entry)
+11904 56 2 56 81 25 8000 -  # Spirit of Aquementas -- SP / Crit; green; ilvl 56 kept (target 55); round 7: Spell Power
+#   (Solo) (ruling 33) (was SP+Int / Crit share 8000)
+11905 56 2 56 0 26 0 all  # Linken's Boomerang -- - / Haste; green; ilvl 56 kept (target 55); no primary (trinket,
+#   ruling 22); keeps spell 1
+11906 55 2 55 22 27 8000 all  # Beastsmasher -- Str / Mastery; green; ilvl 55 kept (target 55); keeps spell 1; FB no
+#   stock primary: type Str (one-handed mace, even entry)
+11907 55 2 55 22 28 8000 all  # Beastslayer -- Str / Vers; green; ilvl 55 kept (target 55); keeps spell 1; FB no stock
+#   primary: type Str (two-handed axe)
+11908 51 2 55 1 72 8000 -  # Archaeologist's Quarry Boots -- Int+SP / CDH; green; ilvl 55 kept (target 55)
+11909 51 2 55 24 73 8000 -  # Excavator's Utility Belt -- Int / Proc; green; ilvl 55 kept (target 55)
+11910 55 2 55 71 28 8000 -  # Bejeweled Legguards -- Spi / Vers; green; ilvl 55 kept (target 55); tank Dodge dropped, no
+#   Str/Agi (ruling 24): Vers
+11911 55 2 55 6 26 8000 -  # Treetop Leggings -- Spi+SP / Haste; green; ilvl 55 kept (target 55)
+11913 55 2 55 15 28 8000 -  # Clayridge Helm -- Agi+AP / Vers; green; ilvl 55 kept (target 55)
+11915 51 2 55 22 73 8000 -  # Shizzle's Drizzle Blocker -- Str / Proc; green; ilvl 55 kept (target 55)
+11916 51 2 55 6 25 8000 -  # Shizzle's Muzzle -- Spi+SP / Crit; green; ilvl 55 kept (target 55)
+11917 51 2 55 24 26 8000 -  # Shizzle's Nozzle Wiper -- Int / Haste; green; ilvl 55 kept (target 55)
+11918 55 2 55 20 27 8000 -  # Grotslab Gloves -- Agi+Int+SP / Mastery; green; ilvl 55 kept (target 55)
+11919 55 2 55 22 28 8000 -  # Cragplate Greaves -- Str / Vers; green; ilvl 55 kept (target 55)
+11936 20 2 25 8 27 8000 -  # Relic Hunter Belt -- Int+Spi+SP / Mastery; green; ilvl 20->25
+11962 54 3 59 24 39 6000 -  # Manacle Cuffs -- Int / Crit+Proc; blue; ilvl 55->59
+11963 53 2 55 15 73 8000 -  # Penance Spaulders -- Agi+AP / Proc; green; ilvl 53->55
+11964 55 2 55 22 25 8000 -  # Swiftstrike Cudgel -- Str / Crit; green; ilvl 55 kept (target 55); FB no stock primary:
+#   type Str (one-handed mace, even entry)
+12000 55 2 55 22 25 8000 -  # Limb Cleaver -- Str / Crit; green; ilvl 55 kept (target 55)
+12018 54 2 55 71 25 8000 -  # Conservator Helm -- Spi / Crit; green; ilvl 54->55
+12021 54 2 55 22 28 8000 -  # Shieldplate Sabatons -- Str / Vers; green; ilvl 54->55
+12041 54 2 55 6 73 8000 -  # Windshear Leggings -- Spi+SP / Proc; green; ilvl 54->55
+12049 53 2 55 6 26 8000 -  # Splintsteel Armor -- Spi+SP / Haste; green; ilvl 53->55
+12050 54 2 55 6 27 8000 -  # Hazecover Boots -- Spi+SP / Mastery; green; ilvl 54->55
+12051 54 2 55 12 28 8000 -  # Brazen Gauntlets -- Str+AP / Vers; green; ilvl 54->55
+12059 58 3 60 0 75 0 -  # Conqueror's Medallion -- - / Mastery+Proc; blue; ilvl 58->60; no primary (jewelry/cloak)
+12061 58 2 60 82 26 8000 -  # Blade of Reckoning -- AP / Haste; green; ilvl 60 kept (target 55); round 7: Attack Power
+#   (Solo) (ruling 33) (was AP+Str / Haste share 8000)
+12062 58 2 60 23 27 8000 -  # Skilled Fighting Blade -- Agi / Mastery; green; ilvl 60 kept (target 55); FB no stock
+#   primary: type Agi (dagger)
+12065 58 2 60 0 73 0 -  # Ward of the Elements -- - / Proc; green; ilvl 60 kept (target 55); no primary (trinket, ruling
+#   22)
+12066 58 2 58 0 25 0 -  # Shaleskin Cape -- - / Crit; green; ilvl 58 kept (target 55); no primary (jewelry/cloak)
+12082 58 2 58 23 72 8000 -  # Wyrmhide Spaulders -- Agi / CDH; green; ilvl 58 kept (target 55); FB no stock primary:
+#   type Agi (leather)
+12083 58 2 58 24 73 8000 -  # Valconian Sash -- Int / Proc; green; ilvl 58 kept (target 55)
+12102 54 2 55 0 25 0 -  # Ring of the Aristocrat -- - / Crit; green; ilvl 54->55; no primary (jewelry/cloak)
+12108 58 2 58 71 25 8000 -  # Basaltscale Armor -- Spi / Crit; green; ilvl 58 kept (target 55)
+12109 58 2 58 24 26 8000 -  # Azure Moon Amice -- Int / Haste; green; ilvl 58 kept (target 55)
+12110 58 2 58 0 27 0 -  # Raincaster Drape -- - / Mastery; green; ilvl 58 kept (target 55); no primary (jewelry/cloak)
+12111 58 2 58 22 28 8000 -  # Lavaplate Gauntlets -- Str / Vers; green; ilvl 58 kept (target 55)
+12112 56 2 56 23 72 8000 -  # Crypt Demon Bracers -- Agi / CDH; green; ilvl 56 kept (target 55)
+12113 56 2 56 0 73 0 -  # Sunborne Cape -- - / Proc; green; ilvl 56 kept (target 55); no primary (jewelry/cloak)
+12114 56 2 56 12 25 8000 -  # Nightfall Gloves -- Str+AP / Crit; green; ilvl 56 kept (target 55)
+12115 56 2 56 22 55 8000 -  # Stalwart Clutch -- Str / Parry; green; ilvl 56 kept (target 55); Defense->Parry; tank
+#   Parry; FB no stock primary: type Str (plate)
+12185 60 2 60 24 73 8000 all  # Bloodsail Admiral's Hat -- Int / Proc; green; ilvl 60 kept (target 55); keeps spell 1,2;
+#   FB no stock primary: type Int (cloth)
+12295 15 2 20 4 26 8000 -  # Leggings of the People's Militia -- Spi+SP / Haste; green; ilvl 15->20
+12296 17 2 22 24 27 8000 -  # Spark of the People's Militia -- Int / Mastery; green; ilvl 17->22; FB no stock primary:
+#   type Int (wand)
+12299 7 2 9 24 73 4000 -  # Netted Gloves -- Int / Proc; white->green; ilvl 8->9; type Int (cloth); round 8 step-down
+#   (ruling 37): share 8000->4000 so Proc is at least 1
+12344 60 3 61 0 66 0 all  # Seal of Ascension -- - / Crit+Proc; blue; ilvl 61 kept (target 60); no primary
+#   (jewelry/cloak); keeps spell 1,2
+12522 15 2 20 20 25 8000 -  # Bingles' Flying Gloves -- Agi+Int+SP / Crit; green; ilvl 15->20
+12543 59 3 60 0 67 0 -  # Songstone of Ironforge -- - / Mastery+Vers; blue; ilvl 60 kept (target 60); no primary
+#   (jewelry/cloak)
+12544 60 3 60 0 74 0 -  # Thrall's Resolve -- - / CDH+Vers; blue; ilvl 60 kept (target 60); no primary (jewelry/cloak)
+12545 60 3 60 0 75 0 -  # Eye of Orgrimmar -- - / Mastery+Proc; blue; ilvl 60 kept (target 60); no primary
+#   (jewelry/cloak)
+12548 59 3 60 0 31 0 -  # Magni's Will -- - / Crit+Mastery; blue; ilvl 60 kept (target 60); no primary (jewelry/cloak)
+12631 60 3 60 22 65 6000 all  # Fiery Plate Gauntlets -- Str / Haste+CDH; blue; ilvl 58->60; keeps spell 1; FB no stock
+#   primary: type Str (plate)
+12752 60 4 62 24 31 6000 -  # Cap of the Scarlet Savant -- Int / Crit+Mastery; epic; ilvl 62 kept (epic)
+12756 60 4 62 9 35 6000 -  # Leggings of Arcana -- Spi+Int+SP / Haste+Vers; epic; ilvl 62 kept (epic)
+12757 60 4 62 23 58 6000 -  # Breastplate of Bloodthirst -- Agi / Dodge+Haste; designer 2026-11-09 (round 6, ruling 29):
+#   Agility instead of Strength (was Str / Dodge+Haste share 6000)
+12846 55 2 55 0 25 0 all  # Argent Dawn Commission -- - / Crit; white->green; ilvl 1->55; no primary (trinket, ruling
+#   22); keeps spell 1
+12895 60 4 62 12 67 6000 -  # Breastplate of the Chromatic Flight -- Str+AP / Mastery+Vers; epic; ilvl 62 kept (epic)
+12903 60 4 62 23 32 6000 -  # Legguards of the Chromatic Defier -- Agi / Crit+Vers; epic; ilvl 62 kept (epic)
+12945 60 4 62 9 67 6000 -  # Legplates of the Chromatic Defier -- Spi+Int+SP / Mastery+Vers; epic; ilvl 62 kept (epic)
+13171 60 2 61 0 26 0 all  # Smokey's Lighter -- - / Haste; green; ilvl 61 kept (target 55); no primary (trinket, ruling
+#   22); keeps spell 1
+13209 60 3 61 0 67 0 all  # Seal of the Dawn -- - / Mastery+Vers; blue; ilvl 61 kept (target 60); no primary (trinket,
+#   ruling 22); keeps spell 1,2
+13216 60 2 61 24 72 8000 -  # Crown of the Penitent -- Int / CDH; green; ilvl 61 kept (target 55); FB MP5 lost: blues
+#   only (green)
+13217 60 2 61 0 73 0 -  # Band of the Penitent -- - / Proc; green; ilvl 61 kept (target 55); no primary (jewelry/cloak)
+13243 60 3 62 22 65 6000 all  # Argent Defender -- Str / Haste+CDH; blue; ilvl 62 kept (target 60); keeps spell 1; FB no
+#   stock primary: type Str (shield)
+13246 60 3 62 22 74 6000 all  # Argent Avenger -- Str / CDH+Vers; blue; ilvl 62 kept (target 60); keeps spell 1; FB no
+#   stock primary: type Str (one-handed sword, even entry)
+13249 60 3 62 8 30 6000 -  # Argent Crusader -- Int+Spi+SP / Crit+Mastery; blue; ilvl 62 kept (target 60)
+13315 60 2 61 71 26 8000 all  # Testament of Hope -- Spi / Haste; green; ilvl 61 kept (target 55); keeps spell 1
+13473 54 2 55 0 28 0 -  # Felstone Good Luck Charm -- - / Vers; green; ilvl 54->55; no primary (jewelry/cloak)
+13474 55 2 56 23 72 8000 -  # Farmer Dalson's Shotgun -- Agi / CDH; green; ilvl 56 kept (target 55); FB no stock
+#   primary: type Agi (gun)
+13475 55 2 55 0 73 0 -  # Dalson Family Wedding Ring -- - / Proc; green; ilvl 55 kept (target 55); no primary
+#   (jewelry/cloak)
+13544 60 2 60 0 27 0 all  # Spectral Essence -- - / Mastery; green; ilvl 60 kept (target 55); no primary (trinket,
+#   ruling 22); keeps spell 1
+13811 60 2 60 0 73 0 -  # Necklace of the Dawn -- - / Proc; green; ilvl 60 kept (target 55); no primary (jewelry/cloak)
+13812 58 2 58 0 25 0 -  # Ring of the Dawn -- - / Crit; green; ilvl 58 kept (target 55); no primary (jewelry/cloak)
+13958 60 3 60 9 37 6000 -  # Wyrmthalak's Shackles -- Spi+Int+SP / Crit+CDH; blue; ilvl 60 kept (target 60)
+13959 60 3 60 22 38 6000 -  # Omokk's Girth Restrainer -- Str / Haste+CDH; blue; ilvl 60 kept (target 60)
+13961 60 3 60 24 40 6000 -  # Halycon's Muzzle -- Int / Haste+Proc; blue; ilvl 60 kept (target 60)
+13962 60 3 60 22 59 6000 -  # Vosh'gajin's Strand -- Str / Dodge+Mastery; blue; ilvl 60 kept (target 60); tank Dodge
+13963 60 3 60 23 65 6000 -  # Voone's Vice Grips -- Agi / Haste+CDH; blue; ilvl 60 kept (target 60)
+13982 60 3 63 22 66 6000 -  # Warblade of Caer Darrow -- Str / Crit+Proc; blue; ilvl 63 kept (target 60); FB no stock
+#   primary: type Str (two-handed sword)
+13984 60 3 63 23 74 6000 all  # Darrowspike -- Agi / CDH+Vers; blue; ilvl 63 kept (target 60); keeps spell 1; FB no
+#   stock primary: type Agi (dagger)
+13986 60 3 63 8 29 6000 -  # Crown of Caer Darrow -- Int+Spi+SP / Crit+Haste; blue; ilvl 63 kept (target 60)
+14002 60 3 63 71 74 6000 -  # Darrowshire Strongguard -- Spi / CDH+Vers; blue; ilvl 63 kept (target 60)
+14022 60 3 62 0 29 0 all  # Barov Peasant Caller -- - / Crit+Haste; blue; ilvl 62 kept (target 60); no primary (trinket,
+#   ruling 22); keeps spell 1
+14023 60 3 62 0 29 0 all  # Barov Peasant Caller -- - / Crit+Haste; blue; ilvl 62 kept (target 60); no primary (trinket,
+#   ruling 22); keeps spell 1; round 6: as 14022, same name and quest (ruling 28)
+15104 39 3 44 9 31 6000 -  # Wingborne Boots -- Spi+Int+SP / Crit+Mastery; blue; ilvl 39->44
+15105 40 2 45 2 28 8000 -  # Staff of Noh'Orahil -- SP+Int / Vers; green; ilvl 40->45
+15106 40 2 45 2 72 8000 -  # Staff of Dar'Orahil -- SP+Int / CDH; green; ilvl 40->45
+15107 40 3 45 2 34 6000 all  # Orb of Noh'Orahil -- SP+Int / Haste+Mastery; blue; ilvl 40->45; keeps spell 2
+15108 40 3 45 2 35 6000 all  # Orb of Dar'Orahil -- SP+Int / Haste+Vers; blue; ilvl 40->45; keeps spell 2
+15109 25 2 30 81 26 8000 -  # Staff of Soran'ruk -- SP / Haste; green; ilvl 25->30; round 7: Spell Power (Solo) (ruling
+#   33) (was SP+Int / Haste share 8000)
+15202 18 2 23 15 72 8000 -  # Wildkeeper Leggings -- Agi+AP / CDH; green; ilvl 18->23
+15203 18 2 23 22 73 8000 -  # Guststorm Legguards -- Str / Proc; green; ilvl 18->23
+15204 18 2 23 24 25 8000 -  # Moonstone Wand -- Int / Crit; green; ilvl 18->23; FB no stock primary: type Int (wand)
+15205 20 2 25 23 26 8000 -  # Owlsight Rifle -- Agi / Haste; green; ilvl 20->25; FB no stock primary: type Agi (gun)
+15206 20 2 25 71 27 8000 -  # Jadefinger Baton -- Spi / Mastery; green; ilvl 20->25
+15207 20 2 25 22 28 8000 -  # Steelcap Shield -- Str / Vers; green; ilvl 20->25
+15335 14 2 19 23 73 6000 -  # Briarsteel Shortsword -- Agi / Proc; green; ilvl 14->19; FB no stock primary: type Agi
+#   (one-handed sword, odd entry); round 6 step-down: share 8000->6000 so Proc is at least 1
+15396 14 2 19 23 25 6000 -  # Curvewood Dagger -- Agi / Crit; green; ilvl 14->19; FB no stock primary: type Agi
+#   (dagger); round 6 step-down: share 8000->6000 so Crit is at least 1
+15397 14 2 19 24 26 8000 -  # Oakthrush Staff -- Int / Haste; green; ilvl 14->19
+15398 14 2 16 24 27 8000 -  # Sandcomber Boots -- Int / Mastery; white->green; ilvl 14->16; type Int (cloth)
+15399 14 2 19 24 28 8000 -  # Dryweed Belt -- Int / Vers; green; ilvl 14->19
+15400 14 2 16 23 72 6000 -  # Clamshell Bracers -- Agi / CDH; white->green; ilvl 14->16; type Agi (mail, even entry);
+#   round 6 step-down: share 8000->6000 so CDH is at least 1
+15401 17 2 19 24 73 8000 -  # Welldrip Gloves -- Int / Proc; white->green; ilvl 14->19; type Int (cloth)
+15402 17 2 19 23 25 8000 -  # Noosegrip Gauntlets -- Agi / Crit; white->green; ilvl 14->19; type Agi (mail, even entry)
+15403 18 2 23 71 26 8000 -  # Ridgeback Bracers -- Spi / Haste; green; ilvl 18->23
+15404 18 2 23 23 27 8000 -  # Breakwater Girdle -- Agi / Mastery; green; ilvl 18->23
+15405 17 2 22 24 28 8000 -  # Shucking Gloves -- Int / Vers; green; ilvl 17->22
+15406 17 2 22 23 72 8000 -  # Crustacean Boots -- Agi / CDH; green; ilvl 17->22; FB no stock primary: type Agi (mail,
+#   even entry)
+15411 60 3 63 0 32 0 -  # Mark of Fordring -- - / Crit+Vers; blue; ilvl 63 kept (target 60); no primary (jewelry/cloak)
+15413 60 3 63 22 77 6000 -  # Ornate Adamantium Breastplate -- Str / Parry+Proc; blue; ilvl 63 kept (target 60);
+#   Defense->Parry; tank Parry; FB no stock primary: type Str (plate)
+15418 60 3 63 22 39 6000 all  # Shimmering Platinum Warhammer -- Str / Crit+Proc; blue; ilvl 63 kept (target 60); keeps
+#   spell 1; FB no stock primary: type Str (two-handed mace)
+15421 60 3 63 0 65 0 -  # Shroud of the Exile -- - / Haste+CDH; blue; ilvl 63 kept (target 60); no primary
+#   (jewelry/cloak)
+15424 16 2 21 22 72 8000 -  # Axe of Orgrimmar -- Str / CDH; green; ilvl 18->21
+15443 16 2 21 71 73 8000 -  # Kris of Orgrimmar -- Spi / Proc; green; ilvl 18->21
+15444 16 2 21 8 25 8000 -  # Staff of Orgrimmar -- Int+Spi+SP / Crit; green; ilvl 18->21
+15445 16 2 21 22 26 6000 -  # Hammer of Orgrimmar -- Str / Haste; green; ilvl 18->21; round 6 step-down: share
+#   8000->6000 so Haste is at least 1
+15449 16 2 21 24 73 8000 -  # Ghastly Trousers -- Int / Proc; green; ilvl 18->21
+15450 16 2 21 6 25 8000 -  # Dredgemire Leggings -- Spi+SP / Crit; green; ilvl 18->21
+15451 16 2 21 12 26 8000 -  # Gargoyle Leggings -- Str+AP / Haste; green; ilvl 18->21
+15452 16 2 21 24 27 8000 -  # Featherbead Bracers -- Int / Mastery; green; ilvl 18->21
+15453 16 2 21 23 28 8000 -  # Savannah Bracers -- Agi / Vers; green; ilvl 18->21; FB no stock primary: type Agi
+#   (leather)
+15455 37 2 42 24 73 8000 -  # Dustfall Robes -- Int / Proc; green; ilvl 37->42
+15456 37 2 42 23 25 8000 -  # Lightstep Leggings -- Agi / Crit; green; ilvl 37->42
+15457 28 2 33 8 26 8000 -  # Desert Shoulders -- Int+Spi+SP / Haste; green; ilvl 28->33
+15458 28 2 33 8 27 8000 -  # Tundra Boots -- Int+Spi+SP / Mastery; green; ilvl 28->33
+15459 28 2 33 22 28 8000 -  # Grimtoll Wristguards -- Str / Vers; green; ilvl 28->33
+15461 28 2 33 8 73 8000 -  # Lightheel Boots -- Int+Spi+SP / Proc; green; ilvl 25->33
+15462 28 2 33 23 25 8000 -  # Loamflake Bracers -- Agi / Crit; green; ilvl 25->33
+15463 28 2 33 22 26 8000 -  # Palestrider Gloves -- Str / Haste; green; ilvl 25->33
+15464 28 2 33 22 27 8000 -  # Brute Hammer -- Str / Mastery; green; ilvl 28->33
+15465 28 2 33 24 28 8000 -  # Stingshot Wand -- Int / Vers; green; ilvl 28->33; FB no stock primary: type Int (wand)
+15466 28 2 33 12 72 8000 -  # Clink Shield -- Str+AP / CDH; green; ilvl 28->33
+15467 30 2 35 0 73 0 -  # Inventor's League Ring -- - / Proc; green; ilvl 31->35; no primary (jewelry/cloak)
+15468 29 2 34 0 25 0 -  # Windsong Drape -- - / Crit; green; ilvl 29->34; no primary (jewelry/cloak)
+15469 29 2 34 82 26 8000 -  # Windsong Cinch -- AP / Haste; green; ilvl 29->34; round 7: Attack Power (Solo) (ruling 33)
+#   (was AP+Str / Haste share 8000)
+15470 29 2 34 22 27 8000 -  # Plainsguard Leggings -- Str / Mastery; green; ilvl 29->34
+15471 29 2 34 15 28 8000 -  # Brawnhide Armor -- Agi+AP / Vers; green; ilvl 29->34
+15585 35 2 40 71 28 8000 -  # Pardoc Grips -- Spi / Vers; green; ilvl 35->40
+15587 35 2 40 82 73 8000 -  # Ringtail Girdle -- AP / Proc; green; ilvl 35->40; round 7: Attack Power (Solo) (ruling 33)
+#   (was AP+Str / Proc share 8000)
+15588 35 2 40 12 25 8000 -  # Bracesteel Belt -- Str+AP / Crit; green; ilvl 35->40
+15689 35 2 40 0 73 0 -  # Trader's Ring -- - / Proc; green; ilvl 35->40; no primary (jewelry/cloak)
+15690 32 2 41 0 25 0 -  # Kodobone Necklace -- - / Crit; green; ilvl 41 kept (target 37); no primary (jewelry/cloak)
+15691 38 2 43 23 26 8000 -  # Sidegunner Shottie -- Agi / Haste; green; ilvl 38->43; FB no stock primary: type Agi (gun)
+15692 38 2 43 24 27 8000 -  # Kodo Brander -- Int / Mastery; green; ilvl 38->43; FB no stock primary: type Int (wand)
+15695 38 2 43 22 73 8000 -  # Studded Ring Shield -- Str / Proc; green; ilvl 38->43
+15697 34 2 39 8 26 8000 -  # Kodo Rustler Boots -- Int+Spi+SP / Haste; green; ilvl 38->39
+15698 34 2 39 22 27 8000 -  # Wrangling Spaulders -- Str / Mastery; green; ilvl 38->39
+15702 55 2 55 0 25 0 -  # Chemist's Ring -- - / Crit; green; ilvl 55 kept (target 55); no primary (jewelry/cloak)
+15703 55 2 55 0 26 0 -  # Chemist's Smock -- - / Haste; green; ilvl 55 kept (target 55); no primary (jewelry/cloak)
+15704 60 2 60 0 27 0 -  # Hunter's Insignia Medal -- - / Mastery; green; ilvl 60 kept (target 55); no primary
+#   (jewelry/cloak)
+15705 57 2 57 12 28 8000 -  # Tidecrest Blade -- Str+AP / Vers; green; ilvl 57 kept (target 55)
+15706 57 2 57 15 72 8000 -  # Hunt Tracker Blade -- Agi+AP / CDH; green; ilvl 57 kept (target 55)
+15707 58 2 58 7 73 8000 -  # Brantwood Sash -- Int+Spi+SP / Proc; green; ilvl 58 kept (target 55)
+15708 58 2 58 15 25 8000 -  # Blight Leather Gloves -- Agi+AP / Crit; green; ilvl 58 kept (target 55)
+15709 58 2 58 22 26 8000 -  # Gearforge Girdle -- Str / Haste; green; ilvl 58 kept (target 55)
+15782 60 2 60 22 27 8000 all  # Beaststalker Blade -- Str / Mastery; green; ilvl 60 kept (target 55); keeps spell 1; FB
+#   no stock primary: type Str (one-handed sword, even entry)
+15783 60 2 60 23 28 8000 all  # Beasthunter Dagger -- Agi / Vers; green; ilvl 60 kept (target 55); keeps spell 1; FB no
+#   stock primary: type Agi (dagger)
+15784 59 2 59 71 72 8000 -  # Crystal Breeze Mantle -- Spi / CDH; green; ilvl 59 kept (target 55)
+15786 59 2 59 9 25 8000 -  # Fernpulse Jerkin -- Spi+Int+SP / Crit; green; ilvl 59 kept (target 55)
+15787 59 2 59 23 26 8000 -  # Willow Band Hauberk -- Agi / Haste; green; ilvl 59 kept (target 55)
+15789 56 2 56 0 28 0 -  # Deep River Cloak -- - / Vers; green; ilvl 56 kept (target 55); no primary (jewelry/cloak)
+15791 58 2 58 8 73 8000 -  # Turquoise Sash -- Int+Spi+SP / Proc; green; ilvl 58 kept (target 55)
+15792 58 2 58 8 25 8000 -  # Plow Wood Spaulders -- Int+Spi+SP / Crit; green; ilvl 58 kept (target 55)
+15795 58 2 58 22 28 8000 -  # Emerald Mist Gauntlets -- Str / Vers; green; ilvl 58 kept (target 55)
+15796 59 2 59 24 72 8000 -  # Seaspray Bracers -- Int / CDH; green; ilvl 59 kept (target 55)
+15797 59 2 59 22 73 8000 -  # Shining Armplates -- Str / Proc; green; ilvl 59 kept (target 55)
+15799 58 3 60 0 65 0 -  # Heroic Commendation Medal -- - / Haste+CDH; blue; ilvl 58->60; no primary (jewelry/cloak)
+15800 58 3 60 82 66 6000 -  # Intrepid Shortsword -- AP / Crit+Proc; blue; ilvl 58->60; round 7: Attack Power (Solo)
+#   (ruling 33) (was AP+Str / Crit+Proc share 6000)
+15801 58 3 60 81 67 6000 -  # Valiant Shortsword -- SP / Mastery+Vers; blue; ilvl 58->60; round 7: Spell Power (Solo)
+#   (ruling 33) (was SP+Int / Mastery+Vers share 6000)
+15804 56 2 56 0 25 0 -  # Cerise Drape -- - / Crit; green; ilvl 56 kept (target 55); no primary (jewelry/cloak)
+15805 60 3 61 8 30 6000 -  # Penelope's Rose -- Int+Spi+SP / Crit+Mastery; blue; ilvl 61 kept (target 60)
+15806 60 3 61 12 31 6000 -  # Mirah's Song -- Str+AP / Crit+Mastery; blue; ilvl 61 kept (target 60)
+15812 56 2 56 3 27 8000 -  # Orchid Amice -- Int+SP / Mastery; green; ilvl 56 kept (target 55)
+15813 56 2 56 24 28 8000 -  # Gold Link Belt -- Int / Vers; green; ilvl 56 kept (target 55)
+15814 60 2 60 22 72 8000 all  # Hameya's Slayer -- Str / CDH; green; ilvl 60 kept (target 55); keeps spell 1; FB no
+#   stock primary: type Str (one-handed sword, even entry)
+15815 60 2 60 0 73 0 -  # Hameya's Cloak -- - / Proc; green; ilvl 60 kept (target 55); no primary (jewelry/cloak)
+15822 55 2 55 23 25 8000 -  # Shadowskin Spaulders -- Agi / Crit; green; ilvl 55 kept (target 55)
+15823 55 2 55 22 26 8000 -  # Bricksteel Gauntlets -- Str / Haste; green; ilvl 55 kept (target 55)
+15824 59 2 59 8 27 8000 -  # Astoria Robes -- Int+Spi+SP / Mastery; green; ilvl 59 kept (target 55)
+15825 59 2 59 23 28 8000 -  # Traphook Jerkin -- Agi / Vers; green; ilvl 59 kept (target 55)
+15827 59 2 59 71 73 8000 -  # Jadescale Breastplate -- Spi / Proc; green; ilvl 59 kept (target 55)
+15853 60 3 60 22 65 6000 all  # Windreaper -- Str / Haste+CDH; blue; ilvl 60 kept (target 60); keeps spell 1; FB no
+#   stock primary: type Str (one-handed axe)
+15854 60 3 60 9 66 6000 -  # Dancing Sliver -- Spi+Int+SP / Crit+Proc; blue; ilvl 60 kept (target 60)
+15855 60 3 60 0 67 0 -  # Ring of Protection -- - / Mastery+Vers; blue; ilvl 60 kept (target 60); no primary
+#   (jewelry/cloak)
+15856 60 3 60 0 74 0 -  # Archlight Talisman -- - / CDH+Vers; blue; ilvl 60 kept (target 60); no primary (jewelry/cloak)
+15857 60 3 60 24 75 6000 -  # Magebane Scion -- Int / Mastery+Proc; blue; ilvl 60 kept (target 60); type Int (held in
+#   off-hand, ruling 25)
+15858 59 2 59 71 25 8000 -  # Freewind Gloves -- Spi / Crit; green; ilvl 59 kept (target 55)
+15859 59 2 59 9 26 8000 -  # Seapost Girdle -- Spi+Int+SP / Haste; green; ilvl 59 kept (target 55)
+15862 54 2 55 82 72 8000 -  # Blitzcleaver -- AP / CDH; green; ilvl 54->55; round 7: Attack Power (Solo) (ruling 33)
+#   (was AP+Str / CDH share 8000)
+15863 54 2 55 8 73 8000 -  # Grave Scepter -- Int+Spi+SP / Proc; green; ilvl 54->55
+15864 39 2 44 71 25 8000 -  # Condor Bracers -- Spi / Crit; green; ilvl 39->44
+15865 39 2 44 8 26 8000 -  # Anchorhold Buckler -- Int+Spi+SP / Haste; green; ilvl 39->44
+15866 14 2 19 8 27 6000 all  # Veildust Medicine Bag -- Int+Spi+SP / Mastery; green; ilvl 15->19; keeps spell 1; round 6
+#   step-down: share 8000->6000 so Mastery is at least 1
+15867 60 2 60 0 28 0 all  # Prismcharm -- - / Vers; green; ilvl 60 kept (target 55); no primary (trinket, ruling 22);
+#   keeps spell 1
+15873 60 3 60 0 67 0 all  # Ragged John's Neverending Cup -- - / Mastery+Vers; blue; ilvl 60 kept (target 60); no
+#   primary (trinket, ruling 22); keeps spell 1
+16058 60 3 63 0 31 0 -  # Fordring's Seal -- - / Crit+Mastery; blue; ilvl 63 kept (target 60); no primary
+#   (jewelry/cloak)
+16604 4 2 9 71 27 4000 -  # Moon Robes of Elune -- Spi / Mastery; green; ilvl 5->9; round 8 step-down (ruling 37): share
+#   8000->4000 so Mastery is at least 1
+16605 4 2 9 71 28 4000 -  # Friar's Robes of the Light -- Spi / Vers; green; ilvl 5->9; round 8 step-down (ruling 37):
+#   share 8000->4000 so Vers is at least 1
+16606 4 2 9 71 72 4000 -  # Juju Hex Robes -- Spi / CDH; green; ilvl 5->9; round 8 step-down (ruling 37): share
+#   8000->4000 so CDH is at least 1
+16607 4 2 9 71 73 4000 -  # Acolyte's Sacrificial Robes -- Spi / Proc; green; ilvl 5->9; round 8 step-down (ruling 37):
+#   share 8000->4000 so Proc is at least 1
+16608 16 3 21 0 29 0 all  # Aquarius Belt -- - / Crit+Haste; designer 2026-11-09 (round 6, ruling 29): no Agility: no
+#   primary, Crit and Haste only (was Agi / Crit+Haste share 6000); designer 2026-11-09 (round 7, ruling 36): even
+#   Crit/Haste (was Crit/Haste, Crit lead)
+16622 57 2 57 23 27 8000 -  # Thornflinger -- Agi / Mastery; green; ilvl 57 kept (target 55); FB no stock primary: type
+#   Agi (bow)
+16623 57 2 57 0 28 0 -  # Opaline Medallion -- - / Vers; green; ilvl 57 kept (target 55); no primary (jewelry/cloak)
+16658 30 2 35 0 27 0 all  # Wildhunter Cloak -- - / Mastery; green; ilvl 32->35; no primary (jewelry/cloak); keeps spell
+#   1
+16659 27 2 32 14 28 8000 -  # Deftkin Belt -- AP+Agi / Vers; green; ilvl 27->32
+16660 27 2 32 18 72 8000 -  # Driftmire Shield -- Int+Str+SP / CDH; green; ilvl 27->32
+16661 27 2 32 0 73 0 -  # Soft Willow Cape -- - / Proc; green; ilvl 27->32; no primary (jewelry/cloak)
+16738 49 2 54 71 72 8000 -  # Witherseed Gloves -- Spi / CDH; green; ilvl 48->54
+16739 49 2 54 8 73 8000 -  # Rugwood Mantle -- Int+Spi+SP / Proc; green; ilvl 48->54
+16740 30 2 35 3 25 8000 -  # Shredder Operating Gloves -- Int+SP / Crit; green; ilvl 31->35
+16741 30 2 35 71 26 8000 -  # Oilrag Handwraps -- Spi / Haste; green; ilvl 31->35
+16788 36 2 41 22 25 8000 -  # Captain Rackmore's Wheel -- Str / Crit; green; ilvl 36->41; FB no stock primary: type Str
+#   (shield)
+16789 36 2 41 24 26 8000 -  # Captain Rackmore's Tiller -- Int / Haste; green; ilvl 36->41; FB no stock primary: type
+#   Int (wand)
+16791 38 2 43 8 28 8000 -  # Silkstream Cuffs -- Int+Spi+SP / Vers; green; ilvl 38->43
+16793 38 2 43 23 73 8000 -  # Arcmetal Shoulders -- Agi / Proc; green; ilvl 38->43
+16794 38 2 43 12 25 8000 -  # Gripsteel Wristguards -- Str+AP / Crit; green; ilvl 38->43
+16873 38 2 43 8 26 8000 -  # Braidfur Gloves -- Int+Spi+SP / Haste; green; ilvl 38->43
+16889 24 2 29 24 73 8000 -  # Polished Walking Staff -- Int / Proc; green; ilvl 24->29
+16890 24 2 29 12 25 8000 -  # Slatemetal Cutlass -- Str+AP / Crit; green; ilvl 24->29
+16891 21 2 26 23 26 8000 -  # Claystone Shortsword -- Agi / Haste; green; ilvl 21->26; FB no stock primary: type Agi
+#   (one-handed sword, odd entry)
+16894 21 2 26 24 72 8000 -  # Clear Crystal Rod -- Int / CDH; green; ilvl 21->26
+16975 27 3 32 24 30 6000 -  # Warsong Sash -- Int / Crit+Mastery; blue; ilvl 27->32
+16977 27 3 32 23 32 6000 -  # Warsong Boots -- Agi / Crit+Vers; blue; ilvl 27->32
+16978 27 3 32 22 33 6000 -  # Warsong Gauntlets -- Str / Haste+Mastery; blue; ilvl 27->32
+16981 20 2 25 8 26 8000 -  # Owlbeard Bracers -- Int+Spi+SP / Haste; green; ilvl 20->25
+16985 25 2 30 71 73 8000 -  # Windseeker Boots -- Spi / Proc; green; ilvl 25->30
+16986 25 2 30 22 25 8000 -  # Sandspire Gloves -- Str / Crit; green; ilvl 25->30
+16987 26 2 31 8 26 8000 -  # Screecher Belt -- Int+Spi+SP / Haste; green; ilvl 27->31
+16990 26 2 31 0 72 0 -  # Spritekin Cloak -- - / CDH; green; ilvl 27->31; no primary (jewelry/cloak)
+16992 58 2 60 23 25 8000 -  # Smokey's Explosive Launcher -- Agi / Crit; green; ilvl 60 kept (target 55); FB no stock
+#   primary: type Agi (gun)
+16993 58 2 60 24 26 8000 -  # Smokey's Fireshooter -- Int / Haste; green; ilvl 60 kept (target 55); FB no stock primary:
+#   type Int (wand)
+16994 60 2 60 8 27 8000 -  # Duskwing Gloves -- Int+Spi+SP / Mastery; green; ilvl 60 kept (target 55)
+16995 60 2 60 23 28 8000 -  # Duskwing Mantle -- Agi / Vers; green; ilvl 60 kept (target 55)
+17001 60 2 62 0 28 0 -  # Elemental Circle -- - / Vers; green; ilvl 62 kept (target 55); no primary (jewelry/cloak)
+17002 60 2 61 22 72 8000 all  # Ichor Spitter -- Str / CDH; green; ilvl 61 kept (target 55); keeps spell 1; FB no stock
+#   primary: type Str (one-handed axe)
+17003 60 2 61 8 73 8000 -  # Skullstone Hammer -- Int+Spi+SP / Proc; green; ilvl 61 kept (target 55)
+17004 60 2 61 24 25 8000 -  # Sarah's Guide -- Int / Crit; green; ilvl 61 kept (target 55)
+17005 26 2 31 23 26 8000 -  # Boorguard Tunic -- Agi / Haste; green; ilvl 27->31
+17006 26 2 31 12 27 8000 -  # Cobalt Legguards -- Str+AP / Mastery; green; ilvl 27->31
+17039 36 2 41 24 73 8000 -  # Skullbreaker -- Int / Proc; green; ilvl 36->41
+17042 36 2 41 23 27 8000 -  # Nail Spitter -- Agi / Mastery; green; ilvl 36->41; FB no stock primary: type Agi (gun)
+17043 36 2 41 8 28 8000 -  # Zealot's Robe -- Int+Spi+SP / Vers; green; ilvl 36->41
+17044 60 3 61 0 74 0 -  # Will of the Martyr -- - / CDH+Vers; blue; ilvl 61 kept (target 60); no primary (jewelry/cloak)
+17045 60 3 61 0 75 0 -  # Blood of the Martyr -- - / Mastery+Proc; blue; ilvl 61 kept (target 60); no primary
+#   (jewelry/cloak)
+17046 30 2 35 22 25 8000 -  # Gutterblade -- Str / Crit; green; ilvl 31->35
+17047 30 2 35 8 26 8000 -  # Luminescent Amice -- Int+Spi+SP / Haste; green; ilvl 30->35
+17191 49 3 54 7 30 6000 -  # Scepter of Celebras -- Int+Spi+SP / Crit+Mastery; blue; ilvl 53->54
+17508 38 2 43 71 25 8000 -  # Forcestone Buckler -- Spi / Crit; green; ilvl 41->43
+17523 58 2 58 0 28 0 -  # Smokey's Drape -- - / Vers; green; ilvl 58 kept (target 55); no primary (jewelry/cloak)
+17686 43 2 48 23 72 8000 -  # Master Hunter's Bow -- Agi / CDH; green; ilvl 43->48; FB no stock primary: type Agi (bow)
+17687 43 2 48 23 73 8000 -  # Master Hunter's Rifle -- Agi / Proc; green; ilvl 43->48; FB no stock primary: type Agi
+#   (gun)
+17688 40 2 45 22 25 8000 -  # Jungle Boots -- Str / Crit; green; ilvl 40->45
+17692 23 2 28 0 72 0 -  # Horn Ring -- - / CDH; green; ilvl 23->28; no primary (jewelry/cloak)
+17694 26 2 31 0 25 0 -  # Band of the Fist -- - / Crit; green; ilvl 25->31; no primary (jewelry/cloak)
+17695 26 2 31 24 26 8000 -  # Chestnut Mantle -- Int / Haste; green; ilvl 26->31
+17705 51 3 56 23 40 6000 all  # Thrash Blade -- Agi / Haste+Proc; blue; ilvl 53->56; keeps spell 1; FB no stock primary:
+#   type Agi (one-handed sword, odd entry)
+17743 51 3 56 24 49 6000 2  # Resurgence Rod -- Int / MP5+Haste; blue; ilvl 53->56; MP5 kept; keeps spell 2; FB no stock
+#   primary: type Int (staff)
+17753 51 3 56 23 34 6000 all  # Verdant Keeper's Aim -- Agi / Haste+Mastery; blue; ilvl 53->56; keeps spell 1; FB no
+#   stock primary: type Agi (bow)
+17759 60 3 60 0 40 0 all  # Mark of Resolution -- - / Haste+Proc; blue; ilvl 60 kept (target 60); no primary (trinket,
+#   ruling 22); keeps spell 1,2
+17768 47 2 52 0 27 0 -  # Woodseed Hoop -- - / Mastery; green; ilvl 47->52; no primary (jewelry/cloak)
+17770 47 2 52 22 72 8000 all  # Branchclaw Gauntlets -- Str / CDH; green; ilvl 47->52; keeps spell 1
+17772 42 2 47 0 25 0 -  # Zealous Shadowshard Pendant -- - / Crit; green; ilvl 42->47; no primary (jewelry/cloak)
+17773 42 2 47 0 26 0 -  # Prodigious Shadowshard Pendant -- - / Haste; green; ilvl 42->47; no primary (jewelry/cloak)
+17774 48 2 53 0 27 0 all  # Mark of the Chosen -- - / Mastery; green; ilvl 48->53; no primary (trinket, ruling 22);
+#   keeps spell 1
+17775 47 2 52 24 28 8000 -  # Acumen Robes -- Int / Vers; green; ilvl 47->52
+17776 47 2 52 23 72 8000 -  # Sprightring Helm -- Agi / CDH; green; ilvl 47->52
+17777 47 2 52 3 73 8000 -  # Relentless Chain -- Int+SP / Proc; green; ilvl 47->52
+17778 47 2 52 23 25 8000 -  # Sagebrush Girdle -- Agi / Crit; green; ilvl 47->52
+17779 47 2 52 22 26 8000 -  # Hulkstone Pauldrons -- Str / Haste; green; ilvl 47->52
+18022 60 3 62 0 33 0 -  # Royal Seal of Alexis -- - / Haste+Mastery; blue; ilvl 62 kept (target 60); no primary
+#   (jewelry/cloak)
+18366 60 3 60 12 35 6000 -  # Gordok's Handguards -- Str+AP / Haste+Vers; blue; ilvl 60 kept (target 60)
+18367 60 3 60 8 36 6000 -  # Gordok's Gauntlets -- Int+Spi+SP / Mastery+Vers; blue; ilvl 60 kept (target 60)
+18368 60 3 60 8 37 6000 -  # Gordok's Gloves -- Int+Spi+SP / Crit+CDH; blue; ilvl 60 kept (target 60)
+18369 60 3 60 8 38 6000 -  # Gordok's Handwraps -- Int+Spi+SP / Haste+CDH; blue; ilvl 60 kept (target 60)
+18398 60 3 63 0 31 0 -  # Tidal Loop -- - / Crit+Mastery; blue; ilvl 63 kept (target 60); no primary (jewelry/cloak)
+18399 60 3 63 0 32 0 -  # Ocean's Breeze -- - / Crit+Vers; blue; ilvl 63 kept (target 60); no primary (jewelry/cloak)
+18400 57 2 57 0 72 0 -  # Ring of Living Stone -- - / CDH; green; ilvl 57 kept (target 55); no primary (jewelry/cloak)
+18402 57 2 57 0 25 0 -  # Glowing Crystal Ring -- - / Crit; green; ilvl 57 kept (target 55); no primary (jewelry/cloak)
+18403 60 4 74 0 32 0 -  # Dragonslayer's Signet -- - / Crit+Vers; epic; ilvl 74 kept (epic); no primary (jewelry/cloak)
+18404 60 4 74 0 33 0 -  # Onyxia Tooth Pendant -- - / Haste+Mastery; epic; ilvl 74 kept (epic); no primary
+#   (jewelry/cloak)
+18406 60 4 74 0 83 0 3  # Onyxia Blood Talisman -- - / Parry+Vers; designer 2026-11-09 (round 6, ruling 29): keep the
+#   Parry: Parry/Versatility (Any), a round 6 shape (was - / Haste+Vers share 0)
+18410 58 2 57 22 27 8000 all  # Sprinter's Sword -- Str / Mastery; green; ilvl 57 kept (target 55); keeps spell 1; FB no
+#   stock primary: type Str (two-handed sword)
+18411 58 2 57 23 54 8000 -  # Spry Boots -- Agi / Dodge; green; ilvl 57 kept (target 55); tank Dodge
+18420 60 3 63 22 35 6000 -  # Bonecrusher -- Str / Haste+Vers; blue; ilvl 63 kept (target 60)
+18421 60 3 63 20 36 6000 -  # Backwood Helm -- Agi+Int+SP / Mastery+Vers; blue; ilvl 63 kept (target 60)
+18424 60 3 63 24 39 6000 -  # Sedge Boots -- Int / Crit+Proc; blue; ilvl 63 kept (target 60)
+18465 60 3 62 0 67 0 -  # Royal Seal of Eldre'Thalas -- - / Mastery+Vers; blue; ilvl 62 kept (target 60); no primary
+#   (trinket, ruling 22)
+18466 60 3 62 0 74 0 all  # Royal Seal of Eldre'Thalas -- - / CDH+Vers; blue; ilvl 62 kept (target 60); no primary
+#   (trinket, ruling 22); keeps spell 1
+18467 60 3 62 81 75 6000 -  # Royal Seal of Eldre'Thalas -- SP / Mastery+Proc; blue; ilvl 62 kept (target 60); round 7:
+#   Spell Power (Solo) (ruling 33) (was SP+Int / Mastery+Proc share 6000)
+18468 60 3 62 0 30 0 -  # Royal Seal of Eldre'Thalas -- - / Crit+Mastery; designer 2026-11-09 (round 6, ruling 29):
+#   Mastery instead of MP5: Crit/Mastery (was - / MP5+Crit share 0)
+18469 60 3 62 2 33 6000 -  # Royal Seal of Eldre'Thalas -- SP+Int / Haste+Mastery; designer 2026-11-09 (round 6, ruling
+#   29): Mastery instead of MP5: Haste/Mastery (was SP+Int / MP5+Haste share 6000)
+18470 60 3 62 81 31 6000 -  # Royal Seal of Eldre'Thalas -- SP / Crit+Mastery; blue; ilvl 62 kept (target 60); round 7:
+#   Spell Power (Solo) (ruling 33) (was SP+Int / Crit+Mastery share 6000)
+18471 60 3 62 81 32 6000 -  # Royal Seal of Eldre'Thalas -- SP / Crit+Vers; blue; ilvl 62 kept (target 60); round 7:
+#   Spell Power (Solo) (ruling 33) (was SP+Int / Crit+Vers share 6000)
+18472 60 3 62 81 33 6000 1  # Royal Seal of Eldre'Thalas -- SP / Haste+Mastery; blue; ilvl 62 kept (target 60); round 7:
+#   Spell Power (Solo) (ruling 33); keeps spell 1 (was SP+Int / Haste+Mastery share 6000)
+18473 60 3 62 82 34 6000 -  # Royal Seal of Eldre'Thalas -- AP / Haste+Mastery; blue; ilvl 62 kept (target 60); round 7:
+#   Attack Power (Solo) (ruling 33) (was AP+Str / Haste+Mastery share 6000)
+18491 57 3 60 8 34 6000 -  # Lorespinner -- Int+Spi+SP / Haste+Mastery; blue; ilvl 57->60; FB MP5 lost: Spirit primary
+#   kept (MP5 forbids Spirit)
+18535 60 3 60 71 65 6000 all  # Milli's Shield -- Spi / Haste+CDH; blue; ilvl 59->60; keeps spell 1
+18536 60 3 60 24 50 6000 -  # Milli's Lexicon -- Int / MP5+Mastery; blue; ilvl 59->60; MP5 kept
+18585 40 3 45 0 38 0 -  # Band of Allegiance -- - / Haste+CDH; blue; ilvl 35->45; no primary (jewelry/cloak)
+18586 40 3 45 0 39 0 -  # Lonetree's Circle -- - / Crit+Proc; blue; ilvl 35->45; no primary (jewelry/cloak)
+18602 60 3 60 24 37 6000 all  # Tome of Sacrifice -- Int / Crit+CDH; blue; ilvl 60 kept (target 60); type Int (held in
+#   off-hand, ruling 25); keeps spell 1
+18762 50 3 55 81 35 6000 -  # Shard of the Green Flame -- SP / Haste+Vers; blue; ilvl 54->55; round 7: Spell Power
+#   (Solo) (ruling 33) (was SP+Int / Haste+Vers share 6000)
+18807 60 3 62 7 67 6000 -  # Helm of Latent Power -- Int+Spi+SP / Mastery+Vers; blue; ilvl 62 kept (target 60)
+18951 50 2 55 0 28 0 all  # Evonice's Landin' Pilla -- - / Vers; green; ilvl 50->55; no primary (trinket, ruling 22);
+#   keeps spell 1
+18957 10 2 15 23 28 4000 -  # Brushwood Blade -- Agi / Vers; green; ilvl 10->15; FB no stock primary: type Agi
+#   (one-handed sword, odd entry); round 8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+19037 48 2 53 12 73 8000 -  # Emerald Peak Spaulders -- Str+AP / Proc; green; ilvl 48->53
+19038 48 2 53 0 25 0 -  # Ring of Subtlety -- - / Crit; green; ilvl 48->53; no primary (jewelry/cloak); FB MP5 lost:
+#   blues only (green)
+19039 48 2 53 8 26 8000 -  # Zorbin's Water Resistant Hat -- Int+Spi+SP / Haste; green; ilvl 48->53
+19040 48 2 53 23 27 8000 -  # Zorbin's Mega-Slicer -- Agi / Mastery; green; ilvl 48->53
+19041 48 2 53 15 28 8000 -  # Pratt's Handcrafted Tunic -- Agi+AP / Vers; green; ilvl 48->53
+19042 48 2 53 15 72 8000 -  # Jangdor's Handcrafted Tunic -- Agi+AP / CDH; green; ilvl 48->53
+19065 59 3 60 0 32 0 -  # Emerald Circle -- - / Crit+Vers; blue; ilvl 59->60; no primary (jewelry/cloak)
+19114 51 2 55 23 72 8000 -  # Highland Bow -- Agi / CDH; green; ilvl 51->55
+19115 51 2 55 1 73 8000 -  # Flask of Forest Mojo -- Int+SP / Proc; green; ilvl 51->55
+19116 50 2 55 1 25 8000 -  # Greenleaf Handwraps -- Int+SP / Crit; green; ilvl 50->55
+19117 50 2 55 22 26 8000 -  # Laquered Wooden Plate Legguards -- Str / Haste; green; ilvl 50->55
+19118 50 2 55 24 27 8000 -  # Nature's Breath -- Int / Mastery; green; ilvl 50->55
+19120 51 2 55 82 72 8000 -  # Rune of the Guard Captain -- AP / CDH; green; ilvl 51->55; round 7: Attack Power (Solo)
+#   (ruling 33) (was AP+Str / CDH share 8000)
+19121 51 3 56 0 34 0 -  # Deep Woodlands Cloak -- - / Haste+Mastery; blue; ilvl 51->56; no primary (jewelry/cloak)
+19123 48 2 53 24 26 8000 -  # Everwarm Handwraps -- Int / Haste; green; ilvl 48->53; FB MP5 lost: blues only (green)
+19124 48 2 53 22 55 8000 -  # Slagplate Leggings -- Str / Parry; green; ilvl 48->53; Defense->Parry; tank Parry
+19125 49 2 54 23 28 8000 -  # Seared Mail Girdle -- Agi / Vers; green; ilvl 49->54
+19126 49 2 54 22 72 8000 -  # Slagplate Gauntlets -- Str / CDH; green; ilvl 49->54
+19127 50 2 55 23 73 8000 -  # Charred Leather Tunic -- Agi / Proc; green; ilvl 50->55
+19128 50 2 55 20 25 8000 -  # Seared Mail Vest -- Agi+Int+SP / Crit; green; ilvl 50->55
+19129 49 2 54 7 26 8000 -  # Everglowing Robe -- Int+Spi+SP / Haste; green; ilvl 49->54
+19141 49 2 54 0 26 0 all  # Luffa -- - / Haste; green; ilvl 50->54; no primary (trinket, ruling 22); keeps spell 1
+19159 51 3 56 0 36 0 -  # Woven Ivy Necklace -- - / Mastery+Vers; blue; ilvl 51->56; no primary (jewelry/cloak)
+19366 60 4 83 81 45 4000 -  # Master Dragonslayer's Orb -- SP / Crit+Mastery+Vers; designer 2026-11-09 (round 6, ruling
+#   29): no Intellect: Spell Power (Solo), a round 6 shape (was SP+Int / Crit+Mastery+Vers share 4000)
+19383 60 4 83 0 67 0 -  # Master Dragonslayer's Medallion -- - / Mastery+Vers; epic; ilvl 83 kept (epic); no primary
+#   (jewelry/cloak); Defense->Dodge; tank Dodge dropped, no Str/Agi (ruling 24): Vers
+19384 60 4 83 0 38 0 -  # Master Dragonslayer's Ring -- - / Haste+CDH; epic; ilvl 83 kept (epic); no primary
+#   (jewelry/cloak)
+19812 60 3 61 0 41 0 all  # Rune of the Dawn -- - / Crit+Haste; blue; ilvl 61 kept (target 60); no primary (trinket,
+#   ruling 22); keeps spell 1,2
+19948 60 4 68 0 74 0 all  # Zandalarian Hero Badge -- - / CDH+Vers; epic; ilvl 68 kept (epic); no primary (trinket,
+#   ruling 22); keeps spell 1
+19949 60 4 68 0 75 0 all  # Zandalarian Hero Medallion -- - / Mastery+Proc; epic; ilvl 68 kept (epic); no primary
+#   (trinket, ruling 22); keeps spell 1
+19950 60 4 68 0 29 0 all  # Zandalarian Hero Charm -- - / Crit+Haste; epic; ilvl 68 kept (epic); no primary (trinket,
+#   ruling 22); keeps spell 1
+19982 52 3 57 0 31 0 -  # Duskbat Drape -- - / Crit+Mastery; blue; ilvl 52->57; no primary (jewelry/cloak)
+19984 52 3 57 82 33 6000 -  # Ebon Mask -- AP / Haste+Mastery; designer 2026-11-09 (round 6, ruling 29): no Strength:
+#   Attack Power (Solo), a round 6 shape (was AP+Str / Haste+Mastery share 6000)
+19990 52 3 57 0 39 0 all  # Blessed Prayer Beads -- - / Crit+Proc; blue; ilvl 52->57; no primary (trinket, ruling 22);
+#   keeps spell 1
+19991 52 3 57 0 40 0 all  # Devilsaur Eye -- - / Haste+Proc; blue; ilvl 52->57; no primary (trinket, ruling 22); keeps
+#   spell 1
+19992 52 3 57 23 41 6000 all  # Devilsaur Tooth -- Agi / Crit+Haste; blue; ilvl 52->57; keeps spell 1
+20006 52 3 57 0 37 0 -  # Circle of Hope -- - / Crit+CDH; blue; ilvl 52->57; no primary (jewelry/cloak)
+20035 52 3 57 24 30 6000 all  # Glacial Spike -- Int / Crit+Mastery; blue; ilvl 52->57; keeps spell 1
+20036 52 3 57 0 31 0 all  # Fire Ruby -- - / Crit+Mastery; blue; ilvl 52->57; no primary (trinket, ruling 22); keeps
+#   spell 1
+20037 52 3 57 0 32 0 -  # Arcane Crystal Pendant -- - / Crit+Vers; blue; ilvl 52->57; no primary (jewelry/cloak)
+20082 52 3 57 81 41 6000 -  # Woestave -- SP / Crit+Haste; blue; ilvl 52->57; round 7: Spell Power (Solo) (ruling 33)
+#   (was SP+Int / Crit+Haste share 6000)
+20083 52 3 57 23 49 6000 -  # Hunting Spear -- Agi / MP5+Haste; blue; ilvl 52->57; MP5 kept; FB no stock primary: type
+#   Agi (polearm)
+20130 52 3 57 0 35 0 all  # Diamond Flask -- - / Haste+Vers; blue; ilvl 52->57; no primary (trinket, ruling 22); keeps
+#   spell 1
+20134 60 4 62 15 38 6000 -  # Skyfury Helm -- Agi+AP / Haste+CDH; designer 2026-11-09 (round 6, ruling 29): Agility
+#   instead of Strength: Agi/AP, Agi lead (was Str+AP / Haste+CDH share 6000)
+20255 52 3 57 23 34 6000 all  # Whisperwalk Boots -- Agi / Haste+Mastery; blue; ilvl 52->57; keeps spell 1
+20369 52 3 57 81 40 6000 -  # Azurite Fists -- SP / Haste+Proc; designer 2026-11-09 (round 6, ruling 29): no Intellect,
+#   no Spirit: Spell Power (Solo), a round 6 shape (was Int+Spi+SP / Haste+Proc share 6000)
+20503 52 3 57 0 30 0 all  # Enamored Water Spirit -- - / Crit+Mastery; blue; ilvl 52->57; no primary (trinket, ruling
+#   22); keeps spell 1
+20504 52 3 57 12 31 6000 -  # Lightforged Blade -- Str+AP / Crit+Mastery; blue; ilvl 52->57
+20505 52 3 57 0 32 0 -  # Chivalrous Signet -- - / Crit+Vers; blue; ilvl 52->57; no primary (jewelry/cloak)
+20512 52 3 57 0 39 0 all  # Sanctified Orb -- - / Crit+Proc; blue; ilvl 52->57; no primary (trinket, ruling 22); keeps
+#   spell 1
+20517 52 3 57 12 67 6000 -  # Razorsteel Shoulders -- Str+AP / Mastery+Vers; blue; ilvl 52->57
+20521 52 3 57 22 30 6000 -  # Fury Visor -- Str / Crit+Mastery; blue; ilvl 52->57
+20530 52 3 57 2 39 6000 -  # Robes of Servitude -- SP+Int / Crit+Proc; blue; ilvl 52->57
+20534 52 3 57 0 66 0 all  # Abyss Shard -- - / Crit+Proc; blue; ilvl 52->57; no primary (trinket, ruling 22); keeps
+#   spell 1
+20536 52 3 57 81 74 6000 -  # Soul Harvester -- SP / CDH+Vers; blue; ilvl 52->57; round 7: Spell Power (Solo) (ruling
+#   33) (was SP+Int / CDH+Vers share 6000)
+20556 52 3 57 1 29 6000 -  # Wildstaff -- Int+SP / Crit+Haste; designer 2026-11-09 (round 6, ruling 29): no Strength:
+#   Int/SP, Even (the Str lead's other two stats are even) (was Str+Int+SP / Crit+Haste share 6000)
+20600 60 4 72 0 29 0 -  # Malfurion's Signet Ring -- - / Crit+Haste; epic; ilvl 72 kept (epic); no primary
+#   (jewelry/cloak)
+20640 45 2 50 22 55 8000 -  # Southsea Head Bucket -- Str / Parry; green; ilvl 45->50; Defense->Parry; tank Parry
+20641 45 2 50 3 26 8000 -  # Southsea Mojo Boots -- Int+SP / Haste; green; ilvl 45->50
+20642 47 2 52 1 27 8000 -  # Antiquated Nobleman's Tunic -- Int+SP / Mastery; green; ilvl 47->52
+20643 47 2 52 15 28 8000 -  # Undercity Reservist's Cap -- Agi+AP / Vers; green; ilvl 47->52
+20646 59 3 60 23 29 6000 -  # Sandstrider's Mark -- Agi / Crit+Haste; blue; ilvl 59->60; FB no stock primary: type Agi
+#   (bow)
+20647 59 3 60 2 49 6000 -  # Black Crystal Dagger -- SP+Int / MP5+Haste; blue; ilvl 59->60; MP5 kept
+20649 60 2 60 0 28 0 -  # Sunprism Pendant -- - / Vers; green; ilvl 60 kept (target 55); no primary (jewelry/cloak)
+20650 60 2 60 22 55 8000 -  # Desert Wind Gauntlets -- Str / Parry; green; ilvl 60 kept (target 55); Defense->Parry;
+#   tank Parry
+20723 60 2 62 22 73 8000 -  # Brann's Trusty Pick -- Str / Proc; green; ilvl 62 kept (target 55)
+20724 60 2 62 81 25 8000 -  # Corrupted Blackwood Staff -- SP / Crit; green; ilvl 62 kept (target 55); round 7: Spell
+#   Power (Solo) (ruling 33) (was SP+Int / Crit share 8000)
+20835 4 2 6 23 28 8000 -  # Sunstrider Sword -- Agi / Vers; white->green; ilvl 5->6; type Agi (one-handed sword, odd
+#   entry)
+20836 4 2 6 23 72 8000 -  # Sunstrider Dagger -- Agi / CDH; white->green; ilvl 5->6; type Agi (dagger)
+20837 4 2 6 22 73 8000 -  # Sunstrider Axe -- Str / Proc; white->green; ilvl 5->6; type Str (one-handed axe)
+20838 5 2 7 23 25 4000 -  # Sunstrider Bow -- Agi / Crit; white->green; ilvl 5->7; type Agi (bow); round 8 step-down
+#   (ruling 37): share 8000->4000 so Crit is at least 1
+20839 4 2 6 24 26 6000 -  # Sunstrider Staff -- Int / Haste; white->green; ilvl 5->6; type Int (staff); round 6
+#   step-down: share 8000->6000 so Haste is at least 1
+20840 4 2 6 22 27 8000 -  # Sunstrider Mace -- Str / Mastery; white->green; ilvl 5->6; type Str (one-handed mace, even
+#   entry)
+20841 5 2 7 22 28 8000 -  # Sunstrider Shield -- Str / Vers; white->green; ilvl 5->7; type Str (shield)
+20991 4 2 6 0 28 0 -  # Daylight Cloak -- - / Vers; white->green; ilvl 5->6; no primary (jewelry/cloak)
+20992 3 2 5 24 72 8000 -  # Sunrise Bracers -- Int / CDH; white->green; ilvl 5 kept (target 5); type Int (cloth)
+20993 3 2 5 23 73 4000 -  # Lynxskin Gloves -- Agi / Proc; white->green; ilvl 5 kept (target 5); type Agi (leather);
+#   round 8 step-down (ruling 37): share 8000->4000 so Proc is at least 1
+20994 3 2 5 23 25 4000 -  # Green Chain Vest -- Agi / Crit; white->green; ilvl 5 kept (target 5); type Agi (mail, even
+#   entry); round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1
+20995 4 2 6 24 26 4000 -  # Well Watcher Gloves -- Int / Haste; white->green; ilvl 5->6; type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Haste is at least 1
+20996 4 2 6 23 27 4000 -  # Sunspire Cord -- Agi / Mastery; white->green; ilvl 5->6; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+20997 1 2 5 24 28 4000 -  # Green Chain Boots -- Int / Vers; white->green; ilvl 5 kept (target 3); type Int (mail, odd
+#   entry); round 8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+20998 1 2 5 24 72 4000 -  # Wyrm Sash -- Int / CDH; white->green; ilvl 5 kept (target 3); type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so CDH is at least 1
+20999 3 2 5 24 73 4000 -  # Green Chain Gauntlets -- Int / Proc; white->green; ilvl 5 kept (target 5); type Int (mail,
+#   odd entry); round 8 step-down (ruling 37): share 8000->4000 so Proc is at least 1
+21000 3 2 5 23 25 8000 -  # Vigorous Bracers -- Agi / Crit; white->green; ilvl 5 kept (target 5); type Agi (leather)
+21001 3 2 5 24 26 4000 -  # Striding Pants -- Int / Haste; white->green; ilvl 5 kept (target 5); type Int (cloth); round
+#   8 step-down (ruling 37): share 8000->4000 so Haste is at least 1
+21178 60 3 62 2 39 6000 -  # Gloves of Earthen Power -- SP+Int / Crit+Proc; blue; ilvl 62 kept (target 60)
+21179 60 3 62 0 50 0 -  # Band of Earthen Wrath -- - / MP5+Mastery; blue; ilvl 62 kept (target 60); no primary
+#   (jewelry/cloak); MP5 kept
+21180 60 4 66 0 34 0 all  # Earthstrike -- - / Haste+Mastery; epic; ilvl 66 kept (epic); no primary (trinket, ruling
+#   22); keeps spell 1
+21181 60 3 66 0 65 0 all  # Grace of Earth -- - / Haste+CDH; blue; ilvl 66 kept (target 60); no primary (trinket, ruling
+#   22); keeps spell 1
+21182 60 3 66 0 66 0 -  # Band of Earthen Might -- - / Crit+Proc; blue; ilvl 66 kept (target 60); no primary
+#   (jewelry/cloak)
+21183 60 3 66 1 67 6000 -  # Earthpower Vest -- Int+SP / Mastery+Vers; blue; ilvl 66 kept (target 60)
+21184 60 4 62 12 38 6000 -  # Deeprock Bracers -- Str+AP / Haste+CDH; epic; ilvl 62 kept (epic)
+21185 60 4 62 1 47 6000 -  # Earthcalm Orb -- Int+SP / MP5; designer 2026-11-09 (round 6, ruling 29): MP5 instead of
+#   Proc Chance and Crit: MP5 (Solo) (was Int+SP / Crit+Proc share 6000)
+21186 60 4 62 81 40 6000 -  # Rockfury Bracers -- SP / Haste+Proc; epic; ilvl 62 kept (epic); round 7: Spell Power
+#   (Solo) (ruling 33) (was SP+Int / Haste+Proc share 6000)
+21187 60 3 62 0 30 0 -  # Earthweave Cloak -- - / Crit+Mastery; blue; ilvl 62 kept (target 60); no primary
+#   (jewelry/cloak)
+21188 60 4 66 81 42 4000 -  # Fist of Cenarius -- SP / Crit+Haste+Mastery; epic; ilvl 66 kept (epic); round 7: Spell
+#   Power (Solo) (ruling 33) (was SP+Int / Crit+Haste+Mastery share 4000)
+21189 60 4 62 0 43 0 all  # Might of Cenarius -- - / Haste+Mastery+Vers; epic; ilvl 62 kept (epic); no primary
+#   (jewelry/cloak); keeps spell 1
+21190 60 4 66 0 44 0 all  # Wrath of Cenarius -- - / Crit+Haste+Vers; epic; ilvl 66 kept (epic); no primary
+#   (jewelry/cloak); keeps spell 1
+21196 60 4 60 0 35 0 -  # Signet Ring of the Bronze Dragonflight -- - / Haste+Vers; epic; ilvl 60 kept (epic); no
+#   primary (jewelry/cloak); Defense->Dodge; tank Dodge dropped, no Str/Agi (ruling 24): Vers
+21197 60 4 65 0 35 0 -  # Signet Ring of the Bronze Dragonflight -- - / Haste+Vers; epic; ilvl 65 kept (epic); no
+#   primary (jewelry/cloak); Defense->Dodge; tank Dodge dropped, no Str/Agi (ruling 24): Vers; round 6: as 21196, same
+#   name and quest (ruling 28)
+21198 60 4 70 0 35 0 -  # Signet Ring of the Bronze Dragonflight -- - / Haste+Vers; epic; ilvl 70 kept (epic); no
+#   primary (jewelry/cloak); Defense->Dodge; tank Dodge dropped, no Str/Agi (ruling 24): Vers; round 6: as 21196, same
+#   name and quest (ruling 28)
+21199 60 4 75 0 35 0 -  # Signet Ring of the Bronze Dragonflight -- - / Haste+Vers; epic; ilvl 75 kept (epic); no
+#   primary (jewelry/cloak); Defense->Dodge; tank Dodge dropped, no Str/Agi (ruling 24): Vers; round 6: as 21196, same
+#   name and quest (ruling 28)
+21201 60 4 60 0 30 0 -  # Signet Ring of the Bronze Dragonflight -- - / Crit+Mastery; epic; ilvl 60 kept (epic); no
+#   primary (jewelry/cloak)
+21202 60 4 65 0 30 0 -  # Signet Ring of the Bronze Dragonflight -- - / Crit+Mastery; epic; ilvl 65 kept (epic); no
+#   primary (jewelry/cloak); round 6: as 21201, same name and quest (ruling 28)
+21203 60 4 70 0 30 0 -  # Signet Ring of the Bronze Dragonflight -- - / Crit+Mastery; epic; ilvl 70 kept (epic); no
+#   primary (jewelry/cloak); round 6: as 21201, same name and quest (ruling 28)
+21204 60 4 75 0 30 0 -  # Signet Ring of the Bronze Dragonflight -- - / Crit+Mastery; epic; ilvl 75 kept (epic); no
+#   primary (jewelry/cloak); round 6: as 21201, same name and quest (ruling 28)
+21206 60 4 60 0 35 0 -  # Signet Ring of the Bronze Dragonflight -- - / Haste+Vers; epic; ilvl 60 kept (epic); no
+#   primary (jewelry/cloak); FB MP5 lost: blues only (epic)
+21207 60 4 65 0 35 0 -  # Signet Ring of the Bronze Dragonflight -- - / Haste+Vers; epic; ilvl 65 kept (epic); no
+#   primary (jewelry/cloak); round 6: as 21206, same name and quest (ruling 28); FB MP5 lost: blues only (epic)
+21208 60 4 70 0 35 0 -  # Signet Ring of the Bronze Dragonflight -- - / Haste+Vers; epic; ilvl 70 kept (epic); no
+#   primary (jewelry/cloak); round 6: as 21206, same name and quest (ruling 28); FB MP5 lost: blues only (epic)
+21209 60 4 75 0 35 0 -  # Signet Ring of the Bronze Dragonflight -- - / Haste+Vers; epic; ilvl 75 kept (epic); no
+#   primary (jewelry/cloak); round 6: as 21206, same name and quest (ruling 28); FB MP5 lost: blues only (epic)
+21311 48 2 53 24 73 8000 -  # Earth Warder's Vest -- Int / Proc; green; ilvl 48->53; FB MP5 lost: blues only (green)
+21312 48 2 53 82 25 8000 -  # Belt of the Den Watcher -- AP / Crit; green; ilvl 48->53; round 7: Attack Power (Solo)
+#   (ruling 33) (was AP+Str / Crit share 8000)
+21316 55 2 55 22 72 8000 -  # Leggings of the Ursa -- Str / CDH; green; ilvl 55 kept (target 55)
+21317 55 2 55 23 73 8000 -  # Helm of the Pathfinder -- Agi / Proc; green; ilvl 55 kept (target 55); FB no stock
+#   primary: type Agi (leather)
+21318 58 2 58 81 25 8000 -  # Earth Warder's Gloves -- SP / Crit; green; ilvl 58 kept (target 55); round 7: Spell Power
+#   (Solo) (ruling 33) (was SP+Int / Crit share 8000)
+21319 58 2 58 12 26 8000 -  # Gloves of the Pathfinder -- Str+AP / Haste; green; ilvl 58 kept (target 55)
+21320 58 2 58 23 27 8000 -  # Vest of the Den Watcher -- Agi / Mastery; green; ilvl 58 kept (target 55)
+21322 58 2 58 23 54 8000 -  # Ursa's Embrace -- Agi / Dodge; green; ilvl 58 kept (target 55); Defense->Parry; tank
+#   Dodge; FB Parry needs Str: Dodge
+21326 60 4 62 0 30 0 all  # Defender of the Timbermaw -- - / Crit+Mastery; epic; ilvl 62 kept (epic); no primary
+#   (trinket, ruling 22); keeps spell 1
+21520 60 4 76 12 67 6000 -  # Ravencrest's Legacy -- Str+AP / Mastery+Vers; epic; ilvl 76 kept (epic)
+21521 60 4 76 2 68 4000 -  # Runesword of the Red -- SP+Int / Proc+Crit+Mastery; epic; ilvl 76 kept (epic)
+21522 60 4 76 15 69 4000 -  # Shadowsong's Sorrow -- Agi+AP / Haste+CDH+Mastery; epic; ilvl 76 kept (epic)
+21523 60 4 76 2 74 6000 -  # Fang of Korialstrasz -- SP+Int / CDH+Vers; epic; ilvl 76 kept (epic)
+21709 60 4 88 0 38 0 -  # Ring of the Fallen God -- - / Haste+CDH; epic; ilvl 88 kept (epic); no primary (jewelry/cloak)
+21710 60 4 88 0 39 0 -  # Cloak of the Fallen God -- - / Crit+Proc; epic; ilvl 88 kept (epic); no primary
+#   (jewelry/cloak)
+21712 60 4 88 0 41 0 -  # Amulet of the Fallen God -- - / Crit+Haste; epic; ilvl 88 kept (epic); no primary
+#   (jewelry/cloak); FB MP5 lost: blues only (epic)
+21994 60 3 65 12 76 6000 -  # Belt of Heroism -- Str+AP / Parry+Mastery; blue; ilvl 65 kept (target 60); Defense->Parry;
+#   tank Parry
+21995 60 4 60 22 67 6000 -  # Boots of Heroism -- Str / Mastery+Vers; epic; ilvl 60 kept (epic)
+21996 60 3 65 12 60 6000 -  # Bracers of Heroism -- Str+AP / Parry+Crit; blue; ilvl 65 kept (target 60); Defense->Parry;
+#   tank Parry
+21997 60 4 60 12 69 4000 -  # Breastplate of Heroism -- Str+AP / Haste+CDH+Mastery; epic; ilvl 60 kept (epic)
+21998 60 4 60 22 74 6000 -  # Gauntlets of Heroism -- Str / CDH+Vers; epic; ilvl 60 kept (epic)
+21999 60 4 60 22 75 6000 -  # Helm of Heroism -- Str / Mastery+Proc; epic; ilvl 60 kept (epic)
+22000 60 3 66 22 76 6000 -  # Legplates of Heroism -- Str / Parry+Mastery; blue; ilvl 66 kept (target 60);
+#   Defense->Parry; tank Parry
+22001 60 3 65 12 34 6000 -  # Spaulders of Heroism -- Str+AP / Haste+Mastery; blue; ilvl 65 kept (target 60)
+22002 60 3 65 15 35 6000 -  # Darkmantle Belt -- Agi+AP / Haste+Vers; blue; ilvl 65 kept (target 60)
+22003 60 4 60 23 32 6000 all  # Darkmantle Boots -- Agi / Crit+Vers; epic; ilvl 60 kept (epic); keeps spell 1
+22004 60 3 65 23 37 6000 -  # Darkmantle Bracers -- Agi / Crit+CDH; blue; ilvl 65 kept (target 60)
+22005 60 4 60 15 34 6000 -  # Darkmantle Cap -- Agi+AP / Haste+Mastery; epic; ilvl 60 kept (epic)
+22006 60 4 60 15 35 6000 -  # Darkmantle Gloves -- Agi+AP / Haste+Vers; epic; ilvl 60 kept (epic)
+22007 60 3 66 15 40 6000 -  # Darkmantle Pants -- Agi+AP / Haste+Proc; blue; ilvl 66 kept (target 60)
+22008 60 3 65 23 41 6000 -  # Darkmantle Spaulders -- Agi / Crit+Haste; blue; ilvl 65 kept (target 60)
+22009 60 4 60 23 38 6000 -  # Darkmantle Tunic -- Agi / Haste+CDH; epic; ilvl 60 kept (epic)
+22010 60 3 65 13 66 6000 -  # Beastmaster's Belt -- Agi+AP / Crit+Proc; blue; ilvl 65 kept (target 60)
+22011 60 3 65 13 67 6000 -  # Beastmaster's Bindings -- Agi+AP / Mastery+Vers; blue; ilvl 65 kept (target 60)
+22013 60 4 60 13 42 4000 2  # Beastmaster's Cap -- Agi+AP / Crit+Haste+Mastery; epic; ilvl 60 kept (epic); keeps spell 2
+22015 60 4 60 13 44 4000 all  # Beastmaster's Gloves -- Agi+AP / Crit+Haste+Vers; epic; ilvl 60 kept (epic); keeps spell
+#   2
+22016 60 3 65 21 31 6000 -  # Beastmaster's Mantle -- Int+Agi+SP / Crit+Mastery; blue; ilvl 65 kept (target 60)
+22017 60 3 66 13 32 6000 -  # Beastmaster's Pants -- Agi+AP / Crit+Vers; blue; ilvl 66 kept (target 60)
+22060 60 4 60 13 39 6000 1  # Beastmaster's Tunic -- Agi+AP / Crit+Proc; epic; ilvl 60 kept (epic); keeps spell 1
+22061 60 4 60 13 40 6000 1  # Beastmaster's Boots -- Agi+AP / Haste+Proc; epic; ilvl 60 kept (epic); keeps spell 1
+22062 60 3 65 3 41 6000 -  # Sorcerer's Belt -- Int+SP / Crit+Haste; designer 2026-11-09 (round 6, ruling 29):
+#   Sorcerer's set: no Spirit: Int/SP, Int lead (was Int+Spi+SP / Crit+Haste share 6000)
+22063 60 3 65 3 65 6000 -  # Sorcerer's Bindings -- Int+SP / Haste+CDH; designer 2026-11-09 (round 6, ruling 29):
+#   Sorcerer's set: no Spirit: Int/SP, Int lead (was Int+Spi+SP / Haste+CDH share 6000)
+22064 60 4 60 1 43 4000 -  # Sorcerer's Boots -- Int+SP / Haste+Mastery+Vers; designer 2026-11-09 (round 6, ruling 29):
+#   Sorcerer's set: no Spirit: Int/SP, Even (was Int+Spi+SP / Haste+Mastery+Vers share 4000)
+22065 60 4 60 3 44 4000 -  # Sorcerer's Crown -- Int+SP / Crit+Haste+Vers; designer 2026-11-09 (round 6, ruling 29):
+#   Sorcerer's set: no Spirit: Int/SP, Int lead (was Int+Spi+SP / Crit+Haste+Vers share 4000)
+22066 60 4 60 1 45 4000 -  # Sorcerer's Gloves -- Int+SP / Crit+Mastery+Vers; designer 2026-11-09 (round 6, ruling 29):
+#   Sorcerer's set: no Spirit: Int/SP, Even (was Int+Spi+SP / Crit+Mastery+Vers share 4000)
+22067 60 3 66 3 75 6000 -  # Sorcerer's Leggings -- Int+SP / Mastery+Proc; designer 2026-11-09 (round 6, ruling 29):
+#   Sorcerer's set: no Spirit: Int/SP, Int lead (was Int+Spi+SP / Mastery+Proc share 6000)
+22068 60 3 65 3 29 6000 -  # Sorcerer's Mantle -- Int+SP / Crit+Haste; designer 2026-11-09 (round 6, ruling 29):
+#   Sorcerer's set: no Spirit: Int/SP, Int lead (was Int+Spi+SP / Crit+Haste share 6000)
+22069 60 4 60 3 66 6000 -  # Sorcerer's Robes -- Int+SP / Crit+Proc; designer 2026-11-09 (round 6, ruling 29):
+#   Sorcerer's set: no Spirit: Int/SP, Int lead (was Int+Spi+SP / Crit+Proc share 6000)
+22070 60 3 65 3 31 6000 -  # Deathmist Belt -- Int+SP / Crit+Mastery; blue; ilvl 65 kept (target 60)
+22071 60 3 65 3 32 6000 -  # Deathmist Bracers -- Int+SP / Crit+Vers; blue; ilvl 65 kept (target 60)
+22072 60 3 66 3 33 6000 -  # Deathmist Leggings -- Int+SP / Haste+Mastery; blue; ilvl 66 kept (target 60)
+22073 60 3 65 3 34 6000 -  # Deathmist Mantle -- Int+SP / Haste+Mastery; blue; ilvl 65 kept (target 60)
+22074 60 4 60 3 75 6000 -  # Deathmist Mask -- Int+SP / Mastery+Proc; epic; ilvl 60 kept (epic)
+22075 60 4 60 3 29 6000 -  # Deathmist Robe -- Int+SP / Crit+Haste; epic; ilvl 60 kept (epic)
+22076 60 4 60 1 30 6000 -  # Deathmist Sandals -- Int+SP / Crit+Mastery; epic; ilvl 60 kept (epic)
+22077 60 4 60 1 31 6000 -  # Deathmist Wraps -- Int+SP / Crit+Mastery; epic; ilvl 60 kept (epic)
+22078 60 3 65 7 39 6000 -  # Virtuous Belt -- Int+Spi+SP / Crit+Proc; blue; ilvl 65 kept (target 60)
+22079 60 3 65 7 40 6000 -  # Virtuous Bracers -- Int+Spi+SP / Haste+Proc; blue; ilvl 65 kept (target 60); FB MP5 lost:
+#   Spirit primary kept (MP5 forbids Spirit)
+22080 60 4 60 7 34 6000 -  # Virtuous Crown -- Int+Spi+SP / Haste+Mastery; epic; ilvl 60 kept (epic); FB MP5 lost: blues
+#   only (epic)
+22081 60 4 60 8 35 6000 -  # Virtuous Gloves -- Int+Spi+SP / Haste+Vers; epic; ilvl 60 kept (epic)
+22082 60 3 65 7 66 6000 -  # Virtuous Mantle -- Int+Spi+SP / Crit+Proc; blue; ilvl 65 kept (target 60)
+22083 60 4 60 8 37 6000 -  # Virtuous Robe -- Int+Spi+SP / Crit+CDH; epic; ilvl 60 kept (epic); FB MP5 lost: blues only
+#   (epic)
+22084 60 4 60 7 38 6000 -  # Virtuous Sandals -- Int+Spi+SP / Haste+CDH; epic; ilvl 60 kept (epic); FB MP5 lost: blues
+#   only (epic)
+22085 60 3 66 7 75 6000 -  # Virtuous Skirt -- Int+Spi+SP / Mastery+Proc; blue; ilvl 66 kept (target 60); FB MP5 lost:
+#   Spirit primary kept (MP5 forbids Spirit)
+22086 60 3 65 16 48 6000 -  # Soulforge Belt -- Str+Int+SP / MP5+Crit; blue; ilvl 65 kept (target 60); MP5 kept
+22087 60 4 60 16 41 6000 -  # Soulforge Boots -- Str+Int+SP / Crit+Haste; epic; ilvl 60 kept (epic); FB MP5 lost: blues
+#   only (epic)
+22088 60 3 65 16 31 6000 -  # Soulforge Bracers -- Str+Int+SP / Crit+Mastery; blue; ilvl 65 kept (target 60)
+22089 60 4 60 16 43 4000 -  # Soulforge Breastplate -- Str+Int+SP / Haste+Mastery+Vers; epic; ilvl 60 kept (epic)
+22090 60 4 60 16 44 4000 -  # Soulforge Gauntlets -- Str+Int+SP / Crit+Haste+Vers; epic; ilvl 60 kept (epic)
+22091 60 4 60 16 45 4000 -  # Soulforge Helm -- Str+Int+SP / Crit+Mastery+Vers; epic; ilvl 60 kept (epic)
+22092 60 3 66 16 35 6000 -  # Soulforge Legplates -- Str+Int+SP / Haste+Vers; blue; ilvl 66 kept (target 60)
+22093 60 3 65 16 49 6000 -  # Soulforge Spaulders -- Str+Int+SP / MP5+Haste; blue; ilvl 65 kept (target 60); MP5 kept
+22095 60 3 65 1 49 6000 -  # Bindings of The Five Thunders -- Int+SP / MP5+Haste; designer 2026-11-09 (round 6, ruling
+#   29): Five Thunders set: no Spirit: Int/SP, Even, then MP5 instead of Spirit: MP5/Haste keeps its Haste (was
+#   Int+Spi+SP / Haste+CDH share 6000)
+22096 60 4 60 19 68 4000 -  # Boots of The Five Thunders -- Agi+Int+SP / Proc+Crit+Mastery; designer 2026-11-09 (round
+#   6, ruling 29): Five Thunders set: Agility instead of Strength: Agi/Int/SP, Even trio (was Str+Int+SP /
+#   Proc+Crit+Mastery share 4000)
+22097 60 4 60 3 49 6000 -  # Coif of The Five Thunders -- Int+SP / MP5+Haste; designer 2026-11-09 (round 6, ruling 29):
+#   Five Thunders set: no Spirit: Int/SP, Int lead, then MP5 instead of Spirit: MP5/Haste keeps its Haste (a pair: share
+#   6000) (was Int+Spi+SP / Haste+CDH+Mastery share 4000)
+22098 60 3 65 19 48 6000 -  # Cord of The Five Thunders -- Agi+Int+SP / MP5+Crit; designer 2026-11-09 (round 6, ruling
+#   29): Five Thunders set: Agility instead of Strength: Agi/Int/SP, Even trio (was Str+Int+SP / MP5+Crit share 6000)
+22099 60 4 60 19 75 6000 -  # Gauntlets of The Five Thunders -- Agi+Int+SP / Mastery+Proc; designer 2026-11-09 (round 6,
+#   ruling 29): Five Thunders set: Agility instead of Strength: Agi/Int/SP, Even trio (was Str+Int+SP / Mastery+Proc
+#   share 6000)
+22100 60 3 66 1 48 6000 -  # Kilt of The Five Thunders -- Int+SP / MP5+Crit; designer 2026-11-09 (round 6, ruling 29):
+#   Five Thunders set: no Spirit: Int/SP, Even, then MP5 instead of Spirit: MP5/Crit keeps its Crit (was Int+Spi+SP /
+#   Crit+Proc share 6000)
+22101 60 3 65 1 50 6000 -  # Pauldrons of The Five Thunders -- Int+SP / MP5+Mastery; designer 2026-11-09 (round 6,
+#   ruling 29): Five Thunders set: no Spirit: Int/SP, Even, then MP5 instead of Spirit: MP5/Mastery keeps its Mastery
+#   (was Int+Spi+SP / Mastery+Vers share 6000)
+22102 60 4 60 1 48 6000 -  # Vest of The Five Thunders -- Int+SP / MP5+Crit; designer 2026-11-09 (round 6, ruling 29):
+#   Five Thunders set: no Spirit: Int/SP, Even, then MP5 instead of Spirit: MP5/Crit keeps its Crit (was Int+Spi+SP /
+#   Crit+Mastery share 6000)
+22106 60 3 65 0 31 0 -  # Feralheart Belt -- - / Crit+Mastery; designer 2026-11-09 (round 6, ruling 29): Feralheart set:
+#   no primary stats, secondary stats only (was Int+Spi+SP / Crit+Mastery share 6000)
+22107 60 4 60 0 36 0 -  # Feralheart Boots -- - / Mastery+Vers; designer 2026-11-09 (round 6, ruling 29): Feralheart
+#   set: no primary stats, secondary stats only (was Str+Int+SP / Mastery+Vers share 6000)
+22108 60 3 65 0 33 0 -  # Feralheart Bracers -- - / Haste+Mastery; designer 2026-11-09 (round 6, ruling 29): Feralheart
+#   set: no primary stats, secondary stats only (was Int+Str+SP / Haste+Mastery share 6000)
+22109 60 4 60 0 38 0 -  # Feralheart Cowl -- - / Haste+CDH; designer 2026-11-09 (round 6, ruling 29): Feralheart set: no
+#   primary stats, secondary stats only (was Int+Spi+SP / Haste+CDH share 6000)
+22110 60 4 60 0 39 0 -  # Feralheart Gloves -- - / Crit+Proc; designer 2026-11-09 (round 6, ruling 29): Feralheart set:
+#   no primary stats, secondary stats only (was Int+Spi+SP / Crit+Proc share 6000)
+22111 60 3 66 0 36 0 -  # Feralheart Kilt -- - / Mastery+Vers; designer 2026-11-09 (round 6, ruling 29): Feralheart set:
+#   no primary stats, secondary stats only (was Int+Spi+SP / Mastery+Vers share 6000)
+22112 60 3 65 0 37 0 -  # Feralheart Spaulders -- - / Crit+CDH; designer 2026-11-09 (round 6, ruling 29): Feralheart
+#   set: no primary stats, secondary stats only (was Int+Spi+SP / Crit+CDH share 6000)
+22113 60 4 60 0 42 0 -  # Feralheart Vest -- - / Crit+Haste+Mastery; designer 2026-11-09 (round 6, ruling 29):
+#   Feralheart set: no primary stats, secondary stats only (was Str+Int+SP / Crit+Haste+Mastery share 4000)
+22149 60 3 63 0 38 0 -  # Beads of Ogre Mojo -- - / Haste+CDH; blue; ilvl 63 kept (target 60); no primary
+#   (jewelry/cloak)
+22150 60 3 63 0 39 0 -  # Beads of Ogre Might -- - / Crit+Proc; blue; ilvl 63 kept (target 60); no primary
+#   (jewelry/cloak)
+22272 52 3 57 2 35 6000 -  # Forest's Embrace -- SP+Int / Haste+Vers; blue; ilvl 52->57
+22274 52 3 57 15 37 6000 -  # Grizzled Pelt -- Agi+AP / Crit+CDH; designer 2026-11-09 (round 6, ruling 29): Agility
+#   instead of Strength: Agi/AP, Agi lead (was Str+AP / Crit+CDH share 6000)
+22458 52 3 57 5 29 6000 -  # Moonshadow Stave -- SP+Spi / Crit+Haste; designer 2026-11-09 (round 6, ruling 29): Spirit
+#   instead of Intellect: Spirit/SP, SP lead, then Haste instead of MP5: Crit/Haste (was SP+Int / MP5+Crit share 6000)
+22725 60 3 70 0 38 0 -  # Band of Cenarius -- - / Haste+CDH; blue; ilvl 70 kept (target 60); no primary (jewelry/cloak)
+22783 17 2 22 23 26 6000 all  # Sunwell Blade -- Agi / Haste; green; ilvl 20->22; keeps spell 1; FB no stock primary:
+#   type Agi (one-handed sword, odd entry); round 6 step-down: share 8000->6000 so Haste is at least 1
+22784 17 2 22 24 27 8000 all  # Sunwell Orb -- Int / Mastery; green; ilvl 20->22; keeps spell 1
+22951 7 2 9 23 26 4000 -  # Springpaw Hide Leggings -- Agi / Haste; white->green; ilvl 7->9; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Haste is at least 1
+22952 7 2 9 0 27 0 -  # Springpaw Hide Cloak -- - / Mastery; white->green; ilvl 7->9; no primary (jewelry/cloak)
+22953 7 2 9 24 28 4000 -  # Fur Lined Chain Shirt -- Int / Vers; white->green; ilvl 7->9; type Int (mail, odd entry);
+#   round 8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+22956 7 2 9 22 25 8000 -  # Rusty Mace -- Str / Crit; white->green; ilvl 7->9; type Str (one-handed mace, even entry)
+22957 7 2 9 23 26 8000 -  # Rusty Sin'dorei Sword -- Agi / Haste; white->green; ilvl 7->9; type Agi (one-handed sword,
+#   odd entry)
+22958 10 2 12 22 27 8000 -  # Farstrider Sword -- Str / Mastery; white->green; ilvl 10->12; type Str (two-handed sword)
+22959 10 2 12 24 28 8000 -  # Smooth Metal Staff -- Int / Vers; white->green; ilvl 10->12; type Int (staff)
+22963 10 2 12 23 26 4000 -  # Ranger's Pocketknife -- Agi / Haste; white->green; ilvl 10->12; type Agi (dagger); round 8
+#   step-down (ruling 37): share 8000->4000 so Haste is at least 1
+22964 8 2 10 23 27 8000 -  # Sunsail Bracers -- Agi / Mastery; white->green; ilvl 8->10; type Agi (mail, even entry)
+22965 8 2 10 23 28 8000 -  # Longshoreman's Bindings -- Agi / Vers; white->green; ilvl 8->10; type Agi (leather)
+22966 8 2 10 24 72 8000 -  # Silk Wristbands -- Int / CDH; white->green; ilvl 8->10; type Int (cloth)
+22969 11 2 16 23 26 8000 -  # Ven'jashi's Bow -- Agi / Haste; green; ilvl 11->16; FB no stock primary: type Agi (bow)
+22971 11 2 16 24 28 8000 -  # Hoodoo Wand -- Int / Vers; green; ilvl 11->16; FB no stock primary: type Int (wand)
+22979 21 2 26 0 73 0 -  # Slayer's Band -- - / Proc; green; ilvl 21->26; no primary (jewelry/cloak)
+22980 21 3 26 8 41 6000 -  # Staff of the Sun -- Int+Spi+SP / Crit+Haste; blue; ilvl 21->26
+22982 21 3 26 23 66 6000 -  # Farstrider's Longbow -- Agi / Crit+Proc; blue; ilvl 21->26; FB no stock primary: type Agi
+#   (bow)
+22984 21 3 26 23 74 6000 -  # Dawnblade -- Agi / CDH+Vers; blue; ilvl 21->26; FB no stock primary: type Agi (dagger)
+22995 21 3 26 22 38 6000 -  # Sin'dorei Warblade -- Str / Haste+CDH; blue; ilvl 21->26
+22996 20 2 25 22 72 8000 -  # Reforged Quel'dorei Crest -- Str / CDH; green; ilvl 20->25
+22997 20 2 25 24 73 8000 -  # Ley-Keeper's Wand -- Int / Proc; green; ilvl 20->25; FB no stock primary: type Int (wand)
+22998 20 2 25 23 25 8000 -  # Ghostclaw Leggings -- Agi / Crit; green; ilvl 20->25
+23078 50 3 63 22 31 6000 all  # Gauntlets of Undead Slaying -- Str / Crit+Mastery; blue; ilvl 63 kept (target 55); keeps
+#   spell 1; FB no stock primary: type Str (plate)
+23081 50 3 63 23 34 6000 all  # Handwraps of Undead Slaying -- Agi / Haste+Mastery; blue; ilvl 63 kept (target 55);
+#   keeps spell 1; FB no stock primary: type Agi (leather)
+23082 50 3 63 23 35 6000 all  # Handguards of Undead Slaying -- Agi / Haste+Vers; blue; ilvl 63 kept (target 55); keeps
+#   spell 1; FB no stock primary: type Agi (mail, even entry)
+23084 50 3 63 24 37 6000 all  # Gloves of Undead Cleansing -- Int / Crit+CDH; blue; ilvl 63 kept (target 55); keeps
+#   spell 1
+23206 60 4 90 0 35 0 all  # Mark of the Champion -- - / Haste+Vers; epic; ilvl 90 kept (epic); no primary (trinket,
+#   ruling 22); keeps spell 1
+23207 60 4 90 0 35 0 all  # Mark of the Champion -- - / Haste+Vers; epic; ilvl 90 kept (epic); no primary (trinket,
+#   ruling 22); keeps spell 1; round 6: as 23206, same name and quest (ruling 28)
+23265 11 2 13 24 28 6000 -  # Blackened Chain Girdle -- Int / Vers; white->green; ilvl 11->13; type Int (mail, odd
+#   entry); round 6 step-down: share 8000->6000 so Vers is at least 1
+23266 11 2 13 23 72 6000 -  # Ranger's Vest -- Agi / CDH; white->green; ilvl 11->13; type Agi (leather); round 6
+#   step-down: share 8000->6000 so CDH is at least 1
+23267 11 2 13 24 73 6000 -  # Satin Lined Boots -- Int / Proc; white->green; ilvl 11->13; type Int (cloth); round 6
+#   step-down: share 8000->6000 so Proc is at least 1
+23367 5 2 7 24 28 4000 -  # Light Silk Robe -- Int / Vers; white->green; ilvl 5->7; type Int (cloth); round 8 step-down
+#   (ruling 37): share 8000->4000 so Vers is at least 1
+23370 6 2 8 22 25 8000 -  # Ley-Keeper's Blade -- Str / Crit; white->green; ilvl 6->8; type Str (one-handed sword, even
+#   entry)
+23371 6 2 8 24 26 6000 -  # Velania's Walking Stick -- Int / Haste; white->green; ilvl 6->8; type Int (staff); round 6
+#   step-down: share 8000->6000 so Haste is at least 1
+23372 7 2 9 22 27 4000 -  # Bloodhawk Claymore -- Str / Mastery; white->green; ilvl 7->9; type Str (two-handed sword);
+#   round 8 step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+23373 7 2 9 23 28 8000 -  # Long Knife -- Agi / Vers; white->green; ilvl 7->9; type Agi (one-handed sword, odd entry)
+23375 6 2 8 23 73 4000 -  # Black Leather Vest -- Agi / Proc; white->green; ilvl 6->8; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Proc is at least 1
+23376 6 2 8 23 25 4000 -  # Gatewatcher's Chain Gloves -- Agi / Crit; white->green; ilvl 6->8; type Agi (mail, even
+#   entry); round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1
+23377 6 2 8 24 26 4000 -  # Guard's Leggings -- Int / Haste; white->green; ilvl 6->8; type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Haste is at least 1
+23390 5 2 7 22 27 4000 -  # Exodar Bastard Sword -- Str / Mastery; white->green; ilvl 5->7; type Str (two-handed sword);
+#   round 8 step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+23391 5 2 7 23 28 8000 -  # Exodar Dagger -- Agi / Vers; white->green; ilvl 5->7; type Agi (dagger)
+23392 5 2 7 22 72 8000 -  # Exodar Maul -- Str / CDH; white->green; ilvl 5->7; type Str (one-handed mace, even entry)
+23393 5 2 7 23 73 8000 -  # Exodar Shortsword -- Agi / Proc; white->green; ilvl 5->7; type Agi (one-handed sword, odd
+#   entry)
+23395 9 2 11 22 26 8000 -  # Farstrider's Buckler -- Str / Haste; white->green; ilvl 9->11; type Str (shield)
+23396 9 2 11 22 27 8000 -  # Slightly Used Ranger's Blade -- Str / Mastery; white->green; ilvl 9->11; type Str (one-
+#   handed sword, even entry)
+23397 9 2 11 24 28 4000 -  # Satin Lined Gloves -- Int / Vers; white->green; ilvl 9->11; type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Vers is at least 1
+23398 9 2 11 23 72 4000 -  # Worn Ranger's Bow -- Agi / CDH; white->green; ilvl 9->11; type Agi (bow); round 8 step-down
+#   (ruling 37): share 8000->4000 so CDH is at least 1
+23399 10 2 15 24 73 8000 -  # Fallen Apprentice's Robe -- Int / Proc; green; ilvl 10->15
+23400 16 2 21 0 25 0 -  # Sylastor's Cloak -- - / Crit; green; ilvl 16->21; no primary (jewelry/cloak)
+23401 16 2 21 24 26 8000 -  # Divining Crystal -- Int / Haste; green; ilvl 16->21
+23402 14 2 19 24 27 8000 -  # Arcanist's Dagger -- Int / Mastery; green; ilvl 14->19
+23403 14 2 19 22 28 8000 -  # Salvaged Mail Leggings -- Str / Vers; green; ilvl 14->19
+23404 14 2 19 23 72 8000 -  # Padded Running Shoes -- Agi / CDH; green; ilvl 14->19
+23405 12 2 17 23 73 8000 -  # Farstrider's Tunic -- Agi / Proc; green; ilvl 12->17
+23406 19 2 24 22 25 8000 -  # Sentry Bracers -- Str / Crit; green; ilvl 19->24
+23407 19 2 24 2 26 8000 -  # Supple Cotton Bracer -- SP+Int / Haste; green; ilvl 19->24
+23408 19 2 24 23 27 8000 -  # Farstrider's Bracers -- Agi / Mastery; green; ilvl 19->24
+23409 20 2 25 23 28 6000 -  # Well Crafted Long Bow -- Agi / Vers; green; ilvl 20->25; FB no stock primary: type Agi
+#   (bow); round 6 step-down: share 8000->6000 so Vers is at least 1
+23410 20 2 25 22 72 8000 -  # Well Crafted Sword -- Str / CDH; green; ilvl 20->25
+23411 20 2 25 81 73 8000 -  # Well Crafted Staff -- SP / Proc; green; ilvl 20->25; round 7: Spell Power (Solo) (ruling
+#   33) (was SP+Int / Proc share 8000)
+23412 17 2 22 22 25 8000 -  # Troll Kickers -- Str / Crit; green; ilvl 17->22
+23413 17 2 22 2 25 8000 -  # Troll Kickers -- SP+Int / Crit; green; ilvl 17->22; round 6: as 23412, same name and quest
+#   (ruling 28); keeps its own primary (SP+Int variant)
+23414 17 2 22 23 25 8000 -  # Troll Kickers -- Agi / Crit; green; ilvl 17->22; round 6: as 23412, same name and quest
+#   (ruling 28); keeps its own primary (Agi variant)
+23415 15 2 20 23 28 6000 -  # Survival Knife -- Agi / Vers; green; ilvl 15->20; round 6 step-down: share 8000->6000 so
+#   Vers is at least 1
+23423 10 2 15 22 25 6000 -  # Mercenary Greatsword -- Str / Crit; green; ilvl 10->15; round 8: Warrior gear Agi->Crit
+#   (rulings 32, 38): Agi / Proc -> Str / Crit (was Str / Crit+Proc share 6000); round 8 step-down (ruling 37): share
+#   8000->6000 so Crit is at least 1
+23429 10 2 15 22 73 6000 -  # Mercenary Clout -- Str / Proc; green; ilvl 10->15; round 6 step-down: share 8000->6000 so
+#   Proc is at least 1
+23430 10 2 15 22 25 4000 -  # Mercenary Sword -- Str / Crit; green; ilvl 10->15; FB no stock primary: type Str
+#   (one-handed sword, even entry); round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1
+23431 10 2 15 22 25 8000 -  # Mercenary Stiletto -- Str / Crit; green; ilvl 10->15; round 8: Warrior gear Agi->Crit
+#   (rulings 32, 38): Agi / Haste -> Str / Crit; FB no stock primary: type Agi (dagger) (was Str / Crit+Haste share
+#   8000)
+23924 5 2 10 71 27 4000 -  # Robes of Silvermoon -- Spi / Mastery; green; ilvl 5->10; round 8 step-down (ruling 37):
+#   share 8000->4000 so Mastery is at least 1
+23931 5 2 10 71 28 4000 -  # Azure Watch Robes -- Spi / Vers; green; ilvl 5->10; round 8 step-down (ruling 37): share
+#   8000->4000 so Vers is at least 1
+24103 8 2 10 23 26 4000 -  # Moongraze Hide Boots -- Agi / Haste; white->green; ilvl 8->10; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Haste is at least 1
+24104 8 2 10 0 27 0 -  # Moongraze Fur Cloak -- - / Mastery; white->green; ilvl 9->10; no primary (jewelry/cloak)
+24107 10 2 15 22 73 8000 -  # Ravager Chitin Tunic -- Str / Proc; green; ilvl 10->15
+24108 10 2 15 23 25 8000 -  # Ravager Hide Leggings -- Agi / Crit; green; ilvl 10->15
+24109 10 2 15 24 26 8000 -  # Thick Ravager Belt -- Int / Haste; green; ilvl 10->15
+24111 10 2 15 23 28 8000 -  # Kurken Hide Jerkin -- Agi / Vers; green; ilvl 10->15
+24112 10 2 15 24 72 8000 -  # Kurkenstoks -- Int / CDH; green; ilvl 10->15; FB no stock primary: type Int (cloth)
+24113 10 2 15 24 73 6000 -  # Cowlen's Bracers of Kinship -- Int / Proc; green; ilvl 10->15; FB no stock primary: type
+#   Int (cloth); round 6 step-down: share 8000->6000 so Proc is at least 1
+24118 32 2 37 0 72 0 -  # Signet of Argas -- - / CDH; green; ilvl 32->37; no primary (jewelry/cloak)
+24119 32 2 37 0 73 0 -  # Band of Argas -- - / Proc; green; ilvl 32->37; no primary (jewelry/cloak)
+24120 32 2 37 0 25 0 -  # Seal of Argas -- - / Crit; green; ilvl 32->37; no primary (jewelry/cloak)
+24129 1 2 5 23 28 4000 -  # Salvaged Leather Belt -- Agi / Vers; white->green; ilvl 5 kept (target 3); type Agi
+#   (leather); round 8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+24130 1 2 5 24 72 4000 -  # Worn Slippers -- Int / CDH; white->green; ilvl 5 kept (target 3); type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so CDH is at least 1
+24131 1 2 5 24 73 8000 -  # Slightly Rusted Bracers -- Int / Proc; white->green; ilvl 5 kept (target 3); type Int (mail,
+#   odd entry)
+24133 4 2 6 24 26 4000 -  # Weathered Mail Tunic -- Int / Haste; white->green; ilvl 5->6; type Int (mail, odd entry);
+#   round 8 step-down (ruling 37): share 8000->4000 so Haste is at least 1
+24134 4 2 6 23 27 4000 -  # Weathered Leather Vest -- Agi / Mastery; white->green; ilvl 5->6; type Agi (leather); round
+#   8 step-down (ruling 37): share 8000->4000 so Mastery is at least 1
+24135 4 2 6 24 28 4000 -  # Weathered Cloth Armor -- Int / Vers; white->green; ilvl 5->6; type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Vers is at least 1
+24136 10 2 15 23 72 6000 -  # Farstrider's Bow -- Agi / CDH; green; ilvl 12->15; FB no stock primary: type Agi (bow);
+#   round 6 step-down: share 8000->6000 so CDH is at least 1
+24138 10 2 15 23 25 6000 -  # Silver Crossbow -- Agi / Crit; green; ilvl 12->15; FB no stock primary: type Agi
+#   (crossbow); round 6 step-down: share 8000->6000 so Crit is at least 1
+24141 7 2 9 24 28 4000 -  # Battle Worn Gauntlets -- Int / Vers; white->green; ilvl 8->9; type Int (mail, odd entry);
+#   round 8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+24142 7 2 9 23 72 4000 -  # Battle Worn Gloves -- Agi / CDH; white->green; ilvl 8->9; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so CDH is at least 1
+24144 7 2 9 24 25 4000 -  # Battle Worn Handguards -- Int / Crit; white->green; ilvl 8->9; type Int (cloth); round 8
+#   step-down (ruling 37): share 8000->4000 so Crit is at least 1
+24241 5 2 7 24 26 4000 -  # Green Chain Belt -- Int / Haste; white->green; ilvl 5->7; type Int (mail, odd entry); round
+#   8 step-down (ruling 37): share 8000->4000 so Haste is at least 1
+24334 19 2 24 22 72 8000 -  # Wheel of the Lost Hope -- Str / CDH; green; ilvl 19->24; FB no stock primary: type Str
+#   (shield)
+24339 11 2 16 22 28 4000 -  # Stung -- Str / Vers; green; ilvl 11->16; round 8 step-down (ruling 37): share 8000->4000
+#   so Vers is at least 1
+24340 11 2 16 71 72 8000 -  # Vandril's Hand Me Down Pants -- Spi / CDH; green; ilvl 11->16
+24341 11 2 16 22 73 8000 -  # Fortified Oven Mitts -- Str / Proc; green; ilvl 11->16
+24342 13 2 18 24 25 8000 -  # Stillpine Shocker -- Int / Crit; green; ilvl 13->18; FB no stock primary: type Int (wand)
+24343 13 2 18 22 26 6000 -  # The Thumper -- Str / Haste; green; ilvl 13->18; round 6 step-down: share 8000->6000 so
+#   Haste is at least 1
+24346 21 2 26 24 72 8000 -  # Robe of the Dragon Slayer -- Int / CDH; green; ilvl 18->26
+24347 21 2 26 23 73 8000 -  # Vest of the Dragon Slayer -- Agi / Proc; green; ilvl 18->26
+24348 21 2 26 22 25 8000 -  # Tunic of the Dragon Slayer -- Str / Crit; green; ilvl 18->26
+24349 20 2 25 0 26 0 -  # Signet Ring of the Hand -- - / Haste; green; ilvl 20->25; no primary (jewelry/cloak)
+24350 20 2 25 0 26 0 -  # Signet Ring of the Hand -- - / Haste; green; ilvl 20->25; no primary (jewelry/cloak); round 6:
+#   as 24349, same name and quest (ruling 28)
+24351 20 2 25 22 28 8000 -  # Mace of the Hand -- Str / Vers; green; ilvl 20->25
+24352 20 2 25 82 72 8000 -  # Blade of the Hand -- AP / CDH; green; ilvl 20->25; round 7: Attack Power (Solo) (ruling
+#   33) (was AP+Str / CDH share 8000)
+24353 20 2 25 23 73 8000 -  # Crossbow of the Hand -- Agi / Proc; green; ilvl 20->25; FB no stock primary: type Agi
+#   (crossbow)
+24354 20 2 25 1 25 8000 -  # Staff of the Hand -- Int+SP / Crit; green; ilvl 20->25
+24423 4 2 6 24 28 4000 -  # Beaten Chain Leggings -- Int / Vers; white->green; ilvl 5->6; type Int (mail, odd entry);
+#   round 8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+24424 4 2 6 23 72 4000 -  # Rough Leather Leggings -- Agi / CDH; white->green; ilvl 5->6; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so CDH is at least 1
+24425 4 2 6 24 73 4000 -  # Hand Sewn Pants -- Int / Proc; white->green; ilvl 5->6; type Int (cloth); round 8 step-down
+#   (ruling 37): share 8000->4000 so Proc is at least 1
+24430 9 2 11 22 72 4000 -  # Seafarer's Blade -- Str / CDH; white->green; ilvl 10->11; type Str (two-handed sword);
+#   round 8 step-down (ruling 37): share 8000->4000 so CDH is at least 1
+24431 9 2 11 24 73 4000 -  # McWeaksauce's Meat Tenderizer -- Int / Proc; white->green; ilvl 10->11; type Int
+#   (one-handed mace, odd entry); round 8 step-down (ruling 37): share 8000->4000 so Proc is at least 1
+24432 9 2 11 22 25 4000 -  # The Shell Cracker -- Str / Crit; white->green; ilvl 10->11; type Str (two-handed mace);
+#   round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1
+24433 9 2 11 23 26 4000 -  # Crossbow of the Albatross -- Agi / Haste; white->green; ilvl 10->11; type Agi (crossbow);
+#   round 8 step-down (ruling 37): share 8000->4000 so Haste is at least 1
+24434 9 2 11 24 27 8000 -  # The Discipline Stick -- Int / Mastery; white->green; ilvl 10->11; type Int (staff)
+24435 8 2 10 24 28 4000 -  # Reinforced Mail Boots -- Int / Vers; white->green; ilvl 7->10; type Int (mail, odd entry);
+#   round 8 step-down (ruling 37): share 8000->4000 so Vers is at least 1
+24436 8 2 10 23 72 8000 -  # Huntsman's Bracers -- Agi / CDH; white->green; ilvl 7->10; type Agi (leather)
+24437 8 2 10 24 73 8000 -  # Slightly Worn Bracer -- Int / Proc; white->green; ilvl 7->10; type Int (cloth)
+24438 11 2 16 71 25 8000 -  # Fur Covered Robe -- Spi / Crit; green; ilvl 11->16
+24439 11 2 16 23 26 8000 -  # Savage Leggings -- Agi / Haste; green; ilvl 11->16
+24440 11 2 16 22 27 8000 -  # Heavy Chain Leggings -- Str / Mastery; green; ilvl 11->16
+24441 5 2 7 23 28 4000 -  # Exodar Crossbow -- Agi / Vers; white->green; ilvl 5->7; type Agi (crossbow); round 8
+#   step-down (ruling 37): share 8000->4000 so Vers is at least 1
+24442 8 2 10 23 72 4000 -  # Mail Belt of the Silverpine -- Agi / CDH; white->green; ilvl 10 kept (target 10); type Agi
+#   (mail, even entry); round 8 step-down (ruling 37): share 8000->4000 so CDH is at least 1
+24443 8 2 10 23 73 8000 -  # Bracers of Shed Fur -- Agi / Proc; white->green; ilvl 10 kept (target 10); type Agi
+#   (leather)
+24444 8 2 10 24 25 4000 -  # Newly Weaved Pants -- Int / Crit; white->green; ilvl 10 kept (target 10); type Int (cloth);
+#   round 8 step-down (ruling 37): share 8000->4000 so Crit is at least 1
+24445 11 2 13 24 26 4000 -  # Fortified Wristguards -- Int / Haste; white->green; ilvl 10->13; type Int (mail, odd
+#   entry); round 8 step-down (ruling 37): share 8000->4000 so Haste is at least 1
+24446 11 2 13 23 27 6000 -  # Sturdy Leather Belt -- Agi / Mastery; white->green; ilvl 10->13; type Agi (leather); round
+#   6 step-down: share 8000->6000 so Mastery is at least 1
+24447 10 2 12 24 28 6000 -  # Naga Scale Boots -- Int / Vers; white->green; ilvl 10->12; type Int (mail, odd entry);
+#   round 6 step-down: share 8000->6000 so Vers is at least 1
+24448 10 2 12 22 72 4000 -  # Battle Tested Blade -- Str / CDH; white->green; ilvl 10->12; type Str (one-handed sword,
+#   even entry); round 8 step-down (ruling 37): share 8000->4000 so CDH is at least 1
+25464 23 3 28 22 41 6000 -  # Blood-Tempered Ranseur -- Str / Crit+Haste; blue; ilvl 27->28
+25553 5 2 7 24 73 6000 -  # Exodar Staff -- Int / Proc; white->green; ilvl 5->7; type Int (staff); round 6 step-down:
+#   share 8000->6000 so Proc is at least 1
+26004 12 2 17 24 25 8000 -  # Farmhand's Vest -- Int / Crit; green; ilvl 11->17
+26005 18 2 23 24 26 8000 -  # Jessera's Fungus Lined Tunic -- Int / Haste; green; ilvl 16->23
+26006 11 2 16 24 27 8000 -  # Crystal-Flecked Pants -- Int / Mastery; green; ilvl 12->16
+26007 18 2 23 24 28 8000 -  # Vindicator's Woolies -- Int / Vers; green; ilvl 17->23
+26008 13 2 18 8 72 8000 -  # Scholar's Gloves -- Int+Spi+SP / CDH; green; ilvl 13->18
+26009 20 2 25 8 73 8000 -  # Flutterer Silk Handwraps -- Int+Spi+SP / Proc; green; ilvl 20->25
+26010 16 2 21 24 25 8000 -  # Vindicator's Soft Sole Slippers -- Int / Crit; green; ilvl 14->21
+26011 18 2 23 24 26 8000 -  # Cryo-Core Attendant's Boots -- Int / Haste; green; ilvl 19->23
+26012 13 2 18 24 27 8000 -  # Kessel's Cinch Wrap -- Int / Mastery; green; ilvl 15->18
+26013 16 2 21 24 28 8000 -  # Cincture of Woven Reeds -- Int / Vers; green; ilvl 20->21
+26014 14 2 19 24 72 8000 -  # Jessera's Fungus Lined Cuffs -- Int / CDH; green; ilvl 13->19
+26016 14 2 19 0 25 0 -  # Surveyor's Mantle -- - / Crit; green; ilvl 14->19; no primary (jewelry/cloak)
+26017 19 2 24 0 26 0 -  # Venomous Silk Cover -- - / Haste; green; ilvl 19->24; no primary (jewelry/cloak)
+26018 12 2 17 23 27 8000 -  # Elekk Handler's Leathers -- Agi / Mastery; green; ilvl 11->17
+26019 18 2 23 82 28 8000 -  # Jessera's Fungus Lined Vest -- AP / Vers; green; ilvl 16->23; round 7: Attack Power (Solo)
+#   (ruling 33) (was AP+Str / Vers share 8000)
+26020 11 2 16 23 72 8000 -  # Shard-Covered Leggings -- Agi / CDH; green; ilvl 12->16
+26021 18 2 23 23 73 8000 -  # Vindicator's Leather Chaps -- Agi / Proc; green; ilvl 17->23
+26022 13 2 18 24 25 8000 -  # Researcher's Gloves -- Int / Crit; green; ilvl 13->18
+26023 20 2 25 23 26 8000 -  # Ravager Hide Gloves -- Agi / Haste; green; ilvl 20->25
+26024 16 2 21 23 27 8000 -  # Vindicator's Leather Moccasins -- Agi / Mastery; green; ilvl 14->21
+26025 18 2 23 15 28 8000 -  # Technician's Boots -- Agi+AP / Vers; green; ilvl 19->23
+26026 16 2 21 82 72 8000 -  # Ornately Tooled Belt -- AP / CDH; green; ilvl 20->21; round 7: Attack Power (Solo) (ruling
+#   33) (was AP+Str / CDH share 8000)
+26027 13 2 18 23 73 8000 -  # Kessel's Sweat Stained Elekk Leash -- Agi / Proc; green; ilvl 15->18; FB no stock primary:
+#   type Agi (leather)
+26028 14 2 19 23 25 8000 -  # Jessera's Fungus Lined Bands -- Agi / Crit; green; ilvl 13->19; FB no stock primary: type
+#   Agi (leather)
+26030 18 2 23 22 27 8000 -  # Jessera's Fungus Lined Hauberk -- Str / Mastery; green; ilvl 16->23
+26031 12 2 17 22 28 8000 -  # Elekk Rider's Mail -- Str / Vers; green; ilvl 11->17
+26032 11 2 16 22 72 8000 -  # Crystal-Studded Legguards -- Str / CDH; green; ilvl 12->16
+26033 18 2 23 22 73 8000 -  # Vindicator's Iron Legguards -- Str / Proc; green; ilvl 17->23
+26034 13 2 18 82 25 8000 -  # Protective Field Gloves -- AP / Crit; green; ilvl 13->18; round 7: Attack Power (Solo)
+#   (ruling 33) (was AP+Str / Crit share 8000)
+26035 20 2 25 22 26 8000 -  # Corin's Handguards -- Str / Haste; green; ilvl 20->25
+26036 16 2 21 23 27 8000 -  # Vindicator's Stompers -- Agi / Mastery; green; ilvl 14->21; FB no stock primary: type Agi
+#   (mail, even entry)
+26037 18 2 23 22 28 8000 -  # Lightweight Mesh Boots -- Str / Vers; green; ilvl 19->23
+26038 16 2 21 22 72 8000 -  # Segmented Girdle -- Str / CDH; green; ilvl 20->21
+26039 13 2 18 24 73 8000 -  # Kessel's Sturdy Riding Handle -- Int / Proc; green; ilvl 15->18; FB no stock primary: type
+#   Int (mail, odd entry)
+26040 14 2 19 23 25 8000 -  # Jessera's Fungus Lined Bracers -- Agi / Crit; green; ilvl 13->19; FB no stock primary:
+#   type Agi (mail, even entry)
+26049 11 2 16 24 28 8000 -  # Old Elekk Prod -- Int / Vers; green; ilvl 11->16; FB no stock primary: type Int (one-
+#   handed mace, odd entry)
+26050 15 2 20 24 72 8000 -  # Fist of Argus -- Int / CDH; green; ilvl 16->20
+26051 11 2 16 22 73 6000 -  # 2 Stone Sledgehammer -- Str / Proc; green; ilvl 11->16; round 6 step-down: share
+#   8000->6000 so Proc is at least 1
+26052 17 2 22 22 25 8000 -  # Vindicator's Smasher -- Str / Crit; green; ilvl 16->22
+26053 11 2 16 22 26 4000 -  # Elekk Handler's Blade -- Str / Haste; green; ilvl 11->16; round 8 step-down (ruling 37):
+#   share 8000->4000 so Haste is at least 1
+26054 15 2 20 23 27 6000 -  # Blade of Argus -- Agi / Mastery; green; ilvl 16->20; round 6 step-down: share 8000->6000
+#   so Mastery is at least 1
+27389 11 2 16 12 73 6000 -  # Surplus Bastard Sword -- Str+AP / Proc; green; ilvl 11->16; round 6 step-down: share
+#   8000->6000 so Proc is at least 1
+27390 17 2 22 12 25 8000 -  # Vindicator's Letter Opener -- Str+AP / Crit; green; ilvl 16->22
+27398 17 2 22 24 27 8000 -  # Carved Crystalline Orb -- Int / Mastery; green; ilvl 17->22
+27399 10 2 15 22 28 6000 -  # Stillpine Defender -- Str / Vers; green; ilvl 12->15; FB no stock primary: type Str
+#   (shield); round 6 step-down: share 8000->6000 so Vers is at least 1
+27400 17 2 22 22 72 8000 -  # Peacekeeper's Buckler -- Str / CDH; green; ilvl 17->22
+27401 10 2 15 23 73 6000 -  # Arugoo's Crossbow of Destruction -- Agi / Proc; green; ilvl 12->15; round 6 step-down:
+#   share 8000->6000 so Proc is at least 1
+27402 18 2 23 23 25 8000 -  # Huntsman's Crossbow -- Agi / Crit; green; ilvl 17->23
+27403 10 2 15 24 26 8000 -  # Stillpine Stinger -- Int / Haste; green; ilvl 12->15
+27404 18 2 23 24 27 8000 -  # Lightspark -- Int / Mastery; green; ilvl 17->23
+27552 5 2 7 23 25 4000 -  # Soft Leather Vest -- Agi / Crit; white->green; ilvl 5->7; type Agi (leather); round 8
+#   step-down (ruling 37): share 8000->4000 so Crit is at least 1
+27640 15 2 20 23 72 8000 -  # Hand of Argus Crossfire -- Agi / CDH; green; ilvl 16->20
+27641 17 2 22 24 73 8000 -  # Vindicator's Walking Stick -- Int / Proc; green; ilvl 16->22
+28141 15 2 20 24 26 8000 -  # Ranger's Sash -- Int / Haste; green; ilvl 15->20
+28142 15 2 20 23 27 8000 -  # Farstrider's Belt -- Agi / Mastery; green; ilvl 15->20
+28143 15 2 20 22 28 8000 -  # Rusted Chain Girdle -- Str / Vers; green; ilvl 15->20
+28144 12 2 17 8 72 8000 -  # Troll Handler Gloves -- Int+Spi+SP / CDH; green; ilvl 12->17
+28146 10 2 15 24 25 6000 -  # Courier's Wraps -- Int / Crit; green; ilvl 10->15; round 6 step-down: share 8000->6000 so
+#   Crit is at least 1
+28147 10 2 15 23 26 6000 -  # Tranquillien Scout's Bracers -- Agi / Haste; green; ilvl 10->15; round 6 step-down: share
+#   8000->6000 so Haste is at least 1
+28148 10 2 15 22 27 6000 -  # Bronze Mail Bracers -- Str / Mastery; green; ilvl 10->15; round 6 step-down: share
+#   8000->6000 so Mastery is at least 1
+28149 11 2 16 23 28 8000 -  # Tranquillien Breeches -- Agi / Vers; green; ilvl 11->16
+28150 13 2 18 0 72 0 -  # Renzithen's Dusty Cloak -- - / CDH; green; ilvl 13->18; no primary (jewelry/cloak)
+28151 14 2 19 24 73 8000 -  # Arcanist's Wand -- Int / Proc; green; ilvl 14->19
+28152 11 2 16 23 25 8000 -  # Quel'Thalas Recurve -- Agi / Crit; green; ilvl 11->16
+28153 12 2 17 22 26 6000 -  # Farstrider's Shield -- Str / Haste; green; ilvl 12->17; FB no stock primary: type Str
+#   (shield); round 6 step-down: share 8000->6000 so Haste is at least 1
+28154 16 2 21 24 27 8000 -  # Red Silk Trousers -- Int / Mastery; green; ilvl 16->21
+28156 17 2 22 24 72 8000 -  # Rotting Handwraps -- Int / CDH; green; ilvl 17->22
+28157 16 2 21 23 73 8000 -  # Black Leather Jerkin -- Agi / Proc; green; ilvl 16->21
+28159 17 2 22 23 26 8000 -  # Undertaker's Gloves -- Agi / Haste; green; ilvl 17->22
+28160 16 2 21 17 27 8000 -  # An'telas Scale Shirt -- Str+Int+SP / Mastery; green; ilvl 16->21
+28161 16 2 21 24 28 8000 -  # Tranquillien Scale Leggings -- Int / Vers; green; ilvl 16->21
+28163 17 2 22 24 73 8000 -  # Maltendis's Handguards -- Int / Proc; green; ilvl 17->22
+28303 21 2 26 0 26 0 -  # Invoker's Signet -- - / Haste; green; ilvl 21->26; no primary (jewelry/cloak)
+29200 27 2 32 23 72 8000 -  # Falfindel's Blaster -- Agi / CDH; green; ilvl 31->32; FB no stock primary: type Agi (gun)
+29914 58 2 81 13 72 8000 -  # Hellfire Skiver -- Agi+AP / CDH; green; ilvl 81 kept (target 55)
+29915 58 2 81 7 73 8000 -  # Desolation Rod -- Int+Spi+SP / Proc; green; ilvl 81 kept (target 55)
+29916 58 2 81 13 25 8000 -  # Ironstar Repeater -- Agi+AP / Crit; green; ilvl 81 kept (target 55)
+29917 58 2 81 1 26 8000 -  # Landslide Buckler -- Int+SP / Haste; green; ilvl 81 kept (target 55); FB MP5 lost: blues
+#   only (green)
+29919 58 2 81 12 28 8000 -  # Adamantine Kite Shield -- Str+AP / Vers; green; ilvl 81 kept (target 55)
+30504 18 2 23 82 25 6000 -  # Leafblade Dagger -- AP / Crit; designer 2026-11-09 (round 6, ruling 29): no Strength:
+#   Attack Power (Solo), a round 6 shape (was AP+Str / Crit share 8000); round 6 step-down: share 8000->6000 so Crit is
+#   at least 1
+30505 18 2 23 23 26 8000 -  # Ghostclaw Tunic -- Agi / Haste; green; ilvl 19->23
+32378 35 2 40 23 27 8000 -  # Silver Star -- Agi / Mastery; green; ilvl 37->40; FB no stock primary: type Agi (thrown)
+33228 36 2 41 8 25 8000 -  # Crimson Tunic -- Int+Spi+SP / Crit; green; ilvl 36->41
+33229 36 2 41 24 26 8000 -  # Mordant's Travel Tunic -- Int / Haste; green; ilvl 36->41
+33230 39 2 44 24 27 8000 -  # Leggings of the Long Road -- Int / Mastery; green; ilvl 39->44
+33231 41 2 46 8 28 8000 -  # Oversized Stonemaul Hood -- Int+Spi+SP / Vers; green; ilvl 40->46
+33232 37 2 42 24 72 8000 -  # Journeyman's Cowl -- Int / CDH; green; ilvl 37->42
+33233 40 2 45 24 73 8000 -  # Cobalt-threaded Gloves -- Int / Proc; green; ilvl 40->45
+33235 40 2 45 8 26 8000 -  # Journeyman's Epaulets -- Int+Spi+SP / Haste; green; ilvl 40->45
+33237 41 2 46 23 28 8000 -  # Brogg's Battle Harness -- Agi / Vers; green; ilvl 40->46
+33239 40 2 45 22 73 8000 -  # Marshwarden's Tunic -- Str / Proc; green; ilvl 40->45
+33240 39 2 44 8 25 8000 -  # Grimtotem Earthbinder's Tunic -- Int+Spi+SP / Crit; green; ilvl 39->44
+33241 40 2 45 12 26 8000 -  # Oiled Leather Leggings -- Str+AP / Haste; green; ilvl 40->45
+33242 39 2 44 8 27 8000 -  # Raptorhide Legguards -- Int+Spi+SP / Mastery; green; ilvl 40->44
+33243 39 2 44 23 28 8000 -  # Skirmisher's Cover -- Agi / Vers; green; ilvl 39->44
+33244 39 2 44 22 72 8000 -  # The Wanderer's Cover -- Str / CDH; green; ilvl 39->44
+33245 36 2 41 23 73 8000 -  # Grimsby's Gaudy Girdle -- Agi / Proc; green; ilvl 36->41
+33247 36 2 41 23 26 8000 -  # Swift Wind Spaulders -- Agi / Haste; green; ilvl 36->41
+33248 37 2 42 8 27 8000 -  # Crested Shoulderpads -- Int+Spi+SP / Mastery; green; ilvl 37->42
+33249 37 2 42 23 28 8000 -  # Boots of the Skirmisher -- Agi / Vers; green; ilvl 37->42
+33250 37 2 42 23 72 8000 -  # Archer's Wristguard -- Agi / CDH; green; ilvl 37->42
+33251 39 2 44 22 73 8000 -  # Steel-banded Hauberk -- Str / Proc; green; ilvl 39->44
+33252 37 2 42 17 25 8000 -  # Gleaming Scale Breastplate -- Str+Int+SP / Crit; green; ilvl 37->42
+33253 36 2 41 12 26 8000 -  # Golden Helm -- Str+AP / Haste; green; ilvl 36->41
+33255 40 2 45 22 28 8000 -  # Rustproof Waistguard -- Str / Vers; green; ilvl 40->45
+33256 41 2 46 22 72 8000 -  # Refitted Bruiser Gauntlets -- Str / CDH; green; ilvl 40->46
+33257 36 2 41 24 73 8000 -  # Scaled Marshwalkers -- Int / Proc; green; ilvl 36->41
+33258 39 2 44 17 25 8000 -  # Protective Engineer's Leggings -- Str+Int+SP / Crit; green; ilvl 40->44
+33259 37 2 42 22 26 8000 -  # Crimson Barbut -- Str / Haste; green; ilvl 38->42
+33260 39 2 44 0 27 0 -  # Spellbound Cloak -- - / Mastery; green; ilvl 39->44; no primary (jewelry/cloak)
+33261 39 2 44 0 28 0 -  # Destroyer's Cloak -- - / Vers; green; ilvl 39->44; no primary (jewelry/cloak)
+33262 39 2 44 0 72 0 -  # Morlann's Seal -- - / CDH; green; ilvl 39->44; no primary (jewelry/cloak)
+33263 39 2 44 0 73 0 -  # Raptor Eye Ring -- - / Proc; green; ilvl 40->44; no primary (jewelry/cloak)
+33264 37 2 42 0 25 0 -  # Glowing Tourmaline Ring -- - / Crit; green; ilvl 38->42; no primary (jewelry/cloak)
+33265 37 2 42 0 26 0 -  # Pendant of Ferocity -- - / Haste; green; ilvl 37->42; no primary (jewelry/cloak)
+33266 37 2 42 7 27 8000 -  # Book of the Adept -- Int+Spi+SP / Mastery; green; ilvl 37->42
+33267 37 2 42 23 28 8000 -  # Fleshripper -- Agi / Vers; green; ilvl 38->42
+33268 37 2 42 23 72 8000 -  # Bone Dirk -- Agi / CDH; green; ilvl 38->42
+33269 37 2 42 8 73 8000 -  # Bejeweled Dagger -- Int+Spi+SP / Proc; green; ilvl 37->42
+33270 37 2 42 15 25 8000 -  # Mariner's Sword -- Agi+AP / Crit; green; ilvl 38->42
+33271 40 2 45 24 26 8000 -  # Battlecaster's Edge -- Int / Haste; green; ilvl 40->45
+33272 37 2 42 15 27 8000 -  # Biting Axe -- Agi+AP / Mastery; green; ilvl 38->42
+33273 39 2 44 23 28 8000 -  # Seasoned Marshwood Bow -- Agi / Vers; green; ilvl 39->44
+33274 37 2 42 22 72 8000 -  # Mercenary's Crossbow -- Str / CDH; green; ilvl 37->42
+34416 46 3 51 1 29 6000 -  # Gloves of the Dune -- Int+SP / Crit+Haste; blue; ilvl 46->51
+34417 46 3 51 13 30 6000 -  # Marauder's Handwraps -- Agi+AP / Crit+Mastery; blue; ilvl 46->51
+34418 50 3 55 81 31 6000 -  # Scrying Wand -- SP / Crit+Mastery; blue; ilvl 50->55; round 7: Spell Power (Solo) (ruling
+#   33) (was SP+Int / Crit+Mastery share 6000)
+34419 50 3 55 82 32 6000 -  # Thorium Flight Blade -- AP / Crit+Vers; blue; ilvl 50->55; round 7: Attack Power (Solo)
+#   (ruling 33) (was AP+Str / Crit+Vers share 6000)
+34421 50 3 55 13 34 6000 -  # Cave Crawler's Mail Treads -- Agi+AP / Haste+Mastery; blue; ilvl 50->55
+34422 50 3 55 22 35 6000 -  # Tempered Thorium Boots -- Str / Haste+Vers; blue; ilvl 50->55
+34423 59 3 60 82 36 6000 -  # Strength of the High Chief -- AP / Mastery+Vers; blue; ilvl 59->60; round 7: Attack Power
+#   (Solo) (ruling 33) (was AP+Str / Mastery+Vers share 6000)
+34424 59 3 60 81 37 6000 -  # Power of the High Chief -- SP / Crit+CDH; blue; ilvl 59->60; round 7: Spell Power (Solo)
+#   (ruling 33) (was SP+Int / Crit+CDH share 6000)
+38632 55 3 70 22 33 6000 -  # Greatsword of the Ebon Blade -- Str / Haste+Mastery; blue; ilvl 70 kept (target 60)
+38633 55 3 70 22 34 6000 -  # Greataxe of the Ebon Blade -- Str / Haste+Mastery; blue; ilvl 70 kept (target 60)
+38661 55 3 70 22 67 6000 -  # Greathelm of the Scourge Champion -- Str / Mastery+Vers; blue; ilvl 70 kept (target 60)
+38662 55 3 70 0 74 0 -  # Bladed Ebon Amulet -- - / CDH+Vers; blue; ilvl 70 kept (target 60); no primary (jewelry/cloak)
+38663 55 3 70 22 75 6000 -  # Blood-soaked Saronite Plated Spaulders -- Str / Mastery+Proc; blue; ilvl 70 kept (target
+#   60)
+38664 55 3 70 0 29 0 -  # Sky Darkener's Shroud of the Unholy -- - / Crit+Haste; blue; ilvl 70 kept (target 60); no
+#   primary (jewelry/cloak)
+38665 55 3 70 22 76 6000 -  # Saronite War Plate -- Str / Parry+Mastery; blue; ilvl 70 kept (target 60); tank Parry
+38666 55 3 70 22 31 6000 -  # Plated Saronite Bracers -- Str / Crit+Mastery; blue; ilvl 70 kept (target 60)
+38667 55 3 70 12 32 6000 -  # Bloodbane's Gauntlets of Command -- Str+AP / Crit+Vers; blue; ilvl 70 kept (target 60)
+38668 55 3 70 22 33 6000 -  # The Plaguebringer's Girdle -- Str / Haste+Mastery; blue; ilvl 70 kept (target 60)
+38669 55 3 70 12 34 6000 -  # Engraved Saronite Legplates -- Str+AP / Haste+Mastery; blue; ilvl 70 kept (target 60)
+38670 55 3 70 22 35 6000 -  # Greaves of the Slaughter -- Str / Haste+Vers; blue; ilvl 70 kept (target 60)
+38671 55 3 70 0 36 0 -  # Valanar's Signet Ring -- - / Mastery+Vers; blue; ilvl 70 kept (target 60); no primary
+#   (jewelry/cloak)
+38672 55 3 70 0 37 0 -  # Keleseth's Signet Ring -- - / Crit+CDH; blue; ilvl 70 kept (target 60); no primary
+#   (jewelry/cloak)
+38674 55 3 70 0 39 0 all  # Soul Harvester's Charm -- - / Crit+Proc; blue; ilvl 70 kept (target 60); no primary
+#   (trinket, ruling 22); keeps spell 1
+38675 55 3 70 0 32 0 all  # Signet of the Dark Brotherhood -- - / Crit+Vers; blue; ilvl 70 kept (target 60); no primary
+#   (trinket, ruling 22); tank Dodge dropped, no Str/Agi (ruling 24): Vers; keeps spell 1; FB Parry needs Str: Dodge
+38707 55 3 65 22 36 6000 -  # Runed Soulblade -- Str / Mastery+Vers; blue; ilvl 65 kept (target 60)
+39208 55 3 70 0 33 0 all  # Sigil of the Dark Rider -- - / Haste+Mastery; blue; ilvl 70 kept (target 60); no primary
+#   (relic); keeps spell 1
+39320 55 3 70 0 37 0 -  # Sky Darkener's Shroud of Blood -- - / Crit+CDH; blue; ilvl 70 kept (target 60); no primary
+#   (jewelry/cloak)
+39322 55 3 70 0 39 0 -  # Shroud of the North Wind -- - / Crit+Proc; blue; ilvl 70 kept (target 60); no primary
+#   (jewelry/cloak)
+40483 55 3 60 0 30 0 all  # Insignia of the Scourge -- - / Crit+Mastery; blue; ilvl 0->60; no primary (trinket, ruling
+#   22); keeps spell 1

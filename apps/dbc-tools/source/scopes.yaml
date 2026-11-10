@@ -47,6 +47,7 @@ scopes:
   healsim:
   npc_tools:  # the training and healing dummies (ids.yaml npc_tools block, no reservation)
     sources: [npcs/training_dummies.py]
+  quest_rewards:  # items/quest_rewards.py: the stock quest rewards on the item stat system (no reservation)
 
 # Reservations no scope owns: a pool whose ids belong to whichever declaration minted them (the item effect spell
 # copies of `item_spell_copy` sit in `items`, each owned by the dungeon whose item declared it).
