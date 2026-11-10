@@ -55,3 +55,33 @@ tank 17 3 60-100 0.8840 0.1480  # tank InventoryType 17 Quality 3 ilvl 60-100 (3
 tank 17 4 60-100 0.8840 0.0657  # tank InventoryType 17 Quality 4 ilvl 60-100 (3 live items) 2026-11-07
 tank 28 3 60-100 none
 tank 28 4 60-100 none
+caster 13 2 1-59 0.6850 -0.2000  # caster InventoryType 13 ilvl 1-59 (14 live items) 2026-11-09
+caster 13 2 60-100 0.5070 -0.2000  # caster InventoryType 13 ilvl 60-100 (5 live items) 2026-11-09
+caster 14 2 1-59 0.6380 0.0000  # caster InventoryType 14 ilvl 1-59 (8 live items) 2026-11-09
+caster 14 2 60-100 0.7660 0.0000  # caster InventoryType 14 ilvl 60-100 (11 live items) 2026-11-09
+caster 14 3 1-59 0.6380 0.0000  # caster InventoryType 14 Quality 3 ilvl 1-59 (6 live items) 2026-11-09
+caster 17 2 1-59 1.1880 -0.2000  # caster InventoryType 17 ilvl 1-59 (38 live items) 2026-11-09
+caster 17 2 60-100 1.0150 -0.2000  # caster InventoryType 17 ilvl 60-100 (48 live items) 2026-11-09
+caster 21 2 1-59 0.8000 -0.2000  # caster InventoryType 21 ilvl 1-59 (8 live items) 2026-11-09
+caster 23 2 1-59 1.1860 0.0000  # caster InventoryType 23 ilvl 1-59 (23 live items) 2026-11-09
+caster 23 2 60-100 0.9650 0.0000  # caster InventoryType 23 ilvl 60-100 (31 live items) 2026-11-09
+caster 23 3 1-59 1.1860 0.0000  # caster InventoryType 23 Quality 3 ilvl 1-59 (23 live items) 2026-11-09
+caster 26 2 1-59 0.6270 -0.2000  # caster InventoryType 26 ilvl 1-59 (8 live items) 2026-11-09
+caster 26 2 60-100 0.5160 -0.2000  # caster InventoryType 26 ilvl 60-100 (22 live items) 2026-11-09
+physical 13 2 1-59 0.7180 0.0000  # physical InventoryType 13 ilvl 1-59 (81 live items) 2026-11-09
+physical 13 2 60-100 0.4450 0.0000  # physical InventoryType 13 ilvl 60-100 (82 live items) 2026-11-09
+physical 14 2 1-59 none
+physical 14 2 60-100 none
+physical 14 3 1-59 none
+physical 15 2 1-59 0.2690 -0.1468  # physical InventoryType 15 ilvl 1-59 (13 live items) 2026-11-09
+physical 15 3 1-59 0.2690 -0.1468  # physical InventoryType 15 Quality 3 ilvl 1-59 (13 live items) 2026-11-09
+physical 17 2 1-59 1.0000 0.0472  # physical InventoryType 17 ilvl 1-59 (45 live items) 2026-11-09
+physical 21 2 1-59 0.5490 0.0000  # physical InventoryType 21 (60 live items) 2026-11-09
+physical 22 2 1-59 0.4370 0.0000  # physical InventoryType 22 (134 live items) 2026-11-09
+physical 22 2 60-100 0.4370 -0.0014  # physical InventoryType 22 ilvl 60-100 (5 live items) 2026-11-09
+physical 23 2 1-59 1.1440 0.0000  # physical InventoryType 23 ilvl 1-59 (3 live items) 2026-11-09
+physical 25 2 1-59 0.3930 0.0000  # physical InventoryType 25 (43 live items) 2026-11-09
+physical 25 3 1-59 0.3930 0.0000  # physical InventoryType 25 Quality 3 (18 live items) 2026-11-09
+physical 26 2 1-59 0.5810 -0.1397  # physical InventoryType 26 ilvl 1-59 (12 live items) 2026-11-09
+physical 26 2 60-100 0.4150 -0.1772  # physical InventoryType 26 ilvl 60-100 (20 live items) 2026-11-09
+tank 14 2 1-59 0.7320 0.0000  # tank InventoryType 14 ilvl 1-59 (15 live items) 2026-11-09
