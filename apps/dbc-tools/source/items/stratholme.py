@@ -2,7 +2,7 @@
 The Stratholme loot (wave 1 dungeon items, after the Deadmines precedent deadmines.py): the 73 approved list items and
 the 6 hard mode items of Balnazzar and Baron Rivendare (docs/dungeons/stratholme-rework.md ## Loot, approved
 2026-11-06, ruling 62; copied in docs/dungeons/dungeon-loot-vanilla.md). Out of scope here: the Haunted tokens and set
-pieces, Deathcharger's Reins, quest items, keys and the kept pools; the loot tables wait for the bosses.
+pieces, Deathcharger's Reins, quest items, keys and the kept pools; the loot tables are in stratholme_loot.py.
 
 Stratholme normal is a level 60 dungeon, so Normal drops Rare at the item's stock level (57-63, relics 65; the shared
 doc Loot ladder: "Normal, level 60 dungeons: stock, about 60"), Heroic is 66 Epic with the Heroic flag, then the three
@@ -23,6 +23,12 @@ Bolts, Skullforge Reaver and the Runeblade. Their effect costs 0.7 of the budget
 The stock spells are the same on every tier (they are not declared in source/items, so they cannot scale). Every other
 stock spell slot (+attack power, MP5, health regen, the relics' flat spell power or rage effects) folds into the budget
 (`absorbed_spell_slots`), as the list's "stats only" asks.
+
+**Unpriced stock extras are cleared on every tier** (the Scholomance precedent, scholomance.py): the stock
+resistances of 15 list items (the former resist greens and the other items with a shadow, frost, fire, nature or
+arcane line) and the random "of the ..." suffix of the Archivist's Cape and the Foresight Girdle. The budget neither
+prices nor scales them, a minted tier would copy them for free, and the build spec's stat lines name a primary and a
+secondary (plus Stamina) only.
 
 **Sockets** (stratholme-rework.md "Sockets", approved 2026-11-06; colors docs/Systems.md "Sockets and gems"): the
 first socket is red on damage and healing gear and blue on tank gear; a second socket takes the color of the item's
@@ -88,7 +94,8 @@ item("strat_mask_of_the_unforgiven", base=13404, ladder=VANILLA_DUNGEON,
      sockets=(Socket.RED,), socket_bonus=BONUS_CRIT_4)
 # Plate tank shoulders: Strength and Dodge (the stock Defense is a dead stat).
 item("strat_wailing_nightbane_pauldrons", base=13405, ladder=VANILLA_DUNGEON,
-     primary="Strength (Solo)", secondary="Dodge (Solo)")
+     primary="Strength (Solo)", secondary="Dodge (Solo)",
+     shadow_res=0)
 # Strength tank axe; keeps its health and mana drain on hit (17506).
 item("strat_soul_breaker", base=13408, ladder=VANILLA_DUNGEON, keep_spells=True,
      primary="Strength (Solo)", secondary="Parry (Solo)")
@@ -113,7 +120,8 @@ item("strat_songbird_sash", name="Songbird Sash", like=13252, ilvl=58, bonding=B
      primary="Spirit (Solo)", secondary="Crit (Solo)")
 # Stock, from the Stratholme BoE pool (1329000); Bind on Pickup from Heroic up.
 item("strat_plaguebat_fur_gloves", base=18744, ladder=VANILLA_DUNGEON,
-     primary="Agility (Solo)", secondary="Crit (Solo)", overrides=BOP_ABOVE_NORMAL)
+     primary="Agility (Solo)", secondary="Crit (Solo)", overrides=BOP_ABOVE_NORMAL,
+     shadow_res=0)
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Timmy the Cruel (stock item level 59-61)
@@ -175,9 +183,11 @@ item("strat_scarlet_throwing_axes", name="Scarlet Throwing Axes", like=28972, il
 # Archivist Galford (stock item level 61)
 
 item("strat_archivist_cape", base=13386, ladder=VANILLA_DUNGEON,
-     primary="Intellect (Solo)", secondary="Crit (Solo)")
+     primary="Intellect (Solo)", secondary="Crit (Solo)",
+     RandomProperty=0)
 item("strat_foresight_girdle", base=13387, ladder=VANILLA_DUNGEON,
-     primary="Agility (Solo)", secondary="Mastery (Solo)")
+     primary="Agility (Solo)", secondary="Mastery (Solo)",
+     RandomProperty=0)
 # New: stats only, one red socket.
 item("strat_pyrewatch_coif", name="Pyrewatch Coif", like=12953, ilvl=61, bonding=BOP, ladder=VANILLA_DUNGEON,
      primary="Intellect (Solo)", secondary="Crit (Solo)",
@@ -206,7 +216,8 @@ item("strat_hammer_of_the_grand_crusader", base=18717, ladder=VANILLA_DUNGEON,
 # Plate tank: two blue sockets (tank gear, and Block is a blue stat), Block bonus.
 item("strat_grand_crusaders_helm", base=18718, ladder=VANILLA_DUNGEON,
      primary="Strength (Solo)", secondary="Block (Solo)",
-     sockets=(Socket.BLUE, Socket.BLUE), socket_bonus=BONUS_BLOCK_4)
+     sockets=(Socket.BLUE, Socket.BLUE), socket_bonus=BONUS_BLOCK_4,
+     shadow_res=0)
 item("strat_shroud_of_the_nathrezim", base=18720, ladder=VANILLA_DUNGEON,
      primary="Intellect (Solo)", secondary="Crit (Solo)")
 # Stock epic, Rare on Normal. Keeps Use: Summon Skeleton (17490).
@@ -233,34 +244,42 @@ item("strat_idol_of_brutality", base=23198, ladder=VANILLA_DUNGEON,
 # Baroness Anastari (stock item level 60)
 
 item("strat_banshee_finger", base=13534, ladder=VANILLA_DUNGEON,
-     primary="Intellect (Solo)", secondary="Haste (Solo)")
+     primary="Intellect (Solo)", secondary="Haste (Solo)",
+     frost_res=0)
 # Was a resist green: Rare on Normal.
 item("strat_windshrieker_pauldrons", base=13538, quality=RARE, ladder=VANILLA_DUNGEON,
      primary="Intellect (Solo)", secondary="Mastery (Solo)",
-     sockets=(Socket.RED,), socket_bonus=BONUS_HASTE_4)
+     sockets=(Socket.RED,), socket_bonus=BONUS_HASTE_4,
+     arcane_res=0)
 item("strat_banshees_touch", base=13539, quality=RARE, ladder=VANILLA_DUNGEON,
-     primary="Strength (Solo)", secondary="Dodge (Solo)")
+     primary="Strength (Solo)", secondary="Dodge (Solo)",
+     frost_res=0, arcane_res=0)
 item("strat_anastari_heirloom", base=18728, ladder=VANILLA_DUNGEON,
      primary=None, secondary="Crit/Haste", primary_share=0)
 item("strat_screeching_bow", base=18729, ammo_type=NO_AMMO, ladder=VANILLA_DUNGEON,
-     primary="Agility (Solo)", secondary="Haste (Solo)")
+     primary="Agility (Solo)", secondary="Haste (Solo)",
+     shadow_res=0)
 item("strat_shadowy_laced_handwraps", base=18730, ladder=VANILLA_DUNGEON,
-     primary="Intellect (Solo)", secondary="Mastery (Solo)")
+     primary="Intellect (Solo)", secondary="Mastery (Solo)",
+     shadow_res=0)
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Nerub'enkan (stock item level 61)
 
 # A caster shield.
 item("strat_husk_of_nerubenkan", base=13529, ladder=VANILLA_DUNGEON,
-     primary="Intellect (Solo)", secondary="Haste (Solo)")
+     primary="Intellect (Solo)", secondary="Haste (Solo)",
+     nature_res=0)
 # Was a mail resist green: now leather (the list's "Leather (was mail)"), Leather Tank, Rare on Normal. The display
 # stays the stock one.
 item("strat_darkspinner_claws", base=13532, quality=RARE, ladder=VANILLA_DUNGEON,
      primary="Agility (Solo)", secondary="Dodge (Solo)", extra_stamina=EXTRA_STAMINA,
-     subclass=ARMOR_SUBCLASS_LEATHER, Material=MATERIAL_LEATHER)
+     subclass=ARMOR_SUBCLASS_LEATHER, Material=MATERIAL_LEATHER,
+     nature_res=0, shadow_res=0)
 item("strat_acid_etched_pauldrons", base=13533, quality=RARE, ladder=VANILLA_DUNGEON,
      primary="Strength (Solo)", secondary="Mastery (Solo)",
-     sockets=(Socket.RED,), socket_bonus=BONUS_HASTE_4)
+     sockets=(Socket.RED,), socket_bonus=BONUS_HASTE_4,
+     nature_res=0)
 item("strat_carapace_spine_crossbow", base=18738, ammo_type=NO_AMMO, ladder=VANILLA_DUNGEON,
      primary="Agility (Solo)", secondary="Mastery (Solo)")
 item("strat_thuzadin_sash", base=18740, ladder=VANILLA_DUNGEON,
@@ -270,14 +289,18 @@ item("strat_thuzadin_sash", base=18740, ladder=VANILLA_DUNGEON,
 # Maleki the Pallid (stock item level 62)
 
 item("strat_skull_of_burning_shadows", base=13524, ladder=VANILLA_DUNGEON,
-     primary="Intellect (Solo)", secondary="Versatility (Solo)")
+     primary="Intellect (Solo)", secondary="Versatility (Solo)",
+     fire_res=0, shadow_res=0)
 item("strat_darkbind_fingers", base=13525, quality=RARE, ladder=VANILLA_DUNGEON,
      primary="Spirit (Solo)", secondary="Crit (Solo)",
-     sockets=(Socket.RED,), socket_bonus=BONUS_CRIT_4)
+     sockets=(Socket.RED,), socket_bonus=BONUS_CRIT_4,
+     shadow_res=0)
 item("strat_flamescarred_girdle", base=13526, quality=RARE, ladder=VANILLA_DUNGEON,
-     primary="Agility (Solo)", secondary="Versatility (Solo)")
+     primary="Agility (Solo)", secondary="Versatility (Solo)",
+     fire_res=0)
 item("strat_pale_moon_cloak", base=18734, ladder=VANILLA_DUNGEON,
-     primary="Strength (Solo)", secondary="Haste (Solo)")
+     primary="Strength (Solo)", secondary="Haste (Solo)",
+     shadow_res=0)
 item("strat_bone_slicing_hatchet", base=18737, ladder=VANILLA_DUNGEON,
      primary="Agility (Solo)", secondary="Mastery (Solo)")
 

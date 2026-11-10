@@ -54,6 +54,20 @@ namespace DungeonKit
         }
     }
 
+    ArenaGuardOptions LeashPreset(std::string const& logPrefix, LeashSpec const& spec)
+    {
+        ArenaGuardOptions o;
+        o.gripOnPull = false;
+        o.gripBack = false;
+        o.holdWhileVictimOff = true;
+        o.switchWhenVictimOff = spec.switchToInside;
+        o.evadeWhenBossOff = true;
+        o.bossGraceMs = spec.bossGraceMs;
+        o.evadeNoTargetInsideMs = spec.noTargetInsideMs;
+        o.logPrefix = logPrefix;
+        return o;
+    }
+
     ArenaGuard::ArenaGuard(Arena arena, ArenaGuardOptions options)
     {
         Configure(std::move(arena), std::move(options));

@@ -95,6 +95,22 @@ namespace DungeonKit
     // never grip it back and forth.
     std::function<bool(Creature const*, Unit const*)> SkipEngagedWithOtherBoss(std::function<bool(uint32)> isBossEntry);
 
+    // The generic leash (Scholomance's LeashOptions lifted into the kit, Stratholme WP-KT-1; the user's arena ruling
+    // "stop at the edge, evade if dragged out", Stratholme handoff section 10): no grips at all; the boss never chases
+    // a victim off his arena (switchToInside: he turns to the highest-threat unit on it; nobody there: he holds at the
+    // edge); he evades when he has been off it himself for bossGraceMs (a charge or a knockback that ends outside does
+    // not reset him at once), and when nobody in combat with him has been on it for noTargetInsideMs. A boss whose
+    // lethal wall arms after a pull grip (KT-2) turns gripOnPull back on in the options this returns.
+    struct LeashSpec
+    {
+        uint32 bossGraceMs = 2000;
+        uint32 noTargetInsideMs = 10000;
+        bool switchToInside = true;
+    };
+
+    // `logPrefix` names the guard's log lines ("strat baron arena").
+    ArenaGuardOptions LeashPreset(std::string const& logPrefix, LeashSpec const& spec = {});
+
     class ArenaGuard
     {
     public:

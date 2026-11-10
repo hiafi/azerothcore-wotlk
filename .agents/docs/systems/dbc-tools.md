@@ -90,6 +90,23 @@ wired in `generate._loot_blocks` after the item expansion, so a full run and `--
   (`loot_tables.derive_heroic_copies`, derived from the replayed normal rows each run, so a rerun is silent). A copy
   on a GroupId a heroic declaration owns is an ERROR; a stale heroic group is a WARNING, never pruned.
 - `remove_loot_group(lootid, group=, why=)` deletes a stock group whose items all moved to another list.
+- `remove_loot_rows(lootid, items=(), group=0, references=(), why=)` deletes single rows of a group, not the whole
+  group: plain item rows by `item_template` entry (`items=`) and grouped or ungrouped reference rows by their
+  `reference_loot_template` Entry (`references=`). Other rows of the group stay. Use it for a stock Tier 0 drop, a cut
+  piece, or a stock pool in a boss's ungrouped rows; a pool that no row references afterwards goes with
+  `remove_reference_pool()`.
+- `loot_chance(lootid, item, chance, group, loot_mode=, reference=)` declares one explicit-chance row, for a drop that
+  is not a list item (a rare mount, a novelty item). The rows of one group are rolled in turn on a single roll, so the
+  group yields **at most one drop**, and a row whose `loot_mode` bit is not set on the kill is skipped. Three rules:
+  - A hard mode extra chance of an item must **share the base row's group** (same Entry, same GroupId). A group of its
+    own rolls independently, so the item can drop twice on one kill. Same group: one roll, one drop.
+  - A second row of the same item in that group needs `reference=R`: the table's key is (Entry, Item, Reference,
+    GroupId), so a plain duplicate would collide. The second row is a grouped reference row into a one-item pool R
+    (MinCount = MaxCount = 1, the pool row at Chance 100 with the same loot mode).
+  - Pattern for "1% normal, 2% heroic, 10% hard mode, never two" (Deathcharger's Reins): normal lootid group G holds
+    the item at 1%; the heroic lootid group G holds the item at 2% (LootMode 1) plus a grouped reference row at 8%
+    (LootMode 2). A hard mode kill has both loot-mode bits, so both rows survive the filter and one roll takes
+    2% + 8% = 10%; a plain heroic kill keeps only the 2% row.
 - Replay note: the replayed loot rows omit columns an INSERT left out; `loot_tables.load_live` fills the schema
   defaults so a declared row compares equal to the live one.
 

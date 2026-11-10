@@ -76,7 +76,7 @@ ContentGate.Enable = 1
 #        509 Ruins of Ahn'Qiraj, 531 Temple of Ahn'Qiraj; 533 Naxxramas (level 80 only).
 #
 
-ContentGate.Open.Instances.EasternKingdoms = "33:N,H 34:N 36:N,H 70:N 90:N 109:N 189:N 229:N 230:N 289:N,H 329:N"
+ContentGate.Open.Instances.EasternKingdoms = "33:N,H 34:N 36:N,H 70:N 90:N 109:N 189:N 229:N 230:N 289:N,H 329:N,H"
 ContentGate.Open.Instances.Kalimdor = "43:N 47:N 48:N 129:N 209:N 349:N 389:N 429:N"
 ContentGate.Open.Instances.Raids = ""
 ContentGate.Open.Instances.TBC = ""

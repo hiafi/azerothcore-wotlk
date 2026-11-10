@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Builds and runs the standalone mod-dungeon-bosses tests with every available host compiler (g++ and clang++).
 # Pure headers only (src/<Dungeon>/*Logic.h, DeadminesKitMath.h, DeadminesRework.h, ShadowfangKeepRework.h,
-# ScholomanceRework.h, SoloLessonLogic.h, the shared kit's pure src/Kit/DungeonKit{Math,State,Arena,Logic,Ids}.h, the
-# generated src/Generated/ItemSpellCopies.h): no server build needed.
+# ScholomanceRework.h, SoloLessonLogic.h, StratholmeRework.h, the shared kit's pure
+# src/Kit/DungeonKit{Math,State,Arena,Logic,Ids,Floor,Flow}.h, the generated src/Generated/ItemSpellCopies.h): no
+# server build needed.
 # A boss WP adds nothing here: every tests/<boss>_test.cpp is listed below already (one per boss file).
 set -euo pipefail
 
@@ -64,6 +65,22 @@ tests=(
   scholo_gandling_test
   scholo_keepsake_test
   scholo_exam_test
+  stratholme_test
+  strat_barthilas_test
+  strat_baroness_test
+  strat_nerubenkan_test
+  strat_maleki_test
+  strat_ramstein_test
+  strat_baron_test
+  strat_ultimatum_test
+  strat_unforgiven_test
+  strat_forresten_test
+  strat_timmy_test
+  strat_malor_test
+  strat_willey_test
+  strat_galford_test
+  strat_dathrohan_test
+  strat_grand_lie_test
 )
 
 status=0
@@ -71,7 +88,8 @@ for cxx in "${compilers[@]}"; do
   for test in "${tests[@]}"; do
     echo "== $cxx $test"
     "$cxx" -std=c++20 -Wall -Wextra -Werror -O1 -I "$root/src/Kit" -I "$root/src/Deadmines" \
-      -I "$root/src/ShadowfangKeep" -I "$root/src/Scholomance" -I "$root/src/Generated" -I "$here" \
+      -I "$root/src/ShadowfangKeep" -I "$root/src/Scholomance" -I "$root/src/Stratholme" -I "$root/src/Generated" \
+      -I "$here" \
       "$here/$test.cpp" -o "$out/$test-$cxx"
     if ! "$out/$test-$cxx"; then
       status=1

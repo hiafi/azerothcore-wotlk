@@ -744,8 +744,8 @@ class DeadminesTest(unittest.TestCase):
             )
             for key in ("creature_templates", "creature_template_models", "creature_template_edits"):
                 cls.dsl[key] = cls.dsl.get(key, []) + list(getattr(kit, key))
-            # This class checks the Deadmines' expansion: the other dungeons' heroics (Shadowfang Keep's, WP-H) have
-            # their own tests and, until their scoped write run, lock lines that are not committed yet.
+            # This class checks the Deadmines' expansion: the other dungeons' heroics (Shadowfang Keep, Scholomance,
+            # Stratholme: each WP-H) have their own tests, and their lock lines (committed or not yet) are left out.
             cls.declared = list(cls.dsl["dungeons"])
             cls.dsl["dungeons"] = [e if e["map_id"] == 36 else dict(e, heroic=None) for e in cls.dsl["dungeons"]]
             cls.index = spell_tables.load_spell_table_index()
@@ -761,8 +761,8 @@ class DeadminesTest(unittest.TestCase):
 
         maps = {e["map_id"]: e for e in self.declared}
         self.assertEqual(set(maps), set(dungeon_extract.VANILLA_DUNGEONS))
-        # Deadmines (E1), Shadowfang Keep and Scholomance (their WP-H); Stratholme joins in its turn
-        self.assertEqual(sorted(m for m, e in maps.items() if e["heroic"]), [33, 36, 289])
+        # Deadmines (E1), Shadowfang Keep, Scholomance and Stratholme (their WP-H)
+        self.assertEqual(sorted(m for m, e in maps.items() if e["heroic"]), [33, 36, 289, 329])
         self.assertTrue(all(e["creatures"] for e in maps.values()))
 
     def test_clean_with_the_committed_lock(self):
@@ -770,7 +770,10 @@ class DeadminesTest(unittest.TestCase):
         self.assertEqual(self.out.lock_appended, [])
         lock = HT.parse_lock(HT.LOCK_PATH.read_text())
         mapping = next(e for e in self.dsl["dungeons"] if e["map_id"] == 36)["heroic_entries"]
-        self.assertEqual(mapping, lock.pairs)
+        # The lock is shared by every heroic dungeon (Shadowfang Keep's and Scholomance's write runs appended their
+        # lines after the Deadmines'): compare the map 36 lines only.
+        self.assertEqual(mapping, {n: h for n, h in lock.pairs.items() if lock.maps[n] == 36})
+        self.assertTrue(set(lock.maps.values()) >= {36})
         self.assertEqual(len(mapping), 29)  # E2's 25 plus the Deadmines Pilot's 4 boss-kit combat adds
         self.assertEqual({e: mapping[e] for e in (300420, 300421, 300422, 300426)},
                          {300420: 310025, 300421: 310026, 300422: 310027, 300426: 310028})

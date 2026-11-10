@@ -11,6 +11,8 @@ keys at one ladder tier, emitted by lib/loot_tables.py as `creature_loot_templat
     remove_loot_group(642, group=1, why="the Shredder's items moved into Sneed's pool")
     remove_reference_pool(35030, why="Ras's list replaced his two rolls on it")         # a stock pool, unused now
     copy_normal_loot(310070, why="the encounter's list is on Vectus")                   # heroic Marduk: copies only
+    loot_chance(310160, 13335, 2, group=4)                                              # a drop at an explicit chance
+    loot_chance(310160, 13335, 8, group=4, loot_mode=2, reference=1700008)             # ... and a hard mode extra
 
 **The loot rule** (docs/dungeons/boss-rework-systems.md section 2, Loot lists): every boss list is one loot group of
 equal-chance entries (Chance 0), so the group always yields an item; a stock generic pool kept on the boss rolls in a
@@ -43,9 +45,21 @@ helms and the cut pieces. A live row of the group that is neither an `item()` en
 `reference_loot_template` Entries (the Reference column).
 
 `remove_loot_rows()` deletes single rows (by Item) of one group, group 0 included: the Tier 0 trash drops and the cut
-stock pieces that sit in a boss's ungrouped rows. Only plain item rows (Reference 0) are matched. It never touches a
-group a `boss_loot()` owns, and the heroic copies (lib/loot_tables.py derive_heroic_copies) are made from the live
-rows without the removed ones.
+stock pieces that sit in a boss's ungrouped rows. Plain item rows (Reference 0) are matched by `items`; `references=`
+names reference rows (the stock pool a boss rolls in his ungrouped rows, the Baron's 35028). It never touches a group a
+`boss_loot()` owns, and the heroic copies (lib/loot_tables.py derive_heroic_copies) are made from the live rows without
+the removed ones.
+
+**`loot_chance()`** (Stratholme, WP-L-1) is the one thing a list cannot be: a row at an explicit chance, the only way
+to roll a rare drop (Deathcharger's Reins) at a chance of its own. A group of `loot_chance()` rows is one loot group
+whose explicit chances are rolled in turn (`LootGroup::Roll`), so it yields at most one of its rows per kill, and a row
+whose `LootMode` bit is not on the kill's loot mode sits out (`LootGroupInvalidSelector`): a normal heroic kill (mode
+1) rolls the 2% row only, a hard mode kill (mode 1 | 2) rolls the 2% and the 8% row, 10% in all, never two drops.
+`creature_loot_template`'s key is (Entry, Item, Reference, GroupId), so a group cannot hold one item twice: the second
+row of an item names `reference=` (a `reference_loot_template` Entry of the `loot_reference` block), which makes it a
+grouped reference row (`Item` = `Reference` = the pool, MaxCount 1) into a pool that holds the item alone. A group is
+declared by `loot_chance()` or by `boss_loot()`, never both; `replaces_items=` / `replaces_references=` name the live
+rows of the group the declaration drops on purpose, as for `boss_loot()`.
 
 **Set tokens.** A key of `boss_loot()` may also be a `set_token()` key (source/items/haunted_set.py): it resolves to the
 token's entry at the declared tier, which is the token the kill gives (Normal on a normal lootid, Heroic on a heroic
@@ -60,7 +74,8 @@ copies of its normal boss's groups. Every heroic copy carries the normal rows' l
 reputation aura, a profession), and a loot row a declaration drops takes its conditions with it.
 
 Registered into `Registry.loot_declarations` keyed on (lootid, group): one declaration per group (row removals are keyed
-on ("loot-rows", lootid, group), pool removals on ("loot-pool", reference, 0), copies on ("loot-copy", lootid, 0)).
+on ("loot-rows", lootid, group), pool removals on ("loot-pool", reference, 0), copies on ("loot-copy", lootid, 0), a
+chance row on ("loot-chance", lootid, group, item, reference or 0): the group is theirs together).
 """
 
 from __future__ import annotations
@@ -96,6 +111,10 @@ class LootDecl:
     rows: tuple[int, ...] = ()
     pool_removal: bool = False  # remove_reference_pool(): DELETE reference_loot_template Entry `reference`
     copy_only: bool = False  # copy_normal_loot(): a heroic lootid with no list, only the copies of its normal loot
+    ref_rows: tuple[int, ...] = ()  # remove_loot_rows(references=): the reference rows (Reference ids) it deletes too
+    chance: float | None = None  # loot_chance(): the row's explicit Chance (percent); None for every other kind
+    item_entry: int = 0  # loot_chance(): the item_template entry of the row
+    label: str = ""  # loot_chance(): the item's name for the row comment
 
     @property
     def listing(self) -> bool:
@@ -104,6 +123,8 @@ class LootDecl:
 
     @property
     def where(self) -> str:
+        if self.chance is not None:
+            return f"loot_chance({self.lootid}, {self.item_entry}, group={self.group})"
         if self.pool_removal:
             return f"remove_reference_pool({self.reference})"
         if self.copy_only:
@@ -136,10 +157,14 @@ def _register(decl: LootDecl) -> LootDecl:
             key = ("loot-pool", decl.reference, 0)
         elif decl.copy_only:
             key = ("loot-copy", decl.lootid, 0)
+        elif decl.chance is not None:
+            key = ("loot-chance", decl.lootid, decl.group, decl.item_entry, decl.reference or 0)
         else:
             key = ("loot-rows" if decl.row_removal else "loot", decl.lootid, decl.group)
         if any(entry["id"] == key for entry in active.loot_declarations):
-            raise _registry.DuplicateIdError(f"{decl.where}: declared twice")
+            hint = (" (a second row of one item in a group needs its own reference=)"
+                    if decl.chance is not None else "")
+            raise _registry.DuplicateIdError(f"{decl.where}: declared twice{hint}")
         active.loot_declarations.append({"id": key, "_decl": decl})
     return decl
 
@@ -197,6 +222,35 @@ def boss_loot(
     ))
 
 
+def loot_chance(
+    lootid: int, item: int, chance: float, group: int, loot_mode: int = LOOT_MODE_DEFAULT, *,
+    reference: int | None = None, replaces_items=(), replaces_references=(), name: str = "",
+) -> LootDecl:
+    """One row of group `group` of `lootid`: item_template entry `item` at an explicit `chance` (percent, 0 to 100) on
+    kills whose loot mode has a bit of `loot_mode`. The rows of one group (several calls, one per row) are rolled in
+    turn and yield at most one drop. `reference=` makes the row a grouped reference row into a one-item pool of that
+    id (a second row of the same item in the group needs it: the table's key is Entry, Item, Reference, GroupId).
+    `replaces_items=` / `replaces_references=` name the stock rows of the group dropped on purpose; `name` is the
+    item's name for the row comment. See the module docstring."""
+    where = f"loot_chance({lootid!r}, {item!r}, group={group!r})"
+    _check_target(where, lootid, group)
+    if not _plain_int(item) or item <= 0:
+        raise LootDeclarationError(f"{where}: item must be a positive int (an item_template entry)")
+    if isinstance(chance, bool) or not isinstance(chance, (int, float)) or not 0.000001 <= chance <= 100:
+        raise LootDeclarationError(f"{where}: chance={chance!r} must be a percent from 0.000001 to 100")
+    if not _plain_int(loot_mode) or not 1 <= loot_mode <= 0xFFFF:
+        raise LootDeclarationError(f"{where}: loot_mode={loot_mode!r} must be a LootMode bit mask (1-65535)")
+    if reference is not None and (not _plain_int(reference) or reference <= 0):
+        raise LootDeclarationError(f"{where}: reference={reference!r} must be a positive int")
+    if not isinstance(name, str):
+        raise LootDeclarationError(f"{where}: name must be a string")
+    replaces_items, replaces_references = _check_replaces(where, replaces_items, replaces_references)
+    return _register(LootDecl(
+        lootid=lootid, group=group, loot_mode=loot_mode, reference=reference, chance=float(chance), item_entry=item,
+        label=name.strip(), replaces_items=replaces_items, replaces_references=replaces_references,
+    ))
+
+
 def remove_loot_group(
     lootid: int, *, group: int, why: str, replaces_items=(), replaces_references=(),
 ) -> LootDecl:
@@ -214,22 +268,28 @@ def remove_loot_group(
     ))
 
 
-def remove_loot_rows(lootid: int, items, *, group: int = 0, why: str) -> LootDecl:
-    """Deletes the plain item rows `items` (`item_template` entries) of group `group` of `lootid` (a stock Tier 0
-    drop, a cut piece in a boss's ungrouped rows). Other rows of the group stay; `why` is printed with the removal."""
+def remove_loot_rows(lootid: int, items=(), *, group: int = 0, why: str, references=()) -> LootDecl:
+    """Deletes the plain item rows `items` (`item_template` entries) and the reference rows `references`
+    (`reference_loot_template` Entries) of group `group` of `lootid` (a stock Tier 0 drop, a cut piece or a stock pool
+    in a boss's ungrouped rows). Other rows of the group stay; `why` is printed with the removal."""
     where = f"remove_loot_rows({lootid!r}, group={group!r})"
     if not _plain_int(lootid) or lootid <= 0:
         raise LootDeclarationError(f"{where}: lootid must be a positive int (a creature_loot_template Entry)")
     if not _plain_int(group) or not 0 <= group <= MAX_GROUP_ID:
         raise LootDeclarationError(f"{where}: group must be an int in 0-{MAX_GROUP_ID}")
-    if not isinstance(items, (tuple, list)) or not items or not all(_plain_int(v) and v > 0 for v in items):
-        raise LootDeclarationError(f"{where}: items must be a non-empty tuple of item_template entries")
-    if len(set(items)) != len(items):
-        raise LootDeclarationError(f"{where}: an item is listed twice")
+    for label, values in (("items", items), ("references", references)):
+        if not isinstance(values, (tuple, list)) or not all(_plain_int(v) and v > 0 for v in values):
+            raise LootDeclarationError(f"{where}: {label} must be a tuple of positive ints")
+        if len(set(values)) != len(values):
+            raise LootDeclarationError(f"{where}: {label} lists an entry twice")
+    if not items and not references:
+        raise LootDeclarationError(f"{where}: items must be a non-empty tuple of item_template entries "
+                                   f"(or references= the reference rows to drop)")
     if not isinstance(why, str) or not why.strip():
         raise LootDeclarationError(f"{where}: why= (why the rows go) is required")
     return _register(LootDecl(
-        lootid=lootid, group=group, row_removal=True, rows=tuple(items), why=why.strip(),
+        lootid=lootid, group=group, row_removal=True, rows=tuple(items), ref_rows=tuple(references),
+        why=why.strip(),
     ))
 
 

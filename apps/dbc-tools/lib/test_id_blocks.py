@@ -585,7 +585,8 @@ class WaveOneItemReservationsTest(unittest.TestCase):
         # `shadowfang_keep` and `scholomance` reservations, shadowfang-keep-build WP-K, scholomance-build WP-KS): an
         # id may sit in either reservation there.
         for directory, names in (("shadowfang_keep", ("shadowfang_items", "shadowfang_keep")),
-                                 ("scholomance", ("scholomance_items", "scholomance"))):
+                                 ("scholomance", ("scholomance_items", "scholomance")),
+                                 ("stratholme", ("stratholme_items", "stratholme"))):
             ids = declared_ids(TOOL_ROOT / "source" / "npcs" / directory)
             self.assertTrue(ids.get("creature"), directory)
             outside = [value for value in sorted(set(ids["creature"]))
@@ -631,6 +632,25 @@ class ScholomanceIdsTest(unittest.TestCase):
         for table, cfg in RESERVATIONS["scholomance"].items():
             for owner, tables in RESERVATIONS.items():
                 if owner != "scholomance" and table in tables:
+                    self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
+
+
+class StratholmeIdsTest(unittest.TestCase):
+    """Stratholme build WP-0 (2026-11-09): the dungeon's reservation, pinned exactly."""
+
+    def test_stratholme_reservation(self):
+        got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["stratholme"].items()}
+        self.assertEqual(got, {
+            "spell": (206400, 206799),
+            "creature": (300580, 300649),
+            "gameobject": (301200, 301249),
+            "spellvisual": (90500, 90549),
+        })
+
+    def test_stratholme_overlaps_no_other_reservation(self):
+        for table, cfg in RESERVATIONS["stratholme"].items():
+            for owner, tables in RESERVATIONS.items():
+                if owner != "stratholme" and table in tables:
                     self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
 
 
