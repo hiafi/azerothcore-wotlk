@@ -38,16 +38,37 @@
 // Data half (apps/dbc-tools/source/world/crafting.py): the three gathering skills are SkillLine category 9
 // (secondary), so they do not use a MaxPrimaryTradeSkill point and cannot be unlearned; the perks' SkillLineAbility
 // rows are AcquireMethod 0, so Player::learnSkillRewardedSpells no longer teaches them.
+//
+// Professions page feed (C2-UI, client/ui-overrides ProfessionsFrame.lua): the client cannot count known recipes
+// without opening each trade skill window, so the server sends them as an addon message to the player himself
+// (SMSG_MESSAGECHAT, CHAT_MSG_WHISPER + LANG_ADDON, read by the client as CHAT_MSG_ADDON):
+//
+//     prefix "CPROF", body "1;<skill>,<recipes>,<rank>;<skill>,<recipes>,<rank>;..."
+//
+// "1" is the format version. One entry per known profession of the 14 above. <rank> is the gathering rank, empty
+// until C3 fills it (the client then shows no rank line). A recipe is a known spell whose SkillLineAbility skill is
+// that profession, minus passives and the profession's tools: the rank spells (SPELL_EFFECT_SKILL), the trade
+// window openers (SPELL_EFFECT_TRADE_SKILL: the main spell, Smelting), Disenchant / Prospecting / Milling and the
+// tracking spells (SPELL_AURA_TRACK_RESOURCES: Find Herbs / Minerals / Fish). That is what the trade skill window
+// lists. Sent on login, after a recipe or profession rank is learned, after a recipe is removed or a profession is
+// unlearned, and when the client asks (body "REQ" whispered to himself; swallowed here). Several
+// changes in one update coalesce into one message. Players without a client (bots) get nothing.
 
+#include "Chat.h"
 #include "Config.h"
+#include "DataMap.h"
 #include "Log.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
+#include "StringFormat.h"
 #include "Trainer.h"
+#include "WorldPacket.h"
+#include "WorldSession.h"
 #include <algorithm>
 #include <array>
+#include <string>
 
 namespace
 {
@@ -156,6 +177,101 @@ namespace
         uint16 const max = std::max(player->GetPureMaxSkillValue(chain.skillId), cap);
         player->SetSkill(chain.skillId, std::max(player->GetSkillStep(chain.skillId), step), value, max);
     }
+
+    // --- Professions page feed ---
+
+    std::string const FeedPrefix = "CPROF";
+    std::string const FeedRequest = "REQ";
+    char constexpr FeedVersion = '1';
+    std::string const FeedStateKey = "Custom_Professions.Feed";
+
+    // A feed message is queued for the player's next update (coalesces several learns in one update).
+    struct FeedState : public DataMap::Base
+    {
+        bool pending = false;
+    };
+
+    // Spells of a profession that are not recipes (rank spells, window openers, Disenchant / Prospecting / Milling,
+    // Find Herbs / Minerals / Fish): the trade window shows none of them.
+    bool IsProfessionTool(SpellInfo const* spellInfo)
+    {
+        return spellInfo->IsPassive() || spellInfo->HasEffect(SPELL_EFFECT_SKILL) ||
+            spellInfo->HasEffect(SPELL_EFFECT_TRADE_SKILL) || spellInfo->HasEffect(SPELL_EFFECT_DISENCHANT) ||
+            spellInfo->HasEffect(SPELL_EFFECT_PROSPECTING) || spellInfo->HasEffect(SPELL_EFFECT_MILLING) ||
+            spellInfo->HasAura(SPELL_AURA_TRACK_RESOURCES); // Find Herbs / Minerals / Fish
+    }
+
+    // The managed profession a spell belongs to through SkillLineAbility, or nullptr.
+    ProfessionChain const* FindProfessionOfAbility(uint32 spellId)
+    {
+        SkillLineAbilityMapBounds bounds = sSpellMgr->GetSkillLineAbilityMapBounds(spellId);
+        for (auto itr = bounds.first; itr != bounds.second; ++itr)
+            if (ProfessionChain const* chain = FindProfession(itr->second->SkillLine))
+                return chain;
+        return nullptr;
+    }
+
+    std::string BuildFeed(Player const* player)
+    {
+        std::array<uint32, Professions.size()> recipes = { };
+        for (auto const& [spellId, playerSpell] : player->GetSpellMap())
+        {
+            if (playerSpell->State == PLAYERSPELL_REMOVED)
+                continue;
+
+            ProfessionChain const* chain = FindProfessionOfAbility(spellId);
+            if (!chain)
+                continue;
+
+            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+            if (!spellInfo || IsProfessionTool(spellInfo))
+                continue;
+
+            ++recipes[chain - Professions.data()];
+        }
+
+        std::string body(1, FeedVersion);
+        for (std::size_t i = 0; i < Professions.size(); ++i)
+        {
+            if (!player->HasSkill(Professions[i].skillId))
+                continue;
+
+            // Third field: gathering rank (crafting rework C3), empty until then.
+            body += Acore::StringFormat(";{},{},", Professions[i].skillId, recipes[i]);
+        }
+        return body;
+    }
+
+    void SendFeed(Player* player)
+    {
+        WorldSession* session = player->GetSession();
+        if (!session || session->IsSocketClosed())
+            return;
+
+        std::string const message = FeedPrefix + '\t' + BuildFeed(player);
+        WorldPacket data;
+        ChatHandler::BuildChatPacket(data, CHAT_MSG_WHISPER, LANG_ADDON, player, player, message);
+        player->SendDirectMessage(&data);
+    }
+
+    // Sends the feed on the player's next update, once however often it is asked for in the meantime.
+    void ScheduleFeed(Player* player, Milliseconds delay = 0ms)
+    {
+        if (!player->GetSession() || player->GetSession()->IsSocketClosed())
+            return;
+
+        FeedState* state = player->CustomData.GetDefault<FeedState>(FeedStateKey);
+        if (state->pending)
+            return;
+
+        state->pending = true;
+        player->m_Events.AddEventAtOffset([player]()
+        {
+            player->CustomData.GetDefault<FeedState>(FeedStateKey)->pending = false;
+            if (player->IsInWorld())
+                SendFeed(player);
+        }, delay);
+    }
 }
 
 class Custom_ProfessionsConfig : public WorldScript
@@ -179,10 +295,17 @@ class Custom_Professions : public PlayerScript
 public:
     Custom_Professions() : PlayerScript("Custom_Professions",
         { PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_LEARN_SPELL, PLAYERHOOK_ON_GET_TRAINER_SPELL_STATE,
-          PLAYERHOOK_CAN_LEARN_SPELL }) { }
+          PLAYERHOOK_CAN_LEARN_SPELL, PLAYERHOOK_ON_SET_SKILL, PLAYERHOOK_CAN_PLAYER_USE_PRIVATE_CHAT,
+          PLAYERHOOK_ON_FORGOT_SPELL }) { }
+
+    using PlayerScript::OnPlayerCanUseChat;
 
     void OnPlayerLogin(Player* player) override
     {
+        // The page feed goes out whatever Custom.Professions.Enable says: it only reports what the player knows. The
+        // delay leaves the client time to finish loading its UI; the client also asks once it is in the world.
+        ScheduleFeed(player, 2s);
+
         if (!Settings.enabled)
             return;
 
@@ -206,14 +329,19 @@ public:
     // A profession rank was learned (the first rank from a trainer, a book, a GM command). The raise waits for the
     // player's next update: from inside learnSpell it would send the higher ranks' SMSG_SUPERCEDED_SPELL before the
     // learn packet of the rank being learned, which learnSpell sends after this hook returns.
+    // A recipe was learned: the page feed goes out on the next update.
     void OnPlayerLearnSpell(Player* player, uint32 spellId) override
     {
-        if (!Settings.enabled || RaisingSkill)
+        if (RaisingSkill)
             return;
 
         ProfessionChain const* chain = FindProfessionOfRank(spellId);
-        if (!chain)
+        if (!chain || !Settings.enabled)
+        {
+            if (chain || FindProfessionOfAbility(spellId))
+                ScheduleFeed(player);
             return;
+        }
 
         uint16 const skillId = chain->skillId;
         player->m_Events.AddEventAtOffset([player, skillId]()
@@ -223,7 +351,38 @@ public:
 
             if (ProfessionChain const* raised = FindProfession(skillId))
                 RaiseToCap(player, *raised, false);
+
+            // After the raise, so the feed lists the new profession with the recipes the ranks taught.
+            ScheduleFeed(player);
         }, 0ms);
+    }
+
+    // A recipe was removed (GM .unlearn, or a profession's spells going with it): the count drops on the next feed.
+    void OnPlayerForgotSpell(Player* player, uint32 spellId) override
+    {
+        if (FindProfessionOfAbility(spellId))
+            ScheduleFeed(player);
+    }
+
+    // A profession was unlearned (Unlearn button, AbandonSkill): the page drops its card on the next feed.
+    void OnPlayerSetSkill(Player* player, uint32 skillId, uint32 /*value*/, uint32 /*max*/, uint32 /*step*/,
+        uint32 newValue) override
+    {
+        if (!newValue && FindProfession(skillId))
+            ScheduleFeed(player);
+    }
+
+    // The client asks for the feed by whispering "REQ" to itself under the feed prefix. Every whisper to self under
+    // that prefix is swallowed, so it never echoes back.
+    bool OnPlayerCanUseChat(Player* player, uint32 type, uint32 language, std::string& msg, Player* receiver) override
+    {
+        if (language != LANG_ADDON || type != CHAT_MSG_WHISPER || receiver != player ||
+            msg.compare(0, FeedPrefix.size() + 1, FeedPrefix + '\t') != 0)
+            return true;
+
+        if (msg.compare(FeedPrefix.size() + 1, std::string::npos, FeedRequest) == 0)
+            ScheduleFeed(player);
+        return false;
     }
 
     // A profession rank above the cap cannot be learned by any route: trainer, recipe book (Master First Aid, Fishing
