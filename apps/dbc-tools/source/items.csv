@@ -40,3 +40,4 @@ id,class_id,subclass_id,sound_override_subclass_id,material,display_info_id,inve
 70601,15,4,-1,-1,31257,0,0,"stratholme-build S8: Scarlet Standard (Grand Lie relic); Horde Battle Standard 18607's look; item_template in rev_balnazzar_hard_mode_stratholme.sql, use spell 206587"
 70602,15,4,-1,-1,23731,0,0,"stratholme-build S8: Blessed Holy Water (Grand Lie relic); Stratholme Holy Water 13180's look; item_template in rev_balnazzar_hard_mode_stratholme.sql, use spell 206586"
 70603,15,4,-1,-1,9857,0,0,"stratholme-build S8: Relic of the Medallion (Grand Lie relic); Medallion of Faith 12845's look; item_template in rev_balnazzar_hard_mode_stratholme.sql, use spell 206588"
+70700,15,0,-1,4,56915,0,0,"lfg-classic-heroic: Satchel of Heroic Supplies (Random Classic Heroic reward); Satchel of Helpful Goods 52003's look; item_template and loot in pending rev_lfg_classic_heroic_rewards.sql"

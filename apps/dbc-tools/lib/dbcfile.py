@@ -283,6 +283,10 @@ def pack_client_dbc(table: DbcTable, rows: list[dict], base_rows: list[dict]) ->
     - DungeonEncounter.dbc: stock is ordered by (MapID, signed OrderIndex, ID), so a heroic copy that keeps its normal
       row's OrderIndex sits right after it, the way the stock TBC/WotLK heroic rows interleave (dungeon difficulties
       E2). Same "keep the order" reasoning as MapDifficulty.
+    - LFGDungeons.dbc: stock is ordered by (TypeID, ID): dungeons, raids, zones, heroics, randoms. A new heroic or
+      random row lands at the end of its type's block (lfg-classic-heroic). Same "keep the order" reasoning.
+    - LFGDungeonGroup.dbc: stock is ordered by (OrderIndex, ID), the order the finder lists its sections in, so a
+      new section lands where its OrderIndex puts it (lfg-classic-heroic). Same "keep the order" reasoning.
 
     lib/test_client_dbc_roundtrip.py checks that every client table repacks its stock file
     byte-identically through here, which also catches a string column read as an int."""
@@ -300,6 +304,10 @@ def pack_client_dbc(table: DbcTable, rows: list[dict], base_rows: list[dict]) ->
         return pack_dbc_bytes(
             table, sorted(rows, key=lambda r: (r["MapID"], order(r["OrderIndex"]), r["ID"])), sort=False,
         )
+    if table.name == "LFGDungeons":
+        return pack_dbc_bytes(table, sorted(rows, key=lambda r: (int(r["TypeID"]), r["ID"])), sort=False)
+    if table.name == "LFGDungeonGroup":
+        return pack_dbc_bytes(table, sorted(rows, key=lambda r: (int(r["OrderIndex"]), r["ID"])), sort=False)
     return pack_dbc_bytes(table, rows)
 
 

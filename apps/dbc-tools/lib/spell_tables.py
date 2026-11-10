@@ -98,6 +98,13 @@ DUNGEONENCOUNTER_COLUMNS = dbcfmt.DUNGEONENCOUNTER.columns
 # Item variants IV10 follow-up 1 (lib/item_limits.py): the unique-equip category every tier of an effect item shares.
 ITEMLIMITCATEGORY_COLUMNS = dbcfmt.ITEMLIMITCATEGORY.columns
 INSTANCE_ENCOUNTERS_COLUMNS = ("entry", "creditType", "creditEntry", "lastEncounterDungeon", "comment")
+# Dungeon finder (lib/dsl/lfg.py, lib/lfg_dungeons.py; lfg-classic-heroic): lfgdungeons_dbc is the server overlay of
+# LFGDungeons.dbc (dbcfmt's column list; the client half goes into patch-Z), lfg_dungeon_template the finder's entrance
+# positions (LFGMgr::LoadLFGDungeons; base dump CREATE TABLE).
+LFGDUNGEONS_COLUMNS = dbcfmt.LFGDUNGEONS.columns
+LFG_DUNGEON_TEMPLATE_COLUMNS = (
+    "dungeonId", "name", "position_x", "position_y", "position_z", "orientation", "VerifiedBuild",
+)
 CREATURE_TEMPLATE_ADDON_COLUMNS = (
     "entry", "path_id", "mount", "bytes1", "bytes2", "emote", "visibilityDistanceType", "auras",
 )
@@ -385,6 +392,17 @@ SPELL_TABLES = (
     TableSpec(
         "instance_encounters", INSTANCE_ENCOUNTERS_COLUMNS, ("entry",), "instance_encounters",
         defaults={"creditType": 0, "creditEntry": 0, "lastEncounterDungeon": 0, "comment": ""},
+        prune_when_empty=True,
+    ),
+    # Dungeon finder entries (lfg-classic-heroic): built by lib/lfg_dungeons.py from lib/dsl/lfg.py's declarations, never
+    # by hand. "No declared finder entry" is a legitimate end state, so both prune when empty. lfgdungeons_dbc's columns
+    # are NOT NULL DEFAULT 0 or nullable strings (the 0/None fallback is right); lfg_dungeon_template's name and
+    # VerifiedBuild are nullable.
+    TableSpec("lfgdungeons_dbc", LFGDUNGEONS_COLUMNS, ("ID",), "lfg_dungeons", prune_when_empty=True),
+    TableSpec(
+        "lfg_dungeon_template", LFG_DUNGEON_TEMPLATE_COLUMNS, ("dungeonId",), "lfg_dungeon_templates",
+        defaults={"name": None, "position_x": 0.0, "position_y": 0.0, "position_z": 0.0, "orientation": 0.0,
+                  "VerifiedBuild": None},
         prune_when_empty=True,
     ),
     TableSpec(

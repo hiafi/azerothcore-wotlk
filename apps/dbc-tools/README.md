@@ -463,6 +463,34 @@ finder entry uses. Deleting a line re-enables the dungeon (the prune pass DELETE
 included). Live on worldserver start or `.reload disables`. Needs the stock
 `var/extractors/dbc/LFGDungeons.dbc` (`DBFilesClient/LFGDungeons.dbc` from `patch-enUS-3.MPQ`, flattened).
 
+### Dungeon finder entries (`lfg_group()` / `lfg_random()` / `lfg_heroic()`)
+
+`source/world/lfg_classic_heroic.py` declares Random Classic Heroic (`lib/dsl/lfg.py`, rows by `lib/lfg_dungeons.py`):
+
+```python
+from lib.dsl.lfg import lfg_group, lfg_heroic, lfg_random
+
+lfg_group(12, name="Classic Heroic", order_index=5, type_id=5)  # a Specific Dungeons section (LFGDungeonGroup.dbc)
+lfg_group(1, order_index=6)                                     # a stock section, moved down one
+lfg_random(300, "Random Classic Heroic", group=12, like=260, expansion=0, min_level=60, max_level=62)
+lfg_heroic(301, normal=6, group=12)                             # Deadmines' heroic finder entry
+```
+
+- `lfg_random` is an `lfgdungeons_dbc` + client LFGDungeons.dbc row (TypeID 6) shaped like the stock random `like`
+  (Difficulty, Flags), with the declared window, expansion and group. One random per group: it draws from every
+  dungeon row of its group.
+- `lfg_heroic` copies the stock normal row `normal` (names, map, texture) as TypeID 5 / Difficulty 1 in `group`, with
+  the group random's window. It also points the map's heroic final boss (`instance_encounters.lastEncounterDungeon`)
+  at the new entry and copies the normal entry's `lfg_dungeon_template` position when it has one. The map needs a
+  declared heroic (`dungeon(..., heroic=heroic(...))`); a heroic map with finder entries left out is a `note:`.
+- `lfg_group` is client-only (patch-Z's LFGDungeonGroup.dbc): a new id needs `name` and `type_id` (5 = heroic
+  section); a stock id keeps its row and takes the new `order_index`. Lower OrderIndex lists first.
+- Ids: `ids.yaml` blocks `lfgdungeons` (300-399) and `lfgdungeongroup` (12-31). Needs the stock
+  `var/extractors/dbc/LFGDungeons.dbc` and `LFGDungeonGroup.dbc` (copy the second from the
+  `azerothcore-wotlk_ac-client-data` docker volume's `/dbc/`); a missing one stops the run.
+- The file is shared (no `--scope` owns it): only a full run writes these rows, and a dungeon's scoped run stops
+  while its final boss names a finder entry that is not live yet.
+
 ### Owning one column of a stock creature (`creature_template_columns`)
 
 `creature_template()` owns a whole row; for a **stock** creature where dbc-tools should own a single column (the

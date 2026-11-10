@@ -86,6 +86,7 @@ from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, so
 from lib import gcd_haste, header_gen, potency_sheet, spell_tables, superseded_ranks  # noqa: E402
 from lib import sqlcorpus, stale_overlay, trainer_pricing, trainer_state  # noqa: E402
 from lib import dungeon_checks, dungeon_heroic, heroic_templates, item_emit, item_ids, item_variants  # noqa: E402
+from lib import lfg_dungeons as lfg_finder  # noqa: E402
 from lib import loot_tables  # noqa: E402
 from lib import item_labels  # noqa: E402
 from lib import item_set_members  # noqa: E402
@@ -1486,6 +1487,16 @@ def _run(
             print(f"WARNING: {warning}")
         if dungeon_heroic.needs_live_world(dsl_classes):
             progress("expanded declared dungeon heroics (encounters, spawnMask, heroic creature templates and rows)")
+        # Dungeon finder entries (lfg-classic-heroic): the LFGDungeons / LFGDungeonGroup rows, the entrance positions
+        # and the heroic final bosses' finder link (it edits the instance_encounters rows the expansion above derived).
+        # Its ERRORs and notes ride on the dungeon expansion, which both the full run and --check report.
+        lfg_expansion = lfg_finder.expand(dsl_classes, lambda: lfg_finder.load_inputs(spell_table_index))
+        for warning in lfg_expansion.warnings:
+            print(f"WARNING: {warning}")
+        dungeon_expansion.errors += lfg_expansion.errors
+        dungeon_expansion.notes += lfg_expansion.notes
+        if lfg_finder.needs_inputs(dsl_classes):
+            progress("built the declared dungeon finder entries (LFGDungeons, LFGDungeonGroup, entrance positions)")
     # Item variants IV1: every item()'s ladder tiers, checked and given their item_template entries (the lock file
     # source/items/item_ids.lock). The itemization tables load only when an item is declared.
     item_expansion = item_variants.expand(
@@ -2269,6 +2280,8 @@ def _run(
         dbcfmt.SPELLRUNECOST: _spell_rune_cost_rows(dsl_classes["spell_rune_costs"]),
         dbcfmt.MAPDIFFICULTY: dungeon_checks.map_difficulty_client_rows(dsl_classes["map_difficulties"]),
         dbcfmt.DUNGEONENCOUNTER: dungeon_heroic.client_encounter_rows(dsl_classes["dungeon_encounters"]),
+        dbcfmt.LFGDUNGEONS: lfg_finder.client_dungeon_rows(dsl_classes["lfg_dungeons"]),
+        dbcfmt.LFGDUNGEONGROUP: lfg_finder.client_group_rows(dsl_classes["lfg_groups"]),
         dbcfmt.ITEMLIMITCATEGORY: item_limits.client_rows(dsl_classes["item_limit_categories"]),
         **(set_expansion.client_rows() if set_expansion is not None else {}),
     }

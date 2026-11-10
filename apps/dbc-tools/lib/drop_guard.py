@@ -75,6 +75,8 @@ CLIENT_TABLES: dict[str, tuple[str | None, tuple[str, ...]]] = {
     "MapDifficulty.dbc": ("mapdifficulty_dbc", ("mapdifficulty",)),
     "DungeonEncounter.dbc": ("dungeonencounter_dbc", ("dungeonencounter",)),
     "ItemLimitCategory.dbc": ("itemlimitcategory_dbc", ("item_limit_category",)),
+    "LFGDungeons.dbc": ("lfgdungeons_dbc", ("lfgdungeons",)),
+    "LFGDungeonGroup.dbc": (None, ("lfgdungeongroup",)),
     "SpellRuneCost.dbc": ("spellrunecost_dbc", ("spellrunecost",)),
     "SpellCategory.dbc": ("spellcategory_dbc", ("spellcategory",)),
     "SpellDescriptionVariables.dbc": (None, ("spelldescriptionvariables",)),

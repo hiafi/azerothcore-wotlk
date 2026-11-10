@@ -9,7 +9,8 @@ What it derives, per declared heroic (map M):
 1. **Encounters** (`heroic(encounter_ids=...)`): the map's normal encounters (stock DungeonEncounter.dbc, then the
    live `dungeonencounter_dbc` overlay) in the stock file's order (OrderIndex), each copied to one declared id with
    Difficulty 1 and the normal row's Bit, OrderIndex, names and icon; plus the `instance_encounters` row with the
-   normal row's credit type and entry and `lastEncounterDungeon` 0. The kill credit stays the **normal** entry: a
+   normal row's credit type and entry and `lastEncounterDungeon` 0 (lib/lfg_dungeons.py later sets it on the final
+   boss when the dungeon has a heroic finder entry, lfg_heroic()). The kill credit stays the **normal** entry: a
    heroic creature still reports `GetEntry()` = the normal entry (`Creature::InitEntry`), which `KillRewarder` and
    `Map::UpdateEncounterState` compare against `creditEntry`. `instance_encounters` has no difficulty column: the
    loader files each row under its DungeonEncounter row's (MapID, Difficulty) (`ObjectMgr::LoadInstanceEncounters`).
@@ -300,6 +301,9 @@ def _encounter_rows(entry: dict, live: LiveWorld, all_declared_ids: set[int], ou
         credit_rows.append({
             "entry": encounter_id, "creditType": _int(credit.get("creditType")),
             "creditEntry": _int(credit.get("creditEntry")), "lastEncounterDungeon": 0, "comment": f"{comment} - Heroic",
+            # The normal row's dungeon finder link: lib/lfg_dungeons.py points the heroic row at the heroic finder
+            # entry of that normal entry (an lfg_heroic() declaration), if there is one. Bookkeeping, not a column.
+            "_normal_lfg": _int(credit.get("lastEncounterDungeon")),
         })
     return dbc_rows, credit_rows
 

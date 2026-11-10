@@ -1006,6 +1006,43 @@ not obvious:
   entries have MapID 0), and DisableMgr rejects a continent map with flags anyway. With the file missing
   it errors only when something is declared.
 
+## Dungeon finder entries: `lfg_group()` / `lfg_random()` / `lfg_heroic()` (lfg-classic-heroic)
+
+`lib/dsl/lfg.py` (declarations in `source/world/lfg_classic_heroic.py`), `lib/lfg_dungeons.py` (rows), wired in
+generate.py right after `dungeon_heroic.expand()`; its ERRORs and notes ride on the dungeon expansion, so the full
+run and `--check` report them alike. Usage in `apps/dbc-tools/README.md`. Things that are not obvious:
+
+- **A random draws from its own group.** `LFGMgr::LoadLFGDungeons` files every non-random row under its `Group_Id`
+  and `GetDungeonsByRandom` returns the random's group, so a heroic random needs a group of its own (one random per
+  group, checked) and every pooled dungeon a heroic row (Difficulty 1, TypeID 5) in it.
+- **The final boss link.** `lib/dungeon_heroic.py` copies each normal encounter's credit with
+  `lastEncounterDungeon` 0 and keeps the normal row's value as `_normal_lfg` (bookkeeping, never rendered);
+  `lfg_heroic(normal=N)` sets the heroic row whose `_normal_lfg` is N to the heroic finder id. Without it
+  `Map::UpdateEncounterState` never calls `LFGMgr::FinishDungeon` and the run never rewards. `ObjectMgr::
+  LoadInstanceEncounters` skips the **whole encounter row** when the finder id is not loaded, so the heroic boss
+  would lose its kill credit: a `--scope` run of a dungeon stops (`scope.reference_errors`, space `lfgdungeons`)
+  while its final boss names a finder entry that is not live yet. The declarations are in a shared world file (no
+  scope owns them), so only a full run ships the finder rows.
+- **Client files.** The client takes names, the Specific Dungeons list and its section headers from its own
+  `LFGDungeons.dbc` and `LFGDungeonGroup.dbc`, so both merge into patch-Z. `LFGDungeons.dbc` now reads
+  `TextureFilename` and the Description locales as strings (they were raw offsets while the file was read-only).
+  Stock row order: LFGDungeons by (TypeID, ID), LFGDungeonGroup by (OrderIndex, ID); `pack_client_dbc` keeps both
+  (round-trip test). `LFGDungeonGroup.dbc` is not in the client extract: copy it from the
+  `azerothcore-wotlk_ac-client-data` volume (`/dbc/`); a declared group with the file missing is an ERROR, not a
+  silent "patch: SKIPPING".
+- **Section order.** The finder lists sections by `OrderIndex`, lowest first (stock 1-5: Lich King Heroic ... Classic
+  Dungeons; raids 17-21). Classic Heroic takes 5 and `lfg_group(1, order_index=6)` moves Classic Dungeons below it (a
+  client-only edit of a stock row). A shared OrderIndex is a WARNING.
+- **Level window.** The heroic rows take the random's window (60-62). mod-content-gate's `RandomQueueWindow` leaves a
+  heroic random's window as is (only the highest open expansion's *normal* random runs to the cap); a content-gate
+  difficulty gate (`36:N` without `H`) closes the heroic map, which `LFGMgr::IsDungeonDisabled(map, difficulty)` also
+  reads, so the finder entry locks with it. mod-playerbots' `JoinLFG` uses LFGMgr's window, but its
+  `IsExpansionOutleveled` keeps classic (ExpansionLevel 0) entries from bots above 60 unless
+  `RandomBotJoinLfgOutleveledExpansion` is on.
+- **Rewards are hand SQL** (`rev_lfg_classic_heroic_rewards.sql`): `lfg_dungeon_rewards` (300, 62), quests
+  90000 / 90001 (ids.yaml `quest`, record only) and the satchel 70700 (`items.csv` row for Item.dbc / item_dbc,
+  item_template and item_loot_template in the rev).
+
 ## Dungeon difficulties: `dungeon()` / `heroic()`, MapDifficulty and `dungeon_access_template`
 
 `lib/dsl/dungeon.py` (usage in `apps/dbc-tools/README.md`), declarations in `source/world/dungeons/` (loaded as one

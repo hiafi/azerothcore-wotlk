@@ -533,12 +533,16 @@ SOUNDENTRIES = DbcTable(
     read_as_string=frozenset({"Name", *(f"File_{i}" for i in range(1, 11)), "DirectoryBase"}),
 )
 
-# LFGDungeons.dbc - read-only reference for lfg_exclude() (lib/dsl/registry.py): lint checks each
-# declared map id against the MapID column so a typo (or a raid/zone id that never appears in the
-# dungeon finder) stops the run. Nothing here is ever written; the server loads the stock file
-# (DBCStores.cpp: LOAD_DBC(sLFGDungeonStore, "LFGDungeons.dbc", "lfgdungeons_dbc"), empty overlay).
-# fmt from DBCfmt.h's LFGDungeonEntryfmt, columns from data/sql/base/db_world/lfgdungeons_dbc.sql.
-# Stock file: patch-enUS-3.MPQ, flattened into var/extractors/dbc/ like Item.dbc. Not in ALL_TABLES.
+# LFGDungeons.dbc - the dungeon finder entries. Read by lfg_exclude() (lib/dsl/registry.py), whose lint checks each
+# declared map id against the MapID column, and written by the dungeon finder declarations of lib/dsl/lfg.py
+# (lfg_random() / lfg_heroic(), rows built by lib/lfg_dungeons.py): server overlay `lfgdungeons_dbc` (DBCStores.cpp:
+# LOAD_DBC(sLFGDungeonStore, "LFGDungeons.dbc", "lfgdungeons_dbc"), empty in stock) and a merge over the stock file
+# into patch-Z, because the client takes the names, the "Specific Dungeons" list and its section headers from its
+# own copy. fmt from DBCfmt.h's LFGDungeonEntryfmt, columns from data/sql/base/db_world/lfgdungeons_dbc.sql.
+# TextureFilename and the Description locales are 'x' in the fmt but string-table offsets in the file
+# (read_as_string). The stock file (max ID 294) is ordered by (TypeID, ID) - see dbcfile.pack_client_dbc.
+# Stock file: patch-enUS-3.MPQ, flattened into var/extractors/dbc/ like Item.dbc. Not in ALL_TABLES (the SQL would
+# go out twice, as for MAPDIFFICULTY).
 LFGDUNGEONS = DbcTable(
     name="LFGDungeons",
     dbc_filename="LFGDungeons.dbc",
@@ -550,6 +554,23 @@ LFGDUNGEONS = DbcTable(
         "ExpansionLevel", "Order_Index", "Group_Id", _locale_cols("Description"),
     ),
     signed=frozenset({"Faction"}),
+    read_as_string=frozenset({"TextureFilename"} | {f"Description_Lang_{loc}" for loc in LOCALE_SUFFIXES}),
+)
+
+# LFGDungeonGroup.dbc - the section headers of the dungeon finder's "Specific Dungeons" list ("Classic Dungeons",
+# "Burning Crusade Heroic", ...): an LFGDungeons row's Group_Id names one. Client-only: no server table, nothing
+# server-side reads it (LFGMgr groups by the LFGDungeons Group_Id number alone), so declared rows (lib/dsl/lfg.py's
+# lfg_group()) only merge into patch-Z. Layout from the stock file itself (21 fields: ID, 16 name locales + mask,
+# OrderIndex, ParentGroupID, TypeID; lower OrderIndex lists first, heroic sections are TypeID 5). The stock file (10
+# rows, IDs 1-9 and 11) is ordered by (OrderIndex, ID) - see dbcfile.pack_client_dbc. Stock file: not in the client
+# extract; copy it from the `azerothcore-wotlk_ac-client-data` docker volume (/dbc/LFGDungeonGroup.dbc) into
+# var/extractors/dbc/. Not in ALL_TABLES.
+LFGDUNGEONGROUP = DbcTable(
+    name="LFGDungeonGroup",
+    dbc_filename="LFGDungeonGroup.dbc",
+    sql_table="",  # no SQL overlay - client-only table, nothing server-side reads it
+    fmt="n" + "s" * 16 + "xiii",
+    columns=_cols("ID", _locale_cols("Name"), "OrderIndex", "ParentGroupID", "TypeID"),
 )
 
 # MapDifficulty.dbc - one row per (map, difficulty) an instance supports: the entry-refused message, the lockout
