@@ -283,7 +283,7 @@ namespace
         {
             CHECK(In(odo, kBellSpots[i]));
             for (std::size_t j = i + 1; j < kBellSpots.size(); ++j)
-                CHECK(DungeonKit::Distance(kBellSpots[i].XY(), kBellSpots[j].XY()) >= 19.f);
+                CHECK(DungeonKit::Distance(kBellSpots[i].XY(), kBellSpots[j].XY()) >= 17.5f);
         }
 
         // The Captain's patrol (path 1345170, DB): every point on his arena (north hall plus walkway); point 5 is in

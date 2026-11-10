@@ -576,6 +576,7 @@ private:
         DungeonKit::ArenaGuardOptions o;
         // A unit in combat with another live boss is left to that boss: no two guards grip it to and fro (R2 S-2).
         o.skipGrip = DungeonKit::SkipEngagedWithOtherBoss(ShadowfangKeepRework::IsSfkBossEntry);
+        DungeonKit::ApplyPlaytestPullRule(o);
         o.logPrefix = "sfk springvale";
         o.offArenaReason = "off-hall";
         return o;

@@ -25,8 +25,9 @@
  *   OD6 Blood Frenzy  heroic: every Maul adds a stack (+20% damage dealt each, no cap; emote line 2): the enrage.
  *   OD7 Howling Rage  stock 7481 / 7483 / 7484 at 70 / 50 / 30% health, once each, interruptible (descriptor
  *                     interrupt list); cast when he is not hunting, bounding or casting.
- * ArenaGuard on his room (OdoArena): a player who leaves the room is gripped back (8 yd toward where they were, else
- * the room's middle); he never chases a victim off the room and evades if dragged off.
+ * ArenaGuard on his room (OdoArena; DungeonKit::ApplyPlaytestPullRule): a player who leaves the room is teleported back
+ * (8 yd toward where they were, else the room's middle); he never chases a victim off the room and evades if dragged
+ * off.
  *
  * Every firing logs one INFO line, "sfk odo <mechanic> ...", in module.dungeonbosses. `.sfktest odo <mechanic>` fires
  * one on demand (OdoTestCommands below).
@@ -88,6 +89,7 @@ namespace
         DungeonKit::ArenaGuardOptions o;
         // A unit in combat with another live boss is left to that boss: no two guards grip it to and fro (R2 S-2).
         o.skipGrip = DungeonKit::SkipEngagedWithOtherBoss(ShadowfangKeepRework::IsSfkBossEntry);
+        DungeonKit::ApplyPlaytestPullRule(o);
         o.logPrefix = "sfk odo arena";
         // A Hunt chases its player: a hunted player who runs out of the door is gripped back after the grace (1.5 s),
         // and Odo, a few yards behind, may step past the door meanwhile. He leashes only after 3 s off the room.

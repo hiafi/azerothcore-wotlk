@@ -93,6 +93,7 @@ namespace
         DungeonKit::ArenaGuardOptions o;
         // A unit in combat with another live boss is left to that boss: no two guards grip it to and fro (R2 S-2).
         o.skipGrip = DungeonKit::SkipEngagedWithOtherBoss(ShadowfangKeepRework::IsSfkBossEntry);
+        DungeonKit::ApplyPlaytestPullRule(o);
         o.logPrefix = "sfk fenrus arena";
         // A unit that ran out of a doorway lands just inside the room on its way back, not at the boss.
         o.landing = [](Creature const* /*boss*/, Unit const* unit)

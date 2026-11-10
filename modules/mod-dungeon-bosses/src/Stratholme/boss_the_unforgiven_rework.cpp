@@ -5,7 +5,8 @@
  * on aggro, the 8 s Frost Nova) and the phantom 10387's (Frost Shock): the templates are rebound by apps/dbc-tools
  * source/npcs/stratholme/the_unforgiven.py. Pure rules: UnforgivenLogic.h.
  *
- *   UF12 The Cordon        at the pull (after the pull grip, the only grip: user ruling on section 7 #16) a rank of
+ *   UF12 The Cordon        once the pull grip has run (DungeonKit::ApplyPlaytestPullRule: 5 s after the pull, a
+ *                          teleport; the only grip: user ruling on section 7 #16) a rank of
  *                          Spectral Footmen (300600) stands across each street mouth; the kit's LethalWall on each
  *                          line arms 2 s later: crossing is death (the shared strike 206400), pets too
  *   UF1  The March         20 s, then every 40 s: yell line 1, a rank forms at one street's cordon, a 3 s line marker
@@ -115,12 +116,14 @@ namespace
         return e;
     }
 
-    // The leash, plus the pull grip (the Cordon is a lethal wall: section 10); never a grip back.
+    // The leash, plus the pull grip (the Cordon is a lethal wall: section 10); never a grip back. The playtest pull
+    // rule (2026-11-09): the grip waits 5 s and teleports; the Cordon rises after it (SealPlaza).
     DungeonKit::ArenaGuardOptions UnforgivenGuardOptions()
     {
         DungeonKit::ArenaGuardOptions o = LeashOptions(kBossLogName);
         o.gripOnPull = true;
         o.gripBack = false;
+        DungeonKit::ApplyPlaytestPullRule(o);
         return o;
     }
 }
@@ -160,9 +163,8 @@ struct boss_the_unforgiven_rework : public BossAI
         _nextHauntMs = kHaunting.first;
         _nextNovaMs = urand(kNovaMinMs, kNovaMaxMs);
 
-        _arena.Engage(me);      // the pull grip: everyone in the fight onto the plaza
-        GripOffTheCordon();     // the safety net: nobody left standing in (or by) a strip
-        RaiseCordon();          // the walls arm 2 s after the grip
+        _arena.Engage(me);      // the pull grip (deferred 5 s): everyone in the fight onto the plaza; then SealPlaza
+        SealPlaza();
         Describe(_heroic);
         Talk(YELL_UNFORGIVEN_AGGRO);
         DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "engage",
@@ -220,6 +222,7 @@ struct boss_the_unforgiven_rework : public BossAI
         _clockMs += diff;
         if (!_arena.Update(me, diff))
             return;     // off his arena, or nobody on it for 10 s: evading
+        SealPlaza();
 
         UpdateMarch();
         UpdateRanks();
@@ -271,6 +274,16 @@ struct boss_the_unforgiven_rework : public BossAI
             return nullptr;
         footman->SetReactState(REACT_PASSIVE);
         return footman;
+    }
+
+    // Once the guard's pull grip has run (5 s after the pull): the Cordon, once per fight.
+    void SealPlaza()
+    {
+        if (_sealed || _arena.PullPending())
+            return;
+        _sealed = true;
+        GripOffTheCordon();     // the safety net: nobody left standing in (or by) a strip
+        RaiseCordon();          // the walls arm 2 s after the grip
     }
 
     // R-2-A A-1 (acceptance #8, "never kill a player who stood inside at the pull"): after the guard's pull grip,
@@ -1093,6 +1106,7 @@ private:
                 }
         me->RemoveAurasDueToSpell(SPELL_UF_GRUDGE);
         _clockMs = 0;
+        _sealed = false;
         _marchNominalMs = _nextMarchMs = 0;
         _fireNominalMs = _nextFireMs = 0;
         _accuseNominalMs = _nextAccuseMs = 0;
@@ -1131,6 +1145,7 @@ private:
     uint32 _freed = 0;
     uint32 _bound = 0;
     bool _heroic = false;
+    bool _sealed = false;                       // the Cordon is up (SealPlaza)
     bool _lastSoul = false;
 };
 
