@@ -331,8 +331,8 @@ any SQL or patch is written, every write run (full, `--scope`, `--only items` / 
   the live content of that row and no UPDATE of it names the id: the run would revert another branch's change.
 - **Deployed patch-Z.** In every DBC of the deployed archive the guard knows (Spell, Talent, TalentTab,
   SkillLineAbility, ItemSet, ItemExtendedCost, MapDifficulty, DungeonEncounter, ItemLimitCategory, SpellRuneCost,
-  SpellCategory, SpellDescriptionVariables, the four secondary DBCs; Item.dbc in repack runs), a custom id the
-  deployed file holds and this run's archive lacks is a drop. A full run replaces the archive, so a DBC it does not
+  SpellCategory, SkillLine, SpellDescriptionVariables, the four secondary DBCs; Item.dbc in repack runs), a custom id
+  the deployed file holds and this run's archive lacks is a drop. A full run replaces the archive, so a DBC it does not
   build loses every row, and a deployed DBC member the guard has no definition for is reported by name; a repack
   (`--scope`, `--only items`) leaves the members it does not replace alone. A full run leaves Item.dbc to the
   stricter `--allow-item-drop` guard.

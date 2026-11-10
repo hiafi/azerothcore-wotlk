@@ -4834,6 +4834,26 @@ InfiniteAmmo.Enabled = 0
 Custom.XP.DungeonBoss.Rate = 10
 
 #
+#    Custom.Professions.Enable
+#        Description: Free gathering and professions at the cap (crafting rework C2). On login every
+#                     character learns Herbalism, Mining and Skinning and has every known profession
+#                     raised to Custom.Professions.SkillCap; learning a profession raises it to the cap;
+#                     trainers refuse ranks above the cap. Implemented by
+#                     src/server/scripts/Custom/custom_professions.cpp.
+#        Default:     1 - (Enabled)
+#                     0 - (Disabled)
+
+Custom.Professions.Enable = 1
+
+#
+#    Custom.Professions.SkillCap
+#        Description: The skill value and maximum every profession sits at. Raised by hand on a phase
+#                     change (300 at level 60, later 375 and 450). Range 75-450. Never lowers a skill.
+#        Default:     300
+
+Custom.Professions.SkillCap = 300
+
+#
 #    Custom.Realm.Classless
 #        Description: 1 on the Classless realm. Read once at first use by class scripts that have
 #                     Classless values (hunter Lone Survivor 1/2%, HunterMechanics.cpp).

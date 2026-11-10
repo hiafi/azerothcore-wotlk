@@ -1081,6 +1081,32 @@ exists nowhere. A spell carrying an entry it never uses is only a `note:`. Entri
 client-only (no SQL table): they ship in `patch-Z.mpq`, merged over
 `var/extractors/dbc/SpellDescriptionVariables.dbc`, which must be extracted (see Setup).
 
+### Crafting rework C2: SkillLine overrides
+
+**`override_skill_line(skill_id, **columns)`** is a full-row override of a stock `SkillLine.dbc` row, built like
+`chr_class()`: every column starts at the stock value and only the named ones change, so dropping a keyword restores
+the stock value and dropping the call prunes the `skillline_dbc` overlay row (`prune_when_empty`). It accepts the SQL
+column names (`lib.dbcfmt.SKILLLINE.columns`: `CategoryID`, `SpellIconID`, `CanLink`, the `DisplayName_Lang_*`
+strings, ...) and `DBCStructure.h`'s `categoryId` / `spellIcon` / `canLink`; an unknown column raises `KeyError`, a
+non-stock id, a changed `ID` or a value of the wrong type (int vs str) `ValueError`. `SkillCategory` (lib.dsl IntEnum,
+re-exported by the registry) names the categories: `SECONDARY` 9, `PROFESSION` 11, ...
+
+Both halves go out: the server `skillline_dbc` overlay (`IsPrimaryProfessionSkill`, SpellMgr.cpp, counts category 11
+against `MaxPrimaryTradeSkill`) and the row merged over the stock file into `patch-Z.mpq`'s
+`DBFilesClient\SkillLine.dbc` (the client groups the Skills tab by `CategoryID` and offers Unlearn for category 11
+only). The stock file is the server's copy:
+`docker cp ac-worldserver:/azerothcore/env/dist/data/dbc/SkillLine.dbc var/extractors/dbc/`; without it the helper
+stops the run with an ERROR naming it. A scoped run (`--scope`) never writes these rows (no id space owns them, as for
+`chr_class()`); a full run does. Tests: `lib/test_skill_line.py`.
+
+```python
+# source/world/crafting.py: gathering no longer uses a profession slot, and its perks stop being taught.
+for skill_id in (182, 186, 393):  # Herbalism, Mining, Skinning
+    override_skill_line(skill_id, CategoryID=SkillCategory.SECONDARY)
+for sla_id in GATHERING_PERK_ROWS:  # Toughness, Master of Anatomy, Lifeblood: 18 stock rows, AcquireMethod 1
+    override_skill_line_ability(sla_id, acquire_method=0)
+```
+
 ## Known limitations
 
 - `spell_icon_id` takes a raw `SpellIconID` integer, not a texture-path

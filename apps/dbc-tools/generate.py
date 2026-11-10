@@ -145,6 +145,13 @@ def _spell_category_rows(dsl_rows: list[dict]) -> dict[int, dict]:
     return {int(r["ID"]): {"ID": int(r["ID"]), "Flags": int(r["Flags"])} for r in dsl_rows}
 
 
+def _skill_line_rows(dsl_rows: list[dict]) -> dict[int, dict]:
+    """Declared override_skill_line() entries as SkillLine.dbc rows, keyed by ID (crafting rework C2). The server half
+    is the SPELL_TABLES `skillline_dbc` delta; this is the client half, merged over the stock file into patch-Z on every
+    build. override_skill_line() itself stops the run when the stock file (the base layer) is missing."""
+    return {int(r["ID"]): {c: r[c] for c in dbcfmt.SKILLLINE.columns} for r in dsl_rows}
+
+
 def _spell_category_base_error(rows: dict[int, dict], base_dir: Path) -> str | None:
     """Declared categories need the stock SpellCategory.dbc as the patch's base layer; without it
     the client would not know the category (sibling spells stay clickable). None when fine."""
@@ -875,7 +882,7 @@ def _run_scoped_check(corpus: sqlcorpus.Corpus, class_name: str) -> int:
     item_live_rows = Lazy(spell_tables.load_live_item_template_rows)
     live_data = spell_tables.dsl_live_data(
         existing_talents, item_live_rows, live_skilllineabilities, lambda: state.load_stock_rows(dbcfmt.CHRCLASSES),
-        lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY),
+        lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY), lambda: state.load_stock_rows(dbcfmt.SKILLLINE),
     )
     try:
         dsl_classes = dsl_registry.load_classes_dir(
@@ -1429,7 +1436,7 @@ def _run(
 
     live_data = spell_tables.dsl_live_data(
         existing_talents, item_live_rows, live_skilllineabilities, lambda: state.load_stock_rows(dbcfmt.CHRCLASSES),
-        lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY),
+        lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY), lambda: state.load_stock_rows(dbcfmt.SKILLLINE),
     )
     progress("loaded live Talent.dbc rows and item_template rows")
 
@@ -2283,6 +2290,7 @@ def _run(
         dbcfmt.LFGDUNGEONS: lfg_finder.client_dungeon_rows(dsl_classes["lfg_dungeons"]),
         dbcfmt.LFGDUNGEONGROUP: lfg_finder.client_group_rows(dsl_classes["lfg_groups"]),
         dbcfmt.ITEMLIMITCATEGORY: item_limits.client_rows(dsl_classes["item_limit_categories"]),
+        dbcfmt.SKILLLINE: _skill_line_rows(dsl_classes["skill_lines"]),
         **(set_expansion.client_rows() if set_expansion is not None else {}),
     }
     for name, table in SECONDARY_TABLES.items():

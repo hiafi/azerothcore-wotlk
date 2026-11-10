@@ -84,6 +84,8 @@ CLIENT_TABLES: dict[str, tuple[str | None, tuple[str, ...]]] = {
     "SpellDuration.dbc": ("spellduration_dbc", ("spellduration",)),
     "SpellRange.dbc": ("spellrange_dbc", ("spellrange",)),
     "SpellRadius.dbc": ("spellradius_dbc", ("spellradius",)),
+    # Crafting rework C2: override_skill_line() only re-declares stock ids, so no custom id can drop.
+    "SkillLine.dbc": ("skillline_dbc", ()),
 }
 
 

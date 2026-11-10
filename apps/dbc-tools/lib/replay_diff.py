@@ -315,6 +315,7 @@ REPLAYED_TABLES = (
     "spell_script_names", "spell_bonus_data", "spell_proc", "spell_linked_spell", "spell_group",
     "spell_group_stack_rules", "spell_custom_attr", "spellshapeshiftform_dbc", "spellcategory_dbc",
     "spell_potency_correction", "disables", "creature_template_spell", "spellrunecost_dbc", "chrclasses_dbc",
+    "skillline_dbc",
     "spell_threat", "playercreateinfo_action", "playercreateinfo_cast_spell", "playercreateinfo_skills",
     "mapdifficulty_dbc", "dungeon_access_template", "spell_required", "spell_ranks",
     "smart_scripts", "creature", "gameobject",

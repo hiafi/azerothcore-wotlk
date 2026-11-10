@@ -143,9 +143,10 @@ class FixtureTest(unittest.TestCase):
         live = spell_tables.dsl_live_data({}, {})
         self.assertIsNone(live["skilllineability_rows"])
         self.assertIsNone(live["chrclasses_rows"])
+        self.assertIsNone(live["skillline_rows"])
         self.assertEqual(set(live), {
             "talent_rows", "item_template_rows", "item_template_columns", "item_template_defaults",
-            "skilllineability_rows", "chrclasses_rows", "skilllineability_stock_rows",
+            "skilllineability_rows", "chrclasses_rows", "skilllineability_stock_rows", "skillline_rows",
         })
 
 

@@ -626,7 +626,10 @@ bool IsPrimaryProfessionSkill(uint32 skill);
 
 inline bool IsProfessionSkill(uint32 skill)
 {
-    return  IsPrimaryProfessionSkill(skill) || skill == SKILL_FISHING || skill == SKILL_COOKING || skill == SKILL_FIRST_AID;
+    // Custom: crafting rework C2 moves Herbalism, Mining and Skinning to the secondary SkillLine category (data), so
+    // IsPrimaryProfessionSkill no longer matches them; list them by id like the stock secondary professions.
+    return  IsPrimaryProfessionSkill(skill) || skill == SKILL_FISHING || skill == SKILL_COOKING ||
+        skill == SKILL_FIRST_AID || skill == SKILL_HERBALISM || skill == SKILL_MINING || skill == SKILL_SKINNING;
 }
 
 inline bool IsProfessionOrRidingSkill(uint32 skill)
