@@ -23,6 +23,7 @@
 #include "DatabaseEnv.h"
 #include "DisableMgr.h"
 #include "GameEventMgr.h"
+#include "LFGMgr.h"
 #include "Log.h"
 #include "ObjectMgr.h"
 #include "StringFormat.h"
@@ -163,6 +164,8 @@ namespace ContentGate
         raw.closedEvents = sConfigMgr->GetOption<std::string>("ContentGate.Closed.Events", "");
         raw.openBundles = sConfigMgr->GetOption<std::string>("ContentGate.Open.Bundles", "");
         raw.wintergraspFollowsNorthrend = sConfigMgr->GetOption<bool>("ContentGate.Wintergrasp.FollowNorthrend", true);
+        raw.randomQueuesFollowExpansions = sConfigMgr->GetOption<bool>("ContentGate.RandomQueues.FollowExpansions",
+            true);
         raw.watchdogMs = sConfigMgr->GetOption<uint32>("ContentGate.WatchdogMs", 5000);
         raw.debug = sConfigMgr->GetOption<bool>("ContentGate.Debug", false);
 
@@ -463,6 +466,7 @@ namespace ContentGate
             Apply(Scope::BootLate);
 
         ValidateBundles();
+        ApplyRandomQueues();
         LogConfigErrors();
         for (std::string const& conflict : _conflicts)
             LOG_WARN(LOG_CAT, "[content-gate] conflict: {}", conflict);
@@ -472,6 +476,32 @@ namespace ContentGate
             _closed.ClosedDifficultyCount(), _closed.openBundles.size(), _closed.closedBundles.size(),
             _closed.battlegrounds.size(), _closed.outdoorPvP.size(), _closed.events.size(),
             _closed.outlandClosed ? "closed" : "open", _closed.northrendClosed ? "closed" : "open");
+    }
+
+    // Random dungeon finder queues follow the Outland and Northrend switches (RandomQueueWindow). LFGMgr has no
+    // setter, so the module writes the window into its dungeon data. The stock window always comes from the DBC row,
+    // so a re-apply, or the rule switched off, starts from stock. LFGMgr reads these on the world thread only (the
+    // LFG opcodes are thread-unsafe handlers), which is where this runs.
+    void Gate::ApplyRandomQueues()
+    {
+        bool const follow = _enabled && _config.randomQueuesFollowExpansions;
+        uint8 const cap = uint8(std::min<uint32>(sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL), 255));
+        for (LFGDungeonEntry const* entry : sLFGDungeonStore)
+        {
+            if (entry->TypeID != lfg::LFG_TYPE_RANDOM)
+                continue;
+            auto* data = const_cast<lfg::LFGDungeonData*>(sLFGMgr->GetLFGDungeon(entry->ID));
+            if (!data || data->seasonal)
+                continue;
+
+            RandomQueue const queue = { entry->ID, uint8(entry->ExpansionLevel),
+                entry->Difficulty != DUNGEON_DIFFICULTY_NORMAL, uint8(entry->MinLevel), uint8(entry->MaxLevel) };
+            RandomWindow const window = follow
+                ? RandomQueueWindow(queue, !_closed.outlandClosed, !_closed.northrendClosed, cap)
+                : RandomWindow{ false, queue.minLevel, queue.maxLevel };
+            data->minlevel = window.minLevel;
+            data->maxlevel = window.maxLevel;
+        }
     }
 
     // A closed event can still be running: ArenaSeasonMgr::LoadActiveSeason (after the boot disables) and
@@ -548,6 +578,8 @@ namespace ContentGate
             _outlandOpen = true;
             _northrendOpen = true;
         }
+
+        ApplyRandomQueues();
 
         ClosedSetDiff const diff = Diff(before, after);
         RestartOpenedEvents(diff);
@@ -648,6 +680,19 @@ namespace ContentGate
             JoinIds(_config.openOutdoorPvP), _closed.outlandClosed ? "closed" : "open",
             _closed.northrendClosed ? "closed" : "open", sWorld->getIntConfig(CONFIG_WINTERGRASP_ENABLE));
         handler->PSendSysMessage("Events closed: {}", JoinIds(_closed.events));
+        std::string randoms;
+        for (LFGDungeonEntry const* entry : sLFGDungeonStore)
+        {
+            lfg::LFGDungeonData const* data = entry->TypeID == lfg::LFG_TYPE_RANDOM
+                ? sLFGMgr->GetLFGDungeon(entry->ID) : nullptr;
+            if (!data || data->seasonal)
+                continue;
+            randoms += Acore::StringFormat("{}{} {}", randoms.empty() ? "" : " | ", entry->ID,
+                data->minlevel == RANDOM_HIDDEN_MIN_LEVEL ? "hidden"
+                    : Acore::StringFormat("{}-{}", data->minlevel, data->maxlevel));
+        }
+        handler->PSendSysMessage("Random queues ({}): {}", _config.randomQueuesFollowExpansions ? "follow expansions"
+            : "stock", randoms.empty() ? "-" : randoms);
 
         if (!_bundleTablesPresent)
             handler->PSendSysMessage("Bundles: ERROR tables missing (module SQL not applied): no bundles loaded, "

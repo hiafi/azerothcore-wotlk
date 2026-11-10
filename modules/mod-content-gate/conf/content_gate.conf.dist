@@ -154,6 +154,23 @@ ContentGate.Open.Northrend = 0
 ContentGate.Wintergrasp.FollowNorthrend = 1
 
 #
+#    ContentGate.RandomQueues.FollowExpansions
+#        Description: The dungeon finder's random queues follow Open.Outland and Open.Northrend.
+#                     A closed expansion's random queues are hidden (Outland closed: Random Burning
+#                     Crusade and its heroic; Northrend closed: Random Lich King and its heroic).
+#                     The highest open expansion's normal random queue runs up to MaxPlayerLevel:
+#                     Random Classic to the cap while Outland is closed (stock stops at 58),
+#                     Random Burning Crusade to the cap while Northrend is closed (stock stops at
+#                     68). Live with `.reload config`. The 3.3.5 client filters the random menu by
+#                     its own LFGDungeons.dbc levels, so a level 59-60 player sees Random Classic
+#                     only with the LFDFrame.lua override in patch-X (client/ui-overrides).
+#        Default:     1 - (Follow the expansion switches)
+#                     0 - (Stock random queue levels)
+#
+
+ContentGate.RandomQueues.FollowExpansions = 1
+
+#
 #    ContentGate.Closed.Events
 #        Description: Extra stock game events kept closed (game_event.eventEntry), space
 #                     separated. Every other stock event runs on its schedule, except the ones
