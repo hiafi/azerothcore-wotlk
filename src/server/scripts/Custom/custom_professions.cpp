@@ -45,17 +45,21 @@
 //
 //     prefix "CPROF", body "1;<skill>,<recipes>,<rank>;<skill>,<recipes>,<rank>;..."
 //
-// "1" is the format version. One entry per known profession of the 14 above. <rank> is the gathering rank, empty
-// until C3 fills it (the client then shows no rank line). A recipe is a known spell whose SkillLineAbility skill is
+// "1" is the format version. One entry per known profession of the 14 above. <rank> is the gathering rank (C3,
+// custom_gathering_ranks.cpp): the best rank across the skill's materials for Herbalism, Mining and Skinning, empty
+// for the others (the client then shows no rank line). A recipe is a known spell whose SkillLineAbility skill is
 // that profession, minus passives and the profession's tools: the rank spells (SPELL_EFFECT_SKILL), the trade
 // window openers (SPELL_EFFECT_TRADE_SKILL: the main spell, Smelting), Disenchant / Prospecting / Milling and the
 // tracking spells (SPELL_AURA_TRACK_RESOURCES: Find Herbs / Minerals / Fish). That is what the trade skill window
 // lists. Sent on login, after a recipe or profession rank is learned, after a recipe is removed or a profession is
-// unlearned, and when the client asks (body "REQ" whispered to himself; swallowed here). Several
-// changes in one update coalesce into one message. Players without a client (bots) get nothing.
+// unlearned, on a gathering rank-up, and when the client asks (body "REQ" whispered to himself; swallowed here).
+// Several changes in one update coalesce into one message. Players without a client (bots) get nothing.
+// On login and on "REQ" the Gathering Ranks window's material list ("G1" bodies, custom_gathering_ranks.cpp) follows
+// the feed under the same prefix.
 
 #include "Chat.h"
 #include "Config.h"
+#include "custom_crafting.h"
 #include "DataMap.h"
 #include "Log.h"
 #include "Player.h"
@@ -189,6 +193,7 @@ namespace
     struct FeedState : public DataMap::Base
     {
         bool pending = false;
+        bool materials = false; // also send the Gathering Ranks window's list
     };
 
     // Spells of a profession that are not recipes (rank spells, window openers, Disenchant / Prospecting / Milling,
@@ -236,42 +241,64 @@ namespace
             if (!player->HasSkill(Professions[i].skillId))
                 continue;
 
-            // Third field: gathering rank (crafting rework C3), empty until then.
+            // Third field: gathering rank (crafting rework C3), gathering skills only.
             body += Acore::StringFormat(";{},{},", Professions[i].skillId, recipes[i]);
+            uint16 const skillId = Professions[i].skillId;
+            if (std::find(GatheringSkills.begin(), GatheringSkills.end(), skillId) != GatheringSkills.end())
+                body += std::to_string(CustomGathering::GetBestRank(player, skillId));
         }
         return body;
     }
 
     void SendFeed(Player* player)
     {
-        WorldSession* session = player->GetSession();
-        if (!session || session->IsSocketClosed())
-            return;
-
-        std::string const message = FeedPrefix + '\t' + BuildFeed(player);
-        WorldPacket data;
-        ChatHandler::BuildChatPacket(data, CHAT_MSG_WHISPER, LANG_ADDON, player, player, message);
-        player->SendDirectMessage(&data);
+        CustomProfessions::SendAddonMessage(player, BuildFeed(player));
     }
 
-    // Sends the feed on the player's next update, once however often it is asked for in the meantime.
-    void ScheduleFeed(Player* player, Milliseconds delay = 0ms)
+    // Sends the feed on the player's next update, once however often it is asked for in the meantime. `materials`
+    // (login, client request) also sends the Gathering Ranks window's list (custom_gathering_ranks.cpp) after it.
+    void ScheduleFeed(Player* player, Milliseconds delay = 0ms, bool materials = false)
     {
         if (!player->GetSession() || player->GetSession()->IsSocketClosed())
             return;
 
         FeedState* state = player->CustomData.GetDefault<FeedState>(FeedStateKey);
+        state->materials = state->materials || materials;
         if (state->pending)
             return;
 
         state->pending = true;
         player->m_Events.AddEventAtOffset([player]()
         {
-            player->CustomData.GetDefault<FeedState>(FeedStateKey)->pending = false;
-            if (player->IsInWorld())
-                SendFeed(player);
+            FeedState* sending = player->CustomData.GetDefault<FeedState>(FeedStateKey);
+            bool const withMaterials = sending->materials;
+            sending->pending = false;
+            sending->materials = false;
+            if (!player->IsInWorld())
+                return;
+
+            SendFeed(player);
+            if (withMaterials)
+                CustomGathering::SendMaterialFeed(player);
         }, delay);
     }
+}
+
+void CustomProfessions::QueueFeed(Player* player)
+{
+    ScheduleFeed(player);
+}
+
+void CustomProfessions::SendAddonMessage(Player* player, std::string const& body)
+{
+    WorldSession* session = player->GetSession();
+    if (!session || session->IsSocketClosed())
+        return;
+
+    std::string const message = FeedPrefix + '\t' + body;
+    WorldPacket data;
+    ChatHandler::BuildChatPacket(data, CHAT_MSG_WHISPER, LANG_ADDON, player, player, message);
+    player->SendDirectMessage(&data);
 }
 
 class Custom_ProfessionsConfig : public WorldScript
@@ -304,7 +331,7 @@ public:
     {
         // The page feed goes out whatever Custom.Professions.Enable says: it only reports what the player knows. The
         // delay leaves the client time to finish loading its UI; the client also asks once it is in the world.
-        ScheduleFeed(player, 2s);
+        ScheduleFeed(player, 2s, true);
 
         if (!Settings.enabled)
             return;
@@ -381,7 +408,7 @@ public:
             return true;
 
         if (msg.compare(FeedPrefix.size() + 1, std::string::npos, FeedRequest) == 0)
-            ScheduleFeed(player);
+            ScheduleFeed(player, 0ms, true);
         return false;
     }
 

@@ -4854,6 +4854,43 @@ Custom.Professions.Enable = 1
 Custom.Professions.SkillCap = 300
 
 #
+#    Custom.Gathering.Enable
+#        Description: Gathering ranks (crafting rework C3). Every gather of a material (the main item of a
+#                     mining or herb node, or of a skinning loot) can raise the gatherer's rank in it (0-5).
+#                     Each rank adds +0.5 to the node's minimum and +1 to its maximum of that material
+#                     (floored), and 20% of the base chance to the loot's rare extras (rank 5 doubles them).
+#                     Playerbots are skipped. Implemented by src/server/scripts/Custom/custom_gathering_ranks.cpp.
+#        Default:     1 - (Enabled)
+#                     0 - (Disabled)
+
+Custom.Gathering.Enable = 1
+
+#
+#    Custom.Gathering.RankUpChances
+#        Description: Chance (percent) that a gather raises the rank, from rank 0, 1, 2, 3 and 4: five
+#                     numbers separated by spaces. The default takes about 155 gathers to reach rank 5.
+#        Default:     "20 10 5 2.5 1.25"
+
+Custom.Gathering.RankUpChances = "20 10 5 2.5 1.25"
+
+#
+#    Custom.Gathering.RareChanceThreshold
+#        Description: A loot entry with a chance at or below this (percent) is a rare extra; the main
+#                     material must be above it. Read at startup, .reload config and .gathering reload.
+#        Default:     15
+
+Custom.Gathering.RareChanceThreshold = 15
+
+#
+#    Custom.Gathering.RareReferenceThreshold
+#        Description: A reference entry (a gem table, like the gems of a Thorium vein) with a chance at or
+#                     below this (percent) is a rare extra. Read at startup, .reload config and
+#                     .gathering reload.
+#        Default:     25
+
+Custom.Gathering.RareReferenceThreshold = 25
+
+#
 #    Custom.Realm.Classless
 #        Description: 1 on the Classless realm. Read once at first use by class scripts that have
 #                     Classless values (hunter Lone Survivor 1/2%, HunterMechanics.cpp).

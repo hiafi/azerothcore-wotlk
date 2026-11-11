@@ -655,6 +655,12 @@ void CharacterDatabaseConnection::DoPrepareStatements()
     PrepareStatement(CHAR_REP_SHAPESHIFT_APPEARANCE, "REPLACE INTO character_shapeshift_appearance (guid, form, display_id) VALUES (?, ?, ?)", CONNECTION_ASYNC);
     PrepareStatement(CHAR_DEL_SHAPESHIFT_APPEARANCE, "DELETE FROM character_shapeshift_appearance WHERE guid = ? AND form = ?", CONNECTION_ASYNC);
     PrepareStatement(CHAR_DEL_SHAPESHIFT_APPEARANCES, "DELETE FROM character_shapeshift_appearance WHERE guid = ?", CONNECTION_ASYNC);
+
+    // Custom: gathering ranks
+    PrepareStatement(CHAR_SEL_GATHERING_RANKS, "SELECT item_entry, skill, `rank` FROM character_gathering_rank WHERE guid = ?", CONNECTION_SYNCH);
+    PrepareStatement(CHAR_REP_GATHERING_RANK, "REPLACE INTO character_gathering_rank (guid, item_entry, skill, `rank`) VALUES (?, ?, ?, ?)", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_DEL_GATHERING_RANK, "DELETE FROM character_gathering_rank WHERE guid = ? AND item_entry = ?", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_DEL_GATHERING_RANKS, "DELETE FROM character_gathering_rank WHERE guid = ?", CONNECTION_ASYNC);
 }
 
 CharacterDatabaseConnection::CharacterDatabaseConnection(MySQLConnectionInfo& connInfo) : MySQLConnection(connInfo)
