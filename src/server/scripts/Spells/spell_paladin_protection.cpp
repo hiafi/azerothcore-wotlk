@@ -52,7 +52,7 @@ namespace
 
     constexpr float   LIGHTS_RESERVOIR_RANGE        = 30.0f;
     constexpr uint8   LIGHTS_RESERVOIR_CANDIDATES   = 100;     // SelectMostInjured trims before the LoS filter
-    constexpr int32   RADIANT_ABSORB_CAP_PCT        = 50;      // of max health
+    constexpr int32   RADIANT_ABSORB_CAP_PCT        = 200;     // of max health (user 2026-11-11: was 50)
     constexpr float   SANCTUARY_BASE_MANA_PCT       = 6.0f;    // of base mana, before Improved BoS
     constexpr uint32  DIVINE_SACRIFICE_THRESHOLD_PCT = 5;      // of max health redirected per Bulwark stack
     constexpr int32   SHIELD_OF_THE_TEMPLAR_REFUND_MS = 1000;

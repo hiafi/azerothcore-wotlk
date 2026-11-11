@@ -234,7 +234,7 @@ radiant_bulwark_absorb_201363 = _buff_spell(
     icon=1801, duration_ms=10000,
     aura="Absorbs damage.",
     notes="paladin-rework PROTECTION §4.3: SCHOOL_ABSORB all schools 10 s, positive, amount supplied by "
-          "spell_pal_radiant_bulwark (17 / 33 / 50% of the overheal, cap 50% max health; user ruling F4). Percent of "
+          "spell_pal_radiant_bulwark (17 / 33 / 50% of the overheal, cap 200% max health; user ruling F4, cap raised 2026-11-11). Percent of "
           "another heal, so potency_excluded; EffectBonusMultiplier 0, no spell_bonus_data.",
     EffectBonusMultiplier_1=0.0,
 )

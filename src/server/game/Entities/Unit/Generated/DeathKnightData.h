@@ -478,7 +478,7 @@ namespace DeathKnightData
     constexpr int32 BLOOD_NOVA_COST_PCT = 10; // Blood Nova health cost, percent of maximum health; the cast is refused at or below it [fixed].
     constexpr int32 BLOOD_NOVA_DAMAGE_PCT = 20; // Blood Nova eruption damage, percent of maximum health at cast time, per enemy [fixed].
     constexpr uint32 BLOOD_NOVA_DELAY_MS = 1000; // Delay between the Blood Nova cast and its eruption [fixed].
-    constexpr int32 BLOOD_SHIELD_CAP_PCT = 30; // Blood Shield stacks up to this percent of the Death Knight's CURRENT maximum health (Vampiric Blood counts) [fixed].
+    constexpr int32 BLOOD_SHIELD_CAP_PCT = 100; // Blood Shield stacks up to this percent of the Death Knight's CURRENT maximum health (Vampiric Blood counts) [fixed].
     constexpr int32 BONESTORM_HEAL_PCT = 1; // Percent of current maximum health Bonestorm heals per enemy hit per tick [tune].
     constexpr uint8 BONESTORM_HEAL_TARGET_CAP = 5; // Enemies per Bonestorm tick that count toward its heal [tune].
     constexpr uint32 BONESTORM_MAX_MS = 10000; // Bonestorm maximum duration in milliseconds [tune].
