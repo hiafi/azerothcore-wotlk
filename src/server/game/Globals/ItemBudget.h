@@ -109,6 +109,12 @@ namespace ItemBudget
 
         int32 EffectiveBudget = 0;   // Budget minus the cost of every applicable delta, before the primary/secondary split
 
+        // Crafting rework C4 (A1): secondary_shape_id 0 on an item with a random suffix pool means "the suffix carries
+        // the secondaries". The secondary budget is left unspent here and becomes the item's suffix factor:
+        // 2 * round(SecondaryBudget / 2), so each half of a 5000/5000 suffix pair is round(SecondaryBudget / 2).
+        bool SuffixSecondaries = false;
+        uint32 SuffixFactor = 0;
+
         std::vector<AllocationDetail> Allocations; // primary-side ranks followed by secondary-side ranks
         int32 RoundingRemainderPoints = 0; // how many points largest-remainder distributed, over the merged list
 
@@ -121,6 +127,11 @@ namespace ItemBudget
     // Read-only recompute for the debug command. Does not require the item to have already
     // been materialized this session.
     Breakdown ComputeBreakdown(uint32 entry);
+
+    // Crafting rework C4 (A1): the random suffix factor of an item whose suffix carries its secondaries (see
+    // Breakdown::SuffixFactor), computed once at startup. 0 for every other item: GenerateEnchSuffixFactor
+    // (ItemEnchantmentMgr.cpp) then sizes the suffix from RandPropPoints as stock does.
+    uint32 GetSuffixFactor(uint32 entry);
 }
 
 #endif

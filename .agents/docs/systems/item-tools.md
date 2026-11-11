@@ -110,6 +110,13 @@ Two new modules carry this, both still no-live-DB:
   from what the live worldserver actually materializes. Both files carry a
   comment pointing at the other for exactly this reason.
 
+**Secondary shape 0 means "secondaries from the random suffix"** (crafting rework C4). With
+`item_itemization.secondary_shape_id = 0` and `item_template.RandomSuffix` set, the secondary budget is
+left unspent and becomes the item's suffix factor (`ItemBudget::GetSuffixFactor`, mirrored by
+`budget.compute_breakdown`'s `suffix_factor`, at least 2), so a 5000/5000 suffix pair splits the
+secondary share. The item form offers it as "Null - secondaries from the random suffix"; it needs a
+`RandomSuffix` pool and a primary share below 100% (the server refuses either otherwise).
+
 ## Dungeon/raid loot browser
 
 `/dungeons` and `/dungeons/<map_id>` (`item_lib/loot.py`) join `creature` +

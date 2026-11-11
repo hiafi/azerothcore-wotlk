@@ -18,6 +18,7 @@
 #include "ItemEnchantmentMgr.h"
 #include "DBCStores.h"
 #include "DatabaseEnv.h"
+#include "ItemBudget.h" // Custom: crafting rework C4, budget-sized suffixes
 #include "Log.h"
 #include "ObjectMgr.h"
 #include "QueryResult.h"
@@ -130,6 +131,10 @@ uint32 GenerateEnchSuffixFactor(uint32 item_id)
         return 0;
     if (!itemProto->RandomSuffix)
         return 0;
+
+    // Custom: crafting rework C4 (A1). An item whose suffix carries its secondaries is sized from its own budget.
+    if (uint32 budgetFactor = ItemBudget::GetSuffixFactor(item_id))
+        return budgetFactor;
 
     RandomPropertiesPointsEntry const* randomProperty = sRandomPropertiesPointsStore.LookupEntry(itemProto->ItemLevel);
     if (!randomProperty)

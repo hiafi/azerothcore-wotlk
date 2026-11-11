@@ -44,6 +44,7 @@ GemProperties itself has no level column, so a "minimum level gem" sets it on th
 
 from __future__ import annotations
 
+import math
 from enum import IntEnum
 from typing import NamedTuple
 
@@ -293,6 +294,32 @@ def suffix(suffix_id: int, name: str, internal_name: str, *parts) -> dict:
         row[f"Enchantment_{index}"] = enchant_id
         row[f"AllocationPct_{index}"] = int(pct)
     return _register("item_random_suffixes", caller, row)
+
+
+def suffix_pool(entry: int, *suffixes) -> list[dict]:
+    """Declares a random suffix pool (crafting rework C4): one `item_enchantment_template` row per suffix, `entry` the
+    pool id an item names in `item_template.RandomSuffix`, every suffix at an equal chance. `suffixes` are suffix ids
+    or the rows `suffix()` returned (declared or stock). The chances are rounded UP to four decimals so they sum to at
+    least 100: `GetItemEnchantMod` (ItemEnchantmentMgr.cpp) walks the running total against a 0-100 roll, and a sum
+    short of 100 sends the top of the roll to its slower fallback. `entry` sits in source/ids.yaml's
+    `item_enchantment_pool` block, clear of the stock pools (61-8675), which share this table with RandomProperty.
+    Returns the rows."""
+    caller = f"suffix_pool({entry!r})"
+    entry = _check_block(caller, "item_enchantment_pool", entry)
+    if not suffixes:
+        raise ValueError(f"{caller}: needs at least one suffix")
+    ids = [_id_of(f"{caller}: suffix {index}", ref) for index, ref in enumerate(suffixes, start=1)]
+    if len(set(ids)) != len(ids):
+        raise ValueError(f"{caller}: a suffix is listed twice")
+    for suffix_id in ids:
+        if suffix_id > MAX_SUFFIX_ID:
+            raise ValueError(f"{caller}: suffix {suffix_id} is above {MAX_SUFFIX_ID} (item_instance.randomPropertyId)")
+    chance = math.ceil(100.0 / len(ids) * 10000) / 10000
+    return [
+        _register("item_enchantment_pools", caller,
+                  {"id": f"{entry}:{suffix_id}", "entry": entry, "ench": suffix_id, "chance": chance})
+        for suffix_id in ids
+    ]
 
 
 # ---------------------------------------------------------------------------------------------------------------------

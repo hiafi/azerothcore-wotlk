@@ -389,6 +389,10 @@ public:
             b.BudgetMult, b.SocketCount, b.SocketBudgetCost, b.IsSetPiece ? "yes" : "no", b.SetDiscount);
         handler->PSendSysMessage("  budget {} -> effective_budget {} (after stamina/dps deltas)", b.Budget, b.EffectiveBudget);
         handler->PSendSysMessage("  primary_budget {:.2f} | secondary_budget {:.2f}", b.PrimaryBudget, b.SecondaryBudget);
+        if (b.SuffixSecondaries)
+            handler->PSendSysMessage("  secondaries from the random suffix (pool {}): suffix factor {}, {} per stat "
+                "of a 5000/5000 pair", sObjectMgr->GetItemTemplate(b.Entry)->RandomSuffix, b.SuffixFactor,
+                b.SuffixFactor / 2);
         handler->PSendSysMessage("  stamina: baseline {} + delta {} = final {}", b.BaselineStamina, b.StaminaDelta, b.FinalStamina);
 
         if (b.HasArmorCurve)

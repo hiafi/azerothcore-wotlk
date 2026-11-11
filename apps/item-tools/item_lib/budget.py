@@ -229,6 +229,14 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
     b["primary_budget"] = primary_budget
     b["secondary_budget"] = secondary_budget
 
+    # Crafting rework C4 (A1): secondary shape 0 on an item with a random suffix pool means the suffix carries the
+    # secondaries. Shape 0 allocates nothing below, and the unspent secondary budget is the item's suffix factor,
+    # 2 * round(S / 2), so each half of a 5000/5000 pair is round(S / 2). Mirrors ItemBudget.cpp's ResolveBudget().
+    suffix_secondaries = secondary_shape_id == 0 and bool(item_row.get("RandomSuffix"))
+    b["suffix_secondaries"] = suffix_secondaries
+    # At least 2 (one point per stat): a factor of 0 would fall back to the stock RandPropPoints size.
+    b["suffix_factor"] = max(2, 2 * _round(secondary_budget / 2.0)) if suffix_secondaries else 0
+
     # Step 4: allocate each side against its shape's ordered stat list and distribution. Every
     # rank goes through this exact same formula in the same order, so ranks that are supposed to
     # tie (Even trio/Lead-plus-two's equal-alloc ranks) produce bit-identical floats - §4.1.
@@ -278,6 +286,13 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
     ]
 
     return b
+
+
+def suffix_stat_amount(breakdown: dict, allocation_pct: int = 5000) -> int:
+    """What one part of the item's random suffix grants: `floor(allocation_pct * suffix factor / 10000)`, the
+    server's formula (`Player::ApplyEnchantment`, the `EffectPointsMin` 0 branch) and the client tooltip's. 0 for
+    an item whose suffix is not sized from its budget (`suffix_factor` 0)."""
+    return allocation_pct * breakdown.get("suffix_factor", 0) // 10000
 
 
 def materialized_item_fields(breakdown: dict) -> dict:

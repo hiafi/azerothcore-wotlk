@@ -228,6 +228,13 @@ def _pool_check(pool_rows, items, suffixes, load_stock, warnings, errors) -> lis
     return suffix_pool_problems(pool_rows, entries, stock_ids | set(suffixes))
 
 
+def merged_pool_rows(live_rows: list[dict], declared_rows: list[dict]) -> list[dict]:
+    """The `item_enchantment_template` rows the server will hold after this run: a pool declared with `suffix_pool()`
+    is exactly its declared rows (the prune pass removes a dropped one), every other pool its live rows."""
+    declared_entries = {int(row["entry"]) for row in declared_rows}
+    return [row for row in live_rows if int(row["entry"]) not in declared_entries] + list(declared_rows)
+
+
 def suffix_pool_problems(
     pool_rows: list[dict], suffix_entries: set[int], suffix_ids: set[int], limit: int = MAX_SUFFIX_ID,
 ) -> list[str]:
@@ -239,6 +246,10 @@ def suffix_pool_problems(
     cannot apply. An id above `limit` cannot be saved either (`item_instance.randomPropertyId` is a smallint holding
     the negated id)."""
     problems = []
+    pooled = {int(row["entry"]) for row in pool_rows}
+    for entry in sorted(suffix_entries - pooled):
+        problems.append(f"item_template.RandomSuffix {entry}: no item_enchantment_template row has that entry, so the "
+                        f"item rolls no suffix (GetItemEnchantMod logs an error at every roll)")
     for row in pool_rows:
         entry, ench = int(row["entry"]), int(row["ench"])
         if entry not in suffix_entries:

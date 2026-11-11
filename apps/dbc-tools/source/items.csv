@@ -41,3 +41,12 @@ id,class_id,subclass_id,sound_override_subclass_id,material,display_info_id,inve
 70602,15,4,-1,-1,23731,0,0,"stratholme-build S8: Blessed Holy Water (Grand Lie relic); Stratholme Holy Water 13180's look; item_template in rev_balnazzar_hard_mode_stratholme.sql, use spell 206586"
 70603,15,4,-1,-1,9857,0,0,"stratholme-build S8: Relic of the Medallion (Grand Lie relic); Medallion of Faith 12845's look; item_template in rev_balnazzar_hard_mode_stratholme.sql, use spell 206588"
 70700,15,0,-1,4,56915,0,0,"lfg-classic-heroic: Satchel of Helpful Goods, heroic copy (Random Classic Heroic reward; TBC gets a Burning and Wrath a Frozen one later); Satchel of Helpful Goods 52003's look; item_template and loot in pending rev_lfg_classic_heroic_rewards.sql"
+70710,0,4,-1,7,3018,0,0,Missive of Critical Strike (crafting rework C4); class/subclass/material match the stock scrolls (1180 Scroll of Stamina), display 3018 = INV_Letter_05
+70711,0,4,-1,7,3018,0,0,Missive of Haste (crafting rework C4); class/subclass/material match the stock scrolls (1180 Scroll of Stamina), display 3018 = INV_Letter_05
+70712,0,4,-1,7,3018,0,0,Missive of Mastery (crafting rework C4); class/subclass/material match the stock scrolls (1180 Scroll of Stamina), display 3018 = INV_Letter_05
+70713,0,4,-1,7,3018,0,0,Missive of Versatility (crafting rework C4); class/subclass/material match the stock scrolls (1180 Scroll of Stamina), display 3018 = INV_Letter_05
+70714,0,4,-1,7,3018,0,0,Missive of Cooldown Haste (crafting rework C4); class/subclass/material match the stock scrolls (1180 Scroll of Stamina), display 3018 = INV_Letter_05
+70715,0,4,-1,7,3018,0,0,Missive of Proc Chance (crafting rework C4); class/subclass/material match the stock scrolls (1180 Scroll of Stamina), display 3018 = INV_Letter_05
+70716,0,4,-1,7,3018,0,0,Missive of Block (crafting rework C4); class/subclass/material match the stock scrolls (1180 Scroll of Stamina), display 3018 = INV_Letter_05
+70717,0,4,-1,7,3018,0,0,Missive of Dodge (crafting rework C4); class/subclass/material match the stock scrolls (1180 Scroll of Stamina), display 3018 = INV_Letter_05
+70718,0,4,-1,7,3018,0,0,Missive of Parry (crafting rework C4); class/subclass/material match the stock scrolls (1180 Scroll of Stamina), display 3018 = INV_Letter_05

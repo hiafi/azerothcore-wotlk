@@ -197,6 +197,7 @@ TABLE_IDS: dict[str, tuple[str, str]] = {
     "itemrandomsuffix_dbc": ("ID", "itemrandomsuffix"),
     "gemproperties_dbc": ("ID", "gemproperties"),
     "spellitemenchantmentcondition_dbc": ("ID", "spellitemenchantmentcondition"),
+    "item_enchantment_template": ("entry", "item_enchantment_pool"),
     "instance_encounters": ("entry", "dungeonencounter"),
     # Dungeon finder entries (lfg-classic-heroic): declared in a shared world file, so no scope owns them (a full run
     # writes them); listed so a scope's heroic final boss that names one not yet live stops the run (reference_errors).
@@ -367,6 +368,7 @@ _DECLARED_ID_LISTS = (
     ("item_random_suffixes", "ID", "itemrandomsuffix"),
     ("gem_properties", "ID", "gemproperties"),
     ("enchant_conditions", "ID", "spellitemenchantmentcondition"),
+    ("item_enchantment_pools", "entry", "item_enchantment_pool"),
 )
 
 # conditions.SourceTypeOrReferenceId -> the id space of its SourceGroup, for the loot conditions lib/loot_tables.py
