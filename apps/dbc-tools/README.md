@@ -1197,6 +1197,15 @@ duelist = suffix(1000, "of the Duelist", "Duelist", (crit, 5000), (haste, 5000))
 suffix_pool(9000, duelist, ...)                            # item_template.RandomSuffix = 9000
 ```
 
+**Gems (crafting rework C5).** The gem table is pure data in `lib/crafting_gems_data.py`: 37 rare and 37 epic gems
+(R39 colors), 10 Uncommon leveling gems and 5 meta gems, with their raw gems, names, amounts and ids.
+`source/world/crafting_gems.py` declares from it: the gem enchants (`MinLevel` 60 on rare, epic and meta, so they are
+inert below 60), `GemProperties`, the Jewelcrafting cuts and their `SkillLineAbility` rows, the trainer rows (list 113;
+epic cuts have none yet), the meta gem spells (scripted in `src/server/scripts/Custom/custom_crafting_gems.cpp`) and +4
+socket bonuses for the stats stock lacks. The gem *items* are new `item_template` rows, so they are hand-written:
+`write_gem_items.py` writes `rev_crafting_c5_gem_items.sql` and the `items.csv` rows from the same table (`--check`
+reports stale files). Tests: `lib/test_crafting_gems.py`. Sockets on items are `item(..., sockets=, socket_bonus=)`.
+
 ## Known limitations
 
 - `spell_icon_id` takes a raw `SpellIconID` integer, not a texture-path
