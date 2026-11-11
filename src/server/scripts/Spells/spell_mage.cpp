@@ -215,7 +215,9 @@ enum MageSpells
     SPELL_MAGE_FLASHPOINT                        = 200111,
     SPELL_MAGE_PYROBLAST                          = 11366,
     SPELL_MAGE_DRAGONS_BREATH                    = 31661,
-    SPELL_MAGE_FIRESTARTER_BUFF                  = 54741
+    SPELL_MAGE_FIRESTARTER_BUFF                  = 54741,
+    SPELL_MAGE_HOT_STREAK_R1                     = 44445,
+    SPELL_MAGE_CLEARCASTING                      = 12536
 };
 
 // Fire Mage rework sec 2 - Meteor "lands at the target location after 3 sec".
@@ -3232,9 +3234,9 @@ class spell_mage_hot_streak : public AuraScript
 
         // Fire Mage rework sec 5 (8,2) Hot Streak - "Any time you score 2 non-periodic spell
         // criticals in a row..." is now unconditional (sec 6, (9,1)/Burnout note aside, this
-        // talent's own aurEff->GetAmount() is repurposed as the Mastery-scaling % consumed by
-        // Pyroblast - Mage::ApplyDoneDamagePctMods/ApplySpellCritChanceMods - not a proc-chance
-        // roll any more).
+        // talent's own aurEff->GetAmount() is repurposed as the Mastery-scaling % that
+        // spell_mage_pyroblast's OnCast snapshot reads - not a proc-chance roll any more; the
+        // always-crit is Mage::ApplySpellCritChanceMods).
         target->RemoveAurasDueToSpell(SPELL_MAGE_HEATING_UP);
         target->CastSpell(target, SPELL_MAGE_HOT_STREAK_PROC, true, nullptr, aurEff);
     }
@@ -3255,19 +3257,57 @@ class spell_mage_hot_streak : public AuraScript
 };
 
 // 11366 - Pyroblast
-// Fire Mage rework sec 5 (8,2) Hot Streak - the free Pyroblast's always-crit (Mage::
-// ApplySpellCritChanceMods) and Mastery-scaled bonus damage (Mage::ApplyDoneDamagePctMods) are
-// both live reads of HasAura(SPELL_MAGE_HOT_STREAK_PROC) from Unit.cpp/StatSystem hooks - this
-// script's only job is consuming that buff after the cast it empowered, same non-charge-consumed
-// pattern as Firestarter (54741) and Fanned Flames (200118): the buff's own ProcCharges is 0, so
-// nothing removes it automatically.
+// Fire Mage rework sec 5 (8,2) Hot Streak - "This Pyroblast always critically strikes and deals
+// increased damage equal to 33/66/100% of your Mastery." The always-crit is a live read of
+// HasAura(SPELL_MAGE_HOT_STREAK_PROC) at launch (Mage::ApplySpellCritChanceMods). The Mastery
+// damage is bound to this cast here (mage-mastery-fix, 2026-11-10): snapshotted OnCast, which runs
+// before HandleLaunchPhase and before the CAST-phase proc that drops Hot Streak's charge (spell_proc
+// 48108), then applied OnHit to the direct hit (pre-crit, so the crit and the Ignite it banks
+// inherit it) and to the Pyroblast DoT this hit applied - "the Pyroblast's damage" is both parts.
+// The DoT lands after the buff is gone, so a live HasAura read could not see it, and a newer Hot
+// Streak gained while this Pyroblast is in flight must not count for it. ConsumeHotStreak is a
+// fallback removal after the cast.
 class spell_mage_pyroblast : public SpellScript
 {
     PrepareSpellScript(spell_mage_pyroblast);
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_MAGE_HOT_STREAK_PROC });
+        return ValidateSpellInfo({ SPELL_MAGE_HOT_STREAK_PROC, SPELL_MAGE_HOT_STREAK_R1 });
+    }
+
+    // Hot Streak talent rank's EFFECT_0 DUMMY is the Mastery share (33/66/100, apps/dbc-tools
+    // mage_trigger_spells.py). No talent (respec with the buff up) means crit only, no bonus.
+    void SnapshotHotStreakMastery()
+    {
+        _masteryBonusPct = 0.0f;
+        Player* player = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
+        if (!player || !player->HasAura(SPELL_MAGE_HOT_STREAK_PROC))
+            return;
+
+        if (AuraEffect const* talent = player->GetAuraEffectOfRankedSpell(SPELL_MAGE_HOT_STREAK_R1, EFFECT_0))
+            _masteryBonusPct = CalculatePct(player->GetMasteryPercentage(), talent->GetAmount());
+    }
+
+    void ApplyHotStreakMastery()
+    {
+        if (_masteryBonusPct <= 0.0f)
+            return;
+
+        int32 damage = GetHitDamage();
+        if (damage > 0)
+            SetHitDamage(AddPct(damage, _masteryBonusPct));
+
+        // A refreshed DoT has just had its amount recalculated from scratch (Aura::SetStackAmount),
+        // so this never compounds on an earlier Hot Streak Pyroblast's bonus.
+        if (Aura* aura = GetHitAura())
+            for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                if (AuraEffect* dot = aura->GetEffect(i))
+                    if (dot->GetAuraType() == SPELL_AURA_PERIODIC_DAMAGE)
+                    {
+                        int32 amount = dot->GetAmount();
+                        dot->ChangeAmount(AddPct(amount, _masteryBonusPct));
+                    }
     }
 
     void ConsumeHotStreak()
@@ -3279,8 +3319,13 @@ class spell_mage_pyroblast : public SpellScript
 
     void Register() override
     {
+        OnCast += SpellCastFn(spell_mage_pyroblast::SnapshotHotStreakMastery);
+        OnHit += SpellHitFn(spell_mage_pyroblast::ApplyHotStreakMastery);
         AfterCast += SpellCastFn(spell_mage_pyroblast::ConsumeHotStreak);
     }
+
+private:
+    float _masteryBonusPct = 0.0f;
 };
 
 // -11185 - Improved Blizzard
@@ -3355,24 +3400,38 @@ namespace
     // Arcane Mage rework (docs/arcane-mage-rework-design.md), Phase 3 Batch C - shared by
     // spell_mage_clearcasting and spell_mage_missile_barrage_proc below (System Rulings: "Mastery
     // for Arcane scales Missile Barrage's empowered Arcane Missiles and Clearcasting-buffed spells"
-    // - one shared hook, "roughly half the coefficient of Fire's/Frost's single hook" - Frost's own
-    // Frostbite capstone applies GetMasteryPercentage() unscaled, MageMechanics.cpp). Granted right
-    // before each buff's native charge is consumed (inside CheckProc, which still has the casting
-    // spell's context), not via a live MageMechanics.cpp read at damage-calc time - both buffs can
-    // empower a *channeled* spell (Arcane Missiles), whose consumption happens at channel start,
-    // well before any tick's own damage calc runs (see Phase 3 Batch A's Progress notes on this
-    // exact ordering risk). The marker (200085, "Arcane Mastery") is read broadly in
-    // MageMechanics.cpp, not scoped to Arcane Missiles specifically - matches "Clearcasting-buffed
-    // spells" (plural, unscoped) in System Rulings.
-    void GrantArcaneMasteryMarker(Unit* caster)
+    // - one shared hook at half weight, Mage::IsArcaneMasteryEmpowered in MageMechanics.cpp).
+    // The marker (200085, "Arcane Mastery") flags an empowered Arcane Missiles *channel*: both
+    // buffs are consumed at channel start (Clearcasting in the CAST phase, Missile Barrage in the
+    // FINISH phase), before any missile's damage calc runs, so the empowerment has to outlive the
+    // proc. It lasts as long as the channel aura: synced here and in the spell_mage_arcane_missiles
+    // AuraScript on apply and on refresh, removed with the aura, and dropped by
+    // spell_mage_arcane_missiles_spell at the start of every new cast. It only counts for that
+    // channel's own missiles. Mastery is read live at each missile's damage calc, so the marker's
+    // amount is unused. A Clearcasting-buffed non-channeled spell needs no marker: MageMechanics
+    // reads it live at that spell's launch (mage-mastery-fix, 2026-11-10).
+    void SyncArcaneMasteryMarker(Unit* caster)
     {
-        Player* player = caster->ToPlayer();
-        if (!player)
+        Aura* marker = caster->GetAura(SPELL_MAGE_ARCANE_MASTERY);
+        Aura const* channel = caster->GetAuraOfRankedSpell(SPELL_MAGE_ARCANE_MISSILES_R1, caster->GetGUID());
+        if (!marker || !channel || channel->GetDuration() <= 0)
             return;
 
-        int32 bonus = int32(player->GetMasteryPercentage() * 0.5f);
-        if (bonus > 0)
-            caster->CastCustomSpell(SPELL_MAGE_ARCANE_MASTERY, SPELLVALUE_BASE_POINT0, bonus, caster, true);
+        // A second of slack so the marker can never time out ahead of the channel's last missile;
+        // the aura's own removal takes it away on time (spell_mage_arcane_missiles). The aura,
+        // not the channel Spell: its duration is unhasted, so with haste it outlives the channel.
+        int32 duration = channel->GetDuration() + 1000;
+        marker->SetMaxDuration(duration);
+        marker->SetDuration(duration);
+    }
+
+    void GrantArcaneMasteryMarker(Unit* caster)
+    {
+        if (!caster->IsPlayer())
+            return;
+
+        caster->CastSpell(caster, SPELL_MAGE_ARCANE_MASTERY, true);
+        SyncArcaneMasteryMarker(caster);
     }
 }
 
@@ -3476,6 +3535,31 @@ class spell_mage_magic_absorption : public AuraScript
 // same pending migration.
 
 // -5143 - Arcane Missiles
+// Mastery fix review S1: Arcane Missiles 5143 hastes its channel (ATTR5 haste-affects-periodic) but
+// not its aura's duration, so with haste the aura lingers after the channel bar ends. A recast in
+// that window refreshes the aura (ModStackAmount: REAPPLY mode only, no REAL apply/remove). This
+// SpellScript drops any leftover marker before this cast's own Clearcasting (CAST phase) or
+// Missile Barrage (FINISH phase) grant; the AuraScript re-syncs the marker on apply and on refresh.
+class spell_mage_arcane_missiles_spell : public SpellScript
+{
+    PrepareSpellScript(spell_mage_arcane_missiles_spell);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_ARCANE_MASTERY });
+    }
+
+    void DropStaleMasteryMarker()
+    {
+        GetCaster()->RemoveAurasDueToSpell(SPELL_MAGE_ARCANE_MASTERY);
+    }
+
+    void Register() override
+    {
+        BeforeCast += SpellCastFn(spell_mage_arcane_missiles_spell::DropStaleMasteryMarker);
+    }
+};
+
 class spell_mage_arcane_missiles : public AuraScript
 {
     PrepareAuraScript(spell_mage_arcane_missiles);
@@ -3485,15 +3569,29 @@ class spell_mage_arcane_missiles : public AuraScript
         return ValidateSpellInfo({ SPELL_MAGE_T10_2P_BONUS, SPELL_MAGE_T10_2P_BONUS_EFFECT });
     }
 
+    // Arcane Mastery marker (see GrantArcaneMasteryMarker): Clearcasting grants it in the CAST
+    // phase, just before this channel aura is applied or refreshed - stretch it over the whole
+    // channel here (REAL for a fresh aura, REAPPLY for a refreshed lingering one).
+    void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        SyncArcaneMasteryMarker(GetTarget());
+    }
+
     void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
     {
         Unit* target = GetTarget();
+        // The empowerment belongs to this channel only; every missile's damage was computed at its
+        // own launch, before the channel aura goes away.
+        target->RemoveAurasDueToSpell(SPELL_MAGE_ARCANE_MASTERY);
+
         if (target->HasAura(SPELL_MAGE_T10_2P_BONUS) && _canProcT10)
             target->CastSpell(target, SPELL_MAGE_T10_2P_BONUS_EFFECT, true, nullptr, aurEff);
     }
 
     void Register() override
     {
+        AfterEffectApply += AuraEffectApplyFn(spell_mage_arcane_missiles::OnApply, EFFECT_1,
+            SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
         AfterEffectRemove += AuraEffectRemoveFn(spell_mage_arcane_missiles::OnRemove, EFFECT_1, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
     }
 
@@ -3591,9 +3689,11 @@ class spell_mage_clearcasting : public AuraScript
                 return false;
 
         // Arcane Concentration (docs/arcane-mage-rework-design.md, Row 2) - "increases its damage
-        // by your Mastery." Same shared marker as Missile Barrage's own Mastery clause below
-        // (System Rulings frames both as one mechanism).
-        GrantArcaneMasteryMarker(GetTarget());
+        // by your Mastery." Only a channeled Arcane Missiles needs the shared marker (same one as
+        // Missile Barrage's own Mastery clause below); any other spell this charge buffs already
+        // got the bonus at its launch, read live in MageMechanics (this proc runs after launch).
+        if (spellInfo->SpellFamilyName == SPELLFAMILY_MAGE && (spellInfo->SpellFamilyFlags[0] & 0x800))
+            GrantArcaneMasteryMarker(GetTarget());
 
         return true;
     }
@@ -4370,7 +4470,9 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_pyroblast);
 
     RegisterSpellScript(spell_mage_arcane_blast);
-    RegisterSpellScript(spell_mage_arcane_missiles);
+    // Custom: Mastery fix S1 - the SpellScript half rides on the stock "spell_mage_arcane_missiles" binding.
+    RegisterSpellAndAuraScriptPairWithArgs(spell_mage_arcane_missiles_spell, spell_mage_arcane_missiles,
+        "spell_mage_arcane_missiles");
     RegisterSpellScript(spell_mage_arcane_potency);
     RegisterSpellScript(spell_mage_burning_determination);
     RegisterSpellScript(spell_mage_molten_armor);

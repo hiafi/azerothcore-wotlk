@@ -18,6 +18,7 @@
 #include "MageMechanics.h"
 #include "ObjectGuid.h"
 #include "Player.h"
+#include "Spell.h"
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
 #include "SpellInfo.h"
@@ -43,8 +44,14 @@ namespace Mage
         // either changes; spell_mage.cpp's SPELL_MAGE_ARCANE_BLAST_STACKS / SPELL_MAGE_ARCANE_POWER.
         constexpr uint32 SPELL_ARCANE_BLAST_STACKS = 36032;
         constexpr uint32 SPELL_ARCANE_POWER = 12042;
-        // Phase 3 Batch C - keep in sync with spell_mage.cpp's own SPELL_MAGE_ARCANE_MASTERY.
+        // Phase 3 Batch C - keep in sync with spell_mage.cpp's own SPELL_MAGE_ARCANE_MASTERY /
+        // SPELL_MAGE_CLEARCASTING / SPELL_MAGE_ARCANE_MISSILES_R1.
         constexpr uint32 SPELL_ARCANE_MASTERY = 200085;
+        constexpr uint32 SPELL_CLEARCASTING = 12536;
+        constexpr uint32 SPELL_ARCANE_MISSILES_R1 = 5143;
+        // System Rulings: each Arcane Mastery hook carries "roughly half the coefficient of Fire's or
+        // Frost's single hook" (both apply the Mastery percentage at full weight).
+        constexpr float ARCANE_MASTERY_FACTOR = 0.5f;
 
         // Fire Mage rework (docs/reworks/fire-mage-rework.md) - keep in sync with spell_mage.cpp's
         // SPELL_MAGE_IGNITE / SPELL_MAGE_IGNITE_TICK / SPELL_MAGE_KINDLING.
@@ -54,10 +61,9 @@ namespace Mage
         constexpr uint32 SPELL_FIRE_BLAST = 2136;
         constexpr uint32 SPELL_BLAZING_SPEED_ESCAPE = 200113;
         // Phase 3 - keep in sync with spell_mage.cpp's own SPELL_MAGE_PYROBLAST /
-        // SPELL_MAGE_HOT_STREAK_PROC / MAGE_ICON_HOT_STREAK.
+        // SPELL_MAGE_HOT_STREAK_PROC. Hot Streak's Mastery damage lives in spell_mage_pyroblast.
         constexpr uint32 SPELL_PYROBLAST = 11366;
         constexpr uint32 SPELL_HOT_STREAK_PROC = 48108;
-        constexpr uint32 MAGE_ICON_HOT_STREAK = 2999;
         // Sec 3.3: 4 sec, 1 sec tick interval, 4 ticks. Kept as the count rather than derived from
         // the aura's duration/amplitude so a refresh mid-cadence still means "4 more payouts".
         constexpr uint8 IGNITE_TICKS = 4;
@@ -77,6 +83,44 @@ namespace Mage
         // from the aura's own AfterEffectRemove), so this never grows past the number of live
         // Ignites in the world.
         std::map<std::pair<ObjectGuid, ObjectGuid>, IgniteBank> igniteBanks;
+
+        // Arcane Concentration (Row 2) / Missile Barrage (Row 5) shared Mastery clause: is this
+        // damage instance part of a cast that Clearcasting or Missile Barrage empowered? Bound to the
+        // cast, never consumed on read (mage-mastery-fix, 2026-11-10):
+        // - Arcane Missiles: every missile of the empowered channel. The marker (200085) is granted
+        //   by the consuming proc (spell_mage_clearcasting / spell_mage_missile_barrage_proc), lives
+        //   as long as the channel aura (spell_mage_arcane_missiles removes it with the channel) and
+        //   only counts for that channel's own triggered missile spell.
+        // - Any other Clearcasting-buffed spell: read live at its launch, while the cast is still
+        //   the caster's spellmod-taking spell and Clearcasting's cost mod is registered on it -
+        //   Clearcasting's own CAST-phase proc drops the charge only *after* HandleLaunchPhase has
+        //   computed the direct damage, so a marker granted by that proc would come too late (it
+        //   used to land on the next spell instead). Mirrors the proc's PROC_ATTR_REQ_MANA_COST
+        //   ("not consumed by a spell that already costs no mana") and skips triggered spells,
+        //   which fire no CAST-phase proc. Same m_appliedMods idiom as Druid's
+        //   ConsumedEmpoweredClearcasting. Never at a delayed spell's impact (its DoT): a consumed
+        //   Clearcasting stays in m_appliedMods (it has a spell_proc row, so RemoveSpellMods keeps
+        //   it) after the aura is freed, and a new Clearcasting proc'd mid-flight can reuse that
+        //   address. Launch damage always runs before the spell turns SPELL_STATE_DELAYED.
+        // The two branches never both match one damage instance (a missile is a triggered spell),
+        // so the bonus never stacks with itself on a cast.
+        bool IsArcaneMasteryEmpowered(Player* player, SpellInfo const* spellProto)
+        {
+            if (player->HasAura(SPELL_ARCANE_MASTERY))
+                if (Aura const* channel = player->GetAuraOfRankedSpell(SPELL_ARCANE_MISSILES_R1, player->GetGUID()))
+                    if (channel->GetSpellInfo()->Effects[EFFECT_1].TriggerSpell == spellProto->Id)
+                        return true;
+
+            Spell* spell = player->m_spellModTakingSpell;
+            if (!spell || spell->getState() == SPELL_STATE_DELAYED || spell->GetSpellInfo()->Id != spellProto->Id
+                || spell->IsTriggered())
+                return false;
+            if (!spellProto->ManaCost && !spellProto->ManaCostPercentage)
+                return false;
+
+            Aura* clearcasting = player->GetAura(SPELL_CLEARCASTING);
+            return clearcasting && spell->m_appliedMods.count(clearcasting);
+        }
 
         std::pair<ObjectGuid, ObjectGuid> IgniteKey(Unit const* caster, Unit const* target)
         {
@@ -248,16 +292,12 @@ namespace Mage
                 AddPct(doneTotalMod, aurEff->GetAmount());
 
         // Arcane Concentration (Row 2) / Missile Barrage (Row 5) shared Mastery clause, Phase 3
-        // Batch C - see spell_mage.cpp's GrantArcaneMasteryMarker (granted right before Clearcasting
-        // or Missile Barrage's own buff is consumed, not read live off either of those - both can
-        // empower a channeled Arcane Missiles cast, whose consumption happens before any tick's
-        // damage calc runs). Consumed immediately on read, not left to expire naturally, so it only
-        // ever applies to the one cast it was granted for.
-        if (AuraEffect* aurEff = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, 1976, EFFECT_0))
-        {
-            AddPct(doneTotalMod, aurEff->GetAmount());
-            caster->RemoveAurasDueToSpell(SPELL_ARCANE_MASTERY);
-        }
+        // Batch C - "+damage by your Mastery" at half weight, see IsArcaneMasteryEmpowered for how
+        // the bonus is bound to the empowered cast. Mastery is read live here (no integer
+        // snapshot in the marker's amount, which truncated anything below 2% Mastery to zero).
+        if (Player* player = caster->ToPlayer())
+            if (IsArcaneMasteryEmpowered(player, spellProto))
+                AddPct(doneTotalMod, player->GetMasteryPercentage() * ARCANE_MASTERY_FACTOR);
     }
 
     void ApplyMeleeDamageTakenPctMods(Unit* defender, Unit* /*attacker*/, SpellSchoolMask damageSchoolMask, float& takenTotalMod)
@@ -394,9 +434,9 @@ namespace Mage
             critChance = 100.0f;
             return true;
         }
-        // Hot Streak (sec 5 (8,2)) - "This Pyroblast always critically strikes." Same HasAura gate
-        // ApplyDoneDamagePctMods' Mastery bonus uses; spell_mage_pyroblast consumes the buff after
-        // this cast either way.
+        // Hot Streak (sec 5 (8,2)) - "This Pyroblast always critically strikes." Rolled at launch,
+        // before Hot Streak's CAST-phase charge drop; the same cast's Mastery damage bonus is
+        // snapshotted by spell_mage_pyroblast (OnCast) under the same buff.
         if (spellProto->Id == SPELL_PYROBLAST && caster && caster->HasAura(SPELL_HOT_STREAK_PROC))
         {
             critChance = 100.0f;
