@@ -302,6 +302,95 @@ class SkillCategory(IntEnum):
     GENERIC = 12
 
 
+class ItemMod(IntEnum):
+    """`ItemModType` in src/server/game/Entities/Item/ItemTemplate.h: the stat id an `ITEM_ENCHANTMENT_TYPE_STAT`
+    enchant carries in `EffectArg` (and `item_template.stat_type1..10`). The four custom stats (crafting rework C0
+    makes the enchant switch apply them, `PlayerStorage.cpp` / `Player.cpp`) reuse stock slots: `MASTERY_RATING` 22,
+    `VERSATILITY_RATING` 23, `COOLDOWN_RATING` 24 (Cooldown Haste) and `PROC_RATING` 33 (Proc Chance). Hit (16-18, 31),
+    Expertise (37) and Defense (12) are still stock members: this fork's design retires them as item stats (crafting
+    rework C6), so new content should not use them. 25-27 and 34 (crit taken) and 40/41/42 are unused or deprecated."""
+
+    MANA = 0
+    HEALTH = 1
+    AGILITY = 3
+    STRENGTH = 4
+    INTELLECT = 5
+    SPIRIT = 6
+    STAMINA = 7
+    DEFENSE_SKILL_RATING = 12
+    DODGE_RATING = 13
+    PARRY_RATING = 14
+    BLOCK_RATING = 15
+    HIT_MELEE_RATING = 16
+    HIT_RANGED_RATING = 17
+    HIT_SPELL_RATING = 18
+    CRIT_MELEE_RATING = 19
+    CRIT_RANGED_RATING = 20
+    CRIT_SPELL_RATING = 21
+    MASTERY_RATING = 22  # Custom: was ITEM_MOD_HIT_TAKEN_MELEE_RATING
+    VERSATILITY_RATING = 23  # Custom: was ITEM_MOD_HIT_TAKEN_RANGED_RATING
+    COOLDOWN_RATING = 24  # Custom: was ITEM_MOD_HIT_TAKEN_SPELL_RATING (Cooldown Haste)
+    HASTE_MELEE_RATING = 28
+    HASTE_RANGED_RATING = 29
+    HASTE_SPELL_RATING = 30
+    HIT_RATING = 31
+    CRIT_RATING = 32
+    PROC_RATING = 33  # Custom: was ITEM_MOD_HIT_TAKEN_RATING (Proc Chance)
+    RESILIENCE_RATING = 35
+    HASTE_RATING = 36
+    EXPERTISE_RATING = 37
+    ATTACK_POWER = 38
+    RANGED_ATTACK_POWER = 39
+    MANA_REGENERATION = 43
+    ARMOR_PENETRATION_RATING = 44
+    SPELL_POWER = 45
+    HEALTH_REGEN = 46
+    SPELL_PENETRATION = 47
+    BLOCK_VALUE = 48
+
+
+class EnchantType(IntEnum):
+    """`SpellItemEnchantment.dbc`'s `Effect_n` column - `ItemEnchantmentType` in
+    src/server/shared/DataStores/DBCEnums.h.
+    What `EffectArg_n` and `EffectPointsMin_n` mean depends on it: STAT = an `ItemMod` and the amount; RESISTANCE = a
+    spell school (0 armor) and the amount; EQUIP_SPELL / COMBAT_SPELL / USE_SPELL = a spell id (COMBAT_SPELL's amount is
+    the proc chance, via `spell_enchant_proc_data`); DAMAGE = the amount; PRISMATIC_SOCKET = nothing (amount 1)."""
+
+    NONE = 0
+    COMBAT_SPELL = 1
+    DAMAGE = 2
+    EQUIP_SPELL = 3
+    RESISTANCE = 4
+    STAT = 5
+    TOTEM = 6
+    USE_SPELL = 7
+    PRISMATIC_SOCKET = 8
+
+
+class GemColor(IntEnum):
+    """`GemProperties.dbc`'s `Type` column and an item's socket colors - `SocketColor` in
+    src/server/game/Entities/Item/ItemTemplate.h. A hybrid gem is the OR of its pure colors (orange = red | yellow), and
+    the server counts it once for each color bit (`Player::EnchantmentFitsRequirements`)."""
+
+    META = 1
+    RED = 2
+    YELLOW = 4
+    BLUE = 8
+    ORANGE = 6  # red + yellow
+    PURPLE = 10  # red + blue
+    GREEN = 12  # yellow + blue
+    PRISMATIC = 14  # red + yellow + blue
+
+
+class GemCompare(IntEnum):
+    """`SpellItemEnchantmentCondition.dbc`'s `Operator_n` - only the three comparators
+    `Player::EnchantmentFitsRequirements` evaluates (the client draws the requirement line from the same values)."""
+
+    LESS_THAN = 2
+    MORE_THAN = 3
+    AT_LEAST = 5
+
+
 class ShapeshiftForm(IntEnum):
     """`ShapeshiftMask`/`ShapeshiftExclude` bit source and `spellshapeshiftform_dbc`'s
     `form_id` - transcribed from `ShapeShiftForm` in

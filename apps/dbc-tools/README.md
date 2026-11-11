@@ -1107,6 +1107,78 @@ for sla_id in GATHERING_PERK_ROWS:  # Toughness, Master of Anatomy, Lifeblood: 1
     override_skill_line_ability(sla_id, acquire_method=0)
 ```
 
+### Crafting rework C1: enchants, random suffixes, gems and meta gem conditions
+
+Four more two-half tables (server `*_dbc` overlay plus a merge over the stock file into `patch-Z.mpq`), declared in
+`lib/dsl/enchants.py`. The module declares **no content**: C4 (suffixes), C5 (gems) and C6 (enchants as items) do. Every
+table is client-visible: the enchant `Name` is the tooltip line, the suffix `Name` the "of the Tiger" in the item's name,
+`GemProperties` how the client colors a gem and matches sockets, the condition the meta gem requirement line.
+
+| Helper | Table | Id block (`source/ids.yaml`) |
+| --- | --- | --- |
+| `enchant()`, `stat_enchant()`, `override_enchant()` | `SpellItemEnchantment` / `spellitemenchantment_dbc` | `spellitemenchantment` 5000-5999 |
+| `suffix()`, `override_suffix()` | `ItemRandomSuffix` / `itemrandomsuffix_dbc` | `itemrandomsuffix` 1000-1999 |
+| `gem()`, `override_gem()` | `GemProperties` / `gemproperties_dbc` | `gemproperties` 2000-2499 |
+| `enchant_condition()`, `override_enchant_condition()` | `SpellItemEnchantmentCondition` / `spellitemenchantmentcondition_dbc` | `spellitemenchantmentcondition` 1000-1099 |
+
+The blocks are a proposal until the user approves them (crafting rework PLAN decision 5). A declared id outside its block
+raises (a stock row is never replaced by accident); `override_*()` is the reverse: a stock id, the stock row's columns
+with the named ones changed (SQL column names), so dropping a keyword restores the stock value and dropping the call
+prunes the overlay row, like `override_skill_line()`.
+
+```python
+from lib.dsl.enchants import (
+    enchant, enchant_condition, gem, gems_at_least, override_enchant, stat_effect, stat_enchant, suffix,
+)
+from lib.dsl.registry import GemColor, ItemMod
+
+# A suffix part: amount 0, the item's suffix factor sets the value ("+$i" is filled in by the client).
+crit = stat_enchant(5000, ItemMod.CRIT_RATING)             # "+$i Critical Strike Rating"
+mastery = stat_enchant(5001, ItemMod.MASTERY_RATING)       # "+$i Mastery Rating"
+suffix(1000, "of the Tiger", "Tiger", (crit, 6666), (mastery, 10000))  # up to 5 (enchant, share in 1/10000ths)
+
+# A gem: the enchant carries the item entry (src_item) the server finds the gem's color through, the gem row the color.
+ruby = stat_enchant(5100, ItemMod.STRENGTH, 12, src_item=71234)
+gem(2000, ruby, GemColor.RED)                              # item_template.GemProperties = 2000
+
+# A meta gem requirement (the server counts META, RED, YELLOW and BLUE only; hybrids count once per color bit).
+need = enchant_condition(1000, gems_at_least(GemColor.RED, 2), gems_at_least(GemColor.BLUE, GemColor.YELLOW))
+enchant(5900, "Hard to Kill", stat_effect(ItemMod.STAMINA, 30), condition=need, min_level=20)
+
+override_enchant(2605, ItemVisual=0)                       # a stock row
+```
+
+`stat_effect()`, `resistance_effect()`, `spell_effect(EnchantType.EQUIP_SPELL | COMBAT_SPELL | USE_SPELL, spell)` and
+`socket_effect()` (the prismatic socket) build an enchant's one to three effects; `ItemMod` names the stat ids including
+the four custom stats (Mastery 22, Versatility 23, Cooldown Haste 24, Proc Chance 33; crafting C0 makes the server apply
+them from an enchant). `stat_enchant()` names the line `+N <stat>` (or `+$i <stat>` for amount 0); pass `name=` for other
+text. A suffix id must stay below 32768 (`item_instance.randomPropertyId` is a smallint holding `-id`).
+
+After everything is loaded (items included), `generate.py` and `--check` run `lib/enchant_tables.check()` before anything
+is written, and stop on: a dangling reference (a suffix part or gem naming an enchant, an enchant naming a condition,
+neither declared nor stock); a gem whose enchant has `Src_ItemID` 0 or whose `Src_ItemID` item does not carry that
+`GemProperties`; a suffix part whose enchant has a flat amount or an effect the suffix factor cannot scale; and an
+`item_enchantment_template` row of a suffix pool (an entry some live or `item()`-declared item names in `RandomSuffix`)
+whose `ench` is not an ItemRandomSuffix id.
+
+The stock files are the server's copies, `docker cp` them into `var/extractors/dbc/` (`GemProperties.dbc`,
+`ItemRandomSuffix.dbc`, `SpellItemEnchantment.dbc`, `SpellItemEnchantmentCondition.dbc`). A run that declares nothing of
+a table does not need that table's file: the suffix pool check is then skipped with one WARNING naming the file and the
+`docker cp` command. When a declaration or a reference needs a missing file it is an ERROR naming the file (not a
+complaint about the declaration); a client patch for a table whose stock file is missing is skipped with a
+`patch: SKIPPING` line, and an `override_*()` stops the run with an ERROR naming the file.
+`SpellItemEnchantmentCondition.dbc` is the one table with byte columns (`dbcfile` writes `b` / `X` as one byte, 64-byte
+record).
+
+**Scoped runs.** The four tables are scope-owned like ItemLimitCategory: a row declared (or an `override_*()` made) in a
+scoped source file (`source/items/stratholme.py`) belongs to that scope in both halves, so `--scope` writes its SQL and
+merges its client rows; a stock id nobody overrides stays as deployed. **Drop guard.** The server half guards every row of
+the four overlay tables (custom ids and stock-id overrides), and the client half refuses a run that reverts or changes a
+deployed override of a stock row (a stock id whose deployed row differs from the stock file) when no SQL file of this
+checkout ever wrote that id (`drop_guard.client_overrides_lost`). `--allow-drop` overrides both. Override values are range
+checked against the column (byte 0..255, signed int32, locale mask uint32, otherwise 0..2^31-1). Tests:
+`lib/test_enchant_tables.py`.
+
 ## Known limitations
 
 - `spell_icon_id` takes a raw `SpellIconID` integer, not a texture-path

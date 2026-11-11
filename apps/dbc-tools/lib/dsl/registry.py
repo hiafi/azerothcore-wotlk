@@ -38,6 +38,7 @@ from .. import potency as _potency
 from . import model, tooltip
 from .constants import AcquireMethod  # noqa: F401 - re-exported for class files (skill_line_ability(acquire_method=...))
 from .constants import SkillCategory  # noqa: F401 - re-exported for source files (override_skill_line(CategoryID=...))
+from .constants import EnchantType, GemColor, GemCompare, ItemMod  # noqa: F401 - re-exported for enchants.py's callers
 from .tooltip import has_aura, knows, product, talent_mult  # noqa: F401 - re-exported for class files
 
 # Unique-ifies the synthetic package name `load_class_package` registers in
@@ -304,6 +305,13 @@ class Registry:
     # Crafting rework C2 (override_skill_line()): skillline_dbc full-row overrides of stock SkillLine rows, which
     # generate.py also merges into patch-Z's SkillLine.dbc. A plain SPELL_TABLES entry.
     skill_lines: list[dict] = field(default_factory=list)
+    # Crafting rework C1 (lib/dsl/enchants.py): full rows of the four enchant / suffix / gem tables, declared with
+    # enchant() / suffix() / gem() / enchant_condition() (a block id) or override_*() (a stock id). Plain SPELL_TABLES
+    # entries; generate.py also merges each into patch-Z's DBC of the same name.
+    spell_item_enchantments: list[dict] = field(default_factory=list)
+    item_random_suffixes: list[dict] = field(default_factory=list)
+    gem_properties: list[dict] = field(default_factory=list)
+    enchant_conditions: list[dict] = field(default_factory=list)
     # Dungeon sets (lib/dsl/sets.py, lib/item_sets.py): one {"id": ("set" | "token" | "vendor", id), "_decl": ...} per
     # item_set() / set_token() / set_vendor() call, and the itemset_dbc, itemextendedcost_dbc and npc_vendor rows
     # generate.py derives from them (lib/item_sets.SET_TABLES).
@@ -350,6 +358,7 @@ MERGE_KEYS = (
     "heroic_template_movements", "heroic_onkill_reputations",
     "lfg_group_declarations", "lfg_dungeon_declarations", "lfg_dungeons", "lfg_dungeon_templates", "lfg_groups",
     "item_declarations", "loot_declarations", "item_limit_categories", "skill_lines",
+    "spell_item_enchantments", "item_random_suffixes", "gem_properties", "enchant_conditions",
     "item_set_declarations", "item_set_rows", "item_extended_cost_rows", "npc_vendor_rows",
 )
 

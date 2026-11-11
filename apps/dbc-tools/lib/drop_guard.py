@@ -49,6 +49,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 BASE_SQL_DIR = REPO_ROOT / "data" / "sql" / "base" / "db_world"
 LOCAL_CONFIG_REL = Path("apps") / "dbc-tools" / "lib" / "local_config.py"
 
+# A pseudo block name for a table every row of which is ours (see GUARDED_TABLES): `_ranges` reads it as all ids.
+ALL_IDS = "*"
 # SQL table -> (id column, ids.yaml blocks holding its custom ids).
 GUARDED_TABLES: dict[str, tuple[str, tuple[str, ...]]] = {
     "spell_dbc": ("ID", ("spell",)),
@@ -56,6 +58,12 @@ GUARDED_TABLES: dict[str, tuple[str, tuple[str, ...]]] = {
     "talenttab_dbc": ("ID", ("talenttab",)),
     "skilllineability_dbc": ("ID", ("skilllineability",)),
     "item_dbc": ("ID", ("item",)),
+    # Crafting rework C1: these overlay tables hold only rows dbc-tools wrote (declared rows in the reserved blocks AND
+    # `override_*()` rows on stock ids), so the whole id range is guarded (ALL_IDS), not just the block.
+    "spellitemenchantment_dbc": ("ID", (ALL_IDS,)),
+    "itemrandomsuffix_dbc": ("ID", (ALL_IDS,)),
+    "gemproperties_dbc": ("ID", (ALL_IDS,)),
+    "spellitemenchantmentcondition_dbc": ("ID", (ALL_IDS,)),
     "item_template": ("entry", ("item",)),
     "itemset_dbc": ("ID", ("item_set",)),
     "itemextendedcost_dbc": ("ID", ("item_extended_cost",)),
@@ -86,6 +94,12 @@ CLIENT_TABLES: dict[str, tuple[str | None, tuple[str, ...]]] = {
     "SpellRadius.dbc": ("spellradius_dbc", ("spellradius",)),
     # Crafting rework C2: override_skill_line() only re-declares stock ids, so no custom id can drop.
     "SkillLine.dbc": ("skillline_dbc", ()),
+    # Crafting rework C1: custom rows live in the ids.yaml blocks of the same names. An override_*() row is a stock id
+    # (outside the block): `client_overrides_lost` guards those against stock content instead.
+    "SpellItemEnchantment.dbc": ("spellitemenchantment_dbc", ("spellitemenchantment",)),
+    "ItemRandomSuffix.dbc": ("itemrandomsuffix_dbc", ("itemrandomsuffix",)),
+    "GemProperties.dbc": ("gemproperties_dbc", ("gemproperties",)),
+    "SpellItemEnchantmentCondition.dbc": ("spellitemenchantmentcondition_dbc", ("spellitemenchantmentcondition",)),
 }
 
 
@@ -96,6 +110,9 @@ class GuardError(RuntimeError):
 def _ranges(block_names, ids_cfg: dict) -> list[tuple[int, int]]:
     out = []
     for name in block_names:
+        if name == ALL_IDS:
+            out.append((-(2 ** 31), 2 ** 31 - 1))
+            continue
         block = ids_cfg.get(name)
         if isinstance(block, dict) and "start" in block:
             out.append((int(block["start"]), int(block["end"])))
@@ -434,6 +451,47 @@ def client_drops(deployed: dict[str, bytes], shipped: dict[str, bytes], tables: 
     return out, lost_members
 
 
+# Client DBCs whose stock rows `override_*()` replaces (crafting rework C1): a deployed row that differs from stock
+# is an override somebody shipped.
+OVERRIDE_FILES = ("SpellItemEnchantment.dbc", "ItemRandomSuffix.dbc", "GemProperties.dbc",
+                  "SpellItemEnchantmentCondition.dbc")
+
+
+def client_overrides_lost(deployed: dict[str, bytes], shipped: dict[str, bytes], tables: dict | None,
+                          replaces_archive: bool, stock_rows=None) -> dict[str, list[int]]:
+    """`{DBC file: ids}`: stock ids whose deployed row differs from the stock row (an override somebody shipped) and
+    whose shipped row is not that deployed row (reverted to stock, changed, or the file is gone). The id-block guard
+    cannot see these (a stock id is outside every block). `stock_rows(table) -> {id: row}` defaults to the extracted
+    stock file; a table without a stock file is skipped (nothing to compare with). Whether the change is this
+    checkout's own is the caller's question (`known_ids`)."""
+    tables = tables if tables is not None else client_table_defs()
+    if stock_rows is None:
+        from . import state  # noqa: PLC0415
+
+        stock_rows = state.load_stock_rows
+    out: dict[str, list[int]] = {}
+    for name, old in deployed.items():
+        filename = name.replace("\\", "/").split("/")[-1]
+        table = tables.get(filename)
+        if filename not in OVERRIDE_FILES or table is None:
+            continue
+        if filename not in shipped and not replaces_archive:
+            continue
+        stock = stock_rows(table)
+        if not stock:
+            continue
+        new = {int(r[table.index_column]): r for r in scope.read_dbc_bytes(shipped[filename], table)} \
+            if filename in shipped else {}
+        lost = sorted(
+            int(r[table.index_column]) for r in scope.read_dbc_bytes(old, table)
+            if int(r[table.index_column]) in stock and r != stock[int(r[table.index_column])]
+            and new.get(int(r[table.index_column])) != r
+        )
+        if lost:
+            out[filename] = lost
+    return out
+
+
 # ---------------------------------------------------------------------------------------------------------------------
 # The write-run check
 # ---------------------------------------------------------------------------------------------------------------------
@@ -453,7 +511,8 @@ NOT_WRITTEN = "No SQL or patch was written"
 
 def check(*, sql_text: str | None, shipped: dict[str, bytes], replaces_archive: bool, deployed_archive: Path | None,
           tables: dict | None, ids_cfg: dict, pending_dir: Path, allow: bool, live_command: list[str] | None = None,
-          live_reader=live_ids, rows_reader=live_rows, include_item: bool = False) -> GuardResult:
+          live_reader=live_ids, rows_reader=live_rows, include_item: bool = False,
+          stock_rows_reader=None) -> GuardResult:
     """Runs both halves and says whether to stop. `shipped` / `replaces_archive` / `tables`: see `client_drops`."""
     out = GuardResult()
     if allow:
@@ -522,6 +581,17 @@ def check(*, sql_text: str | None, shipped: dict[str, bytes], replaces_archive: 
                 problems.append(
                     f"{filename}: {len(foreign)} row(s) of the deployed {Path(deployed_archive).name} this checkout "
                     f"never wrote: {_shown(foreign)}"
+                )
+        for filename, ids in sorted(client_overrides_lost(deployed, shipped, tables, replaces_archive,
+                                                          stock_rows_reader).items()):
+            sql_table = CLIENT_TABLES[filename][0]
+            known = known_ids(sql_table, ids, pending_dir) if sql_table else set()
+            foreign = [i for i in ids if i not in known]
+            if foreign:
+                problems.append(
+                    f"{filename}: {len(foreign)} stock row(s) the deployed {Path(deployed_archive).name} overrides "
+                    f"that this run reverts or changes, and no SQL file of this checkout ever wrote: "
+                    f"{_shown(foreign)}"
                 )
         if lost:
             problems.append(f"the new archive would lose deployed member(s) {', '.join(lost)}")

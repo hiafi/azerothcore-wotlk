@@ -707,6 +707,76 @@ SKILLLINE = DbcTable(
     ),
 )
 
+# --- Crafting rework C1: the four tables behind random suffixes, enchants and gems --------------------------------
+#
+# All four are server-loaded with a DB overlay (DBCStores.cpp LOAD_DBC(..., "<table>_dbc"), :312 / :335 / :367 / :368)
+# AND read by the client from its own copy, so a declared row goes out as both halves: the SPELL_TABLES entry and a
+# merge over the stock file into patch-Z. Client use: SpellItemEnchantment's Name is the enchant line in an item
+# tooltip ("+8 Mastery"), ItemRandomSuffix's Name is the "of the Tiger" in an item's name, GemProperties decides a
+# gem item's color (socket matching, the gem tooltip) and SpellItemEnchantmentCondition the meta gem requirement line
+# (red / grey "Requires ..."). Every fmt is DBCfmt.h verbatim, every column list the base CREATE TABLE
+# (data/sql/base/db_world/<table>_dbc.sql); the stock files come from the worldserver's DBC directory
+# (ac-worldserver:/azerothcore/env/dist/data/dbc/), flattened into var/extractors/dbc/. None is in ALL_TABLES (the SQL
+# would go out twice, as for MAPDIFFICULTY).
+
+# SpellItemEnchantment.dbc - one row per enchant, gem bonus, socket bonus and random suffix part. `Effect_n` is the
+# ItemEnchantmentType (DBCEnums.h: 1 combat spell, 2 damage, 3 equip spell, 4 resistance, 5 stat, 6 totem, 7 use spell,
+# 8 prismatic socket); `EffectArg_n` is the stat / resistance / spell id and `EffectPointsMin_n` the amount (0 on a
+# suffix part: the suffix factor scales it, PlayerStorage.cpp ApplyEnchantment). EffectPointsMax ('x') is a real
+# column. `Name_Lang_Mask` is the client's locale mask ('x').
+SPELLITEMENCHANTMENT = DbcTable(
+    name="SpellItemEnchantment",
+    dbc_filename="SpellItemEnchantment.dbc",
+    sql_table="spellitemenchantment_dbc",
+    fmt="n" + "i" * 7 + "xxx" + "iii" + "s" * 16 + "x" + "i" * 7,
+    columns=_cols(
+        "ID", "Charges", ("Effect", 3), ("EffectPointsMin", 3), ("EffectPointsMax", 3), ("EffectArg", 3),
+        _locale_cols("Name"), "ItemVisual", "Flags", "Src_ItemID", "Condition_Id", "RequiredSkillID",
+        "RequiredSkillRank", "MinLevel",
+    ),
+    # int32 in the SQL table (and in the file: stock enchant 27 has -10, 2605's ItemVisual is -1)
+    signed=frozenset({f"EffectPoints{m}_{i}" for m in ("Min", "Max") for i in (1, 2, 3)} | {"ItemVisual"}),
+)
+
+# ItemRandomSuffix.dbc - the "of the X" suffixes. `Enchantment_n` is a SpellItemEnchantment id and `AllocationPct_n` its
+# share of the item's suffix factor, in 1/10000ths (PlayerStorage.cpp ApplyEnchantment: AllocationPct * factor / 10000).
+# InternalName ('x' in the fmt) is a string in the file.
+ITEMRANDOMSUFFIX = DbcTable(
+    name="ItemRandomSuffix",
+    dbc_filename="ItemRandomSuffix.dbc",
+    sql_table="itemrandomsuffix_dbc",
+    fmt="n" + "s" * 16 + "xx" + "i" * 10,
+    columns=_cols("ID", _locale_cols("Name"), "InternalName", ("Enchantment", 5), ("AllocationPct", 5)),
+    read_as_string=frozenset({"InternalName"}),
+)
+
+# GemProperties.dbc - what a gem item (item_template.GemProperties) is: the enchant it applies and its color mask
+# (`Type`: 1 meta, 2 red, 4 yellow, 8 blue; hybrids are the OR, SocketColor in SharedDefines.h). Maxcount_Inv / _Item
+# are real columns ('x').
+GEMPROPERTIES = DbcTable(
+    name="GemProperties",
+    dbc_filename="GemProperties.dbc",
+    sql_table="gemproperties_dbc",
+    fmt="nixxi",
+    columns=_cols("ID", "Enchant_Id", "Maxcount_Inv", "Maxcount_Item", "Type"),
+)
+
+# SpellItemEnchantmentCondition.dbc - the meta gem requirement: up to five "compare the count of gem color A with gem
+# color B / a value" clauses chained by `Logic_n`. The one table here with BYTE columns: the file's record is 64 bytes
+# (ID, Lt_OperandType[5] bytes, Lt_Operand[5] uint32, Operator[5], Rt_OperandType[5] bytes, Rt_Operand[5] uint32,
+# Logic[5] bytes), unaligned, and 'b' / 'X' are one byte each (dbcfile handles both). Lt_Operand ('x') and Logic ('X')
+# are real columns even though the AC struct never reads them.
+SPELLITEMENCHANTMENTCONDITION = DbcTable(
+    name="SpellItemEnchantmentCondition",
+    dbc_filename="SpellItemEnchantmentCondition.dbc",
+    sql_table="spellitemenchantmentcondition_dbc",
+    fmt="nbbbbbxxxxxbbbbbbbbbbiiiiiXXXXX",
+    columns=_cols(
+        "ID", ("Lt_OperandType", 5), ("Lt_Operand", 5), ("Operator", 5), ("Rt_OperandType", 5), ("Rt_Operand", 5),
+        ("Logic", 5),
+    ),
+)
+
 ALL_TABLES = (
     SPELL, TALENT, TALENTTAB, SPELLCASTTIMES, SPELLDURATION, SPELLRANGE,
     SPELLRADIUS, SKILLLINEABILITY, ITEM,

@@ -147,6 +147,8 @@ class FixtureTest(unittest.TestCase):
         self.assertEqual(set(live), {
             "talent_rows", "item_template_rows", "item_template_columns", "item_template_defaults",
             "skilllineability_rows", "chrclasses_rows", "skilllineability_stock_rows", "skillline_rows",
+            "spellitemenchantment_rows", "itemrandomsuffix_rows", "gemproperties_rows",
+            "spellitemenchantmentcondition_rows",
         })
 
 

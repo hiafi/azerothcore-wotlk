@@ -21,6 +21,38 @@ table's use, entry 70001). If you're touching `var/extractors/dbc/Item.dbc`: it 
 `client/MPQs/enUS/`) — earlier patches (`patch-enUS.MPQ`, `patch-enUS-2.MPQ`) also contain an
 `Item.dbc` but it's shadowed/stale, smaller, and not what the client actually ends up using.
 
+## Enchant, suffix, gem and meta gem condition tables (crafting rework C1)
+
+`lib/dsl/enchants.py` declares rows of `SpellItemEnchantment`, `ItemRandomSuffix`, `GemProperties` and
+`SpellItemEnchantmentCondition` (`enchant()` / `stat_enchant()`, `suffix()`, `gem()`, `enchant_condition()`, plus
+`override_*()` for a stock row). Each goes out as both halves like SkillLine: the `*_dbc` SPELL_TABLES entry (prunes
+when the last declaration goes) and a merge over the stock file into patch-Z. The module declares no content; the
+crafting stages C4 (suffixes), C5 (gems, metas) and C6 (enchants) do. Facts to know before touching them:
+
+- Id blocks (`source/ids.yaml`, proposed 2026-11-10): `spellitemenchantment` 5000-5999, `itemrandomsuffix` 1000-1999,
+  `gemproperties` 2000-2499, `spellitemenchantmentcondition` 1000-1099. A suffix id must stay below 32768
+  (`item_instance.randomPropertyId` is a smallint holding `-id`).
+- Suffix parts are enchants with amount 0: `Player::ApplyEnchantment` takes `AllocationPct * suffix factor / 10000` when
+  the enchant's amount is 0. The suffix factor only exists when `item_template.RandomSuffix` is set.
+- The server finds a socketed gem's color as enchant `Src_ItemID` -> gem item -> `item_template.GemProperties` ->
+  `GemProperties.Type`, so a gem's enchant row must carry `src_item=<gem entry>` or the meta gem count never sees it.
+  The condition table only compares the four colors META, RED, YELLOW, BLUE (a hybrid counts once per color bit); a
+  six-color or per-gem rule is a script.
+- Enchant-type custom stats (Mastery 22, Versatility 23, Cooldown Haste 24, Proc Chance 33) apply only with the C0 core
+  fix (`PlayerStorage.cpp` ApplyEnchantment); `ItemMod` names them.
+- `SpellItemEnchantmentCondition.dbc` has byte columns (64-byte unaligned record): `dbcfile` packs `b` / `X` as one
+  byte.
+- `generate.py` (and `--check`) runs `lib/enchant_tables.check()` before anything is written and stops on a dangling
+  reference, a gem enchant with `Src_ItemID` 0 or an item that does not point back, a suffix part with a flat amount or
+  an unscalable effect, and a bad `item_enchantment_template` suffix pool (live and `item()`-declared items).
+- A missing stock file only matters to a run that declares something of that table (otherwise one WARNING and the pool
+  check is skipped); a needed one is an ERROR naming the file and the `docker cp` command.
+- Scoped runs own these tables like ItemLimitCategory (`scope.DBC_SPACES` / `TABLE_IDS`): a scoped source file's rows and
+  stock-id overrides go out in both halves. The drop guard covers every row of the four overlay tables and refuses a
+  client patch that reverts a deployed stock-row override this checkout never wrote.
+- Stock files: `docker cp ac-worldserver:/azerothcore/env/dist/data/dbc/<name>.dbc var/extractors/dbc/` (checked
+  byte-identical to the 3.3.5a client's `patch-enUS-3.MPQ` / `patch-enUS.MPQ` members, 2026-11-10).
+
 ### Item tier labels on the tooltip (item variants, IV4)
 
 Every tier of an `item()` ladder except a `heroic_flag=True` one gets a green line directly under the item name
@@ -323,7 +355,8 @@ Code: `lib/drop_guard.py`; tests `lib/test_drop_guard.py`. After the SQL and the
 any SQL or patch is written, every write run (full, `--scope`, `--only items` / `--scope items`) checks:
 
 - **Live DB: drops.** The rendered SQL is read back (the same statement reader): for `spell_dbc`, `talent_dbc`,
-  `talenttab_dbc`, `skilllineability_dbc`, `item_dbc`, `item_template`, `itemset_dbc`, `itemextendedcost_dbc`,
+  `talenttab_dbc`, `skilllineability_dbc`, `item_dbc`, `spellitemenchantment_dbc`, `itemrandomsuffix_dbc`,
+  `gemproperties_dbc`, `spellitemenchantmentcondition_dbc`, `item_template`, `itemset_dbc`, `itemextendedcost_dbc`,
   `creature_template` and `creature_template_model`, a live id in the custom blocks that a DELETE covers (range,
   list or key tuple) and no INSERT puts back is a drop.
 - **Live DB: rewrites.** A live custom row the SQL re-inserts with other content (an older copy of a row another
@@ -331,7 +364,8 @@ any SQL or patch is written, every write run (full, `--scope`, `--only items` / 
   the live content of that row and no UPDATE of it names the id: the run would revert another branch's change.
 - **Deployed patch-Z.** In every DBC of the deployed archive the guard knows (Spell, Talent, TalentTab,
   SkillLineAbility, ItemSet, ItemExtendedCost, MapDifficulty, DungeonEncounter, ItemLimitCategory, SpellRuneCost,
-  SpellCategory, SkillLine, SpellDescriptionVariables, the four secondary DBCs; Item.dbc in repack runs), a custom id
+  SpellCategory, SkillLine, SpellItemEnchantment, ItemRandomSuffix, GemProperties, SpellItemEnchantmentCondition,
+  SpellDescriptionVariables, the four secondary DBCs; Item.dbc in repack runs), a custom id
   the deployed file holds and this run's archive lacks is a drop. A full run replaces the archive, so a DBC it does not
   build loses every row, and a deployed DBC member the guard has no definition for is reported by name; a repack
   (`--scope`, `--only items`) leaves the members it does not replace alone. A full run leaves Item.dbc to the

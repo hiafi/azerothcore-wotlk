@@ -100,6 +100,12 @@ ITEMLIMITCATEGORY_COLUMNS = dbcfmt.ITEMLIMITCATEGORY.columns
 # Crafting rework C2 (lib/dsl/registry.py's override_skill_line()): skillline_dbc is the empty server overlay of
 # SkillLine.dbc (dbcfmt's column list; the client half goes into patch-Z).
 SKILLLINE_COLUMNS = dbcfmt.SKILLLINE.columns
+# Crafting rework C1 (lib/dsl/enchants.py): the empty server overlays of SpellItemEnchantment.dbc, ItemRandomSuffix.dbc,
+# GemProperties.dbc and SpellItemEnchantmentCondition.dbc (dbcfmt's column lists; the client halves go into patch-Z).
+SPELLITEMENCHANTMENT_COLUMNS = dbcfmt.SPELLITEMENCHANTMENT.columns
+ITEMRANDOMSUFFIX_COLUMNS = dbcfmt.ITEMRANDOMSUFFIX.columns
+GEMPROPERTIES_COLUMNS = dbcfmt.GEMPROPERTIES.columns
+SPELLITEMENCHANTMENTCONDITION_COLUMNS = dbcfmt.SPELLITEMENCHANTMENTCONDITION.columns
 INSTANCE_ENCOUNTERS_COLUMNS = ("entry", "creditType", "creditEntry", "lastEncounterDungeon", "comment")
 # Dungeon finder (lib/dsl/lfg.py, lib/lfg_dungeons.py; lfg-classic-heroic): lfgdungeons_dbc is the server overlay of
 # LFGDungeons.dbc (dbcfmt's column list; the client half goes into patch-Z), lfg_dungeon_template the finder's entrance
@@ -395,6 +401,16 @@ SPELL_TABLES = (
     # Crafting rework C2: override_skill_line()'s full-row overrides of stock SkillLine rows. "No skill line
     # overridden" is a legitimate end state (the stock row comes back), so the last dropped declaration still prunes.
     TableSpec("skillline_dbc", SKILLLINE_COLUMNS, ("ID",), "skill_lines", prune_when_empty=True),
+    # Crafting rework C1: enchant(), suffix(), gem(), enchant_condition() and their override_*() forms. "No enchant
+    # declared" is a legitimate end state, so the last dropped declaration still prunes. Every column is NOT NULL
+    # DEFAULT 0 or a nullable string (the 0/None fallback is right).
+    TableSpec("spellitemenchantment_dbc", SPELLITEMENCHANTMENT_COLUMNS, ("ID",), "spell_item_enchantments",
+              prune_when_empty=True),
+    TableSpec("itemrandomsuffix_dbc", ITEMRANDOMSUFFIX_COLUMNS, ("ID",), "item_random_suffixes",
+              prune_when_empty=True),
+    TableSpec("gemproperties_dbc", GEMPROPERTIES_COLUMNS, ("ID",), "gem_properties", prune_when_empty=True),
+    TableSpec("spellitemenchantmentcondition_dbc", SPELLITEMENCHANTMENTCONDITION_COLUMNS, ("ID",),
+              "enchant_conditions", prune_when_empty=True),
     TableSpec(
         "instance_encounters", INSTANCE_ENCOUNTERS_COLUMNS, ("entry",), "instance_encounters",
         defaults={"creditType": 0, "creditEntry": 0, "lastEncounterDungeon": 0, "comment": ""},
@@ -596,6 +612,10 @@ _PRUNE_WHY = {
     "dungeonencounter_dbc": "Left in place, the boss stays on that difficulty's encounter list.",
     "itemlimitcategory_dbc": "Left in place, items naming the category keep its equip limit.",
     "skillline_dbc": "Left in place, the skill keeps the overridden category (profession slot, Skills tab group).",
+    "spellitemenchantment_dbc": "Left in place, the enchant / gem bonus / suffix part keeps its effect and name.",
+    "itemrandomsuffix_dbc": "Left in place, items keep rolling the suffix and its stats.",
+    "gemproperties_dbc": "Left in place, the gem item keeps its color and enchant.",
+    "spellitemenchantmentcondition_dbc": "Left in place, the meta gem keeps its declared requirement.",
     "instance_encounters": "Left in place, the kill keeps crediting that encounter.",
     "creature_template_addon": "Left in place, the heroic creature keeps the copied auras and emote.",
     "creature_template_resistance": "Left in place, the heroic creature keeps the copied resistance.",
@@ -891,9 +911,15 @@ def dsl_live_data(
     chrclasses_rows: dict[int, dict] | Callable[[], dict[int, dict]] | None = None,
     skilllineability_stock_rows: dict[int, dict] | Callable[[], dict[int, dict]] | None = None,
     skillline_rows: dict[int, dict] | Callable[[], dict[int, dict]] | None = None,
+    spellitemenchantment_rows: dict[int, dict] | Callable[[], dict[int, dict]] | None = None,
+    itemrandomsuffix_rows: dict[int, dict] | Callable[[], dict[int, dict]] | None = None,
+    gemproperties_rows: dict[int, dict] | Callable[[], dict[int, dict]] | None = None,
+    spellitemenchantmentcondition_rows: dict[int, dict] | Callable[[], dict[int, dict]] | None = None,
 ) -> dict:
     """The `live_data` bundle `lib.dsl.registry.load_classes_dir` hands `retire_talent()`, `item_template()`,
-    `override_skill_line_ability()`, `chr_class()` and `override_skill_line()` (see `registry._active_live_data`).
+    `override_skill_line_ability()`, `chr_class()`, `override_skill_line()` and the four `override_enchant()` family
+    helpers (see `registry._active_live_data`; their stock rows are the last four keyword arguments, crafting C1,
+    loaded together by `stock_enchant_loaders()`).
 
     `skilllineability_rows` (the live SkillLineAbility rows, base file plus promoted migrations),
     `skilllineability_stock_rows` (the stock SkillLineAbility rows `override_skill_line_ability()` edits, so removing
@@ -913,6 +939,23 @@ def dsl_live_data(
         "chrclasses_rows": chrclasses_rows,
         "skilllineability_stock_rows": skilllineability_stock_rows,
         "skillline_rows": skillline_rows,
+        "spellitemenchantment_rows": spellitemenchantment_rows,
+        "itemrandomsuffix_rows": itemrandomsuffix_rows,
+        "gemproperties_rows": gemproperties_rows,
+        "spellitemenchantmentcondition_rows": spellitemenchantmentcondition_rows,
+    }
+
+
+def stock_enchant_loaders() -> dict[str, Callable[[], dict[int, dict]]]:
+    """The lazy stock-row loaders `dsl_live_data` takes for the enchant / suffix / gem / condition overrides
+    (crafting rework C1), as keyword arguments: `dsl_live_data(..., **stock_enchant_loaders())`."""
+    from . import dbcfmt, state  # noqa: PLC0415
+
+    return {
+        "spellitemenchantment_rows": lambda: state.load_stock_rows(dbcfmt.SPELLITEMENCHANTMENT),
+        "itemrandomsuffix_rows": lambda: state.load_stock_rows(dbcfmt.ITEMRANDOMSUFFIX),
+        "gemproperties_rows": lambda: state.load_stock_rows(dbcfmt.GEMPROPERTIES),
+        "spellitemenchantmentcondition_rows": lambda: state.load_stock_rows(dbcfmt.SPELLITEMENCHANTMENTCONDITION),
     }
 
 
@@ -926,6 +969,7 @@ def load_dsl_live_data() -> dict:
         state.load_existing_rows(dbcfmt.TALENT), load_live_item_template_rows(),
         lambda: state.load_existing_rows(dbcfmt.SKILLLINEABILITY), lambda: state.load_stock_rows(dbcfmt.CHRCLASSES),
         lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY), lambda: state.load_stock_rows(dbcfmt.SKILLLINE),
+        **stock_enchant_loaders(),
     )
 
 
