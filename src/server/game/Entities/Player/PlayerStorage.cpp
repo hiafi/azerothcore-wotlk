@@ -4620,17 +4620,23 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
                             ApplyRatingMod(CR_CRIT_SPELL, enchant_amount, apply);
                             LOG_DEBUG("entities.player.items", "+ {} SPELL_CRIT", enchant_amount);
                             break;
-                            //                        Values from ITEM_STAT_MELEE_HA_RATING to ITEM_MOD_HASTE_RANGED_RATING are never used
-                            //                        in Enchantments
-                            //                        case ITEM_MOD_HIT_TAKEN_MELEE_RATING:
-                            //                            ApplyRatingMod(CR_HIT_TAKEN_MELEE, enchant_amount, apply);
-                            //                            break;
-                            //                        case ITEM_MOD_HIT_TAKEN_RANGED_RATING:
-                            //                            ApplyRatingMod(CR_HIT_TAKEN_RANGED, enchant_amount, apply);
-                            //                            break;
-                            //                        case ITEM_MOD_HIT_TAKEN_SPELL_RATING:
-                            //                            ApplyRatingMod(CR_HIT_TAKEN_SPELL, enchant_amount, apply);
-                            //                            break;
+                        // Custom: ids 22-24 are this fork's Mastery, Versatility and Cooldown Haste ratings (stock HIT_TAKEN_*,
+                        // never used in enchantments); mirrors the base item stat switch in Player::_ApplyItemBonuses.
+                        // Gems, enchants, random suffixes and socket bonuses carrying a custom stat need these cases.
+                        case ITEM_MOD_MASTERY_RATING:
+                            ApplyRatingMod(CR_MASTERY, enchant_amount, apply);
+                            LOG_DEBUG("entities.player.items", "+ {} MASTERY", enchant_amount);
+                            break;
+                        case ITEM_MOD_VERSATILITY_RATING:
+                            ApplyRatingMod(CR_VERSATILITY, enchant_amount, apply);
+                            LOG_DEBUG("entities.player.items", "+ {} VERSATILITY", enchant_amount);
+                            break;
+                        case ITEM_MOD_COOLDOWN_RATING:
+                            ApplyRatingMod(CR_COOLDOWN_HASTE, enchant_amount, apply);
+                            LOG_DEBUG("entities.player.items", "+ {} COOLDOWN HASTE", enchant_amount);
+                            break;
+                            //                        Values from ITEM_STAT_MELEE_HA_RATING to ITEM_MOD_HASTE_RANGED_RATING (other than
+                            //                        the custom 22-24 above) are never used in Enchantments
                             //                        case ITEM_MOD_CRIT_TAKEN_MELEE_RATING:
                             //                            ApplyRatingMod(CR_CRIT_TAKEN_MELEE, enchant_amount, apply);
                             //                            break;
@@ -4661,12 +4667,12 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
                             ApplyRatingMod(CR_CRIT_SPELL, enchant_amount, apply);
                             LOG_DEBUG("entities.player.items", "+ {} CRITICAL", enchant_amount);
                             break;
-                            //                        Values ITEM_MOD_HIT_TAKEN_RATING and ITEM_MOD_CRIT_TAKEN_RATING are never used in Enchantment
-                            //                        case ITEM_MOD_HIT_TAKEN_RATING:
-                            //                            ApplyRatingMod(CR_HIT_TAKEN_MELEE, enchant_amount, apply);
-                            //                            ApplyRatingMod(CR_HIT_TAKEN_RANGED, enchant_amount, apply);
-                            //                            ApplyRatingMod(CR_HIT_TAKEN_SPELL, enchant_amount, apply);
-                            //                            break;
+                        // Custom: id 33 is this fork's Proc Chance rating (stock HIT_TAKEN_RATING, never used in enchantments).
+                        case ITEM_MOD_PROC_RATING:
+                            ApplyRatingMod(CR_PROC_CHANCE, enchant_amount, apply);
+                            LOG_DEBUG("entities.player.items", "+ {} PROC CHANCE", enchant_amount);
+                            break;
+                            //                        Value ITEM_MOD_CRIT_TAKEN_RATING is never used in Enchantment
                             //                        case ITEM_MOD_CRIT_TAKEN_RATING:
                             //                            ApplyRatingMod(CR_CRIT_TAKEN_MELEE, enchant_amount, apply);
                             //                            ApplyRatingMod(CR_CRIT_TAKEN_RANGED, enchant_amount, apply);
