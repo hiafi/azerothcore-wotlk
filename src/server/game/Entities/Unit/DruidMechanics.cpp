@@ -480,8 +480,10 @@ namespace Druid
         if (!caster)
             return false;
 
+        // Custom: not at a delayed spell's impact - its consumed aura may be freed and a fresh proc
+        // reuse the address (mage-mastery-fix review S2); launch damage always runs before DELAYED.
         Spell* spell = caster->m_spellModTakingSpell;
-        if (!spell)
+        if (!spell || spell->getState() == SPELL_STATE_DELAYED)
             return false;
 
         Aura* clearcasting = caster->GetAura(SPELL_CLEARCASTING_OMEN_CAPSTONE);
