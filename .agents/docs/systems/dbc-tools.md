@@ -60,6 +60,8 @@ crafting stages C4 (suffixes), C5 (gems, metas) and C6 (enchants) do. Facts to k
   from its budget, not RandPropPoints: `item_itemization.secondary_shape_id` 0 + `RandomSuffix` set makes
   `GenerateEnchSuffixFactor` return `ItemBudget::GetSuffixFactor` (2 x round(secondary budget / 2)), so a 5000/5000 pair
   splits the secondary share. Content: `source/world/crafting_suffixes.py`.
+- Gems (crafting rework C5): the table is `lib/crafting_gems_data.py`, declared by `source/world/crafting_gems.py`;
+  the gem items are hand-written rows from `write_gem_items.py` (rerun it after a table edit; the tests fail while stale).
 
 ### Item tier labels on the tooltip (item variants, IV4)
 

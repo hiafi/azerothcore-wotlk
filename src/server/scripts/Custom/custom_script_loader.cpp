@@ -28,6 +28,7 @@ void AddSC_custom_haste_gcd();
 void AddSC_custom_professions();
 void AddSC_custom_gathering_ranks();
 void AddSC_custom_crafting_missives();
+void AddSC_custom_crafting_gems();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -44,4 +45,5 @@ void AddCustomScripts()
     AddSC_custom_professions();
     AddSC_custom_gathering_ranks();
     AddSC_custom_crafting_missives();
+    AddSC_custom_crafting_gems();
 }

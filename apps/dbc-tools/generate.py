@@ -1461,9 +1461,9 @@ def _run(
         )
         _merge_npc_declarations(dsl_classes, dsl_npcs)
         # source/world/*.py: world content tied to no class or NPC (lfg_exclude(), item_template() edits of
-        # stock items) - same loader, merged in.
+        # stock items, the crafting rework's profession recipes and their trained_by() rows) - same loader, merged in.
         dsl_world = dsl_registry.load_classes_dir(
-            SOURCE_DIR / "world", ids_cfg=ids_cfg, live_data=live_data,
+            SOURCE_DIR / "world", ids_cfg=ids_cfg, trainer_index=trainer_index, live_data=live_data,
             existing_creature_rows=existing_creature_rows, creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
         )
         _merge_npc_declarations(dsl_classes, dsl_world, "source/world/")
