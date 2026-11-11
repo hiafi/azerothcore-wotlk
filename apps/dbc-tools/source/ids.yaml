@@ -101,7 +101,8 @@ skilllineability:
 # touched Item.dbc, so the range starts there. The bounds stay as they are.
 # Hand-picked items.csv rows in 70000-70999 so far: 70100-70103 (test rings), 70500-70599 (set tokens, below), 70600-70603
 # (Stratholme relics, `reservations: stratholme`), 70700 (Satchel of Heroic Supplies, the Random Classic Heroic reward;
-# item_template and loot in hand-written pending world SQL, lfg-classic-heroic).
+# item_template and loot in hand-written pending world SQL, lfg-classic-heroic), 70710-70718 (the nine Missives,
+# crafting rework C4; item_template in hand-written pending world SQL, 70719 spare).
 item:
   start: 70000
   end: 79999
@@ -158,6 +159,15 @@ gemproperties:
 spellitemenchantmentcondition:
   start: 1000
   end: 1099
+
+# item_enchantment_template pool entries for suffix_pool() (crafting rework C4; lib/dsl/enchants.py): the values an
+# item names in item_template.RandomSuffix. The table's entry space is shared by the RandomProperty and RandomSuffix
+# pools; stock entries span 61-8675 (28,594 rows) and item_template.RandomSuffix / RandomProperty top out at 385 /
+# 8675. Checked free 2026-11-10: no item_enchantment_template row above 8675 live, in the base dump or in any SQL file.
+# 9000 crafted gear (throughput pairs), 9001 crafted tank gear (tank pairs).
+item_enchantment_pool:
+  start: 9000
+  end: 9099
 
 # Dungeon sets (lib/item_sets.py, lib/dsl/sets.py; Haunted set track 2026-11-06). Checked free 2026-11-06:
 #   item_set_token: set token item_template entries (explicit per tier in source/items/haunted_set.py), inside the
@@ -555,6 +565,14 @@ reservations:
   haunted_set:
     spell: {start: 205700, end: 205899}
     creature: {start: 300480, end: 300499}
+
+  # Crafting rework C4 (source/world/crafting_suffixes.py): the nine Missive buffs 207000-207008 and their Inscription
+  # recipes 207010-207018 (207019-207049 spare), and the recipes' SkillLineAbility rows 30900-30908 (30909-30919
+  # spare). Checked free 2026-11-10: no declaration, SQL file (base, merged, pending) or live spell_dbc row at or above
+  # 206735 (the dungeon slices of other branches end at 206799), no skilllineability_dbc row above 30855.
+  crafting:
+    spell: {start: 207000, end: 207049}
+    skilllineability: {start: 30900, end: 30919}
 
   # The healing sim (source/npcs/healsim_spells.py) is not a class, but its spells sit inside the spell block, so it
   # reserves under its project name and the overlap test keeps every class out of them.

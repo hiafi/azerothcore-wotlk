@@ -52,6 +52,14 @@ crafting stages C4 (suffixes), C5 (gems, metas) and C6 (enchants) do. Facts to k
   client patch that reverts a deployed stock-row override this checkout never wrote.
 - Stock files: `docker cp ac-worldserver:/azerothcore/env/dist/data/dbc/<name>.dbc var/extractors/dbc/` (checked
   byte-identical to the 3.3.5a client's `patch-enUS-3.MPQ` / `patch-enUS.MPQ` members, 2026-11-10).
+- Suffix pools (crafting rework C4): `suffix_pool(entry, *suffixes)` declares `item_enchantment_template` rows (equal
+  chances, rounded up so they sum to at least 100) in the `item_enchantment_pool` block 9000-9099, clear of the stock
+  pools 61-8675 the table also holds for RandomProperty. A SPELL_TABLES entry keyed `(entry, ench)`: the prune pass only
+  removes keys a past run emitted and never a base-dump key. The pool check reads the declared pools in place of their
+  live rows, and also reports an item whose `RandomSuffix` names a pool with no rows. Crafted gear sizes its suffix
+  from its budget, not RandPropPoints: `item_itemization.secondary_shape_id` 0 + `RandomSuffix` set makes
+  `GenerateEnchSuffixFactor` return `ItemBudget::GetSuffixFactor` (2 x round(secondary budget / 2)), so a 5000/5000 pair
+  splits the secondary share. Content: `source/world/crafting_suffixes.py`.
 
 ### Item tier labels on the tooltip (item variants, IV4)
 

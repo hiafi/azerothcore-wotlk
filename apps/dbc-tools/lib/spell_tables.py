@@ -104,6 +104,7 @@ SKILLLINE_COLUMNS = dbcfmt.SKILLLINE.columns
 # GemProperties.dbc and SpellItemEnchantmentCondition.dbc (dbcfmt's column lists; the client halves go into patch-Z).
 SPELLITEMENCHANTMENT_COLUMNS = dbcfmt.SPELLITEMENCHANTMENT.columns
 ITEMRANDOMSUFFIX_COLUMNS = dbcfmt.ITEMRANDOMSUFFIX.columns
+ITEM_ENCHANTMENT_TEMPLATE_COLUMNS = ("entry", "ench", "chance")
 GEMPROPERTIES_COLUMNS = dbcfmt.GEMPROPERTIES.columns
 SPELLITEMENCHANTMENTCONDITION_COLUMNS = dbcfmt.SPELLITEMENCHANTMENTCONDITION.columns
 INSTANCE_ENCOUNTERS_COLUMNS = ("entry", "creditType", "creditEntry", "lastEncounterDungeon", "comment")
@@ -411,6 +412,11 @@ SPELL_TABLES = (
     TableSpec("gemproperties_dbc", GEMPROPERTIES_COLUMNS, ("ID",), "gem_properties", prune_when_empty=True),
     TableSpec("spellitemenchantmentcondition_dbc", SPELLITEMENCHANTMENTCONDITION_COLUMNS, ("ID",),
               "enchant_conditions", prune_when_empty=True),
+    # Crafting rework C4: suffix_pool()'s random suffix pools. The pool entries sit in their own block (9000+), clear of
+    # the stock pools in the base dump, which the prune pass never touches (base overlap); "no pool declared" is a
+    # legitimate end state. Every column is NOT NULL DEFAULT 0.
+    TableSpec("item_enchantment_template", ITEM_ENCHANTMENT_TEMPLATE_COLUMNS, ("entry", "ench"),
+              "item_enchantment_pools", prune_when_empty=True),
     TableSpec(
         "instance_encounters", INSTANCE_ENCOUNTERS_COLUMNS, ("entry",), "instance_encounters",
         defaults={"creditType": 0, "creditEntry": 0, "lastEncounterDungeon": 0, "comment": ""},
@@ -614,6 +620,7 @@ _PRUNE_WHY = {
     "skillline_dbc": "Left in place, the skill keeps the overridden category (profession slot, Skills tab group).",
     "spellitemenchantment_dbc": "Left in place, the enchant / gem bonus / suffix part keeps its effect and name.",
     "itemrandomsuffix_dbc": "Left in place, items keep rolling the suffix and its stats.",
+    "item_enchantment_template": "Left in place, items naming the pool keep rolling that suffix.",
     "gemproperties_dbc": "Left in place, the gem item keeps its color and enchant.",
     "spellitemenchantmentcondition_dbc": "Left in place, the meta gem keeps its declared requirement.",
     "instance_encounters": "Left in place, the kill keeps crediting that encounter.",

@@ -1600,7 +1600,9 @@ def _run(
     # (the potency sheets below, the --only items hand-over). A missing stock file only stops a run that needs it.
     enchant_errors, enchant_warnings = enchant_tables.check(
         dsl_classes,
-        pool_rows=trainer_state.load_table_rows("item_enchantment_template"),
+        pool_rows=enchant_tables.merged_pool_rows(
+            trainer_state.load_table_rows("item_enchantment_template"), dsl_classes.get("item_enchantment_pools", []),
+        ),
         items=enchant_tables.item_columns(item_live_rows, item_emission, dsl_classes["item_templates"]),
         load_stock=enchant_tables.stock_loader(BASE_DBC_DIR),
     )

@@ -312,6 +312,9 @@ class Registry:
     item_random_suffixes: list[dict] = field(default_factory=list)
     gem_properties: list[dict] = field(default_factory=list)
     enchant_conditions: list[dict] = field(default_factory=list)
+    # Crafting rework C4 (lib/dsl/enchants.py suffix_pool()): item_enchantment_template rows of the declared random
+    # suffix pools ({"id": "entry:ench", entry, ench, chance}). A plain SPELL_TABLES entry.
+    item_enchantment_pools: list[dict] = field(default_factory=list)
     # Dungeon sets (lib/dsl/sets.py, lib/item_sets.py): one {"id": ("set" | "token" | "vendor", id), "_decl": ...} per
     # item_set() / set_token() / set_vendor() call, and the itemset_dbc, itemextendedcost_dbc and npc_vendor rows
     # generate.py derives from them (lib/item_sets.SET_TABLES).
@@ -358,7 +361,7 @@ MERGE_KEYS = (
     "heroic_template_movements", "heroic_onkill_reputations",
     "lfg_group_declarations", "lfg_dungeon_declarations", "lfg_dungeons", "lfg_dungeon_templates", "lfg_groups",
     "item_declarations", "loot_declarations", "item_limit_categories", "skill_lines",
-    "spell_item_enchantments", "item_random_suffixes", "gem_properties", "enchant_conditions",
+    "spell_item_enchantments", "item_random_suffixes", "gem_properties", "enchant_conditions", "item_enchantment_pools",
     "item_set_declarations", "item_set_rows", "item_extended_cost_rows", "npc_vendor_rows",
 )
 

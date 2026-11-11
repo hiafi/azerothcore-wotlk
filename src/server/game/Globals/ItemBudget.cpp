@@ -106,6 +106,10 @@ namespace
     std::unordered_map<uint32, std::vector<uint32>> _shapeStats;  // shape_id -> stat_type, ordered by rank
     std::unordered_map<uint32, std::vector<ShapeRuleRow>> _shapeRules; // shape_id -> rules (secondary shapes only)
 
+    // Crafting rework C4 (A1): entry -> suffix factor of every materialized item whose suffix carries its
+    // secondaries (secondary_shape_id 0 + item_template.RandomSuffix). Filled once by the apply pass, read-only after.
+    std::unordered_map<uint32, uint32> _suffixFactor;
+
     // Allowed primary_share values, docs/itemization-phase-2.md §5.5.
     constexpr uint32 ALLOWED_PRIMARY_SHARES[] = {0, 4000, 6000, 8000, 10000};
 
@@ -566,6 +570,30 @@ namespace
                             LOG_DEBUG("server.loading", "item_itemization entry {}: absorbed_spell_slots marks slot {} but it has no spell to absorb", entry, i);
                 }
 
+                // Crafting rework C4 (A1): secondary shape 0 means "the random suffix carries the
+                // secondaries". The suffix factor is the secondary budget, so the item needs a suffix pool
+                // and a nonzero secondary share (chat links refuse a suffix whose factor is 0).
+                if (row.SecondaryShapeId == 0)
+                {
+                    if (!tpl.RandomSuffix)
+                    {
+                        LOG_ERROR("server.loading", "item_itemization entry {}: secondary_shape_id 0 (secondaries "
+                            "from the random suffix) but item_template.RandomSuffix is 0", entry);
+                        ok = false;
+                    }
+
+                    if (row.PrimaryShare >= 10000)
+                    {
+                        LOG_ERROR("server.loading", "item_itemization entry {}: secondary_shape_id 0 (secondaries "
+                            "from the random suffix) needs primary_share below 10000, got {}", entry, row.PrimaryShare);
+                        ok = false;
+                    }
+                }
+                else if (tpl.RandomSuffix)
+                    LOG_WARN("server.loading", "item_itemization entry {}: real secondary_shape_id {} plus a random "
+                        "suffix pool ({}): the suffix is extra power outside the budget (set secondary_shape_id 0 to "
+                        "size it from the budget)", entry, row.SecondaryShapeId, tpl.RandomSuffix);
+
                 // Check 9: this row's secondary shape's rules, evaluated against its primary
                 // shape's stat set.
                 if (ok)
@@ -731,6 +759,14 @@ namespace
         double secondaryBudget = effectiveBudget - primaryBudget;
         b.PrimaryBudget = static_cast<float>(primaryBudget);
         b.SecondaryBudget = static_cast<float>(secondaryBudget);
+
+        // Crafting rework C4 (A1): shape 0 allocates nothing below, so the secondary budget is left for the random
+        // suffix. 2 * round(S / 2) makes each half of a 5000/5000 pair round(S / 2) instead of floor(S / 2). At
+        // least 2 (one point per stat): a factor of 0 would make GenerateEnchSuffixFactor fall back to the stock
+        // RandPropPoints size. apps/item-tools/item_lib/budget.py compute_breakdown() mirrors this.
+        b.SuffixSecondaries = (row.SecondaryShapeId == 0 && tpl.RandomSuffix != 0);
+        b.SuffixFactor = b.SuffixSecondaries ?
+            static_cast<uint32>(std::max<long>(2, 2 * std::lround(secondaryBudget / 2.0))) : 0;
 
         // Step 4: allocate each side against its shape's ordered stat list and distribution.
         // Every rank of a given (alloc, cost) pair goes through this exact same formula in the
@@ -918,10 +954,19 @@ namespace
                 tpl.Spells[i].SpellCategoryCooldown = -1;
             }
 
+            if (b.SuffixSecondaries)
+            {
+                if (b.SecondaryBudget < 1.0f)
+                    LOG_WARN("server.loading", "item_itemization entry {}: secondary budget {:.2f} is below one point; "
+                        "its random suffix is raised to one point per stat", entry, b.SecondaryBudget);
+                _suffixFactor[entry] = b.SuffixFactor;
+            }
+
             ++applied;
         }
 
-        LOG_INFO("server.loading", ">> Materialized {} item itemization assignment(s)", applied);
+        LOG_INFO("server.loading", ">> Materialized {} item itemization assignment(s), {} with budget-sized random "
+            "suffixes", applied, _suffixFactor.size());
     }
 }
 
@@ -931,6 +976,7 @@ namespace ItemBudget
     {
         uint32 oldMSTime = getMSTime();
 
+        _suffixFactor.clear();
         LoadItemizationData();
         ValidateItemizationData(itemTemplateStore);
         ApplyItemizationAllocation(itemTemplateStore);
@@ -961,5 +1007,11 @@ namespace ItemBudget
 
         ResolveBudget(*tpl, itemizationIt->second, b);
         return b;
+    }
+
+    uint32 GetSuffixFactor(uint32 entry)
+    {
+        auto itr = _suffixFactor.find(entry);
+        return itr != _suffixFactor.end() ? itr->second : 0;
     }
 }

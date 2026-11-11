@@ -125,6 +125,12 @@
               + secondary {{ '%.1f'|format(b.secondary_budget) }}
               {% if b.rounding_remainder_points %}({{ b.rounding_remainder_points }} point(s) largest-remainder){% endif %}
             </p>
+            {% if b.suffix_secondaries %}
+              <p class="hint">
+                secondaries from the random suffix (pool {{ row.RandomSuffix }}): suffix factor {{ b.suffix_factor }},
+                {{ b.suffix_factor // 2 }} per stat of a 5000/5000 pair
+              </p>
+            {% endif %}
             <table>
               <thead><tr><th>Side</th><th>Stat</th><th>Alloc</th><th>Raw</th><th>Rounded</th></tr></thead>
               <tbody>

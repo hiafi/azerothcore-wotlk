@@ -109,6 +109,9 @@ def _describe_changes(changes: dict, original: dict) -> str:
 
 # --- Shape-based itemization (docs/itemization-phase-2.md) ------------------
 
+NULL_SHAPE_ID = 0  # item_shape 0, "Null": no stat rows
+SUFFIX_SECONDARY_LABEL = "Null - secondaries from the random suffix (crafting C4)"
+
 DEFAULT_ITEMIZATION_ROW = {
     "budget_mult": 1.0, "stamina_delta": 0, "dps_delta": 0.0, "absorbed_spell_slots": 0,
     "armor_delta": 0, "primary_shape_id": 0, "secondary_shape_id": 25, "primary_share": 0,
@@ -162,6 +165,10 @@ def _itemization_form_context(entry: int, item_row: dict, tables: dict,
         (s for s in shape_catalog.values() if s["kind"] == shape_lib.KIND_SECONDARY),
         key=lambda s: s["shape_id"],
     )
+    # Crafting rework C4 (A1): the Null shape as a secondary means "the random suffix carries the secondaries" (the
+    # item needs item_template.RandomSuffix; the suffix factor is the unspent secondary budget, budget.py).
+    if NULL_SHAPE_ID in shape_catalog:
+        secondary_options.insert(0, {**shape_catalog[NULL_SHAPE_ID], "name": SUFFIX_SECONDARY_LABEL})
     secondary_rules = {}
     for s in secondary_options:
         requires_any, forbids = shape_lib.rule_stat_lists(s)
@@ -244,7 +251,16 @@ def item_itemization_save(entry: int):
     if primary_shape is None or primary_shape["kind"] != shape_lib.KIND_PRIMARY:
         flash(f"{primary_shape_id} isn't a real primary shape - pick one from the list.", "error")
         return redirect(url_for(".item_edit", entry=entry))
-    if secondary_shape is None or secondary_shape["kind"] != shape_lib.KIND_SECONDARY:
+    suffix_secondaries = secondary_shape_id == NULL_SHAPE_ID and secondary_shape is not None
+    if suffix_secondaries:
+        # ItemBudget.cpp refuses (unmaterializes) these two; say so here instead.
+        if not item_row.get("RandomSuffix"):
+            flash(f"{SUFFIX_SECONDARY_LABEL!r} needs a random suffix pool: set the item's RandomSuffix first.", "error")
+            return redirect(url_for(".item_edit", entry=entry))
+        if _f("primary_share", int, 6000) >= 10000:
+            flash(f"{SUFFIX_SECONDARY_LABEL!r} needs a primary share below 100%: the rest sizes the suffix.", "error")
+            return redirect(url_for(".item_edit", entry=entry))
+    elif secondary_shape is None or secondary_shape["kind"] != shape_lib.KIND_SECONDARY:
         flash(f"{secondary_shape_id} isn't a real secondary shape - pick one from the list.", "error")
         return redirect(url_for(".item_edit", entry=entry))
     if not shape_lib.rules_satisfied(secondary_shape, set(primary_shape["stats"])):

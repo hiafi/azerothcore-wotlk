@@ -1179,6 +1179,24 @@ checkout ever wrote that id (`drop_guard.client_overrides_lost`). `--allow-drop`
 checked against the column (byte 0..255, signed int32, locale mask uint32, otherwise 0..2^31-1). Tests:
 `lib/test_enchant_tables.py`.
 
+**Suffix pools (crafting rework C4).** `suffix_pool(entry, *suffixes)` declares one `item_enchantment_template` row per
+suffix (id or `suffix()` row, declared or stock) at equal chances, rounded up to four decimals so they sum to at least
+100 (`GetItemEnchantMod` walks a running total against a 0-100 roll). `entry` sits in the `item_enchantment_pool` block
+9000-9099; the stock pools (61-8675, shared with RandomProperty) are base-dump rows the prune pass never deletes. The pool
+check takes a declared pool's rows in place of its live ones and reports an item naming a pool with no rows. Crafted gear
+gets its suffix size from its own budget (`item_itemization.secondary_shape_id` 0, see
+`.agents/docs/systems/dbc-tools.md`). Content: `source/world/crafting_suffixes.py`; tests: `lib/test_crafting_suffixes.py`.
+
+```python
+from lib.dsl.enchants import stat_enchant, suffix, suffix_pool
+from lib.dsl.registry import ItemMod
+
+crit = stat_enchant(5000, ItemMod.CRIT_RATING)
+haste = stat_enchant(5001, ItemMod.HASTE_RATING)
+duelist = suffix(1000, "of the Duelist", "Duelist", (crit, 5000), (haste, 5000))
+suffix_pool(9000, duelist, ...)                            # item_template.RandomSuffix = 9000
+```
+
 ## Known limitations
 
 - `spell_icon_id` takes a raw `SpellIconID` integer, not a texture-path
