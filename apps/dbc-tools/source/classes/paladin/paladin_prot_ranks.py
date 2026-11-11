@@ -361,7 +361,7 @@ def _radiant_bulwark(spell_id, bp, pct):
     return _rank(
         spell_id, 'Radiant Bulwark', [_dummy(bp)], 1801, 50,
         f"At 5 stacks of Bulwark, your next Holy Light becomes instant and costs no mana, on any target. If that Holy "
-        f"Light heals you, its overhealing grants you an absorb shield equal to {pct}% of the excess, up to 50% of your "
+        f"Light heals you, its overhealing grants you an absorb shield equal to {pct}% of the excess, up to 200% of your "
         f"maximum health, for 10 sec. A larger shield replaces a smaller one.",
         _RADIANT_NOTE, extra_raw={'ProcTypeMask': 0x4000},
     )

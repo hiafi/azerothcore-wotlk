@@ -132,16 +132,16 @@ namespace
     // the marker-aura-by-icon read on (PLAN sec 3.9).
     constexpr uint32 PRIEST_ICON_HOLY_CONCENTRATION = 2169;
 
-    // Echo of Light (8,3) reservoir is always redistributed across exactly 3 ticks (design doc
-    // 5.1: "6 sec, 3 ticks at a fixed 2 sec interval").
-    constexpr int32 PRIEST_ECHO_OF_LIGHT_TICKS = 3;
+    // Echo of Light (8,3) reservoir is always redistributed across exactly 6 ticks (design doc
+    // 5.1: "12 sec, 6 ticks at a fixed 2 sec interval"; was 6 sec / 3 ticks until 2026-11-11).
+    constexpr int32 PRIEST_ECHO_OF_LIGHT_TICKS = 6;
 
     // Echo of Light counts Mastery at triple weight (user tuning call, 2026-09-22): Mastery is the
     // only stat this whole tree reads (design doc 1), so at 1x it moved the Echo too little to be
     // worth gearing for. Applies to the Mastery bonus only, never to the rank's base %.
     constexpr float PRIEST_ECHO_OF_LIGHT_MASTERY_WEIGHT = 3.0f;
 
-    // Echo of Light's per-rank base (design doc 5.1: 25 / 30 / 35% of the Holy Word's amount) -
+    // Echo of Light's per-rank base (design doc 5.1: 60 / 80 / 100% of the Holy Word's amount) -
     // read from the rank's hidden EFFECT_1 dummy ($s2 in the tooltip, priest_trigger_spells.py
     // echo_of_light_200215..200217) so the tooltip and the math can't drift apart. A brand-new
     // talent (60019) has no existing stock SpellIconID to key a marker-aura-by-icon read on, so
@@ -160,7 +160,7 @@ namespace
      * Echo of Light (8,3) shared apply helper - design doc 5.1. `rawAmount` is the full pre-
      * overheal/overkill amount of the Holy Word that just landed; `echoSpellId` is 200218 (heal) or
      * 200219 (damage). Handles the reservoir math ("take the amount not yet delivered by the
-     * existing Echo, add the new amount, redistribute across a fresh 6 sec/3 ticks") and the
+     * existing Echo, add the new amount, redistribute across a fresh 12 sec/6 ticks") and the
      * done/taken bonus snapshot ("does not re-evaluate per tick" - baked in once, here, since
      * SpellAuraEffects.cpp's IsFixedCadencePeriodic() exempts the tick itself from re-applying
      * them). Casting the same spell id on the same target from the same caster naturally

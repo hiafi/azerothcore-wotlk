@@ -70,7 +70,7 @@ _SV_POWER_WORD_SHIELD = 784     # Power Word: Shield, every rank
 
 # Script numbers (D8 tier 3: not tooltip numbers, not potency). Every [tune] value changes here, never in C++.
 BLOOD_SHIELD_CAP_PCT = const(
-    'BLOOD_SHIELD_CAP_PCT', 30, 'Blood Shield stacks up to this percent of the Death Knight\'s CURRENT maximum health '
+    'BLOOD_SHIELD_CAP_PCT', 100, 'Blood Shield stacks up to this percent of the Death Knight\'s CURRENT maximum health '
     '(Vampiric Blood counts) [fixed].',
 )
 BLOOD_NOVA_COST_PCT = const(
