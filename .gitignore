@@ -157,6 +157,11 @@ modules/mod-dpssim/conf/profiles/.stat-weights-scratch/
 # mod-boss-mechanics and mod-dungeon-difficulties — tracked in this repo, not a separate module repo.
 !modules/mod-dungeon-bosses
 
+# mod-dungeon-checkpoint: in-dungeon respawn checkpoints (entrance + per-boss rows), first-party since 2026-08-28 -
+# tracked in this repo, not a separate module repo. Its SQL ships in the module (data/sql); new module SQL needs
+# an ac-db-import image rebuild (the Dockerfile COPYs modules/; only ./data is bind-mounted).
+!modules/mod-dungeon-checkpoint
+
 # Live-stack e2e private / local tooling (scratch tests stay uncommitted)
 e2e/local/**
 !e2e/local/README.md

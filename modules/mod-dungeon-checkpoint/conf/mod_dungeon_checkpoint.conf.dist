@@ -1,0 +1,17 @@
+[worldserver]
+
+########################################
+# Dungeon Checkpoint configuration
+########################################
+#
+#    DungeonCheckpoint.Enable
+#        Description: Enable or disable dungeon checkpoint respawn. When enabled, releasing
+#                      spirit inside a dungeon that has an active checkpoint resurrects the
+#                      player in place at that checkpoint instead of the normal graveyard
+#                      release/ghost-walk flow. Dungeons with no checkpoints configured in
+#                      `dungeon_checkpoint_location` are unaffected either way.
+#        Default:     1 - Enabled
+#                     0 - Disabled
+#
+
+DungeonCheckpoint.Enable = 1
