@@ -92,6 +92,7 @@ from lib import item_labels  # noqa: E402
 from lib import item_set_members  # noqa: E402
 from lib import item_spell_copies  # noqa: E402
 from lib import item_limits  # noqa: E402
+from lib import enchant_tables  # noqa: E402
 from lib import item_sets  # noqa: E402
 from lib import patch_repack  # noqa: E402
 from lib import drop_guard, scope as scope_lib  # noqa: E402
@@ -883,6 +884,7 @@ def _run_scoped_check(corpus: sqlcorpus.Corpus, class_name: str) -> int:
     live_data = spell_tables.dsl_live_data(
         existing_talents, item_live_rows, live_skilllineabilities, lambda: state.load_stock_rows(dbcfmt.CHRCLASSES),
         lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY), lambda: state.load_stock_rows(dbcfmt.SKILLLINE),
+        **spell_tables.stock_enchant_loaders(),
     )
     try:
         dsl_classes = dsl_registry.load_classes_dir(
@@ -1437,6 +1439,7 @@ def _run(
     live_data = spell_tables.dsl_live_data(
         existing_talents, item_live_rows, live_skilllineabilities, lambda: state.load_stock_rows(dbcfmt.CHRCLASSES),
         lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY), lambda: state.load_stock_rows(dbcfmt.SKILLLINE),
+        **spell_tables.stock_enchant_loaders(),
     )
     progress("loaded live Talent.dbc rows and item_template rows")
 
@@ -1592,6 +1595,21 @@ def _run(
                 lock_text=dungeon_expansion.lock_text if dungeon_expansion and dungeon_expansion.lock_appended
                 else None, item_entries=item_live_rows.keys(),
             )
+    # Crafting rework C1: the enchant / suffix / gem checks (dangling references, gem and suffix part gotchas, suffix
+    # pools). They read the declared items too, so they sit after the item expansion, and before anything is written
+    # (the potency sheets below, the --only items hand-over). A missing stock file only stops a run that needs it.
+    enchant_errors, enchant_warnings = enchant_tables.check(
+        dsl_classes,
+        pool_rows=trainer_state.load_table_rows("item_enchantment_template"),
+        items=enchant_tables.item_columns(item_live_rows, item_emission, dsl_classes["item_templates"]),
+        load_stock=enchant_tables.stock_loader(BASE_DBC_DIR),
+    )
+    for warning in enchant_warnings:
+        print(f"WARNING: {warning}")
+    if enchant_errors:
+        for error in enchant_errors:
+            print(f"ERROR: {error}")
+        return 1
     # The Item.dbc guard compares the full build's custom items with the deployed file; a scoped run keeps every item
     # row it does not own as deployed, so the general drop guard below covers it instead.
     if not scope_names and not item_expansion.errors and \
@@ -2291,6 +2309,8 @@ def _run(
         dbcfmt.LFGDUNGEONGROUP: lfg_finder.client_group_rows(dsl_classes["lfg_groups"]),
         dbcfmt.ITEMLIMITCATEGORY: item_limits.client_rows(dsl_classes["item_limit_categories"]),
         dbcfmt.SKILLLINE: _skill_line_rows(dsl_classes["skill_lines"]),
+        # Crafting rework C1: enchant(), suffix(), gem(), enchant_condition() and their overrides.
+        **{table: enchant_tables.client_rows(table, dsl_classes[key]) for table, key in enchant_tables.TABLES},
         **(set_expansion.client_rows() if set_expansion is not None else {}),
     }
     for name, table in SECONDARY_TABLES.items():

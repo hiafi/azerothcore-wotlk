@@ -129,6 +129,36 @@ item_limit_category:
   start: 1000
   end: 1999
 
+# Enchants, random suffixes, gems and meta gem conditions (crafting rework C1; lib/dsl/enchants.py): the custom rows of
+# SpellItemEnchantment, ItemRandomSuffix, GemProperties and SpellItemEnchantmentCondition (each a server overlay
+# `<table>_dbc` plus the client file in patch-Z). PROPOSED 2026-11-10, pending the user's approval (PLAN decision 5).
+# Checked free 2026-11-10 (stock client files, live DB, base dump, merged and pending SQL, modules):
+#   - spellitemenchantment: stock ids end at 3883 (2,656 rows); the live overlay is empty; item_template.socketBonus and
+#     spell_enchant_proc_data.entry top out at 3882 / 3869 and item_enchantment_template.ench at 2163. 5000-5999 leaves
+#     C4's suffix parts, C5's gems and socket bonuses and C6's enchants room (a suggested split, not enforced: suffix
+#     parts 5000-5099, gem bonuses 5100-5599, socket bonuses 5600-5799, enchants 5800-5999).
+#   - itemrandomsuffix: stock ids end at 99 (95 rows); the live overlay is empty. item_instance.randomPropertyId is a
+#     SMALLINT holding -suffix id, so every suffix id must stay below 32768.
+#   - gemproperties: stock ids end at 1629 (626 rows); the live overlay is empty; item_template.GemProperties tops
+#     out at 1629. 2000-2499 holds the 74 gems per expansion in both qualities with room for socket-bonus-only and
+#     meta rows.
+#   - spellitemenchantmentcondition: stock ids end at 194 (49 rows); the live overlay is empty.
+spellitemenchantment:
+  start: 5000
+  end: 5999
+
+itemrandomsuffix:
+  start: 1000
+  end: 1999
+
+gemproperties:
+  start: 2000
+  end: 2499
+
+spellitemenchantmentcondition:
+  start: 1000
+  end: 1099
+
 # Dungeon sets (lib/item_sets.py, lib/dsl/sets.py; Haunted set track 2026-11-06). Checked free 2026-11-06:
 #   item_set_token: set token item_template entries (explicit per tier in source/items/haunted_set.py), inside the
 #     `item` block so the item_dbc block DELETE covers them; only 70100-70103 (items.csv) are taken in 70000-70999.

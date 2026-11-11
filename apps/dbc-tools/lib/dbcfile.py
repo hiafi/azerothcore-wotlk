@@ -8,9 +8,11 @@ Implements exactly the layout in `src/common/DataStores/DBCFileLoader.cpp`:
     strings: a string pool, offset 0 is always the empty string
 
 Only the field types actually used by the tables in `dbcfmt.py` are
-implemented: 'n'/'i'/'x' (uint32), 'f' (float32), 's' (string offset) — plus
-any column listed in a table's `read_as_string`, decoded as a string
-regardless of its fmt char (see dbcfmt.py's module docstring for why).
+implemented: 'n'/'i'/'x' (uint32), 'f' (float32), 's' (string offset),
+'b'/'X' (one unsigned byte; SpellItemEnchantmentCondition.dbc, whose record is
+packed and unaligned) — plus any column listed in a table's `read_as_string`,
+decoded as a string regardless of its fmt char (see dbcfmt.py's module
+docstring for why).
 """
 
 from __future__ import annotations
@@ -209,7 +211,7 @@ def _pack_body(table: DbcTable, rows: list[dict], string_offsets: dict[str, int]
             kind = 0
         elif ch == "s" or col in table.read_as_string:
             kind = 1
-        elif ch in ("n", "i", "x"):
+        elif ch in ("n", "i", "x", "b", "X"):
             kind = 2
         else:
             raise ValueError(f"unsupported format char {ch!r} in {table.name}")
@@ -226,6 +228,8 @@ def _pack_body(table: DbcTable, rows: list[dict], string_offsets: dict[str, int]
         else:
             int_positions.append(i)
         cols.append(raw)
+    # a byte column wraps at 8 bits, every other integer column at 32
+    masks = {i: (0xFF if table.fmt[i] in _BYTE_FORMATS else mask) for i in int_positions}
 
     pack = _pack_struct(table).pack
     chunks = []
@@ -235,14 +239,22 @@ def _pack_body(table: DbcTable, rows: list[dict], string_offsets: dict[str, int]
         except (struct.error, TypeError, OverflowError):
             fixed = list(values)
             for i in int_positions:
-                fixed[i] = int(fixed[i] or 0) & mask
+                fixed[i] = int(fixed[i] or 0) & masks[i]
             chunks.append(pack(*fixed))
     return b"".join(chunks)
 
 
+_BYTE_FORMATS = ("b", "X")
+
+
+def record_size(table: DbcTable) -> int:
+    """Bytes per record: 4 per field, 1 for a byte field ('b' / 'X')."""
+    return sum(1 if ch in _BYTE_FORMATS else 4 for ch in table.fmt)
+
+
 @functools.lru_cache(maxsize=None)
 def _pack_struct(table: DbcTable) -> struct.Struct:
-    return struct.Struct("<" + "".join("f" if ch == "f" else "I" for ch in table.fmt))
+    return struct.Struct("<" + "".join("f" if ch == "f" else "B" if ch in _BYTE_FORMATS else "I" for ch in table.fmt))
 
 
 def pack_dbc_bytes(table: DbcTable, rows: list[dict], *, sort: bool = True) -> bytes:
@@ -255,7 +267,7 @@ def pack_dbc_bytes(table: DbcTable, rows: list[dict], *, sort: bool = True) -> b
     """
     if sort:
         rows = sorted(rows, key=lambda r: r[table.index_column])
-    record_size = 4 * len(table.fmt)  # every field here is exactly 4 bytes
+    size = record_size(table)
     string_pool, string_offsets = _pack_string_pool(rows, table)
 
     if not rows:
@@ -264,7 +276,7 @@ def pack_dbc_bytes(table: DbcTable, rows: list[dict], *, sort: bool = True) -> b
         body = _pack_body(table, rows, string_offsets)
 
     header = struct.pack(
-        "<4sIIII", MAGIC, len(rows), len(table.fmt), record_size, len(string_pool)
+        "<4sIIII", MAGIC, len(rows), len(table.fmt), size, len(string_pool)
     )
     return header + body + string_pool
 

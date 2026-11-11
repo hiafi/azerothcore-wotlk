@@ -102,7 +102,7 @@ def _old_pack_dbc_bytes(table: DbcTable, rows: list[dict], *, sort: bool = True)
     """
     if sort:
         rows = sorted(rows, key=lambda r: r[table.index_column])
-    record_size = 4 * len(table.fmt)  # every field here is exactly 4 bytes
+    record_size = sum(1 if ch in ("b", "X") else 4 for ch in table.fmt)  # a byte field is 1 byte (crafting C1)
     string_pool, string_offsets = _old_pack_string_pool(rows, table)
 
     body = bytearray()
@@ -115,6 +115,8 @@ def _old_pack_dbc_bytes(table: DbcTable, rows: list[dict], *, sort: bool = True)
                 body += struct.pack("<I", string_offsets[val or ""])
             elif ch in ("n", "i", "x"):
                 body += struct.pack("<I", int(val or 0) & 0xFFFFFFFF)
+            elif ch in ("b", "X"):
+                body += struct.pack("<B", int(val or 0) & 0xFF)
             else:
                 raise ValueError(f"unsupported format char {ch!r} in {table.name}")
 
@@ -233,11 +235,11 @@ class SyntheticEdgeCases(unittest.TestCase):
             _same_rows(self, dbcfile.read_dbc(path, table), _old_read_dbc(path, table))
 
     def test_unsupported_chars(self):
-        table = _mini_table("nb", ("ID", "B"))
+        table = _mini_table("nZ", ("ID", "Z"))  # 'b' / 'X' are byte fields the writer supports since crafting C1
         with self.assertRaises(ValueError) as old_err:
-            _old_pack_dbc_bytes(table, [{"ID": 1, "B": 1}])
+            _old_pack_dbc_bytes(table, [{"ID": 1, "Z": 1}])
         with self.assertRaises(ValueError) as new_err:
-            dbcfile.pack_dbc_bytes(table, [{"ID": 1, "B": 1}])
+            dbcfile.pack_dbc_bytes(table, [{"ID": 1, "Z": 1}])
         self.assertEqual(str(new_err.exception), str(old_err.exception))
         self.assertEqual(dbcfile.pack_dbc_bytes(table, []), _old_pack_dbc_bytes(table, []))
         bad = _mini_table("nZ", ("ID", "Z"))

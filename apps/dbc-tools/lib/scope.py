@@ -193,6 +193,10 @@ TABLE_IDS: dict[str, tuple[str, str]] = {
     "dungeon_access_template": ("id", "dungeon_access"),
     "dungeonencounter_dbc": ("ID", "dungeonencounter"),
     "itemlimitcategory_dbc": ("ID", "item_limit_category"),
+    "spellitemenchantment_dbc": ("ID", "spellitemenchantment"),
+    "itemrandomsuffix_dbc": ("ID", "itemrandomsuffix"),
+    "gemproperties_dbc": ("ID", "gemproperties"),
+    "spellitemenchantmentcondition_dbc": ("ID", "spellitemenchantmentcondition"),
     "instance_encounters": ("entry", "dungeonencounter"),
     # Dungeon finder entries (lfg-classic-heroic): declared in a shared world file, so no scope owns them (a full run
     # writes them); listed so a scope's heroic final boss that names one not yet live stops the run (reference_errors).
@@ -358,6 +362,11 @@ _DECLARED_ID_LISTS = (
     ("map_difficulties", "ID", "mapdifficulty"),
     ("dungeon_access", "id", "dungeon_access"),
     ("dungeon_encounters", "ID", "dungeonencounter"),
+    # Crafting rework C1: a declaration (or an override of a stock id) belongs to the scope of its file in both halves.
+    ("spell_item_enchantments", "ID", "spellitemenchantment"),
+    ("item_random_suffixes", "ID", "itemrandomsuffix"),
+    ("gem_properties", "ID", "gemproperties"),
+    ("enchant_conditions", "ID", "spellitemenchantmentcondition"),
 )
 
 # conditions.SourceTypeOrReferenceId -> the id space of its SourceGroup, for the loot conditions lib/loot_tables.py
@@ -1049,6 +1058,8 @@ DBC_SPACES = {
     "SpellRuneCost": "spellrunecost", "MapDifficulty": "mapdifficulty", "DungeonEncounter": "dungeonencounter",
     "ItemLimitCategory": "item_limit_category", "ItemSet": "item_set", "ItemExtendedCost": "item_extended_cost",
     "LFGDungeons": "lfgdungeons", "LFGDungeonGroup": "lfgdungeongroup",
+    "SpellItemEnchantment": "spellitemenchantment", "ItemRandomSuffix": "itemrandomsuffix",
+    "GemProperties": "gemproperties", "SpellItemEnchantmentCondition": "spellitemenchantmentcondition",
 }
 # The shared secondary tables: no owner, added when a scope's spell needs one the base lacks. Spell column(s) -> table.
 SECONDARY_COLUMNS = {
