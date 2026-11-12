@@ -24,7 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from lib import build, dbcfmt, lint, source, spell_tables, state, trainer_state  # noqa: E402
+from lib import build, dbcfmt, lint, source, spell_tables, sqlcorpus, state, trainer_state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 from lib.reuse import ReuseContext  # noqa: E402
 from lib.test_shaman_sh0a import m, spell_mask, _hex, _u32  # noqa: E402
@@ -443,21 +443,36 @@ def check_new_totem_passive_pairing(creature_spells: list[dict], rows: dict[int,
 _CACHE: dict = {}
 
 
+def loader_kwargs() -> dict:
+    """The class-package loader inputs (ids, trainer index, live tables), loaded once per process through the
+    generate.py SQL replay cache: replaying the migration history from scratch costs minutes per load."""
+    if "kwargs" not in _CACHE:
+        import generate  # noqa: PLC0415 - heavy, only the data tests need it
+
+        sqlcorpus.activate(generate.CACHE_DIR, generate.cache_code_version())
+        try:
+            sti = spell_tables.load_spell_table_index()
+            cti = spell_tables.load_creature_table_index()
+            _CACHE["kwargs"] = dict(
+                ids_cfg=source.load_ids(TOOL_ROOT / "source" / "ids.yaml"),
+                trainer_index=trainer_state.load_trainer_index(),
+                existing_group_ids={key[0] for key in sti.live_keys("spell_group")},
+                shapeshift_index=state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM),
+                existing_creature_rows={int(r["entry"]): r for r in cti.live_rows("creature_template")},
+                creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
+                creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
+                live_data=spell_tables.load_dsl_live_data(),
+            )
+        finally:
+            sqlcorpus.deactivate()
+    return _CACHE["kwargs"]
+
+
 def _data():
-    if not _CACHE:
-        ids_cfg = source.load_ids(TOOL_ROOT / "source" / "ids.yaml")
-        sti = spell_tables.load_spell_table_index()
-        cti = spell_tables.load_creature_table_index()
-        package = registry.load_class_package(
-            SHAMAN_DIR, ids_cfg=ids_cfg, trainer_index=trainer_state.load_trainer_index(),
-            existing_group_ids={key[0] for key in sti.live_keys("spell_group")},
-            shapeshift_index=state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM),
-            existing_creature_rows={int(r["entry"]): r for r in cti.live_rows("creature_template")},
-            creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
-            creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
-            live_data=spell_tables.load_dsl_live_data(),
-        )
-        reuse = ReuseContext({}, ids_cfg)
+    if "package" not in _CACHE:
+        kwargs = loader_kwargs()
+        package = registry.load_class_package(SHAMAN_DIR, **kwargs)
+        reuse = ReuseContext({}, kwargs["ids_cfg"])
         rows = [build.build_spell_row(e, reuse) for e in package.spells]
         strip_ids = [int(x) for x in re.findall(r"^\s+id=(\d+),", (SHAMAN_DIR / "shaman_stock_tool_strip.py")
                                                  .read_text(), re.M)]
