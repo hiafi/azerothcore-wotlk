@@ -1210,6 +1210,19 @@ reports stale files); that includes the two new raw gems, Ruby (red leveling) an
 drops are hand-written in `rev_crafting_c5_raw_gems_loot.sql`. Tests: `lib/test_crafting_gems.py`. Sockets on items
 are `item(..., sockets=, socket_bonus=)`.
 
+**Enchants as items (crafting rework C6).** Every enchant is an item: a profession recipe creates it and its on-use
+spell applies the enchant to a gear piece (effect 53, permanent slot; the belt buckle's effect 156 adds a prismatic
+socket). The table is pure data in `lib/crafting_enchants_data.py`: a leveling and an endgame set of flat-stat enchants
+for 14 slots (58 each; neck and rings share one item), four Engineering tinkers (on-use enchants, type 7, same slot) and
+the Blacksmithing buckle. `source/world/crafting_enchants.py` declares the enchants, use spells, recipes,
+`SkillLineAbility` and trainer rows (each profession's Azeroth trainer); `write_enchant_items.py` writes
+`rev_crafting_c6_enchant_items.sql` and the `items.csv` rows (hand-picked ids 79000-79199). Force Field Lens is scripted
+(`custom_crafting_enchants.cpp`). The same stage remaps every stock enchant row carrying Hit, Expertise or Defense
+(`source/world/crafting_hed_remap.py`, rule in `lib/crafting_hed_remap.py`, `stock_enchant_rows()`), and squishes the
+vanilla crafting materials: `source/world/crafting_squish.py` re-points stock recipes to the surviving dust, essences,
+shards and colored pigments, `lib/disenchant.py` gives minted items their disenchant band, and the loot is hand-written
+in `rev_crafting_c6_squish_loot.sql`. Tests: `lib/test_crafting_enchants.py`.
+
 ## Known limitations
 
 - `spell_icon_id` takes a raw `SpellIconID` integer, not a texture-path

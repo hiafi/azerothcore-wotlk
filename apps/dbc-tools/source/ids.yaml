@@ -107,7 +107,9 @@ skilllineability:
 # crafting rework C4; item_template in hand-written pending world SQL, 70719 spare), 70720-70827 (crafting rework C5 gems:
 # rare 70720-70756, epic 70760-70796, leveling 70800-70809, metas 70810-70814, epic raw gems 70820-70825, raw gems Ruby
 # 70826 and Dusk Amethyst 70827; item_template in hand-written pending world SQL from write_gem_items.py; checked free
-# 2026-11-11).
+# 2026-11-11). Crafting rework C6 enchant items take 79000-79199, carved off the top of item_minted below (79000-79057
+# leveling, 79060-79117 endgame, 79120-79123 tinkers, 79130 belt buckle; item_template in hand-written pending world
+# SQL from write_enchant_items.py; checked free 2026-11-11: no item_template, item_dbc or items.csv row above 72150).
 item:
   start: 70000
   end: 79999
@@ -115,9 +117,10 @@ item:
 # Minted item_template entries (item-variants plan s4, IV0): the ids lib/item_ids.py hands out, recorded in
 # source/items/item_ids.lock. A sub-range of `item` above, so the item_dbc block DELETE already covers it; 70000-70999
 # stays for hand-picked items.csv rows. Checked free 2026-11-06: no item_template row between 70104 and 899999.
+# Ends at 78999 since crafting rework C6 (2026-11-11): 79000-79199 are the hand-picked enchant items (`item` above).
 item_minted:
   start: 71000
-  end: 79999
+  end: 78999
 
 # Per-tier copies of item effect spells (item variants IV10; lib/item_spell_copies.py): the spell ids minted into
 # source/items/item_spell_ids.lock. A sub-range of `spell` and of the `items` spell reservation below; 205400-205409
@@ -142,7 +145,7 @@ item_limit_category:
 #   - spellitemenchantment: stock ids end at 3883 (2,656 rows); the live overlay is empty; item_template.socketBonus and
 #     spell_enchant_proc_data.entry top out at 3882 / 3869 and item_enchantment_template.ench at 2163. 5000-5999 leaves
 #     C4's suffix parts, C5's gems and socket bonuses and C6's enchants room (a suggested split, not enforced: suffix
-#     parts 5000-5099, gem bonuses 5100-5599, socket bonuses 5600-5799, enchants 5800-5999).
+#     parts 5000-5099, gem bonuses 5100-5599, socket bonuses 5600-5799, enchants 5800-5999; C6 uses 5800-5930).
 #   - itemrandomsuffix: stock ids end at 99 (95 rows); the live overlay is empty. item_instance.randomPropertyId is a
 #     SMALLINT holding -suffix id, so every suffix id must stay below 32768.
 #   - gemproperties: stock ids end at 1629 (626 rows); the live overlay is empty; item_template.GemProperties tops
@@ -596,9 +599,13 @@ reservations:
   # C5 (source/world/crafting_gems.py) extends both: gem cuts 207050-207144, meta gem spells 207150-207159
   # (207160-207199 spare), cut SkillLineAbility rows 30920-31014. Checked free 2026-11-11: no declaration, SQL file
   # or live spell_dbc row in 207050-207199, no skilllineability_dbc row above 30908.
+  # C6 (source/world/crafting_enchants.py, source/world/crafting_squish.py) extends both: enchant item use spells
+  # 207200-207330, recipes 207340-207470, tinker effects 207480-207483 (207484-207599 spare), recipe SkillLineAbility
+  # rows 31020-31145. Checked free 2026-11-11: no declaration, SQL file or live spell_dbc row in 207200-209999, no
+  # skilllineability_dbc row above 31014.
   crafting:
-    spell: {start: 207000, end: 207199}
-    skilllineability: {start: 30900, end: 31099}
+    spell: {start: 207000, end: 207599}
+    skilllineability: {start: 30900, end: 31199}
 
   # The healing sim (source/npcs/healsim_spells.py) is not a class, but its spells sit inside the spell block, so it
   # reserves under its project name and the overlap test keeps every class out of them.

@@ -121,9 +121,18 @@ def csv_rows(rows: list[dict]) -> list[str]:
 
 
 def render_csv(existing: str, rows: list[dict]) -> str:
-    kept = [line for line in existing.splitlines()
-            if not (line.split(",", 1)[0].isdigit() and int(line.split(",", 1)[0]) in ITEM_RANGE)]
-    return "\n".join(kept + csv_rows(rows)) + "\n"
+    """`existing` with this writer's rows replaced: each new row goes before the first kept row with a higher id, so
+    the gem and enchant writers (crafting rework C5 / C6) leave each other's blocks in id order whichever runs last."""
+    def row_id(line: str) -> int | None:
+        head = line.split(",", 1)[0]
+        return int(head) if head.isdigit() else None
+
+    out = [line for line in existing.splitlines() if row_id(line) is None or row_id(line) not in ITEM_RANGE]
+    for line in csv_rows(rows):
+        entry = row_id(line)
+        at = next((i for i, kept in enumerate(out) if (row_id(kept) or 0) > entry), len(out))
+        out.insert(at, line)
+    return "\n".join(out) + "\n"
 
 
 def main() -> int:
