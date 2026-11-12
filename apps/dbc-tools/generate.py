@@ -1465,7 +1465,8 @@ def _run(
         # stock items, the crafting rework's profession recipes and their trained_by() rows) - same loader, merged in.
         dsl_world = dsl_registry.load_classes_dir(
             SOURCE_DIR / "world", ids_cfg=ids_cfg, trainer_index=trainer_index, live_data=live_data,
-            existing_creature_rows=existing_creature_rows, creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
+            existing_group_ids=existing_group_ids, existing_creature_rows=existing_creature_rows,
+            creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
         )
         _merge_npc_declarations(dsl_classes, dsl_world, "source/world/")
         # source/items/*.py: item() declarations with their loot ladders (item variants IV1), loaded as one package so

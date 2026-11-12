@@ -23,13 +23,14 @@ from pathlib import Path
 TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
+from lib import crafting_consumables_data as C  # noqa: E402
 from lib import crafting_sets_data as T  # noqa: E402
 
 REPO_ROOT = TOOL_ROOT.parent.parent
 ITEMS_SQL = REPO_ROOT / "data" / "sql" / "updates" / "pending_db_world" / "rev_crafting_c7_set_items.sql"
 LOOT_SQL = REPO_ROOT / "data" / "sql" / "updates" / "pending_db_world" / "rev_crafting_c7_set_loot.sql"
 ITEMS_CSV = TOOL_ROOT / "source" / "items.csv"
-ITEM_RANGE = range(78000, 79000)
+ITEM_RANGE = range(78000, 78800)  # 78800-78999: write_crafting_consumable_items.py
 WIDTH = 120
 
 COLUMNS = (
@@ -47,6 +48,7 @@ SPELLTRIGGER_ON_USE = 0
 CHARGES_CONSUMED = -1
 SKILL_RANK = 300
 SELL_PRICE = 50000
+PREMIUM_TIER = "t1"
 
 ITEMS_HEADER = """\
 -- Crafting rework C7: the raid recipe items (hand-picked `item` block ids 78000-78999, Item.dbc rows in
@@ -168,11 +170,14 @@ def render_loot_sql() -> str:
         material, trash = T.TIER_MATERIAL[tier], T.RAID_TRASH[tier]
         label = T.RAID_WORD[tier]
         out.append("")
-        out.append(f"-- {tier.upper()} ({label}): the {len(recipes)} recipe items, one per roll (group 1, equal "
-                   "chance).")
+        out.append(f"-- {tier.upper()} ({label}): the recipe items, one per roll (group 1, equal chance).")
+        pool_rows = [(pool, r.entry, 0, 0, 1, 1, 1, f"{label} raid recipe: {r.name}") for r in recipes]
+        if tier == PREMIUM_TIER:  # the premium enchant recipes join the T1 pool (decision 4 A)
+            pool_rows += [(pool, p.recipe_item, 0, 0, 1, 1, 1, f"{label} premium enchant recipe: {p.item_name}")
+                          for p in C.PREMIUMS]
         out.append(f"DELETE FROM `reference_loot_template` WHERE `Entry` = {pool};")
         out += _insert_lines("reference_loot_template")
-        out += _loot_values([(pool, r.entry, 0, 0, 1, 1, 1, f"{label} raid recipe: {r.name}") for r in recipes])
+        out += _loot_values(pool_rows)
         out.append(f"-- Every {tier.upper()} boss rolls the pool at {T.RECIPE_CHANCE:g}% and drops the tier material "
                    f"at {T.MATERIAL_BOSS_CHANCE:g}% (1-{T.MATERIAL_BOSS_MAX}).")
         prefix = f"DELETE FROM `creature_loot_template` WHERE `Item` IN ({pool}, {material}) AND `Entry` IN "

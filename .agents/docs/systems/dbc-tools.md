@@ -80,6 +80,16 @@ crafting stages C4 (suffixes), C5 (gems, metas) and C6 (enchants) do. Facts to k
   items (`item_template()`: no teach spell, Poor quality); `write_crafting_retire.py` writes the loot / vendor /
   condition removals, the `disables` rows (spells for players, quests) and the characters-DB cleanup. A profession
   recipe disabled for players can't be learned (`custom_professions.cpp`). Tests: `lib/test_crafting_retire.py`.
+- Crafted sets (crafting rework C7): `lib/crafting_sets_data.py` (seven sets x 102 items), the items in
+  `source/items/crafting_sets.py` (`item(..., suffix_pool=)`: no secondary shape, `RandomSuffix` = the C4 pool, the
+  suffix sized from the unspent secondary budget), the recipes in `source/world/crafting_sets.py`. A recipe names the
+  minted item it creates with `item_key_refs.ref(key)` in `EffectItemType_1`; generate.py swaps the placeholder for the
+  entry after the item expansion (`lib/item_key_refs.py`, the lock for a scoped run). The raid recipe items, their
+  per-tier reference pools (`crafting_loot_reference` block) and the tier materials are hand-written by
+  `write_crafting_set_items.py` (items 78000-78799). Tests: `lib/test_crafting_sets.py`.
+- Premium enchants, flasks, raid buff scrolls, boss runes, Darkmoon tarot (C7): `lib/crafting_consumables_data.py`,
+  `source/world/crafting_consumables.py`, items from `write_crafting_consumable_items.py` (78800-78999); scripts in
+  `custom_crafting_enchants.cpp` and `custom_crafting_runes.cpp`. Tests: `lib/test_crafting_consumables.py`.
 
 ### Item tier labels on the tooltip (item variants, IV4)
 

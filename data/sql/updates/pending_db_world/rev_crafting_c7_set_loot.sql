@@ -3,7 +3,7 @@
 -- apps/dbc-tools/write_crafting_set_items.py from lib/crafting_sets_data.py; edit the data and rerun, never this file.
 -- Rates are first-pass data for the later scarcity stage.
 
--- T1 (Molten): the 42 recipe items, one per roll (group 1, equal chance).
+-- T1 (Molten): the recipe items, one per roll (group 1, equal chance).
 DELETE FROM `reference_loot_template` WHERE `Entry` = 1701001;
 INSERT INTO `reference_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`,
     `MinCount`, `MaxCount`, `Comment`) VALUES
@@ -48,7 +48,14 @@ INSERT INTO `reference_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `
 (1701001, 78038, 0, 0, 0, 1, 1, 1, 1, 'Molten raid recipe: Schematic: Molten Rifle'),
 (1701001, 78039, 0, 0, 0, 1, 1, 1, 1, 'Molten raid recipe: Technique: Molten Tome and Codex'),
 (1701001, 78040, 0, 0, 0, 1, 1, 1, 1, 'Molten raid recipe: Design: Molten Rings'),
-(1701001, 78041, 0, 0, 0, 1, 1, 1, 1, 'Molten raid recipe: Design: Molten Necklaces');
+(1701001, 78041, 0, 0, 0, 1, 1, 1, 1, 'Molten raid recipe: Design: Molten Necklaces'),
+(1701001, 78810, 0, 0, 0, 1, 1, 1, 1, 'Molten premium enchant recipe: Scroll of Enchant Weapon - Crusader'),
+(1701001, 78811, 0, 0, 0, 1, 1, 1, 1, 'Molten premium enchant recipe: Scroll of Enchant Weapon - Spellsurge'),
+(1701001, 78812, 0, 0, 0, 1, 1, 1, 1, 'Molten premium enchant recipe: Scroll of Enchant Weapon - Blade Warding'),
+(1701001, 78813, 0, 0, 0, 1, 1, 1, 1, 'Molten premium enchant recipe: Scroll of Enchant Shield - Blade Warding'),
+(1701001, 78814, 0, 0, 0, 1, 1, 1, 1, 'Molten premium enchant recipe: Scroll of Enchant Boots - Swiftness'),
+(1701001, 78815, 0, 0, 0, 1, 1, 1, 1, 'Molten premium enchant recipe: Scroll of Enchant Cloak - Subtlety'),
+(1701001, 78816, 0, 0, 0, 1, 1, 1, 1, 'Molten premium enchant recipe: Scroll of Enchant Cloak - Steelweave');
 -- Every T1 boss rolls the pool at 20% and drops the tier material at 50% (1-2).
 DELETE FROM `creature_loot_template` WHERE `Item` IN (1701001, 17010) AND `Entry` IN (6109, 11380, 11382, 11502, 11982);
 DELETE FROM `creature_loot_template` WHERE `Item` IN (1701001, 17010) AND `Entry` IN (11988, 12056, 12057, 12098);
@@ -165,7 +172,7 @@ INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `Q
 (12101, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)'),
 (12119, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)');
 
--- T2 (Draconic): the 42 recipe items, one per roll (group 1, equal chance).
+-- T2 (Draconic): the recipe items, one per roll (group 1, equal chance).
 DELETE FROM `reference_loot_template` WHERE `Entry` = 1701002;
 INSERT INTO `reference_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`,
     `MinCount`, `MaxCount`, `Comment`) VALUES
@@ -258,7 +265,7 @@ INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `Q
 (13996, 18562, 0, 3.0, 0, 1, 0, 1, 1, 'Draconic tier material, elite trash (crafting C7)'),
 (14401, 18562, 0, 3.0, 0, 1, 0, 1, 1, 'Draconic tier material, elite trash (crafting C7)');
 
--- T3 (Chthonic): the 42 recipe items, one per roll (group 1, equal chance).
+-- T3 (Chthonic): the recipe items, one per roll (group 1, equal chance).
 DELETE FROM `reference_loot_template` WHERE `Entry` = 1701003;
 INSERT INTO `reference_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`,
     `MinCount`, `MaxCount`, `Comment`) VALUES

@@ -111,9 +111,10 @@ skilllineability:
 # 2026-11-11). Crafting rework C6 enchant items take 79000-79199, carved off the top of item_minted below (79000-79057
 # leveling, 79060-79117 endgame, 79120-79123 tinkers, 79130 belt buckle; item_template in hand-written pending world
 # SQL from write_enchant_items.py; checked free 2026-11-11: no item_template, item_dbc or items.csv row above 72150).
-# Crafting rework C7 raid recipe items take 78000-78999, carved off the top of item_minted too (78000-78125 so far;
-# item_template in hand-written pending world SQL from write_crafting_set_items.py; checked free 2026-11-12: no
-# item_template, item_dbc or items.csv row in 72151-78999).
+# Crafting rework C7 takes 78000-78999, carved off the top of item_minted too: raid recipe items 78000-78799
+# (write_crafting_set_items.py, 78000-78125 so far), premium enchant items and recipes, flasks, buff scrolls, boss runes
+# and the Darkmoon tarot 78800-78999 (write_crafting_consumable_items.py); checked free 2026-11-12: no item_template,
+# item_dbc or items.csv row in 72151-78999.
 item:
   start: 70000
   end: 79999
@@ -275,6 +276,7 @@ spelldescriptionvariables:
 spellcategory:
   start: 1300
   end: 1319
+# 1310: the crafting rework C7 boss runes' shared 24 hour cooldown (source/world/crafting_consumables.py).
 
 # --- Client-patch id blocks (shaman-rework T1, .agents/plans/shaman-rework/shaman-rework.T0a-REPORT.md s1) ---
 #
@@ -615,9 +617,10 @@ reservations:
   # 207200-207330, recipes 207340-207470, tinker effects 207480-207483 (207484-207599 spare), recipe SkillLineAbility
   # rows 31020-31145. Checked free 2026-11-11: no declaration, SQL file or live spell_dbc row in 207200-209999, no
   # skilllineability_dbc row above 31014.
-  # C7 (source/world/crafting_sets.py, source/world/crafting_retire.py) extends both: set recipes 207600-208313, raid
-  # recipe learn spells 208600-208725, set recipe SkillLineAbility rows 31200-31913. Checked free 2026-11-12: no
-  # declaration or live spell_dbc row in 207484-209999, no skilllineability_dbc row above 31145.
+  # C7 (source/world/crafting_sets.py, source/world/crafting_consumables.py) extends both: set recipes
+  # 207600-208313, raid recipe learn spells 208600-208725, premium enchants / flasks / scrolls / runes / tarot
+  # 208800-208914, set recipe SkillLineAbility rows 31200-31913, consumable recipe rows 31950-31985. Checked free
+  # 2026-11-12: no declaration or live spell_dbc row in 207484-209999, no skilllineability_dbc row above 31145.
   crafting:
     spell: {start: 207000, end: 209999}
     skilllineability: {start: 30900, end: 32199}

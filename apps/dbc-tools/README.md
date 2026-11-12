@@ -1232,6 +1232,16 @@ items' loot, vendor and condition rows, `disables` for the spells and the quests
 `pending_db_characters/rev_crafting_c7_retire_learned.sql` (the learned rows). Rerun it after a data edit. Tests:
 `lib/test_crafting_retire.py`.
 
+**Crafted sets (crafting rework C7).** `lib/crafting_sets_data.py` is the catalog: leveling sets at 15, 30 and 45, a
+level-60 set and one raid set per vanilla tier, each the eight armor slots of the ten archetypes plus backs, weapons,
+off-hands and jewelry. `source/items/crafting_sets.py` declares the items with `item(..., suffix_pool=)` (primary +
+Stamina, secondaries from the C4 random suffix pool); `source/world/crafting_sets.py` declares one recipe per item,
+trainer-taught below the raid sets. A recipe spell names its minted item by key (`lib/item_key_refs.py`).
+`write_crafting_set_items.py` writes the raid recipe items, the per-tier recipe pools on every tier boss and the tier
+materials. Premium enchants, flasks, raid buff scrolls, boss runes and the Darkmoon tarot are
+`lib/crafting_consumables_data.py` / `source/world/crafting_consumables.py` / `write_crafting_consumable_items.py`.
+Tests: `lib/test_crafting_sets.py`, `lib/test_crafting_consumables.py`.
+
 ## Known limitations
 
 - `spell_icon_id` takes a raw `SpellIconID` integer, not a texture-path
