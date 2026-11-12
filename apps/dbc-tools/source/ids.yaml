@@ -104,9 +104,10 @@ skilllineability:
 # Hand-picked items.csv rows in 70000-70999 so far: 70100-70103 (test rings), 70500-70599 (set tokens, below), 70600-70603
 # (Stratholme relics, `reservations: stratholme`), 70700 (Satchel of Heroic Supplies, the Random Classic Heroic reward;
 # item_template and loot in hand-written pending world SQL, lfg-classic-heroic), 70710-70718 (the nine Missives,
-# crafting rework C4; item_template in hand-written pending world SQL, 70719 spare), 70720-70825 (crafting rework C5 gems:
-# rare 70720-70756, epic 70760-70796, leveling 70800-70809, metas 70810-70814, epic raw gems 70820-70825; item_template
-# in hand-written pending world SQL from write_gem_items.py; checked free 2026-11-11).
+# crafting rework C4; item_template in hand-written pending world SQL, 70719 spare), 70720-70827 (crafting rework C5 gems:
+# rare 70720-70756, epic 70760-70796, leveling 70800-70809, metas 70810-70814, epic raw gems 70820-70825, raw gems Ruby
+# 70826 and Dusk Amethyst 70827; item_template in hand-written pending world SQL from write_gem_items.py; checked free
+# 2026-11-11).
 item:
   start: 70000
   end: 79999

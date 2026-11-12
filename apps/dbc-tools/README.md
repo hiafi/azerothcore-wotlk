@@ -1204,7 +1204,9 @@ inert below 60), `GemProperties`, the Jewelcrafting cuts and their `SkillLineAbi
 epic cuts have none yet), the meta gem spells (scripted in `src/server/scripts/Custom/custom_crafting_gems.cpp`) and +4
 socket bonuses for the stats stock lacks. The gem *items* are new `item_template` rows, so they are hand-written:
 `write_gem_items.py` writes `rev_crafting_c5_gem_items.sql` and the `items.csv` rows from the same table (`--check`
-reports stale files). Tests: `lib/test_crafting_gems.py`. Sockets on items are `item(..., sockets=, socket_bonus=)`.
+reports stale files); that includes the two new raw gems, Ruby (red leveling) and Dusk Amethyst (purple rare), whose
+drops are hand-written in `rev_crafting_c5_raw_gems_loot.sql`. Tests: `lib/test_crafting_gems.py`. Sockets on items
+are `item(..., sockets=, socket_bonus=)`.
 
 ## Known limitations
 
