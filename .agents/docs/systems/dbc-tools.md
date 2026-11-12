@@ -1432,13 +1432,15 @@ row changed, so there is nothing to generate or deploy.
 
 ## Watch out: one client DBC, one patch archive
 
-Five scripts each own a patch letter: `generate.py` → `patch-Z.mpq` (Spell/Talent/Item/…),
+Six scripts each own a patch letter: `generate.py` → `patch-Z.mpq` (Spell/Talent/Item/…),
 `build_patch_m.py` → `patch-M.mpq` (SpellVisual*/CreatureDisplayInfo/CreatureModelData/
 GameObjectDisplayInfo/SoundEntries + `SPELLS/` models and `SOUND/` sounds), `build_patch_i.py` →
 `patch-I.mpq` (`SpellIcon.dbc` + `Interface/Icons/*.blp`), `patch_gt_tables.py` → `patch-Y.mpq` (GT
 tables), `build_patch_f.py` → `patch-F.mpq` (Bear/Cat Form model assets only — its
 CreatureModelData/CreatureDisplayInfo rows, IDs 90100–90299, are written to the shared working copy
-and ship in patch-M; see `docs/shapeshift-appearances.md`). The client loads lettered patches
+and ship in patch-M; see `docs/shapeshift-appearances.md`), `build_patch_w.py` → `patch-W.mpq`
+(`WorldMapArea`/`DungeonMap`/`DungeonMapChunk` + `Interface/WorldMap/` tiles: the vanilla dungeon maps, see
+below). The client loads lettered patches
 alphabetically and the **highest letter wins per file**, so a DBC packed into two archives is silently served from
 whichever has the later letter — usually a stale copy. That's exactly what blanked every custom
 `SpellIcon` row minted after patch-M's last rebuild (patch-M was sweeping the shared
@@ -1446,6 +1448,25 @@ whichever has the later letter — usually a stale copy. That's exactly what bla
 now has a `NOT_OURS` skip-set — extend it, don't remove it, if another script starts keeping its
 working copy in that directory. Diagnostic when a client ignores a DBC row the plumbing says is
 right: `for p in <patch-root>/Data/patch-*.mpq; do smpq -l $p | grep -i <table>.dbc; done`.
+
+## Vanilla dungeon maps (`build_patch_w.py`)
+
+The stock 3.3.5a client has no world map for any vanilla dungeon or raid. `build_patch_w.py` builds `patch-W.mpq`
+with the Cataclysm-era maps the Ascension backup backported (rows from its `patch-M.MPQ`, tiles from its
+`patch-A.MPQ`) for the 25 maps in `VANILLA_MAPS`. It is self-contained: it reads the stock client and the backup
+directly, keeps no working copy, and is safe to rerun (same input, same archive). Client-only: the server's
+`WorldMapArea.dbc` and `worldmaparea_dbc` stay stock.
+
+- **Ids** (`source/ids.yaml`): WorldMapArea keeps the rows' own 680-766 (Sunken Temple 2021 → 687); DungeonMap
+  floors are renumbered from 1000 and DungeonMapChunk rows from 10000, because Ascension's ids collide with stock.
+- **Row order is kept.** Stock `DungeonMap.dbc` and `DungeonMapChunk.dbc` are not id-sorted; the merge keeps stock
+  rows in file order and appends, and the build stops unless each stock file repacks byte for byte.
+- **Floor switching** comes from `DungeonMapChunk`: each row ties a WMO group of the dungeon to a floor. Ascension's
+  group ids match stock (`WMOAreaTable.dbc` knows all but a few Onyxia/BWL groups, Wailing Caverns' match the stock
+  orphan rows).
+- **Floor names**: none shipped. `WorldMapFrame.lua` reads `DUNGEON_FLOOR_<AREANAME><floor>` and falls back to
+  "Level N"; names would go in a patch-X FrameXML file.
+- `--preview DIR` writes one stitched PNG per floor for a look at the art without a client.
 
 ## Mined spell visuals and sounds (`patch_{mage,priest,druid}_vfx_models.py`)
 

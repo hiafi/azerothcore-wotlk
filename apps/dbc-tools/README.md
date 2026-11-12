@@ -86,7 +86,9 @@ build lacks, e.g. minted item variants from a branch this checkout has not merge
 writing when it would delete a live or deployed custom row no SQL file of this checkout ever wrote) and
 `--deployed-patch PATH` (the archive to treat as deployed; nothing is deployed). See
 `.agents/docs/systems/dbc-tools.md`, "Scoped write runs" and "The drop guard".
-`build_patch_x.py` (the FrameXML overrides, patch-X) only builds unless given `--deploy`.
+`build_patch_x.py` (the FrameXML overrides, patch-X) only builds unless given `--deploy`. `build_patch_w.py`
+(vanilla dungeon world maps, patch-W) builds and deploys like `build_patch_i.py`; see
+`.agents/docs/systems/dbc-tools.md`.
 A run replays the base dumps and every promoted `db_world` file to learn what is live; that replay is cached under
 the gitignored `var/dbc-tools-cache/` and reused while the files, the loader code and the parameters are unchanged
 (see `.agents/docs/systems/dbc-tools.md`, "generate.py speed"). A run after a change that touches the cache's inputs

@@ -334,6 +334,24 @@ summonproperties:
   start: 3000
   end: 3099
 
+# Vanilla dungeon maps (build_patch_w.py, patch-W.mpq; client-only, no SQL overlay). Stock 3.3.5a tops out at
+# WorldMapArea 609, DungeonMap 110 and DungeonMapChunk 1827 (patch-enUS-2/-3.MPQ, checked 2026-11-11).
+#   - worldmaparea: the Cataclysm-era ids the rows came with from the Ascension backup (680-766), plus 687 for Sunken
+#                 Temple (Ascension's own 2021 is renumbered into the gap). The whole range is free in stock.
+#   - dungeonmap / dungeonmapchunk: Ascension's ids collide with stock (Deadmines floors are 13/14), so the builder
+#                 renumbers every imported floor from 1000 and every chunk from 10000, in (MapID, FloorIndex) order.
+worldmaparea:
+  start: 680
+  end: 769
+
+dungeonmap:
+  start: 1000
+  end: 1099
+
+dungeonmapchunk:
+  start: 10000
+  end: 11999
+
 # spellrunecost_dbc ids for spell_rune_cost() (Death Knight T1, .agents/plans/death-knight-rework/
 # death-knight-rework.T1-HANDOFF.md). The stock SpellRuneCost.dbc has 475 rows with a maximum id of 2513, the
 # spellrunecost_dbc overlay is empty, and spell_dbc.RuneCostID tops out at 2467 (T0 report s1.1), so 2600-2629 is
