@@ -147,6 +147,10 @@ class SetsDeclarationsTest(unittest.TestCase):
         sla = {r["id"]: r for r in self.recipes["skill_line_abilities"]}
         for row in T.recipes():
             self.assertEqual((sla[row.sla]["spell_id"], sla[row.sla]["skill_line"]), (row.spell, row.item.profession))
+        ranks = {r["SpellId"]: r["ReqSkillRank"] for r in self.recipes["trainer_spells"]}
+        for craft_set_key, want in (("s15", 75), ("s30", 125), ("s45", 175), ("s60", 250)):  # Tailoring: the bolts
+            row = next(r for r in T.recipes() if r.item.set.key == craft_set_key and r.item.profession == T.TAILORING)
+            self.assertEqual(ranks[row.spell], want)
         costs = {r["SpellId"]: r["MoneyCost"] for r in self.recipes["trainer_spells"]}
         price = {"s15": 10, "s30": 100, "s45": 1000, "s60": 10000}  # user 2026-11-12
         for row in T.recipes():

@@ -69,11 +69,13 @@ for _row in T.recipes():
             'AuraDescription_Lang_enUS': '', **_reagent_columns(T.reagents(_item)), **_extra, **_TEXT_MASKS,
         },
     )
+    _rank = T.skill_rank(_item.profession, _item.set.key)
     skill_line_ability(id=_row.sla, skill_line=_item.profession, spell_id=_row.spell, min_skill_line_rank=1,
-                       acquire_method=0, raw_overrides={'TrivialSkillLineRankHigh': 1, 'TrivialSkillLineRankLow': 1})
+                       acquire_method=0, raw_overrides={'TrivialSkillLineRankHigh': _rank + T.TRIVIAL_HIGH_STEP,
+                                                        'TrivialSkillLineRankLow': _rank + T.TRIVIAL_LOW_STEP})
     if not _item.set.raid:
         trained_by(_row.spell, T.TRAINER[_item.profession], req_level=0, money_cost=T.TRAIN_COST[_item.set.key],
-                   req_skill_line=_item.profession, req_skill_rank=1)
+                   req_skill_line=_item.profession, req_skill_rank=_rank)
 
 
 for _recipe_item in T.raid_recipe_items():

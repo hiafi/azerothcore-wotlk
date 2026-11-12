@@ -71,12 +71,33 @@ LEATHER = {"s15": 2319, "s30": 4234, "s45": 4304, "s60": 8170}  # Medium, Heavy,
 METAL = {"s15": 2841, "s30": 3859, "s45": 3860, "s60": 12359}  # Bronze, Steel, Mithril, Thorium
 GEM = {"s15": 1206, "s30": 1529, "s45": 7909, "s60": 7910}  # Moss Agate, Jade, Aquamarine, Star Ruby
 TUBE = {"s15": 4371, "s30": 4389, "s45": 10559, "s60": 16000}  # Bronze Tube, Gyrochronatom, Mithril / Thorium Tube
-INK = {"s15": 43116, "s30": 43123, "s45": 43121, "s60": 43118}  # Lion's, Sky, Fiery, Jadefire
+INK = {"s15": 43116, "s30": 43118, "s45": 43121, "s60": 43123}  # Lion's, Jadefire, Fiery, Sky (by ink skill)
 PARCHMENT = 39354  # Light Parchment
 ILLUSION_DUST, LESSER_ETERNAL, GREATER_ETERNAL = 16204, 16202, 16203
 SMALL_BRILLIANT, LARGE_BRILLIANT = 14343, 14344
 MOONCLOTH, ENCHANTED_LEATHER, ARCANITE_BAR, ROYAL_INK = 14342, 12810, 12360, 43119
 TIER_MATERIAL = {"t1": 17010, "t2": 18562, "t3": 22203}  # Fiery Core, Elementium Ore, Large Obsidian Shard
+
+
+# The profession skill a set's recipes require (user 2026-11-12): the skill at which the profession makes the set's
+# material, so Wool comes first and Runecloth last (Bolt of Woolen Cloth 75 ... Bolt of Runecloth 250; the leathers
+# 100-250; smelting Bronze 65, Steel 165, Mithril 175, Thorium 230 for the metal crafters; the Engineering tubes; the
+# inks). Enchanting has no crafted band material and takes Tailoring's steps. Raid sets require 300.
+SKILL_RANK = {
+    TAILORING: {"s15": 75, "s30": 125, "s45": 175, "s60": 250},
+    LEATHERWORKING: {"s15": 100, "s30": 150, "s45": 200, "s60": 250},
+    BLACKSMITHING: {"s15": 65, "s30": 165, "s45": 175, "s60": 230},
+    JEWELCRAFTING: {"s15": 65, "s30": 165, "s45": 175, "s60": 230},
+    ENGINEERING: {"s15": 105, "s30": 170, "s45": 195, "s60": 275},
+    ENCHANTING: {"s15": 75, "s30": 125, "s45": 175, "s60": 250},
+    INSCRIPTION: {"s15": 100, "s30": 150, "s45": 225, "s60": 275},
+}
+RAID_SKILL_RANK = 300
+TRIVIAL_LOW_STEP, TRIVIAL_HIGH_STEP = 15, 30  # yellow, then grey, this far above the rank (stock shape)
+
+
+def skill_rank(profession: int, set_key: str) -> int:
+    return SKILL_RANK[profession].get(set_key, RAID_SKILL_RANK)
 
 
 @dataclass(frozen=True)
