@@ -52,7 +52,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from . import item_variants, spell_tables, sql_out
+from . import disenchant, item_variants, spell_tables, sql_out
 from .dsl import items as items_dsl
 
 TEMPLATE_SPEC = spell_tables.ITEM_TABLES[0]
@@ -188,6 +188,14 @@ def _tier_row(item: item_variants.ResolvedItem, tier: item_variants.ResolvedTier
         set_columns += SOCKET_COLUMNS
     if not tier.stock and tier.max_durability is not None:
         row["MaxDurability"] = tier.max_durability  # R1 S2: a minted tier's durability from live data
+    if not tier.stock:
+        # Crafting rework C6 squish (decision 13b): a minted tier disenchants by its own quality and level, not the
+        # like= item's (lib/disenchant.py). A column the declaration sets wins.
+        squish = disenchant.disenchant_columns(_int(row.get("class")), _int(row["Quality"]), _int(row["ItemLevel"]),
+                                               _int(row["RequiredLevel"]))
+        for column, value in (squish or {}).items():
+            if column not in declared:
+                row[column] = value
     if decl.spells is not None:
         # IV10: a tier with `scale=` spells carries its own copies (lib/item_spell_copies.py).
         row.update(_spell_columns(tier.spells if tier.spells is not None else decl.spells))
