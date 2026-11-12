@@ -94,7 +94,13 @@ class GemTableTest(unittest.TestCase):
     def test_rare_raws_are_the_thorium_six(self):
         rare_raws = {g["color"]: g["raw"] for g in self.gems if g["kind"] == "rare"}
         self.assertEqual(set(rare_raws.values()), {T.STAR_RUBY, T.AZEROTHIAN_DIAMOND, T.BLUE_SAPPHIRE, T.LARGE_OPAL,
-                                                   T.HUGE_EMERALD, T.ARCANE_CRYSTAL})
+                                                   T.HUGE_EMERALD, T.DUSK_AMETHYST})
+        self.assertEqual(rare_raws[T.PURPLE], T.DUSK_AMETHYST)  # not Arcane Crystal (user 2026-11-11)
+
+    def test_leveling_raws(self):
+        leveling_raws = {g["color"]: g["raw"] for g in self.gems if g["kind"] == "leveling"}
+        self.assertEqual(leveling_raws, {T.RED: T.RUBY, T.YELLOW: T.CITRINE, T.BLUE: T.AQUAMARINE})
+        self.assertNotIn(T.STAR_RUBY, leveling_raws.values())  # Star Ruby is Thorium tier (user 2026-11-11)
 
     def test_ids_unique_and_in_blocks(self):
         for key, block in (("item", "item"), ("enchant", "spellitemenchantment"), ("gemprop", "gemproperties"),
@@ -103,7 +109,7 @@ class GemTableTest(unittest.TestCase):
             self.assertEqual(len(ids), len(set(ids)), key)
             lo, hi = IDS[block]["start"], IDS[block]["end"]
             self.assertTrue(all(lo <= i <= hi for i in ids), key)
-        items = [g["item"] for g in self.gems] + [r["item"] for r in T.epic_raws()]
+        items = [g["item"] for g in self.gems] + [r["item"] for r in T.epic_raws() + T.new_raws()]
         self.assertEqual(len(items), len(set(items)))
         self.assertTrue(all(70720 <= i <= 70899 for i in items))
         crafting = IDS["reservations"]["crafting"]
@@ -112,7 +118,7 @@ class GemTableTest(unittest.TestCase):
                             for g in self.gems))
 
     def test_names_unique(self):
-        names = [g["name"] for g in self.gems] + [r["name"] for r in T.epic_raws()]
+        names = [g["name"] for g in self.gems] + [r["name"] for r in T.epic_raws() + T.new_raws()]
         self.assertEqual(len(names), len(set(names)))
 
     def test_enchant_text_fits(self):
@@ -203,7 +209,7 @@ class GemItemFilesTest(unittest.TestCase):
 
     def test_rows(self):
         rows = {r["entry"]: r for r in write_gem_items.item_rows()}
-        self.assertEqual(len(rows), 95)
+        self.assertEqual(len(rows), 97)
         # Socketing destroys the gem with DestroyItem, the whole stack: cut gems must not stack (stock: 1).
         self.assertTrue(all(rows[g["item"]]["stackable"] == 1 for g in T.gems()))
         self.assertTrue(all(rows[r["item"]]["stackable"] == 20 for r in T.epic_raws()))
@@ -213,6 +219,9 @@ class GemItemFilesTest(unittest.TestCase):
             self.assertEqual(row["subclass"], T.GEM_SUBCLASS[gem["color"]])
         for raw in T.epic_raws():
             self.assertEqual(rows[raw["item"]]["GemProperties"], 0)
+        for raw in T.new_raws():
+            row = rows[raw["item"]]
+            self.assertEqual((row["class"], row["subclass"], row["GemProperties"], row["stackable"]), (3, 7, 0, 20))
 
     def test_sql_lints(self):
         text = write_gem_items.SQL_PATH.read_text().rstrip("\n")

@@ -105,18 +105,29 @@ LEVELING_GEMS = (
 )
 LEVELING_AMOUNT = 4
 
-# Raw gems (stock vanilla, Thorium vein reference 12900) and the cut gem's base name per color and quality.
-STAR_RUBY, AZEROTHIAN_DIAMOND, BLUE_SAPPHIRE, LARGE_OPAL, HUGE_EMERALD, ARCANE_CRYSTAL = (
-    7910, 12800, 12361, 12799, 12364, 12363)
+# Raw gems and the cut gem's base name per color and quality. Rare raws: five stock vanilla gems from the Thorium vein
+# reference 12900 plus the new Dusk Amethyst (purple; Arcane Crystal stays an Arcanite reagent only). Leveling raws:
+# stock Citrine and Aquamarine plus the new Ruby (red), all from Iron, Gold, Mithril and Truesilver veins. Star Ruby is
+# a Thorium-tier gem now (user 2026-11-11; loot in rev_crafting_c5_raw_gems_loot.sql).
+STAR_RUBY, AZEROTHIAN_DIAMOND, BLUE_SAPPHIRE, LARGE_OPAL, HUGE_EMERALD = 7910, 12800, 12361, 12799, 12364
 CITRINE, AQUAMARINE = 3864, 7909
+
+# The new raw gems (hand-picked `item` ids; stock-vanilla raw shape, class 3 subclass 7 "Simple"):
+# key -> (entry, name, display, Quality, ItemLevel, BuyPrice, SellPrice). Ruby uses Blood of the Mountain's icon
+# (user), Dusk Amethyst Nightseye's raw icon.
+RUBY, DUSK_AMETHYST = 70826, 70827
+NEW_RAWS = (
+    (RUBY, "Ruby", 7051, 2, 40, 3200, 800),
+    (DUSK_AMETHYST, "Dusk Amethyst", 39933, 2, 60, 8000, 2000),
+)
 
 RARE_BASE = {  # color -> (raw gem entry, base name, cut display)
     RED: (STAR_RUBY, "Star Ruby", 39926), YELLOW: (AZEROTHIAN_DIAMOND, "Azerothian Diamond", 39925),
     BLUE: (BLUE_SAPPHIRE, "Blue Sapphire", 39927), ORANGE: (LARGE_OPAL, "Large Opal", 39931),
-    PURPLE: (ARCANE_CRYSTAL, "Arcane Crystal", 39929), GREEN: (HUGE_EMERALD, "Huge Emerald", 39930),
+    PURPLE: (DUSK_AMETHYST, "Dusk Amethyst", 39929), GREEN: (HUGE_EMERALD, "Huge Emerald", 39930),
 }
-LEVELING_BASE = {  # Star Ruby is the only red raw gem in the leveling range (research section 6)
-    RED: (STAR_RUBY, "Ruby Shard", 35930), YELLOW: (CITRINE, "Citrine", 35848), BLUE: (AQUAMARINE, "Aquamarine", 35852),
+LEVELING_BASE = {
+    RED: (RUBY, "Ruby", 35930), YELLOW: (CITRINE, "Citrine", 35848), BLUE: (AQUAMARINE, "Aquamarine", 35852),
 }
 
 # The six epic raw gems (new items, raid drops later; user 2026-11-11): color -> (entry, name, raw display, cut display)
@@ -208,6 +219,12 @@ def _gem(kind, index, name, color, stats, display, raw, item, enchant, gemprop, 
         "sla": sla + index, "quality": quality, "item_level": item_level, "buy": buy, "sell": sell,
         "level_gate": 0 if kind == "leveling" else GEM_LEVEL_GATE,
     }
+
+
+def new_raws():
+    """The two new non-epic raw gems (Ruby, Dusk Amethyst) as dicts (entry, name, display, quality/level/prices)."""
+    return [{"item": entry, "name": name, "display": display, "quality": quality, "item_level": item_level,
+             "buy": buy, "sell": sell} for entry, name, display, quality, item_level, buy, sell in NEW_RAWS]
 
 
 def epic_raws():
