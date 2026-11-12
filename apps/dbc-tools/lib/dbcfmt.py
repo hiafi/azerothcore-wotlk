@@ -777,6 +777,46 @@ SPELLITEMENCHANTMENTCONDITION = DbcTable(
     ),
 )
 
+# World map tables for the vanilla dungeon maps (build_patch_w.py, patch-W.mpq). Client-only like SPELLICON: the
+# server loads WorldMapArea.dbc for zone coordinate conversion only (DBCfmt.h indexes it by AreaID), and never loads
+# the other two, so nothing here has a SQL overlay and the server copy stays stock. Columns are the 3.3.5a client
+# layout (11 / 8 / 5 fields, checked against the stock patch-enUS-3.MPQ files). Not in ALL_TABLES.
+#   WorldMapArea: one row per map the world map can show. AreaName is the art folder and tile prefix
+#                 (Interface\WorldMap\<AreaName>\<AreaName><floor>_<tile>.blp); the four floats are its bounds.
+#                 DisplayMapID and ParentWorldMapID are -1 for "none".
+#   DungeonMap:   one row per floor of a dungeon map, with that floor's bounds; ParentWorldMapID is the outdoor
+#                 zone map the "zoom out" button goes to.
+#   DungeonMapChunk: ties a WMO group (the WMOGroupID of the dungeon's .wmo groups) to the DungeonMap floor the map
+#                 switches to while the player stands in it; MinZ splits a group by height.
+WORLDMAPAREA = DbcTable(
+    name="WorldMapArea",
+    dbc_filename="WorldMapArea.dbc",
+    sql_table="",  # the server's worldmaparea_dbc overlay is not written: the maps are client-only
+    fmt="niisffffiii",
+    columns=_cols(
+        "ID", "MapID", "AreaID", "AreaName", "LocLeft", "LocRight", "LocTop", "LocBottom", "DisplayMapID",
+        "DefaultDungeonFloor", "ParentWorldMapID",
+    ),
+    signed=frozenset({"DisplayMapID", "ParentWorldMapID"}),
+)
+
+DUNGEONMAP = DbcTable(
+    name="DungeonMap",
+    dbc_filename="DungeonMap.dbc",
+    sql_table="",
+    fmt="niiffffi",
+    columns=_cols("ID", "MapID", "FloorIndex", "MinX", "MaxX", "MinY", "MaxY", "ParentWorldMapID"),
+    signed=frozenset({"ParentWorldMapID"}),
+)
+
+DUNGEONMAPCHUNK = DbcTable(
+    name="DungeonMapChunk",
+    dbc_filename="DungeonMapChunk.dbc",
+    sql_table="",
+    fmt="niiif",
+    columns=_cols("ID", "MapID", "WMOGroupID", "DungeonMapID", "MinZ"),
+)
+
 ALL_TABLES = (
     SPELL, TALENT, TALENTTAB, SPELLCASTTIMES, SPELLDURATION, SPELLRANGE,
     SPELLRADIUS, SKILLLINEABILITY, ITEM,
