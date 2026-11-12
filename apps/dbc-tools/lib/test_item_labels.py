@@ -1,10 +1,15 @@
 """lib/item_labels.py: the client tier label table (item-variants IV4)."""
 
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from lib import item_labels
+# Run as a script, lib/ is sys.path[0] and lib/source.py would shadow the source/ namespace package.
+sys.path[:] = [p for p in sys.path if Path(p or ".").resolve() != Path(__file__).resolve().parent]
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from lib import item_labels  # noqa: E402
 
 
 class RenderTest(unittest.TestCase):

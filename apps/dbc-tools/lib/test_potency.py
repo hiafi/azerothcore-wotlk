@@ -10,9 +10,15 @@ is also reflected wherever this module's constants live.
 """
 
 import re
+import sys
 import unittest
+from pathlib import Path
 
-from lib import potency
+# Run as a script, lib/ is sys.path[0] and lib/source.py would shadow the source/ namespace package.
+sys.path[:] = [p for p in sys.path if Path(p or ".").resolve() != Path(__file__).resolve().parent]
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from lib import potency  # noqa: E402
 
 
 def _round_range(resolved, level, spell_level):

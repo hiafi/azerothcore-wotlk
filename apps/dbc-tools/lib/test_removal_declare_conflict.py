@@ -20,6 +20,7 @@ sys.path.insert(0, str(TOOL_ROOT))
 
 import generate  # noqa: E402
 from lib import dbcfmt, source, spell_tables, state, trainer_state  # noqa: E402
+from lib.dsl import items as dsl_items  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 
 _CACHE: dict = {}
@@ -46,10 +47,14 @@ def _removal_inputs() -> tuple[dict, dict]:
         generate._merge_npc_declarations(dsl_classes, dsl_registry.load_classes_dir(source_dir / "npcs", **kwargs))
         generate._merge_npc_declarations(
             dsl_classes, dsl_registry.load_classes_dir(
-                source_dir / "world", ids_cfg=ids_cfg, live_data=live_data,
+                source_dir / "world", ids_cfg=ids_cfg, trainer_index=trainer_index, live_data=live_data,
                 existing_creature_rows=kwargs["existing_creature_rows"], creature_columns=kwargs["creature_columns"],
             ),
             "source/world/",
+        )
+        generate._merge_npc_declarations(
+            dsl_classes, dsl_items.load_items_dir(source_dir / "items", ids_cfg=ids_cfg, live_data=live_data),
+            "source/items/",
         )
         live_keys = {spec.name: spell_table_index.live_keys(spec.name) for spec in spell_tables.SPELL_TABLES}
         live_keys["trainer_spell"] = set(trainer_index.existing_trainer_spells.keys())

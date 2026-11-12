@@ -31,7 +31,7 @@ sys.path.insert(0, str(TOOL_ROOT))
 
 import generate  # noqa: E402
 from lib import dbcfile, dbcfmt, dungeon_checks, dungeon_heroic, spell_tables, sql_dump, sql_out, state  # noqa: E402
-from lib import sqlcorpus, trainer_state  # noqa: E402
+from lib import lfg_dungeons, sqlcorpus, trainer_state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 from lib.table_testkit import (  # noqa: E402
     REPO_ROOT, codestyle_sql, generated_file, index_for, load_dsl, read_back, render, spec_for,
@@ -638,6 +638,15 @@ class DeadminesTest(unittest.TestCase):
             cls.dsl["dungeons"] = [e if e["map_id"] == 36 else dict(e, heroic=None) for e in cls.dsl["dungeons"]]
             cls.index = spell_tables.load_spell_table_index()
             cls.out = dungeon_heroic.expand(cls.dsl, lambda: dungeon_heroic.load_live_world(existing, cls.index))
+            # generate.py's next step: the finder links the heroic final boss (VanCleef's instance_encounters row
+            # gets lastEncounterDungeon 301, source/world/lfg_classic_heroic.py). Only the Deadmines' entry is kept,
+            # as the other maps' heroics are off above.
+            lfg = registry.load_class_file(generate.SOURCE_DIR / "world" / "lfg_classic_heroic.py", ids_cfg=ids_cfg)
+            cls.dsl["lfg_group_declarations"] = list(lfg.lfg_group_declarations)
+            cls.dsl["lfg_dungeon_declarations"] = [
+                d for d in lfg.lfg_dungeon_declarations if d["kind"] != "heroic" or d["normal"] == 6
+            ]
+            cls.lfg_out = lfg_dungeons.expand(cls.dsl, lambda: lfg_dungeons.load_inputs(cls.index))
         finally:
             sqlcorpus.deactivate()
 
@@ -648,6 +657,7 @@ class DeadminesTest(unittest.TestCase):
 
     def test_it_is_clean_and_emits_the_encounter_and_heroic_creature_rows(self):
         self.assertEqual((self.out.errors, self.out.warnings), ([], []))
+        self.assertEqual((self.lfg_out.errors, self.lfg_out.warnings), ([], []))
         self.assertEqual(self.out.spawn_blocks, [])  # WP-1D's spawnMask 3 is live
         for table in ("dungeonencounter_dbc", "instance_encounters"):
             spec = spec_for(table)

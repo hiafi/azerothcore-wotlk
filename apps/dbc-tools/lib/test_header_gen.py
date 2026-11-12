@@ -5,11 +5,16 @@ Unit tests for lib/header_gen.py (PLAN P2b - the generated per-class C++ constan
 from __future__ import annotations
 
 import re
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from lib import header_gen
+# Run as a script, lib/ is sys.path[0] and lib/source.py would shadow the source/ namespace package.
+sys.path[:] = [p for p in sys.path if Path(p or ".").resolve() != Path(__file__).resolve().parent]
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from lib import header_gen  # noqa: E402
 
 
 def _dsl_classes(**overrides):

@@ -151,14 +151,16 @@ def _weapon_percent(effect: dict) -> int:
 
 
 # class -> (spell id, expected (effect index, weapon percent) list); every one must also be free of S3 findings.
+# Percents follow the DPS balance pass 10-31 user rulings: Lava Lash 154 (+40%), Stormstrike and its copies 140 (+40%),
+# Riposte 683 (+250% then +30%), Plague Strike 54 (+10%).
 PERCENTS = {
     "hunter": {2643: [(1, 100)]},
-    "shaman": {60103: [(0, 110)], 32175: [(0, 100)], 32176: [(0, 100)], 202413: [(0, 100)], 202415: [(0, 100)]},
+    "shaman": {60103: [(0, 154)], 32175: [(0, 140)], 32176: [(0, 140)], 202413: [(0, 140)], 202415: [(0, 140)]},
     "druid": {200429: [(0, 310)]},
     "warlock": {30213: [(0, 100)]},
     "warrior": {20240: [(0, 100)]},
-    "rogue": {14251: [(0, 150)], 51675: [(1, 50)], 51677: [(1, 100)], 51723: [(0, 100)], 52874: [(0, 100)]},
-    "deathknight": {45462: [(1, 49)]},
+    "rogue": {14251: [(0, 683)], 51675: [(1, 50)], 51677: [(1, 100)], 51723: [(0, 100)], 52874: [(0, 100)]},
+    "deathknight": {45462: [(1, 54)]},
 }
 
 
