@@ -94,6 +94,21 @@ def world_sql() -> str:
     out += wrap_ids(f"DELETE FROM `conditions` WHERE `SourceTypeOrReferenceId` IN ({types}) AND `SourceEntry` IN ",
                     items, ";")
     out.append("")
+    out.append("-- Loot left empty: the rows pointing at the emptied reference pools, the Blacksmithing Plans chests")
+    out.append("-- (spawns and their pool) and Stonevault Pillager's loot id, so the boot logs no dangling loot id.")
+    refs = ", ".join(map(str, R.EMPTIED_REFERENCES))
+    for table in ("creature_loot_template", "gameobject_loot_template", "item_loot_template",
+                  "reference_loot_template"):
+        out.append(f"DELETE FROM `{table}` WHERE `Reference` IN ({refs});")
+    out.append(f"DELETE FROM `reference_loot_template` WHERE `Entry` IN ({refs});")
+    out += wrap_ids("DELETE FROM `pool_gameobject` WHERE `guid` IN ", R.PLAN_CHEST_SPAWNS, ";")
+    out.append(f"DELETE FROM `pool_template` WHERE `entry` = {R.PLAN_CHEST_POOL};")
+    out += wrap_ids("DELETE FROM `gameobject_addon` WHERE `guid` IN ", R.PLAN_CHEST_SPAWNS, ";")
+    templates = ", ".join(map(str, R.PLAN_CHEST_TEMPLATES))
+    out += wrap_ids(f"DELETE FROM `gameobject` WHERE `id` IN ({templates}) AND `guid` IN ", R.PLAN_CHEST_SPAWNS, ";")
+    out += wrap_ids("DELETE FROM `gameobject_loot_template` WHERE `Entry` IN ", R.PLAN_CHEST_LOOT, ";")
+    out += wrap_ids("UPDATE `creature_template` SET `lootid` = 0 WHERE `entry` IN ", R.EMPTIED_CREATURE_LOOT, ";")
+    out.append("")
     out.append(f"-- The {len(R.RETIRED)} retired recipes are refused to players: no craft, and the learn guard in")
     out.append("-- custom_professions.cpp refuses to teach a profession recipe disabled for players.")
     spells = {s: f"Crafting C7: retired recipe, {prof} - {name}" for s, (prof, name, _) in R.RETIRED.items()}
@@ -103,10 +118,12 @@ def world_sql() -> str:
     out.append("INSERT INTO `disables` (`sourceType`, `entry`, `flags`, `params_0`, `params_1`, `comment`) VALUES")
     out += disable_rows(DISABLE_TYPE_SPELL, SPELL_DISABLE_PLAYER, spells)
     out.append("")
-    out.append(f"-- The {len(R.DISABLED_QUESTS)} quests that rewarded a retired recipe are off for now (decision 1e:")
-    out.append("-- kept as candidates for the later recipe quests).")
-    quests = {q: f"Crafting C7: rewarded a retired recipe ({title})"
-              for q, title in R.DISABLED_QUESTS.items()}
+    out.append(f"-- The {len(R.DISABLED_QUESTS)} quests that rewarded a retired recipe and the "
+               f"{len(R.COLLATERAL_QUESTS)} they strand are off for now")
+    out.append("-- (decision 1e: kept as candidates for the later recipe quests).")
+    quests = {q: f"Crafting C7: rewarded a retired recipe ({title})" for q, title in R.DISABLED_QUESTS.items()}
+    quests.update({q: f"Crafting C7: rewarded a retired recipe, stranded ({title})"
+                   for q, title in R.COLLATERAL_QUESTS.items()})
     out += wrap_ids(f"DELETE FROM `disables` WHERE `sourceType` = {DISABLE_TYPE_QUEST} AND `entry` IN ", quests, ";")
     out.append(f"DELETE FROM `disables` WHERE `sourceType` = {DISABLE_TYPE_QUEST} AND `comment` LIKE "
                "'Crafting C7: rewarded a retired recipe%';")

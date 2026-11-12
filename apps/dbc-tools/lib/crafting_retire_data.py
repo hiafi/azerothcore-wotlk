@@ -6,7 +6,8 @@ decision 1, ruled 2026-11-12; the per-recipe keep list is `crafting-rework.C7-RE
 and regenerating restores nothing by itself: re-teach it with trained_by()).
 
 - RETIRED: recipe spell -> (profession, name, reason): gear (replaced by the C7 sets), stat enchant (by C6's
-  basic set), enchant item (kits, spikes, counterweight, chain, scopes: by C6), glyph (retired), ammo (removed).
+  basic set), enchant item (kits, spikes, counterweight, chain, scopes: by C6), glyph (retired), ammo (removed),
+  stat scroll (the single-target Inscription stat scrolls, replaced by the raid buff scrolls; review S4).
 - TRAINERS: recipe spell -> the trainer ids that taught it on 2026-11-12 (untrain()).
 - RECIPE_ITEMS: recipe item -> (the spell it taught, its name). Neutered: no teach spell, Poor quality.
 - STARTER_SLA: SkillLineAbility id -> spell, for the retired recipes a profession taught on learning
@@ -898,6 +899,33 @@ RETIRED = {
     64266: ('Inscription', 'Glyph of Dark Death', 'glyph'),
     64267: ('Inscription', 'Glyph of Disease', 'glyph'),
     67600: ('Inscription', 'Glyph of Claw', 'glyph'),
+    45382: ('Inscription', 'Scroll of Stamina', 'stat scroll'),
+    48114: ('Inscription', 'Scroll of Intellect', 'stat scroll'),
+    48116: ('Inscription', 'Scroll of Spirit', 'stat scroll'),
+    50598: ('Inscription', 'Scroll of Intellect II', 'stat scroll'),
+    50599: ('Inscription', 'Scroll of Intellect III', 'stat scroll'),
+    50600: ('Inscription', 'Scroll of Intellect IV', 'stat scroll'),
+    50601: ('Inscription', 'Scroll of Intellect V', 'stat scroll'),
+    50605: ('Inscription', 'Scroll of Spirit II', 'stat scroll'),
+    50606: ('Inscription', 'Scroll of Spirit III', 'stat scroll'),
+    50607: ('Inscription', 'Scroll of Spirit IV', 'stat scroll'),
+    50608: ('Inscription', 'Scroll of Spirit V', 'stat scroll'),
+    50609: ('Inscription', 'Scroll of Spirit VI', 'stat scroll'),
+    50612: ('Inscription', 'Scroll of Stamina II', 'stat scroll'),
+    50614: ('Inscription', 'Scroll of Stamina III', 'stat scroll'),
+    50616: ('Inscription', 'Scroll of Stamina IV', 'stat scroll'),
+    50617: ('Inscription', 'Scroll of Stamina V', 'stat scroll'),
+    50618: ('Inscription', 'Scroll of Stamina VI', 'stat scroll'),
+    58472: ('Inscription', 'Scroll of Agility', 'stat scroll'),
+    58473: ('Inscription', 'Scroll of Agility II', 'stat scroll'),
+    58476: ('Inscription', 'Scroll of Agility III', 'stat scroll'),
+    58478: ('Inscription', 'Scroll of Agility IV', 'stat scroll'),
+    58480: ('Inscription', 'Scroll of Agility V', 'stat scroll'),
+    58484: ('Inscription', 'Scroll of Strength', 'stat scroll'),
+    58485: ('Inscription', 'Scroll of Strength II', 'stat scroll'),
+    58486: ('Inscription', 'Scroll of Strength III', 'stat scroll'),
+    58487: ('Inscription', 'Scroll of Strength IV', 'stat scroll'),
+    58488: ('Inscription', 'Scroll of Strength V', 'stat scroll'),
 }
 
 TRAINERS = {
@@ -1304,6 +1332,30 @@ TRAINERS = {
     64266: (119, 120, 121),
     64267: (119, 120, 121),
     67600: (119, 120, 121),
+    50598: (119, 120, 121),
+    50599: (119, 120, 121),
+    50600: (119, 120, 121),
+    50601: (119, 120, 121),
+    50605: (119, 120, 121),
+    50606: (119, 120, 121),
+    50607: (119, 120, 121),
+    50608: (119, 120, 121),
+    50609: (119, 120, 121),
+    50612: (119, 120, 121),
+    50614: (119, 120, 121),
+    50616: (119, 120, 121),
+    50617: (119, 120, 121),
+    50618: (119, 120, 121),
+    58472: (119, 120, 121),
+    58473: (119, 120, 121),
+    58476: (119, 120, 121),
+    58478: (119, 120, 121),
+    58480: (119, 120, 121),
+    58484: (119, 120, 121),
+    58485: (119, 120, 121),
+    58486: (119, 120, 121),
+    58487: (119, 120, 121),
+    58488: (119, 120, 121),
 }
 
 RECIPE_ITEMS = {
@@ -1853,6 +1905,9 @@ STARTER_SLA = {
     6636: 12260,
     13290: 25493,
     13537: 26925,
+    16195: 45382,
+    16542: 48114,
+    16543: 48116,
 }
 
 DISABLED_QUESTS = {
@@ -1901,3 +1956,26 @@ DISABLED_QUESTS = {
     8869: 'Sweet Serenity',
     8878: 'Festive Recipes',
 }
+
+# Quests stranded by the ones above (review S5, 2026-11-12): their only way in is a disabled quest (the Galvan
+# chain, the Expert Blacksmith turn-in that gives the Signet of Expertise) or they only lead to disabled ones (the
+# Wild Leather starters). Off with them, kept for the later recipe quests too.
+COLLATERAL_QUESTS = {
+    2759: 'In Search of Galvan',
+    2760: 'The Mithril Order',
+    2764: "Galvan's Finest Pupil",
+    2765: 'Expert Blacksmith!',
+    2847: 'Wild Leather Armor',
+    2854: 'Wild Leather Armor',
+}
+
+# Loot the retirement leaves empty (review S1): a reference pool or loot table whose every row was a retired recipe
+# item. The rows that still point at the pools go too, the Blacksmithing Plans chests in Blackrock Depths and
+# Stratholme are despawned (with Blackrock Depths' chest pool), and Stonevault Pillager loses its empty loot id, so the
+# boot logs no "does not exist but it is used by" line.
+EMPTIED_REFERENCES = (1054, 1080004)
+PLAN_CHEST_LOOT = (11524, 11525, 13721, 13722)  # gameobject_loot_template entries of the four chest templates
+PLAN_CHEST_SPAWNS = (42888, 42959, 43103, 43104, 43105, 43117, 43118, 43138, 43139, 43140)  # gameobject guids
+PLAN_CHEST_TEMPLATES = (173232, 173234, 176325, 176327)  # Blacksmithing Plans
+PLAN_CHEST_POOL = 9687  # Blackrock Depths - Blacksmithing Plans
+EMPTIED_CREATURE_LOOT = (24830,)  # Stonevault Pillager: creature_template.lootid

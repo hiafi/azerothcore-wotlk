@@ -167,7 +167,8 @@ def render_loot_sql() -> str:
     for tier, pool in T.RECIPE_REFERENCE.items():
         recipes = recipes_by_tier[tier]
         bosses, chests = T.RAID_BOSSES[tier], T.RAID_CHESTS.get(tier, {})
-        material, trash = T.TIER_MATERIAL[tier], T.RAID_TRASH[tier]
+        material = T.TIER_MATERIAL[tier]
+        trash = [t for t in T.RAID_TRASH[tier] if t not in T.MATERIAL_STOCK_TRASH.get(tier, ())]
         label = T.RAID_WORD[tier]
         out.append("")
         out.append(f"-- {tier.upper()} ({label}): the recipe items, one per roll (group 1, equal chance).")
@@ -199,7 +200,8 @@ def render_loot_sql() -> str:
                 rows.append((entry, material, 0, T.MATERIAL_BOSS_CHANCE, 0, 1, T.MATERIAL_BOSS_MAX,
                              f"{name}: {label} tier material"))
             out += _loot_values(rows)
-        out.append(f"-- The tier's elite trash drops the tier material at {T.MATERIAL_TRASH_CHANCE:g}%.")
+        out.append(f"-- The tier's elite trash drops the tier material at {T.MATERIAL_TRASH_CHANCE:g}% (trash with a "
+                   "higher stock rate keeps it).")
         out += _delete_lines(f"DELETE FROM `creature_loot_template` WHERE `Item` = {material} AND `Entry` IN ", trash)
         out += _insert_lines("creature_loot_template")
         out += _loot_values([(entry, material, 0, T.MATERIAL_TRASH_CHANCE, 0, 1, 1,

@@ -334,7 +334,22 @@ DELETE FROM `conditions` WHERE `SourceTypeOrReferenceId` IN (1, 3, 4, 5, 8, 10, 
     22388, 22389, 22390, 22392, 22683, 22766, 22767, 22768, 22769, 22770, 22771, 22772, 22773, 22774, 29120, 33148,
     33152, 33792, 34261, 34262, 34319, 37915, 38327, 38328, 44916, 45050);
 
--- The 882 retired recipes are refused to players: no craft, and the learn guard in
+-- Loot left empty: the rows pointing at the emptied reference pools, the Blacksmithing Plans chests
+-- (spawns and their pool) and Stonevault Pillager's loot id, so the boot logs no dangling loot id.
+DELETE FROM `creature_loot_template` WHERE `Reference` IN (1054, 1080004);
+DELETE FROM `gameobject_loot_template` WHERE `Reference` IN (1054, 1080004);
+DELETE FROM `item_loot_template` WHERE `Reference` IN (1054, 1080004);
+DELETE FROM `reference_loot_template` WHERE `Reference` IN (1054, 1080004);
+DELETE FROM `reference_loot_template` WHERE `Entry` IN (1054, 1080004);
+DELETE FROM `pool_gameobject` WHERE `guid` IN (42888, 42959, 43103, 43104, 43105, 43117, 43118, 43138, 43139, 43140);
+DELETE FROM `pool_template` WHERE `entry` = 9687;
+DELETE FROM `gameobject_addon` WHERE `guid` IN (42888, 42959, 43103, 43104, 43105, 43117, 43118, 43138, 43139, 43140);
+DELETE FROM `gameobject` WHERE `id` IN (173232, 173234, 176325, 176327) AND `guid` IN (42888, 42959, 43103, 43104,
+    43105, 43117, 43118, 43138, 43139, 43140);
+DELETE FROM `gameobject_loot_template` WHERE `Entry` IN (11524, 11525, 13721, 13722);
+UPDATE `creature_template` SET `lootid` = 0 WHERE `entry` IN (24830);
+
+-- The 909 retired recipes are refused to players: no craft, and the learn guard in
 -- custom_professions.cpp refuses to teach a profession recipe disabled for players.
 DELETE FROM `disables` WHERE `sourceType` = 0 AND `entry` IN (2149, 2152, 2153, 2158, 2159, 2160, 2161, 2162, 2163,
     2164, 2165, 2166, 2167, 2168, 2169, 2385, 2386, 2387, 2389, 2395, 2397, 2399, 2401, 2402, 2403, 2661, 2662, 2663,
@@ -381,15 +396,16 @@ DELETE FROM `disables` WHERE `sourceType` = 0 AND `entry` IN (2149, 2152, 2153, 
     26903, 26906, 26907, 26908, 26909, 26910, 26911, 26912, 26914, 26925, 26926, 26927, 26928, 27585, 27586, 27587,
     27588, 27589, 27590, 27829, 27830, 27832, 27837, 28210, 28461, 28462, 28463, 28472, 28473, 28474, 28480, 28481,
     28482, 32178, 32179, 34955, 34959, 34960, 34961, 34979, 34981, 34982, 36074, 36075, 36076, 36122, 36124, 36125,
-    36126, 36128, 36523, 36524, 36525, 36526, 37818, 38175, 43549, 44950, 44953, 44958, 48121, 49677, 50644, 50647,
-    56945, 56948, 56951, 56953, 56955, 56956, 56957, 56959, 56961, 56963, 56968, 56971, 56973, 56974, 56976, 56978,
-    56979, 56981, 56982, 56985, 56994, 56995, 56997, 57000, 57001, 57002, 57004, 57005, 57007, 57009, 57020, 57022,
-    57023, 57024, 57025, 57027, 57029, 57030, 57031, 57032, 57114, 57119, 57120, 57121, 57123, 57125, 57129, 57131,
-    57132, 57133, 57151, 57154, 57156, 57157, 57158, 57161, 57162, 57163, 57165, 57167, 57183, 57184, 57185, 57186,
-    57188, 57194, 57196, 57197, 57200, 57201, 57210, 57213, 57216, 57219, 57238, 57239, 57240, 57241, 57242, 57244,
-    57245, 57246, 57249, 57251, 57259, 57262, 57265, 57266, 57269, 57270, 57271, 57272, 57274, 57277, 58565, 59475,
-    59478, 59484, 59486, 59489, 59490, 59493, 59494, 63742, 63743, 64258, 64259, 64260, 64261, 64262, 64266, 64267,
-    67600);
+    36126, 36128, 36523, 36524, 36525, 36526, 37818, 38175, 43549, 44950, 44953, 44958, 45382, 48114, 48116, 48121,
+    49677, 50598, 50599, 50600, 50601, 50605, 50606, 50607, 50608, 50609, 50612, 50614, 50616, 50617, 50618, 50644,
+    50647, 56945, 56948, 56951, 56953, 56955, 56956, 56957, 56959, 56961, 56963, 56968, 56971, 56973, 56974, 56976,
+    56978, 56979, 56981, 56982, 56985, 56994, 56995, 56997, 57000, 57001, 57002, 57004, 57005, 57007, 57009, 57020,
+    57022, 57023, 57024, 57025, 57027, 57029, 57030, 57031, 57032, 57114, 57119, 57120, 57121, 57123, 57125, 57129,
+    57131, 57132, 57133, 57151, 57154, 57156, 57157, 57158, 57161, 57162, 57163, 57165, 57167, 57183, 57184, 57185,
+    57186, 57188, 57194, 57196, 57197, 57200, 57201, 57210, 57213, 57216, 57219, 57238, 57239, 57240, 57241, 57242,
+    57244, 57245, 57246, 57249, 57251, 57259, 57262, 57265, 57266, 57269, 57270, 57271, 57272, 57274, 57277, 58472,
+    58473, 58476, 58478, 58480, 58484, 58485, 58486, 58487, 58488, 58565, 59475, 59478, 59484, 59486, 59489, 59490,
+    59493, 59494, 63742, 63743, 64258, 64259, 64260, 64261, 64262, 64266, 64267, 67600);
 DELETE FROM `disables` WHERE `sourceType` = 0 AND `comment` LIKE 'Crafting C7: retired recipe%';
 INSERT INTO `disables` (`sourceType`, `entry`, `flags`, `params_0`, `params_1`, `comment`) VALUES
 (0, 2149, 1, '', '', 'Crafting C7: retired recipe, Leatherworking - Handstitched Leather Boots'),
@@ -1157,8 +1173,25 @@ INSERT INTO `disables` (`sourceType`, `entry`, `flags`, `params_0`, `params_1`, 
 (0, 44950, 1, '', '', 'Crafting C7: retired recipe, Tailoring - Green Winter Clothes'),
 (0, 44953, 1, '', '', 'Crafting C7: retired recipe, Leatherworking - Winter Boots'),
 (0, 44958, 1, '', '', 'Crafting C7: retired recipe, Tailoring - Red Winter Clothes'),
+(0, 45382, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Stamina'),
+(0, 48114, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Intellect'),
+(0, 48116, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Spirit'),
 (0, 48121, 1, '', '', 'Crafting C7: retired recipe, Inscription - Glyph of Entangling Roots'),
 (0, 49677, 1, '', '', 'Crafting C7: retired recipe, Tailoring - Dress Shoes'),
+(0, 50598, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Intellect II'),
+(0, 50599, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Intellect III'),
+(0, 50600, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Intellect IV'),
+(0, 50601, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Intellect V'),
+(0, 50605, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Spirit II'),
+(0, 50606, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Spirit III'),
+(0, 50607, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Spirit IV'),
+(0, 50608, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Spirit V'),
+(0, 50609, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Spirit VI'),
+(0, 50612, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Stamina II'),
+(0, 50614, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Stamina III'),
+(0, 50616, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Stamina IV'),
+(0, 50617, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Stamina V'),
+(0, 50618, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Stamina VI'),
 (0, 50644, 1, '', '', 'Crafting C7: retired recipe, Tailoring - Haliscan Jacket'),
 (0, 50647, 1, '', '', 'Crafting C7: retired recipe, Tailoring - Haliscan Pantaloons'),
 (0, 56945, 1, '', '', 'Crafting C7: retired recipe, Inscription - Glyph of Healing Touch'),
@@ -1255,6 +1288,16 @@ INSERT INTO `disables` (`sourceType`, `entry`, `flags`, `params_0`, `params_1`, 
 (0, 57272, 1, '', '', 'Crafting C7: retired recipe, Inscription - Glyph of Shadowburn'),
 (0, 57274, 1, '', '', 'Crafting C7: retired recipe, Inscription - Glyph of Soulstone'),
 (0, 57277, 1, '', '', 'Crafting C7: retired recipe, Inscription - Glyph of Voidwalker'),
+(0, 58472, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Agility'),
+(0, 58473, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Agility II'),
+(0, 58476, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Agility III'),
+(0, 58478, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Agility IV'),
+(0, 58480, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Agility V'),
+(0, 58484, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Strength'),
+(0, 58485, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Strength II'),
+(0, 58486, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Strength III'),
+(0, 58487, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Strength IV'),
+(0, 58488, 1, '', '', 'Crafting C7: retired recipe, Inscription - Scroll of Strength V'),
 (0, 58565, 1, '', '', 'Crafting C7: retired recipe, Inscription - Mystic Tome'),
 (0, 59475, 1, '', '', 'Crafting C7: retired recipe, Inscription - Tome of the Dawn'),
 (0, 59478, 1, '', '', 'Crafting C7: retired recipe, Inscription - Book of Survival'),
@@ -1275,11 +1318,12 @@ INSERT INTO `disables` (`sourceType`, `entry`, `flags`, `params_0`, `params_1`, 
 (0, 64267, 1, '', '', 'Crafting C7: retired recipe, Inscription - Glyph of Disease'),
 (0, 67600, 1, '', '', 'Crafting C7: retired recipe, Inscription - Glyph of Claw');
 
--- The 44 quests that rewarded a retired recipe are off for now (decision 1e:
--- kept as candidates for the later recipe quests).
+-- The 44 quests that rewarded a retired recipe and the 6 they strand are off for now
+-- (decision 1e: kept as candidates for the later recipe quests).
 DELETE FROM `disables` WHERE `sourceType` = 1 AND `entry` IN (1487, 1578, 1582, 1618, 2751, 2752, 2753, 2754, 2755,
-    2758, 2761, 2762, 2763, 2848, 2849, 2850, 2851, 2852, 2853, 2855, 2856, 2857, 2858, 2859, 2860, 3402, 5124, 5127,
-    5305, 5306, 5307, 7604, 7649, 7650, 7651, 7653, 7654, 7655, 7656, 7657, 7658, 7659, 8869, 8878);
+    2758, 2759, 2760, 2761, 2762, 2763, 2764, 2765, 2847, 2848, 2849, 2850, 2851, 2852, 2853, 2854, 2855, 2856, 2857,
+    2858, 2859, 2860, 3402, 5124, 5127, 5305, 5306, 5307, 7604, 7649, 7650, 7651, 7653, 7654, 7655, 7656, 7657, 7658,
+    7659, 8869, 8878);
 DELETE FROM `disables` WHERE `sourceType` = 1 AND `comment` LIKE 'Crafting C7: rewarded a retired recipe%';
 INSERT INTO `disables` (`sourceType`, `entry`, `flags`, `params_0`, `params_1`, `comment`) VALUES
 (1, 1487, 0, '', '', 'Crafting C7: rewarded a retired recipe (Deviate Eradication)'),
@@ -1292,15 +1336,21 @@ INSERT INTO `disables` (`sourceType`, `entry`, `flags`, `params_0`, `params_1`, 
 (1, 2754, 0, '', '', 'Crafting C7: rewarded a retired recipe (Horns of Frenzy)'),
 (1, 2755, 0, '', '', 'Crafting C7: rewarded a retired recipe (Joys of Omosh)'),
 (1, 2758, 0, '', '', 'Crafting C7: rewarded a retired recipe (The Origins of Smithing)'),
+(1, 2759, 0, '', '', 'Crafting C7: rewarded a retired recipe, stranded (In Search of Galvan)'),
+(1, 2760, 0, '', '', 'Crafting C7: rewarded a retired recipe, stranded (The Mithril Order)'),
 (1, 2761, 0, '', '', 'Crafting C7: rewarded a retired recipe (Smelt On, Smelt Off)'),
 (1, 2762, 0, '', '', 'Crafting C7: rewarded a retired recipe (The Great Silver Deceiver)'),
 (1, 2763, 0, '', '', 'Crafting C7: rewarded a retired recipe (The Art of the Imbue)'),
+(1, 2764, 0, '', '', 'Crafting C7: rewarded a retired recipe, stranded (Galvan''s Finest Pupil)'),
+(1, 2765, 0, '', '', 'Crafting C7: rewarded a retired recipe, stranded (Expert Blacksmith!)'),
+(1, 2847, 0, '', '', 'Crafting C7: rewarded a retired recipe, stranded (Wild Leather Armor)'),
 (1, 2848, 0, '', '', 'Crafting C7: rewarded a retired recipe (Wild Leather Shoulders)'),
 (1, 2849, 0, '', '', 'Crafting C7: rewarded a retired recipe (Wild Leather Vest)'),
 (1, 2850, 0, '', '', 'Crafting C7: rewarded a retired recipe (Wild Leather Helmet)'),
 (1, 2851, 0, '', '', 'Crafting C7: rewarded a retired recipe (Wild Leather Boots)'),
 (1, 2852, 0, '', '', 'Crafting C7: rewarded a retired recipe (Wild Leather Leggings)'),
 (1, 2853, 0, '', '', 'Crafting C7: rewarded a retired recipe (Master of the Wild Leather)'),
+(1, 2854, 0, '', '', 'Crafting C7: rewarded a retired recipe, stranded (Wild Leather Armor)'),
 (1, 2855, 0, '', '', 'Crafting C7: rewarded a retired recipe (Wild Leather Shoulders)'),
 (1, 2856, 0, '', '', 'Crafting C7: rewarded a retired recipe (Wild Leather Vest)'),
 (1, 2857, 0, '', '', 'Crafting C7: rewarded a retired recipe (Wild Leather Helmet)'),

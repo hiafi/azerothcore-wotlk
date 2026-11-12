@@ -82,10 +82,11 @@ def item_rows() -> list[dict]:
     for n, s in enumerate(T.SCROLLS):
         _spell, _recipe, _sla, item = T.scroll_ids(n)
         rows.append(_row(item, CONSUMABLE, SUB_SCROLL, s.name, DISPLAY["buff_scroll"], UNCOMMON, sell=500,
-                         spell=_spell, description=f"Copies {s.source}. Does not stack with it."))
+                         req_level=60, spell=_spell, description=f"Copies {s.source}. Does not stack with it."))
     for r in T.RUNES:
         rows.append(_row(r.item, CONSUMABLE, SUB_OTHER, r.name, DISPLAY["rune"], RARE, sell=5000, req_level=60,
-                         stack=5, spell=r.spell, description="Bind it to the boss you want to push."))
+                         stack=5, spell=r.spell, category=T.RUNE_CATEGORY, category_cd=T.RUNE_COOLDOWN_MS,
+                         description="Bind it to the boss you want to push."))
     rows.append(_row(T.TAROT_ITEM, CONSUMABLE, SUB_OTHER, "Darkmoon Tarot", DISPLAY["tarot"], UNCOMMON,
                      flags=FLAG_HAS_LOOT, sell=2500, charges=0,
                      description="Open it to draw a card of the Beasts, Warlords, Elementals or Portals deck."))

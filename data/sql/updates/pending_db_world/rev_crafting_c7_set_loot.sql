@@ -120,14 +120,14 @@ INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, 
     `MinCount`, `MaxCount`, `Comment`) VALUES
 (16719, 1701001, 1701001, 20.0, 0, 1, 0, 1, 1, 'Cache of the Firelord (Majordomo Executus): Molten raid recipes'),
 (16719, 17010, 0, 50.0, 0, 1, 0, 1, 2, 'Cache of the Firelord (Majordomo Executus): Molten tier material');
--- The tier's elite trash drops the tier material at 3%.
+-- The tier's elite trash drops the tier material at 3% (trash with a higher stock rate keeps it).
 DELETE FROM `creature_loot_template` WHERE `Item` = 17010 AND `Entry` IN (11338, 11339, 11340, 11350, 11351, 11352);
 DELETE FROM `creature_loot_template` WHERE `Item` = 17010 AND `Entry` IN (11353, 11356, 11357, 11359, 11361, 11365);
-DELETE FROM `creature_loot_template` WHERE `Item` = 17010 AND `Entry` IN (11370, 11371, 11372, 11373, 11658, 11659);
-DELETE FROM `creature_loot_template` WHERE `Item` = 17010 AND `Entry` IN (11661, 11662, 11665, 11666, 11667, 11668);
-DELETE FROM `creature_loot_template` WHERE `Item` = 17010 AND `Entry` IN (11673, 11830, 11831, 12076, 12100, 12101);
-DELETE FROM `creature_loot_template` WHERE `Item` = 17010 AND `Entry` IN (12119, 14532, 14750, 14821, 14825, 14880);
-DELETE FROM `creature_loot_template` WHERE `Item` = 17010 AND `Entry` IN (14882, 14883, 15043, 15067, 15111);
+DELETE FROM `creature_loot_template` WHERE `Item` = 17010 AND `Entry` IN (11370, 11371, 11372, 11373, 11658, 11661);
+DELETE FROM `creature_loot_template` WHERE `Item` = 17010 AND `Entry` IN (11662, 11665, 11673, 11830, 11831, 12076);
+DELETE FROM `creature_loot_template` WHERE `Item` = 17010 AND `Entry` IN (12100, 12101, 12119, 14532, 14750, 14821);
+DELETE FROM `creature_loot_template` WHERE `Item` = 17010 AND `Entry` IN (14825, 14880, 14882, 14883, 15043, 15067);
+DELETE FROM `creature_loot_template` WHERE `Item` = 17010 AND `Entry` IN (15111);
 INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`,
     `MinCount`, `MaxCount`, `Comment`) VALUES
 (11338, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)'),
@@ -159,13 +159,9 @@ INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `Q
 (15067, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)'),
 (15111, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)'),
 (11658, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)'),
-(11659, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)'),
 (11661, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)'),
 (11662, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)'),
 (11665, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)'),
-(11666, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)'),
-(11667, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)'),
-(11668, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)'),
 (11673, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)'),
 (12076, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)'),
 (12100, 17010, 0, 3.0, 0, 1, 0, 1, 1, 'Molten tier material, elite trash (crafting C7)'),
@@ -248,9 +244,9 @@ INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `Q
 (14889, 18562, 0, 50.0, 0, 1, 0, 1, 2, 'Emeriss: Draconic tier material (crafting C7)'),
 (14890, 1701002, 1701002, 20.0, 0, 1, 0, 1, 1, 'Taerar: Draconic raid recipes (crafting C7)'),
 (14890, 18562, 0, 50.0, 0, 1, 0, 1, 2, 'Taerar: Draconic tier material (crafting C7)');
--- The tier's elite trash drops the tier material at 3%.
+-- The tier's elite trash drops the tier material at 3% (trash with a higher stock rate keeps it).
 DELETE FROM `creature_loot_template` WHERE `Item` = 18562 AND `Entry` IN (12457, 12459, 12460, 12461, 12463, 12464);
-DELETE FROM `creature_loot_template` WHERE `Item` = 18562 AND `Entry` IN (12465, 12467, 12468, 13996, 14401);
+DELETE FROM `creature_loot_template` WHERE `Item` = 18562 AND `Entry` IN (12465, 12467, 12468, 14401);
 INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`,
     `MinCount`, `MaxCount`, `Comment`) VALUES
 (12457, 18562, 0, 3.0, 0, 1, 0, 1, 1, 'Draconic tier material, elite trash (crafting C7)'),
@@ -262,7 +258,6 @@ INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `Q
 (12465, 18562, 0, 3.0, 0, 1, 0, 1, 1, 'Draconic tier material, elite trash (crafting C7)'),
 (12467, 18562, 0, 3.0, 0, 1, 0, 1, 1, 'Draconic tier material, elite trash (crafting C7)'),
 (12468, 18562, 0, 3.0, 0, 1, 0, 1, 1, 'Draconic tier material, elite trash (crafting C7)'),
-(13996, 18562, 0, 3.0, 0, 1, 0, 1, 1, 'Draconic tier material, elite trash (crafting C7)'),
 (14401, 18562, 0, 3.0, 0, 1, 0, 1, 1, 'Draconic tier material, elite trash (crafting C7)');
 
 -- T3 (Chthonic): the recipe items, one per roll (group 1, equal chance).
@@ -355,7 +350,7 @@ INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `Q
 (15544, 22203, 0, 50.0, 0, 1, 0, 1, 2, 'Vem: Chthonic tier material (crafting C7)'),
 (15727, 1701003, 1701003, 20.0, 0, 1, 0, 1, 1, 'C''Thun: Chthonic raid recipes (crafting C7)'),
 (15727, 22203, 0, 50.0, 0, 1, 0, 1, 2, 'C''Thun: Chthonic tier material (crafting C7)');
--- The tier's elite trash drops the tier material at 3%.
+-- The tier's elite trash drops the tier material at 3% (trash with a higher stock rate keeps it).
 DELETE FROM `creature_loot_template` WHERE `Item` = 22203 AND `Entry` IN (15229, 15230, 15233, 15235, 15236, 15240);
 DELETE FROM `creature_loot_template` WHERE `Item` = 22203 AND `Entry` IN (15247, 15249, 15250, 15252, 15262, 15264);
 DELETE FROM `creature_loot_template` WHERE `Item` = 22203 AND `Entry` IN (15277, 15311, 15312, 15318, 15319, 15320);

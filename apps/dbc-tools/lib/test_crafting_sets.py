@@ -150,7 +150,9 @@ class SetsDeclarationsTest(unittest.TestCase):
         trained = {(r["TrainerId"], r["SpellId"]) for r in self.recipes["trainer_spells"]}
         want = {(T.TRAINER[r.item.profession], r.spell) for r in T.recipes() if not r.item.set.raid}
         self.assertEqual(trained, want)
+        scripts = {(r["spell_id"], r["ScriptName"]) for r in self.recipes["spell_script_names"]}
         for recipe in T.raid_recipe_items():
+            self.assertIn((recipe.learn_spell, "spell_crafting_recipe_learn"), scripts)
             learn = spells[recipe.learn_spell]
             taught = [learn[f"effect{n}"]["trigger_spell"] for n in (1, 2, 3) if learn.get(f"effect{n}")]
             self.assertEqual(taught, [r.spell for r in recipe.teaches])

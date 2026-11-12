@@ -28,7 +28,8 @@ from lib.test_id_blocks import _AnyTrainer  # noqa: E402
 
 IDS = source.load_ids(TOOL_ROOT / "source" / "ids.yaml")
 SOURCE_FILE = TOOL_ROOT / "source" / "world" / "crafting_consumables.py"
-STOCK_GROUPS = {1, 2} | {g for s in T.SCROLLS for g in s.groups}
+STOCK_GROUPS = ({1, 2} | {g for s in T.SCROLLS for g in s.groups} | set(T.EXCLUSIVE_CLASS_GROUPS)) - set(
+    T.WRAPPER_GROUPS)
 FORBIDDEN_STATS = {7, 12, 16, 17, 18, 31, 37}  # Stamina, Defense, the Hits, Expertise (C6)
 
 
@@ -81,6 +82,8 @@ class ConsumablesTest(unittest.TestCase):
             second = next(b for b in T.BUFFS.values() if b.spell == first.spell + 1)
             self.assertEqual((first.aura, first.amount), (second.aura, second.amount))
         self.assertIn((T.BUFFS["absorb"].spell, "spell_crafting_max_health_absorb"), scripts)
+        for p in T.PREMIUMS:
+            self.assertIn((p.learn_spell, "spell_crafting_recipe_learn"), scripts)
         for p in T.PREMIUMS:  # learned from raid recipes only, never trained
             self.assertNotIn(p.recipe_spell, {r["SpellId"] for r in self.dsl["trainer_spells"]})
 
@@ -112,11 +115,24 @@ class ConsumablesTest(unittest.TestCase):
             self.assertEqual(spell["effect1"]["implicit_target_a"], T.SCROLL_TARGET)
         self.assertEqual(len(T.SCROLLS), 17)
 
+    def test_no_scroll_in_an_exclusive_class_group(self):
+        """Review B1: a scroll in a stack-rule-1 group would remove a raid member's own (talent) aura."""
+        for scroll in T.SCROLLS:
+            self.assertFalse(set(scroll.groups) & set(T.EXCLUSIVE_CLASS_GROUPS), scroll.name)
+        groups = {(r["id"], r["spell_id"]) for r in self.dsl["spell_groups"]}
+        rules = {r["group_id"]: r["stack_rule"] for r in self.dsl["spell_group_rules"]}
+        for wrapper, (nested, _name) in T.WRAPPER_GROUPS.items():
+            self.assertIn((wrapper, nested), groups)
+            self.assertEqual(rules[wrapper], T.STACK_RULE_SAME_EFFECT)
+
     def test_runes(self):
         for rune in T.RUNES:
             raw = self.spells[rune.spell]
             self.assertEqual((raw["category"], raw["category_cooldown_ms"]), (T.RUNE_CATEGORY, T.RUNE_COOLDOWN_MS))
             self.assertEqual(raw["effect2"]["base_points"] + 1, rune.pct)
+            self.assertTrue(raw["raw_overrides"]["AttributesEx"] & 0x400, "no threat: using it must not pull (B2)")
+            self.assertIn("$s2", rune.text)  # the percent is EFFECT_1 (review S3)
+            self.assertEqual(bool(raw.get("effect3")), rune.key == "mending")
         self.assertEqual({r["id"] for r in self.dsl["spell_categories"]}, {T.RUNE_CATEGORY})
 
     def test_decks(self):

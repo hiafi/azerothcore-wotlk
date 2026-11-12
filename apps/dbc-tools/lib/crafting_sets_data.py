@@ -332,6 +332,8 @@ def reagents(item: CraftedItem) -> tuple[tuple[int, int], ...]:
     # A Waist (Leatherworking) or Wrist (Blacksmithing) of another armor type also takes that armor type's material.
     if item.armor is not None and prof != ARMOR_PROFESSION[item.armor]:
         out.append(_armor_material(item.armor, band, w))
+    if item.set.key == "s60":  # the level-60 set takes the fine material too (ruling 2e table)
+        out.append((fine, _count(2, w)))
     if item.set.raid:
         out = [(reagent, count * 2) for reagent, count in out]
         out.append((fine, _count(4, w)))
@@ -460,6 +462,9 @@ RAID_TRASH = {
            15389, 15390, 15391, 15392, 15461, 15462, 15505, 15229, 15230, 15233, 15235, 15236, 15240, 15247, 15249,
            15250, 15252, 15262, 15264, 15277, 15311, 15312),
 }
+# Trash that already drops its tier material above the trash rate keeps the stock row (review S2): Molten Destroyer,
+# Firewalker, Flameguard and Firelord (Fiery Core 15-42%), Blackwing Technician (Elementium Ore 7.7%).
+MATERIAL_STOCK_TRASH = {"t1": (11659, 11666, 11667, 11668), "t2": (13996,)}
 RECIPE_ITEM_DISPLAY = 6270  # the stock Molten Core recipes' scroll
 RECIPE_ITEM_LEVEL = 60
 

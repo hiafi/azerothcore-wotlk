@@ -206,7 +206,7 @@ class Scroll:
 
 
 SCROLLS = (
-    Scroll("kings", "Scroll of Kings", ((137, -1, 10),), (1006,), "Blessing of Kings",
+    Scroll("kings", "Scroll of Kings", ((137, -1, 10),), (1391,), "Blessing of Kings",
            "All stats increased by $s1%."),
     Scroll("wild", "Scroll of the Wild", ((22, 1, 410), (29, -1, 19), (143, 126, 28)), (1089,), "Gift of the Wild",
            "Armor increased by $s1, all attributes by $s2 and all resistances by $s3."),
@@ -218,12 +218,12 @@ SCROLLS = (
            "Intellect increased by $s1."),
     Scroll("devotion", "Scroll of Devotion", ((29, STAT_SPIRIT, 40),), (1085,), "Prayer of Spirit",
            "Spirit increased by $s1."),
-    Scroll("winter", "Scroll of Winter's Horn", ((29, STAT_STRENGTH, 85), (29, STAT_AGILITY, 85)), (1088, 1253),
+    Scroll("winter", "Scroll of Winter's Horn", ((29, STAT_STRENGTH, 86), (29, STAT_AGILITY, 86)), (1088, 1253),
            "Horn of Winter", "Strength and Agility increased by $s1."),
     Scroll("stoneskin", "Scroll of Stoneskin", ((22, 1, 913),), (1086,), "Devotion Aura", "Armor increased by $s1."),
     Scroll("battle", "Scroll of Battle", ((99, 0, 414), (124, 0, 414)), (1004,), "Battle Shout",
            "Attack power increased by $s1."),
-    Scroll("trueshot", "Scroll of True Aim", ((166, 0, 10), (167, 0, 10)), (1029,), "Trueshot Aura",
+    Scroll("trueshot", "Scroll of True Aim", ((166, 0, 10), (167, 0, 10)), (1390,), "Trueshot Aura",
            "Attack power increased by $s1%."),
     Scroll("tempest", "Scroll of the Tempest", ((138, 0, 10), (140, 0, 10)), (1022,), "Air Attunement",
            "Melee and ranged attack speed increased by $s1%."),
@@ -240,10 +240,33 @@ SCROLLS = (
     Scroll("wisdom", "Scroll of Wisdom", ((85, 0, 67),), (1105,), "Blessing of Wisdom",
            "Restores $s1 mana every 5 sec."),
 )
+# A scroll never joins a stack-rule-1 (exclusive) class group: landing on a raid member, it would remove their own
+# aura, a passive talent aura (Abomination's Might, Unleashed Rage) until they relog (review B1). Those categories get
+# a wrapper group of their own, stack rule 3 (only the highest of each aura type counts), holding the class group and
+# the scroll: new group -> (nested class group, its name).
+EXCLUSIVE_CLASS_GROUPS = (1006, 1029)  # All Stats Percentage, Percentage AP Buffs (stack rule 1)
+WRAPPER_GROUPS = {
+    1390: (-1029, "Percentage AP Buffs and the Scroll of True Aim: the highest counts"),
+    1391: (-1006, "All Stats Percentage and the Scroll of Kings: the highest counts"),
+}
+STACK_RULE_SAME_EFFECT = 3
 SCROLL_SPELL_BASE, SCROLL_RECIPE_BASE, SCROLL_SLA_BASE, SCROLL_ITEM_BASE = 208860, 208880, 31960, 78830
 SCROLL_DURATION_MS = 3600000
 SCROLL_TARGET, SCROLL_RADIUS_INDEX = 56, 30301  # TARGET_UNIT_CASTER_AREA_RAID and Gift of the Wild's radius
 SCROLL_REAGENTS = ((43116, 2), (43123, 2), (39354, 1))  # Lion's Ink, Ink of the Sky, Light Parchment
+
+
+def number_free(text: str) -> str:
+    """An aura tooltip with its `$sN` numbers taken out (.agents/docs/systems/custom-spells.md: aura text placeholders
+    do not render reliably in-game, so aura texts stay number-free)."""
+    import re  # noqa: PLC0415
+
+    text = re.sub(r" equal to \$s\d+%? of your maximum health", "", text)
+    text = re.sub(r"Armor increased by \$s1, all attributes by \$s2 and all resistances by \$s3",
+                  "Armor, all attributes and all resistances increased", text)
+    text = re.sub(r" (by|to) \$s\d+%?", "", text)
+    text = re.sub(r"\$s\d+%? ?", "", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def scroll_ids(n: int) -> tuple[int, int, int, int]:
@@ -266,15 +289,16 @@ class Rune:
 
 RUNES = (
     Rune("ruin", "Rune of Ruin", 208900, 208905, 31980, 78850, 5,
-         "Bound to a boss: your damage against it is increased by $s1%."),
+         "Bound to a boss: your damage against it is increased by $s2%."),
     Rune("warding", "Rune of Warding", 208901, 208906, 31981, 78851, 8,
-         "Bound to a boss: damage it deals to you is reduced by $s1%."),
+         "Bound to a boss: damage it deals to you is reduced by $s2%."),
     Rune("mending", "Rune of Mending", 208902, 208907, 31982, 78852, 5,
-         "Bound to a boss: your healing is increased by $s1% while it is in combat."),
+         "Bound to a boss: your healing is increased by $s2% while it is in combat."),
 )
 RUNE_CATEGORY = 1310  # spellcategory_dbc (ids.yaml spellcategory); the shared 24 hour cooldown
 RUNE_COOLDOWN_MS = 86400000
 RUNE_DURATION_MS = 3600000
+AURA_MOD_HEALING_DONE_PERCENT = 136  # Rune of Mending's EFFECT_2, switched by the script's tick (review B3)
 RUNE_REAGENTS = ((43119, 2), (43121, 4), (39354, 2))  # Royal Ink, Fiery Ink, Light Parchment
 
 # --- Darkmoon ---------------------------------------------------------------------------------------------------------

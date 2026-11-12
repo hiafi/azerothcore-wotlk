@@ -31,7 +31,7 @@ IDS = source.load_ids(TOOL_ROOT / "source" / "ids.yaml")
 RETIRE_FILE = TOOL_ROOT / "source" / "world" / "crafting_retire.py"
 SQUISH_FILE = TOOL_ROOT / "source" / "world" / "crafting_squish.py"
 SLA_DBC = TOOL_ROOT.parents[1] / "var" / "extractors" / "dbc" / "SkillLineAbility.dbc"
-REASONS = {"gear", "stat enchant", "enchant item", "glyph", "ammo"}
+REASONS = {"gear", "stat enchant", "enchant item", "glyph", "ammo", "stat scroll"}
 CRAFTING_SKILLS = {164, 165, 171, 197, 202, 333, 755, 773}
 # The C6 utility enchants that stay on trainer 96 (crafting_squish.KEPT) and the Engineering gadgets (ruling 1a).
 KEPT_SPOT_CHECKS = {13890, 20014, 7426, 8895, 12905, 12907, 3971, 3969}
@@ -50,7 +50,7 @@ class RetireDataTest(unittest.TestCase):
     """The retired list hangs together."""
 
     def test_data_consistency(self):
-        self.assertEqual(len(R.RETIRED), 882)
+        self.assertEqual(len(R.RETIRED), 909)  # 882 from the audit + 27 stat scrolls (review S4)
         for spell, (prof, name, reason) in R.RETIRED.items():
             self.assertLess(spell, 200000, f"{spell} {name}: a C4-C6 custom recipe is never retired")
             self.assertIn(reason, REASONS, name)
@@ -59,6 +59,8 @@ class RetireDataTest(unittest.TestCase):
         self.assertLessEqual({spell for spell, _name in R.RECIPE_ITEMS.values()}, set(R.RETIRED))
         self.assertLessEqual(set(R.STARTER_SLA.values()), set(R.RETIRED))
         self.assertEqual(len(R.DISABLED_QUESTS), 44)
+        self.assertFalse(set(R.COLLATERAL_QUESTS) & set(R.DISABLED_QUESTS))
+        self.assertNotIn(48248, R.RETIRED)  # Scroll of Recall stays
         self.assertFalse(KEPT_SPOT_CHECKS & set(R.RETIRED))
 
     def test_retired_spells_are_crafting_recipes(self):
@@ -124,8 +126,10 @@ class RetireSqlTest(unittest.TestCase):
         for spell in R.RETIRED:
             self.assertIn(f"(0, {spell}, 1, ", world)
             self.assertRegex(characters, rf"[( ]{spell}[,)]")
-        for quest in R.DISABLED_QUESTS:
+        for quest in list(R.DISABLED_QUESTS) + list(R.COLLATERAL_QUESTS):
             self.assertIn(f"(1, {quest}, 0, ", world)
+        for ref in R.EMPTIED_REFERENCES:  # review S1: nothing may point at an emptied pool
+            self.assertIn(str(ref), world.split("WHERE `Reference` IN (")[1].split(")")[0])
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ Recipe row shape: the C6 recipes (`source/world/crafting_enchants.py`); the lear
 from lib import crafting_sets_data as T
 from lib import item_key_refs
 from lib.dsl import RANGE_SELF, Effect, School
-from lib.dsl.registry import skill_line_ability, spell, trained_by
+from lib.dsl.registry import scripted_by, skill_line_ability, spell, trained_by
 
 _TEXT_MASKS = {
     'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '',
@@ -91,3 +91,4 @@ for _recipe_item in T.raid_recipe_items():
             'AuraDescription_Lang_enUS': '', **_TEXT_MASKS,
         },
     )
+    scripted_by(_recipe_item.learn_spell, "spell_crafting_recipe_learn")  # refused when already known (review S6)

@@ -13,7 +13,7 @@ from lib.dsl import RANGE_SELF, Effect, School
 from lib.dsl.enchants import enchant, spell_effect, stat_effect
 from lib.dsl.registry import (
     EnchantType, item_template, procs_on, scripted_by, skill_line_ability, spell, spell_category, spell_group,
-    trained_by,
+    spell_group_rule, trained_by,
 )
 
 _TEXT_MASKS = {
@@ -89,7 +89,8 @@ def _buff(spell_id: int, name: str, effects, duration_ms: int, text: str, note: 
         category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF, duration_ms=duration_ms,
         effects=effects, spell_icon_id=kwargs.pop('icon', 1), notes=f'Crafting rework C7: {note}',
         raw_overrides={'SpellClassSet': 0, 'EquippedItemClass': -1, 'SpellLevel': 0, 'CastingTimeIndex': 1,
-                       'ProcChance': 101, 'Description_Lang_enUS': text, 'AuraDescription_Lang_enUS': text,
+                       'ProcChance': 101, 'Description_Lang_enUS': text,
+                       'AuraDescription_Lang_enUS': T.number_free(text),
                        **(raw or {}), **_TEXT_MASKS},
         **kwargs,
     )
@@ -156,6 +157,7 @@ for _pr in T.PREMIUMS:
                        'Description_Lang_enUS': f'Teaches you how to make a {_pr.item_name}.',
                        'AuraDescription_Lang_enUS': '', **_TEXT_MASKS},
     )
+    scripted_by(_pr.learn_spell, "spell_crafting_recipe_learn")  # refused when already known (review S6)
 
 # --- Flasks (decision 5) ----------------------------------------------------------------------------------------------
 # (SpellIconID, SpellVisualID_1) of each stock flask; the new ones look like the Titans.
@@ -175,7 +177,7 @@ for _f in T.FLASKS:
             'SpellVisualID_1': _visual, 'SpellClassSet': 13,
             'Description_Lang_enUS': f'Increases {_stat} by $s1 for $d. Counts as both a Battle and Guardian elixir.  '
                                      f'This effect persists through death.',
-            'AuraDescription_Lang_enUS': f'{_stat} increased by $s1.', **_TEXT_MASKS,
+            'AuraDescription_Lang_enUS': f'{_stat} increased.', **_TEXT_MASKS,
         },
     )
     if _f.sla is not None:
@@ -187,6 +189,9 @@ for _f in T.FLASKS:
                    req_skill_line=T.ALCHEMY, req_skill_rank=1)
 
 # --- Raid buff scrolls (decision 6a) ----------------------------------------------------------------------------------
+for _group, (_nested, _name) in T.WRAPPER_GROUPS.items():
+    spell_group(_group, _nested)
+    spell_group_rule(_group, T.STACK_RULE_SAME_EFFECT, _name)
 for _n, _s in enumerate(T.SCROLLS):
     _spell_id, _recipe_id, _sla_id, _item_id = T.scroll_ids(_n)
     _buff(
@@ -196,7 +201,7 @@ for _n, _s in enumerate(T.SCROLLS):
         _s.text, f'raid buff scroll copying {_s.source} at its base value, in its spell group(s) {_s.groups}.',
         raw={'Description_Lang_enUS': f'Gives every party and raid member nearby the {_s.source} effect for $d: '
                                       f'{_s.text}',
-             'AuraDescription_Lang_enUS': _s.text,
+             'AuraDescription_Lang_enUS': T.number_free(_s.text),
              **{f'EffectRadiusIndex_{k}': T.SCROLL_RADIUS_INDEX for k in range(1, len(_s.effects) + 1)},
              'SpellVisualID_1': 212},
         dispel=_DISPEL_MAGIC, icon=2435,
@@ -209,18 +214,23 @@ for _n, _s in enumerate(T.SCROLLS):
 # --- Boss runes (decision 6b) -----------------------------------------------------------------------------------------
 spell_category(T.RUNE_CATEGORY, comment='crafting rework C7 boss runes: one 24 hour cooldown for all three')
 for _r in T.RUNES:
+    _effects = [Effect(type=_EFFECT_DUMMY, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
+                _aura(_AURA_PERIODIC_DUMMY, 0, _r.pct, amplitude=1000)]
+    if _r.key == "mending":  # the healing aura the script turns on while the bound boss is in combat (review B3)
+        _effects.append(_aura(T.AURA_MOD_HEALING_DONE_PERCENT, 0, 0))
     spell(
         id=_r.spell, name=_r.name, school=School.NORMAL, attributes=0, category=T.RUNE_CATEGORY, cast_time_ms=0,
         cooldown_ms=0, category_cooldown_ms=T.RUNE_COOLDOWN_MS, mana_cost=0, mana_cost_pct=0, range_yards=40.0,
-        duration_ms=T.RUNE_DURATION_MS,
-        effects=[Effect(type=_EFFECT_DUMMY, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
-                 _aura(_AURA_PERIODIC_DUMMY, 0, _r.pct, amplitude=1000)],
+        duration_ms=T.RUNE_DURATION_MS, effects=_effects,
         spell_icon_id=2557, notes=f'Crafting rework C7: {_r.name}, the boss rune (custom_crafting_runes.cpp).',
         raw_overrides={'SpellClassSet': 0, 'EquippedItemClass': -1, 'SpellLevel': 0, 'CastingTimeIndex': 1,
-                       'ProcChance': 101, 'AttributesEx3': _ATTR3_ALLOW_AURA_WHILE_DEAD,
+                       'ProcChance': 101, 'AttributesEx': _ATTR1_NO_THREAT,  # no pull (review B2)
+                       'AttributesEx3': _ATTR3_ALLOW_AURA_WHILE_DEAD,
                        'Description_Lang_enUS': f'Use on a boss: binds to it until it dies or resets, at most $d. '
-                                                f'{_r.text} Shares a 24 hour cooldown with the other boss runes.',
-                       'AuraDescription_Lang_enUS': _r.text, 'SpellVisualID_1': 10130, **_TEXT_MASKS},
+                                                f'{_r.text} Lost if you log out. Shares a 24 hour cooldown with '
+                                                f'the other boss runes.',
+                       'AuraDescription_Lang_enUS': T.number_free(_r.text), 'SpellVisualID_1': 10130,
+                       **_TEXT_MASKS},
     )
     scripted_by(_r.spell, "spell_crafting_boss_rune")
     _recipe(_r.recipe_spell, _r.sla, _r.name, _r.item, T.INSCRIPTION, T.RUNE_REAGENTS, 'Boss rune, trained.',

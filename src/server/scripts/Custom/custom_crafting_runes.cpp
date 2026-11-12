@@ -23,8 +23,11 @@
 //
 // - Rune of Ruin (208900): the player's damage to the bound boss +N%.
 // - Rune of Warding (208901): damage the bound boss deals to the player -N%.
-// - Rune of Mending (208902): the player's healing +N% while the bound boss is in combat.
-// N is the aura's EFFECT_1 amount (the periodic dummy that also checks the boss every second).
+// - Rune of Mending (208902): the player's healing +N% while the bound boss is in combat (EFFECT_2, a healing done
+//   percent aura the tick switches between N and 0).
+// N is the aura's EFFECT_1 amount (the periodic dummy that also checks the boss every second). The binding lives in
+// memory only: a relog or disconnect drops the rune (its tooltip says so). The map is touched from map update threads,
+// which is safe while MapUpdate.Threads is 1 (live); with more threads it needs a lock.
 
 #include "Creature.h"
 #include "ObjectAccessor.h"
@@ -98,9 +101,7 @@ class spell_crafting_boss_rune : public SpellScript
             return SPELL_FAILED_DONT_REPORT;
         Unit* target = GetExplTargetUnit();
         if (!IsBoss(target) || !target->IsAlive())
-        {
             return SPELL_FAILED_BAD_TARGETS;
-        }
         return SPELL_CAST_OK;
     }
 
@@ -121,14 +122,26 @@ class spell_crafting_boss_rune_aura : public AuraScript
 {
     PrepareAuraScript(spell_crafting_boss_rune_aura);
 
-    // Every second: the boss must still be there, alive and not resetting.
-    void HandleTick(AuraEffect const* /*aurEff*/)
+    // Every second: the boss must still be there, alive and not resetting. Mending's healing aura is on only while the
+    // bound boss is in combat.
+    void HandleTick(AuraEffect const* aurEff)
     {
         Unit* owner = GetTarget();
         auto itr = BoundBoss.find(owner->GetGUID());
         Creature* boss = itr != BoundBoss.end() ? ObjectAccessor::GetCreature(*owner, itr->second) : nullptr;
         if (!boss || !boss->IsAlive() || boss->IsInEvadeMode())
+        {
             Remove(AURA_REMOVE_BY_EXPIRE);
+            return;
+        }
+
+        if (GetId() == SPELL_RUNE_OF_MENDING)
+            if (AuraEffect* healing = GetAura()->GetEffect(EFFECT_2))
+            {
+                int32 const want = boss->IsInCombat() ? aurEff->GetAmount() : 0;
+                if (healing->GetAmount() != want)
+                    healing->ChangeAmount(want);
+            }
     }
 
     void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
@@ -149,8 +162,8 @@ class custom_crafting_boss_rune_damage : public UnitScript
 {
 public:
     custom_crafting_boss_rune_damage() : UnitScript("custom_crafting_boss_rune_damage", true,
-        { UNITHOOK_MODIFY_MELEE_DAMAGE, UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN, UNITHOOK_MODIFY_PERIODIC_DAMAGE_AURAS_TICK,
-          UNITHOOK_MODIFY_HEAL_RECEIVED }) { }
+        { UNITHOOK_MODIFY_MELEE_DAMAGE, UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN,
+          UNITHOOK_MODIFY_PERIODIC_DAMAGE_AURAS_TICK }) { }
 
     void ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage) override
     {
@@ -171,20 +184,6 @@ public:
         SpellInfo const* /*spellInfo*/) override
     {
         Modify(target, attacker, damage);
-    }
-
-    void ModifyHealReceived(Unit* /*target*/, Unit* healer, uint32& heal, SpellInfo const* /*spellInfo*/) override
-    {
-        Player const* player = RuneOwner(healer);
-        if (!player || BoundBoss.empty())
-            return;
-        int32 const pct = RunePct(player, SPELL_RUNE_OF_MENDING);
-        if (!pct)
-            return;
-        auto itr = BoundBoss.find(player->GetGUID());
-        Creature const* boss = ObjectAccessor::GetCreature(*player, itr->second);
-        if (boss && boss->IsAlive() && boss->IsInCombat())
-            heal += CalculatePct(heal, pct);
     }
 
 private:

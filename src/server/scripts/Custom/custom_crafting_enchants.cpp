@@ -80,7 +80,7 @@ class spell_crafting_premium_higher_primary : public AuraScript
             return owner->GetStat(Stats(info->Effects[EFFECT_0].MiscValue));
         };
         uint32 const buff = statOf(secondInfo) > statOf(firstInfo) ? first + 1 : first;
-        owner->CastSpell(owner, buff, aurEff);
+        owner->CastSpell(owner, buff, true, nullptr, aurEff);
     }
 
     void Register() override
@@ -108,9 +108,36 @@ class spell_crafting_max_health_absorb : public AuraScript
     }
 };
 
+// Crafting rework C7: the learn spell of a raid recipe or premium formula item (208600-208725, 208840-208846) is
+// refused when the player already knows every recipe it teaches, so the item is not used up for nothing.
+class spell_crafting_recipe_learn : public SpellScript
+{
+    PrepareSpellScript(spell_crafting_recipe_learn);
+
+    SpellCastResult CheckCast()
+    {
+        Player* player = GetCaster()->ToPlayer();
+        if (!player)
+            return SPELL_FAILED_DONT_REPORT;
+        for (SpellEffectInfo const& effect : GetSpellInfo()->Effects)
+        {
+            uint32 const recipe = effect.TriggerSpell;
+            if (effect.Effect == SPELL_EFFECT_LEARN_SPELL && recipe && !player->HasSpell(recipe))
+                return SPELL_CAST_OK;
+        }
+        return SPELL_FAILED_SPELL_LEARNED;
+    }
+
+    void Register() override
+    {
+        OnCheckCast += SpellCheckCastFn(spell_crafting_recipe_learn::CheckCast);
+    }
+};
+
 void AddSC_custom_crafting_enchants()
 {
     RegisterSpellScript(spell_crafting_force_field_lens);
     RegisterSpellScript(spell_crafting_premium_higher_primary);
     RegisterSpellScript(spell_crafting_max_health_absorb);
+    RegisterSpellScript(spell_crafting_recipe_learn);
 }
