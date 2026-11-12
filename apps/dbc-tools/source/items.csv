@@ -307,8 +307,6 @@ id,class_id,subclass_id,sound_override_subclass_id,material,display_info_id,inve
 78845,0,4,-1,-1,3331,0,0,Scroll of Empowerment (crafting rework C7)
 78846,0,4,-1,-1,3331,0,0,Scroll of Wisdom (crafting rework C7)
 78850,0,8,-1,-1,28862,0,0,Rune of Empowerment (crafting rework C7)
-78851,0,8,-1,-1,28862,0,0,Rune of Warding (crafting rework C7)
-78852,0,8,-1,-1,28862,0,0,Rune of Mending (crafting rework C7)
 78860,0,8,-1,-1,44704,0,0,Darkmoon Tarot (crafting rework C7)
 79000,0,6,-1,-1,22651,0,0,Lesser Strength Lens (crafting rework C6 enchant item)
 79001,0,6,-1,-1,22651,0,0,Lesser Agility Lens (crafting rework C6 enchant item)

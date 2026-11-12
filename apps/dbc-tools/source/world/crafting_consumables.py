@@ -213,30 +213,27 @@ for _n, _s in enumerate(T.SCROLLS):
             trainer=True)
 
 # --- Boss runes (decision 6b) -----------------------------------------------------------------------------------------
-spell_category(T.RUNE_CATEGORY, comment='crafting rework C7 boss runes: one 24 hour cooldown for all three')
-for _r in T.RUNES:
-    _effects = [Effect(type=_EFFECT_DUMMY, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
-                _aura(_AURA_PERIODIC_DUMMY, 0, _r.pct, amplitude=1000)]
-    if _r.key == "mending":  # the healing aura the script turns on while the bound boss is in combat (review B3)
-        _effects.append(_aura(T.AURA_MOD_HEALING_DONE_PERCENT, 0, 0))
-    spell(
-        id=_r.spell, name=_r.name, school=School.NORMAL, attributes=0, category=T.RUNE_CATEGORY,
-        cast_time_ms=T.RUNE_CAST_MS, cooldown_ms=0, category_cooldown_ms=T.RUNE_COOLDOWN_MS, mana_cost=0,
-        mana_cost_pct=0, range_yards=T.RUNE_RANGE_YARDS,
-        duration_ms=T.RUNE_DURATION_MS, effects=_effects,
-        spell_icon_id=2557, notes=f'Crafting rework C7: {_r.name}, the boss rune (custom_crafting_runes.cpp).',
-        raw_overrides={'SpellClassSet': 0, 'EquippedItemClass': -1, 'SpellLevel': 0, 'InterruptFlags': _INTERRUPT_FLAGS,
-                       'ProcChance': 101, 'AttributesEx': _ATTR1_NO_THREAT,  # no pull (review B2)
-                       'AttributesEx3': _ATTR3_ALLOW_AURA_WHILE_DEAD,
-                       'AttributesEx4': _ATTR4_AURA_EXPIRES_OFFLINE,  # 24 hours of real time
-                       'Description_Lang_enUS': f'Use on a boss to select it: for $d, {_r.text} Shares a 24 hour '
-                                                f'cooldown with the other boss runes.',
-                       'AuraDescription_Lang_enUS': T.number_free(_r.text).capitalize(), 'SpellVisualID_1': 10130,
-                       **_TEXT_MASKS},
-    )
-    scripted_by(_r.spell, "spell_crafting_boss_rune")
-    _recipe(_r.recipe_spell, _r.sla, _r.name, _r.item, T.INSCRIPTION, T.RUNE_REAGENTS, 'Boss rune, trained.',
-            trainer=True)
+spell_category(T.RUNE_CATEGORY, comment='crafting rework C7 Rune of Empowerment: its 24 hour cooldown')
+_r = T.RUNE
+spell(
+    id=_r.spell, name=_r.name, school=School.NORMAL, attributes=0, category=T.RUNE_CATEGORY,
+    cast_time_ms=T.RUNE_CAST_MS, cooldown_ms=0, category_cooldown_ms=T.RUNE_COOLDOWN_MS, mana_cost=0, mana_cost_pct=0,
+    range_yards=T.RUNE_RANGE_YARDS, duration_ms=T.RUNE_DURATION_MS,
+    effects=[Effect(type=_EFFECT_DUMMY, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY, base_points=_r.warding_pct - 1),
+             _aura(_AURA_PERIODIC_DUMMY, 0, _r.damage_pct, amplitude=1000),
+             _aura(T.AURA_MOD_HEALING_DONE_PERCENT, 0, _r.healing_pct)],  # the tick switches it (review B3)
+    spell_icon_id=2557, notes=f'Crafting rework C7: {_r.name}, the boss rune (custom_crafting_runes.cpp).',
+    raw_overrides={'SpellClassSet': 0, 'EquippedItemClass': -1, 'SpellLevel': 0, 'InterruptFlags': _INTERRUPT_FLAGS,
+                   'ProcChance': 101, 'AttributesEx': _ATTR1_NO_THREAT,  # no pull (review B2)
+                   'AttributesEx3': _ATTR3_ALLOW_AURA_WHILE_DEAD,
+                   'AttributesEx4': _ATTR4_AURA_EXPIRES_OFFLINE,  # 24 hours of real time
+                   'Description_Lang_enUS': f'Use on a boss to select it: for $d, {_r.text}',
+                   'AuraDescription_Lang_enUS': 'Empowered against the selected boss: more damage to it, less damage '
+                                                'from it, more healing while fighting it.',
+                   'SpellVisualID_1': 10130, **_TEXT_MASKS},
+)
+scripted_by(_r.spell, "spell_crafting_boss_rune")
+_recipe(_r.recipe_spell, _r.sla, _r.name, _r.item, T.INSCRIPTION, T.RUNE_REAGENTS, 'Boss rune, trained.', trainer=True)
 
 # --- Darkmoon (decision 6c) -------------------------------------------------------------------------------------------
 _recipe(T.TAROT_RECIPE, T.TAROT_SLA, 'Darkmoon Tarot', T.TAROT_ITEM, T.INSCRIPTION, T.TAROT_REAGENTS,

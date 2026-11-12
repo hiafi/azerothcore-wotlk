@@ -125,19 +125,20 @@ class ConsumablesTest(unittest.TestCase):
             self.assertIn((wrapper, nested), groups)
             self.assertEqual(rules[wrapper], T.STACK_RULE_SAME_EFFECT)
 
-    def test_runes(self):
-        for rune in T.RUNES:
-            raw = self.spells[rune.spell]
-            self.assertEqual((raw["category"], raw["category_cooldown_ms"]), (T.RUNE_CATEGORY, T.RUNE_COOLDOWN_MS))
-            self.assertEqual(raw["effect2"]["base_points"] + 1, rune.pct)
-            self.assertTrue(raw["raw_overrides"]["AttributesEx"] & 0x400, "no threat: using it must not pull (B2)")
-            self.assertEqual((raw["cast_time_ms"], raw["range_yards"]), (3000, 60.0))
-            self.assertEqual(raw["duration_ms"], 86400000)  # a 24 hour buff (user 2026-11-12)
-            self.assertTrue(raw["raw_overrides"]["AttributesEx4"] & 0x4, "real time: expires offline")
-            self.assertNotIn("CastingTimeIndex", raw["raw_overrides"])
-            self.assertIn("$s2", rune.text)  # the percent is EFFECT_1 (review S3)
-            self.assertEqual(bool(raw.get("effect3")), rune.key == "mending")
+    def test_rune(self):
+        rune = T.RUNE
+        raw = self.spells[rune.spell]
+        self.assertEqual((raw["category"], raw["category_cooldown_ms"]), (T.RUNE_CATEGORY, T.RUNE_COOLDOWN_MS))
+        self.assertEqual([raw[f"effect{n}"]["base_points"] + 1 for n in (1, 2, 3)],
+                         [rune.warding_pct, rune.damage_pct, rune.healing_pct])
+        self.assertEqual(raw["effect3"]["apply_aura"], T.AURA_MOD_HEALING_DONE_PERCENT)
+        self.assertTrue(raw["raw_overrides"]["AttributesEx"] & 0x400, "no threat: using it must not pull (B2)")
+        self.assertEqual((raw["cast_time_ms"], raw["range_yards"]), (3000, 60.0))
+        self.assertEqual(raw["duration_ms"], 86400000)  # a 24 hour buff (user 2026-11-12)
+        self.assertTrue(raw["raw_overrides"]["AttributesEx4"] & 0x4, "real time: expires offline")
+        self.assertNotIn("CastingTimeIndex", raw["raw_overrides"])
         self.assertEqual({r["id"] for r in self.dsl["spell_categories"]}, {T.RUNE_CATEGORY})
+        self.assertEqual([s for s in (208901, 208902, 208906, 208907) if s in self.spells], [])  # one rune only
 
     def test_decks(self):
         edits = {row["entry"]: row for row in self.dsl["item_templates"]}
