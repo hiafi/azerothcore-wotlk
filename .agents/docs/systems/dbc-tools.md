@@ -86,7 +86,10 @@ crafting stages C4 (suffixes), C5 (gems, metas) and C6 (enchants) do. Facts to k
   minted item it creates with `item_key_refs.ref(key)` in `EffectItemType_1`; generate.py swaps the placeholder for the
   entry after the item expansion (`lib/item_key_refs.py`, the lock for a scoped run). The raid recipe items, their
   per-tier reference pools (`crafting_loot_reference` block) and the tier materials are hand-written by
-  `write_crafting_set_items.py` (items 78000-78799). Tests: `lib/test_crafting_sets.py`.
+  `write_crafting_set_items.py` (items 78000-78799). Tests: `lib/test_crafting_sets.py`. The trade skill window
+  groups the set recipes by set on the client: `write_crafting_categories.py` writes the table
+  `CraftingCategories.lua` (patch-X, hiafi/wow-client-ui) that `TradeSkillCategories.lua` reads; the header names are
+  `crafting_sets_data.CATEGORY_NAME`. Tests: `lib/test_crafting_categories.py`.
 - Premium enchants, flasks, raid buff scrolls, boss runes, Darkmoon tarot (C7): `lib/crafting_consumables_data.py`,
   `source/world/crafting_consumables.py`, items from `write_crafting_consumable_items.py` (78800-78999); scripts in
   `custom_crafting_enchants.cpp` and `custom_crafting_runes.cpp`. Tests: `lib/test_crafting_consumables.py`.

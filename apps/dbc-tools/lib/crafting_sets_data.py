@@ -100,6 +100,26 @@ def skill_rank(profession: int, set_key: str) -> int:
     return SKILL_RANK[profession].get(set_key, RAID_SKILL_RANK)
 
 
+# Trade skill window headers (C7-UI, user 2026-11-12): one header per set, named for the band's material ("Wool" ...
+# "Runecloth"), the raid sets for their tier; the client override `TradeSkillCategories.lua` (hiafi/wow-client-ui)
+# reads the generated table (write_crafting_categories.py). Enchanting has no band material and takes the item word.
+CATEGORY_NAME = {
+    TAILORING: {"s15": "Wool", "s30": "Silk", "s45": "Mageweave", "s60": "Runecloth"},
+    LEATHERWORKING: {"s15": "Medium Leather", "s30": "Heavy Leather", "s45": "Thick Leather",
+                     "s60": "Rugged Leather"},
+    BLACKSMITHING: {"s15": "Bronze", "s30": "Steel", "s45": "Mithril", "s60": "Thorium"},
+    ENGINEERING: {"s15": "Bronze", "s30": "Steel", "s45": "Mithril", "s60": "Thorium"},
+    JEWELCRAFTING: {"s15": "Moss Agate", "s30": "Jade", "s45": "Aquamarine", "s60": "Star Ruby"},
+    ENCHANTING: {"s15": "Runed", "s30": "Mystic", "s45": "Arcane", "s60": "Enchanted"},
+    INSCRIPTION: {"s15": "Lion's Ink", "s30": "Jadefire Ink", "s45": "Fiery Ink", "s60": "Sky Ink"},
+}
+RAID_CATEGORY_NAME = {"t1": "Molten", "t2": "Draconic", "t3": "Chthonic"}
+
+
+def category_name(profession: int, set_key: str) -> str:
+    return CATEGORY_NAME[profession].get(set_key) or RAID_CATEGORY_NAME[set_key]
+
+
 @dataclass(frozen=True)
 class CraftSet:
     key: str

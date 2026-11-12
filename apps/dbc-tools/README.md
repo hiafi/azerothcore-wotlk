@@ -1240,7 +1240,11 @@ trainer-taught below the raid sets. A recipe spell names its minted item by key 
 `write_crafting_set_items.py` writes the raid recipe items, the per-tier recipe pools on every tier boss and the tier
 materials. Premium enchants, flasks, raid buff scrolls, boss runes and the Darkmoon tarot are
 `lib/crafting_consumables_data.py` / `source/world/crafting_consumables.py` / `write_crafting_consumable_items.py`.
-Tests: `lib/test_crafting_sets.py`, `lib/test_crafting_consumables.py`.
+`write_crafting_categories.py` writes the client's trade skill header table
+(`client/ui-overrides/Interface/FrameXML/CraftingCategories.lua`, `--out` for another checkout): every set recipe under
+its set's header (`crafting_sets_data.CATEGORY_NAME`, "Wool" ... "Runecloth", then the raid tiers), read by the patch-X
+override `TradeSkillCategories.lua`. Tests: `lib/test_crafting_sets.py`, `lib/test_crafting_consumables.py`,
+`lib/test_crafting_categories.py`.
 
 ## Known limitations
 
