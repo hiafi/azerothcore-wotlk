@@ -74,6 +74,12 @@ crafting stages C4 (suffixes), C5 (gems, metas) and C6 (enchants) do. Facts to k
   reagents changed (`_squished()` maps an old vanilla dust / essence / shard to its survivor); minted items get their
   `DisenchantID` / `RequiredDisenchantSkill` from quality and item level (`lib/disenchant.py`, hooked in
   `lib/item_emit.py` for non-stock tiers), so a full run rewrites those two columns on every minted vanilla item.
+- Recipe retirement (crafting rework C7): the retired stock recipes are data in `lib/crafting_retire_data.py` (spell,
+  the trainers that taught it, its recipe items, starter SkillLineAbility rows, the quests that rewarded one).
+  `source/world/crafting_retire.py` untrains them, sets the starter rows to AcquireMethod 0 and neuters the recipe
+  items (`item_template()`: no teach spell, Poor quality); `write_crafting_retire.py` writes the loot / vendor /
+  condition removals, the `disables` rows (spells for players, quests) and the characters-DB cleanup. A profession
+  recipe disabled for players can't be learned (`custom_professions.cpp`). Tests: `lib/test_crafting_retire.py`.
 
 ### Item tier labels on the tooltip (item variants, IV4)
 

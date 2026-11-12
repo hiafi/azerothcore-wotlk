@@ -1223,6 +1223,15 @@ vanilla crafting materials: `source/world/crafting_squish.py` re-points stock re
 shards and colored pigments, `lib/disenchant.py` gives minted items their disenchant band, and the loot is hand-written
 in `rev_crafting_c6_squish_loot.sql`. Tests: `lib/test_crafting_enchants.py`.
 
+**Recipe retirement (crafting rework C7).** The 882 stock recipes the crafting rework retires (crafted gear, the drop
+and vendor stat enchants and enchant items C6 replaced, glyphs, ammo) are data in `lib/crafting_retire_data.py`.
+`source/world/crafting_retire.py` takes them off their trainers (`untrain`), stops the starter ones being taught on
+learning the profession (`override_skill_line_ability(..., acquire_method=0)`) and turns their recipe items into Poor
+items that teach nothing (`item_template()`). `write_crafting_retire.py` writes `rev_crafting_c7_retire.sql` (the recipe
+items' loot, vendor and condition rows, `disables` for the spells and the quests that rewarded them) and
+`pending_db_characters/rev_crafting_c7_retire_learned.sql` (the learned rows). Rerun it after a data edit. Tests:
+`lib/test_crafting_retire.py`.
+
 ## Known limitations
 
 - `spell_icon_id` takes a raw `SpellIconID` integer, not a texture-path
