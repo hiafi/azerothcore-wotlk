@@ -298,6 +298,9 @@ RUNES = (
 RUNE_CATEGORY = 1310  # spellcategory_dbc (ids.yaml spellcategory); the shared 24 hour cooldown
 RUNE_COOLDOWN_MS = 86400000
 RUNE_DURATION_MS = 3600000
+# A 3 s cast (move or press Escape to cancel a wrong target; the rune is spent and the cooldown starts only when the
+# cast finishes) at 60 yd, so it can be bound from outside the pull (user 2026-11-12).
+RUNE_CAST_MS, RUNE_RANGE_YARDS = 3000, 60.0
 AURA_MOD_HEALING_DONE_PERCENT = 136  # Rune of Mending's EFFECT_2, switched by the script's tick (review B3)
 RUNE_REAGENTS = ((43119, 2), (43121, 4), (39354, 2))  # Royal Ink, Fiery Ink, Light Parchment
 

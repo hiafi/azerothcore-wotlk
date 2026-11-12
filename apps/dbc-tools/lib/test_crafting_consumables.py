@@ -131,6 +131,8 @@ class ConsumablesTest(unittest.TestCase):
             self.assertEqual((raw["category"], raw["category_cooldown_ms"]), (T.RUNE_CATEGORY, T.RUNE_COOLDOWN_MS))
             self.assertEqual(raw["effect2"]["base_points"] + 1, rune.pct)
             self.assertTrue(raw["raw_overrides"]["AttributesEx"] & 0x400, "no threat: using it must not pull (B2)")
+            self.assertEqual((raw["cast_time_ms"], raw["range_yards"]), (3000, 60.0))
+            self.assertNotIn("CastingTimeIndex", raw["raw_overrides"])
             self.assertIn("$s2", rune.text)  # the percent is EFFECT_1 (review S3)
             self.assertEqual(bool(raw.get("effect3")), rune.key == "mending")
         self.assertEqual({r["id"] for r in self.dsl["spell_categories"]}, {T.RUNE_CATEGORY})

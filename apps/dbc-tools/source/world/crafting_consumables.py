@@ -219,11 +219,12 @@ for _r in T.RUNES:
     if _r.key == "mending":  # the healing aura the script turns on while the bound boss is in combat (review B3)
         _effects.append(_aura(T.AURA_MOD_HEALING_DONE_PERCENT, 0, 0))
     spell(
-        id=_r.spell, name=_r.name, school=School.NORMAL, attributes=0, category=T.RUNE_CATEGORY, cast_time_ms=0,
-        cooldown_ms=0, category_cooldown_ms=T.RUNE_COOLDOWN_MS, mana_cost=0, mana_cost_pct=0, range_yards=40.0,
+        id=_r.spell, name=_r.name, school=School.NORMAL, attributes=0, category=T.RUNE_CATEGORY,
+        cast_time_ms=T.RUNE_CAST_MS, cooldown_ms=0, category_cooldown_ms=T.RUNE_COOLDOWN_MS, mana_cost=0,
+        mana_cost_pct=0, range_yards=T.RUNE_RANGE_YARDS,
         duration_ms=T.RUNE_DURATION_MS, effects=_effects,
         spell_icon_id=2557, notes=f'Crafting rework C7: {_r.name}, the boss rune (custom_crafting_runes.cpp).',
-        raw_overrides={'SpellClassSet': 0, 'EquippedItemClass': -1, 'SpellLevel': 0, 'CastingTimeIndex': 1,
+        raw_overrides={'SpellClassSet': 0, 'EquippedItemClass': -1, 'SpellLevel': 0, 'InterruptFlags': _INTERRUPT_FLAGS,
                        'ProcChance': 101, 'AttributesEx': _ATTR1_NO_THREAT,  # no pull (review B2)
                        'AttributesEx3': _ATTR3_ALLOW_AURA_WHILE_DEAD,
                        'Description_Lang_enUS': f'Use on a boss: binds to it until it dies or resets, at most $d. '
