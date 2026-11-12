@@ -35,6 +35,7 @@ _ATTR0_IS_TRADESKILL_NOT_SHAPESHIFTED = 0x00010020
 _ATTR1_NO_THREAT = 0x00000400
 _ATTR2_ENCHANT_OWN_ITEM_ONLY = 0x00002000
 _ATTR3_ALLOW_AURA_WHILE_DEAD = 0x00100000
+_ATTR4_AURA_EXPIRES_OFFLINE = 0x00000004
 _INTERRUPT_FLAGS = 15
 _DURATION_INFINITE = 21
 _DISPEL_MAGIC = 1
@@ -227,10 +228,10 @@ for _r in T.RUNES:
         raw_overrides={'SpellClassSet': 0, 'EquippedItemClass': -1, 'SpellLevel': 0, 'InterruptFlags': _INTERRUPT_FLAGS,
                        'ProcChance': 101, 'AttributesEx': _ATTR1_NO_THREAT,  # no pull (review B2)
                        'AttributesEx3': _ATTR3_ALLOW_AURA_WHILE_DEAD,
-                       'Description_Lang_enUS': f'Use on a boss: binds to it until it dies or resets, at most $d. '
-                                                f'{_r.text} Lost if you log out. Shares a 24 hour cooldown with '
-                                                f'the other boss runes.',
-                       'AuraDescription_Lang_enUS': T.number_free(_r.text), 'SpellVisualID_1': 10130,
+                       'AttributesEx4': _ATTR4_AURA_EXPIRES_OFFLINE,  # 24 hours of real time
+                       'Description_Lang_enUS': f'Use on a boss to select it: for $d, {_r.text} Shares a 24 hour '
+                                                f'cooldown with the other boss runes.',
+                       'AuraDescription_Lang_enUS': T.number_free(_r.text).capitalize(), 'SpellVisualID_1': 10130,
                        **_TEXT_MASKS},
     )
     scripted_by(_r.spell, "spell_crafting_boss_rune")

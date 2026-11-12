@@ -16,21 +16,21 @@
  */
 
 // Custom: crafting rework C7 boss runes (.agents/plans/crafting-rework/crafting-rework.C7-RESEARCH.md decision 6b,
-// ruling 6.4; data in apps/dbc-tools/lib/crafting_consumables_data.py). Inscription makes three runes. Used on a boss
-// (a dungeon boss or a world/raid boss), a rune binds to that creature: the player's aura lasts until the boss dies or
-// resets (at most an hour) and works only against it. One bound rune per player; the three share a 24 hour cooldown
-// (the spells' category), so a rune is for pushing one boss, not every boss.
+// rulings 6.4 and 2026-11-12; data in apps/dbc-tools/lib/crafting_consumables_data.py). Inscription makes three runes.
+// Used on a boss (a dungeon boss or a world/raid boss; a 3 s cast at 60 yd that pulls nothing), a rune gives the user a
+// 24 hour buff against that boss: every creature of the selected boss's entry, so every pull of it that day. The three
+// share a 24 hour cooldown (the spells' category), so a rune is for pushing one boss, not every boss.
 //
-// - Rune of Ruin (208900): the player's damage to the bound boss +N%.
-// - Rune of Warding (208901): damage the bound boss deals to the player -N%.
-// - Rune of Mending (208902): the player's healing +N% while the bound boss is in combat (EFFECT_2, a healing done
-//   percent aura the tick switches between N and 0).
-// N is the aura's EFFECT_1 amount (the periodic dummy that also checks the boss every second). The binding lives in
-// memory only: a relog or disconnect drops the rune (its tooltip says so). The map is touched from map update threads,
-// which is safe while MapUpdate.Threads is 1 (live); with more threads it needs a lock.
+// - Rune of Empowerment (208900): the user's damage to the selected boss +N%.
+// - Rune of Warding (208901): damage the selected boss deals to the user -N%.
+// - Rune of Mending (208902): the user's healing +N% while in combat with the selected boss (EFFECT_2, a healing done
+//   percent aura the one second tick switches between N and 0).
+//
+// N is the spell's EFFECT_1 value. After the cast EFFECT_1's amount holds the selected boss's creature entry and is
+// marked not recalculated, so it is saved with the aura and survives logout and death.
 
+#include "CombatManager.h"
 #include "Creature.h"
-#include "ObjectAccessor.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "SpellAuraEffects.h"
@@ -38,19 +38,15 @@
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
 #include <algorithm>
-#include <unordered_map>
 
 namespace
 {
     enum BossRune : uint32
     {
-        SPELL_RUNE_OF_RUIN    = 208900,
-        SPELL_RUNE_OF_WARDING = 208901,
-        SPELL_RUNE_OF_MENDING = 208902,
+        SPELL_RUNE_OF_EMPOWERMENT = 208900,
+        SPELL_RUNE_OF_WARDING     = 208901,
+        SPELL_RUNE_OF_MENDING     = 208902,
     };
-
-    // Player -> the boss its rune is bound to. Filled by the rune's hit, cleared when the aura goes.
-    std::unordered_map<ObjectGuid, ObjectGuid> BoundBoss;
 
     bool IsBoss(Unit const* unit)
     {
@@ -58,35 +54,44 @@ namespace
         return creature && !creature->IsPet() && (creature->isWorldBoss() || creature->IsDungeonBoss());
     }
 
-    // The percent of `player`'s `runeSpell` aura when it is bound to `boss`, else 0.
-    int32 RunePct(Player const* player, uint32 runeSpell, Unit const* boss = nullptr)
+    // The selected boss entry of `unit`'s `runeSpell` aura (0 when it has none or the cast never selected one), and
+    // the rune's percent.
+    uint32 SelectedBoss(Unit const* unit, uint32 runeSpell, int32& pct)
     {
-        AuraEffect const* effect = player->GetAuraEffect(runeSpell, EFFECT_1);
-        if (!effect)
+        AuraEffect const* effect = unit->GetAuraEffect(runeSpell, EFFECT_1);
+        if (!effect || effect->CanBeRecalculated())
             return 0;
-        auto itr = BoundBoss.find(player->GetGUID());
-        if (itr == BoundBoss.end() || (boss && itr->second != boss->GetGUID()))
-            return 0;
-        return effect->GetAmount();
+        pct = effect->GetSpellInfo()->Effects[EFFECT_1].CalcValue();
+        return uint32(effect->GetAmount());
     }
 
-    Player const* RuneOwner(Unit const* unit)
+    bool IsSelected(Unit const* player, uint32 runeSpell, Unit const* boss, int32& pct)
     {
-        return unit ? unit->GetCharmerOrOwnerPlayerOrPlayerItself() : nullptr;
+        Creature const* creature = boss ? boss->ToCreature() : nullptr;
+        return creature && !creature->GetOwnerGUID().IsPlayer() &&
+            SelectedBoss(player, runeSpell, pct) == creature->GetEntry();
     }
 
-    // Rune of Ruin on the attacker's side, then Rune of Warding on the target's: the damage after both.
+    // Empowerment on the attacker's side, then Warding on the target's: the damage after both.
     uint32 RuneDamage(Unit const* target, Unit const* attacker, uint32 damage)
     {
         int64 result = damage;
-        if (IsBoss(target))
-            if (Player const* player = RuneOwner(attacker))
-                if (int32 pct = RunePct(player, SPELL_RUNE_OF_RUIN, target))
-                    result += CalculatePct(result, pct);
-        if (Player const* player = target->ToPlayer(); player && IsBoss(attacker))
-            if (int32 pct = RunePct(player, SPELL_RUNE_OF_WARDING, attacker))
+        int32 pct = 0;
+        if (Player const* player = attacker->GetCharmerOrOwnerPlayerOrPlayerItself())
+            if (IsSelected(player, SPELL_RUNE_OF_EMPOWERMENT, target, pct))
+                result += CalculatePct(result, pct);
+        if (Player const* player = target->ToPlayer())
+            if (IsSelected(player, SPELL_RUNE_OF_WARDING, attacker, pct))
                 result -= CalculatePct(result, pct);
         return uint32(std::max<int64>(0, result));
+    }
+
+    bool InCombatWith(Unit* unit, uint32 entry)
+    {
+        for (auto const& [guid, ref] : unit->GetCombatManager().GetPvECombatRefs())
+            if (Unit* other = ref->GetOther(unit); other && other->GetEntry() == entry && other->IsCreature())
+                return true;
+        return false;
     }
 }
 
@@ -102,59 +107,52 @@ class spell_crafting_boss_rune : public SpellScript
         Unit* target = GetExplTargetUnit();
         if (!IsBoss(target) || !target->IsAlive())
             return SPELL_FAILED_BAD_TARGETS;
+        _bossEntry = target->GetEntry();
         return SPELL_CAST_OK;
     }
 
-    void HandleBind(SpellEffIndex /*effIndex*/)
+    // Store the selected boss in the user's aura (EFFECT_1), kept through logout.
+    void HandleAfterCast()
     {
-        if (Unit* target = GetHitUnit())
-            BoundBoss[GetCaster()->GetGUID()] = target->GetGUID();
+        AuraEffect* effect = GetCaster()->GetAuraEffect(GetSpellInfo()->Id, EFFECT_1);
+        if (!effect || !_bossEntry)
+            return;
+        effect->ChangeAmount(int32(_bossEntry));
+        effect->SetCanBeRecalculated(false);
     }
 
     void Register() override
     {
         OnCheckCast += SpellCheckCastFn(spell_crafting_boss_rune::CheckCast);
-        OnEffectHitTarget += SpellEffectFn(spell_crafting_boss_rune::HandleBind, EFFECT_0, SPELL_EFFECT_DUMMY);
+        AfterCast += SpellCastFn(spell_crafting_boss_rune::HandleAfterCast);
     }
+
+private:
+    uint32 _bossEntry = 0;
 };
 
 class spell_crafting_boss_rune_aura : public AuraScript
 {
     PrepareAuraScript(spell_crafting_boss_rune_aura);
 
-    // Every second: the boss must still be there, alive and not resetting. Mending's healing aura is on only while the
-    // bound boss is in combat.
+    // Every second: Rune of Mending's healing aura is on only while the user fights the selected boss.
     void HandleTick(AuraEffect const* aurEff)
     {
-        Unit* owner = GetTarget();
-        auto itr = BoundBoss.find(owner->GetGUID());
-        Creature* boss = itr != BoundBoss.end() ? ObjectAccessor::GetCreature(*owner, itr->second) : nullptr;
-        if (!boss || !boss->IsAlive() || boss->IsInEvadeMode())
-        {
-            Remove(AURA_REMOVE_BY_EXPIRE);
+        if (GetId() != SPELL_RUNE_OF_MENDING || aurEff->CanBeRecalculated())
             return;
-        }
-
-        if (GetId() == SPELL_RUNE_OF_MENDING)
-            if (AuraEffect* healing = GetAura()->GetEffect(EFFECT_2))
-            {
-                int32 const want = boss->IsInCombat() ? aurEff->GetAmount() : 0;
-                if (healing->GetAmount() != want)
-                    healing->ChangeAmount(want);
-            }
-    }
-
-    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-    {
-        BoundBoss.erase(GetTarget()->GetGUID());
+        AuraEffect* healing = GetAura()->GetEffect(EFFECT_2);
+        if (!healing)
+            return;
+        int32 const want = InCombatWith(GetTarget(), uint32(aurEff->GetAmount()))
+            ? aurEff->GetSpellInfo()->Effects[EFFECT_1].CalcValue() : 0;
+        if (healing->GetAmount() != want)
+            healing->ChangeAmount(want);
     }
 
     void Register() override
     {
         OnEffectPeriodic += AuraEffectPeriodicFn(spell_crafting_boss_rune_aura::HandleTick, EFFECT_1,
             SPELL_AURA_PERIODIC_DUMMY);
-        AfterEffectRemove += AuraEffectRemoveFn(spell_crafting_boss_rune_aura::HandleRemove, EFFECT_1,
-            SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
@@ -189,7 +187,7 @@ public:
 private:
     static void Modify(Unit* target, Unit* attacker, uint32& damage)
     {
-        if (!BoundBoss.empty() && target && attacker && damage)
+        if (target && attacker && damage)
             damage = RuneDamage(target, attacker, damage);
     }
 };

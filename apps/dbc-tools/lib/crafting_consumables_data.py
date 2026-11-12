@@ -18,8 +18,9 @@ Resistance stays. One hour, through death (stock flask shape), both elixir slots
 left out), cast on the raid in range like Gift of the Wild, one hour, at the class buff's base value, in the class
 buff's spell group so the two never stack. Inscription trainer.
 
-**Boss runes** (6b, ruling 6.4): used on a boss, they bind to it until it dies or resets (at most an hour); consumed,
-one 24-hour cooldown shared by all three (`custom_crafting_runes.cpp`). Inscription trainer.
+**Boss runes** (6b, rulings 6.4 and 2026-11-12): used on a boss (a 3 s cast at 60 yd), a rune gives the user a 24 hour
+buff against that boss (by creature entry, so every pull of it that day; real time, through death and logout).
+Consumed; one 24-hour cooldown shared by all three (`custom_crafting_runes.cpp`). Inscription trainer.
 
 **Darkmoon** (6c): a Darkmoon Tarot (Inscription trainer) opens into a random card of the four vanilla decks; a
 finished deck turns into its trinket on use (the deck's Faire quest start is dropped).
@@ -288,16 +289,16 @@ class Rune:
 
 
 RUNES = (
-    Rune("ruin", "Rune of Ruin", 208900, 208905, 31980, 78850, 5,
-         "Bound to a boss: your damage against it is increased by $s2%."),
+    Rune("empowerment", "Rune of Empowerment", 208900, 208905, 31980, 78850, 5,
+         "you deal $s2% increased damage to the selected boss."),
     Rune("warding", "Rune of Warding", 208901, 208906, 31981, 78851, 8,
-         "Bound to a boss: damage it deals to you is reduced by $s2%."),
+         "you take $s2% less damage from the selected boss."),
     Rune("mending", "Rune of Mending", 208902, 208907, 31982, 78852, 5,
-         "Bound to a boss: your healing is increased by $s2% while it is in combat."),
+         "your healing is increased by $s2% while you fight the selected boss."),
 )
 RUNE_CATEGORY = 1310  # spellcategory_dbc (ids.yaml spellcategory); the shared 24 hour cooldown
 RUNE_COOLDOWN_MS = 86400000
-RUNE_DURATION_MS = 3600000
+RUNE_DURATION_MS = 86400000  # a 24 hour buff on the user, real time (user 2026-11-12)
 # A 3 s cast (move or press Escape to cancel a wrong target; the rune is spent and the cooldown starts only when the
 # cast finishes) at 60 yd, so it can be bound from outside the pull (user 2026-11-12).
 RUNE_CAST_MS, RUNE_RANGE_YARDS = 3000, 60.0

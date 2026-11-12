@@ -132,6 +132,8 @@ class ConsumablesTest(unittest.TestCase):
             self.assertEqual(raw["effect2"]["base_points"] + 1, rune.pct)
             self.assertTrue(raw["raw_overrides"]["AttributesEx"] & 0x400, "no threat: using it must not pull (B2)")
             self.assertEqual((raw["cast_time_ms"], raw["range_yards"]), (3000, 60.0))
+            self.assertEqual(raw["duration_ms"], 86400000)  # a 24 hour buff (user 2026-11-12)
+            self.assertTrue(raw["raw_overrides"]["AttributesEx4"] & 0x4, "real time: expires offline")
             self.assertNotIn("CastingTimeIndex", raw["raw_overrides"])
             self.assertIn("$s2", rune.text)  # the percent is EFFECT_1 (review S3)
             self.assertEqual(bool(raw.get("effect3")), rune.key == "mending")
