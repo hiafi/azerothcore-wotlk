@@ -113,9 +113,10 @@ class RetireSqlTest(unittest.TestCase):
     def test_files_up_to_date(self):
         self.assertEqual(W.WORLD_SQL.read_text(), W.world_sql())
         self.assertEqual(W.CHARACTERS_SQL.read_text(), W.characters_sql())
+        self.assertEqual(W.CHESTS_SQL.read_text(), W.chests_sql())
 
     def test_lints(self):
-        for path in (W.WORLD_SQL, W.CHARACTERS_SQL):
+        for path in (W.WORLD_SQL, W.CHESTS_SQL, W.CHARACTERS_SQL):
             text = path.read_text().rstrip("\n")
             self.assertTrue(all(len(line) <= 120 for line in text.splitlines()), path.name)
             result = codestyle_sql(text)
