@@ -27,11 +27,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from lib import build, dbcfmt, source, spell_tables, state, trainer_state  # noqa: E402
+from lib import build, dbcfmt, state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 from lib.reuse import ReuseContext  # noqa: E402
 from lib.test_shaman_sh0a import m, spell_mask, _hex, _u32  # noqa: E402
 from lib.test_shaman_sh0b import _data as _shaman_data  # noqa: E402
+from lib.test_shaman_sh0b import loader_kwargs as _shaman_loader_kwargs  # noqa: E402
 
 TOOL_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = TOOL_ROOT.parents[1]
@@ -497,22 +498,12 @@ _S1A: dict = {}
 
 def _class_member_rows(class_dirs=("hunter", "warlock", "mage"), wanted=(3045, 200732, 12472)) -> dict[int, dict]:
     """Built rows of the non-shaman haste-group members, from their own class packages (stock when undeclared)."""
-    ids_cfg = source.load_ids(TOOL_ROOT / "source" / "ids.yaml")
-    sti = spell_tables.load_spell_table_index()
-    cti = spell_tables.load_creature_table_index()
+    kwargs = _shaman_loader_kwargs()
     out = {}
     stock = state.load_stock_rows(dbcfmt.SPELL)
     for name in class_dirs:
-        package = registry.load_class_package(
-            CLASSES_DIR / name, ids_cfg=ids_cfg, trainer_index=trainer_state.load_trainer_index(),
-            existing_group_ids={key[0] for key in sti.live_keys("spell_group")},
-            shapeshift_index=state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM),
-            existing_creature_rows={int(r["entry"]): r for r in cti.live_rows("creature_template")},
-            creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
-            creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
-            live_data=spell_tables.load_dsl_live_data(),
-        )
-        reuse = ReuseContext({}, ids_cfg)
+        package = registry.load_class_package(CLASSES_DIR / name, **kwargs)
+        reuse = ReuseContext({}, kwargs["ids_cfg"])
         for e in package.spells:
             if int(e["id"]) in wanted:
                 out[int(e["id"])] = build.build_spell_row(e, reuse)

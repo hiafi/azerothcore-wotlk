@@ -28,6 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from lib.replay_cache import under_replay_cache  # noqa: E402
 from lib import dbcfmt, source, spell_tables, state, trainer_state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 
@@ -84,6 +85,9 @@ def _is_direct_nature_heal(entry: dict) -> bool:
     if entry["id"] in NEVER_LIST:
         return False
     return True
+
+
+@under_replay_cache
 
 
 def _load_druid_spells() -> list[dict]:

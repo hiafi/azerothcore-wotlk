@@ -38,6 +38,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from lib.replay_cache import under_replay_cache  # noqa: E402
 from lib import build, dbcfmt, source, spell_tables, state, trainer_state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 from lib.reuse import ReuseContext  # noqa: E402
@@ -89,7 +90,8 @@ UNTOUCHED = {28880: 2164260864, 694: 196608, 20230: 65536, 20252: 262144, 12295:
 TRAINER_ROWS = {(200, 469): 22, (200, 23920): 44, (200, 64382): 52, (200, 57755): 60, (200, 674): 10, (200, 845): 14,
                 (200, 6552): 16, (200, 2458): 16, (201, 2458): 16,
                 (200, 34428): 8, (200, 3411): 30, (200, 204400): 38, (200, 55694): 56, (200, 204405): 60}
-UNTRAINED = {(200, 694), (200, 20230), (200, 20252), (201, 20252)}
+# 750 Plate Mail: granted at login since dungeon-prereqs S1 (#78), so its level-40 trainer row went too
+UNTRAINED = {(200, 694), (200, 750), (200, 20230), (200, 20252), (201, 20252)}
 # moved SpellLevel (== BaseLevel for the potency / modified rows)
 MOVED_LEVELS = {845: 14, 6552: 16, 23920: 44, 64382: 52, 57755: 60, 469: 22, 2458: 16, 12294: 20}
 
@@ -507,6 +509,9 @@ def rage_dealt_stock(level: int, damage: float, swing_s: float, *, main_hand: bo
 # ---- real data ----------------------------------------------------------------------------------------------
 
 _CACHE: dict = {}
+
+
+@under_replay_cache
 
 
 def _data():

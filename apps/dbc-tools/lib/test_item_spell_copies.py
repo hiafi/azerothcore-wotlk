@@ -27,6 +27,8 @@ import unittest
 from pathlib import Path
 
 TOOL_ROOT = Path(__file__).resolve().parents[1]
+# Run as a script, lib/ is sys.path[0] and lib/source.py would shadow the source/ namespace package.
+sys.path[:] = [p for p in sys.path if Path(p or ".").resolve() != Path(__file__).resolve().parent]
 sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import item_spell_copies as C  # noqa: E402
