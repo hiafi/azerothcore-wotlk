@@ -62,6 +62,18 @@ crafting stages C4 (suffixes), C5 (gems, metas) and C6 (enchants) do. Facts to k
   splits the secondary share. Content: `source/world/crafting_suffixes.py`.
 - Gems (crafting rework C5): the table is `lib/crafting_gems_data.py`, declared by `source/world/crafting_gems.py`;
   the gem items are hand-written rows from `write_gem_items.py` (rerun it after a table edit; the tests fail while stale).
+- Enchants as items (crafting rework C6): the table is `lib/crafting_enchants_data.py`, declared by
+  `source/world/crafting_enchants.py` (enchant, the item's on-use spell with effect 53 or the buckle's 156, the
+  recipe, its SkillLineAbility and trainer row); the items are hand-written rows from `write_enchant_items.py` in the
+  hand-picked block 79000-79199, carved off the top of `item_minted` (the minter only serves `item()` gear). The use
+  spell's `EquippedItemClass` / `Subclass` / `InvTypes` masks decide which slot an item fits; a tinker (type 7) and a
+  stat enchant share the permanent slot, the buckle has its own prismatic slot. `stock_enchant_rows()` lets a source
+  file select stock rows by content: `source/world/crafting_hed_remap.py` overrides all 215 stock rows carrying Hit,
+  Expertise or Defense with the rule in `lib/crafting_hed_remap.py`.
+- Material squish (C6): `source/world/crafting_squish.py` re-declares stock recipes pulled verbatim with only their
+  reagents changed (`_squished()` maps an old vanilla dust / essence / shard to its survivor); minted items get their
+  `DisenchantID` / `RequiredDisenchantSkill` from quality and item level (`lib/disenchant.py`, hooked in
+  `lib/item_emit.py` for non-stock tiers), so a full run rewrites those two columns on every minted vanilla item.
 
 ### Item tier labels on the tooltip (item variants, IV4)
 

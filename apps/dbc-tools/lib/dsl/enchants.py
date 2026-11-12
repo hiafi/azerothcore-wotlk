@@ -468,6 +468,19 @@ def _override_stock_row(
     return _register(attribute, caller, row)
 
 
+def stock_enchant_rows() -> dict[int, dict]:
+    """The stock `SpellItemEnchantment` rows by id (read-only copies), for a source file that selects stock rows by
+    their content, as the crafting rework C6 Hit / Expertise / Defense remap does."""
+    stock_rows = _registry._require_live("spellitemenchantment_rows", "stock_enchant_rows")
+    if not stock_rows:
+        raise _registry.MissingStockFileError(
+            "stock_enchant_rows(): the stock SpellItemEnchantment index is empty - var/extractors/dbc/"
+            "SpellItemEnchantment.dbc is missing on this checkout. Copy it from the worldserver's DBC directory "
+            "(ac-worldserver:/azerothcore/env/dist/data/dbc/SpellItemEnchantment.dbc) into var/extractors/dbc/."
+        )
+    return {row_id: dict(row) for row_id, row in stock_rows.items()}
+
+
 def override_enchant(enchant_id: int, **changed_columns) -> dict:
     """A full-row override of the stock `SpellItemEnchantment` row `enchant_id`: every column starts at the stock
     value and `changed_columns` (SQL column names, `lib.dbcfmt.SPELLITEMENCHANTMENT.columns`) overwrites just the
