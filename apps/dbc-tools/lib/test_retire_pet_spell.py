@@ -17,6 +17,7 @@ from pathlib import Path
 TOOL_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOL_ROOT))
 
+from lib.replay_cache import under_replay_cache  # noqa: E402
 from lib import build, dbcfile, dbcfmt, superseded_ranks as sr  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 
@@ -256,6 +257,9 @@ class CreatureSpellDataStripApplicationTest(unittest.TestCase):
         rerun = sr.creaturespelldata_overrides({}, stock, promoted, strips={100: frozenset({BITE})})
         self.assertEqual(rerun.to_emit, [])
         self.assertEqual(rerun.warnings, [])
+
+
+@under_replay_cache
 
 
 def _real_pet_data():

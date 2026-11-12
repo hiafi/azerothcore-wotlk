@@ -29,6 +29,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from lib.replay_cache import under_replay_cache  # noqa: E402
 from lib import build, dbcfmt, source, spell_tables, state, trainer_state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 from lib.dsl.tooltip import DEFINED_NAME, MAX_NAME_LENGTH  # noqa: E402
@@ -902,6 +903,9 @@ def check_header(text: str) -> list[str]:
 # ---- real data -----------------------------------------------------------------------------------------------------------
 
 _CACHE: dict = {}
+
+
+@under_replay_cache
 
 
 def _data():

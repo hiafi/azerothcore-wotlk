@@ -19,11 +19,15 @@ TOOL_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOL_ROOT))
 
 import generate  # noqa: E402
+from lib.replay_cache import under_replay_cache  # noqa: E402
 from lib import dbcfmt, source, spell_tables, state, trainer_state  # noqa: E402
 from lib.dsl import items as dsl_items  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 
 _CACHE: dict = {}
+
+
+@under_replay_cache
 
 
 def _removal_inputs() -> tuple[dict, dict]:

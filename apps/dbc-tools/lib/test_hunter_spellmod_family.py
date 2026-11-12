@@ -31,6 +31,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from lib.replay_cache import under_replay_cache  # noqa: E402
 from lib import build, dbcfmt, source, spell_tables, state, trainer_state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 from lib.reuse import ReuseContext  # noqa: E402
@@ -83,6 +84,9 @@ B13_SPELL_PROCS = {
 }
 H0_NEW_SPELLS = range(201600, 201606)
 STEADY_SHOT_ID = 56641
+
+
+@under_replay_cache
 
 
 def _load_hunter_package() -> dict:
@@ -261,6 +265,9 @@ def check_class_set_matches_stock(rows_by_id: dict[int, dict], stock: dict[int, 
 # ---- real data ----------------------------------------------------------------------------------------------
 
 _CACHE: dict = {}
+
+
+@under_replay_cache
 
 
 def _data():

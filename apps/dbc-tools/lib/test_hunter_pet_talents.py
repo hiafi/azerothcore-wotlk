@@ -21,6 +21,7 @@ from pathlib import Path
 TOOL_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOL_ROOT))
 
+from lib.replay_cache import under_replay_cache  # noqa: E402
 from lib import build, dbcfmt, resolve, source, state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 
@@ -148,6 +149,7 @@ def check_link_order(talents: list[dict]) -> list[str]:
 @unittest.skipUnless(HAVE_DBC, "needs the extracted base Talent.dbc (var/extractors/dbc)")
 class HunterPetTalentsTest(unittest.TestCase):
     @classmethod
+    @under_replay_cache
     def setUpClass(cls):
         cls.ids_cfg = source.load_ids(TOOL_ROOT / "source" / "ids.yaml")
         cls.existing_talents = state.load_existing_rows(dbcfmt.TALENT)

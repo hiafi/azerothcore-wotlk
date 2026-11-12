@@ -26,6 +26,7 @@ from pathlib import Path
 TOOL_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOL_ROOT))
 
+from lib.replay_cache import under_replay_cache  # noqa: E402
 from lib import source, spell_tables  # noqa: E402
 from lib.dsl import dungeon_kit, registry  # noqa: E402
 
@@ -61,6 +62,7 @@ def _scripts(reg: registry.Registry, spell_id: int) -> list[str]:
 
 class DungeonKitBuildersTest(unittest.TestCase):
     @classmethod
+    @under_replay_cache
     def setUpClass(cls):
         creature_index = spell_tables.load_creature_table_index()
         existing = {int(r["entry"]): r for r in creature_index.live_rows("creature_template")}

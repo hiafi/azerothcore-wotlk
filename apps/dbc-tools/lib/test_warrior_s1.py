@@ -31,6 +31,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from lib.replay_cache import under_replay_cache  # noqa: E402
 from lib import dbcfile, dbcfmt, state  # noqa: E402
 from lib import test_capstone_format as capfmt  # noqa: E402
 from lib import test_warrior_w0b as w0b  # noqa: E402
@@ -932,6 +933,9 @@ def _range_yd(row: dict) -> float | None:
 
 _DUR: dict[int, int] = {}
 _RANGE: dict[int, float] = {}
+
+
+@under_replay_cache
 
 
 def _data() -> dict:

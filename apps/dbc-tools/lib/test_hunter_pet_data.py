@@ -31,6 +31,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from lib.replay_cache import under_replay_cache  # noqa: E402
 from lib import build, dbcfmt, lint, source, spell_tables, state, superseded_ranks, trainer_state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 from lib.reuse import ReuseContext  # noqa: E402
@@ -446,6 +447,9 @@ EXPECTED_UNBOUND = {34902: {"spell_hun_generic_scaling"}, 34026: {"spell_hun_kil
 _CACHE: dict = {}
 
 
+@under_replay_cache
+
+
 def package_data() -> dict:
     """Loaded once per process (about two minutes). Shared with test_hunter_inert_keys.py."""
     if not _CACHE:
@@ -471,6 +475,9 @@ def package_data() -> dict:
             stock_spells=state.load_stock_rows(dbcfmt.SPELL),
         )
     return _CACHE
+
+
+@under_replay_cache
 
 
 def retirement_resolution() -> dict:

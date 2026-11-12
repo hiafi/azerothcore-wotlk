@@ -24,6 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from lib.replay_cache import under_replay_cache  # noqa: E402
 from lib import dbcfmt, source, spell_tables, state, trainer_state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 
@@ -48,6 +49,9 @@ PROC_HIT_BLOCK = 0x40   # partial or full block (DamageInfo sets it whenever blo
 DEFENSIVE_HIT_MASK = PROC_HIT_DODGE | PROC_HIT_PARRY | PROC_HIT_BLOCK   # 112
 
 _CACHE: dict = {}
+
+
+@under_replay_cache
 
 
 def warrior_package():

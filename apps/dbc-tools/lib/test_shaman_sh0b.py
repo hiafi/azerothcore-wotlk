@@ -24,7 +24,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from lib import build, dbcfmt, lint, source, spell_tables, sqlcorpus, state, trainer_state  # noqa: E402
+from lib import build, dbcfmt, lint, source, spell_tables, state, trainer_state  # noqa: E402
+from lib.replay_cache import replay_cache  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 from lib.reuse import ReuseContext  # noqa: E402
 from lib.test_shaman_sh0a import m, spell_mask, _hex, _u32  # noqa: E402
@@ -444,13 +445,10 @@ _CACHE: dict = {}
 
 
 def loader_kwargs() -> dict:
-    """The class-package loader inputs (ids, trainer index, live tables), loaded once per process through the
-    generate.py SQL replay cache: replaying the migration history from scratch costs minutes per load."""
+    """The class-package loader inputs (ids, trainer index, live tables), loaded once per process under the SQL
+    replay cache (lib/replay_cache.py)."""
     if "kwargs" not in _CACHE:
-        import generate  # noqa: PLC0415 - heavy, only the data tests need it
-
-        sqlcorpus.activate(generate.CACHE_DIR, generate.cache_code_version())
-        try:
+        with replay_cache():
             sti = spell_tables.load_spell_table_index()
             cti = spell_tables.load_creature_table_index()
             _CACHE["kwargs"] = dict(
@@ -463,8 +461,6 @@ def loader_kwargs() -> dict:
                 creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
                 live_data=spell_tables.load_dsl_live_data(),
             )
-        finally:
-            sqlcorpus.deactivate()
     return _CACHE["kwargs"]
 
 

@@ -23,6 +23,7 @@ from pathlib import Path
 TOOL_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOL_ROOT))
 
+from lib.replay_cache import under_replay_cache  # noqa: E402
 from lib import dbcfmt, lint, source, spell_tables, state, trainer_state  # noqa: E402
 from lib import potency as P  # noqa: E402
 from lib.dsl import registry  # noqa: E402
@@ -109,6 +110,9 @@ class WeaponPotencyLintTest(unittest.TestCase):
 
 _PACKAGES: dict[str, object] = {}
 _SPELLS: dict[str, dict[int, dict]] = {}
+
+
+@under_replay_cache
 
 
 def _registry(class_name: str):

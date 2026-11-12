@@ -31,6 +31,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from lib.replay_cache import under_replay_cache  # noqa: E402
 from lib import dbcfmt, source, spell_tables, state, trainer_state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 
@@ -91,6 +92,9 @@ def _has_dummy_aura(entry: dict) -> bool:
         if eff.get("type") == APPLY_AURA_EFFECT_TYPE and eff.get("apply_aura") == DUMMY_AURA:
             return True
     return False
+
+
+@under_replay_cache
 
 
 def _load_druid_package():
