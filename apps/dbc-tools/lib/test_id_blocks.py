@@ -732,8 +732,9 @@ class ItemVariantsIdsTest(unittest.TestCase):
     DEADMINES = {"spell": (205200, 205399), "creature": (300420, 300449), "gameobject": (301000, 301099)}
 
     def test_minted_item_block_sits_inside_item_and_above_the_hand_picked_rows(self):
-        # Ends at 78999 since crafting rework C6: 79000-79199 are hand-picked enchant items (write_enchant_items.py).
-        self.assertEqual(BLOCKS["item_minted"], {"start": 71000, "end": 78999})
+        # Ends at 78999 since crafting rework C6: 79000-79199 are hand-picked enchant items (write_enchant_items.py);
+        # at 77999 since C7: 78000-78999 are the raid recipe items (write_crafting_set_items.py).
+        self.assertEqual(BLOCKS["item_minted"], {"start": 71000, "end": 77999})
         self.assertGreaterEqual(BLOCKS["item_minted"]["start"], BLOCKS["item"]["start"])
         self.assertLessEqual(BLOCKS["item_minted"]["end"], BLOCKS["item"]["end"])
         self.assertEqual(BLOCKS["item"], {"start": 70000, "end": 79999})  # 70000-70999 stays for items.csv rows
