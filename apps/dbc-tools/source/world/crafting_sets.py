@@ -6,7 +6,8 @@ decisions 2e and 3e, ruled 2026-11-12). The data is `lib/crafting_sets_data.py`;
 - One recipe per item (207600 + n) on its profession's skill line, with its SkillLineAbility row (31200 + n). A
   recipe names the minted item it creates by its item() key (`lib/item_key_refs.py`).
 - Leveling and level-60 recipes are taught by the profession's Azeroth trainer (Blacksmithing 60, Leatherworking 61,
-  Tailoring 74, Engineering 92, Enchanting 96, Jewelcrafting 113, Inscription 121) at a flat 5 gold.
+  Tailoring 74, Engineering 92, Enchanting 96, Jewelcrafting 113, Inscription 121): 10 copper for a level-15
+  recipe, 1 silver at 30, 10 silver at 45, 1 gold at 60.
 - Raid recipes have no trainer: a recipe item (`write_crafting_set_items.py`, 78000 + n) teaches them through its
   learn spell (208600 + n), one learn effect per recipe it teaches (up to three). The recipe items drop from the
   tier's raid bosses (`rev_crafting_c7_set_loot.sql`).
@@ -71,7 +72,7 @@ for _row in T.recipes():
     skill_line_ability(id=_row.sla, skill_line=_item.profession, spell_id=_row.spell, min_skill_line_rank=1,
                        acquire_method=0, raw_overrides={'TrivialSkillLineRankHigh': 1, 'TrivialSkillLineRankLow': 1})
     if not _item.set.raid:
-        trained_by(_row.spell, T.TRAINER[_item.profession], req_level=0, money_cost=T.TRAIN_COST,
+        trained_by(_row.spell, T.TRAINER[_item.profession], req_level=0, money_cost=T.TRAIN_COST[_item.set.key],
                    req_skill_line=_item.profession, req_skill_rank=1)
 
 

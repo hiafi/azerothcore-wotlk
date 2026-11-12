@@ -147,6 +147,11 @@ class SetsDeclarationsTest(unittest.TestCase):
         sla = {r["id"]: r for r in self.recipes["skill_line_abilities"]}
         for row in T.recipes():
             self.assertEqual((sla[row.sla]["spell_id"], sla[row.sla]["skill_line"]), (row.spell, row.item.profession))
+        costs = {r["SpellId"]: r["MoneyCost"] for r in self.recipes["trainer_spells"]}
+        price = {"s15": 10, "s30": 100, "s45": 1000, "s60": 10000}  # user 2026-11-12
+        for row in T.recipes():
+            if not row.item.set.raid:
+                self.assertEqual(costs[row.spell], price[row.item.set.key], row.item.key)
         trained = {(r["TrainerId"], r["SpellId"]) for r in self.recipes["trainer_spells"]}
         want = {(T.TRAINER[r.item.profession], r.spell) for r in T.recipes() if not r.item.set.raid}
         self.assertEqual(trained, want)

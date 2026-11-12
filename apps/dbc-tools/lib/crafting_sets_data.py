@@ -49,7 +49,8 @@ TRAINER = {BLACKSMITHING: 60, LEATHERWORKING: 61, TAILORING: 74, ENGINEERING: 92
 # Recipe item subclasses (ItemSubclassRecipe) and their stock icon displays (a stock recipe of the profession).
 RECIPE_SUBCLASS = {LEATHERWORKING: 1, TAILORING: 2, ENGINEERING: 3, BLACKSMITHING: 4, ENCHANTING: 8,
                    JEWELCRAFTING: 10, INSCRIPTION: 11}
-TRAIN_COST = 50000  # 5 gold, the C5 / C6 flat price
+# Trainer price per set (user 2026-11-12): 10 copper, 1 silver, 10 silver, 1 gold.
+TRAIN_COST = {"s15": 10, "s30": 100, "s45": 1000, "s60": 10000}
 
 # --- Ids --------------------------------------------------------------------------------------------------------------
 RECIPE_SPELL_BASE = 207600
