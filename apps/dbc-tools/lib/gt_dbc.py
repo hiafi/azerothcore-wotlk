@@ -15,21 +15,19 @@ Two different on-disk shapes exist among real Gt-tables, confirmed by extracting
                                            on disk at all (a record's index is its position).
   - GtOCTClassCombatRatingScalar.dbc:     field_count=2 - a stored index field (row position + a
                                            per-table starting offset, e.g. +1 here) then the float.
-`DBCfmt.h`'s `"df"` format string (shared by every GtXxx.dbc name in that file) describes the
-*parsed* C++ struct shape (`{float ratio;}` either way - the 'd'/FT_SORT field, when present on
-disk, is never copied into it) - not the raw file layout, which is genuinely 1-field for some
-Gt-tables and 2-field for others. Trusting the format string's letter count over the file's own
-header (as an earlier version of this module did) breaks on the 1-field ones.
+Since upstream AzerothCore #27933 (merged 2026-11-12), `DBCfmt.h` matches those shapes: the
+one-column tables use `"f"` and GtOCTClassCombatRatingScalar keeps `"df"`. Their `gt*_dbc` SQL
+tables still carry an explicit `ID` column, which the loader reads with a separate `GtDatabasefmt`
+(`"df"`). Always trust the file's own header over a format string's letter count.
 
 The *value* side of a patch comes from the live server database, not another binary DBC: AzerothCore
-overlays a same-named SQL table (`gtcombatratings_dbc`, `gtoctclasscombatratingscalar_dbc`) on top
-of whatever the binary file parses to (DBCDatabaseLoader), and for GtCombatRatings.dbc specifically
-the binary file's own field_count (1) doesn't match what `DBCfmt.h` expects (2) - so
-`AutoProduceData` silently produces zero rows from the binary in AzerothCore's own C++ loader, and
-the SQL table ends up being *100% of the effective data*, confirmed by querying a live server and
-finding its values match the ones this was written to reproduce exactly. See patch_gt_tables.py for
-how those values get in (a plain id->float mapping, however it was obtained) and why only the
-*client's* copy of these two files needs patching.
+loads the binary file, then overlays a same-named SQL table (`gtcombatratings_dbc`,
+`gtoctclasscombatratingscalar_dbc`) on top of it row by row (DBCDatabaseLoader). The live tables
+hold every row (3200 for gtcombatratings_dbc), so the SQL values fully replace the stock binary
+ones. Before #27933 the one-column binaries loaded zero rows and the SQL table was the only data.
+Either way the SQL tables are the server's effective values. See patch_gt_tables.py for how those
+values get in (a plain id->float mapping, however it was obtained) and why only the *client's*
+copy of these two files needs patching.
 """
 
 from __future__ import annotations
