@@ -2653,7 +2653,8 @@ class spell_mage_living_bomb : public AuraScript
             return;
 
         if (Unit* caster = GetCaster())
-            caster->CastSpell(GetTarget(), uint32(aurEff->GetAmount()), true, nullptr, aurEff);
+            caster->CastSpell(GetTarget(), uint32(aurEff->GetAmount()),
+                TriggerCastFlags(TRIGGERED_FULL_MASK | TRIGGERED_DONT_ENTER_COMBAT), nullptr, aurEff);
     }
 
     // Fire Mage rework sec 5 (7,1) Fanned Flames - "Your Living Bomb periodic damage has a
