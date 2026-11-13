@@ -90,6 +90,13 @@ crafting stages C4 (suffixes), C5 (gems, metas) and C6 (enchants) do. Facts to k
   groups the set recipes by set on the client: `write_crafting_categories.py` writes the table
   `CraftingCategories.lua` (patch-X, hiafi/wow-client-ui) that `TradeSkillCategories.lua` reads; the header names are
   `crafting_sets_data.CATEGORY_NAME`. Tests: `lib/test_crafting_categories.py`.
+- Class Advancement UI data (U1): `write_class_advancement.py [--check] [--out PATH] [--report]` writes
+  `ClassAdvancementData.lua` (`CLASS_ADVANCEMENT`: per class the three talent tabs with every talent, and the class's
+  abilities by section) into `client/ui-overrides/Interface/FrameXML/`. Standalone like `write_crafting_categories.py`
+  (it is not part of `generate.py`, so rerun it after a talent, trainer or skill line change); it loads the whole DSL
+  (30 to 80 s). The trainer rows are the replayed `trainer_spell` with the declared `trained_by()` / `untrain()` laid
+  over it, so it needs the same stock DBCs as `generate.py`. Tests: `lib/test_class_advancement.py`. Plan:
+  `.agents/plans/classless-ui/classless-ui.PLAN.md`.
 - Premium enchants, flasks, raid buff scrolls, boss runes, Darkmoon tarot (C7): `lib/crafting_consumables_data.py`,
   `source/world/crafting_consumables.py`, items from `write_crafting_consumable_items.py` (78800-78999); scripts in
   `custom_crafting_enchants.cpp` and `custom_crafting_runes.cpp`. Tests: `lib/test_crafting_consumables.py`.
