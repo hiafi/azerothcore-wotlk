@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """
-Packs the client UI overrides (client/ui-overrides/Interface/**) into patch-X.mpq; deploys it only with --deploy.
+Packs the client UI overrides (client/ui-overrides/Interface/** and Sound/**) into patch-X.mpq; deploys it only with
+--deploy.
 
 patch-X is the one archive for every whole-file FrameXML override (UI-unlocked Wow.exe only; the stock exe rejects
 modified FrameXML - see client/ui-overrides/README.md): UnitPopup.lua (level-60 dungeon/raid difficulty menu), the item
 tier label hook ItemTierLabel.lua, its generated table ItemTierLabels.lua (generate.py writes it, lib/item_labels.py)
 the item set tooltip hook ItemSetTooltip.lua with its generated table ItemSetMembers.lua (lib/item_set_members.py)
-and the FrameXML.toc override that loads them after the tooltip frames. It replaces the hand `smpq -c` line the
-README used to carry. Every UI file under Interface/ (PACKED_SUFFIXES: .lua .xml .toc .blp .tga) is packed at its path
-relative to the source directory; dotfiles, editor swap and backup files (.swp, .orig, ~) and files outside
-Interface/ (README.md) are not.
+the hand-written frames (Professions, Gathering Ranks, Wardrobe: WardrobeFrame.xml/.lua with its Interface/Transmogrify
+textures and its apply sound) and the FrameXML.toc override that loads them after the tooltip frames. It replaces
+the hand `smpq -c` line the README used to carry. Every UI file under Interface/ (PACKED_SUFFIXES: .lua .xml .toc
+.blp .tga) and every sound under Sound/ (SOUND_SUFFIXES: .ogg, e.g. the Wardrobe's
+Sound/Interface/ui_transmogrify_apply.ogg) is packed at its path relative to the source directory; dotfiles, editor
+swap and backup files (.swp, .orig, ~), other file types under Sound/ and files outside Interface/ and Sound/
+(README.md, tools/) are not.
 
 Same packer and archive settings as the other build_patch_*.py (lib/mpq_writer.write_mpq: MPQ v1, stored, neutral
 locale), so the hand-built archive and this one differ only in file order.
@@ -46,9 +50,12 @@ LOCAL_OUT = Path(__file__).resolve().parent / "var" / "dbc-patch" / "patch-X.mpq
 TOC = "Interface/FrameXML/FrameXML.toc"
 # Files the toc override must list when they exist: a Lua file the toc forgets never loads, silently.
 TOC_LISTED = ("ItemTierLabels.lua", "ItemTierLabel.lua", "ItemSetMembers.lua", "ItemSetTooltip.lua",
-              "ProfessionsFrame.xml", "GatheringRanksFrame.xml", "CraftingCategories.lua", "TradeSkillCategories.lua")
+              "ProfessionsFrame.xml", "GatheringRanksFrame.xml", "CraftingCategories.lua", "TradeSkillCategories.lua",
+              "WardrobeFrame.xml")
 # What a UI override can be (R1 N11): anything else under Interface/ (swap files, .orig, notes) is left out.
 PACKED_SUFFIXES = (".lua", ".xml", ".toc", ".blp", ".tga")
+# Sounds the UI plays with PlaySoundFile (Sound/**): only these suffixes are packed from Sound/.
+SOUND_SUFFIXES = (".ogg",)
 
 try:
     from lib.local_config import DEPLOY_ROOT as DEFAULT_DEPLOY_ROOT
@@ -57,13 +64,17 @@ except ImportError:
 
 
 def collect(source: Path) -> dict[str, bytes]:
-    """Archive path (backslash-separated) -> bytes for every file under `source`/Interface."""
+    """Archive path (backslash-separated) -> bytes for every file under `source`/Interface and `source`/Sound."""
     interface = source / "Interface"
     if not interface.is_dir():
         raise SystemExit(f"no Interface/ directory under {source}")
+    candidates = sorted(interface.rglob("*"))
+    sound = source / "Sound"
+    if sound.is_dir():
+        candidates += sorted(sound.rglob("*"))
     files = {
         "\\".join(p.relative_to(source).parts): p.read_bytes()
-        for p in sorted(interface.rglob("*")) if p.is_file() and packable(p.relative_to(source))
+        for p in candidates if p.is_file() and packable(p.relative_to(source))
     }
     if not files:
         raise SystemExit(f"no files under {interface}")
@@ -71,10 +82,12 @@ def collect(source: Path) -> dict[str, bytes]:
 
 
 def packable(relative: Path) -> bool:
-    """A UI file to pack: no dotfile or dot directory on the way, and a UI file suffix (so no .swp, .orig, ~)."""
+    """A file to pack: no dotfile or dot directory on the way, and a UI file suffix under Interface/ or a sound suffix
+    under Sound/ (so no .swp, .orig, ~)."""
     if any(part.startswith(".") for part in relative.parts):
         return False
-    return relative.suffix.lower() in PACKED_SUFFIXES
+    suffixes = SOUND_SUFFIXES if relative.parts[0] == "Sound" else PACKED_SUFFIXES
+    return relative.suffix.lower() in suffixes
 
 
 def check_toc(source: Path, files: dict[str, bytes]) -> list[str]:
