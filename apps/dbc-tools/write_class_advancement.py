@@ -23,17 +23,20 @@ Inputs, all read-only and the same view `generate.py` builds (the source tree wi
 Output: `CLASS_ADVANCEMENT_ORDER` (the ten class file tokens) and `CLASS_ADVANCEMENT[token]` = `{ classId, tabs,
 abilities }`; the field contract is in the PLAN (section 4) and the U1 handoff. Per class:
 
-- `tabs`: three, in TalentTab `OrderIndex` order: `{ id, name, art, skillLine, talents }`, talents sorted by row, then
+- `tabs`: three, in TalentTab `OrderIndex` order: `{ id, name, art, skillLine, icon, talents }` (`icon` = the tab's
+  SpellIcon texture path, `TAB_ICON_PATHS`), talents sorted by row, then
   column, `{ id, row, col, ranks, req?, reqRank? }`. `skillLine` is the spec's SkillLine (no DBC field links the two,
   so `SPEC_SKILL_LINES` below is the hand table; each id is checked against SkillLine.dbc).
-- `abilities`: one entry per ability (highest rank id), `{ spell, section, level?, how, talent? }`. `how` is
+- `abilities`: one entry per ability (highest rank id), `{ spell, section, level?, how, talent?, races? }`. `how` is
   "trainer" (lowest ReqLevel on an in-use class trainer), "start" (a class skill line row learned on its own,
   `AcquireMethod` 1 or 2; `level` = ceil(MinSkillLineRank / 5) for method 1, class skills being 5 per level, and 1 for
   method 2) or "talent" (an active spell a talent rank teaches or is; `talent` = the Talent id, no level). `section`
   1..3 = the tab whose skill line the spell's SkillLineAbility is on (the talent's tab for "talent"), 0 = anything
   else (trainer spells with no spec-line row). Sorted by section, then level (talents last), then name, then id.
-  Proficiencies, languages, professions, mounts, racials, pet abilities, hidden helpers and retired spells are left
-  out (`ability_exclusion`); `--report` prints every spell a rule dropped, and the per-class counts.
+  Proficiencies, languages, professions, mounts, pet abilities, hidden helpers and passive talent targets are left
+  out (`ability_exclusion`); `--report` prints every spell a rule dropped, and the per-class counts. `races` (only
+  when set) is the OR of the SkillLineAbility RaceMask of a spell that not every playable race of the class can learn
+  (the faction spells); a client hides the entry when `bit.band(races, 2^(raceId - 1)) == 0`.
 
 The file is deterministic (LF, integers only): a rerun with unchanged data writes nothing.
 `lib/test_class_advancement.py` checks the table.
@@ -89,6 +92,42 @@ SPEC_SKILL_LINES = {
     283: 574, 281: 134, 282: 573,       # Druid: Balance, Feral Combat, Restoration
 }
 
+# SpellIcon.dbc ID -> texture path of every talent tab icon (the stock rows; the client cannot look up another
+# class's tab icon, so the table carries the path). The tracked `DBFilesClient/SpellIcon.dbc` working copy is not
+# readable (its record ids are corrupt from the 1,700th row on), so the paths are listed here; a tab on another
+# SpellIconID stops the script until the id is added.
+TAB_ICON_PATHS = {
+    13: "Interface\\Icons\\Spell_Nature_MagicImmunity",
+    19: "Interface\\Icons\\Spell_Nature_LightningShield",
+    62: "Interface\\Icons\\Spell_Nature_Lightning",
+    70: "Interface\\Icons\\Spell_Holy_HolyBolt",
+    88: "Interface\\Icons\\Spell_Shadow_DeathCoil",
+    90: "Interface\\Icons\\Spell_Shadow_Metamorphosis",
+    107: "Interface\\Icons\\Ability_Racial_BearForm",
+    125: "Interface\\Icons\\Spell_Holy_MagicalSentry",
+    126: "Interface\\Icons\\Ability_Marksmanship",
+    183: "Interface\\Icons\\Spell_Fire_FireBolt02",
+    188: "Interface\\Icons\\Spell_Frost_FrostBolt02",
+    225: "Interface\\Icons\\Spell_Nature_StarFall",
+    234: "Interface\\Icons\\Spell_Shadow_ShadowWordPain",
+    243: "Interface\\Icons\\Ability_BackStab",
+    250: "Interface\\Icons\\Ability_Stealth",
+    255: "Interface\\Icons\\Ability_Hunter_BeastTaming",
+    257: "Interface\\Icons\\Ability_Hunter_SwiftStrike",
+    291: "Interface\\Icons\\Spell_Holy_DevotionAura",
+    514: "Interface\\Icons\\Ability_Rogue_Eviscerate",
+    547: "Interface\\Icons\\Spell_Shadow_RainOfFire",
+    555: "Interface\\Icons\\Spell_Holy_AuraOfLight",
+    561: "Interface\\Icons\\Ability_Warrior_InnerRage",
+    685: "Interface\\Icons\\Spell_Holy_WordFortitude",
+    962: "Interface\\Icons\\Spell_Nature_HealingTouch",
+    1463: "Interface\\Icons\\INV_Shield_06",
+    2632: "Interface\\Icons\\Spell_Deathknight_FrostPresence",
+    2633: "Interface\\Icons\\Spell_Deathknight_UnholyPresence",
+    2636: "Interface\\Icons\\Spell_Deathknight_BloodPresence",
+    2873: "Interface\\Icons\\Spell_Holy_GuardianSpirit",
+}
+
 SPELL_ATTR0_PASSIVE = 0x00000040
 SPELL_ATTR0_DO_NOT_DISPLAY = 0x00000080
 SPELL_EFFECT_LEARN_SPELL = 36
@@ -98,6 +137,9 @@ SPELL_EFFECT_PROFICIENCY = 60
 SPELL_EFFECT_SKILL = 118
 SPELL_EFFECT_APPLY_AURA = 6
 SPELL_AURA_MOUNTED = 78
+
+# Playable race bits of a race mask (1 << raceId - 1): Human .. Troll, Blood Elf, Draenei (no Goblin / Worgen).
+PLAYABLE_RACES = 0x6FF
 
 LEARNED_ON_SKILL_VALUE = 1
 LEARNED_ON_SKILL_LEARN = 2
@@ -117,7 +159,7 @@ class Inputs:
     `spells` / `slas` are Spell.dbc / SkillLineAbility.dbc rows by id; `talents` / `tabs` the final rows; `skill_lines`
     SkillLine.dbc rows; `trainer_rows` the `trainer_spell` rows (TrainerId, SpellId) -> row; `class_trainers`
     class id -> in-use trainer ids; `chains` first_spell_id -> [(spell_id, rank)]; `superseded` the stock ranks a
-    single-rank survivor replaced; `retired_spells` spells whose declaration retired them."""
+    single-rank survivor replaced; `spell_icons` SpellIcon ID -> texture path (the tab icons)."""
 
     talents: dict[int, dict]
     tabs: dict[int, dict]
@@ -128,7 +170,7 @@ class Inputs:
     class_trainers: dict[int, set[int]]
     chains: dict[int, list[tuple[int, int]]]
     superseded: dict[int, int] = field(default_factory=dict)
-    retired_spells: set[int] = field(default_factory=set)
+    spell_icons: dict[int, str] = field(default_factory=dict)  # SpellIcon.dbc ID -> texture path
     class_tokens: dict[int, str] = field(default_factory=dict)  # ChrClasses id -> Filename, for the check below
 
 
@@ -230,18 +272,13 @@ def load_inputs(progress=lambda _label: None) -> Inputs:
         if int(row["spell_id"]) not in unranked:
             chains.setdefault(int(row["first_spell_id"]), []).append((int(row["spell_id"]), int(row["rank"])))
     progress("replayed trainer_spell, trainer and spell_ranks")
-    stock_talents = state.load_stock_rows(dbcfmt.TALENT)
-    retired = {int(r["SpellId"]) for r in dsl["trainer_removals"]}
-    for entry in dsl["retired_talents"]:
-        row = stock_talents.get(int(entry["id"]))
-        retired.update(int(row[f"SpellRank_{n}"]) for n in range(1, 10) if row and row[f"SpellRank_{n}"])
     return Inputs(
         talents=final_talents, tabs=final_tabs, spells=spells, slas=slas, skill_lines=skill_lines,
         trainer_rows=trainer_rows, class_trainers=class_trainers, chains=chains,
         superseded=superseded_ranks.superseded_ranks(
             load_spell_ranks_chains(), superseded_ranks.survivor_ids(spell_entries),
         ),
-        retired_spells=retired,
+        spell_icons=dict(TAB_ICON_PATHS),
         class_tokens={cid: str(r["Filename"]).upper() for cid, r in state.load_stock_rows(dbcfmt.CHRCLASSES).items()},
     )
 
@@ -358,8 +395,13 @@ def tab_entry(inp: Inputs, row: dict) -> dict:
             entry["reqRank"] = int(talent["PrereqRank_1"]) + 1  # the DBC stores the rank 0-based
         talents.append(entry)
     talents.sort(key=lambda t: (t["row"], t["col"], t["id"]))
+    icon_id = int(row["SpellIconID"])
+    if icon_id not in inp.spell_icons:
+        raise DataError(
+            f"talent tab {tab_id} ({row['Name_Lang_enUS']}): SpellIconID {icon_id} has no entry in TAB_ICON_PATHS"
+        )
     return {"id": tab_id, "name": str(row["Name_Lang_enUS"]), "art": str(row["BackgroundFile"]),
-            "skillLine": skill_line, "talents": talents}
+            "skillLine": skill_line, "icon": inp.spell_icons[icon_id], "talents": talents}
 
 
 def _spell_name(inp: Inputs, spell: int) -> str:
@@ -389,6 +431,20 @@ def class_abilities(inp: Inputs, class_id: int, tabs: list[dict], chains: _Chain
         )
         return line_section[lines[0][1]] if lines else 0
 
+    def races_of(spell: int) -> int:
+        """The OR of the RaceMask of the spell's skill line rows on the class's spec lines, or 0 when it is open to
+        every race of the class: no such row, a row with no race mask, or a mask that covers every playable race."""
+        masks = [
+            int(row["RaceMask"]) for member in chains.family(spell) for row in sla_by_spell.get(member, ())
+            if int(row["SkillLine"]) in line_section and int(row["ClassMask"]) in (0, mask)
+        ]
+        if not masks or not all(masks):
+            return 0
+        combined = 0
+        for race_mask in masks:
+            combined |= race_mask
+        return 0 if combined & PLAYABLE_RACES == PLAYABLE_RACES else combined
+
     def accept(spell: int, how: str, **fields) -> None:
         """Adds `spell` (any rank) as an ability unless a rule drops it or an earlier source already has it."""
         if spell in inp.superseded and how != "trainer":  # a trainer that still teaches a rank is the truth
@@ -400,6 +456,8 @@ def class_abilities(inp: Inputs, class_id: int, tabs: list[dict], chains: _Chain
             drop(spell, how, "no such spell")
             return
         reason = ability_exclusion(row)
+        if reason is None and how == "talent" and is_passive(row):
+            reason = "passive"
         if reason:
             drop(top, how, reason)
             return
@@ -464,11 +522,12 @@ def class_abilities(inp: Inputs, class_id: int, tabs: list[dict], chains: _Chain
 
     entries = []
     for top, entry in found.items():
-        if entry["how"] != "trainer" and top in inp.retired_spells:
-            drop(top, entry["how"], "retired")
-        elif entry["how"] == "start" and start_superseded.get(top) in found:
+        if entry["how"] == "start" and start_superseded.get(top) in found:
             drop(top, "start", f"SkillLineAbility says it is superseded by {start_superseded[top]}")
         else:
+            races = races_of(top)
+            if races:
+                entry["races"] = races
             entries.append(entry)
     return entries
 
@@ -503,8 +562,8 @@ def build_table(inp: Inputs) -> Result:
 HEADER = (
     "-- Generated by apps/dbc-tools/write_class_advancement.py from the talent and spell declarations in\n"
     "-- apps/dbc-tools/source/classes over the stock DBCs, and the class trainers' trainer_spell rows. Do not edit.\n"
-    "-- CLASS_ADVANCEMENT[class file token] = { classId, tabs = { { id, name, art, skillLine, talents } x 3 },\n"
-    "-- abilities = { { spell, section, level, how, talent } } } for the class advancement window\n"
+    "-- CLASS_ADVANCEMENT[class file token] = { classId, tabs = { { id, name, art, skillLine, icon, talents } x 3 },\n"
+    "-- abilities = { { spell, section, level, how, talent, races } } } for the class advancement window\n"
     "-- (.agents/plans/classless-ui/classless-ui.PLAN.md, section 4).\n"
 )
 _LUA_ESCAPES = {"\\": "\\\\", '"': '\\"', "\n": "\\n", "\r": "\\r", "\t": "\\t"}
@@ -539,6 +598,8 @@ def _ability_line(ability: dict) -> str:
     parts.append(f"how = {lua_string(ability['how'])}")
     if "talent" in ability:
         parts.append(f"talent = {ability['talent']}")
+    if "races" in ability:
+        parts.append(f"races = {ability['races']}")
     return "{ " + ", ".join(parts) + " }"
 
 
@@ -556,6 +617,7 @@ def render_lua(table: dict[str, dict]) -> str:
                 f"      {{ id = {tab['id']}, name = {lua_string(tab['name'])}, art = {lua_string(tab['art'])}, "
                 f"skillLine = {tab['skillLine']},"
             )
+            lines.append(f"        icon = {lua_string(tab['icon'])},")
             lines.append("        talents = {")
             lines += [f"          {_talent_line(t)}," for t in tab["talents"]]
             lines.append("        } },")

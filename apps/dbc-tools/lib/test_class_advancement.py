@@ -7,6 +7,9 @@ parser and check it.
 Run directly:
 
     apps/dbc-tools/.venv/bin/python3 apps/dbc-tools/lib/test_class_advancement.py
+
+An optional check loads the generated file in a real Lua 5.1 when the `lupa` package is importable
+(`pip install lupa` into a venv); it is skipped otherwise.
 """
 
 from __future__ import annotations
@@ -21,6 +24,20 @@ sys.path.insert(0, str(TOOL_ROOT))
 
 import write_class_advancement as W  # noqa: E402
 from lib import state  # noqa: E402
+
+try:
+    from lupa import lua51 as _lua51  # noqa: E402
+except ImportError:  # optional, see the module docstring
+    _lua51 = None
+
+# TalentTab ids in the order the stock talent frame shows them (OrderIndex), per class.
+TAB_ORDER = {
+    "WARRIOR": [161, 164, 163], "PALADIN": [382, 383, 381], "HUNTER": [361, 363, 362], "ROGUE": [182, 181, 183],
+    "PRIEST": [201, 202, 203], "DEATHKNIGHT": [398, 399, 400], "SHAMAN": [261, 263, 262], "MAGE": [81, 41, 61],
+    "WARLOCK": [302, 303, 301], "DRUID": [283, 281, 282],
+}
+ALLIANCE_RACES = 0x44D  # human, dwarf, night elf, gnome, draenei
+HORDE_RACES = 0x2B2  # orc, undead, tauren, troll, blood elf
 
 _TOKEN = re.compile(r'\s*(?:(?P<num>-?\d+)|(?P<name>[A-Za-z_]\w*)|"(?P<str>(?:[^"\\]|\\.)*)"|(?P<sym>[{}\[\]=,]))')
 _ESCAPE = re.compile(r"\\(\d{3}|.)")
@@ -103,13 +120,15 @@ class RulesTest(unittest.TestCase):
         table = {}
         for token, class_id in W.CLASSES:
             table[token] = {"classId": class_id, "tabs": [
-                {"id": 1, "name": 'Arc"ane', "art": "MageArcane", "skillLine": 237, "talents": [
+                {"id": 1, "name": 'Arc"ane', "art": "MageArcane", "skillLine": 237,
+                 "icon": "Interface\\Icons\\Spell_Holy_MagicalSentry", "talents": [
                     {"id": 74, "row": 0, "col": 1, "ranks": [11210, 12592]},
                     {"id": 75, "row": 2, "col": 0, "ranks": [11213], "req": 74, "reqRank": 1},
                 ]},
             ], "abilities": [
                 {"spell": 133, "section": 2, "level": 1, "how": "start"},
                 {"spell": 11366, "section": 2, "how": "talent", "talent": 36},
+                {"spell": 2825, "section": 1, "level": 60, "how": "trainer", "races": 178},
             ]}
         text = W.render_lua(table)
         self.assertNotIn("\r", text)
@@ -123,6 +142,9 @@ class RulesTest(unittest.TestCase):
         self.assertEqual(mage["tabs"][0]["talents"][1], {"id": 75, "row": 2, "col": 0, "ranks": [11213],
                                                          "req": 74, "reqRank": 1})
         self.assertEqual(mage["abilities"][1], {"spell": 11366, "section": 2, "how": "talent", "talent": 36})
+        self.assertEqual(mage["abilities"][2]["races"], 178)
+        self.assertEqual(mage["tabs"][0]["icon"], "Interface\\Icons\\Spell_Holy_MagicalSentry")
+        self.assertIn('icon = "Interface\\\\Icons\\\\Spell_Holy_MagicalSentry"', text)
 
     def test_parse_rejects_what_the_generator_must_not_write(self):
         with self.assertRaises(ValueError):
@@ -195,8 +217,9 @@ class TableTest(unittest.TestCase):
             for tab in entry["tabs"]:
                 self.assertTrue(tab["name"] and tab["art"], tab)
                 self.assertIn(tab["skillLine"], self.inp.skill_lines)
-            order = [int(self.inp.tabs[tab["id"]]["OrderIndex"]) for tab in entry["tabs"]]
-            self.assertEqual(order, sorted(order), token)
+            self.assertEqual([tab["id"] for tab in entry["tabs"]], TAB_ORDER[token], token)
+            for tab in entry["tabs"]:
+                self.assertTrue(tab["icon"].startswith("Interface\\Icons\\"), tab)
             self.assertEqual(len({tab["skillLine"] for tab in entry["tabs"]}), 3, token)
 
     def test_talents(self):
@@ -249,8 +272,8 @@ class TableTest(unittest.TestCase):
         for token, entry in self.table.items():
             for a in entry["abilities"]:
                 self.assertIsNone(W.ability_exclusion(self.inp.spells[a["spell"]]), f"{token}: {a}")
-                if a["how"] != "trainer":
-                    self.assertNotIn(a["spell"], self.inp.retired_spells, f"{token}: {a}")
+                if a["how"] == "talent":
+                    self.assertFalse(W.is_passive(self.inp.spells[a["spell"]]), f"{token}: {a}")
 
     def test_spot_checks(self):
         def ability(token: str, spell: int) -> dict:
@@ -260,12 +283,45 @@ class TableTest(unittest.TestCase):
         self.assertEqual(ability("DEATHKNIGHT", 203001), {"spell": 203001, "section": 3, "level": 12, "how": "trainer"})
         self.assertEqual(ability("MAGE", 133), {"spell": 133, "section": 2, "level": 1, "how": "start"})
         self.assertEqual(ability("MAGE", 11366), {"spell": 11366, "section": 2, "how": "talent", "talent": 29})
+        # a retired stock talent's spell that became baseline stays (SkillLineAbility 19182, AcquireMethod 2)
+        self.assertEqual(ability("DEATHKNIGHT", 55050), {"spell": 55050, "section": 1, "level": 1, "how": "start"})
         self.assertEqual([tab["name"] for tab in self.table["MAGE"]["tabs"]], ["Arcane", "Fire", "Frost"])
         self.assertEqual([tab["skillLine"] for tab in self.table["MAGE"]["tabs"]], [237, 8, 6])
         self.assertEqual(self.table["MAGE"]["tabs"][0]["art"], "MageArcane")
         talents = {t["id"]: t for tab in self.table["MAGE"]["tabs"] for t in tab["talents"]}
         self.assertEqual(talents[1849]["req"], 1735)  # a stock DependsOn: Fire row 8 needs Dragon's Breath
         self.assertEqual(talents[1849]["reqRank"], 1)
+
+    def test_faction_abilities_carry_race_masks(self):
+        raced = [(token, a) for token, entry in self.table.items() for a in entry["abilities"] if "races" in a]
+        self.assertEqual(len(raced), 26)  # 24 Mage teleports and portals, Bloodlust, Heroism
+        self.assertEqual({token for token, _a in raced}, {"MAGE", "SHAMAN"})
+        for token, a in raced:
+            self.assertTrue(a["races"] & W.PLAYABLE_RACES != W.PLAYABLE_RACES, a)
+            self.assertTrue(a["races"] & ~ALLIANCE_RACES == 0 or a["races"] & ~HORDE_RACES == 0, f"{token}: {a}")
+        by_name: dict[tuple[str, str], list[int]] = {}
+        for token, a in raced:
+            by_name.setdefault((token, W._spell_name(self.inp, a["spell"])), []).append(a["races"])
+        pairs = {key: masks for key, masks in by_name.items() if len(masks) > 1}
+        self.assertIn(("MAGE", "Teleport: Shattrath"), pairs)
+        self.assertIn(("MAGE", "Portal: Shattrath"), pairs)
+        for key, masks in pairs.items():
+            for i, first in enumerate(masks):
+                for second in masks[i + 1:]:
+                    self.assertEqual(first & second, 0, f"{key}: masks {first} and {second} overlap")
+        mage = {a["spell"]: a.get("races") for a in self.table["MAGE"]["abilities"]}
+        self.assertTrue(mage[3561] & ALLIANCE_RACES and not mage[3561] & HORDE_RACES)  # Teleport: Stormwind
+        self.assertTrue(mage[3567] & HORDE_RACES and not mage[3567] & ALLIANCE_RACES)  # Teleport: Orgrimmar
+        self.assertIsNone(mage[116])  # Frostbolt is for everyone
+
+    @unittest.skipIf(_lua51 is None, "lupa (Lua 5.1) is not installed")
+    def test_file_loads_in_lua_51(self):
+        lua = _lua51.LuaRuntime()
+        lua.execute(self.text)
+        advancement = lua.globals().CLASS_ADVANCEMENT
+        self.assertEqual(advancement.MAGE.classId, 8)
+        self.assertEqual(len(advancement.MAGE.abilities), len(self.table["MAGE"]["abilities"]))
+        self.assertEqual(lua.globals().CLASS_ADVANCEMENT_ORDER[10], "DRUID")
 
 
 if __name__ == "__main__":
