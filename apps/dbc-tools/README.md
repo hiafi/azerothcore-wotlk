@@ -1246,7 +1246,8 @@ create its stock scroll item, whose new use spell (209000 + n) applies the encha
 ("(Tank)", "(Healer)"; `CraftedItem.recipe_name`). `write_crafting_categories.py` writes the client's trade skill header table
 (`client/ui-overrides/Interface/FrameXML/CraftingCategories.lua`, `--out` for another checkout): every set recipe under
 its set's header (`crafting_sets_data.CATEGORY_NAME`, "Wool" ... "Runecloth", then the raid tiers), every enchant
-item recipe under its slot and the Missives under "Missives", read by the patch-X override `TradeSkillCategories.lua`. Tests: `lib/test_crafting_sets.py`, `lib/test_crafting_consumables.py`,
+item recipe under its slot, the Missives under "Missives" and the Alchemy potions and elixirs under six headers
+(`lib/crafting_alchemy_categories_data.py`), read by the patch-X override `TradeSkillCategories.lua`. Tests: `lib/test_crafting_sets.py`, `lib/test_crafting_consumables.py`,
 `lib/test_crafting_categories.py`, `lib/test_crafting_utility_enchants.py`.
 
 ## Known limitations

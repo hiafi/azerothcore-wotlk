@@ -7,13 +7,16 @@ patch-X by `build_patch_x.py`). The hand-written `TradeSkillCategories.lua` next
 - the crafted set recipes under one header per set, in level order (Wool first, Runecloth last, then the raid sets);
 - the enchant item recipes (C6 basic enchants, tinkers and buckle, the C7 premium enchants and utility scrolls) under
   one header per slot ("Weapon", "Cloak", "Boots", ...), after the sets;
-- the Missives under "Missives" (user 2026-11-12).
+- the Missives under "Missives" (user 2026-11-12);
+- the Alchemy potions and elixirs under Health Potions, Mana Potions, Battle Potions, Battle Elixirs, Guardian Elixirs
+  and Utility Potions and Elixirs (`lib/crafting_alchemy_categories_data.py`, user 2026-11-13).
 
 Table: `CRAFTING_CATEGORIES[recipe spell] = { header, order }`. The header is `crafting_sets_data.category_name()`; the
 order sorts the sets by level, then inside a set the profession's own armor (by armor type, archetype and slot), the
 armor pieces it makes for other armor types (Leatherworking waists, Blacksmithing wrists), then the other items. A
 header takes the lowest order of its recipes, so the headers follow the sets. The slot headers come after (order
-from 1001: the slot order below, then leveling, endgame, premium, utility, then the name), then Missives (2001).
+from 1001: the slot order below, then leveling, endgame, premium, utility, then the name), then Missives (2001),
+then the Alchemy headers (3001, in their data order).
 
 The file is deterministic (LF, sorted by spell id): a rerun with unchanged data writes nothing.
 `lib/test_crafting_categories.py` checks the table.
@@ -30,6 +33,7 @@ from pathlib import Path
 TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
+from lib import crafting_alchemy_categories_data as A  # noqa: E402
 from lib import crafting_consumables_data as C  # noqa: E402
 from lib import crafting_enchants_data as E  # noqa: E402
 from lib import crafting_sets_data as T  # noqa: E402
@@ -44,7 +48,7 @@ FORBIDDEN = '|"\\'
 SLOT_ORDER = ("Weapon", "Two-Hand Weapon", "Shield", "Off-Hand", "Ranged", "Head", "Shoulder", "Cloak", "Chest",
               "Bracer", "Gloves", "Waist", "Legs", "Boots", "Jewelry")
 SLOT_HEADER = {"2H Weapon": "Two-Hand Weapon", "Hands": "Gloves"}
-SLOT_ORDER_BASE, MISSIVE_ORDER_BASE = 1001, 2001
+SLOT_ORDER_BASE, MISSIVE_ORDER_BASE, ALCHEMY_ORDER_BASE = 1001, 2001, 3001
 MISSIVE_HEADER = "Missives"
 # The Missive recipes (source/world/crafting_suffixes.py MISSIVES; the test reads them from there).
 MISSIVE_RECIPES = tuple(range(207010, 207019))
@@ -97,13 +101,16 @@ def enchant_recipes() -> list[tuple[int, str, str, str]]:
 
 
 def all_categories() -> dict[int, tuple[str, int]]:
-    """The whole table: the set recipes, the enchant item recipes by slot, the Missives."""
+    """The whole table: the set recipes, the enchant item recipes by slot, the Missives, the Alchemy headers."""
     out = categories()
     rows = sorted(enchant_recipes(), key=lambda r: (SLOT_ORDER.index(r[1]), TIER_ORDER[r[2]], r[3], r[0]))
     for order, (spell, header, _tier, _name) in enumerate(rows, start=SLOT_ORDER_BASE):
         out[spell] = (header, order)
     for order, spell in enumerate(MISSIVE_RECIPES, start=MISSIVE_ORDER_BASE):
         out[spell] = (MISSIVE_HEADER, order)
+    alchemy = [(spell, header) for header, recipes in A.HEADERS.items() for spell, _name in recipes]
+    for order, (spell, header) in enumerate(alchemy, start=ALCHEMY_ORDER_BASE):
+        out[spell] = (header, order)
     return out
 
 
