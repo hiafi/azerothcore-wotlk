@@ -202,6 +202,12 @@ bool SimBot::Create(Player* bot, std::vector<Creature*> const& targets, std::str
         }
     }
 
+    // DpsSim.DisableSpells, after every spell, talent and the pet are in place. A spell neither the actor nor its pet
+    // knows (a typo, a triggered spell, another family's) fails the job rather than producing a baseline run named
+    // ".no<id>".
+    if (!RemoveDisabledSpells(bot, true))
+        return false;
+
     // Build the PlayerbotAI through PlayerbotsMgr::AddPlayerbotData() - the same entry point a
     // real bot login uses - rather than `new PlayerbotAI(bot)` directly, and keep only a borrowed
     // pointer to it (~SimBot() still owns cleanup via delete, same as before; see its comment).
@@ -310,7 +316,46 @@ bool SimBot::EnsurePet()
     }
 
     LOG_WARN("server.dpssim", "mod-dpssim: the hunter pet is gone at the start of the iteration - taming it again.");
-    return TameSimPet(bot, _petCreatureEntry) != nullptr;
+    if (!TameSimPet(bot, _petCreatureEntry))
+        return false;
+
+    // A new pet learned its family's spells again (an actor spell is already out of the book, so nothing is required
+    // to be known here)
+    return RemoveDisabledSpells(bot, false);
+}
+
+bool SimBot::RemoveDisabledSpells(Player* bot, bool mustBeKnown)
+{
+    bool allKnown = true;
+    for (uint32 spellId : _disabledSpells)
+    {
+        bool removed = false;
+        if (bot->HasSpell(spellId))
+        {
+            bot->removeSpell(spellId, SPEC_MASK_ALL, false);
+            removed = true;
+        }
+
+        if (Pet* pet = bot->GetPet())
+            if (pet->HasSpell(spellId))
+            {
+                // removeSpell also takes it off the pet bar and out of the autocast list
+                pet->removeSpell(spellId, false);
+                removed = true;
+            }
+
+        if (removed)
+            LOG_INFO("server.dpssim", "mod-dpssim: DpsSim.DisableSpells - spell {} taken out of the spellbook.",
+                spellId);
+        else if (mustBeKnown)
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.DisableSpells - neither the actor nor its pet knows spell "
+                "{} (a typo, a spell another spell triggers, or another family's) - aborting.", spellId);
+            allKnown = false;
+        }
+    }
+
+    return allKnown;
 }
 
 void SimBot::UpdateAI(uint32 diff)

@@ -21,11 +21,13 @@
 #include "Log.h"
 #include "Player.h"
 #include "SimActor.h"
+#include "SimBuffSet.h"
 #include "SimDaemon.h"
 #include "SimMechanicsConfig.h"
 #include "SimProfile.h"
 #include "SimReport.h"
 #include "SimTests.h"
+#include "SpellMgr.h"
 #include "StringFormat.h"
 #include "Timer.h"
 #include "Util.h"
@@ -482,6 +484,131 @@ void DpsSimWorldScript::OnDpsSimRun()
         }
         else
             config.PlayerbotTalents = sConfigMgr->GetOption<std::string>("DpsSim.PlayerbotTalents", "");
+
+        // DpsSim.PetCreatureEntry: the hunter's pet for this run, over the profile's PetCreatureEntry (run-sim.sh sets
+        // it from DPSSIM_PET_ENTRY / DPSSIM_PET_FAMILY, so one profile sims every family). 0 = the profile's.
+        if (uint32 const petEntry = sConfigMgr->GetOption<uint32>("DpsSim.PetCreatureEntry", 0))
+        {
+            if (config.ActorClass != CLASS_HUNTER)
+            {
+                LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.PetCreatureEntry {} is set but the actor is not a "
+                    "hunter - aborting DpsSim.RunPlayerbot job.", petEntry);
+                ready = false;
+            }
+            else
+            {
+                LOG_INFO("server.dpssim", "mod-dpssim: DpsSim.PetCreatureEntry {} replaces the profile's pet {}.",
+                    petEntry, config.PetCreatureEntry);
+                config.PetCreatureEntry = petEntry;
+            }
+        }
+
+        // DpsSim.BuffSet (self_only | full_raid) and the full_raid lists, DPS mode only (SimBuffSet.h)
+        {
+            std::string error;
+            SimBuffSet::Config& buffSet = config.BuffSet;
+            if (!SimBuffSet::ParseSet(sConfigMgr->GetOption<std::string>("DpsSim.BuffSet", "self_only"),
+                buffSet.BuffSet, error))
+                error = "DpsSim.BuffSet: " + error;
+            else if (buffSet.BuffSet == SimBuffSet::Set::FullRaid)
+            {
+                if (config.RunMode != SimDaemon::Mode::Dps)
+                    error = "DpsSim.BuffSet full_raid is for DPS runs only (not heal, tank or mechanics)";
+                // The sim adds every baseline aura with the actor as its caster, so a class that owns one of these
+                // spells would see the aura as its own (a warrior's Thunder Clap, a paladin's Kings: its bot skips
+                // the cast, or the two replace each other every second). The hunter owns none of them. Other
+                // classes need a neutral caster first, see the README.
+                else if (config.ActorClass != CLASS_HUNTER)
+                    error = "DpsSim.BuffSet full_raid is for hunter actors only: the sim adds the raid auras with the "
+                        "actor as their caster, which breaks a class that owns one of those spells";
+
+                struct ListKey
+                {
+                    char const* Key;
+                    char const* Default;
+                    std::vector<SimBuffSet::AuraSpec>* Out;
+                };
+                ListKey const lists[] = {
+                    {"DpsSim.RaidBuffs", SimBuffSet::DEFAULT_RAID_BUFFS, &buffSet.Buffs},
+                    {"DpsSim.RaidDebuffs", SimBuffSet::DEFAULT_RAID_DEBUFFS, &buffSet.Debuffs},
+                    {"DpsSim.RaidPullBuffs", SimBuffSet::DEFAULT_RAID_PULL_BUFFS, &buffSet.PullBuffs}};
+                for (ListKey const& list : lists)
+                {
+                    if (!error.empty())
+                        break;
+
+                    std::string listError;
+                    if (!SimBuffSet::ParseAuraList(sConfigMgr->GetOption<std::string>(list.Key, list.Default),
+                        *list.Out, listError) || !SimBuffSet::Validate(*list.Out, listError))
+                        error = Acore::StringFormat("{}: {}", list.Key, listError);
+                }
+            }
+
+            if (error.empty())
+            {
+                LOG_INFO("server.dpssim", "mod-dpssim: buff set {}.", SimBuffSet::SetName(buffSet.BuffSet));
+                if (buffSet.BuffSet == SimBuffSet::Set::FullRaid)
+                {
+                    LOG_INFO("server.dpssim", "mod-dpssim:   raid buffs (actor and pet): {}",
+                        SimBuffSet::Describe(buffSet.Buffs));
+                    LOG_INFO("server.dpssim", "mod-dpssim:   raid debuffs (every dummy): {}",
+                        SimBuffSet::Describe(buffSet.Debuffs));
+                    LOG_INFO("server.dpssim", "mod-dpssim:   at the pull (actor and pet): {}",
+                        SimBuffSet::Describe(buffSet.PullBuffs));
+                }
+            }
+            else
+            {
+                LOG_ERROR("server.dpssim", "mod-dpssim: {} - aborting DpsSim.RunPlayerbot job.", error);
+                ready = false;
+            }
+        }
+
+        // DpsSim.DisableSpells = "24604, 201716": spells taken out of the actor's and its pet's spellbooks (SimBot)
+        // DpsSim.DummyImmuneAuras = "201665": spell ids every dummy is immune to (SimDaemon.cpp ApplyDummyImmunity)
+        {
+            struct IdKey
+            {
+                char const* Key;
+                std::vector<uint32>* Out;
+                bool MustExist;
+            };
+            IdKey const idKeys[] = {{"DpsSim.DisableSpells", &config.DisableSpells, false},
+                {"DpsSim.DummyImmuneAuras", &config.DummyImmuneAuras, true}};
+            for (IdKey const& idKey : idKeys)
+            {
+                std::vector<SimBuffSet::AuraSpec> ids;
+                std::string error;
+                std::string const text = sConfigMgr->GetOption<std::string>(idKey.Key, "");
+                // plain ids only: ParseAuraList's ':' and '@' suffixes mean nothing here
+                if (text.find_first_of(":@") != std::string::npos || !SimBuffSet::ParseAuraList(text, ids, error))
+                {
+                    LOG_ERROR("server.dpssim", "mod-dpssim: {} '{}' is not a list of spell ids - aborting "
+                        "DpsSim.RunPlayerbot job.", idKey.Key, text);
+                    ready = false;
+                    continue;
+                }
+
+                if (idKey.MustExist && !ids.empty() && config.RunMode != SimDaemon::Mode::Dps)
+                {
+                    LOG_ERROR("server.dpssim", "mod-dpssim: {} is for DPS runs only - aborting DpsSim.RunPlayerbot "
+                        "job.", idKey.Key);
+                    ready = false;
+                }
+
+                for (SimBuffSet::AuraSpec const& id : ids)
+                {
+                    if (idKey.MustExist && !sSpellMgr->GetSpellInfo(id.SpellId))
+                    {
+                        LOG_ERROR("server.dpssim", "mod-dpssim: {}: spell {} does not exist - aborting "
+                            "DpsSim.RunPlayerbot job.", idKey.Key, id.SpellId);
+                        ready = false;
+                    }
+
+                    idKey.Out->push_back(id.SpellId);
+                }
+            }
+        }
 
         // DpsSim.Iterations - added 2026-09-13 alongside SimDaemon::RunPlayerbotBatch(). 1 (the
         // default) keeps today's exact single-run behavior (SimDaemon::RunPlayerbot(), unchanged,

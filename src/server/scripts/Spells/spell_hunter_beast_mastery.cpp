@@ -27,6 +27,7 @@
 #include "HunterMechanics.h"
 #include "Log.h"
 #include "Map.h"
+#include "ObjectAccessor.h"
 #include "ObjectMgr.h"
 #include "Pet.h"
 #include "Player.h"
@@ -40,10 +41,12 @@
 #include "TemporarySummon.h"
 #include "Unit.h"
 #include "WorldPacket.h"
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <initializer_list>
 #include <list>
+#include <unordered_map>
 #include <vector>
 
 namespace
@@ -108,15 +111,12 @@ class spell_hun_command : public SpellScript
 {
     PrepareSpellScript(spell_hun_command);
 
+    // hunter-pet-families F0 (CORE-AUDIT 1.3): only the two presses. A commanded spell that is missing is logged at
+    // the press (CheckCast) and fails for that family alone; listing every commanded id here would unload Command
+    // I/II for every hunter when one family's spell is not deployed.
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ HunterData::SPELL_LUNGE_COMMAND, HunterData::SPELL_RIP_THROAT_COMMAND,
-            HunterData::SPELL_RAKE_COMMAND, HunterData::SPELL_POUNCE_COMMAND, HunterData::SPELL_SAVAGE_REND_COMMAND,
-            HunterData::SPELL_LEAPING_TEAR_COMMAND, HunterData::SPELL_SWIPE_COMMAND, HunterData::SPELL_MAUL_COMMAND,
-            HunterData::SPELL_VENOM_BITE_COMMAND, HunterData::SPELL_VENOMOUS_CLOUD_COMMAND,
-            HunterData::SPELL_SAVAGE_STRIKES_COMMAND, HunterData::SPELL_SAVAGE_POUNCE_COMMAND,
-            HunterData::SPELL_THRASH_COMMAND, HunterData::SPELL_CRUSHING_BLOW_COMMAND,
-            HunterData::SPELL_FEINT_STRIKE_COMMAND, HunterData::SPELL_AMBUSH_COMMAND });
+        return ValidateSpellInfo({ HunterData::SPELL_COMMAND_I, HunterData::SPELL_COMMAND_II });
     }
 
     uint8 GetSlot()
@@ -167,9 +167,17 @@ class spell_hun_command : public SpellScript
         if (!pet->IsValidAttackTarget(target))
             return;
 
+        // hunter-pet-families F0 (FEASIBILITY 10c, note 6): turn the pet to the target first. A triggered cast never
+        // sets facing, so a cone would point wherever the pet faced (after a Kill Command teleport, a charge, or a
+        // target that is not its victim). SetOrientation is the instant server-side turn the cone reads;
+        // SetFacingToObject tells the clients. A channel also keeps facing its target (GetCommandCastFlags).
+        pet->SetOrientation(pet->GetAngle(target));
+        pet->SetFacingToObject(target);
+
         // S1a-5: the press passed CheckPetCanAct, but the triggered pet cast re-checks range strictly (melee reach),
         // so it can still fail at the edge of melee range; log it where the playtest can see it (L17)
-        SpellCastResult const result = pet->CastSpell(target, cmd, TRIGGERED_FULL_MASK);
+        SpellCastResult const result =
+            pet->CastSpell(target, cmd, Hunter::GetCommandCastFlags(sSpellMgr->GetSpellInfo(cmd)));
         if (result != SPELL_CAST_OK)
             LOG_ERROR("scripts.hunter", "Command {}: pet {} failed to cast commanded spell {} on {} (result {})",
                 GetSpellInfo()->Id, pet->GetEntry(), cmd, target->GetGUID().ToString(), uint32(result));
@@ -212,23 +220,284 @@ class spell_hun_command_splash : public SpellScript
     }
 };
 
-// 201726 Swipe (command), eff1 - the 8 yd splash takes a share of the primary's amount (eff0 is untouched)
-class spell_hun_swipe_command_splash : public SpellScript
+// hunter-pet-families F0 (PLAN §5.2 `falloff`, ruling 6): every AoE command. Each target other than the primary (the
+// command's explicit target) takes COMMAND_AOE_FALLOFF_PCT of its hit; with EffectChainAmplitude 1.0 that is also a
+// flat share per chain jump. Bound to Swipe 201726 (was spell_hun_swipe_command_splash); rule 17 exceptions (Leaping
+// Tear, Venomous Cloud, Bat, Sporebat) are not bound. Direct damage only: an AoE DoT carries its own rate.
+// hunter-pet-families F1 review MAJOR 1: a cone selects by distance from the pet (radius plus the target's bounding
+// radius, no combat reach), so a large target the pet melees from its reach (Onyxia: 18 yd) falls outside an 8 yd
+// cone. The primary already passed the command's melee range check, so every cone effect gets it back.
+// hunter-pet-families F2: the same for an area around the pet (Shell Spin, Thunderstomp, Burrow Attack's pulses), and
+// only while the primary is within the spell's largest radius of the pet, reach included: a pulse may land seconds
+// after the press, when the primary has moved away.
+class spell_hun_command_aoe_falloff : public SpellScript
 {
-    PrepareSpellScript(spell_hun_swipe_command_splash);
+    PrepareSpellScript(spell_hun_command_aoe_falloff);
 
-    void HandleSplashDamage(SpellEffIndex /*effIndex*/)
+    // The hit damage of a target accumulates over the spell's damage effects, so only the part each effect adds is
+    // scaled (a target two effects reach is not halved twice).
+    void HandleDamage(SpellEffIndex /*effIndex*/)
     {
         if (!GetOwningHunter(GetCaster()))
             return;
 
-        SetHitDamage(CalculatePct(GetHitDamage(), HunterData::SWIPE_SPLASH_PCT));
+        Unit* target = GetHitUnit();
+        Unit* primary = GetExplTargetUnit();
+        if (!primary || !target || target == primary)
+            return;
+
+        int32& scaled = _scaledSoFar[target->GetGUID()];
+        int32 const added = std::max(GetHitDamage() - scaled, 0);
+        scaled += CalculatePct(added, HunterData::COMMAND_AOE_FALLOFF_PCT);
+        SetHitDamage(scaled);
+    }
+
+    void AddPrimaryToArea(std::list<WorldObject*>& targets)
+    {
+        Unit* caster = GetCaster();
+        Unit* primary = GetExplTargetUnit();
+        if (!primary || !GetOwningHunter(caster) || !primary->IsAlive() || !caster->IsValidAttackTarget(primary))
+            return;
+
+        if (std::find(targets.begin(), targets.end(), primary) != targets.end())
+            return;
+
+        float radius = 0.0f;
+        for (SpellEffectInfo const& effect : GetSpellInfo()->GetEffects())
+            if (effect.IsEffect() && effect.HasRadius())
+                radius = std::max(radius, effect.CalcRadius(caster));
+
+        if (caster->IsWithinCombatRange(primary, radius))
+            targets.push_back(primary);
+    }
+
+    std::unordered_map<ObjectGuid, int32> _scaledSoFar;
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_hun_command_aoe_falloff::HandleDamage, EFFECT_ALL,
+            SPELL_EFFECT_SCHOOL_DAMAGE);
+
+        // Only for the cone and caster-area target types the bound spell uses (an unmatched hook is a boot error), so
+        // every F2/F3 cone or pet-centered command inherits it. An area around the target (Swipe, Bubble Burst) has
+        // the primary at its center and needs none.
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(m_scriptSpellId);
+        if (!spellInfo)
+            return;
+
+        for (Targets area : { TARGET_UNIT_CONE_ENEMY_24, TARGET_UNIT_CONE_ENEMY_54, TARGET_UNIT_CONE_ENEMY_104,
+                 TARGET_UNIT_SRC_AREA_ENEMY })
+        {
+            bool used = false;
+            for (SpellEffectInfo const& effect : spellInfo->GetEffects())
+                if (effect.IsEffect() && (effect.TargetA.GetTarget() == area || effect.TargetB.GetTarget() == area))
+                    used = true;
+
+            if (used)
+                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(
+                    spell_hun_command_aoe_falloff::AddPrimaryToArea, EFFECT_ALL, area);
+        }
+    }
+};
+
+// hunter-pet-families F1 (PLAN §5.2 `execute`, FEASIBILITY 10g): a command that hits harder on a wounded target.
+// Carrion Feast. Once per target after every effect, so a spell with two damage effects is scaled once.
+class spell_hun_command_execute : public SpellScript
+{
+    PrepareSpellScript(spell_hun_command_execute);
+
+    void HandleHit()
+    {
+        Unit* target = GetHitUnit();
+        int32 const damage = GetHitDamage();
+        if (!GetOwningHunter(GetCaster()) || !target || damage <= 0 ||
+            !target->HealthBelowPct(HunterData::COMMAND_EXECUTE_HEALTH_PCT))
+            return;
+
+        SetHitDamage(damage + CalculatePct(damage, HunterData::COMMAND_EXECUTE_BONUS_PCT));
     }
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_hun_swipe_command_splash::HandleSplashDamage, EFFECT_1,
-            SPELL_EFFECT_SCHOOL_DAMAGE);
+        OnHit += SpellHitFn(spell_hun_command_execute::HandleHit);
+    }
+};
+
+// hunter-pet-families F1 (PLAN §5.2 `multihit` / `twohit`, FEASIBILITY 10f): Cackling Frenzy, Swarm, Twin Bite. The
+// command itself is the first strike; its DUMMY effect names the strike helper (TriggerSpell) and the follow-up count
+// (its value). The pet casts the follow-ups at the target COMMAND_MULTIHIT_INTERVAL_MS apart (the Cluster Bombs
+// pattern), scheduled from the cast, so each strike rolls its own hit whatever the first did (review MINOR 1). The
+// strikes are command helpers (d2 b22, no kit slot), so Beast Cleave never copies them. A strike is skipped while the
+// pet is stunned, feared or confused.
+class spell_hun_command_multihit : public SpellScript
+{
+    PrepareSpellScript(spell_hun_command_multihit);
+
+    bool Validate(SpellInfo const* spellInfo) override
+    {
+        for (SpellEffectInfo const& effect : spellInfo->GetEffects())
+            if (effect.Effect == SPELL_EFFECT_DUMMY && effect.TriggerSpell)
+                return ValidateSpellInfo({ effect.TriggerSpell });
+
+        return false;
+    }
+
+    void HandleFollowUps()
+    {
+        Unit* pet = GetCaster();
+        Unit* target = GetExplTargetUnit();
+        if (!pet || !target || !GetOwningHunter(pet))
+            return;
+
+        uint32 strike = 0;
+        int32 count = 0;
+        for (SpellEffectInfo const& effect : GetSpellInfo()->GetEffects())
+            if (effect.Effect == SPELL_EFFECT_DUMMY && effect.TriggerSpell)
+            {
+                strike = effect.TriggerSpell;
+                count = effect.CalcValue(pet);
+                break;
+            }
+
+        if (!strike || count <= 0)
+            return;
+
+        ObjectGuid const targetGuid = target->GetGUID();
+        for (int32 i = 1; i <= count; ++i)
+        {
+            // The event lives in the pet's own event list, which is emptied when the pet leaves the map, so `pet` is
+            // valid whenever it runs; the target is looked up again by GUID.
+            pet->m_Events.AddEventAtOffset([pet, targetGuid, strike]()
+            {
+                if (!pet->IsInWorld() || !pet->IsAlive() || pet->HasUnitState(UNIT_STATE_CONTROLLED))
+                    return;
+
+                Unit* victim = ObjectAccessor::GetUnit(*pet, targetGuid);
+                if (!victim || !victim->IsAlive() || !pet->IsValidAttackTarget(victim))
+                    return;
+
+                pet->CastSpell(victim, strike, TRIGGERED_FULL_MASK);
+            }, Milliseconds(HunterData::COMMAND_MULTIHIT_INTERVAL_MS * i));
+        }
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_hun_command_multihit::HandleFollowUps);
+    }
+};
+
+// hunter-pet-families F2 (PLAN §5.2 `refresh`): Deadly Sting. The command's DUMMY effect names the aura to refresh
+// (TriggerSpell): the pet's own copy of it on the target goes back to its full duration, ticks rolled on (the DoT
+// rolling of Aura::RefreshTimersWithMods). Nothing happens when the target does not carry it.
+class spell_hun_command_refresh : public SpellScript
+{
+    PrepareSpellScript(spell_hun_command_refresh);
+
+    bool Validate(SpellInfo const* spellInfo) override
+    {
+        for (SpellEffectInfo const& effect : spellInfo->GetEffects())
+            if (effect.Effect == SPELL_EFFECT_DUMMY && effect.TriggerSpell)
+                return ValidateSpellInfo({ effect.TriggerSpell });
+
+        return false;
+    }
+
+    void HandleRefresh(SpellEffIndex effIndex)
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        uint32 const refreshed = GetSpellInfo()->Effects[effIndex].TriggerSpell;
+        if (!caster || !target || !refreshed || !GetOwningHunter(caster))
+            return;
+
+        if (Aura* aura = target->GetAura(refreshed, caster->GetGUID()))
+            aura->RefreshTimersWithMods();
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_hun_command_refresh::HandleRefresh, EFFECT_ALL, SPELL_EFFECT_DUMMY);
+    }
+};
+
+// hunter-pet-families F2 (PLAN §5.2 `pulse`): Burrow Attack. The command puts a periodic trigger aura on the pet (not a
+// channel: the pet keeps attacking) and the spell script stashes the command's target in the aura script when the aura
+// lands. Every tick, the pet casts the pulse (the aura's TriggerSpell, an area around the pet with a DUMMY anchor) at
+// that primary, so spell_hun_command_aoe_falloff knows which target takes the full hit. A primary that died, left or
+// turned friendly falls back to the pet's victim; with neither the pulse is skipped, and so is a pulse while the pet
+// is controlled or pacified.
+class spell_hun_command_pulse_aura : public AuraScript
+{
+    PrepareAuraScript(spell_hun_command_pulse_aura);
+
+    bool Validate(SpellInfo const* spellInfo) override
+    {
+        for (SpellEffectInfo const& effect : spellInfo->GetEffects())
+            if (effect.ApplyAuraName == SPELL_AURA_PERIODIC_TRIGGER_SPELL && effect.TriggerSpell)
+                return ValidateSpellInfo({ effect.TriggerSpell });
+
+        return false;
+    }
+
+public:
+    void SetPrimary(ObjectGuid primary)
+    {
+        _primary = primary;
+    }
+
+private:
+    void HandlePulse(AuraEffect const* aurEff)
+    {
+        PreventDefaultAction();
+
+        // F2 review NIT 1: a pacified pet (Worm's Burrow) does not erupt, so Burrow's threat drop holds.
+        Unit* pet = GetTarget();
+        if (!pet || !pet->IsAlive() || pet->HasUnitState(UNIT_STATE_CONTROLLED) ||
+            pet->HasUnitFlag(UNIT_FLAG_PACIFIED) || !GetOwningHunter(pet))
+            return;
+
+        Unit* primary = _primary.IsEmpty() ? nullptr : ObjectAccessor::GetUnit(*pet, _primary);
+        if (!primary || !primary->IsAlive() || !pet->IsValidAttackTarget(primary))
+            primary = pet->GetVictim();
+
+        if (!primary || !primary->IsAlive() || !pet->IsValidAttackTarget(primary))
+            return;
+
+        pet->CastSpell(primary, aurEff->GetSpellInfo()->Effects[aurEff->GetEffIndex()].TriggerSpell,
+            TRIGGERED_FULL_MASK, nullptr, aurEff);
+    }
+
+    ObjectGuid _primary;
+
+    void Register() override
+    {
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_hun_command_pulse_aura::HandlePulse, EFFECT_ALL,
+            SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+    }
+};
+
+class spell_hun_command_pulse : public SpellScript
+{
+    PrepareSpellScript(spell_hun_command_pulse);
+
+    // The aura lands on the pet (TargetA 1); the command's target is the explicit target the DUMMY anchor keeps.
+    void HandleStash()
+    {
+        Unit* pet = GetCaster();
+        Unit* primary = GetExplTargetUnit();
+        if (!pet || !primary || GetHitUnit() != pet)
+            return;
+
+        if (Aura* aura = GetHitAura())
+            if (spell_hun_command_pulse_aura* script =
+                aura->GetScript<spell_hun_command_pulse_aura>("spell_hun_command_pulse"))
+                script->SetPrimary(primary->GetGUID());
+    }
+
+    void Register() override
+    {
+        AfterHit += SpellHitFn(spell_hun_command_pulse::HandleStash);
     }
 };
 
@@ -305,7 +574,8 @@ class spell_hun_kill_command_bm : public SpellScript
     }
 };
 
-// 201806 Beast Cleave - the pet's (and, from S1b, the beasts') copy splashes its hits (A5)
+// 201806 Beast Cleave - the pet's (and, from S1b, the beasts') copy splashes its hits (A5); the pet's share follows
+// its family type (hunter-pet-families ruling 24)
 class spell_hun_beast_cleave : public AuraScript
 {
     PrepareAuraScript(spell_hun_beast_cleave);
@@ -333,6 +603,26 @@ class spell_hun_beast_cleave : public AuraScript
         return !spellInfo || !Hunter::IsBeastCleaveExcluded(spellInfo);
     }
 
+    // hunter-pet-families ruling 24: the hunter's own pet copies by its family type. A Stampede beast keeps the plain
+    // share (it is a guardian, not the pet); the hunter's Kill Command copy never comes through here.
+    static float GetPetTypeScale(Player const* hunter, Unit const* actor)
+    {
+        if (Hunter::GetPassthroughKind(hunter, actor) != Hunter::PassthroughKind::Pet)
+            return 1.0f;
+
+        switch (Hunter::GetPetType(actor))
+        {
+            case Hunter::PetType::Ferocity:
+                return HunterData::BEAST_CLEAVE_PET_FEROCITY_SCALE;
+            case Hunter::PetType::Tenacity:
+                return HunterData::BEAST_CLEAVE_PET_TENACITY_SCALE;
+            case Hunter::PetType::Cunning:
+                return HunterData::BEAST_CLEAVE_PET_CUNNING_SCALE;
+            default:
+                return 1.0f;
+        }
+    }
+
     void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
@@ -349,11 +639,15 @@ class spell_hun_beast_cleave : public AuraScript
         if (damage <= 0 || share <= 0)
             return;
 
+        int32 const copy = int32(CalculatePct(float(damage), float(share) * GetPetTypeScale(hunter, actor)));
+        if (copy <= 0)
+            return;
+
         std::vector<Unit*> targets;
         Hunter::CollectBmSplashTargets(hunter, actor, victim, HunterData::BEAST_CLEAVE_RADIUS_YD, 0, targets);
         for (Unit* extra : targets)
-            actor->CastCustomSpell(HunterData::SPELL_BEAST_CLEAVE_STRIKE, SPELLVALUE_BASE_POINT0,
-                CalculatePct(damage, share), extra, TRIGGERED_FULL_MASK);
+            actor->CastCustomSpell(HunterData::SPELL_BEAST_CLEAVE_STRIKE, SPELLVALUE_BASE_POINT0, copy, extra,
+                TRIGGERED_FULL_MASK);
     }
 
     void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
@@ -938,7 +1232,11 @@ void AddSC_hunter_beast_mastery_spell_scripts()
 {
     RegisterSpellScript(spell_hun_command);
     RegisterSpellScript(spell_hun_command_splash);
-    RegisterSpellScript(spell_hun_swipe_command_splash);
+    RegisterSpellScript(spell_hun_command_aoe_falloff);
+    RegisterSpellScript(spell_hun_command_execute);
+    RegisterSpellScript(spell_hun_command_multihit);
+    RegisterSpellScript(spell_hun_command_refresh);
+    RegisterSpellAndAuraScriptPair(spell_hun_command_pulse, spell_hun_command_pulse_aura);
     RegisterSpellScript(spell_hun_kill_command_bm);
     RegisterSpellScript(spell_hun_beast_cleave);
     RegisterSpellScript(spell_hun_bestial_wrath_bm);
