@@ -37,8 +37,8 @@
 // limited, 7 malformed, 8 every entry was already at or above its rank (nothing to do).
 //
 // LEARN entries run in the order sent and stop at the first failure; Player::LearnTalent stays the authority, the
-// checks before it only pick the error code. HELLO, GET and the first part of a LEARN share one 200 ms rate limit per
-// player; the later parts of a LEARN are not limited (the client sends them in one burst) but must arrive in order.
+// checks before it only pick the error code. The first part of a LEARN is rate limited (200 ms per player); the later
+// parts are not (the client sends them in one burst) but must arrive in order. HELLO and GET are always answered.
 //
 // All of this runs on the world thread: CMSG_MESSAGECHAT is PROCESS_THREADUNSAFE, and so are commands and logout.
 
@@ -194,7 +194,8 @@ namespace
     }
 
     // Learned talents of the active group, the way Player::BuildPlayerTalentsInfoData walks the talent map. Keyed by
-    // talent id, highest rank kept, so each talent appears once and in id order.
+    // talent id, lowest rank kept (the rank Player::LearnTalent and CurrentTalentRank read), so each talent appears
+    // once and in id order.
     std::map<uint32, uint32> CollectActiveTalents(Player* player)
     {
         std::map<uint32, uint32> talents;
@@ -208,8 +209,10 @@ namespace
             if (!talentPos)
                 continue;
 
-            uint32& rank = talents[talentPos->talent_id];
-            rank = std::max<uint32>(rank, uint32(talentPos->rank) + 1);
+            uint32 const rank = uint32(talentPos->rank) + 1;
+            auto [itr, inserted] = talents.try_emplace(talentPos->talent_id, rank);
+            if (!inserted)
+                itr->second = std::min(itr->second, rank);
         }
         return talents;
     }
@@ -263,7 +266,9 @@ namespace
             return LEARN_RESULT_UNKNOWN;
 
         uint32 const spellId = talentInfo->RankID[rank - 1];
-        if (!spellId || !sSpellMgr->GetSpellInfo(spellId))
+        SpellInfo const* spellInfo = spellId ? sSpellMgr->GetSpellInfo(spellId) : nullptr;
+        // LearnTalent spends the points before addTalent rejects an invalid spell, so refuse it here first.
+        if (!spellInfo || !SpellMgr::IsSpellValid(spellInfo))
             return LEARN_RESULT_UNKNOWN;
 
         TalentTabEntry const* talentTabInfo = sTalentTabStore.LookupEntry(talentInfo->TalentTab);
@@ -448,8 +453,10 @@ namespace
         {
             LOG_DEBUG("scripts.custom", "CTAL: malformed or out of order LEARN part {}/{} from {}", part, parts,
                 player->GetGUID().ToString());
+            // Parts still to come for the plan in progress; a stray part with no plan discards nothing.
+            uint32 const discard = state.planParts ? state.planParts - state.nextPart : 0;
             state.ResetPlan();
-            state.discardParts = parts - part;
+            state.discardParts = discard;
             SendLearnResult(player, LEARN_RESULT_MALFORMED, 0, 0);
             return;
         }
@@ -480,19 +487,15 @@ namespace
 
         TalentUIState& state = States[player->GetGUID()];
         std::string_view const command = fields[0];
+        // HELLO and GET are cheap reads and always answered: a dropped HELLO left a reopened window waiting for a CFG
+        // that never came (U2 review M1). Only LEARN is rate-limited.
         if (command == "HELLO")
         {
-            if (!AcceptRequest(state))
-                return;
-
             SendTalentMessage(player, BuildCfgBody(player, state.allClasses));
             SendTalentState(player);
         }
         else if (command == "GET")
-        {
-            if (AcceptRequest(state))
-                SendTalentState(player);
-        }
+            SendTalentState(player);
         else if (command == "LEARN")
             HandleLearn(player, state, fields);
         else
