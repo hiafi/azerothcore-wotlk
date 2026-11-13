@@ -33,12 +33,13 @@ stem a retired special owns):
 | 201737 | `lunge_leap_command_201737` |
 
 Import rule: this file imports no sibling spell module; stock rows are named by bare id. It imports only the
-`_masks` constants module.
+`_masks` constants module and the `_pet_kits` helpers (hunter-pet-families F0).
 """
 
 from lib.dsl import AuraType, Effect, EffectType, PowerType, School
 from lib.dsl.registry import const, custom_attr, retire_pet_spell, scripted_by, skill_line_ability, spell, spell_group, unbind_script
 from . import _masks as m
+from . import _pet_kits as kits
 
 
 # ---- constants (PET.md 5.3; the C++ header names are the strings) ----
@@ -379,7 +380,7 @@ roar_of_courage_201715 = spell(
     spell_icon_id=1573,
     notes='H0-P1 (PET.md 4.4): Cat utility. Effects copied from Strength of Earth 8076 (Str/Agi, bp 9, 2.0714/level, BaseLevel 10, MaxLevel 80), retargeted to CASTER_AREA_RAID 100 yd. Group 1088.',
     raw_overrides={'AttributesEx': 512, 'BaseLevel': 10, 'MaxLevel': 80, 'SpellLevel': 10, 'RangeIndex': 1, 'DefenseType': 2, 'PreventionType': 2,
-                   'SpellClassSet': 9, 'SpellClassMask_2': m.PET_ABILITY, 'EquippedItemClass': -1,
+                   'SpellClassSet': 9, 'SpellClassMask_2': m.PET_ABILITY | m.PET_UTILITY, 'EquippedItemClass': -1,
                    'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0,
                    'AuraDescription_Lang_enUS': 'Increases Strength and Agility by $s1.',
                    'Description_Lang_enUS': 'Your pet roars, increasing the Strength and Agility of all party and raid members by $s1. Does not stack with Strength of Earth Totem or Horn of Winter.'},
@@ -405,7 +406,7 @@ tear_armor_201716 = spell(
     spell_icon_id=565,
     notes='H0-P1 (PET.md 4.4): Raptor utility. -20% armor (Expose Armor 8647 value), 30 s, 5 yd. Group 1015.',
     raw_overrides={'AttributesEx': 512, 'SpellLevel': 1, 'BaseLevel': 1, 'DefenseType': 2, 'PreventionType': 2, 'FacingCasterFlags': 1,
-                   'SpellClassSet': 9, 'SpellClassMask_2': m.PET_ABILITY, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0,
+                   'SpellClassSet': 9, 'SpellClassMask_2': m.PET_ABILITY | m.PET_UTILITY, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0,
                    'AuraDescription_Lang_enUS': 'Armor decreased by ${$m1*-1}%.',
                    'Description_Lang_enUS': "Tears at the target's armor, reducing it by ${$m1*-1}% for $d. Does not stack with Sunder Armor, Expose Armor or Acid Spit."},
 )
@@ -430,7 +431,7 @@ menacing_roar_201717 = spell(
     spell_icon_id=960,
     notes='H0-P1 (PET.md 4.4): Bear utility. Effect copied from Demoralizing Shout 1160 (bp -36, -5.697/level, BaseLevel 14, MaxLevel 80, TargetA 22 / TargetB 15, 10 yd). Group 1062.',
     raw_overrides={'AttributesEx': 512, 'BaseLevel': 14, 'MaxLevel': 80, 'SpellLevel': 14, 'RangeIndex': 1, 'DefenseType': 1, 'PreventionType': 1,
-                   'AttributesEx6': 8388608, 'SpellClassSet': 9, 'SpellClassMask_2': m.PET_ABILITY, 'EquippedItemClass': -1,
+                   'AttributesEx6': 8388608, 'SpellClassSet': 9, 'SpellClassMask_2': m.PET_ABILITY | m.PET_UTILITY, 'EquippedItemClass': -1,
                    'EffectChainAmplitude_1': 1.0,
                    'AuraDescription_Lang_enUS': 'Reduces melee attack power by $s1.',
                    'Description_Lang_enUS': 'Your pet roars, reducing the attack power of all enemies within $a1 yards by $s1 for $d. Does not stack with Demoralizing Shout, Demoralizing Roar, Vindication or Curse of Weakness.'},
@@ -497,9 +498,206 @@ web_pull_201718 = spell(
     spell_icon_id=272,
     notes='H0-P1 (PET.md 4.4): Spider utility. DUMMY on an enemy, 30 yd, 30 s, Mechanic GRIP (6); spell_hun_pet_web_pull makes the target cast Death Grip jump 57604 at the pet. Visual 684 and icon 272 from Web 4167.',
     raw_overrides={'AttributesEx': 512, 'SpellLevel': 1, 'BaseLevel': 1, 'DefenseType': 1, 'PreventionType': 1, 'FacingCasterFlags': 1,
-                   'SpellVisualID_1': 684, 'SpellClassSet': 9, 'SpellClassMask_2': m.PET_ABILITY, 'EquippedItemClass': -1,
+                   'SpellVisualID_1': 684, 'SpellClassSet': 9, 'SpellClassMask_2': m.PET_ABILITY | m.PET_UTILITY, 'EquippedItemClass': -1,
                    'EffectChainAmplitude_1': 1.0,
                    'Description_Lang_enUS': 'Spin a web at the target, pulling it to your pet. Does not work on bosses. 30 sec cooldown.'},
+)
+
+
+# =====================================================================================================
+# hunter-pet-families F0 (PLAN §3, §4.1, §5.3; F0.HANDOFF §5): the five finished kits under the new rules.
+# Slot 3 for Wolf / Cat / Raptor / Bear (201983-201986), slot 2 for Spider (201753; Web Pull moves to its slot 3).
+# Every slot 2 / 3 utility carries d1 b28 + b29 (kits.utility_raw). Unlock levels follow the class equivalents:
+# Frenzied Regeneration 36 (druid), Prowl 20 (druid), Sticky Webbing 26 (Curse of Tongues); Lick Your Wounds shares
+# Frenzied Regeneration's shape and level; Tail Sweep has no class equivalent (30).
+# =====================================================================================================
+
+LICK_YOUR_WOUNDS_LEVEL = 36
+PROWL_LEVEL = 20
+TAIL_SWEEP_LEVEL = 30
+FRENZIED_REGENERATION_LEVEL = 36
+STICKY_WEBBING_LEVEL = 26
+
+# Aura types the DSL enum doesn't name (SpellAuraDefines.h).
+_AURA_MOD_STEALTH = 16
+_AURA_OBS_MOD_HEALTH = 20            # percent of max health per tick (FE 9g)
+_AURA_HASTE_SPELLS = 216             # casting time (Curse of Tongues, Mind-numbing Poison)
+
+lick_your_wounds_201983 = spell(
+    id=201983,
+    name='Lick Your Wounds',
+    school=School.NORMAL,
+    attributes=kits.UTILITY_ATTRIBUTES,
+    cast_time_ms=0,
+    cooldown_ms=60000,
+    category_cooldown_ms=0,
+    power_type=kits.UTILITY_POWER_TYPE,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=5000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=_AURA_OBS_MOD_HEALTH,
+               amplitude=1000),
+    ],
+    spell_icon_id=267,
+    notes='hunter-pet-families F0: Wolf slot 3. Aura 20 OBS_MOD_HEALTH 6% of max health per 1 s for 5 s (30%), on the '
+          'pet, not channeled (stock 53426 channels), manual, 1 min. Visual 12983 / icon 267 from Lick Your Wounds 53426.',
+    raw_overrides=kits.utility_raw(
+        LICK_YOUR_WOUNDS_LEVEL, RangeIndex=1, DefenseType=0, PreventionType=2, SpellVisualID_1=12983,
+        AuraDescription_Lang_enUS='Regaining health.',
+        Description_Lang_enUS='Your pet licks its wounds, healing itself for $o1% of its maximum health over $d.'),
+)
+
+# Prowl: a clone of stock 24450 (retired from pets, PET 4.6) as a new id, with AuraInterruptFlags |= 0x1000
+# (AURA_INTERRUPT_FLAG_MELEE_ATTACK): the pet's next white swing breaks it. Commands are triggered casts
+# (IGNORE_AURA_INTERRUPT_FLAGS), so the first command lands from stealth with the +20% (FE 7, note 7).
+_PROWL_AURA_INTERRUPT_FLAGS = 0x22403 | 0x1000
+prowl_201984 = spell(
+    id=201984,
+    name='Prowl',
+    school=School.NORMAL,
+    dispel=5,
+    attributes=0x1A150010,
+    category=38,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=10000,
+    power_type=kits.UTILITY_POWER_TYPE,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=149, points_per_level=5.0, implicit_target_a=1,
+               apply_aura=_AURA_MOD_STEALTH),
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1,
+               apply_aura=AuraType.MOD_DECREASE_SPEED),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1,
+               apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=65),
+    ],
+    spell_icon_id=495,
+    notes='hunter-pet-families F0: Cat slot 3. Clone of stock Prowl 24450 (stealth 150 + 5/level to MaxLevel 30, '
+          '-50% speed, +20% damage done to schools 65, out of combat only, 10 s category 38 cooldown, '
+          'StartRecoveryCategory 1178, the stock proc flags / charge) with AuraInterruptFlags 0x22403 | 0x1000 '
+          '(MELEE_ATTACK). Manual. Visual 184 / icon 495 / active icon 252 from 24450.',
+    raw_overrides=kits.utility_raw(
+        PROWL_LEVEL, BaseLevel=1, MaxLevel=30, AttributesEx=0x10, AttributesEx2=0x200000, RangeIndex=1,
+        ExcludeCasterAuraState=12, AuraInterruptFlags=_PROWL_AURA_INTERRUPT_FLAGS, ProcTypeMask=332116,
+        ProcChance=101, ProcCharges=1, StartRecoveryCategory=1178, ActiveIconID=252, SpellVisualID_1=184,
+        EffectBonusMultiplier_3=1.0,
+        AuraDescription_Lang_enUS='Stealthed. Movement speed slowed.',
+        Description_Lang_enUS="Your pet enters stealth, moving ${$m2*-1}% slower. Its first command or Kill Command "
+                              "from stealth deals $s3% more damage. Any attack breaks stealth. Usable only out of "
+                              "combat."),
+)
+
+tail_sweep_201985 = spell(
+    id=201985,
+    name='Tail Sweep',
+    school=School.NORMAL,
+    mechanic=0,
+    attributes=kits.UTILITY_ATTRIBUTES,
+    cast_time_ms=0,
+    cooldown_ms=30000,
+    category_cooldown_ms=0,
+    power_type=kits.UTILITY_POWER_TYPE,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=5.0,
+    effects=[
+        Effect(type=EffectType.KNOCK_BACK, base_points=149, implicit_target_a=6, misc_value=300),
+    ],
+    spell_icon_id=1525,
+    notes='hunter-pet-families F0: Raptor slot 3. eff0 KNOCK_BACK (98) on the target, the stock Tail Sweep 15847 '
+          'values (MiscValue 300 = 30 horizontal, bp 149 = 15 vertical), no damage, 5 yd melee, manual, 30 s. The core '
+          'skips world / dungeon bosses, knockback-immune creatures, Giants, vehicles and rooted targets (FE 8a). '
+          'Visual 3879 / icon 1525 from 15847.',
+    raw_overrides=kits.utility_raw(
+        TAIL_SWEEP_LEVEL, enemy_target=True, RangeIndex=2, DefenseType=2, PreventionType=2, FacingCasterFlags=1,
+        SpellVisualID_1=3879,
+        Description_Lang_enUS='Your pet sweeps its tail, knocking the target back. Does not work on bosses.'),
+)
+
+frenzied_regeneration_201986 = spell(
+    id=201986,
+    name='Frenzied Regeneration',
+    school=School.NORMAL,
+    attributes=kits.UTILITY_ATTRIBUTES,
+    cast_time_ms=0,
+    cooldown_ms=60000,
+    category_cooldown_ms=0,
+    power_type=kits.UTILITY_POWER_TYPE,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=_AURA_OBS_MOD_HEALTH,
+               amplitude=1000),
+    ],
+    spell_icon_id=50,
+    notes='hunter-pet-families F0: Bear slot 3. Aura 20 OBS_MOD_HEALTH 3% of max health per 1 s for 10 s (30%), on '
+          'the pet, manual, 1 min. Visual 249 / icon 50 from Frenzied Regeneration 22842.',
+    raw_overrides=kits.utility_raw(
+        FRENZIED_REGENERATION_LEVEL, RangeIndex=1, DefenseType=0, PreventionType=2, SpellVisualID_1=249,
+        AuraDescription_Lang_enUS='Regaining health.',
+        Description_Lang_enUS='Your pet heals itself for $o1% of its maximum health over $d.'),
+)
+
+sticky_webbing_201753 = spell(
+    id=201753,
+    name='Sticky Webbing',
+    school=School.NATURE,
+    attributes=kits.UTILITY_ATTRIBUTES,
+    cast_time_ms=0,
+    cooldown_ms=10000,
+    category_cooldown_ms=0,
+    power_type=kits.UTILITY_POWER_TYPE,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=30.0,
+    duration_ms=30000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-26, implicit_target_a=6, apply_aura=_AURA_HASTE_SPELLS),
+    ],
+    spell_icon_id=174,
+    notes='hunter-pet-families F0: Spider slot 2 (Web Pull 201718 moves to slot 3). Aura 216 HASTE_SPELLS -25% '
+          '(Curse of Tongues 1714 at the same level, live -25), single enemy, 30 yd, 30 s, 10 s cooldown, autocast '
+          '(Tear Armor shape). Group 1096 Cast Time Debuffs (rule 4, highest per aura type: Curse of Tongues, '
+          'Mind-numbing Poison). Visual 684 from Web 4167, icon 174 (Encasing Webs; Web Pull has 272).',
+    raw_overrides=kits.utility_raw(
+        STICKY_WEBBING_LEVEL, enemy_target=True, DefenseType=1, PreventionType=1, FacingCasterFlags=1,
+        SpellVisualID_1=684,
+        AuraDescription_Lang_enUS='Casting time increased.',
+        Description_Lang_enUS="Spits sticky webbing at the target, increasing the casting time of its spells by "
+                              "${$m1*-1}% for $d. Does not stack with Curse of Tongues or Mind-numbing Poison."),
+)
+
+# Kit v2 marker (CORE-AUDIT 3.2): a pet without it gets one re-seat of its bar to basic / slot 2 / slot 3 / Growl
+# (Hunter::SeatDefaultPetBar), then learns it; the player's own order stands from then on. Same template as 201703.
+hunter_pet_kit_v2_marker_202014 = spell(
+    id=202014,
+    name='Hunter Pet Kit Marker',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=0,
+    notes="hunter-pet-families F0: hidden no-op passive, learned once by a hunter pet in the pass where "
+          "Hunter::SeatDefaultPetBar re-seats its bar to the kit v2 layout (basic, slot 2, slot 3, Growl). Existing pets "
+          "lack it and re-seat once on their next summon (no abdata SQL). Family 0, no effect (201703's template).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188,
+                   'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EquippedItemClass': -1,
+                   'EffectChainAmplitude_1': 1.0},
 )
 
 
@@ -509,13 +707,19 @@ _TENACITY_PLACEHOLDER_LINES = [211, 212, 251, 766, 784, 214, 236, 215, 786]     
 _CUNNING_PLACEHOLDER_LINES = [653, 655, 656, 763, 767, 765, 764, 768, 780, 783]      # Cunning minus Spider 203
 
 _sla_rows = [(30560, 270, 61684)]                                                    # Dash, every family
-_sla_rows += [(30561 + i, line, 1742) for i, line in enumerate(_FEROCITY_LINES)]                  # Cower, Ferocity
+# 30561-30571 (Cower on the Ferocity lines) dropped by hunter-pet-families F0: Cower leaves every kit. The freed ids
+# stay unused (PLAN §4: a client may have them cached).
 _sla_rows += [(30572 + i, line, 53478) for i, line in enumerate(_TENACITY_PLACEHOLDER_LINES)]      # Last Stand
 _sla_rows += [(30581 + i, line, 53490) for i, line in enumerate(_CUNNING_PLACEHOLDER_LINES)]       # Bullheaded
 _sla_rows += [(30591 + i, line, 201711) for i, line in enumerate(_CUNNING_PLACEHOLDER_LINES)]      # Spit
 _sla_rows += [(30601, 203, 201710), (30602, 209, 201715), (30603, 217, 201716), (30604, 210, 201717),
               (30605, 203, 201718)]
-assert len(_sla_rows) == 46 and [r[0] for r in _sla_rows] == list(range(30560, 30606))
+# hunter-pet-families F0 (PLAN §4.1 F0 column): the five finished families' new utilities, learned at SpellLevel.
+_sla_rows += [(30551, 208, lick_your_wounds_201983.id), (30552, 209, prowl_201984.id),
+              (30553, 217, tail_sweep_201985.id), (30554, 210, frenzied_regeneration_201986.id),
+              (30555, 203, sticky_webbing_201753.id)]
+assert len(_sla_rows) == 40 and sorted(r[0] for r in _sla_rows) == [
+    *range(30551, 30556), 30560, *range(30572, 30606)]
 for _sla_id, _line, _spell_id in _sla_rows:
     skill_line_ability(id=_sla_id, skill_line=_line, spell_id=_spell_id, class_mask=0, acquire_method=2)
 
@@ -533,10 +737,10 @@ retire_pet_spell(17253, families=[3, 24, 27, 30, 31, 34, 35, 38])
 retire_pet_spell(16827, families=[26, 41])
 retire_pet_spell(49966, families=[33])
 
-# Cower off skill 270 for the 21 non-Ferocity families; the shared 270 row (SLA 13012) is retired for everyone and
-# the Ferocity families relearn it from rows 30561-30571.
-retire_pet_spell(1742, families=[4, 5, 6, 8, 9, 20, 21, 32, 42, 43,
-                                 3, 24, 26, 27, 30, 31, 33, 34, 35, 38, 41], shared_lines=True)
+# hunter-pet-families F0 (PLAN §1, CORE-AUDIT 3.2): Cower leaves every kit. Every family: the stock 270 row (SLA
+# 13012) and any family-line row get AcquireMethod 0, and Cower is stripped from every family's CreatureSpellData
+# record (it was still a default on the Ferocity families). Existing pets: pending_db_characters (worldserver stopped).
+retire_pet_spell(1742)
 
 
 # ---- Spell groups (PET.md 2.5; spell_group accepts stock ids) ----
@@ -544,6 +748,7 @@ spell_group(1025, 24604)            # Furious Howl: Physical Crit Buffs
 spell_group(1088, roar_of_courage_201715)    # Strength and Agility Buffs
 spell_group(1015, tear_armor_201716)         # Major Armor Debuffs
 spell_group(1062, menacing_roar_201717)      # AP Debuffs
+spell_group(1096, sticky_webbing_201753)     # Cast Time Debuffs (F0)
 
 
 # ---- Script bindings (PET.md 8.2 as corrected by H0-P-HANDOFF: positive keys for Bloodthirsty) ----

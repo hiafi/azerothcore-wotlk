@@ -439,6 +439,7 @@ namespace HunterData
     constexpr uint32 SPELL_BOAR_S_SPEED_201750 = 201750; // boar_s_speed_201750
     constexpr uint32 SPELL_BOAR_S_SPEED_201751 = 201751; // boar_s_speed_201751
     constexpr uint32 SPELL_HUNTER_PET_UTILITY_MARKER = 201752; // hunter_pet_utility_marker_201752
+    constexpr uint32 SPELL_STICKY_WEBBING = 201753; // sticky_webbing_201753
     constexpr uint32 SPELL_COMMAND_I = 201800; // command_i_201800
     constexpr uint32 SPELL_COMMAND_II = 201801; // command_ii_201801
     constexpr uint32 SPELL_STAMPEDE_SUMMON = 201802; // stampede_summon_201802
@@ -555,6 +556,11 @@ namespace HunterData
     constexpr uint32 SPELL_RAIN_OF_ARROWS_201980 = 201980; // rain_of_arrows_201980
     constexpr uint32 SPELL_RAPID_KILLING_201981 = 201981; // rapid_killing_201981
     constexpr uint32 SPELL_COMBAT_EXPERIENCE_201982 = 201982; // combat_experience_201982
+    constexpr uint32 SPELL_LICK_YOUR_WOUNDS_201983 = 201983; // lick_your_wounds_201983
+    constexpr uint32 SPELL_PROWL_201984 = 201984; // prowl_201984
+    constexpr uint32 SPELL_TAIL_SWEEP = 201985; // tail_sweep_201985
+    constexpr uint32 SPELL_FRENZIED_REGENERATION = 201986; // frenzied_regeneration_201986
+    constexpr uint32 SPELL_HUNTER_PET_KIT_V2_MARKER = 202014; // hunter_pet_kit_v2_marker_202014
     constexpr uint32 SPELL_MANTIS_STRIKE = 202040; // mantis_strike_202040
     constexpr uint32 SPELL_MANTIS_STRIKE_ENABLE = 202041; // mantis_strike_enable_202041
     constexpr uint32 SPELL_MONGOOSE_FURY = 202042; // mongoose_fury_202042
@@ -638,7 +644,8 @@ namespace HunterData
     constexpr uint32 CLUSTER_BOMBS_FOLLOWUP_MS = 500; // Cluster Bombs: first follow-up offset after the cast, ms (SV 5.8).
     constexpr float CLUSTER_BOMBS_SCATTER_YD = 3.0f; // Cluster Bombs: follow-up scatter distance from the centre, yards (SV 5.8).
     constexpr int32 COMBAT_EXPERIENCE_CAPSTONE_PCT = 30; // Combat Experience capstone: Intellect, percent of Agility (MM 5.10).
-    constexpr int32 COMMAND_DISPLAY_OFFSET = 138; // PT-5: the pet-spellbook display passive of commanded spell N is N + this (201720..201735 -> 201858..201873).
+    constexpr int32 COMMAND_AOE_FALLOFF_PCT = 50; // AoE command share of every target other than the primary, percent (hunter-pet-families ruling 6).
+    constexpr int32 COMMAND_DISPLAY_OFFSET = 138; // PT-5: the display passive of commanded spell N (201720..201735 only) is N + this (201858..201873).
     constexpr uint8 CONVERGENCE_MAX_TARGETS = 5; // Convergence splash target cap, the centre excluded (MM 5.10).
     constexpr int32 CONVERGENCE_SPLASH_PCT = 50; // Convergence splash share of the centre hit, percent (MM 5.10).
     constexpr uint32 DEADEYE_CDR_MS = 2000; // Deadeye capstone: mark cooldown cut per Aimed Shot crit, ms (MM 5.2).
@@ -684,7 +691,6 @@ namespace HunterData
     constexpr int32 STAMPEDE_ENTRY_MAX = 300219; // Last creature_template entry of the Stampede pet block (PET X6).
     constexpr int32 STAMPEDE_ENTRY_MIN = 300200; // First creature_template entry of the Stampede pet block (PET X6).
     constexpr float STAMPEDE_SPREAD_YD = 3.0f; // Stampede ring radius around the destination, yards (BM 13).
-    constexpr int32 SWIPE_SPLASH_PCT = 50; // Swipe command splash share of the primary hit, percent.
     constexpr int32 THRILL_MANA_REFUND_PCT = 40; // Thrill of the Hunt: mana refunded, percent of the cost (the stock script's literal; text only, SV 6.1).
     constexpr uint32 THRILL_MM_CUT_FACTOR = 2; // Thrill of the Hunt: cooldown cut multiplier for Aimed Shot, Multi-Shot, Chimera Shot (SV 0.8).
 }

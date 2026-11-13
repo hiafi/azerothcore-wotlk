@@ -44,6 +44,7 @@
 #include <cmath>
 #include <initializer_list>
 #include <list>
+#include <unordered_map>
 #include <vector>
 
 namespace
@@ -108,15 +109,12 @@ class spell_hun_command : public SpellScript
 {
     PrepareSpellScript(spell_hun_command);
 
+    // hunter-pet-families F0 (CORE-AUDIT 1.3): only the two presses. A commanded spell that is missing is logged at
+    // the press (CheckCast) and fails for that family alone; listing every commanded id here would unload Command
+    // I/II for every hunter when one family's spell is not deployed.
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ HunterData::SPELL_LUNGE_COMMAND, HunterData::SPELL_RIP_THROAT_COMMAND,
-            HunterData::SPELL_RAKE_COMMAND, HunterData::SPELL_POUNCE_COMMAND, HunterData::SPELL_SAVAGE_REND_COMMAND,
-            HunterData::SPELL_LEAPING_TEAR_COMMAND, HunterData::SPELL_SWIPE_COMMAND, HunterData::SPELL_MAUL_COMMAND,
-            HunterData::SPELL_VENOM_BITE_COMMAND, HunterData::SPELL_VENOMOUS_CLOUD_COMMAND,
-            HunterData::SPELL_SAVAGE_STRIKES_COMMAND, HunterData::SPELL_SAVAGE_POUNCE_COMMAND,
-            HunterData::SPELL_THRASH_COMMAND, HunterData::SPELL_CRUSHING_BLOW_COMMAND,
-            HunterData::SPELL_FEINT_STRIKE_COMMAND, HunterData::SPELL_AMBUSH_COMMAND });
+        return ValidateSpellInfo({ HunterData::SPELL_COMMAND_I, HunterData::SPELL_COMMAND_II });
     }
 
     uint8 GetSlot()
@@ -167,9 +165,17 @@ class spell_hun_command : public SpellScript
         if (!pet->IsValidAttackTarget(target))
             return;
 
+        // hunter-pet-families F0 (FEASIBILITY 10c, note 6): turn the pet to the target first. A triggered cast never
+        // sets facing, so a cone would point wherever the pet faced (after a Kill Command teleport, a charge, or a
+        // target that is not its victim). SetOrientation is the instant server-side turn the cone reads;
+        // SetFacingToObject tells the clients. A channel also keeps facing its target (GetCommandCastFlags).
+        pet->SetOrientation(pet->GetAngle(target));
+        pet->SetFacingToObject(target);
+
         // S1a-5: the press passed CheckPetCanAct, but the triggered pet cast re-checks range strictly (melee reach),
         // so it can still fail at the edge of melee range; log it where the playtest can see it (L17)
-        SpellCastResult const result = pet->CastSpell(target, cmd, TRIGGERED_FULL_MASK);
+        SpellCastResult const result =
+            pet->CastSpell(target, cmd, Hunter::GetCommandCastFlags(sSpellMgr->GetSpellInfo(cmd)));
         if (result != SPELL_CAST_OK)
             LOG_ERROR("scripts.hunter", "Command {}: pet {} failed to cast commanded spell {} on {} (result {})",
                 GetSpellInfo()->Id, pet->GetEntry(), cmd, target->GetGUID().ToString(), uint32(result));
@@ -212,22 +218,37 @@ class spell_hun_command_splash : public SpellScript
     }
 };
 
-// 201726 Swipe (command), eff1 - the 8 yd splash takes a share of the primary's amount (eff0 is untouched)
-class spell_hun_swipe_command_splash : public SpellScript
+// hunter-pet-families F0 (PLAN §5.2 `falloff`, ruling 6): every AoE command. Each target other than the primary (the
+// command's explicit target) takes COMMAND_AOE_FALLOFF_PCT of its hit; with EffectChainAmplitude 1.0 that is also a
+// flat share per chain jump. Bound to Swipe 201726 (was spell_hun_swipe_command_splash); rule 17 exceptions (Leaping
+// Tear, Venomous Cloud, Bat, Sporebat) are not bound. Direct damage only: an AoE DoT carries its own rate.
+class spell_hun_command_aoe_falloff : public SpellScript
 {
-    PrepareSpellScript(spell_hun_swipe_command_splash);
+    PrepareSpellScript(spell_hun_command_aoe_falloff);
 
-    void HandleSplashDamage(SpellEffIndex /*effIndex*/)
+    // The hit damage of a target accumulates over the spell's damage effects, so only the part each effect adds is
+    // scaled (a target two effects reach is not halved twice).
+    void HandleDamage(SpellEffIndex /*effIndex*/)
     {
         if (!GetOwningHunter(GetCaster()))
             return;
 
-        SetHitDamage(CalculatePct(GetHitDamage(), HunterData::SWIPE_SPLASH_PCT));
+        Unit* target = GetHitUnit();
+        Unit* primary = GetExplTargetUnit();
+        if (!primary || !target || target == primary)
+            return;
+
+        int32& scaled = _scaledSoFar[target->GetGUID()];
+        int32 const added = std::max(GetHitDamage() - scaled, 0);
+        scaled += CalculatePct(added, HunterData::COMMAND_AOE_FALLOFF_PCT);
+        SetHitDamage(scaled);
     }
+
+    std::unordered_map<ObjectGuid, int32> _scaledSoFar;
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_hun_swipe_command_splash::HandleSplashDamage, EFFECT_1,
+        OnEffectHitTarget += SpellEffectFn(spell_hun_command_aoe_falloff::HandleDamage, EFFECT_ALL,
             SPELL_EFFECT_SCHOOL_DAMAGE);
     }
 };
@@ -938,7 +959,7 @@ void AddSC_hunter_beast_mastery_spell_scripts()
 {
     RegisterSpellScript(spell_hun_command);
     RegisterSpellScript(spell_hun_command_splash);
-    RegisterSpellScript(spell_hun_swipe_command_splash);
+    RegisterSpellScript(spell_hun_command_aoe_falloff);
     RegisterSpellScript(spell_hun_kill_command_bm);
     RegisterSpellScript(spell_hun_beast_cleave);
     RegisterSpellScript(spell_hun_bestial_wrath_bm);

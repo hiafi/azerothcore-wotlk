@@ -80,14 +80,21 @@ EXPECTED_ZEROED_SLA_IDS = frozenset({
     13012,
 })
 
-# PET 4.4's new SkillLineAbility rows: id range -> (skill lines, spell)
-SLA_FIRST, SLA_LAST = 30560, 30605
+# PET 4.4's new SkillLineAbility rows: id range -> (skill lines, spell). hunter-pet-families F0 drops Cower's
+# 30561-30571 (Cower leaves every kit; the ids are not reused) and adds 30551-30555, the five finished families' new
+# utilities (Lick Your Wounds, Prowl, Tail Sweep, Frenzied Regeneration on the Wolf, Cat, Raptor, Bear lines; Sticky
+# Webbing on the Spider line).
+SLA_FIRST, SLA_LAST = 30551, 30605
 FEROCITY_LINES = (208, 209, 217, 213, 654, 781, 787, 218, 788, 775, 785)
 TENACITY_LINES = (211, 212, 251, 766, 784, 214, 236, 215, 786)
 CUNNING_LINES = (653, 655, 656, 763, 767, 765, 764, 768, 780, 783)
 SLA_TABLE = (
+    ((30551, 30551), (208,), 201983),
+    ((30552, 30552), (209,), 201984),
+    ((30553, 30553), (217,), 201985),
+    ((30554, 30554), (210,), 201986),
+    ((30555, 30555), (203,), 201753),
     ((30560, 30560), (270,), 61684),
-    ((30561, 30571), FEROCITY_LINES, COWER),
     ((30572, 30580), TENACITY_LINES, 53478),
     ((30581, 30590), CUNNING_LINES, 53490),
     ((30591, 30600), CUNNING_LINES, 201711),
@@ -257,9 +264,10 @@ def check_sla_rows(sla_rows: list[dict], spell_rows_by_id: dict[int, dict], tabl
         if got != want:
             bad.append(f"SkillLineAbility {first}-{last}: (skill line, spell) is {got}, PET 4.4 says {want}")
     declared = {int(r["ID"]) for r in in_range}
-    if declared != set(range(SLA_FIRST, SLA_LAST + 1)):
-        bad.append(f"SkillLineAbility ids declared in {SLA_FIRST}-{SLA_LAST}: missing "
-                   f"{sorted(set(range(SLA_FIRST, SLA_LAST + 1)) - declared)}")
+    expected = {i for (first, last), _, _ in table for i in range(first, last + 1)}
+    if declared != expected:
+        bad.append(f"SkillLineAbility ids declared in {SLA_FIRST}-{SLA_LAST}: missing {sorted(expected - declared)}, "
+                   f"unexpected {sorted(declared - expected)}")
     for row in in_range:
         if int(row.get("AcquireMethod") or 0) != 2:
             bad.append(f"SkillLineAbility {row['ID']}: AcquireMethod {row.get('AcquireMethod')}, expected 2")
@@ -523,6 +531,15 @@ class HunterPetDataTest(unittest.TestCase):
         retirements, *_ = retirement_resolution()
         self.assertClean(check_retired_spell_set(retirements, EXPECTED_RETIRED_SPELLS))
 
+    def test_cower_is_retired_from_every_family(self):
+        # hunter-pet-families F0: Cower leaves every kit, so its retirement covers every family (families=None: every
+        # pet skill line row and every family's CreatureSpellData record), not only the non-Ferocity ones.
+        retirements, *_ = retirement_resolution()
+        cower = [r for r in retirements if int(r["spell_id"]) == COWER]
+        self.assertEqual(len(cower), 1)
+        self.assertIsNone(cower[0]["families"])
+        self.assertFalse(cower[0]["shared_lines"])
+
     def test_every_retirement_resolves(self):
         retirements, overrides, strips, strip_warnings = retirement_resolution()
         print(f"\nretire_pet_spell: {len(retirements)} call(s), {len(overrides.entries)} SkillLineAbility row(s) "
@@ -751,7 +768,7 @@ class HunterPetDataNegativeTest(unittest.TestCase):
 
     def test_sla_rows_check_fires_on_each_defect(self):
         rows, spells = self._good_sla()
-        self.assertEqual(len(rows), 46)
+        self.assertEqual(len(rows), 40)
         self.assertEqual(check_sla_rows(rows, spells), [])
         self.assertTrue(check_sla_rows(rows[:-1], spells))                                       # a missing row
         wrong_method = [dict(r) for r in rows]

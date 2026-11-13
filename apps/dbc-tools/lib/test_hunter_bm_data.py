@@ -42,6 +42,20 @@ S1b (hunter-rework S1b-HANDOFF WP-A row A3, B1-B6, S1a carry-overs, PT-1..PT-6; 
   (u) tooltip rows T1 (Pathfinding 19559 / 19560 / 201820), T16 (Shark Attack 201839 / 201840), PT2 (Mobility 53483 /
       53485): new text present, old text gone.
 
+hunter-pet-families F0 (hunter-pet-families.F0.HANDOFF.md s2, s5, s7, s9):
+
+  (v) the kit table: HunterMechanics.cpp FAMILY_KITS has one row per hunter family (32), every id it names is declared
+      by the package, every command has a display in COMMAND_DISPLAYS (the command -> display table that replaced the
+      +138 offset), and every slot 2 / slot 3 spell carries d1 b28 + b29; the type defaults name commands only;
+  (w) the F0 utilities 201753, 201983-201986 and the kit v2 marker 202014; their SkillLineAbility rows live in
+      test_hunter_pet_data.py;
+  (x) Mobility 53483 / 53485: ADD_PCT_MODIFIER cooldown -10 / -20 on d1 b29 alone, and the d1 b29 carrier and reader
+      sets of the package;
+  (y) Bear retrofit (ruling 19): Swipe 420 on both effects, Maul 715; Swipe bound to spell_hun_command_aoe_falloff.
+
+The kit and display tables are parsed from the C++ (one source: the C++ drives the game, the parser checks it against
+the DSL), with names resolved through the generated HunterData.h.
+
 Every check is a pure function; the negative-fixture class feeds each one a minimal bad input.
 
 Run directly:
@@ -940,19 +954,79 @@ def check_dot_spellmods(rows_by_id: dict[int, dict], ids=PLUME_AND_MASTERS_COMMA
     return bad
 
 
+_KIT_FIELDS = ("basic", "group", "utility", "commandI", "commandII", "flags")
+_FIELD = r"\s*([\w:]+)\s*"
+_KIT_ROW = re.compile(r"\{\s*(\d+)\s*,\s*\{" + ",".join([_FIELD] * 6) + r"\}\s*\}")
+_DEFAULT_ROW = re.compile(r"constexpr\s+PetKit\s+(KIT_\w+)\s*=\s*\{" + ",".join([_FIELD] * 6) + r"\}\s*;")
+_DISPLAY_ROW = re.compile(r"\{\s*([\w:]+)\s*,\s*([\w:]+)\s*\}")
+KIT_FLAGS = {"PET_KIT_GROUP_AUTOCAST": 0x1}
+
+
+def _header_names(hunter_data_h: str) -> dict[str, int]:
+    return {m.group(1): int(m.group(2))
+            for m in re.finditer(r"constexpr\s+u?int32\s+(\w+)\s*=\s*(\d+)\s*;", hunter_data_h)}
+
+
+def _block(mechanics_cpp: str, name: str) -> str:
+    """The `{{ ... }};` initializer of the std::array `name` in HunterMechanics.cpp ('' when missing)."""
+    m = re.search(rf"\b{name}\s*=\s*\{{\{{(.*?)\}}\}};", mechanics_cpp, re.S)
+    return m.group(1) if m else ""
+
+
+def _resolve(token: str, names: dict[str, int], unresolved: list[str]) -> int:
+    token = token.removeprefix("HunterData::").removeprefix("Hunter::")
+    if token.isdigit():
+        return int(token)
+    if token in KIT_FLAGS:
+        return KIT_FLAGS[token]
+    if token in names:
+        return names[token]
+    unresolved.append(token)
+    return -1
+
+
+def _strip_comments(cpp: str) -> str:
+    return re.sub(r"//[^\n]*", "", cpp)
+
+
+def parse_kits(mechanics_cpp: str, hunter_data_h: str) -> tuple[dict[int, dict], dict[str, dict], list[str]]:
+    """hunter-pet-families F0: (FAMILY_KITS rows by family id, the KIT_*_DEFAULT rows by name, unresolved names).
+    Each row is a dict of `_KIT_FIELDS`; a name is resolved through HunterData.h (0 and flag names literally)."""
+    names, unresolved = _header_names(hunter_data_h), []
+    cpp = _strip_comments(mechanics_cpp)
+    kits: dict[int, dict] = {}
+    for m in _KIT_ROW.finditer(_block(cpp, "FAMILY_KITS")):
+        family = int(m.group(1))
+        row = {field: _resolve(m.group(n + 2), names, unresolved) for n, field in enumerate(_KIT_FIELDS)}
+        kits.setdefault(family, row) if family not in kits else unresolved.append(f"duplicate family {family}")
+    defaults = {m.group(1): {field: _resolve(m.group(n + 2), names, unresolved) for n, field in enumerate(_KIT_FIELDS)}
+                for m in _DEFAULT_ROW.finditer(cpp)}
+    return kits, defaults, unresolved
+
+
+def parse_command_displays(mechanics_cpp: str, hunter_data_h: str) -> tuple[dict[int, int], list[str]]:
+    """hunter-pet-families F0: COMMAND_DISPLAYS as {command id: display id}, plus unresolved names."""
+    names, unresolved = _header_names(hunter_data_h), []
+    displays: dict[int, int] = {}
+    for m in _DISPLAY_ROW.finditer(_block(_strip_comments(mechanics_cpp), "COMMAND_DISPLAYS")):
+        command = _resolve(m.group(1), names, unresolved)
+        if command in displays:
+            unresolved.append(f"duplicate command {m.group(1)}")
+        displays[command] = _resolve(m.group(2), names, unresolved)
+    return displays, unresolved
+
+
 def parse_kit_slots(mechanics_cpp: str, hunter_data_h: str) -> dict[int, str]:
-    """PT-5: commanded spell id -> 'I' / 'II', read from the PetKit tables of HunterMechanics.cpp (the type defaults
-    and GetFamilyKits; `struct PetKit { basic; utility; commandI; commandII; }` in HunterMechanics.h), with the
-    SPELL_*_COMMAND names resolved through HunterData.h. A spell found in both slots maps to 'both'."""
-    names = {m.group(1): int(m.group(2))
-             for m in re.finditer(r"constexpr\s+u?int32\s+(\w+)\s*=\s*(\d+)\s*;", hunter_data_h)}
+    """PT-5: commanded spell id -> 'I' / 'II', read from the kit tables of HunterMechanics.cpp (FAMILY_KITS and the
+    KIT_*_DEFAULT rows, parse_kits). A spell found in both slots maps to 'both'; an unresolved name is kept under -1."""
+    kits, defaults, unresolved = parse_kits(mechanics_cpp, hunter_data_h)
     slots: dict[int, str] = {}
-    for m in re.finditer(r"\{\s*SPELL_\w+\s*,\s*SPELL_\w+\s*,\s*(SPELL_\w+_COMMAND)\s*,\s*(SPELL_\w+_COMMAND)\s*\}",
-                         mechanics_cpp):
-        for name, slot in ((m.group(1), "I"), (m.group(2), "II")):
-            spell_id = names.get(name)
-            if spell_id is None:
-                slots.setdefault(-1, name)      # an unresolved name is reported by the check below
+    if unresolved:
+        slots[-1] = unresolved[0]
+    for row in (*kits.values(), *defaults.values()):
+        for field, slot in (("commandI", "I"), ("commandII", "II")):
+            spell_id = row[field]
+            if spell_id <= 0:
                 continue
             if slots.get(spell_id, slot) != slot:
                 slot = "both"
@@ -960,19 +1034,20 @@ def parse_kit_slots(mechanics_cpp: str, hunter_data_h: str) -> dict[int, str]:
     return slots
 
 
-def check_command_displays(rows_by_id: dict[int, dict], offset: int, slots: dict[int, str], bound: list[dict],
-                           talents: list[dict], trainer_spells: list[dict]) -> list[str]:
-    """(t) PT-5 (brief decision 1): for each commanded spell 201720-201735 a display spell at id + offset (offset = the
-    COMMAND_DISPLAY_OFFSET const, 138): Attributes 0x150 (PASSIVE, no DO_NOT_DISPLAY 0x80), eff0 APPLY_AURA DUMMY at
-    target 1, family 0 without bits, Name "Command <slot>: <commanded name>" with the slot the kit tables give it;
-    no script binding, in no talent row, no trainer row. 201736 (no slot) has no display."""
+def check_command_displays(rows_by_id: dict[int, dict], displays: dict[int, int], slots: dict[int, str],
+                           bound: list[dict], talents: list[dict], trainer_spells: list[dict]) -> list[str]:
+    """(t) PT-5 (brief decision 1) + hunter-pet-families F0: COMMAND_DISPLAYS names a display for every slotted command
+    and for nothing else: Attributes 0x150 (PASSIVE, no DO_NOT_DISPLAY 0x80), eff0 APPLY_AURA DUMMY at target 1,
+    family 0 without bits, Name "Command <slot>: <commanded name>" with the slot the kit tables give it; no script
+    binding, in no talent row, no trainer row. 201736 (no slot) has none."""
     bad = []
     if -1 in slots:
         bad.append(f"HunterMechanics.cpp kit names {slots[-1]} not found in HunterData.h")
-    displays = set()
-    for commanded in COMMANDED_SLOTTED:
-        display = commanded + offset
-        displays.add(display)
+    slotted = {i for i in slots if i > 0}
+    if set(displays) != slotted:
+        bad.append(f"COMMAND_DISPLAYS commands {sorted(set(displays))} != the kits' commands {sorted(slotted)}")
+    for commanded in sorted(slotted):
+        display = displays.get(commanded)
         row, source = rows_by_id.get(display), rows_by_id.get(commanded)
         slot = slots.get(commanded)
         if slot not in ("I", "II"):
@@ -993,18 +1068,167 @@ def check_command_displays(rows_by_id: dict[int, dict], offset: int, slots: dict
             want = f"Command {slot}: {source.get('Name_Lang_enUS')}"
             if row.get("Name_Lang_enUS") != want:
                 bad.append(f"{display}: Name {row.get('Name_Lang_enUS')!r}, expected {want!r}")
-    if COMMANDED[-1] + offset in rows_by_id:
-        bad.append(f"{COMMANDED[-1] + offset}: a display for the splash {COMMANDED[-1]}, which no kit slot names")
+    if COMMANDED[-1] in displays:
+        bad.append(f"{COMMANDED[-1]}: the splash has a display, but no kit slot names it")
+    shown = set(displays.values())
     for r in bound:
-        if int(r["spell_id"]) in displays:
+        if int(r["spell_id"]) in shown:
             bad.append(f"{r['spell_id']}: display spell bound to {r['ScriptName']} (no script, PT-5)")
     for t in talents:
         for sid in t.get("rank_spell_ids") or []:
-            if sid in displays:
+            if sid in shown:
                 bad.append(f"talent {t['id']}: rank {sid} is a display spell")
     for t in trainer_spells:
-        if int(t["SpellId"]) in displays:
+        if int(t["SpellId"]) in shown:
             bad.append(f"trainer {t['TrainerId']}: teaches display spell {t['SpellId']}")
+    return bad
+
+
+# (v) hunter-pet-families F0: the 32 hunter families (CreatureFamily.dbc ids with a pet talent type).
+HUNTER_FAMILIES = frozenset({1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 20, 21, 24, 25, 26, 27, 30, 31, 32, 33, 34, 35, 37, 38,
+                             39, 41, 42, 43, 44, 45, 46})
+PET_ABILITY_D1 = 0x10000000
+PET_UTILITY_D1 = 0x20000000
+# Slot 2 spells that skip the Mobility bit (ruling 10); none exists before F1-F2.
+NO_MOBILITY_UTILITIES: frozenset[int] = frozenset()
+# The placeholders of the 27 families without a kit (Dash, Last Stand, Bullheaded) keep their stock masks until F3
+# removes them (Dash happens to carry d1 b29; the handoff gives b29 to the finished kits' spells only).
+PLACEHOLDER_SLOT_SPELLS = frozenset({61684, 53478, 53490})
+FINISHED_KITS = {     # family: (group, utility)
+    1: (24604, 201983), 2: (201715, 201984), 11: (201716, 201985), 4: (201717, 201986), 3: (201753, 201718),
+}
+
+
+def check_family_kits(kits: dict[int, dict], defaults: dict[str, dict], unresolved: list[str],
+                      displays: dict[int, int], rows_by_id: dict[int, dict]) -> list[str]:
+    """(v) one row per hunter family; every id declared; commands with a display; slot spells with d1 b28 + b29
+    (d1 b28 alone for NO_MOBILITY_UTILITIES); the five finished kits' slot spells; slot 2 autocast only where the
+    PLAN says (the finished kits); the type defaults carry no slot spell."""
+    bad = [f"HunterMechanics.cpp: {name} not resolved through HunterData.h" for name in unresolved]
+    if set(kits) != HUNTER_FAMILIES:
+        bad.append(f"FAMILY_KITS families: missing {sorted(HUNTER_FAMILIES - set(kits))}, "
+                   f"extra {sorted(set(kits) - HUNTER_FAMILIES)}")
+    for family, row in sorted(kits.items()):
+        for field in _KIT_FIELDS[:5]:
+            spell_id = row[field]
+            if field in ("basic", "commandI", "commandII") and spell_id <= 0:
+                bad.append(f"family {family}: {field} is empty")
+            elif spell_id > 0 and spell_id not in rows_by_id:
+                bad.append(f"family {family}: {field} {spell_id} is not declared by the hunter package")
+        for field in ("commandI", "commandII"):
+            if row[field] > 0 and row[field] not in displays:
+                bad.append(f"family {family}: {field} {row[field]} has no COMMAND_DISPLAYS pair")
+        for field in ("group", "utility"):
+            spell = rows_by_id.get(row[field])
+            if spell is None:
+                continue
+            want = PET_ABILITY_D1 | (0 if row[field] in NO_MOBILITY_UTILITIES else PET_UTILITY_D1)
+            got = spell_mask(spell)[1] & (PET_ABILITY_D1 | PET_UTILITY_D1)
+            if row[field] in PLACEHOLDER_SLOT_SPELLS:
+                want = got if got & PET_ABILITY_D1 else PET_ABILITY_D1
+            if _i(spell, "SpellClassSet") != SPELLFAMILY_HUNTER or got != want:
+                bad.append(f"family {family}: {field} {row[field]} SpellClassSet {spell.get('SpellClassSet')} d1 "
+                           f"0x{spell_mask(spell)[1]:X}, expected family 9 with 0x{want:X} of d1 b28/b29")
+        finished = FINISHED_KITS.get(family)
+        if finished and (row["group"], row["utility"]) != finished:
+            bad.append(f"family {family}: slots {(row['group'], row['utility'])}, F0 says {finished}")
+        if bool(row["flags"] & KIT_FLAGS["PET_KIT_GROUP_AUTOCAST"]) != bool(finished):
+            bad.append(f"family {family}: GROUP_AUTOCAST {bool(row['flags'] & 1)}, expected {bool(finished)}")
+    if set(defaults) != {"KIT_FEROCITY_DEFAULT", "KIT_TENACITY_DEFAULT", "KIT_CUNNING_DEFAULT", "KIT_NONE"}:
+        bad.append(f"type default kits: {sorted(defaults)}")
+    for name, row in defaults.items():
+        if row["group"] or row["utility"] or row["flags"]:
+            bad.append(f"{name}: a type default seats the basic and Growl only, got {row}")
+        if name != "KIT_NONE" and not (row["commandI"] in displays and row["commandII"] in displays):
+            bad.append(f"{name}: commands without a COMMAND_DISPLAYS pair")
+    return bad
+
+
+# (w) the F0 utilities: id -> (SpellLevel, Effect_1, EffectAura_1, EffectBasePoints_1, amplitude, RecoveryTime ms)
+F0_UTILITIES = {
+    201983: (36, EFFECT_APPLY_AURA, 20, 5, 1000, 60000),        # Lick Your Wounds: 6% x 5 = 30% over 5 s
+    201984: (20, EFFECT_APPLY_AURA, 16, 149, 0, 0),             # Prowl (24450's numbers; category 38 cooldown)
+    201985: (30, 98, 0, 149, 0, 30000),                         # Tail Sweep: knockback
+    201986: (36, EFFECT_APPLY_AURA, 20, 2, 1000, 60000),        # Frenzied Regeneration: 3% x 10 = 30% over 10 s
+    201753: (26, EFFECT_APPLY_AURA, 216, -26, 0, 10000),        # Sticky Webbing: casting time +25%
+}
+KIT_V2_MARKER = 202014
+AURA_INTERRUPT_MELEE_ATTACK = 0x1000
+SPELL_GROUP_CAST_TIME_DEBUFFS = 1096
+
+
+def check_f0_utilities(rows_by_id: dict[int, dict], groups: list[dict]) -> list[str]:
+    """(w) shape of each F0 utility (level, first effect, cooldown), d1 b28 + b29 family 9, EquippedItemClass -1, not
+    passive; Prowl breaks on the pet's melee swing; Tail Sweep targets the enemy; Sticky Webbing in group 1096; the
+    kit v2 marker is a hidden passive DUMMY with no family."""
+    bad = []
+    for spell_id, (level, effect, aura, bp, amplitude, recovery) in F0_UTILITIES.items():
+        row = rows_by_id.get(spell_id)
+        if row is None:
+            bad.append(f"{spell_id}: not declared")
+            continue
+        got = (_i(row, "SpellLevel"), _i(row, "Effect_1"), _i(row, "EffectAura_1"), _i(row, "EffectBasePoints_1"),
+               _i(row, "EffectAuraPeriod_1"), _i(row, "RecoveryTime"))
+        if got != (level, effect, aura, bp, amplitude, recovery):
+            bad.append(f"{spell_id}: (level, effect, aura, bp, amplitude, cooldown) {got}, expected "
+                       f"{(level, effect, aura, bp, amplitude, recovery)}")
+        if _i(row, "SpellClassSet") != SPELLFAMILY_HUNTER or spell_mask(row) != (0, 0x30000000, 0):
+            bad.append(f"{spell_id}: family {row.get('SpellClassSet')} mask {_hex(spell_mask(row))}, expected 9 "
+                       f"(0, 0x30000000, 0)")
+        if _i(row, "EquippedItemClass") != -1 or _i(row, "Attributes") & ATTR_PASSIVE:
+            bad.append(f"{spell_id}: EquippedItemClass {row.get('EquippedItemClass')} / passive")
+    prowl = rows_by_id.get(201984)
+    if prowl is not None and not _i(prowl, "AuraInterruptFlags") & AURA_INTERRUPT_MELEE_ATTACK:
+        bad.append("201984: Prowl lacks AuraInterruptFlags 0x1000 (MELEE_ATTACK): the next swing must break it")
+    sweep = rows_by_id.get(201985)
+    if sweep is not None and _i(sweep, "ImplicitTargetA_1") != TARGET_UNIT_TARGET_ENEMY:
+        bad.append(f"201985: Tail Sweep TargetA {sweep.get('ImplicitTargetA_1')}, expected 6 (the target)")
+    if not any(int(g["id"]) == SPELL_GROUP_CAST_TIME_DEBUFFS and int(g["spell_id"]) == 201753 for g in groups):
+        bad.append("201753: Sticky Webbing not in spell_group 1096 (Cast Time Debuffs)")
+    marker = rows_by_id.get(KIT_V2_MARKER)
+    if marker is None:
+        bad.append(f"{KIT_V2_MARKER}: kit v2 marker not declared")
+    else:
+        if _i(marker, "Attributes") != 464 or _aura_dummy_on_self(marker):
+            bad.append(f"{KIT_V2_MARKER}: Attributes {marker.get('Attributes')}, expected the hidden passive DUMMY 464")
+        if _i(marker, "SpellClassSet") or any(spell_mask(marker)):
+            bad.append(f"{KIT_V2_MARKER}: has a family or mask")
+    return bad
+
+
+# (x) Mobility and the d1 b29 group
+MOBILITY = {53483: -11, 53485: -21}       # stored base points: -10% / -20%
+SPELLMOD_COOLDOWN = 11
+EFFECT_APPLY_AREA_AURA_PET = 119
+# Every d1 b29 carrier the package declares: the slot 2 / 3 utilities, plus the stock Dash 61684 and the retired Dive
+# 23145 (Dash leaves the placeholders in F3).
+D1_B29_CARRIERS = frozenset({23145, 24604, 61684, 201715, 201716, 201717, 201718, 201753, 201983, 201984, 201985,
+                             201986})
+# Readers: Mobility, the retired Dive ranks (talent 2208 retired, never applied), and Point of No Escape 202058, whose
+# aura 271 reads every bit but two (damage from caster: a pet utility deals no damage).
+D1_B29_READERS = frozenset({53483, 53485, 53554, 53555, 202058})
+
+
+def check_mobility(rows_by_id: dict[int, dict], rows: list[dict]) -> list[str]:
+    bad = []
+    for spell_id, bp in MOBILITY.items():
+        row = rows_by_id.get(spell_id)
+        if row is None:
+            bad.append(f"{spell_id}: not declared")
+            continue
+        got = (_i(row, "Effect_1"), _i(row, "EffectAura_1"), _i(row, "EffectMiscValue_1"),
+               _i(row, "EffectBasePoints_1"), effect_mask(row, 1))
+        want = (EFFECT_APPLY_AREA_AURA_PET, AURA_ADD_PCT_MODIFIER, SPELLMOD_COOLDOWN, bp, (0, PET_UTILITY_D1, 0))
+        if got != want:
+            bad.append(f"{spell_id}: (effect, aura, misc, bp, mask) {got}, expected {want}")
+    family9 = [r for r in rows if _i(r, "SpellClassSet") == SPELLFAMILY_HUNTER]
+    carriers = {int(r["ID"]) for r in family9 if spell_mask(r)[1] & PET_UTILITY_D1}
+    readers = {int(r["ID"]) for r in family9 if any(effect_mask(r, e)[1] & PET_UTILITY_D1 for e in (1, 2, 3))}
+    if carriers != D1_B29_CARRIERS:
+        bad.append(f"d1 b29 carriers: extra {sorted(carriers - D1_B29_CARRIERS)}, "
+                   f"missing {sorted(D1_B29_CARRIERS - carriers)}")
+    if readers != D1_B29_READERS:
+        bad.append(f"d1 b29 readers: extra {sorted(readers - D1_B29_READERS)}, missing {sorted(D1_B29_READERS - readers)}")
     return bad
 
 
@@ -1016,11 +1240,11 @@ _T1_CAP = ("Increases the speed bonus of your Aspect of the Cheetah, Aspect of t
            "not stack with other effects that increase mounted speed.")
 _T1_OLD = ("Aspect of the Monkey to trigger by", "and your mounted speed by")
 _T16 = "Increases the damage done by your pet by $s1%."
-_PT2 = "Reduces the cooldown of your pet's Dash by ${$m1/-1000} sec."
+_PT2 = "Reduces the cooldown of your pet's utility abilities by ${$m1*-1}%."   # hunter-pet-families F0
 TOOLTIP_TEXTS = {
     **{i: ((_T1_MAIN, _T1_CAP), _T1_OLD) for i in (19559, 19560, 201820)},       # T1 Pathfinding (stock ranks + capstone)
     **{i: ((_T16,), ("Increases your pet's damage by",)) for i in (201839, 201840)},  # T16 Shark Attack
-    **{i: ((_PT2,), ("ability by",)) for i in (53483, 53485)},                       # PT2 Mobility
+    **{i: ((_PT2,), ("Dash",)) for i in (53483, 53485)},                             # PT2 Mobility (F0)
 }
 
 
@@ -1212,10 +1436,44 @@ class HunterBmDataTest(unittest.TestCase):
         package = data["package"]
         offset = _consts(package)["COMMAND_DISPLAY_OFFSET"]
         self.assertEqual(offset, DISPLAY_IDS[0] - COMMANDED_SLOTTED[0], "brief decision 1: 201720 + 138 = 201858")
-        slots = parse_kit_slots(HUNTER_MECHANICS_CPP.read_text(encoding="utf-8"),
-                                HUNTER_DATA_H.read_text(encoding="utf-8"))
-        self.assertClean(check_command_displays(data["rows_by_id"], offset, slots, package.spell_script_names,
+        cpp, header = HUNTER_MECHANICS_CPP.read_text(encoding="utf-8"), HUNTER_DATA_H.read_text(encoding="utf-8")
+        slots = parse_kit_slots(cpp, header)
+        displays, unresolved = parse_command_displays(cpp, header)
+        self.assertEqual(unresolved, [])
+        # the 16 pairs F0 moved into the table are still the offset's
+        self.assertEqual({c: d for c, d in displays.items() if c in COMMANDED_SLOTTED},
+                         {c: c + offset for c in COMMANDED_SLOTTED})
+        self.assertClean(check_command_displays(data["rows_by_id"], displays, slots, package.spell_script_names,
                                                 package.talents, package.trainer_spells))
+
+    # (v) hunter-pet-families F0
+    def test_family_kit_table(self):
+        cpp, header = HUNTER_MECHANICS_CPP.read_text(encoding="utf-8"), HUNTER_DATA_H.read_text(encoding="utf-8")
+        kits, defaults, unresolved = parse_kits(cpp, header)
+        displays, _ = parse_command_displays(cpp, header)
+        self.assertEqual(len(kits), 32)
+        self.assertClean(check_family_kits(kits, defaults, unresolved, displays, package_data()["rows_by_id"]))
+
+    # (w)
+    def test_f0_utilities(self):
+        data = package_data()
+        self.assertClean(check_f0_utilities(data["rows_by_id"], data["package"].spell_groups))
+
+    # (x)
+    def test_mobility_and_the_pet_utility_group(self):
+        data = package_data()
+        self.assertClean(check_mobility(data["rows_by_id"], data["rows"]))
+
+    # (y) ruling 19: Swipe x500/600 (504 -> 420 on both effects), Maul x1100/1000 (650 -> 715). Instant pet commands
+    # share one time basis, so ap_bonus is proportional to the authored potency (Rip Throat 552.5 as the yardstick).
+    def test_bear_retrofit(self):
+        package = package_data()["package"]
+        bonus = {int(r["entry"]): r["ap_bonus"] for r in package.spell_bonus_data}
+        self.assertAlmostEqual(bonus[201726] / bonus[201721], 420.0 / 552.5, places=6)
+        self.assertAlmostEqual(bonus[201727] / bonus[201721], 715.0 / 552.5, places=6)
+        swipe = {r["ScriptName"] for r in package.spell_script_names if int(r["spell_id"]) == 201726}
+        self.assertEqual(swipe, {"spell_hun_command_splash", "spell_hun_command_aoe_falloff"})
+        self.assertEqual(_consts(package)["COMMAND_AOE_FALLOFF_PCT"], 50)
 
     def test_tooltip_texts_t1_t16_pt2(self):
         self.assertClean(check_tooltip_texts(package_data()["rows_by_id"]))
@@ -1747,18 +2005,36 @@ class HunterBmS1bNegativeTest(unittest.TestCase):
     def test_kit_slot_parser(self):
         header = ("constexpr uint32 SPELL_BITE = 17253; // x\n"
                   "constexpr uint32 SPELL_A_COMMAND = 201720; // a\nconstexpr uint32 SPELL_B_COMMAND = 201721; // b\n")
-        cpp = "{ 1, { SPELL_BITE, SPELL_BITE, SPELL_A_COMMAND, SPELL_B_COMMAND } },"
-        self.assertEqual(parse_kit_slots(cpp, header), {201720: "I", 201721: "II"})
-        swapped = cpp + "\n{ 2, { SPELL_BITE, SPELL_BITE, SPELL_B_COMMAND, SPELL_A_COMMAND } },"
+
+        def table(*rows):
+            return "constexpr std::array<FamilyKit, 2> FAMILY_KITS =\n{{\n" + "\n".join(rows) + "\n}};\n"
+
+        row1 = "    // Wolf\n    { 1, { SPELL_BITE, 0, 0, SPELL_A_COMMAND,\n        SPELL_B_COMMAND, PET_KIT_GROUP_AUTOCAST } },"
+        self.assertEqual(parse_kit_slots(table(row1), header), {201720: "I", 201721: "II"})
+        kits, defaults, unresolved = parse_kits(table(row1), header)
+        self.assertEqual(kits, {1: {"basic": 17253, "group": 0, "utility": 0, "commandI": 201720,
+                                    "commandII": 201721, "flags": 1}})
+        self.assertEqual((defaults, unresolved), ({}, []))
+        swapped = table(row1, "    { 2, { SPELL_BITE, 0, 0, SPELL_B_COMMAND, SPELL_A_COMMAND, 0 } },")
         self.assertEqual(parse_kit_slots(swapped, header), {201720: "both", 201721: "both"})
-        unknown = cpp + "\nconstexpr PetKit K = { SPELL_BITE, SPELL_BITE, SPELL_C_COMMAND, SPELL_A_COMMAND };"
+        unknown = table(row1) + "constexpr PetKit KIT_X_DEFAULT =\n    { SPELL_BITE, 0, 0, SPELL_C_COMMAND, SPELL_A_COMMAND, 0 };"
         slots = parse_kit_slots(unknown, header)
         self.assertEqual(slots[-1], "SPELL_C_COMMAND")
         self.assertEqual(slots[201720], "both")
+        # a row outside the FAMILY_KITS initializer is not a family row
+        self.assertEqual(parse_kits("{ 3, { SPELL_BITE, 0, 0, SPELL_A_COMMAND, SPELL_B_COMMAND, 0 } },", header)[0], {})
+
+    def test_display_table_parser(self):
+        header = "constexpr uint32 SPELL_A_COMMAND = 201720; // a\nconstexpr uint32 SPELL_A_DISPLAY = 201858; // b\n"
+        cpp = ("constexpr std::array<CommandDisplay, 1> COMMAND_DISPLAYS =\n{{\n"
+               "    { SPELL_A_COMMAND, HunterData::SPELL_A_DISPLAY },\n}};\n")
+        self.assertEqual(parse_command_displays(cpp, header), ({201720: 201858}, []))
+        self.assertEqual(parse_command_displays(cpp.replace("SPELL_A_DISPLAY }", "SPELL_Z }"), header)[1], ["SPELL_Z"])
 
     def test_command_display_guard(self):
         rows, slots = good_displays()
-        self.assertEqual(check_command_displays(rows, 138, slots, [], [], []), [])
+        table = {c: c + 138 for c in COMMANDED_SLOTTED}
+        self.assertEqual(check_command_displays(rows, table, slots, [], [], []), [])
 
         def changed(display, **cols):
             out = dict(rows)
@@ -1771,22 +2047,74 @@ class HunterBmS1bNegativeTest(unittest.TestCase):
                               (201862, {"EffectAura_1": 108}), (201863, {"Effect_2": 6}),
                               (201864, {"SpellClassSet": 9}),
                               (201865, {"SpellClassMask_3": 0x400000})):
-            self.assertEqual(len(check_command_displays(changed(display, **cols), 138, slots, [], [], [])), 1,
+            self.assertEqual(len(check_command_displays(changed(display, **cols), table, slots, [], [], [])), 1,
                              (display, cols))
         missing = {k: v for k, v in rows.items() if k != 201873}
-        self.assertEqual(len(check_command_displays(missing, 138, slots, [], [], [])), 1)
-        self.assertEqual(len(check_command_displays({**rows, 201874: {"ID": 201874}}, 138, slots, [], [], [])), 1)
-        self.assertEqual(len(check_command_displays(rows, 138, {**slots, 201725: "both"}, [], [], [])), 1)
-        self.assertEqual(len(check_command_displays(rows, 138, {k: v for k, v in slots.items() if k != 201730}, [], [],
-                                                    [])), 1)
-        self.assertEqual(len(check_command_displays(rows, 138, {**slots, -1: "SPELL_X_COMMAND"}, [], [], [])), 1)
+        self.assertEqual(len(check_command_displays(missing, table, slots, [], [], [])), 1)
+        with_splash = {**table, 201736: 201874}
+        self.assertGreaterEqual(len(check_command_displays(rows, with_splash, slots, [], [], [])), 1)
+        without_pair = {k: v for k, v in table.items() if k != 201731}
+        self.assertGreaterEqual(len(check_command_displays(rows, without_pair, slots, [], [], [])), 1)
+        self.assertEqual(len(check_command_displays(rows, table, {**slots, 201725: "both"}, [], [], [])), 1)
+        self.assertEqual(len(check_command_displays(rows, table, {k: v for k, v in slots.items() if k != 201730}, [],
+                                                    [], [])), 1)
+        self.assertEqual(len(check_command_displays(rows, table, {**slots, -1: "SPELL_X_COMMAND"}, [], [], [])), 1)
         bound = [{"spell_id": 201866, "ScriptName": "spell_hun_command"}]
-        self.assertEqual(len(check_command_displays(rows, 138, slots, bound, [], [])), 1)
+        self.assertEqual(len(check_command_displays(rows, table, slots, bound, [], [])), 1)
         talents = [{"id": 1, "rank_spell_ids": [201867]}]
-        self.assertEqual(len(check_command_displays(rows, 138, slots, [], talents, [])), 1)
+        self.assertEqual(len(check_command_displays(rows, table, slots, [], talents, [])), 1)
         trainers = [{"TrainerId": 204, "SpellId": 201868}]
-        self.assertEqual(len(check_command_displays(rows, 138, slots, [], [], trainers)), 1)
-        self.assertGreaterEqual(len(check_command_displays(rows, 137, slots, [], [], [])), 1)   # wrong offset
+        self.assertEqual(len(check_command_displays(rows, table, slots, [], [], trainers)), 1)
+        shifted = {c: c + 137 for c in COMMANDED_SLOTTED}
+        self.assertGreaterEqual(len(check_command_displays(rows, shifted, slots, [], [], [])), 1)   # wrong pairs
+
+    def test_family_kit_guard(self):
+        displays = {c: c + 138 for c in COMMANDED_SLOTTED}
+        util = {"SpellClassSet": 9, "SpellClassMask_2": 0x30000000}
+        rows = {i: {"ID": i} for i in (17253, 16827, 49966, 201710, 201711, 61684, 53478, 53490, *COMMANDED_SLOTTED)}
+        rows.update({i: {"ID": i, **util} for g_u in FINISHED_KITS.values() for i in g_u})
+
+        def row(basic, group, utility, c1, c2, flags):
+            return dict(zip(_KIT_FIELDS, (basic, group, utility, c1, c2, flags)))
+
+        kits = {f: row(17253, 61684, 0, 201730, 201731, 0) for f in HUNTER_FAMILIES}
+        for family, (group, utility) in FINISHED_KITS.items():
+            kits[family] = row(16827, group, utility, 201720, 201721, 1)
+        defaults = {"KIT_FEROCITY_DEFAULT": row(17253, 0, 0, 201730, 201731, 0),
+                    "KIT_TENACITY_DEFAULT": row(17253, 0, 0, 201732, 201733, 0),
+                    "KIT_CUNNING_DEFAULT": row(201711, 0, 0, 201734, 201735, 0),
+                    "KIT_NONE": row(0, 0, 0, 0, 0, 0)}
+        rows[61684].update(util)
+        self.assertEqual(check_family_kits(kits, defaults, [], displays, rows), [])
+        self.assertEqual(len(check_family_kits({k: v for k, v in kits.items() if k != 46}, defaults, [], displays,
+                                               rows)), 1)                                    # a family missing
+        self.assertEqual(len(check_family_kits(kits, defaults, ["SPELL_X"], displays, rows)), 1)
+        self.assertEqual(len(check_family_kits({**kits, 7: row(17253, 61684, 0, 201730, 999, 0)}, defaults, [],
+                                               displays, rows)), 2)                         # undeclared, no display
+        self.assertEqual(len(check_family_kits({**kits, 1: row(16827, 24604, 201983, 201720, 201721, 0)}, defaults,
+                                               [], displays, rows)), 1)                     # autocast flag lost
+        self.assertEqual(len(check_family_kits({**kits, 3: row(201710, 201718, 201753, 201728, 201729, 1)},
+                                               defaults, [], displays, rows)), 1)           # Spider slots swapped
+        no_b29 = {**rows, 201983: {"ID": 201983, "SpellClassSet": 9, "SpellClassMask_2": 0x10000000}}
+        self.assertEqual(len(check_family_kits(kits, defaults, [], displays, no_b29)), 1)
+        bad_default = {**defaults, "KIT_FEROCITY_DEFAULT": row(17253, 61684, 0, 201730, 201731, 0)}
+        self.assertEqual(len(check_family_kits(kits, bad_default, [], displays, rows)), 1)
+
+    def test_mobility_guard(self):
+        def mob(bp, **cols):
+            return {"Effect_1": 119, "EffectAura_1": 108, "EffectMiscValue_1": 11, "EffectBasePoints_1": bp,
+                    "EffectSpellClassMaskA_2": 0x20000000, "SpellClassSet": 9, **cols}
+        rows = {53483: {"ID": 53483, **mob(-11)}, 53485: {"ID": 53485, **mob(-21)}}
+        rows.update({i: {"ID": i, "SpellClassSet": 9, "SpellClassMask_2": 0x30000000} for i in D1_B29_CARRIERS})
+        rows.update({i: {"ID": i, "SpellClassSet": 9, "EffectSpellClassMaskA_2": 0x20000000}
+                     for i in D1_B29_READERS - set(MOBILITY)})
+        self.assertEqual(check_mobility(rows, list(rows.values())), [])
+        flat = {**rows, 53483: {"ID": 53483, **mob(-8001, EffectAura_1=107)}}
+        self.assertEqual(len(check_mobility(flat, list(flat.values()))), 1)
+        reader = {**rows, 999: {"ID": 999, "SpellClassSet": 9, "EffectSpellClassMaskB_2": 0x20000000}}
+        self.assertEqual(len(check_mobility(reader, list(reader.values()))), 1)
+        carrier = {**rows, 998: {"ID": 998, "SpellClassSet": 9, "SpellClassMask_2": 0x20000000}}
+        self.assertEqual(len(check_mobility(carrier, list(carrier.values()))), 1)
 
     def test_tooltip_text_guard(self):
         good = {i: {"ID": i, "Description_Lang_enUS": " ".join(req)} for i, (req, _old) in TOOLTIP_TEXTS.items()}

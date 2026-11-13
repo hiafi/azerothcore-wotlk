@@ -26,10 +26,19 @@ IAOTV_CAPSTONE_MANA_PCT = const('IAOTV_CAPSTONE_MANA_PCT', 1, 'Improved Aspect o
 PHOENIX_PLUME_REVIVE_PCT = const('PHOENIX_PLUME_REVIVE_PCT', 50, "Phoenix's Plume revive health, percent (BM 13).")
 PHOENIX_PLUME_REVIVE_DELAY_MS = const('PHOENIX_PLUME_REVIVE_DELAY_MS', 1000, "Phoenix's Plume revive delay, ms (BM 13).")
 
-SWIPE_SPLASH_PCT = const('SWIPE_SPLASH_PCT', 50, 'Swipe command splash share of the primary hit, percent.')
+# hunter-pet-families F0 (PLAN §11 ruling 6): every AoE command's targets other than the primary take this share
+# (spell_hun_command_aoe_falloff); with EffectChainAmplitude 1.0 it is also a flat share per chain jump. Was
+# SWIPE_SPLASH_PCT (Swipe's own script, replaced by the generic one).
+COMMAND_AOE_FALLOFF_PCT = const(
+    'COMMAND_AOE_FALLOFF_PCT', 50,
+    'AoE command share of every target other than the primary, percent (hunter-pet-families ruling 6).',
+)
+# hunter-pet-families F0: the offset only names the 16 displays of 201720-201735. The C++ walks an explicit command ->
+# display table (HunterMechanics.cpp COMMAND_DISPLAYS); the family stages' displays take ids from 202109 on
+# (`_display(..., display_id=...)`).
 COMMAND_DISPLAY_OFFSET = const(
     'COMMAND_DISPLAY_OFFSET', 138,
-    'PT-5: the pet-spellbook display passive of commanded spell N is N + this (201720..201735 -> 201858..201873).',
+    'PT-5: the display passive of commanded spell N (201720..201735 only) is N + this (201858..201873).',
 )
 
 # ---- tooltip_vars (BM 5.3; rank spell ids are bare because hunter_bm_ranks.py / pulled ranks resolve by id) ----
@@ -495,17 +504,19 @@ swipe_command_201726 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        _direct(504.0),
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=504.0, potency_kind='direct',
+        _direct(420.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=420.0, potency_kind='direct',
                implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],
     pet_owner_scaling=_PET_SCALING,
     notes='S1a A2 / BM 4.5: Bear I. eff0 600 on the target (TargetA 6); eff1 to enemies within 8 yd of the target (A 53 / B 16), the primary removed by spell_hun_command_splash. DEVIATION: BM 4.5 says eff1 300 (50%), but the DSL/engine allows ONE direct AP coefficient per spell (D6, spell_bonus_data.ap_bonus), so eff1 carries 600 too; the 50% extra-target rule needs a script halving (SetHitDamage on EFFECT_1) or a split spell. Ruling: eff1 stays 600 and spell_hun_swipe_command_splash (2nd binding) scales EFFECT_1 damage by SWIPE_SPLASH_PCT (50). Visual 189 from Swipe 779.'
           ' Effect 1 ap_potency 600.0 -> 420.0 (2026-11-01, DPS balance pass 1031, user ruling: Swipe (command 1) -30%). Effect 2 ap_potency 600.0 -> 420.0 (2026-11-01, DPS balance pass 1031, user ruling: Swipe (command 1) -30%).'
-          ' Effect 1 ap_potency 420.0 -> 504.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Swipe (command 1) +20%). Effect 2 ap_potency 420.0 -> 504.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Swipe (command 1) +20%).',
+          ' Effect 1 ap_potency 420.0 -> 504.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Swipe (command 1) +20%). Effect 2 ap_potency 420.0 -> 504.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Swipe (command 1) +20%).'
+          ' Effects 1 and 2 ap_potency 504.0 -> 420.0 (2026-11-12, hunter-pet-families F0, ruling 19: the AoE shift, x500/600).'
+          ' The 50% on extra targets is spell_hun_command_aoe_falloff now (COMMAND_AOE_FALLOFF_PCT; was spell_hun_swipe_command_splash).',
     raw_overrides={**_cmd_raw(189), 'RangeIndex': 2,
                    'Description_Lang_enUS': 'Swipe the target and all enemies within $a2 yards, causing {pot1} Physical '
-                                            'damage. Enemies other than the target take ' + str(SWIPE_SPLASH_PCT['value'])
+                                            'damage. Enemies other than the target take ' + str(COMMAND_AOE_FALLOFF_PCT['value'])
                                             + '% damage.'},
 )
 
@@ -520,11 +531,12 @@ maul_command_201727 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=5.0,
-    effects=[_direct(650.0)],
+    effects=[_direct(715.0)],
     pet_owner_scaling=_PET_SCALING,
     notes='S1a A2 / BM 4.5: Bear II, 1000 Physical, melee. Visual 166 from Maul 6807.'
           ' Effect 1 ap_potency 1000.0 -> 500.0 (2026-11-01, DPS balance pass 1031, user ruling: Maul (command 2) -50%).'
-          ' Effect 1 ap_potency 500.0 -> 650.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Maul (command 2) +30%).',
+          ' Effect 1 ap_potency 500.0 -> 650.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Maul (command 2) +30%).'
+          ' Effect 1 ap_potency 650.0 -> 715.0 (2026-11-12, hunter-pet-families F0, ruling 19: the AoE shift, x1100/1000).',
     raw_overrides={**_cmd_raw(166), 'RangeIndex': 2,
                    'Description_Lang_enUS': 'Maul the target, causing {pot1} Physical damage.'},
 )
@@ -736,7 +748,9 @@ venomous_cloud_splash_201736 = spell(
 scripted_by(command_i_201800, 'spell_hun_command')
 scripted_by(command_ii_201801, 'spell_hun_command')
 scripted_by(swipe_command_201726, 'spell_hun_command_splash')
-scripted_by(swipe_command_201726, 'spell_hun_swipe_command_splash')   # second class: eff1 SetHitDamage(SWIPE_SPLASH_PCT %)
+# hunter-pet-families F0: the generic AoE falloff (COMMAND_AOE_FALLOFF_PCT on every target but the primary) replaces
+# spell_hun_swipe_command_splash (C++ class removed; the prune pass deletes its generated binding).
+scripted_by(swipe_command_201726, 'spell_hun_command_aoe_falloff')
 scripted_by(venomous_cloud_splash_201736, 'spell_hun_command_splash')
 scripted_by(34026, 'spell_hun_kill_command_bm')              # PET keeps spell_hun_kill_command_rework
 scripted_by(beast_cleave_buff_201806, 'spell_hun_beast_cleave')
@@ -847,11 +861,14 @@ bm_pet_procs_201809 = spell(
 # trainer. eff0 DUMMY on the pet itself. Hunter::SeatDefaultPetBar learns the current kit's two (ACT_PASSIVE) and
 # removes the other 14. The tooltip quotes the commanded spell through pot_text() and $<id> tokens.
 
-def _display(commanded, slot, icon, text):
+def _display(commanded, slot, icon, text, display_id=None):
+    """The display passive of `commanded`. `display_id` defaults to commanded + COMMAND_DISPLAY_OFFSET (the 16
+    displays of 201720-201735); the family stages pass their own id (202109-202178, PLAN §4) and add the pair to
+    HunterMechanics.cpp's COMMAND_DISPLAYS."""
     press = command_i_201800 if slot == 'I' else command_ii_201801
     text += f' {press.cooldown_ms // 1000} sec cooldown.'
     return spell(
-        id=commanded.id + COMMAND_DISPLAY_OFFSET['value'],
+        id=display_id if display_id is not None else commanded.id + COMMAND_DISPLAY_OFFSET['value'],
         name=f'Command {slot}: {commanded.name}',
         school=commanded.school,
         attributes=0x150,
@@ -906,7 +923,7 @@ leaping_tear_display_201863 = _display(
 swipe_display_201864 = _display(
     swipe_command_201726, 'I', 1562,     # Swipe (Bear) 779
     'Swipe the target and all enemies within $201726a2 yards, causing ' + pot_text(swipe_command_201726)
-    + ' Physical damage. Enemies other than the target take ' + str(SWIPE_SPLASH_PCT['value']) + _SPLASH_TAIL,
+    + ' Physical damage. Enemies other than the target take ' + str(COMMAND_AOE_FALLOFF_PCT['value']) + _SPLASH_TAIL,
 )
 maul_display_201865 = _display(
     maul_command_201727, 'II', 261,      # Maul 6807

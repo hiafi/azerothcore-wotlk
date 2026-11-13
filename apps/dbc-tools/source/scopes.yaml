@@ -22,6 +22,8 @@ scopes:
   deathknight:
   druid:
   hunter:
+    reservations: [hunter_pet_commands, hunter_pet_displays, hunter_pet_slot2, hunter_pet_slot3, hunter_pet_helpers,
+                   hunter_pet_sla, hunter_pet_stampede]
   mage:
   paladin:
   priest:

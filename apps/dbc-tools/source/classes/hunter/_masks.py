@@ -79,7 +79,8 @@ BESTIAL_WRATH = 0x2000000
 TAR_BOMB = 0x4000000                 # S3
 BURNING_TAR = 0x8000000              # S3 (Black Arrow 3674 until then)
 PET_ABILITY = 0x10000000             # every pet-cast family-9 spell keeps it; never in a reader mask
-DASH_DIVE = 0x20000000
+PET_UTILITY = 0x20000000             # hunter-pet-families F0: every slot 2 / 3 pet utility (Mobility); was DASH_DIVE
+DASH_DIVE = PET_UTILITY               # alias kept (append-only file): Dash 61684 / Dive 23145 still carry the bit
 SAVAGE_REND = 0x40000000
 EXPLOSIVE_SHOT = 0x80000000          # poisoned: periodic -> 53352 hardcode
 
@@ -210,3 +211,10 @@ LOCK_AND_LOAD_PROC = (
 PONE_ALL_EXCEPT_BURNING_TAR = (0xFFFFFFFF, 0xFFFFFFFF & ~(BURNING_TAR | PET_ABILITY), 0xFFFFFFFF)  # 271 reader only
 GLYPH_EXPLOSIVE_SHOT = (0, EXPLOSIVE_SHOT, EXPLOSIVE_SHOT_TICK)
 TAMED_PET_PASSIVE_01_MASK = (TAMED_PET_PASSIVE_01, 0, 0)                         # HvW pet damage (Unleashed Fury's channel)
+
+# --- hunter-pet-families F0 (PLAN §5.3, CORE-AUDIT §5): the pet utility group on d1 b29 ---
+# Carrier: every slot 2 / slot 3 utility (d1 b28 pet ability + d1 b29 pet utility). Reader: Mobility 53483 / 53485
+# (d1 b29 alone; lint (c) keeps d1 b28 out of every reader). The raid cooldowns Ancient Hysteria, Eternal Guardian and
+# Earthen Bulwark carry PET_ABILITY only (ruling 10: Mobility does not reach them).
+PET_UTILITY_CARRIER = (0, PET_ABILITY | PET_UTILITY, 0)
+PET_UTILITY_READER = (0, PET_UTILITY, 0)

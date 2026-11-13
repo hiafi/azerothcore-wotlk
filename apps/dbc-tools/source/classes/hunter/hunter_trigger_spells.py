@@ -5822,11 +5822,11 @@ mobility_53483 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=119, base_points=-8001, implicit_target_a=1, apply_aura=107, misc_value=11, radius_yards=100.0),
+        Effect(type=119, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=11, radius_yards=100.0),
     ],
     spell_icon_id=2234,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 268435456, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the cooldown of your pet's Dash by ${$m1/-1000} sec.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 536870912, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes='pulled from existing data. hunter-pet-families F0 (PLAN ruling 13, CORE-AUDIT 5): ADD_FLAT_MODIFIER -8000 ms -> ADD_PCT_MODIFIER (108) misc 11 SPELLMOD_COOLDOWN -10% on d1 b29 (PET_UTILITY_READER), the pet utility group: every slot 2 / slot 3 utility carries d1 b28 + b29 (not Ancient Hysteria, Eternal Guardian, Earthen Bulwark: ruling 10).',
+    raw_overrides={'AttributesEx': 268435456, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the cooldown of your pet's utility abilities by ${$m1*-1}%.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': m.PET_UTILITY_READER[1], 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
 )
 
 
@@ -5842,11 +5842,11 @@ mobility_53485 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=119, base_points=-16001, implicit_target_a=1, apply_aura=107, misc_value=11, radius_yards=100.0),
+        Effect(type=119, base_points=-21, implicit_target_a=1, apply_aura=108, misc_value=11, radius_yards=100.0),
     ],
     spell_icon_id=2234,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 268435456, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the cooldown of your pet's Dash by ${$m1/-1000} sec.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 536870912, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes='pulled from existing data. hunter-pet-families F0 (PLAN ruling 13, CORE-AUDIT 5): ADD_FLAT_MODIFIER -16000 ms -> ADD_PCT_MODIFIER (108) misc 11 SPELLMOD_COOLDOWN -20% on d1 b29 (PET_UTILITY_READER), the pet utility group: every slot 2 / slot 3 utility carries d1 b28 + b29 (not Ancient Hysteria, Eternal Guardian, Earthen Bulwark: ruling 10).',
+    raw_overrides={'AttributesEx': 268435456, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the cooldown of your pet's utility abilities by ${$m1*-1}%.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': m.PET_UTILITY_READER[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
 )
 
 

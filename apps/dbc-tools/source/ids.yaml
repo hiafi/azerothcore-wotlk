@@ -559,6 +559,39 @@ reservations:
     spellvisual: {start: 90300, end: 90339}  # SpellVisual, Kit and EffectName
     spellcategory: {start: 1313, end: 1319}  # only 1 expected: Sweeping Strikes <-> Blade Flurry (PLAN s4)
 
+  # Hunter (hunter-pet-families F0, 2026-11-12; PLAN s4): the rework's blocks, registered after the fact (they predate
+  # the reservations: hunter-rework.PLAN.md s4.1 was the convention). Spell 201600-202199 (SHARED, PET, BM, MM, SV),
+  # talent 60160-60279, SkillLineAbility 30540-30639, spell_group 1231-1250, tooltip variables 1150-1189 (1001,
+  # Immolation Trap's stock-era entry, stays outside: lib/test_id_blocks.py's HUNTER_LEGACY), spellcategory 1301-1303
+  # (1301 Aimed Shot), creature 300200-300259 (Stampede beasts 300200-300219).
+  hunter:
+    spell: {start: 201600, end: 202199}
+    talent: {start: 60160, end: 60279}
+    skilllineability: {start: 30540, end: 30639}
+    spell_group: {start: 1231, end: 1250}
+    spelldescriptionvariables: {start: 1150, end: 1189}
+    spellcategory: {start: 1301, end: 1303}
+    creature: {start: 300200, end: 300259}
+  # hunter-pet-families sub-blocks (PLAN s4; per-stage columns in s4.1). They nest inside `hunter` (test_id_blocks.py
+  # allows a `hunter_*` slice inside `hunter`, and no other overlap), except the extra SkillLineAbility slice
+  # 30870-30899 (between the warrior's 30869 and crafting's 30900). Freed 30560-30590 are not reused (client cache).
+  # SkillLineAbility 30551-30559 and 30606-30639 are the rest of the pet rows, inside `hunter`.
+  hunter_pet_commands:              # 54 commands in family order 201606-201659, then helpers 201660-201675
+    spell: {start: 201606, end: 201675}
+  hunter_pet_displays:              # command display passives (the C++ command -> display table, no offset)
+    spell: {start: 202109, end: 202178}
+  hunter_pet_slot2:                 # slot 2 group effects: 201753 Spider (F0), then 27 families
+    spell: {start: 201753, end: 201780}
+  hunter_pet_slot3:                 # slot 3 utilities: 201983-201986 Wolf, Cat, Raptor, Bear (F0), then 27 families
+    spell: {start: 201983, end: 202013}
+  hunter_pet_helpers:               # utility helpers (202014 = the kit v2 marker); spell_group 1232-1241 if a gap shows
+    spell: {start: 202014, end: 202039}
+    spell_group: {start: 1232, end: 1241}
+  hunter_pet_sla:                   # SkillLineAbility rows past the hunter block (F3: 30870-30885)
+    skilllineability: {start: 30870, end: 30899}
+  hunter_pet_stampede:              # per-family Stampede beasts, stage V only (PLAN Q12)
+    creature: {start: 300208, end: 300234}
+
   # Warlock: only a tooltip-variable slice (dungeon-prereqs S5b, WARLOCK-STONES s2: 1430 = the stone Master Conjuror
   # multipliers). The warlock's spell / talent / group ids predate the reservations and stay outside them.
   warlock:
