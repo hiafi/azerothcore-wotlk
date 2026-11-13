@@ -80,6 +80,8 @@ ARG CACHEBUST=1
 
 WORKDIR /azerothcore/build
 
+# Custom: mod-ale's Lua 5.2 comes from the vendored deps/lua52 (lua.org's TLS endpoint fails intermittently from the
+# build host, which killed builds at configure time); the variable is unused when mod-ale is absent
 RUN --mount=type=cache,target=/ccache,sharing=locked \
     # This may seem silly (and it is), but AzerothCore wants the git repo at
     # build time. The git repo is _huge_ and it's not something that really
@@ -102,6 +104,7 @@ RUN --mount=type=cache,target=/ccache,sharing=locked \
        -DCMAKE_CXX_COMPILER_LAUNCHER="ccache"          \
        -DCMAKE_C_COMPILER_LAUNCHER="ccache"            \
        -DBoost_USE_STATIC_LIBS="ON"                    \
+       -DFETCHCONTENT_SOURCE_DIR_LUA52="/azerothcore/deps/lua52" \
     && cmake --build . --config "$CTYPE" -j $(($(nproc) + 1)) \
     && cmake --install . --config "$CTYPE"
 
