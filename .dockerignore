@@ -12,3 +12,6 @@
 
 # do not ignore the ccache folder (used by the ci)
 !/var/docker/ccache
+
+# mod-dpssim's sim reports (GBs of JSON) are never part of the build
+/modules/mod-dpssim/reports
