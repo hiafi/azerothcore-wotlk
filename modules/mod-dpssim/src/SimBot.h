@@ -92,6 +92,10 @@ public:
     // pet, to the throwaway sim characters schema only - see README.md).
     bool EnsurePet();
 
+    // DpsSim.DisableSpells (RunConfig::DisableSpells): set before Create(). Create() and a re-tame in EnsurePet() take
+    // these spells out of the actor's and its pet's spellbooks, so the bot and the pet's autocast never use them.
+    void SetDisabledSpells(std::vector<uint32> const& spellIds) { _disabledSpells = spellIds; }
+
     // Drives the real Engine/Strategy selector for one tick - call this from the SimClock loop
     // instead of a hardcoded RotationTick(). `diff` is not a wall-clock read: PlayerbotAIBase's
     // own throttling (PlayerbotAIConfig.reactDelay - how often a bot actually "thinks") is driven
@@ -185,10 +189,17 @@ private:
     // SetInCombatWith() fallback.
     bool EngageTargets(std::vector<Creature*> const& targets);
 
+    // Takes _disabledSpells out of the actor's and its pet's spellbooks (logs each one). With `mustBeKnown`, false when
+    // one of them is known to neither (the job then fails).
+    bool RemoveDisabledSpells(Player* bot, bool mustBeKnown);
+
     PlayerbotAI* _ai = nullptr;
 
     // The hunter pet the profile asked for (SimProfile.h's PetCreatureEntry), 0 = none
     uint32 _petCreatureEntry = 0;
+
+    // DpsSim.DisableSpells
+    std::vector<uint32> _disabledSpells;
 
     // Non-combat strategies BeginBuffPhase() removed, restored by EndBuffPhase()
     std::vector<std::string> _removedStrategies;

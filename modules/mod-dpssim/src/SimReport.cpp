@@ -142,7 +142,19 @@ static bool WriteDpsReport(std::string const& path, SimDaemon::RunConfig const& 
     file << "    \"durationMs\": " << config.DurationMs << ",\n";
     file << "    \"targetCount\": " << config.TargetCount << ",\n";
     file << "    \"targetSpreadYards\": " << config.TargetSpreadYards << ",\n";
-    file << "    \"targetRank\": \"" << SimTarget::RankName(config.TargetRank) << "\"\n";
+    file << "    \"targetRank\": \"" << SimTarget::RankName(config.TargetRank) << "\",\n";
+    // The hunter pet (0 = none; DpsSim.PetCreatureEntry or the profile's), the named buff set (SimBuffSet.h) and the
+    // spells DpsSim.DisableSpells took out of the spellbooks, so a sweep can tell its reports apart
+    file << "    \"petCreatureEntry\": " << config.PetCreatureEntry << ",\n";
+    file << "    \"buffSet\": \"" << SimBuffSet::SetName(config.BuffSet.BuffSet) << "\",\n";
+    file << "    \"disabledSpells\": [";
+    for (size_t i = 0; i < config.DisableSpells.size(); ++i)
+        file << (i ? ", " : "") << config.DisableSpells[i];
+    file << "],\n";
+    file << "    \"dummyImmuneAuras\": [";
+    for (size_t i = 0; i < config.DummyImmuneAuras.size(); ++i)
+        file << (i ? ", " : "") << config.DummyImmuneAuras[i];
+    file << "]\n";
     file << "  },\n";
 
     file << "  \"summary\": {\n";
