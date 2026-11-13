@@ -19,6 +19,7 @@ sys.path.insert(0, str(TOOL_ROOT))
 import re  # noqa: E402
 
 import write_crafting_categories as W  # noqa: E402
+from lib import crafting_alchemy_categories_data as A  # noqa: E402
 from lib import crafting_consumables_data as C  # noqa: E402
 from lib import crafting_enchants_data as E  # noqa: E402
 from lib import crafting_sets_data as T  # noqa: E402
@@ -93,6 +94,25 @@ class CategoriesTest(unittest.TestCase):
         self.assertEqual(recipes, set(W.MISSIVE_RECIPES))
         table = W.all_categories()
         self.assertEqual({table[s][0] for s in recipes}, {"Missives"})
+
+    def test_alchemy(self):
+        """User 2026-11-13: six Alchemy headers in this order, every potion and elixir recipe in one of them."""
+        self.assertEqual(list(A.HEADERS), ["Health Potions", "Mana Potions", "Battle Potions", "Battle Elixirs",
+                                           "Guardian Elixirs", "Utility Potions and Elixirs"])
+        spells = [spell for recipes in A.HEADERS.values() for spell, _name in recipes]
+        self.assertEqual(len(spells), len(set(spells)))
+        table = W.all_categories()
+        for header, recipes in A.HEADERS.items():
+            for spell, name in recipes:
+                self.assertEqual(table[spell][0], header, name)
+        firsts = [table[recipes[0][0]][1] for recipes in A.HEADERS.values()]
+        self.assertEqual(firsts, sorted(firsts))
+        self.assertEqual(table[2330][0], "Health Potions")  # Minor Healing Potion
+        self.assertEqual(table[3452][0], "Mana Potions")  # Mana Potion
+        self.assertEqual(table[17570][0], "Battle Potions")  # Greater Stoneshield Potion
+        self.assertEqual(table[17571][0], "Battle Elixirs")  # Elixir of the Mongoose
+        self.assertEqual(table[24365][0], "Guardian Elixirs")  # Mageblood Elixir
+        self.assertEqual(table[7841][0], "Utility Potions and Elixirs")  # Swim Speed Potion
 
     def test_render(self):
         text = W.render_lua(W.all_categories())
