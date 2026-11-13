@@ -16,8 +16,9 @@ from lib.dsl.registry import pot_text, procs_on, spell
 
 from . import _masks as m
 from .hunter_bm_spells import (
-    BEAST_CLEAVE_RADIUS_YD, IAOTV_CAPSTONE_MANA_PCT, PHOENIX_PLUME_REVIVE_PCT, SPIKED_COLLAR_MAX_TARGETS,
-    SPIKED_COLLAR_RADIUS_YD, bm_stomp_1161, stomp_pet_201804,
+    BEAST_CLEAVE_PET_CUNNING_SCALE, BEAST_CLEAVE_PET_FEROCITY_SCALE, BEAST_CLEAVE_PET_TENACITY_SCALE,
+    BEAST_CLEAVE_RADIUS_YD, BEAST_CLEAVE_SHARE_PCT, IAOTV_CAPSTONE_MANA_PCT, PHOENIX_PLUME_REVIVE_PCT,
+    SPIKED_COLLAR_MAX_TARGETS, SPIKED_COLLAR_RADIUS_YD, bm_stomp_1161, stomp_pet_201804,
 )
 
 _MASK_KEYS = {1: 'A', 2: 'B', 3: 'C'}
@@ -271,10 +272,19 @@ pack_hunter_201846 = _pack_hunter(201846, 1, 9, 0)
 pack_hunter_201847 = _pack_hunter(201847, 2, 19, 1)
 
 # ---- (6,2) Beast Cleave 60205: eff0 PROC_TRIGGER_SPELL -> 201806, once per Multi-Shot cast (CAST phase).
+# hunter-pet-families ruling 24: the pet's copy share follows its type (spell_hun_beast_cleave); the last line names it.
+def _pet_type_share(scale_row):
+    """The pet's Beast Cleave share for one type, percent, as tooltip text (50 x 0.93 -> '46.5')."""
+    return f"{round(BEAST_CLEAVE_SHARE_PCT * scale_row['value'], 1):g}"
+
+
 beast_cleave_talent_201848 = _rank(
     201848, 'Beast Cleave', None, [_aura(AuraType.PROC_TRIGGER_SPELL, 0, 0, 201806)], 90235,
     "After you Multi-Shot, your pet's single-target attacks and your Kill Command also strike all enemies within "
-    f"{_c(BEAST_CLEAVE_RADIUS_YD)} yards of the target for $201806s2% of the damage dealt. Lasts $201806d.",
+    f"{_c(BEAST_CLEAVE_RADIUS_YD)} yards of the target for $201806s2% of the damage dealt. Lasts $201806d."
+    f"\n\nYour pet's share depends on its type: Ferocity {_pet_type_share(BEAST_CLEAVE_PET_FEROCITY_SCALE)}%, "
+    f"Tenacity {_pet_type_share(BEAST_CLEAVE_PET_TENACITY_SCALE)}%, "
+    f"Cunning {_pet_type_share(BEAST_CLEAVE_PET_CUNNING_SCALE)}%.",
     raw={'ProcTypeMask': 0x100, 'ProcChance': 100},
 )
 procs_on(

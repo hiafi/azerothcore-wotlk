@@ -302,9 +302,150 @@ namespace Hunter
         constexpr uint32 SPELL_TAIL_SWEEP = HunterData::SPELL_TAIL_SWEEP;
         constexpr uint32 SPELL_FRENZIED_REGENERATION = HunterData::SPELL_FRENZIED_REGENERATION;
 
+        // hunter-pet-families F1 (PLAN §3.1): the 8 Ferocity kits (Command I, Command II, slot 2, slot 3).
+        // Carrion Bird
+        constexpr uint32 SPELL_REND_FLESH_COMMAND = HunterData::SPELL_REND_FLESH_COMMAND;
+        constexpr uint32 SPELL_CARRION_FEAST_COMMAND = HunterData::SPELL_CARRION_FEAST_COMMAND;
+        constexpr uint32 SPELL_DEMORALIZING_SCREECH_201754 = HunterData::SPELL_DEMORALIZING_SCREECH_201754;
+        constexpr uint32 SPELL_SCAVENGE = HunterData::SPELL_SCAVENGE;
+        // Hyena
+        constexpr uint32 SPELL_TENDON_RIP_COMMAND = HunterData::SPELL_TENDON_RIP_COMMAND;
+        constexpr uint32 SPELL_CACKLING_FRENZY_COMMAND = HunterData::SPELL_CACKLING_FRENZY_COMMAND;
+        constexpr uint32 SPELL_CACKLING_HOWL = HunterData::SPELL_CACKLING_HOWL;
+        constexpr uint32 SPELL_INFECTED_BITE = HunterData::SPELL_INFECTED_BITE;
+        // Tallstrider
+        constexpr uint32 SPELL_LEAPING_KICK_COMMAND = HunterData::SPELL_LEAPING_KICK_COMMAND;
+        constexpr uint32 SPELL_STAMPEDING_KICK_COMMAND = HunterData::SPELL_STAMPEDING_KICK_COMMAND;
+        constexpr uint32 SPELL_DUST_CLOUD = HunterData::SPELL_DUST_CLOUD;
+        constexpr uint32 SPELL_LONG_STRIDE = HunterData::SPELL_LONG_STRIDE;
+        // Moth
+        constexpr uint32 SPELL_SERENITY_DUST_COMMAND = HunterData::SPELL_SERENITY_DUST_COMMAND;
+        constexpr uint32 SPELL_DAZZLING_WINGS_COMMAND = HunterData::SPELL_DAZZLING_WINGS_COMMAND;
+        constexpr uint32 SPELL_MOONGLOW_DUST = HunterData::SPELL_MOONGLOW_DUST;
+        constexpr uint32 SPELL_HEALING_DUST = HunterData::SPELL_HEALING_DUST;
+        // Wasp
+        constexpr uint32 SPELL_STING_COMMAND = HunterData::SPELL_STING_COMMAND;
+        constexpr uint32 SPELL_SWARM_COMMAND = HunterData::SPELL_SWARM_COMMAND;
+        constexpr uint32 SPELL_VENOMOUS_STING = HunterData::SPELL_VENOMOUS_STING;
+        constexpr uint32 SPELL_PARALYTIC_STING = HunterData::SPELL_PARALYTIC_STING;
+        // Devilsaur
+        constexpr uint32 SPELL_MONSTROUS_BITE_COMMAND = HunterData::SPELL_MONSTROUS_BITE_COMMAND;
+        constexpr uint32 SPELL_PRIMAL_RAMPAGE_COMMAND = HunterData::SPELL_PRIMAL_RAMPAGE_COMMAND;
+        constexpr uint32 SPELL_PRIMAL_ROAR = HunterData::SPELL_PRIMAL_ROAR;
+        constexpr uint32 SPELL_EARTHSHAKING_STOMP = HunterData::SPELL_EARTHSHAKING_STOMP;
+        // Core Hound
+        constexpr uint32 SPELL_LAVA_BREATH_COMMAND = HunterData::SPELL_LAVA_BREATH_COMMAND;
+        constexpr uint32 SPELL_TWIN_BITE_COMMAND = HunterData::SPELL_TWIN_BITE_COMMAND;
+        constexpr uint32 SPELL_ANCIENT_HYSTERIA = HunterData::SPELL_ANCIENT_HYSTERIA;
+        constexpr uint32 SPELL_MOLTEN_HIDE = HunterData::SPELL_MOLTEN_HIDE;
+        // Spirit Beast
+        constexpr uint32 SPELL_SPIRIT_STRIKE_COMMAND = HunterData::SPELL_SPIRIT_STRIKE_COMMAND;
+        constexpr uint32 SPELL_SPIRIT_POUNCE_COMMAND = HunterData::SPELL_SPIRIT_POUNCE_COMMAND;
+        constexpr uint32 SPELL_ETERNAL_GUARDIAN = HunterData::SPELL_ETERNAL_GUARDIAN;
+        constexpr uint32 SPELL_SPIRIT_MEND = HunterData::SPELL_SPIRIT_MEND;
+
+        // hunter-pet-families F2 (PLAN §3.2): the 9 Tenacity kits (Command I, Command II, slot 2, slot 3).
+        // Boar
+        constexpr uint32 SPELL_GORE_COMMAND = HunterData::SPELL_GORE_COMMAND;
+        constexpr uint32 SPELL_TUSK_SWEEP_COMMAND = HunterData::SPELL_TUSK_SWEEP_COMMAND;
+        constexpr uint32 SPELL_WAR_GRUNT = HunterData::SPELL_WAR_GRUNT;
+        constexpr uint32 SPELL_BOAR_CHARGE = HunterData::SPELL_BOAR_CHARGE;
+        // Crocolisk
+        constexpr uint32 SPELL_SNAP_COMMAND = HunterData::SPELL_SNAP_COMMAND;
+        constexpr uint32 SPELL_DEATH_ROLL_COMMAND = HunterData::SPELL_DEATH_ROLL_COMMAND;
+        constexpr uint32 SPELL_ANKLE_CRACK = HunterData::SPELL_ANKLE_CRACK;
+        constexpr uint32 SPELL_BAD_ATTITUDE_201996 = HunterData::SPELL_BAD_ATTITUDE_201996;
+        // Turtle
+        constexpr uint32 SPELL_SNAPPING_BITE_COMMAND = HunterData::SPELL_SNAPPING_BITE_COMMAND;
+        constexpr uint32 SPELL_SHELL_SPIN_COMMAND = HunterData::SPELL_SHELL_SPIN_COMMAND;
+        constexpr uint32 SPELL_HARDENED_SHELL = HunterData::SPELL_HARDENED_SHELL;
+        constexpr uint32 SPELL_SHELL_SHIELD = HunterData::SPELL_SHELL_SHIELD;
+        // Crab
+        constexpr uint32 SPELL_PINCER_CRUSH_COMMAND = HunterData::SPELL_PINCER_CRUSH_COMMAND;
+        constexpr uint32 SPELL_BUBBLE_BURST_COMMAND = HunterData::SPELL_BUBBLE_BURST_COMMAND;
+        constexpr uint32 SPELL_CRIPPLING_PINCH = HunterData::SPELL_CRIPPLING_PINCH;
+        constexpr uint32 SPELL_BUBBLE_SHIELD = HunterData::SPELL_BUBBLE_SHIELD;
+        // Scorpid
+        constexpr uint32 SPELL_STINGER_COMMAND = HunterData::SPELL_STINGER_COMMAND;
+        constexpr uint32 SPELL_DEADLY_STING_COMMAND = HunterData::SPELL_DEADLY_STING_COMMAND;
+        constexpr uint32 SPELL_SCORPID_POISON_201766 = HunterData::SPELL_SCORPID_POISON_201766;
+        constexpr uint32 SPELL_DISARMING_PINCER = HunterData::SPELL_DISARMING_PINCER;
+        // Gorilla
+        constexpr uint32 SPELL_THUNDERSTOMP_COMMAND = HunterData::SPELL_THUNDERSTOMP_COMMAND;
+        constexpr uint32 SPELL_POUND_COMMAND = HunterData::SPELL_POUND_COMMAND;
+        constexpr uint32 SPELL_PRIMAL_MIGHT = HunterData::SPELL_PRIMAL_MIGHT;
+        constexpr uint32 SPELL_PUMMEL = HunterData::SPELL_PUMMEL;
+        // Warp Stalker
+        constexpr uint32 SPELL_WARP_STRIKE_COMMAND = HunterData::SPELL_WARP_STRIKE_COMMAND;
+        constexpr uint32 SPELL_PHASE_REND_COMMAND = HunterData::SPELL_PHASE_REND_COMMAND;
+        constexpr uint32 SPELL_TIME_WARP = HunterData::SPELL_TIME_WARP;
+        constexpr uint32 SPELL_WARP = HunterData::SPELL_WARP;
+        // Worm
+        constexpr uint32 SPELL_BURROW_ATTACK_COMMAND = HunterData::SPELL_BURROW_ATTACK_COMMAND;
+        constexpr uint32 SPELL_DEVOUR_COMMAND = HunterData::SPELL_DEVOUR_COMMAND;
+        constexpr uint32 SPELL_EARTHEN_BULWARK = HunterData::SPELL_EARTHEN_BULWARK;
+        constexpr uint32 SPELL_BURROW = HunterData::SPELL_BURROW;
+        // Rhino
+        constexpr uint32 SPELL_HORN_CHARGE_COMMAND = HunterData::SPELL_HORN_CHARGE_COMMAND;
+        constexpr uint32 SPELL_STAMPEDE_COMMAND = HunterData::SPELL_STAMPEDE_COMMAND;
+        constexpr uint32 SPELL_HORN_OF_THE_HERD = HunterData::SPELL_HORN_OF_THE_HERD;
+        constexpr uint32 SPELL_LEAD_THE_HERD = HunterData::SPELL_LEAD_THE_HERD;
+
+        // hunter-pet-families F3 (PLAN §3.3): the 10 Cunning kits (Command I, Command II, slot 2, slot 3).
+        // Bat
+        constexpr uint32 SPELL_SONIC_BITE_COMMAND = HunterData::SPELL_SONIC_BITE_COMMAND;
+        constexpr uint32 SPELL_SHRIEK_COMMAND = HunterData::SPELL_SHRIEK_COMMAND;
+        constexpr uint32 SPELL_SCREECH = HunterData::SPELL_SCREECH;
+        constexpr uint32 SPELL_SONIC_BLAST_202004 = HunterData::SPELL_SONIC_BLAST_202004;
+        // Bird of Prey
+        constexpr uint32 SPELL_TALON_RAKE_COMMAND = HunterData::SPELL_TALON_RAKE_COMMAND;
+        constexpr uint32 SPELL_SWOOP_COMMAND = HunterData::SPELL_SWOOP_COMMAND;
+        constexpr uint32 SPELL_KEEN_SIGHT = HunterData::SPELL_KEEN_SIGHT;
+        constexpr uint32 SPELL_SNATCH_202005 = HunterData::SPELL_SNATCH_202005;
+        // Wind Serpent
+        constexpr uint32 SPELL_LIGHTNING_BREATH_COMMAND = HunterData::SPELL_LIGHTNING_BREATH_COMMAND;
+        constexpr uint32 SPELL_CHAIN_LIGHTNING_COMMAND = HunterData::SPELL_CHAIN_LIGHTNING_COMMAND;
+        constexpr uint32 SPELL_STORM_BREATH = HunterData::SPELL_STORM_BREATH;
+        constexpr uint32 SPELL_GALE_BARRIER = HunterData::SPELL_GALE_BARRIER;
+        // Dragonhawk
+        constexpr uint32 SPELL_FIRE_BREATH_COMMAND = HunterData::SPELL_FIRE_BREATH_COMMAND;
+        constexpr uint32 SPELL_FLAME_NOVA_COMMAND = HunterData::SPELL_FLAME_NOVA_COMMAND;
+        constexpr uint32 SPELL_SCORCHING_BREATH = HunterData::SPELL_SCORCHING_BREATH;
+        constexpr uint32 SPELL_BLINDING_FLASH = HunterData::SPELL_BLINDING_FLASH;
+        // Ravager
+        constexpr uint32 SPELL_RAVAGE_COMMAND = HunterData::SPELL_RAVAGE_COMMAND;
+        constexpr uint32 SPELL_GUT_RIP_COMMAND = HunterData::SPELL_GUT_RIP_COMMAND;
+        constexpr uint32 SPELL_RENDING_CLAWS = HunterData::SPELL_RENDING_CLAWS;
+        constexpr uint32 SPELL_CHITINOUS_SHELL = HunterData::SPELL_CHITINOUS_SHELL;
+        // Serpent
+        constexpr uint32 SPELL_POISON_SPIT_COMMAND = HunterData::SPELL_POISON_SPIT_COMMAND;
+        constexpr uint32 SPELL_CONSTRICT_COMMAND = HunterData::SPELL_CONSTRICT_COMMAND;
+        constexpr uint32 SPELL_PARALYZING_VENOM = HunterData::SPELL_PARALYZING_VENOM;
+        constexpr uint32 SPELL_SHED_SKIN = HunterData::SPELL_SHED_SKIN;
+        // Sporebat
+        constexpr uint32 SPELL_SPORE_BURST_COMMAND = HunterData::SPELL_SPORE_BURST_COMMAND;
+        constexpr uint32 SPELL_FUNGAL_BLOOM_COMMAND = HunterData::SPELL_FUNGAL_BLOOM_COMMAND;
+        constexpr uint32 SPELL_ENERGIZING_SPORES = HunterData::SPELL_ENERGIZING_SPORES;
+        constexpr uint32 SPELL_RESTORATIVE_SPORES = HunterData::SPELL_RESTORATIVE_SPORES;
+        // Nether Ray
+        constexpr uint32 SPELL_NETHER_SHOCK_COMMAND = HunterData::SPELL_NETHER_SHOCK_COMMAND;
+        constexpr uint32 SPELL_NETHER_LASH_COMMAND = HunterData::SPELL_NETHER_LASH_COMMAND;
+        constexpr uint32 SPELL_NETHER_CURRENTS = HunterData::SPELL_NETHER_CURRENTS;
+        constexpr uint32 SPELL_NETHER_PULSE = HunterData::SPELL_NETHER_PULSE;
+        // Chimaera
+        constexpr uint32 SPELL_TWIN_BITE_COMMAND_201656 = HunterData::SPELL_TWIN_BITE_COMMAND_201656;
+        constexpr uint32 SPELL_FROSTSTORM_BREATH_COMMAND = HunterData::SPELL_FROSTSTORM_BREATH_COMMAND;
+        constexpr uint32 SPELL_ARCANE_RESONANCE = HunterData::SPELL_ARCANE_RESONANCE;
+        constexpr uint32 SPELL_FROST_NOVA = HunterData::SPELL_FROST_NOVA;
+        // Silithid
+        constexpr uint32 SPELL_VENOM_WEB_SPRAY_COMMAND = HunterData::SPELL_VENOM_WEB_SPRAY_COMMAND;
+        constexpr uint32 SPELL_SWARM_SPIT_COMMAND = HunterData::SPELL_SWARM_SPIT_COMMAND;
+        constexpr uint32 SPELL_QIRAJI_FORTITUDE = HunterData::SPELL_QIRAJI_FORTITUDE;
+        constexpr uint32 SPELL_SWARM_SHIELD = HunterData::SPELL_SWARM_SHIELD;
+
         // The type defaults: the fallback of a family id with no row below (only a non-hunter family reaches it). They
-        // seat the basic and Growl only (CORE-AUDIT §1.3). Their commands 201730-201735 are also the 27 placeholder
-        // families' commands until F1-F3.
+        // seat the basic and Growl only (CORE-AUDIT §1.3). Since F3 every hunter family has its own commands; the
+        // type-default commands 201730-201735 stay for that fallback and in the display table.
         constexpr PetKit KIT_FEROCITY_DEFAULT =
             { SPELL_BITE, 0, 0, SPELL_SAVAGE_STRIKES_COMMAND, SPELL_SAVAGE_POUNCE_COMMAND, 0 };
         constexpr PetKit KIT_TENACITY_DEFAULT =
@@ -348,11 +489,10 @@ namespace Hunter
         }
 
         // hunter-pet-families F0 (PLAN §3, §5.1): one explicit row per hunter family (32), the family id first:
-        // { basic, slot 2 (group), slot 3 (utility), Command I, Command II, flags }. The five finished kits carry their
-        // slot 2 and slot 3; the 27 families without a kit yet keep today's bar minus Cower until their stage (F1
-        // Ferocity, F2 Tenacity, F3 Cunning): the type's commands, the type's placeholder in slot 2 (Ferocity Dash,
-        // Tenacity Last Stand, Cunning Bullheaded) and, for Tenacity and Cunning, Dash in slot 3 (it sat in slot 4
-        // before, and every family still learns it until F3), so no family loses a button before its stage.
+        // { basic, slot 2 (group), slot 3 (utility), Command I, Command II, flags }. Since F3 every family carries its
+        // own kit (PLAN §3): slot 2 and slot 3 (GROUP_AUTOCAST unless slot 2 is a manual raid cooldown: Ancient
+        // Hysteria, Eternal Guardian, Earthen Bulwark) and its own commands. The placeholders Dash, Last Stand and
+        // Bullheaded left every kit in F3 (no family learns them any more).
         // apps/dbc-tools/lib/test_hunter_bm_data.py parses these rows: keep one { family, { six fields } } per row and
         // the HunterData:: names (or 0).
         struct FamilyKit
@@ -374,77 +514,94 @@ namespace Hunter
             { 11, { SPELL_CLAW, SPELL_TEAR_ARMOR, SPELL_TAIL_SWEEP, SPELL_SAVAGE_REND_COMMAND,
                 SPELL_LEAPING_TEAR_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Carrion Bird
-            { 7, { SPELL_BITE, SPELL_DASH, 0, SPELL_SAVAGE_STRIKES_COMMAND, SPELL_SAVAGE_POUNCE_COMMAND, 0 } },
+            { 7, { SPELL_BITE, SPELL_DEMORALIZING_SCREECH_201754, SPELL_SCAVENGE, SPELL_REND_FLESH_COMMAND,
+                SPELL_CARRION_FEAST_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Hyena
-            { 25, { SPELL_BITE, SPELL_DASH, 0, SPELL_SAVAGE_STRIKES_COMMAND, SPELL_SAVAGE_POUNCE_COMMAND, 0 } },
+            { 25, { SPELL_BITE, SPELL_CACKLING_HOWL, SPELL_INFECTED_BITE, SPELL_TENDON_RIP_COMMAND,
+                SPELL_CACKLING_FRENZY_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Devilsaur
-            { 39, { SPELL_BITE, SPELL_DASH, 0, SPELL_SAVAGE_STRIKES_COMMAND, SPELL_SAVAGE_POUNCE_COMMAND, 0 } },
+            { 39, { SPELL_BITE, SPELL_PRIMAL_ROAR, SPELL_EARTHSHAKING_STOMP, SPELL_MONSTROUS_BITE_COMMAND,
+                SPELL_PRIMAL_RAMPAGE_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Core Hound
-            { 45, { SPELL_BITE, SPELL_DASH, 0, SPELL_SAVAGE_STRIKES_COMMAND, SPELL_SAVAGE_POUNCE_COMMAND, 0 } },
+            { 45, { SPELL_BITE, SPELL_ANCIENT_HYSTERIA, SPELL_MOLTEN_HIDE, SPELL_LAVA_BREATH_COMMAND,
+                SPELL_TWIN_BITE_COMMAND, 0 } },
             // Tallstrider
-            { 12, { SPELL_CLAW, SPELL_DASH, 0, SPELL_SAVAGE_STRIKES_COMMAND, SPELL_SAVAGE_POUNCE_COMMAND, 0 } },
+            { 12, { SPELL_CLAW, SPELL_DUST_CLOUD, SPELL_LONG_STRIDE, SPELL_LEAPING_KICK_COMMAND,
+                SPELL_STAMPEDING_KICK_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Spirit Beast
-            { 46, { SPELL_CLAW, SPELL_DASH, 0, SPELL_SAVAGE_STRIKES_COMMAND, SPELL_SAVAGE_POUNCE_COMMAND, 0 } },
+            { 46, { SPELL_CLAW, SPELL_ETERNAL_GUARDIAN, SPELL_SPIRIT_MEND, SPELL_SPIRIT_STRIKE_COMMAND,
+                SPELL_SPIRIT_POUNCE_COMMAND, 0 } },
             // Moth
-            { 37, { SPELL_SMACK, SPELL_DASH, 0, SPELL_SAVAGE_STRIKES_COMMAND, SPELL_SAVAGE_POUNCE_COMMAND, 0 } },
+            { 37, { SPELL_SMACK, SPELL_MOONGLOW_DUST, SPELL_HEALING_DUST, SPELL_SERENITY_DUST_COMMAND,
+                SPELL_DAZZLING_WINGS_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Wasp
-            { 44, { SPELL_SMACK, SPELL_DASH, 0, SPELL_SAVAGE_STRIKES_COMMAND, SPELL_SAVAGE_POUNCE_COMMAND, 0 } },
+            { 44, { SPELL_SMACK, SPELL_VENOMOUS_STING, SPELL_PARALYTIC_STING, SPELL_STING_COMMAND, SPELL_SWARM_COMMAND,
+                PET_KIT_GROUP_AUTOCAST } },
             // Tenacity
             // Bear
             { 4, { SPELL_CLAW, SPELL_MENACING_ROAR, SPELL_FRENZIED_REGENERATION, SPELL_SWIPE_COMMAND,
                 SPELL_MAUL_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Boar
-            { 5, { SPELL_BITE, SPELL_LAST_STAND, SPELL_DASH, SPELL_THRASH_COMMAND, SPELL_CRUSHING_BLOW_COMMAND, 0 } },
+            { 5, { SPELL_BITE, SPELL_WAR_GRUNT, SPELL_BOAR_CHARGE, SPELL_GORE_COMMAND, SPELL_TUSK_SWEEP_COMMAND,
+                PET_KIT_GROUP_AUTOCAST } },
             // Crocolisk
-            { 6, { SPELL_BITE, SPELL_LAST_STAND, SPELL_DASH, SPELL_THRASH_COMMAND, SPELL_CRUSHING_BLOW_COMMAND, 0 } },
+            { 6, { SPELL_BITE, SPELL_ANKLE_CRACK, SPELL_BAD_ATTITUDE_201996, SPELL_SNAP_COMMAND,
+                SPELL_DEATH_ROLL_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Turtle
-            { 21, { SPELL_BITE, SPELL_LAST_STAND, SPELL_DASH, SPELL_THRASH_COMMAND, SPELL_CRUSHING_BLOW_COMMAND, 0 } },
+            { 21, { SPELL_BITE, SPELL_HARDENED_SHELL, SPELL_SHELL_SHIELD, SPELL_SNAPPING_BITE_COMMAND,
+                SPELL_SHELL_SPIN_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Warp Stalker
-            { 32, { SPELL_BITE, SPELL_LAST_STAND, SPELL_DASH, SPELL_THRASH_COMMAND, SPELL_CRUSHING_BLOW_COMMAND, 0 } },
-            // Worm
-            { 42, { SPELL_BITE, SPELL_LAST_STAND, SPELL_DASH, SPELL_THRASH_COMMAND, SPELL_CRUSHING_BLOW_COMMAND, 0 } },
+            { 32, { SPELL_BITE, SPELL_TIME_WARP, SPELL_WARP, SPELL_WARP_STRIKE_COMMAND, SPELL_PHASE_REND_COMMAND,
+                PET_KIT_GROUP_AUTOCAST } },
+            // Worm (Earthen Bulwark is a manual raid cooldown, ruling 20)
+            { 42, { SPELL_BITE, SPELL_EARTHEN_BULWARK, SPELL_BURROW, SPELL_BURROW_ATTACK_COMMAND, SPELL_DEVOUR_COMMAND,
+                0 } },
             // Crab
-            { 8, { SPELL_CLAW, SPELL_LAST_STAND, SPELL_DASH, SPELL_THRASH_COMMAND, SPELL_CRUSHING_BLOW_COMMAND, 0 } },
+            { 8, { SPELL_CLAW, SPELL_CRIPPLING_PINCH, SPELL_BUBBLE_SHIELD, SPELL_PINCER_CRUSH_COMMAND,
+                SPELL_BUBBLE_BURST_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Scorpid
-            { 20, { SPELL_CLAW, SPELL_LAST_STAND, SPELL_DASH, SPELL_THRASH_COMMAND, SPELL_CRUSHING_BLOW_COMMAND, 0 } },
+            { 20, { SPELL_CLAW, SPELL_SCORPID_POISON_201766, SPELL_DISARMING_PINCER, SPELL_STINGER_COMMAND,
+                SPELL_DEADLY_STING_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Gorilla
-            { 9, { SPELL_SMACK, SPELL_LAST_STAND, SPELL_DASH, SPELL_THRASH_COMMAND, SPELL_CRUSHING_BLOW_COMMAND, 0 } },
+            { 9, { SPELL_SMACK, SPELL_PRIMAL_MIGHT, SPELL_PUMMEL, SPELL_THUNDERSTOMP_COMMAND, SPELL_POUND_COMMAND,
+                PET_KIT_GROUP_AUTOCAST } },
             // Rhino
-            { 43, { SPELL_SMACK, SPELL_LAST_STAND, SPELL_DASH, SPELL_THRASH_COMMAND, SPELL_CRUSHING_BLOW_COMMAND, 0 } },
+            { 43, { SPELL_SMACK, SPELL_HORN_OF_THE_HERD, SPELL_LEAD_THE_HERD, SPELL_HORN_CHARGE_COMMAND,
+                SPELL_STAMPEDE_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Cunning
             // Spider (Web Pull moved from slot 2 to slot 3, F0)
             { 3, { SPELL_VENOM_SPIT, SPELL_STICKY_WEBBING, SPELL_WEB_PULL, SPELL_VENOM_BITE_COMMAND,
                 SPELL_VENOMOUS_CLOUD_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Bat
-            { 24, { SPELL_CUNNING_SPIT, SPELL_BULLHEADED, SPELL_DASH, SPELL_FEINT_STRIKE_COMMAND, SPELL_AMBUSH_COMMAND,
-                0 } },
+            { 24, { SPELL_CUNNING_SPIT, SPELL_SCREECH, SPELL_SONIC_BLAST_202004, SPELL_SONIC_BITE_COMMAND,
+                SPELL_SHRIEK_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Bird of Prey
-            { 26, { SPELL_CUNNING_SPIT, SPELL_BULLHEADED, SPELL_DASH, SPELL_FEINT_STRIKE_COMMAND, SPELL_AMBUSH_COMMAND,
-                0 } },
+            { 26, { SPELL_CUNNING_SPIT, SPELL_KEEN_SIGHT, SPELL_SNATCH_202005, SPELL_TALON_RAKE_COMMAND,
+                SPELL_SWOOP_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Wind Serpent
-            { 27, { SPELL_CUNNING_SPIT, SPELL_BULLHEADED, SPELL_DASH, SPELL_FEINT_STRIKE_COMMAND, SPELL_AMBUSH_COMMAND,
-                0 } },
+            { 27, { SPELL_CUNNING_SPIT, SPELL_STORM_BREATH, SPELL_GALE_BARRIER, SPELL_LIGHTNING_BREATH_COMMAND,
+                SPELL_CHAIN_LIGHTNING_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Dragonhawk
-            { 30, { SPELL_CUNNING_SPIT, SPELL_BULLHEADED, SPELL_DASH, SPELL_FEINT_STRIKE_COMMAND, SPELL_AMBUSH_COMMAND,
-                0 } },
+            { 30, { SPELL_CUNNING_SPIT, SPELL_SCORCHING_BREATH, SPELL_BLINDING_FLASH, SPELL_FIRE_BREATH_COMMAND,
+                SPELL_FLAME_NOVA_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Ravager
-            { 31, { SPELL_CUNNING_SPIT, SPELL_BULLHEADED, SPELL_DASH, SPELL_FEINT_STRIKE_COMMAND, SPELL_AMBUSH_COMMAND,
-                0 } },
+            { 31, { SPELL_CUNNING_SPIT, SPELL_RENDING_CLAWS, SPELL_CHITINOUS_SHELL, SPELL_RAVAGE_COMMAND,
+                SPELL_GUT_RIP_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Sporebat
-            { 33, { SPELL_CUNNING_SPIT, SPELL_BULLHEADED, SPELL_DASH, SPELL_FEINT_STRIKE_COMMAND, SPELL_AMBUSH_COMMAND,
-                0 } },
+            { 33, { SPELL_CUNNING_SPIT, SPELL_ENERGIZING_SPORES, SPELL_RESTORATIVE_SPORES, SPELL_SPORE_BURST_COMMAND,
+                SPELL_FUNGAL_BLOOM_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Nether Ray
-            { 34, { SPELL_CUNNING_SPIT, SPELL_BULLHEADED, SPELL_DASH, SPELL_FEINT_STRIKE_COMMAND, SPELL_AMBUSH_COMMAND,
-                0 } },
+            { 34, { SPELL_CUNNING_SPIT, SPELL_NETHER_CURRENTS, SPELL_NETHER_PULSE, SPELL_NETHER_SHOCK_COMMAND,
+                SPELL_NETHER_LASH_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Serpent
-            { 35, { SPELL_CUNNING_SPIT, SPELL_BULLHEADED, SPELL_DASH, SPELL_FEINT_STRIKE_COMMAND, SPELL_AMBUSH_COMMAND,
-                0 } },
+            { 35, { SPELL_CUNNING_SPIT, SPELL_PARALYZING_VENOM, SPELL_SHED_SKIN, SPELL_POISON_SPIT_COMMAND,
+                SPELL_CONSTRICT_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Chimaera
-            { 38, { SPELL_CUNNING_SPIT, SPELL_BULLHEADED, SPELL_DASH, SPELL_FEINT_STRIKE_COMMAND, SPELL_AMBUSH_COMMAND,
-                0 } },
+            { 38, { SPELL_CUNNING_SPIT, SPELL_ARCANE_RESONANCE, SPELL_FROST_NOVA, SPELL_TWIN_BITE_COMMAND_201656,
+                SPELL_FROSTSTORM_BREATH_COMMAND, PET_KIT_GROUP_AUTOCAST } },
             // Silithid
-            { 41, { SPELL_CUNNING_SPIT, SPELL_BULLHEADED, SPELL_DASH, SPELL_FEINT_STRIKE_COMMAND, SPELL_AMBUSH_COMMAND,
-                0 } },
+            { 41, { SPELL_CUNNING_SPIT, SPELL_QIRAJI_FORTITUDE, SPELL_SWARM_SHIELD, SPELL_VENOM_WEB_SPRAY_COMMAND,
+                SPELL_SWARM_SPIT_COMMAND, PET_KIT_GROUP_AUTOCAST } },
         }};
 
         // S1b PT-5 + hunter-pet-families F0: the command -> display table (replaces the +138 offset, which only fits
@@ -458,7 +615,7 @@ namespace Hunter
             uint32 display;
         };
 
-        constexpr std::array<CommandDisplay, 16> COMMAND_DISPLAYS =
+        constexpr std::array<CommandDisplay, 70> COMMAND_DISPLAYS =
         {{
             { SPELL_LUNGE_COMMAND, HunterData::SPELL_LUNGE_DISPLAY },
             { SPELL_RIP_THROAT_COMMAND, HunterData::SPELL_RIP_THROAT_DISPLAY },
@@ -476,6 +633,63 @@ namespace Hunter
             { SPELL_CRUSHING_BLOW_COMMAND, HunterData::SPELL_CRUSHING_BLOW_DISPLAY },
             { SPELL_FEINT_STRIKE_COMMAND, HunterData::SPELL_FEINT_STRIKE_DISPLAY },
             { SPELL_AMBUSH_COMMAND, HunterData::SPELL_AMBUSH_DISPLAY },
+            // hunter-pet-families F1: Ferocity (displays 202109-202124)
+            { SPELL_REND_FLESH_COMMAND, HunterData::SPELL_REND_FLESH_DISPLAY },
+            { SPELL_CARRION_FEAST_COMMAND, HunterData::SPELL_CARRION_FEAST_DISPLAY },
+            { SPELL_TENDON_RIP_COMMAND, HunterData::SPELL_TENDON_RIP_DISPLAY },
+            { SPELL_CACKLING_FRENZY_COMMAND, HunterData::SPELL_CACKLING_FRENZY_DISPLAY },
+            { SPELL_LEAPING_KICK_COMMAND, HunterData::SPELL_LEAPING_KICK_DISPLAY },
+            { SPELL_STAMPEDING_KICK_COMMAND, HunterData::SPELL_STAMPEDING_KICK_DISPLAY },
+            { SPELL_SERENITY_DUST_COMMAND, HunterData::SPELL_SERENITY_DUST_DISPLAY },
+            { SPELL_DAZZLING_WINGS_COMMAND, HunterData::SPELL_DAZZLING_WINGS_DISPLAY },
+            { SPELL_STING_COMMAND, HunterData::SPELL_STING_DISPLAY },
+            { SPELL_SWARM_COMMAND, HunterData::SPELL_SWARM_DISPLAY },
+            { SPELL_MONSTROUS_BITE_COMMAND, HunterData::SPELL_MONSTROUS_BITE_DISPLAY },
+            { SPELL_PRIMAL_RAMPAGE_COMMAND, HunterData::SPELL_PRIMAL_RAMPAGE_DISPLAY },
+            { SPELL_LAVA_BREATH_COMMAND, HunterData::SPELL_LAVA_BREATH_DISPLAY },
+            { SPELL_TWIN_BITE_COMMAND, HunterData::SPELL_TWIN_BITE_DISPLAY },
+            { SPELL_SPIRIT_STRIKE_COMMAND, HunterData::SPELL_SPIRIT_STRIKE_DISPLAY },
+            { SPELL_SPIRIT_POUNCE_COMMAND, HunterData::SPELL_SPIRIT_POUNCE_DISPLAY },
+            // hunter-pet-families F2: Tenacity (displays 202125-202142)
+            { SPELL_GORE_COMMAND, HunterData::SPELL_GORE_DISPLAY },
+            { SPELL_TUSK_SWEEP_COMMAND, HunterData::SPELL_TUSK_SWEEP_DISPLAY },
+            { SPELL_SNAP_COMMAND, HunterData::SPELL_SNAP_DISPLAY },
+            { SPELL_DEATH_ROLL_COMMAND, HunterData::SPELL_DEATH_ROLL_DISPLAY },
+            { SPELL_SNAPPING_BITE_COMMAND, HunterData::SPELL_SNAPPING_BITE_DISPLAY },
+            { SPELL_SHELL_SPIN_COMMAND, HunterData::SPELL_SHELL_SPIN_DISPLAY },
+            { SPELL_PINCER_CRUSH_COMMAND, HunterData::SPELL_PINCER_CRUSH_DISPLAY },
+            { SPELL_BUBBLE_BURST_COMMAND, HunterData::SPELL_BUBBLE_BURST_DISPLAY },
+            { SPELL_STINGER_COMMAND, HunterData::SPELL_STINGER_DISPLAY },
+            { SPELL_DEADLY_STING_COMMAND, HunterData::SPELL_DEADLY_STING_DISPLAY },
+            { SPELL_THUNDERSTOMP_COMMAND, HunterData::SPELL_THUNDERSTOMP_DISPLAY },
+            { SPELL_POUND_COMMAND, HunterData::SPELL_POUND_DISPLAY },
+            { SPELL_WARP_STRIKE_COMMAND, HunterData::SPELL_WARP_STRIKE_DISPLAY },
+            { SPELL_PHASE_REND_COMMAND, HunterData::SPELL_PHASE_REND_DISPLAY },
+            { SPELL_BURROW_ATTACK_COMMAND, HunterData::SPELL_BURROW_ATTACK_DISPLAY },
+            { SPELL_DEVOUR_COMMAND, HunterData::SPELL_DEVOUR_DISPLAY },
+            { SPELL_HORN_CHARGE_COMMAND, HunterData::SPELL_HORN_CHARGE_DISPLAY },
+            { SPELL_STAMPEDE_COMMAND, HunterData::SPELL_STAMPEDE_DISPLAY },
+            // hunter-pet-families F3: Cunning (displays 202143-202162)
+            { SPELL_SONIC_BITE_COMMAND, HunterData::SPELL_SONIC_BITE_DISPLAY },
+            { SPELL_SHRIEK_COMMAND, HunterData::SPELL_SHRIEK_DISPLAY },
+            { SPELL_TALON_RAKE_COMMAND, HunterData::SPELL_TALON_RAKE_DISPLAY },
+            { SPELL_SWOOP_COMMAND, HunterData::SPELL_SWOOP_DISPLAY },
+            { SPELL_LIGHTNING_BREATH_COMMAND, HunterData::SPELL_LIGHTNING_BREATH_DISPLAY },
+            { SPELL_CHAIN_LIGHTNING_COMMAND, HunterData::SPELL_CHAIN_LIGHTNING_DISPLAY },
+            { SPELL_FIRE_BREATH_COMMAND, HunterData::SPELL_FIRE_BREATH_DISPLAY },
+            { SPELL_FLAME_NOVA_COMMAND, HunterData::SPELL_FLAME_NOVA_DISPLAY },
+            { SPELL_RAVAGE_COMMAND, HunterData::SPELL_RAVAGE_DISPLAY },
+            { SPELL_GUT_RIP_COMMAND, HunterData::SPELL_GUT_RIP_DISPLAY },
+            { SPELL_POISON_SPIT_COMMAND, HunterData::SPELL_POISON_SPIT_DISPLAY },
+            { SPELL_CONSTRICT_COMMAND, HunterData::SPELL_CONSTRICT_DISPLAY },
+            { SPELL_SPORE_BURST_COMMAND, HunterData::SPELL_SPORE_BURST_DISPLAY },
+            { SPELL_FUNGAL_BLOOM_COMMAND, HunterData::SPELL_FUNGAL_BLOOM_DISPLAY },
+            { SPELL_NETHER_SHOCK_COMMAND, HunterData::SPELL_NETHER_SHOCK_DISPLAY },
+            { SPELL_NETHER_LASH_COMMAND, HunterData::SPELL_NETHER_LASH_DISPLAY },
+            { SPELL_TWIN_BITE_COMMAND_201656, HunterData::SPELL_TWIN_BITE_DISPLAY_202159 },
+            { SPELL_FROSTSTORM_BREATH_COMMAND, HunterData::SPELL_FROSTSTORM_BREATH_DISPLAY },
+            { SPELL_VENOM_WEB_SPRAY_COMMAND, HunterData::SPELL_VENOM_WEB_SPRAY_DISPLAY },
+            { SPELL_SWARM_SPIT_COMMAND, HunterData::SPELL_SWARM_SPIT_DISPLAY },
         }};
 
         constexpr bool HasCommandDisplay(uint32 command)
@@ -703,6 +917,86 @@ namespace Hunter
             return TriggerCastFlags(TRIGGERED_FULL_MASK & ~TRIGGERED_IGNORE_SET_FACING);
 
         return TRIGGERED_FULL_MASK;
+    }
+
+    bool IsPetControlImmune(Unit const* target)
+    {
+        // Web Pull's and Death Grip's boss rule (FEASIBILITY 8b, 8f): creature immunities alone miss 62 of 219
+        // encounter bosses.
+        Creature const* creature = target ? target->ToCreature() : nullptr;
+        return creature && (creature->isWorldBoss() || creature->IsDungeonBoss());
+    }
+
+    void OnScavengeKill(Unit* victim, Unit* killer)
+    {
+        // Every death in the world reaches this: an NPC (not a critter) killed by a player, a player's pet or
+        // guardian, first.
+        if (!victim || !killer || !victim->IsCreature() || victim->IsControlledByPlayer() ||
+            victim->GetCreatureType() == CREATURE_TYPE_CRITTER || !killer->GetCharmerOrOwnerPlayerOrPlayerItself())
+            return;
+
+        SpellInfo const* freshKill = sSpellMgr->GetSpellInfo(HunterData::SPELL_FRESH_KILL);
+        if (!freshKill)
+            return;
+
+        // Hunter pets that know Scavenge, alive, within the radius. The dead creature stays in the grid until its
+        // corpse is removed, so it is a valid search centre here.
+        struct ScavengerCheck
+        {
+            Unit const* center;
+            float range;
+
+            bool operator()(Creature* creature) const
+            {
+                Pet const* pet = creature->ToPet();
+                return pet && pet->getPetType() == HUNTER_PET && pet->IsAlive() &&
+                    pet->HasSpell(HunterData::SPELL_SCAVENGE) && center->IsWithinDistInMap(pet, range);
+            }
+        };
+
+        float const radius = HunterData::SCAVENGE_RADIUS_YD;
+        std::list<Creature*> pets;
+        ScavengerCheck check{ victim, radius };
+        Acore::CreatureListSearcher<ScavengerCheck> searcher(victim, pets, check);
+        Cell::VisitObjects(victim, searcher, radius);
+
+        for (Creature* creature : pets)
+        {
+            Pet* pet = creature->ToPet();
+            Player* owner = pet->GetOwner();
+            // An enemy of the hunter: not a friendly NPC (a guard a duel partner killed, an escort).
+            if (!owner || owner->getClass() != CLASS_HUNTER || victim->IsFriendlyTo(owner))
+                continue;
+
+            // Refreshes the 10 s window when the buff is already up.
+            pet->AddAura(freshKill->Id, pet);
+        }
+    }
+
+    float GetPetFamilyTakenMultiplier(Unit const* target, Unit const* attacker, SpellSchoolMask schoolMask)
+    {
+        // Every damage event in the world reaches this: the school and the debuff first.
+        if (!target || !attacker || !(schoolMask & SPELL_SCHOOL_MASK_NORMAL) ||
+            !target->HasAura(HunterData::SPELL_GORE_DEBUFF))
+            return 1.0f;
+
+        Player const* owner = GetOwningPlayer(attacker);
+        if (!owner || owner->getClass() != CLASS_HUNTER)
+            return 1.0f;
+
+        // The pet casts Gore (the command's TRIGGER_SPELL), so the debuff carries the pet's GUID: the hunter's current
+        // pet. A dismissed or swapped pet's Gore stops counting for its hunter (30 s at most).
+        ObjectGuid const petGuid = owner->GetPetGUID();
+        if (petGuid.IsEmpty())
+            return 1.0f;
+
+        // Ruling 9, literally (F2 review NIT 5): the hunter and that pet only, not Stampede beasts, Snake Trap snakes
+        // or a charmed creature, which GetOwningPlayer also resolves to the hunter.
+        if (attacker != owner && attacker->GetGUID() != petGuid)
+            return 1.0f;
+
+        AuraEffect const* gore = target->GetAuraEffect(HunterData::SPELL_GORE_DEBUFF, EFFECT_0, petGuid);
+        return gore ? 1.0f + gore->GetAmount() / 100.0f : 1.0f;
     }
 
     uint32 GetCommandSpell(Unit const* pet, uint8 slot)
@@ -1144,7 +1438,7 @@ namespace Hunter
 
                 if (seated >= wanted.size())
                 {
-                    // Spell slots 3-6 beyond the wanted bar are emptied (Cower, Dash, a placeholder). A spell parked
+                    // Spell slots 3-6 beyond the wanted bar are emptied (a retired spell). A spell parked
                     // elsewhere is left alone unless it is one of the wanted spells (it would otherwise show twice).
                     bool const duplicate = entry->GetAction() &&
                         std::find(wanted.begin(), wanted.end(), entry->GetAction()) != wanted.end();
@@ -1164,9 +1458,10 @@ namespace Hunter
         }
 
         // Newly learned (hunter-pet-families F0): a slot 2 / slot 3 spell learned since the last save (PETSPELL_NEW, a
-        // level-up) that found no empty slot takes a spell slot from a spell outside the kit (Dash, which every family
-        // learns until F3, or a placeholder), else an empty one. Without it a utility learned after the re-seat would
-        // stay in the spellbook, since the engine had already filled the free slot with Dash on load. Once per pet and
+        // level-up, or a family stage's new utility on an existing pet) takes an empty spell slot, else a slot holding
+        // a spell outside the kit. Without it a utility learned after the re-seat would stay in the spellbook: the
+        // engine fills a free slot only while it learns the spell, and on load that runs before Pet::CleanupActionBar
+        // empties the slot of a spell the pet no longer knows (F3: Dash, Last Stand, Bullheaded). Once per pet and
         // spell (WasNewlyLearnedSeated): PETSPELL_NEW lasts until the pet saves, and a player who drags the spell off
         // in that window keeps it off.
         for (uint32 spellId : { group, utility })
@@ -1218,8 +1513,9 @@ namespace Hunter
         //  - 201752 marks slot 2 when the kit sets PET_KIT_GROUP_AUTOCAST (Furious Howl, Roar of Courage, Tear Armor,
         //    Menacing Roar, Sticky Webbing). Slot 2 is learned later than the basic (pet level 10, 14, 26), so it has
         //    its own marker, added only in the pass that handled it. A Spider that predates F0 never got it (Web Pull
-        //    was its manual slot 2), so Sticky Webbing is turned on once when learned. Placeholders never get it.
-        // Slot 3, Growl, Dash, Last Stand and Bullheaded stay manual.
+        //    was its manual slot 2), so Sticky Webbing is turned on once when learned. A placeholder pet (before F1-F3)
+        //    never got it either, so a family stage's new slot 2 is turned on once too.
+        // Slot 3 and Growl stay manual.
         // addSpell, not learnSpell: a marker is hidden, so no "learned" packet and no extra PetSpellInitialize (the
         // single resend below covers it). Passive, so addSpell casts it on the pet; type NORMAL, so _SaveSpells writes
         // it.

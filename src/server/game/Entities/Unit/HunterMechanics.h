@@ -152,6 +152,8 @@ namespace Hunter
     constexpr uint32 SPELL_TEAR_ARMOR = HunterData::SPELL_TEAR_ARMOR;
     constexpr uint32 SPELL_MENACING_ROAR = HunterData::SPELL_MENACING_ROAR;
     constexpr uint32 SPELL_GROWL = HunterData::SPELL_GROWL;
+    // hunter-pet-families F3: Dash, Last Stand and Bullheaded left every kit and nothing reads these three any more;
+    // kept because this header is append-only (a later stage or module may still name them).
     constexpr uint32 SPELL_DASH = HunterData::SPELL_DASH;
     constexpr uint32 SPELL_LAST_STAND = HunterData::SPELL_LAST_STAND;
     constexpr uint32 SPELL_BULLHEADED = HunterData::SPELL_BULLHEADED;
@@ -168,8 +170,7 @@ namespace Hunter
 
     // hunter-pet-families F0 (PLAN §5.1, CORE-AUDIT §1.3): a reviewed retype of the PET 4.2 struct (was
     // { basic, utility, commandI, commandII }). Every reader is in HunterMechanics.cpp. `group` = slot 2 (the group
-    // effect, or a family without a kit yet: its type's placeholder Dash / Last Stand / Bullheaded), `utility` =
-    // slot 3; `flags` = PetKitFlag bits.
+    // effect; 0 on a type default), `utility` = slot 3; `flags` = PetKitFlag bits.
     enum PetKitFlag : uint8
     {
         PET_KIT_GROUP_AUTOCAST = 0x01,   // slot 2 is turned on once (marker 201752); without it slot 2 is manual
@@ -396,6 +397,21 @@ namespace Hunter
     // Flags for the pet's triggered cast of a commanded spell: TRIGGERED_FULL_MASK, minus TRIGGERED_IGNORE_SET_FACING
     // for a channel so the pet keeps facing its target for the whole channel (FEASIBILITY note 6).
     TriggerCastFlags GetCommandCastFlags(SpellInfo const* commandedSpell);
+
+    // ---- hunter-pet-families F1 (PLAN §5.2) ----
+    // Ruling 3: a world boss or a dungeon boss (instance_encounters kill credit) is immune to every pet stun, root,
+    // disorient and disarm replacement (spell_hun_pet_control_boss_filter). Interrupts and knockbacks stay stock.
+    bool IsPetControlImmune(Unit const* target);
+    // Ruling 4 (Scavenge): a creature a player-side unit killed gives every hunter pet within SCAVENGE_RADIUS_YD that
+    // knows Scavenge the Fresh Kill buff 202018, Scavenge's window. HunterUnitScript::OnUnitDeath, every death.
+    void OnScavengeKill(Unit* victim, Unit* killer);
+
+    // ---- hunter-pet-families F2 (PLAN §5.1, §5.2 `gore`) ----
+    // Ruling 9 (Boar's Gore, owner-only): the damage multiplier `attacker` gets on `target` from the pet family
+    // debuffs: 1 + Gore's amount / 100 when the target carries Gore 201665 from the attacker's owning hunter's pet
+    // (the hunter and that pet benefit, nothing else it owns) and the damage is Physical, else 1. Read live per hit
+    // from the HunterUnitScript spell, melee and periodic hooks (the Feral Shredded Defense pattern).
+    float GetPetFamilyTakenMultiplier(Unit const* target, Unit const* attacker, SpellSchoolMask schoolMask);
 }
 
 #endif

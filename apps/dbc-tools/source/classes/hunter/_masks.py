@@ -80,7 +80,7 @@ TAR_BOMB = 0x4000000                 # S3
 BURNING_TAR = 0x8000000              # S3 (Black Arrow 3674 until then)
 PET_ABILITY = 0x10000000             # every pet-cast family-9 spell keeps it; never in a reader mask
 PET_UTILITY = 0x20000000             # hunter-pet-families F0: every slot 2 / 3 pet utility (Mobility); was DASH_DIVE
-DASH_DIVE = PET_UTILITY               # alias kept (append-only file): Dash 61684 / Dive 23145 still carry the bit
+DASH_DIVE = PET_UTILITY               # alias kept (append-only file); the retired Dive 23145 still carries it
 SAVAGE_REND = 0x40000000
 EXPLOSIVE_SHOT = 0x80000000          # poisoned: periodic -> 53352 hardcode
 

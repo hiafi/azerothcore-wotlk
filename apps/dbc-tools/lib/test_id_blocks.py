@@ -896,6 +896,20 @@ def out_of_owner_family(owner: str, ids_by_kind: dict[str, list[int]]) -> list[s
     return problems
 
 
+# hunter-pet-families: the PLAN s4.1 per-stage columns (F0-F3) of the pet-family sub-blocks
+HUNTER_PET_STAGE_COLUMNS = {
+    "spell": {201753, 201983, 201984, 201985, 201986, 202014,                                               # F0
+              *range(201606, 201622), *range(201660, 201665), *range(202109, 202125), *range(201754, 201762),
+              *range(201987, 201995), *range(202017, 202025),                                              # F1
+              *range(201622, 201640), *range(201665, 201670), *range(202125, 202143), *range(201762, 201771),
+              *range(201995, 202004), *range(202025, 202032),                                              # F2
+              *range(201640, 201660), *range(201670, 201676), *range(202143, 202163), *range(201771, 201781),
+              *range(202004, 202014), *range(202032, 202040)},                                             # F3
+    "skilllineability": {*range(30551, 30556), *range(30556, 30560), *range(30606, 30618), *range(30618, 30636),
+                         *range(30636, 30640), *range(30870, 30886)},
+}
+
+
 class HunterReservationTest(unittest.TestCase):
     """hunter-pet-families F0 (PLAN s4): the hunter block and the pet-family sub-blocks."""
 
@@ -957,6 +971,54 @@ class HunterReservationTest(unittest.TestCase):
         self.assertTrue({30551, 30552, 30553, 30554, 30555} <= set(self.hunter["skilllineability"]))
         # F0 frees Cower's rows 30561-30571 and does not reuse them (PLAN s4)
         self.assertFalse(set(range(30561, 30572)) & set(self.hunter["skilllineability"]))
+
+    def test_the_f1_ids_sit_in_their_f1_columns(self):
+        """hunter-pet-families F1: every F1 id is declared, inside its F1 column (PLAN s4.1)."""
+        spells = set(self.hunter["spell"])
+        declared_f1 = {*range(201606, 201622), 201660, 201661, 201662, *range(202109, 202125), *range(201754, 201762),
+                       *range(201987, 201995), 202017, 202018}
+        self.assertTrue(declared_f1 <= spells)
+        self.assertTrue({*range(30556, 30560), *range(30606, 30618)} <= set(self.hunter["skilllineability"]))
+
+    def test_the_f2_ids_sit_in_their_f2_columns(self):
+        """hunter-pet-families F2: every F2 id is declared, inside its F2 column (PLAN s4.1); spell_group 1232 is the
+        first of the pet-family group block."""
+        f0 = {"spell": {201753, 201983, 201984, 201985, 201986, 202014},
+              "skilllineability": set(range(30551, 30556))}
+        f1 = {"spell": {*range(201606, 201622), *range(201660, 201665), *range(202109, 202125), *range(201754, 201762),
+                        *range(201987, 201995), *range(202017, 202025)},
+              "skilllineability": {*range(30556, 30560), *range(30606, 30618)}}
+        f2 = {"spell": {*range(201622, 201640), *range(201665, 201670), *range(202125, 202143), *range(201762, 201771),
+                        *range(201995, 202004), *range(202025, 202032)},
+              "skilllineability": set(range(30618, 30636))}
+        spells = set(self.hunter["spell"])
+        declared_f2 = {*range(201622, 201640), 201665, 201666, 201667, *range(202125, 202143), *range(201762, 201771),
+                       *range(201995, 202004)}
+        self.assertTrue(declared_f2 <= spells)
+        self.assertTrue(set(range(30618, 30636)) <= set(self.hunter["skilllineability"]))
+        groups = RESERVATIONS["hunter_pet_helpers"]["spell_group"]
+        self.assertTrue(groups["start"] <= 1232 <= groups["end"])
+        # hunter-pet-families F3: the "every pet-family id is in a stage column" check moved to the F3 test below
+        self.assertTrue(f0["spell"] | f1["spell"] | f2["spell"] <= HUNTER_PET_STAGE_COLUMNS["spell"])
+
+    def test_the_f3_ids_sit_in_their_f3_columns(self):
+        """hunter-pet-families F3: every F3 id is declared, inside its F3 column (PLAN s4.1), and every id in a
+        pet-family sub-block (and every pet SkillLineAbility id) is in one stage's column (F0-F3)."""
+        spells = set(self.hunter["spell"])
+        declared_f3 = {*range(201640, 201660), *range(201670, 201676), *range(202143, 202163), *range(201771, 201781),
+                       *range(202004, 202014), 202032}
+        self.assertTrue(declared_f3 <= spells)
+        f3_sla = {*range(30636, 30640), *range(30870, 30886)}
+        self.assertTrue(f3_sla <= set(self.hunter["skilllineability"]))
+        sub_blocks = [cfg["spell"] for name, cfg in RESERVATIONS.items()
+                      if name.startswith("hunter_pet_") and "spell" in cfg]
+        in_sub_blocks = {i for i in spells if any(b["start"] <= i <= b["end"] for b in sub_blocks)}
+        self.assertEqual(in_sub_blocks - HUNTER_PET_STAGE_COLUMNS["spell"], set())
+        pet_sla = {i for i in self.hunter["skilllineability"]
+                   if 30551 <= i <= 30559 or 30606 <= i <= 30639 or 30870 <= i <= 30899}
+        self.assertEqual(pet_sla - HUNTER_PET_STAGE_COLUMNS["skilllineability"], set())
+        # F3 retired the placeholders' rows 30560 (Dash) and 30572-30590 (Last Stand, Bullheaded); not reused
+        self.assertFalse({30560, *range(30572, 30591)} & set(self.hunter["skilllineability"]))
 
     def test_an_id_outside_every_hunter_slice_fails(self):
         self.assertEqual(out_of_owner_family("hunter", {"spell": [202200], "skilllineability": [30869, 30880]}),

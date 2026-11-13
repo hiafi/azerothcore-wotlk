@@ -17,13 +17,15 @@
 
 /*
  * Hunter rework - pet spell scripts (hunter-rework.SHARED.md §A4 / §C4).
- * Skeleton created by stage T2; H0-P1 adds Bloodthirsty (PET.md 7.5) and Web Pull (PET.md 8.3).
+ * Skeleton created by stage T2; H0-P1 adds Bloodthirsty (PET.md 7.5) and Web Pull (PET.md 8.3); hunter-pet-families
+ * F1 the boss filter, Scavenge and Eternal Guardian.
  */
 
 #include "CharmInfo.h"
 #include "Creature.h"
 #include "HunterMechanics.h"
 #include "Log.h"
+#include "ObjectAccessor.h"
 #include "Pet.h"
 #include "Player.h"
 #include "ScriptMgr.h"
@@ -144,6 +146,207 @@ class spell_hun_pet_web_pull : public SpellScript
     {
         OnCheckCast += SpellCheckCastFn(spell_hun_pet_web_pull::CheckCast);
         OnEffectHitTarget += SpellEffectFn(spell_hun_pet_web_pull::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
+// hunter-pet-families F1 (PLAN §5.2 `boss`, ruling 3, FEASIBILITY 8b): every pet stun, root, disorient and disarm
+// replacement (F1: Paralytic Sting, Earthshaking Stomp). A world or dungeon boss can't be the target of a
+// single-target one (CheckCast, no cooldown spent) and is dropped from the area of an AoE one. The area filter is
+// registered only for the area target types the bound spell uses (an unmatched hook is a boot error), and drops the
+// boss from every effect of that target type: a spell that puts damage and control on one area type would lose the
+// damage on bosses too, so give its control effect its own target type (or register per effect index).
+class spell_hun_pet_control_boss_filter : public SpellScript
+{
+    PrepareSpellScript(spell_hun_pet_control_boss_filter);
+
+    SpellCastResult CheckCast()
+    {
+        if (Unit* target = GetExplTargetUnit())
+            if (target != GetCaster() && Hunter::IsPetControlImmune(target))
+                return SPELL_FAILED_BAD_TARGETS;
+
+        return SPELL_CAST_OK;
+    }
+
+    void FilterBosses(std::list<WorldObject*>& targets)
+    {
+        targets.remove_if([](WorldObject* object)
+        {
+            return Hunter::IsPetControlImmune(object->ToUnit());
+        });
+    }
+
+    void Register() override
+    {
+        OnCheckCast += SpellCheckCastFn(spell_hun_pet_control_boss_filter::CheckCast);
+
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(m_scriptSpellId);
+        if (!spellInfo)
+            return;
+
+        for (Targets area : { TARGET_UNIT_SRC_AREA_ENEMY, TARGET_UNIT_DEST_AREA_ENEMY, TARGET_UNIT_CONE_ENEMY_104 })
+        {
+            bool used = false;
+            for (SpellEffectInfo const& effect : spellInfo->GetEffects())
+                if (effect.IsEffect() && (effect.TargetA.GetTarget() == area || effect.TargetB.GetTarget() == area))
+                    used = true;
+
+            if (used)
+                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(
+                    spell_hun_pet_control_boss_filter::FilterBosses, EFFECT_ALL, area);
+        }
+    }
+};
+
+// hunter-pet-families F2 (PLAN §5.2 `absorb`, FEASIBILITY 9f): a pet-cast absorb (Crab's Bubble Shield on the hunter;
+// F3's Swarm Shield). A SCHOOL_ABSORB aura gets no engine bonus and pet spell power is 0, so the generated attack-power
+// coefficient (spell_bonus_data.ap_bonus, from the effect's ap_potency) times the pet's attack power is added here, on
+// top of the generated base (the Anti-Magic Zone pool's shape). The caster is the pet, whatever unit the shield is on.
+class spell_hun_pet_absorb : public AuraScript
+{
+    PrepareAuraScript(spell_hun_pet_absorb);
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
+    {
+        Unit* pet = GetCaster();
+        if (!pet || pet->IsPlayer() || !Hunter::GetOwningPlayer(pet))
+            return;
+
+        if (SpellBonusEntry const* bonus = sSpellMgr->GetSpellBonusData(GetId()))
+            if (bonus->ap_bonus > 0.0f)
+                amount += int32(bonus->ap_bonus * pet->GetTotalAttackPowerValue(BASE_ATTACK));
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_hun_pet_absorb::CalculateAmount, EFFECT_ALL,
+            SPELL_AURA_SCHOOL_ABSORB);
+    }
+};
+
+// 201987 - Scavenge (hunter-pet-families F1, PLAN §5.2 `scavenge`, ruling 4). Usable only while the pet carries Fresh
+// Kill 202018, which Hunter::OnScavengeKill gives it for 10 s when an enemy dies near it; the cast consumes it.
+class spell_hun_pet_scavenge : public SpellScript
+{
+    PrepareSpellScript(spell_hun_pet_scavenge);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_FRESH_KILL });
+    }
+
+    SpellCastResult CheckCast()
+    {
+        Unit* pet = GetCaster();
+        return pet && pet->HasAura(HunterData::SPELL_FRESH_KILL) ? SPELL_CAST_OK : SPELL_FAILED_NO_EDIBLE_CORPSES;
+    }
+
+    void HandleAfterCast()
+    {
+        if (Unit* pet = GetCaster())
+            pet->RemoveAurasDueToSpell(HunterData::SPELL_FRESH_KILL);
+    }
+
+    void Register() override
+    {
+        OnCheckCast += SpellCheckCastFn(spell_hun_pet_scavenge::CheckCast);
+        AfterCast += SpellCastFn(spell_hun_pet_scavenge::HandleAfterCast);
+    }
+};
+
+// 201761 - Eternal Guardian (hunter-pet-families F1, PLAN §5.2 `res`, ruling 8, FEASIBILITY 2). The pet button is a
+// self-target DUMMY, so the client never has to send a corpse target from the pet bar. The target is the hunter's
+// selection: a dead player in the hunter's party or raid who has not released, within the range of 202017 of the
+// hunter and in its line of sight, with no resurrection pending. The hunter then casts the hidden Rebirth 202017 on it
+// (a player caster: the accept dialog names the hunter, no creature wording). The 10 min cooldown is the pet spell's.
+class spell_hun_pet_eternal_guardian : public SpellScript
+{
+    PrepareSpellScript(spell_hun_pet_eternal_guardian);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_ETERNAL_GUARDIAN_REBIRTH });
+    }
+
+    // The hunter of this pet, nullptr for any other caster.
+    Player* GetHunter()
+    {
+        Player* owner = Hunter::GetOwningPlayer(GetCaster());
+        return owner && owner->getClass() == CLASS_HUNTER && owner != GetCaster() ? owner : nullptr;
+    }
+
+    // The hunter's selection when it is a valid target, else nullptr and `result` says why.
+    static Player* FindTarget(Player* hunter, SpellCastResult& result)
+    {
+        result = SPELL_FAILED_BAD_TARGETS;
+        Player* target = ObjectAccessor::GetPlayer(*hunter, hunter->GetTarget());
+        if (!target || target == hunter)
+            return nullptr;
+
+        if (target->IsAlive())
+        {
+            result = SPELL_FAILED_TARGET_NOT_DEAD;
+            return nullptr;
+        }
+
+        if (!target->IsInSameRaidWith(hunter))
+        {
+            result = SPELL_FAILED_TARGET_NOT_IN_RAID;
+            return nullptr;
+        }
+
+        // A released spirit is a ghost: only its corpse is left here (Rebirth's own rule, FEASIBILITY 2).
+        if (target->HasPlayerFlag(PLAYER_FLAGS_GHOST) || target->isResurrectRequested())
+        {
+            result = SPELL_FAILED_TARGET_CANNOT_BE_RESURRECTED;
+            return nullptr;
+        }
+
+        SpellInfo const* rebirth = sSpellMgr->AssertSpellInfo(HunterData::SPELL_ETERNAL_GUARDIAN_REBIRTH);
+        if (!hunter->IsWithinDistInMap(target, rebirth->GetMaxRange(true, hunter)))
+        {
+            result = SPELL_FAILED_OUT_OF_RANGE;
+            return nullptr;
+        }
+
+        if (!hunter->IsWithinLOSInMap(target))
+        {
+            result = SPELL_FAILED_LINE_OF_SIGHT;
+            return nullptr;
+        }
+
+        result = SPELL_CAST_OK;
+        return target;
+    }
+
+    SpellCastResult CheckCast()
+    {
+        Player* hunter = GetHunter();
+        if (!hunter)
+            return SPELL_FAILED_DONT_REPORT;
+
+        SpellCastResult result = SPELL_CAST_OK;
+        FindTarget(hunter, result);
+        return result;
+    }
+
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        Player* hunter = GetHunter();
+        if (!hunter)
+            return;
+
+        // The selection may have changed or released since the check: look again.
+        SpellCastResult result = SPELL_CAST_OK;
+        if (Player* target = FindTarget(hunter, result))
+            hunter->CastSpell(target, HunterData::SPELL_ETERNAL_GUARDIAN_REBIRTH, TRIGGERED_FULL_MASK);
+    }
+
+    void Register() override
+    {
+        OnCheckCast += SpellCheckCastFn(spell_hun_pet_eternal_guardian::CheckCast);
+        OnEffectHitTarget += SpellEffectFn(spell_hun_pet_eternal_guardian::HandleDummy, EFFECT_0,
+            SPELL_EFFECT_DUMMY);
     }
 };
 
@@ -392,6 +595,10 @@ void AddSC_hunter_pet_spell_scripts()
 {
     RegisterSpellScript(spell_hun_pet_bloodthirsty);
     RegisterSpellScript(spell_hun_pet_web_pull);
+    RegisterSpellScript(spell_hun_pet_control_boss_filter);
+    RegisterSpellScript(spell_hun_pet_scavenge);
+    RegisterSpellScript(spell_hun_pet_absorb);
+    RegisterSpellScript(spell_hun_pet_eternal_guardian);
     RegisterSpellScript(spell_hun_pet_scaling_rework);
     RegisterSpellScript(spell_hun_pet_passthrough);
     RegisterSpellScript(spell_hun_kill_command_rework);

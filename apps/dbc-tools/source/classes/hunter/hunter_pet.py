@@ -327,11 +327,12 @@ venom_spit_201710 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=33.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.basic_potency(33.0, 'Cunning'), potency_kind='direct',
+               implicit_target_a=6),
     ],
     pet_owner_scaling=(PET_AP_FROM_RAP_PCT['value'], PET_AP_FROM_SP_PCT['value']),
     spell_icon_id=68,
-    notes='H0-P1 (PET.md 4.3): Spider basic. Visual 7910 / Speed 40 and icon 68 from Poison Spit 35387, field shape from Acid Spit 55749 (direct hit). Ranged DmgClass 3 so it crits via GetUnitCriticalChance; d1 b28 + d2 b23 carrier; 0 Focus, 6 s cooldown, GCD 1500/133.',
+    notes='H0-P1 (PET.md 4.3): Spider basic. Visual 7910 / Speed 40 and icon 68 from Poison Spit 35387, field shape from Acid Spit 55749 (direct hit). Ruling 23 (user 2026-11-13, hunter-pet-families): ap_potency 33.0 -> x0.39 (kits.basic_potency, Cunning damage scale). Ranged DmgClass 3 so it crits via GetUnitCriticalChance; d1 b28 + d2 b23 carrier; 0 Focus, 6 s cooldown, GCD 1500/133.',
     raw_overrides={**_SPIT_RAW, 'SpellVisualID_1': 7910, 'Speed': 40.0,
                    'Description_Lang_enUS': 'Spit venom at the enemy, causing {pot1} Nature damage.'},
 )
@@ -350,11 +351,12 @@ cunning_spit_201711 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=33.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.basic_potency(33.0, 'Cunning'), potency_kind='direct',
+               implicit_target_a=6),
     ],
     pet_owner_scaling=(PET_AP_FROM_RAP_PCT['value'], PET_AP_FROM_SP_PCT['value']),
     spell_icon_id=636,
-    notes='H0-P1 (PET.md 4.3): Cunning placeholder basic. Visual 854 / Speed 24 and icon 636 from Acid Spit 55749; same numbers as Venom Spit 201710.',
+    notes='H0-P1 (PET.md 4.3): Cunning placeholder basic. Visual 854 / Speed 24 and icon 636 from Acid Spit 55749; same numbers as Venom Spit 201710. Ruling 23 (user 2026-11-13, hunter-pet-families): ap_potency 33.0 -> x0.39 (kits.basic_potency, Cunning damage scale).',
     raw_overrides={**_SPIT_RAW, 'SpellVisualID_1': 854, 'Speed': 24.0,
                    'Description_Lang_enUS': 'Spit at an enemy, causing {pot1} Nature damage.'},
 )
@@ -706,20 +708,18 @@ _FEROCITY_LINES = [208, 209, 217, 213, 654, 781, 787, 218, 788, 775, 785]       
 _TENACITY_PLACEHOLDER_LINES = [211, 212, 251, 766, 784, 214, 236, 215, 786]          # Tenacity minus Bear 210
 _CUNNING_PLACEHOLDER_LINES = [653, 655, 656, 763, 767, 765, 764, 768, 780, 783]      # Cunning minus Spider 203
 
-_sla_rows = [(30560, 270, 61684)]                                                    # Dash, every family
-# 30561-30571 (Cower on the Ferocity lines) dropped by hunter-pet-families F0: Cower leaves every kit. The freed ids
-# stay unused (PLAN §4: a client may have them cached).
-_sla_rows += [(30572 + i, line, 53478) for i, line in enumerate(_TENACITY_PLACEHOLDER_LINES)]      # Last Stand
-_sla_rows += [(30581 + i, line, 53490) for i, line in enumerate(_CUNNING_PLACEHOLDER_LINES)]       # Bullheaded
-_sla_rows += [(30591 + i, line, 201711) for i, line in enumerate(_CUNNING_PLACEHOLDER_LINES)]      # Spit
+# 30561-30571 (Cower on the Ferocity lines) dropped by hunter-pet-families F0: Cower leaves every kit. 30560 (Dash on
+# skill 270), 30572-30580 (Last Stand on the Tenacity lines) and 30581-30590 (Bullheaded on the Cunning lines) dropped
+# by F3: every family has its own kit, so the placeholders leave every kit (PLAN §5.3). The freed ids stay unused (PLAN
+# §4: a client may have them cached). The two line lists stay for Spit (the Cunning basic) and the tests.
+_sla_rows = [(30591 + i, line, 201711) for i, line in enumerate(_CUNNING_PLACEHOLDER_LINES)]       # Spit
 _sla_rows += [(30601, 203, 201710), (30602, 209, 201715), (30603, 217, 201716), (30604, 210, 201717),
               (30605, 203, 201718)]
 # hunter-pet-families F0 (PLAN §4.1 F0 column): the five finished families' new utilities, learned at SpellLevel.
 _sla_rows += [(30551, 208, lick_your_wounds_201983.id), (30552, 209, prowl_201984.id),
               (30553, 217, tail_sweep_201985.id), (30554, 210, frenzied_regeneration_201986.id),
               (30555, 203, sticky_webbing_201753.id)]
-assert len(_sla_rows) == 40 and sorted(r[0] for r in _sla_rows) == [
-    *range(30551, 30556), 30560, *range(30572, 30606)]
+assert len(_sla_rows) == 20 and sorted(r[0] for r in _sla_rows) == [*range(30551, 30556), *range(30591, 30606)]
 for _sla_id, _line, _spell_id in _sla_rows:
     skill_line_ability(id=_sla_id, skill_line=_line, spell_id=_spell_id, class_mask=0, acquire_method=2)
 
@@ -741,6 +741,14 @@ retire_pet_spell(49966, families=[33])
 # 13012) and any family-line row get AcquireMethod 0, and Cower is stripped from every family's CreatureSpellData
 # record (it was still a default on the Ferocity families). Existing pets: pending_db_characters (worldserver stopped).
 retire_pet_spell(1742)
+
+# hunter-pet-families F3 (PLAN §5.3, §5.4): the placeholders Dash 61684, Last Stand 53478 and Bullheaded 53490 leave
+# every kit now that every family has its own. Dropping their SkillLineAbility rows 30560 / 30572-30590 above is the
+# whole retirement: no retire_pet_spell call, because there is nothing else to retire (checked 2026-11-13). Every stock
+# SkillLineAbility row that names them (Dash 20673-20702 on the family lines, Last Stand 18141 / Bullheaded 18148 on
+# 270) is already AcquireMethod 0, and no CreatureSpellData record holds them, so Pet::InitLevelupSpellsForLevel has no
+# default to teach them again (a retire_pet_spell call would match nothing, which the pet data test reports as a wrong
+# id). Existing pets lose them through pending_db_characters (worldserver stopped).
 
 
 # ---- Spell groups (PET.md 2.5; spell_group accepts stock ids) ----

@@ -7,6 +7,7 @@ Split from a single source/classes/hunter.py via split_class_file.py (.agents/pl
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School
 from lib.dsl.registry import knows, pot_text, product, spell, talent_mult, tooltip_vars, trained_by, unbind_bonus_coefficients
 from . import _masks as m
+from . import _pet_kits as kits
 from .hunter_bm_spells import (
     KILL_COMMAND_BW_REDUCTION_MS,
     bm_dragonhawk_1155,
@@ -663,7 +664,7 @@ claw_16827 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=25.5, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.basic_potency(25.5, 'Ferocity'), potency_kind='direct', implicit_target_a=6),
     ],
     pet_owner_scaling=(PET_AP_FROM_RAP_PCT["value"], PET_AP_FROM_SP_PCT["value"]),
     spell_icon_id=262,
@@ -675,6 +676,7 @@ claw_16827 = spell(
         'single-rank-migration bug that had zeroed this spell\'s SP coefficient to 0. '
         'User decision 2026-10-02: sp_potency 12 / ap_potency 22 (AP-led; was 21.2/12.4 from Smack\'s ratio).'
         ' H0-P1 (PET.md 4.3): 0 Focus, RecoveryTime 4000, pure AP ap_potency 25.5 (sp_potency removed, pet SP is 0), d2 b23 PET_BASIC_ATTACK added (SpellClassMask_3), pet_owner_scaling so the tooltip reads $RAP and $SP (4.3a).'
+        ' Ruling 23 (user 2026-11-13, hunter-pet-families): ap_potency 25.5 -> x1.5 (kits.basic_potency, Ferocity/Tenacity basic scale).'
     ),
     raw_overrides={'AttributesEx': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Claw the enemy, causing {pot1} Physical damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': m.PET_ABILITY, 'SpellClassMask_3': m.PET_BASIC_ATTACK, 'SpellClassSet': 9, 'SpellLevel': 1, 'SpellVisualID_1': 6762, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -694,7 +696,7 @@ bite_17253 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=40.8, potency_kind='direct', implicit_target_a=6),   # TUNE1: was 25.5
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.basic_potency(40.8, 'Ferocity'), potency_kind='direct', implicit_target_a=6),   # TUNE1: was 25.5
     ],
     pet_owner_scaling=(PET_AP_FROM_RAP_PCT["value"], PET_AP_FROM_SP_PCT["value"]),
     spell_icon_id=1680,
@@ -706,6 +708,7 @@ bite_17253 = spell(
         'single-rank-migration bug that had zeroed this spell\'s SP coefficient to 0. '
         'User decision 2026-10-02: sp_potency 12 / ap_potency 22 (AP-led; was 21.2/12.4 from Smack\'s ratio).'
         ' H0-P1 (PET.md 4.3): 0 Focus, RecoveryTime 4000, pure AP ap_potency 25.5 (sp_potency removed, pet SP is 0), d2 b23 PET_BASIC_ATTACK added (SpellClassMask_3), pet_owner_scaling so the tooltip reads $RAP and $SP (4.3a).'
+        ' Ruling 23 (user 2026-11-13, hunter-pet-families): ap_potency 40.8 -> x1.5 (kits.basic_potency, Ferocity/Tenacity basic scale).'
     ),
     raw_overrides={'AttributesEx': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Bite the enemy, causing {pot1} Physical damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': m.PET_ABILITY, 'SpellClassMask_3': m.PET_BASIC_ATTACK, 'SpellClassSet': 9, 'SpellLevel': 1, 'SpellVisualID_1': 376, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1342,11 +1345,11 @@ smack_49966 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=25.5, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.basic_potency(25.5, 'Ferocity'), potency_kind='direct', implicit_target_a=6),
     ],
     pet_owner_scaling=(PET_AP_FROM_RAP_PCT["value"], PET_AP_FROM_SP_PCT["value"]),
     spell_icon_id=473,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 11 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P8 (hunter exotic-pet pass): converted to sp_potency=21.2/ap_potency=12.4 (33.6 total, potency-report base-implied default), split 0.6316/0.3684 to match the live SP/AP coefficient ratio (0.120/0.070), same family-sibling treatment P7 used for Claw/Smack.. H0-P1 (PET.md 4.3): 0 Focus, RecoveryTime 4000, pure AP ap_potency 25.5 (sp_potency removed, pet SP is 0), d2 b23 PET_BASIC_ATTACK added (SpellClassMask_3), pet_owner_scaling so the tooltip reads $RAP and $SP (4.3a).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 11 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P8 (hunter exotic-pet pass): converted to sp_potency=21.2/ap_potency=12.4 (33.6 total, potency-report base-implied default), split 0.6316/0.3684 to match the live SP/AP coefficient ratio (0.120/0.070), same family-sibling treatment P7 used for Claw/Smack.. H0-P1 (PET.md 4.3): 0 Focus, RecoveryTime 4000, pure AP ap_potency 25.5 (sp_potency removed, pet SP is 0), d2 b23 PET_BASIC_ATTACK added (SpellClassMask_3), pet_owner_scaling so the tooltip reads $RAP and $SP (4.3a). Ruling 23 (user 2026-11-13, hunter-pet-families): ap_potency 25.5 -> x1.5 (kits.basic_potency, Ferocity/Tenacity basic scale).',
     raw_overrides={'AttributesEx': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Smack the enemy, causing {pot1} Physical damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': m.PET_ABILITY, 'SpellClassMask_3': m.PET_BASIC_ATTACK, 'SpellClassSet': 9, 'SpellLevel': 1, 'SpellVisualID_1': 6762, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -2553,8 +2556,11 @@ dash_61684 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=79, implicit_target_a=1, apply_aura=AuraType.MOD_INCREASE_SPEED),
     ],
     spell_icon_id=959,
-    notes='pulled from existing data. H0-P1 (PET.md 4.4): 0 Focus; SpellLevel 0 -> 1 (SpellMgr.cpp:2666: level-up spells need SpellLevel >= 1)',
-    raw_overrides={'SpellLevel': 1, 'AttributesEx': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases movement speed by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your pet's movement speed by $s1% for $d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 805306368, 'SpellClassSet': 9, 'SpellVisualID_1': 2276},
+    notes='pulled from existing data. H0-P1 (PET.md 4.4): 0 Focus; SpellLevel 0 -> 1 (SpellMgr.cpp:2666: level-up spells need SpellLevel >= 1)'
+          ' hunter-pet-families F3: retired from every pet by dropping SLA 30560 (no stock source teaches it);'
+          ' SpellClassMask_2 0x30000000 -> 0x10000000, d1 b29 (the pet utility bit Mobility reads) is now carried'
+          ' by the kit utilities only.',
+    raw_overrides={'SpellLevel': 1, 'AttributesEx': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases movement speed by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your pet's movement speed by $s1% for $d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 268435456, 'SpellClassSet': 9, 'SpellVisualID_1': 2276},
 )
 
 
