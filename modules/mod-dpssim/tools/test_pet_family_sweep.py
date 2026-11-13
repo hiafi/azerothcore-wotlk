@@ -20,9 +20,9 @@ HUNTER_FAMILIES = {1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 20, 21, 24, 25, 26, 27, 30
                    41, 42, 43, 44, 45, 46}
 
 
-def report(dps, pet_damage, total, entry, per_iteration=None):
+def report(dps, pet_damage, total, entry, per_iteration=None, disabled=None):
     return {
-        "config": {"petCreatureEntry": entry, "buffSet": "full_raid"},
+        "config": {"petCreatureEntry": entry, "buffSet": "full_raid", "disabledSpells": disabled or []},
         "summary": {"dps": dps, "totalDamage": total},
         "spells": [{"spellId": 1, "isPet": True, "totalDamage": pet_damage},
                    {"spellId": 2, "isPet": False, "totalDamage": total - pet_damage}],
@@ -87,6 +87,42 @@ class PlanTests(unittest.TestCase):
         jobs = pfs.plan_jobs(run_args(disable_spells="24604"), pfs.load_families()[:1], [1], "s")
         self.assertEqual(jobs[0]["env"]["DPSSIM_DISABLE_SPELLS"], "24604")
 
+    def test_disable_family_spells_only_for_that_family(self):
+        fams = pfs.select_families(pfs.load_families(), "wolf,raptor")
+        jobs = pfs.plan_jobs(run_args(disable_spells="24604", disable_family_spells=[("raptor", "201985")]),
+                             fams, [1], "s")
+        by_key = {j["key"]: j["env"]["DPSSIM_DISABLE_SPELLS"] for j in jobs}
+        self.assertEqual(by_key, {"wolf": "24604", "raptor": "24604,201985"})
+
+    def test_parse_family_spells(self):
+        self.assertEqual(pfs.parse_family_spells("Raptor=201985, 24604"), ("raptor", "201985,24604"))
+        with self.assertRaises(argparse.ArgumentTypeError):
+            pfs.parse_family_spells("raptor")
+
+    def test_unknown_family_in_disable_family_spells_is_an_error(self):
+        with self.assertRaises(ValueError) as ctx:
+            pfs.plan_jobs(run_args(disable_family_spells=[("raptr", "201985")]), pfs.load_families()[:1], [1], "s")
+        self.assertIn("raptr", str(ctx.exception))
+
+    def test_repeated_family_spells_are_merged(self):
+        merged = pfs.family_spell_map([("raptor", "201985"), ("raptor", "201985,24604"), ("wolf", "24604")])
+        self.assertEqual(merged, {"raptor": [201985, 24604], "wolf": [24604]})
+
+    def test_jobs_record_what_the_report_must_show(self):
+        fams = pfs.select_families(pfs.load_families(), "wolf,raptor")
+        jobs = pfs.plan_jobs(run_args(disable_family_spells=[("raptor", "201985")]), fams, [1], "s")
+        self.assertEqual({j["key"]: (j["buffSet"], j["disabled"]) for j in jobs},
+                         {"wolf": ("full_raid", []), "raptor": ("full_raid", [201985])})
+
+    def test_bad_spell_ids_are_errors(self):
+        with self.assertRaises(ValueError):
+            pfs.plan_jobs(run_args(disable_spells="24604,x"), pfs.load_families()[:1], [1], "s")
+        with self.assertRaises(Exception):
+            pfs.parse_family_spells("raptor=")
+
+    def test_jobs_clamp_is_six(self):
+        self.assertEqual([pfs.clamp_jobs(n) for n in (0, 1, 6, 10)], [1, 1, 6, 6])
+
     def test_batch_tags_are_valid_and_unique(self):
         jobs = pfs.plan_jobs(run_args(), pfs.load_families(), [1, 3, 5], "pf20261112-120000")
         tags = [j["env"]["DPSSIM_BATCH_TAG"] for j in jobs]
@@ -112,7 +148,8 @@ class IndexTests(unittest.TestCase):
             path = f"/r/{key}.t{n}.json"
             runs.append({"family": fam["family"], "key": key, "name": fam["name"], "tree": fam["tree"],
                          "entry": fam["entry"], "targets": n, "exitCode": 0 if dps is not None else 1,
-                         "report": path if dps is not None else None, "log": f"/l/{key}.log"})
+                         "report": path if dps is not None else None, "log": f"/l/{key}.log",
+                         "buffSet": "full_raid", "disabled": []})
             if dps is not None:
                 reports[path] = report(dps, dps * 30.0, dps * 120.0, fam["entry"])
         return {"sweep": "t", "settings": {}, "runs": runs}, reports
@@ -148,6 +185,46 @@ class IndexTests(unittest.TestCase):
         markdown = pfs.summary_markdown(manifest, summary)
         self.assertIn("## Failed runs", markdown)
         self.assertIn("| Wolf | Ferocity | 26016 | 1,000.0 |", markdown)
+
+    def test_report_from_an_image_before_sim1_is_an_error(self):
+        manifest, reports = self.manifest([("wolf", 1, 1000.0), ("cat", 1, 1010.0), ("bear", 1, 1020.0)])
+        del reports["/r/wolf.t1.json"]["config"]["petCreatureEntry"]
+        reports["/r/cat.t1.json"]["config"] = {}
+        del reports["/r/bear.t1.json"]["config"]["disabledSpells"]
+        rows = pfs.build_rows(manifest, load=reports.__getitem__)
+        self.assertEqual(len(rows), 3)
+        for row in rows:
+            self.assertIn("predates SIM1", row["error"])
+
+    def test_buff_set_and_disabled_spells_must_match_the_job(self):
+        manifest, reports = self.manifest([("wolf", 1, 1000.0), ("cat", 1, 1010.0), ("raptor", 1, 1020.0)])
+        reports["/r/wolf.t1.json"]["config"]["buffSet"] = "self_only"
+        reports["/r/cat.t1.json"]["config"]["disabledSpells"] = [24604]
+        manifest["runs"][2]["disabled"] = [201985]
+        rows = {r["key"]: r for r in pfs.build_rows(manifest, load=reports.__getitem__)}
+        self.assertIn("buff set self_only, not full_raid", rows["wolf"]["error"])
+        self.assertIn("disabled spells [24604], not []", rows["cat"]["error"])
+        self.assertIn("disabled spells [], not [201985]", rows["raptor"]["error"])
+        reports["/r/raptor.t1.json"]["config"]["disabledSpells"] = [201985]
+        rows = {r["key"]: r for r in pfs.build_rows(manifest, load=reports.__getitem__)}
+        self.assertIsNone(rows["raptor"]["error"])
+        self.assertEqual(rows["raptor"]["disabledSpells"], [201985])
+
+    def test_flag_direction_and_disabled_marker_in_the_summary(self):
+        manifest, reports = self.manifest([("wolf", 1, 1000.0), ("cat", 1, 1000.0), ("bear", 1, 1000.0),
+                                           ("boar", 1, 1100.0), ("spider", 1, 900.0)])
+        manifest["runs"][4]["disabled"] = [201753]
+        reports["/r/spider.t1.json"]["config"]["disabledSpells"] = [201753]
+        manifest["settings"] = {"disableFamilySpells": {"spider": [201753]}}
+        summary = pfs.summarize(pfs.build_rows(manifest, load=reports.__getitem__), 50.0)
+        directions = {f["key"]: f["direction"] for f in summary["families"]}
+        self.assertEqual(directions["boar"], "over")
+        self.assertEqual(directions["spider"], "under")
+        self.assertEqual(directions["wolf"], "")
+        markdown = pfs.summary_markdown(manifest, summary)
+        self.assertIn("**over**", markdown)
+        self.assertIn("**under** (no 201753)", markdown)
+        self.assertIn("disabled for spider 201753", markdown)
 
     def test_write_index_files(self):
         manifest, reports = self.manifest([("wolf", 1, 1000.0), ("cat", 1, 1020.0)])

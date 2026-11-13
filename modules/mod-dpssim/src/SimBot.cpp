@@ -202,8 +202,11 @@ bool SimBot::Create(Player* bot, std::vector<Creature*> const& targets, std::str
         }
     }
 
-    // DpsSim.DisableSpells, after every spell, talent and the pet are in place
-    RemoveDisabledSpells(bot);
+    // DpsSim.DisableSpells, after every spell, talent and the pet are in place. A spell neither the actor nor its pet
+    // knows (a typo, a triggered spell, another family's) fails the job rather than producing a baseline run named
+    // ".no<id>".
+    if (!RemoveDisabledSpells(bot, true))
+        return false;
 
     // Build the PlayerbotAI through PlayerbotsMgr::AddPlayerbotData() - the same entry point a
     // real bot login uses - rather than `new PlayerbotAI(bot)` directly, and keep only a borrowed
@@ -316,13 +319,14 @@ bool SimBot::EnsurePet()
     if (!TameSimPet(bot, _petCreatureEntry))
         return false;
 
-    // A new pet learned its family's spells again
-    RemoveDisabledSpells(bot);
-    return true;
+    // A new pet learned its family's spells again (an actor spell is already out of the book, so nothing is required
+    // to be known here)
+    return RemoveDisabledSpells(bot, false);
 }
 
-void SimBot::RemoveDisabledSpells(Player* bot)
+bool SimBot::RemoveDisabledSpells(Player* bot, bool mustBeKnown)
 {
+    bool allKnown = true;
     for (uint32 spellId : _disabledSpells)
     {
         bool removed = false;
@@ -343,10 +347,15 @@ void SimBot::RemoveDisabledSpells(Player* bot)
         if (removed)
             LOG_INFO("server.dpssim", "mod-dpssim: DpsSim.DisableSpells - spell {} taken out of the spellbook.",
                 spellId);
-        else
-            LOG_WARN("server.dpssim", "mod-dpssim: DpsSim.DisableSpells - neither the actor nor its pet knows spell "
-                "{}.", spellId);
+        else if (mustBeKnown)
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.DisableSpells - neither the actor nor its pet knows spell "
+                "{} (a typo, a spell another spell triggers, or another family's) - aborting.", spellId);
+            allKnown = false;
+        }
     }
+
+    return allKnown;
 }
 
 void SimBot::UpdateAI(uint32 diff)

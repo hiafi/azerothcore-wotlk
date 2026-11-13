@@ -21,7 +21,8 @@ a sweep cut short still has the number that matters.
 Usage:
     pet_family_sweep.py run [--out DIR] [--sweep ID] [--families wolf,cat,...] [--targets 1,3,5]
                             [--profile BmHunterSim] [--race 6] [--duration 120] [--iterations 5] [--step 100]
-                            [--level 60] [--jobs 6] [--buff-set full_raid] [--disable-spells IDS] [--threshold 50]
+                            [--level 60] [--jobs 6] [--buff-set full_raid] [--disable-spells IDS]
+                            [--disable-family-spells FAMILY=IDS] [--threshold 50]
                             [--dry-run]
     pet_family_sweep.py index <out-dir-or-manifest.json> [--threshold 50]
     pet_family_sweep.py list
@@ -120,8 +121,46 @@ def parse_targets(text: str) -> list[int]:
 
 # ---- run ------------------------------------------------------------------------------------------------------------
 
+def parse_id_list(text: str) -> list[int]:
+    """"24604, 201985" -> [24604, 201985]; ValueError on anything but whole numbers."""
+    parts = [x.strip() for x in text.split(",") if x.strip()]
+    if not parts or not all(x.isdigit() and int(x) > 0 for x in parts):
+        raise ValueError(f"'{text}' is not a comma separated list of spell ids")
+    return [int(x) for x in parts]
+
+
+def parse_family_spells(text: str) -> tuple[str, str]:
+    """"raptor=201985" -> ("raptor", "201985"); the family is a key of pet_families.tsv (checked by
+    family_spell_map)."""
+    key, sep, ids = text.partition("=")
+    key = key.strip().lower()
+    try:
+        if not sep or not key:
+            raise ValueError("no family")
+        ids = ",".join(str(i) for i in parse_id_list(ids))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"'{text}' is not FAMILY=ID[,ID...]") from None
+    return key, ids
+
+
+def family_spell_map(pairs, families: list[dict] | None = None) -> dict[str, list[int]]:
+    """The per-family disables of --disable-family-spells as {key: [ids]}, repeated families merged (no duplicate
+    ids). A family that is not in pet_families.tsv is a ValueError, so a typo cannot be ignored silently."""
+    known = {f["key"] for f in (families or load_families())}
+    result: dict[str, list[int]] = {}
+    for key, ids in pairs or []:
+        if key not in known:
+            raise ValueError(f"--disable-family-spells: '{key}' is not a family key of pet_families.tsv "
+                             f"(see the list command)")
+        merged = result.setdefault(key, [])
+        merged += [i for i in parse_id_list(ids) if i not in merged]
+    return result
+
+
 def plan_jobs(args, families: list[dict], targets: list[int], sweep: str) -> list[dict]:
     """One job per family and target count, every family's run at the first count before any at the next."""
+    base_disabled = parse_id_list(args.disable_spells) if args.disable_spells else []
+    family_disabled = family_spell_map(getattr(args, "disable_family_spells", None))
     jobs = []
     for n in targets:
         for fam in families:
@@ -131,13 +170,16 @@ def plan_jobs(args, families: list[dict], targets: list[int], sweep: str) -> lis
                 "DPSSIM_BATCH_TAG": f"{sweep}-{fam['key']}-t{n}",
                 "DPSSIM_NO_HTML": "1",
             }
-            if args.disable_spells:
-                env["DPSSIM_DISABLE_SPELLS"] = args.disable_spells
+            disabled = list(base_disabled)
+            disabled += [i for i in family_disabled.get(fam["key"], []) if i not in disabled]
+            if disabled:
+                env["DPSSIM_DISABLE_SPELLS"] = ",".join(str(i) for i in disabled)
             # run-sim.sh <profile> [durationSeconds] [level] [race] [iterations] [stepMs] [targets]
             cmd = [str(args.run_sim), args.profile, str(args.duration), str(args.level), str(args.race),
                    str(args.iterations), str(args.step), str(n)]
             jobs.append({"family": fam["family"], "key": fam["key"], "name": fam["name"], "tree": fam["tree"],
-                         "entry": fam["entry"], "targets": n, "env": env, "cmd": cmd})
+                         "entry": fam["entry"], "targets": n, "env": env, "cmd": cmd,
+                         "buffSet": args.buff_set, "disabled": disabled})
     return jobs
 
 
@@ -174,6 +216,12 @@ def run_job(job: dict, out_dir: Path) -> dict:
     return result
 
 
+def clamp_jobs(jobs: int) -> int:
+    """At most MAX_JOBS (6) sims at once, at least 1. Per sweep process: two sweeps, or another session's sims, count
+    separately, so check `docker ps` first."""
+    return max(1, min(jobs, MAX_JOBS))
+
+
 def cmd_run(args) -> int:
     try:
         families = select_families(load_families(), args.families)
@@ -181,10 +229,14 @@ def cmd_run(args) -> int:
     except ValueError as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
-    args.jobs = max(1, min(args.jobs, MAX_JOBS))
+    args.jobs = clamp_jobs(args.jobs)
     sweep = args.sweep or datetime.datetime.now().strftime("pf%Y%m%d-%H%M%S")
     out_dir = Path(args.out) if args.out else REPORTS_DIR / f"petsweep-{sweep}"
-    jobs = plan_jobs(args, families, targets, sweep)
+    try:
+        jobs = plan_jobs(args, families, targets, sweep)
+    except ValueError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
 
     if args.dry_run:
         print(f"# sweep {sweep}: {len(jobs)} run(s), at most {args.jobs} at once, from {REPO_ROOT}")
@@ -199,6 +251,7 @@ def cmd_run(args) -> int:
         "settings": {"profile": args.profile, "race": args.race, "duration": args.duration,
                      "iterations": args.iterations, "step": args.step, "level": args.level, "jobs": args.jobs,
                      "buffSet": args.buff_set, "disableSpells": args.disable_spells or "", "targets": targets,
+                     "disableFamilySpells": family_spell_map(args.disable_family_spells),
                      "image": os.environ.get("DPSSIM_IMAGE", "")},
         "runs": [],
     }
@@ -221,6 +274,7 @@ def report_numbers(report: dict) -> dict:
     damage and the config the report ran with."""
     summary = report.get("summary", {})
     total = float(summary.get("totalDamage") or 0.0)
+    # every isPet row: the pet and the minions it owns (Stampede guardians), not the pet alone
     pet = sum(float(s.get("totalDamage") or 0.0) for s in report.get("spells", []) if s.get("isPet"))
     per_iteration = (report.get("aggregate", {}).get("perIteration", {}) or {}).get("dps") or []
     config = report.get("config", {})
@@ -232,7 +286,29 @@ def report_numbers(report: dict) -> dict:
         "petSharePct": 100.0 * pet / total if total > 0 else 0.0,
         "petCreatureEntry": config.get("petCreatureEntry"),
         "buffSet": config.get("buffSet"),
+        "disabledSpells": config.get("disabledSpells"),
     }
+
+
+def check_report_config(row: dict, run: dict, settings: dict) -> str | None:
+    """None when the report ran what the job asked for, else why not. A report without petCreatureEntry, buffSet or
+    disabledSpells came from an image that predates SIM1 (it ignored the keys, so every "family" is the profile's pet
+    under self_only); a value that differs from the job's is a run that did not do what was asked."""
+    missing = [k for k in ("petCreatureEntry", "buffSet", "disabledSpells") if row.get(k) is None]
+    if missing:
+        return ("the report has no " + "/".join(missing) + " in its config: the image predates SIM1 "
+                "(set DPSSIM_IMAGE to the SIM1 image)")
+    if row["petCreatureEntry"] != row["entry"]:
+        return f"the report ran pet {row['petCreatureEntry']}, not {row['entry']}"
+    want_set = run.get("buffSet") or settings.get("buffSet")
+    if want_set and row["buffSet"] != want_set:
+        return f"the report ran buff set {row['buffSet']}, not {want_set}"
+    want_disabled = run.get("disabled")
+    if want_disabled is None:
+        want_disabled = parse_id_list(settings["disableSpells"]) if settings.get("disableSpells") else []
+    if sorted(row["disabledSpells"]) != sorted(want_disabled):
+        return f"the report disabled spells {sorted(row['disabledSpells'])}, not {sorted(want_disabled)}"
+    return None
 
 
 def build_rows(manifest: dict, load=None) -> list[dict]:
@@ -241,6 +317,7 @@ def build_rows(manifest: dict, load=None) -> list[dict]:
     rows = []
     for run in manifest.get("runs", []):
         row = {k: run.get(k) for k in ("family", "key", "name", "tree", "entry", "targets", "report", "log")}
+        row["asked"] = list(run.get("disabled") or [])
         row["error"] = None
         if run.get("exitCode") != 0 or not run.get("report"):
             row["error"] = f"run failed (exit {run.get('exitCode')}), see {run.get('log')}"
@@ -249,8 +326,8 @@ def build_rows(manifest: dict, load=None) -> list[dict]:
                 row.update(report_numbers(load(run["report"])))
             except (OSError, ValueError) as e:
                 row["error"] = f"report unreadable: {e}"
-        if row["error"] is None and row.get("petCreatureEntry") not in (None, row["entry"]):
-            row["error"] = f"the report ran pet {row['petCreatureEntry']}, not {row['entry']}"
+        if row["error"] is None:
+            row["error"] = check_report_config(row, run, manifest.get("settings", {}))
         rows.append(row)
     order = {f["key"]: i for i, f in enumerate(load_families())}
     rows.sort(key=lambda r: (order.get(r["key"], 999), r["targets"] or 0))
@@ -266,7 +343,8 @@ def summarize(rows: list[dict], threshold: float = DEFAULT_THRESHOLD) -> dict:
     families: dict[str, dict] = {}
     for r in rows:
         fam = families.setdefault(r["key"], {"family": r["family"], "key": r["key"], "name": r["name"],
-                                             "tree": r["tree"], "entry": r["entry"], "byTargets": {}, "errors": []})
+                                             "tree": r["tree"], "entry": r["entry"], "byTargets": {}, "errors": [],
+                                             "disabledSpells": r.get("asked") or []})
         if r.get("error"):
             fam["errors"].append(f"t{r['targets']}: {r['error']}")
             continue
@@ -277,6 +355,7 @@ def summarize(rows: list[dict], threshold: float = DEFAULT_THRESHOLD) -> dict:
     for fam in families.values():
         one = fam["byTargets"].get(1)
         fam["flagged"] = bool(one) and abs(one["vsMedian"]) > threshold
+        fam["direction"] = ("over" if one["vsMedian"] > 0 else "under") if fam["flagged"] else ""
     ranked = sorted(families.values(), key=lambda f: -(f["byTargets"].get(1, {}).get("dps") or 0.0))
     single = [f["byTargets"][1]["dps"] for f in ranked if 1 in f["byTargets"]]
     return {
@@ -304,6 +383,8 @@ def summary_markdown(manifest: dict, summary: dict) -> str:
         f"{s.get('profile')}, race {s.get('race')}, level {s.get('level')}, buff set {s.get('buffSet')}, "
         f"{s.get('duration')} s x {s.get('iterations')}, {s.get('step')} ms step"
         + (f", disabled spells {s['disableSpells']}" if s.get("disableSpells") else "")
+        + "".join(f", disabled for {k} {','.join(str(i) for i in v)}"
+                  for k, v in (s.get("disableFamilySpells") or {}).items())
         + (f", image {s['image']}" if s.get("image") else "") + ".",
         f"Started {manifest.get('started')}, finished {manifest.get('finished', '-')}.",
         "",
@@ -313,7 +394,7 @@ def summary_markdown(manifest: dict, summary: dict) -> str:
         + (", ".join(summary["flagged"]) if summary["flagged"] else "none") + ".",
         "",
         "| Family | Tree | Entry | " + " | ".join(f"DPS {n}t" for n in counts)
-        + " | Pet share 1t | vs median 1t | Flag |",
+        + " | Pet + minions 1t | vs median 1t | Flag |",
         "|---|---|---|" + "---|" * len(counts) + "---|---|---|",
     ]
     for fam in summary["families"]:
@@ -323,7 +404,8 @@ def summary_markdown(manifest: dict, summary: dict) -> str:
             f"| {fam['name']} | {fam['tree']} | {fam['entry']} | "
             + " | ".join(fmt(bt.get(n, {}).get("dps"), 1) for n in counts)
             + f" | {fmt(one.get('petSharePct'), 1)}% | {fmt(one.get('vsMedian'), 1)} | "
-            + ("**over**" if fam["flagged"] else "") + " |")
+            + (f"**{fam['direction']}**" if fam["flagged"] else "")
+            + (f" (no {', '.join(str(i) for i in fam['disabledSpells'])})" if fam["disabledSpells"] else "") + " |")
     errors = [f"- {fam['name']} {e}" for fam in summary["families"] for e in fam["errors"]]
     if errors:
         lines += ["", "## Failed runs", ""] + errors
@@ -331,7 +413,7 @@ def summary_markdown(manifest: dict, summary: dict) -> str:
 
 
 CSV_FIELDS = ["family", "key", "name", "tree", "entry", "targets", "dps", "dpsMin", "dpsMax", "iterations",
-              "petSharePct", "buffSet", "error", "report"]
+              "petSharePct", "buffSet", "disabledSpells", "error", "report"]
 
 
 def write_index(manifest: dict, out_dir: Path, threshold: float = DEFAULT_THRESHOLD) -> int:
@@ -340,7 +422,9 @@ def write_index(manifest: dict, out_dir: Path, threshold: float = DEFAULT_THRESH
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS, extrasaction="ignore")
         writer.writeheader()
         for r in rows:
-            writer.writerow({k: (round(r[k], 2) if isinstance(r.get(k), float) else r.get(k)) for k in CSV_FIELDS})
+            row = {k: (round(r[k], 2) if isinstance(r.get(k), float) else r.get(k)) for k in CSV_FIELDS}
+            row["disabledSpells"] = " ".join(str(i) for i in (r.get("disabledSpells") or []))
+            writer.writerow(row)
     summary = summarize(rows, threshold)
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=1))
     (out_dir / "summary.md").write_text(summary_markdown(manifest, summary))
@@ -379,6 +463,10 @@ def main() -> int:
     run.add_argument("--jobs", type=int, default=MAX_JOBS, help=f"parallel sims, at most {MAX_JOBS}")
     run.add_argument("--buff-set", default="full_raid", choices=["full_raid", "self_only"])
     run.add_argument("--disable-spells", help="DPSSIM_DISABLE_SPELLS for every run, e.g. 24604")
+    run.add_argument("--disable-family-spells", action="append", default=[], type=parse_family_spells,
+                     metavar="FAMILY=IDS", help="DPSSIM_DISABLE_SPELLS for one family's runs only, e.g. "
+                     "raptor=201985 (Tail Sweep knocks the dummies apart, which closes the hunter's AoE gate); "
+                     "repeatable")
     run.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD)
     run.add_argument("--dry-run", action="store_true", help="print the run-sim.sh lines and stop")
     run.add_argument("--run-sim", type=Path, default=RUN_SIM, help=argparse.SUPPRESS)

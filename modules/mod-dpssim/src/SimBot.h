@@ -189,8 +189,9 @@ private:
     // SetInCombatWith() fallback.
     bool EngageTargets(std::vector<Creature*> const& targets);
 
-    // Takes _disabledSpells out of the actor's and its pet's spellbooks (logs each one)
-    void RemoveDisabledSpells(Player* bot);
+    // Takes _disabledSpells out of the actor's and its pet's spellbooks (logs each one). With `mustBeKnown`, false when
+    // one of them is known to neither (the job then fails).
+    bool RemoveDisabledSpells(Player* bot, bool mustBeKnown);
 
     PlayerbotAI* _ai = nullptr;
 

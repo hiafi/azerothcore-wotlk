@@ -49,13 +49,30 @@ arrows. The run log shows what ran: "tamed pet ...", and "strategies resolved: c
   `DPSSIM_RAID_DEBUFFS` / `DPSSIM_RAID_PULL_BUFFS` to replace a list (".full_raid-x<hash>"). The run log names each
   member with its effects and groups ("raid buffs (actor and pet): ...") and, on the first iteration, the amounts it
   landed with ("buff set: 24932 Leader of the Pack on the actor: aura 52 = 5, ..."), or that it did not land.
-- **Disabled spells.** `DpsSim.DisableSpells` (`DPSSIM_DISABLE_SPELLS`, ".no<ids>" in the names) takes spells out of
-  the actor's and its pet's spellbooks, to measure one ability (an owner-only debuff, a family's own group buff). A
-  spell another spell triggers still lands.
+  An entry may end in "@amount" ("21183:0@3", a negative amount is allowed) to set the amount of its applied effects:
+  a spell group is looked up by the first rank of a chain, and Heart of the Crusader's chain is not in `spell_ranks`,
+  so its first rank (1%) is applied with rank 3's 3%. `full_raid` is for hunter actors only (the aura's caster is the
+  actor, so a class that owns one of the listed spells would see it as its own: its bot skips the cast, or the two
+  replace each other every second); another class needs a neutral caster first, and the run refuses it. One sim second
+  after the pull, before the first refresh pass, the log prints "buff set coverage": per actor, pet and dummy what is
+  missing, and which of the pet's auras the actor's own aura carried (an area aura propagated) and which are copies
+  added directly. Every iteration logs what the refresh put back and every put-back that failed, with the member of
+  its spell group in the way (a family effect that outranks the baseline shows up there).
+- **Disabled spells and immune dummies.** `DpsSim.DisableSpells` (`DPSSIM_DISABLE_SPELLS`, ".no<ids>" in the names)
+  takes spells out of the actor's and its pet's spellbooks, to measure one ability (a family's own group buff, a
+  utility): the job fails when neither knows a listed id, and a spell another spell triggers still lands.
+  `DpsSim.DummyImmuneAuras` (`DPSSIM_DUMMY_IMMUNE_AURAS`, ".imm<ids>") makes every dummy immune to the listed spell
+  ids instead, so the hit that applies an owner-only debuff lands and the debuff does not (Boar's Gore debuff
+  201665 once F2 is live).
 - **The sweep.** `tools/pet_family_sweep.py run` runs the BM profile for every family at 1, 3 and 5 targets under
   `full_raid` (120 s x 5, 100 ms step, at most 6 sims at once; `--families`, `--targets`, `--dry-run`), then writes
   `reports/petsweep-<sweep>/sweep.csv` and `summary.md`: DPS per target count, the pet's damage share, the distance
   from the median family and a flag for more than 50 DPS from it at 1 target. `index <dir>` rebuilds the summary.
+  `--disable-family-spells raptor=201985` takes spells out for one family's runs only (the Raptor's Tail Sweep, a
+  knockback, scatters the dummies so the pack rows of the hunter bot never fire at 3 and 5 targets); an unknown family
+  is an error and the disables are in the manifest, the CSV and the summary. A run fails when its report lacks
+  `petCreatureEntry` / `buffSet` / `disabledSpells` (an image that predates SIM1) or has other values than the job
+  asked for. The pet share counts the pet and the minions it owns.
   Tests: `python3 -I modules/mod-dpssim/tools/test_pet_family_sweep.py`.
 
 ## Power and rune samples (`powerSamples[]`)

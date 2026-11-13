@@ -150,6 +150,10 @@ static bool WriteDpsReport(std::string const& path, SimDaemon::RunConfig const& 
     file << "    \"disabledSpells\": [";
     for (size_t i = 0; i < config.DisableSpells.size(); ++i)
         file << (i ? ", " : "") << config.DisableSpells[i];
+    file << "],\n";
+    file << "    \"dummyImmuneAuras\": [";
+    for (size_t i = 0; i < config.DummyImmuneAuras.size(); ++i)
+        file << (i ? ", " : "") << config.DummyImmuneAuras[i];
     file << "]\n";
     file << "  },\n";
 

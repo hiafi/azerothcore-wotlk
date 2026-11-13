@@ -172,6 +172,9 @@ namespace SimDaemon
         // DpsSim.DisableSpells: spell ids taken out of the actor's and its pet's spellbooks for the run (SimBot), to
         // measure what one ability is worth. A spell another spell triggers still lands.
         std::vector<uint32> DisableSpells;
+        // DpsSim.DummyImmuneAuras: spell ids every dummy is immune to for the run (Unit::ApplySpellImmune by id), so
+        // the hit that applies an aura still lands and the aura does not (an owner-only debuff measured on its own).
+        std::vector<uint32> DummyImmuneAuras;
         // Which spell RunOnce()'s hardcoded RotationTick() teaches and casts - defaults to
         // FROSTBOLT_SPELL_ID (Rank 11, 25304) to keep every existing Phase 1 test's expectations
         // unchanged. Override this (SINGLE_RANK_FROSTBOLT_SPELL_ID above, typically) to test a

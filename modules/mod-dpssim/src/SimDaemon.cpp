@@ -337,17 +337,30 @@ namespace
     constexpr uint32 RAID_AURA_REFRESH_MS = 1000;
 
     // full_raid (SimBuffSet.h): the raid buffs on the actor and its pet, the raid debuffs on every dummy (all pinned)
-    // and Bloodlust / Sated at the pull. Logs what landed and with what amounts on the first iteration only. Does
-    // nothing for self_only.
+    // and Bloodlust / Sated at the pull. Logs what landed and with what amounts, and every failure, on the run's first
+    // pull only. Does nothing for self_only.
     void ApplyRaidAuras(SimDaemon::RunConfig const& config, Player* player, std::vector<Creature*> const& dummies)
     {
         if (config.BuffSet.BuffSet != SimBuffSet::Set::FullRaid)
             return;
 
-        static bool loggedOnce = false;
-        SimBuffSet::ApplyPinned(config.BuffSet, player, dummies, !loggedOnce);
-        SimBuffSet::ApplyPullBuffs(config.BuffSet, player);
-        loggedOnce = true;
+        SimBuffSet::Phase const phase =
+            config.BuffSet.State.InitialLogged ? SimBuffSet::Phase::Refresh : SimBuffSet::Phase::Initial;
+        SimBuffSet::ApplyPinned(config.BuffSet, player, dummies, phase);
+        SimBuffSet::ApplyPullBuffs(config.BuffSet, player, phase);
+        config.BuffSet.State.InitialLogged = true;
+    }
+
+    // DpsSim.DummyImmuneAuras: every dummy is immune to these spell ids for the whole run (a hit that applies the
+    // aura still lands, the aura does not)
+    void ApplyDummyImmunity(SimDaemon::RunConfig const& config, std::vector<Creature*> const& dummies)
+    {
+        for (uint32 spellId : config.DummyImmuneAuras)
+            for (Creature* dummy : dummies)
+                dummy->ApplySpellImmune(0, IMMUNITY_ID, spellId, true);
+        if (!config.DummyImmuneAuras.empty())
+            LOG_INFO("server.dpssim", "mod-dpssim: DpsSim.DummyImmuneAuras - {} dummies immune to {} spell id(s).",
+                dummies.size(), config.DummyImmuneAuras.size());
     }
 
     // Pre-pull buff phase (SimProfile.h's PrePullBuffMs): ticks the bot on its non-combat engine, buff and pet
@@ -466,7 +479,16 @@ namespace
             bot.ReestablishCombatState(dummies);
         }
         else
+        {
             ApplyRaidAuras(config, player, dummies);
+            if (config.BuffSet.BuffSet == SimBuffSet::Set::FullRaid)
+            {
+                // the raid's auras are up from the first measured ms, as after a buff phase
+                recorder->RecordAurasPresent(player);
+                for (Creature* dummy : dummies)
+                    recorder->RecordAurasPresent(dummy);
+            }
+        }
         // combat_time() counts from the moment the combat engine started, on getMSTime(). Here that clock still
         // reads the last buff tick, which is earlier than the pull when the buff phase ended early, or the
         // ResetForNextIteration() time without a buff phase: iteration 2+ then opened with combat_time() already
@@ -499,14 +521,21 @@ namespace
         // full_raid: once a sim second, every pinned raid aura that went missing (a dispel, a stronger aura of its
         // group that has since expired, the pet's own cast of the same spell replacing it) is put back
         uint32 nextRaidRefreshMs = RAID_AURA_REFRESH_MS;
-        uint32 raidAurasPutBack = 0;
+        SimBuffSet::RefreshLog raidRefresh;
         while (clock.GetElapsedMs() < config.DurationMs)
         {
             clock.Tick(map);
 
             if (config.BuffSet.BuffSet == SimBuffSet::Set::FullRaid && clock.GetElapsedMs() >= nextRaidRefreshMs)
             {
-                raidAurasPutBack += SimBuffSet::ApplyPinned(config.BuffSet, player, dummies, false);
+                // Once per run, before the first pass: what the pass would otherwise add directly and so hide
+                if (!config.BuffSet.State.CoverageLogged)
+                {
+                    config.BuffSet.State.CoverageLogged = true;
+                    SimBuffSet::LogCoverage(config.BuffSet, player, dummies);
+                }
+
+                SimBuffSet::ApplyPinned(config.BuffSet, player, dummies, SimBuffSet::Phase::Refresh, &raidRefresh);
                 nextRaidRefreshMs += RAID_AURA_REFRESH_MS;
             }
 
@@ -553,10 +582,7 @@ namespace
             result.ActorDiedAtMs = config.DurationMs;
         }
 
-        if (raidAurasPutBack > 0)
-            LOG_INFO("server.dpssim", "mod-dpssim: full_raid - {} raid aura(s) went missing during the iteration and "
-                "were put back (a stronger aura of the same group, or the pet's own cast replacing one).",
-                raidAurasPutBack);
+        SimBuffSet::LogRefresh(raidRefresh);
 
         result.Success = true;
         // Deliberate: an actor that died is charged the full configured duration, not the time it survived, so
@@ -2499,6 +2525,7 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
     }
 
     std::vector<Creature*> const dummies = targets.GetCreatures();
+    ApplyDummyImmunity(config, dummies);
 
     // rotationSpellId defaults to 0 ("track any spell") - see EventRecorder.h's doc comment - since
     // a real Engine/Strategy casts a whole rotation, not Phase 1's one hardcoded Frostbolt.
@@ -2572,6 +2599,7 @@ bool SimDaemon::RunPlayerbotBatch(RunConfig const& config, uint32 iterations, st
     }
 
     std::vector<Creature*> const dummies = targets.GetCreatures();
+    ApplyDummyImmunity(config, dummies);
 
     EventRecorder* recorder = new EventRecorder(player->GetGUID(), targets.GetGuids());
     CastRecorder* castRecorder = new CastRecorder(player->GetGUID(), targets.GetGuids());

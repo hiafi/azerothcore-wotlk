@@ -76,6 +76,10 @@
 #                       dpssim.conf.dist); the names then read ".full_raid-x<hash>".
 #   DPSSIM_DISABLE_SPELLS  Spell ids taken out of the actor's and its pet's spellbooks (DpsSim.DisableSpells), e.g.
 #                       "24604". Adds ".no24604" to the names.
+#   DPSSIM_DUMMY_IMMUNE_AURAS  Spell ids the dummies are immune to (DpsSim.DummyImmuneAuras): the hit that applies the
+#                       aura still lands, the aura does not. For an aura whose spell is not in a spellbook, e.g. a
+#                       family's owner-only debuff such as Boar's Gore debuff 201665 (DisableSpells would take the
+#                       whole ability out). Adds ".imm<ids>" to the names.
 #                       These keys may not be set through DPSSIM_EXTRA_CONF (the names could not show them).
 #
 # Healing runs: a profile with "Mode = Heal" (see SimProfile.h) runs the healing sim. Everything above applies, with
@@ -492,11 +496,13 @@ if [[ -n "$BATCH_TAG" && ! "$BATCH_TAG" =~ ^[A-Za-z0-9_-]+$ ]]; then
 fi
 
 # --- hunter pet family, buff set, disabled spells (the names carry them, so never via DPSSIM_EXTRA_CONF) -------------
-EXTRA_KEYS_RE='^[[:space:]]*DpsSim\.(PetCreatureEntry|BuffSet|RaidBuffs|RaidDebuffs|RaidPullBuffs|DisableSpells)\b'
+EXTRA_KEYS_RE='^[[:space:]]*DpsSim\.(PetCreatureEntry|BuffSet|RaidBuffs|RaidDebuffs|RaidPullBuffs|'
+EXTRA_KEYS_RE+='DisableSpells|DummyImmuneAuras)\b'
 if printf '%b' "${DPSSIM_EXTRA_CONF:-}" | grep -qiE "$EXTRA_KEYS_RE"; then
-    die "DPSSIM_EXTRA_CONF sets DpsSim.PetCreatureEntry / BuffSet / Raid*Buffs / DisableSpells: use DPSSIM_PET_ENTRY," \
-        "DPSSIM_PET_FAMILY, DPSSIM_BUFF_SET, DPSSIM_RAID_BUFFS / DPSSIM_RAID_DEBUFFS / DPSSIM_RAID_PULL_BUFFS or" \
-        "DPSSIM_DISABLE_SPELLS instead, so the report file names carry the setting"
+    die "DPSSIM_EXTRA_CONF sets DpsSim.PetCreatureEntry / BuffSet / Raid*Buffs / DisableSpells /" \
+        "DummyImmuneAuras: use DPSSIM_PET_ENTRY, DPSSIM_PET_FAMILY, DPSSIM_BUFF_SET, DPSSIM_RAID_BUFFS /" \
+        "DPSSIM_RAID_DEBUFFS / DPSSIM_RAID_PULL_BUFFS, DPSSIM_DISABLE_SPELLS or DPSSIM_DUMMY_IMMUNE_AURAS" \
+        "instead, so the report file names carry the setting"
 fi
 PET_FAMILIES_TSV="$REPO_ROOT/modules/mod-dpssim/tools/pet_families.tsv"
 # pet_family_field <column> <match column> <value>: one field of the pet_families.tsv row whose <match column> is
@@ -552,7 +558,9 @@ if [[ "$BUFF_SET" == full_raid ]]; then
             "DPSSIM_RAID_PULL_BUFFS:DpsSim.RaidPullBuffs"; do
         v="${pair%%:*}"; key="${pair#*:}"
         if [[ -n "${!v+x}" ]]; then
-            if ! [[ "${!v}" =~ ^[0-9:,\ ]*$ ]]; then die "$v must be a list like '24932, 202210:01', got '${!v}'"; fi
+            if ! [[ "${!v}" =~ ^[0-9:@,\ -]*$ ]]; then
+                die "$v must be a list like '24932, 202210:01, 21183:0@3', got '${!v}'"
+            fi
             EXTRA_DPS_CONF+="${key} = \"${!v}\""$'\n'
             RAID_LISTS+="${key}=${!v};"
         fi
@@ -573,6 +581,15 @@ if [[ -n "${DPSSIM_DISABLE_SPELLS:-}" ]]; then
     EXTRA_DPS_CONF+="DpsSim.DisableSpells = \"${DPSSIM_DISABLE_SPELLS}\""$'\n'
     # ".no24604-201716"
     EXTRA_NAME+=".no$(printf '%s' "$DPSSIM_DISABLE_SPELLS" | tr -s ', ' '-' | sed -E 's/^-+|-+$//g')"
+fi
+
+if [[ -n "${DPSSIM_DUMMY_IMMUNE_AURAS:-}" ]]; then
+    if ! [[ "$DPSSIM_DUMMY_IMMUNE_AURAS" =~ ^[0-9,\ ]+$ && "$DPSSIM_DUMMY_IMMUNE_AURAS" =~ [0-9] ]]; then
+        die "DPSSIM_DUMMY_IMMUNE_AURAS must be spell ids, comma separated, got '$DPSSIM_DUMMY_IMMUNE_AURAS'"
+    fi
+    EXTRA_DPS_CONF+="DpsSim.DummyImmuneAuras = \"${DPSSIM_DUMMY_IMMUNE_AURAS}\""$'\n'
+    # ".imm201665"
+    EXTRA_NAME+=".imm$(printf '%s' "$DPSSIM_DUMMY_IMMUNE_AURAS" | tr -s ', ' '-' | sed -E 's/^-+|-+$//g')"
 fi
 
 # --- discover the live stack's real network / image / volume / DB creds ------------------

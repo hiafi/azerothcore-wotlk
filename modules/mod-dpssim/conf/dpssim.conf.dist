@@ -438,8 +438,9 @@ DpsSim.PetCreatureEntry = 0
 #                                  DpsSim.RaidDebuffs on every dummy at the pull (both pinned, no expiry, and put back
 #                                  once a sim second if they go missing), and DpsSim.RaidPullBuffs (Bloodlust and
 #                                  Sated) on the actor and its pet at the pull with their own duration. The sim adds
-#                                  the auras itself (the actor as the caster); nobody casts them. run-sim.sh sets it
-#                                  from DPSSIM_BUFF_SET and puts "full_raid" in the report names.
+#                                  the auras itself (the actor as the caster, so hunter actors only: a class that
+#                                  owns one of the spells would see the aura as its own); nobody casts them.
+#                                  run-sim.sh sets it from DPSSIM_BUFF_SET and puts "full_raid" in the report names.
 #        Default:     self_only
 #
 
@@ -450,8 +451,11 @@ DpsSim.BuffSet = self_only
 #    DpsSim.RaidDebuffs
 #    DpsSim.RaidPullBuffs
 #        Description: The full_raid lists: spell ids, comma separated. "id:01" applies only effect indexes 0 and 1 of
-#                      the spell; a bare id applies the effects a raid member would get (every aura effect except a
-#                      plain aura on the caster itself). Each member sits in the same spell_group as the hunter pet
+#                      the spell, "id:0@3" also sets the amount of those effects to 3 (Heart of the Crusader's rank
+#                      chain is not in spell_ranks, so only its first rank is in the group; that rank is applied
+#                      with the amount of the rank wanted, a negative amount is allowed); a bare id applies the effects
+#                      a raid member would get (every aura effect except a plain aura on the caster itself). Each
+#                      member sits in the same spell_group as the hunter pet
 #                      family effect of its category, so a family's own cast is suppressed by the group rule and
 #                      adds nothing (hunter-pet-families DATA-INVENTORY 4.1, BRAINSTORM ruling 7). The run log names
 #                      every member with its effects and groups, and the amount it landed with. Defaults (level 60):
@@ -470,11 +474,11 @@ DpsSim.BuffSet = self_only
 #                        31583:1    Arcane Empowerment r3       party damage 3%              group 1056
 #                      Debuffs (every dummy):
 #                        8647       Expose Armor                major armor -20%             group 1013 -> 1015
-#                        54499      Heart of the Crusader r3    crit taken 3%                group 1058
+#                        21183:0@3  Heart of the Crusader       crit taken 3% (amount set)   group 1058
 #                        60431      Earth and Moon              magic damage taken 10%       group 1101
 #                        1160       Demoralizing Shout          attack power down            group 1062
 #                        6343       Thunder Clap                attack speed slow            group 1059
-#                        11719:0    Curse of Tongues r2         casting slow                 group 1096
+#                        1714:0     Curse of Tongues r1         casting slow 25%             group 1096
 #                        30070      Blood Frenzy r2             physical damage taken 4%     group 1108
 #                      (no hit-chance debuff: group 1060's only member, Insect Swarm 5570, no longer has its
 #                      hit-chance effect; add Tallstrider's Dust Cloud id once it exists)
@@ -483,19 +487,36 @@ DpsSim.BuffSet = self_only
 #
 
 DpsSim.RaidBuffs = "24932, 8076:01, 53137, 202210:01, 24907:0, 50172, 5677, 202211, 23948, 25898:0, 202212, 31583:1"
-DpsSim.RaidDebuffs = "8647, 54499, 60431, 1160, 6343, 11719:0, 30070"
+DpsSim.RaidDebuffs = "8647, 21183:0@3, 60431, 1160, 6343, 1714:0, 30070"
 DpsSim.RaidPullBuffs = "2825, 57724"
 
 #
 #    DpsSim.DisableSpells
 #        Description: Spell ids, comma separated, taken out of the actor's and its pet's spellbooks for the run (and
 #                      again after a pet re-tame), so the bot and the pet's autocast never use them: a run with and
-#                      one without gives an ability's value (an owner-only debuff such as Boar's Gore). A spell
-#                      another spell triggers still lands. The run log names each one taken out.
+#                      one without gives an ability's value (a family's own group buff such as Wolf's Furious Howl, or
+#                      a utility such as the Raptor's Tail Sweep). A spell another spell triggers still lands, and the
+#                      job fails when the actor and the pet both lack a listed id (a typo, a triggered spell, another
+#                      family's). A spell that is not in a spellbook, such as an owner-only debuff that an ability
+#                      applies, cannot be measured this way (removing its ability removes the hit too): use
+#                      DpsSim.DummyImmuneAuras. The run log names each one taken out.
 #        Default:     "" - (None)
 #
 
 DpsSim.DisableSpells =
+
+#
+#    DpsSim.DummyImmuneAuras
+#        Description: Spell ids, comma separated, that every dummy is immune to for the run (DPS runs only; each id
+#                      must exist). The hit that applies the aura still lands and the aura does not, so an
+#                      owner-only debuff can be measured on its own: a run with and one without gives its value
+#                      (Boar's Gore debuff 201665 once F2 is live). The id is the aura's spell, not the ability's.
+#                      A baseline debuff of the same id (full_raid) is blocked too. run-sim.sh sets it from
+#                      DPSSIM_DUMMY_IMMUNE_AURAS and adds ".imm<ids>" to the report names.
+#        Default:     "" - (None)
+#
+
+DpsSim.DummyImmuneAuras =
 
 #
 #    DpsSim.MechanicsMode

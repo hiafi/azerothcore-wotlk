@@ -27,6 +27,7 @@
 #include "SimProfile.h"
 #include "SimReport.h"
 #include "SimTests.h"
+#include "SpellMgr.h"
 #include "StringFormat.h"
 #include "Timer.h"
 #include "Util.h"
@@ -513,6 +514,13 @@ void DpsSimWorldScript::OnDpsSimRun()
             {
                 if (config.RunMode != SimDaemon::Mode::Dps)
                     error = "DpsSim.BuffSet full_raid is for DPS runs only (not heal, tank or mechanics)";
+                // The sim adds every baseline aura with the actor as its caster, so a class that owns one of these
+                // spells would see the aura as its own (a warrior's Thunder Clap, a paladin's Kings: its bot skips
+                // the cast, or the two replace each other every second). The hunter owns none of them. Other
+                // classes need a neutral caster first, see the README.
+                else if (config.ActorClass != CLASS_HUNTER)
+                    error = "DpsSim.BuffSet full_raid is for hunter actors only: the sim adds the raid auras with the "
+                        "actor as their caster, which breaks a class that owns one of those spells";
 
                 struct ListKey
                 {
@@ -557,18 +565,49 @@ void DpsSimWorldScript::OnDpsSimRun()
         }
 
         // DpsSim.DisableSpells = "24604, 201716": spells taken out of the actor's and its pet's spellbooks (SimBot)
+        // DpsSim.DummyImmuneAuras = "201665": spell ids every dummy is immune to (SimDaemon.cpp ApplyDummyImmunity)
         {
-            std::vector<SimBuffSet::AuraSpec> ids;
-            std::string error;
-            std::string const text = sConfigMgr->GetOption<std::string>("DpsSim.DisableSpells", "");
-            if (text.find(':') != std::string::npos || !SimBuffSet::ParseAuraList(text, ids, error))
+            struct IdKey
             {
-                LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.DisableSpells '{}' is not a list of spell ids - "
-                    "aborting DpsSim.RunPlayerbot job.", text);
-                ready = false;
+                char const* Key;
+                std::vector<uint32>* Out;
+                bool MustExist;
+            };
+            IdKey const idKeys[] = {{"DpsSim.DisableSpells", &config.DisableSpells, false},
+                {"DpsSim.DummyImmuneAuras", &config.DummyImmuneAuras, true}};
+            for (IdKey const& idKey : idKeys)
+            {
+                std::vector<SimBuffSet::AuraSpec> ids;
+                std::string error;
+                std::string const text = sConfigMgr->GetOption<std::string>(idKey.Key, "");
+                // plain ids only: ParseAuraList's ':' and '@' suffixes mean nothing here
+                if (text.find_first_of(":@") != std::string::npos || !SimBuffSet::ParseAuraList(text, ids, error))
+                {
+                    LOG_ERROR("server.dpssim", "mod-dpssim: {} '{}' is not a list of spell ids - aborting "
+                        "DpsSim.RunPlayerbot job.", idKey.Key, text);
+                    ready = false;
+                    continue;
+                }
+
+                if (idKey.MustExist && !ids.empty() && config.RunMode != SimDaemon::Mode::Dps)
+                {
+                    LOG_ERROR("server.dpssim", "mod-dpssim: {} is for DPS runs only - aborting DpsSim.RunPlayerbot "
+                        "job.", idKey.Key);
+                    ready = false;
+                }
+
+                for (SimBuffSet::AuraSpec const& id : ids)
+                {
+                    if (idKey.MustExist && !sSpellMgr->GetSpellInfo(id.SpellId))
+                    {
+                        LOG_ERROR("server.dpssim", "mod-dpssim: {}: spell {} does not exist - aborting "
+                            "DpsSim.RunPlayerbot job.", idKey.Key, id.SpellId);
+                        ready = false;
+                    }
+
+                    idKey.Out->push_back(id.SpellId);
+                }
             }
-            for (SimBuffSet::AuraSpec const& id : ids)
-                config.DisableSpells.push_back(id.SpellId);
         }
 
         // DpsSim.Iterations - added 2026-09-13 alongside SimDaemon::RunPlayerbotBatch(). 1 (the
