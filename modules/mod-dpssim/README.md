@@ -33,6 +33,31 @@ A dead pet is revived and a missing one tamed again. The pet's swings and spells
 read "(pet)" in the report). A hunter actor also gets the "Requires No Ammo" aura, so its ranged weapon needs no
 arrows. The run log shows what ran: "tamed pet ...", and "strategies resolved: combat [...], non-combat [...]".
 
+### Any pet family, the full_raid buff set, the family sweep
+
+- **Family switch.** `DpsSim.PetCreatureEntry` replaces the profile's pet for one run. `run-sim.sh` sets it from
+  `DPSSIM_PET_FAMILY` (a key, name or family number of `tools/pet_families.tsv`, one "Tamable <family>" creature per
+  family, all 32) or `DPSSIM_PET_ENTRY`, and the names carry it: `BmHunterSim.pet-cat.<ts>...`.
+- **Buff sets** (`DpsSim.BuffSet`, `SimBuffSet.h`, DPS runs only). `self_only`, the default, adds nothing (every run
+  before this). `full_raid` puts `DpsSim.RaidBuffs` on the actor and its pet at the end of the pre-pull buff phase
+  (after a pet re-tame or revive), `DpsSim.RaidDebuffs` on every dummy, both pinned (no expiry) and put back once a sim
+  second if they go missing, and `DpsSim.RaidPullBuffs` (Bloodlust and Sated) on the actor and pet with their own
+  duration. The sim adds the auras with `Unit::AddAura` (the actor as the caster); nobody casts them. Every member is in
+  the same `spell_group` as the hunter pet family effect of its category, so a family's own cast is suppressed by the
+  group rule and adds nothing (hunter-pet-families ruling 7). The lists and their defaults are in `dpssim.conf.dist`;
+  `run-sim.sh` takes `DPSSIM_BUFF_SET=full_raid` (".full_raid" in the names) and `DPSSIM_RAID_BUFFS` /
+  `DPSSIM_RAID_DEBUFFS` / `DPSSIM_RAID_PULL_BUFFS` to replace a list (".full_raid-x<hash>"). The run log names each
+  member with its effects and groups ("raid buffs (actor and pet): ...") and, on the first iteration, the amounts it
+  landed with ("buff set: 24932 Leader of the Pack on the actor: aura 52 = 5, ..."), or that it did not land.
+- **Disabled spells.** `DpsSim.DisableSpells` (`DPSSIM_DISABLE_SPELLS`, ".no<ids>" in the names) takes spells out of
+  the actor's and its pet's spellbooks, to measure one ability (an owner-only debuff, a family's own group buff). A
+  spell another spell triggers still lands.
+- **The sweep.** `tools/pet_family_sweep.py run` runs the BM profile for every family at 1, 3 and 5 targets under
+  `full_raid` (120 s x 5, 100 ms step, at most 6 sims at once; `--families`, `--targets`, `--dry-run`), then writes
+  `reports/petsweep-<sweep>/sweep.csv` and `summary.md`: DPS per target count, the pet's damage share, the distance
+  from the median family and a flag for more than 50 DPS from it at 1 target. `index <dir>` rebuilds the summary.
+  Tests: `python3 -I modules/mod-dpssim/tools/test_pet_family_sweep.py`.
+
 ## Power and rune samples (`powerSamples[]`)
 
 The playerbot DPS report (and a tank report, which is the DPS report plus a `tank` section) carries `powerSamples[]`,

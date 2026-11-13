@@ -65,6 +65,18 @@
 #                       (e.g. acore/ac-wotlk-worldserver:master after a `docker compose build` the live container has
 #                       not been recreated for).
 #   DPSSIM_EXTRA_CONF   Extra lines appended to the generated dpssim.conf (printf %b, so "\n" separates lines).
+#   DPSSIM_PET_FAMILY   Hunter profiles: the pet family to sim instead of the profile's pet, by key, name or number
+#                       from modules/mod-dpssim/tools/pet_families.tsv (one creature per family), e.g. "cat",
+#                       "bird-of-prey", "Bird of Prey" or 26 (DpsSim.PetCreatureEntry). Adds ".pet-<key>" to the names.
+#   DPSSIM_PET_ENTRY    The same with a creature_template entry ("pet<entry>" in the names unless the table has it).
+#   DPSSIM_BUFF_SET     self_only (default) or full_raid (DpsSim.BuffSet, DPS profiles): raid buffs on the actor
+#                       and its pet, raid debuffs on the dummies, Bloodlust at the pull. Adds ".full_raid" to the names.
+#   DPSSIM_RAID_BUFFS / DPSSIM_RAID_DEBUFFS / DPSSIM_RAID_PULL_BUFFS
+#                       full_raid only: replace that list (DpsSim.RaidBuffs / RaidDebuffs / RaidPullBuffs, see
+#                       dpssim.conf.dist); the names then read ".full_raid-x<hash>".
+#   DPSSIM_DISABLE_SPELLS  Spell ids taken out of the actor's and its pet's spellbooks (DpsSim.DisableSpells), e.g.
+#                       "24604". Adds ".no24604" to the names.
+#                       These keys may not be set through DPSSIM_EXTRA_CONF (the names could not show them).
 #
 # Healing runs: a profile with "Mode = Heal" (see SimProfile.h) runs the healing sim. Everything above applies, with
 # these differences: [targets] must be 1, [durationSeconds] is at most 300, the reports are named
@@ -479,6 +491,90 @@ if [[ -n "$BATCH_TAG" && ! "$BATCH_TAG" =~ ^[A-Za-z0-9_-]+$ ]]; then
     die "DPSSIM_BATCH_TAG must hold only letters, digits, '_' and '-', got '$BATCH_TAG'"
 fi
 
+# --- hunter pet family, buff set, disabled spells (the names carry them, so never via DPSSIM_EXTRA_CONF) -------------
+EXTRA_KEYS_RE='^[[:space:]]*DpsSim\.(PetCreatureEntry|BuffSet|RaidBuffs|RaidDebuffs|RaidPullBuffs|DisableSpells)\b'
+if printf '%b' "${DPSSIM_EXTRA_CONF:-}" | grep -qiE "$EXTRA_KEYS_RE"; then
+    die "DPSSIM_EXTRA_CONF sets DpsSim.PetCreatureEntry / BuffSet / Raid*Buffs / DisableSpells: use DPSSIM_PET_ENTRY," \
+        "DPSSIM_PET_FAMILY, DPSSIM_BUFF_SET, DPSSIM_RAID_BUFFS / DPSSIM_RAID_DEBUFFS / DPSSIM_RAID_PULL_BUFFS or" \
+        "DPSSIM_DISABLE_SPELLS instead, so the report file names carry the setting"
+fi
+PET_FAMILIES_TSV="$REPO_ROOT/modules/mod-dpssim/tools/pet_families.tsv"
+# pet_family_field <column> <match column> <value>: one field of the pet_families.tsv row whose <match column> is
+# <value> (case-insensitive), empty if none. Columns: 1 family, 2 key, 3 name, 4 tree, 5 entry, 6 creature.
+pet_family_field() {
+    awk -F'\t' -v out="$1" -v col="$2" -v want="$(printf '%s' "$3" | tr 'A-Z' 'a-z')" \
+        '/^#/ || $1 == "family" { next } tolower($col) == want { print $out; exit }' "$PET_FAMILIES_TSV"
+}
+EXTRA_DPS_CONF=""
+EXTRA_NAME=""
+if [[ -n "${DPSSIM_PET_ENTRY:-}" && -n "${DPSSIM_PET_FAMILY:-}" ]]; then
+    die "set DPSSIM_PET_ENTRY or DPSSIM_PET_FAMILY, not both"
+fi
+PET_ENTRY=""
+PET_KEY=""
+if [[ -n "${DPSSIM_PET_FAMILY:-}" ]]; then
+    # The family key (wolf, bird-of-prey), its name (Bird of Prey) or its number (26)
+    for col in 2 3 1; do
+        PET_KEY="$(pet_family_field 2 "$col" "$DPSSIM_PET_FAMILY")"
+        if [[ -n "$PET_KEY" ]]; then break; fi
+    done
+    if [[ -z "$PET_KEY" ]]; then
+        die "DPSSIM_PET_FAMILY '$DPSSIM_PET_FAMILY' is not a family of $PET_FAMILIES_TSV (key, name or number)"
+    fi
+    PET_ENTRY="$(pet_family_field 5 2 "$PET_KEY")"
+elif [[ -n "${DPSSIM_PET_ENTRY:-}" ]]; then
+    if ! [[ "$DPSSIM_PET_ENTRY" =~ ^[1-9][0-9]{0,8}$ ]]; then
+        die "DPSSIM_PET_ENTRY must be a creature_template entry, got '$DPSSIM_PET_ENTRY'"
+    fi
+    PET_ENTRY="$DPSSIM_PET_ENTRY"
+    PET_KEY="$(pet_family_field 2 5 "$PET_ENTRY")"
+fi
+if [[ -n "$PET_ENTRY" ]]; then
+    if [[ "$(profile_key Class)" != 3 ]]; then
+        die "DPSSIM_PET_ENTRY / DPSSIM_PET_FAMILY are for hunter profiles (Class = 3); '$PROFILE_NAME' is not one"
+    fi
+    EXTRA_DPS_CONF+="DpsSim.PetCreatureEntry = ${PET_ENTRY}"$'\n'
+    # ".pet-wolf" for a family of the table, ".pet26016" for any other entry
+    if [[ -n "$PET_KEY" ]]; then EXTRA_NAME+=".pet-${PET_KEY}"; else EXTRA_NAME+=".pet${PET_ENTRY}"; fi
+fi
+
+BUFF_SET="$(printf '%s' "${DPSSIM_BUFF_SET:-self_only}" | tr 'A-Z' 'a-z')"
+if ! [[ "$BUFF_SET" =~ ^(self_only|full_raid)$ ]]; then
+    die "DPSSIM_BUFF_SET must be self_only or full_raid, got '$BUFF_SET'"
+fi
+if [[ "$BUFF_SET" == full_raid ]]; then
+    if [[ "$IS_HEAL" -eq 1 || "$IS_TANK" -eq 1 || "$IS_MECH" -eq 1 ]]; then
+        die "DPSSIM_BUFF_SET=full_raid is for DPS profiles only"
+    fi
+    EXTRA_DPS_CONF+="DpsSim.BuffSet = full_raid"$'\n'
+    RAID_LISTS=""
+    for pair in "DPSSIM_RAID_BUFFS:DpsSim.RaidBuffs" "DPSSIM_RAID_DEBUFFS:DpsSim.RaidDebuffs" \
+            "DPSSIM_RAID_PULL_BUFFS:DpsSim.RaidPullBuffs"; do
+        v="${pair%%:*}"; key="${pair#*:}"
+        if [[ -n "${!v+x}" ]]; then
+            if ! [[ "${!v}" =~ ^[0-9:,\ ]*$ ]]; then die "$v must be a list like '24932, 202210:01', got '${!v}'"; fi
+            EXTRA_DPS_CONF+="${key} = \"${!v}\""$'\n'
+            RAID_LISTS+="${key}=${!v};"
+        fi
+    done
+    # ".full_raid" with the default lists, ".full_raid-x1a2b3c" when a DPSSIM_RAID_* variable replaced one
+    EXTRA_NAME+=".full_raid"
+    if [[ -n "$RAID_LISTS" ]]; then EXTRA_NAME+="-x$(short_hash "$RAID_LISTS")"; fi
+else
+    for v in DPSSIM_RAID_BUFFS DPSSIM_RAID_DEBUFFS DPSSIM_RAID_PULL_BUFFS; do
+        if [[ -n "${!v+x}" ]]; then die "$v is set but DPSSIM_BUFF_SET is not full_raid"; fi
+    done
+fi
+
+if [[ -n "${DPSSIM_DISABLE_SPELLS:-}" ]]; then
+    if ! [[ "$DPSSIM_DISABLE_SPELLS" =~ ^[0-9,\ ]+$ && "$DPSSIM_DISABLE_SPELLS" =~ [0-9] ]]; then
+        die "DPSSIM_DISABLE_SPELLS must be spell ids, comma separated, got '$DPSSIM_DISABLE_SPELLS'"
+    fi
+    EXTRA_DPS_CONF+="DpsSim.DisableSpells = \"${DPSSIM_DISABLE_SPELLS}\""$'\n'
+    # ".no24604-201716"
+    EXTRA_NAME+=".no$(printf '%s' "$DPSSIM_DISABLE_SPELLS" | tr -s ', ' '-' | sed -E 's/^-+|-+$//g')"
+fi
+
 # --- discover the live stack's real network / image / volume / DB creds ------------------
 if ! docker inspect ac-worldserver >/dev/null 2>&1; then
     echo "error: no 'ac-worldserver' container found - is the normal stack up" \
@@ -652,6 +748,7 @@ EOF
 if [[ -n "$HEAL_CONF" ]]; then printf '%s' "$HEAL_CONF" >> "$SCRATCH/etc/modules/dpssim.conf"; fi
 if [[ -n "$TANK_CONF" ]]; then printf '%s' "$TANK_CONF" >> "$SCRATCH/etc/modules/dpssim.conf"; fi
 if [[ -n "$MECH_CONF" ]]; then printf '%s' "$MECH_CONF" >> "$SCRATCH/etc/modules/dpssim.conf"; fi
+if [[ -n "$EXTRA_DPS_CONF" ]]; then printf '%s' "$EXTRA_DPS_CONF" >> "$SCRATCH/etc/modules/dpssim.conf"; fi
 if [[ -n "${DPSSIM_EXTRA_CONF:-}" ]]; then printf '%b\n' "$DPSSIM_EXTRA_CONF" >> "$SCRATCH/etc/modules/dpssim.conf"; fi
 
 REPORTS_DIR="$REPO_ROOT/modules/mod-dpssim/reports"
@@ -671,6 +768,9 @@ if [[ "$IS_MECH" -eq 1 ]]; then
     BATCH_NAME="${PROFILE_NAME}.mech-${MECH_TAG}.g${MECH_GROUP}"
     if [[ "$MECH_FALLIBILITY" -eq 1 ]]; then BATCH_NAME+=".f1"; fi
 fi
+# The pet family, the buff set and the disabled spells ("<Profile>.T3.pet-cat.full_raid.no24604.<ts>..."; none of them
+# for a self_only run with the profile's pet, so those names are unchanged)
+BATCH_NAME+="${EXTRA_NAME}"
 # DPSSIM_BATCH_TAG keeps parallel runs of one profile apart (the timestamp below has a 1 s resolution)
 if [[ -n "$BATCH_TAG" ]]; then BATCH_NAME+=".${BATCH_TAG}"; fi
 

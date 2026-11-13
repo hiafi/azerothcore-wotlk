@@ -202,6 +202,9 @@ bool SimBot::Create(Player* bot, std::vector<Creature*> const& targets, std::str
         }
     }
 
+    // DpsSim.DisableSpells, after every spell, talent and the pet are in place
+    RemoveDisabledSpells(bot);
+
     // Build the PlayerbotAI through PlayerbotsMgr::AddPlayerbotData() - the same entry point a
     // real bot login uses - rather than `new PlayerbotAI(bot)` directly, and keep only a borrowed
     // pointer to it (~SimBot() still owns cleanup via delete, same as before; see its comment).
@@ -310,7 +313,40 @@ bool SimBot::EnsurePet()
     }
 
     LOG_WARN("server.dpssim", "mod-dpssim: the hunter pet is gone at the start of the iteration - taming it again.");
-    return TameSimPet(bot, _petCreatureEntry) != nullptr;
+    if (!TameSimPet(bot, _petCreatureEntry))
+        return false;
+
+    // A new pet learned its family's spells again
+    RemoveDisabledSpells(bot);
+    return true;
+}
+
+void SimBot::RemoveDisabledSpells(Player* bot)
+{
+    for (uint32 spellId : _disabledSpells)
+    {
+        bool removed = false;
+        if (bot->HasSpell(spellId))
+        {
+            bot->removeSpell(spellId, SPEC_MASK_ALL, false);
+            removed = true;
+        }
+
+        if (Pet* pet = bot->GetPet())
+            if (pet->HasSpell(spellId))
+            {
+                // removeSpell also takes it off the pet bar and out of the autocast list
+                pet->removeSpell(spellId, false);
+                removed = true;
+            }
+
+        if (removed)
+            LOG_INFO("server.dpssim", "mod-dpssim: DpsSim.DisableSpells - spell {} taken out of the spellbook.",
+                spellId);
+        else
+            LOG_WARN("server.dpssim", "mod-dpssim: DpsSim.DisableSpells - neither the actor nor its pet knows spell "
+                "{}.", spellId);
+    }
 }
 
 void SimBot::UpdateAI(uint32 diff)

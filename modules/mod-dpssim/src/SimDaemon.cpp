@@ -333,6 +333,23 @@ namespace
         LOG_INFO("server.dpssim", "mod-dpssim: auras on the bot at the pull: [{}]", list);
     }
 
+    // How often a full_raid run puts back a pinned raid aura that went missing (sim ms)
+    constexpr uint32 RAID_AURA_REFRESH_MS = 1000;
+
+    // full_raid (SimBuffSet.h): the raid buffs on the actor and its pet, the raid debuffs on every dummy (all pinned)
+    // and Bloodlust / Sated at the pull. Logs what landed and with what amounts on the first iteration only. Does
+    // nothing for self_only.
+    void ApplyRaidAuras(SimDaemon::RunConfig const& config, Player* player, std::vector<Creature*> const& dummies)
+    {
+        if (config.BuffSet.BuffSet != SimBuffSet::Set::FullRaid)
+            return;
+
+        static bool loggedOnce = false;
+        SimBuffSet::ApplyPinned(config.BuffSet, player, dummies, !loggedOnce);
+        SimBuffSet::ApplyPullBuffs(config.BuffSet, player);
+        loggedOnce = true;
+    }
+
     // Pre-pull buff phase (SimProfile.h's PrePullBuffMs): ticks the bot on its non-combat engine, buff and pet
     // strategies only (SimBot::BeginBuffPhase()), for `buffMs` of sim time ending at `endMs`, so the measured run
     // starts exactly where it always did. Unrecorded: the caller rewinds the recorders afterwards. Ends early if
@@ -435,6 +452,9 @@ namespace
         {
             uint32 const buffMs = std::min(config.PrePullBuffMs, ITERATION_GAP_MS);
             RunBuffPhase(config, buffMs, measuredStartMs, player, map, bot, castRecorder);
+            // full_raid: the raid's buffs, debuffs and Bloodlust go up at the end of the phase (the pet is in place by
+            // now, re-tamed or revived above), before the recorders rewind, so they count as present at the pull
+            ApplyRaidAuras(config, player, dummies);
             recorder->Reset();
             castRecorder->Reset();
             // Buffs from the phase are up from the first measured ms; without these the uptime table only sees
@@ -445,6 +465,8 @@ namespace
             RefillResources(player, dummies);
             bot.ReestablishCombatState(dummies);
         }
+        else
+            ApplyRaidAuras(config, player, dummies);
         // combat_time() counts from the moment the combat engine started, on getMSTime(). Here that clock still
         // reads the last buff tick, which is earlier than the pull when the buff phase ended early, or the
         // ResetForNextIteration() time without a buff phase: iteration 2+ then opened with combat_time() already
@@ -474,9 +496,19 @@ namespace
         // The bot's own current target, seeded with the primary at the pull (D5: measured, not inferred from casts)
         ObjectGuid lastTarget = bot.GetCurrentTarget();
         uint32 targetSwitches = 0;
+        // full_raid: once a sim second, every pinned raid aura that went missing (a dispel, a stronger aura of its
+        // group that has since expired, the pet's own cast of the same spell replacing it) is put back
+        uint32 nextRaidRefreshMs = RAID_AURA_REFRESH_MS;
+        uint32 raidAurasPutBack = 0;
         while (clock.GetElapsedMs() < config.DurationMs)
         {
             clock.Tick(map);
+
+            if (config.BuffSet.BuffSet == SimBuffSet::Set::FullRaid && clock.GetElapsedMs() >= nextRaidRefreshMs)
+            {
+                raidAurasPutBack += SimBuffSet::ApplyPinned(config.BuffSet, player, dummies, false);
+                nextRaidRefreshMs += RAID_AURA_REFRESH_MS;
+            }
 
             // A dead actor ends the iteration before auto release can run. The sim bot is registered with
             // PlayerbotsMgr, so PlayerbotsPlayerScript::OnPlayerAfterUpdate also ticks its AI inside
@@ -520,6 +552,11 @@ namespace
             result.ActorDied = true;
             result.ActorDiedAtMs = config.DurationMs;
         }
+
+        if (raidAurasPutBack > 0)
+            LOG_INFO("server.dpssim", "mod-dpssim: full_raid - {} raid aura(s) went missing during the iteration and "
+                "were put back (a stronger aura of the same group, or the pet's own cast replacing one).",
+                raidAurasPutBack);
 
         result.Success = true;
         // Deliberate: an actor that died is charged the full configured duration, not the time it survived, so
@@ -2476,6 +2513,7 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
     // SimBot::Create() teaches the bot's class spells and "pulls" every dummy (each engages the bot, no
     // spell cast) to bootstrap combat state - see its own doc comment for why that's needed.
     SimBot bot;
+    bot.SetDisabledSpells(config.DisableSpells);
     if (!bot.Create(player, dummies, config.PlayerbotTalents, config.PlayerbotGlyphs, config.PetCreatureEntry))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotOnce() - SimBot::Create() failed - aborting.");
@@ -2539,6 +2577,7 @@ bool SimDaemon::RunPlayerbotBatch(RunConfig const& config, uint32 iterations, st
     CastRecorder* castRecorder = new CastRecorder(player->GetGUID(), targets.GetGuids());
 
     SimBot bot;
+    bot.SetDisabledSpells(config.DisableSpells);
     if (!bot.Create(player, dummies, config.PlayerbotTalents, config.PlayerbotGlyphs, config.PetCreatureEntry))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotBatch() - SimBot::Create() failed - aborting.");
