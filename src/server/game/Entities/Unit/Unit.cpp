@@ -3827,6 +3827,11 @@ float Unit::GetUnitCriticalChance(WeaponAttackType attackType, Unit const* victi
 
 float Unit::GetCritChanceFromSkillDiff(Unit const* victim) const
 {
+    // Custom: in PvE the crit chance of a player, pet or guardian is what the character sheet says - no level-based
+    // suppression or bonus against non-player targets (sits with the Hit/Expertise removal; PvP is unchanged)
+    if (!victim->IsPlayer() && GetSpellModOwner())
+        return 0.0f;
+
     int32 const skillDiff = int32(victim->GetDefenseSkillValue(this)) - int32(GetMaxSkillValueForLevel(victim));
     if (victim->IsPlayer() || skillDiff <= 0)
         return -skillDiff * 0.04f;
@@ -9226,7 +9231,8 @@ float Unit::SpellTakenCritChance(Unit const* caster, SpellInfo const* spellProto
                     }
 
                     // spell crit suppression vs higher level creatures: none at +1, 0.3% at +2, 2.1% against a +3 boss
-                    if (IsCreature() && !spellProto->IsPositive())
+                    // Custom: not for a player, pet or guardian caster - see GetCritChanceFromSkillDiff
+                    if (IsCreature() && !spellProto->IsPositive() && !caster->GetSpellModOwner())
                     {
                         int32 const levelDiff = int32(getLevelForTarget(caster)) - int32(caster->GetLevel());
                         if (levelDiff == 2)
