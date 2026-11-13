@@ -14,14 +14,13 @@ not the clean percentage curve the server now applies to them.
 The server's *values* don't come from a binary DBC file, though - confirmed by pulling the real
 gtCombatRatings.dbc out of a live worldserver's DataDir: it's byte-identical in shape to a real
 stock 3.3.5a client's copy (same header, same field_count=1 - "just a float per record, no ID
-column" is how Blizzard genuinely ships this particular table, not a corruption), and AzerothCore's
-own `DBCfmt.h` expects 2 fields for it, so the C++ loader's `AutoProduceData` silently produces
-*zero* rows from that binary file (see lib/gt_dbc.py's docstring). The server's own
-`sGtCombatRatingsStore`/`sGtOCTClassCombatRatingScalarStore` end up 100% populated by AzerothCore's
-SQL overlay instead (`gtcombatratings_dbc`/`gtoctclasscombatratingscalar_dbc` in `acore_world` -
-see DBCDatabaseLoader) - confirmed by querying a live server and finding those exact numbers match
-what this was written to reproduce. So the input here is a plain (table, id, value) export of
-those two SQL tables, not another binary DBC.
+column" is how Blizzard genuinely ships this particular table, not a corruption). The server loads
+those stock binary values first, then AzerothCore's SQL overlay
+(`gtcombatratings_dbc`/`gtoctclasscombatratingscalar_dbc` in `acore_world` - see
+DBCDatabaseLoader) replaces them row by row. The live tables hold every row, so the SQL values are
+what the server actually uses (see lib/gt_dbc.py's docstring; before upstream #27933 the binary
+loaded zero rows and the SQL tables were the only data). So the input here is a plain
+(table, id, value) export of those two SQL tables, not another binary DBC.
 
 Usage:
     python3 apps/dbc-tools/patch_gt_tables.py --server-values /path/to/values.tsv
