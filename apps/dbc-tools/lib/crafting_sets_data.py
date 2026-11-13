@@ -278,6 +278,21 @@ class CraftedItem:
     def extra_stamina(self) -> float:
         return TANK_EXTRA_STAMINA if self.tank else 0.0
 
+    @property
+    def role(self) -> str | None:
+        """The role the recipe name shows (user 2026-11-12): Tank, Healer (Spirit pieces and plate Intellect, the
+        holy paladin archetype), or None for the generic pieces."""
+        if self.tank:
+            return "Tank"
+        if self.primary == SPIRIT or (self.armor == "plate" and self.primary == INTELLECT):
+            return "Healer"
+        return None
+
+    @property
+    def recipe_name(self) -> str:
+        """The recipe spell's name: the item name plus the role, e.g. "Woolen Devout Robe (Healer)"."""
+        return f"{self.name} ({self.role})" if self.role else self.name
+
 
 # Raid recipe groups for the non-armor items: one recipe item teaches every key of a group (at most three).
 OTHER_GROUPS = {

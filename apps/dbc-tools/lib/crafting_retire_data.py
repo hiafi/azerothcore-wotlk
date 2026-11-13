@@ -7,7 +7,9 @@ and regenerating restores nothing by itself: re-teach it with trained_by()).
 
 - RETIRED: recipe spell -> (profession, name, reason): gear (replaced by the C7 sets), stat enchant (by C6's
   basic set), enchant item (kits, spikes, counterweight, chain, scopes: by C6), glyph (retired), ammo (removed),
-  stat scroll (the single-target Inscription stat scrolls, replaced by the raid buff scrolls; review S4).
+  stat scroll (the single-target Inscription stat scrolls, replaced by the raid buff scrolls; review S4), research
+  (Inscription research, which taught glyphs), vellum (enchants are items since C6) and duplicate (the AQ40 Subtlety
+  recipe, the same scroll as the T1 premium), all three from the C7 follow-up.
 - TRAINERS: recipe spell -> the trainer ids that taught it on 2026-11-12 (untrain()).
 - RECIPE_ITEMS: recipe item -> (the spell it taught, its name). Neutered: no teach spell, Poor quality.
 - STARTER_SLA: SkillLineAbility id -> spell, for the retired recipes a profession taught on learning
@@ -926,6 +928,17 @@ RETIRED = {
     58486: ('Inscription', 'Scroll of Strength III', 'stat scroll'),
     58487: ('Inscription', 'Scroll of Strength IV', 'stat scroll'),
     58488: ('Inscription', 'Scroll of Strength V', 'stat scroll'),
+    # C7 follow-up (user 2026-11-12): research makes glyph recipes (retired); vellum held enchants (C6 made them items).
+    61288: ('Inscription', 'Minor Inscription Research', 'research'),
+    61177: ('Inscription', 'Northrend Inscription Research', 'research'),
+    52739: ('Inscription', 'Armor Vellum', 'vellum'),
+    52840: ('Inscription', 'Weapon Vellum', 'vellum'),
+    59499: ('Inscription', 'Armor Vellum II', 'vellum'),
+    59488: ('Inscription', 'Weapon Vellum II', 'vellum'),
+    59500: ('Inscription', 'Armor Vellum III', 'vellum'),
+    59501: ('Inscription', 'Weapon Vellum III', 'vellum'),
+    # C7 follow-up review: the AQ40 Subtlety recipe made the same scroll as the T1 premium Subtlety recipe.
+    25084: ('Enchanting', 'Enchant Cloak - Subtlety', 'duplicate'),
 }
 
 TRAINERS = {
@@ -1356,6 +1369,14 @@ TRAINERS = {
     58486: (119, 120, 121),
     58487: (119, 120, 121),
     58488: (119, 120, 121),
+    61288: (119, 120, 121),
+    61177: (119,),
+    52739: (119, 120, 121),
+    52840: (119, 120, 121),
+    59499: (119, 120, 121),
+    59488: (119, 120, 121),
+    59500: (119,),
+    59501: (119,),
 }
 
 RECIPE_ITEMS = {
@@ -1888,6 +1909,9 @@ RECIPE_ITEMS = {
     38328: (50647, 'Pattern: Haliscan Pantaloons'),
     44916: (26403, 'Pattern: Festival Dress'),
     45050: (15596, 'Formula: Smoking Heart of the Mountain'),
+    20735: (25084, 'Formula: Enchant Cloak - Subtlety'),
+    33150: (25084, 'Formula: Enchant Cloak - Subtlety'),
+    33151: (25084, 'Formula: Enchant Cloak - Subtlety'),
 }
 
 STARTER_SLA = {

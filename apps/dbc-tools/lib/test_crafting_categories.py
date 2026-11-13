@@ -16,8 +16,15 @@ from pathlib import Path
 TOOL_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOL_ROOT))
 
+import re  # noqa: E402
+
 import write_crafting_categories as W  # noqa: E402
+from lib import crafting_consumables_data as C  # noqa: E402
+from lib import crafting_enchants_data as E  # noqa: E402
 from lib import crafting_sets_data as T  # noqa: E402
+from lib import crafting_utility_enchants_data as U  # noqa: E402
+
+SUFFIXES_FILE = TOOL_ROOT / "source" / "world" / "crafting_suffixes.py"
 
 
 def _headers(table: dict, profession: int) -> list[str]:
@@ -67,8 +74,28 @@ class CategoriesTest(unittest.TestCase):
         self.assertIsNotNone(tailoring[0].item.armor)
         self.assertIsNone(tailoring[-1].item.armor)
 
+    def test_enchant_items_by_slot(self):
+        """User 2026-11-12: the enchant item recipes sit under their slot, after the sets."""
+        table = W.all_categories()
+        expected = ({row["craft_spell"] for row in E.enchants()} | {row["craft_spell"] for row in E.tinkers()}
+                    | {E.BUCKLE["craft_spell"]} | {p.recipe_spell for p in C.PREMIUMS} | {u.recipe for u in U.UTILITY})
+        slots = {spell for spell, (name, _order) in table.items() if name in W.SLOT_ORDER}
+        self.assertEqual(slots, expected)
+        self.assertEqual(table[13890][0], "Boots")  # Minor Speed
+        self.assertEqual(table[20014][0], "Cloak")  # Greater Resistance
+        self.assertTrue(all(order > len(self.table) for spell, (_n, order) in table.items() if spell in slots))
+        orders = [order for _name, order in table.values()]
+        self.assertEqual(len(orders), len(set(orders)))
+
+    def test_missives(self):
+        recipes = {int(m) for m in re.findall(r'\("\w+", \d+, (\d+), \d+, \d+\)', SUFFIXES_FILE.read_text())}
+        self.assertEqual(len(recipes), 9)
+        self.assertEqual(recipes, set(W.MISSIVE_RECIPES))
+        table = W.all_categories()
+        self.assertEqual({table[s][0] for s in recipes}, {"Missives"})
+
     def test_render(self):
-        text = W.render_lua(self.table)
+        text = W.render_lua(W.all_categories())
         self.assertIn('    [207600] = { "', text)
         self.assertTrue(text.startswith("-- Generated"))
         self.assertTrue(text.endswith("}\n"))

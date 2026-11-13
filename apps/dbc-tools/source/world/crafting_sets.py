@@ -57,9 +57,10 @@ for _row in T.recipes():
     _item = _row.item
     _cast, _visual, _icon, _extra = _CRAFT_SHAPE[_item.profession]
     spell(
-        id=_row.spell, name=_item.name, school=School.NORMAL, attributes=_ATTR0_IS_TRADESKILL_NOT_SHAPESHIFTED,
-        cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF,
-        duration_ms=0, effects=[Effect(type=_EFFECT_CREATE_ITEM, implicit_target_a=_TARGET_UNIT_CASTER)],
+        id=_row.spell, name=_item.recipe_name, school=School.NORMAL,
+        attributes=_ATTR0_IS_TRADESKILL_NOT_SHAPESHIFTED, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,
+        mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF, duration_ms=0,
+        effects=[Effect(type=_EFFECT_CREATE_ITEM, implicit_target_a=_TARGET_UNIT_CASTER)],
         spell_icon_id=_icon,
         notes=f'Crafting rework C7: the recipe of {_item.name} ({_item.set.label} set, item {_item.key}).',
         raw_overrides={

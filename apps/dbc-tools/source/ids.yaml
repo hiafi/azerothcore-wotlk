@@ -621,6 +621,8 @@ reservations:
   # 207600-208313, raid recipe learn spells 208600-208725, premium enchants / flasks / scrolls / runes / tarot
   # 208800-208914, set recipe SkillLineAbility rows 31200-31913, consumable recipe rows 31950-31985. Checked free
   # 2026-11-12: no declaration or live spell_dbc row in 207484-209999, no skilllineability_dbc row above 31145.
+  # The C7 follow-up (source/world/crafting_utility_enchants.py): utility enchant scroll use spells 209000-209026
+  # (209027-209099 spare). Checked free 2026-11-12 (declarations, pending SQL, live spell_dbc).
   crafting:
     spell: {start: 207000, end: 209999}
     skilllineability: {start: 30900, end: 32199}

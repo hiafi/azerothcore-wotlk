@@ -31,7 +31,7 @@ IDS = source.load_ids(TOOL_ROOT / "source" / "ids.yaml")
 RETIRE_FILE = TOOL_ROOT / "source" / "world" / "crafting_retire.py"
 SQUISH_FILE = TOOL_ROOT / "source" / "world" / "crafting_squish.py"
 SLA_DBC = TOOL_ROOT.parents[1] / "var" / "extractors" / "dbc" / "SkillLineAbility.dbc"
-REASONS = {"gear", "stat enchant", "enchant item", "glyph", "ammo", "stat scroll"}
+REASONS = {"gear", "stat enchant", "enchant item", "glyph", "ammo", "stat scroll", "research", "vellum", "duplicate"}
 CRAFTING_SKILLS = {164, 165, 171, 197, 202, 333, 755, 773}
 # The C6 utility enchants that stay on trainer 96 (crafting_squish.KEPT) and the Engineering gadgets (ruling 1a).
 KEPT_SPOT_CHECKS = {13890, 20014, 7426, 8895, 12905, 12907, 3971, 3969}
@@ -50,7 +50,7 @@ class RetireDataTest(unittest.TestCase):
     """The retired list hangs together."""
 
     def test_data_consistency(self):
-        self.assertEqual(len(R.RETIRED), 909)  # 882 from the audit + 27 stat scrolls (review S4)
+        self.assertEqual(len(R.RETIRED), 918)  # 882 audit + 27 stat scrolls + 2 research + 6 vellum + Subtlety
         for spell, (prof, name, reason) in R.RETIRED.items():
             self.assertLess(spell, 200000, f"{spell} {name}: a C4-C6 custom recipe is never retired")
             self.assertIn(reason, REASONS, name)

@@ -93,6 +93,9 @@ crafting stages C4 (suffixes), C5 (gems, metas) and C6 (enchants) do. Facts to k
 - Premium enchants, flasks, raid buff scrolls, boss runes, Darkmoon tarot (C7): `lib/crafting_consumables_data.py`,
   `source/world/crafting_consumables.py`, items from `write_crafting_consumable_items.py` (78800-78999); scripts in
   `custom_crafting_enchants.cpp` and `custom_crafting_runes.cpp`. Tests: `lib/test_crafting_consumables.py`.
+- Utility enchant scrolls (C7 follow-up): `lib/crafting_utility_enchants_data.py`,
+  `source/world/crafting_utility_enchants.py` re-declare the 27 stock utility enchant recipes as create-item recipes
+  of their stock scroll items (use spells 209000-209026). Tests: `lib/test_crafting_utility_enchants.py`.
 
 ### Item tier labels on the tooltip (item variants, IV4)
 

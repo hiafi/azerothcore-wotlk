@@ -126,6 +126,21 @@ class SetsDeclarationsTest(unittest.TestCase):
         cls.items = _load(ITEMS_FILE)
         cls.recipes = _load(RECIPES_FILE)
 
+    def test_recipe_names_show_the_role(self):
+        """User 2026-11-12: tank and healer recipes say so; the generic ones keep the item name."""
+        spells = {s["id"]: s for s in self.recipes["spells"]}
+        roles = {}
+        for row in T.recipes():
+            name = spells[row.spell]["name"]
+            roles.setdefault(row.item.role, set()).add(name.rsplit(" (", 1)[-1] if name.endswith(")") else None)
+            self.assertTrue(name.startswith(row.item.name), name)
+        self.assertEqual(roles, {"Tank": {"Tank)"}, "Healer": {"Healer)"}, None: {None}})
+        by_key = {row.item.key: spells[row.spell]["name"] for row in T.recipes()}
+        self.assertEqual(by_key["craft_s15_cloth_spirit_chest"], "Woolen Devout Robe (Healer)")
+        self.assertEqual(by_key["craft_s15_plate_int_head"], "Bronze Templar Helm (Healer)")
+        self.assertEqual(by_key["craft_s15_leather_tank_head"], "Tanned Bruin Cap (Tank)")
+        self.assertEqual(by_key["craft_s15_cloth_int_chest"], "Woolen Arcanist Robe")
+
     def test_items(self):
         decls = {entry["id"]: entry["_decl"] for entry in self.items["item_declarations"]}
         self.assertEqual(set(decls), {i.key for i in T.items()})
