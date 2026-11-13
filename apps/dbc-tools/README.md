@@ -1223,6 +1223,32 @@ vanilla crafting materials: `source/world/crafting_squish.py` re-points stock re
 shards and colored pigments, `lib/disenchant.py` gives minted items their disenchant band, and the loot is hand-written
 in `rev_crafting_c6_squish_loot.sql`. Tests: `lib/test_crafting_enchants.py`.
 
+**Recipe retirement (crafting rework C7).** The 882 stock recipes the crafting rework retires (crafted gear, the drop
+and vendor stat enchants and enchant items C6 replaced, glyphs, ammo) are data in `lib/crafting_retire_data.py`.
+`source/world/crafting_retire.py` takes them off their trainers (`untrain`), stops the starter ones being taught on
+learning the profession (`override_skill_line_ability(..., acquire_method=0)`) and turns their recipe items into Poor
+items that teach nothing (`item_template()`). `write_crafting_retire.py` writes `rev_crafting_c7_retire.sql` (the recipe
+items' loot, vendor and condition rows, `disables` for the spells and the quests that rewarded them) and
+`pending_db_characters/rev_crafting_c7_retire_learned.sql` (the learned rows). Rerun it after a data edit. Tests:
+`lib/test_crafting_retire.py`.
+
+**Crafted sets (crafting rework C7).** `lib/crafting_sets_data.py` is the catalog: leveling sets at 15, 30 and 45, a
+level-60 set and one raid set per vanilla tier, each the eight armor slots of the ten archetypes plus backs, weapons,
+off-hands and jewelry. `source/items/crafting_sets.py` declares the items with `item(..., suffix_pool=)` (primary +
+Stamina, secondaries from the C4 random suffix pool); `source/world/crafting_sets.py` declares one recipe per item,
+trainer-taught below the raid sets. A recipe spell names its minted item by key (`lib/item_key_refs.py`).
+`write_crafting_set_items.py` writes the raid recipe items, the per-tier recipe pools on every tier boss and the tier
+materials. Premium enchants, flasks, raid buff scrolls, boss runes and the Darkmoon tarot are
+`lib/crafting_consumables_data.py` / `source/world/crafting_consumables.py` / `write_crafting_consumable_items.py`.
+The 27 stock utility enchants (armor, resistances, Minor Speed, gathering gloves, ...) are scrolls too:
+`lib/crafting_utility_enchants_data.py` / `source/world/crafting_utility_enchants.py` re-declare each stock recipe to
+create its stock scroll item, whose new use spell (209000 + n) applies the enchant. Set recipe names carry the role
+("(Tank)", "(Healer)"; `CraftedItem.recipe_name`). `write_crafting_categories.py` writes the client's trade skill header table
+(`client/ui-overrides/Interface/FrameXML/CraftingCategories.lua`, `--out` for another checkout): every set recipe under
+its set's header (`crafting_sets_data.CATEGORY_NAME`, "Wool" ... "Runecloth", then the raid tiers), every enchant
+item recipe under its slot and the Missives under "Missives", read by the patch-X override `TradeSkillCategories.lua`. Tests: `lib/test_crafting_sets.py`, `lib/test_crafting_consumables.py`,
+`lib/test_crafting_categories.py`, `lib/test_crafting_utility_enchants.py`.
+
 ## Known limitations
 
 - `spell_icon_id` takes a raw `SpellIconID` integer, not a texture-path

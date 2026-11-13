@@ -52,6 +52,7 @@ def _removal_inputs() -> tuple[dict, dict]:
         generate._merge_npc_declarations(
             dsl_classes, dsl_registry.load_classes_dir(
                 source_dir / "world", ids_cfg=ids_cfg, trainer_index=trainer_index, live_data=live_data,
+                existing_group_ids=kwargs["existing_group_ids"],
                 existing_creature_rows=kwargs["existing_creature_rows"], creature_columns=kwargs["creature_columns"],
             ),
             "source/world/",

@@ -27,6 +27,8 @@
 // - On learning a profession rank (trainer, book, GM): raise that profession to the cap on the player's next update.
 // - Trainers show the rank spells above the cap as unavailable, so a level-60 player cannot buy Master, and no other
 //   route (recipe book, quest, GM command) can teach a rank above the cap either.
+// - A profession recipe disabled for players (`disables` sourceType 0, flag 1: the recipes crafting rework C7
+//   retired) cannot be learned by any route either: an old recipe item, a quest, a GM command or a bot.
 //
 // Raising walks the profession's rank chain (spell_ranks: Apprentice 75, Journeyman 150, Expert 225, Artisan 300,
 // Master 375, Grand Master 450): each rank whose max is <= the cap is learned in order, which is what a trainer
@@ -61,6 +63,7 @@
 #include "Config.h"
 #include "custom_crafting.h"
 #include "DataMap.h"
+#include "DisableMgr.h"
 #include "Log.h"
 #include "Player.h"
 #include "ScriptMgr.h"
@@ -414,8 +417,12 @@ public:
 
     // A profession rank above the cap cannot be learned by any route: trainer, recipe book (Master First Aid, Fishing
     // and Cooking books), quest reward or GM command all go through Player::learnSpell.
-    bool OnPlayerCanLearnSpell(Player* /*player*/, uint32 spellId) override
+    // A retired recipe (crafting rework C7) is disabled for players in `disables`; refused whatever the route.
+    bool OnPlayerCanLearnSpell(Player* player, uint32 spellId) override
     {
+        if (FindProfessionOfAbility(spellId) && DisableMgr::IsDisabledFor(DISABLE_TYPE_SPELL, spellId, player))
+            return false;
+
         if (!Settings.enabled)
             return true;
 

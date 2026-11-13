@@ -461,6 +461,24 @@ class CheckTest(unittest.TestCase):
         self.assertEqual(ring.items[0].tiers[0].itemization["primary_shape_id"], 0)
         self.assertEqual(ring.items[0].tiers[0].itemization["primary_share"], 0)
 
+    def test_suffix_pool(self):
+        """Crafting rework C7: suffix_pool= puts no secondary shape on the item and the pool on every tier."""
+        exp = run([girdle(secondary=None, suffix_pool=9000)])
+        self.assertEqual(exp.errors, [])
+        for tier in exp.items[0].tiers:
+            self.assertEqual((tier.itemization["secondary_shape_id"], tier.itemization["primary_share"]), (0, 6000))
+            self.assertEqual(tier.columns["RandomSuffix"], 9000)
+        ring = run([D.item("dm_ring", base=1156, suffix_pool=9000, ladder=ladder_dungeon())])
+        self.assertEqual(ring.errors, [])
+        self.assertEqual(ring.items[0].tiers[0].itemization["primary_share"], 0)
+        for bad, text in (({"secondary": "Crit (Solo)"}, "drop secondary="), ({"primary_share": 10000}, "10000"),
+                          ({"suffix_pool": 0}, "pool entry")):
+            args = {"secondary": None, "suffix_pool": 9000, **bad}
+            with self.assertRaisesRegex(D.ItemDeclarationError, text):
+                girdle(**args)
+        with self.assertRaisesRegex(D.ItemDeclarationError, "suffix_pool="):
+            girdle(secondary=None, RandomSuffix=9000)
+
     def test_slots(self):
         shield = run([D.item("dm_buckler", base=5443, primary="Strength (Solo)", secondary="Crit (Solo)",
                              ladder=ladder_dungeon())])

@@ -86,6 +86,7 @@ from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, so
 from lib import gcd_haste, header_gen, potency_sheet, spell_tables, superseded_ranks  # noqa: E402
 from lib import sqlcorpus, stale_overlay, trainer_pricing, trainer_state  # noqa: E402
 from lib import dungeon_checks, dungeon_heroic, heroic_templates, item_emit, item_ids, item_variants  # noqa: E402
+from lib import item_key_refs  # noqa: E402
 from lib import lfg_dungeons as lfg_finder  # noqa: E402
 from lib import loot_tables  # noqa: E402
 from lib import item_labels  # noqa: E402
@@ -1464,7 +1465,8 @@ def _run(
         # stock items, the crafting rework's profession recipes and their trained_by() rows) - same loader, merged in.
         dsl_world = dsl_registry.load_classes_dir(
             SOURCE_DIR / "world", ids_cfg=ids_cfg, trainer_index=trainer_index, live_data=live_data,
-            existing_creature_rows=existing_creature_rows, creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
+            existing_group_ids=existing_group_ids, existing_creature_rows=existing_creature_rows,
+            creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
         )
         _merge_npc_declarations(dsl_classes, dsl_world, "source/world/")
         # source/items/*.py: item() declarations with their loot ladders (item variants IV1), loaded as one package so
@@ -1539,6 +1541,11 @@ def _run(
             header_problem = item_spell_copies.header_problem(item_spell_expansion.header_text)
             if header_problem and "--check" in sys.argv and not only_items:
                 item_expansion.errors.append(header_problem)
+    # Crafting rework C7: recipe spells name the minted item they create by its item() key (lib/item_key_refs.py);
+    # swap each placeholder for the entry before anything builds a spell row.
+    item_expansion.errors += item_key_refs.resolve(
+        dsl_classes["spells"], item_expansion.assignment.entries if item_expansion.assignment is not None else None,
+    )
     # Item variants IV10 follow-up 1: every tier of an effect item shares one unique-equip ItemLimitCategory
     # (lib/item_limits.py): the tiers' column (before item_emit.build below), the itemlimitcategory_dbc rows (a
     # SPELL_TABLES entry) and the client ItemLimitCategory.dbc rows (the patch-Z merge).

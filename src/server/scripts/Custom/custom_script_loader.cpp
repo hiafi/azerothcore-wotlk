@@ -30,6 +30,7 @@ void AddSC_custom_gathering_ranks();
 void AddSC_custom_crafting_missives();
 void AddSC_custom_crafting_gems();
 void AddSC_custom_crafting_enchants();
+void AddSC_custom_crafting_runes();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -48,4 +49,5 @@ void AddCustomScripts()
     AddSC_custom_crafting_missives();
     AddSC_custom_crafting_gems();
     AddSC_custom_crafting_enchants();
+    AddSC_custom_crafting_runes();
 }

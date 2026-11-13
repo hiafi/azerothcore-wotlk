@@ -68,6 +68,9 @@ from . import registry as _registry
 
 HEROIC_TOOLTIP_FLAG = 0x8  # ITEM_FLAG_HEROIC_TOOLTIP, ItemTemplate.h: "Makes green Heroic text appear on item"
 NULL_PRIMARY_SHAPE = "Null (jewelry, 100% secondary)"  # item_shape 0, the primary of a primary-less item
+# Crafting rework C4 (A1) / C7: `suffix_pool=` items carry no secondary shape (`secondary_shape_id` 0); the random
+# suffix rolled from the pool (`RandomSuffix`) carries the secondaries, sized from the unspent secondary budget.
+SUFFIX_SECONDARY_SHAPE_ID = 0
 PRIMARY_SHARES = (0, 4000, 6000, 8000, 10000)
 DEFAULT_SHARE_BOTH = 6000
 EFFECT_BUDGET_MULT = 0.7  # itemization-changes.md s3: an item with a Use or Equip effect pays for it
@@ -105,6 +108,7 @@ STAT_COLUMNS = frozenset(
 KEYWORD_COLUMNS = {
     "entry": "the key / base=", "name": "name=", "ItemLevel": "ilvl=", "Quality": "quality=",
     "RequiredLevel": "required_level=", "socketBonus": "socket_bonus=", "ItemLimitCategory": "unique_equip=",
+    "RandomSuffix": "suffix_pool=",
     **{f"socketColor_{n}": "sockets=" for n in range(1, 4)},
     **{f"socketContent_{n}": "sockets=" for n in range(1, 4)},
     **{f"spell{part}_{n}": "spells=" for n in range(1, 6) for part in (
@@ -412,6 +416,7 @@ class ItemDecl:
     overrides: tuple[tuple[str, tuple[tuple[str, object], ...]], ...] = ()
     columns: tuple[tuple[str, object], ...] = ()
     unique_equip: bool | None = None  # None: True when the item has an effect (IV10 follow-up 1, lib/item_limits.py)
+    suffix_pool: int | None = None  # item_enchantment_template entry: the random suffix carries the secondaries
 
     @property
     def where(self) -> str:
@@ -428,7 +433,8 @@ def item(
     budget_mult: float | None = None, itemization: str | None = None,
     extra_stamina: float = 0.0, extra_armor: float = 0.0, extra_dps: float | None = None, extra_block: float = 0.0,
     free_dps: bool = False, weapon_role: str | None = None, spells=None, keep_spells: bool = False, sockets=None,
-    socket_bonus: int | None = None, overrides: dict | None = None, unique_equip: bool | None = None, **columns,
+    socket_bonus: int | None = None, overrides: dict | None = None, unique_equip: bool | None = None,
+    suffix_pool: int | None = None, **columns,
 ) -> ItemDecl:
     """Declares an item on `ladder` (see the module docstring). `key` names it in the lock file forever: the ids of
     its tiers stay with the key whatever its name, level or shapes later become. `columns` are other `item_template`
@@ -439,7 +445,10 @@ def item(
     or `weapon_role=` ("physical", "caster", "tank") overrides it. `free_dps=True` (needs `extra_dps=` and a role
     cell) funds the DPS difference between `extra_dps=` and the role cell's DPS fraction by raising `budget_mult`, so
     the item keeps the role-cell version's stats with the declared DPS (quest reward ruling 40: full-strength wands
-    at the caster cell's stats). Checks here are the ones that need no live data;
+    at the caster cell's stats). `suffix_pool=<item_enchantment_template entry>` (crafting rework C7) makes the
+    random suffix carry the secondaries: no secondary shape (`secondary_shape_id` 0, leave `secondary=` out),
+    `RandomSuffix` = the pool on every tier, and the suffix is sized from the unspent secondary budget (C4 A1;
+    `primary_share` defaults to 6000, or 0 without a primary). Checks here are the ones that need no live data;
     `lib/item_variants.py` checks the rest when generate.py resolves the item."""
     where = f"item({key!r})"
     if not isinstance(key, str) or not _KEY_RE.match(key):
@@ -484,7 +493,7 @@ def item(
         if base is None:
             raise ItemDeclarationError(f"{where}: itemization=\"live\" adopts a stock row, so it needs base=")
         given = [k for k, v in (("primary", primary), ("secondary", secondary), ("primary_share", primary_share),
-                                ("budget_mult", budget_mult)) if v is not None]
+                                ("budget_mult", budget_mult), ("suffix_pool", suffix_pool)) if v is not None]
         given += [k for k, v in (("extra_stamina", extra_stamina), ("extra_armor", extra_armor),
                                  ("extra_dps", extra_dps), ("extra_block", extra_block),
                                  ("free_dps", free_dps)) if v]
@@ -498,13 +507,20 @@ def item(
             if value is not None and not ((isinstance(value, str) and value)
                                           or (_plain_int(value) and value > 0)):
                 raise ItemDeclarationError(f"{where}: {keyword}={value!r} must be an item_shape name or shape_id")
-        if primary is None and secondary is None:
+        if suffix_pool is not None:
+            if not _plain_int(suffix_pool) or suffix_pool <= 0:
+                raise ItemDeclarationError(f"{where}: suffix_pool={suffix_pool!r} must be a pool entry (> 0)")
+            if secondary is not None:
+                raise ItemDeclarationError(f"{where}: suffix_pool= carries the secondaries; drop secondary=")
+            if primary_share == 10000:
+                raise ItemDeclarationError(f"{where}: suffix_pool= needs a secondary share, not primary_share 10000")
+        elif primary is None and secondary is None:
             raise ItemDeclarationError(f"{where}: give primary= and/or secondary= (or itemization=\"live\")")
         if primary_share is not None and primary_share not in PRIMARY_SHARES:
             raise ItemDeclarationError(f"{where}: primary_share={primary_share!r} must be one of {PRIMARY_SHARES}")
         if primary is None and primary_share not in (None, 0):
             raise ItemDeclarationError(f"{where}: no primary shape means primary_share 0, not {primary_share}")
-        if secondary is None and primary_share not in (None, 10000):
+        if secondary is None and suffix_pool is None and primary_share not in (None, 10000):
             raise ItemDeclarationError(f"{where}: no secondary shape means primary_share 10000, not {primary_share}")
         if budget_mult is not None and (not _number(budget_mult) or not 0 < budget_mult <= 2):
             raise ItemDeclarationError(f"{where}: budget_mult={budget_mult!r} must be a number in (0, 2]")
@@ -560,7 +576,7 @@ def item(
         extra_dps=None if extra_dps is None else float(extra_dps), extra_block=float(extra_block),
         free_dps=free_dps, weapon_role=weapon_role, spells=spell_tuple, keep_spells=keep_spells, sockets=socket_tuple,
         socket_bonus=socket_bonus, overrides=override_tuple, columns=tuple(sorted(columns.items())),
-        unique_equip=unique_equip,
+        unique_equip=unique_equip, suffix_pool=suffix_pool,
     )
     active = _registry._active
     if active is not None:

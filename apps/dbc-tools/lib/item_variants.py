@@ -570,6 +570,8 @@ def _resolve_item(
         like_columns = {c: like_row[c] for c in items_dsl.LIKE_COLUMNS if c in like_row}
         source_row = {}  # a new item copies only LIKE_COLUMNS (not the like= item's set, spells or sockets)
     explicit = dict(decl.columns)
+    if decl.suffix_pool is not None:
+        explicit["RandomSuffix"] = decl.suffix_pool  # every tier rolls from the pool (crafting rework C7)
     look = {**source_row, **like_columns, **explicit}
     if decl.base is None:
         missing = [c for c in REQUIRED_NEW_COLUMNS if c not in like_columns and c not in explicit]
@@ -634,7 +636,10 @@ def _resolve_item(
     else:
         primary_name = decl.primary if decl.primary is not None else items_dsl.NULL_PRIMARY_SHAPE
         primary = _find_shape(f"{where} primary", primary_name, shapes.KIND_PRIMARY, shape_index, errors)
-        if decl.secondary is not None:
+        suffix = decl.suffix_pool is not None
+        if suffix:
+            secondary = None  # no shape: the random suffix carries the secondaries (secondary_shape_id 0)
+        elif decl.secondary is not None:
             secondary = _find_shape(f"{where} secondary", decl.secondary, shapes.KIND_SECONDARY, shape_index, errors)
             if primary is not None and secondary is not None and not shapes.rules_satisfied(
                 secondary, set(primary["stats"]),
@@ -645,21 +650,24 @@ def _resolve_item(
                 )
         else:
             secondary = None
-            if primary is not None:
+            if primary is not None and not suffix:
                 secondary = next((
                     s for _, s in sorted(catalog.items())
                     if s["kind"] == shapes.KIND_SECONDARY and shapes.rules_satisfied(s, set(primary["stats"]))
                 ), None)
                 if secondary is None:
                     errors.append(f"{where}: no secondary shape goes with primary {primary['name']!r}")
-        if primary is None or secondary is None:
+        if primary is None or (secondary is None and not suffix):
             return None
-        primary_id, secondary_id = primary["shape_id"], secondary["shape_id"]
+        primary_id = primary["shape_id"]
+        secondary_id = items_dsl.SUFFIX_SECONDARY_SHAPE_ID if suffix else secondary["shape_id"]
         role = decl.weapon_role or shape_role(primary, secondary)
         if decl.primary_share is not None:
             share = decl.primary_share
         elif decl.primary is None:
             share = 0
+        elif suffix:
+            share = items_dsl.DEFAULT_SHARE_BOTH
         elif decl.secondary is None:
             share = 10000
         else:
