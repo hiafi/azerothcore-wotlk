@@ -33,6 +33,20 @@ migration that was never meant to exist.
 always a real bug (see the `classmask-scope-audit` skill), not noise. Stop and flag it to the user
 rather than deploying through it, unless they've explicitly said to proceed anyway.
 
+### Step 1b — Class Advancement data check (warning only)
+
+The talent window's data table (`client/ui-overrides/Interface/FrameXML/ClassAdvancementData.lua`, shipped in
+patch-X) is written by a standalone script that `generate.py` does not run, so a talent, trainer or skill line change
+leaves it stale. Check it after every generate:
+
+```bash
+apps/dbc-tools/.venv/bin/python3 apps/dbc-tools/write_class_advancement.py --check
+```
+
+(skip if the script is not on this branch). Exit 0: current. Exit 1: the table is stale. **This never blocks the
+deploy.** Say so in the report (Step 6), and tell the user that the window shows the old trees and abilities until
+someone reruns the script without `--check`, commits the regenerated file in wow-client-ui and rebuilds patch-X.
+
 ## Step 2 — Decide whether a rebuild is needed
 
 Content that's pure DBC/SQL data (new spell/talent rows, retuned values, a `SpellMod`) is **fully
@@ -134,7 +148,8 @@ Skip this step entirely if no `patch-` containers are running, or the change was
 
 ## Step 6 — Report
 
-State plainly, in order: what `generate.py` produced (or "nothing changed"), whether a rebuild ran
+State plainly, in order: what `generate.py` produced (or "nothing changed"), whether the Class Advancement
+data is current (Step 1b), whether a rebuild ran
 and its result, whether the migration applied cleanly, the restart/boot result, and whether the
 client patch step ran. If any step was skipped, say which and why (e.g. "no rebuild — this was
 data-only").
