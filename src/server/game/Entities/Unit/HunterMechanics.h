@@ -21,6 +21,7 @@
 #include "Define.h"
 #include "Generated/HunterData.h"
 #include "SharedDefines.h"
+#include "SpellDefines.h"
 #include <array>
 #include <cstdint>
 #include <vector>
@@ -151,6 +152,8 @@ namespace Hunter
     constexpr uint32 SPELL_TEAR_ARMOR = HunterData::SPELL_TEAR_ARMOR;
     constexpr uint32 SPELL_MENACING_ROAR = HunterData::SPELL_MENACING_ROAR;
     constexpr uint32 SPELL_GROWL = HunterData::SPELL_GROWL;
+    // hunter-pet-families F3: Dash, Last Stand and Bullheaded left every kit and nothing reads these three any more;
+    // kept because this header is append-only (a later stage or module may still name them).
     constexpr uint32 SPELL_DASH = HunterData::SPELL_DASH;
     constexpr uint32 SPELL_LAST_STAND = HunterData::SPELL_LAST_STAND;
     constexpr uint32 SPELL_BULLHEADED = HunterData::SPELL_BULLHEADED;
@@ -165,7 +168,15 @@ namespace Hunter
     enum class PetType : uint8 { Ferocity = 0, Tenacity = 1, Cunning = 2, None = 0xFF };
     enum class PassthroughKind : uint8 { None, Pet, StampedeBeast };
 
-    struct PetKit { uint32 basic; uint32 utility; uint32 commandI; uint32 commandII; };
+    // hunter-pet-families F0 (PLAN §5.1, CORE-AUDIT §1.3): a reviewed retype of the PET 4.2 struct (was
+    // { basic, utility, commandI, commandII }). Every reader is in HunterMechanics.cpp. `group` = slot 2 (the group
+    // effect; 0 on a type default), `utility` = slot 3; `flags` = PetKitFlag bits.
+    enum PetKitFlag : uint8
+    {
+        PET_KIT_GROUP_AUTOCAST = 0x01,   // slot 2 is turned on once (marker 201752); without it slot 2 is manual
+        // (slot 3 is always manual: no kit wants it autocast yet, and a second flag would need its own marker)
+    };
+    struct PetKit { uint32 basic; uint32 group; uint32 utility; uint32 commandI; uint32 commandII; uint8 flags; };
 
     PetType GetPetType(Unit const* petOrGuardian);            // CreatureFamilyEntry::petTalentType
     PetKit const& GetPetKit(uint32 creatureFamily);           // PET 4.2 + 4.9; unknown family -> its type's default
@@ -187,11 +198,11 @@ namespace Hunter
     // OnPetAddToWorld call them.
     // Pins POWER_HAPPINESS and POWER_FOCUS at max (PET 4.7); refreshes white damage if the happiness state changed.
     void PinPetPowers(Pet* pet);
-    // Seats the default pet bar (basic, utility, Growl, Cower/Dash) once per pet (while it lacks marker 201703) when
-    // the basic is on no bar slot, and turns autocast on once for the basic and once for the buff/debuff utility,
-    // each tracked by its own hidden marker spell (201703, 201752) in pet_spell. S1b PT-5: also keeps the two
-    // passive "Command I/II: <ability>" display spells of the pet's kit in its spellbook (commanded id +
-    // HunterData::COMMAND_DISPLAY_OFFSET) and removes the other 14. Needs a live, loaded pet.
+    // Seats the default pet bar (basic, slot 2, slot 3, Growl) once per pet (while it lacks the kit v2 marker
+    // 202014; hunter-pet-families F0), and turns autocast on once for the basic (marker 201703) and once for slot 2
+    // when the kit sets PET_KIT_GROUP_AUTOCAST (marker 201752). S1b PT-5: also keeps the two passive
+    // "Command I/II: <ability>" display spells of the pet's kit in its spellbook (the command -> display table) and
+    // removes every other display. Needs a live, loaded pet.
     void SeatDefaultPetBar(Pet* pet);
 
     // Aspect of the Monkey (SHARED B6.6): puts 201605 on a pet that lacks it while its owner carries the aspect.
@@ -209,7 +220,9 @@ namespace Hunter
     constexpr uint32 SPELL_COBRA_SHOT_RANK3 = HunterData::SPELL_COBRA_SHOT_201851;         // 201851
 
     float GetBeastMasteryPetMasteryPct(Player const* owner);     // Mastery % with The Beast Within 3/3 (201857), else 0
-    bool  IsBeastCleaveExcluded(SpellInfo const* spellInfo);     // 201725/6/9, 201736, 201804/5/7
+    // hunter-pet-families F0: by rule (an area or chain effect, or a TRIGGER_SPELL to one; a command helper, i.e. a
+    // commanded-spell carrier no kit slots), plus the Spiked Collar / Beast Cleave copies
+    bool  IsBeastCleaveExcluded(SpellInfo const* spellInfo);
     void  RefreshSteadyShotTransforms(Player* player);           // 201811 re-add when 201851 is known (C6)
     void  RecalculatePetTalentChannels(Player* player);          // pet auras 8875, 19581, 19591, 34667 (§0.14)
     void  OnBeastMasteryTalentsChanged(Player* player);          // the two above, then RefreshAllPassthrough once
@@ -372,6 +385,33 @@ namespace Hunter
     void   ReduceCategoryCooldown(Player* player, uint32 category, uint32 ms); // §0.19
     // S3 supplies the body of the H0 section's OnDirectFireHit (contract there and in SURVIVAL §0.23); it calls
     // AddBurningTar.
+
+    // ---- hunter-pet-families F0 (PLAN §5.1) ----
+    constexpr uint32 SPELL_HUNTER_PET_KIT_V2_MARKER = HunterData::SPELL_HUNTER_PET_KIT_V2_MARKER;   // 202014
+
+    // The passive "Command I/II: <ability>" display of a commanded spell (the command -> display table), 0 when the
+    // spell is not a slotted command.
+    uint32 GetCommandDisplaySpell(uint32 commandedSpellId);
+    // True for every slotted commanded spell (a kit's Command I / II, the type defaults included).
+    bool   IsSlottedCommand(uint32 spellId);
+    // Flags for the pet's triggered cast of a commanded spell: TRIGGERED_FULL_MASK, minus TRIGGERED_IGNORE_SET_FACING
+    // for a channel so the pet keeps facing its target for the whole channel (FEASIBILITY note 6).
+    TriggerCastFlags GetCommandCastFlags(SpellInfo const* commandedSpell);
+
+    // ---- hunter-pet-families F1 (PLAN §5.2) ----
+    // Ruling 3: a world boss or a dungeon boss (instance_encounters kill credit) is immune to every pet stun, root,
+    // disorient and disarm replacement (spell_hun_pet_control_boss_filter). Interrupts and knockbacks stay stock.
+    bool IsPetControlImmune(Unit const* target);
+    // Ruling 4 (Scavenge): a creature a player-side unit killed gives every hunter pet within SCAVENGE_RADIUS_YD that
+    // knows Scavenge the Fresh Kill buff 202018, Scavenge's window. HunterUnitScript::OnUnitDeath, every death.
+    void OnScavengeKill(Unit* victim, Unit* killer);
+
+    // ---- hunter-pet-families F2 (PLAN §5.1, §5.2 `gore`) ----
+    // Ruling 9 (Boar's Gore, owner-only): the damage multiplier `attacker` gets on `target` from the pet family
+    // debuffs: 1 + Gore's amount / 100 when the target carries Gore 201665 from the attacker's owning hunter's pet
+    // (the hunter and that pet benefit, nothing else it owns) and the damage is Physical, else 1. Read live per hit
+    // from the HunterUnitScript spell, melee and periodic hooks (the Feral Shredded Defense pattern).
+    float GetPetFamilyTakenMultiplier(Unit const* target, Unit const* attacker, SpellSchoolMask schoolMask);
 }
 
 #endif

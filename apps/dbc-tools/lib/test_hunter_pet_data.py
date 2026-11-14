@@ -12,8 +12,9 @@ Loads the real hunter DSL package (source/classes/hunter/, `regen_hunter_header.
   (c) no `sp_potency` effect on a d1 b28 spell, except 59881 / 50518 / 50271 (PET 4.8);
   (d) Furious Howl 24604: one effect, no points_per_level, MaxLevel 0, aura 52, bp 4;
   (e) d2 b23 (0x800000) is carried by exactly {17253, 16827, 49966, 201710, 201711}; no reader mask holds d1 b28;
-  (f) every new pet-cast spell carries d1 b28; the 46 SkillLineAbility rows 30560-30605 are the PET 4.4 table, have
-      AcquireMethod 2, and teach spells with SpellLevel >= 1;
+  (f) every new pet-cast spell carries d1 b28; the pet SkillLineAbility rows (PET 4.4's 30560-30605 as the
+      hunter-pet-families stages changed them, plus 30551-30559 and 30606-30639 / 30870-30899) are the expected table,
+      have AcquireMethod 2, and teach spells with SpellLevel >= 1; no declared row teaches a retired placeholder;
   (g) `lint.check_hunter_family_rules` and `lint.check_talent_tab_refs` emit nothing on the loaded package.
 
 Every check is a pure function; the negative-fixture class feeds each one a minimal bad input.
@@ -80,22 +81,65 @@ EXPECTED_ZEROED_SLA_IDS = frozenset({
     13012,
 })
 
-# PET 4.4's new SkillLineAbility rows: id range -> (skill lines, spell)
-SLA_FIRST, SLA_LAST = 30560, 30605
+# PET 4.4's new SkillLineAbility rows: id range -> (skill lines, spell). hunter-pet-families F0 drops Cower's
+# 30561-30571 (Cower leaves every kit; the ids are not reused) and adds 30551-30555, the five finished families' new
+# utilities (Lick Your Wounds, Prowl, Tail Sweep, Frenzied Regeneration on the Wolf, Cat, Raptor, Bear lines; Sticky
+# Webbing on the Spider line).
+# hunter-pet-families F1 adds the 8 Ferocity families' slot 2 and slot 3 rows: 30556-30559 and 30606-30617 (PLAN s4.1);
+# F2 the 9 Tenacity families': 30618-30635; F3 the 10 Cunning families': 30636-30639 and 30870-30885, and drops the
+# placeholders' rows 30560 (Dash on 270), 30572-30580 (Last Stand) and 30581-30590 (Bullheaded) (PLAN s5.3; the ids are
+# not reused).
+SLA_FIRST, SLA_LAST = 30551, 30639
+SLA_F3_FIRST, SLA_F3_LAST = 30870, 30899
+PLACEHOLDER_SPELLS = frozenset({61684, 53478, 53490})      # Dash, Last Stand, Bullheaded (retired by F3)
 FEROCITY_LINES = (208, 209, 217, 213, 654, 781, 787, 218, 788, 775, 785)
 TENACITY_LINES = (211, 212, 251, 766, 784, 214, 236, 215, 786)
 CUNNING_LINES = (653, 655, 656, 763, 767, 765, 764, 768, 780, 783)
 SLA_TABLE = (
-    ((30560, 30560), (270,), 61684),
-    ((30561, 30571), FEROCITY_LINES, COWER),
-    ((30572, 30580), TENACITY_LINES, 53478),
-    ((30581, 30590), CUNNING_LINES, 53490),
+    ((30551, 30551), (208,), 201983),
+    ((30552, 30552), (209,), 201984),
+    ((30553, 30553), (217,), 201985),
+    ((30554, 30554), (210,), 201986),
+    ((30555, 30555), (203,), 201753),
     ((30591, 30600), CUNNING_LINES, 201711),
     ((30601, 30601), (203,), 201710),
     ((30602, 30602), (209,), 201715),
     ((30603, 30603), (217,), 201716),
     ((30604, 30604), (210,), 201717),
     ((30605, 30605), (203,), 201718),
+    # F1 Ferocity: slot 2 then slot 3 per family (Carrion Bird, Hyena, Tallstrider, Moth, Wasp, Devilsaur, Core Hound,
+    # Spirit Beast)
+    ((30556, 30556), (213,), 201754), ((30557, 30557), (213,), 201987),
+    ((30558, 30558), (654,), 201755), ((30559, 30559), (654,), 201988),
+    ((30606, 30606), (218,), 201756), ((30607, 30607), (218,), 201989),
+    ((30608, 30608), (775,), 201757), ((30609, 30609), (775,), 201990),
+    ((30610, 30610), (785,), 201758), ((30611, 30611), (785,), 201991),
+    ((30612, 30612), (781,), 201759), ((30613, 30613), (781,), 201992),
+    ((30614, 30614), (787,), 201760), ((30615, 30615), (787,), 201993),
+    ((30616, 30616), (788,), 201761), ((30617, 30617), (788,), 201994),
+    # F2 Tenacity: slot 2 then slot 3 per family (Boar, Crocolisk, Turtle, Crab, Scorpid, Gorilla, Warp Stalker, Worm,
+    # Rhino)
+    ((30618, 30618), (211,), 201762), ((30619, 30619), (211,), 201995),
+    ((30620, 30620), (212,), 201763), ((30621, 30621), (212,), 201996),
+    ((30622, 30622), (251,), 201764), ((30623, 30623), (251,), 201997),
+    ((30624, 30624), (214,), 201765), ((30625, 30625), (214,), 201998),
+    ((30626, 30626), (236,), 201766), ((30627, 30627), (236,), 201999),
+    ((30628, 30628), (215,), 201767), ((30629, 30629), (215,), 202000),
+    ((30630, 30630), (766,), 201768), ((30631, 30631), (766,), 202001),
+    ((30632, 30632), (784,), 201769), ((30633, 30633), (784,), 202002),
+    ((30634, 30634), (786,), 201770), ((30635, 30635), (786,), 202003),
+    # F3 Cunning: slot 2 then slot 3 per family (Bat, Bird of Prey, Wind Serpent, Dragonhawk, Ravager, Serpent,
+    # Sporebat, Nether Ray, Chimaera, Silithid)
+    ((30636, 30636), (653,), 201771), ((30637, 30637), (653,), 202004),
+    ((30638, 30638), (655,), 201772), ((30639, 30639), (655,), 202005),
+    ((30870, 30870), (656,), 201773), ((30871, 30871), (656,), 202006),
+    ((30872, 30872), (763,), 201774), ((30873, 30873), (763,), 202007),
+    ((30874, 30874), (767,), 201775), ((30875, 30875), (767,), 202008),
+    ((30876, 30876), (768,), 201776), ((30877, 30877), (768,), 202009),
+    ((30878, 30878), (765,), 201777), ((30879, 30879), (765,), 202010),
+    ((30880, 30880), (764,), 201778), ((30881, 30881), (764,), 202011),
+    ((30882, 30882), (780,), 201779), ((30883, 30883), (780,), 202012),
+    ((30884, 30884), (783,), 201780), ((30885, 30885), (783,), 202013),
 )
 
 
@@ -246,10 +290,19 @@ def check_pet_cast_carry_pet_bit(rows_by_id: dict[int, dict], ids=PET_CAST_NEW) 
     return bad
 
 
+def _in_pet_sla_block(row_id: int) -> bool:
+    return SLA_FIRST <= row_id <= SLA_LAST or SLA_F3_FIRST <= row_id <= SLA_F3_LAST
+
+
 def check_sla_rows(sla_rows: list[dict], spell_rows_by_id: dict[int, dict], table=SLA_TABLE) -> list[str]:
-    """(f) rows 30560-30605: the PET 4.4 (skill line, spell) table, AcquireMethod 2, taught spell SpellLevel >= 1."""
+    """(f) rows 30551-30639 and 30870-30899: the PET 4.4 (skill line, spell) table plus the hunter-pet-families F0-F3
+    rows, AcquireMethod 2, taught spell SpellLevel >= 1; hunter-pet-families F3: no declared row teaches Dash, Last
+    Stand or Bullheaded."""
     bad = []
-    in_range = [r for r in sla_rows if SLA_FIRST <= int(r["ID"]) <= SLA_LAST]
+    in_range = [r for r in sla_rows if _in_pet_sla_block(int(r["ID"]))]
+    for row in sla_rows:
+        if int(row["Spell"]) in PLACEHOLDER_SPELLS and int(row.get("AcquireMethod") or 0) == 2:
+            bad.append(f"SkillLineAbility {row['ID']}: teaches the retired placeholder {row['Spell']} (F3)")
     for (first, last), lines, spell in table:
         rows = [r for r in in_range if first <= int(r["ID"]) <= last]
         want = sorted((line, spell) for line in lines)
@@ -257,9 +310,11 @@ def check_sla_rows(sla_rows: list[dict], spell_rows_by_id: dict[int, dict], tabl
         if got != want:
             bad.append(f"SkillLineAbility {first}-{last}: (skill line, spell) is {got}, PET 4.4 says {want}")
     declared = {int(r["ID"]) for r in in_range}
-    if declared != set(range(SLA_FIRST, SLA_LAST + 1)):
-        bad.append(f"SkillLineAbility ids declared in {SLA_FIRST}-{SLA_LAST}: missing "
-                   f"{sorted(set(range(SLA_FIRST, SLA_LAST + 1)) - declared)}")
+    expected = {i for (first, last), _, _ in table for i in range(first, last + 1)}
+    if declared != expected:
+        bad.append(f"SkillLineAbility ids declared in {SLA_FIRST}-{SLA_LAST} / {SLA_F3_FIRST}-{SLA_F3_LAST}: missing "
+                   f"{sorted(expected - declared)}, "
+                   f"unexpected {sorted(declared - expected)}")
     for row in in_range:
         if int(row.get("AcquireMethod") or 0) != 2:
             bad.append(f"SkillLineAbility {row['ID']}: AcquireMethod {row.get('AcquireMethod')}, expected 2")
@@ -523,6 +578,15 @@ class HunterPetDataTest(unittest.TestCase):
         retirements, *_ = retirement_resolution()
         self.assertClean(check_retired_spell_set(retirements, EXPECTED_RETIRED_SPELLS))
 
+    def test_cower_is_retired_from_every_family(self):
+        # hunter-pet-families F0: Cower leaves every kit, so its retirement covers every family (families=None: every
+        # pet skill line row and every family's CreatureSpellData record), not only the non-Ferocity ones.
+        retirements, *_ = retirement_resolution()
+        cower = [r for r in retirements if int(r["spell_id"]) == COWER]
+        self.assertEqual(len(cower), 1)
+        self.assertIsNone(cower[0]["families"])
+        self.assertFalse(cower[0]["shared_lines"])
+
     def test_every_retirement_resolves(self):
         retirements, overrides, strips, strip_warnings = retirement_resolution()
         print(f"\nretire_pet_spell: {len(retirements)} call(s), {len(overrides.entries)} SkillLineAbility row(s) "
@@ -751,7 +815,7 @@ class HunterPetDataNegativeTest(unittest.TestCase):
 
     def test_sla_rows_check_fires_on_each_defect(self):
         rows, spells = self._good_sla()
-        self.assertEqual(len(rows), 46)
+        self.assertEqual(len(rows), 74)
         self.assertEqual(check_sla_rows(rows, spells), [])
         self.assertTrue(check_sla_rows(rows[:-1], spells))                                       # a missing row
         wrong_method = [dict(r) for r in rows]
@@ -760,7 +824,10 @@ class HunterPetDataNegativeTest(unittest.TestCase):
         wrong_spell = [dict(r) for r in rows]
         wrong_spell[0]["Spell"] = 53478
         self.assertTrue(any("PET 4.4 says" in p for p in check_sla_rows(wrong_spell, spells)))
-        self.assertTrue(any("SpellLevel" in p for p in check_sla_rows(rows, {**spells, 61684: _row(61684, SpellLevel=0)})))
+        no_level = {**spells, 201711: _row(201711, SpellLevel=0)}
+        self.assertTrue(any("SpellLevel" in p for p in check_sla_rows(rows, no_level)))
+        placeholder = rows + [{"ID": 40000, "SkillLine": 270, "Spell": 61684, "AcquireMethod": 2, "ClassMask": 0}]
+        self.assertTrue(any("retired placeholder" in p for p in check_sla_rows(placeholder, spells)))
         self.assertTrue(any("no spell row" in p for p in check_sla_rows(rows, {})))
         with_class = [dict(r) for r in rows]
         with_class[5]["ClassMask"] = 4

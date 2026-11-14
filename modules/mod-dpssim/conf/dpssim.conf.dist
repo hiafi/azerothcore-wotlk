@@ -419,6 +419,106 @@ DpsSim.TankDummyCrit =
 DpsSim.TankPullAuras =
 
 #
+#    DpsSim.PetCreatureEntry
+#        Description: The hunter's pet for this run: a creature_template entry with a creature family, over the
+#                      profile's PetCreatureEntry, so one hunter profile sims every family. Any row of the family
+#                      works (the pet takes the actor's level; untamable families too). run-sim.sh sets it from
+#                      DPSSIM_PET_ENTRY or DPSSIM_PET_FAMILY (tools/pet_families.tsv, one entry per family) and puts
+#                      it in the report names. Setting it for a non-hunter actor aborts the job.
+#        Default:     0 - (The profile's pet)
+#
+
+DpsSim.PetCreatureEntry = 0
+
+#
+#    DpsSim.BuffSet
+#        Description: The named buff set (docs/dps-sim-module.md 5.2, ruling 12; SimBuffSet.h). DPS runs only.
+#                      self_only - the actor's own buffs and nothing else (every run before buff sets existed).
+#                      full_raid - DpsSim.RaidBuffs on the actor and its pet after the pre-pull buff phase,
+#                                  DpsSim.RaidDebuffs on every dummy at the pull (both pinned, no expiry, and put back
+#                                  once a sim second if they go missing), and DpsSim.RaidPullBuffs (Bloodlust and
+#                                  Sated) on the actor and its pet at the pull with their own duration. The sim adds
+#                                  the auras itself (the actor as the caster, so hunter actors only: a class that
+#                                  owns one of the spells would see the aura as its own); nobody casts them.
+#                                  run-sim.sh sets it from DPSSIM_BUFF_SET and puts "full_raid" in the report names.
+#        Default:     self_only
+#
+
+DpsSim.BuffSet = self_only
+
+#
+#    DpsSim.RaidBuffs
+#    DpsSim.RaidDebuffs
+#    DpsSim.RaidPullBuffs
+#        Description: The full_raid lists: spell ids, comma separated. "id:01" applies only effect indexes 0 and 1 of
+#                      the spell, "id:0@3" also sets the amount of those effects to 3 (Heart of the Crusader's rank
+#                      chain is not in spell_ranks, so only its first rank is in the group; that rank is applied
+#                      with the amount of the rank wanted, a negative amount is allowed); a bare id applies the effects
+#                      a raid member would get (every aura effect except a plain aura on the caster itself). Each
+#                      member sits in the same spell_group as the hunter pet
+#                      family effect of its category, so a family's own cast is suppressed by the group rule and
+#                      adds nothing (hunter-pet-families DATA-INVENTORY 4.1, BRAINSTORM ruling 7). The run log names
+#                      every member with its effects and groups, and the amount it landed with. Defaults (level 60):
+#                      Buffs (actor and pet):
+#                        24932      Leader of the Pack          melee/ranged crit 5%         group 1023 -> 1025
+#                        8076:01    Strength of Earth           Strength and Agility         group 1064 -> 1088
+#                        53137      Abomination's Might r1      attack power 5%              group 1026 -> 1029
+#                        202210:01  Air Attunement              melee and ranged haste 10%   group 1022
+#                        24907:0    Moonkin Aura                spell crit 5%                group 1034 -> 1036
+#                        50172      Improved Moonkin Form r3    all haste 3% (spell haste)   group 1054
+#                        5677       Mana Spring                 mana per 5 sec               group 1105
+#                        202211     Earth Attunement Armor      armor                        group 1086
+#                        23948      Power Word: Fortitude r6    Stamina                      group 1084
+#                        25898:0    Greater Blessing of Kings   all stats 10%                group 1006
+#                        202212     Fire Attunement Spell Power spell power (pet AP)         group 1048
+#                        31583:1    Arcane Empowerment r3       party damage 3%              group 1056
+#                      Debuffs (every dummy):
+#                        8647       Expose Armor                major armor -20%             group 1013 -> 1015
+#                        21183:0@3  Heart of the Crusader       crit taken 3% (amount set)   group 1058
+#                        60431      Earth and Moon              magic damage taken 10%       group 1101
+#                        1160       Demoralizing Shout          attack power down            group 1062
+#                        6343       Thunder Clap                attack speed slow            group 1059
+#                        1714:0     Curse of Tongues r1         casting slow 25%             group 1096
+#                        30070      Blood Frenzy r2             physical damage taken 4%     group 1108
+#                      (no hit-chance debuff: group 1060's only member, Insect Swarm 5570, no longer has its
+#                      hit-chance effect; add Tallstrider's Dust Cloud id once it exists)
+#                      At the pull (actor and pet): 2825 Bloodlust, 57724 Sated.
+#        Default:     the lists above
+#
+
+DpsSim.RaidBuffs = "24932, 8076:01, 53137, 202210:01, 24907:0, 50172, 5677, 202211, 23948, 25898:0, 202212, 31583:1"
+DpsSim.RaidDebuffs = "8647, 21183:0@3, 60431, 1160, 6343, 1714:0, 30070"
+DpsSim.RaidPullBuffs = "2825, 57724"
+
+#
+#    DpsSim.DisableSpells
+#        Description: Spell ids, comma separated, taken out of the actor's and its pet's spellbooks for the run (and
+#                      again after a pet re-tame), so the bot and the pet's autocast never use them: a run with and
+#                      one without gives an ability's value (a family's own group buff such as Wolf's Furious Howl, or
+#                      a utility such as the Raptor's Tail Sweep). A spell another spell triggers still lands, and the
+#                      job fails when the actor and the pet both lack a listed id (a typo, a triggered spell, another
+#                      family's). A spell that is not in a spellbook, such as an owner-only debuff that an ability
+#                      applies, cannot be measured this way (removing its ability removes the hit too): use
+#                      DpsSim.DummyImmuneAuras. The run log names each one taken out.
+#        Default:     "" - (None)
+#
+
+DpsSim.DisableSpells =
+
+#
+#    DpsSim.DummyImmuneAuras
+#        Description: Spell ids, comma separated, that every dummy is immune to for the run (DPS runs only; each id
+#                      must exist). The hit that applies the aura still lands and the aura does not, so an
+#                      owner-only debuff can be measured on its own: a run with and one without gives its value
+#                      (Boar's Gore debuff 201665 once F2 is live). The id is the aura's spell, not the ability's.
+#                      A baseline debuff of the same id (full_raid) is blocked too. run-sim.sh sets it from
+#                      DPSSIM_DUMMY_IMMUNE_AURAS and adds ".imm<ids>" to the report names.
+#        Default:     "" - (None)
+#
+
+DpsSim.DummyImmuneAuras =
+
+#
 #    DpsSim.MechanicsMode
 #        Description: Mechanics mode (dungeon mechanics STAGE-M4; SimMechanicsConfig.h, README "Mechanics sim"): run
 #                      DpsSim.Profile as one member of a group of real bots that fights a boss stand-in while

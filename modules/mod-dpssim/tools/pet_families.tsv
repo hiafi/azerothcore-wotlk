@@ -1,0 +1,38 @@
+# One creature per hunter pet family, for DPSSIM_PET_FAMILY (run-sim.sh) and pet_family_sweep.py. Blizzard's
+# "Tamable <family>" test creatures: one per family, nothing else uses them, no SQL update touches them. Their
+# creature level does not matter (the sim's pet takes the actor's level, SimBot.cpp TameSimPet), and
+# Player::CreatePet() takes untamable / exotic families too. Tree: the pet talent tree (CreatureFamily.dbc
+# PetTalentType). Columns are tab-separated; lines starting with '#' are comments.
+family	key	name	tree	entry	creature
+1	wolf	Wolf	Ferocity	26016	Tamable Wolf
+2	cat	Cat	Ferocity	26021	Tamable Cat
+3	spider	Spider	Cunning	26033	Tamable Spider
+4	bear	Bear	Tenacity	34025	Tamable Bear
+5	boar	Boar	Tenacity	26020	Tamable Boar
+6	crocolisk	Crocolisk	Tenacity	34027	Tamable Crocolisk
+7	carrion-bird	Carrion Bird	Ferocity	26019	Tamable Carrion Bird
+8	crab	Crab	Tenacity	34026	Tamable Crab
+9	gorilla	Gorilla	Tenacity	34028	Tamable Gorilla
+11	raptor	Raptor	Ferocity	26029	Tamable Raptor
+12	tallstrider	Tallstrider	Ferocity	34022	Tamable Tallstrider
+20	scorpid	Scorpid	Tenacity	26031	Tamable Scorpid
+21	turtle	Turtle	Tenacity	34029	Tamable Turtle
+24	bat	Bat	Cunning	26017	Tamable Bat
+25	hyena	Hyena	Ferocity	34019	Tamable Hyena
+26	bird-of-prey	Bird of Prey	Cunning	26028	Tamable Bird of Prey
+27	wind-serpent	Wind Serpent	Cunning	26038	Tamable Wind Serpent
+30	dragonhawk	Dragonhawk	Cunning	26024	Tamable Dragonhawk
+31	ravager	Ravager	Cunning	26030	Tamable Ravager
+32	warp-stalker	Warp Stalker	Tenacity	26037	Tamable Warp Stalker
+33	sporebat	Sporebat	Cunning	34018	Tamable Sporebat
+34	nether-ray	Nether Ray	Cunning	26027	Tamable Nether Ray
+35	serpent	Serpent	Cunning	26032	Tamable Serpent
+37	moth	Moth	Ferocity	34021	Tamable Moth
+38	chimaera	Chimaera	Cunning	33504	Tamable Chimaera
+39	devilsaur	Devilsaur	Ferocity	33505	Tamable Devilsaur
+41	silithid	Silithid	Cunning	33508	Tamable Silithid
+42	worm	Worm	Tenacity	33511	Tamable Worm
+43	rhino	Rhino	Tenacity	33506	Tamable Rhino
+44	wasp	Wasp	Ferocity	34024	Tamable Wasp
+45	core-hound	Core Hound	Ferocity	33502	Tamable Core Hound
+46	spirit-beast	Spirit Beast	Ferocity	33510	Tamable Spirit Beast

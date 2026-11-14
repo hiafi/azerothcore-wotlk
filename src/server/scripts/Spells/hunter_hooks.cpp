@@ -153,17 +153,23 @@ public:
 
 // S1b (SHARED §A5): the one hunter UnitScript. OnUnitDeath runs for every death in the world, so each branch starts
 // with its cheapest guard (unit->IsPet() first, inside Hunter::OnPhoenixPlumePetDeath). S2 adds
-// UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN and a second, independent death branch (Lone Survivor) to this class.
+// UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN and a second, independent death branch (Lone Survivor) to this class;
+// hunter-pet-families F1 a third (Scavenge's Fresh Kill); F2 the melee and periodic damage hooks for Gore.
 class HunterUnitScript : public UnitScript
 {
 public:
     HunterUnitScript() : UnitScript("HunterUnitScript", true,
-        { UNITHOOK_ON_UNIT_DEATH, UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN }) { }
+        { UNITHOOK_ON_UNIT_DEATH, UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN, UNITHOOK_MODIFY_MELEE_DAMAGE,
+            UNITHOOK_MODIFY_PERIODIC_DAMAGE_AURAS_TICK }) { }
 
-    void OnUnitDeath(Unit* unit, Unit* /*killer*/) override
+    void OnUnitDeath(Unit* unit, Unit* killer) override
     {
         // ---- S1b: Phoenix's Plume revive (BEAST-MASTERY §4.10). ----
         Hunter::OnPhoenixPlumePetDeath(unit);
+
+        // ---- hunter-pet-families F1: Scavenge's window (ruling 4). Independent of the other branches; its first
+        // guard is an NPC killed by a player-side unit. ----
+        Hunter::OnScavengeKill(unit, killer);
 
         // ---- S2: Lone Survivor refresh on hunter pet death (MARKSMANSHIP §10.4, M-m8). ----
         // Independent of the Phoenix's Plume branch (no order between them). Type checks first: every death in the
@@ -185,6 +191,38 @@ public:
     void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage, SpellInfo const* spellInfo) override
     {
         Hunter::ApplyMarksmanshipTakenMods(target, attacker, damage, spellInfo);
+
+        // ---- hunter-pet-families F2: Gore (ruling 9), owner-only Physical damage taken. ----
+        if (damage > 0 && spellInfo)
+            ApplyGore(target, attacker, damage, spellInfo->GetSchoolMask());
+    }
+
+    // ---- hunter-pet-families F2: Gore on white swings (the pet's; a hunter's melee too). Before armor. ----
+    void ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage) override
+    {
+        if (damage && attacker)
+            ApplyGore(target, attacker, damage, attacker->GetMeleeDamageSchoolMask());
+    }
+
+    // ---- hunter-pet-families F2: Gore on bleeds and other Physical ticks. The hook also fires for heal ticks, which
+    // never take a damage-taken mod. ----
+    void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage,
+        SpellInfo const* spellInfo) override
+    {
+        if (!damage || !spellInfo || spellInfo->HasAura(SPELL_AURA_PERIODIC_HEAL) ||
+            spellInfo->HasAura(SPELL_AURA_OBS_MOD_HEALTH))
+            return;
+
+        ApplyGore(target, attacker, damage, spellInfo->GetSchoolMask());
+    }
+
+private:
+    template <typename T>
+    static void ApplyGore(Unit* target, Unit* attacker, T& damage, SpellSchoolMask schoolMask)
+    {
+        float const mult = Hunter::GetPetFamilyTakenMultiplier(target, attacker, schoolMask);
+        if (mult != 1.0f)
+            damage = T(float(damage) * mult);
     }
 };
 
