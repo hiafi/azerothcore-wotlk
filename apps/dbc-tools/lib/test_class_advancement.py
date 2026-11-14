@@ -129,6 +129,7 @@ class RulesTest(unittest.TestCase):
                 {"spell": 133, "section": 2, "level": 1, "how": "start"},
                 {"spell": 11366, "section": 2, "how": "talent", "talent": 36},
                 {"spell": 2825, "section": 1, "level": 60, "how": "trainer", "races": 178},
+                {"spell": 3127, "section": 3, "level": 6, "how": "trainer", "passive": 1},
             ]}
         text = W.render_lua(table)
         self.assertNotIn("\r", text)
@@ -143,6 +144,7 @@ class RulesTest(unittest.TestCase):
                                                          "req": 74, "reqRank": 1})
         self.assertEqual(mage["abilities"][1], {"spell": 11366, "section": 2, "how": "talent", "talent": 36})
         self.assertEqual(mage["abilities"][2]["races"], 178)
+        self.assertEqual(mage["abilities"][3]["passive"], 1)
         self.assertEqual(mage["tabs"][0]["icon"], "Interface\\Icons\\Spell_Holy_MagicalSentry")
         self.assertIn('icon = "Interface\\\\Icons\\\\Spell_Holy_MagicalSentry"', text)
 
@@ -252,7 +254,8 @@ class TableTest(unittest.TestCase):
             self.assertEqual(len(spells), len(set(spells)), f"{token}: an ability twice")
             for a in entry["abilities"]:
                 self.assertIn(a["spell"], self.inp.spells, a)
-                self.assertIn(a["section"], (0, 1, 2, 3), a)
+                self.assertIn(a["section"], (1, 2, 3), a)  # no General strip (user 2026-11-13)
+                self.assertEqual(a.get("passive"), 1 if W.is_passive(self.inp.spells[a["spell"]]) else None, a)
                 self.assertIn(a["how"], ("trainer", "start", "talent"), a)
                 if a["how"] == "talent":
                     self.assertIn(a["talent"], talents, f"{token}: {a}")
@@ -285,6 +288,9 @@ class TableTest(unittest.TestCase):
         self.assertEqual(ability("MAGE", 11366), {"spell": 11366, "section": 2, "how": "talent", "talent": 29})
         # a retired stock talent's spell that became baseline stays (SkillLineAbility 19182, AcquireMethod 2)
         self.assertEqual(ability("DEATHKNIGHT", 55050), {"spell": 55050, "section": 1, "level": 1, "how": "start"})
+        rogue_tabs = [tab["skillLine"] for tab in self.table["ROGUE"]["tabs"]]
+        self.assertEqual(ability("ROGUE", 1804)["section"], rogue_tabs.index(39) + 1)  # Pick Lock -> Subtlety
+        self.assertFalse(any(a["spell"] in (674, 3127) for e in self.table.values() for a in e["abilities"]))
         self.assertEqual([tab["name"] for tab in self.table["MAGE"]["tabs"]], ["Arcane", "Fire", "Frost"])
         self.assertEqual([tab["skillLine"] for tab in self.table["MAGE"]["tabs"]], [237, 8, 6])
         self.assertEqual(self.table["MAGE"]["tabs"][0]["art"], "MageArcane")
