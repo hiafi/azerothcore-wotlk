@@ -5,8 +5,10 @@ Packs the client UI overrides (client/ui-overrides/Interface/**) into patch-X.mp
 patch-X is the one archive for every whole-file FrameXML override (UI-unlocked Wow.exe only; the stock exe rejects
 modified FrameXML - see client/ui-overrides/README.md): UnitPopup.lua (level-60 dungeon/raid difficulty menu), the item
 tier label hook ItemTierLabel.lua, its generated table ItemTierLabels.lua (generate.py writes it, lib/item_labels.py)
-the item set tooltip hook ItemSetTooltip.lua with its generated table ItemSetMembers.lua (lib/item_set_members.py)
-and the FrameXML.toc override that loads them after the tooltip frames. It replaces the hand `smpq -c` line the
+the item set tooltip hook ItemSetTooltip.lua with its generated table ItemSetMembers.lua (lib/item_set_members.py),
+the Class Advancement window ClassAdvancementFrame.xml/.lua with its generated table ClassAdvancementData.lua
+(write_class_advancement.py) and its textures under Interface/ClassAdvancement/ and Interface/Icons/, and the
+FrameXML.toc override that loads them after the tooltip frames. It replaces the hand `smpq -c` line the
 README used to carry. Every UI file under Interface/ (PACKED_SUFFIXES: .lua .xml .toc .blp .tga) is packed at its path
 relative to the source directory; dotfiles, editor swap and backup files (.swp, .orig, ~) and files outside
 Interface/ (README.md) are not.
@@ -46,7 +48,8 @@ LOCAL_OUT = Path(__file__).resolve().parent / "var" / "dbc-patch" / "patch-X.mpq
 TOC = "Interface/FrameXML/FrameXML.toc"
 # Files the toc override must list when they exist: a Lua file the toc forgets never loads, silently.
 TOC_LISTED = ("ItemTierLabels.lua", "ItemTierLabel.lua", "ItemSetMembers.lua", "ItemSetTooltip.lua",
-              "ProfessionsFrame.xml", "GatheringRanksFrame.xml", "CraftingCategories.lua", "TradeSkillCategories.lua")
+              "ProfessionsFrame.xml", "GatheringRanksFrame.xml", "CraftingCategories.lua", "TradeSkillCategories.lua",
+              "ClassAdvancementData.lua", "ClassAdvancementFrame.xml")
 # What a UI override can be (R1 N11): anything else under Interface/ (swap files, .orig, notes) is left out.
 PACKED_SUFFIXES = (".lua", ".xml", ".toc", ".blp", ".tga")
 
