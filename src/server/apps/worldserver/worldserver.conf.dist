@@ -4908,6 +4908,18 @@ Custom.Gathering.RareReferenceThreshold = 25
 Custom.Realm.Classless = 0
 
 #
+#    Custom.TalentUI.Enable
+#        Description: Server side of the Class Advancement window (classless-ui U2): answers the
+#                     client's "CTAL" addon messages (read the learned talents, learn a staged plan).
+#                     When 0 the messages are ignored (still swallowed, never shown in chat) and the
+#                     window cannot load or learn. Implemented by
+#                     src/server/scripts/Custom/custom_talent_ui.cpp.
+#        Default:     1 - (Enabled)
+#                     0 - (Disabled)
+
+Custom.TalentUI.Enable = 1
+
+#
 ###################################################################################################
 
 ###################################################################################################
