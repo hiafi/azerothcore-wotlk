@@ -1004,6 +1004,13 @@ void ScriptMgr::OnPlayerAfterTrainSpell(Player* player, Creature* trainer, uint3
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_AFTER_TRAIN_SPELL, script->OnPlayerAfterTrainSpell(player, trainer, spellId));
 }
 
+// Custom: featured quests (custom_featured_quests.cpp) restate a quest's quest-giver status
+void ScriptMgr::OnPlayerGetQuestDialogStatus(Player* player, Quest const* quest, QuestGiverStatus& status)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_QUEST_DIALOG_STATUS,
+        script->OnPlayerGetQuestDialogStatus(player, quest, status));
+}
+
 PlayerScript::PlayerScript(char const* name, std::vector<uint16> enabledHooks)
     : ScriptObject(name, PLAYERHOOK_END)
 {

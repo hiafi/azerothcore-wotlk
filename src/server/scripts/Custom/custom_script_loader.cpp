@@ -32,6 +32,7 @@ void AddSC_custom_crafting_gems();
 void AddSC_custom_crafting_enchants();
 void AddSC_custom_crafting_runes();
 void AddSC_custom_talent_ui();
+void AddSC_custom_featured_quests();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -52,4 +53,5 @@ void AddCustomScripts()
     AddSC_custom_crafting_enchants();
     AddSC_custom_crafting_runes();
     AddSC_custom_talent_ui();
+    AddSC_custom_featured_quests();
 }

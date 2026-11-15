@@ -1811,6 +1811,9 @@ QuestGiverStatus Player::GetQuestDialogStatus(Object* questgiver)
                 {
                     result2 = DIALOG_STATUS_UNAVAILABLE;
                 }
+
+                // Custom: featured quests show a yellow "!" when outlevelled, filler quests show as low level
+                sScriptMgr->OnPlayerGetQuestDialogStatus(this, quest, result2);
             }
         }
 
