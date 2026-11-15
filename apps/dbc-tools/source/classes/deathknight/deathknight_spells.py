@@ -395,10 +395,11 @@ rune_strike_56815 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=EffectType.WEAPON_DAMAGE, base_points=-1, implicit_target_a=6),
-        Effect(type=31, weapon_potency=381, implicit_target_a=6),
+        Effect(type=31, weapon_potency=419, implicit_target_a=6),
     ],
     spell_icon_id=3007,
     notes=(
+        'weapon_potency 381 -> 419 (381 x 1.10 = 419.1, whole) (2026-11-15, balance on the Normal-tier kits, user ruling: Rune Strike +10%). '
         'weapon_potency 508 -> 381 (508 x 0.75) (2026-11-02, DPS balance pass 1031 round R6, user ruling: Rune Strike -25%). '
         'weapon_potency 363 -> 508 (363 x 1.4 = 508.2, rounded to a whole number) (2026-11-02, DPS balance pass 1031 round R5, user ruling: Rune Strike +40%). '
         'weapon_potency 290 -> 363 (290 x 1.25 = 362.5, rounded half up to a whole number) (2026-11-01, DPS balance pass 1031 round R4, user ruling: Rune Strike +25%). '
@@ -487,12 +488,13 @@ frost_strike_49143 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=60, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=62, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5.15, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2740,
     notes=(
+        'weapon_potency 60 -> 62 (60 x 1.03 = 61.8, rounded to whole) and sp_potency 5 -> 5.15 (2026-11-15, balance on the Normal-tier kits, user ruling: Frost Strike +3%). '
         'pulled from existing data; dk-rework DK0a (shared doc "Frost Strike", U8/U9): baseline at level 10, '
         '60% weapon damage plus 5 potency Frost damage. Percent effect FIRST, flat NORMALIZED_WEAPON_DMG effect '
         'second (SpellEffects.cpp EffectWeaponDmg multiplies a flat effect that sits before the percent effect '

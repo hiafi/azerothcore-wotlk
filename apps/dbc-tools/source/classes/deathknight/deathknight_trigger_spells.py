@@ -394,14 +394,15 @@ death_strike_49998 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=128, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=15, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=147, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=17.25, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=29, implicit_target_a=6),
     ],
     spell_icon_id=2751,
     tooltip_vars=improved_death_strike_tooltip_1251,
     notes=(
+        'weapon_potency 128 -> 147 (128 x 1.15 = 147.2, whole) and sp_potency 15 -> 17.25 (2026-11-15, balance on the Normal-tier kits, user ruling: Death Strike damage +15%; the heal DUMMY untouched). '
         'S1a: tooltip reads Improved Death Strike (tooltip_vars 1251): $dsdmg on the damage (weapon percent and flat), $dsheal on the heal %. '
         'DK0a (death-knight-shared-rework.md "Death Strike"): PowerType 6 / ManaCost 400 (40 RP, RP x10) / RuneCostID 0 '
         '(no runes, generates none), SpellLevel 10, d0 b4 kept. Effects: eff0 WEAPON_PERCENT_DAMAGE weapon_potency 85, '
@@ -756,12 +757,13 @@ death_strike_66188 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=128, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=7.5, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=147, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=8.625, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2751,
     notes=(
+        'weapon_potency 128 -> 147 and sp_potency 7.5 -> 8.625 (2026-11-15, balance on the Normal-tier kits, user ruling: Death Strike +15%, the off-hand copy follows the main hand). '
         'weapon_potency 85 -> 128 and sp_potency 5 -> 7.5 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Death Strike +50%, the Threat of Thassarian off-hand copy follows the main hand). '
         'death-knight-rework S2a (U16 / U17, brief D1): Threat of Thassarian off-hand copy of Death Strike 49998. eff0 '
         'WEAPON_PERCENT_DAMAGE weapon_potency 85 first, eff1 NORMALIZED_WEAPON_DMG sp_potency 5 (HALF of the main hand\'s 10: '
@@ -785,12 +787,13 @@ frost_strike_66196 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=60, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=62, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5.15, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2740,
     notes=(
+        'weapon_potency 60 -> 62 and sp_potency 5 -> 5.15 (2026-11-15, balance on the Normal-tier kits, user ruling: Frost Strike +3%, the off-hand copy follows the main hand). '
         'death-knight-rework S2a (U16 / U17, brief D1): Threat of Thassarian off-hand copy of Frost Strike 49143. Always Frost, '
         'so non-physical: no flat doubling and no TOTAL_PCT (SpellEffects.cpp:3897), it stores the FULL main-hand flat (sp_potency 5) '
         'and gets x 0.5 x (1 + Nerves of Cold Steel) from DeathKnight::GetFrostDamageMultiplier (spell_dk_frost_offhand). eff0 '
@@ -888,13 +891,14 @@ heart_strike_55050 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=90, implicit_target_a=6, chain_targets=2),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=15, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=95, implicit_target_a=6, chain_targets=2),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=15.75, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6, chain_targets=2),
     ],
     spell_icon_id=3145,
     tooltip_vars=heart_plague_strike_tooltip_1254,
     notes=(
+        'weapon_potency 90 -> 95 (90 x 1.05 = 94.5, rounded half up to whole) and sp_potency 15 -> 15.75 (2026-11-15, balance on the Normal-tier kits, user ruling: Heart Strike +5%; both rows). '
         'S2a (U24): tooltip_vars 1254 replaces 1250 so Gravefrost joins the multiplier: $heart = Bloody Strikes x Gravefrost, text unchanged. '
         'S1a: tooltip reads Bloody Strikes\' Heart Strike multiplier (tooltip_vars 1250, $heart) on the weapon percent and the flat. '
         'DK0a (death-knight-shared-rework.md "Heart Strike"): SpellLevel 1, RuneCostID 1142 (1 Blood Rune + 10 RP) kept. '

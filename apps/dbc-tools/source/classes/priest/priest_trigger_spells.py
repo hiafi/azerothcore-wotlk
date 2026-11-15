@@ -226,11 +226,12 @@ penance_47666 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=89.7, potency_kind='direct', implicit_target_a=77),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=152.49, potency_kind='direct', implicit_target_a=77),
     ],
     spell_icon_id=2818,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (84, chain has a gap at 60) slope (anchor rank 53000, rank 4); coefficient/cast_time_ms/mana_cost_pct from max rank (53000, rank 4); MaxLevel set to 80. "
-          "Potency system P5-Priest: converted to sp_potency=89.7 (user-reviewed, mismatched row).",
+          "Potency system P5-Priest: converted to sp_potency=89.7 (user-reviewed, mismatched row)."
+          ' sp_potency 89.7 -> 152.49 (2026-11-15, balance on the Normal-tier kits, user ruling: Penance damage 47666 +70%).',
     raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a volley of holy light at the target, causing {pot1} Holy damage to an enemy, or $47750s1 healing to an ally instantly and every $47758t2 sec for $47758d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 40.0, 'SpellClassMask_2': 32768, 'SpellClassSet': 6, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 10982},
 )
 
@@ -247,11 +248,12 @@ penance_47750 = spell(
     mana_cost_pct=0,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=67.3, potency_kind='heal', implicit_target_a=77),
+        Effect(type=EffectType.HEAL, sp_potency=114.41, potency_kind='heal', implicit_target_a=77),
     ],
     spell_icon_id=2818,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (84, chain has a gap at 60) slope (anchor rank 52985, rank 4); coefficient/cast_time_ms/mana_cost_pct from max rank (52985, rank 4); MaxLevel set to 80. "
-          "Potency system P5-Priest: converted to sp_potency=67.3 (potency-report default, base/coef already agreed).",
+          "Potency system P5-Priest: converted to sp_potency=67.3 (potency-report default, base/coef already agreed)."
+          ' sp_potency 67.3 -> 114.41 (2026-11-15, balance on the Normal-tier kits, user ruling: Penance heal 47750 +70%).',
     raw_overrides={'AttributesEx2': 4194308, 'AttributesEx3': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a volley of holy light at the target, causing $47666s1 Holy damage to an enemy, or {pot1} healing to an ally instantly and every $47758t2 sec for $47758d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 40.0, 'SpellClassMask_2': 65536, 'SpellClassSet': 6, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 10981},
 )
 

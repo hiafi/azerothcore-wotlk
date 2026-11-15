@@ -422,8 +422,8 @@ def _burst(spell_id: int, name: str, school, effect_description: str, icon: int,
            notes: str, magic: bool, **raw_extra):
     """An Elemental Burst: SCHOOL_DAMAGE 150 potency per target on the area around a destination (Fire Nova 8349's A 87 /
     B 16 shape, 5 yd), triggered by Shaman::CastElementalBurst at the shaman's target (or the shaman), range 50000 (L6)."""
-    sp = 150.0 if magic else 0.0
-    ap = 0.0 if magic else 150.0
+    sp = 225.0 if magic else 0.0
+    ap = 0.0 if magic else 225.0
     raw = _raw(spell_description, '', 15, family=magic, DefenseType=1 if magic else 2, PreventionType=1 if magic else 0,
                AttributesEx3=ATTR3_SUPPRESS_CASTER_PROCS, **raw_extra)
     return spell(
@@ -434,7 +434,7 @@ def _burst(spell_id: int, name: str, school, effect_description: str, icon: int,
             implicit_target_a=TARGET_DEST_DEST, implicit_target_b=TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=5.0,
         )],
         spell_icon_id=icon,
-        notes=NOTE + notes + ' Potency 150 direct, T 1500, SpellLevel 15 (Elemental Charge\'s row). SchoolMask ' + effect_description +
+        notes=NOTE + notes + ' Potency 225 direct, T 1500, SpellLevel 15 (Elemental Charge\'s row). sp_potency / ap_potency 150 -> 225 (2026-11-15, balance on the Normal-tier kits, user ruling: Flame Burst / Storm Burst / Wind Burst +50%). SchoolMask ' + effect_description +
               '. Area targets as Fire Nova 8349 (A 87 DEST_DEST, B 16, radius 5 yd = BURST_RADIUS_YD) so the caster picks the '
               'centre by the cast target (the shaman\'s current target, else the shaman); spell_sha_enh_burst filters to '
               'enemies in combat with the shaman or the group and keeps the BURST_TARGETS nearest (Q16). Triggered with no '
@@ -461,7 +461,7 @@ storm_burst_202385 = _burst(
 wind_burst_202386 = _burst(
     202386, 'Wind Burst', School.NORMAL, 'Physical (1)', ICON_WIND,
     'Deals {pot1} Physical damage to up to 5 enemies within 5 yards of your target.',
-    'Wind Burst, released by swapping away from Windfury at 10 Wind Charge. ap_potency 150, DmgClass MELEE (D6), SpellClassSet 0 '
+    'Wind Burst, released by swapping away from Windfury at 10 Wind Charge. ap_potency 225 (was 150), DmgClass MELEE (D6), SpellClassSet 0 '
     '(no family bits, so no shaman SpellMod and not Improved Stormstrike\'s aura 271).', False,
 )
 for _burst_spell in (flame_burst_202384, storm_burst_202385, wind_burst_202386):

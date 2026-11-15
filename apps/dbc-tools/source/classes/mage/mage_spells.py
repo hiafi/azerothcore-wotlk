@@ -1348,12 +1348,13 @@ arcane_blast = spell(
     mana_cost_pct=12,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=91.7, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=77.945, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=1, trigger_spell=arcane_blast_debuff.id),
     ],
     spell_icon_id=2294,
     notes='Arcane Mage rework (docs/arcane-mage-rework-design.md): learn level dropped 64->10 ("Now learnable at level 10"). Placeholder scaling curve rebased to the new low anchor, now fully replaced by potency\'s own level curve. Potency system P5 (Mage pass): converted to sp_potency=201.6 (mage-potency-proposals.txt) - resolves the "needs real tuning" open item via the project-wide potency formula rather than further hand-tuning. 2026-10-07: mana_cost_pct 7 -> 8 (DPS balance pass, user ruling: Arcane should feel mana pressure). mana_cost_pct 8 -> 10 (2026-10-08, DPS balance pass, user ruling: Arcane should feel mana pressure). mana_cost_pct 10 -> 12 (2026-10-08, DPS balance pass, user ruling: Arcane should go OOM with Arcane Blast spam). Effect 1 sp_potency 201.6 -> 131.0 (2026-10-08, DPS balance pass, user ruling: Arcane Blast -35%).'
-          ' Effect 1 sp_potency 131.0 -> 91.7 (2026-10-31, DPS balance pass 1031, user ruling: Arcane damage -30%).',
+          ' Effect 1 sp_potency 131.0 -> 91.7 (2026-10-31, DPS balance pass 1031, user ruling: Arcane damage -30%).'
+          ' Effect 1 sp_potency 91.7 -> 77.945 (2026-11-15, balance on the Normal-tier kits, user ruling: Arcane Blast -15%).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 10, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with energy, dealing {pot1} Arcane damage.  Each time you cast Arcane Blast, the damage of all Arcane spells is increased by $36032s1% and mana cost of Arcane Blast is increased by $36032s2%.  Effect stacks up to $36032u times and lasts $36032d or until any Arcane damage spell except Arcane Blast is cast.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 536870912, 'EffectSpellClassMaskC_1': 536870912, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 536870912, 'SpellClassSet': 3, 'SpellLevel': 10, 'SpellVisualID_1': 7749, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

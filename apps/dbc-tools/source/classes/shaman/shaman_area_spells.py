@@ -175,7 +175,7 @@ scripted_by(earthquake_tick_202281, 'spell_sha_earthquake_tick')
 elemental_blast_202282 = spell(
     id=202282, name='Elemental Blast', school=School.FIRE | School.FROST | School.NATURE, attributes=0,
     cast_time_ms=0, cooldown_ms=12000, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=6, range_yards=40.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=86.0, potency_kind='direct', time_basis_ms=1500,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=120.4, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_ELEMENTAL_BLAST,
     notes='SH0b A5, shared doc "Elemental Blast": instant, SchoolMask 0x1C (Fire 4 + Frost 16 + Nature 8: counts as '
@@ -183,7 +183,7 @@ elemental_blast_202282 = spell(
           '< 30 s), 40 yd, 6% base mana (was 8%; user playtest fix pass 2026-10-22, P1), GCD 1500 / 133 (an explicit spell-GCD like Lava Burst, brief decision 4), '
           'd2 b20 (no d0 b0 / b1, d1 b12). Speed 24 and SpellVisualID 11565 = Lava Burst\'s missile and impact (a '
           'lightning-impact clone of 11565 in the 90131+ block is the V stage). SpellLevel 50. Icon 1930 is a '
-          'placeholder (the 3.3.5 client has no Elemental Blast icon). Effect 1 sp_potency 43 -> 86 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Elemental Blast +100%).',
+          'placeholder (the 3.3.5 client has no Elemental Blast icon). Effect 1 sp_potency 43 -> 86 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Elemental Blast +100%). sp_potency 86 -> 120.4 (2026-11-15, balance on the Normal-tier kits, user ruling: Elemental Blast +40%).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_3': m.ELEMENTAL_BLAST, 'DefenseType': _DMG_MAGIC,
         'PreventionType': 1, 'EquippedItemClass': -1, 'SpellLevel': 50, 'CastingTimeIndex': 1,

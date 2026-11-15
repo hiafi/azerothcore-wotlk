@@ -5507,10 +5507,10 @@ fury_of_elune_beam_200338 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=15.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=22.5, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90111,
-    notes='NEW (druid-rework BALANCE §5 "Fury of Elune"): live damage every 0.5s tick, scales with level (learn 60, level-60 value 40 -> ppl 40/60); cast by the 200336 AuraScript\'s OnEffectPeriodic (WP-B); SpellVisualID_1 90020 (patch_druid_vfx_models.py): stock Moonfire impact + Fury of Elune damage-impact sound on every tick, under the beam 200336 carries. Potency system P5 (druid pass): converted to sp_potency=15.0 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.1) spell_bonus_data override is retired in favor of the generated DBC coefficient.',
+    notes='NEW (druid-rework BALANCE §5 "Fury of Elune"): live damage every 0.5s tick, scales with level (learn 60, level-60 value 40 -> ppl 40/60); cast by the 200336 AuraScript\'s OnEffectPeriodic (WP-B); SpellVisualID_1 90020 (patch_druid_vfx_models.py): stock Moonfire impact + Fury of Elune damage-impact sound on every tick, under the beam 200336 carries. Potency system P5 (druid pass): converted to sp_potency=15.0 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.1) spell_bonus_data override is retired in favor of the generated DBC coefficient. Effect 1 sp_potency 15.0 -> 22.5 (2026-11-15, balance on the Normal-tier kits, user ruling: Fury of Elune +50%)',
     raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_3': FURY_OF_ELUNE, 'SpellVisualID_1': 90020, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Astral damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
@@ -5527,10 +5527,10 @@ fury_of_elune_splash_200339 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=7.5, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=11.25, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=90111,
-    notes='NEW (druid-rework BALANCE §5): half of 200338, scripted_by(spell_dru_starfall_aoe) filters the primary target out (see druid_talents.py). Potency system P5 (druid pass): converted to sp_potency=7.5 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.05) spell_bonus_data override is retired in favor of the generated DBC coefficient.',
+    notes='NEW (druid-rework BALANCE §5): half of 200338, scripted_by(spell_dru_starfall_aoe) filters the primary target out (see druid_talents.py). Potency system P5 (druid pass): converted to sp_potency=7.5 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.05) spell_bonus_data override is retired in favor of the generated DBC coefficient. Effect 1 sp_potency 7.5 -> 11.25 (2026-11-15, balance on the Normal-tier kits, user ruling: Fury of Elune +50%, splash half kept at half of 200338)',
     raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_3': FURY_OF_ELUNE, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Astral damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 

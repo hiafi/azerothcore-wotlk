@@ -154,13 +154,13 @@ stomp_pet_201804 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=40.0, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=52.0, potency_kind='direct',
                implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],
     pet_owner_scaling=_PET_SCALING,
     spell_icon_id=129,
     tooltip_vars=bm_stomp_1161,
-    notes='S1a BM 4.7 / 0.1: pet-cast Stomp, data only (S1b casts it). ap_potency 40 (guess, M tunes), 8 yd around the target, d1 b28 + d2 b24 (STOMP_CARRIER; Earthshaker reads d2 b24). Visual 7429 from Thunderstomp 63900.',
+    notes='S1a BM 4.7 / 0.1: pet-cast Stomp, data only (S1b casts it). ap_potency 40 (guess, M tunes) -> 52.0 (2026-11-15, balance on the Normal-tier kits, user ruling: Stomp +30%), 8 yd around the target, d1 b28 + d2 b24 (STOMP_CARRIER; Earthshaker reads d2 b24). Visual 7429 from Thunderstomp 63900.',
     raw_overrides={
         'EquippedItemClass': -1, 'SpellLevel': 30, 'DefenseType': 2, 'PreventionType': 2, 'AttributesEx': 0x200,
         'SpellClassSet': 9, 'SpellClassMask_2': m.STOMP_CARRIER[1], 'SpellClassMask_3': m.STOMP_CARRIER[2],
@@ -1012,7 +1012,8 @@ ambush_display_201873 = _display(
 # faction and react state come from the summon (Guardian::InitStats, the AI). Three models each, probability 1.0.
 _STAMPEDE_GUARDIAN_COMMON = dict(
     faction=35, unit_class=1, unit_flags=33554434, type=1, flags_extra=66,
-    DamageModifier=1, BaseAttackTime=2000, RegenHealth=0, detection_range=0,
+    DamageModifier=1.5,   # 1 -> 1.5 (2026-11-15, balance on the Normal-tier kits, user ruling: Stampede pets +50% damage)
+    BaseAttackTime=2000, RegenHealth=0, detection_range=0,
     minlevel=1, maxlevel=1, ScriptName='npc_hun_stampede_beast',
 )
 

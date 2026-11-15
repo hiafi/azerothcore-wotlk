@@ -115,7 +115,7 @@ def expectations(idx: dict) -> tuple[dict, dict, dict]:
             "SpellClassMask_1": 0, "SpellClassMask_2": 0, "SpellClassMask_3": 0,
         },
         # ---- reworked stock rows: costs, effect order (percent first), levels
-        SS: {"ManaCost": 40, "SpellLevel": 1, "BaseLevel": 1, "Effect_1": 31, "EffectBasePoints_1": 199,   # DPS balance pass 1031: 200% (M2a 250%)
+        SS: {"ManaCost": 40, "SpellLevel": 1, "BaseLevel": 1, "Effect_1": 31, "EffectBasePoints_1": 259,   # BAL1 2026-11-15: 260% (1031: 200%, M2a 250%)
              "Effect_2": 121, "Effect_3": 80, "MaxLevel": 0, "StartRecoveryCategory": 133, "StartRecoveryTime": 1000},
         BS: {"ManaCost": 45, "SpellLevel": 4, "BaseLevel": 4, "Effect_1": 31, "EffectBasePoints_1": 499,   # DPS balance pass 1031: 500% (M2a 250%)
              "Effect_2": 121, "Effect_3": 80},

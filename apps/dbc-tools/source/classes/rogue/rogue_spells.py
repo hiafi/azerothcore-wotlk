@@ -214,8 +214,8 @@ sinister_strike_1752 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=200, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=8, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=260, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10.4, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
@@ -231,7 +231,8 @@ sinister_strike_1752 = spell(
         'S3a A4 (U58): tooltip_vars = SDV 1350 and the multiplier token ssmult (Improved Sinister Strike x Surprise '
         'Attacks) on the weapon percent and the flat part; second binding spell_rog_sinister_strike_combat. '
         'rogue-rework M2a (M1 S2, [tune]): weapon_potency 100 -> 250 (the second strike 203986 mirrors it). '
-        'weapon_potency 250 -> 200 and sp_potency 10 -> 8 (2026-11-01, DPS balance pass 1031, user ruling: Sinister Strike -20%; 203986 mirrors it).'
+        'weapon_potency 250 -> 200 and sp_potency 10 -> 8 (2026-11-01, DPS balance pass 1031, user ruling: Sinister Strike -20%; 203986 mirrors it). '
+        'weapon_potency 200 -> 260 and sp_potency 8 -> 10.4 (2026-11-15, balance on the Normal-tier kits, user ruling: Sinister Strike +30%; 203986 mirrors it).'
     ),
     tooltip_vars=tooltip_sinister_strike_1350,
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant strike that causes ${$s1*$<ssmult>}% weapon damage plus {pot2.avg*ssmult}. Awards 1 combo point.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8388610, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 1, 'SpellVisualID_1': 253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},

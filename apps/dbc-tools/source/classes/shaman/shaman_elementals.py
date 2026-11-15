@@ -193,14 +193,14 @@ water_bolt_heal_202277 = spell(
     id=202277, name='Water Bolt', school=School.NATURE, attributes=0, cast_time_ms=0, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
     effects=[Effect(
-        type=EffectType.HEAL, sp_potency=10.0, potency_kind='heal', time_basis_ms=2000,
+        type=EffectType.HEAL, sp_potency=20.0, potency_kind='heal', time_basis_ms=2000,
         implicit_target_a=TARGET_UNIT_TARGET_ALLY,
     )],
     spell_icon_id=ICON_WATERBOLT,
     notes=NOTE + 'Water Bolt\'s heal (shared doc: Nature school, 10 potency each, T 2000 = the bolt\'s 2 s cast, about 141 at 60), '
           'cast by spell_sha_water_bolt from the Water Elemental on up to 3 lowest-percent players within 40 yd (pets never '
           'chosen) as a triggered plain CastSpell, caster = the guardian (no owner GUID, so it rolls none of the shaman\'s '
-          'procs). range_yards 50000 (RangeIndex 13): the targets sit anywhere near the elemental (L6). Family d2 b24 so '
+          'procs). sp_potency 10 -> 20 (2026-11-15, balance on the Normal-tier kits, user ruling: Greater Water Elemental Water Bolt healing +100%). range_yards 50000 (RangeIndex 13): the targets sit anywhere near the elemental (L6). Family d2 b24 so '
           'Purification-style talents reach it. SpellLevel 1 (no learn level, warlock P8 shape).',
     raw_overrides={
         'SpellClassSet': SPELLFAMILY_SHAMAN, 'SpellClassMask_3': m.WATER_BOLT_HEAL, 'EquippedItemClass': -1,
@@ -213,7 +213,7 @@ water_bolt_202276 = spell(
     id=202276, name='Water Bolt', school=School.FROST, attributes=0, cast_time_ms=2000, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=45.0,
     effects=[Effect(
-        type=EffectType.SCHOOL_DAMAGE, sp_potency=21.5, potency_kind='direct', implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
+        type=EffectType.SCHOOL_DAMAGE, sp_potency=43.0, potency_kind='direct', implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
     )],
     spell_icon_id=ICON_WATERBOLT,
     notes=NOTE + 'the Water Elemental\'s only ability (shared doc "Water Elemental"): 2 s cast, 43 potency Frost damage '
@@ -221,7 +221,8 @@ water_bolt_202276 = spell(
           'the guardian, SpellLevel 1 (warlock P8 shape). Range 45 yd = stock Waterbolt 31707 (RangeIndex 36); the AI '
           'chases to 30 yd and searches 40 yd (consts). Missile speed 16 and SV 7875 are Waterbolt\'s ("mage Waterbolt" '
           'visual). Family d2 b25. '
-          '2026-11-01 sp_potency 43.0 -> 21.5 (2026-11-01, DPS balance pass 1031, user ruling: Greater Water Elemental Water Bolt -50%).',
+          '2026-11-01 sp_potency 43.0 -> 21.5 (2026-11-01, DPS balance pass 1031, user ruling: Greater Water Elemental Water Bolt -50%). '
+          'sp_potency 21.5 -> 43.0 (2026-11-15, balance on the Normal-tier kits, user ruling: Water Bolt damage +100%).',
     raw_overrides={
         'SpellClassSet': SPELLFAMILY_SHAMAN, 'SpellClassMask_3': m.WATER_BOLT_DAMAGE, 'EquippedItemClass': -1,
         'DefenseType': 1, 'PreventionType': 1, 'SpellLevel': 1, 'Speed': 16.0, 'SpellVisualID_1': SV_WATERBOLT,
@@ -362,7 +363,7 @@ creature_spell(300261, 0, storm_bolt_202278)
 # applied in SyncGuardianAuras); DamageModifier stays at the stock 1.5. Fire Blast, Fire Nova and Angered Earth are not
 # melee and are untouched either way.
 greater_fire_elemental_15438 = creature_template(15438, 'Greater Fire Elemental', ScriptName='npc_sha_fire_elemental_rework',
-                                                 DamageModifier=0.4)
+                                                 DamageModifier=0.6)   # 0.4 -> 0.6 (2026-11-15, balance on the Normal-tier kits, user ruling: Greater Fire Elemental melee +50%)
 greater_earth_elemental_15352 = creature_template(15352, 'Greater Earth Elemental', ScriptName='npc_sha_earth_elemental_rework',
                                                   DamageModifier=1.5)
 
