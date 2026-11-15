@@ -77,9 +77,10 @@ class HardModeItemEffectsTest(unittest.TestCase):
     def test_ids_sit_in_their_reservations(self):
         self.assertEqual(sorted(self.spells), list(range(KEG, ZONE + 1)))
         # Every source/items spell sits in an item reservation: `items` (Deadmines, the copies), a dungeon's
-        # `<dungeon>_items` or the Haunted set's `haunted_set`.
+        # `<dungeon>_items` or a dungeon set's `haunted_set` / `molten_set`. A stock id (Totem of Rage's Equip 27859,
+        # moved onto potency) is outside every minted block and is not judged.
         owners = [name for name in id_blocks.RESERVATIONS
-                  if name in ("items", "haunted_set") or name.endswith("_items")]
+                  if name in ("items", "haunted_set", "molten_set") or name.endswith("_items")]
         declared = id_blocks.declared_ids(TOOL_ROOT / "source" / "items")
         for value in declared.get("spell", []):
             self.assertTrue(any(not id_blocks.out_of_reservation(owner, {"spell": [value]}) for owner in owners),

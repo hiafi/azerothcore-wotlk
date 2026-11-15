@@ -639,6 +639,21 @@ reservations:
     spell: {start: 205700, end: 205899}
     creature: {start: 300480, end: 300499}
 
+  # Blackrock gear stage (.agents/plans/blackrock-gear/, 2026-11-14): the Blackrock Spire and Blackrock Depths item
+  # effects (source/items/blackrock_*_hard_mode_effects.py) and the Molten dungeon set bonus spells and token vendors
+  # (source/items/molten_set*.py, source/npcs/molten_set/). Checked free 2026-11-14: no declaration, pending SQL or live
+  # spell_dbc / creature_template row in 206800-206999 or 300650-300699. The Molten tokens 70540-70579, ItemSet
+  # 1002-1003 and ItemExtendedCost 3040-3079 were set aside with the Haunted ones (the blocks above).
+  blackrock_spire_items:
+    spell: {start: 206800, end: 206829}
+    creature: {start: 300650, end: 300654}
+  blackrock_depths_items:
+    spell: {start: 206830, end: 206899}
+    creature: {start: 300655, end: 300669}
+  molten_set:
+    spell: {start: 206900, end: 206999}
+    creature: {start: 300670, end: 300699}
+
   # Crafting rework C4 (source/world/crafting_suffixes.py): the nine Missive buffs 207000-207008 and their Inscription
   # recipes 207010-207018 (207019-207049 spare), and the recipes' SkillLineAbility rows 30900-30908 (30909-30919
   # spare). Checked free 2026-11-10: no declaration, SQL file (base, merged, pending) or live spell_dbc row at or above

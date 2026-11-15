@@ -133,8 +133,71 @@ namespace ItemSpellCopies
         { 205516, 205671, 205515 },  // strat_deathchargers_spur empowered_2_hm
         { 205517, 205670, 205517 },  // strat_deathchargers_spur empowered_3_hm
         { 205518, 205671, 205517 },  // strat_deathchargers_spur empowered_3_hm
+        { 205519, 206831, 205519 },  // brd_leftys_shiv empowered_1_hm
+        { 205520, 206832, 205519 },  // brd_leftys_shiv empowered_1_hm
+        { 205521, 206831, 205521 },  // brd_leftys_shiv empowered_2_hm
+        { 205522, 206832, 205521 },  // brd_leftys_shiv empowered_2_hm
+        { 205523, 206831, 205523 },  // brd_leftys_shiv empowered_3_hm
+        { 205524, 206832, 205523 },  // brd_leftys_shiv empowered_3_hm
+        { 205525, 206835, 205525 },  // brd_black_anvil_bulwark empowered_1_hm
+        { 205526, 206836, 205525 },  // brd_black_anvil_bulwark empowered_1_hm
+        { 205527, 206835, 205527 },  // brd_black_anvil_bulwark empowered_2_hm
+        { 205528, 206836, 205527 },  // brd_black_anvil_bulwark empowered_2_hm
+        { 205529, 206835, 205529 },  // brd_black_anvil_bulwark empowered_3_hm
+        { 205530, 206836, 205529 },  // brd_black_anvil_bulwark empowered_3_hm
+        { 205531, 206837, 205531 },  // brd_fist_of_the_lake_lord empowered_1_hm
+        { 205532, 206838, 205531 },  // brd_fist_of_the_lake_lord empowered_1_hm
+        { 205533, 206837, 205533 },  // brd_fist_of_the_lake_lord empowered_2_hm
+        { 205534, 206838, 205533 },  // brd_fist_of_the_lake_lord empowered_2_hm
+        { 205535, 206837, 205535 },  // brd_fist_of_the_lake_lord empowered_3_hm
+        { 205536, 206838, 205535 },  // brd_fist_of_the_lake_lord empowered_3_hm
+        { 205537, 206839, 205537 },  // brd_scepter_of_the_molten_lake empowered_1_hm
+        { 205538, 206840, 205537 },  // brd_scepter_of_the_molten_lake empowered_1_hm
+        { 205539, 206841, 205537 },  // brd_scepter_of_the_molten_lake empowered_1_hm
+        { 205540, 206839, 205540 },  // brd_scepter_of_the_molten_lake empowered_2_hm
+        { 205541, 206840, 205540 },  // brd_scepter_of_the_molten_lake empowered_2_hm
+        { 205542, 206841, 205540 },  // brd_scepter_of_the_molten_lake empowered_2_hm
+        { 205543, 206839, 205543 },  // brd_scepter_of_the_molten_lake empowered_3_hm
+        { 205544, 206840, 205543 },  // brd_scepter_of_the_molten_lake empowered_3_hm
+        { 205545, 206841, 205543 },  // brd_scepter_of_the_molten_lake empowered_3_hm
+        { 205546, 206842, 205546 },  // brd_prototype_power_core empowered_1_hm
+        { 205547, 206843, 205546 },  // brd_prototype_power_core empowered_1_hm
+        { 205548, 206842, 205548 },  // brd_prototype_power_core empowered_2_hm
+        { 205549, 206843, 205548 },  // brd_prototype_power_core empowered_2_hm
+        { 205550, 206842, 205550 },  // brd_prototype_power_core empowered_3_hm
+        { 205551, 206843, 205550 },  // brd_prototype_power_core empowered_3_hm
+        { 205552, 206844, 205552 },  // brd_golemwrights_mending_rod empowered_1_hm
+        { 205553, 206845, 205552 },  // brd_golemwrights_mending_rod empowered_1_hm
+        { 205554, 206846, 205552 },  // brd_golemwrights_mending_rod empowered_1_hm
+        { 205555, 206844, 205555 },  // brd_golemwrights_mending_rod empowered_2_hm
+        { 205556, 206845, 205555 },  // brd_golemwrights_mending_rod empowered_2_hm
+        { 205557, 206846, 205555 },  // brd_golemwrights_mending_rod empowered_2_hm
+        { 205558, 206844, 205558 },  // brd_golemwrights_mending_rod empowered_3_hm
+        { 205559, 206845, 205558 },  // brd_golemwrights_mending_rod empowered_3_hm
+        { 205560, 206846, 205558 },  // brd_golemwrights_mending_rod empowered_3_hm
+        { 205561, 206847, 205561 },  // brd_electrons_lethal_coil empowered_1_hm
+        { 205562, 206848, 205561 },  // brd_electrons_lethal_coil empowered_1_hm
+        { 205563, 206849, 205561 },  // brd_electrons_lethal_coil empowered_1_hm
+        { 205564, 206847, 205564 },  // brd_electrons_lethal_coil empowered_2_hm
+        { 205565, 206848, 205564 },  // brd_electrons_lethal_coil empowered_2_hm
+        { 205566, 206849, 205564 },  // brd_electrons_lethal_coil empowered_2_hm
+        { 205567, 206847, 205567 },  // brd_electrons_lethal_coil empowered_3_hm
+        { 205568, 206848, 205567 },  // brd_electrons_lethal_coil empowered_3_hm
+        { 205569, 206849, 205567 },  // brd_electrons_lethal_coil empowered_3_hm
+        { 205570, 206850, 205570 },  // brd_volcanic_heartstone empowered_1_hm
+        { 205571, 206851, 205570 },  // brd_volcanic_heartstone empowered_1_hm
+        { 205572, 206850, 205572 },  // brd_volcanic_heartstone empowered_2_hm
+        { 205573, 206851, 205572 },  // brd_volcanic_heartstone empowered_2_hm
+        { 205574, 206850, 205574 },  // brd_volcanic_heartstone empowered_3_hm
+        { 205575, 206851, 205574 },  // brd_volcanic_heartstone empowered_3_hm
+        { 205576, 206852, 205576 },  // brd_orb_of_the_sorcerer_thane empowered_1_hm
+        { 205577, 206853, 205576 },  // brd_orb_of_the_sorcerer_thane empowered_1_hm
+        { 205578, 206852, 205578 },  // brd_orb_of_the_sorcerer_thane empowered_2_hm
+        { 205579, 206853, 205578 },  // brd_orb_of_the_sorcerer_thane empowered_2_hm
+        { 205580, 206852, 205580 },  // brd_orb_of_the_sorcerer_thane empowered_3_hm
+        { 205581, 206853, 205580 },  // brd_orb_of_the_sorcerer_thane empowered_3_hm
     };
-    inline constexpr std::size_t kCopyCount = 109;
+    inline constexpr std::size_t kCopyCount = 172;
 
     // The group of `spellId` when it is a copy, else 0.
     constexpr std::uint32_t GroupOf(std::uint32_t spellId)

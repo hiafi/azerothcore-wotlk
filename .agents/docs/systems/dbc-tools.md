@@ -315,6 +315,14 @@ and the Item.dbc merge before they are used) and in the full run's SQL and patch
   A full write run stops without them; `--check` warns.
 - **Not wired yet:** `boss_loot()` resolves `item()` keys only, so a token cannot be put on a boss list until the loot
   resolver also accepts `set_token()` keys (the dungeons' loot stage).
+- **Molten set (blackrock gear):** same machinery, `source/items/molten_set*.py` and `source/npcs/molten_set/`. A stock
+  piece another declaration owns (a `quest_rewards.lock` line, the Tier 0.5 armor) is handed over by deleting its
+  `quest_rewards.lock` line and keeping the `item_ids.lock` key (`qr_<entry>`); the quest chain's own rewards are
+  hand SQL (`quest_template` is not managed here).
+- **Stock spell moved onto potency:** an id owned by `source/spells/*.csv` becomes a DSL `spell()` in `source/items/` by
+  deleting its csv row (one owner per spell). The potency shape lint (`lint.check_percent_field_potency`) only lets a
+  non-damage/heal/absorb effect carry potency if its spell id is in `_POTENCY_FLAT_BONUS_SPELLS` (Totem of Rage's
+  Equip 27859, flat spell power on the level curve).
 
 ## Watch out: a full write run is global; dungeon and class work writes with `--scope`
 

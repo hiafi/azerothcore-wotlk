@@ -1016,6 +1016,12 @@ _POTENCY_EFFECT_TYPES = frozenset({2, 3, 10, 17, 31, 58, 77, 121})
 _POTENCY_CARRIER_EFFECT_TYPES = frozenset({6, 27, 35})
 # 226 = PERIODIC_DUMMY: Death and Decay's 43265 carrier, whose script passes the amount into the 52212 tick (F9).
 _POTENCY_AURAS = frozenset({0, 3, 4, 8, 43, 53, 69, 226, 227})
+# Flat spell power an item grants on its own level curve (a count that is meant to grow with level, user rule
+# "everything on potency"), declared on potency although the effect is not damage/heal/absorb shaped: spell id -> why.
+_POTENCY_FLAT_BONUS_SPELLS: dict[int, str] = {
+    27859: "Totem of Rage's Equip (OVERRIDE_CLASS_SCRIPTS 4418, Unit.cpp: flat spell power for Earth, Flame and Frost "
+           "Shock): the stock +30 at level 60, on the level curve below it (blackrock gear, Depths list)",
+}
 
 
 def check_percent_field_potency(
@@ -1045,7 +1051,7 @@ def check_percent_field_potency(
                 aura = int(effect.get("apply_aura") or 0)
                 shaped = effect_type in _POTENCY_EFFECT_TYPES or (
                     effect_type in _POTENCY_CARRIER_EFFECT_TYPES and aura in _POTENCY_AURAS
-                )
+                ) or spell_id in _POTENCY_FLAT_BONUS_SPELLS
                 if not shaped:
                     errors.append(
                         f"spell {spell_id} ({entry.get('name', '?')}) effect {index}: potency on effect type "
