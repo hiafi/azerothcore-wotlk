@@ -227,20 +227,47 @@ namespace MoltenSet
             case Archetype::FiveThunders:
                 return (!e.periodic && e.spell && e.damageOrHeal) ? castHeat : 0;
             case Archetype::Soulforge:
-                return (!e.periodic && (e.spell || e.meleeAbility) && e.holy) ? castHeat : 0;
+                // Any Holy spell or ability: Judgement and Avenger's Shield are ranged class in the 3.3.5 data.
+                return (!e.periodic && (e.spell || e.meleeAbility || e.rangedAbility) && e.holy) ? castHeat : 0;
             case Archetype::Heroism:
             case Archetype::Guardians:
             case Archetype::Impenetrable:
-                return (!e.periodic && e.meleeAbility) ? castHeat : 0;
+                // "Abilities": melee or ranged class (Thunder Clap, Avenger's Shield, Judgement are ranged class),
+                // never an auto attack (the proc rows carry no auto attack flag).
             case Archetype::Beastmasters:
                 return (!e.periodic && (e.meleeAbility || e.rangedAbility)) ? castHeat : 0;
             case Archetype::Darkmantle:
-                if (e.periodic || !e.finisher || !e.comboPoints || !(e.meleeAbility || e.rangedAbility))
+                // Any finisher, whatever its damage class: Slice and Dice and Savage Roar are class NONE.
+                if (e.periodic || !e.finisher || !e.comboPoints)
                     return 0;
                 return e.comboPoints + (e.crit ? 1 : 0);
             default:
                 return 0;
         }
+    }
+
+    // Where a two-sided eruption (Molten Thunder, Hallowed Flame) lands.
+    enum class PayoutSide : std::uint8_t
+    {
+        Enemy,   // the damage half on the event's enemy target
+        Ally,    // the heal half on the event's ally target
+        Wearer,  // the heal half on the wearer
+        Nearby,  // the damage half on the wearer's in-combat victim or selection
+    };
+
+    // The event's target is an enemy, an ally other than the wearer, or neither (none, or the wearer itself, as a
+    // self-cast cooldown has); `healing` says the cast heals; `enemyInCombat` that the wearer has an in-combat victim
+    // or hostile selection. A heal (on the wearer too) heals; a self-cast that does not heal (Elemental Mastery, a
+    // seal) strikes the wearer's enemy, the heal on the wearer only when there is none.
+    constexpr PayoutSide ChoosePayoutSide(bool targetEnemy, bool targetOtherAlly, bool healing, bool enemyInCombat)
+    {
+        if (targetEnemy)
+            return PayoutSide::Enemy;
+        if (targetOtherAlly)
+            return PayoutSide::Ally;
+        if (!healing && enemyInCombat)
+            return PayoutSide::Nearby;
+        return PayoutSide::Wearer;
     }
 
     // A Heat gain's result: the stacks left on the buff (0: the buff goes) and whether it erupted.

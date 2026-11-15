@@ -34,7 +34,9 @@ sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import test_id_blocks as id_blocks  # noqa: E402
 from lib.dsl.items import NULL_PRIMARY_SHAPE, Quality, Socket, SpellTrigger  # noqa: E402
-from lib.test_hard_mode_item_effects import _load_items_registry  # noqa: E402
+from lib.test_hard_mode_item_effects import (  # noqa: E402
+    _load_items_registry, assert_shape_stats_on_every_tier,
+)
 
 MODULE_DIR = REPO_ROOT / "modules" / "mod-dungeon-bosses" / "src" / "BlackrockSpire"
 HEADER = MODULE_DIR / "BlackrockSpireHardModeItemsLogic.h"
@@ -186,6 +188,14 @@ def _shape_stats(name):
     return set(bare.split("/"))
 
 
+# Blackrock gear fix pass (REVIEW S1-S3): the declared budget multipliers; every other item takes the default.
+DECLARED_MULTS = {
+    "brs_ward_of_the_three_tribes": 0.6,      # socketed hard mode shield: every doc stat a few points (S3)
+    "brs_shardstaff_of_stolen_power": 0.7105,  # caster two-hand 60-100 cell x 0.7, 101 tier included (S1)
+    "brs_riphook": 0.405,                      # bow 60-100 cell on the level 59 Normal tier too (S2)
+}
+
+
 class BlackrockSpireItemsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -220,6 +230,19 @@ class BlackrockSpireItemsTest(unittest.TestCase):
                 self.assertEqual(_shape_stats(decl.primary), {STAT_NAMES[first]}, key)
             else:
                 self.assertIn(decl.primary, (None, NULL_PRIMARY_SHAPE), key)
+
+    def test_declared_multipliers(self):
+        """Only the fix pass's items declare a multiplier; the thrown axe keeps the one-hand baseline DPS."""
+        declared = {k: d.budget_mult for k, d in self.decls.items() if d.budget_mult is not None}
+        self.assertEqual(declared, DECLARED_MULTS)
+        self.assertEqual(self.decls["brs_flightblade_throwing_axe"].extra_dps, 0.0)
+        self.assertFalse(self.decls["brs_flightblade_throwing_axe"].keep_spells)  # its +12 AP Equip folds away
+
+    def test_every_shape_stat_is_on_every_tier(self):
+        """The materialized rows, not the declaration: every doc stat (the item's shape stats) has at least one point
+        on every tier (REVIEW S3: a thin cell budget after the socket left a hard mode shield 1 Strength and nothing
+        else)."""
+        assert_shape_stats_on_every_tier(self, self.decls)
 
     def test_shapes_exist(self):
         from lib import item_variants  # noqa: PLC0415
@@ -343,7 +366,9 @@ class BlackrockSpireItemsTest(unittest.TestCase):
             self.assertEqual((item_spell.spell_id, item_spell.trigger), (spell_id, trigger), key)
             self.assertEqual(item_spell.cooldown, -1, key)  # the spell's own cooldown
             self.assertIsNone(item_spell.scale, key)  # nothing here grows with item level
-            self.assertIsNone(decl.budget_mult, key)  # an effect item pays 0.7 of the budget
+            # an effect item pays 0.7 of the budget (the default), except the fix pass's declared ones: the Ward (a
+            # socketed thin shield, S3) and the Shardstaff (the 60-100 cell x 0.7 on every tier, S1)
+            self.assertEqual(decl.budget_mult, DECLARED_MULTS.get(key), key)
 
     def test_nothing_deals_damage_or_heals(self):
         for spell_id, spell in self.spells.items():

@@ -47,6 +47,12 @@ resolved for the first time (`ItemExpansion.cells_lock_appended`); `--check` nam
 add cells, never change one another item already uses. Retuning a cell is a deliberate act: change a declaration
 (`budget_mult=` / `extra_dps=` / `weapon_role=`), never the line.
 
+**Bucket steps** (blackrock gear fix S1/S2). Each bucket was fit on its own, so two tiers of one ladder in different
+buckets can take very different cells (the 101-200 caster cells, fit on TBC items, are 1.8x to 2.4x the 60-100 ones).
+A tier whose `budget_mult` comes from a cell may step at most `ROLE_CELL_MAX_STEP` (1.5x) over the tier below it when
+that one came from a cell too; a bigger step is an ERROR naming both cells. Declare `budget_mult=` on the item (the
+lower cell, times 0.7 with an effect) to keep the ladder on the budget curve.
+
 **Free DPS** (quest reward ruling 40). `free_dps=True` keeps the role cell's stats while `extra_dps=` sets the DPS:
 the DPS over the cell's fraction costs `item_weapon_dps_cost` budget per point, so the tier's `budget_mult` is raised
 by exactly that (`_free_dps_mult`, the same arithmetic as ItemBudget.cpp). It needs a weapon with a role cell, and the
@@ -85,6 +91,11 @@ WEAPON_TIER_INV_TYPES = (13, 14, 15, 17, 21, 22, 23, 25, 26, 28)
 # The stock conversion's item level buckets (each bucket was fit on its own, so a cell never mixes two).
 ROLE_CELL_BUCKETS = ((1, 59), (60, 100), (101, 200), (201, 300))
 ROLE_CELL_MIN_SAMPLES = 3
+# The largest budget_mult step one ladder tier may take over the tier below it when both come from a role cell. The
+# budget curve already scales the stats with item level, so a bigger step is a bucket artifact (blackrock gear REVIEW
+# S1/S2: the 101-200 caster cells, fit on TBC items, gave a 2.4x jump from 91 to 101). The live vanilla ladders step at
+# most 1.35x (caster one-hand 60-100 -> 101-200).
+ROLE_CELL_MAX_STEP = 1.5
 CASTER_LEAD_STATS = frozenset((5, 6, 45))  # Intellect, Spirit, Spell Power
 TANK_STATS = frozenset((12, 13, 14, 15, 48))  # Defense, Dodge, Parry, Block rating, Block value
 DURABILITY_WINDOWS = (5, 10, 20, None)  # item level distance; None = any level
@@ -734,6 +745,7 @@ def _resolve_item(
         item_class=item_class, subclass=subclass, sockets=tuple(sockets),
     )
     tier_plans = []
+    previous_cell = None  # (tier name, cell) of the tier below when its budget_mult came from a role cell
     for plan in plans:
         spec = plan["spec"]
         if spec.deferred:
@@ -742,6 +754,18 @@ def _resolve_item(
         cell = None
         if weapon_tier and role_cells is not None:
             cell = role_cells.lookup(role, inv_type, plan["quality"], plan["ilvl"])
+        # Whether this tier's budget_mult comes from the cell (below): a live item's higher tiers, or no declared one.
+        from_cell = cell is not None and (not plan["first"] if live_row is not None else mult is None)
+        if from_cell and previous_cell is not None and previous_cell[1][0] > 0:
+            step = cell[0] / previous_cell[1][0]
+            if step > ROLE_CELL_MAX_STEP:
+                errors.append(
+                    f"{where} tier {spec.name!r}: its role cell's budget_mult {cell[0]} ({cell[2]}) is {step:.2f}x "
+                    f"tier {previous_cell[0]!r}'s {previous_cell[1][0]} ({previous_cell[1][2]}), over the "
+                    f"{ROLE_CELL_MAX_STEP}x a ladder step may take (an item level bucket artifact); declare "
+                    f"budget_mult= (e.g. the lower cell, times 0.7 with an effect)"
+                )
+        previous_cell = (spec.name, cell) if from_cell else None
         if live_row is not None and plan["first"]:
             itemization = {c: live_row[c] for c in ITEMIZATION_COLUMNS}
             source = "live row"
@@ -793,7 +817,8 @@ def _resolve_item(
                     continue
                 itemization["budget_mult"] = free_mult
                 source += ", free DPS"
-            budget.compute_breakdown(stand_in, {"entry": stand_in["entry"], **itemization}, tables, catalog)
+            breakdown = budget.compute_breakdown(stand_in, {"entry": stand_in["entry"], **itemization}, tables,
+                                                 catalog)
         except budget.BudgetError as error:
             errors.append(f"{where} tier {spec.name!r}: the budget does not resolve: {error}")
             continue
@@ -809,6 +834,9 @@ def _resolve_item(
             "first": plan["first"], "itemization": itemization, "columns": tier_columns, "baselines": base,
             "number": tier_number(decl.ladder, spec), "sockets": spec.sockets, "max_durability": max_durability,
             "budget_source": source,
+            # The materialized stat lines (stat type -> value, zero lines left out as the materializer does); the live
+            # first tier of an itemization="live" item computes from its live row the same way.
+            "stats": {a["stat_type"]: a["rounded"] for a in breakdown["allocations"] if a["rounded"]},
         })
     if len(errors) > start:
         return None

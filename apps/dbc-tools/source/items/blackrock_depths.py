@@ -93,6 +93,25 @@ RARE = Quality.RARE
 EXTRA_STAMINA = 0.25  # "extra Stamina" on a tank piece: a quarter more than the tier's baseline
 NO_SET = {"itemset": 0}  # the dissolved Savage Gladiator set (ruling 85): no set bonus on any tier
 
+# Blackrock gear fix pass (REVIEW S1-S3), declared multipliers that replace a weapon-tier role cell:
+# - a caster main-hand or bow whose stock level is below 60 takes the 60-100 cell (1.931, 0.405) on its Normal tier;
+#   the 1-59 cell (0.8, five live items; bows 0.269) is a third (two thirds) of it (S2; the bucket step check);
+# - a hard mode weapon whose 101 tier would fall in the 101-200 bucket keeps its 60-100 cell times the effect discount
+#   on every tier: that bucket was fit on TBC items (caster two-hand 2.455, caster main-hand 3.429, shield 0.758), a
+#   2x to 2.7x step from 91 to 101 instead of the budget curve's 1.13x (S1; the physical two-hand also keeps its
+#   60-100 DPS fraction);
+# - a socketed hard mode one-hander or shield pays the socket out of a thin cell budget (0.311 / 0.295 left 1 point of
+#   the primary and 0 or 1 of each secondary): 0.6 gives every doc stat a few points (S3).
+CASTER_MAIN_HAND_MULT = 1.931            # caster InventoryType 21 ilvl 60-100 (item_role_cells.lock)
+HM_CASTER_TWO_HAND_MULT = 0.7105         # caster InventoryType 17 ilvl 60-100 1.015 x the effect discount 0.7
+HM_CASTER_MAIN_HAND_MULT = 1.3517        # caster InventoryType 21 ilvl 60-100 1.931 x 0.7
+# physical InventoryType 17 Quality 4 ilvl 60-100: 0.791 x 0.7 and its DPS fraction. The 101-200 cell's multiplier is
+# close (0.885) but its DPS fraction (0.0002) moves the DPS budget into stats: 13 to 21 Strength from 91 to 101.
+HM_PHYSICAL_TWO_HAND_MULT = 0.5537
+HM_PHYSICAL_TWO_HAND_DPS = 0.0695
+HM_SOCKETED_THIN_MULT = 0.6              # socketed hard mode one-hander or shield with an effect
+BOW_MULT = 0.405                         # physical InventoryType 15 ilvl 60-100: a bow below level 60 (S2, the same)
+
 # Bows need no ammo (source/world/ranged_weapons.py, hunter-rework Q3); an item() declaration owns its entry, so it
 # sets the column itself and the minted tiers copy it (ranged_weapons.py skips item-owned entries).
 NO_AMMO = 0
@@ -135,8 +154,9 @@ item("brd_idol_of_ferocity", base=22397, ladder=VANILLA_DUNGEON,
      primary="Agility (Solo)", secondary="Dodge/Proc")
 
 # Houndmaster Grebmar (stock item level 52-53)
+# Stock level 53: BOW_MULT (the 60-100 bow cell) on the Normal tier too (fix S2).
 item("brd_houndmasters_bow", base=11628, ammo_type=NO_AMMO, ladder=VANILLA_DUNGEON,
-     primary="Agility (Solo)", secondary="Mastery (Solo)")
+     primary="Agility (Solo)", secondary="Mastery (Solo)", budget_mult=BOW_MULT)
 item("brd_fleetfoot_greaves", base=11627, ladder=VANILLA_DUNGEON,
      primary="Agility (Solo)", secondary="Haste/Versatility",
      sockets=(R,), socket_bonus=BONUS_CRIT_4)
@@ -206,8 +226,9 @@ item("brd_dregmetal_spaulders", base=11722, ladder=VANILLA_DUNGEON,
 item("brd_boreal_mantle", base=11782, ladder=VANILLA_DUNGEON,
      primary="Intellect (Solo)", secondary="Crit/Versatility",
      sockets=(R,), socket_bonus=BONUS_CRIT_4)
+# Stock level 53: CASTER_MAIN_HAND_MULT (the 60-100 cell) on the Normal tier too (fix S2).
 item("brd_arbiters_blade", base=11784, ladder=VANILLA_DUNGEON,
-     primary="Intellect (Solo)", secondary="Haste (Solo)")
+     primary="Intellect (Solo)", secondary="Haste (Solo)", budget_mult=CASTER_MAIN_HAND_MULT)
 item("brd_dark_warders_pauldrons", base=22241, ladder=VANILLA_DUNGEON,
      primary="Agility (Solo)", secondary="Haste/Mastery")
 item("brd_vereks_collar", base=11755, ladder=VANILLA_DUNGEON,
@@ -312,10 +333,11 @@ item("brd_libram_of_truth", base=22400, ladder=VANILLA_DUNGEON, keep_spells=True
 # Keeps Drain Life on hit (16414).
 item("brd_wraith_scythe", base=11920, ladder=VANILLA_DUNGEON, keep_spells=True,
      primary="Strength (Solo)", secondary="Haste (Solo)")
+# Stock level 57 (both): CASTER_MAIN_HAND_MULT on the Normal tier too (fix S2).
 item("brd_blood_etched_blade", base=11922, ladder=VANILLA_DUNGEON,
-     primary="Intellect (Solo)", secondary="Mastery (Solo)")
+     primary="Intellect (Solo)", secondary="Mastery (Solo)", budget_mult=CASTER_MAIN_HAND_MULT)
 item("brd_the_hammer_of_grace", base=11923, ladder=VANILLA_DUNGEON,
-     primary="Spirit (Solo)", secondary="Haste (Solo)")
+     primary="Spirit (Solo)", secondary="Haste (Solo)", budget_mult=CASTER_MAIN_HAND_MULT)
 # Was mail: now plate (the list's "Plate (was mail)"), the dungeon's one Plate Intellect piece. The display stays the
 # stock one; the armor comes from the plate curve.
 item("brd_deathdealer_breastplate", base=11926, ladder=VANILLA_DUNGEON,
@@ -380,12 +402,13 @@ item("brd_shalehusk_boots", base=11787, ladder=VANILLA_DUNGEON,
 
 # Equip: +10% melee damage to enemies below 30% health (a percent: unscaled). One red socket.
 item("brd_theldrens_executioner", name="Theldren's Executioner", like=11931, bonding=BOP, ladder=VANILLA_HARD_MODE,
-     primary="Strength (Solo)", secondary="Crit (Solo)",
+     primary="Strength (Solo)", secondary="Crit (Solo)", budget_mult=HM_PHYSICAL_TWO_HAND_MULT,
+     extra_dps=HM_PHYSICAL_TWO_HAND_DPS,
      sockets=(R,), socket_bonus=BONUS_CRIT_4,
      spells=(equip_spell(theldrens_executioner_206830),))
 # Equip: melee hits open a stacking bleed (scaled by item level). One red socket.
 item("brd_leftys_shiv", name="Lefty's Shiv", like=22266, bonding=BOP, ladder=VANILLA_HARD_MODE,
-     primary="Agility (Solo)", secondary="Mastery/Versatility",
+     primary="Agility (Solo)", secondary="Mastery/Versatility", budget_mult=HM_SOCKETED_THIN_MULT,
      sockets=(R,), socket_bonus=BONUS_HASTE_4,
      spells=(equip_spell(leftys_shiv_206831, scale="budget"),))
 # Equip: direct heals may chain half the amount to the most injured party member (a share: unscaled). One red socket.
@@ -399,18 +422,18 @@ item("brd_korvs_spirit_fetish", name="Korv's Spirit Fetish", like=4984, bonding=
 
 # Strength tank shield, Equip: blocks may erupt in flame (scaled). One blue socket (tank gear), Block bonus.
 item("brd_black_anvil_bulwark", name="Black Anvil Bulwark", like=4069, bonding=BOP, ladder=VANILLA_HARD_MODE,
-     primary="Strength (Solo)", secondary="Block/Haste",
+     primary="Strength (Solo)", secondary="Block/Haste", budget_mult=HM_SOCKETED_THIN_MULT,
      sockets=(B,), socket_bonus=BONUS_BLOCK_4,
      spells=(equip_spell(black_anvil_bulwark_206835, scale="budget"),))
 # Equip: melee hits may slam the ground under the target (scaled). One red socket.
 item("brd_fist_of_the_lake_lord", name="Fist of the Lake Lord", like=11743, bonding=BOP, ladder=VANILLA_HARD_MODE,
-     primary="Agility (Solo)", secondary="Versatility (Solo)",
+     primary="Agility (Solo)", secondary="Versatility (Solo)", budget_mult=HM_SOCKETED_THIN_MULT,
      sockets=(R,), socket_bonus=BONUS_CRIT_4,
      spells=(equip_spell(fist_of_the_lake_lord_206837, scale="budget"),))
 # Equip: damaging spells may call a Lava Spawn (scaled). One red socket.
 item("brd_scepter_of_the_molten_lake", name="Scepter of the Molten Lake", like=11932, bonding=BOP,
      ladder=VANILLA_HARD_MODE, primary="Intellect (Solo)", secondary="Haste/Mastery",
-     sockets=(R,), socket_bonus=BONUS_HASTE_4,
+     budget_mult=HM_CASTER_TWO_HAND_MULT, sockets=(R,), socket_bonus=BONUS_HASTE_4,
      spells=(equip_spell(scepter_of_the_molten_lake_206839, scale="budget"),))
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -423,7 +446,7 @@ item("brd_prototype_power_core", name="Prototype Power Core", like=18638, bondin
 # Equip: heals may deploy a Mending Servo (scaled). One red socket.
 item("brd_golemwrights_mending_rod", name="Golemwright's Mending Rod", like=18321, bonding=BOP,
      ladder=VANILLA_HARD_MODE, primary="Spirit (Solo)", secondary="Crit/Versatility",
-     sockets=(R,), socket_bonus=BONUS_CRIT_4,
+     budget_mult=HM_CASTER_MAIN_HAND_MULT, sockets=(R,), socket_bonus=BONUS_CRIT_4,
      spells=(equip_spell(golemwrights_mending_rod_206844, scale="budget"),))
 # Ring, Equip: Lethal Attraction (scaled). One secondary and an effect (ruling 92 BD9). One red socket.
 item("brd_electrons_lethal_coil", name="Electron's Lethal Coil", like=11934, bonding=BOP, ladder=VANILLA_HARD_MODE,
@@ -438,7 +461,7 @@ item("brd_electrons_lethal_coil", name="Electron's Lethal Coil", like=11934, bon
 # minute). A new item with Ironfoe's look: the hard mode ladder's first tier is 71, so the stock row cannot be its
 # base. One red socket.
 item("brd_ironfoe", name="Ironfoe", like=11684, bonding=BOP, ladder=VANILLA_HARD_MODE,
-     primary="Strength (Solo)", secondary="Crit (Solo)",
+     primary="Strength (Solo)", secondary="Crit (Solo)", budget_mult=HM_SOCKETED_THIN_MULT,
      sockets=(R,), socket_bonus=BONUS_CRIT_4,
      spells=(hit_spell(SPELL_FURY_OF_FORGEWRIGHT, ppm=1.5),))
 # Tank trinket, Use (2 min): -20% damage taken for 8 sec, then a Fire burst (scaled). No primary: the

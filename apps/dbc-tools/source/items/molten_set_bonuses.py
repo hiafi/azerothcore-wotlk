@@ -22,11 +22,15 @@ MoltenSetLogic.h; lib/test_molten_set.py checks they agree). Item casts never co
 skips item cooldowns). Cast phase, one per cast.
 
 Damage and healing are potency (docs/potency-system.md; "everything on potency"), off-GCD payouts (time basis 1.5 s;
-ticks their own 2 s). Payouts suppress caster procs (SPELL_ATTR3_SUPPRESS_CASTER_PROCS), so no payout builds Heat or
-feeds another bonus. Area payouts reach only enemies already in combat (and the eruption's own target): a bonus never
-pulls a pack. Values are starting points [tune]: a 3 piece eruption is sized like a Haunted 3 piece proc (about 100
-potency every 10 to 15 sec); the dps and heal sims measure each one before the build is final. No look was checked in
-game.
+ticks their own 2 s). Payouts suppress caster procs (SPELL_ATTR3_SUPPRESS_CASTER_PROCS), which gates only the cast's
+own hit (Spell.cpp): the periodic payouts' ticks (Molten Edge, Burning Shards, Hallowed Flame) still raise periodic
+procs, class talents and other sets included. No payout builds Heat or erupts again because spell_molten_heat and
+spell_molten_cooldown_heat skip every id of the molten_set slice (kSpellsMoltenSet), and Haunting Mark skips it too.
+Heat builds only while the wearer is in combat (both scripts check; the buff's LEAVE_COMBAT only fires on leaving).
+Area payouts reach only enemies already in combat (and the eruption's own target), and an eruption's fallback enemy
+(the wearer's victim or selection) must be in combat: a bonus never pulls a pack. Values are starting points [tune]:
+a 3 piece eruption is sized like a Haunted 3 piece proc (about 100 potency every 10 to 15 sec); the dps and heal sims
+measure each one before the build is final. No look was checked in game.
 
 Ids: the `molten_set` reservation 206900-206999 (source/ids.yaml), ten per set in this order: +0 the 3 piece, +1 the 5
 piece, +2 the Heat buff, +3 and up the payouts. Scripts: modules/mod-dungeon-bosses/src/DungeonSets/
@@ -66,7 +70,7 @@ molten_set_bonuses.cpp (ids and script numbers mirrored in MoltenSetLogic.h).
   206944  Hallowed Flame       Holy damage over time on an enemy, spell power potency 20 a tick, every 2 s for 6 s.
   206945  Tended Flame         1% of maximum mana (ENERGIZE_PCT).
   Plate Strength, Heroism (511)                             Heat 10
-  206950  Molten Edge (3)      a melee ability 1 (crit 2); at 10 the ability sears its target.
+  206950  Molten Edge (3)      a melee or ranged ability 1 (crit 2); at 10 the ability sears its target.
   206951  Stoke the Forge (5)  an ability with a 30 sec+ cooldown grants 10 Heat (an eruption).
   206952  Heat
   206953  Molten Edge          Fire damage over time, attack power potency 25 a tick, every 2 s for 6 s.
@@ -86,13 +90,13 @@ molten_set_bonuses.cpp (ids and script numbers mirrored in MoltenSetLogic.h).
   206973  Slag Burst           Fire, attack power potency 100, the target and every enemy within 5 yd.
   206974  Rekindle             your next combo point generator grants 1 extra combo point (20 s). One charge.
   Leather Tank, Guardian's (1002)                           Heat 10
-  206980  Scorching Hide (3)   a melee ability 1 (crit 2); at 10 you erupt.
+  206980  Scorching Hide (3)   a melee or ranged ability 1 (crit 2); at 10 you erupt.
   206981  Tempered Hide (5)    marker: an eruption gives 206984.
   206982  Heat
   206983  Scorching Hide       Fire, attack power potency 80, every enemy within 8 yd of you; threat x3 (spell_threat).
   206984  Tempered Hide        damage taken -5%, 6 s.
   Plate Tank, Impenetrable (1003)                           Heat 10
-  206990  Molten Plate (3)     a melee ability 1 (crit 2); at 10 your armor rises (206993).
+  206990  Molten Plate (3)     a melee or ranged ability 1 (crit 2); at 10 your armor rises (206993).
   206991  Banked Coals (5)     an ability with a 30 sec+ cooldown grants 10 Heat (an eruption).
   206992  Heat
   206993  Molten Plate         armor +10%, 8 s.
@@ -150,6 +154,9 @@ _SPELLS = (_PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG | _PROC_FLAG_DONE_SPELL_MAG
 _MELEE = _PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS
 _ABILITIES = _PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS | _PROC_FLAG_DONE_SPELL_RANGED_DMG_CLASS
 _EVERY_CAST = _SPELLS | _ABILITIES
+# Every finishing move: melee and ranged class (Eviscerate, Rip, Deadly Throw) and class NONE (Slice and Dice, Savage
+# Roar).
+_FINISHERS = _ABILITIES | _PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_POS | _PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG
 _HIT_OR_CRIT = _PROC_HIT_NORMAL | _PROC_HIT_CRITICAL
 
 _OFF_GCD_MS = 1500  # potency time basis of a proc payout
@@ -527,12 +534,13 @@ hallowed_flame_206940 = _bonus(
     + pot_text(hallowed_flame_hot_206943, variant='total') + ' over the time, or burning an enemy for '
     + pot_text(hallowed_flame_dot_206944, variant='total') + ' Holy damage.' + _HEAT_LASTS,
     _ICON_HOLY_FIRE,
-    'Molten set, Soulforge 3 piece (Plate Intellect). spell_proc: done spells and melee abilities, hit phase, 100%. '
+    'Molten set, Soulforge 3 piece (Plate Intellect). spell_proc: done spells and melee and ranged abilities '
+    '(Judgement and Avenger\'s Shield are ranged class), hit phase, 100%. '
     'spell_molten_heat: a spell or ability with the Holy school gives 1 Heat (2 on a crit), once per cast. At 8, '
     '206943 on an ally target (the wearer when the cast had none) or 206944 on an enemy target.',
-    proc_type_mask=_SPELLS | _MELEE,
+    proc_type_mask=_SPELLS | _ABILITIES,
 )
-_heat_proc(hallowed_flame_206940, _SPELLS | _MELEE)
+_heat_proc(hallowed_flame_206940, _SPELLS | _ABILITIES)
 
 tended_flame_206941 = _bonus(
     206941, 'Tended Flame',
@@ -559,15 +567,18 @@ molten_edge_heat_206952 = _heat(206952, 'Heroism', MOLTEN_EDGE_HEAT)
 
 molten_edge_206950 = _bonus(
     206950, 'Molten Edge',
-    f'Your melee abilities grant 1 Heat, or {CRIT_HEAT} when they critically strike. At {MOLTEN_EDGE_HEAT} Heat, '
+    f'Your melee and ranged abilities grant 1 Heat, or {CRIT_HEAT} when they critically strike. At {MOLTEN_EDGE_HEAT} '
+    'Heat, '
     'your ability sears the target, burning it for ' + pot_text(molten_edge_sear_206953, variant='total')
     + ' Fire damage over $206953d.' + _HEAT_LASTS,
     _ICON_LAVA_LASH,
-    'Molten set, Heroism 3 piece (Plate Strength). spell_proc: done melee abilities, hit phase, 100%. '
-    'spell_molten_heat: a melee-class spell gives 1 Heat (2 on a crit), once per cast. At 10, 206953 on the target.',
-    proc_type_mask=_MELEE,
+    'Molten set, Heroism 3 piece (Plate Strength). spell_proc: done melee and ranged abilities (Thunder Clap, '
+    'Avenger\'s Shield, Judgement are ranged class; never an auto attack), hit phase, 100%. '
+    'spell_molten_heat: a melee- or ranged-class spell gives 1 Heat (2 on a crit), once per cast. At 10, 206953 on '
+    'the target.',
+    proc_type_mask=_ABILITIES,
 )
-_heat_proc(molten_edge_206950, _MELEE)
+_heat_proc(molten_edge_206950, _ABILITIES)
 
 stoke_the_forge_206951 = _bonus(
     206951, 'Stoke the Forge',
@@ -684,13 +695,14 @@ slag_burst_206970 = _bonus(
     f'{SLAG_BURST_HEAT} Heat, your finishing move erupts, dealing ' + pot_text(slag_burst_eruption_206973)
     + ' Fire damage to the target and all enemies within $206973a1 yards.' + _HEAT_LASTS,
     _ICON_CONFLAGRATE,
-    'Molten set, Darkmantle 3 piece (Leather Agility). spell_proc: done melee and ranged abilities, hit phase, 100%. '
+    'Molten set, Darkmantle 3 piece (Leather Agility). spell_proc: done melee and ranged abilities and class NONE '
+    'spells (Slice and Dice and Savage Roar are class NONE), hit phase, 100%. '
     'spell_molten_heat: a spell that needs combo points gives 1 Heat per point held at its hit (the points are taken '
     'only after the hits) and 1 more on a crit, once per cast. At 10, 206973 at the target (the wearer\'s victim '
     'after a self-cast finisher), and Rekindle 206974 with the 5 piece. Serves rogues and cats.',
-    proc_type_mask=_ABILITIES,
+    proc_type_mask=_FINISHERS,
 )
-_heat_proc(slag_burst_206970, _ABILITIES)
+_heat_proc(slag_burst_206970, _FINISHERS)
 
 rekindle_206971 = _bonus(
     206971, 'Rekindle',
@@ -729,16 +741,18 @@ scorching_hide_heat_206982 = _heat(206982, 'Guardian\'s', SCORCHING_HIDE_HEAT)
 
 scorching_hide_206980 = _bonus(
     206980, 'Scorching Hide',
-    f'Your melee abilities grant 1 Heat, or {CRIT_HEAT} when they critically strike. At {SCORCHING_HIDE_HEAT} Heat, '
+    f'Your melee and ranged abilities grant 1 Heat, or {CRIT_HEAT} when they critically strike. At '
+    f'{SCORCHING_HIDE_HEAT} Heat, '
     'you erupt, dealing ' + pot_text(scorching_hide_eruption_206983) + ' Fire damage to all enemies within '
     '$206983a1 yards, with high threat.' + _HEAT_LASTS,
     _ICON_FIRE_SHIELD,
-    'Molten set, Guardian\'s 3 piece (Leather Tank). spell_proc: done melee abilities, hit phase, 100%. '
-    'spell_molten_heat: a melee-class spell gives 1 Heat (2 on a crit), once per cast. At 10, 206983 around the '
-    'wearer, and Tempered Hide 206984 with the 5 piece.',
-    proc_type_mask=_MELEE,
+    'Molten set, Guardian\'s 3 piece (Leather Tank). spell_proc: done melee and ranged abilities (Thunder Clap, '
+    'Avenger\'s Shield, Judgement are ranged class; never an auto attack), hit phase, 100%. '
+    'spell_molten_heat: a melee- or ranged-class spell gives 1 Heat (2 on a crit), once per cast. At 10, 206983 '
+    'around the wearer, and Tempered Hide 206984 with the 5 piece.',
+    proc_type_mask=_ABILITIES,
 )
-_heat_proc(scorching_hide_206980, _MELEE)
+_heat_proc(scorching_hide_206980, _ABILITIES)
 
 tempered_hide_206981 = _bonus(
     206981, 'Tempered Hide',
@@ -765,14 +779,17 @@ molten_plate_heat_206992 = _heat(206992, 'Impenetrable', MOLTEN_PLATE_HEAT)
 
 molten_plate_206990 = _bonus(
     206990, 'Molten Plate',
-    f'Your melee abilities grant 1 Heat, or {CRIT_HEAT} when they critically strike. At {MOLTEN_PLATE_HEAT} Heat, '
+    f'Your melee and ranged abilities grant 1 Heat, or {CRIT_HEAT} when they critically strike. At '
+    f'{MOLTEN_PLATE_HEAT} Heat, '
     'your armor is increased by $206993s1% for $206993d.' + _HEAT_LASTS,
     _ICON_MOLTEN_ARMOR,
-    'Molten set, Impenetrable 3 piece (Plate Tank). spell_proc: done melee abilities, hit phase, 100%. '
-    'spell_molten_heat: a melee-class spell gives 1 Heat (2 on a crit), once per cast. At 10, 206993 on the wearer.',
-    proc_type_mask=_MELEE,
+    'Molten set, Impenetrable 3 piece (Plate Tank). spell_proc: done melee and ranged abilities (Thunder Clap, '
+    'Avenger\'s Shield, Judgement are ranged class; never an auto attack), hit phase, 100%. '
+    'spell_molten_heat: a melee- or ranged-class spell gives 1 Heat (2 on a crit), once per cast. At 10, 206993 on '
+    'the wearer.',
+    proc_type_mask=_ABILITIES,
 )
-_heat_proc(molten_plate_206990, _MELEE)
+_heat_proc(molten_plate_206990, _ABILITIES)
 
 banked_coals_206991 = _bonus(
     206991, 'Banked Coals',

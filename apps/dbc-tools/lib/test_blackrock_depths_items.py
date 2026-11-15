@@ -35,7 +35,9 @@ sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import test_id_blocks as id_blocks  # noqa: E402
 from lib.dsl.items import NULL_PRIMARY_SHAPE, Quality, Socket, SpellTrigger  # noqa: E402
-from lib.test_hard_mode_item_effects import _load_items_registry  # noqa: E402
+from lib.test_hard_mode_item_effects import (  # noqa: E402
+    _load_items_registry, assert_shape_stats_on_every_tier,
+)
 
 MODULE_DIR = REPO_ROOT / "modules" / "mod-dungeon-bosses" / "src" / "BlackrockDepths"
 HEADER = MODULE_DIR / "BlackrockDepthsHardModeItemsLogic.h"
@@ -128,6 +130,26 @@ class BlackrockDepthsItemsTest(unittest.TestCase):
             if key in NEW_LIST:
                 self.assertEqual(decl.ilvl, NEW_LIST[key], key)  # the boss's lowest stock item level, else 60
         self.assertEqual(self.decls["brd_ironfoe"].like, 11684)  # Ironfoe's look, on the hard mode ladder
+
+    def test_declared_multipliers(self):
+        """Blackrock gear fix pass (REVIEW S1-S3): only these items declare a multiplier (and the Executioner its DPS);
+        every other item takes the role cell or the plain default."""
+        declared = {k: d.budget_mult for k, d in self.decls.items() if d.budget_mult is not None}
+        self.assertEqual(declared, {
+            "brd_arbiters_blade": 1.931, "brd_blood_etched_blade": 1.931, "brd_the_hammer_of_grace": 1.931,  # S2
+            "brd_houndmasters_bow": 0.405,                                                                 # S2
+            "brd_scepter_of_the_molten_lake": 0.7105, "brd_golemwrights_mending_rod": 1.3517,              # S1
+            "brd_theldrens_executioner": 0.5537,                                                           # S1
+            "brd_leftys_shiv": 0.6, "brd_black_anvil_bulwark": 0.6, "brd_fist_of_the_lake_lord": 0.6,      # S3
+            "brd_ironfoe": 0.6,                                                                            # S3
+        })
+        self.assertEqual(self.decls["brd_theldrens_executioner"].extra_dps, 0.0695)
+
+    def test_every_shape_stat_is_on_every_tier(self):
+        """The materialized rows, not the declaration: every doc stat (the item's shape stats) has at least one point
+        on every tier (REVIEW S3: a thin cell budget after the socket left a hard mode shield 1 Strength and nothing
+        else)."""
+        assert_shape_stats_on_every_tier(self, self.decls)
 
     def test_sockets(self):
         socketed = {k: d.sockets for k, d in self.decls.items() if d.sockets}

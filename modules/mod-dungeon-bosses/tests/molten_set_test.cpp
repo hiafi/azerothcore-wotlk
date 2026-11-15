@@ -158,14 +158,21 @@ namespace
         HeatEvent consecrationTick = tick;
         consecrationTick.holy = true;
         CHECK(HeatGain(Archetype::Soulforge, consecrationTick) == 0);
+        // Judgement and Avenger's Shield are ranged class in the 3.3.5 data (REVIEW S5): Holy, so they count.
+        HeatEvent judgement = Cast(false, false, false, true);
+        judgement.holy = true;
+        CHECK(HeatGain(Archetype::Soulforge, judgement) == 1);
+        judgement.holy = false;  // a ranged ability that is not Holy (Shoot) does not
+        CHECK(HeatGain(Archetype::Soulforge, judgement) == 0);
 
-        // Heroism, Guardian's, Impenetrable: melee abilities; Beastmaster's: melee or ranged abilities.
+        // Heroism, Guardian's, Impenetrable and Beastmaster's: melee or ranged abilities (Thunder Clap, Avenger's
+        // Shield, Judgement are ranged class: REVIEW S5); never a spell (class magic or none).
         HeatEvent strike = Cast(false, false, true, false);
         HeatEvent shot = Cast(true, false, false, true);
         for (Archetype set : { Archetype::Heroism, Archetype::Guardians, Archetype::Impenetrable })
         {
             CHECK(HeatGain(set, strike) == 1);
-            CHECK(HeatGain(set, shot) == 0);
+            CHECK(HeatGain(set, shot) == 2);
             CHECK(HeatGain(set, bolt) == 0);
         }
         CHECK(HeatGain(Archetype::Beastmasters, strike) == 1);
@@ -190,8 +197,29 @@ namespace
         ripTick.finisher = true;
         ripTick.comboPoints = 5;
         CHECK(HeatGain(Archetype::Darkmantle, ripTick) == 0);
+        // Slice and Dice and Savage Roar are damage class NONE (REVIEW S4): a finisher still, so its points count.
+        HeatEvent sliceAndDice = Cast(false, true, false, false);
+        sliceAndDice.finisher = true;
+        sliceAndDice.comboPoints = 5;
+        CHECK(HeatGain(Archetype::Darkmantle, sliceAndDice) == 5);
+        sliceAndDice.comboPoints = 0;
+        CHECK(HeatGain(Archetype::Darkmantle, sliceAndDice) == 0);
 
         CHECK(HeatGain(Archetype::Count, bolt) == 0);
+    }
+
+    // Molten Thunder and Hallowed Flame (REVIEW N2): an enemy target takes the damage half, another ally the heal; a
+    // heal cast on the wearer (or with no target) heals the wearer; a self-cast that does not heal (Elemental
+    // Mastery off Thunderhead, a seal) strikes the wearer's in-combat enemy, the wearer's heal only when there is none.
+    void TestPayoutSide()
+    {
+        CHECK(ChoosePayoutSide(true, false, false, true) == PayoutSide::Enemy);
+        CHECK(ChoosePayoutSide(true, false, true, false) == PayoutSide::Enemy);
+        CHECK(ChoosePayoutSide(false, true, true, true) == PayoutSide::Ally);
+        CHECK(ChoosePayoutSide(false, true, false, true) == PayoutSide::Ally);
+        CHECK(ChoosePayoutSide(false, false, true, true) == PayoutSide::Wearer);   // a self-heal
+        CHECK(ChoosePayoutSide(false, false, false, true) == PayoutSide::Nearby);  // a self-cast cooldown, in combat
+        CHECK(ChoosePayoutSide(false, false, false, false) == PayoutSide::Wearer); // nobody to strike
     }
 
     void TestStepHeat()
@@ -294,6 +322,7 @@ int main()
     TestIds();
     TestHeatCounts();
     TestHeatGain();
+    TestPayoutSide();
     TestStepHeat();
     TestCooldownHooks();
     TestMendingFlame();

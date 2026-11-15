@@ -2,7 +2,9 @@
  * mod-dungeon-bosses, dungeon sets: the Molten set bonuses (docs/dungeons/dungeon-loot-vanilla.md "Molten set
  * bonuses", approved 2026-11-06). The spells are apps/dbc-tools/source/items/molten_set_bonuses.py; every damage and
  * heal number comes from potency or the spell data, so nothing here sizes a payout. Heat is a count, never a chance:
- * no script here rolls, and every Heat proc row is 100%.
+ * no script here rolls, and every Heat proc row is 100%. Heat builds only while the wearer is in combat (the buff's
+ * LEAVE_COMBAT interrupt clears it on leaving), and an eruption's fallback enemy (victim, selection) must already be in
+ * combat, so a bonus never pulls.
  *
  *   spell_molten_heat                  the ten 3 pieces (206900 + 10k): one Heat gain per event (MoltenSet::HeatGain,
  *                                      once per cast), the Heat buff's stacks (AddHeat), the set's eruption at its
@@ -115,6 +117,17 @@ namespace
         return false;
     }
 
+    // A direct heal or a heal over time: a two-sided eruption from it heals, the wearer too.
+    bool IsHealingSpell(SpellInfo const* spellInfo)
+    {
+        if (spellInfo->HasEffect(SPELL_EFFECT_HEAL))
+            return true;
+        for (SpellEffectInfo const& effect : spellInfo->Effects)
+            if (effect.IsAura(SPELL_AURA_PERIODIC_HEAL))
+                return true;
+        return false;
+    }
+
     // The unit a proc event is about: the hit's target, or a cast-phase event's explicit unit target.
     Unit* EventTarget(ProcEventInfo& eventInfo)
     {
@@ -186,16 +199,28 @@ namespace
     }
 
     // The enemy an eruption hits: the event's own target when it is an enemy, else the wearer's victim, else its
-    // hostile selection; nullptr when there is none.
+    // hostile selection, those two only when already in combat (a bonus never pulls); nullptr when there is none.
     Unit* EnemyFor(Player* wearer, Unit* target)
     {
         if (IsEnemy(wearer, target))
             return target;
-        if (Unit* victim = wearer->GetVictim(); IsEnemy(wearer, victim))
+        if (Unit* victim = wearer->GetVictim(); IsEnemy(wearer, victim) && victim->IsInCombat())
             return victim;
-        if (Unit* selected = wearer->GetSelectedUnit(); IsEnemy(wearer, selected))
+        if (Unit* selected = wearer->GetSelectedUnit(); IsEnemy(wearer, selected) && selected->IsInCombat())
             return selected;
         return nullptr;
+    }
+
+    // Where a two-sided eruption lands (MoltenSet::ChoosePayoutSide): `enemy` is set for Enemy / Nearby, `ally` for
+    // Ally / Wearer.
+    void PayoutFor(Player* wearer, Unit* target, bool healing, Unit*& enemy, Unit*& ally)
+    {
+        bool const targetEnemy = IsEnemy(wearer, target);
+        bool const targetOtherAlly = !targetEnemy && target != wearer && IsAlly(wearer, target);
+        Unit* nearby = (targetEnemy || targetOtherAlly || healing) ? nullptr : EnemyFor(wearer, nullptr);
+        PayoutSide const side = ChoosePayoutSide(targetEnemy, targetOtherAlly, healing, nearby != nullptr);
+        enemy = side == PayoutSide::Enemy ? target : side == PayoutSide::Nearby ? nearby : nullptr;
+        ally = side == PayoutSide::Ally ? target : side == PayoutSide::Wearer ? wearer : nullptr;
     }
 
     // Living enemies of `attacker` within `radius` yards of `center`, in combat (a bonus never pulls a pack).
@@ -273,9 +298,12 @@ namespace
     }
 
     // The set's eruption at its count. `target` is the event's unit (may be null or the wearer); `ranged` says the
-    // event was a ranged ability (Beastmaster's shards off ranged attack power).
-    void Erupt(Player* wearer, Archetype set, Unit* target, bool ranged, AuraEffect const* by)
+    // event was a ranged ability (Beastmaster's shards off ranged attack power); `healing` that it healed (where Molten
+    // Thunder and Hallowed Flame land when the target is the wearer or none).
+    void Erupt(Player* wearer, Archetype set, Unit* target, bool ranged, bool healing, AuraEffect const* by)
     {
+        Unit* payoutEnemy = nullptr;
+        Unit* payoutAlly = nullptr;
         switch (set)
         {
             case Archetype::Sorcerers:
@@ -290,18 +318,17 @@ namespace
                 wearer->CastSpell(wearer, SPELL_EMBER_BLOOM_READY, true, nullptr, by);
                 break;
             case Archetype::FiveThunders:
-                if (IsEnemy(wearer, target))
-                    wearer->CastSpell(target, SPELL_MOLTEN_THUNDER_DAMAGE, true, nullptr, by);
+                PayoutFor(wearer, target, healing, payoutEnemy, payoutAlly);
+                if (payoutEnemy)
+                    wearer->CastSpell(payoutEnemy, SPELL_MOLTEN_THUNDER_DAMAGE, true, nullptr, by);
                 else
-                    HealAround(wearer, IsAlly(wearer, target) ? target : wearer, SPELL_MOLTEN_THUNDER_HEAL,
-                        kMoltenThunderRadius, kMoltenThunderExtraAllies, by);
+                    HealAround(wearer, payoutAlly, SPELL_MOLTEN_THUNDER_HEAL, kMoltenThunderRadius,
+                        kMoltenThunderExtraAllies, by);
                 break;
             case Archetype::Soulforge:
-                if (IsEnemy(wearer, target))
-                    wearer->CastSpell(target, SPELL_HALLOWED_FLAME_DOT, true, nullptr, by);
-                else
-                    wearer->CastSpell(IsAlly(wearer, target) ? target : wearer, SPELL_HALLOWED_FLAME_HOT, true,
-                        nullptr, by);
+                PayoutFor(wearer, target, healing, payoutEnemy, payoutAlly);
+                wearer->CastSpell(payoutEnemy ? payoutEnemy : payoutAlly,
+                    payoutEnemy ? SPELL_HALLOWED_FLAME_DOT : SPELL_HALLOWED_FLAME_HOT, true, nullptr, by);
                 break;
             case Archetype::Heroism:
                 if (Unit* enemy = EnemyFor(wearer, target))
@@ -354,7 +381,10 @@ class spell_molten_heat : public AuraScript
     {
         Unit* wearer = GetTarget();
         SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
-        if (!spellInfo || eventInfo.GetActor() != wearer || kSpellsMoltenSet.Contains(spellInfo->Id))
+        // Heat lives only in combat: its buff's LEAVE_COMBAT interrupt fires on leaving combat, never on a gain made
+        // while already out of it (a heal between pulls), so such a gain must not start one.
+        if (!spellInfo || eventInfo.GetActor() != wearer || !wearer->IsInCombat() ||
+            kSpellsMoltenSet.Contains(spellInfo->Id))
             return false;
         _gain = HeatGain(ArchetypeOf(GetId()), BuildEvent(wearer, eventInfo));
         if (!_gain || !_guard.First(eventInfo))
@@ -362,6 +392,7 @@ class spell_molten_heat : public AuraScript
         Unit* target = EventTarget(eventInfo);
         _target = target ? target->GetGUID() : ObjectGuid::Empty;
         _ranged = spellInfo->DmgClass == SPELL_DAMAGE_CLASS_RANGED;
+        _healing = IsHealingSpell(spellInfo);
         return true;
     }
 
@@ -375,7 +406,7 @@ class spell_molten_heat : public AuraScript
         if (!AddHeat(wearer, set, _gain))
             return;
         Unit* target = _target ? ObjectAccessor::GetUnit(*wearer, _target) : nullptr;
-        Erupt(wearer, set, target, _ranged, aurEff);
+        Erupt(wearer, set, target, _ranged, _healing, aurEff);
     }
 
     void Register() override
@@ -388,6 +419,7 @@ class spell_molten_heat : public AuraScript
     ObjectGuid _target;
     uint32 _gain = 0;
     bool _ranged = false;
+    bool _healing = false;
 };
 
 // 206901 Flare-up, 206931 Thunderhead, 206951 Stoke the Forge, 206991 Banked Coals: a cast on the Cooldown Haste rule's
@@ -408,7 +440,8 @@ class spell_molten_cooldown_heat : public AuraScript
         Unit* wearer = GetTarget();
         SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
         Spell const* spell = eventInfo.GetProcSpell();
-        if (!spellInfo || !spell || eventInfo.GetActor() != wearer ||
+        // In combat only, like the 3 pieces: a cooldown used before the pull neither starts Heat nor erupts at a pack.
+        if (!spellInfo || !spell || eventInfo.GetActor() != wearer || !wearer->IsInCombat() ||
             !(eventInfo.GetSpellPhaseMask() & PROC_SPELL_PHASE_CAST) || spell->m_CastItem || spellInfo->IsPassive() ||
             kSpellsMoltenSet.Contains(spellInfo->Id))
             return false;
@@ -417,6 +450,7 @@ class spell_molten_cooldown_heat : public AuraScript
         Unit* target = EventTarget(eventInfo);
         _target = target ? target->GetGUID() : ObjectGuid::Empty;
         _ranged = spellInfo->DmgClass == SPELL_DAMAGE_CLASS_RANGED;
+        _healing = IsHealingSpell(spellInfo);
         return true;
     }
 
@@ -434,13 +468,13 @@ class spell_molten_cooldown_heat : public AuraScript
             if (!EnemyFor(wearer, target))
                 return;
             wearer->RemoveAurasDueToSpell(HeatSpellOf(set));
-            Erupt(wearer, set, target, _ranged, aurEff);
+            Erupt(wearer, set, target, _ranged, _healing, aurEff);
             return;
         }
         uint32 const gain = CooldownHookHeat(set);
         LOG_DEBUG(kLog, "molten-set cooldown hook {} set {} +{} heat", wearer->GetGUID().ToString(), uint32(set), gain);
         if (AddHeat(wearer, set, gain))
-            Erupt(wearer, set, target, _ranged, aurEff);
+            Erupt(wearer, set, target, _ranged, _healing, aurEff);
     }
 
     void Register() override
@@ -451,6 +485,7 @@ class spell_molten_cooldown_heat : public AuraScript
 
     ObjectGuid _target;
     bool _ranged = false;
+    bool _healing = false;
 };
 
 // 206903 Stoked Flame, 206933 Molten Thunder, 206973 Slag Burst: the area around the target reaches only enemies

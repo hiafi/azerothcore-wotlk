@@ -336,6 +336,15 @@ class MoltenSetTest(unittest.TestCase):
         for spell_id in (206923, 206924, 206974):
             self.assertEqual(procs[spell_id]["Charges"], 1)
         self.assertTrue(procs[206900]["ProcFlags"] & 0x40000)  # Stoked Flame counts periodic crits
+        # REVIEW S5: Judgement, Thunder Clap and Avenger's Shield are ranged class, so Soulforge and the three
+        # "ability" sets listen to ranged-class spells too (DONE_SPELL_RANGED_DMG_CLASS 0x100), never auto attacks
+        # (DONE_MELEE_AUTO_ATTACK 0x4, DONE_RANGED_AUTO_ATTACK 0x40).
+        for spell_id in (206940, 206950, 206980, 206990):
+            flags = int(procs[spell_id]["ProcFlags"])
+            self.assertEqual(flags & 0x110, 0x110, spell_id)
+            self.assertFalse(flags & 0x44, spell_id)
+        # REVIEW S4: Slag Burst also listens to class NONE spells (Slice and Dice, Savage Roar: 0x400 / 0x1000).
+        self.assertEqual(int(procs[206970]["ProcFlags"]) & 0x1510, 0x1510)
 
     def test_damage_and_heals_on_potency(self):
         for spell_id, spell in self.spells.items():

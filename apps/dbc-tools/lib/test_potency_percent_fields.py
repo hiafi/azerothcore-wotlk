@@ -59,6 +59,12 @@ class PercentFieldLintTest(unittest.TestCase):
         # Totem of Rage's Equip (27859): flat spell power on the level curve, listed in lint._POTENCY_FLAT_BONUS_SPELLS
         listed = _entry(27859, effect1={"type": 6, "apply_aura": 112, "_potency": _POTENCY})
         self.assertEqual(lint.check_percent_field_potency([listed]), [])
+        # the allowance is per effect: potency on another effect of the same spell is still an error
+        other_effect = _entry(27859, effect1={"type": 6, "apply_aura": 112, "_potency": _POTENCY},
+                              effect2={"type": 6, "apply_aura": 112, "_potency": _POTENCY})
+        errors = lint.check_percent_field_potency([other_effect])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("effect 1", errors[0])
         unlisted = _entry(27860, effect1={"type": 6, "apply_aura": 112, "_potency": _POTENCY})
         self.assertEqual(len(lint.check_percent_field_potency([unlisted])), 1)
 

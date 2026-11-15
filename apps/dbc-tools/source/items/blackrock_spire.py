@@ -88,6 +88,21 @@ EXTRA_STAMINA = 0.25  # "extra Stamina" on a tank piece: a quarter more than the
 # its entry, so it sets the column itself; the minted tiers copy it, and a new gun (`like=` a gun) sets it too.
 NO_AMMO = 0
 
+# Blackrock gear fix pass (REVIEW S1, S3; the same rules as blackrock_depths.py): the Shardstaff keeps its 60-100 caster
+# two-hand cell times the effect discount on every tier (the 101-200 cell, 2.455, fit on TBC staves, was a 2.7x step
+# from 91 to 101), and the Ward, a socketed hard mode shield, takes 0.6 so Strength, Parry and Versatility each get a
+# few points (the shield cell times 0.7, 0.295, left 1 Strength after the socket).
+HM_CASTER_TWO_HAND_MULT = 0.7105         # caster InventoryType 17 ilvl 60-100 1.015 x the effect discount 0.7
+HM_SOCKETED_THIN_MULT = 0.6              # socketed hard mode one-hander or shield with an effect
+# Thrown weapons (fix pass, sim kits): the 60-100 thrown cell (+11% DPS) was fit on TBC thrown items at 91-100 that
+# carry no stats, so a level 60 thrown spent its budget on DPS above the one-hand baseline (2 Strength, 2 Mastery).
+# The vanilla thrown cell (1-59) keeps the baseline DPS: extra_dps=0.
+THROWN_BASELINE_DPS = 0.0
+# A bow below level 60 (fix S2, found by the bucket step check): the 1-59 bow cell (0.269) is two thirds of the 60-100
+# one (0.405) its Heroic tier takes, so Riphook at 59 had 7 Agility to Ancient Bone Bow's 10 at 61. The Normal tier
+# takes the 60-100 cell.
+BOW_MULT = 0.405                         # physical InventoryType 15 ilvl 60-100 (item_role_cells.lock)
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Highlord Omokk (stock item level 60)
 
@@ -108,8 +123,9 @@ item("brs_funeral_cuffs", base=12626, ladder=VANILLA_DUNGEON,
 item("brs_blackcrow", base=12651, ammo_type=NO_AMMO, ladder=VANILLA_DUNGEON,
      primary="Agility (Solo)", secondary="Crit/Haste",
      sockets=(Socket.RED,), socket_bonus=BONUS_HASTE_4)
+# Stock level 59: BOW_MULT (the 60-100 bow cell) on the Normal tier too (fix S2).
 item("brs_riphook", base=12653, ammo_type=NO_AMMO, ladder=VANILLA_DUNGEON,
-     primary="Agility (Solo)", secondary="Mastery/Versatility")
+     primary="Agility (Solo)", secondary="Mastery/Versatility", budget_mult=BOW_MULT)
 # New: the wave's Enhancement totem (the stat budget of a relic; no stock effect to keep).
 item("brs_totem_of_hexed_blood", name="Totem of Hexed Blood", like=22395, ilvl=59, bonding=BOP,
      ladder=VANILLA_DUNGEON, primary="Agility (Solo)", secondary="Haste/Proc")
@@ -126,8 +142,9 @@ item("brs_brazecore_armguards", base=13179, ladder=VANILLA_DUNGEON,
      primary="Intellect (Solo)", secondary="Crit/Versatility",
      sockets=(Socket.RED,), socket_bonus=BONUS_CRIT_4)
 # Stock, from its 100% row; now on Voone's list (ruling 77): the vanilla dungeons' one Strength thrown item.
+# Its stock Equip (9141, +12 attack power) folds into the budget (absorbed_spell_slots); baseline DPS (above).
 item("brs_flightblade_throwing_axe", base=28972, ladder=VANILLA_DUNGEON,
-     primary="Strength (Solo)", secondary="Mastery (Solo)")
+     primary="Strength (Solo)", secondary="Mastery (Solo)", extra_dps=THROWN_BASELINE_DPS)
 # New: a Strength axe at level 60 normal.
 item("brs_war_masters_hatchet", name="War Master's Hatchet", like=18498, ilvl=60, bonding=BOP,
      ladder=VANILLA_DUNGEON, primary="Strength (Solo)", secondary="Crit (Solo)")
@@ -339,12 +356,12 @@ item("brs_bloodaxe_war_horn", name="Bloodaxe War Horn", like=14557, bonding=BOP,
 # Equip: 1% less damage taken for each enemy attacking you within 8 yd, up to 5. Tank shield, blue socket.
 item("brs_ward_of_the_three_tribes", name="Ward of the Three Tribes", like=14002, bonding=BOP,
      ladder=VANILLA_HARD_MODE, primary="Strength (Solo)", secondary="Parry/Versatility (Any)",
-     sockets=(Socket.BLUE,), socket_bonus=BONUS_PARRY_4,
+     budget_mult=HM_SOCKETED_THIN_MULT, sockets=(Socket.BLUE,), socket_bonus=BONUS_PARRY_4,
      spells=(equip_spell(ward_of_the_three_tribes_206802),))
 # Equip: your spell crits give Stolen Power (+1% spell damage and healing, 10 sec, 5 stacks). One red socket.
 item("brs_shardstaff_of_stolen_power", name="Shardstaff of Stolen Power", like=20654, bonding=BOP,
      ladder=VANILLA_HARD_MODE, primary="Intellect (Solo)", secondary="Crit (Solo)",
-     sockets=(Socket.RED,), socket_bonus=BONUS_CRIT_4,
+     budget_mult=HM_CASTER_TWO_HAND_MULT, sockets=(Socket.RED,), socket_bonus=BONUS_CRIT_4,
      spells=(equip_spell(shardstaff_of_stolen_power_206804),))
 
 # ---------------------------------------------------------------------------------------------------------------------
