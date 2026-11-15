@@ -41,9 +41,14 @@ scopes:
     reservations: [scholomance_items]
   stratholme:
     reservations: [stratholme_items]
+  blackrock_spire:
+    reservations: [blackrock_spire_items]
+  blackrock_depths:
+    reservations: [blackrock_depths_items]
 
   # Dungeon sets and tools.
   haunted_set:
+  molten_set:
   bossmechanics:
     sources: [npcs/boss_mechanics.py]
   healsim:
