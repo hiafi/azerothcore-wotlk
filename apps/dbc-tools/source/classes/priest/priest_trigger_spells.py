@@ -3593,7 +3593,10 @@ divine_aegis_47515 = spell(
 # only applies within a file - see source/classes/README.md).
 _GRACE_RANK_NOTE = (
     'Discipline rework (8,2): 3 ranks at 33/66/100% chance, Power Word: Shield added to the '
-    'trigger mask, and each rank now triggers its own 1/2/3%-per-stack buff spell.'
+    'trigger mask, and each rank now triggers its own 1/2/3%-per-stack buff spell. Capstone clause added to every '
+    'rank text (2026-11-15, balance round 3 on the Normal-tier kits, user ruling: "Your Penance heals also shield the '
+    'target for 30% of the amount healed, stacking"): only rank 3 (grace_200163) has the effect, spell_pri_grace_capstone '
+    '(spell_priest_disc.cpp) reads it off that rank spell id and the shield is penance_shield_200169.'
 )
 _GRACE_TRIGGER_MASK = (_masks.PWS | _masks.FLASH_HEAL | _masks.GREATER_HEAL, _masks.PENANCE_HEAL_BOLT, 0)
 
@@ -3614,7 +3617,7 @@ grace_47516 = spell(
     ],
     spell_icon_id=2819,
     notes=_GRACE_RANK_NOTE,
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Flash Heal, Greater Heal, Penance and Power Word: Shield have a 33% chance to bless the target with Grace, increasing all healing received from you by 1%.  Stacks up to 3 times.  Lasts 12 sec.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': _GRACE_TRIGGER_MASK[0], 'EffectSpellClassMaskA_2': _GRACE_TRIGGER_MASK[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Flash Heal, Greater Heal, Penance and Power Word: Shield have a 33% chance to bless the target with Grace, increasing all healing received from you by 1%.  Stacks up to 3 times.  Lasts 12 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Penance heals also shield the target for 30% of the amount healed, stacking.|r', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': _GRACE_TRIGGER_MASK[0], 'EffectSpellClassMaskA_2': _GRACE_TRIGGER_MASK[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -3634,7 +3637,7 @@ grace_47517 = spell(
     ],
     spell_icon_id=2819,
     notes=_GRACE_RANK_NOTE,
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Flash Heal, Greater Heal, Penance and Power Word: Shield have a 66% chance to bless the target with Grace, increasing all healing received from you by 2%.  Stacks up to 3 times.  Lasts 12 sec.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': _GRACE_TRIGGER_MASK[0], 'EffectSpellClassMaskA_2': _GRACE_TRIGGER_MASK[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Flash Heal, Greater Heal, Penance and Power Word: Shield have a 66% chance to bless the target with Grace, increasing all healing received from you by 2%.  Stacks up to 3 times.  Lasts 12 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Penance heals also shield the target for 30% of the amount healed, stacking.|r', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': _GRACE_TRIGGER_MASK[0], 'EffectSpellClassMaskA_2': _GRACE_TRIGGER_MASK[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 # Ranks 1-2 share one whole-chain spell_proc row (see the -14531 comment): Chance is left at 0 so
 # LoadSpellProcs falls back to each rank's own DBC ProcChance (33 / 66). AttributesMask 2 =
@@ -6224,8 +6227,11 @@ grace_200163 = spell(
     spell_icon_id=2819,
     notes='Discipline rework (8,2) NEW rank 3 of Grace - 100% chance, triggering the stock 3%-per-'
           'stack buff 47930. Ranks 1-2 (47516/47517) keep their stock ids and trigger the 1%/2% '
-          'clones 200164/200165 instead.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Flash Heal, Greater Heal, Penance and Power Word: Shield have a 100% chance to bless the target with Grace, increasing all healing received from you by 3%.  Stacks up to 3 times.  Lasts 12 sec.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': _GRACE_TRIGGER_MASK[0], 'EffectSpellClassMaskA_2': _GRACE_TRIGGER_MASK[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
+          'clones 200164/200165 instead. Capstone clause added to the rank text (2026-11-15, balance round 3 on the '
+          'Normal-tier kits, user ruling: "Your Penance heals also shield the target for 30% of the amount healed, '
+          'stacking"): this rank is the one that has the effect, spell_pri_grace_capstone (spell_priest_disc.cpp, '
+          'bound to the Penance bolts 47750 / 200160) keys on it; the shield is penance_shield_200169.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Flash Heal, Greater Heal, Penance and Power Word: Shield have a 100% chance to bless the target with Grace, increasing all healing received from you by 3%.  Stacks up to 3 times.  Lasts 12 sec.\n\nCapstone Bonus: Your Penance heals also shield the target for 30% of the amount healed, stacking.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': _GRACE_TRIGGER_MASK[0], 'EffectSpellClassMaskA_2': _GRACE_TRIGGER_MASK[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 # No spell_proc row of its own: the -47516 whole-chain row (above) covers rank 3 through the talent
 # rank chain, and a positive 200163 row would be dropped at boot as a duplicate.
@@ -6303,6 +6309,46 @@ spirit_shell_absorb_200167 = spell(
           'with spirit_shell_200166 - see that spell\'s notes.',
     raw_overrides={'AttributesEx2': 2621440, 'AttributesEx3': 67108864, 'AttributesEx4': 1048576, 'CastingTimeIndex': 1, 'InterruptFlags': 8, 'ProcChance': 101, 'BaseLevel': 1, 'SpellLevel': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs damage.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'SpellClassSet': 6, 'SpellClassMask_3': _masks.SPIRIT_SHELL, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
+
+
+# --- (8,2) Grace capstone: the Penance shield ------------------------------------------
+# id 200169 is one of Disc's spare 200168-200171 block (the Renewed Hope note above); checked free in every checkout,
+# the dbc-tools source and the data/sql tree on 2026-11-15. The priest has no `reservations:` slice in ids.yaml.
+penance_shield_200169 = spell(
+    id=200169,
+    name='Penance Shield',
+    school=School.HOLY,
+    dispel=DispelType.MAGIC,
+    attributes=327680,
+    range_yards=100.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=21, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127,
+            potency_excluded="percent of a heal, user ruling: the amount always arrives as BP0 from "
+                              "CastCustomSpell (spell_pri_grace_capstone, spell_priest_disc.cpp), 30% of the "
+                              "Penance bolt's effective heal, so it is already scaled by the heal's own "
+                              "potency - the same exclusion as Divine Aegis 47753 / Guiding Star 200158 / "
+                              "Spirit Shell 200167."),
+    ],
+    spell_icon_id=2818,
+    notes='Discipline Grace capstone (8,2) rank 3 (2026-11-15, balance round 3 on the Normal-tier kits, user ruling: '
+          '"Your Penance heals also shield the target for 30% of the amount healed, stacking"): the visible stacking '
+          'absorb spell_pri_grace_capstone puts on the target of every Penance heal bolt (47750 and the Empowered '
+          'Penance bolt 200160). Each bolt adds 30% of its effective heal (plus 30% of a quarter of the overheal, '
+          'Divine Aegis\'s weight) to the running amount, recast with the new total so the 15 s duration refreshes on '
+          'every add, capped at 30% of the target\'s maximum health in C++, same shape as Divine Aegis (47753) and '
+          'Spirit Shell (200167), and tracked separately from both so it stacks with them. Attribute set copied from '
+          'Guiding Star\'s absorb 200158; die_sides=0 because the amount always arrives as BP0 from CastCustomSpell. '
+          'No family flags: nothing else keys on it.',
+    raw_overrides={'AttributesEx2': 2621440, 'AttributesEx3': 67108864, 'AttributesEx4': 1048576, 'CastingTimeIndex': 1, 'InterruptFlags': 8, 'ProcChance': 101, 'BaseLevel': 1, 'SpellLevel': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs damage.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'SpellClassSet': 6, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# The two Penance heal bolts carry the capstone's shield: 47750 (the bolt every Penance channel fires, three per cast)
+# and 200160 (the Empowered Penance bolt). The script reads the bolt's effective heal in AfterHit, and does nothing
+# without Grace rank 3 (200163), so ranks 1-2 carry the tooltip text only.
+scripted_by(penance_47750, 'spell_pri_grace_capstone')
+scripted_by(penance_empowered_200160, 'spell_pri_grace_capstone')
 
 
 # ============================================================================================

@@ -21,7 +21,9 @@ Ids (Enhancement block 202360-202519):
     202444-202449  [DPS balance pass 1031 S1, 2026-11-02] the tank Lightning Shield kit and the Stormstrike cleave: Toughness's
                    orb heal 202444, Anticipation's Chain Lightning jumps child 202447, Static Shock's orb damage child
                    202448, Improved Lightning Shield's Stormstrike cleave 202449 (here); the arc 202445 and the Chain
-                   Lightning orb 202446 sit next to the orb 26364 in shaman_trigger_spells.py. 202450-202519 stay spare.
+                   Lightning orb 202446 sit next to the orb 26364 in shaman_trigger_spells.py.
+    202450         [balance round 3 on the Normal-tier kits, 2026-11-15] Toughness's Shield Strike (the shield tank's Stormstrike
+                   strike with the shield); 202451-202519 stay spare.
 SkillLineAbility 30680 (Living Earth), creatures 300262-300265 (the four Elemental Spirit wolves), tooltip entries 1217-1219,
 spell_group 1259.
 
@@ -270,6 +272,7 @@ ILS_SS_CLEAVE_R2 = const('ILS_SS_CLEAVE_R2', 66, 'Improved Lightning Shield rank
 ILS_SS_CLEAVE_R3 = const('ILS_SS_CLEAVE_R3', 100, 'Improved Lightning Shield rank 3: Stormstrike cleave share, percent [tune].')
 ILS_SS_CLEAVE_TARGETS = const('ILS_SS_CLEAVE_TARGETS', 4, 'Improved Lightning Shield: enemies the Stormstrike cleave strikes besides the target [fixed].')
 ILS_SS_CLEAVE_RADIUS_YD = const('ILS_SS_CLEAVE_RADIUS_YD', 8.0, 'Improved Lightning Shield: Stormstrike cleave radius around the target, yd [fixed].')
+SHIELD_STRIKE_ARMOR_PCT = const('SHIELD_STRIKE_ARMOR_PCT', 70, 'Toughness under Rockbiter with a shield equipped: Shield Strike (202450) damage, percent of the shield item\'s armor (item_template Armor); every Toughness rank carries it as its DUMMY effect 3 ($s3) [tune].')
 THUNDERING_SURGE_R1 = const('THUNDERING_SURGE_R1', 40, 'Thundering Strikes rank 1: damage bonus of a 5-stack Maelstrom Weapon Chain Lightning under Flametongue / Frostbrand / Windfury, percent [tune].')
 THUNDERING_SURGE_R2 = const('THUNDERING_SURGE_R2', 80, 'Thundering Strikes rank 2: the Chain Lightning surge, percent [tune].')
 THUNDERING_SURGE_R3 = const('THUNDERING_SURGE_R3', 125, 'Thundering Strikes rank 3: the Chain Lightning surge, percent [tune].')
@@ -1238,6 +1241,39 @@ ils_stormstrike_cleave_202449 = spell(
                        AttributesEx4=ATTR4_SUPPRESS_WEAPON_PROCS),
 )
 custom_attr(ils_stormstrike_cleave_202449, CU_IGNORE_ARMOR)
+
+# ---- Shield Strike (2026-11-15, balance round 3 on the Normal-tier kits, user ruling: the shield tank's Stormstrike) ------------
+BAL3_NOTE = ('(2026-11-15, balance round 3 on the Normal-tier kits, user ruling: the shield tank loses Lava Lash, the off-hand '
+             'Stormstrike and off-hand melee, so its Stormstrike also strikes with the shield, sized to about 680-700 DPS in '
+             'EnhShamanTankShieldSim, under the two one-handers\' 766) ')
+ICON_SHIELD_SLAM = 413                # Shield Slam 23922's icon (INV_Shield_05)
+
+shield_strike_202450 = spell(
+    id=202450, name='Shield Strike', school=School.NORMAL, attributes=ATTR0_NO_ACTIVE_DEFENSE,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
+    effects=[Effect(
+        type=EffectType.SCHOOL_DAMAGE, implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
+        potency_excluded='percent of shield armor, user ruling: SHIELD_STRIKE_ARMOR_PCT (70 %, the Toughness rank\'s DUMMY '
+                         'effect 3) of the equipped shield\'s item_template Armor is passed as bp0 by '
+                         'spell_sha_enh_stormstrike::ShieldStrike.',
+    )],
+    spell_icon_id=ICON_SHIELD_SLAM,
+    notes=NOTE + BAL3_NOTE + 'Toughness\'s Shield Strike: with Rockbiter active, any Toughness rank and a shield (item class 4 '
+          'subclass 6, usable) in the off hand, every Stormstrike 17364 that hits its primary target also casts this at that '
+          'target (spell_sha_enh_stormstrike::ShieldStrike, AfterHit, once per cast). Damage = the Toughness rank\'s DUMMY '
+          '(SHIELD_STRIKE_ARMOR_PCT, 70 %) of the shield\'s template Armor (base + bonus armor, as ItemBudget materializes it; '
+          'enchant armor is not counted), passed as bp0. Physical SCHOOL_DAMAGE, DmgClass melee: armor mitigates it, it can '
+          'crit (melee crit, 200 %), done-% auras apply (Rockbiter\'s +10 % with Spirit Guard), normal threat (Rockbiter\'s '
+          'threat aura applies as to any damage). ATTR0 NO_ACTIVE_DEFENSE and AttributesEx3 ALWAYS_HIT: it rides on a '
+          'Stormstrike that already landed, so it never rolls its own miss / dodge / parry / block. AttributesEx3 '
+          'SUPPRESS_CASTER_PROCS and AttributesEx4 SUPPRESS_WEAPON_PROCS: it procs nothing (no Earth Charge, no imbue or '
+          'Maelstrom roll; Stormstrike\'s own hit already counted). Not counted in the Frost Spirit / Improved Lightning '
+          'Shield landed sum (only 32175 / 32176 are). SpellClassSet 0 and no bits (no shaman SpellMod scales it). Range '
+          '50000 (L6). The ILS cleave 202449 shape.',
+    raw_overrides=_raw('Strikes the target with your shield.', '', 40, family=False, DefenseType=2,
+                       AttributesEx3=ATTR3_SUPPRESS_CASTER_PROCS | ATTR3_ALWAYS_HIT,
+                       AttributesEx4=ATTR4_SUPPRESS_WEAPON_PROCS),
+)
 
 # ---- Spirit Guard (60300, row 7): teaches parry, Rockbiter parry bonus and Stoneskin per parry -----------------------------------------
 _SPIRIT_GUARD_BONUS = (1, 2, 3)

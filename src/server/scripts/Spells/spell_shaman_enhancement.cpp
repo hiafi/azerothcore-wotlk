@@ -39,6 +39,8 @@
 #include "GameTime.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "Item.h"
+#include "ItemTemplate.h"
 #include "Log.h"
 #include "Player.h"
 #include "ScriptMgr.h"
@@ -783,6 +785,8 @@ class spell_sha_enh_frozen_blizzard : public AuraScript
 //    SUPPRESS_CASTER_PROCS and SUPPRESS_WEAPON_PROCS, so a cleave hit rolls no proc and no enchant.
 //  - Improved Lightning Shield (DPS balance pass 1031 S1): with the shaman's Lightning Shield up, a share of the landed
 //    damage on up to 4 other enemies near the target (202449), after the Ascendance cleave and never on its targets.
+//  - Toughness's Shield Strike (balance round 3 on the Normal-tier kits, 2026-11-15): under Rockbiter with a shield in
+//    the off hand, a strike with the shield (202450) for a percent of the shield's armor.
 class spell_sha_enh_stormstrike : public SpellScript
 {
     PrepareSpellScript(spell_sha_enh_stormstrike);
@@ -792,7 +796,7 @@ class spell_sha_enh_stormstrike : public SpellScript
         return ValidateSpellInfo({ SPELL_STORMSTRIKE_MAIN_HAND, SPELL_STORMSTRIKE_OFF_HAND,
             ShamanData::SPELL_STORMSTRIKE_CLEAVE_MAIN_HAND, ShamanData::SPELL_STORMSTRIKE_CLEAVE_OFF_HAND,
             ShamanData::SPELL_IMPROVED_STORMSTRIKE_DEBUFF, ShamanData::SPELL_IMPROVED_STORMSTRIKE_MANA,
-            ShamanData::SPELL_ILS_STORMSTRIKE_CLEAVE });
+            ShamanData::SPELL_ILS_STORMSTRIKE_CLEAVE, ShamanData::SPELL_SHIELD_STRIKE });
     }
 
     bool Load() override
@@ -832,6 +836,7 @@ class spell_sha_enh_stormstrike : public SpellScript
 
         ApplyImprovedStormstrike(player, target);
         ApplyStaticShockCapstone(player);
+        ShieldStrike(player, target);
 
         if (landed)
             Shaman::OnStormstrikeLanded(player, target, landed);
@@ -894,6 +899,38 @@ class spell_sha_enh_stormstrike : public SpellScript
         uint32 const charges = std::min<uint32>(added, uint32(ShamanData::SS_STATIC_SHOCK_CAP));
         if (charges > shield->GetCharges())
             shield->SetCharges(uint8(charges));
+    }
+
+    // Toughness (balance round 3 on the Normal-tier kits, 2026-11-15, user ruling): with Rockbiter active, any
+    // Toughness rank and a usable shield in the off hand, the Stormstrike that hit `target` also strikes it with the
+    // shield (202450, ALWAYS_HIT: it rides on the landed Stormstrike) for the rank's DUMMY percent
+    // (SHIELD_STRIKE_ARMOR_PCT) of the shield's template armor (base + bonus armor; enchant armor is not counted).
+    // Physical, armor and crit apply. Not part of the Frost Spirit / Improved Lightning Shield landed sum (only
+    // 32175 / 32176 feed it).
+    static void ShieldStrike(Player* player, Unit* target)
+    {
+        if (Shaman::GetActiveImbue(player) != ShamanData::SPELL_ROCKBITER_WEAPON)
+            return;
+
+        uint8 const rank = Shaman::GetTalentRank(player, TOUGHNESS_RANKS);
+        if (!rank)
+            return;
+
+        Item const* shield = player->GetShield(true);
+        if (!shield || shield->GetTemplate()->SubClass != ITEM_SUBCLASS_ARMOR_SHIELD)
+            return;
+
+        std::vector<int32> const amounts = GetRankDummyAmounts(TOUGHNESS_RANKS[rank - 1]);
+        if (amounts.empty())
+        {
+            LOG_ERROR("scripts.spells", "spell_sha_enh_stormstrike: Toughness rank {} needs a DUMMY effect (Shield "
+                "Strike percent of shield armor), found none", TOUGHNESS_RANKS[rank - 1]);
+            return;
+        }
+
+        int32 const damage = int32(CalculatePct(shield->GetTemplate()->Armor, amounts[0]));
+        if (damage > 0)
+            player->CastCustomSpell(ShamanData::SPELL_SHIELD_STRIKE, SPELLVALUE_BASE_POINT0, damage, target, true);
     }
 
     // The Frost / Elemental Ascendance cleave; returns the enemies it struck

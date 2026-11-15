@@ -110,6 +110,8 @@ R4_ROCKBITER_DAMAGE_RETIRED = 202443
 # DPS balance pass 1031 S1 (2026-11-02, user ruling: shaman package): the tank Lightning Shield kit and the Stormstrike cleave.
 S1_TOUGHNESS_HEAL, S1_ARC, S1_CHAIN_ORB, S1_JUMPS, S1_ORB_DAMAGE, S1_SS_CLEAVE = range(202444, 202450)
 S1_IDS = tuple(range(202444, 202450))
+# Balance round 3 on the Normal-tier kits (2026-11-15, user ruling): Toughness's Shield Strike took the first spare id.
+BAL3_SHIELD_STRIKE = 202450
 S3A_SPARE = range(202450, 202520)
 REWRITTEN_STOCK = (
     16257, 53817, 8017, 324, 8042, 8349, 8187, 2484, 59566, 63685, 3600, 32175, 32176, 421, 60103, 17364, 30823, 51533,
@@ -747,6 +749,32 @@ class ShamanS3aDataTest(unittest.TestCase):
         self.assertEqual(len(proc), 1)
         self.assertEqual((proc[0]["HitMask"], proc[0]["AttributesMask"], proc[0]["Cooldown"], proc[0]["SpellTypeMask"]),
                          (0x403, 0x2, 3500, 0x1))
+
+    def test_bal3_toughness_shield_strike(self):
+        """Balance round 3 (2026-11-15): every Toughness rank carries the Shield Strike percent as its DUMMY effect 3 (70 %,
+        stored 69, quoted as $s3), and Shield Strike 202450 is a Physical melee-class strike, script-sized, that always hits
+        (it rides on a landed Stormstrike), can crit (no CANT_CRIT), keeps armor and done mods, and procs nothing."""
+        d = _data()
+        rows, entries, p = d["rows_by_id"], d["entries_by_id"], d["package"]
+        consts = {c["name"]: c["value"] for c in p.consts}
+        self.assertEqual(consts["SHIELD_STRIKE_ARMOR_PCT"], 70)
+        for sid in (16252, 16306, 16307):
+            with self.subTest(rank=sid):
+                row = rows[sid]
+                self.assertEqual((int(row["Effect_3"]), int(row["EffectAura_3"])), (6, 4))   # APPLY_AURA, DUMMY
+                self.assertEqual(int(row["EffectBasePoints_3"]) + 1, 70)
+                self.assertIn("your Stormstrike also strikes with your shield, dealing Physical damage equal to $s3% of your "
+                              "shield's armor.", row["Description_Lang_enUS"])
+        strike = rows[BAL3_SHIELD_STRIKE]
+        self.assertEqual(int(strike["SchoolMask"]), 1)
+        self.assertEqual(int(strike["DefenseType"]), 2)
+        self.assertEqual(int(strike.get("SpellClassSet") or 0), 0)
+        self.assertEqual(int(strike["EquippedItemClass"]), -1)
+        self.assertEqual(int(strike["AttributesEx2"]) & 0x20000000, 0)                    # can crit
+        self.assertEqual(int(strike["AttributesEx3"]) & 0x20050000, 0x00050000)           # ALWAYS_HIT | SUPPRESS, done mods kept
+        self.assertEqual(int(strike["AttributesEx4"]) & 0x00800000, 0x00800000)           # SUPPRESS_WEAPON_PROCS
+        self.assertNotIn((BAL3_SHIELD_STRIKE, 0x8000), {(int(r["spell_id"]), int(r["attributes"])) for r in p.custom_attrs})
+        self.assertIn("percent of shield armor, user ruling", entries[BAL3_SHIELD_STRIKE]["effect1"]["_potency_excluded"])
 
     def test_gust(self):
         self.assertClean(check_gust(_data()["rows_by_id"]))

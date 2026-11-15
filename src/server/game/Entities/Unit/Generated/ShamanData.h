@@ -507,6 +507,7 @@ namespace ShamanData
     constexpr uint32 SPELL_ANTICIPATION_JUMPS = 202447; // anticipation_jumps_202447
     constexpr uint32 SPELL_STATIC_SHOCK_ORB_DAMAGE = 202448; // static_shock_orb_damage_202448
     constexpr uint32 SPELL_ILS_STORMSTRIKE_CLEAVE = 202449; // ils_stormstrike_cleave_202449
+    constexpr uint32 SPELL_SHIELD_STRIKE = 202450; // shield_strike_202450
     constexpr uint32 SPELL_RAZE_RANK1 = 202520; // raze_rank1_202520
     constexpr uint32 SPELL_RAZE_RANK2 = 202521; // raze_rank2_202521
     constexpr uint32 SPELL_RAZE_RANK3 = 202522; // raze_rank3_202522
@@ -741,6 +742,7 @@ namespace ShamanData
     constexpr float SEARING_RANGE_YD = 20.0f; // Searing Totem: target search radius, yd (stock) [tune].
     constexpr int32 SHAMANISM_CDR_MS = 1000; // Shamanism reduction of Elemental Mastery / Thunderstorm, real ms [fixed].
     constexpr int32 SHAMANISM_CHANCE = 33; // Shamanism cooldown-reduction chance per Lightning Bolt / Chain Lightning hit, percent [fixed].
+    constexpr int32 SHIELD_STRIKE_ARMOR_PCT = 70; // Toughness under Rockbiter with a shield equipped: Shield Strike (202450) damage, percent of the shield item's armor (item_template Armor); every Toughness rank carries it as its DUMMY effect 3 ($s3) [tune].
     constexpr int32 SPIRIT_GUARD_STONESKIN_R1 = 3; // Spirit Guard rank 1: Stoneskin per parry under Rockbiter [fixed].
     constexpr int32 SPIRIT_GUARD_STONESKIN_R2 = 6; // Spirit Guard rank 2: Stoneskin per parry under Rockbiter [fixed].
     constexpr int32 SPIRIT_GUARD_STONESKIN_R3 = 10; // Spirit Guard rank 3: Stoneskin per parry under Rockbiter [fixed].

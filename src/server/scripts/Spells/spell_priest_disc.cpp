@@ -40,6 +40,7 @@
 #include "SpellMgr.h"
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
+#include <algorithm>
 
 enum PriestDiscSpells
 {
@@ -63,6 +64,7 @@ enum PriestDiscSpells
     SPELL_PRIEST_MARTYRDOM_R2                   = 14774,
     SPELL_PRIEST_ABSOLUTION_R1                  = 33167,    // (3,0)
     SPELL_PRIEST_FOCUSED_WILL_R3                = 45244,    // (6,0) rank 3 - Empowered Penance
+    SPELL_PRIEST_GRACE_R3                       = 200163,   // (8,2) rank 3 - the Penance shield capstone
     SPELL_PRIEST_ASPIRATION_R2                  = 47508,    // (7,2) rank 2 - Power Infusion echo
     SPELL_PRIEST_IMPROVED_FLASH_HEAL_R3         = 63506,    // (6,2) rank 3 - Inner Focus cooldown
     SPELL_PRIEST_REPRIEVE_R3                    = 200144,   // (1,0) rank 3 - Weakened Soul trim
@@ -71,7 +73,9 @@ enum PriestDiscSpells
     SPELL_PRIEST_MARTYRDOM_BUFF                 = 200145,
     SPELL_PRIEST_INNER_FOCUS_MIND_BLAST_SLOW    = 200146,
     SPELL_PRIEST_ABSOLUTION_BUFF                = 200153,
-    SPELL_PRIEST_EMPOWERED_PENANCE_READY        = 200159
+    SPELL_PRIEST_EMPOWERED_PENANCE_READY        = 200159,
+    SPELL_PRIEST_SPIRIT_SHELL                   = 200166,
+    SPELL_PRIEST_PENANCE_SHIELD                 = 200169    // the Grace capstone's stacking absorb
 };
 
 namespace
@@ -92,6 +96,14 @@ namespace
     // Improved Flash Heal (6,2) capstone: "Flash Heal casts reduce the cooldown of Inner Focus by
     // 1 sec."
     constexpr uint32 PRIEST_IMPROVED_FLASH_HEAL_INNER_FOCUS_REDUCTION_MS = 1000;
+
+    // Grace (8,2) capstone (balance round 3 on the Normal-tier kits, 2026-11-15): "Your Penance heals also shield the
+    // target for 30% of the amount healed, stacking." The percent is the tooltip's own number, the overheal weight and
+    // the cap mirror Divine Aegis (PRIEST_DIVINE_AEGIS_OVERHEAL_WEIGHT / PRIEST_DIVINE_AEGIS_MAX_HEALTH_PCT in
+    // spell_priest.cpp: overhealing shields 75% less, the absorb is limited to 30% of the target's maximum health).
+    constexpr float PRIEST_GRACE_CAPSTONE_SHIELD_PCT = 30.0f;
+    constexpr float PRIEST_GRACE_CAPSTONE_OVERHEAL_WEIGHT = 0.25f;
+    constexpr int32 PRIEST_GRACE_CAPSTONE_MAX_HEALTH_PCT = 30;
 }
 
 /*
@@ -416,6 +428,97 @@ class spell_pri_improved_flash_heal_capstone : public SpellScript
 };
 
 /*
+ * Grace (8,2) capstone: "Your Penance heals also shield the target for 30% of the amount healed, stacking." Registered
+ * on both Penance heal bolts, 47750 (three per Penance channel; the channel's own spell 47757 only triggers it) and the
+ * Empowered Penance bolt 200160, and gated on Grace rank 3's spell id (200163), the only rank with the capstone.
+ *
+ * AfterHit, not a proc: 200160 carries no family flags on purpose (it must not proc Grace again), so a Grace proc never
+ * sees it, and by AfterHit Spell::DoAllEffectOnTarget has replaced m_healing with the effective heal (`m_healing =
+ * gain`), the figure the capstone is defined on. The overheal is re-derived the way spell_pri_echo_of_light_heal
+ * derives its raw amount (the target's TargetInfo damage, a heal stored negative, plus the crit bonus), because
+ * Divine Aegis's rule is the one the ruling asks to follow: overhealing shields 75% less, so it counts at 25%.
+ *
+ * Skipped while Spirit Shell is up, the guard Divine Aegis carries: Priest::TryConvertHealToSpiritShell already turned
+ * a 47750 bolt into its own absorb (the bolt lands for 0), and one cast must never yield two absorbs. The Empowered
+ * Penance bolt is not on that conversion list, so inside the window it heals for real and takes no capstone shield
+ * either, same as it takes no Divine Aegis there.
+ *
+ * Each bolt adds to the running amount of the target's existing shield and recasts the aura with the new total (the
+ * shape of Divine Aegis and Spirit Shell), which refreshes the 15 s duration; the total is capped at 30% of the
+ * target's maximum health. A separate spell (200169) from Divine Aegis and Spirit Shell, so all three stack.
+ */
+class spell_pri_grace_capstone : public SpellScript
+{
+    PrepareSpellScript(spell_pri_grace_capstone);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_PRIEST_PENANCE_SHIELD });
+    }
+
+    // The heal the bolt was about to land for, crit included, before overheal is taken off (see the class comment).
+    static uint32 GetRawHeal(Spell* spell, Unit* caster, Unit* target, SpellInfo const* spellInfo)
+    {
+        for (TargetInfo const& info : *spell->GetUniqueTargetInfo())
+        {
+            if (info.targetGUID != target->GetGUID())
+                continue;
+
+            if (info.damage >= 0)
+                return 0;
+
+            uint32 raw = uint32(-info.damage);
+            if (info.crit)
+                raw = Unit::SpellCriticalHealingBonus(caster, spellInfo, raw, nullptr);
+
+            return raw;
+        }
+
+        return 0;
+    }
+
+    void HandleShield()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!caster || !target || !target->IsAlive())
+            return;
+
+        if (!caster->HasAura(SPELL_PRIEST_GRACE_R3))
+            return;
+
+        if (caster->HasAura(SPELL_PRIEST_SPIRIT_SHELL))
+            return;
+
+        int32 const effective = GetHitHeal();
+        if (effective < 0)
+            return;
+
+        uint32 const raw = GetRawHeal(GetSpell(), caster, target, GetSpellInfo());
+        uint32 const overheal = raw > uint32(effective) ? raw - uint32(effective) : 0;
+        float const contribution = float(effective) + float(overheal) * PRIEST_GRACE_CAPSTONE_OVERHEAL_WEIGHT;
+
+        int32 absorb = int32(CalculatePct(contribution, PRIEST_GRACE_CAPSTONE_SHIELD_PCT));
+        if (absorb <= 0)
+            return;
+
+        // "Stacking": this bolt's shield adds to whatever the earlier bolts left on the target.
+        ObjectGuid const casterGuid = caster->GetGUID();
+        if (AuraEffect const* existing = target->GetAuraEffect(SPELL_PRIEST_PENANCE_SHIELD, EFFECT_0, casterGuid))
+            absorb += existing->GetAmount();
+
+        absorb = std::min<int32>(absorb, int32(target->CountPctFromMaxHealth(PRIEST_GRACE_CAPSTONE_MAX_HEALTH_PCT)));
+
+        caster->CastCustomSpell(SPELL_PRIEST_PENANCE_SHIELD, SPELLVALUE_BASE_POINT0, absorb, target, true);
+    }
+
+    void Register() override
+    {
+        AfterHit += SpellHitFn(spell_pri_grace_capstone::HandleShield);
+    }
+};
+
+/*
  * Aspiration (7,2) capstone: "Casting Power Infusion on an ally also applies Power Infusion to
  * you." Registered on Power Infusion itself and gated on rank 2's spell id, so no marker is
  * needed. The self-cast's own hit unit *is* the caster, so the `hit unit != caster` guard is also
@@ -456,6 +559,7 @@ void AddSC_priest_disc_spell_scripts()
     RegisterSpellScript(spell_pri_absolution);
     RegisterSpellScript(spell_pri_aspiration_power_infusion);
     RegisterSpellScript(spell_pri_focused_will);
+    RegisterSpellScript(spell_pri_grace_capstone);
     RegisterSpellScript(spell_pri_improved_flash_heal_capstone);
     RegisterSpellScript(spell_pri_inner_focus_mind_blast);
     RegisterSpellScript(spell_pri_martyrdom);

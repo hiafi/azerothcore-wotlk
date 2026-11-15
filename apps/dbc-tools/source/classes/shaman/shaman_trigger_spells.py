@@ -16,7 +16,7 @@ from .shaman_enh_tooltips import shaman_lshield_1217
 from .shaman_restoration import natures_guardian_heal_202675, totemic_focus_heal_202677
 from .shaman_enhancement import (
     ANTICIPATION_CL_JUMPS, ILS_SS_CLEAVE_R1, ILS_SS_CLEAVE_R2, ILS_SS_CLEAVE_R3, ILS_SS_CLEAVE_RADIUS_YD, ILS_SS_CLEAVE_TARGETS,
-    S1_NOTE, STATIC_SHOCK_ARC_PCT, STATIC_SHOCK_ARC_RADIUS_YD, STATIC_SHOCK_ORB_DAMAGE_R1, STATIC_SHOCK_ORB_DAMAGE_R2,
+    S1_NOTE, SHIELD_STRIKE_ARMOR_PCT, STATIC_SHOCK_ARC_PCT, STATIC_SHOCK_ARC_RADIUS_YD, STATIC_SHOCK_ORB_DAMAGE_R1, STATIC_SHOCK_ORB_DAMAGE_R2,
     STATIC_SHOCK_ORB_DAMAGE_R3, THUNDERING_SURGE_MW_STACKS, THUNDERING_SURGE_R1, THUNDERING_SURGE_R2, THUNDERING_SURGE_R3,
     anticipation_shell_202441, toughness_heal_202444,
 )
@@ -133,7 +133,18 @@ def _scaled_pot(text, num, den):
 # talent (proposal Revisions 2-3), and the Improved Lightning Shield / Thundering Strikes DPS clauses.
 def _toughness_clause(rank):
     return (' While Rockbiter is active, your Lightning Shield orbs heal you for '
-            + _scaled_pot(pot_text(toughness_heal_202444), rank, 3) + '.')
+            + _scaled_pot(pot_text(toughness_heal_202444), rank, 3) + '.' + _TOUGHNESS_SHIELD_STRIKE)
+
+
+# Balance round 3 on the Normal-tier kits (2026-11-15, user ruling): the shield tank's Stormstrike also strikes with the
+# shield (Shield Strike 202450). The percent is every Toughness rank's DUMMY effect 3 ($s3, SHIELD_STRIKE_ARMOR_PCT), which
+# spell_sha_enh_stormstrike::ShieldStrike reads.
+_TOUGHNESS_SHIELD_STRIKE = (' While Rockbiter is active and you have a shield equipped, your Stormstrike also strikes with '
+                            'your shield, dealing Physical damage equal to $s3% of your shield\'s armor.')
+_TOUGHNESS_BAL3_NOTE = (' (2026-11-15, balance round 3 on the Normal-tier kits, user ruling: the shield tank\'s Stormstrike '
+                        'also strikes with the shield) Effect 3 DUMMY = SHIELD_STRIKE_ARMOR_PCT (70, stored 69), the Shield '
+                        'Strike 202450 percent of the shield\'s template armor, read by spell_sha_enh_stormstrike::ShieldStrike '
+                        'under Rockbiter with a usable shield in the off hand (any rank).')
 
 
 _STATIC_SHOCK_ORB = (STATIC_SHOCK_ORB_DAMAGE_R1['value'], STATIC_SHOCK_ORB_DAMAGE_R2['value'], STATIC_SHOCK_ORB_DAMAGE_R3['value'])
@@ -3790,11 +3801,12 @@ scripted_by(8170, 'spell_sha_resto_cleansing_totem')
 
 toughness_16252 = _talent(
     16252, 'Toughness', 'Rank 1',
-    [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 3, 1), _aura(232, -11, 11)], 52,
+    [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 3, 1), _aura(232, -11, 11),
+     _dummy(SHIELD_STRIKE_ARMOR_PCT['value'] - 1)], 52,
     _cap('Increases your armor value from items by 4% and reduces the duration of movement slowing effects on you by 10%.'
          + _toughness_clause(1),
           'While you are below 35% health, your Stoneskin erodes 50% slower.', last=False),
-    notes='S3a A2: pulled stock rank, rewritten. Item armor +4% (aura 142 physical; the stock Stamina clause is gone), snare duration -10% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.' + S1_NOTE + 'Rockbiter clause: every Lightning Shield orb the shield fires heals for 202444 x rank / 3 (5 / 10 / 15 potency; spell_sha_enh_storm_orb + spell_sha_enh_toughness_heal).',
+    notes='S3a A2: pulled stock rank, rewritten. Item armor +4% (aura 142 physical; the stock Stamina clause is gone), snare duration -10% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.' + S1_NOTE + 'Rockbiter clause: every Lightning Shield orb the shield fires heals for 202444 x rank / 3 (5 / 10 / 15 potency; spell_sha_enh_storm_orb + spell_sha_enh_toughness_heal).' + _TOUGHNESS_BAL3_NOTE,
 )
 
 
@@ -3897,21 +3909,23 @@ thundering_strikes_16303 = _talent(
 
 toughness_16306 = _talent(
     16306, 'Toughness', 'Rank 2',
-    [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 6, 1), _aura(232, -21, 11)], 52,
+    [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 6, 1), _aura(232, -21, 11),
+     _dummy(SHIELD_STRIKE_ARMOR_PCT['value'] - 1)], 52,
     _cap('Increases your armor value from items by 7% and reduces the duration of movement slowing effects on you by 20%.'
          + _toughness_clause(2),
           'While you are below 35% health, your Stoneskin erodes 50% slower.', last=False),
-    notes='S3a A2: pulled stock rank, rewritten. Item armor +7% (aura 142 physical; the stock Stamina clause is gone), snare duration -20% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.' + S1_NOTE + 'Rockbiter clause: every Lightning Shield orb the shield fires heals for 202444 x rank / 3 (5 / 10 / 15 potency; spell_sha_enh_storm_orb + spell_sha_enh_toughness_heal).',
+    notes='S3a A2: pulled stock rank, rewritten. Item armor +7% (aura 142 physical; the stock Stamina clause is gone), snare duration -20% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.' + S1_NOTE + 'Rockbiter clause: every Lightning Shield orb the shield fires heals for 202444 x rank / 3 (5 / 10 / 15 potency; spell_sha_enh_storm_orb + spell_sha_enh_toughness_heal).' + _TOUGHNESS_BAL3_NOTE,
 )
 
 
 toughness_16307 = _talent(
     16307, 'Toughness', 'Rank 3',
-    [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 9, 1), _aura(232, -31, 11)], 52,
+    [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 9, 1), _aura(232, -31, 11),
+     _dummy(SHIELD_STRIKE_ARMOR_PCT['value'] - 1)], 52,
     _cap('Increases your armor value from items by 10% and reduces the duration of movement slowing effects on you by 30%.'
          + _toughness_clause(3),
           'While you are below 35% health, your Stoneskin erodes 50% slower.', last=True),
-    notes='S3a A2: pulled stock rank, rewritten. Item armor +10% (aura 142 physical; the stock Stamina clause is gone), snare duration -30% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.' + S1_NOTE + 'Rockbiter clause: every Lightning Shield orb the shield fires heals for 202444 x rank / 3 (5 / 10 / 15 potency; spell_sha_enh_storm_orb + spell_sha_enh_toughness_heal).',
+    notes='S3a A2: pulled stock rank, rewritten. Item armor +10% (aura 142 physical; the stock Stamina clause is gone), snare duration -30% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.' + S1_NOTE + 'Rockbiter clause: every Lightning Shield orb the shield fires heals for 202444 x rank / 3 (5 / 10 / 15 potency; spell_sha_enh_storm_orb + spell_sha_enh_toughness_heal).' + _TOUGHNESS_BAL3_NOTE,
 )
 
 
