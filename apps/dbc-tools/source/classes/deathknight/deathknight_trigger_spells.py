@@ -122,7 +122,7 @@ plague_strike_45462 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=121, sp_potency=56.4, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),
-        Effect(type=31, weapon_potency=54, implicit_target_a=6),
+        Effect(type=31, weapon_potency=62, implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=6, trigger_spell=55078),
     ],
     spell_icon_id=2719,
@@ -150,7 +150,8 @@ plague_strike_45462 = spell(
         'effect does not apply); it still comes first, so the 49% weapon percent still scales it (2026-11-01, potency '
         'audit fix F14). The off-hand copy 66216 keeps its hand-set flat (37 at 60), which already follows this flat at '
         '0.245 x. '
-        'weapon_potency 49 -> 54 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Plague Strike +10%; 49 x 1.1 = 53.9 rounded to the whole number 54, so +10.2%; the flat eff0 sits before the percent effect and is scaled by it, so it follows without an edit; the off-hand copy 66216 follows).'
+        'weapon_potency 49 -> 54 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Plague Strike +10%; 49 x 1.1 = 53.9 rounded to the whole number 54, so +10.2%; the flat eff0 sits before the percent effect and is scaled by it, so it follows without an edit; the off-hand copy 66216 follows). '
+        'weapon_potency 54 -> 62 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Plague Strike +15%; 54 x 1.15 = 62.1 rounded to the whole number 62, so +14.8%; the flat eff0 sits before the percent effect and is scaled by it, so it follows without an edit; the off-hand copy 66216 follows).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals ${$m2*$<plague>}% weapon damage plus {pot1*plagueflat} and infects the target with Blood Plague, a disease dealing Shadow damage over time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 221, 'SpellClassMask_1': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 11624, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -936,7 +937,7 @@ scourge_strike_55090 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=77, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=89, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=11, implicit_target_a=6),
     ],
@@ -955,7 +956,8 @@ scourge_strike_55090 = spell(
         'AttributesEx3 0x400, CumulativeAura 1, the 1.5 s GCD and spell_threat 55090 kept; the stock SkillLineAbility 19202 '
         '(superseded by 55265) is harmless. The tooltip reads Outbreak through tooltip_vars 1280 ($outbreak). Rebinds '
         '-55090 to spell_dk_scourge_strike_rework (end of this file). '
-        'weapon_potency 70 -> 77 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Scourge Strike +10%; the Shadow part is a percent of the dealt damage and follows).'
+        'weapon_potency 70 -> 77 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Scourge Strike +10%; the Shadow part is a percent of the dealt damage and follows). '
+        'weapon_potency 77 -> 89 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Scourge Strike +15%; 77 x 1.15 = 88.55 rounded to the whole number 89, so +15.6%; the Shadow part 70890 is a percent of the dealt damage and follows).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An unholy strike that deals ${$s1*$<outbreak>}% weapon damage as Physical damage, plus $s3% of that damage as Shadow damage for each of your diseases on the target. Bursts half the Festering Wounds on the target, rounded down, minimum 2. Each rune it spends has a 33% chance to return as a Death Rune.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 2602, 'SpellClassMask_2': m.SCOURGE_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 15, 'SpellPriority': 50, 'SpellVisualID_1': 11832, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )

@@ -170,10 +170,10 @@ mongoose_bite_1495 = spell(
     mana_cost_pct=3,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=97.5, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=107.25, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=257,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 16); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to potency (74.8 then; ap_potency=130 since the H0 strike retune). hunter-rework S3a A15: TOOLTIP-RECONCILE (a) wording, {pot1*df} with tooltip_vars 1153 (Deadly Focus).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 16); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to potency (74.8 then; ap_potency=130 since the H0 strike retune). hunter-rework S3a A15: TOOLTIP-RECONCILE (a) wording, {pot1*df} with tooltip_vars 1153 (Deadly Focus). Effect 1 ap_potency 97.5 -> 107.25 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Mongoose Bite +10%).',
     tooltip_vars=sv_strike_1153,
     raw_overrides={'AttributesEx': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A quick bite that deals {pot1*df} Physical damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 12, 'SpellClassMask_1': 2, 'SpellClassSet': 9, 'SpellLevel': 16, 'SpellVisualID_1': 342, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )

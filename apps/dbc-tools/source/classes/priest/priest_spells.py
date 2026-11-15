@@ -2012,7 +2012,7 @@ holy_word_sanctify_200198 = spell(
     range_yards=40.0,
     radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=28.3, potency_kind='heal', implicit_target_a=31, radius_yards=8.0),
+        Effect(type=EffectType.HEAL, sp_potency=56.6, potency_kind='heal', implicit_target_a=31, radius_yards=8.0),
     ],
     spell_icon_id=90107,
     notes='HOLY.md §2/§"ID map": instant ground-targeted AoE heal, 60 s cooldown, 20% base mana, '
@@ -2034,7 +2034,7 @@ holy_word_sanctify_200198 = spell(
           '(_masks.HW_SANCTIFY) is its own family-flag identity (same rationale as Serenity above). '
           'Potency system P5-Priest: converted to sp_potency=28.3 (user-reviewed, mismatched row) - '
           'replaces the bonus_coefficients(direct=0.6) call below (removed; brand-new custom id, no '
-          'stock-dump row to retire). DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit).',
+          'stock-dump row to retire). DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit). sp_potency 28.3 -> 56.6 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Holy Word: Sanctify +100%, it should hit harder than Prayer of Healing (47.5)).',
     raw_overrides={'Targets': 64, 'BaseLevel': 10, 'SpellLevel': 10, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals up to 5 friendly targets within $a1 yards of the target location for {pot1}.  Healing is reduced beyond 5 targets.', 'EquippedItemClass': -1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 280, 'SpellClassMask_3': _masks.HW_SANCTIFY, 'DefenseType': 1},
 )
 scripted_by(holy_word_sanctify_200198, 'spell_pri_holy_word_sanctify')

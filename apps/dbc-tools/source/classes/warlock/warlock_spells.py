@@ -1520,11 +1520,12 @@ chaos_bolt_50796 = spell(
     mana_cost_pct=7,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=170.4, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=204.48, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=3178,
     notes="warlock-rework DESTRUCTION §4.1 (B3 rebase, moved (10,1)->(6,1), learn level 60->40). School Fire (4) -> 36 (Fire|Shadow, Shadowflame per §0.2.5; crit still reads GetFirstSchoolInMask=Fire, unchanged). Description names Chaotic Burn and Soulburn: Chaos Bolt/Soul Fire (§6.1); Mastery capstone is spell_warl_chaos_bolt_mastery (WP-B). Potency system P4 (warlock pilot): converted to sp_potency=213.0 (user-reviewed, mismatched row)."
-          ' Effect 1 sp_potency 213.0 -> 170.4 (2026-11-01, DPS balance pass 1031, user ruling: Chaos Bolt -20%).',
+          ' Effect 1 sp_potency 213.0 -> 170.4 (2026-11-01, DPS balance pass 1031, user ruling: Chaos Bolt -20%).'
+    ' Effect 1 sp_potency 170.4 -> 204.48 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Chaos Bolt +20%).',
     raw_overrides={'AttributesEx3': 262144, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Sends a bolt of chaotic fire at the enemy, dealing {pot1} Shadowflame damage and leaving Chaotic Burn on the target. Chaos Bolt cannot be resisted, and pierces through all absorption effects. Learning Chaos Bolt also grants Soulburn: Chaos Bolt and Soulburn: Soul Fire.\n\nChaotic Burn: deals 25% of Chaos Bolt's damage as Shadowflame damage over 6 sec, ticking every 2 sec. Your Conflagrate deals 20% more damage to targets afflicted by your Chaotic Burn.\n\nCapstone Bonus: Chaos Bolt's damage is increased by your Mastery.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': 131072, 'SpellClassSet': 5, 'SpellLevel': 40, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(chaos_bolt_50796, 'spell_warl_chaos_bolt', 'spell_warl_chaos_bolt_mastery')

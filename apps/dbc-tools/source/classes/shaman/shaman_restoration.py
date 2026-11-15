@@ -562,12 +562,12 @@ healing_tide_counter_202660 = _buff(
 )
 
 healing_tide_party_heal_202661 = _heal(
-    202661, 'Healing Tide Totem', 30.0, 2000, ICON_HEALING_STREAM, 20,
+    202661, 'Healing Tide Totem', 42.0, 2000, ICON_HEALING_STREAM, 20,
     'the Healing Tide Totem\'s heal in a 5-player party: Nature, 30 potency on the healing scale (T 2000, about 424 at '
     '60; the doc\'s +50% over Healing Stream\'s 20), d0 b13 (the Healing Stream heal bit: Improved Healing Stream '
     'reaches it). Cast by the 5672 passive branch of the Tide creature (caster = the totem, no owner GUID: no shaman '
     'proc rolls; it can crit) on the 10 most injured players when the owner is in a 5-player party (not a raid); a raid '
-    'uses 202271 (20). SpellLevel 20 = Healing Stream\'s.',
+    'uses 202271 (20). SpellLevel 20 = Healing Stream\'s. Potency 30.0 -> 42.0 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Resto Shaman option B, Healing Tide Totem +40%).',
     'Heals the target for {pot1}.',
     SpellClassMask_1=m.HEALING_STREAM_HEAL,
 )

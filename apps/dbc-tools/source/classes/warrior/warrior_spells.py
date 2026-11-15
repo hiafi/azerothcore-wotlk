@@ -817,8 +817,8 @@ overpower_7384 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=139, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=14.025, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=153, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=15.4275, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=battlelord_tooltip,
@@ -833,6 +833,7 @@ overpower_7384 = spell(
         'stays bound (EFFECT_0 SPELL_EFFECT_ANY). warrior-rework S2 D27: the damage reads Battlelord (tooltip_vars 1386).'
           ' Effect 1 weapon_potency 168 -> 126 (2026-10-31, DPS balance pass 1031, user ruling: Arms damage -25%). Effect 2 sp_potency 17 -> 12.75 (2026-10-31, DPS balance pass 1031, user ruling: Arms damage -25%).'
           ' Effect 1 weapon_potency 126 -> 139 (138.6 rounded to a whole number) (2026-11-15, balance on the Normal-tier kits, user ruling: Overpower +10%). Effect 2 sp_potency 12.75 -> 14.025 (2026-11-15, balance on the Normal-tier kits, user ruling: Overpower +10%).'
+          ' Effect 1 weapon_potency 139 -> 153 (153.0 from 139 x1.10 = 152.9, whole number) (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Overpower +10% Effect 2 sp_potency 14.025 -> 15.4275 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Overpower +10%)'
     ),
     raw_overrides={'AttributesEx': 1476395520, 'AttributesEx3': 1024, 'AttributesEx4': 512, 'AttributesEx6': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CasterAuraSpell': 204403, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly overpower the enemy, dealing ${$m1*$<bl>}% weapon damage plus {pot2.avg*bl}. Usable only with an Overpower charge. Parrying an attack grants a charge.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 0, 'SpellClassMask_1': 4, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 12, 'SpellVisualID_1': 39, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1167,8 +1168,8 @@ mortal_strike_12294 = spell(
     duration_ms=10000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=6, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=188, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=14.85, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=207, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=16.335, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=improved_mortal_strike_tooltip,
@@ -1182,6 +1183,7 @@ mortal_strike_12294 = spell(
         'Mortal Strike (tooltip_vars 1387).'
           ' Effect 2 weapon_potency 228 -> 171 (2026-10-31, DPS balance pass 1031, user ruling: Arms damage -25%). Effect 3 sp_potency 18 -> 13.5 (2026-10-31, DPS balance pass 1031, user ruling: Arms damage -25%).'
           ' Effect 2 weapon_potency 171 -> 188 (188.1 rounded to a whole number) (2026-11-15, balance on the Normal-tier kits, user ruling: Mortal Strike +10%). Effect 3 sp_potency 13.5 -> 14.85 (2026-11-15, balance on the Normal-tier kits, user ruling: Mortal Strike +10%).'
+          ' Effect 2 weapon_potency 188 -> 207 (206.8 rounded to a whole number) (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Mortal Strike +10% Effect 3 sp_potency 14.85 -> 16.335 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Mortal Strike +10%)'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing received is reduced.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals ${$m2*$<ims>}% weapon damage plus {pot3.avg*ims} and wounds the target, reducing the healing it receives by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'SpellClassMask_1': 33554432, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 39, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )

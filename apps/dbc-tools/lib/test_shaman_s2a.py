@@ -122,7 +122,7 @@ HOT_TWIN_TALENTS = {"Healing Way": (29206, 29205, 29202), "Torrent": (30864, 308
 
 # id -> (total potency, T seconds or None, wanted own-mask bit as (dword index, bit value) or None)
 HEAL_POTENCY = {
-    TIDE_HEAL: (30.0, 2.0, (0, D0_HEALING_STREAM)),
+    TIDE_HEAL: (42.0, 2.0, (0, D0_HEALING_STREAM)),
     UCT_HEAL: (30.0, 2.0, (2, D2_UNDULATING)),
     TORRENT_HEAL: (10.0, 1.5, (2, D2_TORRENT)),
     PLACEMENT_HEAL: (5.0, None, (2, D2_MINOR_HEAL)),

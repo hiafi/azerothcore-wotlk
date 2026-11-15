@@ -6116,10 +6116,11 @@ chaos_bolt_copy_200980 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=170.4, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=204.48, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=3178,
-    notes='warlock-rework DESTRUCTION §5/§7.5/§7.6: Cast for the Havoc duplicate and Soulburn: Chaos Bolts extra targets (WP-B); range_yards 30 so Destructive Reach and the engine range check enforce "within range". Shares Chaos Bolts d2 0x20000; triggered + SUPPRESS_CASTER_PROCS so it never re-rolls Soulburn/Chaotic Inferno/Intensity/Soul Leech/Chaos Echo (G3). Potency system P4 (warlock pilot): converted to sp_potency=213.0 (user-reviewed, mismatched row) - same value as Chaos Bolt 50796 by design. Effect 1 sp_potency 213.0 -> 170.4 (2026-11-01, DPS balance pass 1031, user ruling: Chaos Bolt -20%).',
+    notes='warlock-rework DESTRUCTION §5/§7.5/§7.6: Cast for the Havoc duplicate and Soulburn: Chaos Bolts extra targets (WP-B); range_yards 30 so Destructive Reach and the engine range check enforce "within range". Shares Chaos Bolts d2 0x20000; triggered + SUPPRESS_CASTER_PROCS so it never re-rolls Soulburn/Chaotic Inferno/Intensity/Soul Leech/Chaos Echo (G3). Potency system P4 (warlock pilot): converted to sp_potency=213.0 (user-reviewed, mismatched row) - same value as Chaos Bolt 50796 by design. Effect 1 sp_potency 213.0 -> 170.4 (2026-11-01, DPS balance pass 1031, user ruling: Chaos Bolt -20%).'
+    ' Effect 1 sp_potency 170.4 -> 204.48 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Chaos Bolt +20%; the Havoc/Soulburn copy follows its parent).',
     raw_overrides={'AttributesEx3': 327680, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Shadowflame damage. Cannot be resisted, and pierces through all absorption effects.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': m.CHAOS_BOLT, 'SpellClassSet': 5, 'SpellLevel': 40, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
 scripted_by(chaos_bolt_copy_200980, 'spell_warl_chaos_bolt_copy', 'spell_warl_chaos_bolt_mastery')
@@ -6656,10 +6657,11 @@ dreadstalker_bite_200830 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=39.6, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=47.52, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=4062,
-    notes="warlock-rework DEMONOLOGY §5.0: cast by each Dreadstalker every 2 s (npc_warl_dreadstalker). SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT). Potency system P8 (warlock guardians, user-approved 2026-10-02): moved from the bespoke Warlock::ComputeGuardianBasePoints owner-SP-coefficient formula (eff0 was previously via _scaling.sb_units(0.183, 30, 88, 89)) to the standard potency curve - converted to sp_potency=49.5 (potency-report base-implied default, T=1.5s instant floor, no mismatch). pet_warlock_rework.cpp's DoBite() switched from me->CastCustomSpell(target, ..., &bp0, ...) to a plain me->CastSpell(target, ..., true) so the generated EffectBonusMultiplier_1/correction row apply through the normal CalcValue hook with the Dreadstalker as caster. This is a real rebalance, not a preserved total - SpellLevel=1 (no player learn level; pure guardian-cast). Effect 1 sp_potency 49.5 -> 39.6 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Dreadstalker Bite -20%).",
+    notes="warlock-rework DEMONOLOGY §5.0: cast by each Dreadstalker every 2 s (npc_warl_dreadstalker). SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT). Potency system P8 (warlock guardians, user-approved 2026-10-02): moved from the bespoke Warlock::ComputeGuardianBasePoints owner-SP-coefficient formula (eff0 was previously via _scaling.sb_units(0.183, 30, 88, 89)) to the standard potency curve - converted to sp_potency=49.5 (potency-report base-implied default, T=1.5s instant floor, no mismatch). pet_warlock_rework.cpp's DoBite() switched from me->CastCustomSpell(target, ..., &bp0, ...) to a plain me->CastSpell(target, ..., true) so the generated EffectBonusMultiplier_1/correction row apply through the normal CalcValue hook with the Dreadstalker as caster. This is a real rebalance, not a preserved total - SpellLevel=1 (no player learn level; pure guardian-cast). Effect 1 sp_potency 49.5 -> 39.6 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Dreadstalker Bite -20%)."
+    ' Effect 1 sp_potency 39.6 -> 47.52 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Dreadstalker Bite +20%).',
     raw_overrides={'AttributesEx': 1024, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals {pot1} Shadow damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'SpellLevel': 1},
 )
 

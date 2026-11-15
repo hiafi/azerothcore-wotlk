@@ -59,9 +59,9 @@ _dt_cp = _potency.resolve(
 # SDV 1323), each line one `$max()` (potency.md "Tooltips").
 _EVISCERATE_LEVEL = 1
 _ev_flat = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=36.9096, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=_EVISCERATE_LEVEL)
+    _potency.PotencyEffect(ap_potency=43.184232, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=_EVISCERATE_LEVEL)
 _ev_cp = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=58.29824, kind=_potency.KIND_PERIODIC, t_ms=1500.0),
+    _potency.PotencyEffect(ap_potency=68.2089408, kind=_potency.KIND_PERIODIC, t_ms=1500.0),
     spell_level=_EVISCERATE_LEVEL)
 
 
@@ -94,8 +94,8 @@ backstab_53 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=500, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=20, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=600, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=24, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
@@ -109,7 +109,8 @@ backstab_53 = spell(
         'the generator. Stock family bits (0x800004), dagger requirement 0x8000, behind-the-target custom attr 0x20000 '
         'and every other column kept. Cost not talent-reducible (shared doc). '
         'rogue-rework M2a (M1 U4, [tune]): weapon_potency 150 -> 250. '
-        'weapon_potency 250 -> 500 and sp_potency 10 -> 20 (2026-11-01, DPS balance pass 1031, user ruling: Backstab +100%).'
+        'weapon_potency 250 -> 500 and sp_potency 10 -> 20 (2026-11-01, DPS balance pass 1031, user ruling: Backstab +100%); '
+        'weapon_potency 500 -> 600 and sp_potency 20 -> 24 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Backstab +20%).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Backstab the target, causing ${$s1*$<bsall>}% weapon damage plus {pot2.avg*bsall}. Awards 1 combo point. Requires a dagger in the main hand. Must be behind the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 32768, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8388612, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 4, 'SpellPriority': 50, 'SpellVisualID_1': 155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -549,7 +550,7 @@ eviscerate_2098 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=47.98248, cp_ap_potency=75.787712, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=43.184232, cp_ap_potency=68.2089408, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=1),
     ],
     tooltip_vars=tooltip_seal_fate_1323,
@@ -566,7 +567,8 @@ eviscerate_2098 = spell(
         'cp_ap_potency 30.8 -> 43.12; M2c (user 2026-10-28): +30% to 35.49 / 56.056; '
         'ap_potency 35.49 -> 28.392 and cp_ap_potency 56.056 -> 44.8448 (2026-11-01, DPS balance pass 1031, user ruling: Eviscerate -20%); '
         'ap_potency 28.392 -> 36.9096 and cp_ap_potency 44.8448 -> 58.29824 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Eviscerate +30%); '
-        'ap_potency 36.9096 -> 47.98248 and cp_ap_potency 58.29824 -> 75.787712 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Eviscerate +30%). Deadly Throw keeps its 75% ratio; '
+        'ap_potency 36.9096 -> 47.98248 and cp_ap_potency 58.29824 -> 75.787712 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Eviscerate +30%); '
+        'ap_potency 47.98248 -> 43.184232 and cp_ap_potency 75.787712 -> 68.2089408 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Eviscerate -10%). Deadly Throw keeps its 75% ratio; '
         'Between the Eyes (x1.8 of M2a) and the Death from Above landing (x1.15 of M2a) were set on their own in M2c. '
         'The stock-shaped ladder ($m1 / $b1 / $AP x 0.03-0.35) is replaced by the potency '
         'ladder _EVISCERATE_LADDER (average per combo point, both AP terms melee $AP, times $<evmult>).'
@@ -768,8 +770,8 @@ ambush_8676 = spell(
     mana_cost_pct=0,
     range_yards=25.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=315, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=9, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=378, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10.8, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, base_points=1, implicit_target_a=6),
     ],
@@ -787,7 +789,8 @@ ambush_8676 = spell(
         'bits 0x800200 kept, so a Shadowed (aura 275) rogue passes CheckCast. NPC users 7052 / 7056 (SAI spellhit -> '
         'Kill Self on 8676) keep landing a spell hit. '
         'rogue-rework M2a (M1 U1, [tune]): weapon_potency 175 -> 350; '
-        'weapon_potency 350 -> 315 and the NORMALIZED_WEAPON_DMG sp_potency 10 -> 9 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Ambush -10%).'
+        'weapon_potency 350 -> 315 and the NORMALIZED_WEAPON_DMG sp_potency 10 -> 9 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Ambush -10%); '
+        'weapon_potency 315 -> 378 and sp_potency 9 -> 10.8 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Ambush +20%).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Ambush the target, causing ${$s1*$<amall>}% weapon damage plus {pot2.avg*amall}. If you are stealthed and more than melee range away, you first teleport behind the target. Awards 2 combo points. Must be Hidden.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'ShapeshiftMask': 536870912, 'SpellClassMask_1': 8389120, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 18, 'SpellPriority': 50, 'SpellVisualID_1': 155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )

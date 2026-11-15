@@ -450,7 +450,7 @@ healing_stream_heal_202271 = spell(
     id=202271, name='Healing Stream Totem', school=School.NATURE, attributes=0, category=0, cast_time_ms=0,
     cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
     effects=[Effect(
-        type=EffectType.HEAL, sp_potency=20.0, potency_kind='heal', time_basis_ms=2000,
+        type=EffectType.HEAL, sp_potency=28.0, potency_kind='heal', time_basis_ms=2000,
         implicit_target_a=TARGET_UNIT_TARGET_ALLY,
     )],
     spell_icon_id=ICON_HEALING_STREAM_HEAL,
@@ -460,7 +460,7 @@ healing_stream_heal_202271 = spell(
           'crit). Range '
           '50000 and AttributesEx2 0x4 (stock 52042 gets 40 yd + ignore LoS from SpellInfoCorrections), DefenseType 1 '
           'so it is a magic-class heal. Family d0 b13 (Earthfury 3pc +10 yd accepted, PLAN 1D.6). SpellLevel 20 = the '
-          'totem\'s learn level. The stock 52042 stays for NPC-owned Healing Stream totems.',
+          'totem\'s learn level. The stock 52042 stays for NPC-owned Healing Stream totems. sp_potency 20.0 -> 28.0 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Resto Shaman option B, Healing Stream Totem +40%); in a raid the Healing Tide Totem casts this heal too.',
     raw_overrides=_raw(
         20, 'Heals the target for {pot1}.', base_level=False,
         AttributesEx2=SPELL_ATTR2_IGNORE_LINE_OF_SIGHT,

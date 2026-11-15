@@ -247,11 +247,11 @@ chain_heal_1064 = spell(
     mana_cost_pct=19,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=52.0, potency_kind='heal', implicit_target_a=45, chain_targets=3),
+        Effect(type=EffectType.HEAL, sp_potency=70.2, potency_kind='heal', implicit_target_a=45, chain_targets=3),
     ],
     spell_icon_id=963,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
-          'Potency system P7-Shaman: converted to sp_potency=52.0 - docs/potency-system.md ("Healing" table, "Decided so far") explicitly resolves Chain Heal to 52, NOT the shaman-potency-proposals.txt/base-implied value of 40.3, because 52 preserves Chain Heal\'s total healing at 500 spell power against stock (1,267 vs 1,278); its base runs ~50% over stock and its coefficient ~48% under as a result.',
+          'Potency system P7-Shaman: converted to sp_potency=52.0 - docs/potency-system.md ("Healing" table, "Decided so far") explicitly resolves Chain Heal to 52, NOT the shaman-potency-proposals.txt/base-implied value of 40.3, because 52 preserves Chain Heal\'s total healing at 500 spell power against stock (1,267 vs 1,278); its base runs ~50% over stock and its coefficient ~48% under as a result. sp_potency 52.0 -> 70.2 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Resto Shaman option B, Chain Heal +35%).',
     tooltip_vars=shaman_chainheal_1221,
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the friendly target for {pot1*mult}, then jumps to heal additional nearby targets.  If cast on a party member, the heal will only jump to other party members.  Each jump reduces the effectiveness of the heal by 40%.  Heals $x1 total targets.', 'EffectChainAmplitude_1': 0.6000000238418579, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 256, 'SpellClassSet': 11, 'SpellLevel': 40, 'SpellVisualID_1': 3659, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )

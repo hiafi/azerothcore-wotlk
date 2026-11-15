@@ -69,13 +69,13 @@ W0A_IDS = (HS, CLEAVE, SLAM, OVERPOWER, MS, BT, REVENGE, REND, THUNDER_CLAP, COM
 # MS x1.5 x1.4 x0.8 x1.1 x0.95, Overpower x1.5 x1.4 x0.8, on both parts
 # DPS balance pass 1031 (2026-10-31, user): HS x0.85 (Fury -15%), Slam / MS / Overpower x0.75 (Arms -25%), both parts
 # Round R5 (2026-11-02, user): HS weapon percent 156 -> 172 (about +10%), the flat part unchanged
-PERCENTS = {HS: 189, CLEAVE: 144, SLAM: 165, MS: 188, OVERPOWER: 139}  # 2026-11-15 BAL1
+PERCENTS = {HS: 189, CLEAVE: 144, SLAM: 165, MS: 207, OVERPOWER: 153}  # 2026-11-15 BAL1, BAL2
 # strike -> (percent effect index, flat effect index, flat carrier type)
 STRIKE_SHAPE = {HS: (1, 2, WEAPON_DAMAGE), CLEAVE: (1, 2, WEAPON_DAMAGE), SLAM: (1, 2, WEAPON_DAMAGE),
                 MS: (2, 3, NORMALIZED_WEAPON), OVERPOWER: (1, 2, NORMALIZED_WEAPON)}
-FLAT_POT = {HS: 11.22, CLEAVE: 12, SLAM: 14.85, OVERPOWER: 14.025, MS: 14.85}  # 2026-11-15 BAL1
-FLAT_L60 = {HS: 29, CLEAVE: 31, SLAM: 38, OVERPOWER: 36, MS: 38}  # 2026-11-15 BAL1 (flat potency +10%)
-FLAT_L22 = {HS: 5, CLEAVE: 5, SLAM: 13, OVERPOWER: 6, MS: 6}
+FLAT_POT = {HS: 11.22, CLEAVE: 12, SLAM: 14.85, OVERPOWER: 15.4275, MS: 16.335}  # 2026-11-15 BAL1, BAL2
+FLAT_L60 = {HS: 29, CLEAVE: 31, SLAM: 38, OVERPOWER: 39, MS: 42}  # 2026-11-15 BAL1, BAL2 (flat potency +10%)
+FLAT_L22 = {HS: 5, CLEAVE: 5, SLAM: 13, OVERPOWER: 5, MS: 6}
 
 # WP-BRIEF ruling 2 / 0VERIFY 2e: ShapeshiftMask -> 0
 ZERO_LIST = (72, 100, 355, 676, 772, 871, 1680, 1715, 1719, 2565, 3411, 5308, 6343, 6552, 6572, 7384, 7922, 12328,
@@ -693,8 +693,8 @@ def _strike_rows() -> dict[int, dict]:
         CLEAVE: strike(CLEAVE, 1, 2, WEAPON_DAMAGE, 144, 14, -1, 4.8 / 7, EffectChainTargets_1=2,
                        EffectChainTargets_2=2),
         SLAM: strike(SLAM, 1, 2, WEAPON_DAMAGE, 165, 30, 12, 5.94 / 7),
-        OVERPOWER: strike(OVERPOWER, 1, 2, NORMALIZED_WEAPON, 139, 12, -3, 5.61 / 7),
-        MS: strike(MS, 2, 3, NORMALIZED_WEAPON, 188, 20, 4, 5.94 / 7, Effect_1=APPLY_AURA, EffectAura_1=118),
+        OVERPOWER: strike(OVERPOWER, 1, 2, NORMALIZED_WEAPON, 153, 12, -4, 6.2 / 7),
+        MS: strike(MS, 2, 3, NORMALIZED_WEAPON, 207, 20, 4, 6.534 / 7, Effect_1=APPLY_AURA, EffectAura_1=118),
     }
 
 
