@@ -1,7 +1,7 @@
 """
 Scoped write runs: `generate.py --scope <name>[,<name>...]` (dbc-tools-scoped-generate plan, section 1).
 
-A full write run regenerates every reserved block (`DELETE FROM spell_dbc WHERE ID BETWEEN 200101 AND 209999` plus a
+A full write run regenerates every reserved block (`DELETE FROM spell_dbc WHERE ID BETWEEN 200101 AND 399999` plus a
 full re-insert) and builds patch-Z from every source row, so a run from a branch that lacks another branch's rows wipes
 them. A scoped run computes exactly what a full run computes (same loaders, same DSL, same lints, same derived rows),
 then narrows the output to the rows its scope owns:

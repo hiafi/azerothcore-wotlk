@@ -127,6 +127,12 @@ DRILL_BARS: dict[str, dict] = {
         "gated": {2: 1, 3: 1, 4: 1, 5: 1}, "reported": {1}, "cross_specs": 3,
         "references": {}, "group": {}, "cycle_ms": 30000, "default_cycles": 4,
     },
+    "blackrock-spire-followups": {
+        # 1 punch, 3 charges, 5 chains are first shapes (reported); 2, 6, 7 the 1.5 s follow-ups and 4 the pounces
+        # (drawn with their charge, landing 1.5 s after it)
+        "gated": {2: 1, 4: 1, 6: 1, 7: 1}, "reported": {1, 3, 5}, "cross_specs": 3,
+        "references": {}, "group": {}, "cycle_ms": 24000, "default_cycles": 5,
+    },
     "stratholme-jump": {
         # the bar is no Jump hit at all (1, 3, 4); Freeze Tag's RunOut (2) is reported
         "gated": {1: 0, 3: 0, 4: 0}, "reported": {2}, "cross_specs": None,

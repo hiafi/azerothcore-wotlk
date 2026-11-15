@@ -347,7 +347,7 @@ def _drop_unchanged_blocks(
     `pending_db_world` rev, custom and module file in update order (`state.load_applied_rows`). A block
     that differs from promoted state but not from that is dropped too: its content already sits in a pending rev, which
     db-import applies anyway. Without it every run re-emitted each block whose current version had not been promoted
-    yet (a no-change full run always wrote a rev: spell 200000-209999 plus the stock-id edits, skilllineability,
+    yet (a no-change full run always wrote a rev: spell 200000-399999 plus the stock-id edits, skilllineability,
     item; dbc-replay-fix). `existing_rows` stays promoted-only for every other question (state.py's docstring); a
     rev this run writes is written after this check, so it is never part of `applied`. A table missing from
     `applied` is judged on promoted state alone, as before.

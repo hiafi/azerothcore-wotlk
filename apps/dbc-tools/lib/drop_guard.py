@@ -2,7 +2,7 @@
 The general drop guard (dbc-tools-scoped-generate plan, section 2): before a write run (full, `--scope`, `--only
 items`) writes its SQL or patch, it checks that the run would not delete, or rewrite with other content, a custom row
 that is live or deployed but that this checkout has never seen. The 2026-11-07 near-miss: a branch whose generated
-revs predated #96 rewrote the whole spell block (`DELETE ... BETWEEN 200101 AND 209999` + re-insert) without #96's
+revs predated #96 rewrote the whole spell block (`DELETE ... BETWEEN 200101 AND 399999` + re-insert) without #96's
 spells 205282 / 205304 / 205348, and its patch-Z lacked them too.
 
 What it can and cannot see: it judges the run being made, against what is live / deployed *now*. A rev written earlier

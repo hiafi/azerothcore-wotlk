@@ -649,7 +649,7 @@ def check_custom_equipped_item_class(
 # semantics this mirrors): the map key for a `(spell_trigger, type)` pair is `spell_trigger`
 # unshifted for type 0, or `spell_trigger ± SPELL_LINKED_MAX_SPELLS*type` (added if positive,
 # subtracted if negative) for type 1/2. `source/ids.yaml`'s whole custom-spell block (200000-
-# 209999) sits exactly inside that offset window, so a `type=0` trigger in that range can collide
+# 399999) sits inside that offset window, so a `type=0` trigger in that range can collide
 # with a `type=1`/`type=2` row declared (or already stock) at `trigger - 200000`/`trigger -
 # 400000` - two unrelated declarations that the engine reads as the *same* row.
 _SPELL_LINKED_MAX_SPELLS = 200000
@@ -759,7 +759,7 @@ def check_linked_spell_key_collisions(rows: list[dict]) -> list[str]:
             f"spell_linked_spell: {desc} all encode to the same SpellMgr::LoadSpellLinked lookup "
             f"key ({key}) - trigger ± {_SPELL_LINKED_MAX_SPELLS}*type - so these rows collide at "
             f"runtime; only one is ever seen for that key. A type=0 trigger inside "
-            f"source/ids.yaml's custom spell block (200000-209999) is the usual cause."
+            f"source/ids.yaml's custom spell block (200000-399999) is the usual cause."
         )
     return warnings
 

@@ -43,7 +43,7 @@
 
 spell:
   start: 200000
-  end: 209999
+  end: 399999
   # 202900-202909: healing sim (source/npcs/healsim_spells.py): 202900 Sim Damage Pulse, 202901 Sim Pin Hit,
   # 202902-202909 spare. A non-class owner reserves under its project name in `reservations:` at the bottom
   # (`healsim`), so lib/test_id_blocks.py's overlap test protects it from the class slices (the T0 collision
@@ -415,7 +415,9 @@ dungeonencounter:
 #   - lfgdungeons: LFGDungeons.dbc / lfgdungeons_dbc ids (lfg_random(), lfg_heroic()), also lfg_dungeon_template's
 #     dungeonId and instance_encounters.lastEncounterDungeon (a smallint unsigned). The stock file tops out at 294 and
 #     the overlay is empty. Random Classic Heroic 300; its heroic entries from 301 (Deadmines 301, Shadowfang Keep 302,
-#     Scholomance 303, Stratholme Main Gate 304, Service Entrance 305). The client patch carries them.
+#     Scholomance 303, Stratholme Main Gate 304, Service Entrance 305, Lower Blackrock Spire 306, Upper Blackrock
+#     Spire 307). The client patch carries them. Stock row 44 (Upper Blackrock Spire) is edited in place by
+#     lfg_override() into a dungeon entry (Blackrock Spire build); it keeps its stock id.
 #   - lfgdungeongroup: LFGDungeonGroup.dbc ids (lfg_group(), client only). Stock ids are 1-9 and 11; Classic Heroic 12.
 #   - quest: quest_template ids of custom quests. Record only: no dbc-tools reader mints from it; the dungeon finder
 #     reward quests are hand-written pending world SQL. quest_template tops out at 26034. 90000 / 90001: Random Classic
@@ -683,8 +685,9 @@ reservations:
 
   # mod-boss-mechanics (source/npcs/boss_mechanics.py, stage M1): Weakened 205000, resolve spells 205001-205007 (one per
   # school), the drills' Baited and Marked stand-ins 205008 and 205009 (stage M4), the M5 descriptor stand-ins
-  # 205010-205023 (casts, dispellable debuffs, deadline pair, buffs, Aiming; 205024-205029 reserved), Mechanic Marker
-  # 300400, Mechanic Test Owner 300401, Mechanics Training Dummy 300402 (M4), Descriptor Training Dummy 300403 and the
+  # 205010-205023 (casts, dispellable debuffs, deadline pair, buffs, Aiming), Taunt Swap (drill) 205024 (Blackrock
+  # Spire build; 205025-205029 reserved), Mechanic Marker 300400, Mechanic Test Owner 300401, Mechanics Training
+  # Dummy 300402 (M4), Descriptor Training Dummy 300403 and the
   # Drill Caster / Add / Copy / Prison 300404-300407 (M5), and the telegraph marker displays
   # (patch_bossmechanics_markers.py), nine colors, outline + fill layers: 91000 + 100 * color + shape offset + step
   # for the quad shapes (91000-91833, +34..+99 of each color block spare), 91990-91995 the opt-in diagnostic
@@ -749,3 +752,18 @@ reservations:
     gameobject: {start: 301200, end: 301249}
     spellvisual: {start: 90500, end: 90549}  # SpellVisual, Kit and EffectName
     item: {start: 70600, end: 70603}  # Grand Lie relics (S8: source/items/stratholme_relics.py, items.csv rows)
+  # Blackrock Spire build WP-0 (2026-11-15, blackrock-spire-build.HANDOFF.md s3.3; checked free in this file, the live DB
+  # and the source/ working copy). The spell range sits above 209999 on the widened tool-wide block (200000-399999,
+  # handoff s10 #15). Creatures are sliced by wave for the heroic mint order: wave 1 300700-300729, wave 2 300730-300779.
+  # Shared heroic ids after Stratholme (inside the shared blocks, no separate reservation): mapdifficulty 1004,
+  # dungeon_access 126, dungeonencounter 1041-1054, lfgdungeons 306 (LBRS heroic) / 307 (UBRS heroic), loot_reference
+  # from 1700011. Not in ids.yaml: creature_immunities 1973 (Emberseer: Fire school + the 1972 mechanics set; live max
+  # is 1972 and no declaration or pending SQL goes above it).
+  blackrock_spire:
+    spell: {start: 210000, end: 210699}
+    creature: {start: 300700, end: 300779}
+    gameobject: {start: 301250, end: 301279}
+    spellvisual: {start: 90600, end: 90649}  # SpellVisual, Kit and EffectName
+    gameobjectdisplayinfo: {start: 90040, end: 90049}
+    creaturedisplayinfo: {start: 90740, end: 90769}
+    creaturemodeldata: {start: 90740, end: 90769}

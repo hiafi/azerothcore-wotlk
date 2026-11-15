@@ -58,7 +58,7 @@ class IdsYamlTest(unittest.TestCase):
         foreign = source.foreign_ids(SPELL_BLOCK)
         self.assertEqual(list(foreign), [TRANSMOG_SPELL])
         self.assertIn("mod-transmog", foreign[TRANSMOG_SPELL])
-        self.assertEqual((SPELL_BLOCK["start"], SPELL_BLOCK["end"]), (200000, 209999))
+        self.assertEqual((SPELL_BLOCK["start"], SPELL_BLOCK["end"]), (200000, 399999))
 
     def test_no_other_block_has_foreign_ids(self):
         for name, cfg in IDS.items():
@@ -113,7 +113,7 @@ class SourceHelpersTest(unittest.TestCase):
 class BlockSqlTest(unittest.TestCase):
     def test_block_ranges_split_around_the_hole(self):
         self.assertEqual(sql_out.block_ranges(BLOCK), [(200000, 200099), (200101, 200199)])
-        self.assertEqual(sql_out.block_ranges(SPELL_BLOCK), [(200000, 200099), (200101, 209999)])
+        self.assertEqual(sql_out.block_ranges(SPELL_BLOCK), [(200000, 200099), (200101, 399999)])
         self.assertEqual(sql_out.block_ranges({"start": 5, "end": 9}), [(5, 9)])
         self.assertEqual(sql_out.block_ranges({"start": 5, "end": 9, "foreign": {5: "a", 9: "b"}}), [(6, 8)])
         self.assertEqual(sql_out.block_ranges({"start": 5, "end": 5, "foreign": {5: "a"}}), [])
@@ -121,8 +121,8 @@ class BlockSqlTest(unittest.TestCase):
     def test_the_spell_block_delete_never_names_200100(self):
         text = _emit([_spell(200099), _spell(200101)], SPELL_BLOCK)
         self.assertIn("DELETE FROM `spell_dbc` WHERE `ID` BETWEEN 200000 AND 200099;", text)
-        self.assertIn("DELETE FROM `spell_dbc` WHERE `ID` BETWEEN 200101 AND 209999;", text)
-        self.assertNotIn("BETWEEN 200000 AND 209999", text)
+        self.assertIn("DELETE FROM `spell_dbc` WHERE `ID` BETWEEN 200101 AND 399999;", text)
+        self.assertNotIn("BETWEEN 200000 AND 399999", text)
         self.assertNotIn("(200100,", text)
 
     def test_a_row_or_edit_on_the_hole_is_refused(self):
@@ -185,7 +185,7 @@ class NotOursTest(unittest.TestCase):
         watched = generate._block_ids(SPELL_BLOCK, [116])
         self.assertNotIn(200100, watched)
         self.assertIn(116, watched)
-        self.assertEqual(len(watched), 10000)  # 200000-209999 less 200100, plus 116
+        self.assertEqual(len(watched), 200000)  # 200000-399999 less 200100, plus 116
 
     def test_generate_prints_an_error_naming_mod_transmog(self):
         out = io.StringIO()

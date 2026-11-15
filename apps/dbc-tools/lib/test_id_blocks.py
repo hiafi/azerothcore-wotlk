@@ -168,7 +168,7 @@ class BlockShapeTest(unittest.TestCase):
 
     def test_talent_tab_and_spell_blocks_are_unchanged(self):
         # The earlier blocks keep their numbers: a reader that hardcodes one must keep working.
-        self.assertEqual(_bounds(BLOCKS["spell"]), {"start": 200000, "end": 209999})
+        self.assertEqual(_bounds(BLOCKS["spell"]), {"start": 200000, "end": 399999})
         self.assertEqual(BLOCKS["creature"], {"start": 300000, "end": 300999})
         self.assertEqual(BLOCKS["spell_group"], {"start": 1200, "end": 1399})  # widened by Rogue T1 (was 1299)
         self.assertEqual(BLOCKS["spellicon"], {"start": 90100, "end": 90499})  # widened by Rogue T1 (was 90399)
@@ -257,7 +257,7 @@ class BlockShapeTest(unittest.TestCase):
         # no other block moved (spellvisual moved later, with the dungeon kit WP-K0: DungeonKitIdsTest)
         self.assertGreaterEqual(BLOCKS["spellvisual"]["end"], 90399)
         self.assertEqual(BLOCKS["spellicon"], {"start": 90100, "end": 90499})
-        self.assertEqual(_bounds(BLOCKS["spell"]), {"start": 200000, "end": 209999})
+        self.assertEqual(_bounds(BLOCKS["spell"]), {"start": 200000, "end": 399999})
 
     def test_game_event_bundle_block_fits_a_tinyint_above_stock(self):
         # progression-slim WP-D2: game_event.eventEntry is TINYINT UNSIGNED; stock/live events top out at 190.
@@ -564,7 +564,7 @@ class ReservationTest(unittest.TestCase):
 
     def test_a_deliberately_out_of_block_reservation_would_fail(self):
         # The check above is not vacuous: a reservation poking out of its block is detected by the same comparison.
-        out = {"start": 209990, "end": 210010}
+        out = {"start": 399990, "end": 400010}
         self.assertFalse(
             BLOCKS["spell"]["start"] <= out["start"] and out["end"] <= BLOCKS["spell"]["end"],
         )
@@ -700,6 +700,44 @@ class StratholmeIdsTest(unittest.TestCase):
             for owner, tables in RESERVATIONS.items():
                 if owner != "stratholme" and table in tables:
                     self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
+
+
+class BlackrockSpireIdsTest(unittest.TestCase):
+    """Blackrock Spire build WP-0 (2026-11-15): the dungeon's reservation, pinned exactly, and the widened spell block
+    it needs (blackrock-spire-build.HANDOFF.md s3.3, s10 #15)."""
+
+    def test_blackrock_spire_reservation(self):
+        got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["blackrock_spire"].items()}
+        self.assertEqual(got, {
+            "spell": (210000, 210699),
+            "creature": (300700, 300779),
+            "gameobject": (301250, 301279),
+            "spellvisual": (90600, 90649),
+            "gameobjectdisplayinfo": (90040, 90049),
+            "creaturedisplayinfo": (90740, 90769),
+            "creaturemodeldata": (90740, 90769),
+        })
+
+    def test_blackrock_spire_overlaps_no_other_reservation(self):
+        for table, cfg in RESERVATIONS["blackrock_spire"].items():
+            for owner, tables in RESERVATIONS.items():
+                if owner != "blackrock_spire" and table in tables:
+                    self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
+
+    def test_blackrock_spire_sits_inside_the_blocks(self):
+        for table, cfg in RESERVATIONS["blackrock_spire"].items():
+            self.assertTrue(BLOCKS[table]["start"] <= cfg["start"] and cfg["end"] <= BLOCKS[table]["end"], table)
+
+    def test_the_spell_block_reaches_399999_and_no_further(self):
+        # 399999 is the ceiling: SPELL_LINKED_MAX_SPELLS (200000) offsets type 1/2 keys, so a type 0 key at 400000+
+        # would collide with stock type 2 rows (handoff s10 #15)
+        self.assertEqual(_bounds(BLOCKS["spell"]), {"start": 200000, "end": 399999})
+
+    def test_the_wave_slices_of_the_creature_range_are_contiguous(self):
+        # wave 1 300700-300729, wave 2 300730-300779 (the heroic mint order)
+        cfg = RESERVATIONS["blackrock_spire"]["creature"]
+        self.assertEqual((cfg["start"], cfg["end"]), (300700, 300779))
+        self.assertEqual(300729 + 1, 300730)
 
 
 class DungeonKitIdsTest(unittest.TestCase):
@@ -1222,7 +1260,7 @@ class ClassDeclarationsTest(unittest.TestCase):
         self.assertEqual(out_of_reservation("deathknight", {"spell": [202900]}), ["spell 202900"])  # the sim's spell
 
     def test_the_healing_sims_spells_are_inside_the_healsim_reservation(self):
-        # source/npcs also declares the boss mechanics spells (205000-205023, the `bossmechanics` reservation)
+        # source/npcs also declares the boss mechanics spells (205000-205024, the `bossmechanics` reservation)
         boss = RESERVATIONS["bossmechanics"]["spell"]
         sim_spells = [i for i in self.npcs["spell"] if BLOCKS["spell"]["start"] <= i <= BLOCKS["spell"]["end"]
                       and not boss["start"] <= i <= boss["end"]]
@@ -1233,7 +1271,7 @@ class ClassDeclarationsTest(unittest.TestCase):
         self.assertEqual(out_of_reservation("healsim", {"spell": [203000]}), ["spell 203000"])
 
     def test_boss_mechanics_declares_exactly_its_ids_and_no_other_npcs_file_declares_in_its_slices(self):
-        expected = {"spell": list(range(205000, 205024)), "creature": list(range(300400, 300408))}
+        expected = {"spell": list(range(205000, 205025)), "creature": list(range(300400, 300408))}
         res = RESERVATIONS["bossmechanics"]
         # the whole source/npcs directory: whatever sits inside the reservation is boss_mechanics.py's declarations
         inside = {kind: sorted(i for i in set(self.npcs[kind]) if res[kind]["start"] <= i <= res[kind]["end"])

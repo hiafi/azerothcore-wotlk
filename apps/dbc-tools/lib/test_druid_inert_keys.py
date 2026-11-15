@@ -49,7 +49,7 @@ AURA_STATE_SWIFTMEND = 15  # SharedDefines.h TargetAuraState raw column value
 # This rework's own reserved id blocks (PLAN §4) - the only ranges a "never reassign" check needs
 # to scan, since a legitimate *stock* row (untouched until its owning pass lands) is never in these
 # ranges and must not trip a check meant to catch this rework's own mistakes.
-CUSTOM_SPELL_ID_MIN = 200000  # PLAN §4.1 spell block 200000-209999
+CUSTOM_SPELL_ID_MIN = 200000  # PLAN §4.1 spell block 200000-399999
 MINTED_TALENT_IDS = set(range(60026, 60070))  # PLAN §4.2 60026-60069 (Balance/Feral/Resto minted)
 
 

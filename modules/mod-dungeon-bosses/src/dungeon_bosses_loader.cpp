@@ -87,6 +87,29 @@ void AddSC_boss_archivist_galford_rework();         // S6: boss_archivist_galfor
 void AddSC_boss_dathrohan_balnazzar_rework();       // S7: boss_dathrohan_balnazzar_rework (10812 and 10813)
 void AddSC_strat_balnazzar_hard_mode();             // S8: Balnazzar's hard mode (`.dbtest strat grandlie`)
 
+// Blackrock Spire (map 229): the Blackrock Spire skeleton (WP-S0): the instance (registered under the stock name
+// instance_blackrock_spire, replacing the stock one; the stock Valthalak, Mor Grayhoof, Vaelastrasz, Father Flame and
+// area trigger scripts keep working) and the `.dbtest brs` shell
+void AddSC_instance_blackrock_spire_rework();
+void AddSC_dungeon_bosses_brs_commandscript();
+// Blackrock Spire bosses (one file per boss WP). Wave 1, Lower Blackrock Spire:
+void AddSC_boss_highlord_omokk_rework();            // B1: boss_highlord_omokk_rework
+void AddSC_boss_shadow_hunter_voshgajin_rework();   // B2: boss_shadow_hunter_voshgajin_rework
+void AddSC_boss_warmaster_voone_rework();           // B3: boss_warmaster_voone_rework
+void AddSC_boss_mother_smolderweb_rework();         // B4: boss_mother_smolderweb_rework
+void AddSC_boss_urok_doomhowl_rework();             // B5: boss_urok_doomhowl_rework
+void AddSC_boss_quartermaster_zigris_rework();      // B6: boss_quartermaster_zigris_rework
+void AddSC_boss_halycon_gizrul_rework();            // B7: boss_halycon_gizrul_rework (10220 and 10268)
+void AddSC_boss_overlord_wyrmthalak_rework();       // B8: boss_overlord_wyrmthalak_rework
+void AddSC_brs_wyrmthalak_hard_mode();              // B9: Wyrmthalak's hard mode (`.dbtest brs warhorn`)
+// Wave 2, Upper Blackrock Spire (AIs registered only once wave 2 flips kWave2Bound / BIND_WAVE_2):
+void AddSC_boss_pyroguard_emberseer_rework();       // B10: boss_pyroguard_emberseer_rework
+void AddSC_boss_solakar_flamewreath_rework();       // B11: boss_solakar_flamewreath_rework
+void AddSC_boss_rend_blackhand_rework();            // B12: boss_rend_blackhand_rework
+void AddSC_boss_gyth_rework();                      // B12: boss_gyth_rework
+void AddSC_boss_the_beast_rework();                 // B13: boss_the_beast_rework
+void AddSC_boss_drakkisath_rework();                // B14: boss_drakkisath_rework
+void AddSC_brs_drakkisath_hard_mode();              // B15: Drakkisath's hard mode (`.dbtest brs army`)
 // Stratholme hard mode items (wave 1 dungeon items): the Balnazzar and Baron Rivendare hard mode item effects
 void AddSC_strat_hard_mode_items();         // spell_strat_dust_of_the_nathrezim, spell_strat_two_faced_tome,
                                             // spell_strat_ysidas_locket, spell_strat_blade_of_the_condemned,
@@ -171,16 +194,34 @@ void Addmod_dungeon_bossesScripts()
     AddSC_boss_archivist_galford_rework();
     AddSC_boss_dathrohan_balnazzar_rework();
     AddSC_strat_balnazzar_hard_mode();
+    AddSC_instance_blackrock_spire_rework();
+    AddSC_boss_highlord_omokk_rework();
+    AddSC_boss_shadow_hunter_voshgajin_rework();
+    AddSC_boss_warmaster_voone_rework();
+    AddSC_boss_mother_smolderweb_rework();
+    AddSC_boss_urok_doomhowl_rework();
+    AddSC_boss_quartermaster_zigris_rework();
+    AddSC_boss_halycon_gizrul_rework();
+    AddSC_boss_overlord_wyrmthalak_rework();
+    AddSC_brs_wyrmthalak_hard_mode();
+    AddSC_boss_pyroguard_emberseer_rework();
+    AddSC_boss_solakar_flamewreath_rework();
+    AddSC_boss_rend_blackhand_rework();
+    AddSC_boss_gyth_rework();
+    AddSC_boss_the_beast_rework();
+    AddSC_boss_drakkisath_rework();
+    AddSC_brs_drakkisath_hard_mode();
     AddSC_strat_hard_mode_items();
     AddSC_sfk_hard_mode_items();
     AddSC_brs_hard_mode_items();
     AddSC_brd_hard_mode_items();
     AddSC_haunted_set_bonuses();
     AddSC_molten_set_bonuses();
-    // after the boss files: they register their `.dmtest` / `.sfktest` / `.dbtest scholo` / `.dbtest strat` tables
-    // from their AddSC_ functions
+    // after the boss files: they register their `.dmtest` / `.sfktest` / `.dbtest scholo` / `.dbtest strat` /
+    // `.dbtest brs` tables from their AddSC_ functions
     AddSC_dungeon_bosses_dmtest_commandscript();
     AddSC_dungeon_bosses_sfktest_commandscript();
     AddSC_dungeon_bosses_scholo_commandscript();
     AddSC_dungeon_bosses_strat_commandscript();
+    AddSC_dungeon_bosses_brs_commandscript();
 }

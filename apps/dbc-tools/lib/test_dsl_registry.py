@@ -56,7 +56,7 @@ spell(id=116, name="Should never be imported", school=1)
 '''
 
 
-IDS_CFG = {"spell": {"start": 200000, "end": 209999}}
+IDS_CFG = {"spell": {"start": 200000, "end": 399999}}
 
 # A custom (in-reserved-block) spell ID, real cast_time_ms, correctly marked
 # player_castable=True with a matching skill_line_ability id - the "did it

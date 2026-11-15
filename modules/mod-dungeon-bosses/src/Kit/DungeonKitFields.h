@@ -216,7 +216,8 @@ namespace DungeonKit
     struct WaveSpec
     {
         uint32 entry = 0;
-        uint32 health = 0;                  // > 0: max and current health (0: the template's)
+        uint32 health = 0;                  // > 0: max and current health (0: the template's); on a flex map the
+                                            // 5-player base (Flex::SetHealth: the ladder applies at its pull)
         TempSummonType type = TEMPSUMMON_CORPSE_TIMED_DESPAWN;
         Milliseconds despawn{ 5000 };
         bool passive = false;               // REACT_PASSIVE (the meat walks, it does not fight)

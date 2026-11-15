@@ -2,9 +2,13 @@
 // DungeonKitLogic.h and DungeonKitIds.h, plus the parity of the Deadmines aliases (DeadminesKit, Greenskin) with the
 // generic pieces they now name. Stratholme WP-KT-1: DungeonKitFloor.h (FloorPath and its parity with Gilnid's, floor
 // spots, puddles, the inside clock) and DungeonKitFlow.h (weighted split, wave cap, cast queue, holds, percents).
+// Blackrock Spire WP-KT-B1: DungeonKitFlexRules.h (the flex 5-10 rules) and DungeonKitChaseLogic.h (the chaser's
+// clock, the crawl clock, the fall catch book).
 #include "DeadminesKitMath.h"
 #include "DeadminesRework.h"
 #include "DungeonKitArena.h"
+#include "DungeonKitChaseLogic.h"
+#include "DungeonKitFlexRules.h"
 #include "DungeonKitFloor.h"
 #include "DungeonKitFlow.h"
 #include "DungeonKitIds.h"
@@ -1082,6 +1086,198 @@ namespace
         CHECK(amount.Resolve(150, std::nullopt) == 150);                       // a later caster recalculation
         CHECK(amount.Resolve(std::nullopt, std::nullopt) == 150);
     }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Blackrock Spire WP-KT-B1
+    // ----------------------------------------------------------------------------------------------------------------
+
+    void TestFlexRules()
+    {
+        // The count: clamped to 5..10; 0 ("not held") reads as 5.
+        CHECK(Flex::Clamp(0) == 5 && Flex::Clamp(3) == 5 && Flex::Clamp(5) == 5 && Flex::Clamp(7) == 7);
+        CHECK(Flex::Clamp(10) == 10 && Flex::Clamp(15) == 10 && Flex::Clamp(40) == 10);
+        // The ladder: 1.00 .. 2.25 in steps of 0.25.
+        double const ladder[] = { 1.0, 1.25, 1.5, 1.75, 2.0, 2.25 };
+        for (std::uint32_t n = 5; n <= 10; ++n)
+            CHECK(std::fabs(Flex::Ladder(n) - ladder[n - 5]) < 1e-9);
+        CHECK(Flex::Ladder(0) == 1.0 && Flex::Ladder(12) == 2.25);
+        // Health: base x ladder, rounded, at least 1, saturating.
+        CHECK(Flex::HealthAt(5, 100000) == 100000 && Flex::HealthAt(6, 100000) == 125000);
+        CHECK(Flex::HealthAt(10, 400000) == 900000 && Flex::HealthAt(0, 3000) == 3000);
+        CHECK(Flex::HealthAt(7, 3) == 5);           // 4.5 rounds up
+        CHECK(Flex::HealthAt(5, 0) == 1);
+        CHECK(Flex::HealthAt(10, 0xFFFFFFFFu) == 0xFFFFFFFFu);
+        // Target counts: a at 5, b at 6 or more (and at 0: a).
+        CHECK(Flex::TargetCount(0, 1, 2) == 1 && Flex::TargetCount(5, 1, 2) == 1);
+        CHECK(Flex::TargetCount(6, 1, 2) == 2 && Flex::TargetCount(10, 3, 6) == 6 && Flex::TargetCount(12, 3, 6) == 6);
+        CHECK(FlexCount(5, 2, 4) == 2 && FlexCount(6, 2, 4) == 4);
+        static_assert(FlexCount(9, 1, 2) == 2, "constexpr");
+        // Loot: one roll below 10, two at 10.
+        for (std::uint32_t n = 0; n < 10; ++n)
+            CHECK(Flex::LootRolls(n) == 1);
+        CHECK(Flex::LootRolls(10) == 2 && Flex::LootRolls(15) == 2);
+        // The taunt swap: only at 10 (after the clamp).
+        for (std::uint32_t n = 0; n < 10; ++n)
+            CHECK(!Flex::TankSwapOn(n));
+        CHECK(Flex::TankSwapOn(10) && Flex::TankSwapOn(11));
+        // The flex loot bits: LootMode 4 (+ 8 with the hard mode) only on a two-roll kill; never bit 2.
+        CHECK(Flex::LootBits(5, false) == 0 && Flex::LootBits(9, true) == 0);
+        CHECK(Flex::LootBits(10, false) == 0x04 && Flex::LootBits(10, true) == 0x0C);
+        CHECK((Flex::kLootModeFlexMask & 0x02) == 0 && Flex::kLootModeFlexMask == 0x0C);
+    }
+
+    void TestChaseClock()
+    {
+        ChaseTuning t;
+        t.pauseMs = 1000;
+        t.reach = 2.f;
+        // A plain chase: move until within reach, then arrive once and end.
+        {
+            ChaseClock c(t);
+            CHECK(c.Update(100, false, true, 10.f) == ChaseStep::Move);
+            CHECK(c.Update(100, false, true, 2.5f) == ChaseStep::Move);
+            CHECK(c.Update(100, false, true, 2.f) == ChaseStep::Arrive);
+            CHECK(c.Done() && c.Update(100, false, true, 1.f) == ChaseStep::Expire);
+        }
+        // A short toss: held 1 s from its start, though the toss itself lasts 300 ms.
+        {
+            ChaseClock c(t);
+            CHECK(c.Update(100, true, true, 10.f) == ChaseStep::Hold);      // tossed: 1000 left
+            CHECK(c.Update(300, true, true, 10.f) == ChaseStep::Hold);      // 700
+            CHECK(c.Update(300, false, true, 10.f) == ChaseStep::Hold);     // landed: 400
+            CHECK(c.Holding());
+            CHECK(c.Update(300, false, true, 10.f) == ChaseStep::Hold);     // 100
+            CHECK(c.Update(100, false, true, 10.f) == ChaseStep::Move);     // 0: off again
+            CHECK(!c.Holding());
+        }
+        // A long stun: held for the stun, then nothing more (the pause counts from the start).
+        {
+            ChaseClock c(t);
+            CHECK(c.Update(50, true, true, 10.f) == ChaseStep::Hold);
+            for (int i = 0; i < 30; ++i)
+                CHECK(c.Update(100, true, true, 10.f) == ChaseStep::Hold);   // 3 s stunned
+            CHECK(c.Update(50, false, true, 10.f) == ChaseStep::Move);
+        }
+        // A hold ignores the target and the arrival; after it, a dead target asks for a retarget.
+        {
+            ChaseClock c(t);
+            CHECK(c.Update(100, true, false, 0.f) == ChaseStep::Hold);
+            CHECK(c.Update(100, true, true, 1.f) == ChaseStep::Hold);       // within reach, but stunned
+            CHECK(c.Update(1000, false, false, 0.f) == ChaseStep::Retarget);
+            c.Retargeted();
+            CHECK(c.Update(100, false, true, 8.f) == ChaseStep::Move);
+        }
+        // No-threat mode: a retarget every 3 s, the period restarting at each pick.
+        {
+            ChaseTuning nt = t;
+            nt.retargetEveryMs = 3000;
+            ChaseClock c(nt);
+            CHECK(c.Update(2900, false, true, 9.f) == ChaseStep::Move);
+            CHECK(c.Update(100, false, true, 9.f) == ChaseStep::Retarget);
+            c.Retargeted();
+            CHECK(c.Update(2999, false, true, 9.f) == ChaseStep::Move);
+            CHECK(c.Update(1, false, true, 9.f) == ChaseStep::Retarget);
+        }
+        // Life: expires even mid-hold, and stays expired.
+        {
+            ChaseTuning lt = t;
+            lt.lifeMs = 10000;
+            ChaseClock c(lt);
+            CHECK(c.Update(9900, false, true, 9.f) == ChaseStep::Move);
+            CHECK(c.Update(50, true, true, 9.f) == ChaseStep::Hold);
+            CHECK(c.Update(50, true, true, 9.f) == ChaseStep::Expire);
+            CHECK(c.Done() && c.Update(10, false, true, 1.f) == ChaseStep::Expire);
+        }
+        // Keep chasing (whelps on the flame holder): Arrive once per contact, again only after leaving reach + 1.
+        {
+            ChaseTuning kt = t;
+            kt.endOnArrive = false;
+            ChaseClock c(kt);
+            CHECK(c.Update(100, false, true, 1.f) == ChaseStep::Arrive);
+            CHECK(c.Update(100, false, true, 1.5f) == ChaseStep::Move);
+            CHECK(c.Update(100, false, true, 2.9f) == ChaseStep::Move);     // within the slack: same contact
+            CHECK(c.Update(100, false, true, 1.f) == ChaseStep::Move);
+            CHECK(c.Update(100, false, true, 3.5f) == ChaseStep::Move);     // left
+            CHECK(c.Update(100, false, true, 2.f) == ChaseStep::Arrive);
+            CHECK(!c.Done());
+            CHECK(c.Update(100, true, true, 1.f) == ChaseStep::Hold);       // a stun ends the contact
+            CHECK(c.Update(1000, false, true, 1.f) == ChaseStep::Arrive);
+        }
+        // Restart clears everything.
+        {
+            ChaseClock c(t);
+            c.Update(100, false, true, 1.f);
+            CHECK(c.Done());
+            c.Restart();
+            CHECK(!c.Done() && c.ElapsedMs() == 0 && c.Update(100, false, true, 9.f) == ChaseStep::Move);
+        }
+    }
+
+    void TestCrawlClock()
+    {
+        // Urok's shard on normal: 10 s lying still, then a crawl until 1.5 yd from him.
+        {
+            CrawlClock c(10000, 0, 1.5f);
+            CHECK(c.Update(9750, true, 30.f) == CrawlStep::Wait);
+            CHECK(!c.Crawling());
+            CHECK(c.Update(250, true, 30.f) == CrawlStep::Crawl);
+            CHECK(c.Crawling());
+            CHECK(c.Update(250, true, 1.6f) == CrawlStep::Crawl);
+            CHECK(c.Update(250, true, 1.5f) == CrawlStep::Reach);
+            CHECK(c.Done() && c.Update(250, true, 9.f) == CrawlStep::Reach);
+        }
+        // No goal (the pile gone, no Urok yet): it waits however long; a goal later starts the crawl at once.
+        {
+            CrawlClock c(7000, 0, 1.5f);
+            CHECK(c.Update(20000, false, 0.f) == CrawlStep::Wait);
+            CHECK(c.Update(250, true, 12.f) == CrawlStep::Crawl);
+        }
+        // Lying still inside reach of the goal does not count until the wait is over (a shard dropped at his feet).
+        {
+            CrawlClock c(7000, 0, 1.5f);
+            CHECK(c.Update(250, true, 0.5f) == CrawlStep::Wait);
+            CHECK(c.Update(6750, true, 0.5f) == CrawlStep::Reach);
+        }
+        // Crawl off: never moves; a life ends it.
+        {
+            CrawlClock c(0, 5000, 1.5f, false);
+            CHECK(c.Update(4999, true, 0.f) == CrawlStep::Wait);
+            CHECK(c.Update(1, true, 0.f) == CrawlStep::Expire);
+        }
+    }
+
+    void TestFallCatch()
+    {
+        // Omokk's Pit Drop: deck at 100, caught 15 yd under it, inside the pit only, 3 s grace.
+        CHECK(!BelowDeck(86.f, 100.f, 15.f) && BelowDeck(85.f, 100.f, 15.f) && BelowDeck(40.f, 100.f, 15.f));
+        FallCatchBook book(3000);
+        CHECK(!book.Check(1, 90.f, true, 100.f, 15.f, 0));          // falling, not deep enough yet
+        CHECK(!book.Check(1, 80.f, false, 100.f, 15.f, 100));       // deep, but outside the pit (another level)
+        CHECK(book.Check(1, 84.f, true, 100.f, 15.f, 200));         // caught
+        CHECK(book.Size() == 1);
+        CHECK(!book.Check(1, 84.f, true, 100.f, 15.f, 1200));       // still climbing back: no second catch
+        CHECK(book.Check(2, 50.f, true, 100.f, 15.f, 1200));        // the pit floor: caught the same way
+        CHECK(!book.Check(1, 84.f, true, 100.f, 15.f, 3199));
+        CHECK(book.Check(1, 84.f, true, 100.f, 15.f, 3200));        // a second fall after the grace
+        book.Prune(4199);
+        CHECK(book.Size() == 2);
+        book.Prune(4200);
+        CHECK(book.Size() == 1);
+        book.Prune(6200);
+        CHECK(book.Size() == 0);
+        book.Check(3, 10.f, true, 100.f, 15.f, 7000);
+        book.Clear();
+        CHECK(book.Size() == 0 && book.Check(3, 10.f, true, 100.f, 15.f, 7001));
+
+        // K-m5: the pet watch takes pets and guardians, never totems or charmed mobs.
+        static_assert(WatchesControlled(true, true, false, false));     // a hunter pet (pets are guardians)
+        static_assert(WatchesControlled(false, true, false, false));    // a guardian (Water Elemental, treants)
+        CHECK(!WatchesControlled(false, false, true, false));           // a totem (a minion)
+        CHECK(!WatchesControlled(false, true, true, false));            // a totem even if flagged guardian
+        CHECK(!WatchesControlled(false, false, false, true));           // a mind-controlled mob
+        CHECK(!WatchesControlled(true, true, false, true));             // a charmed pet
+        CHECK(!WatchesControlled(false, false, false, false));          // any other minion
+    }
 }
 
 int main()
@@ -1119,5 +1315,9 @@ int main()
     TestHoldBook();
     TestEffectPercent();
     TestPerStackAmount();
+    TestFlexRules();
+    TestChaseClock();
+    TestCrawlClock();
+    TestFallCatch();
     return Report("dungeon_kit_test");
 }
