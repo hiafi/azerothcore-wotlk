@@ -297,23 +297,25 @@ sweeping_strikes_arms_204493 = _arms(
     'talent 133\'s granted_by_talent. cooldown_ms 30000 -> 20000 (2026-11-16, AoE round 3 on the Normal-tier kits, '
     'user ruling: Arms pack builds keep Sweeping Strikes up about 70% of a fight with Improved Sweeping Strikes); the '
     'base extra-hit share 40% -> 55% (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: the cleave window '
-    'is the Arms AoE engine; the C++ base is SWEEPING_STRIKES_BASE_PCT in WarriorMechanics.cpp).',
-    _raw('For 10 sec, your single-target melee abilities also strike up to 4 additional nearby enemies for 55% of '
+    'is the Arms AoE engine; the C++ base is SWEEPING_STRIKES_BASE_PCT in WarriorMechanics.cpp); 55% -> 70% '
+    '(2026-11-16, AoE round 3 follow-up 2 on the Normal-tier kits, user ruling: Arms option A, the pack build was '
+    'about 250-400 under 2,500 at 5 targets).',
+    _raw('For 10 sec, your single-target melee abilities also strike up to 4 additional nearby enemies for 70% of '
          'their damage. Rend and Colossus Smash apply in full to each enemy struck. Shares a cooldown with Blade '
          'Flurry.', 'Your melee abilities strike nearby enemies.', level=30, PreventionType=_PREVENTION_PACIFY,
          SpellClassMask_2=_SWEEPING_D1, SpellVisualID_1=_SV_SWEEPING, SpellPriority=50),
     attributes=_SWEEPING_ATTRIBUTES, rage=30, range_yards=RANGE_SELF, cooldown_ms=20000, duration_ms=10000,
 )
 
-# 204494: the P0 copy (p0_sweeping_copy_204890, PASSED). Physical SCHOOL_DAMAGE, amount = bp0 the C++ passes (55% /
-# 60% / 65% of the main hit before the main target's own taken-mods), DmgClass melee (rolls its own crit), 50000 yd,
+# 204494: the P0 copy (p0_sweeping_copy_204890, PASSED). Physical SCHOOL_DAMAGE, amount = bp0 the C++ passes (70% /
+# 75% / 80% of the main hit before the main target's own taken-mods), DmgClass melee (rolls its own crit), 50000 yd,
 # FacingCasterFlags 0, AttributesEx3 IGNORE_CASTER_MODIFIERS | ALWAYS_HIT | SUPPRESS_CASTER_PROCS, AttributesEx4
 # SUPPRESS_WEAPON_PROCS. No CANT_CRIT, no CU_IGNORE_ARMOR (the extra target's own armor applies), no family bits.
 # Visible (D28 allows either; the combat log shows the extra hits).
 sweeping_strikes_copy_204494 = _arms(
     204494, 'Sweeping Strikes',
     [Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY,
-            potency_excluded='percent-of-other-damage: 55/60/65% of the main hit, passed as bp0 by the Sweeping '
+            potency_excluded='percent-of-other-damage: 70/75/80% of the main hit, passed as bp0 by the Sweeping '
                              'capture (WarriorUnitScript), no potency of its own')],
     _ICON_SWEEPING,
     'warrior-rework S2 A2 (D4, P0 p0_sweeping_copy_204890 shape): cast triggered by the Sweeping capture on up to 4 '
@@ -776,15 +778,16 @@ def _improved_sweeping_strikes(spell_id, rank, seconds, percent):
         _ICON_FAN_OF_KNIVES,
         f'warrior-rework S2 A2 (D24, doc "Improved Sweeping Strikes"): rank {rank}. eff0 ADD_FLAT_MODIFIER DURATION '
         f'+{seconds} s (bp {seconds * 1000 - 1}) on Sweeping Strikes (EffectSpellClassMaskA_2 = d1 0x100000), eff1 '
-        f'DUMMY carrier {percent} (the extra-hit percent [tune], read by the Sweeping copy). Carrier {percent - 15} -> {percent} '
-        f'(2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: the Arms cleave window 55 / 60 / 65%).',
+        f'DUMMY carrier {percent} (the extra-hit percent [tune], read by the Sweeping copy). Carrier {percent - 30} -> '
+        f'{percent - 15} (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: the Arms cleave window 55 / 60 / '
+        f'65%) -> {percent} (2026-11-16, AoE round 3 follow-up 2, user ruling: Arms option A, 70 / 75 / 80%).',
         _rank_raw(f'Increases the duration of your Sweeping Strikes by {seconds} sec and increases the damage of its '
-                  f'extra hits from 55% to {percent}%.', EffectSpellClassMaskA_2=_SWEEPING_D1),
+                  f'extra hits from 70% to {percent}%.', EffectSpellClassMaskA_2=_SWEEPING_D1),
     )
 
 
-improved_sweeping_strikes_204529 = _improved_sweeping_strikes(204529, 1, 2, 60)
-improved_sweeping_strikes_204530 = _improved_sweeping_strikes(204530, 2, 4, 65)
+improved_sweeping_strikes_204529 = _improved_sweeping_strikes(204529, 1, 2, 75)
+improved_sweeping_strikes_204530 = _improved_sweeping_strikes(204530, 2, 4, 80)
 
 
 # Exploiter 204531-204532 (D15, R7): eff0 DUMMY carrier 15 / 30 (per-stack percent). ProcTypeMask / ProcChance 0: no
