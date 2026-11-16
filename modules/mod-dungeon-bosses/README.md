@@ -51,6 +51,10 @@ so db-import and the dbc-tools replay see one history.
 | `src/Kit/DungeonKitFlex.{h,cpp}` | Engine: DD's scaler for scripts: `Flex::Count`, `OnPull`, `SetFlexLoot`, `SetHealth` |
 | `src/Kit/DungeonKitChaseLogic.h` | Pure: `ChaseClock`, `CrawlClock`, `FallCatchBook` |
 | `src/Kit/DungeonKitChase.{h,cpp}` | Engine: `Chaser`, `CrawlPickups` (pickups that crawl to a goal), `FallWatch` |
+| `src/Kit/DungeonKitFrontLogic.h` | Pure: rolling front plans: timing, ring slices, gaps off pools, carrier spots |
+| `src/Kit/DungeonKitFronts.{h,cpp}` | Engine: `FrontDirector` (ring and wall sequences on BM's fronts), `PoolsOf` |
+| `src/Kit/DungeonKitRingLogic.h` | Pure: the ring wall (band, crossings, `RingWatch`, push-out plan, grace) |
+| `src/Kit/DungeonKitRing.{h,cpp}` | Engine: `LethalRing(s)` (a lethal ring wall with a push-out), `RingInside` |
 | `src/Kit/ArenaGuard.{h,cpp}` | The arena guard (grips, hold, leash), `LeashPreset`, cell `Confinement` |
 | `src/Kit/DungeonTestCommand.{h,cpp}` | The generic `.<x>test` GM command shell, one per dungeon |
 | `src/Deadmines/DeadminesRework.h` | Pure: entries, boss states, data ids, text groups, spell slices, measured frames |
@@ -175,3 +179,36 @@ The movers (`DungeonKitChase.h`; each is owned by one AI: Update from `UpdateAI`
 - `FallWatch`: catches players and their pets and guardians (no totems, no charmed mobs) inside a region a set height
   under a deck before they land (`onCatch`; a caught player's fall start is reset, so the jump back deals no fall
   damage), once per grace. Omokk's Pit Drop.
+
+## Kit: rolling fronts and the ring wall (Blackrock Spire WP-KT-B2)
+
+The script side of mod-boss-mechanics' rolling fronts (BM README "Rolling fronts"; `Mechanic::ConeFront`,
+`LineFront`, `FrontSafe`). BM registers and judges one front; `DungeonKit::FrontDirector` (`DungeonKitFronts.h`) runs
+a sequence of them on a clock the AI drives (`Update` from `UpdateAI`, `Clear` from `Reset`, `JustDied`,
+`EnterEvadeMode`: it cancels every registered front and safe slot and despawns the carriers):
+
+- `StartRings(owner, apex, RingSequence)`: Emberseer's Furnace Pulse rings. The plan (`Fronts::PlanRings`) gives each
+  ring its launch (first warn, then the spacing), its slice (turned clockwise per ring) and its registration (SP: a
+  ring's slice shows as the ring before it launches; `revealAtPreviousLaunch = false` shows them all at once). Each
+  ring gets a `FrontSafe` (the bot tank leads the boss into the slice) unless `safeSlot = false`.
+  `Fronts::LastPassMs` / `FirstReachMs` time the posts (EM6: flare once the last ring passed 21 yd; the next pulse
+  waits so its first ring cannot reach 15 yd first).
+- `StartWalls(owner, start, WallSequence)`: Rend's Freezing Sweep. One gap per wall inside the usable span
+  (`gaps.spanYd`: the arena's narrow strip), off every live pool (`pools`, read at each wall's registration;
+  `PoolsOf(puddleField)`); a later wall's gap on the other side and within 20 yd of the previous one. When no lane is
+  pool-free (several 6 yd pools across a 40 yd strip often cover it), the lane with the least floor under pools is
+  taken and logged (`poolSqYd=`): the side and the distance rules outrank a pool-free lane.
+- Damage, school, Weakened, rider and tag are the boss's (`decorate(ref, index)`); `within` gives each front the room's
+  bounds (outside them every spot reads safe to the solver). Optional carriers (`FrontCarrierSpec`: an invisible
+  entry with an aura) spawn at each launch along the band and move with it; `onLaunch` is for the cast visual.
+
+The ring wall (`DungeonKitRing.h`), the circle form of `LethalWall` for Drakkisath's Champion's Challenge:
+`LethalRing(owner, spec)` / `LethalRings::Add` closes a lethal band (registry `Donut`, `.Lethal()`) round
+`spec.center`, pushes out everyone but `keepIn` at once (a knockback to 3 yd past the band, no damage; pets too,
+never totems), arms after 1.5 s, and for its life (12 s) strikes whoever stands in the band or crosses it (an outright
+kill, as the arena walls). A unit the kit pushed flies over the band under a grace; with `pushDuringLife` anyone not
+kept in found inside the disc later is pushed out again. `RingInside(spec)` is the challenger bot's `Within` bounds.
+`carrierEntry` / `carrierAura` spawn the ring's look (despawned by `LethalRings::Clear`).
+
+Tests: `tests/kit_fronts_test.cpp` (pure plans and the ring rules) and `tests/kit_fronts_parity_test.cpp` (the
+mirrored BM rules, run when `BM_SRC` or `../mod-boss-mechanics/src` has `MechanicFront.h`).

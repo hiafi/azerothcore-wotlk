@@ -2,8 +2,8 @@
 # Builds and runs the standalone mod-dungeon-bosses tests with every available host compiler (g++ and clang++).
 # Pure headers only (src/<Dungeon>/*Logic.h, src/DungeonSets/*Logic.h, DeadminesKitMath.h, DeadminesRework.h,
 # ShadowfangKeepRework.h, ScholomanceRework.h, SoloLessonLogic.h, StratholmeRework.h, BlackrockSpireRework.h, the
-# shared kit's pure src/Kit/DungeonKit{Math,State,Arena,Logic,Ids,Floor,Flow,WallLogic}.h, the generated
-# src/Generated/ItemSpellCopies.h): no server build needed.
+# shared kit's pure src/Kit/DungeonKit{Math,State,Arena,Logic,Ids,Floor,Flow,WallLogic,FrontLogic,RingLogic}.h, the
+# generated src/Generated/ItemSpellCopies.h): no server build needed.
 # A boss WP adds nothing here: every tests/<boss>_test.cpp is listed below already (one per boss file).
 set -euo pipefail
 
@@ -85,6 +85,7 @@ tests=(
   strat_dathrohan_test
   strat_grand_lie_test
   kit_walls_test
+  kit_fronts_test
   blackrock_spire_test
   brs_omokk_test
   brs_voshgajin_test
@@ -131,5 +132,32 @@ if [[ -f "$dd_src/FlexMath.h" ]]; then
   done
 else
   echo "== skip kit_flex_parity_test (no mod-dungeon-difficulties source: set DD_SRC)"
+fi
+# WP-KT-B2: the kit's front rules against mod-boss-mechanics' MechanicFront.h, when BM's source is on hand.
+bm_src="${BM_SRC:-$(dirname "$root")/mod-boss-mechanics/src}"
+if [[ -f "$bm_src/MechanicFront.h" ]]; then
+  for cxx in "${compilers[@]}"; do
+    echo "== $cxx kit_fronts_parity_test"
+    "$cxx" -std=c++20 -Wall -Wextra -Werror -O1 -I "$root/src/Kit" -I "$bm_src" -I "$here" \
+      "$here/kit_fronts_parity_test.cpp" -o "$out/kit_fronts_parity_test-$cxx"
+    if ! "$out/kit_fronts_parity_test-$cxx"; then
+      status=1
+    fi
+  done
+else
+  echo "== skip kit_fronts_parity_test (no mod-boss-mechanics source: set BM_SRC)"
+fi
+# WP-B10: Emberseer's pulses against BM's solver and brain model (the bots' ring and nova hits).
+if [[ -f "$bm_src/MechanicFront.h" && -f "$bm_src/../tests/brain_model.h" ]]; then
+  for cxx in "${compilers[@]}"; do
+    echo "== $cxx brs_emberseer_bots_test"
+    "$cxx" -std=c++20 -Wall -Wextra -Werror -O1 -I "$root/src/Kit" -I "$root/src/BlackrockSpire" -I "$here" \
+      -I "$bm_src" -I "$bm_src/../tests" "$here/brs_emberseer_bots_test.cpp" -o "$out/brs_emberseer_bots_test-$cxx"
+    if ! "$out/brs_emberseer_bots_test-$cxx"; then
+      status=1
+    fi
+  done
+else
+  echo "== skip brs_emberseer_bots_test (no mod-boss-mechanics source: set BM_SRC)"
 fi
 exit $status

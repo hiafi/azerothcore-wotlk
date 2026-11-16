@@ -327,8 +327,12 @@ blackrock_spire = dungeon(
         creature(300710, "Bloodaxe Champion", "trash", summoned_by=("C++ boss_overlord_wyrmthalak_rework",)),
         creature(300711, "Bloodaxe Worg Rider", "trash", summoned_by=("C++ boss_overlord_wyrmthalak_rework",)),
         creature(300731, "Flame Whelp", "trash", summoned_by=("C++ boss_solakar_flamewreath_rework",)),
+        # B12: the Rend show's Nefarius copy (stock spawn 137967 rebound from 10162 by rev_rend_gyth; BWL's 10162
+        # untouched): a friendly NPC, normal-only like 10162.
+        creature(300732, "Lord Victor Nefarius", "npc", spawns=1),
         creature(300733, "Banner of the Dark Horde", "trash", summoned_by=("C++ boss_rend_blackhand_rework",)),
         creature(300736, "Rage Talon Dragonspawn", "trash", summoned_by=("C++ boss_drakkisath_rework",)),
+        creature(300740, "Black Dragonkin Herald", "npc", spawns=1),  # B15: the hard mode herald, heroic-only spawn
         creature(300737, "Rage Talon Captain", "trash", summoned_by=("C++ boss_drakkisath_rework",)),
         creature(300738, "Rage Talon Fire Tongue", "trash", summoned_by=("C++ boss_drakkisath_rework",)),
         creature(300739, "Rage Talon Dragon Guard", "trash", summoned_by=("C++ boss_drakkisath_rework",)),

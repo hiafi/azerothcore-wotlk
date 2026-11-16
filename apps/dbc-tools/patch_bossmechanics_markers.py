@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Boss-mechanics telegraph marker assets (dungeon mechanics stage M1, WP-A): 1,332 creature displays
+Boss-mechanics telegraph marker assets (dungeon mechanics stage M1, WP-A): 1,872 creature displays
 that are flat, colored, alpha-blended floor shapes a stalker creature wears and `SetObjectScale`s
 to any size. Every telegraph draws two layers (M1-FIX-TELEGRAPH-FILL-REPORT.md): a static OUTLINE
 (rim + faint interior, the full hitbox from the first frame) and a FILL (rim + solid interior) that
@@ -21,7 +21,7 @@ Textures are generated here, not mined (lib/blp_write.py, DXT5): WHITE, with the
 channel, one per shape step and shared by every color. The color is the model's own: its M2Color
 track (the one the skin batch's color index 0 points at) holds the color's RGB, and the client
 multiplies the texture by it (M1-FIX-COLORS-REPORT.md). So each display is a small model + skin,
-and the 36 textures are shared. The shape stops MARGIN_FRAC of the side short of every texture edge
+and the 96 textures are shared. The shape stops MARGIN_FRAC of the side short of every texture edge
 it would otherwise touch, and the quad is that much bigger (QUAD_HALF = 8/7), so scale 1 is still
 exactly a 1-yard radius / length / width; all four edges of every texture are transparent at every
 mip level (`encode_blp(clear_cols=True, clear_rows=True)`). The skin batch carries the projected-
@@ -31,7 +31,7 @@ build drew the shapes edge to edge (straight lines at a disc's N/E/S/W), and unt
 projection fix the lines kept their far-end row as body (a rimless strip several yards past the
 end; M1-LINE-RENDER-FORENSICS.md).
 
-Rows written: CreatureModelData + CreatureDisplayInfo ids 91000-91833, 92000-92856 and 93000-93856
+Rows written: CreatureModelData + CreatureDisplayInfo ids 91000-91893, 92000-92856 and 93000-93856
 (one pair per display, the same id in both tables), into the working copy
 `var/model-visual-dbc/DBFilesClient/`, with any other row of the reserved block 91000-93999 or of
 the old slice 90500-90699 removed; model, skin and texture files into `var/model-visual-dbc/SPELLS/`
@@ -56,10 +56,14 @@ black 8). Within a color's 91000 block (F = fill layer, O = outline layer):
     +17..+24    cone (F), angle_j in (30 45 60 90 120 150 180 270) degrees
     +25..+32    cone (O)
     +33         dashed ring (rim dashes only; an armed mine)
-    +34..+99    spare (+33..+98 were the line ladders before M1-FIX-LINE-FILL)
+    +34..+36    wide cone (F), angle_j in (300 315 330) degrees (Blackrock Spire WP-RF: a cone past 270)
+    +37..+39    wide cone (O)
+    +40..+93    arc band (a rolling cone front's band): angle_a in (180 270 300 315 330 360) x the hole's
+                inner/outer ratio rho_k in (0.5 0.6 0.7 0.75 0.8 0.85 0.875 0.9 0.925), step = a * 9 + k
+    +94..+99    spare (+33..+98 were the line ladders before M1-FIX-LINE-FILL)
 
 Line ladder: k_i = line_aspect(i), i = 0..56 (aspect 1/4 to 64; i = 8 is aspect 1), the same for
-both layers; +57..+99 of each line block are spare. 91834-91989 are spare; 91990-91995 are the
+both layers; +57..+99 of each line block are spare. 91894-91989 are spare; 91990-91995 are the
 diagnostic displays, only with --diagnostics (DIAGNOSTICS below); 93990-93999 are the line-render probes, only
 with --probes (the default run builds none and removes any), in the client DBCs and files only, never in the SQL
 (PROBES below). The line-direction probe 91996 of
@@ -139,6 +143,13 @@ WHITE = (255, 255, 255)      # every marker texture's RGB: the model's M2Color s
 
 DONUT_RATIOS = (0.25, 0.33, 0.40, 0.50, 0.60, 0.67, 0.75)
 CONE_ANGLES = (30, 45, 60, 90, 120, 150, 180, 270)
+# Blackrock Spire WP-RF (rolling fronts; mod-boss-mechanics BossMechanicsIds.h kWideConeAngles, kArcBandAngles,
+# kArcBandRatios): cones past 270 degrees, and a rolling cone front's band (an annular sector; the module scales it
+# to the band's outer radius and rounds the hole's ratio down, so the drawn band is never thinner than the hitbox's).
+WIDE_CONE_ANGLES = (300, 315, 330)
+ARC_BAND_ANGLES = (180, 270, 300, 315, 330, 360)
+ARC_BAND_RATIOS = (0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.875, 0.9, 0.925)
+ARC_BAND_ALPHA = 140        # the band's interior: a moving hit, stronger than a fill (0.55)
 LINE_STEPS = 57                                  # i = 0..56, aspect 1/4 to 64
 LINE_UNIT_STEP = 8                               # the step of aspect 1
 
@@ -150,6 +161,8 @@ QUAD_SHAPES = (
     ("donut", len(DONUT_RATIOS)), ("donut_outline", len(DONUT_RATIOS)),
     ("cone", len(CONE_ANGLES)), ("cone_outline", len(CONE_ANGLES)),
     ("dashed", 1),
+    ("wide_cone", len(WIDE_CONE_ANGLES)), ("wide_cone_outline", len(WIDE_CONE_ANGLES)),
+    ("arc_band", len(ARC_BAND_ANGLES) * len(ARC_BAND_RATIOS)),
 )
 SHAPES = QUAD_SHAPES + (("line", LINE_STEPS), ("line_outline", LINE_STEPS))
 SHAPE_OFFSET: dict[str, int] = {}
@@ -157,11 +170,16 @@ _next = 0
 for _shape, _steps in QUAD_SHAPES:
     SHAPE_OFFSET[_shape] = _next
     _next += _steps
-PER_COLOR = _next                                # 34
+PER_COLOR = _next                                # 94
 del _next, _shape, _steps
-QUAD_LAST_ID = FIRST_ID + COLOR_STRIDE * (len(COLORS) - 1) + PER_COLOR - 1                  # 91833
+QUAD_LAST_ID = FIRST_ID + COLOR_STRIDE * (len(COLORS) - 1) + PER_COLOR - 1                  # 91893
 LAST_ID = LINE_FIRST_ID["line_outline"] + COLOR_STRIDE * (len(COLORS) - 1) + LINE_STEPS - 1  # 93856
-DISPLAY_COUNT = len(COLORS) * (PER_COLOR + 2 * LINE_STEPS)                                   # 1332
+DISPLAY_COUNT = len(COLORS) * (PER_COLOR + 2 * LINE_STEPS)                                   # 1872
+
+
+def arc_band_params(step: int) -> tuple[int, float]:
+    """(angle, inner/outer ratio) of arc band step `step` (BossMechanicsIds.h ArcBandStep: angle index * 9 + ratio)."""
+    return ARC_BAND_ANGLES[step // len(ARC_BAND_RATIOS)], ARC_BAND_RATIOS[step % len(ARC_BAND_RATIOS)]
 
 
 def display_id(color: int, shape: str, step: int = 0) -> int:
@@ -271,6 +289,29 @@ def cone_alpha(size: int, angle_deg: float, fill: int = FILL_ALPHA) -> bytes:
     return _plane(size, alpha)
 
 
+def arc_band_alpha(size: int, angle_deg: float, ratio: float, fill: int = ARC_BAND_ALPHA) -> bytes:
+    """A rolling cone front's band: the annulus ratio * radius .. radius over angle_deg centred on +x (the cone's
+    orientation: apex at the texture centre, opening toward increasing rows), the rim on every edge (RIM_FRAC of the
+    radius, so the leading edge reads at any scale). 360: a full annulus."""
+    radius = shape_radius(size)
+    rim = RIM_FRAC * radius
+    half = math.radians(angle_deg / 2.0)
+    s, c = math.sin(half), math.cos(half)
+    concave = angle_deg > 180.0
+    full = angle_deg >= 360.0
+
+    def alpha(x: float, y: float) -> float:
+        d = math.hypot(x, y)
+        sd = max(d - radius, ratio * radius - d)
+        if not full:
+            d1 = -x * s + y * c
+            d2 = -x * s - y * c
+            sd = max(sd, min(d1, d2) if concave else max(d1, d2))
+        return _shaded(fill, sd, rim)
+
+    return _plane(size, alpha)
+
+
 def dashed_alpha(size: int, dashes: int = DASH_COUNT, duty: float = DASH_DUTY) -> bytes:
     """The armed mine's ring: the outline's rim (RIM_FRAC of the radius, RIM_ALPHA) cut into `dashes` dashes,
     one centred on +X (model forward), with an empty interior. Antialiased along the band and at the dash ends."""
@@ -311,8 +352,9 @@ class Display:
     """One CreatureDisplayInfo + CreatureModelData pair.
 
     shape: disc, ring, timer, donut, cone, line (fill layer: disc, donut, cone, line; outline layer: ring,
-    donut_outline, cone_outline, line_outline; timer: the donut's rim-only timer ring) or diag; step: the ladder
-    index (0 for disc, ring and timer); param: the donut ratio or cone angle. texture: the texture file stem (shared
+    donut_outline, cone_outline, line_outline; timer: the donut's rim-only timer ring; WP-RF: wide_cone /
+    wide_cone_outline and arc_band) or diag; step: the ladder index (0 for disc, ring and timer); param: the donut
+    ratio, the cone angle or (arc_band) its step. texture: the texture file stem (shared
     by every color); tex_rgb: that texture's RGB (white for the markers); tint: the RGB the model's M2Color
     multiplies it by (the display's color). binding: how the model gets its texture: "path" (type 0, hard-coded
     `spells\\<texture>.blp`), "skin" (type 11 + fixed replaceable lookup, TextureVariation_1 = texture),
@@ -448,8 +490,13 @@ def texture_stem(shape: str, step: int) -> str:
         return f"{PREFIX}{shape}"
     if shape == "line_outline":
         return f"{PREFIX}outline_line"
+    if shape == "arc_band":
+        angle, ratio = arc_band_params(step)
+        return f"{PREFIX}arc_{angle:03d}_{round(ratio * 1000):03d}"
     outline = shape.endswith("_outline")
     base = shape.removesuffix("_outline")
+    if base == "wide_cone":
+        return f"{PREFIX}{'outline_' if outline else ''}cone_{WIDE_CONE_ANGLES[step]:03d}"
     tag = f"{round(DONUT_RATIOS[step] * 100):02d}" if base == "donut" else f"{CONE_ANGLES[step]:03d}"
     return f"{PREFIX}{'outline_' if outline else ''}{base}_{tag}"
 
@@ -475,6 +522,10 @@ def build_displays(skins: bool) -> list[Display]:
                     param = DONUT_RATIOS[step]
                 elif shape in ("cone", "cone_outline"):
                     param = CONE_ANGLES[step]
+                elif shape in ("wide_cone", "wide_cone_outline"):
+                    param = WIDE_CONE_ANGLES[step]
+                elif shape == "arc_band":
+                    param = step
                 else:
                     param = step if line else 0.0
                 size = BIG if shape in ("disc", "ring", "timer", "dashed") else SMALL
@@ -498,6 +549,10 @@ def alpha_for(display: Display) -> bytes:
         return donut_alpha(size, param, FILL_ALPHA if shape == "donut" else OUTLINE_FILL_ALPHA)
     if shape in ("cone", "cone_outline"):
         return cone_alpha(size, param, FILL_ALPHA if shape == "cone" else OUTLINE_FILL_ALPHA)
+    if shape in ("wide_cone", "wide_cone_outline"):
+        return cone_alpha(size, param, FILL_ALPHA if shape == "wide_cone" else OUTLINE_FILL_ALPHA)
+    if shape == "arc_band":
+        return arc_band_alpha(size, *arc_band_params(int(param)))
     if shape in ("line", "line_outline"):
         return line_alpha(size, FILL_ALPHA if shape == "line" else OUTLINE_FILL_ALPHA)
     raise ValueError(shape)

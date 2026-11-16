@@ -1,9 +1,9 @@
 """
 Blackrock Spire build, WP-V-1 (wave 1: the Lower Spire, B1-B9): the visual ids the boss files use, one place (not
 loaded on its own: the leading underscore keeps the package loader from treating it as a declaration file; boss files
-import it with `from ._visuals import ...`, like `_common.py` and stratholme/_visuals.py). Created by V-1; V-2 appends
+import it with `from ._visuals import ...`, like `_common.py` and stratholme/_visuals.py). Created by V-1; V-2 appended
 the wave 2 constants (the Upper Spire: Emberseer, Solakar, Rend and Gyth, the Beast, Drakkisath) at the end of each
-section. A boss WP asks for a change in its report.
+section; no wave 1 value was changed. A boss WP asks for a change in its report.
 
 Source: .agents/plans/blackrock-spire-build/blackrock-spire-build.VISUALS-REPORT.md (ids, kits, mesh bounds and
 textures read; nothing rendered, so every look is unconfirmed until seen in game), the top pick of each wave 1 row
@@ -15,8 +15,10 @@ Three kinds of constant:
 - MINTED (client patch-M, by apps/dbc-tools/patch_blackrock_spire_vfx_models.py, ids.yaml reservation
   `blackrock_spire`, spellvisual 90600-90649): the `SV_*` names in the first section. They must equal the patch
   script's constants of the same name (lib/test_blackrock_spire_vfx.py pins it). The two Wyrmthalak looks sit on
-  Ascension models that ship into patch-M (`--extract` pulls them); no GameObjectDisplayInfo, CreatureDisplayInfo or
-  CreatureModelData row is minted for wave 1 (90040-90049 and 90740-90769 stay free for V-2).
+  Ascension models that ship into patch-M (`--extract` pulls them); wave 1 mints no GameObjectDisplayInfo,
+  CreatureDisplayInfo or CreatureModelData row. Wave 2 (V-2) mints SV 90603-90616 (the held torch, the 6 yd shadowflame
+  pool, the Beast's magma pool ladder, Drakkisath's two brands, the 12 yd ring of fire) and one creature display,
+  the ice wall (90740); 90040-90049 stay free.
 - SHIPPED (already in patch-M or the working copy): the telegraph kit displays (91000-93999) and the Deadmines goo
   puddle SV 90342/90343. Nothing ships for them; the test checks they exist in the working-copy DBCs.
 - STOCK: ids that already exist in the 3.3.5 client. Nothing ships and no id is minted.
@@ -39,6 +41,38 @@ SV_SPIT_PATCH_STATE = 90601
 # `ogre_warhorn_impact_base` orange shock-ray burst as an impact on the caster. Cast it from a stalker at the horn
 # (self-target); it has no missile.
 SV_HORN_BLOWN = 90602
+
+# --- Minted by V-2 (wave 2, the Upper Spire; every look unconfirmed until seen in game) --------------------------
+
+# Solakar's held flame (SK4): a StateKit with the stock Torch (SVEN 3032, TorchSpell.mdx) in the RIGHT WEAPON slot, on
+# the holder while the aura lasts. NEVER the stock Torch 55049 (SV 12075: flames at the feet, see the wrong list).
+# Unconfirmed: whether a weapon-slot state shows on a player with a weapon equipped; the fallback is SK_HELD_FLAME_ALT.
+SV_TORCH_HELD = 90603
+# Rend and Gyth RG7 "Taste in my power" pool (6 yd radius, 20 s normal / 25 s heroic): the same Ascension shadow quad
+# as WT16's spit patch at scale 0.7 (12.5 yd across). AREA is for an area aura's dynamic object, STATE for a stalker
+# aura (one stalker per pool).
+SV_SHADOWFLAME_POOL_AREA = 90604
+SV_SHADOWFLAME_POOL_STATE = 90605
+# The Beast's Molten Blood pool (BE3): the Ascension `magmazone` lava quad as a STATE on a stalker, minted at 1 yd rungs
+# from 4 to 10 yd of visible radius (N 5 yd, H 4.5 yd, plus 0.5 yd per Heat stack with no cap: pick the smallest rung
+# at or above the real radius, 10 is the top; a pool past 10 yd keeps the 10 look). Keyed by the rung radius in yd.
+SV_MAGMA_POOL_STATE = {4: 90606, 5: 90607, 6: 90608, 7: 90609, 8: 90610, 9: 90611, 10: 90612}
+MAGMA_POOL_RADII = tuple(sorted(SV_MAGMA_POOL_STATE))
+# Drakkisath's brands (DR2, DR3): the Ascension Odyn runic brand states, a 3.8 yd rune ring under the bearer (a Base
+# state with its own spawn anim). Orange is the Searing Brand (spread out), yellow the Collapsing Brand (pair up).
+SV_BRAND_SEARING = 90613
+SV_BRAND_COLLAPSING = 90614
+# Drakkisath's ring of fire (DR17, 12 yd radius): the stock Flame Circle model (Ring of Flame 35831 uses it at scale 3
+# for a 7 yd radius) at scale 5.14 with a fixed size. The STOCK pick is DR_RING_OF_FIRE (8386) with the dynamic object
+# radius set to 12; use these only if the client does not scale the stock ring to the radius (needs eyes in game).
+SV_RING_OF_FIRE_AREA = 90615
+SV_RING_OF_FIRE_STATE = 90616
+# Rend and Gyth RG6 frost wall: the Ascension `frostwhisper_icewall_base` as a creature display (CMD + CDI 90740, model
+# scale 0.6: about 16 yd wide, 2.1 yd thick, 8 yd tall; the model's long axis is its local Y, so a creature facing the
+# way the wall travels shows the wall across the path). One piece per creature: two pieces with an 8 yd gap. The
+# creature stays an invisible hitbox carrier in function; the kit line is the real 4 yd band.
+DISPLAY_ICE_WALL = 90740
+ICE_WALL_YARDS_WIDE = 16.1
 
 # --- Shipped (patch-M and the working copy) ---------------------------------------------------------------------------
 
@@ -179,6 +213,96 @@ GODI_WAR_HORN = 7352                # elventowerSilithusHorn: 17.9 x 11.9 x 13.1
 WAR_HORN_SIZE = 0.12                # "a horn on a post" is 0.1-0.15 in the gameobject template (unconfirmed in game)
 GODI_WAR_HORN_ALT = 2371            # MargolReaverHorn, a small dwarven horn (1.4 x 1.4 x 1.8 yd)
 
+# --- Wave 2: the Upper Spire (V-2) ------------------------------------------------------------------------------------
+
+# Pyroguard Emberseer (B10)
+EM_RING_LAUNCH = 13372              # Flame Wave 75413 (EM3): rune base + hands, a FireNova x4 shockwave; cast on a
+                                    # stalker at the apex (RISKY, plausible launch flash)
+EM_FIRE_NOVA = 6899                 # Fire Nova 23462: the ring burst, the runner-up launch look and the erupting posts
+EM_SMOLDER = 10775                  # Smoldering Flames 48454 (EM6 post smolder): a lasting Base state on a stalker
+EM_SMOLDER_ALT = 9112               # Immolation 40148: embers and smoke state (also DR_SEARED_FLESH)
+EM_FLARE_COLUMN = 9727              # Pillar of Fire 43541 (EM6 flare column): a 6 s ONE-SHOT, re-cast at 5 s
+EM_FLARE_COLUMN_ALT = 7251          # Spawn - Red Lightning 24240: red columns, 4 s, about 30 yd tall (re-cast at 3 s)
+EM_SEARING_BOND = 1946              # Burning Brand 29618 (EM7 holder): StateKit 235, a LASTING flame state
+EM_SEARING_BOND_ALT = 945           # Searing Pain 5676: a 1.1 s impact, re-cast every second (the doc's pick)
+EM_SEARED = 6764                    # Fire Reflector 23097 (the 40 s Seared debuff): lasting red ribbons on the chest
+EM_ENCAGE = 3943                    # Encage Emberseer 15281: the post beam (ManaBeam from the caster's left hand: the
+                                    # post stalker's attach is unchecked) and the state on the target
+EM_GROWING = 3947                   # Emberseer Growing 16049: a glow star and smoke puff at the base
+EM_SUPERNOVA = 3944                 # Emberseer Full Strength 16047: a blue arcane dome + fire ring (off-tone, stock)
+EM_PYROBLAST = 2253                 # Pyroblast 17274: the stock missile and molten impact
+
+# Solakar Flamewreath (B11)
+SK_HELD_FLAME_ALT = 8581            # Fire Shield 35265: a flame whirl at the holder's base (fallback if SV_TORCH_HELD
+                                    # shows nothing); NEVER 12075 Torch 55049 (flames at the feet, see the wrong list)
+SK_TORCH_TOSS = 10211               # Torch Toss 45732 (SK5): the 0.8 yd torch missile with a flame
+SK_TORCH_CATCH = 10302              # Torch Toss (land) 46054 (SK6): a base fire flash on the catcher (1.9 s)
+SK_EGG_HATCH_CAST = 4204            # Hatch Rookery Egg 15746: the Hatchers' own cast (caster hands only; nothing shows
+                                    # at an egg that hatches from a catch, use SK_EGG_HATCH_BURST there)
+SK_EGG_HATCH_BURST = 3947           # Emberseer Growing 16049: a smoke puff at the egg (the green SW_HATCH_BURST is the
+                                    # spider look); cast from a stalker at each egg
+SK_FLAME_WREATH = 4101              # Flame Wreath 29947 (SK8): one flame state at his base; a stack is the buff icon
+SK_HUNT_ROAR = 4939                 # Bellowing Roar 18431 (SK9): sound + anim 74 + shake (= WT_CAUSTIC_ROAR)
+SK_WAR_STOMP = 2355                 # War Stomp 16727 (both stomps): a 6.9 yd crack; StunSwirl leaks on auras
+SK_SPEAR_THROW = 11993              # Throw Spear 54617 (SK11): the HumanSpear01 missile (never 8855 / 10724)
+SK_SPEAR_THROW_ALT = 12689          # Throw Harpoon 59633: a heavy harpoon missile
+SK_SPEAR_WOUND = 376                # Bite 17253: a lasting blood state on the wounded (the Torn Hide look)
+SK_SPEAR_WOUND_ALT = 121            # Deep Wound 43104: a 0.7 s puff, re-cast every second
+SK_SPEAR_CLEANSE = 12765            # Cauterize 60211: fire hands, a flame burst and a dispel ring at the base
+DISPLAY_FLAME_WHELP = 397           # DragonWhelp black skin at 1.5 (the Rookery Whelp; the flame whelp copy keeps it)
+
+# Warchief Rend Blackhand and Gyth (B12)
+RG_FLAME_BREATH = 1483              # Flame Breath 16390 (Mark of Rend cone, riderless breath)
+RG_WHIRLWIND = 8377                 # Whirlwind 13736 (RG11): a small dust whirl state
+RG_SHADOW_FLAME_HIT = 6559          # Shadow Flame 22539 (RG7 hit, as Wyrmthalak): orange, not black (RISKY)
+RG_SHADOWFLAME_RAIN = 6700          # Shadow Flame 22972: a dust + red glow burst at each circle (= WT_SPIT_LANDING)
+RG_SHADOWFLAME_RAIN_ALT = 11247     # Shadowflame 47960: a chest impact (the doc's pick, a small state)
+RG_FREEZING_BREATH_CAST = 10569     # Freezing Breath 47415: ONLY Gyth's breath cast, never the wall (it is a breath)
+RG_FROST_WALL_SPIKE = 11078         # fallback wall: a row of 8-10 stalkers at 4.5 yd each wearing the Vosh needle tell
+RG_THUMBS_DOWN_SKULL = 90506        # Keening skull State (shipped, Stratholme): a lasting head state
+RG_THUMBS_DOWN_SKULL_ALT = 10061    # Hex of Agony 52647: a 3 s skull (re-cast every 3 s)
+RG_THUMBS_DOWN_HIT = 13549          # Shadow Crash 62660: hand glows + a dark missile on the landing
+RG_REND_MOUNTS = 653                # Rend Mounts 16167: a nature precast + a smoke puff (the model swap is the aura)
+DISPLAY_BATTLE_STANDARD = 14542     # BattleStandard_Horde.mdx (4.4 x 4.4 x 11.2 yd at scale 1), our Skull Banner's
+BANNER_DISPLAY_SCALE = 0.4          # creature scale for the Banner of the Dark Horde (a 4.5 yd tall flag; a guess)
+GODI_HORDE_BANNER = 5111            # HordeBanner03: the fallback plant visual, not attackable
+
+# The Beast (B13)
+BE_ROAR = 247                       # Terrifying Roar 14100 (Dread): a small ring + fear skulls on aura targets
+BE_MAGMA_SPLIT = 4321               # Flamebreak 16785: fire hands, a FireNova ring, an InstantArea fire spiral (the
+                                    # spiral's width at the radius is unconfirmed)
+BE_HEAT = 8581                      # Fire Shield 35265: the CycloneFire_State flame whirl, the LASTING Heat look
+BE_HEAT_ALT = 3946                  # Emberseer Growing 16048: the same state (the stock growth aura)
+BE_HEAT_STACK_FLASH = 1465          # Lava Shield 21858: a 1.5 s chest flash, ONLY as the flash at each new stack
+GODI_FLAME_CIRCLE = 410             # FlameCircle.mdx (5.5 x 5.6 yd ring of flame sprites): the fallback pool object
+                                    # (gameobject `size` about 1.8 for 5 yd)
+
+# General Drakkisath (B14, B15)
+DR_SEARING_BRAND_ALT = 1946         # Burning Brand 29618: lasting flame licks (stock runner-up)
+DR_COLLAPSING_BRAND_ALT = 6764      # Fire Reflector 23097: lasting red ribbons (stock twin)
+DR_COLLAPSING_FLASH = 3479          # Mark of Flames 15128: a 3 s ribbon IMPACT only; never as the 12 s brand look
+DR_THUNDERCLAP = 145                # Thunderclap 15548: a 6.9 yd ground crack + blue hands + a slow state
+DR_FLAMESTRIKE = 10383              # Flamestrike 16419 (the 5 yd patches): a PersistentArea fire spiral
+DR_SWEEP = 399                      # Wide Swipe 6749 (Sweeps, Cleaving Charge): anim + sound + shake, no model; a
+                                    # StunSwirl state leaks on aura targets (a copy that applies an aura needs a row)
+DR_SWEEP_ALT = 166                  # Maul 6807: a claw slash model at the base
+DR_CHALLENGE_CIRCLE = 143           # Fire Blast 2136: hands + a chest flash (the circle marker is the ground)
+DR_FIREBALL_VOLLEY = 2437           # Fireball Volley 15285 (Fire Tongues): Fireball missile + impact
+DR_CONFLAGRATION = 4326             # Conflagration 16805: dragon breath + fire impact (retired, look kept)
+DR_RING_OF_FIRE = 8386              # Ring of Flame 35831: PersistentArea FlameCircleEffect x3 (radius 7 in stock): set
+                                    # the dynamic object radius to 12 (the scaling is untested; fall back to the
+                                    # minted SV_RING_OF_FIRE_AREA / STATE)
+DR_RING_OF_FIRE_ALT = 10398         # Flame Wreath 29946: the same model at x1.35 (radius 3 in stock)
+DR_FINESSE = 8996                   # Adrenaline Rush 13750: a lasting base glow on the challenger
+DR_FINESSE_ALT = 72                 # Evasion 5277
+DR_HUMBLED = 210                    # Demoralizing Shout 1160: a base ring + a squiggle over the head
+EMOTE_STATE_KNEEL = 68              # the server kneel emote state on the boss with DR_HUMBLED (SharedDefines.h)
+DR_CAPTAIN_COMMAND = 246            # Battle Shout 6673: a ring at the Captain; re-cast every 5 s (the 10 yd is the kit)
+DR_CAPTAIN_COMMAND_ALT = 5139       # Concentration Aura 19746
+DR_SEARED_FLESH = 9112              # Immolation 40148: charred embers and smoke on the tank (lasting)
+DISPLAY_BLACK_DRAKONID = 14885      # DragonFootSoldier black skin: the herald (DR11)
+DISPLAY_DEATH_TALON_HATCHER = 12892  # DragonSpawnCaster black skin at 1.75: the herald runner-up
+
 # Every stock SpellVisual id above (the SpellVisual existence check).
 STOCK_SPELL_VISUALS = tuple(sorted({
     OM_CROWD_SHOVE, OM_HAYMAKER, OM_HAYMAKER_FLASH, *OM_PELTING.values(), OM_FRENZY, OM_THROW_ROCK, OM_MOJO_MADNESS,
@@ -196,12 +320,29 @@ STOCK_SPELL_VISUALS = tuple(sorted({
     WT_SHADOW_FLAME_BREATH, WT_TAIL_SWEEP, WT_BOULDER, WT_AXE_FLURRY, WT_AXE_FLURRY_ALT, WT_THROW_AXE, WT_CHARGE,
     WT_SHARD_FLASH, WT_HARPOON_CHAIN, WT_SPEAR_THROW, WT_CORROSIVE_POISON, WT_CAUSTIC_ROAR, WT_SPIT_LANDING,
     WT_SPIT_MISSILE, WT_HORN_CAST, WT_OVERLORDS_FURY,
+    EM_RING_LAUNCH, EM_FIRE_NOVA, EM_SMOLDER, EM_SMOLDER_ALT, EM_FLARE_COLUMN, EM_FLARE_COLUMN_ALT, EM_SEARING_BOND,
+    EM_SEARING_BOND_ALT, EM_SEARED, EM_ENCAGE, EM_GROWING, EM_SUPERNOVA, EM_PYROBLAST,
+    SK_HELD_FLAME_ALT, SK_TORCH_TOSS, SK_TORCH_CATCH, SK_EGG_HATCH_CAST, SK_EGG_HATCH_BURST, SK_FLAME_WREATH,
+    SK_HUNT_ROAR, SK_WAR_STOMP, SK_SPEAR_THROW, SK_SPEAR_THROW_ALT, SK_SPEAR_WOUND, SK_SPEAR_WOUND_ALT,
+    SK_SPEAR_CLEANSE,
+    RG_FLAME_BREATH, RG_WHIRLWIND, RG_SHADOW_FLAME_HIT, RG_SHADOWFLAME_RAIN, RG_SHADOWFLAME_RAIN_ALT,
+    RG_FREEZING_BREATH_CAST, RG_FROST_WALL_SPIKE, RG_THUMBS_DOWN_SKULL_ALT, RG_THUMBS_DOWN_HIT, RG_REND_MOUNTS,
+    BE_ROAR, BE_MAGMA_SPLIT, BE_HEAT, BE_HEAT_ALT, BE_HEAT_STACK_FLASH,
+    DR_SEARING_BRAND_ALT, DR_COLLAPSING_BRAND_ALT, DR_COLLAPSING_FLASH, DR_THUNDERCLAP, DR_FLAMESTRIKE, DR_SWEEP,
+    DR_SWEEP_ALT, DR_CHALLENGE_CIRCLE, DR_FIREBALL_VOLLEY, DR_CONFLAGRATION, DR_RING_OF_FIRE, DR_RING_OF_FIRE_ALT,
+    DR_FINESSE, DR_FINESSE_ALT, DR_HUMBLED, DR_CAPTAIN_COMMAND, DR_CAPTAIN_COMMAND_ALT, DR_SEARED_FLESH,
 }))
 
 # Minted by this work (checked against the patch script's rows, not the stock DBCs)
-MINTED_SPELL_VISUALS = (SV_SPIT_PATCH_AREA, SV_SPIT_PATCH_STATE, SV_HORN_BLOWN)
-# Not in the stock client but already shipped (the Deadmines goo rows)
-MINTED_ELSEWHERE_SPELL_VISUALS = (SV_GOO_PUDDLE, SV_GOO_PUDDLE_STATE)
+MINTED_SPELL_VISUALS = (
+    SV_SPIT_PATCH_AREA, SV_SPIT_PATCH_STATE, SV_HORN_BLOWN,
+    SV_TORCH_HELD, SV_SHADOWFLAME_POOL_AREA, SV_SHADOWFLAME_POOL_STATE, *SV_MAGMA_POOL_STATE.values(),
+    SV_BRAND_SEARING, SV_BRAND_COLLAPSING, SV_RING_OF_FIRE_AREA, SV_RING_OF_FIRE_STATE,
+)
+# Minted creature displays (CreatureDisplayInfo + CreatureModelData rows of the patch script)
+MINTED_CREATURE_DISPLAYS = (DISPLAY_ICE_WALL,)
+# Not in the stock client but already shipped (the Deadmines goo rows, Stratholme's keening skull)
+MINTED_ELSEWHERE_SPELL_VISUALS = (SV_GOO_PUDDLE, SV_GOO_PUDDLE_STATE, RG_THUMBS_DOWN_SKULL)
 # Shipped telegraph kit displays (CreatureDisplayInfo ids in the working copy)
 SHIPPED_CREATURE_DISPLAYS = (OM_BAND_FILL_RED, OM_BAND_OUTLINE_RED, OM_BAND_FILL_PURPLE, OM_BAND_OUTLINE_PURPLE)
 
@@ -210,10 +351,11 @@ STOCK_CREATURE_DISPLAYS = tuple(sorted({
     DISPLAY_INVISIBLE_STALKER,
     DISPLAY_SPIRESTONE_CHAMPION, DISPLAY_SMOLDERTHORN_CHAMPION, DISPLAY_BLOODAXE_CHAMPION,
     DISPLAY_RIDING_DIRE_WOLF, DISPLAY_RIDING_DIRE_WOLF_ALT,
+    DISPLAY_FLAME_WHELP, DISPLAY_BATTLE_STANDARD, DISPLAY_BLACK_DRAKONID, DISPLAY_DEATH_TALON_HATCHER,
 }))
 STOCK_GAMEOBJECT_DISPLAYS = tuple(sorted({
     GODI_STUCK_AXE, GODI_SMOLDERWEB_EGG, GODI_SUPPLY_CRATE, GODI_POWDER_KEG, GODI_NET_TRAP, GODI_WAR_HORN,
-    GODI_WAR_HORN_ALT,
+    GODI_WAR_HORN_ALT, GODI_HORDE_BANNER, GODI_FLAME_CIRCLE,
 }))
 # The sounds the picks use are inside the stock kits (6423 is Horn of Elemental Fury's); none is wired by id here.
 STOCK_SOUND_ENTRIES = (6423,)

@@ -116,7 +116,7 @@ namespace
 
     void TestWaveSwitch()
     {
-        CHECK(!kWave2Bound);
+        CHECK(kWave2Bound); // wave 2 bound (handoff s4.2 row 0-2)
         for (std::uint32_t id : { BOSS_EMBERSEER, BOSS_REND, BOSS_GYTH, BOSS_BEAST, BOSS_DRAKKISATH, BOSS_SOLAKAR,
             BOSS_GENERALS_ARMY })
         {

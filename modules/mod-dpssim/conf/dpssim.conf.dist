@@ -580,7 +580,7 @@ DpsSim.MechanicsDpsProfiles =
 #                      takes ":4" (the chase sweep: "sfk-hunt:4"; the Scholomance shapes sweep:
 #                      "scholomance-shapes:3"; the Stratholme follow-ups sweep: "stratholme-followups:3"; the
 #                      Stratholme drop spots sweep: "stratholme-drops:4"; the Blackrock Spire follow-ups sweep:
-#                      "blackrock-spire-followups:5"). The M5 boss descriptor slice is
+#                      "blackrock-spire-followups:3"). The M5 boss descriptor slice is
 #                      "descriptor:2" (descriptor drills: interrupts, dispels, purges, targets, ignore,
 #                      descriptor, descriptor-drills); it is not in the default rotation.
 #        Default:     "" - (The five-slice rotation that covers every kind in 120 s fights: "smite,fenrus,ras;

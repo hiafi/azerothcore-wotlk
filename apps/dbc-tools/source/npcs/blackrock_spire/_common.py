@@ -82,15 +82,16 @@ KIT_HELPER = kit_helper(KIT_CREATURE)
 # too (it reads this line). The C++ twin is kWave2Bound in modules/mod-dungeon-bosses
 # src/BlackrockSpire/BlackrockSpireRework.h; both sides must agree (lib/test_blackrock_spire_kit.py). The orchestrator
 # flips both in one commit at wave 2's setup (WP 0-2).
-BIND_WAVE_2 = False
+BIND_WAVE_2 = True
 
 # creature_template.flags_extra bits (CreatureData.h): only the four UBRS finals have INSTANCE_BIND today (handoff
 # s2.3); every reworked boss gets it (s3.2 item 2, the Scholomance skeleton).
 FLAGS_EXTRA_INSTANCE_BIND = 0x1
 
 # Pyroguard Emberseer's immunity set (handoff s7 #16 A): the 1972 mechanics set plus the Fire school, a new
-# creature_immunities row 1973 (WP-0: live max 1972; not an ids.yaml table). B10 ships the row; its declaration asserts
-# the id free.
+# creature_immunities row 1973 (WP-0: live max 1972; not an ids.yaml table). B10 ships the row in its SQL rev
+# (data/sql/updates/pending_db_world/rev_pyroguard_emberseer_blackrock_spire.sql; dbc-tools has no creature_immunities
+# declaration); lib/test_blackrock_spire_emberseer.py checks every immunity set the Blackrock Spire rows name exists.
 IMMUNITY_EMBERSEER = 1973
 
 # The flex ladder (handoff s3.12; DD FlexMath.h): max health = the 5-player value x (1 + 0.25 x (N - 5)), N clamped to

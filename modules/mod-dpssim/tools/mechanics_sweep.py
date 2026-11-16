@@ -128,10 +128,19 @@ DRILL_BARS: dict[str, dict] = {
         "references": {}, "group": {}, "cycle_ms": 30000, "default_cycles": 4,
     },
     "blackrock-spire-followups": {
-        # 1 punch, 3 charges, 5 chains are first shapes (reported); 2, 6, 7 the 1.5 s follow-ups and 4 the pounces
-        # (drawn with their charge, landing 1.5 s after it)
-        "gated": {2: 1, 4: 1, 6: 1, 7: 1}, "reported": {1, 3, 5}, "cross_specs": 3,
-        "references": {}, "group": {}, "cycle_ms": 24000, "default_cycles": 5,
+        # wave 1: 1 punch, 3 charges, 5 chains are first shapes (reported); 2, 6, 7 the 1.5 s follow-ups and 4 the
+        # pounces (drawn with their charge, landing 1.5 s after it). Wave 2 (one row a cycle): 8 nova, 9 ring 1, 11
+        # the first wall, 13 the Call (Spot/13) reported; 10 rings 2-4, 12 the second wall, 14 the lethal ring and
+        # 15-19 the Challenge's blows gated
+        "gated": {2: 1, 4: 1, 6: 1, 7: 1, 10: 2, 12: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1},
+        "reported": {1, 3, 5, 8, 9, 11, 13}, "cross_specs": 3,
+        "references": {}, "group": {}, "cycle_ms": 40000, "default_cycles": 3,
+    },
+    "rolling-fronts": {
+        # Emberseer normal (7 stacks) then heroic (14), then Rend: 1, 4 the novas, 2, 5 the first rings and 7 the first
+        # wall reported; 3, 6 the later rings (from the apex at the nova) and 8 the second wall gated
+        "gated": {3: 1, 6: 1, 8: 1}, "reported": {1, 2, 4, 5, 7}, "cross_specs": 3,
+        "references": {}, "group": {}, "cycle_ms": 40000, "default_cycles": 3,
     },
     "stratholme-jump": {
         # the bar is no Jump hit at all (1, 3, 4); Freeze Tag's RunOut (2) is reported

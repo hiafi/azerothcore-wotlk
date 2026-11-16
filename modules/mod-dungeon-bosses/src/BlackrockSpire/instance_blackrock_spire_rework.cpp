@@ -22,7 +22,7 @@
 // stock folder stay registered and keep working, none of them copied: their AIs check the instance name
 // (GetBlackrockSpireAI), which is unchanged. That covers boss_lord_valthalak (BossAI on 14) and boss_mor_grayhoof
 // (BossAI on 24, which persists now), npc_vaelastrasz_the_red and spell_blackrock_spire_call_of_vaelastrasz
-// (DATA_VAELASTRASZ 25), go_father_flame (the Solakar event, DATA_SOLAKAR_FLAMEWREATH 23), the area triggers
+// (DATA_VAELASTRASZ 25), the area triggers
 // at_dragonspire_hall (SetData(1, 2046)), at_blackrock_stadium (Rend), the Beast's 2066 / 2067 and the Scarshield
 // Infiltrator's, and the stock bosses of the wave not yet bound (wave 2: Emberseer, Solakar, Rend, Gyth, the Beast,
 // Drakkisath).
@@ -44,8 +44,10 @@
 // whose grid is not loaded is never closed; SetData(2046, x) stays a no-op); the stock notes fixed (SP notes 1, 3, 4: a
 // failed Solakar event starts again, a boss that is not a BossAI still records its death, Emberseer's Out door is door
 // data and the room check no longer re-opens the In door twice); the saved insult, Urok pile and Solakar state; the war
-// horn and the General's Army per-pull flags with their kill slots and loot bits; the "BRW" save string. While
-// kWave2Bound is false the UBRS bosses run stock and their instance paths are the stock ones.
+// horn and the General's Army per-pull flags with their kill slots and loot bits; the "BRW" save string; the Solakar
+// event rewritten by B11 (one pair, Solakar at 30 s, a working reset; Father Flame 175245 is B11's go_brs_father_flame,
+// boss_solakar_flamewreath_rework.cpp). While kWave2Bound is false the UBRS bosses run stock and their instance paths
+// are the stock ones.
 
 #include "BlackrockSpireRework.h"
 #include "Creature.h"
@@ -58,6 +60,7 @@
 #include "Log.h"
 #include "Map.h"
 #include "Player.h"
+#include "RendGythLogic.h"
 #include "ScriptedCreature.h"
 #include "TemporarySummon.h"
 #include <algorithm>
@@ -143,14 +146,10 @@ namespace
     {
         EVENT_ROOM_STORE    = 1,    // stock EVENT_DRAGONSPIRE_ROOM_STORE
         EVENT_ROOM_CHECK    = 2,    // stock EVENT_DRAGONSPIRE_ROOM_CHECK
-        EVENT_SOLAKAR_WAVE  = 3,    // stock
+        EVENT_SOLAKAR_ARRIVE = 3,   // B11: Solakar shows himself 30 s after Father Flame is taken
         EVENT_ROOM_WATCH    = 4,    // the self-start (section 10)
         EVENT_HALYCON_RESPAWN = 5,  // B7: a dead Halycon after a restart mid-attempt
     };
-
-    // The stock Solakar event (B11 rewrites it: one pair, Solakar at 30 s, a working reset).
-    constexpr Milliseconds kSolakarWaveTimer = 30s;
-    constexpr uint32 kSolakarWaveCount = 5;
 
     enum StockTexts
     {
@@ -230,16 +229,17 @@ public:
                         creature->DisappearAndDie();
                     break;
                 case NPC_REND:
-                    // Stock: the Rend that Gyth carries is not the one the instance tracks.
-                    if (GetBossState(BOSS_GYTH) != IN_PROGRESS)
+                    // Stock: the Rend that Gyth carries is not the one the instance tracks. B12 (wave 2): there is one
+                    // Rend, the balcony spawn, all show long.
+                    if (kWave2Bound || GetBossState(BOSS_GYTH) != IN_PROGRESS)
                         _rend = creature->GetGUID();
-                    if (GetBossState(BOSS_GYTH) == DONE)
+                    if (RendShowOver())
                         creature->DisappearAndDie();
                     break;
                 case NPC_LORD_VICTOR_NEFARIUS:
                 case NPC_BRS_NEFARIUS:
                     _nefarius = creature->GetGUID();
-                    if (GetBossState(BOSS_GYTH) == DONE)
+                    if (RendShowOver())
                         creature->DisappearAndDie();
                     break;
                 case NPC_FINKLE_EINHORN:
@@ -281,7 +281,7 @@ public:
                         HandleGameObject(ObjectGuid::Empty, false, go);
                     break;
                 case GO_GYTH_ENTRY_DOOR:
-                    if (GetBossState(BOSS_GYTH) == DONE)
+                    if (RendShowOver())
                         HandleGameObject(ObjectGuid::Empty, true, go);
                     break;
                 case GO_UROK_CIRCLE:
@@ -289,6 +289,10 @@ public:
                     break;
                 case GO_UROK_CHALLENGE:
                     _urokChallenge = go->GetGUID();
+                    break;
+                case GO_FATHER_FLAME:
+                case GO_ROOKERY_EGG:
+                    RespawnSolakarObject(go);
                     break;
                 default:
                     if (std::optional<uint32> const rune = HallRuneIndex(go->GetEntry()))
@@ -399,9 +403,20 @@ public:
                     break;
                 case BOSS_SOLAKAR:
                     if (state == DONE)
+                    {
+                        // B11: the event is over for good; what is left of the pair goes with it.
                         _solakarEvent = DONE;
+                        events.CancelEvent(EVENT_SOLAKAR_ARRIVE);
+                        DespawnSolakarSummons(false);
+                    }
                     break;
                 case BOSS_REND:
+                    // B12 (R-2 B-1): the arena entry door is shut only while the show runs; it opens on the kill (the
+                    // arena's only way out, as stock JustDied), the wipe and the reset.
+                    static_assert(uint32(IN_PROGRESS) == BrsRendGyth::kRendStateInProgress);
+                    if (kWave2Bound)
+                        HandleGameObject(ObjectGuid::Empty, BrsRendGyth::EntryDoorOpen(uint32(state)),
+                            GetGameObject(GO_GYTH_ENTRY_DOOR));
                     // Stock: a failed Rend event respawns him on the balcony, and Nefarius taunts.
                     if (state == FAIL)
                     {
@@ -498,6 +513,8 @@ public:
                     if (data > kSolakarFlameMax)
                         return;
                     _solakarFlame = data;
+                    if (!SolakarFlameSaved(data))
+                        return;     // a toss, a snatch or a drop: per attempt, not saved
                     break;
                 case DATA_WAR_HORN:
                     if (!WarHornChangeAllowed(data, instance->IsHeroic(), GetBossState(BOSS_WYRMTHALAK)))
@@ -586,13 +603,10 @@ public:
                     case EVENT_HALYCON_RESPAWN:
                         RespawnHalyconIfStuck();
                         break;
-                    case EVENT_SOLAKAR_WAVE:
-                        SummonSolakarWave(_solakarWave);
-                        if (_solakarWave < kSolakarWaveCount)
-                        {
-                            events.ScheduleEvent(EVENT_SOLAKAR_WAVE, kSolakarWaveTimer);
-                            ++_solakarWave;
-                        }
+                    case EVENT_SOLAKAR_ARRIVE:
+                        if (Creature* solakar = instance->GetCreature(_solakar))
+                            if (solakar->IsAlive() && solakar->IsAIEnabled && solakar->AI())
+                                solakar->AI()->DoAction(ACTION_SOLAKAR_ARRIVE);
                         break;
                     default:
                         break;
@@ -844,53 +858,94 @@ public:
         }
 
         // ------------------------------------------------------------------------------------------------------------
-        // The Solakar event (stock five waves; B11 rewrites it)
+        // The Solakar event (B11, SK1 / SK12; SP notes 1 and 3)
         // ------------------------------------------------------------------------------------------------------------
+        // Taking Father Flame (go_brs_father_flame) writes IN_PROGRESS: one Rookery Guardian and one Rookery Hatcher at
+        // the stock spots (the Hatcher yells its stock line) and Solakar himself, hidden at his stock spot: his AI owns
+        // the flame from the first second (the burn, the toss, the Hatcher's snatch, the eggs) and shows himself at the
+        // 30 s mark (ACTION_SOLAKAR_ARRIVE) whatever is left. A FAIL (his AI's wipe, or a GM) ends NOT_STARTED: his AI
+        // clears the flame, the items, the eggs and the whelps (ACTION_SOLAKAR_RESET), the event's units go, and Father
+        // Flame comes back ready, so the event can start again (stock left it dead at FAIL, note 1). DONE is final.
         void WriteSolakarEvent(uint32 data)
         {
             uint32 const before = _solakarEvent;
             _solakarEvent = SolakarEventAfterWrite(before, data);
             if (SolakarEventStarts(before, _solakarEvent))
-            {
-                _solakarWave = 0;
-                events.ScheduleEvent(EVENT_SOLAKAR_WAVE, 500ms);
-            }
+                StartSolakarEvent();
             if (data == FAIL && before != DONE)
-            {
-                // SP note 1: stock left the state at FAIL here, so Father Flame never started it again.
-                events.CancelEvent(EVENT_SOLAKAR_WAVE);
-                for (ObjectGuid const& guid : _solakarSummons)
-                    if (Creature* creature = instance->GetCreature(guid))
-                        creature->DespawnOrUnsummon();
-                _solakarSummons.clear();
-                _solakarWave = 0;
-                _solakarFlame = FLAME_NONE;
-            }
+                ResetSolakarEvent();
             if (before != _solakarEvent)
                 LOG_INFO(kLog, "brs instance solakar event {} -> {}", before, _solakarEvent);
         }
 
-        void SummonSolakarWave(uint32 number)
+        void StartSolakarEvent()
         {
-            if (number < kSolakarWaveCount)
+            DespawnSolakarSummons(true);    // a GM restart over a live one
+            if (Creature* guardian = instance->SummonCreature(NPC_ROOKERY_GUARDIAN, Position(kSolakarPosLeft.x,
+                kSolakarPosLeft.y, kSolakarPosLeft.z, kSolakarPosLeft.o)))
+                _solakarSummons.push_back(guardian->GetGUID());
+            if (Creature* hatcher = instance->SummonCreature(NPC_ROOKERY_HATCHER, Position(kSolakarPosRight.x,
+                kSolakarPosRight.y, kSolakarPosRight.z, kSolakarPosRight.o)))
             {
-                if (Creature* summon = instance->SummonCreature(NPC_ROOKERY_GUARDIAN, Position(kSolakarPosLeft.x,
-                    kSolakarPosLeft.y, kSolakarPosLeft.z, kSolakarPosLeft.o)))
-                    _solakarSummons.push_back(summon->GetGUID());
-                if (Creature* summon = instance->SummonCreature(NPC_ROOKERY_HATCHER, Position(kSolakarPosRight.x,
-                    kSolakarPosRight.y, kSolakarPosRight.z, kSolakarPosRight.o)))
+                _solakarSummons.push_back(hatcher->GetGUID());
+                if (hatcher->IsAIEnabled && hatcher->AI())
+                    hatcher->AI()->Talk(SAY_SOLAKAR_FIRST_HATCHER);
+            }
+            // His AI reads the event (IN_PROGRESS, not arrived) at its creation and hides until the arrival.
+            if (Creature* solakar = instance->SummonCreature(NPC_SOLAKAR, Position(kSolakarPosBoss.x,
+                kSolakarPosBoss.y, kSolakarPosBoss.z, kSolakarPosBoss.o)))
+                _solakarSummons.push_back(solakar->GetGUID());
+            events.CancelEvent(EVENT_SOLAKAR_ARRIVE);
+            events.ScheduleEvent(EVENT_SOLAKAR_ARRIVE, Milliseconds(kSolakarArriveMs));
+            LOG_INFO(kLog, "brs instance solakar event started: the pair is out, Solakar arrives in {} s",
+                kSolakarArriveMs / 1000);
+        }
+
+        void ResetSolakarEvent()
+        {
+            events.CancelEvent(EVENT_SOLAKAR_ARRIVE);
+            DespawnSolakarSummons(true);
+            _solakarFlame = FLAME_NONE;
+            if (GameObject* flame = GetGameObject(GO_FATHER_FLAME))
+            {
+                flame->SetLootState(GO_READY);
+                flame->Respawn();
+            }
+            LOG_INFO(kLog, "brs instance solakar event reset: Father Flame is ready again");
+        }
+
+        // R-2 M-2: Father Flame and the hatched eggs are despawned with a 2 h respawn, which a dungeon saves at once; a
+        // restart or crash mid-event loads the event NOT_STARTED (SanitizeBrsSave) with the chest still gone, so
+        // nobody could start Solakar. Whenever the event is not running and he is not dead, a loaded chest or egg is
+        // brought back (Respawn only clears a pending respawn: a spawned one is untouched).
+        void RespawnSolakarObject(GameObject* go)
+        {
+            if (_solakarEvent != NOT_STARTED || GetBossState(BOSS_SOLAKAR) == DONE)
+                return;
+            if (go->GetEntry() == GO_FATHER_FLAME)
+                go->SetLootState(GO_READY);
+            go->Respawn();
+        }
+
+        // The event's units: the pair, and Solakar too `withBoss` (not on his death: his corpse stays). His AI is told
+        // first, so it clears what it owns (flame, items, eggs, whelps) before he goes.
+        void DespawnSolakarSummons(bool withBoss)
+        {
+            for (ObjectGuid const& guid : _solakarSummons)
+            {
+                Creature* creature = instance->GetCreature(guid);
+                if (!creature)
+                    continue;
+                if (creature->GetEntry() == NPC_SOLAKAR)
                 {
-                    _solakarSummons.push_back(summon->GetGUID());
-                    if (number == 0 && summon->IsAIEnabled && summon->AI())
-                        summon->AI()->Talk(SAY_SOLAKAR_FIRST_HATCHER);
+                    if (!withBoss)
+                        continue;
+                    if (creature->IsAlive() && creature->IsAIEnabled && creature->AI())
+                        creature->AI()->DoAction(ACTION_SOLAKAR_RESET);
                 }
+                creature->DespawnOrUnsummon();
             }
-            else if (number == kSolakarWaveCount)
-            {
-                if (Creature* summon = instance->SummonCreature(NPC_SOLAKAR, Position(kSolakarPosBoss.x,
-                    kSolakarPosBoss.y, kSolakarPosBoss.z, kSolakarPosBoss.o)))
-                    _solakarSummons.push_back(summon->GetGUID());
-            }
+            _solakarSummons.clear();
         }
 
         // ------------------------------------------------------------------------------------------------------------
@@ -903,6 +958,13 @@ public:
         {
             if (boss)
                 DungeonKit::SetHardModeLoot(boss, lit != 0 && GetBossState(bossId) != DONE);
+        }
+
+        // Rend's show is over for good (B12): Rend is dead (wave 2; Gyth may fall mid-show and the show goes on, so his
+        // slot no longer decides it). Stock until wave 2 binds: Gyth DONE.
+        bool RendShowOver() const
+        {
+            return GetBossState(kWave2Bound ? BOSS_REND : BOSS_GYTH) == DONE;
         }
 
         EventMap events;
@@ -932,7 +994,6 @@ public:
 
         // The Solakar event
         uint32 _solakarEvent = NOT_STARTED;
-        uint32 _solakarWave = 0;
         uint32 _solakarFlame = FLAME_NONE;
         GuidVector _solakarSummons;
 

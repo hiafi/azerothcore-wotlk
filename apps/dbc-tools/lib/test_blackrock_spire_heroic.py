@@ -100,9 +100,9 @@ KIT_HEROIC_ID = {  # minted after the extraction set, in entry order, wave by wa
 STOCK_EXTRA = (10161, 10258, 10339, 10601, 10602, 10683)  # the stock event units the extraction cannot see
 EXTRA = (*STOCK_EXTRA, *KIT_HEALTH)
 HEROIC_ENTRY_COUNT = 93  # the 87 hostile extraction creatures plus the six stock extras, before any kit add lands
-NOT_HEROIC = (10162, 10257, 10296, 10740, 10799, 15560,  # friendly NPCs and the event Elder Stonefort
+NOT_HEROIC = (10162, 300732, 10257, 10296, 10740, 10799, 15560,  # friendly NPCs and the event Elder Stonefort
               16044, 16048)  # triggers
-SMART_WIDENED = (10258, 10683, 10442, 10447, 10814)
+SMART_WIDENED = (10442, 10447)
 # The 14 boss spawns and Nefarius' (BRS spawn 137967; it keeps the normal entry) are heroic-masked; the Elder Stonefort
 # (game event 7) and the one event gameobject (event 203) stay normal-only.
 BOSS_SPAWN_GUIDS = (43518, 43522, 45840, 45757, 45749, 137817, 40245, 137971, 137968, 137969, 44342)

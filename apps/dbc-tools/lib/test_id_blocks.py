@@ -716,6 +716,7 @@ class BlackrockSpireIdsTest(unittest.TestCase):
             "gameobjectdisplayinfo": (90040, 90049),
             "creaturedisplayinfo": (90740, 90769),
             "creaturemodeldata": (90740, 90769),
+            "item": (70610, 70619),
         })
 
     def test_blackrock_spire_overlaps_no_other_reservation(self):
@@ -1292,10 +1293,10 @@ class ClassDeclarationsTest(unittest.TestCase):
         self.assertEqual(out_of_reservation("bossmechanics", {"spell": [205100, 204899], "creature": [300420]}),
                          ["spell 204899", "spell 205100", "creature 300420"])
         # the markers' displays are WP-A's rows (not declared by dbc-tools yet): the slice keeps the display ids
-        # 91000-91833, 92000-92856 and 93000-93856 (and the opt-in diagnostics 91990-91995) clear of every other
+        # 91000-91893, 92000-92856 and 93000-93856 (and the opt-in diagnostics 91990-91995) clear of every other
         # owner; USED_DISPLAY_IDS stays at the class scripts' maxima (the markers are not scanned)
         self.assertEqual(out_of_reservation("bossmechanics",
-                                            {"creaturedisplayinfo": [91000, 91833, 91995, 92000, 93856, 93999]}), [])
+                                            {"creaturedisplayinfo": [91000, 91893, 91995, 92000, 93856, 93999]}), [])
         self.assertEqual(out_of_reservation("bossmechanics", {"creaturedisplayinfo": [90500, 90999]}),
                          ["creaturedisplayinfo 90500", "creaturedisplayinfo 90999"])
 

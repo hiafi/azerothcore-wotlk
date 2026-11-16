@@ -155,7 +155,7 @@ namespace BlackrockSpireRework
     // assigned" at boot), and the instance keeps their stock event paths (the altar, the Solakar waves, Rend's
     // respawn); the wave 2 instance code (the insult, the herald's arming) stays off.
     // ----------------------------------------------------------------------------------------------------------------
-    inline constexpr bool kWave2Bound = false;
+    inline constexpr bool kWave2Bound = true;
 
     constexpr bool IsWave2Boss(std::uint32_t bossId)
     {
@@ -423,8 +423,11 @@ namespace BlackrockSpireRework
         return std::nullopt;
     }
 
-    // The items the build touches (B11: Father Flame's toss, an item edit in DT).
-    std::uint32_t constexpr kItemFatherFlame = 13371;
+    // The items the build touches. B11 (R-2 ruling 2026-11-15): Father Flame, the flame players toss, is a custom bag
+    // item (70610, its on-use the toss; apps/dbc-tools source/world/blackrock_spire_father_flame.py, items.csv and the
+    // Solakar SQL rev); the stock off-hand 13371 stays untouched as the keepsake (the holder at his death gets one).
+    std::uint32_t constexpr kItemFatherFlame = 70610;
+    std::uint32_t constexpr kItemFatherFlameKeepsake = 13371;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Spells (spell 210000-210699, ids.yaml reservation `blackrock_spire`; declared in apps/dbc-tools
@@ -453,7 +456,7 @@ namespace BlackrockSpireRework
     IdSlice constexpr kSpellsWarHorn{ 210290, 210339 };         // B9  (WT hard mode)
     IdSlice constexpr kSpellsSpareWave1{ 210340, 210349 };
     IdSlice constexpr kSpellsEmberseer{ 210350, 210389 };       // B10 (EM)
-    IdSlice constexpr kSpellsSolakar{ 210390, 210429 };         // B11 (SK; incl. the item 13371 toss)
+    IdSlice constexpr kSpellsSolakar{ 210390, 210429 };         // B11 (SK; incl. the item 70610 toss)
     IdSlice constexpr kSpellsRendGyth{ 210430, 210489 };        // B12 (RG and the Nefarius copy)
     IdSlice constexpr kSpellsBeast{ 210490, 210519 };           // B13 (BE)
     IdSlice constexpr kSpellsDrakkisath{ 210520, 210559 };      // B14 (DR)
@@ -724,11 +727,21 @@ namespace BlackrockSpireRework
         }
     }
 
-    // Starts the stock wave timer (the transition into IN_PROGRESS).
+    // Starts the event (the transition into IN_PROGRESS).
     constexpr bool SolakarEventStarts(std::uint32_t before, std::uint32_t after)
     {
         return before == DungeonKit::State::NotStarted && after == DungeonKit::State::InProgress;
     }
+
+    // B11 (SK1, SP ruling 57): the event is one pair (a Rookery Guardian and a Rookery Hatcher at the stock spots) and
+    // Solakar, summoned hidden with the pair (his AI owns Father Flame from the first second) and arriving 30 s later
+    // whatever is left. The instance sends his AI these actions (CreatureAI::DoAction).
+    std::uint32_t constexpr kSolakarArriveMs = 30000;
+    enum SolakarActions : std::int32_t
+    {
+        ACTION_SOLAKAR_ARRIVE   = 0x534B0001,   // the 30 s mark: he shows himself and engages
+        ACTION_SOLAKAR_RESET    = 0x534B0002,   // the event failed (a wipe, or a GM): flame, items, eggs and whelps go
+    };
 
     // Father Flame's held flame (DATA_SOLAKAR_FLAME; B11 writes it, the reset reads it).
     enum SolakarFlame : std::uint32_t
@@ -739,6 +752,13 @@ namespace BlackrockSpireRework
         FLAME_BRAZIER   = 3,    // back in Father Flame
     };
     std::uint32_t constexpr kSolakarFlameMax = FLAME_BRAZIER;
+
+    // Is a flame write worth an instance save? A held or dropped flame is per attempt (SanitizeBrsSave drops it on
+    // load), so tosses, snatches and drops never save (R-2 n-1).
+    constexpr bool SolakarFlameSaved(std::uint32_t flame)
+    {
+        return flame != FLAME_HOLDER && flame != FLAME_FLOOR;
+    }
 
     // ----------------------------------------------------------------------------------------------------------------
     // The hard modes (section 3.7) and the insult

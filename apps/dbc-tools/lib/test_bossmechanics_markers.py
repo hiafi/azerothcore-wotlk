@@ -267,6 +267,48 @@ class TextureGeometryTest(unittest.TestCase):
         self.assertGreater(_alpha_at(plane, size, size // 2 + 40, size // 2), 0)    # ahead of the apex
         self.assertEqual(_alpha_at(plane, size, size // 2 - 40, size // 2), 0)      # behind it
 
+    def test_wide_cones_keep_their_slice_clear(self):
+        """WP-RF: a 300 / 315 / 330 degree cone: inside over the angle, the slice behind the apex empty."""
+        size, half, radius = pbm.SMALL, pbm.SMALL / 2, pbm.shape_radius(pbm.SMALL)
+        for angle in pbm.WIDE_CONE_ANGLES:
+            plane = pbm.cone_alpha(size, angle)
+            for deg in range(0, 180, 5):
+                x, y = math.cos(math.radians(deg)) * 0.7 * radius, math.sin(math.radians(deg)) * 0.7 * radius
+                r, c = int(x + half), int(y + half)
+                inside = _alpha_at(plane, size, r, c) >= pbm.FILL_ALPHA // 2
+                if deg < angle / 2 - 3.0:
+                    self.assertTrue(inside, f"wide cone {angle}: {deg} deg should be inside")
+                elif deg > angle / 2 + 3.0:
+                    self.assertFalse(inside, f"wide cone {angle}: {deg} deg should be in the slice")
+
+    def test_arc_band_is_the_annular_sector(self):
+        """WP-RF: the band's hole at ratio x radius, its outer edge at the radius, its angle as the cone's, the rest
+        empty (the hole: the ground the band has passed; the slice: safe)."""
+        size, half, radius = pbm.SMALL, pbm.SMALL / 2, pbm.shape_radius(pbm.SMALL)
+        for step in range(54):
+            angle, ratio = pbm.arc_band_params(step)
+            plane = pbm.arc_band_alpha(size, angle, ratio)
+            row = size // 2
+
+            def at(deg: float, frac: float) -> int:
+                x = math.cos(math.radians(deg)) * frac * radius
+                y = math.sin(math.radians(deg)) * frac * radius
+                return _alpha_at(plane, size, int(x + half), int(y + half))
+
+            mid = (1.0 + ratio) / 2.0
+            self.assertGreaterEqual(at(0, mid), pbm.ARC_BAND_ALPHA // 2, (angle, ratio))        # in the band
+            self.assertEqual(at(0, ratio * 0.5), 0, (angle, ratio))                               # the hole
+            self.assertEqual(_alpha_at(plane, size, 0, 0), 0)                                     # past the radius
+            if angle < 360:
+                self.assertEqual(at(180, mid), 0, (angle, ratio))                                 # the slice
+                self.assertGreaterEqual(at(angle / 2 - 6, mid), pbm.ARC_BAND_ALPHA // 2, (angle, ratio))
+            cols = [c for c in range(size // 2, size) if _alpha_at(plane, size, row, c) >= pbm.ARC_BAND_ALPHA // 2]
+            if angle >= 180:
+                # Along +y (90 degrees): every band with angle >= 180 covers it; the hole and the outer edge.
+                inner = min(cols) + 0.5 - half
+                self.assertAlmostEqual(inner / radius, ratio, delta=1.5 / radius + pbm.RIM_FRAC)
+                self.assertLessEqual(abs(max(cols) + 0.5 - half - radius), 1.0)
+
     def test_line_has_rims_on_the_long_edges_only(self):
         """The body is rows [1/2, LINE_END) = [128, 240) of 256, every row the same; the rest is transparent."""
         size = pbm.SMALL
@@ -362,7 +404,7 @@ class EdgeTexelTest(unittest.TestCase):
         cls.textures = _textures(cls.displays)
 
     def test_every_shipped_texture_has_clear_borders_at_every_mip(self):
-        self.assertEqual(len(self.textures), 36)
+        self.assertEqual(len(self.textures), 96)      # WP-RF: 60 more (wide cones, arc bands)
         for d in self.displays:
             self.assertEqual(pbm.edge_clearing(d), {"clear_cols": True, "clear_rows": True}, d.id)
         for name, data in sorted(self.textures.items()):
@@ -779,6 +821,11 @@ def _expected_ids() -> dict[int, tuple[str, int, str]]:
             exp[base + 17 + j] = ("cone", j, color)
             exp[base + 25 + j] = ("cone_outline", j, color)
         exp[base + 33] = ("dashed", 0, color)
+        for j in range(3):                                  # WP-RF: the wide cones and the arc band
+            exp[base + 34 + j] = ("wide_cone", j, color)
+            exp[base + 37 + j] = ("wide_cone_outline", j, color)
+        for k in range(54):
+            exp[base + 40 + k] = ("arc_band", k, color)
         for i in range(57):
             exp[92000 + 100 * c + i] = ("line", i, color)
             exp[93000 + 100 * c + i] = ("line_outline", i, color)
@@ -791,22 +838,23 @@ class DisplayTableTest(unittest.TestCase):
             got = {d.id: (d.shape, d.step, d.color) for d in pbm.build_displays(skins)}
             self.assertEqual(got, _expected_ids())
         exp = _expected_ids()
-        self.assertEqual((min(exp), max(exp), len(exp)), (91000, 93856, 1332))
-        self.assertEqual(pbm.DISPLAY_COUNT, 1332)
-        for c in range(9):          # each color block is dense: +0 .. +33 at 91000, +0 .. +56 at 92000 and 93000
-            for base, n in ((91000, 34), (92000, 57), (93000, 57)):
+        self.assertEqual((min(exp), max(exp), len(exp)), (91000, 93856, 1872))
+        self.assertEqual(pbm.DISPLAY_COUNT, 1872)
+        for c in range(9):          # each color block is dense: +0 .. +93 at 91000, +0 .. +56 at 92000 and 93000
+            for base, n in ((91000, 94), (92000, 57), (93000, 57)):
                 self.assertEqual(sorted(i for i in exp if base + 100 * c <= i < base + 100 * (c + 1)),
                                  list(range(base + 100 * c, base + 100 * c + n)))
         self.assertEqual((pbm.FIRST_ID, pbm.QUAD_LAST_ID, pbm.LAST_ID, pbm.BLOCK_LAST_ID),
-                         (91000, 91833, 93856, 93999))
+                         (91000, 91893, 93856, 93999))
         self.assertEqual(pbm.LINE_FIRST_ID, {"line": 92000, "line_outline": 93000})
         self.assertEqual((pbm.OLD_FIRST_ID, pbm.OLD_LAST_ID), (90500, 90699))
-        self.assertEqual((pbm.COLOR_STRIDE, pbm.PER_COLOR), (100, 34))
+        self.assertEqual((pbm.COLOR_STRIDE, pbm.PER_COLOR), (100, 94))
 
     def test_display_id_is_the_module_formula(self):
         """mod-boss-mechanics BossMechanicsIds.h MarkerDisplay(color, shape, step): the same numbers."""
         self.assertEqual(pbm.SHAPE_OFFSET, {"disc": 0, "ring": 1, "timer": 2, "donut": 3, "donut_outline": 10,
-                                            "cone": 17, "cone_outline": 25, "dashed": 33})
+                                            "cone": 17, "cone_outline": 25, "dashed": 33, "wide_cone": 34,
+                                            "wide_cone_outline": 37, "arc_band": 40})
         self.assertEqual(pbm.display_id(0, "disc"), 91000)
         self.assertEqual(pbm.display_id(2, "disc"), 91200)
         self.assertEqual(pbm.display_id(2, "ring"), 91201)
@@ -819,7 +867,14 @@ class DisplayTableTest(unittest.TestCase):
         self.assertEqual(pbm.display_id(4, "line", 0), 92400)
         self.assertEqual(pbm.display_id(0, "line", 56), 92056)
         self.assertEqual(pbm.display_id(8, "line_outline", 56), 93856)
-        for bad in ((9, "disc", 0), (-1, "disc", 0), (0, "ring", 1), (0, "cone", 8), (0, "line", 57), (0, "dashed", 1)):
+        # WP-RF (BossMechanicsIds.h kWideConeOffset 34, kArcBandOffset 40, ArcBandStep(a, k) = a * 9 + k).
+        self.assertEqual(pbm.display_id(0, "wide_cone", 0), 91034)
+        self.assertEqual(pbm.display_id(0, "wide_cone_outline", 2), 91039)
+        self.assertEqual(pbm.display_id(0, "arc_band", 0), 91040)
+        self.assertEqual(pbm.display_id(2, "arc_band", 2 * 9 + 4), 91200 + 40 + 22)
+        self.assertEqual(pbm.display_id(8, "arc_band", 53), 91893)
+        for bad in ((9, "disc", 0), (-1, "disc", 0), (0, "ring", 1), (0, "cone", 8), (0, "line", 57), (0, "dashed", 1),
+                    (0, "wide_cone", 3), (0, "arc_band", 54)):
             with self.assertRaises(ValueError):
                 pbm.display_id(*bad)
 
@@ -832,6 +887,13 @@ class DisplayTableTest(unittest.TestCase):
             for j, angle in enumerate(pbm.CONE_ANGLES):
                 self.assertEqual(by_id[pbm.display_id(c, "cone", j)].param, angle)
                 self.assertEqual(by_id[pbm.display_id(c, "cone_outline", j)].param, angle)
+            for j, angle in enumerate(pbm.WIDE_CONE_ANGLES):
+                self.assertEqual(by_id[pbm.display_id(c, "wide_cone", j)].param, angle)
+                self.assertEqual(by_id[pbm.display_id(c, "wide_cone_outline", j)].texture, f"bm_outline_cone_{angle}")
+            for k in range(54):
+                angle, ratio = pbm.arc_band_params(k)
+                self.assertEqual(by_id[pbm.display_id(c, "arc_band", k)].texture,
+                                 f"bm_arc_{angle:03d}_{round(ratio * 1000):03d}")
             for i in range(pbm.LINE_STEPS):
                 fill, outline = by_id[pbm.display_id(c, "line", i)], by_id[pbm.display_id(c, "line_outline", i)]
                 self.assertEqual(fill.verts, outline.verts)                                 # same geometry
@@ -841,6 +903,9 @@ class DisplayTableTest(unittest.TestCase):
     def test_ladders_and_colors(self):
         self.assertEqual(pbm.DONUT_RATIOS, (0.25, 0.33, 0.40, 0.50, 0.60, 0.67, 0.75))
         self.assertEqual(pbm.CONE_ANGLES, (30, 45, 60, 90, 120, 150, 180, 270))
+        self.assertEqual(pbm.WIDE_CONE_ANGLES, (300, 315, 330))
+        self.assertEqual(pbm.ARC_BAND_ANGLES, (180, 270, 300, 315, 330, 360))
+        self.assertEqual(pbm.ARC_BAND_RATIOS, (0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.875, 0.9, 0.925))
         self.assertEqual(pbm.LINE_STEPS, 57)
         self.assertEqual(pbm.COLORS, ("red", "yellow", "blue", "purple", "orange", "green", "teal", "white", "black"))
         self.assertEqual(pbm.COLOR_RGB, {
@@ -933,7 +998,7 @@ class DisplayTableTest(unittest.TestCase):
             self.assertEqual(d.tint, pbm.COLOR_RGB[d.color])
             self.assertTrue(d.model.endswith("_" + d.color))
             self.assertFalse(any(d.texture.endswith("_" + c) for c in pbm.COLORS), d.texture)
-        self.assertEqual(len(by_key), 34 + 2 * 57)
+        self.assertEqual(len(by_key), 94 + 2 * 57)
         for key, group in by_key.items():
             self.assertEqual([d.color for d in group], list(pbm.COLORS), key)
             self.assertEqual(len({d.texture for d in group}), 1, key)
@@ -941,7 +1006,8 @@ class DisplayTableTest(unittest.TestCase):
     def test_textures_are_decodable_white_and_the_right_size(self):
         displays = pbm.build_displays(True)
         textures = _textures(displays)
-        self.assertEqual(len(textures), 36)          # disc, ring, timer, dashed + 7 + 7 donuts + 8 + 8 cones + 2 lines
+        # disc, ring, timer, dashed + 7 + 7 donuts + 8 + 8 cones + 2 lines; WP-RF: 3 + 3 wide cones + 54 arc bands
+        self.assertEqual(len(textures), 96)
         white = blp_write.expand565(blp_write.rgb565(pbm.WHITE))
         self.assertEqual(white, (255, 255, 255))
         for d in displays:
@@ -965,7 +1031,7 @@ class DisplayTableTest(unittest.TestCase):
                       "`TextureVariation_1` LIKE 'bm\\_%';", sql)
         self.assertIn("DELETE FROM `creaturemodeldata_dbc` WHERE `ID` BETWEEN 91000 AND 93999;", sql)
         self.assertIn("DELETE FROM `creaturedisplayinfo_dbc` WHERE `ID` BETWEEN 91000 AND 93999;", sql)
-        self.assertEqual(sql.count("\n(9"), 2 * (1332 + 6))  # every row, both tables
+        self.assertEqual(sql.count("\n(9"), 2 * (1872 + 6))  # every row, both tables
         with tempfile.NamedTemporaryFile("w", suffix=".sql", delete=False, encoding="utf-8") as f:
             f.write(sql)
             path = Path(f.name)
@@ -1046,11 +1112,11 @@ class OutputFilesTest(unittest.TestCase):
             self.assertEqual(_texture_entry(files[name])[0], 11, name)
             self.assertEqual(m2_patch.replaceable_lookup(files[name])[11], 0, name)
 
-    def test_no_skins_gives_1332_models_with_hard_coded_paths(self):
+    def test_no_skins_gives_1872_models_with_hard_coded_paths(self):
         displays, files = self._files(False)
         models = {n for n in files if n.endswith(".m2")}
-        self.assertEqual(len(models), 1332)
-        self.assertEqual(len({n for n in files if n.endswith(".skin")}), 1332)
+        self.assertEqual(len(models), 1872)
+        self.assertEqual(len({n for n in files if n.endswith(".skin")}), 1872)
         for d in displays:
             data = files[f"{d.model}.m2"]
             ttype, _flags, length, ofs = _texture_entry(data)

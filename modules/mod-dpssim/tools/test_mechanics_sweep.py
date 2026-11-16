@@ -210,7 +210,7 @@ class BarTableMatchesTheModule(unittest.TestCase):
     def test_bar_arrays(self):
         for drill, array in (("deadmines-followups", "kFollowupTags"), ("scholomance-shapes", "kScholoBarTags"),
                              ("stratholme-followups", "kStratBarTags"), ("stratholme-drops", "kDropBarTags"),
-                             ("blackrock-spire-followups", "kBrsBarTags")):
+                             ("blackrock-spire-followups", "kBrsBarTags"), ("rolling-fronts", "kFrontBarTags")):
             self.assertEqual(set(ms.DRILL_BARS[drill]["gated"]), self.array(array), drill)
 
     def test_every_tag_and_cycle(self):
