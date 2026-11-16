@@ -112,6 +112,9 @@ S1_TOUGHNESS_HEAL, S1_ARC, S1_CHAIN_ORB, S1_JUMPS, S1_ORB_DAMAGE, S1_SS_CLEAVE =
 S1_IDS = tuple(range(202444, 202450))
 # Balance round 3 on the Normal-tier kits (2026-11-15, user ruling): Toughness's Shield Strike took the first spare id.
 BAL3_SHIELD_STRIKE = 202450
+# Balance round 5 on the Normal-tier kits (2026-11-15, user ruling: shaman tank option B): Spirit Guard's per-rank Rockbiter
+# Stormstrike damage children took the next three.
+BAL5_SPIRIT_GUARD_SS = (202451, 202452, 202453)
 S3A_SPARE = range(202450, 202520)
 REWRITTEN_STOCK = (
     16257, 53817, 8017, 324, 8042, 8349, 8187, 2484, 59566, 63685, 3600, 32175, 32176, 421, 60103, 17364, 30823, 51533,
@@ -734,7 +737,7 @@ class ShamanS3aDataTest(unittest.TestCase):
         self.assertEqual(int(cleave["AttributesEx3"]) & 0x20050000, 0x20050000)   # IGNORE_CASTER_MODIFIERS | ALWAYS_HIT | SUPPRESS
         self.assertIn((S1_SS_CLEAVE, 0x8000), {(int(r["spell_id"]), int(r["attributes"])) for r in p.custom_attrs})
         consts = {c["name"]: c["value"] for c in p.consts}
-        self.assertEqual([consts[f"STATIC_SHOCK_ORB_DAMAGE_R{r}"] for r in (1, 2, 3)], [20, 40, 55])
+        self.assertEqual([consts[f"STATIC_SHOCK_ORB_DAMAGE_R{r}"] for r in (1, 2, 3)], [8, 26, 40])
         self.assertEqual([consts[f"ILS_SS_CLEAVE_R{r}"] for r in (1, 2, 3)], [33, 66, 100])
         self.assertEqual([consts[f"THUNDERING_SURGE_R{r}"] for r in (1, 2, 3)], [40, 80, 125])
         self.assertEqual((consts["STATIC_SHOCK_ARC_PCT"], consts["ANTICIPATION_CL_JUMPS"], consts["ILS_SS_CLEAVE_TARGETS"]),
@@ -752,17 +755,17 @@ class ShamanS3aDataTest(unittest.TestCase):
 
     def test_bal3_toughness_shield_strike(self):
         """Balance round 3 (2026-11-15): every Toughness rank carries the Shield Strike percent as its DUMMY effect 3 (70 %,
-        stored 69, quoted as $s3), and Shield Strike 202450 is a Physical melee-class strike, script-sized, that always hits
+        stored 69; 45 % since balance round 5; quoted as $s3), and Shield Strike 202450 is a Physical melee-class strike, script-sized, that always hits
         (it rides on a landed Stormstrike), can crit (no CANT_CRIT), keeps armor and done mods, and procs nothing."""
         d = _data()
         rows, entries, p = d["rows_by_id"], d["entries_by_id"], d["package"]
         consts = {c["name"]: c["value"] for c in p.consts}
-        self.assertEqual(consts["SHIELD_STRIKE_ARMOR_PCT"], 70)
+        self.assertEqual(consts["SHIELD_STRIKE_ARMOR_PCT"], 45)
         for sid in (16252, 16306, 16307):
             with self.subTest(rank=sid):
                 row = rows[sid]
                 self.assertEqual((int(row["Effect_3"]), int(row["EffectAura_3"])), (6, 4))   # APPLY_AURA, DUMMY
-                self.assertEqual(int(row["EffectBasePoints_3"]) + 1, 70)
+                self.assertEqual(int(row["EffectBasePoints_3"]) + 1, 45)
                 self.assertIn("your Stormstrike also strikes with your shield, dealing Physical damage equal to $s3% of your "
                               "shield's armor.", row["Description_Lang_enUS"])
         strike = rows[BAL3_SHIELD_STRIKE]
@@ -775,6 +778,31 @@ class ShamanS3aDataTest(unittest.TestCase):
         self.assertEqual(int(strike["AttributesEx4"]) & 0x00800000, 0x00800000)           # SUPPRESS_WEAPON_PROCS
         self.assertNotIn((BAL3_SHIELD_STRIKE, 0x8000), {(int(r["spell_id"]), int(r["attributes"])) for r in p.custom_attrs})
         self.assertIn("percent of shield armor, user ruling", entries[BAL3_SHIELD_STRIKE]["effect1"]["_potency_excluded"])
+
+    def test_bal5_spirit_guard_stormstrike(self):
+        """Balance round 5 (2026-11-15, shaman tank option B): one hidden Rockbiter child per Spirit Guard rank, a SPELLMOD_DAMAGE
+        pct of 33 / 66 / 100 % on the Stormstrike strikes only (d2 b10 / b12), quoted by the rank text as $<child>s1; the
+        Static Shock Rockbiter orb bonus at x0.90 (8 / 26 / 40 %) and its child row at rank 3's 40 %."""
+        d = _data()
+        rows, p = d["rows_by_id"], d["package"]
+        consts = {c["name"]: c["value"] for c in p.consts}
+        self.assertEqual([consts[f"SPIRIT_GUARD_SS_DAMAGE_R{r}"] for r in (1, 2, 3)], [33, 66, 100])
+        for rank, (child, rank_id, pct) in enumerate(zip(BAL5_SPIRIT_GUARD_SS, (202368, 202369, 202370), (33, 66, 100)), 1):
+            with self.subTest(rank=rank):
+                row = rows[child]
+                self.assertEqual((int(row["EffectAura_1"]), int(row["EffectMiscValue_1"])),
+                                 (AURA_ADD_PCT_MODIFIER, SPELLMOD_DAMAGE))
+                self.assertEqual(int(row["EffectBasePoints_1"]) + 1, pct)
+                self.assertEqual([int(row.get(f"EffectSpellClassMaskA_{i}") or 0) for i in (1, 2, 3)], [0, 0, 0x1400])
+                self.assertEqual(int(row.get("SpellClassSet") or 0), 11)
+                self.assertTrue(int(row["Attributes"]) & ATTR0_PASSIVE)
+                self.assertEqual(int(row.get("Effect_2") or 0), 0)
+                text = rows[rank_id]["Description_Lang_enUS"]
+                self.assertIn(f"While Rockbiter is active, your Stormstrike deals ${child}s1% more damage.", text)
+        self.assertEqual(int(rows[S1_ORB_DAMAGE]["EffectBasePoints_1"]) + 1, 40)
+        for rank, pct in ((51525, 8), (51526, 26), (51527, 40)):
+            with self.subTest(static_shock=rank):
+                self.assertIn(f"your Lightning Shield orbs deal {pct}% more damage", rows[rank]["Description_Lang_enUS"])
 
     def test_gust(self):
         self.assertClean(check_gust(_data()["rows_by_id"]))

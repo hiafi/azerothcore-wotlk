@@ -23,7 +23,9 @@ Ids (Enhancement block 202360-202519):
                    202448, Improved Lightning Shield's Stormstrike cleave 202449 (here); the arc 202445 and the Chain
                    Lightning orb 202446 sit next to the orb 26364 in shaman_trigger_spells.py.
     202450         [balance round 3 on the Normal-tier kits, 2026-11-15] Toughness's Shield Strike (the shield tank's Stormstrike
-                   strike with the shield); 202451-202519 stay spare.
+                   strike with the shield).
+    202451-202453  [balance round 5 on the Normal-tier kits, 2026-11-15] Spirit Guard's Stormstrike damage children, one per
+                   rank (33 / 66 / 100 %); 202454-202519 stay spare.
 SkillLineAbility 30680 (Living Earth), creatures 300262-300265 (the four Elemental Spirit wolves), tooltip entries 1217-1219,
 spell_group 1259.
 
@@ -261,9 +263,11 @@ EARTHEN_POWER_SLOW_RADIUS_YD = const('EARTHEN_POWER_SLOW_RADIUS_YD', 8.0, 'Earth
 # Shield kit (Rockbiter-gated, one job per tank talent), Improved Lightning Shield's Stormstrike cleave and Thundering
 # Strikes' Chain Lightning surge.
 ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT = const('ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT', 10, 'Rockbiter with any Spirit Guard rank: damage dealt bonus, percent (Rockbiter 8017 effect 0, aura 79, set by spell_sha_rockbiter_damage; 0 without Spirit Guard) [tune].')
-STATIC_SHOCK_ORB_DAMAGE_R1 = const('STATIC_SHOCK_ORB_DAMAGE_R1', 20, 'Static Shock rank 1 under Rockbiter: Lightning Shield orb damage bonus (202448 SPELLMOD_DAMAGE on d0 b10), percent [tune].')
-STATIC_SHOCK_ORB_DAMAGE_R2 = const('STATIC_SHOCK_ORB_DAMAGE_R2', 40, 'Static Shock rank 2 under Rockbiter: Lightning Shield orb damage bonus, percent [tune].')
-STATIC_SHOCK_ORB_DAMAGE_R3 = const('STATIC_SHOCK_ORB_DAMAGE_R3', 55, 'Static Shock rank 3 under Rockbiter: Lightning Shield orb damage bonus, percent [tune].')
+# Balance round 5 on the Normal-tier kits (2026-11-15, user ruling: shaman tank option B): the Rockbiter orb lands at x0.90
+# of round 4 at every rank (1.20 / 1.40 / 1.55 x 0.90 = 1.08 / 1.26 / 1.395; rank 3 rounds to 1.40, x0.903).
+STATIC_SHOCK_ORB_DAMAGE_R1 = const('STATIC_SHOCK_ORB_DAMAGE_R1', 8, 'Static Shock rank 1 under Rockbiter: Lightning Shield orb damage bonus (202448 SPELLMOD_DAMAGE on d0 b10), percent (20 -> 8, balance round 5) [tune].')
+STATIC_SHOCK_ORB_DAMAGE_R2 = const('STATIC_SHOCK_ORB_DAMAGE_R2', 26, 'Static Shock rank 2 under Rockbiter: Lightning Shield orb damage bonus, percent (40 -> 26, balance round 5) [tune].')
+STATIC_SHOCK_ORB_DAMAGE_R3 = const('STATIC_SHOCK_ORB_DAMAGE_R3', 40, 'Static Shock rank 3 under Rockbiter: Lightning Shield orb damage bonus, percent (55 -> 40, balance round 5) [tune].')
 STATIC_SHOCK_ARC_PCT = const('STATIC_SHOCK_ARC_PCT', 55, 'Static Shock under Rockbiter: an orb arc (202445) deals this percent of the orb 26364\'s potency (the arc\'s own row) [tune].')
 STATIC_SHOCK_ARC_RADIUS_YD = const('STATIC_SHOCK_ARC_RADIUS_YD', 8.0, 'Static Shock under Rockbiter: an orb arcs to enemies attacking the shaman within this radius of the orb\'s target, yd [fixed].')
 ANTICIPATION_CL_JUMPS = const('ANTICIPATION_CL_JUMPS', 2, 'Anticipation under Rockbiter: extra Chain Lightning jump targets (202447 SPELLMOD_JUMP_TARGETS) [fixed].')
@@ -272,7 +276,10 @@ ILS_SS_CLEAVE_R2 = const('ILS_SS_CLEAVE_R2', 66, 'Improved Lightning Shield rank
 ILS_SS_CLEAVE_R3 = const('ILS_SS_CLEAVE_R3', 100, 'Improved Lightning Shield rank 3: Stormstrike cleave share, percent [tune].')
 ILS_SS_CLEAVE_TARGETS = const('ILS_SS_CLEAVE_TARGETS', 4, 'Improved Lightning Shield: enemies the Stormstrike cleave strikes besides the target [fixed].')
 ILS_SS_CLEAVE_RADIUS_YD = const('ILS_SS_CLEAVE_RADIUS_YD', 8.0, 'Improved Lightning Shield: Stormstrike cleave radius around the target, yd [fixed].')
-SHIELD_STRIKE_ARMOR_PCT = const('SHIELD_STRIKE_ARMOR_PCT', 70, 'Toughness under Rockbiter with a shield equipped: Shield Strike (202450) damage, percent of the shield item\'s armor (item_template Armor); every Toughness rank carries it as its DUMMY effect 3 ($s3) [tune].')
+SHIELD_STRIKE_ARMOR_PCT = const('SHIELD_STRIKE_ARMOR_PCT', 45, 'Toughness under Rockbiter with a shield equipped: Shield Strike (202450) damage, percent of the shield item\'s armor (item_template Armor); every Toughness rank carries it as its DUMMY effect 3 ($s3) (70 -> 45, balance round 5) [tune].')
+SPIRIT_GUARD_SS_DAMAGE_R1 = const('SPIRIT_GUARD_SS_DAMAGE_R1', 33, 'Spirit Guard rank 1 under Rockbiter: Stormstrike strike damage bonus (202451 SPELLMOD_DAMAGE on 32175 / 32176), percent [tune].')
+SPIRIT_GUARD_SS_DAMAGE_R2 = const('SPIRIT_GUARD_SS_DAMAGE_R2', 66, 'Spirit Guard rank 2 under Rockbiter: Stormstrike strike damage bonus (202452), percent [tune].')
+SPIRIT_GUARD_SS_DAMAGE_R3 = const('SPIRIT_GUARD_SS_DAMAGE_R3', 100, 'Spirit Guard rank 3 under Rockbiter: Stormstrike strike damage bonus (202453), percent [tune].')
 THUNDERING_SURGE_R1 = const('THUNDERING_SURGE_R1', 40, 'Thundering Strikes rank 1: damage bonus of a 5-stack Maelstrom Weapon Chain Lightning under Flametongue / Frostbrand / Windfury, percent [tune].')
 THUNDERING_SURGE_R2 = const('THUNDERING_SURGE_R2', 80, 'Thundering Strikes rank 2: the Chain Lightning surge, percent [tune].')
 THUNDERING_SURGE_R3 = const('THUNDERING_SURGE_R3', 125, 'Thundering Strikes rank 3: the Chain Lightning surge, percent [tune].')
@@ -1209,8 +1216,10 @@ static_shock_orb_damage_202448 = _hidden_child(
     202448, 'Static Shock', [_mod(SpellModOp.DAMAGE, True, STATIC_SHOCK_ORB_DAMAGE_R3['value'] - 1)], ICON_STATIC_SHOCK,
     School.NATURE, 'Your Lightning Shield orbs deal more damage.',
     S1_NOTE + 'hidden child of Rockbiter for Static Shock (any rank): E0 SPELLMOD_DAMAGE pct on d0 b10 (the orb 26364, the arc '
-    '202445 and the Chain Lightning orb 202446; the shield 324 deals no damage). The row stores rank 3\'s 55 % (stored 54); '
-    'Shaman::SyncRockbiterChildren sets the live rank value STATIC_SHOCK_ORB_DAMAGE_R1..R3 (20 / 40 / 55 %) with ChangeAmount, as '
+    '202445 and the Chain Lightning orb 202446; the shield 324 deals no damage). The row stores rank 3\'s value (stored value - 1); '
+    'Shaman::SyncRockbiterChildren sets the live rank value STATIC_SHOCK_ORB_DAMAGE_R1..R3 (20 / 40 / 55 %; 8 / 26 / 40 % since '
+    '2026-11-15, balance round 5 on the Normal-tier kits, user ruling: shaman tank option B, the Rockbiter orb at x0.90) with '
+    'ChangeAmount, as '
     'the Spirit Guard parry child. Applied while Rockbiter is up and Static Shock has a rank, removed with Rockbiter. A SpellMod '
     'damage percent multiplies with Improved Lightning Shield\'s and Static Shock\'s own (Player::ApplySpellMod). Passive + '
     'DO_NOT_DISPLAY with the L5 pair. No class bits of its own.',
@@ -1253,7 +1262,7 @@ shield_strike_202450 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
     effects=[Effect(
         type=EffectType.SCHOOL_DAMAGE, implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
-        potency_excluded='percent of shield armor, user ruling: SHIELD_STRIKE_ARMOR_PCT (70 %, the Toughness rank\'s DUMMY '
+        potency_excluded='percent of shield armor, user ruling: SHIELD_STRIKE_ARMOR_PCT (45 %, the Toughness rank\'s DUMMY '
                          'effect 3) of the equipped shield\'s item_template Armor is passed as bp0 by '
                          'spell_sha_enh_stormstrike::ShieldStrike.',
     )],
@@ -1261,7 +1270,8 @@ shield_strike_202450 = spell(
     notes=NOTE + BAL3_NOTE + 'Toughness\'s Shield Strike: with Rockbiter active, any Toughness rank and a shield (item class 4 '
           'subclass 6, usable) in the off hand, every Stormstrike 17364 that hits its primary target also casts this at that '
           'target (spell_sha_enh_stormstrike::ShieldStrike, AfterHit, once per cast). Damage = the Toughness rank\'s DUMMY '
-          '(SHIELD_STRIKE_ARMOR_PCT, 70 %) of the shield\'s template Armor (base + bonus armor, as ItemBudget materializes it; '
+          '(SHIELD_STRIKE_ARMOR_PCT, 70 %; 45 % since 2026-11-15, balance round 5 on the Normal-tier kits, user ruling: shaman '
+          'tank option B) of the shield\'s template Armor (base + bonus armor, as ItemBudget materializes it; '
           'enchant armor is not counted), passed as bp0. Physical SCHOOL_DAMAGE, DmgClass melee: armor mitigates it, it can '
           'crit (melee crit, 200 %), done-% auras apply (Rockbiter\'s +10 % with Spirit Guard), normal threat (Rockbiter\'s '
           'threat aura applies as to any damage). ATTR0 NO_ACTIVE_DEFENSE and AttributesEx3 ALWAYS_HIT: it rides on a '
@@ -1274,6 +1284,36 @@ shield_strike_202450 = spell(
                        AttributesEx3=ATTR3_SUPPRESS_CASTER_PROCS | ATTR3_ALWAYS_HIT,
                        AttributesEx4=ATTR4_SUPPRESS_WEAPON_PROCS),
 )
+
+# ---- Spirit Guard's Stormstrike damage (2026-11-15, balance round 5 on the Normal-tier kits, user ruling: shaman tank option B) ----
+BAL5_NOTE = ('(2026-11-15, balance round 5 on the Normal-tier kits, user ruling: shaman tank option B, Stormstrike a bigger '
+             'share of the tank: Spirit Guard\'s Rockbiter clause, Shield Strike 70 -> 45 %, the Rockbiter orb x0.90) ')
+_SPIRIT_GUARD_SS_DAMAGE = (SPIRIT_GUARD_SS_DAMAGE_R1['value'], SPIRIT_GUARD_SS_DAMAGE_R2['value'],
+                           SPIRIT_GUARD_SS_DAMAGE_R3['value'])
+_SPIRIT_GUARD_SS_IDS = (202451, 202452, 202453)
+
+
+def _spirit_guard_stormstrike(spell_id: int, rank: int):
+    pct = _SPIRIT_GUARD_SS_DAMAGE[rank - 1]
+    return _hidden_child(
+        spell_id, 'Spirit Guard', [_mod(SpellModOp.DAMAGE, True, pct - 1)], ICON_SPIRIT_GUARD, School.NORMAL,
+        'Your Stormstrike deals more damage.',
+        BAL5_NOTE + f'hidden child of Rockbiter for Spirit Guard rank {rank}: E0 SPELLMOD_DAMAGE pct '
+        f'+SPIRIT_GUARD_SS_DAMAGE_R{rank} ({pct} %, stored {pct - 1}) on d2 b10 / b12 (SS_STRIKES_D2: the Stormstrike strikes '
+        f'32175 / 32176; the Ascendance cleave clones 202413 / 202415 carry the same bits, but they need Frost or Elemental '
+        f'Ascendance, which only a non-Rockbiter imbue swap grants). Not Shield Strike 202450 (family 0). Improved Lightning '
+        f'Shield\'s cleave 202449 and the Frost Spirit copy read the landed strike damage, so they follow it. One row per rank '
+        f'so the rank text quotes it as $' + str(spell_id) + f's1 (Spirit Guard\'s own three effects are taken). '
+        f'Shaman::SyncRockbiterChildren keeps exactly the child of the known rank while Rockbiter is up (Rockbiter apply / '
+        f'remove, talent change, login), removed with Rockbiter; a damage SpellMod multiplies with the other Stormstrike '
+        f'mods (Player::ApplySpellMod). Passive + DO_NOT_DISPLAY with the L5 pair. No class bits of its own.',
+        **_emask(1, (0, 0, SS_STRIKES_D2)),
+    )
+
+
+spirit_guard_stormstrike_r1_202451 = _spirit_guard_stormstrike(202451, 1)
+spirit_guard_stormstrike_r2_202452 = _spirit_guard_stormstrike(202452, 2)
+spirit_guard_stormstrike_r3_202453 = _spirit_guard_stormstrike(202453, 3)
 
 # ---- Spirit Guard (60300, row 7): teaches parry, Rockbiter parry bonus and Stoneskin per parry -----------------------------------------
 _SPIRIT_GUARD_BONUS = (1, 2, 3)
@@ -1289,7 +1329,8 @@ def _spirit_guard(spell_id: int, rank: int):
         [_aura(AURA_MOD_PARRY_PERCENT, -1), _dummy(bonus - 1), _dummy(stoneskin - 1)], ICON_SPIRIT_GUARD, 45,
         _desc(f'Teaches you to parry. While Rockbiter is active, increases your chance to parry by {bonus}%, parrying an attack '
               f'grants you {stoneskin} Stoneskin, and Rockbiter increases your damage dealt by '
-              f'{ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT["value"]}%.', _SPIRIT_GUARD_CAPSTONE, rank == 3),
+              f'{ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT["value"]}%. While Rockbiter is active, your Stormstrike deals '
+              f'${_SPIRIT_GUARD_SS_IDS[rank - 1]}s1% more damage.', _SPIRIT_GUARD_CAPSTONE, rank == 3),
         f'Spirit Guard rank {rank} (talent 60300, learned at 45): E0 MOD_PARRY_PERCENT amount 0 (stored -1: the handler enables the '
         f'parry skill, S3a-0VERIFY (e); the 5 % engine baseline appears once learned and stays until relog), E1 DUMMY = the Rockbiter '
         f'parry bonus {bonus} % (stored {bonus - 1}; the hidden child 202412 carries it), E2 DUMMY = Stoneskin per parry {stoneskin} '
@@ -1299,7 +1340,10 @@ def _spirit_guard(spell_id: int, rank: int):
         f'Any rank gates Rockbiter\'s damage clause (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package): '
         f'Rockbiter 8017 effect 0 is +ROCKBITER_SPIRIT_GUARD_DAMAGE_PCT % damage dealt with a Spirit Guard rank, 0 without '
         f'(spell_sha_rockbiter_damage, recalculated by Shaman::SyncRockbiterChildren); R4\'s "$202443s1%" clause and its '
-        f'hidden passive are gone.',
+        f'hidden passive are gone. '
+        + BAL5_NOTE + f'While Rockbiter is active the Stormstrike strikes 32175 / 32176 deal SPIRIT_GUARD_SS_DAMAGE_R{rank} '
+        f'({_SPIRIT_GUARD_SS_DAMAGE[rank - 1]} %) more: the hidden child {_SPIRIT_GUARD_SS_IDS[rank - 1]} '
+        f'(Shaman::SyncRockbiterChildren), quoted as ${_SPIRIT_GUARD_SS_IDS[rank - 1]}s1.',
         subtext=f'Rank {rank}',
     )
 

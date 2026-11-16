@@ -142,7 +142,8 @@ def _toughness_clause(rank):
 _TOUGHNESS_SHIELD_STRIKE = (' While Rockbiter is active and you have a shield equipped, your Stormstrike also strikes with '
                             'your shield, dealing Physical damage equal to $s3% of your shield\'s armor.')
 _TOUGHNESS_BAL3_NOTE = (' (2026-11-15, balance round 3 on the Normal-tier kits, user ruling: the shield tank\'s Stormstrike '
-                        'also strikes with the shield) Effect 3 DUMMY = SHIELD_STRIKE_ARMOR_PCT (70, stored 69), the Shield '
+                        'also strikes with the shield) Effect 3 DUMMY = SHIELD_STRIKE_ARMOR_PCT (70, stored 69; 45, stored 44 '
+                        'since 2026-11-15, balance round 5 on the Normal-tier kits, user ruling: shaman tank option B), the Shield '
                         'Strike 202450 percent of the shield\'s template armor, read by spell_sha_enh_stormstrike::ShieldStrike '
                         'under Rockbiter with a usable shield in the off hand (any rank).')
 
@@ -2725,7 +2726,7 @@ static_shock_51525 = _talent(
           'Your Stormstrike adds 3 charges to your Lightning Shield.', last=False),
     masks={1: (0x400, 0, 0), 2: (0x400, 0, 0)},
     ProcChance=5, ProcTypeMask=12582932,
-    notes='S3a A2: orb damage +5% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 5% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.' + S1_NOTE + 'Rockbiter clauses: orb damage +20 / 40 / 55 % (hidden child 202448, rank value set by Shaman::SyncRockbiterChildren) and each orb the shield fires arcs (202445, 55 % of the orb) to up to 1 / 2 / 3 other enemies attacking the shaman within 8 yd (spell_sha_enh_storm_orb).',
+    notes='S3a A2: orb damage +5% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 5% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.' + S1_NOTE + 'Rockbiter clauses: orb damage +20 / 40 / 55 % (hidden child 202448, rank value set by Shaman::SyncRockbiterChildren) and each orb the shield fires arcs (202445, 55 % of the orb) to up to 1 / 2 / 3 other enemies attacking the shaman within 8 yd (spell_sha_enh_storm_orb). (2026-11-15, balance round 5 on the Normal-tier kits, user ruling: shaman tank option B) The Rockbiter orb damage is now +8 / 26 / 40 % (x0.90 of 1.20 / 1.40 / 1.55; STATIC_SHOCK_ORB_DAMAGE_R1..R3), so the tank\'s orb lands at x0.90; Enhancement DPS (never in Rockbiter) is unchanged.',
 )
 
 
@@ -2737,7 +2738,7 @@ static_shock_51526 = _talent(
           'Your Stormstrike adds 3 charges to your Lightning Shield.', last=False),
     masks={1: (0x400, 0, 0), 2: (0x400, 0, 0)},
     ProcChance=10, ProcTypeMask=12582932,
-    notes='S3a A2: orb damage +10% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 10% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.' + S1_NOTE + 'Rockbiter clauses: orb damage +20 / 40 / 55 % (hidden child 202448, rank value set by Shaman::SyncRockbiterChildren) and each orb the shield fires arcs (202445, 55 % of the orb) to up to 1 / 2 / 3 other enemies attacking the shaman within 8 yd (spell_sha_enh_storm_orb).',
+    notes='S3a A2: orb damage +10% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 10% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.' + S1_NOTE + 'Rockbiter clauses: orb damage +20 / 40 / 55 % (hidden child 202448, rank value set by Shaman::SyncRockbiterChildren) and each orb the shield fires arcs (202445, 55 % of the orb) to up to 1 / 2 / 3 other enemies attacking the shaman within 8 yd (spell_sha_enh_storm_orb). (2026-11-15, balance round 5 on the Normal-tier kits, user ruling: shaman tank option B) The Rockbiter orb damage is now +8 / 26 / 40 % (x0.90 of 1.20 / 1.40 / 1.55; STATIC_SHOCK_ORB_DAMAGE_R1..R3), so the tank\'s orb lands at x0.90; Enhancement DPS (never in Rockbiter) is unchanged.',
 )
 
 
@@ -2749,7 +2750,7 @@ static_shock_51527 = _talent(
           'Your Stormstrike adds 3 charges to your Lightning Shield.', last=True),
     masks={1: (0x400, 0, 0), 2: (0x400, 0, 0)},
     ProcChance=15, ProcTypeMask=12582932,
-    notes='S3a A2: orb damage +15% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 15% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.' + S1_NOTE + 'Rockbiter clauses: orb damage +20 / 40 / 55 % (hidden child 202448, rank value set by Shaman::SyncRockbiterChildren) and each orb the shield fires arcs (202445, 55 % of the orb) to up to 1 / 2 / 3 other enemies attacking the shaman within 8 yd (spell_sha_enh_storm_orb).',
+    notes='S3a A2: orb damage +15% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 15% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.' + S1_NOTE + 'Rockbiter clauses: orb damage +20 / 40 / 55 % (hidden child 202448, rank value set by Shaman::SyncRockbiterChildren) and each orb the shield fires arcs (202445, 55 % of the orb) to up to 1 / 2 / 3 other enemies attacking the shaman within 8 yd (spell_sha_enh_storm_orb). (2026-11-15, balance round 5 on the Normal-tier kits, user ruling: shaman tank option B) The Rockbiter orb damage is now +8 / 26 / 40 % (x0.90 of 1.20 / 1.40 / 1.55; STATIC_SHOCK_ORB_DAMAGE_R1..R3), so the tank\'s orb lands at x0.90; Enhancement DPS (never in Rockbiter) is unchanged.',
 )
 
 
