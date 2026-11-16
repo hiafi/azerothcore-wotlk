@@ -14,7 +14,7 @@ Shared file (no --scope owns it): only a full generate.py run writes these rows.
 names its finder entry here, so a scoped run of that dungeon stops until a full run has shipped the entry.
 """
 
-from lib.dsl.lfg import lfg_group, lfg_heroic, lfg_random
+from lib.dsl.lfg import lfg_group, lfg_heroic, lfg_override, lfg_random
 
 CLASSIC_HEROIC = 12
 
@@ -33,3 +33,22 @@ lfg_heroic(302, normal=8, group=CLASSIC_HEROIC)  # Shadowfang Keep
 lfg_heroic(303, normal=2, group=CLASSIC_HEROIC)  # Scholomance
 lfg_heroic(304, normal=40, group=CLASSIC_HEROIC)  # Stratholme - Main Gate
 lfg_heroic(305, normal=274, group=CLASSIC_HEROIC)  # Stratholme - Service Entrance
+
+# Blackrock Spire (map 229, the Blackrock Spire build, WP-H): two finder entries on one map, and the Upper half is a
+# raid-type stock row the Finder cannot queue (LFGDungeons 44 is TypeID 2, Group 6, Flags 0; JoinLfg refuses a raid
+# entry while the raid browser is off, DungeonFinder.OptionsMask 5). lfg_override() turns it into a normal dungeon
+# entry in Classic Dungeons (TypeID 1, Group 1, Flags 3, levels 55-65 like every Classic dungeon row), so it queues and
+# joins Random Classic (normal), and so lfg_heroic() can take it as a stock normal dungeon row. Its Finder start point:
+# the stock row has no lfg_dungeon_template row and the map's entrance areatrigger is the Lower Spire's, so the
+# declared position puts the group in the lower hall of the Upper Spire path, 19 yd short of the Dragonspire Hall
+# trigger 2046 ((102.43, -319.17, 65.46), radius 10), on standable mesh 76 yd of walking from the Lower Spire entrance
+# (navmesh report, ubrs_start check): (98.25, -300.75, 63.1), facing the hall. The heroic entry copies it. The spot is
+# 0.25 yd inside the rework instance's self-start box (mod-dungeon-bosses BlackrockSpireRework.h kDragonspireHall /
+# kUbrsFinderStart), so an arrival starts the rune-room check about 1 s later, by design; test_blackrock_spire_kit
+# keeps this position, the checkpoint SQL and the C++ constant equal.
+lfg_override(44, type_id=1, group=1, flags=3, min_level=55, max_level=65, position=(98.25, -300.75, 63.1, 4.94))
+
+# Lower Spire (finder entry 32, Wyrmthalak completes the run) and Upper Spire (44, Drakkisath completes it): one heroic
+# map with a 10-player row, so two heroic entries, each linked to its own final heroic encounter.
+lfg_heroic(306, normal=32, group=CLASSIC_HEROIC)  # Lower Blackrock Spire
+lfg_heroic(307, normal=44, group=CLASSIC_HEROIC)  # Upper Blackrock Spire

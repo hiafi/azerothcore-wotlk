@@ -137,7 +137,7 @@ class OwnershipTest(unittest.TestCase):
         own = _ownership()
         own.declare("spell", 205300, "warrior")
         own.declare("spell", 205301, "deadmines")
-        block = {"start": 200000, "end": 209999, "foreign": {205350: "mod-x"}}
+        block = {"start": 200000, "end": 399999, "foreign": {205350: "mod-x"}}
         self.assertEqual(own.scope_ranges("spell", block), [(205200, 205299), (205301, 205349), (205351, 205399)])
 
     def test_row_owner_by_declared_key_then_id_column(self):
@@ -302,7 +302,7 @@ class DbcBlockTest(unittest.TestCase):
     def blocks(self, built, applied, edited=(), secondary_rows=(), secondary_applied=None, spell_extra=None):
         spell_rows = [{"ID": i, "v": v, **(spell_extra or {}).get(i, {})} for i, v in built.items()]
         blocks = [
-            (self.SPELL, {"start": 200000, "end": 209999}, spell_rows, list(edited), {}),
+            (self.SPELL, {"start": 200000, "end": 399999}, spell_rows, list(edited), {}),
             (self.DURATION, {"start": 30100, "end": 30199}, list(secondary_rows), [], {}),
         ]
         applied_rows = {

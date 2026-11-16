@@ -420,7 +420,7 @@ class CheckClassmaskScopingTest(unittest.TestCase):
 
 
 class CheckMissingSkillLineAbilityTest(unittest.TestCase):
-    IDS_CFG = {"spell": {"start": 200000, "end": 209999}}
+    IDS_CFG = {"spell": {"start": 200000, "end": 399999}}
     CASTABLE = {"attributes": 0, "cast_time_ms": 2000, "cooldown_ms": 0, "category_cooldown_ms": 0,
                 "mana_cost": 0, "mana_cost_pct": 0}
 

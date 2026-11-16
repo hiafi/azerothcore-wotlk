@@ -7,7 +7,7 @@ Two DELETE shapes, per touched table, both idempotent on rerun:
     `rev_1787377390451498201.sql`, now folded into the merged custom-stat
     migration `custom_stats.sql`. A block with `foreign` ids (ids.yaml,
     `source.foreign_ids`) gets one such DELETE per range around them, so
-    `spell_dbc` is cleared as 200000-200099 and 200101-209999 and
+    `spell_dbc` is cleared as 200000-200099 and 200101-399999 and
     mod-transmog's 200100 is never touched.
   - `WHERE ID IN (...)` for specific existing IDs this run is *editing*
     (see lib/resolve.py) — scattered, not contiguous, so a range delete

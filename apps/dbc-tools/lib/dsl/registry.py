@@ -698,7 +698,7 @@ _VALID_LINKED_SPELL_TYPES = (0, 1, 2)  # SpellLinkedType (SpellMgr.h): cast / hi
 #     positive-effect entry; no engine call site reads a negative `effect` for `type == 1`.
 #
 # The `trigger + 200000*type` offset is also why a *positive* `type == 0` trigger in
-# `source/ids.yaml`'s custom spell block (200000-209999) is dangerous: it collides with whatever
+# `source/ids.yaml`'s custom spell block (200000-399999) is dangerous: it collides with whatever
 # `type == 1` row (if any) exists for `trigger - 200000`. `lib/lint.py`'s
 # `check_linked_spell_key_collisions` catches that case (needs the full declared+live row set,
 # not available at declaration time here).

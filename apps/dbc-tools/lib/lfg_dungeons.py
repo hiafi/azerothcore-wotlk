@@ -6,6 +6,9 @@ the SPELL_TABLES render and before `--check` returns, so both paths see the same
 
 What it builds:
 
+0. **Stock row edits** (`lfg_override()`): the stock row with the declared columns replaced, written to the overlay and
+   patch-Z over the stock row, and the declared entrance position as that dungeon's `lfg_dungeon_template` row. Every
+   declaration below reads the edited row (a raid-type stock row made a dungeon entry can be a heroic's `normal`).
 1. **LFGDungeons rows** (`lfg_dungeons`: the `lfgdungeons_dbc` overlay and patch-Z's LFGDungeons.dbc).
    - `lfg_random()`: TypeID 6, MapID 0, the declared level window, ExpansionLevel and group, the `like` row's
      Difficulty, Flags, Faction, TextureFilename, Order_Index and locale masks; the name in enUS only.
@@ -23,7 +26,9 @@ What it builds:
 4. **LFGDungeonGroup rows** (`lfg_groups`, client only): a new group from its declaration, a stock group with the
    declared OrderIndex (and name / type when given).
 
-ERRORs (generate.py stops, also under `--check`): a missing stock file, an id clash with a stock or live row, a
+ERRORs (generate.py stops, also under `--check`): a missing stock file, an id clash with a stock or live row, an
+`lfg_override()` of an id that is not a stock row (or two of one id, or an edit that leaves a dungeon row of a raid-only
+group), a
 random's `like` that is not a stock random, two randoms in one group, a heroic whose `normal` is not a stock normal
 dungeon row, whose map has no declared heroic, whose group has no random or whose heroic encounters carry no final
 boss, two heroics of one normal row, and a dungeon row in an undeclared group that is not stock either.
@@ -35,6 +40,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import dbcfmt, state
+from .dsl.lfg import OVERRIDE_COLUMNS
 from .spell_tables import LFG_DUNGEON_TEMPLATE_COLUMNS
 
 LFG_TYPE_DUNGEON = 1
@@ -168,6 +174,35 @@ def _heroic_row(decl: dict, normal: dict, random: dict) -> dict:
     return row
 
 
+def _override_row(decl: dict, stock: dict[int, dict], edited: dict[int, dict], out: LfgExpansion):
+    """The edited row and the declared entrance position (an `lfg_dungeon_template` row) of one `lfg_override()`, or
+    (None, None) after an ERROR."""
+    label = f"lfg_override({decl['id']})"
+    if decl["id"] not in stock:
+        out.errors.append(f"{label}: no stock LFGDungeons row {decl['id']} to edit (a new entry takes an id from "
+                          f"ids.yaml's lfgdungeons block, declared with lfg_random() / lfg_heroic())")
+        return None, None
+    if decl["id"] in edited:
+        out.errors.append(f"{label}: row {decl['id']} is edited twice")
+        return None, None
+    row = dict(stock[decl["id"]])
+    for name, value in decl["edits"].items():
+        row[OVERRIDE_COLUMNS[name]] = value
+    if _int(row["MinLevel"]) > _int(row["MaxLevel"]):
+        out.errors.append(f"{label}: MinLevel {row['MinLevel']} is above MaxLevel {row['MaxLevel']} after the edit")
+        return None, None
+    row["id"] = decl["id"]
+    row[DERIVED] = True
+    template = None
+    if decl["position"] is not None:
+        x, y, z, o = decl["position"]
+        template = {
+            "dungeonId": decl["id"], "name": row.get("Name_Lang_enUS"), "position_x": x, "position_y": y,
+            "position_z": z, "orientation": o, "VerifiedBuild": 0, "id": decl["id"], DERIVED: True,
+        }
+    return row, template
+
+
 def _clear_derived(dsl_classes: dict) -> None:
     for key in ("lfg_dungeons", "lfg_dungeon_templates", "lfg_groups"):
         dsl_classes[key] = [r for r in dsl_classes.get(key, []) if not r.get(DERIVED)]
@@ -198,15 +233,27 @@ def expand(dsl_classes: dict, load: callable) -> LfgExpansion:
             "LFGDungeonGroup.dbc) into that directory",
         ))
         return out
-    stock = inputs.stock_dungeons
+    stock = dict(inputs.stock_dungeons)
+    positions_in = dict(inputs.positions)
+    edited: dict[int, dict] = {}
+    override_positions: list[dict] = []
+    for decl in (d for d in dsl_classes.get("lfg_dungeon_declarations", []) if d["kind"] == "override"):
+        row, template = _override_row(decl, inputs.stock_dungeons, edited, out)
+        if row is None:
+            continue
+        edited[decl["id"]] = row
+        stock[decl["id"]] = row
+        if template is not None:
+            positions_in[decl["id"]] = template
+            override_positions.append(template)
     groups = _group_rows(dsl_classes.get("lfg_group_declarations", []), inputs.stock_groups or {}, out)
     known_groups = set(groups) | {_int(r.get("Group_Id")) for r in stock.values()} | set(inputs.stock_groups or {})
     declared = dsl_classes.get("lfg_dungeon_declarations", [])
     for decl in declared:
-        if decl["id"] in stock:
+        if decl["kind"] != "override" and decl["id"] in stock:
             out.errors.append(f"dungeon finder: LFGDungeons id {decl['id']} is a stock row - pick a free id")
     randoms: dict[int, dict] = {}
-    rows: dict[int, dict] = {}
+    rows: dict[int, dict] = dict(edited)
     for decl in (d for d in declared if d["kind"] == "random"):
         if decl["group"] in randoms:
             out.errors.append(
@@ -225,7 +272,7 @@ def expand(dsl_classes: dict, load: callable) -> LfgExpansion:
         int(e["map_id"]): e for e in dsl_classes.get("dungeons", []) if e.get("heroic")
     }
     by_normal: dict[int, int] = {}
-    positions = []
+    positions = list(override_positions)
     for decl in (d for d in declared if d["kind"] == "heroic"):
         label = f"lfg_heroic({decl['id']}, normal={decl['normal']})"
         normal = stock.get(decl["normal"])
@@ -251,7 +298,7 @@ def expand(dsl_classes: dict, load: callable) -> LfgExpansion:
             continue
         by_normal[decl["normal"]] = decl["id"]
         rows[decl["id"]] = _heroic_row(decl, normal, random)
-        position = inputs.positions.get(decl["normal"])
+        position = positions_in.get(decl["normal"])
         if position is not None:
             template = {c: position.get(c) for c in LFG_DUNGEON_TEMPLATE_COLUMNS}
             template.update(dungeonId=decl["id"], name=f"{normal.get('Name_Lang_enUS')} (Heroic)")

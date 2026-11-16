@@ -41,7 +41,8 @@ Ids are pinned in .agents/plans/dungeon-mechanics/dungeon-mechanics.STAGE-M1-HAN
                 for ras or soaks within one program slice.
   300400        Mechanic Marker - the telegraph stalker and resolve caster (npc_boss_mechanic_marker).
   300401        Mechanic Test Owner - the hostile owner of `.mech test` (same script).
-  205010-205029 Stage M5 descriptor stand-ins (section "M5 stand-ins" below; 205024-205029 reserved, undeclared).
+  205010-205029 Stage M5 descriptor stand-ins (section "M5 stand-ins" below; 205024 is the taunt swap drill debuff,
+                declared after the M5 block; 205025-205029 reserved, undeclared).
   300402        Mechanics Training Dummy - the stage M4 training dummy (npc_boss_mechanics_dummy, MechanicDummyAI): a
                 player engages it and it runs the `.mech drill` program on itself as the boss stand-in (row below).
 
@@ -220,9 +221,10 @@ for _offset, _school, _label in _SCHOOLS:
 # --- M5 stand-ins (205010-205023, stage M5 WP-K-data) ---------------------------------------------------------------
 # Generic stand-ins the descriptor drills (`.mech drill interrupts|dispels|purges|targets|ignore`) cast on the Drill
 # NPCs and the drill members; ids pinned in dungeon-mechanics.STAGE-M5-HANDOFF.md section 3.6. Names and icons borrowed
-# from stock spells, tooltips number-free (custom-spells.md). 205024-205029 are RESERVED (summons, prison aura), not
-# declared. Damage is a small fixed value (BasePoints 49 + DieSides 1 -> 50): drill filler, not balanced content, so
-# it is potency-excluded like the resolve spells; the Magic/Curse/Poison/Disease debuffs only need to be present.
+# from stock spells, tooltips number-free (custom-spells.md). 205025-205029 are RESERVED (summons, prison aura), not
+# declared (205024, the taunt swap drill debuff, is declared after this block). Damage is a small fixed value
+# (BasePoints 49 + DieSides 1 -> 50): drill filler, not balanced content, so it is potency-excluded like the resolve
+# spells; the Magic/Curse/Poison/Disease debuffs only need to be present.
 _TARGET_UNIT_SRC_AREA_ALLY = 30
 _AURA_DEBUFF = _ATTR0_AURA_IS_DEBUFF
 _DISPEL_ENRAGE = 9
@@ -369,6 +371,36 @@ spell_aiming_205023 = spell(
           'higher priority. 30 s, Dispel none. Stock Mind Vision icon 502.',
     raw_overrides=_standin_raw('Drill stand-in for an add that is preparing a dangerous attack. Lasts $d.',
                                'Drill stand-in for an add that is preparing a dangerous attack.'),
+)
+
+# --- Taunt swap drill debuff 205024 (Blackrock Spire build, WP-TS support) ------------------------------------------
+# The tank swap drill's stacking debuff: harmful, no damage and no stat change, 15 s refreshed on every stack, up to 10
+# stacks. Same shape as Baited (drill) 205008 with a short duration, so the stacks fall off when the swap is taken.
+_TAUNT_SWAP_ICON = 565  # Ability_Warrior_Sunder, stock
+_TAUNT_SWAP_TEXT = 'Drill stand-in for a tank swap debuff; the other tank takes over at enough stacks. Lasts $d.'
+_TAUNT_SWAP_AURA_TEXT = 'Drill stand-in for a tank swap debuff; the other tank takes over at enough stacks.'
+
+taunt_swap_drill_205024 = spell(
+    id=205024, name='Taunt Swap (drill)', school=School.NORMAL, dispel=0, mechanic=0,
+    attributes=_ATTR0_AURA_IS_DEBUFF | _ATTR0_NO_IMMUNITIES, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,
+    mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.DUMMY, base_points=0,
+               implicit_target_a=_TARGET_UNIT_TARGET_ANY),
+    ],
+    spell_icon_id=_TAUNT_SWAP_ICON,
+    notes=(
+        'mod-boss-mechanics TS: the taunt swap drill debuff (stacks to 10, 15 s refreshed on every stack). One DUMMY '
+        'aura, no damage, no stat change; CumulativeAura 10, AURA_IS_DEBUFF + NO_IMMUNITIES, Dispel none. '
+        'TARGET_UNIT_TARGET_ANY like 205008. Stock icon 565.'
+    ),
+    raw_overrides={
+        'SpellClassSet': 0, 'EquippedItemClass': -1, 'CastingTimeIndex': 1, 'SpellLevel': 0, 'CumulativeAura': 10,
+        'EffectChainAmplitude_1': 1.0,
+        'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '',
+        'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _TAUNT_SWAP_TEXT,
+        'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': _TAUNT_SWAP_AURA_TEXT,
+    },
 )
 
 # --- NPCs ---------------------------------------------------------------------------------------------------------

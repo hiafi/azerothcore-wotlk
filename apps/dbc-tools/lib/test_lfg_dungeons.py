@@ -299,6 +299,150 @@ class ExpandTest(unittest.TestCase):
         self.assertEqual(tuple(groups[12]), dbcfmt.LFGDUNGEONGROUP.columns)
 
 
+OVERRIDE = (
+    "lfg_override(44, type_id=1, group=1, flags=3, min_level=55, max_level=65, "
+    "position=(98.25, -300.75, 63.1, 4.94))\n"
+)
+HEADER_OVERRIDE = "from lib.dsl.lfg import lfg_group, lfg_heroic, lfg_override, lfg_random\n"
+
+
+def _ubrs_stock() -> dict:
+    """The stock rows around Blackrock Spire: 32 (LBRS, a dungeon entry) and 44 (UBRS, a raid-type one)."""
+    return {
+        **STOCK_DUNGEONS,
+        32: _dungeon_row(32, "Lower Blackrock Spire", 229, texture="BLACKROCKSPIRE", min_level=55, max_level=65),
+        44: _dungeon_row(44, "Upper Blackrock Spire", 229, type_id=2, group=6, texture="BlackrockSpire", min_level=56,
+                         max_level=83, flags=0),
+    }
+
+
+class OverrideTest(unittest.TestCase):
+    """lfg_override(): an edit of a stock LFGDungeons row (Upper Blackrock Spire, raid-type, made a dungeon entry)."""
+
+    TEXT = DECLARATIONS.replace(HEADER, HEADER_OVERRIDE) + OVERRIDE + "lfg_heroic(306, normal=44, group=12)\n"
+
+    def _run(self, text=TEXT, **kw):
+        kw.setdefault("stock_dungeons", _ubrs_stock())
+        return _expand(text, dungeons=[_heroic_dungeon(36, "Deadmines"), _heroic_dungeon(229, "Blackrock Spire")],
+                       credits=[_credit(1006, 6), _credit(1054, 44, 10363)], **kw)
+
+    def test_the_declaration(self):
+        dsl = _load(self.TEXT)
+        decl = next(d for d in dsl["lfg_dungeon_declarations"] if d["kind"] == "override")
+        self.assertEqual(decl["id"], 44)
+        self.assertEqual(decl["edits"], {"type_id": 1, "group": 1, "flags": 3, "min_level": 55, "max_level": 65})
+        self.assertEqual(decl["position"], (98.25, -300.75, 63.1, 4.94))
+
+    def test_bad_arguments_raise(self):
+        for call in (
+            "lfg_override(44)",  # nothing to edit
+            "lfg_override(0, type_id=1)",
+            "lfg_override(301, type_id=1)",  # a custom id (ids.yaml block)
+            "lfg_override(44, type_id=3)",
+            "lfg_override(44, min_level=70, max_level=60)",
+            "lfg_override(44, min_level=-1)",
+            "lfg_override(44, max_level=300)",
+            "lfg_override(44, flags=True)",
+            "lfg_override(44, position=(1.0, 2.0, 3.0))",
+            "lfg_override(44, position=(1.0, 2.0, 3.0, 'x'))",
+            "lfg_override('44', type_id=1)",
+        ):
+            with self.subTest(call=call), self.assertRaises(ValueError):
+                _load(HEADER_OVERRIDE + call + "\n")
+
+    def test_the_stock_row_is_replaced_and_the_rest_kept(self):
+        dsl, out = self._run()
+        self.assertEqual(out.errors, [])
+        rows = {r["ID"]: r for r in dsl["lfg_dungeons"]}
+        self.assertEqual(sorted(rows), [44, 300, 301, 306])
+        edited, stock = rows[44], _ubrs_stock()[44]
+        self.assertEqual((edited["TypeID"], edited["Group_Id"], edited["Flags"], edited["MinLevel"],
+                          edited["MaxLevel"]), (1, 1, 3, 55, 65))
+        for column in ("Name_Lang_enUS", "Name_Lang_deDE", "MapID", "Difficulty", "TextureFilename", "Target_Level",
+                       "Target_Level_Min", "Target_Level_Max", "ExpansionLevel", "Faction"):
+            self.assertEqual(edited[column], stock[column], column)
+        self.assertEqual(_ubrs_stock()[44]["TypeID"], 2)  # the stock input is not touched
+
+    def test_a_heroic_entry_takes_the_edited_row_as_its_normal(self):
+        dsl, out = self._run()
+        self.assertEqual(out.errors, [])
+        heroic = next(r for r in dsl["lfg_dungeons"] if r["ID"] == 306)
+        self.assertEqual((heroic["TypeID"], heroic["Difficulty"], heroic["Flags"], heroic["MapID"], heroic["Group_Id"]),
+                         (5, 1, 3, 229, 12))
+        self.assertEqual((heroic["MinLevel"], heroic["MaxLevel"]), (60, 62))
+        self.assertTrue(any("lfg_heroic(306, normal=44) completes on heroic encounter 1054" in n for n in out.notes))
+        # without the edit the raid-type row is not a stock normal dungeon row
+        _dsl, bad = self._run(DECLARATIONS + "lfg_heroic(306, normal=44, group=12)\n")
+        self.assertTrue(any("not a stock normal dungeon row" in e for e in bad.errors), bad.errors)
+
+    def test_the_entrance_position_goes_to_the_row_and_its_heroic_copy(self):
+        dsl, out = self._run()
+        self.assertEqual(out.errors, [])
+        positions = {t["dungeonId"]: t for t in dsl["lfg_dungeon_templates"]}
+        self.assertEqual(sorted(positions), [44, 306])
+        first = positions[44]
+        self.assertEqual({c: first[c] for c in spell_tables.LFG_DUNGEON_TEMPLATE_COLUMNS}, {
+            "dungeonId": 44, "name": "Upper Blackrock Spire", "position_x": 98.25, "position_y": -300.75,
+            "position_z": 63.1, "orientation": 4.94, "VerifiedBuild": 0,
+        })
+        copy = positions[306]
+        self.assertEqual((copy["position_x"], copy["position_y"], copy["position_z"], copy["orientation"]),
+                         (98.25, -300.75, 63.1, 4.94))
+        self.assertEqual(copy["name"], "Upper Blackrock Spire (Heroic)")
+
+    def test_an_edit_without_a_position_keeps_the_live_one(self):
+        text = self.TEXT.replace(", position=(98.25, -300.75, 63.1, 4.94)", "")
+        live = {44: {"dungeonId": 44, "name": "UBRS", "position_x": 1.0, "position_y": 2.0, "position_z": 3.0,
+                     "orientation": 0.5, "VerifiedBuild": 0}}
+        dsl, out = self._run(text, positions=live)
+        self.assertEqual(out.errors, [])
+        self.assertEqual([t["dungeonId"] for t in dsl["lfg_dungeon_templates"]], [306])  # 44's live row is not ours
+        self.assertEqual(dsl["lfg_dungeon_templates"][0]["position_x"], 1.0)
+
+    def test_errors(self):
+        cases = {
+            "no stock LFGDungeons row 999": (self.TEXT + "lfg_override(999, flags=3)\n", {}),
+            "is edited twice": (self.TEXT + "lfg_override(44, flags=0)\n", {}),
+            "MinLevel 90 is above MaxLevel 83": (
+                self.TEXT.replace("min_level=55, max_level=65, ", "min_level=90, "), {}),
+        }
+        for expected, (text, kw) in cases.items():
+            with self.subTest(expected=expected):
+                _dsl, out = self._run(text, **kw)
+                self.assertTrue(any(expected in e for e in out.errors), out.errors)
+
+    def test_a_second_expand_replaces_the_edit(self):
+        dsl, _out = self._run()
+        lfg_dungeons.expand(dsl, lambda: _inputs(stock_dungeons=_ubrs_stock()))
+        self.assertEqual(sorted(r["ID"] for r in dsl["lfg_dungeons"]), [44, 300, 301, 306])
+        dsl["lfg_dungeon_declarations"] = []
+        dsl["lfg_group_declarations"] = []
+        lfg_dungeons.expand(dsl, lambda: self.fail("nothing declared: no inputs"))
+        self.assertEqual((dsl["lfg_dungeons"], dsl["lfg_dungeon_templates"]), ([], []))
+
+    def test_the_client_row_replaces_the_stock_row_in_the_merge(self):
+        dsl, _out = self._run()
+        rows = lfg_dungeons.client_dungeon_rows(dsl["lfg_dungeons"])
+        self.assertEqual(tuple(rows[44]), dbcfmt.LFGDUNGEONS.columns)
+        merged = {r["ID"]: r for r in _ubrs_stock().values()}
+        merged.update(rows)
+        self.assertEqual(len(merged), len(_ubrs_stock()) + 3)  # 300, 301 and 306 are new, 44 is replaced
+        self.assertEqual((merged[44]["TypeID"], merged[44]["Group_Id"]), (1, 1))
+
+    def test_the_sql_blocks_hold_row_44_and_its_start_point(self):
+        dsl, _out = self._run()
+        blocks = {t: render(t, index_for(t, []), dsl[spec_for(t).registry_key])
+                  for t in ("lfgdungeons_dbc", "lfg_dungeon_template")}
+        self.assertIn("(44)", blocks["lfgdungeons_dbc"].replace("\n", " "))
+        self.assertIn("(44, 'Upper Blackrock Spire', 98.25, -300.75, 63.1, 4.94, 0)", blocks["lfg_dungeon_template"])
+        done = codestyle_sql("\n\n".join(blocks.values()))
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        for table, rendered in blocks.items():  # a second build over the read-back state emits nothing
+            spec = spec_for(table)
+            live = read_back(rendered, table, spec.columns)
+            self.assertEqual(render(table, index_for(table, live), dsl[spec.registry_key]), "", table)
+
+
 class RenderTest(unittest.TestCase):
     TABLES = ("lfgdungeons_dbc", "lfg_dungeon_template", "instance_encounters")
 
@@ -400,7 +544,7 @@ class RealSourceTest(unittest.TestCase):
     def test_the_declarations(self):
         self.assertEqual([(d["id"], d["kind"], d.get("normal")) for d in self.dsl["lfg_dungeon_declarations"]], [
             (300, "random", None), (301, "heroic", 6), (302, "heroic", 8), (303, "heroic", 2), (304, "heroic", 40),
-            (305, "heroic", 274),
+            (305, "heroic", 274), (44, "override", None), (306, "heroic", 32), (307, "heroic", 44),
         ])
         random = self.dsl["lfg_dungeon_declarations"][0]
         self.assertEqual((random["min_level"], random["max_level"], random["group"]), (60, 62, 12))
@@ -412,13 +556,16 @@ class RealSourceTest(unittest.TestCase):
             self.skipTest("stock LFGDungeons.dbc / LFGDungeonGroup.dbc not in var/extractors/dbc/")
         dsl = {k: list(v) for k, v in self.dsl.items()}
         dsl["dungeons"] = [_heroic_dungeon(m, n) for m, n in ((36, "Deadmines"), (33, "Shadowfang Keep"),
-                                                               (289, "Scholomance"), (329, "Stratholme"))]
+                                                               (289, "Scholomance"), (329, "Stratholme"),
+                                                               (229, "Blackrock Spire"))]
         dsl["instance_encounters"] = [_credit(1006, 6), _credit(1014, 8), _credit(1027, 2), _credit(1033, 40),
-                                      _credit(1040, 274)]
+                                      _credit(1040, 274), _credit(1049, 32, 9568), _credit(1054, 44, 10363)]
         out = lfg_dungeons.expand(dsl, lambda: lfg_dungeons.LfgInputs(
             stock_dungeons={int(r["ID"]): r for r in dbcfile.read_dbc(dungeons_file, dbcfmt.LFGDUNGEONS)},
             stock_groups={int(r["ID"]): r for r in dbcfile.read_dbc(groups_file, dbcfmt.LFGDUNGEONGROUP)},
-            positions=dict(POSITIONS),
+            positions={**POSITIONS, 32: {"dungeonId": 32, "name": "Lower Blackrock Spire", "position_x": 78.5083,
+                                         "position_y": -225.044, "position_z": 49.839, "orientation": 5.1,
+                                         "VerifiedBuild": 0}},
         ))
         self.assertEqual(out.errors, [])
         self.assertEqual(out.warnings, [])
@@ -428,8 +575,31 @@ class RealSourceTest(unittest.TestCase):
             300: ("Random Classic Heroic", 0, 6, 1, 12), 301: ("Deadmines", 36, 5, 1, 12),
             302: ("Shadowfang Keep", 33, 5, 1, 12), 303: ("Scholomance", 289, 5, 1, 12),
             304: ("Stratholme - Main Gate", 329, 5, 1, 12), 305: ("Stratholme - Service Entrance", 329, 5, 1, 12),
+            306: ("Lower Blackrock Spire", 229, 5, 1, 12), 307: ("Upper Blackrock Spire", 229, 5, 1, 12),
+            # the stock raid-type row 44, edited into a Classic dungeon entry (the Blackrock Spire build)
+            44: ("Upper Blackrock Spire", 229, 1, 0, 1),
         })
-        self.assertEqual([c["lastEncounterDungeon"] for c in dsl["instance_encounters"]], [301, 302, 303, 304, 305])
+        self.assertEqual([c["lastEncounterDungeon"] for c in dsl["instance_encounters"]],
+                         [301, 302, 303, 304, 305, 306, 307])
+        # row 44: a dungeon entry (Flags 3, levels 55-65), the rest of the stock row kept; row 307 copies it
+        edited = next(r for r in dsl["lfg_dungeons"] if r["ID"] == 44)
+        stock_44 = next(r for r in dbcfile.read_dbc(dungeons_file, dbcfmt.LFGDUNGEONS) if r["ID"] == 44)
+        self.assertEqual(
+            (edited["TypeID"], edited["Group_Id"], edited["Flags"], edited["MinLevel"], edited["MaxLevel"]),
+            (1, 1, 3, 55, 65),
+        )
+        for column in ("MapID", "Difficulty", "TextureFilename", "ExpansionLevel", "Target_Level", "Name_Lang_enUS"):
+            self.assertEqual(edited[column], stock_44[column], column)
+        heroic_307 = next(r for r in dsl["lfg_dungeons"] if r["ID"] == 307)
+        self.assertEqual((heroic_307["Flags"], heroic_307["Difficulty"], heroic_307["TypeID"], heroic_307["MinLevel"],
+                          heroic_307["MaxLevel"]), (3, 1, 5, 60, 62))
+        # the start point: 44 gets the declared one (short of the Dragonspire Hall trigger); 306 and 307 copy theirs
+        positions = {t["dungeonId"]: (t["position_x"], t["position_y"], t["position_z"], t["orientation"])
+                     for t in dsl["lfg_dungeon_templates"]}
+        self.assertEqual(positions[44], (98.25, -300.75, 63.1, 4.94))
+        self.assertEqual(positions[307], positions[44])
+        self.assertEqual(positions[306], (78.5083, -225.044, 49.839, 5.1))
+        self.assertGreater(((98.25 - 102.43) ** 2 + (-300.75 + 319.17) ** 2 + (63.1 - 65.4635) ** 2) ** 0.5, 10 + 5)
         # Random 260's shape: Difficulty 1, Flags 3; our window and expansion.
         random = next(r for r in dsl["lfg_dungeons"] if r["ID"] == 300)
         self.assertEqual((random["Flags"], random["ExpansionLevel"], random["MinLevel"], random["MaxLevel"]),
@@ -448,7 +618,8 @@ class RealSourceTest(unittest.TestCase):
         back = {r["ID"]: r for r in scope.read_dbc_bytes(blob, dbcfmt.LFGDUNGEONS)}
         self.assertEqual(back[301]["TextureFilename"], back[6]["TextureFilename"])
         self.assertEqual(back[300]["Name_Lang_enUS"], "Random Classic Heroic")
-        self.assertEqual(len(back), len(base) + 6)
+        self.assertEqual(len(back), len(base) + 8)  # eight new ids (300-307); row 44 replaces a stock row
+        self.assertEqual((back[44]["TypeID"], back[44]["Group_Id"], back[44]["Flags"]), (1, 1, 3))
 
 
 if __name__ == "__main__":

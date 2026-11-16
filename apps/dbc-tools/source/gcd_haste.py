@@ -6,7 +6,7 @@ Haste shortens a spell's 1.5s GCD in the core, but not a melee strike's, a range
 classmasks cover them. This file holds the human decisions; the masks are computed, never written here.
 """
 
-# SpellFamilyName -> aura spell ID, allocated from `ids.yaml`'s `spell` block (200000-209999).
+# SpellFamilyName -> aura spell ID, allocated from `ids.yaml`'s `spell` block (200000-399999).
 # 201560-201566 is a contiguous run above everything in use: the highest live custom spell is 201472 and
 # the Paladin rework reserved up to 201559. One per family that ends up with GCD-haste bits. Priest (6),
 # Rogue (8) and Mage (3) have none today (Dispersion is excluded below, Rogue's GCD is already 1.0s, Mage

@@ -349,7 +349,7 @@ from lib.dsl.registry import (
 # |trigger|"; type=2's negative *effect* means "grant/revoke immunity to spell |effect|", not
 # "remove that aura" - see lib/dsl/registry.py's comment above _SPELL_LINKED_MAX_SPELLS for the
 # full, source-verified semantics of every case. A *positive*, type=0 trigger in ids.yaml's custom
-# spell block (200000-209999) risks colliding with a type=1/2 row on (trigger-200000) - see
+# spell block (200000-399999) risks colliding with a type=1/2 row on (trigger-200000) - see
 # lib/lint.py's check_linked_spell_key_collisions, which generate.py runs automatically.
 linked_spell(200326, 57865, type=2)  # positive trigger/effect, type=2: apply/remove 57865 with 200326's aura
 
@@ -465,7 +465,7 @@ finder entry uses. Deleting a line re-enables the dungeon (the prune pass DELETE
 included). Live on worldserver start or `.reload disables`. Needs the stock
 `var/extractors/dbc/LFGDungeons.dbc` (`DBFilesClient/LFGDungeons.dbc` from `patch-enUS-3.MPQ`, flattened).
 
-### Dungeon finder entries (`lfg_group()` / `lfg_random()` / `lfg_heroic()`)
+### Dungeon finder entries (`lfg_group()` / `lfg_random()` / `lfg_heroic()` / `lfg_override()`)
 
 `source/world/lfg_classic_heroic.py` declares Random Classic Heroic (`lib/dsl/lfg.py`, rows by `lib/lfg_dungeons.py`):
 
@@ -476,6 +476,7 @@ lfg_group(12, name="Classic Heroic", order_index=5, type_id=5)  # a Specific Dun
 lfg_group(1, order_index=6)                                     # a stock section, moved down one
 lfg_random(300, "Random Classic Heroic", group=12, like=260, expansion=0, min_level=60, max_level=62)
 lfg_heroic(301, normal=6, group=12)                             # Deadmines' heroic finder entry
+lfg_override(44, type_id=1, group=1, flags=3, min_level=55, max_level=65, position=(98.25, -300.75, 63.1, 4.94))
 ```
 
 - `lfg_random` is an `lfgdungeons_dbc` + client LFGDungeons.dbc row (TypeID 6) shaped like the stock random `like`
@@ -485,6 +486,11 @@ lfg_heroic(301, normal=6, group=12)                             # Deadmines' her
   the group random's window. It also points the map's heroic final boss (`instance_encounters.lastEncounterDungeon`)
   at the new entry and copies the normal entry's `lfg_dungeon_template` position when it has one. The map needs a
   declared heroic (`dungeon(..., heroic=heroic(...))`); a heroic map with finder entries left out is a `note:`.
+- `lfg_override` edits a **stock** LFGDungeons row: the arguments given replace that column (`type_id`, `group`,
+  `flags`, the level window, the target levels), the rest of the stock row stays. The whole row goes to the overlay and
+  patch-Z over the stock row, and `position=(x, y, z, orientation)` writes the dungeon's `lfg_dungeon_template` start
+  point. Later declarations see the edited row, so a raid-type stock row made a dungeon entry (Upper Blackrock Spire,
+  44) can be a `lfg_heroic(normal=...)`. An id outside the stock file, or edited twice, stops the run.
 - `lfg_group` is client-only (patch-Z's LFGDungeonGroup.dbc): a new id needs `name` and `type_id` (5 = heroic
   section); a stock id keeps its row and takes the new `order_index`. Lower OrderIndex lists first.
 - Ids: `ids.yaml` blocks `lfgdungeons` (300-399) and `lfgdungeongroup` (12-31). Needs the stock

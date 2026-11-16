@@ -3,6 +3,7 @@
  */
 
 #include "DungeonKitFields.h"
+#include "DungeonKitFlex.h"
 #include "Creature.h"
 #include "Log.h"
 #include "Map.h"
@@ -384,8 +385,15 @@ namespace DungeonKit
                 list.Summon(add);
             if (spec.health)
             {
-                add->SetMaxHealth(spec.health);
-                add->SetHealth(spec.health);
+                // A flex map: through the scaler (its base, the ladder at the add's pull; WP-KT-B1). Elsewhere the
+                // health as before.
+                if (Flex::IsFlexMap(add))
+                    Flex::SetHealth(add, spec.health, true);
+                else
+                {
+                    add->SetMaxHealth(spec.health);
+                    add->SetHealth(spec.health);
+                }
             }
             if (spec.passive)
                 add->SetReactState(REACT_PASSIVE);

@@ -1550,7 +1550,7 @@ def _apply_delete(
         m = None
     if m:
         # Iterate the (small, fixed-width) target range, not every key currently in `rows` - a
-        # `WHERE id BETWEEN 200000 AND 209999` range-clear is the standard first statement of
+        # `WHERE id BETWEEN 200000 AND 399999` range-clear is the standard first statement of
         # nearly every generate.py-emitted migration (one per class/pass), and `rows` grows to
         # tens of thousands of entries as `state.load_existing_rows` replays ~80 of these files in
         # sequence - the old `[k for k in rows if start <= k <= end]` scanned the *entire current

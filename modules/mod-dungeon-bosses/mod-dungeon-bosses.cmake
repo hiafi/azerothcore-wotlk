@@ -1,7 +1,7 @@
 # mod-dungeon-bosses: build-time checks (included inline by modules/CMakeLists.txt after the module targets exist; the
 # include runs for a disabled module too, so every check is skipped unless this module is enabled).
 #
-# Hard dependency: the boss scripts include mod-boss-mechanics' BossMechanics.h through the modules target's
+# Hard dependencies: the boss scripts include mod-boss-mechanics' BossMechanics.h through the modules target's
 # PUBLIC_INCLUDES, so mod-boss-mechanics must be present and enabled. Without it the build would fail later with a
 # missing-header error deep in a boss file; stop at configure time with a clear message instead.
 if ("mod-dungeon-bosses" IN_LIST MODULE_LIST__)
@@ -24,5 +24,21 @@ if ("mod-dungeon-bosses" IN_LIST MODULE_LIST__)
     message(FATAL_ERROR
       "mod-dungeon-bosses needs mod-boss-mechanics enabled, but it is disabled (DISABLED_AC_MODULES or "
       "MODULE_MOD_BOSS_MECHANICS). Enable it, or disable mod-dungeon-bosses too.")
+  endif()
+  # Hard dependency (Blackrock Spire WP-KT-B1): the kit's flex wrapper (src/Kit/DungeonKitFlex.cpp) and SummonWave call
+  # mod-dungeon-difficulties' flex scaler (FlexScale.h, DungeonDifficulties::Flex). Without it the link fails late.
+  if (NOT EXISTS "${CMAKE_SOURCE_DIR}/modules/mod-dungeon-difficulties/src/FlexScale.h")
+    message(FATAL_ERROR
+      "mod-dungeon-bosses needs mod-dungeon-difficulties with the flex scaler "
+      "(modules/mod-dungeon-difficulties/src/FlexScale.h not found). The scaler lands with the Blackrock Spire flex "
+      "branch of https://github.com/hiafi/mod-dungeon-difficulties: branch feat/flex-blackrock-spire (off main "
+      "8418cda), i.e. its PR merged into main, or a checkout of that branch head. Update modules/"
+      "mod-dungeon-difficulties to it (`git -C modules/mod-dungeon-difficulties log --oneline -1 -- src/FlexScale.h` "
+      "must print a commit), or disable mod-dungeon-bosses with -DDISABLED_AC_MODULES=\"mod-dungeon-bosses\".")
+  endif()
+  if (NOT "mod-dungeon-difficulties" IN_LIST MODULE_LIST__)
+    message(FATAL_ERROR
+      "mod-dungeon-bosses needs mod-dungeon-difficulties enabled, but it is disabled (DISABLED_AC_MODULES or "
+      "MODULE_MOD_DUNGEON_DIFFICULTIES). Enable it, or disable mod-dungeon-bosses too.")
   endif()
 endif()

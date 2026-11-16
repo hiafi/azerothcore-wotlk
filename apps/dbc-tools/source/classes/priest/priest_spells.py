@@ -1706,7 +1706,7 @@ psychic_horror_64044 = spell(
 
 # Priest baseline rework (docs/reworks/priest-new-spells.md) - Phase 1 shared spells, new baseline
 # abilities every Priest spec gets. Fresh custom IDs minted from apps/dbc-tools/source/ids.yaml's
-# reserved spell block (200000-209999), sequential from 200130 (the next free ID at the time this
+# reserved spell block (200000-399999), sequential from 200130 (the next free ID at the time this
 # batch was written - see git history on ids.yaml's own comment for the block's rationale). Talent
 # interactions (Aspiration's CD reduction, Guiding Star's Divine Star buff) are explicitly out of
 # scope for this pass; so is Void Eruption's Shadow-spec "Generates 25 Madness" (Madness is a

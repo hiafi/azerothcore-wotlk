@@ -43,7 +43,7 @@
 
 spell:
   start: 200000
-  end: 209999
+  end: 399999
   # 202900-202909: healing sim (source/npcs/healsim_spells.py): 202900 Sim Damage Pulse, 202901 Sim Pin Hit,
   # 202902-202909 spare. A non-class owner reserves under its project name in `reservations:` at the bottom
   # (`healsim`), so lib/test_id_blocks.py's overlap test protects it from the class slices (the T0 collision
@@ -103,7 +103,8 @@ skilllineability:
 # 2026-11-05 with mod-mythic-plus) already existed at this ID before this pipeline
 # touched Item.dbc, so the range starts there. The bounds stay as they are.
 # Hand-picked items.csv rows in 70000-70999 so far: 70100-70103 (test rings), 70500-70599 (set tokens, below), 70600-70603
-# (Stratholme relics, `reservations: stratholme`), 70700 (Satchel of Heroic Supplies, the Random Classic Heroic reward;
+# (Stratholme relics, `reservations: stratholme`), 70610-70619 (Blackrock Spire: Father Flame 70610), 70700 (Satchel
+# of Heroic Supplies, the Random Classic Heroic reward;
 # item_template and loot in hand-written pending world SQL, lfg-classic-heroic), 70710-70718 (the nine Missives,
 # crafting rework C4; item_template in hand-written pending world SQL, 70719 spare), 70720-70827 (crafting rework C5 gems:
 # rare 70720-70756, epic 70760-70796, leveling 70800-70809, metas 70810-70814, epic raw gems 70820-70825, raw gems Ruby
@@ -308,7 +309,7 @@ spellcategory:
 #                 spellvisual_dbc row and no spell_dbc.SpellVisualID_1/_2 in 90370-90999 in the live DB, no
 #                 constant or SQL above 90344 in any checkout's patch scripts, source/ or pending SQL.
 #   - creaturedisplayinfo / creaturemodeldata: used 90001-90321 / 90001-90310 (mage 90001-90003, the shapeshift
-#                 appearances 90100-90399 of build_patch_f.py), and the boss mechanics markers 91000-91833,
+#                 appearances 90100-90399 of build_patch_f.py), and the boss mechanics markers 91000-91893,
 #                 92000-92856 and 93000-93856 (plus the opt-in diagnostics 91990-91995 and line-render probes
 #                 93990-93999, client DBCs only and not in the default build; patch_bossmechanics_markers.py).
 #   - gameobjectdisplayinfo: used 90001 (client patch-M).
@@ -415,7 +416,9 @@ dungeonencounter:
 #   - lfgdungeons: LFGDungeons.dbc / lfgdungeons_dbc ids (lfg_random(), lfg_heroic()), also lfg_dungeon_template's
 #     dungeonId and instance_encounters.lastEncounterDungeon (a smallint unsigned). The stock file tops out at 294 and
 #     the overlay is empty. Random Classic Heroic 300; its heroic entries from 301 (Deadmines 301, Shadowfang Keep 302,
-#     Scholomance 303, Stratholme Main Gate 304, Service Entrance 305). The client patch carries them.
+#     Scholomance 303, Stratholme Main Gate 304, Service Entrance 305, Lower Blackrock Spire 306, Upper Blackrock
+#     Spire 307). The client patch carries them. Stock row 44 (Upper Blackrock Spire) is edited in place by
+#     lfg_override() into a dungeon entry (Blackrock Spire build); it keeps its stock id.
 #   - lfgdungeongroup: LFGDungeonGroup.dbc ids (lfg_group(), client only). Stock ids are 1-9 and 11; Classic Heroic 12.
 #   - quest: quest_template ids of custom quests. Record only: no dbc-tools reader mints from it; the dungeon finder
 #     reward quests are hand-written pending world SQL. quest_template tops out at 26034. 90000 / 90001: Random Classic
@@ -683,11 +686,12 @@ reservations:
 
   # mod-boss-mechanics (source/npcs/boss_mechanics.py, stage M1): Weakened 205000, resolve spells 205001-205007 (one per
   # school), the drills' Baited and Marked stand-ins 205008 and 205009 (stage M4), the M5 descriptor stand-ins
-  # 205010-205023 (casts, dispellable debuffs, deadline pair, buffs, Aiming; 205024-205029 reserved), Mechanic Marker
-  # 300400, Mechanic Test Owner 300401, Mechanics Training Dummy 300402 (M4), Descriptor Training Dummy 300403 and the
+  # 205010-205023 (casts, dispellable debuffs, deadline pair, buffs, Aiming), Taunt Swap (drill) 205024 (Blackrock
+  # Spire build; 205025-205029 reserved), Mechanic Marker 300400, Mechanic Test Owner 300401, Mechanics Training
+  # Dummy 300402 (M4), Descriptor Training Dummy 300403 and the
   # Drill Caster / Add / Copy / Prison 300404-300407 (M5), and the telegraph marker displays
   # (patch_bossmechanics_markers.py), nine colors, outline + fill layers: 91000 + 100 * color + shape offset + step
-  # for the quad shapes (91000-91833, +34..+99 of each color block spare), 91990-91995 the opt-in diagnostic
+  # for the quad shapes (91000-91893, +94..+99 of each color block spare), 91990-91995 the opt-in diagnostic
   # displays, 93990-93999 the opt-in line-render probes (--probes; client DBCs only, the default run removes them),
   # and the line ladders at 92000 (fill) / 93000 (outline) + 100 * color + step (57 steps each, +57..+99
   # spare). Moved from 90500-90699 by the M1 colors fix (that slice is unreserved again); widened from 91999 to 93999
@@ -749,3 +753,19 @@ reservations:
     gameobject: {start: 301200, end: 301249}
     spellvisual: {start: 90500, end: 90549}  # SpellVisual, Kit and EffectName
     item: {start: 70600, end: 70603}  # Grand Lie relics (S8: source/items/stratholme_relics.py, items.csv rows)
+  # Blackrock Spire build WP-0 (2026-11-15, blackrock-spire-build.HANDOFF.md s3.3; checked free in this file, the live DB
+  # and the source/ working copy). The spell range sits above 209999 on the widened tool-wide block (200000-399999,
+  # handoff s10 #15). Creatures are sliced by wave for the heroic mint order: wave 1 300700-300729, wave 2 300730-300779.
+  # Shared heroic ids after Stratholme (inside the shared blocks, no separate reservation): mapdifficulty 1004,
+  # dungeon_access 126, dungeonencounter 1041-1054, lfgdungeons 306 (LBRS heroic) / 307 (UBRS heroic), loot_reference
+  # from 1700011. Not in ids.yaml: creature_immunities 1973 (Emberseer: Fire school + the 1972 mechanics set; live max
+  # is 1972 and no declaration or pending SQL goes above it).
+  blackrock_spire:
+    spell: {start: 210000, end: 210699}
+    creature: {start: 300700, end: 300779}
+    gameobject: {start: 301250, end: 301279}
+    spellvisual: {start: 90600, end: 90649}  # SpellVisual, Kit and EffectName
+    gameobjectdisplayinfo: {start: 90040, end: 90049}
+    creaturedisplayinfo: {start: 90740, end: 90769}
+    creaturemodeldata: {start: 90740, end: 90769}
+    item: {start: 70610, end: 70619}  # Father Flame 70610 (B11 / R-2 ruling: the custom bag toss item; items.csv row)

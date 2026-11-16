@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from lib import dbcfile, drop_guard, item_sets, mpq_writer  # noqa: E402
 
 IDS = {
-    "spell": {"start": 200000, "end": 209999},
+    "spell": {"start": 200000, "end": 399999},
     "talent": {"start": 60000, "end": 60799},
     "talenttab": {"start": 60800, "end": 60999},
     "skilllineability": {"start": 30400, "end": 30999},
@@ -27,7 +27,7 @@ IDS = {
 }
 FULL_BLOCK_SQL = (
     "DELETE FROM `spell_dbc` WHERE `ID` BETWEEN 200000 AND 200099;\n"
-    "DELETE FROM `spell_dbc` WHERE `ID` BETWEEN 200101 AND 209999;\n"
+    "DELETE FROM `spell_dbc` WHERE `ID` BETWEEN 200101 AND 399999;\n"
     "INSERT INTO `spell_dbc` (`ID`, `x`) VALUES\n(200001, 0),\n(205214, 0);\n"
 )
 
