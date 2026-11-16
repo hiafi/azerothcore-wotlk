@@ -2015,8 +2015,8 @@ R24_POTENCY = {
     201731: [(1, 650.0, "direct", R24_FEROCITY_ST_SCALE)],                                     # Savage Pounce
     201725: [(1, 585.0, "direct", 1.0)],                                                       # Leaping Tear (AoE)
 }
-# the Beast Cleave talent's ruling 24 line: 50% x 0.93 / 1.0 / 1.74
-R24_TOOLTIP = {201848: (["Your pet's share depends on its type: Ferocity 46.5%, Tenacity 50%, Cunning 87%."], [])}
+# the Beast Cleave talent's ruling 24 line: 30% x 0.93 / 1.0 / 1.74 (share 50 -> 30, AoE round 2, 2026-11-15)
+R24_TOOLTIP = {201848: (["Your pet's share depends on its type: Ferocity 27.9%, Tenacity 30%, Cunning 52.2%."], [])}
 
 
 def _has_area_effect(row: dict) -> bool:

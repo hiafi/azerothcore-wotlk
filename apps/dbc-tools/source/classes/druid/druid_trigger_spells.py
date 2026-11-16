@@ -69,10 +69,10 @@ hurricane_42231 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=51.4, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=41.12, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=220,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=102.8 (potency-report default, base/coef already agreed). sp_potency 102.8 -> 51.4 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Hurricane -50%).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=102.8 (potency-report default, base/coef already agreed). sp_potency 102.8 -> 51.4 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Hurricane -50%). Effect 1 sp_potency 51.4 -> 41.12 (2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Hurricane -20%).',
     raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 1073741824, 'AttributesEx5': 1024, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a violent storm in the target area causing {pot1} Nature damage to enemies every $16914t3 sec, and increasing the time between attacks of enemies by $16914s2%.  Lasts $16914d.  Druid must channel to maintain the spell.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 135, 'SpellClassMask_1': 4194304, 'SpellClassSet': 7, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 9491, 'StartRecoveryCategory': 133},
 )
 
@@ -5165,10 +5165,10 @@ insect_swarm_200352 = spell(
     range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     duration_ms=14000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=17.3, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=15.224, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=1771,
-    notes="NEW (druid-rework BALANCE §6 row 3,1 capstone copy): clone of 5570's eff1 only (same base/ppl/coefficient), shares Insect Swarm's family bit (INSECT_SWARM), no script binding - propagation is linear only (spell_dru_swarming_rot never re-triggers off a copy). Potency system P5 (druid pass): converted to sp_potency=34.8, same as 5570 (not mismatched; potency-report base-damage default). sp_potency 34.8 -> 17.3 (2026-11-02, DPS balance pass 1031 round R5, user ruling: the copy must be identical to Insect Swarm 5570; it never took the 2026-10-08 Balance cuts 5570 got, so it was about 2x).",
+    notes="NEW (druid-rework BALANCE §6 row 3,1 capstone copy): clone of 5570's eff1 only (same base/ppl/coefficient), shares Insect Swarm's family bit (INSECT_SWARM), no script binding - propagation is linear only (spell_dru_swarming_rot never re-triggers off a copy). Potency system P5 (druid pass): converted to sp_potency=34.8, same as 5570 (not mismatched; potency-report base-damage default). sp_potency 34.8 -> 17.3 (2026-11-02, DPS balance pass 1031 round R5, user ruling: the copy must be identical to Insect Swarm 5570; it never took the 2026-10-08 Balance cuts 5570 got, so it was about 2x). Effect 1 sp_potency 17.3 -> 15.224 (2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: the propagation copy equals Insect Swarm 5570, which is 15.224 after the round-2 -20%).",
     raw_overrides={'BaseLevel': 20, 'SpellLevel': 20, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_1': INSECT_SWARM, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The enemy target is swarmed by insects, causing {pot1.total} Nature damage over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Nature damage every $t1 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 

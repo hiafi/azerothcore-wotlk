@@ -38,7 +38,9 @@ COMMAND_AOE_FALLOFF_PCT = const(
 # Cleave copying the pet's single-target hits, so the copy strength follows the pet's family type. spell_hun_beast_cleave
 # multiplies the pet's own copy share (BEAST_CLEAVE_SHARE_PCT, the buff's eff1) by these; the hunter's Kill Command copy
 # and the Stampede beasts' copies keep the plain share.
-BEAST_CLEAVE_SHARE_PCT = 50     # the buff 201806 eff1 (stored base points 49); the tooltip line below reads it
+BEAST_CLEAVE_SHARE_PCT = 30     # the buff 201806 eff1 (stored base points 29); the tooltip line below reads it
+# BEAST_CLEAVE_SHARE_PCT 50 -> 30 (2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Beast Cleave pet damage -40%).
+# One value drives the pet's copy, the Stampede beasts' copies and the hunter's Kill Command copy (all read eff1).
 BEAST_CLEAVE_PET_FEROCITY_SCALE = const(
     'BEAST_CLEAVE_PET_FEROCITY_SCALE', 0.93,
     "Beast Cleave: a Ferocity pet's copy share multiplier (hunter-pet-families ruling 24).",
@@ -209,10 +211,10 @@ beast_cleave_buff_201806 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY),   # marker on the hunter
         Effect(type=EffectType.APPLY_AURA, base_points=BEAST_CLEAVE_SHARE_PCT - 1, implicit_target_a=5,
-               apply_aura=AuraType.DUMMY),   # pet: 50% share (x its type's BEAST_CLEAVE_PET_*_SCALE, ruling 24)
+               apply_aura=AuraType.DUMMY),   # pet: 30% share (x its type's BEAST_CLEAVE_PET_*_SCALE, ruling 24)
     ],
     spell_icon_id=90235,
-    notes='S1a BM 4.8 / A5: 12 s buff. eff0 marker on the hunter (bp -1), eff1 proc carrier on the pet (TargetA 5, bp 49 = 50%, the one place the share lives). procs_on: flags 0x10114, spell phase 0x2 (HIT), 100%, attributes_mask 0x2 (TRIGGERED_CAN_PROC) so triggered commands reach it (L8).',
+    notes='S1a BM 4.8 / A5: 12 s buff. eff0 marker on the hunter (bp -1), eff1 proc carrier on the pet (TargetA 5, bp 29 = 30%, the one place the share lives; the pet, the Stampede beasts and the hunter Kill Command copy all read it). eff1 base points 49 -> 29, share 50% -> 30% (2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Beast Cleave pet damage -40%). procs_on: flags 0x10114, spell phase 0x2 (HIT), 100%, attributes_mask 0x2 (TRIGGERED_CAN_PROC) so triggered commands reach it (L8).',
     raw_overrides={
         'EquippedItemClass': -1, 'SpellLevel': 40, 'ProcTypeMask': 0x10114, 'ProcChance': 100,
         'AuraDescription_Lang_enUS': "Your pet's attacks also hit nearby enemies.",

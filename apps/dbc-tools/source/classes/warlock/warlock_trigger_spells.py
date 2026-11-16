@@ -129,10 +129,10 @@ seed_of_corruption_27285 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=132.0, potency_kind='direct', implicit_target_a=16, radius_yards=15.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=105.6, potency_kind='direct', implicit_target_a=16, radius_yards=15.0),
     ],
     spell_icon_id=1932,
-    notes='warlock-rework AFFLICTION §4.1 B8 items 3/4b. SpellClassMask_2 keeps 0x10 (detonation, unaffected by the B16 Seed DoT rebit). Potency system P4 (warlock pilot): converted to sp_potency=440.0 (user-reviewed, mismatched row). sp_potency 440.0 -> 132.0 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Seed of Corruption damage -70%).',
+    notes='warlock-rework AFFLICTION §4.1 B8 items 3/4b. SpellClassMask_2 keeps 0x10 (detonation, unaffected by the B16 Seed DoT rebit). Potency system P4 (warlock pilot): converted to sp_potency=440.0 (user-reviewed, mismatched row). sp_potency 440.0 -> 132.0 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Seed of Corruption damage -70%). Effect 1 sp_potency 132.0 -> 105.6 (2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Seed of Corruption -20%).',
     raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 1, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Imbeds a demon seed in the enemy target, causing $27243o1 Shadow damage over $27243d.  When the target takes $27243s2 total damage or dies, the seed will inflict {pot1} Shadow damage to all enemies within $27285a1 yards of the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 32784, 'SpellClassSet': 5, 'SpellLevel': 44, 'SpellVisualID_1': 7682, 'Targets': 64},
 )
 scripted_by(seed_of_corruption_27285, 'spell_warl_seed_of_corruption_detonation_affliction')

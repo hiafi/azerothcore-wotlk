@@ -774,9 +774,9 @@ namespace ShamanData
     constexpr int32 TF_ECHO_PCT = 30; // Tidal Force: Healing Wave echo, percent of the amount healed [fixed].
     constexpr int32 TF_STACK_MAX = 3; // Tidal Force: Lesser Healing Wave stacks on the ally [fixed]; also the CumulativeAura cap of 202673.
     constexpr int32 THUNDERING_SURGE_MW_STACKS = 5; // Thundering Strikes: Maelstrom Weapon stacks a Chain Lightning cast needs for the surge [fixed].
-    constexpr int32 THUNDERING_SURGE_R1 = 40; // Thundering Strikes rank 1: damage bonus of a 5-stack Maelstrom Weapon Chain Lightning under Flametongue / Frostbrand / Windfury, percent [tune].
-    constexpr int32 THUNDERING_SURGE_R2 = 80; // Thundering Strikes rank 2: the Chain Lightning surge, percent [tune].
-    constexpr int32 THUNDERING_SURGE_R3 = 125; // Thundering Strikes rank 3: the Chain Lightning surge, percent [tune].
+    constexpr int32 THUNDERING_SURGE_R1 = 24; // Thundering Strikes rank 1: damage bonus of a 5-stack Maelstrom Weapon Chain Lightning under Flametongue / Frostbrand / Windfury, percent (40 -> 24, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) [tune].
+    constexpr int32 THUNDERING_SURGE_R2 = 48; // Thundering Strikes rank 2: the Chain Lightning surge, percent (80 -> 48, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) [tune].
+    constexpr int32 THUNDERING_SURGE_R3 = 75; // Thundering Strikes rank 3: the Chain Lightning surge, percent (125 -> 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) [tune].
     constexpr int32 TIDAL_FOCUS_CLEANSE_COUNT = 2; // Tidal Focus capstone: disease and poison effects removed per party member, each [fixed].
     constexpr float TIDAL_FOCUS_CLEANSE_RADIUS_YD = 40.0f; // Tidal Focus capstone: party search radius around the placed Cleansing Totem, yd [fixed].
     constexpr int32 TIDAL_WAVES_DURATION_MS = 15000; // Tidal Waves: duration, refreshed by each grant, ms [tune] (stock).

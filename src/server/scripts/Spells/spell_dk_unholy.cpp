@@ -623,7 +623,8 @@ class spell_dk_festering_wound : public AuraScript
 
 // 203457 burst, 203458 overflow, 203459 death explosion, 203043 Rune of Boiling Blight burst - one cast carries the
 // wound count n in its second effect (the Boiling Blight burst is one wound). OnHit multiplies the whole damage by
-// n x (1 + Dread Host%) before the crit roll, so the AP term is counted per wound. The explosion keeps only enemies
+// n x (1 + Dread Host%) before the crit roll, so the AP term is counted per wound; a burst or overflow on an enemy
+// other than the Death Knight's primary target takes WOUND_SECONDARY_PCT% of it. The explosion keeps only enemies
 // in combat with the Death Knight or the group, the nearest WOUND_EXPLOSION_TARGETS of them. The burst's AfterHit
 // feeds the Runic Power and Wandering Plague rules (the mechanics helper decides by the source it recorded).
 class spell_dk_festering_wound_damage : public SpellScript
@@ -659,8 +660,26 @@ class spell_dk_festering_wound_damage : public SpellScript
         if (GetSpellInfo()->Id != DeathKnightData::SPELL_BOILING_BLIGHT)
             wounds = std::max(1, GetSpell()->CalculateSpellDamage(EFFECT_1, target));
 
-        float const multiplier = float(wounds) * (1.0f + float(DeathKnight::GetDreadHostPct(dk)) / 100.0f);
+        float multiplier = float(wounds) * (1.0f + float(DeathKnight::GetDreadHostPct(dk)) / 100.0f);
+
+        // A burst / overflow on an enemy other than the primary deals WOUND_SECONDARY_PCT%: the Pestilence, Abomination
+        // and Gargoyle wounds that overflow or burst on the pack. Without a primary it stays full (single target).
+        uint32 const spellId = GetSpellInfo()->Id;
+        if ((spellId == DeathKnightData::SPELL_FESTERING_WOUND_BURST ||
+            spellId == DeathKnightData::SPELL_FESTERING_WOUND_OVERFLOW) && !IsPrimaryTarget(dk, target))
+            multiplier *= float(DeathKnightData::WOUND_SECONDARY_PCT) / 100.0f;
+
         SetHitDamage(int32(float(GetHitDamage()) * multiplier));
+    }
+
+    // The Death Knight's victim, else the selected unit (the Breath of Sindragosa tick's rule); none counts as primary.
+    static bool IsPrimaryTarget(Player* dk, Unit const* target)
+    {
+        Unit* primary = dk->GetVictim();
+        if (!primary)
+            primary = ObjectAccessor::GetUnit(*dk, dk->GetTarget());
+
+        return !primary || primary == target;
     }
 
     void HandleAfterHit()

@@ -3827,7 +3827,7 @@ thundering_strikes_16255 = _talent(
     _cap('Increases your chance to get a critical strike with all spells and attacks by 1%.'
          + _thundering_surge_clause(1),
           'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=False),
-    notes='S3a A2: pulled stock rank, rewritten. All crit +1% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +40 / 80 / 125 % and its mana cost is refunded (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
+    notes='S3a A2: pulled stock rank, rewritten. All crit +1% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +24 / 48 / 75 % and its mana cost is refunded (surge 40 / 80 / 125 -> 24 / 48 / 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
 )
 
 
@@ -3893,7 +3893,7 @@ thundering_strikes_16302 = _talent(
     _cap('Increases your chance to get a critical strike with all spells and attacks by 2%.'
          + _thundering_surge_clause(2),
           'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=False),
-    notes='S3a A2: pulled stock rank, rewritten. All crit +2% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +40 / 80 / 125 % and its mana cost is refunded (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
+    notes='S3a A2: pulled stock rank, rewritten. All crit +2% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +24 / 48 / 75 % and its mana cost is refunded (surge 40 / 80 / 125 -> 24 / 48 / 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
 )
 
 
@@ -3904,7 +3904,7 @@ thundering_strikes_16303 = _talent(
          + _thundering_surge_clause(3),
           'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=True),
     ProcChance=10, ProcTypeMask=0x14000,
-    notes='S3a A2: pulled stock rank, rewritten. All crit +3% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair). Rank 3 eff2 PROC_TRIGGER_SPELL -> 202397 (Agility = level, A3); spell_proc 16303: HIT phase, SpellTypeMask damage|heal, 10%, ICD 6000, once per cast (spell_sha_enh_thundering_strikes). Ranks 4 and 5 (16304/16305) leave the talent.' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +40 / 80 / 125 % and its mana cost is refunded (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
+    notes='S3a A2: pulled stock rank, rewritten. All crit +3% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair). Rank 3 eff2 PROC_TRIGGER_SPELL -> 202397 (Agility = level, A3); spell_proc 16303: HIT phase, SpellTypeMask damage|heal, 10%, ICD 6000, once per cast (spell_sha_enh_thundering_strikes). Ranks 4 and 5 (16304/16305) leave the talent.' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +24 / 48 / 75 % and its mana cost is refunded (surge 40 / 80 / 125 -> 24 / 48 / 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
 )
 
 

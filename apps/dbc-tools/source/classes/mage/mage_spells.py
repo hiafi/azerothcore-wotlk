@@ -440,13 +440,14 @@ arcane_explosion_1449 = spell(
     mana_cost_pct=10,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=80.76, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=48.456, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
     ],
     spell_icon_id=122,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 14); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=201.9 (mage-potency-proposals.txt).'
           ' Effect 1 sp_potency 201.9 -> 80.76 (2026-10-31, DPS balance pass 1031, user ruling: Arcane damage -60%).'
           ' Tooltip: "Each cast adds a stack of Arcane Blast." (spell_mage_arcane_explosion) (2026-11-15, AoE round 1 on the'
-          ' Normal-tier kits, user ruling: Arcane Explosion builds Arcane Blast stacks baseline at its normal cost). mana_cost_pct 22 -> 10 (2026-11-15, AoE round 1 on the Normal-tier kits, user ruling: base cost 10% of base mana, +50% per Arcane Blast stack).',
+          ' Normal-tier kits, user ruling: Arcane Explosion builds Arcane Blast stacks baseline at its normal cost). mana_cost_pct 22 -> 10 (2026-11-15, AoE round 1 on the Normal-tier kits, user ruling: base cost 10% of base mana, +50% per Arcane Blast stack).'
+          ' Effect 1 sp_potency 80.76 -> 48.456 (2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Arcane Explosion -40%).',
     raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 14, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes an explosion of arcane magic around the caster, causing {pot1} Arcane damage to all targets within $a1 yards.  Each cast adds a stack of Arcane Blast.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 4096, 'SpellClassSet': 3, 'SpellLevel': 14, 'SpellVisualID_1': 965, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -2171,10 +2172,10 @@ arcane_barrage_44425 = spell(
     mana_cost_pct=18,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=160.0, potency_kind='direct', implicit_target_a=6, chain_targets=5),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=144.0, potency_kind='direct', implicit_target_a=6, chain_targets=5),
     ],
     spell_icon_id=3376,
-    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (86, chain has a gap at 60) slope (anchor rank 44781, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (44781, rank 3); MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=160.0 (potency-report default, base/coef already agreed).",
+    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (86, chain has a gap at 60) slope (anchor rank 44781, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (44781, rank 3); MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=160.0 (potency-report default, base/coef already agreed). Effect 1 sp_potency 160.0 -> 144.0 (2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Arcane Barrage -10%).",
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches several missiles at the enemy target, causing {pot1} Arcane damage. Each stack of Arcane Blast on you causes Arcane Barrage to hit an additional target. Consumes all stacks of Arcane Blast and restores 2.5% of your maximum mana per stack consumed.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 24.0, 'SpellClassMask_2': 32768, 'SpellClassSet': 3, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 9947, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

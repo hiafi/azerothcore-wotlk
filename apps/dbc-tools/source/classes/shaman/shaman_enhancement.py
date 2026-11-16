@@ -280,9 +280,9 @@ SHIELD_STRIKE_ARMOR_PCT = const('SHIELD_STRIKE_ARMOR_PCT', 45, 'Toughness under 
 SPIRIT_GUARD_SS_DAMAGE_R1 = const('SPIRIT_GUARD_SS_DAMAGE_R1', 33, 'Spirit Guard rank 1 under Rockbiter: Stormstrike strike damage bonus (202451 SPELLMOD_DAMAGE on 32175 / 32176), percent [tune].')
 SPIRIT_GUARD_SS_DAMAGE_R2 = const('SPIRIT_GUARD_SS_DAMAGE_R2', 66, 'Spirit Guard rank 2 under Rockbiter: Stormstrike strike damage bonus (202452), percent [tune].')
 SPIRIT_GUARD_SS_DAMAGE_R3 = const('SPIRIT_GUARD_SS_DAMAGE_R3', 100, 'Spirit Guard rank 3 under Rockbiter: Stormstrike strike damage bonus (202453), percent [tune].')
-THUNDERING_SURGE_R1 = const('THUNDERING_SURGE_R1', 40, 'Thundering Strikes rank 1: damage bonus of a 5-stack Maelstrom Weapon Chain Lightning under Flametongue / Frostbrand / Windfury, percent [tune].')
-THUNDERING_SURGE_R2 = const('THUNDERING_SURGE_R2', 80, 'Thundering Strikes rank 2: the Chain Lightning surge, percent [tune].')
-THUNDERING_SURGE_R3 = const('THUNDERING_SURGE_R3', 125, 'Thundering Strikes rank 3: the Chain Lightning surge, percent [tune].')
+THUNDERING_SURGE_R1 = const('THUNDERING_SURGE_R1', 24, 'Thundering Strikes rank 1: damage bonus of a 5-stack Maelstrom Weapon Chain Lightning under Flametongue / Frostbrand / Windfury, percent (40 -> 24, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) [tune].')
+THUNDERING_SURGE_R2 = const('THUNDERING_SURGE_R2', 48, 'Thundering Strikes rank 2: the Chain Lightning surge, percent (80 -> 48, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) [tune].')
+THUNDERING_SURGE_R3 = const('THUNDERING_SURGE_R3', 75, 'Thundering Strikes rank 3: the Chain Lightning surge, percent (125 -> 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) [tune].')
 THUNDERING_SURGE_MW_STACKS = const('THUNDERING_SURGE_MW_STACKS', 5, 'Thundering Strikes: Maelstrom Weapon stacks a Chain Lightning cast needs for the surge [fixed].')
 
 
