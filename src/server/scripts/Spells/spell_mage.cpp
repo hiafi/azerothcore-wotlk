@@ -149,8 +149,6 @@ enum MageSpells
     // by name. Keep in sync with MageMechanics.cpp's own SPELL_ARCANE_BLAST_STACKS /
     // SPELL_ARCANE_POWER if either changes.
     SPELL_MAGE_ARCANE_BLAST_STACKS               = 36032,
-    // Arcane Resonance rank 3, the rank that carries the capstone (2026-11-15, AoE round 1)
-    SPELL_MAGE_ARCANE_RESONANCE_R3               = 18464,
     SPELL_MAGE_ARCANE_POWER                      = 12042,
     SPELL_MAGE_BLINK                             = 1953,
     SPELL_MAGE_COUNTERSPELL                      = 2139,
@@ -1309,59 +1307,29 @@ private:
     uint32 _triggerSpellId;
 };
 
-// 1449 - Arcane Explosion. Arcane Resonance capstone (rank 3): "Each Arcane Explosion you cast adds a stack of Arcane
-// Blast, and each stack increases the mana cost of Arcane Explosion by $36032s3%, as it does for Arcane Blast."
-// Adds the stack the way spell_mage_arcane_blast does (triggered self-cast of 36032 after the cast, so this cast's
-// cost and damage see the stacks it found). The triggered cast is skipped by the Netherwind Presence and Missile
-// Barrage proc checks. The cost per stack is 36032's effect 3 (spell_mage_arcane_blast_stacks).
-// (2026-11-15, AoE round 1 on the Normal-tier kits, user ruling: Arcane Explosion gets the same treatment as Arcane
-// Blast.)
+// 1449 - Arcane Explosion: "Each cast adds a stack of Arcane Blast." Baseline, no talent, at Arcane Explosion's normal
+// cost (36032's cost mod stays scoped to Arcane Blast). Adds the stack the way spell_mage_arcane_blast does (triggered
+// self-cast of 36032 after the cast, so this cast's damage sees the stacks it found). The triggered cast is skipped by
+// the Netherwind Presence and Missile Barrage proc checks. (2026-11-15, AoE round 1 on the Normal-tier kits, user
+// ruling: Arcane Explosion builds Arcane Blast stacks baseline.)
 class spell_mage_arcane_explosion : public SpellScript
 {
     PrepareSpellScript(spell_mage_arcane_explosion);
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_MAGE_ARCANE_BLAST_STACKS, SPELL_MAGE_ARCANE_RESONANCE_R3 });
+        return ValidateSpellInfo({ SPELL_MAGE_ARCANE_BLAST_STACKS });
     }
 
     void HandleAfterCast()
     {
         Unit* caster = GetCaster();
-        if (caster->HasAura(SPELL_MAGE_ARCANE_RESONANCE_R3))
-            caster->CastSpell(caster, SPELL_MAGE_ARCANE_BLAST_STACKS, TRIGGERED_FULL_MASK);
+        caster->CastSpell(caster, SPELL_MAGE_ARCANE_BLAST_STACKS, TRIGGERED_FULL_MASK);
     }
 
     void Register() override
     {
         AfterCast += SpellCastFn(spell_mage_arcane_explosion::HandleAfterCast);
-    }
-};
-
-// 36032 - Arcane Blast (the stacking buff). Effect 3 (EFFECT_2) is Arcane Explosion's +200% mana cost per stack, the
-// twin of effect 2's Arcane Blast one. It only counts with the Arcane Resonance capstone: without it the amount is 0,
-// so Arcane Explosion keeps its cost when Arcane Blast built the stacks. The amount is recalculated on every stack
-// change (Aura::SetStackAmount), which is when a talent swap is picked up. (2026-11-15, AoE round 1.)
-class spell_mage_arcane_blast_stacks : public AuraScript
-{
-    PrepareAuraScript(spell_mage_arcane_blast_stacks);
-
-    bool Validate(SpellInfo const* /*spellInfo*/) override
-    {
-        return ValidateSpellInfo({ SPELL_MAGE_ARCANE_RESONANCE_R3 });
-    }
-
-    void CalculateExplosionCost(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
-    {
-        Unit* owner = GetUnitOwner();
-        if (!owner || !owner->HasAura(SPELL_MAGE_ARCANE_RESONANCE_R3))
-            amount = 0;
-    }
-
-    void Register() override
-    {
-        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_mage_arcane_blast_stacks::CalculateExplosionCost, EFFECT_2,
-            SPELL_AURA_ADD_PCT_MODIFIER);
     }
 };
 
@@ -4530,7 +4498,6 @@ void AddSC_mage_spell_scripts()
 
     RegisterSpellScript(spell_mage_arcane_blast);
     RegisterSpellScript(spell_mage_arcane_explosion);
-    RegisterSpellScript(spell_mage_arcane_blast_stacks);
     // Custom: Mastery fix S1 - the SpellScript half rides on the stock "spell_mage_arcane_missiles" binding.
     RegisterSpellAndAuraScriptPairWithArgs(spell_mage_arcane_missiles_spell, spell_mage_arcane_missiles,
         "spell_mage_arcane_missiles");

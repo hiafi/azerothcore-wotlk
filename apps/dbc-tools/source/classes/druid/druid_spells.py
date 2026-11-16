@@ -1822,9 +1822,11 @@ swipe_cat_62078 = spell(
         "WEAPON_PERCENT_DAMAGE, no flat effect - converted to weapon_potency=249 (previously "
         "base_points=249 with the default die_sides=1, i.e. actually dealing 250% live - the same "
         "pre-existing off-by-one Mangle (Cat)/(Bear) had; weapon_potency's own -1/+1 convention "
-        "lands on the intended 249%). No behavior change beyond that 1-point fix."
+        "lands on the intended 249%). No behavior change beyond that 1-point fix. "
+        "BaseLevel / SpellLevel 71 -> 38 and trained at 38 (2026-11-15, AoE round 1 on the Normal-tier kits, user "
+        "ruling: the cat gets its AoE button in the 30s; 38 has only Cenarion Ward, the Feral side is empty there)."
     ),
-    raw_overrides={'AttributesEx': 512, 'AttributesEx2': 4096, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 71, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Swipe nearby enemies, inflicting $s1% weapon damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_3': 1024, 'SpellClassSet': 7, 'SpellLevel': 71, 'SpellVisualID_1': 13170, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx': 512, 'AttributesEx2': 4096, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 38, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Swipe nearby enemies, inflicting $s1% weapon damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_3': 1024, 'SpellClassSet': 7, 'SpellLevel': 38, 'SpellVisualID_1': 13170, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -2227,6 +2229,8 @@ cenarion_ward_200562 = spell(
     raw_overrides={'AttributesEx3': 2048, 'BaseLevel': 38, 'SpellLevel': 38, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'ProcCharges': 1, 'SpellClassSet': 7, 'SpellClassMask_3': CENARION_WARD, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Protects a friendly target for $d. Any damage taken, including damage over time, consumes the ward and heals the target for $o1 over $200563d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Protected by Cenarion Ward.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(cenarion_ward_200562, trainer_id=216, req_level=38, money_cost=12000)
+# Swipe (Cat) 62078: the cat's AoE button, moved from 71 into the 30s (2026-11-15, AoE round 1, user ruling).
+trained_by(swipe_cat_62078, trainer_id=216, req_level=38, money_cost=12000)
 skill_line_ability(id=30446, skill_line=573, spell_id=cenarion_ward_200562.id, class_mask=1024)
 scripted_by(cenarion_ward_200562, 'spell_dru_cenarion_ward')
 

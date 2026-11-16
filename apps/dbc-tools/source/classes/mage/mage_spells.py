@@ -444,8 +444,10 @@ arcane_explosion_1449 = spell(
     ],
     spell_icon_id=122,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 14); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=201.9 (mage-potency-proposals.txt).'
-          ' Effect 1 sp_potency 201.9 -> 80.76 (2026-10-31, DPS balance pass 1031, user ruling: Arcane damage -60%).',
-    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 14, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes an explosion of arcane magic around the caster, causing {pot1} Arcane damage to all targets within $a1 yards.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 4096, 'SpellClassSet': 3, 'SpellLevel': 14, 'SpellVisualID_1': 965, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+          ' Effect 1 sp_potency 201.9 -> 80.76 (2026-10-31, DPS balance pass 1031, user ruling: Arcane damage -60%).'
+          ' Tooltip: "Each cast adds a stack of Arcane Blast." (spell_mage_arcane_explosion) (2026-11-15, AoE round 1 on the'
+          ' Normal-tier kits, user ruling: Arcane Explosion builds Arcane Blast stacks baseline at its normal cost).',
+    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 14, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes an explosion of arcane magic around the caster, causing {pot1} Arcane damage to all targets within $a1 yards.  Each cast adds a stack of Arcane Blast.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 4096, 'SpellClassSet': 3, 'SpellLevel': 14, 'SpellVisualID_1': 965, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -2503,6 +2505,6 @@ scripted_by(scorch_2948, 'spell_mage_scorch')
 scripted_by(flamestrike_2120, 'spell_mage_flamestrike')
 scripted_by(flashpoint_200111, 'spell_mage_flashpoint')
 scripted_by(pyroblast_11366, 'spell_mage_pyroblast')
-# Arcane Resonance capstone (2026-11-15, AoE round 1 on the Normal-tier kits): each Arcane Explosion adds an Arcane Blast
-# stack. The per-stack cost is 36032's effect 3 (mage_trigger_spells.py, spell_mage_arcane_blast_stacks).
+# Each Arcane Explosion adds an Arcane Blast stack (36032), baseline, at its normal cost (2026-11-15, AoE round 1 on the
+# Normal-tier kits, user ruling).
 scripted_by(arcane_explosion_1449, 'spell_mage_arcane_explosion')
