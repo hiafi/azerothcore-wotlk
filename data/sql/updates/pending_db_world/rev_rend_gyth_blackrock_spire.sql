@@ -5,8 +5,9 @@
 -- 210430-210452 are apps/dbc-tools source/npcs/blackrock_spire/rend_gyth.py. Their loot rows are L-2's.
 
 -- The Nefarius copy takes the Blackrock Spire spawn (137967 at (163.17, -444.17, 122.06), the balcony); Blackwing
--- Lair's 10162 keeps its own spawn (85785, map 469), its script and its texts.
-UPDATE `creature` SET `id` = 300732 WHERE `guid` = 137967 AND `id` IN (10162, 300732);
+-- Lair's 10162 keeps its own spawn (85785, map 469), its script and its texts. It also spawns on heroic (spawnMask bit
+-- 2) here: the dbc-tools heroic rev sorts before this file, so its id-gated spawn mask update still sees 10162.
+UPDATE `creature` SET `id` = 300732, `spawnMask` = `spawnMask` | 2 WHERE `guid` = 137967 AND `id` IN (10162, 300732);
 
 -- His staff (the stock equipment of 10162, the spawn's equipment_id 1) and his visibility row (stock: far).
 DELETE FROM `creature_equip_template` WHERE `CreatureID` = 300732;

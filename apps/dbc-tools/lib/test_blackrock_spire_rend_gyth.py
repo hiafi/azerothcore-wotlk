@@ -224,8 +224,9 @@ class RendGythSqlTest(unittest.TestCase):
         self.sql = SQL.read_text(encoding="utf-8")
 
     def test_the_spawn_rebind_touches_137967_only(self):
-        self.assertIn("UPDATE `creature` SET `id` = 300732 WHERE `guid` = 137967 AND `id` IN (10162, 300732);",
-                      self.sql)
+        # the heroic spawn mask rides along: the dbc-tools heroic rev sorts first and still sees 10162 there
+        self.assertIn("UPDATE `creature` SET `id` = 300732, `spawnMask` = `spawnMask` | 2 WHERE `guid` = 137967 "
+                      "AND `id` IN (10162, 300732);", self.sql)
         self.assertEqual(self.sql.count("UPDATE `creature`"), 1)
         self.assertNotRegex(self.sql, r"`guid` = 85785")     # Blackwing Lair's spawn
 
