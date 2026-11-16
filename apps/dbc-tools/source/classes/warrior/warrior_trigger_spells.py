@@ -3722,8 +3722,10 @@ whirlwind_44949 = spell(
     ],
     spell_icon_id=83,
     notes='pulled from existing data. Warrior balance 2026-10-30 (user): Whirlwind +20% then +30% (156%) on both hands, eff1 '
-          'WEAPON_PERCENT_DAMAGE 156 after the normalized weapon effect (the stale slot-2 die/base keys dropped).',
-    raw_overrides={'AttributesEx': 16, 'AttributesEx3': 16777216, 'AttributesEx4': 128, 'AttributesEx5': 32768, 'CastingTimeIndex': 1, 'BaseLevel': 36, 'SpellLevel': 36, 'RangeIndex': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41395, 'SpellVisualID_1': 223, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 4, 'SpellClassMask_2': 4, 'SpellClassMask_3': 8, 'MaxTargets': 4, 'DefenseType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+          'WEAPON_PERCENT_DAMAGE 156 after the normalized weapon effect (the stale slot-2 die/base keys dropped). '
+          'MaxTargets 4 -> 5 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: the off-hand pass follows '
+          'the main Whirlwind 1680 to 5 enemies).',
+    raw_overrides={'AttributesEx': 16, 'AttributesEx3': 16777216, 'AttributesEx4': 128, 'AttributesEx5': 32768, 'CastingTimeIndex': 1, 'BaseLevel': 36, 'SpellLevel': 36, 'RangeIndex': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41395, 'SpellVisualID_1': 223, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 4, 'SpellClassMask_2': 4, 'SpellClassMask_3': 8, 'MaxTargets': 5, 'DefenseType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
 )
 
 

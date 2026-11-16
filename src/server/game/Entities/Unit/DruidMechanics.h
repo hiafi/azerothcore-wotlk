@@ -496,6 +496,11 @@ namespace Druid
     constexpr uint32 SPELL_TOOTH_AND_CLAW = 200438;           // buff, 2 charges, Bestial Fury only
     constexpr uint32 SPELL_SAVAGE_BITE = 200439;              // trainer-taught, requires Tooth and Claw
 
+    // Primal Wrath (AoE round 3, 2026-11-16): the cat's area finisher, a Rip-shaped bleed on every
+    // enemy within 8 yd; one bleed with Rip per druid (spell_group 1306). Rend and Tear counts it as
+    // the caster's Rip (GetFeralDamageDoneMultiplier, druid_hooks.cpp's DruidRendAndTearCrit).
+    constexpr uint32 SPELL_PRIMAL_WRATH = 200472;
+
     // Talent ranks read at runtime (FERAL §7; "C" rows only). Ranks are read by rank spell id,
     // highest first, through GetRankAmount - never by icon (PLAN §2).
     constexpr uint32 SPELL_ELDER_HIDE_R1 = 200440;

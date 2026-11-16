@@ -11,6 +11,7 @@ from lib.dsl.registry import (
 )
 from ._masks import BLOOM, CENARION_WARD, MASS_ENTANGLEMENT, STARSURGE
 from ._masks import BERSERK_COST, IRONFUR, PULVERIZE, THRASH, UPHEAVAL  # druid-rework Feral pass
+from ._masks import RIP, RIP_FEROCIOUS_BITE  # Primal Wrath (AoE round 3) carries Rip's family bits
 from .druid_trigger_spells import (
     bloom_jump_200561, cenarion_ward_heal_200563, flourish_buff_200565, hurricane_42231,
     starfall_50286, tranquility_44203, typhoon_61391,
@@ -563,10 +564,10 @@ wrath_5176 = spell(
     mana_cost_pct=8,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=86.636, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=121.29, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=263,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 8 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast_time_ms now says the 1500ms it already resolved to; raw CastingTimeIndex dropped (resolves via the plain 1500ms row, 30004). Potency system P5 (druid pass): converted to sp_potency=119.3 (potency-report default, base/coef already agreed). mana_cost_pct 11 -> 8 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 sp_potency 119.3 -> 71.6 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 71.6 -> 78.76 (2026-10-08, DPS balance pass, user ruling: Balance Wrath x1.10, round 10). Effect 1 sp_potency 78.76 -> 86.636 (2026-11-15, balance on the Normal-tier kits, user ruling: Wrath +10%)',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 8 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast_time_ms now says the 1500ms it already resolved to; raw CastingTimeIndex dropped (resolves via the plain 1500ms row, 30004). Potency system P5 (druid pass): converted to sp_potency=119.3 (potency-report default, base/coef already agreed). mana_cost_pct 11 -> 8 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 sp_potency 119.3 -> 71.6 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 71.6 -> 78.76 (2026-10-08, DPS balance pass, user ruling: Balance Wrath x1.10, round 10). Effect 1 sp_potency 78.76 -> 86.636 (2026-11-15, balance on the Normal-tier kits, user ruling: Wrath +10%). Effect 1 sp_potency 86.636 -> 121.29 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Balance option A, Wrath +40%; real ratio 1.39999)',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Nature damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'Speed': 20.0, 'SpellClassMask_1': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellVisualID_1': 3860, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -2078,10 +2079,10 @@ starsurge_200333 = spell(
     mana_cost_pct=5,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=111.6, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=156.24, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=1957,
-    notes='NEW (druid-rework BALANCE §5 "Starsurge"): scales with level (PLAN B3), learn level 22, level-60 value 200 -> ppl 200/60; on the Cooldown Haste allow list (A3); shares icon 1957 with Genesis talent (spell vs talent, accepted 12.14); a projectile at Speed 35 (Ice Lance is 38) with Ascension\'s own Starsurge missile/hand-flare/impact art, SpellVisualID_1 90018 (patch_druid_vfx_models.py), replacing the borrowed Starfire visual 1264. Potency system P5 (druid pass): converted to sp_potency=74.4 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.5) spell_bonus_data override is retired in favor of the generated DBC coefficient. Effect 1 sp_potency 74.4 -> 111.6 (2026-11-15, balance on the Normal-tier kits, user ruling: Starsurge +50%)',
+    notes='NEW (druid-rework BALANCE §5 "Starsurge"): scales with level (PLAN B3), learn level 22, level-60 value 200 -> ppl 200/60; on the Cooldown Haste allow list (A3); shares icon 1957 with Genesis talent (spell vs talent, accepted 12.14); a projectile at Speed 35 (Ice Lance is 38) with Ascension\'s own Starsurge missile/hand-flare/impact art, SpellVisualID_1 90018 (patch_druid_vfx_models.py), replacing the borrowed Starfire visual 1264. Potency system P5 (druid pass): converted to sp_potency=74.4 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.5) spell_bonus_data override is retired in favor of the generated DBC coefficient. Effect 1 sp_potency 74.4 -> 111.6 (2026-11-15, balance on the Normal-tier kits, user ruling: Starsurge +50%). Effect 1 sp_potency 111.6 -> 156.24 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Balance option A, Starsurge +40%)',
     raw_overrides={'BaseLevel': 22, 'SpellLevel': 22, 'MaxLevel': 80, 'FacingCasterFlags': 1, 'PreventionType': 1, 'DefenseType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': STARSURGE, 'ShapeshiftMask': 1073741824, 'SpellVisualID_1': 90018, 'Speed': 35.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a surge of stellar energies at the target, dealing {pot1} Astral damage.', 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 trained_by(starsurge_200333, trainer_id=216, req_level=22, money_cost=3000)
@@ -2726,3 +2727,77 @@ trained_by(skull_bash_200605, trainer_id=216, req_level=10)
 trained_by(skull_bash_200605, trainer_id=217, req_level=10)
 # Feral Combat skill line 134, like Savage Bite 30439; 30440 is the first Feral spare id (druid-rework.PLAN.md §4.3).
 skill_line_ability(id=30440, skill_line=134, spell_id=skull_bash_200605.id, class_mask=1024)
+
+
+# ============================================================================
+# Primal Wrath (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: "We need an AoE finisher for them to
+# feel complete"; baseline, option A' of blackrock-gear.AOE3-SUGGESTIONS-ROGUE-DRUIDFERAL.md).
+# ============================================================================
+
+primal_wrath_200472 = spell(
+    id=200472,
+    name='Primal Wrath',
+    school=School.NORMAL,
+    mechanic=15,  # bleed, so Primal Gore's Mastery clause (DruidMechanics.cpp) counts it
+    attributes=262160,  # Rip's
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    power_type=PowerType.ENERGY,
+    mana_cost=50,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=12000,
+    effects=[
+        # Every enemy within 8 yd of the druid (A 22 TARGET_SRC_CASTER / B 15 TARGET_UNIT_SRC_AREA_ENEMY, like
+        # Thrash). 3.112 = 2.394 x 1.3, 5.733 = 4.41 x 1.3 (real ratios 1.29992 and 1.3).
+        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=22, implicit_target_b=15,
+               apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, ap_potency=3.112, cp_ap_potency=5.733,
+               potency_kind='periodic', radius_yards=8.0),
+    ],
+    spell_icon_id=1116,  # INV_Misc_MonsterClaw_02 (no other druid spell uses it)
+    notes=(
+        "NEW (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: \"We need an AoE finisher for them to feel "
+        "complete\", Primal Wrath baseline, option A'): a 5-point Cat finisher that applies a Rip-shaped bleed to every "
+        "enemy within 8 yd of the druid. Bleed ticks at 1.3x Rip 1079's: ap_potency 3.112 + cp_ap_potency 5.733 per "
+        "combo point every 2 sec for 12 sec (Rip 2.394 + 4.41; real ratios 1.29992 and 1.3); 50 energy (Rip's 30 + "
+        "20). Every target's amount reads the caster's combo points (SpellPotency::Apply, GetComboPoints() with no "
+        "target), which the finish phase clears only after the last target. No explicit target: Spell::CheckCast "
+        "asks for combo points on any target (NeedsExplicitUnitTarget false). Rip's family bits (dword 1 0x800000 "
+        "shared with Ferocious Bite, dword 3 RIP): Bloodletting (DOT on RIP), Infected Wounds' +9% (FERAL_BLEEDS), "
+        "Primal Gore (FERAL_BLEEDS crit damage; its Mastery clause keys on the bleed mechanic), Predatory Strikes "
+        "(-9 energy and Predator's Swiftness on RIP_FEROCIOUS_BITE), Berserk (-50% cost, BERSERK_COST) and "
+        "Nurturing Instinct's empowered buff reach it. Primal Precision's capstone by scripted_by below. Rend and "
+        "Tear counts it as the caster's Rip in C++ (DruidMechanics.cpp, druid_hooks.cpp). Not Sabertooth "
+        "(spell_dru_ferocious_bite extends spell 1079 only) and not Feral Instinct (its SpellMod is Swipe/Ravage "
+        "only). spell_group 1306 with Rip, stack rule 2 (EXCLUSIVE_FROM_SAME_CASTER, druid_talents.py): a target "
+        "holds one of the two from each druid, the newest. Learned at 42 (trainer 216, like Swipe (Cat)), Feral "
+        "Combat skill line row 30441. Visual: Swipe (Cat)'s 13170."
+    ),
+    raw_overrides={
+        'AttributesEx': 1049088, 'AttributesEx6': 8388608,  # Rip's (finisher, combo points)
+        'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bleed damage every $t1 seconds.',
+        'CastingTimeIndex': 1, 'DefenseType': 2, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        # 5 points per tick: $m1 (the flat line) + 5 x the per-point line at level 60 (20.4477, flat from level 25 up:
+        # "Combo points don't scale with level") + (3.112 + 5 x 5.733) / 100 x 2 / 3.5 = 0.1816 x AP, over 6 ticks.
+        'Description_Lang_enUS': (
+            'Finishing move that rips every enemy within $a1 yards, causing them to bleed.  Damage increases per '
+            'combo point and by your attack power:\r\n   5 points: ${($m1+102+0.1816*$AP)*6} damage over $d.'
+            '\r\n\r\nPrimal Wrath and Rip share one bleed: a target holds only one of them from you, the newest.'
+        ),
+        'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1, 'FacingCasterFlags': 0,
+        'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190,
+        'ShapeshiftMask': SS_CAT, 'SpellClassSet': 7,
+        'SpellClassMask_1': RIP_FEROCIOUS_BITE, 'SpellClassMask_3': RIP,
+        'SpellLevel': 42, 'SpellVisualID_1': 13170,
+        'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000,
+    },
+)
+trained_by(primal_wrath_200472, trainer_id=216, req_level=42, money_cost=14000)
+# Feral Combat skill line 134 (Thrash 30437, Skull Bash 30440); 30441 is the next Feral spare id (druid-rework.PLAN.md
+# §4.3: 30439-30445).
+skill_line_ability(id=30441, skill_line=134, spell_id=primal_wrath_200472.id, class_mask=1024)
+# Primal Precision's capstone: cat finishers take time off Berserk (the same binding as Rip's, druid_talents.py).
+scripted_by(primal_wrath_200472, 'spell_dru_primal_precision')

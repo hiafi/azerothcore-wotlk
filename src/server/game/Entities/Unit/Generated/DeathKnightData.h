@@ -488,10 +488,10 @@ namespace DeathKnightData
     constexpr int32 BREATH_BASE_DRAIN = 10; // Breath drain per second (Runic Power).
     constexpr int32 BREATH_DRAIN_STEP_TICKS = 5; // Breath drain rises by 1 every this many ticks.
     constexpr int32 BREATH_MIN_RP = 10; // Minimum Runic Power to cast Breath of Sindragosa.
-    constexpr int32 BREATH_SECONDARY_PCT = 50; // Breath damage percent on secondary targets.
+    constexpr int32 BREATH_SECONDARY_PCT = 40; // Breath damage percent on secondary targets. BREATH_SECONDARY_PCT 50 -> 40 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Breath of Sindragosa secondary targets 40%).
     constexpr int32 CORPSE_EXPLOSION_CORPSE_RANGE_YARDS = 30; // Corpse Explosion: corpse fallback search range.
     constexpr int32 CRIMSON_COMMUNION_LEECH_PCT = 15; // Percent of the damage each affected player deals that heals them while Crimson Communion lasts [fixed].
-    constexpr int32 DARK_TRANSFORMATION_CLEAVE_PCT = 50; // Dark Transformation cleave: percent of the unmitigated hit.
+    constexpr int32 DARK_TRANSFORMATION_CLEAVE_PCT = 100; // Dark Transformation cleave: percent of the unmitigated hit. DARK_TRANSFORMATION_CLEAVE_PCT 50 -> 100 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Dark Transformation cleave 100%).
     constexpr int32 DEATHCHILL_DAMAGE_PCT = 20; // Deathchill direct-damage bonus percent.
     constexpr int32 DEATHS_CARESS_EXTRA_TARGETS = 2; // Additional nearby enemies Death's Caress hits besides its target [fixed].
     constexpr int32 DEATH_STRIKE_MIN_HEAL_PCT = 10; // Death Strike minimum heal, percent of maximum health

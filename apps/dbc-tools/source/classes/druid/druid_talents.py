@@ -30,8 +30,8 @@ from .druid_spells import (
     barkskin_22812, bear_form_5487, bestial_fury_200425, dire_bear_form_9634,
     feral_charge_bear_16979, feral_charge_cat_49376, ferocious_bite_22568, frenzied_regeneration_22842,
     faerie_fire_feral_16857, healing_touch_5185, maim_22570, mangle_bear_33878, mangle_cat_33876,
-    pounce_9005, rake_1822, ravage_6785, regrowth_8936, rip_1079, savage_roar_52610, shred_5221,
-    thrash_200423, tiger_s_fury_5217,
+    pounce_9005, primal_wrath_200472, rake_1822, ravage_6785, regrowth_8936, rip_1079, savage_roar_52610,
+    shred_5221, thrash_200423, tiger_s_fury_5217,
 )
 from .druid_trigger_spells import (
     bear_form_passive_1178, bestial_fury_rage_200437, bloodletting_200454, bloodletting_200455,
@@ -1455,6 +1455,15 @@ spell_group(1016, thrash_200423)
 # unordered_multiset iteration breaks arbitrarily; if 186 wins, Thrash and Faerie Fire armor stack. 16857 no
 # longer carries anything this group exists for, so it leaves it (770 {101, 186} + Thrash {3, 101} -> 101).
 leave_spell_group(1016, faerie_fire_feral_16857)
+
+# Primal Wrath and Rip are one bleed (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Primal Wrath
+# baseline): stack rule 2 (EXCLUSIVE_FROM_SAME_CASTER), so a target holds one of the two from each druid and the newest
+# replaces the other; two druids still each keep their own. Rule 4 (EXCLUSIVE_HIGHEST) was not taken: Primal Wrath's
+# per-tick amount is always the higher at equal combo points, so a Rip cast on a Primal Wrath target would land on
+# nothing and waste its combo points. Group 1306: the first id above every class reservation in source/ids.yaml's
+# spell_group block (warrior ends at 1305; the druid has no reservation; its other group is 1200).
+spell_group(1306, rip_1079, primal_wrath_200472)
+spell_group_rule(1306, stack_rule=2, description='Rip and Primal Wrath: one bleed per druid, the newest wins')
 
 # Berserk no longer makes Mangle (Bear) hit 3 targets (FERAL §7 (10,1)). The stock row is type 2 (aura link) -
 # data/sql/base/db_world/spell_linked_spell.sql: (50334,58923,2,'Berserk - modify target number aura').

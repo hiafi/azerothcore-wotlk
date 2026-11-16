@@ -1406,7 +1406,9 @@ fan_of_knives_51723 = spell(
         'hardcode); the off hand 52874 (npc.csv bp 69 -> 99) and the Second Volley copies 204166 / 204167 match. '
         'weapon_potency 100 is now the module constant FAN_OF_KNIVES_WEAPON_POTENCY (rogue_subtlety.py), shared with the '
         'off hand 52874 below and the Second Volley copies, so a retune carries to all four (2026-11-01, potency audit '
-        'fix F6).'
+        'fix F6). '
+        'eff0 weapon_potency 100 -> 250 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: rogue packs reach '
+        'the 2,500-2,800 5-target band; Fan of Knives is not cast at one target) through FAN_OF_KNIVES_WEAPON_POTENCY.'
     ),
     raw_overrides={'AttributesEx': 16, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly throw both weapons at all enemies within 8 yards, causing ${$s1*1.5*$<fanmult>}% weapon damage with daggers and ${$s1*$<fanmult>}% with other weapons. Awards 1 combo point.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 1, 'Speed': 18.0, 'SpellClassMask_2': 262144, 'SpellClassSet': 8, 'SpellLevel': 24, 'SpellVisualID_1': 12317, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -1436,7 +1438,9 @@ fan_of_knives_off_hand_52874 = spell(
     notes=(
         'pulled from existing data (stock off-hand throw, was in npc.csv). Eff0 base_points 99 -> weapon_potency '
         'FAN_OF_KNIVES_WEAPON_POTENCY (100, the same 100% off-hand hit), tied to 51723\'s so a retune carries over; '
-        'SpellLevel 80 kept (BaseLevel is generated equal to it) (2026-11-01, potency audit fix F6).'
+        'SpellLevel 80 kept (BaseLevel is generated equal to it) (2026-11-01, potency audit fix F6). '
+        'eff0 weapon_potency 100 -> 250 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: rogue packs reach '
+        'the 2,500-2,800 5-target band) through FAN_OF_KNIVES_WEAPON_POTENCY.'
     ),
     raw_overrides={'AttributesEx': 16, 'AttributesEx3': 16777216, 'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 80, 'RangeIndex': 2, 'Speed': 18.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'SpellVisualID_1': 12318, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly throw both weapons at all targets within $a1 yards, causing $s1% weapon damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 8, 'SpellClassMask_2': 262144, 'DefenseType': 2, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )

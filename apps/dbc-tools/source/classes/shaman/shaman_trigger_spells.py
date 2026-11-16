@@ -1929,7 +1929,7 @@ improved_shields_16261 = _talent(
          + ' While Rockbiter is active, your Lightning Shield orbs also grant 1 Stoneskin each and generate double threat.',
           'Your Lightning Shield has a 30% chance not to expend a charge when it would.', last=False),
     masks={1: (0x400, 0, 0)},
-    notes='S3a A2: Improved Lightning Shield (was Improved Shields): orb damage +15% (SPELLMOD_DAMAGE on d0 b10, the orb 26364; talent_mult effect 1 for tooltip entry 1217). The Water Shield / Earth Shield clauses are gone. The Rockbiter Stoneskin/threat and the rank 3 capstone are scripts (spell_sha_enh_lightning_shield, hidden child 202411).' + S1_NOTE + 'Stormstrike cleave clause (Revision 3, any imbue): with the shaman\'s own Lightning Shield holding a charge, Stormstrike also strikes up to 4 other enemies within 8 yd of its target for 33 / 66 / 100 % of the landed damage (202449, spell_sha_enh_stormstrike::Cleave). Dormant until Stormstrike (row 6, level 40).',
+    notes='S3a A2: Improved Lightning Shield (was Improved Shields): orb damage +15% (SPELLMOD_DAMAGE on d0 b10, the orb 26364; talent_mult effect 1 for tooltip entry 1217). The Water Shield / Earth Shield clauses are gone. The Rockbiter Stoneskin/threat and the rank 3 capstone are scripts (spell_sha_enh_lightning_shield, hidden child 202411).' + S1_NOTE + 'Stormstrike cleave clause (Revision 3, any imbue): with the shaman\'s own Lightning Shield holding a charge, Stormstrike also strikes up to 4 other enemies within 8 yd of its target for 33 / 66 / 75 % of the landed damage (202449, spell_sha_enh_stormstrike::Cleave; ILS_SS_CLEAVE_R3 100 -> 75 on 2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Enhancement option A). Dormant until Stormstrike (row 6, level 40).',
 )
 
 
@@ -1970,7 +1970,7 @@ improved_shields_16290 = _talent(
          + ' While Rockbiter is active, your Lightning Shield orbs also grant 1 Stoneskin each and generate double threat.',
           'Your Lightning Shield has a 30% chance not to expend a charge when it would.', last=False),
     masks={1: (0x400, 0, 0)},
-    notes='S3a A2: Improved Lightning Shield (was Improved Shields): orb damage +30% (SPELLMOD_DAMAGE on d0 b10, the orb 26364; talent_mult effect 1 for tooltip entry 1217). The Water Shield / Earth Shield clauses are gone. The Rockbiter Stoneskin/threat and the rank 3 capstone are scripts (spell_sha_enh_lightning_shield, hidden child 202411).' + S1_NOTE + 'Stormstrike cleave clause (Revision 3, any imbue): with the shaman\'s own Lightning Shield holding a charge, Stormstrike also strikes up to 4 other enemies within 8 yd of its target for 33 / 66 / 100 % of the landed damage (202449, spell_sha_enh_stormstrike::Cleave). Dormant until Stormstrike (row 6, level 40).',
+    notes='S3a A2: Improved Lightning Shield (was Improved Shields): orb damage +30% (SPELLMOD_DAMAGE on d0 b10, the orb 26364; talent_mult effect 1 for tooltip entry 1217). The Water Shield / Earth Shield clauses are gone. The Rockbiter Stoneskin/threat and the rank 3 capstone are scripts (spell_sha_enh_lightning_shield, hidden child 202411).' + S1_NOTE + 'Stormstrike cleave clause (Revision 3, any imbue): with the shaman\'s own Lightning Shield holding a charge, Stormstrike also strikes up to 4 other enemies within 8 yd of its target for 33 / 66 / 75 % of the landed damage (202449, spell_sha_enh_stormstrike::Cleave; ILS_SS_CLEAVE_R3 100 -> 75 on 2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Enhancement option A). Dormant until Stormstrike (row 6, level 40).',
 )
 
 
@@ -3035,7 +3035,7 @@ improved_shields_51881 = _talent(
          + ' While Rockbiter is active, your Lightning Shield orbs also grant 1 Stoneskin each and generate double threat.',
           'Your Lightning Shield has a 30% chance not to expend a charge when it would.', last=True),
     masks={1: (0x400, 0, 0)},
-    notes='S3a A2: Improved Lightning Shield (was Improved Shields): orb damage +45% (SPELLMOD_DAMAGE on d0 b10, the orb 26364; talent_mult effect 1 for tooltip entry 1217). The Water Shield / Earth Shield clauses are gone. The Rockbiter Stoneskin/threat and the rank 3 capstone are scripts (spell_sha_enh_lightning_shield, hidden child 202411).' + S1_NOTE + 'Stormstrike cleave clause (Revision 3, any imbue): with the shaman\'s own Lightning Shield holding a charge, Stormstrike also strikes up to 4 other enemies within 8 yd of its target for 33 / 66 / 100 % of the landed damage (202449, spell_sha_enh_stormstrike::Cleave). Dormant until Stormstrike (row 6, level 40).',
+    notes='S3a A2: Improved Lightning Shield (was Improved Shields): orb damage +45% (SPELLMOD_DAMAGE on d0 b10, the orb 26364; talent_mult effect 1 for tooltip entry 1217). The Water Shield / Earth Shield clauses are gone. The Rockbiter Stoneskin/threat and the rank 3 capstone are scripts (spell_sha_enh_lightning_shield, hidden child 202411).' + S1_NOTE + 'Stormstrike cleave clause (Revision 3, any imbue): with the shaman\'s own Lightning Shield holding a charge, Stormstrike also strikes up to 4 other enemies within 8 yd of its target for 33 / 66 / 75 % of the landed damage (202449, spell_sha_enh_stormstrike::Cleave; ILS_SS_CLEAVE_R3 100 -> 75 on 2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Enhancement option A). Dormant until Stormstrike (row 6, level 40).',
 )
 
 

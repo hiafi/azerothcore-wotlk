@@ -273,7 +273,7 @@ STATIC_SHOCK_ARC_RADIUS_YD = const('STATIC_SHOCK_ARC_RADIUS_YD', 8.0, 'Static Sh
 ANTICIPATION_CL_JUMPS = const('ANTICIPATION_CL_JUMPS', 2, 'Anticipation under Rockbiter: extra Chain Lightning jump targets (202447 SPELLMOD_JUMP_TARGETS) [fixed].')
 ILS_SS_CLEAVE_R1 = const('ILS_SS_CLEAVE_R1', 33, 'Improved Lightning Shield rank 1: Stormstrike cleave (202449) share of the landed Stormstrike damage, percent [tune].')
 ILS_SS_CLEAVE_R2 = const('ILS_SS_CLEAVE_R2', 66, 'Improved Lightning Shield rank 2: Stormstrike cleave share, percent [tune].')
-ILS_SS_CLEAVE_R3 = const('ILS_SS_CLEAVE_R3', 100, 'Improved Lightning Shield rank 3: Stormstrike cleave share, percent [tune].')
+ILS_SS_CLEAVE_R3 = const('ILS_SS_CLEAVE_R3', 75, 'Improved Lightning Shield rank 3: Stormstrike cleave share, percent; ILS_SS_CLEAVE_R3 100 -> 75 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Enhancement option A, trims the 5-target cleave at the top of the band) [tune].')
 ILS_SS_CLEAVE_TARGETS = const('ILS_SS_CLEAVE_TARGETS', 4, 'Improved Lightning Shield: enemies the Stormstrike cleave strikes besides the target [fixed].')
 ILS_SS_CLEAVE_RADIUS_YD = const('ILS_SS_CLEAVE_RADIUS_YD', 8.0, 'Improved Lightning Shield: Stormstrike cleave radius around the target, yd [fixed].')
 SHIELD_STRIKE_ARMOR_PCT = const('SHIELD_STRIKE_ARMOR_PCT', 45, 'Toughness under Rockbiter with a shield equipped: Shield Strike (202450) damage, percent of the shield item\'s armor (item_template Armor); every Toughness rank carries it as its DUMMY effect 3 ($s3) (70 -> 45, balance round 5) [tune].')
@@ -1231,7 +1231,7 @@ ils_stormstrike_cleave_202449 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
     effects=[Effect(
         type=EffectType.SCHOOL_DAMAGE, implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
-        potency_excluded='script-sized: ILS_SS_CLEAVE_R1..R3 (33 / 66 / 100 %) of the shaman\'s landed Stormstrike damage on the '
+        potency_excluded='script-sized: ILS_SS_CLEAVE_R1..R3 (33 / 66 / 75 %) of the shaman\'s landed Stormstrike damage on the '
                          'primary (main hand + off hand, after armor) is passed as bp0 by spell_sha_enh_stormstrike::Cleave.',
     )],
     spell_icon_id=ICON_STORMSTRIKE,
@@ -1243,7 +1243,8 @@ ils_stormstrike_cleave_202449 = spell(
           'SpellMod stacks onto the share). AttributesEx3 IGNORE_CASTER_MODIFIERS (the amount already carries every done bonus) | '
           'SUPPRESS_CASTER_PROCS | ALWAYS_HIT, AttributesEx4 SUPPRESS_WEAPON_PROCS, AttributesEx2 CANT_CRIT (the share already '
           'carries the strike\'s crit), ATTR0 NO_ACTIVE_DEFENSE; custom attr IGNORE_ARMOR (the share is post-armor). Range 50000 '
-          '(L6). The Dark Transformation cleave 203466 shape.',
+          '(L6). The Dark Transformation cleave 203466 shape. ILS_SS_CLEAVE_R3 100 -> 75 (2026-11-16, AoE round 3 on the Normal-tier '
+          'kits, user ruling: Enhancement option A; rank 3 now copies 75% of the landed Stormstrike, was 100%).',
     raw_overrides=_raw('Strikes the target for a share of your Stormstrike.', '', 40, family=False, DefenseType=2,
                        AttributesEx2=ATTR2_CANT_CRIT,
                        AttributesEx3=ATTR3_SUPPRESS_CASTER_PROCS | ATTR3_ALWAYS_HIT | ATTR3_IGNORE_CASTER_MODIFIERS,

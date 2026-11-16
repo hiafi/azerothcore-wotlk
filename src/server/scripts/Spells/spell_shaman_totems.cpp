@@ -465,7 +465,8 @@ class spell_sha_elemental_owner_stats : public AuraScript
 // (H7, no target cap; T0b section 4 and 8). The zone is unhasted: PERIODIC_DUMMY gets no haste.
 // DPS balance pass 1031 S1 (user ruling: shaman package): the enemies are counted first and every tick of this pulse
 // carries the multiplier 100 + EARTHQUAKE_EXTRA_ENEMY_PCT x (count - 1) in SPELLVALUE_BASE_POINT1 (the tick's effect 1
-// is empty; the value only rides on the Spell), which spell_sha_earthquake_tick applies (x1 alone, x2 at 5 enemies).
+// is empty; the value only rides on the Spell), which spell_sha_earthquake_tick applies (x1 alone, x3 at 5 enemies
+// since the 50 of 2026-11-16, AoE round 3).
 class spell_sha_earthquake : public AuraScript
 {
     PrepareAuraScript(spell_sha_earthquake);

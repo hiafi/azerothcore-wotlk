@@ -426,10 +426,16 @@ private:
             // base-point override, so the engine's normal CalcValue() runs SpellPotency::Apply()
             // with the exploding Wild Imp as caster (docs/potency-system.md). The old
             // ComputeGuardianBasePoints() owner-SP-coefficient formula is gone.
+            // Dest only, no unit target: 200828's effect target A must be a dest-referenced target
+            // (87, TARGET_DEST_DEST). A target-referenced one (53) makes InitExplicitTargets drop this
+            // dest and CheckCast fail with SPELL_FAILED_BAD_TARGETS (the imp has no victim).
             SpellCastTargets targets;
             targets.SetDst(_implodeTargetPos);
 
-            me->CastSpell(targets, explosionInfo, nullptr, TRIGGERED_FULL_MASK);
+            SpellCastResult const result = me->CastSpell(targets, explosionInfo, nullptr, TRIGGERED_FULL_MASK);
+            if (result != SPELL_CAST_OK)
+                LOG_DEBUG("scripts.ai", "npc_warl_wild_imp: {} Implosion explosion failed ({})",
+                    me->GetGUID().ToString(), uint32(result));
         }
 
         Warlock::OnWildImpDespawn(GetOwnerPlayer(), Warlock::WildImpDespawnReason::Implosion);

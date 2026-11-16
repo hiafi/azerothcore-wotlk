@@ -30,7 +30,9 @@ from . import _masks as m
 
 # Fan of Knives' weapon percent: one number for the main hand 51723, its stock off hand 52874 (rogue_spells.py) and the
 # Second Volley copies 204166 / 204167 below, so a retune of one carries to all four (potency audit F6, 2026-11-01).
-FAN_OF_KNIVES_WEAPON_POTENCY = 100
+# FAN_OF_KNIVES_WEAPON_POTENCY 100 -> 250 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: rogue packs reach
+# the 2,500-2,800 5-target band; Fan of Knives is never pressed at one target, so 1T is unchanged) [tune].
+FAN_OF_KNIVES_WEAPON_POTENCY = 250
 
 # ---- Spell.dbc flag values (src/server/shared/SharedDefines.h) ----
 _SPELLFAMILY_ROGUE = 8
@@ -632,7 +634,9 @@ second_volley_main_204166 = spell(
           'WEAPON_PERCENT_DAMAGE weapon_potency 100 (M2a, was 70) + eff1 ADD_COMBO_POINTS on the same A 18 / B 16 radius 8, Speed 18, '
           'SpellLevel 24, visual 12317, d1 b18 (m.SECOND_VOLLEY_CLASS: the dagger +50% hardcode stays), Ex3 0x10400 '
           '(main hand + SUPPRESS_CASTER_PROCS), no combo attributes, PreventionType 0. Bound to spell_rog_fan_of_knives '
-          '(one point on the selection per cast); linked to the off-hand 204167.',
+          '(one point on the selection per cast); linked to the off-hand 204167. weapon_potency 100 -> 250 (2026-11-16, '
+          'AoE round 3 on the Normal-tier kits, user ruling: rogue packs reach the 2,500-2,800 5-target band) through '
+          'FAN_OF_KNIVES_WEAPON_POTENCY.',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.SECOND_VOLLEY_CLASS),
         'EquippedItemClass': _ITEM_CLASS_WEAPON, 'EquippedItemSubclass': _ANY_MELEE_WEAPON, 'CastingTimeIndex': 1,
@@ -657,7 +661,9 @@ second_volley_off_204167 = spell(
     notes='rogue-rework S2a A3, subtlety doc "Second Volley" (U41, Known-hard 8): the off-hand copy, linked from 204166 '
           '(type 0, the 51723 -> 52874 shape). 52874\'s frame (off hand: Ex3 REQUIRES_OFF_HAND 0x1000000 + '
           'SUPPRESS_CASTER_PROCS 0x10000, Speed 18, visual 12318), eff0 weapon_potency 100 (M2a, was 70), SpellLevel 24, d1 b18 '
-          '(m.SECOND_VOLLEY_CLASS), no combo effect, no combo attributes.',
+          '(m.SECOND_VOLLEY_CLASS), no combo effect, no combo attributes. weapon_potency 100 -> 250 (2026-11-16, AoE round 3 '
+          'on the Normal-tier kits, user ruling: rogue packs reach the 2,500-2,800 5-target band) through '
+          'FAN_OF_KNIVES_WEAPON_POTENCY.',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.SECOND_VOLLEY_CLASS),
         'EquippedItemClass': _ITEM_CLASS_WEAPON, 'EquippedItemSubclass': _ANY_MELEE_WEAPON, 'CastingTimeIndex': 1,

@@ -325,14 +325,14 @@ dark_transformation_ready_203465 = _buff(
 custom_attr(dark_transformation_ready_203465, attributes=_CU_AURA_CANNOT_BE_SAVED)
 # The linked_spell(203448, -203465, 0) row that removes the marker on the cast lives with the castable (deathknight_unholy.py).
 
-# The cleave: cast BY THE GHOUL at its Claw / melee victim; bp = 50% of the hit's unmitigated damage (SPELLVALUE_BASE_POINT0,
+# The cleave: cast BY THE GHOUL at its Claw / melee victim; bp = DARK_TRANSFORMATION_CLEAVE_PCT (100%) of the hit's unmitigated damage (SPELLVALUE_BASE_POINT0,
 # so the effect is potency_excluded), the primary is excluded by the script. Physical, melee class, 8 yd around the
 # victim. ATTR3 IGNORE_CASTER_MODIFIERS: the amount is built from damage that already carries the +80%, so the engine's
 # done-bonus must not boost it again (U16: excluded from the minion seam).
 _cleave_effects = [
     Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=_TARGET_DEST_TARGET_ENEMY,
            implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=8.0,
-           potency_excluded='a share (50%) of the ghoul\'s own hit, computed by the script'),
+           potency_excluded='a share (DARK_TRANSFORMATION_CLEAVE_PCT) of the ghoul\'s own hit, computed by the script'),
 ]
 dark_transformation_cleave_203466 = spell(
     id=203466, name='Dark Transformation', school=School.NORMAL, attributes=_ATTR0_NO_ACTIVE_DEFENSE, cast_time_ms=0,
@@ -340,7 +340,7 @@ dark_transformation_cleave_203466 = spell(
     effects=_cleave_effects, spell_icon_id=_ICON_DARK_TRANSFORMATION,
     notes=(
         'S3a Unholy (U22): the transformed ghoul\'s cleave, cast by the ghoul (family 0, no bits: nothing of the owner\'s '
-        'matches it) at the victim of its melee / Claw hit. SCHOOL_DAMAGE potency_excluded (bp = 50% of '
+        'matches it) at the victim of its melee / Claw hit. SCHOOL_DAMAGE potency_excluded (bp = DARK_TRANSFORMATION_CLEAVE_PCT, 100% since 2026-11-16, of '
         'GetUnmitigatedDamage via SPELLVALUE_BASE_POINT0), Physical, DmgClass MELEE (DefenseType 2), cannot be dodged / '
         'parried / blocked. Area: A TARGET_DEST_TARGET_ENEMY (53, the victim\'s position) + B TARGET_UNIT_DEST_AREA_ENEMY (16), '
         '8 yd; the script drops the primary and keeps only enemies engaged with the owner or group. AttributesEx3 '
@@ -444,7 +444,7 @@ custom_attr(lesser_ghoul_counter_203470, attributes=_CU_AURA_CANNOT_BE_SAVED)
 # The detonation: cast at a POSITION in both branches (the ghoul at its own position, the Death Knight at the corpse
 # position): A TARGET_DEST_DEST (87) + B TARGET_UNIT_DEST_AREA_ENEMY (16), like the death explosion 203459.
 _detonation_effects = [
-    Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=80.0, potency_kind='direct', implicit_target_a=_TARGET_DEST_DEST,
+    Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=160.0, potency_kind='direct', implicit_target_a=_TARGET_DEST_DEST,
            implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=8.0),
 ]
 corpse_explosion_detonation_203471 = spell(
@@ -458,7 +458,8 @@ corpse_explosion_detonation_203471 = spell(
         'Knight at the corpse position (CastSpell x, y, z). Family 0 / no bits: Impurity (a lookup on the caster) never applies to the ghoul branch and '
         'the corpse branch applies the minion terms in its own script. Triggered; ALWAYS_HIT. The script (OnHit) scales by '
         'the ghoul\'s remaining-duration fraction, filters to engaged enemies and unsummons the ghoul in AfterCast. '
-        'SpellVisual 11080 (stock Corpse Explosion).'
+        'SpellVisual 11080 (stock Corpse Explosion). '
+        'Effect 1 ap_potency 80 -> 160 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Corpse Explosion x2).'
     ),
     raw_overrides=_raw(
         'Detonates for {pot1} Shadow damage to all enemies within 8 yards.', level=30, magic=True, SpellClassSet=0,

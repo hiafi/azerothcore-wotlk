@@ -738,7 +738,7 @@ class ShamanS3aDataTest(unittest.TestCase):
         self.assertIn((S1_SS_CLEAVE, 0x8000), {(int(r["spell_id"]), int(r["attributes"])) for r in p.custom_attrs})
         consts = {c["name"]: c["value"] for c in p.consts}
         self.assertEqual([consts[f"STATIC_SHOCK_ORB_DAMAGE_R{r}"] for r in (1, 2, 3)], [8, 26, 40])
-        self.assertEqual([consts[f"ILS_SS_CLEAVE_R{r}"] for r in (1, 2, 3)], [33, 66, 100])
+        self.assertEqual([consts[f"ILS_SS_CLEAVE_R{r}"] for r in (1, 2, 3)], [33, 66, 75])
         self.assertEqual([consts[f"THUNDERING_SURGE_R{r}"] for r in (1, 2, 3)], [24, 48, 75])
         self.assertEqual((consts["STATIC_SHOCK_ARC_PCT"], consts["ANTICIPATION_CL_JUMPS"], consts["ILS_SS_CLEAVE_TARGETS"]),
                          (55, 2, 4))
