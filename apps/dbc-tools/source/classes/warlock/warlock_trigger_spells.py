@@ -6637,7 +6637,7 @@ implosion_explosion_200828 = spell(
     range_yards=100.0,
     radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=73.0, potency_kind='direct', implicit_target_a=87, implicit_target_b=16),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=80.3, potency_kind='direct', implicit_target_a=87, implicit_target_b=16),
     ],
     spell_icon_id=2356,
     notes="warlock-rework DEMONOLOGY §5.0/§7.2/§7.3: cast by each Wild Imp on landing (MovementInform after MoveJump, §11 Q13). implicit_target_a=53 (DEST_TARGET_ENEMY), b=16 (UNIT_DEST_AREA_ENEMY), radius 8 yd - hits the primary too. SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT). Potency system P8 (warlock guardians, user-approved 2026-10-02): moved from the bespoke Warlock::ComputeGuardianBasePoints owner-SP-coefficient formula (eff0 was previously via _scaling.sb_units(0.18, 30, 87, 87)) to the standard potency curve - converted to sp_potency=48.6 (potency-report base-implied default, T=1.5s instant floor, no mismatch). pet_warlock_rework.cpp's Explode() switched from a CustomSpellValues(SPELLVALUE_BASE_POINT0) cast to a plain targeted me->CastSpell(targets, explosionInfo, nullptr, TRIGGERED_FULL_MASK) so the generated EffectBonusMultiplier_1/correction row apply through the normal CalcValue hook with the exploding Wild Imp as caster. This is a real rebalance, not a preserved total - SpellLevel=1 (no player learn level; pure guardian-cast)."
@@ -6647,7 +6647,9 @@ implosion_explosion_200828 = spell(
           " SPELL_FAILED_BAD_TARGETS (the imp has no victim): the explosion never dealt damage. 87 (DEST_DEST) keeps the passed"
           " landing point; b=16 still hits every enemy within 8 yd of it, the primary included."
           " Effect 1 sp_potency 48.6 -> 73.0 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Implosion potency"
-          " x1.5; 72.9 rounded, real ratio x1.502).",
+          " x1.5; 72.9 rounded, real ratio x1.502)."
+          " Effect 1 sp_potency 73.0 -> 80.3 (x1.10) (2026-11-16, AoE round 3 follow-up on the Normal-tier kits, user ruling:"
+          " Implosion +10%, Demonology 5 targets about 2,405 -> 2,465).",
     raw_overrides={'AttributesEx': 1024, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Speed': 0.0, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals {pot1} Shadowflame damage to all enemies within 8 yards.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'SpellLevel': 1},
 )
 

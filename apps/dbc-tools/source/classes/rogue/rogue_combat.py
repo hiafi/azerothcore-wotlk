@@ -187,9 +187,10 @@ BLADE_FLURRY_COPY_PCT = const(
     '2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: reverses the 10-28 cut, Combat pack build reaches '
     'the 2,500-2,800 5-target band).')
 BLADE_FLURRY_ENFORCER_COPY_PCT = const(
-    'BLADE_FLURRY_ENFORCER_COPY_PCT', 100, 'Blade Flurry in Enforcer Stance: copy share of the damage dealt, %; '
+    'BLADE_FLURRY_ENFORCER_COPY_PCT', 60, 'Blade Flurry in Enforcer Stance: copy share of the damage dealt, %; '
     'the aura is refreshed by the tank\'s hits so it stays up while the tank fights [tune] (new 2026-11-16, AoE '
-    'round 3 tank wave on the Normal-tier kits, user ruling: Combat tank option A).')
+    'round 3 tank wave on the Normal-tier kits, user ruling: Combat tank option A; 100 -> 60, 2026-11-16, AoE round '
+    '3 follow-up on the Normal-tier kits, user ruling: Combat tank 5T 3,369 -> about 2,500-2,600).')
 PREY_DAMAGE_HEALTH_PCT = const(
     'PREY_DAMAGE_HEALTH_PCT', 35, 'Prey on the Weak: damage clause threshold, target health % [fixed].')
 PREY_CRIT_HEALTH_PCT = const(

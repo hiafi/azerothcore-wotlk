@@ -1718,8 +1718,10 @@ blade_flurry_13877 = spell(
         '(d0 b30 | d1 b11) kept as they are (WP-BRIEF R24); tooltip and aura text = the doc, verbatim, the numbers from '
         'the BLADE_FLURRY_* consts. spell_rog_blade_flurry is unbound from 13877 only (the NPC ids keep it) and '
         'spell_rog_blade_flurry_rework bound. Tooltip adds the Enforcer Stance clause (copies '
-        'BLADE_FLURRY_ENFORCER_COPY_PCT 100%, the hits keep the aura up; Rogue::OnBladeFlurryDamage) (2026-11-16, AoE '
-        'round 3 tank wave on the Normal-tier kits, user ruling: Combat tank option A).'
+        'BLADE_FLURRY_ENFORCER_COPY_PCT, the hits keep the aura up; Rogue::OnBladeFlurryDamage) (2026-11-16, AoE '
+        'round 3 tank wave on the Normal-tier kits, user ruling: Combat tank option A). Enforcer copy share 100 -> 60 '
+        '(2026-11-16, AoE round 3 follow-up on the Normal-tier kits, user ruling: Combat tank 5T 3,369 -> about '
+        '2,500-2,600; the tooltip follows the constant).'
     ),
     raw_overrides={'AttributesEx': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your attacks strike nearby enemies.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': f"Your attacks also strike up to {_c(BLADE_FLURRY_EXTRA_TARGETS)} additional nearby enemies for {_c(BLADE_FLURRY_COPY_PCT)}% of the damage dealt. Lasts $d. In Enforcer Stance, the extra strikes deal {_c(BLADE_FLURRY_ENFORCER_COPY_PCT)}% of the damage dealt and your attacks keep Blade Flurry active. Can't be active at the same time as Sweeping Strikes, and shares a cooldown with it. Usable while shapeshifted.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassMask_1': 1073741824, 'SpellClassMask_2': 2048, 'SpellClassSet': 8, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 211, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )

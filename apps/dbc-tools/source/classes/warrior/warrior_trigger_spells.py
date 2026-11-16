@@ -3405,8 +3405,8 @@ blood_and_thunder_200054 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=245,
-    notes='Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Blood and Thunder rank (15%) - marker read by spell_warr_thunder_clap',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your Thunder Clap causes targets to bleed for 15% of the damage dealt over 9 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Thunder Clap causes targets to bleed for 15% of the damage dealt over 9 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Blood and Thunder', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Blood and Thunder rank (15%) - marker read by spell_warr_thunder_clap. Tooltip "causes targets to bleed" -> "causes up to 5 targets to bleed" (2026-11-16, AoE round 3 follow-up on the Normal-tier kits, user ruling: cap the bleed at 5 targets; spell_warrior_protection.cpp BLOOD_AND_THUNDER_MAX_TARGETS)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your Thunder Clap causes up to 5 targets to bleed for 15% of the damage dealt over 9 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Thunder Clap causes up to 5 targets to bleed for 15% of the damage dealt over 9 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Blood and Thunder', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3425,8 +3425,8 @@ blood_and_thunder_200055 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=245,
-    notes='Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Blood and Thunder rank (30%) - marker read by spell_warr_thunder_clap',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your Thunder Clap causes targets to bleed for 30% of the damage dealt over 9 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Thunder Clap causes targets to bleed for 30% of the damage dealt over 9 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Blood and Thunder', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Blood and Thunder rank (30%) - marker read by spell_warr_thunder_clap. Tooltip "causes targets to bleed" -> "causes up to 5 targets to bleed" (2026-11-16, AoE round 3 follow-up on the Normal-tier kits, user ruling: cap the bleed at 5 targets; spell_warrior_protection.cpp BLOOD_AND_THUNDER_MAX_TARGETS)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your Thunder Clap causes up to 5 targets to bleed for 30% of the damage dealt over 9 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Thunder Clap causes up to 5 targets to bleed for 30% of the damage dealt over 9 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Blood and Thunder', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
