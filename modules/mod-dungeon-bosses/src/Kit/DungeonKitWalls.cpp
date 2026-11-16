@@ -194,6 +194,10 @@ namespace DungeonKit
             return ref;
         // Lethal() first, in the registering statement (refused after the commit; X4).
         ref.Lethal().Persistent(spec.lifetime, spec.tick).NoFillTimer();
+        // Blackrock Spire R-3 n-3: as LethalRing, a wall that never strikes pets (TickWall honors pets = false) tells
+        // the bots, so a pet owner's view keeps no pet margin from it (BM ViewRules::LethalPetExtraYd).
+        if (!spec.pets)
+            ref.SparesPets();
         if (spec.color)
             ref.Color(*spec.color);
         if (spec.tag)
