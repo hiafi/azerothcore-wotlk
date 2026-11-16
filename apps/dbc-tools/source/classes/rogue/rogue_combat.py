@@ -423,7 +423,7 @@ pistol_shot_203958 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=30, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=79.2, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=83.16, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
@@ -438,7 +438,7 @@ pistol_shot_203958 = spell(
           '(SDV 1351). spell_rog_pistol_shot: latches Opportunity, OnPistolShotHit, spends one stack in AfterCast. '
           'M2a (M1 C1, [tune]): ap_potency 50 -> 120; M2c (user 2026-10-28, -25%): 120 -> 90 (the extra shot 203988 '
           'matches); ap_potency 90 -> 72 (2026-11-01, DPS balance pass 1031, user ruling: Pistol Shot -20%; 203988 matches); '
-          'ap_potency 72 -> 79.2 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Pistol Shot +10%; 203988 matches).',
+          'ap_potency 72 -> 79.2 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Pistol Shot +10%; 203988 matches). ap_potency 79.2 -> 83.16 (2026-11-15, balance round 4 on the Normal-tier kits, user ruling: Pistol Shot +5%).',
     tooltip_vars=tooltip_pistol_shot_1351,
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.PISTOL_SHOT_CLASS), 'EquippedItemClass': -1,
@@ -606,7 +606,7 @@ pistol_shot_extra_203988 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=79.2, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=83.16, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_PISTOL_SHOT,
@@ -617,7 +617,7 @@ pistol_shot_extra_203988 = spell(
           'DefenseType 2, Ex3 SUPPRESS_CASTER_PROCS, SV 90252, hidden. spell_rog_pistol_shot_extra multiplies the '
           'hit by (100 + OPPORTUNITY_EMPOWER_PCT)% when the stamp says the first shot was empowered. '
           'ap_potency 90 -> 72 (2026-11-01, DPS balance pass 1031, user ruling: Pistol Shot -20%; same line as 203958); '
-          'ap_potency 72 -> 79.2 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Pistol Shot +10%; same line as 203958).',
+          'ap_potency 72 -> 79.2 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Pistol Shot +10%; same line as 203958). ap_potency 79.2 -> 83.16 (2026-11-15, balance round 4 on the Normal-tier kits, user ruling: Pistol Shot +5%).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.PISTOL_SHOT_EXTRA_CLASS), 'EquippedItemClass': -1,
         'CastingTimeIndex': 1, 'AttributesEx3': _ATTR3_SUPPRESS_CASTER_PROCS, 'DefenseType': _DEFENSE_MELEE,

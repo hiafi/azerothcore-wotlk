@@ -280,7 +280,7 @@ prayer_of_healing_596 = spell(
     mana_cost_pct=20,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=47.5, potency_kind='heal', implicit_target_a=21, implicit_target_b=37, radius_yards=30.0),
+        Effect(type=EffectType.HEAL, sp_potency=42.75, potency_kind='heal', implicit_target_a=21, implicit_target_b=37, radius_yards=30.0),
     ],
     spell_icon_id=540,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1→level-60 slope (anchor rank 25316, rank 5); coefficient/cast_time_ms/mana_cost_pct from max rank (48072, rank 7); MaxLevel set to 80. '
@@ -292,7 +292,7 @@ prayer_of_healing_596 = spell(
           'round R4 revision, user ruling: '
           '"make the mana changes baseline", Prayer of Healing the main cut; sized with Holy '
           'Concentration\'s -45% Holy Words so Holy\'s party pin50 sim runs out of mana near 45 s). '
-          'Shared with Disc, whose sizing accounts for it (dps-balance-1031.STAGE-R4-PRIEST-REPORT.md).',
+          'Shared with Disc, whose sizing accounts for it (dps-balance-1031.STAGE-R4-PRIEST-REPORT.md). Effect 1 sp_potency 47.5 -> 42.75 (2026-11-15, balance round 4 on the Normal-tier kits, user ruling: Prayer of Healing -10% (Holy over the 4,000 goal; Disc also casts it)).',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 14, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "A powerful prayer heals the friendly target's party members within $a1 yards for {pot1}.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 512, 'SpellClassSet': 6, 'SpellLevel': 30, 'SpellVisualID_1': 194, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
