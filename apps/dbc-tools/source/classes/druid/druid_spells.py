@@ -2479,11 +2479,12 @@ upheaval_200422 = spell(
           "bonus_coefficients() below) - ap_potency=33.6 is druid-potency-report.md's base-implied default, matching "
           "the established P5/Feral convention; AP coefficient moves 0.12 -> 0.144, base V60 90 -> ~86 (essentially "
           "unchanged by construction). Same structural follow-up as Pulverize/Savage Bite/Lacerate, just not named in "
-          "the original pass's scope.",
+          "the original pass's scope. Tooltip adds 'Deals $200473s1% more damage in Bear Form.' (2026-11-16, AoE round 3 "
+          "tank wave on the Normal-tier kits, user ruling: Bear tank option A, the hidden form-8 aura 200473).",
     raw_overrides=_feral_new_raw(
         "Slams the ground, dealing {pot1} damage to up to $i enemies within $a1 yards.  "
         "When more than 5 enemies are hit, the damage to each is reduced.  Consumes up to 2 stacks of Swell, increasing damage by 25% per "
-        "stack consumed.",
+        "stack consumed.  Deals $200473s1% more damage in Bear Form.",
         **_BEAR_ATTACK_RAW, BaseLevel=34, SpellLevel=34, MaxLevel=80, MaxTargets=10, SpellClassMask_3=UPHEAVAL,
         SpellVisualID_1=189, DurationIndex=0,
     ),

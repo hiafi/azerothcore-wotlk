@@ -11,8 +11,8 @@ from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerTyp
 from lib.dsl.registry import custom_attr, pot_text, scripted_by, spell, spell_group, trained_by, unbind_script, unlink_spell
 from . import _masks as m
 from .rogue_combat import (
-    ADRENALINE_RUSH_EXTRA_POINTS, BLADE_FLURRY_COPY_PCT, BLADE_FLURRY_EXTRA_TARGETS, KILLING_SPREE_HOP_RANGE_YD,
-    _c, tooltip_sinister_strike_1350,
+    ADRENALINE_RUSH_EXTRA_POINTS, BLADE_FLURRY_COPY_PCT, BLADE_FLURRY_ENFORCER_COPY_PCT, BLADE_FLURRY_EXTRA_TARGETS,
+    KILLING_SPREE_HOP_RANGE_YD, _c, tooltip_sinister_strike_1350,
 )
 from .rogue_assassination import (
     mutilate_mh_203827, mutilate_oh_203828, tooltip_blood_spatter_1322, tooltip_seal_fate_1323,
@@ -1717,9 +1717,11 @@ blade_flurry_13877 = spell(
         'proc-check a marker); raw AttributesEx 0x20 (self buff, does not break Stealth); the stock family bits '
         '(d0 b30 | d1 b11) kept as they are (WP-BRIEF R24); tooltip and aura text = the doc, verbatim, the numbers from '
         'the BLADE_FLURRY_* consts. spell_rog_blade_flurry is unbound from 13877 only (the NPC ids keep it) and '
-        'spell_rog_blade_flurry_rework bound.'
+        'spell_rog_blade_flurry_rework bound. Tooltip adds the Enforcer Stance clause (copies '
+        'BLADE_FLURRY_ENFORCER_COPY_PCT 100%, the hits keep the aura up; Rogue::OnBladeFlurryDamage) (2026-11-16, AoE '
+        'round 3 tank wave on the Normal-tier kits, user ruling: Combat tank option A).'
     ),
-    raw_overrides={'AttributesEx': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your attacks strike nearby enemies.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': f"Your attacks also strike up to {_c(BLADE_FLURRY_EXTRA_TARGETS)} additional nearby enemies for {_c(BLADE_FLURRY_COPY_PCT)}% of the damage dealt. Lasts $d. Can't be active at the same time as Sweeping Strikes, and shares a cooldown with it. Usable while shapeshifted.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassMask_1': 1073741824, 'SpellClassMask_2': 2048, 'SpellClassSet': 8, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 211, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your attacks strike nearby enemies.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': f"Your attacks also strike up to {_c(BLADE_FLURRY_EXTRA_TARGETS)} additional nearby enemies for {_c(BLADE_FLURRY_COPY_PCT)}% of the damage dealt. Lasts $d. In Enforcer Stance, the extra strikes deal {_c(BLADE_FLURRY_ENFORCER_COPY_PCT)}% of the damage dealt and your attacks keep Blade Flurry active. Can't be active at the same time as Sweeping Strikes, and shares a cooldown with it. Usable while shapeshifted.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassMask_1': 1073741824, 'SpellClassMask_2': 2048, 'SpellClassSet': 8, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 211, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 unbind_script(13877, 'spell_rog_blade_flurry')   # 13877 only: the NPC ids 33735 / 51211 / 65956 keep the stock script

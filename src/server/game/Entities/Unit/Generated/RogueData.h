@@ -458,6 +458,7 @@ namespace RogueData
     constexpr int32 ANTICIPATION_MISSILE_WAIT_MS = 1500; // Anticipation: Deadly Throw's release poll limit, ms [fixed].
     constexpr int32 ANTICIPATION_POLL_MS = 100; // Anticipation: Deadly Throw's release poll step, ms [fixed].
     constexpr int32 BLADE_FLURRY_COPY_PCT = 60; // Blade Flurry: copy share of the damage dealt, % [tune] (40 -> 20, 2026-10-28; 20 -> 60, 2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: reverses the 10-28 cut, Combat pack build reaches the 2,500-2,800 5-target band).
+    constexpr int32 BLADE_FLURRY_ENFORCER_COPY_PCT = 100; // Blade Flurry in Enforcer Stance: copy share of the damage dealt, %; the aura is refreshed by the tank's hits so it stays up while the tank fights [tune] (new 2026-11-16, AoE round 3 tank wave on the Normal-tier kits, user ruling: Combat tank option A).
     constexpr int32 BLADE_FLURRY_EXTRA_TARGETS = 4; // Blade Flurry: copies per hit [fixed].
     constexpr float BLADE_FLURRY_RADIUS_YD = 8.0f; // Blade Flurry: copy radius around the hit target, yards [tune].
     constexpr int32 CELERITY_DURATION_MS = 4000; // Celerity: the granted Adrenaline Rush lasts this long, = 203996's duration, ms [fixed].
@@ -488,7 +489,7 @@ namespace RogueData
     constexpr float GRAPPLE_SPEED_XY = 30.0f; // Grappling Hook: horizontal speed, yards per second [tune].
     constexpr int32 HACK_AND_SLASH_CHANCE_PCT = 6; // Hack and Slash: base chance, % (x weapon speed / 2600 on autos, x Proc Chance) [fixed].
     constexpr float HONOR_AMONG_THIEVES_ALLY_RANGE_YD = 40.0f; // Honor Among Thieves: ally search range, yards [tune].
-    constexpr int32 IMPROVED_RIPOSTE_EXTRA_TARGETS = 2; // Improved Riposte capstone: extra enemies struck [fixed].
+    constexpr int32 IMPROVED_RIPOSTE_EXTRA_TARGETS = 4; // Improved Riposte capstone: extra enemies struck [fixed] (2 -> 4, 2026-11-16, AoE round 3 tank wave on the Normal-tier kits, user ruling: Combat tank option A, the [fixed] value changed on purpose).
     constexpr float IMPROVED_RIPOSTE_RADIUS_YD = 8.0f; // Improved Riposte capstone: cleave radius around the target, yards [tune].
     constexpr int32 INDISCRIMINATE_CARNAGE_RADIUS_YD = 8; // Indiscriminate Carnage: spread radius around the primary, yards [tune].
     constexpr float KILLING_SPREE_HOP_RANGE_YD = 10.0f; // Killing Spree: hop range, yards [fixed].

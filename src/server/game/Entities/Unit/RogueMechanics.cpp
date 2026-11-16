@@ -2794,7 +2794,8 @@ namespace Rogue
             rogue->HasAura(RogueData::SPELL_ENDURANCE_13872))
             rogue->CastSpell(rogue, RogueData::SPELL_ENDURANCE_RIPOSTE_HEAL, TRIGGERED_FULL_MASK);
 
-        // Improved Riposte's capstone: Riposte's damage on up to 2 more engaged enemies near the target.
+        // Improved Riposte's capstone: Riposte's damage on up to IMPROVED_RIPOSTE_EXTRA_TARGETS (4) more engaged
+        // enemies near the target.
         if (!target || !rogue->HasAura(RogueData::SPELL_IMPROVED_RIPOSTE_203968))
             return;
 
@@ -2842,10 +2843,20 @@ namespace Rogue
             IsRoguePoisonDamage(spellInfo)))
             return;
 
-        if (!rogue->HasAura(RogueData::SPELL_BLADE_FLURRY))
+        Aura* flurry = rogue->GetAura(RogueData::SPELL_BLADE_FLURRY);
+        if (!flurry)
             return;
 
-        uint32 const pct = uint32(std::max<int32>(RogueData::BLADE_FLURRY_COPY_PCT, 0));
+        // AoE round 3 tank wave (2026-11-16, Combat tank option A): in Enforcer Stance Blade Flurry copies
+        // BLADE_FLURRY_ENFORCER_COPY_PCT and stays up: a hit with under half its duration left refreshes it (at most
+        // one aura update per half duration), so it lapses only once the tank stops landing hits (combat over) or
+        // within one duration of leaving the stance. Outside the stance the 12 s aura and the DPS share are unchanged.
+        bool const enforcer = rogue->HasAura(RogueData::SPELL_ENFORCER_STANCE);
+        if (enforcer && flurry->GetMaxDuration() > 0 && flurry->GetDuration() < flurry->GetMaxDuration() / 2)
+            flurry->RefreshDuration();
+
+        uint32 const pct = uint32(std::max<int32>(enforcer ? RogueData::BLADE_FLURRY_ENFORCER_COPY_PCT :
+            RogueData::BLADE_FLURRY_COPY_PCT, 0));
         int32 const copyDamage = int32(std::min<uint64>(uint64(damage) * pct / 100,
             uint64(std::numeric_limits<int32>::max())));
         if (copyDamage <= 0)

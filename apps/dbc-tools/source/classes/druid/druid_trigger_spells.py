@@ -24,7 +24,7 @@ from ._masks import (
 from ._masks import (
     BEAR_FORM_PASSIVE, DEMORALIZING_ROAR, FERAL_BLEEDS, LACERATE, MAIM, MARKER_NOTHING, MANGLE_BEAR, MANGLE_CAT, MAUL,
     NURTURING_INSTINCT_DAMAGE, NURTURING_INSTINCT_DOT, PROC_HIT_NORMAL, PROC_SPELL_TYPE_DAMAGE, PULVERIZE, RAKE,
-    RAVAGE, RIP, RIP_FEROCIOUS_BITE, SAVAGE_ROAR, SHRED, SURVIVAL_INSTINCTS, SWIPE_BEAR, SWIPE_CAT, THRASH,
+    RAVAGE, RIP, RIP_FEROCIOUS_BITE, SAVAGE_ROAR, SHRED, SURVIVAL_INSTINCTS, SWIPE_BEAR, SWIPE_CAT, THRASH, UPHEAVAL,
 )
 
 # druid-rework Feral pass: ShapeshiftMask/ShapeshiftExclude bits (`1 << (form - 1)`,
@@ -6991,6 +6991,31 @@ bestial_fury_rage_200437 = spell(
           ' Effect_3 stays 0 (inert); EffectBasePoints_3 59 + EffectDieSides_3 1 = 60, the percentage of normal white-hit damage for a Bestial Fury bear, read by DruidFeralUnitHooks::ModifyMeleeDamage via Effects[EFFECT_2].CalcValue() when the caster has Bestial Fury 200425 (200425 itself has no free effect slot; 2026-10-08, DPS balance pass, user ruling: Bestial Fury auto-attacks at 60%).',
     raw_overrides=_feral_raw("Rage from damage dealt increased by $s1%.  Immune to Polymorph effects.",
                              EffectBasePoints_3=59, EffectDieSides_3=1),
+)
+
+
+# Upheaval in the everyday bear (form 8) only: a hidden aura linked from Bear Form 5487 / Dire Bear Form 9634
+# (linked_spell type 2, druid_talents.py; 5487 has no free effect slot, its eff2 is the +45% physical). Bestial Fury
+# (form 5, 200425) never carries it, so Bear DPS is unchanged. 2026-11-16, AoE round 3 tank wave on the Normal-tier
+# kits, user ruling: Bear tank option A, BearTankSim 5T ~2,043 -> ~2,520 (Upheaval 365 x 2.3), 1T none (the tank
+# bot never casts Upheaval on one target).
+UPHEAVAL_BEAR_TANK_DAMAGE_PCT = 130
+
+bear_form_upheaval_200473 = spell(
+    id=200473, name='Bear Form', **_feral_buff_kwargs(-1, attributes=_HIDDEN_AURA_ATTRIBUTES),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=UPHEAVAL_BEAR_TANK_DAMAGE_PCT - 1, implicit_target_a=1,
+               apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+    ],
+    spell_icon_id=107,
+    notes="NEW (2026-11-16, AoE round 3 tank wave on the Normal-tier kits, user ruling: Bear tank option A, Upheaval "
+          "+130% in Dire Bear Form only): hidden aura linked from Bear Form 5487 and Dire Bear Form 9634 "
+          "(linked_spell type 2, the 200437 precedent; 5487 has no free effect slot). eff0 ADD_PCT_MODIFIER "
+          "SPELLMOD_DAMAGE +UPHEAVAL_BEAR_TANK_DAMAGE_PCT% on Upheaval 200422 only (dword 3 UPHEAVAL); "
+          "spell_dru_upheaval's Swell / soft-cap multiplier applies on top in OnHit. Bestial Fury (form 5) never "
+          "carries it: Bear DPS unchanged. Side effect (flagged): the tank's Upheaval hit (~640) then beats Bestial "
+          "Fury's (~470 with 2 Swell).",
+    raw_overrides=_feral_raw("Upheaval damage increased by $s1%.", EffectSpellClassMaskC_1=UPHEAVAL),
 )
 
 

@@ -167,7 +167,9 @@ SURPRISE_ATTACKS_EXTRA_SHOTS = const(
 SURPRISE_SHOT_DELAY_MS = const(
     'SURPRISE_SHOT_DELAY_MS', 200, 'Surprise Attacks capstone: delay between the shots, ms [tune].')
 IMPROVED_RIPOSTE_EXTRA_TARGETS = const(
-    'IMPROVED_RIPOSTE_EXTRA_TARGETS', 2, 'Improved Riposte capstone: extra enemies struck [fixed].')
+    'IMPROVED_RIPOSTE_EXTRA_TARGETS', 4, 'Improved Riposte capstone: extra enemies struck [fixed] (2 -> 4, '
+    '2026-11-16, AoE round 3 tank wave on the Normal-tier kits, user ruling: Combat tank option A, the [fixed] value '
+    'changed on purpose).')
 IMPROVED_RIPOSTE_RADIUS_YD = const(
     'IMPROVED_RIPOSTE_RADIUS_YD', 8.0, 'Improved Riposte capstone: cleave radius around the target, yards [tune].')
 DEFT_MANEUVERS_MIN_ENEMIES = const(
@@ -184,6 +186,10 @@ BLADE_FLURRY_COPY_PCT = const(
     'BLADE_FLURRY_COPY_PCT', 60, 'Blade Flurry: copy share of the damage dealt, % [tune] (40 -> 20, 2026-10-28; 20 -> 60, '
     '2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: reverses the 10-28 cut, Combat pack build reaches '
     'the 2,500-2,800 5-target band).')
+BLADE_FLURRY_ENFORCER_COPY_PCT = const(
+    'BLADE_FLURRY_ENFORCER_COPY_PCT', 100, 'Blade Flurry in Enforcer Stance: copy share of the damage dealt, %; '
+    'the aura is refreshed by the tank\'s hits so it stays up while the tank fights [tune] (new 2026-11-16, AoE '
+    'round 3 tank wave on the Normal-tier kits, user ruling: Combat tank option A).')
 PREY_DAMAGE_HEALTH_PCT = const(
     'PREY_DAMAGE_HEALTH_PCT', 35, 'Prey on the Weak: damage clause threshold, target health % [fixed].')
 PREY_CRIT_HEALTH_PCT = const(
