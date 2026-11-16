@@ -6,9 +6,10 @@
  * The pure rules are DungeonKitRingLogic.h.
  *
  *   LethalRing    registers the ring: a telegraph-only persistent Donut, `.Lethal()` (bots never plan a way across,
- *                 inside or out), armed `armAfter` after the close; pushes out at the close and, on every tick, anyone
- *                 not kept in who got inside the disc; strikes every player and pet in the band and every one whose
- *                 step crossed it (pushed units fly over it under a grace)
+ *                 inside or out; `.SparesPets()` with pets = false), armed `armAfter` after the close; pushes out at
+ *                 the close and, on every tick, anyone not kept in who got inside the disc; strikes every player (and
+ *                 pet, unless pets = false) in the band and every one whose step crossed it (pushed units fly over it
+ *                 under a grace)
  *   RingInside    the hard bounds that keep a bot inside (the challenger): SpotBounds().Circle inside the band, for
  *                 the bot's Within(...) on the challenge's Zones
  *   LethalRings   the rings one AI raised (and their carriers): Add, Clear (Reset / JustDied / EnterEvadeMode)
@@ -47,6 +48,7 @@ namespace DungeonKit
         Milliseconds tick{ kWallTickMs };
         float zBand = 6.f;                              // units this far above or below the centre's z count
         float zTolerance = 0.f;                         // > 0: the registry hitbox's ZTolerance
+        // false: pets and guardians are never struck (pushed out), and the ring says so to the bots (SparesPets).
         bool pets = true;                               // pets and guardians die in the band too
         bool crossings = true;                          // a step across the band between ticks kills
         // The units it closes round (the challenger; the boss is a creature and never counts): never pushed. Their

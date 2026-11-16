@@ -5,9 +5,10 @@
  *
  *   LethalWall          an arena wall (The Unforgiven's Cordon, Galford's Pyre and north wall): a telegraph-only
  *                       persistent registry Line, `.Lethal()` (mod-boss-mechanics X4: bots never plan a way across),
- *                       armed `armAfter` after it registers; every tick the kit strikes each player and pet inside it,
- *                       and each one that crossed its line since the last tick (a blink, a charge, a mount); the
- *                       strike is an outright kill (user ruling, F-2): absorbs, shields and reductions never save
+ *                       armed `armAfter` after it registers; every tick the kit strikes each player and pet inside it
+ *                       (no pet with pets = false, and the wall declares `.SparesPets()`), and each one that crossed
+ *                       its line since the last tick (a blink, a charge, a mount); the strike is an outright kill
+ *                       (user ruling, F-2): absorbs, shields and reductions never save
  *   FinishLethalStrike  kills a struck victim still standing (LethalStrikeKills); the strike spell's script and the
  *                       wall's tick both call it
  *   LethalWalls         the walls one boss AI raised: Add, Clear (Reset / JustDied / EnterEvadeMode)
@@ -55,6 +56,7 @@ namespace DungeonKit
         float zBand = 6.f;                              // the crossing check's floor band round the wall's height
         float zTolerance = 0.f;                         // > 0: the registry hitbox's ZTolerance (0: its default)
         bool pets = true;                               // pets, guardians and charmed units die too (ST: "Pets too")
+                                                        // false: spared, and the wall declares .SparesPets() (bots)
         bool crossings = true;                          // also strike a unit whose step went across between ticks
         std::optional<BossMechanics::Color> color;      // default: the encounter's get-out color
         uint32 tag = 0;

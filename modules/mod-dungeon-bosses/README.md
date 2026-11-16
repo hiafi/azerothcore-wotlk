@@ -208,7 +208,10 @@ The ring wall (`DungeonKitRing.h`), the circle form of `LethalWall` for Drakkisa
 never totems), arms after 1.5 s, and for its life (12 s) strikes whoever stands in the band or crosses it (an outright
 kill, as the arena walls). A unit the kit pushed flies over the band under a grace; with `pushDuringLife` anyone not
 kept in found inside the disc later is pushed out again. `RingInside(spec)` is the challenger bot's `Within` bounds.
-`carrierEntry` / `carrierAura` spawn the ring's look (despawned by `LethalRings::Clear`).
+`carrierEntry` / `carrierAura` spawn the ring's look (despawned by `LethalRings::Clear`). With `pets = false` (the
+duel ring, by ruling) pets and guardians are never struck, and the ring declares `.SparesPets()`, so a bot that owns a
+pet keeps no pet margin from it (Blackrock Spire F-3: with one, a pet owner found no spot inside the ring clear of the
+Thunderclap). `LethalWall` with `pets = false` declares it the same way (none does today).
 
 Tests: `tests/kit_fronts_test.cpp` (pure plans and the ring rules) and `tests/kit_fronts_parity_test.cpp` (the
 mirrored BM rules, run when `BM_SRC` or `../mod-boss-mechanics/src` has `MechanicFront.h`).

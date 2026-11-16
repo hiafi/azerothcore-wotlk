@@ -371,8 +371,10 @@ namespace BrsGeneralsArmy
     float constexpr kRingWidth = DungeonKit::kRingDefaultWidthYd;      // a 2 yd band
     std::uint32_t constexpr kRingArmMs = DungeonKit::kRingArmMs;       // 1.5 s: the push lands first
     std::uint32_t constexpr kRingLifeMs = kChallengeMs - kRingArmMs;   // close to end: 12 s
-    bool constexpr kRingStrikesPets = false;        // default pending the user: pets are pushed out, never killed
-    bool constexpr kRingSparesChallenger = false;   // default pending the user: the challenger dies stepping out
+    // User ruling 2026-11-15 (HANDOFF section 10): pets are pushed out, never killed. The kit then declares the ring
+    // SparesPets, so a pet owner's bot keeps no pet margin from it (F-3: with one, no spot fit the Thunderclap).
+    bool constexpr kRingStrikesPets = false;
+    bool constexpr kRingSparesChallenger = false;   // same ruling: the challenger dies stepping out
 
     // The ring's centre: on him, unless the challenger stands so far out that the band would be under them; then
     // shifted toward the challenger so they stand kChallengerMaxFromCentreYd from it (both well inside the band).

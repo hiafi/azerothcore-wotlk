@@ -4,7 +4,8 @@
 // The timing is the boss's own (EmberseerLogic.h PulseSpec through the kit's pure planner DungeonKitFrontLogic.h
 // PlanRings, the plan FrontDirector registers); the bots are mod-boss-mechanics' brain model (tests/brain_model.h) on
 // its solver, the hazards built as the bot view builds them (RF tests/front_test.cpp). Normal and heroic, 5 and 10
-// bots, the group close (ranged 5-9 yd: the RF report's "within about 9 yd") or at its usual 15-19 yd.
+// bots, the group close (ranged 5-9 yd: the RF report's "within about 9 yd") or at its usual 15-19 yd. Each case on
+// the live timing (Blackrock Spire F-3: BrainModel::Config::Live) and on the model's own.
 //
 // Needs mod-boss-mechanics' src and tests (not part of tests/run.sh's pure list): run.sh's BM_SRC block, or
 //   g++ -std=c++20 -O1 -I src/Kit -I src/BlackrockSpire -I tests -I $BM/src -I $BM/tests
@@ -123,10 +124,12 @@ namespace
 
     // 60 s of pulses at a fixed stack count (the rings and the nova radius of that count), the boss on the apex at the
     // dais's centre, the group round him drifting back to its spots between pulses (stock follow).
-    Result Run(Case const& c, std::uint32_t seed)
+    Result Run(Case const& c, std::uint32_t seed, bool live)
     {
         BrainModel::Config cfg;
         cfg.params.marginMs = Ms(300);
+        if (live)
+            cfg.Live();
         BrainModel::World world;
         world.cfg = cfg;
         std::vector<Vec3> slots;
@@ -199,7 +202,7 @@ namespace
         for (Ms now = t0; now < end; now += cfg.step)
         {
             for (Pending& p : pending)
-                if (p.h.id != 0 && p.at <= now)
+                if (p.h.id != 0 && p.at + cfg.sightLag <= now)
                 {
                     world.AddHazard(p.h);
                     p.h.id = 0;
@@ -225,13 +228,67 @@ namespace
         return out;
     }
 
+    // R-3 n-5: the model timing's nova backstop (CheckCase).
+    float constexpr kModelNovaBackstopPct = 20.f;
+
+    // One case over four seeds on the given timing, printed and gated (TestPulses).
+    void CheckCase(Case const& c, bool live)
+    {
+        Result sum;
+        for (std::uint32_t seed = 0; seed < 4; ++seed)
+        {
+            Result const r = Run(c, seed, live);
+            sum.c.Add(r.c);
+            sum.novaHits += r.novaHits;
+            sum.ringHits += r.ringHits;
+            sum.ringPasses += r.ringPasses;
+            sum.novaPasses += r.novaPasses;
+            sum.firstRingHits += r.firstRingHits;
+            sum.laterRingHits += r.laterRingHits;
+            for (std::size_t k = 0; k < sum.byRing.size(); ++k)
+                sum.byRing[k] += r.byRing[k];
+        }
+        float const ringPct = 100.f * float(sum.ringHits) / float(std::max(1u, sum.ringPasses));
+        float const novaPct = 100.f * float(sum.novaHits) / float(std::max(1u, sum.novaPasses));
+        std::printf("emberseer bots %s %-27s %2u bots, ranged %2.0f yd: nova %3u of %3u (%4.1f%%), rings %3u of "
+            "%3u (%4.1f%%; by ring %u/%u/%u/%u); solves %4u, fallback %4u, solve us max %4lld mean %4lld\n",
+            live ? "live" : "host", c.name, c.bots, c.rangedYd, sum.novaHits, sum.novaPasses, novaPct, sum.ringHits,
+            sum.ringPasses, ringPct, sum.byRing[0], sum.byRing[1], sum.byRing[2], sum.byRing[3], sum.c.solves,
+            sum.c.Fallbacks(),
+            static_cast<long long>(sum.c.solveUsMax),
+            static_cast<long long>(sum.c.solves ? sum.c.solveUsTotal / sum.c.solves : 0));
+        CHECK(sum.ringPasses > 0 && sum.novaPasses > 0);
+        // Ring 1's slice, shown 5 s ahead (ruling 1), is reached: no bot takes ring 1 on the model's timing, at
+        // most 2% of ring 1's passes (one per pulse and bot) on the live one.
+        if (live)
+            CHECK(sum.firstRingHits * 50 <= sum.novaPasses);
+        else
+            CHECK(sum.firstRingHits == 0);
+        if (c.maxRingPct >= 0.f)
+            CHECK(ringPct <= c.maxRingPct);
+        if (c.maxNovaPct >= 0.f && live)
+            CHECK(novaPct <= c.maxNovaPct);
+        // R-3 n-5: the model's own timing is the suite's only late mover (an escape started one decision late), so
+        // its nova keeps a looser backstop on every gated case (17.5% at most after F-3).
+        if (c.maxNovaPct >= 0.f && !live)
+            CHECK(novaPct <= kModelNovaBackstopPct);
+    }
+
     void TestPulses()
     {
         // Normal 1 / 2 / 3 rings at 3 / 10 / 16 stacks (and 19: a 12.7 yd nova), heroic 2 / 3 / 4. Gates (the group
         // close, the setup the boss plays for): ring hits at most 2% (normal) / 3% (heroic up to 3 rings), nova hits
         // at most 15%. Heroic 4 rings (14+ stacks, reached only by missing posts; user ruling 2026-11-15 keeps the
-        // design): rings at most 10%, nova at most 20% (WP-SF's ring orbit + the kit's nextTurnDeg hint: ~5.5%).
-        // The ranged at 15 yd are reported only.
+        // design): rings at most 10%, nova at most 20% (WP-SF's ring orbit + the kit's nextTurnDeg hint + F-3's
+        // orbit timing: ~6-8% live). The ranged at 15 yd are reported only.
+        // Blackrock Spire F-3: every case runs on the live timing (BrainModel::Config::Live: movement at once, the
+        // shapes seen one update late, the registry's swept judge) and on the model's own (movement startDelay
+        // after each decision). The live run holds every gate: the model's own timing hid the heroic rings' misses
+        // of the live sweeps (25-28% here before F-3's orbit timing). On it, ring 1 may be clipped at its launch by
+        // a bot that leaves the nova (seen one update late) at the slice's edge: at most 2% of ring 1's passes (the
+        // live sweeps: 0.1-1.0%); on the model's own timing, never. The nova gate is the live run's: the model's own
+        // timing starts every escape 150 ms late, which the nova's 2.5 s (the tightest exit) pays for most (normal
+        // 19 stacks: 17.5% on it, 11.2% live, 8.8% with only the movement made live); there it has a 20% backstop.
         Case const cases[] = {
             { "normal  3 stacks (1 ring)", false, 3, 5, 5.f, 2.f, 15.f },
             { "normal 10 stacks (2 rings)", false, 10, 5, 5.f, 2.f, 15.f },
@@ -250,38 +307,9 @@ namespace
             { "heroic 10 stacks (3 rings)", true, 10, 10, 15.f, -1.f, -1.f },
             { "heroic 16 stacks (4 rings)", true, 16, 10, 15.f, -1.f, -1.f },
         };
-        for (Case const& c : cases)
-        {
-            Result sum;
-            for (std::uint32_t seed = 0; seed < 4; ++seed)
-            {
-                Result const r = Run(c, seed);
-                sum.c.Add(r.c);
-                sum.novaHits += r.novaHits;
-                sum.ringHits += r.ringHits;
-                sum.ringPasses += r.ringPasses;
-                sum.novaPasses += r.novaPasses;
-                sum.firstRingHits += r.firstRingHits;
-                sum.laterRingHits += r.laterRingHits;
-                for (std::size_t k = 0; k < sum.byRing.size(); ++k)
-                    sum.byRing[k] += r.byRing[k];
-            }
-            float const ringPct = 100.f * float(sum.ringHits) / float(std::max(1u, sum.ringPasses));
-            float const novaPct = 100.f * float(sum.novaHits) / float(std::max(1u, sum.novaPasses));
-            std::printf("emberseer bots %-27s %2u bots, ranged %2.0f yd: nova %3u of %3u (%4.1f%%), rings %3u of %3u "
-                "(%4.1f%%; by ring %u/%u/%u/%u); solves %4u, fallback %4u, solve us max %4lld mean %4lld\n", c.name,
-                c.bots, c.rangedYd, sum.novaHits, sum.novaPasses, novaPct, sum.ringHits, sum.ringPasses, ringPct,
-                sum.byRing[0], sum.byRing[1], sum.byRing[2], sum.byRing[3], sum.c.solves, sum.c.Fallbacks(),
-                static_cast<long long>(sum.c.solveUsMax),
-                static_cast<long long>(sum.c.solves ? sum.c.solveUsTotal / sum.c.solves : 0));
-            CHECK(sum.ringPasses > 0 && sum.novaPasses > 0);
-            // Ring 1's slice, shown 5 s ahead (ruling 1), is always reached: no bot takes ring 1 in any case.
-            CHECK(sum.firstRingHits == 0);
-            if (c.maxRingPct >= 0.f)
-                CHECK(ringPct <= c.maxRingPct);
-            if (c.maxNovaPct >= 0.f)
-                CHECK(novaPct <= c.maxNovaPct);
-        }
+        for (bool const live : { true, false })
+            for (Case const& c : cases)
+                CheckCase(c, live);
     }
 }
 
