@@ -799,6 +799,10 @@ def _check_report(
     check_stock_spells = state.load_stock_rows(dbcfmt.SPELL)
     for warning in lint.check_family_zero_spellmods(spell_entries, check_rows, check_stock_spells):
         print(f"WARNING: {warning}")
+    # The write run's wrong-letter classmask lint, so --check catches it too (Bear Form Upheaval aura 200473 shipped
+    # with its mask on EffectSpellClassMaskC_1 and a family-wide +130% SPELLMOD_DAMAGE, 2026-11-16).
+    for warning in lint.check_classmask_scoping(spell_entries, check_rows, check_stock_spells):
+        print(f"WARNING: {warning}")
     # Shaman T1 lints and the family-bit rules, over the declared population. --check has no promoted-aware
     # spell/SLA state: the base rows are the stock client file and only declared SkillLineAbility rows count.
     for warning in _t1_content_warnings(

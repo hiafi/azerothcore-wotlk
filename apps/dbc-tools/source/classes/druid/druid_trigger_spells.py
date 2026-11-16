@@ -7014,8 +7014,10 @@ bear_form_upheaval_200473 = spell(
           "SPELLMOD_DAMAGE +UPHEAVAL_BEAR_TANK_DAMAGE_PCT% on Upheaval 200422 only (dword 3 UPHEAVAL); "
           "spell_dru_upheaval's Swell / soft-cap multiplier applies on top in OnHit. Bestial Fury (form 5) never "
           "carries it: Bear DPS unchanged. Side effect (flagged): the tank's Upheaval hit (~640) then beats Bestial "
-          "Fury's (~470 with 2 Swell).",
-    raw_overrides=_feral_raw("Upheaval damage increased by $s1%.", EffectSpellClassMaskC_1=UPHEAVAL),
+          "Fury's (~470 with 2 Swell). FIX 2026-11-16: the mask was on EffectSpellClassMaskC_1 (= Effect_3, dword "
+          "1), leaving eff0's mask all-zero = every druid spell (+130% Mangle/Maul/Thrash/Lacerate direct hits in "
+          "Bear Form); now EffectSpellClassMaskA_3 (letter = effect, number = dword).",
+    raw_overrides=_feral_raw("Upheaval damage increased by $s1%.", EffectSpellClassMaskA_3=UPHEAVAL),
 )
 
 
