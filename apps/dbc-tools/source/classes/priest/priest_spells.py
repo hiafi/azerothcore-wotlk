@@ -1269,6 +1269,11 @@ mind_sear_48045 = spell(
 # ~500c/level) - no data exists past level 34 on this trainer to anchor to more precisely; flagged
 # as a first-pass estimate like this rework's other placeholder tuning numbers.
 trained_by(mind_sear_48045, trainer_id=208, req_level=44, money_cost=17000)
+# Pain and Suffering (8,1) capstone (2026-11-15, AoE round 1 on the Normal-tier kits, user ruling: Devouring Plague
+# spreads one target at a time with Mind Sear): an AuraScript on the channel aura's periodic tick copies the priest's
+# Devouring Plague to one nearby enemy without it (spell_priest_shadow.cpp, Priest::SpreadDevouringPlague). It reads
+# rank 3 (47582) on the caster and does nothing without it.
+scripted_by(mind_sear_48045, 'spell_pri_mind_sear_plague_spread')
 
 
 divine_hymn_64843 = spell(

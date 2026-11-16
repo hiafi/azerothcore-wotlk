@@ -26,6 +26,7 @@
 #include "SpellInfo.h"
 #include "Unit.h"
 #include "Util.h"
+#include <vector>
 
 namespace
 {
@@ -234,6 +235,11 @@ namespace
 
         return castSpell->SpellFamilyFlags.HasFlag(PRIEST_HEAL_MASK_DW1, PRIEST_HEAL_MASK_DW2, PRIEST_HEAL_MASK_DW3);
     }
+
+    // Set only around Priest::SpreadDevouringPlague's AddAura (Pain and Suffering's capstone). Map
+    // updates can run on several threads, so the flag is per thread; the AddAura call that reads it
+    // through spell_pri_devouring_plague's OnEffectApply runs synchronously on the same thread.
+    thread_local bool spreadingDevouringPlague = false;
 }
 
 namespace Priest
@@ -842,5 +848,60 @@ namespace Priest
         float chance = float(deathspeaker->GetAmount()) * (1.0f + killerPlr->GetProcChancePercentage() / 100.0f);
         if (roll_chance_f(chance))
             TrySummonTentacle(killerPlr, TentacleTrigger::Kill);
+    }
+
+    Aura* SpreadDevouringPlague(Unit* caster, Aura const* source, Unit* target)
+    {
+        if (!caster || !source || !target || source->IsRemoved() || !target->IsAlive())
+            return nullptr;
+
+        int32 const remaining = source->GetDuration();
+        if (remaining <= 0)
+            return nullptr;
+
+        SpellInfo const* spellInfo = source->GetSpellInfo();
+
+        // Unit::_AddAura removes every other registered single-target aura of the same spell the
+        // moment the copy lands, which would take the source (or the last real cast) off its unit.
+        std::vector<Aura*> held;
+        Unit::AuraList& singleCast = caster->GetSingleCastAuras();
+        for (Aura* aura : singleCast)
+            if (aura->GetSpellInfo()->IsRankOf(spellInfo))
+                held.push_back(aura);
+
+        for (Aura* aura : held)
+            aura->UnregisterSingleTarget();
+
+        spreadingDevouringPlague = true;
+        Aura* copy = caster->AddAura(spellInfo, MAX_EFFECT_MASK, target);
+        spreadingDevouringPlague = false;
+
+        if (copy && copy->IsSingleTarget())
+            copy->UnregisterSingleTarget();
+
+        for (Aura* aura : held)
+        {
+            if (aura->IsRemoved())
+                continue;
+
+            aura->SetIsSingleTarget(true);
+            singleCast.push_back(aura);
+        }
+
+        if (!copy)
+            return nullptr;
+
+        if (remaining < copy->GetMaxDuration())
+        {
+            copy->SetMaxDuration(remaining);
+            copy->SetDuration(remaining);
+        }
+
+        return copy;
+    }
+
+    bool IsSpreadingDevouringPlague()
+    {
+        return spreadingDevouringPlague;
     }
 }

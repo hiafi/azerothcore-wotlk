@@ -65,12 +65,13 @@ EXPECTED_CAPSTONES = {
                         "Sinister Calling", "Surprise Attacks", "Throwing Specialization", "Toxic Blade",
                         "Venomous Fan", "Vile Poisons", "Waylay", "Endurance", "Deflection", "Reinforced Leather"}),
     # Priest: the rework's 25 capstones (Disc, Holy, Shadow) plus Holy Concentration's Holy Word mana-regen one of the
-    # DPS balance pass 1031 (user 2026-11-01) and Grace's Penance shield (balance round 3 on the Normal-tier kits,
-    # user ruling 2026-11-15).
+    # DPS balance pass 1031 (user 2026-11-01), Grace's Penance shield (balance round 3 on the Normal-tier kits,
+    # user ruling 2026-11-15) and Pain and Suffering's Mind Sear Devouring Plague spread (AoE round 1, 2026-11-15).
     "priest": frozenset({"Aspiration", "Blessed Recovery", "Dissolving Shadows", "Divine Aegis", "Empowered Renew",
                          "Focused Power", "Focused Will", "Grace", "Healing Focus", "Holy Concentration", "Holy Reach",
                          "Holy Wrath", "Improved Devouring Plague", "Improved Flash Heal",
-                         "Improved Power Word: Shield", "Lash of Insanity", "Meditation", "Renewed Hope", "Reprieve",
+                         "Improved Power Word: Shield", "Lash of Insanity", "Meditation", "Pain and Suffering",
+                         "Renewed Hope", "Reprieve",
                          "Serendipity", "Shadow Affinity", "Shadow Power", "Shadow Reach", "Spirit of Redemption",
                          "Test of Faith", "Void-touched Mind", "Writhing Agony"}),
     # Shaman: the rework's 42 capstones (Elemental, Enhancement, Restoration) plus the three Enhancement tank survivability

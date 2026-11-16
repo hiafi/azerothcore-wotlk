@@ -2503,3 +2503,6 @@ scripted_by(scorch_2948, 'spell_mage_scorch')
 scripted_by(flamestrike_2120, 'spell_mage_flamestrike')
 scripted_by(flashpoint_200111, 'spell_mage_flashpoint')
 scripted_by(pyroblast_11366, 'spell_mage_pyroblast')
+# Arcane Resonance capstone (2026-11-15, AoE round 1 on the Normal-tier kits): each Arcane Explosion adds an Arcane Blast
+# stack. The per-stack cost is 36032's effect 3 (mage_trigger_spells.py, spell_mage_arcane_blast_stacks).
+scripted_by(arcane_explosion_1449, 'spell_mage_arcane_explosion')
