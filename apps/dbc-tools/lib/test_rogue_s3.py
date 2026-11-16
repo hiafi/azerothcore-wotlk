@@ -303,7 +303,7 @@ CONSTS = {   # name -> (value, cpp type), brief section 6
     "DEFT_MANEUVERS_MIN_ENEMIES": (3, "int32"), "DEFT_MANEUVERS_MAX_POINTS": (5, "int32"),
     "DEFT_MANEUVERS_RADIUS_YD": (8.0, "float"), "BLADE_FLURRY_EXTRA_TARGETS": (4, "int32"),
     "BLADE_FLURRY_RADIUS_YD": (8.0, "float"), "BLADE_FLURRY_COPY_PCT": (60, "int32"),
-    "BLADE_FLURRY_ENFORCER_COPY_PCT": (60, "int32"),
+    "BLADE_FLURRY_ENFORCER_COPY_PCT": (75, "int32"),
     "PREY_DAMAGE_HEALTH_PCT": (35, "int32"), "PREY_CRIT_HEALTH_PCT": (90, "int32"),
     "HACK_AND_SLASH_CHANCE_PCT": (6, "int32"), "KILLING_SPREE_HOP_RANGE_YD": (10.0, "float"),
     "KILLING_SPREE_STRIKE_INTERVAL_MS": (500, "int32"), "GRAPPLE_SPEED_XY": (30.0, "float"),
