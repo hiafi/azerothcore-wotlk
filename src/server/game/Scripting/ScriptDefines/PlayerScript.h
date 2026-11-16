@@ -32,6 +32,8 @@ namespace Trainer
     enum class SpellState : uint8;
 }
 
+enum QuestGiverStatus : uint32; // Custom: featured quests (OnPlayerGetQuestDialogStatus)
+
 namespace WorldPackets::NPC
 {
     class TrainerList;
@@ -235,6 +237,7 @@ enum PlayerHook
     PLAYERHOOK_ON_BEFORE_RECEIVE_SPELL_LIST_FROM_TRAINER,
     PLAYERHOOK_ON_GET_TRAINER_SPELL_STATE,
     PLAYERHOOK_ON_AFTER_TRAIN_SPELL,
+    PLAYERHOOK_ON_GET_QUEST_DIALOG_STATUS, // Custom: featured quests
     PLAYERHOOK_END
 };
 
@@ -966,6 +969,18 @@ public:
      * @param spellId The id of the trainer spell that was bought
      */
     virtual void OnPlayerAfterTrainSpell(Player* /*player*/, Creature* /*trainer*/, uint32 /*spellId*/) {}
+
+    /**
+     * @brief Custom: called from Player::GetQuestDialogStatus for a quest the player has not taken yet and
+     * can see, right after its quest-giver status (available, low level, repeatable or unavailable) was
+     * worked out. The quest giver shows the highest status over all its quests.
+     *
+     * @param player Contains information about the Player
+     * @param quest The quest the giver offers
+     * @param status The status worked out for this quest, to be read and overwritten
+     */
+    virtual void OnPlayerGetQuestDialogStatus(Player* /*player*/, Quest const* /*quest*/,
+        QuestGiverStatus& /*status*/) {}
 };
 
 #endif

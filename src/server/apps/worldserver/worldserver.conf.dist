@@ -4920,6 +4920,18 @@ Custom.Realm.Classless = 0
 Custom.TalentUI.Enable = 1
 
 #
+#    Custom.FeaturedQuests.Enable
+#        Description: Featured quests, the "golden path" (world table custom_featured_quest). Featured quests
+#                     (Tier 1) keep a yellow "!" when outlevelled and pay full XP that partly grows with the
+#                     player (the quest XP of max(quest level, player level - 5)); filler quests (Tier 2) show
+#                     as low level, so they are hidden unless Minimap tracking > Low Level Quests is on.
+#                     Implemented by src/server/scripts/Custom/custom_featured_quests.cpp.
+#        Default:     1 - (Enabled)
+#                     0 - (Disabled)
+
+Custom.FeaturedQuests.Enable = 1
+
+#
 ###################################################################################################
 
 ###################################################################################################
