@@ -12,6 +12,7 @@ from lib.dsl.registry import (
 from ._masks import BLOOM, CENARION_WARD, MASS_ENTANGLEMENT, STARSURGE
 from ._masks import BERSERK_COST, IRONFUR, PULVERIZE, THRASH, UPHEAVAL  # druid-rework Feral pass
 from ._masks import RIP, RIP_FEROCIOUS_BITE  # Primal Wrath (AoE round 3) carries Rip's family bits
+from ._masks import THRASH_CAT  # Thrash (Cat) 200474 (AoE round 3 follow-up)
 from .druid_trigger_spells import (
     bloom_jump_200561, cenarion_ward_heal_200563, flourish_buff_200565, hurricane_42231,
     starfall_50286, tranquility_44203, typhoon_61391,
@@ -2802,3 +2803,67 @@ trained_by(primal_wrath_200472, trainer_id=216, req_level=42, money_cost=14000)
 skill_line_ability(id=30441, skill_line=134, spell_id=primal_wrath_200472.id, class_mask=1024)
 # Primal Precision's capstone: cat finishers take time off Berserk (the same binding as Rip's, druid_talents.py).
 scripted_by(primal_wrath_200472, 'spell_dru_primal_precision')
+
+
+# ============================================================================
+# Thrash (Cat) (2026-11-16, AoE round 3 follow-up on the Normal-tier kits, user ruling: "For feral, we should also let
+# it use Thrash"; option B of blackrock-gear.AOE3-SUGGESTIONS-ROGUE-DRUIDFERAL.md).
+# ============================================================================
+
+thrash_cat_200474 = spell(
+    id=200474,
+    name='Thrash (Cat)',
+    school=School.NORMAL,
+    attributes=262160,  # Thrash's
+    cast_time_ms=0,
+    cooldown_ms=6000,
+    category_cooldown_ms=0,
+    power_type=PowerType.ENERGY,
+    mana_cost=50,
+    mana_cost_pct=0,
+    range_yards=5.0,
+    duration_ms=12000,
+    effects=[
+        # Thrash 200423's hit and bleed at the same potency, 8 yd around the druid (Thrash is 10 yd).
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=90.45, potency_kind='direct', implicit_target_a=22,
+               implicit_target_b=15, radius_yards=8.0),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=14.88, potency_kind='periodic', mechanic=15, implicit_target_a=22,
+               implicit_target_b=15, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000, radius_yards=8.0),
+        # Swipe (Cat)'s combo point effect: on the explicit target only (base 0 + 1 die = 1 point), so one per cast.
+        Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
+    ],
+    spell_icon_id=496,  # Thrash's (Ability_Druid_Swipe)
+    notes=(
+        "NEW (2026-11-16, AoE round 3 follow-up on the Normal-tier kits, user ruling: \"For feral, we should also let it "
+        "use Thrash\", option B): a Cat Form copy of Thrash 200423. Hit ap_potency 90.45 and bleed ap_potency 14.88 "
+        "(4 ticks of 3 sec over 12 sec), Thrash's own numbers, on every enemy within 8 yd of the druid (A 22 / B 15); "
+        "Thrash's -6% armor effect is dropped for the combo point effect (ADD_COMBO_POINTS on the explicit target, "
+        "Swipe (Cat)'s shape: 1 point per cast, on the target only). 50 energy, 6 sec cooldown, melee range target, "
+        "Cat Form only. One target: ~1,370 for 50 energy (27 per energy) against Shred's ~29, so single target is "
+        "neutral. Family bit THRASH_CAT (dword 1 bit 26), not Thrash's THRASH: Ferocity's rage-cost modifier names "
+        "THRASH and would cut the energy cost by 11. THRASH_CAT is in FERAL_BLEEDS (Infected Wounds +9% bleed, Primal "
+        "Gore crit damage), BERSERK_COST (-50% cost) and the Nurturing Instinct buff, and in Rending Swipes' two "
+        "modifiers; the Rending Swipes damage hook (DruidMechanics.cpp) counts its bleed as Thrash. Primal Gore's "
+        "Mastery reaches it through the bleed mechanic. Not: Ferocity, Rend and Tear (Rip/Lacerate only), Primal Fury "
+        "and Berserk's +4 combo points (builder lists without it, like Swipe (Cat)), the Bestial Fury Swell script "
+        "(spell_dru_thrash is not bound). Stacks with bear Thrash (a different spell). Learned at 30 with Thrash "
+        "(trainer 216), Feral Combat skill line row 30442. Visual: Thrash's 189."
+    ),
+    raw_overrides={
+        'AttributesEx': 134218240, 'CastingTimeIndex': 1, 'DefenseType': 2, 'PreventionType': 2, 'ProcChance': 101,
+        'RangeIndex': 2, 'FacingCasterFlags': 1, 'SpellClassSet': 7, 'EquippedItemClass': -1,
+        'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '',
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': (
+            'Deals {pot1} damage to enemies within $a1 yards and causes them to bleed for {pot2.total} damage over '
+            '$d.  Awards 1 combo point.'
+        ),
+        'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} damage every $t2 sec.',
+        'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0,
+        'ShapeshiftMask': SS_CAT, 'SpellClassMask_1': THRASH_CAT, 'SpellLevel': 30, 'SpellVisualID_1': 189,
+        'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000,
+    },
+)
+trained_by(thrash_cat_200474, trainer_id=216, req_level=30, money_cost=6000)
+# Feral Combat skill line 134, next Feral spare id after Primal Wrath's 30441 (druid-rework.PLAN.md §4.3: 30439-30445).
+skill_line_ability(id=30442, skill_line=134, spell_id=thrash_cat_200474.id, class_mask=1024)

@@ -501,6 +501,10 @@ namespace Druid
     // the caster's Rip (GetFeralDamageDoneMultiplier, druid_hooks.cpp's DruidRendAndTearCrit).
     constexpr uint32 SPELL_PRIMAL_WRATH = 200472;
 
+    // Thrash (Cat) (AoE round 3 follow-up, 2026-11-16): a Cat Form copy of Thrash; Rending Swipes'
+    // damage hook counts its bleed as the caster's Thrash (GetFeralDamageDoneMultiplier).
+    constexpr uint32 SPELL_THRASH_CAT = 200474;
+
     // Talent ranks read at runtime (FERAL §7; "C" rows only). Ranks are read by rank spell id,
     // highest first, through GetRankAmount - never by icon (PLAN §2).
     constexpr uint32 SPELL_ELDER_HIDE_R1 = 200440;

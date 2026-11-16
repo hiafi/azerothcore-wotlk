@@ -1230,9 +1230,10 @@ namespace Druid
         {
             uint32 const id = spellInfo->Id;
 
-            // Rending Swipes (4,0): Swipe and Upheaval vs a target carrying the caster's Thrash.
+            // Rending Swipes (4,0): Swipe and Upheaval vs a target carrying the caster's Thrash (bear or
+            // the Cat copy).
             if ((id == SPELL_SWIPE_BEAR || id == SPELL_SWIPE_CAT || id == SPELL_UPHEAVAL) &&
-                victim->HasAura(SPELL_THRASH, casterGuid))
+                (victim->HasAura(SPELL_THRASH, casterGuid) || victim->HasAura(SPELL_THRASH_CAT, casterGuid)))
                 if (int32 pct = GetRankAmount(player, { SPELL_RENDING_SWIPES_R2, SPELL_RENDING_SWIPES_R1 }, EFFECT_2))
                     AddPct(mult, pct);
 

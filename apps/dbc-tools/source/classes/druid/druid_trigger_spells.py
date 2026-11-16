@@ -24,7 +24,8 @@ from ._masks import (
 from ._masks import (
     BEAR_FORM_PASSIVE, DEMORALIZING_ROAR, FERAL_BLEEDS, LACERATE, MAIM, MARKER_NOTHING, MANGLE_BEAR, MANGLE_CAT, MAUL,
     NURTURING_INSTINCT_DAMAGE, NURTURING_INSTINCT_DOT, PROC_HIT_NORMAL, PROC_SPELL_TYPE_DAMAGE, PULVERIZE, RAKE,
-    RAVAGE, RIP, RIP_FEROCIOUS_BITE, SAVAGE_ROAR, SHRED, SURVIVAL_INSTINCTS, SWIPE_BEAR, SWIPE_CAT, THRASH, UPHEAVAL,
+    RAVAGE, RIP, RIP_FEROCIOUS_BITE, SAVAGE_ROAR, SHRED, SURVIVAL_INSTINCTS, SWIPE_BEAR, SWIPE_CAT, THRASH, THRASH_CAT,
+    UPHEAVAL,
 )
 
 # druid-rework Feral pass: ShapeshiftMask/ShapeshiftExclude bits (`1 << (form - 1)`,
@@ -7139,7 +7140,10 @@ _RENDING_SWIPES_TEXT = ("Increases the damage of your Thrash and Swipe by $s1%. 
                         "$s3% increased damage from your Swipe and Upheaval.")
 _RENDING_SWIPES_NOTES = ("NEW (druid-rework FERAL §7 (4,0), WP-BRIEF §3), talent 60042: +10/20% Thrash (hit and bleed) "
                          "and Swipe (Bear/Cat) damage; eff2 DUMMY 5/10 = bonus for Swipe (Bear/Cat) and Upheaval vs "
-                         "targets with the caster's Thrash (Druid damage hooks).")
+                         "targets with the caster's Thrash (Druid damage hooks)."
+                         " EffectSpellClassMaskA_1 / B_1 THRASH_CAT added (2026-11-16, AoE round 3 follow-up, user "
+                         "ruling: Thrash (Cat)): the cat copy 200474 is a Thrash for both modifiers, and the damage "
+                         "hook counts its bleed as the caster's Thrash.")
 
 rending_swipes_200449 = spell(
     id=200449, name='Rending Swipes', **_dru_passive_talent_kwargs(),
@@ -7149,7 +7153,7 @@ rending_swipes_200449 = spell(
         _aura(AuraType.DUMMY, 4),
     ],
     spell_icon_id=4001, notes=_RENDING_SWIPES_NOTES + " Rank 1/2.",
-    raw_overrides=_feral_talent_raw(_RENDING_SWIPES_TEXT, EffectSpellClassMaskA_2=SWIPE_BEAR, EffectSpellClassMaskA_3=SWIPE_CAT | THRASH, EffectSpellClassMaskB_3=THRASH),
+    raw_overrides=_feral_talent_raw(_RENDING_SWIPES_TEXT, EffectSpellClassMaskA_1=THRASH_CAT, EffectSpellClassMaskA_2=SWIPE_BEAR, EffectSpellClassMaskA_3=SWIPE_CAT | THRASH, EffectSpellClassMaskB_1=THRASH_CAT, EffectSpellClassMaskB_3=THRASH),
 )
 
 rending_swipes_200450 = spell(
@@ -7160,7 +7164,7 @@ rending_swipes_200450 = spell(
         _aura(AuraType.DUMMY, 9),
     ],
     spell_icon_id=4001, notes=_RENDING_SWIPES_NOTES + " Rank 2/2.",
-    raw_overrides=_feral_talent_raw(_RENDING_SWIPES_TEXT, EffectSpellClassMaskA_2=SWIPE_BEAR, EffectSpellClassMaskA_3=SWIPE_CAT | THRASH, EffectSpellClassMaskB_3=THRASH),
+    raw_overrides=_feral_talent_raw(_RENDING_SWIPES_TEXT, EffectSpellClassMaskA_1=THRASH_CAT, EffectSpellClassMaskA_2=SWIPE_BEAR, EffectSpellClassMaskA_3=SWIPE_CAT | THRASH, EffectSpellClassMaskB_1=THRASH_CAT, EffectSpellClassMaskB_3=THRASH),
 )
 
 
