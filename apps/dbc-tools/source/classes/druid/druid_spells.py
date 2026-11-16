@@ -1815,6 +1815,7 @@ swipe_cat_62078 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=31, weapon_potency=249, implicit_target_a=6, chain_targets=1000),
+        Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
     spell_icon_id=1562,
     notes=(
@@ -1824,9 +1825,12 @@ swipe_cat_62078 = spell(
         "pre-existing off-by-one Mangle (Cat)/(Bear) had; weapon_potency's own -1/+1 convention "
         "lands on the intended 249%). No behavior change beyond that 1-point fix. "
         "BaseLevel / SpellLevel 71 -> 38 and trained at 38 (2026-11-15, AoE round 1 on the Normal-tier kits, user "
-        "ruling: the cat gets its AoE button in the 30s; 38 has only Cenarion Ward, the Feral side is empty there)."
+        "ruling: the cat gets its AoE button in the 30s; 38 has only Cenarion Ward, the Feral side is empty there). "
+        "Effect 2 ADD_COMBO_POINTS added (2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Swipe (Cat) "
+        "awards a combo point, option C): the Shred/Rake/Mangle effect (target 6, base 0 + 1 die = exactly 1 point), "
+        "with no chain targets, so the point is awarded once, on the primary target only, not once per enemy hit."
     ),
-    raw_overrides={'AttributesEx': 512, 'AttributesEx2': 4096, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 38, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Swipe nearby enemies, inflicting $s1% weapon damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_3': 1024, 'SpellClassSet': 7, 'SpellLevel': 38, 'SpellVisualID_1': 13170, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx': 512, 'AttributesEx2': 4096, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 38, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Swipe nearby enemies, inflicting $s1% weapon damage. Awards 1 combo point.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_3': 1024, 'SpellClassSet': 7, 'SpellLevel': 38, 'SpellVisualID_1': 13170, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
