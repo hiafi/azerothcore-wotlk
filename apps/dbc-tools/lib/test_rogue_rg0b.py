@@ -115,11 +115,11 @@ def expectations(idx: dict) -> tuple[dict, dict, dict]:
             "SpellClassMask_1": 0, "SpellClassMask_2": 0, "SpellClassMask_3": 0,
         },
         # ---- reworked stock rows: costs, effect order (percent first), levels
-        SS: {"ManaCost": 40, "SpellLevel": 1, "BaseLevel": 1, "Effect_1": 31, "EffectBasePoints_1": 199,   # DPS balance pass 1031: 200% (M2a 250%)
+        SS: {"ManaCost": 40, "SpellLevel": 1, "BaseLevel": 1, "Effect_1": 31, "EffectBasePoints_1": 259,   # BAL1 2026-11-15: 260% (1031: 200%, M2a 250%)
              "Effect_2": 121, "Effect_3": 80, "MaxLevel": 0, "StartRecoveryCategory": 133, "StartRecoveryTime": 1000},
-        BS: {"ManaCost": 45, "SpellLevel": 4, "BaseLevel": 4, "Effect_1": 31, "EffectBasePoints_1": 499,   # DPS balance pass 1031: 500% (M2a 250%)
+        BS: {"ManaCost": 45, "SpellLevel": 4, "BaseLevel": 4, "Effect_1": 31, "EffectBasePoints_1": 599,   # BAL2 round 2: 600% (DPS balance pass 1031 500%, M2a 250%)
              "Effect_2": 121, "Effect_3": 80},
-        AMBUSH: {"ManaCost": 45, "SpellLevel": 18, "BaseLevel": 18, "Effect_1": 31, "EffectBasePoints_1": 314,   # M2a; 314 = R4 Ambush -10%
+        AMBUSH: {"ManaCost": 45, "SpellLevel": 18, "BaseLevel": 18, "Effect_1": 31, "EffectBasePoints_1": 377,   # BAL2 round 2: 378% (R4 315%, M2a 350%)
                  "Effect_2": 121, "Effect_3": 80, "EffectBasePoints_3": 1, "RangeIndex": idx["r25"],
                  "EquippedItemClass": 2, "EquippedItemSubclass": 0x2A5F3},
         GS: {"RecoveryTime": 0, "Category": 0, "CategoryRecoveryTime": 0, "DurationIndex": inf, "SpellLevel": 10,

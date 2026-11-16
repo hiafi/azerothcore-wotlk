@@ -1433,6 +1433,11 @@ class spell_pri_devouring_plague : public AuraScript
         if (!caster || !target)
             return;
 
+        // A Pain and Suffering capstone spread (Mind Sear) is not a cast: no instant chunk and no
+        // self-heal on the copy (2026-11-15, AoE round 1).
+        if (Priest::IsSpreadingDevouringPlague())
+            return;
+
         AuraEffect const* improvedDevouringPlague = caster->GetDummyAuraEffect(SPELLFAMILY_PRIEST,
             PRIEST_ICON_ID_IMPROVED_DEVOURING_PLAGUE, EFFECT_1);
         if (!improvedDevouringPlague)

@@ -44,6 +44,7 @@
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
 #include "TemporarySummon.h"
+#include <algorithm>
 
 enum PriestShadowSpells
 {
@@ -51,6 +52,8 @@ enum PriestShadowSpells
     SPELL_PRIEST_SHADOW_WORD_PAIN            = 589,
     SPELL_PRIEST_MIND_FLAY                   = 15407,
     SPELL_PRIEST_MIND_BLAST                  = 8092,
+    SPELL_PRIEST_DEVOURING_PLAGUE            = 2944,
+    SPELL_PRIEST_PAIN_AND_SUFFERING_R3       = 47582,    // (8,1) rank 3 - Devouring Plague spread capstone
 
     // Void Eruption's buff (spell_priest_new.cpp / PriestMechanics.cpp's own PRIEST_ICON_VOIDFORM
     // comment) - Void-touched Mind's capstone extends its live duration.
@@ -847,6 +850,93 @@ class spell_pri_writhing_agony : public AuraScript
 };
 
 /*
+ * 48045 - Mind Sear (the channel aura on the channel target). Pain and Suffering (8,1) capstone
+ * (2026-11-15, AoE round 1 on the Normal-tier kits, user ruling: "Devouring Plague spreads one
+ * target at a time with Mind Sear"): each tick copies the priest's Devouring Plague from an
+ * afflicted enemy in Mind Sear's area to ONE enemy in that area that lacks it. Per tick rather than
+ * per cast, so a full 5-tick channel can cover a 5-pack instead of one new target per 5 s. The
+ * source is the channel target when it carries the plague, else the afflicted unit with the most
+ * time left; the recipient is the nearest unafflicted enemy to the channel target that the priest
+ * or the group is already fighting, in line of sight of it. The copy keeps the source's remaining
+ * duration (Priest::SpreadDevouringPlague), so spreading never extends the plague, and it is not a
+ * cast: no Improved Devouring Plague chunk or self-heal.
+ */
+class spell_pri_mind_sear_plague_spread : public AuraScript
+{
+    PrepareAuraScript(spell_pri_mind_sear_plague_spread);
+
+    bool Validate(SpellInfo const* spellInfo) override
+    {
+        return ValidateSpellInfo({ SPELL_PRIEST_DEVOURING_PLAGUE, SPELL_PRIEST_PAIN_AND_SUFFERING_R3,
+            spellInfo->Effects[EFFECT_0].TriggerSpell });
+    }
+
+    void HandlePeriodic(AuraEffect const* aurEff)
+    {
+        Player* player = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
+        Unit* center = GetTarget();
+        if (!player || !center || !player->HasAura(SPELL_PRIEST_PAIN_AND_SUFFERING_R3))
+            return;
+
+        // Mind Sear's own area: the tick spell's radius around the channel target
+        uint32 const tickId = aurEff->GetSpellInfo()->Effects[aurEff->GetEffIndex()].TriggerSpell;
+        SpellInfo const* tick = sSpellMgr->GetSpellInfo(tickId);
+        if (!tick)
+            return;
+
+        float const radius = tick->Effects[EFFECT_0].CalcRadius(player);
+
+        std::list<Unit*> nearby;
+        Acore::AnyUnfriendlyUnitInObjectRangeCheck check(center, player, radius);
+        Acore::UnitListSearcher<Acore::AnyUnfriendlyUnitInObjectRangeCheck> searcher(center, nearby, check);
+        Cell::VisitObjects(center, searcher, radius);
+        if (std::find(nearby.begin(), nearby.end(), center) == nearby.end())
+            nearby.push_back(center);
+
+        Aura const* source = center->GetAura(SPELL_PRIEST_DEVOURING_PLAGUE, player->GetGUID());
+        bool const sourceFixed = source != nullptr;
+        Unit* recipient = nullptr;
+        float recipientDist = 0.0f;
+
+        for (Unit* unit : nearby)
+        {
+            if (!unit->IsAlive())
+                continue;
+
+            if (Aura const* plague = unit->GetAura(SPELL_PRIEST_DEVOURING_PLAGUE, player->GetGUID()))
+            {
+                if (!sourceFixed && (!source || plague->GetDuration() > source->GetDuration()))
+                    source = plague;
+
+                continue;
+            }
+
+            if (!player->IsValidAttackTarget(unit) || !IsEngagedWithOwnerOrGroup(unit, player))
+                continue;
+
+            float const dist = center->GetExactDist(unit);
+            if (recipient && dist >= recipientDist)
+                continue;
+
+            if (unit != center && !center->IsWithinLOSInMap(unit))
+                continue;
+
+            recipient = unit;
+            recipientDist = dist;
+        }
+
+        if (source && recipient)
+            Priest::SpreadDevouringPlague(player, source, recipient);
+    }
+
+    void Register() override
+    {
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_pri_mind_sear_plague_spread::HandlePeriodic, EFFECT_0,
+            SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+    }
+};
+
+/*
  * Per-player Shadow state (Madness value, shared tentacle-spawn ICD, last Mind Blast spawn stamp)
  * lives in PriestMechanics.cpp's own file-scope maps, keyed by ObjectGuid. Auras cover the Madness
  * value's lifetime (spell_pri_madness above), but nothing covers the two timestamp maps, which
@@ -882,4 +972,5 @@ void AddSC_priest_shadow_spell_scripts()
     RegisterSpellScript(spell_pri_shadow_reach_capstone);
     RegisterSpellScript(spell_pri_lash_of_insanity);
     RegisterSpellScript(spell_pri_writhing_agony);
+    RegisterSpellScript(spell_pri_mind_sear_plague_spread);
 }

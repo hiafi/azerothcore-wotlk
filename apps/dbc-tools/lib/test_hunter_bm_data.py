@@ -2015,8 +2015,8 @@ R24_POTENCY = {
     201731: [(1, 650.0, "direct", R24_FEROCITY_ST_SCALE)],                                     # Savage Pounce
     201725: [(1, 585.0, "direct", 1.0)],                                                       # Leaping Tear (AoE)
 }
-# the Beast Cleave talent's ruling 24 line: 50% x 0.93 / 1.0 / 1.74
-R24_TOOLTIP = {201848: (["Your pet's share depends on its type: Ferocity 46.5%, Tenacity 50%, Cunning 87%."], [])}
+# the Beast Cleave talent's ruling 24 line: 30% x 0.93 / 1.0 / 1.74 (share 50 -> 30, AoE round 2, 2026-11-15)
+R24_TOOLTIP = {201848: (["Your pet's share depends on its type: Ferocity 27.9%, Tenacity 30%, Cunning 52.2%."], [])}
 
 
 def _has_area_effect(row: dict) -> bool:
@@ -2127,8 +2127,8 @@ class HunterBmDataTest(unittest.TestCase):
         package = package_data()["package"]
         bonus = [r for r in package.spell_bonus_data if int(r["entry"]) == 56641]
         self.assertEqual(len(bonus), 1)
-        # TUNE3: ap_potency 44.1 (pass 1031: was 49; TUNE1 70, was 100), so the coefficient is 0.441 * (1.5 / 3.5)
-        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.441 * 1.5 / 3.5, places=4)
+        # TUNE3: ap_potency 52.92 (BAL1 2026-11-15: was 44.1; pass 1031: was 49; TUNE1 70, was 100), so the coefficient is 0.5292 * (1.5 / 3.5)
+        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.5292 * 1.5 / 3.5, places=4)
 
     def test_s1b_ids_have_equipped_item_class_minus_one(self):
         rows = package_data()["rows_by_id"]

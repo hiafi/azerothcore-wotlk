@@ -122,7 +122,7 @@ plague_strike_45462 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=121, sp_potency=56.4, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),
-        Effect(type=31, weapon_potency=54, implicit_target_a=6),
+        Effect(type=31, weapon_potency=62, implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=6, trigger_spell=55078),
     ],
     spell_icon_id=2719,
@@ -150,7 +150,8 @@ plague_strike_45462 = spell(
         'effect does not apply); it still comes first, so the 49% weapon percent still scales it (2026-11-01, potency '
         'audit fix F14). The off-hand copy 66216 keeps its hand-set flat (37 at 60), which already follows this flat at '
         '0.245 x. '
-        'weapon_potency 49 -> 54 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Plague Strike +10%; 49 x 1.1 = 53.9 rounded to the whole number 54, so +10.2%; the flat eff0 sits before the percent effect and is scaled by it, so it follows without an edit; the off-hand copy 66216 follows).'
+        'weapon_potency 49 -> 54 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Plague Strike +10%; 49 x 1.1 = 53.9 rounded to the whole number 54, so +10.2%; the flat eff0 sits before the percent effect and is scaled by it, so it follows without an edit; the off-hand copy 66216 follows). '
+        'weapon_potency 54 -> 62 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Plague Strike +15%; 54 x 1.15 = 62.1 rounded to the whole number 62, so +14.8%; the flat eff0 sits before the percent effect and is scaled by it, so it follows without an edit; the off-hand copy 66216 follows).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals ${$m2*$<plague>}% weapon damage plus {pot1*plagueflat} and infects the target with Blood Plague, a disease dealing Shadow damage over time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 221, 'SpellClassMask_1': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 11624, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -394,14 +395,15 @@ death_strike_49998 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=128, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=15, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=147, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=17.25, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=29, implicit_target_a=6),
     ],
     spell_icon_id=2751,
     tooltip_vars=improved_death_strike_tooltip_1251,
     notes=(
+        'weapon_potency 128 -> 147 (128 x 1.15 = 147.2, whole) and sp_potency 15 -> 17.25 (2026-11-15, balance on the Normal-tier kits, user ruling: Death Strike damage +15%; the heal DUMMY untouched). '
         'S1a: tooltip reads Improved Death Strike (tooltip_vars 1251): $dsdmg on the damage (weapon percent and flat), $dsheal on the heal %. '
         'DK0a (death-knight-shared-rework.md "Death Strike"): PowerType 6 / ManaCost 400 (40 RP, RP x10) / RuneCostID 0 '
         '(no runes, generates none), SpellLevel 10, d0 b4 kept. Effects: eff0 WEAPON_PERCENT_DAMAGE weapon_potency 85, '
@@ -756,12 +758,13 @@ death_strike_66188 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=128, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=7.5, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=147, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=8.625, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2751,
     notes=(
+        'weapon_potency 128 -> 147 and sp_potency 7.5 -> 8.625 (2026-11-15, balance on the Normal-tier kits, user ruling: Death Strike +15%, the off-hand copy follows the main hand). '
         'weapon_potency 85 -> 128 and sp_potency 5 -> 7.5 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Death Strike +50%, the Threat of Thassarian off-hand copy follows the main hand). '
         'death-knight-rework S2a (U16 / U17, brief D1): Threat of Thassarian off-hand copy of Death Strike 49998. eff0 '
         'WEAPON_PERCENT_DAMAGE weapon_potency 85 first, eff1 NORMALIZED_WEAPON_DMG sp_potency 5 (HALF of the main hand\'s 10: '
@@ -785,12 +788,13 @@ frost_strike_66196 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=60, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=62, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5.15, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2740,
     notes=(
+        'weapon_potency 60 -> 62 and sp_potency 5 -> 5.15 (2026-11-15, balance on the Normal-tier kits, user ruling: Frost Strike +3%, the off-hand copy follows the main hand). '
         'death-knight-rework S2a (U16 / U17, brief D1): Threat of Thassarian off-hand copy of Frost Strike 49143. Always Frost, '
         'so non-physical: no flat doubling and no TOTAL_PCT (SpellEffects.cpp:3897), it stores the FULL main-hand flat (sp_potency 5) '
         'and gets x 0.5 x (1 + Nerves of Cold Steel) from DeathKnight::GetFrostDamageMultiplier (spell_dk_frost_offhand). eff0 '
@@ -888,13 +892,14 @@ heart_strike_55050 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=90, implicit_target_a=6, chain_targets=2),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=15, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=95, implicit_target_a=6, chain_targets=2),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=15.75, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6, chain_targets=2),
     ],
     spell_icon_id=3145,
     tooltip_vars=heart_plague_strike_tooltip_1254,
     notes=(
+        'weapon_potency 90 -> 95 (90 x 1.05 = 94.5, rounded half up to whole) and sp_potency 15 -> 15.75 (2026-11-15, balance on the Normal-tier kits, user ruling: Heart Strike +5%; both rows). '
         'S2a (U24): tooltip_vars 1254 replaces 1250 so Gravefrost joins the multiplier: $heart = Bloody Strikes x Gravefrost, text unchanged. '
         'S1a: tooltip reads Bloody Strikes\' Heart Strike multiplier (tooltip_vars 1250, $heart) on the weapon percent and the flat. '
         'DK0a (death-knight-shared-rework.md "Heart Strike"): SpellLevel 1, RuneCostID 1142 (1 Blood Rune + 10 RP) kept. '
@@ -932,7 +937,7 @@ scourge_strike_55090 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=77, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=89, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=11, implicit_target_a=6),
     ],
@@ -951,7 +956,8 @@ scourge_strike_55090 = spell(
         'AttributesEx3 0x400, CumulativeAura 1, the 1.5 s GCD and spell_threat 55090 kept; the stock SkillLineAbility 19202 '
         '(superseded by 55265) is harmless. The tooltip reads Outbreak through tooltip_vars 1280 ($outbreak). Rebinds '
         '-55090 to spell_dk_scourge_strike_rework (end of this file). '
-        'weapon_potency 70 -> 77 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Scourge Strike +10%; the Shadow part is a percent of the dealt damage and follows).'
+        'weapon_potency 70 -> 77 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Scourge Strike +10%; the Shadow part is a percent of the dealt damage and follows). '
+        'weapon_potency 77 -> 89 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Scourge Strike +15%; 77 x 1.15 = 88.55 rounded to the whole number 89, so +15.6%; the Shadow part 70890 is a percent of the dealt damage and follows).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An unholy strike that deals ${$s1*$<outbreak>}% weapon damage as Physical damage, plus $s3% of that damage as Shadow damage for each of your diseases on the target. Bursts half the Festering Wounds on the target, rounded down, minimum 2. Each rune it spends has a 33% chance to return as a Death Rune.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 2602, 'SpellClassMask_2': m.SCOURGE_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 15, 'SpellPriority': 50, 'SpellVisualID_1': 11832, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )

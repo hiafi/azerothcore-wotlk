@@ -727,11 +727,12 @@ breath_of_sindragosa_tick_203307 = spell(
     id=203307, name='Breath of Sindragosa', school=School.FROST, attributes=0, cast_time_ms=0, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF, radius_yards=12.0, duration_ms=0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=101.062, potency_kind='direct', time_basis_ms=1000,
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=96.009, potency_kind='direct', time_basis_ms=1000,
                implicit_target_a=_TARGET_UNIT_CONE_ENEMY_104, radius_yards=12.0),
     ],
     spell_icon_id=_ICON_BREATH_OF_SINDRAGOSA,
     notes=(
+        'ap_potency 101.062 -> 96.009 (101.062 x 0.95 = 96.0089) (2026-11-15, balance on the Normal-tier kits, user ruling: Breath of Sindragosa -5%). '
         'death-knight-rework S2a (U11 / D2), Frost doc "Breath of Sindragosa" (10,1): the per-second tick. '
         'SCHOOL_DAMAGE ap_potency 92 (RETUNE-RESIM 2026-10-25; RETUNE 70, S2 TUNE 42, doc 60) direct, time_basis_ms 1000 (L2), TARGET_UNIT_CONE_ENEMY_104 (104 degree total '
         'arc) '

@@ -111,7 +111,7 @@ AVALANCHE_ID = 203321
 POTENCY = {
     # RETUNE 2026-10-25 (on the re-anchored footing): HB 62 -> 90, GA eruption 52 -> 75, Breath tick 42 -> 70,
     # HC tick 10 -> 15, Avalanche 17 -> 25 (S2 TUNE 2026-10-25 had cut them from the doc's 90 / 75 / 60 / 15 / 25)
-    HOWLING_BLAST: (99.0, 1.5, 20), 203274: (75.0, 1.5, 30), 203307: (101.062, 1.0, 60), 203316: (15.0, 2.0, 40),
+    HOWLING_BLAST: (99.0, 1.5, 20), 203274: (75.0, 1.5, 30), 203307: (96.009, 1.0, 60), 203316: (15.0, 2.0, 40),
     AVALANCHE_ID: (25.0, 1.5, 27),
 }
 GLACIAL_ADVANCE, BREATH, BREATH_TICK, HC_TICK, GLACIAL_ERUPTION = 203273, 203306, 203307, 203316, 203274
@@ -120,9 +120,9 @@ GLACIAL_ADVANCE_POWER = (6, 300)  # PowerType runic power, ManaCost x10
 
 # off-hand copy -> (main-hand spell, copy's flat potency, main's flat potency); D1: physical copies store half
 OFFHAND = {
-    66198: (203054, 5.5, 11.0), 66188: (49998, 7.5, 15.0), 203322: (55050, 7.5, 15.0),  # 5/10 -> 7.5/15 (2026-11-01, DPS balance pass 1031 round T1, Heart Strike / Death Strike +50%)
+    66198: (203054, 5.5, 11.0), 66188: (49998, 8.625, 17.25), 203322: (55050, 7.875, 15.75),  # 7.5/15 -> 8.625/17.25 Death Strike +15%, 7.5/15 -> 7.875/15.75 Heart Strike +5% (2026-11-15, balance on the Normal-tier kits)
     66216: (45462, None, None),  # PS: half of PS's own flat (value read from the main-hand entry)
-    66196: (49143, 5.0, 5.0),  # Frost Strike OH is always Frost = non-physical: the FULL flat, the helper adds x p
+    66196: (49143, 5.15, 5.15),  # Frost Strike OH is always Frost = non-physical: the FULL flat, the helper adds x p
 }
 FULL_FLAT_COPIES = {66196}
 
@@ -858,7 +858,7 @@ class DeathKnightS2NegativeTest(unittest.TestCase):
         rows = {sid: _row(sid, SpellLevel=lvl) for sid, (_, _, lvl) in POTENCY.items()}
         self.assertEqual(check_potency(rows, entries), [])
         # wrong potency / time basis (the 1500 default on a 1 s or 2 s tick) / missing SpellLevel
-        self.assertEqual(len(check_potency(rows, {**entries, 203307: _entry(203307, [(101.062, 1.5, 60)])})), 1)
+        self.assertEqual(len(check_potency(rows, {**entries, 203307: _entry(203307, [(96.009, 1.5, 60)])})), 1)
         self.assertEqual(len(check_potency(rows, {**entries, 203316: _entry(203316, [(15.0, 1.5, 40)])})), 1)
         self.assertEqual(len(check_potency(rows, {**entries, 49184: _entry(49184, [(100.9, 1.5, 20)])})), 1)
         self.assertEqual(len(check_potency({**rows, 203274: _row(203274, SpellLevel=0)}, entries)), 1)

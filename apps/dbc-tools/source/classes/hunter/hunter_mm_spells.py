@@ -74,7 +74,7 @@ RAIN_OF_ARROWS_FIRE_PCT = const(
     cpp_type='int32',
 )
 CHIMERA_SERPENT_BURST_PCT = const(
-    'CHIMERA_SERPENT_BURST_PCT', 60, "Chimera Shot: Serpent Sting burst, percent of the sting's total damage (MM 5.6).",
+    'CHIMERA_SERPENT_BURST_PCT', 78, "Chimera Shot: Serpent Sting burst, percent of the sting's total damage (MM 5.6). 60 -> 78 (2026-11-15, balance on the Normal-tier kits, user ruling: Chimera Shot - Serpent 53353 +30%).",
     cpp_type='int32',
 )
 # S2a A1: Convergence's two script numbers (MM 5.10). The DSL allows one direct AP coefficient per spell (D6), so
@@ -207,7 +207,7 @@ _MARK_TAIL = ' Reapplying the mark resets its stacks.'
 
 
 def _mark(spell_id, name, school, icon, level, cooldown_ms, visual, description, aura_text, tooltip=None,
-          weapon_potency=220):
+          weapon_potency=220, note_extra=''):
     return spell(
         id=spell_id,
         name=name,
@@ -228,7 +228,7 @@ def _mark(spell_id, name, school, icon, level, cooldown_ms, visual, description,
         spell_icon_id=icon,
         tooltip_vars=tooltip,
         notes=f'S2a A1 / MM 4.1: {name}. Instant shot (CastingTimeIndex 18), {weapon_potency} weapon potency '
-              f'(TUNE3: was 110), eff2 DUMMY = the mark '
+              f'(TUNE3: was 110){note_extra}, eff2 DUMMY = the mark '
               f'(0-10 stacks, spell_hun_mark), 15 s, {cooldown_ms // 1000} s, 4% base mana, 35 yd, Speed 40, d2 b27, '
               f'GCD 1500/133, EquippedItemClass 2 (player-cast shot, M4). Visual {visual} reused from a stock shot.',
         raw_overrides={
@@ -287,8 +287,9 @@ vipers_bite_201930 = _mark_dot(
     note_extra=' Effect 1 ap_potency 4.6 -> 3.22 (2026-11-01, DPS balance pass 1031, user ruling: Vipers Bite -30%).',
 )
 vipers_venom_201931 = _mark_dot(
-    201931, "Viper's Venom", 6000, 3521, 60, 23.0,
+    201931, "Viper's Venom", 6000, 3521, 60, 29.9,
     'Deals {pot1*mult} Nature damage every $t1 sec for $d.',
+    note_extra=' Effect 1 ap_potency 23.0 -> 29.9 (2026-11-15, balance on the Normal-tier kits, user ruling: Viper Venom +30%).',
 )
 
 
@@ -301,6 +302,8 @@ snipers_mark_201920 = _mark(
     + _n(SNIPER_CRIT_DAMAGE_PER_STACK) + '% critical strike damage per stack. Your Chimera Shot against the target is '
     'a guaranteed critical strike with ' + _n(CHIMERA_SNIPER_CRIT_DAMAGE) + '% more critical strike damage.',
     'Marked. Aimed Shot consumes this mark for extra critical strike chance and critical strike damage.',
+    weapon_potency=330,
+    note_extra=' weapon_potency 220 -> 330 (2026-11-15, balance on the Normal-tier kits, user ruling: Sniper Mark +50%)',
 )
 vipers_mark_201921 = _mark(
     201921, "Viper's Mark", School.NATURE, 1679, 40, 45000, 3179,
@@ -312,6 +315,8 @@ vipers_mark_201921 = _mark(
     'Venom, dealing ' + pot_text(vipers_venom_201931, variant='total', var='mult') + ' Nature damage over $201931d.',
     "Marked. Aimed Shot consumes this mark to apply Viper's Bite.",
     tooltip=mm_mark_dots_1170,
+    weapon_potency=286,
+    note_extra=' weapon_potency 220 -> 286 (2026-11-15, balance on the Normal-tier kits, user ruling: Viper Mark +30%)',
 )
 falcons_mark_201922 = _mark(
     201922, "Falcon's Mark", School.NORMAL, 1530, 50, 60000, 8155,
@@ -338,16 +343,16 @@ convergence_201932 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=300.0, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=450.0, potency_kind='direct',
                implicit_target_a=87, implicit_target_b=16, radius_yards=8.0),
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=300.0, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=450.0, potency_kind='direct',
                implicit_target_a=87, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=2235,
     tooltip_vars=mm_convergence_1171,
     notes='S2a A1 / MM 5.10: Convergence, data only (S2b casts it). eff0 the centre, eff1 the splash, both '
-          'TARGET_DEST_DEST (87) + TARGET_UNIT_DEST_AREA_ENEMY (16), 8 yd, ap_potency 300 (placeholder, M). DEVIATION: '
-          'MM 5.10 gives eff1 150; the DSL allows one direct AP coefficient per spell (D6), so eff1 carries 300 '
+          'TARGET_DEST_DEST (87) + TARGET_UNIT_DEST_AREA_ENEMY (16), 8 yd, ap_potency 300 (placeholder, M); both effects ap_potency 300 -> 450 (2026-11-15, balance on the Normal-tier kits, user ruling: Convergence +50%). DEVIATION: '
+          'MM 5.10 gives eff1 150; the DSL allows one direct AP coefficient per spell (D6), so eff1 carries the centre value '
           'too and '
           'spell_hun_convergence (S2b) scales EFFECT_1 by CONVERGENCE_SPLASH_PCT (Swipe 201726 precedent). Physical, '
           'RANGED, Speed 0, Targets 0x40 (dest), SUPPRESS_CASTER_PROCS, IGNORE_LINE_OF_SIGHT (S2b R-cpp m-1: no '

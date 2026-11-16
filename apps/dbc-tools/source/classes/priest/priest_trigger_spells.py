@@ -226,11 +226,12 @@ penance_47666 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=89.7, potency_kind='direct', implicit_target_a=77),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=182.988, potency_kind='direct', implicit_target_a=77),
     ],
     spell_icon_id=2818,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (84, chain has a gap at 60) slope (anchor rank 53000, rank 4); coefficient/cast_time_ms/mana_cost_pct from max rank (53000, rank 4); MaxLevel set to 80. "
-          "Potency system P5-Priest: converted to sp_potency=89.7 (user-reviewed, mismatched row).",
+          "Potency system P5-Priest: converted to sp_potency=89.7 (user-reviewed, mismatched row)."
+          ' sp_potency 89.7 -> 152.49 (2026-11-15, balance on the Normal-tier kits, user ruling: Penance damage 47666 +70%). sp_potency 152.49 -> 182.988 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Disc option C, Penance +20%).',
     raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a volley of holy light at the target, causing {pot1} Holy damage to an enemy, or $47750s1 healing to an ally instantly and every $47758t2 sec for $47758d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 40.0, 'SpellClassMask_2': 32768, 'SpellClassSet': 6, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 10982},
 )
 
@@ -247,11 +248,12 @@ penance_47750 = spell(
     mana_cost_pct=0,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=67.3, potency_kind='heal', implicit_target_a=77),
+        Effect(type=EffectType.HEAL, sp_potency=137.292, potency_kind='heal', implicit_target_a=77),
     ],
     spell_icon_id=2818,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (84, chain has a gap at 60) slope (anchor rank 52985, rank 4); coefficient/cast_time_ms/mana_cost_pct from max rank (52985, rank 4); MaxLevel set to 80. "
-          "Potency system P5-Priest: converted to sp_potency=67.3 (potency-report default, base/coef already agreed).",
+          "Potency system P5-Priest: converted to sp_potency=67.3 (potency-report default, base/coef already agreed)."
+          ' sp_potency 67.3 -> 114.41 (2026-11-15, balance on the Normal-tier kits, user ruling: Penance heal 47750 +70%). sp_potency 114.41 -> 137.292 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Disc option C, Penance +20%).',
     raw_overrides={'AttributesEx2': 4194308, 'AttributesEx3': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a volley of holy light at the target, causing $47666s1 Holy damage to an enemy, or {pot1} healing to an ally instantly and every $47758t2 sec for $47758d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 40.0, 'SpellClassMask_2': 65536, 'SpellClassSet': 6, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 10981},
 )
 
@@ -3591,7 +3593,10 @@ divine_aegis_47515 = spell(
 # only applies within a file - see source/classes/README.md).
 _GRACE_RANK_NOTE = (
     'Discipline rework (8,2): 3 ranks at 33/66/100% chance, Power Word: Shield added to the '
-    'trigger mask, and each rank now triggers its own 1/2/3%-per-stack buff spell.'
+    'trigger mask, and each rank now triggers its own 1/2/3%-per-stack buff spell. Capstone clause added to every '
+    'rank text (2026-11-15, balance round 3 on the Normal-tier kits, user ruling: "Your Penance heals also shield the '
+    'target for 30% of the amount healed, stacking"): only rank 3 (grace_200163) has the effect, spell_pri_grace_capstone '
+    '(spell_priest_disc.cpp) reads it off that rank spell id and the shield is penance_shield_200169.'
 )
 _GRACE_TRIGGER_MASK = (_masks.PWS | _masks.FLASH_HEAL | _masks.GREATER_HEAL, _masks.PENANCE_HEAL_BOLT, 0)
 
@@ -3612,7 +3617,7 @@ grace_47516 = spell(
     ],
     spell_icon_id=2819,
     notes=_GRACE_RANK_NOTE,
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Flash Heal, Greater Heal, Penance and Power Word: Shield have a 33% chance to bless the target with Grace, increasing all healing received from you by 1%.  Stacks up to 3 times.  Lasts 12 sec.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': _GRACE_TRIGGER_MASK[0], 'EffectSpellClassMaskA_2': _GRACE_TRIGGER_MASK[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Flash Heal, Greater Heal, Penance and Power Word: Shield have a 33% chance to bless the target with Grace, increasing all healing received from you by 1%.  Stacks up to 3 times.  Lasts 12 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Penance heals also shield the target for 30% of the amount healed, stacking.|r', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': _GRACE_TRIGGER_MASK[0], 'EffectSpellClassMaskA_2': _GRACE_TRIGGER_MASK[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -3632,7 +3637,7 @@ grace_47517 = spell(
     ],
     spell_icon_id=2819,
     notes=_GRACE_RANK_NOTE,
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Flash Heal, Greater Heal, Penance and Power Word: Shield have a 66% chance to bless the target with Grace, increasing all healing received from you by 2%.  Stacks up to 3 times.  Lasts 12 sec.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': _GRACE_TRIGGER_MASK[0], 'EffectSpellClassMaskA_2': _GRACE_TRIGGER_MASK[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Flash Heal, Greater Heal, Penance and Power Word: Shield have a 66% chance to bless the target with Grace, increasing all healing received from you by 2%.  Stacks up to 3 times.  Lasts 12 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Penance heals also shield the target for 30% of the amount healed, stacking.|r', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': _GRACE_TRIGGER_MASK[0], 'EffectSpellClassMaskA_2': _GRACE_TRIGGER_MASK[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 # Ranks 1-2 share one whole-chain spell_proc row (see the -14531 comment): Chance is left at 0 so
 # LoadSpellProcs falls back to each rank's own DBC ProcChance (33 / 66). AttributesMask 2 =
@@ -4054,7 +4059,7 @@ pain_and_suffering_47580 = spell(
     ],
     spell_icon_id=2874,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mind Flay, Mind Sear and Mind Blast casts have a $h% chance to refresh the duration of your Shadow Word: Pain on the target. Reduces the damage you take from your own Shadow Word: Death by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskB_2': 32785, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 6},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mind Flay, Mind Sear and Mind Blast casts have a $h% chance to refresh the duration of your Shadow Word: Pain on the target. Reduces the damage you take from your own Shadow Word: Death by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Each tick of your Mind Sear spreads your Devouring Plague from an afflicted enemy to one nearby enemy that does not have it, for the time remaining on the original.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskB_2': 32785, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 # Priest Shadow rework (SHADOW.md (8,1)): rebuilt as a cast-phase proc (was damage-phase via the
 # stock DBC ProcTypeMask alone) so it fires once per Mind Flay/Mind Sear/Mind Blast cast rather than
@@ -4080,7 +4085,7 @@ pain_and_suffering_47581 = spell(
     ],
     spell_icon_id=2874,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mind Flay, Mind Sear and Mind Blast casts have a $h% chance to refresh the duration of your Shadow Word: Pain on the target. Reduces the damage you take from your own Shadow Word: Death by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskB_2': 32785, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_1': 8388608, 'SpellClassSet': 6},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mind Flay, Mind Sear and Mind Blast casts have a $h% chance to refresh the duration of your Shadow Word: Pain on the target. Reduces the damage you take from your own Shadow Word: Death by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Each tick of your Mind Sear spreads your Devouring Plague from an afflicted enemy to one nearby enemy that does not have it, for the time remaining on the original.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskB_2': 32785, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_1': 8388608, 'SpellClassSet': 6},
 )
 procs_on(pain_and_suffering_47581, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, spell_phase_mask=PROC_SPELL_PHASE_CAST,
          family_name=6, family_mask=(_masks.MIND_BLAST, _masks.MIND_SEAR, _masks.MIND_FLAY), chance=66)
@@ -4103,8 +4108,12 @@ pain_and_suffering_47582 = spell(
     ],
     spell_icon_id=2874,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mind Flay, Mind Sear and Mind Blast casts have a $h% chance to refresh the duration of your Shadow Word: Pain on the target. Reduces the damage you take from your own Shadow Word: Death by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskB_2': 32785, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 6},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mind Flay, Mind Sear and Mind Blast casts have a $h% chance to refresh the duration of your Shadow Word: Pain on the target. Reduces the damage you take from your own Shadow Word: Death by $s2%.\n\nCapstone Bonus: Each tick of your Mind Sear spreads your Devouring Plague from an afflicted enemy to one nearby enemy that does not have it, for the time remaining on the original.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskB_2': 32785, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
+# Capstone (2026-11-15, AoE round 1 on the Normal-tier kits, user ruling: Devouring Plague spreads one target at a time
+# with Mind Sear): no data effect; spell_pri_mind_sear_plague_spread (bound to Mind Sear 48045) checks for this rank's
+# aura on the caster. Hosted here (not Improved Devouring Plague, whose capstone slot is taken and which the guide
+# build skips): this is the talent about Mind Sear keeping the priest's DoTs going, and the guide build has it 3/3.
 procs_on(pain_and_suffering_47582, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, spell_phase_mask=PROC_SPELL_PHASE_CAST,
          family_name=6, family_mask=(_masks.MIND_BLAST, _masks.MIND_SEAR, _masks.MIND_FLAY), chance=100)
 # Verify (WP-C): spell_pri_pain_and_suffering_proc (47948) still refreshes SW:P on the proc target
@@ -4936,7 +4945,7 @@ divine_star_pulse_200134 = spell(
     school=School.HOLY,
     cast_time_ms=0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=9.4, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=28.2, potency_kind='heal', implicit_target_a=21),
         Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=37.4, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90101,
@@ -4945,7 +4954,8 @@ divine_star_pulse_200134 = spell(
           'sp_potency=37.4 (both user-reviewed, mismatched rows) - replaces the bonus_coefficients(direct=0.4) '
           'call below (removed; this is a brand-new custom id with no stock-dump row to retire, unlike '
           'Circle of Healing). '
-          'Divine Star\'s heal/damage pulse (docs/reworks/priest-new-spells.md: "100 (0.4 spellpower coeff) healing/damage"). Cast by the owning priest directly at whichever specific unit npc_pri_divine_star (spell_priest_new.cpp) finds newly within its own small pulse radius as it travels out and back - an explicit single-unit target per cast (owner->CastSpell(unit, 200134, true)), not a native AoE dest-area query. TARGET_UNIT_TARGET_ALLY (21) on the heal effect and TARGET_UNIT_TARGET_ENEMY (6) on the damage effect do NOT independently no-op against an explicit single-unit target server-side - Spell::SelectImplicitTargetObjectTargets (the TARGET_REFERENCE_TYPE_TARGET/TARGET_SELECT_CATEGORY_DEFAULT path these two target types take) never consults SpellImplicitTargetInfo::GetCheckType() the way the AoE/nearby/chain/trajectory search paths do, so both effects were applying to literally every unit hit - a priest healing themselves also silently self-damaged for the same amount, and any enemy hit also got healed. Playtest bugfix (2026-09-20, "not sure if Divine Star is healing, is it being attributed correctly"): spell_pri_divine_star_pulse (spell_priest_new.cpp) now hooks OnObjectTargetSelect per effect (EFFECT_0/ally, EFFECT_1/enemy) and nulls the target WorldObject*& when the caster\'s actual IsValidAssistTarget/IsValidAttackTarget disagrees with that effect\'s intended reaction - same idiom as spell_mage_arcane_blast::ClearSelfTarget (spell_mage.cpp) for nulling a single effect\'s target without touching the other effect\'s own resolution. This also gives full manual control over per-leg hit-dedup (tracked in the creature AI, not this row) rather than fighting native AoE re-hit semantics. base_points=99 (stored -1 convention) for the tooltip\'s 100; coeff_weight=0.4 matches the design doc\'s spellpower coefficient but is passthrough metadata only (lib/build.py\'s own docstring) - it never turns into a spell_bonus_data row or an EffectBonusMultiplier by itself. Confirmed live: spell_bonus_data had zero rows for 200134 and EffectBonusMultiplier_1/_2 were both 0 in spell_dbc, so every cast landed for a flat, non-scaling 100 regardless of the caster\'s spellpower. Fixed below via bonus_coefficients(), the actual mechanism (see halo_pulse_200136\'s own identical fix just above, and mage_trigger_spells.py/mage_spells.py for the established precedent - e.g. meteor_impact_200096, burnout_explosion_200116) that emits the spell_bonus_data row SpellMgr::GetSpellBonusData reads (both SpellDamageBonusDone and SpellHealingBonusDone key off the same direct_bonus column, so one row covers both effects). "Healing reduced beyond 6 targets": npc_pri_divine_star tracks a cast-wide (both legs) count of distinct allies healed and, once that count exceeds 6, casts the heal via CastCustomSpell/SPELLVALUE_BASE_POINT0 with a reduced amount instead of this row\'s own base_points - default falloff 10% per target beyond 6, compounding (retail\'s own value; docs/reworks/priest-new-spells.md doesn\'t specify a curve, flagged as playtest-tunable). No RangeIndex/range concern: the owner casts this triggered (bypasses range checks) at the missile\'s live position, which may be well outside the caster\'s own melee range. SpellVisualID_1=90013 is the yellow burst impact kit patch_priest_vfx_models.py mints (ChestEffect -> Priest_DivineStar_Impact_Yellow, mined from Ascension\'s client) - the missile\'s own travelling orb model is wired separately, on the creature_template row, not here. DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit).',
+          'Divine Star\'s heal/damage pulse (docs/reworks/priest-new-spells.md: "100 (0.4 spellpower coeff) healing/damage"). Cast by the owning priest directly at whichever specific unit npc_pri_divine_star (spell_priest_new.cpp) finds newly within its own small pulse radius as it travels out and back - an explicit single-unit target per cast (owner->CastSpell(unit, 200134, true)), not a native AoE dest-area query. TARGET_UNIT_TARGET_ALLY (21) on the heal effect and TARGET_UNIT_TARGET_ENEMY (6) on the damage effect do NOT independently no-op against an explicit single-unit target server-side - Spell::SelectImplicitTargetObjectTargets (the TARGET_REFERENCE_TYPE_TARGET/TARGET_SELECT_CATEGORY_DEFAULT path these two target types take) never consults SpellImplicitTargetInfo::GetCheckType() the way the AoE/nearby/chain/trajectory search paths do, so both effects were applying to literally every unit hit - a priest healing themselves also silently self-damaged for the same amount, and any enemy hit also got healed. Playtest bugfix (2026-09-20, "not sure if Divine Star is healing, is it being attributed correctly"): spell_pri_divine_star_pulse (spell_priest_new.cpp) now hooks OnObjectTargetSelect per effect (EFFECT_0/ally, EFFECT_1/enemy) and nulls the target WorldObject*& when the caster\'s actual IsValidAssistTarget/IsValidAttackTarget disagrees with that effect\'s intended reaction - same idiom as spell_mage_arcane_blast::ClearSelfTarget (spell_mage.cpp) for nulling a single effect\'s target without touching the other effect\'s own resolution. This also gives full manual control over per-leg hit-dedup (tracked in the creature AI, not this row) rather than fighting native AoE re-hit semantics. base_points=99 (stored -1 convention) for the tooltip\'s 100; coeff_weight=0.4 matches the design doc\'s spellpower coefficient but is passthrough metadata only (lib/build.py\'s own docstring) - it never turns into a spell_bonus_data row or an EffectBonusMultiplier by itself. Confirmed live: spell_bonus_data had zero rows for 200134 and EffectBonusMultiplier_1/_2 were both 0 in spell_dbc, so every cast landed for a flat, non-scaling 100 regardless of the caster\'s spellpower. Fixed below via bonus_coefficients(), the actual mechanism (see halo_pulse_200136\'s own identical fix just above, and mage_trigger_spells.py/mage_spells.py for the established precedent - e.g. meteor_impact_200096, burnout_explosion_200116) that emits the spell_bonus_data row SpellMgr::GetSpellBonusData reads (both SpellDamageBonusDone and SpellHealingBonusDone key off the same direct_bonus column, so one row covers both effects). "Healing reduced beyond 6 targets": npc_pri_divine_star tracks a cast-wide (both legs) count of distinct allies healed and, once that count exceeds 6, casts the heal via CastCustomSpell/SPELLVALUE_BASE_POINT0 with a reduced amount instead of this row\'s own base_points - default falloff 10% per target beyond 6, compounding (retail\'s own value; docs/reworks/priest-new-spells.md doesn\'t specify a curve, flagged as playtest-tunable). No RangeIndex/range concern: the owner casts this triggered (bypasses range checks) at the missile\'s live position, which may be well outside the caster\'s own melee range. SpellVisualID_1=90013 is the yellow burst impact kit patch_priest_vfx_models.py mints (ChestEffect -> Priest_DivineStar_Impact_Yellow, mined from Ascension\'s client) - the missile\'s own travelling orb model is wired separately, on the creature_template row, not here. DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit).'
+          ' Effect 0 (heal) sp_potency 9.4 -> 28.2 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Divine Star +200%; the heal only - the damage half eff1 is unchanged, healer balance).',
     raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 0, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 32, 'SpellPriority': 50, 'SpellVisualID_1': 90013, 'SpellClassMask_3': _masks.DIVINE_STAR, 'DefenseType': 1},
 )
 scripted_by(divine_star_pulse_200134, 'spell_pri_divine_star_pulse')
@@ -4957,7 +4967,7 @@ halo_pulse_200136 = spell(
     school=School.HOLY,
     cast_time_ms=0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=18.9, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=56.7, potency_kind='heal', implicit_target_a=21),
         Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=74.8, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90102,
@@ -4965,7 +4975,8 @@ halo_pulse_200136 = spell(
     notes='Potency system P5-Priest: eff0 (heal) converted to sp_potency=18.9, eff1 (damage) to '
           'sp_potency=74.8 (both user-reviewed, mismatched rows) - replaces the bonus_coefficients(direct=0.526) '
           'call below (removed; brand-new custom id, no stock-dump row to retire). '
-          'Halo\'s heal/damage pulse (docs/reworks/priest-new-spells.md: "200 (0.526 spellpower coeff) healing/damage"). Cast by the owning priest directly at whichever specific unit spell_pri_halo (AuraScript on 200135, spell_priest_new.cpp) finds newly crossed by the expanding ring on each periodic tick - same explicit-single-unit-target "ally heals / enemy damages" idiom as Divine Star\'s pulse (200134, priest_trigger_spells.py); see that spell\'s own notes for why this sidesteps native-AoE re-hit dedup problems entirely. base_points=199 (stored -1 convention) for the tooltip\'s 200; coeff_weight=0.526 matches the design doc. Playtest bugfix (2026-09-20, "Halo is also not healing either or its not being attributed correctly") - two independent bugs, same shape as Divine Star\'s own pulse (200134, see its notes just above for the full mechanism writeup): (1) TARGET_UNIT_TARGET_ALLY (21, EFFECT_0/HEAL) and TARGET_UNIT_TARGET_ENEMY (6, EFFECT_1/SCHOOL_DAMAGE) do NOT independently gate against an explicit single-unit target - Spell::SelectImplicitTargetObjectTargets never consults each effect\'s own check type for this target-reference path, so both effects landed on every unit the ring touched regardless of reaction (an ally took damage alongside the heal; an enemy got healed alongside the damage) - fixed by spell_pri_halo_pulse (spell_priest_new.cpp), same OnObjectTargetSelect-nulling idiom as spell_pri_divine_star_pulse. (2) coeff_weight alone is passthrough metadata only (lib/build.py\'s own docstring) - it never turns into a spell_bonus_data row or an EffectBonusMultiplier by itself, unlike what its name suggests. Confirmed live: spell_bonus_data had zero rows for 200136 and EffectBonusMultiplier_1/_2 were both 0 in spell_dbc, so every cast landed for a flat, non-scaling ~200 regardless of the caster\'s spellpower. Fixed by calling bonus_coefficients() below, the actual mechanism (see mage_trigger_spells.py/mage_spells.py for the established precedent - e.g. meteor_impact_200096, burnout_explosion_200116) that emits the spell_bonus_data row SpellMgr::GetSpellBonusData reads. DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit).',
+          'Halo\'s heal/damage pulse (docs/reworks/priest-new-spells.md: "200 (0.526 spellpower coeff) healing/damage"). Cast by the owning priest directly at whichever specific unit spell_pri_halo (AuraScript on 200135, spell_priest_new.cpp) finds newly crossed by the expanding ring on each periodic tick - same explicit-single-unit-target "ally heals / enemy damages" idiom as Divine Star\'s pulse (200134, priest_trigger_spells.py); see that spell\'s own notes for why this sidesteps native-AoE re-hit dedup problems entirely. base_points=199 (stored -1 convention) for the tooltip\'s 200; coeff_weight=0.526 matches the design doc. Playtest bugfix (2026-09-20, "Halo is also not healing either or its not being attributed correctly") - two independent bugs, same shape as Divine Star\'s own pulse (200134, see its notes just above for the full mechanism writeup): (1) TARGET_UNIT_TARGET_ALLY (21, EFFECT_0/HEAL) and TARGET_UNIT_TARGET_ENEMY (6, EFFECT_1/SCHOOL_DAMAGE) do NOT independently gate against an explicit single-unit target - Spell::SelectImplicitTargetObjectTargets never consults each effect\'s own check type for this target-reference path, so both effects landed on every unit the ring touched regardless of reaction (an ally took damage alongside the heal; an enemy got healed alongside the damage) - fixed by spell_pri_halo_pulse (spell_priest_new.cpp), same OnObjectTargetSelect-nulling idiom as spell_pri_divine_star_pulse. (2) coeff_weight alone is passthrough metadata only (lib/build.py\'s own docstring) - it never turns into a spell_bonus_data row or an EffectBonusMultiplier by itself, unlike what its name suggests. Confirmed live: spell_bonus_data had zero rows for 200136 and EffectBonusMultiplier_1/_2 were both 0 in spell_dbc, so every cast landed for a flat, non-scaling ~200 regardless of the caster\'s spellpower. Fixed by calling bonus_coefficients() below, the actual mechanism (see mage_trigger_spells.py/mage_spells.py for the established precedent - e.g. meteor_impact_200096, burnout_explosion_200116) that emits the spell_bonus_data row SpellMgr::GetSpellBonusData reads. DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit).'
+          ' Effect 0 (heal) sp_potency 18.9 -> 56.7 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Halo +200%; the heal only - the damage half eff1 is unchanged, healer balance).',
     raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 0, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 52, 'SpellPriority': 50, 'SpellClassMask_3': _masks.HALO, 'DefenseType': 1},
 )
 scripted_by(halo_pulse_200136, 'spell_pri_halo_pulse')
@@ -6166,7 +6177,7 @@ penance_empowered_200160 = spell(
     attributes=65536,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=256.2, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=137.292, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=2818,
     notes='Discipline rework (6,0): the extra ally heal bolt Empowered Penance fires. A copy of the '
@@ -6175,7 +6186,7 @@ penance_empowered_200160 = spell(
           'Reprieve / Renewed Hope a second time on top of the real bolt that spawned it. '
           'Potency system P5-Priest: converted to sp_potency=256.2 (user-reviewed, mismatched row) - '
           'replaces the bonus_coefficients(direct=0.537) call below (removed; brand-new custom id, no '
-          'stock-dump row to retire).',
+          'stock-dump row to retire). sp_potency 256.2 -> 114.41 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: the Empowered Penance bolt is a copy of the Penance heal bolt 47750, now 114.41; it had drifted to 2.2x the bolt). sp_potency 114.41 -> 137.292 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Disc option C, Penance +20%; the Empowered Penance bolt stays a copy of 47750).',
     raw_overrides={'AttributesEx2': 4194308, 'AttributesEx3': 512, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'SpellLevel': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals an ally near your Penance target.', 'AuraDescription_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 10981},
 )
 
@@ -6220,8 +6231,11 @@ grace_200163 = spell(
     spell_icon_id=2819,
     notes='Discipline rework (8,2) NEW rank 3 of Grace - 100% chance, triggering the stock 3%-per-'
           'stack buff 47930. Ranks 1-2 (47516/47517) keep their stock ids and trigger the 1%/2% '
-          'clones 200164/200165 instead.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Flash Heal, Greater Heal, Penance and Power Word: Shield have a 100% chance to bless the target with Grace, increasing all healing received from you by 3%.  Stacks up to 3 times.  Lasts 12 sec.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': _GRACE_TRIGGER_MASK[0], 'EffectSpellClassMaskA_2': _GRACE_TRIGGER_MASK[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
+          'clones 200164/200165 instead. Capstone clause added to the rank text (2026-11-15, balance round 3 on the '
+          'Normal-tier kits, user ruling: "Your Penance heals also shield the target for 30% of the amount healed, '
+          'stacking"): this rank is the one that has the effect, spell_pri_grace_capstone (spell_priest_disc.cpp, '
+          'bound to the Penance bolts 47750 / 200160) keys on it; the shield is penance_shield_200169.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Flash Heal, Greater Heal, Penance and Power Word: Shield have a 100% chance to bless the target with Grace, increasing all healing received from you by 3%.  Stacks up to 3 times.  Lasts 12 sec.\n\nCapstone Bonus: Your Penance heals also shield the target for 30% of the amount healed, stacking.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': _GRACE_TRIGGER_MASK[0], 'EffectSpellClassMaskA_2': _GRACE_TRIGGER_MASK[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 # No spell_proc row of its own: the -47516 whole-chain row (above) covers rank 3 through the talent
 # rank chain, and a positive 200163 row would be dropped at boot as a duplicate.
@@ -6299,6 +6313,46 @@ spirit_shell_absorb_200167 = spell(
           'with spirit_shell_200166 - see that spell\'s notes.',
     raw_overrides={'AttributesEx2': 2621440, 'AttributesEx3': 67108864, 'AttributesEx4': 1048576, 'CastingTimeIndex': 1, 'InterruptFlags': 8, 'ProcChance': 101, 'BaseLevel': 1, 'SpellLevel': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs damage.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'SpellClassSet': 6, 'SpellClassMask_3': _masks.SPIRIT_SHELL, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
+
+
+# --- (8,2) Grace capstone: the Penance shield ------------------------------------------
+# id 200169 is one of Disc's spare 200168-200171 block (the Renewed Hope note above); checked free in every checkout,
+# the dbc-tools source and the data/sql tree on 2026-11-15. The priest has no `reservations:` slice in ids.yaml.
+penance_shield_200169 = spell(
+    id=200169,
+    name='Penance Shield',
+    school=School.HOLY,
+    dispel=DispelType.MAGIC,
+    attributes=327680,
+    range_yards=100.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=21, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127,
+            potency_excluded="percent of a heal, user ruling: the amount always arrives as BP0 from "
+                              "CastCustomSpell (spell_pri_grace_capstone, spell_priest_disc.cpp), 30% of the "
+                              "Penance bolt's effective heal, so it is already scaled by the heal's own "
+                              "potency - the same exclusion as Divine Aegis 47753 / Guiding Star 200158 / "
+                              "Spirit Shell 200167."),
+    ],
+    spell_icon_id=2818,
+    notes='Discipline Grace capstone (8,2) rank 3 (2026-11-15, balance round 3 on the Normal-tier kits, user ruling: '
+          '"Your Penance heals also shield the target for 30% of the amount healed, stacking"): the visible stacking '
+          'absorb spell_pri_grace_capstone puts on the target of every Penance heal bolt (47750 and the Empowered '
+          'Penance bolt 200160). Each bolt adds 30% of its effective heal (plus 30% of a quarter of the overheal, '
+          'Divine Aegis\'s weight) to the running amount, recast with the new total so the 15 s duration refreshes on '
+          'every add, capped at 30% of the target\'s maximum health in C++, same shape as Divine Aegis (47753) and '
+          'Spirit Shell (200167), and tracked separately from both so it stacks with them. Attribute set copied from '
+          'Guiding Star\'s absorb 200158; die_sides=0 because the amount always arrives as BP0 from CastCustomSpell. '
+          'No family flags: nothing else keys on it.',
+    raw_overrides={'AttributesEx2': 2621440, 'AttributesEx3': 67108864, 'AttributesEx4': 1048576, 'CastingTimeIndex': 1, 'InterruptFlags': 8, 'ProcChance': 101, 'BaseLevel': 1, 'SpellLevel': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs damage.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'SpellClassSet': 6, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# The two Penance heal bolts carry the capstone's shield: 47750 (the bolt every Penance channel fires, three per cast)
+# and 200160 (the Empowered Penance bolt). The script reads the bolt's effective heal in AfterHit, and does nothing
+# without Grace rank 3 (200163), so ranks 1-2 carry the tooltip text only.
+scripted_by(penance_47750, 'spell_pri_grace_capstone')
+scripted_by(penance_empowered_200160, 'spell_pri_grace_capstone')
 
 
 # ============================================================================================

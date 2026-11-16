@@ -16,7 +16,7 @@ from .shaman_enh_tooltips import shaman_lshield_1217
 from .shaman_restoration import natures_guardian_heal_202675, totemic_focus_heal_202677
 from .shaman_enhancement import (
     ANTICIPATION_CL_JUMPS, ILS_SS_CLEAVE_R1, ILS_SS_CLEAVE_R2, ILS_SS_CLEAVE_R3, ILS_SS_CLEAVE_RADIUS_YD, ILS_SS_CLEAVE_TARGETS,
-    S1_NOTE, STATIC_SHOCK_ARC_PCT, STATIC_SHOCK_ARC_RADIUS_YD, STATIC_SHOCK_ORB_DAMAGE_R1, STATIC_SHOCK_ORB_DAMAGE_R2,
+    S1_NOTE, SHIELD_STRIKE_ARMOR_PCT, STATIC_SHOCK_ARC_PCT, STATIC_SHOCK_ARC_RADIUS_YD, STATIC_SHOCK_ORB_DAMAGE_R1, STATIC_SHOCK_ORB_DAMAGE_R2,
     STATIC_SHOCK_ORB_DAMAGE_R3, THUNDERING_SURGE_MW_STACKS, THUNDERING_SURGE_R1, THUNDERING_SURGE_R2, THUNDERING_SURGE_R3,
     anticipation_shell_202441, toughness_heal_202444,
 )
@@ -133,7 +133,19 @@ def _scaled_pot(text, num, den):
 # talent (proposal Revisions 2-3), and the Improved Lightning Shield / Thundering Strikes DPS clauses.
 def _toughness_clause(rank):
     return (' While Rockbiter is active, your Lightning Shield orbs heal you for '
-            + _scaled_pot(pot_text(toughness_heal_202444), rank, 3) + '.')
+            + _scaled_pot(pot_text(toughness_heal_202444), rank, 3) + '.' + _TOUGHNESS_SHIELD_STRIKE)
+
+
+# Balance round 3 on the Normal-tier kits (2026-11-15, user ruling): the shield tank's Stormstrike also strikes with the
+# shield (Shield Strike 202450). The percent is every Toughness rank's DUMMY effect 3 ($s3, SHIELD_STRIKE_ARMOR_PCT), which
+# spell_sha_enh_stormstrike::ShieldStrike reads.
+_TOUGHNESS_SHIELD_STRIKE = (' While Rockbiter is active and you have a shield equipped, your Stormstrike also strikes with '
+                            'your shield, dealing Physical damage equal to $s3% of your shield\'s armor.')
+_TOUGHNESS_BAL3_NOTE = (' (2026-11-15, balance round 3 on the Normal-tier kits, user ruling: the shield tank\'s Stormstrike '
+                        'also strikes with the shield) Effect 3 DUMMY = SHIELD_STRIKE_ARMOR_PCT (70, stored 69; 45, stored 44 '
+                        'since 2026-11-15, balance round 5 on the Normal-tier kits, user ruling: shaman tank option B), the Shield '
+                        'Strike 202450 percent of the shield\'s template armor, read by spell_sha_enh_stormstrike::ShieldStrike '
+                        'under Rockbiter with a usable shield in the off hand (any rank).')
 
 
 _STATIC_SHOCK_ORB = (STATIC_SHOCK_ORB_DAMAGE_R1['value'], STATIC_SHOCK_ORB_DAMAGE_R2['value'], STATIC_SHOCK_ORB_DAMAGE_R3['value'])
@@ -2714,7 +2726,7 @@ static_shock_51525 = _talent(
           'Your Stormstrike adds 3 charges to your Lightning Shield.', last=False),
     masks={1: (0x400, 0, 0), 2: (0x400, 0, 0)},
     ProcChance=5, ProcTypeMask=12582932,
-    notes='S3a A2: orb damage +5% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 5% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.' + S1_NOTE + 'Rockbiter clauses: orb damage +20 / 40 / 55 % (hidden child 202448, rank value set by Shaman::SyncRockbiterChildren) and each orb the shield fires arcs (202445, 55 % of the orb) to up to 1 / 2 / 3 other enemies attacking the shaman within 8 yd (spell_sha_enh_storm_orb).',
+    notes='S3a A2: orb damage +5% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 5% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.' + S1_NOTE + 'Rockbiter clauses: orb damage +20 / 40 / 55 % (hidden child 202448, rank value set by Shaman::SyncRockbiterChildren) and each orb the shield fires arcs (202445, 55 % of the orb) to up to 1 / 2 / 3 other enemies attacking the shaman within 8 yd (spell_sha_enh_storm_orb). (2026-11-15, balance round 5 on the Normal-tier kits, user ruling: shaman tank option B) The Rockbiter orb damage is now +8 / 26 / 40 % (x0.90 of 1.20 / 1.40 / 1.55; STATIC_SHOCK_ORB_DAMAGE_R1..R3), so the tank\'s orb lands at x0.90; Enhancement DPS (never in Rockbiter) is unchanged.',
 )
 
 
@@ -2726,7 +2738,7 @@ static_shock_51526 = _talent(
           'Your Stormstrike adds 3 charges to your Lightning Shield.', last=False),
     masks={1: (0x400, 0, 0), 2: (0x400, 0, 0)},
     ProcChance=10, ProcTypeMask=12582932,
-    notes='S3a A2: orb damage +10% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 10% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.' + S1_NOTE + 'Rockbiter clauses: orb damage +20 / 40 / 55 % (hidden child 202448, rank value set by Shaman::SyncRockbiterChildren) and each orb the shield fires arcs (202445, 55 % of the orb) to up to 1 / 2 / 3 other enemies attacking the shaman within 8 yd (spell_sha_enh_storm_orb).',
+    notes='S3a A2: orb damage +10% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 10% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.' + S1_NOTE + 'Rockbiter clauses: orb damage +20 / 40 / 55 % (hidden child 202448, rank value set by Shaman::SyncRockbiterChildren) and each orb the shield fires arcs (202445, 55 % of the orb) to up to 1 / 2 / 3 other enemies attacking the shaman within 8 yd (spell_sha_enh_storm_orb). (2026-11-15, balance round 5 on the Normal-tier kits, user ruling: shaman tank option B) The Rockbiter orb damage is now +8 / 26 / 40 % (x0.90 of 1.20 / 1.40 / 1.55; STATIC_SHOCK_ORB_DAMAGE_R1..R3), so the tank\'s orb lands at x0.90; Enhancement DPS (never in Rockbiter) is unchanged.',
 )
 
 
@@ -2738,7 +2750,7 @@ static_shock_51527 = _talent(
           'Your Stormstrike adds 3 charges to your Lightning Shield.', last=True),
     masks={1: (0x400, 0, 0), 2: (0x400, 0, 0)},
     ProcChance=15, ProcTypeMask=12582932,
-    notes='S3a A2: orb damage +15% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 15% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.' + S1_NOTE + 'Rockbiter clauses: orb damage +20 / 40 / 55 % (hidden child 202448, rank value set by Shaman::SyncRockbiterChildren) and each orb the shield fires arcs (202445, 55 % of the orb) to up to 1 / 2 / 3 other enemies attacking the shaman within 8 yd (spell_sha_enh_storm_orb).',
+    notes='S3a A2: orb damage +15% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 15% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.' + S1_NOTE + 'Rockbiter clauses: orb damage +20 / 40 / 55 % (hidden child 202448, rank value set by Shaman::SyncRockbiterChildren) and each orb the shield fires arcs (202445, 55 % of the orb) to up to 1 / 2 / 3 other enemies attacking the shaman within 8 yd (spell_sha_enh_storm_orb). (2026-11-15, balance round 5 on the Normal-tier kits, user ruling: shaman tank option B) The Rockbiter orb damage is now +8 / 26 / 40 % (x0.90 of 1.20 / 1.40 / 1.55; STATIC_SHOCK_ORB_DAMAGE_R1..R3), so the tank\'s orb lands at x0.90; Enhancement DPS (never in Rockbiter) is unchanged.',
 )
 
 
@@ -3790,11 +3802,12 @@ scripted_by(8170, 'spell_sha_resto_cleansing_totem')
 
 toughness_16252 = _talent(
     16252, 'Toughness', 'Rank 1',
-    [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 3, 1), _aura(232, -11, 11)], 52,
+    [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 3, 1), _aura(232, -11, 11),
+     _dummy(SHIELD_STRIKE_ARMOR_PCT['value'] - 1)], 52,
     _cap('Increases your armor value from items by 4% and reduces the duration of movement slowing effects on you by 10%.'
          + _toughness_clause(1),
           'While you are below 35% health, your Stoneskin erodes 50% slower.', last=False),
-    notes='S3a A2: pulled stock rank, rewritten. Item armor +4% (aura 142 physical; the stock Stamina clause is gone), snare duration -10% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.' + S1_NOTE + 'Rockbiter clause: every Lightning Shield orb the shield fires heals for 202444 x rank / 3 (5 / 10 / 15 potency; spell_sha_enh_storm_orb + spell_sha_enh_toughness_heal).',
+    notes='S3a A2: pulled stock rank, rewritten. Item armor +4% (aura 142 physical; the stock Stamina clause is gone), snare duration -10% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.' + S1_NOTE + 'Rockbiter clause: every Lightning Shield orb the shield fires heals for 202444 x rank / 3 (5 / 10 / 15 potency; spell_sha_enh_storm_orb + spell_sha_enh_toughness_heal).' + _TOUGHNESS_BAL3_NOTE,
 )
 
 
@@ -3814,7 +3827,7 @@ thundering_strikes_16255 = _talent(
     _cap('Increases your chance to get a critical strike with all spells and attacks by 1%.'
          + _thundering_surge_clause(1),
           'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=False),
-    notes='S3a A2: pulled stock rank, rewritten. All crit +1% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +40 / 80 / 125 % and its mana cost is refunded (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
+    notes='S3a A2: pulled stock rank, rewritten. All crit +1% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +24 / 48 / 75 % and its mana cost is refunded (surge 40 / 80 / 125 -> 24 / 48 / 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
 )
 
 
@@ -3880,7 +3893,7 @@ thundering_strikes_16302 = _talent(
     _cap('Increases your chance to get a critical strike with all spells and attacks by 2%.'
          + _thundering_surge_clause(2),
           'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=False),
-    notes='S3a A2: pulled stock rank, rewritten. All crit +2% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +40 / 80 / 125 % and its mana cost is refunded (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
+    notes='S3a A2: pulled stock rank, rewritten. All crit +2% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +24 / 48 / 75 % and its mana cost is refunded (surge 40 / 80 / 125 -> 24 / 48 / 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
 )
 
 
@@ -3891,27 +3904,29 @@ thundering_strikes_16303 = _talent(
          + _thundering_surge_clause(3),
           'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=True),
     ProcChance=10, ProcTypeMask=0x14000,
-    notes='S3a A2: pulled stock rank, rewritten. All crit +3% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair). Rank 3 eff2 PROC_TRIGGER_SPELL -> 202397 (Agility = level, A3); spell_proc 16303: HIT phase, SpellTypeMask damage|heal, 10%, ICD 6000, once per cast (spell_sha_enh_thundering_strikes). Ranks 4 and 5 (16304/16305) leave the talent.' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +40 / 80 / 125 % and its mana cost is refunded (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
+    notes='S3a A2: pulled stock rank, rewritten. All crit +3% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair). Rank 3 eff2 PROC_TRIGGER_SPELL -> 202397 (Agility = level, A3); spell_proc 16303: HIT phase, SpellTypeMask damage|heal, 10%, ICD 6000, once per cast (spell_sha_enh_thundering_strikes). Ranks 4 and 5 (16304/16305) leave the talent.' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +24 / 48 / 75 % and its mana cost is refunded (surge 40 / 80 / 125 -> 24 / 48 / 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
 )
 
 
 toughness_16306 = _talent(
     16306, 'Toughness', 'Rank 2',
-    [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 6, 1), _aura(232, -21, 11)], 52,
+    [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 6, 1), _aura(232, -21, 11),
+     _dummy(SHIELD_STRIKE_ARMOR_PCT['value'] - 1)], 52,
     _cap('Increases your armor value from items by 7% and reduces the duration of movement slowing effects on you by 20%.'
          + _toughness_clause(2),
           'While you are below 35% health, your Stoneskin erodes 50% slower.', last=False),
-    notes='S3a A2: pulled stock rank, rewritten. Item armor +7% (aura 142 physical; the stock Stamina clause is gone), snare duration -20% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.' + S1_NOTE + 'Rockbiter clause: every Lightning Shield orb the shield fires heals for 202444 x rank / 3 (5 / 10 / 15 potency; spell_sha_enh_storm_orb + spell_sha_enh_toughness_heal).',
+    notes='S3a A2: pulled stock rank, rewritten. Item armor +7% (aura 142 physical; the stock Stamina clause is gone), snare duration -20% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.' + S1_NOTE + 'Rockbiter clause: every Lightning Shield orb the shield fires heals for 202444 x rank / 3 (5 / 10 / 15 potency; spell_sha_enh_storm_orb + spell_sha_enh_toughness_heal).' + _TOUGHNESS_BAL3_NOTE,
 )
 
 
 toughness_16307 = _talent(
     16307, 'Toughness', 'Rank 3',
-    [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 9, 1), _aura(232, -31, 11)], 52,
+    [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 9, 1), _aura(232, -31, 11),
+     _dummy(SHIELD_STRIKE_ARMOR_PCT['value'] - 1)], 52,
     _cap('Increases your armor value from items by 10% and reduces the duration of movement slowing effects on you by 30%.'
          + _toughness_clause(3),
           'While you are below 35% health, your Stoneskin erodes 50% slower.', last=True),
-    notes='S3a A2: pulled stock rank, rewritten. Item armor +10% (aura 142 physical; the stock Stamina clause is gone), snare duration -30% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.' + S1_NOTE + 'Rockbiter clause: every Lightning Shield orb the shield fires heals for 202444 x rank / 3 (5 / 10 / 15 potency; spell_sha_enh_storm_orb + spell_sha_enh_toughness_heal).',
+    notes='S3a A2: pulled stock rank, rewritten. Item armor +10% (aura 142 physical; the stock Stamina clause is gone), snare duration -30% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.' + S1_NOTE + 'Rockbiter clause: every Lightning Shield orb the shield fires heals for 202444 x rank / 3 (5 / 10 / 15 potency; spell_sha_enh_storm_orb + spell_sha_enh_toughness_heal).' + _TOUGHNESS_BAL3_NOTE,
 )
 
 

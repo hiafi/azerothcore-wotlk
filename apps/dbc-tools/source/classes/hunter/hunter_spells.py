@@ -170,10 +170,10 @@ mongoose_bite_1495 = spell(
     mana_cost_pct=3,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=97.5, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=107.25, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=257,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 16); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to potency (74.8 then; ap_potency=130 since the H0 strike retune). hunter-rework S3a A15: TOOLTIP-RECONCILE (a) wording, {pot1*df} with tooltip_vars 1153 (Deadly Focus).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 16); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to potency (74.8 then; ap_potency=130 since the H0 strike retune). hunter-rework S3a A15: TOOLTIP-RECONCILE (a) wording, {pot1*df} with tooltip_vars 1153 (Deadly Focus). Effect 1 ap_potency 97.5 -> 107.25 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Mongoose Bite +10%).',
     tooltip_vars=sv_strike_1153,
     raw_overrides={'AttributesEx': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A quick bite that deals {pot1*df} Physical damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 12, 'SpellClassMask_1': 2, 'SpellClassSet': 9, 'SpellLevel': 16, 'SpellVisualID_1': 342, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1800,12 +1800,12 @@ steady_shot_56641 = spell(
     range_yards=35.0,
     effects=[
         # The potency time basis stays at the live 1.5 s cast (DBC 1000 ms + the engine's 500 ms), not cast_time_ms.
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=44.1, potency_kind='direct', time_basis_ms=1500,
-               implicit_target_a=6),   # 2026-11-01 pass 1031: ap_potency 49.0 -> 44.1
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=52.92, potency_kind='direct', time_basis_ms=1500,
+               implicit_target_a=6),   # 2026-11-01 pass 1031: ap_potency 49.0 -> 44.1; 2026-11-15: 44.1 -> 52.92
     ],
     spell_icon_id=2228,
     tooltip_vars=bm_steady_shot_1150,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted effect 1 (the flat + AP-scaling term) to ap_potency=42.6 (potency-report default, base/coef already agreed); the raw weapon+ammo damage added in SpellEffects.cpp\'s SPELLFAMILY_HUNTER case is real weapon itemization, not hard-coded AP math (no RAP term there), so it is untouched. Effect 1 ap_potency 49.0 -> 44.1 (2026-11-01, DPS balance pass 1031, user ruling: Steady Shot -10%).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted effect 1 (the flat + AP-scaling term) to ap_potency=42.6 (potency-report default, base/coef already agreed); the raw weapon+ammo damage added in SpellEffects.cpp\'s SPELLFAMILY_HUNTER case is real weapon itemization, not hard-coded AP math (no RAP term there), so it is untouched. Effect 1 ap_potency 49.0 -> 44.1 (2026-11-01, DPS balance pass 1031, user ruling: Steady Shot -10%). Effect 1 ap_potency 44.1 -> 52.92 (2026-11-15, balance on the Normal-tier kits, user ruling: Steady Shot +20%); the raw weapon+ammo damage added in C++ is not scaled.',
     raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 134217728, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 4, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A steady shot that causes {pot1*steady} Physical damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_3': m.STEADY_SHOT, 'SpellClassSet': 9, 'SpellLevel': 8, 'SpellVisualID_1': 8155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # 204 is the live Hunter trainer; Steady Shot is a baseline at 8 (hunter-rework SHARED B1).
@@ -2267,10 +2267,10 @@ chimera_shot_53209 = spell(
     effects=[
         Effect(type=77, die_sides=0, implicit_target_a=6),
         Effect(type=121, base_points=-1, implicit_target_a=6),
-        Effect(type=31, weapon_potency=122, implicit_target_a=6),   # R2-15 (user 2026-10-13); placeholder, M; 2026-11-01 pass 1031: 135 -> 122
+        Effect(type=31, weapon_potency=159, implicit_target_a=6),   # R2-15 (user 2026-10-13); placeholder, M; 2026-11-01 pass 1031: 135 -> 122; 2026-11-15: 122 -> 159
     ],
     spell_icon_id=3412,
-    notes='pulled from existing data. Effect 3 weapon_potency 135 -> 122 (2026-11-01, DPS balance pass 1031, user ruling: Chimera Shot -10%; 135 x 0.9 = 121.5, weapon_potency must be whole, rounded up).',
+    notes='pulled from existing data. Effect 3 weapon_potency 135 -> 122 (2026-11-01, DPS balance pass 1031, user ruling: Chimera Shot -10%; 135 x 0.9 = 121.5, weapon_potency must be whole, rounded up). Effect 3 weapon_potency 122 -> 159 (2026-11-15, balance on the Normal-tier kits, user ruling: Chimera Shot +30%; 122 x 1.3 = 158.6, weapon_potency must be whole, rounded up).',
     raw_overrides={'AttributesEx2': 131072, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "You deal $s3% weapon damage, refreshing your Serpent Sting on the target and instantly dealing " + _c(CHIMERA_SERPENT_BURST_PCT) + "% of its total damage. Each of your marks on the target also triggers, without being consumed: Sniper's Mark makes this a critical strike with " + _c(CHIMERA_SNIPER_CRIT_DAMAGE) + "% more critical strike damage; Viper's Mark adds a stack and applies Viper's Venom; Falcon's Mark increases your attack power by $201947s1% for $201947d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_3': 1, 'SpellClassSet': 9, 'SpellLevel': 60, 'SpellVisualID_1': 11725, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

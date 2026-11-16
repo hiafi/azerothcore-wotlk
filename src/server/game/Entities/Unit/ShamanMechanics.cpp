@@ -1837,6 +1837,15 @@ namespace
         int32(ShamanData::STATIC_SHOCK_ORB_DAMAGE_R3)
     };
 
+    // Spirit Guard's Stormstrike damage children under Rockbiter (balance round 5 on the Normal-tier kits), one per
+    // rank; the percent is each row's own value.
+    constexpr std::array<uint32, 3> SPIRIT_GUARD_STORMSTRIKE_CHILDREN =
+    {
+        ShamanData::SPELL_SPIRIT_GUARD_STORMSTRIKE_R1,
+        ShamanData::SPELL_SPIRIT_GUARD_STORMSTRIKE_R2,
+        ShamanData::SPELL_SPIRIT_GUARD_STORMSTRIKE_R3
+    };
+
     // Spirit Guard's parry bonus under Rockbiter is 1/2/3% (doc [fixed]): the rank itself. The brief names no const
     // for it (local fallback).
     constexpr int32 SPIRIT_GUARD_PARRY_PCT_PER_RANK = 1;
@@ -2189,6 +2198,7 @@ namespace
     // the talent is known. Both are passive and hidden; the parry amount is set live (it is not a row value).
     // DPS balance pass 1031 S1: Anticipation's jumps child and Static Shock's orb damage child (rank %) follow the same
     // rule, and Rockbiter's own effect 0 (damage dealt with Spirit Guard, spell_sha_rockbiter_damage) is recalculated.
+    // Balance round 5: Spirit Guard's per-rank Stormstrike damage child (202451-202453) too.
     void SyncRockbiterChildren(Player* player, bool rockbiter)
     {
         uint8 const spiritGuardRank = Shaman::GetTalentRank(player, SPIRIT_GUARD_RANKS);
@@ -2204,6 +2214,11 @@ namespace
                         if (effect->GetAuraType() == SPELL_AURA_MOD_PARRY_PERCENT && effect->GetAmount() != parryPct)
                             effect->ChangeAmount(parryPct);     // marked: a recalculation keeps the live value
         }
+
+        // Balance round 5 on the Normal-tier kits (2026-11-15, user ruling: shaman tank option B): the Stormstrike
+        // strikes deal 33/66/100% more under Rockbiter; exactly the known rank's child is kept.
+        for (size_t i = 0; i < SPIRIT_GUARD_STORMSTRIKE_CHILDREN.size(); ++i)
+            SetOwnerAura(player, player, SPIRIT_GUARD_STORMSTRIKE_CHILDREN[i], parryWanted && spiritGuardRank == i + 1);
 
         SetOwnerAura(player, player, ShamanData::SPELL_ROCKBITER_ILS_THREAT,
             rockbiter && Shaman::GetTalentRank(player, IMPROVED_LIGHTNING_SHIELD_RANKS) > 0);

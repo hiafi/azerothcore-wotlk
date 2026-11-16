@@ -254,11 +254,12 @@ shadow_word_pain_589 = spell(
     range_yards=30.0,
     duration_ms=18000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=21.33, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=25.596, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
     ],
     spell_icon_id=234,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1→level-60 slope (anchor rank 10894, rank 8); coefficient/cast_time_ms/mana_cost_pct from max rank (48125, rank 12); MaxLevel set to 80. '
-          'Potency system P5-Priest: converted to sp_potency=23.7 (potency-report default, base/coef already agreed). mana_cost_pct 22 -> 16 (2026-10-08, DPS balance pass, user ruling: Shadow mana). Effect 1 sp_potency 23.7 -> 21.33 (2026-11-01, DPS balance pass 1031, user ruling: Shadow Word: Pain -10%).',
+          'Potency system P5-Priest: converted to sp_potency=23.7 (potency-report default, base/coef already agreed). mana_cost_pct 22 -> 16 (2026-10-08, DPS balance pass, user ruling: Shadow mana). Effect 1 sp_potency 23.7 -> 21.33 (2026-11-01, DPS balance pass 1031, user ruling: Shadow Word: Pain -10%).'
+          ' sp_potency 21.33 -> 25.596 (2026-11-15, balance on the Normal-tier kits, user ruling: Shadow Word: Pain +20%).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx4': 1048576, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Shadow damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A word of darkness that causes {pot1.total} Shadow damage over $d.', 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 32768, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 4, 'SpellVisualID_1': 71, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 unbind_bonus_coefficients(shadow_word_pain_589)  # stale spell_bonus_data row overrode the potency coefficient (D1)
@@ -279,7 +280,7 @@ prayer_of_healing_596 = spell(
     mana_cost_pct=20,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=47.5, potency_kind='heal', implicit_target_a=21, implicit_target_b=37, radius_yards=30.0),
+        Effect(type=EffectType.HEAL, sp_potency=42.75, potency_kind='heal', implicit_target_a=21, implicit_target_b=37, radius_yards=30.0),
     ],
     spell_icon_id=540,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1→level-60 slope (anchor rank 25316, rank 5); coefficient/cast_time_ms/mana_cost_pct from max rank (48072, rank 7); MaxLevel set to 80. '
@@ -291,7 +292,7 @@ prayer_of_healing_596 = spell(
           'round R4 revision, user ruling: '
           '"make the mana changes baseline", Prayer of Healing the main cut; sized with Holy '
           'Concentration\'s -45% Holy Words so Holy\'s party pin50 sim runs out of mana near 45 s). '
-          'Shared with Disc, whose sizing accounts for it (dps-balance-1031.STAGE-R4-PRIEST-REPORT.md).',
+          'Shared with Disc, whose sizing accounts for it (dps-balance-1031.STAGE-R4-PRIEST-REPORT.md). Effect 1 sp_potency 47.5 -> 42.75 (2026-11-15, balance round 4 on the Normal-tier kits, user ruling: Prayer of Healing -10% (Holy over the 4,000 goal; Disc also casts it)).',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 14, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "A powerful prayer heals the friendly target's party members within $a1 yards for {pot1}.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 512, 'SpellClassSet': 6, 'SpellLevel': 30, 'SpellVisualID_1': 194, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -614,12 +615,13 @@ devouring_plague_2944 = spell(
     range_yards=30.0,
     duration_ms=24000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=22.515, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_LEECH, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=27.018, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_LEECH, amplitude=3000),
     ],
     spell_icon_id=3789,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor rank 19280, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48300, rank 9); MaxLevel set to 80. '
           'docs/reworks/priest-new-spells.md ("Spell Changes"): learn level moved from 20 to 14. '
-          "Potency system P5-Priest: converted to sp_potency=23.7 - a classifier gap (potency_report.py's classify_effect() doesn't recognize PERIODIC_LEECH, so this effect never appeared in the auto-report at all); computed by hand from this fork's own formula (base-implied 23.74, coef-implied 21.58, well under the 10% mismatch threshold so no ambiguity) - matches Shadow Word: Pain's own baseline DoT potency almost exactly, as expected for a plain Shadow DoT. The 15% self-heal (EffectMultipleValue_1) and PERIODIC_LEECH's own stock healing-the-caster mechanic are untouched, same as any other DoT's script multiplier on an already-potency-scaled amount. mana_cost_pct 25 -> 18 (2026-10-08, DPS balance pass, user ruling: Shadow mana). mana_cost_pct 18 -> 14 (2026-10-08, DPS balance pass, user ruling: Shadow mana). Effect 1 sp_potency 23.7 -> 22.515 (2026-11-01, DPS balance pass 1031, user ruling: Devouring Plague -5%).",
+          "Potency system P5-Priest: converted to sp_potency=23.7 - a classifier gap (potency_report.py's classify_effect() doesn't recognize PERIODIC_LEECH, so this effect never appeared in the auto-report at all); computed by hand from this fork's own formula (base-implied 23.74, coef-implied 21.58, well under the 10% mismatch threshold so no ambiguity) - matches Shadow Word: Pain's own baseline DoT potency almost exactly, as expected for a plain Shadow DoT. The 15% self-heal (EffectMultipleValue_1) and PERIODIC_LEECH's own stock healing-the-caster mechanic are untouched, same as any other DoT's script multiplier on an already-potency-scaled amount. mana_cost_pct 25 -> 18 (2026-10-08, DPS balance pass, user ruling: Shadow mana). mana_cost_pct 18 -> 14 (2026-10-08, DPS balance pass, user ruling: Shadow mana). Effect 1 sp_potency 23.7 -> 22.515 (2026-11-01, DPS balance pass 1031, user ruling: Devouring Plague -5%)."
+          ' sp_potency 22.515 -> 27.018 (2026-11-15, balance on the Normal-tier kits, user ruling: Devouring Plague +20%).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx5': 32, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Causes {pot1} damage every $t1 seconds, healing the caster.', 'BaseLevel': 14, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Afflicts the target with a disease that causes {pot1.total} Shadow damage over $d. 15% of damage caused by the Devouring Plague heals the caster. This spell can only affect one target at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 0.15000000596046448, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 33554432, 'SpellClassMask_2': 4096, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 14, 'SpellPriority': 50, 'SpellVisualID_1': 346, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # TrainerId 208 is the live Priest trainer (confirmed via lib/trainer_state.py's
@@ -691,11 +693,12 @@ mind_blast_8092 = spell(
     mana_cost_pct=9,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=103.768, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=124.522, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=95,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1→level-60 slope (anchor rank 10947, rank 9); coefficient/cast_time_ms/mana_cost_pct from max rank (48127, rank 13); MaxLevel set to 80. '
-          'Potency system P5-Priest: converted to sp_potency=190.7 (user-reviewed, mismatched row). mana_cost_pct 17 -> 12 (2026-10-08, DPS balance pass, user ruling: Shadow mana). mana_cost_pct 12 -> 9 (2026-10-08, DPS balance pass, user ruling: Shadow mana). Effect 1 sp_potency 190.7 -> 152.6 (2026-10-08, DPS balance pass, user ruling: Shadow damage). Effect 1 sp_potency 152.6 -> 129.71 (2026-11-01, DPS balance pass 1031, user ruling: Mind Blast -15%). Effect 1 sp_potency 129.71 -> 103.768 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Mind Blast -20%).',
+          'Potency system P5-Priest: converted to sp_potency=190.7 (user-reviewed, mismatched row). mana_cost_pct 17 -> 12 (2026-10-08, DPS balance pass, user ruling: Shadow mana). mana_cost_pct 12 -> 9 (2026-10-08, DPS balance pass, user ruling: Shadow mana). Effect 1 sp_potency 190.7 -> 152.6 (2026-10-08, DPS balance pass, user ruling: Shadow damage). Effect 1 sp_potency 152.6 -> 129.71 (2026-11-01, DPS balance pass 1031, user ruling: Mind Blast -15%). Effect 1 sp_potency 129.71 -> 103.768 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Mind Blast -20%).'
+          ' sp_potency 103.768 -> 124.522 (2026-11-15, balance on the Normal-tier kits, user ruling: Mind Blast +20%).',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target for {pot1} Shadow damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 8192, 'SpellClassSet': 6, 'SpellLevel': 10, 'SpellVisualID_1': 3057, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # Priest Shadow rework (SHADOW.md "Scripts on stock spells"): row unchanged, one script class
@@ -1266,6 +1269,11 @@ mind_sear_48045 = spell(
 # ~500c/level) - no data exists past level 34 on this trainer to anchor to more precisely; flagged
 # as a first-pass estimate like this rework's other placeholder tuning numbers.
 trained_by(mind_sear_48045, trainer_id=208, req_level=44, money_cost=17000)
+# Pain and Suffering (8,1) capstone (2026-11-15, AoE round 1 on the Normal-tier kits, user ruling: Devouring Plague
+# spreads one target at a time with Mind Sear): an AuraScript on the channel aura's periodic tick copies the priest's
+# Devouring Plague to one nearby enemy without it (spell_priest_shadow.cpp, Priest::SpreadDevouringPlague). It reads
+# rank 3 (47582) on the caster and does nothing without it.
+scripted_by(mind_sear_48045, 'spell_pri_mind_sear_plague_spread')
 
 
 divine_hymn_64843 = spell(
@@ -2009,7 +2017,7 @@ holy_word_sanctify_200198 = spell(
     range_yards=40.0,
     radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=28.3, potency_kind='heal', implicit_target_a=31, radius_yards=8.0),
+        Effect(type=EffectType.HEAL, sp_potency=56.6, potency_kind='heal', implicit_target_a=31, radius_yards=8.0),
     ],
     spell_icon_id=90107,
     notes='HOLY.md §2/§"ID map": instant ground-targeted AoE heal, 60 s cooldown, 20% base mana, '
@@ -2031,7 +2039,7 @@ holy_word_sanctify_200198 = spell(
           '(_masks.HW_SANCTIFY) is its own family-flag identity (same rationale as Serenity above). '
           'Potency system P5-Priest: converted to sp_potency=28.3 (user-reviewed, mismatched row) - '
           'replaces the bonus_coefficients(direct=0.6) call below (removed; brand-new custom id, no '
-          'stock-dump row to retire). DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit).',
+          'stock-dump row to retire). DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit). sp_potency 28.3 -> 56.6 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Holy Word: Sanctify +100%, it should hit harder than Prayer of Healing (47.5)).',
     raw_overrides={'Targets': 64, 'BaseLevel': 10, 'SpellLevel': 10, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals up to 5 friendly targets within $a1 yards of the target location for {pot1}.  Healing is reduced beyond 5 targets.', 'EquippedItemClass': -1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 280, 'SpellClassMask_3': _masks.HW_SANCTIFY, 'DefenseType': 1},
 )
 scripted_by(holy_word_sanctify_200198, 'spell_pri_holy_word_sanctify')

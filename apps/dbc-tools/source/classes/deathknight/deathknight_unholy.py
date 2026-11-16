@@ -376,6 +376,9 @@ _C = [
     ('WOUND_BURST_MIN', 2, 'Scourge Strike bursts max(this, stacks / 2) wounds, capped at the stack.'),
     ('WOUND_EXPLOSION_PCT', 30, 'Death explosion: percent of a wound burst per wound.'),
     ('WOUND_EXPLOSION_TARGETS', 5, 'Death explosion target cap.'),
+    ('WOUND_SECONDARY_PCT', 50, 'Wound burst / overflow damage percent on an enemy other than the Death Knight\'s '
+     'primary target (victim, else selection). Added 50 (2026-11-15, AoE round 2 on the Normal-tier kits, user '
+     'ruling: Festering Wound 50% damage to nearby targets).'),
     ('SCOURGE_STRIKE_DEATH_RUNE_PCT', 33, 'Scourge Strike: base chance percent per plain rune spent to return a ready Death Rune.'),
     ('SCOURGE_STRIKE_DISEASE_PCT', 12, 'Scourge Strike Shadow part: percent of the hit per own disease.'),
     ('NECROMANTIC_ENERGY_PER_STRIKE', 3, 'Necromancy: Necromantic Energy per Plague Strike.'),

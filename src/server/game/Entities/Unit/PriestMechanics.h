@@ -236,6 +236,20 @@ namespace Priest
     // Death kill rolls a separate, ICD-exempt Tentacle of Madness chance. Call site next to
     // `Mage::OnKill` in `Unit::Kill` (`Unit.cpp` ~13958).
     void OnKill(Unit* killer, Unit* victim, SpellInfo const* spellProto);
+
+    // Pain and Suffering (Shadow 8,1) capstone (2026-11-15, AoE round 1): each Mind Sear tick
+    // copies the priest's Devouring Plague `source` onto `target` (spell_pri_mind_sear_plague_spread,
+    // spell_priest_shadow.cpp). The copy is a fresh aura at the caster's current stats that keeps the
+    // source's remaining duration. Devouring Plague is a single-target spell (AttributesEx5 LIMIT_N),
+    // so the caster's registered single-target Devouring Plague is held out of that list while the
+    // copy is created and put back after, and the copy itself is never registered: a real cast still
+    // replaces only the previous real cast. Returns the copy, or nullptr when nothing was applied.
+    Aura* SpreadDevouringPlague(Unit* caster, Aura const* source, Unit* target);
+
+    // True only while SpreadDevouringPlague creates its copy. A spread is not a cast, so
+    // spell_pri_devouring_plague (spell_priest.cpp) skips Improved Devouring Plague's instant
+    // chunk (63675) and self-heal (75999) for it.
+    bool IsSpreadingDevouringPlague();
 }
 
 #endif

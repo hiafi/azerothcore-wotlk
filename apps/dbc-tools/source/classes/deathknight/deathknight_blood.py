@@ -194,13 +194,14 @@ marrowrend_203123 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=144, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=18, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=158, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=19.8, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=599,
     tooltip_vars=bloody_strikes_tooltip_1250,
     notes=(
+        'weapon_potency 144 -> 158 (144 x 1.10 = 158.4, whole) and sp_potency 18 -> 19.8 (2026-11-15, balance on the Normal-tier kits, user ruling: Marrowrend +10%). '
         'weapon_potency 180 -> 144 and sp_potency 22.5 -> 18 (2026-11-02, DPS balance pass 1031 round R6, user ruling: Marrowrend -20%). '
         'weapon_potency 120 -> 180 and sp_potency 15 -> 22.5 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Marrowrend +50%). '
         'weapon_potency 80 -> 120 and sp_potency 10 -> 15 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Marrowrend +50%; the user wrote "50%" '

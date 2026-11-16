@@ -63,7 +63,7 @@ def _desc(text, capstone=None, last=False):
     return f"{text}\n\n|cFF9D9D9DCapstone Bonus: {capstone}|r"
 
 
-def _rank(spell_id, name, rank, effects, icon, description, masks=None, raw=None, tooltip_vars=None):
+def _rank(spell_id, name, rank, effects, icon, description, masks=None, raw=None, tooltip_vars=None, notes=_NOTE):
     """A talent rank passive. `masks` maps a 1-based effect index to its (d0, d1, d2) EffectSpellClassMask triple;
     `rank` is the NameSubtext number (None for a one-rank talent)."""
     overrides = {
@@ -87,7 +87,7 @@ def _rank(spell_id, name, rank, effects, icon, description, masks=None, raw=None
         id=spell_id, name=name, school=School.NORMAL, attributes=464,
         cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
         range_yards=0.0, duration_ms=-1,
-        effects=effects, spell_icon_id=icon, notes=_NOTE, raw_overrides=overrides, **kwargs,
+        effects=effects, spell_icon_id=icon, notes=notes, raw_overrides=overrides, **kwargs,
     )
 
 # ---- (0,0) Pathfinding 1384: r3 clones 19560 (r1/r2 are in hunter_trigger_spells.py). Capstone via linked_spell 201813 (A1).
@@ -292,7 +292,7 @@ procs_on(
     family_mask=(m.MULTI_SHOT, 0, 0), spell_phase_mask=m.PROC_SPELL_PHASE_CAST, chance=100.0,
 )
 
-# ---- (7,1) Cobra Shot 60206: Steady Shot damage +16/32/51%; r3 capstone links 201811 (A1). The Nature share moved to
+# ---- (7,1) Cobra Shot 60206: Steady Shot damage stored 22/44/66 = live +23/45/67% (was 16/32/51 = +17/33/52%); r3 capstone links 201811 (A1). The Nature share moved to
 # Serpent's Swiftness, so these ranks carry no script and no spell_proc row.
 _COBRA = (
     "Increases the damage of your Steady Shot by $s1%."
@@ -300,16 +300,20 @@ _COBRA = (
 _COBRA_CAP = "Your Steady Shot becomes instant. Cannot be combined with other talents that transform Steady Shot."
 
 
-def _cobra(spell_id, rank, bp, last):
+def _cobra(spell_id, rank, bp, last, old_bp):
+    # SPELLMOD_DAMAGE percent mods multiply per mod in Player::ApplySpellMod (totalmul *= 1 + value / 100), so the
+    # max rank's live 1.52 -> 1.67 raises Steady Shot's whole hit by 1.67 / 1.52 = x1.0987 whatever else is active.
     return _rank(
         spell_id, 'Cobra Shot', rank, [_pct(SpellModOp.DAMAGE, bp)], 2236, _desc(_COBRA, _COBRA_CAP, last=last),
         masks={1: m.STEADY_SHOT_MASK},
+        notes=f"{_NOTE} EffectBasePoints_1 {old_bp} -> {bp} (2026-11-15, balance round 2 on the Normal-tier kits, "
+              f"user ruling: Cobra Shot rank 3 Steady Shot damage +10% more, spread evenly over the ranks).",
     )
 
 
-cobra_shot_201849 = _cobra(201849, 1, 16, False)
-cobra_shot_201850 = _cobra(201850, 2, 32, False)
-cobra_shot_201851 = _cobra(201851, 3, 51, True)
+cobra_shot_201849 = _cobra(201849, 1, 22, False, 16)
+cobra_shot_201850 = _cobra(201850, 2, 44, False, 32)
+cobra_shot_201851 = _cobra(201851, 3, 66, True, 51)
 
 # ---- (7,2) Master's Command 2136: commanded-spell damage.
 def _masters_command(spell_id, rank, bp):

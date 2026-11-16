@@ -507,6 +507,10 @@ namespace ShamanData
     constexpr uint32 SPELL_ANTICIPATION_JUMPS = 202447; // anticipation_jumps_202447
     constexpr uint32 SPELL_STATIC_SHOCK_ORB_DAMAGE = 202448; // static_shock_orb_damage_202448
     constexpr uint32 SPELL_ILS_STORMSTRIKE_CLEAVE = 202449; // ils_stormstrike_cleave_202449
+    constexpr uint32 SPELL_SHIELD_STRIKE = 202450; // shield_strike_202450
+    constexpr uint32 SPELL_SPIRIT_GUARD_STORMSTRIKE_R1 = 202451; // spirit_guard_stormstrike_r1_202451
+    constexpr uint32 SPELL_SPIRIT_GUARD_STORMSTRIKE_R2 = 202452; // spirit_guard_stormstrike_r2_202452
+    constexpr uint32 SPELL_SPIRIT_GUARD_STORMSTRIKE_R3 = 202453; // spirit_guard_stormstrike_r3_202453
     constexpr uint32 SPELL_RAZE_RANK1 = 202520; // raze_rank1_202520
     constexpr uint32 SPELL_RAZE_RANK2 = 202521; // raze_rank2_202521
     constexpr uint32 SPELL_RAZE_RANK3 = 202522; // raze_rank3_202522
@@ -741,6 +745,10 @@ namespace ShamanData
     constexpr float SEARING_RANGE_YD = 20.0f; // Searing Totem: target search radius, yd (stock) [tune].
     constexpr int32 SHAMANISM_CDR_MS = 1000; // Shamanism reduction of Elemental Mastery / Thunderstorm, real ms [fixed].
     constexpr int32 SHAMANISM_CHANCE = 33; // Shamanism cooldown-reduction chance per Lightning Bolt / Chain Lightning hit, percent [fixed].
+    constexpr int32 SHIELD_STRIKE_ARMOR_PCT = 45; // Toughness under Rockbiter with a shield equipped: Shield Strike (202450) damage, percent of the shield item's armor (item_template Armor); every Toughness rank carries it as its DUMMY effect 3 ($s3) (70 -> 45, balance round 5) [tune].
+    constexpr int32 SPIRIT_GUARD_SS_DAMAGE_R1 = 33; // Spirit Guard rank 1 under Rockbiter: Stormstrike strike damage bonus (202451 SPELLMOD_DAMAGE on 32175 / 32176), percent [tune].
+    constexpr int32 SPIRIT_GUARD_SS_DAMAGE_R2 = 66; // Spirit Guard rank 2 under Rockbiter: Stormstrike strike damage bonus (202452), percent [tune].
+    constexpr int32 SPIRIT_GUARD_SS_DAMAGE_R3 = 100; // Spirit Guard rank 3 under Rockbiter: Stormstrike strike damage bonus (202453), percent [tune].
     constexpr int32 SPIRIT_GUARD_STONESKIN_R1 = 3; // Spirit Guard rank 1: Stoneskin per parry under Rockbiter [fixed].
     constexpr int32 SPIRIT_GUARD_STONESKIN_R2 = 6; // Spirit Guard rank 2: Stoneskin per parry under Rockbiter [fixed].
     constexpr int32 SPIRIT_GUARD_STONESKIN_R3 = 10; // Spirit Guard rank 3: Stoneskin per parry under Rockbiter [fixed].
@@ -752,9 +760,9 @@ namespace ShamanData
     constexpr int32 SS_STATIC_SHOCK_CHARGES = 3; // Static Shock capstone: Lightning Shield charges Stormstrike adds [fixed].
     constexpr int32 STATIC_SHOCK_ARC_PCT = 55; // Static Shock under Rockbiter: an orb arc (202445) deals this percent of the orb 26364's potency (the arc's own row) [tune].
     constexpr float STATIC_SHOCK_ARC_RADIUS_YD = 8.0f; // Static Shock under Rockbiter: an orb arcs to enemies attacking the shaman within this radius of the orb's target, yd [fixed].
-    constexpr int32 STATIC_SHOCK_ORB_DAMAGE_R1 = 20; // Static Shock rank 1 under Rockbiter: Lightning Shield orb damage bonus (202448 SPELLMOD_DAMAGE on d0 b10), percent [tune].
-    constexpr int32 STATIC_SHOCK_ORB_DAMAGE_R2 = 40; // Static Shock rank 2 under Rockbiter: Lightning Shield orb damage bonus, percent [tune].
-    constexpr int32 STATIC_SHOCK_ORB_DAMAGE_R3 = 55; // Static Shock rank 3 under Rockbiter: Lightning Shield orb damage bonus, percent [tune].
+    constexpr int32 STATIC_SHOCK_ORB_DAMAGE_R1 = 8; // Static Shock rank 1 under Rockbiter: Lightning Shield orb damage bonus (202448 SPELLMOD_DAMAGE on d0 b10), percent (20 -> 8, balance round 5) [tune].
+    constexpr int32 STATIC_SHOCK_ORB_DAMAGE_R2 = 26; // Static Shock rank 2 under Rockbiter: Lightning Shield orb damage bonus, percent (40 -> 26, balance round 5) [tune].
+    constexpr int32 STATIC_SHOCK_ORB_DAMAGE_R3 = 40; // Static Shock rank 3 under Rockbiter: Lightning Shield orb damage bonus, percent (55 -> 40, balance round 5) [tune].
     constexpr int32 STONESKIN_CHAIN_LIGHTNING = 1; // Stoneskin stacks Chain Lightning grants per target hit [tune].
     constexpr int32 STONESKIN_EARTH_SHOCK = 15; // Stoneskin stacks Earth Shock grants, once per cast [tune].
     constexpr int32 STONESKIN_LAVA_LASH = 5; // Stoneskin stacks Lava Lash grants [tune].
@@ -766,9 +774,9 @@ namespace ShamanData
     constexpr int32 TF_ECHO_PCT = 30; // Tidal Force: Healing Wave echo, percent of the amount healed [fixed].
     constexpr int32 TF_STACK_MAX = 3; // Tidal Force: Lesser Healing Wave stacks on the ally [fixed]; also the CumulativeAura cap of 202673.
     constexpr int32 THUNDERING_SURGE_MW_STACKS = 5; // Thundering Strikes: Maelstrom Weapon stacks a Chain Lightning cast needs for the surge [fixed].
-    constexpr int32 THUNDERING_SURGE_R1 = 40; // Thundering Strikes rank 1: damage bonus of a 5-stack Maelstrom Weapon Chain Lightning under Flametongue / Frostbrand / Windfury, percent [tune].
-    constexpr int32 THUNDERING_SURGE_R2 = 80; // Thundering Strikes rank 2: the Chain Lightning surge, percent [tune].
-    constexpr int32 THUNDERING_SURGE_R3 = 125; // Thundering Strikes rank 3: the Chain Lightning surge, percent [tune].
+    constexpr int32 THUNDERING_SURGE_R1 = 24; // Thundering Strikes rank 1: damage bonus of a 5-stack Maelstrom Weapon Chain Lightning under Flametongue / Frostbrand / Windfury, percent (40 -> 24, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) [tune].
+    constexpr int32 THUNDERING_SURGE_R2 = 48; // Thundering Strikes rank 2: the Chain Lightning surge, percent (80 -> 48, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) [tune].
+    constexpr int32 THUNDERING_SURGE_R3 = 75; // Thundering Strikes rank 3: the Chain Lightning surge, percent (125 -> 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) [tune].
     constexpr int32 TIDAL_FOCUS_CLEANSE_COUNT = 2; // Tidal Focus capstone: disease and poison effects removed per party member, each [fixed].
     constexpr float TIDAL_FOCUS_CLEANSE_RADIUS_YD = 40.0f; // Tidal Focus capstone: party search radius around the placed Cleansing Totem, yd [fixed].
     constexpr int32 TIDAL_WAVES_DURATION_MS = 15000; // Tidal Waves: duration, refreshed by each grant, ms [tune] (stock).

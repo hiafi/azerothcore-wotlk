@@ -184,8 +184,8 @@ rampage_fury_204630 = _fury(
     'rage [fixed], RecoveryTime 10000 [fixed] with Category 0, SpellLevel = BaseLevel 50. eff0 DUMMY on the enemy. '
     'SpellClassMask_3 = 0x4 (d2 b2 only, never b3). Icon 2006. spell_warr_rampage_fury runs the four strikes. Tooltip 185% -> 157% '
     '(2026-10-31, DPS balance pass 1031, user ruling: Fury damage -15%). Tooltip 157% -> 173% '
-    '(2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%).',
-    _raw('Strike the target 4 times in quick succession, alternating main hand and off hand, each strike dealing 173% '
+    '(2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%). Tooltip 173% -> 208% (2026-11-15, balance on the Normal-tier kits, user ruling: Rampage +20%).',
+    _raw('Strike the target 4 times in quick succession, alternating main hand and off hand, each strike dealing 208% '
          'weapon damage. While you are Enraged, Rampage\'s damage is increased by your Enrage bonus a second time.',
          level=50, RangeIndex=_RANGE_INDEX_MELEE, FacingCasterFlags=1, DefenseType=_DMG_CLASS_MELEE,
          PreventionType=_PREVENTION_PACIFY, EquippedItemClass=_WEAPON_CLASS, EquippedItemSubclass=_WEAPON_SUBCLASSES,
@@ -208,7 +208,7 @@ rampage_fury_204630 = _fury(
 def _rampage_strike(spell_id, hand, extra_ex3, notes_hand):
     return _fury(
         spell_id, 'Rampage',
-        [_weapon_strike(173)],
+        [_weapon_strike(208)],
         _ICON_RAMPAGE,
         'warrior-rework S3 A2a (D7 / D8): the Rampage ' + hand + ' strike, cast triggered by spell_warr_rampage_fury '
         '(0 / 330 / 660 / 1000 ms). WEAPON_PERCENT_DAMAGE 180% [tune], ' + notes_hand + ' DmgClass melee, hidden '
@@ -217,7 +217,7 @@ def _rampage_strike(spell_id, hand, extra_ex3, notes_hand):
         + ', AttributesEx4 SUPPRESS_WEAPON_PROCS, SpellLevel 1, visual 372.'
         + ' Effect 1 weapon_potency 185 -> 157 (157.25 rounded to a whole number) '
         '(2026-10-31, DPS balance pass 1031, user ruling: Fury damage -15%). Effect 1 weapon_potency 157 -> 173 (172.7 '
-        'rounded to a whole number) (2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%).',
+        'rounded to a whole number) (2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%). Effect 1 weapon_potency 173 -> 208 (207.6 rounded to a whole number) (2026-11-15, balance on the Normal-tier kits, user ruling: Rampage +20%).',
         _raw('Strike the target with your ' + hand + ' weapon.', level=1, DefenseType=_DMG_CLASS_MELEE,
              PreventionType=_PREVENTION_PACIFY, AttributesEx3=extra_ex3[0], AttributesEx4=_ATTR4_SUPPRESS_WEAPON_PROCS,
              SpellClassMask_3=_masks.RAMPAGE, SpellVisualID_1=_SV_BLOODTHIRST, DurationIndex=_DURATION_INFINITE),
@@ -246,7 +246,7 @@ rampage_strike_oh_204632 = _rampage_strike(
 # Recklessness' crit, Impale) reaches the strike as part of the parent cast. Hidden (0x80).
 frenzied_blows_heroic_strike_204633 = _fury(
     204633, 'Frenzied Blows',
-    [_weapon_strike(172), _weapon_flat(10.2)],
+    [_weapon_strike(189), _weapon_flat(11.22)],
     _ICON_HEROIC_STRIKE,
     'warrior-rework S3 A2a (D19): the off-hand Heroic Strike, cast by spell_warr_hs_cleave_fury (AfterHit, per landed '
     'target, triggered, synchronous). Copy of 78\'s damage rows: eff0 WEAPON_PERCENT_DAMAGE 150%, eff1 WEAPON_DAMAGE '
@@ -255,7 +255,7 @@ frenzied_blows_heroic_strike_204633 = _fury(
     'facing flag, cost 0, carriers d0 0x40 + d2 0x8, hidden (0x80), SpellLevel 1, visual 39. Effect 1 weapon_potency '
     '183 -> 156 (155.55 rounded to a whole number), Effect 2 sp_potency 12 -> 10.2, kept equal to Heroic Strike 78 '
     '(2026-10-31, DPS balance pass 1031, user ruling: Fury damage -15%). Effect 1 weapon_potency 156 -> 172, kept '
-    'equal to Heroic Strike 78 (2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%).',
+    'equal to Heroic Strike 78 (2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%). Effect 1 weapon_potency 172 -> 189, Effect 2 sp_potency 10.2 -> 11.22, kept equal to Heroic Strike 78 (2026-11-15, balance on the Normal-tier kits, user ruling: Heroic Strike +10%).',
     _raw('Strike the target with your off-hand weapon.', level=1, DefenseType=_DMG_CLASS_MELEE,
          PreventionType=_PREVENTION_PACIFY,
          AttributesEx3=_ATTR3_REQUIRES_OFF_HAND_WEAPON | _ATTR3_SUPPRESS_CASTER_PROCS,

@@ -816,7 +816,7 @@ namespace HunterData
     constexpr float BEAST_CLEAVE_PET_FEROCITY_SCALE = 0.93f; // Beast Cleave: a Ferocity pet's copy share multiplier (hunter-pet-families ruling 24).
     constexpr float BEAST_CLEAVE_PET_TENACITY_SCALE = 1.0f; // Beast Cleave: a Tenacity pet's copy share multiplier, the anchor (hunter-pet-families ruling 24).
     constexpr float BEAST_CLEAVE_RADIUS_YD = 8.0f; // Beast Cleave splash radius around the victim, yards (BM 13).
-    constexpr int32 CHIMERA_SERPENT_BURST_PCT = 60; // Chimera Shot: Serpent Sting burst, percent of the sting's total damage (MM 5.6).
+    constexpr int32 CHIMERA_SERPENT_BURST_PCT = 78; // Chimera Shot: Serpent Sting burst, percent of the sting's total damage (MM 5.6). 60 -> 78 (2026-11-15, balance on the Normal-tier kits, user ruling: Chimera Shot - Serpent 53353 +30%).
     constexpr int32 CHIMERA_SNIPER_CRIT_CHANCE = 100; // Sniper's Mark: Chimera Shot crit chance, flat points (MM 5.6).
     constexpr int32 CHIMERA_SNIPER_CRIT_DAMAGE = 100; // Sniper's Mark: Chimera Shot crit damage bonus, percent (MM 5.6).
     constexpr uint8 CLUSTER_BOMBS_FOLLOWUP_COUNT = 4; // Cluster Bombs: follow-up blasts after the cast (SV 5.8).

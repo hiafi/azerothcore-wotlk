@@ -38,7 +38,9 @@ COMMAND_AOE_FALLOFF_PCT = const(
 # Cleave copying the pet's single-target hits, so the copy strength follows the pet's family type. spell_hun_beast_cleave
 # multiplies the pet's own copy share (BEAST_CLEAVE_SHARE_PCT, the buff's eff1) by these; the hunter's Kill Command copy
 # and the Stampede beasts' copies keep the plain share.
-BEAST_CLEAVE_SHARE_PCT = 50     # the buff 201806 eff1 (stored base points 49); the tooltip line below reads it
+BEAST_CLEAVE_SHARE_PCT = 30     # the buff 201806 eff1 (stored base points 29); the tooltip line below reads it
+# BEAST_CLEAVE_SHARE_PCT 50 -> 30 (2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Beast Cleave pet damage -40%).
+# One value drives the pet's copy, the Stampede beasts' copies and the hunter's Kill Command copy (all read eff1).
 BEAST_CLEAVE_PET_FEROCITY_SCALE = const(
     'BEAST_CLEAVE_PET_FEROCITY_SCALE', 0.93,
     "Beast Cleave: a Ferocity pet's copy share multiplier (hunter-pet-families ruling 24).",
@@ -154,13 +156,13 @@ stomp_pet_201804 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=40.0, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=52.0, potency_kind='direct',
                implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],
     pet_owner_scaling=_PET_SCALING,
     spell_icon_id=129,
     tooltip_vars=bm_stomp_1161,
-    notes='S1a BM 4.7 / 0.1: pet-cast Stomp, data only (S1b casts it). ap_potency 40 (guess, M tunes), 8 yd around the target, d1 b28 + d2 b24 (STOMP_CARRIER; Earthshaker reads d2 b24). Visual 7429 from Thunderstomp 63900.',
+    notes='S1a BM 4.7 / 0.1: pet-cast Stomp, data only (S1b casts it). ap_potency 40 (guess, M tunes) -> 52.0 (2026-11-15, balance on the Normal-tier kits, user ruling: Stomp +30%), 8 yd around the target, d1 b28 + d2 b24 (STOMP_CARRIER; Earthshaker reads d2 b24). Visual 7429 from Thunderstomp 63900.',
     raw_overrides={
         'EquippedItemClass': -1, 'SpellLevel': 30, 'DefenseType': 2, 'PreventionType': 2, 'AttributesEx': 0x200,
         'SpellClassSet': 9, 'SpellClassMask_2': m.STOMP_CARRIER[1], 'SpellClassMask_3': m.STOMP_CARRIER[2],
@@ -209,10 +211,10 @@ beast_cleave_buff_201806 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY),   # marker on the hunter
         Effect(type=EffectType.APPLY_AURA, base_points=BEAST_CLEAVE_SHARE_PCT - 1, implicit_target_a=5,
-               apply_aura=AuraType.DUMMY),   # pet: 50% share (x its type's BEAST_CLEAVE_PET_*_SCALE, ruling 24)
+               apply_aura=AuraType.DUMMY),   # pet: 30% share (x its type's BEAST_CLEAVE_PET_*_SCALE, ruling 24)
     ],
     spell_icon_id=90235,
-    notes='S1a BM 4.8 / A5: 12 s buff. eff0 marker on the hunter (bp -1), eff1 proc carrier on the pet (TargetA 5, bp 49 = 50%, the one place the share lives). procs_on: flags 0x10114, spell phase 0x2 (HIT), 100%, attributes_mask 0x2 (TRIGGERED_CAN_PROC) so triggered commands reach it (L8).',
+    notes='S1a BM 4.8 / A5: 12 s buff. eff0 marker on the hunter (bp -1), eff1 proc carrier on the pet (TargetA 5, bp 29 = 30%, the one place the share lives; the pet, the Stampede beasts and the hunter Kill Command copy all read it). eff1 base points 49 -> 29, share 50% -> 30% (2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Beast Cleave pet damage -40%). procs_on: flags 0x10114, spell phase 0x2 (HIT), 100%, attributes_mask 0x2 (TRIGGERED_CAN_PROC) so triggered commands reach it (L8).',
     raw_overrides={
         'EquippedItemClass': -1, 'SpellLevel': 40, 'ProcTypeMask': 0x10114, 'ProcChance': 100,
         'AuraDescription_Lang_enUS': "Your pet's attacks also hit nearby enemies.",
@@ -1012,7 +1014,8 @@ ambush_display_201873 = _display(
 # faction and react state come from the summon (Guardian::InitStats, the AI). Three models each, probability 1.0.
 _STAMPEDE_GUARDIAN_COMMON = dict(
     faction=35, unit_class=1, unit_flags=33554434, type=1, flags_extra=66,
-    DamageModifier=1, BaseAttackTime=2000, RegenHealth=0, detection_range=0,
+    DamageModifier=1.5,   # 1 -> 1.5 (2026-11-15, balance on the Normal-tier kits, user ruling: Stampede pets +50% damage)
+    BaseAttackTime=2000, RegenHealth=0, detection_range=0,
     minlevel=1, maxlevel=1, ScriptName='npc_hun_stampede_beast',
 )
 

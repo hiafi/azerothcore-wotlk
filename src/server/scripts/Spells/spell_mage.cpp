@@ -1307,6 +1307,32 @@ private:
     uint32 _triggerSpellId;
 };
 
+// 1449 - Arcane Explosion: "Each cast adds a stack of Arcane Blast." Baseline, no talent, at Arcane Explosion's normal
+// cost (36032's cost mod stays scoped to Arcane Blast). Adds the stack the way spell_mage_arcane_blast does (triggered
+// self-cast of 36032 after the cast, so this cast's damage sees the stacks it found). The triggered cast is skipped by
+// the Netherwind Presence and Missile Barrage proc checks. (2026-11-15, AoE round 1 on the Normal-tier kits, user
+// ruling: Arcane Explosion builds Arcane Blast stacks baseline.)
+class spell_mage_arcane_explosion : public SpellScript
+{
+    PrepareSpellScript(spell_mage_arcane_explosion);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_ARCANE_BLAST_STACKS });
+    }
+
+    void HandleAfterCast()
+    {
+        Unit* caster = GetCaster();
+        caster->CastSpell(caster, SPELL_MAGE_ARCANE_BLAST_STACKS, TRIGGERED_FULL_MASK);
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_mage_arcane_explosion::HandleAfterCast);
+    }
+};
+
 class spell_mage_burning_determination : public AuraScript
 {
     PrepareAuraScript(spell_mage_burning_determination);
@@ -4471,6 +4497,7 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_pyroblast);
 
     RegisterSpellScript(spell_mage_arcane_blast);
+    RegisterSpellScript(spell_mage_arcane_explosion);
     // Custom: Mastery fix S1 - the SpellScript half rides on the stock "spell_mage_arcane_missiles" binding.
     RegisterSpellAndAuraScriptPairWithArgs(spell_mage_arcane_missiles_spell, spell_mage_arcane_missiles,
         "spell_mage_arcane_missiles");
