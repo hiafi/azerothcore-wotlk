@@ -605,6 +605,42 @@ class WaveOneItemReservationsTest(unittest.TestCase):
             self.assertEqual(outside, [], directory)
 
 
+class BlackrockGearReservationsTest(unittest.TestCase):
+    """Blackrock gear (2026-11-14): the Blackrock Spire / Blackrock Depths item effects and the Molten dungeon set,
+    pinned exactly. Checked free 2026-11-14: no declaration, SQL file or live spell_dbc / creature_template row in
+    206800-206999 or 300650-300699."""
+
+    RESERVED = (
+        ("blackrock_spire_items", (206800, 206829), (300650, 300654)),
+        ("blackrock_depths_items", (206830, 206899), (300655, 300669)),
+        ("molten_set", (206900, 206999), (300670, 300699)),
+    )
+
+    def test_blackrock_gear_reservations(self):
+        for name, spells, creatures in self.RESERVED:
+            got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS[name].items()}
+            self.assertEqual(got, {"spell": spells, "creature": creatures}, name)
+
+    def test_blackrock_gear_reservations_overlap_no_other_reservation(self):
+        for name, _spells, _creatures in self.RESERVED:
+            for table, cfg in RESERVATIONS[name].items():
+                for owner, tables in RESERVATIONS.items():
+                    if owner != name and table in tables:
+                        self.assertFalse(_overlap(cfg, tables[table]), f"{name} {table} vs {owner}")
+
+    def test_the_blackrock_gear_blocks_sit_inside_the_spell_and_creature_blocks(self):
+        for name, spells, creatures in self.RESERVED:
+            self.assertTrue(BLOCKS["spell"]["start"] <= spells[0] and spells[1] <= BLOCKS["spell"]["end"], name)
+            self.assertTrue(BLOCKS["creature"]["start"] <= creatures[0] and creatures[1] <= BLOCKS["creature"]["end"],
+                            name)
+
+    def test_the_blackrock_gear_npcs_sit_in_their_creature_slice(self):
+        for directory, name in (("blackrock_depths", "blackrock_depths_items"), ("molten_set", "molten_set")):
+            ids = declared_ids(TOOL_ROOT / "source" / "npcs" / directory)
+            self.assertTrue(ids.get("creature"), directory)
+            self.assertEqual(out_of_reservation(name, {"creature": ids["creature"]}), [], directory)
+
+
 class ShadowfangKeepIdsTest(unittest.TestCase):
     """Shadowfang Keep build WP-0 (2026-11-07): the dungeon's reservation, pinned exactly."""
 

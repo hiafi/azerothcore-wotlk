@@ -208,6 +208,10 @@ wired in `generate._loot_blocks` after the item expansion, so a full run and `--
   commit it with the SQL) records the cell's `budget_mult` and DPS fraction (or `none`, the plain default), and later
   runs read the line instead of the live median. So declaring a new `base=` weapon (which leaves the sample) never
   retunes an earlier item of the same cell; retune one item through its declaration, never by editing a line.
+- **Bucket steps.** A tier whose cell `budget_mult` is more than 1.5x the tier below it (both from cells) is an ERROR:
+  the buckets were fit separately, so a ladder that crosses one (a hard mode 101 tier in 101-200, a Normal tier below
+  60 under a 60-100 Heroic) can jump 2-3x in stats. Declare `budget_mult=` (the lower cell, times 0.7 with an effect).
+  Shipped vanilla ladders step at most 1.35x (caster one-hand into 101-200).
 - **Durability.** A minted tier's `MaxDurability` is the median of live items with the same class, subclass, slot and
   quality within 5 item levels (widening to 10, 20, any), else the donor's (`base=` / `like=`). Prices and
   disenchanting are not derived yet.
@@ -315,6 +319,15 @@ and the Item.dbc merge before they are used) and in the full run's SQL and patch
   A full write run stops without them; `--check` warns.
 - **Not wired yet:** `boss_loot()` resolves `item()` keys only, so a token cannot be put on a boss list until the loot
   resolver also accepts `set_token()` keys (the dungeons' loot stage).
+- **Molten set (blackrock gear):** same machinery, `source/items/molten_set*.py` and `source/npcs/molten_set/`. A stock
+  piece another declaration owns (a `quest_rewards.lock` line, the Tier 0.5 armor) is handed over by deleting its
+  `quest_rewards.lock` line and keeping the `item_ids.lock` key (`qr_<entry>`); the quest chain's own rewards are
+  hand SQL (`quest_template` is not managed here). The Tier 0.5 upgrade quests themselves are `disables` rows
+  (sourceType 1, hand SQL; blackrock gear fix pass).
+- **Stock spell moved onto potency:** an id owned by `source/spells/*.csv` becomes a DSL `spell()` in `source/items/` by
+  deleting its csv row (one owner per spell). The potency shape lint (`lint.check_percent_field_potency`) only lets a
+  non-damage/heal/absorb effect carry potency if its (spell id, effect index) is in `_POTENCY_FLAT_BONUS_SPELLS`
+  (Totem of Rage's Equip 27859 effect 0, flat spell power on the level curve).
 
 ## Watch out: a full write run is global; dungeon and class work writes with `--scope`
 

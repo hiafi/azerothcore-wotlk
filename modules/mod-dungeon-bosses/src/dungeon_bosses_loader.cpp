@@ -99,8 +99,21 @@ void AddSC_sfk_hard_mode_items();           // spell_sfk_arugals_shadow_tome, sp
 void AddSC_scholo_items();                  // spell_scholo_phylactery_shard, spell_scholo_bonechill_blade,
                                             // spell_scholo_transfer_papers, spell_scholo_darkmasters_portal_rod
 
+// Blackrock Spire hard mode items (wave 2 dungeon items): the Wyrmthalak and Drakkisath hard mode item effects
+void AddSC_brs_hard_mode_items();           // spell_brs_ward_of_the_three_tribes, spell_brs_champions_mark
+
+// Blackrock Depths hard mode items (wave 2 dungeon items): the Encore, Incendius, Argelmach and Emperor items
+void AddSC_brd_hard_mode_items();           // BrdExecutionerDamage, spell_brd_korvs_spirit_fetish,
+                                            // spell_brd_scepter_of_the_molten_lake, spell_brd_lava_spawn,
+                                            // spell_brd_prototype_power_core, spell_brd_golemwrights_mending_rod,
+                                            // spell_brd_mending_servo, spell_brd_electrons_lethal_coil,
+                                            // spell_brd_volcanic_heartstone, spell_brd_orb_of_the_sorcerer_thane
+
 // Dungeon sets (item variants, Haunted set track): the Haunted set bonuses
 void AddSC_haunted_set_bonuses();           // spell_haunted_* bonus scripts, HauntedSetSpellHooks, HauntedSetUnitHooks
+
+// Dungeon sets (blackrock gear): the Molten set bonuses
+void AddSC_molten_set_bonuses();            // spell_molten_* bonus scripts (Heat, eruptions, cooldown hooks)
 
 void Addmod_dungeon_bossesScripts()
 {
@@ -160,7 +173,10 @@ void Addmod_dungeon_bossesScripts()
     AddSC_strat_balnazzar_hard_mode();
     AddSC_strat_hard_mode_items();
     AddSC_sfk_hard_mode_items();
+    AddSC_brs_hard_mode_items();
+    AddSC_brd_hard_mode_items();
     AddSC_haunted_set_bonuses();
+    AddSC_molten_set_bonuses();
     // after the boss files: they register their `.dmtest` / `.sfktest` / `.dbtest scholo` / `.dbtest strat` tables
     // from their AddSC_ functions
     AddSC_dungeon_bosses_dmtest_commandscript();

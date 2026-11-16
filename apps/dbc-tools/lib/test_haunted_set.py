@@ -93,9 +93,11 @@ class HauntedSetTest(unittest.TestCase):
         cls.reg = _load_items_registry()
         cls.items = {e["id"]: e["_decl"] for e in cls.reg.item_declarations if e["id"].startswith("haunted_")}
         decls = [e["_decl"] for e in cls.reg.item_set_declarations]
-        cls.sets = {d.set_id: d for d in decls if isinstance(d, ItemSetDecl)}
-        cls.tokens = {d.key: d for d in decls if isinstance(d, SetTokenDecl)}
-        cls.vendors = {d.entry: d for d in decls if isinstance(d, SetVendorDecl)}
+        # Scoped to the Haunted set: the Molten set (blackrock gear) declares its own sets, tokens and vendors too.
+        set_ids = set(STOCK_SETS) | set(NEW_SETS)
+        cls.sets = {d.set_id: d for d in decls if isinstance(d, ItemSetDecl) and d.set_id in set_ids}
+        cls.tokens = {d.key: d for d in decls if isinstance(d, SetTokenDecl) and d.key.startswith("haunted_")}
+        cls.vendors = {d.entry: d for d in decls if isinstance(d, SetVendorDecl) and d.entry in CREATURES}
         cls.spells = {int(e["id"]): e for e in cls.reg.spells if int(e["id"]) in RESERVATION}
         cls.header = HEADER.read_text(encoding="utf-8")
         cls.script = SCRIPT.read_text(encoding="utf-8")

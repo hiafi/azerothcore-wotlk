@@ -1661,50 +1661,6 @@
 #   (jewelry/cloak)
 21712 60 4 88 0 41 0 -  # Amulet of the Fallen God -- - / Crit+Haste; epic; ilvl 88 kept (epic); no primary
 #   (jewelry/cloak); FB MP5 lost: blues only (epic)
-21994 60 3 65 12 76 6000 -  # Belt of Heroism -- Str+AP / Parry+Mastery; blue; ilvl 65 kept (target 60); Defense->Parry;
-#   tank Parry
-21995 60 4 60 22 67 6000 -  # Boots of Heroism -- Str / Mastery+Vers; epic; ilvl 60 kept (epic)
-21996 60 3 65 12 60 6000 -  # Bracers of Heroism -- Str+AP / Parry+Crit; blue; ilvl 65 kept (target 60); Defense->Parry;
-#   tank Parry
-21997 60 4 60 12 69 4000 -  # Breastplate of Heroism -- Str+AP / Haste+CDH+Mastery; epic; ilvl 60 kept (epic)
-21998 60 4 60 22 74 6000 -  # Gauntlets of Heroism -- Str / CDH+Vers; epic; ilvl 60 kept (epic)
-21999 60 4 60 22 75 6000 -  # Helm of Heroism -- Str / Mastery+Proc; epic; ilvl 60 kept (epic)
-22000 60 3 66 22 76 6000 -  # Legplates of Heroism -- Str / Parry+Mastery; blue; ilvl 66 kept (target 60);
-#   Defense->Parry; tank Parry
-22001 60 3 65 12 34 6000 -  # Spaulders of Heroism -- Str+AP / Haste+Mastery; blue; ilvl 65 kept (target 60)
-22002 60 3 65 15 35 6000 -  # Darkmantle Belt -- Agi+AP / Haste+Vers; blue; ilvl 65 kept (target 60)
-22003 60 4 60 23 32 6000 all  # Darkmantle Boots -- Agi / Crit+Vers; epic; ilvl 60 kept (epic); keeps spell 1
-22004 60 3 65 23 37 6000 -  # Darkmantle Bracers -- Agi / Crit+CDH; blue; ilvl 65 kept (target 60)
-22005 60 4 60 15 34 6000 -  # Darkmantle Cap -- Agi+AP / Haste+Mastery; epic; ilvl 60 kept (epic)
-22006 60 4 60 15 35 6000 -  # Darkmantle Gloves -- Agi+AP / Haste+Vers; epic; ilvl 60 kept (epic)
-22007 60 3 66 15 40 6000 -  # Darkmantle Pants -- Agi+AP / Haste+Proc; blue; ilvl 66 kept (target 60)
-22008 60 3 65 23 41 6000 -  # Darkmantle Spaulders -- Agi / Crit+Haste; blue; ilvl 65 kept (target 60)
-22009 60 4 60 23 38 6000 -  # Darkmantle Tunic -- Agi / Haste+CDH; epic; ilvl 60 kept (epic)
-22010 60 3 65 13 66 6000 -  # Beastmaster's Belt -- Agi+AP / Crit+Proc; blue; ilvl 65 kept (target 60)
-22011 60 3 65 13 67 6000 -  # Beastmaster's Bindings -- Agi+AP / Mastery+Vers; blue; ilvl 65 kept (target 60)
-22013 60 4 60 13 42 4000 2  # Beastmaster's Cap -- Agi+AP / Crit+Haste+Mastery; epic; ilvl 60 kept (epic); keeps spell 2
-22015 60 4 60 13 44 4000 all  # Beastmaster's Gloves -- Agi+AP / Crit+Haste+Vers; epic; ilvl 60 kept (epic); keeps spell
-#   2
-22016 60 3 65 21 31 6000 -  # Beastmaster's Mantle -- Int+Agi+SP / Crit+Mastery; blue; ilvl 65 kept (target 60)
-22017 60 3 66 13 32 6000 -  # Beastmaster's Pants -- Agi+AP / Crit+Vers; blue; ilvl 66 kept (target 60)
-22060 60 4 60 13 39 6000 1  # Beastmaster's Tunic -- Agi+AP / Crit+Proc; epic; ilvl 60 kept (epic); keeps spell 1
-22061 60 4 60 13 40 6000 1  # Beastmaster's Boots -- Agi+AP / Haste+Proc; epic; ilvl 60 kept (epic); keeps spell 1
-22062 60 3 65 3 41 6000 -  # Sorcerer's Belt -- Int+SP / Crit+Haste; designer 2026-11-09 (round 6, ruling 29):
-#   Sorcerer's set: no Spirit: Int/SP, Int lead (was Int+Spi+SP / Crit+Haste share 6000)
-22063 60 3 65 3 65 6000 -  # Sorcerer's Bindings -- Int+SP / Haste+CDH; designer 2026-11-09 (round 6, ruling 29):
-#   Sorcerer's set: no Spirit: Int/SP, Int lead (was Int+Spi+SP / Haste+CDH share 6000)
-22064 60 4 60 1 43 4000 -  # Sorcerer's Boots -- Int+SP / Haste+Mastery+Vers; designer 2026-11-09 (round 6, ruling 29):
-#   Sorcerer's set: no Spirit: Int/SP, Even (was Int+Spi+SP / Haste+Mastery+Vers share 4000)
-22065 60 4 60 3 44 4000 -  # Sorcerer's Crown -- Int+SP / Crit+Haste+Vers; designer 2026-11-09 (round 6, ruling 29):
-#   Sorcerer's set: no Spirit: Int/SP, Int lead (was Int+Spi+SP / Crit+Haste+Vers share 4000)
-22066 60 4 60 1 45 4000 -  # Sorcerer's Gloves -- Int+SP / Crit+Mastery+Vers; designer 2026-11-09 (round 6, ruling 29):
-#   Sorcerer's set: no Spirit: Int/SP, Even (was Int+Spi+SP / Crit+Mastery+Vers share 4000)
-22067 60 3 66 3 75 6000 -  # Sorcerer's Leggings -- Int+SP / Mastery+Proc; designer 2026-11-09 (round 6, ruling 29):
-#   Sorcerer's set: no Spirit: Int/SP, Int lead (was Int+Spi+SP / Mastery+Proc share 6000)
-22068 60 3 65 3 29 6000 -  # Sorcerer's Mantle -- Int+SP / Crit+Haste; designer 2026-11-09 (round 6, ruling 29):
-#   Sorcerer's set: no Spirit: Int/SP, Int lead (was Int+Spi+SP / Crit+Haste share 6000)
-22069 60 4 60 3 66 6000 -  # Sorcerer's Robes -- Int+SP / Crit+Proc; designer 2026-11-09 (round 6, ruling 29):
-#   Sorcerer's set: no Spirit: Int/SP, Int lead (was Int+Spi+SP / Crit+Proc share 6000)
 22070 60 3 65 3 31 6000 -  # Deathmist Belt -- Int+SP / Crit+Mastery; blue; ilvl 65 kept (target 60)
 22071 60 3 65 3 32 6000 -  # Deathmist Bracers -- Int+SP / Crit+Vers; blue; ilvl 65 kept (target 60)
 22072 60 3 66 3 33 6000 -  # Deathmist Leggings -- Int+SP / Haste+Mastery; blue; ilvl 66 kept (target 60)
@@ -1713,67 +1669,6 @@
 22075 60 4 60 3 29 6000 -  # Deathmist Robe -- Int+SP / Crit+Haste; epic; ilvl 60 kept (epic)
 22076 60 4 60 1 30 6000 -  # Deathmist Sandals -- Int+SP / Crit+Mastery; epic; ilvl 60 kept (epic)
 22077 60 4 60 1 31 6000 -  # Deathmist Wraps -- Int+SP / Crit+Mastery; epic; ilvl 60 kept (epic)
-22078 60 3 65 7 39 6000 -  # Virtuous Belt -- Int+Spi+SP / Crit+Proc; blue; ilvl 65 kept (target 60)
-22079 60 3 65 7 40 6000 -  # Virtuous Bracers -- Int+Spi+SP / Haste+Proc; blue; ilvl 65 kept (target 60); FB MP5 lost:
-#   Spirit primary kept (MP5 forbids Spirit)
-22080 60 4 60 7 34 6000 -  # Virtuous Crown -- Int+Spi+SP / Haste+Mastery; epic; ilvl 60 kept (epic); FB MP5 lost: blues
-#   only (epic)
-22081 60 4 60 8 35 6000 -  # Virtuous Gloves -- Int+Spi+SP / Haste+Vers; epic; ilvl 60 kept (epic)
-22082 60 3 65 7 66 6000 -  # Virtuous Mantle -- Int+Spi+SP / Crit+Proc; blue; ilvl 65 kept (target 60)
-22083 60 4 60 8 37 6000 -  # Virtuous Robe -- Int+Spi+SP / Crit+CDH; epic; ilvl 60 kept (epic); FB MP5 lost: blues only
-#   (epic)
-22084 60 4 60 7 38 6000 -  # Virtuous Sandals -- Int+Spi+SP / Haste+CDH; epic; ilvl 60 kept (epic); FB MP5 lost: blues
-#   only (epic)
-22085 60 3 66 7 75 6000 -  # Virtuous Skirt -- Int+Spi+SP / Mastery+Proc; blue; ilvl 66 kept (target 60); FB MP5 lost:
-#   Spirit primary kept (MP5 forbids Spirit)
-22086 60 3 65 16 48 6000 -  # Soulforge Belt -- Str+Int+SP / MP5+Crit; blue; ilvl 65 kept (target 60); MP5 kept
-22087 60 4 60 16 41 6000 -  # Soulforge Boots -- Str+Int+SP / Crit+Haste; epic; ilvl 60 kept (epic); FB MP5 lost: blues
-#   only (epic)
-22088 60 3 65 16 31 6000 -  # Soulforge Bracers -- Str+Int+SP / Crit+Mastery; blue; ilvl 65 kept (target 60)
-22089 60 4 60 16 43 4000 -  # Soulforge Breastplate -- Str+Int+SP / Haste+Mastery+Vers; epic; ilvl 60 kept (epic)
-22090 60 4 60 16 44 4000 -  # Soulforge Gauntlets -- Str+Int+SP / Crit+Haste+Vers; epic; ilvl 60 kept (epic)
-22091 60 4 60 16 45 4000 -  # Soulforge Helm -- Str+Int+SP / Crit+Mastery+Vers; epic; ilvl 60 kept (epic)
-22092 60 3 66 16 35 6000 -  # Soulforge Legplates -- Str+Int+SP / Haste+Vers; blue; ilvl 66 kept (target 60)
-22093 60 3 65 16 49 6000 -  # Soulforge Spaulders -- Str+Int+SP / MP5+Haste; blue; ilvl 65 kept (target 60); MP5 kept
-22095 60 3 65 1 49 6000 -  # Bindings of The Five Thunders -- Int+SP / MP5+Haste; designer 2026-11-09 (round 6, ruling
-#   29): Five Thunders set: no Spirit: Int/SP, Even, then MP5 instead of Spirit: MP5/Haste keeps its Haste (was
-#   Int+Spi+SP / Haste+CDH share 6000)
-22096 60 4 60 19 68 4000 -  # Boots of The Five Thunders -- Agi+Int+SP / Proc+Crit+Mastery; designer 2026-11-09 (round
-#   6, ruling 29): Five Thunders set: Agility instead of Strength: Agi/Int/SP, Even trio (was Str+Int+SP /
-#   Proc+Crit+Mastery share 4000)
-22097 60 4 60 3 49 6000 -  # Coif of The Five Thunders -- Int+SP / MP5+Haste; designer 2026-11-09 (round 6, ruling 29):
-#   Five Thunders set: no Spirit: Int/SP, Int lead, then MP5 instead of Spirit: MP5/Haste keeps its Haste (a pair: share
-#   6000) (was Int+Spi+SP / Haste+CDH+Mastery share 4000)
-22098 60 3 65 19 48 6000 -  # Cord of The Five Thunders -- Agi+Int+SP / MP5+Crit; designer 2026-11-09 (round 6, ruling
-#   29): Five Thunders set: Agility instead of Strength: Agi/Int/SP, Even trio (was Str+Int+SP / MP5+Crit share 6000)
-22099 60 4 60 19 75 6000 -  # Gauntlets of The Five Thunders -- Agi+Int+SP / Mastery+Proc; designer 2026-11-09 (round 6,
-#   ruling 29): Five Thunders set: Agility instead of Strength: Agi/Int/SP, Even trio (was Str+Int+SP / Mastery+Proc
-#   share 6000)
-22100 60 3 66 1 48 6000 -  # Kilt of The Five Thunders -- Int+SP / MP5+Crit; designer 2026-11-09 (round 6, ruling 29):
-#   Five Thunders set: no Spirit: Int/SP, Even, then MP5 instead of Spirit: MP5/Crit keeps its Crit (was Int+Spi+SP /
-#   Crit+Proc share 6000)
-22101 60 3 65 1 50 6000 -  # Pauldrons of The Five Thunders -- Int+SP / MP5+Mastery; designer 2026-11-09 (round 6,
-#   ruling 29): Five Thunders set: no Spirit: Int/SP, Even, then MP5 instead of Spirit: MP5/Mastery keeps its Mastery
-#   (was Int+Spi+SP / Mastery+Vers share 6000)
-22102 60 4 60 1 48 6000 -  # Vest of The Five Thunders -- Int+SP / MP5+Crit; designer 2026-11-09 (round 6, ruling 29):
-#   Five Thunders set: no Spirit: Int/SP, Even, then MP5 instead of Spirit: MP5/Crit keeps its Crit (was Int+Spi+SP /
-#   Crit+Mastery share 6000)
-22106 60 3 65 0 31 0 -  # Feralheart Belt -- - / Crit+Mastery; designer 2026-11-09 (round 6, ruling 29): Feralheart set:
-#   no primary stats, secondary stats only (was Int+Spi+SP / Crit+Mastery share 6000)
-22107 60 4 60 0 36 0 -  # Feralheart Boots -- - / Mastery+Vers; designer 2026-11-09 (round 6, ruling 29): Feralheart
-#   set: no primary stats, secondary stats only (was Str+Int+SP / Mastery+Vers share 6000)
-22108 60 3 65 0 33 0 -  # Feralheart Bracers -- - / Haste+Mastery; designer 2026-11-09 (round 6, ruling 29): Feralheart
-#   set: no primary stats, secondary stats only (was Int+Str+SP / Haste+Mastery share 6000)
-22109 60 4 60 0 38 0 -  # Feralheart Cowl -- - / Haste+CDH; designer 2026-11-09 (round 6, ruling 29): Feralheart set: no
-#   primary stats, secondary stats only (was Int+Spi+SP / Haste+CDH share 6000)
-22110 60 4 60 0 39 0 -  # Feralheart Gloves -- - / Crit+Proc; designer 2026-11-09 (round 6, ruling 29): Feralheart set:
-#   no primary stats, secondary stats only (was Int+Spi+SP / Crit+Proc share 6000)
-22111 60 3 66 0 36 0 -  # Feralheart Kilt -- - / Mastery+Vers; designer 2026-11-09 (round 6, ruling 29): Feralheart set:
-#   no primary stats, secondary stats only (was Int+Spi+SP / Mastery+Vers share 6000)
-22112 60 3 65 0 37 0 -  # Feralheart Spaulders -- - / Crit+CDH; designer 2026-11-09 (round 6, ruling 29): Feralheart
-#   set: no primary stats, secondary stats only (was Int+Spi+SP / Crit+CDH share 6000)
-22113 60 4 60 0 42 0 -  # Feralheart Vest -- - / Crit+Haste+Mastery; designer 2026-11-09 (round 6, ruling 29):
-#   Feralheart set: no primary stats, secondary stats only (was Str+Int+SP / Crit+Haste+Mastery share 4000)
 22149 60 3 63 0 38 0 -  # Beads of Ogre Mojo -- - / Haste+CDH; blue; ilvl 63 kept (target 60); no primary
 #   (jewelry/cloak)
 22150 60 3 63 0 39 0 -  # Beads of Ogre Might -- - / Crit+Proc; blue; ilvl 63 kept (target 60); no primary

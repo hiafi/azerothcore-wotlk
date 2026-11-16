@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds and runs the standalone mod-dungeon-bosses tests with every available host compiler (g++ and clang++).
-# Pure headers only (src/<Dungeon>/*Logic.h, DeadminesKitMath.h, DeadminesRework.h, ShadowfangKeepRework.h,
-# ScholomanceRework.h, SoloLessonLogic.h, StratholmeRework.h, the shared kit's pure
+# Pure headers only (src/<Dungeon>/*Logic.h, src/DungeonSets/*Logic.h, DeadminesKitMath.h, DeadminesRework.h,
+# ShadowfangKeepRework.h, ScholomanceRework.h, SoloLessonLogic.h, StratholmeRework.h, the shared kit's pure
 # src/Kit/DungeonKit{Math,State,Arena,Logic,Ids,Floor,Flow,WallLogic}.h, the generated src/Generated/ItemSpellCopies.h): no
 # server build needed.
 # A boss WP adds nothing here: every tests/<boss>_test.cpp is listed below already (one per boss file).
@@ -39,7 +39,10 @@ tests=(
   scholomance_items_test
   stratholme_hard_mode_items_test
   shadowfang_keep_hard_mode_items_test
+  blackrock_spire_hard_mode_items_test
+  blackrock_depths_hard_mode_items_test
   haunted_set_test
+  molten_set_test
   shadowfang_keep_test
   sfk_rethilgore_test
   sfk_razorclaw_test

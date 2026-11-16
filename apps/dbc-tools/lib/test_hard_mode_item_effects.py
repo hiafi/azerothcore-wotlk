@@ -66,6 +66,51 @@ def _load_items_registry():
     )
 
 
+def materialized_tier_stats(decls: dict) -> dict:
+    """{item key: {tier name: {stat type: value}}}: each tier's materialized primary and secondary stat lines (the
+    budget's baseline Stamina is not a shape stat and is left out, as are zero lines) as generate.py resolves `decls`
+    ({key: ItemDecl}): the replayed itemization tables and item_template rows, the frozen role cells lock (a cell that
+    is not frozen yet resolves to the plain default here), sockets and the effect discount. Loading the tables takes
+    about 20 s. Raises AssertionError when an item does not resolve."""
+    from lib import item_variants  # noqa: PLC0415
+
+    tables, catalog = item_variants.load_itemization_tables()
+    live_rows = id_blocks.spell_tables.load_live_item_template_rows()
+    cells = item_variants.FrozenRoleCells(
+        item_variants.RoleCells(), item_variants.parse_cells_lock(item_variants.CELLS_LOCK_PATH.read_text()),
+    )
+    shape_index = item_variants._shape_index(catalog)
+    columns = tuple(id_blocks.spell_tables.ITEM_TEMPLATE_COLUMNS)
+    out = {}
+    for key, decl in decls.items():
+        errors, warnings = [], []
+        result = item_variants._resolve_item(decl, live_rows, tables, catalog, shape_index, columns, errors, warnings,
+                                             cells)
+        if result is None or errors:
+            raise AssertionError(f"{key}: does not resolve: {errors}")
+        out[key] = {plan["spec"].name: plan["stats"] for plan in result[1]}
+    return out
+
+
+def assert_shape_stats_on_every_tier(case: unittest.TestCase, decls: dict) -> None:
+    """Every stat of each item's primary and secondary shapes has at least one point on every tier of the materialized
+    row (blackrock gear REVIEW S3: the declaration named the stat, the thin budget dropped it)."""
+    from lib import item_variants  # noqa: PLC0415
+
+    _, catalog = item_variants.load_itemization_tables()
+    by_name = {shape["name"]: shape for shape in catalog.values()}
+    stats = materialized_tier_stats(decls)
+    for key, decl in decls.items():
+        wanted = set()
+        for name in (decl.primary, decl.secondary):
+            if name is not None:
+                case.assertIn(name, by_name, f"{key}: no item_shape {name!r}")
+                wanted |= set(by_name[name]["stats"])
+        for tier, got in stats[key].items():
+            missing = sorted(wanted - set(got))
+            case.assertFalse(missing, f"{key} {tier}: stat type(s) {missing} round to 0 (materialized: {got})")
+
+
 class HardModeItemEffectsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -77,9 +122,10 @@ class HardModeItemEffectsTest(unittest.TestCase):
     def test_ids_sit_in_their_reservations(self):
         self.assertEqual(sorted(self.spells), list(range(KEG, ZONE + 1)))
         # Every source/items spell sits in an item reservation: `items` (Deadmines, the copies), a dungeon's
-        # `<dungeon>_items` or the Haunted set's `haunted_set`.
+        # `<dungeon>_items` or a dungeon set's `haunted_set` / `molten_set`. A stock id (Totem of Rage's Equip 27859,
+        # moved onto potency) is outside every minted block and is not judged.
         owners = [name for name in id_blocks.RESERVATIONS
-                  if name in ("items", "haunted_set") or name.endswith("_items")]
+                  if name in ("items", "haunted_set", "molten_set") or name.endswith("_items")]
         declared = id_blocks.declared_ids(TOOL_ROOT / "source" / "items")
         for value in declared.get("spell", []):
             self.assertTrue(any(not id_blocks.out_of_reservation(owner, {"spell": [value]}) for owner in owners),

@@ -242,6 +242,33 @@ class FrozenCellTest(unittest.TestCase):
         self.assertTrue(any("malformed" in e for e in exp.errors))
 
 
+class BucketStepTest(unittest.TestCase):
+    """Blackrock gear fix S1/S2: a tier whose role cell budget_mult is more than ROLE_CELL_MAX_STEP times the tier
+    below it (both from cells) is an item level bucket artifact, an ERROR; a declared budget_mult= is never judged."""
+
+    LOCK = ("physical 17 3 1-59 {low} 0.0000  # test\n"
+            "physical 17 4 60-100 {high} 0.0000  # test\n")
+
+    def run_lock(self, low, high, **kw):
+        return F.run([F.hammer(**kw)], labels_loader=dict, cells_lock_text=self.LOCK.format(low=low, high=high))
+
+    def test_a_big_step_is_an_error(self):
+        exp = self.run_lock("0.4000", "0.8000")  # Normal (Rare, 1-59) 0.4 -> Heroic (Epic, 60-100) 0.8: 2x
+        errors = [e for e in exp.errors if "a ladder step may take" in e]
+        self.assertEqual(len(errors), 1)
+        self.assertIn("'dm_hammer' tier 'heroic'", errors[0])
+        self.assertIn("2.00x", errors[0])
+
+    def test_a_small_step_and_a_drop_are_clean(self):
+        self.assertEqual(self.run_lock("0.6000", "0.8000").errors, [])  # 1.33x
+        self.assertEqual(self.run_lock("1.2000", "0.8000").errors, [])  # a drop is not a jump
+
+    def test_a_declared_multiplier_is_not_judged(self):
+        exp = self.run_lock("0.4000", "0.8000", budget_mult=0.8)
+        self.assertEqual(exp.errors, [])
+        self.assertEqual(tier(exp, "dm_hammer", "normal").itemization["budget_mult"], 0.8)
+
+
 class DurabilityTest(unittest.TestCase):
     def test_minted_tiers_take_the_live_median(self):
         plate_waist = {"class": 4, "subclass": 4, "InventoryType": 6}

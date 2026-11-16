@@ -55,6 +55,19 @@ class PercentFieldLintTest(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertIn("not a damage/heal/absorb effect", errors[0])
 
+    def test_a_listed_flat_bonus_spell_may_carry_potency(self):
+        # Totem of Rage's Equip (27859): flat spell power on the level curve, listed in lint._POTENCY_FLAT_BONUS_SPELLS
+        listed = _entry(27859, effect1={"type": 6, "apply_aura": 112, "_potency": _POTENCY})
+        self.assertEqual(lint.check_percent_field_potency([listed]), [])
+        # the allowance is per effect: potency on another effect of the same spell is still an error
+        other_effect = _entry(27859, effect1={"type": 6, "apply_aura": 112, "_potency": _POTENCY},
+                              effect2={"type": 6, "apply_aura": 112, "_potency": _POTENCY})
+        errors = lint.check_percent_field_potency([other_effect])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("effect 1", errors[0])
+        unlisted = _entry(27860, effect1={"type": 6, "apply_aura": 112, "_potency": _POTENCY})
+        self.assertEqual(len(lint.check_percent_field_potency([unlisted])), 1)
+
     def test_potency_on_damage_heal_absorb_shapes_is_clean(self):
         shapes = [(2, 0), (10, 0), (31, 0), (121, 0), (6, 3), (6, 8), (6, 53), (6, 69), (27, 4), (35, 69), (3, 0)]
         entries = [_entry(300100 + i, effect1={"type": t, "apply_aura": a, "_potency": _POTENCY})

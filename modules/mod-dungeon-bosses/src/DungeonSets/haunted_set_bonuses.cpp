@@ -41,6 +41,7 @@
 #include "Group.h"
 #include "HauntedSetLogic.h"
 #include "Log.h"
+#include "MoltenSetLogic.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "Random.h"
@@ -789,7 +790,7 @@ public:
 
 // 205761 Haunting Mark (Beaststalker's 3 piece): the marker's next melee or ranged ability against the marked target
 // deals the mark's amount (15%) more and consumes the mark. The ability that marked gains nothing: the mark lands
-// after its damage. The set's own payouts never consume it.
+// after its damage. The set's own payouts (and the Molten set's) never consume it.
 // 205770 Wraith Venom / 205772 Grave Rot (Shadowcraft 3 and 5 piece): poisons roll nothing by the shared rogue rule,
 // so the rolls happen here, on every rogue poison damage hit (direct and periodic, Instant Poison included) and every
 // bleed tick the wearer deals, times Proc Chance, with an internal cooldown kept as a spell cooldown on the bonus id.
@@ -802,8 +803,9 @@ public:
 
     void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage, SpellInfo const* spellInfo) override
     {
+        // the Molten set's payouts (Obsidian Shard and the like) are melee or ranged class too: they never consume it
         if (damage <= 0 || !target || !attacker || !spellInfo || !attacker->IsPlayer() ||
-            kSpellsHauntedSet.Contains(spellInfo->Id))
+            kSpellsHauntedSet.Contains(spellInfo->Id) || MoltenSet::kSpellsMoltenSet.Contains(spellInfo->Id))
             return;
         if (spellInfo->DmgClass != SPELL_DAMAGE_CLASS_MELEE && spellInfo->DmgClass != SPELL_DAMAGE_CLASS_RANGED)
             return;
