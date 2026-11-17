@@ -32,7 +32,7 @@
  *                                               Warrior::PressChargeGuard (one Recklessness charge per press)
  * spell_warr_anger_management         -12296   D12: the rage trickle only in combat
  * spell_warr_weapon_spec_sword        204514, 204517, 204520   D17: the sword strike 204511 on the struck target
- * spell_warr_sweeping_strikes_rework  204493   D4/R6: puts Blade Flurry on a 20 s cooldown
+ * spell_warr_sweeping_strikes_rework  204493   D4/R6: puts Blade Flurry on a 15 s cooldown
  */
 
 #include "EngagementMechanics.h"
@@ -56,9 +56,9 @@ namespace
     constexpr uint32 SPELL_BLADE_FLURRY = 13877; // rogue; spell_rog_blade_flurry_rework sets the other direction
 
     // D4/R6: the peer's lock-out after a Sweeping Strikes cast (full, never haste-scaled), in ms. Sweeping Strikes'
-    // own cooldown (AoE round 3, 2026-11-16: 30 -> 20 s); the rogue side's lock-out on Sweeping stays Blade
+    // own cooldown (AoE round 3, 2026-11-16: 30 -> 20 -> 15 s); the rogue side's lock-out on Sweeping stays Blade
     // Flurry's own 30 s (spell_rogue_combat.cpp), so each cast locks the peer for the caster's own cooldown.
-    constexpr uint32 SWEEPING_PEER_LOCKOUT_MS = 20000;
+    constexpr uint32 SWEEPING_PEER_LOCKOUT_MS = 15000;
 
     // CAST-phase procs see every non-triggered melee-class cast (Unit::ProcSkillsAndAuras forces
     // PROC_SPELL_TYPE_MASK_ALL there), stances and utility included. Only a strike counts: a spell with a direct damage

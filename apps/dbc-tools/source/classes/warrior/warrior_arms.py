@@ -299,12 +299,13 @@ sweeping_strikes_arms_204493 = _arms(
     'base extra-hit share 40% -> 55% (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: the cleave window '
     'is the Arms AoE engine; the C++ base is SWEEPING_STRIKES_BASE_PCT in WarriorMechanics.cpp); 55% -> 70% '
     '(2026-11-16, AoE round 3 follow-up 2 on the Normal-tier kits, user ruling: Arms option A, the pack build was '
-    'about 250-400 under 2,500 at 5 targets).',
+    'about 250-400 under 2,500 at 5 targets); cooldown_ms 20000 -> 15000 (2026-11-16, AoE round 3 follow-up 3 on '
+    'the Normal-tier kits, user ruling: Arms option C, the pack build stayed about 400 under 2,500 at 5 targets).',
     _raw('For 10 sec, your single-target melee abilities also strike up to 4 additional nearby enemies for 70% of '
          'their damage. Rend and Colossus Smash apply in full to each enemy struck. Shares a cooldown with Blade '
          'Flurry.', 'Your melee abilities strike nearby enemies.', level=30, PreventionType=_PREVENTION_PACIFY,
          SpellClassMask_2=_SWEEPING_D1, SpellVisualID_1=_SV_SWEEPING, SpellPriority=50),
-    attributes=_SWEEPING_ATTRIBUTES, rage=30, range_yards=RANGE_SELF, cooldown_ms=20000, duration_ms=10000,
+    attributes=_SWEEPING_ATTRIBUTES, rage=30, range_yards=RANGE_SELF, cooldown_ms=15000, duration_ms=10000,
 )
 
 # 204494: the P0 copy (p0_sweeping_copy_204890, PASSED). Physical SCHOOL_DAMAGE, amount = bp0 the C++ passes (70% /
@@ -341,7 +342,7 @@ sweeping_strikes_copy_204494 = _arms(
 # the stock whirl visual 11756. One whirl per second, the once-per-whirl proc roll is the spell script's AfterCast.
 bladestorm_whirl_204495 = _arms(
     204495, 'Bladestorm',
-    [Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=170.0, implicit_target_a=_TARGET_UNIT_SRC_AREA_ENEMY,
+    [Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=272.0, implicit_target_a=_TARGET_UNIT_SRC_AREA_ENEMY,
             implicit_target_b=_TARGET_SRC_CASTER, radius_yards=8.0)],
     2782,
     'warrior-rework S2 A2 (D10, doc "Bladestorm"): the Arms Bladestorm whirl, 46924\'s periodic trigger target. '
@@ -349,7 +350,8 @@ bladestorm_whirl_204495 = _arms(
     '14 (8 yd), MaxTargets 5 [tune], own mask d1 0x4000 only (Wrecking Crew\'s Bladestorm bit; not Whirlwind\'s d1 '
     '0x4 / d2 0x8, so Seismic never echoes and Sweeping never copies it), AttributesEx3 SUPPRESS_CASTER_PROCS, '
     'SpellLevel = BaseLevel 50, DmgClass melee, visual 11756. No GCD, no cost, no off-hand trigger (Arms is '
-    'two-handed).',
+    'two-handed). eff0 weapon_potency 170 -> 272 (2026-11-16, AoE round 3 follow-up 3 on the Normal-tier kits, user '
+    'ruling: Arms option C, Bladestorm +60%).',
     _raw('A whirl of steel strikes up to 5 nearby enemies.', level=50, MaxTargets=5, DefenseType=_DMG_CLASS_MELEE,
          PreventionType=_PREVENTION_PACIFY, SpellClassMask_2=_BLADESTORM_D1, AttributesEx3=_ATTR3_SUPPRESS_CASTER_PROCS,
          SpellVisualID_1=_SV_BLADESTORM_WHIRL, SpellPriority=50, RangeIndex=_RANGE_INDEX_SELF,

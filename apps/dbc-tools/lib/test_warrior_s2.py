@@ -248,21 +248,21 @@ NEW_ROW_PINS: dict[int, dict] = {
              "BaseLevel": 60, "RecoveryTime": 90000, "ManaCost": 0, "StartRecoveryCategory": 0,
              "StartRecoveryTime": 0, "Effect_1": EFF_APPLY_AURA, "EffectAura_1": AURA_MOD_SCALE,
              "EffectBasePoints_1": 29},
-    # D4 Sweeping Strikes: off the GCD, 30 rage, 20 s (AoE round 3: 30 -> 20), 10 s, NO NOT_SHAPESHIFTED (0x10000), visible self DUMMY
+    # D4 Sweeping Strikes: off the GCD, 30 rage, 15 s (AoE round 3: 30 -> 20 -> 15), 10 s, NO NOT_SHAPESHIFTED (0x10000), visible self DUMMY
     SWEEPING: {"Name_Lang_enUS": "Sweeping Strikes", "Attributes": 0x40010, "SpellClassSet": 4,
                "SpellClassMask_2": 0x100000, "DurationIndex": DUR["10s"], "SpellLevel": 30, "BaseLevel": 30,
-               "RecoveryTime": 20000, "Category": 0, "ManaCost": 300, "StartRecoveryCategory": 0,
+               "RecoveryTime": 15000, "Category": 0, "ManaCost": 300, "StartRecoveryCategory": 0,
                "StartRecoveryTime": 0, "ProcTypeMask": 0, "ProcCharges": 0, "Effect_1": EFF_APPLY_AURA,
                "EffectAura_1": AURA_DUMMY, "EffectBasePoints_1": 0},
     # the copy: a school-damage helper that can crit (no CANT_CRIT), melee DmgClass
     SWEEPING_COPY: {"Name_Lang_enUS": "Sweeping Strikes", "Attributes": 0, "AttributesEx2": 0,
                     "AttributesEx3": 0x20050000, "AttributesEx4": 0x800000, "SpellClassSet": 4,
                     "DefenseType": 2, "RangeIndex": 13, "Effect_1": EFF_SCHOOL_DAMAGE},
-    # D10 the whirl: 170% weapon (balance 2026-10-30 +70%), MaxTargets 5, d1 0x4000 only, melee DmgClass, level 50
+    # D10 the whirl: 272% weapon (balance 2026-10-30 +70%, AoE round 3 +60%), MaxTargets 5, d1 0x4000 only, melee DmgClass, level 50
     WHIRL: {"Name_Lang_enUS": "Bladestorm", "Attributes": 0x50010, "AttributesEx3": 0x10000,
             "SpellClassSet": 4, "SpellClassMask_1": 0, "SpellClassMask_2": 0x4000, "SpellClassMask_3": 0,
             "MaxTargets": 5, "DefenseType": 2, "SpellLevel": 50, "BaseLevel": 50, "Effect_1": EFF_WEAPON_PERCENT,
-            "EffectBasePoints_1": 169, "ImplicitTargetA_1": 22, "ImplicitTargetB_1": 15, "EffectRadiusIndex_1": 14},
+            "EffectBasePoints_1": 271, "ImplicitTargetA_1": 22, "ImplicitTargetB_1": 15, "EffectRadiusIndex_1": 14},
     # D5 Deep Wounds holder (visible, 6 s, periodic dummy every 1000 ms, d1 0x10) and the hidden tick (no crit)
     DW_HOLDER: {"Name_Lang_enUS": "Deep Wounds", "Attributes": 0, "SpellClassSet": 4, "SpellClassMask_2": 0x10,
                 "DurationIndex": DUR["6s"], "Effect_1": EFF_APPLY_AURA, "EffectAura_1": AURA_PERIODIC_DUMMY,
