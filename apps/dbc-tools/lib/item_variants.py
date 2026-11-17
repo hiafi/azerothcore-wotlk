@@ -72,7 +72,7 @@ import statistics
 import sys
 from dataclasses import dataclass, field
 
-from . import item_ids
+from . import item_ids, weapon_spell_power
 from .dsl import items as items_dsl
 
 ITEM_CLASS_WEAPON = 2
@@ -82,7 +82,7 @@ ARMOR_CURVE_SUBCLASSES = (1, 2, 3, 4, 6)  # cloth, leather, mail, plate, shield:
 SPELL_SLOTS = 5
 ITEMIZATION_COLUMNS = (
     "budget_mult", "stamina_delta", "dps_delta", "absorbed_spell_slots", "armor_delta", "primary_shape_id",
-    "secondary_shape_id", "primary_share", "block_value_delta",
+    "secondary_shape_id", "primary_share", "block_value_delta", "spell_power_per_dps",
 )
 REQUIRED_NEW_COLUMNS = ("class", "subclass", "InventoryType", "displayid")
 # Weapon-tier slots whose stock budget was corrected per (role, slot) (itemization-changes.md Bucket 1): One-Hand,
@@ -166,6 +166,9 @@ class ResolvedTier:
     # IV10 (lib/item_spell_copies.py): this tier's own spells, the declaration's with each `scale=` spell swapped for
     # the tier's copy. None: the declaration's spells as they are.
     spells: tuple | None = None
+    # Weapon scaling WS0b (lib/weapon_spell_power.py): the item's spell power multiplier m (declared, else the role
+    # default), the same on every tier; 0 on a non-weapon.
+    spell_power_mult: float = 0.0
 
     @property
     def writes_label(self) -> bool:
@@ -533,6 +536,7 @@ def _resolve_item(
     decl: items_dsl.ItemDecl, live_rows: dict[int, dict], tables: dict, catalog: dict, shape_index: dict,
     columns: tuple[str, ...], errors: list[str], warnings: list[str],
     role_cells: RoleCells | FrozenRoleCells | None = None, durability: DurabilityIndex | None = None,
+    spell_power_k: dict | None = None,
 ) -> tuple[ResolvedItem, list[dict]] | None:
     """The item-level checks and the per-tier plan (entries are filled in later). Returns None when a check failed
     in a way that stops the tier plan (the errors say why)."""
@@ -621,6 +625,8 @@ def _resolve_item(
         errors.append(f"{where}: weapon_role= needs a weapon-tier slot (InventoryType {WEAPON_TIER_INV_TYPES})")
     if decl.extra_block and not (item_class == ITEM_CLASS_ARMOR and subclass == ARMOR_SUBCLASS_SHIELD):
         errors.append(f"{where}: extra_block= needs a shield")
+    if decl.weapon_spell_power_mult is not None and item_class != ITEM_CLASS_WEAPON:
+        errors.append(f"{where}: weapon_spell_power_mult= needs a weapon (item class {ITEM_CLASS_WEAPON})")
 
     stock_slots = _stock_spell_slots(source_row) if decl.base is not None else 0
     if decl.keep_spells:
@@ -686,6 +692,10 @@ def _resolve_item(
         mult = decl.budget_mult  # None: per tier, the role cell (weapon-tier slot) or the plain default
     if len(errors) > start:
         return None
+    # Weapon scaling WS0b: m from the role as the shapes declare it (before the materializer strips Spell Power), so a
+    # Spell Power lead weapon stays a caster weapon.
+    spell_power_mult = (weapon_spell_power.resolve_mult(decl.weapon_spell_power_mult, role)
+                        if item_class == ITEM_CLASS_WEAPON else 0.0)
 
     # Tier levels, per item: the first tier takes the item's (or the stock row's) own.
     plans = []
@@ -767,7 +777,7 @@ def _resolve_item(
                 )
         previous_cell = (spec.name, cell) if from_cell else None
         if live_row is not None and plan["first"]:
-            itemization = {c: live_row[c] for c in ITEMIZATION_COLUMNS}
+            itemization = {c: live_row.get(c, 0) for c in ITEMIZATION_COLUMNS}
             source = "live row"
         else:
             tier_mult, dps_fraction, source = mult, fractions["dps"], "declared"
@@ -795,6 +805,10 @@ def _resolve_item(
             }
             if plan["first"] and stock_armor_delta is not None:
                 itemization["armor_delta"] = stock_armor_delta
+        # Weapon scaling WS0b/WS0c: the generator owns the column on every tier, the live first tier included; a tier
+        # above weapon_spell_power.MAX_ITEM_LEVEL gets 0 and keeps its budgeted Spell Power.
+        itemization["spell_power_per_dps"] = weapon_spell_power.coefficient(
+            item_class, inv_type, spell_power_mult, spell_power_k, item_level=plan["ilvl"])
         tier_columns = {**explicit, **decl.override_columns(spec.name)}
         # The budget must resolve on a stand-in row of this tier (the C++ would skip the item otherwise).
         stand_in = {**look, **tier_columns, "entry": decl.base or 0, "ItemLevel": plan["ilvl"],
@@ -833,7 +847,7 @@ def _resolve_item(
             "spec": spec, "ilvl": plan["ilvl"], "quality": plan["quality"], "required": plan["required"],
             "first": plan["first"], "itemization": itemization, "columns": tier_columns, "baselines": base,
             "number": tier_number(decl.ladder, spec), "sockets": spec.sockets, "max_durability": max_durability,
-            "budget_source": source,
+            "budget_source": source, "spell_power_mult": spell_power_mult,
             # The materialized stat lines (stat type -> value, zero lines left out as the materializer does); the live
             # first tier of an itemization="live" item computes from its live row the same way.
             "stats": {a["stat_type"]: a["rounded"] for a in breakdown["allocations"] if a["rounded"]},
@@ -848,6 +862,7 @@ def expand(
     items_csv_ids=(), item_template_decl_ids=(), tables_loader=load_itemization_tables,
     item_dbc_ids_loader=None, lock: item_ids.Lock | None = None, lock_path=None,
     today: str | None = None, labels_loader=None, cells_lock_text: str | None = None,
+    spell_power_k: dict | None = None,
 ) -> ItemExpansion:
     """Resolves `declarations` (`dsl_classes["item_declarations"]`). `live_rows` are the live item_template rows by
     entry, `columns` its column names; `items_csv_ids` and `item_template_decl_ids` the entries other declarations
@@ -855,7 +870,9 @@ def expand(
     the live item_dbc ids a new id must skip (runs only when an id is minted). `lock` defaults to the file.
     `labels_loader` gives the current tooltip label table (`item_labels.read_table`, the default) for the retire
     suggestion of a dropped tier. `cells_lock_text` is the frozen role cells lock; None reads `CELLS_LOCK_PATH` when
-    `lock` is None too (the real run), else starts empty (a test passing its own id lock)."""
+    `lock` is None too (the real run), else starts empty (a test passing its own id lock). `spell_power_k` is the
+    weapon spell power constant table (None: `weapon_spell_power.K_SP`; tests pass theirs): every tier's
+    `spell_power_per_dps` is k_sp(slot) x the item's m (weapon scaling WS0b/WS0c)."""
     out = ItemExpansion()
     if cells_lock_text is None:
         cells_lock_text = (CELLS_LOCK_PATH.read_text(encoding="utf-8")
@@ -940,7 +957,7 @@ def expand(
         durability = build_durability_index(live_rows, excluded)
         for decl in decls:
             result = _resolve_item(decl, live_rows, tables, catalog, shape_index, columns, out.errors, out.warnings,
-                                   role_cells, durability)
+                                   role_cells, durability, spell_power_k)
             if result is not None:
                 resolved_items.append(result)
 
@@ -984,7 +1001,7 @@ def expand(
                 required_level=plan["required"], heroic_flag=spec.heroic_flag, variant_base=variant_base,
                 itemization=plan["itemization"], columns=plan["columns"], baselines=plan["baselines"],
                 number=plan["number"], sockets=plan["sockets"], max_durability=plan["max_durability"],
-                budget_source=plan["budget_source"],
+                budget_source=plan["budget_source"], spell_power_mult=plan["spell_power_mult"],
             ))
             if variant_base is None:
                 variant_base = entry

@@ -17,6 +17,7 @@
 
 #include "Config.h"
 #include "Creature.h"
+#include "DruidMechanics.h" // Custom: weapon scaling (Moonkin form AP)
 #include "Pet.h"
 #include "Player.h"
 #include "ScriptMgr.h"
@@ -474,7 +475,9 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
                 val2 = (GetLevel() * mLevelMult) + GetStat(STAT_STRENGTH) * 2.0f - 20.0f + weapon_bonus + m_baseFeralAP;
                 break;
             case FORM_MOONKIN:
-                val2 = (GetLevel() * mLevelMult) + GetStat(STAT_STRENGTH) * 2.0f - 20.0f + m_baseFeralAP;
+                // Custom: weapon scaling, with WeaponScaling.FeralApPerDps > 0 the weapon form AP is Cat/Bear only.
+                val2 = (GetLevel() * mLevelMult) + GetStat(STAT_STRENGTH) * 2.0f - 20.0f
+                    + Druid::GetMoonkinWeaponFormAp(m_baseFeralAP);
                 break;
             default:
                 val2 = GetStat(STAT_STRENGTH) * 2.0f - 20.0f;

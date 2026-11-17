@@ -405,6 +405,11 @@ public:
             handler->PSendSysMessage("  weapon dps: baseline {:.2f} + delta {:.2f} = final {:.2f} -> dmg {:.1f}-{:.1f}",
                 b.BaselineDps, b.DpsDelta, b.FinalDps, b.DmgMin, b.DmgMax);
 
+        if (b.SpellPowerStripped)
+            handler->PSendSysMessage("  weapon spell power: {:.4f} per dps x {:.2f} = {} (off budget; shape Spell "
+                "Power stripped{})", b.SpellPowerPerDps, b.FinalDps, b.WeaponSpellPower,
+                b.SpellPowerBudgetToSecondary ? ", primary budget moved to the secondary shape" : "");
+
         for (ItemBudget::AllocationDetail const& alloc : b.Allocations)
             handler->PSendSysMessage("    stat {} ({}) alloc {} -> raw {:.3f} -> rounded {}",
                 alloc.StatType, alloc.IsPrimary ? "primary" : "secondary", alloc.Alloc, alloc.RawValue, alloc.RoundedValue);

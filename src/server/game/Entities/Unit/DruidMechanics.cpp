@@ -1395,4 +1395,25 @@ namespace Druid
         // Heart of the Wild's Mastery max health follows the form (C4).
         player->UpdateMaxHealth();
     }
+
+    namespace
+    {
+        // WeaponScaling.FeralApPerDps; written once at startup (OnAfterConfigLoad), before any map update.
+        float WeaponFeralApPerDps = 0.0f;
+    }
+
+    void SetWeaponFeralApPerDps(float perDps)
+    {
+        WeaponFeralApPerDps = perDps > 0.0f ? perDps : 0.0f;
+    }
+
+    float GetWeaponFeralApPerDps()
+    {
+        return WeaponFeralApPerDps;
+    }
+
+    uint32 GetMoonkinWeaponFormAp(uint32 baseFeralAp)
+    {
+        return WeaponFeralApPerDps > 0.0f ? 0 : baseFeralAp;
+    }
 }

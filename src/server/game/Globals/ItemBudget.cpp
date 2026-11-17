@@ -58,6 +58,7 @@ namespace
         uint32 SecondaryShapeId = 0;
         uint32 PrimaryShare = 6000;    // ten-thousandths
         int32 BlockValueDelta = 0;     // shields only, NOT funded from budget, docs/itemization-phase-2.md §7.4
+        float SpellPowerPerDps = 0.0f; // weapons only, off-budget Spell Power per final DPS (weapon scaling WS0c)
     };
 
     struct StatCostRow
@@ -135,9 +136,28 @@ namespace
         _shapeStats.clear();
         _shapeRules.clear();
 
-        if (QueryResult result = WorldDatabase.Query(
+        QueryResult itemizationResult = WorldDatabase.Query(
             "SELECT entry, budget_mult, stamina_delta, dps_delta, absorbed_spell_slots, armor_delta, "
-            "primary_shape_id, secondary_shape_id, primary_share, block_value_delta FROM item_itemization"))
+            "primary_shape_id, secondary_shape_id, primary_share, block_value_delta, spell_power_per_dps "
+            "FROM item_itemization");
+
+        // A failed SELECT (e.g. a world DB without a column above, such as weapon scaling's spell_power_per_dps)
+        // also returns null. Booting on would silently leave every itemized item unmaterialized, so stop instead.
+        if (!itemizationResult)
+        {
+            if (QueryResult countResult = WorldDatabase.Query("SELECT COUNT(*) FROM item_itemization"))
+            {
+                if (uint64 rows = (*countResult)[0].Get<uint64>())
+                {
+                    LOG_FATAL("server.loading", "item_itemization has {} row(s) but its SELECT failed (see the sql "
+                        "log); a column is probably missing. Import the pending world updates before starting the "
+                        "server.", rows);
+                    exit(1);
+                }
+            }
+        }
+
+        if (QueryResult result = itemizationResult)
         {
             do
             {
@@ -152,6 +172,7 @@ namespace
                 row.SecondaryShapeId = fields[7].Get<uint32>();
                 row.PrimaryShare = fields[8].Get<uint32>();
                 row.BlockValueDelta = fields[9].Get<int32>();
+                row.SpellPowerPerDps = fields[10].Get<float>();
                 _itemization[fields[0].Get<uint32>()] = row;
             } while (result->NextRow());
         }
@@ -541,6 +562,14 @@ namespace
                     ok = false;
                 }
 
+                // Weapon scaling WS0c: spell_power_per_dps is a weapon's off-budget Spell Power per point of DPS.
+                if (row.SpellPowerPerDps < 0.0f || (row.SpellPowerPerDps != 0.0f && tpl.Class != ITEM_CLASS_WEAPON))
+                {
+                    LOG_ERROR("server.loading", "item_itemization entry {}: spell_power_per_dps {} must be 0, or "
+                        "above 0 on a weapon", entry, row.SpellPowerPerDps);
+                    ok = false;
+                }
+
                 bool hasArmorCurve = _armorCurve.contains({tpl.ItemLevel, tpl.SubClass}) && _armorSlotMult.contains(tpl.InventoryType) && _armorQualityMult.contains(tpl.Quality);
                 if (row.ArmorDelta != 0 && !(tpl.Class == ITEM_CLASS_ARMOR && hasArmorCurve))
                 {
@@ -744,6 +773,16 @@ namespace
                 float avgDamage = b.FinalDps * (static_cast<float>(tpl.Delay) / 1000.0f);
                 b.DmgMin = avgDamage * (1.0f - _weaponDpsSpread / 2.0f);
                 b.DmgMax = avgDamage * (1.0f + _weaponDpsSpread / 2.0f);
+
+                // Weapon scaling WS0c: the weapon's Spell Power comes from its DPS, off budget; the shapes' own
+                // Spell Power is stripped below. apps/item-tools/item_lib/budget.py compute_breakdown() mirrors this.
+                if (row.SpellPowerPerDps > 0.0f)
+                {
+                    b.SpellPowerPerDps = row.SpellPowerPerDps;
+                    b.SpellPowerStripped = true;
+                    b.WeaponSpellPower = static_cast<int32>(std::lround(
+                        static_cast<double>(row.SpellPowerPerDps) * static_cast<double>(b.FinalDps)));
+                }
             }
         }
 
@@ -786,8 +825,22 @@ namespace
 
         std::vector<Working> working;
 
-        auto allocateSide = [&working](uint32 shapeId, double sideBudget, bool isPrimarySide)
+        struct SideRank
         {
+            uint32 StatType;
+            uint32 Alloc;
+        };
+
+        // A side's (stat, alloc) ranks and the alloc total they divide by (10000 for a whole shape). Weapon scaling
+        // WS0c: with SpellPowerStripped, Spell Power leaves the side and its share goes to the side's other stats in
+        // proportion to their own shares (the divisor becomes their alloc total). `hasStats` is false for a shape
+        // with no stat rows (shape 0, the null shape).
+        auto sideRanks = [&b](uint32 shapeId, std::vector<SideRank>& ranks, double& whole, bool& hasStats)
+        {
+            ranks.clear();
+            whole = 10000.0;
+            hasStats = false;
+
             auto shapeIt = _shapes.find(shapeId);
             if (shapeIt == _shapes.end())
                 return;
@@ -799,27 +852,70 @@ namespace
 
             std::vector<uint32> const& allocs = allocIt->second;
             std::vector<uint32> const& stats = statsIt->second;
+            hasStats = !stats.empty();
             size_t n = std::min(allocs.size(), stats.size()); // a mismatch is already logged, §8 check 1
 
+            bool hasSpellPower = false;
             for (size_t i = 0; i < n; ++i)
             {
-                uint32 statType = stats[i];
-                uint32 alloc = allocs[i];
+                if (stats[i] == ITEM_MOD_SPELL_POWER)
+                    hasSpellPower = true;
+                ranks.push_back({stats[i], allocs[i]});
+            }
 
-                float cost = 1.0f;
-                if (auto costIt = _statCost.find(statType); costIt != _statCost.end())
-                    cost = costIt->second.Cost;
-
-                double raw = sideBudget * (static_cast<double>(alloc) / 10000.0);
-                double exact = (cost > 0.0f) ? raw / cost : 0.0;
-                int32 flr = static_cast<int32>(std::floor(exact));
-
-                working.push_back({statType, isPrimarySide, alloc, exact, flr, exact - static_cast<double>(flr)});
+            if (b.SpellPowerStripped && hasSpellPower)
+            {
+                std::erase_if(ranks, [](SideRank const& rank) { return rank.StatType == ITEM_MOD_SPELL_POWER; });
+                uint32 remaining = 0;
+                for (SideRank const& rank : ranks)
+                    remaining += rank.Alloc;
+                whole = static_cast<double>(remaining);
             }
         };
 
-        allocateSide(row.PrimaryShapeId, primaryBudget, true);
-        allocateSide(row.SecondaryShapeId, secondaryBudget, false);
+        auto allocateSide = [&working](std::vector<SideRank> const& ranks, double whole, double sideBudget,
+            bool isPrimarySide)
+        {
+            for (SideRank const& rank : ranks)
+            {
+                float cost = 1.0f;
+                if (auto costIt = _statCost.find(rank.StatType); costIt != _statCost.end())
+                    cost = costIt->second.Cost;
+
+                double raw = sideBudget * (static_cast<double>(rank.Alloc) / whole);
+                double exact = (cost > 0.0f) ? raw / cost : 0.0;
+                int32 flr = static_cast<int32>(std::floor(exact));
+
+                working.push_back({rank.StatType, isPrimarySide, rank.Alloc, exact, flr,
+                    exact - static_cast<double>(flr)});
+            }
+        };
+
+        std::vector<SideRank> primaryRanks;
+        std::vector<SideRank> secondaryRanks;
+        double primaryWhole = 10000.0;
+        double secondaryWhole = 10000.0;
+        bool primaryHasStats = false;
+        bool secondaryHasStats = false;
+        sideRanks(row.PrimaryShapeId, primaryRanks, primaryWhole, primaryHasStats);
+        sideRanks(row.SecondaryShapeId, secondaryRanks, secondaryWhole, secondaryHasStats);
+
+        double primaryAllocBudget = primaryBudget;
+        double secondaryAllocBudget = secondaryBudget;
+        if (b.SpellPowerStripped && primaryRanks.empty() && primaryHasStats)
+        {
+            // Weapon scaling WS0c: a Spell Power-only primary has no other stat to take its share, so the whole
+            // primary budget goes to the secondary shape; the item keeps its full budget.
+            if (secondaryRanks.empty() || b.SuffixSecondaries)
+                return false; // the apply pass logs it and leaves the item unmaterialized
+
+            primaryAllocBudget = 0.0;
+            secondaryAllocBudget = primaryBudget + secondaryBudget;
+            b.SpellPowerBudgetToSecondary = true;
+        }
+
+        allocateSide(primaryRanks, primaryWhole, primaryAllocBudget, true);
+        allocateSide(secondaryRanks, secondaryWhole, secondaryAllocBudget, false);
 
         int32 floorSum = 0;
         double exactSum = 0.0;
@@ -886,9 +982,13 @@ namespace
 
             ItemTemplate& tpl = itemIt->second;
 
-            if (b.Allocations.size() + 1 > static_cast<size_t>(MAX_ITEM_PROTO_STATS)) // +1 for off-budget stamina
+            // +1 for off-budget stamina, +1 for a weapon's off-budget Spell Power line (weapon scaling WS0c)
+            size_t const spellPowerLine = b.WeaponSpellPower > 0 ? 1 : 0;
+            if (b.Allocations.size() + 1 + spellPowerLine > static_cast<size_t>(MAX_ITEM_PROTO_STATS))
             {
-                LOG_ERROR("server.loading", "item_itemization: entry {} resolves to {} stats plus stamina, exceeding the {} available slots -- skipped", entry, b.Allocations.size(), MAX_ITEM_PROTO_STATS);
+                LOG_ERROR("server.loading", "item_itemization: entry {} resolves to {} stats plus stamina{}, "
+                    "exceeding the {} available slots -- skipped", entry, b.Allocations.size(),
+                    spellPowerLine ? " plus the Spell Power line" : "", MAX_ITEM_PROTO_STATS);
                 continue;
             }
 
@@ -910,6 +1010,14 @@ namespace
             {
                 tpl.ItemStat[slot].ItemStatType = ITEM_MOD_STAMINA;
                 tpl.ItemStat[slot].ItemStatValue = b.FinalStamina;
+                ++slot;
+            }
+
+            // Weapon scaling WS0c: the weapon's DPS-derived Spell Power, off budget, after Stamina.
+            if (b.WeaponSpellPower > 0)
+            {
+                tpl.ItemStat[slot].ItemStatType = ITEM_MOD_SPELL_POWER;
+                tpl.ItemStat[slot].ItemStatValue = b.WeaponSpellPower;
                 ++slot;
             }
 

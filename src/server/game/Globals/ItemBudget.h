@@ -107,6 +107,16 @@ namespace ItemBudget
         float DmgMin = 0.0f;
         float DmgMax = 0.0f;
 
+        // Weapon scaling WS0c: item_itemization.spell_power_per_dps (k_sp x the weapon's multiplier, written by
+        // apps/dbc-tools/lib/weapon_spell_power.py). Above 0 on a weapon with a DPS curve entry: Spell Power leaves
+        // the shape allocation (each side spreads the dropped share over its other stats; a Spell Power-only primary
+        // hands its whole budget to the secondary side) and WeaponSpellPower = lround(SpellPowerPerDps * FinalDps)
+        // is materialized as an off-budget ITEM_MOD_SPELL_POWER line after Stamina.
+        float SpellPowerPerDps = 0.0f;
+        bool SpellPowerStripped = false;
+        bool SpellPowerBudgetToSecondary = false;
+        int32 WeaponSpellPower = 0;
+
         int32 EffectiveBudget = 0;   // Budget minus the cost of every applicable delta, before the primary/secondary split
 
         // Crafting rework C4 (A1): secondary_shape_id 0 on an item with a random suffix pool means "the suffix carries

@@ -409,6 +409,8 @@ class ItemDecl:
     # the stats stay the role-cell version's (lib/item_variants.py `_free_dps_mult`).
     free_dps: bool = False
     weapon_role: str | None = None
+    # Weapon scaling WS0b (lib/weapon_spell_power.py): the weapon's spell power multiplier m; None = the role default.
+    weapon_spell_power_mult: float | None = None
     spells: tuple[ItemSpell, ...] | None = None
     keep_spells: bool = False
     sockets: tuple[int, ...] | None = None
@@ -434,7 +436,7 @@ def item(
     extra_stamina: float = 0.0, extra_armor: float = 0.0, extra_dps: float | None = None, extra_block: float = 0.0,
     free_dps: bool = False, weapon_role: str | None = None, spells=None, keep_spells: bool = False, sockets=None,
     socket_bonus: int | None = None, overrides: dict | None = None, unique_equip: bool | None = None,
-    suffix_pool: int | None = None, **columns,
+    suffix_pool: int | None = None, weapon_spell_power_mult: float | None = None, **columns,
 ) -> ItemDecl:
     """Declares an item on `ladder` (see the module docstring). `key` names it in the lock file forever: the ids of
     its tiers stay with the key whatever its name, level or shapes later become. `columns` are other `item_template`
@@ -448,7 +450,10 @@ def item(
     at the caster cell's stats). `suffix_pool=<item_enchantment_template entry>` (crafting rework C7) makes the
     random suffix carry the secondaries: no secondary shape (`secondary_shape_id` 0, leave `secondary=` out),
     `RandomSuffix` = the pool on every tier, and the suffix is sized from the unspent secondary budget (C4 A1;
-    `primary_share` defaults to 6000, or 0 without a primary). Checks here are the ones that need no live data;
+    `primary_share` defaults to 6000, or 0 without a primary). `weapon_spell_power_mult=` (weapon scaling WS0b, a
+    number in [0, 2]) is the weapon's spell power multiplier m: the weapon carries `round(k_sp(slot) x DPS x m)`
+    Spell Power off budget and no budgeted Spell Power (lib/weapon_spell_power.py); undeclared it is 1.0 on a caster
+    role weapon and 0 otherwise, and every tier carries the item's m. Checks here are the ones that need no live data;
     `lib/item_variants.py` checks the rest when generate.py resolves the item."""
     where = f"item({key!r})"
     if not isinstance(key, str) or not _KEY_RE.match(key):
@@ -534,6 +539,12 @@ def item(
         )
     if weapon_role is not None and weapon_role not in WEAPON_ROLES:
         raise ItemDeclarationError(f"{where}: weapon_role={weapon_role!r} must be one of {WEAPON_ROLES}")
+    if weapon_spell_power_mult is not None:
+        from .. import weapon_spell_power  # noqa: PLC0415
+
+        problem = weapon_spell_power.check_mult(where, weapon_spell_power_mult)
+        if problem:
+            raise ItemDeclarationError(problem)
     for keyword, value in (("extra_stamina", extra_stamina), ("extra_armor", extra_armor),
                            ("extra_dps", extra_dps), ("extra_block", extra_block)):
         if keyword == "extra_dps" and value is None:
@@ -577,6 +588,7 @@ def item(
         free_dps=free_dps, weapon_role=weapon_role, spells=spell_tuple, keep_spells=keep_spells, sockets=socket_tuple,
         socket_bonus=socket_bonus, overrides=override_tuple, columns=tuple(sorted(columns.items())),
         unique_equip=unique_equip, suffix_pool=suffix_pool,
+        weapon_spell_power_mult=None if weapon_spell_power_mult is None else float(weapon_spell_power_mult),
     )
     active = _registry._active
     if active is not None:

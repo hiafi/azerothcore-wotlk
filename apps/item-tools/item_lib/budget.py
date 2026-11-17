@@ -15,6 +15,7 @@ assembled shape catalog (from `lib.shapes.catalog()`).
 from __future__ import annotations
 
 import math
+import struct
 
 from . import shapes as shape_lib
 
@@ -22,6 +23,7 @@ ITEM_CLASS_WEAPON = 2
 ITEM_CLASS_ARMOR = 4
 ITEM_SUBCLASS_ARMOR_SHIELD = 6
 ITEM_MOD_STAMINA = 7
+ITEM_MOD_SPELL_POWER = 45
 MAX_ITEM_PROTO_STATS = 10
 MAX_ITEM_PROTO_SPELLS = 5
 MAX_ITEM_PROTO_SOCKETS = 3
@@ -35,6 +37,18 @@ SINGLE_SLOT_INV_TYPES = {15, 17, 25, 26, 28}
 
 def _is_single_slot(inv_type: int) -> bool:
     return inv_type in SINGLE_SLOT_INV_TYPES
+
+
+def _f32(x: float) -> float:
+    """`x` as a C++ `float` holds it (round to the nearest float32)."""
+    return struct.unpack("<f", struct.pack("<f", x))[0]
+
+
+def weapon_spell_power_value(coef: float, baseline_dps: float, dps_delta: float) -> int:
+    """ItemBudget.cpp's `std::lround(double(coef) * double(FinalDps))`, with `FinalDps = max(0.0f, BaselineDps +
+    DpsDelta)` in float arithmetic and the coefficient a FLOAT column value (weapon scaling WS0c)."""
+    final_dps = max(0.0, _f32(_f32(baseline_dps) + _f32(dps_delta)))
+    return _round(_f32(coef) * final_dps)
 
 
 def _round(x: float) -> int:
@@ -67,6 +81,14 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
     ItemBudget.h) using snake_case keys, plus `allocations`: a list of
     `{stat_type, is_primary, alloc, raw, rounded}` in primary-then-secondary
     rank order after the merged largest-remainder rounding.
+
+    `itemization_row["spell_power_per_dps"]` (weapon scaling WS0b/WS0c, apps/dbc-tools/lib/weapon_spell_power.py;
+    absent or 0 = off), mirrored by ItemBudget.cpp: on a weapon with a resolved DPS curve entry, Spell Power (45)
+    leaves the shape allocation - each side spreads the dropped share over its other stats in proportion to their own
+    shares, so the side budgets do not move (a Spell Power-only primary gives its whole budget to the secondary
+    shape) - and `weapon_spell_power` = `lround(coef * final_dps)` is an off-budget line of its own
+    (`materialized_item_fields` writes it after Stamina). `coef` and `final_dps` are taken through float32 as the C++
+    holds them (a FLOAT column, `float FinalDps`), so the line matches the server's to the point.
     """
     entry = item_row["entry"]
     ilvl = item_row["ItemLevel"]
@@ -99,6 +121,12 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
         missing.append(f"item_shape has no row for secondary_shape_id {secondary_shape_id}")
     if missing:
         raise BudgetError("; ".join(missing))
+
+    # Weapon scaling WS0c: ItemBudget.cpp's validation refuses (and leaves unmaterialized) an itemization row whose
+    # spell_power_per_dps is negative, or nonzero on a non-weapon; refuse it here too, so a check fails first.
+    spell_power_per_dps = _f32(float(itemization_row.get("spell_power_per_dps") or 0.0))
+    if spell_power_per_dps < 0.0 or (spell_power_per_dps != 0.0 and item_class != ITEM_CLASS_WEAPON):
+        raise BudgetError(f"spell_power_per_dps {spell_power_per_dps:g} must be 0, or above 0 on a weapon")
 
     b: dict = {
         "entry": entry,
@@ -187,6 +215,10 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
     effective_budget = float(budget) - (stamina_delta * stamina_cost)
 
     b["dps_delta"] = 0.0
+    b["spell_power_per_dps"] = 0.0
+    b["weapon_spell_power"] = 0
+    b["spell_power_stripped"] = False
+    b["spell_power_budget_to_secondary"] = False
     b["baseline_dps"] = 0.0
     b["final_dps"] = 0.0
     b["dmg_min"] = 0.0
@@ -210,6 +242,10 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
             b["final_dps"] = final_dps
             b["dmg_min"] = avg_damage * (1.0 - weapon_dps_spread / 2.0)
             b["dmg_max"] = avg_damage * (1.0 + weapon_dps_spread / 2.0)
+            if spell_power_per_dps > 0.0:
+                b["spell_power_per_dps"] = spell_power_per_dps
+                b["spell_power_stripped"] = True
+                b["weapon_spell_power"] = weapon_spell_power_value(spell_power_per_dps, baseline_dps, dps_delta)
 
     if effective_budget < 0.0:
         effective_budget = 0.0
@@ -243,17 +279,25 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
     stat_cost_table = tables["item_stat_cost"]
     working = []
 
-    def _allocate_side(shape: dict, side_budget: float, is_primary_side: bool):
+    def _side_pairs(shape: dict) -> tuple[list[tuple[int, int]], float]:
+        """The side's (stat, alloc) ranks and the alloc total they divide by (10000 for a whole shape)."""
         stats = shape["stats"]
         alloc = shape["alloc"]
         n = min(len(stats), len(alloc))  # a mismatch is already logged, §8 check 1
-        for i in range(n):
-            stat_type = stats[i]
-            a = alloc[i]
+        pairs = [(stats[i], alloc[i]) for i in range(n)]
+        # WS0b: the weapon's Spell Power comes from its DPS, off budget; the shape's own share goes to its other
+        # stats, in proportion to their shares.
+        if b["spell_power_stripped"] and any(stat == ITEM_MOD_SPELL_POWER for stat, _ in pairs):
+            pairs = [(stat, a) for stat, a in pairs if stat != ITEM_MOD_SPELL_POWER]
+            return pairs, float(sum(a for _, a in pairs))
+        return pairs, 10000.0
+
+    def _allocate_side(pairs: list[tuple[int, int]], whole: float, side_budget: float, is_primary_side: bool):
+        for stat_type, a in pairs:
             cost_row = stat_cost_table.get((stat_type,))
             cost = cost_row["cost"] if cost_row else 1.0
 
-            raw = side_budget * (a / 10000.0)
+            raw = side_budget * (a / whole)
             exact = raw / cost if cost > 0.0 else 0.0
             floor = math.floor(exact)
             working.append({
@@ -261,8 +305,21 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
                 "exact": exact, "floor": int(floor), "remainder": exact - floor,
             })
 
-    _allocate_side(primary_shape, primary_budget, True)
-    _allocate_side(secondary_shape, secondary_budget, False)
+    primary_pairs, primary_whole = _side_pairs(primary_shape)
+    secondary_pairs, secondary_whole = _side_pairs(secondary_shape)
+    primary_alloc_budget, secondary_alloc_budget = primary_budget, secondary_budget
+    if b["spell_power_stripped"] and not primary_pairs and primary_shape["stats"]:
+        # WS0b: a Spell Power-only primary (shape "Spell Power (Solo)") has no other stat to take its share, so the
+        # whole primary budget goes to the secondary shape; the item keeps its full budget.
+        if not secondary_pairs or suffix_secondaries:
+            raise BudgetError(
+                f"primary shape {primary_shape.get('name', '?')!r} is Spell Power only and the secondary has no stat "
+                f"to take its budget, so the weapon's DPS-derived Spell Power cannot replace it"
+            )
+        primary_alloc_budget, secondary_alloc_budget = 0.0, primary_budget + secondary_budget
+        b["spell_power_budget_to_secondary"] = True
+    _allocate_side(primary_pairs, primary_whole, primary_alloc_budget, True)
+    _allocate_side(secondary_pairs, secondary_whole, secondary_alloc_budget, False)
 
     floor_sum = sum(w["floor"] for w in working)
     exact_sum = sum(w["exact"] for w in working)
@@ -295,6 +352,13 @@ def suffix_stat_amount(breakdown: dict, allocation_pct: int = 5000) -> int:
     return allocation_pct * breakdown.get("suffix_factor", 0) // 10000
 
 
+def stat_line_count(breakdown: dict) -> int:
+    """The stat lines `ApplyItemizationAllocation()` (ItemBudget.cpp) counts against the 10 stat slots before it
+    writes an item: every allocation (one that rounds to 0 too), Stamina (even at 0) and the weapon's Spell Power line
+    when above 0. Above `MAX_ITEM_PROTO_STATS` the server skips the item and it keeps its old stats."""
+    return len(breakdown["allocations"]) + 1 + (1 if breakdown.get("weapon_spell_power", 0) > 0 else 0)
+
+
 def materialized_item_fields(breakdown: dict) -> dict:
     """The `item_template` columns `ApplyItemizationAllocation()` actually
     overwrites, given a `compute_breakdown()` result - `stat_typeN`/
@@ -306,7 +370,16 @@ def materialized_item_fields(breakdown: dict) -> dict:
 
     A line whose value is 0 (an allocation that rounds to 0, or a 0
     Stamina) is left out and the lines after it move up, as the C++ does:
-    the client would print it as "+0 <stat>"."""
+    the client would print it as "+0 <stat>".
+
+    Raises `BudgetError` when the server would skip the item (`stat_line_count` above the 10 slots, counted
+    before zero lines are dropped, as the C++ does)."""
+    lines = stat_line_count(breakdown)
+    if lines > MAX_ITEM_PROTO_STATS:
+        raise BudgetError(f"{len(breakdown['allocations'])} stats plus Stamina"
+                          f"{' plus the Spell Power line' if lines > len(breakdown['allocations']) + 1 else ''} "
+                          f"exceed the {MAX_ITEM_PROTO_STATS} stat slots; the server would skip the item")
+
     fields: dict = {}
     slot = 1
     for alloc in breakdown["allocations"]:
@@ -319,6 +392,12 @@ def materialized_item_fields(breakdown: dict) -> dict:
     if breakdown["final_stamina"] != 0:
         fields[f"stat_type{slot}"] = ITEM_MOD_STAMINA
         fields[f"stat_value{slot}"] = breakdown["final_stamina"]
+        slot += 1
+
+    # WS0b: the weapon's DPS-derived Spell Power, off budget (the itemization row's `spell_power_per_dps`).
+    if breakdown.get("weapon_spell_power", 0) > 0:
+        fields[f"stat_type{slot}"] = ITEM_MOD_SPELL_POWER
+        fields[f"stat_value{slot}"] = breakdown["weapon_spell_power"]
         slot += 1
 
     for clear in range(slot, MAX_ITEM_PROTO_STATS + 1):

@@ -7145,7 +7145,8 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
         }
 
         feral_bonus += proto->getFeralBonus(dpsMod);
-        sScriptMgr->OnPlayerGetFeralApBonus(this, feral_bonus, dpsMod, proto, ssv);
+        // Custom: + slot (weapon scaling, custom_weapon_scaling.cpp)
+        sScriptMgr->OnPlayerGetFeralApBonus(this, feral_bonus, dpsMod, proto, ssv, slot);
         if (feral_bonus)
             ApplyFeralAPBonus(feral_bonus, apply);
     }

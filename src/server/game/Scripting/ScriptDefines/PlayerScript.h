@@ -601,7 +601,9 @@ public:
 
     [[nodiscard]] virtual bool OnPlayerCanArmorDamageModifier(Player* /*player*/) { return true; }
 
-    virtual void OnPlayerGetFeralApBonus(Player* /*player*/, int32& /*feral_bonus*/, int32 /*dpsMod*/, ItemTemplate const* /*proto*/, ScalingStatValuesEntry const* /*ssv*/) { }
+    // Custom: `slot` added for weapon scaling (custom_weapon_scaling.cpp: only the main hand gives form AP).
+    virtual void OnPlayerGetFeralApBonus(Player* /*player*/, int32& /*feral_bonus*/, int32 /*dpsMod*/,
+        ItemTemplate const* /*proto*/, ScalingStatValuesEntry const* /*ssv*/, uint8 /*slot*/) { }
 
     [[nodiscard]] virtual bool OnPlayerCanApplyWeaponDependentAuraDamageMod(Player* /*player*/, Item* /*item*/, WeaponAttackType /*attackType*/, AuraEffect const* /*aura*/, bool /*apply*/) { return true; }
 

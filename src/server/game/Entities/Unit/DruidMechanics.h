@@ -717,6 +717,17 @@ namespace Druid
     // recalculates Protector of the Pack, Survival of the Fittest and Predatory Instincts and calls
     // UpdateMaxHealth (Heart of the Wild's Mastery, C4).
     void OnFeralFormChanged(Player* player, bool refreshBoosts);
+
+    // Weapon scaling (.agents/plans/weapon-scaling): WeaponScaling.FeralApPerDps, set once at startup by
+    // src/server/scripts/Custom/custom_weapon_scaling.cpp (0, or NaN/negative, keeps the stock formula). Above 0 the
+    // script puts only the main-hand weapon's form attack power into Player::m_baseFeralAP, and it counts in Cat and
+    // Bear/Dire Bear form only.
+    void SetWeaponFeralApPerDps(float perDps);
+    float GetWeaponFeralApPerDps();
+
+    // The weapon form attack power Moonkin form adds (StatSystem.cpp): stock m_baseFeralAP with
+    // WeaponScaling.FeralApPerDps at 0, else nothing.
+    uint32 GetMoonkinWeaponFormAp(uint32 baseFeralAp);
 }
 
 #endif
