@@ -139,11 +139,11 @@ def _buff(spell_id, name, effects, icon, duration_ms, description, aura_descript
     )
 
 
-def _wound_burst(spell_id, name_note, role):
+def _wound_burst(spell_id, name_note, role, ap_potency=25.0, potency_note=''):
     """203457 / 203458 (same data, own ids: sim and log visibility). eff0 Shadow damage with ap_potency 25 per wound,
     eff1 the DUMMY carrier of the wound count n (SPELLVALUE_BASE_POINT1; the script's OnHit multiplies by n)."""
     effects = [
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=25.0, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=ap_potency, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         Effect(type=EffectType.DUMMY, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ]
@@ -161,7 +161,7 @@ def _wound_burst(spell_id, name_note, role):
             '(INFECTED): Crypt Fever / Ebon Plague raise it (caster-scoped, max not sum); known effect (D4): the 18 '
             'INFECTED-immune templates take no wound damage. d2 b11 ROT_DAMAGE (Runic Focus, Rage of Rivendare read it). '
             'AttributesEx3 ALWAYS_HIT (the Scourge Strike / Coil already rolled the hit; a resisted burst would eat '
-            f'wounds for nothing). SpellVisual 11452 (Shadow impact only). {name_note}'
+            f'wounds for nothing). SpellVisual 11452 (Shadow impact only). {name_note}{potency_note}'
         ),
         raw_overrides=_raw(
             'Bursts for {pot1} Shadow damage.', level=20, magic=True, SpellClassMask_3=m.ROT_DAMAGE,
@@ -177,7 +177,11 @@ def _wound_burst(spell_id, name_note, role):
 
 festering_wound_burst_203457 = _wound_burst(
     203457, 'RP (3 per wound) and Wandering Plague are granted in the script AfterHit, by source.',
-    'wound burst (Scourge Strike, Rotten Touch, Pestilence overflow rules in the script)')
+    'wound burst (Scourge Strike, Rotten Touch, Pestilence overflow rules in the script)',
+    ap_potency=26.8,
+    potency_note=' ap_potency 25 -> 26.8 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: '
+                 'Festering Wound burst 203457 +7%; 25 x 1.07 = 26.75, kept to one decimal, x1.072; the overflow 203458 '
+                 'and the death explosion 203459 keep their values).')
 scripted_by(festering_wound_burst_203457, 'spell_dk_festering_wound_damage')
 
 festering_wound_overflow_203458 = _wound_burst(

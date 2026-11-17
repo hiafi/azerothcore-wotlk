@@ -825,7 +825,8 @@ lava_burst_overload_202593 = _overload_copy(
     'You hurl molten lava at the target, dealing {pot1} Fire damage. If your Flame Shock is on the target, Lava Burst '
     'will deal a critical strike.',
     extra_note=' 2026-11-01 sp_potency 28.8 -> 23.04 (2026-11-01, DPS balance pass 1031, user ruling: Lava Burst -20%; '
-               'follows the parent 51505 at half).',
+               'follows the parent 51505 at half). sp_potency 23.04 -> 16.13 (2026-11-16, single-target pass to 1,000 on the '
+               'Normal-tier kits, user ruling: Lava Burst -30%; follows the parent 51505 (46.08 -> 32.26) at half).',
 )
 for _copy in (lightning_bolt_overload_202591, chain_lightning_overload_202592, lava_burst_overload_202593):
     scripted_by(_copy, 'spell_sha_ele_overload_copy')

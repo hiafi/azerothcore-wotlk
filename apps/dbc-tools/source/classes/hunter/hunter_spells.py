@@ -2077,7 +2077,7 @@ explosive_shot_53301 = spell(
     duration_ms=2000,
     effects=[
         # The hit (SURVIVAL 5.5, V2): the only 53301 potency.
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=53.55, potency_kind='direct', implicit_target_a=6),   # 2026-11-01 pass 1031: 76.5 -> 53.55
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=64.3, potency_kind='direct', implicit_target_a=6),   # 2026-11-01 pass 1031: 76.5 -> 53.55; 2026-11-16 ST1000: 53.55 -> 64.3
         # A bare 1 s timer (live 0, no potency, no potency_excluded): its d1 b31 hardcode (cast 53352 with BP0 =
         # m_amount, SpellAuraEffects.cpp) is prevented by spell_hun_explosive_shot_rework, which casts 53352 with no bp.
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DUMMY,
@@ -2094,7 +2094,7 @@ explosive_shot_53301 = spell(
           'Tooltip SURVIVAL 5.5 with tooltip_vars 1180 (T.N.T. x Demolitions). '
           'User 2026-10-17: no minimum range, RangeIndex 114 (Hunter Range, ranged flag = melee-range minimum) -> 35 '
           '(Medium-Long Range, 0-35 yd, no flag). '
-          'Effect 1 ap_potency 76.5 -> 53.55 (2026-11-01, DPS balance pass 1031, user ruling: Explosive Shot -30%).',
+          'Effect 1 ap_potency 76.5 -> 53.55 (2026-11-01, DPS balance pass 1031, user ruling: Explosive Shot -30%). Effect 1 ap_potency 53.55 -> 64.3 (64.26 kept to one decimal, so +20.1%) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Explosive Shot +20%).',
     raw_overrides={'AttributesEx2': 131072, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Taking Fire damage every second.', 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You fire an explosive charge into the enemy target, dealing {pot1*tntdemo} Fire damage. The charge blasts the target every second for an additional $d, dealing ' + pot_text(explosive_shot_53352, var='tntdemo') + ' Fire damage each time. Nearby enemies take $202054s2% of the damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 35, 'Speed': 40.0, 'SpellClassMask_2': 2147483648, 'SpellClassSet': 9, 'SpellLevel': 30, 'SpellVisualID_1': 11828, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -2267,10 +2267,10 @@ chimera_shot_53209 = spell(
     effects=[
         Effect(type=77, die_sides=0, implicit_target_a=6),
         Effect(type=121, base_points=-1, implicit_target_a=6),
-        Effect(type=31, weapon_potency=159, implicit_target_a=6),   # R2-15 (user 2026-10-13); placeholder, M; 2026-11-01 pass 1031: 135 -> 122; 2026-11-15: 122 -> 159
+        Effect(type=31, weapon_potency=183, implicit_target_a=6),   # R2-15 (user 2026-10-13); placeholder, M; 2026-11-01 pass 1031: 135 -> 122; 2026-11-15: 122 -> 159; 2026-11-16 ST1000: 159 -> 183
     ],
     spell_icon_id=3412,
-    notes='pulled from existing data. Effect 3 weapon_potency 135 -> 122 (2026-11-01, DPS balance pass 1031, user ruling: Chimera Shot -10%; 135 x 0.9 = 121.5, weapon_potency must be whole, rounded up). Effect 3 weapon_potency 122 -> 159 (2026-11-15, balance on the Normal-tier kits, user ruling: Chimera Shot +30%; 122 x 1.3 = 158.6, weapon_potency must be whole, rounded up).',
+    notes='pulled from existing data. Effect 3 weapon_potency 135 -> 122 (2026-11-01, DPS balance pass 1031, user ruling: Chimera Shot -10%; 135 x 0.9 = 121.5, weapon_potency must be whole, rounded up). Effect 3 weapon_potency 122 -> 159 (2026-11-15, balance on the Normal-tier kits, user ruling: Chimera Shot +30%; 122 x 1.3 = 158.6, weapon_potency must be whole, rounded up). Effect 3 weapon_potency 159 -> 183 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Chimera Shot +15%; 159 x 1.15 = 182.85, weapon_potency must be whole, rounded up, so +15.1%).',
     raw_overrides={'AttributesEx2': 131072, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "You deal $s3% weapon damage, refreshing your Serpent Sting on the target and instantly dealing " + _c(CHIMERA_SERPENT_BURST_PCT) + "% of its total damage. Each of your marks on the target also triggers, without being consumed: Sniper's Mark makes this a critical strike with " + _c(CHIMERA_SNIPER_CRIT_DAMAGE) + "% more critical strike damage; Viper's Mark adds a stack and applies Viper's Venom; Falcon's Mark increases your attack power by $201947s1% for $201947d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_3': 1, 'SpellClassSet': 9, 'SpellLevel': 60, 'SpellVisualID_1': 11725, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

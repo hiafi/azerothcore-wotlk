@@ -1579,12 +1579,13 @@ blade_of_justice_201400 = spell(
     mana_cost_pct=4,
     range_yards=20.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=65.0, ap_potency=65.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=48.75, ap_potency=48.75, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90210,
     notes='paladin-rework S1 RETRIBUTION §4.1: 100 / 100 potency, 10 s cooldown (< 30 s: no Cooldown Haste), BoJ bit d2 0x800, learn 30. Visual = Crusader Strike SV 8316 placeholder (VFX follow-up). '
           'The six seal echoes 201401-201409 are paladin_trigger_spells.py.'
-          ' Effect 1 sp_potency/ap_potency 100.0 -> 65.0 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -35%).',
+          ' Effect 1 sp_potency/ap_potency 100.0 -> 65.0 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -35%).'
+          ' Effect 1 sp_potency/ap_potency 65.0 -> 48.75 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Blade of Justice -25%).',
     raw_overrides=_raw(
         castable=True,
         SpellClassMask_3=m.BLADE_OF_JUSTICE,
@@ -1612,13 +1613,14 @@ execution_sentence_burst_201411 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=163.8, ap_potency=163.8, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=131.04, ap_potency=131.04, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90212,
     notes='paladin-rework S1 RETRIBUTION §4.3: the hammer\'s main-target strike, 180 / 180, triggered only. Range 50000 (the hammer can expire with the paladin far away). '
           'spell_pal_execution_sentence_burst applies x(1 + 0.05 * gained) and keeps the main target out of the splash.'
           ' Effect 1 sp_potency/ap_potency 180.0 -> 234.0 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).'
-          ' Effect 1 sp_potency/ap_potency 234.0 -> 163.8 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
+          ' Effect 1 sp_potency/ap_potency 234.0 -> 163.8 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).'
+          ' Effect 1 sp_potency/ap_potency 163.8 -> 131.04 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Execution Sentence -20%).',
     raw_overrides=_raw(
         AttributesEx2=0x4,  # SPELL_ATTR2_IGNORE_LINE_OF_SIGHT: script-cast at a target / dest the paladin may not see
         SpellClassMask_3=m.EXECUTION_SENTENCE,
@@ -1679,7 +1681,7 @@ execution_sentence_201410 = spell(
     duration_ms=10000,
     effects=[
         Effect(
-            type=EffectType.APPLY_AURA, sp_potency=32.76, ap_potency=32.76, potency_kind='periodic', implicit_target_a=6,
+            type=EffectType.APPLY_AURA, sp_potency=26.208, ap_potency=26.208, potency_kind='periodic', implicit_target_a=6,
             apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000,
         ),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.MOD_DAMAGE_FROM_CASTER),
@@ -1688,7 +1690,8 @@ execution_sentence_201410 = spell(
     notes='paladin-rework S1 RETRIBUTION §4.3: DoT 36 / 36 per 1 s tick for 10 s (480 total at T 1 s), 60 s cooldown (>= 30 s: Cooldown Haste applies), magic-dispellable (a dispel fires the burst), ES bit d2 0x2000, learn 50. '
           'eff2 = aura 271 (damage taken from the caster) 0% until Fanaticism adds to it through SPELLMOD_EFFECT2; it reads SEAL_DAMAGE (U | P) on mask B. Visual 90044 (patch_paladin_vfx_models.py): Ascension\'s falling hammer as a StateKit on the DoT.'
           ' Effect 1 (periodic) sp_potency/ap_potency 36.0 -> 46.8 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).'
-          ' Effect 1 (periodic) sp_potency/ap_potency 46.8 -> 32.76 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
+          ' Effect 1 (periodic) sp_potency/ap_potency 46.8 -> 32.76 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).'
+          ' Effect 1 (periodic) sp_potency/ap_potency 32.76 -> 26.208 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Execution Sentence -20%).',
     raw_overrides=_raw(
         castable=True,
         AuraDescription_Lang_Mask=16712190,

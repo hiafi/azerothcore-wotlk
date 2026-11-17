@@ -565,10 +565,10 @@ wrath_5176 = spell(
     mana_cost_pct=8,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=121.29, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=97.032, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=263,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 8 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast_time_ms now says the 1500ms it already resolved to; raw CastingTimeIndex dropped (resolves via the plain 1500ms row, 30004). Potency system P5 (druid pass): converted to sp_potency=119.3 (potency-report default, base/coef already agreed). mana_cost_pct 11 -> 8 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 sp_potency 119.3 -> 71.6 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 71.6 -> 78.76 (2026-10-08, DPS balance pass, user ruling: Balance Wrath x1.10, round 10). Effect 1 sp_potency 78.76 -> 86.636 (2026-11-15, balance on the Normal-tier kits, user ruling: Wrath +10%). Effect 1 sp_potency 86.636 -> 121.29 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Balance option A, Wrath +40%; real ratio 1.39999)',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 8 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast_time_ms now says the 1500ms it already resolved to; raw CastingTimeIndex dropped (resolves via the plain 1500ms row, 30004). Potency system P5 (druid pass): converted to sp_potency=119.3 (potency-report default, base/coef already agreed). mana_cost_pct 11 -> 8 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 sp_potency 119.3 -> 71.6 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 71.6 -> 78.76 (2026-10-08, DPS balance pass, user ruling: Balance Wrath x1.10, round 10). Effect 1 sp_potency 78.76 -> 86.636 (2026-11-15, balance on the Normal-tier kits, user ruling: Wrath +10%). Effect 1 sp_potency 86.636 -> 121.29 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Balance option A, Wrath +40%; real ratio 1.39999). Effect 1 sp_potency 121.29 -> 97.032 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Wrath -20%)',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Nature damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'Speed': 20.0, 'SpellClassMask_1': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellVisualID_1': 3860, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -2421,7 +2421,7 @@ pulverize_200421 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=50.067, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=40.054, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=19, implicit_target_a=6),
     ],
     spell_icon_id=102,
@@ -2441,7 +2441,8 @@ pulverize_200421 = spell(
           ' Effect 1 ap_potency 32.76 -> 29.48 (2026-10-08, DPS balance pass, user ruling: Bear DPS Pulverize x0.90, round 11).'
           ' Effect 1 ap_potency 29.48 -> 21.82 (2026-10-12, melee-haste-gcd T4, user ruling: Bear DPS Pulverize x0.74). Effect 1 ap_potency 21.82 -> 50.57 (2026-10-12, melee-haste-gcd T4-FIX, Predatory Strikes leak removed).'
           ' Effect 1 ap_potency 50.57 -> 55.63 (2026-11-01, DPS balance pass 1031, user ruling: Pulverize +10%)'
-          ' Effect 1 ap_potency 55.63 -> 50.067 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Pulverize -10%).',
+          ' Effect 1 ap_potency 55.63 -> 50.067 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Pulverize -10%).'
+          ' Effect 1 ap_potency 50.067 -> 40.054 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Pulverize -20%).',
     raw_overrides=_feral_new_raw(
         "Requires 3 applications of Lacerate on the target.  Deals {pot1} damage, increased by $s2% "
         "for each application of your Lacerate on the target, then consumes Lacerate and reapplies it with 1 "

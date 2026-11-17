@@ -1315,7 +1315,7 @@ envenom_32645 = spell(
     range_yards=5.0,
     duration_ms=1000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_base_potency=44.112, cp_ap_potency=21.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_base_potency=48.5, cp_ap_potency=23.1, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER,
                misc_value=SpellModOp.CRITICAL_CHANCE),
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=18),
@@ -1340,6 +1340,7 @@ envenom_32645 = spell(
         "multiplies the per-combo-point line by comboPoints internally, so leaving the old "
         "`damage *= doses` active on top would double-count the combo scaling)."
         " rogue-rework S1a A4 (section 10.7): DBC eff1 = self flat CRITICAL_CHANCE (Dashing Scoundrel, value from the Aura script's DoEffectCalcAmount; 0 without a rank) on POISON_DAMAGE_READ, finisher bit d2 b18, aura text U14 conditional, Slice and Dice line for rogues with Mutilate. Raw DurationIndex 285 untouched."
+        " Effect 1 cp_base_potency 44.112 -> 48.5 (48.523 kept to one decimal, so +9.95%) and cp_ap_potency 21.0 -> 23.1 (the AP coefficient 0.09 -> 0.099) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Envenom +10%)."
     ),
     raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 9, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$?s203821[Your poisons are applied more often and are more likely to critically strike.]'
                                       '?s203820[Your poisons are applied more often and are more likely to critically strike.]'

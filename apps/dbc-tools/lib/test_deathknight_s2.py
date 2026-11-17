@@ -120,11 +120,14 @@ GLACIAL_ADVANCE_POWER = (6, 300)  # PowerType runic power, ManaCost x10
 
 # off-hand copy -> (main-hand spell, copy's flat potency, main's flat potency); D1: physical copies store half
 OFFHAND = {
-    66198: (203054, 5.5, 11.0), 66188: (49998, 8.625, 17.25), 203322: (55050, 7.875, 15.75),  # 7.5/15 -> 8.625/17.25 Death Strike +15%, 7.5/15 -> 7.875/15.75 Heart Strike +5% (2026-11-15, balance on the Normal-tier kits)
+    66198: (203054, 4.125, 11.0),  # 5.5 -> 4.125 off-hand Obliterate -25% (2026-11-16, ST1000); the copy no longer mirrors the main hand
+    66188: (49998, 8.625, 17.25), 203322: (55050, 7.875, 15.75),  # 7.5/15 -> 8.625/17.25 Death Strike +15%, 7.5/15 -> 7.875/15.75 Heart Strike +5% (2026-11-15, balance on the Normal-tier kits)
     66216: (45462, None, None),  # PS: half of PS's own flat (value read from the main-hand entry)
     66196: (49143, 5.15, 5.15),  # Frost Strike OH is always Frost = non-physical: the FULL flat, the helper adds x p
 }
 FULL_FLAT_COPIES = {66196}
+# copies whose weapon percent was cut on its own: spell id -> EffectBasePoints_1 (percent - 1); 66198 off-hand Obliterate 130 -> 98 (2026-11-16, ST1000)
+DETACHED_PERCENT_BP = {66198: 97}
 
 # CAST-phase talents (phase 1); abs(SpellId) of their spell_proc rows
 CAST_PHASE = {203278, 203279, 203292, 203281, 203282, 49149, 50115, 203302, 203303}
@@ -477,6 +480,7 @@ def check_offhand_copies(rows_by_id: dict[int, dict], entries: dict[int, dict]) 
             # like with like: the main hand's WEAPON_PERCENT_DAMAGE effect (Plague Strike lists its flat first)
             main_pct = next((_i(main_row, f"EffectBasePoints_{n}") for n in (1, 2, 3)
                              if _i(main_row, f"Effect_{n}") == EFFECT_WEAPON_PERCENT_DAMAGE), None)
+            main_pct = DETACHED_PERCENT_BP.get(sid, main_pct)
             if main_pct is not None and _i(row, "EffectBasePoints_1") != main_pct:
                 bad.append(f"{sid}: weapon percent bp {row.get('EffectBasePoints_1')!r}, main hand {main} has "
                            f"{main_pct!r}")
@@ -1010,7 +1014,7 @@ class DeathKnightS2NegativeTest(unittest.TestCase):
             row.update(cols)
             return row
 
-        rows = {sid: copy(sid) for sid in OFFHAND}
+        rows = {sid: copy(sid, pct_bp=DETACHED_PERCENT_BP.get(sid, 59)) for sid in OFFHAND}
         rows.update({main: copy(main) for main, _, _ in OFFHAND.values()})
         entries = {sid: _entry(sid, [(0.0, 1.5, 20)]) for sid in OFFHAND}
         for sid, (main, flat, main_flat) in OFFHAND.items():
@@ -1019,7 +1023,7 @@ class DeathKnightS2NegativeTest(unittest.TestCase):
             entries[main] = {"id": main, "effect2": {"type": 121, "_potency": {
                 "total_potency": main_flat if main_flat is not None else 6.0, "t_seconds": 1.5, "kind": "direct"}}}
         self.assertEqual(check_offhand_copies(rows, entries), [])
-        self.assertEqual(len(check_offhand_copies({**rows, 66198: copy(66198, Effect_1=121, Effect_2=31)}, entries)), 2)
+        self.assertEqual(len(check_offhand_copies({**rows, 66198: copy(66198, pct_bp=97, Effect_1=121, Effect_2=31)}, entries)), 2)
         self.assertEqual(len(check_offhand_copies({**rows, 66188: copy(66188, Effect_3=7)}, entries)), 1)  # per-disease E2
         self.assertEqual(len(check_offhand_copies({**rows, 66216: copy(66216, EffectAura_3=4)}, entries)), 1)
         self.assertEqual(len(check_offhand_copies({**rows, 203322: copy(203322, pct_bp=10)}, entries)), 1)  # not mirrored

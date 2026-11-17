@@ -819,12 +819,13 @@ obliterate_66198 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=130, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5.5, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=98, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=4.125, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2639,
     notes=(
+        'weapon_potency 130 -> 98 and sp_potency 5.5 -> 4.125 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: off-hand Obliterate -25%; 130 x 0.75 = 97.5, rounded up because potency must be whole, so x0.754; the flat is exactly x0.75; the copy no longer mirrors 203054, which keeps 130 / 11). '
         'death-knight-rework S2a (U16 / U17, brief D1): Threat of Thassarian off-hand copy of Obliterate 203054. eff0 '
         'WEAPON_PERCENT_DAMAGE weapon_potency 118 first (mirrors 203054; RETUNE-RESIM 118, RETUNE 145, S2 TUNE 72), eff1 '
         'NORMALIZED_WEAPON_DMG '

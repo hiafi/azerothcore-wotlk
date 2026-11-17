@@ -18,7 +18,10 @@ from . import _masks
 # spell-power coefficient, so the two can never drift apart. 98.21 -> 88.39 is the 2026-11-01
 # DPS balance pass 1031 Mind Flay -10%; 88.39 -> 83.97 is a further -5% once the whole spell ran
 # on this potency (2026-11-01, DPS balance pass 1031, user ruling: Mind Flay -5% more).
-MIND_FLAY_TICK_POTENCY = 83.97
+# MIND_FLAY_TICK_POTENCY 83.97 -> 62.978 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits,
+# user ruling: Mind Flay -25%; real ratio 0.75002). 62.978 -> 75.573 (2026-11-16, single-target pass to 1,000
+# follow-up, user ruling: soften the Mind Flay cut to -10% overall, 83.97 x 0.90; Shadow fell to 966 at -25%).
+MIND_FLAY_TICK_POTENCY = 75.573
 
 # Proc flags/phases used by the procs_on() calls below - src/server/game/Spells/SpellMgr.h's
 # ProcFlags / ProcFlagsSpellPhase / ProcAttributes enums. Named here rather than as bare ints so a
@@ -7916,7 +7919,7 @@ mind_flay_58381 = spell(
         # it (RealPointsPerLevel is applied to a passed value too; only the potency correction is
         # skipped for a caller-supplied value), so base_potency=0.0 keeps this row at the stock
         # BasePoints -1 / DieSides 1 / RealPointsPerLevel 0 (a net 0 base) and sp_potency only
-        # generates the spell-power coefficient: 83.97 / 100 * (1.0 s tick / 3.5) = 0.2399 in
+        # generates the spell-power coefficient: 62.978 / 100 * (1.0 s tick / 3.5) = 0.1799 in
         # EffectBonusMultiplier_1. time_basis_ms=1000 is the channel's tick interval, since this
         # row is a direct hit on its own (cast_time_ms 0 would otherwise default T to 1.5 s).
         Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=MIND_FLAY_TICK_POTENCY, base_potency=0.0, potency_kind='direct', time_basis_ms=1000, implicit_target_a=77),
@@ -7927,7 +7930,8 @@ mind_flay_58381 = spell(
           "coefficient was the stock spell_bonus_data row (58381, direct_bonus 0.257), which beats "
           "the DBC EffectBonusMultiplier; that row is retired by unbind_bonus_coefficients() below "
           "and the coefficient now comes from sp_potency=MIND_FLAY_TICK_POTENCY (83.97, 1 s tick): "
-          "EffectBonusMultiplier_1 0.257 -> 0.2399.",
+          "EffectBonusMultiplier_1 0.257 -> 0.2399. MIND_FLAY_TICK_POTENCY 83.97 -> 62.978 (2026-11-16, single-target pass to 1,000 on the "
+          "Normal-tier kits, user ruling: Mind Flay -25%), so EffectBonusMultiplier_1 0.2399 -> 0.1799.",
     raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 1073741824, 'CastingTimeIndex': 1, 'InterruptFlags': 15, 'ChannelInterruptFlags': 31788, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 9', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Assault the target's mind with Shadow energy, causing Shadow damage over $48156d and slowing the target to $15407s2% of their movement speed.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed slowed to $15407s2% of normal.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 6, 'SpellClassMask_1': 8388608, 'SpellLevel': 0, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0},
 )
 unbind_bonus_coefficients(mind_flay_58381)  # retires the stock spell_bonus_data row (58381, direct_bonus 0.257) that beat the generated potency coefficient (D1)
