@@ -5,7 +5,7 @@ class 2) with a spell power multiplier `m` > 0 carries one Spell Power stat line
 shape budgets is stripped and that budget is spread over the shape's other stats.
 
 **The constant.** `ONE_HAND_K` (spell power per point of DPS on a one-hand) times `SLOT_FACTORS` (user ruling
-2026-11-17: staff 0.82, wand 0.85 of the one-hand k) gives `K_SP`, the only table the code reads. With `ONE_HAND_K` 0
+2026-11-17: staff 0.82 of the one-hand k, ranged slots 0) gives `K_SP`, the only table the code reads. With `ONE_HAND_K` 0
 (until WS1 calibrates it) the feature is off: every coefficient is 0, nothing is stripped, no line is written, and
 every run and test is unchanged. Callers take `k=None` for `K_SP`; tests pass their own table.
 
@@ -54,12 +54,12 @@ STAT_COLUMNS = tuple(c for n in range(1, MAX_ITEM_PROTO_STATS + 1) for c in (f"s
 # Spell power per point of weapon DPS on a one-hand weapon. 0 = the feature is off (WS1 calibrates it, WS2 sets it).
 ONE_HAND_K = 0.0
 # Each slot kind's k as a fraction of the one-hand k (user ruling 2026-11-17, WS0b report "Slot parity"): a staff
-# carries the caster cells' one-hand / two-hand DPS ratio (~0.82), a wand 0.85 (its DPS sits on the two-hand curve,
-# so this keeps its Spell Power near its budget share of a one-hand's).
+# carries the caster cells' one-hand / two-hand DPS ratio (~0.82). Ranged slots get 0 (user ruling 2026-11-17, after
+# WS1: weapon spell power goes on actual weapons, not wands; a wand keeps its budgeted stats, Spell Power included).
 SLOT_FACTORS = {
     "one_hand": 1.0,  # One-Hand (13), Main Hand (21), Off Hand (22)
     "two_hand": 0.82,  # Two-Hand (17): staves, two-hand maces and swords, polearms
-    "ranged": 0.85,  # Ranged (15), Thrown (25), Ranged Right (26): wands (a caster bow or gun takes it too)
+    "ranged": 0.0,  # Ranged (15), Thrown (25), Ranged Right (26): wands (and a caster bow or gun) get none
 }
 
 

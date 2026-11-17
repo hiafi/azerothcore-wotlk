@@ -4,7 +4,7 @@ caster weapon spell power from weapon DPS (lib/weapon_spell_power.py, `item_item
 item_lib.budget, item_variants / item_emit carrying the multiplier m), against the fixture tables of
 lib/test_item_variants.py.
 
-Covered: the shipped constants are off and carry the ruled slot factors (staff 0.82, wand 0.85); the role default
+Covered: the shipped constants are off and carry the ruled slot factors (staff 0.82, ranged 0); the role default
 (caster 1.0, physical 0) and a declared override; the DSL range check and a non-weapon refusal; m = 0 writes no line
 and a 0 coefficient; every minted tier inherits m and carries `lround(k x DPS x m)`; an m > 0 weapon has exactly one
 Spell Power line and the same budget (effective, per side and spent) as without the rule; a Spell Power-only primary
@@ -102,15 +102,15 @@ class ConstantsTest(unittest.TestCase):
         self.assertEqual(W.ONE_HAND_K, 0.0)
         self.assertTrue(all(v == 0 for v in W.K_SP.values()))
         self.assertFalse(W.enabled())
-        self.assertEqual(W.SLOT_FACTORS, {"one_hand": 1.0, "two_hand": 0.82, "ranged": 0.85})
-        self.assertEqual(W.k_table(4.0), {"one_hand": 4.0, "two_hand": 4.0 * 0.82, "ranged": 4.0 * 0.85})
+        self.assertEqual(W.SLOT_FACTORS, {"one_hand": 1.0, "two_hand": 0.82, "ranged": 0.0})
+        self.assertEqual(W.k_table(4.0), {"one_hand": 4.0, "two_hand": 4.0 * 0.82, "ranged": 0.0})
         self.assertTrue(W.enabled(K))
 
     def test_coefficient(self):
         self.assertEqual(W.coefficient(2, 13, 1.0, K, item_level=60), 3.0)
         self.assertEqual(W.coefficient(2, 21, 1.0, K, item_level=60), 3.0)
         self.assertEqual(W.coefficient(2, 17, 0.5, K, item_level=60), round(3.0 * 0.82 * 0.5, 4))
-        self.assertEqual(W.coefficient(2, 26, 1.0, K, item_level=60), round(3.0 * 0.85, 4))
+        self.assertEqual(W.coefficient(2, 26, 1.0, K, item_level=60), 0.0)  # a wand gets none
         self.assertEqual(W.coefficient(4, 13, 1.0, K, item_level=60), 0.0)  # not a weapon
         self.assertEqual(W.coefficient(2, 13, 0.0, K, item_level=60), 0.0)
         self.assertEqual(W.coefficient(2, 13, 1.0, item_level=60), 0.0)  # the shipped constants
