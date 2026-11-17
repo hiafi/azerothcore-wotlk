@@ -502,8 +502,10 @@ public:
         if (!spell || !spell->m_spellInfo)
             return true;
 
+        // Primal Wrath carries the same Rip/Ferocious Bite bit, so its prepare drops a leftover too.
         uint32 const spellId = spell->m_spellInfo->Id;
-        if (spellId != Druid::SPELL_FEROCIOUS_BITE && spellId != Druid::SPELL_RIP)
+        if (spellId != Druid::SPELL_FEROCIOUS_BITE && spellId != Druid::SPELL_RIP &&
+            spellId != Druid::SPELL_PRIMAL_WRATH)
             return true;
 
         Player* player = GetDruidPlayer(spell->GetCaster() ? spell->GetCaster()->ToUnit() : nullptr);
@@ -515,6 +517,7 @@ public:
         if (spellId == Druid::SPELL_FEROCIOUS_BITE)
             if (Unit* target = spell->m_targets.GetUnitTarget())
                 if (target->HasAura(Druid::SPELL_RIP, player->GetGUID()) ||
+                    target->HasAura(Druid::SPELL_PRIMAL_WRATH, player->GetGUID()) ||
                     target->HasAura(Druid::SPELL_LACERATE, player->GetGUID()))
                     critBonus = Druid::GetRankAmount(player,
                         { Druid::SPELL_REND_AND_TEAR_R3, Druid::SPELL_REND_AND_TEAR_R2, Druid::SPELL_REND_AND_TEAR_R1 },

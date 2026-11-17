@@ -83,7 +83,7 @@ YSERAS_GIFT = 0x80000000  # bit 31 - Ysera's Gift heal 200569
 MARKER_NOTHING = 0x4000
 
 # Every free druid dword-3 bit is now allocated (PLAN §4.4). Dword 1 bit 26 (0x4000000, NPC-only
-# 9033) is the only remaining reserve, a last resort.
+# 9033) was the only remaining reserve, a last resort; Thrash (Cat) took it (THRASH_CAT below).
 
 # --- Composite (dword1, dword2, dword3) tuples (BALANCE §3 item 2) ---
 
@@ -189,17 +189,23 @@ TIGERS_FURY = 0x800  # 5217
 CLAW = 0x40000  # 1082
 RIP = 0x200000  # 1079 only
 
+# dword 1 bit 26, the last druid reserve bit (only the NPC spell 9033 carries it; no druid SpellMod named it): Thrash
+# (Cat) 200474 (2026-11-16, AoE round 3 follow-up, user ruling: "For feral, we should also let it use Thrash"). Not
+# Thrash's own THRASH bit: Ferocity's rage-cost modifier (-11 rage units at 5/5) names THRASH and would take 11 off
+# the cat copy's energy cost, which must stay 50.
+THRASH_CAT = 0x04000000
+
 # --- Feral composites (druid-rework FERAL §7 with WP-BRIEF §3; added by the Feral pass's WP-A) ---
 
 # The feral bleeds a SpellMod can reach: Rake (direct + bleed), Lacerate, Rip (its Rip-only dword 3
 # bit - dword 1 0x800000 is shared with Ferocious Bite), Thrash. Pounce's bleed 9007 has no family.
 # Infected Wounds eff1 (DOT) and Primal Gore eff0 (CRIT_DAMAGE_BONUS).
-FERAL_BLEEDS = (RAKE, LACERATE, RIP | THRASH)
+FERAL_BLEEDS = (RAKE | THRASH_CAT, LACERATE, RIP | THRASH)
 
 # Berserk 50334 eff0's -50% cost scope (FERAL §7 (10,1)): the stock cat scope plus Maul, Demoralizing
 # Roar, Mangle (Bear), Lacerate, Swipe (Bear), Feral Charge (Bear) and the four new bear abilities.
 BERSERK_COST = (
-    RIP_FEROCIOUS_BITE | POUNCE | RAVAGE | SHRED | RAKE | MAUL | DEMORALIZING_ROAR,
+    RIP_FEROCIOUS_BITE | POUNCE | RAVAGE | SHRED | RAKE | MAUL | DEMORALIZING_ROAR | THRASH_CAT,
     SAVAGE_ROAR | COWER | SWIPE_BEAR | MANGLE_CAT | LACERATE | MAIM | MANGLE_BEAR | FERAL_CHARGE_BEAR_D2,
     CLAW | SWIPE_CAT | FERAL_CHARGE_CAT | CHALLENGING_ROAR | IRONFUR | PULVERIZE | UPHEAVAL | THRASH,
 )
@@ -207,11 +213,11 @@ BERSERK_COST = (
 # Nurturing Instinct's empowered buff 200430 (FERAL §7 (4,3)): "any feral damage ability" -
 # eff0 DAMAGE on the direct hits, eff1 DOT on the bleeds.
 NURTURING_INSTINCT_DAMAGE = (
-    RIP_FEROCIOUS_BITE | POUNCE | RAVAGE | SHRED | RAKE | MAUL,
+    RIP_FEROCIOUS_BITE | POUNCE | RAVAGE | SHRED | RAKE | MAUL | THRASH_CAT,
     SWIPE_BEAR | MANGLE_CAT | LACERATE | MAIM | MANGLE_BEAR,
     CLAW | SWIPE_CAT | PULVERIZE | UPHEAVAL | THRASH,
 )
-NURTURING_INSTINCT_DOT = (RIP_FEROCIOUS_BITE | RAKE, LACERATE, RIP | THRASH)
+NURTURING_INSTINCT_DOT = (RIP_FEROCIOUS_BITE | RAKE | THRASH_CAT, LACERATE, RIP | THRASH)
 
 # Infected Wounds' proc trigger scope (procs_on(-48483), FERAL §7 (7,3)): Shred, Maul, Swipe (both), Mangle (both).
 INFECTED_WOUNDS_TRIGGER = (SHRED | MAUL, SWIPE_BEAR | MANGLE_CAT | MANGLE_BEAR, SWIPE_CAT)

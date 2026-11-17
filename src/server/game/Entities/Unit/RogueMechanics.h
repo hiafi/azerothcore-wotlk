@@ -290,6 +290,7 @@ namespace Rogue
     void OnBladeFlurryCast(Player* rogue);
     // U59 copier: the rogue holds 13877's aura; spellInfo null = an auto attack. Up to BLADE_FLURRY_EXTRA_TARGETS
     // engaged units within BLADE_FLURRY_RADIUS_YD of target -> CastCustomSpell(unit, 203991, pct of damage, true).
+    // In Enforcer Stance (203720): pct = BLADE_FLURRY_ENFORCER_COPY_PCT and the hits refresh the aura (stays up).
     void OnBladeFlurryDamage(Player* rogue, Unit* target, uint32 damage, SpellInfo const* spellInfo);
 
     // Celerity (U74): 13750 up -> its remaining time to at least CELERITY_DURATION_MS; else apply / refresh 203996 to

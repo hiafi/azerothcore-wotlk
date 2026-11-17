@@ -564,7 +564,7 @@ class spell_rog_envenom_assassination_aura : public AuraScript
     }
 };
 
-// 1943 - Rupture (beside the stock aura script): Indiscriminate Carnage copies a full Rupture onto up to 1 / 2 other
+// 1943 - Rupture (beside the stock aura script): Indiscriminate Carnage copies a full Rupture onto up to 2 / 4 other
 // enemies near the primary that are in combat with the rogue or the group and carry none of the rogue's.
 // The copies are applied as auras (AddAura), not cast: a triggered cast would still pass CheckRange (melee reach,
 // in front of the rogue) and line of sight, which the doc's "nearby enemies" (within 8 yd of the primary) does not

@@ -558,7 +558,8 @@ class spell_dru_ferocious_bite : public SpellScript
     }
 };
 
-// 1079, 22568, 52610, 22570 - Rip / Ferocious Bite / Savage Roar / Maim: Primal Precision r2 capstone
+// 1079, 22568, 52610, 22570, 200472 - Rip / Ferocious Bite / Savage Roar / Maim / Primal Wrath: Primal
+// Precision r2 capstone
 // (3,3) - finishers reduce Berserk's cooldown, at most once every 5 sec (FERAL-ADDENDUM §3.7 - was
 // 3 sec, now the same shared ICD as Druid::TryPrimalPrecisionBearReduction). Nothing happens, and no
 // ICD is burned, while Berserk is active (decision: rule 9).

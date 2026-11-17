@@ -167,7 +167,9 @@ SURPRISE_ATTACKS_EXTRA_SHOTS = const(
 SURPRISE_SHOT_DELAY_MS = const(
     'SURPRISE_SHOT_DELAY_MS', 200, 'Surprise Attacks capstone: delay between the shots, ms [tune].')
 IMPROVED_RIPOSTE_EXTRA_TARGETS = const(
-    'IMPROVED_RIPOSTE_EXTRA_TARGETS', 2, 'Improved Riposte capstone: extra enemies struck [fixed].')
+    'IMPROVED_RIPOSTE_EXTRA_TARGETS', 4, 'Improved Riposte capstone: extra enemies struck [fixed] (2 -> 4, '
+    '2026-11-16, AoE round 3 tank wave on the Normal-tier kits, user ruling: Combat tank option A, the [fixed] value '
+    'changed on purpose).')
 IMPROVED_RIPOSTE_RADIUS_YD = const(
     'IMPROVED_RIPOSTE_RADIUS_YD', 8.0, 'Improved Riposte capstone: cleave radius around the target, yards [tune].')
 DEFT_MANEUVERS_MIN_ENEMIES = const(
@@ -181,7 +183,15 @@ BLADE_FLURRY_EXTRA_TARGETS = const(
 BLADE_FLURRY_RADIUS_YD = const(
     'BLADE_FLURRY_RADIUS_YD', 8.0, 'Blade Flurry: copy radius around the hit target, yards [tune].')
 BLADE_FLURRY_COPY_PCT = const(
-    'BLADE_FLURRY_COPY_PCT', 20, 'Blade Flurry: copy share of the damage dealt, % [tune] (40 -> 20, 2026-10-28).')
+    'BLADE_FLURRY_COPY_PCT', 60, 'Blade Flurry: copy share of the damage dealt, % [tune] (40 -> 20, 2026-10-28; 20 -> 60, '
+    '2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: reverses the 10-28 cut, Combat pack build reaches '
+    'the 2,500-2,800 5-target band).')
+BLADE_FLURRY_ENFORCER_COPY_PCT = const(
+    'BLADE_FLURRY_ENFORCER_COPY_PCT', 75, 'Blade Flurry in Enforcer Stance: copy share of the damage dealt, %; '
+    'the aura is refreshed by the tank\'s hits so it stays up while the tank fights [tune] (new 2026-11-16, AoE '
+    'round 3 tank wave on the Normal-tier kits, user ruling: Combat tank option A; 100 -> 60, 2026-11-16, AoE round '
+    '3 follow-up on the Normal-tier kits, user ruling: Combat tank 5T 3,369 -> about 2,500-2,600; 60 -> 75, 2026-11-16, AoE round 3 follow-up 2 on the '
+    'Normal-tier kits, user ruling: 60% landed 2,040 at 5T, 100% 3,369).')
 PREY_DAMAGE_HEALTH_PCT = const(
     'PREY_DAMAGE_HEALTH_PCT', 35, 'Prey on the Weak: damage clause threshold, target health % [fixed].')
 PREY_CRIT_HEALTH_PCT = const(
@@ -1071,7 +1081,9 @@ blade_flurry_copy_203991 = spell(
     ],
     spell_icon_id=_ICON_BLADE_FLURRY,
     notes='rogue-rework S3a A3, combat doc "Blade Flurry" (U59, item 4): the hidden copy Rogue::OnBladeFlurryDamage '
-          'casts at up to 4 enemies near the hit target with bp0 = BLADE_FLURRY_COPY_PCT (20%) of the damage dealt. The S2 echo shape '
+          'casts at up to 4 enemies near the hit target with bp0 = BLADE_FLURRY_COPY_PCT (60%) of the damage dealt. '
+          'BLADE_FLURRY_COPY_PCT 20 -> 60 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: reverses the '
+          '10-28 cut). The S2 echo shape '
           '(204162): Physical SCHOOL_DAMAGE, SpellClassSet 8 with NO family bits (no reader reaches it), Ex3 '
           'IGNORE_CASTER_MODIFIERS | ALWAYS_HIT | SUPPRESS_CASTER_PROCS, Ex2 CANT_CRIT, DefenseType 0, A 6, '
           'RangeIndex 6 (100 yd), FacingCasterFlags 0, custom attr 0x8000 (a share of post-armor damage), hidden, '

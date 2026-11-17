@@ -125,7 +125,7 @@ def expectations(idx: dict) -> tuple[dict, dict, dict]:
         GS: {"RecoveryTime": 0, "Category": 0, "CategoryRecoveryTime": 0, "DurationIndex": inf, "SpellLevel": 10,
              "BaseLevel": 10, "SpellClassMask_1": 0x40000000, "Effect_1": 31, "EffectBasePoints_1": 389,
              "Effect_2": 64, "EffectTriggerSpell_2": VEIL, "ImplicitTargetA_2": 1, "Effect_3": 80},
-        FOK: {"SpellLevel": 24, "BaseLevel": 24, "Effect_1": 31, "EffectBasePoints_1": 99, "Effect_2": 80,   # M2a: 100%
+        FOK: {"SpellLevel": 24, "BaseLevel": 24, "Effect_1": 31, "EffectBasePoints_1": 249, "Effect_2": 80,   # M2a: 100%, AoE round 3 (2026-11-16): 250%
               "Effect_3": 0},
         DT: {"Effect_1": 2, "EffectPointsPerCombo_1": 0, "SpellLevel": 36, "BaseLevel": 36, "Effect_2": 6,
              "EffectAura_2": 33},

@@ -84,9 +84,10 @@ shaman_blast_1214 = tooltip_vars(
 )
 
 EARTHQUAKE_EXTRA_ENEMY_PCT = const(
-    'EARTHQUAKE_EXTRA_ENEMY_PCT', 25, 'Earthquake: each tick deals this percent more damage for each enemy inside the quake '
+    'EARTHQUAKE_EXTRA_ENEMY_PCT', 50, 'Earthquake: each tick deals this percent more damage for each enemy inside the quake '
     'beyond the first (spell_sha_earthquake counts the valid enemies, spell_sha_earthquake_tick scales the hit; nothing at 1 '
-    'target) (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package), Revision 5 (Revision 4 had 50) [tune].',
+    'target) (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package), Revision 5 (Revision 4 had 50); EARTHQUAKE_EXTRA_ENEMY_PCT 25 -> 50 (2026-11-16, AoE round 3 on the '
+    'Normal-tier kits, user ruling: Elemental option C, Earthquake +25% -> +50% per extra enemy) [tune].',
 )
 
 HEALING_RAIN_TARGETS = const(
@@ -119,7 +120,9 @@ earthquake_tick_202281 = spell(
           'itself, so the engine\'s caster-to-target check must not skip enemies the shaman cannot see. '
           'Enemy-count scaling (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package): spell_sha_earthquake counts the enemies the tick will hit and passes the multiplier '
           '100 + EARTHQUAKE_EXTRA_ENEMY_PCT x (count - 1) in SPELLVALUE_BASE_POINT1 (effect 1 is empty, so the value only '
-          'rides on the Spell); spell_sha_earthquake_tick scales the hit by it in OnHit (x2.0 at 5 enemies, x1.0 alone). '
+          'rides on the Spell); spell_sha_earthquake_tick scales the hit by it in OnHit (x3.0 at 5 enemies, x1.0 alone; was x2.0 with 25). '
+          'EARTHQUAKE_EXTRA_ENEMY_PCT 25 -> 50 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Elemental option C, '
+          'Earthquake +25% -> +50% per extra enemy). '
           'A cast of the tick from anywhere else carries 0 there and is not scaled.',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_3': m.EARTHQUAKE, 'DefenseType': _DMG_MAGIC,

@@ -658,7 +658,7 @@ namespace ShamanData
     constexpr int32 EARTHEN_WALL_PERIOD_MS = 2000; // Earthen Wall Totem: ms between pulses, the first at placement [fixed].
     constexpr int32 EARTHEN_WALL_PULSES = 8; // Earthen Wall Totem: pulses per placement [fixed].
     constexpr float EARTHEN_WALL_RANGE_YD = 40.0f; // Earthen Wall Totem: spill-to-ally search radius, yd [tune].
-    constexpr int32 EARTHQUAKE_EXTRA_ENEMY_PCT = 25; // Earthquake: each tick deals this percent more damage for each enemy inside the quake beyond the first (spell_sha_earthquake counts the valid enemies, spell_sha_earthquake_tick scales the hit; nothing at 1 target) (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package), Revision 5 (Revision 4 had 50) [tune].
+    constexpr int32 EARTHQUAKE_EXTRA_ENEMY_PCT = 50; // Earthquake: each tick deals this percent more damage for each enemy inside the quake beyond the first (spell_sha_earthquake counts the valid enemies, spell_sha_earthquake_tick scales the hit; nothing at 1 target) (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package), Revision 5 (Revision 4 had 50); EARTHQUAKE_EXTRA_ENEMY_PCT 25 -> 50 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Elemental option C, Earthquake +25% -> +50% per extra enemy) [tune].
     constexpr int32 EARTH_ELEMENTAL_BONUS_PCT = 20; // Earth Elemental damage bonus (Elemental Warding capstone), percent [fixed].
     constexpr int32 ECHO_DURATION_MS = 30000; // Echo duration, ms, refreshed by each Echo [tune] (20 s until the 2026-10-20 Earth Shock burst ruling).
     constexpr int32 ECHO_EARTH_ELEMENTAL_GRANT = 5; // Echo granted by each Earth Elemental summon with the Booming Echoes capstone [tune].
@@ -699,7 +699,7 @@ namespace ShamanData
     constexpr int32 ILS_ORB_STONESKIN = 1; // Improved Lightning Shield: Stoneskin per orb under Rockbiter [fixed].
     constexpr int32 ILS_SS_CLEAVE_R1 = 33; // Improved Lightning Shield rank 1: Stormstrike cleave (202449) share of the landed Stormstrike damage, percent [tune].
     constexpr int32 ILS_SS_CLEAVE_R2 = 66; // Improved Lightning Shield rank 2: Stormstrike cleave share, percent [tune].
-    constexpr int32 ILS_SS_CLEAVE_R3 = 100; // Improved Lightning Shield rank 3: Stormstrike cleave share, percent [tune].
+    constexpr int32 ILS_SS_CLEAVE_R3 = 75; // Improved Lightning Shield rank 3: Stormstrike cleave share, percent; ILS_SS_CLEAVE_R3 100 -> 75 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Enhancement option A, trims the 5-target cleave at the top of the band) [tune].
     constexpr float ILS_SS_CLEAVE_RADIUS_YD = 8.0f; // Improved Lightning Shield: Stormstrike cleave radius around the target, yd [fixed].
     constexpr int32 ILS_SS_CLEAVE_TARGETS = 4; // Improved Lightning Shield: enemies the Stormstrike cleave strikes besides the target [fixed].
     constexpr int32 IWS_CAPSTONE_MANA_PCT = 1; // Improved Water Shield capstone: percent of maximum mana per direct-heal critical strike [fixed].

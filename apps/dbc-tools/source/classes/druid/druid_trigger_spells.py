@@ -24,7 +24,8 @@ from ._masks import (
 from ._masks import (
     BEAR_FORM_PASSIVE, DEMORALIZING_ROAR, FERAL_BLEEDS, LACERATE, MAIM, MARKER_NOTHING, MANGLE_BEAR, MANGLE_CAT, MAUL,
     NURTURING_INSTINCT_DAMAGE, NURTURING_INSTINCT_DOT, PROC_HIT_NORMAL, PROC_SPELL_TYPE_DAMAGE, PULVERIZE, RAKE,
-    RAVAGE, RIP, RIP_FEROCIOUS_BITE, SAVAGE_ROAR, SHRED, SURVIVAL_INSTINCTS, SWIPE_BEAR, SWIPE_CAT, THRASH,
+    RAVAGE, RIP, RIP_FEROCIOUS_BITE, SAVAGE_ROAR, SHRED, SURVIVAL_INSTINCTS, SWIPE_BEAR, SWIPE_CAT, THRASH, THRASH_CAT,
+    UPHEAVAL,
 )
 
 # druid-rework Feral pass: ShapeshiftMask/ShapeshiftExclude bits (`1 << (form - 1)`,
@@ -69,10 +70,10 @@ hurricane_42231 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=41.12, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=37.01, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=220,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=102.8 (potency-report default, base/coef already agreed). sp_potency 102.8 -> 51.4 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Hurricane -50%). Effect 1 sp_potency 51.4 -> 41.12 (2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Hurricane -20%).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=102.8 (potency-report default, base/coef already agreed). sp_potency 102.8 -> 51.4 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Hurricane -50%). Effect 1 sp_potency 51.4 -> 41.12 (2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Hurricane -20%). Effect 1 sp_potency 41.12 -> 37.01 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Balance option A, Hurricane -10%; real ratio 0.90005).',
     raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 1073741824, 'AttributesEx5': 1024, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a violent storm in the target area causing {pot1} Nature damage to enemies every $16914t3 sec, and increasing the time between attacks of enemies by $16914s2%.  Lasts $16914d.  Druid must channel to maintain the spell.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 135, 'SpellClassMask_1': 4194304, 'SpellClassSet': 7, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 9491, 'StartRecoveryCategory': 133},
 )
 
@@ -5487,10 +5488,10 @@ starfire_cleave_200337 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=185.4, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=64.8, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=1485,
-    notes='NEW (druid-rework BALANCE §4 "Starfire cleave"): half of 2912\'s own base/ppl (120/29/14.3 -> 59/15/7.15); shares Starfire\'s family bit deliberately (Tentacle Mind Flay precedent); scripted_by(spell_dru_starfall_aoe) reuses the stock area-target filter that drops GetExplTargetUnit() (see druid_talents.py); cast by spell_dru_starfire_cleave AfterHit on 2912 (WP-B). Potency system P5 (druid pass): converted to sp_potency=185.4 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.5) spell_bonus_data override is retired in favor of the generated DBC coefficient. This spell previously had no explicit BaseLevel/SpellLevel/MaxLevel (defaulted to 0) since it is never learned or cast directly - potency requires SpellLevel set (BaseLevel must equal it, "Caveats and checks"), so added BaseLevel=SpellLevel=20/MaxLevel=80 matching Starfire 2912\'s own SpellLevel (this is conceptually half of that spell).',
+    notes='NEW (druid-rework BALANCE §4 "Starfire cleave"): half of 2912\'s own base/ppl (120/29/14.3 -> 59/15/7.15); shares Starfire\'s family bit deliberately (Tentacle Mind Flay precedent); scripted_by(spell_dru_starfall_aoe) reuses the stock area-target filter that drops GetExplTargetUnit() (see druid_talents.py); cast by spell_dru_starfire_cleave AfterHit on 2912 (WP-B). Potency system P5 (druid pass): converted to sp_potency=185.4 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.5) spell_bonus_data override is retired in favor of the generated DBC coefficient. This spell previously had no explicit BaseLevel/SpellLevel/MaxLevel (defaulted to 0) since it is never learned or cast directly - potency requires SpellLevel set (BaseLevel must equal it, "Caveats and checks"), so added BaseLevel=SpellLevel=20/MaxLevel=80 matching Starfire 2912\'s own SpellLevel (this is conceptually half of that spell). Effect 1 sp_potency 185.4 -> 64.8 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Balance option A, the cleave back to half of Starfire\'s damage: 185.4 x 592 / 1,693, the live Starfire hit halved over the live cleave hit in the 5-target sim; the analytic half of Starfire 2912\'s 72.27 at its 2.5 s time basis is 72.27 x 2.5 / 1.5 / 2 = 60.2 at the cleave\'s 1.5 s, confirm the per-hit ratio in the re-sim).',
     raw_overrides={'BaseLevel': 20, 'SpellLevel': 20, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'MaxTargets': 2, 'EquippedItemClass': -1, 'SpellClassMask_1': STARFIRE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Arcane damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
@@ -6994,6 +6995,33 @@ bestial_fury_rage_200437 = spell(
 )
 
 
+# Upheaval in the everyday bear (form 8) only: a hidden aura linked from Bear Form 5487 / Dire Bear Form 9634
+# (linked_spell type 2, druid_talents.py; 5487 has no free effect slot, its eff2 is the +45% physical). Bestial Fury
+# (form 5, 200425) never carries it, so Bear DPS is unchanged. 2026-11-16, AoE round 3 tank wave on the Normal-tier
+# kits, user ruling: Bear tank option A, BearTankSim 5T ~2,043 -> ~2,520 (Upheaval 365 x 2.3), 1T none (the tank
+# bot never casts Upheaval on one target).
+UPHEAVAL_BEAR_TANK_DAMAGE_PCT = 130
+
+bear_form_upheaval_200473 = spell(
+    id=200473, name='Bear Form', **_feral_buff_kwargs(-1, attributes=_HIDDEN_AURA_ATTRIBUTES),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=UPHEAVAL_BEAR_TANK_DAMAGE_PCT - 1, implicit_target_a=1,
+               apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+    ],
+    spell_icon_id=107,
+    notes="NEW (2026-11-16, AoE round 3 tank wave on the Normal-tier kits, user ruling: Bear tank option A, Upheaval "
+          "+130% in Dire Bear Form only): hidden aura linked from Bear Form 5487 and Dire Bear Form 9634 "
+          "(linked_spell type 2, the 200437 precedent; 5487 has no free effect slot). eff0 ADD_PCT_MODIFIER "
+          "SPELLMOD_DAMAGE +UPHEAVAL_BEAR_TANK_DAMAGE_PCT% on Upheaval 200422 only (dword 3 UPHEAVAL); "
+          "spell_dru_upheaval's Swell / soft-cap multiplier applies on top in OnHit. Bestial Fury (form 5) never "
+          "carries it: Bear DPS unchanged. Side effect (flagged): the tank's Upheaval hit (~640) then beats Bestial "
+          "Fury's (~470 with 2 Swell). FIX 2026-11-16: the mask was on EffectSpellClassMaskC_1 (= Effect_3, dword "
+          "1), leaving eff0's mask all-zero = every druid spell (+130% Mangle/Maul/Thrash/Lacerate direct hits in "
+          "Bear Form); now EffectSpellClassMaskA_3 (letter = effect, number = dword).",
+    raw_overrides=_feral_raw("Upheaval damage increased by $s1%.", EffectSpellClassMaskA_3=UPHEAVAL),
+)
+
+
 # ============================================================================
 # druid-rework FERAL WP-A: new talent ranks (FERAL §7, WP-BRIEF §3). "DUMMY" values the C++ reads are
 # APPLY_AURA + DUMMY (a plain SPELL_EFFECT_DUMMY creates no AuraEffect for GetRankAmount to find - Resto
@@ -7112,7 +7140,10 @@ _RENDING_SWIPES_TEXT = ("Increases the damage of your Thrash and Swipe by $s1%. 
                         "$s3% increased damage from your Swipe and Upheaval.")
 _RENDING_SWIPES_NOTES = ("NEW (druid-rework FERAL §7 (4,0), WP-BRIEF §3), talent 60042: +10/20% Thrash (hit and bleed) "
                          "and Swipe (Bear/Cat) damage; eff2 DUMMY 5/10 = bonus for Swipe (Bear/Cat) and Upheaval vs "
-                         "targets with the caster's Thrash (Druid damage hooks).")
+                         "targets with the caster's Thrash (Druid damage hooks)."
+                         " EffectSpellClassMaskA_1 / B_1 THRASH_CAT added (2026-11-16, AoE round 3 follow-up, user "
+                         "ruling: Thrash (Cat)): the cat copy 200474 is a Thrash for both modifiers, and the damage "
+                         "hook counts its bleed as the caster's Thrash.")
 
 rending_swipes_200449 = spell(
     id=200449, name='Rending Swipes', **_dru_passive_talent_kwargs(),
@@ -7122,7 +7153,7 @@ rending_swipes_200449 = spell(
         _aura(AuraType.DUMMY, 4),
     ],
     spell_icon_id=4001, notes=_RENDING_SWIPES_NOTES + " Rank 1/2.",
-    raw_overrides=_feral_talent_raw(_RENDING_SWIPES_TEXT, EffectSpellClassMaskA_2=SWIPE_BEAR, EffectSpellClassMaskA_3=SWIPE_CAT | THRASH, EffectSpellClassMaskB_3=THRASH),
+    raw_overrides=_feral_talent_raw(_RENDING_SWIPES_TEXT, EffectSpellClassMaskA_1=THRASH_CAT, EffectSpellClassMaskA_2=SWIPE_BEAR, EffectSpellClassMaskA_3=SWIPE_CAT | THRASH, EffectSpellClassMaskB_1=THRASH_CAT, EffectSpellClassMaskB_3=THRASH),
 )
 
 rending_swipes_200450 = spell(
@@ -7133,7 +7164,7 @@ rending_swipes_200450 = spell(
         _aura(AuraType.DUMMY, 9),
     ],
     spell_icon_id=4001, notes=_RENDING_SWIPES_NOTES + " Rank 2/2.",
-    raw_overrides=_feral_talent_raw(_RENDING_SWIPES_TEXT, EffectSpellClassMaskA_2=SWIPE_BEAR, EffectSpellClassMaskA_3=SWIPE_CAT | THRASH, EffectSpellClassMaskB_3=THRASH),
+    raw_overrides=_feral_talent_raw(_RENDING_SWIPES_TEXT, EffectSpellClassMaskA_1=THRASH_CAT, EffectSpellClassMaskA_2=SWIPE_BEAR, EffectSpellClassMaskA_3=SWIPE_CAT | THRASH, EffectSpellClassMaskB_1=THRASH_CAT, EffectSpellClassMaskB_3=THRASH),
 )
 
 

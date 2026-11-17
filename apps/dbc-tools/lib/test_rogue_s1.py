@@ -188,13 +188,13 @@ AMOUNTS = (
     + [(i, 1, AURA_DUMMY, v) for i, v in zip((51625, 51626), (50, 100))]           # Deadly Brew
     + [(i, 1, AURA_DUMMY, v) for i, v in zip((203811, 203812, 203813), (10, 20, 30))]    # Zoldyck
     + [(i, 1, AURA_DUMMY, v) for i, v in zip((203814, 203815), (4, 8))]            # Cut Throat
-    + [(i, 1, AURA_DUMMY, v) for i, v in zip((203818, 203819), (1, 2))]            # Indiscriminate Carnage
+    + [(i, 1, AURA_DUMMY, v) for i, v in zip((203818, 203819), (2, 4))]            # Indiscriminate Carnage
     + [(i, 1, AURA_DUMMY, v) for i, v in zip((203820, 203821), (5, 10))]           # Dashing Scoundrel
     + [(i, 1, AURA_DUMMY, v) for i, v in zip((14144, 14148), (25, 50))]            # Remorseless markers (R12)
     + [(i, 3, AURA_DUMMY, v) for i, v in zip((14156, 14160, 14161), (33, 66, 100))]  # Ruthlessness (R13)
     + [(i, 1, 193, v) for i, v in zip((203800, 203801, 203802), (1, 2, 3))]        # Quick Pace (R11)
     + [(i, 1, 306, v) for i, v in zip((14138, 14139, 14140), (2, 4, 6))]           # Malice
-    + [(i, 1, AURA_PCT, v) for i, v in zip((203809, 203810), (15, 30))]            # Venomous Fan
+    + [(i, 1, AURA_PCT, v) for i, v in zip((203809, 203810), (50, 100))]            # Venomous Fan
     + [(i, 1, AURA_FLAT, v) for i, v in zip((203816, 203817), (1, 2))]             # Toxic Blade
     + [(203823, 1, 35, 30)]                                                         # Vigor r2 (R11)
     + [(i, 1, 172, v) for i, v in zip((31208, 31209, 203824), (3, 6, 10))]         # Fleet Footed (R11)

@@ -106,6 +106,31 @@ namespace
         dk->CastSpell(dk, DeathKnightData::SPELL_UNENDING_THIRST, TRIGGERED_FULL_MASK);
     }
 
+    // Crimson Scourge's proc rolled by hand for a Blood Boil hit (the capstone, rank 3): the same chance (the rank's
+    // ProcChance through the chain's proc row, spell mods and the Proc Chance stat) and the same 10 s internal
+    // cooldown on the rank aura as the auto-attack proc, so the two paths share one cooldown.
+    void TryGrantCrimsonScourge(Player* dk)
+    {
+        Aura* rank = dk->GetAura(DeathKnightData::SPELL_CRIMSON_SCOURGE_203136);
+        SpellProcEntry const* procEntry = sSpellMgr->GetSpellProcEntry(DeathKnightData::SPELL_CRIMSON_SCOURGE_203136);
+        if (!rank || !procEntry)
+            return;
+
+        TimePoint const now = Acore::Time::SteadyNow();
+        if (rank->IsProcOnCooldown(now))
+            return;
+
+        float chance = procEntry->Chance;
+        dk->ApplySpellMod(DeathKnightData::SPELL_CRIMSON_SCOURGE_203136, SPELLMOD_CHANCE_OF_SUCCESS, chance);
+        // the Proc Chance stat, as Aura::CalcProcChance applies it to every native proc
+        chance *= 1.0f + dk->GetProcChancePercentage() / 100.0f;
+        if (!roll_chance_f(chance))
+            return;
+
+        rank->AddProcCooldown(procEntry, now);
+        dk->CastSpell(dk, DeathKnightData::SPELL_CRIMSON_SCOURGE_BUFF, TRIGGERED_FULL_MASK);
+    }
+
     // Vendetta's strike heal percent for the highest rank known (the percent is a const per rank, not an effect)
     int32 GetVendettaStrikeHealPct(Unit const* dk)
     {
@@ -419,6 +444,41 @@ class spell_dk_crimson_scourge : public AuraScript
     void Register() override
     {
         DoCheckProc += AuraCheckProcFn(spell_dk_crimson_scourge::CheckProc);
+    }
+};
+
+// -48721 - Blood Boil (a second script beside the stock spell_dk_blood_boil, which keeps its once-per-cast trigger).
+// The Crimson Scourge capstone (rank 3, 203136), per enemy hit after the damage: a target that already carried the
+// Death Knight's Blood Plague rolls Crimson Scourge (TryGrantCrimsonScourge), then every target hit gets Blood Plague
+// (a fresh one or a refresh). The damage of this hit has already read the diseases, so a clean target takes the plain
+// hit. Players only: a Dancing Rune Weapon copy (cast by the weapon) does neither.
+class spell_dk_blood_boil_crimson_scourge : public SpellScript
+{
+    PrepareSpellScript(spell_dk_blood_boil_crimson_scourge);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ DeathKnightData::SPELL_CRIMSON_SCOURGE_203136,
+            DeathKnightData::SPELL_CRIMSON_SCOURGE_BUFF, DeathKnightData::SPELL_BLOOD_PLAGUE });
+    }
+
+    void HandleAfterHit()
+    {
+        Player* dk = GetPlayerCaster(GetCaster());
+        Unit* target = GetHitUnit();
+        if (!dk || !target || !target->IsAlive() || dk->IsFriendlyTo(target) ||
+            !dk->HasAura(DeathKnightData::SPELL_CRIMSON_SCOURGE_203136))
+            return;
+
+        if (target->HasAura(DeathKnightData::SPELL_BLOOD_PLAGUE, dk->GetGUID()))
+            TryGrantCrimsonScourge(dk);
+
+        dk->CastSpell(target, DeathKnightData::SPELL_BLOOD_PLAGUE, TRIGGERED_FULL_MASK);
+    }
+
+    void Register() override
+    {
+        AfterHit += SpellHitFn(spell_dk_blood_boil_crimson_scourge::HandleAfterHit);
     }
 };
 
@@ -1021,6 +1081,7 @@ void AddSC_deathknight_blood_spell_scripts()
     RegisterSpellScript(spell_dk_death_and_decay_blood);
     RegisterSpellScript(spell_dk_death_and_decay_tick_blood);
     RegisterSpellScript(spell_dk_crimson_scourge);
+    RegisterSpellScript(spell_dk_blood_boil_crimson_scourge);
     RegisterSpellScript(spell_dk_crimson_scourge_buff);
     RegisterSpellScript(spell_dk_crimson_communion);
     RegisterSpellScript(spell_dk_blood_nova);

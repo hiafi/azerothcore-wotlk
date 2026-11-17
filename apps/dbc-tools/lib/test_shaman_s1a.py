@@ -644,8 +644,8 @@ class ShamanS1aDataTest(unittest.TestCase):
             with self.subTest(rank=sid):
                 self.assertIn("Your Chain Lightning jumps to 1 additional target.", rows[sid]["Description_Lang_enUS"])
         consts = {c["name"]: c["value"] for c in p.consts}
-        self.assertEqual(consts["EARTHQUAKE_EXTRA_ENEMY_PCT"], 25)
-        self.assertIn("25% more damage for each other enemy", rows[202280]["Description_Lang_enUS"])
+        self.assertEqual(consts["EARTHQUAKE_EXTRA_ENEMY_PCT"], 50)
+        self.assertIn("50% more damage for each other enemy", rows[202280]["Description_Lang_enUS"])
         names = {(int(r["spell_id"]), r["ScriptName"]) for r in p.spell_script_names}
         self.assertIn((202281, "spell_sha_earthquake_tick"), names)
 

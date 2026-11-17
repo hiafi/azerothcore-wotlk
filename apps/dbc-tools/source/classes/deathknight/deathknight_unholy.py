@@ -248,7 +248,7 @@ dark_transformation_203448 = spell(
     raw_overrides=_raw(
         'Your Death Coils grant your ghoul Shadow Infusion, stacking up to 5. At 5 stacks, transform your ghoul into '
         'a monstrosity for $d, increasing its damage by $s2% and causing its attacks to hit all enemies within 8 '
-        'yards for 50% damage.',
+        'yards for 100% damage.',
         'Transformed into a monstrosity. Deals more damage, and its attacks hit nearby enemies.', level=40,
         CasterAuraSpell=dark_transformation_ready_203465.id,
         **_chain_amplitudes([None] * 3),
@@ -388,7 +388,8 @@ _C = [
     ('LESSER_GHOUL_RANGE_YARDS', 40, 'Corpse Explosion: Lesser Ghoul search range.'),
     ('CORPSE_EXPLOSION_CORPSE_RANGE_YARDS', 30, 'Corpse Explosion: corpse fallback search range.'),
     ('SHADOW_INFUSION_STACKS', 5, 'Shadow Infusion stacks needed for Dark Transformation.'),
-    ('DARK_TRANSFORMATION_CLEAVE_PCT', 50, 'Dark Transformation cleave: percent of the unmitigated hit.'),
+    ('DARK_TRANSFORMATION_CLEAVE_PCT', 100, 'Dark Transformation cleave: percent of the unmitigated hit. '
+     'DARK_TRANSFORMATION_CLEAVE_PCT 50 -> 100 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Dark Transformation cleave 100%).'),
     ('ABOMINATION_WOUND_EVERY_TICKS', 3, 'Putrid Cloud: a wound every this many ticks per target.'),
     ('GARGOYLE_NECROMANCY_PCT', 3, 'Gargoyle Necromancy: minion damage percent per stack.'),
     ('GARGOYLE_NECROMANCY_MAX_STACKS', 10, 'Gargoyle Necromancy stack cap.'),

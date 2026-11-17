@@ -784,17 +784,19 @@ shattering_vial_203808 = _rank(
     + ' Nature damage over $203836d to all enemies within $203836a1 yards.',
     notes='DUMMY 5 (% per combo point, x Proc Chance); the splash is 203836.')
 
-# ---- (5,2) Venomous Fan 60395: pct DAMAGE +15 / +30 on Fan of Knives; capstone: x2 poison chance (203810) ----
+# ---- (5,2) Venomous Fan 60395: pct DAMAGE +50 / +100 (was +15 / +30) on Fan of Knives; capstone: x2 poison chance (203810) ----
 _VENOMOUS_FAN_CAP = 'Capstone Bonus: Your Fan of Knives has double the chance to apply your poisons.'
 
 
 def _venomous_fan(spell_id, rank):
     return _rank(
-        spell_id, 'Venomous Fan', rank, _ROW_VENOMOUS_FAN, [_pct(SpellModOp.DAMAGE, 15 * rank - 1)],
+        spell_id, 'Venomous Fan', rank, _ROW_VENOMOUS_FAN, [_pct(SpellModOp.DAMAGE, 50 * rank - 1)],
         _ICON_VENOMOUS_FAN, _with_cap('Your Fan of Knives deals $s1% more damage.', _VENOMOUS_FAN_CAP, rank == 2),
         masks={1: m.VENOMOUS_FAN_READ},
-        notes=f'pct DAMAGE +{15 * rank} on Fan of Knives (m.VENOMOUS_FAN_READ: d1 b18, 51723 + 52874)'
-              + ('; the capstone is HasAura(203810).' if rank == 2 else '.'))
+        notes=f'pct DAMAGE +{50 * rank} on Fan of Knives (m.VENOMOUS_FAN_READ: d1 b18, 51723 + 52874)'
+              + ('; the capstone is HasAura(203810).' if rank == 2 else '.')
+              + f' pct DAMAGE {15 * rank} -> {50 * rank} (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: '
+              'the bleed pack build reaches the 2,500-2,800 5-target band; Fan of Knives is not cast at one target).')
 
 
 venomous_fan_203809 = _venomous_fan(203809, 1)
@@ -840,12 +842,14 @@ def _toxic_blade(spell_id, rank):
 toxic_blade_203816 = _toxic_blade(203816, 1)
 toxic_blade_203817 = _toxic_blade(203817, 2)
 
-# ---- (8,2) Indiscriminate Carnage 60399: DUMMY 1 / 2 (extra Rupture targets) ----
+# ---- (8,2) Indiscriminate Carnage 60399: DUMMY 2 / 4 (was 1 / 2; extra Rupture targets) ----
 def _carnage(spell_id, rank):
     return _rank(
-        spell_id, 'Indiscriminate Carnage', rank, _ROW_CARNAGE, [_dummy(rank - 1)], _ICON_CARNAGE,
+        spell_id, 'Indiscriminate Carnage', rank, _ROW_CARNAGE, [_dummy(2 * rank - 1)], _ICON_CARNAGE,
         'Your Rupture also applies to $s1 additional nearby $lenemy:enemies; already in combat with you or your group.',
-        notes=f'DUMMY {rank} (extra enemies; the radius is INDISCRIMINATE_CARNAGE_RADIUS_YD).')
+        notes=f'DUMMY {2 * rank} (extra enemies; the radius is INDISCRIMINATE_CARNAGE_RADIUS_YD). DUMMY {rank} -> '
+              f'{2 * rank} (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: the bleed pack build reaches '
+              'the 2,500-2,800 5-target band).')
 
 
 indiscriminate_carnage_203818 = _carnage(203818, 1)

@@ -854,8 +854,9 @@ improved_revenge_12797 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY, trigger_spell=200045),
     ],
     spell_icon_id=562,
-    notes='warrior-rework S1 D12/D25: Improved Revenge rank 1: Revenge damage +15% (e0 mask d0 0x400), Devastate extra target buff 200045 via the cast-phase proc row (spell_phase_mask CAST: once per Revenge cast, S1 D12), capstone (rank 2): Revenge +2 targets (e2 JUMP_TARGETS, mask d0 0x400). The tooltip is built with _desc (capstone format, grey below the last rank).',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases damage of your Revenge ability by 15%. After using Revenge your next Devastate within 8 sec will strike an additional target.', 'Your Revenge strikes 2 additional targets.', last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 25, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D12/D25: Improved Revenge rank 1: Revenge damage +15% (e0 mask d0 0x400), Devastate extra target buff 200045 via the cast-phase proc row (spell_phase_mask CAST: once per Revenge cast, S1 D12), capstone (rank 2): Revenge +4 targets (e2 JUMP_TARGETS, mask d0 0x400). The tooltip is built with _desc (capstone format, grey below the last rank). '
+          'Description capstone text 2 -> 4 additional targets (2026-11-16, AoE round 3 tank wave on the Normal-tier kits, user ruling: Prot Warrior option A, Improved Revenge capstone +2 -> +4 targets).',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases damage of your Revenge ability by 15%. After using Revenge your next Devastate within 8 sec will strike an additional target.', 'Your Revenge strikes 4 additional targets.', last=False), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 25, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 procs_on(
     improved_revenge_12797, proc_flags=0x10, family_name=4, family_mask=(0x400, 0, 0), spell_type_mask=1,
@@ -877,11 +878,12 @@ improved_revenge_12799 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY, trigger_spell=200045),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=17),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=17),
     ],
     spell_icon_id=562,
-    notes='warrior-rework S1 D12/D25: Improved Revenge rank 2: Revenge damage +30% (e0 mask d0 0x400), Devastate extra target buff 200045 via the cast-phase proc row (spell_phase_mask CAST: once per Revenge cast, S1 D12), capstone (rank 2): Revenge +2 targets (e2 JUMP_TARGETS, mask d0 0x400). The tooltip is built with _desc (capstone format, grey below the last rank).',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases damage of your Revenge ability by 30%. After using Revenge your next Devastate within 8 sec will strike an additional target.', 'Your Revenge strikes 2 additional targets.', last=True), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EffectSpellClassMaskB_1': 1024, 'EffectSpellClassMaskC_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 50, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warrior-rework S1 D12/D25: Improved Revenge rank 2: Revenge damage +30% (e0 mask d0 0x400), Devastate extra target buff 200045 via the cast-phase proc row (spell_phase_mask CAST: once per Revenge cast, S1 D12), capstone (rank 2): Revenge +4 targets (e2 JUMP_TARGETS, mask d0 0x400). The tooltip is built with _desc (capstone format, grey below the last rank). '
+          'Effect 2 base_points 2 -> 4 (total +3 -> +5 jump targets on Revenge, ChainTarget 0: hits 3 -> 5) and the capstone text 2 -> 4 additional targets (2026-11-16, AoE round 3 tank wave on the Normal-tier kits, user ruling: Prot Warrior option A, Improved Revenge capstone +2 -> +4 targets).',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _desc('Increases damage of your Revenge ability by 30%. After using Revenge your next Devastate within 8 sec will strike an additional target.', 'Your Revenge strikes 4 additional targets.', last=True), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EffectSpellClassMaskB_1': 1024, 'EffectSpellClassMaskC_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 50, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 procs_on(
     improved_revenge_12799, proc_flags=0x10, family_name=4, family_mask=(0x400, 0, 0), spell_type_mask=1,
@@ -3403,8 +3405,8 @@ blood_and_thunder_200054 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=245,
-    notes='Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Blood and Thunder rank (15%) - marker read by spell_warr_thunder_clap',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your Thunder Clap causes targets to bleed for 15% of the damage dealt over 9 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Thunder Clap causes targets to bleed for 15% of the damage dealt over 9 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Blood and Thunder', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Blood and Thunder rank (15%) - marker read by spell_warr_thunder_clap. Tooltip "causes targets to bleed" -> "causes up to 5 targets to bleed" (2026-11-16, AoE round 3 follow-up on the Normal-tier kits, user ruling: cap the bleed at 5 targets; spell_warrior_protection.cpp BLOOD_AND_THUNDER_MAX_TARGETS)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your Thunder Clap causes up to 5 targets to bleed for 15% of the damage dealt over 9 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Thunder Clap causes up to 5 targets to bleed for 15% of the damage dealt over 9 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Blood and Thunder', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3423,8 +3425,8 @@ blood_and_thunder_200055 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=245,
-    notes='Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Blood and Thunder rank (30%) - marker read by spell_warr_thunder_clap',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your Thunder Clap causes targets to bleed for 30% of the damage dealt over 9 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Thunder Clap causes targets to bleed for 30% of the damage dealt over 9 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Blood and Thunder', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Blood and Thunder rank (30%) - marker read by spell_warr_thunder_clap. Tooltip "causes targets to bleed" -> "causes up to 5 targets to bleed" (2026-11-16, AoE round 3 follow-up on the Normal-tier kits, user ruling: cap the bleed at 5 targets; spell_warrior_protection.cpp BLOOD_AND_THUNDER_MAX_TARGETS)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your Thunder Clap causes up to 5 targets to bleed for 30% of the damage dealt over 9 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Thunder Clap causes up to 5 targets to bleed for 30% of the damage dealt over 9 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Blood and Thunder', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3722,8 +3724,10 @@ whirlwind_44949 = spell(
     ],
     spell_icon_id=83,
     notes='pulled from existing data. Warrior balance 2026-10-30 (user): Whirlwind +20% then +30% (156%) on both hands, eff1 '
-          'WEAPON_PERCENT_DAMAGE 156 after the normalized weapon effect (the stale slot-2 die/base keys dropped).',
-    raw_overrides={'AttributesEx': 16, 'AttributesEx3': 16777216, 'AttributesEx4': 128, 'AttributesEx5': 32768, 'CastingTimeIndex': 1, 'BaseLevel': 36, 'SpellLevel': 36, 'RangeIndex': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41395, 'SpellVisualID_1': 223, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 4, 'SpellClassMask_2': 4, 'SpellClassMask_3': 8, 'MaxTargets': 4, 'DefenseType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+          'WEAPON_PERCENT_DAMAGE 156 after the normalized weapon effect (the stale slot-2 die/base keys dropped). '
+          'MaxTargets 4 -> 5 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: the off-hand pass follows '
+          'the main Whirlwind 1680 to 5 enemies).',
+    raw_overrides={'AttributesEx': 16, 'AttributesEx3': 16777216, 'AttributesEx4': 128, 'AttributesEx5': 32768, 'CastingTimeIndex': 1, 'BaseLevel': 36, 'SpellLevel': 36, 'RangeIndex': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41395, 'SpellVisualID_1': 223, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 4, 'SpellClassMask_2': 4, 'SpellClassMask_3': 8, 'MaxTargets': 5, 'DefenseType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
 )
 
 

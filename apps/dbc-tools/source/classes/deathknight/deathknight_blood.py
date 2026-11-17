@@ -483,7 +483,14 @@ _CRIMSON_SCOURGE_NOTE = (
     'ProcChance 5 / 10 / 15 on the rank spell; the shared chain row (procs_on -203134) carries Chance 0 = "use the spell\'s", '
     'cooldown 10000 ms, ProcFlags DONE melee auto attack only (either hand, no abilities). '
     'spell_dk_crimson_scourge.CheckProc: the auto attack\'s target carries the owner\'s Blood Plague (55078). '
-    'SpellLevel 9 + 5 x row 5 + rank.'
+    'SpellLevel 9 + 5 x row 5 + rank. '
+    'Description: capstone paragraph added (2026-11-16, AoE round 3 tank wave on the Normal-tier kits, user ruling: '
+    'Blood DK option B, the rank-3 capstone makes Blood Boil apply Blood Plague to every enemy it hits and roll '
+    'Crimson Scourge on plagued targets; spell_dk_blood_boil_crimson_scourge on Blood Boil 48721, no rune cost change).'
+)
+_CRIMSON_SCOURGE_CAPSTONE = (
+    'Your Blood Boil infects every enemy it hits with Blood Plague, and its hits on targets already infected with your '
+    'Blood Plague can also trigger Crimson Scourge.'
 )
 
 
@@ -493,8 +500,10 @@ def _crimson_scourge_rank(spell_id, rank, chance):
         [Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=203137,
                 implicit_target_a=_TARGET_UNIT_CASTER)],
         _ICON_CRIMSON_SCOURGE, _rank_level(5, rank),
-        f'Your auto attacks against targets infected with your Blood Plague have a {chance}% chance to make your next '
-        'Death and Decay cost no runes and reset its cooldown. This effect cannot occur more than once every 10 sec.',
+        _capstone_text(
+            f'Your auto attacks against targets infected with your Blood Plague have a {chance}% chance to make your '
+            'next Death and Decay cost no runes and reset its cooldown. This effect cannot occur more than once every '
+            '10 sec.', _CRIMSON_SCOURGE_CAPSTONE, rank == 3),
         _CRIMSON_SCOURGE_NOTE, proc_chance=chance,
     )
 
@@ -504,6 +513,11 @@ crimson_scourge_203135 = _crimson_scourge_rank(203135, 2, 10)
 crimson_scourge_203136 = _crimson_scourge_rank(203136, 3, 15)
 procs_on(-203134, proc_flags=_PROC_FLAG_DONE_MELEE_AUTO_ATTACK, spell_phase_mask=0, chance=0.0, cooldown_ms=10000)
 scripted_by(-203134, 'spell_dk_crimson_scourge')
+# The capstone's Blood Boil half (2026-11-16, AoE round 3 tank wave on the Normal-tier kits, user ruling: Blood DK
+# option B): a second script on Blood Boil 48721 beside the stock spell_dk_blood_boil (base DB row -48721). Rank 3
+# (203136) gates it; each enemy hit rolls Crimson Scourge (same chance, same 10 s cooldown on the rank aura) when it
+# already carries the Death Knight's Blood Plague, then gets Blood Plague.
+scripted_by(48721, 'spell_dk_blood_boil_crimson_scourge')
 
 # The visible buff (name shown to players: Crimson Scourge): the next Death and Decay costs nothing (SpellMod COST -100%
 # on 43265, d0 b5; rune costs honour it) and has no cooldown (AfterEffectApply removes the cooldown). One charge, spent by

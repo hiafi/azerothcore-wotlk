@@ -46,6 +46,10 @@ namespace
 
     // Storm's Bulwark grants (D5), in percent of maximum health.
     constexpr uint32 BULWARK_MAX_TARGETS = 5;
+
+    // Blood and Thunder (D7): the bleed lands on at most this many targets per Thunder Clap (user 2026-11-16, AoE round 3
+    // follow-up). Thunder Clap itself still damages and slows every target in range.
+    constexpr uint32 BLOOD_AND_THUNDER_MAX_TARGETS = 5;
     constexpr float SHOCKWAVE_BULWARK_PCT = 20.0f;
     constexpr float ECHO_BULWARK_SHARE = 0.5f;
     constexpr float REPRISAL_PER_SUNDER = 0.2f;
@@ -77,7 +81,7 @@ namespace
 
 // 6343 - Thunder Clap. Storm's Bulwark (D5): talent rank 2/4/6% + 1% per target struck (first counted, at most 5),
 // the Thunder Clap part raised by Shield Discipline's 25/50% (consumed by any Thunder Clap, D23); the unamplified
-// percent is recorded for the echo. Blood and Thunder (D7): each landed target bleeds for 15/30% of the final hit
+// percent is recorded for the echo. Blood and Thunder (D7): up to 5 landed targets bleed for 15/30% of the final hit
 // through Bloodstorm. Thunderstruck's capstone casts the echo's 3 s holder, which keeps this cast's spot.
 class spell_warr_thunder_clap : public SpellScript
 {
@@ -110,12 +114,15 @@ class spell_warr_thunder_clap : public SpellScript
 
         int32 const bleedPct = GetRankAmount(player, { WarriorData::SPELL_BLOOD_AND_THUNDER_200055,
             WarriorData::SPELL_BLOOD_AND_THUNDER }, EFFECT_0);
-        if (bleedPct <= 0)
+        if (bleedPct <= 0 || _bleedTargets >= BLOOD_AND_THUNDER_MAX_TARGETS)
             return;
 
         uint32 const total = CalculatePct(uint32(GetHitDamage()), bleedPct);
         if (total)
+        {
+            ++_bleedTargets;
             Warrior::ApplyPercentBleed(player, target, WarriorData::SPELL_BLOODSTORM, total);
+        }
     }
 
     void HandleAfterCast()
@@ -166,6 +173,7 @@ class spell_warr_thunder_clap : public SpellScript
 
 private:
     uint32 _targetsHit = 0;
+    uint32 _bleedTargets = 0; // Blood and Thunder bleeds applied by this cast, capped at BLOOD_AND_THUNDER_MAX_TARGETS
 };
 
 // 200066 - Thunderstruck, the echo's 3 s holder (D6). Applied in the Thunder Clap's own AfterCast, so the warrior's

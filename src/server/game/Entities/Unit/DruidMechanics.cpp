@@ -1230,15 +1230,18 @@ namespace Druid
         {
             uint32 const id = spellInfo->Id;
 
-            // Rending Swipes (4,0): Swipe and Upheaval vs a target carrying the caster's Thrash.
+            // Rending Swipes (4,0): Swipe and Upheaval vs a target carrying the caster's Thrash (bear or
+            // the Cat copy).
             if ((id == SPELL_SWIPE_BEAR || id == SPELL_SWIPE_CAT || id == SPELL_UPHEAVAL) &&
-                victim->HasAura(SPELL_THRASH, casterGuid))
+                (victim->HasAura(SPELL_THRASH, casterGuid) || victim->HasAura(SPELL_THRASH_CAT, casterGuid)))
                 if (int32 pct = GetRankAmount(player, { SPELL_RENDING_SWIPES_R2, SPELL_RENDING_SWIPES_R1 }, EFFECT_2))
                     AddPct(mult, pct);
 
-            // Rend and Tear (9,1): Maul and Shred vs a target carrying the caster's Rip or Lacerate.
+            // Rend and Tear (9,1): Maul and Shred vs a target carrying the caster's Rip or Lacerate
+            // (Primal Wrath's bleed counts as Rip).
             if ((id == SPELL_MAUL || id == SPELL_SHRED) &&
-                (victim->HasAura(SPELL_RIP, casterGuid) || victim->HasAura(SPELL_LACERATE, casterGuid)))
+                (victim->HasAura(SPELL_RIP, casterGuid) || victim->HasAura(SPELL_PRIMAL_WRATH, casterGuid) ||
+                 victim->HasAura(SPELL_LACERATE, casterGuid)))
                 if (int32 pct = GetRankAmount(player,
                         { SPELL_REND_AND_TEAR_R3, SPELL_REND_AND_TEAR_R2, SPELL_REND_AND_TEAR_R1 }, EFFECT_0))
                     AddPct(mult, pct);

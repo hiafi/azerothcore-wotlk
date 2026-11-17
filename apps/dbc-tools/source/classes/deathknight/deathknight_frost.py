@@ -722,7 +722,7 @@ custom_attr(frostwyrms_wrath_ramp_203305, attributes=_CU_AURA_CANNOT_BE_SAVED)
 # (L2: the
 # real cadence), Frost, magic class, 12 yd cone (D2: target 104, a 104 degree total arc; the bot reads
 # enemies_in_cone(12, 104)), visual 14711 (Sindragosa's Frost Breath). The primary takes the full tick, every other
-# target 50% (script). d2 b10 (m.BREATH). SUPPRESS_CASTER_PROCS: ticks roll no procs. SpellLevel 60 = 9 + 5 x 10 + 1.
+# target BREATH_SECONDARY_PCT, 40% (script). d2 b10 (m.BREATH). SUPPRESS_CASTER_PROCS: ticks roll no procs. SpellLevel 60 = 9 + 5 x 10 + 1.
 breath_of_sindragosa_tick_203307 = spell(
     id=203307, name='Breath of Sindragosa', school=School.FROST, attributes=0, cast_time_ms=0, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF, radius_yards=12.0, duration_ms=0,
@@ -799,7 +799,8 @@ _C = [
     ("BREATH_MIN_RP", 10, "Minimum Runic Power to cast Breath of Sindragosa."),
     ("BREATH_BASE_DRAIN", 10, "Breath drain per second (Runic Power)."),
     ("BREATH_DRAIN_STEP_TICKS", 5, "Breath drain rises by 1 every this many ticks."),
-    ("BREATH_SECONDARY_PCT", 50, "Breath damage percent on secondary targets."),
+    ("BREATH_SECONDARY_PCT", 40, "Breath damage percent on secondary targets. "
+     "BREATH_SECONDARY_PCT 50 -> 40 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Breath of Sindragosa secondary targets 40%)."),
     ("FROSTWYRM_RAMP_PCT", 10, "Frostwyrm's Wrath ramp: Breath damage percent per stack."),
     ("FROSTWYRM_RAMP_TICKS", 5, "Frostwyrm's Wrath ramp: ticks per stack."),
     ("FINAL_ROAR_SHARE_PCT", 10, "Final Roar: share of Breath damage dealt (stored, split among the cone)."),

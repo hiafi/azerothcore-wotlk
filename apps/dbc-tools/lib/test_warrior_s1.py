@@ -190,7 +190,7 @@ TOOLTIP_FRAGMENTS = {
     200059: ("equal to 4% of your maximum health", "Lasts 15 sec"),
     200060: ("equal to 6% of your maximum health", "Lasts 15 sec"),
     12797: ("Revenge ability by 15%", "next Devastate within 8 sec will strike an additional target",
-            "Your Revenge strikes 2 additional targets"),
+            "Your Revenge strikes 4 additional targets"),
     12799: ("Revenge ability by 30%", "next Devastate within 8 sec will strike an additional target"),
     200049: ("reduces the remaining cooldown of your Last Stand by 1 sec", "increasing its damage by 30%",
              "equal to 2% of your maximum health"),
