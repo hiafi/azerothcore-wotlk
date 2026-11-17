@@ -19,8 +19,9 @@ from . import _masks
 # DPS balance pass 1031 Mind Flay -10%; 88.39 -> 83.97 is a further -5% once the whole spell ran
 # on this potency (2026-11-01, DPS balance pass 1031, user ruling: Mind Flay -5% more).
 # MIND_FLAY_TICK_POTENCY 83.97 -> 62.978 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits,
-# user ruling: Mind Flay -25%; real ratio 0.75002).
-MIND_FLAY_TICK_POTENCY = 62.978
+# user ruling: Mind Flay -25%; real ratio 0.75002). 62.978 -> 75.573 (2026-11-16, single-target pass to 1,000
+# follow-up, user ruling: soften the Mind Flay cut to -10% overall, 83.97 x 0.90; Shadow fell to 966 at -25%).
+MIND_FLAY_TICK_POTENCY = 75.573
 
 # Proc flags/phases used by the procs_on() calls below - src/server/game/Spells/SpellMgr.h's
 # ProcFlags / ProcFlagsSpellPhase / ProcAttributes enums. Named here rather than as bare ints so a
