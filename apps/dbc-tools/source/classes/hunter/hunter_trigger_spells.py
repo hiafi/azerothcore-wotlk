@@ -7559,7 +7559,7 @@ explosive_shot_53352 = spell(
     range_yards=50000.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6, ap_potency=18.2, potency_kind='direct'),
+        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6, ap_potency=21.8, potency_kind='direct'),
     ],
     spell_icon_id=3407,
     notes=(
@@ -7567,7 +7567,8 @@ explosive_shot_53352 = spell(
         'SCHOOL_DAMAGE ap_potency=50 direct, cast by spell_hun_explosive_shot_rework with no bp (one potency '
         "application); SpellLevel 30 (the talent row's learn level); stale EffectSpellClassMaskA_1 0xC00017 "
         'deleted; d2 b9 (EXPLOSIVE_SHOT_TICK), AttributesEx2 0x4 and EquippedItemClass -1 kept. '
-        'Effect 1 ap_potency 26.0 -> 18.2 (2026-11-01, DPS balance pass 1031, user ruling: Explosive Shot -30%).'
+        'Effect 1 ap_potency 26.0 -> 18.2 (2026-11-01, DPS balance pass 1031, user ruling: Explosive Shot -30%). '
+        'Effect 1 ap_potency 18.2 -> 21.8 (21.84 kept to one decimal, so +19.8%) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Explosive Shot +20%).'
     ),
     raw_overrides={
         'AttributesEx2': 4,

@@ -1118,14 +1118,15 @@ lava_burst_51505 = spell(
     mana_cost_pct=10,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=46.08, potency_kind='direct', implicit_target_a=6),  # 80.7 -> 57.6 (Elemental trim, user 2026-10-22) -> 46.08 (DPS balance pass 1031, Lava Burst -20%)
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=32.26, potency_kind='direct', implicit_target_a=6),  # 80.7 -> 57.6 (Elemental trim, user 2026-10-22) -> 46.08 (DPS balance pass 1031, Lava Burst -20%) -> 32.26 (ST1000, Lava Burst -30%)
     ],
     spell_icon_id=3064,
     notes='SH0a: learn level 75 -> 42 (potency 322.7 kept; BaseLevel derived from SpellLevel by the potency pass). Was: pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 75); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 2 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
           'Potency system P7-Shaman: converted to sp_potency=322.7 (shaman-potency-proposals.txt, mismatched row). '
           '2026-10-20 smoke-test fix pass: sp_potency 322.7 -> 80.7 (x0.25, the hardest cut: Lava Burst auto-crits on Flame Shock and was 40% of the bot\'s damage; tooltip follows {pot1}). '
           '2026-10-22 Elemental trim (user): sp_potency 80.7 -> 57.6 (x0.714) so Elemental lands about 1,000 DPS at 300 s after the cost cut; Lava Burst is 28% of Ele damage and 2% of Enhancement\'s (the overload copy follows at half). '
-          '2026-11-01 sp_potency 57.6 -> 46.08 (2026-11-01, DPS balance pass 1031, user ruling: Lava Burst -20%; the overload copy 202593 follows at half automatically).',
+          '2026-11-01 sp_potency 57.6 -> 46.08 (2026-11-01, DPS balance pass 1031, user ruling: Lava Burst -20%; the overload copy 202593 follows at half automatically). '
+          'sp_potency 46.08 -> 32.26 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Lava Burst -30%; 46.08 x 0.70 = 32.256, kept to two decimals like the surrounding data, x0.7000; the overload copy 202593 follows at half, 16.13).',
     tooltip_vars=shaman_lava_1211,
     raw_overrides={'AttributesEx3': 1048576, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 5, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You hurl molten lava at the target, dealing {pot1*mult} Fire damage. If your Flame Shock is on the target, Lava Burst will deal a critical strike.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 24.0, 'SpellClassMask_2': 4096, 'SpellClassSet': 11, 'SpellLevel': 42, 'SpellPriority': 50, 'SpellVisualID_1': 11565, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1616,7 +1617,7 @@ lava_lash_60103 = spell(
     mana_cost_pct=4,
     range_yards=5.0,
     effects=[
-        Effect(type=31, weapon_potency=169, implicit_target_a=6),
+        Effect(type=31, weapon_potency=220, implicit_target_a=6),
     ],
     spell_icon_id=3741,
     notes='S3a A4 (Enhancement doc, Lava Lash): eff0 WEAPON_PERCENT_DAMAGE 110% off-hand weapon, Fire (stock 100%, raised to 250% then trimmed to 110% 2026-10-22 [tune], S3-ENH-TRIM-DIAG: the engine skips the off-hand penalty on Fire strikes) '
@@ -1629,8 +1630,9 @@ lava_lash_60103 = spell(
           'Eff0 base_points 109 -> weapon_potency 110 (the same 110% off-hand hit) (2026-11-01, potency audit fix F14). '
           'Eff0 weapon_potency 110 -> 154 (110 x 1.40 = 154 exactly) (2026-11-01, DPS balance pass 1031 round B3, user ruling: Lava Lash +40%). '
           'Eff0 weapon_potency 154 -> 169 (154 x 1.10 = 169.4, rounded: potency must be whole) (2026-11-15, balance on the Normal-tier kits, user ruling: Lava Lash +10%). '
+          'Eff0 weapon_potency 169 -> 220 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Lava Lash +30%; 169 x 1.30 = 219.7, rounded: potency must be whole, so x1.302). '
           'Was: pulled from existing data',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 16777216, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You charge your off-hand weapon with lava and instantly strike, dealing 169% off-hand weapon damage as Fire damage. Deals 40% more damage while Flametongue is active. 6 sec cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemInvTypes': 4194304, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_3': 4, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellPriority': 50, 'SpellVisualID_1': 12759, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 16777216, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You charge your off-hand weapon with lava and instantly strike, dealing 220% off-hand weapon damage as Fire damage. Deals 40% more damage while Flametongue is active. 6 sec cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemInvTypes': 4194304, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_3': 4, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellPriority': 50, 'SpellVisualID_1': 12759, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 

@@ -434,7 +434,8 @@ scripted_by(rune_haste_sync_203053, 'spell_dk_rune_haste_sync')
 
 # ---- Obliterate (shared doc "Obliterate", U2, U3, U9, known-hard 5) ----
 # 1 Frost Rune + 15 RP (spell_rune_cost 2600; stock 587 is 1 Frost + 1 Unholy), 130% weapon damage + an 11 potency flat
-# (RETUNE 2026-10-25: S2 TUNE 72%, doc 160%; the off-hand copy 66198 mirrors it).
+# (RETUNE 2026-10-25: S2 TUNE 72%, doc 160%; the off-hand copy 66198 mirrored it until 2026-11-16, when the copy was cut -25%
+# on its own: ST1000, 98% + a 4.125 flat).
 # Stock 49020's frame (Mograine 30838 keeps casting that one; its DSL row, SLA 17555 and rank chain stay). The percent
 # effect is FIRST and the flat NORMALIZED_WEAPON_DMG second: EffectWeaponDmg multiplies a flat effect that sits before
 # the percent effect by the percent (Frost Strike 49143 does the same). EFFECT_2 stays empty: SpellEffects.cpp reads
