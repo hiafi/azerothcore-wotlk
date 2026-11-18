@@ -167,6 +167,7 @@ enum PlayerHook
     PLAYERHOOK_ON_APPLY_WEAPON_DAMAGE,
     PLAYERHOOK_CAN_ARMOR_DAMAGE_MODIFIER,
     PLAYERHOOK_ON_GET_FERAL_AP_BONUS,
+    PLAYERHOOK_ON_GET_WEAPON_RANGED_AP_BONUS, // Custom: weapon scaling, stage WSH
     PLAYERHOOK_CAN_APPLY_WEAPON_DEPENDENT_AURA_DAMAGE_MOD,
     PLAYERHOOK_CAN_APPLY_EQUIP_SPELL,
     PLAYERHOOK_CAN_APPLY_EQUIP_SPELLS_ITEM_SET,
@@ -604,6 +605,12 @@ public:
     // Custom: `slot` added for weapon scaling (custom_weapon_scaling.cpp: only the main hand gives form AP).
     virtual void OnPlayerGetFeralApBonus(Player* /*player*/, int32& /*feral_bonus*/, int32 /*dpsMod*/,
         ItemTemplate const* /*proto*/, ScalingStatValuesEntry const* /*ssv*/, uint8 /*slot*/) { }
+
+    // Custom: weapon scaling (custom_weapon_scaling.cpp). Called from Player::_ApplyItemBonuses for a hunter's
+    // ranged-slot item, on equip and on unequip with the same arguments; `ranged_ap` starts at 0 and the core adds
+    // what the script leaves in it to the ranged attack power flat modifier (and removes it on unequip).
+    virtual void OnPlayerGetWeaponRangedApBonus(Player* /*player*/, int32& /*ranged_ap*/, int32 /*dpsMod*/,
+        ItemTemplate const* /*proto*/, uint8 /*slot*/) { }
 
     [[nodiscard]] virtual bool OnPlayerCanApplyWeaponDependentAuraDamageMod(Player* /*player*/, Item* /*item*/, WeaponAttackType /*attackType*/, AuraEffect const* /*aura*/, bool /*apply*/) { return true; }
 

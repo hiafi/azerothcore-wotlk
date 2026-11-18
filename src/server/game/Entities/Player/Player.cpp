@@ -7150,6 +7150,18 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
         if (feral_bonus)
             ApplyFeralAPBonus(feral_bonus, apply);
     }
+
+    // Custom: hunters get ranged attack power from the ranged-slot weapon's dps (weapon scaling,
+    // custom_weapon_scaling.cpp). The same flat modifier the ITEM_MOD_RANGED_ATTACK_POWER stat uses, so apply and
+    // unapply (equip, unequip, broken item, login) go through the paths every other item bonus takes.
+    if (slot == EQUIPMENT_SLOT_RANGED && IsClass(CLASS_HUNTER, CLASS_CONTEXT_STATS))
+    {
+        int32 rangedAp = 0;
+        int32 const rangedDpsMod = ssv ? int32(ssv->getDPSMod(ScalingStatValue)) : 0;
+        sScriptMgr->OnPlayerGetWeaponRangedApBonus(this, rangedAp, rangedDpsMod, proto, slot);
+        if (rangedAp)
+            HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(rangedAp), apply);
+    }
 }
 
 void Player::_ApplyWeaponDamage(uint8 slot, ItemTemplate const* proto, ScalingStatValuesEntry const* ssv, bool apply)

@@ -4934,6 +4934,20 @@ Custom.TalentUI.Enable = 1
 WeaponScaling.FeralApPerDps = 0
 
 #
+#    WeaponScaling.RangedApPerDps
+#        Description: Weapon scaling (plan weapon-scaling, stage WSH). Ranged attack power a hunter
+#                     gets from the weapon in the ranged slot (bow, gun, crossbow, thrown), per point
+#                     of weapon DPS: this value x the DPS (heirloom DPS bonus included), rounded to a
+#                     whole number. Ranged attack power only, no melee attack power; the hunter's pet
+#                     inherits it through its share of the owner's ranged attack power. At 0 nothing
+#                     is added and the stock behavior stays.
+#                     Read at startup only: .reload config logs a change but keeps the old value.
+#                     Implemented by src/server/scripts/Custom/custom_weapon_scaling.cpp.
+#        Default:     0 - (Off)
+
+WeaponScaling.RangedApPerDps = 0
+
+#
 ###################################################################################################
 
 ###################################################################################################

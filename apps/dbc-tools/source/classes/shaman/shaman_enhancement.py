@@ -432,8 +432,8 @@ def _burst(spell_id: int, name: str, school, effect_description: str, icon: int,
            notes: str, magic: bool, **raw_extra):
     """An Elemental Burst: SCHOOL_DAMAGE 150 potency per target on the area around a destination (Fire Nova 8349's A 87 /
     B 16 shape, 5 yd), triggered by Shaman::CastElementalBurst at the shaman's target (or the shaman), range 50000 (L6)."""
-    sp = 225.0 if magic else 0.0
-    ap = 0.0 if magic else 225.0
+    sp = 272.25 if magic else 0.0
+    ap = 0.0 if magic else 272.25
     raw = _raw(spell_description, '', 15, family=magic, DefenseType=1 if magic else 2, PreventionType=1 if magic else 0,
                AttributesEx3=ATTR3_SUPPRESS_CASTER_PROCS, **raw_extra)
     return spell(
@@ -444,7 +444,7 @@ def _burst(spell_id: int, name: str, school, effect_description: str, icon: int,
             implicit_target_a=TARGET_DEST_DEST, implicit_target_b=TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=5.0,
         )],
         spell_icon_id=icon,
-        notes=NOTE + notes + ' Potency 225 direct, T 1500, SpellLevel 15 (Elemental Charge\'s row). sp_potency / ap_potency 150 -> 225 (2026-11-15, balance on the Normal-tier kits, user ruling: Flame Burst / Storm Burst / Wind Burst +50%). SchoolMask ' + effect_description +
+        notes=NOTE + notes + ' Potency 225 direct, T 1500, SpellLevel 15 (Elemental Charge\'s row). sp_potency / ap_potency 150 -> 225 (2026-11-15, balance on the Normal-tier kits, user ruling: Flame Burst / Storm Burst / Wind Burst +50%). sp_potency / ap_potency 225 -> 272.25 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21). SchoolMask ' + effect_description +
               '. Area targets as Fire Nova 8349 (A 87 DEST_DEST, B 16, radius 5 yd = BURST_RADIUS_YD) so the caster picks the '
               'centre by the cast target (the shaman\'s current target, else the shaman); spell_sha_enh_burst filters to '
               'enemies in combat with the shaman or the group and keeps the BURST_TARGETS nearest (Q16). Triggered with no '
@@ -510,12 +510,12 @@ def _gust(spell_id: int, name: str, potency: float, description: str, notes: str
 
 
 gust_202391 = _gust(
-    202391, 'Gust', 35.0, 'Deals {pot1} Physical damage to the target.',
-    'the Gust: rolled by Wind / Elemental Ascendance (the aura proc rows below) and by the Wind Spirit.')
+    202391, 'Gust', 42.35, 'Deals {pot1} Physical damage to the target.',
+    'the Gust: rolled by Wind / Elemental Ascendance (the aura proc rows below) and by the Wind Spirit. ap_potency 35.0 -> 42.35 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).')
 gust_splash_202392 = _gust(
-    202392, 'Gust', 17.5, 'Deals {pot1} Physical damage to the target.',
+    202392, 'Gust', 21.175, 'Deals {pot1} Physical damage to the target.',
     'the Gust splash, half of the Gust, cast by spell_sha_enh_gust at up to GUST_SPLASH_TARGETS other enemies within '
-    'GUST_SPLASH_RADIUS_YD of the struck target. It never rolls Gust (triggered) and rolls nothing else (SUPPRESS_CASTER_PROCS).',
+    'GUST_SPLASH_RADIUS_YD of the struck target. It never rolls Gust (triggered) and rolls nothing else (SUPPRESS_CASTER_PROCS). ap_potency 17.5 -> 21.175 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
     suppress_caster_procs=True)
 scripted_by(gust_202391, 'spell_sha_enh_gust')
 

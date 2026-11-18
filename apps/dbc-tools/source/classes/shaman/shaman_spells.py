@@ -1484,12 +1484,13 @@ stormstrike_main_hand_32175 = spell(
     range_yards=5.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=210, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=254, implicit_target_a=6),
     ],
     spell_icon_id=2562,
     notes='pulled from existing data (stock main-hand strike, was in npc.csv). Eff0 WEAPON_DAMAGE base 0 / die 0 -> '
           'WEAPON_PERCENT_DAMAGE weapon_potency 100: the same 100% main-hand hit, now on potency (2026-11-01, potency '
-          'audit fix F14). Effect 1 weapon_potency 100 -> 140 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Stormstrike +40%). weapon_potency 140 -> 210 (2026-11-15, balance on the Normal-tier kits, user ruling: Stormstrike +50%).',
+          'audit fix F14). Effect 1 weapon_potency 100 -> 140 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Stormstrike +40%). weapon_potency 140 -> 210 (2026-11-15, balance on the Normal-tier kits, user ruling: Stormstrike +50%).'
+          ' weapon_potency 210 -> 254 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
     raw_overrides={'AttributesEx': 512, 'AttributesEx3': 263680, 'AttributesEx4': 1, 'FacingCasterFlags': 1, 'CastingTimeIndex': 1, 'ProcTypeMask': 139944, 'ProcChance': 100, 'ProcCharges': 2, 'SpellLevel': 40, 'RangeIndex': 2, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'SpellVisualID_1': 7660, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly attack with both weapons.  In addition, the next 2 sources of Nature damage dealt to the target are increased by $17364s1%.  Lasts $17364d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 11, 'SpellClassMask_2': 16, 'SpellClassMask_3': 5120, 'DefenseType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
 )
 
@@ -1508,12 +1509,13 @@ stormstrike_off_hand_32176 = spell(
     range_yards=5.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=210, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=254, implicit_target_a=6),
     ],
     spell_icon_id=2562,
     notes='pulled from existing data (stock off-hand strike, was in npc.csv). Eff0 WEAPON_DAMAGE base 0 / die 0 -> '
           'WEAPON_PERCENT_DAMAGE weapon_potency 100: the same 100% off-hand hit, now on potency (2026-11-01, potency '
-          'audit fix F14). Effect 1 weapon_potency 100 -> 140 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Stormstrike +40%). weapon_potency 140 -> 210 (2026-11-15, balance on the Normal-tier kits, user ruling: Stormstrike +50%).',
+          'audit fix F14). Effect 1 weapon_potency 100 -> 140 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Stormstrike +40%). weapon_potency 140 -> 210 (2026-11-15, balance on the Normal-tier kits, user ruling: Stormstrike +50%).'
+          ' weapon_potency 210 -> 254 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
     raw_overrides={'AttributesEx3': 17039872, 'AttributesEx4': 1, 'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 40, 'RangeIndex': 2, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly attack with both weapons.  In addition, the next 2 sources of Nature damage dealt to the target are increased by $17364s1%.  Lasts $17364d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 11, 'SpellClassMask_2': 16, 'SpellClassMask_3': 5120, 'DefenseType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
 )
 
@@ -1631,7 +1633,7 @@ lava_lash_60103 = spell(
     mana_cost_pct=4,
     range_yards=5.0,
     effects=[
-        Effect(type=31, weapon_potency=220, implicit_target_a=6),
+        Effect(type=31, weapon_potency=266, implicit_target_a=6),
     ],
     spell_icon_id=3741,
     notes='S3a A4 (Enhancement doc, Lava Lash): eff0 WEAPON_PERCENT_DAMAGE 110% off-hand weapon, Fire (stock 100%, raised to 250% then trimmed to 110% 2026-10-22 [tune], S3-ENH-TRIM-DIAG: the engine skips the off-hand penalty on Fire strikes) '
@@ -1645,8 +1647,9 @@ lava_lash_60103 = spell(
           'Eff0 weapon_potency 110 -> 154 (110 x 1.40 = 154 exactly) (2026-11-01, DPS balance pass 1031 round B3, user ruling: Lava Lash +40%). '
           'Eff0 weapon_potency 154 -> 169 (154 x 1.10 = 169.4, rounded: potency must be whole) (2026-11-15, balance on the Normal-tier kits, user ruling: Lava Lash +10%). '
           'Eff0 weapon_potency 169 -> 220 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Lava Lash +30%; 169 x 1.30 = 219.7, rounded: potency must be whole, so x1.302). '
-          'Was: pulled from existing data',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 16777216, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You charge your off-hand weapon with lava and instantly strike, dealing 220% off-hand weapon damage as Fire damage. Deals 40% more damage while Flametongue is active. 6 sec cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemInvTypes': 4194304, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_3': 4, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellPriority': 50, 'SpellVisualID_1': 12759, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+          'Was: pulled from existing data'
+          ' weapon_potency 220 -> 266 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 16777216, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You charge your off-hand weapon with lava and instantly strike, dealing 266% off-hand weapon damage as Fire damage. Deals 40% more damage while Flametongue is active. 6 sec cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemInvTypes': 4194304, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_3': 4, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellPriority': 50, 'SpellVisualID_1': 12759, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 

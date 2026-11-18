@@ -685,6 +685,14 @@ void ScriptMgr::OnPlayerGetFeralApBonus(Player* player, int32& feral_bonus, int3
         script->OnPlayerGetFeralApBonus(player, feral_bonus, dpsMod, proto, ssv, slot));
 }
 
+// Custom: weapon scaling, stage WSH (custom_weapon_scaling.cpp)
+void ScriptMgr::OnPlayerGetWeaponRangedApBonus(Player* player, int32& ranged_ap, int32 dpsMod,
+    ItemTemplate const* proto, uint8 slot)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_WEAPON_RANGED_AP_BONUS,
+        script->OnPlayerGetWeaponRangedApBonus(player, ranged_ap, dpsMod, proto, slot));
+}
+
 bool ScriptMgr::OnPlayerCanApplyWeaponDependentAuraDamageMod(Player* player, Item* item, WeaponAttackType attackType, AuraEffect const* aura, bool apply)
 {
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_APPLY_WEAPON_DEPENDENT_AURA_DAMAGE_MOD, !script->OnPlayerCanApplyWeaponDependentAuraDamageMod(player, item, attackType, aura, apply));

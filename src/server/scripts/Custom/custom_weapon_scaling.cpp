@@ -15,7 +15,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-// Weapon scaling (plan: .agents/plans/weapon-scaling/weapon-scaling.PLAN.md, stages WS0a and WS0 fixes).
+// Weapon scaling (plan: .agents/plans/weapon-scaling/weapon-scaling.PLAN.md, stages WS0a, WS0 fixes and WSH0).
 //
 // Druids in Cat, Bear and Moonkin forms get attack power from their weapon. The stock formula is
 // 14 x DPS - 767 (ItemTemplate::getFeralBonus): zero for every weapon under 54.8 DPS, so it only matters at the
@@ -29,9 +29,18 @@
 //   Player::m_baseFeralAP, so apply and unapply stay symmetric as long as k_f does not change while players are
 //   online: it is read at startup only, never on .reload config.
 // - Moonkin form: StatSystem.cpp adds Druid::GetMoonkinWeaponFormAp(m_baseFeralAP), which is 0 with k_f above 0.
+//
+// Hunters (stage WSH0, user ruling 2026-11-17): with WeaponScaling.RangedApPerDps (k_h) above 0, the weapon in the
+// ranged slot (bow, gun, crossbow, thrown) gives ranged attack power k_h x DPS. The value goes through
+// PlayerScript::OnPlayerGetWeaponRangedApBonus, called from Player::_ApplyItemBonuses for a hunter's ranged-slot item;
+// the core adds it to (and on unequip removes it from) the UNIT_MOD_ATTACK_POWER_RANGED flat modifier, the same one
+// ITEM_MOD_RANGED_ATTACK_POWER uses. Melee attack power is untouched. The hunter's pet inherits it through its owner
+// ranged attack power share. Like k_f, k_h is read at startup only; with k_h at 0 the hook leaves the value at 0 and
+// the core does nothing.
 
 #include "Config.h"
 #include "DruidMechanics.h"
+#include "HunterMechanics.h"
 #include "ItemTemplate.h"
 #include "Log.h"
 #include "Player.h"
@@ -52,21 +61,29 @@ public:
 
     void OnAfterConfigLoad(bool reload) override
     {
-        float const value = sConfigMgr->GetOption<float>("WeaponScaling.FeralApPerDps", 0.0f);
+        float const feralValue = sConfigMgr->GetOption<float>("WeaponScaling.FeralApPerDps", 0.0f);
+        float const rangedValue = sConfigMgr->GetOption<float>("WeaponScaling.RangedApPerDps", 0.0f);
 
-        // Changing k_f with druids online would unapply a different value than was applied (m_baseFeralAP), so a
-        // reload keeps the startup value.
+        // Changing k_f or k_h with players online would unapply a different value than was applied (m_baseFeralAP, the
+        // ranged attack power flat modifier), so a reload keeps the startup values.
         if (reload)
         {
-            float const current = Druid::GetWeaponFeralApPerDps();
-            float const wanted = value > 0.0f ? value : 0.0f;
-            if (wanted != current)
-                LOG_WARN("server.loading", "WeaponScaling.FeralApPerDps changed from {} to {}: it is read at startup "
-                    "only, restart the worldserver to apply it", current, wanted);
+            WarnIfChanged("WeaponScaling.FeralApPerDps", Druid::GetWeaponFeralApPerDps(), feralValue);
+            WarnIfChanged("WeaponScaling.RangedApPerDps", Hunter::GetWeaponRangedApPerDps(), rangedValue);
             return;
         }
 
-        Druid::SetWeaponFeralApPerDps(value);
+        Druid::SetWeaponFeralApPerDps(feralValue);
+        Hunter::SetWeaponRangedApPerDps(rangedValue);
+    }
+
+private:
+    static void WarnIfChanged(char const* key, float current, float value)
+    {
+        float const wanted = value > 0.0f ? value : 0.0f;
+        if (wanted != current)
+            LOG_WARN("server.loading", "{} changed from {} to {}: it is read at startup only, restart the worldserver "
+                "to apply it", key, current, wanted);
     }
 };
 
@@ -102,8 +119,30 @@ public:
     }
 };
 
+class Custom_WeaponScalingRangedAp : public PlayerScript
+{
+public:
+    Custom_WeaponScalingRangedAp() :
+        PlayerScript("Custom_WeaponScalingRangedAp", { PLAYERHOOK_ON_GET_WEAPON_RANGED_AP_BONUS }) { }
+
+    // The core calls this only for a hunter's ranged-slot item, with the same arguments on equip and unequip, so the
+    // value it applies is the value it removes (k_h is startup-only).
+    void OnPlayerGetWeaponRangedApBonus(Player* /*player*/, int32& ranged_ap, int32 dpsMod, ItemTemplate const* proto,
+        uint8 slot) override
+    {
+        float const perDps = Hunter::GetWeaponRangedApPerDps();
+        if (perDps <= 0.0f || !proto || slot != EQUIPMENT_SLOT_RANGED || proto->Class != ITEM_CLASS_WEAPON)
+            return;
+
+        // dpsMod is the heirloom ScalingStatValues DPS bonus, as in the druid hook.
+        float const dps = proto->getDPS() + float(dpsMod);
+        ranged_ap = dps > 0.0f ? int32(std::lround(perDps * dps)) : 0;
+    }
+};
+
 void AddSC_custom_weapon_scaling()
 {
     new Custom_WeaponScalingConfig();
     new Custom_WeaponScalingFeralAp();
+    new Custom_WeaponScalingRangedAp();
 }
