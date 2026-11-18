@@ -102,6 +102,7 @@ class HeroicSpec:
     tier_values: tuple[tuple[str, int, int], ...] = ()  # (row, health, melee) replacing a TIERS row for this dungeon
     overrides: tuple[tuple[int, tuple], ...] = ()  # (entry, sorted (key, value) pairs); see heroic()
     widen_smart_scripts: bool = True
+    no_credit: tuple[int, ...] = ()  # normal DungeonEncounter ids whose heroic copy gets no instance_encounters row
 
 
 def heroic(
@@ -109,6 +110,7 @@ def heroic(
     reset_seconds: int = HEROIC_RESET_SECONDS, max_players: int = HEROIC_MAX_PLAYERS, message: str | None = None,
     encounter_ids=(), spawn_mask: bool = True, event_spawns: bool = False, tier: str = "vanilla",
     tier_values: dict | None = None, overrides: dict | None = None, widen_smart_scripts: bool = True,
+    no_credit=(),
 ) -> HeroicSpec:
     """The heroic difficulty (Difficulty 1) of a 5-man dungeon, for `dungeon(..., heroic=...)`.
 
@@ -127,6 +129,13 @@ def heroic(
     tops out at 894), one per normal encounter of the map in the stock file's order (`range(1000, 1007)` for the
     seven Deadmines bosses); each heroic row copies its normal row. Empty: no heroic encounter rows. Like every id
     here, never move them once shipped.
+
+    `no_credit` names NORMAL DungeonEncounter ids (the stock rows, e.g. 234 Fineous Darkvire) whose heroic copy keeps
+    its DungeonEncounter row and its id in `encounter_ids` (the client's lockout list, the Bit, the id order) but gets
+    no `instance_encounters` kill credit row: no kill completes that encounter on heroic. For an encounter whose
+    credit is dropped on normal too (a hand SQL DELETE of the stock row, which generate.py never writes); with the
+    normal row gone, a listed id is also exempt from the "no kill credit" WARNING. generate.py stops when a listed id
+    is not a normal encounter of the map.
 
     `spawn_mask` (E2, default on: a heroic with no spawns is an empty instance with no doors) puts every creature and
     gameobject spawn of the map on heroic too; `event_spawns=True` includes the spawns a game event owns (holiday
@@ -168,6 +177,14 @@ def heroic(
             raise ValueError(f"{label}: {name} must be True or False, got {value!r}")
     if event_spawns and not spawn_mask:
         raise ValueError(f"{label}: event_spawns=True needs spawn_mask=True")
+    try:
+        no_credit_ids = tuple(sorted(set(no_credit)))
+    except TypeError:
+        raise ValueError(f"{label}: no_credit must be a sequence of DungeonEncounter ids, got {no_credit!r}") from None
+    if not all(_plain_int(e) and e > 0 for e in no_credit_ids):
+        raise ValueError(f"{label}: no_credit must be positive DungeonEncounter ids, got {no_credit!r}")
+    if no_credit_ids and not encounters:
+        raise ValueError(f"{label}: no_credit needs encounter_ids (it drops the credit of a heroic encounter copy)")
     if not isinstance(widen_smart_scripts, bool):
         raise ValueError(f"{label}: widen_smart_scripts must be True or False, got {widen_smart_scripts!r}")
     if not isinstance(tier, str) or not tier:
@@ -186,7 +203,7 @@ def heroic(
         min_item_level=min_item_level, reset_seconds=reset_seconds, max_players=max_players, message=message,
         encounter_ids=encounters, spawn_mask=spawn_mask, event_spawns=event_spawns, tier=tier,
         tier_values=tuple(values), overrides=_overrides(label, overrides or {}),
-        widen_smart_scripts=widen_smart_scripts,
+        widen_smart_scripts=widen_smart_scripts, no_credit=no_credit_ids,
     )
 
 

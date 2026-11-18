@@ -52,3 +52,13 @@ lfg_override(44, type_id=1, group=1, flags=3, min_level=55, max_level=65, positi
 # map with a 10-player row, so two heroic entries, each linked to its own final heroic encounter.
 lfg_heroic(306, normal=32, group=CLASSIC_HEROIC)  # Lower Blackrock Spire
 lfg_heroic(307, normal=44, group=CLASSIC_HEROIC)  # Upper Blackrock Spire
+
+# Blackrock Depths (map 230, the Blackrock Depths build, WP-H): four sections of one 5-player heroic map, each a heroic
+# entry of its normal row (30, 308, 309 and 276 are declared in source/world/lfg_classic_sections.py) that copies the
+# normal row's start and completes on the heroic copy of the section's last boss: 1058 the Ring of Law, 1063 Bael'Gar,
+# 1065 Argelmach, 1073 the Emperor. One map, one instance, one heroic lock for all four (a player who ran section 1
+# heroic today is bound to the same instance for every section).
+lfg_heroic(310, normal=30, group=CLASSIC_HEROIC)  # Blackrock Depths - Prison
+lfg_heroic(311, normal=308, group=CLASSIC_HEROIC)  # Blackrock Depths - Shadowforge City
+lfg_heroic(312, normal=309, group=CLASSIC_HEROIC)  # Blackrock Depths - Manufactory
+lfg_heroic(313, normal=276, group=CLASSIC_HEROIC)  # Blackrock Depths - Upper City

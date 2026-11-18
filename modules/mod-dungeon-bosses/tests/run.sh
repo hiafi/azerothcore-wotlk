@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Builds and runs the standalone mod-dungeon-bosses tests with every available host compiler (g++ and clang++).
 # Pure headers only (src/<Dungeon>/*Logic.h, src/DungeonSets/*Logic.h, DeadminesKitMath.h, DeadminesRework.h,
-# ShadowfangKeepRework.h, ScholomanceRework.h, SoloLessonLogic.h, StratholmeRework.h, BlackrockSpireRework.h, the
-# shared kit's pure src/Kit/DungeonKit{Math,State,Arena,Logic,Ids,Floor,Flow,WallLogic,FrontLogic,RingLogic}.h, the
-# generated src/Generated/ItemSpellCopies.h): no server build needed.
+# ShadowfangKeepRework.h, ScholomanceRework.h, SoloLessonLogic.h, StratholmeRework.h, BlackrockSpireRework.h,
+# BlackrockDepthsRework.h, the shared kit's pure
+# src/Kit/DungeonKit{Math,State,Arena,Logic,Ids,Floor,Flow,WallLogic,FrontLogic,RingLogic}.h, the generated
+# src/Generated/ItemSpellCopies.h): no server build needed.
 # A boss WP adds nothing here: every tests/<boss>_test.cpp is listed below already (one per boss file).
 set -euo pipefail
 
@@ -102,6 +103,31 @@ tests=(
   brs_beast_test
   brs_drakkisath_test
   brs_drakkisath_hard_mode_test
+  blackrock_depths_test
+  brd_gerstahn_test
+  brd_roccor_test
+  brd_grebmar_test
+  brd_ring_of_law_test
+  brd_ring_champions_test
+  brd_ring_encore_test
+  brd_loregrain_test
+  brd_stilgiss_verek_test
+  brd_vault_test
+  brd_fineous_test
+  brd_incendius_test
+  brd_incendius_hard_mode_test
+  brd_baelgar_test
+  brd_angerforge_test
+  brd_argelmach_test
+  brd_argelmach_hard_mode_test
+  brd_guzzler_test
+  brd_hurley_test
+  brd_phalanx_test
+  brd_flamelash_test
+  brd_the_seven_test
+  brd_magmus_test
+  brd_emperor_test
+  brd_emperor_hard_mode_test
 )
 
 status=0
@@ -110,7 +136,7 @@ for cxx in "${compilers[@]}"; do
     echo "== $cxx $test"
     "$cxx" -std=c++20 -Wall -Wextra -Werror -O1 -I "$root/src/Kit" -I "$root/src/Deadmines" \
       -I "$root/src/ShadowfangKeep" -I "$root/src/Scholomance" -I "$root/src/Stratholme" -I "$root/src/Generated" \
-      -I "$root/src/BlackrockSpire" \
+      -I "$root/src/BlackrockSpire" -I "$root/src/BlackrockDepths" \
       -I "$here" \
       "$here/$test.cpp" -o "$out/$test-$cxx"
     if ! "$out/$test-$cxx"; then

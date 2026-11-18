@@ -108,9 +108,12 @@ def _declare(*calls) -> list[dict]:
     return reg.loot_declarations
 
 
-def _build(decls, expansion, creatures=None, strict=True) -> loot_tables.LootPlan:
+def _build(decls, expansion, creatures=None, strict=True, require_heroic_lists=False) -> loot_tables.LootPlan:
+    """`require_heroic_lists=False`: most tests declare one boss of the three-boss fixture, and the "heroic boss with no
+    declaration" rule (test_a_heroic_boss_on_its_own_lootid_needs_a_declaration) would flag the other two."""
     return loot_tables.build(decls, expansion, ids_cfg=IDS_CFG, heroic_pairs=HEROIC_PAIRS,
-                             creature_rows=creatures or _creatures(), strict_lootid=strict)
+                             creature_rows=creatures or _creatures(), strict_lootid=strict,
+                             require_heroic_lists=require_heroic_lists)
 
 
 def _row(entry, item, group=1, chance=0.0, reference=0, loot_mode=1, max_count=1, comment="stock"):
@@ -248,6 +251,10 @@ class BuildTest(unittest.TestCase):
             (L.boss_loot, (310004, ("dm_fuse",)), dict(tier="heroic_hm", group=2, loot_mode=2)),
         ), self.exp)
         self.assertTrue(any("declares no default list group" in e for e in lone.errors), lone.errors)
+        opted = _build(_declare(
+            (L.boss_loot, (310004, ("dm_fuse",)), dict(tier="heroic_hm", group=2, loot_mode=2, hard_mode_only=True)),
+        ), self.exp)
+        self.assertFalse(any("declares no default list group" in e for e in opted.errors), opted.errors)
         always = _build(_declare(
             (L.boss_loot, (310004, ("dm_hammer",)), dict(tier="heroic")),
             (L.boss_loot, (310004, ("dm_fuse",)), dict(tier="heroic_hm", group=2, loot_mode=3)),
@@ -275,6 +282,42 @@ class BuildTest(unittest.TestCase):
         self.assertTrue(any("still uses the normal lootid 644" in w for w in shared.warnings), shared.warnings)
         orphan = _build(_declare((L.boss_loot, (9999, ("dm_hammer",)), dict(tier="normal")),), self.exp)
         self.assertTrue(any("no creature_template row has lootid 9999" in w for w in orphan.warnings))
+
+    def test_a_heroic_boss_on_its_own_lootid_needs_a_declaration(self):
+        """R-1-LOOT M-1 (Blackrock Depths): a heroic override that points a boss at its own lootid without declaring
+        it leaves the boss with no loot rows at all (the heroic copies are only made for declared lootids)."""
+        def build(decls, creatures=None, strict=True):
+            return _build(decls, self.exp, creatures, strict, require_heroic_lists=True)
+
+        def own(plan, entry=None):
+            tag = "has its own lootid"
+            return [e for e in plan.errors if tag in e and (entry is None or f"creature {entry} " in e)]
+
+        normal_only = _declare((L.boss_loot, (644, ("dm_hammer",)), dict(tier="normal")),)
+        missing = own(build(normal_only))
+        self.assertTrue(any("heroic creature 310008 (Rhahk'Zor) has its own lootid 310008" in e for e in missing),
+                        missing)
+        self.assertEqual(len(missing), 3, missing)  # Rhahk'Zor, Sneed and VanCleef's heroic rows, none declared
+        # a declared list, a hard mode group or a copy_normal_loot() answers it
+        for call, args, kwargs in (
+            (L.boss_loot, (310008, ("dm_hammer",)), dict(tier="heroic")),
+            (L.boss_loot, (310008, ("dm_fuse",)), dict(tier="heroic_hm", group=2, loot_mode=2, hard_mode_only=True)),
+            (L.copy_normal_loot, (310008,), dict(why="the list is on another boss")),
+        ):
+            declared = _declare((L.boss_loot, (644, ("dm_hammer",)), dict(tier="normal")), (call, args, kwargs))
+            self.assertEqual(own(build(declared), 310008), [], call)
+        # a removal alone is no declaration
+        removal = _declare((L.remove_loot_group, (310008,), dict(group=1, why="x")),)
+        self.assertTrue(own(build(removal), 310008))
+        # a heroic row that keeps its normal lootid, or has lootid 0, needs nothing (the shared-list warning is the
+        # other rule's)
+        shared = build(normal_only, _creatures(e310008=644, e310007=0, e310004=639))
+        self.assertEqual(own(shared), [])
+        # an `--only items` run renders no heroic row: a warning, not an error
+        lenient = build(normal_only, strict=False)
+        self.assertEqual(own(lenient), [])
+        self.assertTrue(any("has its own lootid 310008" in w and "a full run emits the heroic row" in w
+                            for w in lenient.warnings), lenient.warnings)
 
     def test_lint_rows_catches_hand_built_breakage(self):
         plan = loot_tables.LootPlan(groups={
@@ -460,7 +503,8 @@ class ReplacesAndRowsTest(unittest.TestCase):
             (L.boss_loot, (310004, ("tok_belt",)), dict(tier="heroic", group=3)),
         )
         plan = loot_tables.build(decls, self.exp, ids_cfg=IDS_CFG, heroic_pairs=HEROIC_PAIRS,
-                                 creature_rows=_creatures(), tokens={"tok_belt": token})
+                                 creature_rows=_creatures(), tokens={"tok_belt": token},
+                                 require_heroic_lists=False)
         self.assertEqual(plan.errors, [])
         self.assertEqual([(r["Item"], r["GroupId"], r["Chance"]) for r in plan.groups[(639, 3)]], [(70520, 3, 0)])
         self.assertEqual([r["Item"] for r in plan.groups[(310004, 3)]], [70521])
@@ -472,14 +516,16 @@ class ReplacesAndRowsTest(unittest.TestCase):
             (L.boss_loot, (644, ("tok_missing",)), dict(tier="normal", group=3)),
         )
         plan = loot_tables.build(bad, self.exp, ids_cfg=IDS_CFG, heroic_pairs=HEROIC_PAIRS,
-                                 creature_rows=_creatures(), tokens={"tok_belt": token})
+                                 creature_rows=_creatures(), tokens={"tok_belt": token},
+                                 require_heroic_lists=False)
         self.assertEqual(len(plan.errors), 2, plan.errors)
         self.assertIn("a normal lootid drops 'normal'", plan.errors[0])
         self.assertIn("not a resolved item() key", plan.errors[1])
         # a live token row in its own group is no foreign row once the declaration owns it
         live = [_row(639, 70520, group=3)]
         plan = loot_tables.build(decls[:2], self.exp, ids_cfg=IDS_CFG, heroic_pairs=HEROIC_PAIRS,
-                                 creature_rows=_creatures(), tokens={"tok_belt": token})
+                                 creature_rows=_creatures(), tokens={"tok_belt": token},
+                                 require_heroic_lists=False)
         loot_tables.check_live(plan, live, [], IDS_CFG)
         self.assertEqual(plan.errors, [])
 

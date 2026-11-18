@@ -3,17 +3,22 @@
 // generic pieces they now name. Stratholme WP-KT-1: DungeonKitFloor.h (FloorPath and its parity with Gilnid's, floor
 // spots, puddles, the inside clock) and DungeonKitFlow.h (weighted split, wave cap, cast queue, holds, percents).
 // Blackrock Spire WP-KT-B1: DungeonKitFlexRules.h (the flex 5-10 rules) and DungeonKitChaseLogic.h (the chaser's
-// clock, the crawl clock, the fall catch book).
+// clock, the crawl clock, the fall catch book). Blackrock Depths WP-KT-D1: DungeonKitBodyLogic.h (death spots, held
+// bodies) and DungeonKitEdgeLogic.h (the push over a floor's edge, edge bands). WP-KT-D2: DungeonKitPoolLogic.h (the
+// shared health pool, the damage tally).
 #include "DeadminesKitMath.h"
 #include "DeadminesRework.h"
 #include "DungeonKitArena.h"
+#include "DungeonKitBodyLogic.h"
 #include "DungeonKitChaseLogic.h"
+#include "DungeonKitEdgeLogic.h"
 #include "DungeonKitFlexRules.h"
 #include "DungeonKitFloor.h"
 #include "DungeonKitFlow.h"
 #include "DungeonKitIds.h"
 #include "DungeonKitLogic.h"
 #include "DungeonKitMath.h"
+#include "DungeonKitPoolLogic.h"
 #include "DungeonKitState.h"
 #include "GilnidLogic.h"
 #include "GreenskinLogic.h"
@@ -1278,6 +1283,479 @@ namespace
         CHECK(!WatchesControlled(true, true, false, true));             // a charmed pet
         CHECK(!WatchesControlled(false, false, false, false));          // any other minion
     }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Blackrock Depths WP-KT-D1: death spots, held bodies, the push over the edge, edge bands
+    // ----------------------------------------------------------------------------------------------------------------
+
+    DeathSpot Spot(std::uint64_t id, std::uint32_t entry, float x, float y, std::uint64_t atMs, std::uint32_t tag = 0)
+    {
+        DeathSpot s;
+        s.id = id;
+        s.entry = entry;
+        s.at = { x, y };
+        s.z = -70.f;
+        s.atMs = atMs;
+        s.tag = tag;
+        return s;
+    }
+
+    void TestDeathSpots()
+    {
+        // Raise Dead (SP S1 AN1): beasts die over a wave; Anub'shiah raises 1 or 2 at their spots, each spot once.
+        DeathSpotBook book;
+        book.Record(Spot(1, 9001, 0.f, 0.f, 100));
+        book.Record(Spot(2, 9002, 10.f, 0.f, 200));
+        book.Record(Spot(3, 9001, 20.f, 0.f, 300, 7));
+        CHECK(book.Size() == 3 && book.Count() == 3);
+        CHECK(book.Count({ 9001, 0, true }) == 2);
+        CHECK(book.Count({ 0, 7, true }) == 1);
+
+        std::vector<DeathSpot> taken = book.TakeOldest(1, { 9001, 0, true });
+        CHECK(taken.size() == 1 && taken[0].id == 1 && taken[0].used);
+        CHECK(book.Count({ 9001, 0, true }) == 1);             // spot 1 is spent
+        CHECK(book.Count() == 3);                               // but still stored (Acid Burst may read it)
+        taken = book.TakeOldest(5);
+        CHECK(taken.size() == 2 && taken[0].id == 2 && taken[1].id == 3);
+        CHECK(book.TakeOldest(1).empty());                      // nothing unused left
+        CHECK(book.Mark(2, false) && book.Count({ 0, 0, true }) == 1);
+        CHECK(!book.Mark(99));
+
+        // A revived unit that dies again replaces its spot (unused again, the newest).
+        book.Record(Spot(1, 9001, 5.f, 5.f, 400));
+        CHECK(book.Size() == 3);
+        std::optional<DeathSpot> const one = book.Find(1);
+        CHECK(one && !one->used && Near(one->at.x, 5.f, 1e-4f) && one->atMs == 400);
+        CHECK(book.All().back().id == 1);
+        CHECK(!book.Find(42));
+
+        // Random picks: distinct, marked used, never more than the pool.
+        DeathSpotBook pool;
+        for (std::uint64_t i = 1; i <= 4; ++i)
+            pool.Record(Spot(i, 9003, static_cast<float>(i), 0.f, i * 10));
+        std::vector<DeathSpot> const picked = pool.TakeRandom(3, FixedRand{ 1 });
+        CHECK(picked.size() == 3);
+        CHECK(picked[0].id == 2 && picked[1].id == 3 && picked[2].id == 4);    // index 1 of the remaining each time
+        CHECK(pool.TakeRandom(3, FixedRand{ 7 }).size() == 1);                  // one left
+        CHECK(pool.TakeRandom(1, FixedRand{ 0 }).empty());
+
+        // Nearest (Acid Burst at the corpse nearest a point; the body itself is gone).
+        DeathSpotBook near;
+        near.Record(Spot(1, 9004, 0.f, 0.f, 0));
+        near.Record(Spot(2, 9004, 10.f, 0.f, 0));
+        std::optional<DeathSpot> n = near.Nearest({ 8.f, 0.f });
+        CHECK(n && n->id == 2);
+        CHECK(!near.Nearest({ 8.f, 30.f }, 5.f));                               // none within 5 yd
+        near.TakeOldest(1);
+        n = near.Nearest({ 1.f, 0.f });
+        CHECK(n && n->id == 2);                                                 // spot 1 spent
+        n = near.Nearest({ 1.f, 0.f }, 0.f, { 0, 0, false });
+        CHECK(n && n->id == 1);                                                 // unless spent ones count
+
+        // The cap drops the oldest death; Expire and Forget.
+        DeathSpotBook capped(2);
+        capped.Record(Spot(1, 1, 0.f, 0.f, 0));
+        capped.Record(Spot(2, 1, 0.f, 0.f, 1000));
+        capped.Record(Spot(3, 1, 0.f, 0.f, 2000));
+        CHECK(capped.Size() == 2 && !capped.Find(1) && capped.Find(3));
+        capped.Expire(2500, 1000);
+        CHECK(capped.Size() == 1 && capped.Find(3));
+        CHECK(capped.Forget(3) && !capped.Forget(3) && capped.Size() == 0);
+        capped.Record(Spot(4, 1, 0.f, 0.f, 0));
+        capped.Clear();
+        CHECK(capped.Size() == 0);
+    }
+
+    void TestHeldBody()
+    {
+        // Korv's Ancestral Spirit (SP S1 EN5): one hold per member; a revived member dies for real.
+        HeldBodyLatch body(1);
+        CHECK(body.State() == BodyState::Up && body.HoldsLeft());
+        HeldBodyLatch::Result r = body.Apply(1000, 400);
+        CHECK(!r.clamped && !r.fell && r.damage == 400);
+        r = body.Apply(600, 900);
+        CHECK(r.clamped && r.fell && r.damage == 599 && body.Fallen() && body.Falls() == 1);
+        r = body.Apply(1, 5000);                                    // a hit on the body: absorbed
+        CHECK(r.clamped && !r.fell && r.damage == 0 && body.Fallen());
+        r = body.Apply(1, 0);
+        CHECK(!r.clamped && r.damage == 0);
+        CHECK(!body.Update(60000));                                 // no hold limit: it lies until revived
+        CHECK(body.Revive() && body.State() == BodyState::Up && body.Revives() == 1);
+        CHECK(!body.Revive());                                      // only from Fallen
+        CHECK(!body.HoldsLeft());
+        r = body.Apply(500, 900);                                   // the second lethal hit is the real death
+        CHECK(!r.clamped && r.damage == 900 && body.State() == BodyState::Dead);   // R-1-FW MIN-4
+        CHECK(!body.HoldsLeft() && !body.Revive());
+        std::vector<BodyState> const pair{ BodyState::Fallen, body.State() };
+        CHECK(AllDown(pair));
+        body.Reset();                                               // the next pull
+        CHECK(body.HoldsLeft() && body.Falls() == 0 && body.Revives() == 0);
+
+        // The Encore ends: a fallen body is finished (the real death); a finished body never falls again.
+        CHECK(body.Apply(100, 100).fell);
+        CHECK(body.Finish() && body.State() == BodyState::Dead);
+        CHECK(!body.Finish() && !body.Revive());
+        r = body.Apply(100, 100);
+        CHECK(!r.clamped && r.damage == 100);
+
+        // Acid Burst's swell (SP S1 RW6): held 2 s, then finished once.
+        HeldBodyLatch swell(1, 2000);
+        CHECK(!swell.Update(5000));                                 // standing: no clock
+        CHECK(swell.Apply(50, 80).fell);
+        CHECK(!swell.Update(1500) && swell.FallenMs() == 1500);
+        CHECK(swell.Update(500));
+        CHECK(!swell.Update(100));                                  // once
+        CHECK(swell.Finish());
+
+        // No holds: every lethal hit is real.
+        HeldBodyLatch none(0);
+        CHECK(!none.HoldsLeft() && !none.Apply(10, 10).clamped);
+        CHECK(none.State() == BodyState::Dead);
+
+        // Two holds (a unit raised twice).
+        HeldBodyLatch twice(2);
+        CHECK(twice.Apply(10, 10).fell && twice.Revive() && twice.Apply(10, 10).fell && twice.Falls() == 2);
+        CHECK(twice.Revive() && !twice.Apply(10, 10).clamped);
+        CHECK(twice.State() == BodyState::Dead);
+        HeldBodyLatch chip(0);
+        CHECK(!chip.Apply(10, 9).clamped && chip.State() == BodyState::Up);    // not lethal: still up
+
+        // The team is down when every member lies or is dead.
+        std::vector<BodyState> team{ BodyState::Fallen, BodyState::Dead, BodyState::Fallen };
+        CHECK(AllDown(team));
+        team.push_back(BodyState::Up);
+        CHECK(!AllDown(team));
+        CHECK(!AllDown(std::span<BodyState const>()));
+    }
+
+    // A 50 x 24 floor (x along it), and the same floor wound the other way.
+    std::vector<Vec2> const kFloorCcw{ { 0.f, 0.f }, { 50.f, 0.f }, { 50.f, 24.f }, { 0.f, 24.f } };
+    std::vector<Vec2> const kFloorCw{ { 0.f, 0.f }, { 0.f, 24.f }, { 50.f, 24.f }, { 50.f, 0.f } };
+
+    void TestEdgePush()
+    {
+        float const south = Deg(270.f);
+        float const north = Deg(90.f);
+
+        // Nearest edge and its inward normal, either winding.
+        std::optional<EdgePoint> e = NearestEdge(kFloorCcw, { 25.f, 6.f });
+        CHECK(e && Near(e->distance, 6.f, 1e-4f) && e->edge == 0 && Near(e->point.x, 25.f, 1e-4f));
+        Vec2 in = InwardNormal(kFloorCcw, 0);
+        CHECK(Near(in.x, 0.f, 1e-5f) && Near(in.y, 1.f, 1e-5f));
+        in = InwardNormal(kFloorCw, 3);                             // (50,0) -> (0,0): the same edge, reversed
+        CHECK(Near(in.x, 0.f, 1e-5f) && Near(in.y, 1.f, 1e-5f));
+        CHECK(!NearestEdge(std::vector<Vec2>{ { 0.f, 0.f } }, { 1.f, 1.f }));
+
+        // The way out: to the nearest edge; on the edge, along its outward normal; off the floor, farther away.
+        CHECK(Near(OutwardBearing(kFloorCcw, { 25.f, 2.f }), south, 1e-4f));
+        CHECK(Near(OutwardBearing(kFloorCw, { 25.f, 2.f }), south, 1e-4f));
+        CHECK(Near(OutwardBearing(kFloorCcw, { 25.f, 21.f }), north, 1e-4f));
+        CHECK(Near(OutwardBearing(kFloorCcw, { 2.f, 12.f }), kPi, 1e-4f));
+        CHECK(Near(OutwardBearing(kFloorCcw, { 25.f, 0.f }), south, 1e-4f));
+        CHECK(Near(OutwardBearing(kFloorCcw, { 25.f, -3.f }), south, 1e-4f));
+        CHECK(Near(OutwardBearing(std::vector<Vec2>{}, { 0.f, 0.f }, 1.25f), 1.25f, 1e-6f));
+
+        // Away from the centre line (SP S2 913).
+        CHECK(Near(AwayFromLine({ 0.f, 12.f }, { 50.f, 12.f }, { 25.f, 20.f }), north, 1e-4f));
+        CHECK(Near(AwayFromLine({ 0.f, 12.f }, { 50.f, 12.f }, { 25.f, 4.f }), south, 1e-4f));
+        CHECK(Near(AwayFromLine({ 0.f, 12.f }, { 50.f, 12.f }, { 25.f, 12.f }, 0.5f), 0.5f, 1e-6f));
+
+        // Over the edge from the first band and from deep in a later one (plan section 8 #42): always 4 yd past it.
+        EdgePush p = PlanOverEdge(kFloorCcw, { 25.f, 2.f }, south);
+        CHECK(p.overEdge && Near(p.exitYd, 2.f, 1e-3f) && Near(p.landing.y, -4.f, 1e-3f));
+        CHECK(Near(p.distance, 6.f, 1e-3f));
+        p = PlanOverEdge(kFloorCcw, { 25.f, 10.f }, OutwardBearing(kFloorCcw, { 25.f, 10.f }));
+        CHECK(p.overEdge && Near(p.exit.y, 0.f, 1e-3f) && Near(p.landing.y, -4.f, 1e-3f));
+        CHECK(Near(p.distance, 14.f, 1e-3f));
+        CHECK(!PointInPolygon(kFloorCcw, p.landing));
+        p = PlanOverEdge(kFloorCcw, { 25.f, 10.f }, south, 6.f);
+        CHECK(Near(p.landing.y, -6.f, 1e-3f));
+        // Arm Sweep: thrown toward the far edge, wherever it stands across the width.
+        p = PlanOverEdge(kFloorCcw, { 25.f, 3.f }, north);
+        CHECK(p.overEdge && Near(p.landing.y, 28.f, 1e-3f) && Near(p.exitYd, 21.f, 1e-3f));
+        // A start already off the floor keeps going.
+        p = PlanOverEdge(kFloorCcw, { 25.f, -1.f }, south);
+        CHECK(p.overEdge && p.exitYd == 0.f && Near(p.landing.y, -5.f, 1e-3f) && Near(p.distance, 4.f, 1e-3f));
+
+        // A concave floor: a notch 10 yd wide is a drop of its own (beyond the edge is not floor), so the throw ends
+        // in it, 4 yd past its near side.
+        std::vector<Vec2> const notched{ { 0.f, 0.f }, { 30.f, 0.f }, { 30.f, 20.f }, { 20.f, 20.f }, { 20.f, 5.f },
+            { 10.f, 5.f }, { 10.f, 20.f }, { 0.f, 20.f } };
+        p = PlanOverEdge(notched, { 5.f, 10.f }, 0.f);
+        CHECK(p.overEdge && Near(p.exit.x, 10.f, 1e-2f) && Near(p.landing.x, 14.f, 1e-2f));
+        CHECK(!PointInPolygon(notched, p.landing));
+        // A slit narrower than beyondYd: landing 4 yd on would be floor again, so the throw crosses it, re-enters,
+        // and leaves for good at the far side.
+        std::vector<Vec2> const slit{ { 0.f, 0.f }, { 30.f, 0.f }, { 30.f, 20.f }, { 12.f, 20.f }, { 12.f, 5.f },
+            { 10.f, 5.f }, { 10.f, 20.f }, { 0.f, 20.f } };
+        p = PlanOverEdge(slit, { 5.f, 10.f }, 0.f);
+        CHECK(p.overEdge && Near(p.exit.x, 30.f, 1e-2f) && Near(p.landing.x, 34.f, 1e-2f));
+        CHECK(!PointInPolygon(slit, p.landing));
+        // The same slit with a 1 yd beyond: the landing fits in it.
+        p = PlanOverEdge(slit, { 5.f, 10.f }, 0.f, 1.f);
+        CHECK(Near(p.exit.x, 10.f, 1e-2f) && Near(p.landing.x, 11.f, 1e-2f));
+
+        // Magma Fist's 10 yd knockback (SP S2 816): on the floor when it fits, past the edge (never on the rim) when
+        // it does not.
+        p = PlanKnockback(kFloorCcw, { 25.f, 12.f }, south, 10.f);
+        CHECK(!p.overEdge && Near(p.landing.y, 2.f, 1e-3f) && Near(p.distance, 10.f, 1e-3f));
+        p = PlanKnockback(kFloorCcw, { 25.f, 6.f }, south, 10.f);
+        CHECK(p.overEdge && Near(p.landing.y, -4.f, 1e-3f) && Near(p.distance, 10.f, 1e-3f));
+        p = PlanKnockback(kFloorCcw, { 25.f, 8.f }, south, 10.f);                  // would land 2 yd in: 4 past
+        CHECK(p.overEdge && Near(p.landing.y, -4.f, 1e-3f) && Near(p.distance, 12.f, 1e-3f));
+        p = PlanKnockback(kFloorCcw, { 25.f, 3.f }, south, 10.f);                  // the full 10 yd
+        CHECK(p.overEdge && Near(p.landing.y, -7.f, 1e-3f) && Near(p.distance, 10.f, 1e-3f));
+        p = PlanKnockback(kFloorCcw, { 25.f, 12.f }, south, 0.f);
+        CHECK(!p.overEdge && p.distance == 0.f);
+
+        // The jump: 0.8 s flights, never slower than 8 yd/s.
+        CHECK(Near(EdgeJumpSpeedXY(10.f), 12.5f, 1e-4f));
+        CHECK(Near(EdgeJumpSpeedXY(4.f), kEdgeMinSpeedXY, 1e-4f));
+        CHECK(Near(EdgeJumpSpeedXY(10.f, 0), kEdgeMinSpeedXY, 1e-4f));
+        CHECK(EdgeFlightMs(10.f, 12.5f) == 800 && EdgeFlightMs(4.f, 8.f) == 500 && EdgeFlightMs(4.f, 0.f) == 0);
+    }
+
+    void TestEdgeBands()
+    {
+        // The crumble (SP S2 909): the outer 4 yd along an edge, then the next 4 yd in.
+        WallLine band = EdgeBand(kFloorCcw, 0, 0.f, 4.f);
+        CHECK(Near(band.width, 4.f, 1e-5f) && Near(band.from.y, 2.f, 1e-4f) && Near(band.to.y, 2.f, 1e-4f));
+        CHECK(Near(band.from.x, 0.f, 1e-4f) && Near(band.to.x, 50.f, 1e-4f));
+        band = EdgeBand(kFloorCw, 3, 4.f, 8.f);                    // the same edge, the other winding
+        CHECK(Near(band.width, 4.f, 1e-5f) && Near(band.from.y, 6.f, 1e-4f) && Near(band.from.x, 50.f, 1e-4f));
+        band = EdgeBand(kFloorCcw, 1, 0.f, 2.f, 1.f);               // the east edge, 2 yd, ends stretched 1 yd
+        CHECK(Near(band.from.x, 49.f, 1e-4f) && Near(band.from.y, -1.f, 1e-4f) && Near(band.to.y, 25.f, 1e-4f));
+        CHECK(EdgeBand(kFloorCcw, 0, 4.f, 4.f).width == 0.f);
+        CHECK(EdgeBand(std::vector<Vec2>{ { 0.f, 0.f }, { 1.f, 0.f } }, 0, 0.f, 4.f).width == 0.f);
+
+        // Every point of a band is on the floor and is pushed past the edge it runs along.
+        band = EdgeBand(kFloorCcw, 0, 0.f, 4.f);
+        for (float y : { 0.5f, 2.f, 3.9f })
+        {
+            Vec2 const at{ 25.f, y };
+            CHECK(PointInPolygon(kFloorCcw, at) && InsideWall(band, at));
+            EdgePush const p = PlanOverEdge(kFloorCcw, at, OutwardBearing(kFloorCcw, at));
+            CHECK(p.overEdge && !PointInPolygon(kFloorCcw, p.landing) && Near(p.landing.y, -4.f, 1e-3f));
+        }
+        CHECK(!InsideWall(band, { 25.f, 4.5f }));
+
+        // All edges, or the listed ones (Lord of the Lake: the long edges only); empty steps are dropped.
+        CHECK(EdgeBands(kFloorCcw, {}, 0.f, 4.f).size() == 4);
+        std::vector<std::size_t> const longEdges{ 0, 2 };
+        std::vector<WallLine> const two = EdgeBands(kFloorCcw, longEdges, 2.f, 4.f);
+        CHECK(two.size() == 2 && Near(two[0].from.y, 3.f, 1e-4f) && Near(two[1].from.y, 21.f, 1e-4f));
+        CHECK(EdgeBands(kFloorCcw, longEdges, 4.f, 2.f).empty());
+    }
+
+    PoolHit Hit(std::uint64_t attacker, PoolHitKind kind, std::uint64_t member, std::uint32_t amount, std::uint64_t ms)
+    {
+        PoolHit h;
+        h.attacker = attacker;
+        h.kind = kind;
+        h.member = member;
+        h.amount = amount;
+        h.atMs = ms;
+        return h;
+    }
+
+    // WP-KT-D2: the Seven's shared pool (handoff section 3.11 #4): the cleave-once rule, heals, the mirror, the
+    // all-die tick.
+    void TestHealthPool()
+    {
+        HealthPool pool(320000);
+        CHECK(pool.Max() == 320000 && pool.Current() == 320000 && !pool.Emptied());
+        CHECK(pool.Mirror(320000) == 320000 && pool.Mirror(2614) == 2614 && pool.Mirror(0) == 0);
+
+        // A single hit comes off in full.
+        HealthPool::Result r = pool.Damage(Hit(1, PoolHitKind::Spell, 100, 1000, 1000));
+        CHECK(r.change == 1000 && !r.merged && !r.emptied && pool.Current() == 319000);
+
+        // A cleave: the same attacker and kind on two other members in the same tick counts as its largest hit.
+        r = pool.Damage(Hit(2, PoolHitKind::Spell, 100, 800, 2000));
+        CHECK(r.change == 800 && !r.merged);
+        r = pool.Damage(Hit(2, PoolHitKind::Spell, 101, 600, 2000));
+        CHECK(r.change == 0 && r.merged);
+        r = pool.Damage(Hit(2, PoolHitKind::Spell, 102, 900, 2000));
+        CHECK(r.change == 100 && r.merged);             // 900 replaces 800 as the cast's top: +100
+        CHECK(pool.Current() == 319000 - 900);
+
+        // A missile cleave inside the cast window still merges; past it, a new cast.
+        std::uint32_t const atStart = pool.Current();
+        pool.Damage(Hit(3, PoolHitKind::Spell, 100, 500, 5000));
+        r = pool.Damage(Hit(3, PoolHitKind::Spell, 101, 500, 5000 + kPoolCastWindowMs));
+        CHECK(r.change == 0 && r.merged);
+        r = pool.Damage(Hit(3, PoolHitKind::Spell, 102, 500, 5000 + kPoolCastWindowMs + 1));
+        CHECK(r.change == 500 && !r.merged);
+        CHECK(pool.Current() == atStart - 1000);
+
+        // A second hit on a member the cast already hit is a new cast (two swings, two ticks).
+        std::uint32_t const beforeSwings = pool.Current();
+        pool.Damage(Hit(4, PoolHitKind::Melee, 100, 300, 6000));
+        r = pool.Damage(Hit(4, PoolHitKind::Melee, 100, 300, 6000));
+        CHECK(r.change == 300 && !r.merged);
+        CHECK(pool.Current() == beforeSwings - 600);
+
+        // Different attackers, or different kinds of one attacker, never merge.
+        std::uint32_t const beforeTwo = pool.Current();
+        pool.Damage(Hit(5, PoolHitKind::Spell, 100, 200, 7000));
+        r = pool.Damage(Hit(6, PoolHitKind::Spell, 101, 200, 7000));
+        CHECK(r.change == 200 && !r.merged);
+        r = pool.Damage(Hit(5, PoolHitKind::Melee, 101, 200, 7000));
+        CHECK(r.change == 200 && !r.merged);
+        // Unknown attacker or kind Other: always in full.
+        pool.Damage(Hit(0, PoolHitKind::Spell, 100, 50, 7000));
+        r = pool.Damage(Hit(0, PoolHitKind::Spell, 101, 50, 7000));
+        CHECK(r.change == 50 && !r.merged);
+        pool.Damage(Hit(7, PoolHitKind::Other, 100, 50, 7000));
+        r = pool.Damage(Hit(7, PoolHitKind::Other, 101, 50, 7000));
+        CHECK(r.change == 50 && !r.merged);
+        CHECK(pool.Current() == beforeTwo - 800);
+
+        // DoTs: one tick only (an AoE DoT on two members merges; a tick 1 ms apart does not).
+        std::uint32_t const beforeDots = pool.Current();
+        pool.Damage(Hit(8, PoolHitKind::Periodic, 100, 400, 8000));
+        r = pool.Damage(Hit(8, PoolHitKind::Periodic, 101, 400, 8000));
+        CHECK(r.change == 0 && r.merged);
+        r = pool.Damage(Hit(8, PoolHitKind::Periodic, 102, 400, 8001));
+        CHECK(r.change == 400 && !r.merged);
+        CHECK(pool.Current() == beforeDots - 800);
+
+        // Old casts are pruned (the window plus 1 s).
+        pool.Damage(Hit(9, PoolHitKind::Spell, 100, 1, 20000));
+        CHECK(pool.OpenCasts() == 1);
+
+        // Heals: into the pool, capped at the max, once per cast too.
+        HealthPool heal(1000);
+        heal.Damage(Hit(1, PoolHitKind::Spell, 100, 600, 0));
+        r = heal.Heal(Hit(2, PoolHitKind::Heal, 100, 100, 10));
+        CHECK(r.change == 100 && heal.Current() == 500);
+        r = heal.Heal(Hit(2, PoolHitKind::Heal, 101, 100, 10));
+        CHECK(r.change == 0 && r.merged && heal.Current() == 500);
+        CHECK(heal.Restore(50) == 50 && heal.Current() == 550);
+        CHECK(heal.RestorePct(5.f) == 50 && heal.Current() == 600);          // Vile Communion's 5%
+        CHECK(heal.RestorePct(0.f) == 0);
+        CHECK(heal.Restore(10000) == 400 && heal.Current() == 1000);         // capped
+        r = heal.Heal(Hit(3, PoolHitKind::Heal, 100, 10, 20));
+        CHECK(r.change == 0);
+
+        // The mirror: each member's share of its own max health, rounded up, at least 1.
+        HealthPool mirror(320000);
+        mirror.Damage(Hit(1, PoolHitKind::Other, 100, 160000, 0));
+        CHECK(mirror.Mirror(320000) == 160000);
+        CHECK(mirror.Mirror(2614) == 1307);
+        CHECK(Near(mirror.Pct(), 50.f, 1e-4f));
+        mirror.Damage(Hit(1, PoolHitKind::Other, 100, 159999, 0));
+        CHECK(mirror.Current() == 1 && mirror.Mirror(2614) == 1 && mirror.Mirror(320000) == 1);
+
+        // The all-die tick: the emptying hit (overkill capped), then everything absorbed, then one death tick.
+        HealthPool death(1000);
+        CHECK(!death.TakeDeathTick());
+        r = death.Damage(Hit(1, PoolHitKind::Spell, 100, 400, 0));
+        CHECK(!r.emptied);
+        r = death.Damage(Hit(2, PoolHitKind::Spell, 101, 5000, 0));
+        CHECK(r.emptied && r.change == 600 && death.Current() == 0 && death.Emptied());
+        CHECK(death.Mirror(2614) == 1);                 // held at 1 health until the tick
+        r = death.Damage(Hit(3, PoolHitKind::Spell, 102, 100, 0));
+        CHECK(r.change == 0 && !r.emptied);             // emptied once only
+        CHECK(death.Heal(Hit(4, PoolHitKind::Heal, 100, 500, 0)).change == 0);
+        CHECK(death.Restore(500) == 0 && death.Current() == 0);
+        CHECK(death.TakeDeathTick());
+        CHECK(!death.TakeDeathTick());                  // the tick fires once
+        CHECK(death.DeathTaken());
+
+        // R-2-FW MIN-1 / R-2-B MN-1: the death tick's killer: recorded, else a loot recipient, else a map player,
+        // only then a self-kill (which finds no player: no credit, no bind).
+        CHECK(ChoosePoolKiller(true, true, true) == PoolKiller::Recorded);
+        CHECK(ChoosePoolKiller(true, false, false) == PoolKiller::Recorded);
+        CHECK(ChoosePoolKiller(false, true, true) == PoolKiller::LootRecipient);
+        CHECK(ChoosePoolKiller(false, false, true) == PoolKiller::MapPlayer);
+        CHECK(ChoosePoolKiller(false, false, false) == PoolKiller::Self);
+
+        // A cleave that empties the pool: the merged part is what counts (the top hit), emptied once.
+        HealthPool edge(1000);
+        edge.Damage(Hit(1, PoolHitKind::Other, 100, 500, 0));
+        r = edge.Damage(Hit(2, PoolHitKind::Spell, 100, 300, 10));
+        CHECK(r.change == 300 && !r.emptied);
+        r = edge.Damage(Hit(2, PoolHitKind::Spell, 101, 700, 10));
+        CHECK(r.change == 200 && r.merged && r.emptied);
+
+        // Start: the next pull, full again with every latch cleared (0 keeps the max).
+        death.Start();
+        CHECK(death.Max() == 1000 && death.Current() == 1000 && !death.Emptied() && !death.DeathTaken());
+        CHECK(death.OpenCasts() == 0);
+        death.Start(450000);
+        CHECK(death.Max() == 450000 && death.Current() == 450000);
+
+        // No max: nothing happens.
+        HealthPool none;
+        CHECK(none.Damage(Hit(1, PoolHitKind::Spell, 100, 10, 0)).change == 0 && !none.Emptied());
+        CHECK(none.Mirror(100) == 100);
+    }
+
+    // WP-KT-D2: Phalanx's Throw Out tally (handoff section 3.11 #5): the 10 s window, ties, exclusions. Pet credit is
+    // the engine's (the hit is recorded under its player's id), so here a "pet" hit is a hit under its owner's id.
+    void TestDamageTally()
+    {
+        DamageTally tally;
+        CHECK(tally.WindowMs() == kTallyWindowMs);
+        CHECK(!tally.Top(0));
+
+        tally.Record(1, 500, 1000);
+        tally.Record(2, 400, 2000);
+        tally.Record(2, 300, 3000);         // player 2's pet: credited to 2
+        tally.Record(3, 0, 3000);           // nothing
+        tally.Record(0, 999, 3000);         // no one
+        CHECK(tally.Size() == 3);
+        CHECK(tally.Total(2, 3000) == 700 && tally.Total(1, 3000) == 500 && tally.Total(3, 3000) == 0);
+        std::optional<TallyStanding> top = tally.Top(3000);
+        CHECK(top && top->who == 2 && top->total == 700 && top->lastMs == 3000 && top->firstMs == 2000);
+
+        // The window: a hit exactly 10 s old has left it.
+        CHECK(tally.Total(1, 10999) == 500);
+        CHECK(tally.Total(1, 11000) == 0);
+        top = tally.Top(12000);
+        CHECK(top && top->who == 2 && top->total == 300);
+        CHECK(!tally.Top(13000));
+        CHECK(tally.Size() == 0);
+
+        // Ties: who reached the total first (the earlier newest hit).
+        DamageTally ties;
+        ties.Record(10, 300, 0);            // 10 reaches 300 at 0
+        ties.Record(11, 200, 100);
+        ties.Record(12, 300, 150);          // 12 reaches 300 at 150
+        ties.Record(11, 100, 200);          // 11 reaches 300 at 200
+        ties.Record(10, 0, 500);            // not a hit
+        std::vector<TallyStanding> rank = ties.Ranking(600);
+        CHECK(rank.size() == 3 && rank[0].who == 10 && rank[1].who == 12 && rank[2].who == 11);
+        CHECK(rank[0].total == 300 && rank[1].total == 300 && rank[2].total == 300);
+        // 20 reached 200 first (50); 21 and 22 both at 100: the earlier first hit (21, at 0) wins.
+        DamageTally sameLast;
+        sameLast.Record(21, 100, 0);
+        sameLast.Record(20, 200, 50);
+        sameLast.Record(21, 100, 100);
+        sameLast.Record(20, 0, 100);
+        sameLast.Record(22, 200, 100);
+        rank = sameLast.Ranking(100);
+        CHECK(rank.size() == 3 && rank[0].who == 20 && rank[1].who == 21 && rank[2].who == 22);
+
+        // Exclusions (the victim, the last one thrown) and a predicate (alive, on the map).
+        std::vector<std::uint64_t> const exclude{ 10 };
+        top = ties.Top(600, exclude);
+        CHECK(top && top->who == 12);
+        std::vector<std::uint64_t> const all{ 10, 11, 12 };
+        CHECK(!ties.Top(600, all));
+        top = ties.TopIf(600, [](std::uint64_t who) { return who == 11; });
+        CHECK(top && top->who == 11 && top->total == 300);
+
+        // A short window and Clear.
+        DamageTally shortWindow(2000);
+        shortWindow.Record(1, 100, 0);
+        shortWindow.Record(2, 50, 1500);
+        CHECK(shortWindow.Top(1999)->who == 1);
+        CHECK(shortWindow.Top(2000)->who == 2);
+        shortWindow.Clear();
+        CHECK(shortWindow.Size() == 0 && !shortWindow.Top(2000));
+    }
 }
 
 int main()
@@ -1319,5 +1797,11 @@ int main()
     TestChaseClock();
     TestCrawlClock();
     TestFallCatch();
+    TestDeathSpots();
+    TestHeldBody();
+    TestEdgePush();
+    TestEdgeBands();
+    TestHealthPool();
+    TestDamageTally();
     return Report("dungeon_kit_test");
 }

@@ -4,6 +4,7 @@
 #include "DatabaseEnv.h"
 #include "Log.h"
 #include "Map.h"
+#include "Player.h"
 #include "QueryResult.h"
 #include "Timer.h"
 #include <algorithm>
@@ -24,9 +25,12 @@ void DungeonCheckpointMgr::LoadLocationsFromDB()
     uint32 oldMSTime = getMSTime();
 
     _locationsByMap.clear();
+    _reachMaps.clear();
 
-    //                                                 0        1                2                  3            4            5            6
-    QueryResult result = WorldDatabase.Query("SELECT map_id, creature_entry, checkpoint_order, position_x, position_y, position_z, orientation FROM dungeon_checkpoint_location");
+    // Fields: 0 map_id, 1 creature_entry, 2 location_index, 3 checkpoint_order, 4-7 position_x/y/z and orientation,
+    // 8 reach_radius (u_dungeon_checkpoint_2026_11_17_01.sql; the boot fails to load any row without it).
+    QueryResult result = WorldDatabase.Query("SELECT map_id, creature_entry, location_index, checkpoint_order, "
+        "position_x, position_y, position_z, orientation, reach_radius FROM dungeon_checkpoint_location");
     if (!result)
     {
         LOG_INFO("server.loading", ">> Loaded 0 dungeon checkpoint locations. Table is empty!");
@@ -42,8 +46,14 @@ void DungeonCheckpointMgr::LoadLocationsFromDB()
 
         DungeonCheckpointLocation location;
         location.creatureEntry = fields[1].Get<uint32>();
-        location.checkpointOrder = fields[2].Get<uint8>();
-        location.loc = WorldLocation(mapId, fields[3].Get<float>(), fields[4].Get<float>(), fields[5].Get<float>(), fields[6].Get<float>());
+        location.locationIndex = fields[2].Get<uint8>();
+        location.checkpointOrder = fields[3].Get<uint8>();
+        location.loc = WorldLocation(mapId, fields[4].Get<float>(), fields[5].Get<float>(), fields[6].Get<float>(),
+            fields[7].Get<float>());
+        location.reachRadius = fields[8].Get<float>();
+
+        if (location.reachRadius > 0.0f)
+            _reachMaps.insert(mapId);
 
         _locationsByMap[mapId].push_back(location);
         ++count;
@@ -81,11 +91,19 @@ void DungeonCheckpointMgr::PruneOrphanedState(bool sync)
     // since reset/expired.
     static constexpr char const* PRUNE_SQL =
         "DELETE FROM dungeon_checkpoint_instance WHERE instance_id NOT IN (SELECT id FROM instance)";
+    static constexpr char const* PRUNE_REACHED_SQL =
+        "DELETE FROM dungeon_checkpoint_reached WHERE instance_id NOT IN (SELECT id FROM instance)";
 
     if (sync)
+    {
         CharacterDatabase.DirectExecute(PRUNE_SQL);
+        CharacterDatabase.DirectExecute(PRUNE_REACHED_SQL);
+    }
     else
+    {
         CharacterDatabase.Execute(PRUNE_SQL);
+        CharacterDatabase.Execute(PRUNE_REACHED_SQL);
+    }
 }
 
 DungeonCheckpointState* DungeonCheckpointMgr::GetOrLoadState(uint32 instanceId, uint32 mapId)
@@ -109,12 +127,33 @@ DungeonCheckpointState* DungeonCheckpointMgr::GetOrLoadState(uint32 instanceId, 
     state.loc = WorldLocation(mapId, fields[0].Get<float>(), fields[1].Get<float>(), fields[2].Get<float>(), fields[3].Get<float>());
     state.checkpointOrder = fields[4].Get<uint8>();
 
+    // The "reached only" spots this instance has already been near (only maps that have such spots).
+    if (_reachMaps.count(mapId))
+    {
+        QueryResult reached = CharacterDatabase.Query(
+            "SELECT checkpoint_order, location_index FROM dungeon_checkpoint_reached "
+            "WHERE instance_id = {} AND map_id = {}",
+            instanceId, mapId);
+        if (reached)
+        {
+            do
+            {
+                Field* reachedFields = reached->Fetch();
+                state.reached.insert((uint32(reachedFields[0].Get<uint8>()) << 8) | reachedFields[1].Get<uint8>());
+            } while (reached->NextRow());
+        }
+    }
+
     return &_stateByInstance.emplace(instanceId, state).first->second;
 }
 
 void DungeonCheckpointMgr::SaveState(uint32 instanceId, uint32 mapId, DungeonCheckpointState const& state)
 {
-    _stateByInstance[instanceId] = state;
+    // Advancing the checkpoint replaces the state wholesale - keep what the instance has already reached.
+    DungeonCheckpointState& slot = _stateByInstance[instanceId];
+    std::unordered_set<uint32> reached = std::move(slot.reached);
+    slot = state;
+    slot.reached = std::move(reached);
 
     CharacterDatabase.Execute(
         "REPLACE INTO dungeon_checkpoint_instance (instance_id, map_id, position_x, position_y, position_z, orientation, checkpoint_order) VALUES ({}, {}, {}, {}, {}, {}, {})",
@@ -139,14 +178,67 @@ void DungeonCheckpointMgr::OnPlayerEnterMap(Map* map)
     // Brand new instance - seed the entrance checkpoint, if one is configured for this dungeon.
     for (DungeonCheckpointLocation const& location : mapItr->second)
     {
-        if (location.creatureEntry != 0)
-            continue;
+        if (location.creatureEntry != 0 || location.reachRadius > 0.0f)
+            continue; // a "reached only" spot is never the instance's starting checkpoint
 
         DungeonCheckpointState state;
         state.checkpointOrder = location.checkpointOrder;
         state.loc = location.loc;
         SaveState(instanceId, mapId, state);
         break;
+    }
+}
+
+void DungeonCheckpointMgr::MarkReached(uint32 instanceId, uint32 mapId, DungeonCheckpointState& state,
+    DungeonCheckpointLocation const& location)
+{
+    state.reached.insert(location.ReachKey());
+
+    CharacterDatabase.Execute(
+        "REPLACE INTO dungeon_checkpoint_reached (instance_id, map_id, checkpoint_order, location_index) "
+        "VALUES ({}, {}, {}, {})",
+        instanceId, mapId, location.checkpointOrder, location.locationIndex);
+}
+
+void DungeonCheckpointMgr::OnMapUpdate(Map* map, uint32 diff)
+{
+    if (_reachMaps.empty() || !map->IsDungeon() || !_reachMaps.count(map->GetId()))
+        return;
+
+    // Only live state: OnPlayerEnterMap() has cached it by the time anyone is in the instance, and a map update must
+    // never turn into a blocking DB read.
+    auto stateItr = _stateByInstance.find(map->GetInstanceId());
+    if (stateItr == _stateByInstance.end())
+        return;
+
+    static constexpr uint32 REACH_CHECK_INTERVAL = 1000;
+
+    DungeonCheckpointState& state = stateItr->second;
+    state.reachTimer += diff;
+    if (state.reachTimer < REACH_CHECK_INTERVAL)
+        return;
+
+    state.reachTimer = 0;
+
+    auto mapItr = _locationsByMap.find(map->GetId());
+    if (mapItr == _locationsByMap.end())
+        return;
+
+    for (DungeonCheckpointLocation const& location : mapItr->second)
+    {
+        if (location.reachRadius <= 0.0f || state.reached.count(location.ReachKey()))
+            continue;
+
+        float radiusSq = location.reachRadius * location.reachRadius;
+        for (MapReference const& ref : map->GetPlayers())
+        {
+            Player* player = ref.GetSource();
+            if (player && player->IsAlive() && location.loc.GetExactDistSq(*player) <= radiusSq)
+            {
+                MarkReached(map->GetInstanceId(), map->GetId(), state, location);
+                break;
+            }
+        }
     }
 }
 
@@ -198,6 +290,7 @@ void DungeonCheckpointMgr::OnInstanceReset(uint32 instanceId)
     // Synchronous: GetOrLoadState() reads with a blocking query, so a queued async delete could
     // still lose the race against a new instance that immediately reuses this id.
     CharacterDatabase.DirectExecute("DELETE FROM dungeon_checkpoint_instance WHERE instance_id = {}", instanceId);
+    CharacterDatabase.DirectExecute("DELETE FROM dungeon_checkpoint_reached WHERE instance_id = {}", instanceId);
 }
 
 WorldLocation const* DungeonCheckpointMgr::GetRespawnLocation(Map const* map, Position const& deathPos) const
@@ -219,6 +312,10 @@ WorldLocation const* DungeonCheckpointMgr::GetRespawnLocation(Map const* map, Po
     for (DungeonCheckpointLocation const& location : mapItr->second)
     {
         if (location.checkpointOrder != state.checkpointOrder)
+            continue;
+
+        // A "reached only" spot is skipped until a member of this instance has been near it.
+        if (location.reachRadius > 0.0f && !state.reached.count(location.ReachKey()))
             continue;
 
         float distSq = location.loc.GetExactDistSq(deathPos);

@@ -635,10 +635,17 @@ class BlackrockGearReservationsTest(unittest.TestCase):
                             name)
 
     def test_the_blackrock_gear_npcs_sit_in_their_creature_slice(self):
-        for directory, name in (("blackrock_depths", "blackrock_depths_items"), ("molten_set", "molten_set")):
+        # npcs/blackrock_depths also holds the dungeon build's own creatures (reservation blackrock_depths,
+        # 300780-300879, 2026-11-17): those are checked by BlackrockDepthsIdsTest, not against the gear slice.
+        for directory, name, also in (("blackrock_depths", "blackrock_depths_items", "blackrock_depths"),
+                                      ("molten_set", "molten_set", None)):
             ids = declared_ids(TOOL_ROOT / "source" / "npcs" / directory)
             self.assertTrue(ids.get("creature"), directory)
-            self.assertEqual(out_of_reservation(name, {"creature": ids["creature"]}), [], directory)
+            wrong = out_of_reservation(name, {"creature": ids["creature"]})
+            if also:
+                build = RESERVATIONS[also]["creature"]
+                wrong = [w for w in wrong if not build["start"] <= int(w.split()[1]) <= build["end"]]
+            self.assertEqual(wrong, [], directory)
 
 
 class ShadowfangKeepIdsTest(unittest.TestCase):
@@ -739,6 +746,44 @@ class BlackrockSpireIdsTest(unittest.TestCase):
         cfg = RESERVATIONS["blackrock_spire"]["creature"]
         self.assertEqual((cfg["start"], cfg["end"]), (300700, 300779))
         self.assertEqual(300729 + 1, 300730)
+
+
+class BlackrockDepthsIdsTest(unittest.TestCase):
+    """Blackrock Depths build WP-0 (2026-11-17): the dungeon's reservation, pinned exactly
+    (blackrock-depths-build.HANDOFF.md s3.3)."""
+
+    def test_blackrock_depths_reservation(self):
+        got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["blackrock_depths"].items()}
+        self.assertEqual(got, {
+            "spell": (210700, 211999),
+            "creature": (300780, 300879),
+            "gameobject": (301280, 301309),
+            "spellvisual": (90650, 90699),
+            "gameobjectdisplayinfo": (90050, 90059),
+            "creaturedisplayinfo": (90770, 90799),
+            "creaturemodeldata": (90770, 90799),
+            "item": (70620, 70629),
+        })
+
+    def test_blackrock_depths_overlaps_no_other_reservation(self):
+        for table, cfg in RESERVATIONS["blackrock_depths"].items():
+            for owner, tables in RESERVATIONS.items():
+                if owner != "blackrock_depths" and table in tables:
+                    self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
+
+    def test_blackrock_depths_sits_inside_the_blocks(self):
+        for table, cfg in RESERVATIONS["blackrock_depths"].items():
+            self.assertTrue(BLOCKS[table]["start"] <= cfg["start"] and cfg["end"] <= BLOCKS[table]["end"], table)
+
+    def test_the_spell_range_starts_after_blackrock_spire(self):
+        self.assertEqual(RESERVATIONS["blackrock_spire"]["spell"]["end"] + 1,
+                         RESERVATIONS["blackrock_depths"]["spell"]["start"])
+
+    def test_the_wave_slices_of_the_creature_range_are_contiguous(self):
+        # wave 1 300780-300829, wave 2 300830-300879 (the heroic mint order)
+        cfg = RESERVATIONS["blackrock_depths"]["creature"]
+        self.assertEqual((cfg["start"], cfg["end"]), (300780, 300879))
+        self.assertEqual(300829 + 1, 300830)
 
 
 class DungeonKitIdsTest(unittest.TestCase):

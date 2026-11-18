@@ -10,7 +10,8 @@ What it derives, per declared heroic (map M):
    live `dungeonencounter_dbc` overlay) in the stock file's order (OrderIndex), each copied to one declared id with
    Difficulty 1 and the normal row's Bit, OrderIndex, names and icon; plus the `instance_encounters` row with the
    normal row's credit type and entry and `lastEncounterDungeon` 0 (lib/lfg_dungeons.py later sets it on the final
-   boss when the dungeon has a heroic finder entry, lfg_heroic()). The kill credit stays the **normal** entry: a
+   boss when the dungeon has a heroic finder entry, lfg_heroic()); no credit row for an id in `heroic(no_credit=...)`
+   (its DungeonEncounter row stays). The kill credit stays the **normal** entry: a
    heroic creature still reports `GetEntry()` = the normal entry (`Creature::InitEntry`), which `KillRewarder` and
    `Map::UpdateEncounterState` compare against `creditEntry`. `instance_encounters` has no difficulty column: the
    loader files each row under its DungeonEncounter row's (MapID, Difficulty) (`ObjectMgr::LoadInstanceEncounters`).
@@ -277,6 +278,13 @@ def _encounter_rows(entry: dict, live: LiveWorld, all_declared_ids: set[int], ou
     if held:
         out.errors.append(f"{label}: the map already has heroic encounter rows {held} (stock or live)")
     normals = normal_encounters(map_id, live, all_declared_ids)
+    no_credit = {_int(e) for e in spec.get("no_credit") or ()}
+    unknown = sorted(no_credit - {_int(r.get("ID")) for r in normals})
+    if unknown:
+        out.errors.append(
+            f"{label}: no_credit names {unknown}, not normal encounter(s) of map {map_id} - it takes the normal "
+            f"DungeonEncounter ids (the stock rows) whose heroic copy gets no kill credit"
+        )
     if len(normals) != len(ids):
         listed = ", ".join(f"{_int(r['ID'])} {r.get('Name_Lang_enUS')!r}" for r in normals)
         out.errors.append(
@@ -290,6 +298,8 @@ def _encounter_rows(entry: dict, live: LiveWorld, all_declared_ids: set[int], ou
         row = {column: normal.get(column) for column in dbcfmt.DUNGEONENCOUNTER.columns}
         row.update(ID=encounter_id, Difficulty=DIFFICULTY_HEROIC, OrderIndex=_signed(normal.get("OrderIndex")))
         dbc_rows.append(row)
+        if _int(normal["ID"]) in no_credit:
+            continue
         credit = live.instance_encounters.get(_int(normal["ID"]))
         if credit is None:
             out.warnings.append(
@@ -304,6 +314,9 @@ def _encounter_rows(entry: dict, live: LiveWorld, all_declared_ids: set[int], ou
             # The normal row's dungeon finder link: lib/lfg_dungeons.py points the heroic row at the heroic finder
             # entry of that normal entry (an lfg_heroic() declaration), if there is one. Bookkeeping, not a column.
             "_normal_lfg": _int(credit.get("lastEncounterDungeon")),
+            # The normal encounter it copies: lib/lfg_dungeons.py reads the link of that row as edited this run
+            # (lfg_dungeon() / lfg_override(last_encounter=...)) before falling back to `_normal_lfg`.
+            "_normal_entry": _int(normal["ID"]),
         })
     return dbc_rows, credit_rows
 
@@ -679,9 +692,11 @@ def expand(
         dsl_classes["dungeon_encounters"].extend(dbc_rows)
         dsl_classes["instance_encounters"].extend(credit_rows)
         if dbc_rows:
+            dropped = entry["heroic"].get("no_credit") or ()
             out.notes.append(
                 f"dungeons: {entry['name']} (map {entry['map_id']}) heroic - {len(dbc_rows)} DungeonEncounter row(s) "
                 f"{dbc_rows[0]['ID']}-{dbc_rows[-1]['ID']}, {len(credit_rows)} instance_encounters row(s)"
+                + (f" (no credit for the copies of {', '.join(str(e) for e in dropped)})" if dropped else "")
             )
         planned = _spawn_masks(entry, live, out)
         _spawn_lints(entry, planned, live, out)

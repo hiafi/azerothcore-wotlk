@@ -3,6 +3,7 @@
 
 #include "Position.h"
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 class Creature;
@@ -12,11 +13,21 @@ class Map;
 // creatureEntry == 0 means "entrance checkpoint" - active as soon as the instance is created,
 // before any boss has been killed. Rows sharing a checkpointOrder are alternative spots for the
 // same checkpoint (e.g. one per wing entrance); the player respawns at the one nearest their death.
+//
+// reachRadius > 0 makes the spot "reached only": it is a respawn candidate only once a living member of the
+// instance has come within reachRadius yards of it (e.g. the extra Dungeon Finder starts of Blackrock Depths, which
+// a group that never went there must not respawn at). 0 = always a candidate, which is how every row behaved before
+// the column existed.
 struct DungeonCheckpointLocation
 {
     uint32 creatureEntry = 0;
+    uint8 locationIndex = 0;
     uint8 checkpointOrder = 0;
+    float reachRadius = 0.0f;
     WorldLocation loc;
+
+    // Identifies the spot inside its dungeon for the per-instance "reached" set.
+    [[nodiscard]] uint32 ReachKey() const { return (uint32(checkpointOrder) << 8) | locationIndex; }
 };
 
 // Live, per-instance checkpoint progress.
@@ -24,6 +35,11 @@ struct DungeonCheckpointState
 {
     uint8 checkpointOrder = 0;
     WorldLocation loc;
+
+    // ReachKey()s of the "reached only" spots a member of this instance has been near. Persisted in
+    // dungeon_checkpoint_reached; carried over unchanged when the checkpoint advances.
+    std::unordered_set<uint32> reached;
+    uint32 reachTimer = 0;
 };
 
 // Drives dungeon checkpoint respawn: which boss kills (per dungeon map) advance the checkpoint,
@@ -67,6 +83,11 @@ public:
     // instance's current one, advances the instance's checkpoint.
     void OnBossDeath(Creature* boss);
 
+    // Map tick for dungeons that have "reached only" spots: about once a second, marks the spots a living instance
+    // member is now within reachRadius of. Does nothing for every other map. Runs on the map update thread and reads
+    // the shared per-instance cache unguarded: safe with MapUpdate.Threads = 1 (live), see the README.
+    void OnMapUpdate(Map* map, uint32 diff);
+
     // The instance map unloaded - drop the in-memory cache entry. Persisted state is left
     // alone; it belongs to the instance save, not the map's lifetime in memory.
     void OnInstanceDestroyed(uint32 instanceId);
@@ -87,11 +108,16 @@ private:
     // Writes new checkpoint state to the cache and persists it (write-through).
     void SaveState(uint32 instanceId, uint32 mapId, DungeonCheckpointState const& state);
 
+    // Records that a member of the instance has been near the spot `key`, and persists it.
+    void MarkReached(uint32 instanceId, uint32 mapId, DungeonCheckpointState& state,
+        DungeonCheckpointLocation const& location);
+
     bool _enabled = true;
     uint32 _pruneTimer = 0;
 
     std::unordered_map<uint32 /*mapId*/, std::vector<DungeonCheckpointLocation>> _locationsByMap;
     std::unordered_map<uint32 /*instanceId*/, DungeonCheckpointState> _stateByInstance;
+    std::unordered_set<uint32 /*mapId*/> _reachMaps; // maps with at least one reachRadius > 0 row
 };
 
 #define sDungeonCheckpointMgr DungeonCheckpointMgr::instance()

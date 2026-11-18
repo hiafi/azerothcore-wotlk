@@ -44,7 +44,7 @@ scopes:
   blackrock_spire:
     reservations: [blackrock_spire_items]
     sources: [world/blackrock_spire_father_flame.py]  # B11: Father Flame, bag item 70610
-  blackrock_depths:
+  blackrock_depths:  # also owns the ids.yaml reservation of the same name (WP-0, 2026-11-17)
     reservations: [blackrock_depths_items]
 
   # Dungeon sets and tools.

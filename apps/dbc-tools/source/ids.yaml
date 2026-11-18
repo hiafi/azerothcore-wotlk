@@ -769,3 +769,26 @@ reservations:
     creaturedisplayinfo: {start: 90740, end: 90769}
     creaturemodeldata: {start: 90740, end: 90769}
     item: {start: 70610, end: 70619}  # Father Flame 70610 (B11 / R-2 ruling: the custom bag toss item; items.csv row)
+  # Blackrock Depths build WP-0 (2026-11-17, blackrock-depths-build.HANDOFF.md s3.3; checked free in this file, the live
+  # DB (spell_dbc, creature_template, gameobject_template, item_template / item_dbc, spellvisual_dbc,
+  # creaturedisplayinfo_dbc, creaturemodeldata_dbc, gameobjectdisplayinfo_dbc, mapdifficulty_dbc,
+  # dungeon_access_template, dungeonencounter_dbc, lfgdungeons_dbc, reference_loot_template), the source/ working copy
+  # and pending SQL). Creatures are sliced by wave for the heroic mint order: wave 1 300780-300829, wave 2
+  # 300830-300879. The spell range follows BRS (ends 210699) inside the tool-wide 200000-399999 block; its slices are
+  # in the handoff. The spellvisual slice 90650-90699 is the SpellVisual, Kit and EffectName ids; if it overflows,
+  # 90550-90599 is the agreed spare (inside the shared 90001-90699 block, no reservation owns it, the Stratholme
+  # slice ends at 90549). The CDI/CMD slice 90770-90799 follows BRS's 90740-90769.
+  # Shared heroic ids after BRS (inside the shared blocks, no separate reservation): mapdifficulty 1005,
+  # dungeon_access 127, dungeonencounter 1055-1073 (19 encounters, stock OrderIndex order), lfgdungeons 308
+  # (Shadowforge City) / 309 (Manufactory) / 310-313 (heroic for sections 1-4), loot_reference 1700019-1700021
+  # (L-2: the Emperor's pools + key; BRS ends 1700018), creature_heroic lock lines from 310301. Not in ids.yaml:
+  # creature_immunities 1972 and 1973 are reused.
+  blackrock_depths:
+    spell: {start: 210700, end: 211999}
+    creature: {start: 300780, end: 300879}
+    gameobject: {start: 301280, end: 301309}
+    spellvisual: {start: 90650, end: 90699}  # SpellVisual, Kit and EffectName
+    gameobjectdisplayinfo: {start: 90050, end: 90059}
+    creaturedisplayinfo: {start: 90770, end: 90799}
+    creaturemodeldata: {start: 90770, end: 90799}
+    item: {start: 70620, end: 70629}  # Vault Treasure Bag 70620, Cinder of the Firelord 70621, Guzzler Rope 70622
