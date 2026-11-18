@@ -217,7 +217,7 @@ def _cone(potency):
     """The F1 cone shape: cone damage (TargetA 104, 8 yd) and a DUMMY at the target that keeps the command's target as
     the spell's explicit target, the primary of spell_hun_command_aoe_falloff (which also puts a large primary back
     into the cone, F1 review MAJOR 1)."""
-    return [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=potency, potency_kind='direct',
+    return [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.pet_trim(potency), potency_kind='direct',
                    implicit_target_a=_TARGET_UNIT_CONE_ENEMY, radius_yards=_AREA_RADIUS_YD),
             Effect(type=EffectType.DUMMY, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)]
 
@@ -225,7 +225,7 @@ def _cone(potency):
 def _at_target(potency):
     """Damage to the target and every enemy within 8 yd of it (TargetA 53 / B 16, the Bubble Burst 201629 shape): the
     target is the area's center and stays the explicit target, no anchor needed."""
-    return [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=potency, potency_kind='direct',
+    return [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.pet_trim(potency), potency_kind='direct',
                    implicit_target_a=_TARGET_DEST_TARGET_ENEMY, implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY,
                    radius_yards=_AREA_RADIUS_YD)]
 
@@ -248,7 +248,9 @@ sonic_bite_command_201640 = _command(
     EffectChainAmplitude_1=_BOUNCE_AMPLITUDE,
     notes='hunter-pet-families F3: Bat I, 900 x0.84 = 756 Physical (rule 17: full potency, the bounce is the AoE). '
           'chain_targets 2 with EffectChainAmplitude 0.5: the second enemy takes 50% (the Leaping Tear 201725 shape, '
-          'no falloff script). 30 yd, DmgClass RANGED. Visual 376 (Bite), icon 87 (Sonic Burst 8281).',
+          'no falloff script). 30 yd, DmgClass RANGED. Visual 376 (Bite), icon 87 (Sonic Burst 8281).'
+          ' Effect 1 ap_potency 294.84 -> 204.619 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 shriek_command_201641 = _command(
@@ -261,7 +263,9 @@ shriek_command_201641 = _command(
     notes='hunter-pet-families F3: Bat II, 1800 x0.65 = 1170 Physical (rule 17: full potency, no AoE shift), the F1 '
           'cone shape (104, 8 yd + DUMMY anchor), spell_hun_command_aoe_falloff (extra targets 50%, the AoE rule every '
           'other cone follows). Melee reach, not 30 yd: the cone starts at the pet. Visual 9478 (Screech 31273), icon '
-          '458 (Sonic Boom 33666).',
+          '458 (Sonic Boom 33666).'
+          ' Effect 1 ap_potency 456.3 -> 316.6722 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 screech_201771 = _utility(
@@ -314,7 +318,10 @@ talon_rake_command_201642 = _command(
     notes='hunter-pet-families F3: Bird of Prey I. eff0 600 x0.84 = 504 direct, eff1 bleed 300 x0.84 = 252 over 6 s '
           '(rate 63, 2 s ticks), Mechanic 15. 30 yd. Visual 750 (Rake), icon 2328 (Swoop 52825).'
           + kits.ruling_24_note('Cunning', kits.command_potency(600, 'I', cunning=True),
-                                kits.command_potency(300, 'I', cunning=True)),
+                                kits.command_potency(300, 'I', cunning=True))
+                                + ' Effect 1 ap_potency 184.7664 -> 128.2279 (2026-11-17, weapon scaling WSH2 Normal'
+                                  ' trim, user ruling: BM x0.694). Effect 2 ap_potency 23.0958 -> 16.0285'
+                                  ' (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
 )
 
 swoop_command_201643 = _command(
@@ -324,7 +331,9 @@ swoop_command_201643 = _command(
     'Swoop down on the target, causing {pot1} Physical damage.',
     notes='hunter-pet-families F3: Bird of Prey II, 1800 x0.65 = 1170 Physical, 30 yd (PLAN §3.3: a plain hit, no '
           'charge). Visual 1104 (Swoop 52825), icon 277 (Swoop 5708).'
-          + kits.ruling_24_note('Cunning', kits.command_potency(1800, 'II', cunning=True)),
+          + kits.ruling_24_note('Cunning', kits.command_potency(1800, 'II', cunning=True))
+          + ' Effect 1 ap_potency 428.922 -> 297.6719 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 keen_sight_201772 = _utility(
@@ -371,7 +380,9 @@ lightning_breath_command_201644 = _command(
     school=School.NATURE,
     notes='hunter-pet-families F3: Wind Serpent I, 1250 x0.84 = 1050 Nature (1250 = 900 + the AoE shift off Chain '
           'Lightning, rule 15), single target, 30 yd. Visual 173 / icon 62 from Lightning Breath 24844.'
-          + kits.ruling_24_note('Cunning', kits.command_potency(1250, 'I', cunning=True)),
+          + kits.ruling_24_note('Cunning', kits.command_potency(1250, 'I', cunning=True))
+          + ' Effect 1 ap_potency 384.93 -> 267.1414 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 chain_lightning_command_201645 = _command(
@@ -383,7 +394,9 @@ chain_lightning_command_201645 = _command(
     school=School.NATURE, EffectChainAmplitude_1=1.0,
     notes='hunter-pet-families F3: Wind Serpent II, 1450 x0.65 = 942.5 Nature, chain_targets 3 with '
           'EffectChainAmplitude 1.0: spell_hun_command_aoe_falloff gives each jump a flat 50% (ruling 6, not the '
-          'engine\'s compounding 100/50/25). 30 yd. Visual 36 / icon 165 from Chain Lightning 421.',
+          'engine\'s compounding 100/50/25). 30 yd. Visual 36 / icon 165 from Chain Lightning 421.'
+          ' Effect 1 ap_potency 367.575 -> 255.097 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 storm_breath_201773 = _utility(
@@ -434,7 +447,10 @@ fire_breath_command_201646 = _command(
           '2 s ticks); 1250 = 900 + the AoE shift off Flame Nova. 30 yd. Visual 8256 / icon 2128 from Fire Breath '
           '34889.'
           + kits.ruling_24_note('Cunning', kits.command_potency(600, 'I', cunning=True),
-                                kits.command_potency(650, 'I', cunning=True)),
+                                kits.command_potency(650, 'I', cunning=True))
+                                + ' Effect 1 ap_potency 184.7664 -> 128.2279 (2026-11-17, weapon scaling WSH2 Normal'
+                                  ' trim, user ruling: BM x0.694). Effect 2 ap_potency 50.0409 -> 34.7284'
+                                  ' (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
 )
 
 flame_nova_command_201647 = _command(
@@ -446,7 +462,9 @@ flame_nova_command_201647 = _command(
     school=School.FIRE,
     notes='hunter-pet-families F3: Dragonhawk II, 1450 x0.65 = 942.5 Fire to the target and the enemies within 8 yd of '
           'it (TargetA 53 / B 16, the Bubble Burst shape), spell_hun_command_aoe_falloff. 30 yd. Visual 10383 '
-          '(Flamestrike 2120), icon 33 (Fire Nova).',
+          '(Flamestrike 2120), icon 33 (Fire Nova).'
+          ' Effect 1 ap_potency 367.575 -> 255.097 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 scorching_breath_201774 = _utility(
@@ -493,7 +511,10 @@ ravage_command_201648 = _command(
     notes='hunter-pet-families F3: Ravager I. eff0 600 x0.84 = 504 direct, eff1 bleed 300 x0.84 = 252 over 6 s (rate '
           '63, 2 s ticks), Mechanic 15. 30 yd. Visual 8102 / icon 2253 from Ravage 50518.'
           + kits.ruling_24_note('Cunning', kits.command_potency(600, 'I', cunning=True),
-                                kits.command_potency(300, 'I', cunning=True)),
+                                kits.command_potency(300, 'I', cunning=True))
+                                + ' Effect 1 ap_potency 184.7664 -> 128.2279 (2026-11-17, weapon scaling WSH2 Normal'
+                                  ' trim, user ruling: BM x0.694). Effect 2 ap_potency 23.0958 -> 16.0285'
+                                  ' (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
 )
 
 gut_rip_command_201649 = _command(
@@ -503,7 +524,9 @@ gut_rip_command_201649 = _command(
     'Rip into the target, causing {pot1} Physical damage.',
     notes='hunter-pet-families F3: Ravager II, 1800 x0.65 = 1170 Physical, 30 yd. Visual 8009 / icon 2046 from Gut Rip '
           '32022.'
-          + kits.ruling_24_note('Cunning', kits.command_potency(1800, 'II', cunning=True)),
+          + kits.ruling_24_note('Cunning', kits.command_potency(1800, 'II', cunning=True))
+          + ' Effect 1 ap_potency 428.922 -> 297.6719 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 rending_claws_201775 = _utility(
@@ -547,7 +570,9 @@ poison_spit_command_201650 = _command(
     AuraDescription_Lang_enUS='Nature damage inflicted every $t1 sec.',
     notes='hunter-pet-families F3: Serpent I, 900 x0.84 = 756 Nature over 9 s (rate 126, 3 s ticks), all periodic. '
           '30 yd. Visual 7910 / icon 68 from Poison Spit 35387.'
-          + kits.ruling_24_note('Cunning', kits.command_potency(900, 'I', cunning=True)),
+          + kits.ruling_24_note('Cunning', kits.command_potency(900, 'I', cunning=True))
+          + ' Effect 1 ap_potency 46.1916 -> 32.057 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 constrict_root_201672 = _root_rider(
@@ -571,7 +596,9 @@ constrict_command_201651 = _command(
     notes='hunter-pet-families F3: Serpent II, 1800 x0.65 = 1170 Physical over 6 s (rate 292.5, 2 s ticks; §3.3 marks '
           'no school: F1 decision 2), eff1 TRIGGER_SPELL the 2 s root 201672 (boss-filtered on its own). 30 yd. '
           'Visual 11023 / icon 2678 from Crush 50234.'
-          + kits.ruling_24_note('Cunning', kits.command_potency(1800, 'II', cunning=True)),
+          + kits.ruling_24_note('Cunning', kits.command_potency(1800, 'II', cunning=True))
+          + ' Effect 1 ap_potency 107.2305 -> 74.418 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 paralyzing_venom_201776 = _utility(
@@ -632,14 +659,16 @@ shed_skin_202009 = _utility(
 spore_burst_splash_201675 = _damage_helper(
     201675, 'Spore Burst',
     [Effect(type=EffectType.SCHOOL_DAMAGE,
-            ap_potency=round(kits.command_potency(900, 'I', cunning=True) * _SPLASH_PCT / 100, 4),
+            ap_potency=kits.pet_trim(round(kits.command_potency(900, 'I', cunning=True) * _SPLASH_PCT / 100, 4)),
             potency_kind='direct', implicit_target_a=_TARGET_DEST_TARGET_ENEMY,
             implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=_AREA_RADIUS_YD)],
     195, 170, school=School.NATURE, range_yards=_SPLASH_RANGE_YD,
     notes='hunter-pet-families F3: Spore Burst\'s splash (command helper), 900 x0.84 x 50% = 378 Nature to the enemies '
           'within 8 yd of the primary (TargetA 53 / B 16); spell_hun_command_splash drops the primary (the Venomous '
           'Cloud splash 201736 shape: rule 17 keeps the primary at full potency, no falloff script). Triggered by '
-          '201652 with the primary as its explicit target. Visual 195 / icon 170 from Spore Burst 5100.',
+          '201652 with the primary as its explicit target. Visual 195 / icon 170 from Spore Burst 5100.'
+          ' Effect 1 ap_potency 147.42 -> 102.3095 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 spore_burst_command_201652 = _command(
@@ -651,7 +680,9 @@ spore_burst_command_201652 = _command(
     school=School.NATURE,
     notes='hunter-pet-families F3: Sporebat I, 900 x0.84 = 756 Nature to the target (rule 17: full potency), eff1 '
           'TRIGGER_SPELL the 50% splash 201675 at the enemies around it. 30 yd. Visual 195 / icon 170 from Spore '
-          'Burst 5100.',
+          'Burst 5100.'
+          ' Effect 1 ap_potency 294.84 -> 204.619 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 _FUNGAL_BLOOM_MS = 12000
@@ -665,7 +696,9 @@ fungal_bloom_splash_201674 = _damage_helper(
     notes='hunter-pet-families F3: Fungal Bloom\'s splash (command helper), half the primary\'s rate (73.125, 3 s '
           'ticks, 12 s: 585 total) on the enemies within 8 yd of the primary (TargetA 53 / B 16); '
           'spell_hun_command_splash drops the primary. The Venomous Cloud splash 201736 shape (rule 17: its AoE is a '
-          'DoT). Visual 10409 / icon 2681 from Spore Cloud 50274.',
+          'DoT). Visual 10409 / icon 2681 from Spore Cloud 50274.'
+          ' Effect 1 ap_potency 28.5188 -> 19.792 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 fungal_bloom_command_201653 = _command(
@@ -681,7 +714,9 @@ fungal_bloom_command_201653 = _command(
     AuraDescription_Lang_enUS='Nature damage inflicted every $t1 sec.',
     notes='hunter-pet-families F3: Sporebat II, 1800 x0.65 = 1170 Nature over 12 s on the target (rate 146.25, 3 s '
           'ticks; rule 17: full potency), eff1 TRIGGER_SPELL the 50% splash DoT 201674 (Venomous Cloud 201729 shape). '
-          '30 yd. Visual 10409 / icon 2681 from Spore Cloud 50274.',
+          '30 yd. Visual 10409 / icon 2681 from Spore Cloud 50274.'
+          ' Effect 1 ap_potency 57.0375 -> 39.584 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 energizing_spores_201777 = _utility(
@@ -729,7 +764,9 @@ nether_shock_command_201654 = _command(
     school=School.ARCANE,
     notes='hunter-pet-families F3: Nether Ray I, 900 x0.84 = 756 Arcane, 30 yd. Visual 4209 / icon 2027 from Nether '
           'Shock 35334.'
-          + kits.ruling_24_note('Cunning', kits.command_potency(900, 'I', cunning=True)),
+          + kits.ruling_24_note('Cunning', kits.command_potency(900, 'I', cunning=True))
+          + ' Effect 1 ap_potency 277.1496 -> 192.3418 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 nether_lash_command_201655 = _command(
@@ -740,7 +777,9 @@ nether_lash_command_201655 = _command(
     school=School.ARCANE,
     notes='hunter-pet-families F3: Nether Ray II, 1800 x0.65 = 1170 Arcane, 30 yd. Visual 8037 (Arcane Shock 33175), '
           'icon 1485 (Arcane Bolt 13748).'
-          + kits.ruling_24_note('Cunning', kits.command_potency(1800, 'II', cunning=True)),
+          + kits.ruling_24_note('Cunning', kits.command_potency(1800, 'II', cunning=True))
+          + ' Effect 1 ap_potency 428.922 -> 297.6719 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 nether_currents_201778 = _utility(
@@ -783,7 +822,9 @@ twin_bite_second_bite_201670 = _damage_helper(
           '546 Nature (the second school, D6: one school per spell), cast once by spell_hun_command_multihit 300 ms '
           'after 201656. SUPPRESS_CASTER_PROCS (F1\'s strike rule), 40 yd (the command reaches 30). Visual 4200 '
           '(Froststorm Breath 54644), icon 2108 (the Core Hound\'s Twin Bite).'
-          + kits.ruling_24_note('Cunning', kits.command_potency(650, 'I', cunning=True)),
+          + kits.ruling_24_note('Cunning', kits.command_potency(650, 'I', cunning=True))
+          + ' Effect 1 ap_potency 200.1636 -> 138.9135 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 twin_bite_command_201656 = _command(
@@ -799,7 +840,9 @@ twin_bite_command_201656 = _command(
           'off Froststorm Breath). twohit = spell_hun_command_multihit with one follow-up (the F1 Core Hound Twin Bite '
           'shape): eff0 the Frost bite, eff1 DUMMY naming the Nature second bite 201670 (value 1). 30 yd. Visual 4200 '
           '(Froststorm Breath 54644), icon 2108 (Blade Twisting).'
-          + kits.ruling_24_note('Cunning', kits.command_potency(600, 'I', cunning=True)),
+          + kits.ruling_24_note('Cunning', kits.command_potency(600, 'I', cunning=True))
+          + ' Effect 1 ap_potency 184.7664 -> 128.2279 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 _FROSTSTORM_BREATH_MS = 3000
@@ -812,7 +855,9 @@ froststorm_breath_tick_201671 = _damage_helper(
           '400.8333 each, the F1 cone shape (104, 8 yd + DUMMY anchor at the primary), spell_hun_command_aoe_falloff. '
           'Cast by spell_hun_command_pulse\'s aura every second at the stashed primary. Not SUPPRESS_CASTER_PROCS: the '
           'ticks are the command\'s only hits (Burrow Attack\'s pulse rule, F2). 30 yd so a tick never fails its '
-          'strict triggered range check. Visual 4200 / icon 62 from Froststorm Breath 54644.',
+          'strict triggered range check. Visual 4200 / icon 62 from Froststorm Breath 54644.'
+          ' Effect 1 ap_potency 156.325 -> 108.4895 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 froststorm_breath_command_201657 = _command(
@@ -895,7 +940,9 @@ venom_web_spray_command_201658 = _command(
     notes='hunter-pet-families F3: Silithid I, 1250 x0.84 = 1050 Nature over 6 s (rate 262.5, 2 s ticks; 1250 = 900 + '
           'the AoE shift off Swarm Spit), eff1 TRIGGER_SPELL the 2 s root 201673 (boss-filtered on its own). 30 yd. '
           'Visual 12013 / icon 272 from Venom Web Spray 54706.'
-          + kits.ruling_24_note('Cunning', kits.command_potency(1250, 'I', cunning=True)),
+          + kits.ruling_24_note('Cunning', kits.command_potency(1250, 'I', cunning=True))
+          + ' Effect 1 ap_potency 96.2325 -> 66.7854 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 swarm_spit_command_201659 = _command(
@@ -906,7 +953,9 @@ swarm_spit_command_201659 = _command(
     + _FALLOFF_TEXT,
     school=School.NATURE,
     notes='hunter-pet-families F3: Silithid II, 1450 x0.65 = 942.5 Nature to the target and the enemies within 8 yd of '
-          'it (TargetA 53 / B 16), spell_hun_command_aoe_falloff. 30 yd. Visual 854 / icon 636 from Acid Spit 55749.',
+          'it (TargetA 53 / B 16), spell_hun_command_aoe_falloff. 30 yd. Visual 854 / icon 636 from Acid Spit 55749.'
+          ' Effect 1 ap_potency 367.575 -> 255.097 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 qiraji_fortitude_201780 = _utility(

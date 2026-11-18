@@ -185,13 +185,14 @@ def _helper(spell_id, name, school, icon, level, effects, notes, duration_ms=Non
 # ---- 5.1 Mantis Strike 202040 + its enable 202041 (talent (4,0), learn 30; replaces Counterattack 19306) ----
 mantis_strike_202040 = _castable(
     202040, 'Mantis Strike', School.NORMAL, 278, 30,
-    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=128.0, potency_kind='direct', implicit_target_a=6),
+    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=88.192, potency_kind='direct', implicit_target_a=6),
      _aura(AuraType.MOD_ROOT, 0, 0, target=6, mechanic=Mechanic.ROOT)],
     'S3a A1 / SV 5.1 + A4: Mantis Strike. Physical RANGED instant AP strike (no weapon, N5): eff0 SCHOOL_DAMAGE 160 AP '
     'potency (T 1.5), eff1 MOD_ROOT with mechanic ROOT on the effect, 2 s root, 3% base mana (placeholder, M), no '
     'cooldown, 5 yd (RangeIndex 12, no melee flag; Deadly Focus +10), CasterAuraSpell 202041 (the enable, consumed by '
     'spell_hun_mantis_strike AfterCast), CasterAuraState 0, d1 b19 (MANTIS_STRIKE), CastingTimeIndex 1, '
-    'tooltip_vars 1153. Icon 278 (Counterattack, placeholder V3).',
+    'tooltip_vars 1153. Icon 278 (Counterattack, placeholder V3).'
+    ' Effect 1 ap_potency 128.0 -> 88.192 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).',
     bit=(2, m.MANTIS_STRIKE), mana_pct=3, range_yards=5.0, duration_ms=2000, tooltip_vars=sv_strike_1153,
     raw={'RangeIndex': 12, 'CasterAuraSpell': 202041, 'CasterAuraState': 0,
          'Description_Lang_enUS': 'A swift strike that deals {pot1*mantis} Physical damage and immobilizes the target '
@@ -245,9 +246,9 @@ scavenger_energize_202044 = _helper(
 # ---- 5.3 Wildfire Bomb 202045 (talent (2,1), learn 20; impact + burn in one spell, d1 b6) ----
 wildfire_bomb_202045 = _castable(
     202045, 'Wildfire Bomb', School.FIRE, 2505, 20,
-    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=73.92, potency_kind='direct', implicit_target_a=53,
+    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=50.931, potency_kind='direct', implicit_target_a=53,
             implicit_target_b=16, radius_yards=8.0),
-     Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000, ap_potency=14.08,
+     Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000, ap_potency=9.701,
             potency_kind='periodic', implicit_target_a=53, implicit_target_b=16, radius_yards=8.0)],
     'S3a A1 / SV 5.3 + A4: Wildfire Bomb. Fire instant, unit-targeted, 15 yd, 18 s cooldown (< 30 s: no Cooldown '
     'Haste), category 0, 6% base mana (placeholder, M), eff0 impact 120 AP potency (T 1.5), eff1 burn 23 AP potency '
@@ -256,7 +257,9 @@ wildfire_bomb_202045 = _castable(
     'Effect 1 ap_potency 84.0 -> 67.2 (2026-11-01, DPS balance pass 1031, user ruling: Wildfire Bomb -20%). '
     'Effect 2 ap_potency 16.0 -> 12.8 (2026-11-01, DPS balance pass 1031, user ruling: Wildfire Bomb -20%). '
     'Effect 1 ap_potency 67.2 -> 73.92 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Wildfire Bomb +10%). '
-    'Effect 2 ap_potency 12.8 -> 14.08 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Wildfire Bomb +10%).',
+    'Effect 2 ap_potency 12.8 -> 14.08 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Wildfire Bomb +10%).'
+    ' Effect 1 ap_potency 73.92 -> 50.931 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).'
+    ' Effect 2 ap_potency 14.08 -> 9.701 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).',
     bit=(2, m.WILDFIRE_BOMB), cooldown_ms=18000, mana_pct=6, range_yards=15.0, duration_ms=6000,
     dispel=DispelType.MAGIC, tooltip_vars=sv_explosive_1180,
     raw={'Description_Lang_enUS': 'Hurl a bomb at an enemy. It explodes for {pot1*tntdemo} Fire damage to the target '
@@ -290,13 +293,14 @@ tar_slow_202049 = _helper(
 )
 burning_tar_202050 = _helper(
     202050, 'Burning Tar', School.FIRE, 1939, 50,
-    [_aura(AuraType.PERIODIC_DAMAGE, 0, 0, target=6, amplitude=1000, ap_potency=16.8, potency_kind='periodic',
+    [_aura(AuraType.PERIODIC_DAMAGE, 0, 0, target=6, amplitude=1000, ap_potency=11.575, potency_kind='periodic',
            time_basis_ms=1500)],
     'S3a A1 / SV 5.10 + A3: Burning Tar, the bank DoT. Fire PERIODIC_DAMAGE 1 s ticks (hasted), 6 s, eff0 24 AP '
     'potency as the chunk SOURCE (time basis 1500: a payout priced as an instant; the S3b script reads CalcValue), '
     'RANGED, Dispel 0, StackAmount 255 (CumulativeAura, display), d1 b27 (BURNING_TAR), IGNORE_LINE_OF_SIGHT (stale '
     'line 12), not IGNORE_CASTER_MODIFIERS, not SUPPRESS_CASTER_PROCS (ticks raise DONE_PERIODIC for Lock and Load). '
-    'Inert in S3a (only S3b code casts it).',
+    'Inert in S3a (only S3b code casts it).'
+    ' Effect 1 ap_potency 16.8 -> 11.575 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).',
     duration_ms=6000,
     raw={'SpellClassMask_2': m.BURNING_TAR, 'DefenseType': 3, 'CumulativeAura': 255,
          'AttributesEx2': _IGNORE_LINE_OF_SIGHT,
@@ -305,7 +309,7 @@ burning_tar_202050 = _helper(
 )
 tar_bomb_202047 = _castable(
     202047, 'Tar Bomb', School.NATURE, 2565, 50,
-    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=30.0, potency_kind='direct', implicit_target_a=53,
+    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=20.67, potency_kind='direct', implicit_target_a=53,
             implicit_target_b=16, radius_yards=8.0),
      Effect(type=EffectType.TRIGGER_SPELL, trigger_spell=202048, implicit_target_a=53, implicit_target_b=16,
             radius_yards=8.0),
@@ -314,7 +318,8 @@ tar_bomb_202047 = _castable(
     'S3a A1 / SV 5.4 + A4: Tar Bomb. Nature instant, unit-targeted, impact 30 AP potency (T 1.5), A 53 / B 16 8 yd, '
     '15 yd, 30 s on its own RecoveryTime (category 0: Cooldown Haste eligible, Dark Hunting -5 s first), 6% base mana '
     '(placeholder, M); eff1 / eff2 TRIGGER_SPELL Tarred 202048 and Tar 202049 on every hit target (LAUNCH_TARGET, '
-    '0-verify finding 10). d1 b26 (TAR_BOMB), CastingTimeIndex 1, tooltip_vars 1180.',
+    '0-verify finding 10). d1 b26 (TAR_BOMB), CastingTimeIndex 1, tooltip_vars 1180.'
+    ' Effect 1 ap_potency 30.0 -> 20.67 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).',
     bit=(2, m.TAR_BOMB), cooldown_ms=30000, mana_pct=6, range_yards=15.0, tooltip_vars=sv_explosive_1180,
     raw={'Description_Lang_enUS':
          'Throw a bomb of tar at an enemy, dealing {pot1*tnt} Nature damage to it and all enemies within $a1 yards '
@@ -326,26 +331,28 @@ tar_bomb_202047 = _castable(
 # ---- 5.8 Cluster Bombs 202051 / 202052 (talent (10,1), learn 60; d2 b5 on both) ----
 cluster_bombs_blast_202052 = _helper(
     202052, 'Cluster Bombs', School.FIRE, 2499, 60,
-    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=76.5, potency_kind='direct', implicit_target_a=87,
+    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=52.708, potency_kind='direct', implicit_target_a=87,
             implicit_target_b=16, radius_yards=5.0)],
     'S3a A1 / SV 5.8: a Cluster Bombs follow-up blast, Fire 90 AP potency (T 1.5) at TARGET_DEST_DEST (87) + '
     'TARGET_UNIT_DEST_AREA_ENEMY (16) 5 yd, cast at a scripted position by spell_hun_cluster_bombs (SpellCastTargets '
     'dst), RANGED, AttributesEx3 SUPPRESS_CASTER_PROCS (rolls nothing), d2 b5 (CLUSTER_BOMBS), no 0x4 (stale line 12: '
-    'a scatter point the centre cannot see is replaced by the centre). Burning Tar via OnDirectFireHit (SV 0.23).',
+    'a scatter point the centre cannot see is replaced by the centre). Burning Tar via OnDirectFireHit (SV 0.23).'
+    ' Effect 1 ap_potency 76.5 -> 52.708 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).',
     raw={'SpellClassMask_3': m.CLUSTER_BOMBS, 'DefenseType': 3, 'AttributesEx3': _SUPPRESS_CASTER_PROCS,
          'SpellVisualID_1': 90091,   # patch_hunter_vfx_models.py: stock dynamite explosion, one per blast
          'Description_Lang_enUS': 'Deals {pot1} Fire damage to all enemies within $a1 yards.'},
 )
 cluster_bombs_202051 = _castable(
     202051, 'Cluster Bombs', School.FIRE, 2499, 60,
-    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=72.0, potency_kind='direct', implicit_target_a=87,
+    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=49.608, potency_kind='direct', implicit_target_a=87,
             implicit_target_b=16, radius_yards=5.0),
      Effect(type=EffectType.DUMMY, implicit_target_a=87)],
     'S3a A1 / SV 5.8 + A4: Cluster Bombs. The cast is the first blast (eff0 Fire 90 AP potency, T 1.5, A 87 / B 16 5 '
     'yd at the destination; unsuppressed: rolls the once-per-cast procs, SV 0.16); eff1 DUMMY A 87 is the scheduler of '
     'the 4 follow-ups 202052 (spell_hun_cluster_bombs, OnEffectHit). Ground cursor (raw Targets 0x40, the trap shape), '
     'FacingCasterFlags 0 (not unit-targeted, A4), 30 yd, 50 s (Cooldown Haste eligible), 10% base mana (placeholder, '
-    'M), d2 b5 (CLUSTER_BOMBS), CastingTimeIndex 1, tooltip_vars 1180.',
+    'M), d2 b5 (CLUSTER_BOMBS), CastingTimeIndex 1, tooltip_vars 1180.'
+    ' Effect 1 ap_potency 72.0 -> 49.608 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).',
     bit=(3, m.CLUSTER_BOMBS), cooldown_ms=50000, mana_pct=10, range_yards=30.0, tooltip_vars=sv_explosive_1180,
     raw={'Targets': _TARGETS_DEST_LOCATION, 'FacingCasterFlags': 0,
          'SpellVisualID_1': 90091,   # patch_hunter_vfx_models.py: the first of the five explosions
@@ -359,11 +366,12 @@ cluster_bombs_202051 = _castable(
 # ---- 5.7 / 5.6 Shrapnel 202053 and the two Explosive Shot splashes (no bits, proc-free) ----
 shrapnel_hit_202053 = _helper(
     202053, 'Shrapnel', School.FIRE, 2147, 35,
-    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=34.0, potency_kind='direct', implicit_target_a=6)],
+    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=23.426, potency_kind='direct', implicit_target_a=6)],
     'S3a A1 / SV 5.7: Shrapnel. Fire 40 AP potency (T 1.5) at one enemy picked by Hunter::TryShrapnel, RANGED, '
     'AttributesEx3 SUPPRESS_CASTER_PROCS, IGNORE_LINE_OF_SIGHT (stale line 12: the shrapnel flies from the primary; '
     'TryShrapnel filters candidates by the primary\'s LoS, N3), no bit (Mastery and Point of No Escape by '
-    'spell_hun_shrapnel); Burning Tar via OnDirectFireHit.',
+    'spell_hun_shrapnel); Burning Tar via OnDirectFireHit.'
+    ' Effect 1 ap_potency 34.0 -> 23.426 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).',
     raw={'DefenseType': 3, 'AttributesEx3': _SUPPRESS_CASTER_PROCS, 'AttributesEx2': _IGNORE_LINE_OF_SIGHT,
          'Description_Lang_enUS': 'Deals {pot1} Fire damage.'},
 )

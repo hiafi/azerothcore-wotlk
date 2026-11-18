@@ -327,12 +327,13 @@ venom_spit_201710 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.basic_potency(33.0, 'Cunning'), potency_kind='direct',
-               implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.pet_trim(kits.basic_potency(33.0, 'Cunning')),
+               potency_kind='direct', implicit_target_a=6),
     ],
     pet_owner_scaling=(PET_AP_FROM_RAP_PCT['value'], PET_AP_FROM_SP_PCT['value']),
     spell_icon_id=68,
-    notes='H0-P1 (PET.md 4.3): Spider basic. Visual 7910 / Speed 40 and icon 68 from Poison Spit 35387, field shape from Acid Spit 55749 (direct hit). Ruling 23 (user 2026-11-13, hunter-pet-families): ap_potency 33.0 -> x0.39 (kits.basic_potency, Cunning damage scale). Ranged DmgClass 3 so it crits via GetUnitCriticalChance; d1 b28 + d2 b23 carrier; 0 Focus, 6 s cooldown, GCD 1500/133.',
+    notes='H0-P1 (PET.md 4.3): Spider basic. Visual 7910 / Speed 40 and icon 68 from Poison Spit 35387, field shape from Acid Spit 55749 (direct hit). Ruling 23 (user 2026-11-13, hunter-pet-families): ap_potency 33.0 -> x0.39 (kits.basic_potency, Cunning damage scale). Ranged DmgClass 3 so it crits via GetUnitCriticalChance; d1 b28 + d2 b23 carrier; 0 Focus, 6 s cooldown, GCD 1500/133.'
+    ' Effect 1 ap_potency 12.87 -> 8.9318 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
     raw_overrides={**_SPIT_RAW, 'SpellVisualID_1': 7910, 'Speed': 40.0,
                    'Description_Lang_enUS': 'Spit venom at the enemy, causing {pot1} Nature damage.'},
 )
@@ -351,12 +352,13 @@ cunning_spit_201711 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.basic_potency(33.0, 'Cunning'), potency_kind='direct',
-               implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.pet_trim(kits.basic_potency(33.0, 'Cunning')),
+               potency_kind='direct', implicit_target_a=6),
     ],
     pet_owner_scaling=(PET_AP_FROM_RAP_PCT['value'], PET_AP_FROM_SP_PCT['value']),
     spell_icon_id=636,
-    notes='H0-P1 (PET.md 4.3): Cunning placeholder basic. Visual 854 / Speed 24 and icon 636 from Acid Spit 55749; same numbers as Venom Spit 201710. Ruling 23 (user 2026-11-13, hunter-pet-families): ap_potency 33.0 -> x0.39 (kits.basic_potency, Cunning damage scale).',
+    notes='H0-P1 (PET.md 4.3): Cunning placeholder basic. Visual 854 / Speed 24 and icon 636 from Acid Spit 55749; same numbers as Venom Spit 201710. Ruling 23 (user 2026-11-13, hunter-pet-families): ap_potency 33.0 -> x0.39 (kits.basic_potency, Cunning damage scale).'
+    ' Effect 1 ap_potency 12.87 -> 8.9318 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
     raw_overrides={**_SPIT_RAW, 'SpellVisualID_1': 854, 'Speed': 24.0,
                    'Description_Lang_enUS': 'Spit at an enemy, causing {pot1} Nature damage.'},
 )

@@ -159,7 +159,7 @@ def _weapon_percent(effect: dict) -> int:
 # Riposte 683 (+250% then +30%), Plague Strike 54 (+10%).
 # Fury Swipe 200429: 310 -> 240 (2026-11-17, weapon scaling WS2 Normal trim, Bear DPS x0.774).
 PERCENTS = {
-    "hunter": {2643: [(1, 100)]},
+    "hunter": {2643: [(1, 66)]},   # 100 -> 66 (2026-11-17, weapon scaling WSH2 Normal trim, MM x0.664)
     "shaman": {60103: [(0, 266)], 32175: [(0, 254)], 32176: [(0, 254)], 202413: [(0, 140)], 202415: [(0, 140)]},
     "druid": {200429: [(0, 240)]},
     "warlock": {30213: [(0, 100)]},
@@ -189,7 +189,9 @@ class MigratedStrikesTest(unittest.TestCase):
     def test_flat_parts_keep_their_level_60_values(self):
         # (class, spell, effect index, the old hand-set level-60 value, tolerance)
         for class_name, spell_id, index, old, tolerance in (
-            ("hunter", 2643, 0, 275, 1.5),          # bp 0 + int(42 x 6.5645); a direct sp_potency 103
+            # hunter: was 275 (bp 0 + int(42 x 6.5645); a direct sp_potency 103); sp_potency 68.392 after WSH2 MM x0.664
+            # (2026-11-17)
+            ("hunter", 2643, 0, 182.7, 1.5),
             ("warlock", 30213, 1, 50.4, 1.5),       # was 62 (bp 31 + int(10 x 3.0667) + 1, sp_potency 23.2); sp_potency 19.024 after WS2 Demonology x0.82 (2026-11-17)
             ("deathknight", 45462, 0, 151, 1.5),    # bp 9 + int(59 x 2.3899) + 1; sp_potency 56.4
         ):

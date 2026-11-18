@@ -1382,6 +1382,11 @@ def _potency_of(entry: dict, effect: int, kind: str) -> float | None:
     return float(pot["total_potency"]) * float(pot["t_seconds"]) / 1.5 * float(pot.get("ticks", 1.0))
 
 
+# weapon scaling WSH2 (user ruling 2026-11-17): every pet damage potency takes Beast Mastery's Normal trim, on top of
+# the rulings below. Pinned here independently of _pet_kits.py's PET_WSH2_TRIM.
+WSH2_PET_TRIM = 0.694
+
+
 def check_f1_potency(entries_by_id: dict[int, dict], table=F1_POTENCY, extra_scale: float = 1.0,
                      id_scales: dict[int, float] | None = None) -> list[str]:
     """(z) every new command (and helper hit) is the ruling 1 scale of its §3.1 number; `extra_scale` is a further
@@ -1396,10 +1401,11 @@ def check_f1_potency(entries_by_id: dict[int, dict], table=F1_POTENCY, extra_sca
         scale = extra_scale * (id_scales or {}).get(spell_id, 1.0)
         for effect, authored, slot, kind in rows:
             got = _potency_of(entry, effect, kind)
-            want = authored * F1_SCALE[slot] * scale
+            want = authored * F1_SCALE[slot] * scale * WSH2_PET_TRIM
             if got is None or abs(got - want) > 0.01:
                 bad.append(f"{spell_id} eff{effect}: potency ({kind}) {got}, expected {authored} x {F1_SCALE[slot]}"
-                           f"{f' x {round(scale, 4)}' if scale != 1.0 else ''} = {round(want, 4)}")
+                           f"{f' x {round(scale, 4)}' if scale != 1.0 else ''} x {WSH2_PET_TRIM} (WSH2) = "
+                           f"{round(want, 4)}")
     return bad
 
 
@@ -1442,9 +1448,10 @@ def check_ruling_23_potency(entries_by_id: dict[int, dict], table=R23_POTENCY) -
             continue
         for effect, current, kind, scale in rows:
             got = _potency_of(entry, effect, kind)
-            want = current * scale
+            want = current * scale * WSH2_PET_TRIM
             if got is None or abs(got - want) > 0.01:
-                bad.append(f"{spell_id} eff{effect}: potency ({kind}) {got}, expected {current} x {scale} = "
+                bad.append(f"{spell_id} eff{effect}: potency ({kind}) {got}, expected {current} x {scale} x "
+                           f"{WSH2_PET_TRIM} (WSH2) = "
                            f"{round(want, 4)}")
     return bad
 
@@ -2127,8 +2134,9 @@ class HunterBmDataTest(unittest.TestCase):
         package = package_data()["package"]
         bonus = [r for r in package.spell_bonus_data if int(r["entry"]) == 56641]
         self.assertEqual(len(bonus), 1)
-        # TUNE3: ap_potency 52.92 (BAL1 2026-11-15: was 44.1; pass 1031: was 49; TUNE1 70, was 100), so the coefficient is 0.5292 * (1.5 / 3.5)
-        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.5292 * 1.5 / 3.5, places=4)
+        # WSH2: ap_potency 36.726 (2026-11-17 Normal trim x0.694 on 52.92; BAL1 2026-11-15: was 44.1; pass 1031: was 49;
+        # TUNE1 70, was 100), so the coefficient is 0.36726 * (1.5 / 3.5)
+        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.36726 * 1.5 / 3.5, places=4)
 
     def test_s1b_ids_have_equipped_item_class_minus_one(self):
         rows = package_data()["rows_by_id"]
@@ -3124,14 +3132,14 @@ class HunterPetFamiliesF1GuardTest(unittest.TestCase):
     def test_ruling_23_guard(self):
         def entry(value):
             return {"effect1": {"_potency": {"total_potency": value}}}
-        good = {1: entry(61.2), 2: entry(12.87)}
+        good = {1: entry(61.2 * WSH2_PET_TRIM), 2: entry(12.87 * WSH2_PET_TRIM)}
         table = {1: [(1, 40.8, "direct", 1.5)], 2: [(1, 33.0, "direct", 0.39)]}
         self.assertEqual(check_ruling_23_potency(good, table), [])
         self.assertEqual(len(check_ruling_23_potency({**good, 1: entry(40.8)}, table)), 1)    # basic unscaled
         self.assertEqual(len(check_ruling_23_potency({**good, 2: entry(33.0)}, table)), 1)    # Cunning unscaled
         self.assertEqual(len(check_ruling_23_potency({2: good[2]}, table)), 1)                # missing
         # ruling 23b: a Tenacity command that kept (or double-took) the scale is caught by the F2 table check
-        tenacity = {1: {"effect1": {"_potency": {"total_potency": 650 * 0.84 * 0.8}}}}
+        tenacity = {1: {"effect1": {"_potency": {"total_potency": 650 * 0.84 * 0.8 * WSH2_PET_TRIM}}}}
         self.assertEqual(check_f1_potency(tenacity, {1: [(1, 650, "I", "direct")]}, 0.8), [])
         self.assertEqual(len(check_f1_potency({1: {"effect1": {"_potency": {"total_potency": 650 * 0.84}}}},
                                               {1: [(1, 650, "I", "direct")]}, 0.8)), 1)
@@ -3142,7 +3150,8 @@ class HunterPetFamiliesF1GuardTest(unittest.TestCase):
                 {"total_potency": value}
             return {"effect1": {"_potency": pot}}
         table = {1: [(1, 400, "I", "direct")], 2: [(1, 1000, "II", "direct")], 3: [(1, 250, "I", "total")]}
-        good = {1: entry(336.0), 2: entry(650.0), 3: entry(35.0, "total")}    # 35 x 3 s / 1.5 s x 3 ticks = 210
+        good = {1: entry(336.0 * WSH2_PET_TRIM), 2: entry(650.0 * WSH2_PET_TRIM),
+                3: entry(35.0 * WSH2_PET_TRIM, "total")}    # 35 x 3 s / 1.5 s x 3 ticks = 210, then the WSH2 trim
         self.assertEqual(check_f1_potency(good, table), [])
         self.assertEqual(len(check_f1_potency({**good, 1: entry(400.0)}, table)), 1)      # unscaled
         self.assertEqual(len(check_f1_potency({**good, 2: entry(546.0)}, table)), 1)      # Command I scale on II
@@ -3454,11 +3463,12 @@ class HunterPetFamiliesRuling24GuardTest(unittest.TestCase):
         def entry(value):
             return {"effect1": {"_potency": {"total_potency": value}}}
         table = {1: [(1, 400, "I", "direct")], 2: [(1, 400, "I", "direct")]}
-        good = {1: entry(400 * 0.84 * 1.07), 2: entry(400 * 0.84)}             # 1 single-target, 2 AoE
+        good = {1: entry(400 * 0.84 * 1.07 * WSH2_PET_TRIM),
+                2: entry(400 * 0.84 * WSH2_PET_TRIM)}             # 1 single-target, 2 AoE
         self.assertEqual(check_f1_potency(good, table, id_scales={1: 1.07}), [])
         self.assertEqual(len(check_f1_potency({**good, 1: entry(336.0)}, table, id_scales={1: 1.07})), 1)  # unscaled
         self.assertEqual(len(check_f1_potency({**good, 2: entry(336.0 * 1.07)}, table, id_scales={1: 1.07})), 1)
-        cunning = {1: entry(400 * 0.84 * 0.39 * 0.94)}
+        cunning = {1: entry(400 * 0.84 * 0.39 * 0.94 * WSH2_PET_TRIM)}
         self.assertEqual(check_f1_potency(cunning, {1: table[1]}, 0.39, {1: 0.94}), [])
         self.assertEqual(len(check_f1_potency({1: entry(400 * 0.84 * 0.39)}, {1: table[1]}, 0.39, {1: 0.94})), 1)
         self.assertEqual(len(check_ruling_23_potency({1: entry(302.4)}, {1: [(1, 302.4, "direct", 1.07)]})), 1)
