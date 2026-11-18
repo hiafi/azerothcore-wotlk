@@ -51,8 +51,9 @@ ITEM_MOD_SPELL_POWER = 45
 MAX_ITEM_PROTO_STATS = 10
 STAT_COLUMNS = tuple(c for n in range(1, MAX_ITEM_PROTO_STATS + 1) for c in (f"stat_type{n}", f"stat_value{n}"))
 
-# Spell power per point of weapon DPS on a one-hand weapon. 0 = the feature is off (WS1 calibrates it, WS2 sets it).
-ONE_HAND_K = 0.0
+# Spell power per point of weapon DPS on a one-hand weapon (user ruling 2026-11-17 after WS1: 7.5). 0 = the feature
+# is off.
+ONE_HAND_K = 7.5
 # Each slot kind's k as a fraction of the one-hand k (user ruling 2026-11-17, WS0b report "Slot parity"): a staff
 # carries the caster cells' one-hand / two-hand DPS ratio (~0.82). Ranged slots get 0 (user ruling 2026-11-17, after
 # WS1: weapon spell power goes on actual weapons, not wands; a wand keeps its budgeted stats, Spell Power included).

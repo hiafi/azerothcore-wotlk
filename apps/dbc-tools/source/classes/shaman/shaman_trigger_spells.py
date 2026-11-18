@@ -949,11 +949,12 @@ earthliving_51945 = spell(
     range_yards=40.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=5.0, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000, time_basis_ms=3000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=4.115, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000, time_basis_ms=3000),
     ],
     spell_icon_id=3060,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
-          'Potency system P7-Shaman: converted to sp_potency=5.1 then SH0a A2 set 5.0 (12 s / 3 s) (shaman-potency-proposals.txt, mismatched row). Cast by the player via earthliving_weapon_passive_51940\'s own PROC_TRIGGER_SPELL aura (triggered off the player\'s own weapon-enchant buff, not a totem/pet).',
+          'Potency system P7-Shaman: converted to sp_potency=5.1 then SH0a A2 set 5.0 (12 s / 3 s) (shaman-potency-proposals.txt, mismatched row). Cast by the player via earthliving_weapon_passive_51940\'s own PROC_TRIGGER_SPELL aura (triggered off the player\'s own weapon-enchant buff, not a totem/pet).'
+          ' sp_potency 5.0 -> 4.115 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Shaman x0.823).',
     raw_overrides={'AttributesEx3': 128, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing over time.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1.total} over $d.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 524288, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellVisualID_1': 11443, 'StartRecoveryCategory': 133},
 )
 
@@ -3375,7 +3376,7 @@ fire_elemental_fire_nova_12470 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=19.2, implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=15.168, implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
     ],
     spell_icon_id=33,
     notes=(
@@ -3390,6 +3391,7 @@ fire_elemental_fire_nova_12470 = spell(
         "EffectBonusMultiplier_1 of 1.0 is a large mismatch against this base-implied value (would "
         "imply potency ~175) but is irrelevant in practice (an NPC guardian has ~0 spell power); base-"
         "implied wins by default per docs/potency-system.md, flagged for review."
+        ' sp_potency 19.2 -> 15.168 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Fire Elemental Fire Nova x0.790 (Elemental, shared with Enhancement)).'
     ),
     raw_overrides={'AttributesEx': 136, 'CastingTimeIndex': 5, 'InterruptFlags': 9, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 963, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Inflicts {pot1} Fire damage to nearby enemies.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'BaseLevel': 20, 'SpellLevel': 20},
 )
@@ -3410,7 +3412,7 @@ fire_elemental_fire_blast_57984 = spell(
     range_yards=20.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=19.3, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=15.247, implicit_target_a=6),
     ],
     spell_icon_id=12,
     notes=(
@@ -3422,6 +3424,7 @@ fire_elemental_fire_blast_57984 = spell(
         "120 / C(60) = 44.86, rounded). The live EffectBonusMultiplier_1 of 0.429 implies ~100 potency "
         "by coefficient, a real mismatch (same NPC-spell-power caveat as Fire Nova); base-implied wins "
         "by default, flagged for review."
+        ' sp_potency 19.3 -> 15.247 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Fire Elemental Fire Blast x0.790 (Elemental, shared with Enhancement)).'
     ),
     raw_overrides={'FacingCasterFlags': 1, 'CastingTimeIndex': 1, 'InterruptFlags': 8, 'ProcChance': 101, 'EquippedItemClass': -1, 'SpellVisualID_1': 143, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Inflicts {pot1} Fire damage to an enemy.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 3, 'SpellClassMask_1': 131074, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'BaseLevel': 20, 'SpellLevel': 20},
 )
@@ -3472,7 +3475,7 @@ fire_elemental_fire_shield_pulse_13376 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=5.6, potency_kind='periodic', time_basis_ms=3000, implicit_target_a=22, implicit_target_b=15, radius_yards=5.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=4.424, potency_kind='periodic', time_basis_ms=3000, implicit_target_a=22, implicit_target_b=15, radius_yards=5.0),
     ],
     spell_icon_id=31,
     notes=(
@@ -3489,6 +3492,7 @@ fire_elemental_fire_shield_pulse_13376 = spell(
         "boss_pyroguard_emberseer (see 13377's note) - that NPC's own damage from this ability will "
         "also scale through the same converted row, at its own level; not a new risk (RealPointsPerLevel "
         "already scaled it by caster level before this conversion too)."
+        ' sp_potency 5.6 -> 4.424 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Fire Elemental Fire Shield x0.790 (Elemental, shared with Enhancement)).'
     ),
     raw_overrides={'AttributesEx': 136, 'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 1465, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals {pot1} Fire damage to all nearby enemies.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'BaseLevel': 1, 'SpellLevel': 1},
 )

@@ -344,7 +344,18 @@ class spell_warl_generic_scaling : public AuraScript
                 int32 fire  = owner->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_FIRE);
                 int32 shadow = owner->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_SHADOW);
                 int32 maximum  = (fire > shadow) ? fire : shadow;
-                amount = CalculatePct(std::max<int32>(0, maximum), 57);
+
+                // Custom: weapon scaling WS2 Normal trim (2026-11-17, user ruling). Weapon spell power raised the
+                // owner's spell power and the demon's melee follows it, so the Felguard (Demonology x0.82) and the
+                // Felhunter (Affliction x0.775) take their spec's trim on the 57% share: 57 x 0.82 = 46.7 -> 47,
+                // 57 x 0.775 = 44.2 -> 44. Other demons keep the stock share.
+                int32 apSharePct = 57;
+                if (pet->GetEntry() == NPC_FELGUARD)
+                    apSharePct = 47;
+                else if (pet->GetEntry() == NPC_FELHUNTER)
+                    apSharePct = 44;
+
+                amount = CalculatePct(std::max<int32>(0, maximum), apSharePct);
 
                 // Glyph of felguard, 99% sure this is a HACK
                 if (pet->GetEntry() == NPC_FELGUARD)

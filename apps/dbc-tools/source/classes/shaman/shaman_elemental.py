@@ -744,11 +744,11 @@ earth_elemental_no_threat_202589 = _buff(
 # reaches a physical guardian's swing (Guardian::UpdateDamagePhysical has no DamageModifier term), so the +200% is this
 # aura: aura 79 physical (misc 1) feeds the guardian's TOTAL_PCT. Always on (not talent-gated); SyncGuardianAuras adds it.
 earth_elemental_melee_202596 = _buff(
-    202596, 'Earth Elemental Melee', [_aura(AuraType.MOD_DAMAGE_PERCENT_DONE, 349, SCHOOL_PHYSICAL)], ICON_EARTH, -1, '',
-    'Increases the physical damage dealt by your Earth Elemental by 350%.',
+    202596, 'Earth Elemental Melee', [_aura(AuraType.MOD_DAMAGE_PERCENT_DONE, 255, SCHOOL_PHYSICAL)], ICON_EARTH, -1, '',
+    'Increases the physical damage dealt by your Earth Elemental by 256%.',
     'Earth Elemental melee +200% (DPS balance pass 1031): aura 79 physical (stored 199, misc 1), owner-added on the '
     'guardian (L5), replaces the no-op DamageModifier 4.5 on 15352. EquippedItemClass -1 (from _raw). Id 202596 is '
-    'the first spare after the S1a block. Aura stored 199 -> 349 (x3.00 -> x4.50, +200% -> +350%) (2026-11-15, balance on the Normal-tier kits, user ruling: Greater Earth Elemental melee +50%).',
+    'the first spare after the S1a block. Aura stored 199 -> 349 (x3.00 -> x4.50, +200% -> +350%) (2026-11-15, balance on the Normal-tier kits, user ruling: Greater Earth Elemental melee +50%). Aura stored 349 -> 255 (x4.50 -> x3.56, +350% -> +256%) (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Elemental x0.790; its melee follows the owner\'s spell power).',
     hidden=True, guardian=True,
 )
 
@@ -811,7 +811,7 @@ lightning_bolt_overload_202591 = _overload_copy(
     202591, 'Lightning Bolt', School.NATURE, lightning_bolt_403, 2000, LB, 0, 1, ICON_LB, 20.0, 173,
     'Casts a bolt of lightning at the target for {pot1} Nature damage.',
     extra_note=' 2026-11-01 sp_potency 63 -> 50.4 (2026-11-01, DPS balance pass 1031, user ruling: Lightning Bolt -20%; '
-               'follows the parent 403 at half).',
+               'follows the parent 403 at half). sp_potency 50.4 -> 39.816 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Elemental x0.790 (shared with Enhancement): follows the parent 403 (100.8 -> 79.632) at half).',
 )
 chain_lightning_overload_202592 = _overload_copy(
     202592, 'Chain Lightning', School.NATURE, chain_lightning_421, 2000, CL, 0, 32, ICON_CL, 20.0, 36,

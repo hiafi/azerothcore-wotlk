@@ -681,11 +681,11 @@ holy_shock_25912 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=250.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=209.75, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=156,
     tooltip_vars=holy_heal_tooltip,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=250.0 (paladin-potency-proposals.txt, user value; was 305.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: SpellLevel 40 -> 30; description quotes only its own value ({pot1*shock}, entry 1105 owned by paladin_holy_spells.py); NOT_A_PROC (AttributesEx3 0x200) kept for the resolver',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=250.0 (paladin-potency-proposals.txt, user value; was 305.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: SpellLevel 40 -> 30; description quotes only its own value ({pot1*shock}, entry 1105 owned by paladin_holy_spells.py); NOT_A_PROC (AttributesEx3 0x200) kept for the resolver Effect 1 sp_potency 250.0 -> 209.75 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839).',
     raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, causing {pot1*shock} Holy damage.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2097152, 'SpellClassSet': 10, 'SpellLevel': 30, 'SpellVisualID_1': 128, 'StartRecoveryCategory': 133},
 )
 
@@ -702,11 +702,11 @@ holy_shock_25914 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=105.0, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=92.505, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=156,
     tooltip_vars=holy_heal_tooltip,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=125.0 (paladin-potency-proposals.txt, user value; was 137.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: sp_potency 125 -> 150 (A2), SpellLevel 40 -> 30; description quotes only its own value ({pot1*shock}); NOT_A_PROC kept for the resolver. sp_potency 150 -> 105 (2026-11-01, DPS balance pass 1031 round H2, user ruling: Holy Shock healing -30%, damage 25912 unchanged).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=125.0 (paladin-potency-proposals.txt, user value; was 137.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: sp_potency 125 -> 150 (A2), SpellLevel 40 -> 30; description quotes only its own value ({pot1*shock}); NOT_A_PROC kept for the resolver. sp_potency 150 -> 105 (2026-11-01, DPS balance pass 1031 round H2, user ruling: Holy Shock healing -30%, damage 25912 unchanged). Effect 1 sp_potency 105.0 -> 92.505 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Paladin x0.881).',
     raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, healing an ally for {pot1*shock}.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 65536, 'SpellClassSet': 10, 'SpellLevel': 30, 'SpellVisualID_1': 135, 'StartRecoveryCategory': 133},
 )
 
@@ -3477,11 +3477,11 @@ sacred_shield_58597 = spell(
     range_yards=50000.0,
     duration_ms=6000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=60.0, potency_kind='absorb', implicit_target_a=21, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=52.86, potency_kind='absorb', implicit_target_a=21, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127),
         Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=21, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3026,
-    notes='pulled from existing data | paladin-rework S1 SHARED B5.11: eff0 converted to sp_potency 60 absorb, learn 60; spell_pal_sacred_shield replaced by spell_pal_sacred_shield_absorb (generated coefficient through Paladin::CalculateAbsorbBonus).',
+    notes='pulled from existing data | paladin-rework S1 SHARED B5.11: eff0 converted to sp_potency 60 absorb, learn 60; spell_pal_sacred_shield replaced by spell_pal_sacred_shield_absorb (generated coefficient through Paladin::CalculateAbsorbBonus). Effect 1 sp_potency 60.0 -> 52.86 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Paladin x0.881).',
     raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 60, 'EquippedItemClass': -1, 'SpellVisualID_1': 12581, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': "Each time the target takes damage they gain a Sacred Shield, absorbing {pot1} damage and increasing the paladin's chance to critically hit with Flash of Light by $s2% for up to $d. They cannot gain this effect more than once every 6 sec.  Lasts $d.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Absorbs damage and increases the casting paladin's chance to critically hit with Flash of Light by $s2%.", 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 10, 'SpellClassMask_2': 524288, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 

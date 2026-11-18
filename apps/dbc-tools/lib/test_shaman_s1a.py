@@ -302,10 +302,14 @@ FIX_PASS_SUMMONS = (2062, 2894, 202272, 202273)
 # 2026-11-01 DPS balance pass 1031: 51505 57.6 -> 46.08, 403 126.0 -> 100.8, 8050 32.3 -> 25.84 / 10.8 -> 8.64, 202276 43.0 -> 21.5
 # 2026-11-16 ST1000: 51505 46.08 -> 32.26
 # 2026-11-02 DPS balance pass 1031 S1 (shaman package): 421 79.6 -> 99.5 (x1.25, and no per-jump falloff)
+# 2026-11-17 weapon scaling WS2 Elemental x0.790: 51505 32.26 -> 25.485, 421 99.5 -> 78.605, 8056 32.3 -> 25.517,
+# 202281 21.5 -> 16.985, 202282 120.4 -> 95.116, 202276 43.0 -> 33.97, 202278 51.6 -> 40.764, 202270 10.8 -> 8.532
+# 2026-11-17 follow-up (user ruling: trim the Enhancement-shared spells too): 403 100.8 -> 79.632, 8042 96.0 -> 75.84,
+# 8050 25.84 -> 20.414 / 8.64 -> 6.826.
 FIX_PASS_POTENCY = (
-    (51505, 1, 32.26), (403, 1, 100.8), (421, 1, 99.5), (8042, 2, 96.0), (8050, 1, 25.84), (8050, 2, 8.64),
-    (8056, 2, 32.3), (202281, 1, 21.5), (202282, 1, 120.4), (202276, 1, 43.0), (202278, 1, 51.6),
-    (202270, 1, 10.8), (8349, 1, 104.1),
+    (51505, 1, 25.485), (403, 1, 79.632), (421, 1, 78.605), (8042, 2, 75.84), (8050, 1, 20.414), (8050, 2, 6.826),
+    (8056, 2, 25.517), (202281, 1, 16.985), (202282, 1, 95.116), (202276, 1, 33.97), (202278, 1, 40.764),
+    (202270, 1, 8.532), (8349, 1, 104.1),
 )
 
 
@@ -351,8 +355,8 @@ def check_earth_shock_burst(rows: dict[int, dict], entries: dict[int, dict], con
         if have.get(name) != want:
             bad.append(f"const {name} {have.get(name)!r}, expected {want}")
     pot = ((entries.get(EARTH_SHOCK) or {}).get("effect2") or {}).get("_potency") or {}
-    if pot.get("total_potency") != 96.0:
-        bad.append(f"{EARTH_SHOCK}: effect 2 total potency {pot.get('total_potency')!r}, expected 96.0")
+    if pot.get("total_potency") != 75.84:
+        bad.append(f"{EARTH_SHOCK}: effect 2 total potency {pot.get('total_potency')!r}, expected 75.84")
     return bad
 
 
@@ -789,7 +793,7 @@ class ShamanS1aNegativeTest(unittest.TestCase):
         rows = {sid: _row(sid, ManaCostPct=8) for sid in FIX_PASS_SUMMONS}
         entries = {sid: {f"effect{e}": {"_potency": {"total_potency": p}}} for sid, e, p in FIX_PASS_POTENCY
                    if sid not in (8050,)}
-        entries[8050] = {"effect1": {"_potency": {"total_potency": 25.84}}, "effect2": {"_potency": {"total_potency": 8.64}}}
+        entries[8050] = {"effect1": {"_potency": {"total_potency": 20.414}}, "effect2": {"_potency": {"total_potency": 6.826}}}
         consts = [{"name": "LM_CHANCE_PER_STACK", "value": 7}, {"name": "ICEFURY_MANA_PCT", "value": 5}]
         self.assertEqual(check_fix_pass(rows, entries, consts), [])
         self.assertEqual(len(check_fix_pass({**rows, 2062: _row(2062, ManaCostPct=24)}, entries, consts)), 1)
@@ -800,7 +804,7 @@ class ShamanS1aNegativeTest(unittest.TestCase):
 
     def test_earth_shock_burst(self):
         rows = {ECHO_BUFF: _row(ECHO_BUFF, EffectBasePoints_1=29, EffectBasePoints_2=9)}
-        entries = {ECHO_BUFF: {"duration_ms": 30000}, EARTH_SHOCK: {"effect2": {"_potency": {"total_potency": 96.0}}}}
+        entries = {ECHO_BUFF: {"duration_ms": 30000}, EARTH_SHOCK: {"effect2": {"_potency": {"total_potency": 75.84}}}}
         consts = [{"name": "ECHO_DURATION_MS", "value": 30000}, {"name": "ECHO_EARTH_ELEMENTAL_GRANT", "value": 5},
                   {"name": "ECHO_MAX", "value": 10}]
         self.assertEqual(check_earth_shock_burst(rows, entries, consts), [])

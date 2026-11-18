@@ -21,7 +21,8 @@ from . import _masks
 # MIND_FLAY_TICK_POTENCY 83.97 -> 62.978 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits,
 # user ruling: Mind Flay -25%; real ratio 0.75002). 62.978 -> 75.573 (2026-11-16, single-target pass to 1,000
 # follow-up, user ruling: soften the Mind Flay cut to -10% overall, 83.97 x 0.90; Shadow fell to 966 at -25%).
-MIND_FLAY_TICK_POTENCY = 75.573
+# MIND_FLAY_TICK_POTENCY 75.573 -> 56.906 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).
+MIND_FLAY_TICK_POTENCY = 56.906
 
 # Proc flags/phases used by the procs_on() calls below - src/server/game/Spells/SpellMgr.h's
 # ProcFlags / ProcFlagsSpellPhase / ProcAttributes enums. Named here rather than as bare ints so a
@@ -118,11 +119,12 @@ holy_nova_23455 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=28.9, potency_kind='heal', implicit_target_a=20, radius_yards=10.0),
+        Effect(type=EffectType.HEAL, sp_potency=25.143, potency_kind='heal', implicit_target_a=20, radius_yards=10.0),
     ],
     spell_icon_id=1874,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor rank 27805, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48076, rank 9); MaxLevel set to 80. '
-          "Potency system P5-Priest: converted to sp_potency=28.9 (user-reviewed, mismatched row). The damage half (15237, priest_spells.py) is a separate spell, converted independently - cross-spell tokens stay native, only each spell's own self-reference becomes {pot1}.",
+          "Potency system P5-Priest: converted to sp_potency=28.9 (user-reviewed, mismatched row). The damage half (15237, priest_spells.py) is a separate spell, converted independently - cross-spell tokens stay native, only each spell's own self-reference becomes {pot1}."
+          ' sp_potency 28.9 -> 25.143 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Nova heal x0.87 (Disc/Holy shared)).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes an explosion of holy light around the caster, causing $15237s1 Holy damage to all enemy targets within $15237a1 yards and healing all party members within $23455a1 yards for {pot1}.  These effects cause no threat.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassMask_1': 134217728, 'SpellClassSet': 6, 'SpellLevel': 20, 'SpellVisualID_1': 6882},
 )
 
@@ -229,12 +231,13 @@ penance_47666 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=182.988, potency_kind='direct', implicit_target_a=77),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=159.2, potency_kind='direct', implicit_target_a=77),
     ],
     spell_icon_id=2818,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (84, chain has a gap at 60) slope (anchor rank 53000, rank 4); coefficient/cast_time_ms/mana_cost_pct from max rank (53000, rank 4); MaxLevel set to 80. "
           "Potency system P5-Priest: converted to sp_potency=89.7 (user-reviewed, mismatched row)."
-          ' sp_potency 89.7 -> 152.49 (2026-11-15, balance on the Normal-tier kits, user ruling: Penance damage 47666 +70%). sp_potency 152.49 -> 182.988 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Disc option C, Penance +20%).',
+          ' sp_potency 89.7 -> 152.49 (2026-11-15, balance on the Normal-tier kits, user ruling: Penance damage 47666 +70%). sp_potency 152.49 -> 182.988 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Disc option C, Penance +20%).'
+          ' sp_potency 182.988 -> 159.2 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Penance damage x0.87 (Disc/Holy shared)).',
     raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a volley of holy light at the target, causing {pot1} Holy damage to an enemy, or $47750s1 healing to an ally instantly and every $47758t2 sec for $47758d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 40.0, 'SpellClassMask_2': 32768, 'SpellClassSet': 6, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 10982},
 )
 
@@ -251,12 +254,13 @@ penance_47750 = spell(
     mana_cost_pct=0,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=137.292, potency_kind='heal', implicit_target_a=77),
+        Effect(type=EffectType.HEAL, sp_potency=124.112, potency_kind='heal', implicit_target_a=77),
     ],
     spell_icon_id=2818,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (84, chain has a gap at 60) slope (anchor rank 52985, rank 4); coefficient/cast_time_ms/mana_cost_pct from max rank (52985, rank 4); MaxLevel set to 80. "
           "Potency system P5-Priest: converted to sp_potency=67.3 (potency-report default, base/coef already agreed)."
-          ' sp_potency 67.3 -> 114.41 (2026-11-15, balance on the Normal-tier kits, user ruling: Penance heal 47750 +70%). sp_potency 114.41 -> 137.292 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Disc option C, Penance +20%).',
+          ' sp_potency 67.3 -> 114.41 (2026-11-15, balance on the Normal-tier kits, user ruling: Penance heal 47750 +70%). sp_potency 114.41 -> 137.292 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Disc option C, Penance +20%).'
+          ' sp_potency 137.292 -> 124.112 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Discipline x0.904).',
     raw_overrides={'AttributesEx2': 4194308, 'AttributesEx3': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a volley of holy light at the target, causing $47666s1 Holy damage to an enemy, or {pot1} healing to an ally instantly and every $47758t2 sec for $47758d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 40.0, 'SpellClassMask_2': 65536, 'SpellClassSet': 6, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 10981},
 )
 
@@ -339,11 +343,12 @@ mind_sear_49821 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=71.0, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=53.463, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=2895,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 75); RealPointsPerLevel from rank1→top rank's own top level (84, chain has a gap at 60) slope (anchor rank 53022, rank 2); coefficient/cast_time_ms/mana_cost_pct from max rank (53022, rank 2); MaxLevel set to 80. "
-          "Potency system P5-Priest: converted to sp_potency=71.0 (potency-report default, base/coef already agreed) - kept potency_kind='direct' (T=1.5s default) matching the report's own classification, since 48045's PERIODIC_TRIGGER_SPELL wrapper re-casts this spell fresh every 1s tick (AuraEffect::HandlePeriodicTriggerSpellAuraTick), so each tick is an independent roll, not one DoT amount held for a duration.",
+          "Potency system P5-Priest: converted to sp_potency=71.0 (potency-report default, base/coef already agreed) - kept potency_kind='direct' (T=1.5s default) matching the report's own classification, since 48045's PERIODIC_TRIGGER_SPELL wrapper re-casts this spell fresh every 1s tick (AuraEffect::HandlePeriodicTriggerSpellAuraTick), so each tick is an independent roll, not one DoT amount held for a duration."
+          ' sp_potency 71.0 -> 53.463 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).',
     raw_overrides={'AttributesEx': 136, 'AttributesEx2': 4194304, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Causing shadow damage to all targets within $a1 yards.', 'BaseLevel': 75, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes an explosion of shadow magic around the enemy target, causing {pot1} Shadow damage every 1 sec for $48045d to all enemies within $a1 yards around the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 524288, 'SpellClassSet': 6, 'SpellLevel': 75, 'SpellVisualID_1': 12122},
 )
 
@@ -4948,8 +4953,8 @@ divine_star_pulse_200134 = spell(
     school=School.HOLY,
     cast_time_ms=0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=28.2, potency_kind='heal', implicit_target_a=21),
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=37.4, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.HEAL, sp_potency=25.493, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=32.538, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90101,
     coeff_weight=0.4,
@@ -4958,7 +4963,9 @@ divine_star_pulse_200134 = spell(
           'call below (removed; this is a brand-new custom id with no stock-dump row to retire, unlike '
           'Circle of Healing). '
           'Divine Star\'s heal/damage pulse (docs/reworks/priest-new-spells.md: "100 (0.4 spellpower coeff) healing/damage"). Cast by the owning priest directly at whichever specific unit npc_pri_divine_star (spell_priest_new.cpp) finds newly within its own small pulse radius as it travels out and back - an explicit single-unit target per cast (owner->CastSpell(unit, 200134, true)), not a native AoE dest-area query. TARGET_UNIT_TARGET_ALLY (21) on the heal effect and TARGET_UNIT_TARGET_ENEMY (6) on the damage effect do NOT independently no-op against an explicit single-unit target server-side - Spell::SelectImplicitTargetObjectTargets (the TARGET_REFERENCE_TYPE_TARGET/TARGET_SELECT_CATEGORY_DEFAULT path these two target types take) never consults SpellImplicitTargetInfo::GetCheckType() the way the AoE/nearby/chain/trajectory search paths do, so both effects were applying to literally every unit hit - a priest healing themselves also silently self-damaged for the same amount, and any enemy hit also got healed. Playtest bugfix (2026-09-20, "not sure if Divine Star is healing, is it being attributed correctly"): spell_pri_divine_star_pulse (spell_priest_new.cpp) now hooks OnObjectTargetSelect per effect (EFFECT_0/ally, EFFECT_1/enemy) and nulls the target WorldObject*& when the caster\'s actual IsValidAssistTarget/IsValidAttackTarget disagrees with that effect\'s intended reaction - same idiom as spell_mage_arcane_blast::ClearSelfTarget (spell_mage.cpp) for nulling a single effect\'s target without touching the other effect\'s own resolution. This also gives full manual control over per-leg hit-dedup (tracked in the creature AI, not this row) rather than fighting native AoE re-hit semantics. base_points=99 (stored -1 convention) for the tooltip\'s 100; coeff_weight=0.4 matches the design doc\'s spellpower coefficient but is passthrough metadata only (lib/build.py\'s own docstring) - it never turns into a spell_bonus_data row or an EffectBonusMultiplier by itself. Confirmed live: spell_bonus_data had zero rows for 200134 and EffectBonusMultiplier_1/_2 were both 0 in spell_dbc, so every cast landed for a flat, non-scaling 100 regardless of the caster\'s spellpower. Fixed below via bonus_coefficients(), the actual mechanism (see halo_pulse_200136\'s own identical fix just above, and mage_trigger_spells.py/mage_spells.py for the established precedent - e.g. meteor_impact_200096, burnout_explosion_200116) that emits the spell_bonus_data row SpellMgr::GetSpellBonusData reads (both SpellDamageBonusDone and SpellHealingBonusDone key off the same direct_bonus column, so one row covers both effects). "Healing reduced beyond 6 targets": npc_pri_divine_star tracks a cast-wide (both legs) count of distinct allies healed and, once that count exceeds 6, casts the heal via CastCustomSpell/SPELLVALUE_BASE_POINT0 with a reduced amount instead of this row\'s own base_points - default falloff 10% per target beyond 6, compounding (retail\'s own value; docs/reworks/priest-new-spells.md doesn\'t specify a curve, flagged as playtest-tunable). No RangeIndex/range concern: the owner casts this triggered (bypasses range checks) at the missile\'s live position, which may be well outside the caster\'s own melee range. SpellVisualID_1=90013 is the yellow burst impact kit patch_priest_vfx_models.py mints (ChestEffect -> Priest_DivineStar_Impact_Yellow, mined from Ascension\'s client) - the missile\'s own travelling orb model is wired separately, on the creature_template row, not here. DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit).'
-          ' Effect 0 (heal) sp_potency 9.4 -> 28.2 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Divine Star +200%; the heal only - the damage half eff1 is unchanged, healer balance).',
+          ' Effect 0 (heal) sp_potency 9.4 -> 28.2 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Divine Star +200%; the heal only - the damage half eff1 is unchanged, healer balance).'
+          ' Effect 0 sp_potency 28.2 -> 25.493 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Discipline x0.904).'
+          ' Effect 1 sp_potency 37.4 -> 32.538 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Divine Star damage x0.87 (Disc/Holy shared)).',
     raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 0, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 32, 'SpellPriority': 50, 'SpellVisualID_1': 90013, 'SpellClassMask_3': _masks.DIVINE_STAR, 'DefenseType': 1},
 )
 scripted_by(divine_star_pulse_200134, 'spell_pri_divine_star_pulse')
@@ -4970,8 +4977,8 @@ halo_pulse_200136 = spell(
     school=School.HOLY,
     cast_time_ms=0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=56.7, potency_kind='heal', implicit_target_a=21),
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=74.8, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.HEAL, sp_potency=47.855, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=65.076, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90102,
     coeff_weight=0.526,
@@ -4979,7 +4986,9 @@ halo_pulse_200136 = spell(
           'sp_potency=74.8 (both user-reviewed, mismatched rows) - replaces the bonus_coefficients(direct=0.526) '
           'call below (removed; brand-new custom id, no stock-dump row to retire). '
           'Halo\'s heal/damage pulse (docs/reworks/priest-new-spells.md: "200 (0.526 spellpower coeff) healing/damage"). Cast by the owning priest directly at whichever specific unit spell_pri_halo (AuraScript on 200135, spell_priest_new.cpp) finds newly crossed by the expanding ring on each periodic tick - same explicit-single-unit-target "ally heals / enemy damages" idiom as Divine Star\'s pulse (200134, priest_trigger_spells.py); see that spell\'s own notes for why this sidesteps native-AoE re-hit dedup problems entirely. base_points=199 (stored -1 convention) for the tooltip\'s 200; coeff_weight=0.526 matches the design doc. Playtest bugfix (2026-09-20, "Halo is also not healing either or its not being attributed correctly") - two independent bugs, same shape as Divine Star\'s own pulse (200134, see its notes just above for the full mechanism writeup): (1) TARGET_UNIT_TARGET_ALLY (21, EFFECT_0/HEAL) and TARGET_UNIT_TARGET_ENEMY (6, EFFECT_1/SCHOOL_DAMAGE) do NOT independently gate against an explicit single-unit target - Spell::SelectImplicitTargetObjectTargets never consults each effect\'s own check type for this target-reference path, so both effects landed on every unit the ring touched regardless of reaction (an ally took damage alongside the heal; an enemy got healed alongside the damage) - fixed by spell_pri_halo_pulse (spell_priest_new.cpp), same OnObjectTargetSelect-nulling idiom as spell_pri_divine_star_pulse. (2) coeff_weight alone is passthrough metadata only (lib/build.py\'s own docstring) - it never turns into a spell_bonus_data row or an EffectBonusMultiplier by itself, unlike what its name suggests. Confirmed live: spell_bonus_data had zero rows for 200136 and EffectBonusMultiplier_1/_2 were both 0 in spell_dbc, so every cast landed for a flat, non-scaling ~200 regardless of the caster\'s spellpower. Fixed by calling bonus_coefficients() below, the actual mechanism (see mage_trigger_spells.py/mage_spells.py for the established precedent - e.g. meteor_impact_200096, burnout_explosion_200116) that emits the spell_bonus_data row SpellMgr::GetSpellBonusData reads. DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit).'
-          ' Effect 0 (heal) sp_potency 18.9 -> 56.7 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Halo +200%; the heal only - the damage half eff1 is unchanged, healer balance).',
+          ' Effect 0 (heal) sp_potency 18.9 -> 56.7 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Halo +200%; the heal only - the damage half eff1 is unchanged, healer balance).'
+          ' Effect 0 sp_potency 56.7 -> 47.855 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).'
+          ' Effect 1 sp_potency 74.8 -> 65.076 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Halo damage x0.87 (Disc/Holy shared)).',
     raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 0, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 52, 'SpellPriority': 50, 'SpellClassMask_3': _masks.HALO, 'DefenseType': 1},
 )
 scripted_by(halo_pulse_200136, 'spell_pri_halo_pulse')
@@ -5022,13 +5031,14 @@ divine_hymn_64844 = spell(
     range_yards=40.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=18.9, potency_kind='heal', implicit_target_a=22, implicit_target_b=30, radius_yards=40.0),
+        Effect(type=EffectType.HEAL, sp_potency=15.952, potency_kind='heal', implicit_target_a=22, implicit_target_b=30, radius_yards=40.0),
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=22, implicit_target_b=30, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127, radius_yards=40.0),
     ],
     spell_icon_id=2845,
     coeff_weight=0.2,
     notes='Priest baseline rework (docs/reworks/priest-new-spells.md): migrated out of the legacy source/spells/npc.csv (a pulled-from-client row; that row is deleted in the same change - generate.py would otherwise see this ID declared twice) into this DSL package so it can take coeff_weight/raw_overrides cleanly like every other spell here. implicit_target_a=22/implicit_target_b=30 (TARGET_UNIT_SRC_AREA_ALLY/TARGET_UNIT_PARTY, unchanged from the pulled data) - triggered every tick by 64843\'s own PERIODIC_TRIGGER_SPELL aura (priest_spells.py\'s divine_hymn_64843), cast by the priest each tick, landing on everyone within 40 yds. Old design capped this at the 3 lowest-health targets in spell_pri_divine_hymn::FilterTargets (spell_priest.cpp) - that resize(3) is deleted in the same change (its RaidCheck filter is kept); new design heals everyone in range. Healing-taken buff, on this row\'s own APPLY_AURA effect: duration_ms 8000->15000 (this row\'s own duration governs the aura, independent of 64843\'s trigger cadence), 10%->4% per application (base_points 9->3, stored -1 convention), and CumulativeAura=5 added to raw_overrides so it stacks (the pulled data had none, meaning the old buff just refreshed at a flat 10% - default stack cap of 5 is a first-pass tunable, one full channel\'s worth of ticks, not specified in the design doc). '
-          'Potency system P5-Priest: eff0 (heal) converted to sp_potency=18.9 (user-reviewed, mismatched row) - replaces the hand-set EffectBonusMultiplier_1=0.2/coeff_weight=0.2 tuning; eff1 (healing-taken buff) is a flat percent, untouched. SpellLevel/BaseLevel set to 60 (matching parent cast spell 64843\'s own level) since potency requires one and this trigger-only spell never had one before.',
+          'Potency system P5-Priest: eff0 (heal) converted to sp_potency=18.9 (user-reviewed, mismatched row) - replaces the hand-set EffectBonusMultiplier_1=0.2/coeff_weight=0.2 tuning; eff1 (healing-taken buff) is a flat percent, untouched. SpellLevel/BaseLevel set to 60 (matching parent cast spell 64843\'s own level) since potency requires one and this trigger-only spell never had one before.'
+          ' sp_potency 18.9 -> 15.952 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).',
     raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741828, 'AttributesEx4': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing received increased by $s2%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_3': 4, 'SpellClassSet': 6, 'SpellLevel': 60, 'SpellVisualID_1': 13751, 'CumulativeAura': 5},
 )
 unbind_bonus_coefficients(divine_hymn_64844)  # stale spell_bonus_data row overrode the potency coefficient (D1)
@@ -6041,7 +6051,7 @@ greater_power_word_shield_200155 = spell(
     range_yards=40.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=145.2, potency_kind='absorb', implicit_target_a=21, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=131.261, potency_kind='absorb', implicit_target_a=21, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127),
     ],
     spell_icon_id=453,
     notes='Discipline rework: the secondary shield the Renewed Hope capstone puts on the 2 nearest '
@@ -6057,7 +6067,8 @@ greater_power_word_shield_200155 = spell(
           'sp_potency 96.8 -> 145.2 (+50%, matching Power Word: Shield\'s baseline +50%) (2026-11-01, DPS balance '
           'pass 1031 round R4 revision, user ruling: '
           '"raise Power Word: Shield\'s baseline absorb"; the Renewed Hope proc shield must not fall '
-          'behind the shield it replaces).',
+          'behind the shield it replaces).'
+          ' sp_potency 145.2 -> 131.261 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Discipline x0.904).',
     raw_overrides={'AttributesEx2': 2621440, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Draws on the soul of the friendly target to shield them, absorbing damage.  While the shield holds, spellcasting will not be interrupted by damage.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': _masks.GREATER_PWS, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 784},
 )
 scripted_by(greater_power_word_shield_200155, 'spell_pri_power_word_shield_aura')
@@ -6180,7 +6191,7 @@ penance_empowered_200160 = spell(
     attributes=65536,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=137.292, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=124.112, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=2818,
     notes='Discipline rework (6,0): the extra ally heal bolt Empowered Penance fires. A copy of the '
@@ -6189,7 +6200,8 @@ penance_empowered_200160 = spell(
           'Reprieve / Renewed Hope a second time on top of the real bolt that spawned it. '
           'Potency system P5-Priest: converted to sp_potency=256.2 (user-reviewed, mismatched row) - '
           'replaces the bonus_coefficients(direct=0.537) call below (removed; brand-new custom id, no '
-          'stock-dump row to retire). sp_potency 256.2 -> 114.41 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: the Empowered Penance bolt is a copy of the Penance heal bolt 47750, now 114.41; it had drifted to 2.2x the bolt). sp_potency 114.41 -> 137.292 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Disc option C, Penance +20%; the Empowered Penance bolt stays a copy of 47750).',
+          'stock-dump row to retire). sp_potency 256.2 -> 114.41 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: the Empowered Penance bolt is a copy of the Penance heal bolt 47750, now 114.41; it had drifted to 2.2x the bolt). sp_potency 114.41 -> 137.292 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Disc option C, Penance +20%; the Empowered Penance bolt stays a copy of 47750).'
+          ' sp_potency 137.292 -> 124.112 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Discipline x0.904).',
     raw_overrides={'AttributesEx2': 4194308, 'AttributesEx3': 512, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'SpellLevel': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals an ally near your Penance target.', 'AuraDescription_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 10981},
 )
 
@@ -6566,7 +6578,7 @@ prayer_of_mending_33110 = spell(
     range_yards=50000.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=100.0, potency_kind='heal', implicit_target_a=1),
+        Effect(type=EffectType.HEAL, sp_potency=90.4, potency_kind='heal', implicit_target_a=1),
     ],
     spell_icon_id=2219,
     notes='pulled from existing data. '
@@ -6580,7 +6592,8 @@ prayer_of_mending_33110 = spell(
           'Open-decision review 2026-10-02 (user, option B): sp_potency 0.1 -> 100. At 0.1 the heal '
           'only worked through a stale spell_bonus_data row (direct 0.8057); 100 keeps that SP '
           'coefficient and adds a real base heal (about 1059 per bounce at 60, stock 3.3.5 is 800), '
-          'and the stale row is unbound below.',
+          'and the stale row is unbound below.'
+          ' sp_potency 100.0 -> 90.4 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Discipline x0.904).',
     raw_overrides={'AttributesEx': 1024, 'AttributesEx2': 4, 'AttributesEx3': 1073741824, 'TargetCreatureType': 767, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 1, 'SpellLevel': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 1714, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Places a spell on the target that heals them the next time they take damage.  When the heal occurs, Prayer of Mending jumps to a party or raid member within $41635a1 yards. Jumps up to $48113n times and lasts $48111d after each jump. This spell can only be placed on one target at a time.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 6, 'SpellClassMask_2': 32, 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
 )
 unbind_bonus_coefficients(prayer_of_mending_33110)
@@ -7149,7 +7162,7 @@ lightwell_heal_200202 = spell(
     school=School.HOLY,
     cast_time_ms=0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=27.4, potency_kind='heal', implicit_target_a=1),
+        Effect(type=EffectType.HEAL, sp_potency=23.126, potency_kind='heal', implicit_target_a=1),
     ],
     spell_icon_id=1878,
     notes='HOLY.md 6,1/baseline edits: the Lightwell object\'s own auto-heal, cast by '
@@ -7157,7 +7170,8 @@ lightwell_heal_200202 = spell(
           "in need within 20 yds. Potency system P8: migrated from base_points=289 flat + "
           "bonus_coefficients(direct=0.4) to sp_potency=27.4 (base-implied, preserving the ~290 "
           "level-60 heal; see comment above) - no stock-dump conflict at this custom id, so the "
-          "prune pass retires the old spell_bonus_data row without needing unbind_bonus_coefficients(). DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit).",
+          "prune pass retires the old spell_bonus_data row without needing unbind_bonus_coefficients(). DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit)."
+          ' sp_potency 27.4 -> 23.126 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).',
     raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1}.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0, 'SpellLevel': 0, 'DefenseType': 1},
 )
 
@@ -7931,7 +7945,8 @@ mind_flay_58381 = spell(
           "the DBC EffectBonusMultiplier; that row is retired by unbind_bonus_coefficients() below "
           "and the coefficient now comes from sp_potency=MIND_FLAY_TICK_POTENCY (83.97, 1 s tick): "
           "EffectBonusMultiplier_1 0.257 -> 0.2399. MIND_FLAY_TICK_POTENCY 83.97 -> 62.978 (2026-11-16, single-target pass to 1,000 on the "
-          "Normal-tier kits, user ruling: Mind Flay -25%), so EffectBonusMultiplier_1 0.2399 -> 0.1799.",
+          "Normal-tier kits, user ruling: Mind Flay -25%), so EffectBonusMultiplier_1 0.2399 -> 0.1799."
+          ' MIND_FLAY_TICK_POTENCY 75.573 -> 56.906 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753); sp_potency follows the constant.',
     raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 1073741824, 'CastingTimeIndex': 1, 'InterruptFlags': 15, 'ChannelInterruptFlags': 31788, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 9', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Assault the target's mind with Shadow energy, causing Shadow damage over $48156d and slowing the target to $15407s2% of their movement speed.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed slowed to $15407s2% of normal.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 6, 'SpellClassMask_1': 8388608, 'SpellLevel': 0, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0},
 )
 unbind_bonus_coefficients(mind_flay_58381)  # retires the stock spell_bonus_data row (58381, direct_bonus 0.257) that beat the generated potency coefficient (D1)
@@ -7948,7 +7963,7 @@ tentacle_mind_flay_200246 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=68.859, base_potency=0.0, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=51.851, base_potency=0.0, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
     ],
     spell_icon_id=548,
     notes="Priest Shadow rework (SHADOW.md (3,0) / ID map): the tentacle's own channeled Mind Flay "
@@ -7979,7 +7994,8 @@ tentacle_mind_flay_200246 = spell(
           'AttributesEx (67125252 - confirmed SPELL_ATTR1_IS_CHANNELED (0x4) already set) so the '
           "tentacle's channel generates no threat, matching the design doc's \"Generates no threat "
           'for the priest.\" spell_pri_tentacle_mind_flay (WP-B, AuraScript) hooks OnEffectPeriodic '
-          'for the 1-Madness-per-tick generation. dot bonus coefficient 0.257 -> 0.2313 (2026-10-08, DPS balance pass, user ruling: Shadow damage). dot bonus coefficient 0.2313 -> 0.2429 (2026-10-08, DPS balance pass, user ruling: Tentacle Mind Flay x1.05, round 10). dot bonus coefficient 0.2429 -> 0.2186 (2026-11-01, DPS balance pass 1031, user ruling: Mind Flay -10%). Converted 2026-11-01 (user ruling: Mind Flay fully potency-based) from the hand-set bonus_coefficients(dot=0.2186) to sp_potency=76.51 (periodic, 1 s tick: 76.51 / 100 / 3.5 = 0.2186, damage unchanged) with base_potency=0.0 so the base stays 0 and the damage stays fully coefficient-driven. sp_potency 76.51 -> 68.859 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Mind Flay Tentacle -10%).',
+          'for the 1-Madness-per-tick generation. dot bonus coefficient 0.257 -> 0.2313 (2026-10-08, DPS balance pass, user ruling: Shadow damage). dot bonus coefficient 0.2313 -> 0.2429 (2026-10-08, DPS balance pass, user ruling: Tentacle Mind Flay x1.05, round 10). dot bonus coefficient 0.2429 -> 0.2186 (2026-11-01, DPS balance pass 1031, user ruling: Mind Flay -10%). Converted 2026-11-01 (user ruling: Mind Flay fully potency-based) from the hand-set bonus_coefficients(dot=0.2186) to sp_potency=76.51 (periodic, 1 s tick: 76.51 / 100 / 3.5 = 0.2186, damage unchanged) with base_potency=0.0 so the base stays 0 and the damage stays fully coefficient-driven. sp_potency 76.51 -> 68.859 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Mind Flay Tentacle -10%).'
+          ' sp_potency 68.859 -> 51.851 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).',
     raw_overrides={'AttributesEx': 67126276, 'AttributesEx2': 524288, 'AttributesEx5': 134225920, 'AttributesEx6': 8388608, 'SpellVisualID_1': 12637, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'CastingTimeIndex': 1, 'SpellClassSet': 6, 'SpellLevel': 0, 'SpellClassMask_3': _masks.MIND_FLAY, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Assaults the target's mind with Shadow energy, causing Shadow damage over 3 sec.", 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
 )
 # SpellVisualID_1 12637 is stock Mind Flay's own channel visual (shared by 15407/17313/17314).

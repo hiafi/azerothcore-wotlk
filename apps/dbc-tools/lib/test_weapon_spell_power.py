@@ -37,6 +37,7 @@ from item_lib import budget, shapes  # noqa: E402  (on the path once test_item_v
 
 SP, SPI, INT, CRIT, STA = 45, 6, 5, 32, 7
 K = W.k_table(3.0)
+OFF = W.k_table(0.0)  # the feature off (the shipped constant is 7.5 since 2026-11-17)
 CASTER_ENTRY, UNDECLARED, PHYS_UNDECLARED, LITERAL_CASTER = 13964, 9001, 9002, 9003
 
 
@@ -99,9 +100,11 @@ def undeclared(tbl, owned=(), k=K, rows=None):
 
 class ConstantsTest(unittest.TestCase):
     def test_shipped_constants(self):
-        self.assertEqual(W.ONE_HAND_K, 0.0)
-        self.assertTrue(all(v == 0 for v in W.K_SP.values()))
-        self.assertFalse(W.enabled())
+        self.assertEqual(W.ONE_HAND_K, 7.5)  # user ruling 2026-11-17 after WS1
+        self.assertEqual(W.K_SP, W.k_table(7.5))
+        self.assertAlmostEqual(W.K_SP["two_hand"], 6.15)
+        self.assertEqual(W.K_SP["ranged"], 0.0)
+        self.assertTrue(W.enabled())
         self.assertEqual(W.SLOT_FACTORS, {"one_hand": 1.0, "two_hand": 0.82, "ranged": 0.0})
         self.assertEqual(W.k_table(4.0), {"one_hand": 4.0, "two_hand": 4.0 * 0.82, "ranged": 0.0})
         self.assertTrue(W.enabled(K))
@@ -113,7 +116,8 @@ class ConstantsTest(unittest.TestCase):
         self.assertEqual(W.coefficient(2, 26, 1.0, K, item_level=60), 0.0)  # a wand gets none
         self.assertEqual(W.coefficient(4, 13, 1.0, K, item_level=60), 0.0)  # not a weapon
         self.assertEqual(W.coefficient(2, 13, 0.0, K, item_level=60), 0.0)
-        self.assertEqual(W.coefficient(2, 13, 1.0, item_level=60), 0.0)  # the shipped constants
+        self.assertEqual(W.coefficient(2, 13, 1.0, item_level=60), 7.5)  # the shipped constants
+        self.assertEqual(W.coefficient(2, 13, 1.0, OFF, item_level=60), 0.0)
         # Rounded to 4 decimals (a FLOAT column read back as text): 3.4567 x 0.82 = 2.834494 -> 2.8345.
         self.assertEqual(W.coefficient(2, 17, 1.0, W.k_table(3.4567), item_level=60), 2.8345)
 
@@ -205,7 +209,7 @@ class EmitTest(unittest.TestCase):
     def test_budget_total_unchanged(self):
         tbl = tables()
         exp, on = run([caster()], k=K, tbl=tbl)
-        _, off = run([caster()], tbl=tbl)
+        _, off = run([caster()], k=OFF, tbl=tbl)
         self.assertEqual(on.errors, [])
         for on_rows, off_rows in zip(on.tiers, off.tiers):
             a, b = on_rows.breakdown, off_rows.breakdown
@@ -223,7 +227,7 @@ class EmitTest(unittest.TestCase):
 
     def test_k_zero_changes_nothing(self):
         items = [caster(), F.hammer()]
-        _, default = run(items)
+        _, default = run(items, k=OFF)
         _, zeros = run(items, k=W.k_table(0.0))
         self.assertEqual([t.row for t in default.tiers], [t.row for t in zeros.tiers])
         for tier_rows in default.tiers:
@@ -231,7 +235,7 @@ class EmitTest(unittest.TestCase):
             self.assertEqual(tier_rows.tier.itemization["spell_power_per_dps"], 0.0)
         # The caster keeps its budgeted Spell Power with the feature off.
         self.assertTrue(any(s == SP for t in default.tiers for s, _ in lines(t.row)))
-        result = undeclared(tables(), k=None)
+        result = undeclared(tables(), k=OFF)
         self.assertEqual((result.rows, result.covered, result.unclassifiable, result.notes), ([], [], [], []))
 
     def test_missing_column_reads_as_zero(self):
@@ -354,7 +358,7 @@ class UndeclaredTest(unittest.TestCase):
         tbl = tables()
         tbl["item_itemization"][(UNDECLARED,)]["spell_power_per_dps"] = 3.0  # a run with the feature on applied
         self.assertEqual(undeclared(tbl).rows, [])  # same constant: nothing changes
-        [row] = undeclared(tbl, k=None).rows  # the constant back at 0
+        [row] = undeclared(tbl, k=OFF).rows  # the constant back at 0
         self.assertEqual((row["entry"], row["spell_power_per_dps"]), (UNDECLARED, 0.0))
 
     def test_rendered_block(self):

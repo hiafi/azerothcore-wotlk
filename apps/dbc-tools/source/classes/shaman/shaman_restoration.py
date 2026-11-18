@@ -401,7 +401,7 @@ undulating_currents_heal_202663 = spell(
     id=202663, name='Undulating Currents', school=School.NATURE, attributes=0,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
     effects=[Effect(
-        type=EffectType.HEAL, sp_potency=30.0, potency_kind='heal', time_basis_ms=2000,
+        type=EffectType.HEAL, sp_potency=24.69, potency_kind='heal', time_basis_ms=2000,
         implicit_target_a=TARGET_UNIT_TARGET_CHAINHEAL_ALLY, chain_targets=3,
     )],
     spell_icon_id=ICON_CHAIN_HEAL,
@@ -414,7 +414,8 @@ undulating_currents_heal_202663 = spell(
           'other totem heals. Family d2 b23 (Kindling, Purification; never Healing Way, which covers CH d0 b8 only). '
           '2026-10-22 playtest fix pass (P4): SpellVisualID_1 3659 = Chain Heal 1064\'s, so the cast kit 3169 (SpellChainEffects 736) '
           'draws the beam from the casting totem to the primary and on to each jump (the client chains the beam through the SMSG_SPELL_GO '
-          'target list, which follows the rebuilt jump order); the impact kit 3170 plays on every target.',
+          'target list, which follows the rebuilt jump order); the impact kit 3170 plays on every target.'
+          ' sp_potency 30.0 -> 24.69 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Shaman x0.823).',
     raw_overrides=_raw(
         'Heals the target for {pot1} and jumps to 2 additional allies.', '', 50,
         DefenseType=1, PreventionType=1, AttributesEx2=ATTR2_IGNORE_LOS,
@@ -562,12 +563,12 @@ healing_tide_counter_202660 = _buff(
 )
 
 healing_tide_party_heal_202661 = _heal(
-    202661, 'Healing Tide Totem', 42.0, 2000, ICON_HEALING_STREAM, 20,
+    202661, 'Healing Tide Totem', 34.566, 2000, ICON_HEALING_STREAM, 20,
     'the Healing Tide Totem\'s heal in a 5-player party: Nature, 30 potency on the healing scale (T 2000, about 424 at '
     '60; the doc\'s +50% over Healing Stream\'s 20), d0 b13 (the Healing Stream heal bit: Improved Healing Stream '
     'reaches it). Cast by the 5672 passive branch of the Tide creature (caster = the totem, no owner GUID: no shaman '
     'proc rolls; it can crit) on the 10 most injured players when the owner is in a 5-player party (not a raid); a raid '
-    'uses 202271 (20). SpellLevel 20 = Healing Stream\'s. Potency 30.0 -> 42.0 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Resto Shaman option B, Healing Tide Totem +40%).',
+    'uses 202271 (20). SpellLevel 20 = Healing Stream\'s. Potency 30.0 -> 42.0 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Resto Shaman option B, Healing Tide Totem +40%). Potency 42.0 -> 34.566 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Shaman x0.823).',
     'Heals the target for {pot1}.',
     SpellClassMask_1=m.HEALING_STREAM_HEAL,
 )
@@ -648,12 +649,12 @@ cloudburst_release_202666 = spell(
 
 # ---- Torrent heal (Healing Rain's Riptide torrent; Restoration owns it) ---------------------------------------------------------
 torrent_heal_202667 = _heal(
-    202667, 'Torrent', 10.0, 1500, ICON_RIPTIDE, 30,
+    202667, 'Torrent', 8.23, 1500, ICON_RIPTIDE, 30,
     'the Healing Rain torrent (shared doc "Healing Rain"; replaces the 10-potency placeholder DUMMY, effect 3 of '
     '202283): Nature, 10 potency per target on the healing scale (T 1500, about 106 at 60), d2 b22 (Torrent, Healing '
     'Way, Purification, Tidal Mastery crit reach it). Cast triggered by the Riptide script at up to 5 most injured '
     'players in the shaman\'s own rain; AttributesEx3 SUPPRESS_CASTER_PROCS (it rolls none of the shaman\'s procs). '
-    'SpellLevel 30 = Healing Rain\'s learn level.',
+    'SpellLevel 30 = Healing Rain\'s learn level. Potency 10.0 -> 8.23 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Shaman x0.823).',
     'Heals the target for {pot1}.',
     SpellClassMask_3=m.TORRENT, AttributesEx3=ATTR3_SUPPRESS_CASTER_PROCS,
 )
@@ -748,10 +749,10 @@ tidal_force_echo_202674 = spell(
 
 # ---- Nature's Guardian capstone: the heal and the guaranteed-crit buff ------------------------------------------------------------
 natures_guardian_heal_202675 = _heal(
-    202675, 'Nature\'s Guardian', 100.0, 1500, ICON_NATURES_GUARDIAN, 40,
+    202675, 'Nature\'s Guardian', 82.3, 1500, ICON_NATURES_GUARDIAN, 40,
     'the Nature\'s Guardian capstone heal (3C Q4): Nature, 100 potency on the healing scale (T 1500, about 1,059 at 60 '
     '[tune]), self-cast by spell_sha_resto_nature_guardian (plain CastSpell, so potency applies and it can crit). Family '
-    'd2 b27 (MINOR_HEAL: Purification reaches it). SpellLevel 40 = the talent row\'s.',
+    'd2 b27 (MINOR_HEAL: Purification reaches it). SpellLevel 40 = the talent row\'s. Potency 100.0 -> 82.3 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Shaman x0.823).',
     'Heals you for {pot1}.',
     target=TARGET_UNIT_CASTER, SpellClassMask_3=m.MINOR_HEAL,
 )
@@ -775,11 +776,11 @@ procs_on(
 
 # ---- Totemic Focus capstone: the placement heal -----------------------------------------------------------------------------------
 totemic_focus_heal_202677 = _heal(
-    202677, 'Totemic Focus', 5.0, 1500, ICON_TOTEMIC_FOCUS, 10,
+    202677, 'Totemic Focus', 4.115, 1500, ICON_TOTEMIC_FOCUS, 10,
     'the Totemic Focus capstone heal: Nature, 5 potency per target on the healing scale (T 1500, about 53 at 60 '
     '[fixed]), cast by the placed totem 1 ms after the placement (TOTEMIC_FOCUS_DELAY_MS) at up to TOTEMIC_FOCUS_TARGETS '
     'injured players within TOTEMIC_FOCUS_RADIUS_YD (Heal::SelectMostInjured, players only). Caster = the totem (no '
-    'owner GUID, no shaman proc). Family d2 b27 (MINOR_HEAL: Purification reaches it). SpellLevel 10 = the talent row\'s.',
+    'owner GUID, no shaman proc). Family d2 b27 (MINOR_HEAL: Purification reaches it). SpellLevel 10 = the talent row\'s. Potency 5.0 -> 4.115 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Shaman x0.823).',
     'Heals the target for {pot1}.',
     SpellClassMask_3=m.MINOR_HEAL,
 )

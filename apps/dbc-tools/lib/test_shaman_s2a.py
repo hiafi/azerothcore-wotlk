@@ -122,11 +122,12 @@ HOT_TWIN_TALENTS = {"Healing Way": (29206, 29205, 29202), "Torrent": (30864, 308
 
 # id -> (total potency, T seconds or None, wanted own-mask bit as (dword index, bit value) or None)
 HEAL_POTENCY = {
-    TIDE_HEAL: (42.0, 2.0, (0, D0_HEALING_STREAM)),
-    UCT_HEAL: (30.0, 2.0, (2, D2_UNDULATING)),
-    TORRENT_HEAL: (10.0, 1.5, (2, D2_TORRENT)),
-    PLACEMENT_HEAL: (5.0, None, (2, D2_MINOR_HEAL)),
-    NG_HEAL: (100.0, None, (2, D2_MINOR_HEAL)),
+    # 2026-11-17 weapon scaling WS2 Restoration x0.823: 42.0 -> 34.566, 30.0 -> 24.69, 10.0 -> 8.23, 5.0 -> 4.115, 100.0 -> 82.3
+    TIDE_HEAL: (34.566, 2.0, (0, D0_HEALING_STREAM)),
+    UCT_HEAL: (24.69, 2.0, (2, D2_UNDULATING)),
+    TORRENT_HEAL: (8.23, 1.5, (2, D2_TORRENT)),
+    PLACEMENT_HEAL: (4.115, None, (2, D2_MINOR_HEAL)),
+    NG_HEAL: (82.3, None, (2, D2_MINOR_HEAL)),
 }
 POTENCY_EXCLUDED = (TIDAL_FORCE_ECHO, BULWARK_SHIELD, CLOUDBURST_RELEASE)
 
@@ -287,9 +288,10 @@ def check_riptide(rows: dict, entries: dict) -> list[str]:
         bad.append(f"{RIPTIDE}: SpellLevel {row.get('SpellLevel')}, expected 30")
     pots = _potencies(entry)
     if len(pots) != 2:
-        return bad + [f"{RIPTIDE}: {len(pots)} potency effects, expected direct 43 + periodic 5"]
+        return bad + [f"{RIPTIDE}: {len(pots)} potency effects, expected direct 35.389 + periodic 4.115"]
     (_, direct), (_, periodic) = pots
-    for label, pot, want, t in (("direct", direct, 43.0, 1.5), ("periodic", periodic, 5.0, 3.0)):
+    # 2026-11-17 weapon scaling WS2 Restoration x0.823: direct 43.0 -> 35.389, periodic 5.0 -> 4.115
+    for label, pot, want, t in (("direct", direct, 35.389, 1.5), ("periodic", periodic, 4.115, 3.0)):
         if pot.get("total_potency") != want:
             bad.append(f"{RIPTIDE}: {label} potency {pot.get('total_potency')!r}, expected {want}")
         if pot.get("t_seconds") != t:
@@ -845,8 +847,8 @@ class ShamanS2aNegativeTest(unittest.TestCase):
         self.assertEqual(check_forbidden_bits({202660: _row(202660, SpellClassMask_3=D2_TORRENT)}, [202660]), [])
 
     def _riptide(self, **over):
-        pot = {"total_potency": 43.0, "t_seconds": 1.5, "spell_level": 30}
-        per = {"total_potency": 5.0, "t_seconds": 3.0, "spell_level": 30}
+        pot = {"total_potency": 35.389, "t_seconds": 1.5, "spell_level": 30}
+        per = {"total_potency": 4.115, "t_seconds": 3.0, "spell_level": 30}
         entry = {"effect1": {"_potency": dict(pot, **over.get("d", {}))}, "effect2": {"_potency": dict(per, **over.get("p", {}))},
                  "duration_ms": over.get("dur", 15000)}
         return {RIPTIDE: _row(RIPTIDE, SpellLevel=over.get("lvl", 30))}, {RIPTIDE: entry}
@@ -966,7 +968,7 @@ class ShamanS2aNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_heal_rows({**rows, NG_HEAL: dict(rows[NG_HEAL], SpellClassMask_3=0)}, entries)), 1)
         bad = {**entries, TIDE_HEAL: {"effect1": {"_potency": {"total_potency": 20.0, "t_seconds": 2.0}}}}
         self.assertEqual(len(check_heal_rows(rows, bad)), 1)
-        bad_t = {**entries, UCT_HEAL: {"effect1": {"_potency": {"total_potency": 30.0, "t_seconds": 1.5}}}}
+        bad_t = {**entries, UCT_HEAL: {"effect1": {"_potency": {"total_potency": 24.69, "t_seconds": 1.5}}}}
         self.assertEqual(len(check_heal_rows(rows, bad_t)), 1)
         self.assertEqual(len(check_heal_rows(rows, {**entries, UCT_HEAL: {}})), 1)
         self.assertEqual(len(check_heal_rows({k: v for k, v in rows.items() if k != PLACEMENT_HEAL}, entries)), 1)
