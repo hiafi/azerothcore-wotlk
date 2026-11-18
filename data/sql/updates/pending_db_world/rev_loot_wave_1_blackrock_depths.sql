@@ -88,6 +88,30 @@ INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, 
 --    (rolls under either). A game object has the default loot mode 1, so a normal Dark Coffer gives the rare gem; the
 --    instance script sets mode 2 on the heroic Dark Coffer (`go->SetLootMode(LOOT_MODE_HARD_MODE_1)` in
 --    instance_blackrock_depths_rework.cpp OnGameObjectCreate, GO_DARK_COFFER), which swaps the rare gem for the epic.
+--    The two supply rolls share one pool, reference 1701101 (ids.yaml event_loot_reference), rolled twice (MaxCount 2
+--    on a reference row is the number of rolls): gameobject_loot_template's key is (Entry, Item), so the same item
+--    cannot sit in two groups of one chest. Its rows are LootMode 3 like the coffer row that rolls it.
+DELETE FROM `reference_loot_template` WHERE `Entry` = 1701101;
+INSERT INTO `reference_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`,
+    `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES
+(1701101, 13446, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Major Healing Potion'),
+(1701101, 13444, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Major Mana Potion'),
+(1701101, 13443, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Superior Mana Potion'),
+(1701101, 13442, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Mighty Rage Potion'),
+(1701101, 13455, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Greater Stoneshield Potion'),
+(1701101, 13452, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Elixir of the Mongoose'),
+(1701101, 13453, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Elixir of Brute Force'),
+(1701101, 9206, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Elixir of Giants'),
+(1701101, 13454, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Greater Arcane Elixir'),
+(1701101, 13447, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Elixir of the Sages'),
+(1701101, 13445, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Elixir of Superior Defense'),
+(1701101, 20007, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Mageblood Elixir'),
+(1701101, 10305, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Scroll of Protection IV'),
+(1701101, 10306, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Scroll of Spirit IV'),
+(1701101, 10307, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Scroll of Stamina IV'),
+(1701101, 10308, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Scroll of Intellect IV'),
+(1701101, 10309, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Scroll of Agility IV'),
+(1701101, 10310, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Scroll of Strength IV');
 DELETE FROM `gameobject_loot_template` WHERE `Entry` = 11103 AND `Item` NOT IN (11751, 11752, 11753);
 INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`,
     `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES
@@ -178,42 +202,7 @@ INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, 
 (11103, 13512, 0, 0, 0, 3, 4, 1, 1, 'Dark Coffer flask - Flask of Supreme Power'),
 (11103, 78820, 0, 0, 0, 3, 4, 1, 1, 'Dark Coffer flask - Flask of Might'),
 (11103, 78821, 0, 0, 0, 3, 4, 1, 1, 'Dark Coffer flask - Flask of Grace'),
-(11103, 13446, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Major Healing Potion'),
-(11103, 13444, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Major Mana Potion'),
-(11103, 13443, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Superior Mana Potion'),
-(11103, 13442, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Mighty Rage Potion'),
-(11103, 13455, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Greater Stoneshield Potion'),
-(11103, 13452, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Elixir of the Mongoose'),
-(11103, 13453, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Elixir of Brute Force'),
-(11103, 9206, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Elixir of Giants'),
-(11103, 13454, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Greater Arcane Elixir'),
-(11103, 13447, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Elixir of the Sages'),
-(11103, 13445, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Elixir of Superior Defense'),
-(11103, 20007, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Mageblood Elixir'),
-(11103, 10305, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Scroll of Protection IV'),
-(11103, 10306, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Scroll of Spirit IV'),
-(11103, 10307, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Scroll of Stamina IV'),
-(11103, 10308, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Scroll of Intellect IV'),
-(11103, 10309, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Scroll of Agility IV'),
-(11103, 10310, 0, 0, 0, 3, 5, 1, 1, 'Dark Coffer supplies (first) - Scroll of Strength IV'),
-(11103, 13446, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Major Healing Potion'),
-(11103, 13444, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Major Mana Potion'),
-(11103, 13443, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Superior Mana Potion'),
-(11103, 13442, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Mighty Rage Potion'),
-(11103, 13455, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Greater Stoneshield Potion'),
-(11103, 13452, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Elixir of the Mongoose'),
-(11103, 13453, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Elixir of Brute Force'),
-(11103, 9206, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Elixir of Giants'),
-(11103, 13454, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Greater Arcane Elixir'),
-(11103, 13447, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Elixir of the Sages'),
-(11103, 13445, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Elixir of Superior Defense'),
-(11103, 20007, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Mageblood Elixir'),
-(11103, 10305, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Scroll of Protection IV'),
-(11103, 10306, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Scroll of Spirit IV'),
-(11103, 10307, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Scroll of Stamina IV'),
-(11103, 10308, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Scroll of Intellect IV'),
-(11103, 10309, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Scroll of Agility IV'),
-(11103, 10310, 0, 0, 0, 3, 6, 1, 1, 'Dark Coffer supplies (second) - Scroll of Strength IV');
+(11103, 1701101, 1701101, 100, 0, 3, 0, 2, 2, 'Dark Coffer supplies - two rolls (reference 1701101)');
 UPDATE `gameobject_loot_template` SET `LootMode` = 3 WHERE `Entry` = 11103 AND `Item` IN (11751, 11752, 11753);
 
 -- 4. The chests' gold (gameobject_template_addon mingold / maxgold, copper): the Relic Coffer 10 to 50 gold, the Dark

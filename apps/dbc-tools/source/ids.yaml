@@ -217,6 +217,14 @@ crafting_loot_reference:
   start: 1701000
   end: 1701099
 
+# reference_loot_template entries of hand-written event loot (outside loot_reference, which boss_loot() owns whole).
+# 1701100 the Blackrock Depths Vault Treasure Bag gem pool (rolled once by bag 70620, twice by heroic bag 70623),
+# 1701101 the Dark Coffer supply pool (rolled twice by chest loot 11103).
+# Checked free 2026-11-18: no reference_loot_template row above 1701003 live.
+event_loot_reference:
+  start: 1701100
+  end: 1701199
+
 # spell_group ids for a brand-new DB-defined group (SpellMgr::LoadSpellGroups requires every
 # group id to be above SPELL_GROUP_DB_RANGE_MIN, 1000). See the "How the bounds were picked"
 # note above - this one wasn't picked in a vacuum either: 1200 leaves a clear gap above every

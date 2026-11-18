@@ -530,11 +530,24 @@ class GameObjectLootRevTest(unittest.TestCase):
         self.assertEqual(set(groups[(1, 1)]), self.RARE_CUTS)
         self.assertEqual(set(groups[(2, 2)]), self.EPIC_CUTS)
         # every other group rolls under either mode (3 = 1 | 2)
-        self.assertEqual(sorted(groups), [(1, 1), (2, 2), (3, 3), (4, 3), (5, 3), (6, 3)])
+        self.assertEqual(sorted(groups), [(0, 3), (1, 1), (2, 2), (3, 3), (4, 3)])
         self.assertEqual(set(groups[(3, 3)]), self.WEAPON_SCROLLS)
         self.assertEqual(set(groups[(4, 3)]), self.FLASKS)
-        self.assertEqual(groups[(5, 3)], groups[(6, 3)])  # the two supply rolls share the pool
-        self.assertEqual(set(groups[(5, 3)]), {row["item"] for row in self.rows[11105] if row["group"] == 2})
+        # the two supply rolls: one reference row rolled twice (the key is (Entry, Item): an item cannot sit in two
+        # groups of one chest), its pool the Relic Coffer's consumables at LootMode 3
+        ref = [row for row in self.rows[11103] if row["ref"]]
+        self.assertEqual([(r["item"], r["ref"], r["chance"], r["mode"], r["group"], r["min"], r["max"]) for r in ref],
+                         [(1701101, 1701101, 100, 3, 0, 2, 2)])
+        pool = self.rows[1701101]
+        self.assertEqual({row["item"] for row in pool}, {row["item"] for row in self.rows[11105] if row["group"] == 2})
+        self.assertEqual({(r["mode"], r["group"], r["chance"], r["min"], r["max"]) for r in pool}, {(3, 1, 0, 1, 1)})
+        self.assertIn("DELETE FROM `reference_loot_template` WHERE `Entry` = 1701101;", self.text)
+
+    def test_no_chest_lists_an_item_twice(self):
+        # item_loot_template / gameobject_loot_template / reference_loot_template are keyed (Entry, Item)
+        for entry, rows in self.rows.items():
+            items = [row["item"] for row in rows]
+            self.assertEqual(len(items), len(set(items)), entry)
 
     def test_the_dark_coffer_keeps_the_three_libram_quest_items(self):
         self.assertIn("DELETE FROM `gameobject_loot_template` WHERE `Entry` = 11103 AND `Item` NOT IN (11751, 11752, "

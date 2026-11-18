@@ -36,6 +36,7 @@ REPO_ROOT = TOOL_ROOT.parents[1]
 sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import crafting_gems_data as gems_data  # noqa: E402
+from lib import source  # noqa: E402
 from lib import test_id_blocks as id_blocks  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 
@@ -198,19 +199,19 @@ class EventItemsTest(unittest.TestCase):
         self.assertEqual(len(cuts), 37)
         first, last = self.table["RARE_CUT_FIRST"], self.table["RARE_CUT_LAST"]
         self.assertEqual([g["item"] for g in cuts], list(range(first, last + 1)))
-        loot = re.findall(r"^\((70620|70623), (\d+), 0, 0, 0, 1, (\d+), 1, 1, '", self.sql, re.M)
-        by_bag: dict[str, dict[int, list[int]]] = {}
-        for bag, item, group in loot:
-            by_bag.setdefault(bag, {}).setdefault(int(group), []).append(int(item))
-        self.assertEqual(sorted(by_bag["70620"]), [1])
-        self.assertEqual(sorted(by_bag["70623"]), [1, 2])
-        expected = [g["item"] for g in cuts]
-        for bag, groups in by_bag.items():
-            for group, items in groups.items():
-                self.assertEqual(items, expected, f"{bag} group {group}")
+        # one shared pool (reference 1701100), rolled once by the normal bag and twice by the heroic bag:
+        # item_loot_template's key is (Entry, Item), so a gem cannot sit in two groups of one bag
+        pool = [int(i) for i in re.findall(r"^\(1701100, (\d+), 0, 0, 0, 1, 1, 1, 1, '", self.sql, re.M)]
+        self.assertEqual(pool, [g["item"] for g in cuts])
+        refs = re.findall(r"^\((70620|70623), 1701100, 1701100, 100, 0, 1, 0, (\d), (\d), '", self.sql, re.M)
+        self.assertEqual(sorted(refs), [("70620", "1", "1"), ("70623", "2", "2")])  # MinCount = MaxCount
+        self.assertIsNone(re.search(r"^\((70620|70623), 707\d\d,", self.sql, re.M))
+        ids = source.load_ids(TOOL_ROOT / "source" / "ids.yaml")["event_loot_reference"]
+        self.assertTrue(ids["start"] <= 1701100 <= ids["end"])
         self.assertEqual(self.items[BAG]["gems"], 1)
         self.assertEqual(self.items[BAG_HEROIC]["gems"], 2)
         self.assertIn("DELETE FROM `item_loot_template` WHERE `Entry` IN (70620, 70623);", self.sql)
+        self.assertIn("DELETE FROM `reference_loot_template` WHERE `Entry` = 1701100;", self.sql)
 
     # --- the Cinder and the rope --------------------------------------------------------------------------------------
 
