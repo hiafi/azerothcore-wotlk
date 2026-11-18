@@ -424,7 +424,12 @@ public: /* PlayerScript */
     void OnPlayerApplyEnchantmentItemModsBefore(Player* player, Item* item, EnchantmentSlot slot, bool apply, uint32 enchant_spell_id, uint32& enchant_amount);
     void OnPlayerApplyWeaponDamage(Player* player, uint8 slot, ItemTemplate const* proto, float& minDamage, float& maxDamage, uint8 damageIndex);
     bool OnPlayerCanArmorDamageModifier(Player* player);
-    void OnPlayerGetFeralApBonus(Player* player, int32& feral_bonus, int32 dpsMod, ItemTemplate const* proto, ScalingStatValuesEntry const* ssv);
+    // Custom: + slot (weapon scaling, custom_weapon_scaling.cpp)
+    void OnPlayerGetFeralApBonus(Player* player, int32& feral_bonus, int32 dpsMod, ItemTemplate const* proto,
+        ScalingStatValuesEntry const* ssv, uint8 slot);
+    // Custom: weapon scaling, stage WSH (custom_weapon_scaling.cpp)
+    void OnPlayerGetWeaponRangedApBonus(Player* player, int32& ranged_ap, int32 dpsMod, ItemTemplate const* proto,
+        uint8 slot);
     bool OnPlayerCanApplyWeaponDependentAuraDamageMod(Player* player, Item* item, WeaponAttackType attackType, AuraEffect const* aura, bool apply);
     bool OnPlayerCanApplyEquipSpell(Player* player, SpellInfo const* spellInfo, Item* item, bool apply, bool form_change);
     bool OnPlayerCanApplyEquipSpellsItemSet(Player* player, ItemSetEffect* eff);

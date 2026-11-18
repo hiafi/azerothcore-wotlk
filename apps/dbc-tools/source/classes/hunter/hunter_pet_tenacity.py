@@ -170,7 +170,7 @@ def _cone(potency):
     """The F1 cone shape (Dazzling Wings, Lava Breath): cone damage (TargetA 104, 8 yd) and a DUMMY at the target that
     keeps the command's target as the spell's explicit target, the primary of spell_hun_command_aoe_falloff (which
     also puts a large primary back into the cone, F1 review MAJOR 1)."""
-    return [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=potency, potency_kind='direct',
+    return [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.pet_trim(potency), potency_kind='direct',
                    implicit_target_a=_TARGET_UNIT_CONE_ENEMY, radius_yards=_AREA_RADIUS_YD),
             Effect(type=EffectType.DUMMY, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)]
 
@@ -178,7 +178,7 @@ def _cone(potency):
 def _around_pet(potency):
     """Damage to the enemies within 8 yd of the pet (TargetA 22 / B 15) and the F1 DUMMY anchor at the target, the
     primary of spell_hun_command_aoe_falloff (which adds the primary back when the area misses it)."""
-    return [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=potency, potency_kind='direct',
+    return [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.pet_trim(potency), potency_kind='direct',
                    implicit_target_a=_TARGET_SRC_CASTER, implicit_target_b=_TARGET_UNIT_SRC_AREA_ENEMY,
                    radius_yards=_AREA_RADIUS_YD),
             Effect(type=EffectType.DUMMY, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)]
@@ -217,7 +217,9 @@ gore_command_201622 = _command(
     'from you and your pet.',
     notes='hunter-pet-families F2: Boar I. eff0 650 x0.84 = 546 Physical, eff1 TRIGGER_SPELL the owner-only debuff '
           '201665 (+4% Physical taken from the hunter and pet, 30 s; ruling 9: priced into this command by the sim). '
-          'Visual 6762 / icon 1578 from Gore 35290.',
+          'Visual 6762 / icon 1578 from Gore 35290.'
+          ' Effect 1 ap_potency 436.8 -> 303.1392 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 tusk_sweep_command_201623 = _command(
@@ -227,7 +229,8 @@ tusk_sweep_command_201623 = _command(
     'Sweep your tusks at the target and all enemies in a cone in front of your pet, causing {pot1} Physical damage.'
     + _FALLOFF_TEXT,
     notes='hunter-pet-families F2: Boar II, 800 x0.65 = 520 Physical, cone (TargetA 104) 8 yd + DUMMY anchor (the F1 '
-          'cone shape), spell_hun_command_aoe_falloff. Visual 189 (Swipe), icon 496 (Druid Swipe).',
+          'cone shape), spell_hun_command_aoe_falloff. Visual 189 (Swipe), icon 496 (Druid Swipe).'
+          ' Effect 1 ap_potency 416 -> 288.704 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
 )
 
 war_grunt_201762 = _utility(
@@ -268,7 +271,9 @@ snap_command_201624 = _command(
     376, 1680,
     'Snap at the target, causing {pot1} Physical damage.',
     notes='hunter-pet-families F2: Crocolisk I, 600 x0.84 = 504 Physical. Visual 376 (Bite), icon 1680 (Ferocious '
-          'Bite).',
+          'Bite).'
+          ' Effect 1 ap_potency 403.2 -> 279.8208 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 _DEATH_ROLL_MS = 3000
@@ -283,7 +288,8 @@ death_roll_command_201625 = _command(
           'channel bonus is in the 1300), PERIODIC_DAMAGE on the target, 1 s ticks (rate 422.5 per 1.5 s). '
           'AttributesEx 0x4 (channeled): Hunter::GetCommandCastFlags casts it without TRIGGERED_IGNORE_SET_FACING, so '
           'the pet keeps facing; the pet\'s melee stops while it channels (FE 10a). No ChannelInterruptFlags (stuns '
-          'and interrupts still break it). Visual 5287 (Bad Attitude), icon 1581 (Crocolisk).',
+          'and interrupts still break it). Visual 5287 (Bad Attitude), icon 1581 (Crocolisk).'
+          ' Effect 1 ap_potency 338 -> 234.572 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
 )
 
 ankle_crack_201763 = _utility(
@@ -328,7 +334,9 @@ snapping_bite_command_201626 = _command(
     376, 1680,
     'Snap your jaws on the target, causing {pot1} Physical damage.',
     notes='hunter-pet-families F2: Turtle I, 800 x0.84 = 672 Physical (800 = 600 + the AoE shift off Shell Spin, rule '
-          '15). Visual 376 (Bite), icon 1680 (Ferocious Bite).',
+          '15). Visual 376 (Bite), icon 1680 (Ferocious Bite).'
+          ' Effect 1 ap_potency 537.6 -> 373.0944 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 shell_spin_command_201627 = _command(
@@ -340,7 +348,8 @@ shell_spin_command_201627 = _command(
     notes='hunter-pet-families F2: Turtle II, 800 x0.65 = 520 Physical to the enemies within 8 yd of the pet (TargetA '
           '22 / B 15) + DUMMY anchor at the target, spell_hun_command_aoe_falloff. Visual 7425 (Shell Shield), icon '
           '347 '
-          '(Shell).',
+          '(Shell).'
+          ' Effect 1 ap_potency 416 -> 288.704 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
 )
 
 hardened_shell_201764 = _utility(
@@ -391,12 +400,14 @@ pincer_crush_command_201628 = _command(
     'Crush the target in your pincers, causing {pot1} Physical damage and rooting it for $201666d. The root does not '
     'work on bosses.',
     notes='hunter-pet-families F2: Crab I. eff0 800 x0.84 = 672 Physical, eff1 TRIGGER_SPELL the 2 s root 201666 '
-          '(boss-filtered on its own). Visual 5287 / icon 2679 from Pin 50245.',
+          '(boss-filtered on its own). Visual 5287 / icon 2679 from Pin 50245.'
+          ' Effect 1 ap_potency 537.6 -> 373.0944 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 bubble_burst_command_201629 = _command(
     201629, 'Bubble Burst',
-    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.command_potency(800, 'II', tenacity=True),
+    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.pet_trim(kits.command_potency(800, 'II', tenacity=True)),
             potency_kind='direct', implicit_target_a=_TARGET_DEST_TARGET_ENEMY,
             implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=_AREA_RADIUS_YD)],
     17, 193,
@@ -405,7 +416,8 @@ bubble_burst_command_201629 = _command(
     school=School.FROST,
     notes='hunter-pet-families F2: Crab II, 800 x0.65 = 520 Frost to the enemies within 8 yd of the target (TargetA '
           '53 / B 16: the target is the area\'s center and stays the explicit target, no anchor needed), '
-          'spell_hun_command_aoe_falloff. Visual 17 / icon 193 from Frost Nova 122.',
+          'spell_hun_command_aoe_falloff. Visual 17 / icon 193 from Frost Nova 122.'
+          ' Effect 1 ap_potency 416 -> 288.704 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
 )
 
 crippling_pinch_201765 = _utility(
@@ -451,7 +463,10 @@ stinger_command_201630 = _command(
     'Sting the target for {pot1} Nature damage and poison it for an additional {pot2.total} Nature damage over $d.',
     school=School.NATURE, duration_ms=_STINGER_MS,
     notes='hunter-pet-families F2: Scorpid I, Nature (one school per spell, F1\'s Sting). eff0 300 x0.84 = 252, eff1 '
-          '300 x0.84 = 252 over 6 s (rate 63, 2 s ticks). Visual 19 from Scorpid Poison 24640, icon 1585 (Scorpid).',
+          '300 x0.84 = 252 over 6 s (rate 63, 2 s ticks). Visual 19 from Scorpid Poison 24640, icon 1585 (Scorpid).'
+          ' Effect 1 ap_potency 201.6 -> 139.9104 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694). Effect 2 ap_potency 50.4 -> 34.9776 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling:'
+          ' BM x0.694).',
 )
 
 deadly_sting_command_201631 = _command(
@@ -464,7 +479,8 @@ deadly_sting_command_201631 = _command(
     school=School.NATURE,
     notes='hunter-pet-families F2: Scorpid II, 1000 x0.65 = 650 Nature. eff1 DUMMY naming Stinger 201630 '
           '(TriggerSpell): spell_hun_command_refresh resets the pet\'s Stinger on the target to its full duration '
-          '(PLAN §5.2 `refresh`). Visual 19 (Scorpid Poison), icon 1719 (Creature Poison).',
+          '(PLAN §5.2 `refresh`). Visual 19 (Scorpid Poison), icon 1719 (Creature Poison).'
+          ' Effect 1 ap_potency 520 -> 360.88 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
 )
 
 scorpid_poison_201766 = _utility(
@@ -512,7 +528,8 @@ thunderstomp_command_201632 = _command(
     + _FALLOFF_TEXT,
     notes='hunter-pet-families F2: Gorilla I, 500 x0.84 = 420 Physical (§3.2 marks no school: F1 decision 2) to the '
           'enemies within 8 yd of the pet + DUMMY anchor, spell_hun_command_aoe_falloff. Visual 7429 / icon 148 from '
-          'Thunderstomp 63900.',
+          'Thunderstomp 63900.'
+          ' Effect 1 ap_potency 336 -> 233.184 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
 )
 
 pound_command_201633 = _command(
@@ -521,7 +538,8 @@ pound_command_201633 = _command(
     166, 473,
     'Pound the target, causing {pot1} Physical damage.',
     notes='hunter-pet-families F2: Gorilla II, 1100 x0.65 = 715 Physical (1100 = 1000 + the AoE shift off '
-          'Thunderstomp). Visual 166 (Maul), icon 473 (Bash).',
+          'Thunderstomp). Visual 166 (Maul), icon 473 (Bash).'
+          ' Effect 1 ap_potency 572 -> 396.968 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
 )
 
 primal_might_201767 = _utility(
@@ -568,7 +586,9 @@ warp_strike_command_201634 = _command(
           'target '
           '(TargetA 1 / B 65, radius 2: Kill Command\'s teleport 201704 / Shadowstep), eff1 600 x0.84 = 504 Physical. '
           '25 yd (the jump commands\' reach); AttributesEx2 IGNORE_LOS as 201704 (CheckPetCanAct still checks LoS at '
-          'the press). Visual 263 (Warp / Blink), icon 1499 (Blink).',
+          'the press). Visual 263 (Warp / Blink), icon 1499 (Blink).'
+          ' Effect 2 ap_potency 403.2 -> 279.8208 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 phase_rend_command_201635 = _command(
@@ -578,7 +598,8 @@ phase_rend_command_201635 = _command(
     'Rend the target through the phases, causing {pot1} Arcane damage.',
     school=School.ARCANE,
     notes='hunter-pet-families F2: Warp Stalker II, 1000 x0.65 = 650 Arcane (melee DmgClass, the Venom Bite '
-          'precedent). Visual 7749 (Arcane Blast), icon 211 (Phase Shift).',
+          'precedent). Visual 7749 (Arcane Blast), icon 211 (Phase Shift).'
+          ' Effect 1 ap_potency 520 -> 360.88 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
 )
 
 time_warp_201768 = _utility(
@@ -633,7 +654,9 @@ burrow_attack_pulse_201667 = spell(
           'The commanded-spell carrier (Phoenix\'s Plume, Master\'s Command reach it), no kit slot (no Beast Cleave). '
           'Not SUPPRESS_CASTER_PROCS: the pulses are the command\'s only hits, procs per target hit like every AoE '
           'command. 30 yd so a pulse never fails its strict triggered range check. Visual 854 from Acid Spit 55749.'
-          + kits.RULING_23B_NOTE,
+          + kits.RULING_23B_NOTE
+          + ' Effect 1 ap_potency 112 -> 77.728 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
     raw_overrides={**_cmd_raw(854), 'SpellIconID': 636},
 )
 
@@ -659,7 +682,8 @@ devour_command_201637 = _command(
     376, 166,
     'Devour the target, causing {pot1} Physical damage.',
     notes='hunter-pet-families F2: Worm II, 1100 x0.65 = 715 Physical (1100 = 1000 + the AoE shift off Burrow Attack). '
-          'Visual 376 (Bite), icon 166 (Devour).',
+          'Visual 376 (Bite), icon 166 (Devour).'
+          ' Effect 1 ap_potency 572 -> 396.968 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
 )
 
 earthen_bulwark_201769 = _utility(
@@ -706,7 +730,9 @@ horn_charge_command_201638 = _command(
     range_yards=25.0, melee_range_index=False,
     notes='hunter-pet-families F2: Rhino I, the Lunge 201720 shape: eff0 JUMP (41) to the target, eff1 800 x0.84 = '
           '672 Physical (800 = 600 + the AoE shift off Stampede). 25 yd, DmgClass MELEE. Visual 519 (pet Charge), icon '
-          '457 (Charge).',
+          '457 (Charge).'
+          ' Effect 2 ap_potency 537.6 -> 373.0944 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
 )
 
 stampede_command_201639 = _command(
@@ -716,7 +742,8 @@ stampede_command_201639 = _command(
     'Trample the target and all enemies in a cone in front of your pet, causing {pot1} Physical damage.'
     + _FALLOFF_TEXT,
     notes='hunter-pet-families F2: Rhino II, 800 x0.65 = 520 Physical, the F1 cone shape (104, 8 yd + DUMMY anchor), '
-          'spell_hun_command_aoe_falloff. Visual 9248 / icon 3066 from Stampede 57386.',
+          'spell_hun_command_aoe_falloff. Visual 9248 / icon 3066 from Stampede 57386.'
+          ' Effect 1 ap_potency 416 -> 288.704 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
 )
 
 horn_of_the_herd_201770 = _utility(

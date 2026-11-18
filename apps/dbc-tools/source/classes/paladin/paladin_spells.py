@@ -87,11 +87,11 @@ holy_light_635 = spell(
     mana_cost_pct=29,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=108.675, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=95.74267, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=70,
     tooltip_vars=holy_heal_tooltip,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 13 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=135.0 (paladin-potency-proposals.txt, user value; was 207.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: sp_potency 150 -> 135 (2,383 at 60); description {pot1} -> {pot1*hl} (entry 1105 owned by paladin_holy_spells.py). sp_potency 135 -> 94.5 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Holy Light healing -30%). sp_potency 94.5 -> 108.675 (2026-11-01, DPS balance pass 1031 round T2, user ruling: Holy Light healing +15%).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 13 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=135.0 (paladin-potency-proposals.txt, user value; was 207.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: sp_potency 150 -> 135 (2,383 at 60); description {pot1} -> {pot1*hl} (entry 1105 owned by paladin_holy_spells.py). sp_potency 135 -> 94.5 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Holy Light healing -30%). sp_potency 94.5 -> 108.675 (2026-11-01, DPS balance pass 1031 round T2, user ruling: Holy Light healing +15%). Effect 1 sp_potency 108.675 -> 95.74267 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Paladin x0.881).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 20, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1*hl}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2147483648, 'SpellClassSet': 10, 'SpellLevel': 1, 'SpellVisualID_1': 2936, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -365,11 +365,11 @@ flash_of_light_19750 = spell(
     mana_cost_pct=7,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=90.0, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=79.29, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=242,
     tooltip_vars=holy_heal_tooltip,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=90.0 (paladin-potency-proposals.txt, user value; was 52.7 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: sp_potency 75 -> 90 (953 at 60); description {pot1*hl} (entry 1105 owned by paladin_holy_spells.py).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=90.0 (paladin-potency-proposals.txt, user value; was 52.7 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: sp_potency 75 -> 90 (953 at 60); description {pot1*hl} (entry 1105 owned by paladin_holy_spells.py). Effect 1 sp_potency 90.0 -> 79.29 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Paladin x0.881).',
     raw_overrides={'AttributesEx6': 33554432, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1*hl}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 10, 'SpellLevel': 20, 'SpellVisualID_1': 6623, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

@@ -412,6 +412,12 @@ namespace Hunter
     // (the hunter and that pet benefit, nothing else it owns) and the damage is Physical, else 1. Read live per hit
     // from the HunterUnitScript spell, melee and periodic hooks (the Feral Shredded Defense pattern).
     float GetPetFamilyTakenMultiplier(Unit const* target, Unit const* attacker, SpellSchoolMask schoolMask);
+
+    // Weapon scaling (.agents/plans/weapon-scaling, stage WSH): WeaponScaling.RangedApPerDps, set once at startup by
+    // src/server/scripts/Custom/custom_weapon_scaling.cpp (0, or NaN/negative, means off: stock behaviour). Above 0 a
+    // hunter's ranged-slot weapon gives ranged attack power: k x (weapon DPS + heirloom DPS bonus), rounded.
+    void SetWeaponRangedApPerDps(float perDps);
+    float GetWeaponRangedApPerDps();
 }
 
 #endif

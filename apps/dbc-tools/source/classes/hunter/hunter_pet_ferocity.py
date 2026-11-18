@@ -188,7 +188,10 @@ rend_flesh_command_201606 = _command(
     duration_ms=_REND_FLESH_MS,
     notes='hunter-pet-families F1: Carrion Bird I. eff0 150 x0.84 = 126 direct, eff1 bleed 250 x0.84 = 210 over 9 s '
           '(rate 35 per 1.5 s, 3 s ticks), Mechanic 15. Visual 372 from Rend 772, icon 500 (Rupture).'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(150, 'I'), kits.command_potency(250, 'I')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(150, 'I'), kits.command_potency(250, 'I'))
+          + ' Effect 1 ap_potency 134.82 -> 93.5651 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694). Effect 2 ap_potency 37.45 -> 25.9903 (2026-11-17, weapon scaling WSH2 Normal trim, user'
+            ' ruling: BM x0.694).',
 )
 
 carrion_feast_command_201607 = _command(
@@ -198,7 +201,9 @@ carrion_feast_command_201607 = _command(
     'Feast on the target, causing {pot1} Physical damage.' + _EXECUTE_TEXT,
     notes='hunter-pet-families F1: Carrion Bird II. 800 x0.65 = 520 Physical; spell_hun_command_execute adds 50% '
           'below 35% target health (FE 10g). Visual 2275 from Ravage 6785, icon 116 (Carrion Swarm).'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(800, 'II')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(800, 'II'))
+          + ' Effect 1 ap_potency 556.4 -> 386.1416 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 demoralizing_screech_201754 = _utility(
@@ -267,14 +272,18 @@ tendon_rip_command_201608 = _command(
     duration_ms=_TENDON_RIP_MS,
     notes='hunter-pet-families F1: Hyena I. eff0 400 x0.84 = 336 Physical, eff1 -50% speed 6 s (Mechanic 11, free per '
           'ruling 3). Visual 842 / icon 138 from Tendon Rip 50271.'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(400, 'I')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(400, 'I'))
+          + ' Effect 1 ap_potency 359.52 -> 249.5069 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 cackling_frenzy_strike_201660 = _helper_strike(
     201660, 'Cackling Frenzy', kits.command_potency(333, 'II', ferocity=True, single_target=True), 376,
     notes='hunter-pet-families F1: Cackling Frenzy follow-up bite (command helper). 333 x0.65 = 216.45 Physical, cast '
           'twice by spell_hun_command_multihit after the command\'s own bite. Visual 376 from Bite 17253.'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(333, 'II')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(333, 'II'))
+          + ' Effect 1 ap_potency 231.6015 -> 160.7314 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 _CACKLING_FRENZY_HITS = 3
@@ -287,7 +296,9 @@ cackling_frenzy_command_201609 = _command(
     notes='hunter-pet-families F1: Hyena II, 3 x 333 (x0.65 = 216.45 each). eff0 the first bite, eff1 DUMMY: '
           'spell_hun_command_multihit casts 201660 twice, COMMAND_MULTIHIT_INTERVAL_MS apart. Visual 376 from Bite, '
           'icon 1565 (Hyena).'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(333, 'II')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(333, 'II'))
+          + ' Effect 1 ap_potency 231.6015 -> 160.7314 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 cackling_howl_201755 = _utility(
@@ -332,7 +343,9 @@ leaping_kick_command_201610 = _command(
     range_yards=25.0, melee_range_index=False,
     notes='hunter-pet-families F1: Tallstrider I, the Lunge 201720 shape: eff0 JUMP (41) to the target, eff1 400 x0.84 '
           '= 336 Physical. 25 yd (the jump reach), DmgClass MELEE. Visual 519 (pet Charge), icon 246 (Kick).'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(400, 'I')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(400, 'I'))
+          + ' Effect 2 ap_potency 359.52 -> 249.5069 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 stampeding_kick_command_201611 = _command(
@@ -342,7 +355,9 @@ stampeding_kick_command_201611 = _command(
     'Kick the target with great force, causing {pot1} Physical damage.',
     notes='hunter-pet-families F1: Tallstrider II, 1000 x0.65 = 650 Physical, no knockback (it would push the mob off '
           'the tank). Visual 90 from Kick 1766, icon 1587 (Tallstrider).'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(1000, 'II')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(1000, 'II'))
+          + ' Effect 1 ap_potency 695.5 -> 482.677 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 dust_cloud_201756 = _utility(
@@ -390,13 +405,15 @@ serenity_dust_command_201612 = _command(
     'Shake dust over the target, causing {pot1} Physical damage.',
     notes='hunter-pet-families F1: Moth I, 600 x0.84 = 504 Physical (600 = 400 + the 20% the AoE shift moved off '
           'Dazzling Wings, rule 15). Visual 8529 / icon 1714 from Serenity Dust 50318.'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(600, 'I')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(600, 'I'))
+          + ' Effect 1 ap_potency 539.28 -> 374.2603 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 dazzling_wings_command_201613 = _command(
     201613, 'Dazzling Wings',
-    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.command_potency(800, 'II'), potency_kind='direct',
-            implicit_target_a=_TARGET_UNIT_CONE_ENEMY, radius_yards=8.0),
+    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.pet_trim(kits.command_potency(800, 'II')),
+            potency_kind='direct', implicit_target_a=_TARGET_UNIT_CONE_ENEMY, radius_yards=8.0),
      Effect(type=EffectType.DUMMY, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     4961, 1618,
     'Beat dazzling wings at the target and all enemies in a cone in front of your pet, causing {pot1} Physical '
@@ -404,7 +421,8 @@ dazzling_wings_command_201613 = _command(
     notes='hunter-pet-families F1: Moth II, 800 x0.65 = 520 Physical, cone (TargetA 104) 8 yd. eff1 DUMMY on the '
           'target keeps the command\'s target as the spell\'s explicit target (a cone-only spell drops it, CORE-AUDIT '
           '2.2), which spell_hun_command_aoe_falloff reads as the primary; the dispatcher turns the pet to it first. '
-          'Visual 4961 / icon 1618 from Wing Buffet 18500.',
+          'Visual 4961 / icon 1618 from Wing Buffet 18500.'
+          ' Effect 1 ap_potency 520 -> 360.88 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
 )
 
 moonglow_dust_201757 = _utility(
@@ -454,14 +472,19 @@ sting_command_201614 = _command(
     school=School.NATURE, duration_ms=_STING_MS,
     notes='hunter-pet-families F1: Wasp I, Nature (the Venom Bite 201728 shape: one school per spell). eff0 150 x0.84 '
           '= 126, eff1 250 x0.84 = 210 over 6 s (rate 52.5, 2 s ticks). Visual 192 / icon 110 from Sting 56626.'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(150, 'I'), kits.command_potency(250, 'I')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(150, 'I'), kits.command_potency(250, 'I'))
+          + ' Effect 1 ap_potency 134.82 -> 93.5651 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694). Effect 2 ap_potency 56.175 -> 38.9854 (2026-11-17, weapon scaling WSH2 Normal trim, user'
+            ' ruling: BM x0.694).',
 )
 
 swarm_strike_201661 = _helper_strike(
     201661, 'Swarm', kits.command_potency(200, 'II', ferocity=True, single_target=True), 192,
     notes='hunter-pet-families F1: Swarm follow-up sting (command helper). 200 x0.65 = 130 Physical, cast four times '
           'by spell_hun_command_multihit after the command\'s own sting. Visual 192 from Sting 56626.'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(200, 'II')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(200, 'II'))
+          + ' Effect 1 ap_potency 139.1 -> 96.5354 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 _SWARM_HITS = 5
@@ -473,7 +496,9 @@ swarm_command_201615 = _command(
     _multi_hit_text('Sting', _SWARM_HITS, '{pot1}', 'sting'),
     notes='hunter-pet-families F1: Wasp II, 5 x 200 (x0.65 = 130 each). eff0 the first sting, eff1 DUMMY: '
           'spell_hun_command_multihit casts 201661 four times. Visual 192 (Sting), icon 1771 (Insect Swarm).'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(200, 'II')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(200, 'II'))
+          + ' Effect 1 ap_potency 139.1 -> 96.5354 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 venomous_sting_201758 = _utility(
@@ -517,7 +542,9 @@ monstrous_bite_command_201616 = _command(
     'Bite the target, causing {pot1} Physical damage.',
     notes='hunter-pet-families F1: Devilsaur I, 400 x0.84 = 336 Physical. Visual 376 / icon 599 from Monstrous Bite '
           '54680.'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(400, 'I')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(400, 'I'))
+          + ' Effect 1 ap_potency 359.52 -> 249.5069 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 primal_rampage_command_201617 = _command(
@@ -527,7 +554,9 @@ primal_rampage_command_201617 = _command(
     'Maul the target in a primal rage, causing {pot1} Physical damage.',
     notes='hunter-pet-families F1: Devilsaur II, 1000 x0.65 = 650 Physical. Visual 166 (Maul 6807), icon 2006 '
           '(Rampage).'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(1000, 'II')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(1000, 'II'))
+          + ' Effect 1 ap_potency 695.5 -> 482.677 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 primal_roar_201759 = _utility(
@@ -565,8 +594,8 @@ earthshaking_stomp_201992 = _utility(
 _LAVA_BREATH_MS = 6000
 lava_breath_command_201618 = _command(
     201618, 'Lava Breath',
-    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.command_potency(300, 'I'), potency_kind='direct',
-            implicit_target_a=_TARGET_UNIT_CONE_ENEMY, radius_yards=8.0),
+    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.pet_trim(kits.command_potency(300, 'I')),
+            potency_kind='direct', implicit_target_a=_TARGET_UNIT_CONE_ENEMY, radius_yards=8.0),
      Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=_TARGET_UNIT_CONE_ENEMY,
             apply_aura=AuraType.MOD_DECREASE_SPEED, mechanic=_MECHANIC_SNARE, radius_yards=8.0),
      Effect(type=EffectType.DUMMY, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
@@ -576,14 +605,17 @@ lava_breath_command_201618 = _command(
     school=School.FIRE, duration_ms=_LAVA_BREATH_MS,
     notes='hunter-pet-families F1: Core Hound I, 300 x0.84 = 252 Fire, cone (TargetA 104) 8 yd, eff1 -50% speed 6 s on '
           'the same cone (Mechanic 11, free). eff2 DUMMY on the target keeps it the explicit target, the primary of '
-          'spell_hun_command_aoe_falloff (Dazzling Wings shape). Visual 8489 / icon 1197 from Lava Breath 58604.',
+          'spell_hun_command_aoe_falloff (Dazzling Wings shape). Visual 8489 / icon 1197 from Lava Breath 58604.'
+          ' Effect 1 ap_potency 252 -> 174.888 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
 )
 
 twin_bite_second_bite_201662 = _helper_strike(
     201662, 'Twin Bite', kits.command_potency(550, 'II', ferocity=True, single_target=True), 376,
     notes='hunter-pet-families F1: Twin Bite second bite (command helper, the twohit shape). 550 x0.65 = 357.5 '
           'Physical, cast once by spell_hun_command_multihit after 201619. Visual 376 from Bite 17253.'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(550, 'II')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(550, 'II'))
+          + ' Effect 1 ap_potency 382.525 -> 265.4723 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 twin_bite_command_201619 = _command(
@@ -596,7 +628,9 @@ twin_bite_command_201619 = _command(
           'with one follow-up (F1 review MINOR 1: the second bite rolls its own hit, 300 ms after the cast): eff0 the '
           'first bite, eff1 DUMMY naming 201662. One school and one direct coefficient per spell (D6); F3 Chimaera '
           'reuses the shape with a Nature second bite. Visual 376 (Bite), icon 2108 (Blade Twisting).'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(550, 'II')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(550, 'II'))
+          + ' Effect 1 ap_potency 382.525 -> 265.4723 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 ancient_hysteria_201760 = _utility(
@@ -641,7 +675,9 @@ spirit_strike_command_201620 = _command(
     school=School.NATURE,
     notes='hunter-pet-families F1: Spirit Beast I, 400 x0.84 = 336 Nature (melee DmgClass, the Venom Bite precedent). '
           'Visual 1263 / icon 225 from Spirit Strike 61193.'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(400, 'I')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(400, 'I'))
+          + ' Effect 1 ap_potency 359.52 -> 249.5069 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 spirit_pounce_command_201621 = _command(
@@ -651,7 +687,9 @@ spirit_pounce_command_201621 = _command(
     'Pounce on the target, causing {pot1} Physical damage.',
     notes='hunter-pet-families F1: Spirit Beast II, 1000 x0.65 = 650 Physical. Visual 3942 (Pounce 9005), icon 67 '
           '(Spirit Wolf).'
-          + kits.ruling_24_note('Ferocity', kits.command_potency(1000, 'II')),
+          + kits.ruling_24_note('Ferocity', kits.command_potency(1000, 'II'))
+          + ' Effect 1 ap_potency 695.5 -> 482.677 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+            ' x0.694).',
 )
 
 eternal_guardian_rebirth_202017 = spell(

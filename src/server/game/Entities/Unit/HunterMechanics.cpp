@@ -2899,4 +2899,21 @@ namespace Hunter
         for (uint32 spellId : spellIds)
             ReduceSpellCooldown(player, spellId, ms);
     }
+
+    namespace
+    {
+        // WeaponScaling.RangedApPerDps; written once at startup (OnAfterConfigLoad), before any map update.
+        float WeaponRangedApPerDps = 0.0f;
+    }
+
+    void SetWeaponRangedApPerDps(float perDps)
+    {
+        // `perDps > 0.0f` is false for NaN too
+        WeaponRangedApPerDps = perDps > 0.0f ? perDps : 0.0f;
+    }
+
+    float GetWeaponRangedApPerDps()
+    {
+        return WeaponRangedApPerDps;
+    }
 }

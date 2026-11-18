@@ -157,10 +157,11 @@ def _weapon_percent(effect: dict) -> int:
 # class -> (spell id, expected (effect index, weapon percent) list); every one must also be free of S3 findings.
 # Percents follow the DPS balance pass 10-31 user rulings: Lava Lash 220 (154 +40%, 169 +10%, 220 +30%), Stormstrike and its copies 140 (+40%),
 # Riposte 683 (+250% then +30%), Plague Strike 54 (+10%).
+# Fury Swipe 200429: 310 -> 240 (2026-11-17, weapon scaling WS2 Normal trim, Bear DPS x0.774).
 PERCENTS = {
-    "hunter": {2643: [(1, 100)]},
-    "shaman": {60103: [(0, 220)], 32175: [(0, 210)], 32176: [(0, 210)], 202413: [(0, 140)], 202415: [(0, 140)]},
-    "druid": {200429: [(0, 310)]},
+    "hunter": {2643: [(1, 66)]},   # 100 -> 66 (2026-11-17, weapon scaling WSH2 Normal trim, MM x0.664)
+    "shaman": {60103: [(0, 266)], 32175: [(0, 254)], 32176: [(0, 254)], 202413: [(0, 140)], 202415: [(0, 140)]},
+    "druid": {200429: [(0, 240)]},
     "warlock": {30213: [(0, 100)]},
     "warrior": {20240: [(0, 100)]},
     "rogue": {14251: [(0, 683)], 51675: [(1, 50)], 51677: [(1, 100)], 51723: [(0, 250)], 52874: [(0, 250)]},
@@ -188,8 +189,10 @@ class MigratedStrikesTest(unittest.TestCase):
     def test_flat_parts_keep_their_level_60_values(self):
         # (class, spell, effect index, the old hand-set level-60 value, tolerance)
         for class_name, spell_id, index, old, tolerance in (
-            ("hunter", 2643, 0, 275, 1.5),          # bp 0 + int(42 x 6.5645); a direct sp_potency 103
-            ("warlock", 30213, 1, 62, 1.5),         # bp 31 + int(10 x 3.0667) + 1; sp_potency 23.2
+            # hunter: was 275 (bp 0 + int(42 x 6.5645); a direct sp_potency 103); sp_potency 68.392 after WSH2 MM x0.664
+            # (2026-11-17)
+            ("hunter", 2643, 0, 182.7, 1.5),
+            ("warlock", 30213, 1, 50.4, 1.5),       # was 62 (bp 31 + int(10 x 3.0667) + 1, sp_potency 23.2); sp_potency 19.024 after WS2 Demonology x0.82 (2026-11-17)
             ("deathknight", 45462, 0, 151, 1.5),    # bp 9 + int(59 x 2.3899) + 1; sp_potency 56.4
         ):
             effect = _package(class_name)[spell_id][f"effect{index + 1}"]

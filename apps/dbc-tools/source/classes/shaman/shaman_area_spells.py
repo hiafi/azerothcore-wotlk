@@ -109,7 +109,7 @@ HEALING_RAIN_TARGETS = const(
 earthquake_tick_202281 = spell(
     id=202281, name='Earthquake', school=School.NATURE, attributes=0,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=21.5, potency_kind='direct', time_basis_ms=1000,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=16.985, potency_kind='direct', time_basis_ms=1000,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_EARTHQUAKE,
     notes='SH0b A5, shared doc "Earthquake": the per-target tick, never player-cast (no SkillLineAbility, no trainer). '
@@ -123,7 +123,8 @@ earthquake_tick_202281 = spell(
           'rides on the Spell); spell_sha_earthquake_tick scales the hit by it in OnHit (x3.0 at 5 enemies, x1.0 alone; was x2.0 with 25). '
           'EARTHQUAKE_EXTRA_ENEMY_PCT 25 -> 50 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Elemental option C, '
           'Earthquake +25% -> +50% per extra enemy). '
-          'A cast of the tick from anywhere else carries 0 there and is not scaled.',
+          'A cast of the tick from anywhere else carries 0 there and is not scaled.'
+          ' sp_potency 21.5 -> 16.985 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Elemental x0.79).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_3': m.EARTHQUAKE, 'DefenseType': _DMG_MAGIC,
         'EquippedItemClass': -1, 'SpellLevel': 38, 'CastingTimeIndex': 1,
@@ -178,7 +179,7 @@ scripted_by(earthquake_tick_202281, 'spell_sha_earthquake_tick')
 elemental_blast_202282 = spell(
     id=202282, name='Elemental Blast', school=School.FIRE | School.FROST | School.NATURE, attributes=0,
     cast_time_ms=0, cooldown_ms=12000, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=6, range_yards=40.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=120.4, potency_kind='direct', time_basis_ms=1500,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=95.116, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_ELEMENTAL_BLAST,
     notes='SH0b A5, shared doc "Elemental Blast": instant, SchoolMask 0x1C (Fire 4 + Frost 16 + Nature 8: counts as '
@@ -186,7 +187,8 @@ elemental_blast_202282 = spell(
           '< 30 s), 40 yd, 6% base mana (was 8%; user playtest fix pass 2026-10-22, P1), GCD 1500 / 133 (an explicit spell-GCD like Lava Burst, brief decision 4), '
           'd2 b20 (no d0 b0 / b1, d1 b12). Speed 24 and SpellVisualID 11565 = Lava Burst\'s missile and impact (a '
           'lightning-impact clone of 11565 in the 90131+ block is the V stage). SpellLevel 50. Icon 1930 is a '
-          'placeholder (the 3.3.5 client has no Elemental Blast icon). Effect 1 sp_potency 43 -> 86 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Elemental Blast +100%). sp_potency 86 -> 120.4 (2026-11-15, balance on the Normal-tier kits, user ruling: Elemental Blast +40%).',
+          'placeholder (the 3.3.5 client has no Elemental Blast icon). Effect 1 sp_potency 43 -> 86 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Elemental Blast +100%). sp_potency 86 -> 120.4 (2026-11-15, balance on the Normal-tier kits, user ruling: Elemental Blast +40%).'
+          ' sp_potency 120.4 -> 95.116 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Elemental x0.79).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_3': m.ELEMENTAL_BLAST, 'DefenseType': _DMG_MAGIC,
         'PreventionType': 1, 'EquippedItemClass': -1, 'SpellLevel': 50, 'CastingTimeIndex': 1,
@@ -208,13 +210,14 @@ elemental_blast_202282 = spell(
 healing_rain_heal_202284 = spell(
     id=202284, name='Healing Rain', school=School.NATURE, attributes=0,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
-    effects=[Effect(type=EffectType.HEAL, sp_potency=5.0, potency_kind='heal', time_basis_ms=2000,
+    effects=[Effect(type=EffectType.HEAL, sp_potency=4.115, potency_kind='heal', time_basis_ms=2000,
                     implicit_target_a=_TARGET_UNIT_TARGET_ALLY)],
     spell_icon_id=_ICON_HEALING_RAIN,
     notes='SH0b A5, shared doc "Healing Rain": the per-target pulse heal, never player-cast (no SkillLineAbility, no '
           'trainer). Nature HEAL on TARGET_UNIT_TARGET_ALLY, sp_potency 5 heal, T 2000, SpellLevel 30, d2 b21 '
           '(Ancestral Awakening / Healing Way hook here later). range_yards 50000 (= RangeIndex 13 as the P0 202776; '
-          'L6). The Healing Rain script reads it live each pulse. AttributesEx2 0x4 is set (see 202281): the script picks targets from the ring.',
+          'L6). The Healing Rain script reads it live each pulse. AttributesEx2 0x4 is set (see 202281): the script picks targets from the ring.'
+          ' sp_potency 5.0 -> 4.115 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Shaman x0.823).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_3': m.HEALING_RAIN, 'DefenseType': _DMG_MAGIC,
         'EquippedItemClass': -1, 'SpellLevel': 30, 'CastingTimeIndex': 1, 'AttributesEx2': 0x4,

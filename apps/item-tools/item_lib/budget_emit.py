@@ -26,7 +26,7 @@ from .emit import _guard_term, _new_pending_path, _quote_value, _wrap_comment
 ITEMIZATION_COLUMNS = (
     "entry", "budget_mult", "stamina_delta", "dps_delta", "absorbed_spell_slots",
     "armor_delta", "primary_shape_id", "secondary_shape_id", "primary_share",
-    "block_value_delta",
+    "block_value_delta", "spell_power_per_dps",
 )
 
 

@@ -89,7 +89,7 @@ def fixture_tables() -> dict:
     t["item_itemization"] = {(5192,): {
         "entry": 5192, "budget_mult": 0.718, "stamina_delta": 2, "dps_delta": -0.5, "absorbed_spell_slots": 0,
         "armor_delta": 0, "primary_shape_id": 23, "secondary_shape_id": 47, "primary_share": 10000,
-        "block_value_delta": 0,
+        "block_value_delta": 0, "spell_power_per_dps": 0.0,
     }}
     return t
 

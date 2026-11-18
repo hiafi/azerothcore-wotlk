@@ -87,6 +87,7 @@ from lib import gcd_haste, header_gen, potency_sheet, spell_tables, superseded_r
 from lib import sqlcorpus, stale_overlay, trainer_pricing, trainer_state  # noqa: E402
 from lib import dungeon_checks, dungeon_heroic, heroic_templates, item_emit, item_ids, item_variants  # noqa: E402
 from lib import item_key_refs  # noqa: E402
+from lib import weapon_spell_power  # noqa: E402
 from lib import lfg_dungeons as lfg_finder  # noqa: E402
 from lib import loot_tables  # noqa: E402
 from lib import item_labels  # noqa: E402
@@ -1594,6 +1595,19 @@ def _run(
         item_entries, dbc_errors = item_emit.merge_dbc_entries(item_entries, item_emission)
         item_expansion.errors += dbc_errors
         dsl_classes["item_templates"] += item_emission.template_edits
+        # Weapon scaling WS0b/WS0c (lib/weapon_spell_power.py): every itemized weapon no item() declaration owns gets
+        # the same item_itemization.spell_power_per_dps as the declared ones (k_sp(slot) x its role's m); only rows
+        # whose value changes join the item_itemization block (none while the constant is 0 and the column is 0).
+        # The itemization tables are the ones the declarations resolved against (always loaded: items are declared).
+        if not item_expansion.errors and item_expansion.tables is not None:
+            wsp = weapon_spell_power.undeclared_rows(
+                item_live_rows, set(dsl_items.item_owned_entries()) | {t.tier.entry for t in item_emission.tiers},
+                item_expansion.tables, item_expansion.catalog,
+            )
+            item_expansion.errors += wsp.errors
+            for note in wsp.notes:
+                print(f"note: {note}")
+            item_emission.itemization_rows += wsp.rows
         if not item_expansion.errors:
             item_rendered = item_emit.render(item_emission, item_live_rows, item_expansion.tables or {})
             for note in item_emit.summary_notes(item_emission, item_rendered):

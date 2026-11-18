@@ -25,12 +25,13 @@ from .hunter_sv_spells import sv_glaive_1154
 glaive_toss_201600 = spell(
     id=201600, name='Glaive Toss', school=School.NORMAL,
     cast_time_ms=0, cooldown_ms=15000, range_yards=20.0, mana_cost_pct=4,   # mana placeholder, M (§0.6)
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=60.0, potency_kind='direct',
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=41.34, potency_kind='direct',
                     implicit_target_a=6, chain_targets=3)],
     spell_icon_id=85,   # stock Ability_UpgradeMoonGlaive
     # hunter-rework S3a A15 (X18): Improved Glaive Toss's % through tooltip_vars 1154 (`igt`); `${$x1-1}` stays, the
     # capstone's JUMP_TARGETS mod changes the bounce count. TOOLTIP-RECONCILE (a) wording.
     tooltip_vars=sv_glaive_1154,
+    notes='Effect 1 ap_potency 60.0 -> 41.34 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).',
     raw_overrides={'SpellLevel': 12, 'DefenseType': 3, 'SpellClassSet': 9, 'SpellClassMask_3': 0x40,
                    'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'FacingCasterFlags': 1,
                    'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1,
@@ -41,10 +42,12 @@ glaive_toss_201600 = spell(
 aspect_of_the_dragonhawk_explosion_201601 = spell(
     id=201601, name='Aspect of the Dragonhawk', school=School.FIRE,
     cast_time_ms=0, range_yards=50000.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=60.0, potency_kind='direct', time_basis_ms=1500,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=41.34, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=53, implicit_target_b=16, radius_yards=5.0)],   # placeholder, M (§0.5)
     spell_icon_id=2328,
     tooltip_vars=bm_dragonhawk_1155,
+    notes='Effect 1 ap_potency 60.0 -> 41.34 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689; '
+          'the Dragonhawk explosion is part of the Survival rotation, the Beast Mastery sim never casts it).',
     raw_overrides={'SpellLevel': 16, 'DefenseType': 3, 'SpellClassSet': 9, 'SpellClassMask_3': 0x2000000,
                    'AttributesEx3': 0x10000, 'EquippedItemClass': -1,
                    'Description_Lang_enUS': 'Explodes for {pot1*idh} Fire damage to the target and all enemies within $a1 yards.'},

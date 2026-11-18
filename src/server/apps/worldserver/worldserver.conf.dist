@@ -4920,6 +4920,34 @@ Custom.Realm.Classless = 0
 Custom.TalentUI.Enable = 1
 
 #
+#    WeaponScaling.FeralApPerDps
+#        Description: Weapon scaling (plan weapon-scaling, WS0a). Attack power a druid gets in Cat, Bear
+#                     and Dire Bear forms from the equipped main-hand (or two-hand) weapon, per point of
+#                     weapon DPS. Above 0 the form attack power of the weapon is exactly this value x its
+#                     DPS (heirloom DPS bonus included), with no threshold, rounded to a whole number; an
+#                     off-hand weapon and Moonkin form get none. At 0 the stock formula stays:
+#                     14 x DPS - 767, never below 0, from every weapon, Moonkin form included.
+#                     Read at startup only: .reload config logs a change but keeps the old value.
+#                     Implemented by src/server/scripts/Custom/custom_weapon_scaling.cpp.
+#        Default:     0 - (Stock formula)
+
+WeaponScaling.FeralApPerDps = 0
+
+#
+#    WeaponScaling.RangedApPerDps
+#        Description: Weapon scaling (plan weapon-scaling, stage WSH). Ranged attack power a hunter
+#                     gets from the weapon in the ranged slot (bow, gun, crossbow, thrown), per point
+#                     of weapon DPS: this value x the DPS (heirloom DPS bonus included), rounded to a
+#                     whole number. Ranged attack power only, no melee attack power; the hunter's pet
+#                     inherits it through its share of the owner's ranged attack power. At 0 nothing
+#                     is added and the stock behavior stays.
+#                     Read at startup only: .reload config logs a change but keeps the old value.
+#                     Implemented by src/server/scripts/Custom/custom_weapon_scaling.cpp.
+#        Default:     0 - (Off)
+
+WeaponScaling.RangedApPerDps = 0
+
+#
 ###################################################################################################
 
 ###################################################################################################

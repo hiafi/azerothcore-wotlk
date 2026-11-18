@@ -379,7 +379,9 @@ class spell_pri_shadowfiend_scaling : public AuraScript
         if (Unit* owner = GetUnitOwner()->GetOwner())
         {
             int32 shadow = owner->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_SHADOW);
-            amount = CalculatePct(std::max<int32>(0, shadow), 300); // xinef: deacrased to 300, including 15% from self buff
+            // Custom: 300 -> 226 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753; the
+            // fiend's melee follows the owner's spell power, which now carries weapon spell power).
+            amount = CalculatePct(std::max<int32>(0, shadow), 226);
         }
     }
 

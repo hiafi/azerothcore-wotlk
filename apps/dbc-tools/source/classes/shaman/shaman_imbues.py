@@ -161,7 +161,7 @@ flametongue_attack_202202 = spell(
     id=202202, name='Flametongue Attack', school=School.FIRE, attributes=_ATTR0_DO_NOT_SHEATH,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=6.8, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=8.228, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         Effect(type=EffectType.DUMMY, base_points=999, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
@@ -173,7 +173,8 @@ flametongue_attack_202202 = spell(
           'spell_sha_flametongue_attack multiplies the hit by ms / 1000 (B4). AttributesEx 0x88, DO_NOT_SHEATH and '
           'RangeIndex as stock 10444; AttributesEx3 0x10000 (marker only; the real no-proc guard is the cast being triggered with no NOT_A_PROC, '
           'SpellAuras.cpp GetProcEffectMask). '
-          '2026-11-01 sp_potency 8.0 -> 6.8 (2026-11-01, DPS balance pass 1031, user ruling: Flametongue Attack -15%; the user wrote "15%" with no sign, read as a cut because Enhancement is over target).',
+          '2026-11-01 sp_potency 8.0 -> 6.8 (2026-11-01, DPS balance pass 1031, user ruling: Flametongue Attack -15%; the user wrote "15%" with no sign, read as a cut because Enhancement is over target).'
+          ' sp_potency 6.8 -> 8.228 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_1': m.FLAMETONGUE_ATTACK, 'DefenseType': _DMG_MAGIC,
         'EquippedItemClass': -1, 'SpellLevel': 10, 'CastingTimeIndex': 1, 'AttributesEx': 0x88,
@@ -187,14 +188,15 @@ flametongue_attack_202202 = spell(
 frostbrand_attack_202203 = spell(
     id=202203, name='Frostbrand Attack', school=School.FROST, attributes=_ATTR0_DO_NOT_SHEATH,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=20.0, potency_kind='direct', time_basis_ms=1500,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=24.2, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_FROSTBRAND,
     tooltip_vars=shaman_imbuehits_1218,   # S3a A4: Elemental Weapons (`mult`) on the hit number
     notes='SH0a A3, shared doc "Frostbrand": the 15% proc hit, triggered by spell_sha_frostbrand_proc (child 202201). Potency '
           '20 Frost direct, T 1500, d0 b24. Stock 8034\'s slow dropped (not in the rework text). AttributesEx 0x88 as '
           'stock 8034/10444; AttributesEx3 0x10000 (marker only; the real no-proc guard is the cast being triggered with no NOT_A_PROC, '
-          'SpellAuras.cpp GetProcEffectMask).',
+          'SpellAuras.cpp GetProcEffectMask).'
+          ' sp_potency 20.0 -> 24.2 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_1': m.FROSTBRAND_ATTACK, 'DefenseType': _DMG_MAGIC,
         'EquippedItemClass': -1, 'SpellLevel': 20, 'CastingTimeIndex': 1, 'AttributesEx': 0x88,
@@ -213,12 +215,13 @@ frostbrand_attack_202203 = spell(
 windfury_attack_mh_202204 = spell(
     id=202204, name='Windfury Attack', school=School.NORMAL, attributes=_ATTR0_DO_NOT_SHEATH,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
-    effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
+    effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=121, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_WINDFURY,
     tooltip_vars=shaman_imbuehits_1218,   # S3a A4: `wf` = Elemental Weapons x Improved Windfury x Spirit Weapons on the weapon %
     notes='SH0a A3, shared doc "Windfury": main-hand extra attack, two per proc (spell_sha_windfury_proc). One '
           'WEAPON_PERCENT_DAMAGE effect, weapon_potency 100, d0 b23 (H7 Flurry, Spirit Weapons). BASE_ATTACK weapon. '
-          'spell_sha_windfury_attack adds +20% AP. No NOT_A_PROC and no SUPPRESS_CASTER_PROCS (they roll Maelstrom Weapon).',
+          'spell_sha_windfury_attack adds +20% AP. No NOT_A_PROC and no SUPPRESS_CASTER_PROCS (they roll Maelstrom Weapon).'
+          ' weapon_potency 100 -> 121 and the C++ +20% attack power part (WINDFURY_AP_BONUS 0.2 -> 0.242, spell_shaman_shared.cpp) (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_1': m.WINDFURY_ATTACK, 'DefenseType': _DMG_MELEE,
         'EquippedItemClass': -1, 'SpellLevel': 30, 'CastingTimeIndex': 1, 'SpellVisualID_1': _SV_WINDFURY_ATTACK,
@@ -230,12 +233,13 @@ windfury_attack_mh_202204 = spell(
 windfury_attack_oh_202205 = spell(
     id=202205, name='Windfury Attack', school=School.NORMAL, attributes=_ATTR0_DO_NOT_SHEATH,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
-    effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
+    effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=121, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_WINDFURY,
     tooltip_vars=shaman_imbuehits_1218,   # S3a A4: as 202204
     notes='SH0a A3, shared doc "Windfury": off-hand extra attack, cast only for an off-hand hit. Same as 202204 with '
           'AttributesEx3 REQUIRES_OFF_HAND_WEAPON 0x1000000, which makes Spell::m_attackType OFF_ATTACK; the cast-time '
-          'weapon check is skipped for EquippedItemClass -1, so spell_sha_windfury_proc is the gate (off-hand hit only).',
+          'weapon check is skipped for EquippedItemClass -1, so spell_sha_windfury_proc is the gate (off-hand hit only).'
+          ' weapon_potency 100 -> 121 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_1': m.WINDFURY_ATTACK, 'DefenseType': _DMG_MELEE,
         'EquippedItemClass': -1, 'SpellLevel': 30, 'CastingTimeIndex': 1, 'SpellVisualID_1': _SV_WINDFURY_ATTACK,

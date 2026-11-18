@@ -76,14 +76,15 @@ warlock_stones_1430 = tooltip_vars(
 fire_blast_200716 = spell(
     id=200716, name='Fire Blast', school=School.FIRE, attributes=0,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=40.0, potency_kind='direct', time_basis_ms=1500,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=31.44, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_FIRE_BLAST,
     notes='dungeon-prereqs S5b (WARLOCK-STONES s3): the Firestone proc, triggered by 200714 eff1. '
           'Potency 40 Fire direct, '
           'T 1500, d2 STONE_FIRE_BLAST (Master Conjuror eff1 only). Range 50000 (triggered helper). '
           'AttributesEx3 0x10000 '
-          'is a marker; the triggered cast is the no-proc guard.',
+          'is a marker; the triggered cast is the no-proc guard.'
+          ' Effect 1 sp_potency 40.0 -> 31.44 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Destruction x0.786).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_WARLOCK, 'SpellClassMask_2': m.STONE_FIRE_BLAST, 'DefenseType': _DMG_MAGIC,
         'EquippedItemClass': -1, 'SpellLevel': 28, 'CastingTimeIndex': 1,

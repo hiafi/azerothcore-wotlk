@@ -247,7 +247,7 @@ earthen_wall_shield_202262 = spell(
     duration_ms=6000,
     effects=[Effect(
         type=EffectType.APPLY_AURA, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=SCHOOL_MASK_ALL,
-        implicit_target_a=TARGET_UNIT_TARGET_ALLY, sp_potency=40.0, potency_kind='absorb', time_basis_ms=2000,
+        implicit_target_a=TARGET_UNIT_TARGET_ALLY, sp_potency=32.92, potency_kind='absorb', time_basis_ms=2000,
     )],
     spell_icon_id=ICON_EARTHEN_WALL_SHIELD,
     notes=NOTE + 'the stone barrier: absorb 40 potency on the healing scale (T 2000, ~565 at 60), 6 s, every school, '
@@ -257,7 +257,8 @@ earthen_wall_shield_202262 = spell(
           'SpellInfoCorrections). Owner spell power is added by spell_sha_earthen_wall_shield (absorbs get none from '
           'the engine) from the generated EffectBonusMultiplier_1. Family d2 b15; never d1 b5 / b10 or d0 b10 (the '
           'elemental-shield and NO_THREAT readers). Visual: Earth Shield state kit 7362 as a placeholder (V stage). '
-          'Aura text number-free.',
+          'Aura text number-free.'
+          ' sp_potency 40.0 -> 32.92 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Shaman x0.823).',
     tooltip_vars=shaman_ewall_1225,
     raw_overrides=_raw(
         20, 'Absorbs {pot1*egr} damage for $d.', 'A stone barrier absorbs damage.', base_level=False,
@@ -428,7 +429,7 @@ searing_bolt_202270 = spell(
     id=202270, name='Searing Bolt', school=School.FIRE, attributes=0, category=0, cast_time_ms=0, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=20.0,
     effects=[Effect(
-        type=EffectType.SCHOOL_DAMAGE, sp_potency=10.8, potency_kind='direct', time_basis_ms=1000,
+        type=EffectType.SCHOOL_DAMAGE, sp_potency=8.532, potency_kind='direct', time_basis_ms=1000,
         implicit_target_a=6,
     )],
     spell_icon_id=ICON_SEARING,
@@ -436,7 +437,8 @@ searing_bolt_202270 = spell(
           '(stock). Cast by npc_sha_searing_totem (300278) at an engaged enemy each second from placement, plain '
           'cast, no owner GUID, so none of the shaman\'s procs roll. The stock 3606 (2.2 s cast, creatures 2523 / '
           '21995) is left alone: an instant 3606 would flip those totems to TOTEM_PASSIVE. Family d0 b30 (the '
-          'Fire-totem damage bit shared with the Magma pulse). Missile Speed 19 and visual 67 as 3606.',
+          'Fire-totem damage bit shared with the Magma pulse). Missile Speed 19 and visual 67 as 3606.'
+          ' sp_potency 10.8 -> 8.532 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Elemental x0.79).',
     raw_overrides=_raw(
         10, 'Deals {pot1} Fire damage to the target.', base_level=False,
         SpellClassMask_1=m.SEARING_MAGMA_BOLT,
@@ -450,7 +452,7 @@ healing_stream_heal_202271 = spell(
     id=202271, name='Healing Stream Totem', school=School.NATURE, attributes=0, category=0, cast_time_ms=0,
     cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
     effects=[Effect(
-        type=EffectType.HEAL, sp_potency=28.0, potency_kind='heal', time_basis_ms=2000,
+        type=EffectType.HEAL, sp_potency=23.044, potency_kind='heal', time_basis_ms=2000,
         implicit_target_a=TARGET_UNIT_TARGET_ALLY,
     )],
     spell_icon_id=ICON_HEALING_STREAM_HEAL,
@@ -460,7 +462,8 @@ healing_stream_heal_202271 = spell(
           'crit). Range '
           '50000 and AttributesEx2 0x4 (stock 52042 gets 40 yd + ignore LoS from SpellInfoCorrections), DefenseType 1 '
           'so it is a magic-class heal. Family d0 b13 (Earthfury 3pc +10 yd accepted, PLAN 1D.6). SpellLevel 20 = the '
-          'totem\'s learn level. The stock 52042 stays for NPC-owned Healing Stream totems. sp_potency 20.0 -> 28.0 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Resto Shaman option B, Healing Stream Totem +40%); in a raid the Healing Tide Totem casts this heal too.',
+          'totem\'s learn level. The stock 52042 stays for NPC-owned Healing Stream totems. sp_potency 20.0 -> 28.0 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Resto Shaman option B, Healing Stream Totem +40%); in a raid the Healing Tide Totem casts this heal too.'
+          ' sp_potency 28.0 -> 23.044 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Shaman x0.823).',
     raw_overrides=_raw(
         20, 'Heals the target for {pot1}.', base_level=False,
         AttributesEx2=SPELL_ATTR2_IGNORE_LINE_OF_SIGHT,

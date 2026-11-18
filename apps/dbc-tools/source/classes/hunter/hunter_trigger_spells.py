@@ -189,10 +189,11 @@ immolation_trap_13797 = spell(
     range_yards=10.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, ap_potency=49.5, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=34.105, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
     ],
     spell_icon_id=678,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 16); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to ap_potency=49.5 (potency-report default, base/coef already agreed); tooltip simplified from the old $<mult>/$<duration> SpellDescriptionVariable formula to {pot1}/{pot1.total} (same convention as every other conversion - SpellDescriptionVariableID left in raw_overrides, now unused).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 16); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to ap_potency=49.5 (potency-report default, base/coef already agreed); tooltip simplified from the old $<mult>/$<duration> SpellDescriptionVariable formula to {pot1}/{pot1.total} (same convention as every other conversion - SpellDescriptionVariableID left in raw_overrides, now unused).'
+    ' Effect 1 ap_potency 49.5 -> 34.105 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).',
     raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Fire damage every $t1 seconds.', 'BaseLevel': 16, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Place a fire trap that will burn the first enemy to approach for {pot1.total} Fire damage over $13797d.  Trap will exist for $13797d.  Only one trap can be active at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': 131072, 'SpellClassSet': 9, 'SpellDescriptionVariableID': 121, 'SpellLevel': 16, 'SpellVisualID_1': 4500},
 )
 
@@ -209,11 +210,12 @@ explosive_trap_effect_13812 = spell(
     range_yards=0.0,
     duration_ms=20000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=107.4, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=73.999, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
         Effect(type=EffectType.PERSISTENT_AREA_AURA, base_points=11, points_per_level=1.3043478260869565, implicit_target_a=28, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=2000, radius_yards=10.0),
     ],
     spell_icon_id=37,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 34); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted effect 1 (the explosion burst) to ap_potency=134.2 (potency-report default, base/coef already agreed); effect 2 (the burn-over-time persistent-area aura) is left unconverted - potency_report.py\'s classify_effect() does not scan PERSISTENT_AREA_AURA/PERIODIC_DAMAGE on this effect shape, so it never appeared in the P3 report.',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 34); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted effect 1 (the explosion burst) to ap_potency=134.2 (potency-report default, base/coef already agreed); effect 2 (the burn-over-time persistent-area aura) is left unconverted - potency_report.py\'s classify_effect() does not scan PERSISTENT_AREA_AURA/PERIODIC_DAMAGE on this effect shape, so it never appeared in the P3 report.'
+    ' Effect 1 ap_potency 107.4 -> 73.999 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).',
     raw_overrides={'AttributesEx': 136, 'AttributesEx3': 262720, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Burning for Fire damage every $t2 sec.', 'BaseLevel': 34, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Place a fire trap that explodes when an enemy approaches, causing {pot1} Fire damage and burning all enemies for $13812o2 additional Fire damage over $13812d to all within $13812a1 yards.  Trap will exist for $13813d.  Only one trap can be active at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 4, 'SpellClassMask_3': 16384, 'SpellClassSet': 9, 'SpellLevel': 34, 'SpellVisualID_1': 10389, 'Targets': 64},
 )
 
@@ -295,10 +297,11 @@ wyvern_sting_24131 = spell(
     range_yards=50000.0,
     duration_ms=6000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, ap_potency=129.0, potency_kind='periodic', implicit_target_a=25, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=88.881, potency_kind='periodic', implicit_target_a=25, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=1721,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to sp_potency=129.0 (potency-report default, base/coef already agreed - this effect already had genuine spell-power scaling live, not attack power, despite being a Hunter ability). Effect 0 sp_potency 129.0 -> ap_potency 129.0 (2026-11-01, potency audit fix F21 / S1): the DoT is DmgClass NONE, so its spell power coefficient never applied (and spell power is not a hunter stat); ap_potency keeps the same base and writes a spell_bonus_data row, which ends the early return, so it now scales with ranged attack power like the other hunter DoTs. Currently uncast: the survival rework (S3b B7) unbound the stock spell_hun_wyvern_sting that cast it.',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to sp_potency=129.0 (potency-report default, base/coef already agreed - this effect already had genuine spell-power scaling live, not attack power, despite being a Hunter ability). Effect 0 sp_potency 129.0 -> ap_potency 129.0 (2026-11-01, potency audit fix F21 / S1): the DoT is DmgClass NONE, so its spell power coefficient never applied (and spell power is not a hunter stat); ap_potency keeps the same base and writes a spell_bonus_data row, which ends the early return, so it now scales with ranged attack power like the other hunter DoTs. Currently uncast: the survival rework (S3b B7) unbound the stock spell_hun_wyvern_sting that cast it.'
+    ' Effect 1 ap_potency 129.0 -> 88.881 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).',
     raw_overrides={'AttributesEx': 32, 'AttributesEx2': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Nature damage every $t1 seconds.', 'BaseLevel': 40, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A stinging shot that puts the target to sleep for $19386d.  Any damage will cancel the effect.  When the target wakes up, the Sting causes {pot1.total} Nature damage over $24131d.  Only one Sting per Hunter can be active on the target at a time.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 0.16699999570846558, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 256, 'SpellClassSet': 9, 'SpellLevel': 40, 'SpellVisualID_1': 7206},
 )
 
@@ -422,10 +425,11 @@ volley_42243 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=75.5, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=50.132, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=126,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to ap_potency=75.5 (potency-report default, base/coef already agreed). hunter-rework S2a A3 (MARKSMANSHIP 5.11/5.12): {pot1*mult} with tooltip_vars 1172 (Barrage, Rain of Arrows).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to ap_potency=75.5 (potency-report default, base/coef already agreed). hunter-rework S2a A3 (MARKSMANSHIP 5.11/5.12): {pot1*mult} with tooltip_vars 1172 (Barrage, Rain of Arrows).'
+    ' Effect 1 ap_potency 75.5 -> 50.132 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).',
     tooltip_vars=mm_volley_1172,
     raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 32, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Continuously fires a volley of ammo at the target area, causing {pot1*mult} Arcane damage to enemy targets within $a1 yards every ${$1510d/6}.2 $Lsecond:seconds; for $1510d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 135, 'SpellClassMask_1': 8192, 'SpellClassSet': 9, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 9493, 'StartRecoveryCategory': 133},
 )
@@ -7513,10 +7517,11 @@ wild_quiver_auto_shot_53254 = spell(
     range_yards=50000.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=60, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=40, implicit_target_a=6),
     ],
     spell_icon_id=83,
-    notes='pulled S2a; hunter-rework S2a A3 (MARKSMANSHIP 5.11): weapon_potency 60 (stock 80%), AttributesEx3 |= 0x10000 (the extra shot rolls no procs, so its d0 b0 cannot re-proc Wild Quiver).',
+    notes='pulled S2a; hunter-rework S2a A3 (MARKSMANSHIP 5.11): weapon_potency 60 (stock 80%), AttributesEx3 |= 0x10000 (the extra shot rolls no procs, so its d0 b0 cannot re-proc Wild Quiver).'
+    ' Effect 1 weapon_potency 60 -> 40 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).',
     raw_overrides={'AttributesEx2': 131072, 'AttributesEx3': 65536, 'CastingTimeIndex': 18, 'ProcChance': 101, 'BaseLevel': 1, 'SpellLevel': 1, 'Speed': 40.0, 'EquippedItemClass': -1, 'ActiveIconID': 122, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'You have a chance to shoot an additional shot when doing damage with your auto shot, dealing $53254s1% weapon nature damage. Wild Quiver consumes no ammo.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Firing $s1% Weapon Damage to the target.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 9, 'SpellClassMask_1': 1, 'SpellClassMask_3': 128, 'DefenseType': 3, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
@@ -7559,7 +7564,7 @@ explosive_shot_53352 = spell(
     range_yards=50000.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6, ap_potency=21.8, potency_kind='direct'),
+        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6, ap_potency=15.02, potency_kind='direct'),
     ],
     spell_icon_id=3407,
     notes=(
@@ -7569,6 +7574,7 @@ explosive_shot_53352 = spell(
         'deleted; d2 b9 (EXPLOSIVE_SHOT_TICK), AttributesEx2 0x4 and EquippedItemClass -1 kept. '
         'Effect 1 ap_potency 26.0 -> 18.2 (2026-11-01, DPS balance pass 1031, user ruling: Explosive Shot -30%). '
         'Effect 1 ap_potency 18.2 -> 21.8 (21.84 kept to one decimal, so +19.8%) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Explosive Shot +20%).'
+        ' Effect 1 ap_potency 21.8 -> 15.02 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).'
     ),
     raw_overrides={
         'AttributesEx2': 4,

@@ -115,7 +115,7 @@ SUFFIX_SECONDARY_LABEL = "Null - secondaries from the random suffix (crafting C4
 DEFAULT_ITEMIZATION_ROW = {
     "budget_mult": 1.0, "stamina_delta": 0, "dps_delta": 0.0, "absorbed_spell_slots": 0,
     "armor_delta": 0, "primary_shape_id": 0, "secondary_shape_id": 25, "primary_share": 0,
-    "block_value_delta": 0,
+    "block_value_delta": 0, "spell_power_per_dps": 0.0,
 }  # an item with no item_itemization row yet - null primary, "Crit (Solo)" secondary, 0% share
 
 
@@ -280,6 +280,10 @@ def item_itemization_save(entry: int):
         "secondary_shape_id": secondary_shape_id,
         "primary_share": _f("primary_share", int, 0),
         "block_value_delta": _f("block_value_delta", int, 0),
+        # Weapon scaling WS0c: dbc-tools owns this column (lib/weapon_spell_power.py); a form save keeps it.
+        "spell_power_per_dps": float(
+            (tables["item_itemization"].get((entry,)) or {}).get("spell_power_per_dps") or 0.0
+        ),
     }
 
     try:
@@ -300,7 +304,11 @@ def item_itemization_save(entry: int):
         flash("A change note is required (it becomes the pending SQL file's comment).", "error")
         return redirect(url_for(".item_edit", entry=entry))
 
-    changes = budget.materialized_item_fields(breakdown)
+    try:
+        changes = budget.materialized_item_fields(breakdown)
+    except budget.BudgetError as e:  # more stat lines than the server materializes (it would skip the item)
+        flash(f"Can't save this itemization: {e}", "error")
+        return redirect(url_for(".item_edit", entry=entry))
     changes.update(budget.absorb_spell_fields(absorbed))
     item_changes = emit.diff_row(item_row, changes)
 

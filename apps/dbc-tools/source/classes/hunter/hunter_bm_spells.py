@@ -156,13 +156,14 @@ stomp_pet_201804 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=52.0, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.pet_trim(52.0), potency_kind='direct',
                implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],
     pet_owner_scaling=_PET_SCALING,
     spell_icon_id=129,
     tooltip_vars=bm_stomp_1161,
-    notes='S1a BM 4.7 / 0.1: pet-cast Stomp, data only (S1b casts it). ap_potency 40 (guess, M tunes) -> 52.0 (2026-11-15, balance on the Normal-tier kits, user ruling: Stomp +30%), 8 yd around the target, d1 b28 + d2 b24 (STOMP_CARRIER; Earthshaker reads d2 b24). Visual 7429 from Thunderstomp 63900.',
+    notes='S1a BM 4.7 / 0.1: pet-cast Stomp, data only (S1b casts it). ap_potency 40 (guess, M tunes) -> 52.0 (2026-11-15, balance on the Normal-tier kits, user ruling: Stomp +30%), 8 yd around the target, d1 b28 + d2 b24 (STOMP_CARRIER; Earthshaker reads d2 b24). Visual 7429 from Thunderstomp 63900.'
+    ' Effect 1 ap_potency 52 -> 36.088 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
     raw_overrides={
         'EquippedItemClass': -1, 'SpellLevel': 30, 'DefenseType': 2, 'PreventionType': 2, 'AttributesEx': 0x200,
         'SpellClassSet': 9, 'SpellClassMask_2': m.STOMP_CARRIER[1], 'SpellClassMask_3': m.STOMP_CARRIER[2],
@@ -373,11 +374,13 @@ def _cmd_raw(visual, dmg_class=2, prevention=2):
 
 
 def _direct(potency, **kw):
-    return Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=potency, potency_kind='direct', implicit_target_a=6, **kw)
+    return Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.pet_trim(potency), potency_kind='direct',
+                  implicit_target_a=6, **kw)
 
 
 def _dot(rate, amplitude, **kw):
-    return Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DAMAGE, ap_potency=rate,
+    return Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DAMAGE,
+                  ap_potency=kits.pet_trim(rate),
                   potency_kind='periodic', amplitude=amplitude, **kw)
 
 
@@ -400,7 +403,9 @@ lunge_command_201720 = spell(
     notes='S1a A2 / BM 4.5: Wolf I. eff0 JUMP (41) to the target, eff1 360 Physical (TUNE1: was 400). 25 yd (the jump reach) but DmgClass MELEE (B16). Visual 519 from pet Charge 61685. If the one-spell Lunge fails the playtest, split 201737 (not built).'
           ' Effect 2 ap_potency 360.0 -> 252.0 (2026-11-01, DPS balance pass 1031, user ruling: Lunge -30%).'
           ' Effect 1 ap_potency 252.0 -> 302.4 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Lunge (command 1) +20%).'
-          ' Effect 2 ap_potency 302.4 -> 323.568 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).',
+          ' Effect 2 ap_potency 302.4 -> 323.568 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).'
+          ' Effect 2 ap_potency 323.568 -> 224.5562 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
     raw_overrides={**_cmd_raw(519),
                    'Description_Lang_enUS': 'Leap to the target and strike it for {pot2} Physical damage.'},
 )
@@ -421,7 +426,9 @@ rip_throat_command_201721 = spell(
     notes='S1a A2 / BM 4.5: Wolf II, 850 Physical (TUNE1: was 1000), melee. Visual 2275 from Ravage 6785.'
           ' Effect 1 ap_potency 850.0 -> 425.0 (2026-11-01, DPS balance pass 1031, user ruling: Rip Throat -50%).'
           ' Effect 1 ap_potency 425.0 -> 552.5 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Rip Throat (command 2) +30%).'
-          ' Effect 1 ap_potency 552.5 -> 591.175 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).',
+          ' Effect 1 ap_potency 552.5 -> 591.175 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).'
+          ' Effect 1 ap_potency 591.175 -> 410.2754 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
     raw_overrides={**_cmd_raw(2275), 'RangeIndex': 2,
                    'Description_Lang_enUS': "Tear at the target's throat, causing {pot1} Physical damage."},
 )
@@ -446,7 +453,10 @@ rake_command_201722 = spell(
     notes='S1a A2 / BM 4.5: Cat I. eff0 200 direct, eff1 PERIODIC_DAMAGE 50/tick (rate, 0.15), amplitude 3000, 9 s (= 300 bleed), Mechanic 15. Visual 750 from Rake 1822.'
           ' Effect 1 ap_potency 200.0 -> 140.0 (2026-11-01, DPS balance pass 1031, user ruling: Rake (command 1) -30%). Effect 2 ap_potency 50.0 -> 35.0 (2026-11-01, DPS balance pass 1031, user ruling: Rake (command 1) -30%).'
           ' Effect 1 ap_potency 140.0 -> 168.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Rake (command 1) +20%). Effect 2 ap_potency 35.0 -> 42.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Rake (command 1) +20%).'
-          ' Effect 1 ap_potency 168.0 -> 179.76, effect 2 42.0 -> 44.94 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).',
+          ' Effect 1 ap_potency 168.0 -> 179.76, effect 2 42.0 -> 44.94 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).'
+          ' Effect 1 ap_potency 179.76 -> 124.7534 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694). Effect 2 ap_potency 44.94 -> 31.1884 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling:'
+          ' BM x0.694).',
     raw_overrides={**_cmd_raw(750), 'RangeIndex': 2, 'SpellIconID': 494,
                    'AuraDescription_Lang_enUS': 'Bleeding for $s2 damage every $t2 sec.',
                    'Description_Lang_enUS': 'Rake the target for {pot1} Physical damage and an additional {pot2.total} '
@@ -469,7 +479,9 @@ pounce_command_201723 = spell(
     notes='S1a A2 / BM 4.5: Cat II, 800 Physical, melee, no stun. Visual 3942 from Pounce 9005.'
           ' Effect 1 ap_potency 800.0 -> 400.0 (2026-11-01, DPS balance pass 1031, user ruling: Pounce (command 2) -50%).'
           ' Effect 1 ap_potency 400.0 -> 520.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Pounce (command 2) +30%).'
-          ' Effect 1 ap_potency 520.0 -> 556.4 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).',
+          ' Effect 1 ap_potency 520.0 -> 556.4 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).'
+          ' Effect 1 ap_potency 556.4 -> 386.1416 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
     raw_overrides={**_cmd_raw(3942), 'RangeIndex': 2,
                    'Description_Lang_enUS': 'Pounce on the target, causing {pot1} Physical damage.'},
 )
@@ -490,7 +502,9 @@ savage_rend_command_201724 = spell(
     notes='S1a A2 / BM 4.5: Raptor I, 450 Physical, melee. Visual 372 from Savage Rend 50498.'
           ' Effect 1 ap_potency 450.0 -> 315.0 (2026-11-01, DPS balance pass 1031, user ruling: Savage Rend (command 1) -30%).'
           ' Effect 1 ap_potency 315.0 -> 378.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Savage Rend (command 1) +20%).'
-          ' Effect 1 ap_potency 378.0 -> 404.46 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).',
+          ' Effect 1 ap_potency 378.0 -> 404.46 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).'
+          ' Effect 1 ap_potency 404.46 -> 280.6952 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
     raw_overrides={**_cmd_raw(372), 'RangeIndex': 2,
                    'Description_Lang_enUS': 'Savagely rend the target, causing {pot1} Physical damage.'},
 )
@@ -512,7 +526,8 @@ leaping_tear_command_201725 = spell(
     pet_owner_scaling=_PET_SCALING,
     notes='S1a A2 / BM 4.5: Raptor II, 900 Physical melee, chain_targets 2 with EffectChainAmplitude_1 0.5 (the second target takes 50%). Visual 11039 from Feral Charge - Cat 49376.'
           ' Effect 1 ap_potency 900.0 -> 450.0 (2026-11-01, DPS balance pass 1031, user ruling: Leaping Tear (command 2) -50%).'
-          ' Effect 1 ap_potency 450.0 -> 585.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Leaping Tear (command 2) +30%).',
+          ' Effect 1 ap_potency 450.0 -> 585.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Leaping Tear (command 2) +30%).'
+          ' Effect 1 ap_potency 585 -> 405.99 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
     raw_overrides={**_cmd_raw(11039), 'RangeIndex': 2, 'EffectChainAmplitude_1': _LEAPING_TEAR_CHAIN_AMP,
                    'Description_Lang_enUS': 'Tear into the target and one nearby enemy, causing {pot1} Physical damage. '
                                             'The second enemy takes ' + str(round(_LEAPING_TEAR_CHAIN_AMP * 100))
@@ -532,8 +547,8 @@ swipe_command_201726 = spell(
     range_yards=5.0,
     effects=[
         _direct(kits.tenacity_damage(420.0)),
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.tenacity_damage(420.0), potency_kind='direct',
-               implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.pet_trim(kits.tenacity_damage(420.0)),
+               potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],
     pet_owner_scaling=_PET_SCALING,
     notes='S1a A2 / BM 4.5: Bear I. eff0 600 on the target (TargetA 6); eff1 to enemies within 8 yd of the target (A 53 / B 16), the primary removed by spell_hun_command_splash. DEVIATION: BM 4.5 says eff1 300 (50%), but the DSL/engine allows ONE direct AP coefficient per spell (D6, spell_bonus_data.ap_bonus), so eff1 carries 600 too; the 50% extra-target rule needs a script halving (SetHitDamage on EFFECT_1) or a split spell. Ruling: eff1 stays 600 and spell_hun_swipe_command_splash (2nd binding) scales EFFECT_1 damage by SWIPE_SPLASH_PCT (50). Visual 189 from Swipe 779.'
@@ -541,7 +556,9 @@ swipe_command_201726 = spell(
           ' Effect 1 ap_potency 420.0 -> 504.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Swipe (command 1) +20%). Effect 2 ap_potency 420.0 -> 504.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Swipe (command 1) +20%).'
           ' Effects 1 and 2 ap_potency 504.0 -> 420.0 (2026-11-12, hunter-pet-families F0, ruling 19: the AoE shift, x500/600).'
           ' The 50% on extra targets is spell_hun_command_aoe_falloff now (COMMAND_AOE_FALLOFF_PCT; was spell_hun_swipe_command_splash).'
-          ' Effects 1 and 2 ap_potency 420.0 -> 336.0 (2026-11-13, hunter-pet-families ruling 23b: Tenacity command damage x0.80, kits.tenacity_damage).',
+          ' Effects 1 and 2 ap_potency 420.0 -> 336.0 (2026-11-13, hunter-pet-families ruling 23b: Tenacity command damage x0.80, kits.tenacity_damage).'
+          ' Effect 1 ap_potency 336 -> 233.184 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).'
+          ' Effect 2 ap_potency 336 -> 233.184 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
     raw_overrides={**_cmd_raw(189), 'RangeIndex': 2,
                    'Description_Lang_enUS': 'Swipe the target and all enemies within $a2 yards, causing {pot1} Physical '
                                             'damage. Enemies other than the target take ' + str(COMMAND_AOE_FALLOFF_PCT['value'])
@@ -565,7 +582,8 @@ maul_command_201727 = spell(
           ' Effect 1 ap_potency 1000.0 -> 500.0 (2026-11-01, DPS balance pass 1031, user ruling: Maul (command 2) -50%).'
           ' Effect 1 ap_potency 500.0 -> 650.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Maul (command 2) +30%).'
           ' Effect 1 ap_potency 650.0 -> 715.0 (2026-11-12, hunter-pet-families F0, ruling 19: the AoE shift, x1100/1000).'
-          ' Effect 1 ap_potency 715.0 -> 572.0 (2026-11-13, hunter-pet-families ruling 23b: Tenacity command damage x0.80, kits.tenacity_damage).',
+          ' Effect 1 ap_potency 715.0 -> 572.0 (2026-11-13, hunter-pet-families ruling 23b: Tenacity command damage x0.80, kits.tenacity_damage).'
+          ' Effect 1 ap_potency 572 -> 396.968 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
     raw_overrides={**_cmd_raw(166), 'RangeIndex': 2,
                    'Description_Lang_enUS': 'Maul the target, causing {pot1} Physical damage.'},
 )
@@ -591,7 +609,10 @@ venom_bite_command_201728 = spell(
           ' Effect 1 ap_potency 600.0 -> 420.0 (2026-11-01, DPS balance pass 1031, user ruling: Venom Bite (command 1) -30%). Effect 2 ap_potency 75.0 -> 52.5 (2026-11-01, DPS balance pass 1031, user ruling: Venom Bite (command 1) -30%).'
           ' Effect 1 ap_potency 420.0 -> 504.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Venom Bite (command 1) +20%). Effect 2 ap_potency 52.5 -> 63.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Venom Bite (command 1) +20%).'
           ' Effect 1 ap_potency 504.0 -> 196.56, effect 2 63.0 -> 24.57 (2026-11-13, hunter-pet-families ruling 23: Cunning damage x0.39, kits.cunning_damage).'
-          ' Effect 1 ap_potency 196.56 -> 184.766, effect 2 24.57 -> 23.0958 (2026-11-13, hunter-pet-families ruling 24: Cunning single-target command damage x0.94 on top of ruling 23, kits.cunning_damage(single_target=True)).',
+          ' Effect 1 ap_potency 196.56 -> 184.766, effect 2 24.57 -> 23.0958 (2026-11-13, hunter-pet-families ruling 24: Cunning single-target command damage x0.94 on top of ruling 23, kits.cunning_damage(single_target=True)).'
+          ' Effect 1 ap_potency 184.7664 -> 128.2279 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694). Effect 2 ap_potency 23.0958 -> 16.0285 (2026-11-17, weapon scaling WSH2 Normal trim, user'
+          ' ruling: BM x0.694).',
     raw_overrides={**_cmd_raw(7910), 'RangeIndex': 2, 'SpellIconID': 68,
                    'AuraDescription_Lang_enUS': 'Nature damage inflicted every $t2 sec.',
                    'Description_Lang_enUS': 'Bite the target for {pot1} Nature damage and poison it for an additional '
@@ -625,7 +646,9 @@ venomous_cloud_command_201729 = spell(
     notes='S1a A2 / BM 4.5: Spider II, Nature, 30 yd, DmgClass RANGED (d1 b28 inverted lint). eff0 PERIODIC_DAMAGE 337.5/tick, amplitude 2000, 8 s (= 1800); eff1 TRIGGER_SPELL -> 201736 with TargetA 6 so the splash receives the primary as its explicit target (0-verify 8b). Visual 10409 from Spore Cloud 50274.'
           ' Effect 1 ap_potency 337.5 -> 168.75 (2026-11-01, DPS balance pass 1031, user ruling: Venomous Cloud (command 2) -50%).'
           ' Effect 1 ap_potency 168.75 -> 219.375 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Venomous Cloud (command 2) +30%).'
-          ' Effect 1 ap_potency 219.375 -> 85.5563 (2026-11-13, hunter-pet-families ruling 23: Cunning damage x0.39, kits.cunning_damage).',
+          ' Effect 1 ap_potency 219.375 -> 85.5563 (2026-11-13, hunter-pet-families ruling 23: Cunning damage x0.39, kits.cunning_damage).'
+          ' Effect 1 ap_potency 85.5563 -> 59.3761 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
     raw_overrides={**_cmd_raw(10409, dmg_class=3, prevention=1), 'SpellIconID': 2681,
                    'AuraDescription_Lang_enUS': 'Nature damage inflicted every $t1 sec.',
                    'Description_Lang_enUS': 'Spit a cloud of venom at the target, poisoning it and all enemies within $201736a1 '
@@ -649,7 +672,9 @@ savage_strikes_command_201730 = spell(
     notes='S1a A2 / BM 4.5: Ferocity default I, 400 Physical, melee. Visual 6762 from Claw 16827.'
           ' Effect 1 ap_potency 400.0 -> 280.0 (2026-11-01, DPS balance pass 1031, user ruling: Savage Strikes (command 1) -30%).'
           ' Effect 1 ap_potency 280.0 -> 336.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Savage Strikes (command 1) +20%).'
-          ' Effect 1 ap_potency 336.0 -> 359.52 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).',
+          ' Effect 1 ap_potency 336.0 -> 359.52 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).'
+          ' Effect 1 ap_potency 359.52 -> 249.5069 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
     raw_overrides={**_cmd_raw(6762), 'RangeIndex': 2,
                    'Description_Lang_enUS': 'Strike the target savagely, causing {pot1} Physical damage.'},
 )
@@ -670,7 +695,9 @@ savage_pounce_command_201731 = spell(
     notes='S1a A2 / BM 4.5: Ferocity default II, 1000 Physical, melee. Visual 3942 from Pounce 9005.'
           ' Effect 1 ap_potency 1000.0 -> 500.0 (2026-11-01, DPS balance pass 1031, user ruling: Savage Pounce (command 2) -50%).'
           ' Effect 1 ap_potency 500.0 -> 650.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Savage Pounce (command 2) +30%).'
-          ' Effect 1 ap_potency 650.0 -> 695.5 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).',
+          ' Effect 1 ap_potency 650.0 -> 695.5 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).'
+          ' Effect 1 ap_potency 695.5 -> 482.677 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
     raw_overrides={**_cmd_raw(3942), 'RangeIndex': 2,
                    'Description_Lang_enUS': 'Pounce on the target, causing {pot1} Physical damage.'},
 )
@@ -691,7 +718,9 @@ thrash_command_201732 = spell(
     notes='S1a A2 / BM 4.5: Tenacity default I, 600 Physical, melee. Visual 189 from Swipe 779.'
           ' Effect 1 ap_potency 600.0 -> 420.0 (2026-11-01, DPS balance pass 1031, user ruling: Thrash (command 1) -30%).'
           ' Effect 1 ap_potency 420.0 -> 504.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Thrash (command 1) +20%).'
-          ' Effect 1 ap_potency 504.0 -> 403.2 (2026-11-13, hunter-pet-families ruling 23b: Tenacity command damage x0.80, kits.tenacity_damage).',
+          ' Effect 1 ap_potency 504.0 -> 403.2 (2026-11-13, hunter-pet-families ruling 23b: Tenacity command damage x0.80, kits.tenacity_damage).'
+          ' Effect 1 ap_potency 403.2 -> 279.8208 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
     raw_overrides={**_cmd_raw(189), 'RangeIndex': 2,
                    'Description_Lang_enUS': 'Claw the enemy, causing {pot1} Physical damage.'},
 )
@@ -712,7 +741,8 @@ crushing_blow_command_201733 = spell(
     notes='S1a A2 / BM 4.5: Tenacity default II, 1000 Physical, melee. Visual 166 from Maul 6807.'
           ' Effect 1 ap_potency 1000.0 -> 500.0 (2026-11-01, DPS balance pass 1031, user ruling: Crushing Blow (command 2) -50%).'
           ' Effect 1 ap_potency 500.0 -> 650.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Crushing Blow (command 2) +30%).'
-          ' Effect 1 ap_potency 650.0 -> 520.0 (2026-11-13, hunter-pet-families ruling 23b: Tenacity command damage x0.80, kits.tenacity_damage).',
+          ' Effect 1 ap_potency 650.0 -> 520.0 (2026-11-13, hunter-pet-families ruling 23b: Tenacity command damage x0.80, kits.tenacity_damage).'
+          ' Effect 1 ap_potency 520 -> 360.88 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
     raw_overrides={**_cmd_raw(166), 'RangeIndex': 2,
                    'Description_Lang_enUS': 'Maul the target, causing {pot1} Physical damage.'},
 )
@@ -734,7 +764,9 @@ feint_strike_command_201734 = spell(
           ' Effect 1 ap_potency 900.0 -> 630.0 (2026-11-01, DPS balance pass 1031, user ruling: Feint Strike (command 1) -30%).'
           ' Effect 1 ap_potency 630.0 -> 756.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Feint Strike (command 1) +20%).'
           ' Effect 1 ap_potency 756.0 -> 294.84 (2026-11-13, hunter-pet-families ruling 23: Cunning damage x0.39, kits.cunning_damage).'
-          ' Effect 1 ap_potency 294.84 -> 277.15 (2026-11-13, hunter-pet-families ruling 24: Cunning single-target command damage x0.94 on top of ruling 23, kits.cunning_damage(single_target=True)).',
+          ' Effect 1 ap_potency 294.84 -> 277.15 (2026-11-13, hunter-pet-families ruling 24: Cunning single-target command damage x0.94 on top of ruling 23, kits.cunning_damage(single_target=True)).'
+          ' Effect 1 ap_potency 277.1496 -> 192.3418 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
     raw_overrides={**_cmd_raw(398, dmg_class=3, prevention=1),
                    'Description_Lang_enUS': 'Strike the target from range, causing {pot1} Physical damage.'},
 )
@@ -756,7 +788,9 @@ ambush_command_201735 = spell(
           ' Effect 1 ap_potency 1800.0 -> 900.0 (2026-11-01, DPS balance pass 1031, user ruling: Ambush (command 2) -50%).'
           ' Effect 1 ap_potency 900.0 -> 1170.0 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Ambush (command 2) +30%).'
           ' Effect 1 ap_potency 1170.0 -> 456.3 (2026-11-13, hunter-pet-families ruling 23: Cunning damage x0.39, kits.cunning_damage).'
-          ' Effect 1 ap_potency 456.3 -> 428.922 (2026-11-13, hunter-pet-families ruling 24: Cunning single-target command damage x0.94 on top of ruling 23, kits.cunning_damage(single_target=True)).',
+          ' Effect 1 ap_potency 456.3 -> 428.922 (2026-11-13, hunter-pet-families ruling 24: Cunning single-target command damage x0.94 on top of ruling 23, kits.cunning_damage(single_target=True)).'
+          ' Effect 1 ap_potency 428.922 -> 297.6719 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
     raw_overrides={**_cmd_raw(398, dmg_class=3, prevention=1),
                    'Description_Lang_enUS': 'Ambush the target, causing {pot1} Physical damage.'},
 )
@@ -780,7 +814,9 @@ venomous_cloud_splash_201736 = spell(
     notes='S1a A2 / BM 4.5: triggered by 201729 eff1. Nature, PERIODIC_DAMAGE 168.75/tick (rate), amplitude 2000, 8 s (= 900), A 53 / B 16 radius 8, the primary removed by spell_hun_command_splash. 50000 yd (triggered), DmgClass RANGED. Visual 10409 from Spore Cloud 50274.'
           ' Effect 1 ap_potency 168.75 -> 84.375 (2026-11-01, DPS balance pass 1031, user ruling: Venomous Cloud -50%, the splash stays 50% of the primary).'
           ' Effect 1 ap_potency 84.375 -> 109.6875 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Venomous Cloud (command 2) +30%, the splash stays 50% of the primary).'
-          ' Effect 1 ap_potency 109.6875 -> 42.7781 (2026-11-13, hunter-pet-families ruling 23: Cunning damage x0.39, kits.cunning_damage; still 50% of the primary).',
+          ' Effect 1 ap_potency 109.6875 -> 42.7781 (2026-11-13, hunter-pet-families ruling 23: Cunning damage x0.39, kits.cunning_damage; still 50% of the primary).'
+          ' Effect 1 ap_potency 42.7781 -> 29.688 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
+          ' x0.694).',
     raw_overrides={**_cmd_raw(10409, dmg_class=3, prevention=1), 'SpellIconID': 2681,
                    'AuraDescription_Lang_enUS': 'Nature damage inflicted every $t1 sec.'},
 )

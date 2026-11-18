@@ -94,10 +94,11 @@ _MISC_SCHOOL_HOLY_DISEASE = 3  # aura 246 misc 3 = Disease
 # --- Sunlight tooltip ----------------------------------------------------------------------------------------------
 # A talent-pane rank tooltip must show its own rank's fraction, which a tooltip variable can't do, so each rank keeps
 # the literal ${...} expression of Sunlight's hit 201232 scaled by the rank constant (HOLY section 4.1 exception).
-# 201232 (A2a, paladin_holy_spells.py): hybrid 7.5 SP + 7.5 AP, direct, instant (time basis 1.5 s), SpellLevel 25.
+# 201232 (A2a, paladin_holy_spells.py): hybrid 6.2925 SP + 6.2925 AP (7.5 x 0.839, 2026-11-17 weapon scaling WS2 Normal trim),
+# direct, instant (time basis 1.5 s), SpellLevel 25.
 # Re-copy these numbers here if 201232's potency ever changes (HOLY section 11 risk 8).
 _SUNLIGHT_HIT = _potency.resolve(
-    _potency.PotencyEffect(sp_potency=7.5, ap_potency=7.5, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=25,
+    _potency.PotencyEffect(sp_potency=6.2925, ap_potency=6.2925, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=25,
 )
 
 
@@ -235,7 +236,8 @@ zealous_exorcism_r2_201253 = _zealous(201253, -81, 80, 1999, 2)
 _SUNLIGHT_NOTE = (
     'paladin-rework S2 HOLY section 5 (3,3): eff1 PROC_TRIGGER_SPELL -> Sunlight 201232 (default handler, no script), eff2 DUMMY = '
     'rank % applied by spell_pal_sunlight_hit; spell_proc row on autos + Crusader Strike, DisableEffectsMask 0x2. Tooltip keeps the '
-    'literal ${...} expression of 201232 scaled by the rank fraction (section 4.1 exception).'
+    'literal ${...} expression of 201232 scaled by the rank fraction (section 4.1 exception). Tooltip expression re-copied for '
+    '201232 sp_potency and ap_potency 7.5 -> 6.2925 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839).'
 )
 _SUNLIGHT_CAPSTONE = "Each Sunlight has a 10% chance to strike the target again."
 

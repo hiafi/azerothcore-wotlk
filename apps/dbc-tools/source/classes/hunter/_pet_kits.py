@@ -45,6 +45,20 @@ CUNNING_ST_COMMAND_SCALE = 0.94         # on top of ruling 23's CUNNING_DAMAGE_S
 _ST_SCALES = {'Ferocity': FEROCITY_ST_COMMAND_SCALE, 'Cunning': CUNNING_ST_COMMAND_SCALE}
 
 
+# ---- weapon scaling WSH2 Normal trim (user ruling 2026-11-17) ----
+# Hunters now get k_h x ranged weapon DPS ranged attack power and pets inherit all of it (PET_AP_FROM_RAP_PCT), so every
+# pet damage potency takes Beast Mastery's trim (BM is 50% pet). Applied where the Effect is built (the `_direct` /
+# `_dot` / `_cone` / `_at_target` / `_around_pet` helpers and the literal pet Effects), after the authored numbers, so
+# the historical rulings above and their notes keep reading their own values. Heals, absorbs and utilities never pass
+# it.
+PET_WSH2_TRIM = 0.694
+
+
+def pet_trim(potency: float) -> float:
+    """A pet damage potency after the WSH2 Normal trim (x0.694, BM's factor), rounded like the other pet helpers."""
+    return round(potency * PET_WSH2_TRIM, 4)
+
+
 def ruling_24_note(tree: str, *before: float) -> str:
     """The notes line of a ruling 24 spell: each pre-ruling-24 potency `before` -> its scaled value."""
     scale = _ST_SCALES[tree]
