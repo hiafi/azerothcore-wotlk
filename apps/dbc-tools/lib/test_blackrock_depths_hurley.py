@@ -198,7 +198,7 @@ class HurleyDeclarationTest(unittest.TestCase):
         normal, heroic = _header_nh("kCronyHealth")
         self.assertEqual(math.ceil(WARRIOR_53_BASE * float(crony["HealthModifier"])), int(normal))
         self.assertEqual((normal, heroic), (8_000, 12_000))
-        self.assertAlmostEqual(float(crony["DamageModifier"]), 7.5)
+        self.assertAlmostEqual(float(crony["DamageModifier"]), 3.0)
         # the kept stock spells, not copies
         self.assertEqual(int(_header_value("SPELL_STOCK_SINISTER_STRIKE")), 15581)
         self.assertEqual(int(_header_value("SPELL_STOCK_RUPTURE")), 15583)

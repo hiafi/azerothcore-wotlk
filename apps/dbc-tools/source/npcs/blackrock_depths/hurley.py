@@ -19,8 +19,8 @@ nothing spawns them until the C++ binds.
   tier's melee are WP-H's (source/world/dungeons/blackrock_depths.py). His loot is kept.
 - 9541 Blackbreath Crony: bound to npc_blackbreath_crony_rework (s7 #13: C++ for the heroic Bottle Toss; the rev drops
   the three spawns' per-guid SmartAI), 8,000 at 5 players (HealthModifier 3.261312 on the level 53 warrior base
-  2,453), DamageModifier the stock 7.5 (base SQL; a designer question), immunities kept (none). Sinister Strike 15581
-  and the heroic Rupture 15583 are the stock spells (kept, not rescaled). Heroic 12k: WP-H's override.
+  2,453), DamageModifier 3.0 (stock 7.5; lowered 2026-11-19, D18 question 5), immunities kept (none). Sinister
+  Strike 15581 and the heroic Rupture 15583 are the stock spells (kept, not rescaled). Heroic 12k: WP-H's override.
 - 300839 Thunderbrew Lager Keg: the boss-kit target (S4 "Build spec"), level 55, rank 0, 4,000 health (HealthModifier
   1.530222 on 2,614; 6,000 until a 2026-11-19 bot run showed short keg runs), not selectable until Hurley marks it
   (unit_flags NOT_SELECTABLE; the script clears it), no melee,
@@ -164,7 +164,7 @@ CRONY_COLUMNS = {
     'ScriptName': 'npc_blackbreath_crony_rework',
     'AIName': '',
     'HealthModifier': _health_modifier(CRONY_HEALTH, WARRIOR_53_BASE),
-    'DamageModifier': 7.5,
+    'DamageModifier': 3.0,  # 7.5 (stock) until 2026-11-19: the four-way opening on the tank killed it in 7 s
 }
 if BIND_WAVE_2:
     creature_template_columns(HURLEY, **HURLEY_COLUMNS)
