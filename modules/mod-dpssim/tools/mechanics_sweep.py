@@ -148,11 +148,11 @@ DRILL_BARS: dict[str, dict] = {
         "references": {}, "group": {}, "cycle_ms": 20000, "default_cycles": 6,
     },
     "blackrock-depths-shapes": {
-        # cycle 0: 1 the Rampage lanes reported; 2 the tank's 8 yd and 3 everyone's 40 yd leash on the walking boss
-        # (OffSpot failures, no zone), 4 the leap lines and 5 their landing gated. Cycle 1: 6 the axe and 7 its return
-        # line before the lock reported, 8 the locked return gated; 9, 10 the ruptures gated; Stack/11 the ward
-        # reported, 12 the tide gated; 13 the edge bands, 14 the crumble, 15 the arm sweeps gated; 16 the hide gated
-        # at 0
+        # cycle 0: 1 the Rampage lanes reported; 2 the tank's 8 yd leash on the walking boss and 3 the 40 yd one (the
+        # non-healers on the boss, the healers on the tank; OffSpot failures, no zone), 4 the leap lines and 5 their
+        # landing gated. Cycle 1: 6 the axe and 7 its return line before the lock reported, 8 the locked return gated;
+        # 9, 10 the ruptures gated; Stack/11 the ward reported, 12 the tide gated; 13 the edge bands, 14 the crumble,
+        # 15 the arm sweeps gated; 16 the hide gated at 0
         "gated": {2: 1, 3: 1, 4: 1, 5: 1, 8: 1, 9: 1, 10: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 0},
         "reported": {1, 6, 7, 11},
         "cross_specs": 3, "references": {}, "group": {}, "cycle_ms": 60000, "default_cycles": 2,
