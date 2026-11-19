@@ -11,8 +11,9 @@ and the Rowdy Patron's ScriptName (an unbound name logs "not assigned" at boot).
 are declared either way: nothing spawns the patron until the C++ binds.
 
 - 9502 Phalanx: npc_phalanx_rework (stock npc_phalanx retired; SmartAI off: he has none in the live DB), the build
-  spec's normal health (160k: HealthModifier 61.209 on the level 55 warrior class base 2,614), the kit's stun immunity
-  set 1972 (s7 #10: stock -248 lets stuns land, ruling 64 asks for -251's stun immunity), INSTANCE_BIND, DamageModifier
+  spec's normal health lowered to 145k (was 160k; 2026-11-19 bot runs: HealthModifier 55.47 on the level 55 warrior
+  class base 2,614), the kit's stun immunity set 1972 (s7 #10: stock -248 lets stuns land, ruling 64 asks for -251's
+  stun immunity), INSTANCE_BIND, DamageModifier
   3.5 (the stock base value; the live 7 is a leftover). His template keeps faction 35, npcflag 1 and gossip_menu_id
   2283 (the dormant state and the new gossip start need them). Heroic 230k is WP-H's override
   (source/world/dungeons/blackrock_depths.py). Display 8177 (Toxitron wears it too) is the stock one and stays.
@@ -30,7 +31,7 @@ rest are looks or the hold:
 
   211460  Mighty Blow          PH1 stock 14099: 25% / 30% (the tank row on the tank) and the stock knockback
   211461  Thunderclap          PH2 stock 15588: 10 yd, 10% / 12%, -40% movement, -34% attack speed, 10 s, Magic
-  211462  Fireball Volley      PH3 stock 15285: 20 yd, 12% / 15% (from 50% health)
+  211462  Fireball Volley      PH3 stock 15285: 20 yd, 10% / 15% (from 50% health)
   211463  Throw Out            PH4 the 1 s hold (a 1.5 s stun the throw removes; the Grabbed trail SV 12139)
   211464  Throw Out            PH4 look: his throw (Throw 55425's SV 12140), cast on the held player as they fly
   211465  Throw Out            PH4 the landing circle's hit: 6 yd, 30% / 45% + Weakened (everyone but the thrown player)
@@ -103,8 +104,9 @@ _SCRIPT_REFFLAT = ('Blackrock Depths: a percent of reference health in hundredth
 
 # --- the boss (held back until wave 2 binds the section: _common.py BIND_WAVE_2) --------------------------------------
 
-# 61.209 x the level 55 warrior base 2,614 = 160,000 (the S0 skeleton's value, kept).
-PHALANX_COLUMNS = boss_columns('npc_phalanx_rework', 61.209, damage_modifier=3.5)
+# 55.47 x the level 55 warrior base 2,614 = 145,000 (was 160,000; lowered with Volley 12 -> 10% on 2026-11-19: the
+# brd-s4 bot runs lost a fight about twice the intended length).
+PHALANX_COLUMNS = boss_columns('npc_phalanx_rework', 55.47, damage_modifier=3.5)
 if BIND_WAVE_2:
     creature_template_columns(9502, **PHALANX_COLUMNS)
 
@@ -112,7 +114,7 @@ if BIND_WAVE_2:
 
 MIGHTY_BLOW = (2500, 3000)          # kMightyBlowPct 25 / 30 (hundredths)
 THUNDERCLAP = (1000, 1200)          # kThunderclapPct 10 / 12
-VOLLEY = (1200, 1500)               # kVolleyPct 12 / 15
+VOLLEY = (1000, 1500)               # kVolleyPct 10 / 15
 THUNDERCLAP_RADIUS = 10.0           # kThunderclapRadiusYd
 THUNDERCLAP_MS = 10000              # kThunderclapMs
 THUNDERCLAP_SLOW = -40              # kThunderclapSlowPct
@@ -249,7 +251,7 @@ fireball_volley_211462 = spell(
     spell_icon_id=_ICON_FIREBALL_VOLLEY,
     notes=f'{_D19}, PH3: the stock Fireball Volley 15285 (Fire on everyone within 20 yd) kept and rescaled (rule 15: '
           'a copy). From 50% health (stock HealthBelowPct(51)) he casts it on himself (triggered) at once and every '
-          '10 s: 12% (heroic 15%: EffectMiscValueB) of the reference row on everyone within 20 yd, through '
+          '10 s: 10% (heroic 15%: EffectMiscValueB) of the reference row on everyone within 20 yd, through '
           'spell_dungeon_refflat_damage: healer load in the second half (gap 36 default). The stock missiles (Speed '
           '24) and look (SV 2437). Always hits, cannot crit, ignores his modifiers.',
     raw_overrides=kit_raw('Inflicts Fire damage to nearby enemies.', instant=True, DefenseType=_DEFENSE_MAGIC,

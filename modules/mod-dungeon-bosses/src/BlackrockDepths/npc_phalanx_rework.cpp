@@ -22,7 +22,7 @@
  *                        stock knockback (heroic: the tank knocked into a table smashes it, PH6)
  *   PH2 Thunderclap      stock 15588 copy: 12 s, then every 10 s: 10 yd, 10% / 12% and a 10 s Magic slow (-40%
  *                        movement, -34% attack speed): the dispel list (a reward on normal, expected on heroic)
- *   PH3 Fireball Volley  stock 15285 copy: from 50% health, at once then every 10 s: 20 yd, 12% / 15%
+ *   PH3 Fireball Volley  stock 15285 copy: from 50% health, at once then every 10 s: 20 yd, 10% / 15%
  *   PH4 Throw Out        10 s, then every 20 s (heroic 15 s): the top damage dealer of the last 10 s (KT-D2's ledger,
  *                        on him and his Rowdy Patrons; never his victim, never the last one thrown) is held 1 s (emote
  *                        line 1) and thrown 15-25 yd onto open floor (never onto a table); the 6 yd landing circle

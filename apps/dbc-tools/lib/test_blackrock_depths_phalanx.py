@@ -9,7 +9,7 @@ package with the switch written True. Nothing here needs the switch on.
 
 Checks:
   - the spells sit in his slice (211460-211489) and PhalanxLogic.h names the same ids;
-  - he is bound once wave 2 is (SmartAI off, immunity 1972, INSTANCE_BIND), 160k at 5 players, DamageModifier 3.5, and
+  - he is bound once wave 2 is (SmartAI off, immunity 1972, INSTANCE_BIND), 145k at 5 players, DamageModifier 3.5, and
     declares nothing while the switch is off;
   - the Rowdy Patron: its entry, model, level, health, script and WP-H's heroic lock line;
   - Mighty Blow, Thunderclap and Fireball Volley (rule 15 copies on the kit's refflat script, the header's percents),
@@ -58,7 +58,7 @@ PHALANX = 9502
 PATRON = 300841
 PATRON_HEROIC = 310415
 WARRIOR_55_BASE = 2614
-HEALTH_AT_5 = 160_000
+HEALTH_AT_5 = 145_000
 STALKER_WAVE_2 = 300845
 GOSSIP_MENU = 2283
 DATA_PHALANX_ACTIVATED = 44
@@ -178,9 +178,9 @@ class PhalanxDeclarationTest(unittest.TestCase):
 
     def test_his_columns(self):
         self.assertRegex(self.declaration,
-                         r"PHALANX_COLUMNS = boss_columns\('npc_phalanx_rework', 61\.209, damage_modifier=3\.5\)")
+                         r"PHALANX_COLUMNS = boss_columns\('npc_phalanx_rework', 55\.47, damage_modifier=3\.5\)")
         self.assertRegex(self.declaration, r"creature_template_columns\(9502, \*\*PHALANX_COLUMNS\)")
-        c = common.boss_columns("npc_phalanx_rework", 61.209, damage_modifier=3.5)
+        c = common.boss_columns("npc_phalanx_rework", 55.47, damage_modifier=3.5)
         self.assertEqual(c["ScriptName"], "npc_phalanx_rework")
         self.assertEqual(c["AIName"], "")
         self.assertEqual(c["CreatureImmunitiesId"], IMMUNITY_BOSS_STUN)      # stock -248 let stuns land

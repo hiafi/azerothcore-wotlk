@@ -143,7 +143,7 @@ namespace BrdPhalanx
 
     // PH3 Fireball Volley: stock 15285 (20 yd), rescaled: healer load in the second half (gap 36 default). From 50%
     // health (stock HealthBelowPct(51)): the first at once, then every 10 s.
-    inline constexpr NH<float> kVolleyPct{ 12.f, 15.f };
+    inline constexpr NH<float> kVolleyPct{ 10.f, 15.f };
     inline constexpr std::uint32_t kVolleyEveryMs = 10000;
     inline constexpr float kVolleyHealthPct = 51.f;            // HealthBelowPct(51): at or below 50%
     inline constexpr float kVolleyRadiusYd = 20.f;
