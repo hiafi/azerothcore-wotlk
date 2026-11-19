@@ -109,6 +109,27 @@ namespace
         return player && player->IsInWorld() && player->IsAlive() && !player->IsGameMaster();
     }
 
+    // The bots' hard bounds while a mechanic of the fight is in view (Last Call, the Throw Out landing, the tank's
+    // Park): PhalanxLogic.h BotFloor, the throw floor and the door alcove on the bar floor's height. An escape never
+    // plans onto the stairs or the lower level, out of the healer's range and sight of the tank (PHALANX-DIAG).
+    std::vector<Position> AtBarFloor(Vec2 const* first, Vec2 const* last)
+    {
+        std::vector<Position> out;
+        out.reserve(std::size_t(last - first));
+        for (Vec2 const* p = first; p != last; ++p)
+            out.emplace_back(p->x, p->y, kBarFloorZ, 0.f);
+        return out;
+    }
+
+    BossMechanics::SpotBounds BarFloorBounds()
+    {
+        return BossMechanics::SpotBounds()
+            .Polygon(AtBarFloor(kThrowFloorPolygon.data(), kThrowFloorPolygon.data() + kThrowFloorPolygon.size()),
+                kBarFloorZMin, kBarFloorZMax)
+            .Polygon(AtBarFloor(kDoorAlcovePolygon.data(), kDoorAlcovePolygon.data() + kDoorAlcovePolygon.size()),
+                kBarFloorZMin, kBarFloorZMax);
+    }
+
     // The test commands' forced mechanics (`.dbtest brd phalanx ...`; out of combat the GM stands in for the group).
     enum class TestKind : uint8
     {
@@ -412,7 +433,7 @@ private:
         tankOnly.roles = BossMechanics::Role::Tank;
         MechanicRef ref = Mechanic::Circle(me, Position(kTankSpot.x, kTankSpot.y, kTankSpot.z, kDoorNode.o),
             kParkRadiusYd, Ms(kParkRenewMs + 5000));
-        ref.Park(me).NoTelegraph().Eligible(tankOnly).Tag(TAG_PH_PARK);
+        ref.Park(me).NoTelegraph().Eligible(tankOnly).Within(BarFloorBounds()).Tag(TAG_PH_PARK);
         _park = ref.Handle();
         Track(_park);
         _parkAtMs = _clockMs + kParkRenewMs;
@@ -598,7 +619,7 @@ private:
                 others.carriers.insert(p->GetGUID());
         MechanicRef ref = Mechanic::Circle(me, *landing, kLandingRadiusYd, Ms(kThrowWarnMs));
         ref.Damage(othersPct).TankDamage(othersPct).School(SPELL_SCHOOL_NORMAL).Spell(SPELL_PH_THROW_OUT).Weakened()
-            .Eligible(others).Tag(TAG_PH_THROW_OUT);
+            .Eligible(others).Within(BarFloorBounds()).Tag(TAG_PH_THROW_OUT);
         if (!ref.IsValid())
         {
             LogPh("throw-out-refused", target->GetName());
@@ -694,7 +715,7 @@ private:
         bool const heroic = _heroic;
         MechanicRef ref = Mechanic::Circle(me, me, r, Ms(kLastCallCastMs));
         ref.Damage(pct).TankDamage(pct).School(SPELL_SCHOOL_NORMAL).Spell(SPELL_PH_LAST_CALL).Weakened()
-            .Tag(TAG_PH_LAST_CALL)
+            .Within(BarFloorBounds()).Tag(TAG_PH_LAST_CALL)
             .OnHit(OnPhalanxHit([x, y, heroic](npc_phalanx_rework& ai, Unit* hit)
             {
                 ai.LastCallHit(hit, x, y, heroic);

@@ -228,6 +228,8 @@ namespace BrdPhalanx
 
     inline constexpr float kBarFloorZ = -43.65f;
     inline constexpr float kFloorZBandYd = 1.5f;               // the lower level is 6 yd below: never this floor
+    inline constexpr float kBarFloorZMin = kBarFloorZ - kFloorZBandYd;
+    inline constexpr float kBarFloorZMax = kBarFloorZ + kFloorZBandYd;
 
     // The throw floor: the main upper floor from the navmesh component around (870, -210), 1.5-2 yd inside its edges,
     // x 850-900 (about 1,640 sq yd of the 1,945 within 30 yd). The +y edge is the rail over the lower level; the door
@@ -240,11 +242,29 @@ namespace BrdPhalanx
         { 895.f, -203.f }, { 900.f, -200.f },
     } };
 
+    // The throw pick's floor.
     inline DungeonKit::Arena ThrowFloor()
     {
         return DungeonKit::Arena(DungeonKit::ArenaRegion::Polygon(
-            std::vector<Vec2>(kThrowFloorPolygon.begin(), kThrowFloorPolygon.end()), kBarFloorZ - kFloorZBandYd,
-            kBarFloorZ + kFloorZBandYd));
+            std::vector<Vec2>(kThrowFloorPolygon.begin(), kThrowFloorPolygon.end()), kBarFloorZMin, kBarFloorZMax));
+    }
+
+    // The door alcove (navmesh, on the bar floor's height, x 867-881, y -224 to -236): out of the throw floor, but the
+    // short Last Call escape for melee behind him while he is tanked at the door node (R-FIXES MN-1).
+    inline constexpr std::array<Vec2, 4> kDoorAlcovePolygon{ {
+        { 867.f, -224.f }, { 881.f, -229.f }, { 881.f, -236.f }, { 869.f, -236.f },
+    } };
+
+    // The bots' hard bounds (npc_phalanx_rework.cpp BarFloorBounds: Last Call, the Throw Out landing, the tank's Park):
+    // the throw floor plus the door alcove, both on the bar floor's z band, so a planned spot never leaves the upper
+    // floor (the stairs and the lower level below it are out of the healer's range and sight of the tank;
+    // PHALANX-DIAG).
+    inline DungeonKit::Arena BotFloor()
+    {
+        DungeonKit::Arena floor = ThrowFloor();
+        floor.Add(DungeonKit::ArenaRegion::Polygon(
+            std::vector<Vec2>(kDoorAlcovePolygon.begin(), kDoorAlcovePolygon.end()), kBarFloorZMin, kBarFloorZMax));
+        return floor;
     }
 
     // The seven tables (NM 4.2, the chair clusters at z -43.7 [db]). Index 0-6 = T1-T7.

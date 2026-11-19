@@ -295,6 +295,69 @@ namespace
         CHECK(open >= 3);
     }
 
+    // The bots' hard bounds (npc_phalanx_rework.cpp BarFloorBounds on Last Call, the Throw Out landing and the tank's
+    // Park) are BotFloor: ThrowFloor's polygon plus the door alcove, on the same z band. PHALANX-DIAG: the healer's
+    // Last Call escape went to (829.3, -232.9, -46.5), on the stairs below the floor, 38.6 yd from the tank's Spot; the
+    // bounds refuse it, and the floor still holds plenty of escape room outside Last Call yet within heal range
+    // (Playerbots.HealDistance 38.5) of the Spot. R-FIXES MN-1: melee behind him at the door step back into the
+    // alcove, a short escape the throw floor alone left out.
+    void TestBotBounds()
+    {
+        DungeonKit::Arena const floor = BotFloor();
+        DungeonKit::Arena const throwFloor = ThrowFloor();
+        CHECK(Near(kBarFloorZMin, kBarFloorZ - kFloorZBandYd) && Near(kBarFloorZMax, kBarFloorZ + kFloorZBandYd));
+        CHECK(!floor.Contains({ 829.3f, -232.9f }, -46.5f));
+        CHECK(!floor.Contains({ 829.3f, -232.9f }, kBarFloorZ));
+        CHECK(!floor.Contains({ 870.f, -200.f }, -46.5f));     // below the band: the stairs' height
+        CHECK(!floor.Contains({ 877.f, -234.f }, -46.5f));
+        // every throw-floor spot is a bot spot; the tank's Park centre is inside them
+        CHECK(floor.Contains({ 870.f, -200.f }, kBarFloorZ));
+        CHECK(floor.Contains(kTankSpot.XY(), kTankSpot.z));
+        // the alcove: in the bot bounds, not on the throw floor (no throw lands there), clear of every table
+        CHECK(floor.Contains({ 877.f, -234.f }, kBarFloorZ));
+        CHECK(!throwFloor.Contains({ 877.f, -234.f }, kBarFloorZ));
+        CHECK(!floor.Contains(kDoorNode.XY(), kDoorNode.z));   // his own spot at the mouth stays out
+        CHECK(!floor.Contains({ 862.f, -232.f }, kBarFloorZ)); // west of the alcove: off the floor
+        for (Vec2 const& p : kDoorAlcovePolygon)
+            CHECK(MinTableDistance(p) > kTableAvoidYd);
+        // a melee escape from behind him at the door node: alcove floor outside Last Call, within 20 yd
+        for (bool heroic : { false, true })
+        {
+            std::uint32_t alcove = 0;
+            for (int x = 866; x <= 882; ++x)
+                for (int y = -237; y <= -223; ++y)
+                {
+                    Vec2 const p{ float(x), float(y) };
+                    float const d = DungeonKit::Distance(p, kDoorNode.XY());
+                    if (floor.Contains(p, kBarFloorZ) && !throwFloor.Contains(p, kBarFloorZ)
+                        && d > kLastCallRadiusYd(heroic) && d <= 20.f)
+                        ++alcove;
+                }
+            CHECK(alcove >= 15);
+        }
+
+        // Last Call from where he is tanked (the door node, the Spot) or from the floor's middle: the open floor
+        // outside the pulse and within heal range of the tank's Spot, on a 1 yd grid
+        float constexpr kHealRangeYd = 38.5f;
+        for (Vec2 const& at : { kDoorNode.XY(), kTankSpot.XY(), Vec2{ 875.f, -200.f } })
+        {
+            for (bool heroic : { false, true })
+            {
+                float const r = kLastCallRadiusYd(heroic);
+                std::uint32_t room = 0;
+                for (int x = 845; x <= 905; ++x)
+                    for (int y = -237; y <= -165; ++y)
+                    {
+                        Vec2 const p{ float(x), float(y) };
+                        if (floor.Contains(p, kBarFloorZ) && DungeonKit::Distance(p, at) > r
+                            && DungeonKit::Distance(p, kTankSpot.XY()) <= kHealRangeYd)
+                            ++room;
+                    }
+                CHECK(room >= 600);
+            }
+        }
+    }
+
     void TestChairs()
     {
         std::set<std::uint32_t> entries;
@@ -467,6 +530,7 @@ int main()
     TestNumbers();
     TestStateMachine();
     TestFloor();
+    TestBotBounds();
     TestChairs();
     TestThrow();
     TestTimeline();
