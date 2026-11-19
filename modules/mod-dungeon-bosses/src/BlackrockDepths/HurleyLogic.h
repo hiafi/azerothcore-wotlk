@@ -295,13 +295,16 @@ namespace BrdHurley
     // ----------------------------------------------------------------------------------------------------------------
     inline constexpr float kFloorZ = -49.7f;
 
-    // The six keg spots (NM 4.1; K4 moved to (883, -163) for clearance 4, handoff 3.8). K6 is the stock keg cluster
+    // The six keg spots (NM 4.1; K4 moved to (883, -163) for clearance 4, handoff 3.8, then to mid-floor (907, -158.5),
+    // user 2026-11-19: at (883, -163) it stood 1.5 yd from the Grim Guzzler patrons, a 13-strong linked group, and the
+    // tank's AoE pulled 14 of them when Hurley lurched there in a bot run. Now 23 yd from the nearest patron, clearance
+    // 11 yd, 13 yd from K3/K5/K6). K6 is the stock keg cluster
     // (the three GOs 164911, consumed by the wake-up before the pull). Legs 17-25 yd: 7-10 s at his walk.
     inline constexpr std::array<Point3, kKegCount> kKegSpots{ {
         { 910.2f, -133.2f, -49.7f },    // K1
         { 893.2f, -130.8f, -49.7f },    // K2
         { 895.2f, -152.8f, -49.7f },    // K3
-        { 883.0f, -163.0f, -49.7f },    // K4
+        { 907.0f, -158.5f, -49.7f },    // K4 (mid-floor, clear of the patrons)
         { 910.8f, -171.2f, -49.7f },    // K5
         { 916.7f, -150.0f, -49.7f },    // K6
     } };

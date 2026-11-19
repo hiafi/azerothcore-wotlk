@@ -51,9 +51,11 @@ namespace
             CHECK(InArena(keg));
         for (Point3 const& node : kWakePath)
             CHECK(InArena(node));
-        // The keg spots are NM's six (K4 moved for clearance), on the lower floor's level.
+        // The keg spots are NM's six (K4 moved mid-floor, clear of the bar patrons), on the lower floor's level.
         CHECK(kKegSpots.size() == 6);
-        CHECK(std::fabs(kKegSpots[3].x - 883.f) < 0.01f && std::fabs(kKegSpots[3].y + 163.f) < 0.01f);
+        CHECK(std::fabs(kKegSpots[3].x - 907.f) < 0.01f && std::fabs(kKegSpots[3].y + 158.5f) < 0.01f);
+        // [db] the nearest Grim Guzzler patron (faction 674) to K4 is 23 yd away; the old K4 stood 1.5 yd from one.
+        CHECK(Dist(kKegSpots[3], Point3{ 878.4f, -158.2f, -49.7f }) > 20.f);
         for (Point3 const& keg : kKegSpots)
             CHECK(std::fabs(keg.z - kFloorZ) < 0.5f);
         // The legs NM measured: 17-25 yd between neighbours (7-10 s at his walk).
