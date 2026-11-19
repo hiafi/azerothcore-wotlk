@@ -10,7 +10,8 @@
  *                  source/npcs/blackrock_depths/hurley.py
  *   Tuning         NH<> constants from the build spec (normal / heroic); the unset "stock rescaled" cell (Mortal
  *                  Strike) and the breath's width are this WP's defaults (report, designer questions)
- *   Wake           the stock wake-up (the third keg GO 164911 sends SetData 1,1): the escort path, the Cronies' copy
+ *   Wake           the stock wake-up (the third keg GO 164911 sends SetData 1,1): the escort path, the Cronies' copy,
+ *                  the arrival's target (the tank first)
  *   KegRun         HU3 / HU4 as a small state machine (which keg is marked, the walk, the drink, the stacks)
  *   Geometry       the six keg spots (NM), the breath cone and the puddles in it (HU6), the walk's deadline
  */
@@ -24,6 +25,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <vector>
 
 namespace BrdHurley
 {
@@ -331,6 +333,40 @@ namespace BrdHurley
     inline constexpr Point3 CronyNode(Point3 node, Point3 cronySpawn, Point3 hurleySpawn)
     {
         return { node.x + (cronySpawn.x - hurleySpawn.x), node.y + (cronySpawn.y - hurleySpawn.y), node.z };
+    }
+
+    // The arrival's target (user ruling 2026-11-19): he and the Cronies open on the tank, not on whoever stands nearest
+    // to the path's end (three bot runs lost a non-tank in 1-3 s to four 7.5 elites while the tank stood at the kegs).
+    inline constexpr float kArriveAttackYd = 40.f;      // a player further off than this is not a candidate
+
+    struct ArrivalCandidate
+    {
+        float distance = 0.f;   // from the arriving unit
+        bool tank = false;      // the kit's role provider says tank (a tank spec; a feral druid only in bear form)
+        bool bear = false;      // not a tank by role, but a feral druid out of cat form (a bear tank that tapped the
+                                // kegs in caster form)
+    };
+
+    // The candidate he (or a Crony) attacks on arrival: the nearest tank within kArriveAttackYd, else the nearest bear
+    // out of form, else the nearest player. -1 when nobody is in range.
+    inline int PickArrivalTarget(std::vector<ArrivalCandidate> const& candidates)
+    {
+        int best = -1;
+        int bestTier = 3;
+        for (std::size_t i = 0; i < candidates.size(); ++i)
+        {
+            ArrivalCandidate const& c = candidates[i];
+            if (c.distance > kArriveAttackYd)
+                continue;
+            int const tier = c.tank ? 0 : (c.bear ? 1 : 2);
+            if (best < 0 || tier < bestTier
+                || (tier == bestTier && c.distance < candidates[static_cast<std::size_t>(best)].distance))
+            {
+                best = static_cast<int>(i);
+                bestTier = tier;
+            }
+        }
+        return best;
     }
 
     inline constexpr float kWalkSpeedYd = 2.5f;         // his speed_walk 1.0 [db]

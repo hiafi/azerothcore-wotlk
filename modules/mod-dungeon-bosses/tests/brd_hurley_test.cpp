@@ -1,7 +1,7 @@
 // Host tests for HurleyLogic.h (D18: Hurley Blackbreath, the Cronies, the kegs and the puddles).
 // The slice and the arena (WP-S0's), the Keg Run's state machine, the keg pick, the walk and its deadline, the breath
 // cone (the tank, the puddles, the heroic double width), the wake-up (the escort path, the Cronies' copy, the reload
-// check) against D17's BarModel, the tuning table and the room's points.
+// check) against D17's BarModel, the arrival's target (the tank first), the tuning table and the room's points.
 #include "GuzzlerLogic.h"
 #include "HurleyLogic.h"
 #include "check.h"
@@ -241,6 +241,38 @@ namespace
         CHECK(DATA_HURLEY_AWAKE != DATA_HURLEY_WAKE);
     }
 
+    ArrivalCandidate Cand(float distance, bool tank = false, bool bear = false)
+    {
+        ArrivalCandidate c;
+        c.distance = distance;
+        c.tank = tank;
+        c.bear = bear;
+        return c;
+    }
+
+    void TestArrival()
+    {
+        // User ruling 2026-11-19: he and the Cronies open on the tank, even when non-tanks stand nearer (the bot
+        // runs: a DPS at 10 yd, the tank at 26 yd at the kegs).
+        CHECK(PickArrivalTarget({ Cand(10.4f), Cand(26.4f, true), Cand(11.3f) }) == 1);
+        // The nearest of two tanks.
+        CHECK(PickArrivalTarget({ Cand(30.f, true), Cand(12.f), Cand(20.f, true) }) == 2);
+        // No tank by role: a bear out of form (the keg tap drops the form) before the nearer non-tanks.
+        CHECK(PickArrivalTarget({ Cand(8.f), Cand(25.f, false, true), Cand(9.f) }) == 1);
+        // A tank by role still beats a bear out of form.
+        CHECK(PickArrivalTarget({ Cand(5.f, false, true), Cand(30.f, true) }) == 1);
+        // No tank: the nearest player (the old rule).
+        CHECK(PickArrivalTarget({ Cand(14.f), Cand(9.f), Cand(22.f) }) == 1);
+        // A tank out of range does not count: the nearest player in range.
+        CHECK(PickArrivalTarget({ Cand(kArriveAttackYd + 1.f, true), Cand(18.f), Cand(12.f) }) == 2);
+        // Exactly at the range counts.
+        CHECK(PickArrivalTarget({ Cand(kArriveAttackYd, true), Cand(3.f) }) == 0);
+        // Nobody in range, nobody at all.
+        CHECK(PickArrivalTarget({ Cand(kArriveAttackYd + 0.5f), Cand(60.f, true) }) == -1);
+        CHECK(PickArrivalTarget({}) == -1);
+        CHECK(kArriveAttackYd == 40.f);
+    }
+
     void TestTuning()
     {
         // S4 "Build spec".
@@ -277,6 +309,7 @@ int main()
     TestWalk();
     TestBreath();
     TestWake();
+    TestArrival();
     TestTuning();
     return Report("brd_hurley_test");
 }

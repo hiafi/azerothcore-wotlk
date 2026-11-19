@@ -10,8 +10,9 @@
  *
  *   Wake  hidden, passive and immune to players until the third stock keg GO 164911 is tapped (its SmartAI sends
  *         SetData 1,1): yell 0, he and the Cronies run the stock escort path, then say 1 and ATTACK (the stock quirk,
- *         passive until struck, is fixed). Hidden while every keg GO stands used (a reload: the GOs respawn in 12 h and
- *         the wake is not saved): he wakes at once, at his home, without the yell
+ *         passive until struck, is fixed), all four on the tank (user ruling 2026-11-19; else the nearest player).
+ *         Hidden while every keg GO stands used (a reload: the GOs respawn in 12 h and the wake is not saved): he wakes
+ *         at once, at his home, without the yell
  *   HU1  Mortal Strike   5-8 s, then every 8-13 s, on his victim: 20% / 25% of the tank row and -50% healing, 5 s
  *   HU2  Flame Breath    8 s, then every 15 s: a 2 s bar, a 15 yd 60 degree cone down his front (the tank exempt from
  *                        the cone): 30% / 45% + Weakened on the others; the tank in the arc takes 10% / 15% of the
@@ -81,7 +82,6 @@ namespace
     uint32 constexpr WAKE_AT_HOME = 2;          // ... or appear at its end at once (the reload case)
     float constexpr kGroundBandYd = 6.f;        // a ground probe further off than this is taken as a hole
     float constexpr kPuddleZBandYd = 4.f;       // a player this far above or below a puddle is not in it
-    float constexpr kArriveAttackYd = 40.f;     // on arrival he and the Cronies go for the nearest player this close
     float constexpr kCronyScanYd = 70.f;        // the Cronies around him (they stand within 50 yd of his spawn)
 
     Milliseconds Ms(uint32 ms)
@@ -111,13 +111,28 @@ namespace
         return h;
     }
 
-    // The nearest player he (or a Crony) can attack on arrival, else nullptr.
-    Player* NearestTarget(Creature* me)
+    // The player he (or a Crony) attacks on arrival (user ruling 2026-11-19): the nearest tank within 40 yd, else the
+    // nearest feral druid out of cat form, else the nearest player (PickArrivalTarget). nullptr when nobody is there.
+    Player* ArrivalTarget(Creature* me)
     {
-        Player* p = me->SelectNearestPlayer(kArriveAttackYd);
-        if (!p || !p->IsAlive() || p->IsGameMaster() || !me->IsValidAttackTarget(p))
-            return nullptr;
-        return p;
+        std::vector<Player*> players;
+        std::vector<ArrivalCandidate> candidates;
+        for (auto const& ref : me->GetMap()->GetPlayers())
+        {
+            Player* p = ref.GetSource();
+            if (!p || !p->IsAlive() || p->IsGameMaster() || !me->IsWithinDistInMap(p, kArriveAttackYd)
+                || !me->IsValidAttackTarget(p))
+                continue;
+            ArrivalCandidate c;
+            c.distance = me->GetDistance(p);
+            c.tank = BossMechanics::GetRoleProvider().Get(me, p) == BossMechanics::Role::Tank;
+            c.bear = !c.tank && p->getClass() == CLASS_DRUID && p->GetShapeshiftForm() != FORM_CAT
+                && p->GetSpec() == TALENT_TREE_DRUID_FERAL_COMBAT;
+            players.push_back(p);
+            candidates.push_back(c);
+        }
+        int const pick = PickArrivalTarget(candidates);
+        return pick < 0 ? nullptr : players[static_cast<std::size_t>(pick)];
     }
 
     // The test commands' forced mechanics (`.dbtest brd hurley ...`).
@@ -367,7 +382,7 @@ struct boss_hurley_blackbreath_rework : public BossAI
         me->GetMotionMaster()->MovePoint(POINT_WAKE_FIRST + step, node.x, node.y, node.z, FORCED_MOVEMENT_RUN);
     }
 
-    // The path's end: home here, aggressive, and the stock line; he attacks the nearest player (the quirk fixed).
+    // The path's end: home here, aggressive, and the stock line; he attacks the tank (the quirk fixed; ArrivalTarget).
     void Arrive(bool say)
     {
         _wakeStep = 0;
@@ -377,8 +392,12 @@ struct boss_hurley_blackbreath_rework : public BossAI
             return;
         Talk(SAY_HURLEY_ARRIVE);
         if (!me->IsEngaged())
-            if (Player* target = NearestTarget(me))
+            if (Player* target = ArrivalTarget(me))
+            {
+                LogHu("arrive", Acore::StringFormat("target={} distance={:.1f}", target->GetName(),
+                    me->GetDistance(target)));
                 AttackStart(target);
+            }
     }
 
     // Hidden: every stock keg GO there and none standing means they were used before a reload.
@@ -1198,14 +1217,24 @@ private:
         Arrive(false);
     }
 
+    // At the path's end it goes for Hurley's target when he fights already, else for his pick (ArrivalTarget, the
+    // tank first); its pull then pulls him onto the same player (JustEngagedWith).
     void Arrive(bool attack)
     {
         _wakeStep = 0;
         me->SetHomePosition(me->GetPosition());
         me->SetReactState(REACT_AGGRESSIVE);
-        if (attack && !me->IsEngaged())
-            if (Player* target = NearestTarget(me))
-                AttackStart(target);
+        if (!attack || me->IsEngaged())
+            return;
+        Unit* target = nullptr;
+        if (Creature* hurley = Hurley())
+            if (hurley->IsAlive() && hurley->IsEngaged())
+                if (Unit* victim = hurley->GetVictim(); victim && me->IsValidAttackTarget(victim))
+                    target = victim;
+        if (!target)
+            target = ArrivalTarget(me);
+        if (target)
+            AttackStart(target);
     }
 
     InstanceScript* _instance = nullptr;
