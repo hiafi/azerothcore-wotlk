@@ -203,7 +203,7 @@ public:
             InstanceScript::OnPlayerEnter(player);
             ReplaceMoiraIfSaved();      // stock: a player joining mid-run
 
-            // Section 10 / R-1-RING MJ-1: the Ring gallery stands down for a group whose instance starts at S2a.
+            // Section 10 / R-1-RING MJ-1: the Ring gallery stands down for a group whose instance starts at S2.
             uint32 lfgDungeon = 0;
             if (Group* group = player->GetGroup(); group && group->isLFGGroup())
                 lfgDungeon = sLFGMgr->GetDungeon(group->GetGUID());
@@ -215,7 +215,7 @@ public:
                 s2.lfgHeroic, firstEntry, fromStart))
             {
                 LOG_INFO(kLog, "brd instance gallery stands down (player {}, lfg dungeon {}, first entry {}, {:.1f} yd "
-                    "from S2a)", player->GetName(), lfgDungeon, firstEntry, fromStart);
+                    "from the S2 start)", player->GetName(), lfgDungeon, firstEntry, fromStart);
                 StandDownGallery();
             }
         }

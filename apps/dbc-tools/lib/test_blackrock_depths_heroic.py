@@ -58,6 +58,7 @@ KIT_DIR = TOOL_ROOT / "source" / "npcs" / "blackrock_depths"
 CREDIT_DROP_SQL = _PENDING / "rev_credit_drops_blackrock_depths.sql"
 CHECKPOINT_SQL = (TOOL_ROOT.parents[1] / "modules" / "mod-dungeon-checkpoint" / "data" / "sql" / "db-world"
                   / "u_dungeon_checkpoint_2026_11_17_00.sql")
+S2_MOVE_SQL = CHECKPOINT_SQL.parent / "u_dungeon_checkpoint_2026_11_18_00.sql"  # S2a -> S2g (smoke-run fix)
 IDS = source.load_ids(TOOL_ROOT / "source" / "ids.yaml")
 
 # The nineteen normal encounters in the stock file's order (OrderIndex 0 ... 18000: the same as the id order here),
@@ -166,7 +167,7 @@ BOSS_SPAWN_GUIDS = (45931, 45885, 47733, 47250, 47613, 47771, 47304, 45954, 4777
 EVENT_CREATURE_GUIDS = (78375, 240000)  # Elder Morndeep and Coren Direbrew
 STILGISS_VEREK_CREDIT = 211066  # the credit spell the instance fires when both die (stilgiss_verek.py)
 ENTRANCE = (458.32, 26.52, -70.67)  # LFGDungeons 30 / 276: areatrigger_teleport 1466
-START_S2 = (595.0, -92.0, -45.0, 1.89)
+START_S2 = (544.0, -181.3, -36.0, 5.18)  # S2g, the Ring's south gallery (S2a's patrol fix)
 START_S3 = (607.2, -47.8, -59.8, 6.05)
 START_S4 = (843.8, -167.8, -49.7, 4.64)
 RING_TRIGGER = (595.29, -186.56, -54.0)  # the Ring of Law's centre; areatrigger 1526 is the arena
@@ -379,12 +380,23 @@ class HandSqlTest(unittest.TestCase):
         text = CHECKPOINT_SQL.read_text()
         rows = re.findall(r"^\((230), (\d+), (\d+), (\d+), ([-\d.]+), ([-\d.]+), ([-\d.]+), ([-\d.]+),\s+'", text, re.M)
         self.assertEqual([(int(r[1]), int(r[2]), int(r[3])) for r in rows], [(0, 1, 0), (0, 2, 0), (0, 3, 0)])
-        self.assertEqual([tuple(float(v) for v in r[4:8]) for r in rows], [START_S2, START_S3, START_S4])
+        # index 1 (section 2) moved later: u_dungeon_checkpoint_2026_11_18_00.sql (S2_MOVE_SQL) moves it to S2g
+        self.assertEqual([tuple(float(v) for v in r[4:8]) for r in rows[1:]], [START_S3, START_S4])
         self.assertIn("`location_index` IN (1, 2, 3)", text)
+        move = S2_MOVE_SQL.read_text()
+        m = re.search(r"SET `position_x` = ([-\d.]+), `position_y` = ([-\d.]+), `position_z` = ([-\d.]+), "
+                      r"`orientation` = ([-\d.]+), `reach_radius` = 12,", move)
+        self.assertIsNotNone(m)
+        self.assertEqual(tuple(float(v) for v in m.groups()), START_S2)
+        self.assertIn("WHERE `map_id` = 230 AND `creature_entry` = 0 AND `location_index` = 1;", move)
+        # it sorts after the file that adds reach_radius (and sets 25 on the three starts)
+        self.assertGreater(S2_MOVE_SQL.name, "u_dungeon_checkpoint_2026_11_17_01.sql")
 
     def test_the_finder_starts_are_clear_of_the_arena_trigger_and_near_their_landmarks(self):
-        # S2a is outside the Ring's arena (the BRS K-m3 lesson: arriving must not start the event), S3 faces the lever
-        self.assertGreater(math.dist(START_S2[:3], RING_TRIGGER), 60)
+        # S2g is up in the gallery, well clear of the Ring's arena trigger (the BRS K-m3 lesson: arriving must not start
+        # the event) and above the floor (z -54); S3 faces the lever
+        self.assertGreater(math.dist(START_S2[:3], RING_TRIGGER), 40)
+        self.assertGreater(START_S2[2], RING_TRIGGER[2] + 15)
         self.assertLess(math.dist(START_S3[:3], LEVER), 9)
         bearing = math.atan2(LEVER[1] - START_S3[1], LEVER[0] - START_S3[0]) % (2 * math.pi)
         self.assertAlmostEqual(START_S3[3], bearing, delta=0.25)

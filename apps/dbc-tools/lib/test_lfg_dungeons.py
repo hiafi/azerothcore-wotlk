@@ -956,7 +956,7 @@ class RealSourceTest(unittest.TestCase):
         self.assertEqual(positions[307], positions[44])
         self.assertEqual(positions[306], (78.5083, -225.044, 49.839, 5.1))
         # the Blackrock Depths starts (handoff 3.8): the three moved or new ones, each copied by its heroic entry
-        self.assertEqual(positions[308], (595.0, -92.0, -45.0, 1.89))
+        self.assertEqual(positions[308], (544.0, -181.3, -36.0, 5.18))
         self.assertEqual(positions[309], (607.2, -47.8, -59.8, 6.05))
         self.assertEqual(positions[276], (843.8, -167.8, -49.7, 4.64))
         self.assertEqual((positions[311], positions[312], positions[313]),

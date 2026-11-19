@@ -902,7 +902,7 @@ namespace BlackrockDepthsRework
     inline std::array<FinderSection, 4> constexpr kSections{ {
         { 1, "Detention Block", 30, 310, { 458.32f, 26.52f, -70.67f, 4.95f }, BOSS_RING_OF_LAW,
             { { GO_ARENA4, GO_ARENA3, 0, 0, 0, 0, 0 } } },
-        { 2, "Shadowforge City", 308, 311, { 595.0f, -92.0f, -45.0f, 1.89f }, BOSS_BAELGAR,
+        { 2, "Shadowforge City", 308, 311, { 544.0f, -181.3f, -36.0f, 5.18f }, BOSS_BAELGAR,
             { { 0, 0, 0, 0, 0, 0, 0 } } },
         { 3, "Manufactory", 309, 312, { 607.2f, -47.8f, -59.8f, 6.05f }, BOSS_ARGELMACH,
             { { GO_SHADOW_LOCK, GO_SHADOW_DUMMY, GO_SHADOW_GIANT_DOOR, 0, 0, 0, 0 } } },
@@ -1221,8 +1221,8 @@ namespace BlackrockDepthsRework
     // ----------------------------------------------------------------------------------------------------------------
     // The Ring gallery stand-down for a section 2 start (section 10, R-1-RING MJ-1): every gallery unit (the
     // spectators, peasants and citizens, the armed Anvilrage soldiers, medics, officers and footmen, the two senators)
-    // turns neutral for a group whose instance starts at S2a: its Finder dungeon is section 2's (308 / 311), or the
-    // instance's first entry lands at the S2a start (a headless `.dc test brd-s2` run has no LFG group). Saved; the
+    // turns neutral for a group whose instance starts at S2: its Finder dungeon is section 2's (308 / 311), or the
+    // instance's first entry lands at the S2 start (a headless `.dc test brd-s2` run has no LFG group). Saved; the
     // Ring's slot, gates and credit are untouched (the Ring stays startable). [db] the gallery: 69 units at z -37 to
     // -34, 50-67 yd from kRingCenter, and two footmen at z -46, 71-72 yd.
     // ----------------------------------------------------------------------------------------------------------------
@@ -1232,7 +1232,7 @@ namespace BlackrockDepthsRework
     std::uint32_t constexpr NPC_ANVILRAGE_OFFICER = 8895;
     float constexpr kGalleryRadius = 75.f;
     float constexpr kGalleryZMin = -48.f;               // above the Ring's floor (z -54) and the depths (z -83)
-    float constexpr kGalleryStartEntryYd = 25.f;        // a first entry this close to the S2a start counts
+    float constexpr kGalleryStartEntryYd = 25.f;        // a first entry this close to the S2 start counts
 
     constexpr bool IsGalleryEntry(std::uint32_t entry)
     {
@@ -1258,7 +1258,7 @@ namespace BlackrockDepthsRework
     }
 
     // `lfgDungeon`: the entering player's LFG group's dungeon (0 without one); `firstEntry`: no player entered this
-    // instance before and no slot is IN_PROGRESS or DONE; `yardsFromS2Start`: the player's 2D distance to S2a.
+    // instance before and no slot is IN_PROGRESS or DONE; `yardsFromS2Start`: the player's 2D distance to the S2 start.
     constexpr bool GalleryStandsDownOnEntry(bool alreadyStoodDown, std::uint32_t ringState, std::uint32_t lfgDungeon,
         std::uint32_t lfgSection2Normal, std::uint32_t lfgSection2Heroic, bool firstEntry, float yardsFromS2Start)
     {

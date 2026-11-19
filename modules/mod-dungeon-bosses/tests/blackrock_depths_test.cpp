@@ -354,7 +354,7 @@ namespace
         // Section 4 passes the Bar Door first and the throne door last.
         CHECK(kSections[3].doors[0] == GO_BAR_DOOR && kSections[3].doors[6] == GO_THRONE_ROOM);
         // R-1-KIT n1 / R-1-B n5: the starts carry the Finder rows' facing (lfg_classic_sections.py, checkpoint SQL).
-        CHECK(std::fabs(kSections[1].start.o - 1.89f) < 0.001f && std::fabs(kSections[2].start.o - 6.05f) < 0.001f);
+        CHECK(std::fabs(kSections[1].start.o - 5.18f) < 0.001f && std::fabs(kSections[2].start.o - 6.05f) < 0.001f);
         CHECK(std::fabs(kSections[3].start.o - 4.64f) < 0.001f);
     }
 
@@ -508,7 +508,7 @@ namespace
         }
         CHECK(!IsGalleryEntry(8891) && !IsGalleryEntry(NPC_GRIMSTONE) && !IsGalleryEntry(8921));
         CHECK(NPC_ANVILRAGE_FOOTMAN == 8892 && NPC_ANVILRAGE_OFFICER == 8895);
-        // The trigger: a section 2 Finder group (normal or heroic), or the first entry at S2a.
+        // The trigger: a section 2 Finder group (normal or heroic), or the first entry at the S2 start.
         std::uint32_t const n = kSections[1].lfgNormal;
         std::uint32_t const h = kSections[1].lfgHeroic;
         CHECK(n == 308 && h == 311);
@@ -518,11 +518,14 @@ namespace
         CHECK(!GalleryStandsDownOnEntry(false, State::NotStarted, 0, n, h, false, 900.f));      // a full run
         CHECK(GalleryStandsDownOnEntry(false, State::NotStarted, 0, n, h, true, kGalleryStartEntryYd));   // `.dc test`
         CHECK(!GalleryStandsDownOnEntry(false, State::NotStarted, 0, n, h, true, kGalleryStartEntryYd + 1.f));
-        CHECK(!GalleryStandsDownOnEntry(false, State::NotStarted, 0, n, h, false, 2.f));  // a full run back at S2a
+        CHECK(!GalleryStandsDownOnEntry(false, State::NotStarted, 0, n, h, false, 2.f));  // a full run back at S2
         CHECK(!GalleryStandsDownOnEntry(true, State::NotStarted, 308, n, h, true, 0.f));  // once
         CHECK(!GalleryStandsDownOnEntry(false, State::Done, 308, n, h, true, 0.f));       // the Ring's win did it
-        // S2a is off the Ring's floor and within reach of the gallery's north side.
-        CHECK(!In(RingOfLawArena(), kSections[1].start.P3()));
+        // The S2 start (S2g, smoke-run fix 2026-11-18) is up in the gallery, off the Ring's floor, and inside the band
+        // the stand-down covers, so the units around a Finder arrival are the stood-down ones.
+        Point3 const s2 = kSections[1].start.P3();
+        CHECK(!In(RingOfLawArena(), s2));
+        CHECK(DungeonKit::Distance(s2.XY(), kRingCenter.XY()) < kGalleryRadius && s2.z > kGalleryZMin);
     }
 
     void TestSave()
