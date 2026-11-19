@@ -283,7 +283,7 @@ namespace
         CHECK(kLagerBuzzPct == 10 && kTipsyPct == 30 && kMortalStrikeHealingPct == 50);
         CHECK(kHurleyHealth.normal == 140000 && kHurleyHealth.heroic == 200000);
         CHECK(kCronyHealth.normal == 8000 && kCronyHealth.heroic == 12000);
-        CHECK(kKegHealth.normal == 6000 && kKegHealth.heroic == 9000);
+        CHECK(kKegHealth.normal == 4000 && kKegHealth.heroic == 6000);
         CHECK(kKegRunFirstMs == 15000 && kKegRunEveryMs.normal == 25000 && kKegRunEveryMs.heroic == 20000);
         CHECK(kDrinkMs == 3000 && kBreathFirstMs == 8000 && kBreathEveryMs == 15000 && kBreathCastMs == 2000);
         CHECK(kPuddleLifeMs == 30000 && kBurningLagerMs == 20000 && kLagerBuzzMs == 5000);
@@ -293,7 +293,7 @@ namespace
         // never more than two thirds of a keg run apart.
         CHECK(kPuddleLifeMs / kKegRunEveryMs.normal + 1 <= 2);
         CHECK(kPuddleLifeMs / kKegRunEveryMs.heroic + 1 <= 2);
-        // The failing path (S4): a drink heals 10% of 140k = 14,000, a smash costs 6,000.
+        // The failing path (S4): a drink heals 10% of 140k = 14,000, a smash costs 4,000.
         CHECK(kHurleyHealth.normal / 100 * kDrinkHealPct > kKegHealth.normal);
         // A drink always ends before the next lurch is due (walk + drink inside the interval at the longest leg).
         CHECK(LurchDeadlineMs(25.f) + kDrinkMs < kKegRunEveryMs.heroic);

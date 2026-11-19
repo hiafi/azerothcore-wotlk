@@ -111,7 +111,7 @@ namespace BrdHurley
     // Health at 5 players (handoff 3.6; heroic by WP-H's overrides and the keg's heroic template).
     inline constexpr NH<std::uint32_t> kHurleyHealth{ 140000, 200000 };
     inline constexpr NH<std::uint32_t> kCronyHealth{ 8000, 12000 };
-    inline constexpr NH<std::uint32_t> kKegHealth{ 6000, 9000 };
+    inline constexpr NH<std::uint32_t> kKegHealth{ 4000, 6000 };   // was 6k / 9k (user 2026-11-19: short keg runs)
 
     // ----------------------------------------------------------------------------------------------------------------
     // Timers (ms). The pull is t = 0.

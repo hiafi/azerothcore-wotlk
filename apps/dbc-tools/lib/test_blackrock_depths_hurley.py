@@ -207,8 +207,8 @@ class HurleyDeclarationTest(unittest.TestCase):
         text = HEROIC.read_text(encoding="utf-8")
         self.assertRegex(text, r"9537: _boss\(200_000, 310378\)")
         self.assertRegex(text, r"9541: dict\(health=12_000\)")
-        self.assertRegex(text, r"300839: dict\(health=9_000\)")
-        self.assertEqual(_header_nh("kKegHealth"), (6_000.0, 9_000.0))
+        self.assertRegex(text, r"300839: dict\(health=6_000\)")
+        self.assertEqual(_header_nh("kKegHealth"), (4_000.0, 6_000.0))
 
     # --- the keg and the puddle --------------------------------------------------------------------------------------
 
@@ -216,7 +216,7 @@ class HurleyDeclarationTest(unittest.TestCase):
         keg = self.creatures[KEG]
         self.assertEqual(keg["name"], "Thunderbrew Lager Keg")
         self.assertEqual((int(keg["minlevel"]), int(keg["maxlevel"])), (55, 55))
-        self.assertEqual(math.ceil(WARRIOR_55_BASE * float(keg["HealthModifier"])), 6_000)
+        self.assertEqual(math.ceil(WARRIOR_55_BASE * float(keg["HealthModifier"])), 4_000)
         self.assertTrue(int(keg["unit_flags"]) & UNIT_FLAG_NOT_SELECTABLE)    # selectable only once marked
         self.assertEqual(float(keg["DamageModifier"]), 0.0)
         self.assertEqual(int(keg["faction"]), 54)

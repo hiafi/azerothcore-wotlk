@@ -21,8 +21,9 @@ nothing spawns them until the C++ binds.
   the three spawns' per-guid SmartAI), 8,000 at 5 players (HealthModifier 3.261312 on the level 53 warrior base
   2,453), DamageModifier the stock 7.5 (base SQL; a designer question), immunities kept (none). Sinister Strike 15581
   and the heroic Rupture 15583 are the stock spells (kept, not rescaled). Heroic 12k: WP-H's override.
-- 300839 Thunderbrew Lager Keg: the boss-kit target (S4 "Build spec"), level 55, rank 0, 6,000 health (HealthModifier
-  2.295333 on 2,614), not selectable until Hurley marks it (unit_flags NOT_SELECTABLE; the script clears it), no melee,
+- 300839 Thunderbrew Lager Keg: the boss-kit target (S4 "Build spec"), level 55, rank 0, 4,000 health (HealthModifier
+  1.530222 on 2,614; 6,000 until a 2026-11-19 bot run showed short keg runs), not selectable until Hurley marks it
+  (unit_flags NOT_SELECTABLE; the script clears it), no melee,
   rooted and passive (npc_brd_lager_keg), immunity 1972 (no fear, no stun: it never moves), no loot, no XP. On V-1's
   minted keg display CDI 90770 (`G_Keg.mdx`; the spec's 24860 is an invisible stalker, never wired). Heroic 9k:
   `difficulty_entry_1` 310414 (WP-H's predicted lock line).
@@ -109,7 +110,7 @@ WARRIOR_55_BASE = 2614              # creature_classlevelstats level 55, class 1
 WARRIOR_53_BASE = 2453              # level 53
 HURLEY_HEALTH = 140_000             # kHurleyHealth normal
 CRONY_HEALTH = 8_000                # kCronyHealth normal
-KEG_HEALTH = 6_000                  # kKegHealth normal
+KEG_HEALTH = 4_000                  # kKegHealth normal
 KEG_LEVEL = 55
 KEG_COUNT = 6                       # kKegCount (Liquid Courage's cap)
 

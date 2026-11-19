@@ -141,7 +141,7 @@ KIT_HEALTH = {  # new kit adds (handoff 3.3 ids): heroic health; None = the tier
     300780: 12_000, 300781: 9_000, **{e: 10_000 for e in range(300782, 300788)}, 300788: 40_000,
     300789: None, 300790: None, 300791: None, 300792: 7_000, 300793: 28_000, 300794: 9_000, 300795: 6_000,
     300830: 15_000, 300831: 4_500, 300832: 7_500, 300833: 37_000, 300834: 37_000, 300835: 37_000, 300836: 100_000,
-    300839: 9_000, 300841: 8_000, 300842: 12_000, 300843: 12_000, 300844: 10_000,
+    300839: 6_000, 300841: 8_000, 300842: 12_000, 300843: 12_000, 300844: 10_000,
 }
 # minted after the extraction set, in entry order, wave by wave (the mint-order note in blackrock_depths.py)
 KIT_HEROIC_ID = {entry: 310391 + i for i, entry in enumerate(sorted(KIT_HEALTH))}
