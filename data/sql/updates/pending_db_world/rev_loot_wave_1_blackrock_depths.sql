@@ -1,0 +1,211 @@
+-- Blackrock Depths build WP-L-1: the gameobject loot of sections 1 and 2 (the Secret Safe, the twelve Relic Coffers,
+-- the Dark Coffer), the rows apps/dbc-tools' loot DSL cannot declare (it writes creature loot only; the creature
+-- lists, tokens, hard mode lists and the 5% Dark Keeper Key rows are source/items/blackrock_depths_loot.py).
+-- .agents/plans/blackrock-depths-build/blackrock-depths-build.HANDOFF.md s3.6, s7 #17; build spec
+-- docs/dungeons/blackrock-depths-2-shadowforge-city.md "Coffer loot" (rulings 32-36). Wave 2's gameobject loot (the
+-- Chest of The Seven 12260) is WP-L-2's own rev.
+
+-- 1. The Secret Safe 161495 (WP-D9): go_brd_vault_secret_safe fills it by script when it opens (the Cinder always,
+--    one gear item that is never Doomgrip's, the bags by the loot clock). The engine only calls the fill hook when the
+--    table yields at least one row, so the table keeps exactly one: the Cinder of the Firelord 70621 at 100% (the
+--    script strips and re-adds it). The four stock Vault gear rows go: the fill script places the gear (the Vault four
+--    are Doomgrip's list now). No gold on the Safe.
+DELETE FROM `gameobject_loot_template` WHERE `Entry` = 161495;
+INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`,
+    `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES
+(161495, 70621, 0, 100, 0, 1, 0, 1, 1, 'Secret Safe - Cinder of the Firelord (the fill script owns the rest)');
+
+-- 2. The twelve Relic Coffers (chest 160836, loot 11105; rulings 32-34): 10 to 50 gold (the chest's gold, shared in the
+--    group like any chest gold), 1 cut rare gem (the 37 C5 rare cuts, equal chance) on both difficulties and 1
+--    consumable (ruling 33: potions, elixirs and scrolls). The stock vendor items (sacks of coins, bracelets,
+--    documents, the Deed, the booties and the three rare oddities) are removed.
+DELETE FROM `gameobject_loot_template` WHERE `Entry` = 11105;
+INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`,
+    `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES
+(11105, 70720, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Bold Star Ruby'),
+(11105, 70721, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Delicate Star Ruby'),
+(11105, 70722, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Brilliant Star Ruby'),
+(11105, 70723, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Sparkling Star Ruby'),
+(11105, 70724, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Smooth Azerothian Diamond'),
+(11105, 70725, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Quick Azerothian Diamond'),
+(11105, 70726, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Fractured Azerothian Diamond'),
+(11105, 70727, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Mystic Azerothian Diamond'),
+(11105, 70728, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Fortunate Blue Sapphire'),
+(11105, 70729, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Tireless Blue Sapphire'),
+(11105, 70730, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Lustrous Blue Sapphire'),
+(11105, 70731, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Shielded Blue Sapphire'),
+(11105, 70732, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Subtle Blue Sapphire'),
+(11105, 70733, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Flashing Blue Sapphire'),
+(11105, 70734, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Inscribed Large Opal'),
+(11105, 70735, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Fierce Large Opal'),
+(11105, 70736, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Etched Large Opal'),
+(11105, 70737, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Deadly Large Opal'),
+(11105, 70738, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Deft Large Opal'),
+(11105, 70739, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Glinting Large Opal'),
+(11105, 70740, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Potent Large Opal'),
+(11105, 70741, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Reckless Large Opal'),
+(11105, 70742, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Luminous Large Opal'),
+(11105, 70743, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Stalwart Dusk Amethyst'),
+(11105, 70744, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Defender''s Dusk Amethyst'),
+(11105, 70745, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Nimble Dusk Amethyst'),
+(11105, 70746, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Regal Dusk Amethyst'),
+(11105, 70747, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Royal Dusk Amethyst'),
+(11105, 70748, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Purified Dusk Amethyst'),
+(11105, 70749, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Jagged Huge Emerald'),
+(11105, 70750, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Forceful Huge Emerald'),
+(11105, 70751, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Radiant Huge Emerald'),
+(11105, 70752, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Vivid Huge Emerald'),
+(11105, 70753, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Misty Huge Emerald'),
+(11105, 70754, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Energized Huge Emerald'),
+(11105, 70755, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Intricate Huge Emerald'),
+(11105, 70756, 0, 0, 0, 1, 1, 1, 1, 'Relic Coffer gem - Steady Huge Emerald'),
+(11105, 13446, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Major Healing Potion'),
+(11105, 13444, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Major Mana Potion'),
+(11105, 13443, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Superior Mana Potion'),
+(11105, 13442, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Mighty Rage Potion'),
+(11105, 13455, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Greater Stoneshield Potion'),
+(11105, 13452, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Elixir of the Mongoose'),
+(11105, 13453, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Elixir of Brute Force'),
+(11105, 9206, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Elixir of Giants'),
+(11105, 13454, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Greater Arcane Elixir'),
+(11105, 13447, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Elixir of the Sages'),
+(11105, 13445, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Elixir of Superior Defense'),
+(11105, 20007, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Mageblood Elixir'),
+(11105, 10305, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Scroll of Protection IV'),
+(11105, 10306, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Scroll of Spirit IV'),
+(11105, 10307, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Scroll of Stamina IV'),
+(11105, 10308, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Scroll of Intellect IV'),
+(11105, 10309, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Scroll of Agility IV'),
+(11105, 10310, 0, 0, 0, 1, 2, 1, 1, 'Relic Coffer supplies - Scroll of Strength IV');
+
+-- 3. The Dark Coffer (chest 160845, loot 11103; rulings 32-35): 50 to 200 gold, one cut gem (a rare cut on normal, an
+--    epic cut on heroic, ruling 34), one weapon enchant scroll (C6's endgame weapon scrolls), one flask, and two more
+--    consumables from the Relic Coffer's pool. The three Libram quest items (Burning Essence 11751, Black Blood of the
+--    Tormented 11752, Eye of Kajal 11753; quests 4463, 4482, 4483) stay at their stock rates, at LootMode 3 so the
+--    heroic coffer (mode 2) drops them too (R-2-LOOT m-1); the other 143 rows (the random green and blue gear, recipes
+--    and trinkets) are removed.
+--    LootMode: the rare gem group is LootMode 1 and the epic gem group LootMode 2; every other group is LootMode 3
+--    (rolls under either). A game object has the default loot mode 1, so a normal Dark Coffer gives the rare gem; the
+--    instance script sets mode 2 on the heroic Dark Coffer (`go->SetLootMode(LOOT_MODE_HARD_MODE_1)` in
+--    instance_blackrock_depths_rework.cpp OnGameObjectCreate, GO_DARK_COFFER), which swaps the rare gem for the epic.
+--    The two supply rolls share one pool, reference 1701101 (ids.yaml event_loot_reference), rolled twice (MaxCount 2
+--    on a reference row is the number of rolls): gameobject_loot_template's key is (Entry, Item), so the same item
+--    cannot sit in two groups of one chest. Its rows are LootMode 3 like the coffer row that rolls it.
+DELETE FROM `reference_loot_template` WHERE `Entry` = 1701101;
+INSERT INTO `reference_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`,
+    `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES
+(1701101, 13446, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Major Healing Potion'),
+(1701101, 13444, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Major Mana Potion'),
+(1701101, 13443, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Superior Mana Potion'),
+(1701101, 13442, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Mighty Rage Potion'),
+(1701101, 13455, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Greater Stoneshield Potion'),
+(1701101, 13452, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Elixir of the Mongoose'),
+(1701101, 13453, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Elixir of Brute Force'),
+(1701101, 9206, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Elixir of Giants'),
+(1701101, 13454, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Greater Arcane Elixir'),
+(1701101, 13447, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Elixir of the Sages'),
+(1701101, 13445, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Elixir of Superior Defense'),
+(1701101, 20007, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Mageblood Elixir'),
+(1701101, 10305, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Scroll of Protection IV'),
+(1701101, 10306, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Scroll of Spirit IV'),
+(1701101, 10307, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Scroll of Stamina IV'),
+(1701101, 10308, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Scroll of Intellect IV'),
+(1701101, 10309, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Scroll of Agility IV'),
+(1701101, 10310, 0, 0, 0, 3, 1, 1, 1, 'Dark Coffer supplies - Scroll of Strength IV');
+DELETE FROM `gameobject_loot_template` WHERE `Entry` = 11103 AND `Item` NOT IN (11751, 11752, 11753);
+INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`,
+    `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES
+(11103, 70720, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Bold Star Ruby'),
+(11103, 70721, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Delicate Star Ruby'),
+(11103, 70722, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Brilliant Star Ruby'),
+(11103, 70723, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Sparkling Star Ruby'),
+(11103, 70724, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Smooth Azerothian Diamond'),
+(11103, 70725, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Quick Azerothian Diamond'),
+(11103, 70726, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Fractured Azerothian Diamond'),
+(11103, 70727, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Mystic Azerothian Diamond'),
+(11103, 70728, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Fortunate Blue Sapphire'),
+(11103, 70729, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Tireless Blue Sapphire'),
+(11103, 70730, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Lustrous Blue Sapphire'),
+(11103, 70731, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Shielded Blue Sapphire'),
+(11103, 70732, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Subtle Blue Sapphire'),
+(11103, 70733, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Flashing Blue Sapphire'),
+(11103, 70734, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Inscribed Large Opal'),
+(11103, 70735, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Fierce Large Opal'),
+(11103, 70736, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Etched Large Opal'),
+(11103, 70737, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Deadly Large Opal'),
+(11103, 70738, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Deft Large Opal'),
+(11103, 70739, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Glinting Large Opal'),
+(11103, 70740, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Potent Large Opal'),
+(11103, 70741, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Reckless Large Opal'),
+(11103, 70742, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Luminous Large Opal'),
+(11103, 70743, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Stalwart Dusk Amethyst'),
+(11103, 70744, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Defender''s Dusk Amethyst'),
+(11103, 70745, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Nimble Dusk Amethyst'),
+(11103, 70746, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Regal Dusk Amethyst'),
+(11103, 70747, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Royal Dusk Amethyst'),
+(11103, 70748, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Purified Dusk Amethyst'),
+(11103, 70749, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Jagged Huge Emerald'),
+(11103, 70750, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Forceful Huge Emerald'),
+(11103, 70751, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Radiant Huge Emerald'),
+(11103, 70752, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Vivid Huge Emerald'),
+(11103, 70753, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Misty Huge Emerald'),
+(11103, 70754, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Energized Huge Emerald'),
+(11103, 70755, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Intricate Huge Emerald'),
+(11103, 70756, 0, 0, 0, 1, 1, 1, 1, 'Dark Coffer gem (normal) - Steady Huge Emerald'),
+(11103, 70760, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Bold Bloodfire Ruby'),
+(11103, 70761, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Delicate Bloodfire Ruby'),
+(11103, 70762, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Brilliant Bloodfire Ruby'),
+(11103, 70763, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Sparkling Bloodfire Ruby'),
+(11103, 70764, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Smooth Sunfire Citrine'),
+(11103, 70765, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Quick Sunfire Citrine'),
+(11103, 70766, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Fractured Sunfire Citrine'),
+(11103, 70767, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Mystic Sunfire Citrine'),
+(11103, 70768, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Fortunate Tidal Sapphire'),
+(11103, 70769, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Tireless Tidal Sapphire'),
+(11103, 70770, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Lustrous Tidal Sapphire'),
+(11103, 70771, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Shielded Tidal Sapphire'),
+(11103, 70772, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Subtle Tidal Sapphire'),
+(11103, 70773, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Flashing Tidal Sapphire'),
+(11103, 70774, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Inscribed Dawnfire Opal'),
+(11103, 70775, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Fierce Dawnfire Opal'),
+(11103, 70776, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Etched Dawnfire Opal'),
+(11103, 70777, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Deadly Dawnfire Opal'),
+(11103, 70778, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Deft Dawnfire Opal'),
+(11103, 70779, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Glinting Dawnfire Opal'),
+(11103, 70780, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Potent Dawnfire Opal'),
+(11103, 70781, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Reckless Dawnfire Opal'),
+(11103, 70782, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Luminous Dawnfire Opal'),
+(11103, 70783, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Stalwart Twilight Amethyst'),
+(11103, 70784, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Defender''s Twilight Amethyst'),
+(11103, 70785, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Nimble Twilight Amethyst'),
+(11103, 70786, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Regal Twilight Amethyst'),
+(11103, 70787, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Royal Twilight Amethyst'),
+(11103, 70788, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Purified Twilight Amethyst'),
+(11103, 70789, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Jagged Wildheart Emerald'),
+(11103, 70790, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Forceful Wildheart Emerald'),
+(11103, 70791, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Radiant Wildheart Emerald'),
+(11103, 70792, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Vivid Wildheart Emerald'),
+(11103, 70793, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Misty Wildheart Emerald'),
+(11103, 70794, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Energized Wildheart Emerald'),
+(11103, 70795, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Intricate Wildheart Emerald'),
+(11103, 70796, 0, 0, 0, 2, 2, 1, 1, 'Dark Coffer gem (heroic) - Steady Wildheart Emerald'),
+(11103, 79099, 0, 0, 0, 3, 3, 1, 1, 'Dark Coffer weapon enchant - Scroll of Enchant Weapon - Greater Strength'),
+(11103, 79100, 0, 0, 0, 3, 3, 1, 1, 'Dark Coffer weapon enchant - Scroll of Enchant Weapon - Greater Agility'),
+(11103, 79101, 0, 0, 0, 3, 3, 1, 1, 'Dark Coffer weapon enchant - Scroll of Enchant Weapon - Greater Intellect'),
+(11103, 79102, 0, 0, 0, 3, 3, 1, 1, 'Dark Coffer weapon enchant - Scroll of Enchant Weapon - Greater Spirit'),
+(11103, 79103, 0, 0, 0, 3, 3, 1, 1, 'Dark Coffer weapon enchant - Scroll of Enchant 2H Weapon - Greater Strength'),
+(11103, 79104, 0, 0, 0, 3, 3, 1, 1, 'Dark Coffer weapon enchant - Scroll of Enchant 2H Weapon - Greater Agility'),
+(11103, 79105, 0, 0, 0, 3, 3, 1, 1, 'Dark Coffer weapon enchant - Scroll of Enchant 2H Weapon - Greater Intellect'),
+(11103, 79106, 0, 0, 0, 3, 3, 1, 1, 'Dark Coffer weapon enchant - Scroll of Enchant 2H Weapon - Greater Spirit'),
+(11103, 13510, 0, 0, 0, 3, 4, 1, 1, 'Dark Coffer flask - Flask of the Titans'),
+(11103, 13511, 0, 0, 0, 3, 4, 1, 1, 'Dark Coffer flask - Flask of Distilled Wisdom'),
+(11103, 13512, 0, 0, 0, 3, 4, 1, 1, 'Dark Coffer flask - Flask of Supreme Power'),
+(11103, 78820, 0, 0, 0, 3, 4, 1, 1, 'Dark Coffer flask - Flask of Might'),
+(11103, 78821, 0, 0, 0, 3, 4, 1, 1, 'Dark Coffer flask - Flask of Grace'),
+(11103, 1701101, 1701101, 100, 0, 3, 0, 2, 2, 'Dark Coffer supplies - two rolls (reference 1701101)');
+UPDATE `gameobject_loot_template` SET `LootMode` = 3 WHERE `Entry` = 11103 AND `Item` IN (11751, 11752, 11753);
+
+-- 4. The chests' gold (gameobject_template_addon mingold / maxgold, copper): the Relic Coffer 10 to 50 gold, the Dark
+--    Coffer 50 to 200 gold. Both were 0. An UPDATE: the addon rows exist (flags 16).
+UPDATE `gameobject_template_addon` SET `mingold` = 100000, `maxgold` = 500000 WHERE `entry` = 160836;
+UPDATE `gameobject_template_addon` SET `mingold` = 500000, `maxgold` = 2000000 WHERE `entry` = 160845;

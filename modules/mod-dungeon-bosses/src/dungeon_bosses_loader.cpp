@@ -110,6 +110,39 @@ void AddSC_boss_gyth_rework();                      // B12: boss_gyth_rework
 void AddSC_boss_the_beast_rework();                 // B13: boss_the_beast_rework
 void AddSC_boss_drakkisath_rework();                // B14: boss_drakkisath_rework
 void AddSC_brs_drakkisath_hard_mode();              // B15: Drakkisath's hard mode (`.dbtest brs army`)
+// Blackrock Depths (map 230): the Blackrock Depths skeleton (WP-S0): the instance (registered under the stock name
+// instance_blackrock_depths, replacing the stock one; Rocknot, Nagmara, the braziers, at_ring_of_law, Grimstone,
+// Phalanx, the Tomb and the stock bosses of the wave not yet bound keep working) and the `.dbtest brd` shell
+void AddSC_instance_blackrock_depths_rework();
+void AddSC_dungeon_bosses_brd_commandscript();
+// Blackrock Depths bosses (one file per boss WP). Wave 1, Detention Block and Shadowforge City:
+void AddSC_boss_high_interrogator_gerstahn_rework();    // D1: boss_high_interrogator_gerstahn_rework
+void AddSC_boss_lord_roccor_rework();                   // D2: boss_lord_roccor_rework
+void AddSC_boss_houndmaster_grebmar_rework();           // D3: boss_houndmaster_grebmar_rework
+void AddSC_npc_grimstone_rework();                      // D4: npc_grimstone_rework (registered once D4 binds it)
+void AddSC_npc_ring_beast_rework();                     // D4: npc_ring_beast_rework (idem)
+void AddSC_boss_ring_champions_rework();                // D5: the six boss_<champion>_rework (once D5 binds them)
+void AddSC_brd_ring_encore_hard_mode();                 // D6: the Encore (`.dbtest brd encore`)
+void AddSC_boss_pyromancer_loregrain_rework();          // D7: boss_pyromancer_loregrain_rework
+void AddSC_boss_warder_stilgiss_rework();               // D8: boss_warder_stilgiss_rework, npc_verek_rework
+void AddSC_boss_watchman_doomgrip_rework();             // D9: boss_watchman_doomgrip_rework
+void AddSC_npc_fineous_darkvire_rework();               // D10: npc_fineous_darkvire_rework
+void AddSC_boss_lord_incendius_rework();                // D11: boss_lord_incendius_rework
+void AddSC_brd_incendius_hard_mode();                   // D12: Lord of the Lake (`.dbtest brd lake`)
+void AddSC_boss_baelgar_rework();                       // D13: boss_baelgar_rework
+// Wave 2, Manufactory and Imperial Seat (AIs registered only once wave 2 flips kWave2Bound / BIND_WAVE_2; D17 is
+// data only):
+void AddSC_boss_general_angerforge_rework();            // D14: boss_general_angerforge_rework
+void AddSC_boss_golem_lord_argelmach_rework();          // D15: boss_golem_lord_argelmach_rework
+void AddSC_brd_argelmach_hard_mode();                   // D16: the Prototype (`.dbtest brd prototype`)
+void AddSC_boss_hurley_blackbreath_rework();            // D18: Hurley and npc_blackbreath_crony_rework
+void AddSC_npc_phalanx_rework();                        // D19: npc_phalanx_rework
+void AddSC_boss_ambassador_flamelash_rework();          // D20: Flamelash and npc_burning_spirit_rework
+void AddSC_boss_the_seven_rework();                     // D21: boss_the_seven_rework (all seven)
+void AddSC_boss_magmus_rework();                        // D22: boss_magmus_rework, npc_ironhand_guardian_rework
+void AddSC_boss_emperor_dagran_thaurissan_rework();     // D23: boss_emperor_dagran_thaurissan_rework
+void AddSC_boss_moira_bronzebeard_rework();             // D23: boss_moira_bronzebeard_rework (8929 and 10076)
+void AddSC_brd_emperor_hard_mode();                     // D24: the Avatar of Ragnaros (`.dbtest brd avatar`)
 // Stratholme hard mode items (wave 1 dungeon items): the Balnazzar and Baron Rivendare hard mode item effects
 void AddSC_strat_hard_mode_items();         // spell_strat_dust_of_the_nathrezim, spell_strat_two_faced_tome,
                                             // spell_strat_ysidas_locket, spell_strat_blade_of_the_condemned,
@@ -211,6 +244,32 @@ void Addmod_dungeon_bossesScripts()
     AddSC_boss_the_beast_rework();
     AddSC_boss_drakkisath_rework();
     AddSC_brs_drakkisath_hard_mode();
+    AddSC_instance_blackrock_depths_rework();
+    AddSC_boss_high_interrogator_gerstahn_rework();
+    AddSC_boss_lord_roccor_rework();
+    AddSC_boss_houndmaster_grebmar_rework();
+    AddSC_npc_grimstone_rework();
+    AddSC_npc_ring_beast_rework();
+    AddSC_boss_ring_champions_rework();
+    AddSC_brd_ring_encore_hard_mode();
+    AddSC_boss_pyromancer_loregrain_rework();
+    AddSC_boss_warder_stilgiss_rework();
+    AddSC_boss_watchman_doomgrip_rework();
+    AddSC_npc_fineous_darkvire_rework();
+    AddSC_boss_lord_incendius_rework();
+    AddSC_brd_incendius_hard_mode();
+    AddSC_boss_baelgar_rework();
+    AddSC_boss_general_angerforge_rework();
+    AddSC_boss_golem_lord_argelmach_rework();
+    AddSC_brd_argelmach_hard_mode();
+    AddSC_boss_hurley_blackbreath_rework();
+    AddSC_npc_phalanx_rework();
+    AddSC_boss_ambassador_flamelash_rework();
+    AddSC_boss_the_seven_rework();
+    AddSC_boss_magmus_rework();
+    AddSC_boss_emperor_dagran_thaurissan_rework();
+    AddSC_boss_moira_bronzebeard_rework();
+    AddSC_brd_emperor_hard_mode();
     AddSC_strat_hard_mode_items();
     AddSC_sfk_hard_mode_items();
     AddSC_brs_hard_mode_items();
@@ -218,10 +277,11 @@ void Addmod_dungeon_bossesScripts()
     AddSC_haunted_set_bonuses();
     AddSC_molten_set_bonuses();
     // after the boss files: they register their `.dmtest` / `.sfktest` / `.dbtest scholo` / `.dbtest strat` /
-    // `.dbtest brs` tables from their AddSC_ functions
+    // `.dbtest brs` / `.dbtest brd` tables from their AddSC_ functions
     AddSC_dungeon_bosses_dmtest_commandscript();
     AddSC_dungeon_bosses_sfktest_commandscript();
     AddSC_dungeon_bosses_scholo_commandscript();
     AddSC_dungeon_bosses_strat_commandscript();
     AddSC_dungeon_bosses_brs_commandscript();
+    AddSC_dungeon_bosses_brd_commandscript();
 }

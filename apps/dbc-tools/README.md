@@ -465,7 +465,7 @@ finder entry uses. Deleting a line re-enables the dungeon (the prune pass DELETE
 included). Live on worldserver start or `.reload disables`. Needs the stock
 `var/extractors/dbc/LFGDungeons.dbc` (`DBFilesClient/LFGDungeons.dbc` from `patch-enUS-3.MPQ`, flattened).
 
-### Dungeon finder entries (`lfg_group()` / `lfg_random()` / `lfg_heroic()` / `lfg_override()`)
+### Dungeon finder entries (`lfg_group()` / `lfg_random()` / `lfg_heroic()` / `lfg_override()` / `lfg_dungeon()`)
 
 `source/world/lfg_classic_heroic.py` declares Random Classic Heroic (`lib/dsl/lfg.py`, rows by `lib/lfg_dungeons.py`):
 
@@ -477,6 +477,10 @@ lfg_group(1, order_index=6)                                     # a stock sectio
 lfg_random(300, "Random Classic Heroic", group=12, like=260, expansion=0, min_level=60, max_level=62)
 lfg_heroic(301, normal=6, group=12)                             # Deadmines' heroic finder entry
 lfg_override(44, type_id=1, group=1, flags=3, min_level=55, max_level=65, position=(98.25, -300.75, 63.1, 4.94))
+lfg_override(30, last_encounter=230)                            # a stock entry's final boss moves (227 -> 230)
+lfg_dungeon(308, "Blackrock Depths - Shadowforge City", map_id=230, like=30, min_level=48, max_level=58,
+            target_level=53, last_encounter=235, position=(595.0, -92.0, -45.0, 0.0))  # a new section of a map
+lfg_heroic(311, normal=308, group=12)                           # the heroic of a declared section
 ```
 
 - `lfg_random` is an `lfgdungeons_dbc` + client LFGDungeons.dbc row (TypeID 6) shaped like the stock random `like`
@@ -490,7 +494,20 @@ lfg_override(44, type_id=1, group=1, flags=3, min_level=55, max_level=65, positi
   `flags`, the level window, the target levels), the rest of the stock row stays. The whole row goes to the overlay and
   patch-Z over the stock row, and `position=(x, y, z, orientation)` writes the dungeon's `lfg_dungeon_template` start
   point. Later declarations see the edited row, so a raid-type stock row made a dungeon entry (Upper Blackrock Spire,
-  44) can be a `lfg_heroic(normal=...)`. An id outside the stock file, or edited twice, stops the run.
+  44) can be a `lfg_heroic(normal=...)`. An id outside the stock file, or edited twice, stops the run. With no
+  column argument (only `position` / `last_encounter`) the LFGDungeons row stays stock and is not written.
+- `lfg_dungeon` is a **new** normal entry (TypeID 1, Difficulty 0, `ids.yaml` block `lfgdungeons`) of an instance
+  map: the stock row `like` gives the texture, descriptions, faction and expansion; the name is enUS only; `group`
+  (default 1, Classic Dungeons, so Random Classic draws it), `flags` (default 3), the level window and target level
+  (`target_level_min` / `_max` default to target - 2 / + 1). `position` writes its `lfg_dungeon_template` start (none:
+  the map's entrance areatrigger). It counts as a stock row for every later declaration (`lfg_heroic(normal=308)`).
+- `last_encounter=E` (`lfg_dungeon`, required; `lfg_override`, optional) makes DungeonEncounter E's normal
+  `instance_encounters` row end that finder entry (`lastEncounterDungeon`) and sets every other row that ends the
+  entry now, or in the stock dump, to 0. The heroic copies follow: the entry's `lfg_heroic` completes on the heroic
+  copy of E. E must be a normal encounter of the entry's map with a credit row; one encounter ending two entries, or
+  an edit that leaves another entry of the map without a final boss, stops the run. The rows are stock keys, so
+  dropping the declaration leaves the edit live (the prune pass never deletes a stock key): revert it by declaring
+  the old final boss.
 - `lfg_group` is client-only (patch-Z's LFGDungeonGroup.dbc): a new id needs `name` and `type_id` (5 = heroic
   section); a stock id keeps its row and takes the new `order_index`. Lower OrderIndex lists first.
 - Ids: `ids.yaml` blocks `lfgdungeons` (300-399) and `lfgdungeongroup` (12-31). Needs the stock
@@ -538,6 +555,10 @@ heroic(map_difficulty_id=1000, access_id=122, min_level=60,
 - `encounter_ids` (`ids.yaml` block `dungeonencounter`): a heroic `dungeonencounter_dbc` row per normal encounter
   (same Bit, OrderIndex and names; also merged into patch-Z's `DungeonEncounter.dbc`) and its `instance_encounters`
   row (the normal credit type and entry, no dungeon finder link). Needs `var/extractors/dbc/DungeonEncounter.dbc`.
+- `no_credit=(234, 240, 241)`: normal DungeonEncounter ids whose heroic copy keeps its DungeonEncounter row and
+  id but gets no `instance_encounters` row (no kill completes it on heroic). Meant for an encounter whose normal
+  credit is deleted by hand SQL too (generate.py never deletes a stock row); a listed id with no normal credit row
+  does not warn. An id that is not a normal encounter of the map stops the run.
 - `spawn_mask`: `UPDATE creature/gameobject SET spawnMask = spawnMask | 2 WHERE id IN (...) AND guid IN (...)` for
   every spawn on the map that live does not already have on heroic; nothing for a map already at 3.
 - `dungeon(...)["heroic_entries"]` (normal -> heroic entry, filled by the heroic template generator's lock file):

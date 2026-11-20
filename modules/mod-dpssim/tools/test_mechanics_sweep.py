@@ -121,6 +121,33 @@ class SweepIndexTests(unittest.TestCase):
         self.assertIn(4, bar["reported"])         # both report tag 4 (Shockwave, the ringer in the landing)
         self.assertEqual(bar["cross_specs"], 3)
 
+    def test_brd_shapes_leash_and_ward(self):
+        # the leashes post OffSpot failures under Zone/<tag>; the ward's Stack misses are reported
+        e = self.entry("blackrock-depths-shapes:2", actor_failures={"OffSpot": {"Zone/2": 2, "Zone/3": 1},
+                                                                    "MissedStack": {"Stack/11": 3}})
+        self.assertEqual(self.bar_problems(e), ["bar: Zone/2 x2 (bar 1)"])
+        self.assertEqual(e["reportedHits"], {"Stack/11": 3})
+        self.assertEqual(ms.program_length_ms("blackrock-depths-shapes:2"), (120000, [("blackrock-depths-shapes", 0)]))
+        self.assertEqual(ms.program_warnings("blackrock-depths-shapes:2", 120000), [])
+
+    def test_brd_shapes_2_beam_loner_and_crossfire(self):
+        # wave 2: the beam's MissedSoak is a group failure, the loner's MissedStack the member's, Livewire reported
+        e = self.entry("blackrock-depths-shapes-2:2",
+                       actor_failures={"MissedStack": {"Stack/22": 2}, "Hit": {"Zone/23": 4, "Zone/26": 1}},
+                       group={"MissedSoak": {"Soak/21": 3}})
+        self.assertEqual(self.bar_problems(e), ["bar: Stack/22 x2 (bar 1)", "group bar: Soak/21 x3 (bar 2)"])
+        self.assertEqual(e["reportedHits"], {"Zone/23": 4})
+        ok = self.entry("blackrock-depths-shapes-2", actor_failures={"Hit": {"Zone/25": 1, "Zone/24": 2}},
+                        group={"MissedSoak": {"Soak/21": 2}})
+        self.assertEqual(self.bar_problems(ok), [])
+        self.assertEqual(ms.program_length_ms("blackrock-depths-shapes-2:2"),
+                         (120000, [("blackrock-depths-shapes-2", 0)]))
+        self.assertEqual(ms.program_warnings("blackrock-depths-shapes-2:2", 120000), [])
+        # one drill per sweep: the two Blackrock Depths drills never share a tag
+        one, two = ms.DRILL_BARS["blackrock-depths-shapes"], ms.DRILL_BARS["blackrock-depths-shapes-2"]
+        tags = [set(b["gated"]) | b["reported"] | set(b["group"]) for b in (one, two)]
+        self.assertEqual(tags[0] & tags[1], set())
+
     # ---- D2: a program longer than the fight ----
     def test_comma_program_length_and_late_entries(self):
         length, starts = ms.program_length_ms("deadmines-followups,sfk-hunt,scholomance-shapes")
@@ -210,8 +237,11 @@ class BarTableMatchesTheModule(unittest.TestCase):
     def test_bar_arrays(self):
         for drill, array in (("deadmines-followups", "kFollowupTags"), ("scholomance-shapes", "kScholoBarTags"),
                              ("stratholme-followups", "kStratBarTags"), ("stratholme-drops", "kDropBarTags"),
-                             ("blackrock-spire-followups", "kBrsBarTags"), ("rolling-fronts", "kFrontBarTags")):
+                             ("blackrock-spire-followups", "kBrsBarTags"), ("rolling-fronts", "kFrontBarTags"),
+                             ("blackrock-depths-shapes", "kBrdBarTags"),
+                             ("blackrock-depths-shapes-2", "kBrd2BarTags")):
             self.assertEqual(set(ms.DRILL_BARS[drill]["gated"]), self.array(array), drill)
+        self.assertEqual(set(ms.DRILL_BARS["blackrock-depths-shapes-2"]["group"]), self.array("kBrd2GroupTags"))
 
     def test_every_tag_and_cycle(self):
         seen = set()

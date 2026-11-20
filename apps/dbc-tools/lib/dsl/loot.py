@@ -8,6 +8,7 @@ keys at one ladder tier, emitted by lib/loot_tables.py as `creature_loot_templat
     boss_loot(310008, ("dm_rhahkzors_hammer", "dm_rockslicer"), tier="heroic")           # his heroic body
     boss_loot(643, SNEED_POOL, tier="normal", picks=2, reference=1700000)               # two distinct items
     boss_loot(310004, VANCLEEF_HARD_MODE, tier="heroic_hm", group=2, loot_mode=2)       # lit kills only
+    boss_loot(310390, ENCORE_ITEMS, tier="heroic_hm", group=2, loot_mode=2, hard_mode_only=True)  # no default list
     remove_loot_group(642, group=1, why="the Shredder's items moved into Sneed's pool")
     remove_reference_pool(35030, why="Ras's list replaced his two rolls on it")         # a stock pool, unused now
     copy_normal_loot(310070, why="the encounter's list is on Vectus")                   # heroic Marduk: copies only
@@ -29,7 +30,15 @@ items are distinct (`LootGroupInvalidSelector`, LootMgr.cpp). `reference=` is th
 **`loot_mode`** is the rows' `LootMode` bit: the default 1 (`LOOT_MODE_DEFAULT`) always rolls; 2
 (`LOOT_MODE_HARD_MODE_1`) rolls only when the creature's loot mode has it at death, which the boss script sets with
 `AddLootMode` while its hard mode is lit (Ulduar's mechanism; the loot is filled in `Unit::Kill` with
-`creature->GetLootMode()`, before `JustDied`).
+`creature->GetLootMode()`, before `JustDied`). A hard mode group sits on top of the lootid's default list, and
+lib/loot_tables.py rejects one on a lootid that declares none; **`hard_mode_only=True`** opts one group out of that
+check, for a unit that drops no gear list of its own (the Blackrock Depths Encore's Theldren: his heroic lootid holds
+the three Encore items at `loot_mode=2` and the copied quest row, no list), and needs a `loot_mode` without bit 1.
+It is for that lootid's only declaration: a lootid with a default list needs no flag.
+
+**The heroic lootid rule**: a heroic boss whose `lootid` override is its own heroic entry must have a declaration of
+that lootid (`boss_loot()`, `loot_chance()`, `copy_normal_loot()`): without one it has no `creature_loot_template`
+rows and drops nothing on heroic (lib/loot_tables.py `_check_creatures` reports it as an ERROR).
 
 **`tier`** is the ladder tier name every item drops at (lib/dsl/items.py, the lock file's tier column). A normal
 lootid drops the items' own-level tier (the ladder's first tier without an `ilvl=`); a heroic creature's own lootid
@@ -115,6 +124,7 @@ class LootDecl:
     chance: float | None = None  # loot_chance(): the row's explicit Chance (percent); None for every other kind
     item_entry: int = 0  # loot_chance(): the item_template entry of the row
     label: str = ""  # loot_chance(): the item's name for the row comment
+    hard_mode_only: bool = False  # boss_loot(hard_mode_only=True): a hard mode group on a lootid with no gear list
 
     @property
     def listing(self) -> bool:
@@ -182,12 +192,13 @@ def _check_replaces(where: str, replaces_items, replaces_references) -> tuple[tu
 
 def boss_loot(
     lootid: int, items, *, tier: str, group: int = 1, picks: int = 1, reference: int | None = None,
-    loot_mode: int = LOOT_MODE_DEFAULT, replaces_items=(), replaces_references=(),
+    loot_mode: int = LOOT_MODE_DEFAULT, replaces_items=(), replaces_references=(), hard_mode_only: bool = False,
 ) -> LootDecl:
     """Group `group` of `lootid` becomes the list `items` (`item()` or `set_token()` keys) at ladder tier `tier`, all
     at equal chance; `picks=N` (with `reference=`) drops N distinct items of the list; `loot_mode=2` rolls only on a
-    hard mode kill; `replaces_items=` / `replaces_references=` name the stock rows of the group dropped on purpose.
-    See the module docstring."""
+    hard mode kill; `replaces_items=` / `replaces_references=` name the stock rows of the group dropped on purpose;
+    `hard_mode_only=True` (with a hard mode `loot_mode`) allows a lootid whose only list is this hard mode group (a
+    unit that drops no gear otherwise, e.g. the BRD Encore's Theldren). See the module docstring."""
     where = f"boss_loot({lootid!r}, group={group!r})"
     _check_target(where, lootid, group)
     if isinstance(items, str) or not isinstance(items, (tuple, list)) or not items:
@@ -215,10 +226,13 @@ def boss_loot(
         raise LootDeclarationError(f"{where}: reference={reference!r} must be a positive int")
     if not _plain_int(loot_mode) or not 1 <= loot_mode <= 0xFFFF:
         raise LootDeclarationError(f"{where}: loot_mode={loot_mode!r} must be a LootMode bit mask (1-65535)")
+    if hard_mode_only and loot_mode & LOOT_MODE_DEFAULT:
+        raise LootDeclarationError(f"{where}: hard_mode_only=True needs a hard mode loot_mode without bit 1")
     replaces_items, replaces_references = _check_replaces(where, replaces_items, replaces_references)
     return _register(LootDecl(
         lootid=lootid, group=group, items=tuple(items), tier=tier, picks=picks, reference=reference,
         loot_mode=loot_mode, replaces_items=replaces_items, replaces_references=replaces_references,
+        hard_mode_only=bool(hard_mode_only),
     ))
 
 

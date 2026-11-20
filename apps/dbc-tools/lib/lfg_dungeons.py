@@ -7,9 +7,14 @@ the SPELL_TABLES render and before `--check` returns, so both paths see the same
 What it builds:
 
 0. **Stock row edits** (`lfg_override()`): the stock row with the declared columns replaced, written to the overlay and
-   patch-Z over the stock row, and the declared entrance position as that dungeon's `lfg_dungeon_template` row. Every
-   declaration below reads the edited row (a raid-type stock row made a dungeon entry can be a heroic's `normal`).
+   patch-Z over the stock row (only when a column changes), and the declared entrance position as that dungeon's
+   `lfg_dungeon_template` row. Every declaration below reads the edited row (a raid-type stock row made a dungeon
+   entry can be a heroic's `normal`).
 1. **LFGDungeons rows** (`lfg_dungeons`: the `lfgdungeons_dbc` overlay and patch-Z's LFGDungeons.dbc).
+   - `lfg_dungeon()`: a new normal dungeon row (TypeID 1, Difficulty 0): a copy of the `like` stock row (texture,
+     descriptions, faction, expansion, locale masks) with the declared id, enUS name (other name locales empty), map,
+     group, flags and level window; its `position` as an `lfg_dungeon_template` row. Every declaration below reads it
+     as a stock row (an lfg_heroic() may take it as `normal`).
    - `lfg_random()`: TypeID 6, MapID 0, the declared level window, ExpansionLevel and group, the `like` row's
      Difficulty, Flags, Faction, TextureFilename, Order_Index and locale masks; the name in enUS only.
    - `lfg_heroic()`: a copy of the stock normal row (every name locale, map, faction, texture, expansion, description)
@@ -19,14 +24,22 @@ What it builds:
 2. **lfg_dungeon_template** (`lfg_dungeon_templates`): a heroic entry gets its normal entry's entrance position when
    the normal one has a row (LFGMgr falls back to the map's entrance areatrigger otherwise, which is the same for
    both difficulties).
-3. **The final boss**: every heroic `instance_encounters` row lib/dungeon_heroic.py derived from a normal row whose
-   `lastEncounterDungeon` is a declared heroic's `normal` gets the heroic entry's id there instead of 0
+3. **The final boss**:
+   - `last_encounter=` (lfg_dungeon(), lfg_override()): the normal `instance_encounters` row of that encounter, with
+     `lastEncounterDungeon` = the finder entry, and every other row whose live or stock-dump value is that entry, set
+     to 0 (the stock dump keeps the cleared row emitted after it went live, so the run stays stable). Rows go to
+     `instance_encounters` (the prune pass never deletes a stock key; dropping the declaration leaves the edit live).
+   - every heroic `instance_encounters` row lib/dungeon_heroic.py derived from a normal row whose `lastEncounterDungeon`
+     (as edited above, else live) is a declared heroic's `normal` gets the heroic entry's id there instead of 0
    (`ObjectMgr::LoadInstanceEncounters` keeps it per (map, difficulty), `Map::UpdateEncounterState` passes it to
    `LFGMgr::FinishDungeon`, which compares it with the group's dungeon).
 4. **LFGDungeonGroup rows** (`lfg_groups`, client only): a new group from its declaration, a stock group with the
    declared OrderIndex (and name / type when given).
 
 ERRORs (generate.py stops, also under `--check`): a missing stock file, an id clash with a stock or live row, an
+lfg_dungeon() whose `like` is not a stock normal dungeon row or whose group is unknown, a `last_encounter` that is not
+a normal encounter of the entry's map or has no instance_encounters row, one encounter ending two entries, an edit
+that leaves another finder entry of the map without a final boss, an
 `lfg_override()` of an id that is not a stock row (or two of one id, or an edit that leaves a dungeon row of a raid-only
 group), a
 random's `like` that is not a stock random, two randoms in one group, a heroic whose `normal` is not a stock normal
@@ -41,7 +54,7 @@ from pathlib import Path
 
 from . import dbcfmt, state
 from .dsl.lfg import OVERRIDE_COLUMNS
-from .spell_tables import LFG_DUNGEON_TEMPLATE_COLUMNS
+from .spell_tables import LFG_DUNGEON_TEMPLATE_COLUMNS, load_base_table_rows
 
 LFG_TYPE_DUNGEON = 1
 LFG_TYPE_HEROIC = 5
@@ -52,7 +65,9 @@ LFG_FLAG_SEASONAL = 0x4  # LFGMgr.h: a holiday boss entry (Crown Chemical Co. on
 # The normal finder entry a derived heroic instance_encounters row was copied from (lib/dungeon_heroic.py sets it):
 # the normal row's lastEncounterDungeon. Bookkeeping only, never a column.
 NORMAL_LFG_KEY = "_normal_lfg"
+NORMAL_ENTRY_KEY = "_normal_entry"  # the normal encounter that derived heroic row copies (lib/dungeon_heroic.py)
 DERIVED = "_lfg_dungeons"
+LINK = "_lfg_last_encounter"  # a normal instance_encounters row this module wrote (a last_encounter edit)
 
 
 def _int(value) -> int:
@@ -70,6 +85,11 @@ class LfgInputs:
     stock_dungeons: dict[int, dict] | None
     stock_groups: dict[int, dict] | None
     positions: dict[int, dict] = field(default_factory=dict)  # lfg_dungeon_template rows by dungeonId
+    # For `last_encounter=` only: DungeonEncounter rows by ID (stock file, then the live overlay; None: file missing),
+    # the live `instance_encounters` rows and the base dump's (both by entry).
+    encounters: dict[int, dict] | None = None
+    credits: dict[int, dict] = field(default_factory=dict)
+    base_credits: dict[int, dict] = field(default_factory=dict)
 
 
 @dataclass
@@ -86,12 +106,20 @@ def _stock(path: Path, table: dbcfmt.DbcTable) -> dict[int, dict] | None:
 
 
 def load_inputs(spell_table_index, base_dir: Path = state.BASE_DBC_DIR) -> LfgInputs:
-    """The stock LFGDungeons.dbc / LFGDungeonGroup.dbc and the live `lfg_dungeon_template` rows (`spell_table_index`:
-    the run's SPELL_TABLES index)."""
+    """The stock LFGDungeons.dbc / LFGDungeonGroup.dbc / DungeonEncounter.dbc, the live `lfg_dungeon_template`,
+    `dungeonencounter_dbc` and `instance_encounters` rows (`spell_table_index`: the run's SPELL_TABLES index) and the
+    base dump's `instance_encounters`."""
+    encounters = _stock(base_dir / dbcfmt.DUNGEONENCOUNTER.dbc_filename, dbcfmt.DUNGEONENCOUNTER)
+    if encounters is not None:
+        for row in spell_table_index.live_rows("dungeonencounter_dbc"):
+            encounters[_int(row.get("ID"))] = row
     return LfgInputs(
         stock_dungeons=_stock(base_dir / dbcfmt.LFGDUNGEONS.dbc_filename, dbcfmt.LFGDUNGEONS),
         stock_groups=_stock(base_dir / dbcfmt.LFGDUNGEONGROUP.dbc_filename, dbcfmt.LFGDUNGEONGROUP),
         positions={_int(r.get("dungeonId")): r for r in spell_table_index.live_rows("lfg_dungeon_template")},
+        encounters=encounters,
+        credits={_int(r.get("entry")): r for r in spell_table_index.live_rows("instance_encounters")},
+        base_credits={_int(r.get("entry")): r for r in load_base_table_rows("instance_encounters")},
     )
 
 
@@ -174,13 +202,45 @@ def _heroic_row(decl: dict, normal: dict, random: dict) -> dict:
     return row
 
 
+def _template(dungeon_id: int, name, position: tuple) -> dict:
+    x, y, z, o = position
+    return {
+        "dungeonId": dungeon_id, "name": name, "position_x": x, "position_y": y, "position_z": z, "orientation": o,
+        "VerifiedBuild": 0, "id": dungeon_id, DERIVED: True,
+    }
+
+
+def _dungeon_row(decl: dict, stock: dict[int, dict], out: LfgExpansion) -> dict | None:
+    """The new normal row of one `lfg_dungeon()`, or None after an ERROR."""
+    label = f"lfg_dungeon({decl['id']}, {decl['name']!r})"
+    like = stock.get(decl["like"])
+    if like is None or _int(like.get("TypeID")) != LFG_TYPE_DUNGEON or _int(like.get("Difficulty")) != 0:
+        out.errors.append(f"{label}: like={decl['like']} is not a stock normal dungeon row (LFGDungeons TypeID 1, "
+                          f"Difficulty 0) to copy the texture and description from")
+        return None
+    if _int(like.get("MapID")) != decl["map_id"]:
+        out.warnings.append(f"{label}: like={decl['like']} is on map {_int(like.get('MapID'))}, the entry on map "
+                            f"{decl['map_id']} - its texture and description name another dungeon")
+    row = dict(like)
+    for column in dbcfmt.LFGDUNGEONS.columns:
+        if column.startswith("Name_Lang_") and column != "Name_Lang_Mask":
+            row[column] = ""
+    row.update(
+        ID=decl["id"], Name_Lang_enUS=decl["name"], MinLevel=decl["min_level"], MaxLevel=decl["max_level"],
+        Target_Level=decl["target_level"], Target_Level_Min=decl["target_level_min"],
+        Target_Level_Max=decl["target_level_max"], MapID=decl["map_id"], Difficulty=DIFFICULTY_NORMAL,
+        Flags=decl["flags"], TypeID=LFG_TYPE_DUNGEON, Group_Id=decl["group"],
+    )
+    return row
+
+
 def _override_row(decl: dict, stock: dict[int, dict], edited: dict[int, dict], out: LfgExpansion):
     """The edited row and the declared entrance position (an `lfg_dungeon_template` row) of one `lfg_override()`, or
     (None, None) after an ERROR."""
     label = f"lfg_override({decl['id']})"
     if decl["id"] not in stock:
         out.errors.append(f"{label}: no stock LFGDungeons row {decl['id']} to edit (a new entry takes an id from "
-                          f"ids.yaml's lfgdungeons block, declared with lfg_random() / lfg_heroic())")
+                          f"ids.yaml's lfgdungeons block, declared with lfg_random() / lfg_dungeon() / lfg_heroic())")
         return None, None
     if decl["id"] in edited:
         out.errors.append(f"{label}: row {decl['id']} is edited twice")
@@ -195,17 +255,14 @@ def _override_row(decl: dict, stock: dict[int, dict], edited: dict[int, dict], o
     row[DERIVED] = True
     template = None
     if decl["position"] is not None:
-        x, y, z, o = decl["position"]
-        template = {
-            "dungeonId": decl["id"], "name": row.get("Name_Lang_enUS"), "position_x": x, "position_y": y,
-            "position_z": z, "orientation": o, "VerifiedBuild": 0, "id": decl["id"], DERIVED: True,
-        }
+        template = _template(decl["id"], row.get("Name_Lang_enUS"), decl["position"])
     return row, template
 
 
 def _clear_derived(dsl_classes: dict) -> None:
     for key in ("lfg_dungeons", "lfg_dungeon_templates", "lfg_groups"):
         dsl_classes[key] = [r for r in dsl_classes.get(key, []) if not r.get(DERIVED)]
+    dsl_classes["instance_encounters"] = [r for r in dsl_classes.get("instance_encounters", []) if not r.get(LINK)]
     for row in dsl_classes.get("instance_encounters", []):
         if row.get(DERIVED):
             row["lastEncounterDungeon"] = 0
@@ -236,6 +293,7 @@ def expand(dsl_classes: dict, load: callable) -> LfgExpansion:
     stock = dict(inputs.stock_dungeons)
     positions_in = dict(inputs.positions)
     edited: dict[int, dict] = {}
+    written: dict[int, dict] = {}  # edited stock rows with a changed column: these go to the overlay and patch-Z
     override_positions: list[dict] = []
     for decl in (d for d in dsl_classes.get("lfg_dungeon_declarations", []) if d["kind"] == "override"):
         row, template = _override_row(decl, inputs.stock_dungeons, edited, out)
@@ -243,6 +301,8 @@ def expand(dsl_classes: dict, load: callable) -> LfgExpansion:
             continue
         edited[decl["id"]] = row
         stock[decl["id"]] = row
+        if decl["edits"]:
+            written[decl["id"]] = row
         if template is not None:
             positions_in[decl["id"]] = template
             override_positions.append(template)
@@ -252,8 +312,27 @@ def expand(dsl_classes: dict, load: callable) -> LfgExpansion:
     for decl in declared:
         if decl["kind"] != "override" and decl["id"] in stock:
             out.errors.append(f"dungeon finder: LFGDungeons id {decl['id']} is a stock row - pick a free id")
+    rows: dict[int, dict] = dict(written)
+    for decl in (d for d in declared if d["kind"] == "dungeon"):
+        if decl["id"] in stock:
+            continue  # the stock-row ERROR above
+        if decl["group"] not in known_groups:
+            out.errors.append(f"lfg_dungeon({decl['id']}): group {decl['group']} is neither stock nor declared with "
+                              f"lfg_group()")
+        row = _dungeon_row(decl, stock, out)
+        if row is None:
+            continue
+        stock[decl["id"]] = row
+        rows[decl["id"]] = row
+        if decl["position"] is not None:
+            template = _template(decl["id"], decl["name"], decl["position"])
+            positions_in[decl["id"]] = template
+            override_positions.append(template)
+        else:
+            out.notes.append(f"dungeon finder: lfg_dungeon({decl['id']}) has no position - the Finder starts it at "
+                             f"map {decl['map_id']}'s entrance areatrigger")
+    links = _last_encounters(declared, stock, inputs, out)
     randoms: dict[int, dict] = {}
-    rows: dict[int, dict] = dict(edited)
     for decl in (d for d in declared if d["kind"] == "random"):
         if decl["group"] in randoms:
             out.errors.append(
@@ -279,7 +358,7 @@ def expand(dsl_classes: dict, load: callable) -> LfgExpansion:
         if normal is None or _int(normal.get("TypeID")) != LFG_TYPE_DUNGEON \
                 or _int(normal.get("Difficulty")) != DIFFICULTY_NORMAL or _int(normal.get("Flags")) & LFG_FLAG_SEASONAL:
             out.errors.append(f"{label}: {decl['normal']} is not a stock normal dungeon row (LFGDungeons TypeID 1, "
-                              f"Difficulty 0, not seasonal)")
+                              f"Difficulty 0, not seasonal) or an lfg_dungeon() one")
             continue
         if decl["normal"] in by_normal:
             out.errors.append(f"{label}: normal {decl['normal']} already has heroic entry {by_normal[decl['normal']]}")
@@ -308,7 +387,9 @@ def expand(dsl_classes: dict, load: callable) -> LfgExpansion:
     for row_id, row in sorted(rows.items()):
         row["id"] = row_id
         row[DERIVED] = True
-    _link_final_bosses(dsl_classes, by_normal, heroic_maps, stock, out)
+    _link_final_bosses(dsl_classes, by_normal, links, out)
+    dsl_classes["instance_encounters"] = [*dsl_classes.get("instance_encounters", []),
+                                          *_link_rows(links, inputs)]
     dsl_classes["lfg_dungeons"] = [*dsl_classes.get("lfg_dungeons", []), *(rows[i] for i in sorted(rows))]
     dsl_classes["lfg_dungeon_templates"] = [*dsl_classes.get("lfg_dungeon_templates", []), *positions]
     dsl_classes["lfg_groups"] = [*dsl_classes.get("lfg_groups", []), *(groups[i] for i in sorted(groups))]
@@ -323,11 +404,93 @@ def expand(dsl_classes: dict, load: callable) -> LfgExpansion:
     return out
 
 
-def _link_final_bosses(dsl_classes: dict, by_normal: dict[int, int], heroic_maps: dict, stock: dict,
+def _last_encounters(declared: list[dict], stock: dict[int, dict], inputs: LfgInputs,
+                     out: LfgExpansion) -> dict[int, int]:
+    """The `last_encounter=` edits: appends nothing itself, returns {normal encounter id: lastEncounterDungeon} of
+    every normal `instance_encounters` row to write (the declared final bosses and the rows they take the link from),
+    after the ERROR checks; `expand()` writes the rows."""
+    wanted = [d for d in declared if d.get("last_encounter") is not None and d["kind"] in ("dungeon", "override")
+              and d["id"] in stock]
+    if not wanted:
+        return {}
+    if inputs.encounters is None:
+        out.errors.append(_missing_file(
+            dbcfmt.DUNGEONENCOUNTER, "copy it from the worldserver's DBC directory (ac-worldserver:/azerothcore/env/"
+            "dist/data/dbc/) into that directory; last_encounter= checks the encounter against it",
+        ))
+        return {}
+    live = {e: _int(r.get("lastEncounterDungeon")) for e, r in inputs.credits.items()}
+    base = {e: _int(r.get("lastEncounterDungeon")) for e, r in inputs.base_credits.items()}
+    links: dict[int, int] = {}
+    maps: set[int] = set()
+    for decl in wanted:
+        lfg_id, encounter_id = decl["id"], decl["last_encounter"]
+        label = f"lfg_{'dungeon' if decl['kind'] == 'dungeon' else 'override'}({lfg_id}, last_encounter={encounter_id})"
+        map_id = _int(stock[lfg_id].get("MapID"))
+        encounter = inputs.encounters.get(encounter_id)
+        if encounter is None or _int(encounter.get("MapID")) != map_id \
+                or _int(encounter.get("Difficulty")) != DIFFICULTY_NORMAL:
+            out.errors.append(f"{label}: {encounter_id} is not a normal encounter of map {map_id} (DungeonEncounter "
+                              f"MapID {map_id}, Difficulty 0)")
+            continue
+        if encounter_id not in inputs.credits:
+            out.errors.append(f"{label}: encounter {encounter_id} ({encounter.get('Name_Lang_enUS')}) has no "
+                              f"instance_encounters row, so no kill could complete the entry")
+            continue
+        if encounter_id in links:
+            out.errors.append(f"{label}: encounter {encounter_id} already ends finder entry {links[encounter_id]}")
+            continue
+        links[encounter_id] = lfg_id
+        maps.add(map_id)
+        out.notes.append(f"dungeon finder: {lfg_id} {stock[lfg_id].get('Name_Lang_enUS')} completes on encounter "
+                         f"{encounter_id} {encounter.get('Name_Lang_enUS')}")
+    edits = dict(links)
+    for lfg_id in set(links.values()):
+        for entry in sorted(live):  # a row deleted live stays deleted
+            if entry not in links and lfg_id in (live[entry], base.get(entry)):
+                edits[entry] = 0
+                if live.get(entry) == lfg_id:
+                    out.notes.append(f"dungeon finder: encounter {entry} no longer ends finder entry {lfg_id}")
+    # Every finder entry of a touched map that has a final boss live keeps exactly one.
+    on_maps = {e for e, r in inputs.encounters.items() if _int(r.get("MapID")) in maps}
+    after = {e: edits.get(e, live.get(e, 0)) for e in on_maps if e in inputs.credits}
+    for lfg_id in sorted({live[e] for e in on_maps if live.get(e)} | set(links.values())):
+        ends = sorted(e for e, value in after.items() if value == lfg_id)
+        if not ends:
+            out.errors.append(f"dungeon finder: finder entry {lfg_id} loses its final boss (encounter "
+                              f"{[e for e in on_maps if live.get(e) == lfg_id]} now ends another entry) - give it a "
+                              f"last_encounter= too")
+        elif len(ends) > 1:
+            out.errors.append(f"dungeon finder: finder entry {lfg_id} ends at encounters {ends}; ObjectMgr keeps "
+                              f"only the first")
+    return edits
+
+
+def _link_rows(edits: dict[int, int], inputs: LfgInputs) -> list[dict]:
+    rows = []
+    for entry, lfg_id in sorted(edits.items()):
+        live = inputs.credits[entry]
+        row = {c: live.get(c) for c in ("entry", "creditType", "creditEntry", "comment")}
+        row.update(entry=entry, lastEncounterDungeon=lfg_id)
+        row[LINK] = True
+        rows.append(row)
+    return rows
+
+
+def _link_final_bosses(dsl_classes: dict, by_normal: dict[int, int], links: dict[int, int],
                        out: LfgExpansion) -> None:
     linked: dict[int, list[int]] = {}
+    moved = {lfg_id for lfg_id in links.values() if lfg_id}  # entries whose final boss this run declares
     for row in dsl_classes.get("instance_encounters", []):
-        normal_lfg = _int(row.get(NORMAL_LFG_KEY))
+        if row.get(LINK):
+            continue
+        normal_entry = row.get(NORMAL_ENTRY_KEY)
+        if normal_entry is not None and _int(normal_entry) in links:
+            normal_lfg = links[_int(normal_entry)]
+        else:
+            normal_lfg = _int(row.get(NORMAL_LFG_KEY))
+            if normal_lfg in moved:
+                normal_lfg = 0  # the live link of a row the declaration did not keep
         heroic_id = by_normal.get(normal_lfg)
         if heroic_id is None:
             continue

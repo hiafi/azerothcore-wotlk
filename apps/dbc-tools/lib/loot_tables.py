@@ -164,13 +164,16 @@ def _row(entry: int, item: int, comment: str, *, group: int, loot_mode: int = lo
 def build(
     declarations: list[dict], expansion: item_variants.ItemExpansion, *, ids_cfg: dict,
     heroic_pairs: dict[int, int], creature_rows: dict[int, dict], strict_lootid: bool = True,
-    tokens: dict | None = None,
+    tokens: dict | None = None, require_heroic_lists: bool = True,
 ) -> LootPlan:
     """Resolves `declarations` (`dsl_classes["loot_declarations"]`) against the item expansion. `heroic_pairs` is
     normal -> heroic creature entry (heroic_ids.lock); `creature_rows` the creature_template rows by entry as this run
     will leave them (live, with the declared and generated heroic rows over them). `strict_lootid=False` (an
     `--only items` run, which renders no creature_template row) makes a heroic row whose lootid is not its own entry
-    a WARNING instead of an ERROR. `tokens` is the `set_token()` declarations by key (lib/dsl/sets.py)."""
+    a WARNING instead of an ERROR. `tokens` is the `set_token()` declarations by key (lib/dsl/sets.py).
+    `require_heroic_lists` (the default, what generate.py runs) makes a heroic boss that points at its own lootid
+    without any declaration of it an ERROR (`_check_creatures`); a unit test of another rule on a partly declared
+    fixture passes False."""
     plan = LootPlan()
     all_decls: list[loot_dsl.LootDecl] = [entry["_decl"] for entry in declarations]
     if not all_decls:
@@ -273,7 +276,8 @@ def build(
             if decl.loot_mode & loot_dsl.LOOT_MODE_DEFAULT:
                 plan.errors.append(f"{where}: loot_mode={decl.loot_mode} includes LOOT_MODE_DEFAULT (1), so it would "
                                    f"roll on every kill; a hard mode group carries only its own bit")
-            if not any(d.loot_mode == loot_dsl.LOOT_MODE_DEFAULT and not d.removal for d in by_entry[decl.lootid]):
+            if not decl.hard_mode_only and not any(
+                    d.loot_mode == loot_dsl.LOOT_MODE_DEFAULT and not d.removal for d in by_entry[decl.lootid]):
                 plan.errors.append(f"{where}: a loot_mode={decl.loot_mode} group drops on top of the boss's list, but "
                                    f"lootid {decl.lootid} declares no default list group")
 
@@ -308,7 +312,7 @@ def build(
         if decl.replaces_items or decl.replaces_references:
             plan.replaces[key] = (frozenset(decl.replaces_items), frozenset(decl.replaces_references))
 
-    _check_creatures(plan, decls + copy_only, heroic_pairs, creature_rows, strict_lootid)
+    _check_creatures(plan, decls + copy_only, heroic_pairs, creature_rows, strict_lootid, require_heroic_lists)
     normal_of = {h: n for n, h in heroic_pairs.items()}
     for lootid in sorted({d.lootid for d in decls + copy_only if not d.removal} & set(normal_of)):
         normal_row = creature_rows.get(normal_of[lootid])
@@ -494,7 +498,7 @@ def _without_removed(plan: LootPlan, key: tuple[int, int], rows: list[dict]) -> 
 
 
 def _check_creatures(plan: LootPlan, decls: list[loot_dsl.LootDecl], heroic_pairs: dict[int, int],
-                     creature_rows: dict[int, dict], strict_lootid: bool) -> None:
+                     creature_rows: dict[int, dict], strict_lootid: bool, require_heroic_lists: bool = True) -> None:
     """The heroic lootid rule, a lootid no creature drops, and a heroic body still sharing its normal list."""
     heroic_entries = set(heroic_pairs.values())
     used = {_int(r.get("lootid")) for r in creature_rows.values()}
@@ -517,6 +521,20 @@ def _check_creatures(plan: LootPlan, decls: list[loot_dsl.LootDecl], heroic_pair
         normal_row, heroic_row = creature_rows.get(normal), creature_rows.get(heroic)
         if not normal_row or not heroic_row:
             continue
+        # A heroic boss on its own lootid (a heroic override `lootid` = its heroic entry) needs a declaration of that
+        # lootid: boss_loot() / loot_chance() / copy_normal_loot(). Without one the lootid has no loot_template rows
+        # (the heroic copies are only made for declared lootids) and the boss drops nothing at all, quest and key rows
+        # included (Scholomance R-A S-2, Blackrock Depths R-1-LOOT M-1). Only a heroic entry's own lootid counts: a
+        # trash copy that keeps its normal lootid, and a lootid 0, need nothing.
+        if require_heroic_lists and _int(heroic_row.get("lootid")) == heroic and heroic not in listed:
+            message = (
+                f"heroic creature {heroic} ({heroic_row.get('name')}) has its own lootid {heroic} but no loot "
+                f"declaration: it would drop nothing on heroic; declare it (boss_loot(), loot_chance(), or "
+                f"copy_normal_loot({heroic}, why=...) for the normal boss's copies only) or drop its lootid override"
+            )
+            (plan.errors if strict_lootid else plan.warnings).append(
+                message if strict_lootid else message + " (a full run emits the heroic row)"
+            )
         lootid = _int(normal_row.get("lootid"))
         if lootid in listed and heroic not in listed and _int(heroic_row.get("lootid")) == lootid:
             plan.warnings.append(

@@ -163,11 +163,18 @@ wired in `generate._loot_blocks` after the item expansion, so a full run and `--
 - **Tiers by difficulty.** A heroic creature's lootid (any entry in `source/world/heroic_ids.lock`) drops the ladder's
   first explicit-level tier (Heroic, Heroic Hard Mode), any other lootid the own-level tier (Normal). The heroic row's
   `lootid` must be its own entry: set it in the dungeon file's heroic `overrides` columns (an ERROR on a full run, a
-  WARNING under `--only items`, which renders no creature row).
+  WARNING under `--only items`, which renders no creature row). The reverse is checked too: a heroic boss that
+  points at its own lootid (an override `lootid` = its heroic entry) must have a declaration of that lootid
+  (`boss_loot()`, `loot_chance()` or `copy_normal_loot()`), else it has no `creature_loot_template` rows at all and
+  drops nothing on heroic, quest and key rows included (ERROR on a full run, WARNING under `--only items`; Blackrock
+  Depths R-1-LOOT M-1, Scholomance R-A S-2).
 - **Hard mode** (`loot_mode=2`, `LOOT_MODE_HARD_MODE_1`): a group next to a default list on the same Entry; it rolls
   only when the boss script added the bit with `AddLootMode` before the kill (`Unit::Kill` fills the loot with
   `GetLootMode()` before `JustDied`). Deadmines: `instance_deadmines_rework.cpp` `ApplyHardModeLoot()` follows
-  `DATA_HARD_MODE`.
+  `DATA_HARD_MODE`. A unit that drops no gear of its own and carries only a hard mode list (the BRD Encore's Theldren,
+  whose heroic lootid holds the Encore items beside his copied quest row) declares it with
+  `boss_loot(..., loot_mode=2, hard_mode_only=True)`: that skips the "hard mode group needs a default list" ERROR for
+  that one group; the flag needs a `loot_mode` without bit 1.
 - **Heroic copies.** A heroic lootid with a declared list also gets every other group of its normal boss's lootid
   (cloth, food, quest items, a world loot reference) copied unchanged into the same GroupId
   (`loot_tables.derive_heroic_copies`, derived from the replayed normal rows each run, so a rerun is silent). A copy
@@ -1121,6 +1128,13 @@ run and `--check` report them alike. Usage in `apps/dbc-tools/README.md`. Things
   would lose its kill credit: a `--scope` run of a dungeon stops (`scope.reference_errors`, space `lfgdungeons`)
   while its final boss names a finder entry that is not live yet. The declarations are in a shared world file (no
   scope owns them), so only a full run ships the finder rows.
+- **Moving a final boss (`last_encounter=`, Blackrock Depths sections).** `lib/lfg_dungeons.py` writes the normal
+  `instance_encounters` rows itself (marker `_lfg_last_encounter`): the declared row with the finder id and every row
+  that ends that id live **or in the base dump** with 0. The base-dump half keeps the cleared stock row (227
+  Gerstahn) declared after the deploy, so the next run emits nothing instead of a "stock dump owns this key" prune
+  line. The heroic rows carry `_normal_entry` (the normal encounter they copy) and take the edited link before
+  `_normal_lfg`; a heroic row whose `_normal_lfg` names a moved entry is not linked. A row deleted live (hand SQL) is
+  never re-inserted by a clear.
 - **Client files.** The client takes names, the Specific Dungeons list and its section headers from its own
   `LFGDungeons.dbc` and `LFGDungeonGroup.dbc`, so both merge into patch-Z. `LFGDungeons.dbc` now reads
   `TextureFilename` and the Description locales as strings (they were raw offsets while the file was read-only).

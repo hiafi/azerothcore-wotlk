@@ -55,6 +55,13 @@ so db-import and the dbc-tools replay see one history.
 | `src/Kit/DungeonKitFronts.{h,cpp}` | Engine: `FrontDirector` (ring and wall sequences on BM's fronts), `PoolsOf` |
 | `src/Kit/DungeonKitRingLogic.h` | Pure: the ring wall (band, crossings, `RingWatch`, push-out plan, grace) |
 | `src/Kit/DungeonKitRing.{h,cpp}` | Engine: `LethalRing(s)` (a lethal ring wall with a push-out), `RingInside` |
+| `src/Kit/DungeonKitBodyLogic.h` | Pure: `DeathSpotBook` (death spots), `HeldBodyLatch`, `AllDown` |
+| `src/Kit/DungeonKitBodies.{h,cpp}` | Engine: `DeathSpots`, `HeldBody` (a fallen unit kept as a body) |
+| `src/Kit/DungeonKitEdgeLogic.h` | Pure: pushes over a floor's edge (`PlanOverEdge`, `PlanKnockback`), `EdgeBand(s)` |
+| `src/Kit/DungeonKitEdges.{h,cpp}` | Engine: `PushOverEdge`, `PushAlong`, `LethalBand(s)` (pushes over the edge) |
+| `src/Kit/DungeonKitPoolLogic.h` | Pure: `HealthPool` (shared pool, cleave once per cast), `DamageTally` (window) |
+| `src/Kit/DungeonKitPool.{h,cpp}` | Engine: `SharedHealthPool` (one pool on several creatures, all die in one tick) |
+| `src/Kit/DungeonKitLedger.{h,cpp}` | Engine: `DamageLedger` (damage per player over 10 s, pets to owners, `Top`) |
 | `src/Kit/ArenaGuard.{h,cpp}` | The arena guard (grips, hold, leash), `LeashPreset`, cell `Confinement` |
 | `src/Kit/DungeonTestCommand.{h,cpp}` | The generic `.<x>test` GM command shell, one per dungeon |
 | `src/Deadmines/DeadminesRework.h` | Pure: entries, boss states, data ids, text groups, spell slices, measured frames |
@@ -111,6 +118,11 @@ so db-import and the dbc-tools replay see one history.
 | `src/BlackrockSpire/BlackrockSpireHardModeItemsLogic.h` | Pure: Blackrock Spire item effect ids (206800-206811), stack and award rules |
 | `src/BlackrockDepths/hard_mode_items.cpp` | Encore, Incendius, Argelmach, Emperor hard mode item scripts, Theldren's damage hook |
 | `src/BlackrockDepths/BlackrockDepthsHardModeItemsLogic.h` | Pure: Blackrock Depths item effect ids (206830-206853), shares, picks, beam |
+| `src/BlackrockDepths/BlackrockDepthsRework.h` | Pure: entries, states, data ids, slices, arenas, sections, save |
+| `src/BlackrockDepths/instance_blackrock_depths_rework.cpp` | Instance (stock name, replaced at load; stock ids kept) |
+| `src/BlackrockDepths/BlackrockDepthsKit.{h,cpp}` | Glue: leash options, `OnBossPull` (the pull line; not flex) |
+| `src/BlackrockDepths/BlackrockDepthsTestCommand.{h,cpp}` | The `.dbtest brd` shell, `instance` and `section` |
+| `src/BlackrockDepths/<boss files>.cpp`, `<Boss>Logic.h` | One set per boss (D1-D24); D6/D12/D16/D24 hard modes |
 | `src/DungeonSets/haunted_set_bonuses.cpp` | Haunted set bonus scripts (10 sets x 3 and 5 pieces) and their hooks |
 | `src/DungeonSets/HauntedSetLogic.h` | Pure: Haunted set bonus ids (205700-205793), script numbers, rolls, picks |
 | `src/DungeonSets/molten_set_bonuses.cpp` | Molten set bonus scripts (10 sets x 3 and 5 pieces): Heat, eruptions, cooldown hooks |
@@ -122,6 +134,7 @@ so db-import and the dbc-tools replay see one history.
 | `tests/kit_test.cpp`, `tests/<boss>_test.cpp` | Suites for the Deadmines kit and each boss's `<Boss>Logic.h` |
 | `tests/stratholme_test.cpp`, `tests/strat_<boss>_test.cpp` | The Stratholme skeleton and each boss |
 | `tests/blackrock_spire_test.cpp`, `tests/brs_<boss>_test.cpp` | The Blackrock Spire skeleton and each boss |
+| `tests/blackrock_depths_test.cpp`, `tests/brd_<boss>_test.cpp` | The Blackrock Depths skeleton and each boss |
 
 ## Adding a dungeon
 
@@ -215,3 +228,110 @@ Thunderclap). `LethalWall` with `pets = false` declares it the same way (none do
 
 Tests: `tests/kit_fronts_test.cpp` (pure plans and the ring rules) and `tests/kit_fronts_parity_test.cpp` (the
 mirrored BM rules, run when `BM_SRC` or `../mod-boss-mechanics/src` has `MechanicFront.h`).
+
+## Blackrock Depths `.dbtest brd` subcommands
+
+`.dbtest brd <boss> <subcommand>` (GM, map 230). Each boss file's header comment gives the arguments.
+
+`heroic 1` on a normal map switches the script's timers, counts and radii only. The percents set by spell scripts
+(`spell_dungeon_refflat_damage`, `spell_brd_flamelash_damage`) read the map's difficulty and stay at the normal values.
+
+| Boss | Subcommands |
+| --- | --- |
+| `instance` | boss where ring favor banner burn vault vaultreset clock gallery rope cinder console avatar |
+| `section` | `<1-4>`: the Finder section's start, end slot and doors |
+| `gerstahn` | info state pain flay circle sear shield pool doubt clear |
+| `roccor` | info state rampage tremor loosed boulders underfoot flameshock earthshock hurl |
+| `grebmar` | info state sicem fetch heel horn finale pack clear heroic |
+| `ring` | info state start favor jeer gift fire beast sig next win wipe |
+| `champions` | gorosh grizzle eviscerator okthor anubshiah hedrum spawn |
+| `encore` | info state banner burn spawn theldren korv lefty volida malgen |
+| `loregrain` | info state tide wrath ward totem splash fury fireward blast |
+| `stilgiss` | info verek state draw coffer eye bindings magma wand blood nova frostbolt curse enrage |
+| `vault` | info state wake skip sweep draught safe |
+| `fineous` | info state pillar holylight kick rope climb |
+| `incendius` | info state firestorm fist surge curse burst shatter seal crumble throwoff |
+| `lake` | info state toss pose fist sweep spawn breath crumble reach |
+| `baelgar` | info state rockfall boulder furnace fissure splash melt clear heroic |
+| `angerforge` | info state squad grenade blow cleave clear heroic |
+| `argelmach` | info state wake bomb mist tether livewire orb overcharge chain |
+| `prototype` | info arm clear state incinerate flame core |
+| `hurley` | info state wake kegrun breath puddle ignite bottle clear heroic |
+| `phalanx` | info state wake throw lastcall clap blow volley smash clear heroic |
+| `flamelash` | info state portal spirit kindling trail stack blast clear heroic |
+| `seven` | info state start step mood wipe heroic |
+| `magmus` | info state stomp burst crossfire flamewall pool clear heroic |
+| `emperor` | info state hand nemesis wave necrosis flamestrike enrage firestorm slam cage uncage clear heroic |
+| `moira` | info state |
+| `avatar` | info awaken state clap blast stone magma |
+
+## Kit: death spots, held bodies and the edge (Blackrock Depths WP-KT-D1)
+
+Death spots and held bodies (`DungeonKitBodies.h`; the Ring of Law's Acid Burst and Raise Dead, the Encore's
+Ancestral Spirit):
+
+- `DeathSpots`: the fight's dead (guid, entry, position, time, a tag). `Record(dead)` from the dying unit's `JustDied`
+  or the summoner's `SummonedCreatureDies` (the spot outlives a `TEMPSUMMON_DEAD_DESPAWN` body); `TakeOldest(n)` /
+  `TakeRandom(n)` hand out unused spots and mark them used (Raise Dead raises each spot once); `Find(guid)` and
+  `Nearest(pos)` read them (a burst at a corpse that is gone). The same unit dying again replaces its spot. `Clear`
+  from the owner's Reset / JustDied / EnterEvadeMode.
+- `HeldBody`: the held-body form of `LethalGuard`, owned by the unit's own AI. The first lethal hit (or the first
+  `holds`) leaves it at 1 health as a body: the feign-death look, rooted, passive, `UNIT_FLAG_NON_ATTACKABLE` (players
+  and bots drop it; a friendly spell still reaches it), casts stopped, every hit absorbed, still in combat. It lies
+  until `Revive(me, pct)`, `Finish(me, killer)` (the real death: `Unit::Kill`, loot to its loot recipient) or its
+  `holdLimit` (Acid Burst's 2 s swell); a lethal hit with no hold left is a real death. The AI calls `Intercept` from
+  `DamageTaken`, `Update` from `UpdateAI` and returns before `UpdateVictim` while `Fallen()` (a body must not evade),
+  and `Reset` from `Reset` / `EnterEvadeMode`. `AllDown(states)` (pure) says a team is all fallen or dead.
+
+The edge (`DungeonKitEdges.h`; Lord Incendius's crumbled edge, Arm Sweep, Magma Fist). The floor is a polygon of the
+real walkable edge (the causeway's top), not the arena:
+
+- `PushOverEdge(unit, floor, options)`: a computed `JumpTo` from anywhere on the floor (the first band or deep in a
+  later one) to `beyondYd` (4) past the edge, along `options.bearing` or the unit's shortest way out; a concave floor's
+  slits are crossed, a wide notch is a drop of its own. A player's jump ends 1 yd under the floor past the rim and the
+  client falls from there (a real fall); a pet's ends on the ground below (or `landZ`). Never a fixed knockback.
+- `PushAlong(unit, floor, bearing, yd)`: a fixed throw (Magma Fist's 10 yd) on the floor when it fits, else over the
+  edge, never onto the rim.
+- `LethalBand(owner, spec)` / `LethalBands::Add`, `AddEdges(owner, spec, edges, fromDepth, toDepth, z)`: a lethal
+  two-point band: a telegraph-only persistent registry Line, `.Lethal()` from the warning on (the navmesh still sees
+  floor there; the registry keeps bots out, the tank too), a 5 s warning, then `onCrumble` once and, for its life,
+  everyone in it (players, and pets and guardians unless `pets = false`; never totems) pushed over the edge under a
+  grace for the flight. `AddEdges` lays one band per listed polygon edge between two depths (a crumble step: 0-4 yd,
+  then 4-8; or 2 yd steps on the long edges only).
+
+The kit kills no one at the edge: a fall into lava is lethal only through its fall damage and the lava. A fight that
+must not be survived pairs it with a `FallWatch` whose `onCatch` kills (`deckZ` the floor, `below` about 20 yd,
+`region` the lake). Tests: `tests/dungeon_kit_test.cpp` (`TestDeathSpots`, `TestHeldBody`, `TestEdgePush`,
+`TestEdgeBands`).
+
+## Kit: the shared health pool and the damage ledger (Blackrock Depths WP-KT-D2)
+
+The shared pool (`DungeonKitPool.h`; the Seven, one pool across seven ghosts):
+
+- `SharedHealthPool`: owned where every member's AI reaches it (the instance, or a leader AI). `Add` the members,
+  `Engage(me)` once per pull (`if (!Engaged())`: it refills the pool, sets every member full and lowers each member's
+  player damage requirement, or a member brought down by the mirror alone gives no credit). Each member calls
+  `DamageTaken(me, who, damage, type)`, `HealReceived(me, who, heal)` and `Update(me)` from `UpdateAI`; the wipe calls
+  `Reset()`. Every hit comes off the pool and every member shows the pool's percent of its own max health. **Cleave
+  once per cast**: hits of one attacker and one kind (melee, spell, DoT, heal) on different members within 250 ms (a
+  DoT: the same tick) are one cast and the pool loses only the largest (`castWindowMs`); a merged hit still gives its
+  attacker the full threat (`keepThreat`). Heals on a member go into the pool by the same rule; `Restore(me, amount)` /
+  `RestorePct(me, pct)` heal the pool by script (Vile Communion). **All die in one tick**: the hit that empties the
+  pool is clamped to leave 1 health (as `InterceptLethal`), every member is held at 1, `onEmpty` runs, and the next
+  `Update` of any member kills every living member (`Unit::Kill`, in `Add` order) with the player who emptied the pool
+  as the killer (credit, loot and the instance's encounter credit as for any kill).
+- Known limit: the cast key is (attacker, kind, window), not the spell: the AI's `DamageTaken` has no spell id in
+  this core, so two different hits of one player on two members inside the window also merge (an instant on one
+  ghost while a bolt lands on another, two DoTs ticking in the same world tick). The Seven's tuning takes that loss.
+- Self-kills: with no killer (`HeldBody::Finish(me)`, a pool death with no player behind it) the engine's
+  `Unit::Kill(me, me)` calls the unit's own `KilledUnit(me)` before `JustDied`; guard kill taunts with
+  `victim->IsPlayer()`.
+
+The damage ledger (`DungeonKitLedger.h`; Phalanx's Throw Out):
+
+- `DamageLedger` (10 s window): `Record(who, damage)` from `DamageTaken` credits the player behind the hit (its pet's,
+  guardian's or totem's hits count for it; hits from units no player controls are dropped). `Top(me, { victim,
+  lastThrown })` is the player with the most damage in the window, alive, on the map and not excluded (null when none:
+  the caller's fallback); a tie goes to the one who reached the total first. `Total`, `Ranking`, `Clear` (Reset).
+
+Tests: `tests/dungeon_kit_test.cpp` (`TestHealthPool`, `TestDamageTally`).

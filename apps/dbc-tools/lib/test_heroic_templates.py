@@ -762,7 +762,7 @@ class DeadminesTest(unittest.TestCase):
         maps = {e["map_id"]: e for e in self.declared}
         self.assertEqual(set(maps), set(dungeon_extract.VANILLA_DUNGEONS))
         # Deadmines (E1), Shadowfang Keep, Blackrock Spire, Scholomance and Stratholme (their WP-H)
-        self.assertEqual(sorted(m for m, e in maps.items() if e["heroic"]), [33, 36, 229, 289, 329])
+        self.assertEqual(sorted(m for m, e in maps.items() if e["heroic"]), [33, 36, 229, 230, 289, 329])
         self.assertTrue(all(e["creatures"] for e in maps.values()))
 
     def test_clean_with_the_committed_lock(self):

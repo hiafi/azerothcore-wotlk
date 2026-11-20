@@ -59,10 +59,12 @@ def _stock() -> dict[int, dict]:
     return {r["ID"]: r for r in dbcfile.read_dbc(STOCK_FILE, DE)}
 
 
-def _heroic(map_id=36, name="Deadmines", encounter_ids=(), spawn_mask=True, event_spawns=False, entries=None):
+def _heroic(map_id=36, name="Deadmines", encounter_ids=(), spawn_mask=True, event_spawns=False, entries=None,
+            no_credit=()):
     return {
         "id": map_id, "map_id": map_id, "name": name, "heroic_entries": dict(entries or {}),
-        "heroic": {"encounter_ids": tuple(encounter_ids), "spawn_mask": spawn_mask, "event_spawns": event_spawns},
+        "heroic": {"encounter_ids": tuple(encounter_ids), "spawn_mask": spawn_mask, "event_spawns": event_spawns,
+                   "no_credit": tuple(no_credit)},
     }
 
 
@@ -188,9 +190,17 @@ class DeclarationTest(unittest.TestCase):
             (", spawn_mask=1", "spawn_mask must be True or False"),
             (", spawn_mask=False, event_spawns=True", "needs spawn_mask"),
             (", encounter_ids=[999]", "dungeonencounter reserved block"),
+            (", encounter_ids=range(1000, 1007), no_credit=[0]", "no_credit must be positive"),
+            (", encounter_ids=range(1000, 1007), no_credit=5", "no_credit must be a sequence"),
+            (", no_credit=[164]", "no_credit needs encounter_ids"),
         ):
             with self.subTest(args=args), self.assertRaisesRegex(ValueError, pattern):
                 self._load(args)
+
+    def test_no_credit_reaches_the_bookkeeping_entry_sorted(self):
+        entry = self._load(", encounter_ids=range(1000, 1007), no_credit=[165, 164, 165]")["dungeons"][0]
+        self.assertEqual(entry["heroic"]["no_credit"], (164, 165))
+        self.assertEqual(self._load("")["dungeons"][0]["heroic"]["no_credit"], ())
 
     def test_a_missing_block_raises(self):
         with self.assertRaisesRegex(ValueError, "dungeonencounter"):
@@ -273,6 +283,32 @@ class EncounterTest(unittest.TestCase):
         self.assertTrue(any("163 ('Gilnid') has no instance_encounters row" in w for w in out.warnings))
         self.assertEqual(len(dsl["dungeon_encounters"]), 7)
         self.assertNotIn(1002, [r["entry"] for r in dsl["instance_encounters"]])
+
+    def test_no_credit_keeps_the_encounter_rows_and_drops_their_credit(self):
+        # Blackrock Depths' shape (§7 #4 A): every DungeonEncounter copy and id stays, the named copies credit nothing
+        dsl, out = self._expand(_heroic(encounter_ids=range(1000, 1007), spawn_mask=False, no_credit=(163, 165)))
+        self.assertEqual(out.errors, [])
+        self.assertEqual(out.warnings, [])
+        self.assertEqual([r["ID"] for r in dsl["dungeon_encounters"]], list(range(1000, 1007)))
+        self.assertEqual([r["entry"] for r in dsl["instance_encounters"]], [1000, 1001, 1003, 1005, 1006])
+        self.assertIn("5 instance_encounters row(s) (no credit for the copies of 163, 165)", "\n".join(out.notes))
+        # each credit row names the normal encounter it copies (lib/lfg_dungeons.py relinks by it)
+        self.assertEqual([r["_normal_entry"] for r in dsl["instance_encounters"]], [161, 162, 164, 166, 167])
+
+    def test_no_credit_of_a_row_deleted_on_normal_does_not_warn(self):
+        credits = _live().instance_encounters
+        del credits[163]  # the hand SQL DELETE of the normal credit
+        dsl, out = self._expand(_heroic(encounter_ids=range(1000, 1007), spawn_mask=False, no_credit=(163,)),
+                                instance_encounters=credits)
+        self.assertEqual((out.errors, out.warnings), ([], []))
+        self.assertEqual(len(dsl["dungeon_encounters"]), 7)
+        self.assertNotIn(1002, [r["entry"] for r in dsl["instance_encounters"]])
+
+    def test_no_credit_of_another_maps_encounter_is_an_error(self):
+        dsl, out = self._expand(_heroic(encounter_ids=range(1000, 1007), spawn_mask=False, no_credit=(227,)))
+        self.assertTrue(any("no_credit names [227], not normal encounter(s) of map 36" in e for e in out.errors),
+                        out.errors)
+        self.assertEqual(dsl["dungeon_encounters"], [])
 
     def test_a_missing_stock_file_is_an_error(self):
         dsl = _dsl(_heroic(encounter_ids=range(1000, 1007), spawn_mask=False))

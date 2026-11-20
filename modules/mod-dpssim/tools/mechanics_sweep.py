@@ -147,6 +147,24 @@ DRILL_BARS: dict[str, dict] = {
         "gated": {1: 0, 3: 0, 4: 0}, "reported": {2}, "cross_specs": None,
         "references": {}, "group": {}, "cycle_ms": 20000, "default_cycles": 6,
     },
+    "blackrock-depths-shapes": {
+        # cycle 0: 1 the Rampage lanes reported; 2 the tank's 8 yd leash on the walking boss and 3 the 40 yd one (the
+        # non-healers on the boss, the healers on the tank; OffSpot failures, no zone), 4 the leap lines and 5 their
+        # landing gated. Cycle 1: 6 the axe and 7 its return line before the lock reported, 8 the locked return gated;
+        # 9, 10 the ruptures gated; Stack/11 the ward reported, 12 the tide gated; 13 the edge bands, 14 the crumble,
+        # 15 the arm sweeps gated; 16 the hide gated at 0
+        "gated": {2: 1, 3: 1, 4: 1, 5: 1, 8: 1, 9: 1, 10: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 0},
+        "reported": {1, 6, 7, 11},
+        "cross_specs": 3, "references": {}, "group": {}, "cycle_ms": 60000, "default_cycles": 2,
+    },
+    "blackrock-depths-shapes-2": {
+        # wave 2 (WP-G2), its own drill: cycle 0 the Nemesis beam, a 2 yd line Soak of one body (Soak/21, a group
+        # failure: at most 2 short passes of 75 in a run); cycle 1 Stack/22 the loner (Seething Cold) gated, 23 the
+        # Livewire pulses and 24 its burst reported, 25 the Crossfire ignition, 26 its burn and 27 the Flame Wall gated
+        "gated": {22: 1, 25: 1, 26: 1, 27: 1},
+        "reported": {23, 24},
+        "cross_specs": 3, "references": {}, "group": {21: 2}, "cycle_ms": 60000, "default_cycles": 2,
+    },
 }
 # Drill::kProgramGapMs: the quiet time after each comma entry of a program
 PROGRAM_GAP_MS = 4000

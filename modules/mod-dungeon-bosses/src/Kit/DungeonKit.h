@@ -255,7 +255,8 @@ namespace DungeonKit
     // from DamageTaken; the first lethal hit after Arm / Reset calls `onZero` once (the phase change). Armed by
     // default, and still armed after firing: every later lethal hit is clamped too until Disarm (call it when the
     // boss may die). Reset (re-arm, not fired) belongs in the boss's Reset, or a wipe after the phase change leaves
-    // him at 1 health forever.
+    // him at 1 health forever. The held-body form (a fallen unit kept as a body until revived or finished, with the
+    // look, the root and no attacks) is HeldBody in DungeonKitBodies.h.
     //
     //     void Reset() override { BossAI::Reset(); _lethal.Reset(); }
     //     void DamageTaken(Unit*, uint32& damage, DamageEffectType, SpellSchoolMask) override
