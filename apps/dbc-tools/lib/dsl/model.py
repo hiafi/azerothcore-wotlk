@@ -21,6 +21,10 @@ from dataclasses import dataclass, field
 
 from .. import potency as _potency
 
+# A weapon strike's flat part declared on its own weapon-damage effect, beside a WEAPON_PERCENT_DAMAGE effect: exempt
+# from the potency rebase like a weapon_potency flat (level60-stat-curve HANDOFF 1.7 / 1.9, LS5b ruling 1).
+_WEAPON_DAMAGE_EFFECT_TYPES = frozenset((17, 58, 121))  # WEAPON_DAMAGE_NOSCHOOL, WEAPON_DAMAGE, NORMALIZED_WEAPON_DMG
+
 
 def _int(value) -> int | None:
     """`None` stays `None` (build.py's `entry.get(field, 0) or 0` already
@@ -129,6 +133,11 @@ class Effect:
     # aura's (Scarlet gear review m5, 2026-11-20: the Rallying Standard's damage and Treads of Denial's damage
     # taken). Only read by the copy builder; never written to a row.
     scale_amount: bool = False
+    # Potency rebase (level60-stat-curve HANDOFF 1.9, LS5b ruling 4): True resolves this effect at a = b = 1 and the
+    # stock heal coefficient multiplier (lib.potency.PotencyEffect.rebase_exempt): the item absorbs that scale with
+    # item level, and the hunter pet abilities awaiting a ruling. A strike's flat part on its own weapon-damage effect
+    # (WEAPON_DAMAGE_NOSCHOOL 17, WEAPON_DAMAGE 58, NORMALIZED_WEAPON_DMG 121) is exempt without it (ruling 1).
+    rebase_exempt: bool = False
 
     @property
     def has_potency(self) -> bool:
@@ -435,6 +444,7 @@ class Spell:
                 pe = _potency.PotencyEffect(
                     sp_potency=effect.sp_potency, ap_potency=effect.ap_potency, kind=kind, t_ms=t_ms,
                     base_potency=effect.base_potency,
+                    rebase_exempt=bool(effect.rebase_exempt) or int(effect.type) in _WEAPON_DAMAGE_EFFECT_TYPES,
                 )
             resolved = _potency.resolve(pe, spell_level=int(spell_level))
             if resolved.ap_coefficient and uses_ranged_attack_power(int(self.attributes or 0), raw_overrides):

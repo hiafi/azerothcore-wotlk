@@ -1602,7 +1602,7 @@ def _run(
         if not item_expansion.errors and item_expansion.tables is not None:
             wsp = weapon_spell_power.undeclared_rows(
                 item_live_rows, set(dsl_items.item_owned_entries()) | {t.tier.entry for t in item_emission.tiers},
-                item_expansion.tables, item_expansion.catalog,
+                item_expansion.tables, item_expansion.catalog, cells=item_expansion.physical_cells,
             )
             item_expansion.errors += wsp.errors
             for note in wsp.notes:

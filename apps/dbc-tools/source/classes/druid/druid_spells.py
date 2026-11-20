@@ -1220,7 +1220,9 @@ maim_22570 = spell(
     range_yards=5.0,
     duration_ms=0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=19.7625, cp_base_potency=24.33655, potency_kind='direct', implicit_target_a=6),
+        # LS5c (level60-stat-curve, user ruling round 12, 2026-11-20): the combo-point line gets attack power scaling of
+        # the same potency (cp_base_potency 24.33655 -> cp_ap_potency 24.33655), so the potency rebase applies normally.
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=19.7625, cp_ap_potency=24.33655, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, die_sides=0, mechanic=Mechanic.STUN, implicit_target_a=6, apply_aura=AuraType.MOD_STUN),
     ],
     spell_icon_id=1681,

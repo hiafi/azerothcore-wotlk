@@ -16,6 +16,7 @@
  */
 
 #include "ItemBudget.h"
+#include "DBCStores.h"
 #include "DatabaseEnv.h"
 #include "Log.h"
 #include "ObjectMgr.h"
@@ -66,6 +67,7 @@ namespace
         float Cost = 1.0f;
         bool IsPrimary = false;
         uint32 ShapeSide = 0; // 0 = never in a shape, 1 = primary side, 2 = secondary side
+        uint32 BudgetCurve = 0; // 0 = primary curve, 1 = secondary curve (secondary side only)
     };
 
     struct ShapeRow
@@ -85,6 +87,7 @@ namespace
     // from these.
     std::unordered_map<uint32, ItemizationRow> _itemization;
     std::unordered_map<uint32, uint32> _budgetCurve;      // ilvl -> budget
+    std::unordered_map<uint32, uint32> _secondaryBudgetCurve; // ilvl -> secondary_budget (level 60 secondary curve)
     std::unordered_map<uint32, uint32> _staminaCurve;     // ilvl -> stamina
     std::map<std::tuple<uint32, uint32, bool>, float> _weaponDpsCurve; // (ilvl, quality, isSingleSlot) -> dps
     float _weaponDpsCost = 0.0f;
@@ -111,6 +114,12 @@ namespace
     // secondaries (secondary_shape_id 0 + item_template.RandomSuffix). Filled once by the apply pass, read-only after.
     std::unordered_map<uint32, uint32> _suffixFactor;
 
+    // Level 60 secondary stat curve (LS1b): random suffix pool (item_enchantment_template.entry, rows with chance > 0)
+    // -> the stat types its suffixes grant (ItemRandomSuffix -> SpellItemEnchantment, ITEM_ENCHANTMENT_TYPE_STAT
+    // effects). A pool whose stats all ride the secondary curve sizes its suffix factor x r; any other pool keeps the
+    // primary-curve factor.
+    std::unordered_map<uint32, std::set<uint32>> _suffixPoolStats;
+
     // Allowed primary_share values, docs/itemization-phase-2.md §5.5.
     constexpr uint32 ALLOWED_PRIMARY_SHARES[] = {0, 4000, 6000, 8000, 10000};
 
@@ -120,6 +129,8 @@ namespace
     {
         _itemization.clear();
         _budgetCurve.clear();
+        _secondaryBudgetCurve.clear();
+        _suffixPoolStats.clear();
         _staminaCurve.clear();
         _weaponDpsCurve.clear();
         _slotMult.clear();
@@ -177,12 +188,34 @@ namespace
             } while (result->NextRow());
         }
 
-        if (QueryResult result = WorldDatabase.Query("SELECT ilvl, budget FROM item_budget_curve"))
+        // Level 60 secondary stat curve: secondary_budget and item_stat_cost.budget_curve are new columns. Their
+        // SELECTs fail on a world DB without them, which would leave every item without a budget (or every stat on the
+        // primary curve), so stop as for item_itemization above.
+        QueryResult budgetCurveResult = WorldDatabase.Query(
+            "SELECT ilvl, budget, secondary_budget FROM item_budget_curve");
+        QueryResult statCostResult = WorldDatabase.Query(
+            "SELECT stat_type, cost, is_primary, shape_side, budget_curve FROM item_stat_cost");
+        if (!budgetCurveResult || !statCostResult)
+        {
+            QueryResult curveCount = WorldDatabase.Query("SELECT COUNT(*) FROM item_budget_curve");
+            QueryResult costCount = WorldDatabase.Query("SELECT COUNT(*) FROM item_stat_cost");
+            if ((!budgetCurveResult && curveCount && (*curveCount)[0].Get<uint64>()) ||
+                (!statCostResult && costCount && (*costCount)[0].Get<uint64>()))
+            {
+                LOG_FATAL("server.loading", "item_budget_curve or item_stat_cost has rows but its SELECT failed (see "
+                    "the sql log); item_budget_curve.secondary_budget or item_stat_cost.budget_curve is probably "
+                    "missing. Import the pending world updates before starting the server.");
+                exit(1);
+            }
+        }
+
+        if (QueryResult result = budgetCurveResult)
         {
             do
             {
                 Field* fields = result->Fetch();
                 _budgetCurve[fields[0].Get<uint32>()] = fields[1].Get<uint32>();
+                _secondaryBudgetCurve[fields[0].Get<uint32>()] = fields[2].Get<uint32>();
             } while (result->NextRow());
         }
 
@@ -232,7 +265,7 @@ namespace
             } while (result->NextRow());
         }
 
-        if (QueryResult result = WorldDatabase.Query("SELECT stat_type, cost, is_primary, shape_side FROM item_stat_cost"))
+        if (QueryResult result = statCostResult)
         {
             do
             {
@@ -241,6 +274,7 @@ namespace
                 row.Cost = fields[1].Get<float>();
                 row.IsPrimary = fields[2].Get<bool>();
                 row.ShapeSide = fields[3].Get<uint8>();
+                row.BudgetCurve = fields[4].Get<uint8>();
                 _statCost[fields[0].Get<uint32>()] = row;
             } while (result->NextRow());
         }
@@ -346,6 +380,34 @@ namespace
             } while (result->NextRow());
         }
 
+        if (QueryResult result = WorldDatabase.Query("SELECT entry, ench, chance FROM item_enchantment_template"))
+        {
+            do
+            {
+                Field* fields = result->Fetch();
+                // The roll ignores rows with no chance (LoadRandomEnchantmentsTable), so they do not count here.
+                if (fields[2].Get<float>() <= 0.000001f)
+                    continue;
+
+                std::set<uint32>& stats = _suffixPoolStats[fields[0].Get<uint32>()];
+                ItemRandomSuffixEntry const* suffix = sItemRandomSuffixStore.LookupEntry(fields[1].Get<uint32>());
+                if (!suffix)
+                    continue;
+
+                for (uint32 enchantId : suffix->Enchantment)
+                {
+                    SpellItemEnchantmentEntry const* enchant =
+                        enchantId ? sSpellItemEnchantmentStore.LookupEntry(enchantId) : nullptr;
+                    if (!enchant)
+                        continue;
+
+                    for (uint8 i = 0; i < MAX_SPELL_ITEM_ENCHANTMENT_EFFECTS; ++i)
+                        if (enchant->type[i] == ITEM_ENCHANTMENT_TYPE_STAT)
+                            stats.insert(enchant->spellid[i]);
+                }
+            } while (result->NextRow());
+        }
+
         LOG_INFO("server.loading", ">> Loaded {} item_itemization row(s), {} shape(s), {} distribution(s)", _itemization.size(), _shapes.size(), _dist.size());
     }
 
@@ -427,6 +489,50 @@ namespace
         }
     }
 
+    // Level 60 secondary stat curve: every ilvl with a budget needs a secondary_budget above 0 (an item at an ilvl
+    // without one is refused in ValidateItemizationData), and every stat's budget_curve is 0 or 1. A 1 on a stat
+    // outside the secondary side is inert (only secondary-side ranks scale), so it is logged too.
+    void ValidateSecondaryCurve()
+    {
+        for (auto const& [ilvl, budget] : _budgetCurve)
+        {
+            auto secondaryIt = _secondaryBudgetCurve.find(ilvl);
+            if (secondaryIt == _secondaryBudgetCurve.end() || secondaryIt->second == 0)
+                LOG_ERROR("server.loading", "item_budget_curve ilvl {}: budget {} but secondary_budget is 0; items at "
+                    "this ilvl stay unmaterialized", ilvl, budget);
+        }
+
+        for (auto const& [statType, cost] : _statCost)
+        {
+            if (cost.BudgetCurve > 1)
+                LOG_ERROR("server.loading", "item_stat_cost stat_type {}: budget_curve {} is not 0 (primary curve) or "
+                    "1 (secondary curve); it is read as the primary curve", statType, cost.BudgetCurve);
+            else if (cost.BudgetCurve == 1 && cost.ShapeSide != 2)
+                LOG_ERROR("server.loading", "item_stat_cost stat_type {}: budget_curve 1 on shape_side {}; only "
+                    "secondary-side (2) stats ride the secondary curve, so the flag is inert", statType,
+                    cost.ShapeSide);
+        }
+    }
+
+    // Level 60 secondary stat curve (LS1b): true when every stat of the random suffix pool rides the secondary curve
+    // (item_stat_cost.budget_curve 1). A pool with a flag-0 stat (the tank pool's Block, Dodge and Parry, a primary),
+    // mixed or not, or with no known stat keeps the primary-curve suffix factor.
+    bool SuffixPoolRidesSecondaryCurve(uint32 pool)
+    {
+        auto poolIt = _suffixPoolStats.find(pool);
+        if (poolIt == _suffixPoolStats.end() || poolIt->second.empty())
+            return false;
+
+        for (uint32 statType : poolIt->second)
+        {
+            auto costIt = _statCost.find(statType);
+            if (costIt == _statCost.end() || costIt->second.BudgetCurve != 1)
+                return false;
+        }
+
+        return true;
+    }
+
     // A secondary shape's rules, evaluated against a primary shape's stat set (§6, §8 check 9).
     // All requires_any rows for the shape form a single disjunction; all forbids rows must be
     // absent. A secondary shape with no rules at all always passes.
@@ -464,6 +570,7 @@ namespace
     void ValidateItemizationData(ItemTemplateContainer const& itemTemplateStore)
     {
         ValidateShapeCatalog();
+        ValidateSecondaryCurve();
 
         std::vector<uint32> badEntries;
         for (auto const& [entry, row] : _itemization)
@@ -518,6 +625,13 @@ namespace
                 if (!_budgetCurve.contains(tpl.ItemLevel))
                 {
                     LOG_ERROR("server.loading", "item_itemization entry {}: ItemLevel {} missing from item_budget_curve", entry, tpl.ItemLevel);
+                    ok = false;
+                }
+                else if (auto secondaryIt = _secondaryBudgetCurve.find(tpl.ItemLevel);
+                    secondaryIt == _secondaryBudgetCurve.end() || secondaryIt->second == 0)
+                {
+                    LOG_ERROR("server.loading", "item_itemization entry {}: ItemLevel {} has no secondary_budget in "
+                        "item_budget_curve", entry, tpl.ItemLevel);
                     ok = false;
                 }
 
@@ -691,6 +805,14 @@ namespace
         b.BudgetMult = row.BudgetMult;
         b.AbsorbedSpellSlots = row.AbsorbedSpellSlots;
 
+        // Level 60 secondary stat curve: r = secondary_budget / budget at this ilvl (1 where either is missing or 0;
+        // validation refuses an item whose ilvl has no secondary_budget).
+        b.CurveBudget = curveIt->second;
+        if (auto secondaryIt = _secondaryBudgetCurve.find(tpl.ItemLevel); secondaryIt != _secondaryBudgetCurve.end())
+            b.CurveSecondaryBudget = secondaryIt->second;
+        b.SecondaryRatio = (b.CurveBudget > 0 && b.CurveSecondaryBudget > 0) ?
+            static_cast<double>(b.CurveSecondaryBudget) / static_cast<double>(b.CurveBudget) : 1.0;
+
         b.IsSetPiece = (tpl.ItemSet != 0);
         b.SetDiscount = b.IsSetPiece ? _setDiscount : 1.0f;
 
@@ -802,10 +924,14 @@ namespace
         // Crafting rework C4 (A1): shape 0 allocates nothing below, so the secondary budget is left for the random
         // suffix. 2 * round(S / 2) makes each half of a 5000/5000 pair round(S / 2) instead of floor(S / 2). At
         // least 2 (one point per stat): a factor of 0 would make GenerateEnchSuffixFactor fall back to the stock
-        // RandPropPoints size. apps/item-tools/item_lib/budget.py compute_breakdown() mirrors this.
+        // RandPropPoints size. A pool whose stats all ride the secondary curve is sized from it (the secondary budget
+        // times r); any other pool (tank pool: Block, Dodge, Parry) keeps the primary-curve factor.
+        // apps/item-tools/item_lib/budget.py compute_breakdown() mirrors this.
         b.SuffixSecondaries = (row.SecondaryShapeId == 0 && tpl.RandomSuffix != 0);
+        b.SuffixRatio = (b.SuffixSecondaries && SuffixPoolRidesSecondaryCurve(tpl.RandomSuffix)) ?
+            b.SecondaryRatio : 1.0;
         b.SuffixFactor = b.SuffixSecondaries ?
-            static_cast<uint32>(std::max<long>(2, 2 * std::lround(secondaryBudget / 2.0))) : 0;
+            static_cast<uint32>(std::max<long>(2, 2 * std::lround(secondaryBudget * b.SuffixRatio / 2.0))) : 0;
 
         // Step 4: allocate each side against its shape's ordered stat list and distribution.
         // Every rank of a given (alloc, cost) pair goes through this exact same formula in the
@@ -818,6 +944,7 @@ namespace
             uint32 StatType;
             bool IsPrimary;
             uint32 Alloc;
+            uint32 BudgetCurve;
             double Exact;
             int32 Floor;
             double Remainder;
@@ -879,14 +1006,18 @@ namespace
             for (SideRank const& rank : ranks)
             {
                 float cost = 1.0f;
+                uint32 budgetCurve = 0;
                 if (auto costIt = _statCost.find(rank.StatType); costIt != _statCost.end())
+                {
                     cost = costIt->second.Cost;
+                    budgetCurve = costIt->second.BudgetCurve;
+                }
 
                 double raw = sideBudget * (static_cast<double>(rank.Alloc) / whole);
                 double exact = (cost > 0.0f) ? raw / cost : 0.0;
                 int32 flr = static_cast<int32>(std::floor(exact));
 
-                working.push_back({rank.StatType, isPrimarySide, rank.Alloc, exact, flr,
+                working.push_back({rank.StatType, isPrimarySide, rank.Alloc, budgetCurve, exact, flr,
                     exact - static_cast<double>(flr)});
             }
         };
@@ -947,6 +1078,49 @@ namespace
         for (int32 i = 0; i < remainder && i < static_cast<int32>(order.size()); ++i)
             working[order[i]].Floor += 1;
 
+        // Step 6 (level 60 secondary stat curve): every value above is today's. The secondary-side stats with
+        // budget_curve 1 now take their exact value times r. Every other stat keeps the point count step 5 gave it,
+        // which keeps the primary side and the flag-0 secondaries (Dodge, Parry, Block, MP5) identical to today. The
+        // scaled stats are rounded among themselves: their points total lround(sum of their new exact values), shared
+        // by the same largest-remainder rule and tiebreak. At r = 1 (secondary_budget = budget) nothing moves, so the
+        // item keeps step 5's merged rounding exactly. apps/item-tools/item_lib/budget.py mirrors this.
+        std::vector<size_t> scaled;
+        double scaledExactSum = 0.0;
+        if (b.CurveSecondaryBudget != b.CurveBudget)
+        {
+            for (size_t i = 0; i < working.size(); ++i)
+            {
+                Working& w = working[i];
+                if (w.IsPrimary || w.BudgetCurve != 1)
+                    continue;
+
+                scaled.push_back(i);
+                w.Exact *= b.SecondaryRatio;
+                w.Floor = static_cast<int32>(std::floor(w.Exact));
+                w.Remainder = w.Exact - static_cast<double>(w.Floor);
+                scaledExactSum += w.Exact;
+            }
+        }
+
+        if (!scaled.empty())
+        {
+            int32 scaledFloorSum = 0;
+            for (size_t i : scaled)
+                scaledFloorSum += working[i].Floor;
+
+            int32 scaledRemainder = std::max(0, static_cast<int32>(std::lround(scaledExactSum)) - scaledFloorSum);
+
+            std::sort(scaled.begin(), scaled.end(), [&working](size_t lhs, size_t rhs)
+            {
+                if (working[lhs].Remainder != working[rhs].Remainder)
+                    return working[lhs].Remainder > working[rhs].Remainder;
+                return working[lhs].StatType < working[rhs].StatType;
+            });
+
+            for (int32 i = 0; i < scaledRemainder && i < static_cast<int32>(scaled.size()); ++i)
+                working[scaled[i]].Floor += 1;
+        }
+
         b.Allocations.clear();
         b.Allocations.reserve(working.size());
         for (Working const& w : working)
@@ -955,6 +1129,8 @@ namespace
             detail.StatType = w.StatType;
             detail.IsPrimary = w.IsPrimary;
             detail.Alloc = w.Alloc;
+            detail.BudgetCurve = w.BudgetCurve;
+            detail.Scaled = !w.IsPrimary && w.BudgetCurve == 1;
             detail.RawValue = static_cast<float>(w.Exact);
             detail.RoundedValue = w.Floor;
             b.Allocations.push_back(detail);
@@ -1064,9 +1240,10 @@ namespace
 
             if (b.SuffixSecondaries)
             {
-                if (b.SecondaryBudget < 1.0f)
+                double suffixBudget = static_cast<double>(b.SecondaryBudget) * b.SuffixRatio;
+                if (suffixBudget < 1.0)
                     LOG_WARN("server.loading", "item_itemization entry {}: secondary budget {:.2f} is below one point; "
-                        "its random suffix is raised to one point per stat", entry, b.SecondaryBudget);
+                        "its random suffix is raised to one point per stat", entry, suffixBudget);
                 _suffixFactor[entry] = b.SuffixFactor;
             }
 

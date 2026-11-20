@@ -36,7 +36,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from lib import dbcfmt, state  # noqa: E402
+from lib import dbcfmt, potency, state  # noqa: E402
 from lib.test_deathknight_dk0a import _data, _hex, _u32, m, spell_mask  # noqa: E402
 
 BLOOD_TAB = 398
@@ -121,7 +121,7 @@ SDV_NAME = re.compile(r"^\$(\w+)=", re.MULTILINE)
 MAX_SDV_NAME = 12
 D_AND_D_PINNED = {"Attributes": 67108864, "AttributesEx": 136, "AttributesEx3": 0, "AttributesEx5": 512,
                   "RuneCostID": 101, "PowerType": POWER_RUNE, "CategoryRecoveryTime": 30000, "Effect_1": 27,
-                  "EffectAura_1": 226, "EffectBasePoints_1": 23}  # 13 -> 23 = potency 39.95 (2026-11-01, DPS balance pass 1031 round R4, Death and Decay +70%); RETUNE 2026-10-25 re-anchor: was 25; 8 -> 12 (2026-11-01, DPS balance pass 1031 round T1, Death and Decay +50%); 12 -> 13 = potency 23.5 on a 1 s basis (2026-11-01, potency audit fix F9)
+                  "EffectAura_1": 226, "EffectBasePoints_1": 13}  # 23 -> 13: x a 0.57 (LS5b potency rebase); 13 -> 23 = potency 39.95 (2026-11-01, DPS balance pass 1031 round R4, Death and Decay +70%); RETUNE 2026-10-25 re-anchor: was 25; 8 -> 12 (2026-11-01, DPS balance pass 1031 round T1, Death and Decay +50%); 12 -> 13 = potency 23.5 on a 1 s basis (2026-11-01, potency audit fix F9)
 D_AND_D_MASK = (m.DEATH_AND_DECAY, 0, 0)
 DND_TICK_POTENCY = 39.95  # DEATH_AND_DECAY_TICK_POTENCY in deathknight_trigger_spells.py (potency audit F9)
 STOCK_COMPARE_COLUMNS = ("Attributes", "AttributesEx", "AttributesEx2", "AttributesEx3", "AttributesEx4",
@@ -596,7 +596,9 @@ class DeathKnightS1DataTest(unittest.TestCase):
         self.assertEqual(carrier["total_potency"], DND_TICK_POTENCY)
         self.assertEqual(carrier["kind"], "periodic")
         self.assertEqual(tick["total_potency"], 0.0)  # base_potency=0.0: the passed amount is not doubled
-        self.assertAlmostEqual(tick["ap_coefficient"], DND_TICK_POTENCY / 100.0 / 3.5, places=6)
+        # x b / R since the potency rebase (level60-stat-curve HANDOFF 1.9, LS5b).
+        self.assertAlmostEqual(tick["ap_coefficient"],
+                               DND_TICK_POTENCY / 100.0 / 3.5 * potency.COEF_SCALE / potency.DEFAULT_R, places=6)
         rows = [r for r in pkg.spell_bonus_data if int(r["entry"]) == D_AND_D_TICK]
         self.assertEqual(len(rows), 1)  # the generated one only, not a second hand bonus_coefficients() row
         self.assertAlmostEqual(rows[0]["ap_bonus"], tick["ap_coefficient"], places=6)

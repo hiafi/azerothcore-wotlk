@@ -177,7 +177,7 @@ def build_class_report(
 
             t = t_ms / 1000.0
             is_heal_like = kind in _HEAL_LIKE_KINDS
-            heal_div = potency.HEAL_BASE_MULT if is_heal_like else 1.0
+            heal_div = potency.HEAL_BASE_MULT_STOCK if is_heal_like else 1.0
             base_potency = (v60 / (c60 * t / 1.5)) / heal_div
 
             if bonus is not None:
@@ -187,7 +187,7 @@ def build_class_report(
                 coef = float(live.get(f"EffectBonusMultiplier_{idx}") or 0.0)
                 ap_coef = 0.0
 
-            coef_div = potency.HEAL_COEF_MULT if is_heal_like else 1.0
+            coef_div = potency.HEAL_COEF_MULT_STOCK if is_heal_like else 1.0
             sp_implied = (100 * coef * 3.5 / t) / coef_div if coef else None
             ap_implied = (100 * ap_coef * 3.5 * potency.DEFAULT_R / t) if ap_coef else None
 

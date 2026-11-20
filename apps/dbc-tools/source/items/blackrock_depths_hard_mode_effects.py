@@ -638,6 +638,7 @@ increased_shock_damage_27859 = spell(
     id=27859, name='Increased Shock Damage', school=School.NORMAL, attributes=464, cast_time_ms=0, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
     effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.OVERRIDE_CLASS_SCRIPTS, misc_value=4418,
+                    rebase_exempt=True,  # scales with item level, not the potency rebase (level60-stat-curve LS5b)
                     base_potency=2.83, potency_kind='absorb', implicit_target_a=_TARGET_UNIT_CASTER)],
     spell_icon_id=13,
     notes='Totem of Rage (22395), the Equip, moved onto potency (Blackrock Depths list: "keeps Increased Shock '

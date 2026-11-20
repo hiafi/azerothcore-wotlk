@@ -159,7 +159,7 @@ class ScarletMonasteryHardModeItemsTest(unittest.TestCase):
         declared = {k: d.budget_mult for k, d in self.decls.items() if d.budget_mult is not None}
         self.assertEqual(declared, {
             "sm_heretics_wand": 0.6, "sm_scarlet_garrison_rifle": 0.6, "sm_garrison_bulwark": 0.6,
-            "sm_staff_of_the_consecrated_hall": 0.7105, "sm_fathers_verdict": 0.5537,
+            "sm_staff_of_the_consecrated_hall": 0.5537, "sm_fathers_verdict": 0.5537,
         })
         dps = {k: d.extra_dps for k, d in self.decls.items() if d.extra_dps is not None}
         self.assertEqual(dps, {"sm_heretics_wand": -0.2, "sm_scarlet_garrison_rifle": -0.2052,

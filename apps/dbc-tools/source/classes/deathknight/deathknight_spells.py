@@ -56,7 +56,10 @@ death_and_decay_43265 = spell(
     range_yards=30.0,
     duration_ms=10000,
     effects=[
-        Effect(type=EffectType.PERSISTENT_AREA_AURA, base_potency=DEATH_AND_DECAY_TICK_POTENCY, potency_kind='periodic', implicit_target_a=28, apply_aura=226, amplitude=1000, radius_yards=10.0),
+        # LS5b ruling 4 (level60-stat-curve, 2026-11-20): base_potency -> ap_potency of the same potency. The server's
+        # attack-power part is still the 52212 tick's own (this effect value is only the base passed to it, and a
+        # PERIODIC_DUMMY amount takes no bonus), so the new coefficient only adds the AP term to {pot1}.
+        Effect(type=EffectType.PERSISTENT_AREA_AURA, ap_potency=DEATH_AND_DECAY_TICK_POTENCY, potency_kind='periodic', implicit_target_a=28, apply_aura=226, amplitude=1000, radius_yards=10.0),
     ],
     spell_icon_id=118,
     tooltip_vars=sanguine_ground_tooltip_1252,  # S1a U24: tooltip only (Sanguine Ground +10/20/30%); the row stays stock

@@ -102,9 +102,12 @@ NO_SET = {"itemset": 0}  # the dissolved Savage Gladiator set (ruling 85): no se
 #   60-100 DPS fraction);
 # - a socketed hard mode one-hander or shield pays the socket out of a thin cell budget (0.311 / 0.295 left 1 point of
 #   the primary and 0 or 1 of each secondary): 0.6 gives every doc stat a few points (S3).
-CASTER_MAIN_HAND_MULT = 1.931            # caster InventoryType 21 ilvl 60-100 (item_role_cells.lock)
-HM_CASTER_TWO_HAND_MULT = 0.7105         # caster InventoryType 17 ilvl 60-100 1.015 x the effect discount 0.7
-HM_CASTER_MAIN_HAND_MULT = 1.3517        # caster InventoryType 21 ilvl 60-100 1.931 x 0.7
+# physical InventoryType 13 ilvl 60-100: caster weapons take the physical budget (level60-stat-curve 1.8)
+CASTER_MAIN_HAND_MULT = 0.445
+# physical InventoryType 17 ilvl 60-100 0.791 x the effect discount 0.7 (level60-stat-curve 1.8)
+HM_CASTER_TWO_HAND_MULT = 0.5537
+# physical InventoryType 13 ilvl 60-100 0.445 x 0.7 (level60-stat-curve 1.8)
+HM_CASTER_MAIN_HAND_MULT = 0.3115
 # physical InventoryType 17 Quality 4 ilvl 60-100: 0.791 x 0.7 and its DPS fraction. The 101-200 cell's multiplier is
 # close (0.885) but its DPS fraction (0.0002) moves the DPS budget into stats: 13 to 21 Strength from 91 to 101.
 HM_PHYSICAL_TWO_HAND_MULT = 0.5537

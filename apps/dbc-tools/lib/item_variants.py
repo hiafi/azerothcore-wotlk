@@ -25,6 +25,14 @@ item without `extra_armor=` keeps its live row's `armor_delta` on its own tier (
 their stock armor that way); its minted tiers take the armor curve. `ResolvedTier.number` is the
 `item_budget_variant.tier` value (`tier_number()`).
 
+**One secondary on a pure-primary Rare / Epic** (level 60 stat curve LS2, HANDOFF 1.5). A tier of Quality 3 or 4 whose
+row would carry `primary_share` 10000 (the default of a primary with no secondary, a declared 10000, the live row of an
+`itemization="live"` item, a quest reward's line) takes `primary_share` 8000 and the Solo secondary shape of its
+secondary's lead stat instead (`solo_secondary`: the one-stat shape of that stat whose rules pass against the primary,
+the lowest id when two do). It is decided per tier, so a ladder that rises from Uncommon keeps 10000 on its Uncommon
+tier. A lead stat with no Solo shape that goes with the primary is a WARNING and the row keeps 10000 (reported, not
+forced). Uncommon and lower are untouched; a row with no secondary shape (jewelry-style, suffix pool) is too.
+
 **Weapon-tier defaults** (R1 S1). On a weapon-tier slot (`WEAPON_TIER_INV_TYPES`: weapons, shields, held in off-hand)
 the stock budget is corrected per (role, slot): the stock conversion set every such item's `budget_mult` to its
 (role, InventoryType) cell target per item level bucket, and matched weapon DPS through `dps_delta`
@@ -97,6 +105,10 @@ ROLE_CELL_MIN_SAMPLES = 3
 # most 1.35x (caster one-hand 60-100 -> 101-200).
 ROLE_CELL_MAX_STEP = 1.5
 CASTER_LEAD_STATS = frozenset((5, 6, 45))  # Intellect, Spirit, Spell Power
+# Level 60 stat curve LS2 (HANDOFF 1.5): a Rare or Epic item with no secondary budget (primary_share 10000) gets one
+# secondary at primary_share 8000 instead; Uncommon keeps 10000.
+SOLO_QUALITIES = (3, 4)  # Rare, Epic
+SOLO_PRIMARY_SHARE = 8000
 TANK_STATS = frozenset((12, 13, 14, 15, 48))  # Defense, Dodge, Parry, Block rating, Block value
 DURABILITY_WINDOWS = (5, 10, 20, None)  # item level distance; None = any level
 DURABILITY_MIN_SAMPLES = 3
@@ -203,6 +215,7 @@ class ItemExpansion:
     notes: list[str] = field(default_factory=list)
     tables: dict | None = None  # the itemization tables the tiers were resolved against (None: no item declared)
     catalog: dict | None = None  # their shape catalog
+    physical_cells: object = None  # weapon_spell_power.PhysicalCells of this run (LS4), for the undeclared weapons
 
     @property
     def minted(self) -> list[tuple[int, str, str]]:
@@ -295,6 +308,42 @@ def _curve_problems(tables: dict, ilvl: int, quality: int, inv_type: int, item_c
 
 def _bucket(ilvl: int) -> int | None:
     return next((i for i, (low, high) in enumerate(ROLE_CELL_BUCKETS) if low <= ilvl <= high), None)
+
+
+def solo_secondary(secondary: dict | None, primary: dict | None, catalog: dict) -> dict | None:
+    """The one-stat secondary shape of `secondary`'s lead (rank 1) stat whose rules pass against `primary`'s stat set
+    (HANDOFF 1.5), or None when there is none. `secondary` itself when it is already that shape; else the lowest shape
+    id (MP5 47 / 79 and Dodge 54 / 80 each have two Solo shapes, told apart by their rules)."""
+    _, shapes = _item_lib()
+    if secondary is None or not secondary["stats"]:
+        return None
+    lead = secondary["stats"][0]
+    primary_stats = set(primary["stats"]) if primary else set()
+    solos = [s for _, s in sorted(catalog.items())
+             if s["kind"] == shapes.KIND_SECONDARY and s["stats"] == [lead] and shapes.rules_satisfied(s, primary_stats)]
+    if not solos:
+        return None
+    return next((s for s in solos if s["shape_id"] == secondary["shape_id"]), solos[0])
+
+
+def apply_solo_secondary(itemization: dict, quality: int, catalog: dict) -> str | None:
+    """HANDOFF 1.5 on one tier's `item_itemization` values, in place: a Rare / Epic tier with a primary, a secondary
+    shape and primary_share 10000 gets primary_share 8000 and the Solo shape of its secondary's lead stat. Returns
+    None when nothing needed to change or it was changed, else the reason a Solo shape could not be used (the row is
+    left as it is: reported, not forced)."""
+    if quality not in SOLO_QUALITIES or _int(itemization.get("primary_share")) != 10000:
+        return None
+    primary = catalog.get(_int(itemization.get("primary_shape_id")))
+    secondary = catalog.get(_int(itemization.get("secondary_shape_id")))
+    if primary is None or not primary["stats"] or secondary is None or not secondary["stats"]:
+        return None  # no primary (a jewelry-style row) or no secondary shape: nothing to share
+    solo = solo_secondary(secondary, primary, catalog)
+    if solo is None:
+        return (f"no Solo shape for the lead stat {secondary['stats'][0]} of secondary shape {secondary['name']!r} "
+                f"goes with primary {primary['name']!r}")
+    itemization["primary_share"] = SOLO_PRIMARY_SHARE
+    itemization["secondary_shape_id"] = solo["shape_id"]
+    return None
 
 
 def shape_role(primary: dict | None, secondary: dict | None) -> str:
@@ -397,6 +446,7 @@ class FrozenRoleCells:
     frozen: dict = field(default_factory=dict)
     today: str = ""
     appended: dict = field(default_factory=dict)  # key -> lock line
+    physical: object = None  # weapon_spell_power.PhysicalCells (LS4: the physical cells caster weapons read), or None
 
     def lookup(self, role: str, inv_type: int, quality: int, ilvl: int) -> tuple[float, float, str] | None:
         key = (role, inv_type, quality, _bucket(ilvl))
@@ -756,13 +806,26 @@ def _resolve_item(
     )
     tier_plans = []
     previous_cell = None  # (tier name, cell) of the tier below when its budget_mult came from a role cell
+    # LS4 (weapon_spell_power.py): a weapon whose DPS feeds spell power takes the physical role cell and no DPS credit;
+    # a bow, gun or crossbow takes no DPS credit. A declared budget_mult= / extra_dps= wins.
+    physical = getattr(role_cells, "physical", None)
+    caster_rule = (weapon_tier and physical is not None
+                   and weapon_spell_power.takes_physical_budget(item_class, inv_type, spell_power_mult, spell_power_k))
+    hunter_rule = weapon_spell_power.is_hunter_ranged(item_class, subclass, inv_type)
     for plan in plans:
         spec = plan["spec"]
         if spec.deferred:
             continue
         base = _baselines(tables, plan["ilvl"], plan["quality"], inv_type, item_class, subclass)
         cell = None
-        if weapon_tier and role_cells is not None:
+        if caster_rule:
+            found = physical.lookup(inv_type, plan["quality"], plan["ilvl"])
+            if found is None:
+                errors.append(f"{where} tier {spec.name!r}: no physical role cell for InventoryType {inv_type}, not "
+                              f"even by fallback (a caster weapon takes the physical stat budget)")
+                continue
+            cell = (found[0], 0.0, f"physical {found[1]}, DPS 0")
+        elif weapon_tier and role_cells is not None:
             cell = role_cells.lookup(role, inv_type, plan["quality"], plan["ilvl"])
         # Whether this tier's budget_mult comes from the cell (below): a live item's higher tiers, or no declared one.
         from_cell = cell is not None and (not plan["first"] if live_row is not None else mult is None)
@@ -779,6 +842,10 @@ def _resolve_item(
         if live_row is not None and plan["first"]:
             itemization = {c: live_row.get(c, 0) for c in ITEMIZATION_COLUMNS}
             source = "live row"
+            if caster_rule and decl.budget_mult is None:
+                itemization["budget_mult"], source = cell[0], f"live row, {cell[2]}"
+            if (caster_rule or hunter_rule) and decl.extra_dps is None:
+                itemization["dps_delta"] = 0.0
         else:
             tier_mult, dps_fraction, source = mult, fractions["dps"], "declared"
             if live_row is not None:
@@ -792,6 +859,8 @@ def _resolve_item(
                     source = "default"
             if dps_fraction is None:
                 dps_fraction = cell[1] if cell is not None and item_class == ITEM_CLASS_WEAPON else 0.0
+            if (caster_rule or hunter_rule) and decl.extra_dps is None:
+                dps_fraction = 0.0
             itemization = {
                 "budget_mult": tier_mult,
                 "stamina_delta": budget._round(_scaled(fractions["stamina"], base["stamina"])),
@@ -805,6 +874,9 @@ def _resolve_item(
             }
             if plan["first"] and stock_armor_delta is not None:
                 itemization["armor_delta"] = stock_armor_delta
+        # Level 60 stat curve LS2: a Rare / Epic tier that would carry no secondary budget gets one Solo secondary.
+        if problem := apply_solo_secondary(itemization, plan["quality"], catalog):
+            warnings.append(f"{where} tier {spec.name!r}: primary_share 10000 kept, {problem}")
         # Weapon scaling WS0b/WS0c: the generator owns the column on every tier, the live first tier included, at any
         # item level (user ruling 2026-11-20: no item level limit).
         itemization["spell_power_per_dps"] = weapon_spell_power.coefficient(
@@ -954,6 +1026,8 @@ def expand(
 
         role_cells = FrozenRoleCells(build_role_cells(tables, catalog, live_rows, excluded), frozen_cells,
                                      today or datetime.date.today().isoformat())
+        # LS4: the physical cells caster weapons take, read from a snapshot of the lock before this run freezes more.
+        role_cells.physical = out.physical_cells = weapon_spell_power.PhysicalCells(dict(frozen_cells), role_cells.live)
         durability = build_durability_index(live_rows, excluded)
         for decl in decls:
             result = _resolve_item(decl, live_rows, tables, catalog, shape_index, columns, out.errors, out.warnings,

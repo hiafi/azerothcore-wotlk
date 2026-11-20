@@ -59,6 +59,7 @@ enum ShamanSpells
     SPELL_SHAMAN_NATURE_GUARDIAN_THREAT         = 39301,
     SPELL_SHAMAN_SATED                          = 57724,
     SPELL_SHAMAN_STONECLAW_TOTEM                = 55277,
+    SPELL_SHAMAN_STONECLAW_TOTEM_POTENCY        = 55328, // Custom: the potency-converted rank (LS5b ruling 4)
     SPELL_SHAMAN_STORM_EARTH_AND_FIRE           = 51483,
     SPELL_SHAMAN_TOTEM_EARTHBIND_EARTHGRAB      = 64695,
     SPELL_SHAMAN_TOTEM_EARTHBIND_TOTEM          = 6474,
@@ -1240,6 +1241,15 @@ class spell_sha_stoneclaw_totem : public SpellScript
         // again would double the low-level correction and the +/-10% variance roll (see
         // spell_warr_bloodthirst::HandleDamage in spell_warrior.cpp for the same established
         // principle on an already-converted spell).
+        // Custom: 55328's potency is spell power potency since the potency rebase (level60-stat-curve LS5b ruling 4,
+        // 2026-11-20). A SCRIPT_EFFECT value gets no engine bonus, so the generated coefficient is added here from
+        // the owner's healing power (absorbs follow the heal rule). Stock ranks keep their bare value.
+        int32 absorb = GetEffectValue();
+        if (GetSpellInfo()->Id == SPELL_SHAMAN_STONECLAW_TOTEM_POTENCY)
+            if (Unit* owner = GetCaster()->GetOwner())
+                absorb += int32(GetSpellInfo()->Effects[EFFECT_0].BonusMultiplier *
+                    float(owner->SpellBaseHealingBonusDone(GetSpellInfo()->GetSchoolMask())));
+
         // Cast Absorb on totems
         for (uint8 slot = SUMMON_SLOT_TOTEM_FIRE; slot < MAX_TOTEM_SLOT; ++slot)
         {
@@ -1248,12 +1258,12 @@ class spell_sha_stoneclaw_totem : public SpellScript
 
             Creature* totem = target->GetMap()->GetCreature(target->m_SummonSlot[slot]);
             if (totem && totem->IsTotem())
-                GetCaster()->CastCustomSpell(SPELL_SHAMAN_STONECLAW_TOTEM, SPELLVALUE_BASE_POINT0, GetEffectValue(), totem, true);
+                GetCaster()->CastCustomSpell(SPELL_SHAMAN_STONECLAW_TOTEM, SPELLVALUE_BASE_POINT0, absorb, totem, true);
         }
 
         // Glyph of Stoneclaw Totem
         if (AuraEffect* aur = target->GetAuraEffect(SPELL_SHAMAN_GLYPH_OF_STONECLAW_TOTEM, 0))
-            GetCaster()->CastCustomSpell(SPELL_SHAMAN_STONECLAW_TOTEM, SPELLVALUE_BASE_POINT0, GetEffectValue() * aur->GetAmount(), target, true);
+            GetCaster()->CastCustomSpell(SPELL_SHAMAN_STONECLAW_TOTEM, SPELLVALUE_BASE_POINT0, absorb * aur->GetAmount(), target, true);
     }
 
     void Register() override

@@ -516,7 +516,10 @@ mana_shield_1463 = spell(
     range_yards=0.0,
     duration_ms=60000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=119, points_per_level=11.25, implicit_target_a=1, apply_aura=97, misc_value=127),
+        # LS5b ruling 7 (level60-stat-curve, 2026-11-20): flat base x a (0.57) like a generated base: 119 / 11.25 -> 68
+        # /
+        # 6.4125 (569 -> 324 at 60); spell_mage_mana_shield's spell power factor goes 0.8053 -> 0.8053 x b (2.84).
+        Effect(type=EffectType.APPLY_AURA, base_points=68, points_per_level=6.4125, implicit_target_a=1, apply_aura=97, misc_value=127),
     ],
     spell_icon_id=209,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',

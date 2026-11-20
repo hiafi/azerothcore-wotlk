@@ -319,7 +319,9 @@ scripted_by(fairbells_censer_212003, _ROLL_ONCE)
 voss_blessing_212006 = spell(
     id=212006, name="Voss's Blessing", school=School.HOLY, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,
     mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=6000,
-    effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.SCHOOL_ABSORB, base_potency=60.0,
+    # rebase_exempt: scales with item level, not the potency rebase (level60-stat-curve LS5b)
+    effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.SCHOOL_ABSORB, rebase_exempt=True,
+                    base_potency=60.0,
                     potency_kind='absorb', misc_value=_SCHOOL_MASK_ALL, implicit_target_a=_TARGET_UNIT_TARGET_ALLY)],
     spell_icon_id=_ICON_POWER_WORD_SHIELD,
     notes='Scarlet Monastery hard mode, Voss\'s Blessed Signet: the shield, cast by the healer (triggered by 212005) '
@@ -356,6 +358,7 @@ shard_of_the_phylactery_212007 = spell(
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF, duration_ms=15000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=_SCHOOL_MASK_ALL,
+               rebase_exempt=True,  # scales with item level, not the potency rebase (level60-stat-curve LS5b)
                base_potency=150.0, potency_kind='absorb', implicit_target_a=_TARGET_UNIT_CASTER),
         Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, base_points=9,
                misc_value=_SCHOOL_MASK_SPELLS, implicit_target_a=_TARGET_UNIT_CASTER),

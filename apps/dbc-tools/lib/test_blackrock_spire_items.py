@@ -191,7 +191,7 @@ def _shape_stats(name):
 # Blackrock gear fix pass (REVIEW S1-S3): the declared budget multipliers; every other item takes the default.
 DECLARED_MULTS = {
     "brs_ward_of_the_three_tribes": 0.6,      # socketed hard mode shield: every doc stat a few points (S3)
-    "brs_shardstaff_of_stolen_power": 0.7105,  # caster two-hand 60-100 cell x 0.7, 101 tier included (S1)
+    "brs_shardstaff_of_stolen_power": 0.5537,  # physical two-hand 60-100 cell x 0.7 (1.8), 101 tier included (S1)
     "brs_riphook": 0.405,                      # bow 60-100 cell on the level 59 Normal tier too (S2)
 }
 

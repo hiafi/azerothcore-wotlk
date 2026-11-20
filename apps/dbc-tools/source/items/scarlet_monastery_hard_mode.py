@@ -64,7 +64,8 @@ BOP = 1  # ITEM_BIND_ON_ACQUIRE: a new boss item binds when picked up, whatever 
 R, B = Socket.RED, Socket.BLUE
 
 # Declared multipliers (module docstring), the same numbers as blackrock_depths.py's:
-HM_CASTER_TWO_HAND_MULT = 0.7105         # caster InventoryType 17 ilvl 60-100 1.015 x the effect discount 0.7
+# physical InventoryType 17 ilvl 60-100 0.791 x the effect discount 0.7 (level60-stat-curve 1.8)
+HM_CASTER_TWO_HAND_MULT = 0.5537
 HM_PHYSICAL_TWO_HAND_MULT = 0.5537       # physical InventoryType 17 Quality 4 ilvl 60-100 0.791 x 0.7
 HM_PHYSICAL_TWO_HAND_DPS = 0.0695        # ... and its DPS fraction
 HM_SOCKETED_THIN_MULT = 0.6              # socketed hard mode one-hander, ranged weapon or shield with an effect

@@ -92,7 +92,8 @@ NO_AMMO = 0
 # two-hand cell times the effect discount on every tier (the 101-200 cell, 2.455, fit on TBC staves, was a 2.7x step
 # from 91 to 101), and the Ward, a socketed hard mode shield, takes 0.6 so Strength, Parry and Versatility each get a
 # few points (the shield cell times 0.7, 0.295, left 1 Strength after the socket).
-HM_CASTER_TWO_HAND_MULT = 0.7105         # caster InventoryType 17 ilvl 60-100 1.015 x the effect discount 0.7
+# physical InventoryType 17 ilvl 60-100 0.791 x the effect discount 0.7 (level60-stat-curve 1.8)
+HM_CASTER_TWO_HAND_MULT = 0.5537
 HM_SOCKETED_THIN_MULT = 0.6              # socketed hard mode one-hander or shield with an effect
 # Thrown weapons (fix pass, sim kits): the 60-100 thrown cell (+11% DPS) was fit on TBC thrown items at 91-100 that
 # carry no stats, so a level 60 thrown spent its budget on DPS above the one-hand baseline (2 Strength, 2 Mastery).

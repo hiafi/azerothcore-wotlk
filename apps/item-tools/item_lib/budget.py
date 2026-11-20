@@ -66,6 +66,95 @@ class BudgetError(Exception):
     rather than crashing."""
 
 
+ITEM_ENCHANTMENT_TYPE_STAT = 5
+SUFFIX_ENCHANTMENTS = 5  # ItemRandomSuffix Enchantment_1..5
+ENCHANTMENT_EFFECTS = 3  # SpellItemEnchantment Effect_1..3
+
+_pool_index_cache: tuple | None = None  # (item_enchantment_template rows, {pool: [ench, ...]}): last index built
+
+
+def _pool_suffixes(tables: dict) -> dict[int, list[int]]:
+    """{pool: [suffix id, ...]} from `item_enchantment_template`, rows with chance > 0 only (the server's
+    LoadRandomEnchantmentsTable drops the others), cached per `item_enchantment_template` dict (by identity)."""
+    global _pool_index_cache
+    rows = tables.get("item_enchantment_template", {})
+    if _pool_index_cache is not None and _pool_index_cache[0] is rows:
+        return _pool_index_cache[1]
+    index: dict[int, list[int]] = {}
+    for row in rows.values():
+        if float(row.get("chance") or 0.0) > 0.000001:
+            index.setdefault(int(row["entry"]), []).append(int(row["ench"]))
+    _pool_index_cache = (rows, index)
+    return index
+
+
+def suffix_pool_stats(pool: int, tables: dict) -> set[int]:
+    """The stat types the suffixes of random suffix pool `pool` grant (ItemRandomSuffix -> SpellItemEnchantment
+    `ITEM_ENCHANTMENT_TYPE_STAT` effects), as ItemBudget.cpp's `_suffixPoolStats` reads them. The server reads the two
+    DBCs from its stores (client file plus the `_dbc` rows); this mirror sees only the `_dbc` rows, so a suffix or
+    enchantment missing there raises `BudgetError` rather than guess."""
+    suffixes = tables.get("itemrandomsuffix_dbc", {})
+    enchants = tables.get("spellitemenchantment_dbc", {})
+    stats: set[int] = set()
+    for suffix_id in _pool_suffixes(tables).get(pool, []):
+        suffix = suffixes.get((suffix_id,))
+        if suffix is None:
+            raise BudgetError(f"random suffix pool {pool}: suffix {suffix_id} is not in itemrandomsuffix_dbc (a client "
+                              f"DBC row the mirror cannot read)")
+        for n in range(1, SUFFIX_ENCHANTMENTS + 1):
+            enchant_id = int(suffix.get(f"Enchantment_{n}") or 0)
+            if not enchant_id:
+                continue
+            enchant = enchants.get((enchant_id,))
+            if enchant is None:
+                raise BudgetError(f"random suffix {suffix_id}: enchantment {enchant_id} is not in "
+                                  f"spellitemenchantment_dbc (a client DBC row the mirror cannot read)")
+            for e in range(1, ENCHANTMENT_EFFECTS + 1):
+                if int(enchant.get(f"Effect_{e}") or 0) == ITEM_ENCHANTMENT_TYPE_STAT:
+                    stats.add(int(enchant.get(f"EffectArg_{e}") or 0))
+    return stats
+
+
+def suffix_pool_rides_secondary_curve(pool: int, tables: dict) -> bool:
+    """ItemBudget.cpp's `SuffixPoolRidesSecondaryCurve`: True when every stat of the pool has
+    `item_stat_cost.budget_curve` 1. A pool with any flag-0 stat (the tank pool's Block, Dodge, Parry; a primary),
+    mixed or not, or with no known stat keeps the primary-curve suffix factor (level 60 secondary curve, LS1b)."""
+    stats = suffix_pool_stats(pool, tables)
+    if not stats:
+        return False
+    costs = tables["item_stat_cost"]
+    return all(int((costs.get((stat,)) or {}).get("budget_curve", 0) or 0) == 1 for stat in stats)
+
+
+def _rides_secondary_curve(w: dict) -> bool:
+    return not w["is_primary"] and w["budget_curve"] == 1
+
+
+def _apply_secondary_curve(working: list[dict], ratio: float, curve_budget, curve_secondary_budget) -> None:
+    """Step 6 of ItemBudget.cpp's ResolveBudget() (level 60 secondary stat curve), in place on the rounded `working`
+    list. The secondary-side stats with `item_stat_cost.budget_curve` 1 take their exact value times `ratio` (r);
+    every other stat keeps the points step 5 gave it, so the primary side and the flag-0 secondaries (Dodge, Parry,
+    Block, MP5) stay as they were. The scaled stats are rounded among themselves: their points total
+    `round(sum of their new exact values)`, shared by the same largest-remainder rule and tiebreak (ascending
+    stat_type). At r = 1 (`secondary_budget == budget`) nothing moves: the item keeps step 5's merged rounding."""
+    if curve_secondary_budget == curve_budget:
+        return
+    scaled = [i for i, w in enumerate(working) if _rides_secondary_curve(w)]
+    if not scaled:
+        return
+    exact_sum = 0.0
+    for i in scaled:
+        w = working[i]
+        w["exact"] *= ratio
+        w["floor"] = math.floor(w["exact"])
+        w["remainder"] = w["exact"] - w["floor"]
+        exact_sum += w["exact"]
+    remainder = max(0, _round(exact_sum) - sum(working[i]["floor"] for i in scaled))
+    scaled.sort(key=lambda i: (-working[i]["remainder"], working[i]["stat_type"]))
+    for i in scaled[:remainder]:
+        working[i]["floor"] += 1
+
+
 def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, dict],
                        shape_catalog: dict[int, dict]) -> dict:
     """Mirrors `ResolveBudget()`. `item_row` is one `item_template` row
@@ -79,8 +168,10 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
 
     Returns a dict with the same shape as ItemBudget::Breakdown (see
     ItemBudget.h) using snake_case keys, plus `allocations`: a list of
-    `{stat_type, is_primary, alloc, raw, rounded}` in primary-then-secondary
-    rank order after the merged largest-remainder rounding.
+    `{stat_type, is_primary, alloc, budget_curve, scaled, raw, rounded}` in
+    primary-then-secondary rank order after the merged largest-remainder
+    rounding and the secondary curve step (`_apply_secondary_curve`: `scaled`
+    stats' `raw` includes r = `secondary_ratio`).
 
     `itemization_row["spell_power_per_dps"]` (weapon scaling WS0b/WS0c, apps/dbc-tools/lib/weapon_spell_power.py;
     absent or 0 = off), mirrored by ItemBudget.cpp: on a weapon with a resolved DPS curve entry, Spell Power (45)
@@ -119,6 +210,10 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
         missing.append(f"item_shape has no row for primary_shape_id {primary_shape_id}")
     if secondary_shape is None:
         missing.append(f"item_shape has no row for secondary_shape_id {secondary_shape_id}")
+    # Level 60 secondary stat curve: ItemBudget.cpp's validation refuses an item whose ilvl has no secondary_budget
+    # (the replayed column defaults to 0). A curve row without the key at all (a hand-built table) reads as r = 1.
+    if curve_row is not None and curve_row.get("secondary_budget", 1) <= 0:
+        missing.append(f"item_budget_curve ilvl {ilvl} has no secondary_budget")
     if missing:
         raise BudgetError("; ".join(missing))
 
@@ -145,6 +240,15 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
     b["slot_mult"] = slot_mult
     b["quality_mult"] = quality_mult
     b["budget_mult"] = budget_mult
+
+    # Level 60 secondary stat curve: r = secondary_budget / budget at this ilvl (ItemBudget.cpp's SecondaryRatio, a
+    # double of two integer columns). Secondary-side stats with item_stat_cost.budget_curve 1 are scaled by it below.
+    curve_budget = curve_row["budget"]
+    curve_secondary_budget = curve_row.get("secondary_budget", curve_budget)
+    b["curve_budget"] = curve_budget
+    b["curve_secondary_budget"] = curve_secondary_budget
+    b["secondary_ratio"] = (float(curve_secondary_budget) / float(curve_budget)
+                            if curve_budget > 0 and curve_secondary_budget > 0 else 1.0)
 
     is_set_piece = bool(item_row.get("itemset"))
     set_discount_row = tables["item_budget_set_discount"].get((1,))
@@ -266,12 +370,17 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
     b["secondary_budget"] = secondary_budget
 
     # Crafting rework C4 (A1): secondary shape 0 on an item with a random suffix pool means the suffix carries the
-    # secondaries. Shape 0 allocates nothing below, and the unspent secondary budget is the item's suffix factor,
-    # 2 * round(S / 2), so each half of a 5000/5000 pair is round(S / 2). Mirrors ItemBudget.cpp's ResolveBudget().
+    # secondaries. Shape 0 allocates nothing below, and the unspent secondary budget is the item's suffix factor:
+    # 2 * round(S * k / 2), so each half of a 5000/5000 pair is round(S * k / 2), with k = r when every stat of the
+    # pool rides the secondary curve, else 1. Mirrors ItemBudget.cpp's ResolveBudget().
     suffix_secondaries = secondary_shape_id == 0 and bool(item_row.get("RandomSuffix"))
     b["suffix_secondaries"] = suffix_secondaries
+    # LS1b: only a pool whose stats all ride the secondary curve takes r; the tank pool keeps the primary-curve factor.
+    b["suffix_ratio"] = (b["secondary_ratio"] if suffix_secondaries
+                         and suffix_pool_rides_secondary_curve(int(item_row["RandomSuffix"]), tables) else 1.0)
     # At least 2 (one point per stat): a factor of 0 would fall back to the stock RandPropPoints size.
-    b["suffix_factor"] = max(2, 2 * _round(secondary_budget / 2.0)) if suffix_secondaries else 0
+    b["suffix_factor"] = (max(2, 2 * _round(secondary_budget * b["suffix_ratio"] / 2.0))
+                          if suffix_secondaries else 0)
 
     # Step 4: allocate each side against its shape's ordered stat list and distribution. Every
     # rank goes through this exact same formula in the same order, so ranks that are supposed to
@@ -296,12 +405,13 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
         for stat_type, a in pairs:
             cost_row = stat_cost_table.get((stat_type,))
             cost = cost_row["cost"] if cost_row else 1.0
+            budget_curve = int(cost_row.get("budget_curve", 0) or 0) if cost_row else 0
 
             raw = side_budget * (a / whole)
             exact = raw / cost if cost > 0.0 else 0.0
             floor = math.floor(exact)
             working.append({
-                "stat_type": stat_type, "is_primary": is_primary_side, "alloc": a,
+                "stat_type": stat_type, "is_primary": is_primary_side, "alloc": a, "budget_curve": budget_curve,
                 "exact": exact, "floor": int(floor), "remainder": exact - floor,
             })
 
@@ -322,7 +432,11 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
     _allocate_side(secondary_pairs, secondary_whole, secondary_alloc_budget, False)
 
     floor_sum = sum(w["floor"] for w in working)
-    exact_sum = sum(w["exact"] for w in working)
+    # A plain left-to-right sum, as ItemBudget.cpp adds: Python 3.12's sum() of floats is compensated, which put 7
+    # items' totals (x.49999 in the C++) on the other side of an x.5 and gave them one point more than the server.
+    exact_sum = 0.0
+    for w in working:
+        exact_sum += w["exact"]
     target = _round(exact_sum)
     remainder = max(0, target - floor_sum)
     b["rounding_remainder_points"] = remainder
@@ -336,8 +450,11 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
     for i in order[:remainder]:
         working[i]["floor"] += 1
 
+    _apply_secondary_curve(working, b["secondary_ratio"], b["curve_budget"], b["curve_secondary_budget"])
+
     b["allocations"] = [
         {"stat_type": w["stat_type"], "is_primary": w["is_primary"], "alloc": w["alloc"],
+         "budget_curve": w["budget_curve"], "scaled": _rides_secondary_curve(w),
          "raw": w["exact"], "rounded": w["floor"]}
         for w in working
     ]

@@ -96,7 +96,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from lib import build, dbcfmt, state  # noqa: E402
+from lib import build, dbcfmt, potency, state  # noqa: E402
 from lib.test_hunter_pet_data import check_equipped_item_class, package_data  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -2135,8 +2135,10 @@ class HunterBmDataTest(unittest.TestCase):
         bonus = [r for r in package.spell_bonus_data if int(r["entry"]) == 56641]
         self.assertEqual(len(bonus), 1)
         # WSH2: ap_potency 36.726 (2026-11-17 Normal trim x0.694 on 52.92; BAL1 2026-11-15: was 44.1; pass 1031: was 49;
-        # TUNE1 70, was 100), so the coefficient is 0.36726 * (1.5 / 3.5)
-        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.36726 * 1.5 / 3.5, places=4)
+        # TUNE1 70, was 100), so the coefficient is 0.36726 * (1.5 / 3.5), x b / R since the potency rebase
+        # (level60-stat-curve HANDOFF 1.9, LS5b)
+        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.36726 * 1.5 / 3.5 * potency.COEF_SCALE / potency.DEFAULT_R,
+                               places=4)
 
     def test_s1b_ids_have_equipped_item_class_minus_one(self):
         rows = package_data()["rows_by_id"]

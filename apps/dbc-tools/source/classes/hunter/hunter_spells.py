@@ -1058,6 +1058,9 @@ scorpid_poison_24640 = spell(
 
 lightning_breath_24844 = spell(
     id=24844,
+    # LS5b ruling 4 (level60-stat-curve, 2026-11-20): base_potency 23.2 -> ap_potency 23.2: the pet's own attack power
+    # (owner RAP + SP shares, spell_hunter_pet.cpp) scales it; the tooltip reads those owner shares.
+    pet_owner_scaling=(PET_AP_FROM_RAP_PCT["value"], PET_AP_FROM_SP_PCT["value"]),
     name='Lightning Breath',
     school=School.NATURE,
     attributes=65536,
@@ -1070,7 +1073,7 @@ lightning_breath_24844 = spell(
     mana_cost_pct=0,
     range_yards=20.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=23.2, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=23.2, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=62,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P8 (hunter exotic-pet pass): converted to base_potency=23.2 (potency-report base-implied default; this effect carried no live SP/AP coefficient, so base_potency keeps it scaling with neither stat rather than introducing new gear scaling).',
@@ -1366,6 +1369,9 @@ smack_49966 = spell(
 
 pin_50245 = spell(
     id=50245,
+    # LS5b ruling 4 (level60-stat-curve, 2026-11-20): base_potency 12.3 -> ap_potency 12.3: the pet's own attack power
+    # (owner RAP + SP shares, spell_hunter_pet.cpp) scales it; the tooltip reads those owner shares.
+    pet_owner_scaling=(PET_AP_FROM_RAP_PCT["value"], PET_AP_FROM_SP_PCT["value"]),
     name='Pin',
     school=School.NORMAL,
     dispel=DispelType.MAGIC,
@@ -1381,7 +1387,7 @@ pin_50245 = spell(
     duration_ms=4000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.MOD_ROOT),
-        Effect(type=EffectType.APPLY_AURA, base_potency=12.3, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=12.3, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
     ],
     spell_icon_id=2679,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P8 (hunter exotic-pet pass): converted eff2 to base_potency=12.3 (potency-report base-implied default; this effect carried no live SP/AP coefficient, so base_potency keeps it scaling with neither stat rather than introducing new gear scaling).',
@@ -1462,6 +1468,9 @@ spore_cloud_50274 = spell(
 
 serenity_dust_50318 = spell(
     id=50318,
+    # LS5b ruling 4 (level60-stat-curve, 2026-11-20): base_potency 5.9 -> ap_potency 5.9: the pet's own attack power
+    # (owner RAP + SP shares, spell_hunter_pet.cpp) scales it; the tooltip reads those owner shares.
+    pet_owner_scaling=(PET_AP_FROM_RAP_PCT["value"], PET_AP_FROM_SP_PCT["value"]),
     name='Serenity Dust',
     school=School.NATURE,
     dispel=DispelType.MAGIC,
@@ -1475,7 +1484,7 @@ serenity_dust_50318 = spell(
     range_yards=0.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_potency=5.9, potency_kind='heal_periodic', implicit_target_a=1, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=5.9, potency_kind='heal_periodic', implicit_target_a=1, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=166),
     ],
     spell_icon_id=1714,
@@ -1529,6 +1538,9 @@ nether_shock_50479 = spell(
 
 savage_rend_50498 = spell(
     id=50498,
+    # LS5b ruling 4 (level60-stat-curve, 2026-11-20): base_potency 1.7 -> ap_potency 1.7: the pet's own attack power
+    # (owner RAP + SP shares, spell_hunter_pet.cpp) scales it; the tooltip reads those owner shares.
+    pet_owner_scaling=(PET_AP_FROM_RAP_PCT["value"], PET_AP_FROM_SP_PCT["value"]),
     name='Savage Rend',
     school=School.NORMAL,
     mechanic=15,
@@ -1543,7 +1555,7 @@ savage_rend_50498 = spell(
     duration_ms=15000,
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=16.8, potency_kind='direct', implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, base_potency=1.7, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=5000),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=1.7, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=5000),
     ],
     spell_icon_id=245,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P8 (hunter exotic-pet pass): converted eff1 to sp_potency=10.6/ap_potency=6.2 (16.8 total, split 0.6316/0.3684 matching the live 0.120/0.070 SP/AP coefficient ratio, same family-sibling treatment P7 used for Claw/Smack), eff2 to base_potency=1.7 (potency-report base-implied default; eff2 carried no live SP/AP coefficient, so base_potency keeps it scaling with neither stat). H0-P1 (PET.md 4.8): sp_potency folded into ap_potency (sum-preserving; pet SP is 0).',
@@ -1750,6 +1762,9 @@ venom_web_spray_54706 = spell(
 
 acid_spit_55749 = spell(
     id=55749,
+    # LS5b ruling 4 (level60-stat-curve, 2026-11-20): base_potency 35.9 -> ap_potency 35.9: the pet's own attack power
+    # (owner RAP + SP shares, spell_hunter_pet.cpp) scales it; the tooltip reads those owner shares.
+    pet_owner_scaling=(PET_AP_FROM_RAP_PCT["value"], PET_AP_FROM_SP_PCT["value"]),
     name='Acid Spit',
     school=School.NATURE,
     attributes=65536,
@@ -1762,7 +1777,7 @@ acid_spit_55749 = spell(
     range_yards=30.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=35.9, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=35.9, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=6, apply_aura=101, misc_value=1),
     ],
     spell_icon_id=636,
@@ -2475,6 +2490,10 @@ bullheaded_53490 = spell(
 
 wolverine_bite_53508 = spell(
     id=53508,
+    # LS5b ruling 4 (level60-stat-curve, 2026-11-20): base_potency 78.546 -> ap_potency 78.546: the pet's own attack
+    # power
+    # (owner RAP + SP shares, spell_hunter_pet.cpp) scales it; the tooltip reads those owner shares.
+    pet_owner_scaling=(PET_AP_FROM_RAP_PCT["value"], PET_AP_FROM_SP_PCT["value"]),
     name='Wolverine Bite',
     school=School.NORMAL,
     attributes=2097168,
@@ -2487,7 +2506,7 @@ wolverine_bite_53508 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=78.546, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=78.546, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=2246,
     notes='pulled from existing data. Potency system P8 (hunter exotic-pet pass): converted to base_potency=114.0 (potency-report base-implied default; this effect carried no live SP/AP coefficient, so base_potency keeps it scaling with neither stat rather than introducing new gear scaling); had no SpellLevel declared at all (unlike every sibling spell), so added SpellLevel=1 (BaseLevel/MaxLevel are then generated to match) - the generator requires an explicit SpellLevel on any potency effect.'

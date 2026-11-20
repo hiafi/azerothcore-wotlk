@@ -196,6 +196,7 @@ class MigratedStrikesTest(unittest.TestCase):
             ("deathknight", 45462, 0, 151, 1.5),    # bp 9 + int(59 x 2.3899) + 1; sp_potency 56.4
         ):
             effect = _package(class_name)[spell_id][f"effect{index + 1}"]
+            # Exempt from the potency rebase (their own weapon-damage effect: level60-stat-curve LS5b ruling 1).
             self.assertAlmostEqual(_level60(effect), old, delta=tolerance, msg=spell_id)
 
     def test_flat_parts_come_after_nothing_they_should_precede(self):
@@ -209,8 +210,10 @@ class MigratedStrikesTest(unittest.TestCase):
         for spell_id, old_tick in ((55078, 23), (55095, 19)):
             effect = dk[spell_id]["effect1"]
             self.assertEqual(effect["apply_aura"], 3, spell_id)
-            self.assertAlmostEqual(_level60(effect), old_tick, delta=0.5, msg=spell_id)
-            self.assertAlmostEqual(effect["_potency"]["ap_coefficient"], 0.06325, places=4, msg=spell_id)
+            # Rebased (level60-stat-curve HANDOFF 1.9): tick x a, coefficient x b / R (0.06325 at a = b = R = 1).
+            self.assertAlmostEqual(_level60(effect), old_tick * P.BASE_SCALE, delta=1.0, msg=spell_id)
+            self.assertAlmostEqual(effect["_potency"]["ap_coefficient"], 0.06325 * P.COEF_SCALE / P.DEFAULT_R,
+                                   places=4, msg=spell_id)
             self.assertEqual(effect["_potency"]["sp_coefficient"], 0.0, spell_id)
             self.assertEqual(effect["_potency"]["kind"], "periodic", spell_id)
 

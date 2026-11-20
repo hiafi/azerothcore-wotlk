@@ -2728,8 +2728,9 @@ class spell_mage_mana_shield : public spell_mage_incanters_absorbtion_base_AuraS
         canBeRecalculated = false;
         if (Unit* caster = GetCaster())
         {
-            // +80.53% from sp bonus
-            float bonus = 0.8053f;
+            // Custom: +80.53% from sp bonus x the potency rebase's b (2.84) = 228.71%, like a generated spell power
+            // coefficient; the base (1463's base points) took a (level60-stat-curve HANDOFF 1.9, LS5b ruling 7).
+            float bonus = 2.2871f;
 
             bonus *= caster->SpellBaseDamageBonusDone(GetSpellInfo()->GetSchoolMask());
             bonus *= caster->CalculateLevelPenalty(GetSpellInfo());
@@ -4156,8 +4157,9 @@ class spell_mage_incanters_absorption_shield : public AuraScript
         Unit* caster = GetTarget();
         // "a small amount of damage" - placeholder coefficient off spell power, same shape as
         // spell_mage_fire_frost_ward::CalculateAmount but scaled down; flagged for Phase 4 playtest
-        // tuning like Arcane Overload's own coefficient.
-        int32 absorbAmount = int32(caster->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_ARCANE) * 0.15f);
+        // tuning like Arcane Overload's own coefficient. 0.426 = 0.15 x the potency rebase's b (2.84), like a generated
+        // spell power coefficient (level60-stat-curve HANDOFF 1.9, LS5b ruling 7, 2026-11-20).
+        int32 absorbAmount = int32(caster->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_ARCANE) * 0.426f);
         if (absorbAmount > 0)
             caster->CastCustomSpell(SPELL_MAGE_INCANTERS_ABSORPTION_SHIELD, SPELLVALUE_BASE_POINT0, absorbAmount, caster, true, nullptr, aurEff);
     }

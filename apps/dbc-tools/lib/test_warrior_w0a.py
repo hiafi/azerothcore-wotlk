@@ -357,8 +357,9 @@ def check_rend(rows: dict[int, dict], entries: dict[int, dict], script_removals:
         bad.append("no attack-power coefficient")
     if (_i(r, "EffectAura_1"), _i(r, "EffectAuraPeriod_1")) != (3, 3000):
         bad.append(f"aura/period {r.get('EffectAura_1')}/{r.get('EffectAuraPeriod_1')}, expected 3 / 3000")
-    if calc_value(r, 1, 60) != 68 or calc_value(r, 1, 22) != 11:
-        bad.append(f"per-tick value {calc_value(r, 1, 22)} at 22 / {calc_value(r, 1, 60)} at 60, expected 11 / 68")
+    # 11 / 68 before the potency rebase; its base x a = 0.57 (level60-stat-curve HANDOFF 1.9, LS5b): 6 / 39.
+    if calc_value(r, 1, 60) != 39 or calc_value(r, 1, 22) != 6:
+        bad.append(f"per-tick value {calc_value(r, 1, 22)} at 22 / {calc_value(r, 1, 60)} at 60, expected 6 / 39")
     if not any(int(x["spell_id"]) == -REND and x["ScriptName"] == "spell_warr_rend" for x in script_removals):
         bad.append("unbind_script(-772, 'spell_warr_rend') is not declared")
     if any(int(x["spell_id"]) == -REND for x in script_names):
@@ -414,8 +415,9 @@ def check_moved_levels(rows: dict[int, dict]) -> list[str]:
         bad.append(f"{SPELL_REFLECTION}: level-60 value {calc_value(sr, 1, 60)}, expected 100 (aura 28, no slope)")
     for sid in (SHATTERING_THROW, HEROIC_THROW):
         r = rows.get(sid)
-        if r is not None and calc_value(r, 1, 60) != 11:
-            bad.append(f"{sid}: flat at level 60 is {calc_value(r, 1, 60)}, expected 11 (0VERIFY item 3)")
+        # 11 before the potency rebase; the attack-power throws' base x a = 0.57 (level60-stat-curve LS5b): 7.
+        if r is not None and calc_value(r, 1, 60) != 7:
+            bad.append(f"{sid}: flat at level 60 is {calc_value(r, 1, 60)}, expected 7 (0VERIFY item 3, rebased)")
     return bad
 
 
@@ -845,7 +847,7 @@ class WarriorW0aNegativeTest(unittest.TestCase):
 
     def test_rend(self):
         row = {"ID": REND, "EffectAura_1": 3, "EffectAuraPeriod_1": 3000, "BaseLevel": 4, "SpellLevel": 4,
-               "EffectBasePoints_1": -17, "EffectRealPointsPerLevel_1": 1.5156, "EffectDieSides_1": 1}
+               "EffectBasePoints_1": -10, "EffectRealPointsPerLevel_1": 0.863892, "EffectDieSides_1": 1}  # x a (LS5b)
         ent = {"id": REND, "effect1": {"_potency": {"kind": "periodic", "total_potency": 12.63, "t_seconds": 3.0,
                                                     "ap_coefficient": 0.0578}}}
         rem = [{"spell_id": -REND, "ScriptName": "spell_warr_rend"}]
@@ -887,8 +889,9 @@ class WarriorW0aNegativeTest(unittest.TestCase):
         rows = {sid: {"ID": sid, "SpellLevel": lv, "BaseLevel": lv} for sid, lv in MOVED_LEVELS.items()}
         rows[PUMMEL].update(Effect_1=68)
         rows[SPELL_REFLECTION].update(EffectAura_1=28, EffectBasePoints_1=99, EffectDieSides_1=1)
-        rows[SHATTERING_THROW].update(EffectBasePoints_1=8, EffectRealPointsPerLevel_1=0.25714, EffectDieSides_1=1)
-        rows[HEROIC_THROW].update(EffectBasePoints_1=10, EffectRealPointsPerLevel_1=0.25714, EffectDieSides_1=1)
+        # The throws' base x a since the potency rebase (level60-stat-curve LS5b): 8 / 10 at 0.25714 -> 5 / 6.
+        rows[SHATTERING_THROW].update(EffectBasePoints_1=5, EffectRealPointsPerLevel_1=0.146571, EffectDieSides_1=1)
+        rows[HEROIC_THROW].update(EffectBasePoints_1=6, EffectRealPointsPerLevel_1=0.146571, EffectDieSides_1=1)
         self.assertEqual(check_moved_levels(rows), [])
         for sid in MOVED_LEVELS:
             self.assertGreaterEqual(len(check_moved_levels({**rows, sid: {**rows[sid], "SpellLevel": 99}})), 1, sid)

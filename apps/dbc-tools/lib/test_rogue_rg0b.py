@@ -398,10 +398,16 @@ _DT_FLAT = potency.resolve(
     potency.PotencyEffect(ap_potency=26.6175, kind=potency.KIND_DIRECT, t_ms=1500.0), spell_level=36)
 _RUPTURE_TICK = potency.resolve(
     potency.PotencyEffect(base_potency=35.289, kind=potency.KIND_PERIODIC, t_ms=2000.0), spell_level=20)
-_DT_CP_LINE = 5 * 112.46235        # cp_line 112.46235 per point (M2a 86.5095, was 61.7925), 5 points
-_DT_CP_AP = 0.9009                 # cp AP 0.18018 x 5, token $AP (melee)
-_DT_FLAT_AP = 0.114075             # spell_bonus_data.ap_bonus of ap_potency 26.6175, token $RAP
-_RUP_AP_TICK = 0.0675             # ap_potency 11.8125 per 2 s tick (M2a 1.5 x the old 5-point AP part, then x1.2 in the DPS balance pass 1031)
+# Before the potency rebase (level60-stat-curve HANDOFF 1.9, LS5b) these were hand pins: cp_line 112.46235 per point,
+# cp AP 0.18018 per point, flat AP 0.114075, Rupture AP 0.0675 per tick. Now resolved, so a / b / R follow.
+_DT_CP = potency.resolve(
+    potency.PotencyEffect(ap_potency=42.042, kind=potency.KIND_PERIODIC, t_ms=1500.0), spell_level=36)
+_DT_CP_LINE = 5 * _DT_CP.level60_value  # 5 points (cp_line 112.46235 per point before the rebase)
+_DT_CP_AP = 5 * _DT_CP.ap_coefficient  # token $AP (melee); 0.9009 before the rebase
+_DT_FLAT_AP = _DT_FLAT.ap_coefficient  # ap_bonus of ap_potency 26.6175, token $RAP; 0.114075 before the rebase
+_RUP_AP_TICK = potency.resolve(potency.PotencyEffect(ap_potency=11.8125, kind=potency.KIND_PERIODIC, t_ms=2000.0),
+                               spell_level=20).ap_coefficient  # per 2 s tick; 0.0675 before the rebase
+_A = potency.BASE_SCALE
 
 
 def dt_oracle(level: int, ap: float, rap: float) -> float:
@@ -433,13 +439,14 @@ def check_tooltips(dt_desc: str, rupture_desc: str) -> list[str]:
                 got, want = eval_tooltip(dt, level, 100, 200), dt_oracle(level, 100, 200)
                 if abs(got - want) > 1.5:
                     bad.append(f"{DT}: tooltip at L{level} = {got:.2f}, simulate_value says {want:.2f}")
-            if abs(eval_tooltip(dt, 60) - 633.3) > 0.5:
+            if abs(eval_tooltip(dt, 60) - 633.3 * _A) > 1.0:
                 bad.append(f"{DT}: L60 5-cp value {eval_tooltip(dt, 60):.2f}, "
-                           "expected 633.3 (x1.3 of M2a's 487.15 since M2c, 5% mid-roll included)")
+                           "expected 633.3 x a (x1.3 of M2a's 487.15 since M2c, 5% mid-roll included; x a since LS5b)")
             ap_term = eval_tooltip(dt, 60, ap=100) - eval_tooltip(dt, 60)
             rap_term = eval_tooltip(dt, 60, rap=100) - eval_tooltip(dt, 60)
-            if abs(ap_term - 90.09) > 0.05 or abs(rap_term - 11.41) > 0.05:
-                bad.append(f"{DT}: AP/RAP terms per 100 are {ap_term:.2f}/{rap_term:.2f}, expected 90.09/11.41")
+            if abs(ap_term - 100 * _DT_CP_AP) > 0.05 or abs(rap_term - 100 * _DT_FLAT_AP) > 0.05:
+                bad.append(f"{DT}: AP/RAP terms per 100 are {ap_term:.2f}/{rap_term:.2f}, expected "
+                           f"{100 * _DT_CP_AP:.2f}/{100 * _DT_FLAT_AP:.2f} (90.09/11.41 x b / R)")
         except Exception as exc:   # a malformed expression is a failure, not a crash
             bad.append(f"{DT}: tooltip does not evaluate: {exc!r}")
     if ru is None:
@@ -455,10 +462,11 @@ def check_tooltips(dt_desc: str, rupture_desc: str) -> list[str]:
                 # 1.5 (was 1.0): the 1031 x1.2 tick makes the integer base-points rounding at L20 reach 1.06
                 if abs(got - want) > 1.5:
                     bad.append(f"{RUPTURE}: tooltip at L{level} = {got:.2f}, simulate_value says {want:.2f}")
-            if abs(eval_tooltip(ru, 60) - 126.0) > 0.3:
-                bad.append(f"{RUPTURE}: L60 tick {eval_tooltip(ru, 60):.2f}, expected 126.0 (M2a x1.5 of 70.0, then x1.2, DPS balance pass 1031)")
-            if abs(eval_tooltip(ru, 60, ap=100) - eval_tooltip(ru, 60) - 6.75) > 0.05:
-                bad.append(f"{RUPTURE}: AP term per 100 is not 6.75 (0.0675 x AP per tick)")
+            if abs(eval_tooltip(ru, 60) - 126.0 * _A) > 0.6:
+                bad.append(f"{RUPTURE}: L60 tick {eval_tooltip(ru, 60):.2f}, expected 126.0 x a (M2a x1.5 of 70.0, "
+                           "then x1.2, DPS balance pass 1031; x a since LS5b)")
+            if abs(eval_tooltip(ru, 60, ap=100) - eval_tooltip(ru, 60) - 100 * _RUP_AP_TICK) > 0.05:
+                bad.append(f"{RUPTURE}: AP term per 100 is not {100 * _RUP_AP_TICK:.2f} (6.75 x b / R per tick)")
         except Exception as exc:
             bad.append(f"{RUPTURE}: tooltip does not evaluate: {exc!r}")
         if "every 2 sec" not in rupture_desc:
@@ -577,9 +585,10 @@ def _good_rows() -> dict:
 def _good_descs() -> tuple[str, str]:
     # M2a: Deadly Throw x1.4 (with Eviscerate), Rupture's tick x1.5; M2c: Deadly Throw x1.3 more (with Eviscerate);
     # DPS balance pass 1031: Rupture's tick x1.2 (Deadly Throw unchanged).
-    dt = ("causing ${$max($max(0.1141*$RAP+562.3118+0.9009*$AP,4.4085+0.4359*$PL+0.1141*$RAP+562.3118+0.9009*$AP),"
-          "1.597*$max(0,$PL-15.2926)+0.1141*$RAP+562.3118+0.9009*$AP)} Physical damage.")
-    ru = ("causes ${$max($max(0.0675*$AP,7.793+0.7705*$PL+0.0675*$AP),2.8231*$max(0,$PL-15.3685)+0.0675*$AP)} "
+    # Potency rebase (level60-stat-curve HANDOFF 1.9, LS5b): the lines x a, the AP terms x b / R.
+    dt = ("causing ${$max($max(0.1507*$RAP+320.5177+1.19*$AP,2.5129+0.2484*$PL+0.1507*$RAP+320.5177+1.19*$AP),"
+          "0.9103*$max(0,$PL-15.0157)+0.1507*$RAP+320.5177+1.19*$AP)} Physical damage.")
+    ru = ("causes ${$max($max(0.0892*$AP,4.442+0.4392*$PL+0.0892*$AP),1.6092*$max(0,$PL-15.2567)+0.0892*$AP)} "
           "Physical damage every 2 sec. Lasts longer per combo point: 1 point: 8 sec, 5 points: 24 sec.")
     return dt, ru
 
@@ -760,11 +769,11 @@ class RogueRG0bNegativeTest(unittest.TestCase):
         dt, ru = _good_descs()
         self.assertEqual(check_tooltips(dt, ru), [])
         self.assertEqual(tooltip_expr("no block"), None)
-        for old, new in (("562.3118", "540"), ("0.9009*$AP", "0.95*$AP"), ("0.1141*$RAP", "0.1141*$AP"),
-                         ("1.597*$max", "2.4*$max")):
+        for old, new in (("320.5177", "300"), ("1.19*$AP", "1.25*$AP"), ("0.1507*$RAP", "0.1507*$AP"),
+                         ("0.9103*$max", "2.4*$max")):
             self.assertGreaterEqual(len(check_tooltips(dt.replace(old, new), ru)), 1, old)
-        for old, new in (("2.8231", "1.8"), ("0.0675*$AP", "0.045*$AP"), ("0.0675*$AP", "0.0675*$RAP"),
-                         ("7.793+0.7705", "27.793+0.7705"), ("every 2 sec", "over time")):
+        for old, new in (("1.6092", "1.0"), ("0.0892*$AP", "0.045*$AP"), ("0.0892*$AP", "0.0892*$RAP"),
+                         ("4.442+0.4392", "24.442+0.4392"), ("every 2 sec", "over time")):
             self.assertGreaterEqual(len(check_tooltips(dt, ru.replace(old, new))), 1, old)
         self.assertGreaterEqual(len(check_tooltips("no block", ru)), 1)
         self.assertGreaterEqual(len(check_tooltips(dt, "no block")), 1)
