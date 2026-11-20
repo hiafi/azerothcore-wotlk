@@ -15,13 +15,13 @@ and the Portal Anchor are declared as if bound (the spells are new ids nothing u
   2,614), stun immunity 1972 (the stock -251 goes), INSTANCE_BIND, DamageModifier 3.5 (the stock base value; the live 5
   is a leftover). Heroic 210k is WP-H's override (source/world/dungeons/blackrock_depths.py). His loot and spawn are the
   stock rows' (L-2 adds the Dark Keeper Key).
-- 9178 Burning Spirit: npc_burning_spirit_rework (the stock npc_burning_spirit stays registered, unbound), 3,000 health
-  (HealthModifier 3.1414 on the level 30 warrior base 955; heroic 4,500 is WP-H's override), no creature immunities (the
+- 9178 Burning Spirit: npc_burning_spirit_rework (the stock npc_burning_spirit stays registered, unbound), 1,500 health
+  (HealthModifier 1.57068 on the L30 warrior base 955; heroic 4,500 is WP-H's override), no creature immunities (the
   stock -62 held the Fire school, disarm, sleep and knockout: the spirits are must-kill adds and lose their Fire
   immunity, handoff s7 #10; slows, roots and stuns land), standing still (the stock random MovementType goes: the boss
   marches them). No SmartAI, no loot, no spawns (summoned only by the boss script).
 - 300842 Portal Anchor (FL2): a boss-kit add on a rune spot, an elemental (type 4, faction 54 like him), level 55 elite
-  warrior class, 8,000 health (HealthModifier 3.0605 on 2,614; heroic 12,000 is WP-H's `extra=`, difficulty_entry_1
+  warrior class, 4,000 health (HealthModifier 1.5302 on 2,614; heroic 12,000 is WP-H's `extra=`, difficulty_entry_1
   310416 per STAGE-H-REPORT section 3), no melee (DamageModifier 0: it never attacks), no loot, no XP, stun immunity
   1972 (a fear or a stun would walk or freeze a stationary add; the kit's set holds both), the invisible stalker's
   display (11686): the portal look is a lasting state on it (SV 90658, V-1's FL_PORTAL_ANCHOR). In game: whether an
@@ -102,7 +102,7 @@ if BIND_WAVE_2:
         'boss_ambassador_flamelash_rework', 57.383, damage_modifier=3.5,
     ))
     creature_template_columns(
-        9178, ScriptName='npc_burning_spirit_rework', AIName='', HealthModifier=3.1414, MovementType=0,
+        9178, ScriptName='npc_burning_spirit_rework', AIName='', HealthModifier=1.57068, MovementType=0,
         CreatureImmunitiesId=0,
     )
 
@@ -120,7 +120,8 @@ STACK_SIZE = 5                  # kStackSizePctPerStack
 STACK_CAP = 10                  # kStackCap
 STACK_MS = 30000                # kStackLifeMs
 FIRE_BLAST_RANGE = 20.0         # kFireBlastRangeYd
-ANCHOR_HEALTH_MODIFIER = 3.0605     # 8,000 on the level 55 warrior base 2,614
+ANCHOR_HEALTH_MODIFIER = 1.5302     # 4,000 on the level 55 warrior base 2,614 (was 8,000; spirit 3,000 -> 1,500: the
+#                                     2026-11-19 brd-s4 bot smoke could not keep up, designer call; heroic unchanged)
 
 _ATTR1_IS_CHANNELED = 0x00000004        # SPELL_ATTR1_IS_CHANNELED
 _AURA_INTERRUPT_CHANGE_MAP = 0x00080000     # AURA_INTERRUPT_FLAG_CHANGE_MAP: leaving the map

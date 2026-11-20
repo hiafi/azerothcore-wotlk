@@ -13,7 +13,7 @@ Checks:
     5% Fire hits on the same script, the stack aura is +10% damage and +5% size, 30 s, ten at most, the channel is a
     real channel nothing interrupts, the looks are the V-1 visuals, the trail patch a Fire resolve copy;
   - the creatures: Flamelash's columns (script, SmartAI off, 150,000, stun immunity 1972, INSTANCE_BIND), the Burning
-    Spirit's (script, 3,000 health, no Fire immunity, standing still), the Portal Anchor (8,000, no melee, stun
+    Spirit's (script, 1,500 health, no Fire immunity, standing still), the Portal Anchor (4,000, no melee, stun
     immunity, the invisible display, the heroic link 310416); with the gate off the first two are stock and the anchor
     and the spells are declared anyway;
   - the SQL: three new texts for 9156 (a yell, a boss emote, a yell), the stock aggro line left alone;
@@ -243,8 +243,8 @@ class FlamelashTest(unittest.TestCase):
         self.assertEqual(c["AIName"], "")
         self.assertEqual(c["CreatureImmunitiesId"], 0)      # no Fire immunity: a must-kill add (handoff s7 #10)
         self.assertEqual(c["MovementType"], 0)
-        # 3,000 on the level 30 warrior class base 955
-        self.assertAlmostEqual(c["HealthModifier"] * 955, 3000, delta=1)
+        # 1,500 on the level 30 warrior class base 955
+        self.assertAlmostEqual(c["HealthModifier"] * 955, 1500, delta=1)
         self.assertNotIn("flags_extra", c)                  # not an encounter boss
 
     def test_the_gate_holds_the_stock_units_back(self):
@@ -258,7 +258,7 @@ class FlamelashTest(unittest.TestCase):
         self.assertEqual(c["ScriptName"], "npc_brd_portal_anchor_rework")
         self.assertEqual(c["AIName"], "")
         self.assertEqual((c["minlevel"], c["maxlevel"], c["rank"], c["unit_class"]), (55, 55, 1, 1))
-        self.assertAlmostEqual(c["HealthModifier"] * 2614, 8000, delta=3)
+        self.assertAlmostEqual(c["HealthModifier"] * 2614, 4000, delta=3)
         self.assertEqual(c["DamageModifier"], 0.0)
         self.assertEqual(c["CreatureImmunitiesId"], IMMUNITY_BOSS_STUN)
         self.assertEqual(c["MovementType"], 0)
@@ -321,8 +321,8 @@ class FlamelashTest(unittest.TestCase):
     def test_the_spirit_boss_and_anchor_healths_match_the_build_spec(self):
         # 150k boss / 8k anchor / 3k spirit (handoff 3.6), heroic 210k / 12k / 4.5k are WP-H's overrides
         self.assertAlmostEqual(self.edits[FLAMELASH]["HealthModifier"] * 2614, 150000, delta=10)
-        self.assertAlmostEqual(self.creatures[ANCHOR]["HealthModifier"] * 2614, 8000, delta=3)
-        self.assertAlmostEqual(self.edits[SPIRIT]["HealthModifier"] * 955, 3000, delta=1)
+        self.assertAlmostEqual(self.creatures[ANCHOR]["HealthModifier"] * 2614, 4000, delta=3)
+        self.assertAlmostEqual(self.edits[SPIRIT]["HealthModifier"] * 955, 1500, delta=1)
 
     def test_no_literal_visual_id_sits_in_the_file(self):
         # rule 4: _visuals.py constants only

@@ -161,6 +161,9 @@ namespace BrdFlamelash
     inline constexpr float kSpiritMaxSpeed = 6.f;
     inline constexpr std::uint32_t kSpiritReaimMs = 500;        // the march re-aims at him (a slow or a root shows)
     inline constexpr float kArriveYd = 1.5f;                    // a spirit this close to his reach has arrived
+    // Bots: a ranged DPS skips a spirit within this of him (about 2 s from arriving at up to 6 yd/s; the 2026-11-19
+    // brd-s4 smoke spent every post-anchor window on the oldest spirit, which arrived anyway). Melee still catch it.
+    inline constexpr float kSpiritLateYd = 12.f;
 
     inline float SpiritSpeed(float distance)
     {

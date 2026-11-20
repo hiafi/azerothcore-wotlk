@@ -706,11 +706,21 @@ public:
 
     // Kill order: Portal Anchor, Burning Spirit, Flamelash. No interrupt or dispel list. Kindling is a RunOut, the
     // trail a persistent Zone (both registry mechanics), the tank has a Spot in the chamber's center.
+    // Roles (spec): melee catch spirits near him (4, above the anchor), ranged run to the anchor. A ranged DPS skips a
+    // spirit already within kSpiritLateYd of him. The tank lists both adds below the boss, so it keeps Flamelash and
+    // its stock assist stands down (MechanicTargetRules lowerListed).
     void Describe()
     {
+        using BossMechanics::Condition;
+        using BossMechanics::TargetEntry;
+        using BossMechanics::Who;
         BossMechanics::Descriptor d;
-        d.targets.push_back(BossMechanics::TargetEntry(NPC_BRD_PORTAL_ANCHOR, 3, BossMechanics::Who::Dps));
-        d.targets.push_back(BossMechanics::TargetEntry(NPC_BURNING_SPIRIT, 2, BossMechanics::Who::Dps).AoeOk());
+        d.targets.push_back(TargetEntry(NPC_BURNING_SPIRIT, 4, Who::Melee).AoeOk());
+        d.targets.push_back(TargetEntry(NPC_BRD_PORTAL_ANCHOR, 3, Who::Dps));
+        d.targets.push_back(TargetEntry(NPC_BURNING_SPIRIT, 2, Who::Ranged,
+            Condition::Not(Condition::NearUnit(NPC_FLAMELASH, kSpiritLateYd))).AoeOk());
+        d.targets.push_back(TargetEntry(NPC_BURNING_SPIRIT, -1, Who::Tank));
+        d.targets.push_back(TargetEntry(NPC_BRD_PORTAL_ANCHOR, -1, Who::Tank));
         Mechanic::Describe(me, std::move(d));
     }
 
