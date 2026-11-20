@@ -165,11 +165,18 @@ void AddSC_brd_hard_mode_items();           // BrdExecutionerDamage, spell_brd_k
                                             // spell_brd_mending_servo, spell_brd_electrons_lethal_coil,
                                             // spell_brd_volcanic_heartstone, spell_brd_orb_of_the_sorcerer_thane
 
+// Scarlet Monastery hard mode items (scarlet gear): the Thalnos, Doan, Herod and Whitemane items
+void AddSC_sm_hard_mode_items();            // spell_sm_pureblood_rallying_standard, spell_sm_one_roll_per_cast,
+                                            // spell_sm_fathers_verdict, spell_sm_inquisitors_rosary
+
 // Dungeon sets (item variants, Haunted set track): the Haunted set bonuses
 void AddSC_haunted_set_bonuses();           // spell_haunted_* bonus scripts, HauntedSetSpellHooks, HauntedSetUnitHooks
 
 // Dungeon sets (blackrock gear): the Molten set bonuses
 void AddSC_molten_set_bonuses();            // spell_molten_* bonus scripts (Heat, eruptions, cooldown hooks)
+
+// Dungeon sets (scarlet gear): the Zealot's set bonuses
+void AddSC_zealot_set_bonuses();            // spell_zealot_* bonus scripts, ZealotSetUnitHooks
 
 void Addmod_dungeon_bossesScripts()
 {
@@ -274,8 +281,10 @@ void Addmod_dungeon_bossesScripts()
     AddSC_sfk_hard_mode_items();
     AddSC_brs_hard_mode_items();
     AddSC_brd_hard_mode_items();
+    AddSC_sm_hard_mode_items();
     AddSC_haunted_set_bonuses();
     AddSC_molten_set_bonuses();
+    AddSC_zealot_set_bonuses();
     // after the boss files: they register their `.dmtest` / `.sfktest` / `.dbtest scholo` / `.dbtest strat` /
     // `.dbtest brs` / `.dbtest brd` tables from their AddSC_ functions
     AddSC_dungeon_bosses_dmtest_commandscript();

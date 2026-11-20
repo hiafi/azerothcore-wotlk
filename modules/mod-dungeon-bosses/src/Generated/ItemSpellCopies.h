@@ -196,8 +196,71 @@ namespace ItemSpellCopies
         { 205579, 206853, 205578 },  // brd_orb_of_the_sorcerer_thane empowered_2_hm
         { 205580, 206852, 205580 },  // brd_orb_of_the_sorcerer_thane empowered_3_hm
         { 205581, 206853, 205580 },  // brd_orb_of_the_sorcerer_thane empowered_3_hm
+        { 205582, 212003, 205582 },  // sm_fairbells_censer empowered_1_hm
+        { 205583, 212004, 205582 },  // sm_fairbells_censer empowered_1_hm
+        { 205584, 212003, 205584 },  // sm_fairbells_censer empowered_2_hm
+        { 205585, 212004, 205584 },  // sm_fairbells_censer empowered_2_hm
+        { 205586, 212003, 205586 },  // sm_fairbells_censer empowered_3_hm
+        { 205587, 212004, 205586 },  // sm_fairbells_censer empowered_3_hm
+        { 205588, 212005, 205588 },  // sm_voss_blessed_signet empowered_1_hm
+        { 205589, 212006, 205588 },  // sm_voss_blessed_signet empowered_1_hm
+        { 205590, 212005, 205590 },  // sm_voss_blessed_signet empowered_2_hm
+        { 205591, 212006, 205590 },  // sm_voss_blessed_signet empowered_2_hm
+        { 205592, 212005, 205592 },  // sm_voss_blessed_signet empowered_3_hm
+        { 205593, 212006, 205592 },  // sm_voss_blessed_signet empowered_3_hm
+        { 205594, 212007, 205594 },  // sm_shard_of_the_phylactery empowered_1_hm
+        { 205595, 212007, 205595 },  // sm_shard_of_the_phylactery empowered_2_hm
+        { 205596, 212007, 205596 },  // sm_shard_of_the_phylactery empowered_3_hm
+        { 205597, 212008, 205597 },  // sm_heretics_wand empowered_1_hm
+        { 205598, 212009, 205597 },  // sm_heretics_wand empowered_1_hm
+        { 205599, 212008, 205599 },  // sm_heretics_wand empowered_2_hm
+        { 219000, 212009, 205599 },  // sm_heretics_wand empowered_2_hm
+        { 219001, 212008, 219001 },  // sm_heretics_wand empowered_3_hm
+        { 219002, 212009, 219001 },  // sm_heretics_wand empowered_3_hm
+        { 219003, 212010, 219003 },  // sm_fissure_touched_grips empowered_1_hm
+        { 219004, 212011, 219003 },  // sm_fissure_touched_grips empowered_1_hm
+        { 219005, 212010, 219005 },  // sm_fissure_touched_grips empowered_2_hm
+        { 219006, 212011, 219005 },  // sm_fissure_touched_grips empowered_2_hm
+        { 219007, 212010, 219007 },  // sm_fissure_touched_grips empowered_3_hm
+        { 219008, 212011, 219007 },  // sm_fissure_touched_grips empowered_3_hm
+        { 219009, 212012, 219009 },  // sm_scarlet_garrison_rifle empowered_1_hm
+        { 219010, 212013, 219009 },  // sm_scarlet_garrison_rifle empowered_1_hm
+        { 219011, 212012, 219011 },  // sm_scarlet_garrison_rifle empowered_2_hm
+        { 219012, 212013, 219011 },  // sm_scarlet_garrison_rifle empowered_2_hm
+        { 219013, 212012, 219013 },  // sm_scarlet_garrison_rifle empowered_3_hm
+        { 219014, 212013, 219013 },  // sm_scarlet_garrison_rifle empowered_3_hm
+        { 219015, 212014, 219015 },  // sm_garrison_bulwark empowered_1_hm
+        { 219016, 212015, 219015 },  // sm_garrison_bulwark empowered_1_hm
+        { 219017, 212014, 219017 },  // sm_garrison_bulwark empowered_2_hm
+        { 219018, 212015, 219017 },  // sm_garrison_bulwark empowered_2_hm
+        { 219019, 212014, 219019 },  // sm_garrison_bulwark empowered_3_hm
+        { 219020, 212015, 219019 },  // sm_garrison_bulwark empowered_3_hm
+        { 219021, 212016, 219021 },  // sm_staff_of_the_consecrated_hall empowered_1_hm
+        { 219022, 212017, 219021 },  // sm_staff_of_the_consecrated_hall empowered_1_hm
+        { 219023, 212016, 219023 },  // sm_staff_of_the_consecrated_hall empowered_2_hm
+        { 219024, 212017, 219023 },  // sm_staff_of_the_consecrated_hall empowered_2_hm
+        { 219025, 212016, 219025 },  // sm_staff_of_the_consecrated_hall empowered_3_hm
+        { 219026, 212017, 219025 },  // sm_staff_of_the_consecrated_hall empowered_3_hm
+        { 219027, 212018, 219027 },  // sm_fathers_verdict empowered_1_hm
+        { 219028, 212019, 219027 },  // sm_fathers_verdict empowered_1_hm
+        { 219029, 212018, 219029 },  // sm_fathers_verdict empowered_2_hm
+        { 219030, 212019, 219029 },  // sm_fathers_verdict empowered_2_hm
+        { 219031, 212018, 219031 },  // sm_fathers_verdict empowered_3_hm
+        { 219032, 212019, 219031 },  // sm_fathers_verdict empowered_3_hm
+        { 219033, 212000, 219033 },  // sm_purebloods_rallying_standard empowered_1_hm
+        { 219034, 212001, 219033 },  // sm_purebloods_rallying_standard empowered_1_hm
+        { 219035, 212000, 219035 },  // sm_purebloods_rallying_standard empowered_2_hm
+        { 219036, 212001, 219035 },  // sm_purebloods_rallying_standard empowered_2_hm
+        { 219037, 212000, 219037 },  // sm_purebloods_rallying_standard empowered_3_hm
+        { 219038, 212001, 219037 },  // sm_purebloods_rallying_standard empowered_3_hm
+        { 219039, 212020, 219039 },  // sm_treads_of_denial empowered_1_hm
+        { 219040, 212021, 219039 },  // sm_treads_of_denial empowered_1_hm
+        { 219041, 212020, 219041 },  // sm_treads_of_denial empowered_2_hm
+        { 219042, 212021, 219041 },  // sm_treads_of_denial empowered_2_hm
+        { 219043, 212020, 219043 },  // sm_treads_of_denial empowered_3_hm
+        { 219044, 212021, 219043 },  // sm_treads_of_denial empowered_3_hm
     };
-    inline constexpr std::size_t kCopyCount = 172;
+    inline constexpr std::size_t kCopyCount = 235;
 
     // The group of `spellId` when it is a copy, else 0.
     constexpr std::uint32_t GroupOf(std::uint32_t spellId)

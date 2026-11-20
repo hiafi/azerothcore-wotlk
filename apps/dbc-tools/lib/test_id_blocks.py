@@ -147,10 +147,20 @@ class BlockShapeTest(unittest.TestCase):
             with self.subTest(block=name):
                 # `foreign` (lib/source.py foreign_ids): the spell block's hole for mod-transmog's 200100, pinned in
                 # lib/test_foreign_ids.py. No other block has one.
-                self.assertEqual(set(cfg), {"start", "end", "foreign"} if name == "spell" else {"start", "end"})
+                # `more`: the item_spell_copy block's further ranges (lib/item_spell_copies.py block_ranges), each an
+                # ordered pair above the one before it.
+                extra = {"spell": {"foreign"}, "item_spell_copy": {"more"}}.get(name, set())
+                self.assertEqual(set(cfg), {"start", "end"} | extra)
                 self.assertIsInstance(cfg["start"], int)
                 self.assertIsInstance(cfg["end"], int)
                 self.assertLessEqual(cfg["start"], cfg["end"])
+                if name == "item_spell_copy":
+                    last = cfg["end"]
+                    for more in cfg["more"]:
+                        self.assertEqual(set(more), {"start", "end"})
+                        self.assertLessEqual(more["start"], more["end"])
+                        self.assertGreater(more["start"], last)
+                        last = more["end"]
 
     def test_the_client_patch_blocks_exist(self):
         for name in (
@@ -912,12 +922,26 @@ class ItemVariantsIdsTest(unittest.TestCase):
     def test_item_spell_copy_block_sits_inside_the_items_reservation_above_the_declared_effects(self):
         # IV10: the per-tier copies of item effect spells (lib/item_spell_copies.py); 205400-205409 stay hand-declared
         block = BLOCKS["item_spell_copy"]
-        self.assertEqual(block, {"start": 205410, "end": 205599})
+        self.assertEqual({k: v for k, v in block.items() if k != "more"}, {"start": 205410, "end": 205599})
         mine = RESERVATIONS["items"]["spell"]
         self.assertTrue(mine["start"] < block["start"] and block["end"] <= mine["end"])
         self.assertTrue(BLOCKS["spell"]["start"] <= block["start"] and block["end"] <= BLOCKS["spell"]["end"])
         declared = declared_ids(TOOL_ROOT / "source" / "items").get("spell", [])
         self.assertFalse([i for i in declared if block["start"] <= i <= block["end"]])
+
+    def test_item_spell_copy_second_range_is_the_item_copies_pool(self):
+        # scarlet gear stage: the first range was full, `more:` continues in the `item_copies` pool reservation
+        block = BLOCKS["item_spell_copy"]
+        self.assertEqual(block["more"], [{"start": 219000, "end": 219399}])
+        pool = RESERVATIONS["item_copies"]["spell"]
+        self.assertEqual(pool, {"start": 219000, "end": 219399})
+        self.assertTrue(BLOCKS["spell"]["start"] <= pool["start"] and pool["end"] <= BLOCKS["spell"]["end"])
+        for owner, tables in RESERVATIONS.items():
+            if owner != "item_copies" and "spell" in tables:
+                with self.subTest(owner=owner):
+                    self.assertFalse(_overlap(pool, tables["spell"]))
+        declared = declared_ids(TOOL_ROOT / "source" / "items").get("spell", [])
+        self.assertFalse([i for i in declared if pool["start"] <= i <= pool["end"]])
 
 
 class _AnyRows(dict):

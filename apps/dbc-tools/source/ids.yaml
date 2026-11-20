@@ -133,9 +133,18 @@ item_minted:
 # source/items/item_spell_ids.lock. A sub-range of `spell` and of the `items` spell reservation below; 205400-205409
 # stay for the hand-declared effect spells. Checked free 2026-11-06: no declaration, SQL file or live spell_dbc row at
 # or above 205408.
+# Scarlet gear stage (2026-11-19): the first range was full after Blackrock Depths (205582-205599 left, 18 ids) and
+# cannot be widened (205600-205899 are the shadowfang / scholomance / stratholme / haunted reservations, spare ids
+# included), so `more:` adds a second range that lib/item_spell_copies.py mints from once the first is full
+# (219000-219399, the `item_copies` pool reservation below: 51 copies for the Scarlet Monastery hard mode items, 349
+# of headroom for the dungeons after it). Checked free 2026-11-19: no declaration, source file, pending or merged SQL
+# or live spell_dbc row (live ends at 211669) at or above 212000 outside the scarlet reservations; the dungeon build's
+# own spell blocks start at 212300, so the pool sits clear of seven thousand ids of dungeon work.
 item_spell_copy:
   start: 205410
   end: 205599
+  more:
+    - {start: 219000, end: 219399}
 
 # ItemLimitCategory ids (item variants IV10 follow-up 1; lib/item_limits.py): one unique-equip category per item with
 # an effect, shared by all its tiers, recorded in source/items/item_limit_ids.lock. Server overlay itemlimitcategory_dbc
@@ -187,11 +196,14 @@ item_enchantment_pool:
 # Dungeon sets (lib/item_sets.py, lib/dsl/sets.py; Haunted set track 2026-11-06). Checked free 2026-11-06:
 #   item_set_token: set token item_template entries (explicit per tier in source/items/haunted_set.py), inside the
 #     `item` block so the item_dbc block DELETE covers them; only 70100-70103 (items.csv) are taken in 70000-70999.
-#     Haunted 70500-70539 (8 slots x 5 tiers), Molten 70540-70579 (reserved for Blackrock Spire / Depths).
+#     Haunted 70500-70539 (8 slots x 5 tiers), Molten 70540-70579 (reserved for Blackrock Spire / Depths), Zealot's
+#     70580-70591 (3 slots x 4 tiers, Scarlet Monastery heroic; 70592-70599 spare).
 #   item_set: new ItemSet.dbc ids (stock ends at 901, itemset_dbc is empty): Haunted Protector's 1000, Shadowguard
-#     1001; Molten Guardian's 1002, Impenetrable 1003.
+#     1001; Molten Guardian's 1002, Impenetrable 1003; Zealot's 1004-1013 (ten new 3 piece archetype sets).
 #   item_extended_cost: ItemExtendedCost.dbc ids, one per token tier (stock ends at 2997, itemextendedcost_dbc is
-#     empty): Haunted 3000-3039, Molten 3040-3079.
+#     empty): Haunted 3000-3039, Molten 3040-3079, Zealot's 3080-3091.
+#   Zealot's checked free 2026-11-19: no item_template row in 70580-70599, itemset_dbc ends at 1003,
+#     itemextendedcost_dbc ends at 3079 (live), no declaration or pending SQL.
 item_set_token:
   start: 70500
   end: 70599
@@ -626,6 +638,11 @@ reservations:
   items:
     spell: {start: 205400, end: 205599}
 
+  # The second range of the `item_spell_copy` block (the `more:` entry above; scarlet gear stage, 2026-11-19): a pool
+  # like `items`, each copy owned by the dungeon whose item declared it (source/scopes.yaml `pools`).
+  item_copies:
+    spell: {start: 219000, end: 219399}
+
   # Wave 1 dungeon items (item variants, 2026-11-06): the hand-declared hard mode item effect spells of Shadowfang Keep,
   # Scholomance and Stratholme (source/items/<dungeon>_hard_mode_effects.py); their per-tier copies mint from the
   # `item_spell_copy` block. Checked free 2026-11-06: no declaration, SQL file or live spell_dbc row in 205600-205699.
@@ -664,6 +681,18 @@ reservations:
   molten_set:
     spell: {start: 206900, end: 206999}
     creature: {start: 300670, end: 300699}
+
+  # Scarlet Monastery gear stage (.agents/plans/scarlet-gear/, 2026-11-19): the hard mode item effects
+  # (source/items/scarlet_monastery_hard_mode_effects.py) and the Zealot's dungeon set bonus spells, look creatures and
+  # token vendors (source/items/zealot_set*.py, source/npcs/zealot_set/). Checked free 2026-11-19: no declaration,
+  # pending SQL or live spell_dbc / creature_template row in 212000-212299 or 300880-300899 (live spell_dbc ends at
+  # 211669 below 400000). The dungeon build reserves its own block after these (212300 up, 300900 up).
+  scarlet_monastery_items:
+    spell: {start: 212000, end: 212099}
+    creature: {start: 300880, end: 300889}
+  zealot_set:
+    spell: {start: 212100, end: 212299}
+    creature: {start: 300890, end: 300899}
 
   # Crafting rework C4 (source/world/crafting_suffixes.py): the nine Missive buffs 207000-207008 and their Inscription
   # recipes 207010-207018 (207019-207049 spare), and the recipes' SkillLineAbility rows 30900-30908 (30909-30919

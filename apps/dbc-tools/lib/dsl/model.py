@@ -124,6 +124,11 @@ class Effect:
     # exists for the flat line). See docs/potency-system.md's "Attack power abilities" worked
     # derivation for Ferocious Bite's own numbers.
     cp_base_potency: float | None = None
+    # Item effect copies (lib/item_spell_copies.py, `scale="budget"`): a percent aura amount (damage done or taken %,
+    # ...) normally stays the same on every tier; True scales this effect's amount by the tier's ratio like a stat
+    # aura's (Scarlet gear review m5, 2026-11-20: the Rallying Standard's damage and Treads of Denial's damage
+    # taken). Only read by the copy builder; never written to a row.
+    scale_amount: bool = False
 
     @property
     def has_potency(self) -> bool:

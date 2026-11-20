@@ -11,9 +11,9 @@ Spell Power line and the same budget (effective, per side and spent) as without 
 hands its budget to the secondary shape; a Spell Power lead weapon stays caster; the coefficient and DPS go through
 float32 like the C++; an undeclared itemized caster weapon gets its item_itemization row rewritten (an owned one and a
 physical one do not, an unitemized caster-lead one is listed); k_sp = 0 changes nothing, and turning it back to 0
-writes 0 back; a weapon above item level 100 keeps coefficient 0 and its budgeted Spell Power (declared tier by tier,
-and undeclared); a negative k raises; the coefficient is rounded to 4 decimals; item_lib.budget refuses the rows
-ItemBudget.cpp refuses (negative, or nonzero on a non-weapon).
+writes 0 back; a weapon above item level 100 gets the rule too (no item level limit, user ruling 2026-11-20; declared
+tier by tier, and undeclared); a negative k raises; the coefficient is rounded to 4 decimals; item_lib.budget refuses
+the rows ItemBudget.cpp refuses (negative, or nonzero on a non-weapon).
 
 Run directly:
 
@@ -110,28 +110,27 @@ class ConstantsTest(unittest.TestCase):
         self.assertTrue(W.enabled(K))
 
     def test_coefficient(self):
-        self.assertEqual(W.coefficient(2, 13, 1.0, K, item_level=60), 3.0)
-        self.assertEqual(W.coefficient(2, 21, 1.0, K, item_level=60), 3.0)
-        self.assertEqual(W.coefficient(2, 17, 0.5, K, item_level=60), round(3.0 * 0.82 * 0.5, 4))
-        self.assertEqual(W.coefficient(2, 26, 1.0, K, item_level=60), 0.0)  # a wand gets none
-        self.assertEqual(W.coefficient(4, 13, 1.0, K, item_level=60), 0.0)  # not a weapon
-        self.assertEqual(W.coefficient(2, 13, 0.0, K, item_level=60), 0.0)
-        self.assertEqual(W.coefficient(2, 13, 1.0, item_level=60), 7.5)  # the shipped constants
-        self.assertEqual(W.coefficient(2, 13, 1.0, OFF, item_level=60), 0.0)
+        self.assertEqual(W.coefficient(2, 13, 1.0, K), 3.0)
+        self.assertEqual(W.coefficient(2, 21, 1.0, K), 3.0)
+        self.assertEqual(W.coefficient(2, 17, 0.5, K), round(3.0 * 0.82 * 0.5, 4))
+        self.assertEqual(W.coefficient(2, 26, 1.0, K), 0.0)  # a wand gets none
+        self.assertEqual(W.coefficient(4, 13, 1.0, K), 0.0)  # not a weapon
+        self.assertEqual(W.coefficient(2, 13, 0.0, K), 0.0)
+        self.assertEqual(W.coefficient(2, 13, 1.0), 7.5)  # the shipped constants
+        self.assertEqual(W.coefficient(2, 13, 1.0, OFF), 0.0)
         # Rounded to 4 decimals (a FLOAT column read back as text): 3.4567 x 0.82 = 2.834494 -> 2.8345.
-        self.assertEqual(W.coefficient(2, 17, 1.0, W.k_table(3.4567), item_level=60), 2.8345)
+        self.assertEqual(W.coefficient(2, 17, 1.0, W.k_table(3.4567)), 2.8345)
 
-    def test_item_level_limit(self):
-        self.assertEqual(W.MAX_ITEM_LEVEL, 100)
-        self.assertEqual(W.coefficient(2, 13, 1.0, K, item_level=100), 3.0)
-        self.assertEqual(W.coefficient(2, 13, 1.0, K, item_level=101), 0.0)
-        self.assertEqual(W.coefficient(2, 17, 2.0, K, item_level=226), 0.0)
+    def test_no_item_level_limit(self):
+        # User ruling 2026-11-20 (Scarlet gear review M2): no upper item level bound, so no constant and no argument.
+        self.assertFalse(hasattr(W, "MAX_ITEM_LEVEL"))
+        self.assertNotIn("item_level", W.coefficient.__code__.co_varnames)
 
     def test_negative_k_refused(self):
         with self.assertRaisesRegex(ValueError, "must be a number >= 0"):
             W.k_table(-3.5)
         with self.assertRaisesRegex(ValueError, "must be a number >= 0"):
-            W.coefficient(2, 13, 1.0, {"one_hand": -1.0, "two_hand": 0.0, "ranged": 0.0}, item_level=60)
+            W.coefficient(2, 13, 1.0, {"one_hand": -1.0, "two_hand": 0.0, "ranged": 0.0})
 
 
 class DslTest(unittest.TestCase):
@@ -155,7 +154,7 @@ class RoleTest(unittest.TestCase):
             for tier in item.tiers:
                 want = 1.0 if tier.key == "scholo_witchblade" else 0.0
                 self.assertEqual(tier.spell_power_mult, want, tier)
-                coef = W.coefficient(item.item_class, item.inventory_type, want, K, item_level=tier.ilvl)
+                coef = W.coefficient(item.item_class, item.inventory_type, want, K)
                 self.assertAlmostEqual(tier.itemization["spell_power_per_dps"], coef)
 
     def test_override(self):
@@ -274,11 +273,12 @@ class SpellPowerOnlyTest(unittest.TestCase):
         self.assertEqual([fields[f"stat_type{n}"] for n in range(1, 4)], [CRIT, STA, SP])
 
 
-class ItemLevelLimitTest(unittest.TestCase):
-    """User ruling 2026-11-17 (WS0 review): only caster weapons of item level 100 and below get the rule; a weapon
-    above keeps coefficient 0 and its budgeted Spell Power, declared tier by tier and undeclared."""
+class NoItemLevelLimitTest(unittest.TestCase):
+    """User ruling 2026-11-20 (Scarlet gear review M2, replacing the 2026-11-17 WS0 review limit at item level 100):
+    weapon spell power scales through TBC and WotLK, so a weapon above item level 100 gets the rule like any other,
+    declared tier by tier and undeclared."""
 
-    def test_declared_tier_above_100_keeps_budgeted_spell_power(self):
+    def test_declared_tier_above_100_gets_weapon_spell_power(self):
         ladder = D.ladder(
             "ws_ilvl_limit",
             normal=D.tier(step=0, label="Normal"),
@@ -286,33 +286,28 @@ class ItemLevelLimitTest(unittest.TestCase):
             empowered_1=D.tier(step=2, ilvl=101, quality=D.Quality.EPIC, required_level=60, label="Empowered"),
         )
         exp, em = run([caster(ladder=ladder)], k=K)
-        _, off = run([caster(ladder=ladder)])
         self.assertEqual(em.errors, [])
         by_tier = {t.tier.tier: t for t in em.tiers}
         self.assertEqual({name: t.tier.ilvl for name, t in by_tier.items()},
                          {"normal": 61, "heroic": 100, "empowered_1": 101})
-        for name in ("normal", "heroic"):
-            self.assertEqual(by_tier[name].tier.itemization["spell_power_per_dps"], 3.0)
-            self.assertTrue(by_tier[name].breakdown["spell_power_stripped"])
-        above = by_tier["empowered_1"]
-        self.assertEqual(above.tier.itemization["spell_power_per_dps"], 0.0)
-        self.assertFalse(above.breakdown["spell_power_stripped"])
-        self.assertEqual(above.breakdown["weapon_spell_power"], 0)
-        off_above = next(t for t in off.tiers if t.tier.tier == "empowered_1")
-        self.assertEqual(above.row, off_above.row)  # exactly the feature-off stats, budgeted Spell Power included
-        self.assertIn(SP, dict(lines(above.row)))
+        for name in ("normal", "heroic", "empowered_1"):
+            tier = by_tier[name]
+            self.assertEqual(tier.tier.itemization["spell_power_per_dps"], 3.0, name)
+            self.assertTrue(tier.breakdown["spell_power_stripped"], name)
+            self.assertGreater(tier.breakdown["weapon_spell_power"], 0, name)
+            self.assertEqual([s for s, _ in lines(tier.row)].count(SP), 1, name)
 
-    def test_undeclared_above_100_left_alone_or_reset(self):
+    def test_undeclared_above_100_covered(self):
         rows = live_rows()
         for entry in (UNDECLARED, LITERAL_CASTER):
             rows[entry] = {**rows[entry], "ItemLevel": 101}
         tbl = tables()
-        result = undeclared(tbl, rows=rows)
-        self.assertEqual((result.rows, result.covered, result.unclassifiable), ([], [], []))
-        # A coefficient a run gave it earlier goes back to 0.
-        tbl["item_itemization"][(UNDECLARED,)]["spell_power_per_dps"] = 3.0
-        [row] = undeclared(tbl, rows=rows).rows
-        self.assertEqual((row["entry"], row["spell_power_per_dps"]), (UNDECLARED, 0.0))
+        result = undeclared(tbl, owned={CASTER_ENTRY, 5187}, rows=rows)
+        self.assertEqual(result.errors, [])
+        self.assertEqual(result.covered, [UNDECLARED])
+        [row] = result.rows
+        self.assertEqual((row["entry"], row["spell_power_per_dps"]), (UNDECLARED, 3.0))
+        self.assertEqual(result.unclassifiable, [(LITERAL_CASTER, f"Item {LITERAL_CASTER}")])
 
 
 class ValidationMirrorTest(unittest.TestCase):

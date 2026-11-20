@@ -34,8 +34,8 @@ row and the item the client sees agree.
 **Weapon spell power** (weapon scaling WS0b/WS0c, lib/weapon_spell_power.py). Every tier's `item_itemization` row
 carries `spell_power_per_dps` = k_sp(slot) x the item's m (`ResolvedTier.spell_power_mult`); above 0 the budget (and
 ItemBudget.cpp) strips the shape's Spell Power, spreads its share over the other stats and adds a
-`lround(coef x DPS)` Spell Power line after Stamina. 0 while `weapon_spell_power.K_SP` is 0, and on a tier above
-item level `weapon_spell_power.MAX_ITEM_LEVEL` (100), which keeps its budgeted Spell Power.
+`lround(coef x DPS)` Spell Power line after Stamina, at any item level (user ruling 2026-11-20). 0 while
+`weapon_spell_power.K_SP` is 0.
 
 **Sockets** are the item's on every tier except a `tier(sockets=False)` one (user ruling 2026-11-06: the leveling
 Normal tier has none, they ate its whole budget), which writes no socket, no socket bonus and so gets no socket

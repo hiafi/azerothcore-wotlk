@@ -100,3 +100,5 @@ physical 28 3 1-59 none
 tank 13 4 101-200 0.6560 -0.0004  # tank InventoryType 13 Quality 4 ilvl 101-200 (10 live items) 2026-11-14
 tank 14 4 101-200 0.7580 0.0000  # tank InventoryType 14 Quality 4 ilvl 101-200 (13 live items) 2026-11-14
 tank 28 3 1-59 none
+caster 26 4 101-200 0.5730 -0.2000  # caster InventoryType 26 Quality 4 ilvl 101-200 (30 live items) 2026-11-19
+physical 26 4 101-200 0.3660 -0.3047  # physical InventoryType 26 Quality 4 ilvl 101-200 (20 live items) 2026-11-19

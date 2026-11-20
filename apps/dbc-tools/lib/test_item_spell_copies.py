@@ -228,6 +228,29 @@ class IdTest(unittest.TestCase):
                        lock=C.Lock(), taken_loader=tuple)
         self.assertTrue(any("is full" in e for e in out.errors))
 
+    def test_block_continues_in_its_more_ranges(self):
+        # the first range (205410-205599) cannot be widened; `more:` ranges take over once it is full, skipping taken
+        # ids
+        cfg = {"item_spell_copy": {"start": 205410, "end": 205413, "more": [{"start": 219000, "end": 219099}]}}
+        out = C.expand(expansion(keg(Family())), Family().dsl_classes(), cfg, lock=C.Lock(),
+                       taken_loader=lambda: (219001,))
+        self.assertFalse(out.errors, out.errors)
+        ids = [int(line.split()[0]) for line in out.lock_appended]
+        self.assertEqual(ids, [205410, 205411, 205412, 205413] + [219000] + list(range(219002, 219009)))
+        # a rerun over the written lock keeps every id and appends nothing; the lock accepts ids of either range
+        again = C.expand(expansion(keg(Family())), Family().dsl_classes(), cfg, lock=C.Lock(text=out.lock_text),
+                         taken_loader=lambda: (219001,))
+        self.assertFalse(again.errors, again.errors)
+        self.assertEqual(again.lock_appended, [])
+        # an id outside every range is refused
+        bad = C.Lock(text="205414 keg heroic_hm 100\n")
+        self.assertTrue(C.expand(expansion(keg(Family())), Family().dsl_classes(), cfg, lock=bad).errors)
+
+    def test_block_full_across_every_range(self):
+        cfg = {"item_spell_copy": {"start": 205410, "end": 205411, "more": [{"start": 219000, "end": 219001}]}}
+        out = C.expand(expansion(keg(Family())), Family().dsl_classes(), cfg, lock=C.Lock(), taken_loader=tuple)
+        self.assertTrue(any("is full" in e and "205410-205411 and 219000-219001" in e for e in out.errors), out.errors)
+
     def test_no_scaled_spell_no_copies(self):
         out, _ = run([keg(Family(), scale=None)])
         self.assertEqual((out.errors, out.spells, out.lock_appended), ([], [], []))
