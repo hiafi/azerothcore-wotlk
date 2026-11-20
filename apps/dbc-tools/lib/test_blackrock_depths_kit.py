@@ -69,7 +69,7 @@ BOSSES = {
     9033: ("boss_general_angerforge_rework", 150_000, 55, 2614, 2, 3.5),
     8983: ("boss_golem_lord_argelmach_rework", 150_000, 55, 2091, 2, 3.5),
     9537: ("boss_hurley_blackbreath_rework", 140_000, 55, 2614, 2, 7.5),
-    9502: ("npc_phalanx_rework", 160_000, 55, 2614, 2, 3.5),
+    9502: ("npc_phalanx_rework", 145_000, 55, 2614, 2, 3.5),
     9156: ("boss_ambassador_flamelash_rework", 150_000, 55, 2614, 2, 3.5),
     9034: ("boss_the_seven_rework", 320_000, 55, 2091, 2, 3.5),
     9035: ("boss_the_seven_rework", 320_000, 55, 2614, 2, 3.5),
