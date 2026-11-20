@@ -116,11 +116,12 @@ STAT_AURAS = {
 }
 MOD_RATING = 189
 # Level 60 secondary stat curve (LS1b): the combat ratings (CR_*, MOD_RATING's misc_value bits) of the stats with
-# item_stat_cost.budget_curve 1, as Player::_ApplyItemBonuses maps them: Crit 32 (CR 8, 9, 10), Proc Chance 33 (11),
-# Haste 36 (17, 18, 19), Mastery 22 (20), Versatility 23 (21), Cooldown Haste 24 (22), Armor Penetration 44 (24).
-# A MOD_RATING aura whose bits all sit in this set scales by the secondary curve's tier ratio; any other bit (Dodge,
-# Parry, Block, hit, expertise, defense...) keeps the whole aura on the primary ratio.
-SECONDARY_CURVE_RATINGS = frozenset((8, 9, 10, 11, 17, 18, 19, 20, 21, 22, 24))
+# item_stat_cost.budget_curve 1, as Player::_ApplyItemBonuses maps them: Dodge 13 (CR 2), Parry 14 (3), Block 15 (4;
+# HANDOFF 1.10), Crit 32 (8, 9, 10), Proc Chance 33 (11), Haste 36 (17, 18, 19), Mastery 22 (20), Versatility 23 (21),
+# Cooldown Haste 24 (22), Armor Penetration 44 (24). A MOD_RATING aura whose bits all sit in this set scales by the
+# secondary curve's tier ratio; any other bit (hit, expertise, defense, resilience...) keeps the whole aura on the
+# primary ratio.
+SECONDARY_CURVE_RATINGS = frozenset((2, 3, 4, 8, 9, 10, 11, 17, 18, 19, 20, 21, 22, 24))
 SECONDARY_CURVE_RATING_MASK = sum(1 << cr for cr in SECONDARY_CURVE_RATINGS)
 TEXT_KEYS = ("Description_Lang_enUS", "AuraDescription_Lang_enUS")
 _ID_TOKEN_RE = re.compile(r"\$(\d+)(?=[a-zA-Z])")

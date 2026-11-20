@@ -117,8 +117,9 @@ def suffix_pool_stats(pool: int, tables: dict) -> set[int]:
 
 def suffix_pool_rides_secondary_curve(pool: int, tables: dict) -> bool:
     """ItemBudget.cpp's `SuffixPoolRidesSecondaryCurve`: True when every stat of the pool has
-    `item_stat_cost.budget_curve` 1. A pool with any flag-0 stat (the tank pool's Block, Dodge, Parry; a primary),
-    mixed or not, or with no known stat keeps the primary-curve suffix factor (level 60 secondary curve, LS1b)."""
+    `item_stat_cost.budget_curve` 1. A pool with any flag-0 stat (MP5, a primary), mixed or not, or with no known stat
+    keeps the primary-curve suffix factor (level 60 secondary curve, LS1b). Both live pools (9000, and the tank pool
+    9001 since Dodge, Parry and Block moved to flag 1) take r."""
     stats = suffix_pool_stats(pool, tables)
     if not stats:
         return False
@@ -133,8 +134,8 @@ def _rides_secondary_curve(w: dict) -> bool:
 def _apply_secondary_curve(working: list[dict], ratio: float, curve_budget, curve_secondary_budget) -> None:
     """Step 6 of ItemBudget.cpp's ResolveBudget() (level 60 secondary stat curve), in place on the rounded `working`
     list. The secondary-side stats with `item_stat_cost.budget_curve` 1 take their exact value times `ratio` (r);
-    every other stat keeps the points step 5 gave it, so the primary side and the flag-0 secondaries (Dodge, Parry,
-    Block, MP5) stay as they were. The scaled stats are rounded among themselves: their points total
+    every other stat keeps the points step 5 gave it, so the primary side and the flag-0 secondary (MP5) stay as they
+    were. The scaled stats are rounded among themselves: their points total
     `round(sum of their new exact values)`, shared by the same largest-remainder rule and tiebreak (ascending
     stat_type). At r = 1 (`secondary_budget == budget`) nothing moves: the item keeps step 5's merged rounding."""
     if curve_secondary_budget == curve_budget:
@@ -375,7 +376,7 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
     # pool rides the secondary curve, else 1. Mirrors ItemBudget.cpp's ResolveBudget().
     suffix_secondaries = secondary_shape_id == 0 and bool(item_row.get("RandomSuffix"))
     b["suffix_secondaries"] = suffix_secondaries
-    # LS1b: only a pool whose stats all ride the secondary curve takes r; the tank pool keeps the primary-curve factor.
+    # LS1b: only a pool whose stats all ride the secondary curve takes r; one with a flag-0 stat keeps today's factor.
     b["suffix_ratio"] = (b["secondary_ratio"] if suffix_secondaries
                          and suffix_pool_rides_secondary_curve(int(item_row["RandomSuffix"]), tables) else 1.0)
     # At least 2 (one point per stat): a factor of 0 would fall back to the stock RandPropPoints size.

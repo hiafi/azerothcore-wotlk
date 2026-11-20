@@ -5,8 +5,8 @@
 -- item_budget_curve.secondary_budget: the budget the secondary curve gives each item level. ItemBudget.cpp (and its
 -- mirror apps/item-tools/item_lib/budget.py) computes an item exactly as before, then multiplies the exact value of
 -- each secondary-side stat with item_stat_cost.budget_curve = 1 by r = secondary_budget / budget, and rounds those
--- stats again over the new total. Primaries, Stamina, armor, block value, weapon DPS and the flag-0 secondaries
--- (Dodge, Parry, Block, MP5) do not move. A secondary_budget of 0 is refused at boot.
+-- stats again over the new total. Primaries, Stamina, armor, block value, weapon DPS and the flag-0 secondary (MP5)
+-- do not move. A secondary_budget of 0 is refused at boot.
 --
 -- The 300 values come from this formula (half-up rounding to an integer; budget(i) is item_budget_curve.budget):
 --   ilvl   1-59:  budget(i) * 64.6 / 47
@@ -16,8 +16,9 @@
 --   ilvl 172-186: 733 (holds ilvl 171)
 --   ilvl 187-300: 733 * 3.0 ^ ((i - 187) / 58)
 --
--- item_stat_cost.budget_curve: 1 = the stat rides the secondary curve (Crit 32, Haste 36, Mastery 22, Versatility 23,
--- Cooldown Haste 24, Proc Chance 33, Armor Penetration 44), 0 = the primary curve (every other stat).
+-- item_stat_cost.budget_curve: 1 = the stat rides the secondary curve (Dodge 13, Parry 14, Block 15, Mastery 22,
+-- Versatility 23, Cooldown Haste 24, Crit 32, Proc Chance 33, Haste 36, Armor Penetration 44; HANDOFF 1.3 + 1.10),
+-- 0 = the primary curve (every other stat, MP5 43 included).
 ALTER TABLE `item_budget_curve`
   ADD COLUMN `secondary_budget` int unsigned NOT NULL DEFAULT '0'
     COMMENT 'budget of the secondary-curve stats (item_stat_cost.budget_curve 1) at this ilvl'
@@ -28,7 +29,7 @@ ALTER TABLE `item_stat_cost`
     COMMENT '0 = primary curve (item_budget_curve.budget), 1 = secondary curve (secondary_budget), secondary side only'
     AFTER `shape_side`;
 
-UPDATE `item_stat_cost` SET `budget_curve` = 1 WHERE `stat_type` IN (22, 23, 24, 32, 33, 36, 44);
+UPDATE `item_stat_cost` SET `budget_curve` = 1 WHERE `stat_type` IN (13, 14, 15, 22, 23, 24, 32, 33, 36, 44);
 
 UPDATE `item_budget_curve` SET `secondary_budget` = 1 WHERE `ilvl` = 1;
 UPDATE `item_budget_curve` SET `secondary_budget` = 1 WHERE `ilvl` = 2;

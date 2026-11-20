@@ -133,7 +133,7 @@ namespace ItemBudget
         // the secondaries". The secondary budget is left unspent here and becomes the item's suffix factor:
         // 2 * round(SecondaryBudget x SuffixRatio / 2), so each half of a 5000/5000 suffix pair is half the scaled
         // secondary budget, rounded. SuffixRatio is SecondaryRatio when every stat of the item's suffix pool rides the
-        // secondary curve, else 1 (a pool with Block, Dodge, Parry or any other flag-0 stat keeps today's factor).
+        // secondary curve, else 1 (a pool with MP5, a primary or any other flag-0 stat keeps today's factor).
         bool SuffixSecondaries = false;
         double SuffixRatio = 1.0;
         uint32 SuffixFactor = 0;

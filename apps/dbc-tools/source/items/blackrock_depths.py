@@ -94,20 +94,19 @@ EXTRA_STAMINA = 0.25  # "extra Stamina" on a tank piece: a quarter more than the
 NO_SET = {"itemset": 0}  # the dissolved Savage Gladiator set (ruling 85): no set bonus on any tier
 
 # Blackrock gear fix pass (REVIEW S1-S3), declared multipliers that replace a weapon-tier role cell:
-# - a caster main-hand or bow whose stock level is below 60 takes the 60-100 cell (1.931, 0.405) on its Normal tier;
+# - a caster main-hand or bow whose stock level is below 60 takes the 60-100 cell (0.445, 0.405) on its Normal tier;
 #   the 1-59 cell (0.8, five live items; bows 0.269) is a third (two thirds) of it (S2; the bucket step check);
 # - a hard mode weapon whose 101 tier would fall in the 101-200 bucket keeps its 60-100 cell times the effect discount
 #   on every tier: that bucket was fit on TBC items (caster two-hand 2.455, caster main-hand 3.429, shield 0.758), a
 #   2x to 2.7x step from 91 to 101 instead of the budget curve's 1.13x (S1; the physical two-hand also keeps its
 #   60-100 DPS fraction);
 # - a socketed hard mode one-hander or shield pays the socket out of a thin cell budget (0.311 / 0.295 left 1 point of
-#   the primary and 0 or 1 of each secondary): 0.6 gives every doc stat a few points (S3).
+#   the primary and 0 or 1 of each secondary): 0.6 gives every doc stat a few points (S3). The caster one-hander
+#   (Golemwright's Mending Rod) too: its physical cell x 0.7 (0.3115, level60-stat-curve 1.8) is that thin budget.
 # physical InventoryType 13 ilvl 60-100: caster weapons take the physical budget (level60-stat-curve 1.8)
 CASTER_MAIN_HAND_MULT = 0.445
 # physical InventoryType 17 ilvl 60-100 0.791 x the effect discount 0.7 (level60-stat-curve 1.8)
 HM_CASTER_TWO_HAND_MULT = 0.5537
-# physical InventoryType 13 ilvl 60-100 0.445 x 0.7 (level60-stat-curve 1.8)
-HM_CASTER_MAIN_HAND_MULT = 0.3115
 # physical InventoryType 17 Quality 4 ilvl 60-100: 0.791 x 0.7 and its DPS fraction. The 101-200 cell's multiplier is
 # close (0.885) but its DPS fraction (0.0002) moves the DPS budget into stats: 13 to 21 Strength from 91 to 101.
 HM_PHYSICAL_TWO_HAND_MULT = 0.5537
@@ -449,7 +448,7 @@ item("brd_prototype_power_core", name="Prototype Power Core", like=18638, bondin
 # Equip: heals may deploy a Mending Servo (scaled). One red socket.
 item("brd_golemwrights_mending_rod", name="Golemwright's Mending Rod", like=18321, bonding=BOP,
      ladder=VANILLA_HARD_MODE, primary="Spirit (Solo)", secondary="Crit/Versatility",
-     budget_mult=HM_CASTER_MAIN_HAND_MULT, sockets=(R,), socket_bonus=BONUS_CRIT_4,
+     budget_mult=HM_SOCKETED_THIN_MULT, sockets=(R,), socket_bonus=BONUS_CRIT_4,
      spells=(equip_spell(golemwrights_mending_rod_206844, scale="budget"),))
 # Ring, Equip: Lethal Attraction (scaled). One secondary and an effect (ruling 92 BD9). One red socket.
 item("brd_electrons_lethal_coil", name="Electron's Lethal Coil", like=11934, bonding=BOP, ladder=VANILLA_HARD_MODE,

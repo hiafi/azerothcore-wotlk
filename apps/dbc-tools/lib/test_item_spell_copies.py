@@ -521,19 +521,21 @@ class StatAuraTest(unittest.TestCase):
         return C.build_copies(index, [110], {110: 205500}, ratio, "test", rating_ratio)[110]
 
     def test_secondary_curve_ratings_take_the_rating_ratio(self):
-        for crs in (self.CR_CRIT, self.CR_PROC, self.CR_HASTE, self.CR_MASTERY, self.CR_VERS, self.CR_CDH,
-                    self.CR_ARP, (self.CR_MASTERY, self.CR_VERS)):
+        for crs in (self.CR_DODGE, self.CR_PARRY, self.CR_BLOCK, self.CR_CRIT, self.CR_PROC, self.CR_HASTE,
+                    self.CR_MASTERY, self.CR_VERS, self.CR_CDH, self.CR_ARP, (self.CR_MASTERY, self.CR_VERS),
+                    (self.CR_DODGE, self.CR_MASTERY), (self.CR_DODGE, self.CR_PARRY, self.CR_BLOCK)):
             copy = self._copy_two([Effect(type=APPLY_AURA, apply_aura=self.MOD_RATING, base_points=99,
                                           misc_value=self._mask(crs))])
             self.assertEqual(copy.effects[0].base_points, round(100 * 2.5) - 1, crs)
 
     def test_flag_0_ratings_mixed_masks_and_other_stats_keep_the_ratio(self):
         copy = self._copy_two([
-            Effect(type=APPLY_AURA, apply_aura=self.MOD_RATING, base_points=99, misc_value=self._mask(self.CR_DODGE)),
+            Effect(type=APPLY_AURA, apply_aura=self.MOD_RATING, base_points=99,
+                   misc_value=self._mask(self.CR_HIT_MELEE)),
             Effect(type=APPLY_AURA, apply_aura=self.MOD_RATING, base_points=99,
                    misc_value=self._mask(self.CR_PARRY, self.CR_BLOCK, self.CR_HIT_MELEE)),
             Effect(type=APPLY_AURA, apply_aura=self.MOD_RATING, base_points=99,
-                   misc_value=self._mask(self.CR_DODGE, self.CR_MASTERY)),  # mixed: the conservative primary ratio
+                   misc_value=self._mask(self.CR_HIT_MELEE, self.CR_MASTERY)),  # mixed: the conservative primary ratio
         ])
         self.assertEqual([e.base_points for e in copy.effects], [round(100 * 1.2545) - 1] * 3)
         copy = self._copy_two([
@@ -547,7 +549,7 @@ class StatAuraTest(unittest.TestCase):
             type=APPLY_AURA, apply_aura=self.MOD_RATING, base_points=9, misc_value=self._mask(self.CR_CRIT))]).notes)
 
     def test_the_rating_set_matches_the_secondary_curve_stats(self):
-        self.assertEqual(sorted(C.SECONDARY_CURVE_RATINGS), [8, 9, 10, 11, 17, 18, 19, 20, 21, 22, 24])
+        self.assertEqual(sorted(C.SECONDARY_CURVE_RATINGS), [2, 3, 4, 8, 9, 10, 11, 17, 18, 19, 20, 21, 22, 24])
 
 
 class PotTextRefTest(unittest.TestCase):

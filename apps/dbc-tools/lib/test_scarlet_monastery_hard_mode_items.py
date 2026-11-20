@@ -154,7 +154,7 @@ class ScarletMonasteryHardModeItemsTest(unittest.TestCase):
 
     def test_declared_multipliers(self):
         """The Blackrock gear fix pass (REVIEW S1 and S3): the weapon-tier items whose cell is thin or jumps at 101
-        declare a multiplier (and the ranged weapons and the sword their DPS fraction); the rest take the cell or the
+        declare a multiplier (and the wand and the sword their DPS fraction); the rest take the cell or the
         plain default."""
         declared = {k: d.budget_mult for k, d in self.decls.items() if d.budget_mult is not None}
         self.assertEqual(declared, {
@@ -162,8 +162,8 @@ class ScarletMonasteryHardModeItemsTest(unittest.TestCase):
             "sm_staff_of_the_consecrated_hall": 0.5537, "sm_fathers_verdict": 0.5537,
         })
         dps = {k: d.extra_dps for k, d in self.decls.items() if d.extra_dps is not None}
-        self.assertEqual(dps, {"sm_heretics_wand": -0.2, "sm_scarlet_garrison_rifle": -0.2052,
-                               "sm_fathers_verdict": 0.0695})
+        # The gun declares no DPS fraction: bows, guns and crossbows take dps_delta 0 (level60-stat-curve 1.8).
+        self.assertEqual(dps, {"sm_heretics_wand": -0.2, "sm_fathers_verdict": 0.0695})
 
     def test_every_shape_stat_is_on_every_tier(self):
         """The materialized rows: every doc stat has at least one point on every tier (REVIEW S3)."""

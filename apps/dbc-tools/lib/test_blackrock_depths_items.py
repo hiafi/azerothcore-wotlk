@@ -138,10 +138,9 @@ class BlackrockDepthsItemsTest(unittest.TestCase):
         self.assertEqual(declared, {
             "brd_arbiters_blade": 0.445, "brd_blood_etched_blade": 0.445, "brd_the_hammer_of_grace": 0.445,  # S2
             "brd_houndmasters_bow": 0.405,                                                                 # S2
-            "brd_scepter_of_the_molten_lake": 0.5537, "brd_golemwrights_mending_rod": 0.3115,              # S1
-            "brd_theldrens_executioner": 0.5537,                                                           # S1
+            "brd_scepter_of_the_molten_lake": 0.5537, "brd_theldrens_executioner": 0.5537,                 # S1
             "brd_leftys_shiv": 0.6, "brd_black_anvil_bulwark": 0.6, "brd_fist_of_the_lake_lord": 0.6,      # S3
-            "brd_ironfoe": 0.6,                                                                            # S3
+            "brd_ironfoe": 0.6, "brd_golemwrights_mending_rod": 0.6,                                       # S3
         })
         self.assertEqual(self.decls["brd_theldrens_executioner"].extra_dps, 0.0695)
 

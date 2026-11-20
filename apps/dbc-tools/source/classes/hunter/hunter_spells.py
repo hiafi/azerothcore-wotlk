@@ -2491,8 +2491,7 @@ bullheaded_53490 = spell(
 wolverine_bite_53508 = spell(
     id=53508,
     # LS5b ruling 4 (level60-stat-curve, 2026-11-20): base_potency 78.546 -> ap_potency 78.546: the pet's own attack
-    # power
-    # (owner RAP + SP shares, spell_hunter_pet.cpp) scales it; the tooltip reads those owner shares.
+    # power (owner RAP + SP shares, spell_hunter_pet.cpp) scales it; the tooltip reads those owner shares.
     pet_owner_scaling=(PET_AP_FROM_RAP_PCT["value"], PET_AP_FROM_SP_PCT["value"]),
     name='Wolverine Bite',
     school=School.NORMAL,

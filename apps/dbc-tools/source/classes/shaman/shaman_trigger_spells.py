@@ -3293,8 +3293,8 @@ stoneclaw_totem_absorb_55328 = spell(
     duration_ms=15000,
     effects=[
         # LS5b ruling 4 (level60-stat-curve, 2026-11-20): base_potency 50 -> sp_potency 50; spell_sha_stoneclaw_totem
-        # adds
-        # EffectBonusMultiplier_1 x the owner's healing power (the SCRIPT_EFFECT value itself gets no engine bonus).
+        # adds EffectBonusMultiplier_1 x the owner's healing power (the SCRIPT_EFFECT value itself gets no engine
+        # bonus).
         Effect(type=EffectType.SCRIPT_EFFECT, sp_potency=50.0, potency_kind='absorb', implicit_target_a=27),
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],

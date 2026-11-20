@@ -121,7 +121,11 @@ SDV_NAME = re.compile(r"^\$(\w+)=", re.MULTILINE)
 MAX_SDV_NAME = 12
 D_AND_D_PINNED = {"Attributes": 67108864, "AttributesEx": 136, "AttributesEx3": 0, "AttributesEx5": 512,
                   "RuneCostID": 101, "PowerType": POWER_RUNE, "CategoryRecoveryTime": 30000, "Effect_1": 27,
-                  "EffectAura_1": 226, "EffectBasePoints_1": 13}  # 23 -> 13: x a 0.57 (LS5b potency rebase); 13 -> 23 = potency 39.95 (2026-11-01, DPS balance pass 1031 round R4, Death and Decay +70%); RETUNE 2026-10-25 re-anchor: was 25; 8 -> 12 (2026-11-01, DPS balance pass 1031 round T1, Death and Decay +50%); 12 -> 13 = potency 23.5 on a 1 s basis (2026-11-01, potency audit fix F9)
+                  "EffectAura_1": 226, "EffectBasePoints_1": 13}
+# EffectBasePoints_1 history: 23 -> 13: x a 0.57 (LS5b potency rebase); 13 -> 23 = potency 39.95 (2026-11-01, DPS
+# balance pass 1031 round R4, Death and Decay +70%); RETUNE 2026-10-25 re-anchor: was 25; 8 -> 12 (2026-11-01, DPS
+# balance pass 1031 round T1, Death and Decay +50%); 12 -> 13 = potency 23.5 on a 1 s basis (2026-11-01, potency
+# audit fix F9).
 D_AND_D_MASK = (m.DEATH_AND_DECAY, 0, 0)
 DND_TICK_POTENCY = 39.95  # DEATH_AND_DECAY_TICK_POTENCY in deathknight_trigger_spells.py (potency audit F9)
 STOCK_COMPARE_COLUMNS = ("Attributes", "AttributesEx", "AttributesEx2", "AttributesEx3", "AttributesEx4",

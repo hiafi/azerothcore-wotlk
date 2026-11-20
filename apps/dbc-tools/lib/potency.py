@@ -130,8 +130,8 @@ class PotencyEffect:
     base_potency: float | None = None
     # True for the flat part of a weapon strike declared on its own weapon-damage effect (WEAPON_DAMAGE 58,
     # NORMALIZED_WEAPON_DMG 121, WEAPON_DAMAGE_NOSCHOOL 17) rather than beside weapon_potency on one effect: HANDOFF
-    # 1.7 / 1.9 exempt a strike's flat part from the potency rebase, so it resolves at a = b = 1. Not set by
-    # model.Spell yet (level60-stat-curve LS5 report, open question 1).
+    # 1.7 / 1.9 exempt a strike's flat part from the potency rebase, so it resolves at a = b = 1. model.Spell sets it
+    # from Effect.rebase_exempt and for every weapon-damage effect type (level60-stat-curve LS5b, ruling 1).
     rebase_exempt: bool = False
     # "Weapon attacks": a weapon-percent effect may also carry a small flat sp_potency bonus
     # (WEAPON_FLAT_BONUS_MAX or less) on the SAME effect - "one hit through the weapon effect".

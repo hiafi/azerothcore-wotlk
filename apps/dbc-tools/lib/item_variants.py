@@ -320,7 +320,8 @@ def solo_secondary(secondary: dict | None, primary: dict | None, catalog: dict) 
     lead = secondary["stats"][0]
     primary_stats = set(primary["stats"]) if primary else set()
     solos = [s for _, s in sorted(catalog.items())
-             if s["kind"] == shapes.KIND_SECONDARY and s["stats"] == [lead] and shapes.rules_satisfied(s, primary_stats)]
+             if s["kind"] == shapes.KIND_SECONDARY and s["stats"] == [lead]
+             and shapes.rules_satisfied(s, primary_stats)]
     if not solos:
         return None
     return next((s for s in solos if s["shape_id"] == secondary["shape_id"]), solos[0])

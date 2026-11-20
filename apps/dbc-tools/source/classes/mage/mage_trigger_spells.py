@@ -4,6 +4,7 @@ Mage - spells that are never directly cast - proc/periodic-tick effects, trigger
 Split from a single source/classes/mage.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .mage_...` below) resolve.
 """
 
+from lib import potency as _potency
 from lib.dsl import (
     RANGE_SELF, AuraType, CombatRating, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp,
 )
@@ -5194,7 +5195,7 @@ incanter_s_absorption_200086 = spell(
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=69, misc_value=127),
     ],
     spell_icon_id=2941,
-    notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, Phase 3 Batch C) - Incanter\'s Absorption\'s (6,2) new "100% chance to grant a shield" proc, granted by spell_mage_incanters_absorption_shield (spell_mage.cpp) off a cast-time-bearing Arcane spell or Arcane Missiles while Missile Barrage is active. Absorb amount computed live at grant time (caster->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_ARCANE) * 0.15, a placeholder coefficient - \'a small amount\', flagged for Phase 4 playtest tuning same as Arcane Overload\'s own coefficient). die_sides=0 so the CastCustomSpell-injected value is used exactly as passed. Separate from the existing ward-absorb-scaling mechanism (spell_mage_incanters_absorbtion_base_AuraScript) - that one is untouched.',
+    notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, Phase 3 Batch C) - Incanter\'s Absorption\'s (6,2) new "100% chance to grant a shield" proc, granted by spell_mage_incanters_absorption_shield (spell_mage.cpp) off a cast-time-bearing Arcane spell or Arcane Missiles while Missile Barrage is active. Absorb amount computed live at grant time (caster->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_ARCANE) * 0.426, i.e. 0.15 x the potency rebase b 2.84 since level60-stat-curve LS5b, a placeholder coefficient - \'a small amount\', flagged for Phase 4 playtest tuning same as Arcane Overload\'s own coefficient). die_sides=0 so the CastCustomSpell-injected value is used exactly as passed. Separate from the existing ward-absorb-scaling mechanism (spell_mage_incanters_absorbtion_base_AuraScript) - that one is untouched.',
     raw_overrides={'BaseLevel': 80, 'SpellLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs a small amount of damage.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Shielded.'},
 )
 
@@ -5306,10 +5307,9 @@ arcane_overload_200092 = spell(
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, die_sides=0, implicit_target_a=6, misc_value=6),
         Effect(type=EffectType.DUMMY, base_points=69, die_sides=0, implicit_target_a=6),
-        # LS5b ruling 7 (level60-stat-curve, 2026-11-20): the spell power share x b (2.84): 34 -> 97 (96.56). The mana-
-        # spent
-        # share (effect 2) is not a C(L) base and stays.
-        Effect(type=EffectType.DUMMY, base_points=97, die_sides=0, implicit_target_a=6),
+        # LS5b ruling 7 (level60-stat-curve, 2026-11-20): the stock spell power share 34% x b (potency.COEF_SCALE): 97
+        # at b 2.84 (96.56). The mana-spent share (effect 2) is not a C(L) base and stays.
+        Effect(type=EffectType.DUMMY, base_points=round(34 * _potency.COEF_SCALE), die_sides=0, implicit_target_a=6),
     ],
     spell_icon_id=2210,
     notes="Bugfix (playtest report, 2026-09-08) - implicit_target_a was 1 (TARGET_UNIT_CASTER), a leftover default that made this sub-spell always hit the caster instead of the passed CastCustomSpell target ('Arcane Overload deals damage to you and not the target'); fixed to 6 (TARGET_UNIT_TARGET_ENEMY). misc_value (the SPELL_EFFECT_SCHOOL_DAMAGE school index, 0=Physical/6=Arcane - distinct from the row's own SchoolMask column, which was already 64/Arcane) was left at its 0 default, so the hit rolled as Physical damage ('needs to be in the Arcane School'); fixed to 6. Original note: Arcane Mage rework (docs/arcane-mage-rework-design.md, Phase 3 Batch D) - Arcane Overload's (10,1) actual damage-dealing sub-spell, hit once per target (primary + AoE-around-caster, apps/dbc-tools' own 200079 effect2) by spell_mage_arcane_overload. die_sides=0 so the CastCustomSpell-injected value (mana spent + placeholder spell power coefficient, with falloff beyond 5 targets) is used exactly as passed."

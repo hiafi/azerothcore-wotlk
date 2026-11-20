@@ -527,7 +527,7 @@ namespace DeathKnightData
     constexpr int32 MINION_GHOUL_AP_SHARE_PCT = 60; // Permanent ghoul (Raise Dead) attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 90).
     constexpr int32 MINION_HASTE_SHARE_PCT = 100; // Share of owner spell haste the minion inherits, percent (DK0b U8).
     constexpr int32 MINION_LESSER_GHOUL_AP_SHARE_PCT = 25; // Lesser Ghoul attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 50).
-    constexpr int32 MINION_SP_SHARE_PCT = 100; // Minion spell power per owner attack power, percent (DK0b U8, Gargoyle).
+    constexpr int32 MINION_SP_SHARE_PCT = 47; // Minion spell power per owner attack power, percent (DK0b U8, Gargoyle; 100 / potency R).
     constexpr int32 MINION_STAMINA_SHARE_PCT = 30; // Minion stamina inherited from owner stamina, percent, computed live (DK0b U9).
     constexpr int32 MINION_VERSATILITY_SHARE_PCT = 100; // Share of owner versatility the minion inherits, percent (DK0b U8).
     constexpr int32 NECROMANCY_RP = 0; // Necromancy: Runic Power per energy-spending Scourge Strike (RETUNE 2026-10-25: was 10).

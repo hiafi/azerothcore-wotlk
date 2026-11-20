@@ -515,8 +515,8 @@ namespace
     }
 
     // Level 60 secondary stat curve (LS1b): true when every stat of the random suffix pool rides the secondary curve
-    // (item_stat_cost.budget_curve 1). A pool with a flag-0 stat (the tank pool's Block, Dodge and Parry, a primary),
-    // mixed or not, or with no known stat keeps the primary-curve suffix factor.
+    // (item_stat_cost.budget_curve 1). A pool with a flag-0 stat (MP5, a primary), mixed or not, or with no known
+    // stat keeps the primary-curve suffix factor.
     bool SuffixPoolRidesSecondaryCurve(uint32 pool)
     {
         auto poolIt = _suffixPoolStats.find(pool);
@@ -925,7 +925,7 @@ namespace
         // suffix. 2 * round(S / 2) makes each half of a 5000/5000 pair round(S / 2) instead of floor(S / 2). At
         // least 2 (one point per stat): a factor of 0 would make GenerateEnchSuffixFactor fall back to the stock
         // RandPropPoints size. A pool whose stats all ride the secondary curve is sized from it (the secondary budget
-        // times r); any other pool (tank pool: Block, Dodge, Parry) keeps the primary-curve factor.
+        // times r); any other pool (one with MP5 or a primary) keeps the primary-curve factor.
         // apps/item-tools/item_lib/budget.py compute_breakdown() mirrors this.
         b.SuffixSecondaries = (row.SecondaryShapeId == 0 && tpl.RandomSuffix != 0);
         b.SuffixRatio = (b.SuffixSecondaries && SuffixPoolRidesSecondaryCurve(tpl.RandomSuffix)) ?
@@ -1080,7 +1080,7 @@ namespace
 
         // Step 6 (level 60 secondary stat curve): every value above is today's. The secondary-side stats with
         // budget_curve 1 now take their exact value times r. Every other stat keeps the point count step 5 gave it,
-        // which keeps the primary side and the flag-0 secondaries (Dodge, Parry, Block, MP5) identical to today. The
+        // which keeps the primary side and the flag-0 secondary (MP5) identical to today. The
         // scaled stats are rounded among themselves: their points total lround(sum of their new exact values), shared
         // by the same largest-remainder rule and tiebreak. At r = 1 (secondary_budget = budget) nothing moves, so the
         // item keeps step 5's merged rounding exactly. apps/item-tools/item_lib/budget.py mirrors this.

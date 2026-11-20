@@ -1243,12 +1243,19 @@ class spell_sha_stoneclaw_totem : public SpellScript
         // principle on an already-converted spell).
         // Custom: 55328's potency is spell power potency since the potency rebase (level60-stat-curve LS5b ruling 4,
         // 2026-11-20). A SCRIPT_EFFECT value gets no engine bonus, so the generated coefficient is added here from
-        // the owner's healing power (absorbs follow the heal rule). Stock ranks keep their bare value.
+        // the owner's healing power (absorbs follow the heal rule), through the owner's spell mods like the fork's
+        // other script-applied absorb coefficients (PaladinMechanics.cpp CalculateAbsorbBonus). Stock ranks keep their
+        // bare value.
         int32 absorb = GetEffectValue();
         if (GetSpellInfo()->Id == SPELL_SHAMAN_STONECLAW_TOTEM_POTENCY)
+        {
             if (Unit* owner = GetCaster()->GetOwner())
-                absorb += int32(GetSpellInfo()->Effects[EFFECT_0].BonusMultiplier *
-                    float(owner->SpellBaseHealingBonusDone(GetSpellInfo()->GetSchoolMask())));
+            {
+                float bonus = GetSpellInfo()->Effects[EFFECT_0].BonusMultiplier *
+                    float(owner->SpellBaseHealingBonusDone(GetSpellInfo()->GetSchoolMask()));
+                absorb += int32(owner->ApplyEffectModifiers(GetSpellInfo(), EFFECT_0, bonus));
+            }
+        }
 
         // Cast Absorb on totems
         for (uint8 slot = SUMMON_SLOT_TOTEM_FIRE; slot < MAX_TOTEM_SLOT; ++slot)

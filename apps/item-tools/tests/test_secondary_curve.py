@@ -25,11 +25,14 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 LEGACY_COMMIT = "81d92fc05"  # Playerbot before the secondary curve (#151)
 LEGACY_PATH = "apps/item-tools/item_lib/budget.py"
 
-SECONDARY_CURVE_STATS = {22, 23, 24, 32, 33, 36, 44}  # Mastery, Versatility, CDH, Crit, Proc, Haste, ArP
-PRIMARY_CURVE_SECONDARIES = {13, 14, 15, 43}  # Dodge, Parry, Block, MP5
-DODGE, VERSATILITY = 13, 23
+# Dodge, Parry, Block, Mastery, Versatility, CDH, Crit, Proc, Haste, ArP (HANDOFF 1.3 + 1.10)
+SECONDARY_CURVE_STATS = {13, 14, 15, 22, 23, 24, 32, 33, 36, 44}
+PRIMARY_CURVE_SECONDARIES = {43}  # MP5
+DODGE, VERSATILITY, CRIT, MP5 = 13, 23, 32, 43
 DODGE_VERSATILITY_ANY = 98  # secondary shape "Dodge/Versatility (Any)", Even pair
+MP5_CRIT = 48  # secondary shape "MP5/Crit", Even pair (no MP5/Versatility shape exists); forbids Spirit
 STRENGTH_SOLO = 22  # primary shape
+INTELLECT_SOLO = 24  # primary shape, no Spirit (MP5/Crit's rule)
 ARMOR, PLATE, EPIC, INV_CHEST = 4, 4, 4, 5
 
 OFF_BUDGET_KEYS = ("final_stamina", "has_armor_curve", "final_armor", "has_block_value_curve", "final_block_value",
@@ -163,31 +166,47 @@ class SecondaryCurveTest(unittest.TestCase):
         self.assertTrue(suffix_items)
         for item_row, itemization in suffix_items:
             b = budget.compute_breakdown(item_row, itemization, self.tables, self.catalog)
-            ratio = b["secondary_ratio"] if item_row["RandomSuffix"] == 9000 else 1.0  # 9001: the tank pool
+            # Both pools grant only secondary-curve stats since HANDOFF 1.10 (the tank pool 9001: Block, Dodge, Parry,
+            # Mastery, Versatility), so both take r.
+            self.assertIn(item_row["RandomSuffix"], (9000, 9001), item_row["entry"])
+            ratio = b["secondary_ratio"]
             self.assertEqual(b["suffix_ratio"], ratio, item_row["entry"])
             self.assertEqual(b["suffix_factor"], max(2, 2 * budget._round(b["secondary_budget"] * ratio / 2.0)))
 
-    def test_dodge_versatility_scales_only_the_versatility(self):
+    def _ilvl_96_chest(self, primary, secondary, flat=False):
         item_row = {
             "entry": 1, "ItemLevel": 96, "Quality": EPIC, "InventoryType": INV_CHEST, "class": ARMOR,
             "subclass": PLATE, "itemset": 0, "delay": 0, "ArmorDamageModifier": 0, "RandomSuffix": 0,
         }
         itemization = {
             "entry": 1, "budget_mult": 1.0, "stamina_delta": 0, "dps_delta": 0.0, "absorbed_spell_slots": 0,
-            "armor_delta": 0, "primary_shape_id": STRENGTH_SOLO, "secondary_shape_id": DODGE_VERSATILITY_ANY,
+            "armor_delta": 0, "primary_shape_id": primary, "secondary_shape_id": secondary,
             "primary_share": 6000, "block_value_delta": 0,
         }
-        self.assertEqual(self.catalog[DODGE_VERSATILITY_ANY]["stats"], [DODGE, VERSATILITY])
-        new = budget.compute_breakdown(item_row, itemization, self.tables, self.catalog)
-        flat = budget.compute_breakdown(item_row, itemization, self.flat_tables, self.catalog)
-        values = {a["stat_type"]: a for a in new["allocations"] if not a["is_primary"]}
-        flat_values = {a["stat_type"]: a for a in flat["allocations"] if not a["is_primary"]}
+        b = budget.compute_breakdown(item_row, itemization, self.flat_tables if flat else self.tables, self.catalog)
+        return b, {a["stat_type"]: a for a in b["allocations"] if not a["is_primary"]}
+
+    def test_mp5_crit_scales_only_the_crit(self):
+        # MP5 is the one flag-0 secondary left (HANDOFF 1.10): it keeps today's points beside a scaled stat.
+        self.assertEqual(self.catalog[MP5_CRIT]["stats"], [MP5, CRIT])
+        new, values = self._ilvl_96_chest(INTELLECT_SOLO, MP5_CRIT)
+        _flat, flat_values = self._ilvl_96_chest(INTELLECT_SOLO, MP5_CRIT, flat=True)
         self.assertAlmostEqual(new["secondary_ratio"], 194 / 64)
-        self.assertEqual(values[DODGE]["rounded"], flat_values[DODGE]["rounded"])
-        self.assertFalse(values[DODGE]["scaled"])
-        self.assertTrue(values[VERSATILITY]["scaled"])
-        self.assertEqual(values[VERSATILITY]["raw"], flat_values[VERSATILITY]["raw"] * new["secondary_ratio"])
-        self.assertGreater(values[VERSATILITY]["rounded"], 2.9 * flat_values[VERSATILITY]["rounded"])
+        self.assertEqual(values[MP5]["rounded"], flat_values[MP5]["rounded"])
+        self.assertFalse(values[MP5]["scaled"])
+        self.assertTrue(values[CRIT]["scaled"])
+        self.assertEqual(values[CRIT]["raw"], flat_values[CRIT]["raw"] * new["secondary_ratio"])
+        self.assertGreater(values[CRIT]["rounded"], 2.9 * flat_values[CRIT]["rounded"])
+
+    def test_dodge_versatility_scales_both(self):
+        # Dodge, Parry and Block ride the secondary curve since HANDOFF 1.10.
+        self.assertEqual(self.catalog[DODGE_VERSATILITY_ANY]["stats"], [DODGE, VERSATILITY])
+        new, values = self._ilvl_96_chest(STRENGTH_SOLO, DODGE_VERSATILITY_ANY)
+        _flat, flat_values = self._ilvl_96_chest(STRENGTH_SOLO, DODGE_VERSATILITY_ANY, flat=True)
+        for stat in (DODGE, VERSATILITY):
+            self.assertTrue(values[stat]["scaled"], stat)
+            self.assertEqual(values[stat]["raw"], flat_values[stat]["raw"] * new["secondary_ratio"], stat)
+            self.assertGreater(values[stat]["rounded"], 2.9 * flat_values[stat]["rounded"], stat)
 
     def test_curve_spot_values(self):
         curve = self.tables["item_budget_curve"]

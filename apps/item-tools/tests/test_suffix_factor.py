@@ -41,7 +41,7 @@ STRENGTH_SOLO = 22
 CRIT_SOLO = 25  # a real secondary shape
 POOL = 9000
 TANK_POOL = 9001
-BLOCK, DODGE, PARRY = 15, 13, 14
+BLOCK, DODGE, PARRY, MP5 = 15, 13, 14, 43
 
 
 def _item(ilvl, quality, inv_type, item_class=ARMOR, subclass=CLOTH, random_suffix=POOL):
@@ -155,32 +155,45 @@ class SuffixFactorTest(unittest.TestCase):
         self.assertEqual(budget.suffix_pool_stats(POOL, self.tables), {32, 36, 22, 23, 24, 33})
         self.assertEqual(budget.suffix_pool_stats(TANK_POOL, self.tables), {BLOCK, DODGE, PARRY, 22, 23})
         self.assertTrue(budget.suffix_pool_rides_secondary_curve(POOL, self.tables))
-        # The tank pool mixes Block / Dodge / Parry (flag 0) with Mastery / Versatility: the conservative reading keeps
-        # the whole pool on the primary curve (level 60 secondary curve, LS1b).
-        self.assertFalse(budget.suffix_pool_rides_secondary_curve(TANK_POOL, self.tables))
+        # Block / Dodge / Parry ride the secondary curve since HANDOFF 1.10, so the tank pool grants only flag-1 stats
+        # and takes r like the DPS pool.
+        self.assertTrue(budget.suffix_pool_rides_secondary_curve(TANK_POOL, self.tables))
         self.assertFalse(budget.suffix_pool_rides_secondary_curve(123456, self.tables))  # no such pool
 
-    def test_tank_pool_keeps_todays_factor(self):
+    def test_tank_pool_takes_r(self):
         for ilvl in (35, 60, 76, 96):
             for inv_type in (INV_CHEST, INV_WRIST):
                 item = _item(ilvl, EPIC, inv_type, subclass=PLATE, random_suffix=TANK_POOL)
                 b = self._breakdown(item, _itemization(primary=STRENGTH_SOLO))
                 flat = self._breakdown(item, _itemization(primary=STRENGTH_SOLO), flat=True)
-                self.assertEqual(b["suffix_ratio"], 1.0)
                 self.assertGreater(b["secondary_ratio"], 1.0)
-                self.assertEqual(b["suffix_factor"], flat["suffix_factor"], (ilvl, inv_type))
-                self.assertEqual(b["suffix_factor"], max(2, 2 * budget._round(b["secondary_budget"] / 2.0)))
+                self.assertEqual(b["suffix_ratio"], b["secondary_ratio"])
+                self.assertEqual(flat["suffix_ratio"], 1.0)
+                self.assertGreaterEqual(b["suffix_factor"], flat["suffix_factor"], (ilvl, inv_type))
+                self.assertEqual(b["suffix_factor"],
+                                 max(2, 2 * budget._round(b["secondary_budget"] * b["secondary_ratio"] / 2.0)))
 
     def test_only_a_pure_secondary_curve_pool_scales(self):
-        # A hand-built pool: one suffix of Crit + Haste (scales), then the same pool with the Dodge/Parry suffix added
-        # (does not), then that suffix at chance 0 (never rolled, LoadRandomEnchantmentsTable: scales again).
-        def pool(*rows):
-            return {**self.tables, "item_enchantment_template": {
-                (1, ench): {"entry": 1, "ench": ench, "chance": chance} for ench, chance in rows}}
+        # A hand-built pool: one suffix of Crit + Haste (scales), the Dodge/Parry suffix 1017 (scales since HANDOFF
+        # 1.10), then a made-up MP5 suffix added (MP5 is flag 0: does not), then that suffix at chance 0 (never rolled,
+        # LoadRandomEnchantmentsTable: scales again).
+        mp5_suffix, mp5_enchant = 99001, 99002
+        suffixes = {**self.tables["itemrandomsuffix_dbc"],
+                    (mp5_suffix,): {"ID": mp5_suffix, "Enchantment_1": mp5_enchant, "AllocationPct_1": 10000}}
+        enchants = {**self.tables["spellitemenchantment_dbc"],
+                    (mp5_enchant,): {"ID": mp5_enchant, "Effect_1": budget.ITEM_ENCHANTMENT_TYPE_STAT,
+                                     "EffectArg_1": MP5}}
 
+        def pool(*rows):
+            return {**self.tables, "itemrandomsuffix_dbc": suffixes, "spellitemenchantment_dbc": enchants,
+                    "item_enchantment_template": {
+                        (1, ench): {"entry": 1, "ench": ench, "chance": chance} for ench, chance in rows}}
+
+        self.assertEqual(budget.suffix_pool_stats(1, pool((mp5_suffix, 50.0))), {MP5})
         self.assertTrue(budget.suffix_pool_rides_secondary_curve(1, pool((1000, 50.0))))
-        self.assertFalse(budget.suffix_pool_rides_secondary_curve(1, pool((1000, 50.0), (1017, 50.0))))
-        self.assertTrue(budget.suffix_pool_rides_secondary_curve(1, pool((1000, 50.0), (1017, 0.0))))
+        self.assertTrue(budget.suffix_pool_rides_secondary_curve(1, pool((1000, 50.0), (1017, 50.0))))
+        self.assertFalse(budget.suffix_pool_rides_secondary_curve(1, pool((1000, 50.0), (mp5_suffix, 50.0))))
+        self.assertTrue(budget.suffix_pool_rides_secondary_curve(1, pool((1000, 50.0), (mp5_suffix, 0.0))))
 
     def test_a_suffix_missing_from_the_dbc_table_is_refused(self):
         missing = {(1, 99999): {"entry": 1, "ench": 99999, "chance": 100.0}}

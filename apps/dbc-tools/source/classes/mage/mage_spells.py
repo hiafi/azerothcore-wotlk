@@ -4,6 +4,7 @@ Mage - player-castable spells (real cast_time_ms/cooldown_ms, not marked passive
 Split from a single source/classes/mage.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .mage_...` below) resolve.
 """
 
+from lib import potency as _potency
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
 from lib.dsl.registry import bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by, unbind_bonus_coefficients
 from .mage_trigger_spells import arcane_blast_debuff, arcane_missile_7268, blizzard_42208, frost_talent_tooltip, meteor_impact_200096, molten_armor_34913
@@ -516,10 +517,12 @@ mana_shield_1463 = spell(
     range_yards=0.0,
     duration_ms=60000,
     effects=[
-        # LS5b ruling 7 (level60-stat-curve, 2026-11-20): flat base x a (0.57) like a generated base: 119 / 11.25 -> 68
-        # /
-        # 6.4125 (569 -> 324 at 60); spell_mage_mana_shield's spell power factor goes 0.8053 -> 0.8053 x b (2.84).
-        Effect(type=EffectType.APPLY_AURA, base_points=68, points_per_level=6.4125, implicit_target_a=1, apply_aura=97, misc_value=127),
+        # LS5b ruling 7 (level60-stat-curve, 2026-11-20): the stock flat base 119 / 11.25 x a (potency.BASE_SCALE)
+        # like a generated base: 68 / 6.4125 at a 0.57 (569 -> 324 at 60). spell_mage_mana_shield's spell power
+        # factor is 0.8053 x b (2.84) = 2.2871; lib/test_potency_hand_scaled.py pins it to potency.COEF_SCALE.
+        Effect(type=EffectType.APPLY_AURA, base_points=round(119 * _potency.BASE_SCALE),
+               points_per_level=round(11.25 * _potency.BASE_SCALE, 4), implicit_target_a=1, apply_aura=97,
+               misc_value=127),
     ],
     spell_icon_id=209,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',

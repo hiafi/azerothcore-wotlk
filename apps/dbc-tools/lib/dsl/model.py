@@ -135,8 +135,9 @@ class Effect:
     scale_amount: bool = False
     # Potency rebase (level60-stat-curve HANDOFF 1.9, LS5b ruling 4): True resolves this effect at a = b = 1 and the
     # stock heal coefficient multiplier (lib.potency.PotencyEffect.rebase_exempt): the item absorbs that scale with
-    # item level, and the hunter pet abilities awaiting a ruling. A strike's flat part on its own weapon-damage effect
-    # (WEAPON_DAMAGE_NOSCHOOL 17, WEAPON_DAMAGE 58, NORMALIZED_WEAPON_DMG 121) is exempt without it (ruling 1).
+    # item level (the hunter pet abilities were ruled onto attack power potency). A strike's flat part on its own
+    # weapon-damage effect (WEAPON_DAMAGE_NOSCHOOL 17, WEAPON_DAMAGE 58, NORMALIZED_WEAPON_DMG 121) is exempt without
+    # it (ruling 1).
     rebase_exempt: bool = False
 
     @property

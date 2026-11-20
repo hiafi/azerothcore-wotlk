@@ -17,10 +17,17 @@ For every damage, heal or absorb effect that ISN'T already a potency effect (no 
   - T (cast time or tick amplitude);
   - implied potency from the base (`V60 / (C(60) x T/1.5)`, heal / 3.96 - "dbc-tools generator");
   - implied SP potency from the SP coefficient (`100 x coef x 3.5 / T`, heal / 1.88);
-  - implied AP potency from the AP coefficient (`100 x coef x 3.5 x R / T`, R = `potency.DEFAULT_R`,
-    the P3-measured value);
+  - implied AP potency from the AP coefficient (`100 x coef x 3.5 x R / T`, R = `R_STOCK` = 1);
   - a mismatch flag when the base-derived and coefficient-derived potencies disagree by more than
     10%.
+
+The implied ("Old") potencies are on the stock scale: the potency rebase's a = b = 1, R = 1 (the
+pre-rebase `DEFAULT_R`) and the stock heal multipliers 3.96 / 1.88 (`HEAL_*_MULT_STOCK`). That is the
+scale every declared potency in the DSL is written on: the rebase (level60-stat-curve HANDOFF 1.9)
+kept each declared potency and moved its damage from base to power through `resolve()`. `New Base` /
+`New Coefficient` are the current `resolve()` (a, b, R and heal multipliers as shipped), so a
+converted spell lands where every already-converted spell of the same potency does: its base about
+x0.57 and its coefficient about x2.84 of today's, not today's numbers.
 
 Per potency-system.HANDOFF.md's P3 extra: "Don't set any potency yourself on a mismatched row. The
 user does that at the start of each class pass." This script only reports; `docs/potency-system.md`
@@ -55,6 +62,8 @@ SOURCE_DIR = TOOL_ROOT / "source"
 OUT_DIR = REPO_ROOT / ".agents" / "plans" / "potency-system"
 
 MISMATCH_THRESHOLD = 0.10
+# R on the stock (pre-rebase) potency scale the implied potencies are read on (module docstring).
+R_STOCK = 1.0
 
 # kind -> (is_heal_like, label) - "Periodic effects"/"Healing"/"Damage range" in the design doc.
 _KIND_LABELS = {
@@ -189,7 +198,7 @@ def build_class_report(
 
             coef_div = potency.HEAL_COEF_MULT_STOCK if is_heal_like else 1.0
             sp_implied = (100 * coef * 3.5 / t) / coef_div if coef else None
-            ap_implied = (100 * ap_coef * 3.5 * potency.DEFAULT_R / t) if ap_coef else None
+            ap_implied = (100 * ap_coef * 3.5 * R_STOCK / t) if ap_coef else None
 
             mismatch = False
             for implied in (sp_implied, ap_implied):
@@ -253,7 +262,11 @@ def build_class_report(
         "three disagree by more than 10%. `Proposed Potency` is the base-damage potency, since it "
         "wins by default where a human hasn't overridden it (docs/potency-system.md); `New Base`/"
         "`New Coefficient` re-bake the effect from that proposal, so it's visible as a concrete "
-        "before/after next to the live `V60 (old)`/`Coefficient (old)` values.\n\n"
+        "before/after next to the live `V60 (old)`/`Coefficient (old)` values. Old and proposed "
+        "potencies are on the stock scale (a = b = R = 1, heal 3.96 / 1.88), the scale the DSL "
+        "declares potency on; `New Base`/`New Coefficient` include the potency rebase "
+        "(level60-stat-curve HANDOFF 1.9), so they differ from the old values even on a matched "
+        "row.\n\n"
         "| Spell | Name | Eff | Kind | T | V60 (old) | Coefficient (old, SP / AP) | "
         "Old Potency (Base / SP Coef / AP Coef) | Proposed Potency | New Base | "
         "New Coefficient (SP / AP) | Mismatch |\n"

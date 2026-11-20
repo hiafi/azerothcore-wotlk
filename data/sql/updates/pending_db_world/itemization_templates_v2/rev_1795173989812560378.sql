@@ -1,9 +1,7 @@
--- Level 60 stat curve LS2 (.agents/plans/level60-stat-curve/ HANDOFF 1.5): every Rare or Epic item that still
---   spends its
--- whole budget on primaries (item_itemization.primary_share = 10000) gets one secondary: primary_share 8000 and the
--- Solo secondary shape of the lead (rank 1) stat of the secondary shape it already has. Accepted cost: these
---   items lose
--- 20 percent of their primaries (user ruling 2026-11-20). Uncommon items are untouched.
+-- Level 60 stat curve LS2 (.agents/plans/level60-stat-curve/ HANDOFF 1.5): every Rare or Epic item that still spends
+-- its whole budget on primaries (item_itemization.primary_share = 10000) gets one secondary: primary_share 8000 and
+-- the Solo secondary shape of the lead (rank 1) stat of the secondary shape it already has. Accepted cost: these items
+-- lose 20 percent of their primaries (user ruling 2026-11-20). Uncommon items are untouched.
 --
 -- Covers 3220 rows that no item() declaration, item_ids.lock line or quest_rewards.lock line owns. The declared
 -- ones take the same rule from apps/dbc-tools/lib/item_variants.py (apply_solo_secondary) at the next generate run.
