@@ -16,9 +16,10 @@ row that carries a value (declared tiers through lib/item_emit.py, undeclared we
 The materialized stats follow at the next boot. Rows of entries the generator no longer covers (a retired minted
 tier, an entry a declaration dropped) keep whatever value they last got.
 
-**Item level limit (user ruling 2026-11-17, WS0 review).** Only a weapon of item level `MAX_ITEM_LEVEL` (100) and
-below gets the rule: above it the coefficient is 0 (a declared tier per its own item level, an undeclared weapon per
-its ItemLevel), so a TBC/WotLK weapon keeps its budgeted Spell Power until those tiers get their own pass.
+**No item level limit (user ruling 2026-11-20, Scarlet gear review M2).** Every weapon gets the rule, whatever its item
+level: weapon spell power scales through TBC and WotLK. This replaces the 2026-11-17 WS0 review ruling, which held
+weapons above item level 100 at coefficient 0 with their budgeted Spell Power (it left the vanilla hard mode ladder's
+101 tier, and every TBC/WotLK caster weapon, without the line).
 
 **The multiplier `m`.** `item(..., weapon_spell_power_mult=)` declares it (a number in [0, 2]); undeclared it is the
 role default (`ROLE_DEFAULT_MULT`: caster 1.0, physical and tank 0). The role is the item generator's own rule
@@ -63,10 +64,6 @@ SLOT_FACTORS = {
     "ranged": 0.0,  # Ranged (15), Thrown (25), Ranged Right (26): wands (and a caster bow or gun) get none
 }
 
-
-# Only weapons of this item level and below get the rule (user ruling 2026-11-17, WS0 review): a TBC/WotLK weapon
-# keeps coefficient 0 and its budgeted Spell Power until those tiers get their own pass.
-MAX_ITEM_LEVEL = 100
 
 
 def _check_k(where: str, table: dict) -> dict:
@@ -120,11 +117,11 @@ def resolve_mult(declared: float | None, role: str) -> float:
     return float(declared) if declared is not None else default_mult(role)
 
 
-def coefficient(item_class: int, inv_type: int, mult: float, k: dict | None = None, *, item_level: int) -> float:
+def coefficient(item_class: int, inv_type: int, mult: float, k: dict | None = None) -> float:
     """`k_sp(slot) x m`, rounded to `COEFFICIENT_DIGITS`: spell power per point of the weapon's DPS (0 for a
-    non-weapon, a slot without a k, m 0, an item level above `MAX_ITEM_LEVEL` or the feature off)."""
+    non-weapon, a slot without a k, m 0 or the feature off). Any item level (user ruling 2026-11-20)."""
     table = _table(k)
-    if int(item_class) != ITEM_CLASS_WEAPON or not mult or int(item_level) > MAX_ITEM_LEVEL:
+    if int(item_class) != ITEM_CLASS_WEAPON or not mult:
         return 0.0
     kind = slot_kind(inv_type)
     if kind is None:
@@ -191,16 +188,14 @@ def undeclared_rows(live_rows: dict[int, dict], owned, tables: dict, catalog: di
         row = live_rows[entry]
         if _int(row.get("class")) != ITEM_CLASS_WEAPON or entry in owned:
             continue
-        item_level = _int(row.get("ItemLevel"))
         item_row = itemization.get((entry,))
         if item_row is None:
-            if enabled(k) and item_level <= MAX_ITEM_LEVEL and literal_caster_lead(row):
+            if enabled(k) and literal_caster_lead(row):
                 out.unclassifiable.append((entry, str(row.get("name") or "")))
             continue
         role = item_variants.shape_role(catalog.get(_int(item_row.get("primary_shape_id"))),
                                         catalog.get(_int(item_row.get("secondary_shape_id"))))
-        coef = coefficient(ITEM_CLASS_WEAPON, _int(row.get("InventoryType")), default_mult(role), k,
-                           item_level=item_level)
+        coef = coefficient(ITEM_CLASS_WEAPON, _int(row.get("InventoryType")), default_mult(role), k)
         if coef > 0:
             out.covered.append(entry)
         if abs(float(item_row.get("spell_power_per_dps") or 0.0) - coef) < 1e-6:

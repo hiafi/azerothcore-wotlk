@@ -52,6 +52,20 @@ VANILLA_HARD_MODE = ladder(
     empowered_3_hm=tier(step=4, ilvl=101, quality=EPIC, required_level=REQUIRED_LEVEL, label="Chthonic Empowered" + HM),
 )
 
+# Heroic-only dungeon set (scarlet-gear handoff section 1, user ruling 2026-11-19: the Zealot's family). The tokens
+# drop only on heroic, so the pieces and tokens start at Heroic: VANILLA_DUNGEON's tiers from step 1 up, same names,
+# levels, flag and labels, no Normal tier. Like the hard mode ladder its first tier is the variant base, so the
+# empowered module looks it up as (Heroic entry, step 2-4). A normal lootid cannot drop it (lib/loot_tables.py
+# own_level_tier finds no tier), which is the point.
+VANILLA_HEROIC_SET = ladder(
+    "vanilla_heroic_set",
+    effect_reference="heroic",
+    heroic=tier(step=1, ilvl=66, quality=EPIC, required_level=REQUIRED_LEVEL, heroic_flag=True, label="Heroic"),
+    empowered_1=tier(step=2, ilvl=76, quality=EPIC, required_level=REQUIRED_LEVEL, label="Molten Empowered"),
+    empowered_2=tier(step=3, ilvl=86, quality=EPIC, required_level=REQUIRED_LEVEL, label="Draconic Empowered"),
+    empowered_3=tier(step=4, ilvl=96, quality=EPIC, required_level=REQUIRED_LEVEL, label="Chthonic Empowered"),
+)
+
 # Quest rewards (docs/plans/quest-reward-itemization/, stage QR1): one tier, the stock item itself re-leveled and
 # re-statted in place (source/items/quest_rewards.py, one item(base=...) per quest_rewards.lock line). The item level,
 # quality and required level are each item's own (its lock line). No tooltip line (ruling 20): label=None.

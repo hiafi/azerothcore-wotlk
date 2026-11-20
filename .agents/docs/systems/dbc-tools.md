@@ -260,7 +260,9 @@ every tier but the ladder's effect reference tier its own copy of the spell and 
   MOD_RATING 189); every family id inside it remapped to the same tier's copy (trigger spells, `$<id>` tokens,
   `pot_text` expressions, linked spells); its `spell_proc`, `spell_script_names`, `spell_custom_attr` rows copied;
   potency rows from its own `to_entry()`. Everything else (durations, cooldowns, radius, proc chance, percentages such
-  as damage taken %, speed %, an effect with `potency_excluded`) is unchanged. A family damage or heal effect without
+  as damage taken %, speed %, an effect with `potency_excluded`) is unchanged; an aura declared
+  `Effect(..., scale_amount=True)` has its amount scaled like a stat aura (a percent meant to grow with the tier: the
+  Scarlet Monastery Rallying Standard and Treads of Denial, 2026-11-20). A family damage or heal effect without
   potency, a `weapon_potency` effect or a hand `bonus_coefficients()` row is an ERROR. The tier's item row names its
   copies (`ResolvedTier.spells`); the reference tier keeps the declared ids. Show aura amounts with `$s1` in the
   texts (a typed number would not follow the copy).
@@ -270,8 +272,11 @@ every tier but the ladder's effect reference tier its own copy of the spell and 
   matching expressions (and then pulls in every spell with that expression). Build a description's `pot_text()` in
   the `spell(...)` call (or just before it), not in a shared string reused by several spells.
 - **Ids**: `source/items/item_spell_ids.lock` (`<spell id> <key> <tier> <base spell id> [retired <date>]`), minted
-  from the `item_spell_copy` block (205410-205599, inside the `items` spell reservation), same append-only, retire
-  and merge rules as `item_ids.lock`; a full run writes it, `--check` lists the lines.
+  from the `item_spell_copy` block (205410-205599, inside the `items` spell reservation, then its `more:` ranges:
+  219000-219399, the `item_copies` pool reservation, once the first range was full after Blackrock Depths), same
+  append-only, retire and merge rules as `item_ids.lock`; a full run writes it, `--check` lists the lines. A block
+  that fills up gets another `more:` range (a pool reservation in `source/scopes.yaml` `pools`), never a wider `end`
+  that would walk into the neighboring reservations.
 - **C++**: the copies run the same scripts, so a script casting another family spell must cast its tier's copy. A full
   run writes `modules/mod-dungeon-bosses/src/Generated/ItemSpellCopies.h` (pure; `ItemSpellCopies::Resolve(cast or
   aura id, base id)`); `--check` errors on a stale one.
@@ -331,6 +336,11 @@ and the Item.dbc merge before they are used) and in the full run's SQL and patch
   `quest_rewards.lock` line and keeping the `item_ids.lock` key (`qr_<entry>`); the quest chain's own rewards are
   hand SQL (`quest_template` is not managed here). The Tier 0.5 upgrade quests themselves are `disables` rows
   (sourceType 1, hand SQL; blackrock gear fix pass).
+- **Zealot's set (scarlet gear):** heroic-only, `source/items/zealot_set*.py` and `source/npcs/zealot_set/` on
+  `VANILLA_HEROIC_SET` (Heroic 66, then the three empowered tiers, no Normal tier; the first tier is the variant base,
+  as on the hard mode ladders). The reused stock pieces are `like=` copies with the stock name and look, the stock
+  entries untouched; the sets code needed no change for 3 slots, 4 tiers and no Normal tier. A Zealot's token on a
+  normal loot list is an ERROR by design.
 - **Stock spell moved onto potency:** an id owned by `source/spells/*.csv` becomes a DSL `spell()` in `source/items/` by
   deleting its csv row (one owner per spell). The potency shape lint (`lint.check_percent_field_potency`) only lets a
   non-damage/heal/absorb effect carry potency if its (spell id, effect index) is in `_POTENCY_FLAT_BONUS_SPELLS`

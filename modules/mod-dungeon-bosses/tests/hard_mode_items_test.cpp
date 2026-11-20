@@ -23,6 +23,9 @@ namespace
         CHECK(kSpellsItems.last == 205599u);
         CHECK(kSpellsItems.Contains(kSpellsDeadminesHardModeItems.first));
         CHECK(kSpellsItems.Contains(kSpellsDeadminesHardModeItems.last));
+        CHECK(kSpellsItemCopyPool.first == 219000u);
+        CHECK(kSpellsItemCopyPool.last == 219399u);
+        CHECK(kSpellsItemCopyPool.first > kSpellsItems.last);
         using namespace DeadminesRework;
         for (std::uint32_t id : { SPELL_POWDER_KEG_FUSE, SPELL_POWDER_KEG_FUSE_LOOK, SPELL_POWDER_KEG_BLAST,
                  SPELL_BLACKGUARDS_SIGNET, SPELL_BLACKGUARD_STRIKE, SPELL_BLACKGUARD_AMBUSH_LOOK,
@@ -105,7 +108,7 @@ namespace
         {
             ItemSpellCopies::Copy const& c = ItemSpellCopies::kCopies[i];
             CHECK(c.copy > kSpellsDeadminesHardModeItems.last);         // a copy never takes a declared id
-            CHECK(kSpellsItems.Contains(c.copy));
+            CHECK(kSpellsItems.Contains(c.copy) || kSpellsItemCopyPool.Contains(c.copy));
             if (!kSpellsDeadminesHardModeItems.Contains(c.base))
                 continue;                                               // another dungeon's copy
             CHECK(c.base != SPELL_BLACKGUARD_AMBUSH_LOOK);               // the Blackguard's own look is not copied

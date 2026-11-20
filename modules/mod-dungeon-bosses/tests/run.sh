@@ -42,8 +42,10 @@ tests=(
   shadowfang_keep_hard_mode_items_test
   blackrock_spire_hard_mode_items_test
   blackrock_depths_hard_mode_items_test
+  scarlet_monastery_hard_mode_items_test
   haunted_set_test
   molten_set_test
+  zealot_set_test
   shadowfang_keep_test
   sfk_rethilgore_test
   sfk_razorclaw_test

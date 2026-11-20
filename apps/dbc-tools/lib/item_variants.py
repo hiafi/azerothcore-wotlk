@@ -805,10 +805,10 @@ def _resolve_item(
             }
             if plan["first"] and stock_armor_delta is not None:
                 itemization["armor_delta"] = stock_armor_delta
-        # Weapon scaling WS0b/WS0c: the generator owns the column on every tier, the live first tier included; a tier
-        # above weapon_spell_power.MAX_ITEM_LEVEL gets 0 and keeps its budgeted Spell Power.
+        # Weapon scaling WS0b/WS0c: the generator owns the column on every tier, the live first tier included, at any
+        # item level (user ruling 2026-11-20: no item level limit).
         itemization["spell_power_per_dps"] = weapon_spell_power.coefficient(
-            item_class, inv_type, spell_power_mult, spell_power_k, item_level=plan["ilvl"])
+            item_class, inv_type, spell_power_mult, spell_power_k)
         tier_columns = {**explicit, **decl.override_columns(spec.name)}
         # The budget must resolve on a stand-in row of this tier (the C++ would skip the item otherwise).
         stand_in = {**look, **tier_columns, "entry": decl.base or 0, "ItemLevel": plan["ilvl"],

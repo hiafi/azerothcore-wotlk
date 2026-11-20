@@ -27,7 +27,8 @@ Only spells declared in `source/items/` are followed: a reference to a stock or 
 (`STAT_AURAS`: ratings, stats, armor and resistances, spell power, attack power, health, mana regeneration, block value,
 flat absorbs) times the ratio too, rounded, every family id inside it remapped to the same tier's copy (trigger spells,
 `$<id>` tokens, `pot_text` expressions, linked spells), and everything else unchanged: name, icon, visuals, durations,
-cooldowns, ranges, radii, proc chance, percentages (a -10% damage taken or +30% speed stays). Its own
+cooldowns, ranges, radii, proc chance, percentages (a -10% damage taken or +30% speed stays, unless the effect is
+declared `Effect(..., scale_amount=True)`: then its amount is scaled like a stat aura's). Its own
 `{potN}` placeholders are expanded from the scaled effects by `Spell.to_entry()`, so every tooltip shows the tier's own
 numbers. The rows a spell owns by id are copied too: `spell_proc`, `spell_script_names` (the same C++ script runs for
 every copy), `spell_custom_attr`, `spell_linked_spell`, and the potency rows (`spell_bonus_data`,
@@ -48,7 +49,8 @@ in source/items.
 
 **Ids**: `source/items/item_spell_ids.lock`, append-only like `item_ids.lock`: one `<spell id> <item key> <tier> <base
 spell id>` line per copy, minted from source/ids.yaml's `item_spell_copy` block (205410-205599, inside the `items`
-spell reservation) after the highest id in the file, skipping every declared spell id and every live `spell_dbc` row.
+spell reservation, then the `more:` ranges listed under it, each inside a pool reservation: 219000-219399 since the
+scarlet gear stage) after the highest id in the file, skipping every declared spell id and every live `spell_dbc` row.
 A (key, tier, base) keeps its id forever. A line no declaration wants any more stops the run unless it is marked
 `retired <date>` (its id is never reused; the item row of a retired tier still names it, so keep the spell declared if
 players hold the item). `--check` reports the lines a full run would append and never writes.
@@ -170,9 +172,9 @@ def parse_lock(text: str, block: dict | None = None) -> Lock:
         if entry.triple in triples:
             raise LockError(f"{where}: {entry.key} {entry.tier} {entry.base} is already on line "
                             f"{triples[entry.triple]}")
-        if block and not block["start"] <= entry.spell_id <= block["end"]:
+        if block and not _in_ranges(block_ranges(block), entry.spell_id):
             raise LockError(f"{where}: {entry.spell_id} is outside source/ids.yaml's {LOCK_BLOCK} block "
-                            f"({block['start']}-{block['end']})")
+                            f"({describe_ranges(block_ranges(block))})")
         ids[entry.spell_id] = number
         triples[entry.triple] = number
         lock.lines.append(entry)
@@ -194,6 +196,29 @@ def lock_text(lock: Lock, appended: list[str]) -> str:
 
 def reservation(ids_cfg: dict) -> dict | None:
     return ids_cfg.get(LOCK_BLOCK)
+
+
+def block_ranges(block: dict) -> list[tuple[int, int]]:
+    """The block's id ranges in minting order: its own `start`-`end`, then each `more:` entry (the block outgrew its
+    first range, which sits between other reservations and cannot be widened)."""
+    return [(int(block["start"]), int(block["end"]))] + [(int(r["start"]), int(r["end"]))
+                                                          for r in (block.get("more") or ())]
+
+
+def _in_ranges(ranges: list[tuple[int, int]], spell_id: int) -> bool:
+    return any(low <= spell_id <= high for low, high in ranges)
+
+
+def _next_in_ranges(ranges: list[tuple[int, int]], at_least: int) -> int | None:
+    """The first id >= `at_least` that sits in a range, None when every range lies below it."""
+    for low, high in ranges:
+        if at_least <= high:
+            return max(at_least, low)
+    return None
+
+
+def describe_ranges(ranges: list[tuple[int, int]]) -> str:
+    return " and ".join(f"{low}-{high}" for low, high in ranges)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -378,8 +403,8 @@ def family_problems(index: SpellIndex, family: list[int], dsl_classes: dict, whe
 
 def _scaled_amount(effect, ratio: float) -> dict:
     """A stat aura's new `base_points` / `die_sides` (the amount is BasePoints + 1..DieSides), or {} to keep it."""
-    if (int(effect.type) not in APPLY_AURA_EFFECTS or int(effect.apply_aura) not in STAT_AURAS or effect.has_potency
-            or effect.potency_excluded):
+    stat_like = int(effect.apply_aura) in STAT_AURAS or effect.scale_amount
+    if int(effect.type) not in APPLY_AURA_EFFECTS or not stat_like or effect.has_potency or effect.potency_excluded:
         return {}
     offset = 1 if effect.die_sides >= 1 else 0
     low = effect.base_points + offset
@@ -558,6 +583,7 @@ def expand(
     by_triple = lock.by_triple
     declared = {int(e["id"]) for e in dsl_classes["spells"]}
     in_lock = {line.spell_id for line in lock.lines}
+    ranges = block_ranges(block)
     next_id = max([block["start"] - 1, *in_lock]) + 1
     taken: set[int] | None = None
     ids: dict[tuple[str, str, int], int] = {}
@@ -574,14 +600,16 @@ def expand(
             continue
         if taken is None:
             taken = declared | in_lock | set(int(i) for i in (taken_loader() if taken_loader else ()))
-        while next_id in taken or next_id in ids.values():
-            next_id += 1
-        if next_id > block["end"]:
+        candidate = _next_in_ranges(ranges, next_id)
+        while candidate is not None and (candidate in taken or candidate in ids.values()):
+            candidate = _next_in_ranges(ranges, candidate + 1)
+        if candidate is None:
             if not full:
                 out.errors.append(f"items: source/ids.yaml's {LOCK_BLOCK} block "
-                                  f"({block['start']}-{block['end']}) is full; widen it")
+                                  f"({describe_ranges(ranges)}) is full; add a `more:` range")
                 full = True
             continue
+        next_id = candidate
         ids[triple] = next_id
         out.lock_appended.append(f"{next_id} {triple[0]} {triple[1]} {triple[2]}")
         next_id += 1

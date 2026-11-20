@@ -24,6 +24,9 @@ namespace HardModeItems
     // ids.yaml reservation `items` (item variants); the Deadmines hard mode effects take its first ten ids.
     IdSlice constexpr kSpellsItems{ 205400, 205599 };
     IdSlice constexpr kSpellsDeadminesHardModeItems{ 205400, 205409 };
+    // ids.yaml reservation `item_copies`: the item_spell_copy block's second range (scarlet gear stage), where the
+    // per-tier copies mint once 205410-205599 is full.
+    IdSlice constexpr kSpellsItemCopyPool{ 219000, 219399 };
 
     enum HardModeItemSpells : std::uint32_t
     {
