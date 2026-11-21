@@ -720,11 +720,11 @@ def check_mortal_strike_and_rend(rows: dict) -> list[str]:
     if (_i(ms, "RecoveryTime"), _i(ms, "ManaCost")) != (6000, 250):
         bad.append(f"{MORTAL_STRIKE}: cooldown / cost {(_i(ms, 'RecoveryTime'), _i(ms, 'ManaCost'))}, "
                    "expected (6000, 250) (Q2: row unchanged)")
-    if _i(ms, "EffectBasePoints_2") != 166:
-        bad.append(f"{MORTAL_STRIKE}: weapon percent bp {ms.get('EffectBasePoints_2')!r}, expected 166 "
+    if _i(ms, "EffectBasePoints_2") != 179:
+        bad.append(f"{MORTAL_STRIKE}: weapon percent bp {ms.get('EffectBasePoints_2')!r}, expected 179 "
                    "(D29 130%, balance 2026-10-30 x1.5 x1.4 x0.8 x1.1 x0.95: 228%, "
                    "DPS balance pass 1031 Arms x0.75: 171%, BAL1 2026-11-15 +10%: 188%, BAL2 +10%: 207%, BAL4 -5%: 197%, "
-                   "S9 2026-11-21 x0.85: 167%)")
+                   "S9 2026-11-21 x0.85: 167%, S13 x1.08: 180%)")
     # Q9 (user ruling 2026-10-30): Rend needs any melee weapon (the stock gate); the weapon talents fold into it
     # through the core's normal item-gated aura-79 path (second ruling 2026-10-30: no divide-out hook)
     if (_i(rend, "EquippedItemClass"), _i(rend, "EquippedItemSubclass")) != (2, 173555):
