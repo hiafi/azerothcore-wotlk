@@ -1676,7 +1676,7 @@ mangle_bear_33878 = spell(
     range_yards=5.0,
     duration_ms=60000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=74.37664, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=63.22014, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=6, apply_aura=255, misc_value=15),
     ],
     spell_icon_id=2312,
@@ -1694,7 +1694,8 @@ mangle_bear_33878 = spell(
           ' Effect 1 ap_potency 43.41 -> 30.39 (2026-10-12, melee-haste-gcd T4, user ruling: Bear DPS Mangle (Bear) x0.70). Effect 1 ap_potency 30.39 -> 50.97 (2026-10-12, melee-haste-gcd T4-FIX, Predatory Strikes leak removed).'
           ' Effect 1 ap_potency 50.97 -> 61.16 (2026-11-01, DPS balance pass 1031, user ruling: Mangle (Bear) +20%).'
           ' Effect 1 ap_potency 61.16 -> 122.33 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Mangle (Bear) +100%)'
-          ' Effect 1 ap_potency 122.33 -> 97.864 (2026-11-15, balance on the Normal-tier kits, user ruling: Mangle (Bear) -20%). Effect 1 ap_potency 97.864 -> 74.37664 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS and Bear tank shared x0.76).',
+          ' Effect 1 ap_potency 122.33 -> 97.864 (2026-11-15, balance on the Normal-tier kits, user ruling: Mangle (Bear) -20%). Effect 1 ap_potency 97.864 -> 74.37664 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS and Bear tank shared x0.76).'
+          ' Effect 1 ap_potency 74.37664 -> 63.22014 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Bear DPS, Mangle (Bear) x0.85; shared with the Bear tank).',
     raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'All bleed effects cause $s2% additional damage.', 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mangle the target for {pot1} damage and causes the target to take $s2% additional damage from bleed effects for $d.  While Bestial Fury is active, has a 15% chance to grant Tooth and Claw.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': SS_ANY_BEAR, 'SpellClassMask_2': 64, 'SpellClassSet': 7, 'SpellLevel': 10, 'SpellVisualID_1': 6586, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(mangle_bear_33878, trainer_id=216, req_level=10, money_cost=600)  # druid-rework FERAL §5: talent -> baseline

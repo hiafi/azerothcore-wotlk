@@ -6125,12 +6125,13 @@ chaos_bolt_copy_200980 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=160.7213, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=149.7923, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=3178,
     notes='warlock-rework DESTRUCTION §5/§7.5/§7.6: Cast for the Havoc duplicate and Soulburn: Chaos Bolts extra targets (WP-B); range_yards 30 so Destructive Reach and the engine range check enforce "within range". Shares Chaos Bolts d2 0x20000; triggered + SUPPRESS_CASTER_PROCS so it never re-rolls Soulburn/Chaotic Inferno/Intensity/Soul Leech/Chaos Echo (G3). Potency system P4 (warlock pilot): converted to sp_potency=213.0 (user-reviewed, mismatched row) - same value as Chaos Bolt 50796 by design. Effect 1 sp_potency 213.0 -> 170.4 (2026-11-01, DPS balance pass 1031, user ruling: Chaos Bolt -20%).'
     ' Effect 1 sp_potency 170.4 -> 204.48 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Chaos Bolt +20%; the Havoc/Soulburn copy follows its parent).'
-          ' Effect 1 sp_potency 204.48 -> 160.7213 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Destruction x0.786).',
+          ' Effect 1 sp_potency 204.48 -> 160.7213 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Destruction x0.786).'
+          ' Effect 1 sp_potency 160.7213 -> 149.7923 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Destruction x0.932 on Chaos Bolt, Incinerate and Immolate; the Havoc/Soulburn copy follows its parent).',
     raw_overrides={'AttributesEx3': 327680, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Shadowflame damage. Cannot be resisted, and pierces through all absorption effects.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': m.CHAOS_BOLT, 'SpellClassSet': 5, 'SpellLevel': 40, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
 scripted_by(chaos_bolt_copy_200980, 'spell_warl_chaos_bolt_copy', 'spell_warl_chaos_bolt_mastery')

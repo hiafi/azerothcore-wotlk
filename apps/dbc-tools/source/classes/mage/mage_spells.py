@@ -72,14 +72,15 @@ frostbolt_116 = spell(
     duration_ms=5000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-41, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED),
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=65.9736, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=68.6125, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
     ],
     spell_icon_id=188,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass, anchor spell): converted to sp_potency=123.6 (mage-potency-proposals.txt - the live 2.0s cast time this spell carries from an earlier Frost Mage rework, not the design doc's 3.0s/100-potency hypothetical, is real, documented tuning drift, not a bug - see docs/potency-system.md's reference table note). mana_cost_pct 11 -> 9 (2026-10-08, DPS balance pass, user ruling: Frost mana). Effect 2 sp_potency 123.6 -> 136.0 (2026-10-08, DPS balance pass, user ruling: Frost damage). mana_cost_pct 9 -> 8 (2026-10-08, DPS balance pass, user ruling: Frost damage and mana). Effect 2 sp_potency 136.0 -> 142.8 (2026-10-08, DPS balance pass, user ruling: Frost +5%)."
           ' Effect 2 sp_potency 142.8 -> 85.68 (2026-10-31, DPS balance pass 1031, user ruling: Frost damage -40%).'
           ' Tooltip {pot2*mult} -> {pot2*fbmult} (2026-11-07, balance 1107: shows Empowering Frostbolt\'s +7/15%).'
-          ' Effect 2 sp_potency 85.68 -> 65.9736 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Frost x0.770).',
+          ' Effect 2 sp_potency 85.68 -> 65.9736 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Frost x0.770).'
+          ' Effect 2 sp_potency 65.9736 -> 68.6125 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Frost Mage x1.04 on Ice Lance, Glacial Spike, Frostbolt, Frozen Orb, Flurry and Piercing Cold).',
     tooltip_vars=frost_talent_tooltip,
     raw_overrides={'AttributesEx6': 2097152, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement slowed by $s1%.', 'BaseLevel': 4, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a bolt of frost at the enemy, causing {pot2*fbmult} Frost damage and slowing movement speed by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 28.0, 'SpellClassMask_1': 32, 'SpellClassSet': 3, 'SpellLevel': 4, 'SpellPriority': 50, 'SpellVisualID_1': 13, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1396,14 +1397,15 @@ ice_lance_30455 = spell(
     mana_cost_pct=6,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=43.505, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=45.2452, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=186,
     notes='EDITED for docs/frost-mage-redesign.md sec 2 (Ice Lance): "Now learnable at level 15, will need to create scaling for it." BaseLevel/SpellLevel 66->15; base_points/points_per_level rescaled to keep the same level-80 ceiling the old 66-anchored single-rank bootstrap landed on (~217 before spell power) - a real balance pass should replace this placeholder slope. single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 66); RealPointsPerLevel from rank1→top rank\'s own top level (82, chain has a gap at 60) slope (anchor rank 42914, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (42914, rank 3); MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=60.7 (mage-potency-proposals.txt). Effect 1 sp_potency 60.7 -> 72.8 (2026-10-08, DPS balance pass, user ruling: Frost burst +20%). Effect 1 sp_potency 72.8 -> 87.4 (2026-10-08, DPS balance pass, user ruling: Frost damage and mana). Effect 1 sp_potency 87.4 -> 91.8 (2026-10-08, DPS balance pass, user ruling: Frost +5%).'
           ' Effect 1 sp_potency 91.8 -> 100.98 (2026-10-31, DPS balance pass 1031, user ruling: Frost damage +10%).'
           ' Effect 1 sp_potency 100.98 -> 50.49 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Ice Lance -50%).'
           ' Effect 1 sp_potency 50.49 -> 56.5 (56.549 kept to one decimal, so +11.9%) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Ice Lance +12%).'
-          ' Effect 1 sp_potency 56.5 -> 43.505 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Frost x0.770).',
+          ' Effect 1 sp_potency 56.5 -> 43.505 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Frost x0.770).'
+          ' Effect 1 sp_potency 43.505 -> 45.2452 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Frost Mage x1.04 on Ice Lance, Glacial Spike, Frostbolt, Frozen Orb, Flurry and Piercing Cold).',
     tooltip_vars=frost_talent_tooltip,
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 15, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1*mult} Frost damage to an enemy target.  Causes triple damage against Frozen targets.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 38.0, 'SpellClassMask_1': 131072, 'SpellClassSet': 3, 'SpellLevel': 15, 'SpellVisualID_1': 7906, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
