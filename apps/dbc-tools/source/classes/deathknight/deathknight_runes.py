@@ -362,14 +362,15 @@ exsanguination_203041 = spell(
     range_yards=RANGE_SELF,
     duration_ms=6000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, ap_potency=7.0, potency_kind='heal_periodic',
+        Effect(type=EffectType.APPLY_AURA, ap_potency=10.08, potency_kind='heal_periodic',
                implicit_target_a=_TARGET_UNIT_CASTER, apply_aura=AuraType.PERIODIC_HEAL, amplitude=2000),
     ],
     spell_icon_id=3006,
     notes='dk-rework DK0b (shared doc "Rune of Exsanguination"): the proc buff. PERIODIC_HEAL every 2 s for 6 s '
           '(3 ticks), ap_potency 10 -> 7 (2026-11-01, DPS balance pass 1031 round T2, user ruling: Exsanguination healing -30%) heal_periodic, SpellLevel 20, CumulativeAura 3. DefenseType 1 so the HoT can crit '
           'and Versatility applies (DmgClass NONE periodic heals never crit); family 15; S1a adds the '
-          'self-heal bit d2 b15 (DK_SELF_HEAL, SpellClassMask_3). Icon 3006 is a placeholder (V stage).',
+          'self-heal bit d2 b15 (DK_SELF_HEAL, SpellClassMask_3). Icon 3006 is a placeholder (V stage).'
+          ' ap_potency 7.0 -> 10.08 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: attack-power heals and absorbs option A (restore the pre-rebase level), x1.44).',
     raw_overrides={
         'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'CumulativeAura': 3,
         'SpellClassMask_3': m.DK_SELF_HEAL,  # S1a: the spell's own family bit d2 b15, the Voracious capstone self-heal group

@@ -326,7 +326,7 @@ avengers_shield_extra_201370 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=_FAR_RANGE, duration_ms=10000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=264.7, ap_potency=264.7, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=307.052, ap_potency=307.052, potency_kind='direct',
                implicit_target_a=6, chain_targets=2),
         Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=11, implicit_target_a=6,
                apply_aura=AuraType.MOD_DECREASE_SPEED, chain_targets=2),
@@ -340,7 +340,8 @@ avengers_shield_extra_201370 = spell(
           "sp_potency 132.35 -> 264.7 and ap_potency 132.35 -> 264.7 (2026-11-01, DPS balance pass 1031 round T1, "
           "user ruling: Avenger's Shield +100%). "
           "Effects 0 and 1 chain_targets 3 -> 2 (2026-11-16, AoE round 3 tank wave on the Normal-tier kits, user "
-          "ruling: Prot Paladin option C, Avenging Light's extra shields chain 3 -> 2; Avenger's Shield 31935 keeps 3).",
+          "ruling: Prot Paladin option C, Avenging Light's extra shields chain 3 -> 2; Avenger's Shield 31935 keeps 3)."
+          ' sp_potency 264.7 -> 307.052; ap_potency 264.7 -> 307.052 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Prot Paladin, Avenger\'s Shield, Shield of Righteousness and Hammer of the Righteous x1.16).',
     raw_overrides=_raw(
         "", "Dazed.", level=40, dmg_class=_DMG_RANGED,
         AttributesEx2=_ATTR2_IGNORE_LINE_OF_SIGHT, AttributesEx3=_ATTR3_SUPPRESS_CASTER_PROCS,

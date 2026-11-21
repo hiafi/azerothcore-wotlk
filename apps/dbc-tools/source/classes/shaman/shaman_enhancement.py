@@ -1203,12 +1203,17 @@ toughness_heal_202444 = spell(
 scripted_by(toughness_heal_202444, 'spell_sha_enh_toughness_heal')
 
 anticipation_jumps_202447 = _hidden_child(
-    202447, 'Anticipation', [_mod(SpellModOp.JUMP_TARGETS, False, ANTICIPATION_CL_JUMPS['value'] - 1)], ICON_ANTICIPATION,
-    School.NATURE, 'Your Chain Lightning jumps to additional targets.',
+    202447, 'Anticipation', [_mod(SpellModOp.JUMP_TARGETS, False, ANTICIPATION_CL_JUMPS['value'] - 1),
+                             _aura(AURA_MOD_PARRY_PERCENT, 14)], ICON_ANTICIPATION,
+    School.NATURE, 'Your Chain Lightning jumps to additional targets and your chance to parry is increased.',
     S1_NOTE + 'hidden child of Rockbiter for Anticipation (any rank): E0 SPELLMOD_JUMP_TARGETS flat +ANTICIPATION_CL_JUMPS (2, stored '
     '1) on Chain Lightning (d0 b1, the shape of Frostbrand\'s and Storm Empowerment\'s jump mods). Applied by '
     'Shaman::SyncRockbiterChildren while Rockbiter is up and Anticipation has a rank (Rockbiter apply / remove, talent change, '
-    'login), removed with Rockbiter. Passive + DO_NOT_DISPLAY with the L5 pair. No class bits of its own.',
+    'login), removed with Rockbiter. Passive + DO_NOT_DISPLAY with the L5 pair. No class bits of its own. '
+    'E1 aura 47 MOD_PARRY_PERCENT (2026-11-21, level60-stat-curve round S9, user ruling 6: "While Rockbiter is active, your '
+    'parry chance is increased by 5/10/15%"): the row stores rank 3\'s 15 (stored 14); Shaman::SyncRockbiterChildren sets '
+    'the live rank value from the Anticipation rank\'s eff3 DUMMY (16254 / 16271 / 16272) with ChangeAmount, as Static '
+    'Shock\'s orb child. A flat parry percent is not diminished.',
     **_emask(1, CHAIN_LIGHTNING_D0),
 )
 

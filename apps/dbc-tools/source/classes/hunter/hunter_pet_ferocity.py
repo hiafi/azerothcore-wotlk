@@ -441,9 +441,9 @@ moonglow_dust_201757 = _utility(
 _HEALING_DUST_MS = 12000
 healing_dust_201990 = _utility(
     201990, 'Healing Dust', HEALING_DUST_LEVEL,
-    [Effect(type=EffectType.APPLY_AURA, ap_potency=_dot_rate(300, _HEALING_DUST_MS), potency_kind='heal_periodic',
+    [Effect(type=EffectType.APPLY_AURA, ap_potency=_dot_rate(420, _HEALING_DUST_MS), potency_kind='heal_periodic',
             implicit_target_a=1, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
-     Effect(type=EffectType.APPLY_AURA, ap_potency=_dot_rate(300, _HEALING_DUST_MS), potency_kind='heal_periodic',
+     Effect(type=EffectType.APPLY_AURA, ap_potency=_dot_rate(420, _HEALING_DUST_MS), potency_kind='heal_periodic',
             implicit_target_a=_TARGET_UNIT_MASTER, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000)],
     2315, 8529,
     'Your pet sheds healing dust, healing itself and you for {pot1.total} over $d.',
@@ -453,7 +453,8 @@ healing_dust_201990 = _utility(
     notes='hunter-pet-families F1: Moth slot 3, manual. PERIODIC_HEAL on the pet (TargetA 1) and the hunter (TargetA '
           '27 MASTER, FE 9i), 300 potency each over 12 s (rate 37.5, 3 s ticks; Mend Pet 136 is 353 over 15 s), from '
           'the pet\'s AP (pet_owner_scaling). DefenseType 1 so the potency coefficient applies (custom-spells.md). '
-          '1 min. Visual 8529 (Serenity Dust), icon 2315 (Dust).',
+          '1 min. Visual 8529 (Serenity Dust), icon 2315 (Dust).'
+          ' Effects 1 and 2 ap_potency total potency 300 -> 420 over the duration (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: attack-power heals and absorbs option A, restore x1.40).',
 )
 
 
@@ -738,7 +739,7 @@ eternal_guardian_201761 = _utility(
 _SPIRIT_MEND_MS = 10000
 spirit_mend_201994 = _utility(
     201994, 'Spirit Mend', SPIRIT_MEND_LEVEL,
-    [Effect(type=EffectType.APPLY_AURA, ap_potency=_dot_rate(150, _SPIRIT_MEND_MS), potency_kind='heal_periodic',
+    [Effect(type=EffectType.APPLY_AURA, ap_potency=_dot_rate(210, _SPIRIT_MEND_MS), potency_kind='heal_periodic',
             implicit_target_a=_TARGET_UNIT_CASTER_AREA_RAID, apply_aura=AuraType.PERIODIC_HEAL, amplitude=2000,
             radius_yards=40.0)],
     1879, 280,
@@ -750,7 +751,8 @@ spirit_mend_201994 = _utility(
     notes='hunter-pet-families F1: Spirit Beast slot 3, manual. PERIODIC_HEAL on the raid within 40 yd of the pet '
           '(TargetA 56, ruling 7), 150 potency each over 10 s (rate 22.5, 2 s ticks), from the pet\'s AP '
           '(pet_owner_scaling). DefenseType 1 (custom-spells.md). 1 min. Visual 280 / icon 1879 from Spirit Mend '
-          '42025.',
+          '42025.'
+          ' Effect 1 ap_potency total potency 150 -> 210 over the duration (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: attack-power heals and absorbs option A, restore x1.40).',
 )
 
 

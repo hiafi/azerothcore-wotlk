@@ -736,7 +736,7 @@ energizing_spores_201777 = _utility(
 _RESTORATIVE_SPORES_MS = 10000
 restorative_spores_202010 = _utility(
     202010, 'Restorative Spores', RESTORATIVE_SPORES_LEVEL,
-    [Effect(type=EffectType.APPLY_AURA, ap_potency=_dot_rate(150, _RESTORATIVE_SPORES_MS),
+    [Effect(type=EffectType.APPLY_AURA, ap_potency=_dot_rate(210, _RESTORATIVE_SPORES_MS),
             potency_kind='heal_periodic', implicit_target_a=_TARGET_UNIT_CASTER_AREA_RAID,
             apply_aura=AuraType.PERIODIC_HEAL, amplitude=2000, radius_yards=40.0)],
     1737, 7847,
@@ -748,7 +748,8 @@ restorative_spores_202010 = _utility(
     notes='hunter-pet-families F3: Sporebat slot 3, manual. PERIODIC_HEAL on the raid within 40 yd of the pet (TargetA '
           '56, ruling 7), Spirit Mend 201994\'s numbers: 150 potency each over 10 s (rate 22.5, 2 s ticks), from the '
           'pet\'s AP (pet_owner_scaling). DefenseType 1 (custom-spells.md). 1 min. Visual 7847 / icon 1737 from Spore '
-          'Explosion 32327.',
+          'Explosion 32327.'
+          ' Effect 1 ap_potency total potency 150 -> 210 over the duration (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: attack-power heals and absorbs option A, restore x1.40).',
 )
 
 
@@ -974,7 +975,7 @@ qiraji_fortitude_201780 = _utility(
 
 swarm_shield_202013 = _utility(
     202013, 'Swarm Shield', SWARM_SHIELD_LEVEL,
-    [Effect(type=EffectType.APPLY_AURA, ap_potency=300.0, potency_kind='absorb', implicit_target_a=_TARGET_UNIT_MASTER,
+    [Effect(type=EffectType.APPLY_AURA, ap_potency=420.0, potency_kind='absorb', implicit_target_a=_TARGET_UNIT_MASTER,
             apply_aura=AuraType.SCHOOL_ABSORB, misc_value=_SCHOOL_MASK_ALL)],
     566, 784,
     'Your pet surrounds you with a swarm that absorbs {pot1} damage for $d.',
@@ -983,7 +984,8 @@ swarm_shield_202013 = _utility(
     notes='hunter-pet-families F3: Silithid slot 3, manual. Bubble Shield 201998\'s shape: aura 69 SCHOOL_ABSORB all '
           'schools on the hunter (TargetA 27 MASTER, FE 9f), 300 potency on the heal scale, 15 s, 1 min; '
           'spell_hun_pet_absorb (F2, PLAN §5.2 `absorb`) adds the generated ap_bonus x the pet\'s attack power. Visual '
-          '784 / icon 566 from Power Word: Shield 17.',
+          '784 / icon 566 from Power Word: Shield 17.'
+          ' Effect 1 ap_potency 300 -> 420 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: attack-power heals and absorbs option A, restore x1.40).',
 )
 
 

@@ -574,11 +574,12 @@ firebolt_3110 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=33.798, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=12.3945, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=18,
     notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/mana_cost_pct from max rank; MaxLevel set to 80. PLAN A9 (druid-rework code review finding #9): keeps its live cast time - cast_time_ms=2000, raw CastingTimeIndex (5, 2000ms) dropped; no behaviour change. Potency system P8 (warlock pets): cast by the Imp (pet AI, stock spellbook path, no custom base points - the hook applies naturally). Converted to sp_potency=43.0, the user's own pre-set warlock-potency-proposals.txt value (recorded 2026-10-01, held for P8 since this is pet-cast) - not the plain report default (43.2, effectively the same number, rounding only)."
-          ' Effect 1 sp_potency 43.0 -> 33.798 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Destruction x0.786).',
+          ' Effect 1 sp_potency 43.0 -> 33.798 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Destruction x0.786).'
+          ' Effect 1 sp_potency 33.798 -> 12.3945 (x0.3667: the pet now gets 100% of the owner\'s spell power instead of 15% (spell_warl_generic_scaling, user ruling 1A); sized so the Destruction Normal-kit hit stays the same at owner spell power 453.6: (1 + 0.006442 x 0.15 x 453.6) / (1 + 0.006442 x 453.6)) (2026-11-21, level60-stat-curve round S9: targeted trims after S8).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Fire damage to a target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 16.0, 'SpellClassMask_1': 4096, 'SpellClassSet': 5, 'SpellLevel': 1, 'SpellVisualID_1': 67, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
@@ -919,10 +920,11 @@ lash_of_pain_7814 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=70.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=25.1699, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=596,
-    notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P8 (warlock pets): cast by the Succubus (pet AI, stock spellbook path, no custom base points - the hook applies naturally). Converted to sp_potency=70.0, the user's own pre-set warlock-potency-proposals.txt value (recorded 2026-10-01, held for P8 since this is pet-cast) - not the plain report default (63.2); the live SP coefficient (0.429) implied 100.1, so the user's own reviewed number sits between the two.",
+    notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P8 (warlock pets): cast by the Succubus (pet AI, stock spellbook path, no custom base points - the hook applies naturally). Converted to sp_potency=70.0, the user's own pre-set warlock-potency-proposals.txt value (recorded 2026-10-01, held for P8 since this is pet-cast) - not the plain report default (63.2); the live SP coefficient (0.429) implied 100.1, so the user's own reviewed number sits between the two."
+          ' Effect 1 sp_potency 70.0 -> 25.1699 (x0.3596: the pet now gets 100% of the owner\'s spell power instead of 15% (spell_warl_generic_scaling, user ruling 1A); sized so the Demonology (no Succubus kit; the median warlock kit) Normal-kit hit stays the same at owner spell power 474.4: (1 + 0.006442 x 0.15 x 474.4) / (1 + 0.006442 x 474.4)) (2026-11-21, level60-stat-curve round S9: targeted trims after S8).',
     raw_overrides={'AttributesEx': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant attack that lashes the target, causing {pot1} Shadow damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8192, 'SpellClassSet': 5, 'SpellLevel': 20, 'SpellVisualID_1': 792, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1410,11 +1412,12 @@ shadow_bite_54049 = spell(
     mana_cost_pct=3,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=46.5, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=16.3748, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=2027,
     notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 42); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P8 (warlock pets): cast by the Felhunter (pet AI, stock spellbook path, no custom base points - the hook applies naturally). eff0 converted to sp_potency=60.0, the user's own pre-set warlock-potency-proposals.txt value (recorded 2026-10-01, held for P8 since this is pet-cast) - not the plain report default (26.2); the live SP coefficient (0.429) implied 100.1, so the user's own reviewed number sits between the two. eff1/eff2 (the per-DoT percent bonus, read via GetAmount()/CalcValue() by spell_warl_shadow_bite_improved_felhunter) are flat tier-2 constants, untouched."
-          ' Effect 1 sp_potency 60.0 -> 46.5 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Affliction x0.775).',
+          ' Effect 1 sp_potency 60.0 -> 46.5 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Affliction x0.775).'
+          ' Effect 1 sp_potency 46.5 -> 16.3748 (x0.3521: the pet now gets 100% of the owner\'s spell power instead of 15% (spell_warl_generic_scaling, user ruling 1A); sized so the Affliction Normal-kit hit stays the same at owner spell power 497.5: (1 + 0.006442 x 0.15 x 497.5) / (1 + 0.006442 x 497.5)) (2026-11-21, level60-stat-curve round S9: targeted trims after S8).',
     raw_overrides={'AttributesEx': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Bite the enemy, causing {pot1} Shadow damage plus an additional $s3% damage for each of your damage over time effects on the target.', 'EffectBasePoints_2': -1, 'EffectBasePoints_3': 14, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 4194304, 'SpellClassSet': 5, 'SpellLevel': 42, 'SpellVisualID_1': 11837, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(shadow_bite_54049, 'spell_warl_shadow_bite_improved_felhunter')

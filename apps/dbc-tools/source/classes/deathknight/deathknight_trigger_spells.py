@@ -4460,10 +4460,13 @@ veteran_of_the_third_war_49006 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=137),
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=137, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_RATING_FROM_STAT,
+               misc_value=1 << 3),
     ],
     spell_icon_id=2615,
-    notes='S1a (Blood doc "Veteran of the Third War"): E3 (aura 240, expertise) dropped, Expertise is removed from the server. E1 Strength bp 1 / 3 / 5, E2 Stamina bp 0 / 1 / 2 unchanged.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by 2% and your Stamina by 1%.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Veteran of the Third War"): E3 (aura 240, expertise) dropped, Expertise is removed from the server. E1 Strength bp 1 / 3 / 5, E2 Stamina bp 0 / 1 / 2 unchanged.'
+          ' Parry clause (2026-11-21, level60-stat-curve round S9, user ruling: Blood DK tank survival): E3 aura 220 MOD_RATING_FROM_STAT, misc 8 (1 << CR_PARRY), MiscValueB 0 (Strength), bp 5 = 6% of Strength as parry rating, the stock Forceful Deflection 49410 mechanism (25%), on top of it.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by 2% and your Stamina by 1%, and converts an additional $s3% of your Strength into parry rating.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4481,10 +4484,13 @@ veteran_of_the_third_war_49526 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=137),
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=137, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=12, implicit_target_a=1, apply_aura=AuraType.MOD_RATING_FROM_STAT,
+               misc_value=1 << 3),
     ],
     spell_icon_id=2615,
-    notes='S1a (Blood doc "Veteran of the Third War"): E3 (aura 240, expertise) dropped, Expertise is removed from the server. E1 Strength bp 1 / 3 / 5, E2 Stamina bp 0 / 1 / 2 unchanged.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by 4% and your Stamina by 2%.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Veteran of the Third War"): E3 (aura 240, expertise) dropped, Expertise is removed from the server. E1 Strength bp 1 / 3 / 5, E2 Stamina bp 0 / 1 / 2 unchanged.'
+          ' Parry clause (2026-11-21, level60-stat-curve round S9, user ruling: Blood DK tank survival): E3 aura 220 MOD_RATING_FROM_STAT, misc 8 (1 << CR_PARRY), MiscValueB 0 (Strength), bp 12 = 13% of Strength as parry rating, the stock Forceful Deflection 49410 mechanism (25%), on top of it.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by 4% and your Stamina by 2%, and converts an additional $s3% of your Strength into parry rating.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4502,10 +4508,13 @@ veteran_of_the_third_war_50029 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=137),
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=137, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.MOD_RATING_FROM_STAT,
+               misc_value=1 << 3),
     ],
     spell_icon_id=2615,
-    notes='S1a (Blood doc "Veteran of the Third War"): E3 (aura 240, expertise) dropped, Expertise is removed from the server. E1 Strength bp 1 / 3 / 5, E2 Stamina bp 0 / 1 / 2 unchanged.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by 6% and your Stamina by 3%.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Veteran of the Third War"): E3 (aura 240, expertise) dropped, Expertise is removed from the server. E1 Strength bp 1 / 3 / 5, E2 Stamina bp 0 / 1 / 2 unchanged.'
+          ' Parry clause (2026-11-21, level60-stat-curve round S9, user ruling: Blood DK tank survival): E3 aura 220 MOD_RATING_FROM_STAT, misc 8 (1 << CR_PARRY), MiscValueB 0 (Strength), bp 19 = 20% of Strength as parry rating, the stock Forceful Deflection 49410 mechanism (25%), on top of it.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by 6% and your Stamina by 3%, and converts an additional $s3% of your Strength into parry rating.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 

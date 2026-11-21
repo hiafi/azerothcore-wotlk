@@ -19,7 +19,7 @@ skipped by the other checks.
  10. Dancing Rune Weapon has no Runic Power cost. 11. Bloodworms aura 231 stored 1 (value 2), 18 s summon, no proc cd.
  12. Bonestorm USE_ALL_MANA + HASTE_AFFECTS_PERIODIC. 13. Shroud aura 301 + 88 + NO_AURA_CANCEL; lockout
      NO_IMMUNITIES + ALLOW_AURA_WHILE_DEAD. 14. Blood Gorged ARP misc physical, damage passives bp 2/5/8 with no
-     points_per_level. 15. Veteran of the Third War without aura 240.
+     points_per_level. 15. Veteran of the Third War without aura 240, its third slot the S9 parry clause.
  16. Every S1 DONE spell-class / DONE_PERIODIC spell_proc row has SpellPhaseMask 2.
  17. No S1 tooltip ends in "cooldown.". 18. SpellDescriptionVariables names <= 12 chars (1250-1252 declared).
  19. Vendetta 50154 explicitly unbound from spell_dk_vendetta. 20. 52212 not declared / edited, 43265 stock fields kept.
@@ -76,6 +76,9 @@ BONESTORM, SHROUD, LOCKOUT = 203148, 203146, 203147
 ARP_PASSIVES = {61274: 2, 61275: 5, 61276: 9}
 DAMAGE_PASSIVES = {50096: 2, 50108: 5, 50109: 8}
 VETERAN_RANKS = (49006, 49526, 50029)
+VETERAN_PARRY_BP = {49006: 5, 49526: 12, 50029: 19}  # S9: 6 / 13 / 20% of Strength as parry rating
+AURA_RATING_FROM_STAT = 220
+CR_PARRY = 3
 SUBVERSION_RANKS, BLOODY_STRIKES_RANKS, MIGHT_RANKS = (48997, 49490, 49491), (48977, 49394, 49395), (49023, 49533, 49534)
 SUDDEN_DOOM = -49018
 VENDETTA_RANK2 = 50154
@@ -442,8 +445,15 @@ def check_veteran(rows_by_id: dict[int, dict]) -> list[str]:
     for sid, row in _present(rows_by_id, *VETERAN_RANKS):
         if any(e["aura"] == AURA_EXPERTISE for e in _effects(row)):
             bad.append(f"{sid}: still has an aura-240 (expertise) effect")
-        if _i(row, "Effect_3"):
-            bad.append(f"{sid}: effect 2 {row.get('Effect_3')!r} not dropped")
+        # level60-stat-curve S9 (2026-11-21): the third slot is now the parry clause, aura 220 MOD_RATING_FROM_STAT on
+        # CR_PARRY from Strength (MiscValueB 0) at 6/13/20% (stored 5/12/19), Forceful Deflection's mechanism.
+        if _i(row, "Effect_3") and (_i(row, "EffectAura_3") != AURA_RATING_FROM_STAT
+                                    or _i(row, "EffectMiscValue_3") != 1 << CR_PARRY
+                                    or _i(row, "EffectMiscValueB_3")
+                                    or _i(row, "EffectBasePoints_3") != VETERAN_PARRY_BP[sid]):
+            bad.append(f"{sid}: effect 3 is not the Strength-to-parry-rating clause")
+        elif not _i(row, "Effect_3"):
+            bad.append(f"{sid}: effect 3 (the Strength-to-parry-rating clause) is missing")
     return bad
 
 
@@ -802,11 +812,16 @@ class DeathKnightS1NegativeTest(unittest.TestCase):
         self.assertEqual(len(check_blood_gorged({**good, 50108: dict(good[50108], MaxLevel=80)})), 1)
 
     def test_veteran(self):
-        good = {sid: _row(sid, Effect_1=6, EffectAura_1=137, Effect_2=6, EffectAura_2=137) for sid in VETERAN_RANKS}
+        good = {sid: _row(sid, Effect_1=6, EffectAura_1=137, Effect_2=6, EffectAura_2=137, Effect_3=6,
+                          EffectAura_3=AURA_RATING_FROM_STAT, EffectMiscValue_3=1 << CR_PARRY,
+                          EffectBasePoints_3=VETERAN_PARRY_BP[sid]) for sid in VETERAN_RANKS}
         self.assertEqual(check_veteran(good), [])
         with_expertise = {**good, 49526: dict(good[49526], Effect_3=6, EffectAura_3=240)}
-        self.assertEqual(len(check_veteran(with_expertise)), 2)  # aura 240 and an occupied third slot
+        self.assertEqual(len(check_veteran(with_expertise)), 2)  # aura 240 and a third slot that is not the clause
         self.assertEqual(len(check_veteran({**good, 50029: dict(good[50029], Effect_3=6, EffectAura_3=4)})), 1)
+        self.assertEqual(len(check_veteran({**good, 50029: dict(good[50029], EffectBasePoints_3=5)})), 1)
+        self.assertEqual(len(check_veteran({**good, 49006: dict(good[49006], EffectMiscValueB_3=1)})), 1)
+        self.assertEqual(len(check_veteran({**good, 49006: dict(good[49006], Effect_3=0)})), 1)
 
     def test_proc_phases(self):
         self.assertEqual(check_proc_phases([_proc(203153, 0x10 | 0x4, 2), _proc(-203134, 0x4, 0),

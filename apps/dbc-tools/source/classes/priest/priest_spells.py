@@ -284,7 +284,7 @@ prayer_of_healing_596 = spell(
     mana_cost_pct=20,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=36.081, potency_kind='heal', implicit_target_a=21, implicit_target_b=37, radius_yards=30.0),
+        Effect(type=EffectType.HEAL, sp_potency=31.3905, potency_kind='heal', implicit_target_a=21, implicit_target_b=37, radius_yards=30.0),
     ],
     spell_icon_id=540,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1→level-60 slope (anchor rank 25316, rank 5); coefficient/cast_time_ms/mana_cost_pct from max rank (48072, rank 7); MaxLevel set to 80. '
@@ -297,7 +297,8 @@ prayer_of_healing_596 = spell(
           '"make the mana changes baseline", Prayer of Healing the main cut; sized with Holy '
           'Concentration\'s -45% Holy Words so Holy\'s party pin50 sim runs out of mana near 45 s). '
           'Shared with Disc, whose sizing accounts for it (dps-balance-1031.STAGE-R4-PRIEST-REPORT.md). Effect 1 sp_potency 47.5 -> 42.75 (2026-11-15, balance round 4 on the Normal-tier kits, user ruling: Prayer of Healing -10% (Holy over the 4,000 goal; Disc also casts it)).'
-          ' sp_potency 42.75 -> 36.081 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).',
+          ' sp_potency 42.75 -> 36.081 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).'
+          ' sp_potency 36.081 -> 31.3905 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Holy Priest, Prayer of Healing x0.87).',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 14, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "A powerful prayer heals the friendly target's party members within $a1 yards for {pot1}.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 512, 'SpellClassSet': 6, 'SpellLevel': 30, 'SpellVisualID_1': 194, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1455,14 +1456,15 @@ circle_of_healing_34861 = spell(
     mana_cost_pct=10,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=43.753, potency_kind='heal', implicit_target_a=63, implicit_target_b=31, radius_yards=15.0),
+        Effect(type=EffectType.HEAL, sp_potency=38.0651, potency_kind='heal', implicit_target_a=63, implicit_target_b=31, radius_yards=15.0),
     ],
     spell_icon_id=2214,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1→level-60 slope (anchor rank 34864, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48089, rank 7); MaxLevel set to 80. '
           'Priest Holy rework (HOLY.md "Baseline spell edits" / design doc §3): amount set to a flat 343 - checked this row\'s actual die_sides per PLAN §3.5 before typing the number, and it was NOT the default 1 (it was 37, a real min/max variance range inherited from the stock rank chain: 343-379). HOLY.md\'s own arithmetic ("base_points=342 if die_sides=1") assumes the default, which this row did not have - flattened die_sides to 1 (explicit override) here so the stated flat "343 + 0.4 SP" reads as a deterministic amount, consistent with how every other new spell in this pass (Holy Word: Serenity/Sanctify, Divine Star, Halo) is a flat number rather than a stock-style random range. Radius stays 15 yd (user override of the design doc\'s 30 yd, PLAN §1) - only the target-count/selection logic changes, in WP-B\'s C++ script. '
           'Potency system P5-Priest: converted to sp_potency=32.4 (user-reviewed, mismatched row); the old bonus_coefficients(direct=0.4) call retired via unbind_bonus_coefficients() below, since 34861 is a real stock spell id and the stock base dump\'s own spell_bonus_data row at this key would otherwise keep winning over the new generated EffectBonusMultiplier_1 (D1) - same stale-row issue Corruption/Metamorphosis hit in the Warlock pilot. '
           'mana_cost_pct 21 -> 10 and sp_potency 32.4 -> 51.84 (+60%) (2026-11-02, DPS balance pass 1031 round R5, user ruling: Circle of Healing cheaper and stronger, cast over Prayer of Healing).'
-          ' sp_potency 51.84 -> 43.753 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).',
+          ' sp_potency 51.84 -> 43.753 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).'
+          ' sp_potency 43.753 -> 38.0651 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Holy Priest, Circle of Healing x0.87).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx5': 4194304, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals up to 5 friendly party or raid members within $a1 yards of the target for {pot1}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 268435456, 'SpellClassSet': 6, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 8253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 unbind_bonus_coefficients(circle_of_healing_34861)  # P5-Priest: retires the live stock spell_bonus_data

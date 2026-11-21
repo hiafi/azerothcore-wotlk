@@ -156,14 +156,15 @@ stomp_pet_201804 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=kits.pet_trim(52.0), potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=round(kits.pet_trim(52.0) * 0.9, 4), potency_kind='direct',
                implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],
     pet_owner_scaling=_PET_SCALING,
     spell_icon_id=129,
     tooltip_vars=bm_stomp_1161,
     notes='S1a BM 4.7 / 0.1: pet-cast Stomp, data only (S1b casts it). ap_potency 40 (guess, M tunes) -> 52.0 (2026-11-15, balance on the Normal-tier kits, user ruling: Stomp +30%), 8 yd around the target, d1 b28 + d2 b24 (STOMP_CARRIER; Earthshaker reads d2 b24). Visual 7429 from Thunderstomp 63900.'
-    ' Effect 1 ap_potency 52 -> 36.088 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).',
+    ' Effect 1 ap_potency 52 -> 36.088 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).'
+    ' Effect 1 ap_potency 36.088 -> 32.4792 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: BM x0.90).',
     raw_overrides={
         'EquippedItemClass': -1, 'SpellLevel': 30, 'DefenseType': 2, 'PreventionType': 2, 'AttributesEx': 0x200,
         'SpellClassSet': 9, 'SpellClassMask_2': m.STOMP_CARRIER[1], 'SpellClassMask_3': m.STOMP_CARRIER[2],
@@ -397,7 +398,7 @@ lunge_command_201720 = spell(
     range_yards=25.0,
     effects=[
         Effect(type=41, implicit_target_a=6),    # SPELL_EFFECT_JUMP to the target
-        _direct(kits.ferocity_st_damage(302.4)),
+        _direct(kits.ferocity_st_damage(302.4) * 0.9),
     ],
     pet_owner_scaling=_PET_SCALING,
     notes='S1a A2 / BM 4.5: Wolf I. eff0 JUMP (41) to the target, eff1 360 Physical (TUNE1: was 400). 25 yd (the jump reach) but DmgClass MELEE (B16). Visual 519 from pet Charge 61685. If the one-spell Lunge fails the playtest, split 201737 (not built).'
@@ -405,7 +406,8 @@ lunge_command_201720 = spell(
           ' Effect 1 ap_potency 252.0 -> 302.4 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Lunge (command 1) +20%).'
           ' Effect 2 ap_potency 302.4 -> 323.568 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).'
           ' Effect 2 ap_potency 323.568 -> 224.5562 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
-          ' x0.694).',
+          ' x0.694).'
+          ' Effect 2 ap_potency 224.5562 -> 202.1006 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: BM x0.90).',
     raw_overrides={**_cmd_raw(519),
                    'Description_Lang_enUS': 'Leap to the target and strike it for {pot2} Physical damage.'},
 )
@@ -421,14 +423,15 @@ rip_throat_command_201721 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=5.0,
-    effects=[_direct(kits.ferocity_st_damage(552.5))],
+    effects=[_direct(kits.ferocity_st_damage(552.5) * 0.9)],
     pet_owner_scaling=_PET_SCALING,
     notes='S1a A2 / BM 4.5: Wolf II, 850 Physical (TUNE1: was 1000), melee. Visual 2275 from Ravage 6785.'
           ' Effect 1 ap_potency 850.0 -> 425.0 (2026-11-01, DPS balance pass 1031, user ruling: Rip Throat -50%).'
           ' Effect 1 ap_potency 425.0 -> 552.5 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Rip Throat (command 2) +30%).'
           ' Effect 1 ap_potency 552.5 -> 591.175 (2026-11-13, hunter-pet-families ruling 24: Ferocity single-target command damage x1.07, kits.ferocity_st_damage).'
           ' Effect 1 ap_potency 591.175 -> 410.2754 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM'
-          ' x0.694).',
+          ' x0.694).'
+          ' Effect 1 ap_potency 410.2754 -> 369.2479 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: BM x0.90).',
     raw_overrides={**_cmd_raw(2275), 'RangeIndex': 2,
                    'Description_Lang_enUS': "Tear at the target's throat, causing {pot1} Physical damage."},
 )

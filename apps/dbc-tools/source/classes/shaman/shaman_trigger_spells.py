@@ -177,6 +177,8 @@ def _thundering_surge_clause(rank):
 
 _ANTICIPATION_JUMPS_CLAUSE = (f' While Rockbiter is active, your Chain Lightning jumps to {ANTICIPATION_CL_JUMPS["value"]} '
                               f'additional targets.')
+# level60-stat-curve S9 (2026-11-21, user ruling 6): the Rockbiter parry clause, rank value from each rank's eff3 DUMMY.
+_ANTICIPATION_PARRY_CLAUSE = ' While Rockbiter is active, your parry chance is increased by $s3%.'
 
 
 def _aura(aura, base_points=0, misc_value=0, **kw):
@@ -2369,31 +2371,34 @@ lightning_overload_30679 = _talent(
 
 mental_quickness_30812 = _talent(
     30812, 'Mental Quickness', 'Rank 1',
-    [_aura(AuraType.MOD_SPELL_DAMAGE_OF_ATTACK_POWER, 24, 126), _aura(AuraType.MOD_SPELL_HEALING_OF_ATTACK_POWER, 24, 127)], 2022,
-    _cap('Increases your spell power by 25% of your attack power.',
+    [_aura(AuraType.MOD_SPELL_DAMAGE_OF_ATTACK_POWER, 16, 126), _aura(AuraType.MOD_SPELL_HEALING_OF_ATTACK_POWER, 16, 127)], 2022,
+    _cap('Increases your spell power by 17% of your attack power.',
           'Your direct melee abilities increase the damage of your spells by 10% for 6 sec. Your damaging spells increase the damage of your melee abilities by 5% for 6 sec. These effects cannot be active at the same time.', last=False),
     EffectMiscValueB_1=1,
-    notes='S3a A2: spell power 25% of attack power (aura 237 non-physical, aura 238 healing). The stock mana-cost clause is gone.',
+    notes='S3a A2: spell power 25% of attack power (aura 237 non-physical, aura 238 healing). The stock mana-cost clause is gone.'
+          ' Spell power 25% -> 17% of attack power (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Enhancement, Mental Quickness 25/50/75% -> 17/33/50%).',
 )
 
 
 mental_quickness_30813 = _talent(
     30813, 'Mental Quickness', 'Rank 2',
-    [_aura(AuraType.MOD_SPELL_DAMAGE_OF_ATTACK_POWER, 49, 126), _aura(AuraType.MOD_SPELL_HEALING_OF_ATTACK_POWER, 49, 127)], 2022,
-    _cap('Increases your spell power by 50% of your attack power.',
+    [_aura(AuraType.MOD_SPELL_DAMAGE_OF_ATTACK_POWER, 32, 126), _aura(AuraType.MOD_SPELL_HEALING_OF_ATTACK_POWER, 32, 127)], 2022,
+    _cap('Increases your spell power by 33% of your attack power.',
           'Your direct melee abilities increase the damage of your spells by 10% for 6 sec. Your damaging spells increase the damage of your melee abilities by 5% for 6 sec. These effects cannot be active at the same time.', last=False),
     EffectMiscValueB_1=1,
-    notes='S3a A2: spell power 50% of attack power (aura 237 non-physical, aura 238 healing). The stock mana-cost clause is gone.',
+    notes='S3a A2: spell power 50% of attack power (aura 237 non-physical, aura 238 healing). The stock mana-cost clause is gone.'
+          ' Spell power 50% -> 33% of attack power (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Enhancement, Mental Quickness 25/50/75% -> 17/33/50%).',
 )
 
 
 mental_quickness_30814 = _talent(
     30814, 'Mental Quickness', 'Rank 3',
-    [_aura(AuraType.MOD_SPELL_DAMAGE_OF_ATTACK_POWER, 74, 126), _aura(AuraType.MOD_SPELL_HEALING_OF_ATTACK_POWER, 74, 127), _dummy(0)], 2022,
-    _cap('Increases your spell power by 75% of your attack power.',
+    [_aura(AuraType.MOD_SPELL_DAMAGE_OF_ATTACK_POWER, 49, 126), _aura(AuraType.MOD_SPELL_HEALING_OF_ATTACK_POWER, 49, 127), _dummy(0)], 2022,
+    _cap('Increases your spell power by 50% of your attack power.',
           'Your direct melee abilities increase the damage of your spells by 10% for 6 sec. Your damaging spells increase the damage of your melee abilities by 5% for 6 sec. These effects cannot be active at the same time.', last=True),
     EffectMiscValueB_1=1, ProcChance=100, ProcTypeMask=0x10010,
-    notes="S3a A2: spell power 75% of attack power (aura 237 non-physical, aura 238 healing). The stock mana-cost clause is gone. Rank 3 eff3 DUMMY carrier for spell_sha_enh_mental_quickness (spell_proc 30814: melee spell / magic damage hits, PROC_ATTR_TRIGGERED_CAN_PROC because Stormstrike's hits are the triggered 32175 / 32176; the script dedupes once per cast).",
+    notes="S3a A2: spell power 75% of attack power (aura 237 non-physical, aura 238 healing). The stock mana-cost clause is gone. Rank 3 eff3 DUMMY carrier for spell_sha_enh_mental_quickness (spell_proc 30814: melee spell / magic damage hits, PROC_ATTR_TRIGGERED_CAN_PROC because Stormstrike's hits are the triggered 32175 / 32176; the script dedupes once per cast)."
+          ' Spell power 75% -> 50% of attack power (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Enhancement, Mental Quickness 25/50/75% -> 17/33/50%).',
 )
 
 
@@ -3820,11 +3825,12 @@ toughness_16252 = _talent(
 
 anticipation_16254 = _talent(
     16254, 'Anticipation', 'Rank 1',
-    [_aura(AuraType.MOD_DODGE_PERCENT, 0), _aura(234, -21, 3)], 229,
+    [_aura(AuraType.MOD_DODGE_PERCENT, 0), _aura(234, -21, 3), _dummy(4)], 229,
     _cap('Increases your chance to dodge by 1% and reduces the duration of Disarm effects used against you by 20%. Does not stack with other Disarm duration reducing effects.'
-         + _ANTICIPATION_JUMPS_CLAUSE,
+         + _ANTICIPATION_JUMPS_CLAUSE + _ANTICIPATION_PARRY_CLAUSE,
          _ANTICIPATION_CAPSTONE, last=False),
-    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 3 makes spell_sha_stoneskin_grant build the Chain Lightning stone shell 202441. S3a A2: pulled stock rank, rewritten. Dodge +1% (aura 49), disarm duration -20% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).' + S1_NOTE + 'Rockbiter clauses: any rank, Chain Lightning jumps to 2 more targets (hidden child 202447, Shaman::SyncRockbiterChildren); the capstone adds the Chain Lightning orb 202446 on each hit enemy attacking the shaman (spell_sha_stoneskin_grant) and the shell 202441 drops 6 -> 3 potency.',
+    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 3 makes spell_sha_stoneskin_grant build the Chain Lightning stone shell 202441. S3a A2: pulled stock rank, rewritten. Dodge +1% (aura 49), disarm duration -20% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).' + S1_NOTE + 'Rockbiter clauses: any rank, Chain Lightning jumps to 2 more targets (hidden child 202447, Shaman::SyncRockbiterChildren); the capstone adds the Chain Lightning orb 202446 on each hit enemy attacking the shaman (spell_sha_stoneskin_grant) and the shell 202441 drops 6 -> 3 potency.'
+          ' Rockbiter parry clause (2026-11-21, level60-stat-curve round S9, user ruling 6: Enhancement tank survival): eff3 DUMMY 4 = +5% parry while Rockbiter is active; Shaman::SyncRockbiterChildren reads this value and sets it on the Anticipation child 202447 (its MOD_PARRY_PERCENT effect, no diminishing returns). The clause sits in the rank text above the capstone block.',
 )
 
 
@@ -3858,21 +3864,23 @@ spirit_weapons_16268 = _talent(
 
 anticipation_16271 = _talent(
     16271, 'Anticipation', 'Rank 2',
-    [_aura(AuraType.MOD_DODGE_PERCENT, 1), _aura(234, -36, 3)], 229,
+    [_aura(AuraType.MOD_DODGE_PERCENT, 1), _aura(234, -36, 3), _dummy(9)], 229,
     _cap('Increases your chance to dodge by 2% and reduces the duration of Disarm effects used against you by 35%. Does not stack with other Disarm duration reducing effects.'
-         + _ANTICIPATION_JUMPS_CLAUSE,
+         + _ANTICIPATION_JUMPS_CLAUSE + _ANTICIPATION_PARRY_CLAUSE,
          _ANTICIPATION_CAPSTONE, last=False),
-    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 3 makes spell_sha_stoneskin_grant build the Chain Lightning stone shell 202441. S3a A2: pulled stock rank, rewritten. Dodge +2% (aura 49), disarm duration -35% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).' + S1_NOTE + 'Rockbiter clauses: any rank, Chain Lightning jumps to 2 more targets (hidden child 202447, Shaman::SyncRockbiterChildren); the capstone adds the Chain Lightning orb 202446 on each hit enemy attacking the shaman (spell_sha_stoneskin_grant) and the shell 202441 drops 6 -> 3 potency.',
+    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 3 makes spell_sha_stoneskin_grant build the Chain Lightning stone shell 202441. S3a A2: pulled stock rank, rewritten. Dodge +2% (aura 49), disarm duration -35% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).' + S1_NOTE + 'Rockbiter clauses: any rank, Chain Lightning jumps to 2 more targets (hidden child 202447, Shaman::SyncRockbiterChildren); the capstone adds the Chain Lightning orb 202446 on each hit enemy attacking the shaman (spell_sha_stoneskin_grant) and the shell 202441 drops 6 -> 3 potency.'
+          ' Rockbiter parry clause (2026-11-21, level60-stat-curve round S9, user ruling 6: Enhancement tank survival): eff3 DUMMY 9 = +10% parry while Rockbiter is active; Shaman::SyncRockbiterChildren reads this value and sets it on the Anticipation child 202447 (its MOD_PARRY_PERCENT effect, no diminishing returns). The clause sits in the rank text above the capstone block.',
 )
 
 
 anticipation_16272 = _talent(
     16272, 'Anticipation', 'Rank 3',
-    [_aura(AuraType.MOD_DODGE_PERCENT, 2), _aura(234, -51, 3)], 229,
+    [_aura(AuraType.MOD_DODGE_PERCENT, 2), _aura(234, -51, 3), _dummy(14)], 229,
     _cap('Increases your chance to dodge by 3% and reduces the duration of Disarm effects used against you by 50%. Does not stack with other Disarm duration reducing effects.'
-         + _ANTICIPATION_JUMPS_CLAUSE,
+         + _ANTICIPATION_JUMPS_CLAUSE + _ANTICIPATION_PARRY_CLAUSE,
          _ANTICIPATION_CAPSTONE, last=True),
-    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 3 makes spell_sha_stoneskin_grant build the Chain Lightning stone shell 202441. S3a A2: pulled stock rank, rewritten. Dodge +3% (aura 49), disarm duration -50% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).' + S1_NOTE + 'Rockbiter clauses: any rank, Chain Lightning jumps to 2 more targets (hidden child 202447, Shaman::SyncRockbiterChildren); the capstone adds the Chain Lightning orb 202446 on each hit enemy attacking the shaman (spell_sha_stoneskin_grant) and the shell 202441 drops 6 -> 3 potency.',
+    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 3 makes spell_sha_stoneskin_grant build the Chain Lightning stone shell 202441. S3a A2: pulled stock rank, rewritten. Dodge +3% (aura 49), disarm duration -50% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).' + S1_NOTE + 'Rockbiter clauses: any rank, Chain Lightning jumps to 2 more targets (hidden child 202447, Shaman::SyncRockbiterChildren); the capstone adds the Chain Lightning orb 202446 on each hit enemy attacking the shaman (spell_sha_stoneskin_grant) and the shell 202441 drops 6 -> 3 potency.'
+          ' Rockbiter parry clause (2026-11-21, level60-stat-curve round S9, user ruling 6: Enhancement tank survival): eff3 DUMMY 14 = +15% parry while Rockbiter is active; Shaman::SyncRockbiterChildren reads this value and sets it on the Anticipation child 202447 (its MOD_PARRY_PERCENT effect, no diminishing returns). The clause sits in the rank text above the capstone block.',
 )
 
 

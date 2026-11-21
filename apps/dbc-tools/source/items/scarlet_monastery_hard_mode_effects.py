@@ -494,13 +494,15 @@ scripted_by(scarlet_garrison_rifle_212012, _ROLL_ONCE)
 pillar_of_light_212015 = spell(
     id=212015, name='Pillar of Light', school=School.HOLY, attributes=0, cast_time_ms=0, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF, duration_ms=0,
-    effects=[Effect(type=EffectType.HEAL, ap_potency=100.0, potency_kind='heal', time_basis_ms=_PROC_PAYOUT_MS,
+    effects=[Effect(type=EffectType.HEAL, ap_potency=144.0, potency_kind='heal', time_basis_ms=_PROC_PAYOUT_MS,
                     implicit_target_a=_TARGET_UNIT_CASTER)],
     spell_icon_id=_ICON_HOLY_SHIELD,
     notes='Scarlet Monastery hard mode, Garrison Bulwark: the pillar of Light on the wearer, cast by the wearer '
           '(triggered by 212014). A heal, attack power potency 100 (a Strength tank shield; SpellHealingBonusDone adds '
           'the AP coefficient, the Fury heal precedent), T 1.5 s. DefenseType MAGIC so the bonus applies. '
-          'SUPPRESS_CASTER_PROCS. Look: stock Beam of Light SV 12479 (the Herod section doc\'s pillar).',
+          'SUPPRESS_CASTER_PROCS. Look: stock Beam of Light SV 12479 (the Herod section doc\'s pillar).'
+          ' Effect 1 ap_potency 100.0 -> 144.0 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user '
+          'ruling: attack-power heals and absorbs option A (restore the pre-rebase level), x1.44).',
     raw_overrides=_raw('Heals you for {pot1}.', spell_level=1, DefenseType=_DMG_CLASS_MAGIC,
                        SpellVisualID_1=_SV_BEAM_OF_LIGHT, AttributesEx3=_ATTR3_SUPPRESS_CASTER_PROCS),
 )

@@ -180,7 +180,7 @@ anti_magic_zone_50461 = spell(
     range_yards=0.0,
     duration_ms=30000,
     effects=[
-        Effect(type=35, ap_potency=500.0, potency_kind='absorb', implicit_target_a=_TARGET_UNIT_CASTER,
+        Effect(type=35, ap_potency=720.0, potency_kind='absorb', implicit_target_a=_TARGET_UNIT_CASTER,
                apply_aura=AuraType.SCHOOL_ABSORB, misc_value=_MISC_NON_PHYSICAL_SCHOOLS, radius_yards=7.0),
     ],
     spell_icon_id=3144,
@@ -192,6 +192,8 @@ anti_magic_zone_50461 = spell(
         '(spell_dk_anti_magic_zone_rework, ConsumeZoneAbsorb) and each member copy is set to -1 (unlimited). SpellLevel 52 '
         '(was 55). Stock spell_dk_anti_magic_zone is unbound. 50462 (d0 b17, no caller) is left alone. The stock '
         'description "...absorbs ${$51052m1+2*$AP}" is replaced by the shared doc tooltip with {pot1}.'
+        ' Effect 1 ap_potency 500.0 -> 720.0 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user '
+        'ruling: attack-power heals and absorbs option A (restore the pre-rebase level), x1.44).'
     ),
     raw_overrides={
         'AttributesEx': 68, 'AttributesEx3': 1048576, 'AttributesEx4': 1, 'AttributesEx5': 1024, 'CastingTimeIndex': 1,
