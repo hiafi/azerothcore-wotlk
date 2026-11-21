@@ -273,6 +273,13 @@ namespace SimDaemon
         // The actor died mid-iteration, at ActorDiedAtMs sim ms into the fight (meaningless when ActorDied is false)
         bool ActorDied = false;
         uint32 ActorDiedAtMs = 0;
+        // DPS mode: the pre-pull buff phase ran its full length with nothing still being cast at its end (true
+        // without a buff phase), and whether the actor had a pet at the pull. RunPlayerbotBatch() runs an iteration
+        // again, once, when its phase was cut short or it pulled without the pet an earlier iteration had;
+        // RerunCount is how many attempts it discarded before this one (0 or 1). All three go into the report JSON.
+        bool PrePullComplete = true;
+        bool PetAtPull = false;
+        uint32 RerunCount = 0;
         uint32 CastAttempts = 0;
         uint64 TotalDamage = 0;
         uint32 CastCount = 0;

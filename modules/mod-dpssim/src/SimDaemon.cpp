@@ -366,10 +366,12 @@ namespace
     // Pre-pull buff phase (SimProfile.h's PrePullBuffMs): ticks the bot on its non-combat engine, buff and pet
     // strategies only (SimBot::BeginBuffPhase()), for `buffMs` of sim time ending at `endMs`, so the measured run
     // starts exactly where it always did. Unrecorded: the caller rewinds the recorders afterwards. Ends early if
-    // the bot enters combat.
-    void RunBuffPhase(SimDaemon::RunConfig const& config, uint32 buffMs, uint32 endMs, Player* player, Map* map,
+    // the bot enters combat. Returns false when the phase was cut short or a spell was still being cast at its end
+    // (the setup did not finish: a demon summon, a self-buff), true otherwise.
+    bool RunBuffPhase(SimDaemon::RunConfig const& config, uint32 buffMs, uint32 endMs, Player* player, Map* map,
         SimBot& bot, CastRecorder* castRecorder)
     {
+        bool complete = true;
         if (!bot.BeginBuffPhase())
             LOG_WARN("server.dpssim", "mod-dpssim: pre-pull buff phase - PlayerbotAI reports the bot inactive out of "
                 "combat (AllowActivity() false), so only relevance >= 100 triggers will run; set "
@@ -391,6 +393,7 @@ namespace
                     "combat with {} (entry {}), pet in combat: {}; the bot's last cast spell {}.",
                     buffClock.GetElapsedMs(), with ? with->GetName() : "nothing", with ? with->GetEntry() : 0,
                     pet && pet->IsInCombat() ? "yes" : "no", casts.empty() ? 0 : casts.back().SpellId);
+                complete = false;
                 break;
             }
 
@@ -405,13 +408,17 @@ namespace
         {
             if (Spell const* spell = player->GetCurrentSpell(type))
             {
+                // Cut short by combat: the line above names the cause, the phase length is not the problem
                 LOG_WARN("server.dpssim", "mod-dpssim: pre-pull buff phase ended with spell {} still being cast - "
-                    "interrupted; raise PrePullBuffMs if this repeats.", spell->m_spellInfo->Id);
+                    "interrupted; {}", spell->m_spellInfo->Id, complete ? "raise PrePullBuffMs if this repeats." :
+                    "the phase was cut short (line above).");
+                complete = false;
             }
         }
         player->InterruptNonMeleeSpells(false);
 
         bot.EndBuffPhase();
+        return complete;
     }
 
     // The tick loop + result population shared by RunPlayerbotOnce() (one call) and
@@ -464,7 +471,7 @@ namespace
         if (config.PrePullBuffMs > 0)
         {
             uint32 const buffMs = std::min(config.PrePullBuffMs, ITERATION_GAP_MS);
-            RunBuffPhase(config, buffMs, measuredStartMs, player, map, bot, castRecorder);
+            result.PrePullComplete = RunBuffPhase(config, buffMs, measuredStartMs, player, map, bot, castRecorder);
             // full_raid: the raid's buffs, debuffs and Bloodlust go up at the end of the phase (the pet is in place by
             // now, re-tamed or revived above), before the recorders rewind, so they count as present at the pull
             ApplyRaidAuras(config, player, dummies);
@@ -499,6 +506,8 @@ namespace
         GameTime::UpdateGameTimers();
         bot.RestartCombatClock();
         LogAurasAtPull(player);
+        // RunPlayerbotBatch() compares it across iterations (a pet class that lost its pet before this pull)
+        result.PetAtPull = player->GetPet() != nullptr;
         // The primary dummy's armor at the pull: a recalculation restoring the template armor would show here.
         LOG_INFO("server.dpssim", "mod-dpssim: iteration pull - dummy armor {}, maxHealth {}.",
             dummies.front()->GetArmor(), dummies.front()->GetMaxHealth());
@@ -674,6 +683,141 @@ namespace
                 SimDummyAI::ResetHealth(dummy);
     }
 
+    // DrainInFlightEvents(): the longest the reset waits for the last fight's queued events, and its step
+    constexpr uint32 DRAIN_MAX_MS = 10 * IN_MILLISECONDS;
+    constexpr uint32 DRAIN_STEP_MS = 100;
+
+    // Lands what the last fight still had queued on the actor's and its pet's event queues (WorldObject::m_Events),
+    // so the reset can clear its effects. A travel-time spell launched in the fight's last ~0.5 s (Shadow Bolt,
+    // Incinerate, Chaos Bolt, Soul Fire, a Molten Bolt the dummy's Molten Bolts aura fired) is a SpellEvent in
+    // SPELL_STATE_DELAYED: InterruptNonMeleeSpells(false) skips delayed spells, and a triggered one is no current
+    // spell at all. Left queued, it ran on the event clock into the next pre-pull buff phase, landed 100-500 ms in,
+    // put the bot in combat with the dummy and ended the phase with the demon summon interrupted, so the iteration
+    // ran with no pet and no self-buffs (S12 report, "sim flake"; RunBuffPhase()). The class mechanics' delayed
+    // lambdas (echo damage, aura floors) sit on the same queue.
+    // Only the queues tick here, not the map: the AI, auras, autorepeat and movement stand still and nothing new
+    // starts. The caller interrupts the actor's casts in progress first (SpellEvent::Execute() advances a PREPARING
+    // spell's cast timer); the queued next-swing spell (Heroic Strike, Maul, Cleave) is cancelled here, for the actor
+    // and its pet, since it stays PREPARING until a swing that never comes and would hold the queue for the full
+    // DRAIN_MAX_MS. The sim clock moves with the queues, as in SimClock::Tick(), so it never runs backward. A fight
+    // that ends with nothing in flight costs at most one step (+100 ms on the clock): the last cast's finished event,
+    // or the one the reset's interrupt just cancelled, is still queued until the next Update() deletes it.
+    void DrainInFlightEvents(Player* player, EventRecorder* recorder)
+    {
+        player->InterruptSpell(CURRENT_MELEE_SPELL);
+        if (Pet* pet = player->GetPet())
+        {
+            pet->InterruptSpell(CURRENT_MELEE_SPELL);
+            pet->InterruptNonMeleeSpells(false);
+        }
+
+        auto const hasQueued = [player]()
+        {
+            Pet* pet = player->GetPet();
+            return player->m_Events.HasEvents() || (pet && pet->m_Events.HasEvents());
+        };
+
+        uint32 const startMs = std::max(getMSTime(), uint32(GameTime::GetGameTimeMS().count()));
+        size_t const hitsBefore = recorder->GetHitSpellIds().size();
+        uint32 elapsedMs = 0;
+        uint32 lastLandedMs = 0;
+        while (elapsedMs < DRAIN_MAX_MS && hasQueued())
+        {
+            elapsedMs += DRAIN_STEP_MS;
+            Acore::Time::SetSimClockOverride(Milliseconds(startMs + elapsedMs));
+            GameTime::UpdateGameTimers();
+
+            size_t const hitsBeforeStep = recorder->GetHitSpellIds().size();
+            player->m_Events.Update(DRAIN_STEP_MS);
+            // A landed missile that is still the current spell stays queued (not deletable) until the current-spell
+            // pointer lets go of it, which Unit::_UpdateSpells() would do; this does it without touching one still in
+            // flight (false: delayed spells are skipped). The pet's too (an Imp Firebolt).
+            player->InterruptNonMeleeSpells(false);
+            // Looked up again: a landing can remove the pet
+            if (Pet* pet = player->GetPet())
+            {
+                pet->m_Events.Update(DRAIN_STEP_MS);
+                pet->InterruptNonMeleeSpells(false);
+            }
+            if (recorder->GetHitSpellIds().size() > hitsBeforeStep)
+                lastLandedMs = elapsedMs;
+        }
+
+        std::vector<uint32> const& hitSpellIds = recorder->GetHitSpellIds();
+        if (hitSpellIds.size() > hitsBefore)
+        {
+            std::set<uint32> const landedIds(hitSpellIds.begin() + std::ptrdiff_t(hitsBefore), hitSpellIds.end());
+            std::string ids;
+            for (uint32 spellId : landedIds)
+                ids += (ids.empty() ? "" : ", ") + std::to_string(spellId);
+            LOG_INFO("server.dpssim", "mod-dpssim: iteration reset - {} hit(s) still in flight at the end of the "
+                "fight landed within {} ms (spell ids [{}]); drained and cleared before the next pre-pull buff phase.",
+                hitSpellIds.size() - hitsBefore, lastLandedMs, ids);
+        }
+
+        // Something that never empties (a repeating event) only costs the DRAIN_MAX_MS of queue ticks; logged once
+        static bool loggedStillQueued = false;
+        if (!loggedStillQueued && hasQueued())
+        {
+            loggedStillQueued = true;
+            LOG_INFO("server.dpssim", "mod-dpssim: iteration reset - the actor's (or its pet's) event queue still "
+                "holds events {} ms after the fight; they run into the next pre-pull buff phase (logged once).",
+                elapsedMs);
+        }
+    }
+
+    // DespawnOwnSummons(): the creatures summoned by one of `summoners`, other than a Pet
+    struct OwnSummonCheck
+    {
+        explicit OwnSummonCheck(std::set<ObjectGuid> const& summoners) : _summoners(summoners) { }
+
+        bool operator()(Creature* creature) const
+        {
+            if (!creature || !creature->IsSummon() || creature->IsPet())
+                return false;
+            TempSummon const* summon = creature->ToTempSummon();
+            return summon && _summoners.count(summon->GetSummonerGUID()) > 0;
+        }
+
+    private:
+        std::set<ObjectGuid> const& _summoners;
+    };
+
+    // Despawns every creature the actor or its pet summoned that the reset's own summon cleanup does not reach: a
+    // plain TempSummon from Map/WorldObject::SummonCreature() has no summon slot and is not in m_Controlled, so
+    // neither UnsummonAllTotems() nor the guardian loop sees it. Frost Mage's Frozen Orb (NPC 300001,
+    // TEMPSUMMON_TIMED_DESPAWN 10 s, spell_mage.cpp SummonOrb) cast in a fight's last 10 s survived the reset, and its
+    // own AI pulse (200008, cast by the mage) put the bot in combat in the next pre-pull buff phase. Matched by
+    // summoner GUID, so the dummies, the heal-mode boss (Map::SummonCreature(), no summoner) and the headless allies
+    // are never touched, and a Pet is skipped (the permanent pet is the reset's business). Totems and guardians
+    // match too, harmlessly (the reset removes them anyway). Searched within the map's visibility range of the actor.
+    void DespawnOwnSummons(Player* player)
+    {
+        std::set<ObjectGuid> summoners = {player->GetGUID()};
+        if (Pet* pet = player->GetPet())
+            summoners.insert(pet->GetGUID());
+
+        std::list<Creature*> found;
+        OwnSummonCheck check(summoners);
+        Acore::CreatureListSearcher<OwnSummonCheck> searcher(player, found, check);
+        Cell::VisitObjects(player, searcher, player->GetMap()->GetVisibilityRange());
+
+        std::string entries;
+        uint32 count = 0;
+        for (Creature* creature : found)
+        {
+            TempSummon* summon = creature->ToTempSummon();
+            if (!summon || !summon->IsInWorld())
+                continue;
+            entries += (entries.empty() ? "" : ", ") + std::to_string(creature->GetEntry());
+            ++count;
+            summon->UnSummon();
+        }
+        if (count > 0)
+            LOG_INFO("server.dpssim", "mod-dpssim: iteration reset - despawned {} summon(s) of the actor left from the "
+                "last fight (entries [{}]).", count, entries);
+    }
+
     // Between-iteration reset for RunPlayerbotBatch() - see that function's doc comment (SimDaemon.h)
     // for the full reasoning, especially the passive-aura carve-out and SimBot::ReestablishCombatState()'s
     // own doc comment for the real failure this also guards against (a batch's first iteration
@@ -685,6 +829,14 @@ namespace
     void ResetForNextIteration(Player* player, std::vector<Creature*> const& dummies, SimBot& bot,
         EventRecorder* recorder, CastRecorder* castRecorder, Position const& startPosition)
     {
+        // First, land what the last fight still had in flight (see DrainInFlightEvents()), so its hits and procs are
+        // cleared below with everything else. Before the death check: a landing that kills the actor is resurrected.
+        player->InterruptNonMeleeSpells(false);
+        DrainInFlightEvents(player, recorder);
+        // Then the actor's free-standing summons (a Frozen Orb), which keep acting on their own AI; after the drain,
+        // since a drained effect can summon too
+        DespawnOwnSummons(player);
+
         // The actor can die (a rotation that hurts itself, e.g. Shadow Word: Death backlash).
         // RunPlayerbotIteration() ends the iteration the moment it does, before the AI's auto release can repop it,
         // so it is normally still a corpse in place here. The safety net: if a release teleport did start, the sim
@@ -717,7 +869,10 @@ namespace
 
         // Nothing the last fight left running reaches the next one: a cast in progress, totems, ground effects
         // (DynamicObjects; a Lightwell is a totem) and temporary guardians (Wild Imps, Treants...). The permanent
-        // pet stays and is reset below.
+        // pet is reset below if it is still there - but UnsummonAllTotems() walks every summon slot from
+        // SUMMON_SLOT_PET (0) on (Unit.cpp), and a Pet is a TempSummon, so it dismisses the warlock demon and the
+        // hunter pet too: every iteration's pre-pull buff phase summons the demon again, and EnsurePet() tames the
+        // hunter pet again ("the hunter pet is gone at the start of the iteration").
         player->InterruptNonMeleeSpells(false);
         player->UnsummonAllTotems();
         player->RemoveAllDynObjects();
@@ -2633,6 +2788,21 @@ bool SimDaemon::RunPlayerbotBatch(RunConfig const& config, uint32 iterations, st
 
     Position const startPosition = player->GetPosition();
 
+    // Pre-pull setup that did not finish: the buff phase was cut short or ended mid-cast, or the actor pulled without
+    // the pet an earlier iteration pulled with (a warlock whose demon summon was interrupted). Such an iteration runs
+    // again, once; a second failure is kept, with a line a collector can drop it by. The cause S12 hit (a spell still
+    // in flight at the end of the last fight) is drained by ResetForNextIteration(), so this is the safety net.
+    bool sawPetAtPull = false;
+    auto const describeIncomplete = [&sawPetAtPull](RunResult const& r) -> std::string
+    {
+        std::string reasons;
+        if (!r.PrePullComplete)
+            reasons = "the buff phase was cut short or ended mid-cast";
+        if (sawPetAtPull && !r.PetAtPull)
+            reasons += std::string(reasons.empty() ? "" : "; ") + "no pet at the pull, earlier iterations had one";
+        return reasons;
+    };
+
     for (uint32 i = 0; i < iterations; ++i)
     {
         if (i > 0)
@@ -2640,6 +2810,27 @@ bool SimDaemon::RunPlayerbotBatch(RunConfig const& config, uint32 iterations, st
 
         RunResult result;
         RunPlayerbotIteration(config, player, dummies, map, bot, recorder, castRecorder, result);
+
+        if (std::string const reasons = describeIncomplete(result); !reasons.empty())
+        {
+            // The marker for log-reading collectors: the attempt's own lines ("auras on the bot at the pull",
+            // "iteration pull", "SimActor in-combat sheet") are already in the log just above this one, and the
+            // in-combat sheet line right before it must be skipped. Its result is not kept.
+            LOG_WARN("server.dpssim", "mod-dpssim: iteration {}/{} - attempt DISCARDED, PRE-PULL INCOMPLETE ({}); the "
+                "in-combat sheet line just above belongs to it - running it again.", i + 1, iterations, reasons);
+            ResetForNextIteration(player, dummies, bot, recorder, castRecorder, startPosition);
+            result = RunResult{};
+            RunPlayerbotIteration(config, player, dummies, map, bot, recorder, castRecorder, result);
+            result.RerunCount = 1;
+
+            if (std::string const again = describeIncomplete(result); !again.empty())
+                LOG_WARN("server.dpssim", "mod-dpssim: iteration {}/{} - PRE-PULL INCOMPLETE again after the rerun "
+                    "({}) - kept; drop this iteration from the aggregate.", i + 1, iterations, again);
+            else
+                LOG_INFO("server.dpssim", "mod-dpssim: iteration {}/{} - the rerun completed its pre-pull setup.",
+                    i + 1, iterations);
+        }
+        sawPetAtPull = sawPetAtPull || result.PetAtPull;
 
         results.push_back(std::move(result));
     }
