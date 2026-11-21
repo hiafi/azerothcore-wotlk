@@ -89,10 +89,15 @@ def run(argv: list[str], *, command=None, applied_reader=None, live_reader=drop_
     second_names = {p.name for p in second}
     problems: dict[tuple, list[int]] = {}  # (table, what, reason, rev, writer) -> ids
 
+    parsed: dict[tuple[Path, str], tuple] = {}  # a write-run rev is MBs; parse it once per table, not once per id
+
     def first_file(table: str, entry_id: int, kind: str) -> Path | None:
         """The first unapplied file that deletes (kind "delete") or inserts ("insert") the id."""
         for path, text in texts.items():
-            ranges, deleted, ins = scope.deleted_and_inserted(text, {table: drop_guard.GUARDED_TABLES[table][0]})[table]
+            if (path, table) not in parsed:
+                key = {table: drop_guard.GUARDED_TABLES[table][0]}
+                parsed[(path, table)] = scope.deleted_and_inserted(text, key)[table]
+            ranges, deleted, ins = parsed[(path, table)]
             if kind == "delete" and (entry_id in deleted or drop_guard._in(entry_id, ranges)):
                 return path
             if kind == "insert" and entry_id in ins:
