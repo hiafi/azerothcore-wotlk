@@ -590,9 +590,10 @@ def _good_descs() -> tuple[str, str]:
     # DPS balance pass 1031: Rupture's tick x1.2 (Deadly Throw unchanged).
     # Potency rebase (level60-stat-curve HANDOFF 1.9, LS5b): the lines x a, the AP terms x b / R.
     # level60-stat-curve S7 (2026-11-20, user ruling): Rupture's tick x1.35.
-    dt = ("causing ${$max($max(0.1507*$RAP+320.5177+1.19*$AP,2.5129+0.2484*$PL+0.1507*$RAP+320.5177+1.19*$AP),"
-          "0.9103*$max(0,$PL-15.0157)+0.1507*$RAP+320.5177+1.19*$AP)} Physical damage.")
-    ru = ("causes ${$max($max(0.1204*$AP,5.9967+0.5929*$PL+0.1204*$AP),2.1724*$max(0,$PL-15.3487)+0.1204*$AP)} "
+    # level60-stat-curve S7b (2026-11-21): attack power side refit a 0.71 / b 2.49.
+    dt = ("causing ${$max($max(0.1321*$RAP+399.2413+1.0434*$AP,3.1301+0.3095*$PL+0.1321*$RAP+399.2413+1.0434*$AP),"
+          "1.1339*$max(0,$PL-15.5519)+0.1321*$RAP+399.2413+1.0434*$AP)} Physical damage.")
+    ru = ("causes ${$max($max(0.1055*$AP,7.4696+0.7385*$PL+0.1055*$AP),2.706*$max(0,$PL-15.2839)+0.1055*$AP)} "
           "Physical damage every 2 sec. Lasts longer per combo point: 1 point: 8 sec, 5 points: 24 sec.")
     return dt, ru
 
@@ -773,11 +774,11 @@ class RogueRG0bNegativeTest(unittest.TestCase):
         dt, ru = _good_descs()
         self.assertEqual(check_tooltips(dt, ru), [])
         self.assertEqual(tooltip_expr("no block"), None)
-        for old, new in (("320.5177", "300"), ("1.19*$AP", "1.25*$AP"), ("0.1507*$RAP", "0.1507*$AP"),
-                         ("0.9103*$max", "2.4*$max")):
+        for old, new in (("399.2413", "300"), ("1.0434*$AP", "1.1*$AP"), ("0.1321*$RAP", "0.1507*$AP"),
+                         ("1.1339*$max", "2.4*$max")):
             self.assertGreaterEqual(len(check_tooltips(dt.replace(old, new), ru)), 1, old)
-        for old, new in (("2.1724", "1.0"), ("0.1204*$AP", "0.045*$AP"), ("0.1204*$AP", "0.1204*$RAP"),
-                         ("5.9967+0.5929", "25.9967+0.5929"), ("every 2 sec", "over time")):
+        for old, new in (("2.706", "1.0"), ("0.1055*$AP", "0.045*$AP"), ("0.1055*$AP", "0.1204*$RAP"),
+                         ("7.4696+0.7385", "27.4696+0.7385"), ("every 2 sec", "over time")):
             self.assertGreaterEqual(len(check_tooltips(dt, ru.replace(old, new))), 1, old)
         self.assertGreaterEqual(len(check_tooltips("no block", ru)), 1)
         self.assertGreaterEqual(len(check_tooltips(dt, "no block")), 1)

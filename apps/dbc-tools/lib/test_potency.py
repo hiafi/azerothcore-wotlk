@@ -503,10 +503,10 @@ class TooltipExpressionTest(unittest.TestCase):
 
 class PotencyRebaseTest(unittest.TestCase):
     """level60-stat-curve HANDOFF 1.9: a (the BASE_SCALEs) scales the flat base, b (the COEF_SCALEs) both
-    coefficients; heals keep their 3.96 / 1.88 on top; weapon potency and its flat part are exempt; a = b = 1 is
-    today's behavior."""
+    coefficients; heals keep their multipliers on top; weapon potency and its flat part are exempt; a = b = 1 is
+    today's behavior. A / B are the spell power side, AA / BA the attack power side (S7b in-combat refit)."""
 
-    A, B, R, H, HB = 0.57, 2.84, 2.15, 2.44, 2.35
+    A, B, AA, BA, R, H, HB = 0.48, 1.93, 0.71, 2.49, 2.15, 3.39, 2.84
 
     def setUp(self):
         _rebase_on()
@@ -515,10 +515,10 @@ class PotencyRebaseTest(unittest.TestCase):
         _rebase_off()
 
     def test_shipped_constants(self):
-        # S7a split: both sides start at the shared LS5 fit (S7b refits the spell power side)
+        # S7b: both sides refitted on in-combat X (spell power 0.48 / 1.93, attack power 0.71 / 2.49), heals 2.84 / 3.39
         self.assertEqual((potency.SP_BASE_SCALE, potency.SP_COEF_SCALE, potency.AP_BASE_SCALE, potency.AP_COEF_SCALE,
                           potency.DEFAULT_R, potency.HEAL_COEF_MULT, potency.HEAL_BASE_MULT),
-                         (self.A, self.B, self.A, self.B, self.R, self.H, self.HB))
+                         (self.A, self.B, self.AA, self.BA, self.R, self.H, self.HB))
         self.assertEqual((potency.HEAL_COEF_MULT_STOCK, potency.HEAL_BASE_MULT_STOCK), (1.88, 3.96))
 
     def test_one_one_reproduces_today(self):
@@ -534,40 +534,41 @@ class PotencyRebaseTest(unittest.TestCase):
     def test_frostbolt_at_shipped_constants(self):
         r = potency.resolve(potency.PotencyEffect(sp_potency=100, kind=potency.KIND_DIRECT, t_ms=3000),
                             spell_level=1)
-        f = self.A * 100 * 3.0 / 1.5 / 1.05  # 108.571
-        self.assertAlmostEqual(r.level60_value, potency.C60 * f, places=6)  # 290.43
+        f = self.A * 100 * 3.0 / 1.5 / 1.05  # 91.429
+        self.assertAlmostEqual(r.level60_value, potency.C60 * f, places=6)  # 244.57
         self.assertAlmostEqual(r.points_per_level, 0.06 * f, places=6)
         self.assertAlmostEqual(r.correction_per_level, (0.06 - 0.016375) * f, places=6)
-        self.assertEqual(r.base_points, -95)
-        self.assertEqual(potency.simulate_value(r, 60, spell_level=1), 290.0)
-        self.assertAlmostEqual(r.sp_coefficient, 3.0 / 3.5 * self.B, places=9)  # 2.4343
+        self.assertEqual(r.base_points, -79)
+        self.assertEqual(potency.simulate_value(r, 60, spell_level=1), 245.0)
+        self.assertAlmostEqual(r.sp_coefficient, 3.0 / 3.5 * self.B, places=9)  # 1.6543
         self.assertEqual(r.ap_coefficient, 0.0)
         self.assertEqual(r.total_potency, 100)  # the declared potency, not the scaled base
 
     def test_default_r_and_ap_line(self):
-        """Arcane Shot's 50.3 attack power potency: base x a, coefficient x b / R."""
+        """Arcane Shot's 50.3 attack power potency: base x a, coefficient x b / R (attack power side)."""
         r = potency.resolve(potency.PotencyEffect(ap_potency=50.3, kind=potency.KIND_DIRECT, t_ms=1500),
                             spell_level=1)
-        self.assertAlmostEqual(r.ap_coefficient, 0.503 * 1.5 / 3.5 * self.B / self.R, places=9)
-        self.assertAlmostEqual(r.level60_value * 1.05, self.A * 135, delta=0.5)  # doc's 135 base x a
+        self.assertAlmostEqual(r.ap_coefficient, 0.503 * 1.5 / 3.5 * self.BA / self.R, places=9)
+        self.assertAlmostEqual(r.level60_value * 1.05, self.AA * 135, delta=0.5)  # doc's 135 base x a
 
     def test_hybrid(self):
-        """Exorcism 35 / 35: base from a x 70; both coefficients x b, the attack power one / R too."""
+        """Exorcism 35 / 35: base from a x 70 (a split by the halves); each coefficient x its side's b, the attack
+        power one / R too."""
         r = potency.resolve(potency.PotencyEffect(sp_potency=35, ap_potency=35, kind=potency.KIND_DIRECT,
                                                   t_ms=1500), spell_level=1)
         today = potency.resolve(potency.PotencyEffect(sp_potency=35, ap_potency=35, kind=potency.KIND_DIRECT,
                                                       t_ms=1500), spell_level=1, r=1.0, base_scale=1.0,
                                 coef_scale=1.0)
-        self.assertAlmostEqual(r.level60_value, today.level60_value * self.A, places=6)
+        self.assertAlmostEqual(r.level60_value, today.level60_value * (self.A + self.AA) / 2, places=6)
         self.assertAlmostEqual(r.sp_coefficient, 0.15 * self.B, places=9)
-        self.assertAlmostEqual(r.ap_coefficient, 0.15 * self.B / self.R, places=9)
+        self.assertAlmostEqual(r.ap_coefficient, 0.15 * self.BA / self.R, places=9)
 
     def test_heal_keeps_its_multipliers(self):
-        """Greater Heal 100 potency, 3.0 s: base HEAL_BASE_MULT (2.35) x a, coefficient HEAL_COEF_MULT (2.44) x b."""
+        """Greater Heal 100 potency, 3.0 s: base HEAL_BASE_MULT (2.84) x a, coefficient HEAL_COEF_MULT (3.39) x b."""
         r = potency.resolve(potency.PotencyEffect(sp_potency=100, kind=potency.KIND_HEAL, t_ms=3000),
                             spell_level=1)
         self.assertAlmostEqual(r.level60_value, potency.C60 * self.A * 100 * 2 * self.HB, places=6)
-        self.assertAlmostEqual(r.sp_coefficient, 3.0 / 3.5 * self.H * self.B, places=9)  # 5.939
+        self.assertAlmostEqual(r.sp_coefficient, 3.0 / 3.5 * self.H * self.B, places=9)  # 5.608
         self.assertEqual(r.variance_pct, 0.0)
 
     def test_base_potency_takes_a(self):
@@ -632,7 +633,7 @@ class PotencyRebaseTest(unittest.TestCase):
         self.assertIn(potency._fmt(r.tooltip_low_slope) + "*$PL", expr)
         ap = potency.resolve(potency.PotencyEffect(ap_potency=50, kind=potency.KIND_DIRECT, t_ms=1500),
                              spell_level=1)
-        self.assertIn(potency._fmt(0.5 * 1.5 / 3.5 * self.B / self.R) + "*$AP", potency.tooltip_expression(ap))
+        self.assertIn(potency._fmt(0.5 * 1.5 / 3.5 * self.BA / self.R) + "*$AP", potency.tooltip_expression(ap))
 
     def test_dsl_bonus_multiplier_and_base(self):
         """End to end through model.Spell: EffectBonusMultiplier and the baked base carry b and a."""
@@ -644,7 +645,7 @@ class PotencyRebaseTest(unittest.TestCase):
             raw_overrides={"SpellLevel": 1, "DefenseType": 1},
         ).to_entry()
         self.assertAlmostEqual(entry["raw_overrides"]["EffectBonusMultiplier_1"], 3.0 / 3.5 * self.B, places=6)
-        self.assertEqual(entry["effect1"]["base_points"], -95)
+        self.assertEqual(entry["effect1"]["base_points"], -79)
 
 
 class PotencyRebaseSplitTest(unittest.TestCase):
@@ -670,9 +671,9 @@ class PotencyRebaseSplitTest(unittest.TestCase):
     def _resolve(self, **kw):
         return potency.resolve(potency.PotencyEffect(kind=potency.KIND_DIRECT, t_ms=1500, **kw), spell_level=1)
 
-    def test_shipped_sides_are_equal(self):
-        """The split alone changes nothing: both sides ship at the LS5 fit."""
-        self.assertEqual(SHIPPED_SCALES, (0.57, 2.84, 0.57, 2.84))
+    def test_shipped_sides(self):
+        """S7a shipped both sides at the LS5 fit (0.57 / 2.84); S7b refitted each on in-combat X."""
+        self.assertEqual(SHIPPED_SCALES, (0.48, 1.93, 0.71, 2.49))
 
     def test_spell_power_line_takes_the_spell_side(self):
         r, off = self._resolve(sp_potency=100), self._off(sp_potency=100)

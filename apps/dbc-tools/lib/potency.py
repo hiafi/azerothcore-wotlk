@@ -51,12 +51,18 @@ REFERENCE_LEVEL = 60  # "Level 60 is the launch cap and the most important numbe
 # "Healing"
 # The *_STOCK values are the doc's "Healing" rule (3.96 on the base, the stock WotLK 1.88 on the coefficient); a
 # rebase_exempt heal keeps them. HEAL_BASE_MULT / HEAL_COEF_MULT are what resolve() applies with the potency rebase
-# (level60-stat-curve LS5c, user ruling round 12, 2026-11-20): fitted on the healer Normal kits at a = 0.57 / b = 2.84
-# so the median heal flat share is 25% and the median healing is x1.00 before trims (exact 2.3525 / 2.4423).
+# (level60-stat-curve LS5c, user ruling round 12, 2026-11-20), on top of the spell power side's a / b. LS5c fitted them
+# on the healers' sheet spell power (2.35 / 2.44). Refitted 2026-11-21 (S7b, HANDOFF 8 ruling 1) on in-combat healing
+# power: the 5 healer Normal kits' time-weighted in-combat healing power (the sim's "SimActor in-combat sheet" line),
+# at SP_BASE_SCALE 0.48 / SP_COEF_SCALE 1.93, so the median healer's in-combat heal flat share
+# (a_sp x HEAL_BASE_MULT) / (a_sp x HEAL_BASE_MULT + b_sp x HEAL_COEF_MULT x 0.0016 x X_ic) is 25% and the median
+# healing equals the pre-rebase level (3.96 + 1.88 x 0.0016 x X_today, X_today = LS5's pre-rebase sheet spell power
+# plus the kit's in-combat addition). Exact 2.8367 / 3.3918 (median flat 25.03%, median healing x1.000 vs pre-rebase,
+# x0.96 vs the 2.35 / 2.44 build). See level60-stat-curve.STAGE-S7B-REPORT.md.
 HEAL_BASE_MULT_STOCK = 3.96
 HEAL_COEF_MULT_STOCK = 1.88
-HEAL_BASE_MULT = 2.35
-HEAL_COEF_MULT = 2.44
+HEAL_BASE_MULT = 2.84
+HEAL_COEF_MULT = 3.39
 # "Damage range" - potency sets the average; the generator bakes the minimum as potency / 1.05,
 # and the hook rolls the minimum up to 1.1x it (direct damage effects only).
 DIRECT_MIN_DIVISOR = 1.05
@@ -91,16 +97,28 @@ DEFAULT_R = 2.15
 # base is 25% of a potency ability at the median DPS kit, and the median DPS kit's damage is unchanged before trims
 # (a + b x 0.0016 x X_new = 1 + 0.0016 x X_today, X = sheet spell power or attack power / R). Refitted at R = 2.15
 # (LS5b ruling 3): exact 0.5701 / 2.8393.
-# Split by side (level60-stat-curve S7a, user ruling 2026-11-20 round S7): the spell power side (SP_*) is refitted on the
-# casters' in-combat spell power (S7b); the attack power side (AP_*) keeps the LS5 fit. All four start at the shared
-# 0.57 / 2.84, so the split alone changes nothing. Per part: an effect's base takes a_sp on its sp_potency share and
-# a_ap on its ap_potency share (a hand base_potency too, by the same shares); sp_coefficient takes b_sp, ap_coefficient
-# b_ap. A line with neither sp_potency nor ap_potency (a pure base_potency line) takes PotencyEffect.base_side, which
-# model.Spell sets from the spell; the spell side when unset.
-SP_BASE_SCALE = 0.57
-SP_COEF_SCALE = 2.84
-AP_BASE_SCALE = 0.57
-AP_COEF_SCALE = 2.84
+# Split by side (level60-stat-curve S7a, user ruling 2026-11-20 round S7). Per part: an effect's base takes a_sp on its
+# sp_potency share and a_ap on its ap_potency share (a hand base_potency too, by the same shares); sp_coefficient takes
+# b_sp, ap_coefficient b_ap. A line with neither sp_potency nor ap_potency (a pure base_potency line) takes
+# PotencyEffect.base_side, which model.Spell sets from the spell; the spell side when unset.
+# Both sides refitted 2026-11-21 (S7b, HANDOFF 8 ruling 1) on IN-COMBAT X instead of the sheet: the time-weighted mean
+# the sim's "SimActor in-combat sheet" line prints (talents, armors, forms, shouts and self-buffs included), 1 target,
+# 120 s x 5, Normal kits. Same equations as LS5: flat share = a / (a + b x c x X_ic) is 25% at the median kit, and the
+# median kit's potency damage a + b x c x X_ic equals the pre-rebase 1 + c x X_today, with c = (1.5 / 3.5) / 267.5
+# and X_today = LS5's pre-rebase sheet X plus the kit's in-combat addition (X_ic - X_sheet, the talents and buffs did
+# not change).
+#   - SP side: the 9 caster DPS kits (3 mages, 3 warlocks, Shadow, Elemental, Balance), X = in-combat spell power as
+#     spell damage reads it. Exact 0.4759 / 1.9288 (median flat 25.15%, median damage x1.003 at the rounded values;
+#     about x0.71 vs the 0.57 / 2.84 build, which sat at a 15-24% in-combat flat share).
+#   - AP side: the 14 physical DPS kits of LS5b's R pool (warriors, DKs, rogues, hunters, Cat, Bear DPS), X = in-combat
+#     melee attack power / R (hunters ranged, druids form attack power), at k_h 16 / k_f 6. In combat the median flat
+#     share was 19.0% at 0.57 / 2.84 (Battle Shout, forms, Unholy / Frost presences), more than 3 points off, so
+#     refitted too: exact 0.7134 / 2.4949 (median flat 24.95%, median damage x0.997 vs pre-rebase; about x0.93-0.96 vs
+#     the 0.57 / 2.84 build, rogues x1.00).
+SP_BASE_SCALE = 0.48
+SP_COEF_SCALE = 1.93
+AP_BASE_SCALE = 0.71
+AP_COEF_SCALE = 2.49
 SIDE_SP = "sp"
 SIDE_AP = "ap"
 VALID_SIDES = (SIDE_SP, SIDE_AP)

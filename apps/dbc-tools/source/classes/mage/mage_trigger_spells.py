@@ -5307,8 +5307,8 @@ arcane_overload_200092 = spell(
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, die_sides=0, implicit_target_a=6, misc_value=6),
         Effect(type=EffectType.DUMMY, base_points=69, die_sides=0, implicit_target_a=6),
-        # LS5b ruling 7 (level60-stat-curve, 2026-11-20): the stock spell power share 34% x b (potency.SP_COEF_SCALE): 97
-        # at b 2.84 (96.56). The mana-spent share (effect 2) is not a C(L) base and stays.
+        # LS5b ruling 7 (level60-stat-curve, 2026-11-20): the stock spell power share 34% x b (potency.SP_COEF_SCALE): 66
+        # at b 1.93 (65.62, S7b refit). The mana-spent share (effect 2) is not a C(L) base and stays.
         Effect(type=EffectType.DUMMY, base_points=round(34 * _potency.SP_COEF_SCALE), die_sides=0, implicit_target_a=6),
     ],
     spell_icon_id=2210,
