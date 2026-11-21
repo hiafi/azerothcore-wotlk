@@ -21,22 +21,22 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from lib import potency  # noqa: E402
 
 # The doc's reference tables are written with the potency rebase off (level60-stat-curve HANDOFF 1.9: a = b = 1), so
-# every test class here runs with BASE_SCALE / COEF_SCALE at 1.0 - which is also the "a = b = 1 reproduces today
-# exactly" check - except PotencyRebaseTest below, which uses the shipped constants.
-SHIPPED_BASE_SCALE = potency.BASE_SCALE
-SHIPPED_COEF_SCALE = potency.COEF_SCALE
+# every test class here runs with the four rebase scales (SP_/AP_ BASE_SCALE / COEF_SCALE) at 1.0 - which is also the
+# "a = b = 1 reproduces today exactly" check - except PotencyRebaseTest and PotencyRebaseSplitTest below, which use the
+# shipped constants.
+SHIPPED_SCALES = (potency.SP_BASE_SCALE, potency.SP_COEF_SCALE, potency.AP_BASE_SCALE, potency.AP_COEF_SCALE)
 SHIPPED_HEAL_COEF_MULT = potency.HEAL_COEF_MULT
 SHIPPED_HEAL_BASE_MULT = potency.HEAL_BASE_MULT
 
 
 def _rebase_off():
-    potency.BASE_SCALE = potency.COEF_SCALE = 1.0
+    potency.SP_BASE_SCALE = potency.SP_COEF_SCALE = potency.AP_BASE_SCALE = potency.AP_COEF_SCALE = 1.0
     potency.HEAL_COEF_MULT = potency.HEAL_COEF_MULT_STOCK
     potency.HEAL_BASE_MULT = potency.HEAL_BASE_MULT_STOCK
 
 
 def _rebase_on():
-    potency.BASE_SCALE, potency.COEF_SCALE = SHIPPED_BASE_SCALE, SHIPPED_COEF_SCALE
+    potency.SP_BASE_SCALE, potency.SP_COEF_SCALE, potency.AP_BASE_SCALE, potency.AP_COEF_SCALE = SHIPPED_SCALES
     potency.HEAL_COEF_MULT = SHIPPED_HEAL_COEF_MULT
     potency.HEAL_BASE_MULT = SHIPPED_HEAL_BASE_MULT
 
@@ -502,8 +502,9 @@ class TooltipExpressionTest(unittest.TestCase):
 
 
 class PotencyRebaseTest(unittest.TestCase):
-    """level60-stat-curve HANDOFF 1.9: a (BASE_SCALE) scales the flat base, b (COEF_SCALE) both coefficients; heals
-    keep their 3.96 / 1.88 on top; weapon potency and its flat part are exempt; a = b = 1 is today's behavior."""
+    """level60-stat-curve HANDOFF 1.9: a (the BASE_SCALEs) scales the flat base, b (the COEF_SCALEs) both
+    coefficients; heals keep their 3.96 / 1.88 on top; weapon potency and its flat part are exempt; a = b = 1 is
+    today's behavior."""
 
     A, B, R, H, HB = 0.57, 2.84, 2.15, 2.44, 2.35
 
@@ -514,8 +515,10 @@ class PotencyRebaseTest(unittest.TestCase):
         _rebase_off()
 
     def test_shipped_constants(self):
-        self.assertEqual((potency.BASE_SCALE, potency.COEF_SCALE, potency.DEFAULT_R, potency.HEAL_COEF_MULT,
-                          potency.HEAL_BASE_MULT), (self.A, self.B, self.R, self.H, self.HB))
+        # S7a split: both sides start at the shared LS5 fit (S7b refits the spell power side)
+        self.assertEqual((potency.SP_BASE_SCALE, potency.SP_COEF_SCALE, potency.AP_BASE_SCALE, potency.AP_COEF_SCALE,
+                          potency.DEFAULT_R, potency.HEAL_COEF_MULT, potency.HEAL_BASE_MULT),
+                         (self.A, self.B, self.A, self.B, self.R, self.H, self.HB))
         self.assertEqual((potency.HEAL_COEF_MULT_STOCK, potency.HEAL_BASE_MULT_STOCK), (1.88, 3.96))
 
     def test_one_one_reproduces_today(self):
@@ -642,6 +645,108 @@ class PotencyRebaseTest(unittest.TestCase):
         ).to_entry()
         self.assertAlmostEqual(entry["raw_overrides"]["EffectBonusMultiplier_1"], 3.0 / 3.5 * self.B, places=6)
         self.assertEqual(entry["effect1"]["base_points"], -95)
+
+
+class PotencyRebaseSplitTest(unittest.TestCase):
+    """level60-stat-curve S7a: the rebase constants per side. Spell power potency takes SP_BASE_SCALE /
+    SP_COEF_SCALE, attack power potency AP_BASE_SCALE / AP_COEF_SCALE; a hybrid's base splits by its potency shares,
+    a pure base_potency line takes its base_side. Distinct test values on each side so a crossed wire shows."""
+
+    SP_A, SP_B, AP_A, AP_B = 0.40, 3.30, 0.57, 2.84
+
+    def setUp(self):
+        _rebase_on()
+        potency.SP_BASE_SCALE, potency.SP_COEF_SCALE = self.SP_A, self.SP_B
+        potency.AP_BASE_SCALE, potency.AP_COEF_SCALE = self.AP_A, self.AP_B
+
+    def tearDown(self):
+        _rebase_off()
+
+    @staticmethod
+    def _off(**kw):
+        return potency.resolve(potency.PotencyEffect(kind=potency.KIND_DIRECT, t_ms=1500, **kw), spell_level=1,
+                               r=potency.DEFAULT_R, base_scale=1.0, coef_scale=1.0)
+
+    def _resolve(self, **kw):
+        return potency.resolve(potency.PotencyEffect(kind=potency.KIND_DIRECT, t_ms=1500, **kw), spell_level=1)
+
+    def test_shipped_sides_are_equal(self):
+        """The split alone changes nothing: both sides ship at the LS5 fit."""
+        self.assertEqual(SHIPPED_SCALES, (0.57, 2.84, 0.57, 2.84))
+
+    def test_spell_power_line_takes_the_spell_side(self):
+        r, off = self._resolve(sp_potency=100), self._off(sp_potency=100)
+        self.assertAlmostEqual(r.level60_value, off.level60_value * self.SP_A, places=6)
+        self.assertAlmostEqual(r.sp_coefficient, off.sp_coefficient * self.SP_B, places=9)
+
+    def test_attack_power_line_takes_the_attack_power_side(self):
+        r, off = self._resolve(ap_potency=50), self._off(ap_potency=50)
+        self.assertAlmostEqual(r.level60_value, off.level60_value * self.AP_A, places=6)
+        self.assertAlmostEqual(r.ap_coefficient, off.ap_coefficient * self.AP_B, places=9)
+
+    def test_hybrid_splits_per_part(self):
+        """30 SP + 10 AP: base a_sp x 30 + a_ap x 10; each coefficient its own side's b."""
+        r, off = self._resolve(sp_potency=30, ap_potency=10), self._off(sp_potency=30, ap_potency=10)
+        sp_only, ap_only = self._off(sp_potency=30), self._off(ap_potency=10)
+        self.assertAlmostEqual(r.level60_value, off.level60_value * (self.SP_A * 30 + self.AP_A * 10) / 40, places=6)
+        self.assertAlmostEqual(r.sp_coefficient, sp_only.sp_coefficient * self.SP_B, places=9)
+        self.assertAlmostEqual(r.ap_coefficient, ap_only.ap_coefficient * self.AP_B, places=9)
+
+    def test_hybrid_base_potency_splits_by_the_same_shares(self):
+        r = self._resolve(sp_potency=20, ap_potency=60, base_potency=100)
+        off = self._off(sp_potency=20, ap_potency=60, base_potency=100)
+        self.assertAlmostEqual(r.level60_value, off.level60_value * (self.SP_A * 0.25 + self.AP_A * 0.75), places=6)
+
+    def test_pure_base_line_takes_its_base_side(self):
+        off = self._off(base_potency=50)
+        self.assertAlmostEqual(self._resolve(base_potency=50).level60_value, off.level60_value * self.SP_A, places=6)
+        self.assertAlmostEqual(self._resolve(base_potency=50, base_side=potency.SIDE_SP).level60_value,
+                               off.level60_value * self.SP_A, places=6)
+        self.assertAlmostEqual(self._resolve(base_potency=50, base_side=potency.SIDE_AP).level60_value,
+                               off.level60_value * self.AP_A, places=6)
+
+    def test_base_side_ignored_when_the_line_has_a_share(self):
+        self.assertEqual(self._resolve(sp_potency=40, base_side=potency.SIDE_AP), self._resolve(sp_potency=40))
+
+    def test_bad_base_side_rejected(self):
+        with self.assertRaises(ValueError):
+            self._resolve(base_potency=50, base_side="melee")
+
+    def test_per_side_arguments_win(self):
+        effect = potency.PotencyEffect(sp_potency=30, ap_potency=10, kind=potency.KIND_DIRECT, t_ms=1500)
+        both = potency.resolve(effect, spell_level=1, base_scale=1.0, coef_scale=1.0)
+        mixed = potency.resolve(effect, spell_level=1, base_scale=1.0, coef_scale=1.0, sp_coef_scale=2.0,
+                                ap_base_scale=0.5)
+        self.assertAlmostEqual(mixed.sp_coefficient, both.sp_coefficient * 2.0, places=9)
+        self.assertAlmostEqual(mixed.ap_coefficient, both.ap_coefficient, places=9)
+        self.assertAlmostEqual(mixed.level60_value, both.level60_value * (30 + 0.5 * 10) / 40, places=6)
+
+    def test_rebase_exempt_ignores_both_sides(self):
+        exempt = self._resolve(sp_potency=15.5, rebase_exempt=True)
+        self.assertEqual(exempt, self._off(sp_potency=15.5))
+
+    def test_dsl_pure_base_line_side(self):
+        """model.Spell: a pure base_potency line takes AP when the spell's other lines are attack power only, SP when
+        spell power only, and the damage class otherwise."""
+        from lib.dsl import model
+
+        def level60(effects, defense_type, index=0):
+            entry = model.Spell(
+                id=90004, name="Test Finisher", effects=effects,
+                raw_overrides={"SpellLevel": 1, "DefenseType": defense_type},
+            ).to_entry()
+            return entry[f"effect{index + 1}"]["_potency"]["level60_value"]
+
+        off = self._off(base_potency=50).level60_value
+        base_line = model.Effect(type=2, base_potency=50, potency_kind="direct")
+        ap_line = model.Effect(type=2, ap_potency=10, potency_kind="direct")
+        sp_line = model.Effect(type=2, sp_potency=10, potency_kind="direct")
+        self.assertAlmostEqual(level60([base_line, ap_line], 1), off * self.AP_A, places=6)
+        self.assertAlmostEqual(level60([base_line, sp_line], 2), off * self.SP_A, places=6)
+        self.assertAlmostEqual(level60([base_line], 2), off * self.AP_A, places=6)
+        self.assertAlmostEqual(level60([base_line], 3), off * self.AP_A, places=6)
+        self.assertAlmostEqual(level60([base_line], 1), off * self.SP_A, places=6)
+        self.assertAlmostEqual(level60([base_line], 0), off * self.SP_A, places=6)
 
 
 def re_findall_numbers(expr: str) -> list[str]:

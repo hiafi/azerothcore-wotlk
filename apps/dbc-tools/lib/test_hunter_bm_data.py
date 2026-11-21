@@ -2137,7 +2137,7 @@ class HunterBmDataTest(unittest.TestCase):
         # WSH2: ap_potency 36.726 (2026-11-17 Normal trim x0.694 on 52.92; BAL1 2026-11-15: was 44.1; pass 1031: was 49;
         # TUNE1 70, was 100), so the coefficient is 0.36726 * (1.5 / 3.5), x b / R since the potency rebase
         # (level60-stat-curve HANDOFF 1.9, LS5b)
-        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.36726 * 1.5 / 3.5 * potency.COEF_SCALE / potency.DEFAULT_R,
+        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.36726 * 1.5 / 3.5 * potency.AP_COEF_SCALE / potency.DEFAULT_R,
                                places=4)
 
     def test_s1b_ids_have_equipped_item_class_minus_one(self):

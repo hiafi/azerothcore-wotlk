@@ -522,6 +522,8 @@ namespace
         // group that has since expired, the pet's own cast of the same spell replacing it) is put back
         uint32 nextRaidRefreshMs = RAID_AURA_REFRESH_MS;
         SimBuffSet::RefreshLog raidRefresh;
+        // The "SimActor in-combat sheet" line: the actor's power stats over the measured fight (SimActor.h)
+        SimActor::InCombatSheet inCombatSheet;
         while (clock.GetElapsedMs() < config.DurationMs)
         {
             clock.Tick(map);
@@ -561,6 +563,7 @@ namespace
             MaybeSamplePower(player, clock.GetElapsedMs(), lastPowerSampleMs, sampledPowerOnce, powerSamples);
             MaybeSampleMinions(player, clock.GetElapsedMs(), lastMinionSampleMs, sampledMinionsOnce, minionSamples);
             MaybeSampleAuras(player, dummies.front(), clock.GetElapsedMs(), config.AuraSampleIds, auraSamples);
+            inCombatSheet.Sample(player, config.StepMs);
 
             ObjectGuid const currentTarget = bot.GetCurrentTarget();
             if (!currentTarget.IsEmpty())
@@ -583,6 +586,7 @@ namespace
         }
 
         SimBuffSet::LogRefresh(raidRefresh);
+        inCombatSheet.LogAndReset(player->GetName());
 
         result.Success = true;
         // Deliberate: an actor that died is charged the full configured duration, not the time it survived, so
@@ -842,6 +846,8 @@ namespace
             LOG_WARN("server.dpssim", "mod-dpssim: the healer DIED {} ms into the iteration - iteration ended, its "
                 "healing counts the full {} ms.", atMs, config.DurationMs);
         };
+        // The "SimActor in-combat sheet" line: the healer's power stats over the measured fight (SimActor.h)
+        SimActor::InCombatSheet inCombatSheet;
 
         while (clock.GetElapsedMs() < config.DurationMs)
         {
@@ -875,6 +881,7 @@ namespace
             else
                 bot.UpdateAI(config.StepMs);
             MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
+            inCombatSheet.Sample(player, config.StepMs);
 
             if (config.RealTimePaced)
                 std::this_thread::sleep_for(std::chrono::milliseconds(config.StepMs));
@@ -882,6 +889,7 @@ namespace
 
         if (!result.ActorDied && !player->IsAlive())
             noteActorDeath(config.DurationMs);
+        inCombatSheet.LogAndReset(player->GetName());
 
         result.Success = true;
         result.HealMode = true;
@@ -1424,6 +1432,8 @@ namespace
             for (size_t i = 0; i < dummies.size(); ++i)
                 result.ThreatSamples.push_back({atMs, uint8(i), dummies[i]->GetThreatMgr().GetThreat(player)});
         };
+        // The "SimActor in-combat sheet" line: the tank's power stats over the measured fight (SimActor.h)
+        SimActor::InCombatSheet inCombatSheet;
 
         while (clock.GetElapsedMs() < config.DurationMs)
         {
@@ -1471,6 +1481,7 @@ namespace
             MaybeSamplePower(player, clock.GetElapsedMs(), lastPowerSampleMs, sampledPowerOnce, powerSamples);
             MaybeSampleMinions(player, clock.GetElapsedMs(), lastMinionSampleMs, sampledMinionsOnce, minionSamples);
             MaybeSampleAuras(player, dummies.front(), clock.GetElapsedMs(), config.AuraSampleIds, auraSamples);
+            inCombatSheet.Sample(player, config.StepMs);
 
             // The crit chance the dummies have once the bot has acted (its stance, its first buffs): the pull value was
             // taken before any of that
@@ -1521,6 +1532,7 @@ namespace
             result.ActorDiedAtMs = config.DurationMs;
             minHealthPct = 0.0f;
         }
+        inCombatSheet.LogAndReset(player->GetName());
 
         // Plan T11: a survive run the actor lived through to the end; its TTD counts as the full duration
         result.TankSurvived = config.TankScenario == SimTank::Scenario::Survive && !result.ActorDied;
@@ -2152,6 +2164,8 @@ namespace
         scenario.BeginIteration(measuredStartMs);
 
         SimClock clock(config.StepMs, measuredStartMs);
+        // The "SimActor in-combat sheet" lines: every member's power stats over the measured fight (SimActor.h)
+        std::vector<SimActor::InCombatSheet> inCombatSheets(size);
         while (clock.GetElapsedMs() < config.DurationMs)
         {
             clock.Tick(map);
@@ -2177,11 +2191,16 @@ namespace
             scenario.Step(clock.GetElapsedMs(), config.StepMs);
             if (refillBoss)
                 boss->SetFullHealth();
+            for (size_t i = 0; i < size; ++i)
+                inCombatSheets[i].Sample(scenario.GetPlayer(i), config.StepMs);
 
             if (config.RealTimePaced)
                 std::this_thread::sleep_for(std::chrono::milliseconds(config.StepMs));
         }
         scenario.Step(clock.GetElapsedMs(), 0);
+        for (size_t i = 0; i < size; ++i)
+            if (Player* member = scenario.GetPlayer(i))
+                inCombatSheets[i].LogAndReset(member->GetName());
 
         // The sim seam's order: read the counters, stop the program, reset the counters
         std::vector<SimMech::Stats> stats(size);

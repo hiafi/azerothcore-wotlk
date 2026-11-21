@@ -467,9 +467,9 @@ scripted_by(pistol_shot_203958, 'spell_rog_pistol_shot')
 # 20.475 / 32.34, which were 75% of Eviscerate; now ~104% of Eviscerate's 35.49 / 56.056, the ratio is no longer fixed), SpellLevel 20, 35 energy, 20 yd, Speed 0, no stun, GCD 133 / 1000, SV 90252. d2 b5 | d2 b18, never
 # d0 b17 (m.BETWEEN_THE_EYES_CLASS).
 _BTE_FLAT = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=70.1, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=20)
+    _potency.PotencyEffect(ap_potency=94.635, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=20)
 _BTE_CP = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=110.6, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=20)
+    _potency.PotencyEffect(ap_potency=149.31, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=20)
 
 
 def _expr_plus(resolved, extra, *, ticks=1.0, scale=1.0):
@@ -499,7 +499,7 @@ between_the_eyes_203959 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=35, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=70.1, cp_ap_potency=110.6, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=94.635, cp_ap_potency=149.31, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_BETWEEN_THE_EYES,
@@ -507,7 +507,7 @@ between_the_eyes_203959 = spell(
           '203956 (SkillLineAbility 30811). Eviscerate 2098\'s finisher frame (typed 327696, AttributesEx 0x100200, '
           'PreventionType 2) without the weapon requirement and Ex3 0x400 (R25: EquippedItemClass -1). eff0 Physical '
           'SCHOOL_DAMAGE ap_potency 58.968 + cp_ap_potency 93.1392 direct [tune] (M2c: x1.8 of M2a\'s 20.475 / 32.34, ~104% '
-          'of Eviscerate; M2a R2 was 75% of Eviscerate, before that 14.625 / 23.1; ap_potency 36.855 -> 58.968 and cp_ap_potency 58.212 -> 93.1392 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Between the Eyes +60%); ap_potency 58.968 -> 64.8648 and cp_ap_potency 93.1392 -> 102.45312 (2026-11-15, balance on the Normal-tier kits, user ruling: Between the Eyes +10%); ap_potency 64.8648 -> 58.37832 and cp_ap_potency 102.45312 -> 92.207808 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Between the Eyes -10%); ap_potency 58.37832 -> 70.1 (70.054 kept to one decimal, so +20.1%) and cp_ap_potency 92.207808 -> 110.6 (110.649 kept to one decimal, so +19.9%) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Between the Eyes +20%)) at SpellLevel 20, 35 energy, 20 yd (idx 3), Speed 0, DefenseType 2, no stun, GCD '
+          'of Eviscerate; M2a R2 was 75% of Eviscerate, before that 14.625 / 23.1; ap_potency 36.855 -> 58.968 and cp_ap_potency 58.212 -> 93.1392 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Between the Eyes +60%); ap_potency 58.968 -> 64.8648 and cp_ap_potency 93.1392 -> 102.45312 (2026-11-15, balance on the Normal-tier kits, user ruling: Between the Eyes +10%); ap_potency 64.8648 -> 58.37832 and cp_ap_potency 102.45312 -> 92.207808 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Between the Eyes -10%); ap_potency 58.37832 -> 70.1 (70.054 kept to one decimal, so +20.1%) and cp_ap_potency 92.207808 -> 110.6 (110.649 kept to one decimal, so +19.9%) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Between the Eyes +20%); ap_potency 70.1 -> 94.635 and cp_ap_potency 110.6 -> 149.31 (2026-11-20, level60-stat-curve round S7: rogue buffs after the potency rebase, user ruling: Between the Eyes x1.35)) at SpellLevel 20, 35 energy, 20 yd (idx 3), Speed 0, DefenseType 2, no stun, GCD '
           '133 '
           '/ 1000, SV 90252. d2 b5 | d2 b18 (m.BETWEEN_THE_EYES_CLASS), never d0 b17. The tooltip hand-builds the '
           '5-point value like Deadly Throw\'s and multiplies it by Coup de Grace x Surprise Attacks (SDV 1352). '

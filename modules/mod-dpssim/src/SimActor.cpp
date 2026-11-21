@@ -371,3 +371,64 @@ bool SimActor::Create(Config const& config)
         rating(CR_PROC_CHANCE), _player->GetMaxHealth(), _player->GetMaxPower(POWER_MANA));
     return true;
 }
+
+void SimActor::InCombatSheet::Sample(Player* player, uint32 stepMs)
+{
+    if (!player || !stepMs)
+        return;
+
+    double const weight = double(stepMs);
+    _totalMs += stepMs;
+    // Holy to Arcane: the schools a spell power coefficient reads (the range
+    // Player::UpdateSpellDamageAndHealingBonus() writes to PLAYER_FIELD_MOD_DAMAGE_DONE_POS)
+    for (uint8 school = SPELL_SCHOOL_HOLY; school < MAX_SPELL_SCHOOL; ++school)
+    {
+        SpellSchoolMask const mask = SpellSchoolMask(1 << school);
+        _spellPower[school] += weight * double(player->SpellBaseDamageBonusDone(mask));
+        _healingPower[school] += weight * double(player->SpellBaseHealingBonusDone(mask));
+    }
+
+    float const intellect = player->GetStat(STAT_INTELLECT);
+    float const spirit = player->GetStat(STAT_SPIRIT);
+    _flatSpellPower += weight * double(player->GetBaseSpellPowerBonus());
+    // The same truncation Unit::SpellBaseDamageBonusDone applies ("Custom: 0.5 point of spellpower per point of
+    // Intellect and Spirit")
+    _intellectSpiritPart += weight * double(int32(intellect / 2) + int32(spirit / 2));
+    _meleeAttackPower += weight * double(player->GetTotalAttackPowerValue(BASE_ATTACK));
+    _rangedAttackPower += weight * double(player->GetTotalAttackPowerValue(RANGED_ATTACK));
+    _intellect += weight * double(intellect);
+    _spirit += weight * double(spirit);
+}
+
+void SimActor::InCombatSheet::LogAndReset(std::string const& name)
+{
+    if (_totalMs)
+    {
+        static char const* const SCHOOL_NAMES[MAX_SPELL_SCHOOL] =
+            { "Physical", "Holy", "Fire", "Nature", "Frost", "Shadow", "Arcane" };
+        double const total = double(_totalMs);
+        auto const bestSchool = [](std::array<double, MAX_SPELL_SCHOOL> const& sums)
+        {
+            uint8 best = SPELL_SCHOOL_HOLY;
+            for (uint8 school = SPELL_SCHOOL_HOLY + 1; school < MAX_SPELL_SCHOOL; ++school)
+                if (sums[school] > sums[best])
+                    best = school;
+            return best;
+        };
+
+        uint8 const spellSchool = bestSchool(_spellPower);
+        uint8 const healSchool = bestSchool(_healingPower);
+        double const spellPower = _spellPower[spellSchool] / total;
+        double const flat = _flatSpellPower / total;
+        double const intellectSpirit = _intellectSpiritPart / total;
+        LOG_INFO("server.dpssim",
+            "mod-dpssim: SimActor in-combat sheet - '{}': spell power {:.1f} ({}; flat {:.1f}, Intellect/Spirit part "
+            "{:.1f}, auras and other {:.1f}), healing power {:.1f} ({}), melee attack power {:.1f}, ranged attack "
+            "power {:.1f}, Intellect {:.1f}, Spirit {:.1f}; time-weighted mean over {} ms.",
+            name, spellPower, SCHOOL_NAMES[spellSchool], flat, intellectSpirit, spellPower - flat - intellectSpirit,
+            _healingPower[healSchool] / total, SCHOOL_NAMES[healSchool], _meleeAttackPower / total,
+            _rangedAttackPower / total, _intellect / total, _spirit / total, _totalMs);
+    }
+
+    *this = InCombatSheet();
+}

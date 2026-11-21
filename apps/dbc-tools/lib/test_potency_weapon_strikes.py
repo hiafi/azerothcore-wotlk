@@ -211,8 +211,8 @@ class MigratedStrikesTest(unittest.TestCase):
             effect = dk[spell_id]["effect1"]
             self.assertEqual(effect["apply_aura"], 3, spell_id)
             # Rebased (level60-stat-curve HANDOFF 1.9): tick x a, coefficient x b / R (0.06325 at a = b = R = 1).
-            self.assertAlmostEqual(_level60(effect), old_tick * P.BASE_SCALE, delta=1.0, msg=spell_id)
-            self.assertAlmostEqual(effect["_potency"]["ap_coefficient"], 0.06325 * P.COEF_SCALE / P.DEFAULT_R,
+            self.assertAlmostEqual(_level60(effect), old_tick * P.AP_BASE_SCALE, delta=1.0, msg=spell_id)
+            self.assertAlmostEqual(effect["_potency"]["ap_coefficient"], 0.06325 * P.AP_COEF_SCALE / P.DEFAULT_R,
                                    places=4, msg=spell_id)
             self.assertEqual(effect["_potency"]["sp_coefficient"], 0.0, spell_id)
             self.assertEqual(effect["_potency"]["kind"], "periodic", spell_id)

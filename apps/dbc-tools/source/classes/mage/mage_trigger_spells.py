@@ -5307,9 +5307,9 @@ arcane_overload_200092 = spell(
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, die_sides=0, implicit_target_a=6, misc_value=6),
         Effect(type=EffectType.DUMMY, base_points=69, die_sides=0, implicit_target_a=6),
-        # LS5b ruling 7 (level60-stat-curve, 2026-11-20): the stock spell power share 34% x b (potency.COEF_SCALE): 97
+        # LS5b ruling 7 (level60-stat-curve, 2026-11-20): the stock spell power share 34% x b (potency.SP_COEF_SCALE): 97
         # at b 2.84 (96.56). The mana-spent share (effect 2) is not a C(L) base and stays.
-        Effect(type=EffectType.DUMMY, base_points=round(34 * _potency.COEF_SCALE), die_sides=0, implicit_target_a=6),
+        Effect(type=EffectType.DUMMY, base_points=round(34 * _potency.SP_COEF_SCALE), die_sides=0, implicit_target_a=6),
     ],
     spell_icon_id=2210,
     notes="Bugfix (playtest report, 2026-09-08) - implicit_target_a was 1 (TARGET_UNIT_CASTER), a leftover default that made this sub-spell always hit the caster instead of the passed CastCustomSpell target ('Arcane Overload deals damage to you and not the target'); fixed to 6 (TARGET_UNIT_TARGET_ENEMY). misc_value (the SPELL_EFFECT_SCHOOL_DAMAGE school index, 0=Physical/6=Arcane - distinct from the row's own SchoolMask column, which was already 64/Arcane) was left at its 0 default, so the hit rolled as Physical damage ('needs to be in the Arcane School'); fixed to 6. Original note: Arcane Mage rework (docs/arcane-mage-rework-design.md, Phase 3 Batch D) - Arcane Overload's (10,1) actual damage-dealing sub-spell, hit once per target (primary + AoE-around-caster, apps/dbc-tools' own 200079 effect2) by spell_mage_arcane_overload. die_sides=0 so the CastCustomSpell-injected value (mana spent + placeholder spell power coefficient, with falloff beyond 5 targets) is used exactly as passed."

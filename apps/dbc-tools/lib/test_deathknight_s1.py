@@ -602,7 +602,7 @@ class DeathKnightS1DataTest(unittest.TestCase):
         self.assertEqual(tick["total_potency"], 0.0)  # base_potency=0.0: the passed amount is not doubled
         # x b / R since the potency rebase (level60-stat-curve HANDOFF 1.9, LS5b).
         self.assertAlmostEqual(tick["ap_coefficient"],
-                               DND_TICK_POTENCY / 100.0 / 3.5 * potency.COEF_SCALE / potency.DEFAULT_R, places=6)
+                               DND_TICK_POTENCY / 100.0 / 3.5 * potency.AP_COEF_SCALE / potency.DEFAULT_R, places=6)
         rows = [r for r in pkg.spell_bonus_data if int(r["entry"]) == D_AND_D_TICK]
         self.assertEqual(len(rows), 1)  # the generated one only, not a second hand bonus_coefficients() row
         self.assertAlmostEqual(rows[0]["ap_bonus"], tick["ap_coefficient"], places=6)

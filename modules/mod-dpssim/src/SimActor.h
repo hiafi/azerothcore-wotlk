@@ -20,6 +20,8 @@
 
 #include "Define.h"
 #include "ObjectGuid.h"
+#include "SharedDefines.h"
+#include <array>
 #include <map>
 #include <string>
 #include <vector>
@@ -119,6 +121,37 @@ public:
     // the profile listed them; one refused again is logged as an error, as on the first pass. Nothing deferred (every
     // class whose gear fits at creation): a no-op.
     static void EquipDeferredGear(Player* player);
+
+    // The actor's power stats as the fight sees them: Create()'s "SimActor sheet" line is taken before talents, forms,
+    // armors and buffs, so a caster's real spell power reads far above it (level60-stat-curve S6). Each iteration
+    // loop (DPS, heal, tank, mechanics) samples its actor once per sim step after the AI has acted and logs one
+    // "SimActor in-combat sheet" line at the end: the time-weighted mean over the measured fight of
+    //   - spell power as spell damage reads it, Unit::SpellBaseDamageBonusDone() (the value
+    //     Unit::SpellDamageBonusDone() adds x the coefficient), for the school with the highest mean (Holy to Arcane),
+    //     split into the flat part (Player::GetBaseSpellPowerBonus(), the sheet line's "flat spell power"), the
+    //     Intellect/2 + Spirit/2 part and the rest (auras, stat and attack power conversions);
+    //   - healing power, Unit::SpellBaseHealingBonusDone(), for its own highest school;
+    //   - melee and ranged attack power, Unit::GetTotalAttackPowerValue() (forms and weapon scaling included);
+    //   - Intellect and Spirit.
+    class InCombatSheet
+    {
+    public:
+        // One sample, weighted by the step it covers
+        void Sample(Player* player, uint32 stepMs);
+        // The log line for the samples so far (nothing without one), then a reset for the next iteration
+        void LogAndReset(std::string const& name);
+
+    private:
+        uint64 _totalMs = 0;
+        std::array<double, MAX_SPELL_SCHOOL> _spellPower{};
+        std::array<double, MAX_SPELL_SCHOOL> _healingPower{};
+        double _flatSpellPower = 0.0;
+        double _intellectSpiritPart = 0.0;
+        double _meleeAttackPower = 0.0;
+        double _rangedAttackPower = 0.0;
+        double _intellect = 0.0;
+        double _spirit = 0.0;
+    };
 
 private:
     WorldSession* _session = nullptr;

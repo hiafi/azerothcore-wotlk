@@ -1,6 +1,6 @@
 """
 Potency rebase (level60-stat-curve HANDOFF 1.9, LS5b ruling 7, review S5): a few amounts live outside `resolve()` and
-were scaled by hand to the rebase's `a` (`potency.BASE_SCALE`, the flat base) and `b` (`potency.COEF_SCALE`, the
+were scaled by hand to the rebase's `a` (`potency.SP_BASE_SCALE`, the flat base) and `b` (`potency.SP_COEF_SCALE`, the
 power coefficients), or by R (`potency.DEFAULT_R`, attack power per spell power). A refit of a / b / R (HANDOFF 6.1)
 regenerates every potency spell but not these, so each one is recomputed here from its stock value and the current
 constants and compared with the number in the C++ source or the DSL (both parsed, not imported). A refit then fails
@@ -79,28 +79,28 @@ class HandScaledConstantsTest(unittest.TestCase):
     def test_mana_shield_spell_power_factor(self):
         body = _class_body(SPELL_MAGE.read_text(), "spell_mage_mana_shield")
         written = float(re.search(r"float bonus = ([0-9.]+)f;", body).group(1))
-        self.assertWritten(written, MANA_SHIELD_SP, potency.COEF_SCALE, 4, "spell_mage.cpp Mana Shield bonus")
+        self.assertWritten(written, MANA_SHIELD_SP, potency.SP_COEF_SCALE, 4, "spell_mage.cpp Mana Shield bonus")
 
     def test_incanters_absorption_spell_power_factor(self):
         body = _class_body(SPELL_MAGE.read_text(), "spell_mage_incanters_absorption_shield")
         written = float(re.search(r"SpellBaseDamageBonusDone\(SPELL_SCHOOL_MASK_ARCANE\) \* ([0-9.]+)f", body).group(1))
-        self.assertWritten(written, INCANTERS_SP, potency.COEF_SCALE, 4, "spell_mage.cpp Incanter's Absorption")
+        self.assertWritten(written, INCANTERS_SP, potency.SP_COEF_SCALE, 4, "spell_mage.cpp Incanter's Absorption")
 
     def test_infernal_melee(self):
         base = _cpp_float(PET_WARLOCK, r"INFERNAL_MELEE_BASE_DAMAGE = ([0-9.]+)f;")
         coefficient = _cpp_float(PET_WARLOCK, r"INFERNAL_MELEE_SP_COEFFICIENT = ([0-9.]+)f;")
-        self.assertWritten(base, INFERNAL_BASE, potency.BASE_SCALE, 2, "pet_warlock_rework.cpp Infernal base")
-        self.assertWritten(coefficient, INFERNAL_SP, potency.COEF_SCALE, 4, "pet_warlock_rework.cpp Infernal SP")
+        self.assertWritten(base, INFERNAL_BASE, potency.SP_BASE_SCALE, 2, "pet_warlock_rework.cpp Infernal base")
+        self.assertWritten(coefficient, INFERNAL_SP, potency.SP_COEF_SCALE, 4, "pet_warlock_rework.cpp Infernal SP")
 
     def test_mana_shield_base(self):
         base = _dsl_effect_value(MAGE_SPELLS, "mana_shield_1463", 0, "base_points")
         per_level = _dsl_effect_value(MAGE_SPELLS, "mana_shield_1463", 0, "points_per_level")
-        self.assertEqual(base, round(MANA_SHIELD_BASE * potency.BASE_SCALE))
-        self.assertWritten(per_level, MANA_SHIELD_PER_LEVEL, potency.BASE_SCALE, 4, "Mana Shield points per level")
+        self.assertEqual(base, round(MANA_SHIELD_BASE * potency.SP_BASE_SCALE))
+        self.assertWritten(per_level, MANA_SHIELD_PER_LEVEL, potency.SP_BASE_SCALE, 4, "Mana Shield points per level")
 
     def test_arcane_overload_spell_power_share(self):
         share = _dsl_effect_value(MAGE_TRIGGER_SPELLS, "arcane_overload_200092", 2, "base_points")
-        self.assertEqual(share, round(ARCANE_OVERLOAD_SP_PCT * potency.COEF_SCALE))
+        self.assertEqual(share, round(ARCANE_OVERLOAD_SP_PCT * potency.SP_COEF_SCALE))
 
     def test_gargoyle_spell_power_share(self):
         # Attack power turned into spell power for a spell-potency strike: one point of attack power is worth 1 / R.

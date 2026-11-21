@@ -517,11 +517,11 @@ mana_shield_1463 = spell(
     range_yards=0.0,
     duration_ms=60000,
     effects=[
-        # LS5b ruling 7 (level60-stat-curve, 2026-11-20): the stock flat base 119 / 11.25 x a (potency.BASE_SCALE)
+        # LS5b ruling 7 (level60-stat-curve, 2026-11-20): the stock flat base 119 / 11.25 x a (potency.SP_BASE_SCALE)
         # like a generated base: 68 / 6.4125 at a 0.57 (569 -> 324 at 60). spell_mage_mana_shield's spell power
-        # factor is 0.8053 x b (2.84) = 2.2871; lib/test_potency_hand_scaled.py pins it to potency.COEF_SCALE.
-        Effect(type=EffectType.APPLY_AURA, base_points=round(119 * _potency.BASE_SCALE),
-               points_per_level=round(11.25 * _potency.BASE_SCALE, 4), implicit_target_a=1, apply_aura=97,
+        # factor is 0.8053 x b (2.84) = 2.2871; lib/test_potency_hand_scaled.py pins it to potency.SP_COEF_SCALE.
+        Effect(type=EffectType.APPLY_AURA, base_points=round(119 * _potency.SP_BASE_SCALE),
+               points_per_level=round(11.25 * _potency.SP_BASE_SCALE, 4), implicit_target_a=1, apply_aura=97,
                misc_value=127),
     ],
     spell_icon_id=209,

@@ -37,6 +37,7 @@ def _int(value) -> int | None:
 
 SPELLFAMILY_HUNTER = 9
 SPELL_DAMAGE_CLASS_MELEE = 2
+SPELL_DAMAGE_CLASS_RANGED = 3
 SPELL_ATTR0_USES_RANGED_SLOT = 0x2
 PET_FAMILY_BIT = 0x10000000  # SpellClassMask_2 (d1) b28: every pet-cast hunter-family spell carries it
 ITEM_SUBCLASS_MASK_WEAPON_RANGED = (1 << 2) | (1 << 3) | (1 << 18) | (1 << 16)  # bow, gun, crossbow, thrown
@@ -379,6 +380,25 @@ class Spell:
                 f"owner is already the second number of pet_owner_scaling"
             )
 
+    def _rebase_base_side(self, raw_overrides: dict) -> str:
+        """The potency rebase side (lib.potency SIDE_SP / SIDE_AP) a pure base_potency line of this spell takes: one
+        with neither sp_potency nor ap_potency, whose own shares can't say (level60-stat-curve S7a). A line with either
+        splits by its shares instead and never reads this. From the spell's other potency lines (flat and per combo
+        point): attack power only -> AP, spell power only -> SP; neither or both: AP for a melee / ranged damage class
+        (DefenseType) or a pet ability scaling on its owner (pet_owner_scaling), else SP."""
+        effects = [e for e in self.effects if e is not None]
+        # A weapon strike's flat sp_potency bonus is rebase-exempt, so it says nothing about the side
+        has_sp = any((e.sp_potency and e.weapon_potency is None) or e.cp_sp_potency for e in effects)
+        has_ap = any(e.ap_potency or e.cp_ap_potency for e in effects)
+        if has_ap and not has_sp:
+            return _potency.SIDE_AP
+        if has_sp and not has_ap:
+            return _potency.SIDE_SP
+        damage_class = raw_overrides.get("DefenseType", 0) or 0
+        if damage_class in (SPELL_DAMAGE_CLASS_MELEE, SPELL_DAMAGE_CLASS_RANGED) or self.pet_owner_scaling is not None:
+            return _potency.SIDE_AP
+        return _potency.SIDE_SP
+
     def _resolve_potency(self, effect_dicts: list[dict | None], raw_overrides: dict) -> None:
         """Potency system (docs/potency-system.md, PLAN P2 step 2). Runs once per `to_entry()`
         call, only when at least one effect declared `sp_potency`/`ap_potency`/`weapon_potency`.
@@ -402,6 +422,7 @@ class Spell:
 
         resolved_by_index: dict[int, _potency.ResolvedPotency] = {}
         ticks_by_index: dict[int, float] = {}
+        base_side = self._rebase_base_side(raw_overrides)
         # D6's engine limit: spell_bonus_data has one direct and one DoT spell-power coefficient
         # for the *whole* spell - once any effect has ap_potency, that row replaces every direct
         # effect's own EffectBonusMultiplier_N, even a sibling effect that's SP-only itself. So
@@ -446,6 +467,7 @@ class Spell:
                     sp_potency=effect.sp_potency, ap_potency=effect.ap_potency, kind=kind, t_ms=t_ms,
                     base_potency=effect.base_potency,
                     rebase_exempt=bool(effect.rebase_exempt) or int(effect.type) in _WEAPON_DAMAGE_EFFECT_TYPES,
+                    base_side=base_side,
                 )
             resolved = _potency.resolve(pe, spell_level=int(spell_level))
             if resolved.ap_coefficient and uses_ranged_attack_power(int(self.attributes or 0), raw_overrides):
@@ -470,6 +492,7 @@ class Spell:
                     _potency.PotencyEffect(
                         sp_potency=effect.cp_sp_potency, ap_potency=effect.cp_ap_potency,
                         kind=_potency.KIND_PERIODIC, t_ms=t_ms, base_potency=effect.cp_base_potency,
+                        base_side=base_side,
                     ),
                     spell_level=int(spell_level),
                 )

@@ -102,7 +102,7 @@ class PetOwnerScalingTest(unittest.TestCase):
             pet_owner_scaling=(100, 100),
         )
         text = spell.to_entry()["raw_overrides"]["Description_Lang_enUS"]
-        per_tick = 0.2 * (2.0 / 3.5) * potency.COEF_SCALE / potency.DEFAULT_R  # x b / R (LS5b potency rebase)
+        per_tick = 0.2 * (2.0 / 3.5) * potency.AP_COEF_SCALE / potency.DEFAULT_R  # x b / R (LS5b potency rebase)
         self.assertIn(f"{per_tick * 5:.4f}".rstrip("0") + "*$RAP", text)
         self.assertIn(f"{per_tick * 5:.4f}".rstrip("0") + "*$SP", text)
 
