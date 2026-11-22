@@ -719,7 +719,7 @@ class ShamanS3aDataTest(unittest.TestCase):
         self.assertEqual((heal["kind"], float(heal["total_potency"])), ("heal", 15.0))
         self.assertEqual(int(rows[S1_TOUGHNESS_HEAL]["DefenseType"]), 1)
         orb = 103.9  # ORB_COPY_BASE_POTENCY: the copies keep the orb's R5 potency (R6 cut the orb 26364 itself to 77.925)
-        for sid, pct in ((S1_ARC, 55), (S1_CHAIN_ORB, 150)):  # chain orb 100 -> 150 (2026-11-22, level60-stat-curve S17)
+        for sid, pct in ((S1_ARC, 55), (S1_CHAIN_ORB, 200)):  # chain orb 100 -> 150 -> 200 (2026-11-22, level60-stat-curve S17/S19)
             with self.subTest(copy=sid):
                 self.assertAlmostEqual(float(entries[sid]["effect1"]["_potency"]["total_potency"]), orb * pct / 100, places=3)
                 self.assertEqual(int(rows[sid]["SpellClassSet"]), 11)

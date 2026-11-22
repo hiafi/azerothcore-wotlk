@@ -264,7 +264,7 @@ NEW_ROW_PINS: dict[int, dict] = {
     WHIRL: {"Name_Lang_enUS": "Bladestorm", "Attributes": 0x50010, "AttributesEx3": 0x10000,
             "SpellClassSet": 4, "SpellClassMask_1": 0, "SpellClassMask_2": 0x4000, "SpellClassMask_3": 0,
             "MaxTargets": 5, "DefenseType": 2, "SpellLevel": 50, "BaseLevel": 50, "Effect_1": EFF_WEAPON_PERCENT,
-            "EffectBasePoints_1": 244, "ImplicitTargetA_1": 22, "ImplicitTargetB_1": 15, "EffectRadiusIndex_1": 14},
+            "EffectBasePoints_1": 153, "ImplicitTargetA_1": 22, "ImplicitTargetB_1": 15, "EffectRadiusIndex_1": 14},
     # D5 Deep Wounds holder (visible, 6 s, periodic dummy every 1000 ms, d1 0x10) and the hidden tick (no crit)
     DW_HOLDER: {"Name_Lang_enUS": "Deep Wounds", "Attributes": 0, "SpellClassSet": 4, "SpellClassMask_2": 0x10,
                 "DurationIndex": DUR["6s"], "Effect_1": EFF_APPLY_AURA, "EffectAura_1": AURA_PERIODIC_DUMMY,
@@ -723,11 +723,11 @@ def check_mortal_strike_and_rend(rows: dict) -> list[str]:
     if (_i(ms, "RecoveryTime"), _i(ms, "ManaCost")) != (6000, 250):
         bad.append(f"{MORTAL_STRIKE}: cooldown / cost {(_i(ms, 'RecoveryTime'), _i(ms, 'ManaCost'))}, "
                    "expected (6000, 250) (Q2: row unchanged)")
-    if _i(ms, "EffectBasePoints_2") != 179:
-        bad.append(f"{MORTAL_STRIKE}: weapon percent bp {ms.get('EffectBasePoints_2')!r}, expected 179 "
+    if _i(ms, "EffectBasePoints_2") != 187:
+        bad.append(f"{MORTAL_STRIKE}: weapon percent bp {ms.get('EffectBasePoints_2')!r}, expected 187 "
                    "(D29 130%, balance 2026-10-30 x1.5 x1.4 x0.8 x1.1 x0.95: 228%, "
                    "DPS balance pass 1031 Arms x0.75: 171%, BAL1 2026-11-15 +10%: 188%, BAL2 +10%: 207%, BAL4 -5%: 197%, "
-                   "S9 2026-11-21 x0.85: 167%, S13 x1.08: 180%)")
+                   "S9 2026-11-21 x0.85: 167%, S13 x1.08: 180%, S19 x1.044: 188%)")
     # Q9 (user ruling 2026-10-30): Rend needs any melee weapon (the stock gate); the weapon talents fold into it
     # through the core's normal item-gated aura-79 path (second ruling 2026-10-30: no divide-out hook)
     if (_i(rend, "EquippedItemClass"), _i(rend, "EquippedItemSubclass")) != (2, 173555):

@@ -183,9 +183,9 @@ BLADE_FLURRY_EXTRA_TARGETS = const(
 BLADE_FLURRY_RADIUS_YD = const(
     'BLADE_FLURRY_RADIUS_YD', 8.0, 'Blade Flurry: copy radius around the hit target, yards [tune].')
 BLADE_FLURRY_COPY_PCT = const(
-    'BLADE_FLURRY_COPY_PCT', 60, 'Blade Flurry: copy share of the damage dealt, % [tune] (40 -> 20, 2026-10-28; 20 -> 60, '
+    'BLADE_FLURRY_COPY_PCT', 50, 'Blade Flurry: copy share of the damage dealt, % [tune] (40 -> 20, 2026-10-28; 20 -> 60, '
     '2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: reverses the 10-28 cut, Combat pack build reaches '
-    'the 2,500-2,800 5-target band).')
+    'the 2,500-2,800 5-target band; 60 -> 50, 2026-11-22, level60-stat-curve round S19: AoE rule A, user ruling: Combat pack 123% -> about 110%).')
 BLADE_FLURRY_ENFORCER_COPY_PCT = const(
     'BLADE_FLURRY_ENFORCER_COPY_PCT', 75, 'Blade Flurry in Enforcer Stance: copy share of the damage dealt, %; '
     'the aura is refreshed by the tank\'s hits so it stays up while the tank fights [tune] (new 2026-11-16, AoE '

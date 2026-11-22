@@ -1172,8 +1172,8 @@ mortal_strike_12294 = spell(
     duration_ms=10000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=6, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=180, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=14.2457, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=188, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=14.8868, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=improved_mortal_strike_tooltip,
@@ -1191,6 +1191,7 @@ mortal_strike_12294 = spell(
           ' Effect 2 weapon_potency 197 -> 173 (172.96 rounded to the whole number 173, so -12.2%) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Mortal Strike -12%). Effect 3 sp_potency 15.51825 -> 13.7 (13.656 kept to one decimal, so -11.7%) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Mortal Strike -12%). Reverted to weapon_potency 197 and sp_potency 15.51825 (2026-11-16, single-target pass to 1,000 follow-up, user ruling: undo the Mortal Strike cut; Arms fell to 936 with it).'
           ' Effect 2 weapon_potency 197 -> 167 (167.45 rounded to a whole number, so x0.848); effect 3 sp_potency 15.51825 -> 13.1905 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Arms, Mortal Strike x0.85).'
           ' Effect 2 weapon_potency 167 -> 180 (180.36 rounded to a whole number, so x1.078); effect 3 sp_potency 13.1905 -> 14.2457 (2026-11-21, level60-stat-curve round S13: trims after S12, user ruling: Arms Mortal Strike and Rend x1.08).'
+          ' Effect 2 weapon_potency 180 -> 188 (188.1 rounded, x1.044); effect 3 sp_potency 14.2457 -> 14.8868 (x1.045) (2026-11-22, level60-stat-curve round S19: AoE rule A, user ruling: Arms, Mortal Strike covers the 1T loss from Bladestorm x0.63).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing received is reduced.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals ${$m2*$<ims>}% weapon damage plus {pot3.avg*ims} and wounds the target, reducing the healing it receives by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'SpellClassMask_1': 33554432, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 39, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )

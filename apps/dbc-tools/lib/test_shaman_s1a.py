@@ -640,7 +640,7 @@ class ShamanS1aDataTest(unittest.TestCase):
         self.assertNotIn("reduces the damage", cl["Description_Lang_enUS"])
         self.assertEqual(float(rows[202592]["EffectChainAmplitude_1"]), 1.0)
         bolt = rows[202278]
-        self.assertEqual((int(bolt["EffectChainTargets_1"]), float(bolt["EffectChainAmplitude_1"])), (5, 1.0))
+        self.assertEqual((int(bolt["EffectChainTargets_1"]), float(bolt["EffectChainAmplitude_1"])), (3, 1.0))  # 5 -> 3 (S19)
         eots = rows[29065]
         self.assertEqual((int(eots["EffectAura_3"]), int(eots["EffectMiscValue_3"])), (107, 17))   # flat JUMP_TARGETS
         self.assertEqual(int(eots["EffectBasePoints_3"]) + 1, 1)

@@ -344,7 +344,7 @@ sweeping_strikes_copy_204494 = _arms(
 # the stock whirl visual 11756. One whirl per second, the once-per-whirl proc roll is the spell script's AfterCast.
 bladestorm_whirl_204495 = _arms(
     204495, 'Bladestorm',
-    [Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=245.0, implicit_target_a=_TARGET_UNIT_SRC_AREA_ENEMY,
+    [Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=154.0, implicit_target_a=_TARGET_UNIT_SRC_AREA_ENEMY,
             implicit_target_b=_TARGET_SRC_CASTER, radius_yards=8.0)],
     2782,
     'warrior-rework S2 A2 (D10, doc "Bladestorm"): the Arms Bladestorm whirl, 46924\'s periodic trigger target. '
@@ -355,7 +355,9 @@ bladestorm_whirl_204495 = _arms(
     'two-handed). eff0 weapon_potency 170 -> 272 (2026-11-16, AoE round 3 follow-up 3 on the Normal-tier kits, user '
     'ruling: Arms option C, Bladestorm +60%). eff0 weapon_potency 272 -> 245 (244.8 rounded to a whole number, so '
     'x0.901) (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Arms, Bladestorm damage down a '
-    'little, x0.90, no MaxTargets change).',
+    'little, x0.90, no MaxTargets change). eff0 weapon_potency 245 -> 154 (x0.63) (2026-11-22, level60-stat-curve '
+    'round S19: AoE rule A, user ruling: Arms 132% at 30 s; no MaxTargets cap, Bladestorm is a signature ability; '
+    'Mortal Strike x1.045 covers the 1T loss).',
     _raw('A whirl of steel strikes up to 5 nearby enemies.', level=50, MaxTargets=5, DefenseType=_DMG_CLASS_MELEE,
          PreventionType=_PREVENTION_PACIFY, SpellClassMask_2=_BLADESTORM_D1, AttributesEx3=_ATTR3_SUPPRESS_CASTER_PROCS,
          SpellVisualID_1=_SV_BLADESTORM_WHIRL, SpellPriority=50, RangeIndex=_RANGE_INDEX_SELF,
