@@ -649,7 +649,7 @@ half_volley_201936 = spell(
     effects=[
         # Placeholder, M: one Volley tick (42243's 75.5 direct, T 1.5).
         Effect(type=EffectType.PERSISTENT_AREA_AURA, apply_aura=AuraType.DUMMY, implicit_target_a=28, radius_yards=8.0,
-               ap_potency=50.132, potency_kind='direct', time_basis_ms=1500),
+               ap_potency=41.1082, potency_kind='direct', time_basis_ms=1500),
         Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=1000, implicit_target_a=1),
     ],
     spell_icon_id=126,
@@ -661,7 +661,8 @@ half_volley_201936 = spell(
           'ap_potency 75.5 direct T 1.5 (the snapshot source, = one 42243 tick, placeholder M); '
           'eff1 PERIODIC_DUMMY 1000 ms on self, unhasted (3 ticks). '
           'tooltip_vars 1172.'
-          ' Effect 1 ap_potency 75.5 -> 50.132 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).',
+          ' Effect 1 ap_potency 75.5 -> 50.132 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).'
+          ' Effect 1 ap_potency 50.132 -> 41.1082 (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: MM, Volley x0.82, the half Volley = one 42243 tick).',
     raw_overrides={
         # SpellLevel = the Volley tick 42243's: potency derives BaseLevel from it and CalcValue lifts any lower caster
         # level to BaseLevel, so this keeps the snapshot equal to one 42243 tick at every level (pytest-guarded).

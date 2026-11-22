@@ -427,11 +427,12 @@ volley_42243 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=50.132, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=41.1082, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=126,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to ap_potency=75.5 (potency-report default, base/coef already agreed). hunter-rework S2a A3 (MARKSMANSHIP 5.11/5.12): {pot1*mult} with tooltip_vars 1172 (Barrage, Rain of Arrows).'
-    ' Effect 1 ap_potency 75.5 -> 50.132 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).',
+    ' Effect 1 ap_potency 75.5 -> 50.132 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).'
+    ' Effect 1 ap_potency 50.132 -> 41.1082 (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: MM, Volley x0.82; the half Volley 201936 follows).',
     tooltip_vars=mm_volley_1172,
     raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 32, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Continuously fires a volley of ammo at the target area, causing {pot1*mult} Arcane damage to enemy targets within $a1 yards every ${$1510d/6}.2 $Lsecond:seconds; for $1510d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 135, 'SpellClassMask_1': 8192, 'SpellClassSet': 9, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 9493, 'StartRecoveryCategory': 133},
 )

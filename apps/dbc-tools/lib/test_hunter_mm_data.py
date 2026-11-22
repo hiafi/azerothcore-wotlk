@@ -38,7 +38,7 @@ S2b (S2b-HANDOFF WP-A row A2, B2 / B6 / B7 / B9, the S2a review's m-1 and the 34
       SUPPRESS_CASTER_PROCS, eff0 NORMALIZED_WEAPON_DMG bp -1, eff1 live weapon potency = PACK_SHOT_DAMAGE_PCT of
       Aimed Shot 19434's (A1 derives it from a private literal 224: the built equality is the guard), 112 today;
   (o) the half Volley 201936 / tick 201937 (B6): 201936 d2 b30 only, hidden (0x80), 3 s / 1 s = 3 unhasted ticks
-      (no AttributesEx5 0x2000), eff0 the dynobj with ap potency 50.132 direct time_basis 1500 (spell_bonus_data equal
+      (no AttributesEx5 0x2000), eff0 the dynobj with ap potency 41.1082 direct time_basis 1500 (spell_bonus_data equal
       to the Volley tick 42243's); 201937 potency_excluded (no bonus row), no family bit, AttributesEx3 0x20010000;
       VOLLEY_DAMAGE / BARRAGE_DAMAGE hold d2 b30 and the Barrage / Rain of Arrows ranks carry them;
   (p) Barrage r3's spell_proc row 24691 (CAST, 10 s cooldown, Multi-Shot mask, disable_effects_mask 0x1, flags
@@ -383,7 +383,7 @@ PACK_SHOT_FIELDS = {
 PACK_SHOT_WEAPON_POTENCY = 112
 # (o) the half Volley
 HALF_VOLLEY_DURATION_MS, HALF_VOLLEY_AMPLITUDE_MS, HALF_VOLLEY_TICKS = 3000, 1000, 3
-HALF_VOLLEY_AP_POTENCY, HALF_VOLLEY_TIME_BASIS_S = 50.132, 1.5   # WSH2 2026-11-17: was 75.5
+HALF_VOLLEY_AP_POTENCY, HALF_VOLLEY_TIME_BASIS_S = 41.1082, 1.5   # WSH2 2026-11-17: was 75.5; S17 2026-11-22: was 50.132
 HALF_VOLLEY_TICK_EX3 = ATTR_EX3_IGNORE_CASTER_MODIFIERS | ATTR_EX3_SUPPRESS_CASTER_PROCS     # 0x20010000
 # (s) learnable-spell sources: hunter talent tabs (BM 361, SV 362, MM 363), the hunter class skill lines whose
 # class-mask-0 rows still belong to the hunter, the SLA auto-learn methods (1 on skill value, 2 on skill learn)
@@ -1128,7 +1128,7 @@ def check_pack_shots(rows_by_id: dict[int, dict], pack_pct) -> list[str]:
 
 def check_half_volley(volley: dict | None, volley_entry: dict | None, tick: dict | None, tick_entry: dict | None,
                       bonus_rows: list[dict], duration_index_3s: int) -> list[str]:
-    """(o) B6: 201936 the dynobj + snapshot source (3 unhasted 1 s ticks, ap potency 50.132 direct T 1.5, bonus row =
+    """(o) B6: 201936 the dynobj + snapshot source (3 unhasted 1 s ticks, ap potency 41.1082 direct T 1.5, bonus row =
     the Volley tick 42243's), hidden; 201937 the potency-excluded tick (no bonus row, no bit, Ex3 0x20010000)."""
     if volley is None or tick is None or volley_entry is None or tick_entry is None:
         return [f"{HALF_VOLLEY}/{HALF_VOLLEY_TICK}: not declared"]
@@ -1693,7 +1693,7 @@ def good_half_volley() -> tuple[dict, dict, dict, dict, list[dict]]:
               "Effect_1": EFFECT_PERSISTENT_AREA_AURA, "EffectAura_1": AURA_DUMMY, "ImplicitTargetA_1": 28,
               "Effect_2": EFFECT_APPLY_AURA, "EffectAura_2": AURA_PERIODIC_DUMMY, "EffectAuraPeriod_2": 1000,
               "ImplicitTargetA_2": 1}
-    volley_entry = {"id": HALF_VOLLEY, "effect1": {"_potency": {"kind": "direct", "total_potency": 50.132,
+    volley_entry = {"id": HALF_VOLLEY, "effect1": {"_potency": {"kind": "direct", "total_potency": 41.1082,
                                                                 "t_seconds": 1.5, "ap_coefficient": 0.3236}}}
     tick = {"ID": HALF_VOLLEY_TICK, "SpellClassSet": 9, "SchoolMask": SCHOOL_ARCANE, "DefenseType": DEFENSE_RANGED,
             "EquippedItemClass": -1, "AttributesEx3": 0x20010000, "Effect_1": EFFECT_SCHOOL_DAMAGE,
