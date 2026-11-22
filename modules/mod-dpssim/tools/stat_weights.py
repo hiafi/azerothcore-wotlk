@@ -362,8 +362,8 @@ def main() -> int:
           "run(s) each.", file=sys.stderr)
 
     # STATWEIGHTS_DELTAS ("MasteryRating=140,VersatilityRating=280") overrides the delta per stat: this server's rated
-    # stats convert at different rates (level 60, gtcombatratings_dbc: Crit, Mastery and Cooldown Haste 14 rating
-    # per 1% (CDH was 7 before the 1:1 change of 2026-11-20), Versatility 28, Proc Chance 7), so one flat delta is a
+    # stats convert at different rates (level 60, gtcombatratings_dbc: Crit and Mastery 14 rating per 1%, Versatility
+    # 28, Cooldown Haste 6 and Proc Chance 4 since the S21 ruling of 2026-11-22), so one flat delta is a
     # 10% step for one stat and a 5% or 20% step for another.
     per_stat_delta = {}
     for part in os.environ.get("STATWEIGHTS_DELTAS", "").split(","):
