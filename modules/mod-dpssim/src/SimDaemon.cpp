@@ -818,6 +818,72 @@ namespace
                 "last fight (entries [{}]).", count, entries);
     }
 
+    // ReturnToSpawn(): how far a dummy may have moved before the reset logs it
+    constexpr float DUMMY_DRIFT_LOG_YARDS = 1.0f;
+
+    // Puts the actor (and its pet, if the reset left one) back on the iteration's start spot and every dummy back on
+    // its spawn spot (its home position, which Map::SummonCreature() sets), facing as at the spawn, with any movement
+    // stopped. Without it a pack dummy that Dragon's Breath disoriented wandered off and stayed there for every later
+    // iteration (the S16 Fire AoE decay), and melee started iteration 1 with a run-in from the spawn but every later
+    // one already in melee. Now every pull starts from the same layout. Run after the aura removal, so a confuse or
+    // fear aura's movement is already gone.
+    void ReturnToSpawn(Player* player, std::vector<Creature*> const& dummies, SimBot& bot,
+        Position const& startPosition)
+    {
+        if (player->IsAlive() && !player->IsBeingTeleported())
+        {
+            player->GetMotionMaster()->Clear();
+            player->StopMoving();
+            if (player->GetExactDist(startPosition) > 0.5f)
+            {
+                player->NearTeleportTo(startPosition.GetPositionX(), startPosition.GetPositionY(),
+                    startPosition.GetPositionZ(), startPosition.GetOrientation());
+                bot.HandleTeleportAck();
+            }
+            else
+                player->SetFacingTo(startPosition.GetOrientation());
+        }
+
+        // The permanent pet is normally gone by now (UnsummonAllTotems() dismisses it); one still here starts at the
+        // actor's side, following, as a pet the pre-pull buff phase summons does
+        if (Pet* pet = player->GetPet())
+        {
+            if (pet->IsAlive())
+            {
+                pet->AttackStop();
+                pet->GetMotionMaster()->Clear();
+                pet->StopMoving();
+                pet->NearTeleportTo(startPosition.GetPositionX(), startPosition.GetPositionY(),
+                    startPosition.GetPositionZ(), startPosition.GetOrientation());
+                pet->GetMotionMaster()->MoveFollow(player, PET_FOLLOW_DIST, pet->GetFollowAngle());
+            }
+        }
+
+        std::string moved;
+        for (size_t i = 0; i < dummies.size(); ++i)
+        {
+            Creature* dummy = dummies[i];
+            if (!dummy || !dummy->IsInWorld())
+                continue;
+
+            Position const& spawn = dummy->GetHomePosition();
+            float const drift = dummy->GetExactDist(spawn);
+            dummy->GetMotionMaster()->Clear();
+            dummy->StopMoving();
+            if (drift > 0.1f)
+                dummy->NearTeleportTo(spawn.GetPositionX(), spawn.GetPositionY(), spawn.GetPositionZ(),
+                    spawn.GetOrientation());
+            else
+                dummy->SetFacingTo(spawn.GetOrientation());
+
+            if (drift > DUMMY_DRIFT_LOG_YARDS)
+                moved += Acore::StringFormat("{}#{} {:.1f} yd", moved.empty() ? "" : ", ", i, drift);
+        }
+        if (!moved.empty())
+            LOG_INFO("server.dpssim", "mod-dpssim: iteration reset - dummies moved back to their spawn spot ({}).",
+                moved);
+    }
+
     // Between-iteration reset for RunPlayerbotBatch() - see that function's doc comment (SimDaemon.h)
     // for the full reasoning, especially the passive-aura carve-out and SimBot::ReestablishCombatState()'s
     // own doc comment for the real failure this also guards against (a batch's first iteration
@@ -916,6 +982,9 @@ namespace
             std::fill(std::begin(pet->m_ProhibitSchoolTime), std::end(pet->m_ProhibitSchoolTime), 0u);
             pet->RemoveAppliedAuras(removeNonPassive);
         }
+
+        // After the aura removal above, so a disorient/fear's movement is gone before anyone is moved
+        ReturnToSpawn(player, dummies, bot, startPosition);
 
         RefillResources(player, dummies);
 

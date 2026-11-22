@@ -504,8 +504,9 @@ namespace SimDaemon
     // actor's health/mana to full, clears all spell cooldowns, and strips every *non-passive* aura
     // from the actor and every dummy (SpellInfo::IsPassive() - a talent's permanent self-buff, applied
     // once by SimBot::Create()'s bootstrap, is never reapplied between iterations, so removing it
-    // would silently run every iteration after the first without that talent) - see
-    // ResetForNextIteration() in SimDaemon.cpp for the exact call sequence.
+    // would silently run every iteration after the first without that talent), and puts the actor and every dummy
+    // back on their iteration-1 spawn spots (2026-11-22) - see ResetForNextIteration() in SimDaemon.cpp for the exact
+    // call sequence.
     //
     // **Failure found, root-caused, and fixed 2026-09-13**: a batch had been observed landing real
     // hits on iteration 1, then zero casts on every iteration after it, forever - three separate
