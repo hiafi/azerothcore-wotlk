@@ -800,7 +800,7 @@ _C = [
     ("BREATH_MIN_RP", 10, "Minimum Runic Power to cast Breath of Sindragosa."),
     ("BREATH_BASE_DRAIN", 10, "Breath drain per second (Runic Power)."),
     ("BREATH_DRAIN_STEP_TICKS", 5, "Breath drain rises by 1 every this many ticks."),
-    ("BREATH_SECONDARY_PCT", 40, "Breath damage percent on secondary targets. "
+    ("BREATH_SECONDARY_PCT", 25, "Breath damage percent on secondary targets. "
      "BREATH_SECONDARY_PCT 50 -> 40 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Breath of Sindragosa secondary targets 40%). "
      "BREATH_SECONDARY_PCT 40 -> 25 (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Frost DK Breath build, secondaries 25% plus Breath x0.70)."),
     ("FROSTWYRM_RAMP_PCT", 10, "Frostwyrm's Wrath ramp: Breath damage percent per stack."),
