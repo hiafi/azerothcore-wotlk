@@ -223,7 +223,7 @@ rejuvenation_774 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=14,
+    mana_cost_pct=11,
     range_yards=40.0,
     duration_ms=15000,
     effects=[
@@ -232,7 +232,8 @@ rejuvenation_774 = spell(
     spell_icon_id=64,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60 (anchor rank 11 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=10.5 (potency-report default, base/coef already agreed). Effect 1 sp_potency 10.5 -> 8.3265 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793).'
           ' sp_potency 8.3265 -> 8.7428 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Resto Druid, Rejuvenation, Wild Growth, Regrowth, Lifebloom and Healing Touch x1.05 (S9 decision 1B, was x1.20 in the proposal)).'
-          ' mana_cost_pct 18 -> 14 (223 -> 174 mana at level 60, base mana 1244) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Rejuvenation mana cost -20%; 14.4 rounded to 14).',
+          ' mana_cost_pct 18 -> 14 (223 -> 174 mana at level 60, base mana 1244) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Rejuvenation mana cost -20%; 14.4 rounded to 14).'
+          ' mana_cost_pct 14 -> 11 (174 -> 136 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Resto Druid x0.78).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1.total} over $d.', 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_1': 16, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 4, 'SpellVisualID_1': 32, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
 )
 
@@ -587,7 +588,7 @@ healing_touch_5185 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=30,
+    mana_cost_pct=23,
     range_yards=40.0,
     effects=[
         Effect(type=EffectType.HEAL, sp_potency=133.224, potency_kind='heal', implicit_target_a=21),
@@ -595,7 +596,8 @@ healing_touch_5185 = spell(
     spell_icon_id=962,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 15 @ level 80); coefficient/mana_cost_pct from max rank; MaxLevel set to 80. PLAN A9 (BALANCE §0.13): cast_time_ms=2500, raw CastingTimeIndex (16, 1500ms) dropped so it no longer wins over the typed field. ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7 (B6 heal-cancel hook needs the heal to be castable in Moonkin at all). Potency system P5 (druid pass): converted to sp_potency=160.0 (potency-report default, base/coef already agreed); description dropped the stock $<min>/$<max> SpellDescriptionVariable range (heal kind has no variance roll, so it is now a single value) for {pot1}. Effect 1 sp_potency 160.0 -> 126.88 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793).'
           ' sp_potency 126.88 -> 133.224 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Resto Druid, Rejuvenation, Wild Growth, Regrowth, Lifebloom and Healing Touch x1.05 (S9 decision 1B, was x1.20 in the proposal)).'
-          ' mana_cost_pct 33 -> 30 (410 -> 373 mana at level 60, base mana 1244) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Healing Touch mana cost -10%; 29.7 rounded to 30).',
+          ' mana_cost_pct 33 -> 30 (410 -> 373 mana at level 60, base mana 1244) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Healing Touch mana cost -10%; 29.7 rounded to 30).'
+          ' mana_cost_pct 30 -> 23 (373 -> 286 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Resto Druid x0.78).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'SpellClassMask_1': 32, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 28, 'SpellLevel': 1, 'SpellVisualID_1': 58, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -905,7 +907,7 @@ regrowth_8936 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=26,
+    mana_cost_pct=20,
     range_yards=40.0,
     duration_ms=21000,
     effects=[
@@ -915,7 +917,8 @@ regrowth_8936 = spell(
     spell_icon_id=197,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 12); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 12 @ level 80); coefficient/mana_cost_pct from max rank; MaxLevel set to 80. PLAN A9 (BALANCE §0.13): cast_time_ms=1500, raw CastingTimeIndex (5, 2000ms) dropped. ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7. druid-rework FERAL §5 / §0.9: ShapeshiftMask gains cat, bear and dire bear (0x91) next to tree; moonkin stays castable via ALLOW_WHILE_NOT_SHAPESHIFTED (AttributesEx2 0x80000). Potency system P5 (druid pass): converted to sp_potency=153.3 (eff1, heal) / 11.3 (eff2, heal_periodic) (potency-report default, base/coef already agreed). Effect 1 sp_potency 153.3 -> 121.5669 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793). Effect 2 sp_potency 11.3 -> 8.9609 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793).'
           ' sp_potency 121.5669 -> 127.6452; sp_potency 8.9609 -> 9.4089 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Resto Druid, Rejuvenation, Wild Growth, Regrowth, Lifebloom and Healing Touch x1.05 (S9 decision 1B, was x1.20 in the proposal)).'
-          ' mana_cost_pct 29 -> 26 (360 -> 323 mana at level 60, base mana 1244) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Regrowth mana cost -10%; 26.1 rounded to 26).',
+          ' mana_cost_pct 29 -> 26 (360 -> 323 mana at level 60, base mana 1244) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Regrowth mana cost -10%; 26.1 rounded to 26).'
+          ' mana_cost_pct 26 -> 20 (323 -> 248 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Resto Druid x0.78).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot2} every $t2 seconds.', 'BaseLevel': 12, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1} and another {pot2.total} over $d.', 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': SS_TREE | SS_FERAL, 'SpellClassMask_1': 64, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 12, 'SpellVisualID_1': 58, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1526,7 +1529,7 @@ lifebloom_33763 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=11,
+    mana_cost_pct=9,
     range_yards=40.0,
     duration_ms=7000,
     effects=[
@@ -1544,7 +1547,8 @@ lifebloom_33763 = spell(
     spell_icon_id=2101,
     notes="druid-rework RESTO §7: mana_cost_pct 28->14; BaseLevel/SpellLevel 64->26; re-anchored level recipe (Q19, proportional to the existing L80 values: tick 40/46/53 at 60/70/80, bloom 582/679/776) - stored/ppl per RESTO §7's table (tick bp=17 ppl=0.6625, bloom bp=252 ppl=9.7); tooltip drops the mana-return mention and states the one-target rule (mana return removed in spell_dru_lifebloom, WP-B; the second Lifebloom removal itself is Druid::OnLifebloomApplied, WP-B). Potency system P5 (druid pass): eff1 (the tick) converted to sp_potency=5.7 (potency-report default, base/coef already agreed). Potency system P5 follow-up: eff2 (the bloom-on-fall-off base) is now vestigial - the real bloom heal is declared on 33778 itself (lifebloom_bloom_33778, below); this slot's own base_points/ppl are dead data, kept only for the AfterRemove/AfterDispel hook's structural requirement. Tooltip's old self-reference ($s2) repointed to the real source ($33778s1). Effect 1 sp_potency 5.7 -> 4.5201 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793)."
           ' sp_potency 4.5201 -> 4.7461 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Resto Druid, Rejuvenation, Wild Growth, Regrowth, Lifebloom and Healing Touch x1.05 (S9 decision 1B, was x1.20 in the proposal)).'
-          ' mana_cost_pct 14 -> 11 (174 -> 136 mana at level 60, base mana 1244) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Lifebloom mana cost -20%; 11.2 rounded to 11).',
+          ' mana_cost_pct 14 -> 11 (174 -> 136 mana at level 60, base mana 1244) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Lifebloom mana cost -20%; 11.2 rounded to 11).'
+          ' mana_cost_pct 11 -> 9 (136 -> 111 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Resto Druid x0.78).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} every second and $s2 when effect finishes or is dispelled.', 'BaseLevel': 26, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1.total} over $d.  When Lifebloom completes its duration or is dispelled, the target instantly heals themself for $33778s1.  This effect can stack up to $u times on the same target.  May be active on one target at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_2': 16, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 26, 'SpellVisualID_1': 8145, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
 )
 trained_by(lifebloom_33763, trainer_id=216, req_level=26, money_cost=5000)
@@ -1886,7 +1890,7 @@ wild_growth_48438 = spell(
     cooldown_ms=0,
     category_cooldown_ms=6000,
     mana_cost=0,
-    mana_cost_pct=21,
+    mana_cost_pct=16,
     range_yards=40.0,
     duration_ms=7000,
     effects=[
@@ -1896,7 +1900,8 @@ wild_growth_48438 = spell(
     spell_icon_id=2864,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=13.9 (potency-report default, base/coef already agreed). Effect 1 sp_potency 13.9 -> 11.0227 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793).'
           ' sp_potency 11.0227 -> 11.5738 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Resto Druid, Rejuvenation, Wild Growth, Regrowth, Lifebloom and Healing Touch x1.05 (S9 decision 1B, was x1.20 in the proposal)).'
-          ' mana_cost_pct 23 -> 21 (286 -> 261 mana at level 60, base mana 1244) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Wild Growth mana cost -10%; 20.7 rounded to 21).',
+          ' mana_cost_pct 23 -> 21 (286 -> 261 mana at level 60, base mana 1244) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Wild Growth mana cost -10%; 20.7 rounded to 21).'
+          ' mana_cost_pct 21 -> 16 (261 -> 199 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Resto Druid x0.78).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx5': 4194304, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} damage every $t1 second.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals up to $s3 friendly party or raid members within $a1 yards of the target for {pot1.total} over $d. The amount healed is applied quickly at first, and slows down as the Wild Growth reaches its full duration.', 'EffectBasePoints_3': 4, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_2': 67108864, 'SpellClassSet': 7, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 11568, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
