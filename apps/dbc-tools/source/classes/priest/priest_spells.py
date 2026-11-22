@@ -34,7 +34,7 @@ power_word_shield_17 = spell(
     cooldown_ms=4000,
     category_cooldown_ms=4000,
     mana_cost=0,
-    mana_cost_pct=10,
+    mana_cost_pct=11,
     range_yards=40.0,
     duration_ms=30000,
     effects=[
@@ -52,7 +52,8 @@ power_word_shield_17 = spell(
           '"raise Power Word: Shield\'s baseline absorb" and "baseline mana cost about 130 mana at '
           'level 60"; base mana 1376 at 60, so 10% = 137 (9% would be 123). Holy gets both too. '
           'Greater PWS 200155 scaled by the same +50% to keep parity).'
-          ' sp_potency 146.52 -> 132.454 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Discipline x0.904).',
+          ' sp_potency 146.52 -> 132.454 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Discipline x0.904).'
+          ' mana_cost_pct 10 -> 11 (137 -> 151 mana at level 60, base mana 1376) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Power Word: Shield mana cost +10%).',
     raw_overrides={'AttributesEx2': 2621440, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Draws on the soul of the friendly target to shield them, absorbing {pot1} damage.  Lasts $d.  While the shield holds, spellcasting will not be interrupted by damage.  Once shielded, the target cannot be shielded again for $6788d.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'ExcludeTargetAuraSpell': 6788, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 1, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 784, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -281,7 +282,7 @@ prayer_of_healing_596 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=20,
+    mana_cost_pct=24,
     range_yards=40.0,
     effects=[
         Effect(type=EffectType.HEAL, sp_potency=31.3905, potency_kind='heal', implicit_target_a=21, implicit_target_b=37, radius_yards=30.0),
@@ -298,7 +299,8 @@ prayer_of_healing_596 = spell(
           'Concentration\'s -45% Holy Words so Holy\'s party pin50 sim runs out of mana near 45 s). '
           'Shared with Disc, whose sizing accounts for it (dps-balance-1031.STAGE-R4-PRIEST-REPORT.md). Effect 1 sp_potency 47.5 -> 42.75 (2026-11-15, balance round 4 on the Normal-tier kits, user ruling: Prayer of Healing -10% (Holy over the 4,000 goal; Disc also casts it)).'
           ' sp_potency 42.75 -> 36.081 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).'
-          ' sp_potency 36.081 -> 31.3905 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Holy Priest, Prayer of Healing x0.87).',
+          ' sp_potency 36.081 -> 31.3905 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Holy Priest, Prayer of Healing x0.87).'
+          ' mana_cost_pct 20 -> 24 (275 -> 330 mana at level 60, base mana 1376) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Prayer of Healing mana cost +20%).',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 14, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "A powerful prayer heals the friendly target's party members within $a1 yards for {pot1}.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 512, 'SpellClassSet': 6, 'SpellLevel': 30, 'SpellVisualID_1': 194, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
