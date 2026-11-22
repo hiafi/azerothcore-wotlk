@@ -163,7 +163,8 @@ SPECS: dict[str, tuple] = {
                         {"ProcChance": (10, 20, 30)}),
     "Improved Sweeping Strikes": ((204529, 204530),
                                   [(0, AURA_SPELLMOD_FLAT, OP_DURATION, (1999, 3999), (0, 0x100000, 0)),
-                                   (1, AURA_DUMMY, 0, (74, 79), Z)], PASSIVE_ROW, {}),
+                                   # carrier 75 / 80 -> 60 / 65 (2026-11-22, level60-stat-curve S17)
+                                   (1, AURA_DUMMY, 0, (59, 64), Z)], PASSIVE_ROW, {}),
     "Weapon Specialization": ((12281, 12812, 12813), [(0, AURA_DUMMY, 0, (0, 0, 0), Z)],
                               {**NO_PROC, "EquippedItemClass": -1, "EquippedItemSubclass": 0}, {}),
     "Exploiter": ((204531, 204532), [(0, AURA_DUMMY, 0, (14, 29), Z)], {**PASSIVE_ROW, **NO_PROC}, {}),
@@ -258,11 +259,12 @@ NEW_ROW_PINS: dict[int, dict] = {
     SWEEPING_COPY: {"Name_Lang_enUS": "Sweeping Strikes", "Attributes": 0, "AttributesEx2": 0,
                     "AttributesEx3": 0x20050000, "AttributesEx4": 0x800000, "SpellClassSet": 4,
                     "DefenseType": 2, "RangeIndex": 13, "Effect_1": EFF_SCHOOL_DAMAGE},
-    # D10 the whirl: 272% weapon (balance 2026-10-30 +70%, AoE round 3 +60%), MaxTargets 5, d1 0x4000 only, melee DmgClass, level 50
+    # D10 the whirl: 245% weapon (balance 2026-10-30 +70%, AoE round 3 +60%, S17 2026-11-22 x0.90), MaxTargets 5, d1 0x4000
+    # only, melee DmgClass, level 50
     WHIRL: {"Name_Lang_enUS": "Bladestorm", "Attributes": 0x50010, "AttributesEx3": 0x10000,
             "SpellClassSet": 4, "SpellClassMask_1": 0, "SpellClassMask_2": 0x4000, "SpellClassMask_3": 0,
             "MaxTargets": 5, "DefenseType": 2, "SpellLevel": 50, "BaseLevel": 50, "Effect_1": EFF_WEAPON_PERCENT,
-            "EffectBasePoints_1": 271, "ImplicitTargetA_1": 22, "ImplicitTargetB_1": 15, "EffectRadiusIndex_1": 14},
+            "EffectBasePoints_1": 244, "ImplicitTargetA_1": 22, "ImplicitTargetB_1": 15, "EffectRadiusIndex_1": 14},
     # D5 Deep Wounds holder (visible, 6 s, periodic dummy every 1000 ms, d1 0x10) and the hidden tick (no crit)
     DW_HOLDER: {"Name_Lang_enUS": "Deep Wounds", "Attributes": 0, "SpellClassSet": 4, "SpellClassMask_2": 0x10,
                 "DurationIndex": DUR["6s"], "Effect_1": EFF_APPLY_AURA, "EffectAura_1": AURA_PERIODIC_DUMMY,
@@ -416,8 +418,9 @@ TOOLTIP_FRAGMENTS = {
     56637: ("20% chance to grant a charge of Overpower",), 56638: ("30% chance to grant a charge of Overpower",),
     204493: ("For 10 sec", "strike up to 4 additional nearby enemies for 70% of their damage",
              "Rend and Colossus Smash apply in full to each enemy struck", "Shares a cooldown with Blade Flurry"),
-    204529: ("duration of your Sweeping Strikes by 2 sec", "from 70% to 75%"),
-    204530: ("Sweeping Strikes by 4 sec", "from 70% to 80%"),
+    # 75 / 80% -> 60 / 65% (2026-11-22, level60-stat-curve S17)
+    204529: ("duration of your Sweeping Strikes by 2 sec", "from 70% to 60%"),
+    204530: ("Sweeping Strikes by 4 sec", "from 70% to 65%"),
     12281: ("Axes and polearms: critical strike chance and critical strike damage increased by 2%",
             "Maces: armor penetration increased by 5%", "have a 3% chance to grant an extra attack",
             "120% weapon damage, no more than once every 3 sec"),

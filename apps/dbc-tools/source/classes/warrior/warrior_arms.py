@@ -342,7 +342,7 @@ sweeping_strikes_copy_204494 = _arms(
 # the stock whirl visual 11756. One whirl per second, the once-per-whirl proc roll is the spell script's AfterCast.
 bladestorm_whirl_204495 = _arms(
     204495, 'Bladestorm',
-    [Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=272.0, implicit_target_a=_TARGET_UNIT_SRC_AREA_ENEMY,
+    [Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=245.0, implicit_target_a=_TARGET_UNIT_SRC_AREA_ENEMY,
             implicit_target_b=_TARGET_SRC_CASTER, radius_yards=8.0)],
     2782,
     'warrior-rework S2 A2 (D10, doc "Bladestorm"): the Arms Bladestorm whirl, 46924\'s periodic trigger target. '
@@ -351,7 +351,9 @@ bladestorm_whirl_204495 = _arms(
     '0x4 / d2 0x8, so Seismic never echoes and Sweeping never copies it), AttributesEx3 SUPPRESS_CASTER_PROCS, '
     'SpellLevel = BaseLevel 50, DmgClass melee, visual 11756. No GCD, no cost, no off-hand trigger (Arms is '
     'two-handed). eff0 weapon_potency 170 -> 272 (2026-11-16, AoE round 3 follow-up 3 on the Normal-tier kits, user '
-    'ruling: Arms option C, Bladestorm +60%).',
+    'ruling: Arms option C, Bladestorm +60%). eff0 weapon_potency 272 -> 245 (244.8 rounded to a whole number, so '
+    'x0.901) (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Arms, Bladestorm damage down a '
+    'little, x0.90, no MaxTargets change).',
     _raw('A whirl of steel strikes up to 5 nearby enemies.', level=50, MaxTargets=5, DefenseType=_DMG_CLASS_MELEE,
          PreventionType=_PREVENTION_PACIFY, SpellClassMask_2=_BLADESTORM_D1, AttributesEx3=_ATTR3_SUPPRESS_CASTER_PROCS,
          SpellVisualID_1=_SV_BLADESTORM_WHIRL, SpellPriority=50, RangeIndex=_RANGE_INDEX_SELF,
@@ -780,16 +782,18 @@ def _improved_sweeping_strikes(spell_id, rank, seconds, percent):
         _ICON_FAN_OF_KNIVES,
         f'warrior-rework S2 A2 (D24, doc "Improved Sweeping Strikes"): rank {rank}. eff0 ADD_FLAT_MODIFIER DURATION '
         f'+{seconds} s (bp {seconds * 1000 - 1}) on Sweeping Strikes (EffectSpellClassMaskA_2 = d1 0x100000), eff1 '
-        f'DUMMY carrier {percent} (the extra-hit percent [tune], read by the Sweeping copy). Carrier {percent - 30} -> '
-        f'{percent - 15} (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: the Arms cleave window 55 / 60 / '
-        f'65%) -> {percent} (2026-11-16, AoE round 3 follow-up 2, user ruling: Arms option A, 70 / 75 / 80%).',
-        _rank_raw(f'Increases the duration of your Sweeping Strikes by {seconds} sec and increases the damage of its '
+        f'DUMMY carrier {percent} (the extra-hit percent [tune], read by the Sweeping copy). Carrier {percent - 15} -> '
+        f'{percent} (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: the Arms cleave window 55 / 60 / '
+        f'65%) -> {percent + 15} (2026-11-16, AoE round 3 follow-up 2, user ruling: Arms option A, 70 / 75 / 80%) -> '
+        f'{percent} (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Arms, Improved Sweeping '
+        f'Strikes 75 / 80% -> 60 / 65%, now under the 70% base: the talent trades extra-hit damage for duration).',
+        _rank_raw(f'Increases the duration of your Sweeping Strikes by {seconds} sec and changes the damage of its '
                   f'extra hits from 70% to {percent}%.', EffectSpellClassMaskA_2=_SWEEPING_D1),
     )
 
 
-improved_sweeping_strikes_204529 = _improved_sweeping_strikes(204529, 1, 2, 75)
-improved_sweeping_strikes_204530 = _improved_sweeping_strikes(204530, 2, 4, 80)
+improved_sweeping_strikes_204529 = _improved_sweeping_strikes(204529, 1, 2, 60)
+improved_sweeping_strikes_204530 = _improved_sweeping_strikes(204530, 2, 4, 65)
 
 
 # Exploiter 204531-204532 (D15, R7): eff0 DUMMY carrier 15 / 30 (per-stack percent). ProcTypeMask / ProcChance 0: no
