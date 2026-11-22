@@ -111,8 +111,10 @@ BOW_MULT = 0.405                         # physical InventoryType 15 ilvl 60-100
 item("brs_fist_of_omokk", base=13167, ladder=VANILLA_DUNGEON,
      primary="Strength (Solo)", secondary="Crit/Versatility",
      sockets=(Socket.RED, Socket.YELLOW), socket_bonus=BONUS_CRIT_4)
+# Intellect, was Spirit (2026-11-21, level60-stat-curve healer mana pass, user ruling: half the Spirit-only leather
+# caster drops become Intellect, at least one Spirit piece kept per slot).
 item("brs_tressermane_leggings", base=13169, ladder=VANILLA_DUNGEON,
-     primary="Spirit (Solo)", secondary="Crit/Mastery")
+     primary="Intellect (Solo)", secondary="Crit/Mastery")
 item("brs_skyshroud_leggings", base=13170, ladder=VANILLA_DUNGEON,
      primary="Intellect (Solo)", secondary="Haste/Versatility")
 
@@ -251,8 +253,10 @@ item("brs_incarcerators_wand", name="Incarcerator's Wand", like=18483, ilvl=61, 
 
 item("brs_dustfeather_sash", base=12589, ladder=VANILLA_DUNGEON,
      primary="Intellect (Solo)", secondary="Haste/Proc")
+# Intellect, was Spirit (2026-11-21, level60-stat-curve healer mana pass, user ruling: half the Spirit-only leather
+# caster drops become Intellect, at least one Spirit piece kept per slot).
 item("brs_crystallized_girdle", base=12606, ladder=VANILLA_DUNGEON,
-     primary="Spirit (Solo)", secondary="Crit/Mastery")
+     primary="Intellect (Solo)", secondary="Crit/Mastery")
 # Stock (level 63), moved from Rend; its MP5 Equip folds away.
 item("brs_feralsurge_girdle", base=18104, ladder=VANILLA_DUNGEON,
      primary="Intellect (Solo)", secondary="Haste/Mastery")

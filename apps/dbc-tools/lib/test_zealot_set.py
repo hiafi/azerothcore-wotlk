@@ -52,6 +52,15 @@ RESERVATION = range(212100, 212300)
 CREATURES = range(300890, 300900)
 
 SLOTS = ("head", "shoulders", "chest")
+# The leather caster set splits Intellect (head, chest) / Spirit (shoulders) (2026-11-21, level60-stat-curve healer
+# mana pass, user ruling).
+LEATHER_CASTER = {"head": "Intellect (Solo)", "shoulders": "Spirit (Solo)", "chest": "Intellect (Solo)"}
+
+
+def _slot(primary, slot):
+    return primary[slot] if isinstance(primary, dict) else primary
+
+
 INVENTORY = {"head": {1}, "shoulders": {3}, "chest": {5, 20}}
 TIERS = ("heroic", "empowered_1", "empowered_2", "empowered_3")
 # The hub's Sets table (ruling 57), in its order: ItemSet id, key prefix, set name, primary, kind, role, pieces
@@ -77,7 +86,7 @@ SETS = (
     (1010, "ironspine", "Ironspine's Bones", "Agility (Solo)", "leather_tank", "tank",
      {"head": ("Ironspine's Skull", None), "shoulders": ("Ironspine's Shoulderblades", None),
       "chest": ("Ironspine's Ribcage", 7688)}),
-    (1011, "gardener", "Gardener's Vestments", "Spirit (Solo)", "dps", "hybrid",
+    (1011, "gardener", "Gardener's Vestments", LEATHER_CASTER, "dps", "hybrid",
      {"head": ("Gardener's Hat", None), "shoulders": ("Gardener's Mantle", None), "chest": ("Gardener's Smock", None)}),
     (1012, "arcanist", "Regalia of the Arcanist", "Intellect (Solo)", "dps", "damage",
      {"head": ("Doan's Cowl", None), "shoulders": ("Mantle of Doan", 7712), "chest": ("Robe of Doan", 7711)}),
@@ -175,7 +184,7 @@ class ZealotSetTest(unittest.TestCase):
                 if stock is not None:
                     self.assertEqual(decl.like, stock, key)  # a reused stock piece: its name and look
                 self.assertIsNotNone(decl.like, key)
-                self.assertEqual((decl.primary, decl.secondary), (primary, secondary(kind, slot)), key)
+                self.assertEqual((decl.primary, decl.secondary), (_slot(primary, slot), secondary(kind, slot)), key)
                 self.assertEqual(decl.extra_stamina, 0.25 if kind == "leather_tank" else 0.0, key)
                 self.assertEqual(decl.ladder.name, "vanilla_heroic_set")
                 self.assertEqual((decl.ilvl, decl.quality, decl.required_level), (None, None, None))

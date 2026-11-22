@@ -217,8 +217,10 @@ item("brd_spiderfang_carapace", base=11633, ladder=VANILLA_DUNGEON,
 # Pyromancer Loregrain (stock item level 53-55)
 item("brd_kindling_stave", base=11750, ladder=VANILLA_DUNGEON,
      primary="Spirit (Solo)", secondary="Crit/Mastery")
+# Intellect, was Spirit (2026-11-21, level60-stat-curve healer mana pass, user ruling: half the Spirit-only leather
+# caster drops become Intellect, at least one Spirit piece kept per slot).
 item("brd_flamestrider_robes", base=11747, ladder=VANILLA_DUNGEON,
-     primary="Spirit (Solo)", secondary="Haste/Versatility",
+     primary="Intellect (Solo)", secondary="Haste/Versatility",
      sockets=(R, Y), socket_bonus=BONUS_HASTE_4)
 # Moved from Grizzle (the Mail Intellect shoulder).
 item("brd_dregmetal_spaulders", base=11722, ladder=VANILLA_DUNGEON,

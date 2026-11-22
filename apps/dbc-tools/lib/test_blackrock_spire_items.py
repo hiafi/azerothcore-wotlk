@@ -56,7 +56,7 @@ PENDING_SHAPES = {"Mastery/CDH", "Versatility/Proc", "Dodge/Versatility", "Block
 # unordered pairs.
 DOC_STATS = {
     "brs_fist_of_omokk": "Str Vers Crit",
-    "brs_tressermane_leggings": "Spi Crit Mastery",
+    "brs_tressermane_leggings": "Int Crit Mastery",  # was Spi (2026-11-21, level60-stat-curve healer mana pass)
     "brs_skyshroud_leggings": "Int Vers Haste",
     "brs_funeral_cuffs": "Spi Mastery Haste",
     "brs_blackcrow": "Agi Haste Crit",
@@ -93,7 +93,7 @@ DOC_STATS = {
     "brs_helm_of_the_bound_flame": "Str Haste Vers",
     "brs_incarcerators_wand": "Int Mastery",
     "brs_dustfeather_sash": "Int Haste Proc",
-    "brs_crystallized_girdle": "Spi Mastery Crit",
+    "brs_crystallized_girdle": "Int Mastery Crit",  # was Spi (2026-11-21, level60-stat-curve healer mana pass)
     "brs_feralsurge_girdle": "Int Mastery Haste",
     "brs_flamewreath_legplates": "Int Crit CDH",
     "brs_blackhand_doomsaw": "Str Mastery",

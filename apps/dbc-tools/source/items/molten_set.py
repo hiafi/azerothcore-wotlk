@@ -87,6 +87,10 @@ SLOTS = (
 )
 SLOT_KEYS = tuple(s[0] for s in SLOTS)
 BIG_SLOTS = ("head", "shoulders", "chest", "legs")
+# The leather caster set splits its primary by slot: Intellect on the big slots, Spirit on the small ones
+# (2026-11-21, level60-stat-curve healer mana pass, user ruling: leather caster gear was Spirit-only while cloth has
+# an Intellect and a Spirit set, so split the leather caster sets by slot).
+LEATHER_CASTER_PRIMARY = {s: ("Intellect (Solo)" if s in BIG_SLOTS else "Spirit (Solo)") for s in SLOT_KEYS}
 SMALL_CRIT_SLOTS = ("hands", "wrist")
 # The Normal tier's level by slot: Haunted's Tier 0 levels (haunted_set.TIER0_ILVL), the same item level per archetype.
 TIER0_ILVL = {"head": 62, "shoulders": 60, "chest": 63, "hands": 59, "waist": 58, "legs": 61, "feet": 59, "wrist": 57}
@@ -94,6 +98,11 @@ TIER0_ILVL = {"head": 62, "shoulders": 60, "chest": 63, "hands": 59, "waist": 58
 TOKEN_ENTRY_BASE = 70540
 TOKEN_COST_BASE = 3040
 TOKEN_DESCRIPTION = "A Molten quartermaster trades it for the {noun} of your armor type's Molten set."
+
+
+def _slot_primary(primary, slot: str) -> str:
+    """An archetype's primary shape in a slot: one shape for every slot, or a {slot: shape} split."""
+    return primary[slot] if isinstance(primary, dict) else primary
 
 
 def _secondaries(archetype_kind: str, slot: str) -> tuple[str, int]:
@@ -117,7 +126,7 @@ ARCHETYPES = (
      dict(head=22080, shoulders=22082, chest=22083, hands=22081, waist=22078, legs=22085, feet=22084, wrist=22079)),
     (512, "darkmantle", "Leather Agility", "Agility (Solo)", "dps",
      dict(head=22005, shoulders=22008, chest=22009, hands=22006, waist=22002, legs=22007, feet=22003, wrist=22004)),
-    (513, "feralheart", "Leather Spirit", "Spirit (Solo)", "dps",
+    (513, "feralheart", "Leather Spirit", LEATHER_CASTER_PRIMARY, "dps",
      dict(head=22109, shoulders=22112, chest=22113, hands=22110, waist=22106, legs=22111, feet=22107, wrist=22108)),
     (515, "beastmasters", "Mail Agility", "Agility (Solo)", "dps",
      dict(head=22013, shoulders=22016, chest=22060, hands=22015, waist=22010, legs=22017, feet=22061, wrist=22011)),
@@ -165,7 +174,8 @@ for _set_id, _prefix, _archetype, _primary, _kind, _stock in ARCHETYPES:
         _secondary, _bonus = _secondaries(_kind, _slot)
         _ilvl = TIER0_ILVL[_slot]
         item(_piece_key(_prefix, _slot, _stock[_slot]), base=_stock[_slot], ilvl=_ilvl, quality=Quality.RARE,
-             required_level=_ilvl - NEW_ITEM_LEVEL_GAP, primary=_primary, secondary=_secondary,
+             required_level=_ilvl - NEW_ITEM_LEVEL_GAP, primary=_slot_primary(_primary, _slot),
+             secondary=_secondary,
              sockets=_sockets(_slot, _kind), socket_bonus=_bonus, ladder=VANILLA_DUNGEON, bonding=BIND_ON_PICKUP)
     SET_ITEMS[_set_id] = tuple(_piece_key(_prefix, s, _stock[s]) for s in SLOT_KEYS)
 
@@ -175,7 +185,8 @@ for _set_id, _prefix, _set_name, _archetype, _primary, _kind, _pieces in NEW_SET
         _name, _like = _pieces[_slot]
         _ilvl = TIER0_ILVL[_slot]
         item(_piece_key(_prefix, _slot), name=_name, like=_like, ilvl=_ilvl, quality=Quality.RARE,
-             required_level=_ilvl - NEW_ITEM_LEVEL_GAP, primary=_primary, secondary=_secondary,
+             required_level=_ilvl - NEW_ITEM_LEVEL_GAP, primary=_slot_primary(_primary, _slot),
+             secondary=_secondary,
              extra_stamina=EXTRA_STAMINA if _kind == "leather_tank" else 0.0,
              sockets=_sockets(_slot, _kind), socket_bonus=_bonus, ladder=VANILLA_DUNGEON,
              bonding=BIND_ON_PICKUP, itemset=_set_id)
