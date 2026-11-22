@@ -788,8 +788,8 @@ frost_strike_66196 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=62, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5.15, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=105, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=8.755, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2740,
@@ -801,6 +801,7 @@ frost_strike_66196 = spell(
         'WEAPON_PERCENT_DAMAGE weapon_potency 60 first, eff1 NORMALIZED_WEAPON_DMG sp_potency 5 direct T 1500, EFFECT_2 empty (the '
         'BasePoints[E2] -1, DieSides[E2], ImplicitTargetA_3 6 and E2.d1 0x4 twins of the stock row are deleted). SpellLevel 10 = '
         'the main hand\'s.'
+        ' weapon_potency 62 -> 105 and sp_potency 5.15 -> 8.755 (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Frost Strike x1.70 so FrostDkObliterationSim 1T keeps ~1,080 after the Breath x0.70 cut; shared by every Frost DK build, the off-hand copy follows the main hand).'
     ),
     raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy with your off-hand weapon for $s1% weapon damage plus {pot2.avg} as Frost damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RuneCostID': 1824, 'SpellClassMask_2': 4, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellVisualID_1': 11612, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )

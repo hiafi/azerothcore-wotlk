@@ -491,8 +491,8 @@ frost_strike_49143 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=62, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5.15, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=105, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=8.755, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2740,
@@ -504,6 +504,7 @@ frost_strike_49143 = spell(
         'by the percent, so the flat lands whole here). The old single-rank bootstrap values (86 + 6.52/level '
         'flat, 54% weapon) are gone; the stale EffectSpellClassMaskC_2 twin (no aura on effect 2) is dropped. '
         'EFFECT_3 stays empty. 40 RP cost (PowerType 6 / ManaCost 400), RuneCostID 621 (0,0,0,0) kept.'
+        ' weapon_potency 62 -> 105 (105.4 rounded to a whole number, so x1.694) and sp_potency 5.15 -> 8.755 (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Frost Strike x1.70 so FrostDkObliterationSim 1T keeps ~1,080 after the Breath x0.70 cut; shared by every Frost DK build).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy, dealing $s1% weapon damage plus {pot2.avg} as Frost damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 621, 'SpellClassMask_2': m.FROST_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellVisualID_1': 11612, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
