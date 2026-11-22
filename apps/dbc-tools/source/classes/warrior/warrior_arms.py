@@ -300,8 +300,10 @@ sweeping_strikes_arms_204493 = _arms(
     'is the Arms AoE engine; the C++ base is SWEEPING_STRIKES_BASE_PCT in WarriorMechanics.cpp); 55% -> 70% '
     '(2026-11-16, AoE round 3 follow-up 2 on the Normal-tier kits, user ruling: Arms option A, the pack build was '
     'about 250-400 under 2,500 at 5 targets); cooldown_ms 20000 -> 15000 (2026-11-16, AoE round 3 follow-up 3 on '
-    'the Normal-tier kits, user ruling: Arms option C, the pack build stayed about 400 under 2,500 at 5 targets).',
-    _raw('For 10 sec, your single-target melee abilities also strike up to 4 additional nearby enemies for 70% of '
+    'the Normal-tier kits, user ruling: Arms option C, the pack build stayed about 400 under 2,500 at 5 targets); '
+    'base extra-hit share 70% -> 50% (2026-11-22, level60-stat-curve round S17, user ruling: Improved Sweeping '
+    'Strikes went to 60 / 65%, so the base drops under it and the talent stays an upgrade).',
+    _raw('For 10 sec, your single-target melee abilities also strike up to 4 additional nearby enemies for 50% of '
          'their damage. Rend and Colossus Smash apply in full to each enemy struck. Shares a cooldown with Blade '
          'Flurry.', 'Your melee abilities strike nearby enemies.', level=30, PreventionType=_PREVENTION_PACIFY,
          SpellClassMask_2=_SWEEPING_D1, SpellVisualID_1=_SV_SWEEPING, SpellPriority=50),
@@ -786,9 +788,9 @@ def _improved_sweeping_strikes(spell_id, rank, seconds, percent):
         f'{percent} (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: the Arms cleave window 55 / 60 / '
         f'65%) -> {percent + 15} (2026-11-16, AoE round 3 follow-up 2, user ruling: Arms option A, 70 / 75 / 80%) -> '
         f'{percent} (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Arms, Improved Sweeping '
-        f'Strikes 75 / 80% -> 60 / 65%, now under the 70% base: the talent trades extra-hit damage for duration).',
-        _rank_raw(f'Increases the duration of your Sweeping Strikes by {seconds} sec and changes the damage of its '
-                  f'extra hits from 70% to {percent}%.', EffectSpellClassMaskA_2=_SWEEPING_D1),
+        f'Strikes 75 / 80% -> 60 / 65%; the base share went 70% -> 50% with it, so the talent stays an upgrade).',
+        _rank_raw(f'Increases the duration of your Sweeping Strikes by {seconds} sec and increases the damage of its '
+                  f'extra hits from 50% to {percent}%.', EffectSpellClassMaskA_2=_SWEEPING_D1),
     )
 
 

@@ -211,10 +211,11 @@ namespace Warrior
         constexpr float COLOSSUS_SMASH_PCT = 15.0f;
         // D3: each Mortal Strike hit cuts Colossus Smash's cooldown by this much (real time).
         constexpr Milliseconds COLOSSUS_SMASH_MORTAL_STRIKE_CUT = 2s;
-        // D4: the copy's share of the main hit without Improved Sweeping Strikes (75/80% from its DUMMY carrier).
+        // D4: the copy's share of the main hit without Improved Sweeping Strikes (60/65% from its DUMMY carrier).
         // AoE round 3 (2026-11-16, user ruling): 40 -> 55, carriers 45/50 -> 60/65; follow-up 2 (2026-11-16, user
-        // ruling: Arms option A): 55 -> 70, carriers 60/65 -> 75/80. Mirrored in warrior_arms.py.
-        constexpr int32 SWEEPING_STRIKES_BASE_PCT = 70;
+        // ruling: Arms option A): 55 -> 70, carriers 60/65 -> 75/80; level60-stat-curve S17 (2026-11-22, user
+        // ruling): carriers 75/80 -> 60/65 and 70 -> 50, so the talent stays an upgrade. Mirrored in warrior_arms.py.
+        constexpr int32 SWEEPING_STRIKES_BASE_PCT = 50;
         constexpr float SWEEPING_STRIKES_RADIUS_YD = 8.0f;
         constexpr std::size_t SWEEPING_STRIKES_MAX_TARGETS = 4;
         // D5: the stock Deep Wounds basis divides attack power by 14 per second of weapon speed.
