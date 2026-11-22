@@ -478,11 +478,12 @@ fire_nova_8349 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=104.1, potency_kind='direct', implicit_target_a=87, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=187.38, potency_kind='direct', implicit_target_a=87, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=33,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 12); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
-          'Potency system P7-Shaman: converted to sp_potency=242.2 (shaman-potency-proposals.txt, mismatched row). Cast by the player: spell_sha_fire_nova::HandleDummy (spell_shaman.cpp) runs `caster->CastSpell(totem, ..., true)` on the Fire Nova player spell (1535) with the totem only as the target, not the caster, and with no custom base points - so this is an ordinary player-attributed potency conversion, not a D2 script-bp case.',
+          'Potency system P7-Shaman: converted to sp_potency=242.2 (shaman-potency-proposals.txt, mismatched row). Cast by the player: spell_sha_fire_nova::HandleDummy (spell_shaman.cpp) runs `caster->CastSpell(totem, ..., true)` on the Fire Nova player spell (1535) with the totem only as the target, not the caster, and with no custom base points - so this is an ordinary player-attributed potency conversion, not a D2 script-bp case.'
+          ' Effect 1 sp_potency 104.1 -> 187.38 (104.1 x 1.8) (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Enhancement, Fire Nova x1.8; shared with Elemental, whose packs use it too).',
     raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 1073741824, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 12, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Causes the shaman's active Fire totem to emit a wave of flames, inflicting {pot1} Fire damage to enemies within $a1 yards of the totem.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 2147745792, 'SpellClassSet': 11, 'SpellLevel': 12, 'SpellVisualID_1': 14908, 'Targets': 64},
 )
 

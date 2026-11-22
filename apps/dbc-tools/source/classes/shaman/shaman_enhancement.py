@@ -513,9 +513,10 @@ gust_202391 = _gust(
     202391, 'Gust', 42.35, 'Deals {pot1} Physical damage to the target.',
     'the Gust: rolled by Wind / Elemental Ascendance (the aura proc rows below) and by the Wind Spirit. ap_potency 35.0 -> 42.35 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).')
 gust_splash_202392 = _gust(
-    202392, 'Gust', 21.175, 'Deals {pot1} Physical damage to the target.',
-    'the Gust splash, half of the Gust, cast by spell_sha_enh_gust at up to GUST_SPLASH_TARGETS other enemies within '
-    'GUST_SPLASH_RADIUS_YD of the struck target. It never rolls Gust (triggered) and rolls nothing else (SUPPRESS_CASTER_PROCS). ap_potency 17.5 -> 21.175 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
+    202392, 'Gust', 42.35, 'Deals {pot1} Physical damage to the target.',
+    'the Gust splash, as much as the Gust since S17 (half before), cast by spell_sha_enh_gust at up to GUST_SPLASH_TARGETS other enemies within '
+    'GUST_SPLASH_RADIUS_YD of the struck target. It never rolls Gust (triggered) and rolls nothing else (SUPPRESS_CASTER_PROCS). ap_potency 17.5 -> 21.175 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21). '
+    'ap_potency 21.175 -> 42.35 (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Enhancement, Gust splash x2).',
     suppress_caster_procs=True)
 scripted_by(gust_202391, 'spell_sha_enh_gust')
 
