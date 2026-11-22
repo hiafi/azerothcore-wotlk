@@ -702,9 +702,10 @@ lightning_shield_arc_202445 = _orb_copy(
     'first, in line of sight from it. STATIC_SHOCK_ARC_PCT 55 (Revision 3; was 85).',
 )
 lightning_shield_chain_orb_202446 = _orb_copy(
-    202446, 100, 'Anticipation\'s Chain Lightning orb',
+    202446, 150, 'Anticipation\'s Chain Lightning orb',
     'Under Rockbiter with Anticipation rank 3 (the capstone) and the shaman\'s own Lightning Shield up, spell_sha_stoneskin_grant '
-    'casts it at each enemy the shaman\'s Chain Lightning hits whose victim is the shaman.',
+    'casts it at each enemy the shaman\'s Chain Lightning hits whose victim is the shaman. 100 % -> 150 % (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Enhancement '
+    'tanks, the tank-only chain orb copy 150 %).',
 )
 
 lightning_shield_324 = spell(
