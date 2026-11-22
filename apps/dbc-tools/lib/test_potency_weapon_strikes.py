@@ -182,9 +182,12 @@ class MigratedStrikesTest(unittest.TestCase):
                     self.assertEqual(_weapon_percent(effect), percent, spell_id)
 
     def test_fan_of_knives_copies_share_one_percent(self):
+        # Fan of Knives and its off hand share one percent, and the two Second Volley copies share theirs. Second Volley
+        # has its own since 2026-11-22 (level60-stat-curve S17: x1.45, 250 -> 363); before, all four were one.
         rogue = _package("rogue")
-        percents = {sid: _weapon_percent(rogue[sid]["effect1"]) for sid in (51723, 52874, 204166, 204167)}
-        self.assertEqual(len(set(percents.values())), 1, percents)
+        for group in ((51723, 52874), (204166, 204167)):
+            percents = {sid: _weapon_percent(rogue[sid]["effect1"]) for sid in group}
+            self.assertEqual(len(set(percents.values())), 1, percents)
 
     def test_flat_parts_keep_their_level_60_values(self):
         # (class, spell, effect index, the old hand-set level-60 value, tolerance)

@@ -613,6 +613,10 @@ sinister_calling_volley_204165 = spell(
 )
 scripted_by(sinister_calling_volley_204165, 'spell_rog_sinister_calling_volley')
 
+# Second Volley's own weapon percent (both copies): Fan of Knives' 250 x 1.45 = 362.5, rounded to a whole number
+# (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Subtlety, Second Volley x1.45)
+SECOND_VOLLEY_WEAPON_POTENCY = 363
+
 # ---- Second Volley copies 204166 / 204167 (U41) ----
 # 204166 = Fan of Knives 51723's eff0 (weapon_potency 100 since M2a, A 18 / B 16 radius 8) + eff1 ADD_COMBO_POINTS (as 51723), d1 b18
 # (keeps the dagger +50% hardcode on purpose), SpellLevel 24, 51723's visual, Ex3 SUPPRESS_CASTER_PROCS (+ the stock main
@@ -623,7 +627,7 @@ second_volley_main_204166 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=RANGE_SELF, radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=FAN_OF_KNIVES_WEAPON_POTENCY,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=SECOND_VOLLEY_WEAPON_POTENCY,
                implicit_target_a=_TARGET_DEST_CASTER, implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=8.0),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=_TARGET_DEST_CASTER,
                implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=8.0),
@@ -636,7 +640,8 @@ second_volley_main_204166 = spell(
           '(main hand + SUPPRESS_CASTER_PROCS), no combo attributes, PreventionType 0. Bound to spell_rog_fan_of_knives '
           '(one point on the selection per cast); linked to the off-hand 204167. weapon_potency 100 -> 250 (2026-11-16, '
           'AoE round 3 on the Normal-tier kits, user ruling: rogue packs reach the 2,500-2,800 5-target band) through '
-          'FAN_OF_KNIVES_WEAPON_POTENCY.',
+          'FAN_OF_KNIVES_WEAPON_POTENCY. weapon_potency 250 -> 363 (SECOND_VOLLEY_WEAPON_POTENCY) '
+          '(2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Subtlety, Second Volley x1.45; 362.5 rounded to a whole number, so x1.452; a literal now, FAN_OF_KNIVES_WEAPON_POTENCY stays 250 for Fan of Knives 51723 / 52874).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.SECOND_VOLLEY_CLASS),
         'EquippedItemClass': _ITEM_CLASS_WEAPON, 'EquippedItemSubclass': _ANY_MELEE_WEAPON, 'CastingTimeIndex': 1,
@@ -654,7 +659,7 @@ second_volley_off_204167 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=RANGE_SELF, radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=FAN_OF_KNIVES_WEAPON_POTENCY,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=SECOND_VOLLEY_WEAPON_POTENCY,
                implicit_target_a=_TARGET_DEST_CASTER, implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=8.0),
     ],
     spell_icon_id=_ICON_FAN_OF_KNIVES,
@@ -663,7 +668,8 @@ second_volley_off_204167 = spell(
           'SUPPRESS_CASTER_PROCS 0x10000, Speed 18, visual 12318), eff0 weapon_potency 100 (M2a, was 70), SpellLevel 24, d1 b18 '
           '(m.SECOND_VOLLEY_CLASS), no combo effect, no combo attributes. weapon_potency 100 -> 250 (2026-11-16, AoE round 3 '
           'on the Normal-tier kits, user ruling: rogue packs reach the 2,500-2,800 5-target band) through '
-          'FAN_OF_KNIVES_WEAPON_POTENCY.',
+          'FAN_OF_KNIVES_WEAPON_POTENCY. weapon_potency 250 -> 363 (SECOND_VOLLEY_WEAPON_POTENCY) '
+          '(2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Subtlety, Second Volley x1.45; 362.5 rounded to a whole number, so x1.452; a literal now, FAN_OF_KNIVES_WEAPON_POTENCY stays 250 for Fan of Knives 51723 / 52874).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.SECOND_VOLLEY_CLASS),
         'EquippedItemClass': _ITEM_CLASS_WEAPON, 'EquippedItemSubclass': _ANY_MELEE_WEAPON, 'CastingTimeIndex': 1,
