@@ -20,7 +20,7 @@ Ids: 200714-200717 (the warlock-shared spares, SHARED s1), spell_group 1203 (SHA
 from lib.dsl import AuraType, CombatRating, Effect, EffectType, RANGE_SELF, School
 from lib.dsl.registry import (item_template, pot_text, procs_on, scripted_by, spell, spell_group, spell_group_rule,
                                tooltip_vars)
-from lib.dsl.tooltip import talent_mult
+from lib.dsl.tooltip import knows, talent_mult
 
 from . import _masks as m
 from .warlock_trigger_spells import master_conjuror_18767, master_conjuror_18768
@@ -65,6 +65,15 @@ warlock_stones_1430 = tooltip_vars(
     mcmast=talent_mult([master_conjuror_18767, master_conjuror_18768], effect=3),
 )
 
+# level60-stat-curve S23 (user ruling 14): Shadow Bolt, Corruption, Soul Fire and Fire Blast 200716 carry the Demonology
+# x1.09; Affliction and Destruction get +8% more from the hidden passive 200992, which Malediction rank 3 (32484) and
+# Shadow and Flame rank 3 (30290) link. `tune` puts that +8% on the tooltip of a warlock who knows either rank.
+warlock_spec_tune_1431 = tooltip_vars(
+    1431, "Warlock: Affliction and Destruction tuning on the shared spells",
+    afftune=knows(32484, "$200992m1*0.01+1"),
+    tune=knows(30290, "$200992m1*0.01+1", "$<afftune>"),
+)
+
 
 # =====================================================================================================================
 # The procs' payloads
@@ -76,7 +85,7 @@ warlock_stones_1430 = tooltip_vars(
 fire_blast_200716 = spell(
     id=200716, name='Fire Blast', school=School.FIRE, attributes=0,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=31.44, potency_kind='direct', time_basis_ms=1500,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=34.2696, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_FIRE_BLAST,
     notes='dungeon-prereqs S5b (WARLOCK-STONES s3): the Firestone proc, triggered by 200714 eff1. '
@@ -84,13 +93,18 @@ fire_blast_200716 = spell(
           'T 1500, d2 STONE_FIRE_BLAST (Master Conjuror eff1 only). Range 50000 (triggered helper). '
           'AttributesEx3 0x10000 '
           'is a marker; the triggered cast is the no-proc guard.'
-          ' Effect 1 sp_potency 40.0 -> 31.44 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Destruction x0.786).',
+          ' Effect 1 sp_potency 40.0 -> 31.44 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Destruction x0.786).'
+          ' Effect 1 sp_potency 31.44 -> 34.2696 (2026-11-22, level60-stat-curve round S23, user ruling 14: x1.09, the'
+          ' Demonology multiplier, on this spell shared by the specs (any spec can carry a Firestone, and Master Conjuror'
+          ' is a Demonology talent); Affliction and Destruction get their x1.18 from the hidden passive 200992 (+8%,'
+          ' linked from Malediction and Shadow and Flame rank 3)).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_WARLOCK, 'SpellClassMask_2': m.STONE_FIRE_BLAST, 'DefenseType': _DMG_MAGIC,
         'EquippedItemClass': -1, 'SpellLevel': 28, 'CastingTimeIndex': 1,
         'AttributesEx3': _ATTR3_SUPPRESS_CASTER_PROCS, 'SpellVisualID_1': _SV_FIRE_BLAST,
-        'Description_Lang_enUS': 'Blasts the target for {pot1} Fire damage.',
+        'Description_Lang_enUS': 'Blasts the target for {pot1*tune} Fire damage.',
     },
+    tooltip_vars=warlock_spec_tune_1431,
 )
 
 # Spellstone's proc: +1% Mastery per stack (aura 306, misc 1 << MASTERY_TENTHS, amount 10 tenths = stored 9), up to 3

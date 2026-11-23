@@ -162,7 +162,7 @@ PERCENTS = {
     "hunter": {2643: [(1, 66)]},   # 100 -> 66 (2026-11-17, weapon scaling WSH2 Normal trim, MM x0.664)
     "shaman": {60103: [(0, 266)], 32175: [(0, 254)], 32176: [(0, 254)], 202413: [(0, 140)], 202415: [(0, 140)]},
     "druid": {200429: [(0, 240)]},
-    "warlock": {30213: [(0, 100)]},
+    "warlock": {30213: [(0, 109)]},  # 100 -> 109 (2026-11-22, level60-stat-curve S23, Demonology x1.09)
     "warrior": {20240: [(0, 100)]},
     "rogue": {14251: [(0, 683)], 51675: [(1, 50)], 51677: [(1, 100)], 51723: [(0, 250)], 52874: [(0, 250)]},
     "deathknight": {45462: [(1, 62)]},
@@ -195,7 +195,9 @@ class MigratedStrikesTest(unittest.TestCase):
             # hunter: was 275 (bp 0 + int(42 x 6.5645); a direct sp_potency 103); sp_potency 68.392 after WSH2 MM x0.664
             # (2026-11-17)
             ("hunter", 2643, 0, 182.7, 1.5),
-            ("warlock", 30213, 1, 50.4, 1.5),       # was 62 (bp 31 + int(10 x 3.0667) + 1, sp_potency 23.2); sp_potency 19.024 after WS2 Demonology x0.82 (2026-11-17)
+            # warlock: was 62 (bp 31 + int(10 x 3.0667) + 1, sp_potency 23.2); sp_potency 19.024 after WS2 Demonology x0.82
+            # (2026-11-17), 50.4; sp_potency 20.7362 after S23 Demonology x1.09 (2026-11-22), 50.4 x 1.09 = 54.9
+            ("warlock", 30213, 1, 54.9, 1.5),
             ("deathknight", 45462, 0, 151, 1.5),    # bp 9 + int(59 x 2.3899) + 1; sp_potency 56.4
         ):
             effect = _package(class_name)[spell_id][f"effect{index + 1}"]
