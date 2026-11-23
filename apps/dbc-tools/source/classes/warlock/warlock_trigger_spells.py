@@ -1627,11 +1627,13 @@ grim_reach_18219 = spell(
     ],
     spell_icon_id=1614,
     notes='warlock-rework AFFLICTION §6 (3,1) capstone: rank 2 links to the shared +6 yd passive 200708 and carries the "periodic Shadow damage has a 5% chance to bolt+debuff" capstone proc (spell_warl_grim_reach_capstone, procs_on below).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells by $s1 yards.\n\nCapstone Bonus: Your periodic Shadow damage has a 5% chance to deal additional Shadow damage and increase the Shadow damage the target takes from you by 3% for 6 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells by $s1 yards.\n\nCapstone Bonus: Your periodic Shadow damage has a 5% chance to deal additional Shadow damage and increase the Shadow damage the target takes from you by 3% for 6 sec. This effect cannot occur more than once every 1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 linked_spell(grim_reach_18219.id, 200708, type=2)
 scripted_by(grim_reach_18219, 'spell_warl_grim_reach_capstone')
-procs_on(grim_reach_18219, proc_flags=m.PROC_FLAG_DONE_PERIODIC, school_mask=32, spell_type_mask=1, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=5, cooldown_ms=0)
+# S22 2026-11-22 (user ruling 3, Systems.md section 5 AoE throttle): a 1 s ICD. Periodic ticks scale with the number
+# of dotted targets; at ~1.7 single-target attempts per second the ICD keeps ~90% of the ICD-free rate.
+procs_on(grim_reach_18219, proc_flags=m.PROC_FLAG_DONE_PERIODIC, school_mask=32, spell_type_mask=1, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=5, cooldown_ms=1000)
 
 
 shadow_mastery_18271 = spell(
