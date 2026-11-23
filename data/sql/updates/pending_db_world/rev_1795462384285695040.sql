@@ -28,7 +28,7 @@ INSERT INTO `creaturedisplayinfo_dbc` (`ID`, `ModelID`, `SoundID`, `ExtendedDisp
 (90801, 49, 0, 17492, 1.0, 128, '', '', '', '', 1, 0, 0, 0, 0, 0),
 (90802, 49, 0, 7338, 1.0, 128, '', '', '', '', 0, 0, 0, 0, 0, 0),
 (90803, 49, 0, 17491, 1.0, 128, '', '', '', '', 1, 0, 0, 0, 0, 0),
-(90804, 2254, 428, 0, 1.5, 140, 'MountedDeathKnightGoldRed_01', 'MountedDeathKnightGoldRed_02', 'MountedDeathKnightGoldRed_03', '', 4294967295, 0, 0, 0, 0, 0),
+(90804, 2254, 428, 0, 1.5, 140, 'MountedDeathKnightGoldRed_01', 'MountedDeathKnightGoldRed_02', 'MountedDeathKnightGoldRed_03', '', -1, 0, 0, 0, 0, 0),
 (90805, 90805, 0, 0, 1.0, 255, '', '', '', '', 1, 0, 0, 0, 0, 0),
 (90806, 90806, 0, 0, 1.0, 255, '', '', '', '', 1, 0, 0, 0, 0, 0),
 (90807, 90807, 0, 0, 1.0, 255, '', '', '', '', 1, 0, 0, 0, 0, 0);

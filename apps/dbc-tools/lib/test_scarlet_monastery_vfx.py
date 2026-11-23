@@ -297,6 +297,14 @@ class SqlTest(unittest.TestCase):
                 self.assertGreater(float(radius), 0)
                 self.assertGreaterEqual(float(reach), 0.1)       # ObjectMgr resets a combat reach below 0.1
 
+    def test_no_value_overflows_a_signed_int_column(self):
+        # Alexandros clones a stock display whose BloodLevel is -1 (4294967295 in the DBC); the server's
+        # creaturedisplayinfo_dbc columns are signed int, so the raw value failed the 2026-11-23 db-import.
+        self.assertNotRegex(self.sql, r"\b(?:214748364[89]|21474836[5-9]\d|2147483[7-9]\d\d|214748[4-9]\d{3}|"
+                                      r"21474[9]\d{4}|2147[5-9]\d{5}|214[8-9]\d{6}|21[5-9]\d{7}|2[2-9]\d{8}|[3-9]\d{9}|"
+                                      r"\d{11,})\b")
+        self.assertIn("'MountedDeathKnightGoldRed_03', '', -1,", self.sql)
+
     def test_the_model_info_rows_land_after_the_display_rows_in_the_same_file(self):
         # ObjectMgr::LoadCreatureModelInfo dereferences the creaturedisplayinfo_dbc row: one import carries both.
         self.assertLess(self.sql.index("INSERT INTO `creaturedisplayinfo_dbc`"),

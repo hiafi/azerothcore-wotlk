@@ -327,6 +327,11 @@ def build_pending_sql() -> str:
     for table, builder in ((dbcfmt.CREATUREMODELDATA, build_creature_model_rows),
                            (dbcfmt.CREATUREDISPLAYINFO, build_creature_display_rows)):
         built = builder()
+        if table is dbcfmt.CREATUREDISPLAYINFO:
+            # The DBC holds BloodLevel unsigned (a cloned stock row's -1 reads 4294967295); the server column is a
+            # signed int, so db-import refuses the raw value.
+            built = [{**r, "BloodLevel": r["BloodLevel"] - (1 << 32) if r["BloodLevel"] >= 1 << 31 else r["BloodLevel"]}
+                     for r in built]
         built_ids = [r["ID"] for r in built]
         blocks.append(_table_block(table, {"start": min(built_ids), "end": max(built_ids)}, built, []))
     blocks.append(build_creature_model_info_sql())
