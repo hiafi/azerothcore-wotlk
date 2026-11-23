@@ -450,7 +450,7 @@ arcane_explosion_1449 = spell(
     mana_cost_pct=10,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=39.982, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=42.5735, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
     ],
     spell_icon_id=122,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 14); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=201.9 (mage-potency-proposals.txt).'
@@ -459,7 +459,8 @@ arcane_explosion_1449 = spell(
           ' Normal-tier kits, user ruling: Arcane Explosion builds Arcane Blast stacks baseline at its normal cost). mana_cost_pct 22 -> 10 (2026-11-15, AoE round 1 on the Normal-tier kits, user ruling: base cost 10% of base mana, +50% per Arcane Blast stack).'
           ' Effect 1 sp_potency 80.76 -> 48.456 (2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Arcane Explosion -40%).'
           ' Effect 1 sp_potency 48.456 -> 37.0204 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Arcane x0.764).'
-          ' Effect 1 sp_potency 37.0204 -> 39.982 (2026-11-22, level60-stat-curve round S23, user ruling 15: Arcane Explosion x1.08, Arcane AoE 94% -> about 98%; only Arcane casts it).',
+          ' Effect 1 sp_potency 37.0204 -> 39.982 (2026-11-22, level60-stat-curve round S23, user ruling 15: Arcane Explosion x1.08, Arcane AoE 94% -> about 98%; only Arcane casts it).'
+          ' Effect 1 sp_potency 39.982 -> 42.5735 (2026-11-23, level60-stat-curve S23b, user ruling 19: Arcane Explosion x1.15 total, S23 sim AoE score 97% -> about 100%).',
     raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 14, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes an explosion of arcane magic around the caster, causing {pot1} Arcane damage to all targets within $a1 yards.  Each cast adds a stack of Arcane Blast.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 4096, 'SpellClassSet': 3, 'SpellLevel': 14, 'SpellVisualID_1': 965, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
