@@ -1413,8 +1413,9 @@ class spell_mage_molten_armor : public AuraScript
         }
 
         // Xinef: Molten Shields talent
+        // Custom: S22 - the roll multiplies by the mage's Proc Chance (Systems.md section 5)
         if (AuraEffect* aurEff = eventInfo.GetActionTarget()->GetAuraEffect(SPELL_AURA_ADD_FLAT_MODIFIER, SPELLFAMILY_MAGE, 16, EFFECT_0))
-            return roll_chance_i(aurEff->GetSpellInfo()->GetRank() * 50);
+            return RollMageProcChance(eventInfo.GetActionTarget(), float(aurEff->GetSpellInfo()->GetRank() * 50));
 
         return false;
     }
@@ -1780,7 +1781,8 @@ class spell_mage_fire_frost_ward : public spell_mage_incanters_absorbtion_base_A
         {
             int32 chance = talentAurEff->GetSpellInfo()->Effects[EFFECT_1].CalcValue(); // SPELL_EFFECT_DUMMY with NO_TARGET
 
-            if (roll_chance_i(chance))
+            // Custom: S22 - the roll multiplies by the mage's Proc Chance (Systems.md section 5)
+            if (RollMageProcChance(target, float(chance)))
             {
                 int32 bp = dmgInfo.GetDamage();
                 target->CastCustomSpell(target, SPELL_MAGE_FROST_WARDING_TRIGGERED, &bp, nullptr, nullptr, true, nullptr, aurEff);
@@ -3090,9 +3092,10 @@ class spell_mage_empowered_fire : public AuraScript
         // EFFECT_1's DUMMY marker (Phase 2 data) on THIS SAME aura (whichever rank is actually
         // talented - GetEffect, not a separate icon lookup, since aurEff already IS that rank's
         // instance); 1% is fixed regardless of rank (sec 6 (7,2): "reduced from 2% to 1% of base
-        // mana... because Ignite's tick rate doubled").
+        // mana... because Ignite's tick rate doubled"). S22: this is the one roll, with Proc Chance; the
+        // spell_proc row's Chance is 100, so the engine's own roll always passes.
         AuraEffect const* chanceMarker = GetEffect(EFFECT_1);
-        if (!chanceMarker || !roll_chance_i(chanceMarker->GetAmount()))
+        if (!chanceMarker || !RollMageProcChance(target, float(chanceMarker->GetAmount())))
             return;
 
         int32 mana = int32(CalculatePct(target->GetCreateMana(), 1));
@@ -3409,8 +3412,9 @@ class spell_mage_imp_blizzard : public AuraScript
             caster->CastSpell(target, spellId, true, nullptr, aurEff);
 
         // Fingers of Frost: Blizzard chill effects can trigger FoF
+        // Custom: S22 - the roll multiplies by the mage's Proc Chance (Systems.md section 5)
         if (AuraEffect const* fofTalent = caster->GetAuraEffectOfRankedSpell(SPELL_MAGE_FINGERS_OF_FROST, EFFECT_0))
-            if (roll_chance_i(fofTalent->GetAmount()))
+            if (RollMageProcChance(caster, float(fofTalent->GetAmount())))
                 caster->CastSpell(caster, SPELL_MAGE_FINGERS_OF_FROST_AURASTATE_AURA, true);
     }
 

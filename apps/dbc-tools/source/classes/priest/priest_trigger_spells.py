@@ -3975,6 +3975,14 @@ improved_shadowform_47570 = spell(
 )
 
 
+# Improved Shadowform (S22 2026-11-22, user ruling 6 / ICD report B5): stock bound two classes, each rolling eff0 with
+# no Proc Chance (rank 1's 50% netted 25%). Both go; spell_pri_improved_shadowform_rework is the one roll, with it.
+unbind_script(-47569, 'spell_pri_imp_shadowform')
+unbind_script(47569, 'spell_pri_improved_shadowform')
+unbind_script(47570, 'spell_pri_improved_shadowform')
+scripted_by(-47569, 'spell_pri_improved_shadowform_rework')
+
+
 # Priest Shadow rework (SHADOW.md (9,2) / design doc §7): now 3 ranks (51166/51167 orphaned).
 # eff1 (aura 174, Spirit->SP, unchanged slot) retuned 4/8/12% -> 8/16/25% (stored 7/15/24). eff2
 # (OVERRIDE_CLASS_SCRIPTS misc 7377, the Mind Flay/Mind Blast-vs-SWP-target damage bonus the core

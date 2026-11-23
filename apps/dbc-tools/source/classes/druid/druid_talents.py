@@ -1170,6 +1170,11 @@ scripted_by(24905, 'spell_dru_moonkin_form_proc_balance')
 unbind_script(50419, 'spell_dru_brambles_treant')
 scripted_by(50419, 'spell_dru_brambles_treant_balance')
 
+# T3 2-piece 28716 (S22 2026-11-22, user ruling 6 / ICD report B6): the stock class rolled a flat 50% with no Proc
+# Chance after the row's 100%; spell_dru_t3_2p_bonus_rework rolls 50% x Proc Chance (set bonuses scale).
+unbind_script(28716, 'spell_dru_t3_2p_bonus')
+scripted_by(28716, 'spell_dru_t3_2p_bonus_rework')
+
 unbind_script(35669, 'spell_dru_treant_scaling')
 scripted_by(35669, 'spell_dru_treant_scaling_balance')
 unbind_script(35670, 'spell_dru_treant_scaling')

@@ -955,6 +955,34 @@ public:
     }
 };
 
+// -47569 - Improved Shadowform (S22, ICD report B5). Stock bound two classes to this talent
+// (spell_pri_imp_shadowform on -47569, spell_pri_improved_shadowform on 47569 / 47570), each rolling eff0 with no
+// Proc Chance, so rank 1's 50% came out at 25%. Both are unbound; this is the one roll, with Proc Chance. The row's
+// own roll is the DBC ProcChance 101, which always passes.
+class spell_pri_improved_shadowform_rework : public AuraScript
+{
+    PrepareAuraScript(spell_pri_improved_shadowform_rework);
+
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+
+        Unit* target = GetTarget();
+        Player const* player = target->GetSpellModOwner();
+        float chance = float(aurEff->GetAmount());
+        if (player)
+            chance *= 1.0f + player->GetProcChancePercentage() / 100.0f;
+
+        if (roll_chance_f(std::min(chance, 100.0f)))
+            target->RemoveMovementImpairingAuras(true);
+    }
+
+    void Register() override
+    {
+        OnEffectProc += AuraEffectProcFn(spell_pri_improved_shadowform_rework::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
 void AddSC_priest_shadow_spell_scripts()
 {
     new PriestShadowStateCleanup();
@@ -973,4 +1001,5 @@ void AddSC_priest_shadow_spell_scripts()
     RegisterSpellScript(spell_pri_lash_of_insanity);
     RegisterSpellScript(spell_pri_writhing_agony);
     RegisterSpellScript(spell_pri_mind_sear_plague_spread);
+    RegisterSpellScript(spell_pri_improved_shadowform_rework);
 }

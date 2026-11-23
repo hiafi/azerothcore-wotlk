@@ -3099,6 +3099,14 @@ empowered_fire_31658 = spell(
 )
 
 
+# Empowered Fire, all ranks (S22 2026-11-22, user ruling 6 / ICD report B3): the stock row (-31656: Ignite, family 3,
+# HIT phase) with Chance 0 rolled the rank's DBC ProcChance 33/67/100 with Proc Chance, then spell_mage_empowered_fire
+# rolled eff1's 33/66/100 again without it (ranks 1-2 netted ~11% / ~44%). Chance 100 here makes the script's roll
+# (eff1 x Proc Chance) the only one.
+procs_on(-31656, proc_flags=0, school_mask=4, family_name=3, family_mask=(0x8000000, 0, 0), spell_phase_mask=2,
+         chance=100.0)
+
+
 frozen_core_31667 = spell(
     id=31667,
     name='Frozen Core',
