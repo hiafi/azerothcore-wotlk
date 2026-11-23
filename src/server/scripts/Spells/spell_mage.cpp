@@ -283,6 +283,22 @@ enum MageSpellIcons
  * part of this slice - see the implementation plan's "Suggested starting order".
  */
 
+namespace
+{
+    // S22: a mage script that rolls its own chance multiplies it by the player's Proc Chance (Systems.md section 5),
+    // capped at 100. A pet or totem caster rolls its owner's.
+    float GetMageProcChanceMultiplier(Unit const* caster)
+    {
+        Player const* player = caster ? caster->GetSpellModOwner() : nullptr;
+        return player ? 1.0f + player->GetProcChancePercentage() / 100.0f : 1.0f;
+    }
+
+    bool RollMageProcChance(Unit const* caster, float chancePct)
+    {
+        return roll_chance_f(std::min(chancePct * GetMageProcChanceMultiplier(caster), 100.0f));
+    }
+}
+
 namespace FrostMageRework
 {
     // A real freeze/root/stun Frost effect (Frost Nova, Deep Freeze's stun, Water Elemental's
@@ -2044,9 +2060,9 @@ class spell_mage_ignite_dot : public AuraScript
 
             // Fire Mage rework sec 5 (5,0) Tinderbox - "Each time your Ignite deals damage, it has
             // a 5/10% chance to grant Kindling," rolled per Ignite instance (i.e. per target,
-            // sec 4.2's "multi-dotted targets each roll independently").
+            // sec 4.2's "multi-dotted targets each roll independently"). Proc Chance applies (S22).
             if (AuraEffect const* tinderbox = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, MAGE_ICON_TINDERBOX, EFFECT_2))
-                if (roll_chance_i(tinderbox->GetAmount()))
+                if (RollMageProcChance(caster, float(tinderbox->GetAmount())))
                     Mage::GrantKindling(caster, 1);
         }
     }
@@ -2705,7 +2721,8 @@ class spell_mage_living_bomb : public AuraScript
         if (caster->HasAura(SPELL_MAGE_FANNED_FLAMES_ICD))
             return;
 
-        if (!roll_chance_i(marker->GetAmount()))
+        // Proc Chance applies (S22; fire-mage-rework.md: Fanned Flames and Tinderbox scale with it)
+        if (!RollMageProcChance(caster, float(marker->GetAmount())))
             return;
 
         caster->CastSpell(caster, SPELL_MAGE_FANNED_FLAMES_ICD, true);
