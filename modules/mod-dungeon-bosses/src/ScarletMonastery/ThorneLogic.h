@@ -180,9 +180,12 @@ namespace SmThorne
     inline constexpr std::uint32_t kThorneHealthHeroic = 300000;
     inline constexpr std::uint32_t kBrambleHealthHeroic = 8000;
 
-    // GD1 Sow: 2 (heroic 3) random players, the tank included; the furrow a 3 yd circle 5 yd along his facing (inside
-    // the Prune's cone). The bot tank holds his facing while the seeds are out (SM-BM F6).
+    // GD1 Sow: 2 (heroic 3) random players, never the tank (F-4b, orchestrator default 2026-11-23: the tank's
+    // unavoidable Prune and Holy Water load is already about 3% of the tank row a second); the furrow a 3 yd circle
+    // 5 yd along his facing (inside the Prune's cone). The bot tank holds his facing while the seeds are out (SM-BM
+    // F6). A group of the tank alone gets no Sow.
     inline constexpr NH<std::uint32_t> kCarriers{ 2, 3 };
+    inline constexpr bool kSowTankExempt = true;
     inline constexpr float kFurrowAheadYd = 5.f;
     inline constexpr float kFurrowRadiusYd = 3.f;
 

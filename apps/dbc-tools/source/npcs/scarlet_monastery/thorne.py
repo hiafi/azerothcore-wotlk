@@ -253,8 +253,9 @@ blessed_grain_213060 = spell(
     effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.DUMMY, base_points=0,
                     implicit_target_a=TARGET_UNIT_TARGET_ANY)],
     spell_icon_id=_ICON_SEED_POD,
-    notes=f'{_D12}, GD1 Sow: the carrier\'s debuff, cast by Thorne (triggered) on 2 (heroic 3) random players, the '
-          'tank included, at 6 s and every 20 s. 5 s; as it ends the script plants the seed where the carrier stands '
+    notes=f'{_D12}, GD1 Sow: the carrier\'s debuff, cast by Thorne (triggered) on 2 (heroic 3) random players, '
+          'never the tank (F-4b), at 6 s and every 20 s. 5 s; as it ends the script plants the seed where the carrier '
+          'stands '
           '(the furrow 5 yd ahead of him is the registry Spot, tag 1). A clock only: no effect of its own, not '
           'dispellable (the boss data has no dispel list). Seed Pod 48082\'s SpellVisual 10713 (`DruidMorph` impact) '
           'on landing.',

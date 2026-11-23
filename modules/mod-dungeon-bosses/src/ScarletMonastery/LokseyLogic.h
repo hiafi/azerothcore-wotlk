@@ -186,6 +186,10 @@ namespace SmLoksey
     // and the dogs off position, and could never keep kScentFarYd from the boss chasing it. A tank-only group gets no
     // Mark.
     inline constexpr bool kScentTankExempt = true;
+    // Nor the healer (F-4b, orchestrator default 2026-11-23): the 22 yd walk took the healer through the alcove's 3 yd
+    // neck and out of line of sight of the tank, who then died unhealed (STAGE-CLEAR-DIAG §1). A group of tank and
+    // healer alone gets no Mark, the same fallback as the tank's exemption.
+    inline constexpr bool kScentHealerExempt = true;
     // The carrier walks this far from Loksey during the Scent (the registry Bait's `othersRange`): clear of the group
     // and of the tank's side of the hall, inside the 58 yd wall the trail runs along.
     inline constexpr float kScentFarYd = 22.f;

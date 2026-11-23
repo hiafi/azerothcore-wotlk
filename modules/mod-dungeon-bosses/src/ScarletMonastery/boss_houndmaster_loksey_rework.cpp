@@ -12,7 +12,8 @@
  *   LK2  Release          the pull: his three hounds attack (yell 0). Every later Release: 3 pups from the hall's NE
  *                         and SE entries, normal never more than 6 alive; heroic a 2.5 s interruptible whistle, 3 pups
  *                         when kicked, 6 when it ran, no cap. Pups pick the tank first (rule 19)
- *   LK3  Mark             the Scent on a random player (the tank too), 5 s (heroic two players, the dogs split); then
+ *   LK3  Mark             the Scent on a random player (never the tank or
+ *                         the healer), 5 s (heroic two players, the dogs split); then
  *                         from each carrier a 5 yd marker every 0.5 s, 0-2 yd from them, one per free dog; a dog leaps
  *                         onto its marker 1.5 s later: 35% / 45% + Weakened to everyone inside (registry Circles; the
  *                         carrier's walk away from the group is a registry Bait on the carrier alone: F5, composed of
@@ -755,7 +756,8 @@ struct boss_houndmaster_loksey_rework : public BossAI
         return true;
     }
 
-    // Random players of the fight, never the tank (STAGE-R-1-LIB Q1; out of combat in a test: the GM).
+    // Random players of the fight, never the tank (STAGE-R-1-LIB Q1) and never the healer (F-4b); out of combat in a
+    // test: the GM.
     std::vector<Player*> PickCarriers(uint32 count)
     {
         std::vector<Player*> out;
@@ -768,6 +770,7 @@ struct boss_houndmaster_loksey_rework : public BossAI
         DungeonKit::PickRule rule;
         rule.nonTank = kScentTankExempt;
         rule.tankIfAlone = false;
+        rule.nonHealer = kScentHealerExempt;
         return DungeonKit::PickPlayers(me, rule, count);
     }
 

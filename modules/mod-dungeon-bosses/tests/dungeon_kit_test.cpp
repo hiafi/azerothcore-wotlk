@@ -332,6 +332,35 @@ namespace
         soloRule.tankIfAlone = true;
         auto const tank = PickFrom(solo, soloRule, FixedRand{ 0 });
         CHECK(tank && *tank == 0u);
+        // a rule that skips the healer never picks one, and a tank and healer alone get nobody (no fallback)
+        PickCandidate healerC;
+        healerC.id = 7;
+        healerC.distance = 6.f;
+        healerC.healer = true;
+        PickCandidate tankC;
+        tankC.id = 8;
+        tankC.tank = true;
+        PickCandidate dpsC;
+        dpsC.id = 9;
+        dpsC.distance = 9.f;
+        PickRule noHealer;
+        noHealer.nonHealer = true;
+        std::vector<PickCandidate> const group = { tankC, healerC, dpsC };
+        for (std::uint32_t r = 0; r < 20; ++r)
+        {
+            auto const pick = PickFrom(group, noHealer, FixedRand{ r });
+            CHECK(pick && group[*pick].id == 9);
+        }
+        CHECK(PickFrom(group, PickRule{}, FixedRand{ 1 }).has_value());     // off by default: the healer qualifies
+        std::vector<PickCandidate> const tankAndHealer = { tankC, healerC };
+        PickRule tankAndHealerRule;
+        tankAndHealerRule.nonHealer = true;
+        tankAndHealerRule.tankIfAlone = true;       // the tank fallback never brings the healer back
+        auto const fallback = PickFrom(tankAndHealer, tankAndHealerRule, FixedRand{ 0 });
+        CHECK(!fallback.has_value() || tankAndHealer[*fallback].id == 8);
+        tankAndHealerRule.tankIfAlone = false;
+        CHECK(!PickFrom(tankAndHealer, tankAndHealerRule, FixedRand{ 0 }).has_value());
+        CHECK(PickDistinctFrom(group, noHealer, 5, FixedRand{ 0 }).size() == 1u);
         // distinct picks never repeat and stop when the pool is dry
         std::vector<std::size_t> const two = PickDistinctFrom(c, PickRule{}, 10, FixedRand{ 1 });
         CHECK(two.size() == 4u);    // 2, 3, 4, 5: every non-tank within 100 yd

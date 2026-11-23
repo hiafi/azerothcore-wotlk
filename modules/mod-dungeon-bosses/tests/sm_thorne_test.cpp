@@ -1,9 +1,11 @@
 // Host tests for ThorneLogic.h (D12: Brother Aldous Thorne, the Gardener).
+#include "DungeonKitLogic.h"
 #include "ThorneLogic.h"
 #include "check.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <vector>
 
 using namespace ScarletMonasteryRework;
 using namespace SmThorne;
@@ -133,6 +135,30 @@ int main()
     CHECK(PruneLandsAtMs(2) - PlantAtMs(0) > BloomMarkerAtMs(false));
     CHECK(PruneLandsAtMs(2) - PlantAtMs(0) < kBloomAfterMs(false));
     CHECK(kSowDebuffMs == 5000 && kCarriers(false) == 2 && kCarriers(true) == 3);
+    // F-4b: the Sow never picks the tank, and a tank alone gets no Sow (no fallback).
+    CHECK(kSowTankExempt);
+    {
+        DungeonKit::PickRule rule;
+        rule.nonTank = kSowTankExempt;
+        rule.tankIfAlone = false;
+        DungeonKit::PickCandidate tank;
+        tank.id = 1;
+        tank.tank = true;
+        std::vector<DungeonKit::PickCandidate> group{ tank };
+        CHECK(!DungeonKit::PickFrom(group, rule, [](std::size_t) { return std::size_t(0); }).has_value());
+        for (std::uint64_t id = 2; id <= 5; ++id)
+        {
+            DungeonKit::PickCandidate other;
+            other.id = id;
+            other.healer = id == 3;     // the healer is a valid carrier here: only the tank is exempt
+            group.push_back(other);
+        }
+        auto const picks = DungeonKit::PickDistinctFrom(group, rule, kCarriers(true), [](std::size_t) { return 0u; });
+        CHECK(picks.size() == 3u);
+        for (std::size_t const i : picks)
+            CHECK(group[i].id != 1);
+        CHECK(DungeonKit::PickDistinctFrom(group, rule, 10, [](std::size_t) { return 0u; }).size() == 4u);
+    }
 
     // ---- the build spec's numbers ---------------------------------------------------------------------------------
     CHECK(Near(kPrunePct(false), 30.f) && Near(kPrunePct(true), 45.f));

@@ -227,6 +227,7 @@ namespace DungeonKit
                 c.id = player->GetGUID().GetRawValue();
                 c.distance = me->GetExactDist2d(player);
                 c.tank = player == victim;
+                c.healer = BossMechanics::GetRoleProvider().Get(me, player) == BossMechanics::Role::Healer;
                 c.inLos = me->IsWithinLOSInMap(player);
                 players.push_back(player);
                 candidates.push_back(c);

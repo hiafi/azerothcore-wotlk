@@ -6,7 +6,7 @@
  * the AI (and the bramble's) registers only once kWave2Bound flips (W2-SETUP); `.dbtest sm thorne` registers now.
  *
  *   GD1  Sow            at 6 s, then every 20 s (1 s after a Prune lands): Blessed Grain on 2 (heroic 3) random
- *                       players, the tank included (a 5 s debuff), and the furrow, a 3 yd circle 5 yd along his facing,
+ *                       players, never the tank (a 5 s debuff), and the furrow, a 3 yd circle 5 yd along his facing,
  *                       inside the Prune's cone. As the debuff ends each carrier's seed is planted where they stand
  *   GD1a Prune          every 10 s from 5 s: a 2 s wind-up (the cone marker), then a 120 degree sweep 8 yd ahead; the
  *                       tank 15% (25%) of the tank row, anyone else 30% (45%) Physical and Weakened
@@ -310,7 +310,7 @@ public:
     // GD1 Sow
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Blessed Grain on 2 (heroic 3) random players, the tank included (`only`, a test: just that player); the furrow
+    // Blessed Grain on 2 (heroic 3) random players, never the tank (`only`, a test: just that player); the furrow
     // 5 yd along his facing, a registry Spot for each carrier (released as the debuff ends). The bot tank holds his
     // facing (the Spot's own hold, then UpdateFacingHold while a seed stands).
     bool Sow(Player* only)
@@ -321,7 +321,8 @@ public:
         else
         {
             DungeonKit::PickRule rule;
-            rule.nonTank = false;
+            rule.nonTank = kSowTankExempt;
+            rule.tankIfAlone = false;
             carriers = DungeonKit::PickPlayers(me, rule, kCarriers(_heroic));
         }
         if (carriers.empty())

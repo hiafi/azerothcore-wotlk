@@ -201,8 +201,9 @@ scent_212542 = spell(
     effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.DUMMY, base_points=0,
                     implicit_target_a=TARGET_UNIT_TARGET_ANY)],
     spell_icon_id=_ICON_SCENT,
-    notes=f'{_D5}, LK3: the Scent. Cast by Loksey (triggered) on a random non-tank player (1; heroic 2; '
-          'STAGE-R-1-LIB Q1), 5 s (LokseyLogic.h kScentMs). When it ends the dogs come: one 5 yd marker every '
+    notes=f'{_D5}, LK3: the Scent. Cast by Loksey (triggered) on a random player, never the tank '
+          'or the healer (1; heroic 2; STAGE-R-1-LIB Q1, F-4b), 5 s (LokseyLogic.h kScentMs). When it ends the dogs '
+          'come: one 5 yd marker every '
           '0.5 s round the carrier, '
           'one per free dog. A DUMMY debuff: the read is the orange rune ring under the carrier (the shipped SV 90613, '
           'V: the lasting mark; the Scent of Blood flash is 212543). Not dispellable (Dispel none) and '

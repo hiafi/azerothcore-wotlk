@@ -212,6 +212,35 @@ namespace
             auto const pick = DungeonKit::PickFrom(two, rule, [](std::size_t) { return std::size_t(0); });
             CHECK(pick.has_value() && *pick == 1);
         }
+        // F-4b: nor the healer (the 22 yd walk took her out of the tank's line of sight through the alcove's neck).
+        CHECK(kScentHealerExempt);
+        {
+            DungeonKit::PickRule rule;
+            rule.nonTank = kScentTankExempt;
+            rule.tankIfAlone = false;
+            rule.nonHealer = kScentHealerExempt;
+            DungeonKit::PickCandidate tank;
+            tank.id = 1;
+            tank.tank = true;
+            DungeonKit::PickCandidate healer;
+            healer.id = 2;
+            healer.healer = true;
+            DungeonKit::PickCandidate dps;
+            dps.id = 3;
+            for (std::uint32_t r = 0; r < 12; ++r)
+            {
+                std::vector<DungeonKit::PickCandidate> const group{ tank, healer, dps };
+                auto const pick = DungeonKit::PickFrom(group, rule, [r](std::size_t n) { return std::size_t(r) % n; });
+                CHECK(pick.has_value() && group[*pick].id == 3);
+            }
+            // Heroic wants two: with one dps only that one carries.
+            std::vector<DungeonKit::PickCandidate> const group{ tank, healer, dps };
+            CHECK(DungeonKit::PickDistinctFrom(group, rule, kScentCarriers(true), [](std::size_t) { return 0u; })
+                .size() == 1u);
+            // Tank and healer alone: no Mark (the tank's own fallback).
+            std::vector<DungeonKit::PickCandidate> const pair{ tank, healer };
+            CHECK(!DungeonKit::PickFrom(pair, rule, [](std::size_t) { return std::size_t(0); }).has_value());
+        }
         CHECK(kScentMs == 5000 && kMarkerWarnMs == 1500 && kMarkerEveryMs == 500);
         // A dog takes off 0.5 s before its marker resolves (1 s after it drops).
         CHECK(kMarkerWarnMs - kLeapFlightMs == 1000);
