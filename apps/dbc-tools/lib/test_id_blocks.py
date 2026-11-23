@@ -1266,7 +1266,8 @@ class ClassDeclarationsTest(unittest.TestCase):
         minted = sorted(i for i in self.mage["spell"] if BLOCKS["spell"]["start"] <= i <= BLOCKS["spell"]["end"])
         self.assertEqual(out_of_reservation("mage", {"spell": minted}),
                          [f"spell {i}" for i in sorted(MAGE_LEGACY_SPELLS)])
-        self.assertEqual([i for i in minted if i >= 205100], [205100])
+        # 205101 Fire Tuning (2026-11-22, level60-stat-curve S23 ruling 18)
+        self.assertEqual([i for i in minted if i >= 205100], [205100, 205101])
         self.assertNotIn(200100, self.mage["spell"])
 
     def test_warrior_declares_only_inside_its_reservation_apart_from_the_legacy_ids(self):
