@@ -1128,13 +1128,17 @@ fel_armor_28176 = spell(
     range_yards=0.0,
     duration_ms=1800000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=174, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, die_sides=0, implicit_target_a=1, apply_aura=AuraType.MOD_LEECH_PCT),
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=20, amplitude=5000),
-        Effect(type=EffectType.APPLY_AURA, base_points=34, points_per_level=0.8333333, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_DONE, misc_value=126),
     ],
     spell_icon_id=2297,
-    notes='warlock-rework AFFLICTION §4.7 (user 2026-09-27, docs/spell_learn_level.md): baseline learn level 42, trainer 214 added; eff2 (flat spell power) rebased via B3 (V60=50) -> 35@42, 50@60, 66@80',
-    raw_overrides={'AttributesEx': 131072, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases spell power by $s3 plus additional spell power equal to $s1% of your Spirit. Also regenerate $s2% of maximum health every 5 sec.', 'BaseLevel': 42, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Surrounds the caster with fel energy, increasing spell power by $s3 plus additional spell power equal to $s1% of your Spirit. In addition, you regain $s2% of your maximum health every 5 sec. Only one type of Armor spell can be active on the Warlock at any time.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 4, 'EffectSpellClassMaskB_1': 524296, 'EffectSpellClassMaskB_2': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 536870912, 'SpellClassSet': 5, 'SpellLevel': 42, 'SpellVisualID_1': 7578, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='warlock-rework AFFLICTION §4.7 (user 2026-09-27, docs/spell_learn_level.md): baseline learn level 42, trainer 214 added; eff2 (flat spell power) rebased via B3 (V60=50) -> 35@42, 50@60, 66@80.'
+          ' level60-stat-curve S21 (user ruling 2026-11-22): both spell power parts removed, so warlocks get no Spirit'
+          ' scaling beyond the 1/2 Spirit every player has - eff0 aura 174 (30% of Spirit) -> MOD_LEECH_PCT 1% (aura 295,'
+          ' a non-talent leech source: stacks with the active leech talent, heal never crits), eff2 MOD_DAMAGE_DONE'
+          ' deleted. eff1 (2% max health every 5 sec) unchanged. Demonic Aegis (+10/20/30%) still boosts the eff1'
+          ' regen (SpellAuraEffects.cpp icon-89 hack, C18) but not the leech (int amount: 1 x 1.3 rounds to 1).',
+    raw_overrides={'AttributesEx': 131072, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals you for $s1% of the damage you deal. Also regenerate $s2% of maximum health every 5 sec.', 'BaseLevel': 42, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Surrounds the caster with fel energy, healing you for $s1% of the damage you deal. In addition, you regain $s2% of your maximum health every 5 sec. Only one type of Armor spell can be active on the Warlock at any time.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 536870912, 'SpellClassSet': 5, 'SpellLevel': 42, 'SpellVisualID_1': 7578, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(fel_armor_28176, trainer_id=214, req_level=42, money_cost=11000)
 
