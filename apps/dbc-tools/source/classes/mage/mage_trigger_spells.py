@@ -1036,7 +1036,7 @@ arcane_concentration_11247 = spell(
     ],
     spell_icon_id=212,
     notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 2): repoints stock Magic Attunement\'s slot (id 82) to (2,0). "Gives you a 5/10/15% chance of entering a Clearcasting state after casting a damaging spell." effect1 SPELL_AURA_PROC_TRIGGER_SPELL (42) triggering the real stock Clearcasting buff (12536), ProcTypeMask 87376 ("damaging spell hits", same as the real stock Arcane Concentration talent) - proc chance is the spell\'s own ProcChance column, not an effect value. No classmask on the trigger itself (ProcTypeMask already scopes it; the real talent\'s own classmask appears to be additional narrowing not needed here). "...and increases its damage by your Mastery" NOT built this phase - needs a live Player::GetMasteryPercentage() read when Clearcasting is consumed, likely extending spell_mage_clearcasting; deferred to Phase 3. raw_overrides/effects fully replaced (not merged) - the earlier version left stale classmask fields from Magic Attunement; caught and fixed.',
-    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a 5% chance of entering a Clearcasting state after casting a damaging spell.', 'ProcChance': 5, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'ProcTypeMask': 87376},
+    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a 12% chance of entering a Clearcasting state after casting a damaging spell.', 'ProcChance': 12, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'ProcTypeMask': 87376},
 )
 
 
@@ -1893,7 +1893,7 @@ arcane_concentration_12606 = spell(
     ],
     spell_icon_id=212,
     notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 2): repoints stock Magic Attunement\'s slot (id 82) to (2,0). "Gives you a 5/10/15% chance of entering a Clearcasting state after casting a damaging spell." effect1 SPELL_AURA_PROC_TRIGGER_SPELL (42) triggering the real stock Clearcasting buff (12536), ProcTypeMask 87376 ("damaging spell hits", same as the real stock Arcane Concentration talent) - proc chance is the spell\'s own ProcChance column, not an effect value. No classmask on the trigger itself (ProcTypeMask already scopes it; the real talent\'s own classmask appears to be additional narrowing not needed here). "...and increases its damage by your Mastery" NOT built this phase - needs a live Player::GetMasteryPercentage() read when Clearcasting is consumed, likely extending spell_mage_clearcasting; deferred to Phase 3. raw_overrides/effects fully replaced (not merged) - the earlier version left stale classmask fields from Magic Attunement; caught and fixed.',
-    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a 10% chance of entering a Clearcasting state after casting a damaging spell.', 'ProcChance': 10, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'ProcTypeMask': 87376},
+    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a 24% chance of entering a Clearcasting state after casting a damaging spell.', 'ProcChance': 24, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'ProcTypeMask': 87376},
 )
 
 
@@ -4701,8 +4701,20 @@ arcane_concentration_200076 = spell(
     ],
     spell_icon_id=212,
     notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 2): Arcane Concentration rank 3 - the stock talent this reuses (id 82, Magic Attunement) only had 2 ranks, so this rank is a newly-minted row rather than an edit to an existing spell.',
-    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a 15% chance of entering a Clearcasting state after casting a damaging spell.', 'ProcChance': 15, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a 36% chance of entering a Clearcasting state after casting a damaging spell.', 'ProcChance': 36, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
+
+
+# Arcane Concentration, all three ranks (S22 2026-11-22, user ruling 2 / ICD report A1 option A): one roll per cast,
+# not per hit. With no spell_proc row the engine's default entry rolled on every damaging hit, each Arcane Missile bolt
+# included, so Clearcasting fed Missiles that fed Clearcasting and Proc Chance scaled superlinearly. CAST phase on the
+# hostile proc flags; spell_mage_arcane_concentration rejects triggered casts (the bolts) and non-damaging spells.
+# Chance 5/10/15 -> 12/24/36 holds the round-4 Arcane sim's ~21.75 Clearcastings per 120 s at ~52 damaging casts
+# (36% x 1.155 x 52.25 = 21.7; the S22 report has the math).
+for _ac_rank, _ac_chance in ((arcane_concentration_11247, 12), (arcane_concentration_12606, 24),
+                             (arcane_concentration_200076, 36)):
+    procs_on(_ac_rank, proc_flags=0x10 | 0x100 | 0x1000 | 0x10000, spell_phase_mask=1, chance=_ac_chance)
+    scripted_by(_ac_rank, 'spell_mage_arcane_concentration')
 
 
 magic_attunement_28574 = spell(

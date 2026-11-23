@@ -176,6 +176,7 @@ enum MageSpells
     SPELL_MAGE_NETHERWIND_PRESENCE_R2            = 200089,
     SPELL_MAGE_NETHERWIND_PRESENCE_R3            = 200090,
     SPELL_MAGE_NETHERWIND_PRESENCE_ICD           = 200091,
+    SPELL_MAGE_ARCANE_OVERLOAD                   = 200079,
     SPELL_MAGE_ARCANE_OVERLOAD_DAMAGE            = 200092,
     SPELL_MAGE_ARCANE_OVERLOAD_BUFF              = 200093,
     SPELL_MAGE_NETHERWIND_PRESENCE_CAPSTONE      = 200094,
@@ -3733,6 +3734,67 @@ class spell_mage_clearcasting : public AuraScript
     }
 };
 
+// 11247, 12606, 200076 - Arcane Concentration (S22, user ruling 2): one roll per damaging cast.
+// The spell_proc rows roll at the CAST phase on hostile spells. A triggered cast (each Arcane Missile bolt, Arcane
+// Blast's stack self-cast) rolls nothing, and neither does a hostile spell that deals no damage (Slow, Polymorph,
+// Counterspell). Arcane Overload counts: its cast is a DUMMY whose damage is scripted.
+class spell_mage_arcane_concentration : public AuraScript
+{
+    PrepareAuraScript(spell_mage_arcane_concentration);
+
+    static bool IsDamagingCast(SpellInfo const* spellInfo)
+    {
+        if (spellInfo->Id == SPELL_MAGE_ARCANE_OVERLOAD)
+            return true;
+
+        if (spellInfo->IsPositive())
+            return false;
+
+        for (SpellEffectInfo const& effect : spellInfo->Effects)
+        {
+            switch (effect.Effect)
+            {
+                case SPELL_EFFECT_SCHOOL_DAMAGE:
+                case SPELL_EFFECT_HEALTH_LEECH:
+                case SPELL_EFFECT_WEAPON_DAMAGE:
+                case SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL:
+                case SPELL_EFFECT_NORMALIZED_WEAPON_DMG:
+                case SPELL_EFFECT_WEAPON_PERCENT_DAMAGE:
+                    return true;
+                default:
+                    break;
+            }
+
+            // A DoT, or a channel / ground effect whose ticks cast the damage (Arcane Missiles, Blizzard)
+            switch (effect.ApplyAuraName)
+            {
+                case SPELL_AURA_PERIODIC_DAMAGE:
+                case SPELL_AURA_PERIODIC_DAMAGE_PERCENT:
+                case SPELL_AURA_PERIODIC_LEECH:
+                case SPELL_AURA_PERIODIC_TRIGGER_SPELL:
+                case SPELL_AURA_PERIODIC_TRIGGER_SPELL_WITH_VALUE:
+                    return true;
+                default:
+                    break;
+            }
+        }
+
+        return false;
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        Spell const* procSpell = eventInfo.GetProcSpell();
+        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
+        return procSpell && spellInfo && !procSpell->IsTriggered() && IsDamagingCast(spellInfo);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_mage_arcane_concentration::CheckProc);
+    }
+};
+
 // 44401 - Missile Barrage (proc buff)
 class spell_mage_missile_barrage_proc : public AuraScript
 {
@@ -4527,6 +4589,7 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_imp_blizzard);
     RegisterSpellScript(spell_mage_imp_mana_gems);
     RegisterSpellScript(spell_mage_clearcasting);
+    RegisterSpellScript(spell_mage_arcane_concentration);
     RegisterSpellScript(spell_mage_missile_barrage);
     RegisterSpellScript(spell_mage_missile_barrage_proc);
     RegisterSpellScript(spell_mage_blast_wave);
