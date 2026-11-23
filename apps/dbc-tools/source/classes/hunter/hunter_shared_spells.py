@@ -42,12 +42,14 @@ glaive_toss_201600 = spell(
 aspect_of_the_dragonhawk_explosion_201601 = spell(
     id=201601, name='Aspect of the Dragonhawk', school=School.FIRE,
     cast_time_ms=0, range_yards=50000.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=41.34, potency_kind='direct', time_basis_ms=1500,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=37.206, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=53, implicit_target_b=16, radius_yards=5.0)],   # placeholder, M (§0.5)
     spell_icon_id=2328,
     tooltip_vars=bm_dragonhawk_1155,
     notes='Effect 1 ap_potency 60.0 -> 41.34 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689; '
-          'the Dragonhawk explosion is part of the Survival rotation, the Beast Mastery sim never casts it).',
+          'the Dragonhawk explosion is part of the Survival rotation, the Beast Mastery sim never casts it).'
+          ' Effect 1 ap_potency 41.34 -> 37.206 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user '
+          'ruling: SV x0.90).',
     raw_overrides={'SpellLevel': 16, 'DefenseType': 3, 'SpellClassSet': 9, 'SpellClassMask_3': 0x2000000,
                    'AttributesEx3': 0x10000, 'EquippedItemClass': -1,
                    'Description_Lang_enUS': 'Explodes for {pot1*idh} Fire damage to the target and all enemies within $a1 yards.'},
@@ -153,9 +155,10 @@ untrain(8737, [204])
 skill_line_ability(id=30540, skill_line=51, spell_id=201600, class_mask=4)
 
 # --- Aspect spell_proc rows (B6.1) ---
-procs_on(-13165, proc_flags=0x140, family_name=9, spell_phase_mask=0x3, hit_mask=0x2, cooldown_ms=30000)   # Hawk
+# S22 2026-11-22: Hawk and Beast ICD 30 -> 10 s, the length of the buff each one grants (ICD report candidates 2, 3).
+procs_on(-13165, proc_flags=0x140, family_name=9, spell_phase_mask=0x3, hit_mask=0x2, cooldown_ms=10000)   # Hawk
 procs_on(-61846, proc_flags=0x140, family_name=9, spell_phase_mask=0x3, cooldown_ms=3000)    # Dragonhawk
-procs_on(13161, proc_flags=0x140, family_name=9, spell_phase_mask=0x3, cooldown_ms=30000)    # Beast
+procs_on(13161, proc_flags=0x140, family_name=9, spell_phase_mask=0x3, cooldown_ms=10000)    # Beast
 procs_on(34074, proc_flags=0x140, family_name=9, spell_phase_mask=0x3)                       # Viper (was type 1 / HIT)
 procs_on(13163, proc_flags=0x100000, cooldown_ms=20000)   # Monkey (was HitMask DODGE)
 procs_on(aspect_of_the_monkey_pet_201605, proc_flags=0x100000, chance=100.0)   # the real roll is scripted

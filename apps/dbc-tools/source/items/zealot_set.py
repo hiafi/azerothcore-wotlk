@@ -69,11 +69,21 @@ SLOTS = (
     ("chest", "Zealot's Chestguard", (5, 20), 22351),  # Desecrated Robe
 )
 SLOT_KEYS = tuple(s[0] for s in SLOTS)
+# The leather caster set splits its primary by slot: the set has only big slots, so Intellect on head and chest,
+# Spirit on the shoulders
+# (2026-11-21, level60-stat-curve healer mana pass, user ruling: leather caster gear was Spirit-only while cloth has
+# an Intellect and a Spirit set, so split the leather caster sets by slot).
+LEATHER_CASTER_PRIMARY = {"head": "Intellect (Solo)", "shoulders": "Spirit (Solo)", "chest": "Intellect (Solo)"}
 TOKEN_ENTRY_BASE = 70580
 TOKEN_COST_BASE = 3080
 TOKEN_DESCRIPTION = ("The Zealot's quartermasters outside the Scarlet Monastery trade it for the {noun} of any "
                      "Zealot's set.")
 TOKEN_NOUNS = {"head": "helm", "shoulders": "shoulders", "chest": "chestpiece"}
+
+
+def _slot_primary(primary, slot: str) -> str:
+    """An archetype's primary shape in a slot: one shape for every slot, or a {slot: shape} split."""
+    return primary[slot] if isinstance(primary, dict) else primary
 
 
 def _secondaries(kind: str, slot: str) -> tuple[str, int]:
@@ -119,7 +129,7 @@ ARCHETYPES = (
         head=("Ironspine's Skull", 14539, {}),  # Bone Ring Helm
         shoulders=("Ironspine's Shoulderblades", 18686, _LEATHER),  # Bone Golem Shoulders, mail made leather
         chest=("Ironspine's Ribcage", 7688, _LEATHER))),
-    (1011, "gardener", "Gardener's Vestments", "Leather Spirit", "Spirit (Solo)", "dps", dict(
+    (1011, "gardener", "Gardener's Vestments", "Leather Spirit", LEATHER_CASTER_PRIMARY, "dps", dict(
         head=("Gardener's Hat", 8214, {}), shoulders=("Gardener's Mantle", 8210, {}),
         chest=("Gardener's Smock", 8211, {}))),  # the Wild Leather set
     (1012, "arcanist", "Regalia of the Arcanist", "Cloth Intellect", "Intellect (Solo)", "dps", dict(
@@ -145,7 +155,8 @@ for _set_id, _prefix, _set_name, _archetype, _primary, _kind, _pieces in ARCHETY
     for _slot in SLOT_KEYS:
         _name, _like, _columns = _pieces[_slot]
         _secondary, _bonus = _secondaries(_kind, _slot)
-        item(piece_key(_prefix, _slot), name=_name, like=_like, primary=_primary, secondary=_secondary,
+        item(piece_key(_prefix, _slot), name=_name, like=_like, primary=_slot_primary(_primary, _slot),
+             secondary=_secondary,
              extra_stamina=EXTRA_STAMINA if _kind == "leather_tank" else 0.0,
              sockets=_sockets(_slot, _kind), socket_bonus=_bonus, ladder=VANILLA_HEROIC_SET,
              bonding=BIND_ON_PICKUP, itemset=_set_id, **_columns)

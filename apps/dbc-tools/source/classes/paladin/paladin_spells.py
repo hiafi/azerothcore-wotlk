@@ -885,11 +885,12 @@ shield_of_righteousness_53600 = spell(
     mana_cost_pct=4,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=204.12, potency_kind='direct', implicit_target_a=6, chain_targets=1),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=236.7792, potency_kind='direct', implicit_target_a=6, chain_targets=1),
     ],
     spell_icon_id=3031,
     tooltip_vars=prot_sor_tooltip,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 75); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 2 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=145.8 (potency-report base-damage default; not mismatched - this flat bonus never had an SP coefficient at all live, so the new 0.625 coefficient is a real, intended gain from "move to the formula", docs/potency-system.md D4). Only this flat $s1 bonus effect is touched - the separate block-value-based effect (EffectBasePoints_2=99, not modeled by this Effect() list) is untouched. sp_potency 145.8 -> 291.6 and EffectBasePoints_2 99 -> 199 (block-value percent 100% -> 200%, read by SpellEffects.cpp Shield of Righteousness) (2026-11-01, DPS balance pass 1031 round T1, user ruling: Shield of Righteousness +100%). mana_cost_pct 6 -> 4 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Prot Paladin mana costs). sp_potency 291.6 -> 204.12 and EffectBasePoints_2 199 -> 139 (block-value percent 200% -> 140%) (2026-11-02, DPS balance pass 1031 round R6, user ruling: Shield of the Righteous -30%).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 75); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 2 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=145.8 (potency-report base-damage default; not mismatched - this flat bonus never had an SP coefficient at all live, so the new 0.625 coefficient is a real, intended gain from "move to the formula", docs/potency-system.md D4). Only this flat $s1 bonus effect is touched - the separate block-value-based effect (EffectBasePoints_2=99, not modeled by this Effect() list) is untouched. sp_potency 145.8 -> 291.6 and EffectBasePoints_2 99 -> 199 (block-value percent 100% -> 200%, read by SpellEffects.cpp Shield of Righteousness) (2026-11-01, DPS balance pass 1031 round T1, user ruling: Shield of Righteousness +100%). mana_cost_pct 6 -> 4 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Prot Paladin mana costs). sp_potency 291.6 -> 204.12 and EffectBasePoints_2 199 -> 139 (block-value percent 200% -> 140%) (2026-11-02, DPS balance pass 1031 round R6, user ruling: Shield of the Righteous -30%).'
+          ' sp_potency 204.12 -> 236.7792 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Prot Paladin, Avenger\'s Shield, Shield of Righteousness and Hammer of the Righteous x1.16).',
     raw_overrides={'AttributesEx': 512, 'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Slam the target with your shield, causing Holy damage based on your block value plus an additional {pot1*il}.', 'EffectBasePoints_2': 139, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 1048576, 'SpellClassSet': 10, 'SpellLevel': 48, 'SpellVisualID_1': 11792, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1053,11 +1054,12 @@ avenger_s_shield_31935 = spell(
     range_yards=30.0,
     duration_ms=10000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=264.7, ap_potency=264.7, potency_kind='direct', implicit_target_a=6, chain_targets=3),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=307.052, ap_potency=307.052, potency_kind='direct', implicit_target_a=6, chain_targets=3),
         Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED, chain_targets=3),
     ],
     spell_icon_id=2172,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=132.35 / ap_potency=132.35 (paladin-potency-proposals.txt total 264.7, split evenly - matches the pre-existing 0.07/0.07 equal SP/AP coefficient split); also fixes PLAN F13 (zeroed direct_bonus restored as a side effect of the conversion). sp_potency 132.35 -> 264.7 and ap_potency 132.35 -> 264.7 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Avenger’s Shield +100%). mana_cost_pct 26 -> 16 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Prot Paladin mana costs).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=132.35 / ap_potency=132.35 (paladin-potency-proposals.txt total 264.7, split evenly - matches the pre-existing 0.07/0.07 equal SP/AP coefficient split); also fixes PLAN F13 (zeroed direct_bonus restored as a side effect of the conversion). sp_potency 132.35 -> 264.7 and ap_potency 132.35 -> 264.7 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Avenger’s Shield +100%). mana_cost_pct 26 -> 16 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Prot Paladin mana costs).'
+          ' sp_potency 264.7 -> 307.052; ap_potency 264.7 -> 307.052 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Prot Paladin, Avenger\'s Shield, Shield of Righteousness and Hammer of the Righteous x1.16).',
     raw_overrides={'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Dazed.', 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls a holy shield at the enemy, dealing {pot1} Holy damage, Dazing them and then jumping to additional nearby enemies.  Affects $x1 total targets.  Lasts $d. Grants 2 stacks of Bulwark.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 35.0, 'SpellClassMask_1': 16384, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 7886, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1289,10 +1291,11 @@ hammer_of_the_righteous_53595 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6, chain_targets=3),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=315, implicit_target_a=6, chain_targets=3),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=365, implicit_target_a=6, chain_targets=3),
     ],
     spell_icon_id=3023,
-    notes='pulled from existing data. paladin-rework S3 PROTECTION 4.1: eff0 NORMALIZED_WEAPON_DMG + eff1 WEAPON_PERCENT_DAMAGE weapon_potency 75 (Crusader Strike shape, both chain 3), no direct-damage effect left (stock main-hand DPS hardcode inert), stale effect-2/3 keys + MaxLevel 59 / BaseLevel 50 removed, SpellLevel 20 (generator sets BaseLevel/MaxLevel). Effect 1 weapon_potency 75 -> 225 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Hammer of the Righteous +200%). Effect 1 weapon_potency 225 -> 394 (225 x 1.75 = 393.75, rounded to a whole number) (2026-11-01, DPS balance pass 1031 round R4, user ruling: Hammer of the Righteous +75%). mana_cost_pct 6 -> 4 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Prot Paladin mana costs). Effect 1 weapon_potency 394 -> 315 (394 x 0.8 = 315.2, rounded to a whole number) (2026-11-02, DPS balance pass 1031 round R6, user ruling: Hammer of the Righteous -20%).',
+    notes='pulled from existing data. paladin-rework S3 PROTECTION 4.1: eff0 NORMALIZED_WEAPON_DMG + eff1 WEAPON_PERCENT_DAMAGE weapon_potency 75 (Crusader Strike shape, both chain 3), no direct-damage effect left (stock main-hand DPS hardcode inert), stale effect-2/3 keys + MaxLevel 59 / BaseLevel 50 removed, SpellLevel 20 (generator sets BaseLevel/MaxLevel). Effect 1 weapon_potency 75 -> 225 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Hammer of the Righteous +200%). Effect 1 weapon_potency 225 -> 394 (225 x 1.75 = 393.75, rounded to a whole number) (2026-11-01, DPS balance pass 1031 round R4, user ruling: Hammer of the Righteous +75%). mana_cost_pct 6 -> 4 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Prot Paladin mana costs). Effect 1 weapon_potency 394 -> 315 (394 x 0.8 = 315.2, rounded to a whole number) (2026-11-02, DPS balance pass 1031 round R6, user ruling: Hammer of the Righteous -20%).'
+          ' weapon_potency 315 -> 365 (x1.159; weapon potency stays whole) (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Prot Paladin, Avenger\'s Shield, Shield of Righteousness and Hammer of the Righteous x1.16).',
     raw_overrides={'AttributesEx': 512, 'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hammer the current target and up to ${$x2-1} additional nearby targets, causing $s2% weapon damage as Holy damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41105, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'Speed': 35.0, 'SpellClassMask_2': 262144, 'SpellClassSet': 10, 'SpellLevel': 20, 'SpellVisualID_1': 11927, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1579,13 +1582,14 @@ blade_of_justice_201400 = spell(
     mana_cost_pct=4,
     range_yards=20.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=48.75, ap_potency=48.75, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=55.575, ap_potency=55.575, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90210,
     notes='paladin-rework S1 RETRIBUTION §4.1: 100 / 100 potency, 10 s cooldown (< 30 s: no Cooldown Haste), BoJ bit d2 0x800, learn 30. Visual = Crusader Strike SV 8316 placeholder (VFX follow-up). '
           'The six seal echoes 201401-201409 are paladin_trigger_spells.py.'
           ' Effect 1 sp_potency/ap_potency 100.0 -> 65.0 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -35%).'
-          ' Effect 1 sp_potency/ap_potency 65.0 -> 48.75 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Blade of Justice -25%).',
+          ' Effect 1 sp_potency/ap_potency 65.0 -> 48.75 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Blade of Justice -25%).'
+          ' sp_potency 48.75 -> 55.575; ap_potency 48.75 -> 55.575 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).',
     raw_overrides=_raw(
         castable=True,
         SpellClassMask_3=m.BLADE_OF_JUSTICE,
@@ -1613,14 +1617,15 @@ execution_sentence_burst_201411 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=131.04, ap_potency=131.04, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=149.3856, ap_potency=149.3856, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90212,
     notes='paladin-rework S1 RETRIBUTION §4.3: the hammer\'s main-target strike, 180 / 180, triggered only. Range 50000 (the hammer can expire with the paladin far away). '
           'spell_pal_execution_sentence_burst applies x(1 + 0.05 * gained) and keeps the main target out of the splash.'
           ' Effect 1 sp_potency/ap_potency 180.0 -> 234.0 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).'
           ' Effect 1 sp_potency/ap_potency 234.0 -> 163.8 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).'
-          ' Effect 1 sp_potency/ap_potency 163.8 -> 131.04 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Execution Sentence -20%).',
+          ' Effect 1 sp_potency/ap_potency 163.8 -> 131.04 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Execution Sentence -20%).'
+          ' sp_potency 131.04 -> 149.3856; ap_potency 131.04 -> 149.3856 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).',
     raw_overrides=_raw(
         AttributesEx2=0x4,  # SPELL_ATTR2_IGNORE_LINE_OF_SIGHT: script-cast at a target / dest the paladin may not see
         SpellClassMask_3=m.EXECUTION_SENTENCE,
@@ -1681,7 +1686,7 @@ execution_sentence_201410 = spell(
     duration_ms=10000,
     effects=[
         Effect(
-            type=EffectType.APPLY_AURA, sp_potency=26.208, ap_potency=26.208, potency_kind='periodic', implicit_target_a=6,
+            type=EffectType.APPLY_AURA, sp_potency=29.8771, ap_potency=29.8771, potency_kind='periodic', implicit_target_a=6,
             apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000,
         ),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.MOD_DAMAGE_FROM_CASTER),
@@ -1691,7 +1696,8 @@ execution_sentence_201410 = spell(
           'eff2 = aura 271 (damage taken from the caster) 0% until Fanaticism adds to it through SPELLMOD_EFFECT2; it reads SEAL_DAMAGE (U | P) on mask B. Visual 90044 (patch_paladin_vfx_models.py): Ascension\'s falling hammer as a StateKit on the DoT.'
           ' Effect 1 (periodic) sp_potency/ap_potency 36.0 -> 46.8 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).'
           ' Effect 1 (periodic) sp_potency/ap_potency 46.8 -> 32.76 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).'
-          ' Effect 1 (periodic) sp_potency/ap_potency 32.76 -> 26.208 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Execution Sentence -20%).',
+          ' Effect 1 (periodic) sp_potency/ap_potency 32.76 -> 26.208 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Execution Sentence -20%).'
+          ' sp_potency 26.208 -> 29.8771; ap_potency 26.208 -> 29.8771 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).',
     raw_overrides=_raw(
         castable=True,
         AuraDescription_Lang_Mask=16712190,
@@ -1729,13 +1735,14 @@ wake_of_ashes_201413 = spell(
     range_yards=RANGE_SELF,
     effects=[
         Effect(
-            type=EffectType.SCHOOL_DAMAGE, sp_potency=205.0, ap_potency=205.0, potency_kind='direct',
+            type=EffectType.SCHOOL_DAMAGE, sp_potency=233.7, ap_potency=233.7, potency_kind='direct',
             implicit_target_a=104, radius_yards=12.0,
         ),
     ],
     spell_icon_id=90211,
     notes='paladin-rework S1 RETRIBUTION §4.4: 205 / 205 potency in a 12 yd 104 degree cone, up to 5 targets, 45 s cooldown (Cooldown Haste applies), WoA bit d2 0x1000, learn 60. '
-          'Visual = Divine Storm SV 12006 placeholder (VFX follow-up). Stun 201414 and the +3 seal stacks come from spell_pal_wake_of_ashes / the builder script.',
+          'Visual = Divine Storm SV 12006 placeholder (VFX follow-up). Stun 201414 and the +3 seal stacks come from spell_pal_wake_of_ashes / the builder script.'
+          ' sp_potency 205.0 -> 233.7; ap_potency 205.0 -> 233.7 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).',
     raw_overrides=_raw(
         castable=True,
         MaxTargets=5,

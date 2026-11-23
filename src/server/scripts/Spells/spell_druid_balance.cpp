@@ -581,6 +581,41 @@ class spell_dru_vengeful_soul : public AuraScript
     }
 };
 
+// 16911 - Vengeance r3 capstone (Vengeful Soul) - once-per-cast guard (S22, ICD report option A)
+// Starfire's cleave, Fury of Elune's splash and every Starfall / Hurricane hit share their Spell with the other
+// targets, so the HIT-phase crit row would roll once per critting target. The first critting target of a cast
+// claims the one roll; the 6 s ICD is spell_proc's.
+class spell_dru_vengeance_capstone_guard : public AuraScript
+{
+    PrepareAuraScript(spell_dru_vengeance_capstone_guard);
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        Spell const* procSpell = eventInfo.GetProcSpell();
+        if (!procSpell)
+            return true;
+
+        // One claim per Spell object per world tick: every target of a multi-target spell is hit in the same
+        // tick, and the ms check keeps a reused Spell address from matching. CheckProc runs before the roll.
+        uint32 const now = uint32(GameTime::GetGameTimeMS().count());
+        if (procSpell == _guardSpell && now == _guardMs)
+            return false;
+
+        _guardSpell = procSpell;
+        _guardMs = now;
+        return true;
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_dru_vengeance_capstone_guard::CheckProc);
+    }
+
+private:
+    Spell const* _guardSpell = nullptr;
+    uint32 _guardMs = 0;
+};
+
 // 5176 - Wrath - Wrath of Cenarius r3 capstone (talent table 7,2)
 class spell_dru_wrath_of_cenarius_capstone : public SpellScript
 {
@@ -974,6 +1009,7 @@ void AddSC_druid_balance_spell_scripts()
     RegisterSpellScript(spell_dru_hurricane_channel);
     RegisterSpellScript(spell_dru_owlkin_frenzy_proc);
     RegisterSpellScript(spell_dru_vengeful_soul);
+    RegisterSpellScript(spell_dru_vengeance_capstone_guard);
     RegisterSpellScript(spell_dru_wrath_of_cenarius_capstone);
     RegisterSpellScript(spell_dru_astral_surge_sp);
 

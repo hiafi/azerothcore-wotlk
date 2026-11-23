@@ -69,13 +69,13 @@ W0A_IDS = (HS, CLEAVE, SLAM, OVERPOWER, MS, BT, REVENGE, REND, THUNDER_CLAP, COM
 # MS x1.5 x1.4 x0.8 x1.1 x0.95, Overpower x1.5 x1.4 x0.8, on both parts
 # DPS balance pass 1031 (2026-10-31, user): HS x0.85 (Fury -15%), Slam / MS / Overpower x0.75 (Arms -25%), both parts
 # Round R5 (2026-11-02, user): HS weapon percent 156 -> 172 (about +10%), the flat part unchanged
-PERCENTS = {HS: 189, CLEAVE: 144, SLAM: 165, MS: 197, OVERPOWER: 153}  # 2026-11-15 BAL1, BAL2, BAL4 (MS -5%)
+PERCENTS = {HS: 189, CLEAVE: 144, SLAM: 165, MS: 188, OVERPOWER: 153}  # 2026-11-15 BAL1/2/4 (MS -5%); S9 MS x0.85; S13 x1.08; S19 x1.044
 # strike -> (percent effect index, flat effect index, flat carrier type)
 STRIKE_SHAPE = {HS: (1, 2, WEAPON_DAMAGE), CLEAVE: (1, 2, WEAPON_DAMAGE), SLAM: (1, 2, WEAPON_DAMAGE),
                 MS: (2, 3, NORMALIZED_WEAPON), OVERPOWER: (1, 2, NORMALIZED_WEAPON)}
-FLAT_POT = {HS: 11.22, CLEAVE: 12, SLAM: 14.85, OVERPOWER: 15.4275, MS: 15.51825}  # 2026-11-15 BAL1, BAL2, BAL4
-FLAT_L60 = {HS: 29, CLEAVE: 31, SLAM: 38, OVERPOWER: 39, MS: 40}  # 2026-11-15 BAL1, BAL2 (flat potency +10%), BAL4 MS -5%
-FLAT_L22 = {HS: 5, CLEAVE: 5, SLAM: 13, OVERPOWER: 5, MS: 6}
+FLAT_POT = {HS: 11.22, CLEAVE: 12, SLAM: 14.85, OVERPOWER: 15.4275, MS: 14.8868}  # BAL1/2/4; S9 MS x0.85; S13 x1.08; S19 x1.045
+FLAT_L60 = {HS: 29, CLEAVE: 31, SLAM: 38, OVERPOWER: 39, MS: 38}  # BAL1, BAL2 (flat +10%), BAL4 MS -5%; S9 MS x0.85; S13 x1.08; S19 x1.045
+FLAT_L22 = {HS: 5, CLEAVE: 5, SLAM: 13, OVERPOWER: 5, MS: 5}
 
 # WP-BRIEF ruling 2 / 0VERIFY 2e: ShapeshiftMask -> 0
 ZERO_LIST = (72, 100, 355, 676, 772, 871, 1680, 1715, 1719, 2565, 3411, 5308, 6343, 6552, 6572, 7384, 7922, 12328,
@@ -350,15 +350,18 @@ def check_rend(rows: dict[int, dict], entries: dict[int, dict], script_removals:
         return [f"{REND}: not built"]
     bad = []
     pot = (e.get("effect1") or {}).get("_potency") or {}
-    if (pot.get("kind"), pot.get("total_potency"), pot.get("t_seconds")) != ("periodic", 12.63, 3.0):
+    if (pot.get("kind"), pot.get("total_potency"), pot.get("t_seconds")) != ("periodic", 10.9123, 3.0):
         bad.append(f"potency {pot.get('kind')}/{pot.get('total_potency')}/T {pot.get('t_seconds')}, "
-                   "expected periodic/12.63/T 3")
+                   "expected periodic/10.9123/T 3 (S9 Rend x0.80, S13 x1.08)")
     if not float(pot.get("ap_coefficient") or 0):
         bad.append("no attack-power coefficient")
     if (_i(r, "EffectAura_1"), _i(r, "EffectAuraPeriod_1")) != (3, 3000):
         bad.append(f"aura/period {r.get('EffectAura_1')}/{r.get('EffectAuraPeriod_1')}, expected 3 / 3000")
-    if calc_value(r, 1, 60) != 68 or calc_value(r, 1, 22) != 11:
-        bad.append(f"per-tick value {calc_value(r, 1, 22)} at 22 / {calc_value(r, 1, 60)} at 60, expected 11 / 68")
+    # 11 / 68 before the potency rebase; its base x a = 0.57 (level60-stat-curve HANDOFF 1.9, LS5b): 6 / 39; attack power
+    # side a 0.71 (level60-stat-curve S7b in-combat refit): 7 / 48; S9 Rend x0.80 (2026-11-21): 5 / 38;
+    # S13 x1.08: 5 / 41.
+    if calc_value(r, 1, 60) != 41 or calc_value(r, 1, 22) != 5:
+        bad.append(f"per-tick value {calc_value(r, 1, 22)} at 22 / {calc_value(r, 1, 60)} at 60, expected 5 / 41")
     if not any(int(x["spell_id"]) == -REND and x["ScriptName"] == "spell_warr_rend" for x in script_removals):
         bad.append("unbind_script(-772, 'spell_warr_rend') is not declared")
     if any(int(x["spell_id"]) == -REND for x in script_names):
@@ -414,8 +417,10 @@ def check_moved_levels(rows: dict[int, dict]) -> list[str]:
         bad.append(f"{SPELL_REFLECTION}: level-60 value {calc_value(sr, 1, 60)}, expected 100 (aura 28, no slope)")
     for sid in (SHATTERING_THROW, HEROIC_THROW):
         r = rows.get(sid)
-        if r is not None and calc_value(r, 1, 60) != 11:
-            bad.append(f"{sid}: flat at level 60 is {calc_value(r, 1, 60)}, expected 11 (0VERIFY item 3)")
+        # 11 before the potency rebase; the attack-power throws' base x a = 0.57 (level60-stat-curve LS5b): 7; attack
+        # power side a 0.71 (S7b in-combat refit): 8.
+        if r is not None and calc_value(r, 1, 60) != 8:
+            bad.append(f"{sid}: flat at level 60 is {calc_value(r, 1, 60)}, expected 8 (0VERIFY item 3, rebased)")
     return bad
 
 
@@ -694,7 +699,7 @@ def _strike_rows() -> dict[int, dict]:
                        EffectChainTargets_2=2),
         SLAM: strike(SLAM, 1, 2, WEAPON_DAMAGE, 165, 30, 12, 5.94 / 7),
         OVERPOWER: strike(OVERPOWER, 1, 2, NORMALIZED_WEAPON, 153, 12, -4, 6.2 / 7),
-        MS: strike(MS, 2, 3, NORMALIZED_WEAPON, 197, 20, 4, 6.125 / 7, Effect_1=APPLY_AURA, EffectAura_1=118),
+        MS: strike(MS, 2, 3, NORMALIZED_WEAPON, 188, 20, 3, 5.95472 / 7, Effect_1=APPLY_AURA, EffectAura_1=118),
     }
 
 
@@ -845,8 +850,8 @@ class WarriorW0aNegativeTest(unittest.TestCase):
 
     def test_rend(self):
         row = {"ID": REND, "EffectAura_1": 3, "EffectAuraPeriod_1": 3000, "BaseLevel": 4, "SpellLevel": 4,
-               "EffectBasePoints_1": -17, "EffectRealPointsPerLevel_1": 1.5156, "EffectDieSides_1": 1}
-        ent = {"id": REND, "effect1": {"_potency": {"kind": "periodic", "total_potency": 12.63, "t_seconds": 3.0,
+               "EffectBasePoints_1": -12, "EffectRealPointsPerLevel_1": 0.929728, "EffectDieSides_1": 1}  # S9 x0.80, S13 x1.08
+        ent = {"id": REND, "effect1": {"_potency": {"kind": "periodic", "total_potency": 10.9123, "t_seconds": 3.0,
                                                     "ap_coefficient": 0.0578}}}
         rem = [{"spell_id": -REND, "ScriptName": "spell_warr_rend"}]
         self.assertEqual(check_rend({REND: row}, {REND: ent}, rem, []), [])
@@ -887,8 +892,10 @@ class WarriorW0aNegativeTest(unittest.TestCase):
         rows = {sid: {"ID": sid, "SpellLevel": lv, "BaseLevel": lv} for sid, lv in MOVED_LEVELS.items()}
         rows[PUMMEL].update(Effect_1=68)
         rows[SPELL_REFLECTION].update(EffectAura_1=28, EffectBasePoints_1=99, EffectDieSides_1=1)
-        rows[SHATTERING_THROW].update(EffectBasePoints_1=8, EffectRealPointsPerLevel_1=0.25714, EffectDieSides_1=1)
-        rows[HEROIC_THROW].update(EffectBasePoints_1=10, EffectRealPointsPerLevel_1=0.25714, EffectDieSides_1=1)
+        # The throws' base x a since the potency rebase (level60-stat-curve LS5b): 8 / 10 at 0.25714 -> 5 / 6; attack
+        # power side a 0.71 (S7b in-combat refit): 6 / 7 at 0.182571.
+        rows[SHATTERING_THROW].update(EffectBasePoints_1=6, EffectRealPointsPerLevel_1=0.182571, EffectDieSides_1=1)
+        rows[HEROIC_THROW].update(EffectBasePoints_1=7, EffectRealPointsPerLevel_1=0.182571, EffectDieSides_1=1)
         self.assertEqual(check_moved_levels(rows), [])
         for sid in MOVED_LEVELS:
             self.assertGreaterEqual(len(check_moved_levels({**rows, sid: {**rows[sid], "SpellLevel": 99}})), 1, sid)

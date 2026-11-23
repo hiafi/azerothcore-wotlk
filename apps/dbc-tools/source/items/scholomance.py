@@ -284,8 +284,10 @@ item("scholo_vigorsteel_vambraces", base=13951, ladder=VANILLA_DUNGEON,
      sockets=(R,), socket_bonus=BONUS_HASTE_4)
 item("scholo_bonecreeper_stylus", base=13938, ladder=VANILLA_DUNGEON,
      primary="Spirit (Solo)", secondary="Haste (Solo)")
+# Intellect, was Spirit (2026-11-21, level60-stat-curve healer mana pass, user ruling: half the Spirit-only leather
+# caster drops become Intellect, at least one Spirit piece kept per slot).
 item("scholo_boots_of_the_shrieker", base=13398, ladder=VANILLA_DUNGEON,
-     primary="Spirit (Solo)", secondary="Haste (Solo)", shadow_res=0,
+     primary="Intellect (Solo)", secondary="Haste (Solo)", shadow_res=0,
      sockets=(R,), socket_bonus=BONUS_HASTE_4)
 # Becomes a wrist strap (stock waist, 2026-11-02): wrist slot and a mail wrist look (Loomguard Armbraces 13969).
 item("scholo_detention_strap", base=13950, ladder=VANILLA_DUNGEON,

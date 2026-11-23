@@ -55,12 +55,22 @@ SLOTS = ("head", "shoulders", "chest", "hands", "waist", "legs", "feet", "wrist"
 INVENTORY = {"head": {1}, "shoulders": {3}, "chest": {5, 20}, "hands": {10}, "waist": {6}, "legs": {7}, "feet": {8},
              "wrist": {9}}
 TIER0_ILVL = {"head": 62, "shoulders": 60, "chest": 63, "hands": 59, "waist": 58, "legs": 61, "feet": 59, "wrist": 57}
+# The leather caster set splits Intellect (big slots) / Spirit (small slots) (2026-11-21, level60-stat-curve healer
+# mana pass, user ruling).
+LEATHER_CASTER = {s: ("Intellect (Solo)" if s in ("head", "shoulders", "chest", "legs") else "Spirit (Solo)")
+                  for s in SLOTS}
+
+
+def _slot(primary, slot):
+    return primary[slot] if isinstance(primary, dict) else primary
+
+
 # set id: (primary, kind, stock entries in slot order)
 STOCK_SETS = {
     517: ("Intellect (Solo)", "dps", (22065, 22068, 22069, 22066, 22062, 22067, 22064, 22063)),
     514: ("Spirit (Solo)", "dps", (22080, 22082, 22083, 22081, 22078, 22085, 22084, 22079)),
     512: ("Agility (Solo)", "dps", (22005, 22008, 22009, 22006, 22002, 22007, 22003, 22004)),
-    513: ("Spirit (Solo)", "dps", (22109, 22112, 22113, 22110, 22106, 22111, 22107, 22108)),
+    513: (LEATHER_CASTER, "dps", (22109, 22112, 22113, 22110, 22106, 22111, 22107, 22108)),
     515: ("Agility (Solo)", "dps", (22013, 22016, 22060, 22015, 22010, 22017, 22061, 22011)),
     519: ("Intellect (Solo)", "dps", (22097, 22101, 22102, 22099, 22098, 22100, 22096, 22095)),
     516: ("Intellect (Solo)", "dps", (22091, 22093, 22089, 22090, 22086, 22092, 22087, 22088)),
@@ -136,7 +146,8 @@ class MoltenSetTest(unittest.TestCase):
             for slot, base in zip(SLOTS, bases):
                 decl = self.items[f"qr_{base}"]
                 ilvl = TIER0_ILVL[slot]
-                self.assertEqual((decl.base, decl.primary, decl.secondary), (base, primary, secondary(kind, slot)))
+                self.assertEqual((decl.base, decl.primary, decl.secondary),
+                                 (base, _slot(primary, slot), secondary(kind, slot)))
                 self.assertEqual((decl.ilvl, decl.quality, decl.required_level), (ilvl, Quality.RARE, ilvl - 5))
                 self.assertEqual(dict(decl.columns), {"bonding": 1}, decl.key)  # the stock row's itemset stays
                 self.assertEqual(decl.extra_stamina, 0.0)

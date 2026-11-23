@@ -34,7 +34,7 @@ power_word_shield_17 = spell(
     cooldown_ms=4000,
     category_cooldown_ms=4000,
     mana_cost=0,
-    mana_cost_pct=10,
+    mana_cost_pct=16,
     range_yards=40.0,
     duration_ms=30000,
     effects=[
@@ -52,7 +52,9 @@ power_word_shield_17 = spell(
           '"raise Power Word: Shield\'s baseline absorb" and "baseline mana cost about 130 mana at '
           'level 60"; base mana 1376 at 60, so 10% = 137 (9% would be 123). Holy gets both too. '
           'Greater PWS 200155 scaled by the same +50% to keep parity).'
-          ' sp_potency 146.52 -> 132.454 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Discipline x0.904).',
+          ' sp_potency 146.52 -> 132.454 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Discipline x0.904).'
+          ' mana_cost_pct 10 -> 11 (137 -> 151 mana at level 60, base mana 1376) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Power Word: Shield mana cost +10%).'
+          ' mana_cost_pct 11 -> 16 (151 -> 220 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Disc x1.47).',
     raw_overrides={'AttributesEx2': 2621440, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Draws on the soul of the friendly target to shield them, absorbing {pot1} damage.  Lasts $d.  While the shield holds, spellcasting will not be interrupted by damage.  Once shielded, the target cannot be shielded again for $6788d.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'ExcludeTargetAuraSpell': 6788, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 1, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 784, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -281,10 +283,10 @@ prayer_of_healing_596 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=20,
+    mana_cost_pct=28,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=36.081, potency_kind='heal', implicit_target_a=21, implicit_target_b=37, radius_yards=30.0),
+        Effect(type=EffectType.HEAL, sp_potency=31.3905, potency_kind='heal', implicit_target_a=21, implicit_target_b=37, radius_yards=30.0),
     ],
     spell_icon_id=540,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1→level-60 slope (anchor rank 25316, rank 5); coefficient/cast_time_ms/mana_cost_pct from max rank (48072, rank 7); MaxLevel set to 80. '
@@ -297,7 +299,10 @@ prayer_of_healing_596 = spell(
           '"make the mana changes baseline", Prayer of Healing the main cut; sized with Holy '
           'Concentration\'s -45% Holy Words so Holy\'s party pin50 sim runs out of mana near 45 s). '
           'Shared with Disc, whose sizing accounts for it (dps-balance-1031.STAGE-R4-PRIEST-REPORT.md). Effect 1 sp_potency 47.5 -> 42.75 (2026-11-15, balance round 4 on the Normal-tier kits, user ruling: Prayer of Healing -10% (Holy over the 4,000 goal; Disc also casts it)).'
-          ' sp_potency 42.75 -> 36.081 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).',
+          ' sp_potency 42.75 -> 36.081 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).'
+          ' sp_potency 36.081 -> 31.3905 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Holy Priest, Prayer of Healing x0.87).'
+          ' mana_cost_pct 20 -> 24 (275 -> 330 mana at level 60, base mana 1376) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Prayer of Healing mana cost +20%).'
+          ' mana_cost_pct 24 -> 28 (330 -> 385 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Prayer of Healing x1.17 (shared Holy/Disc)).',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 14, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "A powerful prayer heals the friendly target's party members within $a1 yards for {pot1}.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 512, 'SpellClassSet': 6, 'SpellLevel': 30, 'SpellVisualID_1': 194, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -532,7 +537,7 @@ greater_heal_2060 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=32,
+    mana_cost_pct=47,
     range_yards=40.0,
     effects=[
         Effect(type=EffectType.HEAL, sp_potency=119.418, potency_kind='heal', implicit_target_a=21),
@@ -540,7 +545,8 @@ greater_heal_2060 = spell(
     spell_icon_id=241,
     notes="re-anchored for the Priest heal-line collapse (Lesser Heal/Heal retired from trainers, Greater Heal is now the one heal spell learned at level 1): base_points/BaseLevel/SpellLevel moved from rank1's old level-40 anchor down to Lesser Heal rank1's (2050) level-1 value (45); RealPointsPerLevel recomputed as a straight line from that level-1 value to this spell's own previous level-80 ceiling (898 + 40*53.35 = 3032), so max-level healing is unchanged; die_sides/mana_cost_pct/coefficient kept as before (from max rank 48063, rank 9). See docs/.master-todo-list.md. PLAN A9 (BALANCE §0.13/druid-rework code review finding #9): cast_time_ms=2500, raw CastingTimeIndex (14, 3000ms) dropped. "
           "Potency system P5-Priest: converted to sp_potency=132.1 (potency-report default, base/coef already agreed - this is the heal-table validation anchor, see this stage's write-up)."
-          ' sp_potency 132.1 -> 119.418 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Discipline x0.904).',
+          ' sp_potency 132.1 -> 119.418 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Discipline x0.904).'
+          ' mana_cost_pct 32 -> 47 (440 -> 646 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Disc x1.47).',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A slow casting spell that heals a single target for {pot1}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 4096, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 57, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # Auto-learned at character creation, same as Lesser Heal (2050, SkillLineAbility.dbc ID 2313,
@@ -1193,7 +1199,7 @@ prayer_of_mending_33076 = spell(
     cooldown_ms=0,
     category_cooldown_ms=10000,
     mana_cost=0,
-    mana_cost_pct=15,
+    mana_cost_pct=18,
     range_yards=40.0,
     effects=[
         Effect(type=142, base_points=799, points_per_level=15.1875, implicit_target_a=57, trigger_spell=prayer_of_mending_41635.id),
@@ -1201,7 +1207,8 @@ prayer_of_mending_33076 = spell(
     ],
     spell_icon_id=2219,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 68); RealPointsPerLevel from rank1→top rank's own top level (84, chain has a gap at 60) slope (anchor rank 48113, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48113, rank 3); MaxLevel set to 80. "
-          "docs/reworks/priest-new-spells.md (\"Spell Changes\"): learn level moved from 68 to 28.",
+          "docs/reworks/priest-new-spells.md (\"Spell Changes\"): learn level moved from 68 to 28."
+          ' mana_cost_pct 15 -> 18 (206 -> 247 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Prayer of Mending x1.17).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 67108864, 'AttributesEx7': 1073741824, 'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 28, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Places a spell on the target that heals them for $s1 the next time they take damage.  When the heal occurs, Prayer of Mending jumps to a party or raid member within $41635a1 yards.  Jumps up to $n times and lasts $41635d after each jump.  This spell can only be placed on one target at a time.', 'EffectBonusMultiplier_1': 0.8069999814033508, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 5, 'ProcTypeMask': 699048, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_2': 32, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 28, 'SpellVisualID_1': 8070, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # This spell's only pulled trainer_spell row was under dead TrainerId 11 (see devouring_plague_2944's
@@ -1303,7 +1310,7 @@ divine_hymn_64843 = spell(
     cooldown_ms=180000,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=9,
+    mana_cost_pct=11,
     range_yards=40.0,
     duration_ms=5000,
     effects=[
@@ -1312,7 +1319,8 @@ divine_hymn_64843 = spell(
     ],
     spell_icon_id=3209,
     notes='pulled from existing data. '
-          'docs/reworks/priest-new-spells.md: "Heals all party or raid members within 40 yards for 1000 + 1.0 coefficient over 5 sec. Each heal increases all targets\' healing taken by 4% for 15 sec, stacking." Cooldown 480000->180000 (3 min, per the design doc header - not the 8 min a different draft doc implied, confirmed with the user), mana_cost_pct 63->9, duration_ms 8000->5000 and amplitude 2000->1000 (5 ticks over 5 sec instead of 4 over 8, so trigger_spell=divine_hymn_64844 fires once per second for the full channel), BaseLevel/SpellLevel 80->60 (raw_overrides below). The actual heal amount, target selection (everyone in range now, not just the 3 lowest-health) and the stacking healing-taken buff all live on divine_hymn_64844 (priest_trigger_spells.py, migrated out of npc.csv in the same change) - this row is just the channel/trigger shell. Effect index 1 (a small self DUMMY aura, base_points=2/live 3) is unchanged pulled data, left as-is - its purpose wasn\'t touched by this rework and no reference to it appears in the design doc.',
+          'docs/reworks/priest-new-spells.md: "Heals all party or raid members within 40 yards for 1000 + 1.0 coefficient over 5 sec. Each heal increases all targets\' healing taken by 4% for 15 sec, stacking." Cooldown 480000->180000 (3 min, per the design doc header - not the 8 min a different draft doc implied, confirmed with the user), mana_cost_pct 63->9, duration_ms 8000->5000 and amplitude 2000->1000 (5 ticks over 5 sec instead of 4 over 8, so trigger_spell=divine_hymn_64844 fires once per second for the full channel), BaseLevel/SpellLevel 80->60 (raw_overrides below). The actual heal amount, target selection (everyone in range now, not just the 3 lowest-health) and the stacking healing-taken buff all live on divine_hymn_64844 (priest_trigger_spells.py, migrated out of npc.csv in the same change) - this row is just the channel/trigger shell. Effect index 1 (a small self DUMMY aura, base_points=2/live 3) is unchanged pulled data, left as-is - its purpose wasn\'t touched by this rework and no reference to it appears in the design doc.'
+          ' mana_cost_pct 9 -> 11 (123 -> 151 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Holy x1.17).',
     raw_overrides={'AttributesEx': 536870980, 'AttributesEx2': 1074266116, 'AttributesEx3': 1073741824, 'AttributesEx4': 64, 'AttributesEx5': 8192, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reciting Divine Hymn, healing nearby friendly party or raid targets for $64844s1 every $t1 sec for $d.', 'AuraInterruptFlags': 131072, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31788, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals all party or raid members within $64844a1 yards for $64844s1 every $64843t1 sec for $64843d. Each heal increases the target\'s healing taken by $64844s2% for $64844d, stacking.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 13, 'MaxLevel': 84, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_2': 4194304, 'SpellClassSet': 6, 'SpellLevel': 60, 'SpellVisualID_1': 10671, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # This spell's only pulled trainer_spell row was under dead TrainerId 11 (see devouring_plague_2944's
@@ -1354,7 +1362,7 @@ lightwell_724 = spell(
     cooldown_ms=0,
     category_cooldown_ms=90000,
     mana_cost=0,
-    mana_cost_pct=17,
+    mana_cost_pct=20,
     range_yards=40.0,
     duration_ms=30000,
     effects=[
@@ -1377,7 +1385,8 @@ lightwell_724 = spell(
           "2026-10-03 (user): the number is back, through pot_text(lightwell_heal_200202), which "
           "renders 200202's own {pot1} text. The Lightwell is a totem-type summon "
           "(SUMMON_TYPE_LIGHTWELL -> UNIT_MASK_TOTEM), so its heal uses the priest's spell power "
-          "and level, and the tooltip's $SP term is accurate.",
+          "and level, and the tooltip's $SP term is accurate."
+          ' mana_cost_pct 17 -> 20 (233 -> 275 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Holy x1.17).',
     raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a Holy Lightwell that lasts $d. Once per sec, it heals the party or raid member within 20 yds most in need for ' + pot_text(lightwell_heal_200202) + ', for up to 10 heals.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 1141, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 6, 'SpellDescriptionVariableID': 162, 'SpellLevel': 40, 'SpellVisualID_1': 7550, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
 )
 
@@ -1452,17 +1461,19 @@ circle_of_healing_34861 = spell(
     cooldown_ms=0,
     category_cooldown_ms=6000,
     mana_cost=0,
-    mana_cost_pct=10,
+    mana_cost_pct=12,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=43.753, potency_kind='heal', implicit_target_a=63, implicit_target_b=31, radius_yards=15.0),
+        Effect(type=EffectType.HEAL, sp_potency=38.0651, potency_kind='heal', implicit_target_a=63, implicit_target_b=31, radius_yards=15.0),
     ],
     spell_icon_id=2214,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1→level-60 slope (anchor rank 34864, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48089, rank 7); MaxLevel set to 80. '
           'Priest Holy rework (HOLY.md "Baseline spell edits" / design doc §3): amount set to a flat 343 - checked this row\'s actual die_sides per PLAN §3.5 before typing the number, and it was NOT the default 1 (it was 37, a real min/max variance range inherited from the stock rank chain: 343-379). HOLY.md\'s own arithmetic ("base_points=342 if die_sides=1") assumes the default, which this row did not have - flattened die_sides to 1 (explicit override) here so the stated flat "343 + 0.4 SP" reads as a deterministic amount, consistent with how every other new spell in this pass (Holy Word: Serenity/Sanctify, Divine Star, Halo) is a flat number rather than a stock-style random range. Radius stays 15 yd (user override of the design doc\'s 30 yd, PLAN §1) - only the target-count/selection logic changes, in WP-B\'s C++ script. '
           'Potency system P5-Priest: converted to sp_potency=32.4 (user-reviewed, mismatched row); the old bonus_coefficients(direct=0.4) call retired via unbind_bonus_coefficients() below, since 34861 is a real stock spell id and the stock base dump\'s own spell_bonus_data row at this key would otherwise keep winning over the new generated EffectBonusMultiplier_1 (D1) - same stale-row issue Corruption/Metamorphosis hit in the Warlock pilot. '
           'mana_cost_pct 21 -> 10 and sp_potency 32.4 -> 51.84 (+60%) (2026-11-02, DPS balance pass 1031 round R5, user ruling: Circle of Healing cheaper and stronger, cast over Prayer of Healing).'
-          ' sp_potency 51.84 -> 43.753 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).',
+          ' sp_potency 51.84 -> 43.753 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).'
+          ' sp_potency 43.753 -> 38.0651 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Holy Priest, Circle of Healing x0.87).'
+          ' mana_cost_pct 10 -> 12 (137 -> 165 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Holy x1.17).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx5': 4194304, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals up to 5 friendly party or raid members within $a1 yards of the target for {pot1}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 268435456, 'SpellClassSet': 6, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 8253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 unbind_bonus_coefficients(circle_of_healing_34861)  # P5-Priest: retires the live stock spell_bonus_data
@@ -1505,13 +1516,14 @@ penance_47540 = spell(
     cooldown_ms=0,
     category_cooldown_ms=12000,
     mana_cost=0,
-    mana_cost_pct=16,
+    mana_cost_pct=24,
     range_yards=30.0,
     effects=[
         Effect(type=EffectType.DUMMY, base_points=-1, implicit_target_a=25),
     ],
     spell_icon_id=2818,
-    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (84, chain has a gap at 60) slope (anchor rank 53007, rank 4); coefficient/cast_time_ms/mana_cost_pct from max rank (53007, rank 4); MaxLevel set to 80",
+    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (84, chain has a gap at 60) slope (anchor rank 53007, rank 4); coefficient/cast_time_ms/mana_cost_pct from max rank (53007, rank 4); MaxLevel set to 80"
+          ' mana_cost_pct 16 -> 24 (220 -> 330 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Disc x1.47).',
     raw_overrides={'AttributesEx': 268452996, 'AttributesEx4': 134217728, 'AttributesEx5': 8704, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a volley of holy light at the target, causing $47666s1 Holy damage to an enemy, or $47750s1 healing to an ally instantly and every $47758t2 sec for $47758d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 160, 'SpellClassMask_2': 8388608, 'SpellClassSet': 6, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 10980, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1839,14 +1851,15 @@ halo_200135 = spell(
     attributes=65536,
     cast_time_ms=0,
     cooldown_ms=60000,
-    mana_cost_pct=30,
+    mana_cost_pct=35,
     duration_ms=2000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=100),
     ],
     spell_icon_id=90102,
     notes='docs/reworks/priest-new-spells.md: "Creates a ring of Holy energy around you that quickly expands to a 40 yd radius, healing allies for... and dealing... Holy damage to enemies." Deliberately NOT a summoned-creature spell (Frozen Orb\'s *travel-in-one-direction* half doesn\'t fit an all-directions-at-once ring; its *periodic-pulse-with-owner-attribution* half does): self-buff aura (PERIODIC_DUMMY, apply_aura=226) ticking every 100ms (amplitude=100) for the buff\'s duration_ms=2000 (total ring-expansion time to reach 40 yds - not specified in the design doc, flagged as playtest-tunable). spell_pri_halo (AuraScript on this spell, spell_priest_new.cpp), on OnEffectPeriodic, computes the ring\'s current radius from elapsed/total time, does a manual search for units newly crossed by the ring since the last tick, and casts halo_pulse_200136 (priest_trigger_spells.py) at each one individually - same explicit-single-unit-target "ally heals / enemy damages" idiom as Divine Star\'s pulse, chosen specifically to avoid native-AoE re-hit dedup problems (a naive fixed-radius AoE re-query every 100ms would re-hit everyone already inside the ring, not just those newly crossed by it). Live playtest bug (2026-09-20): originally shipped with AttributesEx=4 (SPELL_ATTR1_IS_CHANNELED) copy-pasted from this batch\'s other 5 new spells - harmless on those (no duration_ms, so Spell::handle_immediate\'s IsChanneled()+duration>0 branch never fires), but Halo\'s own duration_ms=2000 made the server actually open a 2-second channel (SendChannelStart), and the client then looked for this spell\'s (empty) ChannelKit instead of its correctly-authored PrecastKit/CastKit - explaining both "shows a channel bar" and "no animation plays" as one bug. Removed. '
-          'Priest Holy rework (HOLY.md "Halo healing-taken" / design doc §3 "Halo"): tooltip gains the +10% healing-taken clause - design doc resolves the doc\'s own "unset variable" placeholder to a literal 10%, not a variable to compute. The buff itself (200173, MOD_HEALING_RECEIVED base 10, 10 s, scoped to this caster\'s own Holy heals via the SPELLFAMILY_PRIEST caster-GUID check native to SPELL_AURA_MOD_HEALING_RECEIVED - see Unit.cpp:9607-9613 - plus a classmask restricting it to priest heals, mirroring stock Grace\'s 47930 shape exactly) is declared in priest_trigger_spells.py; spell_pri_halo_pulse casting it on each target hit is WP-B\'s job (spell_priest_new.cpp).',
+          'Priest Holy rework (HOLY.md "Halo healing-taken" / design doc §3 "Halo"): tooltip gains the +10% healing-taken clause - design doc resolves the doc\'s own "unset variable" placeholder to a literal 10%, not a variable to compute. The buff itself (200173, MOD_HEALING_RECEIVED base 10, 10 s, scoped to this caster\'s own Holy heals via the SPELLFAMILY_PRIEST caster-GUID check native to SPELL_AURA_MOD_HEALING_RECEIVED - see Unit.cpp:9607-9613 - plus a classmask restricting it to priest heals, mirroring stock Grace\'s 47930 shape exactly) is declared in priest_trigger_spells.py; spell_pri_halo_pulse casting it on each target hit is WP-B\'s job (spell_priest_new.cpp).'
+          ' mana_cost_pct 30 -> 35 (412 -> 481 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Holy x1.17).',
     raw_overrides={'BaseLevel': 52, 'SpellLevel': 52, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a ring of Holy energy around you that quickly expands to a 40 yd radius, healing allies for $s1 and dealing $s1 Holy damage to enemies.  Allies healed by Halo take 10% increased healing from you for 10 sec.', 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90014, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassMask_3': _masks.HALO},
 )
 scripted_by(halo_200135, 'spell_pri_halo')
@@ -2006,7 +2019,7 @@ holy_word_serenity_200197 = spell(
     attributes=65536,
     cast_time_ms=0,
     cooldown_ms=60000,
-    mana_cost_pct=12,
+    mana_cost_pct=14,
     range_yards=40.0,
     effects=[
         Effect(type=EffectType.HEAL, sp_potency=39.837, potency_kind='heal', implicit_target_a=21),
@@ -2024,7 +2037,8 @@ holy_word_serenity_200197 = spell(
           'Potency system P5-Priest: converted to sp_potency=47.2 (user-reviewed, mismatched row) - '
           'replaces the bonus_coefficients(direct=1.4) call below (removed; brand-new custom id, no '
           'stock-dump row to retire). DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit).'
-          ' sp_potency 47.2 -> 39.837 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).',
+          ' sp_potency 47.2 -> 39.837 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).'
+          ' mana_cost_pct 12 -> 14 (165 -> 192 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Holy x1.17).',
     raw_overrides={'BaseLevel': 10, 'SpellLevel': 10, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly heals a friendly target for {pot1}.', 'EquippedItemClass': -1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 280, 'SpellClassMask_3': _masks.HW_SERENITY, 'DefenseType': 1},
 )
 scripted_by(holy_word_serenity_200197, 'spell_pri_echo_of_light_heal')  # (8,3) Echo of Light
@@ -2037,7 +2051,7 @@ holy_word_sanctify_200198 = spell(
     attributes=65536,
     cast_time_ms=0,
     cooldown_ms=60000,
-    mana_cost_pct=20,
+    mana_cost_pct=23,
     range_yards=40.0,
     radius_yards=8.0,
     effects=[
@@ -2064,7 +2078,8 @@ holy_word_sanctify_200198 = spell(
           'Potency system P5-Priest: converted to sp_potency=28.3 (user-reviewed, mismatched row) - '
           'replaces the bonus_coefficients(direct=0.6) call below (removed; brand-new custom id, no '
           'stock-dump row to retire). DefenseType 0 -> 1 (2026-11-01, potency audit fix F8): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit). sp_potency 28.3 -> 56.6 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Holy Word: Sanctify +100%, it should hit harder than Prayer of Healing (47.5)).'
-          ' sp_potency 56.6 -> 47.77 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).',
+          ' sp_potency 56.6 -> 47.77 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Priest x0.844).'
+          ' mana_cost_pct 20 -> 23 (275 -> 316 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Holy x1.17).',
     raw_overrides={'Targets': 64, 'BaseLevel': 10, 'SpellLevel': 10, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals up to 5 friendly targets within $a1 yards of the target location for {pot1}.  Healing is reduced beyond 5 targets.', 'EquippedItemClass': -1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 280, 'SpellClassMask_3': _masks.HW_SANCTIFY, 'DefenseType': 1},
 )
 scripted_by(holy_word_sanctify_200198, 'spell_pri_holy_word_sanctify')

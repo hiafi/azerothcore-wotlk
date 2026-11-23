@@ -184,8 +184,9 @@ rampage_fury_204630 = _fury(
     'rage [fixed], RecoveryTime 10000 [fixed] with Category 0, SpellLevel = BaseLevel 50. eff0 DUMMY on the enemy. '
     'SpellClassMask_3 = 0x4 (d2 b2 only, never b3). Icon 2006. spell_warr_rampage_fury runs the four strikes. Tooltip 185% -> 157% '
     '(2026-10-31, DPS balance pass 1031, user ruling: Fury damage -15%). Tooltip 157% -> 173% '
-    '(2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%). Tooltip 173% -> 208% (2026-11-15, balance on the Normal-tier kits, user ruling: Rampage +20%).',
-    _raw('Strike the target 4 times in quick succession, alternating main hand and off hand, each strike dealing 208% '
+    '(2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%). Tooltip 173% -> 208% (2026-11-15, balance on the Normal-tier kits, user ruling: Rampage +20%).'
+    ' Tooltip 208% -> 177% (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Fury, Rampage x0.85).',
+    _raw('Strike the target 4 times in quick succession, alternating main hand and off hand, each strike dealing 177% '
          'weapon damage. While you are Enraged, Rampage\'s damage is increased by your Enrage bonus a second time.',
          level=50, RangeIndex=_RANGE_INDEX_MELEE, FacingCasterFlags=1, DefenseType=_DMG_CLASS_MELEE,
          PreventionType=_PREVENTION_PACIFY, EquippedItemClass=_WEAPON_CLASS, EquippedItemSubclass=_WEAPON_SUBCLASSES,
@@ -208,7 +209,7 @@ rampage_fury_204630 = _fury(
 def _rampage_strike(spell_id, hand, extra_ex3, notes_hand):
     return _fury(
         spell_id, 'Rampage',
-        [_weapon_strike(208)],
+        [_weapon_strike(177)],
         _ICON_RAMPAGE,
         'warrior-rework S3 A2a (D7 / D8): the Rampage ' + hand + ' strike, cast triggered by spell_warr_rampage_fury '
         '(0 / 330 / 660 / 1000 ms). WEAPON_PERCENT_DAMAGE 180% [tune], ' + notes_hand + ' DmgClass melee, hidden '
@@ -217,7 +218,8 @@ def _rampage_strike(spell_id, hand, extra_ex3, notes_hand):
         + ', AttributesEx4 SUPPRESS_WEAPON_PROCS, SpellLevel 1, visual 372.'
         + ' Effect 1 weapon_potency 185 -> 157 (157.25 rounded to a whole number) '
         '(2026-10-31, DPS balance pass 1031, user ruling: Fury damage -15%). Effect 1 weapon_potency 157 -> 173 (172.7 '
-        'rounded to a whole number) (2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%). Effect 1 weapon_potency 173 -> 208 (207.6 rounded to a whole number) (2026-11-15, balance on the Normal-tier kits, user ruling: Rampage +20%).',
+        'rounded to a whole number) (2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%). Effect 1 weapon_potency 173 -> 208 (207.6 rounded to a whole number) (2026-11-15, balance on the Normal-tier kits, user ruling: Rampage +20%).'
+        ' Effect 1 weapon_potency 208 -> 177 (176.8 rounded to a whole number) (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Fury, Rampage x0.85).',
         _raw('Strike the target with your ' + hand + ' weapon.', level=1, DefenseType=_DMG_CLASS_MELEE,
              PreventionType=_PREVENTION_PACIFY, AttributesEx3=extra_ex3[0], AttributesEx4=_ATTR4_SUPPRESS_WEAPON_PROCS,
              SpellClassMask_3=_masks.RAMPAGE, SpellVisualID_1=_SV_BLOODTHIRST, DurationIndex=_DURATION_INFINITE),
@@ -416,11 +418,13 @@ dance_of_death_buff_204639 = _fury(
 # IGNORE_CASTER_MODIFIERS (the warrior's healing modifiers, Titan's Grip's -10% included, apply).
 dance_of_death_heal_204640 = _fury(
     204640, 'Dance of Death',
-    [Effect(type=EffectType.HEAL, ap_potency=50.0, potency_kind='heal', implicit_target_a=_TARGET_UNIT_CASTER)],
+    [Effect(type=EffectType.HEAL, ap_potency=65.5, potency_kind='heal', implicit_target_a=_TARGET_UNIT_CASTER)],
     _ICON_BLOODTHIRST,
     'warrior-rework S3 A2a (D26, doc "Dance of Death"): the capstone heal, cast by spell_warr_dance_of_death at most '
     'once per 5 s. Hidden (0x80) HEAL on the caster, ap_potency 50 [tune] ("base + 40% of attack power"), no '
-    'IGNORE_CASTER_MODIFIERS (Titan\'s Grip\'s penalty applies), SpellLevel = BaseLevel 1.',
+    'IGNORE_CASTER_MODIFIERS (Titan\'s Grip\'s penalty applies), SpellLevel = BaseLevel 1.'
+    ' Effect 1 ap_potency 50.0 -> 65.5 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: '
+    'attack-power heals and absorbs option A (restore the pre-rebase level), x1.31).',
     _raw('Heals you.', level=1),
     attributes=_ATTR0_DO_NOT_DISPLAY, range_yards=RANGE_SELF,
 )

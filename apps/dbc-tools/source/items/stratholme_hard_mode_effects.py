@@ -239,7 +239,9 @@ scripted_by(two_faced_tome_205663, 'spell_strat_two_faced_tome')
 ysidas_ward_205666 = spell(
     id=205666, name="Ysida's Ward", school=School.HOLY, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,
     mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=10000,
-    effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.SCHOOL_ABSORB, base_potency=300.0,
+    # rebase_exempt: scales with item level, not the potency rebase (level60-stat-curve LS5b)
+    effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.SCHOOL_ABSORB, rebase_exempt=True,
+                    base_potency=300.0,
                     potency_kind='absorb', misc_value=_ALL_SCHOOLS, implicit_target_a=_TARGET_UNIT_TARGET_ALLY)],
     spell_icon_id=_ICON_POWER_WORD_SHIELD,
     notes='Stratholme hard mode, Ysida\'s Locket: the ward, cast by the wearer (triggered) on the group member in '

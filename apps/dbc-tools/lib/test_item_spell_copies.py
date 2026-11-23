@@ -156,6 +156,20 @@ class RatioTest(unittest.TestCase):
         self.assertEqual(C.stat_budget(t, 81, EPIC, TRINKET), 58 * 1.0 * 0.5625)
         self.assertIsNone(C.stat_budget(t, 82, EPIC, TRINKET))  # no curve row
 
+    def test_rating_ratio_on_the_fixture(self):
+        t = fixture_tables()
+        for ilvl, secondary in ((71, 110), (81, 150), (91, 200), (101, 226)):
+            t["item_budget_curve"][(ilvl,)]["secondary_budget"] = secondary
+        tiers = resolved_item(D.item("x", name="X", like=1, ladder=LADDER, primary=None, secondary="Crit (Solo)"),
+                              TRINKET, 1).tiers
+        self.assertEqual([C.tier_rating_ratio(t, tiers[0], tier, TRINKET) for tier in tiers],
+                         [1.0, round(150 / 110, 4), round(200 / 110, 4), round(226 / 110, 4)])
+        self.assertEqual(C.secondary_stat_budget(t, 81, EPIC, TRINKET), 150 * 1.0 * 0.5625)
+        self.assertIsNone(C.secondary_stat_budget(t, 82, EPIC, TRINKET))
+        # A curve without the column (a hand-built table) gives the primary ratio.
+        self.assertEqual([C.tier_rating_ratio(fixture_tables(), tiers[0], tier, TRINKET) for tier in tiers],
+                         [1.0, 1.0545, 1.1091, 1.2545])
+
     def test_the_hard_mode_ladder_on_the_replayed_tables(self):
         try:
             tables, _ = item_variants.load_itemization_tables()
@@ -491,6 +505,51 @@ class StatAuraTest(unittest.TestCase):
 
     def test_the_aura_list(self):
         self.assertEqual(sorted(C.STAT_AURAS), [13, 22, 29, 34, 69, 83, 85, 97, 99, 101, 124, 135, 158, 189])
+
+    # Level 60 secondary stat curve (LS1b): a rating aura whose ratings all ride the secondary curve scales by the
+    # secondary tier ratio; everything else keeps the primary ratio.
+    CR_DODGE, CR_PARRY, CR_BLOCK, CR_HIT_MELEE, CR_CRIT = 2, 3, 4, 5, (8, 9, 10)
+    CR_PROC, CR_HASTE, CR_MASTERY, CR_VERS, CR_CDH, CR_ARP = 11, (17, 18, 19), 20, 21, 22, 24
+
+    @staticmethod
+    def _mask(*crs):
+        return sum(1 << cr for group in crs for cr in (group if isinstance(group, tuple) else (group,)))
+
+    def _copy_two(self, effects, ratio=1.2545, rating_ratio=2.5):
+        spell = Spell(id=110, name="Buff", duration_ms=15000, effects=effects, raw_overrides=_raw("$s1 rating."))
+        index = C.SpellIndex(spells={110: spell}, entries={110: spell.to_entry()})
+        return C.build_copies(index, [110], {110: 205500}, ratio, "test", rating_ratio)[110]
+
+    def test_secondary_curve_ratings_take_the_rating_ratio(self):
+        for crs in (self.CR_DODGE, self.CR_PARRY, self.CR_BLOCK, self.CR_CRIT, self.CR_PROC, self.CR_HASTE,
+                    self.CR_MASTERY, self.CR_VERS, self.CR_CDH, self.CR_ARP, (self.CR_MASTERY, self.CR_VERS),
+                    (self.CR_DODGE, self.CR_MASTERY), (self.CR_DODGE, self.CR_PARRY, self.CR_BLOCK)):
+            copy = self._copy_two([Effect(type=APPLY_AURA, apply_aura=self.MOD_RATING, base_points=99,
+                                          misc_value=self._mask(crs))])
+            self.assertEqual(copy.effects[0].base_points, round(100 * 2.5) - 1, crs)
+
+    def test_flag_0_ratings_mixed_masks_and_other_stats_keep_the_ratio(self):
+        copy = self._copy_two([
+            Effect(type=APPLY_AURA, apply_aura=self.MOD_RATING, base_points=99,
+                   misc_value=self._mask(self.CR_HIT_MELEE)),
+            Effect(type=APPLY_AURA, apply_aura=self.MOD_RATING, base_points=99,
+                   misc_value=self._mask(self.CR_PARRY, self.CR_BLOCK, self.CR_HIT_MELEE)),
+            Effect(type=APPLY_AURA, apply_aura=self.MOD_RATING, base_points=99,
+                   misc_value=self._mask(self.CR_HIT_MELEE, self.CR_MASTERY)),  # mixed: the conservative primary ratio
+        ])
+        self.assertEqual([e.base_points for e in copy.effects], [round(100 * 1.2545) - 1] * 3)
+        copy = self._copy_two([
+            Effect(type=APPLY_AURA, apply_aura=self.MOD_STAT, base_points=99, misc_value=3),
+            Effect(type=APPLY_AURA, apply_aura=self.MOD_RESISTANCE, base_points=999, misc_value=1),
+            Effect(type=APPLY_AURA, apply_aura=85, base_points=9, misc_value=0),  # MP5
+        ])
+        self.assertEqual([e.base_points for e in copy.effects],
+                         [round(100 * 1.2545) - 1, round(1000 * 1.2545) - 1, round(10 * 1.2545) - 1])
+        self.assertIn("secondary-curve rating auras", self._copy_two([Effect(
+            type=APPLY_AURA, apply_aura=self.MOD_RATING, base_points=9, misc_value=self._mask(self.CR_CRIT))]).notes)
+
+    def test_the_rating_set_matches_the_secondary_curve_stats(self):
+        self.assertEqual(sorted(C.SECONDARY_CURVE_RATINGS), [2, 3, 4, 8, 9, 10, 11, 17, 18, 19, 20, 21, 22, 24])
 
 
 class PotTextRefTest(unittest.TestCase):

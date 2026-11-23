@@ -157,8 +157,8 @@ KEPT_EFFECTS = {"sm_ravager", "sm_deadmans_hand"}
 # Declared multipliers: the Blackrock gear review's S2 (a caster main-hand or bow below level 60 takes the 60-100 role
 # cell on every tier so the ladder step is the budget curve's alone).
 DECLARED_MULTS = {
-    "sm_bloodletting_kris": 1.931, "sm_kirin_tor_spellblade": 1.931, "sm_hypnotic_blade": 1.931,
-    "sm_hand_of_righteousness": 1.931, "sm_drillmasters_longbow": 0.405,
+    "sm_bloodletting_kris": 0.445, "sm_kirin_tor_spellblade": 0.445, "sm_hypnotic_blade": 0.445,
+    "sm_hand_of_righteousness": 0.445, "sm_drillmasters_longbow": 0.405,
 }
 
 

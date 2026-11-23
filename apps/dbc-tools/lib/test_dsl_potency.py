@@ -18,6 +18,23 @@ sys.path.insert(0, str(TOOL_ROOT))
 from lib import potency
 from lib.dsl import model, registry
 
+# These tests pin the doc's formula numbers, written with the potency rebase off (level60-stat-curve HANDOFF 1.9:
+# a = b = 1) at the 2026-10-01 R = 1.0; lib/test_potency.py's PotencyRebaseTest covers the shipped constants.
+_SHIPPED_SCALES = (potency.SP_BASE_SCALE, potency.SP_COEF_SCALE, potency.AP_BASE_SCALE, potency.AP_COEF_SCALE,
+                   potency.DEFAULT_R, potency.HEAL_COEF_MULT, potency.HEAL_BASE_MULT)
+
+
+def setUpModule():
+    potency.SP_BASE_SCALE = potency.SP_COEF_SCALE = potency.AP_BASE_SCALE = potency.AP_COEF_SCALE = 1.0
+    potency.DEFAULT_R = 1.0
+    potency.HEAL_COEF_MULT = potency.HEAL_COEF_MULT_STOCK
+    potency.HEAL_BASE_MULT = potency.HEAL_BASE_MULT_STOCK
+
+
+def tearDownModule():
+    (potency.SP_BASE_SCALE, potency.SP_COEF_SCALE, potency.AP_BASE_SCALE, potency.AP_COEF_SCALE, potency.DEFAULT_R,
+     potency.HEAL_COEF_MULT, potency.HEAL_BASE_MULT) = _SHIPPED_SCALES
+
 
 class SpellPotencyResolutionTest(unittest.TestCase):
     """Direct Spell().to_entry() calls - no registry needed for the per-effect DBC-field math."""

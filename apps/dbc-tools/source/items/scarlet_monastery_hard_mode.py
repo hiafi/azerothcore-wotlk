@@ -64,14 +64,15 @@ BOP = 1  # ITEM_BIND_ON_ACQUIRE: a new boss item binds when picked up, whatever 
 R, B = Socket.RED, Socket.BLUE
 
 # Declared multipliers (module docstring), the same numbers as blackrock_depths.py's:
-HM_CASTER_TWO_HAND_MULT = 0.7105         # caster InventoryType 17 ilvl 60-100 1.015 x the effect discount 0.7
+# physical InventoryType 17 ilvl 60-100 0.791 x the effect discount 0.7 (level60-stat-curve 1.8)
+HM_CASTER_TWO_HAND_MULT = 0.5537
 HM_PHYSICAL_TWO_HAND_MULT = 0.5537       # physical InventoryType 17 Quality 4 ilvl 60-100 0.791 x 0.7
 HM_PHYSICAL_TWO_HAND_DPS = 0.0695        # ... and its DPS fraction
 HM_SOCKETED_THIN_MULT = 0.6              # socketed hard mode one-hander, ranged weapon or shield with an effect
-# The ranged weapons' DPS fraction, pinned to the 60-100 cell on every tier: the 101 tier's 101-200 cell is not frozen
-# for a wand or a gun, and without it the 101 tier spent its stat budget on DPS (half the 91 tier's stats).
+# The wand's DPS fraction, pinned to the 60-100 cell on every tier: the 101 tier's 101-200 cell is not frozen for a
+# wand, and without it the 101 tier spent its stat budget on DPS (half the 91 tier's stats). The gun declares none: a
+# bow, gun or crossbow takes dps_delta 0 on every tier (level60-stat-curve 1.8, the hunter ranged rule).
 HM_WAND_DPS = -0.2                       # caster InventoryType 26 Quality 4 ilvl 60-100
-HM_GUN_DPS = -0.2052                     # physical InventoryType 26 Quality 4 ilvl 60-100
 
 # Bows and guns need no ammo (source/world/ranged_weapons.py, hunter-rework Q3); an item() declaration owns its entry,
 # so it sets the column itself and the minted tiers copy it.
@@ -121,7 +122,7 @@ item("sm_fissure_touched_grips", name="Fissure-touched Grips", like=18238, bondi
 # Gun, Equip: ranged attacks may call a garrison volley (scaled). One red socket. No ammo.
 item("sm_scarlet_garrison_rifle", name="Scarlet Garrison Rifle", like=10510, bonding=BOP, ladder=VANILLA_HARD_MODE,
      primary="Agility (Solo)", secondary="Crit/Haste", budget_mult=HM_SOCKETED_THIN_MULT,
-     extra_dps=HM_GUN_DPS, sockets=(R,), socket_bonus=BONUS_CRIT_4, ammo_type=NO_AMMO,
+     sockets=(R,), socket_bonus=BONUS_CRIT_4, ammo_type=NO_AMMO,
      spells=(equip_spell(scarlet_garrison_rifle_212012, scale="budget"),))
 # Strength tank shield, Equip: blocks may call a pillar of Light that heals the wearer (scaled). One blue socket (tank
 # gear), Block bonus.

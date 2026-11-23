@@ -43,7 +43,9 @@ _COLUMN_LINE_RE = re.compile(r"^\s*`(?P<col>\w+)`\s")
 # 5-6). table_columns() below replays all three statement kinds across every contributing file,
 # in order, rather than assuming one CREATE TABLE settles a table's schema for good.
 _RENAME_TABLE_RE = re.compile(r"RENAME\s+TABLE\s+`(?P<old>\w+)`\s+TO\s+`(?P<new>\w+)`", re.IGNORECASE)
-_ALTER_TABLE_RE = re.compile(r"ALTER\s+TABLE\s+`(?P<table>\w+)`\s*(?P<clauses>.*?);", re.IGNORECASE | re.DOTALL)
+# The statement head only: the clauses run to the first `;` outside a quoted string (`_alter_table_statements`), so a
+# `;` inside a column COMMENT does not end the statement.
+_ALTER_TABLE_RE = re.compile(r"ALTER\s+TABLE\s+`(?P<table>\w+)`\s*", re.IGNORECASE)
 _ADD_COLUMN_RE = re.compile(
     r"^ADD\s+(?:COLUMN\s+)?`(?P<col>\w+)`.*?(?:\bAFTER\s+`(?P<after>\w+)`|\bFIRST\b)?\s*$",
     re.IGNORECASE | re.DOTALL,
@@ -127,6 +129,44 @@ def _strip_line_comments(text: str) -> str:
     return "".join(out)
 
 
+def _statement_end(text: str, start: int) -> int:
+    """Index of the first `;` at or after `start` outside a single- or double-quoted string or a backtick name
+    (`len(text)` when there is none). A doubled quote or a backslash escape stays inside its string."""
+    i, n = start, len(text)
+    while i < n:
+        ch = text[i]
+        if ch == ";":
+            return i
+        if ch in "'\"`":
+            i += 1
+            while i < n:
+                if text[i] == "\\" and ch != "`" and i + 1 < n:
+                    i += 2
+                    continue
+                if text[i] == ch:
+                    if i + 1 < n and text[i + 1] == ch:
+                        i += 2
+                        continue
+                    break
+                i += 1
+        i += 1
+    return n
+
+
+def _alter_table_statements(text: str):
+    """(table, clauses) of every `ALTER TABLE t ...;` in `text` (line comments already stripped). The clauses end
+    at the statement's own `;`: one inside a quoted COMMENT ('... (x); y') is part of the clause (a regex to the first
+    `;` cut the statement there and crashed the replay on the unterminated string)."""
+    pos = 0
+    while True:
+        m = _ALTER_TABLE_RE.search(text, pos)
+        if m is None:
+            return
+        end = _statement_end(text, m.end())
+        yield m.group("table"), text[m.end():end]
+        pos = end + 1
+
+
 def _create_table_columns(text: str, start: int) -> tuple[list[str], dict[str, object]]:
     """(column names, {column: default value}) inside one `CREATE TABLE ...
     (` block, starting just after its opening paren (`start` = the match's
@@ -200,13 +240,12 @@ def _evolve_schemas() -> tuple[dict[str, list[str]], dict[str, dict[str, object]
                 schemas[new] = schemas.pop(old)
                 defaults[new] = defaults.pop(old)
 
-        for m in _ALTER_TABLE_RE.finditer(text):
-            table = m.group("table")
+        for table, clauses in _alter_table_statements(text):
             if table not in schemas:
                 continue
             columns = schemas[table]
             table_defaults = defaults[table]
-            for clause in replay.sql_dump._split_top_level_commas(m.group("clauses")):
+            for clause in replay.sql_dump._split_top_level_commas(clauses):
                 clause = clause.strip()
                 add_m = _ADD_COLUMN_RE.match(clause)
                 if add_m:
@@ -297,6 +336,11 @@ TABLES: dict[str, tuple[str, ...]] = {
     "item_weapon_dps_cost": ("id",),
     "item_weapon_dps_spread": ("id",),
     "item_budget_variant": ("entry",),
+    # Random suffix pools (crafting rework C4): which stats a pool's suffixes grant decides whether its suffix factor
+    # rides the secondary curve (level 60 secondary stat curve, `budget.suffix_pool_rides_secondary_curve`).
+    "item_enchantment_template": ("entry", "ench"),
+    "itemrandomsuffix_dbc": ("ID",),
+    "spellitemenchantment_dbc": ("ID",),
 }
 
 

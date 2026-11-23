@@ -788,8 +788,8 @@ frost_strike_66196 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=62, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5.15, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=105, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=8.755, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2740,
@@ -801,6 +801,7 @@ frost_strike_66196 = spell(
         'WEAPON_PERCENT_DAMAGE weapon_potency 60 first, eff1 NORMALIZED_WEAPON_DMG sp_potency 5 direct T 1500, EFFECT_2 empty (the '
         'BasePoints[E2] -1, DieSides[E2], ImplicitTargetA_3 6 and E2.d1 0x4 twins of the stock row are deleted). SpellLevel 10 = '
         'the main hand\'s.'
+        ' weapon_potency 62 -> 105 and sp_potency 5.15 -> 8.755 (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Frost Strike x1.70 so FrostDkObliterationSim 1T keeps ~1,080 after the Breath x0.70 cut; shared by every Frost DK build, the off-hand copy follows the main hand).'
     ),
     raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy with your off-hand weapon for $s1% weapon damage plus {pot2.avg} as Frost damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RuneCostID': 1824, 'SpellClassMask_2': 4, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellVisualID_1': 11612, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -4402,7 +4403,7 @@ scent_of_blood_49004 = spell(
     ],
     spell_icon_id=2283,
     notes='S1a (Blood doc "Scent of Blood", brief D4): ONE PROC_TRIGGER_SPELL -> 50421 effect per rank (the stock ranks 2 / 3 carried 2 / 3 effects = 2 / 3 stacks per proc). ProcChance 5 / 10 / 15 on the rank spell, spell_proc -49004 Chance 0 = use the spell\'s, Cooldown 10000, HitMask 0x33 kept (declared at the end of this file). ProcTypeMask 0x222A8 kept (taken hits, no periodic). The buff 50421 (3 charges, 20 s, reset on re-proc) is in deathknight_blood_helpers.py.',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 5% chance after dodging, parrying or taking direct damage to gain Scent of Blood, causing your next 3 melee hits to generate 10 Runic Power. This effect cannot occur more than once every 10 sec.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 5% chance after dodging, parrying or taking direct damage to gain Scent of Blood, causing your next 3 melee hits to generate 10 Runic Power. This effect cannot occur more than once every 5 sec.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4422,7 +4423,7 @@ scent_of_blood_49508 = spell(
     ],
     spell_icon_id=2283,
     notes='S1a (Blood doc "Scent of Blood", brief D4): ONE PROC_TRIGGER_SPELL -> 50421 effect per rank (the stock ranks 2 / 3 carried 2 / 3 effects = 2 / 3 stacks per proc). ProcChance 5 / 10 / 15 on the rank spell, spell_proc -49004 Chance 0 = use the spell\'s, Cooldown 10000, HitMask 0x33 kept (declared at the end of this file). ProcTypeMask 0x222A8 kept (taken hits, no periodic). The buff 50421 (3 charges, 20 s, reset on re-proc) is in deathknight_blood_helpers.py.',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 10% chance after dodging, parrying or taking direct damage to gain Scent of Blood, causing your next 3 melee hits to generate 10 Runic Power. This effect cannot occur more than once every 10 sec.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 10% chance after dodging, parrying or taking direct damage to gain Scent of Blood, causing your next 3 melee hits to generate 10 Runic Power. This effect cannot occur more than once every 5 sec.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4442,7 +4443,7 @@ scent_of_blood_49509 = spell(
     ],
     spell_icon_id=2283,
     notes='S1a (Blood doc "Scent of Blood", brief D4): ONE PROC_TRIGGER_SPELL -> 50421 effect per rank (the stock ranks 2 / 3 carried 2 / 3 effects = 2 / 3 stacks per proc). ProcChance 5 / 10 / 15 on the rank spell, spell_proc -49004 Chance 0 = use the spell\'s, Cooldown 10000, HitMask 0x33 kept (declared at the end of this file). ProcTypeMask 0x222A8 kept (taken hits, no periodic). The buff 50421 (3 charges, 20 s, reset on re-proc) is in deathknight_blood_helpers.py.',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 15% chance after dodging, parrying or taking direct damage to gain Scent of Blood, causing your next 3 melee hits to generate 10 Runic Power. This effect cannot occur more than once every 10 sec.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 15% chance after dodging, parrying or taking direct damage to gain Scent of Blood, causing your next 3 melee hits to generate 10 Runic Power. This effect cannot occur more than once every 5 sec.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4460,10 +4461,13 @@ veteran_of_the_third_war_49006 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=137),
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=137, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_RATING_FROM_STAT,
+               misc_value=1 << 3),
     ],
     spell_icon_id=2615,
-    notes='S1a (Blood doc "Veteran of the Third War"): E3 (aura 240, expertise) dropped, Expertise is removed from the server. E1 Strength bp 1 / 3 / 5, E2 Stamina bp 0 / 1 / 2 unchanged.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by 2% and your Stamina by 1%.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Veteran of the Third War"): E3 (aura 240, expertise) dropped, Expertise is removed from the server. E1 Strength bp 1 / 3 / 5, E2 Stamina bp 0 / 1 / 2 unchanged.'
+          ' Parry clause (2026-11-21, level60-stat-curve round S9, user ruling: Blood DK tank survival): E3 aura 220 MOD_RATING_FROM_STAT, misc 8 (1 << CR_PARRY), MiscValueB 0 (Strength), bp 5 = 6% of Strength as parry rating, the stock Forceful Deflection 49410 mechanism (25%), on top of it.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by 2% and your Stamina by 1%, and converts an additional $s3% of your Strength into parry rating.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4481,10 +4485,13 @@ veteran_of_the_third_war_49526 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=137),
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=137, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=12, implicit_target_a=1, apply_aura=AuraType.MOD_RATING_FROM_STAT,
+               misc_value=1 << 3),
     ],
     spell_icon_id=2615,
-    notes='S1a (Blood doc "Veteran of the Third War"): E3 (aura 240, expertise) dropped, Expertise is removed from the server. E1 Strength bp 1 / 3 / 5, E2 Stamina bp 0 / 1 / 2 unchanged.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by 4% and your Stamina by 2%.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Veteran of the Third War"): E3 (aura 240, expertise) dropped, Expertise is removed from the server. E1 Strength bp 1 / 3 / 5, E2 Stamina bp 0 / 1 / 2 unchanged.'
+          ' Parry clause (2026-11-21, level60-stat-curve round S9, user ruling: Blood DK tank survival): E3 aura 220 MOD_RATING_FROM_STAT, misc 8 (1 << CR_PARRY), MiscValueB 0 (Strength), bp 12 = 13% of Strength as parry rating, the stock Forceful Deflection 49410 mechanism (25%), on top of it.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by 4% and your Stamina by 2%, and converts an additional $s3% of your Strength into parry rating.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4502,10 +4509,13 @@ veteran_of_the_third_war_50029 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=137),
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=137, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.MOD_RATING_FROM_STAT,
+               misc_value=1 << 3),
     ],
     spell_icon_id=2615,
-    notes='S1a (Blood doc "Veteran of the Third War"): E3 (aura 240, expertise) dropped, Expertise is removed from the server. E1 Strength bp 1 / 3 / 5, E2 Stamina bp 0 / 1 / 2 unchanged.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by 6% and your Stamina by 3%.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Veteran of the Third War"): E3 (aura 240, expertise) dropped, Expertise is removed from the server. E1 Strength bp 1 / 3 / 5, E2 Stamina bp 0 / 1 / 2 unchanged.'
+          ' Parry clause (2026-11-21, level60-stat-curve round S9, user ruling: Blood DK tank survival): E3 aura 220 MOD_RATING_FROM_STAT, misc 8 (1 << CR_PARRY), MiscValueB 0 (Strength), bp 19 = 20% of Strength as parry rating, the stock Forceful Deflection 49410 mechanism (25%), on top of it.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by 6% and your Stamina by 3%, and converts an additional $s3% of your Strength into parry rating.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4587,9 +4597,10 @@ procs_on(subversion_49491, proc_flags=_PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS, fam
          hit_mask=_PROC_HIT_CRITICAL, chance=100.0, disable_effects_mask=0x1)
 scripted_by(subversion_49491, 'spell_dk_subversion_capstone')
 
-# Scent of Blood: the stock row (HitMask 0x33, Chance 0 = the rank spell's 5 / 10 / 15) plus the 10 s internal cooldown. The stock
-# bindings on -49004 (spell_dk_scent_of_blood_trigger, spell_gen_proc_from_direct_damage) stay.
-procs_on(-49004, proc_flags=0, hit_mask=_PROC_HIT_SCENT_OF_BLOOD, cooldown_ms=10000)
+# Scent of Blood: the stock row (HitMask 0x33, Chance 0 = the rank spell's 5 / 10 / 15) plus a 5 s internal cooldown
+# (S22 2026-11-22: was 10 s, ICD report Blood DK option A). The stock bindings on -49004
+# (spell_dk_scent_of_blood_trigger, spell_gen_proc_from_direct_damage) stay.
+procs_on(-49004, proc_flags=0, hit_mask=_PROC_HIT_SCENT_OF_BLOOD, cooldown_ms=5000)
 
 # Bloody Vengeance: any crit by the DK, periodic crits included; a triggered cast may proc it (D&D ticks, brief D1).
 procs_on(-48988, proc_flags=_PROC_FLAGS_BLOODY_VENGEANCE, spell_type_mask=_PROC_SPELL_TYPE_DAMAGE,

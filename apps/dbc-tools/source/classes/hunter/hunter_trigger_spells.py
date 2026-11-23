@@ -210,12 +210,14 @@ explosive_trap_effect_13812 = spell(
     range_yards=0.0,
     duration_ms=20000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=73.999, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
-        Effect(type=EffectType.PERSISTENT_AREA_AURA, base_points=11, points_per_level=1.3043478260869565, implicit_target_a=28, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=2000, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=66.5991, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
+        Effect(type=EffectType.PERSISTENT_AREA_AURA, base_points=10, points_per_level=1.166220735785953, implicit_target_a=28, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=2000, radius_yards=10.0),
     ],
     spell_icon_id=37,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 34); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted effect 1 (the explosion burst) to ap_potency=134.2 (potency-report default, base/coef already agreed); effect 2 (the burn-over-time persistent-area aura) is left unconverted - potency_report.py\'s classify_effect() does not scan PERSISTENT_AREA_AURA/PERIODIC_DAMAGE on this effect shape, so it never appeared in the P3 report.'
-    ' Effect 1 ap_potency 107.4 -> 73.999 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).',
+    ' Effect 1 ap_potency 107.4 -> 73.999 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).'
+    ' Effect 1 ap_potency 73.999 -> 66.5991 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: SV x0.90).'
+    ' Effect 2 (the ground fire 202057 reads it: spell_hun_explosive_trap_fire_aura snapshots this amount, no potency) base_points 11 / points_per_level 1.3043478 -> 10 / 1.1662207: 45.9 -> 41.3 at 60, x0.90 exactly there (x0.917 at 34) (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: SV x0.90 on Explosive Trap 202057).',
     raw_overrides={'AttributesEx': 136, 'AttributesEx3': 262720, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Burning for Fire damage every $t2 sec.', 'BaseLevel': 34, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Place a fire trap that explodes when an enemy approaches, causing {pot1} Fire damage and burning all enemies for $13812o2 additional Fire damage over $13812d to all within $13812a1 yards.  Trap will exist for $13813d.  Only one trap can be active at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 4, 'SpellClassMask_3': 16384, 'SpellClassSet': 9, 'SpellLevel': 34, 'SpellVisualID_1': 10389, 'Targets': 64},
 )
 
@@ -425,11 +427,12 @@ volley_42243 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=50.132, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=41.1082, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=126,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to ap_potency=75.5 (potency-report default, base/coef already agreed). hunter-rework S2a A3 (MARKSMANSHIP 5.11/5.12): {pot1*mult} with tooltip_vars 1172 (Barrage, Rain of Arrows).'
-    ' Effect 1 ap_potency 75.5 -> 50.132 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).',
+    ' Effect 1 ap_potency 75.5 -> 50.132 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).'
+    ' Effect 1 ap_potency 50.132 -> 41.1082 (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: MM, Volley x0.82; the half Volley 201936 follows).',
     tooltip_vars=mm_volley_1172,
     raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 32, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Continuously fires a volley of ammo at the target area, causing {pot1*mult} Arcane damage to enemy targets within $a1 yards every ${$1510d/6}.2 $Lsecond:seconds; for $1510d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 135, 'SpellClassMask_1': 8192, 'SpellClassSet': 9, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 9493, 'StartRecoveryCategory': 133},
 )
@@ -7564,7 +7567,7 @@ explosive_shot_53352 = spell(
     range_yards=50000.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6, ap_potency=15.02, potency_kind='direct'),
+        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6, ap_potency=13.518, potency_kind='direct'),
     ],
     spell_icon_id=3407,
     notes=(
@@ -7575,6 +7578,7 @@ explosive_shot_53352 = spell(
         'Effect 1 ap_potency 26.0 -> 18.2 (2026-11-01, DPS balance pass 1031, user ruling: Explosive Shot -30%). '
         'Effect 1 ap_potency 18.2 -> 21.8 (21.84 kept to one decimal, so +19.8%) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Explosive Shot +20%).'
         ' Effect 1 ap_potency 21.8 -> 15.02 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).'
+        ' Effect 1 ap_potency 15.02 -> 13.518 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: SV x0.90).'
     ),
     raw_overrides={
         'AttributesEx2': 4,
@@ -7966,11 +7970,11 @@ lock_and_load_marker_67544 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=0.0,
-    duration_ms=5000,
+    duration_ms=3000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3579,
-    notes='pulled from existing data',
+    notes='pulled from existing data; S22 2026-11-22: 5 s -> 3 s (the Lock and Load ICD; the periodic clause now rolls once per fire pulse, not per target)',
     raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 9, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0},
 )

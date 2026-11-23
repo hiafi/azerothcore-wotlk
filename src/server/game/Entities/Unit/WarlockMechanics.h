@@ -575,7 +575,7 @@ namespace Warlock
     constexpr uint32 SPELL_DEMONIC_POTENCY = WarlockData::SPELL_DEMONIC_POTENCY;                    // hidden aura on every demon
     constexpr uint32 SPELL_IMP_GANG_BOSS_AURA = WarlockData::SPELL_IMP_GANG_BOSS_AURA;                 // hidden +50% on 300151
     constexpr uint32 SPELL_FEL_CRUELTY_BUFF = WarlockData::SPELL_FEL_CRUELTY_BUFF;                   // warlock buff, feeds Potency
-    constexpr uint32 SPELL_GRIMOIRE_OF_SYNERGY_BUFF = WarlockData::SPELL_GRIMOIRE_OF_SYNERGY_BUFF;           // warlock buff, +10% spell dmg
+    constexpr uint32 SPELL_GRIMOIRE_OF_SYNERGY_BUFF = WarlockData::SPELL_GRIMOIRE_OF_SYNERGY_BUFF;           // warlock buff, +7% spell dmg
     constexpr uint32 SPELL_GRIMOIRE_OF_SYNERGY_PET_AURA = WarlockData::SPELL_GRIMOIRE_OF_SYNERGY_FELGUARD;       // hidden proc aura on the Felguard
     constexpr uint32 SPELL_DEMONIC_PACT_EMPOWER = WarlockData::SPELL_DEMONIC_PACT_EMPOWER;               // warlock buff, +5% spell dmg
     constexpr uint32 SPELL_IMPROVED_SOUL_FIRE_SHIELD = WarlockData::SPELL_IMPROVED_SOUL_FIRE_SHIELD;          // absorb shield, 12 s

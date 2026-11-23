@@ -136,12 +136,11 @@ class BlackrockDepthsItemsTest(unittest.TestCase):
         every other item takes the role cell or the plain default."""
         declared = {k: d.budget_mult for k, d in self.decls.items() if d.budget_mult is not None}
         self.assertEqual(declared, {
-            "brd_arbiters_blade": 1.931, "brd_blood_etched_blade": 1.931, "brd_the_hammer_of_grace": 1.931,  # S2
+            "brd_arbiters_blade": 0.445, "brd_blood_etched_blade": 0.445, "brd_the_hammer_of_grace": 0.445,  # S2
             "brd_houndmasters_bow": 0.405,                                                                 # S2
-            "brd_scepter_of_the_molten_lake": 0.7105, "brd_golemwrights_mending_rod": 1.3517,              # S1
-            "brd_theldrens_executioner": 0.5537,                                                           # S1
+            "brd_scepter_of_the_molten_lake": 0.5537, "brd_theldrens_executioner": 0.5537,                 # S1
             "brd_leftys_shiv": 0.6, "brd_black_anvil_bulwark": 0.6, "brd_fist_of_the_lake_lord": 0.6,      # S3
-            "brd_ironfoe": 0.6,                                                                            # S3
+            "brd_ironfoe": 0.6, "brd_golemwrights_mending_rod": 0.6,                                       # S3
         })
         self.assertEqual(self.decls["brd_theldrens_executioner"].extra_dps, 0.0695)
 

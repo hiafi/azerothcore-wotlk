@@ -280,18 +280,20 @@ def _mark_dot(spell_id, name, duration_ms, icon, level, potency, description, ra
 
 
 vipers_bite_201930 = _mark_dot(
-    201930, "Viper's Bite", 12000, 1630, 40, 2.138,
+    201930, "Viper's Bite", 12000, 1630, 40, 1.7318,
     'Deals {pot1*mult} Nature damage every $t1 sec for $d per stack.',
     # stack = Viper's stacks consumed (SPELLVALUE_AURA_STACK; old Bite removed first)
     raw={'CumulativeAura': int(MARK_MAX_STACKS['value'])},
     note_extra=' Effect 1 ap_potency 4.6 -> 3.22 (2026-11-01, DPS balance pass 1031, user ruling: Vipers Bite -30%).'
-               ' Effect 1 ap_potency 3.22 -> 2.138 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).',
+               ' Effect 1 ap_potency 3.22 -> 2.138 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).'
+               ' Effect 1 ap_potency 2.138 -> 1.7318 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: MM-only x0.81).',
 )
 vipers_venom_201931 = _mark_dot(
-    201931, "Viper's Venom", 6000, 3521, 60, 19.854,
+    201931, "Viper's Venom", 6000, 3521, 60, 16.0817,
     'Deals {pot1*mult} Nature damage every $t1 sec for $d.',
     note_extra=' Effect 1 ap_potency 23.0 -> 29.9 (2026-11-15, balance on the Normal-tier kits, user ruling: Viper Venom +30%).'
-               ' Effect 1 ap_potency 29.9 -> 19.854 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).',
+               ' Effect 1 ap_potency 29.9 -> 19.854 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).'
+               ' Effect 1 ap_potency 19.854 -> 16.0817 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: MM-only x0.81).',
 )
 
 
@@ -304,9 +306,10 @@ snipers_mark_201920 = _mark(
     + _n(SNIPER_CRIT_DAMAGE_PER_STACK) + '% critical strike damage per stack. Your Chimera Shot against the target is '
     'a guaranteed critical strike with ' + _n(CHIMERA_SNIPER_CRIT_DAMAGE) + '% more critical strike damage.',
     'Marked. Aimed Shot consumes this mark for extra critical strike chance and critical strike damage.',
-    weapon_potency=219,
+    weapon_potency=177,
     note_extra=' weapon_potency 220 -> 330 (2026-11-15, balance on the Normal-tier kits, user ruling: Sniper Mark +50%).'
-               ' weapon_potency 330 -> 219 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).',
+               ' weapon_potency 330 -> 219 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).'
+               ' weapon_potency 219 -> 177 (219 x 0.81 = 177.39, weapon_potency must be whole, so x0.8082) (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: MM-only x0.81).',
 )
 vipers_mark_201921 = _mark(
     201921, "Viper's Mark", School.NATURE, 1679, 40, 45000, 3179,
@@ -318,9 +321,10 @@ vipers_mark_201921 = _mark(
     'Venom, dealing ' + pot_text(vipers_venom_201931, variant='total', var='mult') + ' Nature damage over $201931d.',
     "Marked. Aimed Shot consumes this mark to apply Viper's Bite.",
     tooltip=mm_mark_dots_1170,
-    weapon_potency=190,
+    weapon_potency=154,
     note_extra=' weapon_potency 220 -> 286 (2026-11-15, balance on the Normal-tier kits, user ruling: Viper Mark +30%).'
-               ' weapon_potency 286 -> 190 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).',
+               ' weapon_potency 286 -> 190 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).'
+               ' weapon_potency 190 -> 154 (190 x 0.81 = 153.9, weapon_potency must be whole, so x0.8105) (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: MM-only x0.81).',
 )
 falcons_mark_201922 = _mark(
     201922, "Falcon's Mark", School.NORMAL, 1530, 50, 60000, 8155,
@@ -330,8 +334,9 @@ falcons_mark_201922 = _mark(
     'haste by $201941s1% for ' + _sec(QUICKENING_MS_PER_STACK) + ' sec per stack. Your Chimera Shot against the '
     'target increases your attack power by $201947s1% for $201947d.',
     'Marked. Aimed Shot consumes this mark to grant its caster Quickening.',
-    weapon_potency=143,
-    note_extra=' weapon_potency 215 -> 143 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).',
+    weapon_potency=116,
+    note_extra=' weapon_potency 215 -> 143 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).'
+               ' weapon_potency 143 -> 116 (143 x 0.81 = 115.83, weapon_potency must be whole, so x0.8112) (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: MM-only x0.81).',
 )
 
 
@@ -348,9 +353,9 @@ convergence_201932 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=298.8, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=242.028, potency_kind='direct',
                implicit_target_a=87, implicit_target_b=16, radius_yards=8.0),
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=298.8, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=242.028, potency_kind='direct',
                implicit_target_a=87, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=2235,
@@ -364,7 +369,9 @@ convergence_201932 = spell(
           'hunter-to-centre LoS fail; the splash also skips the centre-to-target LoS), no family bit. '
           'tooltip_vars 1171.'
           ' Effect 1 ap_potency 450.0 -> 298.8 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).'
-          ' Effect 2 ap_potency 450.0 -> 298.8 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).',
+          ' Effect 2 ap_potency 450.0 -> 298.8 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).'
+          ' Effect 1 ap_potency 298.8 -> 242.028 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: MM-only x0.81).'
+          ' Effect 2 ap_potency 298.8 -> 242.028 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: MM-only x0.81).',
     raw_overrides={
         'EquippedItemClass': -1, 'SpellLevel': 40, 'DefenseType': 3, 'SpellClassSet': 9, 'Targets': 0x40,
         'AttributesEx2': _IGNORE_LINE_OF_SIGHT, 'AttributesEx3': _SUPPRESS_CASTER_PROCS,
@@ -391,7 +398,7 @@ arcane_shot_free_201933 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=43.16, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=38.844, potency_kind='direct', implicit_target_a=6),
         # Orchestrator ruling: no import of hunter_spells.py here, so the value is a literal that must equal
         # arcane_shot_3044's eff1 (20.0% of base mana in tenths of a percent, PT-6); A5's pytest asserts the equality.
         Effect(type=EffectType.DUMMY, base_points=ARCANE_SHOT_MANA_TENTHS),
@@ -402,7 +409,8 @@ arcane_shot_free_201933 = spell(
           '3044), eff1 DUMMY = 3044 eff1 (199, 20.0% base mana), no cost/category/cooldown, Speed 40, 50000 yd '
           '(triggered at the target), d0 b11, SUPPRESS_CASTER_PROCS, CastingTimeIndex 18, EquippedItemClass -1 '
           '(triggered helper). tooltip_vars 1151.'
-          ' Effect 1 ap_potency 65.0 -> 43.16 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).',
+          ' Effect 1 ap_potency 65.0 -> 43.16 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).'
+          ' Effect 1 ap_potency 43.16 -> 38.844 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: MM x0.90 on Arcane Shot 3044; the echo is listed MM-only x0.81, but it must equal Arcane Shot (test_hunter_mm_data m-1), so it follows 3044).',
     raw_overrides={
         'EquippedItemClass': -1, 'SpellLevel': 6, 'DefenseType': 3, 'PreventionType': 2,
         'SpellClassSet': 9, 'SpellClassMask_1': m.ARCANE_SHOT, 'CastingTimeIndex': _USES_RANGED_SLOT_INSTANT,
@@ -564,9 +572,10 @@ marksmanship_mastery_201951 = _buff(
 # helper reach them), Speed 0 (launch and hit inside the handler's CastSpell), always cast with TRIGGERED_FULL_MASK (R3:
 # only TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD keeps the d0 b17 load fix's 10 s RecoveryTime from starting).
 # Must equal aimed_shot_19434's eff1 weapon_potency (hunter_spells.py imports this file, so no import back).
-_AIMED_SHOT_WEAPON_POTENCY = 276   # 2026-11-01 DPS balance pass 1031: 594 -> 416 (Aimed Shot -30%, whole number);
-                                   # 2026-11-17 weapon scaling WSH2 Normal trim, user ruling: MM x0.664: 416 -> 276
-_PACK_SHOT_WEAPON_POTENCY = _AIMED_SHOT_WEAPON_POTENCY * int(PACK_SHOT_DAMAGE_PCT['value']) // 100   # 138
+_AIMED_SHOT_WEAPON_POTENCY = 224   # 2026-11-01 DPS balance pass 1031: 594 -> 416 (Aimed Shot -30%, whole number);
+                                   # 2026-11-17 weapon scaling WSH2 Normal trim, user ruling: MM x0.664: 416 -> 276;
+                                   # 2026-11-21 level60-stat-curve S9, user ruling: MM-only x0.81: 276 -> 224
+_PACK_SHOT_WEAPON_POTENCY = _AIMED_SHOT_WEAPON_POTENCY * int(PACK_SHOT_DAMAGE_PCT['value']) // 100   # 112
 
 
 def _pack_shot(spell_id, kind, notes):
@@ -606,7 +615,8 @@ aimed_shot_ricochet_201934 = _pack_shot(
     'Triangulation x the Sniper payoff; the handler consumes the target\'s marks afterwards. Visual 7955 (Aimed Shot). '
     'Effect 2 weapon_potency 297 -> 208 (2026-11-01, DPS balance pass 1031, user ruling: Aimed Shot -30%; the pack '
     'percent of Aimed Shot\'s new 416). Effect 2 weapon_potency 208 -> 138 (2026-11-17, weapon scaling WSH2 Normal trim, '
-    'user ruling: MM x0.664; the pack percent of Aimed Shot\'s new 276).',
+    'user ruling: MM x0.664; the pack percent of Aimed Shot\'s new 276). Effect 2 weapon_potency 138 -> 112 (2026-11-21, '
+    'level60-stat-curve round S9, user ruling: MM-only x0.81 on Aimed Shot; the pack percent of Aimed Shot\'s new 224).',
 )
 aimed_shot_bounce_201935 = _pack_shot(
     201935, 'bounce',
@@ -614,7 +624,8 @@ aimed_shot_bounce_201935 = _pack_shot(
     'no marks). Visual 7955 (Aimed Shot). Effect 2 weapon_potency 297 -> 208 (2026-11-01, DPS balance pass 1031, '
     'user ruling: Aimed Shot -30%, rides with the ricochet 201934; the same 50% of Aimed Shot\'s new 416). Effect 2 '
     'weapon_potency 208 -> 138 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664; rides with the '
-    'ricochet).',
+    'ricochet). Effect 2 weapon_potency 138 -> 112 (2026-11-21, level60-stat-curve round S9, user ruling: MM-only x0.81 '
+    'on Aimed Shot; rides with the ricochet).',
 )
 
 # Half Volley 201936 / tick 201937 (B6, Q30, the warlock Rain of Fire C5 shape): 201936 eff0 is the dynobj and the
@@ -638,7 +649,7 @@ half_volley_201936 = spell(
     effects=[
         # Placeholder, M: one Volley tick (42243's 75.5 direct, T 1.5).
         Effect(type=EffectType.PERSISTENT_AREA_AURA, apply_aura=AuraType.DUMMY, implicit_target_a=28, radius_yards=8.0,
-               ap_potency=50.132, potency_kind='direct', time_basis_ms=1500),
+               ap_potency=41.1082, potency_kind='direct', time_basis_ms=1500),
         Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=1000, implicit_target_a=1),
     ],
     spell_icon_id=126,
@@ -650,7 +661,8 @@ half_volley_201936 = spell(
           'ap_potency 75.5 direct T 1.5 (the snapshot source, = one 42243 tick, placeholder M); '
           'eff1 PERIODIC_DUMMY 1000 ms on self, unhasted (3 ticks). '
           'tooltip_vars 1172.'
-          ' Effect 1 ap_potency 75.5 -> 50.132 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).',
+          ' Effect 1 ap_potency 75.5 -> 50.132 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: MM x0.664).'
+          ' Effect 1 ap_potency 50.132 -> 41.1082 (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: MM, Volley x0.82, the half Volley = one 42243 tick).',
     raw_overrides={
         # SpellLevel = the Volley tick 42243's: potency derives BaseLevel from it and CalcValue lifts any lower caster
         # level to BaseLevel, so this keeps the snapshot equal to one 42243 tick at every level (pytest-guarded).

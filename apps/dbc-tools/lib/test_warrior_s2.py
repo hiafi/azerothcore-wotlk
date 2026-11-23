@@ -163,7 +163,8 @@ SPECS: dict[str, tuple] = {
                         {"ProcChance": (10, 20, 30)}),
     "Improved Sweeping Strikes": ((204529, 204530),
                                   [(0, AURA_SPELLMOD_FLAT, OP_DURATION, (1999, 3999), (0, 0x100000, 0)),
-                                   (1, AURA_DUMMY, 0, (74, 79), Z)], PASSIVE_ROW, {}),
+                                   # carrier 75 / 80 -> 60 / 65 (2026-11-22, level60-stat-curve S17)
+                                   (1, AURA_DUMMY, 0, (59, 64), Z)], PASSIVE_ROW, {}),
     "Weapon Specialization": ((12281, 12812, 12813), [(0, AURA_DUMMY, 0, (0, 0, 0), Z)],
                               {**NO_PROC, "EquippedItemClass": -1, "EquippedItemSubclass": 0}, {}),
     "Exploiter": ((204531, 204532), [(0, AURA_DUMMY, 0, (14, 29), Z)], {**PASSIVE_ROW, **NO_PROC}, {}),
@@ -258,11 +259,12 @@ NEW_ROW_PINS: dict[int, dict] = {
     SWEEPING_COPY: {"Name_Lang_enUS": "Sweeping Strikes", "Attributes": 0, "AttributesEx2": 0,
                     "AttributesEx3": 0x20050000, "AttributesEx4": 0x800000, "SpellClassSet": 4,
                     "DefenseType": 2, "RangeIndex": 13, "Effect_1": EFF_SCHOOL_DAMAGE},
-    # D10 the whirl: 272% weapon (balance 2026-10-30 +70%, AoE round 3 +60%), MaxTargets 5, d1 0x4000 only, melee DmgClass, level 50
+    # D10 the whirl: 245% weapon (balance 2026-10-30 +70%, AoE round 3 +60%, S17 2026-11-22 x0.90), MaxTargets 5, d1 0x4000
+    # only, melee DmgClass, level 50
     WHIRL: {"Name_Lang_enUS": "Bladestorm", "Attributes": 0x50010, "AttributesEx3": 0x10000,
             "SpellClassSet": 4, "SpellClassMask_1": 0, "SpellClassMask_2": 0x4000, "SpellClassMask_3": 0,
             "MaxTargets": 5, "DefenseType": 2, "SpellLevel": 50, "BaseLevel": 50, "Effect_1": EFF_WEAPON_PERCENT,
-            "EffectBasePoints_1": 271, "ImplicitTargetA_1": 22, "ImplicitTargetB_1": 15, "EffectRadiusIndex_1": 14},
+            "EffectBasePoints_1": 153, "ImplicitTargetA_1": 22, "ImplicitTargetB_1": 15, "EffectRadiusIndex_1": 14},
     # D5 Deep Wounds holder (visible, 6 s, periodic dummy every 1000 ms, d1 0x10) and the hidden tick (no crit)
     DW_HOLDER: {"Name_Lang_enUS": "Deep Wounds", "Attributes": 0, "SpellClassSet": 4, "SpellClassMask_2": 0x10,
                 "DurationIndex": DUR["6s"], "Effect_1": EFF_APPLY_AURA, "EffectAura_1": AURA_PERIODIC_DUMMY,
@@ -364,7 +366,7 @@ S2_UNSCRIPTED = (SWEEPING_COPY, DW_TICK, SEISMIC_ECHO, SWORD_STRIKE, CS_BUTTON, 
 # spell_proc rows: id -> {column: value}
 S2_PROC_ROWS = {
     -29723: {"SpellFamilyName": 4, "SpellFamilyMask0": 0, "SpellFamilyMask1": 0, "SpellFamilyMask2": 0,
-             "ProcFlags": 0x14, "SpellPhaseMask": 1, "Cooldown": 6000},                    # R10 / D9
+             "ProcFlags": 0x14, "SpellPhaseMask": 1, "Cooldown": 3000},  # R10 / D9; 2026-11-22 S22: 6000 -> 3000
     -56636: {"SpellFamilyName": 4, "SpellFamilyMask0": 0x20, "SpellPhaseMask": 2, "Cooldown": 0},   # D6
     -46865: {"SpellFamilyName": 4, "SpellFamilyMask0": 0x20200004, "ProcFlags": 0x10, "SpellPhaseMask": 1,
              "Chance": 100.0, "Cooldown": 0},                                              # D14
@@ -414,10 +416,11 @@ TOOLTIP_FRAGMENTS = {
     56636: ("Your Rend damage has a 10% chance to grant a charge of Overpower, stacking up to 5 times",
             "Your Mortal Strike has a 50% chance to grant a charge of Overpower"),
     56637: ("20% chance to grant a charge of Overpower",), 56638: ("30% chance to grant a charge of Overpower",),
-    204493: ("For 10 sec", "strike up to 4 additional nearby enemies for 70% of their damage",
+    204493: ("For 10 sec", "strike up to 4 additional nearby enemies for 50% of their damage",
              "Rend and Colossus Smash apply in full to each enemy struck", "Shares a cooldown with Blade Flurry"),
-    204529: ("duration of your Sweeping Strikes by 2 sec", "from 70% to 75%"),
-    204530: ("Sweeping Strikes by 4 sec", "from 70% to 80%"),
+    # 75 / 80% -> 60 / 65% (2026-11-22, level60-stat-curve S17)
+    204529: ("duration of your Sweeping Strikes by 2 sec", "from 50% to 60%"),
+    204530: ("Sweeping Strikes by 4 sec", "from 50% to 65%"),
     12281: ("Axes and polearms: critical strike chance and critical strike damage increased by 2%",
             "Maces: armor penetration increased by 5%", "have a 3% chance to grant an extra attack",
             "120% weapon damage, no more than once every 3 sec"),
@@ -446,7 +449,8 @@ TOOLTIP_FRAGMENTS = {
              "only strikes enemies already in combat"),
     204538: ("strikes 3 or more enemies", "again 0.5 sec later for 25% of its damage"),
     204539: ("again 0.5 sec later for 50% of its damage",),
-    29723: ("5% chance to reset the cooldown of your Mortal Strike", "more than once every 6 sec",
+    # 2026-11-22 S22: Sudden Death ICD 6 -> 3 sec.
+    29723: ("5% chance to reset the cooldown of your Mortal Strike", "more than once every 3 sec",
             "Mortal Strike cannot trigger this effect", "keep at least 3 rage after using Execute"),
     29725: ("10% chance to reset the cooldown", "keep at least 7 rage"),
     29724: ("15% chance to reset the cooldown", "keep at least 10 rage"),
@@ -720,10 +724,11 @@ def check_mortal_strike_and_rend(rows: dict) -> list[str]:
     if (_i(ms, "RecoveryTime"), _i(ms, "ManaCost")) != (6000, 250):
         bad.append(f"{MORTAL_STRIKE}: cooldown / cost {(_i(ms, 'RecoveryTime'), _i(ms, 'ManaCost'))}, "
                    "expected (6000, 250) (Q2: row unchanged)")
-    if _i(ms, "EffectBasePoints_2") != 196:
-        bad.append(f"{MORTAL_STRIKE}: weapon percent bp {ms.get('EffectBasePoints_2')!r}, expected 196 "
+    if _i(ms, "EffectBasePoints_2") != 187:
+        bad.append(f"{MORTAL_STRIKE}: weapon percent bp {ms.get('EffectBasePoints_2')!r}, expected 187 "
                    "(D29 130%, balance 2026-10-30 x1.5 x1.4 x0.8 x1.1 x0.95: 228%, "
-                   "DPS balance pass 1031 Arms x0.75: 171%, BAL1 2026-11-15 +10%: 188%, BAL2 +10%: 207%, BAL4 -5%: 197%)")
+                   "DPS balance pass 1031 Arms x0.75: 171%, BAL1 2026-11-15 +10%: 188%, BAL2 +10%: 207%, BAL4 -5%: 197%, "
+                   "S9 2026-11-21 x0.85: 167%, S13 x1.08: 180%, S19 x1.044: 188%)")
     # Q9 (user ruling 2026-10-30): Rend needs any melee weapon (the stock gate); the weapon talents fold into it
     # through the core's normal item-gated aura-79 path (second ruling 2026-10-30: no divide-out hook)
     if (_i(rend, "EquippedItemClass"), _i(rend, "EquippedItemSubclass")) != (2, 173555):

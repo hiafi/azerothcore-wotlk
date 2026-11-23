@@ -51,11 +51,21 @@ CREATURES = range(300480, 300500)
 SLOTS = ("head", "shoulders", "chest", "hands", "waist", "legs", "feet", "wrist")
 INVENTORY = {"head": {1}, "shoulders": {3}, "chest": {5, 20}, "hands": {10}, "waist": {6}, "legs": {7}, "feet": {8},
              "wrist": {9}}
+# The leather caster set splits Intellect (big slots) / Spirit (small slots) (2026-11-21, level60-stat-curve healer
+# mana pass, user ruling).
+LEATHER_CASTER = {s: ("Intellect (Solo)" if s in ("head", "shoulders", "chest", "legs") else "Spirit (Solo)")
+                  for s in SLOTS}
+
+
+def _slot(primary, slot):
+    return primary[slot] if isinstance(primary, dict) else primary
+
+
 STOCK_SETS = {
     181: ("magisters", "Intellect (Solo)", "dps", (16686, 16689, 16688, 16684, 16685, 16687, 16682, 16683)),
     182: ("devout", "Spirit (Solo)", "dps", (16693, 16695, 16690, 16692, 16696, 16694, 16691, 16697)),
     184: ("shadowcraft", "Agility (Solo)", "dps", (16707, 16708, 16721, 16712, 16713, 16709, 16711, 16710)),
-    185: ("wildheart", "Spirit (Solo)", "dps", (16720, 16718, 16706, 16717, 16716, 16719, 16715, 16714)),
+    185: ("wildheart", LEATHER_CASTER, "dps", (16720, 16718, 16706, 16717, 16716, 16719, 16715, 16714)),
     186: ("beaststalkers", "Agility (Solo)", "dps", (16677, 16679, 16674, 16676, 16680, 16678, 16675, 16681)),
     187: ("elements", "Intellect (Solo)", "dps", (16667, 16669, 16666, 16672, 16673, 16668, 16670, 16671)),
     188: ("lightforge", "Intellect (Solo)", "dps", (16727, 16729, 16726, 16724, 16723, 16728, 16725, 16722)),
@@ -116,7 +126,8 @@ class HauntedSetTest(unittest.TestCase):
         for set_id, (prefix, primary, kind, bases) in STOCK_SETS.items():
             for slot, base in zip(SLOTS, bases):
                 decl = self.items[f"haunted_{prefix}_{slot}"]
-                self.assertEqual((decl.base, decl.primary, decl.secondary), (base, primary, secondary(kind, slot)))
+                self.assertEqual((decl.base, decl.primary, decl.secondary),
+                                 (base, _slot(primary, slot), secondary(kind, slot)))
                 self.assertEqual(dict(decl.columns), {"bonding": 1}, decl.key)  # the stock row's itemset stays
                 self.assertEqual(decl.extra_stamina, 0.0)
         for set_id, (prefix, primary, kind) in NEW_SETS.items():

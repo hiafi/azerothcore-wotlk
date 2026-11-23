@@ -11271,9 +11271,10 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
         // works like one: divided by (1 + CDH%/100), not multiplied by (1 - CDH%/100), so 100%
         // CDH only halves the cooldown, 200% only takes it to a third, etc. - full
         // 100%-reduction-to-zero degeneracy is mathematically impossible at any finite rating.
-        // gtcombatratings_dbc's CR_COOLDOWN_HASTE curve (id 22) is tuned at 2x Crit Rating's
-        // percent-per-point (same x0.5 multiplier as CR_PROC_CHANCE) to compensate for the
-        // diminishing-returns curve costing more rating per effective % at high stacks.
+        // gtcombatratings_dbc's CR_COOLDOWN_HASTE curve (id 22) is Crit Rating's (CR_CRIT_SPELL,
+        // rows 1000-1099) x 6/14 at every level: 6 rating per 1% at level 60, against 14 for crit
+        // (CR_PROC_CHANCE is crit's x 4/14, 4 per 1%). It was 1:1 with crit from the secondary stat
+        // curve rework (2026-11-20) until the S21 ruling (2026-11-22) made both cheaper.
         //
         // Deliberately NOT applied by dividing rec/catrec in place before they're stored, the
         // way a normal spellmod (e.g. Ice Floes' SPELLMOD_COOLDOWN, applied above) would be:

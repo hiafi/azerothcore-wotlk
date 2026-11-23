@@ -379,6 +379,15 @@ class spell_warl_generic_scaling : public AuraScript
             int32 maximum  = (fire > shadow) ? fire : shadow;
             amount = CalculatePct(std::max<int32>(0, maximum), 15);
 
+            // Custom: level60-stat-curve S9 (2026-11-21, user ruling 1A): a player's permanent demon gets 100% of the
+            // owner's spell power instead of 15%, so its spells follow the owner's gear like the guardians (200855).
+            // Their spells' potency was cut to keep the Normal-kit hit (apps/dbc-tools warlock_spells.py). Every other
+            // holder of this aura (stock Doomguard 11859, a creature's demon) keeps the stock 15%.
+            uint32 const entry = GetUnitOwner()->GetEntry();
+            if (owner->IsPlayer() && (entry == NPC_IMP || entry == NPC_VOIDWALKER || entry == NPC_SUCCUBUS ||
+                entry == NPC_FELHUNTER || entry == NPC_FELGUARD))
+                amount = std::max<int32>(0, maximum);
+
             // Update appropriate player field
             if (owner->IsPlayer())
                 owner->SetUInt32Value(PLAYER_PET_SPELL_POWER, (uint32)amount);

@@ -1440,7 +1440,7 @@ class spell_sha_enh_mental_quickness : public AuraScript
     uint32 _buff = 0;
 };
 
-// 16303 Thundering Strikes rank 3 (capstone). The roll (10% x Proc Chance, 6 s cooldown: spell_proc 16303, damaging or
+// 16303 Thundering Strikes rank 3 (capstone). The roll (10% x Proc Chance, 3 s cooldown: spell_proc 16303, damaging or
 // healing spells, HIT phase) is per spell cast, not per target: a HIT-phase row is evaluated once per target hit, and
 // the cooldown only stops the rolls after a success. This claims the cast in CheckProc, which runs before the chance
 // roll, so only the first target hit of each cast rolls (Chain Lightning, Fire Nova and Chain Heal roll

@@ -273,6 +273,13 @@ namespace SimDaemon
         // The actor died mid-iteration, at ActorDiedAtMs sim ms into the fight (meaningless when ActorDied is false)
         bool ActorDied = false;
         uint32 ActorDiedAtMs = 0;
+        // DPS mode: the pre-pull buff phase ran its full length with nothing still being cast at its end (true
+        // without a buff phase), and whether the actor had a pet at the pull. RunPlayerbotBatch() runs an iteration
+        // again, once, when its phase was cut short or it pulled without the pet an earlier iteration had;
+        // RerunCount is how many attempts it discarded before this one (0 or 1). All three go into the report JSON.
+        bool PrePullComplete = true;
+        bool PetAtPull = false;
+        uint32 RerunCount = 0;
         uint32 CastAttempts = 0;
         uint64 TotalDamage = 0;
         uint32 CastCount = 0;
@@ -497,8 +504,9 @@ namespace SimDaemon
     // actor's health/mana to full, clears all spell cooldowns, and strips every *non-passive* aura
     // from the actor and every dummy (SpellInfo::IsPassive() - a talent's permanent self-buff, applied
     // once by SimBot::Create()'s bootstrap, is never reapplied between iterations, so removing it
-    // would silently run every iteration after the first without that talent) - see
-    // ResetForNextIteration() in SimDaemon.cpp for the exact call sequence.
+    // would silently run every iteration after the first without that talent), and puts the actor and every dummy
+    // back on their iteration-1 spawn spots (2026-11-22) - see ResetForNextIteration() in SimDaemon.cpp for the exact
+    // call sequence.
     //
     // **Failure found, root-caused, and fixed 2026-09-13**: a batch had been observed landing real
     // hits on iteration 1, then zero casts on every iteration after it, forever - three separate

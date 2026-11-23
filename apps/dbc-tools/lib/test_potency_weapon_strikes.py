@@ -162,7 +162,7 @@ PERCENTS = {
     "hunter": {2643: [(1, 66)]},   # 100 -> 66 (2026-11-17, weapon scaling WSH2 Normal trim, MM x0.664)
     "shaman": {60103: [(0, 266)], 32175: [(0, 254)], 32176: [(0, 254)], 202413: [(0, 140)], 202415: [(0, 140)]},
     "druid": {200429: [(0, 240)]},
-    "warlock": {30213: [(0, 100)]},
+    "warlock": {30213: [(0, 109)]},  # 100 -> 109 (2026-11-22, level60-stat-curve S23, Demonology x1.09)
     "warrior": {20240: [(0, 100)]},
     "rogue": {14251: [(0, 683)], 51675: [(1, 50)], 51677: [(1, 100)], 51723: [(0, 250)], 52874: [(0, 250)]},
     "deathknight": {45462: [(1, 62)]},
@@ -182,9 +182,12 @@ class MigratedStrikesTest(unittest.TestCase):
                     self.assertEqual(_weapon_percent(effect), percent, spell_id)
 
     def test_fan_of_knives_copies_share_one_percent(self):
+        # Fan of Knives and its off hand share one percent, and the two Second Volley copies share theirs. Second Volley
+        # has its own since 2026-11-22 (level60-stat-curve S17: x1.45, 250 -> 363); before, all four were one.
         rogue = _package("rogue")
-        percents = {sid: _weapon_percent(rogue[sid]["effect1"]) for sid in (51723, 52874, 204166, 204167)}
-        self.assertEqual(len(set(percents.values())), 1, percents)
+        for group in ((51723, 52874), (204166, 204167)):
+            percents = {sid: _weapon_percent(rogue[sid]["effect1"]) for sid in group}
+            self.assertEqual(len(set(percents.values())), 1, percents)
 
     def test_flat_parts_keep_their_level_60_values(self):
         # (class, spell, effect index, the old hand-set level-60 value, tolerance)
@@ -192,10 +195,13 @@ class MigratedStrikesTest(unittest.TestCase):
             # hunter: was 275 (bp 0 + int(42 x 6.5645); a direct sp_potency 103); sp_potency 68.392 after WSH2 MM x0.664
             # (2026-11-17)
             ("hunter", 2643, 0, 182.7, 1.5),
-            ("warlock", 30213, 1, 50.4, 1.5),       # was 62 (bp 31 + int(10 x 3.0667) + 1, sp_potency 23.2); sp_potency 19.024 after WS2 Demonology x0.82 (2026-11-17)
+            # warlock: was 62 (bp 31 + int(10 x 3.0667) + 1, sp_potency 23.2); sp_potency 19.024 after WS2 Demonology x0.82
+            # (2026-11-17), 50.4; sp_potency 20.7362 after S23 Demonology x1.09 (2026-11-22), 50.4 x 1.09 = 54.9
+            ("warlock", 30213, 1, 54.9, 1.5),
             ("deathknight", 45462, 0, 151, 1.5),    # bp 9 + int(59 x 2.3899) + 1; sp_potency 56.4
         ):
             effect = _package(class_name)[spell_id][f"effect{index + 1}"]
+            # Exempt from the potency rebase (their own weapon-damage effect: level60-stat-curve LS5b ruling 1).
             self.assertAlmostEqual(_level60(effect), old, delta=tolerance, msg=spell_id)
 
     def test_flat_parts_come_after_nothing_they_should_precede(self):
@@ -209,8 +215,10 @@ class MigratedStrikesTest(unittest.TestCase):
         for spell_id, old_tick in ((55078, 23), (55095, 19)):
             effect = dk[spell_id]["effect1"]
             self.assertEqual(effect["apply_aura"], 3, spell_id)
-            self.assertAlmostEqual(_level60(effect), old_tick, delta=0.5, msg=spell_id)
-            self.assertAlmostEqual(effect["_potency"]["ap_coefficient"], 0.06325, places=4, msg=spell_id)
+            # Rebased (level60-stat-curve HANDOFF 1.9): tick x a, coefficient x b / R (0.06325 at a = b = R = 1).
+            self.assertAlmostEqual(_level60(effect), old_tick * P.AP_BASE_SCALE, delta=1.0, msg=spell_id)
+            self.assertAlmostEqual(effect["_potency"]["ap_coefficient"], 0.06325 * P.AP_COEF_SCALE / P.DEFAULT_R,
+                                   places=4, msg=spell_id)
             self.assertEqual(effect["_potency"]["sp_coefficient"], 0.0, spell_id)
             self.assertEqual(effect["_potency"]["kind"], "periodic", spell_id)
 

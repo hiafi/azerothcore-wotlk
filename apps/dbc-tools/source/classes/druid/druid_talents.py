@@ -1170,6 +1170,11 @@ scripted_by(24905, 'spell_dru_moonkin_form_proc_balance')
 unbind_script(50419, 'spell_dru_brambles_treant')
 scripted_by(50419, 'spell_dru_brambles_treant_balance')
 
+# T3 2-piece 28716 (S22 2026-11-22, user ruling 6 / ICD report B6): the stock class rolled a flat 50% with no Proc
+# Chance after the row's 100%; spell_dru_t3_2p_bonus_rework rolls 50% x Proc Chance (set bonuses scale).
+unbind_script(28716, 'spell_dru_t3_2p_bonus')
+scripted_by(28716, 'spell_dru_t3_2p_bonus_rework')
+
 unbind_script(35669, 'spell_dru_treant_scaling')
 scripted_by(35669, 'spell_dru_treant_scaling_balance')
 unbind_script(35670, 'spell_dru_treant_scaling')
@@ -1227,11 +1232,13 @@ procs_on(-48389, proc_flags=0x10028, spell_phase_mask=PROC_SPELL_PHASE_CAST | PR
 procs_on(24905, proc_flags=0x10000, spell_phase_mask=PROC_SPELL_PHASE_CAST, chance=33)
 
 # (6,3) Vengeance capstone - final rank only; triggered spells allowed (Starfall/Hurricane/Fury of
-# Elune crits can roll it)
+# Elune crits can roll it). S22 2026-11-22 (ICD report option A): ICD 10 -> 6 s, and
+# spell_dru_vengeance_capstone_guard makes a cast roll once (cleave and splash crits share its Spell).
 procs_on(vengeance_16911, proc_flags=0x10000, school_mask=72,
          spell_type_mask=PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=PROC_SPELL_PHASE_HIT,
          hit_mask=PROC_HIT_CRITICAL, attributes_mask=PROC_ATTR_TRIGGERED_CAN_PROC, chance=15,
-         cooldown_ms=10000, disable_effects_mask=0x1)
+         cooldown_ms=6000, disable_effects_mask=0x1)
+scripted_by(vengeance_16911, 'spell_dru_vengeance_capstone_guard')
 
 # (8,0) Eclipse - negative whole-chain row, overrides the stock -48516 row
 procs_on(-48516, proc_flags=0x10000, family_name=7, family_mask=(0x5, 0, 0),

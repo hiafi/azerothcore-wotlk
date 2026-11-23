@@ -7,7 +7,8 @@ Split from a single source/classes/druid.py via split_class_file.py (.agents/pla
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp
 from lib.dsl.constants import ShapeshiftForm
 from lib.dsl.registry import (
-    bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by, unbind_bonus_coefficients, untrain,
+    bonus_coefficients, pot_text, scripted_by, skill_line_ability, spell, trained_by, unbind_bonus_coefficients,
+    untrain,
 )
 from ._masks import BLOOM, CENARION_WARD, MASS_ENTANGLEMENT, STARSURGE
 from ._masks import BERSERK_COST, IRONFUR, PULVERIZE, THRASH, UPHEAVAL  # druid-rework Feral pass
@@ -18,6 +19,7 @@ from .druid_trigger_spells import (
     starfall_50286, tranquility_44203, typhoon_61391,
 )
 # druid-rework Feral pass: ShapeshiftMask bits (defined once, in druid_trigger_spells.py).
+from .druid_trigger_spells import balance_tune_1010  # level60-stat-curve S23 (Wrath, Moonfire tooltips)
 from .druid_trigger_spells import SS_ANY_BEAR, SS_BEAR, SS_CAT, SS_FERAL, SS_TREE
 
 
@@ -108,7 +110,7 @@ tranquility_740 = spell(
     ],
     spell_icon_id=100,
     notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. druid-rework RESTO §7 'Tranquility 740': category_cooldown_ms 480000->180000 (3 min); Cooldown Haste applies to catrec (Player.cpp:11251); scripted_by(740, 'spell_dru_natures_focus_capstone') declared in druid_talents.py.",
-    raw_overrides={'AttributesEx': 64, 'AttributesEx2': 1074266112, 'AttributesEx3': 128, 'AttributesEx5': 8192, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals nearby party members for $s1 every $t2 seconds.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals all nearby group members for $s1 every $t2 seconds for $d.  Druid must channel to maintain the spell.', 'EffectBonusMultiplier_1': 0.28600001335144043, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_1': 128, 'SpellClassSet': 7, 'SpellLevel': 30, 'SpellVisualID_1': 1283, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
+    raw_overrides={'AttributesEx': 64, 'AttributesEx2': 1074266112, 'AttributesEx3': 128, 'AttributesEx5': 8192, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals nearby party members for ' + pot_text(tranquility_44203) + ' every $t2 seconds.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals all nearby group members for ' + pot_text(tranquility_44203) + ' every $t2 seconds for $d.  Druid must channel to maintain the spell.', 'EffectBonusMultiplier_1': 0.28600001335144043, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_1': 128, 'SpellClassSet': 7, 'SpellLevel': 30, 'SpellVisualID_1': 1283, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
 )
 
 
@@ -179,8 +181,9 @@ druid_pet_scaling_04_35672 = spell(
         Effect(type=6, die_sides=0, implicit_target_a=1, apply_aura=22, misc_value=32),
     ],
     spell_icon_id=0,
-    notes='DPS balance pass 11 (2026-10-08, user ruling): stock row, only EffectBasePoints_2 0 -> 179 and EffectDieSides_2 0 -> 1 changed (CalcValue = 179 + 1 = 180). Effect_2 stays 0 (inert). Slot 2 = percentage of normal white-hit damage dealt by the Force of Nature treant (creature 1964, +80%); read by druid_treant_melee_unit_script via sSpellMgr->GetSpellInfo(35672)->Effects[EFFECT_1].CalcValue(). EffectBasePoints_2 179 -> 146 (CalcValue 180 -> 147; 2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818; the treant attack power is 105% of the owner Nature spell power, so its white hits follow the weapon spell power).',
-    raw_overrides={'AttributesEx3': 268435456, 'AttributesEx4': 34603008, 'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1, 'EffectChainAmplitude_2': 1, 'EffectChainAmplitude_3': 1, 'EffectBasePoints_2': 146, 'EffectDieSides_2': 1},
+    notes='DPS balance pass 11 (2026-10-08, user ruling): stock row, only EffectBasePoints_2 0 -> 179 and EffectDieSides_2 0 -> 1 changed (CalcValue = 179 + 1 = 180). Effect_2 stays 0 (inert). Slot 2 = percentage of normal white-hit damage dealt by the Force of Nature treant (creature 1964, +80%); read by druid_treant_melee_unit_script via sSpellMgr->GetSpellInfo(35672)->Effects[EFFECT_1].CalcValue(). EffectBasePoints_2 179 -> 146 (CalcValue 180 -> 147; 2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818; the treant attack power is 105% of the owner Nature spell power, so its white hits follow the weapon spell power).'
+          ' EffectBasePoints_2 146 -> 133 (CalcValue 147 -> 134, x0.912; 2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91, the Force of Nature treant is Balance-only).',
+    raw_overrides={'AttributesEx3': 268435456, 'AttributesEx4': 34603008, 'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1, 'EffectChainAmplitude_2': 1, 'EffectChainAmplitude_3': 1, 'EffectBasePoints_2': 133, 'EffectDieSides_2': 1},
 )
 
 
@@ -222,14 +225,18 @@ rejuvenation_774 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=18,
+    mana_cost_pct=10,
     range_yards=40.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=8.3265, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=9.6171, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
     ],
     spell_icon_id=64,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60 (anchor rank 11 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=10.5 (potency-report default, base/coef already agreed). Effect 1 sp_potency 10.5 -> 8.3265 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60 (anchor rank 11 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=10.5 (potency-report default, base/coef already agreed). Effect 1 sp_potency 10.5 -> 8.3265 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793).'
+          ' sp_potency 8.3265 -> 8.7428 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Resto Druid, Rejuvenation, Wild Growth, Regrowth, Lifebloom and Healing Touch x1.05 (S9 decision 1B, was x1.20 in the proposal)).'
+          ' mana_cost_pct 18 -> 14 (223 -> 174 mana at level 60, base mana 1244) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Rejuvenation mana cost -20%; 14.4 rounded to 14).'
+          ' mana_cost_pct 14 -> 11 (174 -> 136 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Resto Druid x0.78).'
+          ' sp_potency 8.7428 -> 9.6171; mana_cost_pct 11 -> 10 (136 -> 124 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M4, user ruling: Resto Druid non-Tranquility heals: healing x1.10, cost -1/-2% base mana).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1.total} over $d.', 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_1': 16, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 4, 'SpellVisualID_1': 32, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
 )
 
@@ -544,10 +551,12 @@ starfire_2912 = spell(
     mana_cost_pct=12,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=59.11686, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=48.4167, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=1485,
-    notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 7 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast 3.5s->2.5s (Starlight Wrath's stock cast-cut is gone, §6 row 0,1), raw CastingTimeIndex dropped (resolves via the plain 2500ms row, 30002); now cleaves (spell_dru_starfire_cleave AfterHit casts 200337, WP-B). Potency system P5 (druid pass): converted to sp_potency=158.6 (potency-report default, base/coef already agreed). mana_cost_pct 16 -> 12 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 sp_potency 158.6 -> 95.2 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 95.2 -> 87.6 (2026-10-08, DPS balance pass, user ruling: Balance -8%). Effect 1 sp_potency 87.6 -> 96.36 (2026-11-15, balance on the Normal-tier kits, user ruling: Starfire +10%). Effect 1 sp_potency 96.36 -> 72.27 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Starfire -25%) Effect 1 sp_potency 72.27 -> 59.11686 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818).",
+    notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 7 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast 3.5s->2.5s (Starlight Wrath's stock cast-cut is gone, §6 row 0,1), raw CastingTimeIndex dropped (resolves via the plain 2500ms row, 30002); now cleaves (spell_dru_starfire_cleave AfterHit casts 200337, WP-B). Potency system P5 (druid pass): converted to sp_potency=158.6 (potency-report default, base/coef already agreed). mana_cost_pct 16 -> 12 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 sp_potency 158.6 -> 95.2 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 95.2 -> 87.6 (2026-10-08, DPS balance pass, user ruling: Balance -8%). Effect 1 sp_potency 87.6 -> 96.36 (2026-11-15, balance on the Normal-tier kits, user ruling: Starfire +10%). Effect 1 sp_potency 96.36 -> 72.27 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Starfire -25%) Effect 1 sp_potency 72.27 -> 59.11686 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818)."
+          ' sp_potency 59.11686 -> 53.2052 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell).'
+          ' Effect 1 sp_potency 53.2052 -> 48.4167 (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91, a Balance-only spell).',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Arcane damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 4, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 1264, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(starfire_2912, 'spell_dru_starfire_cleave')
@@ -565,11 +574,14 @@ wrath_5176 = spell(
     mana_cost_pct=8,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=79.37218, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=71.435, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=263,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 8 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast_time_ms now says the 1500ms it already resolved to; raw CastingTimeIndex dropped (resolves via the plain 1500ms row, 30004). Potency system P5 (druid pass): converted to sp_potency=119.3 (potency-report default, base/coef already agreed). mana_cost_pct 11 -> 8 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 sp_potency 119.3 -> 71.6 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 71.6 -> 78.76 (2026-10-08, DPS balance pass, user ruling: Balance Wrath x1.10, round 10). Effect 1 sp_potency 78.76 -> 86.636 (2026-11-15, balance on the Normal-tier kits, user ruling: Wrath +10%). Effect 1 sp_potency 86.636 -> 121.29 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Balance option A, Wrath +40%; real ratio 1.39999). Effect 1 sp_potency 121.29 -> 97.032 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Wrath -20%) Effect 1 sp_potency 97.032 -> 79.37218 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818).',
-    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Nature damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'Speed': 20.0, 'SpellClassMask_1': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellVisualID_1': 3860, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 8 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast_time_ms now says the 1500ms it already resolved to; raw CastingTimeIndex dropped (resolves via the plain 1500ms row, 30004). Potency system P5 (druid pass): converted to sp_potency=119.3 (potency-report default, base/coef already agreed). mana_cost_pct 11 -> 8 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 sp_potency 119.3 -> 71.6 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 71.6 -> 78.76 (2026-10-08, DPS balance pass, user ruling: Balance Wrath x1.10, round 10). Effect 1 sp_potency 78.76 -> 86.636 (2026-11-15, balance on the Normal-tier kits, user ruling: Wrath +10%). Effect 1 sp_potency 86.636 -> 121.29 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Balance option A, Wrath +40%; real ratio 1.39999). Effect 1 sp_potency 121.29 -> 97.032 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Wrath -20%) Effect 1 sp_potency 97.032 -> 79.37218 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818).'
+          ' sp_potency 79.37218 -> 71.435 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell).'
+          ' Potency unchanged (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91): Restoration also casts it, so Balance takes its -9% from the hidden passive 200606, linked from Eclipse rank 3; tooltip variables 1010 show it.',
+    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1*bal} Nature damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'Speed': 20.0, 'SpellClassMask_1': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellVisualID_1': 3860, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    tooltip_vars=balance_tune_1010,
 )
 
 
@@ -582,13 +594,17 @@ healing_touch_5185 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=33,
+    mana_cost_pct=21,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=126.88, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=146.546, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=962,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 15 @ level 80); coefficient/mana_cost_pct from max rank; MaxLevel set to 80. PLAN A9 (BALANCE §0.13): cast_time_ms=2500, raw CastingTimeIndex (16, 1500ms) dropped so it no longer wins over the typed field. ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7 (B6 heal-cancel hook needs the heal to be castable in Moonkin at all). Potency system P5 (druid pass): converted to sp_potency=160.0 (potency-report default, base/coef already agreed); description dropped the stock $<min>/$<max> SpellDescriptionVariable range (heal kind has no variance roll, so it is now a single value) for {pot1}. Effect 1 sp_potency 160.0 -> 126.88 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 15 @ level 80); coefficient/mana_cost_pct from max rank; MaxLevel set to 80. PLAN A9 (BALANCE §0.13): cast_time_ms=2500, raw CastingTimeIndex (16, 1500ms) dropped so it no longer wins over the typed field. ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7 (B6 heal-cancel hook needs the heal to be castable in Moonkin at all). Potency system P5 (druid pass): converted to sp_potency=160.0 (potency-report default, base/coef already agreed); description dropped the stock $<min>/$<max> SpellDescriptionVariable range (heal kind has no variance roll, so it is now a single value) for {pot1}. Effect 1 sp_potency 160.0 -> 126.88 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793).'
+          ' sp_potency 126.88 -> 133.224 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Resto Druid, Rejuvenation, Wild Growth, Regrowth, Lifebloom and Healing Touch x1.05 (S9 decision 1B, was x1.20 in the proposal)).'
+          ' mana_cost_pct 33 -> 30 (410 -> 373 mana at level 60, base mana 1244) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Healing Touch mana cost -10%; 29.7 rounded to 30).'
+          ' mana_cost_pct 30 -> 23 (373 -> 286 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Resto Druid x0.78).'
+          ' sp_potency 133.224 -> 146.546; mana_cost_pct 23 -> 21 (286 -> 261 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M4, user ruling: Resto Druid non-Tranquility heals: healing x1.10, cost -1/-2% base mana).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'SpellClassMask_1': 32, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 28, 'SpellLevel': 1, 'SpellVisualID_1': 58, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -878,12 +894,15 @@ moonfire_8921 = spell(
     range_yards=30.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=12.41724, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=50.47878, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=11.1755, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=45.4309, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=225,
-    notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 14 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13: duration 9s->12s (WotLK max rank; the single-rank bootstrap kept rank 1's 9s DurationIndex), 4 ticks at 3s; druid-rework FERAL §5 / §0.9: ShapeshiftExclude gains cat, bear and dire bear (0x91) so the client also refuses/auto-unshifts. Potency system P5 (druid pass): converted to sp_potency=27.7 (eff1, periodic) / 112.9 (eff2, direct) (potency-report default, base/coef already agreed). mana_cost_pct 21 -> 15 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 (periodic) sp_potency 27.7 -> 16.6, effect 2 (direct) sp_potency 112.9 -> 67.7 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 16.6 -> 15.3 (2026-10-08, DPS balance pass, user ruling: Balance -8%). Effect 2 sp_potency 67.7 -> 62.3 (2026-10-08, DPS balance pass, user ruling: Balance -8%). Effect 1 (periodic) sp_potency 15.3 -> 13.8 (2026-10-08, DPS balance pass, user ruling: Balance -10%). Effect 2 (direct) sp_potency 62.3 -> 56.1 (2026-10-08, DPS balance pass, user ruling: Balance -10%). Effect 1 (periodic) sp_potency 13.8 -> 15.18, effect 2 (direct) sp_potency 56.1 -> 61.71 (2026-11-15, balance on the Normal-tier kits, user ruling: Moonfire +10%) Effect 1 sp_potency 15.18 -> 12.41724 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818). Effect 2 sp_potency 61.71 -> 50.47878 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818).",
-    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Arcane damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Burns the enemy for {pot2} Arcane damage and then an additional {pot1.total} Arcane damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': SS_FERAL, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 2, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 4, 'SpellVisualID_1': 1263, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 14 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13: duration 9s->12s (WotLK max rank; the single-rank bootstrap kept rank 1's 9s DurationIndex), 4 ticks at 3s; druid-rework FERAL §5 / §0.9: ShapeshiftExclude gains cat, bear and dire bear (0x91) so the client also refuses/auto-unshifts. Potency system P5 (druid pass): converted to sp_potency=27.7 (eff1, periodic) / 112.9 (eff2, direct) (potency-report default, base/coef already agreed). mana_cost_pct 21 -> 15 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 (periodic) sp_potency 27.7 -> 16.6, effect 2 (direct) sp_potency 112.9 -> 67.7 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 16.6 -> 15.3 (2026-10-08, DPS balance pass, user ruling: Balance -8%). Effect 2 sp_potency 67.7 -> 62.3 (2026-10-08, DPS balance pass, user ruling: Balance -8%). Effect 1 (periodic) sp_potency 15.3 -> 13.8 (2026-10-08, DPS balance pass, user ruling: Balance -10%). Effect 2 (direct) sp_potency 62.3 -> 56.1 (2026-10-08, DPS balance pass, user ruling: Balance -10%). Effect 1 (periodic) sp_potency 13.8 -> 15.18, effect 2 (direct) sp_potency 56.1 -> 61.71 (2026-11-15, balance on the Normal-tier kits, user ruling: Moonfire +10%) Effect 1 sp_potency 15.18 -> 12.41724 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818). Effect 2 sp_potency 61.71 -> 50.47878 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818)."
+          ' sp_potency 12.41724 -> 11.1755; sp_potency 50.47878 -> 45.4309 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell).'
+          ' Potency unchanged (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91): Restoration also casts it, so Balance takes its -9% from the hidden passive 200606, linked from Eclipse rank 3; tooltip variables 1010 show it.',
+    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Arcane damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Burns the enemy for {pot2*bal} Arcane damage and then an additional {pot1.total*bal} Arcane damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': SS_FERAL, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 2, 'SpellClassSet': 7, 'SpellLevel': 4, 'SpellVisualID_1': 1263, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    tooltip_vars=balance_tune_1010,
 )
 
 
@@ -897,15 +916,19 @@ regrowth_8936 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=29,
+    mana_cost_pct=18,
     range_yards=40.0,
     duration_ms=21000,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=121.5669, potency_kind='heal', implicit_target_a=21),
-        Effect(type=EffectType.APPLY_AURA, sp_potency=8.9609, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
+        Effect(type=EffectType.HEAL, sp_potency=140.41, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=10.3498, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
     ],
     spell_icon_id=197,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 12); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 12 @ level 80); coefficient/mana_cost_pct from max rank; MaxLevel set to 80. PLAN A9 (BALANCE §0.13): cast_time_ms=1500, raw CastingTimeIndex (5, 2000ms) dropped. ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7. druid-rework FERAL §5 / §0.9: ShapeshiftMask gains cat, bear and dire bear (0x91) next to tree; moonkin stays castable via ALLOW_WHILE_NOT_SHAPESHIFTED (AttributesEx2 0x80000). Potency system P5 (druid pass): converted to sp_potency=153.3 (eff1, heal) / 11.3 (eff2, heal_periodic) (potency-report default, base/coef already agreed). Effect 1 sp_potency 153.3 -> 121.5669 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793). Effect 2 sp_potency 11.3 -> 8.9609 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 12); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 12 @ level 80); coefficient/mana_cost_pct from max rank; MaxLevel set to 80. PLAN A9 (BALANCE §0.13): cast_time_ms=1500, raw CastingTimeIndex (5, 2000ms) dropped. ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7. druid-rework FERAL §5 / §0.9: ShapeshiftMask gains cat, bear and dire bear (0x91) next to tree; moonkin stays castable via ALLOW_WHILE_NOT_SHAPESHIFTED (AttributesEx2 0x80000). Potency system P5 (druid pass): converted to sp_potency=153.3 (eff1, heal) / 11.3 (eff2, heal_periodic) (potency-report default, base/coef already agreed). Effect 1 sp_potency 153.3 -> 121.5669 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793). Effect 2 sp_potency 11.3 -> 8.9609 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793).'
+          ' sp_potency 121.5669 -> 127.6452; sp_potency 8.9609 -> 9.4089 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Resto Druid, Rejuvenation, Wild Growth, Regrowth, Lifebloom and Healing Touch x1.05 (S9 decision 1B, was x1.20 in the proposal)).'
+          ' mana_cost_pct 29 -> 26 (360 -> 323 mana at level 60, base mana 1244) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Regrowth mana cost -10%; 26.1 rounded to 26).'
+          ' mana_cost_pct 26 -> 20 (323 -> 248 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Resto Druid x0.78).'
+          ' sp_potency 127.6452 -> 140.41; sp_potency 9.4089 -> 10.3498; mana_cost_pct 20 -> 18 (248 -> 223 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M4, user ruling: Resto Druid non-Tranquility heals: healing x1.10, cost -1/-2% base mana).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot2} every $t2 seconds.', 'BaseLevel': 12, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1} and another {pot2.total} over $d.', 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': SS_TREE | SS_FERAL, 'SpellClassMask_1': 64, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 12, 'SpellVisualID_1': 58, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1220,7 +1243,9 @@ maim_22570 = spell(
     range_yards=5.0,
     duration_ms=0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=19.7625, cp_base_potency=24.33655, potency_kind='direct', implicit_target_a=6),
+        # LS5c (level60-stat-curve, user ruling round 12, 2026-11-20): the combo-point line gets attack power scaling of
+        # the same potency (cp_base_potency 24.33655 -> cp_ap_potency 24.33655), so the potency rebase applies normally.
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=19.7625, cp_ap_potency=24.33655, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, die_sides=0, mechanic=Mechanic.STUN, implicit_target_a=6, apply_aura=AuraType.MOD_STUN),
     ],
     spell_icon_id=1681,
@@ -1514,11 +1539,11 @@ lifebloom_33763 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=14,
+    mana_cost_pct=8,
     range_yards=40.0,
     duration_ms=7000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=4.5201, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=1000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=5.2207, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=1000),
         # Potency system P5 follow-up (2026-10-01): this DUMMY slot's own base_points/points_per_level
         # (252/9.7) are now VESTIGIAL - kept only because Druid::TriggerLifebloomBloom's
         # AfterEffectRemove/AfterDispel hooks are registered against EFFECT_1/SPELL_AURA_DUMMY and need
@@ -1530,7 +1555,11 @@ lifebloom_33763 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=252, points_per_level=9.7, implicit_target_a=21, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2101,
-    notes="druid-rework RESTO §7: mana_cost_pct 28->14; BaseLevel/SpellLevel 64->26; re-anchored level recipe (Q19, proportional to the existing L80 values: tick 40/46/53 at 60/70/80, bloom 582/679/776) - stored/ppl per RESTO §7's table (tick bp=17 ppl=0.6625, bloom bp=252 ppl=9.7); tooltip drops the mana-return mention and states the one-target rule (mana return removed in spell_dru_lifebloom, WP-B; the second Lifebloom removal itself is Druid::OnLifebloomApplied, WP-B). Potency system P5 (druid pass): eff1 (the tick) converted to sp_potency=5.7 (potency-report default, base/coef already agreed). Potency system P5 follow-up: eff2 (the bloom-on-fall-off base) is now vestigial - the real bloom heal is declared on 33778 itself (lifebloom_bloom_33778, below); this slot's own base_points/ppl are dead data, kept only for the AfterRemove/AfterDispel hook's structural requirement. Tooltip's old self-reference ($s2) repointed to the real source ($33778s1). Effect 1 sp_potency 5.7 -> 4.5201 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793).",
+    notes="druid-rework RESTO §7: mana_cost_pct 28->14; BaseLevel/SpellLevel 64->26; re-anchored level recipe (Q19, proportional to the existing L80 values: tick 40/46/53 at 60/70/80, bloom 582/679/776) - stored/ppl per RESTO §7's table (tick bp=17 ppl=0.6625, bloom bp=252 ppl=9.7); tooltip drops the mana-return mention and states the one-target rule (mana return removed in spell_dru_lifebloom, WP-B; the second Lifebloom removal itself is Druid::OnLifebloomApplied, WP-B). Potency system P5 (druid pass): eff1 (the tick) converted to sp_potency=5.7 (potency-report default, base/coef already agreed). Potency system P5 follow-up: eff2 (the bloom-on-fall-off base) is now vestigial - the real bloom heal is declared on 33778 itself (lifebloom_bloom_33778, below); this slot's own base_points/ppl are dead data, kept only for the AfterRemove/AfterDispel hook's structural requirement. Tooltip's old self-reference ($s2) repointed to the real source ($33778s1). Effect 1 sp_potency 5.7 -> 4.5201 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793)."
+          ' sp_potency 4.5201 -> 4.7461 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Resto Druid, Rejuvenation, Wild Growth, Regrowth, Lifebloom and Healing Touch x1.05 (S9 decision 1B, was x1.20 in the proposal)).'
+          ' mana_cost_pct 14 -> 11 (174 -> 136 mana at level 60, base mana 1244) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Lifebloom mana cost -20%; 11.2 rounded to 11).'
+          ' mana_cost_pct 11 -> 9 (136 -> 111 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Resto Druid x0.78).'
+          ' sp_potency 4.7461 -> 5.2207; mana_cost_pct 9 -> 8 (111 -> 99 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M4, user ruling: Resto Druid non-Tranquility heals: healing x1.10, cost -1/-2% base mana).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} every second and $s2 when effect finishes or is dispelled.', 'BaseLevel': 26, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1.total} over $d.  When Lifebloom completes its duration or is dispelled, the target instantly heals themself for $33778s1.  This effect can stack up to $u times on the same target.  May be active on one target at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_2': 16, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 26, 'SpellVisualID_1': 8145, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
 )
 trained_by(lifebloom_33763, trainer_id=216, req_level=26, money_cost=5000)
@@ -1553,7 +1582,7 @@ lifebloom_bloom_33778 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=64.4709, base_potency=43.5357, potency_kind='heal', implicit_target_a=1),
+        Effect(type=EffectType.HEAL, sp_potency=74.4638, base_potency=50.2838, potency_kind='heal', implicit_target_a=1),
     ],
     spell_icon_id=962,
     notes="Potency system P5 follow-up (2026-10-01): promoted out of source/spells/npc.csv's inert "
@@ -1585,7 +1614,9 @@ lifebloom_bloom_33778 = spell(
           "SpellHealingBonusDone, matching this spell's real (and only) effect index - see "
           "DruidMechanics.cpp. The ×stack and ×Harmony multipliers TriggerLifebloomBloom applies on "
           "top are untouched by any of this (they're applied after SpellHealingBonusDone returns, "
-          "same as before). 33763's own eff2 DUMMY slot is now vestigial - see its own updated notes. Effect 1 sp_potency 81.3 -> 64.4709 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793). Effect 1 base_potency 54.9 -> 43.5357 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793).",
+          "same as before). 33763's own eff2 DUMMY slot is now vestigial - see its own updated notes. Effect 1 sp_potency 81.3 -> 64.4709 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793). Effect 1 base_potency 54.9 -> 43.5357 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793)."
+          ' sp_potency 64.4709 -> 67.6944; base_potency 43.5357 -> 45.7125 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Resto Druid, Rejuvenation, Wild Growth, Regrowth, Lifebloom and Healing Touch x1.05 (S9 decision 1B, was x1.20 in the proposal)).'
+          ' sp_potency 67.6944 -> 74.4638; base_potency 45.7125 -> 50.2838 (2026-11-21, level60-stat-curve healer mana pass M4, user ruling: Resto Druid non-Tranquility heals: healing x1.10, cost -1/-2% base mana).',
     raw_overrides={'AttributesEx': 1056, 'AttributesEx2': 268451840, 'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target over 7 sec.  When Lifebloom completes its duration or is dispelled, the target instantly heals themself.  This effect can stack up to 3 times on the same target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 5, 'ShapeshiftExclude': 1073741824, 'SpellClassSet': 7, 'SpellLevel': 26, 'SpellVisualID_1': 8101, 'TargetCreatureType': 767},
 )
 unbind_bonus_coefficients(lifebloom_bloom_33778)
@@ -1665,7 +1696,7 @@ mangle_bear_33878 = spell(
     range_yards=5.0,
     duration_ms=60000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=74.37664, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=63.22014, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=6, apply_aura=255, misc_value=15),
     ],
     spell_icon_id=2312,
@@ -1683,7 +1714,8 @@ mangle_bear_33878 = spell(
           ' Effect 1 ap_potency 43.41 -> 30.39 (2026-10-12, melee-haste-gcd T4, user ruling: Bear DPS Mangle (Bear) x0.70). Effect 1 ap_potency 30.39 -> 50.97 (2026-10-12, melee-haste-gcd T4-FIX, Predatory Strikes leak removed).'
           ' Effect 1 ap_potency 50.97 -> 61.16 (2026-11-01, DPS balance pass 1031, user ruling: Mangle (Bear) +20%).'
           ' Effect 1 ap_potency 61.16 -> 122.33 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Mangle (Bear) +100%)'
-          ' Effect 1 ap_potency 122.33 -> 97.864 (2026-11-15, balance on the Normal-tier kits, user ruling: Mangle (Bear) -20%). Effect 1 ap_potency 97.864 -> 74.37664 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS and Bear tank shared x0.76).',
+          ' Effect 1 ap_potency 122.33 -> 97.864 (2026-11-15, balance on the Normal-tier kits, user ruling: Mangle (Bear) -20%). Effect 1 ap_potency 97.864 -> 74.37664 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS and Bear tank shared x0.76).'
+          ' Effect 1 ap_potency 74.37664 -> 63.22014 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Bear DPS, Mangle (Bear) x0.85; shared with the Bear tank).',
     raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'All bleed effects cause $s2% additional damage.', 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mangle the target for {pot1} damage and causes the target to take $s2% additional damage from bleed effects for $d.  While Bestial Fury is active, has a 15% chance to grant Tooth and Claw.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': SS_ANY_BEAR, 'SpellClassMask_2': 64, 'SpellClassSet': 7, 'SpellLevel': 10, 'SpellVisualID_1': 6586, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(mangle_bear_33878, trainer_id=216, req_level=10, money_cost=600)  # druid-rework FERAL §5: talent -> baseline
@@ -1850,10 +1882,12 @@ insect_swarm_5570 = spell(
     range_yards=30.0,
     duration_ms=14000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=12.45323, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=10.1992, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=1771,
-    notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §6 row (2,1): duration 12s->14s (7 ticks), hit-reduction eff2 dropped (12.12); scripted_by(spell_dru_insect_swarm_cast) removes the caster's Swarming Rot copy (200352) on a real cast. Potency system P5 (druid pass): converted to sp_potency=34.8 (not mismatched; potency-report base-damage default). mana_cost_pct 8 -> 6 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 sp_potency 34.8 -> 20.9 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 20.9 -> 19.2 (2026-10-08, DPS balance pass, user ruling: Balance -8%). Effect 1 sp_potency 19.2 -> 17.3 (2026-10-08, DPS balance pass, user ruling: Balance -10%). Effect 1 sp_potency 17.3 -> 19.03 (2026-11-15, balance on the Normal-tier kits, user ruling: Insect Swarm +10%). Effect 1 sp_potency 19.03 -> 15.224 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Insect Swarm -20%) Effect 1 sp_potency 15.224 -> 12.45323 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818).",
+    notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §6 row (2,1): duration 12s->14s (7 ticks), hit-reduction eff2 dropped (12.12); scripted_by(spell_dru_insect_swarm_cast) removes the caster's Swarming Rot copy (200352) on a real cast. Potency system P5 (druid pass): converted to sp_potency=34.8 (not mismatched; potency-report base-damage default). mana_cost_pct 8 -> 6 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 sp_potency 34.8 -> 20.9 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 20.9 -> 19.2 (2026-10-08, DPS balance pass, user ruling: Balance -8%). Effect 1 sp_potency 19.2 -> 17.3 (2026-10-08, DPS balance pass, user ruling: Balance -10%). Effect 1 sp_potency 17.3 -> 19.03 (2026-11-15, balance on the Normal-tier kits, user ruling: Insect Swarm +10%). Effect 1 sp_potency 19.03 -> 15.224 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Insect Swarm -20%) Effect 1 sp_potency 15.224 -> 12.45323 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818)."
+          ' sp_potency 12.45323 -> 11.2079 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell).'
+          ' Effect 1 sp_potency 11.2079 -> 10.1992 (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91, a Balance-only spell).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Nature damage every $t1 sec.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The enemy target is swarmed by insects, causing {pot1.total} Nature damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 2097152, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 7333, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1869,15 +1903,19 @@ wild_growth_48438 = spell(
     cooldown_ms=0,
     category_cooldown_ms=6000,
     mana_cost=0,
-    mana_cost_pct=23,
+    mana_cost_pct=15,
     range_yards=40.0,
     duration_ms=7000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=11.0227, potency_kind='heal_periodic', implicit_target_a=63, implicit_target_b=31, apply_aura=AuraType.PERIODIC_HEAL, amplitude=1000, radius_yards=15.0),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=12.7312, potency_kind='heal_periodic', implicit_target_a=63, implicit_target_b=31, apply_aura=AuraType.PERIODIC_HEAL, amplitude=1000, radius_yards=15.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=87, implicit_target_b=31, apply_aura=AuraType.DUMMY, radius_yards=15.0),
     ],
     spell_icon_id=2864,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=13.9 (potency-report default, base/coef already agreed). Effect 1 sp_potency 13.9 -> 11.0227 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=13.9 (potency-report default, base/coef already agreed). Effect 1 sp_potency 13.9 -> 11.0227 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Restoration Druid x0.793).'
+          ' sp_potency 11.0227 -> 11.5738 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Resto Druid, Rejuvenation, Wild Growth, Regrowth, Lifebloom and Healing Touch x1.05 (S9 decision 1B, was x1.20 in the proposal)).'
+          ' mana_cost_pct 23 -> 21 (286 -> 261 mana at level 60, base mana 1244) (2026-11-21, level60-stat-curve healer mana pass, user ruling: Wild Growth mana cost -10%; 20.7 rounded to 21).'
+          ' mana_cost_pct 21 -> 16 (261 -> 199 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M3, user ruling: OOM target ~70 s, Resto Druid x0.78).'
+          ' sp_potency 11.5738 -> 12.7312; mana_cost_pct 16 -> 15 (199 -> 186 mana at level 60) (2026-11-21, level60-stat-curve healer mana pass M4, user ruling: Resto Druid non-Tranquility heals: healing x1.10, cost -1/-2% base mana).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx5': 4194304, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} damage every $t1 second.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals up to $s3 friendly party or raid members within $a1 yards of the target for {pot1.total} over $d. The amount healed is applied quickly at first, and slows down as the Wild Growth reaches its full duration.', 'EffectBasePoints_3': 4, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_2': 67108864, 'SpellClassSet': 7, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 11568, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -2080,10 +2118,12 @@ starsurge_200333 = spell(
     mana_cost_pct=5,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=127.80432, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=104.6717, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=1957,
-    notes='NEW (druid-rework BALANCE §5 "Starsurge"): scales with level (PLAN B3), learn level 22, level-60 value 200 -> ppl 200/60; on the Cooldown Haste allow list (A3); shares icon 1957 with Genesis talent (spell vs talent, accepted 12.14); a projectile at Speed 35 (Ice Lance is 38) with Ascension\'s own Starsurge missile/hand-flare/impact art, SpellVisualID_1 90018 (patch_druid_vfx_models.py), replacing the borrowed Starfire visual 1264. Potency system P5 (druid pass): converted to sp_potency=74.4 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.5) spell_bonus_data override is retired in favor of the generated DBC coefficient. Effect 1 sp_potency 74.4 -> 111.6 (2026-11-15, balance on the Normal-tier kits, user ruling: Starsurge +50%). Effect 1 sp_potency 111.6 -> 156.24 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Balance option A, Starsurge +40%) Effect 1 sp_potency 156.24 -> 127.80432 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818).',
+    notes='NEW (druid-rework BALANCE §5 "Starsurge"): scales with level (PLAN B3), learn level 22, level-60 value 200 -> ppl 200/60; on the Cooldown Haste allow list (A3); shares icon 1957 with Genesis talent (spell vs talent, accepted 12.14); a projectile at Speed 35 (Ice Lance is 38) with Ascension\'s own Starsurge missile/hand-flare/impact art, SpellVisualID_1 90018 (patch_druid_vfx_models.py), replacing the borrowed Starfire visual 1264. Potency system P5 (druid pass): converted to sp_potency=74.4 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.5) spell_bonus_data override is retired in favor of the generated DBC coefficient. Effect 1 sp_potency 74.4 -> 111.6 (2026-11-15, balance on the Normal-tier kits, user ruling: Starsurge +50%). Effect 1 sp_potency 111.6 -> 156.24 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Balance option A, Starsurge +40%) Effect 1 sp_potency 156.24 -> 127.80432 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818).'
+          ' sp_potency 127.80432 -> 115.0239 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell).'
+          ' Effect 1 sp_potency 115.0239 -> 104.6717 (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91, a Balance-only spell).',
     raw_overrides={'BaseLevel': 22, 'SpellLevel': 22, 'MaxLevel': 80, 'FacingCasterFlags': 1, 'PreventionType': 1, 'DefenseType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': STARSURGE, 'ShapeshiftMask': 1073741824, 'SpellVisualID_1': 90018, 'Speed': 35.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a surge of stellar energies at the target, dealing {pot1} Astral damage.', 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 trained_by(starsurge_200333, trainer_id=216, req_level=22, money_cost=3000)

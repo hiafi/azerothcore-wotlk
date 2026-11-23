@@ -133,8 +133,10 @@ item("strat_grimgore_noose", base=13403, ladder=VANILLA_DUNGEON,
      primary="Spirit (Solo)", secondary="Versatility (Solo)",
      sockets=(Socket.RED,), socket_bonus=BONUS_CRIT_4)
 # New: stats only.
+# Intellect, was Spirit (2026-11-21, level60-stat-curve healer mana pass, user ruling: half the Spirit-only leather
+# caster drops become Intellect, at least one Spirit piece kept per slot).
 item("strat_freeze_tag_mittens", name="Freeze Tag Mittens", like=18309, ilvl=59, bonding=BOP,
-     ladder=VANILLA_DUNGEON, primary="Spirit (Solo)", secondary="Haste (Solo)")
+     ladder=VANILLA_DUNGEON, primary="Intellect (Solo)", secondary="Haste (Solo)")
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Malor the Zealous (no stock item of his own: item level 60)
@@ -172,8 +174,10 @@ item("strat_dianas_pearl_necklace", base=22403, ladder=VANILLA_DUNGEON,
      primary=None, secondary="Haste/Versatility", primary_share=0)
 item("strat_mantle_of_the_scarlet_crusade", base=22405, ladder=VANILLA_DUNGEON,
      primary="Spirit (Solo)", secondary="Crit (Solo)")
+# Intellect, was Spirit (2026-11-21, level60-stat-curve healer mana pass, user ruling: half the Spirit-only leather
+# caster drops become Intellect, at least one Spirit piece kept per slot).
 item("strat_helm_of_the_new_moon", base=22407, ladder=VANILLA_DUNGEON,
-     primary="Spirit (Solo)", secondary="Haste (Solo)",
+     primary="Intellect (Solo)", secondary="Haste (Solo)",
      sockets=(Socket.RED,), socket_bonus=BONUS_HASTE_4)
 # New: the wave's first thrown weapon, a rogue item (ruling 4).
 item("strat_scarlet_throwing_axes", name="Scarlet Throwing Axes", like=28972, ilvl=61, bonding=BOP,
@@ -312,8 +316,10 @@ item("strat_slavedrivers_cane", base=13372, ladder=VANILLA_DUNGEON,
 item("strat_band_of_flesh", base=13373, ladder=VANILLA_DUNGEON,
      primary=None, secondary="Crit/Haste", primary_share=0)
 # Was cloth: now leather (the list's "Leather (was cloth)"). The display stays the stock one.
+# Intellect, was Spirit (2026-11-21, level60-stat-curve healer mana pass, user ruling: half the Spirit-only leather
+# caster drops become Intellect, at least one Spirit piece kept per slot).
 item("strat_soulstealer_mantle", base=13374, ladder=VANILLA_DUNGEON,
-     primary="Spirit (Solo)", secondary="Mastery (Solo)",
+     primary="Intellect (Solo)", secondary="Mastery (Solo)",
      sockets=(Socket.RED,), socket_bonus=BONUS_HASTE_4,
      subclass=ARMOR_SUBCLASS_LEATHER, Material=MATERIAL_LEATHER)
 # Strength tank shield; keeps its damage on block (17495).

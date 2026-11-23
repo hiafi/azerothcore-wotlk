@@ -123,8 +123,10 @@ item("dm_cookies_tenderizer", base=5197, ladder=VANILLA_DUNGEON,
      sockets=(Socket.RED,), socket_bonus=BONUS_HASTE_4)
 item("dm_cookies_stirring_rod", base=5198, ladder=VANILLA_DUNGEON,
      primary="Intellect (Solo)", secondary="Crit (Solo)")
+# Intellect, was Spirit (2026-11-21, level60-stat-curve healer mana pass, user ruling: half the Spirit-only leather
+# caster drops become Intellect, at least one Spirit piece kept per slot).
 item("dm_rubbery_helmet", name="Rubbery Helmet", like=9420, ilvl=21, bonding=BOP, ladder=VANILLA_DUNGEON,
-     primary="Spirit (Solo)", secondary="Mastery (Solo)")
+     primary="Intellect (Solo)", secondary="Mastery (Solo)")
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Captain Greenskin (stock item level 22-23)

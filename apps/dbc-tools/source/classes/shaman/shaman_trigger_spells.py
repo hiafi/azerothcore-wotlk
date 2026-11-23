@@ -177,6 +177,8 @@ def _thundering_surge_clause(rank):
 
 _ANTICIPATION_JUMPS_CLAUSE = (f' While Rockbiter is active, your Chain Lightning jumps to {ANTICIPATION_CL_JUMPS["value"]} '
                               f'additional targets.')
+# level60-stat-curve S9 (2026-11-21, user ruling 6): the Rockbiter parry clause, rank value from each rank's eff3 DUMMY.
+_ANTICIPATION_PARRY_CLAUSE = ' While Rockbiter is active, your parry chance is increased by $s3%.'
 
 
 def _aura(aura, base_points=0, misc_value=0, **kw):
@@ -476,11 +478,12 @@ fire_nova_8349 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=104.1, potency_kind='direct', implicit_target_a=87, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=187.38, potency_kind='direct', implicit_target_a=87, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=33,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 12); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
-          'Potency system P7-Shaman: converted to sp_potency=242.2 (shaman-potency-proposals.txt, mismatched row). Cast by the player: spell_sha_fire_nova::HandleDummy (spell_shaman.cpp) runs `caster->CastSpell(totem, ..., true)` on the Fire Nova player spell (1535) with the totem only as the target, not the caster, and with no custom base points - so this is an ordinary player-attributed potency conversion, not a D2 script-bp case.',
+          'Potency system P7-Shaman: converted to sp_potency=242.2 (shaman-potency-proposals.txt, mismatched row). Cast by the player: spell_sha_fire_nova::HandleDummy (spell_shaman.cpp) runs `caster->CastSpell(totem, ..., true)` on the Fire Nova player spell (1535) with the totem only as the target, not the caster, and with no custom base points - so this is an ordinary player-attributed potency conversion, not a D2 script-bp case.'
+          ' Effect 1 sp_potency 104.1 -> 187.38 (104.1 x 1.8) (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Enhancement, Fire Nova x1.8; shared with Elemental, whose packs use it too).',
     raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 1073741824, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 12, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Causes the shaman's active Fire totem to emit a wave of flames, inflicting {pot1} Fire damage to enemies within $a1 yards of the totem.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 2147745792, 'SpellClassSet': 11, 'SpellLevel': 12, 'SpellVisualID_1': 14908, 'Targets': 64},
 )
 
@@ -699,9 +702,10 @@ lightning_shield_arc_202445 = _orb_copy(
     'first, in line of sight from it. STATIC_SHOCK_ARC_PCT 55 (Revision 3; was 85).',
 )
 lightning_shield_chain_orb_202446 = _orb_copy(
-    202446, 100, 'Anticipation\'s Chain Lightning orb',
+    202446, 200, 'Anticipation\'s Chain Lightning orb',
     'Under Rockbiter with Anticipation rank 3 (the capstone) and the shaman\'s own Lightning Shield up, spell_sha_stoneskin_grant '
-    'casts it at each enemy the shaman\'s Chain Lightning hits whose victim is the shaman.',
+    'casts it at each enemy the shaman\'s Chain Lightning hits whose victim is the shaman. 100 % -> 150 % (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Enhancement '
+    'tanks, the tank-only chain orb copy 150 %). 150 % -> 200 % (2026-11-22, level60-stat-curve round S19: AoE rule A, user ruling: Enhancement shield tank 92% -> about 101%).',
 )
 
 lightning_shield_324 = spell(
@@ -2369,31 +2373,34 @@ lightning_overload_30679 = _talent(
 
 mental_quickness_30812 = _talent(
     30812, 'Mental Quickness', 'Rank 1',
-    [_aura(AuraType.MOD_SPELL_DAMAGE_OF_ATTACK_POWER, 24, 126), _aura(AuraType.MOD_SPELL_HEALING_OF_ATTACK_POWER, 24, 127)], 2022,
-    _cap('Increases your spell power by 25% of your attack power.',
+    [_aura(AuraType.MOD_SPELL_DAMAGE_OF_ATTACK_POWER, 16, 126), _aura(AuraType.MOD_SPELL_HEALING_OF_ATTACK_POWER, 16, 127)], 2022,
+    _cap('Increases your spell power by 17% of your attack power.',
           'Your direct melee abilities increase the damage of your spells by 10% for 6 sec. Your damaging spells increase the damage of your melee abilities by 5% for 6 sec. These effects cannot be active at the same time.', last=False),
     EffectMiscValueB_1=1,
-    notes='S3a A2: spell power 25% of attack power (aura 237 non-physical, aura 238 healing). The stock mana-cost clause is gone.',
+    notes='S3a A2: spell power 25% of attack power (aura 237 non-physical, aura 238 healing). The stock mana-cost clause is gone.'
+          ' Spell power 25% -> 17% of attack power (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Enhancement, Mental Quickness 25/50/75% -> 17/33/50%).',
 )
 
 
 mental_quickness_30813 = _talent(
     30813, 'Mental Quickness', 'Rank 2',
-    [_aura(AuraType.MOD_SPELL_DAMAGE_OF_ATTACK_POWER, 49, 126), _aura(AuraType.MOD_SPELL_HEALING_OF_ATTACK_POWER, 49, 127)], 2022,
-    _cap('Increases your spell power by 50% of your attack power.',
+    [_aura(AuraType.MOD_SPELL_DAMAGE_OF_ATTACK_POWER, 32, 126), _aura(AuraType.MOD_SPELL_HEALING_OF_ATTACK_POWER, 32, 127)], 2022,
+    _cap('Increases your spell power by 33% of your attack power.',
           'Your direct melee abilities increase the damage of your spells by 10% for 6 sec. Your damaging spells increase the damage of your melee abilities by 5% for 6 sec. These effects cannot be active at the same time.', last=False),
     EffectMiscValueB_1=1,
-    notes='S3a A2: spell power 50% of attack power (aura 237 non-physical, aura 238 healing). The stock mana-cost clause is gone.',
+    notes='S3a A2: spell power 50% of attack power (aura 237 non-physical, aura 238 healing). The stock mana-cost clause is gone.'
+          ' Spell power 50% -> 33% of attack power (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Enhancement, Mental Quickness 25/50/75% -> 17/33/50%).',
 )
 
 
 mental_quickness_30814 = _talent(
     30814, 'Mental Quickness', 'Rank 3',
-    [_aura(AuraType.MOD_SPELL_DAMAGE_OF_ATTACK_POWER, 74, 126), _aura(AuraType.MOD_SPELL_HEALING_OF_ATTACK_POWER, 74, 127), _dummy(0)], 2022,
-    _cap('Increases your spell power by 75% of your attack power.',
+    [_aura(AuraType.MOD_SPELL_DAMAGE_OF_ATTACK_POWER, 49, 126), _aura(AuraType.MOD_SPELL_HEALING_OF_ATTACK_POWER, 49, 127), _dummy(0)], 2022,
+    _cap('Increases your spell power by 50% of your attack power.',
           'Your direct melee abilities increase the damage of your spells by 10% for 6 sec. Your damaging spells increase the damage of your melee abilities by 5% for 6 sec. These effects cannot be active at the same time.', last=True),
     EffectMiscValueB_1=1, ProcChance=100, ProcTypeMask=0x10010,
-    notes="S3a A2: spell power 75% of attack power (aura 237 non-physical, aura 238 healing). The stock mana-cost clause is gone. Rank 3 eff3 DUMMY carrier for spell_sha_enh_mental_quickness (spell_proc 30814: melee spell / magic damage hits, PROC_ATTR_TRIGGERED_CAN_PROC because Stormstrike's hits are the triggered 32175 / 32176; the script dedupes once per cast).",
+    notes="S3a A2: spell power 75% of attack power (aura 237 non-physical, aura 238 healing). The stock mana-cost clause is gone. Rank 3 eff3 DUMMY carrier for spell_sha_enh_mental_quickness (spell_proc 30814: melee spell / magic damage hits, PROC_ATTR_TRIGGERED_CAN_PROC because Stormstrike's hits are the triggered 32175 / 32176; the script dedupes once per cast)."
+          ' Spell power 75% -> 50% of attack power (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Enhancement, Mental Quickness 25/50/75% -> 17/33/50%).',
 )
 
 
@@ -2625,7 +2632,7 @@ lava_flows_51480 = _talent(
     51480, 'Lava Flows', 'Rank 1',
     [_mod(SpellModOp.CRIT_DAMAGE_BONUS, 7)], 3087,
     _desc('Increases the critical strike damage bonus of your Lava Burst, Flame Shock and Lava Lash by 8%. Casting Flame Shock or Lava Burst increases your spell and melee haste by 2% for 12 sec.',
-          "Lava Surge. Your Flame Shock's periodic damage has a 15% chance to reset the cooldown of your Lava Burst and make your next Lava Burst within 15 sec instant. This effect can only occur once every 6 sec."),
+          "Lava Surge. Periodic damage from your most recently cast Flame Shock has an 11% chance to reset the cooldown of your Lava Burst and make your next Lava Burst within 15 sec instant."),
     masks={1: (_FLAME_SHOCK, _LAVA_BURST, _LAVA_LASH)},
     notes='S1a A2: crit damage bonus +8% on Flame Shock, Lava Burst and Lava Lash (the Lava Lash clause is kept for the classless realm, d2 b2 is a target here, not an identity). The Sundering / dispel clause and the latent EffectBasePoints_3 twin are gone; the haste is Shaman::LavaFlowsHasteSpell.',
 )
@@ -2635,7 +2642,7 @@ lava_flows_51481 = _talent(
     51481, 'Lava Flows', 'Rank 2',
     [_mod(SpellModOp.CRIT_DAMAGE_BONUS, 15)], 3087,
     _desc('Increases the critical strike damage bonus of your Lava Burst, Flame Shock and Lava Lash by 16%. Casting Flame Shock or Lava Burst increases your spell and melee haste by 4% for 12 sec.',
-          "Lava Surge. Your Flame Shock's periodic damage has a 15% chance to reset the cooldown of your Lava Burst and make your next Lava Burst within 15 sec instant. This effect can only occur once every 6 sec."),
+          "Lava Surge. Periodic damage from your most recently cast Flame Shock has an 11% chance to reset the cooldown of your Lava Burst and make your next Lava Burst within 15 sec instant."),
     masks={1: (_FLAME_SHOCK, _LAVA_BURST, _LAVA_LASH)},
     notes='S1a A2: see lava_flows_51480.',
 )
@@ -2645,10 +2652,10 @@ lava_flows_51482 = _talent(
     51482, 'Lava Flows', 'Rank 3',
     [_mod(SpellModOp.CRIT_DAMAGE_BONUS, 24), _dummy(0)], 3087,
     _desc('Increases the critical strike damage bonus of your Lava Burst, Flame Shock and Lava Lash by 25%. Casting Flame Shock or Lava Burst increases your spell and melee haste by 6% for 12 sec.',
-          "Lava Surge. Your Flame Shock's periodic damage has a 15% chance to reset the cooldown of your Lava Burst and make your next Lava Burst within 15 sec instant. This effect can only occur once every 6 sec.",
+          "Lava Surge. Periodic damage from your most recently cast Flame Shock has an 11% chance to reset the cooldown of your Lava Burst and make your next Lava Burst within 15 sec instant.",
           last=True),
-    masks={1: (_FLAME_SHOCK, _LAVA_BURST, _LAVA_LASH)}, ProcTypeMask=_PROC_DONE_PERIODIC, ProcChance=15,
-    notes='S1a A2: rank 3 (Lava Surge). eff2 DUMMY is the proc carrier; spell_proc 51482 is DONE_PERIODIC on Flame Shock, 15% native (Proc Chance applies), ICD 6000; spell_sha_ele_lava_surge.',
+    masks={1: (_FLAME_SHOCK, _LAVA_BURST, _LAVA_LASH)}, ProcTypeMask=_PROC_DONE_PERIODIC, ProcChance=11,
+    notes='S1a A2: rank 3 (Lava Surge). eff2 DUMMY is the proc carrier; spell_proc 51482 is DONE_PERIODIC on Flame Shock, 11% native (Proc Chance applies), no ICD; spell_sha_ele_lava_surge rolls only the most recently cast Flame Shock (S22 2026-11-22: was 15% with a 6 s ICD on every Flame Shock).',
 )
 
 
@@ -3292,7 +3299,10 @@ stoneclaw_totem_absorb_55328 = spell(
     range_yards=50000.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.SCRIPT_EFFECT, base_potency=50.0, potency_kind='absorb', implicit_target_a=27),
+        # LS5b ruling 4 (level60-stat-curve, 2026-11-20): base_potency 50 -> sp_potency 50; spell_sha_stoneclaw_totem
+        # adds EffectBonusMultiplier_1 x the owner's healing power (the SCRIPT_EFFECT value itself gets no engine
+        # bonus).
+        Effect(type=EffectType.SCRIPT_EFFECT, sp_potency=50.0, potency_kind='absorb', implicit_target_a=27),
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=689,
@@ -3622,7 +3632,7 @@ astral_shift_51479 = _talent(
 
 # =====================================================================================================================
 # S1a A2: spell_proc rows and script bindings for the Elemental rank spells (WP brief class table, B2's constraints:
-# the scripted rolls proc at 100%, every proc talent has a DUMMY effect, Lava Surge keeps the native 15% + ICD 6 s).
+# the scripted rolls proc at 100%, every proc talent has a DUMMY effect, Lava Surge keeps a native 11%, no ICD).
 # Every row with a done-spell / periodic ProcFlags carries SpellPhaseMask HIT (L9).
 # =====================================================================================================================
 
@@ -3681,11 +3691,13 @@ procs_on(
 )
 scripted_by(29000, 'spell_sha_ele_reach_capstone')
 
-# Lava Surge (Lava Flows rank 3): Flame Shock periodic damage, 15% native, ICD 6 s.
+# Lava Surge (Lava Flows rank 3): Flame Shock periodic damage, 11% native, no ICD (S22 2026-11-22, ICD report
+# candidate 7 option B: was 15% with a 6 s ICD). Only the most recently cast Flame Shock rolls (the script's CheckProc),
+# so dotting a pack does not multiply the attempts.
 procs_on(
     51482, proc_flags=_PROC_DONE_PERIODIC, family_name=11, family_mask=(_FLAME_SHOCK, 0, 0),
-    spell_type_mask=_PROC_TYPE_DAMAGE, spell_phase_mask=_PROC_PHASE_HIT, hit_mask=_PROC_HIT_NORMAL_CRIT, chance=15,
-    cooldown_ms=6000,
+    spell_type_mask=_PROC_TYPE_DAMAGE, spell_phase_mask=_PROC_PHASE_HIT, hit_mask=_PROC_HIT_NORMAL_CRIT, chance=11,
+    cooldown_ms=0,
 )
 scripted_by(51482, 'spell_sha_ele_lava_surge')
 
@@ -3817,11 +3829,12 @@ toughness_16252 = _talent(
 
 anticipation_16254 = _talent(
     16254, 'Anticipation', 'Rank 1',
-    [_aura(AuraType.MOD_DODGE_PERCENT, 0), _aura(234, -21, 3)], 229,
+    [_aura(AuraType.MOD_DODGE_PERCENT, 0), _aura(234, -21, 3), _dummy(4)], 229,
     _cap('Increases your chance to dodge by 1% and reduces the duration of Disarm effects used against you by 20%. Does not stack with other Disarm duration reducing effects.'
-         + _ANTICIPATION_JUMPS_CLAUSE,
+         + _ANTICIPATION_JUMPS_CLAUSE + _ANTICIPATION_PARRY_CLAUSE,
          _ANTICIPATION_CAPSTONE, last=False),
-    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 3 makes spell_sha_stoneskin_grant build the Chain Lightning stone shell 202441. S3a A2: pulled stock rank, rewritten. Dodge +1% (aura 49), disarm duration -20% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).' + S1_NOTE + 'Rockbiter clauses: any rank, Chain Lightning jumps to 2 more targets (hidden child 202447, Shaman::SyncRockbiterChildren); the capstone adds the Chain Lightning orb 202446 on each hit enemy attacking the shaman (spell_sha_stoneskin_grant) and the shell 202441 drops 6 -> 3 potency.',
+    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 3 makes spell_sha_stoneskin_grant build the Chain Lightning stone shell 202441. S3a A2: pulled stock rank, rewritten. Dodge +1% (aura 49), disarm duration -20% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).' + S1_NOTE + 'Rockbiter clauses: any rank, Chain Lightning jumps to 2 more targets (hidden child 202447, Shaman::SyncRockbiterChildren); the capstone adds the Chain Lightning orb 202446 on each hit enemy attacking the shaman (spell_sha_stoneskin_grant) and the shell 202441 drops 6 -> 3 potency.'
+          ' Rockbiter parry clause (2026-11-21, level60-stat-curve round S9, user ruling 6: Enhancement tank survival): eff3 DUMMY 4 = +5% parry while Rockbiter is active; Shaman::SyncRockbiterChildren reads this value and sets it on the Anticipation child 202447 (its MOD_PARRY_PERCENT effect, no diminishing returns). The clause sits in the rank text above the capstone block.',
 )
 
 
@@ -3830,7 +3843,7 @@ thundering_strikes_16255 = _talent(
     [_aura(AuraType.MOD_CRIT_PCT, 0)], 25,
     _cap('Increases your chance to get a critical strike with all spells and attacks by 1%.'
          + _thundering_surge_clause(1),
-          'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=False),
+          'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 3 sec.', last=False),
     notes='S3a A2: pulled stock rank, rewritten. All crit +1% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +24 / 48 / 75 % and its mana cost is refunded (surge 40 / 80 / 125 -> 24 / 48 / 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
 )
 
@@ -3855,21 +3868,23 @@ spirit_weapons_16268 = _talent(
 
 anticipation_16271 = _talent(
     16271, 'Anticipation', 'Rank 2',
-    [_aura(AuraType.MOD_DODGE_PERCENT, 1), _aura(234, -36, 3)], 229,
+    [_aura(AuraType.MOD_DODGE_PERCENT, 1), _aura(234, -36, 3), _dummy(9)], 229,
     _cap('Increases your chance to dodge by 2% and reduces the duration of Disarm effects used against you by 35%. Does not stack with other Disarm duration reducing effects.'
-         + _ANTICIPATION_JUMPS_CLAUSE,
+         + _ANTICIPATION_JUMPS_CLAUSE + _ANTICIPATION_PARRY_CLAUSE,
          _ANTICIPATION_CAPSTONE, last=False),
-    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 3 makes spell_sha_stoneskin_grant build the Chain Lightning stone shell 202441. S3a A2: pulled stock rank, rewritten. Dodge +2% (aura 49), disarm duration -35% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).' + S1_NOTE + 'Rockbiter clauses: any rank, Chain Lightning jumps to 2 more targets (hidden child 202447, Shaman::SyncRockbiterChildren); the capstone adds the Chain Lightning orb 202446 on each hit enemy attacking the shaman (spell_sha_stoneskin_grant) and the shell 202441 drops 6 -> 3 potency.',
+    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 3 makes spell_sha_stoneskin_grant build the Chain Lightning stone shell 202441. S3a A2: pulled stock rank, rewritten. Dodge +2% (aura 49), disarm duration -35% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).' + S1_NOTE + 'Rockbiter clauses: any rank, Chain Lightning jumps to 2 more targets (hidden child 202447, Shaman::SyncRockbiterChildren); the capstone adds the Chain Lightning orb 202446 on each hit enemy attacking the shaman (spell_sha_stoneskin_grant) and the shell 202441 drops 6 -> 3 potency.'
+          ' Rockbiter parry clause (2026-11-21, level60-stat-curve round S9, user ruling 6: Enhancement tank survival): eff3 DUMMY 9 = +10% parry while Rockbiter is active; Shaman::SyncRockbiterChildren reads this value and sets it on the Anticipation child 202447 (its MOD_PARRY_PERCENT effect, no diminishing returns). The clause sits in the rank text above the capstone block.',
 )
 
 
 anticipation_16272 = _talent(
     16272, 'Anticipation', 'Rank 3',
-    [_aura(AuraType.MOD_DODGE_PERCENT, 2), _aura(234, -51, 3)], 229,
+    [_aura(AuraType.MOD_DODGE_PERCENT, 2), _aura(234, -51, 3), _dummy(14)], 229,
     _cap('Increases your chance to dodge by 3% and reduces the duration of Disarm effects used against you by 50%. Does not stack with other Disarm duration reducing effects.'
-         + _ANTICIPATION_JUMPS_CLAUSE,
+         + _ANTICIPATION_JUMPS_CLAUSE + _ANTICIPATION_PARRY_CLAUSE,
          _ANTICIPATION_CAPSTONE, last=True),
-    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 3 makes spell_sha_stoneskin_grant build the Chain Lightning stone shell 202441. S3a A2: pulled stock rank, rewritten. Dodge +3% (aura 49), disarm duration -50% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).' + S1_NOTE + 'Rockbiter clauses: any rank, Chain Lightning jumps to 2 more targets (hidden child 202447, Shaman::SyncRockbiterChildren); the capstone adds the Chain Lightning orb 202446 on each hit enemy attacking the shaman (spell_sha_stoneskin_grant) and the shell 202441 drops 6 -> 3 potency.',
+    notes='Capstone clause added (2026-11-01, DPS balance pass 1031 round T1, user ruling): rank 3 makes spell_sha_stoneskin_grant build the Chain Lightning stone shell 202441. S3a A2: pulled stock rank, rewritten. Dodge +3% (aura 49), disarm duration -50% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).' + S1_NOTE + 'Rockbiter clauses: any rank, Chain Lightning jumps to 2 more targets (hidden child 202447, Shaman::SyncRockbiterChildren); the capstone adds the Chain Lightning orb 202446 on each hit enemy attacking the shaman (spell_sha_stoneskin_grant) and the shell 202441 drops 6 -> 3 potency.'
+          ' Rockbiter parry clause (2026-11-21, level60-stat-curve round S9, user ruling 6: Enhancement tank survival): eff3 DUMMY 14 = +15% parry while Rockbiter is active; Shaman::SyncRockbiterChildren reads this value and sets it on the Anticipation child 202447 (its MOD_PARRY_PERCENT effect, no diminishing returns). The clause sits in the rank text above the capstone block.',
 )
 
 
@@ -3896,7 +3911,7 @@ thundering_strikes_16302 = _talent(
     [_aura(AuraType.MOD_CRIT_PCT, 1)], 25,
     _cap('Increases your chance to get a critical strike with all spells and attacks by 2%.'
          + _thundering_surge_clause(2),
-          'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=False),
+          'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 3 sec.', last=False),
     notes='S3a A2: pulled stock rank, rewritten. All crit +2% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +24 / 48 / 75 % and its mana cost is refunded (surge 40 / 80 / 125 -> 24 / 48 / 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
 )
 
@@ -3906,9 +3921,9 @@ thundering_strikes_16303 = _talent(
     [_aura(AuraType.MOD_CRIT_PCT, 2), Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=202397)], 25,
     _cap('Increases your chance to get a critical strike with all spells and attacks by 3%.'
          + _thundering_surge_clause(3),
-          'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=True),
+          'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 3 sec.', last=True),
     ProcChance=10, ProcTypeMask=0x14000,
-    notes='S3a A2: pulled stock rank, rewritten. All crit +3% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair). Rank 3 eff2 PROC_TRIGGER_SPELL -> 202397 (Agility = level, A3); spell_proc 16303: HIT phase, SpellTypeMask damage|heal, 10%, ICD 6000, once per cast (spell_sha_enh_thundering_strikes). Ranks 4 and 5 (16304/16305) leave the talent.' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +24 / 48 / 75 % and its mana cost is refunded (surge 40 / 80 / 125 -> 24 / 48 / 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
+    notes='S3a A2: pulled stock rank, rewritten. All crit +3% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair). Rank 3 eff2 PROC_TRIGGER_SPELL -> 202397 (Agility = level, A3); spell_proc 16303: HIT phase, SpellTypeMask damage|heal, 10%, ICD 3000 (S22: was 6000), once per cast (spell_sha_enh_thundering_strikes). Ranks 4 and 5 (16304/16305) leave the talent.' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +24 / 48 / 75 % and its mana cost is refunded (surge 40 / 80 / 125 -> 24 / 48 / 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
 )
 
 
@@ -4200,13 +4215,13 @@ procs_on(-30816, proc_flags=0x00800000, chance=20)
 # SpellTypeMask DAMAGE | HEAL: SpellMgr requires a SpellPhaseMask for done-spell flags (0x4000 / 0x10000), and a CAST-phase event
 # carries MASK_ALL (no damage / heal is known yet), so the type filter only works at HIT, where Unit::ProcSkillsAndAuras derives
 # DAMAGE or HEAL from the real result (imbue swaps, totems, shields, Ghost Wolf, Purge and item spells are NO_DMG_HEAL and never
-# roll). HIT fires per target (and not for misses / immunes), and the 6 s cooldown only stops the rolls after a success, so the
+# roll). HIT fires per target (and not for misses / immunes), and the 3 s cooldown only stops the rolls after a success, so the
 # row alone would roll once per target hit (S3a code review m1: Chain Lightning ~27%, a 5-target Fire Nova ~41%). The doc says
 # once per cast: spell_sha_enh_thundering_strikes (bound on 16303) claims the cast in CheckProc, before the chance roll, so only
 # the first target hit of each cast rolls.
 procs_on(
-    16303, proc_flags=0x14000, spell_type_mask=_PROC_TYPE_DAMAGE | 0x2, spell_phase_mask=_PROC_PHASE_HIT, chance=10, cooldown_ms=6000,
-)
+    16303, proc_flags=0x14000, spell_type_mask=_PROC_TYPE_DAMAGE | 0x2, spell_phase_mask=_PROC_PHASE_HIT, chance=10, cooldown_ms=3000,
+)  # S22 2026-11-22: ICD 6 -> 3 s (ICD report, Thundering Strikes option A)
 
 # Elemental Weapons capstone (rank 3 only): a Lava Lash (d2 b2, melee) or Lava Burst (d1 b12, magic) damage hit.
 procs_on(

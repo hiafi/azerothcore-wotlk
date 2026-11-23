@@ -96,7 +96,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from lib import build, dbcfmt, state  # noqa: E402
+from lib import build, dbcfmt, potency, state  # noqa: E402
 from lib.test_hunter_pet_data import check_equipped_item_class, package_data  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -1385,6 +1385,12 @@ def _potency_of(entry: dict, effect: int, kind: str) -> float | None:
 # weapon scaling WSH2 (user ruling 2026-11-17): every pet damage potency takes Beast Mastery's Normal trim, on top of
 # the rulings below. Pinned here independently of _pet_kits.py's PET_WSH2_TRIM.
 WSH2_PET_TRIM = 0.694
+# level60-stat-curve S9 (user ruling 2026-11-21): BM x0.90 on its pet abilities (Lunge, Rip Throat, the Bite basic
+# shared by every spec; Stomp is not in these tables), on top of WSH2.
+S9_PET_TRIM = {17253: 0.9, 201720: 0.9, 201721: 0.9}
+# level60-stat-curve S11 (user ruling 2026-11-21): BM x0.96 on its BM-only abilities (Lunge, Rip Throat; Stomp and
+# Kill Command are not in these tables), on top of S9. The shared Bite basic is unchanged.
+S11_PET_TRIM = {201720: 0.96, 201721: 0.96}
 
 
 def check_f1_potency(entries_by_id: dict[int, dict], table=F1_POTENCY, extra_scale: float = 1.0,
@@ -1401,10 +1407,13 @@ def check_f1_potency(entries_by_id: dict[int, dict], table=F1_POTENCY, extra_sca
         scale = extra_scale * (id_scales or {}).get(spell_id, 1.0)
         for effect, authored, slot, kind in rows:
             got = _potency_of(entry, effect, kind)
-            want = authored * F1_SCALE[slot] * scale * WSH2_PET_TRIM
+            want = (authored * F1_SCALE[slot] * scale * WSH2_PET_TRIM * S9_PET_TRIM.get(spell_id, 1.0)
+                    * S11_PET_TRIM.get(spell_id, 1.0))
             if got is None or abs(got - want) > 0.01:
                 bad.append(f"{spell_id} eff{effect}: potency ({kind}) {got}, expected {authored} x {F1_SCALE[slot]}"
-                           f"{f' x {round(scale, 4)}' if scale != 1.0 else ''} x {WSH2_PET_TRIM} (WSH2) = "
+                           f"{f' x {round(scale, 4)}' if scale != 1.0 else ''} x {WSH2_PET_TRIM} (WSH2)"
+                           f"{f' x {S9_PET_TRIM[spell_id]} (S9)' if spell_id in S9_PET_TRIM else ''}"
+                           f"{f' x {S11_PET_TRIM[spell_id]} (S11)' if spell_id in S11_PET_TRIM else ''} = "
                            f"{round(want, 4)}")
     return bad
 
@@ -1448,10 +1457,12 @@ def check_ruling_23_potency(entries_by_id: dict[int, dict], table=R23_POTENCY) -
             continue
         for effect, current, kind, scale in rows:
             got = _potency_of(entry, effect, kind)
-            want = current * scale * WSH2_PET_TRIM
+            want = current * scale * WSH2_PET_TRIM * S9_PET_TRIM.get(spell_id, 1.0) * S11_PET_TRIM.get(spell_id, 1.0)
             if got is None or abs(got - want) > 0.01:
                 bad.append(f"{spell_id} eff{effect}: potency ({kind}) {got}, expected {current} x {scale} x "
-                           f"{WSH2_PET_TRIM} (WSH2) = "
+                           f"{WSH2_PET_TRIM} (WSH2)"
+                           f"{f' x {S9_PET_TRIM[spell_id]} (S9)' if spell_id in S9_PET_TRIM else ''}"
+                           f"{f' x {S11_PET_TRIM[spell_id]} (S11)' if spell_id in S11_PET_TRIM else ''} = "
                            f"{round(want, 4)}")
     return bad
 
@@ -2134,9 +2145,11 @@ class HunterBmDataTest(unittest.TestCase):
         package = package_data()["package"]
         bonus = [r for r in package.spell_bonus_data if int(r["entry"]) == 56641]
         self.assertEqual(len(bonus), 1)
-        # WSH2: ap_potency 36.726 (2026-11-17 Normal trim x0.694 on 52.92; BAL1 2026-11-15: was 44.1; pass 1031: was 49;
-        # TUNE1 70, was 100), so the coefficient is 0.36726 * (1.5 / 3.5)
-        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.36726 * 1.5 / 3.5, places=4)
+        # S9: ap_potency 33.0534 (2026-11-21 BM / MM x0.90 on 36.726; WSH2 2026-11-17 Normal trim x0.694 on 52.92;
+        # BAL1 2026-11-15: was 44.1; pass 1031: was 49; TUNE1 70, was 100), so the coefficient is
+        # 0.330534 * (1.5 / 3.5), x b / R since the potency rebase (level60-stat-curve HANDOFF 1.9, LS5b)
+        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.330534 * 1.5 / 3.5 * potency.AP_COEF_SCALE / potency.DEFAULT_R,
+                               places=4)
 
     def test_s1b_ids_have_equipped_item_class_minus_one(self):
         rows = package_data()["rows_by_id"]
@@ -2305,7 +2318,8 @@ class HunterBmDataTest(unittest.TestCase):
         package = package_data()["package"]
         bonus = {int(r["entry"]): r["ap_bonus"] for r in package.spell_bonus_data}
         # ruling 23b: x0.80 on top of the ruling 19 numbers; the reference Rip Throat took ruling 24's Ferocity x1.07
-        rip_throat = 552.5 * R24_FEROCITY_ST_SCALE
+        # S9: BM x0.90 on Rip Throat; S11: x0.96 on top
+        rip_throat = 552.5 * R24_FEROCITY_ST_SCALE * S9_PET_TRIM[201721] * S11_PET_TRIM[201721]
         self.assertAlmostEqual(bonus[201726] / bonus[201721], 420.0 * R23B_TENACITY_SCALE / rip_throat, places=6)
         self.assertAlmostEqual(bonus[201727] / bonus[201721], 715.0 * R23B_TENACITY_SCALE / rip_throat, places=6)
         swipe = {r["ScriptName"] for r in package.spell_script_names if int(r["spell_id"]) == 201726}

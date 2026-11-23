@@ -300,8 +300,10 @@ sweeping_strikes_arms_204493 = _arms(
     'is the Arms AoE engine; the C++ base is SWEEPING_STRIKES_BASE_PCT in WarriorMechanics.cpp); 55% -> 70% '
     '(2026-11-16, AoE round 3 follow-up 2 on the Normal-tier kits, user ruling: Arms option A, the pack build was '
     'about 250-400 under 2,500 at 5 targets); cooldown_ms 20000 -> 15000 (2026-11-16, AoE round 3 follow-up 3 on '
-    'the Normal-tier kits, user ruling: Arms option C, the pack build stayed about 400 under 2,500 at 5 targets).',
-    _raw('For 10 sec, your single-target melee abilities also strike up to 4 additional nearby enemies for 70% of '
+    'the Normal-tier kits, user ruling: Arms option C, the pack build stayed about 400 under 2,500 at 5 targets); '
+    'base extra-hit share 70% -> 50% (2026-11-22, level60-stat-curve round S17, user ruling: Improved Sweeping '
+    'Strikes went to 60 / 65%, so the base drops under it and the talent stays an upgrade).',
+    _raw('For 10 sec, your single-target melee abilities also strike up to 4 additional nearby enemies for 50% of '
          'their damage. Rend and Colossus Smash apply in full to each enemy struck. Shares a cooldown with Blade '
          'Flurry.', 'Your melee abilities strike nearby enemies.', level=30, PreventionType=_PREVENTION_PACIFY,
          SpellClassMask_2=_SWEEPING_D1, SpellVisualID_1=_SV_SWEEPING, SpellPriority=50),
@@ -342,7 +344,7 @@ sweeping_strikes_copy_204494 = _arms(
 # the stock whirl visual 11756. One whirl per second, the once-per-whirl proc roll is the spell script's AfterCast.
 bladestorm_whirl_204495 = _arms(
     204495, 'Bladestorm',
-    [Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=272.0, implicit_target_a=_TARGET_UNIT_SRC_AREA_ENEMY,
+    [Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=154.0, implicit_target_a=_TARGET_UNIT_SRC_AREA_ENEMY,
             implicit_target_b=_TARGET_SRC_CASTER, radius_yards=8.0)],
     2782,
     'warrior-rework S2 A2 (D10, doc "Bladestorm"): the Arms Bladestorm whirl, 46924\'s periodic trigger target. '
@@ -351,7 +353,11 @@ bladestorm_whirl_204495 = _arms(
     '0x4 / d2 0x8, so Seismic never echoes and Sweeping never copies it), AttributesEx3 SUPPRESS_CASTER_PROCS, '
     'SpellLevel = BaseLevel 50, DmgClass melee, visual 11756. No GCD, no cost, no off-hand trigger (Arms is '
     'two-handed). eff0 weapon_potency 170 -> 272 (2026-11-16, AoE round 3 follow-up 3 on the Normal-tier kits, user '
-    'ruling: Arms option C, Bladestorm +60%).',
+    'ruling: Arms option C, Bladestorm +60%). eff0 weapon_potency 272 -> 245 (244.8 rounded to a whole number, so '
+    'x0.901) (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Arms, Bladestorm damage down a '
+    'little, x0.90, no MaxTargets change). eff0 weapon_potency 245 -> 154 (x0.63) (2026-11-22, level60-stat-curve '
+    'round S19: AoE rule A, user ruling: Arms 132% at 30 s; no MaxTargets cap, Bladestorm is a signature ability; '
+    'Mortal Strike x1.045 covers the 1T loss).',
     _raw('A whirl of steel strikes up to 5 nearby enemies.', level=50, MaxTargets=5, DefenseType=_DMG_CLASS_MELEE,
          PreventionType=_PREVENTION_PACIFY, SpellClassMask_2=_BLADESTORM_D1, AttributesEx3=_ATTR3_SUPPRESS_CASTER_PROCS,
          SpellVisualID_1=_SV_BLADESTORM_WHIRL, SpellPriority=50, RangeIndex=_RANGE_INDEX_SELF,
@@ -780,16 +786,18 @@ def _improved_sweeping_strikes(spell_id, rank, seconds, percent):
         _ICON_FAN_OF_KNIVES,
         f'warrior-rework S2 A2 (D24, doc "Improved Sweeping Strikes"): rank {rank}. eff0 ADD_FLAT_MODIFIER DURATION '
         f'+{seconds} s (bp {seconds * 1000 - 1}) on Sweeping Strikes (EffectSpellClassMaskA_2 = d1 0x100000), eff1 '
-        f'DUMMY carrier {percent} (the extra-hit percent [tune], read by the Sweeping copy). Carrier {percent - 30} -> '
-        f'{percent - 15} (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: the Arms cleave window 55 / 60 / '
-        f'65%) -> {percent} (2026-11-16, AoE round 3 follow-up 2, user ruling: Arms option A, 70 / 75 / 80%).',
+        f'DUMMY carrier {percent} (the extra-hit percent [tune], read by the Sweeping copy). Carrier {percent - 15} -> '
+        f'{percent} (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: the Arms cleave window 55 / 60 / '
+        f'65%) -> {percent + 15} (2026-11-16, AoE round 3 follow-up 2, user ruling: Arms option A, 70 / 75 / 80%) -> '
+        f'{percent} (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Arms, Improved Sweeping '
+        f'Strikes 75 / 80% -> 60 / 65%; the base share went 70% -> 50% with it, so the talent stays an upgrade).',
         _rank_raw(f'Increases the duration of your Sweeping Strikes by {seconds} sec and increases the damage of its '
-                  f'extra hits from 70% to {percent}%.', EffectSpellClassMaskA_2=_SWEEPING_D1),
+                  f'extra hits from 50% to {percent}%.', EffectSpellClassMaskA_2=_SWEEPING_D1),
     )
 
 
-improved_sweeping_strikes_204529 = _improved_sweeping_strikes(204529, 1, 2, 75)
-improved_sweeping_strikes_204530 = _improved_sweeping_strikes(204530, 2, 4, 80)
+improved_sweeping_strikes_204529 = _improved_sweeping_strikes(204529, 1, 2, 60)
+improved_sweeping_strikes_204530 = _improved_sweeping_strikes(204530, 2, 4, 65)
 
 
 # Exploiter 204531-204532 (D15, R7): eff0 DUMMY carrier 15 / 30 (per-stack percent). ProcTypeMask / ProcChance 0: no
@@ -1131,14 +1139,14 @@ def _sudden_death(spell_id, rank, chance, rage_kept):
         notes=f'warrior-rework S2 A2 (D9, R15, doc "Sudden Death"): stock row first-declared, rank {rank}. Stays '
               f'SpellClassSet 0, icon 1989, eff0 aura 42, eff1 bp {rage_kept - 1} (Execute\'s rage-kept lookup reads '
               f'Effects[1].CalcValue() = {rage_kept}). eff0 bp {chance - 1} (tooltip $s1 = {chance}), DBC ProcChance '
-              f'{chance}, ProcTypeMask 0x14; spell_proc -29723 (flags 0x14, family 4, CAST phase, Cooldown 6000) at '
+              f'{chance}, ProcTypeMask 0x14; spell_proc -29723 (flags 0x14, family 4, CAST phase, Cooldown 3000; S22: was 6000) at '
               f'the end of the file. Stale masks cleared.',
         raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0x14, 'ProcChance': chance, 'SpellLevel': 1,
                        'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectDieSides_2': 1,
                        'EffectBasePoints_2': rage_kept - 1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190,
                        'NameSubtext_Lang_enUS': f'Rank {rank}', 'NameSubtext_Lang_Mask': 16712190,
                        'Description_Lang_enUS': f'Your melee hits have a {chance}% chance to reset the cooldown of '
-                                                f'your Mortal Strike. This cannot occur more than once every 6 sec. '
+                                                f'your Mortal Strike. This cannot occur more than once every 3 sec. '
                                                 f'Mortal Strike cannot trigger this effect. You keep at least '
                                                 f'{rage_kept} rage after using Execute.',
                        'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188,
@@ -1313,11 +1321,11 @@ remove_spell_proc(-12289)                                     # Improved Hamstri
 
 # spell_proc rows. Chance 0 means "use the rank's DBC ProcChance" (SpellMgr.cpp LoadSpellProcs).
 # Sudden Death (D9, R10): melee swings and every non-triggered warrior-family melee cast, ONE roll per swing / cast, a
-# 6 s ICD shared by both. SpellFamilyName 4 with an empty mask (a family-0 row would roll on every melee cast incl.
+# 3 s ICD shared by both (S22 2026-11-22: 6 -> 3 s, ICD report option A). SpellFamilyName 4 with an empty mask (a family-0 row would roll on every melee cast incl.
 # Charge and Heroic Leap, 0-verify B item 5); CAST phase (1) so an ability rolls once at cast, swings skip the
 # phase test. No spell_type_mask: it filters nothing at the CAST phase (the event's type mask is ALL); the CheckProc
 # scripts (spell_warr_sudden_death_reset) gate the roll on direct-damage casts.
-procs_on(-29723, proc_flags=0x14, family_name=_SPELLFAMILY_WARRIOR, spell_phase_mask=0x1, cooldown_ms=6000)
+procs_on(-29723, proc_flags=0x14, family_name=_SPELLFAMILY_WARRIOR, spell_phase_mask=0x1, cooldown_ms=3000)
 # Taste for Blood (D6): the stock row with Cooldown 5800 -> 0 (Rend ticks have no Spell*, so they roll per tick; spread
 # Rends roll too). Family 4, Rend d0 0x20, HIT phase (2) kept; the DBC ProcTypeMask 0x40000 (done periodic) still
 # drives it.

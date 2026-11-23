@@ -3,6 +3,7 @@ Death Knight - DK0b minion live-stat mirror rows (203056-203058) and the passthr
 auras. Hunter 201700-201702 (hunter_pet.py) is the shape. Amounts are stored 0; spell_dk_minion_mirror sets them live.
 """
 
+from lib import potency as _potency
 from lib.dsl import AuraType, Effect, EffectType, School
 from lib.dsl.registry import const, custom_attr, scripted_by, spell, unbind_script
 
@@ -13,7 +14,11 @@ MINION_ARMY_AP_SHARE_PCT = const('MINION_ARMY_AP_SHARE_PCT', 15, 'Army of the De
 MINION_GHOUL_AP_SHARE_PCT = const('MINION_GHOUL_AP_SHARE_PCT', 60, 'Permanent ghoul (Raise Dead) attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 90).')
 MINION_LESSER_GHOUL_AP_SHARE_PCT = const('MINION_LESSER_GHOUL_AP_SHARE_PCT', 25, 'Lesser Ghoul attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 50).')
 MINION_ABOMINATION_AP_SHARE_PCT = const('MINION_ABOMINATION_AP_SHARE_PCT', 70, 'Abomination attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 100).')
-MINION_SP_SHARE_PCT = const('MINION_SP_SHARE_PCT', 100, 'Minion spell power per owner attack power, percent (DK0b U8, Gargoyle).')
+# The Gargoyle turns owner attack power into spell power for a spell-potency strike (Gargoyle Strike 51963). One
+# point of attack power is worth 1 / R of spell power in potency (DEFAULT_R), so the share is 100 / R: 47 at R 2.15
+# (level60-stat-curve review S1; 100 gave the Gargoyle x1.85 after the rebase). Derived so an R refit follows.
+MINION_SP_SHARE_PCT = const('MINION_SP_SHARE_PCT', round(100 / _potency.DEFAULT_R),
+                            'Minion spell power per owner attack power, percent (DK0b U8, Gargoyle; 100 / potency R).')
 MINION_CRIT_SHARE_PCT = const('MINION_CRIT_SHARE_PCT', 100, 'Share of owner crit the minion inherits, percent (DK0b U8).')
 MINION_HASTE_SHARE_PCT = const('MINION_HASTE_SHARE_PCT', 100, 'Share of owner spell haste the minion inherits, percent (DK0b U8).')
 MINION_VERSATILITY_SHARE_PCT = const('MINION_VERSATILITY_SHARE_PCT', 100, 'Share of owner versatility the minion inherits, percent (DK0b U8).')

@@ -261,7 +261,8 @@ EXPLOSIVE_SHOT_FIELDS = {
     "EffectAura_2": AURA_PERIODIC_DUMMY, "ImplicitTargetA_2": 6, "EffectAuraPeriod_2": 1000,
     "EffectBasePoints_2": -1, "Effect_3": 0, "SpellDescriptionVariableID": 1180,
 }
-EXPLOSIVE_SHOT_AP, BLAST_AP, BLAST_STALE_AP_BONUS = 44.303, 15.02, 0.16   # WSH2 2026-11-17: were 64.3 and 21.8
+# S9 2026-11-21 (SV x0.90): were 44.303 and 15.02; WSH2 2026-11-17: were 64.3 and 21.8
+EXPLOSIVE_SHOT_AP, BLAST_AP, BLAST_STALE_AP_BONUS = 39.8727, 13.518, 0.16
 EXPLOSIVE_SHOT_DURATION_MS = 2000
 SPLASH_PCT = 40
 
@@ -1169,7 +1170,7 @@ def check_ruling_6(rows_by_id: dict[int, dict]) -> list[str]:
 LOCK_AND_LOAD_VALUES = {
     56342: (32, 2, 0), 56343: (65, 5, 0), 56344: (99, 9, 1999),     # 56344 eff2 = Chain Reaction 2000 ms (0-verify 4l)
 }
-LOCK_AND_LOAD_MARKER_MS = 5000
+LOCK_AND_LOAD_MARKER_MS = 3000   # 2026-11-22 (S22): 5 s -> 3 s, the ICD with one roll per fire pulse
 ATTR_EX3_SUPPRESS_AND_IGNORE = ATTR_EX3_IGNORE_CASTER_MODIFIERS | ATTR_EX3_SUPPRESS_CASTER_PROCS
 
 
@@ -1177,7 +1178,7 @@ def check_lock_and_load(rows_by_id: dict[int, dict], marker_duration_index: int)
     """(q) B4 + 0-verify binding decision 1: the three ranks keep the stock DBC ProcTypeMask 0x240000 / chance 100, the
     trigger eff0 (-> 56453) with bp 32 / 65 / 99, the DUMMY eff1 bp 2 / 5 / 9, and an aura eff2 on EVERY rank (inert
     DUMMY bp 0 on 56342 / 56343, Chain Reaction bp 1999 on 56344) so -56342's disable_effects_mask 0x4 is valid; no
-    SpellMod mask on any of them. 56453 is the one-charge, free-shot buff with the new text; 67544 lasts 5000 ms and has
+    SpellMod mask on any of them. 56453 is the one-charge, free-shot buff with the new text; 67544 lasts 3000 ms and has
     no stale reader masks."""
     bad = []
     for spell_id, (trigger_bp, dummy_bp, eff2_bp) in LOCK_AND_LOAD_VALUES.items():
@@ -1234,7 +1235,9 @@ def check_lock_and_load(rows_by_id: dict[int, dict], marker_duration_index: int)
 
 # ---- (q) Explosive Trap pair, Wyvern Sting, S3b helpers --------------------------------------------------------------
 
-TRAP_EFFECT_STOCK_BP, TRAP_EFFECT_STOCK_AMPLITUDE = 11, 2000      # 13812 eff1 (aura 3 -> 226 keeps the amplitude); bp stock 14 x0.8 (TUNE1)
+# 13812 eff1 (aura 3 -> 226 keeps the amplitude); bp stock 14 x0.8 (TUNE1) = 11, then 10 (S9 2026-11-21, SV x0.90 on the
+# ground fire 202057, with points_per_level 1.3043478 -> 1.1662207)
+TRAP_EFFECT_STOCK_BP, TRAP_EFFECT_STOCK_AMPLITUDE = 10, 2000
 EFFECT_PERSISTENT_AREA_AURA = 27
 WYVERN_DURATION_MS = 2000
 WYVERN_FIELDS = {"Effect_1": EFFECT_APPLY_AURA, "EffectAura_1": 79, "EffectMiscValue_1": 127, "EffectBasePoints_1": -31,
@@ -1523,7 +1526,7 @@ def good_explosive() -> tuple[dict, dict, str]:
     row = {"ID": EXPLOSIVE_SHOT, **EXPLOSIVE_SHOT_FIELDS, "Speed": 40.0, "SpellClassSet": 9,
            "SpellClassMask_2": D1_EXPLOSIVE_SHOT, "DurationIndex": DUR2000, "AttributesEx5": 0,
            "AttributesEx2": 0x20000}
-    entry = {"id": EXPLOSIVE_SHOT, "effect1": {"_potency": {"kind": "direct", "total_potency": 44.303,
+    entry = {"id": EXPLOSIVE_SHOT, "effect1": {"_potency": {"kind": "direct", "total_potency": 39.8727,
                                                             "ap_coefficient": 0.43}},
              "effect2": {}}
     source = ("explosive_shot_53301 = spell(\n    id=53301,\n    raw_overrides={'SpellLevel': 30, "
@@ -1534,7 +1537,7 @@ def good_explosive() -> tuple[dict, dict, str]:
 def good_blast() -> tuple[dict, dict, list[dict]]:
     row = {"ID": EXPLOSIVE_BLAST, "Effect_1": EFFECT_SCHOOL_DAMAGE, "SpellLevel": 30, "BaseLevel": 30, "MaxLevel": 0,
            "EquippedItemClass": -1, "SpellClassMask_3": D2_EXPLOSIVE_SHOT_TICK, "AttributesEx2": 0x4}
-    entry = {"id": EXPLOSIVE_BLAST, "effect1": {"_potency": {"kind": "direct", "total_potency": 15.02,
+    entry = {"id": EXPLOSIVE_BLAST, "effect1": {"_potency": {"kind": "direct", "total_potency": 13.518,
                                                              "ap_coefficient": 0.1429}}}
     return row, entry, [{"entry": EXPLOSIVE_BLAST, "ap_bonus": 0.1429}]
 

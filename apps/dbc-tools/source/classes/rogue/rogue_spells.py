@@ -435,7 +435,7 @@ rupture_1943 = spell(
     duration_ms=4000,
     max_duration_ms=24000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, base_potency=35.289, ap_potency=11.8125, potency_kind='periodic'),
+        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, base_potency=47.64015, ap_potency=15.946875, potency_kind='periodic'),
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=1),
     ],
     tooltip_vars=tooltip_blood_spatter_1322,
@@ -472,7 +472,8 @@ rupture_1943 = spell(
         'only shorten it. The tooltip shows the tick ({pot1}). Stock SpellDescriptionVariableID 63 (the ladder '
         'variables) dropped. '
         'rogue-rework M2a (M1 S1, [tune]): tick x1.5, base_potency 19.605 -> 29.4075, ap_potency 6.5625 -> 9.84375. '
-        'base_potency 29.4075 -> 35.289 and ap_potency 9.84375 -> 11.8125 (2026-11-01, DPS balance pass 1031, user ruling: Rupture +20%).'
+        'base_potency 29.4075 -> 35.289 and ap_potency 9.84375 -> 11.8125 (2026-11-01, DPS balance pass 1031, user ruling: Rupture +20%). '
+        'base_potency 35.289 -> 47.64015 and ap_potency 11.8125 -> 15.946875 (2026-11-20, level60-stat-curve round S7: rogue buffs after the potency rebase, user ruling: Rupture x1.35).'
     ),
     raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 8, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bleeding.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _RUPTURE_DESCRIPTION, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 1048576, 'SpellClassMask_3': m.FINISHER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 20, 'SpellVisualID_1': 250, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -1315,7 +1316,7 @@ envenom_32645 = spell(
     range_yards=5.0,
     duration_ms=1000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_base_potency=48.5, cp_ap_potency=23.1, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_base_potency=50.44, cp_ap_potency=24.024, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER,
                misc_value=SpellModOp.CRITICAL_CHANCE),
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=18),
@@ -1341,6 +1342,8 @@ envenom_32645 = spell(
         "`damage *= doses` active on top would double-count the combo scaling)."
         " rogue-rework S1a A4 (section 10.7): DBC eff1 = self flat CRITICAL_CHANCE (Dashing Scoundrel, value from the Aura script's DoEffectCalcAmount; 0 without a rank) on POISON_DAMAGE_READ, finisher bit d2 b18, aura text U14 conditional, Slice and Dice line for rogues with Mutilate. Raw DurationIndex 285 untouched."
         " Effect 1 cp_base_potency 44.112 -> 48.5 (48.523 kept to one decimal, so +9.95%) and cp_ap_potency 21.0 -> 23.1 (the AP coefficient 0.09 -> 0.099) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Envenom +10%)."
+        " Effect 1 cp_base_potency 48.5 -> 63.05 and cp_ap_potency 23.1 -> 30.03 (2026-11-20, level60-stat-curve round S7: rogue buffs after the potency rebase, user ruling: Envenom x1.30)."
+        " Effect 1 cp_base_potency 63.05 -> 50.44 and cp_ap_potency 30.03 -> 24.024 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Assassination, Envenom x0.80)."
     ),
     raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 9, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$?s203821[Your poisons are applied more often and are more likely to critically strike.]'
                                       '?s203820[Your poisons are applied more often and are more likely to critically strike.]'

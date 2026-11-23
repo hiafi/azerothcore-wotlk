@@ -54,28 +54,29 @@ class PetOwnerScalingTest(unittest.TestCase):
         self.assertEqual(entry, explicit)
         self.assertNotIn("owner_scaling", entry["effect1"]["_potency"])
         # A pet-bit spell is not a "ranged" one for the token (uses_ranged_attack_power), so it reads $AP today.
-        self.assertIn("0.1093*$AP", entry["raw_overrides"]["Description_Lang_enUS"])
+        self.assertIn("0.1266*$AP", entry["raw_overrides"]["Description_Lang_enUS"])
         self.assertNotIn("$RAP", entry["raw_overrides"]["Description_Lang_enUS"])
 
     def test_full_shares_put_both_terms_in_every_branch_of_both_range_ends(self):
         text = _description(_bite(pet_owner_scaling=(100, 100)))
         low, high = _ends(text)
         for end in (low, high):
-            self.assertEqual(end.count("0.1093*$RAP+0.1093*$SP"), 3, end)   # the 3 places c*$AP sits today
+            self.assertEqual(end.count("0.1266*$RAP+0.1266*$SP"), 3, end)   # the 3 places c*$AP sits today
             self.assertNotIn("$AP", end)
-            self.assertTrue(end.startswith("${$max($max(0.1093*$RAP+0.1093*$SP,"), end)
+            self.assertTrue(end.startswith("${$max($max(0.1266*$RAP+0.1266*$SP,"), end)
 
     def test_shares_scale_the_coefficient(self):
         text = _description(_bite(pet_owner_scaling=(100, 50)))
-        self.assertIn("0.1093*$RAP+0.0546*$SP", text)   # 0.10929 * 0.5 = 0.05464
+        # 0.12657 * 0.5 = 0.06329 (0.10929 x b / R since the LS5b potency rebase; attack power side b 2.49, S7b)
+        self.assertIn("0.1266*$RAP+0.0633*$SP", text)
 
     def test_zero_share_drops_its_term(self):
         only_rap = _description(_bite(pet_owner_scaling=(100, 0)))
-        self.assertIn("+0.1093*$RAP", only_rap)
+        self.assertIn("+0.1266*$RAP", only_rap)
         self.assertNotIn("$SP", only_rap)
         only_sp = _description(_bite(pet_owner_scaling=(0, 100)))
         self.assertNotIn("$RAP", only_sp)
-        self.assertIn("0.1093*$SP", only_sp)
+        self.assertIn("0.1266*$SP", only_sp)
 
     def test_zero_zero_renders_the_base_line_only(self):
         text = _description(_bite(pet_owner_scaling=(0, 0)))
@@ -101,7 +102,7 @@ class PetOwnerScalingTest(unittest.TestCase):
             pet_owner_scaling=(100, 100),
         )
         text = spell.to_entry()["raw_overrides"]["Description_Lang_enUS"]
-        per_tick = 0.2 * (2.0 / 3.5)
+        per_tick = 0.2 * (2.0 / 3.5) * potency.AP_COEF_SCALE / potency.DEFAULT_R  # x b / R (LS5b potency rebase)
         self.assertIn(f"{per_tick * 5:.4f}".rstrip("0") + "*$RAP", text)
         self.assertIn(f"{per_tick * 5:.4f}".rstrip("0") + "*$SP", text)
 

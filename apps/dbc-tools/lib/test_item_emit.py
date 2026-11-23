@@ -49,6 +49,11 @@ def tables() -> dict:
         "block_value_delta": 0,
     }
     t["item_budget_variant"] = {}
+    # Uncommon rows: only an Uncommon item can stay pure-primary now (LS2 gives a Rare / Epic one a secondary)
+    t["item_quality_mult"][(2,)] = {"mult": 0.8}
+    t["item_armor_quality_mult"][(2,)] = {"mult": 0.9}
+    t["item_weapon_dps_curve"].update({(i, 2, s): {"dps": i * (1.3 if s else 1.0) + 2} for i in range(1, 301)
+                                       for s in (0, 1)})
     return t
 
 
@@ -147,15 +152,17 @@ class EmissionRowsTest(unittest.TestCase):
             self.assertEqual(row["ItemLevel"], tier_rows.tier.ilvl)
 
     def test_no_zero_stat_lines(self):
-        # Null primary (no stats) and a primary-only item (the default secondary gets no budget).
-        exp, em = run([ring(), F.hammer(secondary=None)])
+        # Null primary (no stats) and a primary-only item (the default secondary gets no budget). A Rare / Epic tier
+        # takes a Solo secondary (level 60 stat curve LS2), so the pure-primary hammer is an Uncommon first tier.
+        exp, em = run([ring(), F.hammer(secondary=None, quality=2)])
         self.assertEqual(em.errors, [])
         hammer_tier = em.by_entry()[5187]
         self.assertIn(0, [a["rounded"] for a in hammer_tier.breakdown["allocations"]])  # the C++ would write it
         for tier_rows in em.tiers:
             self.assertTrue(all(value for _, value in lines(tier_rows.row)), tier_rows.tier)
-            self.assertNotIn(F.CRIT, [t for t, _ in lines(tier_rows.row)] if tier_rows.tier.key == "dm_hammer"
-                             else [])
+            crit = F.CRIT in [t for t, _ in lines(tier_rows.row)]
+            if tier_rows.tier.key == "dm_hammer":  # Uncommon: none; the Epic tiers above it: one Crit line
+                self.assertEqual(crit, tier_rows.tier.quality == 4, tier_rows.tier)
         ring_itemization = em.by_entry()[1156].tier.itemization
         self.assertEqual((ring_itemization["primary_shape_id"], ring_itemization["primary_share"]), (0, 0))
 

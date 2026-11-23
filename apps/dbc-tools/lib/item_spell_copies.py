@@ -114,6 +114,15 @@ STAT_AURAS = {
     158: "MOD_SHIELD_BLOCKVALUE",
     189: "MOD_RATING (every combat rating, the custom stats included)",
 }
+MOD_RATING = 189
+# Level 60 secondary stat curve (LS1b): the combat ratings (CR_*, MOD_RATING's misc_value bits) of the stats with
+# item_stat_cost.budget_curve 1, as Player::_ApplyItemBonuses maps them: Dodge 13 (CR 2), Parry 14 (3), Block 15 (4;
+# HANDOFF 1.10), Crit 32 (8, 9, 10), Proc Chance 33 (11), Haste 36 (17, 18, 19), Mastery 22 (20), Versatility 23 (21),
+# Cooldown Haste 24 (22), Armor Penetration 44 (24). A MOD_RATING aura whose bits all sit in this set scales by the
+# secondary curve's tier ratio; any other bit (hit, expertise, defense, resilience...) keeps the whole aura on the
+# primary ratio.
+SECONDARY_CURVE_RATINGS = frozenset((2, 3, 4, 8, 9, 10, 11, 17, 18, 19, 20, 21, 22, 24))
+SECONDARY_CURVE_RATING_MASK = sum(1 << cr for cr in SECONDARY_CURVE_RATINGS)
 TEXT_KEYS = ("Description_Lang_enUS", "AuraDescription_Lang_enUS")
 _ID_TOKEN_RE = re.compile(r"\$(\d+)(?=[a-zA-Z])")
 _KEY = r"[a-z][a-z0-9_]*"
@@ -234,6 +243,33 @@ def stat_budget(tables: dict, ilvl: int, quality: int, inv_type: int) -> float |
     if not (curve and qual and slot):
         return None
     return float(curve["budget"]) * float(qual["mult"]) * float(slot["mult"])
+
+
+def secondary_stat_budget(tables: dict, ilvl: int, quality: int, inv_type: int) -> float | None:
+    """`stat_budget` on the secondary curve (`item_budget_curve.secondary_budget`; a curve row without the column,
+    a hand-built table, reads its `budget`), or None when a reference row is missing."""
+    curve = tables["item_budget_curve"].get((ilvl,))
+    qual = tables["item_quality_mult"].get((quality,))
+    slot = tables["item_slot_mult"].get((inv_type,))
+    if not (curve and qual and slot):
+        return None
+    return float(curve.get("secondary_budget", curve["budget"])) * float(qual["mult"]) * float(slot["mult"])
+
+
+def tier_rating_ratio(tables: dict, reference, tier, inv_type: int) -> float | None:
+    """secondary budget(tier) / secondary budget(reference), rounded: the ratio of a secondary-curve rating aura
+    (`SECONDARY_CURVE_RATINGS`); None when a reference row is missing."""
+    low = secondary_stat_budget(tables, reference.ilvl, reference.quality, inv_type)
+    high = secondary_stat_budget(tables, tier.ilvl, tier.quality, inv_type)
+    if not low or high is None:
+        return None
+    return round(high / low, RATIO_DIGITS)
+
+
+def is_secondary_curve_rating(effect) -> bool:
+    """A MOD_RATING aura whose ratings all ride the secondary curve (`SECONDARY_CURVE_RATINGS`)."""
+    mask = int(effect.misc_value or 0)
+    return int(effect.apply_aura) == MOD_RATING and mask != 0 and not mask & ~SECONDARY_CURVE_RATING_MASK
 
 
 def tier_ratio(tables: dict, reference, tier, inv_type: int) -> float | None:
@@ -401,11 +437,14 @@ def family_problems(index: SpellIndex, family: list[int], dsl_classes: dict, whe
 # Copies
 
 
-def _scaled_amount(effect, ratio: float) -> dict:
-    """A stat aura's new `base_points` / `die_sides` (the amount is BasePoints + 1..DieSides), or {} to keep it."""
+def _scaled_amount(effect, ratio: float, rating_ratio: float | None = None) -> dict:
+    """A stat aura's new `base_points` / `die_sides` (the amount is BasePoints + 1..DieSides), or {} to keep it. A
+    secondary-curve rating aura (`is_secondary_curve_rating`) scales by `rating_ratio` (default `ratio`)."""
     stat_like = int(effect.apply_aura) in STAT_AURAS or effect.scale_amount
     if int(effect.type) not in APPLY_AURA_EFFECTS or not stat_like or effect.has_potency or effect.potency_excluded:
         return {}
+    if rating_ratio is not None and is_secondary_curve_rating(effect):
+        ratio = rating_ratio
     offset = 1 if effect.die_sides >= 1 else 0
     low = effect.base_points + offset
     changes = {"base_points": int(round(low * ratio)) - offset}
@@ -414,7 +453,7 @@ def _scaled_amount(effect, ratio: float) -> dict:
     return {k: v for k, v in changes.items() if v != getattr(effect, k)}
 
 
-def _scaled_effect(effect, ratio: float, remap: dict[int, int]):
+def _scaled_effect(effect, ratio: float, remap: dict[int, int], rating_ratio: float | None = None):
     if effect is None:
         return None
     changes = {}
@@ -422,7 +461,7 @@ def _scaled_effect(effect, ratio: float, remap: dict[int, int]):
         value = getattr(effect, name)
         if value:
             changes[name] = value * ratio
-    changes.update(_scaled_amount(effect, ratio))
+    changes.update(_scaled_amount(effect, ratio, rating_ratio))
     if effect.trigger_spell and int(effect.trigger_spell) in remap:
         changes["trigger_spell"] = remap[int(effect.trigger_spell)]
     return dataclasses.replace(effect, **changes) if changes else effect
@@ -436,14 +475,16 @@ def _remap_text(text: str, remap: dict[int, int], expressions: dict[str, str]) -
     return text
 
 
-def build_copies(index: SpellIndex, family: list[int], remap: dict[int, int], ratio: float, note: str) -> dict:
+def build_copies(index: SpellIndex, family: list[int], remap: dict[int, int], ratio: float, note: str,
+                 rating_ratio: float | None = None) -> dict:
     """The copies of `family` (base id -> copy Spell), `remap` base id -> copy id. Two passes: the scaled effects
-    first (their tooltip expressions are what the texts point at), then the texts."""
+    first (their tooltip expressions are what the texts point at), then the texts. `rating_ratio` (default `ratio`)
+    scales the secondary-curve rating auras."""
     copies = {}
     for base in family:
         spell = index.spells[base]
         copies[base] = dataclasses.replace(
-            spell, id=remap[base], effects=[_scaled_effect(e, ratio, remap) for e in spell.effects],
+            spell, id=remap[base], effects=[_scaled_effect(e, ratio, remap, rating_ratio) for e in spell.effects],
         )
     expressions: dict[str, str] = {}
     for base, copy in copies.items():
@@ -460,7 +501,11 @@ def build_copies(index: SpellIndex, family: list[int], remap: dict[int, int], ra
             trigger = raw.get(f"EffectTriggerSpell_{n}")
             if trigger and int(trigger) in remap:
                 raw[f"EffectTriggerSpell_{n}"] = remap[int(trigger)]
-        notes = f"{note}: copy of {base} ({copy.name}), damage and healing potency and stat aura amounts x {ratio:g}."
+        notes = f"{note}: copy of {base} ({copy.name}), damage and healing potency and stat aura amounts x {ratio:g}"
+        if rating_ratio is not None and rating_ratio != ratio and any(
+                e is not None and is_secondary_curve_rating(e) for e in index.spells[base].effects):
+            notes += f", secondary-curve rating auras x {rating_ratio:g}"
+        notes += "."
         if copy.notes:
             notes += f" Base notes: {copy.notes}"
         copies[base] = dataclasses.replace(copy, raw_overrides=raw or None, notes=notes)
@@ -474,6 +519,7 @@ class TierCopies:
     entry: int  # the item tier's item_template entry
     ratio: float
     remap: dict[int, int]  # base spell id -> copy id
+    rating_ratio: float | None = None  # the secondary-curve rating auras' ratio (level 60 secondary curve)
 
 
 @dataclass
@@ -576,7 +622,8 @@ def expand(
                 out.errors.append(f"{decl.where} tier {tier.tier!r}: no stat budget for ilvl {tier.ilvl} / quality "
                                   f"{tier.quality} (or the reference tier's), so its spells cannot be scaled")
                 continue
-            plans.append((item, tier, ratio, members))
+            rating_ratio = tier_rating_ratio(tables, reference, tier, item.inventory_type)
+            plans.append((item, tier, ratio, rating_ratio, members))
             wanted += [(decl.key, tier.tier, base) for base in members]
 
     # Ids.
@@ -627,11 +674,11 @@ def expand(
         return out
 
     # Rows.
-    for item, tier, ratio, members in plans:
+    for item, tier, ratio, rating_ratio, members in plans:
         decl = item.decl
         remap = {base: ids[(decl.key, tier.tier, base)] for base in members}
         note = f"Item variants IV10, {decl.key} tier {tier.tier} (ilvl {tier.ilvl})"
-        copies = build_copies(index, members, remap, ratio, note)
+        copies = build_copies(index, members, remap, ratio, note, rating_ratio)
         for base, copy in copies.items():
             try:
                 entry = copy.to_entry()
@@ -662,7 +709,7 @@ def expand(
         tier.spells = tuple(
             s.with_spell_id(remap[s.spell_id]) if s.scale and s.spell_id in remap else s for s in decl.spells
         )
-        out.tiers.append(TierCopies(decl.key, tier.tier, tier.entry, ratio, remap))
+        out.tiers.append(TierCopies(decl.key, tier.tier, tier.entry, ratio, remap, rating_ratio))
     if out.errors:
         return out
     out.lock_text = lock_text(lock, out.lock_appended)

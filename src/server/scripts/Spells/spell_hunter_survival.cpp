@@ -1123,7 +1123,7 @@ class spell_hun_lock_and_load_rework : public AuraScript
             Hunter::SPELL_LOCK_AND_LOAD_R3 });
     }
 
-    // The 5 s marker is the shared ICD: no roll while it is up
+    // The 3 s marker is the shared ICD: no roll while it is up
     bool CheckProc(ProcEventInfo& eventInfo)
     {
         Player* player = AsPlayer(GetUnitOwner());
@@ -1162,6 +1162,10 @@ class spell_hun_lock_and_load_rework : public AuraScript
         SpellInfo const* procSpell = eventInfo.GetSpellInfo();
         if (!procSpell || (procSpell->Id != HunterData::SPELL_IMMOLATION_TRAP_13797 &&
             procSpell->Id != Hunter::SPELL_BURNING_TAR))
+            return false;
+
+        // S22: one roll per fire pulse, so Burning Tar on a pack rolls once per tick, not once per target
+        if (!Hunter::ClaimLockAndLoadPulse(AsPlayer(GetUnitOwner()), procSpell->Id))
             return false;
 
         return Hunter::RollProcChance(GetUnitOwner(), float(aurEff->GetAmount()));
@@ -1282,7 +1286,7 @@ private:
 // exclusion list (no Burning Tar stack). OnHit runs after the victim's taken mods and before crit / armor / absorb.
 // The two terms the snapshot left out are applied here per target: the creature-type factor and Point of No Escape
 // (the ground fire carries no bit for the marker's mask, V-m7). Then Lock and Load rolls its periodic chance once per
-// tick per target (the 5 s marker throttles it).
+// tick, on the first target hit (S22; the 3 s marker throttles it).
 class spell_hun_explosive_trap_fire_tick : public SpellScript
 {
     PrepareSpellScript(spell_hun_explosive_trap_fire_tick);
@@ -1315,7 +1319,7 @@ class spell_hun_explosive_trap_fire_tick : public SpellScript
             SetHitDamage(int32(float(damage) * multiplier));
 
         if (SpellInfo const* rank = GetLockAndLoadRank(hunter))
-            Hunter::TryLockAndLoad(hunter, float(rank->Effects[EFFECT_1].CalcValue(hunter)));
+            Hunter::TryLockAndLoad(hunter, float(rank->Effects[EFFECT_1].CalcValue(hunter)), GetSpellInfo()->Id);
     }
 
     void Register() override

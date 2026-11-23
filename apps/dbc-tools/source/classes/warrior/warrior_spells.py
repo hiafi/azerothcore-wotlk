@@ -311,7 +311,7 @@ rend_772 = spell(
     range_yards=5.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, ap_potency=12.63, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=10.9123, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
     ],
     tooltip_vars=improved_rend_tooltip,
     spell_icon_id=245,
@@ -328,6 +328,8 @@ rend_772 = spell(
         'two-hander talents do not raise bleeds. D27: the bleed damage reads Improved Rend (tooltip_vars 1388). The tooltip is per tick ("every $t1 sec for $d"), not a total: Lingering Wounds (a duration SpellMod) lengthens the bleed without moving the base 15 s, so a total would be wrong at 3/3.'
           ' Effect 1 (periodic) ap_potency 11.23 -> 8.42 (2026-10-31, DPS balance pass 1031, user ruling: Arms damage -25%).'
           ' Effect 1 (periodic) ap_potency 8.42 -> 12.63 (2026-11-15, balance on the Normal-tier kits, user ruling: Rend +50%).'
+          ' Effect 1 (periodic) ap_potency 12.63 -> 10.104 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Arms, Rend x0.80).'
+          ' Effect 1 (periodic) ap_potency 10.104 -> 10.9123 (2026-11-21, level60-stat-curve round S13: trims after S12, user ruling: Arms Mortal Strike and Rend x1.08).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bleeding.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Wounds the target, causing it to bleed for {pot1*ir} every $t1 sec for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 0, 'SpellClassMask_1': 32, 'SpellClassSet': 4, 'SpellLevel': 4, 'SpellVisualID_1': 372, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1170,8 +1172,8 @@ mortal_strike_12294 = spell(
     duration_ms=10000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=6, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=197, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=15.51825, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=188, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=14.8868, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=improved_mortal_strike_tooltip,
@@ -1187,6 +1189,9 @@ mortal_strike_12294 = spell(
           ' Effect 2 weapon_potency 171 -> 188 (188.1 rounded to a whole number) (2026-11-15, balance on the Normal-tier kits, user ruling: Mortal Strike +10%). Effect 3 sp_potency 13.5 -> 14.85 (2026-11-15, balance on the Normal-tier kits, user ruling: Mortal Strike +10%).'
           ' Effect 2 weapon_potency 188 -> 207 (206.8 rounded to a whole number) (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Mortal Strike +10% Effect 3 sp_potency 14.85 -> 16.335 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Mortal Strike +10%) weapon_potency 207 -> 197 (196.65 rounded to the whole number 197, so -4.8%) and flat sp_potency 16.335 -> 15.51825 (2026-11-15, balance round 4 on the Normal-tier kits, user ruling: Mortal Strike -5%).'
           ' Effect 2 weapon_potency 197 -> 173 (172.96 rounded to the whole number 173, so -12.2%) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Mortal Strike -12%). Effect 3 sp_potency 15.51825 -> 13.7 (13.656 kept to one decimal, so -11.7%) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Mortal Strike -12%). Reverted to weapon_potency 197 and sp_potency 15.51825 (2026-11-16, single-target pass to 1,000 follow-up, user ruling: undo the Mortal Strike cut; Arms fell to 936 with it).'
+          ' Effect 2 weapon_potency 197 -> 167 (167.45 rounded to a whole number, so x0.848); effect 3 sp_potency 15.51825 -> 13.1905 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Arms, Mortal Strike x0.85).'
+          ' Effect 2 weapon_potency 167 -> 180 (180.36 rounded to a whole number, so x1.078); effect 3 sp_potency 13.1905 -> 14.2457 (2026-11-21, level60-stat-curve round S13: trims after S12, user ruling: Arms Mortal Strike and Rend x1.08).'
+          ' Effect 2 weapon_potency 180 -> 188 (188.1 rounded, x1.044); effect 3 sp_potency 14.2457 -> 14.8868 (x1.045) (2026-11-22, level60-stat-curve round S19: AoE rule A, user ruling: Arms, Mortal Strike covers the 1T loss from Bladestorm x0.63).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing received is reduced.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals ${$m2*$<ims>}% weapon damage plus {pot3.avg*ims} and wounds the target, reducing the healing it receives by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'SpellClassMask_1': 33554432, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 39, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1372,7 +1377,7 @@ bloodthirst_23881 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=85.1, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=68.08, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.DUMMY),
     ],
     tooltip_vars=bloodthirst_tooltip,
@@ -1404,6 +1409,7 @@ bloodthirst_23881 = spell(
         'reads Unending Fury (tooltip_vars 1408, token {pot1*uf}).'
           ' Effect 1 ap_potency 91.0 -> 77.35 (2026-10-31, DPS balance pass 1031, user ruling: Fury damage -15%).'
           ' Effect 1 ap_potency 77.35 -> 85.1 (85.085 rounded) (2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%).'
+          ' Effect 1 ap_potency 85.1 -> 68.08 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Fury, Bloodthirst x0.80).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly attack the target, causing {pot1*uf} Physical damage and generating 10 rage. Each bleed applied by you increases the damage of Bloodthirst by 8%, up to 40%. In addition, your next successful melee attack restores $m2% of your maximum health. Lasts $23885d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 1024, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 372, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )

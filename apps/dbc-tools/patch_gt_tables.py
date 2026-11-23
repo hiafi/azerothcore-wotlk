@@ -3,7 +3,8 @@
 Patches GtCombatRatings.dbc / GtOCTClassCombatRatingScalar.dbc so the client's own
 GetCombatRatingBonus() returns the same percentage the server computes for the 4 custom stats
 this fork repurposes onto legacy combat-rating slots (Mastery, Versatility, Cooldown Haste,
-Proc Rate - see lib/gt_dbc.py's CUSTOM_COMBAT_RATINGS and Unit.h's CombatRating enum).
+Proc Rate - see lib/gt_dbc.py's CUSTOM_COMBAT_RATINGS and Unit.h's CombatRating enum), and for
+the stock slots whose curve the fork retuned (Dodge, Parry, Block - lib/gt_dbc.py's RETUNED_COMBAT_RATINGS).
 
 Why this is needed at all: Player::GetRatingMultiplier (server) and the client's native
 GetCombatRatingBonus() use the *same formula* over these two DBCs, but the client's own copy
@@ -28,7 +29,7 @@ Usage:
   --server-values  TSV file with columns `table<TAB>id<TAB>value`, one line per row, e.g.:
                         gtcombatratings_dbc	2000	0.538462
                         gtoctclasscombatratingscalar_dbc	12	1
-                    Only needs to cover the ~440 (table, id) pairs this script actually asks for
+                    Only needs to cover the ~550 (table, id) pairs this script actually asks for
                     (see report_*() below) - extras are ignored, missing ones are a hard error.
                     Generate it straight from the live server, e.g.:
                         docker exec -e MYSQL_PWD=<pw> <db-container> mysql -N -u root -e "
@@ -96,7 +97,7 @@ CHECK_LEVELS = (60, 70, 80)
 def combat_ratings_indices() -> list[int]:
     return [
         gt_dbc.combat_ratings_index(cr, level)
-        for cr in gt_dbc.CUSTOM_COMBAT_RATINGS.values()
+        for cr in gt_dbc.PATCHED_COMBAT_RATINGS.values()
         for level in range(1, gt_dbc.GT_MAX_LEVEL + 1)
     ]
 
@@ -104,7 +105,7 @@ def combat_ratings_indices() -> list[int]:
 def class_scalar_indices() -> list[int]:
     return [
         gt_dbc.class_scalar_index(class_id, cr)
-        for cr in gt_dbc.CUSTOM_COMBAT_RATINGS.values()
+        for cr in gt_dbc.PATCHED_COMBAT_RATINGS.values()
         for class_id in gt_dbc.WOTLK_CLASS_IDS
     ]
 
@@ -139,24 +140,26 @@ def _client_bytes(client_dbc_dir: Path, filename: str) -> bytes:
 def report_combat_ratings(changes: list[gt_dbc.Change]) -> None:
     by_index = {c.index: c for c in changes}
     print("GtCombatRatings.dbc:")
-    for label, cr in gt_dbc.CUSTOM_COMBAT_RATINGS.items():
+    for label, cr in gt_dbc.PATCHED_COMBAT_RATINGS.items():
         print(f"  {label} (CR {cr}):")
         for level in CHECK_LEVELS:
             c = by_index[gt_dbc.combat_ratings_index(cr, level)]
             print(f"    level {level}: {c.old_value:.4f} -> {c.new_value:.4f}  (1% = {c.new_value:.2f} rating)")
-    print(f"  {len(changes)} rows patched total (4 stats x {gt_dbc.GT_MAX_LEVEL} levels).")
+    print(f"  {len(changes)} rows patched total ({len(gt_dbc.PATCHED_COMBAT_RATINGS)} stats x {gt_dbc.GT_MAX_LEVEL} "
+          f"levels).")
 
 
 def report_class_scalar(changes: list[gt_dbc.Change]) -> None:
     by_index = {c.index: c for c in changes}
     print("GtOCTClassCombatRatingScalar.dbc:")
-    for label, cr in gt_dbc.CUSTOM_COMBAT_RATINGS.items():
+    for label, cr in gt_dbc.PATCHED_COMBAT_RATINGS.items():
         print(f"  {label} (CR {cr}):")
         for class_id in gt_dbc.WOTLK_CLASS_IDS:
             c = by_index[gt_dbc.class_scalar_index(class_id, cr)]
             marker = "  (!) changed" if c.old_value != c.new_value else ""
             print(f"    class {class_id}: {c.old_value:.4f} -> {c.new_value:.4f}{marker}")
-    print(f"  {len(changes)} rows patched total (4 stats x {len(gt_dbc.WOTLK_CLASS_IDS)} classes).")
+    print(f"  {len(changes)} rows patched total ({len(gt_dbc.PATCHED_COMBAT_RATINGS)} stats x "
+          f"{len(gt_dbc.WOTLK_CLASS_IDS)} classes).")
 
 
 def main() -> int:

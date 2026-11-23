@@ -2223,8 +2223,15 @@ namespace
         SetOwnerAura(player, player, ShamanData::SPELL_ROCKBITER_ILS_THREAT,
             rockbiter && Shaman::GetTalentRank(player, IMPROVED_LIGHTNING_SHIELD_RANKS) > 0);
 
-        SetOwnerAura(player, player, ShamanData::SPELL_ANTICIPATION_JUMPS,
-            rockbiter && Shaman::GetTalentRank(player, ANTICIPATION_RANKS) > 0);
+        uint8 const anticipationRank = Shaman::GetTalentRank(player, ANTICIPATION_RANKS);
+        bool const anticipationWanted = rockbiter && anticipationRank > 0;
+        SetOwnerAura(player, player, ShamanData::SPELL_ANTICIPATION_JUMPS, anticipationWanted);
+
+        // level60-stat-curve S9 (2026-11-21, user ruling 6): the same child carries Anticipation's Rockbiter parry,
+        // 5/10/15%; the known rank's DUMMY (eff3, the rank text's $s3) holds the value.
+        if (anticipationWanted)
+            SetChildAmount(player, ShamanData::SPELL_ANTICIPATION_JUMPS, SPELL_AURA_MOD_PARRY_PERCENT,
+                GetRankDummyValue(player, ANTICIPATION_RANKS));
 
         uint8 const staticShockRank = Shaman::GetTalentRank(player, STATIC_SHOCK_RANKS);
         bool const orbDamageWanted = rockbiter && staticShockRank > 0;

@@ -262,7 +262,7 @@ storm_bolt_202278 = spell(
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=45.0,
     effects=[Effect(
         type=EffectType.SCHOOL_DAMAGE, sp_potency=40.764, potency_kind='direct', implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
-        chain_targets=5,
+        chain_targets=3,
     )],
     spell_icon_id=ICON_LIGHTNING_BOLT,
     notes=NOTE + 'the Storm Elemental\'s only ability (shared doc "Storm Elemental"): 2 s cast, 51.6 potency Nature damage '
@@ -272,12 +272,13 @@ storm_bolt_202278 = spell(
           'EffectChainTargets_1 1 -> 5 at EffectChainAmplitude_1 1.0: the bolt chains to up to 4 more enemies at full damage (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package); '
           'Revision 4 lever 5a (elementals that cleave), kept by Revision 5. The AI already casts it at its victim, so the chain '
           'comes from the row. The jump search is the engine\'s (nearby enemies of the previous target, magic-class radius).'
-          ' sp_potency 51.6 -> 40.764 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Elemental x0.79).',
+          ' sp_potency 51.6 -> 40.764 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Elemental x0.79).'
+          ' EffectChainTargets_1 5 -> 3 (2026-11-22, level60-stat-curve round S19: AoE rule A, user ruling: Elemental AoE 122% at 60 s, chains to 2 more enemies).',
     raw_overrides={
         'SpellClassSet': SPELLFAMILY_SHAMAN, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1,
         'SpellLevel': 1, 'Speed': 20.0, 'SpellVisualID_1': SV_LIGHTNING_BOLT,
         'EffectChainAmplitude_1': 1.0,
-        'Description_Lang_enUS': 'Strikes an enemy with lightning for {pot1} Nature damage, then chains to up to 4 additional '
+        'Description_Lang_enUS': 'Strikes an enemy with lightning for {pot1} Nature damage, then chains to up to 2 additional '
                                  'nearby enemies.',
     },
 )

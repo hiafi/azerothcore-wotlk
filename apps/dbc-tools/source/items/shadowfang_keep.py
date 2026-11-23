@@ -122,8 +122,10 @@ item("sfk_vambraces_of_the_fallen_commander", name="Vambraces of the Fallen Comm
 # Odo the Blindwatcher (stock item level 26)
 
 # Leather Spirit (a leather Intellect piece fits no archetype).
+# Intellect, was Spirit (2026-11-21, level60-stat-curve healer mana pass, user ruling: half the Spirit-only leather
+# caster drops become Intellect, at least one Spirit piece kept per slot).
 item("sfk_girdle_of_the_blindwatcher", base=6319, ladder=VANILLA_DUNGEON,
-     primary="Spirit (Solo)", secondary="Haste (Solo)")
+     primary="Intellect (Solo)", secondary="Haste (Solo)")
 # Spirit / Mastery staff: the second socket is yellow; no Mastery enchant, Haste bonus.
 item("sfk_odos_ley_staff", base=6318, ladder=VANILLA_DUNGEON,
      primary="Spirit (Solo)", secondary="Mastery (Solo)",

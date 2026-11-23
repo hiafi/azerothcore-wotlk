@@ -3975,6 +3975,14 @@ improved_shadowform_47570 = spell(
 )
 
 
+# Improved Shadowform (S22 2026-11-22, user ruling 6 / ICD report B5): stock bound two classes, each rolling eff0 with
+# no Proc Chance (rank 1's 50% netted 25%). Both go; spell_pri_improved_shadowform_rework is the one roll, with it.
+unbind_script(-47569, 'spell_pri_imp_shadowform')
+unbind_script(47569, 'spell_pri_improved_shadowform')
+unbind_script(47570, 'spell_pri_improved_shadowform')
+scripted_by(-47569, 'spell_pri_improved_shadowform_rework')
+
+
 # Priest Shadow rework (SHADOW.md (9,2) / design doc §7): now 3 ranks (51166/51167 orphaned).
 # eff1 (aura 174, Spirit->SP, unchanged slot) retuned 4/8/12% -> 8/16/25% (stored 7/15/24). eff2
 # (OVERRIDE_CLASS_SCRIPTS misc 7377, the Mind Flay/Mind Blast-vs-SWP-target damage bonus the core
@@ -7963,7 +7971,7 @@ tentacle_mind_flay_200246 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=51.851, base_potency=0.0, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=31.1106, base_potency=0.0, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
     ],
     spell_icon_id=548,
     notes="Priest Shadow rework (SHADOW.md (3,0) / ID map): the tentacle's own channeled Mind Flay "
@@ -7995,7 +8003,9 @@ tentacle_mind_flay_200246 = spell(
           "tentacle's channel generates no threat, matching the design doc's \"Generates no threat "
           'for the priest.\" spell_pri_tentacle_mind_flay (WP-B, AuraScript) hooks OnEffectPeriodic '
           'for the 1-Madness-per-tick generation. dot bonus coefficient 0.257 -> 0.2313 (2026-10-08, DPS balance pass, user ruling: Shadow damage). dot bonus coefficient 0.2313 -> 0.2429 (2026-10-08, DPS balance pass, user ruling: Tentacle Mind Flay x1.05, round 10). dot bonus coefficient 0.2429 -> 0.2186 (2026-11-01, DPS balance pass 1031, user ruling: Mind Flay -10%). Converted 2026-11-01 (user ruling: Mind Flay fully potency-based) from the hand-set bonus_coefficients(dot=0.2186) to sp_potency=76.51 (periodic, 1 s tick: 76.51 / 100 / 3.5 = 0.2186, damage unchanged) with base_potency=0.0 so the base stays 0 and the damage stays fully coefficient-driven. sp_potency 76.51 -> 68.859 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Mind Flay Tentacle -10%).'
-          ' sp_potency 68.859 -> 51.851 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).',
+          ' sp_potency 68.859 -> 51.851 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).'
+          ' sp_potency 51.851 -> 25.9255 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Shadow, Tentacle of Madness Mind Flay x0.50).'
+          ' sp_potency 25.9255 -> 31.1106 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Shadow, Tentacle of Madness Mind Flay x0.60 of the S8 value instead of x0.50).',
     raw_overrides={'AttributesEx': 67126276, 'AttributesEx2': 524288, 'AttributesEx5': 134225920, 'AttributesEx6': 8388608, 'SpellVisualID_1': 12637, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'CastingTimeIndex': 1, 'SpellClassSet': 6, 'SpellLevel': 0, 'SpellClassMask_3': _masks.MIND_FLAY, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Assaults the target's mind with Shadow energy, causing Shadow damage over 3 sec.", 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
 )
 # SpellVisualID_1 12637 is stock Mind Flay's own channel visual (shared by 15407/17313/17314).

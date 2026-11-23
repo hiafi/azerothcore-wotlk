@@ -705,8 +705,8 @@ namespace ShamanData
     constexpr int32 IWS_CAPSTONE_MANA_PCT = 1; // Improved Water Shield capstone: percent of maximum mana per direct-heal critical strike [fixed].
     constexpr int32 KINDLING_CDR_MS = 3000; // Kindling capstone: real-time cooldown reduction of the Undulating Currents Totem, ms [fixed].
     constexpr int32 KINDLING_CHANCE = 15; // Kindling capstone: chance a Chain Heal cast cuts the Undulating Currents Totem cooldown, percent (Proc Chance applies) [fixed].
-    constexpr int32 LAVA_SURGE_CHANCE = 15; // Lava Surge chance per Flame Shock tick, percent [fixed].
-    constexpr int32 LAVA_SURGE_ICD_MS = 6000; // Lava Surge internal cooldown, ms [fixed].
+    constexpr int32 LAVA_SURGE_CHANCE = 11; // Lava Surge chance per tick of the most recently cast Flame Shock, percent [fixed].
+    constexpr int32 LAVA_SURGE_ICD_MS = 0; // Lava Surge internal cooldown, ms (none since S22) [fixed].
     constexpr int32 LE_EARTH_CHARGE_COST = 30; // Living Earth: Earth Charge spent for Earthen Ascendance [fixed].
     constexpr int32 LE_STONESKIN = 10; // Living Earth: Stoneskin stacks granted [fixed].
     constexpr int32 LM_CHANCE_PER_STACK = 7; // Lightning Mastery chance per Raw Power stack, percent [tune] (5 until the 2026-10-20 smoke-test fix pass).

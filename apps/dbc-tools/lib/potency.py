@@ -49,8 +49,20 @@ BREAKPOINT_LEVEL = 25  # where the two C(L) segments meet; also spell_potency_co
 REFERENCE_LEVEL = 60  # "Level 60 is the launch cap and the most important number to hit"
 
 # "Healing"
-HEAL_BASE_MULT = 3.96
-HEAL_COEF_MULT = 1.88
+# The *_STOCK values are the doc's "Healing" rule (3.96 on the base, the stock WotLK 1.88 on the coefficient); a
+# rebase_exempt heal keeps them. HEAL_BASE_MULT / HEAL_COEF_MULT are what resolve() applies with the potency rebase
+# (level60-stat-curve LS5c, user ruling round 12, 2026-11-20), on top of the spell power side's a / b. LS5c fitted them
+# on the healers' sheet spell power (2.35 / 2.44). Refitted 2026-11-21 (S7b, HANDOFF 8 ruling 1) on in-combat healing
+# power: the 5 healer Normal kits' time-weighted in-combat healing power (the sim's "SimActor in-combat sheet" line),
+# at SP_BASE_SCALE 0.48 / SP_COEF_SCALE 1.93, so the median healer's in-combat heal flat share
+# (a_sp x HEAL_BASE_MULT) / (a_sp x HEAL_BASE_MULT + b_sp x HEAL_COEF_MULT x 0.0016 x X_ic) is 25% and the median
+# healing equals the pre-rebase level (3.96 + 1.88 x 0.0016 x X_today, X_today = LS5's pre-rebase sheet spell power
+# plus the kit's in-combat addition). Exact 2.8367 / 3.3918 (median flat 25.03%, median healing x1.000 vs pre-rebase,
+# x0.96 vs the 2.35 / 2.44 build). See level60-stat-curve.STAGE-S7B-REPORT.md.
+HEAL_BASE_MULT_STOCK = 3.96
+HEAL_COEF_MULT_STOCK = 1.88
+HEAL_BASE_MULT = 2.84
+HEAL_COEF_MULT = 3.39
 # "Damage range" - potency sets the average; the generator bakes the minimum as potency / 1.05,
 # and the hook rolls the minimum up to 1.1x it (direct damage effects only).
 DIRECT_MIN_DIVISOR = 1.05
@@ -63,7 +75,53 @@ DIRECT_VARIANCE_PCT = 10.0
 # fixture/test item_template rows excluded - see potency-system.PROGRESS.md's P3 section). Measured
 # ~1.07, rounded to 1.0 by the user. Supersedes the original "R = 2, 1,000 AP vs 500 SP" placeholder
 # - see docs/potency-system.md's "Attack power abilities" section for the full writeup.
-DEFAULT_R = 1.0
+# Re-measured 2026-11-20 (level60-stat-curve LS5, same P3 method and pool, obtainable only) on the gear after the
+# caster / hunter weapon rule (HANDOFF 1.8, k_sp 3.75) and the pure-primary rule (1.5): effective attack power 743
+# over effective spell power 631 = 1.177. The same method on today's gear reads 0.933 (caster weapons' spell power
+# from DPS was never in the 2026-10-01 number). See level60-stat-curve.STAGE-LS5-REPORT.md.
+# Replaced by the sheet-based R (LS5b ruling 3, 2026-11-20): the Normal-tier sim kits' character sheets (class and race
+# base stats plus materialized gear after HANDOFF 1.5 / 1.8, k_h 9.5, k_f 7.5, no talents or buffs), median attack power
+# of the physical DPS kits (810: melee AP, hunter ranged AP, druid form AP) over median spell power of the caster DPS
+# kits (376) = 2.154.
+DEFAULT_R = 2.15
+
+# Potency scaling rebase (level60-stat-curve HANDOFF 1.9, user rulings 2026-11-20 rounds 7-9): moves damage from the
+# flat level base C(L) into spell power and attack power, so gear (weapons included) matters to potency abilities as
+# it does to weapon strikes. Both apply to every potency effect resolve() bakes, spell and attack power potency alike,
+# heals and absorbs too (HEAL_BASE_MULT on the base and HEAL_COEF_MULT on the coefficient on top), combo-point lines
+# included; weapon potency and its flat part (`_resolve_weapon`), and any PotencyEffect.rebase_exempt effect, are
+# exempt. 1.0 / 1.0 is today's behavior (off).
+#   - the BASE_SCALEs (a) scale the flat base: F is built from a x (P_sp + P_ap), or a x base_potency.
+#   - the COEF_SCALEs (b) scale the coefficients: sp_coefficient x b, ap_coefficient x b (still / R).
+# Fitted 2026-11-20 (LS5) on the Normal-tier sim kits (blackrock-gear SIM-KITS) after HANDOFF 1.5 and 1.8: the flat
+# base is 25% of a potency ability at the median DPS kit, and the median DPS kit's damage is unchanged before trims
+# (a + b x 0.0016 x X_new = 1 + 0.0016 x X_today, X = sheet spell power or attack power / R). Refitted at R = 2.15
+# (LS5b ruling 3): exact 0.5701 / 2.8393.
+# Split by side (level60-stat-curve S7a, user ruling 2026-11-20 round S7). Per part: an effect's base takes a_sp on its
+# sp_potency share and a_ap on its ap_potency share (a hand base_potency too, by the same shares); sp_coefficient takes
+# b_sp, ap_coefficient b_ap. A line with neither sp_potency nor ap_potency (a pure base_potency line) takes
+# PotencyEffect.base_side, which model.Spell sets from the spell; the spell side when unset.
+# Both sides refitted 2026-11-21 (S7b, HANDOFF 8 ruling 1) on IN-COMBAT X instead of the sheet: the time-weighted mean
+# the sim's "SimActor in-combat sheet" line prints (talents, armors, forms, shouts and self-buffs included), 1 target,
+# 120 s x 5, Normal kits. Same equations as LS5: flat share = a / (a + b x c x X_ic) is 25% at the median kit, and the
+# median kit's potency damage a + b x c x X_ic equals the pre-rebase 1 + c x X_today, with c = (1.5 / 3.5) / 267.5
+# and X_today = LS5's pre-rebase sheet X plus the kit's in-combat addition (X_ic - X_sheet, the talents and buffs did
+# not change).
+#   - SP side: the 9 caster DPS kits (3 mages, 3 warlocks, Shadow, Elemental, Balance), X = in-combat spell power as
+#     spell damage reads it. Exact 0.4759 / 1.9288 (median flat 25.15%, median damage x1.003 at the rounded values;
+#     about x0.71 vs the 0.57 / 2.84 build, which sat at a 15-24% in-combat flat share).
+#   - AP side: the 14 physical DPS kits of LS5b's R pool (warriors, DKs, rogues, hunters, Cat, Bear DPS), X = in-combat
+#     melee attack power / R (hunters ranged, druids form attack power), at k_h 16 / k_f 6. In combat the median flat
+#     share was 19.0% at 0.57 / 2.84 (Battle Shout, forms, Unholy / Frost presences), more than 3 points off, so
+#     refitted too: exact 0.7134 / 2.4949 (median flat 24.95%, median damage x0.997 vs pre-rebase; about x0.93-0.96 vs
+#     the 0.57 / 2.84 build, rogues x1.00).
+SP_BASE_SCALE = 0.48
+SP_COEF_SCALE = 1.93
+AP_BASE_SCALE = 0.71
+AP_COEF_SCALE = 2.49
+SIDE_SP = "sp"
+SIDE_AP = "ap"
+VALID_SIDES = (SIDE_SP, SIDE_AP)
 
 # "Weapon attacks" - "the flat part of a strike... kept low (10 or less)."
 WEAPON_FLAT_BONUS_MAX = 10.0
@@ -99,6 +157,15 @@ class PotencyEffect:
     # ap_coefficient are always computed from sp_potency/ap_potency directly - this only
     # overrides what feeds the shared base-damage formula, never the per-stat scaling.
     base_potency: float | None = None
+    # True for the flat part of a weapon strike declared on its own weapon-damage effect (WEAPON_DAMAGE 58,
+    # NORMALIZED_WEAPON_DMG 121, WEAPON_DAMAGE_NOSCHOOL 17) rather than beside weapon_potency on one effect: HANDOFF
+    # 1.7 / 1.9 exempt a strike's flat part from the potency rebase, so it resolves at a = b = 1. model.Spell sets it
+    # from Effect.rebase_exempt and for every weapon-damage effect type (level60-stat-curve LS5b, ruling 1).
+    rebase_exempt: bool = False
+    # The rebase side (SIDE_SP / SIDE_AP) of the base when the line has no sp_potency and no ap_potency (a pure
+    # base_potency line, whose own shares can't say which). None = the spell side. Ignored when either is set: the base
+    # then splits by the sp_potency / ap_potency shares. model.Spell sets it (level60-stat-curve S7a).
+    base_side: str | None = None
     # "Weapon attacks": a weapon-percent effect may also carry a small flat sp_potency bonus
     # (WEAPON_FLAT_BONUS_MAX or less) on the SAME effect - "one hit through the weapon effect".
     # ap_potency can't combine with weapon_potency ("the flat part carries no attack power
@@ -137,13 +204,37 @@ class ResolvedPotency:
     owner_scaling: tuple[float, float] | None = None
 
 
-def resolve(effect: PotencyEffect, spell_level: int, r: float = DEFAULT_R) -> ResolvedPotency:
+def resolve(effect: PotencyEffect, spell_level: int, r: float | None = None, *, base_scale: float | None = None,
+            coef_scale: float | None = None, sp_base_scale: float | None = None, sp_coef_scale: float | None = None,
+            ap_base_scale: float | None = None, ap_coef_scale: float | None = None) -> ResolvedPotency:
     """The "dbc-tools generator" table, in order. `spell_level` is the effect's own spell's
-    `SpellLevel` (== `BaseLevel` - "BaseLevel must equal SpellLevel", "Caveats and checks")."""
+    `SpellLevel` (== `BaseLevel` - "BaseLevel must equal SpellLevel", "Caveats and checks").
+    `r` is R (None = `DEFAULT_R`). The rebase's a and b per side: `sp_base_scale` / `sp_coef_scale`
+    (None = `SP_BASE_SCALE` / `SP_COEF_SCALE`) and `ap_base_scale` / `ap_coef_scale` (None =
+    `AP_BASE_SCALE` / `AP_COEF_SCALE`); `base_scale` / `coef_scale` set both sides at once (a
+    per-side argument wins over them). All are read at call time. A weapon_potency effect ignores
+    them (its flat part is exempt from the rebase and carries no attack power)."""
     if effect.weapon_potency is not None:
         return _resolve_weapon(effect, spell_level)
+    r = DEFAULT_R if r is None else r
+
+    def _pick(side_arg: float | None, both_arg: float | None, constant: float) -> float:
+        if side_arg is not None:
+            return side_arg
+        return constant if both_arg is None else both_arg
+
+    a_sp = _pick(sp_base_scale, base_scale, SP_BASE_SCALE)
+    b_sp = _pick(sp_coef_scale, coef_scale, SP_COEF_SCALE)
+    a_ap = _pick(ap_base_scale, base_scale, AP_BASE_SCALE)
+    b_ap = _pick(ap_coef_scale, coef_scale, AP_COEF_SCALE)
+    heal_base_mult, heal_coef_mult = HEAL_BASE_MULT, HEAL_COEF_MULT
+    if effect.rebase_exempt:
+        a_sp = b_sp = a_ap = b_ap = 1.0
+        heal_base_mult, heal_coef_mult = HEAL_BASE_MULT_STOCK, HEAL_COEF_MULT_STOCK
     if effect.kind not in VALID_KINDS:
         raise ValueError(f"potency_kind={effect.kind!r} must be one of {VALID_KINDS}")
+    if effect.base_side is not None and effect.base_side not in VALID_SIDES:
+        raise ValueError(f"base_side={effect.base_side!r} must be one of {VALID_SIDES} or None")
     total = effect.sp_potency + effect.ap_potency
     if total <= 0 and effect.base_potency is None:
         raise ValueError(
@@ -159,9 +250,17 @@ def resolve(effect: PotencyEffect, spell_level: int, r: float = DEFAULT_R) -> Re
     # unless base_potency says otherwise, for the rare spell whose base shouldn't equal what its
     # SP/AP coefficients alone imply.
     base_total = effect.base_potency if effect.base_potency is not None else total
-    f = base_total * t / 1.5
+    # The rebase's a on the base, a hand base_potency included, split by the sp_potency / ap_potency shares (written as
+    # a_sp + (a_ap - a_sp) x share so equal sides give a_sp exactly). A line with neither takes its base_side.
+    # total_potency below stays the declared number (labels and the potency sheet show the designer's potency, not the
+    # scaled base).
+    if total > 0:
+        a = a_sp + (a_ap - a_sp) * (effect.ap_potency / total)
+    else:
+        a = a_ap if effect.base_side == SIDE_AP else a_sp
+    f = a * base_total * t / 1.5
     if is_heal_like:
-        f *= HEAL_BASE_MULT
+        f *= heal_base_mult
     if is_direct:
         # "F is divided by 1.05 so the baked value is the minimum and potency stays the average."
         f /= DIRECT_MIN_DIVISOR
@@ -171,9 +270,9 @@ def resolve(effect: PotencyEffect, spell_level: int, r: float = DEFAULT_R) -> Re
     level60_value = C60 * f
     base_points = round(level60_value) - 1 - int((REFERENCE_LEVEL - spell_level) * real_points_per_level)
 
-    coef_mult = HEAL_COEF_MULT if is_heal_like else 1.0
-    sp_coefficient = (effect.sp_potency / 100.0) * (t / 3.5) * coef_mult
-    ap_coefficient = (effect.ap_potency / 100.0) * (t / 3.5) / r
+    coef_mult = heal_coef_mult if is_heal_like else 1.0
+    sp_coefficient = (effect.sp_potency / 100.0) * (t / 3.5) * coef_mult * b_sp
+    ap_coefficient = (effect.ap_potency / 100.0) * (t / 3.5) / r * b_ap
 
     # "Generator implication (P2)": LOW_INTERCEPT/LOW_SLOPE/HIGH_OFFSET, same derivation as
     # EffectRealPointsPerLevel/K above but off the *low* segment's C(L) coefficients, purely for
@@ -256,8 +355,10 @@ def _resolve_weapon(effect: PotencyEffect, spell_level: int) -> ResolvedPotency:
             f"weapon_potency's flat bonus must be {WEAPON_FLAT_BONUS_MAX:g} or less, got "
             f"{effect.sp_potency!r} (\"Weapon attacks\": \"kept low (10 or less)\")"
         )
+    # Exempt from the rebase (HANDOFF 1.9: weapon potency, its flat part included, is untouched).
     flat = resolve(
         PotencyEffect(sp_potency=effect.sp_potency, kind=KIND_DIRECT, t_ms=1500.0), spell_level=spell_level,
+        base_scale=1.0, coef_scale=1.0,
     )
     return ResolvedPotency(
         base_points=int(round(wp)) + flat.base_points,

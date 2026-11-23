@@ -526,7 +526,7 @@ honor_roll_205639 = spell(
     mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF, duration_ms=30000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=_SCHOOL_MASK_ALL,
-               base_potency=30.0, potency_kind='absorb', implicit_target_a=_TARGET_UNIT_CASTER),
+               rebase_exempt=True, base_potency=30.0, potency_kind='absorb', implicit_target_a=_TARGET_UNIT_CASTER),
         Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, base_points=0,
                misc_value=_SCHOOL_MASK_ALL, implicit_target_a=_TARGET_UNIT_CASTER),
         Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_HEALING_DONE_PERCENT, base_points=0,

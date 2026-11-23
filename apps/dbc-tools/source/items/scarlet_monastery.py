@@ -91,7 +91,8 @@ DOG_WHISTLE_CATEGORY_COOLDOWN_MS = 60000
 # 60 would take the 1-59 cell on its Normal tier and the 60-100 cell from Heroic up, a 2.4x step (the ladder check
 # refuses over 1.5x). The 60-100 cell is declared on every tier instead, so the Normal tier is that cell at its own
 # (lower) item level and the step is the budget curve's alone.
-CASTER_MAIN_HAND_MULT = 1.931   # caster InventoryType 21 ilvl 60-100 (item_role_cells.lock)
+# physical InventoryType 13 ilvl 60-100: caster weapons take the physical budget (level60-stat-curve 1.8)
+CASTER_MAIN_HAND_MULT = 0.445
 BOW_MULT = 0.405                # physical InventoryType 15 ilvl 60-100
 
 R, Y, B = Socket.RED, Socket.YELLOW, Socket.BLUE

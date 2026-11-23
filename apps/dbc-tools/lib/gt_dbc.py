@@ -53,6 +53,19 @@ CUSTOM_COMBAT_RATINGS = {
     "Proc Rate": 11,           # was CR_HIT_TAKEN_MELEE
 }
 
+# Stock combat-rating slots whose server curve differs from the client's stock copy, so the client's character pane
+# shows the server's numbers: Dodge and Parry (13.8 per 1% at level 60 on the server; stock client 12 / 15) and Block
+# (5 -> 7 per 1% at level 60, x7/5 at every level, level60-stat-curve HANDOFF 1.10). Resilience (CR 14-16) also
+# differs but is PvP-only and left alone.
+RETUNED_COMBAT_RATINGS = {
+    "Dodge": 2,                # CR_DODGE
+    "Parry": 3,                # CR_PARRY
+    "Block": 4,                # CR_BLOCK
+}
+
+# Every slot patch_gt_tables.py writes into the client's copy.
+PATCHED_COMBAT_RATINGS = {**CUSTOM_COMBAT_RATINGS, **RETUNED_COMBAT_RATINGS}
+
 # Playable class IDs in 3.3.5a (ChrClasses.dbc) - 10 is unused (reserved/Monk in later
 # expansions), so there's no row worth touching for it.
 WOTLK_CLASS_IDS = (1, 2, 3, 4, 5, 6, 7, 8, 9, 11)

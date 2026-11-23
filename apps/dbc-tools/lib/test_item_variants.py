@@ -456,7 +456,8 @@ class CheckTest(unittest.TestCase):
         default = run([hammer(secondary=None)])
         self.assertEqual(default.errors, [])
         tier = default.items[0].tiers[0]
-        self.assertEqual((tier.itemization["secondary_shape_id"], tier.itemization["primary_share"]), (25, 10000))
+        # the stock row is a Rare: the lowest-id default (Crit) goes Solo at share 8000 (LS2, SoloSecondaryTest)
+        self.assertEqual((tier.itemization["secondary_shape_id"], tier.itemization["primary_share"]), (25, 8000))
         ring = run([D.item("dm_ring", base=1156, secondary="Crit (Solo)", ladder=ladder_dungeon())])
         self.assertEqual(ring.items[0].tiers[0].itemization["primary_shape_id"], 0)
         self.assertEqual(ring.items[0].tiers[0].itemization["primary_share"], 0)
@@ -571,12 +572,15 @@ class CheckTest(unittest.TestCase):
         self.assertEqual(exp.errors, [])
         normal, heroic, emp = exp.items[0].tiers
         live = fixture_tables()["item_itemization"][(5192,)]
-        self.assertEqual(normal.itemization, {c: live[c] for c in item_variants.ITEMIZATION_COLUMNS})
+        # a Rare with share 10000 takes the Solo secondary on every tier (LS2); the rest of the row is the live one
+        self.assertEqual(normal.itemization, {c: live[c] for c in item_variants.ITEMIZATION_COLUMNS}
+                         | {"primary_share": 8000})
         stamina_fraction = 2 / normal.baselines["stamina"]
         dps_fraction = -0.5 / normal.baselines["dps"]
         self.assertEqual(heroic.itemization["stamina_delta"], round(stamina_fraction * heroic.baselines["stamina"]))
         self.assertAlmostEqual(heroic.itemization["dps_delta"], round(dps_fraction * heroic.baselines["dps"], 4))
         self.assertEqual((heroic.itemization["primary_shape_id"], heroic.itemization["budget_mult"]), (23, 0.718))
+        self.assertEqual((heroic.itemization["primary_share"], heroic.itemization["secondary_shape_id"]), (8000, 47))
 
     def test_hard_mode_ladder_mints_every_tier(self):
         exp = run([D.item("hm_fuse", name="Powder Keg Fuse", secondary="Crit (Solo)", ladder=HARD_MODE,
@@ -585,6 +589,117 @@ class CheckTest(unittest.TestCase):
         self.assertEqual([(t.tier, t.entry, t.ilvl) for t in exp.items[0].tiers],
                          [("heroic_hm", 71000, 71), ("empowered_1_hm", 71001, 81)])
         self.assertEqual([t.label for t in exp.items[0].tiers], ["Heroic Hard Mode", "Molten Empowered Hard Mode"])
+
+
+class SoloSecondaryTest(unittest.TestCase):
+    """Level 60 stat curve LS2 (HANDOFF 1.5): a Rare / Epic tier that would spend its whole budget on primaries
+    (primary_share 10000) takes primary_share 8000 and the Solo shape of its secondary's lead stat."""
+
+    MASTERY, PARRY = 22, 14
+
+    @classmethod
+    def tables(cls) -> dict:
+        t = fixture_tables()
+        extra = {  # shape_id -> (name, kind, dist, stats, rules)
+            27: ("Mastery (Solo)", 1, 1, [cls.MASTERY], []),
+            33: ("Haste/Mastery", 1, 2, [HASTE, cls.MASTERY], []),
+            48: ("MP5/Crit", 1, 2, [MP5, CRIT], [(1, SPI)]),  # a Spirit primary only
+            55: ("Parry (Solo)", 1, 1, [cls.PARRY], [(1, STR)]),
+            57: ("Dodge/Crit", 1, 2, [DODGE, CRIT], []),
+            60: ("Parry/Crit", 1, 2, [cls.PARRY, CRIT], []),
+            79: ("MP5 (Solo, Spirit)", 1, 1, [MP5], [(1, SPI)]),
+            80: ("Dodge (Solo, Any)", 1, 1, [DODGE], []),
+        }
+        t["item_quality_mult"][(2,)] = {"mult": 0.8}  # Uncommon rows, for the Rare / Epic-only rule
+        t["item_armor_quality_mult"][(2,)] = {"mult": 0.9}
+        levels = range(1, 301)
+        t["item_weapon_dps_curve"].update({(i, 2, s): {"dps": i * (1.3 if s else 1.0) + 2} for i in levels
+                                            for s in (0, 1)})
+        t["item_alloc_dist"][(2, 1)] = {"alloc": 5000}
+        t["item_alloc_dist"][(2, 2)] = {"alloc": 5000}
+        t["item_alloc_dist_name"][(2,)] = {"name": "Even"}
+        for shape_id, (name, kind, dist, stats, rules) in extra.items():
+            t["item_shape"][(shape_id,)] = {"shape_id": shape_id, "name": name, "kind": kind, "dist_id": dist}
+            for rank, stat in enumerate(stats, 1):
+                t["item_shape_stat"][(shape_id, rank)] = {"stat_type": stat}
+            for rule_type, stat in rules:
+                t["item_shape_rule"][(shape_id, rule_type, stat)] = {}
+        return t
+
+    def solo(self, **kw):
+        """girdle() (a new Rare-by-default item, three tiers: Rare, Epic, Epic) resolved against the extra shapes."""
+        exp = run([girdle(**kw)], tables=self.tables())
+        self.assertEqual(exp.errors, [])
+        return exp, [(t.itemization["secondary_shape_id"], t.itemization["primary_share"]) for t in exp.items[0].tiers]
+
+    def test_default_secondary_goes_solo_on_rare_and_epic(self):
+        exp, rows = self.solo(secondary=None)
+        self.assertEqual(rows, [(25, 8000)] * 3)
+        self.assertEqual(exp.warnings, [])
+
+    def test_uncommon_tier_keeps_ten_thousand(self):
+        # an Uncommon first tier stays pure-primary; the Epic tiers above it take the secondary
+        exp, rows = self.solo(secondary=None, quality=2)
+        self.assertEqual(rows, [(25, 10000), (25, 8000), (25, 8000)])
+        self.assertEqual([t.quality for t in exp.items[0].tiers], [2, 4, 4])
+
+    def test_declared_ten_thousand_converts(self):
+        _, rows = self.solo(secondary="Haste/Mastery", primary_share=10000)
+        self.assertEqual(rows, [(26, 8000)] * 3)  # the lead (Haste) Solo shape
+
+    def test_other_shares_untouched(self):
+        for share in (4000, 6000):
+            _, rows = self.solo(secondary="Haste/Mastery", primary_share=share)
+            self.assertEqual(rows, [(33, share)] * 3)
+        _, rows = self.solo(secondary="Haste/Mastery", primary_share=8000)  # already 8000: the shape stays
+        self.assertEqual(rows, [(33, 8000)] * 3)
+
+    def test_solo_secondary_stays_itself(self):
+        _, rows = self.solo(secondary="Haste (Solo)", primary_share=10000)
+        self.assertEqual(rows, [(26, 8000)] * 3)
+
+    def test_two_solo_shapes_told_apart_by_the_rules(self):
+        # MP5/Crit needs a Spirit primary; MP5 (Solo) 47 forbids Spirit, so MP5 (Solo, Spirit) 79 is the one
+        _, rows = self.solo(primary="Spirit/SpellPower, Spirit lead", secondary="MP5/Crit", primary_share=10000)
+        self.assertEqual(rows, [(79, 8000)] * 3)
+        # Dodge/Crit with a Strength primary: Dodge (Solo) 54 and Dodge (Solo, Any) 80 both pass, the lowest id wins
+        _, rows = self.solo(primary="Strength (Solo)", secondary="Dodge/Crit", primary_share=10000)
+        self.assertEqual(rows, [(54, 8000)] * 3)
+
+    def test_solo_that_fails_its_rule_is_reported_not_forced(self):
+        # Parry/Crit goes with any primary; Parry (Solo) 55 needs Strength, and an Agility primary has none
+        exp = run([girdle(primary="Agility (Solo)", secondary="Parry/Crit", primary_share=10000)],
+                  tables=self.tables())
+        self.assertEqual(exp.errors, [])
+        self.assertEqual([(t.itemization["secondary_shape_id"], t.itemization["primary_share"])
+                          for t in exp.items[0].tiers], [(60, 10000)] * 3)
+        self.assertEqual(len(exp.warnings), 3)
+        self.assertIn("no Solo shape for the lead stat 14", exp.warnings[0])
+        self.assertIn("'Parry/Crit'", exp.warnings[0])
+
+    def test_live_itemization_converts_rare_and_epic_tiers(self):
+        rows = live_rows()
+        rows[5192]["Quality"] = 2  # an Uncommon stock base keeps its live row on the first tier
+        exp = run([D.item("dm_blade", base=5192, itemization="live", ladder=ladder_dungeon())], rows=rows,
+                  tables=self.tables())
+        self.assertEqual(exp.errors, [])
+        got = [(t.itemization["secondary_shape_id"], t.itemization["primary_share"]) for t in exp.items[0].tiers]
+        self.assertEqual(got, [(47, 10000), (47, 8000), (47, 8000)])
+
+    def test_apply_solo_secondary_directly(self):
+        _, shapes = item_variants._item_lib()
+        catalog = shapes.catalog(self.tables())
+        row = {"primary_share": 10000, "primary_shape_id": 22, "secondary_shape_id": 33}
+        self.assertIsNone(item_variants.apply_solo_secondary(row, 1, catalog))  # Poor: untouched
+        self.assertEqual(row["primary_share"], 10000)
+        self.assertIsNone(item_variants.apply_solo_secondary(row, 3, catalog))
+        self.assertEqual((row["primary_share"], row["secondary_shape_id"]), (8000, 26))
+        jewelry = {"primary_share": 10000, "primary_shape_id": 0, "secondary_shape_id": 33}  # Null primary
+        self.assertIsNone(item_variants.apply_solo_secondary(jewelry, 4, catalog))
+        self.assertEqual(jewelry["primary_share"], 10000)
+        suffix = {"primary_share": 6000, "primary_shape_id": 22, "secondary_shape_id": 0}
+        self.assertIsNone(item_variants.apply_solo_secondary(suffix, 4, catalog))
+        self.assertEqual(suffix["primary_share"], 6000)
 
 
 class LoadTest(unittest.TestCase):

@@ -681,11 +681,12 @@ holy_shock_25912 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=209.75, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=186.6775, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=156,
     tooltip_vars=holy_heal_tooltip,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=250.0 (paladin-potency-proposals.txt, user value; was 305.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: SpellLevel 40 -> 30; description quotes only its own value ({pot1*shock}, entry 1105 owned by paladin_holy_spells.py); NOT_A_PROC (AttributesEx3 0x200) kept for the resolver Effect 1 sp_potency 250.0 -> 209.75 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=250.0 (paladin-potency-proposals.txt, user value; was 305.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: SpellLevel 40 -> 30; description quotes only its own value ({pot1*shock}, entry 1105 owned by paladin_holy_spells.py); NOT_A_PROC (AttributesEx3 0x200) kept for the resolver Effect 1 sp_potency 250.0 -> 209.75 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839).'
+          ' sp_potency 209.75 -> 186.6775 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Shockadin, Holy Shock damage x0.89 (Divine Toll damage 201205 and the Glimmer damage pulses are ComputeShockValue of this row, so they follow)).',
     raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, causing {pot1*shock} Holy damage.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2097152, 'SpellClassSet': 10, 'SpellLevel': 30, 'SpellVisualID_1': 128, 'StartRecoveryCategory': 133},
 )
 
@@ -2772,7 +2773,7 @@ the_art_of_war_53486 = spell(
     ],
     spell_icon_id=3034,
     notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (7,1): eff0 ADD_PCT DAMAGE (AOW_DAMAGE), eff1 triggers 59578 on every rank, new eff2 ADD_PCT DOT (AOW_DOT); DBC ProcChance 10/20/30.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Judgement, Deliverance, Crusader Strike, Execution Sentence and Divine Storm by $s1%. Damage from these and your main-hand auto attacks has a $h% chance to make your next Flash of Light or Exorcism instant within 20 sec; Divine Storm rolls at half the chance on each target hit. This effect cannot occur more than once every 6 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 4116, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_1': m.AOW_DAMAGE[0], 'EffectSpellClassMaskA_2': m.AOW_DAMAGE[1], 'EffectSpellClassMaskA_3': m.AOW_DAMAGE[2], 'EffectSpellClassMaskC_1': m.AOW_DOT[0], 'EffectSpellClassMaskC_3': m.AOW_DOT[2]},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Judgement, Deliverance, Crusader Strike, Execution Sentence and Divine Storm by $s1%. Damage from these and your main-hand auto attacks has a $h% chance to finish the cooldown of your Exorcism and make your next Flash of Light or Exorcism instant within 20 sec; Divine Storm rolls at half the chance on each target hit. This effect cannot occur more than once every 6 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 4116, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_1': m.AOW_DAMAGE[0], 'EffectSpellClassMaskA_2': m.AOW_DAMAGE[1], 'EffectSpellClassMaskA_3': m.AOW_DAMAGE[2], 'EffectSpellClassMaskC_1': m.AOW_DOT[0], 'EffectSpellClassMaskC_3': m.AOW_DOT[2]},
 )
 
 
@@ -2794,7 +2795,7 @@ the_art_of_war_53488 = spell(
     ],
     spell_icon_id=3034,
     notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (7,1): eff0 ADD_PCT DAMAGE (AOW_DAMAGE), eff1 triggers 59578 on every rank, new eff2 ADD_PCT DOT (AOW_DOT); DBC ProcChance 10/20/30.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Judgement, Deliverance, Crusader Strike, Execution Sentence and Divine Storm by $s1%. Damage from these and your main-hand auto attacks has a $h% chance to make your next Flash of Light or Exorcism instant within 20 sec; Divine Storm rolls at half the chance on each target hit. This effect cannot occur more than once every 6 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 4116, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_1': m.AOW_DAMAGE[0], 'EffectSpellClassMaskA_2': m.AOW_DAMAGE[1], 'EffectSpellClassMaskA_3': m.AOW_DAMAGE[2], 'EffectSpellClassMaskC_1': m.AOW_DOT[0], 'EffectSpellClassMaskC_3': m.AOW_DOT[2]},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Judgement, Deliverance, Crusader Strike, Execution Sentence and Divine Storm by $s1%. Damage from these and your main-hand auto attacks has a $h% chance to finish the cooldown of your Exorcism and make your next Flash of Light or Exorcism instant within 20 sec; Divine Storm rolls at half the chance on each target hit. This effect cannot occur more than once every 6 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 4116, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_1': m.AOW_DAMAGE[0], 'EffectSpellClassMaskA_2': m.AOW_DAMAGE[1], 'EffectSpellClassMaskA_3': m.AOW_DAMAGE[2], 'EffectSpellClassMaskC_1': m.AOW_DOT[0], 'EffectSpellClassMaskC_3': m.AOW_DOT[2]},
 )
 
 
@@ -3754,7 +3755,7 @@ vindication_9452 = spell(
     ],
     spell_icon_id=1798,
     notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (3,1): eff0 now triggers the hit 201420, new eff1 triggers the Mastery buff 201421; DBC ProcChance 5/10/15, ProcTypeMask 0x14.',
-    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 20, 'ProcChance': 5, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a $h% chance to deal ' + pot_text(vindication_strike_201420) + ' Holy damage to the target and increase your Mastery by 3% for 10 sec. This effect cannot occur more than once every 4 sec.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 20, 'ProcChance': 5, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a $h% chance to deal ' + pot_text(vindication_strike_201420) + ' Holy damage to the target and increase your Mastery by 3% for 10 sec. This effect cannot occur more than once every 2 sec.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
 )
 
 
@@ -3775,7 +3776,7 @@ vindication_26016 = spell(
     ],
     spell_icon_id=1798,
     notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (3,1): eff0 now triggers the hit 201420, new eff1 triggers the Mastery buff 201421; DBC ProcChance 5/10/15, ProcTypeMask 0x14.',
-    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 20, 'ProcChance': 10, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a $h% chance to deal ' + pot_text(vindication_strike_201420) + ' Holy damage to the target and increase your Mastery by 3% for 10 sec. This effect cannot occur more than once every 4 sec.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 20, 'ProcChance': 10, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a $h% chance to deal ' + pot_text(vindication_strike_201420) + ' Holy damage to the target and increase your Mastery by 3% for 10 sec. This effect cannot occur more than once every 2 sec.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
 )
 
 
@@ -4489,7 +4490,7 @@ vindication_201466 = spell(
     ],
     spell_icon_id=1798,
     notes='paladin-rework S1 RETRIBUTION §5 (3,1): new rank 3 (clone of 26016): 15% chance.',
-    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a $h% chance to deal ' + pot_text(vindication_strike_201420) + ' Holy damage to the target and increase your Mastery by 3% for 10 sec. This effect cannot occur more than once every 4 sec.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 15, 'ProcTypeMask': 20},
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a $h% chance to deal ' + pot_text(vindication_strike_201420) + ' Holy damage to the target and increase your Mastery by 3% for 10 sec. This effect cannot occur more than once every 2 sec.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 15, 'ProcTypeMask': 20},
 )
 
 
@@ -4601,7 +4602,7 @@ the_art_of_war_201472 = spell(
     ],
     spell_icon_id=3034,
     notes='paladin-rework S1 RETRIBUTION §5 (7,1): new rank 3 (clone of 53488): +9% damage, 30% proc chance, DoT part on AOW_DOT.',
-    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Judgement, Deliverance, Crusader Strike, Execution Sentence and Divine Storm by $s1%. Damage from these and your main-hand auto attacks has a $h% chance to make your next Flash of Light or Exorcism instant within 20 sec; Divine Storm rolls at half the chance on each target hit. This effect cannot occur more than once every 6 sec.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 30, 'ProcTypeMask': 4116, 'EffectSpellClassMaskA_1': m.AOW_DAMAGE[0], 'EffectSpellClassMaskA_2': m.AOW_DAMAGE[1], 'EffectSpellClassMaskA_3': m.AOW_DAMAGE[2], 'EffectSpellClassMaskC_1': m.AOW_DOT[0], 'EffectSpellClassMaskC_3': m.AOW_DOT[2]},
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Judgement, Deliverance, Crusader Strike, Execution Sentence and Divine Storm by $s1%. Damage from these and your main-hand auto attacks has a $h% chance to finish the cooldown of your Exorcism and make your next Flash of Light or Exorcism instant within 20 sec; Divine Storm rolls at half the chance on each target hit. This effect cannot occur more than once every 6 sec.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 30, 'ProcTypeMask': 4116, 'EffectSpellClassMaskA_1': m.AOW_DAMAGE[0], 'EffectSpellClassMaskA_2': m.AOW_DAMAGE[1], 'EffectSpellClassMaskA_3': m.AOW_DAMAGE[2], 'EffectSpellClassMaskC_1': m.AOW_DOT[0], 'EffectSpellClassMaskC_3': m.AOW_DOT[2]},
 )
 
 
@@ -4625,12 +4626,13 @@ procs_on(-53380, proc_flags=0x10 | 0x100 | 0x1000 | 0x10000, family_name=10, fam
          spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, hit_mask=m.PROC_HIT_CRITICAL,
          attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, chance=100)
 # The Art of War: own hits + Crusader Strike / Divine Storm / Execution Sentence + main-hand autos, 6 s ICD; eff0/eff2 are SpellMods (0x5).
+# S22 2026-11-22: the 6 s ICD stays; spell_pal_art_of_war now also finishes Exorcism's cooldown on every proc.
 procs_on(-53486, proc_flags=0x4 | 0x10 | 0x100 | 0x10000, family_name=10, family_mask=m.AOW_PROC,
          spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT,
          attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, disable_effects_mask=0x5, chance=0, cooldown_ms=6000)
-# Vindication: melee attacks, flat 5/10/15% (no PPM), 4 s ICD.
+# Vindication: melee attacks, flat 5/10/15% (no PPM), 2 s ICD (S22 2026-11-22: 4 -> 2 s, ICD report option A).
 procs_on(-9452, proc_flags=0x4 | 0x10, family_name=0, spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE,
-         spell_phase_mask=m.PROC_SPELL_PHASE_HIT, ppm=0.0, chance=0, cooldown_ms=4000)
+         spell_phase_mask=m.PROC_SPELL_PHASE_HIT, ppm=0.0, chance=0, cooldown_ms=2000)
 # Eye for an Eye: damage taken (normal + crit), 60 s ICD; the rank-3 gate lives in spell_pal_eye_for_an_eye_ret.
 procs_on(-9799, proc_flags=0x100000, attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, chance=100, cooldown_ms=60000)
 # Conviction capstone (rank 3 only; no Conviction chain row exists): crits of CS / HoW / Exorcism / DS.

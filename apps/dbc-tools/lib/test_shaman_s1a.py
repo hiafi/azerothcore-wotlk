@@ -305,11 +305,11 @@ FIX_PASS_SUMMONS = (2062, 2894, 202272, 202273)
 # 2026-11-17 weapon scaling WS2 Elemental x0.790: 51505 32.26 -> 25.485, 421 99.5 -> 78.605, 8056 32.3 -> 25.517,
 # 202281 21.5 -> 16.985, 202282 120.4 -> 95.116, 202276 43.0 -> 33.97, 202278 51.6 -> 40.764, 202270 10.8 -> 8.532
 # 2026-11-17 follow-up (user ruling: trim the Enhancement-shared spells too): 403 100.8 -> 79.632, 8042 96.0 -> 75.84,
-# 8050 25.84 -> 20.414 / 8.64 -> 6.826.
+# 8050 25.84 -> 20.414 / 8.64 -> 6.826. 2026-11-22 level60-stat-curve S17: 8349 Fire Nova 104.1 -> 187.38 (x1.8).
 FIX_PASS_POTENCY = (
     (51505, 1, 25.485), (403, 1, 79.632), (421, 1, 78.605), (8042, 2, 75.84), (8050, 1, 20.414), (8050, 2, 6.826),
     (8056, 2, 25.517), (202281, 1, 16.985), (202282, 1, 95.116), (202276, 1, 33.97), (202278, 1, 40.764),
-    (202270, 1, 8.532), (8349, 1, 104.1),
+    (202270, 1, 8.532), (8349, 1, 187.38),
 )
 
 
@@ -640,7 +640,7 @@ class ShamanS1aDataTest(unittest.TestCase):
         self.assertNotIn("reduces the damage", cl["Description_Lang_enUS"])
         self.assertEqual(float(rows[202592]["EffectChainAmplitude_1"]), 1.0)
         bolt = rows[202278]
-        self.assertEqual((int(bolt["EffectChainTargets_1"]), float(bolt["EffectChainAmplitude_1"])), (5, 1.0))
+        self.assertEqual((int(bolt["EffectChainTargets_1"]), float(bolt["EffectChainAmplitude_1"])), (3, 1.0))  # 5 -> 3 (S19)
         eots = rows[29065]
         self.assertEqual((int(eots["EffectAura_3"]), int(eots["EffectMiscValue_3"])), (107, 17))   # flat JUMP_TARGETS
         self.assertEqual(int(eots["EffectBasePoints_3"]) + 1, 1)

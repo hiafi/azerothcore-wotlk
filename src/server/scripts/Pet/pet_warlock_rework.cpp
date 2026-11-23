@@ -156,9 +156,11 @@ namespace
     constexpr uint32 INFERNAL_PULSE_INTERVAL_MS = 1000;
     constexpr uint32 INFERNAL_RETARGET_INTERVAL_MS = 500;
     // Melee swing (2 s, creature_template BaseAttackTime) = two Immolation ticks at level 80
-    // (DEMONOLOGY.md §4.0: 83 + 0.1114 x SP per tick), +/- 10%.
-    constexpr float INFERNAL_MELEE_BASE_DAMAGE = 166.0f;
-    constexpr float INFERNAL_MELEE_SP_COEFFICIENT = 0.2228f;
+    // (DEMONOLOGY.md §4.0: 83 + 0.1114 x SP per tick), +/- 10%. Scaled like a generated potency spell by the potency
+    // rebase (level60-stat-curve HANDOFF 1.9, LS5b ruling 7, 2026-11-20; spell power side refitted in S7b): base
+    // 166 x a (0.48) = 79.68, coefficient 0.2228 x b (1.93) = 0.4300.
+    constexpr float INFERNAL_MELEE_BASE_DAMAGE = 79.68f;
+    constexpr float INFERNAL_MELEE_SP_COEFFICIENT = 0.4300f;
     constexpr float INFERNAL_MELEE_SPREAD = 0.1f;
 
     enum InfernalAIEvent : uint32

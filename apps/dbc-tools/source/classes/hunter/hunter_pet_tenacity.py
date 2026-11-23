@@ -435,7 +435,7 @@ crippling_pinch_201765 = _utility(
 
 bubble_shield_201998 = _utility(
     201998, 'Bubble Shield', BUBBLE_SHIELD_LEVEL,
-    [Effect(type=EffectType.APPLY_AURA, ap_potency=300.0, potency_kind='absorb', implicit_target_a=_TARGET_UNIT_MASTER,
+    [Effect(type=EffectType.APPLY_AURA, ap_potency=420.0, potency_kind='absorb', implicit_target_a=_TARGET_UNIT_MASTER,
             apply_aura=AuraType.SCHOOL_ABSORB, misc_value=_SCHOOL_MASK_ALL)],
     32, 4302,
     'Your pet wraps you in a bubble that absorbs {pot1} damage for $d.',
@@ -445,7 +445,8 @@ bubble_shield_201998 = _utility(
           'MASTER, FE 9f), 300 potency (Healing Dust\'s per-target amount, F1) on the heal scale, 15 s, 1 min. '
           'spell_hun_pet_absorb (PLAN §5.2 `absorb`) adds the generated ap_bonus x the pet\'s attack power (an absorb '
           'gets no engine bonus; pet spell power is 0); F3\'s Swarm Shield reuses it. Visual 4302 / icon 32 from Ice '
-          'Barrier 11426.',
+          'Barrier 11426.'
+          ' Effect 1 ap_potency 300 -> 420 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: attack-power heals and absorbs option A, restore x1.40).',
 )
 
 

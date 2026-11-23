@@ -38,9 +38,10 @@ namespace SimReport
     // Schema (top-level object):
     //   "config":  {actorLevel, targetLevel, spellPower, durationMs, targetCount, targetSpreadYards,
     //               targetRank ("boss"|"elite")}
-    //   "summary": {elapsedMs, totalDamage, dps, castCount, critCount, critRatePct, actorDiedAtMs, dpsPerTarget,
-    //               targetSwitches} - dps is total damage across every dummy / duration, dpsPerTarget that over
-    //               targetCount; targetSwitches is RunResult::TargetSwitches.
+    //   "summary": {elapsedMs, totalDamage, dps, castCount, critCount, critRatePct, actorDiedAtMs, prePullComplete,
+    //               petAtPull, rerunCount, dpsPerTarget, targetSwitches} - dps is total damage across every dummy /
+    //               duration, dpsPerTarget that over targetCount; targetSwitches is RunResult::TargetSwitches;
+    //               prePullComplete / petAtPull / rerunCount are RunResult's (the pre-pull setup, S13).
     //   "spells":  [{spellId, isPet, sourceEntry, hitCount, critCount, totalDamage, pctOfTotal, castCount,
     //               targetsHit}, ...] -
     //              castCount is the cast log's count for that spell id (triggered included, 0 for a pet row), so

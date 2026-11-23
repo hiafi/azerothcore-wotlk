@@ -53,7 +53,8 @@ spell:
   # 204400-204899: Warrior (`reservations: warrior`, warrior-rework.PLAN.md s4): shared 204400-204489, Arms
   # 204490-204629, Fury 204630-204769, Protection 204770-204799, spare 204800-204868, 204869-204899 = the P0 spike.
   # The September Protection build's 37 spells 200028-200066 (all but the mage's 200037 / 200044) stay below the slice.
-  # 205100-205199: Mage (`reservations: mage`): 205100 Lasting Flame rank 2 (moved off 200100, see `foreign`).
+  # 205100-205199: Mage (`reservations: mage`): 205100 Lasting Flame rank 2 (moved off 200100, see `foreign`), 205101
+  # Fire Tuning (level60-stat-curve S23).
   #
   # `foreign`: ids inside this block that another owner's SQL holds, never ours (lib/source.py `foreign_ids`). The
   # generated block DELETE skips them (split into ranges around each one), the stale-overlay and unchanged-block
@@ -622,7 +623,8 @@ reservations:
 
   # Mage: the SpellIcon slice, for the 10-31 bug-fix talent icon pass (build_patch_i.py ICON_ID_MAGE_*: 90450-90455),
   # and a spell slice for every mage spell minted from now on: 205100 Lasting Flame rank 2 (moved off mod-transmog's
-  # 200100 on 2026-11-06: the old mage range 200001-200129 had no free id left), 205101-205199 spare. Checked free
+  # 200100 on 2026-11-06: the old mage range 200001-200129 had no free id left), 205101 Fire Tuning (level60-stat-curve
+  # S23, 2026-11-22), 205102-205199 spare. Checked free
   # 2026-11-06: no declaration, no SQL file (base, merged, pending, custom, modules) and no live spell_dbc row above
   # 205023. The mage's older spell / talent / visual ids predate the reservations and stay outside them
   # (lib/test_id_blocks.py's MAGE_LEGACY).

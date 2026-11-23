@@ -171,6 +171,11 @@ static bool WriteDpsReport(std::string const& path, SimDaemon::RunConfig const& 
     else
         file << "null";
     file << ",\n";
+    // The pre-pull setup (SimDaemon.h's RunResult::PrePullComplete / PetAtPull / RerunCount): a collector drops an
+    // iteration whose prePullComplete is false, or whose petAtPull is false while the run's others are true
+    file << "    \"prePullComplete\": " << (result.PrePullComplete ? "true" : "false") << ",\n";
+    file << "    \"petAtPull\": " << (result.PetAtPull ? "true" : "false") << ",\n";
+    file << "    \"rerunCount\": " << result.RerunCount << ",\n";
     // dps stays total damage across every dummy / duration
     file << "    \"dpsPerTarget\": " << dps / double(targetCount) << ",\n";
     file << "    \"targetSwitches\": " << result.TargetSwitches << "\n";

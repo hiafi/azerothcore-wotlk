@@ -1223,6 +1223,63 @@ class spell_dru_natural_shapeshifter : public AuraScript
     }
 };
 
+// 28716 - Rejuvenation (T3 2P Bonus) - S22, ICD report B6. The stock spell_dru_t3_2p_bonus (unbound) rolled a
+// flat 50% after the row's 100% roll, so Proc Chance did nothing for a set bonus (Systems.md section 5: set bonuses
+// scale). Same payload, one roll of 50% x the druid's Proc Chance.
+class spell_dru_t3_2p_bonus_rework : public AuraScript
+{
+    PrepareAuraScript(spell_dru_t3_2p_bonus_rework);
+
+    static constexpr uint32 SPELL_T3_ENERGIZE_MANA = 28722;
+    static constexpr uint32 SPELL_T3_ENERGIZE_RAGE = 28723;
+    static constexpr uint32 SPELL_T3_ENERGIZE_ENERGY = 28724;
+    static constexpr float T3_2P_CHANCE_PCT = 50.0f;
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_T3_ENERGIZE_MANA, SPELL_T3_ENERGIZE_RAGE, SPELL_T3_ENERGIZE_ENERGY });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        Unit* actor = eventInfo.GetActor();
+        Player const* player = actor ? actor->GetSpellModOwner() : nullptr;
+        float const chanceMult = player ? 1.0f + player->GetProcChancePercentage() / 100.0f : 1.0f;
+        return eventInfo.GetActionTarget() && roll_chance_f(std::min(T3_2P_CHANCE_PCT * chanceMult, 100.0f));
+    }
+
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+        Unit* target = eventInfo.GetActionTarget();
+        uint32 spellId = 0;
+
+        switch (target->getPowerType())
+        {
+            case POWER_MANA:
+                spellId = SPELL_T3_ENERGIZE_MANA;
+                break;
+            case POWER_RAGE:
+                spellId = SPELL_T3_ENERGIZE_RAGE;
+                break;
+            case POWER_ENERGY:
+                spellId = SPELL_T3_ENERGIZE_ENERGY;
+                break;
+            default:
+                return;
+        }
+
+        eventInfo.GetActor()->CastSpell(target, spellId, true, nullptr, aurEff);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_dru_t3_2p_bonus_rework::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_dru_t3_2p_bonus_rework::HandleProc, EFFECT_0,
+            SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
+    }
+};
+
 void AddSC_druid_resto_spell_scripts()
 {
     RegisterSpellScript(spell_dru_harmony_direct);
@@ -1247,4 +1304,5 @@ void AddSC_druid_resto_spell_scripts()
     RegisterSpellScript(spell_dru_living_spirit_capstone);
     RegisterSpellScript(spell_dru_natures_focus_capstone);
     RegisterSpellScript(spell_dru_natural_shapeshifter);
+    RegisterSpellScript(spell_dru_t3_2p_bonus_rework);
 }

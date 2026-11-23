@@ -46,6 +46,8 @@ namespace ItemBudget
         uint32 StatType = 0;
         bool IsPrimary = false; // true if this rank came from the primary shape, not item_stat_cost.is_primary
         uint32 Alloc = 0;       // ten-thousandths, from the shape's distribution
+        uint32 BudgetCurve = 0; // item_stat_cost.budget_curve: 1 = secondary curve, 0 = primary curve
+        bool Scaled = false;    // a secondary-side rank with BudgetCurve 1: RawValue includes SecondaryRatio
         float RawValue = 0.0f;  // before rounding
         int32 RoundedValue = 0;
     };
@@ -77,7 +79,15 @@ namespace ItemBudget
         int32 Budget = 0;            // curve(ilvl) * SlotMult * QualityMult * BudgetMult * SetDiscount, minus socket costs
 
         float PrimaryBudget = 0.0f;
-        float SecondaryBudget = 0.0f;
+        float SecondaryBudget = 0.0f; // the secondary side's budget on the primary curve, before SecondaryRatio
+
+        // Level 60 secondary stat curve: item_budget_curve's two values at this ilvl and their ratio
+        // r = CurveSecondaryBudget / CurveBudget. Each secondary-side stat with item_stat_cost.budget_curve 1 gets its
+        // exact value times r, and those stats are rounded again over the item's new exact total; the random suffix
+        // factor is sized from SecondaryBudget x r.
+        uint32 CurveBudget = 0;
+        uint32 CurveSecondaryBudget = 0;
+        double SecondaryRatio = 1.0;
 
         int32 StaminaDelta = 0;
         int32 BaselineStamina = 0;
@@ -121,8 +131,11 @@ namespace ItemBudget
 
         // Crafting rework C4 (A1): secondary_shape_id 0 on an item with a random suffix pool means "the suffix carries
         // the secondaries". The secondary budget is left unspent here and becomes the item's suffix factor:
-        // 2 * round(SecondaryBudget / 2), so each half of a 5000/5000 suffix pair is round(SecondaryBudget / 2).
+        // 2 * round(SecondaryBudget x SuffixRatio / 2), so each half of a 5000/5000 suffix pair is half the scaled
+        // secondary budget, rounded. SuffixRatio is SecondaryRatio when every stat of the item's suffix pool rides the
+        // secondary curve, else 1 (a pool with MP5, a primary or any other flag-0 stat keeps today's factor).
         bool SuffixSecondaries = false;
+        double SuffixRatio = 1.0;
         uint32 SuffixFactor = 0;
 
         std::vector<AllocationDetail> Allocations; // primary-side ranks followed by secondary-side ranks
