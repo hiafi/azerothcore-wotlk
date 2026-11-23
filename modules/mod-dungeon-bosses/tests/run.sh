@@ -2,9 +2,9 @@
 # Builds and runs the standalone mod-dungeon-bosses tests with every available host compiler (g++ and clang++).
 # Pure headers only (src/<Dungeon>/*Logic.h, src/DungeonSets/*Logic.h, DeadminesKitMath.h, DeadminesRework.h,
 # ShadowfangKeepRework.h, ScholomanceRework.h, SoloLessonLogic.h, StratholmeRework.h, BlackrockSpireRework.h,
-# BlackrockDepthsRework.h, the shared kit's pure
-# src/Kit/DungeonKit{Math,State,Arena,Logic,Ids,Floor,Flow,WallLogic,FrontLogic,RingLogic}.h, the generated
-# src/Generated/ItemSpellCopies.h): no server build needed.
+# BlackrockDepthsRework.h, ScarletMonasteryRework.h, the shared kit's pure
+# src/Kit/DungeonKit{Math,State,Arena,Logic,Ids,Floor,Flow,WallLogic,FrontLogic,RingLogic,ZoneLogic,WingLogic}.h, the
+# generated src/Generated/ItemSpellCopies.h): no server build needed.
 # A boss WP adds nothing here: every tests/<boss>_test.cpp is listed below already (one per boss file).
 set -euo pipefail
 
@@ -130,6 +130,25 @@ tests=(
   brd_magmus_test
   brd_emperor_test
   brd_emperor_hard_mode_test
+  scarlet_monastery_test
+  sm_vishas_test
+  sm_ironspine_test
+  sm_council_test
+  sm_thalnos_test
+  sm_thalnos_hard_mode_test
+  sm_loksey_test
+  sm_kell_test
+  sm_hollis_grey_test
+  sm_doan_test
+  sm_doan_hard_mode_test
+  sm_crell_test
+  sm_halden_test
+  sm_herod_test
+  sm_herod_hard_mode_test
+  sm_thorne_test
+  sm_last_stand_test
+  sm_whitemane_test
+  sm_whitemane_hard_mode_test
 )
 
 status=0
@@ -138,7 +157,7 @@ for cxx in "${compilers[@]}"; do
     echo "== $cxx $test"
     "$cxx" -std=c++20 -Wall -Wextra -Werror -O1 -I "$root/src/Kit" -I "$root/src/Deadmines" \
       -I "$root/src/ShadowfangKeep" -I "$root/src/Scholomance" -I "$root/src/Stratholme" -I "$root/src/Generated" \
-      -I "$root/src/BlackrockSpire" -I "$root/src/BlackrockDepths" \
+      -I "$root/src/BlackrockSpire" -I "$root/src/BlackrockDepths" -I "$root/src/ScarletMonastery" \
       -I "$here" \
       "$here/$test.cpp" -o "$out/$test-$cxx"
     if ! "$out/$test-$cxx"; then

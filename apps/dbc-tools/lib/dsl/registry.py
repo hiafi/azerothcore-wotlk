@@ -278,6 +278,10 @@ class Registry:
     # creature_template_spell / creature_template_model join creature_template_spells / creature_template_models.
     dungeon_encounters: list[dict] = field(default_factory=list)
     instance_encounters: list[dict] = field(default_factory=list)
+    # Scarlet Monastery build FD-SM (lib/dsl/dungeon.py): one entry per dungeon_encounter() / repoint_encounter() call
+    # (`id` = DungeonEncounter id, so declaring one twice is a DuplicateIdError). Never emitted as is:
+    # lib/dungeon_encounters.py builds the `dungeon_encounters` / `instance_encounters` rows from it.
+    encounter_declarations: list[dict] = field(default_factory=list)
     # Dungeon finder declarations (lib/dsl/lfg.py, source/world/): `lfg_group_declarations` one entry per lfg_group()
     # (`id` = LFGDungeonGroup id), `lfg_dungeon_declarations` one per lfg_random() / lfg_heroic() (`id` = LFGDungeons
     # id). Never emitted as is: lib/lfg_dungeons.py builds the full rows from the stock files after loading into
@@ -357,8 +361,8 @@ MERGE_KEYS = (
     "spell_rune_costs", "spell_threats", "spell_threat_removals", "creation_actions", "creation_action_removals",
     "creation_casts", "creation_cast_removals", "creation_skills", "creation_skill_removals", "chr_classes",
     "dungeons", "map_difficulties", "dungeon_access",
-    "dungeon_encounters", "instance_encounters", "heroic_template_addons", "heroic_template_resistances",
-    "heroic_template_movements", "heroic_onkill_reputations",
+    "dungeon_encounters", "instance_encounters", "encounter_declarations", "heroic_template_addons",
+    "heroic_template_resistances", "heroic_template_movements", "heroic_onkill_reputations",
     "lfg_group_declarations", "lfg_dungeon_declarations", "lfg_dungeons", "lfg_dungeon_templates", "lfg_groups",
     "item_declarations", "loot_declarations", "item_limit_categories", "skill_lines",
     "spell_item_enchantments", "item_random_suffixes", "gem_properties", "enchant_conditions", "item_enchantment_pools",

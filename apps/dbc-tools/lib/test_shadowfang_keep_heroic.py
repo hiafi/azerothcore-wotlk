@@ -160,6 +160,9 @@ class ExpansionTest(unittest.TestCase):
                 cls.dsl[key] = cls.dsl.get(key, []) + list(getattr(kit, key))
             # only Shadowfang Keep's heroic is expanded here (the Deadmines' has its own tests)
             cls.dsl["dungeons"] = [e if e["map_id"] == 33 else dict(e, heroic=None) for e in cls.dsl["dungeons"]]
+            # Scarlet Monastery's encounter declarations (FD-SM) belong to its own expansion
+            # (test_scarlet_monastery_heroic.py), which runs dungeon_encounters.expand() first
+            cls.dsl["encounter_declarations"] = []
             cls.index = spell_tables.load_spell_table_index()
             cls.out = dungeon_heroic.expand(
                 cls.dsl, lambda: dungeon_heroic.load_live_world(existing, cls.index), ids_cfg=IDS,

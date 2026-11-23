@@ -98,6 +98,8 @@ namespace
         out.emplace_back("escapeFacingBlocks", c.escapeFacingBlocks);
         out.emplace_back("tankRefacings", c.tankRefacings);
         out.emplace_back("refacingStops", c.refacingStops);
+        // Scarlet Monastery F6: re-facing checks skipped while a facing hold stands
+        out.emplace_back("tankFacingHeld", c.tankFacingHeld);
         out.emplace_back("parks", c.parks);
         out.emplace_back("routesFound", c.routesFound);
         out.emplace_back("routesFailed", c.routesFailed);
