@@ -3816,11 +3816,11 @@ fingers_of_frost_44543 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=44544),
+        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=44544),
     ],
     spell_icon_id=2947,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Chill effects a $s1% chance to grant you the Fingers of Frost effect, which treats your next $44544s1 spells cast as if the target were Frozen.  Lasts $44544d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; S22 2026-11-22 (user ruling 7): chance 7% -> 12% (eff0 and the spell_proc row), the proc now also rolls on each Frozen Orb pulse that strikes (x1) and each Blizzard tick (x0.5, scripts), and the row drops Chilled (Improved Blizzard rolled per target) and triggered casts.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Frostbolt, Frostfire Bolt and Cone of Cold casts and each pulse of your Frozen Orb that strikes an enemy have a $s1% chance, and each tick of your Blizzard has half that chance, to grant you the Fingers of Frost effect, which treats your next $44544s1 spells cast as if the target were Frozen.  Lasts $44544d.  Ice Lance cannot trigger this effect.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3836,12 +3836,23 @@ fingers_of_frost_44545 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=44544),
+        Effect(type=EffectType.APPLY_AURA, base_points=23, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=44544),
     ],
     spell_icon_id=2947,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Chill effects a $s1% chance to grant you the Fingers of Frost effect, which treats your next $44544s1 spells cast as if the target were Frozen.  Lasts $44544d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; S22 2026-11-22 (user ruling 7): chance 15% -> 24% (eff0 and the spell_proc row), the proc now also rolls on each Frozen Orb pulse that strikes (x1) and each Blizzard tick (x0.5, scripts), and the row drops Chilled (Improved Blizzard rolled per target) and triggered casts.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Frostbolt, Frostfire Bolt and Cone of Cold casts and each pulse of your Frozen Orb that strikes an enemy have a $s1% chance, and each tick of your Blizzard has half that chance, to grant you the Fingers of Frost effect, which treats your next $44544s1 spells cast as if the target were Frozen.  Lasts $44544d.  Ice Lance cannot trigger this effect.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
+
+
+# Fingers of Frost talent rows (S22 2026-11-22, user ruling 7): replace the stock rows (mask 0x100220 / 0x1000 =
+# Frostbolt, Cone of Cold, Chilled, Frostfire Bolt; TRIGGERED_CAN_PROC). Chilled is out (Improved Blizzard's chill
+# rolled once per target per tick; Blizzard now rolls once per tick in spell_mage_blizzard_icicles), and triggered
+# casts roll nothing. Ice Lance (d0 0x20000) is in no FoF roll. Sizing (round-4 FrostMageSimSW, per 120 s at 0% Proc
+# Chance): 3.7 Orb casts + 24% x (31.9 striking pulses + 21.1 Frostbolts) = 16.4 grants, today's total.
+procs_on(fingers_of_frost_44543, proc_flags=0, family_name=3, family_mask=(0x220, 0x1000, 0), spell_phase_mask=1,
+         chance=12.0)
+procs_on(fingers_of_frost_44545, proc_flags=0, family_name=3, family_mask=(0x220, 0x1000, 0), spell_phase_mask=1,
+         chance=24.0)
 
 
 brain_freeze_44546 = spell(

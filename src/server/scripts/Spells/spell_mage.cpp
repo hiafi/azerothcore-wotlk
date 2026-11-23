@@ -276,13 +276,6 @@ enum MageSpellIcons
     MAGE_ICON_SCORCHED_EARTH                       = 3063
 };
 
-/*
- * Frost Mage rework (docs/frost-mage-redesign.md, docs/frost-mage-implementation-plan.md).
- * Phase 1, first slice: the shared frozen-state check, Icicles, Glacial Spike, and Flurry.
- * Frozen Orb, Deep Freeze's conversion, the talent-row auras, and the rest of Phase 1 are not
- * part of this slice - see the implementation plan's "Suggested starting order".
- */
-
 namespace
 {
     // S22: a mage script that rolls its own chance multiplies it by the player's Proc Chance (Systems.md section 5),
@@ -297,7 +290,33 @@ namespace
     {
         return roll_chance_f(std::min(chancePct * GetMageProcChanceMultiplier(caster), 100.0f));
     }
+
+    // S22 (user ruling 7): the Fingers of Frost proc as the scripts roll it - the known talent rank's eff0 chance
+    // (12/24%) x `chanceScale` x Proc Chance. Frozen Orb's pulses roll at scale 1, Blizzard's ticks at 0.5; the
+    // talent's own spell_proc row rolls the Frostbolt / Frostfire Bolt / Cone of Cold casts. A success grants the
+    // charges (74396, the same grant Frozen Orb's cast makes). Ice Lance never reaches any of these rolls.
+    bool TryGrantFingersOfFrost(Unit* mage, float chanceScale)
+    {
+        AuraEffect const* talent = mage ? mage->GetAuraEffectOfRankedSpell(SPELL_MAGE_FINGERS_OF_FROST, EFFECT_0) :
+            nullptr;
+        if (!talent || !RollMageProcChance(mage, float(talent->GetAmount()) * chanceScale))
+            return false;
+
+        mage->CastSpell(mage, SPELL_MAGE_FINGERS_OF_FROST_CHARGES, true);
+        return true;
+    }
+
+    // Blizzard rolls Fingers of Frost on each tick at half the talent's chance (an explicit exception to "a cast
+    // rolls once", like Frozen Orb's pulses).
+    constexpr float FINGERS_OF_FROST_BLIZZARD_SCALE = 0.5f;
 }
+
+/*
+ * Frost Mage rework (docs/frost-mage-redesign.md, docs/frost-mage-implementation-plan.md).
+ * Phase 1, first slice: the shared frozen-state check, Icicles, Glacial Spike, and Flurry.
+ * Frozen Orb, Deep Freeze's conversion, the talent-row auras, and the rest of Phase 1 are not
+ * part of this slice - see the implementation plan's "Suggested starting order".
+ */
 
 namespace FrostMageRework
 {
@@ -424,11 +443,17 @@ class spell_mage_blizzard_icicles : public AuraScript
 
     void CountPulse(AuraEffect const* /*aurEff*/)
     {
+        // S22: one Fingers of Frost roll per tick (not per target hit), at half the talent's chance. A Blizzard
+        // channelled out of combat rolls nothing.
+        Unit* caster = GetCaster();
+        if (caster && caster->IsInCombat())
+            TryGrantFingersOfFrost(caster, FINGERS_OF_FROST_BLIZZARD_SCALE);
+
         if (++_pulseCount < 4)
             return;
 
         _pulseCount = 0;
-        GrantIcicleIfGlacialSpikeKnown(GetCaster());
+        GrantIcicleIfGlacialSpikeKnown(caster);
     }
 
     void Register() override
@@ -757,8 +782,9 @@ class spell_mage_refreshment : public AuraScript
  * 200007 is a SPELL_EFFECT_SCRIPT_EFFECT that summons the trigger creature (npc_mage_frozen_orb,
  * NPC_MAGE_FROZEN_ORB) at the caster's position; the creature's own AI drives everything else -
  * movement, the once-a-second pulse (the OWNING PLAYER casting 200008 at an explicit dest = the
- * orb's live position - see IsSummonedBy/UpdateAI's EVENT_FROZEN_ORB_PULSE), and the Fingers of
- * Frost grant chain. The pulse used to be a self-cast periodic aura on the orb (200009), which
+ * orb's live position - see IsSummonedBy/UpdateAI's EVENT_FROZEN_ORB_PULSE). Fingers of Frost (S22):
+ * the cast grants it once, then each pulse rolls the proc (spell_mage_frozen_orb_pulse). The pulse
+ * used to be a self-cast periodic aura on the orb (200009), which
  * silently attributed all damage/threat/combat-log entries to the orb instead of the player -
  * root-caused via live playtest (FoF procced, the pulse showed in the combat log, but never in
  * the player's own damage meter) and fixed by having the AI drive the cast itself instead of
@@ -769,7 +795,6 @@ class spell_mage_refreshment : public AuraScript
 namespace
 {
     constexpr uint32 POINT_FROZEN_ORB_END = 1;
-    constexpr uint32 EVENT_FROZEN_ORB_GRANT_FOF = 1;
     constexpr uint32 EVENT_FROZEN_ORB_PULSE = 2;
     // Matches the orb's TEMPSUMMON_TIMED_DESPAWN lifetime, so its 10th and final pulse (one per
     // second, first at 1s) lands right as it expires.
@@ -804,7 +829,7 @@ public:
     explicit npc_mage_frozen_orb(Creature* creature) : CreatureAI(creature) { }
 
     // Used by spell_mage_frozen_orb_pulse to (a) find the owning player's own aura state for the
-    // Chilled to the Bone check, same way GrantFingersOfFrost() below does, and (b) confirm a
+    // Chilled to the Bone check, and (b) confirm a
     // nearby orb found via a grid search actually belongs to the player who just cast 200008 -
     // 200008 is now cast by the player directly (see this file's Frozen Orb header comment for
     // why), so GetCaster() inside that script is the player, not this orb, and there's no other
@@ -876,11 +901,10 @@ public:
     }
 
     // Called from spell_mage_frozen_orb_pulse::NotifyOrb (OnEffectHitTarget on 200008) whenever a
-    // pulse actually connects with an enemy. Both the "slows down significantly after dealing
-    // damage" travel change (the orb keeps moving at 20% of its speed, it does not stop) and the
-    // Fingers of Frost grant chain start here -
-    // docs/frost-mage-redesign.md sec 1: "Grants 1 charge when the orb first strikes any enemy,
-    // then 1 additional charge every 3 sec while active."
+    // pulse actually connects with an enemy: the "slows down significantly after dealing damage"
+    // travel change (the orb keeps moving at 20% of its speed, it does not stop). The Fingers of
+    // Frost grant chain that used to start here is gone (S22): the cast grants once and each pulse
+    // rolls (spell_mage_frozen_orb::GrantFingersOfFrost, spell_mage_frozen_orb_pulse::NotifyOrb).
     void NotifyPulseHit()
     {
         if (_slowed)
@@ -897,9 +921,6 @@ public:
         me->SetSpeedRate(MOVE_RUN, FROZEN_ORB_SPEED_RATE * FROZEN_ORB_SLOWED_SPEED_PCT);
         me->GetMotionMaster()->Clear();
         me->GetMotionMaster()->MovePoint(POINT_FROZEN_ORB_END, _dest, FORCED_MOVEMENT_NONE, 0.0f, false);
-
-        GrantFingersOfFrost();
-        _events.ScheduleEvent(EVENT_FROZEN_ORB_GRANT_FOF, 3s);
     }
 
     void UpdateAI(uint32 diff) override
@@ -908,12 +929,7 @@ public:
 
         while (uint32 eventId = _events.ExecuteEvent())
         {
-            if (eventId == EVENT_FROZEN_ORB_GRANT_FOF)
-            {
-                GrantFingersOfFrost();
-                _events.ScheduleEvent(EVENT_FROZEN_ORB_GRANT_FOF, 3s);
-            }
-            else if (eventId == EVENT_FROZEN_ORB_PULSE)
+            if (eventId == EVENT_FROZEN_ORB_PULSE)
             {
                 DoPulse();
                 // Rescheduled unconditionally - TEMPSUMMON_TIMED_DESPAWN removes `me` at the
@@ -925,12 +941,6 @@ public:
     }
 
 private:
-    void GrantFingersOfFrost()
-    {
-        if (Unit* owner = ObjectAccessor::GetUnit(*me, _ownerGUID))
-            owner->CastSpell(owner, SPELL_MAGE_FINGERS_OF_FROST_CHARGES, true);
-    }
-
     // The owning player casts 200008 directly, targeted at an explicit dest = the orb's own live
     // position, instead of the orb self-casting a periodic aura - see this file's Frozen Orb
     // header comment for why (damage/threat/combat-log attribution). 200008's own implicit
@@ -955,7 +965,7 @@ class spell_mage_frozen_orb : public SpellScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_MAGE_FROZEN_ORB_PULSE });
+        return ValidateSpellInfo({ SPELL_MAGE_FROZEN_ORB_PULSE, SPELL_MAGE_FINGERS_OF_FROST_CHARGES });
     }
 
     void SummonOrb(SpellEffIndex /*effIndex*/)
@@ -964,9 +974,18 @@ class spell_mage_frozen_orb : public SpellScript
             caster->SummonCreature(NPC_MAGE_FROZEN_ORB, *caster, TEMPSUMMON_TIMED_DESPAWN, FROZEN_ORB_DURATION);
     }
 
+    // S22 (user ruling 7): the cast grants Fingers of Frost once; after that every pulse that strikes an enemy rolls
+    // the proc (spell_mage_frozen_orb_pulse). It used to grant on the first strike and then every 3 sec.
+    void GrantFingersOfFrost()
+    {
+        if (Unit* caster = GetCaster())
+            caster->CastSpell(caster, SPELL_MAGE_FINGERS_OF_FROST_CHARGES, true);
+    }
+
     void Register() override
     {
         OnEffectHit += SpellEffectFn(spell_mage_frozen_orb::SummonOrb, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        AfterCast += SpellCastFn(spell_mage_frozen_orb::GrantFingersOfFrost);
     }
 };
 
@@ -986,7 +1005,7 @@ class spell_mage_frozen_orb_pulse : public SpellScript
     }
 
     // GetCaster() is the player, not an orb, so the orb that actually needs to know about this
-    // hit (to halt movement and start the FoF grant chain) has to be found separately. It must be
+    // hit (to slow its movement) has to be found separately. It must be
     // within 200008's own 10-yard pulse radius of whatever got hit, so search a bit wider than
     // that around the hit target and match by owner GUID, in case another mage's orb happens to
     // be pulsing nearby too.
@@ -996,6 +1015,14 @@ class spell_mage_frozen_orb_pulse : public SpellScript
         Unit* hitUnit = GetHitUnit();
         if (!mage || !hitUnit)
             return;
+
+        // S22 (user ruling 7): one Fingers of Frost roll per pulse that strikes an enemy, on its first target (this
+        // runs once per target hit; each pulse is its own Spell, so the flag resets every pulse).
+        if (!_fingersOfFrostRolled)
+        {
+            _fingersOfFrostRolled = true;
+            TryGrantFingersOfFrost(mage, 1.0f);
+        }
 
         std::list<Creature*> orbs;
         hitUnit->GetCreatureListWithEntryInGrid(orbs, NPC_MAGE_FROZEN_ORB, 15.0f);
@@ -1028,6 +1055,9 @@ class spell_mage_frozen_orb_pulse : public SpellScript
         OnEffectHitTarget += SpellEffectFn(spell_mage_frozen_orb_pulse::NotifyOrb, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
         OnEffectLaunchTarget += SpellEffectFn(spell_mage_frozen_orb_pulse::BoostChillEffect, EFFECT_1, SPELL_EFFECT_APPLY_AURA);
     }
+
+private:
+    bool _fingersOfFrostRolled = false;
 };
 
 // 44566, 44567, 44568 - Chilled to the Bone capstone (rank 3 only, EFFECT_2)
@@ -3389,8 +3419,7 @@ class spell_mage_imp_blizzard : public AuraScript
             {
                 SPELL_MAGE_CHILLED_R1,
                 SPELL_MAGE_CHILLED_R2,
-                SPELL_MAGE_CHILLED_R3,
-                SPELL_MAGE_FINGERS_OF_FROST_AURASTATE_AURA
+                SPELL_MAGE_CHILLED_R3
             });
     }
 
@@ -3411,11 +3440,8 @@ class spell_mage_imp_blizzard : public AuraScript
         if (Unit* target = eventInfo.GetProcTarget())
             caster->CastSpell(target, spellId, true, nullptr, aurEff);
 
-        // Fingers of Frost: Blizzard chill effects can trigger FoF
-        // Custom: S22 - the roll multiplies by the mage's Proc Chance (Systems.md section 5)
-        if (AuraEffect const* fofTalent = caster->GetAuraEffectOfRankedSpell(SPELL_MAGE_FINGERS_OF_FROST, EFFECT_0))
-            if (RollMageProcChance(caster, float(fofTalent->GetAmount())))
-                caster->CastSpell(caster, SPELL_MAGE_FINGERS_OF_FROST_AURASTATE_AURA, true);
+        // Custom: S22 (user ruling 7) - the per-target Fingers of Frost roll on each chill is gone; Blizzard rolls
+        // once per tick at half the talent's chance (spell_mage_blizzard_icicles).
     }
 
     void Register() override
