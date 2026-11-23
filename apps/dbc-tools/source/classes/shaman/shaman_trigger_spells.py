@@ -2632,7 +2632,7 @@ lava_flows_51480 = _talent(
     51480, 'Lava Flows', 'Rank 1',
     [_mod(SpellModOp.CRIT_DAMAGE_BONUS, 7)], 3087,
     _desc('Increases the critical strike damage bonus of your Lava Burst, Flame Shock and Lava Lash by 8%. Casting Flame Shock or Lava Burst increases your spell and melee haste by 2% for 12 sec.',
-          "Lava Surge. Your Flame Shock's periodic damage has a 15% chance to reset the cooldown of your Lava Burst and make your next Lava Burst within 15 sec instant. This effect can only occur once every 6 sec."),
+          "Lava Surge. Periodic damage from your most recently cast Flame Shock has an 11% chance to reset the cooldown of your Lava Burst and make your next Lava Burst within 15 sec instant."),
     masks={1: (_FLAME_SHOCK, _LAVA_BURST, _LAVA_LASH)},
     notes='S1a A2: crit damage bonus +8% on Flame Shock, Lava Burst and Lava Lash (the Lava Lash clause is kept for the classless realm, d2 b2 is a target here, not an identity). The Sundering / dispel clause and the latent EffectBasePoints_3 twin are gone; the haste is Shaman::LavaFlowsHasteSpell.',
 )
@@ -2642,7 +2642,7 @@ lava_flows_51481 = _talent(
     51481, 'Lava Flows', 'Rank 2',
     [_mod(SpellModOp.CRIT_DAMAGE_BONUS, 15)], 3087,
     _desc('Increases the critical strike damage bonus of your Lava Burst, Flame Shock and Lava Lash by 16%. Casting Flame Shock or Lava Burst increases your spell and melee haste by 4% for 12 sec.',
-          "Lava Surge. Your Flame Shock's periodic damage has a 15% chance to reset the cooldown of your Lava Burst and make your next Lava Burst within 15 sec instant. This effect can only occur once every 6 sec."),
+          "Lava Surge. Periodic damage from your most recently cast Flame Shock has an 11% chance to reset the cooldown of your Lava Burst and make your next Lava Burst within 15 sec instant."),
     masks={1: (_FLAME_SHOCK, _LAVA_BURST, _LAVA_LASH)},
     notes='S1a A2: see lava_flows_51480.',
 )
@@ -2652,10 +2652,10 @@ lava_flows_51482 = _talent(
     51482, 'Lava Flows', 'Rank 3',
     [_mod(SpellModOp.CRIT_DAMAGE_BONUS, 24), _dummy(0)], 3087,
     _desc('Increases the critical strike damage bonus of your Lava Burst, Flame Shock and Lava Lash by 25%. Casting Flame Shock or Lava Burst increases your spell and melee haste by 6% for 12 sec.',
-          "Lava Surge. Your Flame Shock's periodic damage has a 15% chance to reset the cooldown of your Lava Burst and make your next Lava Burst within 15 sec instant. This effect can only occur once every 6 sec.",
+          "Lava Surge. Periodic damage from your most recently cast Flame Shock has an 11% chance to reset the cooldown of your Lava Burst and make your next Lava Burst within 15 sec instant.",
           last=True),
-    masks={1: (_FLAME_SHOCK, _LAVA_BURST, _LAVA_LASH)}, ProcTypeMask=_PROC_DONE_PERIODIC, ProcChance=15,
-    notes='S1a A2: rank 3 (Lava Surge). eff2 DUMMY is the proc carrier; spell_proc 51482 is DONE_PERIODIC on Flame Shock, 15% native (Proc Chance applies), ICD 6000; spell_sha_ele_lava_surge.',
+    masks={1: (_FLAME_SHOCK, _LAVA_BURST, _LAVA_LASH)}, ProcTypeMask=_PROC_DONE_PERIODIC, ProcChance=11,
+    notes='S1a A2: rank 3 (Lava Surge). eff2 DUMMY is the proc carrier; spell_proc 51482 is DONE_PERIODIC on Flame Shock, 11% native (Proc Chance applies), no ICD; spell_sha_ele_lava_surge rolls only the most recently cast Flame Shock (S22 2026-11-22: was 15% with a 6 s ICD on every Flame Shock).',
 )
 
 
@@ -3632,7 +3632,7 @@ astral_shift_51479 = _talent(
 
 # =====================================================================================================================
 # S1a A2: spell_proc rows and script bindings for the Elemental rank spells (WP brief class table, B2's constraints:
-# the scripted rolls proc at 100%, every proc talent has a DUMMY effect, Lava Surge keeps the native 15% + ICD 6 s).
+# the scripted rolls proc at 100%, every proc talent has a DUMMY effect, Lava Surge keeps a native 11%, no ICD).
 # Every row with a done-spell / periodic ProcFlags carries SpellPhaseMask HIT (L9).
 # =====================================================================================================================
 
@@ -3691,11 +3691,13 @@ procs_on(
 )
 scripted_by(29000, 'spell_sha_ele_reach_capstone')
 
-# Lava Surge (Lava Flows rank 3): Flame Shock periodic damage, 15% native, ICD 6 s.
+# Lava Surge (Lava Flows rank 3): Flame Shock periodic damage, 11% native, no ICD (S22 2026-11-22, ICD report
+# candidate 7 option B: was 15% with a 6 s ICD). Only the most recently cast Flame Shock rolls (the script's CheckProc),
+# so dotting a pack does not multiply the attempts.
 procs_on(
     51482, proc_flags=_PROC_DONE_PERIODIC, family_name=11, family_mask=(_FLAME_SHOCK, 0, 0),
-    spell_type_mask=_PROC_TYPE_DAMAGE, spell_phase_mask=_PROC_PHASE_HIT, hit_mask=_PROC_HIT_NORMAL_CRIT, chance=15,
-    cooldown_ms=6000,
+    spell_type_mask=_PROC_TYPE_DAMAGE, spell_phase_mask=_PROC_PHASE_HIT, hit_mask=_PROC_HIT_NORMAL_CRIT, chance=11,
+    cooldown_ms=0,
 )
 scripted_by(51482, 'spell_sha_ele_lava_surge')
 
@@ -3841,7 +3843,7 @@ thundering_strikes_16255 = _talent(
     [_aura(AuraType.MOD_CRIT_PCT, 0)], 25,
     _cap('Increases your chance to get a critical strike with all spells and attacks by 1%.'
          + _thundering_surge_clause(1),
-          'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=False),
+          'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 3 sec.', last=False),
     notes='S3a A2: pulled stock rank, rewritten. All crit +1% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +24 / 48 / 75 % and its mana cost is refunded (surge 40 / 80 / 125 -> 24 / 48 / 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
 )
 
@@ -3909,7 +3911,7 @@ thundering_strikes_16302 = _talent(
     [_aura(AuraType.MOD_CRIT_PCT, 1)], 25,
     _cap('Increases your chance to get a critical strike with all spells and attacks by 2%.'
          + _thundering_surge_clause(2),
-          'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=False),
+          'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 3 sec.', last=False),
     notes='S3a A2: pulled stock rank, rewritten. All crit +2% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +24 / 48 / 75 % and its mana cost is refunded (surge 40 / 80 / 125 -> 24 / 48 / 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
 )
 
@@ -3919,9 +3921,9 @@ thundering_strikes_16303 = _talent(
     [_aura(AuraType.MOD_CRIT_PCT, 2), Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=202397)], 25,
     _cap('Increases your chance to get a critical strike with all spells and attacks by 3%.'
          + _thundering_surge_clause(3),
-          'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=True),
+          'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 3 sec.', last=True),
     ProcChance=10, ProcTypeMask=0x14000,
-    notes='S3a A2: pulled stock rank, rewritten. All crit +3% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair). Rank 3 eff2 PROC_TRIGGER_SPELL -> 202397 (Agility = level, A3); spell_proc 16303: HIT phase, SpellTypeMask damage|heal, 10%, ICD 6000, once per cast (spell_sha_enh_thundering_strikes). Ranks 4 and 5 (16304/16305) leave the talent.' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +24 / 48 / 75 % and its mana cost is refunded (surge 40 / 80 / 125 -> 24 / 48 / 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
+    notes='S3a A2: pulled stock rank, rewritten. All crit +3% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair). Rank 3 eff2 PROC_TRIGGER_SPELL -> 202397 (Agility = level, A3); spell_proc 16303: HIT phase, SpellTypeMask damage|heal, 10%, ICD 3000 (S22: was 6000), once per cast (spell_sha_enh_thundering_strikes). Ranks 4 and 5 (16304/16305) leave the talent.' + S1_NOTE + 'Chain Lightning surge clause (Revision 3): with Flametongue, Frostbrand or Windfury active, a Chain Lightning cast with 5 Maelstrom Weapon stacks deals +24 / 48 / 75 % and its mana cost is refunded (surge 40 / 80 / 125 -> 24 / 48 / 75, 2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Thundering Strikes Chain Lightning surge -40%) (spell_sha_enh_thundering_surge on 421; dead under Rockbiter and for Elemental, which never has Maelstrom stacks). Dormant until Maelstrom Weapon (row 9, level 55).',
 )
 
 
@@ -4213,13 +4215,13 @@ procs_on(-30816, proc_flags=0x00800000, chance=20)
 # SpellTypeMask DAMAGE | HEAL: SpellMgr requires a SpellPhaseMask for done-spell flags (0x4000 / 0x10000), and a CAST-phase event
 # carries MASK_ALL (no damage / heal is known yet), so the type filter only works at HIT, where Unit::ProcSkillsAndAuras derives
 # DAMAGE or HEAL from the real result (imbue swaps, totems, shields, Ghost Wolf, Purge and item spells are NO_DMG_HEAL and never
-# roll). HIT fires per target (and not for misses / immunes), and the 6 s cooldown only stops the rolls after a success, so the
+# roll). HIT fires per target (and not for misses / immunes), and the 3 s cooldown only stops the rolls after a success, so the
 # row alone would roll once per target hit (S3a code review m1: Chain Lightning ~27%, a 5-target Fire Nova ~41%). The doc says
 # once per cast: spell_sha_enh_thundering_strikes (bound on 16303) claims the cast in CheckProc, before the chance roll, so only
 # the first target hit of each cast rolls.
 procs_on(
-    16303, proc_flags=0x14000, spell_type_mask=_PROC_TYPE_DAMAGE | 0x2, spell_phase_mask=_PROC_PHASE_HIT, chance=10, cooldown_ms=6000,
-)
+    16303, proc_flags=0x14000, spell_type_mask=_PROC_TYPE_DAMAGE | 0x2, spell_phase_mask=_PROC_PHASE_HIT, chance=10, cooldown_ms=3000,
+)  # S22 2026-11-22: ICD 6 -> 3 s (ICD report, Thundering Strikes option A)
 
 # Elemental Weapons capstone (rank 3 only): a Lava Lash (d2 b2, melee) or Lava Burst (d1 b12, magic) damage hit.
 procs_on(

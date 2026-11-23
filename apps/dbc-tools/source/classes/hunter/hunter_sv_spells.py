@@ -594,7 +594,7 @@ procs_on(202048, proc_flags=0x20200, family_name=0, school_mask=4, spell_type_ma
 # Trap, Burning Tar, Explosive / Immolation Trap effects). chance 0 -> the DBC ProcChance 100, which Proc Chance lifts
 # to
 # >= 100: the row cannot fail, spell_hun_lock_and_load_rework rolls RollProcChance(eff) itself (V-m17: do not "fix").
-# Cooldown 0: the 5 s marker 67544 is the ICD. disable_effects_mask 0x4 (eff2 never procs: Chain Reaction's DUMMY on
+# Cooldown 0: the 3 s marker 67544 is the ICD (S22: was 5 s; each fire pulse rolls once). disable_effects_mask 0x4 (eff2 never procs: Chain Reaction's DUMMY on
 # r3).
 procs_on(-56342, proc_flags=0, family_name=9, family_mask=m.LOCK_AND_LOAD_PROC, spell_phase_mask=0x2 | 0x4,
          attributes_mask=0x2, disable_effects_mask=0x4, chance=0.0, cooldown_ms=0)

@@ -1170,7 +1170,7 @@ def check_ruling_6(rows_by_id: dict[int, dict]) -> list[str]:
 LOCK_AND_LOAD_VALUES = {
     56342: (32, 2, 0), 56343: (65, 5, 0), 56344: (99, 9, 1999),     # 56344 eff2 = Chain Reaction 2000 ms (0-verify 4l)
 }
-LOCK_AND_LOAD_MARKER_MS = 5000
+LOCK_AND_LOAD_MARKER_MS = 3000   # 2026-11-22 (S22): 5 s -> 3 s, the ICD with one roll per fire pulse
 ATTR_EX3_SUPPRESS_AND_IGNORE = ATTR_EX3_IGNORE_CASTER_MODIFIERS | ATTR_EX3_SUPPRESS_CASTER_PROCS
 
 
@@ -1178,7 +1178,7 @@ def check_lock_and_load(rows_by_id: dict[int, dict], marker_duration_index: int)
     """(q) B4 + 0-verify binding decision 1: the three ranks keep the stock DBC ProcTypeMask 0x240000 / chance 100, the
     trigger eff0 (-> 56453) with bp 32 / 65 / 99, the DUMMY eff1 bp 2 / 5 / 9, and an aura eff2 on EVERY rank (inert
     DUMMY bp 0 on 56342 / 56343, Chain Reaction bp 1999 on 56344) so -56342's disable_effects_mask 0x4 is valid; no
-    SpellMod mask on any of them. 56453 is the one-charge, free-shot buff with the new text; 67544 lasts 5000 ms and has
+    SpellMod mask on any of them. 56453 is the one-charge, free-shot buff with the new text; 67544 lasts 3000 ms and has
     no stale reader masks."""
     bad = []
     for spell_id, (trigger_bp, dummy_bp, eff2_bp) in LOCK_AND_LOAD_VALUES.items():

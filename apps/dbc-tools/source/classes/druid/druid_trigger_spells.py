@@ -7187,9 +7187,9 @@ rending_swipes_200450 = spell(
 # SpellAuras.cpp); raw ProcChance only feeds the tooltip's $h.
 _FURY_SWIPES_TEXT = ("Your autoattacks in Cat Form or Bear Form have a $h% chance to cause a Fury Swipe, dealing "
                      "$200429s1% weapon damage.  In Bear Form, Fury Swipe also generates $/10;200429s2 rage.  Cannot "
-                     "occur more than once every 3 sec.  Chance is modified by Proc Chance.")
+                     "occur more than once every 1.5 sec.  Chance is modified by Proc Chance.")
 _FURY_SWIPES_NOTES = ("NEW (druid-rework FERAL §7 (4,1), WP-BRIEF §3), talent 60043: autoattacks proc Fury Swipe 200429 "
-                      "3/5/8% (3 sec ICD), cat/bear/dire bear only (ShapeshiftMask 145).")
+                      "3/5/8% (1.5 sec ICD; S22 2026-11-22: was 3 sec), cat/bear/dire bear only (ShapeshiftMask 145).")
 
 fury_swipes_200451 = spell(
     id=200451, name='Fury Swipes', **_dru_passive_talent_kwargs(),
@@ -7201,7 +7201,7 @@ fury_swipes_200451 = spell(
 )
 
 procs_on(fury_swipes_200451, proc_flags=PROC_FLAG_DONE_MELEE_AUTO_ATTACK,
-         hit_mask=PROC_HIT_NORMAL | PROC_HIT_CRITICAL, chance=3, cooldown_ms=3000)
+         hit_mask=PROC_HIT_NORMAL | PROC_HIT_CRITICAL, chance=3, cooldown_ms=1500)
 
 fury_swipes_200452 = spell(
     id=200452, name='Fury Swipes', **_dru_passive_talent_kwargs(),
@@ -7213,7 +7213,7 @@ fury_swipes_200452 = spell(
 )
 
 procs_on(fury_swipes_200452, proc_flags=PROC_FLAG_DONE_MELEE_AUTO_ATTACK,
-         hit_mask=PROC_HIT_NORMAL | PROC_HIT_CRITICAL, chance=5, cooldown_ms=3000)
+         hit_mask=PROC_HIT_NORMAL | PROC_HIT_CRITICAL, chance=5, cooldown_ms=1500)
 
 fury_swipes_200453 = spell(
     id=200453, name='Fury Swipes', **_dru_passive_talent_kwargs(),
@@ -7225,7 +7225,7 @@ fury_swipes_200453 = spell(
 )
 
 procs_on(fury_swipes_200453, proc_flags=PROC_FLAG_DONE_MELEE_AUTO_ATTACK,
-         hit_mask=PROC_HIT_NORMAL | PROC_HIT_CRITICAL, chance=8, cooldown_ms=3000)
+         hit_mask=PROC_HIT_NORMAL | PROC_HIT_CRITICAL, chance=8, cooldown_ms=1500)
 
 
 

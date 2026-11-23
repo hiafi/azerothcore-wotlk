@@ -6933,11 +6933,11 @@ grimoire_of_synergy_buff_200843 = spell(
     range_yards=0.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=126),
     ],
     spell_icon_id=3217,
-    notes='warlock-rework DEMONOLOGY §5.3/§7.13: self buff, 15 s, granted by the Felguard proc (spell_warl_grimoire_of_synergy_pet). +10% spell damage.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell damage increased by 10%.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell damage by 10%.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0},
+    notes='warlock-rework DEMONOLOGY §5.3/§7.13: self buff, 15 s, granted by the Felguard proc (spell_warl_grimoire_of_synergy_pet). +7% spell damage (S22 2026-11-22: was +10% with a 20 s ICD; the ICD is now 10 s, so a proc refreshes the buff and uptime rises ~48% -> ~66% at 0% Proc Chance; 10% x 48% / 66% = 7.3%).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell damage increased by 7%.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell damage by 7%.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0},
 )
 
 
@@ -6967,7 +6967,7 @@ procs_on(
     proc_flags=0x4 | 0x10,
     spell_phase_mask=1,
     chance=100,
-    cooldown_ms=20000,
+    cooldown_ms=10000,   # S22 2026-11-22: 20 s -> 10 s (ICD report candidate 1, option B); buff trimmed 10% -> 7%
 )
 
 
@@ -8183,7 +8183,7 @@ grimoire_of_synergy_200880 = spell(
     ],
     spell_icon_id=3217,
     notes='warlock-rework DEMONOLOGY §6 (5,2): new talent 60085. eff0 DUMMY stored 4 (5% live), read by spell_warl_grimoire_of_synergy_pet CheckProc.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Felguard's attacks have a $s1% chance to increase your spell damage by 10% for 15 sec. This effect cannot occur more than once every 20 sec.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Felguard's attacks have a $s1% chance to increase your spell damage by 7% for 15 sec. This effect cannot occur more than once every 10 sec.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
 )
 
 
@@ -8203,7 +8203,7 @@ grimoire_of_synergy_200881 = spell(
     ],
     spell_icon_id=3217,
     notes='warlock-rework DEMONOLOGY §6 (5,2): see rank 1 note (10% live).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Felguard's attacks have a $s1% chance to increase your spell damage by 10% for 15 sec. This effect cannot occur more than once every 20 sec.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Felguard's attacks have a $s1% chance to increase your spell damage by 7% for 15 sec. This effect cannot occur more than once every 10 sec.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
 )
 
 
@@ -8223,7 +8223,7 @@ grimoire_of_synergy_200882 = spell(
     ],
     spell_icon_id=3217,
     notes='warlock-rework DEMONOLOGY §6 (5,2): see rank 1 note (15% live).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Felguard's attacks have a $s1% chance to increase your spell damage by 10% for 15 sec. This effect cannot occur more than once every 20 sec.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Felguard's attacks have a $s1% chance to increase your spell damage by 7% for 15 sec. This effect cannot occur more than once every 10 sec.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
 )
 
 

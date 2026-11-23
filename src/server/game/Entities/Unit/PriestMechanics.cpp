@@ -134,7 +134,7 @@ namespace
     constexpr uint8 PRIEST_MADNESS_MAX_STACKS = 250;
 
     constexpr uint32 PRIEST_TENTACLE_MAX_COUNT = 5;
-    constexpr uint32 PRIEST_TENTACLE_SHARED_ICD_MS = 3000;
+    constexpr uint32 PRIEST_TENTACLE_SHARED_ICD_MS = 1500;           // S22: 3 s -> 1.5 s (ICD report candidate 5)
     constexpr uint32 PRIEST_TENTACLE_MIND_BLAST_GUARANTEE_MS = 25000;
 
     // Shadow Power's (6,2) capstone flat bonus and Improved Devouring Plague's (0,1) capstone flat

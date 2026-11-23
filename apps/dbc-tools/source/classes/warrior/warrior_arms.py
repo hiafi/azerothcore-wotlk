@@ -1139,14 +1139,14 @@ def _sudden_death(spell_id, rank, chance, rage_kept):
         notes=f'warrior-rework S2 A2 (D9, R15, doc "Sudden Death"): stock row first-declared, rank {rank}. Stays '
               f'SpellClassSet 0, icon 1989, eff0 aura 42, eff1 bp {rage_kept - 1} (Execute\'s rage-kept lookup reads '
               f'Effects[1].CalcValue() = {rage_kept}). eff0 bp {chance - 1} (tooltip $s1 = {chance}), DBC ProcChance '
-              f'{chance}, ProcTypeMask 0x14; spell_proc -29723 (flags 0x14, family 4, CAST phase, Cooldown 6000) at '
+              f'{chance}, ProcTypeMask 0x14; spell_proc -29723 (flags 0x14, family 4, CAST phase, Cooldown 3000; S22: was 6000) at '
               f'the end of the file. Stale masks cleared.',
         raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0x14, 'ProcChance': chance, 'SpellLevel': 1,
                        'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectDieSides_2': 1,
                        'EffectBasePoints_2': rage_kept - 1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190,
                        'NameSubtext_Lang_enUS': f'Rank {rank}', 'NameSubtext_Lang_Mask': 16712190,
                        'Description_Lang_enUS': f'Your melee hits have a {chance}% chance to reset the cooldown of '
-                                                f'your Mortal Strike. This cannot occur more than once every 6 sec. '
+                                                f'your Mortal Strike. This cannot occur more than once every 3 sec. '
                                                 f'Mortal Strike cannot trigger this effect. You keep at least '
                                                 f'{rage_kept} rage after using Execute.',
                        'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188,
@@ -1321,11 +1321,11 @@ remove_spell_proc(-12289)                                     # Improved Hamstri
 
 # spell_proc rows. Chance 0 means "use the rank's DBC ProcChance" (SpellMgr.cpp LoadSpellProcs).
 # Sudden Death (D9, R10): melee swings and every non-triggered warrior-family melee cast, ONE roll per swing / cast, a
-# 6 s ICD shared by both. SpellFamilyName 4 with an empty mask (a family-0 row would roll on every melee cast incl.
+# 3 s ICD shared by both (S22 2026-11-22: 6 -> 3 s, ICD report option A). SpellFamilyName 4 with an empty mask (a family-0 row would roll on every melee cast incl.
 # Charge and Heroic Leap, 0-verify B item 5); CAST phase (1) so an ability rolls once at cast, swings skip the
 # phase test. No spell_type_mask: it filters nothing at the CAST phase (the event's type mask is ALL); the CheckProc
 # scripts (spell_warr_sudden_death_reset) gate the roll on direct-damage casts.
-procs_on(-29723, proc_flags=0x14, family_name=_SPELLFAMILY_WARRIOR, spell_phase_mask=0x1, cooldown_ms=6000)
+procs_on(-29723, proc_flags=0x14, family_name=_SPELLFAMILY_WARRIOR, spell_phase_mask=0x1, cooldown_ms=3000)
 # Taste for Blood (D6): the stock row with Cooldown 5800 -> 0 (Rend ticks have no Spell*, so they roll per tick; spread
 # Rends roll too). Family 4, Rend d0 0x20, HIT phase (2) kept; the DBC ProcTypeMask 0x40000 (done periodic) still
 # drives it.

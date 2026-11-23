@@ -366,7 +366,7 @@ S2_UNSCRIPTED = (SWEEPING_COPY, DW_TICK, SEISMIC_ECHO, SWORD_STRIKE, CS_BUTTON, 
 # spell_proc rows: id -> {column: value}
 S2_PROC_ROWS = {
     -29723: {"SpellFamilyName": 4, "SpellFamilyMask0": 0, "SpellFamilyMask1": 0, "SpellFamilyMask2": 0,
-             "ProcFlags": 0x14, "SpellPhaseMask": 1, "Cooldown": 6000},                    # R10 / D9
+             "ProcFlags": 0x14, "SpellPhaseMask": 1, "Cooldown": 3000},  # R10 / D9; 2026-11-22 S22: 6000 -> 3000
     -56636: {"SpellFamilyName": 4, "SpellFamilyMask0": 0x20, "SpellPhaseMask": 2, "Cooldown": 0},   # D6
     -46865: {"SpellFamilyName": 4, "SpellFamilyMask0": 0x20200004, "ProcFlags": 0x10, "SpellPhaseMask": 1,
              "Chance": 100.0, "Cooldown": 0},                                              # D14
@@ -449,7 +449,8 @@ TOOLTIP_FRAGMENTS = {
              "only strikes enemies already in combat"),
     204538: ("strikes 3 or more enemies", "again 0.5 sec later for 25% of its damage"),
     204539: ("again 0.5 sec later for 50% of its damage",),
-    29723: ("5% chance to reset the cooldown of your Mortal Strike", "more than once every 6 sec",
+    # 2026-11-22 S22: Sudden Death ICD 6 -> 3 sec.
+    29723: ("5% chance to reset the cooldown of your Mortal Strike", "more than once every 3 sec",
             "Mortal Strike cannot trigger this effect", "keep at least 3 rage after using Execute"),
     29725: ("10% chance to reset the cooldown", "keep at least 7 rage"),
     29724: ("15% chance to reset the cooldown", "keep at least 10 rage"),

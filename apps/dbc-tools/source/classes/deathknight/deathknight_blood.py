@@ -481,7 +481,7 @@ _ICON_CRIMSON_SCOURGE = 2968        # Ability_Warrior_BloodNova (S1a-0VERIFY sec
 _CRIMSON_SCOURGE_NOTE = (
     'death-knight-rework S1a, Blood doc "Crimson Scourge" (5,3): hidden passive, eff0 PROC_TRIGGER_SPELL -> 203137 (self). '
     'ProcChance 5 / 10 / 15 on the rank spell; the shared chain row (procs_on -203134) carries Chance 0 = "use the spell\'s", '
-    'cooldown 10000 ms, ProcFlags DONE melee auto attack only (either hand, no abilities). '
+    'cooldown 5000 ms (S22 2026-11-22: was 10000), ProcFlags DONE melee auto attack only (either hand, no abilities). '
     'spell_dk_crimson_scourge.CheckProc: the auto attack\'s target carries the owner\'s Blood Plague (55078). '
     'SpellLevel 9 + 5 x row 5 + rank. '
     'Description: capstone paragraph added (2026-11-16, AoE round 3 tank wave on the Normal-tier kits, user ruling: '
@@ -503,7 +503,7 @@ def _crimson_scourge_rank(spell_id, rank, chance):
         _capstone_text(
             f'Your auto attacks against targets infected with your Blood Plague have a {chance}% chance to make your '
             'next Death and Decay cost no runes and reset its cooldown. This effect cannot occur more than once every '
-            '10 sec.', _CRIMSON_SCOURGE_CAPSTONE, rank == 3),
+            '5 sec.', _CRIMSON_SCOURGE_CAPSTONE, rank == 3),
         _CRIMSON_SCOURGE_NOTE, proc_chance=chance,
     )
 
@@ -511,11 +511,12 @@ def _crimson_scourge_rank(spell_id, rank, chance):
 crimson_scourge_203134 = _crimson_scourge_rank(203134, 1, 5)
 crimson_scourge_203135 = _crimson_scourge_rank(203135, 2, 10)
 crimson_scourge_203136 = _crimson_scourge_rank(203136, 3, 15)
-procs_on(-203134, proc_flags=_PROC_FLAG_DONE_MELEE_AUTO_ATTACK, spell_phase_mask=0, chance=0.0, cooldown_ms=10000)
+# S22 2026-11-22: ICD 10 -> 5 s (ICD report, Blood DK option A); the Blood Boil path reads the same row.
+procs_on(-203134, proc_flags=_PROC_FLAG_DONE_MELEE_AUTO_ATTACK, spell_phase_mask=0, chance=0.0, cooldown_ms=5000)
 scripted_by(-203134, 'spell_dk_crimson_scourge')
 # The capstone's Blood Boil half (2026-11-16, AoE round 3 tank wave on the Normal-tier kits, user ruling: Blood DK
 # option B): a second script on Blood Boil 48721 beside the stock spell_dk_blood_boil (base DB row -48721). Rank 3
-# (203136) gates it; each enemy hit rolls Crimson Scourge (same chance, same 10 s cooldown on the rank aura) when it
+# (203136) gates it; each enemy hit rolls Crimson Scourge (same chance, same 5 s cooldown on the rank aura) when it
 # already carries the Death Knight's Blood Plague, then gets Blood Plague.
 scripted_by(48721, 'spell_dk_blood_boil_crimson_scourge')
 

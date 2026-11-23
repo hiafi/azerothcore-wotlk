@@ -662,9 +662,18 @@ class spell_pal_art_of_war : public AuraScript
         return _guard.Claim(eventInfo);
     }
 
+    // S22 (ICD report candidate 4, option C): every proc is a real extra Exorcism, so its 15 s cooldown no longer
+    // caps the payoff. eff1 still triggers the instant-cast buff 59578 through the default path.
+    void AfterProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
+    {
+        if (Player* player = GetPlayer(GetTarget()))
+            player->RemoveSpellCooldown(PaladinData::SPELL_EXORCISM, true);
+    }
+
     void Register() override
     {
         DoCheckProc += AuraCheckProcFn(spell_pal_art_of_war::CheckProc);
+        AfterEffectProc += AuraEffectProcFn(spell_pal_art_of_war::AfterProc, EFFECT_1, SPELL_AURA_PROC_TRIGGER_SPELL);
     }
 
 private:

@@ -7970,11 +7970,11 @@ lock_and_load_marker_67544 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=0.0,
-    duration_ms=5000,
+    duration_ms=3000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3579,
-    notes='pulled from existing data',
+    notes='pulled from existing data; S22 2026-11-22: 5 s -> 3 s (the Lock and Load ICD; the periodic clause now rolls once per fire pulse, not per target)',
     raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 9, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0},
 )

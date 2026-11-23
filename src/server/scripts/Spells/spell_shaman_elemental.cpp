@@ -107,6 +107,7 @@ namespace
         uint32 natureCastUntilMs = 0;              // Astral Shift capstone: a Nature spell is being cast until then
         uint32 reachReadyMs = 0;                   // Elemental Reach capstone internal cooldown
         uint32 astralShiftWatchDueMs = 0;          // the plain Astral Shift watcher's next run, 0 when none
+        ObjectGuid lastFlameShockTarget;           // Lava Surge: only the most recently cast Flame Shock rolls (S22)
     };
 
     constexpr char const* ELEMENTAL_STATE_KEY = "shaman_elemental_state";
@@ -645,6 +646,8 @@ class spell_sha_ele_spell_hooks : public SpellScript
                 break;
             case ShamanData::SPELL_FLAME_SHOCK:
                 TryLavaFlowsHaste(player);
+                if (Unit* target = GetExplTargetUnit())
+                    GetState(player)->lastFlameShockTarget = target->GetGUID();
                 break;
             default:
                 break;
@@ -1046,9 +1049,9 @@ class spell_sha_ele_reach_capstone : public AuraScript
     }
 };
 
-// 51482 Lava Flows rank 3 (Lava Surge) - the spell_proc row rolls 15% (native, Proc Chance applies) on the
-// shaman's own Flame Shock periodic damage, ICD 6 sec: resets Lava Burst (its category cooldown) and grants the
-// instant-cast buff.
+// 51482 Lava Flows rank 3 (Lava Surge) - the spell_proc row rolls 11% (native, Proc Chance applies) on the
+// shaman's own Flame Shock periodic damage, no ICD: resets Lava Burst (its category cooldown) and grants the
+// instant-cast buff. S22: only the most recently cast Flame Shock rolls, so dotting a pack adds no attempts.
 class spell_sha_ele_lava_surge : public AuraScript
 {
     PrepareAuraScript(spell_sha_ele_lava_surge);
@@ -1066,8 +1069,10 @@ class spell_sha_ele_lava_surge : public AuraScript
     bool CheckProc(ProcEventInfo& eventInfo)
     {
         SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
-        return GetProcPlayer(GetUnitOwner(), eventInfo) && spellInfo &&
-            spellInfo->Id == ShamanData::SPELL_FLAME_SHOCK;
+        Player* player = GetProcPlayer(GetUnitOwner(), eventInfo);
+        Unit* target = eventInfo.GetActionTarget();
+        return player && spellInfo && spellInfo->Id == ShamanData::SPELL_FLAME_SHOCK && target &&
+            target->GetGUID() == GetState(player)->lastFlameShockTarget;
     }
 
     void HandleProc(ProcEventInfo& /*eventInfo*/)

@@ -4403,7 +4403,7 @@ scent_of_blood_49004 = spell(
     ],
     spell_icon_id=2283,
     notes='S1a (Blood doc "Scent of Blood", brief D4): ONE PROC_TRIGGER_SPELL -> 50421 effect per rank (the stock ranks 2 / 3 carried 2 / 3 effects = 2 / 3 stacks per proc). ProcChance 5 / 10 / 15 on the rank spell, spell_proc -49004 Chance 0 = use the spell\'s, Cooldown 10000, HitMask 0x33 kept (declared at the end of this file). ProcTypeMask 0x222A8 kept (taken hits, no periodic). The buff 50421 (3 charges, 20 s, reset on re-proc) is in deathknight_blood_helpers.py.',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 5% chance after dodging, parrying or taking direct damage to gain Scent of Blood, causing your next 3 melee hits to generate 10 Runic Power. This effect cannot occur more than once every 10 sec.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 5% chance after dodging, parrying or taking direct damage to gain Scent of Blood, causing your next 3 melee hits to generate 10 Runic Power. This effect cannot occur more than once every 5 sec.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4423,7 +4423,7 @@ scent_of_blood_49508 = spell(
     ],
     spell_icon_id=2283,
     notes='S1a (Blood doc "Scent of Blood", brief D4): ONE PROC_TRIGGER_SPELL -> 50421 effect per rank (the stock ranks 2 / 3 carried 2 / 3 effects = 2 / 3 stacks per proc). ProcChance 5 / 10 / 15 on the rank spell, spell_proc -49004 Chance 0 = use the spell\'s, Cooldown 10000, HitMask 0x33 kept (declared at the end of this file). ProcTypeMask 0x222A8 kept (taken hits, no periodic). The buff 50421 (3 charges, 20 s, reset on re-proc) is in deathknight_blood_helpers.py.',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 10% chance after dodging, parrying or taking direct damage to gain Scent of Blood, causing your next 3 melee hits to generate 10 Runic Power. This effect cannot occur more than once every 10 sec.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 10% chance after dodging, parrying or taking direct damage to gain Scent of Blood, causing your next 3 melee hits to generate 10 Runic Power. This effect cannot occur more than once every 5 sec.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4443,7 +4443,7 @@ scent_of_blood_49509 = spell(
     ],
     spell_icon_id=2283,
     notes='S1a (Blood doc "Scent of Blood", brief D4): ONE PROC_TRIGGER_SPELL -> 50421 effect per rank (the stock ranks 2 / 3 carried 2 / 3 effects = 2 / 3 stacks per proc). ProcChance 5 / 10 / 15 on the rank spell, spell_proc -49004 Chance 0 = use the spell\'s, Cooldown 10000, HitMask 0x33 kept (declared at the end of this file). ProcTypeMask 0x222A8 kept (taken hits, no periodic). The buff 50421 (3 charges, 20 s, reset on re-proc) is in deathknight_blood_helpers.py.',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 15% chance after dodging, parrying or taking direct damage to gain Scent of Blood, causing your next 3 melee hits to generate 10 Runic Power. This effect cannot occur more than once every 10 sec.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 15% chance after dodging, parrying or taking direct damage to gain Scent of Blood, causing your next 3 melee hits to generate 10 Runic Power. This effect cannot occur more than once every 5 sec.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4597,9 +4597,10 @@ procs_on(subversion_49491, proc_flags=_PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS, fam
          hit_mask=_PROC_HIT_CRITICAL, chance=100.0, disable_effects_mask=0x1)
 scripted_by(subversion_49491, 'spell_dk_subversion_capstone')
 
-# Scent of Blood: the stock row (HitMask 0x33, Chance 0 = the rank spell's 5 / 10 / 15) plus the 10 s internal cooldown. The stock
-# bindings on -49004 (spell_dk_scent_of_blood_trigger, spell_gen_proc_from_direct_damage) stay.
-procs_on(-49004, proc_flags=0, hit_mask=_PROC_HIT_SCENT_OF_BLOOD, cooldown_ms=10000)
+# Scent of Blood: the stock row (HitMask 0x33, Chance 0 = the rank spell's 5 / 10 / 15) plus a 5 s internal cooldown
+# (S22 2026-11-22: was 10 s, ICD report Blood DK option A). The stock bindings on -49004
+# (spell_dk_scent_of_blood_trigger, spell_gen_proc_from_direct_damage) stay.
+procs_on(-49004, proc_flags=0, hit_mask=_PROC_HIT_SCENT_OF_BLOOD, cooldown_ms=5000)
 
 # Bloody Vengeance: any crit by the DK, periodic crits included; a triggered cast may proc it (D&D ticks, brief D1).
 procs_on(-48988, proc_flags=_PROC_FLAGS_BLOODY_VENGEANCE, spell_type_mask=_PROC_SPELL_TYPE_DAMAGE,

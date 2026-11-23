@@ -116,6 +116,7 @@ namespace Hunter
         // S3 (A18): the Explosive Shot carry and the Burning Tar bank this hunter owns as caster.
         ClearExplosiveShotCarryForCaster(player->GetGUID());
         ClearBurningTarForCaster(player->GetGUID());
+        ClearLockAndLoadPulse(player->GetGUID());
     }
 
     bool IsAspectRollSource(SpellInfo const* spellInfo)
@@ -2626,11 +2627,53 @@ namespace Hunter
             burningTarBanks.erase(itr);
     }
 
-    bool TryLockAndLoad(Player* hunter, float baseChancePct)
+    namespace
+    {
+        // S22: the last fire pulse each hunter rolled Lock and Load on. Aura ticks and the hits of one tick spell
+        // that land in the same world update share its game time, so (time, source spell) names one pulse. Maps
+        // update on several threads, so every access holds the lock.
+        struct LockAndLoadPulse
+        {
+            uint32 timeMs = 0;
+            uint32 spellId = 0;
+        };
+
+        std::mutex lockAndLoadPulseLock;
+        std::unordered_map<ObjectGuid, LockAndLoadPulse> lockAndLoadPulses;
+    }
+
+    bool ClaimLockAndLoadPulse(Player* hunter, uint32 sourceSpellId)
+    {
+        if (!hunter)
+            return false;
+
+        uint32 const now = GameTime::GetGameTimeMS().count();
+        std::lock_guard<std::mutex> lock(lockAndLoadPulseLock);
+        LockAndLoadPulse& last = lockAndLoadPulses[hunter->GetGUID()];
+        if (last.timeMs == now && last.spellId == sourceSpellId)
+            return false;
+
+        last.timeMs = now;
+        last.spellId = sourceSpellId;
+        return true;
+    }
+
+    void ClearLockAndLoadPulse(ObjectGuid hunterGuid)
+    {
+        std::lock_guard<std::mutex> lock(lockAndLoadPulseLock);
+        auto const itr = lockAndLoadPulses.find(hunterGuid);
+        if (itr != lockAndLoadPulses.end())
+            lockAndLoadPulses.erase(itr);
+    }
+
+    bool TryLockAndLoad(Player* hunter, float baseChancePct, uint32 sourceSpellId)
     {
         // C49 / S3b B4: the periodic path's one roll (the ground-fire tick; the talent script rolls its own row).
-        // 67544 is the shared 5 s ICD.
+        // 67544 is the shared 3 s ICD (S22: was 5 s); one roll per pulse, not per target hit.
         if (!hunter || hunter->HasAura(SPELL_LOCK_AND_LOAD_MARKER))
+            return false;
+
+        if (!ClaimLockAndLoadPulse(hunter, sourceSpellId))
             return false;
 
         if (!RollProcChance(hunter, baseChancePct))

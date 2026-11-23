@@ -367,7 +367,12 @@ namespace Hunter
     void   ClearBurningTarForCaster(ObjectGuid casterGuid);                     // called from ClearState (logout)
 
     // Lock and Load (C49): one trigger path for the row, the tick script and Chain Reaction.
-    bool   TryLockAndLoad(Player* hunter, float baseChancePct);  // false while 67544 is up, else RollProcChance
+    // S22: one roll per fire pulse. The first event of a pulse (same game-time ms, same source spell) claims it,
+    // so a pack does not multiply the attempts; 67544 (3 s) is the ICD on top.
+    bool   ClaimLockAndLoadPulse(Player* hunter, uint32 sourceSpellId);
+    void   ClearLockAndLoadPulse(ObjectGuid hunterGuid);                    // called from ClearState (logout)
+    // false while 67544 is up or the pulse already rolled, else RollProcChance
+    bool   TryLockAndLoad(Player* hunter, float baseChancePct, uint32 sourceSpellId);
     void   TriggerLockAndLoad(Player* hunter);                   // 56453, 67544, reset category 1173; r3: CB -2 s
 
     void   TryShrapnel(Player* hunter, Unit* primary);           // §5.7

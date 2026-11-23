@@ -1227,11 +1227,13 @@ procs_on(-48389, proc_flags=0x10028, spell_phase_mask=PROC_SPELL_PHASE_CAST | PR
 procs_on(24905, proc_flags=0x10000, spell_phase_mask=PROC_SPELL_PHASE_CAST, chance=33)
 
 # (6,3) Vengeance capstone - final rank only; triggered spells allowed (Starfall/Hurricane/Fury of
-# Elune crits can roll it)
+# Elune crits can roll it). S22 2026-11-22 (ICD report option A): ICD 10 -> 6 s, and
+# spell_dru_vengeance_capstone_guard makes a cast roll once (cleave and splash crits share its Spell).
 procs_on(vengeance_16911, proc_flags=0x10000, school_mask=72,
          spell_type_mask=PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=PROC_SPELL_PHASE_HIT,
          hit_mask=PROC_HIT_CRITICAL, attributes_mask=PROC_ATTR_TRIGGERED_CAN_PROC, chance=15,
-         cooldown_ms=10000, disable_effects_mask=0x1)
+         cooldown_ms=6000, disable_effects_mask=0x1)
+scripted_by(vengeance_16911, 'spell_dru_vengeance_capstone_guard')
 
 # (8,0) Eclipse - negative whole-chain row, overrides the stock -48516 row
 procs_on(-48516, proc_flags=0x10000, family_name=7, family_mask=(0x5, 0, 0),

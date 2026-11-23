@@ -107,7 +107,7 @@ namespace
     }
 
     // Crimson Scourge's proc rolled by hand for a Blood Boil hit (the capstone, rank 3): the same chance (the rank's
-    // ProcChance through the chain's proc row, spell mods and the Proc Chance stat) and the same 10 s internal
+    // ProcChance through the chain's proc row, spell mods and the Proc Chance stat) and the same 5 s internal
     // cooldown on the rank aura as the auto-attack proc, so the two paths share one cooldown.
     void TryGrantCrimsonScourge(Player* dk)
     {

@@ -155,9 +155,10 @@ untrain(8737, [204])
 skill_line_ability(id=30540, skill_line=51, spell_id=201600, class_mask=4)
 
 # --- Aspect spell_proc rows (B6.1) ---
-procs_on(-13165, proc_flags=0x140, family_name=9, spell_phase_mask=0x3, hit_mask=0x2, cooldown_ms=30000)   # Hawk
+# S22 2026-11-22: Hawk and Beast ICD 30 -> 10 s, the length of the buff each one grants (ICD report candidates 2, 3).
+procs_on(-13165, proc_flags=0x140, family_name=9, spell_phase_mask=0x3, hit_mask=0x2, cooldown_ms=10000)   # Hawk
 procs_on(-61846, proc_flags=0x140, family_name=9, spell_phase_mask=0x3, cooldown_ms=3000)    # Dragonhawk
-procs_on(13161, proc_flags=0x140, family_name=9, spell_phase_mask=0x3, cooldown_ms=30000)    # Beast
+procs_on(13161, proc_flags=0x140, family_name=9, spell_phase_mask=0x3, cooldown_ms=10000)    # Beast
 procs_on(34074, proc_flags=0x140, family_name=9, spell_phase_mask=0x3)                       # Viper (was type 1 / HIT)
 procs_on(13163, proc_flags=0x100000, cooldown_ms=20000)   # Monkey (was HitMask DODGE)
 procs_on(aspect_of_the_monkey_pet_201605, proc_flags=0x100000, chance=100.0)   # the real roll is scripted
