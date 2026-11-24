@@ -448,6 +448,13 @@ blackrock_depths = dungeon(
         creature(300843, "Imperial Guard", "trash", summoned_by=("C++ boss_emperor_dagran_thaurissan_rework",)),
         creature(300844, "Twilight's Hammer Ambassador", "trash",
                  summoned_by=("C++ boss_emperor_dagran_thaurissan_rework",)),
+        # Dungeon quests Q4: the two friendly Thorium Brotherhood quest givers (source/npcs/blackrock_depths/
+        # dungeon_quests.py). Spawned by hand SQL, so the live-DB extraction does not see them yet; role npc: no level
+        # 60 copy, no heroic spawn (see `normal_only_creatures` below).
+        creature(300797, "Kragen Ashvein", "npc",
+                 summoned_by=("spawn 3007970, rev_dungeon_quests_blackrock_depths.sql",)),
+        creature(300798, "Durn Cinderbrew", "npc",
+                 summoned_by=("spawn 3007980, rev_dungeon_quests_blackrock_depths.sql",)),
     ),
     heroic=heroic(
         map_difficulty_id=1005, access_id=127, min_level=60, max_players=5,
@@ -459,6 +466,9 @@ blackrock_depths = dungeon(
         no_credit=(234, 240, 241),
         spawn_mask=True,
         event_spawns=False,
+        # The two dungeon quest givers (source/npcs/blackrock_depths/dungeon_quests.py, hand spawns in
+        # rev_dungeon_quests_blackrock_depths.sql) stand on normal only: heroic is level 60 and has no dungeon quests.
+        normal_only_creatures=(300797, 300798),
         overrides=_with_extra({
             # Wave 1: Detention Block and Shadowforge City.
             9018: _boss(230_000, 310343),  # High Interrogator Gerstahn

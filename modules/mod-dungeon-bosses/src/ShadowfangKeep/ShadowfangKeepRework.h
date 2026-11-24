@@ -192,7 +192,8 @@ namespace ShadowfangKeepRework
         NPC_SFK_LAIR_ADAMANT        = 300514,   // K declares (archmage_arugal.py), S9 scripts: npc_sfk_lair_prisoner
         NPC_SFK_WARD_STALKER        = 300515,   // S9
         NPC_SFK_STRIKE_STALKER      = 300516,   // strike / visual stalker (the first WP that needs it declares it)
-        // 300517-300529 spare (ask the orchestrator)
+        // 300517 is the entrance quest giver Magus Aldren Voss (dungeon quests Q2, data only, no script);
+        // 300518-300529 spare (ask the orchestrator)
     };
 
     // The nine rework bosses (a heroic copy's GetEntry() is its base entry). Every boss's ArenaGuard skips a unit in

@@ -356,6 +356,17 @@ scarlet_monastery = dungeon(
         creature(300954, "Company Wizard", "trash", summoned_by=("C++ boss_mograine_rework",)),
         creature(300955, "Company Abbot", "trash", summoned_by=("C++ boss_mograine_rework",)),
         creature(300956, "Fairbanks", "boss", summoned_by=("C++ whitemane_hard_mode",)),
+        # Dungeon quests Q3: the four friendly Argent Dawn agents, one per wing (source/npcs/scarlet_monastery/
+        # dungeon_quests.py). Spawned by hand SQL, so the live-DB extraction does not see them yet; role npc: no
+        # level 60 copy, no heroic spawn (see `normal_only_creatures` below).
+        creature(300923, "Agent Corwin Hale", "npc",
+                 summoned_by=("spawn 3009230, rev_dungeon_quests_scarlet_monastery.sql",)),
+        creature(300924, "Archivist Tobias Merrow", "npc",
+                 summoned_by=("spawn 3009240, rev_dungeon_quests_scarlet_monastery.sql",)),
+        creature(300925, "Captain Dorrin Ashe", "npc",
+                 summoned_by=("spawn 3009250, rev_dungeon_quests_scarlet_monastery.sql",)),
+        creature(300926, "Father Anselm Gray", "npc",
+                 summoned_by=("spawn 3009260, rev_dungeon_quests_scarlet_monastery.sql",)),
     ),
     heroic=heroic(
         map_difficulty_id=1006, access_id=128, min_level=60, max_players=5,
@@ -368,6 +379,9 @@ scarlet_monastery = dungeon(
         no_credit=_NO_CREDIT_YET,
         spawn_mask=True,
         event_spawns=False,
+        # The four dungeon quest agents (source/npcs/scarlet_monastery/dungeon_quests.py, hand spawns in
+        # rev_dungeon_quests_scarlet_monastery.sql) stand on normal only: heroic is level 60 and has no dungeon quests.
+        normal_only_creatures=(300923, 300924, 300925, 300926),
         overrides=_with_extra({
             # Wave 1: the Graveyard and the Library.
             3983: _boss(280_000, 310424),  # Interrogator Vishas

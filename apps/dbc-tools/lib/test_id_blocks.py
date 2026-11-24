@@ -555,6 +555,7 @@ class ReservationTest(unittest.TestCase):
             "spell": (205200, 205399), "creature": (300420, 300449), "gameobject": (301000, 301099),
             "spellvisual": (90340, 90369), "gameobjectdisplayinfo": (90020, 90029),
             "creaturedisplayinfo": (90700, 90719), "creaturemodeldata": (90700, 90719),
+            "item": (70900, 70909),  # dungeon quests Q1: the two quest items (items.csv rows)
         })
         self.assertEqual(dm["spell"][0], RESERVATIONS["mage"]["spell"]["end"] + 1)
         self.assertEqual(dm["creature"][0], RESERVATIONS["bossmechanics"]["creature"]["end"] + 1)
@@ -671,6 +672,7 @@ class ShadowfangKeepIdsTest(unittest.TestCase):
             "gameobjectdisplayinfo": (90030, 90034),
             "creaturedisplayinfo": (90720, 90729),
             "creaturemodeldata": (90720, 90729),
+            "item": (70910, 70919),  # dungeon quests Q2: the Silverlaine Signet (items.csv row)
         })
 
     def test_shadowfang_keep_overlaps_no_other_reservation(self):

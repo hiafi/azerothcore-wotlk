@@ -81,11 +81,19 @@ deadmines = dungeon(
         creature(300421, "Defias Evoker", "trash", summoned_by=("spawn 79167, WP-B1 SQL",)),  # L19 elite mage
         creature(300422, "Working Miner", "trash", summoned_by=("C++ boss_miner_johnson_rework",)),  # L18 warrior
         creature(300426, "Defias Blackguard", "trash", summoned_by=("C++ boss_edwin_vancleef_rework",)),  # L19 elite
+        # Dungeon quests Q1: the two friendly quest givers (source/npcs/deadmines/dungeon_quests.py). Spawned by hand
+        # SQL, so the live-DB extraction does not see them yet; role npc: no level 60 copy, no heroic spawn (see
+        # `normal_only_creatures` below).
+        creature(300431, "Scout Harlan", "npc", summoned_by=("spawn 3004310, rev_dungeon_quests_deadmines.sql",)),
+        creature(300432, "Sergeant Wynne", "npc", summoned_by=("spawn 3004320, rev_dungeon_quests_deadmines.sql",)),
     ),
     heroic=heroic(
         map_difficulty_id=1000, access_id=122, min_level=60,
         encounter_ids=range(1000, 1007),  # Rhahk'Zor, Sneed, Gilnid, Mr. Smite, Cookie, Captain Greenskin, VanCleef
         spawn_mask=True,
+        # The two dungeon quest givers (source/npcs/deadmines/dungeon_quests.py, hand spawns in
+        # rev_dungeon_quests_deadmines.sql) stand on normal only: heroic is level 60 and has no dungeon quests.
+        normal_only_creatures=(300431, 300432),
         # Heroic health from the dungeon doc's build specs (approved; its "Unit | Entry | Normal | Heroic" tables).
         # The doc names no heroic melee, so every creature takes the tier's. The boss-kit adds (Watchman and Evoker
         # 80k, Working Miner 30k, Blackguard 40k) are the `extra=` entries above. The reworked bosses' heroic rows take

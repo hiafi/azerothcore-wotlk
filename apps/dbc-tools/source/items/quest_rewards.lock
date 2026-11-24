@@ -90,8 +90,9 @@
 2033 26 2 31 23 73 8000 -  # Ambassador's Boots -- Agi / Proc; green; ilvl 25->31
 2036 18 2 23 12 27 8000 -  # Dusty Mining Gloves -- Str+AP / Mastery; green; ilvl 18->23
 2037 18 2 23 71 28 8000 -  # Tunneler's Boots -- Spi / Vers; green; ilvl 18->23
-2041 22 3 27 23 36 6000 -  # Tunic of Westfall -- Agi / Mastery+Vers; blue; ilvl 24->27
-2042 22 3 27 9 37 6000 -  # Staff of Westfall -- Spi+Int+SP / Crit+CDH; blue; ilvl 24->27
+2041 22 4 27 23 36 6000 -  # Tunic of Westfall -- Agi / Mastery+Vers; blue->epic (dungeon quests Q1: quest 166, the
+#   Deadmines open-world quest); ilvl 24->27
+2042 22 4 27 9 37 6000 -  # Staff of Westfall -- Spi+Int+SP / Crit+CDH; blue->epic (dungeon quests Q1); ilvl 24->27
 2043 32 3 37 0 48 0 -  # Ring of Forlorn Spirits -- - / MP5+Crit; blue; ilvl 35->37; no primary (jewelry/cloak); MP5
 #   kept
 2044 32 3 37 22 39 6000 -  # Crescent of Forlorn Spirits -- Str / Crit+Proc; blue; ilvl 35->37; FB no stock primary:
@@ -607,7 +608,7 @@
 6078 5 2 7 22 25 8000 -  # Pikeman Shield -- Str / Crit; white->green; ilvl 5->7; type Str (shield)
 6084 11 2 16 22 25 8000 -  # Stormwind Guard Leggings -- Str / Crit; green; ilvl 13->16
 6085 11 2 16 23 26 8000 -  # Footman Tunic -- Agi / Haste; green; ilvl 13->16
-6087 22 3 27 22 32 6000 -  # Chausses of Westfall -- Str / Crit+Vers; blue; ilvl 24->27
+6087 22 4 27 22 32 6000 -  # Chausses of Westfall -- Str / Crit+Vers; blue->epic (dungeon quests Q1); ilvl 24->27
 6092 18 2 23 23 27 8000 -  # Black Whelp Boots -- Agi / Mastery; green; ilvl 18->23; FB no stock primary: type Agi
 #   (leather)
 6093 25 2 30 22 28 8000 -  # Orc Crusher -- Str / Vers; green; ilvl 27->30
@@ -704,9 +705,10 @@
 6801 40 2 45 4 28 8000 -  # Baroque Apron -- Spi+SP / Vers; green; ilvl 40->45
 6802 42 3 47 22 74 6000 -  # Sword of Omen -- Str / CDH+Vers; blue; ilvl 44->47
 6803 42 3 47 24 75 6000 -  # Prophetic Cane -- Int / Mastery+Proc; blue; ilvl 44->47
-6804 36 3 41 22 29 6000 -  # Windstorm Hammer -- Str / Crit+Haste; blue; ilvl 34->41
-6806 36 3 41 24 31 6000 -  # Dancing Flame -- Int / Crit+Mastery; blue; ilvl 40->41; FB no stock primary: type Int
-#   (wand)
+6804 36 4 41 22 29 6000 -  # Windstorm Hammer -- Str / Crit+Haste; blue->epic (dungeon quests Q3: quest 1394, the
+#   Test of Lore open-world quest); ilvl 34->41
+6806 36 4 41 24 31 6000 -  # Dancing Flame -- Int / Crit+Mastery; blue->epic (dungeon quests Q3: quest 1394); ilvl
+#   40->41; FB no stock primary: type Int (wand)
 6828 38 2 43 71 25 8000 -  # Visionary Buckler -- Spi / Crit; green; ilvl 38->43
 6829 40 3 45 71 36 6000 -  # Sword of Serenity -- Spi / Mastery+Vers; blue; ilvl 44->45
 6830 40 3 45 22 37 6000 -  # Bonebiter -- Str / Crit+CDH; blue; ilvl 44->45
@@ -1095,10 +1097,11 @@
 12050 54 2 55 6 27 8000 -  # Hazecover Boots -- Spi+SP / Mastery; green; ilvl 54->55
 12051 54 2 55 12 28 8000 -  # Brazen Gauntlets -- Str+AP / Vers; green; ilvl 54->55
 12059 58 3 60 0 75 0 -  # Conqueror's Medallion -- - / Mastery+Proc; blue; ilvl 58->60; no primary (jewelry/cloak)
-12061 58 2 60 82 26 8000 -  # Blade of Reckoning -- AP / Haste; green; ilvl 60 kept (target 55); round 7: Attack Power
-#   (Solo) (ruling 33) (was AP+Str / Haste share 8000)
-12062 58 2 60 23 27 8000 -  # Skilled Fighting Blade -- Agi / Mastery; green; ilvl 60 kept (target 55); FB no stock
-#   primary: type Agi (dagger)
+12061 58 3 60 82 29 6000 -  # Blade of Reckoning -- AP / Crit+Haste; green->blue (dungeon quests Q4: quest 4322 Jail
+#   Break!, two secondaries, share 6000); ilvl 60 kept (target 60); round 7: Attack Power (Solo) (ruling 33) (was
+#   AP+Str / Haste share 8000)
+12062 58 3 60 23 30 6000 -  # Skilled Fighting Blade -- Agi / Crit+Mastery; green->blue (dungeon quests Q4: quest 4322);
+#   ilvl 60 kept (target 60); FB no stock primary: type Agi (dagger)
 12065 58 2 60 0 73 0 -  # Ward of the Elements -- - / Proc; green; ilvl 60 kept (target 55); no primary (trinket, ruling
 #   22)
 12066 58 2 58 0 25 0 -  # Shaleskin Cape -- - / Crit; green; ilvl 58 kept (target 55); no primary (jewelry/cloak)
@@ -1125,12 +1128,14 @@
 12344 60 3 61 0 66 0 all  # Seal of Ascension -- - / Crit+Proc; blue; ilvl 61 kept (target 60); no primary
 #   (jewelry/cloak); keeps spell 1,2
 12522 15 2 20 20 25 8000 -  # Bingles' Flying Gloves -- Agi+Int+SP / Crit; green; ilvl 15->20
-12543 59 3 60 0 67 0 -  # Songstone of Ironforge -- - / Mastery+Vers; blue; ilvl 60 kept (target 60); no primary
-#   (jewelry/cloak)
-12544 60 3 60 0 74 0 -  # Thrall's Resolve -- - / CDH+Vers; blue; ilvl 60 kept (target 60); no primary (jewelry/cloak)
-12545 60 3 60 0 75 0 -  # Eye of Orgrimmar -- - / Mastery+Proc; blue; ilvl 60 kept (target 60); no primary
-#   (jewelry/cloak)
-12548 59 3 60 0 31 0 -  # Magni's Will -- - / Crit+Mastery; blue; ilvl 60 kept (target 60); no primary (jewelry/cloak)
+12543 59 4 60 0 67 0 -  # Songstone of Ironforge -- - / Mastery+Vers; blue->epic (dungeon quests Q4: quest 4363, the
+#   Alliance Princess Moira chain's last quest); ilvl 60 kept; no primary (jewelry/cloak)
+12544 60 4 60 0 74 0 -  # Thrall's Resolve -- - / CDH+Vers; blue->epic (dungeon quests Q4: quest 4004, the Horde
+#   Princess Moira chain's last quest); ilvl 60 kept; no primary (jewelry/cloak)
+12545 60 4 60 0 75 0 -  # Eye of Orgrimmar -- - / Mastery+Proc; blue->epic (dungeon quests Q4: quest 4004); ilvl 60
+#   kept; no primary (jewelry/cloak)
+12548 59 4 60 0 31 0 -  # Magni's Will -- - / Crit+Mastery; blue->epic (dungeon quests Q4: quest 4363); ilvl 60 kept; no
+#   primary (jewelry/cloak)
 12631 60 3 60 22 65 6000 all  # Fiery Plate Gauntlets -- Str / Haste+CDH; blue; ilvl 58->60; keeps spell 1; FB no stock
 #   primary: type Str (plate)
 12752 60 4 62 24 31 6000 -  # Cap of the Scarlet Savant -- Int / Crit+Mastery; epic; ilvl 62 kept (epic)
