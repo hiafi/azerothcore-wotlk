@@ -796,6 +796,41 @@ class BlackrockDepthsIdsTest(unittest.TestCase):
         self.assertEqual(300829 + 1, 300830)
 
 
+class ScarletMonasteryIdsTest(unittest.TestCase):
+    """Scarlet Monastery build WP-0 (2026-11-20): the dungeon's reservation, pinned exactly
+    (scarlet-monastery-build.HANDOFF.md s3.3)."""
+
+    def test_scarlet_monastery_reservation(self):
+        got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["scarlet_monastery"].items()}
+        self.assertEqual(got, {
+            "spell": (212300, 213499),
+            "creature": (300900, 300979),
+            "gameobject": (301310, 301339),
+            "spellvisual": (90550, 90599),
+            "gameobjectdisplayinfo": (90060, 90069),
+            "creaturedisplayinfo": (90800, 90829),
+            "creaturemodeldata": (90800, 90829),
+        })
+
+    def test_scarlet_monastery_overlaps_no_other_reservation(self):
+        for table, cfg in RESERVATIONS["scarlet_monastery"].items():
+            for owner, tables in RESERVATIONS.items():
+                if owner != "scarlet_monastery" and table in tables:
+                    self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
+
+    def test_scarlet_monastery_sits_inside_the_blocks(self):
+        for table, cfg in RESERVATIONS["scarlet_monastery"].items():
+            self.assertTrue(BLOCKS[table]["start"] <= cfg["start"] and cfg["end"] <= BLOCKS[table]["end"], table)
+
+    def test_the_spell_range_starts_after_the_gear_stage(self):
+        self.assertEqual(RESERVATIONS["zealot_set"]["spell"]["end"] + 1,
+                         RESERVATIONS["scarlet_monastery"]["spell"]["start"])
+
+    def test_the_creature_range_starts_after_the_gear_stage(self):
+        self.assertEqual(RESERVATIONS["zealot_set"]["creature"]["end"] + 1,
+                         RESERVATIONS["scarlet_monastery"]["creature"]["start"])
+
+
 class DungeonKitIdsTest(unittest.TestCase):
     """The shared dungeon kit (WP-K0, 2026-11-07): the spellvisual block widened from 90399 to 90699 and one 50-id
     SpellVisual slice per reworked dungeon after Deadmines (Deadmines held 90340-90369, leaving 30 ids for three

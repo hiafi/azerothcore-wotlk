@@ -605,6 +605,38 @@ dungeon(36, "Deadmines", creatures=CREATURES,
   missing from the declaration (WARNING: rerun the extraction). Normal-only SmartAI rows (`event_flags` 0x02 without
   0x04) of the dungeon's scripts get `event_flags | 4` (`widen_smart_scripts=False` turns it into a WARNING).
 
+### New and repointed encounter rows (`dungeon_encounter()` / `repoint_encounter()`)
+
+A reworked dungeon with more bosses than the stock DungeonEncounter.dbc lists declares the extra rows next to its
+`dungeon()` (`lib/dsl/dungeon.py`; rows built and checked by `lib/dungeon_encounters.py`):
+
+```python
+from lib.dsl.dungeon import credit_creature, credit_spell, dungeon_encounter, repoint_encounter
+
+# a NEW row: id from ids.yaml's dungeonencounter block; bit = the boss slot (unique in the list, 0-31);
+# order_index = its place in the client's list (stock 5-man rows step by 1000)
+dungeon_encounter(1074, map_id=189, order_index=250, bit=7, name="Ironspine", credit=credit_creature(6489))
+dungeon_encounter(1075, map_id=189, order_index=500, bit=8, name="Azshir the Sleepless and the Fallen Champion",
+                  credit=credit_spell(212300))     # the instance reports the spell (a council, a fake death)
+# a STOCK row turned into another fight: same id, map, difficulty, bit and order unless given
+repoint_encounter(449, name="The Last Stand", credit=credit_spell(212301))
+```
+
+- Each row goes to the `dungeonencounter_dbc` overlay and patch-Z's `DungeonEncounter.dbc` (merged over the stock file
+  by ID, kept in (MapID, OrderIndex, ID) order; a repoint replaces the stock row in place, a new name clears the other
+  locales), and its credit to `instance_encounters` (`credit_creature` creditType 0, `credit_spell` creditType 1;
+  `credit=None`: listed, completed by nothing). `last_encounter=<LFGDungeons id>` makes the kill end that finder entry.
+- A repoint without `credit=` / `last_encounter=` keeps the live credit row. It cannot drop a stock credit (generate.py
+  never deletes a stock key): that stays a hand SQL DELETE plus `heroic(no_credit=...)`.
+- **A heroic of the map counts the declared rows**: `heroic(encounter_ids=...)` needs one id per normal row, stock plus
+  declared, paired in (OrderIndex, Bit, ID) order, and each copy takes the declared name and credit (Scarlet
+  Monastery: 7 stock + 7 new rows = 14 heroic ids). generate.py expands the encounter rows first.
+- generate.py (and `--check`) stops on a new row with a stock id or another map's live id, a repoint of a non-stock id,
+  two rows of one list on one Bit, a map without that difficulty, a credit creature that does not exist, a finder
+  entry that would end twice or on another map, an `lfg_override()` / `lfg_dungeon()` `last_encounter=` naming a
+  declared encounter, and a declared id that is also a heroic id. It warns on a shared OrderIndex and on a credit
+  spell this run does not declare. Dropping a declaration prunes its overlay row (a repoint's credit edit stays).
+
 ### Declaring a creature (T1)
 
 A `source/classes/*.py` file can also declare a rework's own NPC - `creature_template` +

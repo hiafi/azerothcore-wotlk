@@ -1239,6 +1239,40 @@ package by the `source/world/` pass). Things that are not obvious:
 - **SpellDifficulty.dbc** (`dbcfmt.SPELLDIFFICULTY`, read-only, not in ALL_TABLES) feeds an informational note only;
   without the file the check is skipped with a note (the shared checkout has no copy yet).
 
+### New and repointed encounter rows: `dungeon_encounter()` / `repoint_encounter()` (Scarlet Monastery FD-SM)
+
+`lib/dsl/dungeon.py` (declarations, bookkeeping merge key `encounter_declarations`), `lib/dungeon_encounters.py`
+(rows and checks), usage in `apps/dbc-tools/README.md`. Things that are not obvious:
+
+- **Expanded before the heroic.** generate.py calls `dungeon_encounters.expand()` right before
+  `dungeon_heroic.expand()`; `dungeon_heroic.with_declared_encounters()` lays the declared rows (marker
+  `_dungeon_encounter`) and their credits over the replayed overlay, so `heroic(encounter_ids=...)` counts a new
+  normal row like a stock one and copies a repointed row as edited, with the declared credit, in the same run. A
+  declared id's replayed credit gives way to the declared one (or to none). A test or tool that calls
+  `dungeon_heroic.expand()` on a map with encounter declarations must call `dungeon_encounters.expand()` first: the
+  heroic expansion stops with an ERROR otherwise (the heroic ids would pair with the wrong rows).
+- **The heroic pairing is positional.** Heroic ids pair with the normal rows in (OrderIndex, Bit, ID) order, so a new
+  normal row inserted between stock ones after a heroic shipped would shift every later heroic id onto another boss
+  (the client's cached names and saved masks would disagree). Declare the new rows before the heroic first ships.
+- **Repointing a stock row** keeps its id, map, difficulty, Bit and OrderIndex unless given, so saves, the completed
+  mask and the heroic copy stay valid; a new name clears the other locales. Its overlay row overrides the stock DBC
+  row (`DBCDatabaseLoader` replaces an existing index) and patch-Z replaces it in place. A repoint keeps the live
+  credit unless `credit=` / `last_encounter=` is given; it never drops a stock credit (no stock-key DELETE: that stays
+  hand SQL plus `heroic(no_credit=...)`, the Blackrock Depths way).
+- **Bits.** One Bit per (map, difficulty) list, 0-31 (`Map::UpdateEncounterState` sets `1 << Bit` in a uint32). The
+  check counts stock rows, live overlay rows outside ids.yaml's `dungeonencounter` block (module SQL) and the declared
+  rows; live rows inside the block are this tool's own output and only the declarations count for them. A rework
+  instance's boss slot should equal the Bit (BRD's "slot = bit").
+- **Credit spells** (`credit_spell`, creditType 1, `ENCOUNTER_CREDIT_CAST_SPELL`): the instance passes the spell to
+  `UpdateEncounterState` (BRD's 211066). `ObjectMgr::LoadInstanceEncounters` skips a row whose spell or creature does
+  not exist, so an unknown credit creature is an ERROR; a credit spell this run does not declare is a WARNING (it may
+  exist live).
+- **Scopes.** The rows follow their MapID into the dungeon's scope (like the heroic copies), so `--scope <dungeon>`
+  writes them, a repointed stock id included.
+- **Not handled:** dropping a declared new row while the heroic still names its copy leaves the stale live row
+  counted by the heroic until the prune lands (drop the heroic id in the same change); `lfg_override(last_encounter=)`
+  cannot name a declared encounter (an ERROR: set `last_encounter=` on the encounter declaration).
+
 ## Superseded ranks: generated `SkillLineAbility` and `CreatureSpellData` overrides
 
 Pets learn from `SkillLineAbility`, not trainers: `SpellMgr::LoadPetLevelupSpellMap` takes every row on a

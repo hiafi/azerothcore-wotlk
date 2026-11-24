@@ -501,6 +501,39 @@ def _brd_heroic_credits() -> list[dict]:
     return rows
 
 
+# Scarlet Monastery (map 189, the Scarlet Monastery build WP-H): the four stock finder entries (18 Graveyard, 165
+# Library, 163 Armory, 164 Cathedral) already end on Thalnos 445, Doan 447, Herod 448 and Whitemane 450; the heroic
+# copies are 1084, 1088, 1091 and 1094 (FD-SM's pairing of 14 encounters in OrderIndex order).
+SM_HEROIC_FIRST = 1081
+SM_ENCOUNTERS = {445: "Bloodmage Thalnos", 447: "Arcanist Doan", 448: "Herod", 450: "High Inquisitor Whitemane"}
+SM_CREDITS = {445: (4543, 18), 447: (6487, 165), 448: (3975, 163), 450: (3977, 164)}
+SM_HEROIC = {1084: (445, 18), 1088: (447, 165), 1091: (448, 163), 1094: (450, 164)}  # heroic id -> (normal, lfg)
+SM_STARTS = {
+    18: (1688.99, 1053.48, 18.6775, 0.00117), 165: (255.346, -209.09, 18.6773, 6.26656),
+    163: (1610.83, -323.433, 18.6738, 6.28022), 164: (855.683, 1321.5, 18.6709, 0.001747),
+}
+
+
+def _sm_positions() -> dict:
+    names = {18: "Graveyard", 165: "Library", 163: "Armory", 164: "Cathedral"}
+    return {i: {"dungeonId": i, "name": f"Scarlet Monastery - {names[i]}", "position_x": x, "position_y": y,
+                "position_z": z, "orientation": o, "VerifiedBuild": 0} for i, (x, y, z, o) in SM_STARTS.items()}
+
+
+def _sm_normal_credits() -> dict:
+    return {e: {"entry": e, "creditType": 0, "creditEntry": c, "lastEncounterDungeon": lfg,
+                "comment": SM_ENCOUNTERS[e]} for e, (c, lfg) in SM_CREDITS.items()}
+
+
+def _sm_heroic_credits() -> list[dict]:
+    rows = []
+    for heroic_id, (normal, lfg) in SM_HEROIC.items():
+        row = _credit(heroic_id, lfg, SM_CREDITS[normal][0])
+        row[lfg_dungeons.NORMAL_ENTRY_KEY] = normal
+        rows.append(row)
+    return rows
+
+
 def _brd_run(text: str = BRD_TEXT, live_links: dict | None = None, **kw):
     kw.setdefault("stock_dungeons", _brd_stock())
     kw.setdefault("encounters", _brd_encounters())
@@ -521,8 +554,14 @@ def _links(dsl: dict) -> dict[int, int]:
 
 
 def _heroic_links(dsl: dict) -> dict[int, int]:
+    """Blackrock Depths' heroic copies (entries 1055-1073); Scarlet Monastery's (1081-1094) are `_sm_heroic_links`."""
     return {r["entry"] - HEROIC_OFFSET: r["lastEncounterDungeon"] for r in dsl["instance_encounters"]
-            if lfg_dungeons.NORMAL_ENTRY_KEY in r}
+            if lfg_dungeons.NORMAL_ENTRY_KEY in r and r["entry"] < SM_HEROIC_FIRST}
+
+
+def _sm_heroic_links(dsl: dict) -> dict[int, int]:
+    return {r["entry"]: r["lastEncounterDungeon"] for r in dsl["instance_encounters"]
+            if lfg_dungeons.NORMAL_ENTRY_KEY in r and r["entry"] >= SM_HEROIC_FIRST}
 
 
 class SectionTest(unittest.TestCase):
@@ -881,6 +920,8 @@ class RealSourceTest(unittest.TestCase):
             (305, "heroic", 274), (44, "override", None), (306, "heroic", 32), (307, "heroic", 44),
             # Blackrock Depths: the four heroic entries (310-313), then the normal side (sections file)
             (310, "heroic", 30), (311, "heroic", 308), (312, "heroic", 309), (313, "heroic", 276),
+            # Scarlet Monastery: the four heroic entries (314-317) of its four stock entries
+            (314, "heroic", 18), (315, "heroic", 165), (316, "heroic", 163), (317, "heroic", 164),
             (30, "override", None), (308, "dungeon", None), (309, "dungeon", None), (276, "override", None),
         ])
         random = self.dsl["lfg_dungeon_declarations"][0]
@@ -895,21 +936,25 @@ class RealSourceTest(unittest.TestCase):
         dsl["dungeons"] = [_heroic_dungeon(m, n) for m, n in ((36, "Deadmines"), (33, "Shadowfang Keep"),
                                                                (289, "Scholomance"), (329, "Stratholme"),
                                                                (229, "Blackrock Spire"),
-                                                               (230, "Blackrock Depths"))]
+                                                               (230, "Blackrock Depths"),
+                                                               (189, "Scarlet Monastery"))]
         dsl["instance_encounters"] = [_credit(1006, 6), _credit(1014, 8), _credit(1027, 2), _credit(1033, 40),
                                       _credit(1040, 274), _credit(1049, 32, 9568), _credit(1054, 44, 10363),
-                                      *_brd_heroic_credits()]
+                                      *_brd_heroic_credits(), *_sm_heroic_credits()]
         out = lfg_dungeons.expand(dsl, lambda: lfg_dungeons.LfgInputs(
             stock_dungeons={int(r["ID"]): r for r in dbcfile.read_dbc(dungeons_file, dbcfmt.LFGDUNGEONS)},
             stock_groups={int(r["ID"]): r for r in dbcfile.read_dbc(groups_file, dbcfmt.LFGDUNGEONGROUP)},
-            positions={**POSITIONS, 32: {"dungeonId": 32, "name": "Lower Blackrock Spire", "position_x": 78.5083,
+            positions={**POSITIONS, **_sm_positions(),
+                       32: {"dungeonId": 32, "name": "Lower Blackrock Spire", "position_x": 78.5083,
                                          "position_y": -225.044, "position_z": 49.839, "orientation": 5.1,
                                          "VerifiedBuild": 0},
                        30: {"dungeonId": 30, "name": "Blackrock Depths - Prison", "position_x": 458.32,
                             "position_y": 26.52, "position_z": -70.67, "orientation": 4.95, "VerifiedBuild": 0},
                        276: {"dungeonId": 276, "name": "Blackrock Depths - Upper City", "position_x": 458.32,
                              "position_y": 26.52, "position_z": -70.67, "orientation": 4.95, "VerifiedBuild": 0}},
-            encounters=_brd_encounters(), credits=_brd_credits(), base_credits=_brd_credits(),
+            encounters={**_brd_encounters(), **{e: {"ID": e, "MapID": 189, "Difficulty": 0, "Name_Lang_enUS": n}
+                                                for e, n in SM_ENCOUNTERS.items()}},
+            credits={**_brd_credits(), **_sm_normal_credits()}, base_credits={**_brd_credits(), **_sm_normal_credits()},
         ))
         self.assertEqual(out.errors, [])
         self.assertEqual(out.warnings, [])
@@ -929,6 +974,11 @@ class RealSourceTest(unittest.TestCase):
             311: ("Blackrock Depths - Shadowforge City", 230, 5, 1, 12),
             312: ("Blackrock Depths - Manufactory", 230, 5, 1, 12),
             313: ("Blackrock Depths - Upper City", 230, 5, 1, 12),
+            # Scarlet Monastery: the four heroic entries (the Scarlet Monastery build)
+            314: ("Scarlet Monastery - Graveyard", 189, 5, 1, 12),
+            315: ("Scarlet Monastery - Library", 189, 5, 1, 12),
+            316: ("Scarlet Monastery - Armory", 189, 5, 1, 12),
+            317: ("Scarlet Monastery - Cathedral", 189, 5, 1, 12),
         })
         self.assertEqual([c["lastEncounterDungeon"] for c in dsl["instance_encounters"][:7]],
                          [301, 302, 303, 304, 305, 306, 307])
@@ -937,6 +987,9 @@ class RealSourceTest(unittest.TestCase):
         # 237 -> 309, 245 stays 276)
         self.assertEqual(_heroic_links(dsl), {227: 0, 230: 310, 234: 0, 235: 311, 237: 312, 245: 313})
         self.assertEqual(_links(dsl), {227: 0, 230: 30, 235: 308, 237: 309})
+        # Scarlet Monastery: each heroic section completes on the heroic copy of its stock last boss (Thalnos 1084 ends
+        # 314, Doan 1088 ends 315, Herod 1091 ends 316, Whitemane 1094 ends 317); the four normal rows are untouched
+        self.assertEqual(_sm_heroic_links(dsl), {1084: 314, 1088: 315, 1091: 316, 1094: 317})
         # row 44: a dungeon entry (Flags 3, levels 55-65), the rest of the stock row kept; row 307 copies it
         edited = next(r for r in dsl["lfg_dungeons"] if r["ID"] == 44)
         stock_44 = next(r for r in dbcfile.read_dbc(dungeons_file, dbcfmt.LFGDUNGEONS) if r["ID"] == 44)
@@ -962,6 +1015,9 @@ class RealSourceTest(unittest.TestCase):
         self.assertEqual((positions[311], positions[312], positions[313]),
                          (positions[308], positions[309], positions[276]))
         self.assertEqual(positions[310], (458.32, 26.52, -70.67, 4.95))  # section 1 keeps the dungeon entrance
+        # Scarlet Monastery: each heroic entry copies the stock start of its normal entry
+        for heroic, normal in ((314, 18), (315, 165), (316, 163), (317, 164)):
+            self.assertEqual(positions[heroic], SM_STARTS[normal], heroic)
         self.assertGreater(((98.25 - 102.43) ** 2 + (-300.75 + 319.17) ** 2 + (63.1 - 65.4635) ** 2) ** 0.5, 10 + 5)
         # Random 260's shape: Difficulty 1, Flags 3; our window and expansion.
         random = next(r for r in dsl["lfg_dungeons"] if r["ID"] == 300)
@@ -981,7 +1037,7 @@ class RealSourceTest(unittest.TestCase):
         back = {r["ID"]: r for r in scope.read_dbc_bytes(blob, dbcfmt.LFGDUNGEONS)}
         self.assertEqual(back[301]["TextureFilename"], back[6]["TextureFilename"])
         self.assertEqual(back[300]["Name_Lang_enUS"], "Random Classic Heroic")
-        self.assertEqual(len(back), len(base) + 14)  # fourteen new ids (300-313); row 44 replaces a stock row
+        self.assertEqual(len(back), len(base) + 18)  # eighteen new ids (300-317); row 44 replaces a stock row
         self.assertEqual((back[44]["TypeID"], back[44]["Group_Id"], back[44]["Flags"]), (1, 1, 3))
 
 

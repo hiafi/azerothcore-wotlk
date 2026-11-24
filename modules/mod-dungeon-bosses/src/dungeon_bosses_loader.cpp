@@ -143,6 +143,31 @@ void AddSC_boss_magmus_rework();                        // D22: boss_magmus_rewo
 void AddSC_boss_emperor_dagran_thaurissan_rework();     // D23: boss_emperor_dagran_thaurissan_rework
 void AddSC_boss_moira_bronzebeard_rework();             // D23: boss_moira_bronzebeard_rework (8929 and 10076)
 void AddSC_brd_emperor_hard_mode();                     // D24: the Avatar of Ragnaros (`.dbtest brd avatar`)
+// Scarlet Monastery (map 189): the Scarlet Monastery skeleton (WP-S0): the instance (registered under the stock name
+// instance_scarlet_monastery, replacing the stock one; the stock Ashbringer spell scripts and the Horseman keep
+// working), go_sm_chapel_door, go_sm_wing_portal, and the `.dbtest sm` shell
+void AddSC_instance_scarlet_monastery_rework();
+void AddSC_dungeon_bosses_sm_commandscript();
+// Scarlet Monastery bosses (one file per boss WP). Wave 1, the Graveyard and the Library:
+void AddSC_boss_interrogator_vishas_rework();           // D1: boss_interrogator_vishas_rework
+void AddSC_boss_ironspine_rework();                     // D2: boss_ironspine_rework
+void AddSC_boss_azshir_fallen_champion_rework();        // D3: boss_fallen_champion_rework, boss_azshir_*_rework
+void AddSC_boss_bloodmage_thalnos_rework();             // D4: boss_bloodmage_thalnos_rework
+void AddSC_sm_thalnos_hard_mode();                      // D4H: the Desecration (`.dbtest sm desecration`)
+void AddSC_boss_houndmaster_loksey_rework();            // D5: boss_houndmaster_loksey_rework
+void AddSC_boss_ambrose_kell_rework();                  // D6: boss_ambrose_kell_rework (registered once D6 binds it)
+void AddSC_boss_lector_hollis_grey_rework();            // D7: boss_lector_hollis_grey_rework (idem, D7)
+void AddSC_boss_arcanist_doan_rework();                 // D8: boss_arcanist_doan_rework
+void AddSC_sm_doan_hard_mode();                         // D8H: the Kel'Thuzad Heresy (`.dbtest sm heresy`)
+// Wave 2, the Armory and the Cathedral (AIs registered only once wave 2 flips kWave2Bound / BIND_WAVE_2):
+void AddSC_boss_forgemaster_gideon_crell_rework();      // D9: boss_forgemaster_gideon_crell_rework
+void AddSC_boss_drillmaster_corin_halden_rework();      // D10: boss_drillmaster_corin_halden_rework
+void AddSC_boss_herod_rework();                         // D11: boss_herod_rework
+void AddSC_sm_herod_hard_mode();                        // D11H: Call to Arms (`.dbtest sm calltoarms`)
+void AddSC_boss_gardener_rework();                      // D12: boss_gardener_rework (Brother Aldous Thorne)
+void AddSC_boss_mograine_rework();                      // D13: boss_mograine_rework (the Last Stand)
+void AddSC_boss_whitemane_rework();                     // D14: boss_whitemane_rework
+void AddSC_sm_whitemane_hard_mode();                    // D14H: The Truth (`.dbtest sm truth`)
 // Stratholme hard mode items (wave 1 dungeon items): the Balnazzar and Baron Rivendare hard mode item effects
 void AddSC_strat_hard_mode_items();         // spell_strat_dust_of_the_nathrezim, spell_strat_two_faced_tome,
                                             // spell_strat_ysidas_locket, spell_strat_blade_of_the_condemned,
@@ -277,6 +302,25 @@ void Addmod_dungeon_bossesScripts()
     AddSC_boss_emperor_dagran_thaurissan_rework();
     AddSC_boss_moira_bronzebeard_rework();
     AddSC_brd_emperor_hard_mode();
+    AddSC_instance_scarlet_monastery_rework();
+    AddSC_boss_interrogator_vishas_rework();
+    AddSC_boss_ironspine_rework();
+    AddSC_boss_azshir_fallen_champion_rework();
+    AddSC_boss_bloodmage_thalnos_rework();
+    AddSC_sm_thalnos_hard_mode();
+    AddSC_boss_houndmaster_loksey_rework();
+    AddSC_boss_ambrose_kell_rework();
+    AddSC_boss_lector_hollis_grey_rework();
+    AddSC_boss_arcanist_doan_rework();
+    AddSC_sm_doan_hard_mode();
+    AddSC_boss_forgemaster_gideon_crell_rework();
+    AddSC_boss_drillmaster_corin_halden_rework();
+    AddSC_boss_herod_rework();
+    AddSC_sm_herod_hard_mode();
+    AddSC_boss_gardener_rework();
+    AddSC_boss_mograine_rework();
+    AddSC_boss_whitemane_rework();
+    AddSC_sm_whitemane_hard_mode();
     AddSC_strat_hard_mode_items();
     AddSC_sfk_hard_mode_items();
     AddSC_brs_hard_mode_items();
@@ -286,11 +330,12 @@ void Addmod_dungeon_bossesScripts()
     AddSC_molten_set_bonuses();
     AddSC_zealot_set_bonuses();
     // after the boss files: they register their `.dmtest` / `.sfktest` / `.dbtest scholo` / `.dbtest strat` /
-    // `.dbtest brs` / `.dbtest brd` tables from their AddSC_ functions
+    // `.dbtest brs` / `.dbtest brd` / `.dbtest sm` tables from their AddSC_ functions
     AddSC_dungeon_bosses_dmtest_commandscript();
     AddSC_dungeon_bosses_sfktest_commandscript();
     AddSC_dungeon_bosses_scholo_commandscript();
     AddSC_dungeon_bosses_strat_commandscript();
     AddSC_dungeon_bosses_brs_commandscript();
     AddSC_dungeon_bosses_brd_commandscript();
+    AddSC_dungeon_bosses_sm_commandscript();
 }

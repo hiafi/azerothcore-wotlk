@@ -748,6 +748,9 @@ class DeadminesTest(unittest.TestCase):
             # Stratholme: each WP-H) have their own tests, and their lock lines (committed or not yet) are left out.
             cls.declared = list(cls.dsl["dungeons"])
             cls.dsl["dungeons"] = [e if e["map_id"] == 36 else dict(e, heroic=None) for e in cls.dsl["dungeons"]]
+            # Scarlet Monastery's encounter declarations (FD-SM) belong to its own expansion
+            # (test_scarlet_monastery_heroic.py), which runs dungeon_encounters.expand() first
+            cls.dsl["encounter_declarations"] = []
             cls.index = spell_tables.load_spell_table_index()
             cls.out = dungeon_heroic.expand(
                 cls.dsl, lambda: dungeon_heroic.load_live_world(existing, cls.index), ids_cfg=ids_cfg,
@@ -762,7 +765,7 @@ class DeadminesTest(unittest.TestCase):
         maps = {e["map_id"]: e for e in self.declared}
         self.assertEqual(set(maps), set(dungeon_extract.VANILLA_DUNGEONS))
         # Deadmines (E1), Shadowfang Keep, Blackrock Spire, Scholomance and Stratholme (their WP-H)
-        self.assertEqual(sorted(m for m, e in maps.items() if e["heroic"]), [33, 36, 229, 230, 289, 329])
+        self.assertEqual(sorted(m for m, e in maps.items() if e["heroic"]), [33, 36, 189, 229, 230, 289, 329])
         self.assertTrue(all(e["creatures"] for e in maps.values()))
 
     def test_clean_with_the_committed_lock(self):

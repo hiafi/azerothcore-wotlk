@@ -7,7 +7,8 @@ render and before `--check` returns, so both paths see the same rows and ERRORs.
 What it derives, per declared heroic (map M):
 
 1. **Encounters** (`heroic(encounter_ids=...)`): the map's normal encounters (stock DungeonEncounter.dbc, then the
-   live `dungeonencounter_dbc` overlay) in the stock file's order (OrderIndex), each copied to one declared id with
+   live `dungeonencounter_dbc` overlay, then this run's `dungeon_encounter()` / `repoint_encounter()` rows with their
+   declared credit, `with_declared_encounters()`) in OrderIndex order, each copied to one declared id with
    Difficulty 1 and the normal row's Bit, OrderIndex, names and icon; plus the `instance_encounters` row with the
    normal row's credit type and entry and `lastEncounterDungeon` 0 (lib/lfg_dungeons.py later sets it on the final
    boss when the dungeon has a heroic finder entry, lfg_heroic()); no credit row for an id in `heroic(no_credit=...)`
@@ -49,7 +50,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
-from . import dbcfmt, heroic_templates, spawn_state, spell_tables, sql_dump, state, trainer_state
+from . import dbcfmt, dungeon_encounters, heroic_templates, spawn_state, spell_tables, sql_dump, state, trainer_state
 
 DIFFICULTY_NORMAL = 0
 DIFFICULTY_HEROIC = 1
@@ -276,7 +277,7 @@ def _encounter_rows(entry: dict, live: LiveWorld, all_declared_ids: set[int], ou
         and _int(r.get("ID")) not in all_declared_ids
     )
     if held:
-        out.errors.append(f"{label}: the map already has heroic encounter rows {held} (stock or live)")
+        out.errors.append(f"{label}: the map already has heroic encounter rows {held} (stock, live or declared)")
     normals = normal_encounters(map_id, live, all_declared_ids)
     no_credit = {_int(e) for e in spec.get("no_credit") or ()}
     unknown = sorted(no_credit - {_int(r.get("ID")) for r in normals})
@@ -576,6 +577,25 @@ def _model_errors(entry_maps: dict[int, dict[int, int]], dsl_classes: dict) -> l
 # ---------------------------------------------------------------------------------------------------------------------
 # The entry point
 
+def with_declared_encounters(live: LiveWorld, dsl_classes: dict) -> LiveWorld:
+    """`live` with the run's declared encounter rows (lib/dungeon_encounters.py: `dungeon_encounter()` and
+    `repoint_encounter()`) on top of the replayed overlay and credits: a heroic of the map counts and copies a declared
+    normal row (a new boss, a repointed stock one) in the same run, with the credit this run writes. A declared id's
+    replayed credit is replaced by the declared one, or dropped when the declaration writes none."""
+    rows = [r for r in dsl_classes.get("dungeon_encounters", []) if r.get(dungeon_encounters.MARK)]
+    if not rows:
+        return live
+    ids = {int(r["ID"]) for r in rows}
+    credits = {
+        int(r["entry"]): r for r in dsl_classes.get("instance_encounters", []) if r.get(dungeon_encounters.MARK)
+    }
+    encounters = [r for r in live.live_encounters if _int(r.get("ID")) not in ids]
+    encounters += [{c: r.get(c) for c in dbcfmt.DUNGEONENCOUNTER.columns} for r in rows]
+    instance = {e: r for e, r in live.instance_encounters.items() if e not in ids}
+    instance.update({e: {c: r.get(c) for c in spell_tables.INSTANCE_ENCOUNTERS_COLUMNS} for e, r in credits.items()})
+    return replace(live, live_encounters=encounters, instance_encounters=instance)
+
+
 def with_declared_templates(live: LiveWorld, dsl_classes: dict) -> LiveWorld:
     """`live` with the run's own full `creature_template()` rows (source/npcs, source/classes) on top of the replayed
     creature_template: a creature declared this run (a boss-kit add listed in a dungeon's `extra=`) gets its heroic
@@ -675,7 +695,13 @@ def expand(
     _clear_derived(dsl_classes)
     if not heroics:
         return out
-    live = with_declared_templates(load_live(), dsl_classes)
+    live = with_declared_encounters(with_declared_templates(load_live(), dsl_classes), dsl_classes)
+    if dsl_classes.get("encounter_declarations") and not any(
+            r.get(dungeon_encounters.MARK) for r in dsl_classes.get("dungeon_encounters", [])):
+        out.errors.append(
+            "dungeons: dungeon_encounter() / repoint_encounter() rows are missing - lib/dungeon_encounters.expand() "
+            "must run before this expansion (or stopped with the ERRORs above), or the heroic copies miss them"
+        )
     declared_ids: dict[int, int] = {}
     for entry in heroics:
         for encounter_id in entry["heroic"].get("encounter_ids") or ():

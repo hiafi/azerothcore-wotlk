@@ -23,6 +23,17 @@ E2 (WP-T2, generate.py's side in lib/dungeon_heroic.py) adds, for the same heroi
   `entry["heroic_entries"]` on the `Registry.dungeons` bookkeeping entry: `difficulty_entry_1` on each normal row (one
   column) and copies of the side tables the engine reads by the heroic entry.
 
+FD-SM (generate.py's side in lib/dungeon_encounters.py) adds encounter rows of their own, outside any heroic:
+
+- `dungeon_encounter(id, map_id=, order_index=, bit=, name=, credit=credit_creature(entry) | credit_spell(id))`: a
+  NEW DungeonEncounter row (server overlay and patch-Z) and its `instance_encounters` credit, for a boss slot the stock
+  file lacks. A heroic of the map counts it as a normal encounter.
+- `repoint_encounter(id, name=, credit=, ...)`: an edit of a STOCK row (same id, map, difficulty and bit unless
+  given), e.g. a cut boss's row turned into the encounter that replaced it.
+
+    dungeon_encounter(1074, map_id=189, order_index=250, bit=7, name="Ironspine", credit=credit_creature(6489))
+    repoint_encounter(449, name="The Last Stand", credit=credit_spell(212301))
+
 E2 (WP-G, generate.py's side in lib/heroic_templates.py) adds the creature list and the heroic templates:
 
 - `creatures=` (every declaration): the dungeon's creatures as `creature(entry, name, role, ...)` lines, the generated
@@ -127,8 +138,11 @@ def heroic(
 
     `encounter_ids` (E2) are the DungeonEncounter ids of the heroic boss list, from the `dungeonencounter` block (stock
     tops out at 894), one per normal encounter of the map in the stock file's order (`range(1000, 1007)` for the
-    seven Deadmines bosses); each heroic row copies its normal row. Empty: no heroic encounter rows. Like every id
-    here, never move them once shipped.
+    seven Deadmines bosses); each heroic row copies its normal row. The map's `dungeon_encounter()` rows (Difficulty
+    0) count as normal encounters and a `repoint_encounter()` edit is copied as edited, all in (OrderIndex, Bit, ID)
+    order: Scarlet Monastery's 7 stock plus 7 declared rows take 14 ids. Empty: no heroic encounter rows. Like every
+    id here, never move them once shipped (a new normal row between two stock ones shifts every later heroic id's
+    pairing, so declare new rows before the heroic first ships).
 
     `no_credit` names NORMAL DungeonEncounter ids (the stock rows, e.g. 234 Fineous Darkvire) whose heroic copy keeps
     its DungeonEncounter row and its id in `encounter_ids` (the client's lockout list, the Bit, the id order) but gets
@@ -391,3 +405,145 @@ def dungeon(
         registry.dungeon_access.append(access_row(map_id, name, heroic))
     registry.dungeons.append(entry)
     return entry
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Encounter rows (Scarlet Monastery build FD-SM): new normal DungeonEncounter rows and edits of stock ones. Declared
+# here, built by lib/dungeon_encounters.py once the run has the stock file and the live rows (it checks them there).
+
+DIFFICULTY_MAX = 3  # DBCEnums.h Difficulty: 0-1 for a dungeon, 0-3 for a raid
+ENCOUNTER_BIT_MAX = 31  # the completed-encounter mask is a uint32 (Map::UpdateEncounterState: 1 << Bit)
+ENCOUNTER_NAME_MAX = 100  # dungeonencounter_dbc.Name_Lang_enUS is varchar(100)
+CREDIT_KILL_CREATURE = 0  # EncounterCreditType: ENCOUNTER_CREDIT_KILL_CREATURE
+CREDIT_CAST_SPELL = 1  # ENCOUNTER_CREDIT_CAST_SPELL (UpdateEncounterState with the spell id, e.g. a fake death)
+LFG_DUNGEON_ID_MAX = 0xFFFF  # instance_encounters.lastEncounterDungeon is a smallint unsigned
+
+
+@dataclass(frozen=True)
+class EncounterCredit:
+    """What `credit_creature()` / `credit_spell()` return: one `instance_encounters` credit (type and entry)."""
+
+    credit_type: int
+    entry: int
+
+
+def credit_creature(entry: int) -> EncounterCredit:
+    """The encounter completes when creature `entry` dies (creditType 0): the engine also marks that creature a
+    dungeon boss (`CREATURE_FLAG_EXTRA_DUNGEON_BOSS`). On heroic the heroic copy still reports the normal entry."""
+    if not _plain_int(entry) or entry <= 0:
+        raise ValueError(f"credit_creature({entry!r}): entry must be a creature entry (positive int)")
+    return EncounterCredit(CREDIT_KILL_CREATURE, entry)
+
+
+def credit_spell(spell_id: int) -> EncounterCredit:
+    """The encounter completes when the instance reports spell `spell_id` (creditType 1): a server-side dummy the
+    instance script passes to `UpdateEncounterState(ENCOUNTER_CREDIT_CAST_SPELL, spell_id, source)` (or a real cast of
+    it), for an encounter no single kill ends (a council, a fake death). Declare the spell in source/ too."""
+    if not _plain_int(spell_id) or spell_id <= 0:
+        raise ValueError(f"credit_spell({spell_id!r}): spell_id must be a spell id (positive int)")
+    return EncounterCredit(CREDIT_CAST_SPELL, spell_id)
+
+
+def _encounter_common(label: str, *, name, order_index, bit, credit, last_encounter, icon) -> None:
+    if name is not None and (not isinstance(name, str) or not name.strip() or len(name) > ENCOUNTER_NAME_MAX):
+        raise ValueError(f"{label}: name must be a non-empty string of at most {ENCOUNTER_NAME_MAX} characters "
+                         f"(the client's lockout list shows it), got {name!r}")
+    if order_index is not None and (not _plain_int(order_index) or not -0x80000000 <= order_index <= 0x7FFFFFFF):
+        raise ValueError(f"{label}: order_index must be a signed 32-bit int, got {order_index!r}")
+    if bit is not None and (not _plain_int(bit) or not 0 <= bit <= ENCOUNTER_BIT_MAX):
+        raise ValueError(f"{label}: bit must be an int in 0..{ENCOUNTER_BIT_MAX} (the completed-encounter mask is "
+                         f"32 bits), got {bit!r}")
+    if credit is not None and not isinstance(credit, EncounterCredit):
+        raise ValueError(f"{label}: credit must come from credit_creature(entry) or credit_spell(spell_id), "
+                         f"got {credit!r}")
+    if last_encounter is not None and (not _plain_int(last_encounter)
+                                       or not 0 <= last_encounter <= LFG_DUNGEON_ID_MAX):
+        raise ValueError(f"{label}: last_encounter must be 0 or an LFGDungeons id (the finder entry this kill "
+                         f"completes), got {last_encounter!r}")
+    if last_encounter and credit is None and label.startswith("dungeon_encounter("):
+        raise ValueError(f"{label}: last_encounter needs a credit (it lives on the instance_encounters row)")
+    if icon is not None and (not _plain_int(icon) or icon < 0):
+        raise ValueError(f"{label}: icon must be a SpellIcon id (int >= 0), got {icon!r}")
+
+
+def _register_encounter(label: str, entry: dict) -> dict:
+    registry = _registry._require_active()
+    if any(e["id"] == entry["id"] for e in registry.encounter_declarations):
+        raise _registry.DuplicateIdError(f"{label}: DungeonEncounter {entry['id']} is declared twice")
+    registry.encounter_declarations.append(entry)
+    return entry
+
+
+def dungeon_encounter(
+    encounter_id: int, *, map_id: int, order_index: int, bit: int, name: str, credit: EncounterCredit | None,
+    difficulty: int = 0, last_encounter: int = 0, icon: int = 0,
+) -> dict:
+    """A NEW DungeonEncounter row: one more boss of an instance difficulty's encounter list (server overlay
+    `dungeonencounter_dbc`, the same row merged into patch-Z's DungeonEncounter.dbc for the client's lockout list and
+    Finder proposal) and the `instance_encounters` row that credits it.
+
+    `encounter_id` comes from source/ids.yaml's `dungeonencounter` block and never moves once shipped. `map_id` /
+    `difficulty` (0 normal, 1 heroic; the map needs a MapDifficulty row for it) pick the list; `bit` is the encounter's
+    index in the completed mask (unique in the list, 0..31; a rework instance script uses the same number as its boss
+    slot); `order_index` its place in the client's list (signed; the stock rows of a 5-man step by 1000, so a boss
+    between two stock ones takes a value between theirs). `name` is the enUS name the client shows (other locales
+    empty, as on every stock row of a vanilla dungeon); `icon` the SpellIconID (0 on every vanilla row).
+
+    `credit=credit_creature(entry)` (the kill of that creature) or `credit_spell(spell_id)` (the instance reports the
+    spell); `credit=None` writes no `instance_encounters` row (the encounter is listed but no kill completes it).
+    `last_encounter` is the LFGDungeons id this kill completes (`instance_encounters.lastEncounterDungeon`, 0 = none):
+    one final boss per finder entry, checked against the stock and live rows.
+
+    A heroic of the same map (`heroic(encounter_ids=...)`) counts a declared Difficulty 0 row like a stock one: it
+    needs one more heroic id and copies the row (bit, order, name, credit) in OrderIndex order. generate.py stops on a
+    stock id (use repoint_encounter()), a live row of another map under the id, a bit already held in the list, an
+    unknown credit creature, a map without that difficulty and a finder entry that would end twice."""
+    label = f"dungeon_encounter({encounter_id!r}, {name!r})"
+    if not _plain_int(encounter_id) or encounter_id <= 0:
+        raise ValueError(f"{label}: encounter_id must be a DungeonEncounter id (positive int)")
+    if not _plain_int(map_id) or map_id <= 0:
+        raise ValueError(f"{label}: map_id must be a Map.dbc id (positive int)")
+    if not _plain_int(difficulty) or not 0 <= difficulty <= DIFFICULTY_MAX:
+        raise ValueError(f"{label}: difficulty must be an int in 0..{DIFFICULTY_MAX}, got {difficulty!r}")
+    for key, value in (("name", name), ("order_index", order_index), ("bit", bit)):
+        if value is None:
+            raise ValueError(f"{label}: {key} is required")
+    _encounter_common(label, name=name, order_index=order_index, bit=bit, credit=credit,
+                      last_encounter=last_encounter, icon=icon)
+    _check_block(label, "dungeonencounter", encounter_id)
+    return _register_encounter(label, {
+        "id": encounter_id, "kind": "new", "map_id": map_id, "difficulty": difficulty, "order_index": order_index,
+        "bit": bit, "name": name, "credit": (credit.credit_type, credit.entry) if credit else None,
+        "last_encounter": last_encounter, "icon": icon,
+    })
+
+
+def repoint_encounter(
+    encounter_id: int, *, name: str | None = None, order_index: int | None = None, bit: int | None = None,
+    credit: EncounterCredit | None = None, last_encounter: int | None = None, icon: int | None = None,
+) -> dict:
+    """An edit of a STOCK DungeonEncounter row: the encounter keeps its id, map and difficulty (saves, the client's
+    lockout bits and any heroic copy stay valid) but becomes another fight - Scarlet Monastery's 449 (High Inquisitor
+    Fairbanks, bit 5, OrderIndex 5000) turns into the Last Stand. Each argument given replaces that column: `name`
+    (enUS; the other locales are cleared, so a localized client shows no stale name), `order_index`, `bit`, `icon`.
+
+    `credit` replaces the stock `instance_encounters` credit (type and entry); `last_encounter` its
+    `lastEncounterDungeon`. Not given: the live credit row stays as it is (a stock credit cannot be dropped here,
+    generate.py never deletes a stock key: a hand SQL DELETE plus `heroic(no_credit=...)` does that).
+
+    The row goes to the overlay and patch-Z over the stock one, the credit to `instance_encounters`; a declared heroic
+    of the map copies the edited row. Dropping the declaration prunes the overlay row (the server falls back to the
+    stock row; the client keeps the shipped name until the next patch) but leaves the credit edit live."""
+    label = f"repoint_encounter({encounter_id!r})"
+    if not _plain_int(encounter_id) or encounter_id <= 0:
+        raise ValueError(f"{label}: encounter_id must be a stock DungeonEncounter id (positive int)")
+    _encounter_common(label, name=name, order_index=order_index, bit=bit, credit=credit,
+                      last_encounter=last_encounter, icon=icon)
+    if all(v is None for v in (name, order_index, bit, credit, last_encounter, icon)):
+        raise ValueError(f"{label}: nothing to change - pass at least one of name, order_index, bit, credit, "
+                         f"last_encounter, icon")
+    return _register_encounter(label, {
+        "id": encounter_id, "kind": "repoint", "name": name, "order_index": order_index, "bit": bit,
+        "credit": (credit.credit_type, credit.entry) if credit else None, "last_encounter": last_encounter,
+        "icon": icon,
+    })

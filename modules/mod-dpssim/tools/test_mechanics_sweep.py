@@ -148,6 +148,77 @@ class SweepIndexTests(unittest.TestCase):
         tags = [set(b["gated"]) | b["reported"] | set(b["group"]) for b in (one, two)]
         self.assertEqual(tags[0] & tags[1], set())
 
+    def test_scarlet_shapes_tank_rows_and_torment(self):
+        # Scarlet Monastery WP-G1: the tank-only tags bar the reference tank too; the Torment's short passes are a
+        # group failure; the scent's landing is reported
+        e = self.entry("scarlet-monastery-shapes:3",
+                       actor_failures={"Hit": {"Zone/4": 2, "Zone/3": 4, "Gaze/9": 1, "Zone/12": 3}},
+                       ref_failures={"ProtWarriorTankSim": {"OffSpot": {"Zone/2": 2}, "Hit": {"Zone/6": 1}},
+                                     "ArmsWarriorSim": {"Hit": {"Zone/5": 1, "Zone/8": 4}},
+                                     "FireMageSim": {"Hit": {"Zone/4": 3}}},
+                       group={"MissedSoak": {"Soak/1": 6}}, config={"durationMs": 180000})
+        self.assertEqual(self.bar_problems(e), ["bar: Zone/4 x2 (bar 1)",
+                                                "reference ProtWarriorTankSim bar: Zone/2 x2 (bar 1)",
+                                                "reference FireMageSim bar: Zone/4 x3 (bar 1)",
+                                                "group bar: Soak/1 x6 (bar 5)"])
+        self.assertEqual(e["reportedHits"], {"Zone/3": 4, "Zone/12": 3})
+        ok = self.entry("scarlet-monastery-shapes", actor_failures={"Hit": {"Zone/7": 1, "Zone/10": 1, "Zone/13": 1}},
+                        ref_failures={"ProtWarriorTankSim": {"OffSpot": {"Zone/2": 1}, "Hit": {"Zone/6": 1}},
+                                      "ArmsWarriorSim": {"Hit": {"Zone/13": 1}}},
+                        group={"MissedSoak": {"Soak/1": 5}}, config={"durationMs": 180000})
+        self.assertEqual(self.bar_problems(ok), [])
+        # the Flame Spike's pillar on a reference member twice is a problem (a random carrier: the group's signal)
+        two = self.entry("scarlet-monastery-shapes:3", ref_failures={"ArmsWarriorSim": {"Hit": {"Zone/13": 2}}},
+                         config={"durationMs": 180000})
+        self.assertEqual(self.bar_problems(two), ["reference ArmsWarriorSim bar: Zone/13 x2 (bar 1)"])
+        self.assertEqual(ms.program_length_ms("scarlet-monastery-shapes:3"),
+                         (180000, [("scarlet-monastery-shapes", 0)]))
+        self.assertEqual(ms.program_length_ms("scarlet-monastery-shapes"),
+                         (180000, [("scarlet-monastery-shapes", 0)]))
+        self.assertEqual(ms.program_warnings("scarlet-monastery-shapes:3", 180000), [])
+        # a 120 s fight would cut Thalnos's cycle: the launch warns
+        self.assertEqual(len(ms.program_warnings("scarlet-monastery-shapes:3", 120000)), 1)
+        # every tag the reference bar names is also gated for the member under test
+        bar = ms.DRILL_BARS["scarlet-monastery-shapes"]
+        self.assertTrue(set(bar["references"]) <= set(bar["gated"]))
+
+    def test_scarlet_shapes_2_three_cycles_and_flame(self):
+        # Scarlet Monastery WP-G2: three 60 s cycles (180 s); the Vigil Flame's unshared flares are a group failure
+        # (at most 2); the tank-only and random-carrier tags bar the reference members; the Blade spread is reported
+        e = self.entry("scarlet-monastery-shapes-2:3",
+                       actor_failures={"Hit": {"Zone/39": 2, "Spread/32": 9, "Zone/36": 1}},
+                       ref_failures={"ProtWarriorTankSim": {"OffSpot": {"Zone/23": 3, "Zone/31": 1},
+                                                            "Hit": {"Zone/25": 2}},
+                                     "RestoShamanHealSim": {"Hit": {"Zone/30": 2, "Zone/37": 4}},
+                                     "ArmsWarriorSim": {"Hit": {"Zone/26": 1}}},
+                       group={"MissedSoak": {"Soak/29": 3}},
+                       config={"durationMs": 180000})
+        self.assertEqual(self.bar_problems(e), ["bar: Zone/39 x2 (bar 1)",
+                                                "reference ProtWarriorTankSim bar: Zone/23 x3 (bar 1), Zone/25 x2 "
+                                                "(bar 1)",
+                                                "reference RestoShamanHealSim bar: Zone/30 x2 (bar 1)",
+                                                "group bar: Soak/29 x3 (bar 2)"])
+        self.assertEqual(e["reportedHits"], {"Spread/32": 9})
+        ok = self.entry("scarlet-monastery-shapes-2:3",
+                        actor_failures={"Hit": {"Zone/22": 1, "Zone/40": 1}, "OffSpot": {"Spot/21": 1}},
+                        ref_failures={"ProtWarriorTankSim": {"OffSpot": {"Zone/23": 1}}},
+                        group={"MissedSoak": {"Soak/29": 2}}, config={"durationMs": 180000})
+        self.assertEqual(self.bar_problems(ok), [])
+        self.assertEqual(ms.program_length_ms("scarlet-monastery-shapes-2:3"),
+                         (180000, [("scarlet-monastery-shapes-2", 0)]))
+        self.assertEqual(ms.program_length_ms("scarlet-monastery-shapes-2"),
+                         (180000, [("scarlet-monastery-shapes-2", 0)]))
+        self.assertEqual(ms.program_warnings("scarlet-monastery-shapes-2:3", 180000), [])
+        # a 120 s fight would cut the Herod cycle: the launch warns
+        self.assertEqual(len(ms.program_warnings("scarlet-monastery-shapes-2:3", 120000)), 1)
+        bar = ms.DRILL_BARS["scarlet-monastery-shapes-2"]
+        self.assertTrue(set(bar["references"]) <= set(bar["gated"]))
+        # wave 1 and wave 2 tags never meet (one sweep per drill; a ';' rotation would still be unambiguous)
+        wave1 = ms.DRILL_BARS["scarlet-monastery-shapes"]
+        tags1 = set(wave1["gated"]) | wave1["reported"] | set(wave1["group"])
+        tags2 = set(bar["gated"]) | bar["reported"] | set(bar["group"])
+        self.assertEqual(tags1 & tags2, set())
+
     # ---- D2: a program longer than the fight ----
     def test_comma_program_length_and_late_entries(self):
         length, starts = ms.program_length_ms("deadmines-followups,sfk-hunt,scholomance-shapes")
@@ -239,9 +310,17 @@ class BarTableMatchesTheModule(unittest.TestCase):
                              ("stratholme-followups", "kStratBarTags"), ("stratholme-drops", "kDropBarTags"),
                              ("blackrock-spire-followups", "kBrsBarTags"), ("rolling-fronts", "kFrontBarTags"),
                              ("blackrock-depths-shapes", "kBrdBarTags"),
-                             ("blackrock-depths-shapes-2", "kBrd2BarTags")):
+                             ("blackrock-depths-shapes-2", "kBrd2BarTags"),
+                             ("scarlet-monastery-shapes", "kSmBarTags"),
+                             ("scarlet-monastery-shapes-2", "kSm2BarTags")):
             self.assertEqual(set(ms.DRILL_BARS[drill]["gated"]), self.array(array), drill)
         self.assertEqual(set(ms.DRILL_BARS["blackrock-depths-shapes-2"]["group"]), self.array("kBrd2GroupTags"))
+        self.assertEqual(set(ms.DRILL_BARS["scarlet-monastery-shapes"]["group"]), self.array("kSmGroupTags"))
+        self.assertEqual(set(ms.DRILL_BARS["scarlet-monastery-shapes"]["references"]),
+                         self.array("kSmReferenceTags"))
+        self.assertEqual(set(ms.DRILL_BARS["scarlet-monastery-shapes-2"]["group"]), self.array("kSm2GroupTags"))
+        self.assertEqual(set(ms.DRILL_BARS["scarlet-monastery-shapes-2"]["references"]),
+                         self.array("kSm2ReferenceTags"))
 
     def test_every_tag_and_cycle(self):
         seen = set()

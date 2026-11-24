@@ -62,3 +62,14 @@ lfg_heroic(310, normal=30, group=CLASSIC_HEROIC)  # Blackrock Depths - Prison
 lfg_heroic(311, normal=308, group=CLASSIC_HEROIC)  # Blackrock Depths - Shadowforge City
 lfg_heroic(312, normal=309, group=CLASSIC_HEROIC)  # Blackrock Depths - Manufactory
 lfg_heroic(313, normal=276, group=CLASSIC_HEROIC)  # Blackrock Depths - Upper City
+
+# Scarlet Monastery (map 189, the Scarlet Monastery build, WP-H): four sections of one 5-player heroic map. The four
+# normal Finder rows are stock and already end on the right bosses (18 Graveyard: Thalnos 445, 165 Library: Doan 447,
+# 163 Armory: Herod 448, 164 Cathedral: Whitemane 450), so each heroic entry only copies its normal row's start and
+# completes on the heroic copy of the same boss: 1084 Thalnos, 1088 Doan, 1091 Herod, 1094 Whitemane (FD-SM's pairing
+# of 14 encounters in OrderIndex order). One map, one instance, one heroic lock for all four (a player who ran any
+# section heroic today is bound to the same instance for every section, the BRD ruling).
+lfg_heroic(314, normal=18, group=CLASSIC_HEROIC)  # Scarlet Monastery - Graveyard
+lfg_heroic(315, normal=165, group=CLASSIC_HEROIC)  # Scarlet Monastery - Library
+lfg_heroic(316, normal=163, group=CLASSIC_HEROIC)  # Scarlet Monastery - Armory
+lfg_heroic(317, normal=164, group=CLASSIC_HEROIC)  # Scarlet Monastery - Cathedral

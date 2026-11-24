@@ -439,7 +439,9 @@ dungeonencounter:
 #     the overlay is empty. Random Classic Heroic 300; its heroic entries from 301 (Deadmines 301, Shadowfang Keep 302,
 #     Scholomance 303, Stratholme Main Gate 304, Service Entrance 305, Lower Blackrock Spire 306, Upper Blackrock
 #     Spire 307). The client patch carries them. Stock row 44 (Upper Blackrock Spire) is edited in place by
-#     lfg_override() into a dungeon entry (Blackrock Spire build); it keeps its stock id.
+#     lfg_override() into a dungeon entry (Blackrock Spire build); it keeps its stock id. Scarlet Monastery's four
+#     sections: 314 Graveyard, 315 Library, 316 Armory, 317 Cathedral (heroic entries of the stock rows 18, 165, 163,
+#     164; source/world/lfg_classic_heroic.py).
 #   - lfgdungeongroup: LFGDungeonGroup.dbc ids (lfg_group(), client only). Stock ids are 1-9 and 11; Classic Heroic 12.
 #   - quest: quest_template ids of custom quests. Record only: no dbc-tools reader mints from it; the dungeon finder
 #     reward quests are hand-written pending world SQL. quest_template tops out at 26034. 90000 / 90001: Random Classic
@@ -831,3 +833,21 @@ reservations:
     creaturedisplayinfo: {start: 90770, end: 90799}
     creaturemodeldata: {start: 90770, end: 90799}
     item: {start: 70620, end: 70629}  # Vault Treasure Bag 70620, Cinder of the Firelord 70621, Guzzler Rope 70622
+  # Scarlet Monastery build (.agents/plans/scarlet-monastery-build/, WP-0, 2026-11-20; HANDOFF s3.3, all checked free
+  # on the live DB that day). Sits after the gear stage's scarlet_monastery_items / zealot_set (212000-212299,
+  # 300880-300899) and below the item_copies pool (219000). Spell slices: wave 1 212300-212899 (shared 212300-212319,
+  # Vishas 212320, Ironspine 212350, council 212390, Thalnos 212440 + hard mode 212480, Loksey 212540, Kell 212570,
+  # Hollis Grey 212610, Doan 212670 + hard mode 212710, spare 212750); wave 2 212900-213499 (Crell 212900, Halden
+  # 212950, Herod 212980 + hard mode 213020, Thorne 213060, the Last Stand 213100, Whitemane 213150 + hard mode 213190,
+  # spare 213240). Creatures: wave 1 300900-300939, wave 2 300940-300979 (the heroic mint order). The spellvisual slice
+  # takes the spare 90550-90599 the BRD comment above names. Shared heroic ids (no separate reservation):
+  # mapdifficulty 1006, dungeon_access 128, dungeonencounter normal 1074-1080 + heroic 1081-1094 (HANDOFF s7 #3 A),
+  # lfgdungeons 314-317, creature_heroic lock lines from 310419.
+  scarlet_monastery:
+    spell: {start: 212300, end: 213499}
+    creature: {start: 300900, end: 300979}
+    gameobject: {start: 301310, end: 301339}
+    spellvisual: {start: 90550, end: 90599}  # SpellVisual, Kit and EffectName
+    gameobjectdisplayinfo: {start: 90060, end: 90069}
+    creaturedisplayinfo: {start: 90800, end: 90829}
+    creaturemodeldata: {start: 90800, end: 90829}

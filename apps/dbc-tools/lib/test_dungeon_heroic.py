@@ -31,6 +31,7 @@ sys.path.insert(0, str(TOOL_ROOT))
 
 import generate  # noqa: E402
 from lib import dbcfile, dbcfmt, dungeon_checks, dungeon_heroic, spell_tables, sql_dump, sql_out, state  # noqa: E402
+from lib import dungeon_encounters  # noqa: E402
 from lib import lfg_dungeons, sqlcorpus, trainer_state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 from lib.table_testkit import (  # noqa: E402
@@ -309,6 +310,40 @@ class EncounterTest(unittest.TestCase):
         self.assertTrue(any("no_credit names [227], not normal encounter(s) of map 36" in e for e in out.errors),
                         out.errors)
         self.assertEqual(dsl["dungeon_encounters"], [])
+
+    def test_a_declared_normal_row_counts_and_a_repoint_is_copied_as_edited(self):
+        # lib/dungeon_encounters.py's rows (dungeon_encounter() / repoint_encounter()), marked, before this expansion
+        mark = dungeon_encounters.MARK
+        new = dict(self.stock[161], ID=1100, OrderIndex=self.stock[161]["OrderIndex"] + 1, Bit=7,
+                   Name_Lang_enUS="New Boss", id=1100, **{mark: True})
+        repoint = dict(self.stock[164], Name_Lang_enUS="Repointed", id=164, **{mark: True})
+        credits = [
+            {"entry": 1100, "creditType": 0, "creditEntry": 9001, "lastEncounterDungeon": 0, "comment": "New Boss",
+             "id": 1100, mark: True},
+            {"entry": 164, "creditType": 1, "creditEntry": 212300, "lastEncounterDungeon": 0, "comment": "Repointed",
+             "id": 164, mark: True},
+        ]
+        dsl = _dsl(_heroic(encounter_ids=range(1000, 1008), spawn_mask=False), dungeon_encounters=[new, repoint],
+                   instance_encounters=credits, encounter_declarations=[{"id": 1100}, {"id": 164}])
+        out = dungeon_heroic.expand(dsl, lambda: _live(stock_encounters=self.stock))
+        self.assertEqual((out.errors, out.warnings), ([], []))
+        heroic = [r for r in dsl["dungeon_encounters"] if r.get(dungeon_heroic.DERIVED)]
+        self.assertEqual([(r["ID"], r["Name_Lang_enUS"]) for r in heroic][:2],
+                         [(1000, "Rhahk'zor"), (1001, "New Boss")])
+        self.assertEqual(heroic[4]["Name_Lang_enUS"], "Repointed")
+        credit = {r["entry"]: r for r in dsl["instance_encounters"] if r.get(dungeon_heroic.DERIVED)}
+        self.assertEqual((credit[1001]["creditType"], credit[1001]["creditEntry"]), (0, 9001))
+        self.assertEqual((credit[1004]["creditType"], credit[1004]["creditEntry"]), (1, 212300))
+        self.assertEqual(len([r for r in dsl["dungeon_encounters"] if r.get(mark)]), 2)  # left in place
+        # seven ids no longer fit the eight normal rows
+        dsl["dungeons"] = [_heroic(encounter_ids=range(1000, 1007), spawn_mask=False)]
+        out = dungeon_heroic.expand(dsl, lambda: _live(stock_encounters=self.stock))
+        self.assertTrue(any("7 id(s) for 8 normal encounter(s)" in e for e in out.errors), out.errors)
+
+    def test_encounter_declarations_without_their_rows_stop_the_run(self):
+        dsl = _dsl(_heroic(encounter_ids=range(1000, 1007), spawn_mask=False), encounter_declarations=[{"id": 1100}])
+        out = dungeon_heroic.expand(dsl, lambda: _live(stock_encounters=self.stock))
+        self.assertTrue(any("dungeon_encounters.expand() must run before" in e for e in out.errors), out.errors)
 
     def test_a_missing_stock_file_is_an_error(self):
         dsl = _dsl(_heroic(encounter_ids=range(1000, 1007), spawn_mask=False))
@@ -672,6 +707,9 @@ class DeadminesTest(unittest.TestCase):
             # This class checks the Deadmines' expansion: the other dungeons' heroics (Shadowfang Keep's, WP-H) have
             # their own tests and, until their scoped write run, pending rows that are not Deadmines'.
             cls.dsl["dungeons"] = [e if e["map_id"] == 36 else dict(e, heroic=None) for e in cls.dsl["dungeons"]]
+            # Scarlet Monastery's encounter declarations (FD-SM) belong to its own expansion
+            # (test_scarlet_monastery_heroic.py), which runs dungeon_encounters.expand() first
+            cls.dsl["encounter_declarations"] = []
             cls.index = spell_tables.load_spell_table_index()
             cls.out = dungeon_heroic.expand(cls.dsl, lambda: dungeon_heroic.load_live_world(existing, cls.index))
             # generate.py's next step: the finder links the heroic final boss (VanCleef's instance_encounters row

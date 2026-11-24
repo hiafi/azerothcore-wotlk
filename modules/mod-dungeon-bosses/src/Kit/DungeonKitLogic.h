@@ -69,12 +69,14 @@ namespace DungeonKit
         float distance = 0.f;       // from the picker
         bool tank = false;          // the picker's current victim
         bool inLos = true;
+        bool healer = false;        // the role provider's healer (last: the aggregate inits above it stay valid)
     };
 
     struct PickRule
     {
         bool nonTank = true;        // never the tank (unless nobody else qualifies and `tankIfAlone`)
         bool tankIfAlone = false;   // a solo tank (or a tank-only group) may still be picked
+        bool nonHealer = false;     // never the healer (no fallback: a group of tank and healer gets no pick)
         float minRange = 0.f;
         float maxRange = 100.f;
         bool requireLos = false;
@@ -89,6 +91,8 @@ namespace DungeonKit
         auto qualifies = [&rule](PickCandidate const& c, bool allowTank)
         {
             if (c.tank && rule.nonTank && !allowTank)
+                return false;
+            if (c.healer && rule.nonHealer)
                 return false;
             if (c.distance < rule.minRange || c.distance > rule.maxRange)
                 return false;

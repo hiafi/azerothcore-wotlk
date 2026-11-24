@@ -5,7 +5,8 @@
 // Blackrock Spire WP-KT-B1: DungeonKitFlexRules.h (the flex 5-10 rules) and DungeonKitChaseLogic.h (the chaser's
 // clock, the crawl clock, the fall catch book). Blackrock Depths WP-KT-D1: DungeonKitBodyLogic.h (death spots, held
 // bodies) and DungeonKitEdgeLogic.h (the push over a floor's edge, edge bands). WP-KT-D2: DungeonKitPoolLogic.h (the
-// shared health pool, the damage tally).
+// shared health pool, the damage tally). Scarlet Monastery WP-KT-SM: DungeonKitZoneLogic.h (growth, rungs, turning
+// beams) and DungeonKitWingLogic.h (portal travelers, trigger clearance, the seal, stragglers, credit latch, the ward).
 #include "DeadminesKitMath.h"
 #include "DeadminesRework.h"
 #include "DungeonKitArena.h"
@@ -20,10 +21,15 @@
 #include "DungeonKitMath.h"
 #include "DungeonKitPoolLogic.h"
 #include "DungeonKitState.h"
+#include "DungeonKitWingLogic.h"
+#include "DungeonKitZoneLogic.h"
 #include "GilnidLogic.h"
 #include "GreenskinLogic.h"
 #include "check.h"
+#include <array>
 #include <cmath>
+#include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <type_traits>
@@ -326,6 +332,35 @@ namespace
         soloRule.tankIfAlone = true;
         auto const tank = PickFrom(solo, soloRule, FixedRand{ 0 });
         CHECK(tank && *tank == 0u);
+        // a rule that skips the healer never picks one, and a tank and healer alone get nobody (no fallback)
+        PickCandidate healerC;
+        healerC.id = 7;
+        healerC.distance = 6.f;
+        healerC.healer = true;
+        PickCandidate tankC;
+        tankC.id = 8;
+        tankC.tank = true;
+        PickCandidate dpsC;
+        dpsC.id = 9;
+        dpsC.distance = 9.f;
+        PickRule noHealer;
+        noHealer.nonHealer = true;
+        std::vector<PickCandidate> const group = { tankC, healerC, dpsC };
+        for (std::uint32_t r = 0; r < 20; ++r)
+        {
+            auto const pick = PickFrom(group, noHealer, FixedRand{ r });
+            CHECK(pick && group[*pick].id == 9);
+        }
+        CHECK(PickFrom(group, PickRule{}, FixedRand{ 1 }).has_value());     // off by default: the healer qualifies
+        std::vector<PickCandidate> const tankAndHealer = { tankC, healerC };
+        PickRule tankAndHealerRule;
+        tankAndHealerRule.nonHealer = true;
+        tankAndHealerRule.tankIfAlone = true;       // the tank fallback never brings the healer back
+        auto const fallback = PickFrom(tankAndHealer, tankAndHealerRule, FixedRand{ 0 });
+        CHECK(!fallback.has_value() || tankAndHealer[*fallback].id == 8);
+        tankAndHealerRule.tankIfAlone = false;
+        CHECK(!PickFrom(tankAndHealer, tankAndHealerRule, FixedRand{ 0 }).has_value());
+        CHECK(PickDistinctFrom(group, noHealer, 5, FixedRand{ 0 }).size() == 1u);
         // distinct picks never repeat and stop when the pool is dry
         std::vector<std::size_t> const two = PickDistinctFrom(c, PickRule{}, 10, FixedRand{ 1 });
         CHECK(two.size() == 4u);    // 2, 3, 4, 5: every non-tank within 100 yd
@@ -1756,6 +1791,269 @@ namespace
         shortWindow.Clear();
         CHECK(shortWindow.Size() == 0 && !shortWindow.Top(2000));
     }
+    // ----------------------------------------------------------------------------------------------------------------
+    // Scarlet Monastery WP-KT-SM: DungeonKitZoneLogic.h and DungeonKitWingLogic.h
+    // ----------------------------------------------------------------------------------------------------------------
+
+    bool Approx(float a, float b, float eps = 1e-3f)
+    {
+        return std::fabs(a - b) <= eps;
+    }
+
+    void TestGrowthPlan()
+    {
+        // Ironspine's heroic Grave Rot: 7 to 10 yd over 30 s, a step every 10 s.
+        GrowthPlan const rot{ 7.f, 10.f, 30000, 10000 };
+        CHECK(rot.Timed() && rot.StepCount() == 3);
+        CHECK(Approx(rot.RadiusAt(0), 7.f) && Approx(rot.RadiusAt(9999), 7.f));
+        CHECK(Approx(rot.RadiusAt(10000), 8.f) && Approx(rot.RadiusAt(20000), 9.f));
+        CHECK(Approx(rot.RadiusAt(30000), 10.f) && Approx(rot.RadiusAt(600000), 10.f));
+        CHECK(rot.NextStepInMs(0) == 10000u && rot.NextStepInMs(12500) == 7500u);
+        CHECK(!rot.NextStepInMs(30000));
+
+        // A step that does not divide the time: 6 to 12 over 25 s at 10 s = 3 steps (ceil), 2 yd each.
+        GrowthPlan const odd{ 6.f, 12.f, 25000, 10000 };
+        CHECK(odd.StepCount() == 3 && Approx(odd.RadiusAt(10000), 8.f) && Approx(odd.RadiusAt(30000), 12.f));
+
+        // Not timed: by hand only (the mist), or no change.
+        GrowthPlan const byHand{ 6.f, 6.f, 0, 0 };
+        CHECK(!byHand.Timed() && byHand.StepCount() == 0 && Approx(byHand.RadiusAt(99999), 6.f));
+        CHECK(!byHand.NextStepInMs(0));
+        GrowthPlan const noStep{ 6.f, 9.f, 30000, 0 };
+        CHECK(!noStep.Timed() && Approx(noStep.RadiusAt(30000), 6.f));
+
+        // A shrinking zone works the same way.
+        GrowthPlan const shrink{ 10.f, 4.f, 6000, 2000 };
+        CHECK(Approx(shrink.RadiusAt(2000), 8.f) && Approx(shrink.RadiusAt(6000), 4.f));
+    }
+
+    void TestNearestRung()
+    {
+        std::array<float, 4> const rot{ { 7.f, 8.f, 9.f, 10.f } };
+        CHECK(NearestRung(rot, 7.f) == 0u && NearestRung(rot, 9.f) == 2u && NearestRung(rot, 14.f) == 3u);
+        CHECK(NearestRung(rot, 7.4f) == 0u && NearestRung(rot, 7.6f) == 1u);
+        CHECK(NearestRung(rot, 7.5f) == 1u);        // a tie goes to the larger rung
+        CHECK(NearestRung(rot, 2.f) == 0u);
+        std::array<float, 3> const mist{ { 6.f, 9.f, 12.f } };
+        CHECK(NearestRung(mist, 15.f) == 2u);       // past the ladder: the last rung
+        CHECK(!NearestRung(std::span<float const>(), 6.f));
+    }
+
+    void TestBeamClock()
+    {
+        // Herod's beacon: two beams opposite, 30 degrees a step.
+        BeamClock clock(0.f, 30.f, 2);
+        CHECK(clock.Count() == 2 && clock.Direction() == 1 && clock.Steps() == 0);
+        CHECK(Approx(clock.BearingOf(0), 0.f) && Approx(clock.BearingOf(1), kPi));
+        CHECK(Approx(clock.NextBearingOf(0), kPi / 6.f));
+        clock.Step();
+        CHECK(Approx(clock.BearingOf(0), kPi / 6.f) && Approx(clock.BearingOf(1), kPi + kPi / 6.f));
+        CHECK(clock.Steps() == 1);
+        // A full turn: 12 steps back to the start (about 18 s at 1.5 s).
+        for (int i = 0; i < 11; ++i)
+            clock.Step();
+        CHECK(clock.Steps() == 12 && (Approx(clock.Bearing(), 0.f, 1e-3f) || Approx(clock.Bearing(), kTwoPi, 1e-3f)));
+        // Flip: the next step goes back the other way and wraps below 0.
+        clock.Flip();
+        CHECK(clock.Direction() == -1);
+        clock.Step();
+        CHECK(Approx(clock.Bearing(), kTwoPi - kPi / 6.f, 1e-3f));
+        clock.Flip();
+        clock.Step();
+        CHECK(Approx(clock.Bearing(), 0.f, 1e-3f) || Approx(clock.Bearing(), kTwoPi, 1e-3f));
+
+        // Three beams 120 apart, clockwise; a zero count is held at one beam.
+        BeamClock three(kPi / 2.f, 45.f, 3, -1);
+        CHECK(Approx(three.BearingOf(1), kPi / 2.f + kTwoPi / 3.f) && three.Direction() == -1);
+        CHECK(Approx(three.BearingOf(3), kPi / 2.f));
+        BeamClock none(0.f, 30.f, 0);
+        CHECK(none.Count() == 1);
+        CHECK(Approx(BeamClock::Wrap(-kPi / 2.f), 1.5f * kPi) && Approx(BeamClock::Wrap(5.f * kPi), kPi, 1e-3f));
+    }
+
+    void TestBeamSegment()
+    {
+        Vec2 const axe{ 1961.2f, -431.8f };
+        // 3 yd off the axe, 10 yd long, east.
+        std::optional<BeamLane> lane = BeamSegment(axe, 0.f, 3.f, 10.f);
+        CHECK(lane && Approx(lane->from.x, axe.x + 3.f) && Approx(lane->to.x, axe.x + 13.f));
+        CHECK(lane && Approx(lane->length, 10.f));
+        CHECK(lane && !lane->clipped);
+        // The pit's edge 11.7 yd out: stops 0.5 yd short.
+        lane = BeamSegment(axe, kPi / 2.f, 3.f, 14.f, 11.7f);
+        CHECK(lane && lane->clipped && Approx(lane->length, 8.2f) && Approx(lane->to.y, axe.y + 11.2f));
+        // A far wall changes nothing.
+        lane = BeamSegment(axe, 0.f, 3.f, 10.f, 30.f);
+        CHECK(lane && !lane->clipped && Approx(lane->length, 10.f));
+        // A wall inside the inner offset: no lane.
+        CHECK(!BeamSegment(axe, 0.f, 3.f, 10.f, 3.2f));
+
+        // Through the arena's own ray (the pit as a circle of 11.7 yd).
+        Arena const pit(ArenaRegion::Circle(axe, 11.7f, 0.f, 12.f));
+        std::optional<float> wall = pit.RayToEdge(axe, 6.4f, kPi);
+        CHECK(wall && Approx(*wall, 11.7f, 0.01f));
+        lane = BeamSegment(axe, kPi, 3.f, 14.f, wall);
+        CHECK(lane && lane->clipped && Approx(lane->length, 8.2f, 0.01f));
+    }
+
+    void TestTravelers()
+    {
+        TravelerFacts user;
+        user.isUser = true;
+        CHECK(JudgeTraveler(user) == TravelVerdict::Go);
+        user.inCombat = true;
+        CHECK(JudgeTraveler(user) == TravelVerdict::InCombat);
+        CHECK(JudgeTraveler(user, kPortalEscortYd, true) == TravelVerdict::Go);
+        user.inCombat = false;
+        user.distYd = 500.f;                // the user's own distance never counts
+        CHECK(JudgeTraveler(user) == TravelVerdict::Go);
+        user.alive = false;
+        CHECK(JudgeTraveler(user) == TravelVerdict::Dead);
+
+        TravelerFacts escort;
+        escort.distYd = 19.9f;
+        CHECK(JudgeTraveler(escort) == TravelVerdict::Go);
+        escort.distYd = 20.f;
+        CHECK(JudgeTraveler(escort) == TravelVerdict::Go);  // within 20 yd: 20 counts
+        escort.distYd = 20.1f;
+        CHECK(JudgeTraveler(escort) == TravelVerdict::TooFar);
+        escort.distYd = 5.f;
+        escort.inCombat = true;
+        CHECK(JudgeTraveler(escort, kPortalEscortYd, true) == TravelVerdict::InCombat);    // escorts never in combat
+        escort.inCombat = false;
+        escort.busy = true;
+        CHECK(JudgeTraveler(escort) == TravelVerdict::Busy);
+        escort.busy = false;
+        escort.alive = false;
+        CHECK(JudgeTraveler(escort) == TravelVerdict::Dead);
+        escort.sameMap = false;
+        CHECK(JudgeTraveler(escort) == TravelVerdict::OtherMap);
+        CHECK(std::string(TravelVerdictName(TravelVerdict::TooFar)) == "too-far");
+        CHECK(kPortalEscortYd == 20.f);
+
+        // Trigger clearance (section 7 #15: 8 yd from the wing exits).
+        std::array<Vec2, 2> const exits{ { { 0.f, 0.f }, { 30.f, 0.f } } };
+        CHECK(Approx(NearestTrigger({ 10.f, 0.f }, exits), 10.f));
+        CHECK(ClearOfTriggers({ 10.f, 0.f }, exits, 8.f));
+        CHECK(!ClearOfTriggers({ 25.f, 0.f }, exits, 8.f));
+        CHECK(ClearOfTriggers({ 22.f, 0.f }, exits, 8.f));      // exactly 8 yd is clear
+        CHECK(ClearOfTriggers({ 0.f, 0.f }, std::span<Vec2 const>(), 8.f));
+    }
+
+    void TestSealClock()
+    {
+        SealClock seal;
+        CHECK(seal.IsOpen() && !seal.Update(5000));
+        CHECK(!seal.Release());                 // nothing to undo
+
+        // Section 7 #22: closes 3 s after the pull, once.
+        seal.Engage(kSealDelayMs);
+        CHECK(seal.IsClosing() && seal.LeftMs() == 3000);
+        CHECK(!seal.Update(1000) && !seal.Update(1999));
+        CHECK(seal.Update(1) && seal.IsSealed());
+        CHECK(!seal.Update(1000) && seal.IsSealed());
+        seal.Engage(kSealDelayMs);              // a re-engage changes nothing
+        CHECK(seal.IsSealed());
+        CHECK(seal.Release() && seal.IsOpen());
+
+        // A wipe before the close: the pending close is undone.
+        seal.Engage(3000);
+        CHECK(!seal.Update(2000) && seal.Release() && seal.IsOpen() && !seal.Update(5000));
+        // A re-engage while closing keeps the first delay.
+        seal.Engage(3000);
+        seal.Update(2000);
+        seal.Engage(3000);
+        CHECK(seal.LeftMs() == 1000 && seal.Update(1000));
+        // No delay: sealed at the next update.
+        SealClock now;
+        now.Engage(0);
+        CHECK(now.Update(0) && now.IsSealed());
+    }
+
+    void TestStragglers()
+    {
+        StragglerFacts f;
+        f.distYd = 30.f;
+        CHECK(IsStraggler(f));
+        f.distYd = 60.f;
+        CHECK(IsStraggler(f));                  // within 60 yd: 60 counts
+        f.distYd = 60.5f;
+        CHECK(!IsStraggler(f));
+        CHECK(IsStraggler(f, 70.f));
+        f.distYd = 10.f;
+        f.inArena = true;
+        CHECK(!IsStraggler(f));
+        f.inArena = false;
+        f.alive = false;
+        CHECK(!IsStraggler(f));
+        f.alive = true;
+        f.sameWing = false;
+        CHECK(!IsStraggler(f));
+        f.sameWing = true;
+        f.busy = true;
+        CHECK(!IsStraggler(f));
+        f.busy = false;
+        f.gameMaster = true;
+        CHECK(!IsStraggler(f));
+        CHECK(kSealPullInYd == 60.f && kSealDelayMs == 3000u);
+    }
+
+    void TestCreditLatch()
+    {
+        // The council: Azshir and the Fallen Champion, either order, credit once at the second death.
+        std::uint64_t const azshir = 6490, champion = 6488;
+        CreditLatch council({ azshir, champion });
+        CHECK(!council.MarkDead(champion) && council.IsDead(champion) && !council.Fired());
+        CHECK(!council.MarkDead(champion));     // a second death of one changes nothing
+        CHECK(!council.MarkDead(1234));         // a stranger changes nothing
+        CHECK(council.DeadCount() == 1);
+        CHECK(council.MarkDead(azshir) && council.Fired());
+        CHECK(!council.MarkDead(azshir) && !council.MarkDead(champion));   // once only
+
+        // A wipe forgets the deaths; a reload of a DONE encounter restores without firing.
+        council.Reset();
+        CHECK(!council.Fired() && council.DeadCount() == 0);
+        CHECK(!council.MarkDead(azshir) && council.MarkDead(champion));
+        CreditLatch reloaded({ azshir, champion });
+        reloaded.Restore();
+        CHECK(reloaded.Fired() && !reloaded.MarkDead(azshir));
+
+        // One key: the first death fires. No keys: never.
+        CreditLatch single({ 7 });
+        CHECK(single.MarkDead(7));
+        CreditLatch empty;
+        CHECK(!empty.MarkDead(7) && !empty.Fired());
+        // The same entry twice (two of one kind): both deaths are needed.
+        CreditLatch pair({ 5, 5 });
+        CHECK(!pair.MarkDead(5) && pair.MarkDead(5));
+    }
+
+    void TestWardRule()
+    {
+        // Blood Pact: 20% per living risen, up to 80%.
+        WardRule const pact{ 20.f, 80.f };
+        CHECK(Approx(pact.ReductionPct(0), 0.f) && Approx(pact.ReductionPct(2), 40.f));
+        CHECK(Approx(pact.ReductionPct(4), 80.f));
+        CHECK(Approx(pact.ReductionPct(9), 80.f));
+        CHECK(pact.Stacks(0) == 0 && pact.Stacks(3) == 3 && pact.Stacks(9) == 4);
+        CHECK(pact.Scale(1000, 0) == 1000 && pact.Scale(1000, 2) == 600 && pact.Scale(1000, 4) == 200);
+
+        // Reader's Ward: 25% per open book, normal at most 50, heroic 75.
+        WardRule const normal{ 25.f, 50.f }, heroic{ 25.f, 75.f };
+        CHECK(normal.Stacks(3) == 2 && Approx(normal.ReductionPct(3), 50.f));
+        CHECK(heroic.Stacks(3) == 3 && Approx(heroic.ReductionPct(4), 75.f) && heroic.Stacks(4) == 3);
+
+        // Inquisitor's Ward: 50% while he lives.
+        WardRule const inquisitor{ 50.f, 50.f };
+        CHECK(inquisitor.Stacks(1) == 1 && inquisitor.Scale(999, 1) == 500);
+
+        // Never full immunity: the cap is held at 95; a hit stays at least 1.
+        WardRule const greedy{ 50.f, 100.f };
+        CHECK(Approx(greedy.ReductionPct(3), 95.f) && greedy.Stacks(3) == 1);
+        CHECK(greedy.Scale(1, 3) == 1 && greedy.Scale(0, 3) == 0);
+        WardRule const off{ 0.f, 50.f };
+        CHECK(off.Stacks(5) == 0 && Approx(off.ReductionPct(5), 0.f) && off.Scale(100, 5) == 100);
+    }
 }
 
 int main()
@@ -1803,5 +2101,14 @@ int main()
     TestEdgeBands();
     TestHealthPool();
     TestDamageTally();
+    TestGrowthPlan();
+    TestNearestRung();
+    TestBeamClock();
+    TestBeamSegment();
+    TestTravelers();
+    TestSealClock();
+    TestStragglers();
+    TestCreditLatch();
+    TestWardRule();
     return Report("dungeon_kit_test");
 }

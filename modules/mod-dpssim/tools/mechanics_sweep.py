@@ -165,6 +165,40 @@ DRILL_BARS: dict[str, dict] = {
         "reported": {23, 24},
         "cross_specs": 3, "references": {}, "group": {21: 2}, "cycle_ms": 60000, "default_cycles": 2,
     },
+    "scarlet-monastery-shapes": {
+        # Scarlet Monastery WP-G1 (F-1b: the live bosses' timings, a third cycle), gating the heroic sign-off of D1,
+        # D2, D4, D4H, D5, D8 (and D7's growing zone); three 60 s cycles, so the sweep runs 180 s (`--programs
+        # scarlet-monastery-shapes:3 --duration 180`). Cycle 0: Soak/1 Vishas's Torment beam (need 4, eight judged
+        # seconds a channel, 80 passes a run: a group failure per short pass, at most 5); Zone/2 the targeted tank
+        # still within 8.5 yd of him (OffSpot), tank-only, so also barred on the reference tank; Zone/3 the scent's
+        # flat landing reported; Zone/4 a Mark trail marker on anyone but the (non-tank) carrier (the F5 signal) and
+        # Zone/5 one on the carrier gated, and barred on the reference members too (the carrier is a random member).
+        # Cycle 1: Zone/7 the growing rot, Zone/8 the eye pools, Gaze/9 the Glare, Zone/10 Doan's burst on others and
+        # Zone/11 its fire pool gated. Cycle 2 (Thalnos's crypt): Zone/6 the tank inside Galvar's tank-only banner
+        # (30 s), barred on the reference tank too; Zone/12 the Flame Spike's carried marker (no damage) reported;
+        # Zone/13 its pillar (a random carrier, so barred on the references too) and Zone/14 its 30 s pool gated
+        "gated": {2: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 13: 1, 14: 1},
+        "reported": {3, 12},
+        "cross_specs": 3, "references": {2: 1, 4: 1, 5: 1, 6: 1, 13: 1}, "group": {1: 5}, "cycle_ms": 60000,
+        "default_cycles": 3,
+    },
+    "scarlet-monastery-shapes-2": {
+        # Scarlet Monastery WP-G2 (wave 2), gating the heroic sign-off of D9-D12, D14 and D11H; three 60 s cycles, so
+        # the sweep runs 180 s (`--programs scarlet-monastery-shapes-2:3 --duration 180`). Cycle 0: Spot/21 a Sow
+        # carrier off Thorne's furrow, Zone/22 the Prune, Zone/23 the tank that walked while his facing was held
+        # (OffSpot), Zone/24 Holy Water, Zone/25 the tank on the tank-only blessed ground, Zone/26 the bloom (the
+        # step-out ring inside the hold), Zone/27 Halden's Close Ranks band. Cycle 1: Soak/29 the Vigil Flame unshared
+        # (a group failure, 4 flares a run-cycle: at most 2 of 20), Zone/30 a Seared player within 6 yd of the flame,
+        # Zone/31 the tank leaving Mograine while a non-tank could share (OffSpot), Spread/32 the Blade window's
+        # lasting spread reported, Zone/33 and Zone/34 the Proving Strike dashes. Cycle 2: Zone/35-38 Herod's lap (out
+        # lane, ledge band, blades, home lane), Zone/39 Ravager's Beacon, Zone/40 the hard mode blades. The tank-only
+        # (23, 25, 31) and random-carrier (21, 26, 30) tags are barred on the reference members too.
+        "gated": {21: 1, 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 30: 1, 31: 1, 33: 1, 34: 1, 35: 1, 36: 1, 37: 1,
+                  38: 1, 39: 1, 40: 1},
+        "reported": {32},
+        "cross_specs": 3, "references": {21: 1, 23: 1, 25: 1, 26: 1, 30: 1, 31: 1}, "group": {29: 2},
+        "cycle_ms": 60000, "default_cycles": 3,
+    },
 }
 # Drill::kProgramGapMs: the quiet time after each comma entry of a program
 PROGRAM_GAP_MS = 4000

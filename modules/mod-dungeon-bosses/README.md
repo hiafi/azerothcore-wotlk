@@ -61,6 +61,11 @@ so db-import and the dbc-tools replay see one history.
 | `src/Kit/DungeonKitEdges.{h,cpp}` | Engine: `PushOverEdge`, `PushAlong`, `LethalBand(s)` (pushes over the edge) |
 | `src/Kit/DungeonKitPoolLogic.h` | Pure: `HealthPool` (shared pool, cleave once per cast), `DamageTally` (window) |
 | `src/Kit/DungeonKitPool.{h,cpp}` | Engine: `SharedHealthPool` (one pool on several creatures, all die in one tick) |
+| `src/Kit/DungeonKitZoneLogic.h` | Pure: `GrowthPlan`, `NearestRung`, `BeamClock`, `BeamSegment` |
+| `src/Kit/DungeonKitZones.{h,cpp}` | Engine: `GrowingZone(s)` (a zone that grows per step), `TurningBeams` (L43) |
+| `src/Kit/DungeonKitWingLogic.h` | Pure: `JudgeTraveler`, `ClearOfTriggers`, `SealClock`, `IsStraggler`, `CreditLatch`, `WardRule` |
+| `src/Kit/DungeonKitWings.{h,cpp}` | Engine: `WingPortals`, `PortalTravel`, `WingPortalAI`, `SealedArena`, `CreditEncounterBySpell` |
+| `src/Kit/DungeonKitWard.{h,cpp}` | Engine: `WardOfTheLiving` (L38: less damage per living add) |
 | `src/Kit/DungeonKitLedger.{h,cpp}` | Engine: `DamageLedger` (damage per player over 10 s, pets to owners, `Top`) |
 | `src/Kit/ArenaGuard.{h,cpp}` | The arena guard (grips, hold, leash), `LeashPreset`, cell `Confinement` |
 | `src/Kit/DungeonTestCommand.{h,cpp}` | The generic `.<x>test` GM command shell, one per dungeon |
@@ -125,6 +130,16 @@ so db-import and the dbc-tools replay see one history.
 | `src/BlackrockDepths/<boss files>.cpp`, `<Boss>Logic.h` | One set per boss (D1-D24); D6/D12/D16/D24 hard modes |
 | `src/ScarletMonastery/hard_mode_items.cpp` | Thalnos, Doan, Herod, Whitemane hard mode item scripts: the Rallying Standard, one roll per cast, the Verdict, the Rosary |
 | `src/ScarletMonastery/ScarletMonasteryHardModeItemsLogic.h` | Pure: Scarlet Monastery item effect ids (212000-212023, 300880), lockout, Verdict, Rosary rules, item spell test |
+| `src/ScarletMonastery/ScarletMonasteryRework.h` | Pure: entries, states, data ids (stock 1-10 kept), slices, wings, sections, portals, arenas, save |
+| `src/ScarletMonastery/instance_scarlet_monastery_rework.cpp` | Instance (stock name, replaced at load; Horseman and Ashbringer kept), Chapel Door and portal GO AIs |
+| `src/ScarletMonastery/ScarletMonasteryKit.{h,cpp}` | Glue: leash options, `OnBossPull` (the pull line; not flex), `UseWingPortal` |
+| `src/ScarletMonastery/ScarletMonasteryTestCommand.{h,cpp}` | The `.dbtest sm` shell, `instance`, `section` and `portal` |
+| `src/ScarletMonastery/<boss files>.cpp`, `<Boss>Logic.h` | One set per boss (D1-D14); D4H/D8H/D11H/D14H hard modes |
+| `src/ScarletMonastery/ThalnosFight.h` | Thalnos's hard mode hooks for the Desecration (D4 -> D4H): per-pull object, factory |
+| `src/ScarletMonastery/DoanFight.h` | Doan's hard mode hooks for the Heresy (D8 -> D8H): per-pull object, idle look, detonation |
+| `src/ScarletMonastery/HerodFight.h` | Herod's hard mode hooks for Call to Arms (D11 -> D11H): per-pull object, trigger, idle aura |
+| `src/ScarletMonastery/MograineFight.h` | Mograine's risen state for Whitemane's fight (D13 -> D14): fallen, vigil, rising hooks |
+| `src/ScarletMonastery/WhitemaneFight.h` | Whitemane's hard mode hooks for The Truth (D14 -> D14H): Torch trigger, vigil, phases |
 | `src/DungeonSets/haunted_set_bonuses.cpp` | Haunted set bonus scripts (10 sets x 3 and 5 pieces) and their hooks |
 | `src/DungeonSets/HauntedSetLogic.h` | Pure: Haunted set bonus ids (205700-205793), script numbers, rolls, picks |
 | `src/DungeonSets/molten_set_bonuses.cpp` | Molten set bonus scripts (10 sets x 3 and 5 pieces): Heat, eruptions, cooldown hooks |
@@ -139,6 +154,7 @@ so db-import and the dbc-tools replay see one history.
 | `tests/stratholme_test.cpp`, `tests/strat_<boss>_test.cpp` | The Stratholme skeleton and each boss |
 | `tests/blackrock_spire_test.cpp`, `tests/brs_<boss>_test.cpp` | The Blackrock Spire skeleton and each boss |
 | `tests/blackrock_depths_test.cpp`, `tests/brd_<boss>_test.cpp` | The Blackrock Depths skeleton and each boss |
+| `tests/scarlet_monastery_test.cpp`, `tests/sm_<boss>_test.cpp` | The Scarlet Monastery skeleton and each boss |
 
 ## Adding a dungeon
 
@@ -269,6 +285,35 @@ mirrored BM rules, run when `BM_SRC` or `../mod-boss-mechanics/src` has `Mechani
 | `moira` | info state |
 | `avatar` | info awaken state clap blast stone magma |
 
+## Scarlet Monastery `.dbtest sm` subcommands
+
+`.dbtest sm <boss> <subcommand>` (GM, map 189). Each boss file's header comment gives the arguments; the four end
+bosses' tables have `hardmode` (arms their hard mode past the trigger).
+
+| Boss | Subcommands |
+| --- | --- |
+| `instance` | boss where door laststand ashbringer horseman touch page taunt torch |
+| `section` | `<1-4>`: the Finder section's start, end slot and doors |
+| `portal` | `<1-4> [go]`: stand wing portal 1 P1, 2 P1h, 3 P2, 4 P3 and move onto it; `go` uses it |
+| `vishas` | info state interrogation brand pain torment `phase <2\|3>` |
+| `ironspine` | info state `rot [1\|0]` `shatter [1\|0]` `fist [1\|0]` `ribcage [1\|0]` `eye [1\|0]` glare `stacks <n>` |
+| `council` | info azshir state shock exorcism wrath light execution seal judgement shield fall grief |
+| `thalnos` | info state bolt spike boil nova brand `stacks <n>` hardmode |
+| `desecration` | info `touch <1-4>` answer wrong state teleport `rise <1-4>` banner charge repent heal shield whirlwind |
+| `loksey` | info state release mark heel fetch (heroic form only) correction pack clear `heroic [0\|1]` |
+| `kell` | info state unseal wake cloud lines skeleton cane flask torrent curse |
+| `hollis` | info state `open [1-6]` page rebuke close clear `heroic [0\|1]` |
+| `doan` | info hardmode state bubble break detonate scorched explosion mark flamestrike seal |
+| `heresy` | info state `page <1-4>` fissure risen icy |
+| `crell` | info state order heat hammer quench temper blade plate strike cleave rivet tear recruit |
+| `halden` | info state next charge spears javelins closeranks volley second |
+| `herod` | info hardmode state spin blade throw cleave frenzy seal |
+| `calltoarms` | info state taunt prayer squad zeal beams hall |
+| `thorne` | info state prune sow seed bloom briar bramble holywater ground bless |
+| `laststand` | info state start call descend hammer storm reserve fall chest clear `heroic [0\|1]` |
+| `whitemane` | info state hardmode vigil rise lane penance heal shield smite flame hisfall herfall clear `heroic [0\|1]` `force [0\|1]` |
+| `truth` | info state torch vigil truth light verdict curse shield heal |
+
 ## Kit: death spots, held bodies and the edge (Blackrock Depths WP-KT-D1)
 
 Death spots and held bodies (`DungeonKitBodies.h`; the Ring of Law's Acid Burst and Raise Dead, the Encore's
@@ -339,3 +384,34 @@ The damage ledger (`DungeonKitLedger.h`; Phalanx's Throw Out):
   the caller's fallback); a tie goes to the one who reached the total first. `Total`, `Ranking`, `Clear` (Reset).
 
 Tests: `tests/dungeon_kit_test.cpp` (`TestHealthPool`, `TestDamageTally`).
+
+## Kit: growing zones, wing portals, sealed arenas, spell credit, ward, beams (Scarlet Monastery WP-KT-SM)
+
+- `GrowingZone` / `GrowingZones` (`DungeonKitZones.h`): a persistent registry Zone that grows in steps, timed
+  (`fromYd` -> `toYd` over `overMs`, one step per `stepMs`, counted from the first tick) or by hand (`GrowTo`,
+  `Grow`). Each step registers the grown zone (warning `stepWarnMs`, outline only) and cancels the old one once the
+  new one is live; the ground look wears the nearest `rungs` aura (on `look`, the anchor unit, or a `lookEntry`
+  stalker). `lifeMs` ends it; `Cancel` / `Clear` from Reset, JustDied, EnterEvadeMode. Ironspine's Grave Rot, the
+  Emerald Dream mist.
+- `TurningBeams` (`DungeonKitZones.h`, L43): `count` beams around an anchor turning `stepDeg` every `stepMs`; each
+  next step is a registry Line marked one step ahead (its resolve is the hit), clipped to an arena's edge; `Flip`
+  reverses the turn; optional end stalkers channel a chain to the source. Herod's Ravager's Beacon.
+- `WingPortals` / `PortalTravel` / `WingPortalAI` (`DungeonKitWings.h`): in-map wing portals. `Open` spawns the
+  portal GO (idempotent, restored after a grid unload by `Update`); a use takes the user plus every group member on
+  the map within 20 yd of the portal who is alive, out of combat and free to move to the destination (a near
+  teleport with pets); the user is refused in combat; one log line per use. The instance implements
+  `WingPortalHost`. `ClearOfTriggers` pins spots and landings away from exit triggers.
+- `SealedArena` (`DungeonKitWings.h`): `Engage` at the pull; `delayMs` (3 s) later the door shuts (or a seal GO is
+  summoned) with an emote and every living player outside the arena, in the same wing, within 60 yd of the entry
+  spot is moved to it; a door opened while sealed is shut again; `Release` from Reset, JustDied, EnterEvadeMode.
+  Keep the door out of the instance's DoorData. Doan's chamber, Herod's hall.
+- `CreditEncounterBySpell` (`DungeonKitWings.h`) and `CreditLatch` (`DungeonKitWingLogic.h`): a spell-credit row
+  (`creditType 1`) credited by the instance (`Map::UpdateEncounterState`), plus the heroic/raid bind a spell credit
+  does not get by itself; the latch fires once when every listed entry is dead. The spell must exist in
+  `spell_dbc`. The council, the Last Stand.
+- `WardOfTheLiving` (`DungeonKitWard.h`, L38): the boss's ward aura at one stack per living add (linked by hand or
+  by entry within `searchYd`), held at the cap's count; `Mitigate` when the aura is a look only. Blood Pact,
+  Reader's Ward, Inquisitor's Ward.
+
+Tests: `tests/dungeon_kit_test.cpp` (`TestGrowthPlan`, `TestNearestRung`, `TestBeamClock`, `TestBeamSegment`,
+`TestTravelers`, `TestSealClock`, `TestStragglers`, `TestCreditLatch`, `TestWardRule`).

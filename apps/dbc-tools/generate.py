@@ -86,6 +86,7 @@ from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, so
 from lib import gcd_haste, header_gen, potency_sheet, spell_tables, superseded_ranks  # noqa: E402
 from lib import sqlcorpus, stale_overlay, trainer_pricing, trainer_state  # noqa: E402
 from lib import dungeon_checks, dungeon_heroic, heroic_templates, item_emit, item_ids, item_variants  # noqa: E402
+from lib import dungeon_encounters  # noqa: E402
 from lib import item_key_refs  # noqa: E402
 from lib import weapon_spell_power  # noqa: E402
 from lib import lfg_dungeons as lfg_finder  # noqa: E402
@@ -1496,10 +1497,23 @@ def _run(
     # spawn replay loads only when a heroic is declared.
     dungeon_expansion = None
     if not only_items:  # nothing of the dungeon rows reaches an item-only run
+        # Scarlet Monastery build FD-SM: the declared DungeonEncounter rows (dungeon_encounter() / repoint_encounter())
+        # first, so a heroic of the same map counts and copies them. Its ERRORs and notes ride on the dungeon expansion.
+        encounter_expansion = dungeon_encounters.expand(dsl_classes, lambda: dungeon_encounters.load_inputs(
+            spell_table_index,
+            {*existing_creature_rows, *(int(r["entry"]) for r in dsl_classes["creature_templates"])},
+            spell_ids={int(e["id"]) for e in spell_entries}, ids_cfg=ids_cfg,
+        ))
+        for warning in encounter_expansion.warnings:
+            print(f"WARNING: {warning}")
+        if dungeon_encounters.needs_inputs(dsl_classes):
+            progress("built the declared dungeon encounter rows (DungeonEncounter, instance_encounters)")
         dungeon_expansion = dungeon_heroic.expand(
             dsl_classes, lambda: dungeon_heroic.load_live_world(existing_creature_rows, spell_table_index),
             ids_cfg=ids_cfg,
         )
+        dungeon_expansion.errors[:0] = encounter_expansion.errors
+        dungeon_expansion.notes[:0] = encounter_expansion.notes
         for warning in dungeon_expansion.warnings:
             print(f"WARNING: {warning}")
         if dungeon_heroic.needs_live_world(dsl_classes):

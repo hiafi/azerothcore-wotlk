@@ -46,7 +46,7 @@ scopes:
     sources: [world/blackrock_spire_father_flame.py]  # B11: Father Flame, bag item 70610
   blackrock_depths:  # also owns the ids.yaml reservation of the same name (WP-0, 2026-11-17)
     reservations: [blackrock_depths_items]
-  scarlet_monastery:  # scarlet gear stage (2026-11-19): items/scarlet_monastery*.py, npcs/scarlet_monastery/
+  scarlet_monastery:  # gear stage (2026-11-19) + the dungeon build (WP-0, 2026-11-20, owns the same-name reservation)
     reservations: [scarlet_monastery_items]
 
   # Dungeon sets and tools.
