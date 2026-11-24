@@ -111,7 +111,8 @@ skilllineability:
 # rare 70720-70756, epic 70760-70796, leveling 70800-70809, metas 70810-70814, epic raw gems 70820-70825, raw gems Ruby
 # 70826 and Dusk Amethyst 70827; item_template in hand-written pending world SQL from write_gem_items.py; checked free
 # 2026-11-11), 70900-70901 (dungeon quests Q1: the Deadmines quest items; item_template in hand-written pending world
-# SQL, `reservations: deadmines`). Crafting rework C6 enchant items take 79000-79199, carved off the top of item_minted
+# SQL, `reservations: deadmines`), 70910 (dungeon quests Q2: the Shadowfang Keep quest item, `reservations:
+# shadowfang_keep`). Crafting rework C6 enchant items take 79000-79199, carved off the top of item_minted
 # below (79000-79057 leveling, 79060-79117 endgame, 79120-79123 tinkers, 79130 belt buckle; item_template in
 # hand-written pending world SQL from write_enchant_items.py; checked free 2026-11-11: no item_template, item_dbc or
 # items.csv row above 72150).
@@ -464,7 +465,9 @@ quest:
 # reworked leveling dungeons. Record only, like `quest` above (hand-written pending world SQL). Checked free
 # 2026-11-24: quest_template tops out at 26034 apart from 90000 / 90001, and no pending SQL, source file or module
 # names an id in 90100-90199. Slices by dungeon, in the plan's leveling order: Deadmines 90100-90109 (90100 The
-# Juggernaut's Casting Plans, 90101 The Kingpin's Ledger); the next dungeons take 90110-90119, 90120-90129, ...
+# Juggernaut's Casting Plans, 90101 The Kingpin's Ledger), Shadowfang Keep 90110-90119 (stage Q2: 90110 The Baron's
+# Rest); the next dungeons take 90120-90129, 90130-90139, ... Checked free 2026-11-24 for 90110: live quest_template
+# tops out at 26034 apart from 90000 / 90001, and no pending SQL, source file, module or worktree names 90102-90199.
 dungeon_quest:
   start: 90100
   end: 90199
@@ -795,6 +798,11 @@ reservations:
     gameobjectdisplayinfo: {start: 90030, end: 90034}
     creaturedisplayinfo: {start: 90720, end: 90729}
     creaturemodeldata: {start: 90720, end: 90729}
+    # Dungeon quests (stage Q2): the Silverlaine Signet quest item, an items.csv row (70910; item_template in
+    # hand-written pending world SQL). Checked free 2026-11-24: no item_template or item_dbc row, items.csv row or
+    # pending SQL in 70902-70999 (70900-70909 is the Deadmines slice). The two reward items are minted (`item_minted`).
+    # The creature slice's spare 300517 is the entrance quest giver (source/npcs/shadowfang_keep/dungeon_quests.py).
+    item: {start: 70910, end: 70919}
   # Scholomance build WP-0 (2026-11-08, scholomance-build.HANDOFF.md s3.3; checked free in the live DB). Shared heroic
   # ids after SFK: mapdifficulty 1002, dungeon_access 124, dungeonencounter 1015 on (13 encounters).
   scholomance:

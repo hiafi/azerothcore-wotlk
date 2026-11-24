@@ -672,6 +672,7 @@ class ShadowfangKeepIdsTest(unittest.TestCase):
             "gameobjectdisplayinfo": (90030, 90034),
             "creaturedisplayinfo": (90720, 90729),
             "creaturemodeldata": (90720, 90729),
+            "item": (70910, 70919),  # dungeon quests Q2: the Silverlaine Signet (items.csv row)
         })
 
     def test_shadowfang_keep_overlaps_no_other_reservation(self):

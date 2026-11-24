@@ -154,6 +154,7 @@ id,class_id,subclass_id,sound_override_subclass_id,material,display_info_id,inve
 70827,3,7,-1,-1,39933,0,0,Dusk Amethyst (crafting rework C5 gem)
 70900,12,0,-1,-1,8624,0,0,"dungeon-quests Q1: Juggernaut Casting Plans (quest 90100, drops from Gilnid); Venture Co. Engineering Plans 5718's look; item_template in rev_dungeon_quests_deadmines.sql"
 70901,12,0,-1,-1,1134,0,0,"dungeon-quests Q1: Edwin VanCleef's Ledger (quest 90101, drops from VanCleef); Gazlowe's Ledger 5080's look; item_template in rev_dungeon_quests_deadmines.sql"
+70910,12,0,-1,-1,6538,0,0,"dungeon-quests Q2: Silverlaine Signet (quest 90110, drops from Baron Silverlaine); Mistmantle Family Ring 3629's look; item_template in rev_dungeon_quests_shadowfang_keep.sql"
 78000,9,4,-1,-1,6270,0,0,Plans: Molten Plate Helms (crafting rework C7 raid recipe)
 78001,9,4,-1,-1,6270,0,0,Plans: Molten Plate Pauldrons (crafting rework C7 raid recipe)
 78002,9,4,-1,-1,6270,0,0,Plans: Molten Plate Breastplates (crafting rework C7 raid recipe)

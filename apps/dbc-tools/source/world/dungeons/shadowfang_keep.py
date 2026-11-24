@@ -161,6 +161,11 @@ shadowfang_keep = dungeon(
         creature(300514, "Deathstalker Adamant", "npc", summoned_by=("C++ boss_wolf_master_nandos",)),  # lair prisoner
         creature(300515, "Ward Stalker", "trigger", summoned_by=("C++ boss_archmage_arugal",)),
         creature(300516, "Strike Stalker", "trigger", summoned_by=("C++ shadowfang keep kit",)),
+        # Dungeon quests Q2: the friendly entrance quest giver (source/npcs/shadowfang_keep/dungeon_quests.py).
+        # Spawned by hand SQL, so the live-DB extraction does not see it yet; role npc: no level 60 copy, no heroic
+        # spawn (see `normal_only_creatures` below).
+        creature(300517, "Magus Aldren Voss", "npc",
+                 summoned_by=("spawn 3005170, rev_dungeon_quests_shadowfang_keep.sql",)),
     ),
     heroic=heroic(
         map_difficulty_id=1001, access_id=123, min_level=60,
@@ -168,6 +173,9 @@ shadowfang_keep = dungeon(
         encounter_ids=range(1007, 1015),
         spawn_mask=True,
         event_spawns=False,  # Apothecary Hummel's Love is in the Air event and Sever's invasion stay normal-only
+        # The dungeon quest giver (source/npcs/shadowfang_keep/dungeon_quests.py, hand spawn in
+        # rev_dungeon_quests_shadowfang_keep.sql) stands on normal only: heroic is level 60 and has no dungeon quests.
+        normal_only_creatures=(300517,),
         overrides={
             3914: _boss(265_524, 310048),  # Rethilgore (HealthModifier 87 x warrior 3,052)
             3886: _boss(350_980, 310046),  # Razorclaw the Butcher (115)
