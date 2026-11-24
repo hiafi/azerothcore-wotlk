@@ -34,9 +34,10 @@ ids.yaml reservation `scarlet_monastery`):
   last_stand.py               D13  spells 213100-213149, creatures 300950-300955, gameobjects 301330, 301331
   whitemane.py                D14  spells 213150-213189
   whitemane_hard_mode.py      D14H spells 213190-213239, creatures 300956, 300957
+  dungeon_quests.py           Q3   creatures 300923-300926 (the Argent Dawn quest agents, one per wing; data only)
   the wing portal gameobject 301324 is S0's (hand SQL: rev_skeleton_scarlet_monastery.sql); spare spells
   212750-212899 (wave 1) and 213240-213499, the generic stalkers 300922 (wave 1) and 300958 (wave 2), spare
-  creatures 300923-300939 and 300959-300979, gameobjects 301332-301339: ask the orchestrator. The gear's
+  creatures 300927-300939 and 300959-300979, gameobjects 301332-301339: ask the orchestrator. The gear's
   `scarlet_monastery_items` reservation (212000-212099, 300880-300889) is source/items/scarlet_monastery_hard_mode_*.py
   and hard_mode_items.py; `zealot_set` (212100-212299, 300890-300899) is source/items/zealot_set*.py.
 

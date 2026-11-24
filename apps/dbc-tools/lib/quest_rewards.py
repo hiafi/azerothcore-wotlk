@@ -1195,11 +1195,22 @@ class Materialized:
     labels: dict  # tooltip labels the emit would add (ruling 20: none)
 
 
+# A wand whose DPS is raised above the curve's full value, by entry: the fraction `item(extra_dps=)` takes (the DPS
+# the weapon adds over the curve, as a fraction of it; the stats stay the role cell's, `free_dps=True` pays for it with
+# a larger budget_mult, which the item DSL caps at 2).
+# 6806 Dancing Flame, the epic wand of 1394 Final Passage (dungeon quests Q3, designer 2026-11-24): the epic DPS
+# curve is flat below item level 50 (34.67 single slot), so the wand's blue DPS of 33.7 rose 3% while the one-hand
+# weapons rose 46%. +0.42 (about 49 DPS, the same ratio over its blue) needs budget_mult 2.42; +0.27 is close to the
+# most the cap allows with the stats unchanged: budget_mult 1.939, 44.0 DPS (+31% over the blue).
+WAND_EXTRA_DPS = {6806: 0.27}
+
+
 def weapon_extras(row: dict) -> dict:
     """The `item()` keywords a reward weapon adds by its type: a wand is a full-strength weapon with free DPS (ruling
-    40): no caster role cell DPS cut (`extra_dps=0.0`), its stats still the role cell's (`free_dps=True`)."""
+    40): no caster role cell DPS cut (`extra_dps=0.0`), its stats still the role cell's (`free_dps=True`). A wand
+    named in WAND_EXTRA_DPS takes that fraction instead of 0.0."""
     if _int(row.get("class")) == ITEM_CLASS_WEAPON and _int(row.get("subclass")) == WEAPON_WAND:
-        return {"extra_dps": 0.0, "free_dps": True}
+        return {"extra_dps": WAND_EXTRA_DPS.get(_int(row.get("entry")), 0.0), "free_dps": True}
     return {}
 
 

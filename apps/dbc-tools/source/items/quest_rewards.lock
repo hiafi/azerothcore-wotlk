@@ -705,9 +705,10 @@
 6801 40 2 45 4 28 8000 -  # Baroque Apron -- Spi+SP / Vers; green; ilvl 40->45
 6802 42 3 47 22 74 6000 -  # Sword of Omen -- Str / CDH+Vers; blue; ilvl 44->47
 6803 42 3 47 24 75 6000 -  # Prophetic Cane -- Int / Mastery+Proc; blue; ilvl 44->47
-6804 36 3 41 22 29 6000 -  # Windstorm Hammer -- Str / Crit+Haste; blue; ilvl 34->41
-6806 36 3 41 24 31 6000 -  # Dancing Flame -- Int / Crit+Mastery; blue; ilvl 40->41; FB no stock primary: type Int
-#   (wand)
+6804 36 4 41 22 29 6000 -  # Windstorm Hammer -- Str / Crit+Haste; blue->epic (dungeon quests Q3: quest 1394, the
+#   Test of Lore open-world quest); ilvl 34->41
+6806 36 4 41 24 31 6000 -  # Dancing Flame -- Int / Crit+Mastery; blue->epic (dungeon quests Q3: quest 1394); ilvl
+#   40->41; FB no stock primary: type Int (wand)
 6828 38 2 43 71 25 8000 -  # Visionary Buckler -- Spi / Crit; green; ilvl 38->43
 6829 40 3 45 71 36 6000 -  # Sword of Serenity -- Spi / Mastery+Vers; blue; ilvl 44->45
 6830 40 3 45 22 37 6000 -  # Bonebiter -- Str / Crit+CDH; blue; ilvl 44->45

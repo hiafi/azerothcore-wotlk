@@ -466,7 +466,8 @@ quest:
 # 2026-11-24: quest_template tops out at 26034 apart from 90000 / 90001, and no pending SQL, source file or module
 # names an id in 90100-90199. Slices by dungeon, in the plan's leveling order: Deadmines 90100-90109 (90100 The
 # Juggernaut's Casting Plans, 90101 The Kingpin's Ledger), Shadowfang Keep 90110-90119 (stage Q2: 90110 The Baron's
-# Rest); the next dungeons take 90120-90129, 90130-90139, ... Checked free 2026-11-24 for 90110: live quest_template
+# Rest); Scarlet Monastery (stage Q3) builds no new quest and takes none of the block; the next dungeons take
+# 90120-90129, 90130-90139, ... Checked free 2026-11-24 for 90110: live quest_template
 # tops out at 26034 apart from 90000 / 90001, and no pending SQL, source file, module or worktree names 90102-90199.
 dungeon_quest:
   start: 90100
@@ -868,6 +869,10 @@ reservations:
   # takes the spare 90550-90599 the BRD comment above names. Shared heroic ids (no separate reservation):
   # mapdifficulty 1006, dungeon_access 128, dungeonencounter normal 1074-1080 + heroic 1081-1094 (HANDOFF s7 #3 A),
   # lfgdungeons 314-317, creature_heroic lock lines from 310419.
+  # Dungeon quests (stage Q3): the four Argent Dawn quest agents take 300923-300926 of the wave 1 spare slice
+  # (source/npcs/scarlet_monastery/dungeon_quests.py; hand spawns 3009230-3009260 in
+  # rev_dungeon_quests_scarlet_monastery.sql). Checked free 2026-11-24: no live creature_template or creature row, no
+  # pending SQL, source file or worktree names them. The four reward items are minted (`item_minted`).
   scarlet_monastery:
     spell: {start: 212300, end: 213499}
     creature: {start: 300900, end: 300979}

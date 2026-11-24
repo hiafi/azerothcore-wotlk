@@ -789,7 +789,11 @@ class RealDataTest(unittest.TestCase):
                 self.assertGreater(b["final_dps"], 0, entry)
             if row["class"] == 2 and row["subclass"] == qr.WEAPON_WAND:  # ruling 40: full DPS, free
                 wands += 1
-                self.assertEqual(b["final_dps"], b["baseline_dps"], entry)
+                if entry in qr.WAND_EXTRA_DPS:  # a declared raise above the curve (dungeon quests Q3: 6806)
+                    self.assertAlmostEqual(b["final_dps"], b["baseline_dps"] * (1 + qr.WAND_EXTRA_DPS[entry]),
+                                           delta=0.05, msg=entry)
+                else:
+                    self.assertEqual(b["final_dps"], b["baseline_dps"], entry)
                 self.assertGreater(mat.itemization[entry]["budget_mult"], 0.627, entry)
         self.assertGreater(wands, 40)
 
