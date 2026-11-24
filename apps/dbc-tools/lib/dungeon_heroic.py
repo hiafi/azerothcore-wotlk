@@ -21,7 +21,8 @@ What it derives, per declared heroic (map M):
    spawnMask lacks the heroic bit gets one targeted `UPDATE ... SET spawnMask = spawnMask | 2 WHERE id IN (...) AND
    guid IN (...)` per table (the SQL linter's spawn shape). Diffed against the replayed live spawns
    (`lib/spawn_state.py`), so a map already at mask 3 (Deadmines after E1's WP-1D) emits nothing. Spawns a game event
-   owns stay normal-only unless `event_spawns=True`. Never reverted: dropping the heroic leaves the masks.
+   owns stay normal-only unless `event_spawns=True`, and so do the spawns of the creature entries in
+   `heroic(normal_only_creatures=...)` (the dungeon quest givers). Never reverted: dropping the heroic leaves the masks.
 3. **Heroic creature templates** (WP-G, `lib/heroic_templates.py`): for a heroic whose declaration carries a creature
    list (`dungeon(creatures=...)`), one level 60 `creature_template` row per creature of its entry set (ids from the
    append-only `source/world/heroic_ids.lock`), appended to `creature_templates` before step 4 reads them, and the
@@ -371,7 +372,9 @@ def _spawn_masks(entry: dict, live: LiveWorld, out: Expansion) -> dict[str, dict
             continue
         events = live.event_guids.get(table, set())
         excluded = [r for r in rows if _int(r["guid"]) in events and not spec.get("event_spawns")]
-        wanted = [r for r in rows if r not in excluded]
+        quest_givers = set(spec.get("normal_only_creatures") or ()) if table == "creature" else set()
+        pinned = [r for r in rows if spawn_state.spawn_entry(r) in quest_givers and r not in excluded]
+        wanted = [r for r in rows if r not in excluded and r not in pinned]
         todo = [r for r in wanted if not spawn_state.spawn_mask(r) & HEROIC_SPAWN_BIT]
         for r in todo:
             planned[table][_int(r["guid"])] |= HEROIC_SPAWN_BIT
@@ -381,6 +384,7 @@ def _spawn_masks(entry: dict, live: LiveWorld, out: Expansion) -> dict[str, dict
         summary.append(
             f"{len(todo)} of {len(rows)} {table} spawn(s) to set"
             + (f", {len(excluded)} game event spawn(s) left normal-only" if excluded else "")
+            + (f", {len(pinned)} normal_only_creatures spawn(s) left normal-only" if pinned else "")
         )
     if spec.get("spawn_mask") and not any(planned.values()):
         out.errors.append(f"dungeon({map_id}, {name!r}) heroic spawn_mask: no creature or gameobject spawn on the map")

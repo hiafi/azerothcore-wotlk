@@ -110,9 +110,11 @@ skilllineability:
 # crafting rework C4; item_template in hand-written pending world SQL, 70719 spare), 70720-70827 (crafting rework C5 gems:
 # rare 70720-70756, epic 70760-70796, leveling 70800-70809, metas 70810-70814, epic raw gems 70820-70825, raw gems Ruby
 # 70826 and Dusk Amethyst 70827; item_template in hand-written pending world SQL from write_gem_items.py; checked free
-# 2026-11-11). Crafting rework C6 enchant items take 79000-79199, carved off the top of item_minted below (79000-79057
-# leveling, 79060-79117 endgame, 79120-79123 tinkers, 79130 belt buckle; item_template in hand-written pending world
-# SQL from write_enchant_items.py; checked free 2026-11-11: no item_template, item_dbc or items.csv row above 72150).
+# 2026-11-11), 70900-70901 (dungeon quests Q1: the Deadmines quest items; item_template in hand-written pending world
+# SQL, `reservations: deadmines`). Crafting rework C6 enchant items take 79000-79199, carved off the top of item_minted
+# below (79000-79057 leveling, 79060-79117 endgame, 79120-79123 tinkers, 79130 belt buckle; item_template in
+# hand-written pending world SQL from write_enchant_items.py; checked free 2026-11-11: no item_template, item_dbc or
+# items.csv row above 72150).
 # Crafting rework C7 takes 78000-78999, carved off the top of item_minted too: raid recipe items 78000-78799
 # (write_crafting_set_items.py, 78000-78125 so far), premium enchant items and recipes, flasks, buff scrolls, boss runes
 # and the Darkmoon tarot 78800-78999 (write_crafting_consumable_items.py); checked free 2026-11-12: no item_template,
@@ -458,6 +460,15 @@ quest:
   start: 90000
   end: 90099
 
+# Dungeon quests (.agents/plans/dungeon-quests/, stage Q1, 2026-11-24): quest_template ids of the new quests inside the
+# reworked leveling dungeons. Record only, like `quest` above (hand-written pending world SQL). Checked free
+# 2026-11-24: quest_template tops out at 26034 apart from 90000 / 90001, and no pending SQL, source file or module
+# names an id in 90100-90199. Slices by dungeon, in the plan's leveling order: Deadmines 90100-90109 (90100 The
+# Juggernaut's Casting Plans, 90101 The Kingpin's Ledger); the next dungeons take 90110-90119, 90120-90129, ...
+dungeon_quest:
+  start: 90100
+  end: 90199
+
 # Dungeon difficulties E2 (WP-G), read by lib/heroic_templates.py: the heroic creature_template entries of every
 # declared heroic dungeon (one per normal creature, a level 60 copy; the normal row's difficulty_entry_1 points at it).
 # Assigned through the append-only lock file source/world/heroic_ids.lock, so an id never moves. creature_template
@@ -750,7 +761,8 @@ reservations:
   # Cookie 205320-205339, Greenskin 205340-205359, VanCleef 205360-205389, spare 205390-205399. Creatures: Watchman
   # 300420, Evoker 300421, Working Miner 300422, Iron shot 300423, Land mine 300424, Harpoon rope 300425, Blackguard
   # 300426, Shadow image 300427, Mainmast 300428, Powder blast stalker 300429, Blackguard's Signet look-alike 300430
-  # (item variants IV6, source/npcs/deadmines/hard_mode_items.py), spare 300431-300449. Gameobjects: Powder
+  # (item variants IV6, source/npcs/deadmines/hard_mode_items.py), the dungeon quest givers 300431 and 300432 (stage Q1,
+  # source/npcs/deadmines/dungeon_quests.py), spare 300433-300449. Gameobjects: Powder
   # keg 301000, Harpoon rope 301001, Mainmast 301002. Display rows only for visuals mined into patch-M (stage V). The
   # creature display slice starts at 90700, not 90500: the boss mechanics markers' old slice 90500-90699 stays
   # unreserved (test_bossmechanics_overlaps_no_earlier_owner). Checked free 2026-11-06 (handoff s2.6).
@@ -762,6 +774,11 @@ reservations:
     gameobjectdisplayinfo: {start: 90020, end: 90029}
     creaturedisplayinfo: {start: 90700, end: 90719}
     creaturemodeldata: {start: 90700, end: 90719}
+    # Dungeon quests (stage Q1): the two quest items, items.csv rows (70900 Juggernaut Casting Plans, 70901 Edwin
+    # VanCleef's Ledger; item_template in hand-written pending world SQL). Checked free 2026-11-24: no item_template or
+    # item_dbc row, items.csv row or pending SQL in 70900-70909 (70720-70899 belongs to the gem writer,
+    # write_gem_items.py). The reward items are minted (`item_minted`).
+    item: {start: 70900, end: 70909}
 
   # Reworked dungeons after the Deadmines Pilot (WP-K0, the shared dungeon kit, 2026-11-07): the SpellVisual slices
   # (SpellVisual, SpellVisualKit and SpellVisualEffectName share the numbers), one 50-id slice per dungeon in build

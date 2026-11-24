@@ -90,8 +90,9 @@
 2033 26 2 31 23 73 8000 -  # Ambassador's Boots -- Agi / Proc; green; ilvl 25->31
 2036 18 2 23 12 27 8000 -  # Dusty Mining Gloves -- Str+AP / Mastery; green; ilvl 18->23
 2037 18 2 23 71 28 8000 -  # Tunneler's Boots -- Spi / Vers; green; ilvl 18->23
-2041 22 3 27 23 36 6000 -  # Tunic of Westfall -- Agi / Mastery+Vers; blue; ilvl 24->27
-2042 22 3 27 9 37 6000 -  # Staff of Westfall -- Spi+Int+SP / Crit+CDH; blue; ilvl 24->27
+2041 22 4 27 23 36 6000 -  # Tunic of Westfall -- Agi / Mastery+Vers; blue->epic (dungeon quests Q1: quest 166, the
+#   Deadmines open-world quest); ilvl 24->27
+2042 22 4 27 9 37 6000 -  # Staff of Westfall -- Spi+Int+SP / Crit+CDH; blue->epic (dungeon quests Q1); ilvl 24->27
 2043 32 3 37 0 48 0 -  # Ring of Forlorn Spirits -- - / MP5+Crit; blue; ilvl 35->37; no primary (jewelry/cloak); MP5
 #   kept
 2044 32 3 37 22 39 6000 -  # Crescent of Forlorn Spirits -- Str / Crit+Proc; blue; ilvl 35->37; FB no stock primary:
@@ -607,7 +608,7 @@
 6078 5 2 7 22 25 8000 -  # Pikeman Shield -- Str / Crit; white->green; ilvl 5->7; type Str (shield)
 6084 11 2 16 22 25 8000 -  # Stormwind Guard Leggings -- Str / Crit; green; ilvl 13->16
 6085 11 2 16 23 26 8000 -  # Footman Tunic -- Agi / Haste; green; ilvl 13->16
-6087 22 3 27 22 32 6000 -  # Chausses of Westfall -- Str / Crit+Vers; blue; ilvl 24->27
+6087 22 4 27 22 32 6000 -  # Chausses of Westfall -- Str / Crit+Vers; blue->epic (dungeon quests Q1); ilvl 24->27
 6092 18 2 23 23 27 8000 -  # Black Whelp Boots -- Agi / Mastery; green; ilvl 18->23; FB no stock primary: type Agi
 #   (leather)
 6093 25 2 30 22 28 8000 -  # Orc Crusher -- Str / Vers; green; ilvl 27->30
