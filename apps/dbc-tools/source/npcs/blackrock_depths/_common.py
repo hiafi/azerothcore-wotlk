@@ -40,8 +40,9 @@ ids.yaml reservation `blackrock_depths`):
   magmus.py                   D22  spells 211580-211609
   emperor.py                  D23  spells 211610-211659, creatures 300843, 300844
   emperor_hard_mode.py        D24  spells 211660-211709
+  dungeon_quests.py           Q4   creatures 300797, 300798 (the Thorium Brotherhood quest givers; data only)
   shared spells 210700-210719 (kit cast bars, markers), spare spells 211270-211299 (wave 1) and 211710-211999, the
-  generic stalkers 300796 (wave 1) and 300845 (wave 2), spare creatures 300797-300827, 300829 and 300846-300879
+  generic stalkers 300796 (wave 1) and 300845 (wave 2), spare creatures 300799-300827, 300829 and 300846-300879
   (300828 is D12's Hand of Incendius: no heroic template by design, only ever summoned on the heroic hard mode, like
   the generic stalker), gameobjects 301290-301309: ask the orchestrator. The gear's `blackrock_depths_items`
   reservation (206830-206899, 300655-300669) is source/items/blackrock_depths_hard_mode_effects.py's and

@@ -1097,10 +1097,11 @@
 12050 54 2 55 6 27 8000 -  # Hazecover Boots -- Spi+SP / Mastery; green; ilvl 54->55
 12051 54 2 55 12 28 8000 -  # Brazen Gauntlets -- Str+AP / Vers; green; ilvl 54->55
 12059 58 3 60 0 75 0 -  # Conqueror's Medallion -- - / Mastery+Proc; blue; ilvl 58->60; no primary (jewelry/cloak)
-12061 58 2 60 82 26 8000 -  # Blade of Reckoning -- AP / Haste; green; ilvl 60 kept (target 55); round 7: Attack Power
-#   (Solo) (ruling 33) (was AP+Str / Haste share 8000)
-12062 58 2 60 23 27 8000 -  # Skilled Fighting Blade -- Agi / Mastery; green; ilvl 60 kept (target 55); FB no stock
-#   primary: type Agi (dagger)
+12061 58 3 60 82 29 6000 -  # Blade of Reckoning -- AP / Crit+Haste; green->blue (dungeon quests Q4: quest 4322 Jail
+#   Break!, two secondaries, share 6000); ilvl 60 kept (target 60); round 7: Attack Power (Solo) (ruling 33) (was
+#   AP+Str / Haste share 8000)
+12062 58 3 60 23 30 6000 -  # Skilled Fighting Blade -- Agi / Crit+Mastery; green->blue (dungeon quests Q4: quest 4322);
+#   ilvl 60 kept (target 60); FB no stock primary: type Agi (dagger)
 12065 58 2 60 0 73 0 -  # Ward of the Elements -- - / Proc; green; ilvl 60 kept (target 55); no primary (trinket, ruling
 #   22)
 12066 58 2 58 0 25 0 -  # Shaleskin Cape -- - / Crit; green; ilvl 58 kept (target 55); no primary (jewelry/cloak)
@@ -1127,12 +1128,14 @@
 12344 60 3 61 0 66 0 all  # Seal of Ascension -- - / Crit+Proc; blue; ilvl 61 kept (target 60); no primary
 #   (jewelry/cloak); keeps spell 1,2
 12522 15 2 20 20 25 8000 -  # Bingles' Flying Gloves -- Agi+Int+SP / Crit; green; ilvl 15->20
-12543 59 3 60 0 67 0 -  # Songstone of Ironforge -- - / Mastery+Vers; blue; ilvl 60 kept (target 60); no primary
-#   (jewelry/cloak)
-12544 60 3 60 0 74 0 -  # Thrall's Resolve -- - / CDH+Vers; blue; ilvl 60 kept (target 60); no primary (jewelry/cloak)
-12545 60 3 60 0 75 0 -  # Eye of Orgrimmar -- - / Mastery+Proc; blue; ilvl 60 kept (target 60); no primary
-#   (jewelry/cloak)
-12548 59 3 60 0 31 0 -  # Magni's Will -- - / Crit+Mastery; blue; ilvl 60 kept (target 60); no primary (jewelry/cloak)
+12543 59 4 60 0 67 0 -  # Songstone of Ironforge -- - / Mastery+Vers; blue->epic (dungeon quests Q4: quest 4363, the
+#   Alliance Princess Moira chain's last quest); ilvl 60 kept; no primary (jewelry/cloak)
+12544 60 4 60 0 74 0 -  # Thrall's Resolve -- - / CDH+Vers; blue->epic (dungeon quests Q4: quest 4004, the Horde
+#   Princess Moira chain's last quest); ilvl 60 kept; no primary (jewelry/cloak)
+12545 60 4 60 0 75 0 -  # Eye of Orgrimmar -- - / Mastery+Proc; blue->epic (dungeon quests Q4: quest 4004); ilvl 60
+#   kept; no primary (jewelry/cloak)
+12548 59 4 60 0 31 0 -  # Magni's Will -- - / Crit+Mastery; blue->epic (dungeon quests Q4: quest 4363); ilvl 60 kept; no
+#   primary (jewelry/cloak)
 12631 60 3 60 22 65 6000 all  # Fiery Plate Gauntlets -- Str / Haste+CDH; blue; ilvl 58->60; keeps spell 1; FB no stock
 #   primary: type Str (plate)
 12752 60 4 62 24 31 6000 -  # Cap of the Scarlet Savant -- Int / Crit+Mastery; epic; ilvl 62 kept (epic)

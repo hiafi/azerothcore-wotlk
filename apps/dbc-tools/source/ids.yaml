@@ -466,8 +466,8 @@ quest:
 # 2026-11-24: quest_template tops out at 26034 apart from 90000 / 90001, and no pending SQL, source file or module
 # names an id in 90100-90199. Slices by dungeon, in the plan's leveling order: Deadmines 90100-90109 (90100 The
 # Juggernaut's Casting Plans, 90101 The Kingpin's Ledger), Shadowfang Keep 90110-90119 (stage Q2: 90110 The Baron's
-# Rest); Scarlet Monastery (stage Q3) builds no new quest and takes none of the block; the next dungeons take
-# 90120-90129, 90130-90139, ... Checked free 2026-11-24 for 90110: live quest_template
+# Rest); Scarlet Monastery (stage Q3) and Blackrock Depths (stage Q4) build no new quest and take none of the block;
+# the next dungeons take 90120-90129, 90130-90139, ... Checked free 2026-11-24 for 90110: live quest_template
 # tops out at 26034 apart from 90000 / 90001, and no pending SQL, source file, module or worktree names 90102-90199.
 dungeon_quest:
   start: 90100
@@ -850,6 +850,10 @@ reservations:
   # (Shadowforge City) / 309 (Manufactory) / 310-313 (heroic for sections 1-4), loot_reference 1700019-1700021
   # (L-2: the Emperor's pools + key; BRS ends 1700018), creature_heroic lock lines from 310301. Not in ids.yaml:
   # creature_immunities 1972 and 1973 are reused.
+  # Dungeon quests (stage Q4): the two Thorium Brotherhood quest givers take 300797-300798 of the wave 1 spare slice
+  # (source/npcs/blackrock_depths/dungeon_quests.py; hand spawns 3007970 and 3007980 in
+  # rev_dungeon_quests_blackrock_depths.sql). Checked free 2026-11-24: no live creature_template or creature row, no
+  # pending SQL, source file or worktree names them. The four reward items are minted (`item_minted`).
   blackrock_depths:
     spell: {start: 210700, end: 211999}
     creature: {start: 300780, end: 300879}
