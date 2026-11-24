@@ -61,11 +61,11 @@ def _stock() -> dict[int, dict]:
 
 
 def _heroic(map_id=36, name="Deadmines", encounter_ids=(), spawn_mask=True, event_spawns=False, entries=None,
-            no_credit=()):
+            no_credit=(), normal_only_creatures=()):
     return {
         "id": map_id, "map_id": map_id, "name": name, "heroic_entries": dict(entries or {}),
         "heroic": {"encounter_ids": tuple(encounter_ids), "spawn_mask": spawn_mask, "event_spawns": event_spawns,
-                   "no_credit": tuple(no_credit)},
+                   "no_credit": tuple(no_credit), "normal_only_creatures": tuple(normal_only_creatures)},
     }
 
 
@@ -194,6 +194,9 @@ class DeclarationTest(unittest.TestCase):
             (", encounter_ids=range(1000, 1007), no_credit=[0]", "no_credit must be positive"),
             (", encounter_ids=range(1000, 1007), no_credit=5", "no_credit must be a sequence"),
             (", no_credit=[164]", "no_credit needs encounter_ids"),
+            (", normal_only_creatures=['x']", "positive creature entries"),
+            (", normal_only_creatures=5", "sequence of creature entries"),
+            (", spawn_mask=False, normal_only_creatures=[1]", "needs spawn_mask"),
         ):
             with self.subTest(args=args), self.assertRaisesRegex(ValueError, pattern):
                 self._load(args)
@@ -391,6 +394,15 @@ class SpawnMaskTest(unittest.TestCase):
         )
         self.assertIn("WHERE `id` IN (\n    16399\n) AND `guid` IN (\n    50\n);", gameobject)
         self.assertIn("2 of 4 creature spawn(s) to set, 1 game event spawn(s) left normal-only", "\n".join(out.notes))
+
+    def test_normal_only_creatures_keep_their_spawns_off_heroic(self):
+        out = self._expand(_heroic(normal_only_creatures=(1729,)))
+        self.assertIn(
+            "UPDATE `creature` SET `spawnMask` = `spawnMask` | 2 WHERE `id` IN (\n    644\n) AND `guid` IN (\n"
+            "    10\n);", out.spawn_blocks[0],
+        )
+        self.assertNotIn("1729", out.spawn_blocks[0])
+        self.assertIn("2 normal_only_creatures spawn(s)", "\n".join(out.notes))
 
     def test_event_spawns_opt_in(self):
         out = self._expand(_heroic(event_spawns=True))

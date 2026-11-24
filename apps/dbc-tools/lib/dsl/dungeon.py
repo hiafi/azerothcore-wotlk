@@ -114,6 +114,7 @@ class HeroicSpec:
     overrides: tuple[tuple[int, tuple], ...] = ()  # (entry, sorted (key, value) pairs); see heroic()
     widen_smart_scripts: bool = True
     no_credit: tuple[int, ...] = ()  # normal DungeonEncounter ids whose heroic copy gets no instance_encounters row
+    normal_only_creatures: tuple[int, ...] = ()  # creature entries whose spawns on the map stay normal-only
 
 
 def heroic(
@@ -121,7 +122,7 @@ def heroic(
     reset_seconds: int = HEROIC_RESET_SECONDS, max_players: int = HEROIC_MAX_PLAYERS, message: str | None = None,
     encounter_ids=(), spawn_mask: bool = True, event_spawns: bool = False, tier: str = "vanilla",
     tier_values: dict | None = None, overrides: dict | None = None, widen_smart_scripts: bool = True,
-    no_credit=(),
+    no_credit=(), normal_only_creatures=(),
 ) -> HeroicSpec:
     """The heroic difficulty (Difficulty 1) of a 5-man dungeon, for `dungeon(..., heroic=...)`.
 
@@ -153,7 +154,10 @@ def heroic(
 
     `spawn_mask` (E2, default on: a heroic with no spawns is an empty instance with no doors) puts every creature and
     gameobject spawn of the map on heroic too; `event_spawns=True` includes the spawns a game event owns (holiday
-    bosses, Scourge Invasion), which stay normal-only by default."""
+    bosses, Scourge Invasion), which stay normal-only by default. `normal_only_creatures=(entry, ...)` keeps the
+    spawns of those creature entries normal-only too (the dungeon quest givers of the dungeon-quests plan: heroic is
+    level 60 and has no dungeon quests); their spawn rows are hand-written with `spawnMask` 1 and this keeps the
+    emitter from adding the heroic bit to them."""
     if message is None:
         message = f"Heroic Difficulty requires you to be level {min_level}."
     label = f"heroic(map_difficulty_id={map_difficulty_id!r}, ...)"
@@ -199,6 +203,18 @@ def heroic(
         raise ValueError(f"{label}: no_credit must be positive DungeonEncounter ids, got {no_credit!r}")
     if no_credit_ids and not encounters:
         raise ValueError(f"{label}: no_credit needs encounter_ids (it drops the credit of a heroic encounter copy)")
+    try:
+        normal_only = tuple(sorted(set(normal_only_creatures)))
+    except TypeError:
+        raise ValueError(
+            f"{label}: normal_only_creatures must be a sequence of creature entries, got {normal_only_creatures!r}"
+        ) from None
+    if not all(_plain_int(e) and e > 0 for e in normal_only):
+        raise ValueError(
+            f"{label}: normal_only_creatures must be positive creature entries, got {normal_only_creatures!r}"
+        )
+    if normal_only and not spawn_mask:
+        raise ValueError(f"{label}: normal_only_creatures needs spawn_mask=True (it leaves spawns out of the mask)")
     if not isinstance(widen_smart_scripts, bool):
         raise ValueError(f"{label}: widen_smart_scripts must be True or False, got {widen_smart_scripts!r}")
     if not isinstance(tier, str) or not tier:
@@ -217,7 +233,7 @@ def heroic(
         min_item_level=min_item_level, reset_seconds=reset_seconds, max_players=max_players, message=message,
         encounter_ids=encounters, spawn_mask=spawn_mask, event_spawns=event_spawns, tier=tier,
         tier_values=tuple(values), overrides=_overrides(label, overrides or {}),
-        widen_smart_scripts=widen_smart_scripts, no_credit=no_credit_ids,
+        widen_smart_scripts=widen_smart_scripts, no_credit=no_credit_ids, normal_only_creatures=normal_only,
     )
 
 

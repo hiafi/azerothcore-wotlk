@@ -555,6 +555,7 @@ class ReservationTest(unittest.TestCase):
             "spell": (205200, 205399), "creature": (300420, 300449), "gameobject": (301000, 301099),
             "spellvisual": (90340, 90369), "gameobjectdisplayinfo": (90020, 90029),
             "creaturedisplayinfo": (90700, 90719), "creaturemodeldata": (90700, 90719),
+            "item": (70900, 70909),  # dungeon quests Q1: the two quest items (items.csv rows)
         })
         self.assertEqual(dm["spell"][0], RESERVATIONS["mage"]["spell"]["end"] + 1)
         self.assertEqual(dm["creature"][0], RESERVATIONS["bossmechanics"]["creature"]["end"] + 1)

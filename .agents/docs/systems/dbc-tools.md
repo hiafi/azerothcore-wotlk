@@ -1208,6 +1208,11 @@ package by the `source/world/` pass). Things that are not obvious:
   still missing elsewhere). `sql_dump` itself still drops double-quoted INSERTs for every other table.
 - **`heroic_entries`** on the `dungeons` entry (normal -> heroic) is the heroic template generator's hand-off; empty,
   the per-creature emitters do nothing.
+- **`heroic(normal_only_creatures=(entry, ...))`** (dungeon quests Q1) keeps the spawns of those creature entries
+  off the spawnMask emitter: a hand-written spawn with `spawnMask` 1 (the Deadmines quest givers, 300431 and 300432)
+  stays normal-only, and the replay never queues a heroic-bit UPDATE for it. List the creature in the dungeon's
+  `extra=` with role `npc` as well, or the "live creature(s) on the map missing from the declaration" warning fires
+  (the CREATURES block is the extractor's, which reads only what is already live).
 
 ### E2 (WP-G): the creature lists and `lib/heroic_templates.py`
 
