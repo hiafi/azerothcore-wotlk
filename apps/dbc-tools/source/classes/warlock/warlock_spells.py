@@ -1929,9 +1929,11 @@ soulshatter_29858 = spell(
         Effect(type=EffectType.DUMMY, base_points=-51, implicit_target_a=22, implicit_target_b=15, radius_yards=50.0),
     ],
     spell_icon_id=1954,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 1024, 'AttributesEx3': 393216, 'AttributesEx4': 65536, 'AttributesEx5': 2, 'CastingTimeIndex': 1, 'InterruptFlags': 8, 'ProcChance': 101, 'MaxLevel': 72, 'BaseLevel': 66, 'SpellLevel': 66, 'DurationIndex': 0, 'RangeIndex': 1, 'Speed': 22.0, 'Reagent_1': 0, 'ReagentCount_1': 0, 'EquippedItemClass': -1, 'SpellVisualID_1': 7687, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces threat by $s1% for all enemies within $a1 yards.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes='pulled from existing data'
+          ' BaseLevel/SpellLevel 66 -> 46, trainable at 46 from trainer 214 (user ruling 31, 2026-11-24, docs audit: 40 + (stock level - 60), rounded up to an even level; it was on no live trainer).',
+    raw_overrides={'AttributesEx': 1024, 'AttributesEx3': 393216, 'AttributesEx4': 65536, 'AttributesEx5': 2, 'CastingTimeIndex': 1, 'InterruptFlags': 8, 'ProcChance': 101, 'MaxLevel': 72, 'BaseLevel': 46, 'SpellLevel': 46, 'DurationIndex': 0, 'RangeIndex': 1, 'Speed': 22.0, 'Reagent_1': 0, 'ReagentCount_1': 0, 'EquippedItemClass': -1, 'SpellVisualID_1': 7687, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces threat by $s1% for all enemies within $a1 yards.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
+trained_by(soulshatter_29858, trainer_id=214, req_level=46, money_cost=8400)
 
 
 spell_lock_19647 = spell(

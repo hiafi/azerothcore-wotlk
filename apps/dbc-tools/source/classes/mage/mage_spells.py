@@ -6,7 +6,7 @@ Split from a single source/classes/mage.py via split_class_file.py (.agents/plan
 
 from lib import potency as _potency
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
-from lib.dsl.registry import bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by, unbind_bonus_coefficients
+from lib.dsl.registry import bonus_coefficients, pot_text, scripted_by, skill_line_ability, spell, trained_by, unbind_bonus_coefficients
 from .mage_trigger_spells import arcane_blast_debuff, arcane_missile_7268, blizzard_42208, frost_talent_tooltip, meteor_impact_200096, molten_armor_34913
 
 
@@ -1363,9 +1363,11 @@ spellsteal_30449 = spell(
         Effect(type=126, implicit_target_a=6, misc_value=1),
     ],
     spell_icon_id=1961,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 70, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Steals a beneficial magic effect from the target.  This effect lasts a maximum of 2 min.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 16, 'SpellClassSet': 3, 'SpellLevel': 70, 'SpellVisualID_1': 7747, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data'
+          ' BaseLevel/SpellLevel 70 -> 50, trainable at 50 from trainer 212 (user ruling 31, 2026-11-24, docs audit: 40 + (stock level - 60), rounded up to an even level; it was on no live trainer).',
+    raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Steals a beneficial magic effect from the target.  This effect lasts a maximum of 2 min.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 16, 'SpellClassSet': 3, 'SpellLevel': 50, 'SpellVisualID_1': 7747, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+trained_by(spellsteal_30449, trainer_id=212, req_level=50, money_cost=12000)
 
 
 arcane_blast = spell(
@@ -1438,9 +1440,12 @@ molten_armor_30482 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=34, implicit_target_a=1, apply_aura=220, misc_value=1792),
     ],
     spell_icon_id=2307,
-    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 62); RealPointsPerLevel from rank1→top rank's own top level (80, chain has a gap at 60) slope (anchor rank 43046, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (43046, rank 3); MaxLevel set to 80",
-    raw_overrides={'AttributesEx4': 524288, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Causes $34913s1 Fire damage to attackers.  Chance to receive a critical hit reduced by $s2%.  Critical strike rating increased by $s3% of Spirit.', 'BaseLevel': 62, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $34913s1 Fire damage when hit, increases your critical strike rating by $30482s3% of your Spirit, and reduces the chance you are critically hit by $30482s2%.  Only one type of Armor spell can be active on the Mage at any time.  Lasts $30482d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_3': 4, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellClassMask_1': 262144, 'SpellClassSet': 3, 'SpellLevel': 62, 'SpellPriority': 50, 'SpellVisualID_1': 7757, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 62); RealPointsPerLevel from rank1→top rank's own top level (80, chain has a gap at 60) slope (anchor rank 43046, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (43046, rank 3); MaxLevel set to 80"
+          ' BaseLevel/SpellLevel 62 -> 42, trainable at 42 from trainer 212 (user ruling 31, 2026-11-24, docs audit: 40 + (stock level - 60), rounded up to an even level; it was on no live trainer).'
+          ' Tooltip and buff: $34913s1 (the raw base points of a potency effect) -> its potency text (2026-11-24, docs audit).',
+    raw_overrides={'AttributesEx4': 524288, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Causes ' + pot_text(molten_armor_34913) + ' Fire damage to attackers.  Chance to receive a critical hit reduced by $s2%.  Critical strike rating increased by $s3% of Spirit.', 'BaseLevel': 42, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes ' + pot_text(molten_armor_34913) + ' Fire damage when hit, increases your critical strike rating by $30482s3% of your Spirit, and reduces the chance you are critically hit by $30482s2%.  Only one type of Armor spell can be active on the Mage at any time.  Lasts $30482d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_3': 4, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellClassMask_1': 262144, 'SpellClassSet': 3, 'SpellLevel': 42, 'SpellPriority': 50, 'SpellVisualID_1': 7757, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+trained_by(molten_armor_30482, trainer_id=212, req_level=42, money_cost=6600)
 
 
 portal_exodar_32266 = spell(
@@ -1688,9 +1693,11 @@ ritual_of_refreshment_43987 = spell(
         Effect(type=50, implicit_target_a=47, misc_value=186811, radius_yards=5.0),
     ],
     spell_icon_id=2267,
-    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 70); RealPointsPerLevel from rank1→top rank's own top level (80, chain has a gap at 60) slope (anchor rank 58659, rank 2); coefficient/cast_time_ms/mana_cost_pct from max rank (58659, rank 2); MaxLevel set to 80",
-    raw_overrides={'AttributesEx': 131076, 'AttributesEx3': 1073741824, 'AttributesEx5': 8194, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 70, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 48142, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Begins a ritual that creates a refreshment table.  Raid members can click the table to acquire Conjured Mana Biscuits.  The tables lasts for $43985d or 50 charges.  Requires the caster and 2 additional party members to complete the ritual.  In order to participate, all players must right-click the refreshment portal and not move until the ritual is complete.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 31, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 2, 'Reagent_1': 17020, 'SpellClassSet': 3, 'SpellLevel': 70, 'SpellPriority': 50, 'SpellVisualID_1': 9860, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 70); RealPointsPerLevel from rank1→top rank's own top level (80, chain has a gap at 60) slope (anchor rank 58659, rank 2); coefficient/cast_time_ms/mana_cost_pct from max rank (58659, rank 2); MaxLevel set to 80"
+          ' BaseLevel/SpellLevel 70 -> 50, trainable at 50 from trainer 212 (user ruling 31, 2026-11-24, docs audit: 40 + (stock level - 60), rounded up to an even level; it was on no live trainer).',
+    raw_overrides={'AttributesEx': 131076, 'AttributesEx3': 1073741824, 'AttributesEx5': 8194, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 48142, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Begins a ritual that creates a refreshment table.  Raid members can click the table to acquire Conjured Mana Biscuits.  The tables lasts for $43985d or 50 charges.  Requires the caster and 2 additional party members to complete the ritual.  In order to participate, all players must right-click the refreshment portal and not move until the ritual is complete.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 31, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 2, 'Reagent_1': 17020, 'SpellClassSet': 3, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 9860, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+trained_by(ritual_of_refreshment_43987, trainer_id=212, req_level=50, money_cost=12000)
 
 
 frostfire_bolt_44614 = spell(
@@ -1714,10 +1721,12 @@ frostfire_bolt_44614 = spell(
     spell_icon_id=2946,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 75); RealPointsPerLevel from rank1→top rank's own top level (84, chain has a gap at 60) slope (anchor rank 47610, rank 2); coefficient/mana_cost_pct from max rank (47610, rank 2); MaxLevel set to 80. PLAN A9 (druid-rework code review finding #9): cast_time_ms was already 2500 but raw CastingTimeIndex (14, 3000ms) was still winning underneath - dropped so there's no behaviour change from what the DSL claimed. | potency system P5 (Mage pass): eff2 converted to sp_potency=152.5 (mage-potency-proposals.txt), eff3 to sp_potency=3.7 (potency-report default, base/coef already agreed)."
           ' Effect 2 sp_potency 152.5 -> 117.425 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Frost x0.770).'
-          ' Effect 3 sp_potency 3.7 -> 2.849 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Frost x0.770).',
+          ' Effect 3 sp_potency 3.7 -> 2.849 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Frost x0.770).'
+          ' BaseLevel/SpellLevel 75 -> 56, trainable at 56 from trainer 212 (user ruling 31, 2026-11-24, docs audit: 40 + (stock level - 60), rounded up to an even level; it was on no live trainer).',
     tooltip_vars=frost_talent_tooltip,
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement slowed by $s1%.  {pot3} Frostfire damage every $t3 sec.', 'BaseLevel': 75, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Launches a bolt of frostfire at the enemy, causing {pot2*mult} Frostfire damage, slowing movement speed by $s1% and causing an additional {pot3.total*mult} Frostfire damage over $d. This spell will be checked against the lower of the target's Frost and Fire resists.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 28.0, 'SpellClassMask_2': 4096, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 75, 'SpellPriority': 50, 'SpellVisualID_1': 12253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement slowed by $s1%.  {pot3} Frostfire damage every $t3 sec.', 'BaseLevel': 56, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Launches a bolt of frostfire at the enemy, causing {pot2*mult} Frostfire damage, slowing movement speed by $s1% and causing an additional {pot3.total*mult} Frostfire damage over $d. This spell will be checked against the lower of the target's Frost and Fire resists.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 28.0, 'SpellClassMask_2': 4096, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 56, 'SpellPriority': 50, 'SpellVisualID_1': 12253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+trained_by(frostfire_bolt_44614, trainer_id=212, req_level=56, money_cost=18000)
 
 
 ice_block_45438 = spell(
@@ -1890,9 +1899,11 @@ mirror_image_55342 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=226, amplitude=1000, trigger_spell=58836),
     ],
     spell_icon_id=331,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 131072, 'AttributesEx5': 402653184, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Copies of the caster that attack on their own.', 'AuraInterruptFlags': 4718592, 'BaseLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Creates $<images> copies of the caster nearby, which cast spells and attack the mage's enemies.  Lasts $55342d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 32, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 2097152, 'SpellClassSet': 3, 'SpellDescriptionVariableID': 86, 'SpellLevel': 80, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data'
+          ' BaseLevel/SpellLevel 80 -> 60, trainable at 60 from trainer 212 (user ruling 31, 2026-11-24, docs audit: 40 + (stock level - 60), rounded up to an even level; it was on no live trainer).',
+    raw_overrides={'AttributesEx': 131072, 'AttributesEx5': 402653184, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Copies of the caster that attack on their own.', 'AuraInterruptFlags': 4718592, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Creates $<images> copies of the caster nearby, which cast spells and attack the mage's enemies.  Lasts $55342d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 32, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 2097152, 'SpellClassSet': 3, 'SpellDescriptionVariableID': 86, 'SpellLevel': 60, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+trained_by(mirror_image_55342, trainer_id=212, req_level=60, money_cost=22000)
 
 
 glacial_spike_200002 = spell(
