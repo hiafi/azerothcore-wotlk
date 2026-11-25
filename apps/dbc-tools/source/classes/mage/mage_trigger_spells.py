@@ -9,7 +9,7 @@ from lib.dsl import (
     RANGE_SELF, AuraType, CombatRating, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp,
 )
 from lib.dsl.registry import (
-    bonus_coefficients, knows, linked_spell, procs_on, product, scripted_by, spell, talent_mult, tooltip_vars,
+    bonus_coefficients, knows, linked_spell, procs_on, product, scripted_by, spell, talent_mult, tooltip_vars, unbind_script,
     unbind_bonus_coefficients,
 )
 
@@ -5958,6 +5958,14 @@ heating_up_200044 = spell(
 # ---- Phase 3: spell_script_names bindings for the new/modified scripts below ---------------
 scripted_by(flame_throwing_12353, 'spell_mage_flame_throwing_capstone')
 scripted_by(-burnout_44449.id, 'spell_mage_burnout_capstone')
+# Burnout's capstone procs on any direct hit, not only crits (2026-11-24, docs audit). The stock row asked for crits
+# (HitMask 2) with an 8 ms cooldown. The family mask is the stock one (the mage's direct damage spells) plus Meteor's impact
+# 200096 (d2 0x20). It also keeps the script-cast vehicles out (Ignite tick 200098, Burnout explosion 200116, Flashpoint
+# 200119), which are direct Fire damage too. spell_mage_burnout_capstone's CheckProc asks for rank 3 and splits Fire / non-Fire.
+procs_on(-burnout_44449.id, proc_flags=0x10000, family_name=3, family_mask=(0x20E21277, 0x19048, 0x20),
+         spell_type_mask=1, spell_phase_mask=2, hit_mask=0, chance=100)
+# The stock mana drain (a share of a crit's cost) read EFFECT_1, which is the capstone marker now: rank 3 paid 1% of it.
+unbind_script(-burnout_44449.id, 'spell_mage_burnout')
 scripted_by(-playing_with_fire_31638.id, 'spell_mage_playing_with_fire')
 scripted_by(blazing_speed_200107, 'spell_mage_blazing_speed_capstone')
 # warlock-rework AFFLICTION §7 header / SHARED §4 (leech-talent exclusivity, additive binding -
