@@ -179,7 +179,7 @@ class BlockShapeTest(unittest.TestCase):
     def test_talent_tab_and_spell_blocks_are_unchanged(self):
         # The earlier blocks keep their numbers: a reader that hardcodes one must keep working.
         self.assertEqual(_bounds(BLOCKS["spell"]), {"start": 200000, "end": 399999})
-        self.assertEqual(BLOCKS["creature"], {"start": 300000, "end": 300999})
+        self.assertEqual(BLOCKS["creature"], {"start": 300000, "end": 301199})
         self.assertEqual(BLOCKS["spell_group"], {"start": 1200, "end": 1399})  # widened by Rogue T1 (was 1299)
         self.assertEqual(BLOCKS["spellicon"], {"start": 90100, "end": 90499})  # widened by Rogue T1 (was 90399)
 
@@ -856,6 +856,31 @@ class RagefireChasmGearIdsTest(unittest.TestCase):
                          RESERVATIONS["ragefire_chasm_items"]["spell"]["start"])
         self.assertEqual(RESERVATIONS["scarlet_monastery"]["creature"]["end"] + 1,
                          RESERVATIONS["ragefire_chasm_items"]["creature"]["start"])
+
+
+class ZulFarrakGearIdsTest(unittest.TestCase):
+    """Zul'Farrak gear stage (WP-0, 2026-11-25): the `zul_farrak_items` reservation, pinned exactly
+    (zul-farrak-gear.HANDOFF.md s4). The dungeon build adds its own reservation after these ids."""
+
+    def test_zul_farrak_items_reservation(self):
+        got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["zul_farrak_items"].items()}
+        self.assertEqual(got, {"spell": (213800, 213839), "creature": (301000, 301004)})
+
+    def test_zul_farrak_items_overlaps_no_other_reservation(self):
+        for table, cfg in RESERVATIONS["zul_farrak_items"].items():
+            for owner, tables in RESERVATIONS.items():
+                if owner != "zul_farrak_items" and table in tables:
+                    self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
+
+    def test_zul_farrak_items_sit_inside_the_blocks(self):
+        for table, cfg in RESERVATIONS["zul_farrak_items"].items():
+            self.assertTrue(BLOCKS[table]["start"] <= cfg["start"] and cfg["end"] <= BLOCKS[table]["end"], table)
+
+    def test_the_ranges_start_after_the_ragefire_chasm_build(self):
+        self.assertEqual(RESERVATIONS["ragefire_chasm"]["spell"]["end"] + 1,
+                         RESERVATIONS["zul_farrak_items"]["spell"]["start"])
+        self.assertEqual(RESERVATIONS["ragefire_chasm"]["creature"]["end"] + 1,
+                         RESERVATIONS["zul_farrak_items"]["creature"]["start"])
 
 
 class RagefireChasmIdsTest(unittest.TestCase):
