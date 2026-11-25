@@ -17,6 +17,7 @@
 
 #include "SimProfile.h"
 #include "Log.h"
+#include "SimBuffSet.h"
 #include "SimMechanics.h"
 #include "StringFormat.h"
 #include "Unit.h"
@@ -325,6 +326,19 @@ bool SimProfile::Load(std::string const& path, Profile& out)
                     path, lineNo, value);
                 return false;
             }
+        }
+        else if (key == "BuffSet")
+        {
+            SimBuffSet::Set set = SimBuffSet::Set::SelfOnly;
+            std::string error;
+            if (!SimBuffSet::ParseSet(value, set, error))
+            {
+                LOG_ERROR("server.dpssim", "mod-dpssim: SimProfile::Load() - '{}' line {}: 'BuffSet' value {}.", path,
+                    lineNo, error);
+                return false;
+            }
+
+            parsed.BuffSet = value;
         }
         else if (key == "PlayerbotGlyphs")
         {

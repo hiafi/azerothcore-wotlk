@@ -38,6 +38,9 @@
 
 namespace
 {
+    // The level whose class buff values the raid buff scrolls carry (DpsSim.BuffSet full_raid)
+    constexpr uint8 RAID_SCROLL_LEVEL = 60;
+
     // Derives iteration i's own report path from the single DpsSim.ReportPath the conf gives -
     // "<base>.json" -> "<base>.iter<i>.json" (or "<base>.iter<i>" if ReportPath didn't end in
     // ".json" to begin with, though by convention it always does - see that key's own conf doc
@@ -222,6 +225,7 @@ void DpsSimWorldScript::OnDpsSimRun()
         // defaults (CLASS_MAGE, no gear, no stats - a naked caster) - gear/stats have no flat
         // conf-key equivalent, they only exist via a profile.
         std::string const profilePath = sConfigMgr->GetOption<std::string>("DpsSim.Profile", "");
+        std::string profileBuffSet;
         if (!profilePath.empty())
         {
             SimProfile::Profile profile;
@@ -249,6 +253,7 @@ void DpsSimWorldScript::OnDpsSimRun()
                 config.AuraSampleIds = profile.AuraSampleIds;
                 config.PlayerbotGlyphs = profile.PlayerbotGlyphs;
                 config.PetCreatureEntry = profile.PetCreatureEntry;
+                profileBuffSet = profile.BuffSet;
                 if (profile.HealMode)
                 {
                     // DpsSim.HealGroup / DpsSim.HealTargets in the conf override the profile's HealGroup / HealTargets
@@ -503,24 +508,32 @@ void DpsSimWorldScript::OnDpsSimRun()
             }
         }
 
-        // DpsSim.BuffSet (self_only | full_raid) and the full_raid lists, DPS mode only (SimBuffSet.h)
+        // DpsSim.BuffSet (self_only | full_raid; empty = the profile's BuffSet, else self_only) and the full_raid
+        // lists, DPS mode only (SimBuffSet.h)
         {
             std::string error;
             SimBuffSet::Config& buffSet = config.BuffSet;
-            if (!SimBuffSet::ParseSet(sConfigMgr->GetOption<std::string>("DpsSim.BuffSet", "self_only"),
-                buffSet.BuffSet, error))
+            // The sim adds every baseline aura with the actor as its caster, so the lists hold only spells the actor's
+            // class does not own (it would see the aura as its own: its bot skips the cast, or the two replace each
+            // other every second). See SimBuffSet.h.
+            bool const hunter = config.ActorClass == CLASS_HUNTER;
+            buffSet.OwnBuffWins = !hunter;
+            std::string setText = sConfigMgr->GetOption<std::string>("DpsSim.BuffSet", "");
+            // The profile's key is for its DPS runs: a mechanics run of the same profile stays self_only
+            if (setText.empty() && config.RunMode == SimDaemon::Mode::Dps)
+                setText = profileBuffSet;
+            if (setText.empty())
+                setText = "self_only";
+            if (!SimBuffSet::ParseSet(setText, buffSet.BuffSet, error))
                 error = "DpsSim.BuffSet: " + error;
             else if (buffSet.BuffSet == SimBuffSet::Set::FullRaid)
             {
                 if (config.RunMode != SimDaemon::Mode::Dps)
                     error = "DpsSim.BuffSet full_raid is for DPS runs only (not heal, tank or mechanics)";
-                // The sim adds every baseline aura with the actor as its caster, so a class that owns one of these
-                // spells would see the aura as its own (a warrior's Thunder Clap, a paladin's Kings: its bot skips
-                // the cast, or the two replace each other every second). The hunter owns none of them. Other
-                // classes need a neutral caster first, see the README.
-                else if (config.ActorClass != CLASS_HUNTER)
-                    error = "DpsSim.BuffSet full_raid is for hunter actors only: the sim adds the raid auras with the "
-                        "actor as their caster, which breaks a class that owns one of those spells";
+                // The scrolls have one fixed amount, the level 60 one
+                else if (!hunter && config.ActorLevel != RAID_SCROLL_LEVEL)
+                    error = Acore::StringFormat("DpsSim.BuffSet full_raid is for level {} actors (the raid scrolls' "
+                        "amounts are fixed), not level {}", RAID_SCROLL_LEVEL, config.ActorLevel);
 
                 struct ListKey
                 {
@@ -529,17 +542,23 @@ void DpsSimWorldScript::OnDpsSimRun()
                     std::vector<SimBuffSet::AuraSpec>* Out;
                 };
                 ListKey const lists[] = {
-                    {"DpsSim.RaidBuffs", SimBuffSet::DEFAULT_RAID_BUFFS, &buffSet.Buffs},
-                    {"DpsSim.RaidDebuffs", SimBuffSet::DEFAULT_RAID_DEBUFFS, &buffSet.Debuffs},
-                    {"DpsSim.RaidPullBuffs", SimBuffSet::DEFAULT_RAID_PULL_BUFFS, &buffSet.PullBuffs}};
+                    {"DpsSim.RaidBuffs", hunter ? SimBuffSet::DEFAULT_RAID_BUFFS_HUNTER :
+                        SimBuffSet::DEFAULT_RAID_BUFFS, &buffSet.Buffs},
+                    {"DpsSim.RaidDebuffs", hunter ? SimBuffSet::DEFAULT_RAID_DEBUFFS_HUNTER :
+                        SimBuffSet::DEFAULT_RAID_DEBUFFS, &buffSet.Debuffs},
+                    {"DpsSim.RaidPullBuffs", SimBuffSet::DEFAULT_RAID_PULL_BUFFS, &buffSet.PullBuffs},
+                    {"DpsSim.RaidFlasks", SimBuffSet::DEFAULT_RAID_FLASKS, &buffSet.Flasks}};
                 for (ListKey const& list : lists)
                 {
                     if (!error.empty())
                         break;
 
                     std::string listError;
-                    if (!SimBuffSet::ParseAuraList(sConfigMgr->GetOption<std::string>(list.Key, list.Default),
-                        *list.Out, listError) || !SimBuffSet::Validate(*list.Out, listError))
+                    std::string text = sConfigMgr->GetOption<std::string>(list.Key, "default");
+                    if (StringEqualI(text, "default"))
+                        text = list.Default;
+                    if (!SimBuffSet::ParseAuraList(text, *list.Out, listError) ||
+                        !SimBuffSet::Validate(*list.Out, listError))
                         error = Acore::StringFormat("{}: {}", list.Key, listError);
                 }
             }
@@ -555,6 +574,8 @@ void DpsSimWorldScript::OnDpsSimRun()
                         SimBuffSet::Describe(buffSet.Debuffs));
                     LOG_INFO("server.dpssim", "mod-dpssim:   at the pull (actor and pet): {}",
                         SimBuffSet::Describe(buffSet.PullBuffs));
+                    LOG_INFO("server.dpssim", "mod-dpssim:   flasks (the actor, by its highest of Strength, Agility, "
+                        "Intellect): {}", SimBuffSet::Describe(buffSet.Flasks));
                 }
             }
             else

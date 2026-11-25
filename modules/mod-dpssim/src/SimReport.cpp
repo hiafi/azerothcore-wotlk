@@ -147,6 +147,19 @@ static bool WriteDpsReport(std::string const& path, SimDaemon::RunConfig const& 
     // spells DpsSim.DisableSpells took out of the spellbooks, so a sweep can tell its reports apart
     file << "    \"petCreatureEntry\": " << config.PetCreatureEntry << ",\n";
     file << "    \"buffSet\": \"" << SimBuffSet::SetName(config.BuffSet.BuffSet) << "\",\n";
+    if (config.BuffSet.BuffSet == SimBuffSet::Set::FullRaid)
+    {
+        // The flask (0 = none) and the raid buffs the actor's own equal or stronger ones replaced (OwnBuffWins)
+        file << "    \"raidFlask\": " << config.BuffSet.State.FlaskId << ",\n";
+        file << "    \"raidOwnKept\": [";
+        char const* separator = "";
+        for (uint32 spellId : config.BuffSet.State.OwnKeptLogged)
+        {
+            file << separator << spellId;
+            separator = ", ";
+        }
+        file << "],\n";
+    }
     file << "    \"disabledSpells\": [";
     for (size_t i = 0; i < config.DisableSpells.size(); ++i)
         file << (i ? ", " : "") << config.DisableSpells[i];

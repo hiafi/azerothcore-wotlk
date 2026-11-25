@@ -346,6 +346,7 @@ namespace
 
         SimBuffSet::Phase const phase =
             config.BuffSet.State.InitialLogged ? SimBuffSet::Phase::Refresh : SimBuffSet::Phase::Initial;
+        SimBuffSet::BeginIteration(config.BuffSet, player, dummies);
         SimBuffSet::ApplyPinned(config.BuffSet, player, dummies, phase);
         SimBuffSet::ApplyPullBuffs(config.BuffSet, player, phase);
         config.BuffSet.State.InitialLogged = true;
