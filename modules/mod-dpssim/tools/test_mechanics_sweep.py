@@ -220,6 +220,29 @@ class SweepIndexTests(unittest.TestCase):
         self.assertEqual(tags1 & tags2, set())
 
     # ---- D2: a program longer than the fight ----
+    def test_ragefire_shapes_bars_and_groups(self):
+        # Ragefire Chasm WP-G1: the pools take every member (reference bars), three group tags, the chase circles, the
+        # kicked school's bar and the hard mode bursts reported, three 60 s cycles
+        e = self.entry("ragefire-chasm-shapes:3",
+                       actor_failures={"Hit": {"Zone/1": 6, "Zone/2": 2, "Zone/11": 2, "Hide/12": 1, "Hide/13": 1,
+                                               "Zone/17": 4, "Zone/19": 3, "Spread/6": 1}},
+                       ref_failures={"ProtWarriorTankSim": {"Hit": {"Zone/10": 2, "Zone/8": 5}},
+                                     "FireMageSim": {"Hit": {"Zone/11": 3, "Zone/5": 1}}},
+                       group={"MissedSoak": {"Soak/7": 2, "Soak/14": 2, "Soak/15": 15, "Soak/16": 1,
+                                             "Soak/20": 2, "Soak/21": 2}},
+                       config={"durationMs": 180000})
+        self.assertEqual(self.bar_problems(e), ["bar: Hide/12 x1 (bar 0), Hide/13 x1 (bar 0), Zone/2 x2 (bar 1)",
+                                                "reference ProtWarriorTankSim bar: Zone/10 x2 (bar 1)",
+                                                "reference FireMageSim bar: Zone/11 x3 (bar 2)",
+                                                "group bar: Soak/16 x1 (bar 0), Soak/20 x2 (bar 1), Soak/7 x2 (bar 1)"])
+        self.assertEqual(e["reportedHits"], {"Zone/1": 6, "Zone/17": 4, "Zone/19": 3})
+        self.assertEqual(ms.program_length_ms("ragefire-chasm-shapes"), (180000, [("ragefire-chasm-shapes", 0)]))
+        self.assertEqual(ms.program_warnings("ragefire-chasm-shapes:3", 180000), [])
+        self.assertEqual(len(ms.program_warnings("ragefire-chasm-shapes:3", 120000)), 1)
+        bar = ms.DRILL_BARS["ragefire-chasm-shapes"]
+        self.assertTrue(set(bar["references"]) <= set(bar["gated"]))
+        self.assertFalse(set(bar["group"]) & (set(bar["gated"]) | bar["reported"]))
+
     def test_comma_program_length_and_late_entries(self):
         length, starts = ms.program_length_ms("deadmines-followups,sfk-hunt,scholomance-shapes")
         self.assertEqual(length, 248000)
@@ -312,7 +335,8 @@ class BarTableMatchesTheModule(unittest.TestCase):
                              ("blackrock-depths-shapes", "kBrdBarTags"),
                              ("blackrock-depths-shapes-2", "kBrd2BarTags"),
                              ("scarlet-monastery-shapes", "kSmBarTags"),
-                             ("scarlet-monastery-shapes-2", "kSm2BarTags")):
+                             ("scarlet-monastery-shapes-2", "kSm2BarTags"),
+                             ("ragefire-chasm-shapes", "kRfcBarTags")):
             self.assertEqual(set(ms.DRILL_BARS[drill]["gated"]), self.array(array), drill)
         self.assertEqual(set(ms.DRILL_BARS["blackrock-depths-shapes-2"]["group"]), self.array("kBrd2GroupTags"))
         self.assertEqual(set(ms.DRILL_BARS["scarlet-monastery-shapes"]["group"]), self.array("kSmGroupTags"))
@@ -321,6 +345,8 @@ class BarTableMatchesTheModule(unittest.TestCase):
         self.assertEqual(set(ms.DRILL_BARS["scarlet-monastery-shapes-2"]["group"]), self.array("kSm2GroupTags"))
         self.assertEqual(set(ms.DRILL_BARS["scarlet-monastery-shapes-2"]["references"]),
                          self.array("kSm2ReferenceTags"))
+        self.assertEqual(set(ms.DRILL_BARS["ragefire-chasm-shapes"]["group"]), self.array("kRfcGroupTags"))
+        self.assertEqual(set(ms.DRILL_BARS["ragefire-chasm-shapes"]["references"]), self.array("kRfcReferenceTags"))
 
     def test_every_tag_and_cycle(self):
         seen = set()
@@ -336,6 +362,8 @@ class BarTableMatchesTheModule(unittest.TestCase):
             used = {int(t) for t in re.findall(r"\btag=(\d+)", block)}
             if "bell=" in block:    # BellLandingTag, BellRingerTag: the bell tag + 1 and + 2
                 used |= {t + d for t in used for d in (1, 2) if re.search(r"bell=[^\n]*tag=" + str(t) + r"\b", block)}
+            # a mound's eruption counts under its tag + 1 (MoundEruptTag)
+            used |= {int(t) + 1 for t in re.findall(r"\bmound [^;]*?\btag=(\d+)", block)}
             known = set(bar["gated"]) | bar["reported"] | set(bar["group"])
             self.assertEqual(used - known, set(), name)
         self.assertEqual(seen, set(ms.DRILL_BARS))

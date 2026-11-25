@@ -534,6 +534,29 @@ def _sm_heroic_credits() -> list[dict]:
     return rows
 
 
+# Ragefire Chasm (map 389, the Ragefire Chasm build WP-H): the one stock finder entry (4) ends on Taragaman the
+# Hungerer (431, `lastEncounterDungeon` 4), whose heroic copy 1098 completes the heroic entry 318. Entry 4 has no
+# lfg_dungeon_template row (the Finder falls back to the areatrigger), so the heroic entry copies no start.
+RFC_HEROIC_FIRST = 1095
+RFC_ENCOUNTERS = {431: "Taragaman the Hungerer"}
+RFC_CREDITS = {431: (11520, 4)}
+RFC_HEROIC = {1098: (431, 4)}  # heroic id -> (normal, lfg)
+
+
+def _rfc_normal_credits() -> dict:
+    return {e: {"entry": e, "creditType": 0, "creditEntry": c, "lastEncounterDungeon": lfg,
+                "comment": RFC_ENCOUNTERS[e]} for e, (c, lfg) in RFC_CREDITS.items()}
+
+
+def _rfc_heroic_credits() -> list[dict]:
+    rows = []
+    for heroic_id, (normal, lfg) in RFC_HEROIC.items():
+        row = _credit(heroic_id, lfg, RFC_CREDITS[normal][0])
+        row[lfg_dungeons.NORMAL_ENTRY_KEY] = normal
+        rows.append(row)
+    return rows
+
+
 def _brd_run(text: str = BRD_TEXT, live_links: dict | None = None, **kw):
     kw.setdefault("stock_dungeons", _brd_stock())
     kw.setdefault("encounters", _brd_encounters())
@@ -561,7 +584,12 @@ def _heroic_links(dsl: dict) -> dict[int, int]:
 
 def _sm_heroic_links(dsl: dict) -> dict[int, int]:
     return {r["entry"]: r["lastEncounterDungeon"] for r in dsl["instance_encounters"]
-            if lfg_dungeons.NORMAL_ENTRY_KEY in r and r["entry"] >= SM_HEROIC_FIRST}
+            if lfg_dungeons.NORMAL_ENTRY_KEY in r and SM_HEROIC_FIRST <= r["entry"] < RFC_HEROIC_FIRST}
+
+
+def _rfc_heroic_links(dsl: dict) -> dict[int, int]:
+    return {r["entry"]: r["lastEncounterDungeon"] for r in dsl["instance_encounters"]
+            if lfg_dungeons.NORMAL_ENTRY_KEY in r and r["entry"] >= RFC_HEROIC_FIRST}
 
 
 class SectionTest(unittest.TestCase):
@@ -922,6 +950,8 @@ class RealSourceTest(unittest.TestCase):
             (310, "heroic", 30), (311, "heroic", 308), (312, "heroic", 309), (313, "heroic", 276),
             # Scarlet Monastery: the four heroic entries (314-317) of its four stock entries
             (314, "heroic", 18), (315, "heroic", 165), (316, "heroic", 163), (317, "heroic", 164),
+            # Ragefire Chasm: the one heroic entry (318) of its stock entry 4
+            (318, "heroic", 4),
             (30, "override", None), (308, "dungeon", None), (309, "dungeon", None), (276, "override", None),
         ])
         random = self.dsl["lfg_dungeon_declarations"][0]
@@ -937,10 +967,11 @@ class RealSourceTest(unittest.TestCase):
                                                                (289, "Scholomance"), (329, "Stratholme"),
                                                                (229, "Blackrock Spire"),
                                                                (230, "Blackrock Depths"),
-                                                               (189, "Scarlet Monastery"))]
+                                                               (189, "Scarlet Monastery"),
+                                                               (389, "Ragefire Chasm"))]
         dsl["instance_encounters"] = [_credit(1006, 6), _credit(1014, 8), _credit(1027, 2), _credit(1033, 40),
                                       _credit(1040, 274), _credit(1049, 32, 9568), _credit(1054, 44, 10363),
-                                      *_brd_heroic_credits(), *_sm_heroic_credits()]
+                                      *_brd_heroic_credits(), *_sm_heroic_credits(), *_rfc_heroic_credits()]
         out = lfg_dungeons.expand(dsl, lambda: lfg_dungeons.LfgInputs(
             stock_dungeons={int(r["ID"]): r for r in dbcfile.read_dbc(dungeons_file, dbcfmt.LFGDUNGEONS)},
             stock_groups={int(r["ID"]): r for r in dbcfile.read_dbc(groups_file, dbcfmt.LFGDUNGEONGROUP)},
@@ -953,8 +984,11 @@ class RealSourceTest(unittest.TestCase):
                        276: {"dungeonId": 276, "name": "Blackrock Depths - Upper City", "position_x": 458.32,
                              "position_y": 26.52, "position_z": -70.67, "orientation": 4.95, "VerifiedBuild": 0}},
             encounters={**_brd_encounters(), **{e: {"ID": e, "MapID": 189, "Difficulty": 0, "Name_Lang_enUS": n}
-                                                for e, n in SM_ENCOUNTERS.items()}},
-            credits={**_brd_credits(), **_sm_normal_credits()}, base_credits={**_brd_credits(), **_sm_normal_credits()},
+                                                for e, n in SM_ENCOUNTERS.items()},
+                        **{e: {"ID": e, "MapID": 389, "Difficulty": 0, "Name_Lang_enUS": n}
+                           for e, n in RFC_ENCOUNTERS.items()}},
+            credits={**_brd_credits(), **_sm_normal_credits(), **_rfc_normal_credits()},
+            base_credits={**_brd_credits(), **_sm_normal_credits(), **_rfc_normal_credits()},
         ))
         self.assertEqual(out.errors, [])
         self.assertEqual(out.warnings, [])
@@ -979,6 +1013,8 @@ class RealSourceTest(unittest.TestCase):
             315: ("Scarlet Monastery - Library", 189, 5, 1, 12),
             316: ("Scarlet Monastery - Armory", 189, 5, 1, 12),
             317: ("Scarlet Monastery - Cathedral", 189, 5, 1, 12),
+            # Ragefire Chasm: the heroic entry of the stock entry 4 (the Ragefire Chasm build)
+            318: ("Ragefire Chasm", 389, 5, 1, 12),
         })
         self.assertEqual([c["lastEncounterDungeon"] for c in dsl["instance_encounters"][:7]],
                          [301, 302, 303, 304, 305, 306, 307])
@@ -990,6 +1026,9 @@ class RealSourceTest(unittest.TestCase):
         # Scarlet Monastery: each heroic section completes on the heroic copy of its stock last boss (Thalnos 1084 ends
         # 314, Doan 1088 ends 315, Herod 1091 ends 316, Whitemane 1094 ends 317); the four normal rows are untouched
         self.assertEqual(_sm_heroic_links(dsl), {1084: 314, 1088: 315, 1091: 316, 1094: 317})
+        # Ragefire Chasm: the heroic Taragaman (1098) completes the heroic entry 318; the normal row 431 is untouched
+        self.assertEqual(_rfc_heroic_links(dsl), {1098: 318})
+        self.assertNotIn(318, {t["dungeonId"] for t in dsl["lfg_dungeon_templates"]})  # entry 4 has no start row
         # row 44: a dungeon entry (Flags 3, levels 55-65), the rest of the stock row kept; row 307 copies it
         edited = next(r for r in dsl["lfg_dungeons"] if r["ID"] == 44)
         stock_44 = next(r for r in dbcfile.read_dbc(dungeons_file, dbcfmt.LFGDUNGEONS) if r["ID"] == 44)
@@ -1037,7 +1076,7 @@ class RealSourceTest(unittest.TestCase):
         back = {r["ID"]: r for r in scope.read_dbc_bytes(blob, dbcfmt.LFGDUNGEONS)}
         self.assertEqual(back[301]["TextureFilename"], back[6]["TextureFilename"])
         self.assertEqual(back[300]["Name_Lang_enUS"], "Random Classic Heroic")
-        self.assertEqual(len(back), len(base) + 18)  # eighteen new ids (300-317); row 44 replaces a stock row
+        self.assertEqual(len(back), len(base) + 19)  # nineteen new ids (300-318); row 44 replaces a stock row
         self.assertEqual((back[44]["TypeID"], back[44]["Group_Id"], back[44]["Flags"]), (1, 1, 3))
 
 

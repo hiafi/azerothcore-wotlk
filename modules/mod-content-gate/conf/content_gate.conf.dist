@@ -77,7 +77,7 @@ ContentGate.Enable = 1
 #
 
 ContentGate.Open.Instances.EasternKingdoms = "33:N,H 34:N 36:N,H 70:N 90:N 109:N 189:N,H 229:N,H 230:N,H 289:N,H 329:N,H"
-ContentGate.Open.Instances.Kalimdor = "43:N 47:N 48:N 129:N 209:N 349:N 389:N 429:N"
+ContentGate.Open.Instances.Kalimdor = "43:N 47:N 48:N 129:N 209:N 349:N 389:N,H 429:N"
 ContentGate.Open.Instances.Raids = ""
 ContentGate.Open.Instances.TBC = ""
 ContentGate.Open.Instances.WotLK = ""

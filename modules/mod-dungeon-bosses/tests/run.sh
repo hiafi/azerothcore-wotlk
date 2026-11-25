@@ -2,7 +2,7 @@
 # Builds and runs the standalone mod-dungeon-bosses tests with every available host compiler (g++ and clang++).
 # Pure headers only (src/<Dungeon>/*Logic.h, src/DungeonSets/*Logic.h, DeadminesKitMath.h, DeadminesRework.h,
 # ShadowfangKeepRework.h, ScholomanceRework.h, SoloLessonLogic.h, StratholmeRework.h, BlackrockSpireRework.h,
-# BlackrockDepthsRework.h, ScarletMonasteryRework.h, the shared kit's pure
+# BlackrockDepthsRework.h, ScarletMonasteryRework.h, RagefireChasmRework.h, the shared kit's pure
 # src/Kit/DungeonKit{Math,State,Arena,Logic,Ids,Floor,Flow,WallLogic,FrontLogic,RingLogic,ZoneLogic,WingLogic}.h, the
 # generated src/Generated/ItemSpellCopies.h): no server build needed.
 # A boss WP adds nothing here: every tests/<boss>_test.cpp is listed below already (one per boss file).
@@ -43,6 +43,7 @@ tests=(
   blackrock_spire_hard_mode_items_test
   blackrock_depths_hard_mode_items_test
   scarlet_monastery_hard_mode_items_test
+  ragefire_chasm_hard_mode_items_test
   haunted_set_test
   molten_set_test
   zealot_set_test
@@ -149,6 +150,12 @@ tests=(
   sm_last_stand_test
   sm_whitemane_test
   sm_whitemane_hard_mode_test
+  ragefire_chasm_test
+  rfc_oggleflint_test
+  rfc_jergosh_test
+  rfc_bazzalan_test
+  rfc_taragaman_test
+  rfc_taragaman_hard_mode_test
 )
 
 status=0
@@ -158,7 +165,7 @@ for cxx in "${compilers[@]}"; do
     "$cxx" -std=c++20 -Wall -Wextra -Werror -O1 -I "$root/src/Kit" -I "$root/src/Deadmines" \
       -I "$root/src/ShadowfangKeep" -I "$root/src/Scholomance" -I "$root/src/Stratholme" -I "$root/src/Generated" \
       -I "$root/src/BlackrockSpire" -I "$root/src/BlackrockDepths" -I "$root/src/ScarletMonastery" \
-      -I "$here" \
+      -I "$root/src/RagefireChasm" -I "$here" \
       "$here/$test.cpp" -o "$out/$test-$cxx"
     if ! "$out/$test-$cxx"; then
       status=1

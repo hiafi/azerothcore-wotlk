@@ -73,3 +73,9 @@ lfg_heroic(314, normal=18, group=CLASSIC_HEROIC)  # Scarlet Monastery - Graveyar
 lfg_heroic(315, normal=165, group=CLASSIC_HEROIC)  # Scarlet Monastery - Library
 lfg_heroic(316, normal=163, group=CLASSIC_HEROIC)  # Scarlet Monastery - Armory
 lfg_heroic(317, normal=164, group=CLASSIC_HEROIC)  # Scarlet Monastery - Cathedral
+
+# Ragefire Chasm (map 389, the Ragefire Chasm build, WP-H): one section, one 5-player heroic map. The stock normal row 4
+# (levels 15-21) has no lfg_dungeon_template row (the Finder falls back to the areatrigger), so the heroic entry copies
+# none either. It completes on the heroic copy of Taragaman the Hungerer (1098, the stock final boss 431 of the normal
+# entry): one heroic bind for the four bosses.
+lfg_heroic(318, normal=4, group=CLASSIC_HEROIC)  # Ragefire Chasm

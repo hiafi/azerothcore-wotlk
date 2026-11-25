@@ -199,6 +199,26 @@ DRILL_BARS: dict[str, dict] = {
         "cross_specs": 3, "references": {21: 1, 23: 1, 25: 1, 26: 1, 30: 1, 31: 1}, "group": {29: 2},
         "cycle_ms": 60000, "default_cycles": 3,
     },
+    "ragefire-chasm-shapes": {
+        # Ragefire Chasm WP-G1, gating the heroic sign-off of D1 (2, 3, 5), D2 (6, 7, 16, 20, 21), D3 (8, 9, 16, 21)
+        # and D4 (10-14, 16); three 60 s cycles, so the sweep runs 180 s (`--programs ragefire-chasm-shapes:3 --duration
+        # 180`). Cycle 0: Zone/1 and Zone/4 a Borer's chase circle (no damage) reported, Zone/2 and Zone/5 its eruption
+        # (the mound's tag + 1), Zone/3 the Beating's blows. Cycle 1: Spread/6 a Conflagrate ring on someone else,
+        # Soak/7 a wisp eaten (a group failure, 10 a run: at most 1), Soak/14 a 5 s channel nobody kicked (15 a run: at
+        # most 2), Soak/16 a must-play bar of another school lost (0: the recipe), Soak/15 one of the kicked school
+        # reported (lost by design while the lockout runs), Zone/8 the 8 yd fan, Zone/9 the spins after the Shadowsteps.
+        # Soak/20 and Soak/21 the 3 s and 2 s windows of Jergosh and Bazzalan nobody kicked (cycles 0 and 2, 10 a run
+        # each: at most 1 and 2, to be set on the first sweep), Zone/18 and Zone/19 five mounds at once, reported first.
+        # Cycle 2: Zone/10 the Felstorm ring's ticks, Zone/11 the fel spots (150 a run, so 2), Hide/12 three spikes
+        # (0, as blackrock-depths-shapes' hide), Hide/13 heroic's opposite pair (0, STAGE-G1 Q1), Zone/17 the hard
+        # mode's bursts reported. The pools take every member, the tank included, so 2, 3, 5, 9, 10 and 11 are barred
+        # on the reference members too.
+        "gated": {2: 1, 3: 1, 5: 1, 6: 1, 8: 1, 9: 1, 10: 1, 11: 2, 12: 0, 13: 0},
+        "reported": {1, 4, 15, 17, 18, 19},
+        "cross_specs": 3, "references": {2: 1, 3: 1, 5: 1, 9: 1, 10: 1, 11: 2},
+        "group": {7: 1, 14: 2, 16: 0, 20: 1, 21: 2},
+        "cycle_ms": 60000, "default_cycles": 3,
+    },
 }
 # Drill::kProgramGapMs: the quiet time after each comma entry of a program
 PROGRAM_GAP_MS = 4000
