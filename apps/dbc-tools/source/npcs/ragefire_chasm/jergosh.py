@@ -18,7 +18,7 @@ whose amount is the script's base point (DungeonKit::RefFlatOn, the tank row on 
 normal values flat; DieSides 0 so the base point is the amount) and every one ignores caster modifiers (rule 2: the
 Tithe aura never counts twice):
 
-  213580  Immolate         JR1 the kickable 2 s cast: effect 1 the hit, effect 2 the Magic DoT (21 s, 3 s ticks; SV 46)
+  213580  Immolate         JR1 the kickable 2 s cast: effect 1 the hit, effect 2 the DoT (21 s, no dispel; SV 46)
   213581  Conflagrate      JR2 the 2.5 s bar, Arcane, never interruptible (rule 25)
   213582  Conflagrate      JR2 the rings on everyone else (resolve copy, Fire; SV 5199)
   213583  Conflagrate      JR2 the bearer's own burst (script, Fire; SV 5199)
@@ -108,7 +108,6 @@ _ICON_CURSE = 543               # Curse of Weakness 18267
 
 _TARGET_UNIT_TARGET_ENEMY = 6
 _DEFENSE_MAGIC = 1
-_DISPEL_MAGIC = 1
 _PREVENTION_SILENCE = 1
 _INTERRUPT_FLAGS_KICKABLE = 15              # the whitemane.py recipe: movement, pushback, interrupt, auto-attack
 _CHANNEL_INTERRUPT_KICK = 0x08              # SpellDefines.h CHANNEL_INTERRUPT_FLAG_INTERRUPT
@@ -139,7 +138,7 @@ def _script_hit(spell_id: int, name: str, school: School, desc: str, notes: str,
 # --- JR1 Immolate ----------------------------------------------------------------------------------------------------
 
 immolate_213580 = spell(
-    id=213580, name='Immolate', school=School.FIRE, dispel=_DISPEL_MAGIC, mechanic=0, attributes=ATTR0_AURA_IS_DEBUFF,
+    id=213580, name='Immolate', school=School.FIRE, dispel=0, mechanic=0, attributes=ATTR0_AURA_IS_DEBUFF,
     cast_time_ms=IMMOLATE_CAST_MS, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=100.0, duration_ms=IMMOLATE_MS,
     effects=[Effect(type=EffectType.SCHOOL_DAMAGE, base_points=0, die_sides=0,
@@ -153,7 +152,8 @@ immolate_213580 = spell(
           '(InterruptFlags 15, PreventionType silence; his immunity set 1972 holds neither): the descriptor\'s '
           'interrupt list, a reward. Normal: the stock values of 20800 (56, then 16 a tick: 7 ticks of 3 s); heroic '
           '5% of the reference row and 5% a tick, times his Tithe (both effects are the script\'s base points). '
-          'Magic: on heroic the bots\' dispel list. The burn is the fuel of JR2 (its ring is the registry\'s '
+          'Not dispellable on either difficulty (user 2026-11-25: dispels put every burn out). The burn is the '
+          'fuel of JR2 (its ring is the registry\'s '
           'SelfTrigger on this aura). Heroic: whoever another\'s ring hits catches the same DoT (a triggered cast, '
           'the hit\'s base point 0). Ignores line of sight, is not reflected or redirected. Leaving the map drops '
           'it; removed from everyone on a reset, evade or his death. Does not reset his swing (a cast every 3 s '

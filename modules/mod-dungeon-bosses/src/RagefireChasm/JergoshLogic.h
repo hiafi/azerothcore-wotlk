@@ -62,10 +62,9 @@ namespace RfcJergosh
         TAG_JR_WISP         = 7,
     };
 
-    // The descriptor: Drain Soul before Immolate, Immolate on the dispel list (heroic).
+    // The descriptor: Drain Soul before Immolate; nothing to dispel (Immolate is DispelType none, user 2026-11-25).
     inline constexpr std::uint8_t kDrainSoulKickPriority = 2;
     inline constexpr std::uint8_t kImmolateKickPriority = 1;
-    inline constexpr std::uint8_t kImmolateDispelPriority = 1;
 
     // ----------------------------------------------------------------------------------------------------------------
     // The fight's clock

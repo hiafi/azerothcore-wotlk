@@ -7,11 +7,11 @@
  *
  *   JR1 Immolate        3 s, then every 3 s: a real 2 s Fire cast, kickable, on a random player (the tank included),
  *                       never one already burning; skipped while three burn (or everyone in the hall does). 56 and 16
- *                       a tick on normal, 5% and 5% a tick on heroic, 7 ticks of 3 s, Magic. A beat that would run
- *                       into Conflagrate is skipped. Unkicked, three burn at every Conflagrate
+ *                       a tick on normal, 5% and 5% a tick on heroic, 7 ticks of 3 s, not dispellable. A beat that
+ *                       would run into Conflagrate is skipped. Unkicked, three burn at every Conflagrate
  *   JR2 Conflagrate     16 s, then every 20 s, always on time: emote line 1, a 2.5 s Arcane bar (never kicked, never
  *                       locked out: rule 25) and a registry Spread of 5 / 6 yd on everyone burning (SelfTrigger on
- *                       the Immolate aura: a dispel in the middle drops that ring). At its end every burn is
+ *                       the Immolate aura: losing the burn in the middle drops that ring). At its end every burn is
  *                       consumed: the bearer 15% / 20% by script (no Weakened), anyone else in a ring 35% / 45% and
  *                       Weakened. Heroic (ruling 15): whoever another's ring hit then catches the same DoT, no cap
  *   JR3 pressure        his melee and the stock Curse of Weakness 18267 on his target, 1 s then every 30 s
@@ -25,8 +25,7 @@
  *                       caster modifiers and are multiplied here (TitheFactor)
  *   Kicks               Immolate and Drain Soul: a kick's school lockout on him is 2 s, not the kick's own 4 to 8 s
  *                       (OnSpellFailed); a silence is left alone
- *   Boss data           Drain Soul (2) then Immolate (1) on the interrupt list, Immolate on the dispel list (heroic);
- *                       no kill order
+ *   Boss data           Drain Soul (2) then Immolate (1) on the interrupt list; no dispels, no kill order
  *   Arena               JergoshArena() with LeashOptions (no grips). The Spread and the wisp's Soak set no `.Within`,
  *                       as in G1's drill (the claimer must be free to leave the group)
  *
@@ -704,7 +703,6 @@ private:
         {
             d.interrupts.emplace_back(NPC_JERGOSH, SPELL_JR_DRAIN_SOUL, kDrainSoulKickPriority,
                 Ms(Tune::kDrainSoulEveryMs));
-            d.dispels.emplace_back(SPELL_JR_IMMOLATE, kImmolateDispelPriority);
         }
         d.interrupts.emplace_back(NPC_JERGOSH, SPELL_JR_IMMOLATE, kImmolateKickPriority,
             Ms(Tune::kImmolateEveryMs(_heroic)));

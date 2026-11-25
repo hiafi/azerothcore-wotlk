@@ -51,7 +51,6 @@ MAGE_16_BASE = 307          # creature_classlevelstats level 16 class 8 basehp0
 SCHOOL_FIRE, SCHOOL_SHADOW, SCHOOL_ARCANE = 4, 32, 64
 SCHOOL_DAMAGE, APPLY_AURA, DUMMY_EFFECT = 2, 6, 3
 AURA_PERIODIC_DAMAGE, AURA_DUMMY, AURA_MOD_DAMAGE_PCT, AURA_MOD_HEALING_PCT = 3, 4, 79, 118
-DISPEL_MAGIC = 1
 PREVENTION_SILENCE = 1
 CHANNEL_KICK = 0x08
 ATTR1_IS_CHANNELED = 0x4
@@ -176,7 +175,7 @@ class JergoshDeclarationTest(unittest.TestCase):
         self.assertEqual(dot["amplitude"], int(_value("kImmolateTickMs")))
         self.assertEqual(spell["duration_ms"], int(_value("kImmolateDurationMs")))
         self.assertEqual(spell["duration_ms"] // dot["amplitude"], 7)
-        self.assertEqual(spell["dispel"], DISPEL_MAGIC)
+        self.assertEqual(spell["dispel"], 0)
         for effect in (hit, dot):
             self.assertEqual((int(effect["base_points"]), int(effect["die_sides"])), (0, 0))
         self.assertEqual((_value("kImmolateFlatDirect"), _value("kImmolateFlatTick")), (56, 16))
@@ -244,7 +243,7 @@ class JergoshDeclarationTest(unittest.TestCase):
         self.assertNotIn("spec.who", code)
         self.assertIn("void OnChannelFinished(SpellInfo const* spell) override", code)
         # Boss data.
-        self.assertIn("d.dispels.emplace_back(SPELL_JR_IMMOLATE, kImmolateDispelPriority)", code)
+        self.assertNotIn("d.dispels", code)
         self.assertEqual(code.count("d.interrupts.emplace_back(NPC_JERGOSH"), 2)
         # RB-1: everything goes on reset, evade and death.
         cleanup = code[code.index("void Cleanup()"):]
