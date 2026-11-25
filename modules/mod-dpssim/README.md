@@ -38,22 +38,36 @@ arrows. The run log shows what ran: "tamed pet ...", and "strategies resolved: c
 - **Family switch.** `DpsSim.PetCreatureEntry` replaces the profile's pet for one run. `run-sim.sh` sets it from
   `DPSSIM_PET_FAMILY` (a key, name or family number of `tools/pet_families.tsv`, one "Tamable <family>" creature per
   family, all 32) or `DPSSIM_PET_ENTRY`, and the names carry it: `BmHunterSim.pet-cat.<ts>...`.
-- **Buff sets** (`DpsSim.BuffSet`, `SimBuffSet.h`, DPS runs only). `self_only`, the default, adds nothing (every run
+- **Buff sets** (`DpsSim.BuffSet`, `SimBuffSet.h`, DPS runs only; a profile's own `BuffSet = full_raid` key sets
+  it for that profile and `DPSSIM_BUFF_SET` beats the profile). `self_only`, the default, adds nothing (every run
   before this). `full_raid` puts `DpsSim.RaidBuffs` on the actor and its pet at the end of the pre-pull buff phase
   (after a pet re-tame or revive), `DpsSim.RaidDebuffs` on every dummy, both pinned (no expiry) and put back once a sim
   second if they go missing, and `DpsSim.RaidPullBuffs` (Bloodlust and Sated) on the actor and pet with their own
-  duration. The sim adds the auras with `Unit::AddAura` (the actor as the caster); nobody casts them. Every member is in
-  the same `spell_group` as the hunter pet family effect of its category, so a family's own cast is suppressed by the
-  group rule and adds nothing (hunter-pet-families ruling 7). The lists and their defaults are in `dpssim.conf.dist`;
+  duration. One flask of `DpsSim.RaidFlasks` goes on the actor, the one of its highest of Strength, Agility and
+  Intellect at the first pull. Pets get the buffs, temporary guardians do not. The sim adds the auras with
+  `Unit::AddAura` (the actor as the caster); nobody casts them, so the lists hold only spells the actor's class does not
+  own: its bot would skip a cast it thinks is already up, or the two would replace each other every second. There are
+  two sets of default lists (`dpssim.conf.dist` has the ids):
+  - Every class but the hunter: the 17 Inscription raid buff scrolls (family 0, the class buffs' base values and spell
+    groups), Replenishment, the hunter pet family debuffs and Blood Frenzy. Level 60 only, the scrolls' amounts are
+    fixed. In a "same effect" group the actor's own aura and the raid's both stay up and the highest counts; in an
+    "exclusive" or "highest wins" group the actor's own stays and the raid's is left out for the iteration if the own
+    one is at least as strong at the pull (within 2%, the scrolls' amounts are rounded; the log's "left out" lines, the
+    report's `raidOwnKept`), or a pinned raid
+    aura would block its recast. A spec's own proc of Replenishment or Blood Frenzy only refreshes the raid's, which is
+    pinned again within a second.
+  - Hunters: class buffs and debuffs (and Replenishment), each in the same `spell_group` as the hunter pet family effect
+    of its category, so a family's own cast is suppressed by the group rule and adds nothing (hunter-pet-families
+    ruling 7). Families cast the other set's debuffs themselves.
+
   `run-sim.sh` takes `DPSSIM_BUFF_SET=full_raid` (".full_raid" in the names) and `DPSSIM_RAID_BUFFS` /
-  `DPSSIM_RAID_DEBUFFS` / `DPSSIM_RAID_PULL_BUFFS` to replace a list (".full_raid-x<hash>"). The run log names each
+  `DPSSIM_RAID_DEBUFFS` / `DPSSIM_RAID_PULL_BUFFS` / `DPSSIM_RAID_FLASKS` to replace a list (".full_raid-x<hash>"; an
+  empty value is an empty list, so `DPSSIM_RAID_PULL_BUFFS=` is a run without Bloodlust). The run log names each
   member with its effects and groups ("raid buffs (actor and pet): ...") and, on the first iteration, the amounts it
   landed with ("buff set: 24932 Leader of the Pack on the actor: aura 52 = 5, ..."), or that it did not land.
   An entry may end in "@amount" ("21183:0@3", a negative amount is allowed) to set the amount of its applied effects:
   a spell group is looked up by the first rank of a chain, and Heart of the Crusader's chain is not in `spell_ranks`,
-  so its first rank (1%) is applied with rank 3's 3%. `full_raid` is for hunter actors only (the aura's caster is the
-  actor, so a class that owns one of the listed spells would see it as its own: its bot skips the cast, or the two
-  replace each other every second); another class needs a neutral caster first, and the run refuses it. One sim second
+  so its first rank (1%) is applied with rank 3's 3%. One sim second
   after the pull, before the first refresh pass, the log prints "buff set coverage": per actor, pet and dummy what is
   missing, and which of the pet's auras the actor's own aura carried (an area aura propagated) and which are copies
   added directly. Every iteration logs what the refresh put back and every put-back that failed, with the member of

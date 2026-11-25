@@ -69,11 +69,13 @@
 #                       from modules/mod-dpssim/tools/pet_families.tsv (one creature per family), e.g. "cat",
 #                       "bird-of-prey", "Bird of Prey" or 26 (DpsSim.PetCreatureEntry). Adds ".pet-<key>" to the names.
 #   DPSSIM_PET_ENTRY    The same with a creature_template entry ("pet<entry>" in the names unless the table has it).
-#   DPSSIM_BUFF_SET     self_only (default) or full_raid (DpsSim.BuffSet, DPS profiles): raid buffs on the actor
-#                       and its pet, raid debuffs on the dummies, Bloodlust at the pull. Adds ".full_raid" to the names.
-#   DPSSIM_RAID_BUFFS / DPSSIM_RAID_DEBUFFS / DPSSIM_RAID_PULL_BUFFS
-#                       full_raid only: replace that list (DpsSim.RaidBuffs / RaidDebuffs / RaidPullBuffs, see
-#                       dpssim.conf.dist); the names then read ".full_raid-x<hash>".
+#   DPSSIM_BUFF_SET     self_only or full_raid (DpsSim.BuffSet, DPS profiles at level 60): raid buffs on the actor and
+#                       its pet, its flask, raid debuffs on the dummies, Bloodlust at the pull. Adds ".full_raid" to the
+#                       names. Unset: the profile's "BuffSet" key, else self_only.
+#   DPSSIM_RAID_BUFFS / DPSSIM_RAID_DEBUFFS / DPSSIM_RAID_PULL_BUFFS / DPSSIM_RAID_FLASKS
+#                       full_raid only: replace that list (DpsSim.RaidBuffs / RaidDebuffs / RaidPullBuffs / RaidFlasks,
+#                       see dpssim.conf.dist; empty = none of it, e.g. DPSSIM_RAID_PULL_BUFFS= for no Bloodlust); the
+#                       names then read ".full_raid-x<hash>".
 #   DPSSIM_DISABLE_SPELLS  Spell ids taken out of the actor's and its pet's spellbooks (DpsSim.DisableSpells), e.g.
 #                       "24604". Adds ".no24604" to the names.
 #   DPSSIM_DUMMY_IMMUNE_AURAS  Spell ids the dummies are immune to (DpsSim.DummyImmuneAuras): the hit that applies the
@@ -496,12 +498,13 @@ if [[ -n "$BATCH_TAG" && ! "$BATCH_TAG" =~ ^[A-Za-z0-9_-]+$ ]]; then
 fi
 
 # --- hunter pet family, buff set, disabled spells (the names carry them, so never via DPSSIM_EXTRA_CONF) -------------
-EXTRA_KEYS_RE='^[[:space:]]*DpsSim\.(PetCreatureEntry|BuffSet|RaidBuffs|RaidDebuffs|RaidPullBuffs|'
+EXTRA_KEYS_RE='^[[:space:]]*DpsSim\.(PetCreatureEntry|BuffSet|RaidBuffs|RaidDebuffs|RaidPullBuffs|RaidFlasks|'
 EXTRA_KEYS_RE+='DisableSpells|DummyImmuneAuras)\b'
 if printf '%b' "${DPSSIM_EXTRA_CONF:-}" | grep -qiE "$EXTRA_KEYS_RE"; then
-    die "DPSSIM_EXTRA_CONF sets DpsSim.PetCreatureEntry / BuffSet / Raid*Buffs / DisableSpells /" \
+    die "DPSSIM_EXTRA_CONF sets DpsSim.PetCreatureEntry / BuffSet / Raid*Buffs / RaidFlasks / DisableSpells /" \
         "DummyImmuneAuras: use DPSSIM_PET_ENTRY, DPSSIM_PET_FAMILY, DPSSIM_BUFF_SET, DPSSIM_RAID_BUFFS /" \
-        "DPSSIM_RAID_DEBUFFS / DPSSIM_RAID_PULL_BUFFS, DPSSIM_DISABLE_SPELLS or DPSSIM_DUMMY_IMMUNE_AURAS" \
+        "DPSSIM_RAID_DEBUFFS / DPSSIM_RAID_PULL_BUFFS / DPSSIM_RAID_FLASKS, DPSSIM_DISABLE_SPELLS or" \
+        "DPSSIM_DUMMY_IMMUNE_AURAS" \
         "instead, so the report file names carry the setting"
 fi
 PET_FAMILIES_TSV="$REPO_ROOT/modules/mod-dpssim/tools/pet_families.tsv"
@@ -544,9 +547,16 @@ if [[ -n "$PET_ENTRY" ]]; then
     if [[ -n "$PET_KEY" ]]; then EXTRA_NAME+=".pet-${PET_KEY}"; else EXTRA_NAME+=".pet${PET_ENTRY}"; fi
 fi
 
-BUFF_SET="$(printf '%s' "${DPSSIM_BUFF_SET:-self_only}" | tr 'A-Z' 'a-z')"
+# DPSSIM_BUFF_SET, else the profile's BuffSet key (its DPS runs only: a mechanics run of it stays self_only)
+BUFF_SET="${DPSSIM_BUFF_SET:-}"
+BUFF_SET_FROM="DPSSIM_BUFF_SET"
+if [[ -z "$BUFF_SET" && "$IS_HEAL" -eq 0 && "$IS_TANK" -eq 0 && "$IS_MECH" -eq 0 ]]; then
+    BUFF_SET="$(profile_key BuffSet)"
+    BUFF_SET_FROM="the profile's BuffSet"
+fi
+BUFF_SET="$(printf '%s' "${BUFF_SET:-self_only}" | tr 'A-Z' 'a-z')"
 if ! [[ "$BUFF_SET" =~ ^(self_only|full_raid)$ ]]; then
-    die "DPSSIM_BUFF_SET must be self_only or full_raid, got '$BUFF_SET'"
+    die "${BUFF_SET_FROM} must be self_only or full_raid, got '$BUFF_SET'"
 fi
 if [[ "$BUFF_SET" == full_raid ]]; then
     if [[ "$IS_HEAL" -eq 1 || "$IS_TANK" -eq 1 || "$IS_MECH" -eq 1 ]]; then
@@ -555,7 +565,7 @@ if [[ "$BUFF_SET" == full_raid ]]; then
     EXTRA_DPS_CONF+="DpsSim.BuffSet = full_raid"$'\n'
     RAID_LISTS=""
     for pair in "DPSSIM_RAID_BUFFS:DpsSim.RaidBuffs" "DPSSIM_RAID_DEBUFFS:DpsSim.RaidDebuffs" \
-            "DPSSIM_RAID_PULL_BUFFS:DpsSim.RaidPullBuffs"; do
+            "DPSSIM_RAID_PULL_BUFFS:DpsSim.RaidPullBuffs" "DPSSIM_RAID_FLASKS:DpsSim.RaidFlasks"; do
         v="${pair%%:*}"; key="${pair#*:}"
         if [[ -n "${!v+x}" ]]; then
             if ! [[ "${!v}" =~ ^[0-9:@,\ -]*$ ]]; then
@@ -569,9 +579,11 @@ if [[ "$BUFF_SET" == full_raid ]]; then
     EXTRA_NAME+=".full_raid"
     if [[ -n "$RAID_LISTS" ]]; then EXTRA_NAME+="-x$(short_hash "$RAID_LISTS")"; fi
 else
-    for v in DPSSIM_RAID_BUFFS DPSSIM_RAID_DEBUFFS DPSSIM_RAID_PULL_BUFFS; do
-        if [[ -n "${!v+x}" ]]; then die "$v is set but DPSSIM_BUFF_SET is not full_raid"; fi
+    for v in DPSSIM_RAID_BUFFS DPSSIM_RAID_DEBUFFS DPSSIM_RAID_PULL_BUFFS DPSSIM_RAID_FLASKS; do
+        if [[ -n "${!v+x}" ]]; then die "$v is set but the buff set is not full_raid"; fi
     done
+    # A self_only run of a full_raid profile: the profile's key must not win
+    EXTRA_DPS_CONF+="DpsSim.BuffSet = self_only"$'\n'
 fi
 
 if [[ -n "${DPSSIM_DISABLE_SPELLS:-}" ]]; then

@@ -26,19 +26,30 @@
 #include "SpellMgr.h"
 #include "StringFormat.h"
 #include "Util.h"
+#include <algorithm>
+#include <cstdlib>
 #include <exception>
+#include <iterator>
 #include <limits>
 #include <set>
 #include <sstream>
 
 namespace SimBuffSet
 {
-    // Each id sits in the spell_group of the hunter pet family effect of its category (hunter-pet-families
-    // DATA-INVENTORY 4.1), so that family's own cast adds nothing; dpssim.conf.dist lists the values at level 60.
+    // The 17 Inscription raid buff scrolls and Replenishment; the hunter pet family debuffs and Blood Frenzy
     char const* const DEFAULT_RAID_BUFFS =
-        "24932, 8076:01, 53137, 202210:01, 24907:0, 50172, 5677, 202211, 23948, 25898:0, 202212, 31583:1";
-    char const* const DEFAULT_RAID_DEBUFFS = "8647, 21183:0@3, 60431, 1160, 6343, 1714:0, 30070";
+        "208860, 208861, 208862, 208863, 208864, 208865, 208866, 208867, 208868, 208869, 208870, 208871, 208872, "
+        "208873, 208874, 208875, 208876, 57669";
+    char const* const DEFAULT_RAID_DEBUFFS = "201716, 201766, 201773, 201754, 201763, 201768, 30070";
+    // Each id (Replenishment aside) sits in the spell_group of the hunter pet family effect of its category
+    // (hunter-pet-families DATA-INVENTORY 4.1), so that family's own cast adds nothing; dpssim.conf.dist lists the
+    // values at level 60.
+    char const* const DEFAULT_RAID_BUFFS_HUNTER =
+        "24932, 8076:01, 53137, 202210:01, 24907:0, 50172, 5677, 202211, 23948, 25898:0, 202212, 31583:1, 57669";
+    char const* const DEFAULT_RAID_DEBUFFS_HUNTER = "8647, 21183:0@3, 60431, 1160, 6343, 1714:0, 30070";
     char const* const DEFAULT_RAID_PULL_BUFFS = "2825, 57724";
+    // Flask of Might, Flask of Grace, Flask of Supreme Power (their target is the drinker, so the effect is explicit)
+    char const* const DEFAULT_RAID_FLASKS = "208850:0, 208851:0, 17628:0";
 
     namespace
     {
@@ -105,22 +116,108 @@ namespace SimBuffSet
             return 0;
         }
 
+        // How much weaker than the raid's an own aura may be and still count as at least as strong: the scrolls' fixed
+        // amounts are rounded, so a Horn of Winter of 85 stands against the scroll's 86
+        constexpr float OWN_AURA_TOLERANCE = 0.02f;
+
+        bool Lists(std::vector<AuraSpec> const& specs, uint32 spellId)
+        {
+            return std::any_of(specs.begin(), specs.end(),
+                [spellId](AuraSpec const& spec) { return spec.SpellId == spellId; });
+        }
+
+        // The amount `spec` would land with for an effect like this one (the same aura type, and the same stat for a
+        // stat buff), 0 if it has none
+        int32 SpecAmount(AuraSpec const& spec, SpellInfo const* info, Player* caster, AuraEffect const* like)
+        {
+            for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                if ((spec.EffectMask & (1 << i)) && info->Effects[i].ApplyAuraName == like->GetAuraType() &&
+                    (like->GetAuraType() != SPELL_AURA_MOD_STAT || info->Effects[i].MiscValue == like->GetMiscValue()))
+                    return spec.HasAmount ? spec.Amount : info->Effects[i].CalcValue(caster);
+
+            return 0;
+        }
+
+        // OwnBuffWins: the spell of an aura on `target` that is not in the raid's lists, shares an "exclusive" or
+        // "highest wins" group with `spec` and is at least as strong in every effect both have. 0 = none. Those are
+        // the groups where a pinned raid aura would remove the own one and then block its recast; in a "same effect"
+        // group both stay up and the highest counts.
+        uint32 OwnGroupAura(Config const& config, AuraSpec const& spec, Player* caster, Unit const* target)
+        {
+            SpellInfo const* info = sSpellMgr->GetSpellInfo(spec.SpellId);
+            for (auto const& [spellId, application] : target->GetAppliedAuras())
+            {
+                if (Lists(config.Buffs, spellId) || Lists(config.Debuffs, spellId))
+                    continue;
+
+                SpellGroupStackRule const rule =
+                    sSpellMgr->CheckSpellGroupStackRules(info, application->GetBase()->GetSpellInfo());
+                if (rule != SPELL_GROUP_STACK_RULE_EXCLUSIVE && rule != SPELL_GROUP_STACK_RULE_EXCLUSIVE_HIGHEST)
+                    continue;
+
+                bool shared = false;
+                bool weaker = false;
+                for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                    if (AuraEffect const* effect = application->GetBase()->GetEffect(i))
+                        if (int32 const amount = SpecAmount(spec, info, caster, effect))
+                        {
+                            shared = true;
+                            weaker = weaker || std::abs(effect->GetAmount()) * (1.0f + OWN_AURA_TOLERANCE) <
+                                std::abs(amount);
+                        }
+                if (shared && !weaker)
+                    return spellId;
+            }
+
+            return 0;
+        }
+
+        // A spell that only gives a power `target` does not have (Replenishment on a rogue)
+        bool IsUselessPower(AuraSpec const& spec, SpellInfo const* info, Unit const* target)
+        {
+            for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                if (spec.EffectMask & (1 << i))
+                {
+                    if (info->Effects[i].ApplyAuraName != SPELL_AURA_PERIODIC_ENERGIZE)
+                        return false;
+
+                    int32 const power = info->Effects[i].MiscValue;
+                    if (power < 0 || power >= int32(MAX_POWERS) || target->GetMaxPower(Powers(power)) > 0)
+                        return false;
+                }
+
+            return true;
+        }
+
         // Adds `spec` to `target` (the actor as the caster) unless it is already there. Returns true if it added it.
         // Initial: logs the amounts it landed with (when `logAmounts`) and every failure, with the group member that
         // is in the way. Refresh: counts what it put back and every failure into `refresh`.
-        bool AddIfMissing(AuraSpec const& spec, Player* caster, Unit* target, bool pin, Phase phase, bool logAmounts,
-            std::string const& who, RefreshLog* refresh)
+        bool AddIfMissing(Config const& config, AuraSpec const& spec, Player* caster, Unit* target, bool pin,
+            Phase phase, bool logAmounts, std::string const& who, RefreshLog* refresh)
         {
-            if (!target || !target->IsAlive() || target->HasAura(spec.SpellId))
+            if (!target || !target->IsAlive() || config.State.OwnKept.count({target->GetGUID(), spec.SpellId}))
                 return false;
 
+            if (target->HasAura(spec.SpellId))
+            {
+                // The actor's own proc of the same spell (Replenishment, Blood Frenzy) gives it back its duration
+                if (pin)
+                    if (Aura* own = target->GetAura(spec.SpellId, caster->GetGUID()))
+                        if (own->GetOwner() == target && own->GetMaxDuration() != -1)
+                            Pin(own);
+                return false;
+            }
+
             SpellInfo const* info = sSpellMgr->GetSpellInfo(spec.SpellId);
+            if (IsUselessPower(spec, info, target))
+                return false;
+
             // Immune on purpose (DpsSim.DummyImmuneAuras names the id): not added, and not retried every second
             if (target->IsImmunedToSpell(info))
             {
                 if (phase == Phase::Initial)
                     LOG_INFO("server.dpssim", "mod-dpssim: buff set: {} {} skipped on the {}: it is immune to the "
-                        "spell (DpsSim.DummyImmuneAuras).", spec.SpellId, info->SpellName[0], who);
+                        "spell (DpsSim.DummyImmuneAuras, or its own immunity).", spec.SpellId, info->SpellName[0], who);
                 return false;
             }
 
@@ -350,6 +447,55 @@ namespace SimBuffSet
         return text.empty() ? "none" : text;
     }
 
+    void BeginIteration(Config const& config, Player* actor, std::vector<Creature*> const& dummies)
+    {
+        if (config.BuffSet != Set::FullRaid || !actor)
+            return;
+
+        RunState& state = config.State;
+        if (!state.FlaskPicked)
+        {
+            state.FlaskPicked = true;
+            // The order of DpsSim.RaidFlasks. On a tie the earlier one.
+            Stats const stats[] = {STAT_STRENGTH, STAT_AGILITY, STAT_INTELLECT};
+            float highest = 0.0f;
+            for (size_t i = 0; i < config.Flasks.size() && i < std::size(stats); ++i)
+                if (actor->GetStat(stats[i]) > highest)
+                {
+                    highest = actor->GetStat(stats[i]);
+                    state.FlaskId = config.Flasks[i].SpellId;
+                }
+            if (state.FlaskId)
+                LOG_INFO("server.dpssim", "mod-dpssim: buff set: flask {} {} (Strength {:.0f}, Agility {:.0f}, "
+                    "Intellect {:.0f}).", state.FlaskId, sSpellMgr->GetSpellInfo(state.FlaskId)->SpellName[0],
+                    actor->GetStat(STAT_STRENGTH), actor->GetStat(STAT_AGILITY), actor->GetStat(STAT_INTELLECT));
+        }
+
+        state.OwnKept.clear();
+        if (!config.OwnBuffWins)
+            return;
+
+        auto keepOwn = [&](std::vector<AuraSpec> const& specs, Unit* target, std::string const& who)
+        {
+            if (!target)
+                return;
+
+            for (AuraSpec const& spec : specs)
+                if (uint32 const own = OwnGroupAura(config, spec, actor, target))
+                {
+                    state.OwnKept.insert({target->GetGUID(), spec.SpellId});
+                    if (state.OwnKeptLogged.insert(spec.SpellId).second)
+                        LOG_INFO("server.dpssim", "mod-dpssim: buff set: {} {} left out on the {}, its own {} {} is at "
+                            "least as strong.", spec.SpellId, sSpellMgr->GetSpellInfo(spec.SpellId)->SpellName[0], who,
+                            own, sSpellMgr->GetSpellInfo(own)->SpellName[0]);
+                }
+        };
+        keepOwn(config.Buffs, actor, "actor");
+        keepOwn(config.Buffs, actor->GetPet(), "pet");
+        for (size_t i = 0; i < dummies.size(); ++i)
+            keepOwn(config.Debuffs, dummies[i], Acore::StringFormat("dummy #{}", i));
+    }
+
     uint32 ApplyPinned(Config const& config, Player* actor, std::vector<Creature*> const& dummies, Phase phase,
         RefreshLog* refresh)
     {
@@ -361,17 +507,23 @@ namespace SimBuffSet
         for (AuraSpec const& spec : config.Buffs)
         {
             // The actor first: an area aura it owns reaches the pet by itself, and then the pet needs nothing
-            if (AddIfMissing(spec, actor, actor, true, phase, true, "actor", refresh))
+            if (AddIfMissing(config, spec, actor, actor, true, phase, true, "actor", refresh))
                 ++added;
-            if (AddIfMissing(spec, actor, pet, true, phase, true, "pet", refresh))
+            if (AddIfMissing(config, spec, actor, pet, true, phase, true, "pet", refresh))
                 ++added;
         }
+
+        // The actor only: a flask is its own
+        for (AuraSpec const& spec : config.Flasks)
+            if (spec.SpellId == config.State.FlaskId &&
+                AddIfMissing(config, spec, actor, actor, true, phase, true, "actor", refresh))
+                ++added;
 
         for (AuraSpec const& spec : config.Debuffs)
             for (size_t i = 0; i < dummies.size(); ++i)
                 // Every dummy's failures are logged, the landed amounts of the first one only (the others are the
                 // same spell on the same kind of creature)
-                if (AddIfMissing(spec, actor, dummies[i], true, phase, i == 0,
+                if (AddIfMissing(config, spec, actor, dummies[i], true, phase, i == 0,
                     Acore::StringFormat("dummy #{}", i), refresh))
                     ++added;
 
@@ -385,8 +537,8 @@ namespace SimBuffSet
 
         for (AuraSpec const& spec : config.PullBuffs)
         {
-            AddIfMissing(spec, actor, actor, false, phase, true, "actor", nullptr);
-            AddIfMissing(spec, actor, actor->GetPet(), false, phase, true, "pet", nullptr);
+            AddIfMissing(config, spec, actor, actor, false, phase, true, "actor", nullptr);
+            AddIfMissing(config, spec, actor, actor->GetPet(), false, phase, true, "pet", nullptr);
         }
     }
 
@@ -410,9 +562,14 @@ namespace SimBuffSet
         Pet* pet = actor->GetPet();
         for (AuraSpec const& spec : config.Buffs)
         {
-            if (!actor->HasAura(spec.SpellId))
+            auto expected = [&](Unit const* unit)
+            {
+                return !config.State.OwnKept.count({unit->GetGUID(), spec.SpellId}) &&
+                    !IsUselessPower(spec, sSpellMgr->GetSpellInfo(spec.SpellId), unit);
+            };
+            if (expected(actor) && !actor->HasAura(spec.SpellId))
                 actorMissing.push_back(spec.SpellId);
-            if (!pet)
+            if (!pet || !expected(pet))
                 continue;
 
             if (Aura* aura = pet->GetAura(spec.SpellId))
@@ -430,7 +587,8 @@ namespace SimBuffSet
         {
             std::vector<uint32> missing;
             for (AuraSpec const& spec : config.Debuffs)
-                if (!dummies[i]->HasAura(spec.SpellId))
+                if (!config.State.OwnKept.count({dummies[i]->GetGUID(), spec.SpellId}) &&
+                    !dummies[i]->HasAura(spec.SpellId))
                     missing.push_back(spec.SpellId);
             LOG_INFO("server.dpssim", "mod-dpssim: buff set coverage, before the refresh: dummy #{} (entry {}) "
                 "missing {}.", i, dummies[i]->GetEntry(), idList(missing));

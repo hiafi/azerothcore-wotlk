@@ -161,6 +161,11 @@ namespace SimProfile
         // Spider 26033.
         uint32 PetCreatureEntry = 0;
 
+        // `BuffSet = self_only | full_raid`: the profile's default buff set (SimBuffSet.h, DPS runs only).
+        // DpsSim.BuffSet in the conf wins when it is set; empty (absent) = self_only. run-sim.sh reads this key too,
+        // for the report names.
+        std::string BuffSet;
+
         // Master switch for modules/mod-dpssim/tools/stat_weights.py, added 2026-09-13: "false"
         // makes that tool refuse to run any batch at all for this profile, regardless of how many
         // TestX flags below are true - a single kill switch for "don't run stat weights against

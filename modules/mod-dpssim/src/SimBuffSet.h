@@ -19,8 +19,11 @@
 #define MODULE_DPSSIM_SIMBUFFSET_H
 
 #include "Define.h"
+#include "ObjectGuid.h"
 #include <map>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 class Creature;
@@ -30,8 +33,14 @@ class Player;
 // .agents/plans/hunter-pet-families/hunter-pet-families.PLAN.md 6). `self_only` is the actor's own buffs and nothing
 // else (every run before this existed). `full_raid` adds a raid's buffs on the actor and its pet, a raid's debuffs on
 // every dummy and Bloodlust at the pull, all applied by the sim (Unit::AddAura, the actor as the caster), not cast by
-// anyone. Each member sits in the same spell_group as the hunter pet family effect of its category, so a family's own
-// cast is suppressed by the group rule and adds nothing to its number (hunter-pet-families BRAINSTORM ruling 7).
+// anyone. Two sets of default lists (plan .agents/plans/dpssim-raid-buffs/dpssim-raid-buffs.PLAN.md):
+// - hunters: class buffs and debuffs, each in the same spell_group as the hunter pet family effect of its category, so
+//   a family's own cast is suppressed by the group rule and adds nothing to its number (hunter-pet-families BRAINSTORM
+//   ruling 7). A hunter owns none of them.
+// - every other class: spells no such class owns, since an aura the actor is the caster of must not look like its own
+//   (the Inscription raid buff scrolls; the hunter pet family debuffs and Blood Frenzy). A class buff the actor already
+//   carries from a "highest wins" or "exclusive" group stays up if it is at least as strong (OwnBuffWins).
+// Both also get Replenishment and, on the actor only, the flask of its highest primary stat.
 namespace SimBuffSet
 {
     enum class Set : uint8
@@ -58,6 +67,15 @@ namespace SimBuffSet
     {
         bool InitialLogged = false;
         bool CoverageLogged = false;
+        // OwnBuffWins: the members left out because the unit carried an own aura of their group at the pull, by unit.
+        // Renewed at every pull: leaving the member out for the whole iteration is what keeps the actor's own recast
+        // from being blocked by it.
+        std::set<std::pair<ObjectGuid, uint32>> OwnKept;
+        // Every member ever left out and logged (the report's "raidOwnKept"), by spell id
+        std::set<uint32> OwnKeptLogged;
+        // The flask picked at the first pull (0 = none), so every iteration drinks the same one
+        uint32 FlaskId = 0;
+        bool FlaskPicked = false;
     };
 
     struct Config
@@ -69,6 +87,10 @@ namespace SimBuffSet
         std::vector<AuraSpec> Debuffs;
         // On the actor and its pet at the pull, with their own duration, never put back (Bloodlust and Sated)
         std::vector<AuraSpec> PullBuffs;
+        // On the actor only, one of them: the flasks of Strength, Agility and Intellect, in that order (empty = none)
+        std::vector<AuraSpec> Flasks;
+        // Every class but the hunter: see the namespace comment
+        bool OwnBuffWins = false;
         mutable RunState State;
     };
 
@@ -87,10 +109,13 @@ namespace SimBuffSet
         std::map<std::string, uint32> Failed;
     };
 
-    // The defaults of DpsSim.RaidBuffs / RaidDebuffs / RaidPullBuffs (dpssim.conf.dist documents each id)
+    // The defaults of DpsSim.RaidBuffs / RaidDebuffs / RaidPullBuffs / RaidFlasks (dpssim.conf.dist documents each id)
     extern char const* const DEFAULT_RAID_BUFFS;
     extern char const* const DEFAULT_RAID_DEBUFFS;
+    extern char const* const DEFAULT_RAID_BUFFS_HUNTER;
+    extern char const* const DEFAULT_RAID_DEBUFFS_HUNTER;
     extern char const* const DEFAULT_RAID_PULL_BUFFS;
+    extern char const* const DEFAULT_RAID_FLASKS;
 
     char const* SetName(Set set);
     // "self_only" or "full_raid" (case-insensitive)
@@ -108,8 +133,12 @@ namespace SimBuffSet
     // "24932 Leader of the Pack [0,1,2]" per entry, for the run log
     std::string Describe(std::vector<AuraSpec> const& specs);
 
-    // Puts every missing buff on the actor and its pet and every missing debuff on every dummy, pinned. Returns how
-    // many auras it added (0 once everything is up). Phase::Initial logs the amounts that landed (the first dummy's)
+    // Picks the actor's flask (first pull of the run) and, with OwnBuffWins, notes the members this iteration leaves
+    // out. Once per pull, before the first ApplyPinned().
+    void BeginIteration(Config const& config, Player* actor, std::vector<Creature*> const& dummies);
+    // Puts every missing buff on the actor and its pet, the flask on the actor and every missing debuff on every dummy,
+    // pinned (one the actor's own proc refreshed is pinned again). Returns how many auras it added (0 once everything
+    // is up). Phase::Initial logs the amounts that landed (the first dummy's)
     // and every failure (immunity, or the group member that is in the way); Phase::Refresh counts into `refresh`.
     uint32 ApplyPinned(Config const& config, Player* actor, std::vector<Creature*> const& dummies, Phase phase,
         RefreshLog* refresh = nullptr);
