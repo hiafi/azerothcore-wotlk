@@ -442,7 +442,7 @@ private:
     bool _hitAny = false;
 };
 
-// 200439 - Savage Bite (docs/reworks/druid-feral-addition.md, FERAL-ADDENDUM.md): usable only with a
+// 200439 - Savage Bite (docs/reworks/druid-feral.md, FERAL-ADDENDUM.md): usable only with a
 // Tooth and Claw charge, enforced by data (CasterAuraSpell 200438). Consumes 1 charge and triggers
 // Nurturing Instinct exactly like a Predator's Swiftness Regrowth would. Sharing Pulverize's family
 // bit (§3.3, user decision) already gives it Splintering Blows' crit chance and lets it both benefit

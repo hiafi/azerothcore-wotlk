@@ -11,7 +11,7 @@ see apps/dbc-tools/source/classes/README.md), builds full-width DBC rows,
 and produces:
   1. A pending world-DB SQL migration (data/sql/updates/pending_db_world/) —
      load-bearing: this alone is enough for the server (see
-     docs/dbc-build-pipeline.md's "Key finding"). Only written if at least
+     docs/archive/dbc-build-pipeline.md's "Key finding"). Only written if at least
      one table's reserved-block content, or an explicit existing-row edit,
      actually differs from what's already live — see
      lib/resolve.py's `reserved_range_changed` — so a run touching nothing
@@ -2375,7 +2375,7 @@ def _run(
                 f"patch: SKIPPING {table.dbc_filename} — no base client DBC at "
                 f"{dbc_path.relative_to(REPO_ROOT)}; server SQL overlay is still "
                 f"complete, but a client patch needs the full stock file as a base "
-                f"layer (see docs/dbc-build-pipeline.md)."
+                f"layer (see docs/archive/dbc-build-pipeline.md)."
             )
             continue
         base_rows = state.read_dbc_cached(dbc_path, table)  # read-only: shared with the stock-row loaders

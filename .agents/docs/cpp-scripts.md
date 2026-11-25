@@ -22,4 +22,4 @@ Then declare and call `AddSC_<name>()` from the regional loader (`Spells/spells_
 - Argument-dependent lookup: a dungeon helper taking `DungeonKit::Vec2` (or any kit type) must not reuse a `DungeonKit` function name with other parameters (mod-dungeon-bosses `src/Kit/`). ADL offers the kit's overload to every unqualified call, so the two clash as ambiguous or the wrong one wins (Gilnid's `DistanceToSegment(p, a, b)` vs Greenskin's `(a, b, p)`); pick another name.
 - A spell id missing from Wowhead is inconclusive — check the world DB's `spell_dbc` table (server-side spells) before concluding a sniffed id doesn't exist.
 
-Custom (non-upstream) scripts go in `src/server/scripts/Custom/` (gitignored).
+Custom (non-upstream) scripts go in `src/server/scripts/Custom/` (tracked in this fork).

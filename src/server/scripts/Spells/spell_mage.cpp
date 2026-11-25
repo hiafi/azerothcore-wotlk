@@ -223,7 +223,7 @@ enum MageSpells
 
 // Fire Mage rework sec 2 - Meteor "lands at the target location after 3 sec".
 constexpr Milliseconds METEOR_IMPACT_DELAY = 3s;
-// docs/reworks/fire-mage-meteor-vfx.md: how high above the impact point the falling-meteor visual
+// How high above the impact point the falling-meteor visual
 // creature (NPC_MAGE_METEOR_MISSILE) spawns - purely cosmetic, chosen only so its fall (timed to
 // take exactly METEOR_IMPACT_DELAY - see npc_mage_meteor_missile) reads as "dropping from the sky"
 // without spawning inside nearby terrain/geometry at typical outdoor combat heights.
@@ -236,7 +236,7 @@ enum FrostMageReworkCreatures
 
 enum FireMageReworkCreatures
 {
-    // Fire Mage rework sec 2 - Meteor's falling-meteor visual (docs/reworks/fire-mage-meteor-vfx.md).
+    // Fire Mage rework sec 2 - Meteor's falling-meteor visual (docs/reworks/fire-mage-rework.md).
     // Purely cosmetic - see npc_mage_meteor_missile below - carries no damage/aura of its own.
     NPC_MAGE_METEOR_MISSILE = 300002
 };
@@ -819,7 +819,7 @@ namespace
 // (data/sql/updates/db_world/2026_09_01_01.sql, same migration that put CreatureDisplayID back to
 // 90001), the "broken" custom model rendered fine after all - see git history on this comment for
 // the full chain (stock invisible-stalker 1126 first, then Charged Sphere, then this).
-// docs/reworks/fire-mage-meteor-vfx.md's VFX pass adds a purpose-built orb model as a new row
+// The Mage VFX pass adds a purpose-built orb model as a new row
 // (90002, via patch_mage_vfx_models.py) rather than overwriting 90001 in place, and repoints this
 // creature's creature_template_model.CreatureDisplayID from 90001 to 90002 via pending SQL - see
 // that migration for the actual current value, not this comment.
@@ -2111,7 +2111,7 @@ class spell_mage_ignite_dot : public AuraScript
     }
 };
 
-// 300002 - Meteor's falling-meteor visual (docs/reworks/fire-mage-meteor-vfx.md). Purely cosmetic:
+// 300002 - Meteor's falling-meteor visual (docs/reworks/fire-mage-rework.md). Purely cosmetic:
 // no damage, no aura, no interaction with any player - it exists only to visibly fall from
 // METEOR_MISSILE_FALL_HEIGHT above the impact point down to the ground over exactly
 // METEOR_IMPACT_DELAY, landing right as spell_mage_meteor's own event fires the real impact
@@ -2390,9 +2390,9 @@ class spell_mage_playing_with_fire : public AuraScript
 // -44449 - Burnout
 // Fire Mage rework sec 5 (6,0) Burnout capstone (rank 3 only - EFFECT_1's DUMMY marker on THIS
 // SAME aura instance is 0 on ranks 1/2, 1 on rank 3, so CheckProc rejects ranks 1/2 without an
-// icon lookup) - "Dealing direct Fire damage to targets afflicted by your Ignite increases your
-// spell damage by 6% for 8 sec. Dealing direct magic non-Fire damage to targets affected by your
-// Ignite causes an explosion, dealing damage to all nearby enemies."
+// icon lookup): a direct Fire crit on a target with the caster's Ignite gives the 6% buff, a direct
+// non-Fire magic crit on it the explosion. Crits only: the stock spell_proc row -44449 asks for them
+// (HitMask 2), on purpose (user ruling 42, 2026-11-25).
 class spell_mage_burnout_capstone : public AuraScript
 {
     PrepareAuraScript(spell_mage_burnout_capstone);

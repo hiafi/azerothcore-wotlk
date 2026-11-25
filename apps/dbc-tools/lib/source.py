@@ -104,7 +104,7 @@ def partition_by_range(entries: list[dict], id_range: dict) -> tuple[list[dict],
 
     Only the first list should ever be built/emitted — see generate.py's
     "reference-only" filtering and the "Corollary" in
-    docs/dbc-build-pipeline.md: pulling an existing stock row into source/
+    docs/archive/dbc-build-pipeline.md: pulling an existing stock row into source/
     (via pull.py/pull_talents.py) is for reading/editing convenience, not an
     invitation to re-emit it at its original ID. A pulled row only starts
     being generated once its `id` is changed to a fresh one from

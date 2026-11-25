@@ -4,7 +4,7 @@ One-off DBC content patch: mints new SpellVisual.dbc / SpellVisualKit.dbc /
 SpellVisualEffectName.dbc rows (plus one CreatureModelData.dbc / CreatureDisplayInfo.dbc row) for
 the Mage VFX wired up this pass - real models for Meteor/Frozen Orb/Glacial Spike/Flurry, a shared
 precast flourish for Meteor/Flashpoint/Frozen Orb/Flurry, and a real cast-time visual for Glacial
-Spike (the one spell of these five with an actual cast bar - see docs/reworks/fire-mage-meteor-vfx.md).
+Spike (the one spell of these five with an actual cast bar - see docs/reworks/fire-mage-rework.md).
 
 Same "hand-edit the working-copy DBC via dbcfmt.py's table definitions, outside generate.py's own
 source/*.csv pipeline" pattern the deleted patch_frozen_orb_model.py used for Frozen Orb's existing
@@ -134,11 +134,11 @@ EFFECT_GLACIALSPIKE_LAUNCHED_V2 = 90011
 # (id, display name, extracted filename without extension)
 # NOTE: EFFECT_METEOR_MISSILE (90001) is unused by any SpellVisual/SpellVisualKit row below - the
 # falling meteor is a temporary summoned creature instead (see build_creature_model_row/
-# build_creature_display_row and spell_mage.cpp's npc_mage_meteor_missile), same scope decision
-# fire-mage-meteor-vfx.md documents. Minted anyway and left orphaned rather than removed, matching
+# build_creature_display_row and spell_mage.cpp's npc_mage_meteor_missile), same scope decision as
+# docs/reworks/fire-mage-rework.md (Meteor). Minted anyway and left orphaned rather than removed, matching
 # this codebase's own precedent for a superseded-but-harmless row (frozen_orb_periodic_200009's own
 # notes: "left as an orphaned row rather than deleted") - available if a future pass ever revisits
-# the DBC-native-missile alternative the VFX doc's "Open questions" section left open.
+# the DBC-native-missile alternative.
 _EFFECT_NAMES = (
     (EFFECT_METEOR_MISSILE, "Meteor Missile (Custom)", "mage_meteor_missile"),
     (EFFECT_METEOR_IMPACT_WORLD, "Meteor Impact/Burn (Custom)", "mage_meteor_impactstate_world"),
@@ -258,8 +258,8 @@ def build_kit_rows() -> list[dict]:
 
 
 # --- SpellVisual.dbc: one row per spell/stage (90001-90010) ---
-# PrecastKit is correct (not CastKit) for these four 0-cast-time spells - see
-# fire-mage-meteor-vfx.md's "Casting animation" section. Originally wired to stock kit 171 (spell
+# PrecastKit is correct (not CastKit) for these four 0-cast-time spells (docs/reworks/fire-mage-rework.md,
+# Meteor). Originally wired to stock kit 171 (spell
 # 7479's own PrecastKit verbatim), which turned out to carry an AnimID and nothing else - no hand
 # effect, so the flourish played with no glow. KIT_FIRE_PRECAST_HAND/KIT_FROST_PRECAST_HAND (above)
 # keep that same AnimID but add the school-flavored hand glow real stock spells use for their own

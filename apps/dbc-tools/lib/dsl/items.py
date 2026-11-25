@@ -73,9 +73,9 @@ NULL_PRIMARY_SHAPE = "Null (jewelry, 100% secondary)"  # item_shape 0, the prima
 SUFFIX_SECONDARY_SHAPE_ID = 0
 PRIMARY_SHARES = (0, 4000, 6000, 8000, 10000)
 DEFAULT_SHARE_BOTH = 6000
-EFFECT_BUDGET_MULT = 0.7  # itemization-changes.md s3: an item with a Use or Equip effect pays for it
+EFFECT_BUDGET_MULT = 0.7  # docs/archive/itemization-changes.md s3: an item with a Use or Equip effect pays for it
 # Weapon roles for the weapon-tier budget defaults (lib/item_variants.py, RoleCells): the stock itemization's
-# per-(role, slot) correction (itemization-changes.md, Bucket 1 "Weapon role correction").
+# per-(role, slot) correction (docs/archive/itemization-changes.md, Bucket 1 "Weapon role correction").
 WEAPON_ROLES = ("physical", "caster", "tank")
 MAX_SPELLS = 5
 MAX_SOCKETS = 3

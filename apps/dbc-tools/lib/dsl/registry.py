@@ -2212,7 +2212,7 @@ def _bundle_skill_line_ability(
             f"granted_by_talent for spell {rank.id} ({rank.name!r}): player_castable=True needs "
             f"a matching entry in skill_line_ability_ids (mint the next ID from "
             f"source/ids.yaml's skilllineability block, 30400-30499 - see "
-            f"docs/skilllineability-handoff.md)."
+            f"docs/archive/skilllineability-handoff.md)."
         )
     skill_line_ability(
         id=skill_line_ability_id,

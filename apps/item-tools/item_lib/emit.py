@@ -58,7 +58,7 @@ def _guard_term(col: str, value) -> str:
     *computed* float through Python's full-precision `repr()` and back does
     not reliably reproduce the exact stored bit pattern - confirmed live: a
     `dmg_min1` guard built this way affected 0 rows against a value that
-    printed identically (docs/itemization-changes.md's Bucket 1 "DPS trade"
+    printed identically (docs/archive/itemization-changes.md's Bucket 1 "DPS trade"
     note has the incident). An exact-equality guard on a float column that
     already holds a previously-computed value is silently unreliable, not
     just occasionally imprecise - use this for every float guard, not only

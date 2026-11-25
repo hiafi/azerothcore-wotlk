@@ -518,7 +518,7 @@ class spell_pri_divine_hymn : public SpellScript
 {
     PrepareSpellScript(spell_pri_divine_hymn);
 
-    // Priest baseline rework (docs/reworks/priest-new-spells.md): "Heals all party or raid
+    // Priest baseline rework (docs/reworks/priest-holy-rework.md): "Heals all party or raid
     // members within 40 yards" - the old top-3-lowest-health cap is gone, everyone in range is
     // healed now. Only the RaidCheck (party/raid membership) filter survives.
     void FilterTargets(std::list<WorldObject*>& targets)
@@ -1410,7 +1410,7 @@ class spell_pri_renew : public AuraScript
  * replaces (SpellAuras.cpp's `Aura::HandleAuraSpecificMods`, gated only by `if (apply)`).
  *
  * 75999 investigation (mandated before deciding to keep or cut the self-heal cast alongside the
- * chunk): grepped docs/bugs-and-fixes.md and docs/dbc-build-pipeline.md for "75999" - no hits, so
+ * chunk): grepped docs/bugs-and-fixes.md and docs/archive/dbc-build-pipeline.md for "75999" - no hits, so
  * nothing documents it as dead or wrong. apps/dbc-tools/source/spells/npc.csv (WP-A's own pulled
  * client data) carries a full "pulled from existing data" row for spell 75999: a real client spell
  * literally named "Improved Devouring Plague", SPELL_EFFECT_HEAL (effect type 10), self-targeted,

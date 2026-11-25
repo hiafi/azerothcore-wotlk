@@ -34,7 +34,8 @@ playtest only caught after a deploy. Each cost a fix cycle in a past rework. Che
   read at a glance.
 - A purely visual marker (e.g. "your proc fired") is its own non-passive `SPELL_AURA_DUMMY` spell, applied and removed
   with the real effect.
-- Aura text `$s1` / `$n` placeholders didn't render correctly in-game; keep aura texts number-free unless verified.
+- Aura text may hold numbers: `$sN` and `{potN}` render in buff texts (`docs/Systems.md` section 10, user rule; 141
+  custom auras use `$s1`). `$n` didn't render in game. A `$<var>` (tooltip variable) in aura text is untested.
 
 ## Triggered casts, procs and scoping
 

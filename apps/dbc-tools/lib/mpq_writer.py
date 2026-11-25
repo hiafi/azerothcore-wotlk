@@ -8,7 +8,7 @@ alone (no Spell.dbc involved at all) reproduced the exact same "every class's
 talent tree renders almost empty, no client errors" failure the whole
 investigation started from, while a `Talent.dbc` packed by real StormLib
 (same bytes, same MPQ v1 header format, same store/single-unit settings) did
-not — see docs/dbc-build-pipeline.md's "MPQ writer replaced" note for the
+not — see docs/archive/dbc-build-pipeline.md's "MPQ writer replaced" note for the
 full story. The custom writer's own docstring admitted the real problem
 retroactively: it was "enough to package a handful of small DBC files," which
 was never actually verified against a live client for anything Talent.dbc's

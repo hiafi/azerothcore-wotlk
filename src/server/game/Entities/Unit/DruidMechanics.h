@@ -491,7 +491,7 @@ namespace Druid
     constexpr uint32 SPELL_REND_AND_TEAR_CRIT = 200436;       // CORE-AUDIT row 24 helper, 1 charge
     constexpr uint32 SPELL_BESTIAL_FURY_RAGE = 200437;        // hidden, linked to 200425
 
-    // Tooth and Claw addendum (docs/reworks/druid-feral-addition.md, FERAL-ADDENDUM.md). No core
+    // Tooth and Claw addendum (docs/reworks/druid-feral.md, FERAL-ADDENDUM.md). No core
     // edits; everything below is data + the calls listed next to each constant/function.
     constexpr uint32 SPELL_TOOTH_AND_CLAW = 200438;           // buff, 2 charges, Bestial Fury only
     constexpr uint32 SPELL_SAVAGE_BITE = 200439;              // trainer-taught, requires Tooth and Claw
@@ -662,7 +662,7 @@ namespace Druid
     // Frenzied Regeneration by its own bear-only ShapeshiftMask.
     float GetHeartOfTheWildMasteryPct(Player const* player);
 
-    // --- Tooth and Claw addendum (docs/reworks/druid-feral-addition.md, FERAL-ADDENDUM.md) ---
+    // --- Tooth and Claw addendum (docs/reworks/druid-feral.md, FERAL-ADDENDUM.md) ---
 
     // Grants a Tooth and Claw (200438) charge/refresh if `caster` is in Bestial Fury and the roll
     // (scaled and capped by Proc Chance) succeeds. A no-op with chancePct <= 0 (e.g. no Predatory

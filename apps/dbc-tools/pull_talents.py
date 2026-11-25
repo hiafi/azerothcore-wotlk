@@ -2,7 +2,7 @@
 """
 DBC build pipeline — reverse entry point: pull existing Talent.dbc /
 TalentTab.dbc rows into source/talents/*.yaml (companion to pull.py, which
-does the same for spells — see docs/dbc-build-pipeline.md).
+does the same for spells — see docs/archive/dbc-build-pipeline.md).
 
 Reads the merged base-DBC ⊕ current-overlay view for Talent/TalentTab,
 reverses each row through lib/reverse.py, and appends the results to the
@@ -38,7 +38,7 @@ SOURCE_DIR = TOOL_ROOT / "source"
 TALENTS_DIR = SOURCE_DIR / "talents"
 
 # ClassMask bit = 1 << (class_id - 1). Class ID 10 is unused in 3.3.5a (see
-# docs/dbc-build-pipeline.md's Two-realm strategy note), so there's no bit 512
+# docs/archive/dbc-build-pipeline.md's Two-realm strategy note), so there's no bit 512
 # entry here.
 CLASS_MASK = {
     "warrior": 1, "paladin": 2, "hunter": 4, "rogue": 8, "priest": 16,

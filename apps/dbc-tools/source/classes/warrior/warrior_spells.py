@@ -1333,7 +1333,8 @@ concussion_blow_12809 = spell(
     ],
     spell_icon_id=25,
     notes=(
-        'Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Concussion Blow (12809) - was left as an '
+        'Protection Warrior rework phase 3 (docs/reworks/warrior-protection-rework.md): '
+        'Concussion Blow (12809) - was left as an '
         'untouched "pulled from existing data" reference copy. warrior-rework S1 D9 (brief ruling 4): the damage '
         'moves from the stock script-overwritten DUMMY (eff2, 38% of attack power via spell_warr_concussion_blow, now '
         'unbound) onto eff1 SCHOOL_DAMAGE ap_potency 54.6 (= stock 38% AP at about 1,000 AP; about 139 + 0.234 x AP); '

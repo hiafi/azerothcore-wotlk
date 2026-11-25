@@ -35,7 +35,8 @@ file; each models an existing Even pair, name order as below, stat types in pare
 (Venomspitter, Smolderweb's Eye), Frost Blast (Chillpike), Flame Lash (Heart of Wyrmthalak), the Mark of the Dragon
 Lord and Heart of the Scale Uses, Wound (Blackhand Doomsaw), Felstriker, Seeping Willow's cloud, Shahram (Blackblade)
 and Chromatic Infusion (Draconic Infused Emblem). Their effect costs 0.7 of the budget like any effect item
-(itemization-changes.md section 3). The stock spells are the same on every tier (they are not declared in source/items,
+(docs/archive/itemization-changes.md section 3).
+The stock spells are the same on every tier (they are not declared in source/items,
 so they cannot scale). Finkle's Skinner keeps only its Skinning bonus (16718): `spells=` names that one stock spell, so
 its other stock line (Beast Slaying, 18067) is dropped rather than kept (`keep_spells` is all or nothing). Every other
 stock spell slot (+attack power, MP5) folds into the budget (`absorbed_spell_slots`), as the list's "stats only" asks.

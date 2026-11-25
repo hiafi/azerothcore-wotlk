@@ -266,7 +266,7 @@ namespace Priest
         if (spellProto->SpellFamilyName != SPELLFAMILY_PRIEST)
             return;
 
-        // Voidform (docs/reworks/priest-new-spells.md, Void Eruption): "increases your periodic
+        // Voidform (docs/reworks/priest-shadow-rework.md, Void Eruption): "increases your periodic
         // Shadow damage by 10%." damagetype distinguishes a DoT tick from direct damage - the only
         // caster-side signal that lets this scope to "periodic" without a dedicated AuraType.
         if (damagetype == DOT && (spellProto->GetSchoolMask() & SPELL_SCHOOL_MASK_SHADOW))

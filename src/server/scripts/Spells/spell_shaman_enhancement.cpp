@@ -1242,7 +1242,7 @@ class spell_sha_enh_ascendance : public AuraScript
     }
 };
 
-// 202391 Gust. On a landed hit: the splash (202392, half damage by its own potency) on up to GUST_SPLASH_TARGETS
+// 202391 Gust. On a landed hit: the splash (202392, the Gust's damage since S17) on up to GUST_SPLASH_TARGETS
 // enemies nearest the struck target within GUST_SPLASH_RADIUS_YD, never the target itself. The splash is triggered
 // and rolls nothing (and never another Gust).
 class spell_sha_enh_gust : public SpellScript

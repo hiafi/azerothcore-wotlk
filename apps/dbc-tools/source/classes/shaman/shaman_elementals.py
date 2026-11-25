@@ -153,10 +153,11 @@ storm_elemental_totem_202273 = spell(
           'whose Index-0 passive 202275 summons the guardian 300261. Same cooldown / category / GCD / cost [tune] / '
           'HP as 202272, Air\'s back-right spawn point (3738 / 8512). Family d0 b29 + d1 b8. Bound to '
           'spell_sha_elemental_lockout. Icon 90270 = inv_stormelemental.blp (custom SpellIcon, patch-I; P5, 2026-10-22). '
-          'Tooltip: the Storm Bolt chain (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package).',
+          'Tooltip: the Storm Bolt chain (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package); 4 -> 2 more enemies, '
+          'as S19 set it (2026-11-24, docs audit).',
     raw_overrides=_summon_raw(
         56, SUMMON_PROPS_AIR,
-        'Calls forth a greater storm elemental for $d that strikes your enemies with lightning that chains to up to 4 '
+        'Calls forth a greater storm elemental for $d that strikes your enemies with lightning that chains to up to 2 '
         'additional nearby enemies. 2 min cooldown.',
         m.STORM_ELEMENTAL_SUMMON),
 )

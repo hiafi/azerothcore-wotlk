@@ -22,7 +22,7 @@
 #include <vector>
 
 // Shape-based itemization system. See docs/itemization-phase-2.md (schema, pipeline, shape
-// catalog, validation) and docs/itemization-changes.md (server hooks, load order, debug
+// catalog, validation) and docs/archive/itemization-changes.md (server hooks, load order, debug
 // commands, client patching -- still the source of truth for anything phase-2 doesn't cover,
 // e.g. off-budget Stamina/Armor and weapon DPS, both unchanged by this rewrite).
 //
@@ -94,7 +94,7 @@ namespace ItemBudget
         int32 FinalStamina = 0;
 
         // Armor: off-budget like Stamina, never funded from the item's budget -- see
-        // itemization-changes.md §9.3a. HasArmorCurve is false for items whose class/subclass
+        // docs/archive/itemization-changes.md §9.3a. HasArmorCurve is false for items whose class/subclass
         // has no item_armor_curve entry (non-armor-class items, shields, rings/necks/trinkets)
         // -- Armor is left untouched for those, same as any unassigned item.
         bool HasArmorCurve = false;
@@ -143,7 +143,7 @@ namespace ItemBudget
 
         // Bitmask, bit i = Spells[i] (spellid_(i+1) in item_template) gets cleared at
         // materialization time -- its effect has been folded into a plain stat above instead.
-        // See itemization-changes.md §9.8's "absorbing" an on-equip spell into the stat block.
+        // See docs/archive/itemization-changes.md §9.8's "absorbing" an on-equip spell into the stat block.
         uint32 AbsorbedSpellSlots = 0;
     };
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Priest baseline rework (docs/reworks/priest-new-spells.md): mints new SpellIcon.dbc rows for the 5
+Priest baseline rework (docs/reworks/priest-disc-rework.md): mints new SpellIcon.dbc rows for the 5
 new spells that needed real icon art (Power Word: Barrier already has a matching stock icon,
 3837 - see priest_spells.py's own notes on that spell - so it isn't touched here), then packages
 the underlying .blp files into patch-I.mpq and deploys it. A 6th icon (Spirit Shell, Discipline

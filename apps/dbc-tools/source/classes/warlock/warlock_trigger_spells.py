@@ -8622,8 +8622,9 @@ fel_reprisal_200899 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=71165),
     ],
     spell_icon_id=2369,
-    notes='warlock-rework DEMONOLOGY §6 (8,3): new talent 60090. eff0 PROC_TRIGGER_SPELL -> 71165 (Molten Core). Proc row chance 10, cooldown 6000 (§8, spell_warl_fel_reprisal CheckProc gates on form 23 + Immolate-only for periodic).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Dark Apotheosis, taking damage or dealing periodic damage with Immolate has a $s1% chance to grant you Molten Core. This effect cannot occur more than once every 6 sec.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+    notes='warlock-rework DEMONOLOGY §6 (8,3): new talent 60090. eff0 PROC_TRIGGER_SPELL -> 71165 (Molten Core). Proc row chance 10, cooldown 6000 (§8, spell_warl_fel_reprisal CheckProc gates on form 23 + Immolate-only for periodic).'
+          ' Tooltip $s1 (reads 1) -> 10, the spell_proc chance (2026-11-24, docs audit).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Dark Apotheosis, taking damage or dealing periodic damage with Immolate has a 10% chance to grant you Molten Core. This effect cannot occur more than once every 6 sec.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
 )
 
 
@@ -8642,8 +8643,9 @@ fel_reprisal_200900 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=71165),
     ],
     spell_icon_id=2369,
-    notes='warlock-rework DEMONOLOGY §6 (8,3): see rank 1 note (20% chance).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Dark Apotheosis, taking damage or dealing periodic damage with Immolate has a $s1% chance to grant you Molten Core. This effect cannot occur more than once every 6 sec.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+    notes='warlock-rework DEMONOLOGY §6 (8,3): see rank 1 note (20% chance).'
+          ' Tooltip $s1 (reads 1) -> 20, the spell_proc chance (2026-11-24, docs audit).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Dark Apotheosis, taking damage or dealing periodic damage with Immolate has a 20% chance to grant you Molten Core. This effect cannot occur more than once every 6 sec.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
 )
 
 
@@ -8662,8 +8664,9 @@ fel_reprisal_200901 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=71165),
     ],
     spell_icon_id=2369,
-    notes='warlock-rework DEMONOLOGY §6 (8,3): see rank 1 note (30% chance).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Dark Apotheosis, taking damage or dealing periodic damage with Immolate has a $s1% chance to grant you Molten Core. This effect cannot occur more than once every 6 sec.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+    notes='warlock-rework DEMONOLOGY §6 (8,3): see rank 1 note (30% chance).'
+          ' Tooltip $s1 (reads 1) -> 30, the spell_proc chance (2026-11-24, docs audit).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Dark Apotheosis, taking damage or dealing periodic damage with Immolate has a 30% chance to grant you Molten Core. This effect cannot occur more than once every 6 sec.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
 )
 scripted_by(fel_reprisal_200899, 'spell_warl_fel_reprisal')
 scripted_by(fel_reprisal_200900, 'spell_warl_fel_reprisal')

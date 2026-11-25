@@ -1963,7 +1963,7 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
                 damageInfo->blocked_amount -= remainingBlock;
             }
 
-            // Critical Block (Protection Warrior rework, docs/prot_warrior_rework.md Row 7) -
+            // Critical Block (Protection Warrior rework, docs/reworks/warrior-protection-rework.md Row 7) -
             // guaranteed extra %-reduction on the damage that got past the block-value
             // subtraction above; see WarriorMechanics.h for why this lives here instead of a
             // spell script.

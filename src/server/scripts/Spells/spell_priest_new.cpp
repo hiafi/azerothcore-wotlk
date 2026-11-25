@@ -16,7 +16,7 @@
  */
 
 /*
- * Priest baseline rework (docs/reworks/priest-new-spells.md) - the 6 genuinely-new shared spells
+ * Priest baseline rework (docs/reworks/priest-disc-rework.md) - the 6 genuinely-new shared spells
  * from this pass (Angelic Feather, Power Word: Barrier, Divine Star, Halo, Leap of Faith, Void
  * Eruption). Kept in a separate file from the existing spell_priest.cpp (already 1400+ lines
  * before this) rather than growing that file further. Scriptnames prefixed "spell_pri_", same
@@ -93,7 +93,7 @@ enum PriestNewGameObjects
 };
 
 /*
- * Angelic Feather (docs/reworks/priest-new-spells.md): "Places a feather at the target location,
+ * Angelic Feather (docs/reworks/priest-disc-rework.md): "Places a feather at the target location,
  * granting the first ally to walk through it 40% increased movement speed for 5 sec. Only 3
  * feathers can be placed at one time." The feather itself is a native GAMEOBJECT_TYPE_TRAP GO
  * (gameobject_template.trap.spellId = SPELL_PRIEST_ANGELIC_FEATHER_SPEED, autoCloseTime=-1 so it
@@ -134,7 +134,7 @@ class spell_pri_angelic_feather : public SpellScript
 };
 
 /*
- * Divine Star (docs/reworks/priest-new-spells.md): "Throw a Divine Star forward 27 yds, healing
+ * Divine Star (docs/reworks/priest-disc-rework.md): "Throw a Divine Star forward 27 yds, healing
  * allies in its path... and dealing... Holy damage to enemies. After reaching its destination, the
  * Divine Star returns to you, healing allies and damaging enemies in its path again. Healing
  * reduced beyond 6 targets." Modeled on Frost Mage's Frozen Orb (spell_mage.cpp's
@@ -433,7 +433,7 @@ class spell_pri_divine_star_pulse : public SpellScript
 };
 
 /*
- * Halo (docs/reworks/priest-new-spells.md): "Creates a ring of Holy energy around you that quickly
+ * Halo (docs/reworks/priest-disc-rework.md): "Creates a ring of Holy energy around you that quickly
  * expands to a 40 yd radius, healing allies for... and dealing... Holy damage to enemies." Self-buff
  * aura ticking every 100ms, computing the ring's current radius from elapsed/max duration each
  * tick and casting halo_pulse_200136 at whichever units are newly within that radius - same
@@ -551,7 +551,7 @@ class spell_pri_halo_pulse : public SpellScript
 };
 
 /*
- * Leap of Faith (docs/reworks/priest-new-spells.md): "Pulls the spirit of a party or raid member,
+ * Leap of Faith (docs/reworks/priest-disc-rework.md): "Pulls the spirit of a party or raid member,
  * instantly moving them directly in front of you." Modeled directly on DK Death Grip
  * (spell_dk.cpp's spell_dk_death_grip::HandleDummy), direction reversed: the destination is near
  * the *caster*, not the target's own explicit dest, since this pulls a friendly ally to the priest
@@ -584,7 +584,7 @@ class spell_pri_leap_of_faith : public SpellScript
 };
 
 /*
- * Void Eruption (docs/reworks/priest-new-spells.md): "Releases an explosive blast of pure void
+ * Void Eruption (docs/reworks/priest-shadow-rework.md): "Releases an explosive blast of pure void
  * energy, causing Shadow damage to up to 10 enemies within 10 yards of your target. The power
  * drawn from the Void increases your periodic Shadow damage by 10% for 10 sec, with the duration
  * increased by 0.5 sec for each enemy hit. While in Shadowform this spell also applies Shadow
