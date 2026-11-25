@@ -2390,9 +2390,9 @@ class spell_mage_playing_with_fire : public AuraScript
 // -44449 - Burnout
 // Fire Mage rework sec 5 (6,0) Burnout capstone (rank 3 only - EFFECT_1's DUMMY marker on THIS
 // SAME aura instance is 0 on ranks 1/2, 1 on rank 3, so CheckProc rejects ranks 1/2 without an
-// icon lookup) - "Dealing direct Fire damage to targets afflicted by your Ignite increases your
-// spell damage by 6% for 8 sec. Dealing direct magic non-Fire damage to targets affected by your
-// Ignite causes an explosion, dealing damage to all nearby enemies."
+// icon lookup): a direct Fire crit on a target with the caster's Ignite gives the 6% buff, a direct
+// non-Fire magic crit on it the explosion. Crits only: the stock spell_proc row -44449 asks for them
+// (HitMask 2), on purpose (user ruling 42, 2026-11-25).
 class spell_mage_burnout_capstone : public AuraScript
 {
     PrepareAuraScript(spell_mage_burnout_capstone);
