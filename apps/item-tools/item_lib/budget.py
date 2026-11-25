@@ -277,7 +277,7 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
     budget = _round(base - socket_budget_cost - socket_bonus_value)
     b["budget"] = budget
 
-    # Off-budget baselines: Stamina, Armor, Block Value - itemization-changes.md §9.3/§9.3a,
+    # Off-budget baselines: Stamina, Armor, Block Value - docs/archive/itemization-changes.md §9.3/§9.3a,
     # docs/itemization-phase-2.md §7.4. None of these are funded from the budget above.
     stamina_cost_row = tables["item_stat_cost"].get((ITEM_MOD_STAMINA,))
     stamina_cost = stamina_cost_row["cost"] if stamina_cost_row else 1.0

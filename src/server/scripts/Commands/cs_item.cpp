@@ -363,7 +363,7 @@ public:
     }
 
     // Shape-based itemization system debug tool. See docs/itemization-phase-2.md and
-    // docs/itemization-changes.md §6.4.
+    // docs/archive/itemization-changes.md §6.4.
     static bool HandleItemBudgetCommand(ChatHandler* handler, uint32 itemEntry)
     {
         ItemBudget::Breakdown b = ItemBudget::ComputeBreakdown(itemEntry);

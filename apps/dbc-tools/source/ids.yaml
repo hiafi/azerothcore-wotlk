@@ -3,7 +3,7 @@
 # Every future ticket (single-rank spells, Frost Mage, ...) draws new IDs from
 # these ranges instead of picking numbers ad hoc, so nothing ever collides
 # with stock client data or with another ticket's IDs. See
-# docs/dbc-build-pipeline.md, work item 3.
+# docs/archive/dbc-build-pipeline.md, work item 3.
 #
 # How the bounds were picked (checked at the time this file was written):
 #   - spell:      highest ID anywhere in spell_dbc (base + pending) was
@@ -18,7 +18,7 @@
 #                 margin without needing to inspect the client files directly.
 #   - skilllineability: also a currently-empty overlay table; the live base
 #                 file's own IDs top out at 21980 (verified this session —
-#                 see docs/skilllineability-handoff.md), so 30400+ stays clear.
+#                 see docs/archive/skilllineability-handoff.md), so 30400+ stays clear.
 #   - item:       the real client Item.dbc (var/extractors/dbc/Item.dbc, pulled
 #                 from patch-enUS-3.MPQ) tops out at 56806 (asserted in
 #                 DBCStores.cpp as "last client known item added in 3.3.5a") -

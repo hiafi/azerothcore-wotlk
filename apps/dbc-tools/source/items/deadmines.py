@@ -25,7 +25,7 @@ rating instead (Crit and Haste). The bonus is one enchant per item, so it does n
 
 **Hard mode items** (VanCleef, ladder `vanilla_hard_mode`, 71 / 81 / 91 / 101) carry the three effects of stage IV6
 (deadmines_hard_mode_effects.py, spells from the `items` reservation 205400-205599 in source/ids.yaml). Each carries
-`budget_mult` 0.7 for its effect (itemization-changes.md section 3). Only the Signet is socketed (one
+`budget_mult` 0.7 for its effect (docs/archive/itemization-changes.md section 3). Only the Signet is socketed (one
 red, plan section 7.1); trinkets never are. The effects scale with the tier (stage IV10, `scale="budget"`): each tier
 above 71 carries its own copies of the effect spells, damage and healing times its stat budget over the 71 tier's.
 """

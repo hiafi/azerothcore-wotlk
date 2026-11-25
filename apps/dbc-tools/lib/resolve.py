@@ -5,7 +5,7 @@ things without a flag to tell them apart:
 
   - **New content**: `id` is inside the reserved block (source/ids.yaml).
     Always built and emitted — this is genuinely new data, minted by the
-    generator per docs/dbc-build-pipeline.md's "Corollary" (new spells never
+    generator per docs/archive/dbc-build-pipeline.md's "Corollary" (new spells never
     squat on an existing ID).
   - **Editing an existing spell/talent**: `id` is outside the reserved
     block, but the built row doesn't match what's currently live. This is

@@ -2650,7 +2650,7 @@ savage_bite_200439 = spell(
         Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=65.11662, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90122,  # spell_druid_bearhug, build_patch_i.py
-    notes="NEW (docs/reworks/druid-feral-addition.md §2, FERAL-ADDENDUM §3.3): physical SCHOOL_DAMAGE, not a weapon "
+    notes="NEW (docs/reworks/druid-feral.md §2, FERAL-ADDENDUM §3.3): physical SCHOOL_DAMAGE, not a weapon "
           "attack, matching Pulverize's own real formula (SCHOOL_DAMAGE + AP, not the design doc's normalized-weapon-"
           "damage text) scaled by 250/150 - Pulverize's 59 + 5.0/level from 22 (+0.30 AP) x 5/3 = 98 + 8.333/level "
           "(+0.50 AP), ~581 at 80 vs Pulverize's ~349. Same BaseLevel/SpellLevel 22 as Pulverize (not the trainer "

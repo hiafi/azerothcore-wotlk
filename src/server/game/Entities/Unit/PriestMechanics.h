@@ -49,7 +49,7 @@ namespace Priest
     constexpr uint32 SPELL_ECHO_OF_LIGHT_DAMAGE = 200219;
 
     // Unit::SpellPctDamageModsDone's whole (former) SPELLFAMILY_PRIEST case: Void Eruption's
-    // Voidform buff (docs/reworks/priest-new-spells.md - "increases your periodic Shadow damage by
+    // Voidform buff (docs/reworks/priest-shadow-rework.md - "increases your periodic Shadow damage by
     // 10% for 10 sec"; no native WotLK AuraType computes "+X% periodic damage done", hence the live
     // marker-aura-by-icon read), plus the stock Mind Flay / Smite / Shadow Word: Death glyph
     // clauses and Twisted Faith's Mind Flay half, migrated out of Unit.cpp verbatim

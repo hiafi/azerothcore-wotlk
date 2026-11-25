@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 DBC build pipeline — reverse entry point: pull existing spell rows into
-source/spells/*.csv as a starting baseline (see docs/dbc-build-pipeline.md,
+source/spells/*.csv as a starting baseline (see docs/archive/dbc-build-pipeline.md,
 "pull.py — building a baseline from existing data").
 
 Reads the merged base-DBC ⊕ current-overlay view (same one generate.py
@@ -84,7 +84,7 @@ def _load_trainer_and_rank_spell_ids() -> set[int]:
 
 def _load_talent_spell_ids() -> set[int]:
     """Every spell ID granted by spending a talent point (Talent.dbc's
-    SpellRank_1..9 columns — see docs/dbc-tools-talent-misclassification.md).
+    SpellRank_1..9 columns — see docs/archive/dbc-tools-talent-misclassification.md).
     Neither trainer-taught nor part of a spell_ranks chain, so it needs its
     own evidence source — see `_load_trainer_and_rank_spell_ids`."""
     ids: set[int] = set()
@@ -137,7 +137,7 @@ def detect_dest(row: dict, trainer_and_rank_spell_ids: set[int], talent_spell_id
         return "npc"
     # Talent-granted spells get their own file per class, so <class>.csv
     # only ever holds spells learned outright (trainer/rank chain) — see
-    # docs/dbc-tools-talent-misclassification.md.
+    # docs/archive/dbc-tools-talent-misclassification.md.
     if spell_id in talent_spell_ids:
         return f"{dest}_talents"
     return dest

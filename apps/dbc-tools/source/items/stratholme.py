@@ -19,7 +19,8 @@ Stamina" take a quarter more (`extra_stamina=0.25`, the Deadmines Smelting Pants
 **Kept stock effects** (`keep_spells=True`, the list's "keeps ..."): Soul Breaker, Piccolo of the Flaming Fire, The
 Cruel Hand of Timmy, Cannonball Runner, Demonshear, Book of the Dead, Crest of Retribution, Ramstein's Lightning
 Bolts, Skullforge Reaver and the Runeblade. Their effect costs 0.7 of the budget like any effect item
-(itemization-changes.md section 3), except the Piccolo, whose dance adds no throughput: "full stat budget" (designer).
+(docs/archive/itemization-changes.md section 3), except the Piccolo,
+whose dance adds no throughput: "full stat budget" (designer).
 The stock spells are the same on every tier (they are not declared in source/items, so they cannot scale). Every other
 stock spell slot (+attack power, MP5, health regen, the relics' flat spell power or rage effects) folds into the budget
 (`absorbed_spell_slots`), as the list's "stats only" asks.

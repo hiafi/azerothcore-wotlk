@@ -1,6 +1,6 @@
 """
 Places already-built DBC binaries (see dbcfile.write_dbc) into the client
-patch outputs. See docs/dbc-build-pipeline.md, "Client patch delivery
+patch outputs. See docs/archive/dbc-build-pipeline.md, "Client patch delivery
 decision": both loose files and an MPQ are produced every run, not either/or.
 """
 

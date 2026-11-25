@@ -52,7 +52,8 @@ The socket bonus is a stock +4 secondary rating (the Deadmines precedent; one en
 item takes Haste and a Versatility item takes Crit, as in Deadmines.
 
 **Hard mode items** (ladder `vanilla_hard_mode`, 71 / 81 / 91 / 101): one item on every hard mode kill, on top of the
-heroic loot. Effect items carry `budget_mult` 0.7 for the effect (itemization-changes.md section 3), except Transfer
+heroic loot. Effect items carry `budget_mult` 0.7 for the effect
+(docs/archive/itemization-changes.md section 3), except Transfer
 Papers (1.0: its Use adds no throughput, approved 2026-11-02). One socket on the Chillband, the Bonechill Blade, the
 Honor Roll Ribbon and the Portal Rod; trinkets never.
 """

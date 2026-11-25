@@ -38,7 +38,7 @@ namespace Warrior
 {
     // Unit::CalculateMeleeDamage's MELEE_HIT_BLOCK case - Critical Block's guaranteed extra
     // damage-taken reduction on a successful block (Protection Warrior rework,
-    // docs/prot_warrior_rework.md Row 7): "successful blocks now further reduce the damage you
+    // docs/reworks/warrior-protection-rework.md Row 7): "successful blocks now further reduce the damage you
     // take from the blocked hit by 8/16/25%." A flat guaranteed reduction, distinct from the
     // stock chance-based MOD_BLOCK_CRIT_CHANCE "double block" mechanic - no SpellScript hook
     // exists for "the block-value subtraction just happened", hence this core-side check.

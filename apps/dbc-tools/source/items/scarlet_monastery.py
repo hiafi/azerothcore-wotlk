@@ -38,7 +38,7 @@ cooldown (24) and no charges. Every other stock
 spell slot (Loksey's Training Stick Attack Power 14049, Gauntlets of Divinity Attack Power 15807, Branded Leather
 Bracers' flat slot) folds into the budget (`absorbed_spell_slots`), as the list's stats-only lines ask. The stock
 spells are the same on every tier (they are not declared in source/items, so they cannot scale); each effect item pays
-0.7 of the budget (itemization-changes.md section 3), the default for an item with an effect.
+0.7 of the budget (docs/archive/itemization-changes.md section 3), the default for an item with an effect.
 
 **Type and slot changes**: Gauntlets of Divinity mail -> plate (`subclass=4`, `Material=6`, display unchanged, the
 Deathdealer Breastplate precedent: the dungeon's Plate Intellect piece). The Dog Whistle becomes a trinket (class 4,

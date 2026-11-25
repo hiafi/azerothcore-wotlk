@@ -830,7 +830,7 @@ granted_by_talent(
 # Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (10,1) Flashpoint - REPURPOSED stock talent id 1848 (was Fiery Payback at (7,0)). See id 27's
 # comment. Player-castable and talent-granted, hence the SkillLineAbility row (30409, next free in
 # source/ids.yaml's 30400-30499 block) that keeps it in the Fire Spellbook tab - fire_41_tab now
-# carries skill_line=8 for exactly this (docs/skilllineability-handoff.md).
+# carries skill_line=8 for exactly this (docs/archive/skilllineability-handoff.md).
 granted_by_talent(
     id=1848,
     tab=fire_41_tab,

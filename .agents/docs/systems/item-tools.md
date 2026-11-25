@@ -40,15 +40,12 @@ history:
 - **Editing an existing row**: a plain `UPDATE ... SET <changed cols> WHERE
   \`entry\` = N AND <changed cols> = <old values>` - guarded on the old
   value of every column you're changing, so re-running an already-applied
-  file is a no-op instead of an error. See the Conjure Refreshment item-level
-  edit (originally `rev_1787824212353499531.sql`) inside
-  `data/sql/updates/pending_db_world/frost_mage_rework.sql` (the merged
-  Frost Mage rework migration) for a real example.
+  file is a no-op instead of an error. See the `item_template` UPDATEs in
+  `data/sql/updates/db_world/2026_09_01_00.sql` for a real example.
 - **A brand-new row**: `INSERT INTO item_template (...) VALUES (...) ON
   DUPLICATE KEY UPDATE col = VALUES(col), ...` - an upsert, both idempotent
-  and never needs a `DELETE`. See the `creature_template` precedent this
-  was modeled on (originally `rev_1787563173168071680.sql`), also inside
-  `data/sql/updates/pending_db_world/frost_mage_rework.sql`.
+  and never needs a `DELETE`. Any
+  generated rev that mints an item is a real example.
 
 `apps/item-tools/item_lib/emit.py` generates exactly these two shapes; you
 shouldn't need to hand-write either if you're going through the webui.
@@ -93,7 +90,7 @@ column without it.
 ## Budget templates (`/templates`)
 
 Hand-authors the percentage-allocation itemization system's
-`item_budget_template`/`item_budget_assign` (`docs/itemization-changes.md`
+`item_budget_template`/`item_budget_assign` (`docs/archive/itemization-changes.md`
 §9.1/§9.8), and regenerates an item's real `item_template` stats from them.
 Two new modules carry this, both still no-live-DB:
 
@@ -105,10 +102,19 @@ Two new modules carry this, both still no-live-DB:
 - `item_lib/budget.py` - a Python port of `ItemBudget.cpp`'s `ResolveBudget()`.
   A **separate implementation of the same formula**, not a call into the
   C++ - if that formula ever changes (the deferred custom-stat-ID fix
-  mentioned in `docs/itemization-changes.md` §5, for instance), this needs
+  mentioned in `docs/archive/itemization-changes.md` §5, for instance), this needs
   a matching hand-edit or item-tools' previews/writes will silently drift
   from what the live worldserver actually materializes. Both files carry a
   comment pointing at the other for exactly this reason.
+
+**The secondary curve factor r** (level 60 stat curve, 2026-11-20). After the rounding step, secondary-side
+stats with `item_stat_cost.budget_curve = 1` (Dodge, Parry, Block, Mastery, Versatility, Cooldown Haste, Crit,
+Proc Chance, Haste, Armor Penetration) take their exact value times
+`r(ilvl) = item_budget_curve.secondary_budget / budget`, and are re-rounded among themselves
+(`budget._apply_secondary_curve`, mirroring step 6 of `ItemBudget::ResolveBudget()`). MP5 and the primary side
+don't move. A random suffix pool takes r only when every stat of the pool is flagged
+(`suffix_pool_rides_secondary_curve`). Spec: `docs/itemization-phase-2.md` section 4.0; tests:
+`apps/item-tools/tests/test_secondary_curve.py`.
 
 **Secondary shape 0 means "secondaries from the random suffix"** (crafting rework C4). With
 `item_itemization.secondary_shape_id = 0` and `item_template.RandomSuffix` set, the secondary budget is

@@ -11,10 +11,15 @@ pairs always eventually do (see `docs/bugs-and-fixes.md`'s `spell_bonus_data` st
 found exactly this way).
 
 The full design rationale — why potency is `F × C(L)`, the measured `R` constant, the healing/DoT/
-hybrid/weapon formulas, every reference table — lives in `docs/potency-system.md`. That file is
-gitignored (`docs/*`), so it may not exist on a fresh checkout; this doc is the one thing guaranteed
-to be there. If `docs/potency-system.md` is present, read it before retuning any constant in
-`apps/dbc-tools/lib/potency.py` — this doc is the practitioner's quick reference, not the spec.
+hybrid/weapon formulas, every reference table — lives in `docs/potency-system.md`. `docs/` is a private
+nested repo (`hiafi/wow-server-docs`), so it is missing on a fresh checkout or worktree: read it in the
+main checkout before retuning any constant in `apps/dbc-tools/lib/potency.py`. This doc is the
+practitioner's quick reference, not the spec.
+
+**Rebase scales** (2026-11-20 and 21, `lib/potency.py`): the generator scales the flat base by 0.48
+(spell power) or 0.71 (attack power) and the coefficient by 1.93 or 2.49, with R = 2.15. Heals and
+absorbs take another 2.84 on the base and 3.39 on the coefficient. Weapon potency and its flat part are
+exempt. A potency number in the DSL is written before these scales.
 
 ## When to use it
 

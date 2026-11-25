@@ -78,7 +78,7 @@ Quick shape, once a real one exists:
 from lib.dsl import Effect, EffectType, School
 from lib.dsl.registry import spell, tab, granted_by_talent
 
-# A talent tab needs `skill_line` set (see docs/skilllineability-handoff.md)
+# A talent tab needs `skill_line` set (see docs/archive/skilllineability-handoff.md)
 # only if a talent in it ever grants a brand-new, player-castable spell ID —
 # see granted_by_talent below.
 frost_tab = tab(id=60800, name="Frost", class_mask=128, skill_line=6)

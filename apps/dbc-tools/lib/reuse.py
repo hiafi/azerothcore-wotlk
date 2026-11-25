@@ -93,7 +93,7 @@ class ReuseContext:
         included, not just freshly minted ones.
 
         Bugfix (2026-09-12, "Frostbolt/Fireball/Glacial Spike casting instantly" recurring - see
-        docs/dbc-build-pipeline.md and docs/.master-todo-list.md): `generate.py` used to feed
+        docs/archive/dbc-build-pipeline.md and docs/.master-todo-list.md): `generate.py` used to feed
         `sql_out.emit_pending_sql` only `.minted` for these 4 secondary tables, while the emitted
         SQL's own `DELETE FROM x WHERE ID BETWEEN <reserved block>` unconditionally wipes the
         *whole* reserved range. Any run that doesn't happen to re-mint a value some other,

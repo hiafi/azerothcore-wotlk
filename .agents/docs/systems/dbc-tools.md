@@ -4,7 +4,7 @@ Generates `spell_dbc`/`Talent.dbc`/`item_dbc`/etc. content from
 `apps/dbc-tools/source/{spells,talents,items.csv}` via `apps/dbc-tools/generate.py`, producing a
 pending SQL migration plus a client patch MPQ. Full design and workflow:
 `apps/dbc-tools/README.md`. Bugs found and fixed via live-client/live-engine verification are
-logged in `docs/dbc-build-pipeline.md` — read that log before assuming a surprising-looking column
+logged in `docs/archive/dbc-build-pipeline.md` — read that log before assuming a surprising-looking column
 or value is intentional.
 
 ## `Item.dbc` — the newest table this pipeline touches
@@ -1740,7 +1740,7 @@ all-zero — which the engine reads as "matches every spell in the family," not 
 
 This shipped for real twice in the Frost Mage rework — first Permafrost and Chilled to the Bone,
 then (same day, after only documenting the gotcha) Empowered Frostbolt again, on a different
-`SpellModOp` — see `docs/dbc-build-pipeline.md`'s "Bug 3" for both. Docs alone didn't stop the
+`SpellModOp` — see `docs/archive/dbc-build-pipeline.md`'s "Bug 3" for both. Docs alone didn't stop the
 recurrence, so `generate.py` now runs `lib/lint.py`'s `check_classmask_scoping` automatically after
 every spell build and prints a `WARNING:` line for any hand-authored row where a SpellMod effect
 that needs a classmask ends up with an all-zero one. **Don't ignore that warning** — it means an

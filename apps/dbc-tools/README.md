@@ -1,7 +1,7 @@
 # dbc-tools
 
 DBCs as generated build artifacts, not hand-edited files. See
-`docs/dbc-build-pipeline.md` for the full design decision and rationale;
+`docs/archive/dbc-build-pipeline.md` for the full design decision and rationale;
 this file is just usage.
 
 ## Why this works the way it does
@@ -220,12 +220,12 @@ Effect_2, the key is `EffectSpellClassMaskB_1` (or `_2`/`_3`), **not**
 leaves Effect_2's real classmask all-zero, which the engine
 (`SpellInfo::IsAffected`) reads as "matches every spell in the family," not
 "matches nothing." This exact mistake shipped for two frost-mage talents
-(Permafrost, Chilled to the Bone — see `docs/dbc-build-pipeline.md`'s "Bug
+(Permafrost, Chilled to the Bone — see `docs/archive/dbc-build-pipeline.md`'s "Bug
 3") and made their movement-slow modifiers apply to every mage spell
 instead of just Frostbolt/Cone of Cold. When adding any hand-authored
 `EffectSpellClassMask*` override, double check which effect index you
 actually mean before picking the letter. This mistake shipped twice in one day even with this
-callout already written (see `docs/dbc-build-pipeline.md`'s "Bug 3" for the second one, Empowered
+callout already written (see `docs/archive/dbc-build-pipeline.md`'s "Bug 3" for the second one, Empowered
 Frostbolt) — so don't rely on reading this. `generate.py` also runs an automated check
 (`lib/lint.py`) after every spell build and prints a `WARNING:` line if a SpellMod effect that
 needs a classmask ends up with an all-zero one. Take that warning seriously; it's almost always
@@ -322,7 +322,7 @@ safety net if two edits collide).
 - `source/talents/*.yaml` — `Talent.dbc` + `TalentTab.dbc` rows, one file
   per class (same merge-by-directory mechanism, same duplicate-ID check,
   new/edit/reference-copy distinction, as `source/spells/`). UI-agnostic per
-  `docs/talent-ui-decision.md`. `mage.yaml` carries the full schema/example
+  `docs/archive/talent-ui-decision.md`. `mage.yaml` carries the full schema/example
   comment (and, as of the Frost Mage rework starting, the real pulled-in
   Fire/Frost/Arcane trees); the other class files are still empty
   placeholders that just point back to it.

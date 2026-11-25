@@ -41,7 +41,7 @@ past rework's promoted changes (e.g. the Frost Mage rework) read as "already
 applied" rather than "different from vanilla" for *SQL-emission* purposes —
 without it, every run of generate.py permanently re-classifies every ID any
 past run ever touched as freshly edited, forever, regardless of whether this
-run's source data changed it (see docs/dbc-build-pipeline.md's bug log). It's
+run's source data changed it (see docs/archive/dbc-build-pipeline.md's bug log). It's
 a best-effort replay (`sql_dump.apply_statements`) over 776+ files of mixed
 provenance - pure generator output, merged multi-rev migrations with
 hand-written sections, and pure hand-written fixes - so it won't parse every
@@ -50,7 +50,7 @@ degrades safely instead of writing wrong data.
 
 `load_existing_rows` deliberately does not read data/sql/updates/pending_db_world/: this pipeline
 regenerates its own reserved ranges from source on every run rather than
-diffing against its own prior output — see docs/dbc-build-pipeline.md.
+diffing against its own prior output — see docs/archive/dbc-build-pipeline.md.
 (`load_applied_rows` does, for one question only: is a block already in a
 pending rev, so writing it again would change nothing?)
 """
@@ -136,7 +136,7 @@ def _promoted_sql_files() -> list[tuple[Path, str]]:
     scratch, so a run paid for N tables x M files of disk I/O instead of M.
     With M past 950 and climbing (every past rework's promoted migrations
     live here forever), that 9x-redundant re-read became this tool's single
-    largest cost - see docs/dbc-build-pipeline.md's "generate.py looks hung
+    largest cost - see docs/archive/dbc-build-pipeline.md's "generate.py looks hung
     but is CPU-bound" entry, added the same day this cache was."""
     global _promoted_sql_cache
     if _promoted_sql_cache is None:

@@ -35,7 +35,8 @@ Burst of Knowledge and Hand of Justice also carry a flat spell power or attack p
 Ironfoe moves to the Emperor's hard mode list as a new item with the stock Fury of Forgewright (15494, 1.5 procs per
 minute): the hard mode ladder has no stock-level first tier, so a `base=` cannot sit on it. Stock spells are the same
 on every tier (they are not declared in source/items, so they cannot scale). Every effect item pays 0.7 of the budget
-(itemization-changes.md section 3). Every other stock spell slot (+attack power, +spell power, Beast Slaying, the
+(docs/archive/itemization-changes.md section 3).
+Every other stock spell slot (+attack power, +spell power, Beast Slaying, the
 relics' class equips) folds into the budget (`absorbed_spell_slots`), as the list's stats-only lines ask.
 
 **Totem of Rage's "moved onto potency"**: its stock spell 27859 (the shock spell power Equip) is declared by

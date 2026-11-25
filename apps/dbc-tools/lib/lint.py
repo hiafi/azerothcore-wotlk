@@ -19,7 +19,7 @@ from lib.dsl.registry import looks_player_castable
 # specific spells via a classmask - i.e. finding one of these with an
 # all-zero classmask on the effect it lives on is a strong signal of the
 # EffectSpellClassMask{A,B,C}_{1,2,3} letter/number mixup (see
-# docs/dbc-build-pipeline.md "Bug 3"), not a deliberate "applies broadly"
+# docs/archive/dbc-build-pipeline.md "Bug 3"), not a deliberate "applies broadly"
 # design choice the way e.g. SPELLMOD_DAMAGE (0) can legitimately be.
 # SPELLMOD_ALL_EFFECTS (8) used to be left out on the same "can be broad"
 # reasoning; that is how Magic Absorption's Mana Gem clause shipped as a

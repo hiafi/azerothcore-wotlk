@@ -26,7 +26,8 @@ edits of the lock, not rules):
    min(quest level + 5, 60); epic keeps its level; then max(current item level, target) (never lower). Required level
    0 (set by the declaration).
 4. **Stock stat read** (`stock_read()`): the base dump's stat columns plus the stat effects of its Equip spells
-   (`spelltrigger` 1) through `spell_stat_effects()`, the itemization-changes.md s4.5 (revision 3) classifier:
+   (`spelltrigger` 1) through `spell_stat_effects()`, the classifier of
+   docs/archive/itemization-changes.md s4.5 (revision 3):
    `MOD_STAT` (29), `MOD_ATTACK_POWER` (99, `MOD_RANGED_ATTACK_POWER` 124 when alone), `MOD_RATING` (189, every
    priced bit), `MOD_DAMAGE_DONE` (13) on a magic school, `MOD_HEALING_DONE` (135) skipped as 13's companion, plus
    `MOD_POWER_REGEN` (85) on mana as MP5 (requirements: vanilla MP5 is mostly an Equip spell) and
@@ -159,7 +160,8 @@ AURA_MOD_HEALING_DONE, AURA_MOD_RATING = 135, 189
 MAGIC_SCHOOLS = 0x7E
 POWER_MANA = 0
 MOD_STAT_MISC = {0: (STR,), 1: (AGI,), 2: (STA,), 3: (INT,), 4: (SPI,), -1: (STR, AGI, STA, INT, SPI)}
-# CombatRating bit -> ItemModType (itemization-changes.md s4.5 revision 3). Bits that map to the same stat count once.
+# CombatRating bit -> ItemModType (docs/archive/itemization-changes.md s4.5 revision 3).
+# Bits that map to the same stat count once.
 RATING_BITS = {
     1: DEFENSE, 2: DODGE, 3: PARRY, 4: BLOCK, 5: HIT, 6: HIT, 7: HIT, 8: CRIT, 9: CRIT, 10: CRIT,
     17: HASTE, 18: HASTE, 19: HASTE, 23: EXPERTISE, 24: ARPEN,
@@ -322,7 +324,8 @@ def scope(quests: dict[int, dict], addons: dict[int, dict], rows: dict[int, dict
 
 
 def spell_stat_effects(spell: dict | None) -> dict[int, int] | None:
-    """{stat: value} when every effect of `spell` grants a plain stat (the classifier of itemization-changes.md s4.5
+    """{stat: value} when every effect of `spell` grants a plain stat (the classifier of
+    docs/archive/itemization-changes.md s4.5
     revision 3, plus MP5 and Spell Penetration), else None (a proc, a conditional bonus, anything else: a real
     effect). A spell with no effect is not a stat spell."""
     if spell is None:

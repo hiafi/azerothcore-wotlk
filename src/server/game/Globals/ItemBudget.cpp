@@ -54,7 +54,8 @@ namespace
         int32 StaminaDelta = 0;
         float DpsDelta = 0.0f;
         uint32 AbsorbedSpellSlots = 0; // bitmask, bit i = clear Spells[i] at materialization
-        int32 ArmorDelta = 0;          // raw armor points, +/- -- NOT funded from budget, itemization-changes.md §9.3a
+        // raw armor points, +/- -- NOT funded from budget, docs/archive/itemization-changes.md §9.3a
+        int32 ArmorDelta = 0;
         uint32 PrimaryShapeId = 0;
         uint32 SecondaryShapeId = 0;
         uint32 PrimaryShare = 6000;    // ten-thousandths
@@ -843,7 +844,7 @@ namespace
         b.Budget = static_cast<int32>(std::lround(base - b.SocketBudgetCost - b.SocketBonusValue));
 
         // Off-budget baselines: Stamina, Armor, Block Value. None of these are funded from the
-        // budget computed above -- itemization-changes.md §9.3/§9.3a, docs/itemization-phase-2.md §7.4.
+        // budget computed above -- docs/archive/itemization-changes.md §9.3/§9.3a, docs/itemization-phase-2.md §7.4.
         float staminaCost = 1.0f;
         if (auto statCostIt = _statCost.find(ITEM_MOD_STAMINA); statCostIt != _statCost.end())
             staminaCost = statCostIt->second.Cost;

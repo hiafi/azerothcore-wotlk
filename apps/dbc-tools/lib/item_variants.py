@@ -36,7 +36,8 @@ forced). Uncommon and lower are untouched; a row with no secondary shape (jewelr
 **Weapon-tier defaults** (R1 S1). On a weapon-tier slot (`WEAPON_TIER_INV_TYPES`: weapons, shields, held in off-hand)
 the stock budget is corrected per (role, slot): the stock conversion set every such item's `budget_mult` to its
 (role, InventoryType) cell target per item level bucket, and matched weapon DPS through `dps_delta`
-(itemization-changes.md, Buckets 1-2). So, unless `budget_mult=` / `extra_dps=` are declared, each tier takes the
+(docs/archive/itemization-changes.md, Buckets 1-2).
+So, unless `budget_mult=` / `extra_dps=` are declared, each tier takes the
 median `budget_mult` (times 0.7 with an effect) and the median `dps_delta / baseline DPS` of the live itemized items
 of the same role, InventoryType, Quality and item level bucket (`RoleCells`; with fewer than
 `ROLE_CELL_MIN_SAMPLES` samples the quality, then the bucket, is dropped; with none, 1.0 and 0). The role comes from
@@ -93,7 +94,8 @@ ITEMIZATION_COLUMNS = (
     "secondary_shape_id", "primary_share", "block_value_delta", "spell_power_per_dps",
 )
 REQUIRED_NEW_COLUMNS = ("class", "subclass", "InventoryType", "displayid")
-# Weapon-tier slots whose stock budget was corrected per (role, slot) (itemization-changes.md Bucket 1): One-Hand,
+# Weapon-tier slots whose stock budget was corrected per (role, slot)
+# (docs/archive/itemization-changes.md Bucket 1): One-Hand,
 # Shield, Ranged, Two-Hand, Main Hand, Off Hand, Held In Off-hand, Thrown, Ranged Right, Relic.
 WEAPON_TIER_INV_TYPES = (13, 14, 15, 17, 21, 22, 23, 25, 26, 28)
 # The stock conversion's item level buckets (each bucket was fit on its own, so a cell never mixes two).

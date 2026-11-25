@@ -131,7 +131,7 @@ def _pack_string_pool(rows: list[dict], table: DbcTable):
 def order_talent_rows(rows: list[dict], base_rows: list[dict]) -> list[dict]:
     """Physical row order for Talent.dbc — NOT a flat ID sort.
 
-    Confirmed via live-client testing (docs/dbc-build-pipeline.md's "Talent.dbc row order"
+    Confirmed via live-client testing (docs/archive/dbc-build-pipeline.md's "Talent.dbc row order"
     finding): the 3.3.5a client's talent frame assigns each button slot by physical *encounter
     order* within a contiguous per-TabID block in the file, not by ID and not independently of
     file position. A flat global ID sort (pack_dbc_bytes's default) scatters every tab's rows

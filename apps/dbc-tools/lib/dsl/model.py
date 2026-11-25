@@ -641,7 +641,7 @@ class TalentTab:
     left out of `to_entry()`'s output — it's bookkeeping `registry.py`'s
     `granted_by_talent()` reads directly off this object (not off the entry
     dict) to derive a `SkillLineAbility` row for a player-castable talent
-    rank in this tab, per `docs/skilllineability-handoff.md`'s "SkillLine
+    rank in this tab, per `docs/archive/skilllineability-handoff.md`'s "SkillLine
     per class" table (e.g. Mage Frost=6, Fire=8, Arcane=237). Leave it unset
     for a tab whose ranks are never granted-and-player-castable."""
 
@@ -670,7 +670,7 @@ class TalentTab:
 class SkillLineAbility:
     """One `SkillLineAbility.dbc` row. Field names mirror
     `source/talents/*.yaml`'s `skill_line_abilities:` entries exactly. See
-    `docs/skilllineability-handoff.md` for why this table exists at all -
+    `docs/archive/skilllineability-handoff.md` for why this table exists at all -
     Phase 2 of the plan is what stops a source file needing one of these
     hand-added and kept in sync with a `Talent` entry separately."""
 

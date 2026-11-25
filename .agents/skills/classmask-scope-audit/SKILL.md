@@ -43,7 +43,7 @@ relying on it in this session, every time:
 2. `apps/dbc-tools/README.md`'s "Gotcha: `EffectSpellClassMaskA/B/C_1/2/3` in `raw_overrides`"
    section.
 3. `.agents/docs/systems/dbc-tools.md`'s "Load-bearing gotcha" section.
-4. `docs/dbc-build-pipeline.md`'s "Bug 3" writeup — the original incident and its exact symptom
+4. `docs/archive/dbc-build-pipeline.md`'s "Bug 3" writeup — the original incident and its exact symptom
    (Permafrost's slow leaking onto every mage spell's first effect).
 
 All four say the same thing. If any local note, CSV comment, or your own prior turn in this

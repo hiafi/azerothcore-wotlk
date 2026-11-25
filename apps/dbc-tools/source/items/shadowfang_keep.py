@@ -35,7 +35,8 @@ the socket cost eats most of the stats (stage F1 designer flag). Picks, one per 
 throughput rating instead (the Deadmines precedent).
 
 **Effects** (shadowfang_keep_hard_mode_effects.py, the `shadowfang_items` reservation 205600-205619): the three hard
-mode items carry `budget_mult` 0.7 for their effect (itemization-changes.md section 3; the Tome is a held-in-off-hand
+mode items carry `budget_mult` 0.7 for their effect
+(docs/archive/itemization-changes.md section 3; the Tome is a held-in-off-hand
 slot, so its role cell's median times 0.7, stage F1). The Vial and the Tome scale with the tier (`scale="budget"`,
 stage IV10); the Locket has no number to scale. The Meteor Shard keeps its "Chance on hit: Firebolt", rebuilt on
 potency, and scales too: its declared potency is the Heroic tier's (the vanilla dungeon ladder's effect reference), the

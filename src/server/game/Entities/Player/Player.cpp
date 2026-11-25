@@ -5414,7 +5414,7 @@ float Player::GetRatingMultiplier(CombatRating cr) const
     // through the same GtCombatRatings/GtOCTClassCombatRatingScalar curve as every other
     // rating below - DO NOT special-case them to a flat multiplier here. item_stat_cost prices
     // gear-granted points on these stats "weighted equal to Crit" (see
-    // docs/itemization-changes.md), i.e. every existing item's rating values were chosen
+    // docs/archive/itemization-changes.md), i.e. every existing item's rating values were chosen
     // assuming this exact per-level curve; a flat override was tried here for one session
     // (fixing a warrior talent that wanted a level-independent %) and it silently multiplied
     // every already-itemized piece of gear carrying these stats by ~14x at level 60 (confirmed

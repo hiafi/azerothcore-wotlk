@@ -9,7 +9,7 @@ verbatim from the matching `CREATE TABLE` in `data/sql/base/db_world/*_dbc.sql`
 
 Both were independently verified to be the same length for every table below,
 which is the whole point of keeping them side by side here: `fmt[i]` describes
-exactly `columns[i]`, in file-column order. See `docs/dbc-build-pipeline.md`
+exactly `columns[i]`, in file-column order. See `docs/archive/dbc-build-pipeline.md`
 for why that isn't a coincidence — it's the *true* client column layout, not
 an AzerothCore-truncated one, so it doubles as the schema for both the raw
 binary DBC and the SQL overlay table.
@@ -127,7 +127,7 @@ SPELL = DbcTable(
         ("EffectMultipleValue", 3), ("EffectChainTargets", 3),
         ("EffectItemType", 3), ("EffectMiscValue", 3), ("EffectMiscValueB", 3),
         ("EffectTriggerSpell", 3), ("EffectPointsPerCombo", 3),
-        # GOTCHA (found 2026-08-27, see docs/dbc-build-pipeline.md "Bug 3"): unlike every other
+        # GOTCHA (found 2026-08-27, see docs/archive/dbc-build-pipeline.md "Bug 3"): unlike every other
         # per-effect field above, the letter here is the effect index (A=Effect_1, B=Effect_2,
         # C=Effect_3 - zero-based Effects[0..2] in the engine) and the _1/_2/_3 suffix is which of
         # that effect's 3 SpellFamilyFlags dwords - the reverse of what "_N = effect index" would
@@ -354,8 +354,8 @@ CREATUREDISPLAYINFO = DbcTable(
 # data/sql/base/db_world/spellvisual_dbc.sql's CREATE TABLE (same convention as every table above);
 # no equivalent *_dbc.sql exists for the other two, so SPELLVISUALKIT/SPELLVISUALEFFECTNAME below
 # were instead derived by decoding real records from the working-copy binaries field-by-field and
-# cross-checking against wowdev.wiki's documented semantics (both independently agreed) - see
-# docs/reworks/fire-mage-meteor-vfx.md for that verification. Every column is 'x' (never 'i') since
+# cross-checking against wowdev.wiki's documented semantics (both independently agreed).
+# Every column is 'x' (never 'i') since
 # there is no AC struct to call any of them "used" by.
 SPELLVISUAL = DbcTable(
     name="SpellVisual",

@@ -6772,7 +6772,7 @@ tooth_and_claw_200438 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2229,
-    notes="NEW (docs/reworks/druid-feral-addition.md §2, FERAL-ADDENDUM §3.1): proc buff, up to 2 charges, granted "
+    notes="NEW (docs/reworks/druid-feral.md §2, FERAL-ADDENDUM §3.1): proc buff, up to 2 charges, granted "
           "by Mangle (Bear) and Maul while Bestial Fury is active (Druid::TryGrantToothAndClaw), and by Pulverize/"
           "Upheaval via Predatory Strikes' bear clause (Druid::OnSwellSpent). Enables Savage Bite 200439. "
           "ShapeshiftMask 0x10 (Bestial Fury/form 5 only, same as Swell 200426) - leaving Bestial Fury drops it with "
