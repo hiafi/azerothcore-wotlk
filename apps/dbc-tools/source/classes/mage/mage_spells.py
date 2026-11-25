@@ -1693,10 +1693,32 @@ ritual_of_refreshment_43987 = spell(
     ],
     spell_icon_id=2267,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 70); RealPointsPerLevel from rank1→top rank's own top level (80, chain has a gap at 60) slope (anchor rank 58659, rank 2); coefficient/cast_time_ms/mana_cost_pct from max rank (58659, rank 2); MaxLevel set to 80"
-          ' BaseLevel/SpellLevel 70 -> 50, trainable at 50 from trainer 212 (user ruling 31, 2026-11-24, docs audit: 40 + (stock level - 60), rounded up to an even level; it was on no live trainer).',
-    raw_overrides={'AttributesEx': 131076, 'AttributesEx3': 1073741824, 'AttributesEx5': 8194, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 48142, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Begins a ritual that creates a refreshment table.  Raid members can click the table to acquire Conjured Mana Biscuits.  The tables lasts for $43985d or 50 charges.  Requires the caster and 2 additional party members to complete the ritual.  In order to participate, all players must right-click the refreshment portal and not move until the ritual is complete.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 31, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 2, 'Reagent_1': 17020, 'SpellClassSet': 3, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 9860, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+          ' BaseLevel/SpellLevel 70 -> 50, trainable at 50 from trainer 212 (user ruling 31, 2026-11-24, docs audit: 40 + (stock level - 60), rounded up to an even level; it was on no live trainer).'
+          ' The table (186812, through 43988) gives Conjured Mana Pie 43518; tooltip says so (user ruling 43, 2026-11-25).',
+    raw_overrides={'AttributesEx': 131076, 'AttributesEx3': 1073741824, 'AttributesEx5': 8194, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 48142, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Begins a ritual that creates a refreshment table.  Raid members can click the table to acquire Conjured Mana Pies.  The tables lasts for $43985d or 50 charges.  Requires the caster and 2 additional party members to complete the ritual.  In order to participate, all players must right-click the refreshment portal and not move until the ritual is complete.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 31, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 2, 'Reagent_1': 17020, 'SpellClassSet': 3, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 9860, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(ritual_of_refreshment_43987, trainer_id=212, req_level=50, money_cost=12000)
+
+
+conjure_refreshment_43988 = spell(
+    id=43988,
+    name='Conjure Refreshment',
+    school=School.ARCANE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=5.0,
+    effects=[
+        Effect(type=24, base_points=19, implicit_target_a=21),
+    ],
+    spell_icon_id=1842,
+    notes='Cast by the Refreshment Table (gameobject 186812, 50 charges, party only). Moved here from npc.csv. Item Conjured '
+          'Mana Biscuit 34062 (required level 65) -> Conjured Mana Pie 43518 (required level 1), 20 per click (user ruling 43, 2026-11-25).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 43518, 'EquippedItemClass': -1, 'MaxLevel': 1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellVisualID_1': 563},
+)
 
 
 frostfire_bolt_44614 = spell(
