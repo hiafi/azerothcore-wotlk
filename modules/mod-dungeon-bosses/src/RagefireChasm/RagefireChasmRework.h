@@ -50,6 +50,17 @@ namespace RagefireChasmRework
     char constexpr kTestCommand[] = "dbtest rfc";
     char constexpr kLogDungeon[] = "rfc";       // DungeonKit::LogMechanic("rfc", "<boss>", "<mechanic>", ...)
 
+    // How many of a resolve's hits are players, for the log lines' hit counters: zones hit pets too, and a pet's hit is
+    // no player's mistake.
+    template <class Guids>
+    std::uint32_t PlayerHits(Guids const& hits)
+    {
+        std::uint32_t players = 0;
+        for (auto const& guid : hits)
+            players += guid.IsPlayer() ? 1 : 0;
+        return players;
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
     // Boss states (InstanceScript::SetBossNumber(kBossCount)); also the `bossStateId` each boss passes to
     // Mechanic::BeginEncounter. The order is fixed: the save string stores them by position. It is the KILL order

@@ -114,6 +114,37 @@ namespace
         }
         return out;
     }
+
+    // A Shadowstep chain tick by tick (50 ms, one tick `stallMs` longer at `stallAt`): his update first (StepDue, then
+    // the teleport), the registry's resolve after it in the same tick. The times he moved (three landings and the way
+    // home); nothing when a move came before the last spin's resolve.
+    std::vector<std::uint64_t> ChainMoves(std::uint64_t stallAt, std::uint64_t stallMs)
+    {
+        std::vector<std::uint64_t> moves;
+        std::uint64_t nextStep = Tune::kFinisherCastMs;
+        std::uint64_t resolveAt = 0;
+        bool spinUp = false;
+        for (std::uint64_t now = 0; moves.size() <= Tune::kShadowstepCount; now += 50)
+        {
+            if (stallMs && now >= stallAt)
+            {
+                now += stallMs;
+                stallMs = 0;
+            }
+            if (StepDue(now, nextStep, spinUp))
+            {
+                if (spinUp)
+                    return {};
+                moves.push_back(now);
+                nextStep = now + kShadowstepEveryMs;
+                spinUp = moves.size() <= Tune::kShadowstepCount;
+                resolveAt = now + Tune::kShadowstepWarnMs;
+            }
+            if (spinUp && now >= resolveAt)
+                spinUp = false;
+        }
+        return moves;
+    }
 }
 
 int main()
@@ -246,7 +277,20 @@ int main()
 
     // ---- Shadowstep ----
     CHECK(Tune::kShadowstepCount == 3 && ShadowstepChainMs() == 7500);      // SP: "about 7.5 sec"
-    CHECK(kShadowstepEveryMs >= 2000 && kShadowstepEveryMs <= 2500);        // STAGE-G1 Q4
+    CHECK(kShadowstepEveryMs >= kShadowstepFloorMs && kShadowstepEveryMs <= 2500);      // STAGE-G1 Q4
+    CHECK(kShadowstepFloorMs == Tune::kShadowstepWarnMs + 250);
+    CHECK(!StepDue(2499, 2500, false) && StepDue(2500, 2500, false));
+    CHECK(!StepDue(2500, 2500, true) && !StepDue(99999, 2500, true));       // a late resolve holds it, however late
+    // No stall: landings kShadowstepEveryMs apart. A stall anywhere: every step waits for the resolve, none is lost.
+    CHECK((ChainMoves(0, 0) == std::vector<std::uint64_t>{ 2000, 4500, 7000, 9500 }));
+    for (std::uint64_t stallAt = 0; stallAt < 10000; stallAt += 50)
+        for (std::uint64_t stallMs : { 300u, 500u, 600u, 1000u, 3000u, 8000u })
+        {
+            std::vector<std::uint64_t> const moves = ChainMoves(stallAt, stallMs);
+            CHECK(moves.size() == Tune::kShadowstepCount + 1);
+            for (std::size_t i = 1; i < moves.size(); ++i)
+                CHECK(moves[i] - moves[i - 1] >= kShadowstepFloorMs);
+        }
     // A slowed player still clears the 6 yd ring in its 2 s.
     CHECK(SlowedReachYd(Tune::kShadowstepWarnMs) >= Tune::kShadowstepRadius);
     // Every landing, from every floor point and facing, is on the arena, near its player; a player within 2 yd of a rim

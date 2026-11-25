@@ -616,6 +616,15 @@ namespace
 
 int main()
 {
+    // Hit counters: players only.
+    struct Guid
+    {
+        bool player;
+        bool IsPlayer() const { return player; }
+    };
+    CHECK(PlayerHits(std::array<Guid, 0>{}) == 0);
+    CHECK(PlayerHits(std::array<Guid, 1>{ { { false } } }) == 0);
+    CHECK(PlayerHits(std::array<Guid, 3>{ { { true }, { false }, { true } } }) == 2);
     TestIds();
     TestSave();
     TestGateRules();
