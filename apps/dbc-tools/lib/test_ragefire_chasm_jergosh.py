@@ -5,8 +5,8 @@ boss_jergosh_rework.cpp) and its SQL rev.
 
 Checks:
   - the spells sit in his slice (213580-213609) and JergoshLogic.h names the same ids;
-  - Jergosh 11518 is bound (SmartAI off) at 8,596 on the level 16 mage base; the Soul Wisp 300986 is declared, scripted,
-    untouchable and shown;
+  - Jergosh 11518 is bound (SmartAI off) at 21,490 on the level 16 mage base; the Soul Wisp 300986 is declared,
+    scripted, untouchable and shown;
   - Immolate and Drain Soul are kickable (rule 25) and no must-play bar shares a school with them: Conflagrate is Arcane
     and uninterruptible;
   - Immolate's ticks and duration, the times, the Soul-sick and Tithe values are the header's; every damage spell
@@ -182,6 +182,7 @@ class JergoshDeclarationTest(unittest.TestCase):
         self.assertEqual((_value("kImmolateFlatDirect"), _value("kImmolateFlatTick")), (56, 16))
         self.assertTrue(_raw(spell, "AuraInterruptFlags") & CHANGE_MAP)
         self.assertTrue(_raw(spell, "AttributesEx2") & ATTR2_IGNORE_LOS)
+        self.assertTrue(_raw(spell, "AttributesEx2") & 0x00020000)   # does not reset his swing timer
 
     def test_the_hits(self):
         for spell_id, school, visual in ((BEARER, SCHOOL_FIRE, SV_BURST), (SOUL_TEAR, SCHOOL_SHADOW, SV_TEAR)):
@@ -251,6 +252,27 @@ class JergoshDeclarationTest(unittest.TestCase):
                       "SPELL_JR_SOUL_SICK", "SPELL_JR_DRAIN_SOUL", "_conflagrate.rings", "SetObjectScale"):
             self.assertIn(piece, cleanup)
         self.assertNotIn("\t", self.cpp)
+
+    def test_the_immolate_cadence_and_the_kick_lock(self):
+        """User rulings 2026-11-25: every 3 s on both difficulties, none while three burn, a kick's lockout is 2 s."""
+        self.assertEqual(_pair("kImmolateFirstMs"), (3000, 3000))
+        self.assertEqual(_pair("kImmolateEveryMs"), (3000, 3000))
+        self.assertEqual((_value("kImmolateMaxBurning"), _value("kKickLockMs")), (3, 2000))
+        code = _code(self.cpp)
+        cast = code[code.index("bool CastImmolate(Player* forced)"):]
+        self.assertLess(cast.index("ImmolateFull(burning.size())"), cast.index("PickPlayer("))
+        # Only an existing lock is cut (a silence makes none), after the engine's own.
+        self.assertRegex(code, r"if \(!me->IsSpellProhibited\(school\)\)\s+return false;\s+"
+                               r"me->ProhibitSpellSchool\(school, Tune::kKickLockMs\);")
+        failed = code[code.index("void OnSpellFailed"):code.index("void OnChannelFinished")]
+        self.assertEqual(failed.count("ShortenKickLock(spell)"), 2)
+        # The engine locks before it interrupts (the hook sees the lock), and OnSpellFailed is the interrupt's.
+        effects = (REPO_ROOT / "src/server/game/Spells/SpellEffects.cpp").read_text(encoding="utf-8")
+        effect = effects[effects.index("void Spell::EffectInterruptCast("):]
+        self.assertLess(effect.index("ProhibitSpellSchool("), effect.index("InterruptSpell("))
+        unit = (REPO_ROOT / "src/server/game/Entities/Unit/Unit.cpp").read_text(encoding="utf-8")
+        interrupt = unit[unit.index("void Unit::InterruptSpell("):]
+        self.assertIn("OnSpellFailed(", interrupt[:interrupt.index("\n}")])
 
     def test_drill_tags(self):
         header = HEADER.read_text(encoding="utf-8")

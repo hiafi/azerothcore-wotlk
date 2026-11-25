@@ -46,7 +46,7 @@ namespace
             CHECK(kBloodLakeSpots[i].z == kLavaZ);
             CHECK(DungeonKit::Distance(kBloodLakeSpots[i].XY(), start.XY()) < 12.f);
         }
-        CHECK(Tune::kHealth.hardMode == 610400);
+        CHECK(Tune::kHealth.hardMode == 814884);
         // The pour spot is at the foot of the -x arm, over 30 yd from his spawn, beside the lava cell of its look.
         CHECK(DungeonKit::Distance(kPourSpot.XY(), kTaragamanSpawn.XY()) > 30.f);
         CHECK(DungeonKit::Distance(kPourSpot.XY(), kPourLava.XY()) < 2.f);

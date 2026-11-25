@@ -96,10 +96,11 @@ namespace
         CHECK(TaragamanArena().Contains(kTaragamanSpawn.XY(), kTaragamanSpawn.z));
         CHECK(ArenaFor(BOSS_TARAGAMAN).Contains(kTaragamanSpawn.XY(), kTaragamanSpawn.z));
         CHECK(TaragamanArena().Contains(kHub.XY(), kHub.z));
-        // The build spec's normal health: HealthModifier 36 on the level 16 warrior base 356; heroic 103 on 3,052.
-        CHECK(Tune::kHealth.normal == 36 * 356);
-        CHECK(Tune::kHealth.heroic == 103 * 3052);
-        CHECK(Tune::kHealth.hardMode == 200 * 3052);
+        // Health (user 2026-11-25): HealthModifier 68.4 on the level 16 warrior base 356 (rounded up); heroic 137 and
+        // the hard mode 267 on 3,052.
+        CHECK(Tune::kHealth.normal == (684 * 356 + 9) / 10);
+        CHECK(Tune::kHealth.heroic == 137 * 3052);
+        CHECK(Tune::kHealth.hardMode == 267 * 3052);
         // The floor band holds every measured floor point of the plateau and no lava.
         CHECK(OnFloorBand(kHub.z));
         for (Point3 const& p : kSpikePoints)
@@ -149,9 +150,9 @@ namespace
         CHECK(std::fabs(DamageMult(12) - 2.2f) < 1e-5f);
         CHECK(Tune::kGorgedCap(Mode::Normal) == 3 && Tune::kGorgedCap(Mode::Heroic) == 0
             && Tune::kGorgedCap(Mode::HardMode) == 0);
-        CHECK(PctOfHealth(12816, Tune::kGorgeHealPct) == 384);
-        CHECK(PctOfHealth(314356, Tune::kDevourHealPct) == 3143);
-        CHECK(PctOfHealth(610400, Tune::kGlobuleDrunkHealPct) == 12208);
+        CHECK(PctOfHealth(24351, Tune::kGorgeHealPct) == 730);
+        CHECK(PctOfHealth(418124, Tune::kDevourHealPct) == 4181);
+        CHECK(PctOfHealth(814884, Tune::kGlobuleDrunkHealPct) == 16297);
 
         CHECK(!HasDevour(Mode::Normal) && HasDevour(Mode::Heroic) && HasDevour(Mode::HardMode));
         CHECK(std::fabs(Tune::kDevourTickPct(Mode::Heroic) * Tune::kDevourTicks - 70.f) < 1e-4f);

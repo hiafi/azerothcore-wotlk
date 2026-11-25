@@ -6,8 +6,8 @@ Ragefire Chasm build WP-D2: Jergosh the Invoker (11518)
 JergoshLogic.h names the same ids; the texts are the core SQL rev rev_jergosh_ragefire_chasm.sql).
 
 - 11518 Jergosh the Invoker: boss_jergosh_rework (SmartAI off: rev_skeleton_ragefire_chasm.sql drops its rows), the
-  build spec's normal health (8,596 = HealthModifier 28 on the level 16 mage base 307), the stock DamageModifier (until
-  T), stun immunity 1972, INSTANCE_BIND with both assist flags, detection range 12 (s7 #12 A). Heroic 252,048 is WP-H's
+  build spec's normal health (21,490 = HealthModifier 70 on the level 16 mage base 307), the stock DamageModifier (until
+  T), stun immunity 1972, INSTANCE_BIND with both assist flags, detection range 12 (s7 #12 A). Heroic 335,352 is WP-H's
   override (source/world/dungeons/ragefire_chasm.py).
 - 300986 Soul Wisp (JR5, heroic): npc_rfc_soul_wisp, the Wisp display 12432 at scale 1.75, not selectable, not
   attackable; the boss's CrawlPickups moves and removes it. No heroic template.
@@ -30,9 +30,10 @@ Tithe aura never counts twice):
   213589  The Hungerer's Tithe  JR5 heroic: the look on him as a soul arrives (SV 7180)
   213590-213609 spare.
 
-Immolate (Fire) and Drain Soul (Shadow) are the only interruptible casts. A kick locks the cast's school and refuses
-every non-triggered cast of it (rule 25 as corrected), so Conflagrate's bar is Arcane. Curse of Weakness 18267 stays a
-stock cast (JR3). Retired as a cast: Immolate 20800 (the copy above). Looks are copied, never the stock spells.
+Immolate (Fire) and Drain Soul (Shadow) are the only interruptible casts. A kick locks the cast's school (2 s: the
+script shortens the kick's own lockout) and refuses every non-triggered cast of it (rule 25 as corrected), so
+Conflagrate's bar is Arcane. Curse of Weakness 18267 stays a stock cast (JR3). Retired as a cast: Immolate 20800 (the
+copy above). Looks are copied, never the stock spells.
 """
 
 from lib.dsl import RANGE_SELF, AuraType, Effect, EffectType, School
@@ -74,7 +75,7 @@ from ._visuals import (
 )
 
 creature_template_columns(11518, **boss_columns(
-    'boss_jergosh_rework', 28.0, damage_modifier=1.95,
+    'boss_jergosh_rework', 70.0, damage_modifier=1.95,
 ))
 
 wisp_300986 = creature_template(
@@ -114,6 +115,7 @@ _CHANNEL_INTERRUPT_KICK = 0x08              # SpellDefines.h CHANNEL_INTERRUPT_F
 _ATTR1_IS_CHANNELED = 0x00000004
 _AURA_INTERRUPT_CHANGE_MAP = 0x00080000     # SpellDefines.h AURA_INTERRUPT_FLAG_CHANGE_MAP: leaving the map
 _SCHOOL_MASK_ALL = 127
+_ATTR2_DO_NOT_RESET_COMBAT_TIMERS = 0x00020000  # SharedDefines.h: the cast leaves his swing timer alone
 
 
 def _script_hit(spell_id: int, name: str, school: School, desc: str, notes: str, *, icon: int, visual: int):
@@ -146,21 +148,23 @@ immolate_213580 = spell(
                     amplitude=IMMOLATE_TICK_MS, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY,
                     potency_excluded=_SCRIPT_BP)],
     spell_icon_id=_ICON_IMMOLATE,
-    notes=f'{_D2}, JR1: 3 s, then every 8 s (heroic 6 s): a 2 s cast on a random player, the tank included, never one '
-          'already burning. Cast for real (the bar shows), interruptible and silence-preventable (InterruptFlags 15, '
-          'PreventionType silence; his immunity set 1972 holds neither): the descriptor\'s interrupt list, a reward. '
-          'Normal: the stock values of 20800 (56, then 16 a tick: 7 ticks of 3 s); heroic 5% of the reference row and '
-          '5% a tick, times his Tithe (both effects are the script\'s base points). Magic: on heroic the bots\' dispel '
-          'list. The burn is the fuel of JR2 (its ring is the registry\'s SelfTrigger on this aura). Heroic: whoever '
-          'another\'s ring hits catches the same DoT (a triggered cast, the hit\'s base point 0). Ignores line of '
-          'sight, is not reflected or redirected. Leaving the map drops it; removed from everyone on a reset, evade or '
-          'his death. Immolate 20800\'s SV 46.',
+    notes=f'{_D2}, JR1: 3 s, then every 3 s: a 2 s cast on a random player, the tank included, never one already '
+          'burning, none while three burn. Cast for real (the bar shows), interruptible and silence-preventable '
+          '(InterruptFlags 15, PreventionType silence; his immunity set 1972 holds neither): the descriptor\'s '
+          'interrupt list, a reward. Normal: the stock values of 20800 (56, then 16 a tick: 7 ticks of 3 s); heroic '
+          '5% of the reference row and 5% a tick, times his Tithe (both effects are the script\'s base points). '
+          'Magic: on heroic the bots\' dispel list. The burn is the fuel of JR2 (its ring is the registry\'s '
+          'SelfTrigger on this aura). Heroic: whoever another\'s ring hits catches the same DoT (a triggered cast, '
+          'the hit\'s base point 0). Ignores line of sight, is not reflected or redirected. Leaving the map drops '
+          'it; removed from everyone on a reset, evade or his death. Does not reset his swing (a cast every 3 s '
+          'would cost him about a third of them). Immolate 20800\'s SV 46.',
     raw_overrides=kit_raw('Burns an enemy, then inflicts additional Fire damage every $t2 sec. for $d.',
                           'Burning: Fire damage every $t2 sec. Conflagrate will burst this fire around you.',
                           InterruptFlags=_INTERRUPT_FLAGS_KICKABLE, PreventionType=_PREVENTION_SILENCE,
                           DefenseType=_DEFENSE_MAGIC, SpellVisualID_1=JR_IMMOLATE,
                           AttributesEx=ATTR1_NO_THREAT | ATTR1_NO_REDIRECTION | ATTR1_NO_REFLECTION,
-                          AttributesEx2=ATTR2_IGNORE_LINE_OF_SIGHT | ATTR2_CANT_CRIT,
+                          AttributesEx2=(ATTR2_IGNORE_LINE_OF_SIGHT | ATTR2_CANT_CRIT
+                                         | _ATTR2_DO_NOT_RESET_COMBAT_TIMERS),
                           AttributesEx3=ATTR3_ALWAYS_HIT | ATTR3_IGNORE_CASTER_MODIFIERS,
                           AttributesEx4=ATTR4_NO_CAST_LOG, AuraInterruptFlags=_AURA_INTERRUPT_CHANGE_MAP),
 )

@@ -738,7 +738,7 @@ namespace RagefireChasmRework
 
     namespace Oggleflint
     {
-        NH<std::uint32_t> constexpr kHealth{ 8544, 238056 };            // HealthModifier 24 on 356; WP-H's override
+        NH<std::uint32_t> constexpr kHealth{ 21360, 317408 };           // HealthModifier 60 on 356; WP-H's override
 
         // OG1 Borer Hunt, the chase (marks nothing: no damage, no telegraph)
         NH<std::uint32_t> constexpr kHuntFirstMs{ 10000, 10000 };
@@ -778,12 +778,15 @@ namespace RagefireChasmRework
 
     namespace Jergosh
     {
-        NH<std::uint32_t> constexpr kHealth{ 8596, 252048 };            // HealthModifier 28 on 307; WP-H's override
+        NH<std::uint32_t> constexpr kHealth{ 21490, 335352 };           // HealthModifier 70 on 307; WP-H's override
 
-        // JR1 Immolate (kickable; never one already burning)
+        // JR1 Immolate (kickable; never one already burning; none while kImmolateMaxBurning players burn)
         NH<std::uint32_t> constexpr kImmolateFirstMs{ 3000, 3000 };
-        NH<std::uint32_t> constexpr kImmolateEveryMs{ 8000, 6000 };
+        NH<std::uint32_t> constexpr kImmolateEveryMs{ 3000, 3000 };
         std::uint32_t constexpr kImmolateCastMs = 2000;
+        std::uint32_t constexpr kImmolateMaxBurning = 3;
+        // Immolate and Drain Soul: a kick locks the school this long, whatever the kick's own lockout is (4 to 8 s).
+        std::uint32_t constexpr kKickLockMs = 2000;
         std::uint32_t constexpr kImmolateDurationMs = 21000;
         std::uint32_t constexpr kImmolateTickMs = 3000;
         std::uint32_t constexpr kImmolateFlatDirect = 56;               // normal: stock values (#35)
@@ -823,7 +826,7 @@ namespace RagefireChasmRework
 
     namespace Bazzalan
     {
-        NH<std::uint32_t> constexpr kHealth{ 9256, 250264 };            // HealthModifier 26 on 356; WP-H's override
+        NH<std::uint32_t> constexpr kHealth{ 23140, 332668 };           // HealthModifier 65 on 356; WP-H's override
 
         // BZ1 Sinister Strike and combo points, BZ2 the finisher bag
         std::uint32_t constexpr kStrikeFirstMs = 2000;
@@ -880,7 +883,7 @@ namespace RagefireChasmRework
 
     namespace Taragaman
     {
-        Tri<std::uint32_t> constexpr kHealth{ 12816, 314356, 610400 };  // HealthModifier 36 on 356; WP-H; the pour
+        Tri<std::uint32_t> constexpr kHealth{ 24351, 418124, 814884 };  // HealthModifier 68.4 on 356; WP-H; the pour
 
         // TG1 Feast (section 7 #30 A)
         Tri<std::uint32_t> constexpr kFeastFirstMs{ 18000, 16000, 15000 };

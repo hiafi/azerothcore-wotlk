@@ -143,7 +143,7 @@ class OggleflintTest(unittest.TestCase):
         self.assertRegex(self.script, r"me->SetAssistanceTimer\(0\);[^\n]*\n\s+if \(!UpdateVictim\(\)\)")
 
     def test_the_header_is_the_build_spec(self):
-        for name, value in (("kHealth", "8544,238056"), ("kHuntFirstMs", "10000,10000"),
+        for name, value in (("kHealth", "21360,317408"), ("kHuntFirstMs", "10000,10000"),
                             ("kHuntEveryMs", "15000,12000"), ("kChaseMs", "4000"), ("kChaseSpeed", "4.f,5.f"),
                             ("kChaseRadius", "3.f"), ("kExtraBorerEveryMs", "40000"), ("kEruptionWarnMs", "2000"),
                             ("kEruptionRadius", "4.f"), ("kEruptionPct", "30.f,45.f"), ("kSwingFirstMs", "6000,6000"),

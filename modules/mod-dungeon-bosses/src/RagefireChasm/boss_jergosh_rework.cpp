@@ -5,10 +5,10 @@
  * apps/dbc-tools source/npcs/ragefire_chasm/jergosh.py. Pure rules: JergoshLogic.h; every number:
  * RagefireChasmRework.h namespace Jergosh.
  *
- *   JR1 Immolate        3 s, then every 8 s (heroic 6 s): a real 2 s Fire cast, kickable, on a random player (the tank
- *                       included), never one already burning; everyone burning: skipped. 56 and 16 a tick on normal,
- *                       5% and 5% a tick on heroic, 7 ticks of 3 s, Magic. A beat that would run into Conflagrate is
- *                       skipped, so two burn at a Conflagrate (heroic two or three)
+ *   JR1 Immolate        3 s, then every 3 s: a real 2 s Fire cast, kickable, on a random player (the tank included),
+ *                       never one already burning; skipped while three burn (or everyone in the hall does). 56 and 16
+ *                       a tick on normal, 5% and 5% a tick on heroic, 7 ticks of 3 s, Magic. A beat that would run
+ *                       into Conflagrate is skipped. Unkicked, three burn at every Conflagrate
  *   JR2 Conflagrate     16 s, then every 20 s, always on time: emote line 1, a 2.5 s Arcane bar (never kicked, never
  *                       locked out: rule 25) and a registry Spread of 5 / 6 yd on everyone burning (SelfTrigger on
  *                       the Immolate aura: a dispel in the middle drops that ring). At its end every burn is
@@ -23,6 +23,8 @@
  *                       Eaten: emote line 3, the owner Soul-sick 30 s (if alive), a Tithe stack on him: +15% damage
  *                       dealt, no cap (ruling 15). The Tithe aura raises his melee; his own percent hits ignore
  *                       caster modifiers and are multiplied here (TitheFactor)
+ *   Kicks               Immolate and Drain Soul: a kick's school lockout on him is 2 s, not the kick's own 4 to 8 s
+ *                       (OnSpellFailed); a silence is left alone
  *   Boss data           Drain Soul (2) then Immolate (1) on the interrupt list, Immolate on the dispel list (heroic);
  *                       no kill order
  *   Arena               JergoshArena() with LeashOptions (no grips). The Spread and the wisp's Soak set no `.Within`,
@@ -167,9 +169,10 @@ struct boss_jergosh_rework : public BossAI
         switch (spell->Id)
         {
             case SPELL_JR_IMMOLATE:
-                LogJr("immolate-stopped");
+                LogJr("immolate-stopped", ShortenKickLock(spell) ? "kicked" : "not kicked");
                 break;
             case SPELL_JR_DRAIN_SOUL:
+                ShortenKickLock(spell);
                 EndDrain("stopped");
                 break;
             case SPELL_JR_CONFLAGRATE_CAST:
@@ -323,8 +326,8 @@ private:
     // The beats
     // ----------------------------------------------------------------------------------------------------------------
 
-    // False: refused by the engine (a lockout) or nobody to drain, tried again shortly. An Immolate with nobody left
-    // to light is a done beat.
+    // False: refused by the engine (a lockout) or nobody to drain, tried again shortly. An Immolate with nobody to
+    // light (three burn, or everyone) is a done beat.
     bool Begin(Act act)
     {
         switch (act)
@@ -368,6 +371,19 @@ private:
         return out;
     }
 
+    // A kick (Spell::EffectInterruptCast: a player's, a pet's, a creature's, a counterspell) locks the cast's school
+    // and then interrupts the cast, which calls OnSpellFailed: the lock is there already and is cut to 2 s. Nothing
+    // else that stops a cast (a silence, a stun, a death) locks a school, and he never starts a cast of a locked one:
+    // no lock, nothing to cut, and the silence itself stays as long as it is.
+    bool ShortenKickLock(SpellInfo const* spell)
+    {
+        SpellSchoolMask const school = spell->GetSchoolMask();
+        if (!me->IsSpellProhibited(school))
+            return false;
+        me->ProhibitSpellSchool(school, Tune::kKickLockMs);
+        return true;
+    }
+
     int32 ImmolateAmount(Player* target, uint32 flat, float heroicPct) const
     {
         if (!_heroic)
@@ -391,8 +407,14 @@ private:
         Player* target = forced;
         if (!target)
         {
+            std::vector<Player*> const burning = Burning();
+            if (ImmolateFull(burning.size()))
+            {
+                LogJr("immolate-skip", Acore::StringFormat("burning={}", burning.size()));
+                return true;
+            }
             std::vector<uint64> skip = OffHall();
-            for (Player* player : Burning())
+            for (Player* player : burning)
                 skip.push_back(player->GetGUID().GetRawValue());
             target = DungeonKit::PickPlayer(me, ImmolatePick(std::move(skip)));
             if (!target)

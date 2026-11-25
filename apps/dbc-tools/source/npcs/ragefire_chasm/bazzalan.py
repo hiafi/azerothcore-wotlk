@@ -5,8 +5,8 @@ BZ1-BZ8). WP-D3 owns this file (its spells: kSpellsBazzalan 213610-213649 of mod
 src/RagefireChasm/RagefireChasmRework.h only; BazzalanLogic.h names the same ids).
 
 - 11519 Bazzalan: boss_bazzalan_rework (SmartAI off: WP-S0's rev drops its two rows), the build spec's normal health
-  (9,256 = HealthModifier 26 on the level 16 warrior base 356), the stock DamageModifier 2.2 (until T), stun immunity
-  1972, INSTANCE_BIND with both assist flags, detection range 12. Heroic health 250,264 is WP-H's override
+  (23,140 = HealthModifier 65 on the level 16 warrior base 356), the stock DamageModifier 2.2 (until T), stun immunity
+  1972, INSTANCE_BIND with both assist flags, detection range 12. Heroic health 332,668 is WP-H's override
   (source/world/dungeons/ragefire_chasm.py). He keeps his scimitar (creature_equip_template untouched).
 - Sinister Strike 14873 and Deadly Poison 2818 (live rogue rework rows) are retired as his casts: copies here.
 - No boss-kit adds, no new creatures. Texts: data/sql/updates/pending_db_world/rev_bazzalan_ragefire_chasm.sql.
@@ -80,7 +80,7 @@ from ._visuals import (
 _D3 = 'Ragefire Chasm build WP-D3 (Bazzalan)'
 
 creature_template_columns(11519, **boss_columns(
-    'boss_bazzalan_rework', 26.0, damage_modifier=2.2,
+    'boss_bazzalan_rework', 65.0, damage_modifier=2.2,
 ))
 
 _AURA_INTERRUPT_CHANGE_MAP = 0x00080000     # SpellDefines.h AURA_INTERRUPT_FLAG_CHANGE_MAP: leaving the map

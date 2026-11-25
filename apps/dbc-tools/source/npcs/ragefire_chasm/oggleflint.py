@@ -6,8 +6,8 @@ src/RagefireChasm/RagefireChasmRework.h only; OggleflintLogic.h names the same i
 rev_oggleflint_ragefire_chasm.sql).
 
 - 11517 Oggleflint: boss_oggleflint_rework (SmartAI off: rev_skeleton_ragefire_chasm.sql drops its row, Cleave 40505),
-  the build spec's normal health (8,544 = HealthModifier 24 on the level 16 warrior base 356), the stock DamageModifier
-  (until T), stun immunity 1972, INSTANCE_BIND with both assist flags, detection range 12 (s7 #12 A). Heroic 238,056 is
+  the build spec's normal health (21,360 = HealthModifier 60 on the level 16 warrior base 356), the stock DamageModifier
+  (until T), stun immunity 1972, INSTANCE_BIND with both assist flags, detection range 12 (s7 #12 A). Heroic 317,408 is
   WP-H's override (source/world/dungeons/ragefire_chasm.py).
 - 300985 The Borer (OG1, OG2): npc_rfc_borer, the invisible carrier display 15294 wearing the dirt trail 213552, not
   selectable, not attackable; Oggleflint's script chases with it (the kit's Chaser), shows the worm 11010 for the
@@ -65,7 +65,7 @@ _D1 = 'Ragefire Chasm build WP-D1 (Oggleflint)'
 # --- the creatures ---------------------------------------------------------------------------------------------------
 
 creature_template_columns(11517, **boss_columns(
-    'boss_oggleflint_rework', 24.0, damage_modifier=2.2,
+    'boss_oggleflint_rework', 60.0, damage_modifier=2.2,
 ))
 
 _TYPE_BEAST = 1

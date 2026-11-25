@@ -140,7 +140,7 @@ int main()
     CHECK(ArenaFor(BOSS_BAZZALAN).Contains(kBazzalanSpawn.XY(), kBazzalanSpawn.z));
     CHECK(BazzalanArena().Contains(kRidgeSafeDisc.XY(), kRidgeSafeDisc.z));
     // The build spec's health and the numbers it names.
-    CHECK(Tune::kHealth.normal == 26 * 356 && Tune::kHealth.heroic == 82 * 3052);
+    CHECK(Tune::kHealth.normal == 65 * 356 && Tune::kHealth.heroic == 109 * 3052);
     CHECK(Near(Tune::kEvisceratePctTank(false), 35.f) && Near(Tune::kEvisceratePctTank(true), 50.f));
     CHECK(Near(Tune::kFanPct, 35.f) && Near(Tune::kShadowstepPct, 45.f));
     CHECK(Near(Tune::kFanRadius, 8.f) && Near(Tune::kShadowstepRadius, 6.f));
