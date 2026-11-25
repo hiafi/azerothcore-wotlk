@@ -1225,9 +1225,12 @@
 15444 16 2 21 8 25 8000 -  # Staff of Orgrimmar -- Int+Spi+SP / Crit; green; ilvl 18->21
 15445 16 2 21 22 26 6000 -  # Hammer of Orgrimmar -- Str / Haste; green; ilvl 18->21; round 6 step-down: share
 #   8000->6000 so Haste is at least 1
-15449 16 2 21 24 73 8000 -  # Ghastly Trousers -- Int / Proc; green; ilvl 18->21
-15450 16 2 21 6 25 8000 -  # Dredgemire Leggings -- Spi+SP / Crit; green; ilvl 18->21
-15451 16 2 21 12 26 8000 -  # Gargoyle Leggings -- Str+AP / Haste; green; ilvl 18->21
+15449 16 3 21 24 40 6000 -  # Ghastly Trousers -- Int / Haste+Proc; green->blue (dungeon quests, Ragefire Chasm build:
+#   quest 5725 The Power to Destroy..., two secondaries, share 6000); ilvl 18->21
+15450 16 3 21 6 30 6000 -  # Dredgemire Leggings -- Spi+SP / Crit+Mastery; green->blue (dungeon quests, Ragefire Chasm
+#   build: quest 5725, two secondaries, share 6000); ilvl 18->21
+15451 16 3 21 12 35 6000 -  # Gargoyle Leggings -- Str+AP / Haste+Vers; green->blue (dungeon quests, Ragefire Chasm
+#   build: quest 5725, two secondaries, share 6000); ilvl 18->21
 15452 16 2 21 24 27 8000 -  # Featherbead Bracers -- Int / Mastery; green; ilvl 18->21
 15453 16 2 21 23 28 8000 -  # Savannah Bracers -- Agi / Vers; green; ilvl 18->21; FB no stock primary: type Agi
 #   (leather)
