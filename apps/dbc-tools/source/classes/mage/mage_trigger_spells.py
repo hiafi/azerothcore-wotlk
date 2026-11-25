@@ -128,6 +128,28 @@ molten_armor_34913 = spell(
 )
 
 
+deep_freeze_immunity_state_71761 = spell(
+    id=71761,
+    name='Deep Freeze Immunity State',
+    school=School.NORMAL,
+    attributes=448,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2053,
+    notes='Moved here from npc.csv. Hidden passive every mage has (SkillLineAbility 21382, AcquireMethod 2). Was PROC_TRIGGER_SPELL '
+          '-> 71757, the Deep Freeze damage on stun-immune targets, which the rework removed: now an inert DUMMY (user ruling 48, '
+          '2026-11-25). ProcTypeMask stays, so the stock spell_proc row 71761 loads without an error. Keep that row.',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 3},
+)
+
+
 blizzard_42208 = spell(
     id=42208,
     name='Blizzard',
@@ -5976,8 +5998,8 @@ heating_up_200044 = spell(
 # ---- Phase 3: spell_script_names bindings for the new/modified scripts below ---------------
 scripted_by(flame_throwing_12353, 'spell_mage_flame_throwing_capstone')
 scripted_by(-burnout_44449.id, 'spell_mage_burnout_capstone')
-# Burnout's capstone procs on crits only, through the stock spell_proc row -44449 (HitMask 2, the mage's direct damage family
-# mask, HIT phase), which is not declared here on purpose (user ruling 42, 2026-11-25).
+# Burnout's capstone procs on crits only, through the stock spell_proc row -44449 (HitMask 2, the mage's direct damage
+# family mask, HIT phase), which is not declared here on purpose (user ruling 42, 2026-11-25).
 # The stock mana drain (a share of a crit's cost) read EFFECT_1, which is the capstone marker now: rank 3 paid 1% of it.
 unbind_script(-burnout_44449.id, 'spell_mage_burnout')
 scripted_by(-playing_with_fire_31638.id, 'spell_mage_playing_with_fire')
