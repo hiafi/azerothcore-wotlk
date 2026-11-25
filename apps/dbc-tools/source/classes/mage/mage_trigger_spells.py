@@ -483,8 +483,9 @@ frostbite_11071 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=12494),
     ],
     spell_icon_id=119,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing direct Frost damage has a $s1% chance to freeze the target for $12494d.  The freeze breaks on damage.\n\n|cFF9D9D9DCapstone Bonus: Increases the damage of your Frost spells against frozen targets based on your Mastery.|r', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 4096, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_2': 512, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data'
+          ' Tooltip $s1 -> $h: the chance is ProcChance, $s1 reads 0 (2026-11-24, docs audit).',
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing direct Frost damage has a $h% chance to freeze the target for $12494d.  The freeze breaks on damage.\n\n|cFF9D9D9DCapstone Bonus: Increases the damage of your Frost spells against frozen targets based on your Mastery.|r', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 4096, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_2': 512, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1286,10 +1287,11 @@ flame_throwing_12353 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.RANGE),
-        Effect(type=EffectType.APPLY_AURA, base_points=-19, die_sides=0, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CASTING_TIME),
+        Effect(type=EffectType.APPLY_AURA, base_points=-20, die_sides=0, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CASTING_TIME),
     ],
     spell_icon_id=136,
-    notes="Fire Mage rework Phase 3 (2,0) rank 2: EFFECT_1 is the capstone's live cast-time reduction, scoped to Fireball alone (EffectSpellClassMaskB_1=1, letter B = effect index 1). base_points -19 -> real value -20% (die_sides=1 convention). spell_mage_flame_throwing_capstone's DoEffectCalcAmount overrides this to 0 while the 12s lockout (200112) is up, via AuraEffect::RecalculateAmount() triggered by spell_mage_fireball whenever the lockout applies/expires - see that script's own comment for why a cached SpellModifier value needs an explicit recalculation trigger, unlike a live-read DUMMY marker.",
+    notes="Fire Mage rework Phase 3 (2,0) rank 2: EFFECT_1 is the capstone's live cast-time reduction, scoped to Fireball alone (EffectSpellClassMaskB_1=1, letter B = effect index 1). base_points -19 -> real value -20% (die_sides=1 convention). spell_mage_flame_throwing_capstone's DoEffectCalcAmount overrides this to 0 while the 12s lockout (200112) is up, via AuraEffect::RecalculateAmount() triggered by spell_mage_fireball whenever the lockout applies/expires - see that script's own comment for why a cached SpellModifier value needs an explicit recalculation trigger, unlike a live-read DUMMY marker."
+          ' base_points -19 -> -20: die_sides 0 left it at 19%, the tooltip and doc say 20% (2026-11-24, docs audit).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of all Fire spells except Frostfire Bolt by 6 yards.\n\nCapstone Bonus: The cast time of your Fireball is reduced by 20%. This effect becomes inactive for 12 sec after use.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194327, 'EffectSpellClassMaskA_2': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'EffectSpellClassMaskB_1': 1},
 )
 
@@ -1625,8 +1627,9 @@ frostbite_12496 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=12494),
     ],
     spell_icon_id=119,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing direct Frost damage has a $s1% chance to freeze the target for $12494d.  The freeze breaks on damage.\n\n|cFF9D9D9DCapstone Bonus: Increases the damage of your Frost spells against frozen targets based on your Mastery.|r', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 4096, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_2': 512, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data'
+          ' Tooltip $s1 -> $h: the chance is ProcChance, $s1 reads 0 (2026-11-24, docs audit).',
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing direct Frost damage has a $h% chance to freeze the target for $12494d.  The freeze breaks on damage.\n\n|cFF9D9D9DCapstone Bonus: Increases the damage of your Frost spells against frozen targets based on your Mastery.|r', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 4096, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_2': 512, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1646,8 +1649,9 @@ frostbite_12497 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=119,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing direct Frost damage has a $s1% chance to freeze the target for $12494d.  The freeze breaks on damage.\n\nCapstone Bonus: Increases the damage of your Frost spells against frozen targets based on your Mastery.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 4096, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_2': 512, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data'
+          ' Tooltip $s1 -> $h: the chance is ProcChance, $s1 reads 0 (2026-11-24, docs audit).',
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing direct Frost damage has a $h% chance to freeze the target for $12494d.  The freeze breaks on damage.\n\nCapstone Bonus: Increases the damage of your Frost spells against frozen targets based on your Mastery.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 4096, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_2': 512, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -6012,12 +6016,13 @@ scorched_earth_200121 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
-        Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3063,
-    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (1,1) rank 1: new talent, 2 ranks. Effect_0/1 are plain SpellMods (+15% Flamestrike direct/DoT damage, both halves per user call 2026-09-16), scoped via classmask to Flamestrike alone (EffectSpellClassMaskA_1/EffectSpellClassMaskB_1 = 4, Flamestrike's own SpellClassMask_1). Effect_2 is a DUMMY marker (5) carrying the vulnerability-debuff percentage read by spell_mage_flamestrike_vulnerability via the marker-aura-by-icon idiom - icon 3063 (talent-tooltip-audit, 2026-09-17: was 1899, swapped to Spell_Shaman_StormEarthFire, still unique within the Fire tab) - keep spell_mage.cpp's MAGE_ICON_SCORCHED_EARTH in sync with this value.",
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (1,1) rank 1: new talent, 2 ranks. Effect_0/1 are plain SpellMods (+15% Flamestrike direct/DoT damage, both halves per user call 2026-09-16), scoped via classmask to Flamestrike alone (EffectSpellClassMaskA_1/EffectSpellClassMaskB_1 = 4, Flamestrike's own SpellClassMask_1). Effect_2 is a DUMMY marker (5) carrying the vulnerability-debuff percentage read by spell_mage_flamestrike_vulnerability via the marker-aura-by-icon idiom - icon 3063 (talent-tooltip-audit, 2026-09-17: was 1899, swapped to Spell_Shaman_StormEarthFire, still unique within the Fire tab) - keep spell_mage.cpp's MAGE_ICON_SCORCHED_EARTH in sync with this value."
+          ' base_points 15/15/5 -> 14/14/4: die_sides 1 made them 16/16/6%, the tooltip and doc say 15/5% (2026-11-24, docs audit).',
     raw_overrides={'BaseLevel': 1, 'SpellLevel': 1, 'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_1': 4, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Flamestrike by 15%. Enemies standing in your Flamestrike take 5% increased damage from your Fire spells.', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
@@ -6034,12 +6039,13 @@ scorched_earth_200122 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=30, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
-        Effect(type=EffectType.APPLY_AURA, base_points=30, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
-        Effect(type=EffectType.APPLY_AURA, base_points=10, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3063,
-    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (1,1) rank 2: 2 ranks total (design doc originally listed 3 ranks but only ever gave 2 tooltip values - user call 2026-09-16: it's a 2-rank talent).",
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (1,1) rank 2: 2 ranks total (design doc originally listed 3 ranks but only ever gave 2 tooltip values - user call 2026-09-16: it's a 2-rank talent)."
+          ' base_points 30/30/10 -> 29/29/9: die_sides 1 made them 31/31/11%, the tooltip and doc say 30/10% (2026-11-24, docs audit).',
     raw_overrides={'BaseLevel': 1, 'SpellLevel': 1, 'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_1': 4, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Flamestrike by 30%. Enemies standing in your Flamestrike take 10% increased damage from your Fire spells.', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 

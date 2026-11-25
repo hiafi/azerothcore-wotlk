@@ -855,8 +855,9 @@ searing_light_14909 = spell(
     notes="Priest Holy rework (HOLY.md 3,2): rank 1 - eff1/eff2 (damage +5%, unchanged from stock) "
           "mask also gains Penance's dmg-bolt bit (dw3=128) per HOLY.md's target mask ("
           "Smite|HF|Holy Nova dmg|Penance dmg bolt). New eff3 SPELLMOD_COST -8% (base_points=-9) "
-          "scoped Holy Nova damage only.",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Smite, Holy Fire, Holy Nova and Penance spells by $s1%, and reduces the mana cost of your Holy Nova by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5243008, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskA_3': _masks.PENANCE_BOLT, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskC_1': _masks.HOLY_NOVA_DMG, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+          "scoped Holy Nova damage only."
+          ' Tooltip $s2 -> $s3 for the Holy Nova cost: effect 3 holds it (2026-11-24, docs audit).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Smite, Holy Fire, Holy Nova and Penance spells by $s1%, and reduces the mana cost of your Holy Nova by $s3%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5243008, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskA_3': _masks.PENANCE_BOLT, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskC_1': _masks.HOLY_NOVA_DMG, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -1120,8 +1121,9 @@ searing_light_15017 = spell(
     ],
     spell_icon_id=1868,
     notes="Priest Holy rework (HOLY.md 3,2): rank 2 - mask gains Penance dmg-bolt bit (dw3=128). New "
-          "eff3 SPELLMOD_COST -16% (base_points=-17) scoped Holy Nova damage.",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Smite, Holy Fire, Holy Nova and Penance spells by $s1%, and reduces the mana cost of your Holy Nova by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5243008, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskA_3': _masks.PENANCE_BOLT, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskC_1': _masks.HOLY_NOVA_DMG, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+          "eff3 SPELLMOD_COST -16% (base_points=-17) scoped Holy Nova damage."
+          ' Tooltip $s2 -> $s3 for the Holy Nova cost: effect 3 holds it (2026-11-24, docs audit).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Smite, Holy Fire, Holy Nova and Penance spells by $s1%, and reduces the mana cost of your Holy Nova by $s3%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5243008, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskA_3': _masks.PENANCE_BOLT, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskC_1': _masks.HOLY_NOVA_DMG, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -3827,8 +3829,8 @@ divine_providence_47562 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108, misc_value=22),
         Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=11),
     ],
     spell_icon_id=2845,
@@ -3838,8 +3840,9 @@ divine_providence_47562 = spell(
           "dw3-only in the pulled data) mask gains the same new custom-spell bits. eff3 REPURPOSED "
           'from a Prayer of Mending cooldown reduction (dw2=32) into a Halo cooldown reduction '
           '(dw3=HALO) - the exact SpellMod op (COOLDOWN) is unchanged, only its scope moves; -10% '
-          '(base_points=-11).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by Holy Word: Serenity, Holy Word: Sanctify, Circle of Healing, Binding Heal, Holy Nova, Halo, Prayer of Healing, Greater Heal, Penance and Divine Star by $s1%, and reduces the cooldown of your Halo by $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 402657792, 'EffectSpellClassMaskA_2': 65540, 'EffectSpellClassMaskA_3': 25362436, 'EffectSpellClassMaskB_3': 25362436, 'EffectSpellClassMaskC_3': _masks.HALO, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+          '(base_points=-11).'
+          ' Healing 2/4/9 -> 3/6/9% (user ruling 34); the tooltip now names Prayer of Mending (script) and Divine Hymn (mask) (2026-11-24, docs audit).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by Holy Word: Serenity, Holy Word: Sanctify, Circle of Healing, Binding Heal, Holy Nova, Halo, Prayer of Healing, Prayer of Mending, Greater Heal, Penance, Divine Hymn and Divine Star by $s1%, and reduces the cooldown of your Halo by $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 402657792, 'EffectSpellClassMaskA_2': 65540, 'EffectSpellClassMaskA_3': 25362436, 'EffectSpellClassMaskB_3': 25362436, 'EffectSpellClassMaskC_3': _masks.HALO, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -3855,14 +3858,15 @@ divine_providence_47564 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=22),
         Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=108, misc_value=11),
     ],
     spell_icon_id=2845,
     notes='Priest Holy rework (HOLY.md 9,0): rank 2 - heal 6% unchanged; Halo cooldown -20% '
-          '(base_points=-21); same mask changes as rank 1.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by Holy Word: Serenity, Holy Word: Sanctify, Circle of Healing, Binding Heal, Holy Nova, Halo, Prayer of Healing, Greater Heal, Penance and Divine Star by $s1%, and reduces the cooldown of your Halo by $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 402657792, 'EffectSpellClassMaskA_2': 65540, 'EffectSpellClassMaskA_3': 25362436, 'EffectSpellClassMaskB_3': 25362436, 'EffectSpellClassMaskC_3': _masks.HALO, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+          '(base_points=-21); same mask changes as rank 1.'
+          ' Healing 2/4/9 -> 3/6/9% (user ruling 34); the tooltip now names Prayer of Mending (script) and Divine Hymn (mask) (2026-11-24, docs audit).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by Holy Word: Serenity, Holy Word: Sanctify, Circle of Healing, Binding Heal, Holy Nova, Halo, Prayer of Healing, Prayer of Mending, Greater Heal, Penance, Divine Hymn and Divine Star by $s1%, and reduces the cooldown of your Halo by $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 402657792, 'EffectSpellClassMaskA_2': 65540, 'EffectSpellClassMaskA_3': 25362436, 'EffectSpellClassMaskB_3': 25362436, 'EffectSpellClassMaskC_3': _masks.HALO, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -3884,8 +3888,9 @@ divine_providence_47565 = spell(
     ],
     spell_icon_id=2845,
     notes='Priest Holy rework (HOLY.md 9,0): rank 3 (now the final kept rank), heal 6%->9% '
-          '(base_points 5->8); Halo cooldown -30% (base_points=-31); same mask changes as rank 1.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by Holy Word: Serenity, Holy Word: Sanctify, Circle of Healing, Binding Heal, Holy Nova, Halo, Prayer of Healing, Greater Heal, Penance and Divine Star by $s1%, and reduces the cooldown of your Halo by $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 402657792, 'EffectSpellClassMaskA_2': 65540, 'EffectSpellClassMaskA_3': 25362436, 'EffectSpellClassMaskB_3': 25362436, 'EffectSpellClassMaskC_3': _masks.HALO, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+          '(base_points 5->8); Halo cooldown -30% (base_points=-31); same mask changes as rank 1.'
+          ' Healing 2/4/9 -> 3/6/9% (user ruling 34); the tooltip now names Prayer of Mending (script) and Divine Hymn (mask) (2026-11-24, docs audit).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by Holy Word: Serenity, Holy Word: Sanctify, Circle of Healing, Binding Heal, Holy Nova, Halo, Prayer of Healing, Prayer of Mending, Greater Heal, Penance, Divine Hymn and Divine Star by $s1%, and reduces the cooldown of your Halo by $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 402657792, 'EffectSpellClassMaskA_2': 65540, 'EffectSpellClassMaskA_3': 25362436, 'EffectSpellClassMaskB_3': 25362436, 'EffectSpellClassMaskC_3': _masks.HALO, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -6889,8 +6894,9 @@ searing_light_200186 = spell(
           'rather than collapsing to one, since some of the covered spells (Holy Fire\'s DoT '
           'portion) read the misc=22 variant - same masks as 14909/15017 (Smite|HF|Holy Nova dmg|'
           'Penance dmg bolt on eff1, Holy Fire only on eff2). New eff3 SPELLMOD_COST -25% '
-          '(base_points=-26) scoped Holy Nova damage only.',
-    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Smite, Holy Fire, Holy Nova and Penance spells by $s1%, and reduces the mana cost of your Holy Nova by $s2%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 5243008, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskA_3': _masks.PENANCE_BOLT, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskC_1': _masks.HOLY_NOVA_DMG, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+          '(base_points=-26) scoped Holy Nova damage only.'
+          ' Tooltip $s2 -> $s3 for the Holy Nova cost: effect 3 holds it (2026-11-24, docs audit).',
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Smite, Holy Fire, Holy Nova and Penance spells by $s1%, and reduces the mana cost of your Holy Nova by $s3%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 5243008, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskA_3': _masks.PENANCE_BOLT, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskC_1': _masks.HOLY_NOVA_DMG, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
 
@@ -7193,12 +7199,13 @@ blessed_warding_200203 = spell(
     cast_time_ms=0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1880,
     notes='HOLY.md 6,2: rank 1 - eff1 spell damage taken -2% (base_points=-3, misc 126 = magic '
           "schools). eff2 hidden marker holding the healing-done-%-per-stack tuning (1%), read by "
-          'spell_pri_blessed_warding to size the 200206 buff cast.',
+          'spell_pri_blessed_warding to size the 200206 buff cast.'
+          ' eff2 die_sides 0 -> 1: the healing marker read 0, not 1% (2026-11-24, docs audit).',
     raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces spell damage taken by $s1%. Taking area or periodic damage increases your healing done by $s2% for 10 sec, stacking up to 3 times.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 procs_on(blessed_warding_200203, PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG | PROC_FLAG_TAKEN_PERIODIC, chance=100)

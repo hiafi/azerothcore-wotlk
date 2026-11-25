@@ -281,7 +281,7 @@ avatar_204492 = _arms(
 # 204493 Sweeping Strikes (Arms) and 204494 (the copy)  -- D4, doc "Sweeping Strikes"
 # =====================================================================================================================
 # 204493 replaces stock 12328 as talent 133's rank (12328 keeps its load-time correction and its NPC users). Attributes
-# 0x40010 (no NOT_SHAPESHIFTED 0x10000: usable in any form), off the GCD, 30 rage, RecoveryTime 20000 with NO category
+# 0x40010 (no NOT_SHAPESHIFTED 0x10000: usable in any form), off the GCD, 30 rage, RecoveryTime 15000 with NO category
 # (a shared category does not lock across spell families on this core, handoff C2/Q8: the Blade Flurry cross-cooldown
 # is the scripts'), 10 s (idx 1; Improved Sweeping Strikes' DURATION mod reads d1 0x100000), visible self DUMMY,
 # SpellLevel = BaseLevel 30, PreventionType 2, stock visual 211 and icon 515.
@@ -310,15 +310,15 @@ sweeping_strikes_arms_204493 = _arms(
     attributes=_SWEEPING_ATTRIBUTES, rage=30, range_yards=RANGE_SELF, cooldown_ms=15000, duration_ms=10000,
 )
 
-# 204494: the P0 copy (p0_sweeping_copy_204890, PASSED). Physical SCHOOL_DAMAGE, amount = bp0 the C++ passes (70% /
-# 75% / 80% of the main hit before the main target's own taken-mods), DmgClass melee (rolls its own crit), 50000 yd,
+# 204494: the P0 copy (p0_sweeping_copy_204890, PASSED). Physical SCHOOL_DAMAGE, amount = bp0 the C++ passes (50% /
+# 60% / 65% of the main hit before the main target's own taken-mods), DmgClass melee (rolls its own crit), 50000 yd,
 # FacingCasterFlags 0, AttributesEx3 IGNORE_CASTER_MODIFIERS | ALWAYS_HIT | SUPPRESS_CASTER_PROCS, AttributesEx4
 # SUPPRESS_WEAPON_PROCS. No CANT_CRIT, no CU_IGNORE_ARMOR (the extra target's own armor applies), no family bits.
 # Visible (D28 allows either; the combat log shows the extra hits).
 sweeping_strikes_copy_204494 = _arms(
     204494, 'Sweeping Strikes',
     [Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY,
-            potency_excluded='percent-of-other-damage: 70/75/80% of the main hit, passed as bp0 by the Sweeping '
+            potency_excluded='percent-of-other-damage: 50/60/65% of the main hit, passed as bp0 by the Sweeping '
                              'capture (WarriorUnitScript), no potency of its own')],
     _ICON_SWEEPING,
     'warrior-rework S2 A2 (D4, P0 p0_sweeping_copy_204890 shape): cast triggered by the Sweeping capture on up to 4 '
