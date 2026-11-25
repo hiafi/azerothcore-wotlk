@@ -48,6 +48,8 @@ scopes:
     reservations: [blackrock_depths_items]
   scarlet_monastery:  # gear stage (2026-11-19) + the dungeon build (WP-0, 2026-11-20, owns the same-name reservation)
     reservations: [scarlet_monastery_items]
+  ragefire_chasm:  # gear stage + the dungeon build (2026-11-24, also owns the same-name reservation)
+    reservations: [ragefire_chasm_items]
 
   # Dungeon sets and tools.
   haunted_set:

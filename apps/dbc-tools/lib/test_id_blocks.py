@@ -833,6 +833,55 @@ class ScarletMonasteryIdsTest(unittest.TestCase):
                          RESERVATIONS["scarlet_monastery"]["creature"]["start"])
 
 
+class RagefireChasmGearIdsTest(unittest.TestCase):
+    """Ragefire Chasm gear stage (WP-0, 2026-11-24): the `ragefire_chasm_items` reservation, pinned exactly
+    (ragefire-gear.HANDOFF.md s4). The dungeon build adds its own reservation after these ids."""
+
+    def test_ragefire_chasm_items_reservation(self):
+        got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["ragefire_chasm_items"].items()}
+        self.assertEqual(got, {"spell": (213500, 213539), "creature": (300980, 300984)})
+
+    def test_ragefire_chasm_items_overlaps_no_other_reservation(self):
+        for table, cfg in RESERVATIONS["ragefire_chasm_items"].items():
+            for owner, tables in RESERVATIONS.items():
+                if owner != "ragefire_chasm_items" and table in tables:
+                    self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
+
+    def test_ragefire_chasm_items_sit_inside_the_blocks(self):
+        for table, cfg in RESERVATIONS["ragefire_chasm_items"].items():
+            self.assertTrue(BLOCKS[table]["start"] <= cfg["start"] and cfg["end"] <= BLOCKS[table]["end"], table)
+
+    def test_the_ranges_start_after_the_scarlet_monastery_build(self):
+        self.assertEqual(RESERVATIONS["scarlet_monastery"]["spell"]["end"] + 1,
+                         RESERVATIONS["ragefire_chasm_items"]["spell"]["start"])
+        self.assertEqual(RESERVATIONS["scarlet_monastery"]["creature"]["end"] + 1,
+                         RESERVATIONS["ragefire_chasm_items"]["creature"]["start"])
+
+
+class RagefireChasmIdsTest(unittest.TestCase):
+    """Ragefire Chasm build WP-0 (2026-11-24): the dungeon's reservation, pinned exactly
+    (ragefire-chasm-build.HANDOFF.md s3.3)."""
+
+    def test_ragefire_chasm_reservation(self):
+        got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["ragefire_chasm"].items()}
+        self.assertEqual(got, {
+            "spell": (213540, 213799),
+            "creature": (300985, 300999),
+            "gameobject": (301340, 301359),
+            "spellvisual": (90370, 90399),
+        })
+
+    def test_ragefire_chasm_overlaps_no_other_reservation(self):
+        for table, cfg in RESERVATIONS["ragefire_chasm"].items():
+            for owner, tables in RESERVATIONS.items():
+                if owner != "ragefire_chasm" and table in tables:
+                    self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
+
+    def test_ragefire_chasm_sits_inside_the_blocks(self):
+        for table, cfg in RESERVATIONS["ragefire_chasm"].items():
+            self.assertTrue(BLOCKS[table]["start"] <= cfg["start"] and cfg["end"] <= BLOCKS[table]["end"], table)
+
+
 class DungeonKitIdsTest(unittest.TestCase):
     """The shared dungeon kit (WP-K0, 2026-11-07): the spellvisual block widened from 90399 to 90699 and one 50-id
     SpellVisual slice per reworked dungeon after Deadmines (Deadmines held 90340-90369, leaving 30 ids for three

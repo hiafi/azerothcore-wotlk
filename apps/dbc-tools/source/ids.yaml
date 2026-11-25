@@ -885,3 +885,25 @@ reservations:
     gameobjectdisplayinfo: {start: 90060, end: 90069}
     creaturedisplayinfo: {start: 90800, end: 90829}
     creaturemodeldata: {start: 90800, end: 90829}
+  # Ragefire Chasm gear stage (.agents/plans/ragefire-gear/, 2026-11-24): the three Starving hard mode item effects
+  # (source/items/ragefire_chasm_hard_mode_effects.py; their per-tier copies mint from `item_copies`). Checked free
+  # 2026-11-24: no live spell_dbc row in 213500-218999, no live creature_template row in 300980-300999, no declaration,
+  # pending SQL or worktree names them. The dungeon build reserves its own blocks after these (spells from 213540,
+  # creatures from 300985).
+  ragefire_chasm_items:
+    spell: {start: 213500, end: 213539}
+    creature: {start: 300980, end: 300984}
+  # Ragefire Chasm build (.agents/plans/ragefire-chasm-build/, WP-0, 2026-11-24; HANDOFF s3.3, all checked free on the
+  # live DB that day). Sits after the gear stage's ragefire_chasm_items (213500-213539, 300980-300984) and below the
+  # item_copies pool (219000). Spell slices: shared 213540-213549, Oggleflint 213550-213579, Jergosh 213580-213609,
+  # Bazzalan 213610-213649, Taragaman 213650-213689, hard mode 213690-213719, spare 213720-213799. Creatures: Borer
+  # 300985, Soul Wisp 300986, Blood Globule 300987, stalker 300988, entrance orc 300989, spare 300990-300999 (the
+  # `creature` block ends at 300999: the next dungeon widens it). GOs: Blood Shrine 301340, pour spot 301341, Searing
+  # Spike 301342. The spellvisual slice takes the spare 90370-90399 (SpellVisual, Kit and EffectName). Shared heroic ids
+  # (no separate reservation): mapdifficulty 1007, dungeon_access 129, dungeonencounter heroic 1095-1098, lfgdungeons
+  # 318, creature_heroic lock lines from 310488.
+  ragefire_chasm:
+    spell: {start: 213540, end: 213799}
+    creature: {start: 300985, end: 300999}
+    gameobject: {start: 301340, end: 301359}
+    spellvisual: {start: 90370, end: 90399}  # SpellVisual, Kit and EffectName
