@@ -182,7 +182,7 @@ class BazzalanDeclarationTest(unittest.TestCase):
         heroic = int(re.search(r"kStrikeEveryMs\{ \d+, (\d+) \};", _tuning()).group(1))
         self.assertEqual(heroic, 2000)
         text = HEROIC.read_text(encoding="utf-8")
-        self.assertRegex(text, r"11519: _boss\(11519, 250_264, melee=_BAZZALAN_MELEE\)")
+        self.assertRegex(text, r"11519: _boss\(11519, 332_668, melee=_BAZZALAN_MELEE\)")
         melee = int(re.search(r"^_BAZZALAN_MELEE = ([\d_]+)", text, re.M).group(1))
         self.assertEqual(2 * melee, HEROIC_BOSS_MELEE)
 

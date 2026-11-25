@@ -555,11 +555,12 @@ namespace
     {
         // Health (section 3.6): HealthModifier on the level 16 class bases 356 (warrior) and 307 (mage); level 60
         // 3,052 and 2,136.
-        CHECK(Oggleflint::kHealth.normal == 24 * 356 && Oggleflint::kHealth.heroic == 78 * 3052);
-        CHECK(Jergosh::kHealth.normal == 28 * 307 && Jergosh::kHealth.heroic == 118 * 2136);
-        CHECK(Bazzalan::kHealth.normal == 26 * 356 && Bazzalan::kHealth.heroic == 82 * 3052);
-        CHECK(Taragaman::kHealth.normal == 36 * 356 && Taragaman::kHealth.heroic == 103 * 3052);
-        CHECK(Taragaman::kHealth.hardMode == 200 * 3052);
+        CHECK(Oggleflint::kHealth.normal == 60 * 356 && Oggleflint::kHealth.heroic == 104 * 3052);
+        CHECK(Jergosh::kHealth.normal == 70 * 307 && Jergosh::kHealth.heroic == 157 * 2136);
+        CHECK(Bazzalan::kHealth.normal == 65 * 356 && Bazzalan::kHealth.heroic == 109 * 3052);
+        CHECK(Taragaman::kHealth.normal == (684 * 356 + 9) / 10);     // 68.4: the engine rounds up
+        CHECK(Taragaman::kHealth.heroic == 137 * 3052);
+        CHECK(Taragaman::kHealth.hardMode == 267 * 3052);
 
         CHECK(ModeFor(false, false) == Mode::Normal && ModeFor(false, true) == Mode::Normal);
         CHECK(ModeFor(true, false) == Mode::Heroic && ModeFor(true, true) == Mode::HardMode);
@@ -615,6 +616,15 @@ namespace
 
 int main()
 {
+    // Hit counters: players only.
+    struct Guid
+    {
+        bool player;
+        bool IsPlayer() const { return player; }
+    };
+    CHECK(PlayerHits(std::array<Guid, 0>{}) == 0);
+    CHECK(PlayerHits(std::array<Guid, 1>{ { { false } } }) == 0);
+    CHECK(PlayerHits(std::array<Guid, 3>{ { { true }, { false }, { true } } }) == 2);
     TestIds();
     TestSave();
     TestGateRules();

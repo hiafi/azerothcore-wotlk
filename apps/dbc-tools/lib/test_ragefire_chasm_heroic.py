@@ -56,8 +56,8 @@ ENCOUNTER_NAMES = {1095: "Oggleflint", 1096: "Jergosh the Invoker", 1097: "Bazza
 ENCOUNTER_BITS = {1095: (0, 0), 1096: (2, 2000), 1097: (3, 3000), 1098: (1, 4000)}  # heroic id -> (Bit, OrderIndex)
 
 # Heroic health (handoff 3.6): HealthModifier x the level 60 class base (warrior 3,052, mage 2,136).
-BOSS_HEALTH = {11517: 238_056, 11518: 252_048, 11519: 250_264, 11520: 314_356}
-BOSS_MODIFIER = {11517: 78, 11518: 118, 11519: 82, 11520: 103}
+BOSS_HEALTH = {11517: 317_408, 11518: 335_352, 11519: 332_668, 11520: 418_124}
+BOSS_MODIFIER = {11517: 104, 11518: 157, 11519: 109, 11520: 137}
 BOSS_CLASS_BASE = {11517: 3_052, 11518: 2_136, 11519: 3_052, 11520: 3_052}
 BLOOD_GLOBULE = 300987
 GLOBULE_HEALTH = 6_000
@@ -445,7 +445,7 @@ class ExpansionTest(unittest.TestCase):
                 self.assertEqual(report.solved.tier_row, "boss")
                 row = rows[heroic_entry[boss]]
                 self.assertEqual((row["minlevel"], row["maxlevel"], row["exp"]), (60, 60, 0))
-                # 78 / 118 / 82 / 103: the generator stores the modifier a hair under (it rounds the health up)
+                # 104 / 157 / 109 / 137: the generator stores the modifier a hair under (it rounds the health up)
                 self.assertAlmostEqual(float(row["HealthModifier"]), BOSS_MODIFIER[boss], delta=0.001, msg=boss)
                 self.assertEqual(int(row["CreatureImmunitiesId"]), common.IMMUNITY_BOSS_STUN)
                 self.assertEqual(int(row["flags_extra"]), common.BOSS_FLAGS_EXTRA)  # bind + both assist flags

@@ -26,6 +26,7 @@ Run directly:
 
 from __future__ import annotations
 
+import math
 import re
 import sys
 import unittest
@@ -52,10 +53,10 @@ STALKER = 300988
 
 # entry: (script name, normal health, level 16 class base basehp0, stock DamageModifier; live 2026-11-24)
 BOSSES = {
-    11517: ("boss_oggleflint_rework", 8_544, 356, 2.2),
-    11518: ("boss_jergosh_rework", 8_596, 307, 1.95),
-    11519: ("boss_bazzalan_rework", 9_256, 356, 2.2),
-    11520: ("boss_taragaman_rework", 12_816, 356, 2.4),
+    11517: ("boss_oggleflint_rework", 21_360, 356, 2.2),
+    11518: ("boss_jergosh_rework", 21_490, 307, 1.95),
+    11519: ("boss_bazzalan_rework", 23_140, 356, 2.2),
+    11520: ("boss_taragaman_rework", 24_351, 356, 2.4),
 }
 
 # The spell slices (RagefireChasmRework.h) by the declaration file that owns them.
@@ -125,7 +126,8 @@ class RagefireChasmSkeletonTest(unittest.TestCase):
     def test_normal_health_is_the_build_spec(self):
         for entry, (_script, health, base, _damage) in BOSSES.items():
             with self.subTest(entry=entry):
-                self.assertEqual(round(float(self.edits[entry]["HealthModifier"]) * base), health)
+                # the engine's rounding (CreatureData.h GenerateHealth: ceil of base x float(mod))
+                self.assertEqual(math.ceil(base * float(self.edits[entry]["HealthModifier"])), health)
 
     def test_every_registered_creature_script_is_bound(self):
         bound = {r.get("ScriptName") for r in (*self.edits.values(), *self.rows.values())} - {None, ""}

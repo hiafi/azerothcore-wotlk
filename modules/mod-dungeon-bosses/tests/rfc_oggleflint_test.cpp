@@ -143,8 +143,8 @@ namespace
         // The jump-in ledges are not the fight's (section 7 #13 A).
         CHECK(!OggleflintArena().Contains({ -157.f, 24.f }, -21.3f));
         CHECK(!OggleflintArena().Contains({ -145.f, 20.f }, -18.f));
-        CHECK(Tune::kHealth.normal == 24 * 356);
-        CHECK(Tune::kHealth.heroic == 78 * 3052);
+        CHECK(Tune::kHealth.normal == 60 * 356);
+        CHECK(Tune::kHealth.heroic == 104 * 3052);
     }
 
     void TestNumbers()

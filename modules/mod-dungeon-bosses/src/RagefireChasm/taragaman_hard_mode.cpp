@@ -11,7 +11,7 @@
  *                    the lava, every other carrier's aura gone, Taragaman's line 9. Out of combat, never once he
  *                    fights or is dead. Both objects are heroic spawns and not selectable while the trigger is
  *                    closed. Bots never use them, and their use is refused (a bot's session is headless)
- *   From the pour    610,400 health and the red aura, through wipes and reloads (the idle hook: idempotent)
+ *   From the pour    814,884 health and the red aura, through wipes and reloads (the idle hook: idempotent)
  *   Phase 1          the hunt: polled 4 times a second, the moment anyone is under 30% he marks the lowest, at least 6
  *                    s after the last mark; nobody: the lowest anyway every 15 s (D4's Feast timer, at heroic's pace).
  *                    The Felstorm's ring drifts 3 yd/s toward a random player, its center within 8 yd of his spawn (he

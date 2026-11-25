@@ -17,7 +17,8 @@
  *   BZ6 Envenom          heroic: his target, 10% of the tank row per Deadly Poison stack consumed; kickable
  *   BZ7 Shadowstep       heroic: after the bar three landings 2.5 s apart, each behind a different player (the tank
  *                        included) with a 6 yd registry circle on him for 2 s: 45%, Weakened and Crippling Poison; then
- *                        back to the tank, threat unchanged (AttackStop and passive meanwhile, rule 35)
+ *                        back to the tank, threat unchanged (AttackStop and passive meanwhile, rule 35). He never
+ *                        moves on before the last circle has resolved (StepDue)
  *   BZ8 Poisons          a landed swing: Deadly Poison 50% of the time (his swing is 2.0 s: "50% every 2 s"), heroic
  *                        also a Wound Poison
  *
@@ -402,9 +403,10 @@ struct boss_bazzalan_rework : public BossAI
 
     void FanLanded(BossMechanics::ResolveResult const& result)
     {
-        _fanHits += static_cast<uint32>(result.hits.size());
+        uint32 const hits = PlayerHits(result.hits);
+        _fanHits += hits;
         DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "fan-lands",
-            Acore::StringFormat("hits={}:{}", result.hits.size(), Names(result.hits)));
+            Acore::StringFormat("hits={}:{}", hits, Names(result.hits)));
     }
 
     void BeginState(Finisher f)
@@ -527,9 +529,17 @@ struct boss_bazzalan_rework : public BossAI
         return floor;
     }
 
+    // The last spin has not resolved: the registry drops a circle in the tick that resolves (or cancels) it.
+    bool SpinUp() const
+    {
+        BossMechanics::Registry const* registry = _state.spin ? Mechanic::Read(me->GetMap()) : nullptr;
+        BossMechanics::ActiveMechanic const* spin = registry ? registry->Find(_state.spin.id) : nullptr;
+        return spin && !spin->cancelled && !spin->finished;
+    }
+
     void UpdateShadowstep()
     {
-        if (_clockMs < _state.nextStepMs || me->HasUnitState(UNIT_STATE_CASTING))
+        if (!StepDue(_clockMs, _state.nextStepMs, SpinUp()) || me->HasUnitState(UNIT_STATE_CASTING))
             return;
         if (!_state.passive)
         {
@@ -572,6 +582,7 @@ struct boss_bazzalan_rework : public BossAI
                 if (ai._generation == gen && !result.fizzled)
                     ai.StepLanded(result);
             }));
+        _state.spin = ref.Handle();     // none when refused
         if (ref.IsValid())
             Track(ref.Handle());
         DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "shadowstep-lands",
@@ -582,9 +593,10 @@ struct boss_bazzalan_rework : public BossAI
 
     void StepLanded(BossMechanics::ResolveResult const& result)
     {
-        _stepHits += static_cast<uint32>(result.hits.size());
+        uint32 const hits = PlayerHits(result.hits);
+        _stepHits += hits;
         DungeonKit::LogMechanic(kLogDungeon, kBossLogName, "shadowstep-fan",
-            Acore::StringFormat("hits={}:{}", result.hits.size(), Names(result.hits)));
+            Acore::StringFormat("hits={}:{}", hits, Names(result.hits)));
     }
 
     // Back to the tank with the threat he left (his top threat target; he stays where he is when it has no spot).
@@ -712,6 +724,7 @@ private:
         bool passive = false;           // AttackStop and passive until he is back
         uint32 steps = 0;
         uint64 nextStepMs = 0;
+        MechanicHandle spin;            // the last landing's circle
         GuidSet visited;
         Vec2 from;
     };

@@ -4,8 +4,8 @@ Ragefire Chasm build WP-D4: Taragaman the Hungerer (11520)
 docs/dungeons/ragefire-chasm-rework.md "Taragaman the Hungerer", TG1-TG6, TG10). WP-D4 owns this file.
 
 - 11520: bound to boss_taragaman_rework (modules/mod-dungeon-bosses src/RagefireChasm/boss_taragaman_rework.cpp),
-  SmartAI off (rev_skeleton_ragefire_chasm.sql drops its rows), the build spec's normal health (12,816 =
-  HealthModifier 36 on the level 16 warrior base 356), the stock DamageModifier (until T), stun immunity 1972,
+  SmartAI off (rev_skeleton_ragefire_chasm.sql drops its rows), the build spec's normal health (24,351 =
+  HealthModifier 68.4 on the level 16 warrior base 356), the stock DamageModifier (until T), stun immunity 1972,
   INSTANCE_BIND with both assist flags, detection range 12 (s7 #12 A). Heroic health and its overrides are WP-H's
   (source/world/dungeons/ragefire_chasm.py). He has no add of his own.
 - GO 301342 (the Searing Spike) and texts 11520 0-6 are hand SQL:
@@ -82,7 +82,7 @@ _SCRIPT_BP = ('Ragefire Chasm Taragaman: a percent of reference health the scrip
 _SCRIPT_HEAL = 'Ragefire Chasm Taragaman: a percent of his own maximum health (the script\'s base point)'
 
 creature_template_columns(11520, **boss_columns(
-    'boss_taragaman_rework', 36.0, damage_modifier=2.4,
+    'boss_taragaman_rework', 68.4, damage_modifier=2.4,
 ))
 
 # --- constants (RagefireChasmRework.h namespace Taragaman; lib/test_ragefire_chasm_taragaman.py pins each) ------------

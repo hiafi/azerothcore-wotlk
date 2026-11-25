@@ -27,12 +27,12 @@ entry (scripted health, helpers, a friendly NPC); the Blood Globule 300987 (Star
 **Trash** takes the tier as it is: elite 37,000 health and 550 a 2.0 s swing, as Deadmines, Shadowfang Keep and Scarlet
 Monastery do (handoff 2.7 / 3.6: "Heroic trash comes from the extraction as it is"), no override.
 
-**Bosses** (handoff 3.6): heroic health 238,056 / 252,048 / 250,264 / 314,356, the tier's melee (2,500 a 2.0 s
+**Bosses** (handoff 3.6): heroic health 317,408 / 335,352 / 332,668 / 418,124, the tier's melee (2,500 a 2.0 s
 swing, tuned in T through `melee=`; Bazzalan half of it, see `_BAZZALAN_MELEE`), the stun immunity set 1972 and the
 same `flags_extra` (INSTANCE_BIND, DONT_CALL_ASSISTANCE, IGNORE_ALL_ASSISTANCE_CALLS = 0x06000001) and detection range
 12 as the normal rows (section 7 #12 A): the heroic copy reads the live normal row, so the columns are stated here
 (source/npcs/ragefire_chasm/_common.py holds the same numbers; lib/test_ragefire_chasm_heroic.py pins the two
-together). Taragaman's hard mode (610,400) is set by script.
+together). Taragaman's hard mode (814,884) is set by script.
 
 **The heroic ids a boss WP needs** (the mint order, handoff 3.3; the write run mints in normal-entry order, the kit
 unit last): 8996 -> 310488, 11318-11324 -> 310489-310495, 11517 -> 310496, 11518 -> 310497, 11519 -> 310498, 11520 ->
@@ -168,10 +168,10 @@ ragefire_chasm = dungeon(
         # quests. Listing it before it exists is harmless; its `extra=` line is the quests WP's.
         normal_only_creatures=(300989,),
         overrides={
-            11517: _boss(11517, 238_056),  # Oggleflint (HealthModifier 78 x warrior 3,052)
-            11518: _boss(11518, 252_048),  # Jergosh the Invoker (118 x mage 2,136)
-            11519: _boss(11519, 250_264, melee=_BAZZALAN_MELEE),  # Bazzalan (82 x warrior 3,052)
-            11520: _boss(11520, 314_356),  # Taragaman the Hungerer (103 x warrior 3,052; hard mode 610,400 by script)
+            11517: _boss(11517, 317_408),  # Oggleflint (HealthModifier 104 x warrior 3,052)
+            11518: _boss(11518, 335_352),  # Jergosh the Invoker (157 x mage 2,136)
+            11519: _boss(11519, 332_668, melee=_BAZZALAN_MELEE),  # Bazzalan (109 x warrior 3,052)
+            11520: _boss(11520, 418_124),  # Taragaman the Hungerer (137 x warrior 3,052; hard mode 814,884 by script)
             **{entry: values for entry, values in _KIT_ADD_HEROIC.items() if entry in _declared},
         },
     ),

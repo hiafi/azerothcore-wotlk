@@ -276,10 +276,20 @@ namespace RfcBazzalan
     // BZ7 Shadowstep and Fan of Knives
     // ----------------------------------------------------------------------------------------------------------------
 
-    // The bar, then a landing every kShadowstepEveryMs (STAGE-G1 Q4: 2 to 2.5 s, never faster than the ring), then back
-    // to the tank kShadowstepEveryMs after the last landing: the chain is SP's "about 7.5 sec".
+    // The bar, then a landing every kShadowstepEveryMs (STAGE-G1 Q4: 2 to 2.5 s), then back to the tank
+    // kShadowstepEveryMs after the last landing: the chain is SP's "about 7.5 sec". Never as fast as the ring: it is
+    // anchored on him and the registry resolves it after his own update, so a teleport at (or before) its resolve takes
+    // it along and hits whoever he just appeared behind.
     inline constexpr std::uint32_t kShadowstepEveryMs = 2500;
-    static_assert(kShadowstepEveryMs >= Tune::kShadowstepWarnMs, "a ring resolves before the next step");
+    inline constexpr std::uint32_t kShadowstepFloorMs = Tune::kShadowstepWarnMs + 250;
+    static_assert(kShadowstepEveryMs >= kShadowstepFloorMs, "a ring resolves well before the next step");
+
+    // The next step (or the way home): its time has come and the last spin has resolved. A late resolve (a server
+    // stall) delays it, and every step after it, never cancels it. `spinUp`: the registry still holds that spin.
+    constexpr bool StepDue(std::uint64_t nowMs, std::uint64_t nextStepMs, bool spinUp)
+    {
+        return nowMs >= nextStepMs && !spinUp;
+    }
 
     constexpr std::uint32_t ShadowstepChainMs(std::uint32_t steps = Tune::kShadowstepCount)
     {

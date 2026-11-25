@@ -7,6 +7,7 @@
  *   JergoshSpells / JergoshTags     the spells (kSpellsJergosh) and the registry tags (the drill's: 6 and 7)
  *   Timeline                        the fight's clock: Conflagrate first and always on its grid, then Drain Soul, then
  *                                   Immolate, then the curse; an Immolate that would run into Conflagrate is skipped
+ *   ImmolateFull                    he lights nobody while three burn (the fire's spread may still exceed it)
  *   Outsiders                       who the random picks skip: whoever is off his hall
  *   ImmolatePick                    any player, the tank included, never one already burning
  *   BurningAfter                    Conflagrate's fire: every burn consumed, then (heroic) whoever another's ring hit
@@ -24,6 +25,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <utility>
@@ -60,10 +62,9 @@ namespace RfcJergosh
         TAG_JR_WISP         = 7,
     };
 
-    // The descriptor: Drain Soul before Immolate, Immolate on the dispel list (heroic).
+    // The descriptor: Drain Soul before Immolate; nothing to dispel (Immolate is DispelType none, user 2026-11-25).
     inline constexpr std::uint8_t kDrainSoulKickPriority = 2;
     inline constexpr std::uint8_t kImmolateKickPriority = 1;
-    inline constexpr std::uint8_t kImmolateDispelPriority = 1;
 
     // ----------------------------------------------------------------------------------------------------------------
     // The fight's clock
@@ -113,8 +114,7 @@ namespace RfcJergosh
 
     // Conflagrate is never late: nothing starts that would still run at its beat (ruling 15's re-lit burns last 21 s,
     // one second more than its period, so a beat a second late would let them lapse). An Immolate that does not fit is
-    // skipped, not delayed: a delayed one would add a fourth burn to the next Conflagrate (spec: 2, 3 at most; heroic 2
-    // or 3). A Drain Soul that does not fit waits.
+    // skipped, not delayed (the next is 3 s away). A Drain Soul that does not fit waits.
     class Timeline
     {
     public:
@@ -205,6 +205,8 @@ namespace RfcJergosh
     // A burn lit by one Conflagrate is still there for the next (the cascade of ruling 15).
     static_assert(Tune::kImmolateDurationMs >= Tune::kConflagrateEveryMs.heroic + 2 * kBeatMarginMs);
     static_assert(Tune::kImmolateDurationMs % Tune::kImmolateTickMs == 0);
+    static_assert(Tune::kImmolateEveryMs.normal > Tune::kImmolateCastMs
+        && Tune::kImmolateEveryMs.heroic > Tune::kImmolateCastMs);
     inline constexpr std::uint32_t kImmolateTicks = Tune::kImmolateDurationMs / Tune::kImmolateTickMs;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -219,6 +221,12 @@ namespace RfcJergosh
             if (!inside)
                 out.push_back(guid);
         return out.size() == players.size() ? std::vector<std::uint64_t>() : out;
+    }
+
+    // He lights nobody while this many burn already, whoever lit them. One cast at a time: he never makes it a fourth.
+    constexpr bool ImmolateFull(std::size_t burning)
+    {
+        return burning >= Tune::kImmolateMaxBurning;
     }
 
     // `skip`: everyone burning, and the Outsiders.

@@ -619,7 +619,7 @@ public:
             .School(SPELL_SCHOOL_NORMAL).Spell(SPELL_TG_FELSTORM).Within(TaragamanFloorBounds()).Tag(TAG_TG_RING)
             .OnResolve(OnTaragaman([](boss_taragaman_rework& ai, BossMechanics::ResolveResult const& r)
             {
-                ai._storm.ringHits += static_cast<uint32>(r.hits.size());
+                ai._storm.ringHits += PlayerHits(r.hits);
             }));
         if (ring.IsValid())
         {
@@ -739,7 +739,7 @@ public:
             .Within(TaragamanFloorBounds()).Tag(TAG_TG_SPOT)
             .OnResolve(OnTaragaman([stalkerGuid](boss_taragaman_rework& ai, BossMechanics::ResolveResult const& r)
             {
-                ai._storm.spotHits += static_cast<uint32>(r.hits.size());
+                ai._storm.spotHits += PlayerHits(r.hits);
                 Creature* stalker = r.fizzled ? nullptr : ObjectAccessor::GetCreature(*ai.me, stalkerGuid);
                 if (stalker)
                     stalker->CastSpell(stalker, SPELL_TG_FEL_SPOT_LOOK, true);
@@ -839,7 +839,7 @@ public:
             .OnResolve(OnTaragaman([](boss_taragaman_rework& ai, BossMechanics::ResolveResult const& r)
             {
                 ai._nova.resolved = true;
-                ai._nova.seen = static_cast<uint32>(r.hits.size());
+                ai._nova.seen = PlayerHits(r.hits);
                 ai._nova.hidden = static_cast<uint32>(r.cleared.size());
             }));
         if (!ref.IsValid())
