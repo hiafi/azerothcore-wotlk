@@ -4,7 +4,7 @@
 -- source/npcs/ragefire_chasm/dungeon_quests.py; the seven reward items are
 -- source/items/ragefire_chasm_dungeon_quests.py and the green -> blue edit of 15449-15451 is in quest_rewards.lock (the
 -- item_template, item_dbc and Item.dbc rows and the item ids are the deploy's generated rev: this file is named so it
--- sorts after every `rev_<digits>.sql`, and it finds the new items by name). Everything below is hand-written: the
+-- sorts after every `rev_<digits>.sql`). Everything below is hand-written: the
 -- quests' changes, the neutral text, the giver's spawn and weapon, the starter / ender rows. No new quest id (nothing
 -- in 90100-90199), no new item_template row (every quest item is stock).
 --
@@ -37,34 +37,31 @@ UPDATE `quest_template` SET `RewardFactionID1` = 0, `RewardFactionValue1` = 0, `
 
 -- 5728 Hidden Enemies: XP difficulty 7 -> 9 (stock 1,750 base at level 16 -> 3,450, about 2x), and the epic choice,
 -- three waist pieces at item level 26 (Str mail, Agi leather, Int cloth; section 7 #39 A). The stock reward is 8 silver
--- (RewardMoney 800), which stays. The items are looked up by name until the deploy: its generated rev mints their ids
--- in item_ids.lock and inserts the rows before this file runs, and the deploy then replaces each subselect with the
--- minted id (a later rename would break the lookup on a fresh import; the test pins the ids against the lock). A
--- missing item (NULL, error 1048) or a second one of the same name (error 1242) makes the statement fail, loudly,
--- instead of leaving an empty or a wrong choice. Each UPDATE is guarded on the stock values.
+-- (RewardMoney 800), which stays. The items are the minted ids of
+-- item_ids.lock (rfcq_*; the test pins them). Each UPDATE is guarded on the stock values.
 UPDATE `quest_template` SET `RewardXPDifficulty` = 9 WHERE `ID` = 5728 AND `RewardXPDifficulty` = 7;
 UPDATE `quest_template` SET
-    `RewardChoiceItemID1` = (SELECT `entry` FROM `item_template` WHERE `name` = 'Embersworn Girdle'),
+    `RewardChoiceItemID1` = 74463,
     `RewardChoiceItemQuantity1` = 1,
-    `RewardChoiceItemID2` = (SELECT `entry` FROM `item_template` WHERE `name` = 'Cinderstalker''s Belt'),
+    `RewardChoiceItemID2` = 74464,
     `RewardChoiceItemQuantity2` = 1,
-    `RewardChoiceItemID3` = (SELECT `entry` FROM `item_template` WHERE `name` = 'Ashcaller''s Sash'),
+    `RewardChoiceItemID3` = 74465,
     `RewardChoiceItemQuantity3` = 1
     WHERE `ID` = 5728 AND `RewardChoiceItemID1` = 0 AND `RewardChoiceItemID2` = 0 AND `RewardChoiceItemID3` = 0;
 
 -- 5761 Slaying the Beast: a choice of two blues, Agility leather boots or a tank shield (the stock reward is 8 silver
 -- only, which stays). 5723 Testing an Enemy's Strength: a choice of two greens, Strength mail gloves or healer cloth
--- gloves (the stock reward is 7 silver only, which stays). Same name lookup and guard as above.
+-- gloves (the stock reward is 7 silver only, which stays). Same minted ids and guard as above.
 UPDATE `quest_template` SET
-    `RewardChoiceItemID1` = (SELECT `entry` FROM `item_template` WHERE `name` = 'Beastslayer''s Treads'),
+    `RewardChoiceItemID1` = 74466,
     `RewardChoiceItemQuantity1` = 1,
-    `RewardChoiceItemID2` = (SELECT `entry` FROM `item_template` WHERE `name` = 'Beastslayer''s Bulwark'),
+    `RewardChoiceItemID2` = 74467,
     `RewardChoiceItemQuantity2` = 1
     WHERE `ID` = 5761 AND `RewardChoiceItemID1` = 0 AND `RewardChoiceItemID2` = 0;
 UPDATE `quest_template` SET
-    `RewardChoiceItemID1` = (SELECT `entry` FROM `item_template` WHERE `name` = 'Troggbane Gauntlets'),
+    `RewardChoiceItemID1` = 74468,
     `RewardChoiceItemQuantity1` = 1,
-    `RewardChoiceItemID2` = (SELECT `entry` FROM `item_template` WHERE `name` = 'Chasm Tender''s Gloves'),
+    `RewardChoiceItemID2` = 74469,
     `RewardChoiceItemQuantity2` = 1
     WHERE `ID` = 5723 AND `RewardChoiceItemID1` = 0 AND `RewardChoiceItemID2` = 0;
 

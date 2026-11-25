@@ -47,6 +47,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import math
 import tempfile
 from pathlib import Path
 
@@ -202,6 +203,12 @@ def check_stock_ids() -> list[str]:
             f"{len(STOCK_EFFECT_FILES)} stock effect models the fel spot row reuses)"]
 
 
+def _same_row(a: dict, b: dict) -> bool:
+    """The rows are equal, with floats compared as the DBC stores them (float32: 0.01 reads back as 0.00999...)."""
+    return a.keys() == b.keys() and all(
+        math.isclose(a[k], b[k], rel_tol=1e-6, abs_tol=1e-7) if isinstance(a[k], float) else a[k] == b[k] for k in a)
+
+
 def check_no_collisions() -> None:
     """The ids this script mints must be free in the working copy or already equal to its own rows (a merge replaces
     rows silently, so a foreign row in the block would be lost)."""
@@ -211,7 +218,7 @@ def check_no_collisions() -> None:
             ("SpellVisual.dbc", dbcfmt.SPELLVISUAL, build_spellvisual_rows)):
         mine = {r["ID"]: r for r in builder()}
         for row in dbcfile.read_dbc(DBC_DIR / filename, table):
-            if row["ID"] in mine and row != mine[row["ID"]]:
+            if row["ID"] in mine and not _same_row(row, mine[row["ID"]]):
                 raise SystemExit(f"{filename}: id {row['ID']} already holds a different row")
             if VISUAL_BLOCK["start"] <= row["ID"] <= VISUAL_BLOCK["end"] and row["ID"] not in mine:
                 raise SystemExit(f"{filename}: foreign row {row['ID']} inside the ragefire_chasm block")

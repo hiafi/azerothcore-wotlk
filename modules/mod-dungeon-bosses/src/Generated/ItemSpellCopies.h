@@ -259,8 +259,26 @@ namespace ItemSpellCopies
         { 219042, 212021, 219041 },  // sm_treads_of_denial empowered_2_hm
         { 219043, 212020, 219043 },  // sm_treads_of_denial empowered_3_hm
         { 219044, 212021, 219043 },  // sm_treads_of_denial empowered_3_hm
+        { 219045, 213500, 219045 },  // rfc_taragamans_fang empowered_1_hm
+        { 219046, 213501, 219045 },  // rfc_taragamans_fang empowered_1_hm
+        { 219047, 213500, 219047 },  // rfc_taragamans_fang empowered_2_hm
+        { 219048, 213501, 219047 },  // rfc_taragamans_fang empowered_2_hm
+        { 219049, 213500, 219049 },  // rfc_taragamans_fang empowered_3_hm
+        { 219050, 213501, 219049 },  // rfc_taragamans_fang empowered_3_hm
+        { 219051, 213503, 219051 },  // rfc_heart_of_the_starving empowered_1_hm
+        { 219052, 213503, 219052 },  // rfc_heart_of_the_starving empowered_2_hm
+        { 219053, 213503, 219053 },  // rfc_heart_of_the_starving empowered_3_hm
+        { 219054, 213505, 219054 },  // rfc_felstorm_greatblade empowered_1_hm
+        { 219055, 213506, 219054 },  // rfc_felstorm_greatblade empowered_1_hm
+        { 219056, 213507, 219054 },  // rfc_felstorm_greatblade empowered_1_hm
+        { 219057, 213505, 219057 },  // rfc_felstorm_greatblade empowered_2_hm
+        { 219058, 213506, 219057 },  // rfc_felstorm_greatblade empowered_2_hm
+        { 219059, 213507, 219057 },  // rfc_felstorm_greatblade empowered_2_hm
+        { 219060, 213505, 219060 },  // rfc_felstorm_greatblade empowered_3_hm
+        { 219061, 213506, 219060 },  // rfc_felstorm_greatblade empowered_3_hm
+        { 219062, 213507, 219060 },  // rfc_felstorm_greatblade empowered_3_hm
     };
-    inline constexpr std::size_t kCopyCount = 235;
+    inline constexpr std::size_t kCopyCount = 253;
 
     // The group of `spellId` when it is a copy, else 0.
     constexpr std::uint32_t GroupOf(std::uint32_t spellId)
