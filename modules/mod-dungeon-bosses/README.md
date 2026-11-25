@@ -140,6 +140,15 @@ so db-import and the dbc-tools replay see one history.
 | `src/ScarletMonastery/HerodFight.h` | Herod's hard mode hooks for Call to Arms (D11 -> D11H): per-pull object, trigger, idle aura |
 | `src/ScarletMonastery/MograineFight.h` | Mograine's risen state for Whitemane's fight (D13 -> D14): fallen, vigil, rising hooks |
 | `src/ScarletMonastery/WhitemaneFight.h` | Whitemane's hard mode hooks for The Truth (D14 -> D14H): Torch trigger, vigil, phases |
+| `src/RagefireChasm/hard_mode_items.cpp` | Taragaman, Starving hard mode item scripts: the Fang's leap and bite, the Heart's Bloodward, one roll per cast |
+| `src/RagefireChasm/RagefireChasmHardModeItemsLogic.h` | Pure: Ragefire Chasm item effect ids (213500-213507), landing watch, bite heal, health check, Bloodward, item spell test |
+| `src/RagefireChasm/RagefireChasmRework.h` | Pure: entries, 5 states, data ids, gate and hard mode rules, slices, points, polygons, every boss's tuning table, save |
+| `src/RagefireChasm/instance_ragefire_chasm_rework.cpp` | Instance (stock name, replaced at load): the gate derived from slots 0-2, the hard mode flag, kill slot and loot bit |
+| `src/RagefireChasm/RagefireChasmKit.{h,cpp}` | Glue: leash options, `ArenaEdge` (a boss at his arena's edge), `OnBossPull`, `<Boss>FloorBounds`, `ApplyTaragamanGate` |
+| `src/RagefireChasm/RagefireChasmTestCommand.{h,cpp}` | The `.dbtest rfc` shell, `gate`, `section` and `instance` |
+| `src/RagefireChasm/boss_<name>_rework.cpp`, `<Boss>Logic.h` | One pair per boss (D1-D4) |
+| `src/RagefireChasm/TaragamanFight.h` | Taragaman's hard mode hooks for Starving (D4 -> D4H): per-pull object, factory, idle hook, action hook, Felstorm spot |
+| `src/RagefireChasm/taragaman_hard_mode.cpp`, `TaragamanHardModeLogic.h` | D4H Starving: shrine and pour GOs, Blood Globules; `.dbtest rfc starving` |
 | `src/DungeonSets/haunted_set_bonuses.cpp` | Haunted set bonus scripts (10 sets x 3 and 5 pieces) and their hooks |
 | `src/DungeonSets/HauntedSetLogic.h` | Pure: Haunted set bonus ids (205700-205793), script numbers, rolls, picks |
 | `src/DungeonSets/molten_set_bonuses.cpp` | Molten set bonus scripts (10 sets x 3 and 5 pieces): Heat, eruptions, cooldown hooks |
@@ -155,6 +164,7 @@ so db-import and the dbc-tools replay see one history.
 | `tests/blackrock_spire_test.cpp`, `tests/brs_<boss>_test.cpp` | The Blackrock Spire skeleton and each boss |
 | `tests/blackrock_depths_test.cpp`, `tests/brd_<boss>_test.cpp` | The Blackrock Depths skeleton and each boss |
 | `tests/scarlet_monastery_test.cpp`, `tests/sm_<boss>_test.cpp` | The Scarlet Monastery skeleton and each boss |
+| `tests/ragefire_chasm_test.cpp`, `tests/rfc_<boss>_test.cpp` | The Ragefire Chasm skeleton and each boss |
 
 ## Adding a dungeon
 
@@ -313,6 +323,21 @@ bosses' tables have `hardmode` (arms their hard mode past the trigger).
 | `laststand` | info state start call descend hammer storm reserve fall chest clear `heroic [0\|1]` |
 | `whitemane` | info state hardmode vigil rise lane penance heal shield smite flame hisfall herfall clear `heroic [0\|1]` `force [0\|1]` |
 | `truth` | info state torch vigil truth light verdict curse shield heal |
+
+## Ragefire Chasm `.dbtest rfc` subcommands
+
+`.dbtest rfc <boss> <subcommand>` (GM, map 389). Each boss file's header comment gives the arguments.
+
+| Boss | Subcommands |
+| --- | --- |
+| `gate` | `open`, `close`: slots 0 to 2 DONE / NOT_STARTED (the third DONE wakes Taragaman and plays line 0) |
+| `section` | `<entrance\|den\|hall\|ridge\|plateau\|shrine\|pour\|checkpoint>`: teleport |
+| `instance` | `boss <id> <state>`, `where` |
+| `oggleflint` | info state hunt swing beating join |
+| `jergosh` | info state immolate burn burnall conflagrate drain wisp `tithe <n>` curse |
+| `bazzalan` | info state `points [n]` poison eviscerate rupture fan envenom shadowstep |
+| `taragaman` | info state `hardmode [0\|1]` feast felstorm nova spot gorge uppercut `heroic [0\|1]` (all but info, state and hardmode need combat and `.gm off`) |
+| `starving` | info state draw pour feast phase2 globules combo burst |
 
 ## Kit: death spots, held bodies and the edge (Blackrock Depths WP-KT-D1)
 

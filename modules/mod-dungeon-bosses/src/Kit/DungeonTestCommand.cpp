@@ -126,7 +126,7 @@ namespace
         }
 
     public:
-        static std::size_t constexpr kMaxShells = 8;
+        static std::size_t constexpr kMaxShells = 12;
 
         template <std::size_t... I>
         static auto ListThunks(std::index_sequence<I...>)

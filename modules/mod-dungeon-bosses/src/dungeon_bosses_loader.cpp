@@ -169,6 +169,16 @@ void AddSC_boss_gardener_rework();                      // D12: boss_gardener_re
 void AddSC_boss_mograine_rework();                      // D13: boss_mograine_rework (the Last Stand)
 void AddSC_boss_whitemane_rework();                     // D14: boss_whitemane_rework
 void AddSC_sm_whitemane_hard_mode();                    // D14H: The Truth (`.dbtest sm truth`)
+// Ragefire Chasm (map 389): the Ragefire Chasm skeleton (WP-S0): the bosses (one file per boss WP), the instance
+// (registered under the stock name instance_ragefire_chasm, replacing the empty stock one) and the `.dbtest rfc` shell
+void AddSC_boss_oggleflint_rework();        // D1: boss_oggleflint_rework, npc_rfc_borer
+void AddSC_boss_jergosh_rework();           // D2: boss_jergosh_rework, npc_rfc_soul_wisp
+void AddSC_boss_bazzalan_rework();          // D3: boss_bazzalan_rework
+void AddSC_boss_taragaman_rework();         // D4: boss_taragaman_rework
+void AddSC_rfc_taragaman_hard_mode();       // D4H: Starving: go_rfc_blood_shrine, go_rfc_pour_spot,
+                                            // npc_rfc_blood_globule (`.dbtest rfc starving`)
+void AddSC_instance_ragefire_chasm_rework();
+void AddSC_dungeon_bosses_rfc_commandscript();
 // Stratholme hard mode items (wave 1 dungeon items): the Balnazzar and Baron Rivendare hard mode item effects
 void AddSC_strat_hard_mode_items();         // spell_strat_dust_of_the_nathrezim, spell_strat_two_faced_tome,
                                             // spell_strat_ysidas_locket, spell_strat_blade_of_the_condemned,
@@ -194,6 +204,10 @@ void AddSC_brd_hard_mode_items();           // BrdExecutionerDamage, spell_brd_k
 // Scarlet Monastery hard mode items (scarlet gear): the Thalnos, Doan, Herod and Whitemane items
 void AddSC_sm_hard_mode_items();            // spell_sm_pureblood_rallying_standard, spell_sm_one_roll_per_cast,
                                             // spell_sm_fathers_verdict, spell_sm_inquisitors_rosary
+
+// Ragefire Chasm hard mode items (ragefire gear): the Taragaman, Starving items
+void AddSC_rfc_hard_mode_items();           // spell_rfc_taragamans_fang, spell_rfc_hungering_bite,
+                                            // spell_rfc_heart_of_the_starving, spell_rfc_one_roll_per_cast
 
 // Dungeon sets (item variants, Haunted set track): the Haunted set bonuses
 void AddSC_haunted_set_bonuses();           // spell_haunted_* bonus scripts, HauntedSetSpellHooks, HauntedSetUnitHooks
@@ -323,16 +337,23 @@ void Addmod_dungeon_bossesScripts()
     AddSC_boss_mograine_rework();
     AddSC_boss_whitemane_rework();
     AddSC_sm_whitemane_hard_mode();
+    AddSC_boss_oggleflint_rework();
+    AddSC_boss_jergosh_rework();
+    AddSC_boss_bazzalan_rework();
+    AddSC_boss_taragaman_rework();
+    AddSC_rfc_taragaman_hard_mode();
+    AddSC_instance_ragefire_chasm_rework();
     AddSC_strat_hard_mode_items();
     AddSC_sfk_hard_mode_items();
     AddSC_brs_hard_mode_items();
     AddSC_brd_hard_mode_items();
     AddSC_sm_hard_mode_items();
+    AddSC_rfc_hard_mode_items();
     AddSC_haunted_set_bonuses();
     AddSC_molten_set_bonuses();
     AddSC_zealot_set_bonuses();
     // after the boss files: they register their `.dmtest` / `.sfktest` / `.dbtest scholo` / `.dbtest strat` /
-    // `.dbtest brs` / `.dbtest brd` / `.dbtest sm` tables from their AddSC_ functions
+    // `.dbtest brs` / `.dbtest brd` / `.dbtest sm` / `.dbtest rfc` tables from their AddSC_ functions
     AddSC_dungeon_bosses_dmtest_commandscript();
     AddSC_dungeon_bosses_sfktest_commandscript();
     AddSC_dungeon_bosses_scholo_commandscript();
@@ -340,4 +361,5 @@ void Addmod_dungeon_bossesScripts()
     AddSC_dungeon_bosses_brs_commandscript();
     AddSC_dungeon_bosses_brd_commandscript();
     AddSC_dungeon_bosses_sm_commandscript();
+    AddSC_dungeon_bosses_rfc_commandscript();
 }
