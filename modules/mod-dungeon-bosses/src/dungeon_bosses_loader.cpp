@@ -216,6 +216,12 @@ void AddSC_zf_hard_mode_items();            // spell_zf_scale_of_the_storm_god, 
 // Zul'Farrak list items (zul-farrak gear): the tier-matched Sul'thraze join
 void AddSC_zf_sulthraze_join();             // spell_zf_call_of_sulthraze, SulthrazeJoinWorldScript
 
+// Gnomeregan hard mode items (gnomeregan gear): the Whole Workshop items
+void AddSC_gnomer_hard_mode_items();        // spell_gnomer_item_meltdown_pulse, spell_gnomer_item_walking_bomb,
+                                            // spell_gnomer_item_walking_bomb_launcher,
+                                            // spell_gnomer_item_walking_bomb_blast,
+                                            // spell_gnomer_item_master_punch_card
+
 // Dungeon sets (item variants, Haunted set track): the Haunted set bonuses
 void AddSC_haunted_set_bonuses();           // spell_haunted_* bonus scripts, HauntedSetSpellHooks, HauntedSetUnitHooks
 
@@ -358,6 +364,7 @@ void Addmod_dungeon_bossesScripts()
     AddSC_rfc_hard_mode_items();
     AddSC_zf_hard_mode_items();
     AddSC_zf_sulthraze_join();
+    AddSC_gnomer_hard_mode_items();
     AddSC_haunted_set_bonuses();
     AddSC_molten_set_bonuses();
     AddSC_zealot_set_bonuses();

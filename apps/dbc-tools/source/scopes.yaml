@@ -52,6 +52,8 @@ scopes:
     reservations: [ragefire_chasm_items]
   zul_farrak:  # gear stage (2026-11-25); the dungeon build adds its reservation here, never a second key
     reservations: [zul_farrak_items]
+  gnomeregan:  # gear stage (2026-11-25); the dungeon build adds its reservation here, never a second key
+    reservations: [gnomeregan_items]
 
   # Dungeon sets and tools.
   haunted_set:

@@ -919,3 +919,12 @@ reservations:
   zul_farrak_items:
     spell: {start: 213800, end: 213839}
     creature: {start: 301000, end: 301004}
+  # Gnomeregan gear stage (.agents/plans/gnomeregan-gear/, 2026-11-25): the three Mekgineer Thermaplugg hard mode item
+  # effects (source/items/gnomeregan_hard_mode_effects.py; their per-tier copies mint from `item_copies`) and the
+  # Walking Bomb look. Checked free 2026-11-25: no live spell_dbc row in 214240-214299, no live creature_template row in
+  # 301100-301199, and no worktree's ids.yaml names them as spells or creatures. Starts after the Zul'Farrak build's
+  # reservation (spells 213840-214239, creatures 301005-301099, in its worktree). The Gnomeregan build reserves its own
+  # blocks after these (spells from 214280, creatures from 301105).
+  gnomeregan_items:
+    spell: {start: 214240, end: 214279}
+    creature: {start: 301100, end: 301104}

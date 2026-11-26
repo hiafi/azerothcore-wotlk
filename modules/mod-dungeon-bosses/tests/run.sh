@@ -46,6 +46,7 @@ tests=(
   ragefire_chasm_hard_mode_items_test
   zul_farrak_hard_mode_items_test
   zul_farrak_sulthraze_join_test
+  gnomeregan_hard_mode_items_test
   haunted_set_test
   molten_set_test
   zealot_set_test
