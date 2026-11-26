@@ -445,6 +445,19 @@ namespace SimBuffSet
         return true;
     }
 
+    bool IsRaidScroll(uint32 spellId)
+    {
+        return spellId >= 208860 && spellId <= 208876;
+    }
+
+    uint32 DropRaidScrolls(std::vector<AuraSpec>& specs)
+    {
+        std::size_t const before = specs.size();
+        specs.erase(std::remove_if(specs.begin(), specs.end(),
+            [](AuraSpec const& spec) { return IsRaidScroll(spec.SpellId); }), specs.end());
+        return uint32(before - specs.size());
+    }
+
     std::string Describe(std::vector<AuraSpec> const& specs)
     {
         std::string text;

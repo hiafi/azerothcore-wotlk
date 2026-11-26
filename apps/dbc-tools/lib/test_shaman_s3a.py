@@ -462,7 +462,7 @@ def check_unleashed_rage(rows: dict, ids=UNLEASHED_RAGE) -> list[str]:
 
 
 LAVA_LASH = 60103
-LAVA_LASH_WEAPON_PERCENT = 280   # off-hand weapon damage % [tune], stock 100, 250 on 2026-10-22 then trimmed to 110 (S3-ENH-TRIM-DIAG option 3), 154 on 2026-11-01 (B3, +40%), 169 on 2026-11-15 (BAL1, +10%, whole potency), 220 on 2026-11-16 (ST1000, +30%), 266 on 2026-11-17 (WS3 Enhancement compensation, x1.21), 278 on 2026-11-26 (raid-buff-sets retune R1, x1.045)
+LAVA_LASH_WEAPON_PERCENT = 280   # off-hand weapon damage % [tune], stock 100, 250 on 2026-10-22 then trimmed to 110 (S3-ENH-TRIM-DIAG option 3), 154 on 2026-11-01 (B3, +40%), 169 on 2026-11-15 (BAL1, +10%, whole potency), 220 on 2026-11-16 (ST1000, +30%), 266 on 2026-11-17 (WS3 Enhancement compensation, x1.21), 278 on 2026-11-26 (raid-buff-sets retune R1, x1.045), rounded to 280 in the R1 revision
 EFFECT_WEAPON_PERCENT_DAMAGE = 31
 
 

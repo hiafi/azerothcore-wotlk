@@ -448,7 +448,8 @@ DpsSim.PetCreatureEntry = 0
 #                                  the auras itself, the actor as the caster; nobody casts them. So the default lists
 #                                  hold only spells the actor's class does not own, and a class buff the actor already
 #                                  carries from a "highest wins" group stays if it is at least as strong (not for
-#                                  hunters). Level 60 only, except hunters.
+#                                  hunters). Level 60 only, except hunters: below level 60 a hunter's run leaves
+#                                  the raid scrolls out of its lists (their amounts are the level 60 ones).
 #                      empty     - the profile's own BuffSet key, self_only without one.
 #                      run-sim.sh sets it from DPSSIM_BUFF_SET or the profile's BuffSet and puts "standard" or
 #                      "full_raid" in the report names.

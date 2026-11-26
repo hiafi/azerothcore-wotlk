@@ -426,10 +426,10 @@ seal_of_vengeance_hit_201083 = spell(
     id=201083, name='Seal of Vengeance', school=_HOLY_SHADOW, attributes=_PASSIVE_ATTRIBUTES,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0,
-    effects=[_weapon(11.0)],
+    effects=[_weapon(10.0)],
     spell_icon_id=_ICON_SOV,
     notes='paladin-rework SHARED B1.4: Seal of Vengeance passive, auto-attack form, 10% weapon (bits P). Icon 2292 is safe: the JoV hardcode needs d1 0x400000 as well and a passive carries none.'
-          ' Effect 1 weapon_potency 10.0 -> 11.0 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13 = 11.3, weapon potency must be whole: x1.10).',
+          ' Effect 1 weapon_potency 10.0 -> 11.0 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13 = 11.3, weapon potency must be whole: x1.10); 11.0 -> 10.0 (2026-11-26, retune fix pass, user ruling: visible weapon percents are multiples of 5).',
     raw_overrides={**_passive_raw('Seal of Vengeance weapon damage.'), **_chain(1)},
 )
 
@@ -489,10 +489,10 @@ seal_of_vengeance_hit_normalized_201089 = spell(
     id=201089, name='Seal of Vengeance', school=_HOLY_SHADOW, attributes=_PASSIVE_ATTRIBUTES,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0,
-    effects=[_normalized(), _weapon(11.0)],
+    effects=[_normalized(), _weapon(10.0)],
     spell_icon_id=_ICON_SOV,
     notes='paladin-rework SHARED B1.4: Seal of Vengeance passive, ability form, 10% weapon, bits P.'
-          ' Effect 2 weapon_potency 10.0 -> 11.0 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13 = 11.3, weapon potency must be whole: x1.10).',
+          ' Effect 2 weapon_potency 10.0 -> 11.0 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13 = 11.3, weapon potency must be whole: x1.10); 11.0 -> 10.0 (2026-11-26, retune fix pass, user ruling: visible weapon percents are multiples of 5).',
     raw_overrides={**_passive_raw('Seal of Vengeance weapon damage.'), **_chain(1, 2)},
 )
 

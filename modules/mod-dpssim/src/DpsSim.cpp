@@ -575,6 +575,18 @@ void DpsSimWorldScript::OnDpsSimRun()
                         !SimBuffSet::Validate(*list.Out, listError))
                         error = Acore::StringFormat("{}: {}", list.Key, listError);
                 }
+
+                // full_raid for a hunter below level 60: the pet family spells have ranks, but the scrolls in the
+                // list have only their level 60 amount, so they are left out (full_raid then has no scrolls)
+                if (error.empty() && hunterLists && config.ActorLevel != RAID_SCROLL_LEVEL)
+                {
+                    uint32 const dropped = SimBuffSet::DropRaidScrolls(buffSet.Buffs) +
+                        SimBuffSet::DropRaidScrolls(buffSet.Debuffs);
+                    if (dropped)
+                        LOG_INFO("server.dpssim", "mod-dpssim: {} for a level {} hunter: the {} raid scroll(s) are "
+                            "left out (their amounts are the level {} ones).", setName, config.ActorLevel, dropped,
+                            RAID_SCROLL_LEVEL);
+                }
             }
 
             if (error.empty())

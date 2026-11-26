@@ -291,7 +291,7 @@ scripted_by(glacial_advance_203273, 'spell_dk_glacial_advance')
 _GRAVEFROST_CAPSTONE = 'Heart Strike and Plague Strike deal Shadowfrost damage.'
 _GRAVEFROST_NOTE = (
     'death-knight-rework S2a, Frost doc "Gravefrost" (4,2), U15: hidden passive, eff0 ADD_PCT_MODIFIER SPELLMOD_DAMAGE '
-    'stored 29 / 59 / 89 (= +30 / 60 / 90%; R4 (2026-11-26, raid-buff-sets retune R4: Breath 1,494 measured after R3, Gravefrost 25/50/75 -> 30/60/90, x1.083 on Heart Strike / Plague Strike at rank 3); was stored 24 / 49 / 74 = +25 / 50 / 75% (R3), was stored 19 / 39 / 59 = +20 / 40 / 60% (R3), stored 4 / 9 / 14 = +5 / 10 / 15% before, changed (2026-11-26, raid-buff-sets retune R2, user ruling: Breath package B; 2026-11-26, raid-buff-sets retune R3: Gravefrost x1.25 on the rank 3 +60 -> +75, Breath-only talent)) on m.GRAVEFROST_READ = Heart Strike d0 b24 + Plague Strike d0 b0 (the Heart '
+    'stored 29 / 59 / 89 (= +30 / 60 / 90%; R4 (2026-11-26, raid-buff-sets retune R4: Breath 1,494 measured after R3, Gravefrost 25/50/75 -> 30/60/90, x1.083 on Heart Strike / Plague Strike at rank 3); was stored 24 / 49 / 74 = +25 / 50 / 75% (R3), was stored 19 / 39 / 59 = +20 / 40 / 60% (R2), stored 4 / 9 / 14 = +5 / 10 / 15% before, changed (2026-11-26, raid-buff-sets retune R2, user ruling: Breath package B; 2026-11-26, raid-buff-sets retune R3: Gravefrost x1.25 on the rank 3 +60 -> +75, Breath-only talent)) on m.GRAVEFROST_READ = Heart Strike d0 b24 + Plague Strike d0 b0 (the Heart '
     'Strike off-hand copy 203322 carries b24 too). Rank 3 (203277) is the capstone marker: the Heart Strike / Plague '
     'Strike scripts test HasAura(203277) and switch the cast school to Shadowfrost (U5). SpellLevel 9 + 5 x 4 + rank.'
 )

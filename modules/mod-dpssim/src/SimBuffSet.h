@@ -148,6 +148,10 @@ namespace SimBuffSet
     // The effects a raid member gets from the spell: every aura effect except a plain APPLY_AURA on the caster itself
     // (the caster's own perk, e.g. Abomination's Might's +1% Strength on the death knight)
     uint8 ResolveEffectMask(uint32 spellId);
+    // The Inscription raid buff scrolls (208860-208876): one fixed amount each, the level 60 one
+    bool IsRaidScroll(uint32 spellId);
+    // Drops the raid scrolls from the list; returns how many it dropped
+    uint32 DropRaidScrolls(std::vector<AuraSpec>& specs);
     // "24932 Leader of the Pack [0,1,2]" per entry, for the run log
     std::string Describe(std::vector<AuraSpec> const& specs);
 
