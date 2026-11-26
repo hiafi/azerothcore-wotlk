@@ -219,6 +219,34 @@ DRILL_BARS: dict[str, dict] = {
         "group": {7: 1, 14: 2, 16: 0, 20: 1, 21: 2},
         "cycle_ms": 60000, "default_cycles": 3,
     },
+    "zul-farrak-shapes": {
+        # Zul'Farrak WP-G1 (HANDOFF §3.9, §7 #58 A: each row gates only its own boss's heroic sign-off; the hard mode
+        # rows are reported); five 60 s cycles, so the sweep runs 300 s (`--programs zul-farrak-shapes:5 --duration
+        # 300`). Cycle 0: Theka (Zone/1 the 5 yd/s swarm pair, Zone/2 the turn after him, Zone/3 and Zone/5 the circle
+        # on him at the arrival, Zone/4 normal's 4 yd/s line) and Antu'sul (Zone/6 the trench bolts, Zone/7 a dispel
+        # with someone within 6 yd, Stack/8 the 5-stack carrier off him). Cycle 1: Zum'rah (Soak/9 a soul bound, 40 a
+        # run: at most 5, to be set on the first sweep; Soak/10 the 3-stack delivery missed, 5 a run: at most 1;
+        # Soak/11 the healer walker's souls reported; Zone/12 the walking healer past 36.5 yd of the tank, a tick a
+        # second: 2; Zone/13 wails and Zone/14 graves on the walker, Zone/15 echoes on the living) and the crew
+        # (RunOut/16 the Seed, Stack/17 Gang Up, Zone/18 the Ambush, Zone/19 Rain of Fire). Cycle 2: the Pyramid
+        # (Soak/20 a Block unsoaked, 30 a run: at most 2; Zone/21 the stair-wide barrel lane, Zone/22 Trampling).
+        # Cycle 3: Ukorz (Zone/23 a DPS member on the disfavored boss, a tick a second: 2; Zone/24 Bladestorm; Zone/25
+        # its sand trail reported; Zone/26 the Creeping Sands down to 15 yd, Zone/27 at 10 yd reported; Spread/28 the
+        # Lash; Zone/29 a pit landing; Zone/30 its slow reported). Cycle 4: the pool (Zone/31 water reported, Zone/32
+        # the Discharge, Zone/33 the Icicle's circle reported, Zone/34 its target off the puddles) and the hard mode,
+        # reported (Stack/35 the gather, Spread/36 Conductive, Zone/37 off the floes, Zone/38 Storm Strikes, Stack/39
+        # Storm's Chosen, Soak/40 a Twin Call cast nobody kicked). Every gated pool takes any member, the tank
+        # included, the leash the reference healer and the kill order the reference DPS: all barred on the reference
+        # members too.
+        "gated": {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 12: 2, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1,
+                  19: 1, 21: 1, 22: 1, 23: 2, 24: 1, 26: 1, 28: 1, 29: 1, 32: 1, 34: 1},
+        "reported": {11, 25, 27, 30, 31, 33, 35, 36, 37, 38, 39, 40},
+        "cross_specs": 3,
+        "references": {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 12: 2, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1,
+                       18: 1, 19: 1, 21: 1, 22: 1, 23: 2, 24: 1, 26: 1, 28: 1, 29: 1, 32: 1, 34: 1},
+        "group": {9: 5, 10: 1, 20: 2},
+        "cycle_ms": 60000, "default_cycles": 5,
+    },
 }
 # Drill::kProgramGapMs: the quiet time after each comma entry of a program
 PROGRAM_GAP_MS = 4000

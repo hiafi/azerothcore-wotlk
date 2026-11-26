@@ -243,6 +243,31 @@ class SweepIndexTests(unittest.TestCase):
         self.assertTrue(set(bar["references"]) <= set(bar["gated"]))
         self.assertFalse(set(bar["group"]) & (set(bar["gated"]) | bar["reported"]))
 
+    def test_zul_farrak_shapes_bars_and_groups(self):
+        # Zul'Farrak WP-G1: 13 rows over five 60 s cycles (300 s), the hard mode's rows reported (§7 #58 A), three
+        # group tags, every gated tag barred on the reference members too
+        e = self.entry("zul-farrak-shapes:5",
+                       actor_failures={"Hit": {"Zone/1": 2, "Zone/31": 9, "Zone/38": 4, "Zone/24": 1},
+                                       "OffSpot": {"Zone/12": 3, "Zone/37": 5, "Zone/34": 1}},
+                       ref_failures={"ProtWarriorTankSim": {"Hit": {"Zone/3": 2}},
+                                     "FireMageSim": {"OffSpot": {"Zone/23": 3}}},
+                       group={"MissedSoak": {"Soak/9": 6, "Soak/10": 1, "Soak/11": 12, "Soak/20": 3,
+                                             "Soak/40": 4}},
+                       config={"durationMs": 300000})
+        self.assertEqual(self.bar_problems(e), ["bar: Zone/1 x2 (bar 1), Zone/12 x3 (bar 2)",
+                                                "reference ProtWarriorTankSim bar: Zone/3 x2 (bar 1)",
+                                                "reference FireMageSim bar: Zone/23 x3 (bar 2)",
+                                                "group bar: Soak/20 x3 (bar 2), Soak/9 x6 (bar 5)"])
+        self.assertEqual(e["reportedHits"], {"Zone/31": 9, "Zone/37": 5, "Zone/38": 4})
+        self.assertEqual(ms.program_length_ms("zul-farrak-shapes"), (300000, [("zul-farrak-shapes", 0)]))
+        self.assertEqual(ms.program_warnings("zul-farrak-shapes:5", 300000), [])
+        self.assertEqual(len(ms.program_warnings("zul-farrak-shapes:5", 180000)), 1)
+        bar = ms.DRILL_BARS["zul-farrak-shapes"]
+        self.assertEqual(set(bar["references"]), set(bar["gated"]))
+        self.assertFalse(set(bar["group"]) & (set(bar["gated"]) | bar["reported"]))
+        self.assertFalse(set(bar["gated"]) & bar["reported"])
+        self.assertEqual(set(bar["gated"]) | bar["reported"] | set(bar["group"]), set(range(1, 41)))
+
     def test_comma_program_length_and_late_entries(self):
         length, starts = ms.program_length_ms("deadmines-followups,sfk-hunt,scholomance-shapes")
         self.assertEqual(length, 248000)
@@ -336,7 +361,8 @@ class BarTableMatchesTheModule(unittest.TestCase):
                              ("blackrock-depths-shapes-2", "kBrd2BarTags"),
                              ("scarlet-monastery-shapes", "kSmBarTags"),
                              ("scarlet-monastery-shapes-2", "kSm2BarTags"),
-                             ("ragefire-chasm-shapes", "kRfcBarTags")):
+                             ("ragefire-chasm-shapes", "kRfcBarTags"),
+                             ("zul-farrak-shapes", "kZfBarTags")):
             self.assertEqual(set(ms.DRILL_BARS[drill]["gated"]), self.array(array), drill)
         self.assertEqual(set(ms.DRILL_BARS["blackrock-depths-shapes-2"]["group"]), self.array("kBrd2GroupTags"))
         self.assertEqual(set(ms.DRILL_BARS["scarlet-monastery-shapes"]["group"]), self.array("kSmGroupTags"))
@@ -347,6 +373,9 @@ class BarTableMatchesTheModule(unittest.TestCase):
                          self.array("kSm2ReferenceTags"))
         self.assertEqual(set(ms.DRILL_BARS["ragefire-chasm-shapes"]["group"]), self.array("kRfcGroupTags"))
         self.assertEqual(set(ms.DRILL_BARS["ragefire-chasm-shapes"]["references"]), self.array("kRfcReferenceTags"))
+        self.assertEqual(set(ms.DRILL_BARS["zul-farrak-shapes"]["group"]), self.array("kZfGroupTags"))
+        self.assertEqual(set(ms.DRILL_BARS["zul-farrak-shapes"]["references"]), self.array("kZfReferenceTags"))
+        self.assertEqual(ms.DRILL_BARS["zul-farrak-shapes"]["reported"], self.array("kZfReportedTags"))
 
     def test_every_tag_and_cycle(self):
         seen = set()

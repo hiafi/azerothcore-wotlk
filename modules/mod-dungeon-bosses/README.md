@@ -149,6 +149,15 @@ so db-import and the dbc-tools replay see one history.
 | `src/RagefireChasm/boss_<name>_rework.cpp`, `<Boss>Logic.h` | One pair per boss (D1-D4) |
 | `src/RagefireChasm/TaragamanFight.h` | Taragaman's hard mode hooks for Starving (D4 -> D4H): per-pull object, factory, idle hook, action hook, Felstorm spot |
 | `src/RagefireChasm/taragaman_hard_mode.cpp`, `TaragamanHardModeLogic.h` | D4H Starving: shrine and pour GOs, Blood Globules; `.dbtest rfc starving` |
+| `src/ZulFarrak/ZulFarrakRework.h` | Pure: entries, 9 states, data ids, crew modes and mask, the Pyramid's stage machine, paths, the Test, the End Door, the hard mode rules, slices, points, wave tables, room polygons, health, the "ZFR" save with the stock "Z F" reader |
+| `src/ZulFarrak/instance_zulfarrak_rework.cpp` | Instance (stock name, replaced at load): the stage machine with snapshots and restores, slots 5 and 6, the crew's modes and restore, the End Door, Gahz'rilla's summon, the hard mode; `go_zf_troll_cage` |
+| `src/ZulFarrak/ZulFarrakKit.{h,cpp}` | Glue: `ZulFarrak::NoAssist`, leash options, `OnBossPull`, `<Room>FloorBounds`, the crew's mode helpers, the Pyramid's stage directors (`RegisterPyramidStage`) |
+| `src/ZulFarrak/ZulFarrakTestCommand.{h,cpp}` | The `.dbtest zf` shell, `stage`, `crew`, `door`, `test`, `section` and `instance` |
+| `src/ZulFarrak/boss_<name>_rework.cpp`, `<Boss>Logic.h` | One pair per boss WP (D1-D3, D4a, D4b's Sezz'ziz and Nekrum, D6, D7) |
+| `src/ZulFarrak/pyramid_stair_rework.cpp`, `StairLogic.h`, `PyramidFight.h` | D4b the Stair and the Altar (stages 2 and 3); D4a's shared Pyramid pieces |
+| `src/ZulFarrak/BlyCrew.{h,cpp}`, `BlyCrewLogic.h` | CR: Sergeant Bly's crew, the five members' AI by mode (the interface every later WP uses) |
+| `src/ZulFarrak/bly_crew_fight_rework.cpp`, `CrewFightLogic.h` | D5: the crew's fight on CR's crew; `.dbtest zf blyfight` |
+| `src/ZulFarrak/PoolFight.h`, `gahzrilla_crew_hard_mode.cpp`, `gahzrilla_deluge.cpp` | D7's hooks for the hard mode; D7Ha The Crew at the Pool, D7Hb the Deluge, each with its Logic header |
 | `src/ZulFarrak/hard_mode_items.cpp` | Crew at the Pool hard mode item scripts: the Scale's charge and discharge, the Fang's charge and arc, the Whistle's copied heals and crew |
 | `src/ZulFarrak/ZulFarrakHardModeItemsLogic.h` | Pure: Zul'Farrak item effect ids (213800-213807, 301000-301004), charge and discharge events, one action per cast, single target heal test, crew table |
 | `src/ZulFarrak/sulthraze_join.cpp` | Call of Sul'thraze (213808), the Use on every tier of Jang'thraze: joins it with a Sang'thraze of the same tier into that tier's Sul'thraze, refuses mixed tiers; loads the tiers from `item_budget_variant` at startup |
@@ -171,6 +180,7 @@ so db-import and the dbc-tools replay see one history.
 | `tests/blackrock_depths_test.cpp`, `tests/brd_<boss>_test.cpp` | The Blackrock Depths skeleton and each boss |
 | `tests/scarlet_monastery_test.cpp`, `tests/sm_<boss>_test.cpp` | The Scarlet Monastery skeleton and each boss |
 | `tests/ragefire_chasm_test.cpp`, `tests/rfc_<boss>_test.cpp` | The Ragefire Chasm skeleton and each boss |
+| `tests/zul_farrak_test.cpp`, `tests/zf_<boss>_test.cpp` | The Zul'Farrak skeleton and each WP |
 
 ## Adding a dungeon
 
@@ -344,6 +354,30 @@ bosses' tables have `hardmode` (arms their hard mode past the trigger).
 | `bazzalan` | info state `points [n]` poison eviscerate rupture fan envenom shadowstep |
 | `taragaman` | info state `hardmode [0\|1]` feast felstorm nova spot gorge uppercut `heroic [0\|1]` (all but info, state and hardmode need combat and `.gm off`) |
 | `starving` | info state draw pour feast phase2 globules combo burst |
+
+## Zul'Farrak `.dbtest zf` subcommands
+
+`.dbtest zf <key> <subcommand>` (GM, map 209). Each file's header comment gives the arguments.
+
+| Key | Subcommands |
+| --- | --- |
+| `stage` | `<0..4>`: the Pyramid's stage in play, idle (none, block, stair, altar, done) |
+| `crew` | (none): the crew's state; `mask <0..31>`, `path <0\|1\|2>`, `mode <member> <mode>` |
+| `door` | `open`, `close`: the End Door |
+| `test` | `arm` (heroic: the Pyramid DONE with all five alive), `hardmode [0\|1]` |
+| `section` | `<entrance\|courtyard\|den\|bowl\|top\|landing\|plaza\|mesa\|pool\|checkpoint>`: teleport |
+| `instance` | `boss <id> <state>`, `where` |
+| `theka` | info |
+| `antusul` | info |
+| `zumrah` | info |
+| `block` | info |
+| `stair` | info |
+| `band` | info |
+| `blyfight` | info |
+| `ukorz` | info |
+| `pool` | velratha gahzrilla |
+| `poolcrew` | info |
+| `deluge` | info |
 
 ## Kit: death spots, held bodies and the edge (Blackrock Depths WP-KT-D1)
 

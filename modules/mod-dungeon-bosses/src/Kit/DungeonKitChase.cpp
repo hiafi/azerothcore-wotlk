@@ -291,26 +291,68 @@ namespace DungeonKit
         e.clock = CrawlClock(Ms(spec.wait), Ms(spec.life), spec.reach, spec.crawl);
         e.dwell = DwellTracker(Ms(spec.dwell));
         e.last = at;
-        // Telegraph only: the Soak shows the pickup to the bots and never posts a failure (the arrival is the cost).
-        // A pickup with a life is cancelled before its warning ends; one without lasts the whole fight.
-        Milliseconds const warn = spec.life.count() > 0 ? spec.life + Milliseconds(5000) : kWholeFight;
-        {
-            BossMechanics::MechanicRef ref = Mechanic::Soak(owner, unit, spec.radius, std::max<uint8>(1, spec.count),
-                warn);
-            ref.MissedSoak(BossMechanics::MissedSoakMode::Never).Eligible(spec.who).NoFillTimer();
-            if (spec.order)
-                ref.Order(*spec.order);
-            if (spec.oneClaimPerBot)
-                ref.OneClaimPerBot();
-            if (spec.color)
-                ref.Color(*spec.color);
-            if (spec.tag)
-                ref.Tag(spec.tag);
-            e.soak = ref.Handle();
-        }
+        if (spec.onlyWhileCarriers)
+            spec.who.carriers = _carriers;
         e.spec = std::move(spec);
+        RegisterSoak(owner, e, unit);
         _pickups.push_back(std::move(e));
         return _pickups.back().id;
+    }
+
+    // Telegraph only: the Soak shows the pickup to the bots and never posts a failure (the arrival is the cost). A
+    // pickup with a life is cancelled before its warning ends; one without lasts the whole fight. A dormant pickup
+    // (onlyWhileCarriers, nobody to take it) has none.
+    void CrawlPickups::RegisterSoak(Creature* owner, Entry& e, Creature* unit)
+    {
+        if (e.soak)
+            Mechanic::Cancel(owner, e.soak);
+        e.soak = {};
+        if (e.spec.onlyWhileCarriers && e.spec.who.carriers.empty())
+            return;
+        if (!unit)
+            unit = e.unit ? owner->GetMap()->GetCreature(e.unit) : nullptr;
+        if (!unit)
+            return;
+        uint32 const lifeMs = Ms(e.spec.life);
+        uint32 const ageMs = e.clock.AgeMs();
+        Milliseconds const warn = lifeMs > 0 ? Milliseconds(lifeMs > ageMs ? lifeMs - ageMs : 0) + Milliseconds(5000)
+            : kWholeFight;
+        BossMechanics::MechanicRef ref = Mechanic::Soak(owner, unit, e.spec.radius, std::max<uint8>(1, e.spec.count),
+            warn);
+        ref.MissedSoak(BossMechanics::MissedSoakMode::Never).Eligible(e.spec.who).NoFillTimer();
+        if (e.spec.order)
+            ref.Order(*e.spec.order);
+        if (e.spec.oneClaimPerBot)
+            ref.OneClaimPerBot();
+        if (e.spec.color)
+            ref.Color(*e.spec.color);
+        if (e.spec.tag)
+            ref.Tag(e.spec.tag);
+        e.soak = ref.Handle();
+    }
+
+    void CrawlPickups::SetCarriers(Creature* owner, GuidSet carriers)
+    {
+        if (carriers == _carriers)
+            return;
+        _carriers = std::move(carriers);
+        for (Entry& e : _pickups)
+        {
+            if (!e.spec.onlyWhileCarriers)
+                continue;
+            e.spec.who.carriers = _carriers;
+            e.dwell.Clear();
+            if (owner && owner->IsInWorld())
+                RegisterSoak(owner, e);
+        }
+    }
+
+    bool CrawlPickups::Dormant(uint32 id) const
+    {
+        for (Entry const& e : _pickups)
+            if (e.id == id)
+                return e.spec.onlyWhileCarriers && e.spec.who.carriers.empty();
+        return false;
     }
 
     void CrawlPickups::SetGoal(CrawlGoal goal)
@@ -385,8 +427,11 @@ namespace DungeonKit
             BossMechanics::ActiveMechanic const* soak = reg ? reg->Find(it->soak.id) : nullptr;
             std::vector<uint64> inside;
             std::vector<Player*> players;
+            bool const dormant = it->spec.onlyWhileCarriers && it->spec.who.carriers.empty();
             for (auto const& ref : map->GetPlayers())
             {
+                if (dormant)
+                    break;      // nobody may take it now (an empty who would mean everyone)
                 Player* player = ref.GetSource();
                 if (!player || !player->IsAlive() || player->IsGameMaster())
                     continue;
