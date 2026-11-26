@@ -311,8 +311,8 @@ class TestSql(unittest.TestCase):
         self.assertEqual(sorted(minted), sorted(ITEMS))
         choices = self._choices()
         for quest, (first, keys) in CHOICES.items():
-            self.assertEqual([choices[quest][first + i] for i in range(len(keys))], [minted[k] for k in keys], quest,
-                             "deploy step: set the ids of item_ids.lock into the SQL")
+            self.assertEqual([choices[quest][first + i] for i in range(len(keys))], [minted[k] for k in keys],
+                             f"{quest}: deploy step: set the ids of item_ids.lock into the SQL")
 
 
 class TestItems(unittest.TestCase):
