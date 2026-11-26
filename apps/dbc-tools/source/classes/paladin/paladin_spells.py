@@ -1598,7 +1598,7 @@ blade_of_justice_201400 = spell(
     mana_cost_pct=4,
     range_yards=20.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=62.7997, ap_potency=62.7997, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=69.0797, ap_potency=69.0797, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90210,
     notes='paladin-rework S1 RETRIBUTION §4.1: 100 / 100 potency, 10 s cooldown (< 30 s: no Cooldown Haste), BoJ bit d2 0x800, learn 30. Visual = Crusader Strike SV 8316 placeholder (VFX follow-up). '
@@ -1606,7 +1606,8 @@ blade_of_justice_201400 = spell(
           ' Effect 1 sp_potency/ap_potency 100.0 -> 65.0 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -35%).'
           ' Effect 1 sp_potency/ap_potency 65.0 -> 48.75 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Blade of Justice -25%).'
           ' sp_potency 48.75 -> 55.575; ap_potency 48.75 -> 55.575 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).'
-          ' sp_potency 55.575 -> 62.7997; ap_potency 55.575 -> 62.7997 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).',
+          ' sp_potency 55.575 -> 62.7997; ap_potency 55.575 -> 62.7997 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).'
+          ' sp_potency 62.7997 -> 69.0797; ap_potency 62.7997 -> 69.0797 (2026-11-26, raid-buff-sets retune R3, user ruling: Retribution-only x1.1).',
     raw_overrides=_raw(
         castable=True,
         SpellClassMask_3=m.BLADE_OF_JUSTICE,
@@ -1634,7 +1635,7 @@ execution_sentence_burst_201411 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=168.8057, ap_potency=168.8057, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=185.6863, ap_potency=185.6863, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90212,
     notes='paladin-rework S1 RETRIBUTION §4.3: the hammer\'s main-target strike, 180 / 180, triggered only. Range 50000 (the hammer can expire with the paladin far away). '
@@ -1643,7 +1644,8 @@ execution_sentence_burst_201411 = spell(
           ' Effect 1 sp_potency/ap_potency 234.0 -> 163.8 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).'
           ' Effect 1 sp_potency/ap_potency 163.8 -> 131.04 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Execution Sentence -20%).'
           ' sp_potency 131.04 -> 149.3856; ap_potency 131.04 -> 149.3856 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).'
-          ' sp_potency 149.3856 -> 168.8057; ap_potency 149.3856 -> 168.8057 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).',
+          ' sp_potency 149.3856 -> 168.8057; ap_potency 149.3856 -> 168.8057 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).'
+          ' sp_potency 168.8057 -> 185.6863; ap_potency 168.8057 -> 185.6863 (2026-11-26, raid-buff-sets retune R3, user ruling: Retribution-only x1.1).',
     raw_overrides=_raw(
         AttributesEx2=0x4,  # SPELL_ATTR2_IGNORE_LINE_OF_SIGHT: script-cast at a target / dest the paladin may not see
         SpellClassMask_3=m.EXECUTION_SENTENCE,
@@ -1704,7 +1706,7 @@ execution_sentence_201410 = spell(
     duration_ms=10000,
     effects=[
         Effect(
-            type=EffectType.APPLY_AURA, sp_potency=33.7611, ap_potency=33.7611, potency_kind='periodic', implicit_target_a=6,
+            type=EffectType.APPLY_AURA, sp_potency=37.1372, ap_potency=37.1372, potency_kind='periodic', implicit_target_a=6,
             apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000,
         ),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.MOD_DAMAGE_FROM_CASTER),
@@ -1716,7 +1718,8 @@ execution_sentence_201410 = spell(
           ' Effect 1 (periodic) sp_potency/ap_potency 46.8 -> 32.76 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).'
           ' Effect 1 (periodic) sp_potency/ap_potency 32.76 -> 26.208 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Execution Sentence -20%).'
           ' sp_potency 26.208 -> 29.8771; ap_potency 26.208 -> 29.8771 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).'
-          ' Effect 1 (periodic) sp_potency 29.8771 -> 33.7611; ap_potency 29.8771 -> 33.7611 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).',
+          ' Effect 1 (periodic) sp_potency 29.8771 -> 33.7611; ap_potency 29.8771 -> 33.7611 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).'
+          ' Effect 1 (periodic) sp_potency 33.7611 -> 37.1372; ap_potency 33.7611 -> 37.1372 (2026-11-26, raid-buff-sets retune R3, user ruling: Retribution-only x1.10).',
     raw_overrides=_raw(
         castable=True,
         AuraDescription_Lang_Mask=16712190,
@@ -1754,7 +1757,7 @@ wake_of_ashes_201413 = spell(
     range_yards=RANGE_SELF,
     effects=[
         Effect(
-            type=EffectType.SCHOOL_DAMAGE, sp_potency=264.081, ap_potency=264.081, potency_kind='direct',
+            type=EffectType.SCHOOL_DAMAGE, sp_potency=290.4891, ap_potency=290.4891, potency_kind='direct',
             implicit_target_a=104, radius_yards=12.0,
         ),
     ],
@@ -1762,7 +1765,8 @@ wake_of_ashes_201413 = spell(
     notes='paladin-rework S1 RETRIBUTION §4.4: 205 / 205 potency in a 12 yd 104 degree cone, up to 5 targets, 45 s cooldown (Cooldown Haste applies), WoA bit d2 0x1000, learn 60. '
           'Visual = Divine Storm SV 12006 placeholder (VFX follow-up). Stun 201414 and the +3 seal stacks come from spell_pal_wake_of_ashes / the builder script.'
           ' sp_potency 205.0 -> 233.7; ap_potency 205.0 -> 233.7 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).'
-          ' sp_potency 233.7 -> 264.081; ap_potency 233.7 -> 264.081 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).',
+          ' sp_potency 233.7 -> 264.081; ap_potency 233.7 -> 264.081 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).'
+          ' sp_potency 264.081 -> 290.4891; ap_potency 264.081 -> 290.4891 (2026-11-26, raid-buff-sets retune R3, user ruling: Retribution-only x1.1).',
     raw_overrides=_raw(
         castable=True,
         MaxTargets=5,

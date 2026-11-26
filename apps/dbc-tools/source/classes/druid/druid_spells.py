@@ -417,8 +417,8 @@ rake_1822 = spell(
     range_yards=5.0,
     duration_ms=9000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=33.06764, potency_kind='direct', mechanic=15, implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, ap_potency=10.69344, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=31.24892, potency_kind='direct', mechanic=15, implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=10.1053, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
     spell_icon_id=494,
@@ -433,6 +433,7 @@ rake_1822 = spell(
         ' Effect 1 (direct) ap_potency 15.6 -> 13.26, effect 2 (periodic) ap_potency 15.8 -> 13.43 (2026-10-08, DPS balance pass, user ruling: Cat Rake x0.85). 2026-10-12, melee-haste-gcd T4-CAT, Predatory Strikes leak removed: x3.132 (direct ap_potency 13.26 -> 41.53; periodic stays 13.43).'
         ' Effect 1 (direct) ap_potency 41.53 -> 45.683, effect 2 (periodic) 13.43 -> 14.773 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Rake +10%). Effect 1 ap_potency 45.683 -> 35.40433 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Feral Cat x0.775). Effect 2 ap_potency 14.773 -> 11.44908 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Feral Cat x0.775).'
           ' ap_potency 35.40433 -> 33.06764; ap_potency 11.44908 -> 10.69344 (2026-11-26, raid-buff-sets retune R1, user ruling: Feral x0.934).'
+          ' ap_potency 33.06764 -> 31.24892; 10.69344 -> 10.1053 (2026-11-26, raid-buff-sets retune R3, user ruling: Feral Rake x0.945).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 8, 'AttributesEx4': 1048576, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} damage every $t2 seconds.', 'BaseLevel': 24, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Rake the target, causing {pot1} damage and an additional {pot2.total} damage over $d.  Awards $s3 combo $lpoint:points;.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 4096, 'SpellClassSet': 7, 'SpellLevel': 24, 'SpellVisualID_1': 750, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -867,7 +868,7 @@ maul_6807 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=57.27314, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=54.12312, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=261,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework FERAL §5: no longer on-next-swing (attributes 1044 -> 262160: drops ON_NEXT_SWING/ON_NEXT_SWING_NO_DAMAGE, adds DO_NOT_SHEATH), bear GCD, 5 sec cooldown (below 30 sec, so no Cooldown Haste), 25 rage; spell_dru_maul grants Swell in Bestial Fury. '
@@ -886,7 +887,8 @@ maul_6807 = spell(
           ' Effect 1 ap_potency 74.28 -> 57.20 (2026-10-08, DPS balance pass, user ruling: Bear DPS Maul x0.77, round 10).'
           ' Effect 1 ap_potency 57.20 -> 40.04 (2026-10-12, melee-haste-gcd T4, user ruling: Bear DPS Maul x0.70). Rend and Tear bonus (Spell.cpp, flags[0]&0x8800) is a percentage of the spell damage and is unchanged. Effect 1 ap_potency 40.04 -> 61.87 (2026-10-12, melee-haste-gcd T4-FIX, Predatory Strikes leak removed).'
           ' Effect 1 ap_potency 61.87 -> 86.62 (2026-11-01, DPS balance pass 1031, user ruling: Maul +40%) Effect 1 ap_potency 86.62 -> 65.8312 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS and Bear tank shared x0.76).'
-          ' ap_potency 65.8312 -> 57.27314 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Bear DPS and Bear tank shared x0.87 from the pre-R1 values).',
+          ' ap_potency 65.8312 -> 57.27314 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Bear DPS and Bear tank shared x0.87 from the pre-R1 values).'
+          ' ap_potency 57.27314 -> 54.12312 (2026-11-26, raid-buff-sets retune R3, user ruling: Bear DPS and Bear tank shared x0.945).',
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 4096, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A strong attack that deals {pot1} damage and causes a high amount of threat.  While Bestial Fury is active, Maul grants 1 stack of Swell and has a 15% chance to grant Tooth and Claw.  Effects which increase Bleed damage also increase Maul damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 144, 'SpellClassMask_1': 2048, 'SpellClassSet': 7, 'SpellLevel': 10, 'SpellVisualID_1': 166, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(maul_6807, 'spell_dru_maul')  # druid-rework FERAL §5: AfterCast AddSwell(1) in Bestial Fury
@@ -1519,8 +1521,8 @@ lacerate_33745 = spell(
     range_yards=5.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, ap_potency=2.34604, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=19.08382, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=2.21701, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=18.03421, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=2246,
     notes=(
@@ -1542,6 +1544,7 @@ lacerate_33745 = spell(
         ' Effect 1 (periodic) ap_potency 6.336 -> 4.4352, effect 2 (direct) 51.54 -> 36.078 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Lacerate -30%).'
         ' Effect 1 (periodic) ap_potency 4.4352 -> 3.54816, effect 2 (direct) 36.078 -> 28.8624 (2026-11-15, balance on the Normal-tier kits, user ruling: Lacerate -20%). Effect 1 ap_potency 3.54816 -> 2.6966 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS and Bear tank shared x0.76). Effect 2 ap_potency 28.8624 -> 21.93542 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS and Bear tank shared x0.76).'
           ' ap_potency 2.6966 -> 2.34604; 21.93542 -> 19.08382 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Bear DPS and Bear tank shared x0.87 from the pre-R1 values).'
+          ' ap_potency 2.34604 -> 2.21701; 19.08382 -> 18.03421 (2026-11-26, raid-buff-sets retune R3, user ruling: Bear DPS and Bear tank shared x0.945).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} damage every $t sec', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Lacerates the enemy target, dealing {pot2} damage and making them bleed for {pot1.total} damage over $d and causing a high amount of threat.  This effect stacks up to $u times on the same target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 144, 'SpellClassMask_2': 256, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 8146, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1721,7 +1724,7 @@ mangle_bear_33878 = spell(
     range_yards=5.0,
     duration_ms=60000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=55.00152, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=51.97644, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=6, apply_aura=255, misc_value=15),
     ],
     spell_icon_id=2312,
@@ -1741,7 +1744,8 @@ mangle_bear_33878 = spell(
           ' Effect 1 ap_potency 61.16 -> 122.33 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Mangle (Bear) +100%)'
           ' Effect 1 ap_potency 122.33 -> 97.864 (2026-11-15, balance on the Normal-tier kits, user ruling: Mangle (Bear) -20%). Effect 1 ap_potency 97.864 -> 74.37664 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS and Bear tank shared x0.76).'
           ' Effect 1 ap_potency 74.37664 -> 63.22014 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Bear DPS, Mangle (Bear) x0.85; shared with the Bear tank).'
-          ' ap_potency 63.22014 -> 55.00152 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Bear DPS and Bear tank shared x0.87 from the pre-R1 values).',
+          ' ap_potency 63.22014 -> 55.00152 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Bear DPS and Bear tank shared x0.87 from the pre-R1 values).'
+          ' ap_potency 55.00152 -> 51.97644 (2026-11-26, raid-buff-sets retune R3, user ruling: Bear DPS and Bear tank shared x0.945).',
     raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'All bleed effects cause $s2% additional damage.', 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mangle the target for {pot1} damage and causes the target to take $s2% additional damage from bleed effects for $d.  While Bestial Fury is active, has a 15% chance to grant Tooth and Claw.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': SS_ANY_BEAR, 'SpellClassMask_2': 64, 'SpellClassSet': 7, 'SpellLevel': 10, 'SpellVisualID_1': 6586, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(mangle_bear_33878, trainer_id=216, req_level=10, money_cost=600)  # druid-rework FERAL §5: talent -> baseline
@@ -2491,7 +2495,7 @@ pulverize_200421 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=26.4837, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=25.0271, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=19, implicit_target_a=6),
     ],
     spell_icon_id=102,
@@ -2513,7 +2517,8 @@ pulverize_200421 = spell(
           ' Effect 1 ap_potency 50.57 -> 55.63 (2026-11-01, DPS balance pass 1031, user ruling: Pulverize +10%)'
           ' Effect 1 ap_potency 55.63 -> 50.067 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Pulverize -10%).'
           ' Effect 1 ap_potency 50.067 -> 40.054 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Pulverize -20%). Effect 1 ap_potency 40.054 -> 30.44104 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS and Bear tank shared x0.76).'
-          ' ap_potency 30.44104 -> 26.4837 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Bear DPS and Bear tank shared x0.87 from the pre-R1 values).',
+          ' ap_potency 30.44104 -> 26.4837 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Bear DPS and Bear tank shared x0.87 from the pre-R1 values).'
+          ' ap_potency 26.4837 -> 25.0271 (2026-11-26, raid-buff-sets retune R3, user ruling: Bear DPS and Bear tank shared x0.945).',
     raw_overrides=_feral_new_raw(
         "Requires 3 applications of Lacerate on the target.  Deals {pot1} damage, increased by $s2% "
         "for each application of your Lacerate on the target, then consumes Lacerate and reapplies it with 1 "

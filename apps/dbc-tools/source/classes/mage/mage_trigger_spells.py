@@ -45,7 +45,7 @@ arcane_missile_7268 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=68.6392, potency_kind='direct', implicit_target_a=77),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=67.6096, potency_kind='direct', implicit_target_a=77),
     ],
     spell_icon_id=225,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | Bugfix (playtest report, 2026-09-08): SpellVisualID_1 was left at rank 1\'s own value (268) instead of being carried over from the max rank\'s damage sub-spell (25346, mage.csv/npc.csv - SpellVisualID_1 270) like every other field in this bootstrap was - "arcane missiles has the rank 1 model instead of the max rank model for its missiles". Fixed to 270. Potency system P5 (Mage pass): converted to sp_potency=72.9 (potency-report default, base/coef already agreed). Effect 1 sp_potency 72.9 -> 94.8 (2026-10-08, DPS balance pass, user ruling: Arcane Missiles +30%).'
@@ -53,7 +53,8 @@ arcane_missile_7268 = spell(
           ' Effect 1 sp_potency 85.32 -> 102.384 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Arcane Missiles +20%).'
           ' Effect 1 sp_potency 102.384 -> 92.1456 (2026-11-15, balance on the Normal-tier kits, user ruling: Arcane Missiles -10%).'
           ' Effect 1 sp_potency 92.1456 -> 70.3992 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Arcane x0.764).'
-          ' Effect 1 sp_potency 70.3992 -> 68.6392 (2026-11-26, raid-buff-sets retune R1, user ruling: Arcane x0.975).',
+          ' Effect 1 sp_potency 70.3992 -> 68.6392 (2026-11-26, raid-buff-sets retune R1, user ruling: Arcane x0.975).'
+          ' Effect 1 sp_potency 68.6392 -> 67.6096 (2026-11-26, raid-buff-sets retune R3, user ruling: Arcane x0.985).',
     raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches Arcane Missiles at the enemy, causing {pot1} Arcane damage every $5143t2 sec for $5143d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_1': 2097152, 'SpellClassSet': 3, 'SpellLevel': 8, 'SpellPriority': 50, 'SpellVisualID_1': 270},
 )
 
@@ -202,7 +203,7 @@ living_bomb_44461 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=46.6123, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=43.8156, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=3000,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (86, chain has a gap at 60) slope (anchor rank 55362, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (55362, rank 3); MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=114.4 (mage-potency-proposals.txt) - cast natively via spell_mage_living_bomb::AfterRemove's caster->CastSpell(target, id, true) (no custom bp), so it's a genuine potency candidate, not script-driven. Effect 1 sp_potency 114.4 -> 91.5 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana)."
@@ -210,7 +211,8 @@ living_bomb_44461 = spell(
           ' Effect 1 sp_potency 64.05 -> 50.4714 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Fire x0.788).'
           ' sp_potency 50.4714 -> 51.9855 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Fire Mage, the other Fire spells about x1.05, sized x1.03 to land Fire about 1,025).'
           ' Effect 1 sp_potency 51.9855 -> 49.9061 (2026-11-22, level60-stat-curve round S23, user ruling 18: Fire x0.96, a Fire-only spell).'
-          ' Effect 1 sp_potency 49.9061 -> 46.6123 (2026-11-26, raid-buff-sets retune R1, user ruling: Fire x0.934).',
+          ' Effect 1 sp_potency 49.9061 -> 46.6123 (2026-11-26, raid-buff-sets retune R1, user ruling: Fire x0.934).'
+          ' Effect 1 sp_potency 46.6123 -> 43.8156 (2026-11-26, raid-buff-sets retune R3, user ruling: Fire x0.94).',
     raw_overrides={'AttributesEx2': 1073741824, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The target becomes a Living Bomb, taking $44457o1 Fire damage over $44457d.  After $44457d or when the spell is dispelled, the target explodes dealing {pot1} Fire damage to all enemies within $44461a1 yards.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 12582935, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 65536, 'SpellClassSet': 3, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 10693},
 )
 
@@ -5466,8 +5468,8 @@ meteor_impact_200096 = spell(
     radius_yards=8.0,
     duration_ms=4000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=152.3688, potency_kind='direct', implicit_target_a=16, radius_yards=8.0),
-        Effect(type=EffectType.PERSISTENT_AREA_AURA, sp_potency=47.6822, potency_kind='periodic', implicit_target_a=28, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=143.2367, potency_kind='direct', implicit_target_a=16, radius_yards=8.0),
+        Effect(type=EffectType.PERSISTENT_AREA_AURA, sp_potency=44.8213, potency_kind='periodic', implicit_target_a=28, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000, radius_yards=8.0),
     ],
     spell_icon_id=1516,
     notes="Fire Mage rework sec 2 - Meteor's impact + ground burn, cast by spell_mage_meteor 3 sec after the player's Meteor (200095). Same shape as Flamestrike (2120): effect1 direct damage to every enemy in the 8yd area, effect2 a 4-sec persistent ground aura ticking every 1 sec. Budget (user call, 2026-09-15): ~2x Flamestrike - direct 751+14.1/lvl (die 41) vs Flamestrike's 51+7.4955/lvl anchored at Meteor's own SpellLevel 58; burn 160+3.3/lvl per 1-sec tick x4 vs Flamestrike's 84->117 per 2-sec tick x4. Only the impact can crit -> only the impact banks Ignite (sec 4.1a); the burn is periodic and never does. SpellVisualID_1 90003 (patch_mage_vfx_models.py) - superseded the earlier Flamestrike reuse (10383) now that a purpose-built Ascension model exists: InstantAreaKit + PersistentAreaKit both point at the same kit wrapping mage_meteor_impactstate_world, so the burst and the 4-sec ground-burn's own visual are the same asset (its name suggests it's already a combined burst+decal, not two separate assets - see docs/reworks/fire-mage-rework.md). | potency system P5 (Mage pass): eff1 converted to sp_potency=299.1 (mage-potency-proposals.txt). eff2 (PERSISTENT_AREA_AURA burn) is invisible to potency_report.py's classifier (same gap P4 found on Rain of Fire, also hit on Flamestrike eff2 this stage) - converted by hand to sp_potency=93.6, the base-damage-implied potency from its live 160+3.3/lvl @ 1s tick (V60=167) vs its old explicit 0.15 dot_bonus (52.5-implied) - a notably large (~78%) disagreement, well above every other row this stage, flagged prominently for review since it wasn't independently user-reviewed and the two source numbers disagree far more than usual."
@@ -5476,7 +5478,8 @@ meteor_impact_200096 = spell(
           ' Effect 2 sp_potency 65.52 -> 51.6298 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Fire x0.788).'
           ' sp_potency 164.9836 -> 169.9331; sp_potency 51.6298 -> 53.1787 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Fire Mage, the other Fire spells about x1.05, sized x1.03 to land Fire about 1,025).'
           ' Effect 1 sp_potency 169.9331 -> 163.1358, Effect 2 sp_potency 53.1787 -> 51.0516 (2026-11-22, level60-stat-curve round S23, user ruling 18: Fire x0.96, a Fire-only spell).'
-          ' Effect 1 sp_potency 163.1358 -> 152.3688 Effect 2 sp_potency 51.0516 -> 47.6822 (2026-11-26, raid-buff-sets retune R1, user ruling: Fire x0.934).',
+          ' Effect 1 sp_potency 163.1358 -> 152.3688 Effect 2 sp_potency 51.0516 -> 47.6822 (2026-11-26, raid-buff-sets retune R1, user ruling: Fire x0.934).'
+          ' Effect 1 sp_potency 152.3688 -> 143.2367 Effect 2 sp_potency 47.6822 -> 44.8213 (2026-11-26, raid-buff-sets retune R3, user ruling: Fire x0.94).',
     raw_overrides={'BaseLevel': 58, 'SpellLevel': 58, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 3, 'SpellClassMask_3': 32, 'SpellPriority': 50, 'SpellVisualID_1': 90003, 'Targets': 64, 'AttributesEx': 268435592, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Fire damage to all enemies in the area and burns the ground for {pot2.total} Fire damage over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} Fire damage every $t2 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 

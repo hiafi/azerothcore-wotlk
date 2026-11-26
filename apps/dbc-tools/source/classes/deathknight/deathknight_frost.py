@@ -285,13 +285,13 @@ glacial_advance_203273 = spell(
 scripted_by(glacial_advance_203273, 'spell_dk_glacial_advance')
 
 # =====================================================================================================================
-# Gravefrost (203275-203277, talent 60347, row 4): Heart Strike and Plague Strike +20/40/60% (was 5/10/15, R2); rank 3 = Shadowfrost
+# Gravefrost (203275-203277, talent 60347, row 4): Heart Strike and Plague Strike +25/50/75% (was 5/10/15, R2: 20/40/60, R3); rank 3 = Shadowfrost
 # =====================================================================================================================
 
 _GRAVEFROST_CAPSTONE = 'Heart Strike and Plague Strike deal Shadowfrost damage.'
 _GRAVEFROST_NOTE = (
     'death-knight-rework S2a, Frost doc "Gravefrost" (4,2), U15: hidden passive, eff0 ADD_PCT_MODIFIER SPELLMOD_DAMAGE '
-    'stored 19 / 39 / 59 (= +20 / 40 / 60%; was stored 4 / 9 / 14 = +5 / 10 / 15%, changed (2026-11-26, raid-buff-sets retune R2, user ruling: Breath package B)) on m.GRAVEFROST_READ = Heart Strike d0 b24 + Plague Strike d0 b0 (the Heart '
+    'stored 24 / 49 / 74 (= +25 / 50 / 75%; was stored 19 / 39 / 59 = +20 / 40 / 60% (R3), stored 4 / 9 / 14 = +5 / 10 / 15% before, changed (2026-11-26, raid-buff-sets retune R2, user ruling: Breath package B; 2026-11-26, raid-buff-sets retune R3: Gravefrost x1.25 on the rank 3 +60 -> +75, Breath-only talent)) on m.GRAVEFROST_READ = Heart Strike d0 b24 + Plague Strike d0 b0 (the Heart '
     'Strike off-hand copy 203322 carries b24 too). Rank 3 (203277) is the capstone marker: the Heart Strike / Plague '
     'Strike scripts test HasAura(203277) and switch the cast school to Shadowfrost (U5). SpellLevel 9 + 5 x 4 + rank.'
 )
@@ -308,17 +308,17 @@ def _gravefrost_rank(spell_id, rank, stored, percent):
     )
 
 
-gravefrost_203275 = _gravefrost_rank(203275, 1, 19, 20)
-gravefrost_203276 = _gravefrost_rank(203276, 2, 39, 40)
-gravefrost_203277 = _gravefrost_rank(203277, 3, 59, 60)
+gravefrost_203275 = _gravefrost_rank(203275, 1, 24, 25)
+gravefrost_203276 = _gravefrost_rank(203276, 2, 49, 50)
+gravefrost_203277 = _gravefrost_rank(203277, 3, 74, 75)
 
 # =====================================================================================================================
-# Koltira's Favor (203278-203279, talent 60348, row 5): Obliterate +5/10% and a 5/10% Frost Rune refund
+# Koltira's Favor (203278-203279, talent 60348, row 5): Obliterate +10/20% (R3; was 5/10) and a 5/10% Frost Rune refund
 # =====================================================================================================================
 
 _KOLTIRAS_NOTE = (
     'death-knight-rework S2a, Frost doc "Koltira\'s Favor" (5,1), U15 / U18: hidden passive. eff0 ADD_PCT_MODIFIER '
-    'SPELLMOD_DAMAGE stored 4 / 9 (= +5 / 10%) on Obliterate (EffectSpellClassMaskA_2 = m.OBLITERATE, d1 b17). eff1 '
+    'SPELLMOD_DAMAGE stored 9 / 19 (= +10 / 20%; was stored 4 / 9 = +5 / 10%, changed (2026-11-26, raid-buff-sets retune R3, user ruling: Obliteration build +44, Obliterate x1.091; the refund chance stays 5 / 10%)) on Obliterate (EffectSpellClassMaskA_2 = m.OBLITERATE, d1 b17). eff1 '
     'DUMMY: the proc effect. Chain spell_proc row (procs_on -203278): CAST phase (1) on Obliterate, melee-class '
     'ProcFlags 0x10, Chance 0 = the rank\'s ProcChance 5 / 10 (native, Proc Chance scales it). '
     'spell_dk_koltiras_favor (OnProc) finds the Frost Rune the cast just spent (snapshot taken in the Obliterate '
@@ -326,18 +326,18 @@ _KOLTIRAS_NOTE = (
 )
 
 
-def _koltiras_rank(spell_id, rank, stored, percent):
+def _koltiras_rank(spell_id, rank, stored, percent, refund):
     return _passive_rank(
         spell_id, "Koltira's Favor",
         [_aura(AuraType.ADD_PCT_MODIFIER, base_points=stored, misc_value=int(SpellModOp.DAMAGE)), _dummy_aura()],
         _ICON_KOLTIRAS_FAVOR, _ROW_KOLTIRAS_FAVOR, rank,
-        f'Your Obliterate deals {percent}% more damage and has a {percent}% chance to refund its Frost Rune.',
-        _KOLTIRAS_NOTE, masks={1: (0, m.OBLITERATE, 0)}, proc_chance=percent,
+        f'Your Obliterate deals {percent}% more damage and has a {refund}% chance to refund its Frost Rune.',
+        _KOLTIRAS_NOTE, masks={1: (0, m.OBLITERATE, 0)}, proc_chance=refund,
     )
 
 
-koltiras_favor_203278 = _koltiras_rank(203278, 1, 4, 5)
-koltiras_favor_203279 = _koltiras_rank(203279, 2, 9, 10)
+koltiras_favor_203278 = _koltiras_rank(203278, 1, 9, 10, 5)
+koltiras_favor_203279 = _koltiras_rank(203279, 2, 19, 20, 10)
 procs_on(
     -203278, proc_flags=_PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS, family_name=_SPELLFAMILY_DEATHKNIGHT,
     family_mask=(0, m.OBLITERATE, 0), spell_type_mask=_PROC_SPELL_TYPE_ALL, spell_phase_mask=_PROC_SPELL_PHASE_CAST,

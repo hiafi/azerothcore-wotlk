@@ -108,7 +108,7 @@ namespace Warrior
     // From WarriorUnitScript::OnSpellDamageTakenFinal (post-mitigation, carries isCrit). S1: Incite's capstone (D11).
     void OnSpellDamageTakenFinal(Unit* target, Unit* attacker, int32 damage, SpellInfo const* spellInfo, bool isCrit);
 
-    // Storm's Bulwark (D5). add = pctOfMaxHealth % of max health x STORMS_BULWARK_GRANT_SCALE (0.75, retune R2;
+    // Storm's Bulwark (D5). add = pctOfMaxHealth % of max health x STORMS_BULWARK_GRANT_SCALE (0.65, retune R3;
     // callers pass the unscaled design percent), x (1 + Mastery) only with Storm's Bulwark rank 3 (200060); cap = 30%
     // of max health x (1 + Mastery if 200060), read at this grant; the new amount is
     // max(current, min(current + add, cap)) (no source ever lowers it); creates 200028 if absent; refreshes its 15 s
