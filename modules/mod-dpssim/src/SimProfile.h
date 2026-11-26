@@ -161,7 +161,8 @@ namespace SimProfile
         // Spider 26033.
         uint32 PetCreatureEntry = 0;
 
-        // `BuffSet = self_only | full_raid`: the profile's default buff set (SimBuffSet.h, DPS runs only).
+        // `BuffSet = self_only | standard | full_raid` (or self | all): the profile's default buff set (SimBuffSet.h,
+        // DPS runs only).
         // DpsSim.BuffSet in the conf wins when it is set; empty (absent) = self_only. run-sim.sh reads this key too,
         // for the report names.
         std::string BuffSet;

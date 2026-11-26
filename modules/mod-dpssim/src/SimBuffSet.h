@@ -29,25 +29,36 @@
 class Creature;
 class Player;
 
-// Named buff sets (design doc docs/dps-sim-module.md 5.2, ruling 12; plan
-// .agents/plans/hunter-pet-families/hunter-pet-families.PLAN.md 6). `self_only` is the actor's own buffs and nothing
-// else (every run before this existed). `full_raid` adds a raid's buffs on the actor and its pet, a raid's debuffs on
-// every dummy and Bloodlust at the pull, all applied by the sim (Unit::AddAura, the actor as the caster), not cast by
-// anyone. Two sets of default lists (plan .agents/plans/dpssim-raid-buffs/dpssim-raid-buffs.PLAN.md):
+// Named buff sets (design doc docs/dps-sim-module.md 5.2, ruling 12; plans
+// .agents/plans/hunter-pet-families/hunter-pet-families.PLAN.md 6, .agents/plans/dpssim-raid-buffs/ and
+// .agents/plans/raid-buff-sets/). `self_only` ("self") is the actor's own buffs and nothing else (every run before this
+// existed). `standard` and `full_raid` ("all") add a raid's buffs on the actor and its pet, a raid's debuffs on every
+// dummy and the pull auras, all applied by the sim (Unit::AddAura, the actor as the caster), not cast by anyone.
+// `standard` is the balance target's set: the common raid buffs and two debuffs, Sated and Exhaustion at the pull (so
+// no Bloodlust, the actor's own included), no flask and no Replenishment. `full_raid` is every category, Bloodlust at
+// the pull, Replenishment and the flask. Two sets of default lists each:
 // - hunters: class buffs and debuffs, each in the same spell_group as the hunter pet family effect of its category, so
 //   a family's own cast is suppressed by the group rule and adds nothing to its number (hunter-pet-families BRAINSTORM
-//   ruling 7). A hunter owns none of them.
+//   ruling 7). A hunter owns none of them. The flat attack power is the Scroll of Battle (no family casts into its
+//   group 1004).
 // - every other class: spells no such class owns, since an aura the actor is the caster of must not look like its own
 //   (the Inscription raid buff scrolls; the hunter pet family debuffs and Blood Frenzy). A class buff the actor already
 //   carries from a "highest wins" or "exclusive" group stays up if it is at least as strong (OwnBuffWins).
-// Both also get Replenishment and, on the actor only, the flask of its highest primary stat.
+// full_raid also gets Replenishment and, on the actor only, the flask of its highest primary stat.
 namespace SimBuffSet
 {
     enum class Set : uint8
     {
         SelfOnly,
+        Standard,
         FullRaid
     };
+
+    // standard or full_raid: the sim adds auras
+    inline bool AddsAuras(Set set)
+    {
+        return set != Set::SelfOnly;
+    }
 
     // One list entry: a spell id and the effects of it to apply. EffectMask 0 in a parsed entry means "the effects a
     // raid member would get" (ResolveEffectMask()); "id:01" picks effect indexes 0 and 1 explicitly. "id:0@3" also
@@ -87,7 +98,8 @@ namespace SimBuffSet
         std::vector<AuraSpec> Debuffs;
         // On the actor and its pet at the pull, with their own duration, never put back (Bloodlust and Sated)
         std::vector<AuraSpec> PullBuffs;
-        // On the actor only, one of them: the flasks of Strength, Agility and Intellect, in that order (empty = none)
+        // On the actor only, one of them: the flasks of Strength, Agility and Intellect, in that order (empty = none;
+        // standard has none)
         std::vector<AuraSpec> Flasks;
         // Every class but the hunter: see the namespace comment
         bool OwnBuffWins = false;
@@ -109,16 +121,22 @@ namespace SimBuffSet
         std::map<std::string, uint32> Failed;
     };
 
-    // The defaults of DpsSim.RaidBuffs / RaidDebuffs / RaidPullBuffs / RaidFlasks (dpssim.conf.dist documents each id)
+    // The defaults of DpsSim.RaidBuffs / RaidDebuffs / RaidPullBuffs / RaidFlasks (full_raid) and
+    // DpsSim.StandardBuffs / StandardDebuffs / StandardPullBuffs (standard); dpssim.conf.dist documents each id
     extern char const* const DEFAULT_RAID_BUFFS;
     extern char const* const DEFAULT_RAID_DEBUFFS;
     extern char const* const DEFAULT_RAID_BUFFS_HUNTER;
     extern char const* const DEFAULT_RAID_DEBUFFS_HUNTER;
     extern char const* const DEFAULT_RAID_PULL_BUFFS;
     extern char const* const DEFAULT_RAID_FLASKS;
+    extern char const* const DEFAULT_STANDARD_BUFFS;
+    extern char const* const DEFAULT_STANDARD_DEBUFFS;
+    extern char const* const DEFAULT_STANDARD_BUFFS_HUNTER;
+    extern char const* const DEFAULT_STANDARD_DEBUFFS_HUNTER;
+    extern char const* const DEFAULT_STANDARD_PULL_BUFFS;
 
     char const* SetName(Set set);
-    // "self_only" or "full_raid" (case-insensitive)
+    // "self_only", "standard" or "full_raid", or the aliases "self" and "all" (case-insensitive)
     bool ParseSet(std::string const& text, Set& out, std::string& error);
     // "24932, 25898:0, 202210:01, 21183:0@3": comma-separated spell ids, each optionally followed by ':' and the effect
     // indexes (0-2) to apply, and then by '@' and the amount to give them. Blank entries are skipped. Pure parsing: the
@@ -148,8 +166,9 @@ namespace SimBuffSet
     // area auras have updated, so the direct copies of the refresh cannot hide a gap.
     void LogCoverage(Config const& config, Player* actor, std::vector<Creature*> const& dummies);
     // Logs what an iteration's refresh passes put back and failed to put back (nothing when nothing went missing)
-    void LogRefresh(RefreshLog const& refresh);
-    // Bloodlust and Sated: once at the pull, on the actor and its pet, with their own duration
+    void LogRefresh(Set set, RefreshLog const& refresh);
+    // The pull auras (full_raid: Bloodlust and Sated; standard: Sated and Exhaustion): once at the pull, on the actor
+    // and its pet, with their own duration
     void ApplyPullBuffs(Config const& config, Player* actor, Phase phase);
 }
 

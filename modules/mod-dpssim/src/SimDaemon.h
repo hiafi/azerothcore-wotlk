@@ -166,7 +166,7 @@ namespace SimDaemon
         // hunter profile sims any pet family.
         uint32 PetCreatureEntry = 0;
         // Named buff set (DpsSim.BuffSet and its lists, see SimBuffSet.h): self_only (the default, nothing added) or
-        // full_raid (raid buffs on the actor and its pet, raid debuffs on the dummies, Bloodlust at the pull). DPS mode
+        // standard / full_raid (raid buffs on the actor and its pet, raid debuffs on the dummies, pull auras). DPS mode
         // only.
         SimBuffSet::Config BuffSet;
         // DpsSim.DisableSpells: spell ids taken out of the actor's and its pet's spellbooks for the run (SimBot), to

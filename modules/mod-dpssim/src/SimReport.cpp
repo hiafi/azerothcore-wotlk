@@ -147,7 +147,7 @@ static bool WriteDpsReport(std::string const& path, SimDaemon::RunConfig const& 
     // spells DpsSim.DisableSpells took out of the spellbooks, so a sweep can tell its reports apart
     file << "    \"petCreatureEntry\": " << config.PetCreatureEntry << ",\n";
     file << "    \"buffSet\": \"" << SimBuffSet::SetName(config.BuffSet.BuffSet) << "\",\n";
-    if (config.BuffSet.BuffSet == SimBuffSet::Set::FullRaid)
+    if (SimBuffSet::AddsAuras(config.BuffSet.BuffSet))
     {
         // The flask (0 = none) and the raid buffs the actor's own equal or stronger ones replaced (OwnBuffWins)
         file << "    \"raidFlask\": " << config.BuffSet.State.FlaskId << ",\n";
