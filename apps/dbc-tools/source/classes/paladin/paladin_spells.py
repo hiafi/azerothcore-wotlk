@@ -322,11 +322,16 @@ blessing_of_might_19740 = spell(
     range_yards=30.0,
     duration_ms=600000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, points_per_level=6.973684210526316, implicit_target_a=21, apply_aura=AuraType.MOD_ATTACK_POWER),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, points_per_level=6.973684210526316, implicit_target_a=21, apply_aura=124),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, points_per_level=3.786, implicit_target_a=21, apply_aura=AuraType.MOD_ATTACK_POWER),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, points_per_level=3.786, implicit_target_a=21, apply_aura=124),
     ],
     spell_icon_id=298,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
+        'e0/e1 points_per_level 6.9737 -> 3.786 (2026-11-25, raid buff sets, user ruling: Blessing of Might gives 232 attack '
+        'power at level 60, the stock level 60 rank, as Battle Shout): 20 at 4, 80 at 20, 156 at 40, 232 at 60 (307 at 80 until '
+        'the 70/80 brackets retune it).'
+    ),
     raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases attack power by $s1.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Places a Blessing on the friendly target, increasing attack power by $s1 for $d.  Players may only have one Blessing on them per Paladin at any one time.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2, 'SpellClassSet': 10, 'SpellLevel': 4, 'SpellVisualID_1': 9179, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

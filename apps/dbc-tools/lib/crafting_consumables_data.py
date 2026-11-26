@@ -223,7 +223,8 @@ SCROLLS = (
     Scroll("winter", "Scroll of Winter's Horn", ((29, STAT_STRENGTH, 86), (29, STAT_AGILITY, 86)), (1088, 1253),
            "Horn of Winter", "Strength and Agility increased by $s1."),
     Scroll("stoneskin", "Scroll of Stoneskin", ((22, 1, 913),), (1086,), "Devotion Aura", "Armor increased by $s1."),
-    Scroll("battle", "Scroll of Battle", ((99, 0, 414), (124, 0, 414)), (1004,), "Battle Shout",
+    # 232: Battle Shout and Blessing of Might at 60 (raid buff sets, user ruling 2026-11-25; was 414)
+    Scroll("battle", "Scroll of Battle", ((99, 0, 232), (124, 0, 232)), (1004,), "Battle Shout",
            "Attack power increased by $s1."),
     Scroll("trueshot", "Scroll of True Aim", ((166, 0, 10), (167, 0, 10)), (1390,), "Trueshot Aura",
            "Attack power increased by $s1%."),

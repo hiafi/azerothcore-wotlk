@@ -794,15 +794,18 @@ battle_shout_6673 = spell(
     range_yards=0.0,
     duration_ms=120000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, points_per_level=6.772151898734177, implicit_target_a=56, apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=30.0),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, points_per_level=6.772151898734177, implicit_target_a=56, apply_aura=124, radius_yards=30.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, points_per_level=3.678, implicit_target_a=56, apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=30.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, points_per_level=3.678, implicit_target_a=56, apply_aura=124, radius_yards=30.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=56, apply_aura=AuraType.MOD_STAT, misc_value=0, radius_yards=30.0),
     ],
     spell_icon_id=456,
     notes=(
         'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
         'warrior-rework S3 D30: new e2 aura 29 MOD_STAT misc 0 (Strength), same target and radius as e0/e1; spell_warr_commanding_presence '
-        '(DoEffectCalcAmount on e2) sets its amount from the caster\'s Commanding Presence rank (0 / half / full of COMMANDING_PRESENCE_AT_60 scaled by level).'
+        '(DoEffectCalcAmount on e2) sets its amount from the caster\'s Commanding Presence rank (0 / half / full of COMMANDING_PRESENCE_AT_60 scaled by level). '
+        'e0/e1 points_per_level 6.7722 -> 3.678 (2026-11-25, raid buff sets, user ruling: Battle Shout gives 232 attack power at '
+        'level 60, the stock level 60 rank, instead of 414): 15 at 1, 84 at 20, 158 at 40, 232 at 60 (305 at 80 until the 70/80 '
+        'brackets retune it). Commanding Shout 469 keeps its 297, which was scaled from the old 414 curve.'
     ),
     raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases your attack power by $s1. Strength increased.', 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The warrior shouts, increasing attack power of all raid and party members within $a1 yards by $s1.  Lasts $d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 65536, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 246, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
