@@ -17,7 +17,7 @@ tests prove each one can fail.
   4. D9 stance zero list (22 ids) and the untouched ids (28880, the removed three, talent passives, ranks).
   5. Battle Stance aura 213 (+10), no aura 280; Stance Mastery 12678 (149 / icon 139 / family 4 / SLA skill 26
      acquire 2); 8616 teaches 2458 only.
-  6. Rend (9 potency / 3 s tick, -772 unbound), Thunder Clap 30 s, Commanding Shout (113 at 22, 297 at 60, MaxLevel 60).
+  6. Rend (9 potency / 3 s tick, -772 unbound), Thunder Clap 30 s, Commanding Shout (293 at 22, 738 at 60, MaxLevel 60).
   7. Moved learn levels and level-60 values; trainer rows (D3); the consts; no FORBIDDEN_* bit; no "Capstone"; the spike
      ids declared nowhere.
   8. The rage worked example (D12, D22) as a pure-Python reference at the live m 1.35, with the spell-haste factor.
@@ -386,7 +386,7 @@ def check_commanding_shout(rows: dict[int, dict]) -> list[str]:
     if r is None:
         return [f"{COMMANDING_SHOUT}: not built"]
     bad = []
-    for lvl, want in ((22, 113), (60, 297)):
+    for lvl, want in ((22, 293), (60, 738)):  # raid buff sets 2026-11-25, option B (was 113 / 297)
         if calc_value(r, 1, lvl) != want:
             bad.append(f"value at level {lvl} is {calc_value(r, 1, lvl)}, expected {want}")
     if calc_value(r, 1, 70) != calc_value(r, 1, 60):
@@ -878,13 +878,13 @@ class WarriorW0aNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_thunder_clap({}, {}, 9)), 1)
 
     def test_commanding_shout(self):
-        row = {"ID": COMMANDING_SHOUT, "BaseLevel": 22, "SpellLevel": 22, "MaxLevel": 60, "EffectBasePoints_1": 112,
-               "EffectRealPointsPerLevel_1": 4.8422, "EffectDieSides_1": 1}
+        row = {"ID": COMMANDING_SHOUT, "BaseLevel": 22, "SpellLevel": 22, "MaxLevel": 60, "EffectBasePoints_1": 292,
+               "EffectRealPointsPerLevel_1": 11.72, "EffectDieSides_1": 1}
         self.assertEqual(check_commanding_shout({COMMANDING_SHOUT: row}), [])
-        self.assertEqual(calc_value(row, 1, 22), 113)
-        self.assertEqual(calc_value(row, 1, 60), 297)
+        self.assertEqual(calc_value(row, 1, 22), 293)
+        self.assertEqual(calc_value(row, 1, 60), 738)
         for col, val in (("EffectBasePoints_1", 1079), ("EffectRealPointsPerLevel_1", 3.0), ("MaxLevel", 80),
-                         ("SpellLevel", 68), ("BaseLevel", 68), ("EffectBasePoints_1", 111)):
+                         ("SpellLevel", 68), ("BaseLevel", 68), ("EffectBasePoints_1", 291)):
             self.assertGreaterEqual(len(check_commanding_shout({COMMANDING_SHOUT: {**row, col: val}})), 1, col)
         self.assertEqual(len(check_commanding_shout({})), 1)
 

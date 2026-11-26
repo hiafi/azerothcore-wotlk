@@ -37,10 +37,13 @@ demoralizing_roar_99 = spell(
     range_yards=0.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-32, points_per_level=-5.428571428571429, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=10.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-32, points_per_level=-2.301, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=10.0),
     ],
     spell_icon_id=960,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ' points_per_level -5.4286 -> -2.301 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): -54 at 20, -100 at 40, -146 at 60 (stock -146 at 60). The old line gave -302 at 60.'
+    ),
     raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Decreases melee attack power by $s1.', 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "The druid roars, decreasing nearby enemies' melee attack power by $s1.  Lasts $d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 144, 'SpellClassMask_1': 8, 'SpellClassSet': 7, 'SpellLevel': 10, 'SpellPriority': 50, 'SpellVisualID_1': 3949, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -385,12 +388,17 @@ mark_of_the_wild_1126 = spell(
     range_yards=30.0,
     duration_ms=1800000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=24, points_per_level=9.177215189873417, implicit_target_a=21, apply_aura=22, misc_value=1),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=21, apply_aura=AuraType.MOD_STAT, misc_value=-1),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=21, apply_aura=143, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, points_per_level=4.407, implicit_target_a=21, apply_aura=22, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, points_per_level=0.17, implicit_target_a=21, apply_aura=AuraType.MOD_STAT, misc_value=-1),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, points_per_level=0.255, implicit_target_a=21, apply_aura=143, misc_value=126),
     ],
     spell_icon_id=123,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
+        'e0 armor points_per_level 9.1772 -> 4.407; e1 stats base 1, points_per_level 0 -> 0.17; e2 resistances base 4, points_per_level 0 -> 0.255 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): '
+        'armor 108 / 196 / 285, all stats 5 / 8 / 12, resistances 9 / 14 / 20 at 20 / 40 / 60 (240 / 10 / 17 at 50). '
+        'The old bootstrap line made the armor 566 at 60 while stats and resistances stayed at rank 1 (+2, +5), which let a druid\'s own Mark block the Scroll of the Wild.'
+    ),
     raw_overrides={'AttributesEx': 131072, 'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases armor by $s1.', 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the friendly target's armor by $s1 for $d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 262144, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 212, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1136,12 +1144,15 @@ gift_of_the_wild_21849 = spell(
     range_yards=40.0,
     duration_ms=3600000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=239, points_per_level=17.0, implicit_target_a=56, apply_aura=22, misc_value=1, radius_yards=100.0),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=0.9, implicit_target_a=56, apply_aura=AuraType.MOD_STAT, misc_value=-1, radius_yards=100.0),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, points_per_level=1.3, implicit_target_a=56, apply_aura=143, misc_value=126, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=239, points_per_level=4.5, implicit_target_a=56, apply_aura=22, misc_value=1, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=0.2, implicit_target_a=56, apply_aura=AuraType.MOD_STAT, misc_value=-1, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=16, points_per_level=0.3, implicit_target_a=56, apply_aura=143, misc_value=126, radius_yards=100.0),
     ],
     spell_icon_id=2435,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ' e0 armor points_per_level 17 -> 4.5; e1 stats points_per_level 0.9 -> 0.2; e2 resistances base 14 -> 16, points_per_level 1.3 -> 0.3 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): armor 285, all stats 12, resistances 20 at 60 (240 / 10 / 17 at 50, level 50 being its learn level), the same as Mark of the Wild 1126, at most 1 below it between 50 and 60.'
+    ),
     raw_overrides={'AttributesEx': 131072, 'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases armor by $s1, all attributes by $s2 and all resistances by $s3.', 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives the Gift of the Wild to all party and raid members, increasing armor by $s1, all attributes by $s2 and all resistances by $s3 for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 1, 'Reagent_1': 17021, 'SpellClassMask_1': 262144, 'SpellClassSet': 7, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 212, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # Only on a stock TrainerId no NPC uses; 216 is the live Druid trainer (docs/spell_learn_level.md).

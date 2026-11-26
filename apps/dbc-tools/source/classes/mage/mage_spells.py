@@ -479,10 +479,13 @@ arcane_intellect_1459 = spell(
     range_yards=30.0,
     duration_ms=1800000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, points_per_level=0.4915, implicit_target_a=21, apply_aura=AuraType.MOD_STAT, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, points_per_level=0.492, implicit_target_a=21, apply_aura=AuraType.MOD_STAT, misc_value=3),
     ],
     spell_icon_id=125,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes=(
+        'single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ' points_per_level 0.4915 -> 0.492 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): 59 x 0.4915 truncates to 28 in float32, so the stock 31 landed as 30 at 60; 59 x 0.492 = 29.03. 11 at 20, 21 at 40, 31 at 60.'
+    ),
     raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases Intellect by $s1.', 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the target's Intellect by $s1 for $d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 1024, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellVisualID_1': 158, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

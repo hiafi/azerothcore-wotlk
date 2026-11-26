@@ -288,11 +288,14 @@ curse_of_weakness_702 = spell(
     range_yards=30.0,
     duration_ms=120000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-22, points_per_level=-6.0131578947368425, implicit_target_a=6, apply_aura=AuraType.MOD_ATTACK_POWER),
+        Effect(type=EffectType.APPLY_AURA, base_points=-22, points_per_level=-2.536, implicit_target_a=6, apply_aura=AuraType.MOD_ATTACK_POWER),
         Effect(type=EffectType.APPLY_AURA, base_points=-6, implicit_target_a=6, apply_aura=101, misc_value=1),
     ],
     spell_icon_id=543,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ' e0 points_per_level -6.0132 -> -2.536 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): -61 at 20, -112 at 40, -163 at 60 (stock -163 at 60). The old line gave -357 at 60.'
+    ),
     raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee attack power reduced by $s1, and armor is reduced by $s2%.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Target's melee attack power is reduced by $s1 and armor is reduced by $s2% for $d.  Only one Curse per Warlock can be active on any one target.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 32768, 'SpellClassSet': 5, 'SpellLevel': 4, 'SpellVisualID_1': 346, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -497,11 +500,14 @@ curse_of_the_elements_1490 = spell(
     range_yards=30.0,
     duration_ms=300000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-46, points_per_level=-2.5, implicit_target_a=6, apply_aura=22, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=-46, points_per_level=-1.0715, implicit_target_a=6, apply_aura=22, misc_value=126),
         Effect(type=EffectType.APPLY_AURA, base_points=5, points_per_level=0.14583333333333334, implicit_target_a=6, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=126),
     ],
     spell_icon_id=55,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 32); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 32); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ' e0 resistances points_per_level -2.5 -> -1.0715 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): -53 at 40, -75 at 60 (stock -75 at 60). The old line gave -115 at 60. e1 (+10% magic damage taken) is unchanged.'
+    ),
     raw_overrides={'AttributesEx5': 4, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduces Arcane, Fire, Frost, Nature and Shadow resistances by $s1.  Increases magic damage taken by $s2%.', 'BaseLevel': 32, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Curses the target for $d, reducing Arcane, Fire, Frost, Nature, and Shadow resistances by $s1 and increasing magic damage taken by $s2%.  Only one Curse per Warlock can be active on any one target.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 512, 'SpellClassSet': 5, 'SpellLevel': 32, 'SpellVisualID_1': 785, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

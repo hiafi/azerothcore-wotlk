@@ -378,11 +378,14 @@ roar_of_courage_201715 = spell(
     range_yards=0.0,
     duration_ms=120000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=2.0714285714285716, implicit_target_a=56, apply_aura=AuraType.MOD_STAT, misc_value=0, radius_yards=100.0),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=2.0714285714285716, implicit_target_a=56, apply_aura=AuraType.MOD_STAT, misc_value=1, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=1.34, implicit_target_a=56, apply_aura=AuraType.MOD_STAT, misc_value=0, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=1.34, implicit_target_a=56, apply_aura=AuraType.MOD_STAT, misc_value=1, radius_yards=100.0),
     ],
     spell_icon_id=1573,
-    notes='H0-P1 (PET.md 4.4): Cat utility. Effects copied from Strength of Earth 8076 (Str/Agi, bp 9, 2.0714/level, BaseLevel 10, MaxLevel 80), retargeted to CASTER_AREA_RAID 100 yd. Group 1088.',
+    notes=(
+        'H0-P1 (PET.md 4.4): Cat utility. Effects copied from Strength of Earth 8076 (Str/Agi, bp 9, 2.0714/level, BaseLevel 10, MaxLevel 80), retargeted to CASTER_AREA_RAID 100 yd. Group 1088.'
+        ' Strength and Agility points_per_level 2.0714 -> 1.34 from level 10 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): the stock Strength of Earth (base 9, 1.34 per level): 23 at 20, 50 at 40, 77 at 60. The old line was the bootstrapped one (113 at 60).'
+    ),
     raw_overrides={'AttributesEx': 512, 'BaseLevel': 10, 'MaxLevel': 80, 'SpellLevel': 10, 'RangeIndex': 1, 'DefenseType': 2, 'PreventionType': 2,
                    'SpellClassSet': 9, 'SpellClassMask_2': m.PET_ABILITY | m.PET_UTILITY, 'EquippedItemClass': -1,
                    'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0,
@@ -430,10 +433,13 @@ menacing_roar_201717 = spell(
     range_yards=0.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-36, points_per_level=-5.696969696969697, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=10.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-36, points_per_level=-2.4135, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=10.0),
     ],
     spell_icon_id=960,
-    notes='H0-P1 (PET.md 4.4): Bear utility. Effect copied from Demoralizing Shout 1160 (bp -36, -5.697/level, BaseLevel 14, MaxLevel 80, TargetA 22 / TargetB 15, 10 yd). Group 1062.',
+    notes=(
+        'H0-P1 (PET.md 4.4): Bear utility. Effect copied from Demoralizing Shout 1160 (bp -36, -5.697/level, BaseLevel 14, MaxLevel 80, TargetA 22 / TargetB 15, 10 yd). Group 1062.'
+        ' points_per_level -5.697 -> -2.4135 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): Demoralizing Shout 1160\'s curve, -49 at 20, -97 at 40, -146 at 60.'
+    ),
     raw_overrides={'AttributesEx': 512, 'BaseLevel': 14, 'MaxLevel': 80, 'SpellLevel': 14, 'RangeIndex': 1, 'DefenseType': 1, 'PreventionType': 1,
                    'AttributesEx6': 8388608, 'SpellClassSet': 9, 'SpellClassMask_2': m.PET_ABILITY | m.PET_UTILITY, 'EquippedItemClass': -1,
                    'EffectChainAmplitude_1': 1.0,

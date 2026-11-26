@@ -178,11 +178,14 @@ improved_moonkin_form_50170 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=65, points_per_level=0.03333333333333333, implicit_target_a=1, apply_aura=193, radius_yards=100.0),
+        Effect(type=65, implicit_target_a=1, apply_aura=193, radius_yards=100.0),
     ],
     spell_icon_id=2855,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 268436480, 'AttributesEx4': 2097152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712188, 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_2': 8192, 'EffectSpellClassMaskB_1': 1024, 'EffectSpellClassMaskC_2': 8192, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 1073741824, 'SpellClassSet': 7, 'SpellVisualID_1': 13458},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ' points_per_level 0.0333 -> 0 and MaxLevel 80 -> 0 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): rank 1 is a flat 1% haste (the old slope gave 2% from level 31; the rank design is 1 / 2 / 3%), as Ferocious Inspiration 75593.'
+    ),
+    raw_overrides={'AttributesEx': 268436480, 'AttributesEx4': 2097152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712188, 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_2': 8192, 'EffectSpellClassMaskB_1': 1024, 'EffectSpellClassMaskC_2': 8192, 'EquippedItemClass': -1, 'MaxLevel': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 1073741824, 'SpellClassSet': 7, 'SpellVisualID_1': 13458},
 )
 
 

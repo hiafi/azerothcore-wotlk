@@ -971,7 +971,7 @@ demoralizing_screech_24423 = spell(
     duration_ms=10000,
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=25.0, potency_kind='direct', implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, base_points=-36, points_per_level=-6.822784810126582, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=5.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-36, points_per_level=-1.78, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=5.0),
     ],
     spell_icon_id=1579,
     notes=(
@@ -982,6 +982,7 @@ demoralizing_screech_24423 = spell(
         '0.120/0.070 shared by Gore/Smack/Swipe/etc.) - this also fixes PLAN F13\'s single-rank-migration '
         'bug that had zeroed this spell\'s SP coefficient to 0. '
         'User decision 2026-10-02: sp_potency 15 / ap_potency 10 (was 15.6/9.1).'
+        ' e1 attack power points_per_level -6.8228 -> -1.78 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): -68 at 20, -104 at 40, -140 at 60 (stock -140 at 60). The old line gave -437 at 60.'
     ),
     raw_overrides={'AttributesEx': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee attack power reduced by $s2.', 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts a single enemy for {pot1} damage and lowers the melee attack power of all enemies in melee range by $s2.  Effect lasts $d.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 268435456, 'SpellClassSet': 9, 'SpellLevel': 1, 'SpellVisualID_1': 7302, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )

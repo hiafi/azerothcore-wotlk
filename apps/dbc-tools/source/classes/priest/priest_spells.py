@@ -396,10 +396,13 @@ power_word_fortitude_1243 = spell(
     range_yards=30.0,
     duration_ms=1800000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, points_per_level=0.8644, implicit_target_a=21, apply_aura=AuraType.MOD_STAT, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, points_per_level=0.865, implicit_target_a=21, apply_aura=AuraType.MOD_STAT, misc_value=2),
     ],
     spell_icon_id=685,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→level-60 slope (anchor rank 10938, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48161, rank 8); MaxLevel set to 80',
+    notes=(
+        'single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→level-60 slope (anchor rank 10938, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48161, rank 8); MaxLevel set to 80'
+        ' points_per_level 0.8644 -> 0.865 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): 59 x 0.8644 truncates to 50 in float32, so the stock 54 landed as 53 at 60; 59 x 0.865 = 51.03. 19 at 20, 36 at 40, 54 at 60.'
+    ),
     raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 524288, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases Stamina by $s1.', 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Power infuses the target, increasing their Stamina by $s1 for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 8, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellVisualID_1': 278, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

@@ -208,7 +208,7 @@ carrion_feast_command_201607 = _command(
 
 demoralizing_screech_201754 = _utility(
     201754, 'Demoralizing Screech', DEMORALIZING_SCREECH_LEVEL,
-    [Effect(type=EffectType.APPLY_AURA, base_points=-36, points_per_level=-5.696969696969697,
+    [Effect(type=EffectType.APPLY_AURA, base_points=-36, points_per_level=-2.4135,
             implicit_target_a=_TARGET_SRC_CASTER, implicit_target_b=_TARGET_UNIT_SRC_AREA_ENEMY,
             apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=10.0)],
     1579, 7302,
@@ -217,9 +217,12 @@ demoralizing_screech_201754 = _utility(
     cooldown_ms=10000, duration_ms=30000, defense=1, prevention=1,
     MaxLevel=80, AttributesEx=kits.ATTR1_INITIATE_COMBAT, AttributesEx6=8388608, RangeIndex=1,
     AuraDescription_Lang_enUS='Attack power reduced.',
-    notes='hunter-pet-families F1: Carrion Bird slot 2, autocast. Menacing Roar 201717 shape (Demoralizing Shout 1160: '
+    notes=(
+        'hunter-pet-families F1: Carrion Bird slot 2, autocast. Menacing Roar 201717 shape (Demoralizing Shout 1160: '
           'bp -36, -5.697/level from 14 to 80, around the pet 10 yd), 30 s, 10 s cooldown. Group 1062 AP Debuffs '
-          '(rule 4, aura 99). Visual 7302 / icon 1579 from Demoralizing Screech 24423.',
+          '(rule 4, aura 99). Visual 7302 / icon 1579 from Demoralizing Screech 24423.'
+        ' points_per_level -5.697 -> -2.4135 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): Demoralizing Shout 1160\'s curve, -49 at 20, -97 at 40, -146 at 60.'
+    ),
 )
 
 fresh_kill_202018 = spell(
@@ -427,15 +430,18 @@ dazzling_wings_command_201613 = _command(
 
 moonglow_dust_201757 = _utility(
     201757, 'Moonglow Dust', MOONGLOW_DUST_LEVEL,
-    [_raid_aura(_AURA_MOD_POWER_REGEN, 15, points_per_level=1.38889)],
+    [_raid_aura(_AURA_MOD_POWER_REGEN, 15, points_per_level=0.442)],
     2261, 8529,
     'Your pet scatters glowing dust, restoring $s1 mana every 5 seconds to all party and raid members for $d. Does '
     'not stack with Blessing of Wisdom or Water Attunement.',
     school=School.NATURE, cooldown_ms=40000, duration_ms=120000, RangeIndex=1, MaxLevel=80,
     AuraDescription_Lang_enUS='Restores mana.',
-    notes='hunter-pet-families F1: Moth slot 2, autocast. Aura 85 MOD_POWER_REGEN (mana), Mana Spring 5677 values '
+    notes=(
+        'hunter-pet-families F1: Moth slot 2, autocast. Aura 85 MOD_POWER_REGEN (mana), Mana Spring 5677 values '
           '(bp 15, +1.389/level from 26 to 80), raid 100 yd, 2 min, 40 s cooldown. Group 1105 MP5 Buffs (rule 3). '
-          'Visual 8529 (Serenity Dust), icon 2261 (Arcane Dust).',
+          'Visual 8529 (Serenity Dust), icon 2261 (Arcane Dust).'
+        ' mp5 points_per_level 1.38889 -> 0.442 from level 26 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): 16 at 20, 22 at 40, 31 at 60, the stock Mana Spring (31 at 60). The old line was the bootstrapped one (63 at 60).'
+    ),
 )
 
 _HEALING_DUST_MS = 12000

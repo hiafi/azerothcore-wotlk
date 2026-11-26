@@ -350,10 +350,13 @@ blessing_of_wisdom_19742 = spell(
     range_yards=30.0,
     duration_ms=600000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=1.2424242424242424, implicit_target_a=21, apply_aura=85),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=0.5, implicit_target_a=21, apply_aura=85),
     ],
     spell_icon_id=306,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 14); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 14); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ' points_per_level 1.2424 -> 0.5 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): 13 at 20, 23 at 40, 33 at 60 (stock 33). The old line gave 67 at 60. The Scroll of Wisdom 208876 follows at 33.'
+    ),
     raw_overrides={'AttributesEx': 1024, 'AttributesEx3': 1, 'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Restores $s1 mana every 5 seconds.', 'BaseLevel': 14, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Places a Blessing on the friendly target, restoring $s1 mana every 5 seconds for $d.  Players may only have one Blessing on them per Paladin at any one time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 65536, 'SpellClassSet': 10, 'SpellLevel': 14, 'SpellVisualID_1': 5400, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -602,12 +605,15 @@ greater_blessing_of_might_25782 = spell(
     range_yards=40.0,
     duration_ms=1800000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=184, points_per_level=13.035714285714286, implicit_target_a=61, apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=100.0),
-        Effect(type=EffectType.APPLY_AURA, base_points=184, points_per_level=13.035714285714286, implicit_target_a=61, apply_aura=124, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, points_per_level=3.786, implicit_target_a=61, apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, points_per_level=3.786, implicit_target_a=61, apply_aura=124, radius_yards=100.0),
     ],
     spell_icon_id=1802,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 52); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases attack power by $s1.', 'BaseLevel': 52, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives all members of the raid or group that share the same class with the target the Greater Blessing of Might, increasing attack power by $s1 for $d.  Players may only have one Blessing on them per Paladin at any one time.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 0, 'Reagent_1': 0, 'SpellClassMask_1': 2, 'SpellClassSet': 10, 'SpellLevel': 52, 'SpellVisualID_1': 9179, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 52); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ' Copies Blessing of Might 19740\'s curve (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): BaseLevel / SpellLevel 52 -> 4, base 184 -> 19, points_per_level 13.0357 -> 3.786 (MaxLevel 80), so it equals Blessing of Might at every level: 232 attack power at 60 (+25% over it before). The trainer row still teaches it at 52.'
+    ),
+    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases attack power by $s1.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives all members of the raid or group that share the same class with the target the Greater Blessing of Might, increasing attack power by $s1 for $d.  Players may only have one Blessing on them per Paladin at any one time.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 0, 'Reagent_1': 0, 'SpellClassMask_1': 2, 'SpellClassSet': 10, 'SpellLevel': 4, 'SpellVisualID_1': 9179, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -625,10 +631,13 @@ greater_blessing_of_wisdom_25894 = spell(
     range_yards=40.0,
     duration_ms=1800000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, points_per_level=2.3846153846153846, implicit_target_a=61, apply_aura=85, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, points_per_level=0.5, implicit_target_a=61, apply_aura=85, radius_yards=100.0),
     ],
     spell_icon_id=1805,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 54); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 54); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ' points_per_level 2.3846 -> 0.5 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): 33 at 60, equal to Blessing of Wisdom 19742 from level 54 on (stock 33). The old line gave 44 at 60.'
+    ),
     raw_overrides={'AttributesEx': 1024, 'AttributesEx3': 1, 'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Restores $s1 mana every 5 seconds.', 'BaseLevel': 54, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives all members of the raid or group that share the same class with the target the Greater Blessing of Wisdom, restoring $s1 mana every 5 seconds for $d.  Players may only have one Blessing on them per Paladin at any one time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 0, 'Reagent_1': 0, 'SpellClassMask_1': 65536, 'SpellClassSet': 10, 'SpellLevel': 54, 'SpellVisualID_1': 5400, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

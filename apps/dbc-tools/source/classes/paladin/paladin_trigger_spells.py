@@ -420,10 +420,13 @@ devotion_aura_465 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=65, base_points=54, points_per_level=14.556962025316455, implicit_target_a=1, apply_aura=22, misc_value=1, radius_yards=40.0),
+        Effect(type=65, base_points=54, points_per_level=11.526, implicit_target_a=1, apply_aura=22, misc_value=1, radius_yards=40.0),
     ],
     spell_icon_id=291,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | paladin-rework S1 SHARED Part C C1.2: button (60 s RecoveryTime, Category 1300 / 15 s, IS_ABILITY flat GCD).',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | paladin-rework S1 SHARED Part C C1.2: button (60 s RecoveryTime, Category 1300 / 15 s, IS_ABILITY flat GCD).'
+        ' e0 points_per_level 14.557 -> 11.526 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): 273 at 20, 504 at 40, 735 at 60 (stock rank 7 735 at 60). The old line gave 913 at 60. The Scroll of Stoneskin 208867 and Hardened Shell 201764 follow at 735.'
+    ),
     category=1300,
     raw_overrides={'ActiveIconID': 122, 'AttributesEx2': 17, 'AttributesEx3': 1114112, 'AttributesEx4': 3145728, 'AttributesEx7': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases armor by $s1.', 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives $s1 additional armor to party and raid members within $a1 yards. Activating it also reduces damage taken by party and raid members within $a1 yards by $201161s2% for $201161d. Players may only have one Aura on them per Paladin at any one time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 64, 'SpellClassMask_3': 32, 'SpellClassSet': 10, 'SpellLevel': 1, 'SpellVisualID_1': 160, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )

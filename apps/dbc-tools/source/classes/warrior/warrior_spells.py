@@ -203,18 +203,19 @@ commanding_shout_469 = spell(
     range_yards=0.0,
     duration_ms=120000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=112, points_per_level=4.8422, implicit_target_a=56, apply_aura=230, radius_yards=30.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=292, points_per_level=11.72, implicit_target_a=56, apply_aura=230, radius_yards=30.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=56, apply_aura=AuraType.MOD_STAT, misc_value=2, radius_yards=30.0),
     ],
     spell_icon_id=1934,
     notes=(
-        'warrior-rework W0a A1 (shared doc "Commanding Shout", HANDOFF D18): learned at 22 with a level curve that follows '
-        'Battle Shout 6673\'s slope instead of the stock flat 1,080 at every level below 68. BaseLevel = SpellLevel = 22, '
-        'MaxLevel 60 (frozen until the 70/80 brackets open), base 112 + 4.8422 per level: 113 at 22, ~200 at 40, 297 at 60 '
-        '(the 297 is the stock row\'s own slope extrapolated to 60, an M placeholder; Battle Shout builds 157 at 22 and '
-        '414 at 60, so V(L) = 297 x BS(L) / BS(60)). warrior-rework S3 D30: new e1 aura 29 MOD_STAT misc 2 (Stamina), same '
+        'warrior-rework W0a A1 (shared doc "Commanding Shout", HANDOFF D18): learned at 22 with a level curve instead of the '
+        'stock flat 1,080 at every level below 68. BaseLevel = SpellLevel = 22, MaxLevel 60 (frozen until the 70/80 '
+        'brackets open). It first followed Battle Shout 6673\'s slope (base 112 + 4.8422 per level, 297 at 60, scaled from '
+        'Battle Shout\'s old 414); that basis is gone since Battle Shout went to 232 (see the 2026-11-25 sentence at the end). '
+        'warrior-rework S3 D30: new e1 aura 29 MOD_STAT misc 2 (Stamina), same '
         'target and radius as e0; spell_warr_commanding_presence (DoEffectCalcAmount on e1) sets its amount from the '
         'caster\'s Commanding Presence rank.'
+        ' e0 base 112 -> 292, points_per_level 4.8422 -> 11.72 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value), option B of the raid buff audit: the stock ratio of Commanding Shout to Power Word: Fortitude\'s health (1,080 at rank 1 against 79 Stamina x 10, 2,255 against 165 x 10: 1.367 both times) times the 60 Stamina of Fortitude at 60 (54 x 10) gives 738 maximum health at 60. 293 at 22, 386 at 30, 503 at 40, 621 at 50, 738 at 60 (BaseLevel = SpellLevel 22, MaxLevel 60 kept). It no longer follows Battle Shout\'s curve, which went to 232 attack power. The Scroll of Command 208863 follows at 738. The Commanding Presence Stamina (e1) is unchanged.'
     ),
     raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Maximum health increased. Stamina increased.', 'BaseLevel': 22, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the maximum health of all party and raid members within $a1 yards by an amount that scales with level, $s1 at your level, for $d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 60, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 128, 'SpellClassSet': 4, 'SpellLevel': 22, 'SpellVisualID_1': 246, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -406,10 +407,13 @@ demoralizing_shout_1160 = spell(
     range_yards=0.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-36, points_per_level=-5.696969696969697, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=10.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-36, points_per_level=-2.4135, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=10.0),
     ],
     spell_icon_id=282,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 14); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 14); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ' points_per_level -5.697 -> -2.4135 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): -49 at 20, -97 at 40, -146 at 60 (stock rank 7 -146 at 60). The old line gave -297 at 60. The pet copies 201717, 201754 and 201771 follow.'
+    ),
     raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduces melee attack power by $s1.', 'BaseLevel': 14, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the melee attack power of all enemies within $a1 yards by $s1 for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 131072, 'SpellClassSet': 4, 'SpellLevel': 14, 'SpellVisualID_1': 210, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

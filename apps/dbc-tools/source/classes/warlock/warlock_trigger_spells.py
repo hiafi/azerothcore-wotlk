@@ -89,10 +89,13 @@ blood_pact_6307 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=65, base_points=19, points_per_level=17.236842105263158, implicit_target_a=1, apply_aura=230, misc_value=2, radius_yards=30.0),
+        Effect(type=65, base_points=19, points_per_level=6.4286, implicit_target_a=1, apply_aura=230, misc_value=2, radius_yards=30.0),
     ],
     spell_icon_id=541,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ' points_per_level 17.2368 -> 6.4286 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): 122 at 20, 251 at 40, 380 at 60 (stock 380). The old line gave 985 at 60.'
+    ),
     raw_overrides={'ActiveIconID': 122, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases health by $s1.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases party and raid members' health by $s1.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 8388608, 'SpellClassSet': 5, 'SpellLevel': 4, 'SpellVisualID_1': 799},
 )
 
@@ -287,11 +290,14 @@ fel_intelligence_54424 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=65, base_points=11, points_per_level=0.7516666666294137, implicit_target_a=1, apply_aura=AuraType.MOD_STAT, misc_value=3, radius_yards=100.0),
-        Effect(type=65, base_points=17, points_per_level=0.9599999999627471, implicit_target_a=1, apply_aura=AuraType.MOD_STAT, misc_value=4, radius_yards=100.0),
+        Effect(type=65, base_points=11, points_per_level=0.4643, implicit_target_a=1, apply_aura=AuraType.MOD_STAT, misc_value=3, radius_yards=100.0),
+        Effect(type=65, base_points=17, points_per_level=0.5, implicit_target_a=1, apply_aura=AuraType.MOD_STAT, misc_value=4, radius_yards=100.0),
     ],
     spell_icon_id=1940,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 32); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 32); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ' e0 Intellect points_per_level 0.7517 -> 0.4643, e1 Spirit points_per_level 0.96 -> 0.5 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): Intellect 15 at 40, 25 at 60 (stock 25), Spirit 22 at 40, 32 at 60 (stock 32). The old line gave 33 / 44 at 60, above the Scroll of Brilliance (31) and Devotion (40).'
+    ),
     raw_overrides={'ActiveIconID': 122, 'AttributesEx': 1024, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases Intellect by $s1 and Spirit by $s2.', 'BaseLevel': 32, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases party and raid members Intellect by $s1 and Spirit by $s2.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 33554432, 'SpellClassSet': 5, 'SpellLevel': 32, 'SpellVisualID_1': 799},
 )
 

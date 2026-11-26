@@ -14,18 +14,20 @@ cost, no cooldown, instant, GCD 1500 / category 133, `AttributesEx3 0x100000` (p
 NOT `IS_ABILITY` (a bit-less ability would fall under the gcd_haste policy; as a magic GCD it simply hastes with
 spell haste).
 
-Values are the stock totem buff + 20% (user answer 14, 2026-10-18), scaled by the caster's level. The curve is
+Values are the stock totem buff + 20% (user answer 14, 2026-10-18), scaled by the caster's level. The first rows were
+built on the bootstrapped (too steep) totem lines; Earth, Water and Air were retuned to the real stock level 60 values on
+2026-11-25 (raid buff sets, user ruling), Fire's spell power is 120 at 60 (stock Totem of Wrath). The curve is
 `BP + int((clamp(L, BaseLevel, MaxLevel) - max(BaseLevel, SpellLevel)) * ppl) + 1` (SpellEffectInfo::CalcValue).
 `SpellLevel` is the learn level (the trainer lint wants SpellLevel <= ReqLevel); `BaseLevel` is the stock curve's
 anchor level (>= SpellLevel), so a caster below it gets the flat anchor value, as the stock totem buff did;
 `MaxLevel` 60 stops the curve at the server's level cap. BasePoints / ppl are the stock ones x1.2 (BP rounded):
 
     effect (stock source)                      BP    ppl        Base/Spell/Max   L10  L20  L26  L32  L40  L50  L60  target L60
-    Earth Strength  (8076 eff0, 9 / 2.07143)   11    2.485716   10 / 10 / 60      12   36   51   66   86  111  136  135.6
-    Earth armor     (8072 eff0, 94 / 13.8816)  213   16.65792   10 / 10 / 60     214  380  480  580  713  880 1046  1046.4
-    Water mp5       (5677 eff0, 15 / 1.38889)  18    1.68       26 / 20 / 60      19   19   19   29   42   59   76  75.6
-    Fire spell power (52109 eff0+eff1, 24 / 2.70455)  29  3.24546  28 / 26 / 60   30   30   30   42   68  101  133  133.2
-    Air Agility     (8076 eff1, 9 / 2.07143)   65    2.5        32 / 32 / 60      66   66   66   66   86  111  136  135.6
+    Earth Strength  (SoE 77 at 60, x1.2)       11    1.6        10 / 10 / 60      12   28   37   47   60   76   92   92.4
+    Earth armor     (Stoneskin 640 at 60, x1.2) 191  11.52      10 / 10 / 60     192  307  376  445  537  652  768  768
+    Water mp5       (Mana Spring 31 at 60, x1.2) 18  0.53       26 / 20 / 60      19   19   19   22   26   31   37   37.2
+    Fire spell power (ToW 120 at 60, ruled)    29  2.82     28 / 26 / 60   30   30   30   41   63   92  120  120
+    Air Agility     (SoE 77 at 60, x1.2)       46    1.61       32 / 32 / 60      47   47   47   47   59   75   92   92.4
 
 (Air is only learnable at 32, so its L10-L26 columns are the flat anchor value.) Spell haste 5% (BP 4), melee haste
 10% and ranged haste 10% (BP 9) are flat. 8076's inert third effect (aura 52) is not copied.
@@ -147,29 +149,38 @@ def _child(spell_id, name, icon, effects, spell_level, base_level, notes):
 # ---- Earth @10: Strength on the parent, armor on a hidden child (rule-4 armor group is whole-aura, B14) ----
 earth_attunement_202207 = _attunement(
     202207, 'Earth Attunement', ICON_EARTH,
-    [_area(AuraType.MOD_STAT, base_points=11, points_per_level=2.485716, misc_value=STAT_STRENGTH)],
+    [_area(AuraType.MOD_STAT, base_points=11, points_per_level=1.6, misc_value=STAT_STRENGTH)],
     spell_level=10, base_level=10,
     description='Attunes you to Earth, increasing the armor and Strength of party and raid members within 40 yards.',
     aura_description='Armor and Strength increased.',
-    notes='Strength = stock Strength of Earth 8076 eff0 x1.2 (136 at 60); armor comes from the child 202211. '
-          'Group 1252 (rule 2) and 1253 (Str/Agi, rule 3).',
+    notes=(
+        'Strength = stock Strength of Earth 8076 eff0 x1.2 (136 at 60); armor comes from the child 202211. '
+          'Group 1252 (rule 2) and 1253 (Str/Agi, rule 3).'
+        ' Retuned (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): Strength base 11, points_per_level 2.485716 -> 1.6 from level 10, the design\'s stock Strength of Earth +20% (77 x 1.2). 28 at 20, 60 at 40, 92 at 60. The old line was built on the bootstrapped Strength of Earth 8076 (113 at 60), 136 at 60.'
+    ),
 )
 earth_attunement_armor_202211 = _child(
     202211, 'Earth Attunement Armor', ICON_EARTH,
-    [_area(AURA_MOD_RESISTANCE, base_points=213, points_per_level=16.65792, misc_value=RESISTANCE_PHYSICAL)],
+    [_area(AURA_MOD_RESISTANCE, base_points=191, points_per_level=11.52, misc_value=RESISTANCE_PHYSICAL)],
     spell_level=10, base_level=10,
-    notes='hidden child of 202207: armor = stock Stoneskin 8072 eff0 x1.2 (1046 at 60). In stock group 1086 with '
-          'Devotion Aura 465 (rule 4, highest wins).',
+    notes=(
+        'hidden child of 202207: armor = stock Stoneskin 8072 eff0 x1.2 (1046 at 60). In stock group 1086 with '
+          'Devotion Aura 465 (rule 4, highest wins).'
+        ' Retuned (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): armor base 213 -> 191, points_per_level 16.65792 -> 11.52 from level 10, the design\'s stock Stoneskin Totem +20% (640 x 1.2). 307 at 20, 537 at 40, 768 at 60. The old line was built on the bootstrapped Stoneskin 8072 (872 at 60), 1046 at 60.'
+    ),
 )
 
 # ---- Water @20: mana per 5 sec, one effect, straight into the MP5 group ----
 water_attunement_202208 = _attunement(
     202208, 'Water Attunement', ICON_WATER,
-    [_area(AURA_MOD_POWER_REGEN, base_points=18, points_per_level=1.68)],
+    [_area(AURA_MOD_POWER_REGEN, base_points=18, points_per_level=0.53)],
     spell_level=20, base_level=26,
     description='Attunes you to Water, restoring mana every 5 sec to party and raid members within 40 yards.',
     aura_description='Mana restored over time.',
-    notes='mp5 = stock Mana Spring 5677 x1.2 (76 at 60; flat 19 until level 26, as the stock curve). Stock group 1105.',
+    notes=(
+        'mp5 = stock Mana Spring 5677 x1.2 (76 at 60; flat 19 until level 26, as the stock curve). Stock group 1105.'
+        ' Retuned (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): mp5 points_per_level 1.68 -> 0.53 (base 18, from level 26), the design\'s stock Mana Spring +20% (31 x 1.2). 19 at 20, 26 at 40, 37 at 60. The old line was built on the bootstrapped Mana Spring 5677 (63 at 60), 76 at 60.'
+    ),
 )
 
 # ---- Fire @26: spell haste on the parent, spell power on a hidden child (rule-4 SP group is whole-aura, B14) ----
@@ -185,12 +196,18 @@ fire_attunement_202209 = _attunement(
 fire_attunement_spell_power_202212 = _child(
     202212, 'Fire Attunement Spell Power', ICON_FIRE,
     [
-        _area(AuraType.MOD_DAMAGE_DONE, base_points=29, points_per_level=3.24546, misc_value=SCHOOL_MASK_ALL_MAGIC),
-        _area(AuraType.MOD_HEALING_DONE, base_points=29, points_per_level=3.24546, misc_value=SCHOOL_MASK_ALL),
+        _area(AuraType.MOD_DAMAGE_DONE, base_points=29, points_per_level=2.82, misc_value=SCHOOL_MASK_ALL_MAGIC),
+        _area(AuraType.MOD_HEALING_DONE, base_points=29, points_per_level=2.82, misc_value=SCHOOL_MASK_ALL),
     ],
     spell_level=26, base_level=28,
-    notes='hidden child of 202209: spell power (aura 13 school mask 126 + aura 135) = stock Flametongue Totem 52109 '
-          'x1.2 (133 at 60; flat 30 until level 28). In stock group 1048 (rule 4).',
+    notes=(
+        'hidden child of 202209: spell power (aura 13 school mask 126 + aura 135) = stock Flametongue Totem 52109 '
+        'x1.2 (133 at 60; flat 30 until level 28). In stock group 1048 (rule 4).'
+        ' Retuned (2026-11-25, raid buff sets, user ruling): the design is no longer "stock Flametongue +20%"; it is '
+        '120 at 60, stock Totem of Wrath\'s level 60 value. points_per_level 3.24546 -> 2.82 from level 28 (base 29, '
+        'BaseLevel 28, SpellLevel 26, MaxLevel 60 kept): 30 at 20, 63 at 40, 120 at 60. The old line gave 133 at 60. '
+        'Arcane Resonance 201779 and the Scroll of Flame 208874 follow at 120.'
+    ),
 )
 
 # ---- Air @32: melee + ranged haste 10% and Agility ----
@@ -199,14 +216,17 @@ air_attunement_202210 = _attunement(
     [
         _area(AuraType.MOD_MELEE_HASTE, base_points=9),
         _area(AURA_MOD_RANGED_HASTE, base_points=9),
-        _area(AuraType.MOD_STAT, base_points=65, points_per_level=2.5, misc_value=STAT_AGILITY),
+        _area(AuraType.MOD_STAT, base_points=46, points_per_level=1.61, misc_value=STAT_AGILITY),
     ],
     spell_level=32, base_level=32,
     description='Attunes you to Air, increasing the melee and ranged haste of party and raid members within 40 '
                 'yards by 10% and their Agility.',
     aura_description='Melee and ranged haste and Agility increased.',
-    notes='melee haste (138) and ranged haste (140, not 192) 10% each; Agility = stock Strength of Earth 8076 eff1 '
-          'x1.2 (136 at 60). Groups 1252, 1253, 1022.',
+    notes=(
+        'melee haste (138) and ranged haste (140, not 192) 10% each; Agility = stock Strength of Earth 8076 eff1 '
+          'x1.2 (136 at 60). Groups 1252, 1253, 1022.'
+        ' Retuned (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): Agility base 65 -> 46, points_per_level 2.5 -> 1.61 from level 32, the design\'s stock Strength of Earth +20% (77 x 1.2). 59 at 40, 92 at 60. The old line was built on the bootstrapped Strength of Earth 8076 (113 at 60), 136 at 60.'
+    ),
 )
 
 scripted_by(earth_attunement_202207, 'spell_sha_attunement')
