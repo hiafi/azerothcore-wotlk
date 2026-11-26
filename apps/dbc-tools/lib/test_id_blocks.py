@@ -883,6 +883,25 @@ class ZulFarrakGearIdsTest(unittest.TestCase):
                          RESERVATIONS["zul_farrak_items"]["creature"]["start"])
 
 
+class GnomereganGearIdsTest(unittest.TestCase):
+    """Gnomeregan gear stage (WP-0, 2026-11-25): the `gnomeregan_items` reservation, pinned exactly
+    (gnomeregan-gear.HANDOFF.md s4). The dungeon build adds its own reservation after these ids."""
+
+    def test_gnomeregan_items_reservation(self):
+        got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["gnomeregan_items"].items()}
+        self.assertEqual(got, {"spell": (214240, 214279), "creature": (301100, 301104)})
+
+    def test_gnomeregan_items_overlaps_no_other_reservation(self):
+        for table, cfg in RESERVATIONS["gnomeregan_items"].items():
+            for owner, tables in RESERVATIONS.items():
+                if owner != "gnomeregan_items" and table in tables:
+                    self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
+
+    def test_gnomeregan_items_sit_inside_the_blocks(self):
+        for table, cfg in RESERVATIONS["gnomeregan_items"].items():
+            self.assertTrue(BLOCKS[table]["start"] <= cfg["start"] and cfg["end"] <= BLOCKS[table]["end"], table)
+
+
 class RagefireChasmIdsTest(unittest.TestCase):
     """Ragefire Chasm build WP-0 (2026-11-24): the dungeon's reservation, pinned exactly
     (ragefire-chasm-build.HANDOFF.md s3.3)."""

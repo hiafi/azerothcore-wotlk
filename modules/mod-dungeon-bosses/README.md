@@ -153,6 +153,8 @@ so db-import and the dbc-tools replay see one history.
 | `src/ZulFarrak/ZulFarrakHardModeItemsLogic.h` | Pure: Zul'Farrak item effect ids (213800-213807, 301000-301004), charge and discharge events, one action per cast, single target heal test, crew table |
 | `src/ZulFarrak/sulthraze_join.cpp` | Call of Sul'thraze (213808), the Use on every tier of Jang'thraze: joins it with a Sang'thraze of the same tier into that tier's Sul'thraze, refuses mixed tiers; loads the tiers from `item_budget_variant` at startup |
 | `src/ZulFarrak/SulthrazeJoinLogic.h` | Pure: the Sul'thraze join's base entries, tier table and tier rule |
+| `src/Gnomeregan/hard_mode_items.cpp` | Whole Workshop hard mode item scripts: Meltdown's pulse filter, the Walking Bomb Launcher's roll, mark and bomb, the blast filter, the Master Punch Card's punches and Clearance |
+| `src/Gnomeregan/GnomereganHardModeItemsLogic.h` | Pure: Gnomeregan item effect ids (214240-214247, 301100), item spell test, one roll per cast, bomb steps, punch rule and card memory |
 | `src/DungeonSets/haunted_set_bonuses.cpp` | Haunted set bonus scripts (10 sets x 3 and 5 pieces) and their hooks |
 | `src/DungeonSets/HauntedSetLogic.h` | Pure: Haunted set bonus ids (205700-205793), script numbers, rolls, picks |
 | `src/DungeonSets/molten_set_bonuses.cpp` | Molten set bonus scripts (10 sets x 3 and 5 pieces): Heat, eruptions, cooldown hooks |
