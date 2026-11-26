@@ -517,7 +517,6 @@ void DpsSimWorldScript::OnDpsSimRun()
             // class does not own (it would see the aura as its own: its bot skips the cast, or the two replace each
             // other every second). See SimBuffSet.h.
             bool const hunter = config.ActorClass == CLASS_HUNTER;
-            buffSet.OwnBuffWins = !hunter;
             std::string setText = sConfigMgr->GetOption<std::string>("DpsSim.BuffSet", "");
             // The profile's key is for its DPS runs: a mechanics run of the same profile stays self_only
             if (setText.empty() && config.RunMode == SimDaemon::Mode::Dps)
@@ -530,11 +529,15 @@ void DpsSimWorldScript::OnDpsSimRun()
             {
                 bool const standard = buffSet.BuffSet == SimBuffSet::Set::Standard;
                 char const* const setName = SimBuffSet::SetName(buffSet.BuffSet);
+                // standard: one neutral list for every class, so a hunter's pet family buff or debuff is its own
+                // like any class buff (user ruling 2026-11-25); full_raid keeps the hunter lists without the rule
+                bool const hunterLists = hunter && !standard;
+                buffSet.OwnBuffWins = !hunterLists;
                 if (config.RunMode != SimDaemon::Mode::Dps)
                     error = Acore::StringFormat("DpsSim.BuffSet {} is for DPS runs only (not heal, tank or mechanics)",
                         setName);
                 // The scrolls have one fixed amount, the level 60 one
-                else if (!hunter && config.ActorLevel != RAID_SCROLL_LEVEL)
+                else if (!hunterLists && config.ActorLevel != RAID_SCROLL_LEVEL)
                     error = Acore::StringFormat("DpsSim.BuffSet {} is for level {} actors (the raid scrolls' "
                         "amounts are fixed), not level {}", setName, RAID_SCROLL_LEVEL, config.ActorLevel);
 
@@ -548,10 +551,8 @@ void DpsSimWorldScript::OnDpsSimRun()
                 std::vector<ListKey> lists;
                 if (standard)
                     lists = {
-                        {"DpsSim.StandardBuffs", hunter ? SimBuffSet::DEFAULT_STANDARD_BUFFS_HUNTER :
-                            SimBuffSet::DEFAULT_STANDARD_BUFFS, &buffSet.Buffs},
-                        {"DpsSim.StandardDebuffs", hunter ? SimBuffSet::DEFAULT_STANDARD_DEBUFFS_HUNTER :
-                            SimBuffSet::DEFAULT_STANDARD_DEBUFFS, &buffSet.Debuffs},
+                        {"DpsSim.StandardBuffs", SimBuffSet::DEFAULT_STANDARD_BUFFS, &buffSet.Buffs},
+                        {"DpsSim.StandardDebuffs", SimBuffSet::DEFAULT_STANDARD_DEBUFFS, &buffSet.Debuffs},
                         {"DpsSim.StandardPullBuffs", SimBuffSet::DEFAULT_STANDARD_PULL_BUFFS, &buffSet.PullBuffs}};
                 else
                     lists = {

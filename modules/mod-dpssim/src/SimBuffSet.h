@@ -36,14 +36,15 @@ class Player;
 // dummy and the pull auras, all applied by the sim (Unit::AddAura, the actor as the caster), not cast by anyone.
 // `standard` is the balance target's set: the common raid buffs and two debuffs, Sated and Exhaustion at the pull (so
 // no Bloodlust, the actor's own included), no flask and no Replenishment. `full_raid` is every category, Bloodlust at
-// the pull, Replenishment and the flask. Two sets of default lists each:
+// the pull, Replenishment and the flask. standard has one set of lists for every class, hunters included (user ruling
+// 2026-11-25: a hunter's fixed pet's family buff or debuff counts like any class's own buff). full_raid has two:
 // - hunters: class buffs and debuffs, each in the same spell_group as the hunter pet family effect of its category, so
 //   a family's own cast is suppressed by the group rule and adds nothing to its number (hunter-pet-families BRAINSTORM
-//   ruling 7). A hunter owns none of them. The flat attack power is the Scroll of Battle (no family casts into its
-//   group 1004).
+//   ruling 7). A hunter owns none of them. No flat attack power member.
 // - every other class: spells no such class owns, since an aura the actor is the caster of must not look like its own
 //   (the Inscription raid buff scrolls; the hunter pet family debuffs and Blood Frenzy). A class buff the actor already
-//   carries from a "highest wins" or "exclusive" group stays up if it is at least as strong (OwnBuffWins).
+//   carries from a "highest wins" or "exclusive" group stays up if it is at least as strong (OwnBuffWins; standard
+//   applies it to hunters too).
 // full_raid also gets Replenishment and, on the actor only, the flask of its highest primary stat.
 namespace SimBuffSet
 {
@@ -131,8 +132,6 @@ namespace SimBuffSet
     extern char const* const DEFAULT_RAID_FLASKS;
     extern char const* const DEFAULT_STANDARD_BUFFS;
     extern char const* const DEFAULT_STANDARD_DEBUFFS;
-    extern char const* const DEFAULT_STANDARD_BUFFS_HUNTER;
-    extern char const* const DEFAULT_STANDARD_DEBUFFS_HUNTER;
     extern char const* const DEFAULT_STANDARD_PULL_BUFFS;
 
     char const* SetName(Set set);

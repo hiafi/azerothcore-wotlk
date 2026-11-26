@@ -437,8 +437,9 @@ DpsSim.PetCreatureEntry = 0
 #                      standard  - the balance target's set: DpsSim.StandardBuffs on the actor and its pet,
 #                                  DpsSim.StandardDebuffs on every dummy (pinned and put back as in full_raid) and
 #                                  DpsSim.StandardPullBuffs (Sated and Exhaustion, so no Bloodlust or Heroism, the
-#                                  actor's own included) at the pull. No flask, no Replenishment. Level 60 only, except
-#                                  hunters; the "own buff wins" rule as in full_raid (not for hunters).
+#                                  actor's own included) at the pull. No flask, no Replenishment. Level 60 only. One
+#                                  set of lists for every class, hunters included, and the "own buff wins" rule of
+#                                  full_raid for every class (a hunter pet family's buff or debuff is its own).
 #                      full_raid - (alias all) DpsSim.RaidBuffs on the actor and its pet after the pre-pull buff
 #                                  phase (not on temporary guardians), one of DpsSim.RaidFlasks on the actor,
 #                                  DpsSim.RaidDebuffs on every dummy at the pull (all pinned, no expiry, and put back
@@ -498,8 +499,6 @@ DpsSim.BuffSet =
 #                        202212     Fire Attunement Spell Power spell power (pet AP)         group 1048
 #                        31583:1    Arcane Empowerment r3       party damage 3%              group 1056
 #                        57669      Replenishment
-#                        208868     Scroll of Battle            attack power (flat)          group 1004 (no family
-#                                                                                            casts into it)
 #                      Debuffs, hunters:
 #                        8647       Expose Armor                major armor -20%             group 1013 -> 1015
 #                        21183:0@3  Heart of the Crusader       crit taken 3% (amount set)   group 1058
@@ -527,18 +526,13 @@ DpsSim.RaidFlasks = default
 #    DpsSim.StandardPullBuffs
 #        Description: The standard lists, same syntax as the full_raid ones (user ruling 2026-11-25, plan
 #                      .agents/plans/raid-buff-sets/). There is no flask key: standard has none. Defaults (level 60):
-#                      Buffs (actor and pet), every class but the hunter, the scrolls of:
+#                      Buffs (actor and pet), every class (hunters too), the scrolls of:
 #                        208860 all stats 10%              208861 Mark of the Wild         208862 Stamina
 #                        208863 maximum health             208864 Intellect                208865 Spirit
 #                        208866 Strength and Agility       208867 armor                    208868 attack power
 #                        208872 spell crit 5%              208873 melee/ranged crit 5%     208874 spell power
-#                      Debuffs (every dummy), every class but the hunter:
+#                      Debuffs (every dummy), every class (hunters too):
 #                        201716 major armor -20%           201773 magic taken 10%
-#                      Buffs, hunters (the same categories out of the hunter full_raid list, which has no Wild,
-#                      maximum health, Intellect or Spirit member): 24932 Leader of the Pack, 8076:01 Strength of
-#                      Earth, 24907:0 Moonkin Aura, 202211 Earth Attunement Armor, 23948 Power Word: Fortitude r6,
-#                      25898:0 Greater Blessing of Kings, 202212 Fire Attunement Spell Power, 208868 Scroll of Battle.
-#                      Debuffs, hunters: 8647 Expose Armor, 60431 Earth and Moon.
 #                      At the pull (actor and pet): 57724 Sated, 57723 Exhaustion (no Bloodlust; the actor's own
 #                      Bloodlust or Heroism cannot be cast).
 #                      Left out on purpose: attack power 10%, melee/ranged haste 10%, all haste 3%, damage done 3%,

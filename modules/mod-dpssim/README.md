@@ -65,9 +65,9 @@ arrows. The run log shows what ran: "tamed pet ...", and "strategies resolved: c
     pinned again within a second.
   - Hunters: class buffs and debuffs (and Replenishment), each in the same `spell_group` as the hunter pet family effect
     of its category, so a family's own cast is suppressed by the group rule and adds nothing (hunter-pet-families
-    ruling 7), plus the Scroll of Battle for flat attack power (no family casts into its group 1004). Families cast
-    the other set's debuffs themselves. Their `standard` lists are the same categories out of these lists (there is no
-    Wild, maximum health, Intellect or Spirit member).
+    ruling 7). Families cast the other set's debuffs themselves. This is `full_raid` only: `standard` has one set of
+    lists for every class, hunters included, and applies the "own buff wins" rule to them too, so the fixed pet's
+    family buff or debuff counts like any class's own buff (user ruling 2026-11-25).
 
   `run-sim.sh` takes `DPSSIM_BUFF_SET=standard` or `full_raid` (".standard" / ".full_raid" in the names, `self` and
   `all` are accepted too) and `DPSSIM_RAID_BUFFS` / `DPSSIM_RAID_DEBUFFS` / `DPSSIM_RAID_PULL_BUFFS` /

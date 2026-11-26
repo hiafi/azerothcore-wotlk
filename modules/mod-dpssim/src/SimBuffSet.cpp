@@ -44,26 +44,21 @@ namespace SimBuffSet
     // Each id (Replenishment aside) sits in the spell_group of the hunter pet family effect of its category
     // (hunter-pet-families DATA-INVENTORY 4.1), so that family's own cast adds nothing; dpssim.conf.dist lists the
     // values at level 60.
-    // 208868 Scroll of Battle (flat attack power) is the one scroll: no hunter pet family casts into its group 1004.
     char const* const DEFAULT_RAID_BUFFS_HUNTER =
-        "24932, 8076:01, 53137, 202210:01, 24907:0, 50172, 5677, 202211, 23948, 25898:0, 202212, 31583:1, 57669, "
-        "208868";
+        "24932, 8076:01, 53137, 202210:01, 24907:0, 50172, 5677, 202211, 23948, 25898:0, 202212, 31583:1, 57669";
     char const* const DEFAULT_RAID_DEBUFFS_HUNTER = "8647, 21183:0@3, 60431, 1160, 6343, 1714:0, 30070";
     char const* const DEFAULT_RAID_PULL_BUFFS = "2825, 57724";
     // Flask of Might, Flask of Grace, Flask of Supreme Power (their target is the drinker, so the effect is explicit)
     char const* const DEFAULT_RAID_FLASKS = "208850:0, 208851:0, 17628:0";
 
-    // standard (user ruling 2026-11-25, plan .agents/plans/raid-buff-sets/): Kings, Wild, Fortitude, Command,
-    // Brilliance, Devotion, Winter's Horn, Stoneskin, Battle, Insight (spell crit), the Pack (melee/ranged crit) and
-    // Flame (spell power); major armor and magic damage taken on the dummies. Left out on purpose: attack power 10%,
-    // melee haste 10%, all haste 3%, damage 3%, crit taken 3%, physical taken 4%, mana per 5, the minor debuffs,
-    // Replenishment and the flask.
+    // standard (user rulings 2026-11-25, plan .agents/plans/raid-buff-sets/), every class, hunters too: Kings, Wild,
+    // Fortitude, Command, Brilliance, Devotion, Winter's Horn, Stoneskin, Battle, Insight (spell crit), the Pack
+    // (melee/ranged crit) and Flame (spell power); major armor and magic damage taken on the dummies. Left out on
+    // purpose: attack power 10%, melee haste 10%, all haste 3%, damage 3%, crit taken 3%, physical taken 4%, mana
+    // per 5, the minor debuffs, Replenishment and the flask.
     char const* const DEFAULT_STANDARD_BUFFS =
         "208860, 208861, 208862, 208863, 208864, 208865, 208866, 208867, 208868, 208872, 208873, 208874";
     char const* const DEFAULT_STANDARD_DEBUFFS = "201716, 201773";
-    // The same categories out of the hunter lists (they have no Wild, Command, Intellect or Spirit member)
-    char const* const DEFAULT_STANDARD_BUFFS_HUNTER = "24932, 8076:01, 24907:0, 202211, 23948, 25898:0, 202212, 208868";
-    char const* const DEFAULT_STANDARD_DEBUFFS_HUNTER = "8647, 60431";
     // Sated and Exhaustion, no Bloodlust: the actor's own Bloodlust or Heroism cannot be cast either
     char const* const DEFAULT_STANDARD_PULL_BUFFS = "57724, 57723";
 
