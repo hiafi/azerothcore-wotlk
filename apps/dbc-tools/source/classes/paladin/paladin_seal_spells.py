@@ -256,13 +256,14 @@ unleash_vengeance_201071 = spell(
     id=201071, name='Judgement of Vengeance', school=_HOLY_SHADOW,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0, duration_ms=15000,
-    effects=[_unleash_dot(12.0612)],
+    effects=[_unleash_dot(13.6292)],
     spell_icon_id=_ICON_SOV_DOT_ALIAS,
     notes='paladin-rework SHARED B4.1: Vengeance unleash DoT, 9/9 per 3 s tick over 15 s (snapshots natively). Icon 90182 (alias of the 2292 texture) and no d1 0x400000, so the JoV +10%/stack hardcode never fires. The script sets canBeRecalculated = false.'
           ' Effect 1 (periodic) potency per tick 9.0 -> 10.8 (2026-10-08, DPS balance pass, user ruling: Retribution x1.20).'
           ' Effect 1 (periodic) potency per tick 10.8 -> 15.12 (2026-10-08, DPS balance pass, user ruling: Retribution x1.40, round 9).'
           ' Effect 1 (periodic) potency per tick 15.12 -> 10.58 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).'
-          ' Effect 1 (periodic) potency per tick 10.58 -> 12.0612 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).',
+          ' Effect 1 (periodic) potency per tick 10.58 -> 12.0612 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).'
+          ' Effect 1 (periodic) potency per tick 12.0612 -> 13.6292 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).',
     raw_overrides=_unleash_raw('Afflicts the target with Twilight damage over time.', '{pot1} Twilight damage every $t1 sec.'),
 )
 
@@ -424,9 +425,10 @@ seal_of_vengeance_hit_201083 = spell(
     id=201083, name='Seal of Vengeance', school=_HOLY_SHADOW, attributes=_PASSIVE_ATTRIBUTES,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0,
-    effects=[_weapon(10.0)],
+    effects=[_weapon(11.0)],
     spell_icon_id=_ICON_SOV,
-    notes='paladin-rework SHARED B1.4: Seal of Vengeance passive, auto-attack form, 10% weapon (bits P). Icon 2292 is safe: the JoV hardcode needs d1 0x400000 as well and a passive carries none.',
+    notes='paladin-rework SHARED B1.4: Seal of Vengeance passive, auto-attack form, 10% weapon (bits P). Icon 2292 is safe: the JoV hardcode needs d1 0x400000 as well and a passive carries none.'
+          ' Effect 1 weapon_potency 10.0 -> 11.0 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13 = 11.3, weapon potency must be whole: x1.10).',
     raw_overrides={**_passive_raw('Seal of Vengeance weapon damage.'), **_chain(1)},
 )
 
@@ -486,9 +488,10 @@ seal_of_vengeance_hit_normalized_201089 = spell(
     id=201089, name='Seal of Vengeance', school=_HOLY_SHADOW, attributes=_PASSIVE_ATTRIBUTES,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0,
-    effects=[_normalized(), _weapon(10.0)],
+    effects=[_normalized(), _weapon(11.0)],
     spell_icon_id=_ICON_SOV,
-    notes='paladin-rework SHARED B1.4: Seal of Vengeance passive, ability form, 10% weapon, bits P.',
+    notes='paladin-rework SHARED B1.4: Seal of Vengeance passive, ability form, 10% weapon, bits P.'
+          ' Effect 2 weapon_potency 10.0 -> 11.0 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13 = 11.3, weapon potency must be whole: x1.10).',
     raw_overrides={**_passive_raw('Seal of Vengeance weapon damage.'), **_chain(1, 2)},
 )
 

@@ -178,15 +178,17 @@ def _wound_burst(spell_id, name_note, role, ap_potency=25.0, potency_note=''):
 festering_wound_burst_203457 = _wound_burst(
     203457, 'RP (3 per wound) and Wandering Plague are granted in the script AfterHit, by source.',
     'wound burst (Scourge Strike, Rotten Touch, Pestilence overflow rules in the script)',
-    ap_potency=26.8,
+    ap_potency=28.408,
     potency_note=' ap_potency 25 -> 26.8 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: '
                  'Festering Wound burst 203457 +7%; 25 x 1.07 = 26.75, kept to one decimal, x1.072; the overflow 203458 '
-                 'and the death explosion 203459 keep their values).')
+                 'and the death explosion 203459 keep their values). ap_potency 26.8 -> 28.408 (2026-11-26, raid-buff-sets retune R1, user ruling: Unholy Plague only x1.06).')
 scripted_by(festering_wound_burst_203457, 'spell_dk_festering_wound_damage')
 
 festering_wound_overflow_203458 = _wound_burst(
     203458, 'Its own id so the combat log and the sim tell an overflow from a burst; damage only.',
-    'overflow burst (a wound added at 10 stacks bursts at once)')
+    'overflow burst (a wound added at 10 stacks bursts at once)',
+    ap_potency=26.5,
+    potency_note=' ap_potency 25.0 -> 26.5 (2026-11-26, raid-buff-sets retune R1, user ruling: Unholy Plague only x1.06; the death explosion 203459 keeps its value).')
 scripted_by(festering_wound_overflow_203458, 'spell_dk_festering_wound_damage')
 
 # The explosion: cast by the Death Knight at the dying enemy's position (an explicit dest captured at death), 8 yd around
@@ -479,7 +481,7 @@ scripted_by(corpse_explosion_detonation_203471, 'spell_dk_corpse_explosion_deton
 # The tick: cast by the Abomination (family 0) at each engaged enemy within 8 yd of it (the cloud aura's periodic script
 # collects them). time_basis_ms 1000: the cloud ticks on a fixed 1 s timer (L2).
 _cloud_tick_effects = [
-    Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=9.0, potency_kind='direct', time_basis_ms=1000,
+    Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=9.45, potency_kind='direct', time_basis_ms=1000,
            implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
 ]
 putrid_cloud_tick_203473 = spell(
@@ -488,7 +490,7 @@ putrid_cloud_tick_203473 = spell(
     effects=_cloud_tick_effects, spell_icon_id=_ICON_RAISE_ABOMINATION,
     notes=(
         'S3a Unholy (U21): one cloud tick on one enemy, cast by the Abomination. Shadow, magic class, eff0 SCHOOL_DAMAGE '
-        'ap_potency 9 direct [tune] (RETUNE 2026-10-25: was 12) '
+        'ap_potency 9 direct [tune] (RETUNE 2026-10-25: was 12; 9.0 -> 9.45 2026-11-26, raid-buff-sets retune R1, user ruling: Unholy shared x1.05) '
         'with time_basis_ms 1000 (L2: the fixed 1 s cadence), SpellLevel 50 (L6). Explicit enemy '
         'target. Family 0 / no bits (minion damage: Mastery once and All Will Serve through the seam; not Impurity). '
         'AttributesEx3 SUPPRESS_CASTER_PROCS (rolls no procs) | ALWAYS_HIT (a minion\'s tick must not miss).'

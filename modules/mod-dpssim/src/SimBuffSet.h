@@ -40,7 +40,8 @@ class Player;
 // 2026-11-25: a hunter's fixed pet's family buff or debuff counts like any class's own buff). full_raid has two:
 // - hunters: class buffs and debuffs, each in the same spell_group as the hunter pet family effect of its category, so
 //   a family's own cast is suppressed by the group rule and adds nothing to its number (hunter-pet-families BRAINSTORM
-//   ruling 7). A hunter owns none of them. No flat attack power member.
+//   ruling 7). A hunter owns none of them. Plus the scrolls of the standard categories no pet family casts (Wild,
+//   Command, Brilliance, Devotion, Battle; 2026-11-26), so full_raid is never weaker than standard for a hunter.
 // - every other class: spells no such class owns, since an aura the actor is the caster of must not look like its own
 //   (the Inscription raid buff scrolls; the hunter pet family debuffs and Blood Frenzy). A class buff the actor already
 //   carries from a "highest wins" or "exclusive" group stays up if it is at least as strong (OwnBuffWins; standard

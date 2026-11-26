@@ -37,6 +37,7 @@ INCANTERS_SP = 0.15            # spell_mage_incanters_absorption_shield's placeh
 INFERNAL_BASE = 166.0          # Infernal melee: two Immolation ticks at 80 (DEMONOLOGY.md 4.0: 83 + 0.1114 x SP)
 INFERNAL_SP = 0.2228
 ARCANE_OVERLOAD_SP_PCT = 34    # Arcane Overload 200092 effect 3: spell power share, percent
+ARCANE_OVERLOAD_R1_FACTOR = 0.975  # raid-buff-sets retune R1, Arcane x0.975
 GARGOYLE_SP_SHARE_PCT = 100    # Ebon Gargoyle spell power per owner attack power, percent
 
 
@@ -100,7 +101,7 @@ class HandScaledConstantsTest(unittest.TestCase):
 
     def test_arcane_overload_spell_power_share(self):
         share = _dsl_effect_value(MAGE_TRIGGER_SPELLS, "arcane_overload_200092", 2, "base_points")
-        self.assertEqual(share, round(ARCANE_OVERLOAD_SP_PCT * potency.SP_COEF_SCALE))
+        self.assertEqual(share, round(ARCANE_OVERLOAD_SP_PCT * ARCANE_OVERLOAD_R1_FACTOR * potency.SP_COEF_SCALE))
 
     def test_gargoyle_spell_power_share(self):
         # Attack power turned into spell power for a spell-potency strike: one point of attack power is worth 1 / R.

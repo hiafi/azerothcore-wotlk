@@ -170,12 +170,13 @@ mongoose_bite_1495 = spell(
     mana_cost_pct=3,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=66.5055, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=69.1657, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=257,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 16); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to potency (74.8 then; ap_potency=130 since the H0 strike retune). hunter-rework S3a A15: TOOLTIP-RECONCILE (a) wording, {pot1*df} with tooltip_vars 1153 (Deadly Focus). Effect 1 ap_potency 97.5 -> 107.25 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Mongoose Bite +10%).'
     ' Effect 1 ap_potency 107.25 -> 73.895 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).'
-    ' Effect 1 ap_potency 73.895 -> 66.5055 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: SV x0.90).',
+    ' Effect 1 ap_potency 73.895 -> 66.5055 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: SV x0.90).'
+    ' Effect 1 ap_potency 66.5055 -> 69.1657 (2026-11-26, raid-buff-sets retune R1, user ruling: Survival x1.04).',
     tooltip_vars=sv_strike_1153,
     raw_overrides={'AttributesEx': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A quick bite that deals {pot1*df} Physical damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 12, 'SpellClassMask_1': 2, 'SpellClassSet': 9, 'SpellLevel': 16, 'SpellVisualID_1': 342, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -361,12 +362,13 @@ raptor_strike_2973 = spell(
     mana_cost_pct=4,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=62.01, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=64.4904, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=26,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 11 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. hunter-rework S3a A15 (user ruling 6): the mana clause is dropped (2973 has no EFFECT_1; the 5% base-mana restore is the capstone of Deadly Focus rank 2 202081 and is described there); TOOLTIP-RECONCILE (a) wording.'
     ' Effect 1 ap_potency 100.0 -> 68.9 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).'
-    ' Effect 1 ap_potency 68.9 -> 62.01 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: SV x0.90).',
+    ' Effect 1 ap_potency 68.9 -> 62.01 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: SV x0.90).'
+    ' Effect 1 ap_potency 62.01 -> 64.4904 (2026-11-26, raid-buff-sets retune R1, user ruling: Survival x1.04).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A strike that deals {pot1} Physical damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'EquippedItemInvTypes': 0, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 12, 'SpellClassMask_3': 65536, 'SpellClassSet': 9, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 39, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1165,7 +1167,7 @@ kill_command_34026 = spell(
     mana_cost_pct=3,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=65.232, potency_kind='direct', implicit_target_a=6),  # TUNE1: was 75; 2026-11-01 pass 1031: 86.0 -> 98.9 -> 108.79
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=60.7310, potency_kind='direct', implicit_target_a=6),  # R1 x0.931; TUNE1: was 75; 2026-11-01 pass 1031: 86.0 -> 98.9 -> 108.79
         Effect(type=EffectType.DUMMY, implicit_target_a=6),
     ],
     spell_icon_id=2226,
@@ -1179,6 +1181,7 @@ kill_command_34026 = spell(
         ' Effect 1 ap_potency 108.79 -> 75.5 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: BM x0.694).'
         ' Effect 1 ap_potency 75.5 -> 67.95 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: BM x0.90).'
         ' Effect 1 ap_potency 67.95 -> 65.232 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: BM x0.96 on Kill Command and the Wolf commands / Stomp).'
+        ' Effect 1 ap_potency 65.232 -> 60.731 (2026-11-26, raid-buff-sets retune R1, user ruling: BM x0.931).'
     ),
     raw_overrides={
         'AuraDescription_Lang_Mask': 16712188,
@@ -2119,7 +2122,7 @@ explosive_shot_53301 = spell(
     duration_ms=2000,
     effects=[
         # The hit (SURVIVAL 5.5, V2): the only 53301 potency.
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=39.8727, potency_kind='direct', implicit_target_a=6),   # 2026-11-01 pass 1031: 76.5 -> 53.55; 2026-11-16 ST1000: 53.55 -> 64.3
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=41.4676, potency_kind='direct', implicit_target_a=6),   # 2026-11-01 pass 1031: 76.5 -> 53.55; 2026-11-16 ST1000: 53.55 -> 64.3
         # A bare 1 s timer (live 0, no potency, no potency_excluded): its d1 b31 hardcode (cast 53352 with BP0 =
         # m_amount, SpellAuraEffects.cpp) is prevented by spell_hun_explosive_shot_rework, which casts 53352 with no bp.
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DUMMY,
@@ -2138,7 +2141,8 @@ explosive_shot_53301 = spell(
           '(Medium-Long Range, 0-35 yd, no flag). '
           'Effect 1 ap_potency 76.5 -> 53.55 (2026-11-01, DPS balance pass 1031, user ruling: Explosive Shot -30%). Effect 1 ap_potency 53.55 -> 64.3 (64.26 kept to one decimal, so +20.1%) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Explosive Shot +20%).'
           ' Effect 1 ap_potency 64.3 -> 44.303 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).'
-          ' Effect 1 ap_potency 44.303 -> 39.8727 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: SV x0.90).',
+          ' Effect 1 ap_potency 44.303 -> 39.8727 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: SV x0.90).'
+    ' Effect 1 ap_potency 39.8727 -> 41.4676 (2026-11-26, raid-buff-sets retune R1, user ruling: Survival x1.04).',
     raw_overrides={'AttributesEx2': 131072, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Taking Fire damage every second.', 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You fire an explosive charge into the enemy target, dealing {pot1*tntdemo} Fire damage. The charge blasts the target every second for an additional $d, dealing ' + pot_text(explosive_shot_53352, var='tntdemo') + ' Fire damage each time. Nearby enemies take $202054s2% of the damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 35, 'Speed': 40.0, 'SpellClassMask_2': 2147483648, 'SpellClassSet': 9, 'SpellLevel': 30, 'SpellVisualID_1': 11828, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

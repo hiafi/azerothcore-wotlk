@@ -127,7 +127,7 @@ ICON_THUNDERSTORM = 3080
 # =====================================================================================================================
 # Script numbers (generated into ShamanData::)
 # =====================================================================================================================
-EMPOWERMENT_PCT = const('EMPOWERMENT_PCT', 10, 'Elemental Empowerment, percent damage [fixed]; Conduit capstone adds Mastery.')
+EMPOWERMENT_PCT = const('EMPOWERMENT_PCT', 20, 'Elemental Empowerment, percent damage [fixed]; Conduit capstone adds Mastery. 10 -> 20 (2026-11-26, raid-buff-sets retune R1, user ruling: Power of the Elements Empowerment 10% -> 20%).')
 GATHERING_FLAMES_MAX = const('GATHERING_FLAMES_MAX', 5, 'Gathering Flames stack cap [fixed].')
 ECHO_MAX = const('ECHO_MAX', 10, 'Echo stack cap [fixed].')
 ECHO_DURATION_MS = const('ECHO_DURATION_MS', 30000, 'Echo duration, ms, refreshed by each Echo [tune] (20 s until the 2026-10-20 Earth Shock burst ruling).')
@@ -140,9 +140,9 @@ LM_CHANCE_PER_STACK = const('LM_CHANCE_PER_STACK', 7, 'Lightning Mastery chance 
 RAW_POWER_CHANCE_R1 = const('RAW_POWER_CHANCE_R1', 33, 'Lightning Mastery rank 1: chance a critical cast grants Raw Power, percent [fixed].')
 RAW_POWER_CHANCE_R2 = const('RAW_POWER_CHANCE_R2', 66, 'Lightning Mastery rank 2 Raw Power chance, percent [fixed].')
 RAW_POWER_CHANCE_R3 = const('RAW_POWER_CHANCE_R3', 100, 'Lightning Mastery rank 3 Raw Power chance, percent [fixed].')
-LO_CHANCE_R1 = const('LO_CHANCE_R1', 6, 'Lightning Overload rank 1 chance per target hit, percent [fixed].')
-LO_CHANCE_R2 = const('LO_CHANCE_R2', 13, 'Lightning Overload rank 2 chance, percent [fixed].')
-LO_CHANCE_R3 = const('LO_CHANCE_R3', 20, 'Lightning Overload rank 3 chance, percent [fixed].')
+LO_CHANCE_R1 = const('LO_CHANCE_R1', 10, 'Lightning Overload rank 1 chance per target hit, percent [fixed]. 6 -> 10 (2026-11-26, raid-buff-sets retune R1, user ruling: 6/13/20% -> 10/20/30%).')
+LO_CHANCE_R2 = const('LO_CHANCE_R2', 20, 'Lightning Overload rank 2 chance, percent [fixed].')
+LO_CHANCE_R3 = const('LO_CHANCE_R3', 30, 'Lightning Overload rank 3 chance, percent [fixed].')
 LO_CRIT_MULT = const('LO_CRIT_MULT', 3, 'Lightning Overload chance multiplier on a critical hit [fixed].')
 SHAMANISM_CHANCE = const('SHAMANISM_CHANCE', 33, 'Shamanism cooldown-reduction chance per Lightning Bolt / Chain Lightning hit, percent [fixed].')
 SHAMANISM_CDR_MS = const('SHAMANISM_CDR_MS', 1000, 'Shamanism reduction of Elemental Mastery / Thunderstorm, real ms [fixed].')
@@ -161,7 +161,7 @@ ASTRAL_SHIFT_PLAIN_PCT = const('ASTRAL_SHIFT_PLAIN_PCT', 10, 'Astral Shift damag
 ASTRAL_SHIFT_EMPOWERED_PCT = const('ASTRAL_SHIFT_EMPOWERED_PCT', 25, 'Empowered Astral Shift damage taken reduction, percent [fixed].')
 ASTRAL_SHIFT_EMPOWERED_MS = const('ASTRAL_SHIFT_EMPOWERED_MS', 6000, 'Empowered Astral Shift duration, ms [fixed].')
 WARDING_HEALTH_PCT = const('WARDING_HEALTH_PCT', 10, 'Elemental Warding capstone maximum health, percent [fixed].')
-WATER_ELEMENTAL_BONUS_PCT = const('WATER_ELEMENTAL_BONUS_PCT', 30, 'Water Elemental damage bonus (Power of the Elements), percent [fixed].')
+WATER_ELEMENTAL_BONUS_PCT = const('WATER_ELEMENTAL_BONUS_PCT', 50, 'Water Elemental damage bonus (Power of the Elements), percent [fixed]. 30 -> 50 (2026-11-26, raid-buff-sets retune R1, user ruling).')
 EARTH_ELEMENTAL_BONUS_PCT = const('EARTH_ELEMENTAL_BONUS_PCT', 20, 'Earth Elemental damage bonus (Elemental Warding capstone), percent [fixed].')
 UNRELENTING_STORM_STACKS = const('UNRELENTING_STORM_STACKS', 3, 'Unrelenting Storm stacks that arm the Chain Lightning capstone [fixed].')
 DEVASTATION_PC_R1 = const('DEVASTATION_PC_R1', 3, 'Elemental Devastation rank 1 Proc Chance bonus, percent points [fixed].')
@@ -310,14 +310,14 @@ wind_rush_rank3_202525 = _wind_rush(202525, 3, True)
 power_of_the_elements_202526 = _rank(
     202526, 'Power of the Elements', [_dummy()], ICON_POTE, 30,
     'While one of your elementals is active, you gain its Elemental Empowerment, increasing the damage of its matching '
-    'spells by 10%. Earth Elemental: Earth Shock and Earthquake. Fire Elemental: Lava Burst, Flame Shock, Fire Nova and '
+    'spells by 20%. Earth Elemental: Earth Shock and Earthquake. Fire Elemental: Lava Burst, Flame Shock, Fire Nova and '
     'your Fire totems; each Lava Burst you cast grants Gathering Flames, increasing the damage of your Flame Shock by '
     '20%, stacking up to 5 times until the Fire Elemental expires. Water Elemental: Frost Shock and Elemental Blast. '
     'Storm Elemental: Lightning Bolt, Chain Lightning and Thunderstorm, and your Chain Lightning jumps to 2 additional '
     'targets. Each elemental\'s own damage is also empowered. Your Earth Elemental no longer taunts or generates threat, '
-    'and your Water Elemental deals 30% more damage.',
+    'and your Water Elemental deals 50% more damage.',
     'marker (DUMMY): the AllCreatureScript hooks read HasAura(202526) to add / remove the Empowerment buffs '
-    '202560-202563 and the guardian auras.',
+    '202560-202563 and the guardian auras. Empowerment 10% -> 20% and the Water Elemental bonus 30% -> 50% (2026-11-26, raid-buff-sets retune R1, user ruling).',
 )
 
 # ---- Conduit of the Elements (60283, row 7): marker -------------------------------------------------------------------
@@ -326,7 +326,7 @@ conduit_of_the_elements_202527 = _rank(
     _desc('Reduces the shared lockout between your elementals to 30 sec.',
           'Your Mastery increases your Elemental Empowerment.', True),
     'marker (DUMMY): Shaman::GetElementalLockoutBaseMs returns CONDUIT_LOCKOUT_MS with it; the capstone (Empowerment '
-    '= 10% + Mastery) is part of the same marker (single rank, so the capstone line is plain).',
+    '= 20% + Mastery) is part of the same marker (single rank, so the capstone line is plain).',
 )
 
 # ---- Icefury (60284, row 8): marker; charge buff 202566 ----------------------------------------------------------------
@@ -350,14 +350,14 @@ def _fusion(spell_id: int, pct: int, last: bool):
     return _rank(
         spell_id, 'Fusion of Elements', [_mod(SpellModOp.DAMAGE, True, pct - 1)], ICON_FUSION, 50,
         _desc(f'Increases the damage of your Elemental Blast by {pct}%.', _FUSION_CAPSTONE, last),
-        f'Fusion of Elements rank {pct // 10}: SPELLMOD_DAMAGE pct +{pct}% on Elemental Blast (d2 b20). Rank 2 is the '
+        f'Fusion of Elements rank {1 if not last else 2}: SPELLMOD_DAMAGE pct +{pct}% on Elemental Blast (d2 b20). Rank 2 is the '
         f'capstone (C++ picks 202576-8 on an EB cast).',
         **_emask(1, (0, 0, ELEMENTAL_BLAST)),
     )
 
 
-fusion_rank1_202529 = _fusion(202529, 10, False)
-fusion_rank2_202530 = _fusion(202530, 20, True)
+fusion_rank1_202529 = _fusion(202529, 25, False)   # 10 -> 25 (2026-11-26, raid-buff-sets retune R1, user ruling: Fusion of Elements 10/20% -> 25/45%)
+fusion_rank2_202530 = _fusion(202530, 45, True)    # 20 -> 45
 # The brief names the variables fusion_of_elements_rank1 / _rank2; the header names (SPELL_FUSION_RANK1 / 2) come from
 # the first-bound variable name above (`_collect_var_names` uses setdefault over the module namespace).
 fusion_of_elements_rank1_202529 = fusion_rank1_202529
@@ -430,13 +430,13 @@ call_of_thunder_rank3_202534 = _call_of_thunder(202534, 6, True)
 
 # ---- Booming Echoes rank 3 (talent 2262, row 7): shocks + Elemental Blast +15%; capstone = Echo (C++) ------------------------
 booming_echoes_rank3_202535 = _rank(
-    202535, 'Booming Echoes', [_mod(SpellModOp.DAMAGE, True, 14), _mod(SpellModOp.DOT, True, 14)], ICON_ECHOES, 45,
-    _desc('Increases the damage of your Shock spells and Elemental Blast by 15%.',
+    202535, 'Booming Echoes', [_mod(SpellModOp.DAMAGE, True, 29), _mod(SpellModOp.DOT, True, 29)], ICON_ECHOES, 45,
+    _desc('Increases the damage of your Shock spells and Elemental Blast by 30%.',
           'Each of your Lightning Overloads grants 1 Echo, stacking up to 10 times. Lasts 30 sec. Each Echo increases '
           'the damage of your next Earth Shock by 30% and its critical strike damage bonus by 10%. Summoning your Earth '
           'Elemental grants 5 Echoes. Earth Shock consumes all Echoes, or half of them while your Earth Elemental is active.', True),
-    'Booming Echoes rank 3 (capstone): SPELLMOD_DAMAGE pct +15% on the three shocks (d0) and Elemental Blast (d2 b20), '
-    'effect 2 SPELLMOD_DOT +15% on Flame Shock; same shape as A2\'s ranks 1 / 2. Echo 202565 is granted by the overload '
+    'Booming Echoes rank 3 (capstone): SPELLMOD_DAMAGE pct +30% (15% until 2026-11-26, raid-buff-sets retune R1, user ruling: Booming Echoes 5/10/15% -> 10/20/30%) on the three shocks (d0) and Elemental Blast (d2 b20), '
+    'effect 2 SPELLMOD_DOT +30% on Flame Shock; same shape as A2\'s ranks 1 / 2. Echo 202565 is granted by the overload '
     'script when it casts a copy.',
     **_emask(1, (SHOCKS, 0, ELEMENTAL_BLAST)), **_emask(2, FLAME_SHOCK),
 )
@@ -466,7 +466,7 @@ elemental_oath_rank3_202536 = spell(
 # =====================================================================================================================
 # Elemental Empowerment buffs 202560-202563 (Power of the Elements)
 # =====================================================================================================================
-# Effect 1 = SPELLMOD_DAMAGE pct +10% (the hooks / spell_sha_ele_empowerment rewrite the amount to 10 + Mastery with
+# Effect 1 = SPELLMOD_DAMAGE pct +20% (the hooks / spell_sha_ele_empowerment rewrite the amount to 20 + Mastery with
 # Conduit), effect 2 = the second mod where the window needs one (Fire: Flame Shock's DoT so the snapshot carries it;
 # Storm: +2 Chain Lightning jumps), effect 3 = PERIODIC_DUMMY 1 s (spell_sha_ele_empowerment's OnEffectPeriodic, EFFECT_2).
 # Infinite, visible, no stack / charge. Copies carry the parent bits, so the Storm window empowers them.
@@ -476,15 +476,15 @@ _EMPOWER_PERIODIC_MS = 1000
 
 def _empowerment(spell_id: int, name: str, icon: int, mask_d: tuple, notes: str, second: Effect | None = None,
                  second_mask=None):
-    effects = [_mod(SpellModOp.DAMAGE, True, 9), second, _aura(AuraType.PERIODIC_DUMMY, 0, amplitude=_EMPOWER_PERIODIC_MS)]
+    effects = [_mod(SpellModOp.DAMAGE, True, 19), second, _aura(AuraType.PERIODIC_DUMMY, 0, amplitude=_EMPOWER_PERIODIC_MS)]
     raw = _emask(1, mask_d)
     if second_mask is not None:
         raw.update(_emask(2, second_mask))
     return _buff(
         spell_id, name, effects, icon, -1, _EMPOWER_TEXT,
         f'Your {name.split()[0].lower()} elemental empowers its matching spells.',
-        f'{name}: SPELLMOD_DAMAGE pct +10% (stored 9) on {notes}. Effect 3 PERIODIC_DUMMY (1 s) is the hook for '
-        f'spell_sha_ele_empowerment (Conduit capstone: amount = 10 + Mastery, written to every mod effect).',
+        f'{name}: SPELLMOD_DAMAGE pct +20% (stored 19; 10% until 2026-11-26, raid-buff-sets retune R1, user ruling) on {notes}. Effect 3 PERIODIC_DUMMY (1 s) is the hook for '
+        f'spell_sha_ele_empowerment (Conduit capstone: amount = 20 + Mastery, written to every mod effect).',
         **raw,
     )
 
@@ -496,9 +496,9 @@ empowerment_earth_202560 = _empowerment(
 empowerment_fire_202561 = _empowerment(
     202561, 'Fire Empowerment', ICON_FIRE, (FLAME_SHOCK | SEARING_MAGMA, LAVA_BURST | FIRE_NOVA_DAMAGE, 0),
     'Flame Shock (d0 b28), Searing / Magma bolts (d0 b30), Lava Burst (d1 b12) and Fire Nova damage 8349 (d1 b18 + b31); '
-    'never d0 b29 / d1 b23 (the Fire Elemental is not a Fire totem). Effect 2 SPELLMOD_DOT +10% on Flame Shock so the '
+    'never d0 b29 / d1 b23 (the Fire Elemental is not a Fire totem). Effect 2 SPELLMOD_DOT +20% on Flame Shock so the '
     'periodic part is empowered (and snapshotted) too',
-    second=_mod(SpellModOp.DOT, True, 9), second_mask=(FLAME_SHOCK, 0, 0),
+    second=_mod(SpellModOp.DOT, True, 19), second_mask=(FLAME_SHOCK, 0, 0),
 )
 empowerment_water_202562 = _empowerment(
     202562, 'Water Empowerment', ICON_WATER, (FROST_SHOCK, 0, ELEMENTAL_BLAST),
@@ -720,17 +720,17 @@ earth_elemental_damage_202586 = _buff(
     hidden=True, guardian=True,
 )
 water_elemental_damage_202587 = _buff(
-    202587, 'Power of the Elements', [_aura(AuraType.MOD_DAMAGE_PERCENT_DONE, 29, SCHOOL_ALL)], ICON_WATER, -1, '',
-    'Increases the damage dealt by your Water Elemental by 30%.',
-    'Water Elemental +30% damage (Power of the Elements): aura 79 all schools (stored 29), owner-added on the guardian. '
+    202587, 'Power of the Elements', [_aura(AuraType.MOD_DAMAGE_PERCENT_DONE, 49, SCHOOL_ALL)], ICON_WATER, -1, '',
+    'Increases the damage dealt by your Water Elemental by 50%.',
+    'Water Elemental +50% damage (Power of the Elements; 30% until 2026-11-26, raid-buff-sets retune R1, user ruling): aura 79 all schools (stored 49), owner-added on the guardian. '
     'Healing is never raised (aura 79 does not touch heals).',
     hidden=True, guardian=True,
 )
 elemental_empowered_202588 = _buff(
-    202588, 'Elemental Empowerment', [_aura(AuraType.MOD_DAMAGE_PERCENT_DONE, 9, SCHOOL_ALL)], ICON_FIRE, -1, '',
-    'Increases the damage dealt by this elemental by 10%.',
-    'Guardian-side Empowerment: aura 79 all schools +10% (stored 9); Shaman::RefreshEmpowerment rewrites the amount to '
-    '10 + Mastery with Conduit. Owner-added on each guardian.',
+    202588, 'Elemental Empowerment', [_aura(AuraType.MOD_DAMAGE_PERCENT_DONE, 19, SCHOOL_ALL)], ICON_FIRE, -1, '',
+    'Increases the damage dealt by this elemental by 20%.',
+    'Guardian-side Empowerment: aura 79 all schools +20% (stored 19; 10% until 2026-11-26, raid-buff-sets retune R1, user ruling); Shaman::RefreshEmpowerment rewrites the amount to '
+    '20 + Mastery with Conduit. Owner-added on each guardian.',
     hidden=True, guardian=True,
 )
 earth_elemental_no_threat_202589 = _buff(
@@ -772,7 +772,7 @@ astral_shift_empowered_202595 = _buff(
 # =====================================================================================================================
 # Lightning Overload copies 202591-202593 (Decision 13)
 # =====================================================================================================================
-# 50% of the parent's potency at the parent's cast-time basis (T = 2000), NO_THREAT, triggered-only, instant, free, no
+# 75% of the parent's potency (50% until 2026-11-26, raid-buff-sets retune R1, user ruling, 2026-11-26) at the parent's cast-time basis (T = 2000), NO_THREAT, triggered-only, instant, free, no
 # cooldown, no range beyond the parent's 30 yd. They carry the PARENT bits (the one allowed exception to FB 4.3: Concussion,
 # Convection, Shamanism, Call of Thunder, Frostbrand, the Storm Empowerment and Echo reach them by bit) and neither
 # NOT_A_PROC (SH0a-CODE-REVIEW m2) nor SPELL_ATTR6_IGNORE_CASTER_DAMAGE_MODIFIERS (they keep caster mods). The Lava Burst
@@ -784,14 +784,14 @@ astral_shift_empowered_202595 = _buff(
 # parent's own LoS filtering stands in for it.
 def _overload_copy(spell_id: int, name: str, school, parent, parent_t_ms: int, mask_d0: int, mask_d1: int, level: int,
                    icon: int, speed: float, visual: int, description: str, chain_amp: float = 1.0, extra_note: str = ''):
-    potency = parent.effects[0].sp_potency / 2
+    potency = parent.effects[0].sp_potency * 0.75
     return spell(
         id=spell_id, name=name, school=school, attributes=0,
         cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
         effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=potency, potency_kind='direct',
                         time_basis_ms=parent_t_ms, implicit_target_a=TARGET_UNIT_TARGET_ENEMY)],
         spell_icon_id=icon,
-        notes=NOTE + f'{name} Lightning Overload copy: potency {potency:g} = half of the parent ({parent.id}) at T '
+        notes=NOTE + f'{name} Lightning Overload copy: potency {potency:g} = 75% of the parent ({parent.id}; half until the 2026-11-26 raid-buff-sets retune R1 ruling) at T '
               f'{parent_t_ms}; AttributesEx NO_THREAT (0x400), AttributesEx2 IGNORE_LINE_OF_SIGHT (0x4: a Chain Lightning jump target is '
               f'LoS-checked from the previous target, not the shaman; the copy is only cast at a target the parent '
               f'just hit); parent bits d0 {mask_d0:#x} / d1 {mask_d1:#x}; no '

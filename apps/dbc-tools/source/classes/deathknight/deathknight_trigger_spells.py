@@ -939,7 +939,7 @@ scourge_strike_55090 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=89, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=95, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=11, implicit_target_a=6),
     ],
@@ -959,7 +959,8 @@ scourge_strike_55090 = spell(
         '(superseded by 55265) is harmless. The tooltip reads Outbreak through tooltip_vars 1280 ($outbreak). Rebinds '
         '-55090 to spell_dk_scourge_strike_rework (end of this file). '
         'weapon_potency 70 -> 77 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Scourge Strike +10%; the Shadow part is a percent of the dealt damage and follows). '
-        'weapon_potency 77 -> 89 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Scourge Strike +15%; 77 x 1.15 = 88.55 rounded to the whole number 89, so +15.6%; the Shadow part 70890 is a percent of the dealt damage and follows).'
+        'weapon_potency 77 -> 89 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Scourge Strike +15%; 77 x 1.15 = 88.55 rounded to the whole number 89, so +15.6%; the Shadow part 70890 is a percent of the dealt damage and follows). '
+        'weapon_potency 89 -> 93 (2026-11-26, raid-buff-sets retune R1, Unholy shared x1.05 = 93.45), then 93 -> 95 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: multiples of 5 for visible weapon percents: x1.067 on 89; the Shadow part 70890 follows).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An unholy strike that deals ${$s1*$<outbreak>}% weapon damage as Physical damage, plus $s3% of that damage as Shadow damage for each of your diseases on the target. Bursts half the Festering Wounds on the target, rounded down, minimum 2. Each rune it spends has a 33% chance to return as a Death Rune.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 2602, 'SpellClassMask_2': m.SCOURGE_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 15, 'SpellPriority': 50, 'SpellVisualID_1': 11832, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -3444,11 +3445,12 @@ necrosis_51462 = _frost_rank(
     51462, 'Necrosis', rank=2, row=2, icon=2709,
     proc_chance=100, proc_type_mask=20,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=12, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
     description='Your auto attacks deal an additional $s1% Shadow damage.',
     notes=(
-        'death-knight-rework S3a (Unholy doc "Necrosis", U27): talent row 2, rank 2 of 3 (51464 / 51465 are not granted). eff0 DUMMY 13% (stock 4 / 8 / 12 / 16 / 20%) read by the stock spell_dk_necrosis on -51459. ProcTypeMask 20 and ProcChance 100 kept; the stock spell_proc row -51459 (flags 0x4, phase 0) is unchanged. The eff1 mask twin (0x400) and the eff2 residue are gone.'
+        'death-knight-rework S3a (Unholy doc "Necrosis", U27): talent row 2, rank 2 of 3 (51464 / 51465 are not granted). eff0 DUMMY 13% (stock 4 / 8 / 12 / 16 / 20%) read by the stock spell_dk_necrosis on -51459. ProcTypeMask 20 and ProcChance 100 kept; the stock spell_proc row -51459 (flags 0x4, phase 0) is unchanged. The eff1 mask twin (0x400) and the eff2 residue are gone. '
+        'eff0 base_points 12 -> 13, 13% -> 14% (2026-11-26, raid-buff-sets retune R1, user ruling: Unholy shared x1.05 = 13.65).'
     ),
 )
 
@@ -3457,11 +3459,12 @@ necrosis_51463 = _frost_rank(
     51463, 'Necrosis', rank=3, row=2, icon=2709,
     proc_chance=100, proc_type_mask=20,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=20, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
     description='Your auto attacks deal an additional $s1% Shadow damage.',
     notes=(
-        'death-knight-rework S3a (Unholy doc "Necrosis", U27): talent row 2, rank 3 of 3 (51464 / 51465 are not granted). eff0 DUMMY 20% (stock 4 / 8 / 12 / 16 / 20%) read by the stock spell_dk_necrosis on -51459. ProcTypeMask 20 and ProcChance 100 kept; the stock spell_proc row -51459 (flags 0x4, phase 0) is unchanged. The eff1 mask twin (0x400) and the eff2 residue are gone.'
+        'death-knight-rework S3a (Unholy doc "Necrosis", U27): talent row 2, rank 3 of 3 (51464 / 51465 are not granted). eff0 DUMMY 20% (stock 4 / 8 / 12 / 16 / 20%) read by the stock spell_dk_necrosis on -51459. ProcTypeMask 20 and ProcChance 100 kept; the stock spell_proc row -51459 (flags 0x4, phase 0) is unchanged. The eff1 mask twin (0x400) and the eff2 residue are gone. '
+        'eff0 base_points 19 -> 20, 20% -> 21% (2026-11-26, raid-buff-sets retune R1, user ruling: Unholy shared x1.05).'
     ),
 )
 
@@ -4361,10 +4364,10 @@ gargoyle_strike_51963 = spell(
     mana_cost_pct=0,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=60.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=65.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=213,
-    notes="RETUNE 2026-10-25: sp_potency 100 -> 60 [tune] (Unholy U36 TUNE on the re-anchored footing). "
+    notes="Effect 1 sp_potency 60.0 -> 63.0 (2026-11-26, raid-buff-sets retune R1, Unholy shared x1.05), then 63.0 -> 65.0 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: visible number to a multiple of 5, x1.083 on 60). RETUNE 2026-10-25: sp_potency 100 -> 60 [tune] (Unholy U36 TUNE on the re-anchored footing). "
           "pulled from existing data. Potency system P8: Ebon Gargoyle's own attack (DoCastVictim, "
           "no custom bp). Base-implied sp_potency=16.8 from the flat (no RealPointsPerLevel) V60 "
           "average of 60 (50 base + die_sides=19 mean 10); the live EffectBonusMultiplier_1 (0.453) "

@@ -97,7 +97,7 @@ deadly_poison_2818 = spell(
     range_yards=100.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000, ap_potency=4.5, potency_kind='periodic'),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000, ap_potency=3.825, potency_kind='periodic'),
         None,
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=197),
     ],
@@ -107,7 +107,7 @@ deadly_poison_2818 = spell(
         'potency-system (PLAN P7-Rogue): converted to ap_potency=4.5 (periodic, matching the live, '
         'already-mismatched ap_dot_bonus=0.030 coefficient\'s base-implied potency from '
         'rogue-potency-report.md/rogue-potency-proposals.txt) - reproduces the pre-conversion V60 '
-        'of 24 exactly (simulate_value).'
+        'of 24 exactly (simulate_value). ap_potency 4.5 -> 3.825 (2026-11-26, raid-buff-sets retune R1, user ruling: shared rogue spells x0.85).'
     ),
     raw_overrides={'AttributesEx': 131208, 'AttributesEx2': 16777220, 'AttributesEx3': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Taking Nature damage over time.', 'CastingTimeIndex': 1, 'CumulativeAura': 5, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Poisons the target for {pot1.total} Nature damage over $2818d. Stacks up to 5 times.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_1': m.DEADLY_POISON, 'SpellClassMask_2': m.POISON_GROUP, 'SpellClassSet': 8, 'SpellLevel': 30, 'SpellVisualID_1': 5100},
 )
@@ -146,7 +146,7 @@ instant_poison_8680 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=40, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=34, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),
     ],
     spell_icon_id=247,
     notes=(
@@ -155,7 +155,7 @@ instant_poison_8680 = spell(
         'rogue-rework RG0a: ap_potency 30 direct, time_basis_ms 1500 ("a payout at 1.5 sec", rogue-shared-rework.md '
         'Instant Poison); SpellClassMask_2 gains the poison group bit (d1 b19); range 100 and EquippedItemClass -1 '
         'kept (script-cast payload of the 203701 self aura). '
-        'rogue-rework M2a (M1 S3, [tune]): ap_potency 30 -> 40.'
+        'rogue-rework M2a (M1 S3, [tune]): ap_potency 30 -> 40. ap_potency 40 -> 34 (2026-11-26, raid-buff-sets retune R1, user ruling: shared rogue spells x0.85).'
     ),
     raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Nature damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_1': m.INSTANT_POISON, 'SpellClassMask_2': m.POISON_GROUP, 'SpellClassSet': 8, 'SpellLevel': 20, 'SpellVisualID_1': 5100},
 )
@@ -6512,11 +6512,11 @@ hack_and_slash_13960 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1462,
     notes=(
-        'rogue-rework S3a A2, Combat doc "Hack and Slash": eff0 DUMMY 33 (weapon %, the strikes\' bp; read by GetRankAmount), any one-hander (the script checks the hitting hand). The proc row -13960 (flags 0x14, chance 100) and spell_rog_hack_and_slash roll it; raw ProcTypeMask 20 kept, the row\'s chance overrides ProcChance.'
+        'rogue-rework S3a A2, Combat doc "Hack and Slash": eff0 DUMMY 30 (2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88; was 33) (weapon %, the strikes\' bp; read by GetRankAmount), any one-hander (the script checks the hitting hand). The proc row -13960 (flags 0x14, chance 100) and spell_rog_hack_and_slash roll it; raw ProcTypeMask 20 kept, the row\'s chance overrides ProcChance.'
     ),
     raw_overrides={
         'AttributesEx3': 524288,
@@ -6554,11 +6554,11 @@ hack_and_slash_13961 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1462,
     notes=(
-        'rogue-rework S3a A2, Combat doc "Hack and Slash": eff0 DUMMY 66 (weapon %, the strikes\' bp; read by GetRankAmount), any one-hander (the script checks the hitting hand). The proc row -13960 (flags 0x14, chance 100) and spell_rog_hack_and_slash roll it; raw ProcTypeMask 20 kept, the row\'s chance overrides ProcChance.'
+        'rogue-rework S3a A2, Combat doc "Hack and Slash": eff0 DUMMY 60 (2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88; was 66) (weapon %, the strikes\' bp; read by GetRankAmount), any one-hander (the script checks the hitting hand). The proc row -13960 (flags 0x14, chance 100) and spell_rog_hack_and_slash roll it; raw ProcTypeMask 20 kept, the row\'s chance overrides ProcChance.'
     ),
     raw_overrides={
         'AttributesEx3': 524288,
@@ -6596,11 +6596,11 @@ hack_and_slash_13962 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=89, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1462,
     notes=(
-        'rogue-rework S3a A2, Combat doc "Hack and Slash": eff0 DUMMY 100 (weapon %, the strikes\' bp; read by GetRankAmount), any one-hander (the script checks the hitting hand). The proc row -13960 (flags 0x14, chance 100) and spell_rog_hack_and_slash roll it; raw ProcTypeMask 20 kept, the row\'s chance overrides ProcChance.'
+        'rogue-rework S3a A2, Combat doc "Hack and Slash": eff0 DUMMY 90 (2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88; was 100) (weapon %, the strikes\' bp; read by GetRankAmount), any one-hander (the script checks the hitting hand). The proc row -13960 (flags 0x14, chance 100) and spell_rog_hack_and_slash roll it; raw ProcTypeMask 20 kept, the row\'s chance overrides ProcChance.'
     ),
     raw_overrides={
         'AttributesEx3': 524288,
@@ -6943,7 +6943,7 @@ killing_spree_main_57841 = spell(
     range_yards=5.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=200, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=175, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=6, trigger_spell=57842),
     ],
@@ -6953,7 +6953,7 @@ killing_spree_main_57841 = spell(
         'rogue-rework M2a (M1 C2, [tune]): 100% -> 200% weapon damage per hand. Mutilate-hand layout (potency.md '
         '"Weapon attacks"): eff0 WEAPON_PERCENT_DAMAGE weapon_potency 200 FIRST, eff1 the stock NORMALIZED_WEAPON_DMG '
         '(bp -1 = no flat part, keeps the strike normalized), eff2 TRIGGER_SPELL 57842 (was eff1; no C++ reads its '
-        'index: spell_rog_killing_spree_rework_aura casts 57841 plainly).'
+        'index: spell_rog_killing_spree_rework_aura casts 57841 plainly). weapon_potency 200 -> 175 (176 rounded to a multiple of 5; 2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88).'
     ),
     raw_overrides={
         'AttributesEx': 512,
@@ -6999,14 +6999,14 @@ killing_spree_off_57842 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=200, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=175, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
     ],
     spell_icon_id=83,
     notes=(
         'rogue-rework S3a A2, Combat doc "Killing Spree" off-hand strike (moved from npc.csv): KILLING_SPREE_STRIKE_CLASS (d1 b23), Ex3 |= SUPPRESS_CASTER_PROCS 0x10000, Ex4 |= SUPPRESS_WEAPON_PROCS 0x800000 (R6 / U62); damage unchanged. '
         'rogue-rework M2a (M1 C2, [tune]): 100% -> 200% weapon damage, eff0 WEAPON_PERCENT_DAMAGE weapon_potency 200 '
-        'FIRST, eff1 the stock NORMALIZED_WEAPON_DMG bp -1 (the 57841 shape).'
+        'FIRST, eff1 the stock NORMALIZED_WEAPON_DMG bp -1 (the 57841 shape). weapon_potency 200 -> 175 (176 rounded to a multiple of 5; 2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88).'
     ),
     raw_overrides={
         'AttributesEx': 16,

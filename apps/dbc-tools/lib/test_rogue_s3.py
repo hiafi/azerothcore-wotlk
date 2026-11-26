@@ -218,7 +218,7 @@ AMOUNTS = (
     + [(i, 1, AURA_DUMMY, v) for i, v in zip((31124, 31126), (2, 4))]
     + [(i, 1, AURA_DUMMY, v) for i, v in zip((51685, 51686, 51687), (3, 6, 10))]
     + [(i, 2, AURA_DUMMY, v) for i, v in zip((51685, 51686, 51687), (5, 10, 15))]
-    + [(i, 1, AURA_DUMMY, v) for i, v in zip((13960, 13961, 13962), (33, 66, 100))]
+    + [(i, 1, AURA_DUMMY, v) for i, v in zip((13960, 13961, 13962), (30, 60, 90))]  # raid-buff-sets R1 2026-11-26: Combat x0.88 (was 33, 66, 100)
     + [(i, 3, AURA_DUMMY, v) for i, v in zip((13742, 13872), (10, 20))]
     + [(i, 1, AURA_FLAT, v) for i, v in zip((13742, 13872), (-30000, -60000))]
     + [(i, 1, AURA_PCT, v) for i, v in zip(CDG, (10, 20, 30))]

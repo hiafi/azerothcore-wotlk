@@ -41,11 +41,13 @@ namespace SimBuffSet
         "208860, 208861, 208862, 208863, 208864, 208865, 208866, 208867, 208868, 208869, 208870, 208871, 208872, "
         "208873, 208874, 208875, 208876, 57669";
     char const* const DEFAULT_RAID_DEBUFFS = "201716, 201766, 201773, 201754, 201763, 201768, 30070";
-    // Each id (Replenishment aside) sits in the spell_group of the hunter pet family effect of its category
-    // (hunter-pet-families DATA-INVENTORY 4.1), so that family's own cast adds nothing; dpssim.conf.dist lists the
-    // values at level 60.
+    // Each id up to 31583 sits in the spell_group of the hunter pet family effect of its category (hunter-pet-families
+    // DATA-INVENTORY 4.1), so that family's own cast adds nothing; the scrolls after it (Wild, Command, Brilliance,
+    // Devotion, Battle) are the standard categories no pet family casts (raid-buff-sets retune, user ruling
+    // 2026-11-26: full_raid is never weaker than standard for hunters). dpssim.conf.dist lists the values at level 60.
     char const* const DEFAULT_RAID_BUFFS_HUNTER =
-        "24932, 57330:01, 53137, 202210:01, 24907:0, 50172, 25894, 208867, 23948, 25898:0, 202212, 31583:1, 57669";
+        "24932, 57330:01, 53137, 202210:01, 24907:0, 50172, 25894, 208867, 23948, 25898:0, 202212, 31583:1, "
+        "208861, 208863, 208864, 208865, 208868, 57669";
     char const* const DEFAULT_RAID_DEBUFFS_HUNTER = "8647, 21183:0@3, 60431, 1160, 6343, 1714:0, 30070";
     char const* const DEFAULT_RAID_PULL_BUFFS = "2825, 57724";
     // Flask of Might, Flask of Grace, Flask of Supreme Power (their target is the drinker, so the effect is explicit)

@@ -498,6 +498,11 @@ DpsSim.BuffSet =
 #                        25898:0    Greater Blessing of Kings   all stats 10%                group 1006
 #                        202212     Fire Attunement Spell Power spell power (120)            group 1048
 #                        31583:1    Arcane Empowerment r3       party damage 3%              group 1056
+#                        208861     Scroll of the Wild          armor 285, stats 12, res 20  no pet family casts it
+#                        208863     Scroll of Command           maximum health (738)         no pet family casts it
+#                        208864     Scroll of Brilliance        Intellect                    no pet family casts it
+#                        208865     Scroll of Devotion          Spirit                       no pet family casts it
+#                        208868     Scroll of Battle            attack power (232)           no pet family casts it
 #                        57669      Replenishment
 #                      Debuffs, hunters:
 #                        8647       Expose Armor                major armor -20%             group 1013 -> 1015

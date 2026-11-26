@@ -179,21 +179,24 @@ TOOLTIP_FRAGMENTS = {
     200039: ("armor value from your equipped Shield by 20%", "Stamina by 2%", "block value by 4%"),
     200040: ("armor value from your equipped Shield by 30%", "Stamina by 3%", "block value by 6%"),
     50685: ("critical strike chance of your Revenge by 10%",
-            "1.5% of your maximum health to your Storm's Bulwark shield", "does not extend the shield's duration"),
+            "1.275% of your maximum health to your Storm's Bulwark shield", "does not extend the shield's duration"),
     50686: ("chance of your Revenge by 20%",), 50687: ("chance of your Revenge by 30%",),
-    200056: ("0.5% of your maximum health to your Storm's Bulwark shield", "increased by 20% for each application of "
+    200056: ("0.425% of your maximum health to your Storm's Bulwark shield", "increased by 20% for each application of "
                                                                           "Sunder Armor"),
-    200057: ("1% of your maximum health to your Storm's Bulwark shield", "increased by 20%"),
-    200058: ("absorb shield equal to 2% of your maximum health",
-             "additional 1% for each target struck, up to 5 targets", "Lasts 15 sec",
+    200057: ("0.85% of your maximum health to your Storm's Bulwark shield", "increased by 20%"),
+    # Storm's Bulwark percents x0.85 (2026-11-26, raid-buff-sets retune R1, user ruling 6A; STORMS_BULWARK_GRANT_SCALE)
+    200058: ("absorb shield equal to 1.7% of your maximum health",
+             "additional 0.85% for each target struck, up to 5 targets", "Lasts 15 sec",
              "Mastery increases every amount added to your Storm's Bulwark shield, and raises its maximum"),
-    200059: ("equal to 4% of your maximum health", "Lasts 15 sec"),
-    200060: ("equal to 6% of your maximum health", "Lasts 15 sec"),
+    200059: ("equal to 3.4% of your maximum health", "Lasts 15 sec"),
+    200060: ("equal to 5.1% of your maximum health", "Lasts 15 sec"),
+    SHOCKWAVE: ("equal to 17% of your maximum health to your Storm's Bulwark shield",
+                "additional 0.85% for each target struck, up to 5 targets"),
     12797: ("Revenge ability by 15%", "next Devastate within 8 sec will strike an additional target",
             "Your Revenge strikes 4 additional targets"),
     12799: ("Revenge ability by 30%", "next Devastate within 8 sec will strike an additional target"),
     200049: ("reduces the remaining cooldown of your Last Stand by 1 sec", "increasing its damage by 30%",
-             "equal to 2% of your maximum health"),
+             "equal to 1.7% of your maximum health"),
     200062: ("increases the absorb granted by your next Thunder Clap by 25%",),
     200063: ("increases the absorb granted by your next Thunder Clap by 50%",),
     200054: ("bleed for 15% of the damage dealt over 9 sec",),
@@ -1498,6 +1501,25 @@ class WarriorS1NegativeTest(unittest.TestCase):
             self.assertGreaterEqual(len(check_capstones(in_aura)), 1, name)
         self.assertGreaterEqual(len(check_capstones({k: v for k, v in self.rows.items() if k != 12803})), 1)
         self.assertGreaterEqual(len(check_capstones(_mut(self.rows, 12312, Name_Lang_enUS="Improved Disciplines"))), 1)
+
+
+class StormsBulwarkGrantScaleTest(unittest.TestCase):
+    """Retune R1 (2026-11-26, user ruling 6A): the C++ grant scale and the tooltip helper's must stay equal."""
+
+    CPP = TOOL_ROOT.parents[1] / "src" / "server" / "game" / "Entities" / "Unit" / "WarriorMechanics.cpp"
+
+    def test_cpp_and_tooltip_scale_match(self):
+        from source.classes.warrior import _tooltips
+        m = re.search(r"constexpr float STORMS_BULWARK_GRANT_SCALE = ([0-9.]+)f;", self.CPP.read_text())
+        self.assertIsNotNone(m, "STORMS_BULWARK_GRANT_SCALE not found in WarriorMechanics.cpp")
+        self.assertAlmostEqual(float(m.group(1)), _tooltips.STORMS_BULWARK_GRANT_SCALE, places=6)
+        self.assertIn("* STORMS_BULWARK_GRANT_SCALE", self.CPP.read_text(), "the add no longer applies the scale")
+
+    def test_bulwark_pct_format(self):
+        from source.classes.warrior import _tooltips
+        scale = _tooltips.STORMS_BULWARK_GRANT_SCALE
+        self.assertEqual(float(_tooltips.bulwark_pct(2)), round(2 * scale, 3))
+        self.assertEqual(float(_tooltips.bulwark_pct(20)), round(20 * scale, 3))
 
 
 if __name__ == "__main__":

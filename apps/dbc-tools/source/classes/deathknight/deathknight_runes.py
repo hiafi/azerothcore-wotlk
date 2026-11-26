@@ -417,11 +417,12 @@ boiling_blight_203043 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=100.0, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=105.0, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=4068,
     notes='dk-rework DK0b (shared doc "Rune of Boiling Blight"): the burst. Shadow SCHOOL_DAMAGE on the target, '
+          'Effect 1 ap_potency 100.0 -> 105.0 (2026-11-26, raid-buff-sets retune R1, user ruling: Unholy shared x1.05). '
           'ap_potency 100 [tune] (RETUNE 2026-10-25: was 200) '
           'direct T 1500, SpellLevel 20, DefenseType 1 (magic: crits at spell crit chance, Runic Focus '
           'doubles it), family 15 with d2 b11 only (_masks.ROT_DAMAGE, the N4 Rot damage group), AttributesEx3 0x50000 (ALWAYS_HIT + no caster procs) '

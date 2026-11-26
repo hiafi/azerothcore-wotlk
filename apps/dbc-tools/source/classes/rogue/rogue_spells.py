@@ -59,9 +59,9 @@ _dt_cp = _potency.resolve(
 # SDV 1323), each line one `$max()` (potency.md "Tooltips").
 _EVISCERATE_LEVEL = 1
 _ev_flat = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=43.184232, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=_EVISCERATE_LEVEL)
+    _potency.PotencyEffect(ap_potency=36.7065972, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=_EVISCERATE_LEVEL)
 _ev_cp = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=68.2089408, kind=_potency.KIND_PERIODIC, t_ms=1500.0),
+    _potency.PotencyEffect(ap_potency=57.97759968, kind=_potency.KIND_PERIODIC, t_ms=1500.0),
     spell_level=_EVISCERATE_LEVEL)
 
 
@@ -94,8 +94,8 @@ backstab_53 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=600, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=24, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=460, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=18.48, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
@@ -110,7 +110,7 @@ backstab_53 = spell(
         'and every other column kept. Cost not talent-reducible (shared doc). '
         'rogue-rework M2a (M1 U4, [tune]): weapon_potency 150 -> 250. '
         'weapon_potency 250 -> 500 and sp_potency 10 -> 20 (2026-11-01, DPS balance pass 1031, user ruling: Backstab +100%); '
-        'weapon_potency 500 -> 600 and sp_potency 20 -> 24 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Backstab +20%).'
+        'weapon_potency 500 -> 600 and sp_potency 20 -> 24 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Backstab +20%). weapon_potency 600 -> 460 (462 rounded to a multiple of 5) and sp_potency 24 -> 18.48 (2026-11-26, raid-buff-sets retune R1, user ruling: Subtlety x0.77).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Backstab the target, causing ${$s1*$<bsall>}% weapon damage plus {pot2.avg*bsall}. Awards 1 combo point. Requires a dagger in the main hand. Must be behind the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 32768, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8388612, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 4, 'SpellPriority': 50, 'SpellVisualID_1': 155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -215,8 +215,8 @@ sinister_strike_1752 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=260, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10.4, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=220, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=8.84, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
@@ -233,7 +233,7 @@ sinister_strike_1752 = spell(
         'Attacks) on the weapon percent and the flat part; second binding spell_rog_sinister_strike_combat. '
         'rogue-rework M2a (M1 S2, [tune]): weapon_potency 100 -> 250 (the second strike 203986 mirrors it). '
         'weapon_potency 250 -> 200 and sp_potency 10 -> 8 (2026-11-01, DPS balance pass 1031, user ruling: Sinister Strike -20%; 203986 mirrors it). '
-        'weapon_potency 200 -> 260 and sp_potency 8 -> 10.4 (2026-11-15, balance on the Normal-tier kits, user ruling: Sinister Strike +30%; 203986 mirrors it).'
+        'weapon_potency 200 -> 260 and sp_potency 8 -> 10.4 (2026-11-15, balance on the Normal-tier kits, user ruling: Sinister Strike +30%; 203986 mirrors it). weapon_potency 260 -> 220 (221 rounded to a multiple of 5) and sp_potency 10.4 -> 8.84 (2026-11-26, raid-buff-sets retune R1, user ruling: shared rogue spells x0.85; the Combat-only second strike 203986 takes x0.88 on its own).'
     ),
     tooltip_vars=tooltip_sinister_strike_1350,
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant strike that causes ${$s1*$<ssmult>}% weapon damage plus {pot2.avg*ssmult}. Awards 1 combo point.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8388610, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 1, 'SpellVisualID_1': 253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
@@ -435,7 +435,7 @@ rupture_1943 = spell(
     duration_ms=4000,
     max_duration_ms=24000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, base_potency=47.64015, ap_potency=15.946875, potency_kind='periodic'),
+        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, base_potency=40.4941275, ap_potency=13.55484375, potency_kind='periodic'),
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=1),
     ],
     tooltip_vars=tooltip_blood_spatter_1322,
@@ -473,7 +473,7 @@ rupture_1943 = spell(
         'variables) dropped. '
         'rogue-rework M2a (M1 S1, [tune]): tick x1.5, base_potency 19.605 -> 29.4075, ap_potency 6.5625 -> 9.84375. '
         'base_potency 29.4075 -> 35.289 and ap_potency 9.84375 -> 11.8125 (2026-11-01, DPS balance pass 1031, user ruling: Rupture +20%). '
-        'base_potency 35.289 -> 47.64015 and ap_potency 11.8125 -> 15.946875 (2026-11-20, level60-stat-curve round S7: rogue buffs after the potency rebase, user ruling: Rupture x1.35).'
+        'base_potency 35.289 -> 47.64015 and ap_potency 11.8125 -> 15.946875 (2026-11-20, level60-stat-curve round S7: rogue buffs after the potency rebase, user ruling: Rupture x1.35). base_potency 47.64015 -> 40.4941275 and ap_potency 15.946875 -> 13.55484375 (2026-11-26, raid-buff-sets retune R1, user ruling: shared rogue spells x0.85).'
     ),
     raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 8, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bleeding.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _RUPTURE_DESCRIPTION, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 1048576, 'SpellClassMask_3': m.FINISHER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 20, 'SpellVisualID_1': 250, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -551,7 +551,7 @@ eviscerate_2098 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=43.184232, cp_ap_potency=68.2089408, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=36.7065972, cp_ap_potency=57.97759968, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=1),
     ],
     tooltip_vars=tooltip_seal_fate_1323,
@@ -569,7 +569,7 @@ eviscerate_2098 = spell(
         'ap_potency 35.49 -> 28.392 and cp_ap_potency 56.056 -> 44.8448 (2026-11-01, DPS balance pass 1031, user ruling: Eviscerate -20%); '
         'ap_potency 28.392 -> 36.9096 and cp_ap_potency 44.8448 -> 58.29824 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Eviscerate +30%); '
         'ap_potency 36.9096 -> 47.98248 and cp_ap_potency 58.29824 -> 75.787712 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Eviscerate +30%); '
-        'ap_potency 47.98248 -> 43.184232 and cp_ap_potency 75.787712 -> 68.2089408 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Eviscerate -10%). Deadly Throw keeps its 75% ratio; '
+        'ap_potency 47.98248 -> 43.184232 and cp_ap_potency 75.787712 -> 68.2089408 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Eviscerate -10%); ap_potency 43.184232 -> 36.7065972 and cp_ap_potency 68.2089408 -> 57.97759968 (2026-11-26, raid-buff-sets retune R1, user ruling: shared rogue spells x0.85). Deadly Throw keeps its 75% ratio; '
         'Between the Eyes (x1.8 of M2a) and the Death from Above landing (x1.15 of M2a) were set on their own in M2c. '
         'The stock-shaped ladder ($m1 / $b1 / $AP x 0.03-0.35) is replaced by the potency '
         'ladder _EVISCERATE_LADDER (average per combo point, both AP terms melee $AP, times $<evmult>).'
@@ -771,8 +771,8 @@ ambush_8676 = spell(
     mana_cost_pct=0,
     range_yards=25.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=378, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10.8, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=290, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=8.316, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, base_points=1, implicit_target_a=6),
     ],
@@ -791,7 +791,7 @@ ambush_8676 = spell(
         'Kill Self on 8676) keep landing a spell hit. '
         'rogue-rework M2a (M1 U1, [tune]): weapon_potency 175 -> 350; '
         'weapon_potency 350 -> 315 and the NORMALIZED_WEAPON_DMG sp_potency 10 -> 9 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Ambush -10%); '
-        'weapon_potency 315 -> 378 and sp_potency 9 -> 10.8 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Ambush +20%).'
+        'weapon_potency 315 -> 378 and sp_potency 9 -> 10.8 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Ambush +20%). weapon_potency 378 -> 290 (291.06 rounded to a multiple of 5) and sp_potency 10.8 -> 8.316 (2026-11-26, raid-buff-sets retune R1, user ruling: Subtlety x0.77).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Ambush the target, causing ${$s1*$<amall>}% weapon damage plus {pot2.avg*amall}. If you are stealthed and more than melee range away, you first teleport behind the target. Awards 2 combo points. Must be Hidden.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'ShapeshiftMask': 536870912, 'SpellClassMask_1': 8389120, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 18, 'SpellPriority': 50, 'SpellVisualID_1': 155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -1316,7 +1316,7 @@ envenom_32645 = spell(
     range_yards=5.0,
     duration_ms=1000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_base_potency=50.44, cp_ap_potency=24.024, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_base_potency=47.918, cp_ap_potency=22.8228, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER,
                misc_value=SpellModOp.CRITICAL_CHANCE),
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=18),
@@ -1344,6 +1344,7 @@ envenom_32645 = spell(
         " Effect 1 cp_base_potency 44.112 -> 48.5 (48.523 kept to one decimal, so +9.95%) and cp_ap_potency 21.0 -> 23.1 (the AP coefficient 0.09 -> 0.099) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Envenom +10%)."
         " Effect 1 cp_base_potency 48.5 -> 63.05 and cp_ap_potency 23.1 -> 30.03 (2026-11-20, level60-stat-curve round S7: rogue buffs after the potency rebase, user ruling: Envenom x1.30)."
         " Effect 1 cp_base_potency 63.05 -> 50.44 and cp_ap_potency 30.03 -> 24.024 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Assassination, Envenom x0.80)."
+        " Effect 1 cp_base_potency 50.44 -> 47.918 and cp_ap_potency 24.024 -> 22.8228 (2026-11-26, raid-buff-sets retune R1, user ruling: Assassination x0.95)."
     ),
     raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 9, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$?s203821[Your poisons are applied more often and are more likely to critically strike.]'
                                       '?s203820[Your poisons are applied more often and are more likely to critically strike.]'

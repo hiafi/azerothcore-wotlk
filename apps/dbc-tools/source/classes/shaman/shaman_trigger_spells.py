@@ -2342,32 +2342,32 @@ elemental_precision_30674 = _talent(
 
 lightning_overload_30675 = _talent(
     30675, 'Lightning Overload', 'Rank 1',
-    [_dummy(5)], 2018,
-    _desc('Gives your Lightning Bolt and Chain Lightning a 6% chance to cast a second, similar spell on the same target at no additional cost that deals half damage and no threat. This chance is tripled for critical strikes.',
+    [_dummy(9)], 2018,
+    _desc('Gives your Lightning Bolt and Chain Lightning a 10% chance to cast a second, similar spell on the same target at no additional cost that deals 75% damage and no threat. This chance is tripled for critical strikes.',
           'While your Fire Elemental is active, your Lava Burst can also trigger Lightning Overload.'),
     ProcTypeMask=_PROC_DONE_SPELL_MAGIC_NEG, ProcChance=100,
-    notes='S1a A2: DUMMY proc carrier (amount = the rank chance, 6 live). spell_proc -30675 now procs at 100% (the scripted roll is the only one) on Lightning Bolt, Chain Lightning and Lava Burst; spell_sha_ele_lightning_overload.',
+    notes='S1a A2: DUMMY proc carrier (amount = the rank chance, 10 live; was 6 until 2026-11-26, raid-buff-sets retune R1, user ruling: Lightning Overload chance 6/13/20% -> 10/20/30%, copy damage 50% -> 75%). spell_proc -30675 now procs at 100% (the scripted roll is the only one) on Lightning Bolt, Chain Lightning and Lava Burst; spell_sha_ele_lightning_overload.',
 )
 
 
 lightning_overload_30678 = _talent(
     30678, 'Lightning Overload', 'Rank 2',
-    [_dummy(12)], 2018,
-    _desc('Gives your Lightning Bolt and Chain Lightning a 13% chance to cast a second, similar spell on the same target at no additional cost that deals half damage and no threat. This chance is tripled for critical strikes.',
+    [_dummy(19)], 2018,
+    _desc('Gives your Lightning Bolt and Chain Lightning a 20% chance to cast a second, similar spell on the same target at no additional cost that deals 75% damage and no threat. This chance is tripled for critical strikes.',
           'While your Fire Elemental is active, your Lava Burst can also trigger Lightning Overload.'),
     ProcTypeMask=_PROC_DONE_SPELL_MAGIC_NEG, ProcChance=100,
-    notes='S1a A2: see lightning_overload_30675.',
+    notes='S1a A2: see lightning_overload_30675. Chance 13% -> 20% (stored 12 -> 19) (2026-11-26, raid-buff-sets retune R1, user ruling).',
 )
 
 
 lightning_overload_30679 = _talent(
     30679, 'Lightning Overload', 'Rank 3',
-    [_dummy(19)], 2018,
-    _desc('Gives your Lightning Bolt and Chain Lightning a 20% chance to cast a second, similar spell on the same target at no additional cost that deals half damage and no threat. This chance is tripled for critical strikes.',
+    [_dummy(29)], 2018,
+    _desc('Gives your Lightning Bolt and Chain Lightning a 30% chance to cast a second, similar spell on the same target at no additional cost that deals 75% damage and no threat. This chance is tripled for critical strikes.',
           'While your Fire Elemental is active, your Lava Burst can also trigger Lightning Overload.',
           last=True),
     ProcTypeMask=_PROC_DONE_SPELL_MAGIC_NEG, ProcChance=100,
-    notes='S1a A2: see lightning_overload_30675.',
+    notes='S1a A2: see lightning_overload_30675. Chance 20% -> 30% (stored 19 -> 29) (2026-11-26, raid-buff-sets retune R1, user ruling).',
 )
 
 
@@ -3169,32 +3169,32 @@ cobra_reflexes_61683 = spell(
 
 shamanism_62097 = _talent(
     62097, 'Shamanism', 'Rank 1',
-    [_mod(SpellModOp.DAMAGE, 4)], 2427,
-    _desc('Increases the damage of your Lightning Bolt and Chain Lightning by 5%. Each time your Lightning Bolt or Chain Lightning deals damage, including Lightning Overloads, you have a 33% chance to reduce the remaining cooldown of Elemental Mastery and Thunderstorm by 1 sec.',
+    [_mod(SpellModOp.DAMAGE, 9)], 2427,
+    _desc('Increases the damage of your Lightning Bolt and Chain Lightning by 10%. Each time your Lightning Bolt or Chain Lightning deals damage, including Lightning Overloads, you have a 33% chance to reduce the remaining cooldown of Elemental Mastery and Thunderstorm by 1 sec.',
           'Increases the haste granted by Elemental Mastery by an additional 5%.'),
     masks={1: (_LB | _CL, 0, 0)}, level=1, SpellPriority=50,
-    notes='S1a A2: Lightning Bolt / Chain Lightning +5% damage (the stock bonus-multiplier clauses are gone). The cooldown roll is spell_sha_ele_spell_hooks / the overload copy script.',
+    notes='S1a A2: Lightning Bolt / Chain Lightning +5% damage (the stock bonus-multiplier clauses are gone). The cooldown roll is spell_sha_ele_spell_hooks / the overload copy script. Damage 5% -> 10% (stored 4 -> 9) (2026-11-26, raid-buff-sets retune R1, user ruling: Shamanism 5/10/15% -> 10/20/30%).',
 )
 
 
 shamanism_62098 = _talent(
     62098, 'Shamanism', 'Rank 2',
-    [_mod(SpellModOp.DAMAGE, 9)], 2427,
-    _desc('Increases the damage of your Lightning Bolt and Chain Lightning by 10%. Each time your Lightning Bolt or Chain Lightning deals damage, including Lightning Overloads, you have a 33% chance to reduce the remaining cooldown of Elemental Mastery and Thunderstorm by 1 sec.',
+    [_mod(SpellModOp.DAMAGE, 19)], 2427,
+    _desc('Increases the damage of your Lightning Bolt and Chain Lightning by 20%. Each time your Lightning Bolt or Chain Lightning deals damage, including Lightning Overloads, you have a 33% chance to reduce the remaining cooldown of Elemental Mastery and Thunderstorm by 1 sec.',
           'Increases the haste granted by Elemental Mastery by an additional 5%.'),
     masks={1: (_LB | _CL, 0, 0)}, level=1, SpellPriority=50,
-    notes='S1a A2: see shamanism_62097.',
+    notes='S1a A2: see shamanism_62097. Damage 10% -> 20% (stored 9 -> 19) (2026-11-26, raid-buff-sets retune R1, user ruling: Shamanism 5/10/15% -> 10/20/30%).',
 )
 
 
 shamanism_62099 = _talent(
     62099, 'Shamanism', 'Rank 3',
-    [_mod(SpellModOp.DAMAGE, 14), _mod(SpellModOp.EFFECT1, 4, pct=False)], 2427,
-    _desc('Increases the damage of your Lightning Bolt and Chain Lightning by 15%. Each time your Lightning Bolt or Chain Lightning deals damage, including Lightning Overloads, you have a 33% chance to reduce the remaining cooldown of Elemental Mastery and Thunderstorm by 1 sec.',
+    [_mod(SpellModOp.DAMAGE, 29), _mod(SpellModOp.EFFECT1, 4, pct=False)], 2427,
+    _desc('Increases the damage of your Lightning Bolt and Chain Lightning by 30%. Each time your Lightning Bolt or Chain Lightning deals damage, including Lightning Overloads, you have a 33% chance to reduce the remaining cooldown of Elemental Mastery and Thunderstorm by 1 sec.',
           'Increases the haste granted by Elemental Mastery by an additional 5%.',
           last=True),
     masks={1: (_LB | _CL, 0, 0), 2: (0, 0, m.EM_HASTE)}, level=1, SpellPriority=50,
-    notes='S1a A2 (brief Decision 11): rank 3 capstone, eff2 flat SPELLMOD_EFFECT1 +5 on d2 b26 (Elemental Mastery haste 64701, effect 1 = the 10% haste -> 15%).',
+    notes='S1a A2 (brief Decision 11): rank 3 capstone, eff2 flat SPELLMOD_EFFECT1 +5 on d2 b26 (Elemental Mastery haste 64701, effect 1 = the 10% haste -> 15%). Damage 15% -> 30% (stored 14 -> 29) (2026-11-26, raid-buff-sets retune R1, user ruling: Shamanism 5/10/15% -> 10/20/30%).',
 )
 
 
@@ -3244,21 +3244,21 @@ shamanism_62101 = spell(
 
 booming_echoes_63370 = _talent(
     63370, 'Booming Echoes', 'Rank 1',
-    [_mod(SpellModOp.DAMAGE, 4), _mod(SpellModOp.DOT, 4)], 2460,
-    _desc('Increases the damage of your Shock spells and Elemental Blast by 5%.',
+    [_mod(SpellModOp.DAMAGE, 9), _mod(SpellModOp.DOT, 9)], 2460,
+    _desc('Increases the damage of your Shock spells and Elemental Blast by 10%.',
           'Each of your Lightning Overloads grants 1 Echo, stacking up to 10 times. Lasts 30 sec. Each Echo increases the damage of your next Earth Shock by 30% and its critical strike damage bonus by 10%. Summoning your Earth Elemental grants 5 Echoes. Earth Shock consumes all Echoes, or half of them while your Earth Elemental is active.'),
     masks={1: (_SHOCKS, 0, m.ELEMENTAL_BLAST), 2: (_FLAME_SHOCK, 0, 0)},
-    notes='S1a A2: shocks + Elemental Blast +5% (talent_mult effect 1), eff2 the Flame Shock tick. The stock shock cooldown clause is gone.',
+    notes='S1a A2: shocks + Elemental Blast +5% (talent_mult effect 1), eff2 the Flame Shock tick. The stock shock cooldown clause is gone. +5% -> +10% (stored 4 -> 9, both effects) (2026-11-26, raid-buff-sets retune R1, user ruling: Booming Echoes 5/10/15% -> 10/20/30%).',
 )
 
 
 booming_echoes_63372 = _talent(
     63372, 'Booming Echoes', 'Rank 2',
-    [_mod(SpellModOp.DAMAGE, 9), _mod(SpellModOp.DOT, 9)], 2460,
-    _desc('Increases the damage of your Shock spells and Elemental Blast by 10%.',
+    [_mod(SpellModOp.DAMAGE, 19), _mod(SpellModOp.DOT, 19)], 2460,
+    _desc('Increases the damage of your Shock spells and Elemental Blast by 20%.',
           'Each of your Lightning Overloads grants 1 Echo, stacking up to 10 times. Lasts 30 sec. Each Echo increases the damage of your next Earth Shock by 30% and its critical strike damage bonus by 10%. Summoning your Earth Elemental grants 5 Echoes. Earth Shock consumes all Echoes, or half of them while your Earth Elemental is active.'),
     masks={1: (_SHOCKS, 0, m.ELEMENTAL_BLAST), 2: (_FLAME_SHOCK, 0, 0)},
-    notes='S1a A2: see booming_echoes_63370.',
+    notes='S1a A2: see booming_echoes_63370. +10% -> +20% (stored 9 -> 19, both effects) (2026-11-26, raid-buff-sets retune R1, user ruling: Booming Echoes 5/10/15% -> 10/20/30%).',
 )
 
 

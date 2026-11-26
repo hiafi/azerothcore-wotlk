@@ -57,8 +57,10 @@ namespace
     // Windfury Attack's bonus: +20% of attack power per attack (U7), normalized the way weapon damage is
     // (AP / 14 per second of the hitting weapon's speed)
     // Custom: 0.2 -> 0.242 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling:
-    // Enhancement-only spells x1.21).
-    constexpr float WINDFURY_AP_BONUS = 0.242f;
+    // Enhancement-only spells x1.21). 0.242 -> 0.2529 (2026-11-26, raid-buff-sets retune R1, user ruling:
+    // Enhancement-only spells x1.045). 0.2529 -> 0.25 (same day, user ruling: rounded numbers; weapon potency
+    // 125 and 0.25 are both x125/121 of the original).
+    constexpr float WINDFURY_AP_BONUS = 0.25f;
 
     // Talent rank chains the Enhancement hooks read, in rank order (reads go through Shaman::GetTalentRank).
     // Improved Lightning Shield (was Improved Shields); Maelstrom Weapon (ranks 4 and 5 are dropped from the talent).

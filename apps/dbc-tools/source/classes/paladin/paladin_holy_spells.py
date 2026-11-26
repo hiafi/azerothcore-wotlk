@@ -188,11 +188,11 @@ light_s_hammer_damage_source_201282 = spell(
     id=201282, name="Light's Hammer", school=_HOLY, attributes=_ATTR0_DO_NOT_DISPLAY,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=RANGE_SELF,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=22.653, potency_kind='direct', time_basis_ms=2000,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=21.7469, potency_kind='direct', time_basis_ms=2000,
                     implicit_target_a=1)],
     spell_icon_id=1664,
     notes="paladin-rework HOLY §4.3 (review-2 X4): hidden damage snapshot source, 27 per 2 s (96 at 60, pure SP like "
-          "Holy Shock). DmgClass MAGIC so SPELL_DIRECT_DAMAGE reads the direct coefficient. Bit LH. Effect 1 sp_potency 27.0 -> 22.653 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839).",
+          "Holy Shock). DmgClass MAGIC so SPELL_DIRECT_DAMAGE reads the direct coefficient. Bit LH. Effect 1 sp_potency 27.0 -> 22.653 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839). Effect 1 sp_potency 22.653 -> 24.1028 (2026-11-26, raid-buff-sets retune R1, Shockadin-only x1.064), then 24.1028 -> 21.7469 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Shockadin x0.96 from the pre-R1 value, 22.653 x 0.96; Light's Hammer ticks 201202 carry no potency and follow this source).",
     raw_overrides=_raw(level=20, dmg_class=_DMG_MAGIC, SpellClassMask_3=m.LIGHTS_HAMMER),
 )
 
@@ -553,12 +553,12 @@ sunlight_hit_201232 = spell(
     id=201232, name='Sunlight', school=_HOLY, attributes=0,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=_FAR_RANGE,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=6.2925, ap_potency=6.2925, potency_kind='direct',
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=6.0408, ap_potency=6.0408, potency_kind='direct',
                     implicit_target_a=6)],
     spell_icon_id=2176,
     notes="paladin-rework HOLY §4.5: Sunlight hit, 15 potency hybrid (7.5 SP + 7.5 AP, [TUNE], Q10), learn 25; "
           "spell_pal_sunlight_hit scales it per rank in OnHit (33 / 66 / 100%: 13 / 27 / 40 at 60). Visual 128 stand-in. "
-          "A2c's rank tooltips copy this potency as a literal expression (HOLY §4.1 exception). Effect 1 sp_potency 7.5 -> 6.2925 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839). Effect 1 ap_potency 7.5 -> 6.2925 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839).",
+          "A2c's rank tooltips copy this potency as a literal expression (HOLY §4.1 exception). Effect 1 sp_potency 7.5 -> 6.2925 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839). Effect 1 ap_potency 7.5 -> 6.2925 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839). Effect 1 sp_potency/ap_potency 6.2925 -> 6.6952 (2026-11-26, raid-buff-sets retune R1, Shockadin-only x1.064), then 6.6952 -> 6.0408 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Shockadin x0.96 from the pre-R1 value, 6.2925 x 0.96).",
     raw_overrides=_raw(
         "Calls down Sunlight on the target, dealing {pot1} Holy damage.", level=25, dmg_class=_DMG_MAGIC,
         AttributesEx2=_ATTR2_IGNORE_LINE_OF_SIGHT, AttributesEx3=_ATTR3_SUPPRESS_CASTER_PROCS, SpellVisualID_1=128,
@@ -569,10 +569,10 @@ sunlight_echo_201233 = spell(
     id=201233, name='Sunlight', school=_HOLY, attributes=0,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=_FAR_RANGE,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=6.2925, ap_potency=6.2925, potency_kind='direct',
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=6.0408, ap_potency=6.0408, potency_kind='direct',
                     implicit_target_a=6)],
     spell_icon_id=2176,
-    notes="paladin-rework HOLY §4.5: Sunlight echo - identical data to 201232 (same scaling script); never rolls an echo itself. Effect 1 sp_potency 7.5 -> 6.2925 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839). Effect 1 ap_potency 7.5 -> 6.2925 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839).",
+    notes="paladin-rework HOLY §4.5: Sunlight echo - identical data to 201232 (same scaling script); never rolls an echo itself. Effect 1 sp_potency 7.5 -> 6.2925 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839). Effect 1 ap_potency 7.5 -> 6.2925 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839). Effect 1 sp_potency/ap_potency 6.2925 -> 6.6952 (2026-11-26, raid-buff-sets retune R1, Shockadin-only x1.064), then 6.6952 -> 6.0408 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Shockadin x0.96 from the pre-R1 value, 6.2925 x 0.96).",
     raw_overrides=_raw(
         "Calls down Sunlight on the target, dealing {pot1} Holy damage.", level=25, dmg_class=_DMG_MAGIC,
         AttributesEx2=_ATTR2_IGNORE_LINE_OF_SIGHT, AttributesEx3=_ATTR3_SUPPRESS_CASTER_PROCS, SpellVisualID_1=128,

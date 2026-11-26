@@ -239,9 +239,9 @@ def _mutilate_hand(spell_id, offhand):
         cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0,
         mana_cost_pct=0, range_yards=None,
         effects=[
-            Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=145.0,
+            Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=140,
                    implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
-            Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10.0, potency_kind='direct', time_basis_ms=1500,
+            Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=9.5, potency_kind='direct', time_basis_ms=1500,
                    implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         ],
         spell_icon_id=533,
@@ -251,7 +251,7 @@ def _mutilate_hand(spell_id, offhand):
               'one-hand weapon mask '
               '41105 (Spell::CheckItems runs on triggered casts). eff0 weapon_potency 145 first, eff1 sp_potency 10 '
               'direct T 1500 second (SS shape). SpellLevel 20. d2 b20 only (m.MUTILATE_HANDS). script '
-              'spell_rog_dual_strike_hand: B13 rescale to a 1.7 weapon + 15% per own poison.',
+              'spell_rog_dual_strike_hand: B13 rescale to a 1.7 weapon + 15% per own poison. weapon_potency 145 -> 140 (137.75 rounded to a multiple of 5) and sp_potency 10 -> 9.5 (2026-11-26, raid-buff-sets retune R1, user ruling: Assassination x0.95).',
         raw_overrides={
             'SpellClassSet': _SPELLFAMILY_ROGUE, 'EquippedItemClass': _ITEM_CLASS_WEAPON,
             'EquippedItemSubclass': _ONE_HAND_WEAPONS, 'SpellLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 2,
@@ -582,7 +582,7 @@ kingsbane_dot_203842 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=_SCRIPT_CAST_RANGE, duration_ms=14000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, ap_potency=23.0,
+        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, ap_potency=21.85,
                potency_kind='periodic', implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_KINGSBANE,
@@ -590,7 +590,7 @@ kingsbane_dot_203842 = spell(
           '2000 ms (fixed cadence), 14 s (idx 305), ap_potency 23 periodic [tune], SpellLevel 60, Dispel Poison, Ex3 '
           '0x80 (stack per caster), CumulativeAura 0, ProcCharges 0, ProcTypeMask 0, no proc row. d1 b19 + d2 b9 '
           '(m.KINGSBANE_DOT: Hunger for Blood and Find Weakness read it). Visible debuff, the doc\'s text. '
-          'spell_rog_kingsbane_dot fixes the base once and ChangeAmounts per stack; the stack count shows as charges.',
+          'spell_rog_kingsbane_dot fixes the base once and ChangeAmounts per stack; the stack count shows as charges. ap_potency 23 -> 21.85 (2026-11-26, raid-buff-sets retune R1, user ruling: Assassination x0.95).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, 'SpellClassMask_2': m.POISON_GROUP, 'SpellClassMask_3': m.KINGSBANE_DOT,
         'EquippedItemClass': -1, 'CastingTimeIndex': 1, 'SpellLevel': 60, 'DefenseType': 0,
@@ -614,7 +614,7 @@ def _kingsbane_hand(spell_id, offhand):
         cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0,
         mana_cost_pct=0, range_yards=None,
         effects=[
-            Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100.0,
+            Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=95.0,
                    implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         ],
         spell_icon_id=_ICON_KINGSBANE,
@@ -622,7 +622,7 @@ def _kingsbane_hand(spell_id, offhand):
               'triggered by 203822 eff1 / eff2. Nature WEAPON_PERCENT_DAMAGE weapon_potency 100 [tune], the stock hand '
               f'frame (Ex3 {"0x1000200" if offhand else "0x600"}), one-hand weapon mask 41105, DefenseType 2, '
               'raw RangeIndex 2, SpellLevel 60, hidden. d1 b19 + d2 b10 (m.POISON_STRIKE). No script (the hook '
-              'records it, the parent resolves once).',
+              'records it, the parent resolves once). weapon_potency 100 -> 95 (2026-11-26, raid-buff-sets retune R1, user ruling: Assassination x0.95).',
         raw_overrides={
             'SpellClassSet': _SPELLFAMILY_ROGUE, 'SpellClassMask_2': m.POISON_GROUP,
             'SpellClassMask_3': m.POISON_STRIKE, 'EquippedItemClass': _ITEM_CLASS_WEAPON,

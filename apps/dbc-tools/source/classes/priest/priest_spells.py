@@ -259,13 +259,14 @@ shadow_word_pain_589 = spell(
     range_yards=30.0,
     duration_ms=18000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=19.274, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=18.0212, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
     ],
     spell_icon_id=234,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1→level-60 slope (anchor rank 10894, rank 8); coefficient/cast_time_ms/mana_cost_pct from max rank (48125, rank 12); MaxLevel set to 80. '
           'Potency system P5-Priest: converted to sp_potency=23.7 (potency-report default, base/coef already agreed). mana_cost_pct 22 -> 16 (2026-10-08, DPS balance pass, user ruling: Shadow mana). Effect 1 sp_potency 23.7 -> 21.33 (2026-11-01, DPS balance pass 1031, user ruling: Shadow Word: Pain -10%).'
           ' sp_potency 21.33 -> 25.596 (2026-11-15, balance on the Normal-tier kits, user ruling: Shadow Word: Pain +20%).'
-          ' sp_potency 25.596 -> 19.274 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).',
+          ' sp_potency 25.596 -> 19.274 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).'
+          ' Effect 1 sp_potency 19.274 -> 18.0212 (2026-11-26, raid-buff-sets retune R1, user ruling: Shadow Priest x0.935).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx4': 1048576, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Shadow damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A word of darkness that causes {pot1.total} Shadow damage over $d.', 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 32768, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 4, 'SpellVisualID_1': 71, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 unbind_bonus_coefficients(shadow_word_pain_589)  # stale spell_bonus_data row overrode the potency coefficient (D1)
@@ -633,14 +634,15 @@ devouring_plague_2944 = spell(
     range_yards=30.0,
     duration_ms=24000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=20.345, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_LEECH, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=19.0226, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_LEECH, amplitude=3000),
     ],
     spell_icon_id=3789,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor rank 19280, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48300, rank 9); MaxLevel set to 80. '
           'docs/reworks/priest-disc-rework.md ("Spell Changes"): learn level moved from 20 to 14. '
           "Potency system P5-Priest: converted to sp_potency=23.7 - a classifier gap (potency_report.py's classify_effect() doesn't recognize PERIODIC_LEECH, so this effect never appeared in the auto-report at all); computed by hand from this fork's own formula (base-implied 23.74, coef-implied 21.58, well under the 10% mismatch threshold so no ambiguity) - matches Shadow Word: Pain's own baseline DoT potency almost exactly, as expected for a plain Shadow DoT. The 15% self-heal (EffectMultipleValue_1) and PERIODIC_LEECH's own stock healing-the-caster mechanic are untouched, same as any other DoT's script multiplier on an already-potency-scaled amount. mana_cost_pct 25 -> 18 (2026-10-08, DPS balance pass, user ruling: Shadow mana). mana_cost_pct 18 -> 14 (2026-10-08, DPS balance pass, user ruling: Shadow mana). Effect 1 sp_potency 23.7 -> 22.515 (2026-11-01, DPS balance pass 1031, user ruling: Devouring Plague -5%)."
           ' sp_potency 22.515 -> 27.018 (2026-11-15, balance on the Normal-tier kits, user ruling: Devouring Plague +20%).'
-          ' sp_potency 27.018 -> 20.345 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).',
+          ' sp_potency 27.018 -> 20.345 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).'
+          ' Effect 1 sp_potency 20.345 -> 19.0226 (2026-11-26, raid-buff-sets retune R1, user ruling: Shadow Priest x0.935).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx5': 32, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Causes {pot1} damage every $t1 seconds, healing the caster.', 'BaseLevel': 14, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Afflicts the target with a disease that causes {pot1.total} Shadow damage over $d. 15% of damage caused by the Devouring Plague heals the caster. This spell can only affect one target at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 0.15000000596046448, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 33554432, 'SpellClassMask_2': 4096, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 14, 'SpellPriority': 50, 'SpellVisualID_1': 346, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # TrainerId 208 is the live Priest trainer (confirmed via lib/trainer_state.py's
@@ -712,14 +714,15 @@ mind_blast_8092 = spell(
     mana_cost_pct=9,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=79.701, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=74.5204, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=95,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1→level-60 slope (anchor rank 10947, rank 9); coefficient/cast_time_ms/mana_cost_pct from max rank (48127, rank 13); MaxLevel set to 80. '
           'Potency system P5-Priest: converted to sp_potency=190.7 (user-reviewed, mismatched row). mana_cost_pct 17 -> 12 (2026-10-08, DPS balance pass, user ruling: Shadow mana). mana_cost_pct 12 -> 9 (2026-10-08, DPS balance pass, user ruling: Shadow mana). Effect 1 sp_potency 190.7 -> 152.6 (2026-10-08, DPS balance pass, user ruling: Shadow damage). Effect 1 sp_potency 152.6 -> 129.71 (2026-11-01, DPS balance pass 1031, user ruling: Mind Blast -15%). Effect 1 sp_potency 129.71 -> 103.768 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Mind Blast -20%).'
           ' sp_potency 103.768 -> 124.522 (2026-11-15, balance on the Normal-tier kits, user ruling: Mind Blast +20%).'
           ' Effect 1 sp_potency 124.522 -> 105.844 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Mind Blast -15%).'
-          ' sp_potency 105.844 -> 79.701 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).',
+          ' sp_potency 105.844 -> 79.701 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).'
+          ' Effect 1 sp_potency 79.701 -> 74.5204 (2026-11-26, raid-buff-sets retune R1, user ruling: Shadow Priest x0.935).',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target for {pot1} Shadow damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 8192, 'SpellClassSet': 6, 'SpellLevel': 10, 'SpellVisualID_1': 3057, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # Priest Shadow rework (SHADOW.md "Scripts on stock spells"): row unchanged, one script class
@@ -1137,13 +1140,14 @@ shadow_word_death_32379 = spell(
     mana_cost_pct=12,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=251.954, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=235.577, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=1980,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 62); RealPointsPerLevel from rank1→top rank's own top level (84, chain has a gap at 60) slope (anchor rank 48158, rank 4); coefficient/cast_time_ms/mana_cost_pct from max rank (48158, rank 4); MaxLevel set to 80. "
           "docs/reworks/priest-disc-rework.md (\"Spell Changes\"): learn level moved from 62 to 30. "
           "Potency system P5-Priest: converted to sp_potency=334.6 (user-reviewed, mismatched row)."
-          ' sp_potency 334.6 -> 251.954 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).',
+          ' sp_potency 334.6 -> 251.954 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).'
+          ' Effect 1 sp_potency 251.954 -> 235.577 (2026-11-26, raid-buff-sets retune R1, user ruling: Shadow Priest x0.935).',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A word of dark binding that inflicts {pot1} Shadow damage to the target.  If the target is not killed by Shadow Word: Death, the caster takes damage equal to 40% of the damage inflicted upon the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_2': 2, 'SpellClassSet': 6, 'SpellLevel': 30, 'SpellVisualID_1': 8069, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # This spell's only pulled trainer_spell row was under dead TrainerId 11 (see devouring_plague_2944's
@@ -1423,7 +1427,8 @@ mind_flay_15407 = spell(
           "auto-report). Two implied potencies disagreed by ~40% (base-implied 67.9 from the live "
           "14+2.65/lvl, SP-coefficient-implied 94.9 at the live 0.271 coefficient); the user chose "
           "the coefficient-implied value. mana_cost_pct 9 -> 7 (2026-10-08, DPS balance pass, user ruling: Shadow mana). mana_cost_pct 7 -> 5 (2026-10-08, DPS balance pass, user ruling: Shadow mana). Effect 3 sp_potency 94.9 -> 85.4 (2026-10-08, DPS balance pass, user ruling: Shadow damage). Effect 3 sp_potency 85.4 -> 98.21 (2026-10-08, DPS balance pass, user ruling: Shadow Mind Flay x1.15, round 10). Effect 3 sp_potency 98.21 -> 88.39 (2026-11-01, DPS balance pass 1031, user ruling: Mind Flay -10%). Effect 3 sp_potency now reads the shared MIND_FLAY_TICK_POTENCY constant (priest_trigger_spells.py), the same number mind_flay_58381's damage effect carries (2026-11-01, user ruling: Mind Flay fully potency-based). MIND_FLAY_TICK_POTENCY 88.39 -> 83.97 (2026-11-01, DPS balance pass 1031, user ruling: Mind Flay -5% more). MIND_FLAY_TICK_POTENCY 83.97 -> 62.978 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Mind Flay -25%)."
-          ' MIND_FLAY_TICK_POTENCY 75.573 -> 56.906 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753); sp_potency follows the constant.',
+          ' MIND_FLAY_TICK_POTENCY 75.573 -> 56.906 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753); sp_potency follows the constant.'
+          ' Effect 3 sp_potency follows MIND_FLAY_TICK_POTENCY 56.906 -> 53.2091 (2026-11-26, raid-buff-sets retune R1, user ruling: Shadow Priest x0.935).',
     raw_overrides={'AttributesEx': 67125252, 'AttributesEx2': 524288, 'AttributesEx5': 134225920, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed slowed.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Assault the target's mind with Shadow energy, causing {pot3.total} Shadow damage over $d and slowing their movement speed by $s2%.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_3': 1088, 'SpellClassSet': 6, 'SpellLevel': 20, 'SpellVisualID_1': 12637, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # Priest Shadow rework (SHADOW.md "Scripts on stock spells"): row unchanged - OnEffectPeriodic
@@ -1502,13 +1507,14 @@ vampiric_touch_34914 = spell(
     duration_ms=15000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=6, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, sp_potency=16.867, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=15.7706, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2213,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1→level-60 slope (anchor rank 34916, rank 2); coefficient/cast_time_ms/mana_cost_pct from max rank (48160, rank 5); MaxLevel set to 80. '
           'Potency system P5-Priest: eff1 (periodic) converted to sp_potency=22.4 (user-reviewed, mismatched row); eff0/eff2 (mana-regen proc marker, dispel-punish marker) are flat DUMMY auras, untouched by the spell-wide BaseLevel/MaxLevel potency now manages. mana_cost_pct 16 -> 12 (2026-10-08, DPS balance pass, user ruling: Shadow mana). mana_cost_pct 12 -> 9 (2026-10-08, DPS balance pass, user ruling: Shadow mana).'
-          ' sp_potency 22.4 -> 16.867 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).',
+          ' sp_potency 22.4 -> 16.867 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).'
+          ' Effect 2 sp_potency 16.867 -> 15.7706 (2026-11-26, raid-buff-sets retune R1, user ruling: Shadow Priest x0.935).',
     raw_overrides={'AttributesEx3': 67108864, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "{pot2} Shadow damage every $t2 seconds. Priest's party or raid members gain 1% of their maximum mana per 5 sec when the priest deals damage from Mind Blast.", 'BaseLevel': 50, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot2.total} Shadow damage over $d to your target and causes up to 10 party or raid members to gain 1% of their maximum mana per 5 sec when you deal damage from Mind Blast. In addition, if the Vampiric Touch is dispelled it will cause $*8;s2 damage to the afflicted target.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 131072, 'SpellClassMask_2': 1024, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 50, 'SpellVisualID_1': 3582, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1913,13 +1919,14 @@ void_eruption_200139 = spell(
     range_yards=30.0,
     radius_yards=10.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=84.411, potency_kind='direct', implicit_target_a=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=78.9243, potency_kind='direct', implicit_target_a=16, radius_yards=10.0),
         Effect(type=EffectType.TRIGGER_SPELL, implicit_target_a=1, trigger_spell=void_eruption_buff_200140.id),
     ],
     spell_icon_id=90104,
     notes='docs/reworks/priest-shadow-rework.md: "Releases an explosive blast of pure void energy, causing Shadow damage to up to 10 enemies within 10 yards of your target. The power drawn from the Void increases your periodic Shadow damage by 10% for 10 sec, with the duration increased by 0.5 sec for each enemy hit. While in Shadowform this spell also applies Shadow Word: Pain to all enemies hit." Baseline behavior only this pass, per the user\'s explicit scope call - Shadow spec\'s "Generates 25 Madness" (priest-shadow-rework.md) is deferred to whenever the Shadow resource system itself gets built. Effect 0: SCHOOL_DAMAGE, dest-area-enemy (implicit_target_a=16, matches Frozen Orb Pulse\'s own dest-area-enemy target), 10 yd radius; originally base_points=299 (stored -1 convention, ~300 damage - the design doc gives no explicit number, this was a first-pass placeholder in line with other level-40 Priest AoE damage). The "up to 10 enemies" cap is enforced in spell_pri_void_eruption (spell_priest_new.cpp) via OnObjectAreaTargetSelect trimming the hit list, not a DBC field. Effect 1: TRIGGER_SPELL, self, applying void_eruption_buff_200140 ("Voidform", priest_trigger_spells.py) - see that spell\'s own notes for the periodic-Shadow-damage-%-boost hook (PriestMechanics.h/.cpp) and the duration-extension/Shadow-Word:-Pain-application logic (both spell_pri_void_eruption). '
           'Potency system P5-Priest: eff0 converted to sp_potency=112.1 (potency-report default, base/coef already agreed).'
-          ' sp_potency 112.1 -> 84.411 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).',
+          ' sp_potency 112.1 -> 84.411 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).'
+          ' Effect 1 sp_potency 84.411 -> 78.9243 (2026-11-26, raid-buff-sets retune R1, user ruling: Shadow Priest x0.935).',
     raw_overrides={'BaseLevel': 40, 'SpellLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Releases an explosive blast of pure void energy, causing {pot1} Shadow damage to up to 10 enemies within 10 yards of your target.  The power drawn from the Void increases your periodic Shadow damage by 10% for 10 sec, with the duration increased by 0.5 sec for each enemy hit.  While in Shadowform this spell also applies Shadow Word: Pain to all enemies hit.  Generates 12 Madness.', 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90015, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassMask_3': _masks.VOID_ERUPTION},
 )
 # Priest Shadow rework (SHADOW.md "Baseline spell edits"): tooltip now states "Generates 12
