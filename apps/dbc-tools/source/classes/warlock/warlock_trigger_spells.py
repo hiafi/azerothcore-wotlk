@@ -4818,14 +4818,14 @@ tainted_soul_eruption_200722 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0, radius_yards=6.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=42.1009, potency_kind='direct', implicit_target_a=87, implicit_target_b=16, radius_yards=6.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=42.4911, potency_kind='direct', implicit_target_a=87, implicit_target_b=16, radius_yards=6.0),
         Effect(type=EffectType.DUMMY, base_points=100, die_sides=0, implicit_target_a=87),
     ],
     spell_icon_id=207,
     notes='warlock-rework AFFLICTION §5/§7.15: eruption, anchored at Shadow Pact row-5 level 35; eff2 carries the erupt-percent (100 on a stack-cap eruption, 10*stacks on a death eruption) as a raw (die_sides=0) value read via GetSpellValue()->EffectBasePoints[EFFECT_1], scaling eff1s dealt damage (F8: multiplies the already-potency-scaled amount, doesn\'t discard it - stays hand-set, not potency). Target-select trims to the source unit + up to 4 others within 6 yd (QA #13/#14). Potency system P4 (warlock pilot): eff0 converted to sp_potency=40.0 (user-reviewed, mismatched row).'
           ' Effect 1 sp_potency 40.0 -> 31.0 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Affliction x0.775).'
           ' Effect 1 sp_potency 31.0 -> 36.58 (2026-11-22, level60-stat-curve round S23, user ruling 14: Affliction x1.18).'
-          ' Effect 1 sp_potency 36.58 -> 43.3583 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853). Effect 1 sp_potency 43.3583 -> 42.1009 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971).',
+          ' Effect 1 sp_potency 36.58 -> 43.3583 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853). Effect 1 sp_potency 43.3583 -> 42.1009 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971). Effect 1 sp_potency 42.1009 -> 42.4911 (2026-11-26, raid-buff-sets retune R4: x0.98 instead of x0.971, R3 measured 1,498).',
     raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Tainted Soul erupts, dealing Shadow damage to the target and up to 4 other enemies within 6 yards.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'MaxTargets': 5, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.TAINTED_SOUL, 'SpellClassSet': 5, 'SpellLevel': 35, 'SpellVisualID_1': 8339},
 )
 scripted_by(tainted_soul_eruption_200722, 'spell_warl_tainted_soul_eruption')
@@ -4861,12 +4861,12 @@ grim_reach_bolt_200725 = spell(
     id=200725, name='Grim Reach', school=School.SHADOW,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=67.6772, potency_kind='direct', implicit_target_a=6)],
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=68.3045, potency_kind='direct', implicit_target_a=6)],
     spell_icon_id=1614,
     notes='warlock-rework AFFLICTION §5/§6 (3,1). Potency system P4 (warlock pilot): converted to sp_potency=64.3 (user-reviewed, mismatched row).'
           ' Effect 1 sp_potency 64.3 -> 49.8325 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Affliction x0.775).'
           ' Effect 1 sp_potency 49.8325 -> 58.8024 (2026-11-22, level60-stat-curve round S23, user ruling 14: Affliction x1.18).'
-          ' Effect 1 sp_potency 58.8024 -> 69.6985 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853). Effect 1 sp_potency 69.6985 -> 67.6772 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971).',
+          ' Effect 1 sp_potency 58.8024 -> 69.6985 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853). Effect 1 sp_potency 69.6985 -> 67.6772 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971). Effect 1 sp_potency 67.6772 -> 68.3045 (2026-11-26, raid-buff-sets retune R4: x0.98 instead of x0.971, R3 measured 1,498).',
     raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grim Reach bolt.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.GRIM_REACH_BOLT, 'SpellClassSet': 5, 'SpellLevel': 25, 'SpellVisualID_1': 8339},
 )
 
@@ -4933,12 +4933,12 @@ phantom_singularity_damage_200730 = spell(
     id=200730, name='Phantom Singularity', school=School.SHADOW,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0, radius_yards=10.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=26.313, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0)],
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=26.5569, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0)],
     spell_icon_id=173,
     notes='warlock-rework AFFLICTION §5/§7.17: NOT SUPPRESS_CASTER_PROCS (must feed Shadow Pacts Tainted Soul proc, §7.15); each tick is a fresh cast (live SP/crit, not snapshotted). Potency system P4 (warlock pilot): converted to sp_potency=25.0 (user-reviewed, mismatched row).'
           ' Effect 1 sp_potency 25.0 -> 19.375 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Affliction x0.775).'
           ' Effect 1 sp_potency 19.375 -> 22.8625 (2026-11-22, level60-stat-curve round S23, user ruling 14: Affliction x1.18).'
-          ' Effect 1 sp_potency 22.8625 -> 27.0989 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853). Effect 1 sp_potency 27.0989 -> 26.313 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971).',
+          ' Effect 1 sp_potency 22.8625 -> 27.0989 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853). Effect 1 sp_potency 27.0989 -> 26.313 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971). Effect 1 sp_potency 26.313 -> 26.5569 (2026-11-26, raid-buff-sets retune R4: x0.98 instead of x0.971, R3 measured 1,498).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Phantom Singularity damage.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.PHANTOM_SINGULARITY, 'SpellClassSet': 5, 'SpellLevel': 30, 'SpellVisualID_1': 8339},
 )
 scripted_by(phantom_singularity_damage_200730, 'spell_warl_phantom_singularity_damage')

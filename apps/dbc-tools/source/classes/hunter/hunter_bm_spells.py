@@ -156,7 +156,7 @@ stomp_pet_201804 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=round(kits.pet_trim(52.0) * 0.9 * 0.96 * 0.931 * 0.935, 4), potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=round(kits.pet_trim(52.0) * 0.9 * 0.96 * 0.931 * 0.95, 4), potency_kind='direct',
                implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],
     pet_owner_scaling=_PET_SCALING,
@@ -167,7 +167,8 @@ stomp_pet_201804 = spell(
     ' Effect 1 ap_potency 36.088 -> 32.4792 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: BM x0.90).'
     ' Effect 1 ap_potency 32.4792 -> 31.18 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: BM x0.96 on Kill Command and the Wolf commands / Stomp).'
     ' Effect 1 ap_potency 31.18 -> 29.03 (2026-11-26, raid-buff-sets retune R1, user ruling: BM x0.931).'
-    ' Effect 1 ap_potency 29.03 -> 27.1431 (2026-11-26, raid-buff-sets retune R3, user ruling: BM x0.935 on its BM-only abilities, BM 1,570 -> ~1,520).',
+    ' Effect 1 ap_potency 29.03 -> 27.1431 (2026-11-26, raid-buff-sets retune R3, user ruling: BM x0.935 on its BM-only abilities, BM 1,570 -> ~1,520).'
+          ' Effect 1 ap_potency 27.1431 -> 27.5785 (2026-11-26, raid-buff-sets retune R4: x0.95 instead of x0.935, R3 measured 1,491).',
     raw_overrides={
         'EquippedItemClass': -1, 'SpellLevel': 30, 'DefenseType': 2, 'PreventionType': 2, 'AttributesEx': 0x200,
         'SpellClassSet': 9, 'SpellClassMask_2': m.STOMP_CARRIER[1], 'SpellClassMask_3': m.STOMP_CARRIER[2],
@@ -401,7 +402,7 @@ lunge_command_201720 = spell(
     range_yards=25.0,
     effects=[
         Effect(type=41, implicit_target_a=6),    # SPELL_EFFECT_JUMP to the target
-        _direct(kits.ferocity_st_damage(302.4) * 0.9 * 0.96 * 0.931 * 0.935),
+        _direct(kits.ferocity_st_damage(302.4) * 0.9 * 0.96 * 0.931 * 0.95),
     ],
     pet_owner_scaling=_PET_SCALING,
     notes='S1a A2 / BM 4.5: Wolf I. eff0 JUMP (41) to the target, eff1 360 Physical (TUNE1: was 400). 25 yd (the jump reach) but DmgClass MELEE (B16). Visual 519 from pet Charge 61685. If the one-spell Lunge fails the playtest, split 201737 (not built).'
@@ -413,7 +414,8 @@ lunge_command_201720 = spell(
           ' Effect 2 ap_potency 224.5562 -> 202.1006 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: BM x0.90).'
           ' Effect 2 ap_potency 202.1006 -> 194.0165 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: BM x0.96 on Kill Command and the Wolf commands / Stomp).'
           ' Effect 2 ap_potency 194.0165 -> 180.6294 (2026-11-26, raid-buff-sets retune R1, user ruling: BM x0.931).'
-          ' Effect 2 ap_potency 180.6294 -> 168.8885 (2026-11-26, raid-buff-sets retune R3, user ruling: BM x0.935 on its BM-only abilities, BM 1,570 -> ~1,520).',
+          ' Effect 2 ap_potency 180.6294 -> 168.8885 (2026-11-26, raid-buff-sets retune R3, user ruling: BM x0.935 on its BM-only abilities, BM 1,570 -> ~1,520).'
+          ' Effect 2 ap_potency 168.8885 -> 171.5979 (2026-11-26, raid-buff-sets retune R4: x0.95 instead of x0.935, R3 measured 1,491).',
     raw_overrides={**_cmd_raw(519),
                    'Description_Lang_enUS': 'Leap to the target and strike it for {pot2} Physical damage.'},
 )
@@ -429,7 +431,7 @@ rip_throat_command_201721 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=5.0,
-    effects=[_direct(kits.ferocity_st_damage(552.5) * 0.9 * 0.96 * 0.931 * 0.935)],
+    effects=[_direct(kits.ferocity_st_damage(552.5) * 0.9 * 0.96 * 0.931 * 0.95)],
     pet_owner_scaling=_PET_SCALING,
     notes='S1a A2 / BM 4.5: Wolf II, 850 Physical (TUNE1: was 1000), melee. Visual 2275 from Ravage 6785.'
           ' Effect 1 ap_potency 850.0 -> 425.0 (2026-11-01, DPS balance pass 1031, user ruling: Rip Throat -50%).'
@@ -440,7 +442,8 @@ rip_throat_command_201721 = spell(
           ' Effect 1 ap_potency 410.2754 -> 369.2479 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: BM x0.90).'
           ' Effect 1 ap_potency 369.2479 -> 354.478 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: BM x0.96 on Kill Command and the Wolf commands / Stomp).'
           ' Effect 1 ap_potency 354.478 -> 330.019 (2026-11-26, raid-buff-sets retune R1, user ruling: BM x0.931).'
-          ' Effect 1 ap_potency 330.019 -> 308.5677 (2026-11-26, raid-buff-sets retune R3, user ruling: BM x0.935 on its BM-only abilities, BM 1,570 -> ~1,520).',
+          ' Effect 1 ap_potency 330.019 -> 308.5677 (2026-11-26, raid-buff-sets retune R3, user ruling: BM x0.935 on its BM-only abilities, BM 1,570 -> ~1,520).'
+          ' Effect 1 ap_potency 308.5677 -> 313.5181 (2026-11-26, raid-buff-sets retune R4: x0.95 instead of x0.935, R3 measured 1,491).',
     raw_overrides={**_cmd_raw(2275), 'RangeIndex': 2,
                    'Description_Lang_enUS': "Tear at the target's throat, causing {pot1} Physical damage."},
 )

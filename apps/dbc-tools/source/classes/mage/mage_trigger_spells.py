@@ -203,7 +203,7 @@ living_bomb_44461 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=43.8156, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=45.2139, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=3000,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (86, chain has a gap at 60) slope (anchor rank 55362, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (55362, rank 3); MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=114.4 (mage-potency-proposals.txt) - cast natively via spell_mage_living_bomb::AfterRemove's caster->CastSpell(target, id, true) (no custom bp), so it's a genuine potency candidate, not script-driven. Effect 1 sp_potency 114.4 -> 91.5 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana)."
@@ -212,7 +212,8 @@ living_bomb_44461 = spell(
           ' sp_potency 50.4714 -> 51.9855 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Fire Mage, the other Fire spells about x1.05, sized x1.03 to land Fire about 1,025).'
           ' Effect 1 sp_potency 51.9855 -> 49.9061 (2026-11-22, level60-stat-curve round S23, user ruling 18: Fire x0.96, a Fire-only spell).'
           ' Effect 1 sp_potency 49.9061 -> 46.6123 (2026-11-26, raid-buff-sets retune R1, user ruling: Fire x0.934).'
-          ' Effect 1 sp_potency 46.6123 -> 43.8156 (2026-11-26, raid-buff-sets retune R3, user ruling: Fire x0.94).',
+          ' Effect 1 sp_potency 46.6123 -> 43.8156 (2026-11-26, raid-buff-sets retune R3, user ruling: Fire x0.94).'
+          ' Effect 1 sp_potency 46.6123 -> 45.2139 (2026-11-26, raid-buff-sets retune R4: Fire x0.97 instead of x0.94, R3 measured 1,448).',
     raw_overrides={'AttributesEx2': 1073741824, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The target becomes a Living Bomb, taking $44457o1 Fire damage over $44457d.  After $44457d or when the spell is dispelled, the target explodes dealing {pot1} Fire damage to all enemies within $44461a1 yards.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 12582935, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 65536, 'SpellClassSet': 3, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 10693},
 )
 
@@ -5468,8 +5469,8 @@ meteor_impact_200096 = spell(
     radius_yards=8.0,
     duration_ms=4000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=143.2367, potency_kind='direct', implicit_target_a=16, radius_yards=8.0),
-        Effect(type=EffectType.PERSISTENT_AREA_AURA, sp_potency=44.8213, potency_kind='periodic', implicit_target_a=28, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=147.7977, potency_kind='direct', implicit_target_a=16, radius_yards=8.0),
+        Effect(type=EffectType.PERSISTENT_AREA_AURA, sp_potency=46.2518, potency_kind='periodic', implicit_target_a=28, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000, radius_yards=8.0),
     ],
     spell_icon_id=1516,
     notes="Fire Mage rework sec 2 - Meteor's impact + ground burn, cast by spell_mage_meteor 3 sec after the player's Meteor (200095). Same shape as Flamestrike (2120): effect1 direct damage to every enemy in the 8yd area, effect2 a 4-sec persistent ground aura ticking every 1 sec. Budget (user call, 2026-09-15): ~2x Flamestrike - direct 751+14.1/lvl (die 41) vs Flamestrike's 51+7.4955/lvl anchored at Meteor's own SpellLevel 58; burn 160+3.3/lvl per 1-sec tick x4 vs Flamestrike's 84->117 per 2-sec tick x4. Only the impact can crit -> only the impact banks Ignite (sec 4.1a); the burn is periodic and never does. SpellVisualID_1 90003 (patch_mage_vfx_models.py) - superseded the earlier Flamestrike reuse (10383) now that a purpose-built Ascension model exists: InstantAreaKit + PersistentAreaKit both point at the same kit wrapping mage_meteor_impactstate_world, so the burst and the 4-sec ground-burn's own visual are the same asset (its name suggests it's already a combined burst+decal, not two separate assets - see docs/reworks/fire-mage-rework.md). | potency system P5 (Mage pass): eff1 converted to sp_potency=299.1 (mage-potency-proposals.txt). eff2 (PERSISTENT_AREA_AURA burn) is invisible to potency_report.py's classifier (same gap P4 found on Rain of Fire, also hit on Flamestrike eff2 this stage) - converted by hand to sp_potency=93.6, the base-damage-implied potency from its live 160+3.3/lvl @ 1s tick (V60=167) vs its old explicit 0.15 dot_bonus (52.5-implied) - a notably large (~78%) disagreement, well above every other row this stage, flagged prominently for review since it wasn't independently user-reviewed and the two source numbers disagree far more than usual."
@@ -5479,7 +5480,8 @@ meteor_impact_200096 = spell(
           ' sp_potency 164.9836 -> 169.9331; sp_potency 51.6298 -> 53.1787 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Fire Mage, the other Fire spells about x1.05, sized x1.03 to land Fire about 1,025).'
           ' Effect 1 sp_potency 169.9331 -> 163.1358, Effect 2 sp_potency 53.1787 -> 51.0516 (2026-11-22, level60-stat-curve round S23, user ruling 18: Fire x0.96, a Fire-only spell).'
           ' Effect 1 sp_potency 163.1358 -> 152.3688 Effect 2 sp_potency 51.0516 -> 47.6822 (2026-11-26, raid-buff-sets retune R1, user ruling: Fire x0.934).'
-          ' Effect 1 sp_potency 152.3688 -> 143.2367 Effect 2 sp_potency 47.6822 -> 44.8213 (2026-11-26, raid-buff-sets retune R3, user ruling: Fire x0.94).',
+          ' Effect 1 sp_potency 152.3688 -> 143.2367 Effect 2 sp_potency 47.6822 -> 44.8213 (2026-11-26, raid-buff-sets retune R3, user ruling: Fire x0.94).'
+          ' Effect 1 sp_potency 152.3688 -> 147.7977 Effect 2 sp_potency 47.6822 -> 46.2518 (2026-11-26, raid-buff-sets retune R4: Fire x0.97 instead of x0.94, R3 measured 1,448).',
     raw_overrides={'BaseLevel': 58, 'SpellLevel': 58, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 3, 'SpellClassMask_3': 32, 'SpellPriority': 50, 'SpellVisualID_1': 90003, 'Targets': 64, 'AttributesEx': 268435592, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Fire damage to all enemies in the area and burns the ground for {pot2.total} Fire damage over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} Fire damage every $t2 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 

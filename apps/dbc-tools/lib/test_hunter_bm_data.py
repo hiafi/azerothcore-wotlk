@@ -1395,7 +1395,7 @@ S11_PET_TRIM = {201720: 0.96, 201721: 0.96}
 # Kill Command are not in these tables), on top of S11.
 R1_PET_TRIM = {201720: 0.931, 201721: 0.931}
 # raid-buff-sets retune R3 (user ruling 2026-11-26): BM x0.935 more on the same abilities, on top of R1.
-R3_PET_TRIM = {201720: 0.935, 201721: 0.935}
+R3_PET_TRIM = {201720: 0.95, 201721: 0.95}  # R4: 0.95 replaces R3's 0.935 (R3 measured 1,491)
 
 
 def check_f1_potency(entries_by_id: dict[int, dict], table=F1_POTENCY, extra_scale: float = 1.0,

@@ -1167,7 +1167,7 @@ kill_command_34026 = spell(
     mana_cost_pct=3,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=56.7835, potency_kind='direct', implicit_target_a=6),  # R3 x0.935; R1 x0.931; TUNE1: was 75; 2026-11-01 pass 1031: 86.0 -> 98.9 -> 108.79
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=57.6944, potency_kind='direct', implicit_target_a=6),  # R4 x0.95 (R3 x0.935 overshot); R1 x0.931; TUNE1: was 75; 2026-11-01 pass 1031: 86.0 -> 98.9 -> 108.79
         Effect(type=EffectType.DUMMY, implicit_target_a=6),
     ],
     spell_icon_id=2226,
@@ -1183,6 +1183,7 @@ kill_command_34026 = spell(
         ' Effect 1 ap_potency 67.95 -> 65.232 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: BM x0.96 on Kill Command and the Wolf commands / Stomp).'
         ' Effect 1 ap_potency 65.232 -> 60.731 (2026-11-26, raid-buff-sets retune R1, user ruling: BM x0.931).'
         ' Effect 1 ap_potency 60.731 -> 56.7835 (2026-11-26, raid-buff-sets retune R3, user ruling: BM x0.935 on its BM-only abilities, BM 1,570 -> ~1,520).'
+        ' Effect 1 ap_potency 56.7835 -> 57.6944 (2026-11-26, raid-buff-sets retune R4: x0.95 instead of x0.935, R3 measured 1,491).'
     ),
     raw_overrides={
         'AuraDescription_Lang_Mask': 16712188,
