@@ -926,6 +926,39 @@ class RagefireChasmIdsTest(unittest.TestCase):
             self.assertTrue(BLOCKS[table]["start"] <= cfg["start"] and cfg["end"] <= BLOCKS[table]["end"], table)
 
 
+class ZulFarrakIdsTest(unittest.TestCase):
+    """Zul'Farrak build WP-0 (2026-11-25): the dungeon's reservation, pinned exactly, and the spellvisual block widened
+    to 90999 (zul-farrak-build.HANDOFF.md s3.3)."""
+
+    def test_zul_farrak_reservation(self):
+        got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["zul_farrak"].items()}
+        self.assertEqual(got, {
+            "spell": (213840, 214239),
+            "creature": (301005, 301099),
+            "gameobject": (301360, 301379),
+            "spellvisual": (90700, 90749),
+            "creaturedisplayinfo": (90830, 90849),
+            "creaturemodeldata": (90830, 90849),
+        })
+
+    def test_zul_farrak_overlaps_no_other_reservation(self):
+        for table, cfg in RESERVATIONS["zul_farrak"].items():
+            for owner, tables in RESERVATIONS.items():
+                if owner != "zul_farrak" and table in tables:
+                    self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
+
+    def test_zul_farrak_sits_inside_the_blocks(self):
+        for table, cfg in RESERVATIONS["zul_farrak"].items():
+            self.assertTrue(BLOCKS[table]["start"] <= cfg["start"] and cfg["end"] <= BLOCKS[table]["end"], table)
+
+    def test_the_build_follows_the_gear(self):
+        self.assertEqual(RESERVATIONS["zul_farrak_items"]["spell"]["end"] + 1,
+                         RESERVATIONS["zul_farrak"]["spell"]["start"])
+        self.assertEqual(RESERVATIONS["zul_farrak_items"]["creature"]["end"] + 1,
+                         RESERVATIONS["zul_farrak"]["creature"]["start"])
+        self.assertEqual(BLOCKS["spellvisual"]["end"], 90999)
+
+
 class DungeonKitIdsTest(unittest.TestCase):
     """The shared dungeon kit (WP-K0, 2026-11-07): the spellvisual block widened from 90399 to 90699 and one 50-id
     SpellVisual slice per reworked dungeon after Deadmines (Deadmines held 90340-90369, leaving 30 ids for three
@@ -934,7 +967,9 @@ class DungeonKitIdsTest(unittest.TestCase):
     SLICES = {"shadowfang_keep": (90400, 90449), "scholomance": (90450, 90499), "stratholme": (90500, 90549)}
 
     def test_the_spellvisual_block_reaches_90699(self):
-        self.assertEqual(BLOCKS["spellvisual"], {"start": 90001, "end": 90699})
+        # 90999 since the Zul'Farrak build (ZulFarrakIdsTest); the kit's widening still holds
+        self.assertEqual(BLOCKS["spellvisual"]["start"], 90001)
+        self.assertGreaterEqual(BLOCKS["spellvisual"]["end"], 90699)
         # the scan of the patch scripts' constants still covers it (90000-90999)
         self.assertLess(BLOCKS["spellvisual"]["end"], 91000)
 
