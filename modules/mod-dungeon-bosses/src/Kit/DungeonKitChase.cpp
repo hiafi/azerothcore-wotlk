@@ -300,7 +300,7 @@ namespace DungeonKit
     }
 
     // Telegraph only: the Soak shows the pickup to the bots and never posts a failure (the arrival is the cost). A
-    // pickup with a life is cancelled before its warning ends; one without lasts the whole fight. A dormant pickup
+    // pickup with a life is canceled before its warning ends; one without lasts the whole fight. A dormant pickup
     // (onlyWhileCarriers, nobody to take it) has none.
     void CrawlPickups::RegisterSoak(Creature* owner, Entry& e, Creature* unit)
     {

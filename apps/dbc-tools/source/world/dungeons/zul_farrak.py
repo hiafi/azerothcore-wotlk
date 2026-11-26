@@ -244,6 +244,7 @@ zul_farrak = dungeon(
         creature(301016, "Sandfury Hexmaster", "trash", summoned_by=("C++ the Pyramid's waves (D4b)",)),
         creature(301017, "Sandfury Witch Doctor", "trash", summoned_by=("C++ the Pyramid's waves (D4b)",)),
         creature(301031, "Wellspring", "trash", summoned_by=("C++ gahzrilla_crew_hard_mode (D7Ha)",)),
+        creature(301090, "Kizzi Fuseboot", "npc", summoned_by=("spawn 3010900, rev_quests_zul_farrak.sql",)),
     ),
     heroic=heroic(
         map_difficulty_id=1008, access_id=130, min_level=60, max_players=5,
@@ -269,9 +270,9 @@ zul_farrak = dungeon(
             7797: _boss(7797, 233_478, melee=1_250),  # Ruuzlu (76.5 x warrior 3,052)
             7795: _boss(7795, 199_930),  # Hydromancer Velratha (93.6 x mage 2,136)
             7273: _boss(7273, 386_688),  # Gahz'rilla (126.7 x warrior 3,052)
-            # The crew (their own heroic health; also the pool allies of the hard mode).
             # The rares drop the Heroic tier on heroic (L-1): their heroic body's own lootid.
             **{entry: dict(columns={"lootid": _HEROIC_ID[entry]}) for entry in (10080, 10081, 10082)},
+            # The crew (their own heroic health; also the pool allies of the hard mode).
             7604: _crew(113_229, 1_250),  # Sergeant Bly (37.1 x warrior 3,052)
             7605: _crew(73_248, 800),  # Raven (24.0 x warrior 3,052)
             7606: _crew(73_265, 400),  # Oro Eyegouge (34.3 x mage 2,136)

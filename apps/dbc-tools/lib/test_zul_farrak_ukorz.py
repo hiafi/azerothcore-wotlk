@@ -240,12 +240,13 @@ class UkorzTest(unittest.TestCase):
     # --- the SQL ------------------------------------------------------------------------------------------------------
 
     def test_the_texts(self):
-        ukorz_rows = re.findall(r"\(7267, (\d+), 0, '((?:[^']|\\')*)', (\d+), 0, 100, 0, 0, 0, 0, (\d+),", self.sql)
+        ukorz_rows = re.findall(r"\(7267, (\d+), 0, '((?:[^']|'')*)', (\d+), 0, 100, 0, 0, 0, 0, (\d+),", self.sql)
         self.assertEqual([int(r[0]) for r in ukorz_rows], [4, 5, 6, 7])
         self.assertEqual([int(r[2]) for r in ukorz_rows], [14, 14, 14, 41])
         self.assertIn("$n", ukorz_rows[3][1])
         self.assertIn("BETWEEN 4 AND 7", self.sql)     # 0 to 3 are stock
-        ruuzlu_rows = re.findall(r"\(7797, (\d+), 0, '((?:[^']|\\')*)', (\d+), 0, 100,", self.sql)
+        self.assertNotIn("\\'", self.sql)                 # R-1-LOOT n-3: quotes doubled (''), never escaped
+        ruuzlu_rows = re.findall(r"\(7797, (\d+), 0, '((?:[^']|'')*)', (\d+), 0, 100,", self.sql)
         self.assertEqual([int(r[0]) for r in ruuzlu_rows], [0, 1, 2])
         self.assertEqual({int(r[2]) for r in ruuzlu_rows}, {14})
         statements = re.sub(r"^--.*$", "", self.sql, flags=re.M)

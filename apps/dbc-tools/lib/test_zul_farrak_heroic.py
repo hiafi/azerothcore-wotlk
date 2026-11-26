@@ -242,8 +242,11 @@ class DeclarationTest(unittest.TestCase):
         self.assertEqual(by_entry[15578]["event"], True)
         for entry in TRASH:
             self.assertEqual(by_entry[entry]["role"], "trash", entry)
-        for not_declared in (7789, 8876, 8877, NORMAL_ONLY_GOBLIN, 301005, 301010, 301018, 301030):
+        for not_declared in (7789, 8876, 8877, 301005, 301010, 301018, 301030):
             self.assertNotIn(not_declared, by_entry)  # left out of the event / run on their normal entry
+        # the quests WP's entrance goblin: an extra npc line (its hand spawn), normal only (normal_only_creatures)
+        goblin = by_entry[NORMAL_ONLY_GOBLIN]
+        self.assertEqual((goblin["role"], goblin["source"]), ("npc", "extra"))
 
     def test_the_boss_overrides_are_the_headers_heroic_health_and_the_normal_rows_columns(self):
         common = _load_common()

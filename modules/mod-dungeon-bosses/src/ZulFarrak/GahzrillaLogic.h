@@ -143,9 +143,9 @@ namespace ZfPool
 
         // GZ10 the gong: at her 30% she runs to it (about 61 yd), strikes it, and fights on from where she struck it.
         inline constexpr float kGongHealthPct = 30.f;
-        // F-1d DQ-2 (provisional ruling, the user has not answered): she strikes and fights from the gong's bank, out
-        // of the pool strip, so melee (bots and humans) reach her dry. False: the built spot, kGongStandOffYd from the
-        // gong toward her spawn (inside the strip: melee on her stand in water, gain Charged, and bots cannot reach).
+        // F-1d DQ-2 (ruled A by the user, 2026-11-25): she strikes and fights from the gong's bank, out of the pool
+        // strip, so melee (bots and humans) reach her dry. False: the built spot, kGongStandOffYd from the gong toward
+        // her spawn (inside the strip: melee on her stand in water, gain Charged, and bots cannot reach).
         inline constexpr bool kGongFightsFromBank = true;
         inline constexpr float kGongStandOffYd = 2.5f;          // the built strike spot (kGongFightsFromBank false)
         inline constexpr std::uint32_t kGongRunTimeoutMs = 15000;   // a run that never arrives strikes from there
@@ -532,6 +532,10 @@ namespace ZfPool
     {
         return packagesBuilt ? kGongStruckHardMode : kGongStruckPlain;
     }
+
+    // F-2 (RF-1 n3): the sender's values are the instance's (ZulFarrakRework.h kGongDataPlain / kGongDataHardMode).
+    static_assert(kGongStruckPlain == ZulFarrakRework::kGongDataPlain
+        && kGongStruckHardMode == ZulFarrakRework::kGongDataHardMode, "DATA_GONG_STRUCK values differ");
 
     // DQ-1: whether a player already shocked by one carrier's sheet this tick is spared by the next carrier's.
     constexpr bool SheetShockOncePerTick(bool deluge)

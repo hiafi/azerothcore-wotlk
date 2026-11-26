@@ -858,11 +858,13 @@ struct boss_velratha_rework : public BossAI
         if (!_baseHealth)
             _baseHealth = me->GetMaxHealth();
         Cleanup();
+        NoLootAfterFirstDeath();
     }
 
     void JustEngagedWith(Unit* who) override
     {
         BossAI::JustEngagedWith(who);
+        NoLootAfterFirstDeath();
         if (!me->IsEngaged())
             return;     // BossAI evaded
 
@@ -917,6 +919,7 @@ struct boss_velratha_rework : public BossAI
             _struck ? 1 : 0, killer ? killer->GetName() : "none"));
         if (PoolEncounter* fight = Fight())
             fight->VelrathaDied();
+        DropLaterBodyGold();
         Cleanup();
         BossAI::JustDied(killer);
     }
@@ -1063,24 +1066,62 @@ struct boss_velratha_rework : public BossAI
     }
 
 private:
-    // MI-1: Gahz'rilla alive and fighting a player on the pool's arena: she takes that player and stays in.
+    // MI-1, F-2 m1: Gahz'rilla alive and fighting anyone hostile to her on the pool's arena (a player, a pet, a
+    // guardian, a crew member): she takes his victim, else the first such unit on his threat list, and stays in.
     bool KeepFighting()
     {
         PoolEncounter* fight = _engaged ? Fight() : nullptr;
         Creature* gahzrilla = fight ? fight->Gahzrilla() : nullptr;
         if (!gahzrilla || !gahzrilla->IsAlive() || !gahzrilla->IsEngaged())
             return false;
-        Player* target = gahzrilla->GetVictim() ? gahzrilla->GetVictim()->ToPlayer() : nullptr;
-        std::vector<Player*> const players = fight->FightPlayers();
-        if (!target || std::find(players.begin(), players.end(), target) == players.end()
-            || !me->IsValidAttackTarget(target))
-            return false;
-        me->AddThreat(target, 1.f);
-        AttackStart(target);
-        if (me->GetVictim() != target)
-            return false;
-        LogGz("velratha-evade-kept", Acore::StringFormat("target={} (Gahz'rilla fights on)", target->GetName()));
-        return true;
+        std::vector<Unit*> candidates;
+        if (Unit* victim = gahzrilla->GetVictim())
+            candidates.push_back(victim);
+        for (ThreatReference const* ref : gahzrilla->GetThreatMgr().GetSortedThreatList())
+            if (Unit* unit = ref->GetVictim())
+                candidates.push_back(unit);
+        for (Unit* target : candidates)
+        {
+            if (!target->IsAlive() || !_arena.Contains(target) || !me->IsValidAttackTarget(target))
+                continue;
+            me->AddThreat(target, 1.f);
+            AttackStart(target);
+            if (me->GetVictim() != target)
+                continue;
+            LogGz("velratha-evade-kept", Acore::StringFormat("target={} (Gahz'rilla fights on)", target->GetName()));
+            return true;
+        }
+        return false;
+    }
+
+    // F-2 M1, section 7 #43 h A with R-Q m1: her second body (a pool wipe's or a reload's respawn) carries no loot but
+    // her quest items. Only kLootModeVelrathaQuest before the kill (rule 1): Unit::Kill's FillLoot skips every row
+    // without that bit (LootTemplate::Process, LootGroupInvalidSelector), references included, so no item but the two
+    // quest rows the rev marks is ever generated. BossAI::_Reset restores the default mode, so this runs after it, and
+    // again at the pull in case anything reset it since.
+    void NoLootAfterFirstDeath()
+    {
+        InstanceScript const* script = me->GetInstanceScript();
+        if (!script || VelrathaBodyLoots(script->GetData(DATA_VELRATHA_KILLED))
+            || me->GetLootMode() == kLootModeVelrathaQuest)
+            return;
+        me->SetLootMode(kLootModeVelrathaQuest);
+        LogGz("velratha-quest-loot-only", "a later body (section 7 #43 h A)");
+    }
+
+    // The gold Unit::Kill generates for any nonzero loot mode: removed (never a fill), and with no quest item left for
+    // anyone the corpse is not lootable, as the engine does for a looted one (Unit::Kill's else branch).
+    void DropLaterBodyGold()
+    {
+        if (me->GetLootMode() != kLootModeVelrathaQuest)
+            return;
+        me->loot.gold = 0;
+        if (me->loot.isLooted())
+        {
+            me->RemoveDynamicFlag(UNIT_DYNFLAG_LOOTABLE);
+            me->AllLootRemovedFromCorpse();
+        }
+        LogGz("velratha-later-body", Acore::StringFormat("quest items={}", me->loot.quest_items.size()));
     }
 
     bool HardModeNow() const

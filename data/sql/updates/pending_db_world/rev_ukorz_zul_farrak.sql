@@ -12,7 +12,7 @@ INSERT INTO `creature_text` (`CreatureID`, `GroupID`, `ID`, `Text`, `Type`, `Lan
 (7267, 4, 0, 'You spill Sandfury blood? The sands spill yours!', 14, 0, 100, 0, 0, 0, 0, 0,
     'Ukorz - Bladestorm at full Fury (UK3)'),
 (7267, 5, 0, 'Not yet, outlander!', 14, 0, 100, 0, 0, 0, 0, 0, 'Ukorz - the 30% hold (UK9, heroic)'),
-(7267, 6, 0, 'Sul\'thraze! Wake and drink!', 14, 0, 100, 0, 0, 0, 0, 0, 'Ukorz - Call of Sul\'thraze (UK10, heroic)'),
+(7267, 6, 0, 'Sul''thraze! Wake and drink!', 14, 0, 100, 0, 0, 0, 0, 0, 'Ukorz - Call of Sul''thraze (UK10, heroic)'),
 (7267, 7, 0, '%s stamps, and the sand opens beneath $n!', 41, 0, 100, 0, 0, 0, 0, 3,
     'Ukorz - Sinking Sands (UK5, at most once every 10 s)');
 
@@ -22,4 +22,4 @@ INSERT INTO `creature_text` (`CreatureID`, `GroupID`, `ID`, `Text`, `Type`, `Lan
     `Duration`, `Sound`, `BroadcastTextId`, `TextRange`, `comment`) VALUES
 (7797, 0, 0, 'For the chief!', 14, 0, 100, 0, 0, 0, 0, 0, 'Ruuzlu - Bladestorm at full Fury (UK3)'),
 (7797, 1, 0, 'Not yet!', 14, 0, 100, 0, 0, 0, 0, 0, 'Ruuzlu - the 30% hold (UK9, heroic)'),
-(7797, 2, 0, 'Chief! Take it!', 14, 0, 100, 0, 0, 0, 0, 0, 'Ruuzlu - Call of Sul\'thraze (UK10, heroic)');
+(7797, 2, 0, 'Chief! Take it!', 14, 0, 100, 0, 0, 0, 0, 0, 'Ruuzlu - Call of Sul''thraze (UK10, heroic)');

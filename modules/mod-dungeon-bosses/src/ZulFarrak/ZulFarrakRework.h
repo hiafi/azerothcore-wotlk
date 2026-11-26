@@ -128,6 +128,7 @@ namespace ZulFarrakRework
         DATA_HARD_MODE          = 61,   // Get: The Crew at the Pool is armed (saved; holds for the lockout)
         DATA_HARD_MODE_KILLED   = 62,   // Get: slot 8 DONE
         DATA_HARD_MODE_KEY      = 63,   // Get: 1 when the hard mode would arm now (D7Ha reads it at Velratha's pull)
+        DATA_VELRATHA_KILLED    = 64,   // Get: 1 once Velratha died this lockout (saved): a later body has no loot
 
         // GM test commands (.dbtest zf; never sent by a boss)
         DATA_GM_STAGE           = 90,   // Set(stage): force that stage in play, idle (4: the Pyramid DONE)
@@ -715,6 +716,34 @@ namespace ZulFarrakRework
         return velrathaSlot == DungeonKit::State::Done && gahzrillaSlot != DungeonKit::State::Done;
     }
 
+    // F-2 M1, section 7 #43 h A: "her second body carries no loot", but her quest items still drop (R-Q m1: the Tiara
+    // 9234 for 2846 and the Second Mosh'aru Tablet 10661 for 3527). The instance records her first death (slot 0 DONE)
+    // in a saved bit. Every body after it (a pool wipe's or a reload's respawn) has only kLootModeVelrathaQuest from
+    // her Reset and her pull (rule 1: before the kill), and rev_gahzrilla_zul_farrak.sql puts that bit on the two
+    // quest rows of lootid 7795 (her heroic copy shares it), so Unit::Kill rolls nothing else. The gold the engine
+    // still generates for a nonzero mode is the one thing her JustDied removes (never a fill).
+    std::uint16_t constexpr kLootModeVelrathaQuest = 0x20;     // above the kit's hard mode (2) and flex (4, 8) bits
+    inline std::array<std::uint32_t, 2> constexpr kVelrathaQuestItems{ { 9234, 10661 } };
+    std::uint32_t constexpr kVelrathaLootId = 7795;
+
+    constexpr std::uint32_t VelrathaKilledOnce(std::uint32_t killed, std::uint32_t velrathaSlot)
+    {
+        return (killed || velrathaSlot == DungeonKit::State::Done) ? 1 : 0;
+    }
+
+    constexpr bool VelrathaBodyLoots(std::uint32_t killed)
+    {
+        return killed == 0;
+    }
+
+    // F-2 m1 (R-1-C MI-1): a pool slot's wipe restores the crew at the pool only once Gahz'rilla is out of combat. Her
+    // slot resets first inside his own evade (he is still engaged then) and his reset follows; while he fights on
+    // (a pet or a crew member tanking him, she evaded alone) the crew stay as they are.
+    constexpr bool PoolWipeRestoresCrew(std::uint32_t crewSlot, std::uint32_t path, bool gahzrillaInCombat)
+    {
+        return crewSlot == DungeonKit::State::Done && path == CREW_PATH_TEST && !gahzrillaInCombat;
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
     // Measured points (section 3.8; DB rows exact; [navmesh estimate] otherwise, z from the mesh)
     // ----------------------------------------------------------------------------------------------------------------
@@ -1162,19 +1191,20 @@ namespace ZulFarrakRework
 
     enum SaveExtra : std::size_t
     {
-        EXTRA_PYRAMID_STAGE = 0,    // PyramidStage (never running: a reload waits to replay it)
-        EXTRA_CAGES_OPEN    = 1,
-        EXTRA_CREW_ALIVE    = 2,    // the snapshot's while a stage runs (its losses are not permanent yet)
-        EXTRA_OFFERINGS     = 3,    // idem
-        EXTRA_BLOOD_PRICE   = 4,    // idem
-        EXTRA_CREW_AT_END   = 5,    // the Test's key mask
-        EXTRA_CREW_PATH     = 6,    // only with slot 6 DONE (a chosen, unfought path is offered again)
-        EXTRA_END_DOOR      = 7,    // 0 or 3
-        EXTRA_HARD_MODE     = 8,
-        EXTRA_CREW_AT_POOL  = 9,    // CR said the crew arrived at the pool (0 / 1)
-        EXTRA_STASH_LOOTED  = 10,   // the crew's stash chest was emptied (or expired): not summoned again on load
+        EXTRA_PYRAMID_STAGE   = 0,  // PyramidStage (never running: a reload waits to replay it)
+        EXTRA_CAGES_OPEN      = 1,
+        EXTRA_CREW_ALIVE      = 2,  // the snapshot's while a stage runs (its losses are not permanent yet)
+        EXTRA_OFFERINGS       = 3,  // idem
+        EXTRA_BLOOD_PRICE     = 4,  // idem
+        EXTRA_CREW_AT_END     = 5,  // the Test's key mask
+        EXTRA_CREW_PATH       = 6,  // only with slot 6 DONE (a chosen, unfought path is offered again)
+        EXTRA_END_DOOR        = 7,  // 0 or 3
+        EXTRA_HARD_MODE       = 8,
+        EXTRA_CREW_AT_POOL    = 9,  // CR said the crew arrived at the pool (0 / 1)
+        EXTRA_STASH_LOOTED    = 10, // the crew's stash chest was emptied (or expired): not summoned again on load
+        EXTRA_VELRATHA_KILLED = 11, // F-2 M1: Velratha died once (section 7 #43 h A: her later bodies carry no loot)
     };
-    std::size_t constexpr kSaveExtraCount = 11;
+    std::size_t constexpr kSaveExtraCount = 12;
 
     using BossStates = std::array<std::uint32_t, kBossCount>;
 
@@ -1192,6 +1222,7 @@ namespace ZulFarrakRework
         std::uint32_t hardMode = 0;
         std::uint32_t crewAtPool = 0;
         std::uint32_t stashLooted = 0;
+        std::uint32_t velrathaKilled = 0;
     };
 
     inline std::string FormatZfrSave(ZfrSave const& s)
@@ -1209,6 +1240,7 @@ namespace ZulFarrakRework
         extras[EXTRA_HARD_MODE] = s.hardMode;
         extras[EXTRA_CREW_AT_POOL] = s.crewAtPool;
         extras[EXTRA_STASH_LOOTED] = s.stashLooted;
+        extras[EXTRA_VELRATHA_KILLED] = s.velrathaKilled;
         return DungeonKit::FormatStates(kSaveHeader, states, extras);
     }
 
@@ -1250,6 +1282,9 @@ namespace ZulFarrakRework
         s.stashLooted = (crewDone && s.stashLooted) ? 1 : 0;
         if (s.states[BOSS_GAHZRILLA] != DungeonKit::State::Done || !s.hardMode)
             s.states[BOSS_CREW_AT_THE_POOL] = DungeonKit::State::NotStarted;
+        // F-2 M1: a save with slot 0 DONE (an older build's, or the stock mask's) records her kill before the reopen
+        // below forgets it; an older save's missing extra loads 0.
+        s.velrathaKilled = VelrathaKilledOnce(s.velrathaKilled, s.states[BOSS_VELRATHA]);
         // R-1-FW M2 / R-1-C MA-2: Gahz'rilla is a summon of Velratha's strike and never survives a reload; with her
         // dead and him not, the pool reopens as a pool wipe would (section 7 #43 h A): slot 0 back to NOT_STARTED and
         // her body respawned by the instance's Settle.
@@ -1319,6 +1354,7 @@ namespace ZulFarrakRework
             out.hardMode = raw.extras[EXTRA_HARD_MODE];
             out.crewAtPool = raw.extras[EXTRA_CREW_AT_POOL];
             out.stashLooted = raw.extras[EXTRA_STASH_LOOTED];
+            out.velrathaKilled = raw.extras[EXTRA_VELRATHA_KILLED];
         }
         for (std::size_t i = 0; i < kBossCount; ++i)
             out.states[i] = raw.states[i];

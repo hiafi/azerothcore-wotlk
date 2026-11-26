@@ -60,8 +60,8 @@ namespace
             DATA_PYRAMID_COMPLETE, DATA_PYRAMID_FAIL, DATA_CREW_ALIVE, DATA_CREW_PATH, DATA_CREW_DONE, DATA_CREW_FIGHT,
             DATA_CREW_LOST, DATA_CREW_AT_POOL, DATA_CREW_AT_END, DATA_TEST_KEY, DATA_GONG_STRUCK, DATA_HARD_MODE,
             DATA_HARD_MODE_KILLED, DATA_HARD_MODE_KEY, DATA_GM_STAGE, DATA_GM_CREW_MASK, DATA_GM_DOOR,
-            DATA_GM_TEST_ARM, DATA_GM_HARD_MODE };
-        CHECK(ids.size() == 28);
+            DATA_GM_TEST_ARM, DATA_GM_HARD_MODE, DATA_VELRATHA_KILLED };
+        CHECK(ids.size() == 29);
         for (std::uint32_t id : ids)
             CHECK(id < DATA_CREW_MODE_BASE || id >= DATA_CREW_MODE_BASE + kCrewCount);
         // guid keys: bosses by slot, the rest apart
@@ -311,6 +311,20 @@ namespace
         CHECK(!PoolReloadReopensVelratha(S::Done, S::Done) && !PoolReloadReopensVelratha(S::NotStarted, S::NotStarted));
         CHECK(!PoolWipeReopensVelratha(BOSS_GAHZRILLA, S::InProgress, S::NotStarted, S::NotStarted));
         CHECK(!PoolWipeReopensVelratha(BOSS_VELRATHA, S::InProgress, S::NotStarted, S::Done));
+        // F-2 M1 (section 7 #43 h A): her first death is kept; only a body before it loots
+        CHECK(VelrathaKilledOnce(0, S::Done) == 1 && VelrathaKilledOnce(1, S::NotStarted) == 1);
+        CHECK(VelrathaKilledOnce(0, S::NotStarted) == 0 && VelrathaKilledOnce(0, S::InProgress) == 0);
+        CHECK(VelrathaBodyLoots(0) && !VelrathaBodyLoots(1));
+        // R-Q m1: the quest-only bit is one bit, clear of the default (1), the kit's hard mode (2) and flex (4, 8) bits
+        // and LOOT_MODE_HARD_MODE_4 (16); the rows it marks are her two quest items on her lootid
+        CHECK(kLootModeVelrathaQuest == 0x20 && (kLootModeVelrathaQuest & (kLootModeVelrathaQuest - 1)) == 0);
+        CHECK((kLootModeVelrathaQuest & 0x1F) == 0);
+        CHECK(kVelrathaLootId == 7795 && kVelrathaQuestItems[0] == 9234 && kVelrathaQuestItems[1] == 10661);
+        // F-2 m1 (R-1-C MI-1): a pool wipe restores the Test's crew only with Gahz'rilla out of combat
+        CHECK(PoolWipeRestoresCrew(S::Done, CREW_PATH_TEST, false));
+        CHECK(!PoolWipeRestoresCrew(S::Done, CREW_PATH_TEST, true));
+        CHECK(!PoolWipeRestoresCrew(S::Done, CREW_PATH_BETRAYAL, false));
+        CHECK(!PoolWipeRestoresCrew(S::NotStarted, CREW_PATH_TEST, false));
     }
 
     void TestSave()
@@ -340,7 +354,7 @@ namespace
         // R-1-FW M1: Raven died at the pool (Test path, slot 6 DONE): a reload ends the attempt, all five stand
         CHECK(r.crewAlive == kCrewAll && r.offerings == 2 && r.bloodPrice == 77 && r.crewAtEnd == kCrewAll);
         CHECK(r.crewPath == CREW_PATH_TEST && r.endDoor == S::Done && r.hardMode == 1 && r.crewAtPool == 1);
-        CHECK(r.stashLooted == 1);
+        CHECK(r.stashLooted == 1 && r.velrathaKilled == 0);
         // the betrayal keeps its fallen down
         {
             ZfrSave b = s;
@@ -358,6 +372,28 @@ namespace
             // the stash flag needs slot 6 DONE
             p.stashLooted = 1;
             CHECK(ParseZfrSave(FormatZfrSave(p), r) && r.stashLooted == 0);
+        }
+        // F-2 M1: "Velratha killed once" survives the reload that reopens her slot (or a pool wipe's NOT_STARTED)
+        {
+            ZfrSave v;
+            v.states[BOSS_VELRATHA] = S::Done;      // an older build's save: slot 0 DONE, no bit yet
+            CHECK(ParseZfrSave(FormatZfrSave(v), r) && r.states[BOSS_VELRATHA] == S::NotStarted
+                && r.velrathaKilled == 1);
+            v.states[BOSS_VELRATHA] = S::NotStarted;    // reopened by a pool wipe, the bit saved then
+            v.velrathaKilled = 1;
+            CHECK(ParseZfrSave(FormatZfrSave(v), r) && r.velrathaKilled == 1);
+            CHECK(ParseZfrSave(FormatZfrSave(r), r) && r.velrathaKilled == 1);     // and on every reload after
+            v.velrathaKilled = 7;
+            CHECK(ParseZfrSave(FormatZfrSave(v), r) && r.velrathaKilled == 1);
+            v.velrathaKilled = 0;
+            CHECK(ParseZfrSave(FormatZfrSave(v), r) && r.velrathaKilled == 0);
+            // the bit is the save's last extra, so an older 11-extra save loads 0
+            std::string const text = FormatZfrSave(v);
+            CHECK(text.size() > 2 && text.substr(text.size() - 2) == " 0");
+            CHECK(ParseZfrSave(text.substr(0, text.size() - 2), r) && r.velrathaKilled == 0);
+            // the stock save's completed-encounter mask with her bit counts as her kill
+            CHECK(ParseZfrSave("Z F 0 0 0", r, 1u << BOSS_VELRATHA) && r.velrathaKilled == 1
+                && r.states[BOSS_VELRATHA] == S::NotStarted);
         }
 
         // sanitized: IN_PROGRESS goes; slot 8 needs slot 1 DONE and the flag; the path, the door and the pool line
@@ -555,6 +591,48 @@ namespace
                 CHECK(listed.count(name) == 1);
         }
     }
+
+    // F-2 M1 (section 7 #43 h A, rule 1): Velratha's AI zeroes her loot mode after BossAI's _Reset (which restores
+    // the default) and at her pull, never in JustDied; the instance records her first death and saves it.
+    void TestVelrathaSecondBodyNoLoot()
+    {
+        std::string const text = ReadFile(SourceDir() / "boss_gahzrilla_rework.cpp");
+        std::size_t const at = text.find("\nstruct boss_velratha_rework");
+        CHECK(at != std::string::npos);
+        if (at == std::string::npos)
+            return;
+        std::size_t const next = text.find("\nstruct ", at + 1);
+        std::string const body = text.substr(at, next == std::string::npos ? std::string::npos : next - at);
+        auto const method = [&body](std::string const& head)
+        {
+            std::size_t const from = body.find(head);
+            std::size_t const to = from == std::string::npos ? from : body.find("\n    }\n", from);
+            return from == std::string::npos ? std::string() : body.substr(from, to - from);
+        };
+        std::string const reset = method("    void Reset() override");
+        std::size_t const zeroed = reset.find("NoLootAfterFirstDeath();");
+        CHECK(zeroed != std::string::npos && zeroed > reset.find("_Reset();"));
+        std::string const pull = method("    void JustEngagedWith(Unit* who) override");
+        CHECK(pull.find("NoLootAfterFirstDeath();") != std::string::npos);
+        // R-Q m1: a later body keeps only the quest rows' bit; its JustDied only removes the engine's gold
+        std::string const rule = method("    void NoLootAfterFirstDeath()");
+        CHECK(rule.find("DATA_VELRATHA_KILLED") != std::string::npos);
+        CHECK(rule.find("SetLootMode(kLootModeVelrathaQuest)") != std::string::npos);
+        std::string const died = method("    void JustDied(Unit* killer) override");
+        CHECK(died.find("DropLaterBodyGold();") != std::string::npos);
+        CHECK(died.find("FillLoot") == std::string::npos && died.find("SetLootMode") == std::string::npos);
+        std::string const gold = method("    void DropLaterBodyGold()");
+        CHECK(gold.find("me->loot.gold = 0;") != std::string::npos);
+        CHECK(gold.find("FillLoot") == std::string::npos && gold.find("AddItem") == std::string::npos
+            && gold.find("items.clear") == std::string::npos);
+
+        std::string const instance = ReadFile(SourceDir() / "instance_zulfarrak_rework.cpp");
+        CHECK(Count(instance, "_velrathaKilled = 1;") == 1);
+        CHECK(Count(instance, "save.velrathaKilled = _velrathaKilled;") == 1);
+        CHECK(Count(instance, "_velrathaKilled = save.velrathaKilled;") == 1);
+        CHECK(Count(instance, "case DATA_VELRATHA_KILLED:") == 1);
+        CHECK(Count(instance, "PoolWipeRestoresCrew(") == 1);
+    }
 }
 
 int main()
@@ -569,5 +647,6 @@ int main()
     TestGeometry();
     TestHealth();
     TestNoAssistInEveryBossFile();
+    TestVelrathaSecondBodyNoLoot();
     return Report("zul_farrak_test");
 }

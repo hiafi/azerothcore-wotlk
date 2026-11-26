@@ -155,7 +155,7 @@ namespace ZfPool
         // ---- Plumbing ----
         // A unit for the fight (manual despawn unless `despawnMs`), despawned by D7's cleanup. nullptr: refused.
         virtual Creature* Summon(uint32 entry, Position const& at, uint32 despawnMs = 0) = 0;
-        // A registry handle cancelled with the fight.
+        // A registry handle canceled with the fight.
         virtual void Track(BossMechanics::MechanicHandle handle) = 0;
         // Describe both bosses again (DescribeExtra included): a phase change, a crew member lost.
         virtual void RefreshDescriptors() = 0;

@@ -1059,7 +1059,8 @@ namespace ZfCrew
         if (!target)
             return;
         // R-1-FW M4: the four are zone-engaged on the plaza's players (threat 0), so the chooser's death, a Feign
-        // Death or a Vanish leaves each of them someone to fight; then all four go for the chooser.
+        // Death or a Vanish leaves each of them someone to fight. AttackStart adds no threat, so each one's first
+        // victim is whichever zero-threat entry the threat list picks, not always the chooser (no spec row needs it).
         for (uint32 m = 0; m < kCrewCount; ++m)
             if (CrewBit(m) & kCrewFighters)
                 if (BlyCrewAI* ai = CrewAI(instance, m); ai && ai->me->IsAlive())

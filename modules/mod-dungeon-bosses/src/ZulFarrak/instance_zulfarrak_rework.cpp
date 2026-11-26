@@ -289,6 +289,13 @@ public:
                     ApplyHardModeLoot();        // the pull (BossAI::_Reset cleared the loot mode), a wipe
                     [[fallthrough]];
                 case BOSS_VELRATHA:
+                    // F-2 M1 (section 7 #43 h A): her first death is saved; every later body of hers drops no loot
+                    // (her AI reads DATA_VELRATHA_KILLED at her Reset and pull). The base saved before this.
+                    if (id == BOSS_VELRATHA && state == DONE && !_velrathaKilled)
+                    {
+                        _velrathaKilled = 1;
+                        SaveToDB();
+                    }
                     if (PoolWiped(id, before, state))
                         OnPoolWipe(id, before, state);
                     break;
@@ -432,6 +439,8 @@ public:
                 case DATA_HARD_MODE_KEY:
                     return HardModeKey(instance->IsHeroic(), _crewPath, Slot(BOSS_CREW), CrewAtPool(),
                         Slot(BOSS_CREW_AT_THE_POOL)) ? 1 : 0;
+                case DATA_VELRATHA_KILLED:
+                    return _velrathaKilled;
                 default:
                     return 0;
             }
@@ -511,6 +520,7 @@ public:
             save.hardMode = _hardMode;
             save.crewAtPool = _crewAtPool;
             save.stashLooted = _stashLooted;
+            save.velrathaKilled = _velrathaKilled;
             return FormatZfrSave(save);
         }
 
@@ -542,6 +552,7 @@ public:
             _hardMode = save.hardMode;
             _crewAtPool = save.crewAtPool;
             _stashLooted = save.stashLooted;
+            _velrathaKilled = save.velrathaKilled;
             // Loading: each slot is TO_BE_DECIDED, so the base stores the state and skips the switch.
             for (uint32 i = 0; i < kBossCount; ++i)
                 InstanceScript::SetBossState(i, EncounterState(save.states[i]));
@@ -1253,7 +1264,12 @@ public:
             if (Creature* gahzrilla = _gahzrilla ? instance->GetCreature(_gahzrilla) : nullptr)
                 if (gahzrilla->IsAlive() && !gahzrilla->IsEngaged())
                     gahzrilla->DespawnOrUnsummon(1s);
-            if (Slot(BOSS_CREW) == DONE && _crewPath == CREW_PATH_TEST)
+            // F-2 m1: never while Gahz'rilla still fights (she evaded alone); his own reset restores them.
+            Creature* fighting = _gahzrilla ? instance->GetCreature(_gahzrilla) : nullptr;
+            bool const gahzrillaInCombat = fighting && fighting->IsAlive() && fighting->IsEngaged();
+            if (gahzrillaInCombat && Slot(BOSS_CREW) == DONE && _crewPath == CREW_PATH_TEST)
+                DungeonKit::LogMechanic(kLogDungeon, "pool", "crew-restore-held", "Gahz'rilla fights on");
+            if (PoolWipeRestoresCrew(Slot(BOSS_CREW), _crewPath, gahzrillaInCombat))
             {
                 _pyramid.crewAlive = kCrewAll;
                 RestoreCrew("pool-wipe");
@@ -1291,6 +1307,7 @@ public:
         uint32 _hardMode = 0;
         uint32 _crewAtPool = 0;
         uint32 _stashLooted = 0;
+        uint32 _velrathaKilled = 0;
 
         // Per attempt (rebuilt after a reload)
         std::array<CrewMode, kCrewCount> _crewModes{};
