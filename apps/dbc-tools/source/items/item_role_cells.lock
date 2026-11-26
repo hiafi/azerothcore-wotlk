@@ -104,3 +104,5 @@ caster 26 4 101-200 0.5730 -0.2000  # caster InventoryType 26 Quality 4 ilvl 101
 physical 26 4 101-200 0.3660 -0.3047  # physical InventoryType 26 Quality 4 ilvl 101-200 (20 live items) 2026-11-19
 caster 26 4 1-59 0.6270 -0.2000  # caster InventoryType 26 ilvl 1-59 (7 live items) 2026-11-24
 physical 13 4 1-59 0.7180 0.0000  # physical InventoryType 13 ilvl 1-59 (76 live items) 2026-11-24
+physical 17 4 1-59 1.0000 0.0567  # physical InventoryType 17 ilvl 1-59 (39 live items) 2026-11-25
+physical 21 3 1-59 0.5490 0.0000  # physical InventoryType 21 Quality 3 (12 live items) 2026-11-25

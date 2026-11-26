@@ -209,6 +209,13 @@ void AddSC_sm_hard_mode_items();            // spell_sm_pureblood_rallying_stand
 void AddSC_rfc_hard_mode_items();           // spell_rfc_taragamans_fang, spell_rfc_hungering_bite,
                                             // spell_rfc_heart_of_the_starving, spell_rfc_one_roll_per_cast
 
+// Zul'Farrak hard mode items (zul-farrak gear): the Crew at the Pool items
+void AddSC_zf_hard_mode_items();            // spell_zf_scale_of_the_storm_god, spell_zf_static_discharge,
+                                            // spell_zf_stormcharged_fang, spell_zf_sergeants_whistle
+
+// Zul'Farrak list items (zul-farrak gear): the tier-matched Sul'thraze join
+void AddSC_zf_sulthraze_join();             // spell_zf_call_of_sulthraze, SulthrazeJoinWorldScript
+
 // Dungeon sets (item variants, Haunted set track): the Haunted set bonuses
 void AddSC_haunted_set_bonuses();           // spell_haunted_* bonus scripts, HauntedSetSpellHooks, HauntedSetUnitHooks
 
@@ -349,6 +356,8 @@ void Addmod_dungeon_bossesScripts()
     AddSC_brd_hard_mode_items();
     AddSC_sm_hard_mode_items();
     AddSC_rfc_hard_mode_items();
+    AddSC_zf_hard_mode_items();
+    AddSC_zf_sulthraze_join();
     AddSC_haunted_set_bonuses();
     AddSC_molten_set_bonuses();
     AddSC_zealot_set_bonuses();

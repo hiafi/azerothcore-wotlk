@@ -277,8 +277,23 @@ namespace ItemSpellCopies
         { 219060, 213505, 219060 },  // rfc_felstorm_greatblade empowered_3_hm
         { 219061, 213506, 219060 },  // rfc_felstorm_greatblade empowered_3_hm
         { 219062, 213507, 219060 },  // rfc_felstorm_greatblade empowered_3_hm
+        { 219063, 213800, 219063 },  // zf_scale_of_the_storm_god empowered_1_hm
+        { 219064, 213802, 219063 },  // zf_scale_of_the_storm_god empowered_1_hm
+        { 219065, 213800, 219065 },  // zf_scale_of_the_storm_god empowered_2_hm
+        { 219066, 213802, 219065 },  // zf_scale_of_the_storm_god empowered_2_hm
+        { 219067, 213800, 219067 },  // zf_scale_of_the_storm_god empowered_3_hm
+        { 219068, 213802, 219067 },  // zf_scale_of_the_storm_god empowered_3_hm
+        { 219069, 213803, 219069 },  // zf_stormcharged_fang empowered_1_hm
+        { 219070, 213805, 219069 },  // zf_stormcharged_fang empowered_1_hm
+        { 219071, 213803, 219071 },  // zf_stormcharged_fang empowered_2_hm
+        { 219072, 213805, 219071 },  // zf_stormcharged_fang empowered_2_hm
+        { 219073, 213803, 219073 },  // zf_stormcharged_fang empowered_3_hm
+        { 219074, 213805, 219073 },  // zf_stormcharged_fang empowered_3_hm
+        { 219075, 213806, 219075 },  // zf_sergeants_whistle empowered_1_hm
+        { 219076, 213806, 219076 },  // zf_sergeants_whistle empowered_2_hm
+        { 219077, 213806, 219077 },  // zf_sergeants_whistle empowered_3_hm
     };
-    inline constexpr std::size_t kCopyCount = 253;
+    inline constexpr std::size_t kCopyCount = 268;
 
     // The group of `spellId` when it is a copy, else 0.
     constexpr std::uint32_t GroupOf(std::uint32_t spellId)

@@ -44,6 +44,8 @@ tests=(
   blackrock_depths_hard_mode_items_test
   scarlet_monastery_hard_mode_items_test
   ragefire_chasm_hard_mode_items_test
+  zul_farrak_hard_mode_items_test
+  zul_farrak_sulthraze_join_test
   haunted_set_test
   molten_set_test
   zealot_set_test

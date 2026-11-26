@@ -267,9 +267,12 @@ spell_group:
 # from anything Blizzard ships while still covering every custom entry that predates this block.
 # 300999 leaves headroom well past the warlock reservation for future reworks. The test/tool NPCs
 # (training dummies, healing dummy) live in the separate npc_tools block below.
+# Widened to 301199 for Zul'Farrak (2026-11-25): Ragefire Chasm's reservation ended at 300999; no live
+# creature_template row, declaration or pending SQL names a creature in 301000-301199 (301000+ gameobjects are their
+# own table).
 creature:
   start: 300000
-  end: 300999
+  end: 301199
 
 # Test and tool NPCs that belong to no class rework - declared with the same creature_template()
 # helper as the block above, from source/npcs/training_dummies.py (dpssim stage MT0,
@@ -907,3 +910,12 @@ reservations:
     creature: {start: 300985, end: 300999}
     gameobject: {start: 301340, end: 301359}
     spellvisual: {start: 90370, end: 90399}  # SpellVisual, Kit and EffectName
+  # Zul'Farrak gear stage (.agents/plans/zul-farrak-gear/, 2026-11-25): the three Gahz'rilla hard mode item effects
+  # (source/items/zul_farrak_hard_mode_effects.py, 213800-213807; their per-tier copies mint from `item_copies`) and the
+  # Sul'thraze join (source/items/zul_farrak_effects.py, 213808). Checked free
+  # 2026-11-25: no live spell_dbc row in 213720-218999, no live creature_template row in 300990-301999, no declaration
+  # or worktree names them. The dungeon build reserves its own blocks after these (spells from 213840, creatures from
+  # 301005).
+  zul_farrak_items:
+    spell: {start: 213800, end: 213839}
+    creature: {start: 301000, end: 301004}

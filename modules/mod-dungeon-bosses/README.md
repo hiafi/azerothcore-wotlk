@@ -149,6 +149,10 @@ so db-import and the dbc-tools replay see one history.
 | `src/RagefireChasm/boss_<name>_rework.cpp`, `<Boss>Logic.h` | One pair per boss (D1-D4) |
 | `src/RagefireChasm/TaragamanFight.h` | Taragaman's hard mode hooks for Starving (D4 -> D4H): per-pull object, factory, idle hook, action hook, Felstorm spot |
 | `src/RagefireChasm/taragaman_hard_mode.cpp`, `TaragamanHardModeLogic.h` | D4H Starving: shrine and pour GOs, Blood Globules; `.dbtest rfc starving` |
+| `src/ZulFarrak/hard_mode_items.cpp` | Crew at the Pool hard mode item scripts: the Scale's charge and discharge, the Fang's charge and arc, the Whistle's copied heals and crew |
+| `src/ZulFarrak/ZulFarrakHardModeItemsLogic.h` | Pure: Zul'Farrak item effect ids (213800-213807, 301000-301004), charge and discharge events, one action per cast, single target heal test, crew table |
+| `src/ZulFarrak/sulthraze_join.cpp` | Call of Sul'thraze (213808), the Use on every tier of Jang'thraze: joins it with a Sang'thraze of the same tier into that tier's Sul'thraze, refuses mixed tiers; loads the tiers from `item_budget_variant` at startup |
+| `src/ZulFarrak/SulthrazeJoinLogic.h` | Pure: the Sul'thraze join's base entries, tier table and tier rule |
 | `src/DungeonSets/haunted_set_bonuses.cpp` | Haunted set bonus scripts (10 sets x 3 and 5 pieces) and their hooks |
 | `src/DungeonSets/HauntedSetLogic.h` | Pure: Haunted set bonus ids (205700-205793), script numbers, rolls, picks |
 | `src/DungeonSets/molten_set_bonuses.cpp` | Molten set bonus scripts (10 sets x 3 and 5 pieces): Heat, eruptions, cooldown hooks |
