@@ -153,6 +153,12 @@ def _kit_declared() -> set[int]:
     return found
 
 
+# Zul'Farrak's rows in the same dungeons package (source/world/dungeons/zul_farrak.py): its repoints of the stock rows
+# 593-600 and the two credit spells of 598 / 599 (source/npcs/zul_farrak/instance.py, not loaded here).
+ZF_STOCK_ENCOUNTERS = frozenset(range(593, 601))
+ZF_CREDIT_SPELLS = frozenset({213840, 213841})
+
+
 def _sm_entry(root: Path | None = None) -> tuple[dict, object]:
     reg = registry.load_class_package(
         (root or TOOL_ROOT / "source") / "world" / "dungeons", ids_cfg=IDS)
@@ -203,7 +209,8 @@ class DeclarationTest(unittest.TestCase):
         self.assertFalse(self.heroic["event_spawns"])
 
     def test_the_declared_encounters_are_fd_sms_seven_rows_and_the_repoint(self):
-        decls = {d["id"]: d for d in self.reg.encounter_declarations}
+        # the dungeons package also holds Zul'Farrak's repoints of its stock rows 593-600 (no map on a repoint)
+        decls = {d["id"]: d for d in self.reg.encounter_declarations if d["id"] not in ZF_STOCK_ENCOUNTERS}
         self.assertEqual(sorted(decls), [449, *range(1074, 1081)])
         self.assertEqual({i: (decls[i]["order_index"], decls[i]["bit"], decls[i]["name"]) for i in range(1074, 1081)}, {
             1074: (250, 7, "Ironspine"), 1075: (500, 8, "Azshir the Sleepless and the Fallen Champion"),
@@ -513,7 +520,7 @@ class ExpansionTest(unittest.TestCase):
             cls.index = spell_tables.load_spell_table_index()
             cls.encounters = dungeon_encounters.expand(cls.dsl, lambda: dungeon_encounters.load_inputs(
                 cls.index, {*existing, *(int(r["entry"]) for r in cls.dsl.get("creature_templates", []))},
-                spell_ids={212300, 212301}, ids_cfg=IDS))
+                spell_ids={212300, 212301, *ZF_CREDIT_SPELLS}, ids_cfg=IDS))
             cls.out = dungeon_heroic.expand(
                 cls.dsl, lambda: dungeon_heroic.load_live_world(existing, cls.index), ids_cfg=IDS,
             )
@@ -566,7 +573,8 @@ class ExpansionTest(unittest.TestCase):
     def test_fourteen_heroic_encounters_in_the_kill_order(self):
         rows = {r["ID"]: r for r in self.dsl["dungeon_encounters"] if r["Difficulty"] == 1}
         self.assertEqual(sorted(rows), list(range(1081, 1095)))  # 14 rows: the client's lockout list
-        normal = {r["ID"]: r for r in self.dsl["dungeon_encounters"] if r["Difficulty"] == 0}
+        normal = {r["ID"]: r for r in self.dsl["dungeon_encounters"]
+                  if r["Difficulty"] == 0 and r["ID"] not in ZF_STOCK_ENCOUNTERS}
         self.assertEqual(sorted(normal), [449, *range(1074, 1081)])  # the declared rows (the stock ones are not here)
         stock = {r["ID"]: r for r in dbcfile.read_dbc(state.BASE_DBC_DIR / dbcfmt.DUNGEONENCOUNTER.dbc_filename,
                                                       dbcfmt.DUNGEONENCOUNTER)}

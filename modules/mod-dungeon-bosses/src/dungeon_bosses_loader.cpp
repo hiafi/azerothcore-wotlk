@@ -179,6 +179,22 @@ void AddSC_rfc_taragaman_hard_mode();       // D4H: Starving: go_rfc_blood_shrin
                                             // npc_rfc_blood_globule (`.dbtest rfc starving`)
 void AddSC_instance_ragefire_chasm_rework();
 void AddSC_dungeon_bosses_rfc_commandscript();
+// Zul'Farrak (map 209): the Zul'Farrak skeleton (WP-S0): the bosses and the crew (one file per WP), the instance
+// (registered under the stock name instance_zulfarrak, replacing the stock one) and the `.dbtest zf` shell
+void AddSC_boss_theka_rework();             // D1: boss_theka_rework
+void AddSC_boss_antusul_rework();           // D2: boss_antusul_rework, npc_antusul_servant_rework
+void AddSC_boss_zumrah_rework();            // D3: boss_zumrah_rework
+void AddSC_boss_sandfury_executioner_rework();  // D4a: boss_sandfury_executioner_rework (the Block, stage 1)
+void AddSC_pyramid_stair_rework();          // D4b: the Stair and the Altar's directors (stages 2, 3), the specialists
+void AddSC_boss_sezzziz_rework();           // D4b: boss_sezzziz_rework, boss_nekrum_rework
+void AddSC_zf_bly_crew();                   // CR: npc_bly_crew_bly, _raven, _oro, _weegli, _murta
+void AddSC_bly_crew_fight_rework();         // D5: the crew's fight (`.dbtest zf blyfight`)
+void AddSC_boss_ukorz_rework();             // D6: boss_ukorz_rework, boss_ruuzlu_rework
+void AddSC_boss_gahzrilla_rework();         // D7: boss_velratha_rework, boss_gahzrilla_rework
+void AddSC_gahzrilla_crew_hard_mode();      // D7Ha: The Crew at the Pool (`.dbtest zf poolcrew`)
+void AddSC_gahzrilla_deluge();              // D7Hb: the Deluge (`.dbtest zf deluge`)
+void AddSC_instance_zulfarrak_rework();     // S0: the instance, go_zf_troll_cage
+void AddSC_dungeon_bosses_zf_commandscript();
 // Stratholme hard mode items (wave 1 dungeon items): the Balnazzar and Baron Rivendare hard mode item effects
 void AddSC_strat_hard_mode_items();         // spell_strat_dust_of_the_nathrezim, spell_strat_two_faced_tome,
                                             // spell_strat_ysidas_locket, spell_strat_blade_of_the_condemned,
@@ -356,6 +372,19 @@ void Addmod_dungeon_bossesScripts()
     AddSC_boss_taragaman_rework();
     AddSC_rfc_taragaman_hard_mode();
     AddSC_instance_ragefire_chasm_rework();
+    AddSC_boss_theka_rework();
+    AddSC_boss_antusul_rework();
+    AddSC_boss_zumrah_rework();
+    AddSC_boss_sandfury_executioner_rework();
+    AddSC_pyramid_stair_rework();
+    AddSC_boss_sezzziz_rework();
+    AddSC_zf_bly_crew();
+    AddSC_bly_crew_fight_rework();
+    AddSC_boss_ukorz_rework();
+    AddSC_boss_gahzrilla_rework();
+    AddSC_gahzrilla_crew_hard_mode();
+    AddSC_gahzrilla_deluge();
+    AddSC_instance_zulfarrak_rework();
     AddSC_strat_hard_mode_items();
     AddSC_sfk_hard_mode_items();
     AddSC_brs_hard_mode_items();
@@ -369,7 +398,8 @@ void Addmod_dungeon_bossesScripts()
     AddSC_molten_set_bonuses();
     AddSC_zealot_set_bonuses();
     // after the boss files: they register their `.dmtest` / `.sfktest` / `.dbtest scholo` / `.dbtest strat` /
-    // `.dbtest brs` / `.dbtest brd` / `.dbtest sm` / `.dbtest rfc` tables from their AddSC_ functions
+    // `.dbtest brs` / `.dbtest brd` / `.dbtest sm` / `.dbtest rfc` / `.dbtest zf` tables from their AddSC_
+    // functions
     AddSC_dungeon_bosses_dmtest_commandscript();
     AddSC_dungeon_bosses_sfktest_commandscript();
     AddSC_dungeon_bosses_scholo_commandscript();
@@ -378,4 +408,5 @@ void Addmod_dungeon_bossesScripts()
     AddSC_dungeon_bosses_brd_commandscript();
     AddSC_dungeon_bosses_sm_commandscript();
     AddSC_dungeon_bosses_rfc_commandscript();
+    AddSC_dungeon_bosses_zf_commandscript();
 }

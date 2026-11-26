@@ -349,9 +349,12 @@ soundentries:
   start: 90001
   end: 90199
 
+# Widened from 90699 to 90999 by the Zul'Farrak build (WP-0, 2026-11-25; zul-farrak-build.HANDOFF.md s3.3): the
+# 50-id dungeon slices had filled 90370-90699. Checked free 2026-11-25: no spellvisual_dbc row and no
+# spell_dbc.SpellVisualID_1/_2 in 90700-90999 live, no slice in any worktree's ids.yaml.
 spellvisual:
   start: 90001
-  end: 90699
+  end: 90999
 
 # Widened from 90499 to 90699 by boss mechanics M1 (mod-boss-mechanics marker displays: the bossmechanics slice
 # 90500-90699, handoff dungeon-mechanics.STAGE-M1-HANDOFF.md s3.1; the rogue slice 90490-90499 ended the old block),
@@ -919,6 +922,17 @@ reservations:
   zul_farrak_items:
     spell: {start: 213800, end: 213839}
     creature: {start: 301000, end: 301004}
+  # Zul'Farrak build (WP-0, 2026-11-25; .agents/plans/zul-farrak-build/zul-farrak-build.HANDOFF.md s3.3). Checked free
+  # 2026-11-25: no live spell_dbc row in 213840-214239, creature_template row in 301005-301099, gameobject_template row
+  # in 301360-301379, spellvisual row in 90700-90999 or creaturedisplayinfo / creaturemodeldata row in 90830-90849, and
+  # no other worktree's ids.yaml names them. Slices in the handoff s3.3.
+  zul_farrak:
+    spell: {start: 213840, end: 214239}
+    creature: {start: 301005, end: 301099}
+    gameobject: {start: 301360, end: 301379}
+    spellvisual: {start: 90700, end: 90749}  # SpellVisual, Kit and EffectName
+    creaturedisplayinfo: {start: 90830, end: 90849}
+    creaturemodeldata: {start: 90830, end: 90849}
   # Gnomeregan gear stage (.agents/plans/gnomeregan-gear/, 2026-11-25): the three Mekgineer Thermaplugg hard mode item
   # effects (source/items/gnomeregan_hard_mode_effects.py; their per-tier copies mint from `item_copies`) and the
   # Walking Bomb look. Checked free 2026-11-25: no live spell_dbc row in 214240-214299, no live creature_template row in

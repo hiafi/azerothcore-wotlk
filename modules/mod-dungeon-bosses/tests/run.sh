@@ -2,8 +2,9 @@
 # Builds and runs the standalone mod-dungeon-bosses tests with every available host compiler (g++ and clang++).
 # Pure headers only (src/<Dungeon>/*Logic.h, src/DungeonSets/*Logic.h, DeadminesKitMath.h, DeadminesRework.h,
 # ShadowfangKeepRework.h, ScholomanceRework.h, SoloLessonLogic.h, StratholmeRework.h, BlackrockSpireRework.h,
-# BlackrockDepthsRework.h, ScarletMonasteryRework.h, RagefireChasmRework.h, the shared kit's pure
-# src/Kit/DungeonKit{Math,State,Arena,Logic,Ids,Floor,Flow,WallLogic,FrontLogic,RingLogic,ZoneLogic,WingLogic}.h, the
+# BlackrockDepthsRework.h, ScarletMonasteryRework.h, RagefireChasmRework.h, ZulFarrakRework.h, the shared kit's pure
+# src/Kit/DungeonKit{Math,State,Arena,Logic,Ids,Floor,Flow,WallLogic,FrontLogic,RingLogic,ZoneLogic,WingLogic,
+# WaterLogic,SoakLogic,ArenaEdgeLogic}.h, the
 # generated src/Generated/ItemSpellCopies.h): no server build needed.
 # A boss WP adds nothing here: every tests/<boss>_test.cpp is listed below already (one per boss file).
 set -euo pipefail
@@ -93,6 +94,9 @@ tests=(
   strat_grand_lie_test
   kit_walls_test
   kit_fronts_test
+  kit_water_test
+  kit_edge_test
+  kit_soak_test
   blackrock_spire_test
   brs_omokk_test
   brs_voshgajin_test
@@ -159,6 +163,18 @@ tests=(
   rfc_bazzalan_test
   rfc_taragaman_test
   rfc_taragaman_hard_mode_test
+  zul_farrak_test
+  zf_theka_test
+  zf_antusul_test
+  zf_zumrah_test
+  zf_block_test
+  zf_stair_test
+  zf_crew_test
+  zf_crewfight_test
+  zf_ukorz_test
+  zf_gahzrilla_test
+  zf_hard_mode_test
+  zf_deluge_test
 )
 
 status=0
@@ -168,7 +184,7 @@ for cxx in "${compilers[@]}"; do
     "$cxx" -std=c++20 -Wall -Wextra -Werror -O1 -I "$root/src/Kit" -I "$root/src/Deadmines" \
       -I "$root/src/ShadowfangKeep" -I "$root/src/Scholomance" -I "$root/src/Stratholme" -I "$root/src/Generated" \
       -I "$root/src/BlackrockSpire" -I "$root/src/BlackrockDepths" -I "$root/src/ScarletMonastery" \
-      -I "$root/src/RagefireChasm" -I "$here" \
+      -I "$root/src/RagefireChasm" -I "$root/src/ZulFarrak" -I "$here" \
       "$here/$test.cpp" -o "$out/$test-$cxx"
     if ! "$out/$test-$cxx"; then
       status=1

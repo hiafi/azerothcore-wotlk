@@ -137,8 +137,15 @@ namespace DungeonKit
         std::optional<BossMechanics::Ordering> order;
         uint8 count = 1;                    // bodies the bots send (the Soak's count)
         bool oneClaimPerBot = true;         // among this tag's live pickups, a bot claims one (Malicia's souls)
+        // Only while a walker exists (Zul'Farrak WP-KT, F8: Zum'rah's souls go to the walkers alone): the takers are
+        // the pickups' SetCarriers set, not who.carriers (which an empty set would turn into "everyone"). While that
+        // set is empty the pickup is dormant: no Soak (no bot goes for it) and no touch takes it; it still waits,
+        // crawls, arrives and expires. A new set re-registers its Soak (a new walk, a new walker).
+        bool onlyWhileCarriers = false;
         std::optional<BossMechanics::Color> color;
         uint32 tag = 0;
+        // extra registry options on every registration (capture guids only)
+        std::function<void(BossMechanics::MechanicRef&)> configure;
         // Capture guids only. `at` is where the pickup was when it was taken / arrived.
         std::function<void(Player* taker, Position const& at)> onPick;
         std::function<void(ObjectGuid goal, Position const& at)> onReach;
@@ -162,6 +169,12 @@ namespace DungeonKit
         uint32 Add(Creature* owner, Position const& at, CrawlPickupSpec spec, CrawlGoal goal = {});
         // A new goal for every live pickup (the prelude's pile, then Urok when he arrives).
         void SetGoal(CrawlGoal goal);
+        // The takers of every onlyWhileCarriers pickup, live and to come (the walkers now; empty: none, dormant). A
+        // changed set re-registers their Soaks; the other pickups are untouched.
+        void SetCarriers(Creature* owner, GuidSet carriers);
+        GuidSet const& Carriers() const { return _carriers; }
+        // A dormant pickup: onlyWhileCarriers with nobody to take it.
+        bool Dormant(uint32 id) const;
         void Update(Creature* owner, uint32 diff);
         void Cancel(Creature* owner, uint32 id);
         void Clear(Creature* owner);
@@ -187,9 +200,11 @@ namespace DungeonKit
         };
 
         void Remove(Creature* owner, Entry& e);
+        void RegisterSoak(Creature* owner, Entry& e, Creature* unit = nullptr);
         bool GoalPosition(Map* map, CrawlGoal const& goal, Position& out) const;
 
         std::vector<Entry> _pickups;
+        GuidSet _carriers;
         uint32 _nextId = 1;
         uint32 _pollMs = 0;
     };
