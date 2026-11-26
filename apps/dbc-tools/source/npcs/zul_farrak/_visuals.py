@@ -227,7 +227,7 @@ UK_CALL = 14508
 UK_CALL_ALT = 76
 UK_LASH = 2357
 UK_HELD = 7519                          # F-1d DQ-3 A: the heroic 30% hold (214092): Spirit Shield's rune shield STATE
-UK_HELD_ALT = 711                       # Stone Skin: a grey stone tint STATE, if the shield reads as an immunity
+UK_HELD_ALT = 711                       # Stone Skin: a gray stone tint STATE, if the shield reads as an immunity
 UK_STALKER_DISPLAY = 11686              # CDI InvisibleStalker x1, as RFC's creature 300988
 
 # ===== Velratha and Gahz'rilla =====

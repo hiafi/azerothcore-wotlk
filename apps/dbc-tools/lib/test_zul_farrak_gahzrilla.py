@@ -226,7 +226,8 @@ class GahzrillaDataTest(unittest.TestCase):
         self.assertNotRegex(self.sql, r"\(7273, [12],")
         # F-2 M1 / R-Q m1: her later bodies roll only the quest rows (bit 0x20, kLootModeVelrathaQuest)
         self.assertIn("UPDATE `creature_loot_template` SET `LootMode` = `LootMode` | 32\n    WHERE `Entry` = 7795 AND "
-                      "`Item` IN (9234, 10661) AND `Reference` = 0 AND `GroupId` = 0 AND `QuestRequired` = 1;", self.sql)
+                      "`Item` IN (9234, 10661) AND `Reference` = 0 AND `GroupId` = 0 AND `QuestRequired` = 1;",
+                      self.sql)
 
 
 if __name__ == "__main__":
