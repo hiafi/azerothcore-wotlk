@@ -373,6 +373,14 @@ KEPT_EFFECTS = {
 # the declaration puts the tier-matched join there; slot 2 (a Chance on hit absorb) is the stock slot.
 JANGTHRAZE = "zf_jangthraze_the_protector"
 CALL_STOCK, CALL_JOIN, JANGTHRAZE_ABSORB = 11654, 213808, 11657
+ZF_LIMIT_CATEGORIES = range(1103, 1115)  # minted by the write run (item_limit_ids.lock)
+
+
+def _minted_entries() -> set[int]:
+    """Entries item_ids.lock holds for this file's keys (empty before the write run)."""
+    lock = Path(__file__).resolve().parents[1] / "source" / "items" / "item_ids.lock"
+    return {int(entry) for entry, key, *_ in (line.split() for line in lock.read_text().splitlines() if line.strip())
+            if key.startswith("zf_")}
 # Stock stat spells the budget absorbs (the default): key -> the spell id.
 ABSORBED = {"zf_embrace_of_the_lycan": 15807, "zf_vice_grips": 9142, "zf_gahzrilla_scale_armor": 21631}
 # Columns the declaration clears or sets beyond the look (key -> columns), besides `bonding` on a new item.
@@ -563,7 +571,8 @@ class ZulFarrakItemsTest(unittest.TestCase):
 
     def test_stock_names(self):
         """A stock entry's live name is the doc's; a new item's name is free in the live item_template."""
-        names = {row["name"] for row in self.rows.values()}
+        minted = _minted_entries()  # after the write run the new items are live under their own names
+        names = {row["name"] for entry, row in self.rows.items() if entry not in minted}
         for key, decl in self.decls.items():
             if decl.base is not None:
                 self.assertEqual(self.rows[decl.base]["name"], NAMES[key], key)
@@ -592,6 +601,8 @@ class ZulFarrakItemsTest(unittest.TestCase):
                 continue
             row = self.rows[decl.base]
             stock = (int(row["ItemLevel"]), int(row["RequiredLevel"]))
+            if key in MOVED_LEVELS and stock == MOVED_LEVELS[key]:
+                stock = STOCK_LEVELS[decl.base]  # after the write run the live row already has the moved level
             self.assertEqual(stock, STOCK_LEVELS[decl.base], key)  # the stock row is what this file expects
             self.assertEqual(int(row["Quality"]), 4 if decl.base in STOCK_EPIC else 3, key)
             self.assertIsNone(decl.quality, key)  # the quality is the stock row's
@@ -692,13 +703,15 @@ class ZulFarrakItemsTest(unittest.TestCase):
             self.assertEqual(int(row["RandomProperty"]), 0, key)
             self.assertEqual(int(row["RandomSuffix"]), 0, key)
             self.assertEqual(int(row["itemset"]), 0, key)
-            self.assertEqual(int(row["ItemLimitCategory"]), 0, key)
+            # 0 before the write run; after it, the category the run minted for the item
+            self.assertIn(int(row["ItemLimitCategory"]), {0, *ZF_LIMIT_CATEGORIES}, key)
             for column in RESISTANCES:
                 self.assertEqual(int(row[column]), 0, f"{key} {column}")
         # the cleared ones are real stock values (a stale clear would go unnoticed)
-        self.assertEqual(int(self.rows[9640]["RandomProperty"]), 783)
-        self.assertEqual(int(self.rows[862]["RandomProperty"]), 3253)
-        self.assertEqual(int(self.rows[9483]["fire_res"]), 8)
+        if not _minted_entries():  # after the write run the live rows are already cleared
+            self.assertEqual(int(self.rows[9640]["RandomProperty"]), 783)
+            self.assertEqual(int(self.rows[862]["RandomProperty"]), 3253)
+            self.assertEqual(int(self.rows[9483]["fire_res"]), 8)
         self.assertEqual({k: d.extra_stamina for k, d in self.decls.items() if d.extra_stamina}, EXTRA_STAMINA)
 
     def test_binding(self):
@@ -789,6 +802,10 @@ class ZulFarrakItemsTest(unittest.TestCase):
         for tier, row in rows_now.items():
             changed = {c for c, value in row.items() if value != rows_before[tier][c] and c != "spellppmRate_1"
                        and float(value) != float(rows_before[tier][c])}
+            if int(self.rows[11086]["spellid_1"]) == CALL_JOIN:
+                # after the write run the live stock row, which every tier copies, already carries the join spell
+                self.assertEqual(changed, set(), tier)
+                continue
             self.assertEqual(changed, {"spellid_1"}, tier)
             self.assertEqual(int(rows_before[tier]["spellid_1"]), CALL_STOCK, tier)
         cells = item_variants.FrozenRoleCells(
