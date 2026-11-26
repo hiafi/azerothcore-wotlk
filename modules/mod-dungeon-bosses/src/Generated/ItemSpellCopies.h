@@ -292,8 +292,29 @@ namespace ItemSpellCopies
         { 219075, 213806, 219075 },  // zf_sergeants_whistle empowered_1_hm
         { 219076, 213806, 219076 },  // zf_sergeants_whistle empowered_2_hm
         { 219077, 213806, 219077 },  // zf_sergeants_whistle empowered_3_hm
+        { 219078, 214240, 219078 },  // gnomer_leaking_reactor_core empowered_1_hm
+        { 219079, 214241, 219078 },  // gnomer_leaking_reactor_core empowered_1_hm
+        { 219080, 214240, 219080 },  // gnomer_leaking_reactor_core empowered_2_hm
+        { 219081, 214241, 219080 },  // gnomer_leaking_reactor_core empowered_2_hm
+        { 219082, 214240, 219082 },  // gnomer_leaking_reactor_core empowered_3_hm
+        { 219083, 214241, 219082 },  // gnomer_leaking_reactor_core empowered_3_hm
+        { 219084, 214242, 219084 },  // gnomer_walking_bomb_launcher empowered_1_hm
+        { 219085, 214243, 219084 },  // gnomer_walking_bomb_launcher empowered_1_hm
+        { 219086, 214244, 219084 },  // gnomer_walking_bomb_launcher empowered_1_hm
+        { 219087, 214242, 219087 },  // gnomer_walking_bomb_launcher empowered_2_hm
+        { 219088, 214243, 219087 },  // gnomer_walking_bomb_launcher empowered_2_hm
+        { 219089, 214244, 219087 },  // gnomer_walking_bomb_launcher empowered_2_hm
+        { 219090, 214242, 219090 },  // gnomer_walking_bomb_launcher empowered_3_hm
+        { 219091, 214243, 219090 },  // gnomer_walking_bomb_launcher empowered_3_hm
+        { 219092, 214244, 219090 },  // gnomer_walking_bomb_launcher empowered_3_hm
+        { 219093, 214245, 219093 },  // gnomer_master_punch_card empowered_1_hm
+        { 219094, 214247, 219093 },  // gnomer_master_punch_card empowered_1_hm
+        { 219095, 214245, 219095 },  // gnomer_master_punch_card empowered_2_hm
+        { 219096, 214247, 219095 },  // gnomer_master_punch_card empowered_2_hm
+        { 219097, 214245, 219097 },  // gnomer_master_punch_card empowered_3_hm
+        { 219098, 214247, 219097 },  // gnomer_master_punch_card empowered_3_hm
     };
-    inline constexpr std::size_t kCopyCount = 268;
+    inline constexpr std::size_t kCopyCount = 289;
 
     // The group of `spellId` when it is a copy, else 0.
     constexpr std::uint32_t GroupOf(std::uint32_t spellId)
