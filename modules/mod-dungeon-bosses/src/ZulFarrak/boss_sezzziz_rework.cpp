@@ -263,6 +263,7 @@ struct boss_sezzziz_rework : public ScriptedAI
 
         // The fight clock moves every tick, cast bar or not (L8).
         _now += diff;
+        CheckOfferingBar();
         if (me->HasUnitState(UNIT_STATE_CASTING))
             return;
 
@@ -325,17 +326,37 @@ private:
             return false;
         }
         _offeringAt = _now + urand(Tune::kOfferingMinMs, Tune::kOfferingMaxMs);
+        me->StopMoving();
+        // R-1-B mn-3: a cast refused at its start (a silence, a school lock) draws nothing and says nothing.
+        SpellCastResult const result = me->CastSpell(target, OfferingSpell(), false);
+        if (result != SPELL_CAST_OK)
+        {
+            AltarLog("offering-refused-cast", Acore::StringFormat("target={} result={}", target->GetName(),
+                uint32(result)));
+            _offeringAt = _now + 1000;
+            return false;
+        }
         _offeringTarget = target->GetGUID();
         _offeringCrew = crew;
         _offeringName = target->GetName();
-        me->StopMoving();
         Talk(EMOTE_BLOOD_OFFERING, target);
-        me->CastSpell(target, OfferingSpell(), false);
         Beam(target);
         Mechanic::NoteNextCastIn(me, OfferingSpell(), Milliseconds(_offeringAt - _now));
         AltarLog("offering", Acore::StringFormat("target={} crew={} cast={} heroic={} candidates={}", _offeringName,
             crew ? 1 : 0, Tune::kOfferingCastMs.Get(_heroic), _heroic ? 1 : 0, candidates));
         return true;
+    }
+
+    // R-1-B mn-3: the bar ended with neither OnSpellCast nor OnSpellFailed (a cast that fails at its end: the target
+    // out of range or sight, dead; AzerothCore calls OnSpellFailed only from an interrupt): the beam goes. OnSpellCast
+    // runs inside the spell's own update, before this tick, so an Offering still marked with no bar is a lost one.
+    void CheckOfferingBar()
+    {
+        if (_offeringTarget.IsEmpty() || me->FindCurrentSpellBySpellId(OfferingSpell()))
+            return;
+        AltarLog("offering-lost", Acore::StringFormat("target={} (the bar ended without landing)", _offeringName));
+        Beam(nullptr);
+        _offeringTarget.Clear();
     }
 
     // The red beam from him to the one offered while the bar runs (SV 7270 through his channel fields, as D4a's rope;
@@ -464,30 +485,10 @@ private:
             _live.push_back(handle);
     }
 
-    // Boss data (SP "Boss data"): kicks: the Offering first (required on heroic), the Witch Doctors' Flash Heal (a
-    // reward), never his Shadow Bolt (a kick there locks only Shadow, but it spends the kick the Offering needs);
-    // cures: Curse of Blood and Sandfury Hex (Curse), Hexed and the Scream's fear (Magic, loss of control); kill order:
-    // the Witch Doctors, the Healing Wards, the Hexmasters, the rest of his adds and the fodder, then Nekrum and him;
-    // heroic: Grievous Wound carriers healed on to 95%.
+    // Boss data (SP "Boss data"): ZfPyramid::AltarDescriptor, which the Altar's director stalker carries too.
     void Describe()
     {
-        BossMechanics::Descriptor d;
-        d.interrupts.emplace_back(NPC_SEZZZIZ, OfferingSpell(), uint8(_heroic ? 3 : 2),
-            std::chrono::milliseconds(Tune::kOfferingMinMs));
-        d.interrupts.emplace_back(NPC_ZF_SANDFURY_WITCH_DOCTOR, ZfStair::SPELL_FLASH_HEAL, uint8(1));
-        d.interrupts.emplace_back(NPC_SEZZZIZ, SPELL_SHADOW_BOLT, uint8(0));
-        d.dispels.emplace_back(ZfStair::SPELL_HEXED, uint8(3), true);
-        d.dispels.emplace_back(SPELL_SCREAM_FEAR, uint8(2), true);
-        d.dispels.emplace_back(ZfStair::SPELL_CURSE_OF_BLOOD, uint8(1));
-        d.dispels.emplace_back(ZfStair::SPELL_SANDFURY_HEX, uint8(1));
-        d.targets.emplace_back(NPC_ZF_SANDFURY_WITCH_DOCTOR, int8(4));
-        d.targets.emplace_back(ZfStair::NPC_HEALING_WARD, int8(3));
-        d.targets.emplace_back(NPC_ZF_SANDFURY_HEXMASTER, int8(2));
-        d.targets.emplace_back(NPC_ZF_SANDFURY_BERSERKER, int8(1));
-        d.targets.emplace_back(NPC_SANDFURY_SLAVE, int8(1));
-        d.targets.emplace_back(NPC_SANDFURY_DRUDGE, int8(1));
-        ZfPyramid::AddWoundHealRule(d, _heroic);
-        Mechanic::Describe(me, std::move(d));
+        Mechanic::Describe(me, ZfPyramid::AltarDescriptor(_heroic));
     }
 
     // The pull's state, gone (RB-1): every registry handle, the clocks, the Offering in flight, the frenzy, his buff;

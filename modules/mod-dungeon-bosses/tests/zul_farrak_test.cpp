@@ -88,7 +88,7 @@ namespace
         CHECK(kSpellsShared.Contains(kSpellsCrewAlly.first) && kSpellsShared.Contains(kSpellsCrewAlly.last));
         CHECK(!kSpellsCrewAlly.Contains(SPELL_ZF_WEAKENED_COPY));
         // the build creatures and gameobjects inside theirs
-        for (std::uint32_t entry : { NPC_ZF_PERSECUTOR_SWARM, NPC_ZF_THEKA_STALKER, NPC_ZF_EMPTY_VESSEL,
+        for (std::uint32_t entry : { NPC_ZF_PERSECUTOR_SWARM, NPC_ZF_EMPTY_VESSEL,
             NPC_ZF_GRAVE_STALKER, NPC_ZF_SANDFURY_BERSERKER, NPC_ZF_PYRAMID_STALKER, NPC_ZF_QUICKSAND,
             NPC_ZF_CREEPING_SANDS, NPC_ZF_PUDDLE, NPC_ZF_STRIKE_STALKER, NPC_ZF_ENTRANCE_GOBLIN })
             CHECK(kCreaturesReservation.Contains(entry));
@@ -148,6 +148,15 @@ namespace
         CHECK(PyramidComplete(s, PYRAMID_STAGE_STAIR) == PyramidVerdict::Completed);
         CHECK(s.stage == PYRAMID_STAGE_ALTAR && !s.running && !StairRestartWaits(s));
         CHECK(StockPyramidPhase(s, false) == 7);
+        // R-1-FW m3 / R-1-B mn-4: a loss in the descent's 5 s (no stage running) counts nothing, the bit stays
+        {
+            PyramidState gap = s;
+            gap.crewAlive = kCrewAll;           // (a fresh mask for the check)
+            CrewLoss const lost = PyramidCrewLost(gap, CREW_RAVEN, true);
+            CHECK(!lost.counted && gap.crewAlive == kCrewAll);
+            CHECK(PyramidStart(gap, PYRAMID_STAGE_ALTAR) == PyramidVerdict::Started
+                && (gap.snapshot.crewAlive & CrewBit(CREW_RAVEN)));
+        }
 
         // stage 3: a crew death adds nothing but the bit; a wipe brings it back
         CHECK(PyramidStart(s, PYRAMID_STAGE_ALTAR) == PyramidVerdict::Started);
@@ -171,10 +180,12 @@ namespace
         PyramidCrewLost(h, CREW_RAVEN, true);
         CHECK(h.bloodPrice == 12 + 2 * kBloodPricePerCrew);
         CHECK(PyramidWipe(h, PYRAMID_STAGE_BLOCK) == PyramidVerdict::Wiped && h.bloodPrice == 0);
-        // outside a running stage nothing counts but the bit (a reload's settle)
+        // outside a running stage nothing counts, not even the bit (a reload's settle, an idle stage: R-1-FW m3)
         PyramidState idle;
         loss = PyramidCrewLost(idle, CREW_BLY, true);
-        CHECK(loss.counted && loss.bloodPrice == 0 && idle.bloodPrice == 0);
+        CHECK(!loss.counted && loss.bloodPrice == 0 && idle.bloodPrice == 0 && idle.crewAlive == kCrewAll);
+        // the Blood Price's ticks while a stage runs never save (the snapshot is what a save keeps: D4a's note)
+        CHECK(!BloodPriceWriteSaves(true) && BloodPriceWriteSaves(false));
 
         // the Altar's win
         CHECK(AltarCleared(true, false, true, false));
@@ -275,6 +286,10 @@ namespace
         CHECK(!HardModeArmAllowed(true, CREW_PATH_TEST, S::Done, kCrewAll, S::Done, S::NotStarted));
         CHECK(GmHardModeAllowed(true, S::NotStarted, 1) && !GmHardModeAllowed(false, S::NotStarted, 1));
         CHECK(GmHardModeAllowed(false, S::NotStarted, 0) && !GmHardModeAllowed(true, S::InProgress, 0));
+        // F-1 MA-1: only a strike whose pull built the packages (2) arms; the key alone at the gong (1) never does
+        CHECK(GongArmsHardMode(kGongDataHardMode, true));
+        CHECK(!GongArmsHardMode(kGongDataPlain, true));                 // key shut at her pull, open at the gong
+        CHECK(!GongArmsHardMode(kGongDataHardMode, false) && !GongArmsHardMode(0, true) && !GongArmsHardMode(3, true));
         CHECK(HardModeLootLit(1, S::InProgress) && !HardModeLootLit(1, S::Done) && !HardModeLootLit(0, S::NotStarted));
 
         // the pool's wipes and the slot pairing (section 7 #43 h A)
@@ -284,6 +299,16 @@ namespace
             S::Done));
         CHECK(!PoolWiped(BOSS_UKORZ, S::InProgress, S::NotStarted));
         CHECK(PoolWipeReopensVelratha(BOSS_GAHZRILLA, S::InProgress, S::NotStarted, S::Done));
+        // D5's note: the stash comes back after a reload unless it was emptied
+        CHECK(StashRestoreDue(S::Done, 0, false, true, kStashRestoreMs));
+        CHECK(!StashRestoreDue(S::Done, 1, false, true, kStashRestoreMs));
+        CHECK(!StashRestoreDue(S::Done, 0, true, true, kStashRestoreMs));
+        CHECK(!StashRestoreDue(S::Done, 0, false, false, kStashRestoreMs));
+        CHECK(!StashRestoreDue(S::Done, 0, false, true, kStashRestoreMs - 1));
+        CHECK(!StashRestoreDue(S::InProgress, 0, false, true, kStashRestoreMs));
+        CHECK(kEndDoorFallbackMs >= kStashRestoreMs);   // a reload's watch counts as long ago for both
+        CHECK(PoolReloadReopensVelratha(S::Done, S::NotStarted) && PoolReloadReopensVelratha(S::Done, S::InProgress));
+        CHECK(!PoolReloadReopensVelratha(S::Done, S::Done) && !PoolReloadReopensVelratha(S::NotStarted, S::NotStarted));
         CHECK(!PoolWipeReopensVelratha(BOSS_GAHZRILLA, S::InProgress, S::NotStarted, S::NotStarted));
         CHECK(!PoolWipeReopensVelratha(BOSS_VELRATHA, S::InProgress, S::NotStarted, S::Done));
     }
@@ -306,13 +331,34 @@ namespace
         s.endDoor = S::Done;
         s.hardMode = 1;
         s.crewAtPool = 1;
+        s.stashLooted = 1;
         std::string const text = FormatZfrSave(s);
         CHECK(text.rfind("Z F R ", 0) == 0);
         ZfrSave r;
         CHECK(ParseZfrSave(text, r));
         CHECK(r.states == s.states && r.pyramidStage == s.pyramidStage && r.cagesOpen == 1);
-        CHECK(r.crewAlive == s.crewAlive && r.offerings == 2 && r.bloodPrice == 77 && r.crewAtEnd == kCrewAll);
+        // R-1-FW M1: Raven died at the pool (Test path, slot 6 DONE): a reload ends the attempt, all five stand
+        CHECK(r.crewAlive == kCrewAll && r.offerings == 2 && r.bloodPrice == 77 && r.crewAtEnd == kCrewAll);
         CHECK(r.crewPath == CREW_PATH_TEST && r.endDoor == S::Done && r.hardMode == 1 && r.crewAtPool == 1);
+        CHECK(r.stashLooted == 1);
+        // the betrayal keeps its fallen down
+        {
+            ZfrSave b = s;
+            b.crewPath = CREW_PATH_BETRAYAL;
+            b.crewAlive = 0;
+            CHECK(ParseZfrSave(FormatZfrSave(b), r) && r.crewAlive == kCrewWeegliBit);
+        }
+        // R-1-FW M2 / R-1-C MA-2: Velratha DONE, Gahz'rilla not: slot 0 reopens; both DONE stay DONE
+        {
+            ZfrSave p;
+            p.states[BOSS_VELRATHA] = S::Done;
+            CHECK(ParseZfrSave(FormatZfrSave(p), r) && r.states[BOSS_VELRATHA] == S::NotStarted);
+            p.states[BOSS_GAHZRILLA] = S::Done;
+            CHECK(ParseZfrSave(FormatZfrSave(p), r) && r.states[BOSS_VELRATHA] == S::Done);
+            // the stash flag needs slot 6 DONE
+            p.stashLooted = 1;
+            CHECK(ParseZfrSave(FormatZfrSave(p), r) && r.stashLooted == 0);
+        }
 
         // sanitized: IN_PROGRESS goes; slot 8 needs slot 1 DONE and the flag; the path, the door and the pool line
         // need slot 6 DONE; the stage follows slot 5; Weegli is always alive; the Offerings cap

@@ -358,6 +358,13 @@ class SqlTest(unittest.TestCase):
         self.assertEqual(updates[6697], (0.3672, 1.8))                     # 0.306 and 1.5, both x1.2
         self.assertLess(updates[26252][1], 3.75)                           # the live reach is far too large for a keg
 
+    def test_the_script_names_every_other_creature_the_four_updates_reach(self):
+        # R-1-LOOT m-2: the UPDATEs are by display id, so they change every creature wearing the display. The module
+        # docstring holds the judgement (live creature_template_model, 2026-11-25); it must name each of them.
+        doc = patch.__doc__
+        for entry in (7791, 35253, 300917, 28173, 29737, 29440, 29556):
+            self.assertIn(str(entry), doc, entry)
+
     def test_no_value_overflows_a_signed_int_column(self):
         # MissileAttachment -1 is held as 4294967295 in the DBC; the overlay writes it signed
         sql = patch.build_pending_sql()
@@ -496,6 +503,14 @@ class ConstantsTest(unittest.TestCase):
 
     def test_the_constants_module_is_skipped_by_the_package_loader(self):
         self.assertTrue(VISUALS_FILE.name.startswith("_"))
+
+
+class StyleTest(unittest.TestCase):
+    def test_no_line_is_over_120_columns_and_there_is_no_trailing_whitespace(self):
+        for path in (Path(patch.__file__), Path(__file__)):
+            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                self.assertLessEqual(len(line), 120, f"{path.name}:{number}")
+                self.assertEqual(line, line.rstrip(), f"{path.name}:{number} trailing whitespace")
 
 
 class StockExistsTest(unittest.TestCase):

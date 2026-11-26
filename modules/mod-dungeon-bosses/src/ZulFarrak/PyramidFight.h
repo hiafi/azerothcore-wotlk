@@ -37,6 +37,7 @@
 #include "MechanicRegistry.h"
 #include "ObjectGuid.h"
 #include "Player.h"
+#include "SezzzizLogic.h"
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
 #include "StringFormat.h"
@@ -230,6 +231,37 @@ namespace ZfPyramid
         e.auraSpell = SPELL_PY_GRIEVOUS_WOUND;
         e.maxStacks = 0;
         return e;
+    }
+
+    // The Altar's boss data (SP "Boss data"), one copy for both owners that describe it: Sezz'ziz from his pull and
+    // the Altar's director stalker for the whole stage (R-1-B mn-1: the descent, the idle wait, and after Sezz'ziz
+    // dies while Nekrum and the adds fight on). Kicks: the Offering first (required on heroic), the Witch Doctors'
+    // Flash Heal (a reward), never his Shadow Bolt (a kick there locks only Shadow, but it spends the kick the
+    // Offering needs); cures: Curse of Blood and Sandfury Hex (Curse), Hexed and the Scream's fear (Magic, loss of
+    // control); kill order: the Witch Doctors, the Healing Wards, the Hexmasters, the rest of his adds and the
+    // fodder, then Nekrum and him; heroic: Grievous Wound carriers healed on to 95%.
+    inline BossMechanics::Descriptor AltarDescriptor(bool heroic)
+    {
+        using namespace ZulFarrakRework;
+        uint32 const offering = heroic ? uint32(ZfAltar::SPELL_BLOOD_OFFERING_H)
+            : uint32(ZfAltar::SPELL_BLOOD_OFFERING);
+        BossMechanics::Descriptor d;
+        d.interrupts.emplace_back(NPC_SEZZZIZ, offering, uint8(heroic ? 3 : 2),
+            std::chrono::milliseconds(ZfAltar::Tune::kOfferingMinMs));
+        d.interrupts.emplace_back(NPC_ZF_SANDFURY_WITCH_DOCTOR, ZfStair::SPELL_FLASH_HEAL, uint8(1));
+        d.interrupts.emplace_back(NPC_SEZZZIZ, ZfAltar::SPELL_SHADOW_BOLT, uint8(0));
+        d.dispels.emplace_back(ZfStair::SPELL_HEXED, uint8(3), true);
+        d.dispels.emplace_back(ZfAltar::SPELL_SCREAM_FEAR, uint8(2), true);
+        d.dispels.emplace_back(ZfStair::SPELL_CURSE_OF_BLOOD, uint8(1));
+        d.dispels.emplace_back(ZfStair::SPELL_SANDFURY_HEX, uint8(1));
+        d.targets.emplace_back(NPC_ZF_SANDFURY_WITCH_DOCTOR, int8(4));
+        d.targets.emplace_back(ZfStair::NPC_HEALING_WARD, int8(3));
+        d.targets.emplace_back(NPC_ZF_SANDFURY_HEXMASTER, int8(2));
+        d.targets.emplace_back(NPC_ZF_SANDFURY_BERSERKER, int8(1));
+        d.targets.emplace_back(NPC_SANDFURY_SLAVE, int8(1));
+        d.targets.emplace_back(NPC_SANDFURY_DRUDGE, int8(1));
+        AddWoundHealRule(d, heroic);
+        return d;
     }
 
     // ----------------------------------------------------------------------------------------------------------------

@@ -252,6 +252,72 @@ namespace
         CHECK(Tune::kCasterRangeYd < Tune::kCurseRangeYd);
     }
 
+    // R-1-B MJ-1: a climbing caster stops in melee reach of the landing hold's mouth. Model: its target on the stair's
+    // axis at `targetY`, the caster straight down the axis at its chase distance (range + both hitboxes, 1.5 yd each)
+    // on the stair's slope (or the landing); a melee bot on the hold's mouth reaches 5 yd (NOMINAL_MELEE_RANGE).
+    float CasterToMouthYd(float range, float targetY)
+    {
+        using namespace ZfStair;
+        float const want = range + 3.f;
+        float const tz = StairZAt(targetY);
+        float y = targetY;
+        while (y > kStairLaneYMin)
+        {
+            float const dy = targetY - y;
+            float const dz = tz - StairZAt(y);
+            if (std::sqrt(dy * dy + dz * dz) >= want)
+                break;
+            y -= 0.05f;
+        }
+        float const my = kHoldMouthY - y;
+        float const mz = StairZAt(kHoldMouthY) - StairZAt(y);
+        return y >= kHoldMouthY ? 0.f : std::sqrt(my * my + mz * mz);
+    }
+
+    void TestClimberCasters()
+    {
+        using namespace ZfStair;
+        CHECK(CasterRange(false) == Tune::kCasterRangeYd && CasterRange(true) == Tune::kClimberCasterRangeYd);
+        float constexpr kMeleeYd = 5.f;
+        // the old range: mid-lane, out of every held melee bot's reach (fails before the fix)
+        CHECK(CasterToMouthYd(Tune::kCasterRangeYd, 1271.f) > 15.f);
+        // the climber's range: in reach with its target 4 yd inside the landing (y 1265) or at DC's hold (y 1271)
+        CHECK(CasterToMouthYd(CasterRange(true), 1265.f) <= kMeleeYd);
+        CHECK(CasterToMouthYd(CasterRange(true), 1271.f) <= kMeleeYd);
+        CHECK(CasterToMouthYd(CasterRange(true), 1275.f) <= kMeleeYd);
+        // still on the lane (a barrel's reach) while its target holds the lip
+        CHECK(CasterToMouthYd(CasterRange(true), 1261.f) > 0.f);
+    }
+
+    // R-1-B MJ-2: a climber that comes no nearer the lip for 15 s is returned once, then removed.
+    void TestClimbWatch()
+    {
+        using namespace ZfStair;
+        ClimbWatch w;
+        // progress resets the clock
+        CHECK(JudgeClimb(w, false, 40.f, 0) == ClimbVerdict::Climbing);
+        CHECK(JudgeClimb(w, false, 30.f, 10000) == ClimbVerdict::Climbing);
+        CHECK(JudgeClimb(w, false, 29.5f, 24000) == ClimbVerdict::Climbing);    // under 1 yd: no progress
+        CHECK(JudgeClimb(w, false, 29.5f, 25000) == ClimbVerdict::Return);      // 15 s since y came nearer
+        CHECK(w.strikes == 1 && w.bestYd < 0.f);
+        // after the return it starts over from where it stands
+        CHECK(JudgeClimb(w, false, 35.f, 25500) == ClimbVerdict::Climbing);
+        // fighting or walking home from an evade never counts
+        CHECK(JudgeClimb(w, true, 50.f, 60000) == ClimbVerdict::Climbing);
+        CHECK(JudgeClimb(w, false, 50.f, 74999) == ClimbVerdict::Climbing);
+        CHECK(JudgeClimb(w, false, 50.f, 75000) == ClimbVerdict::Remove);       // the second time: gone
+        // a knockback resets the watch
+        ClimbWatch k;
+        CHECK(JudgeClimb(k, false, 10.f, 0) == ClimbVerdict::Climbing);
+        ResetClimb(k);
+        CHECK(JudgeClimb(k, false, 30.f, 14000) == ClimbVerdict::Climbing);
+        CHECK(JudgeClimb(k, false, 20.f, 28000) == ClimbVerdict::Climbing);
+        CHECK(k.strikes == 0);
+        // the path's ends: the foot below the lane, the end past it on the landing
+        CHECK(kWavePathStart.y < kStairLaneYMin + 2.f && kWavePathEnd.y > kStairLaneYMax);
+        CHECK(Tune::kStuckMs > 2 * Tune::kPollMs && Tune::kStuckTries >= 2);
+    }
+
     void TestAltar()
     {
         using namespace ZfAltar;
@@ -315,6 +381,8 @@ int main()
     TestLane();
     TestHoldAndCrew();
     TestSpecialists();
+    TestClimberCasters();
+    TestClimbWatch();
     TestAltar();
     return Report("zf_stair_test");
 }

@@ -214,6 +214,13 @@ struct npc_zf_sandfury_add : public ScriptedAI
         ResetKit();
     }
 
+    // The Stair's director marks the trolls of waves 1 and 2 (kept through an evade: a climber stays one).
+    void SetData(uint32 id, uint32 value) override
+    {
+        if (id == DATA_STAIR_CLIMBER)
+            _climber = value != 0;
+    }
+
     void UpdateAI(uint32 diff) override
     {
         ZulFarrak::NoAssist(me);
@@ -241,6 +248,7 @@ protected:
     uint32 _now = 0;
     bool _heroic = false;
     bool _engaged = false;
+    bool _climber = false;
 };
 
 // Sandfury Berserker 301015 (Blood Drinker's look): PY6 the charge and its bleed; heroic PY7 Trampling Charge and
@@ -406,7 +414,7 @@ struct npc_zf_sandfury_hexmaster : public npc_zf_sandfury_add
 
     void AttackStart(Unit* who) override
     {
-        AttackStartCaster(who, Tune::kCasterRangeYd);
+        AttackStartCaster(who, CasterRange(_climber));     // R-1-B MJ-1: a climber casts from close
     }
 
 protected:
@@ -463,7 +471,7 @@ struct npc_zf_sandfury_witch_doctor : public npc_zf_sandfury_add
 
     void AttackStart(Unit* who) override
     {
-        AttackStartCaster(who, Tune::kCasterRangeYd);
+        AttackStartCaster(who, CasterRange(_climber));     // R-1-B MJ-1: a climber casts from close
     }
 
     void OnSpellCast(SpellInfo const* spell) override
@@ -668,6 +676,8 @@ public:
         _nextWaveAt = 0;
         _completeDue = false;
         _barrels = 0;
+        _stuckReturns = 0;
+        _stuckRemoved = 0;
         _barrelAt = Tune::kBarrelEveryMs.Get(_heroic);
         _barrelResolveAt = 0;
         SummonStalker();
@@ -765,10 +775,10 @@ public:
             gone += s == ClimberState::Gone ? 1 : 0;
         }
         return Acore::StringFormat("running={} heroic={} now={} wave={} sends={} waiting={} sent={} gone={} "
-            "nextwave_in={} barrels={} barrel_in={} resolving={} tracked={} bleeding={}", _running ? 1 : 0,
-            _heroic ? 1 : 0, _now, _wave, _sends, CountWaiting(states), sent, gone,
-            _nextWaveAt ? _nextWaveAt - _now : 0, _barrels, _barrelAt > _now ? _barrelAt - _now : 0,
-            _barrelResolveAt ? 1 : 0, Buffs().Tracked(), Buffs().Bleeding());
+            "nextwave_in={} barrels={} barrel_in={} resolving={} tracked={} bleeding={} stuck_returned={} "
+            "stuck_removed={}", _running ? 1 : 0, _heroic ? 1 : 0, _now, _wave, _sends, CountWaiting(states), sent,
+            gone, _nextWaveAt ? _nextWaveAt - _now : 0, _barrels, _barrelAt > _now ? _barrelAt - _now : 0,
+            _barrelResolveAt ? 1 : 0, Buffs().Tracked(), Buffs().Bleeding(), _stuckReturns, _stuckRemoved);
     }
 
 private:
@@ -777,6 +787,9 @@ private:
         ObjectGuid guid;
         uint32 entry = 0;
         ClimberState state = ClimberState::Waiting;
+        MechanicHandle hold;        // the landing hold it carries (an evade ends it: re-armed when it fights again)
+        bool fighting = false;      // in combat at the last poll
+        ClimbWatch watch;           // the stuck watch (R-1-B MJ-2)
     };
 
     std::vector<ClimberState> States() const
@@ -844,9 +857,14 @@ private:
             unit->GetMotionMaster()->Clear();      // the stock Slaves' and Drudges' summon walk
             unit->GetMotionMaster()->MoveIdle();
             unit->SetReactState(REACT_AGGRESSIVE);
+            if (unit->IsAIEnabled && unit->AI())
+                unit->AI()->SetData(DATA_STAIR_CLIMBER, 1);     // its casters cast from close (R-1-B MJ-1)
             if (stalker)
                 Mechanic::TrackUnit(stalker, unit);
-            _climbers.push_back({ unit->GetGUID(), entry, ClimberState::Waiting });
+            Climber c;
+            c.guid = unit->GetGUID();
+            c.entry = entry;
+            _climbers.push_back(c);
             specialists += IsSpecialist(entry) ? 1 : 0;
         }
         StairLog("wave", Acore::StringFormat("wave={} trolls={} specialists={} heroic={}", wave, _climbers.size(),
@@ -885,15 +903,66 @@ private:
     void Send(Climber& c, Creature* unit)
     {
         c.state = ClimberState::Sent;
+        c.fighting = unit->IsInCombat();
+        ResetClimb(c.watch);
         unit->SetReactState(REACT_AGGRESSIVE);
         if (!unit->IsInCombat())
             unit->GetMotionMaster()->MoveWaypoint(kWavePath, false);
-        Mechanic::Spot(unit, {}, Milliseconds(Tune::kHoldCarrierMs)).NoTelegraph().Within(_hold).Tag(TAG_HOLD);
+        ArmHold(c, unit);
+    }
+
+    // The bots' landing hold on a climber (replacing the one it carried: an evade ends every mechanic it owns, BM
+    // OnUnitEnterEvadeMode, so a climber that fights again after one carries a fresh hold, R-1-B mn-2).
+    void ArmHold(Climber& c, Creature* unit)
+    {
+        if (c.hold)
+            Mechanic::Cancel(unit, c.hold);
+        MechanicRef hold = Mechanic::Spot(unit, {}, Milliseconds(Tune::kHoldCarrierMs));
+        hold.NoTelegraph().Within(_hold).Tag(TAG_HOLD);
+        c.hold = hold.Handle();
+    }
+
+    // R-1-B MJ-2: a sent climber below the lip, out of combat, that comes no nearer the lip for kStuckMs goes back to
+    // the path's first point; the second time it is removed and its wave can close. False: it is gone.
+    bool WatchClimb(Climber& c, Creature* unit)
+    {
+        if (unit->GetPositionY() >= kStairLaneYMax)
+        {
+            ResetClimb(c.watch);
+            return true;
+        }
+        bool const busy = unit->IsInCombat() || unit->IsInEvadeMode();
+        float const dist = unit->GetExactDist2d(kWavePathEnd.x, kWavePathEnd.y);
+        switch (JudgeClimb(c.watch, busy, dist, _now))
+        {
+            case ClimbVerdict::Climbing:
+                return true;
+            case ClimbVerdict::Return:
+                ++_stuckReturns;
+                StairLog("climber-stuck", Acore::StringFormat("entry={} at=({:.1f}, {:.1f}, {:.1f}) dist={:.1f} "
+                    "do=return", c.entry, unit->GetPositionX(), unit->GetPositionY(), unit->GetPositionZ(), dist));
+                unit->GetMotionMaster()->Clear();
+                unit->NearTeleportTo(kWavePathStart.x, kWavePathStart.y, kWavePathStart.z, kWavePathStart.o);
+                unit->GetMotionMaster()->MoveWaypoint(kWavePath, false);
+                return true;
+            case ClimbVerdict::Remove:
+                ++_stuckRemoved;
+                StairLog("climber-stuck", Acore::StringFormat("entry={} at=({:.1f}, {:.1f}, {:.1f}) dist={:.1f} "
+                    "do=remove", c.entry, unit->GetPositionX(), unit->GetPositionY(), unit->GetPositionZ(), dist));
+                if (c.hold)
+                    Mechanic::Cancel(unit, c.hold);
+                c.hold = MechanicHandle();
+                unit->DespawnOrUnsummon(Milliseconds(1));
+                c.state = ClimberState::Gone;
+                return false;
+        }
+        return true;
     }
 
     // Every kPollMs: the dead are gone; a waiting troll pulled early is sent, one the stock SmartAI walks goes back;
-    // a sent troll standing out of combat (a knockback, an evade home, the path's end) is set on the tank on the
-    // landing (rule 19) or sent up again. A cleared wave starts the next one 10 s later, or wins the stage.
+    // a sent troll that starts fighting again carries a fresh hold; a sent troll standing out of combat (a knockback,
+    // an evade home, the path's end) is set on the tank on the landing (rule 19) or sent up again; a stuck one goes
+    // back to the foot, then away. A cleared wave starts the next one 10 s later, or wins the stage.
     void Poll()
     {
         for (Climber& c : _climbers)
@@ -914,7 +983,13 @@ private:
                     HoldWaiting(unit);
                 continue;
             }
-            if (unit->IsInCombat() || unit->isMoving())
+            bool const fighting = unit->IsInCombat();
+            if (fighting && !c.fighting)
+                ArmHold(c, unit);
+            c.fighting = fighting;
+            if (!WatchClimb(c, unit))
+                continue;
+            if (fighting || unit->isMoving())
                 continue;
             if (unit->GetPositionY() >= kStairLaneYMax)
             {
@@ -1021,7 +1096,7 @@ private:
         Unit* source = barrel ? static_cast<Unit*>(barrel) : static_cast<Unit*>(stalker);
         SpellInfo const* trollSpell = sSpellMgr->GetSpellInfo(SPELL_BARREL_TROLL);
         uint32 trolls = 0;
-        for (Climber const& c : _climbers)
+        for (Climber& c : _climbers)
         {
             Creature* unit = c.state == ClimberState::Gone ? nullptr : GetMap()->GetCreature(c.guid);
             if (!unit || !unit->IsAlive()
@@ -1029,11 +1104,16 @@ private:
                 continue;
             ++trolls;
             uint32 const damage = uint32(TrollBarrelDamage(float(unit->GetMaxHealth())));
+            // skipCombat: a climber still walking up never fights the barrel (R-1-B mn-2: it chased it to the foot,
+            // lost it and evaded home).
             if (source)
                 Unit::DealDamage(source, unit, damage, nullptr, SPELL_DIRECT_DAMAGE, SPELL_SCHOOL_MASK_FIRE, trollSpell,
-                    false);
+                    /*durabilityLoss*/ false, /*allowGM*/ false, /*spell*/ nullptr, /*skipCombat*/ true);
             if (unit->IsAlive())
+            {
                 unit->KnockbackFrom(kKnockSource.x, kKnockSource.y, Tune::kTrollKnockXY, Tune::kTrollKnockZ);
+                ResetClimb(c.watch);    // knocked down the stair: its climb starts over, it is not stuck
+            }
         }
         if (barrel && barrel->IsAIEnabled && barrel->AI())
             barrel->AI()->DoAction(ACTION_BARREL_ROLL);
@@ -1087,6 +1167,8 @@ private:
     uint32 _barrelAt = 0;
     uint32 _barrelResolveAt = 0;
     uint32 _barrels = 0;
+    uint32 _stuckReturns = 0;
+    uint32 _stuckRemoved = 0;
     bool _waveCleared = false;
     bool _completeDue = false;
     bool _running = false;
@@ -1191,7 +1273,11 @@ public:
         if (_spawning || !creature || !IsSpecialist(creature->GetEntry()))
             return;
         if (std::find(_units.begin(), _units.end(), creature->GetGUID()) == _units.end())
+        {
             _adds.push_back(creature->GetGUID());
+            if (Creature* stalker = _stalker.IsEmpty() ? nullptr : GetMap()->GetCreature(_stalker))
+                Mechanic::TrackUnit(stalker, creature);
+        }
     }
 
     bool Running() const { return _running; }
@@ -1235,7 +1321,10 @@ private:
         _units.clear();
         if (_stalker.IsEmpty())
             if (TempSummon* stalker = GetMap()->SummonCreature(NPC_ZF_PYRAMID_STALKER, ToPos(kPlazaCenter)))
+            {
                 _stalker = stalker->GetGUID();
+                DescribeAltar(stalker);
+            }
         Creature* stalker = _stalker.IsEmpty() ? nullptr : GetMap()->GetCreature(_stalker);
         _spawning = true;
         for (std::size_t index : WaveIndexes(3))
@@ -1255,10 +1344,24 @@ private:
             unit->GetMotionMaster()->Clear();
             unit->GetMotionMaster()->MoveIdle();
             unit->SetReactState(REACT_AGGRESSIVE);
+            if (stalker)
+                Mechanic::TrackUnit(stalker, unit);
             _units.push_back(unit->GetGUID());
         }
         _spawning = false;
         AltarLog("spawn", Acore::StringFormat("why={} units={}", why, _units.size()));
+    }
+
+    // R-1-B mn-1: the Altar's boss data on the director's stalker for the whole stage (the descent, the idle wait,
+    // after Sezz'ziz dies while Nekrum and the adds fight on), the same descriptor Sezz'ziz carries from his pull
+    // (bots read the nearest described encounter). Not bound to slot 5: the Stair's win writes slot 5 NOT_STARTED
+    // just before this stalker is made, and BM's deferred boss-state end would close it on the next tick; the
+    // stalker's despawn (OnEnd) ends it.
+    void DescribeAltar(Creature* stalker)
+    {
+        Mechanic::BeginEncounter(stalker);
+        Mechanic::Describe(stalker, ZfPyramid::AltarDescriptor(Heroic()));
+        AltarLog("describe", Acore::StringFormat("heroic={}", Heroic() ? 1 : 0));
     }
 
     // Every kLinkPollMs: an Altar unit out of combat joins a fellow that fights (the whole Altar is one pull, as

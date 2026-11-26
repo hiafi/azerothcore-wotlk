@@ -182,6 +182,31 @@ int main()
         CHECK(late.In(12500) == 5500);
     }
 
+    // ---- ZR8: a ward's four Skeletons, raised by him (R-1-A M1) ----
+    {
+        // SP: "raises a Skeleton of Zum'rah every 5 s" for its 20 s, 4 Skeletons per ward.
+        CHECK(Tune::kWardLifeMs == 20000 && Tune::kWardSkeletons == 4 && Tune::kWardRaiseEveryMs == 5000);
+        WardRaiser w(2000);     // a ward rising 2 s into the fight
+        std::vector<std::uint32_t> at;
+        for (std::uint32_t now = 2000; now <= 40000; now += 100)
+        {
+            std::uint32_t const n = w.Raises(now);
+            CHECK(n <= 1);
+            if (n)
+                at.push_back(now);
+        }
+        CHECK((at == std::vector<std::uint32_t>{ 7000, 12000, 17000, 22000 }));
+        CHECK(w.Spent() && w.Raised() == 4);
+        // A long tick raises the missed ones, never past four.
+        WardRaiser late(0);
+        CHECK(late.Raises(4900) == 0 && !late.Spent());
+        CHECK(late.Raises(16000) == 3);
+        CHECK(late.Raises(60000) == 1 && late.Spent());
+        CHECK(late.Raises(90000) == 0);
+        // The fourth rises before the ward's own timer runs out.
+        CHECK(Tune::kWardLifeMarginMs >= 1000);
+    }
+
     // ---- The graves (section 7 #29 A) ----
     {
         std::vector<std::size_t> const rise = RiseGraves();

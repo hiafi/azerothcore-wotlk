@@ -202,10 +202,15 @@ class BlyCrewFightTest(unittest.TestCase):
         for entry in (7605, 7606, 7608):
             self.assertEqual(self.edits[entry]["flags_extra"], 0x00100000, entry)
             self.assertNotIn("CreatureImmunitiesId", self.edits[entry])
-        self.assertNotIn(7607, self.edits)      # Weegli is not in the fight
+        # Weegli is not in the fight: only the loot columns every body shares
+        self.assertEqual(set(self.edits[7607]) - {"entry", "id", "_update_columns"}, {"lootid", "mingold", "maxgold"})
         for entry in (7604, 7605, 7606, 7608):
-            for column in ("faction", "ScriptName", "AIName", "lootid"):
+            for column in ("faction", "ScriptName", "AIName"):
                 self.assertNotIn(column, self.edits[entry], (entry, column))
+        # s7 #19 A, R-1-LOOT M-1: the five bodies carry nothing (L-1 deleted their loot tables)
+        for entry in (7604, 7605, 7606, 7607, 7608):
+            for column in ("lootid", "mingold", "maxgold"):
+                self.assertEqual(self.edits[entry][column], 0, (entry, column))
 
     # --- the stash ----------------------------------------------------------------------------------------------------
 

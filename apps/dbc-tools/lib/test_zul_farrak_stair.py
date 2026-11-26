@@ -43,6 +43,7 @@ ALTAR_H = MODULE_DIR / "SezzzizLogic.h"
 REWORK = MODULE_DIR / "ZulFarrakRework.h"
 STAIR_CPP = MODULE_DIR / "pyramid_stair_rework.cpp"
 ALTAR_CPP = MODULE_DIR / "boss_sezzziz_rework.cpp"
+PYRAMID_H = MODULE_DIR / "PyramidFight.h"
 SQL = REPO_ROOT / "data" / "sql" / "updates" / "pending_db_world" / "rev_pyramid_stair_zul_farrak.sql"
 PACKAGE = TOOL_ROOT / "source" / "npcs" / "zul_farrak"
 HEROIC = TOOL_ROOT / "source" / "world" / "dungeons" / "zul_farrak.py"
@@ -293,10 +294,18 @@ class StairDeclarationTest(unittest.TestCase):
         self.assertIn("spec.tankPct = Tune::kOfferingPlayerPct;", altar)
         self.assertIn(".TankDamage(Tune::kTramplingPct)", stair)
         self.assertIn(".TankDamage(Tune::kTotemPct)", stair)
-        # Bots: the healer rule on both descriptors, the landing hold, the Altar's bounds on the Scream.
+        # Bots: the healer rule on both descriptors, the landing hold, the Altar's bounds on the Scream. The Altar's
+        # descriptor is one copy (PyramidFight.h AltarDescriptor) on Sezz'ziz and on the director's stalker for the
+        # whole stage (R-1-B mn-1).
+        pyramid = _code(PYRAMID_H.read_text(encoding="utf-8"))
         self.assertIn("ZfPyramid::AddWoundHealRule(d, _heroic);", stair)
-        self.assertIn("ZfPyramid::AddWoundHealRule(d, _heroic);", altar)
+        altar_desc = pyramid[pyramid.index("inline BossMechanics::Descriptor AltarDescriptor(bool heroic)"):]
+        self.assertIn("AddWoundHealRule(d, heroic);", altar_desc[:altar_desc.index("return d;")])
+        self.assertIn("Mechanic::Describe(me, ZfPyramid::AltarDescriptor(_heroic));", altar)
+        self.assertIn("Mechanic::Describe(stalker, ZfPyramid::AltarDescriptor(Heroic()));", stair)
         self.assertIn(".NoTelegraph().Within(_hold).Tag(TAG_HOLD)", stair)
+        # R-1-B mn-2: the barrel's damage never starts a fight with the barrel.
+        self.assertIn("/*skipCombat*/ true);", self.stair)
         self.assertIn(".Within(_bounds).Tag(TAG_SCREAM)", altar)
         # RB-1: Sezz'ziz's cleanup on reset, evade and death.
         cleanup = altar[altar.index("void Cleanup(char const* why, bool adds)"):]

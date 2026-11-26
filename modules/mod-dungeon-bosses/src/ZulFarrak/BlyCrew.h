@@ -224,6 +224,7 @@ namespace ZfCrew
         bool PathsOffered() const;
         void CheckYields();
         void StartFight();
+        bool OtherFighterEngaged() const;
         void StartDoorWalk();
         void ArriveAtDoor();
         void PlantBarrel();

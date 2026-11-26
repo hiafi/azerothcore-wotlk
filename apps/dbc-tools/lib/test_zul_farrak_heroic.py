@@ -77,6 +77,9 @@ BOSSES = {
     7275: ("kSezzziz", 2_442), 7796: ("kNekrum", 3_052), 7267: ("kUkorz", 3_052), 7797: ("kRuuzlu", 3_052),
     7795: ("kVelratha", 2_136), 7273: ("kGahzrilla", 3_052),
 }
+# _crew()'s columns on every heroic crew copy: CAN_ASSIST (7 #17 A; R-1-LOOT m-3 moved it from rev_crew) and no loot or
+# money on the bodies (7 #19 A, R-1-LOOT M-1).
+CREW_COLUMNS = {"type_flags": 4096, "lootid": 0, "mingold": 0, "maxgold": 0}
 CREW = {7604: ("kBly", 1_250), 7605: ("kRaven", 800), 7606: ("kOro", 400), 7607: (None, 400), 7608: ("kMurta", 400)}
 WEEGLI_HEALTH = 55_000  # kWeegliPoolAlly
 TIER_MELEE = 2_500
@@ -266,7 +269,8 @@ class DeclarationTest(unittest.TestCase):
         for entry, (name, melee) in CREW.items():
             with self.subTest(entry=entry):
                 health = header[name][1] if name else _header_constant("kWeegliPoolAlly")
-                self.assertEqual(overrides[entry], {"health": health, "melee": melee})
+                got = {k: (dict(v) if k == "columns" else v) for k, v in overrides[entry].items()}
+                self.assertEqual(got, {"health": health, "melee": melee, "columns": CREW_COLUMNS})
         self.assertEqual(_header_constant("kWeegliPoolAlly"), WEEGLI_HEALTH)
 
     def test_every_boss_of_the_header_table_is_overridden(self):
@@ -573,6 +577,8 @@ class ExpansionTest(unittest.TestCase):
                 self.assertEqual(float(row["detection_range"]), float(normal["detection_range"]))
                 self.assertEqual(int(row["npcflag"]), int(normal["npcflag"]))  # Bly's and Weegli's gossip carries over
                 self.assertEqual(int(row["flags_extra"]) & 0x06000000, 0)  # no assist flags: they help each other
+                for column, value in CREW_COLUMNS.items():
+                    self.assertEqual(int(row[column]), value, column)
 
     def test_the_unscaled_adds(self):
         rows = {int(r["entry"]): r for r in self.dsl["creature_templates"] if r.get(dungeon_heroic.DERIVED)}

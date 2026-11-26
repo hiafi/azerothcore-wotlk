@@ -516,6 +516,64 @@ class HeroicLootidTest(unittest.TestCase):
                                         f"Zul'Farrak creatures. {fix}")
 
 
+class CrewBodiesCarryNothingTest(unittest.TestCase):
+    """R-1-LOOT M-1: the chest rev deletes the five crew creature_loot_template tables, so a crew row that still names
+    its lootid is a boot ERROR (LootMgr: "Table 'creature_loot_template' Entry 7604 does not exist but it is used by
+    Creature") and a `loot id used but it doesn't have records` log per kill. #19 A says the bodies carry nothing,
+    money included. The normal rows are zeroed by a ZF rev or a `creature_template_columns()` call (WP F-1a), the
+    heroic copies (310518 to 310522, which read the replayed normal row) by `_crew()` in the dungeon file."""
+
+    ZERO = ("lootid", "mingold", "maxgold")
+
+    def _sql_zeroed(self) -> set[int]:
+        zeroed: set[int] = set()
+        statement = re.compile(r"UPDATE\s+`creature_template`\s+SET\s+(.*?)\s+WHERE\s+(.*?);", re.S | re.I)
+        for path in sorted(PENDING.glob("rev_*zul_farrak*.sql")):
+            for m in statement.finditer(path.read_text(encoding="utf-8")):
+                sets = dict(re.findall(r"`?(\w+)`?\s*=\s*(\d+)", m[1]))
+                if all(sets.get(column) == "0" for column in self.ZERO):
+                    zeroed |= {int(n) for n in re.findall(r"\b\d{4,6}\b", m[2])}
+        return zeroed
+
+    def _python_zeroed(self) -> set[int]:
+        zeroed: set[int] = set()
+        for path in sorted((TOOL_ROOT / "source" / "npcs" / "zul_farrak").glob("*.py")):
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+                if (isinstance(node, ast.Call) and getattr(node.func, "id", "") == "creature_template_columns"
+                        and node.args and isinstance(node.args[0], ast.Constant)):
+                    given = {k.arg: k.value.value for k in node.keywords
+                             if k.arg and isinstance(k.value, ast.Constant)}
+                    if all(given.get(column) == 0 for column in self.ZERO):
+                        zeroed.add(node.args[0].value)
+        return zeroed
+
+    def test_the_five_normal_rows_name_no_loot_and_carry_no_money(self):
+        zeroed = self._sql_zeroed() | self._python_zeroed()
+        self.assertEqual(set(CREW_LOOTIDS) - zeroed, set(),
+                         "crew rows that still name their deleted lootid or carry gold: set lootid, mingold and "
+                         "maxgold to 0 (R-1-LOOT M-1)")
+
+    def test_the_heroic_copies_are_zeroed_by_the_crew_helper(self):
+        tree = ast.parse(ZF_DUNGEON.read_text(encoding="utf-8"))
+        crew = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_crew")
+        columns: dict[str, object] = {}
+        for node in ast.walk(crew):
+            if isinstance(node, ast.keyword) and node.arg == "columns" and isinstance(node.value, ast.Dict):
+                columns = {k.value: v.value for k, v in zip(node.value.keys, node.value.values)
+                           if isinstance(k, ast.Constant) and isinstance(v, ast.Constant)}
+        for column in self.ZERO:
+            self.assertEqual(columns.get(column), 0, f"_crew() columns must set {column} to 0 (heroic copies)")
+
+    def test_the_chest_rev_deletes_exactly_the_crew_tables(self):
+        text = CHEST_REV.read_text(encoding="utf-8")
+        deletes = re.findall(r"DELETE FROM `creature_loot_template` WHERE `Entry` IN \(([\d, ]+)\);", text)
+        self.assertEqual([[int(n) for n in d.split(",")] for d in deletes], [list(CREW_LOOTIDS)])
+
+    def test_the_chests_comments_name_the_game_object(self):
+        # D5's rev names the chest 'Treasure Sack'; the Comment columns say the same (R-1-LOOT n-5)
+        self.assertNotIn("Crew''s Stash", CHEST_REV.read_text(encoding="utf-8"))
+
+
 class StyleTest(unittest.TestCase):
     def test_no_line_is_over_120_columns_and_there_is_no_trailing_whitespace(self):
         for path in (LOOT_FILE, Path(__file__)):

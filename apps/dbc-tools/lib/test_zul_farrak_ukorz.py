@@ -203,7 +203,8 @@ class UkorzTest(unittest.TestCase):
                              ("SPELL_UK_PIT_LOOK", visuals.UK_PIT), ("SPELL_UK_TRAIL_LOOK", visuals.UK_TRAIL),
                              ("SPELL_UK_SUNK", visuals.UK_SUNK), ("SPELL_UK_EXECUTE_BAR", visuals.UK_EXECUTE),
                              ("SPELL_UK_EXECUTE", visuals.UK_EXECUTE), ("SPELL_UK_CALL", visuals.UK_CALL),
-                             ("SPELL_UK_LASH_BAR", visuals.UK_LASH), ("SPELL_UK_LASH", visuals.UK_LASH)):
+                             ("SPELL_UK_LASH_BAR", visuals.UK_LASH), ("SPELL_UK_LASH", visuals.UK_LASH),
+                             ("SPELL_UK_HELD", visuals.UK_HELD)):
             self.assertEqual(self._raw(name)["SpellVisualID_1"], visual, name)
         # Never a WRONG look (handoff s3.10): Ground Stomp 5285 is only the stamp's alternate.
         for sid, spell in self.spells.items():

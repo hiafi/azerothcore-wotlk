@@ -154,8 +154,10 @@ struct boss_sandfury_executioner_rework : public ScriptedAI
         Talk(SAY_KILL);
     }
 
-    // The bar is not kickable and his immunity set holds the controls that stop casts; anything that still ends it
-    // (the prisoner gone, his death) gives the Block up (rule 15).
+    // The bar is not kickable (InterruptFlags 0, PreventionType 0) and his immunity set holds the controls that stop
+    // casts. AzerothCore calls OnSpellFailed only from an interrupt (Unit::InterruptSpell: his death, an evade, a
+    // script's InterruptNonMeleeSpells), which gives the Block up here (rule 15); a bar that fails at its own end
+    // never reaches this hook and needs nothing from it: the axe runs on his clock.
     void OnSpellFailed(SpellInfo const* spell) override
     {
         if (spell && spell->Id == SPELL_PY_BEHEAD_BAR && _step == Step::Casting)

@@ -144,11 +144,18 @@ namespace
         return DungeonKit::ToPosition(kMesaDonutCenter.XY(), kMesaDonutCenter.z);
     }
 
-    // The bots' spots inside the Creeping Sands' safe circle.
+    // The bots' spots inside the Creeping Sands' safe circle, clipped to the mesa (F-1 MI-4: the bare circle reached
+    // past the walls at its first sizes).
     BossMechanics::SpotBounds CreepBounds(float innerYd)
     {
+        std::vector<Position> points;
+        for (DungeonKit::Vec2 const& v : CreepSafeFloor(CreepBoundsYd(innerYd)))
+            points.emplace_back(v.x, v.y, kMesaDonutCenter.z);
         BossMechanics::SpotBounds bounds;
-        bounds.Circle(MesaCenter(), CreepBoundsYd(innerYd), kMesaZMin, kMesaZMax);
+        if (points.size() >= 3)
+            bounds.Polygon(std::move(points), kMesaZMin, kMesaZMax);
+        else
+            bounds.Circle(MesaCenter(), CreepBoundsYd(innerYd), kMesaZMin, kMesaZMax);
         return bounds;
     }
 

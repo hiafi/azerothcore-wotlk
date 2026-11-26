@@ -162,6 +162,13 @@ namespace ZfStair
         std::uint32_t constexpr kBoltMinMs = 3000;
         std::uint32_t constexpr kBoltMaxMs = 4000;
         float constexpr kCasterRangeYd = 30.f;
+        // A Hexmaster or Witch Doctor of waves 1 and 2 (a climber) casts from this close instead: from 30 yd it
+        // stopped mid-lane, first in the kill order, where the landing hold keeps every melee bot from reaching it
+        // (R-1-B MJ-1). The chase adds both hitboxes (about 3 yd), so it stands about 8 yd from its target: with the
+        // target 4 yd or more inside the landing (the crew's spots, DC's hold at y 1271) it stops at the lane's top
+        // or on the landing, in melee reach of the hold's mouth, and still in a barrel's reach while its target
+        // holds the lip. Wave 3 and Sezz'ziz's adds keep kCasterRangeYd.
+        float constexpr kClimberCasterRangeYd = 5.f;
         // PY9 heroic Sandfury Hex in place of the curse: a stack every 4 s; at 5 the player is Hexed (a 2 s frog,
         // Magic) and the curse clears.
         std::uint32_t constexpr kHexStackMs = 4000;
@@ -193,7 +200,25 @@ namespace ZfStair
         // The crew on the Stair (PY5): kept off the plaza while stage 2 runs (back to their places when they chase
         // below this y).
         float constexpr kCrewLeashY = 1236.f;
+
+        // A sent climber out of combat below the lip that comes no nearer the lip (kStuckProgressYd) for kStuckMs is
+        // stuck (a barrel's knockback onto a ledge, a spawn under the ramp with no path out): the first time it goes
+        // back to the path's first point and climbs again; the kStuckTries-th time it is removed, so its wave can
+        // close (R-1-B MJ-2). The path is run at run speed (waypoint_data 81553 move_type 1): the whole climb takes
+        // about 8 s.
+        std::uint32_t constexpr kStuckMs = 15000;
+        float constexpr kStuckProgressYd = 1.f;
+        std::uint32_t constexpr kStuckTries = 2;
     }
+
+    // The range a wave specialist casts from: a climber (waves 1 and 2) from close, every other one from 30 yd.
+    constexpr float CasterRange(bool climber)
+    {
+        return climber ? Tune::kClimberCasterRangeYd : Tune::kCasterRangeYd;
+    }
+
+    // The specialists' AI data id: SetData(DATA_STAIR_CLIMBER, 1) marks a wave 1 or 2 troll (the Stair's director).
+    std::uint32_t constexpr DATA_STAIR_CLIMBER = 20940;
 
     // ----------------------------------------------------------------------------------------------------------------
     // The waves (section 3.2 item 11, SP mechanic 4): the stock tables (ZulFarrakRework.h kWaveSpawns) with the
@@ -426,6 +451,51 @@ namespace ZfStair
     inline std::uint32_t CountWaiting(std::vector<ClimberState> const& climbers)
     {
         return std::uint32_t(std::count(climbers.begin(), climbers.end(), ClimberState::Waiting));
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // The stuck watch (R-1-B MJ-2): one per sent climber, judged at every poll while it is below the lip.
+    // ----------------------------------------------------------------------------------------------------------------
+    // The path's first point (waypoint_data 81553 point 1, the stair's foot) and the point "nearer the lip" is
+    // measured to (its last point, on the landing; 2D).
+    Point3 constexpr kWavePathStart{ 1884.87f, 1228.62f, 9.7f, 1.571f };
+    Vec2 constexpr kWavePathEnd{ 1887.53f, 1263.f };
+
+    struct ClimbWatch
+    {
+        float bestYd = -1.f;            // the nearest it came to the lip since the watch was last reset (-1: unset)
+        std::uint32_t sinceMs = 0;      // when it last came nearer
+        std::uint32_t strikes = 0;      // times it was found stuck
+    };
+
+    enum class ClimbVerdict : std::uint8_t
+    {
+        Climbing,   // fine (or fighting, or returning home from an evade)
+        Return,     // stuck: back to the path's first point, climb again
+        Remove,     // stuck again: gone, so its wave can close
+    };
+
+    // The watch starts over from where the climber stands now (a send, a return, a knockback).
+    inline void ResetClimb(ClimbWatch& w)
+    {
+        w.bestYd = -1.f;
+    }
+
+    // `busy`: in combat, or walking home from an evade (the watch starts over). `distYd`: its 2D distance to
+    // kWavePathEnd now.
+    inline ClimbVerdict JudgeClimb(ClimbWatch& w, bool busy, float distYd, std::uint32_t nowMs)
+    {
+        if (busy || w.bestYd < 0.f || distYd < w.bestYd - Tune::kStuckProgressYd)
+        {
+            w.bestYd = distYd;
+            w.sinceMs = nowMs;
+            return ClimbVerdict::Climbing;
+        }
+        if (nowMs - w.sinceMs < Tune::kStuckMs)
+            return ClimbVerdict::Climbing;
+        ++w.strikes;
+        ResetClimb(w);
+        return w.strikes >= Tune::kStuckTries ? ClimbVerdict::Remove : ClimbVerdict::Return;
     }
 
     // ----------------------------------------------------------------------------------------------------------------

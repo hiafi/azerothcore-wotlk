@@ -11,9 +11,10 @@ The crew's fight columns (the Build spec "Encounter" table; s3.6 normal health x
 ZulFarrakRework.h Health (Bly 63,941 = 34.6 x warrior 1,848 at 45; Raven 39,917 = 22.4 x 1,782; Oro 40,029 = 32.1 x
 mage 1,247; Murta 40,071 = 28.1 x paladin 1,426), Bly's stun immunity set 1972 (stock -325, ruling 29), and
 CREATURE_FLAG_EXTRA_ALL_DIMINISH on Raven, Oro and Murta (crowd control works on them under player diminishing returns,
-ruling 29; immunity set 0 kept). DamageModifier, faction, flags and loot ids stay as they are (the faction is CR's by
-mode; the bodies carry no loot: L-1 empties their tables). Weegli 7607 is not in the fight: no column here. Heroic
-health is WP-H's override (source/world/dungeons/zul_farrak.py `_crew`).
+ruling 29; immunity set 0 kept). DamageModifier, faction and flags stay as they are (the faction is CR's by mode).
+The five bodies carry nothing (s7 #19 A): lootid, mingold and maxgold 0 on all five, Weegli 7607 included (his only
+columns here; L-1 empties their tables). Heroic health and the heroic copies' loot columns are WP-H's override
+(source/world/dungeons/zul_farrak.py `_crew`).
 
 Spells. The registry's hits are dungeon copies of the mod-boss-mechanics resolve spell; the split strike and the Seed's
 burst take the script's base point (DungeonKit::SplitShares, RefFlatOn); every damage spell ignores the caster's
@@ -158,10 +159,17 @@ _ICON_BLOODLUST = 38
 
 # --- the crew's fight columns ----------------------------------------------------------------------------------------
 
-creature_template_columns(7604, HealthModifier=HEALTH_MODIFIER[7604], CreatureImmunitiesId=IMMUNITY_BOSS_STUN)
-creature_template_columns(7605, HealthModifier=HEALTH_MODIFIER[7605], flags_extra=FLAGS_EXTRA_ALL_DIMINISH)
-creature_template_columns(7606, HealthModifier=HEALTH_MODIFIER[7606], flags_extra=FLAGS_EXTRA_ALL_DIMINISH)
-creature_template_columns(7608, HealthModifier=HEALTH_MODIFIER[7608], flags_extra=FLAGS_EXTRA_ALL_DIMINISH)
+# s7 #19 A: the bodies carry nothing, money included (L-1's rev deletes their creature_loot_template rows, so a lootid
+# left on the row is a boot ERROR; R-1-LOOT M-1). Weegli 7607 is not in the fight: only his loot columns.
+creature_template_columns(7604, HealthModifier=HEALTH_MODIFIER[7604], CreatureImmunitiesId=IMMUNITY_BOSS_STUN,
+                          lootid=0, mingold=0, maxgold=0)
+creature_template_columns(7605, HealthModifier=HEALTH_MODIFIER[7605], flags_extra=FLAGS_EXTRA_ALL_DIMINISH,
+                          lootid=0, mingold=0, maxgold=0)
+creature_template_columns(7606, HealthModifier=HEALTH_MODIFIER[7606], flags_extra=FLAGS_EXTRA_ALL_DIMINISH,
+                          lootid=0, mingold=0, maxgold=0)
+creature_template_columns(7607, lootid=0, mingold=0, maxgold=0)
+creature_template_columns(7608, HealthModifier=HEALTH_MODIFIER[7608], flags_extra=FLAGS_EXTRA_ALL_DIMINISH,
+                          lootid=0, mingold=0, maxgold=0)
 
 
 # --- helpers ---------------------------------------------------------------------------------------------------------

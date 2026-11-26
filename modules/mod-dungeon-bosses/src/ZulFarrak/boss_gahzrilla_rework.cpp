@@ -16,8 +16,9 @@
  *                       ice (no zone), thaw after 45 s (heroic 30 s) at the size they froze; every Discharge grows
  *                       every water puddle 2 yd (heroic 3), no cap. The pool is water for good (section 7 #37 A)
  *   GZ9 Healing Wave    12 s, then every 15 s: a kickable 3 s (heroic 2 s) Nature self-heal for 10% (20%)
- *   GZ10 The gong       at her 30% she yells line 1, runs to the gong (about 61 yd; she cannot die on the way), strikes
- *                       it (the instance arms the hard mode and summons Gahz'rilla) and fights on from there, standing
+ *   GZ10 The gong       at her 30% she yells line 1, runs to the gong's bank (about 73 yd by path, out of the pool
+ *                       strip: F-1 DQ-2; she cannot die on the way), strikes the gong (the instance arms the hard mode
+ *                       and summons Gahz'rilla) and fights on from there, standing
  *   The rise            Gahz'rilla, untargetable, walks from the stock summon point to (1677, 1167) (section 7 #35 A),
  *                       then fights: Velratha's target first, else the nearest player (rule 19). Hard mode: 500,000
  *   GZ3 Static Discharge  Storm Builds' clock from his arrival (normal every 30 s; heroic 20, 20, then 1.5 s sooner,
@@ -152,15 +153,11 @@ namespace
             kPoolSurfaceZ, 0.f);
     }
 
-    // Her strike spot: kGongStandOffYd from the gong toward the shore she came from, facing the gong.
+    // Her strike spot, facing the gong (GahzrillaLogic.h GongStrikeSpot: the gong's bank, out of the pool strip).
     Position GongSpot()
     {
-        float const dx = kVelrathaSpawn.x - kGong.x;
-        float const dy = kVelrathaSpawn.y - kGong.y;
-        float const len = std::max(0.1f, std::sqrt(dx * dx + dy * dy));
-        float const x = kGong.x + dx / len * Tune::kGongStandOffYd;
-        float const y = kGong.y + dy / len * Tune::kGongStandOffYd;
-        return Position(x, y, kGong.z, std::atan2(-dy, -dx));
+        Point3 const spot = GongStrikeSpot();
+        return Position(spot.x, spot.y, spot.z, spot.o);
     }
 
     // The shore polygon for the Spill carrier's drop spot (Edge: the shore's rim).
@@ -692,8 +689,12 @@ private:
     }
 
     // GZ14: every 2 s per carrier, an arc to each player within 6 yd and, in water, a shock to everyone in its sheet.
+    // DQ-1 (ruled B: the shocks stack per carrier; SheetShockOncePerTick is false): with the switch on, carriers due
+    // in the same pass would share one sheet shock a player.
     void TickConductive()
     {
+        std::vector<ObjectGuid> shocked;
+        bool const once = SheetShockOncePerTick(_phase == PoolPhase::Deluge);
         for (auto it = _conductive.begin(); it != _conductive.end();)
         {
             Player* carrier = ObjectAccessor::GetPlayer(_map, it->first);
@@ -705,14 +706,15 @@ private:
             if (_clock >= it->second)
             {
                 it->second += Tune::kConductiveTickMs;
-                Arc(carrier);
+                Arc(carrier, once ? &shocked : nullptr);
             }
             ++it;
         }
     }
 
     // One hit a player a tick, whether the arc, the sheet's shock or both reach them (section 9 Q4 of the report).
-    void Arc(Player* carrier)
+    // `shocked`: the players another carrier's sheet already shocked this pass (DQ-1; nullptr: they stack).
+    void Arc(Player* carrier, std::vector<ObjectGuid>* shocked)
     {
         Unit* owner = ReferenceOwner();
         if (!owner)
@@ -724,7 +726,14 @@ private:
         for (Player* player : FightPlayers())
         {
             bool const arc = player != carrier && player->GetExactDist(carrier) <= Tune::kConductiveArcYd;
-            bool const shock = sheet && _water.InWaterSheet(*sheet, player);
+            bool shock = sheet && _water.InWaterSheet(*sheet, player);
+            if (shock && shocked)
+            {
+                if (std::find(shocked->begin(), shocked->end(), player->GetGUID()) != shocked->end())
+                    shock = false;
+                else
+                    shocked->push_back(player->GetGUID());
+            }
             if (!arc && !shock)
                 continue;
             arcs += arc ? 1 : 0;
@@ -876,17 +885,30 @@ struct boss_velratha_rework : public BossAI
 
     void EnterEvadeMode(EvadeReason why) override
     {
+        bool const withPool = _evadeWithPool;
+        _evadeWithPool = false;
+        // F-1 MI-1: while Gahz'rilla fights on she never evades alone (her slot's reset would run the instance's
+        // pool-wipe restore of the crew mid fight): she turns on his target instead. His own evade ends both.
+        if (!withPool && KeepFighting())
+            return;
         if (_engaged)
             LogGz("velratha-evade", Acore::StringFormat("reason={}", uint32(why)));
         // A Gahz'rilla in combat keeps the encounter (his own evade ends it); otherwise this is the wipe.
         if (PoolEncounter* fight = Fight())
         {
             Creature* gahzrilla = fight->Gahzrilla();
-            if (!(gahzrilla && gahzrilla->IsAlive() && gahzrilla->IsEngaged()))
+            if (withPool || !(gahzrilla && gahzrilla->IsAlive() && gahzrilla->IsEngaged()))
                 fight->End(false, "velratha-evade");
         }
         Cleanup();
         BossAI::EnterEvadeMode(why);
+    }
+
+    // Gahz'rilla's evade (the wipe): hers too, whatever he still fights.
+    void EvadeWithPool(EvadeReason why)
+    {
+        _evadeWithPool = true;
+        EnterEvadeMode(why);
     }
 
     void JustDied(Unit* killer) override
@@ -1041,6 +1063,26 @@ struct boss_velratha_rework : public BossAI
     }
 
 private:
+    // MI-1: Gahz'rilla alive and fighting a player on the pool's arena: she takes that player and stays in.
+    bool KeepFighting()
+    {
+        PoolEncounter* fight = _engaged ? Fight() : nullptr;
+        Creature* gahzrilla = fight ? fight->Gahzrilla() : nullptr;
+        if (!gahzrilla || !gahzrilla->IsAlive() || !gahzrilla->IsEngaged())
+            return false;
+        Player* target = gahzrilla->GetVictim() ? gahzrilla->GetVictim()->ToPlayer() : nullptr;
+        std::vector<Player*> const players = fight->FightPlayers();
+        if (!target || std::find(players.begin(), players.end(), target) == players.end()
+            || !me->IsValidAttackTarget(target))
+            return false;
+        me->AddThreat(target, 1.f);
+        AttackStart(target);
+        if (me->GetVictim() != target)
+            return false;
+        LogGz("velratha-evade-kept", Acore::StringFormat("target={} (Gahz'rilla fights on)", target->GetName()));
+        return true;
+    }
+
     bool HardModeNow() const
     {
         InstanceScript const* script = me->GetInstanceScript();
@@ -1205,20 +1247,24 @@ private:
             gong->SendCustomAnim(0);
         }
         me->CastSpell(me, SPELL_GZ_GONG_STRIKE, true);
+        // F-1 MA-1: the instance arms only when this pull built the hard mode packages (GongStruckData).
+        PoolEncounter* const pool = Fight();
+        bool const packages = pool && pool->HardMode();
         if (instance)
-            instance->SetData(DATA_GONG_STRUCK, 1);
+            instance->SetData(DATA_GONG_STRUCK, GongStruckData(packages));
         bool const armed = instance && instance->GetData(DATA_HARD_MODE);
         Creature* gahzrilla = (instance && map) ? map->GetCreature(instance->GetGuidData(kGuidGahzrilla)) : nullptr;
         if (gahzrilla && !gahzrilla->IsAlive())
             gahzrilla = nullptr;
-        if (PoolEncounter* fight = Fight())
-            fight->GongStruck(gahzrilla, armed);
+        if (pool)
+            pool->GongStruck(gahzrilla, armed && packages);
         if (gahzrilla && gahzrilla->IsAIEnabled)
             gahzrilla->AI()->SetGUID(_keeper, kSetGuidKeeper);
         if (_hardMode && !armed)
             _hardMode = false;
-        LogGz("gong", Acore::StringFormat("how={} health={:.1f} gahzrilla={} hardmode={} at=({:.1f}, {:.1f})", how,
-            me->GetHealthPct(), gahzrilla ? 1 : 0, armed ? 1 : 0, me->GetPositionX(), me->GetPositionY()));
+        LogGz("gong", Acore::StringFormat("how={} health={:.1f} gahzrilla={} hardmode={} packages={} at=({:.1f}, "
+            "{:.1f})", how, me->GetHealthPct(), gahzrilla ? 1 : 0, armed ? 1 : 0, packages ? 1 : 0,
+            me->GetPositionX(), me->GetPositionY()));
     }
 
     void Cleanup()
@@ -1246,6 +1292,7 @@ private:
     bool _engaged = false;
     bool _run = false;
     bool _struck = false;
+    bool _evadeWithPool = false;
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1313,7 +1360,12 @@ struct boss_gahzrilla_rework : public BossAI
         {
             if (Creature* velratha = fight->Velratha(); velratha && velratha->IsAlive() && velratha->IsEngaged()
                 && velratha->IsAIEnabled)
-                velratha->AI()->EnterEvadeMode(why);
+            {
+                if (auto* ai = dynamic_cast<boss_velratha_rework*>(velratha->AI()))
+                    ai->EvadeWithPool(why);
+                else
+                    velratha->AI()->EnterEvadeMode(why);
+            }
             fight->End(false, "gahzrilla-evade");
         }
         Cleanup();

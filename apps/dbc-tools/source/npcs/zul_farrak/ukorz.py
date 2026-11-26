@@ -79,6 +79,7 @@ from ._visuals import (
     UK_CALL,
     UK_EXECUTE,
     UK_FURY,
+    UK_HELD,
     UK_LASH,
     UK_PIT,
     UK_ROAR,
@@ -421,8 +422,9 @@ creeping_214091 = resolve_copy(
 held_214092 = _self_state(
     214092, 'Not Yet', -1, 'Holds on until the other is ready.', 'Holding on. Bring the other down too.',
     f'{_D6}, UK9 (heroic): the 30% hold\'s state on a boss at the line (Ukorz line 5, Ruuzlu line 1); the script keeps '
-    'him there (no damage gets through) until both are at 30%, then the Call (UK10) removes it. No look.',
-    icon=_ICON_HOLD,
+    'him there (no damage gets through) until both are at 30%, then the Call (UK10) removes it. Look: UK_HELD, a '
+    'rune shield on the held boss (F-1d DQ-3 A: the players see that their damage is wasted).',
+    icon=_ICON_HOLD, visual=UK_HELD,
 )
 
 vengeance_214093 = _self_state(

@@ -161,8 +161,11 @@ def _boss(entry: int, health: int, **more) -> dict:
 
 def _crew(health: int, melee: int) -> dict:
     """A crew member on heroic: a boss body (their own heroic health, the tier's boss row, small hits) on the live
-    normal row's columns: no boss columns, they help each other (handoff 3.2 item 8)."""
-    return dict(health=health, melee=melee)
+    normal row's columns: no boss columns, they help each other (handoff 3.2 item 8). The copy reads the replayed
+    normal row, so what a hand rev or a later normal edit gives the normal rows is stated here: players may heal them
+    (CREATURE_TYPE_FLAG_CAN_ASSIST 4096, handoff 7 #17 A; every crew row's type_flags is 0 or 4096 live) and the bodies
+    carry nothing (lootid, mingold and maxgold 0, 7 #19 A, R-1-LOOT M-1)."""
+    return dict(health=health, melee=melee, columns={"type_flags": 4096, "lootid": 0, "mingold": 0, "maxgold": 0})
 
 
 # The boss kit's units that fight on heroic (handoff 3.3 / 3.6, 7 #44 A). Applied once a source file declares the unit

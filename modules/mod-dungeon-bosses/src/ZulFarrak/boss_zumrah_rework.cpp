@@ -24,11 +24,13 @@
  *                 line 4 at most every 10 s; normal caps them at 4 (past it the soul is lost), heroic none (ruling
  *                 45). A walker with two Gathered Souls within 3 yd frees one (the kit's DwellSoaks, dwell 0)
  *   ZR7 ward      Ward of the Dead on him: one stack a Bound Dead, the amount set here (WardReductionPct)
- *   ZR8 Skeletons the stock Ward of Zum'rah 11086 at 2 s, then every 30-36 s (heroic 25 s); its Skeletons
- *                 (npc_zf_zumrah_skeleton) live until killed, go for the husk if one stands (10,000 threat: a taunt
- *                 takes them), else the tank, else the nearest player; a hit every 2 s for 3% (heroic 5%)
+ *   ZR8 Skeletons the stock Ward of Zum'rah 11086 at 2 s, then every 30-36 s (heroic 25 s). He raises its four
+ *                 Skeletons himself (5, 10, 15, 20 s, wild: the totem's passive 11087 is cleared, its 11088 made
+ *                 the ward's guardians, gone with it), then dismisses it; killing it stops the raising. The
+ *                 Skeletons (npc_zf_zumrah_skeleton) live until killed, go for the husk if one stands (10,000
+ *                 threat: a taunt takes them), else the tank, else the nearest player; a hit every 2 s for 3% (5%)
  *   ZR9 Volley    8 s, then every 12-16 s (never sooner than 10 s): a kickable 3 s (heroic 2 s) Shadow cast; landed,
- *                 20% (heroic 35%) on every player within 30 yd but the walker
+ *                 20% (heroic 35%) on every player on the bowl within 30 yd but the walker
  *   ZR10 Bolt     1 s, then every 3-4 s, only where it ends before the next Rend and Volley: a kickable 3 s Shadow
  *                 bolt, 8% on his target (a random living player while the target walks)
  *   Heroic        ZR11 Soul Burn 6% on the walker and ZR12 a Soul Echo (5 yd under a random living player, 2 s, 35%
@@ -56,6 +58,7 @@
 #include "ObjectAccessor.h"
 #include "PassiveAI.h"
 #include "Player.h"
+#include "Random.h"
 #include "ScriptedCreature.h"
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
@@ -211,10 +214,12 @@ struct boss_zumrah_rework : public BossAI
             Talk(SAY_ZUMRAH_KILL);
     }
 
-    // The wards, husks, souls, Bound Dead and looks: never zoned into combat.
+    // The wards, husks, souls, Bound Dead, Skeletons and looks: never zoned into combat.
     void JustSummoned(Creature* summon) override
     {
         summons.Summon(summon);
+        if (summon && summon->GetEntry() == NPC_WARD_OF_ZUMRAH)
+            WardRisen(summon);
     }
 
     // Nothing on the living side reaches a walker (appendix B 2.3: by script, not an immunity).
@@ -268,6 +273,7 @@ struct boss_zumrah_rework : public BossAI
         _frees.Update(me, diff);
         TickBoundDead();
         TickWard();
+        TickWardRaises();
         TickSkeletons(diff);
         if (!_engaged)
             return;
@@ -1001,12 +1007,65 @@ private:
         _timeline.WardDone(urand(Tune::kWardEveryMinMs(_heroic), Tune::kWardEveryMaxMs(_heroic)));
     }
 
-    // The stock spell as it is (the ward and its Skeletons are stock entries); triggered, so no lockout stops it.
+    // The stock spell as it is (the ward is a stock entry); triggered, so no lockout stops it. JustSummoned takes the
+    // ward from there (WardRisen).
     void CastWard()
     {
         me->CastSpell(me, SPELL_WARD_OF_ZUMRAH, true);
         ++_counts.wards;
         LogZr("ward", Acore::StringFormat("skeletons={} husk={}", _skeletons.size(), _walk.husk ? 1 : 0));
+    }
+
+    // From JustSummoned. 11086's SummonProperties 121 (Ally, no type) makes the ward a plain timed summon with the
+    // default AI: its passive 11087 never goes up on this core, and were it cast, its 11088 (SummonProperties 61)
+    // would make the Skeletons the ward's guardians, gone with it (R-1-A M1). So the slot is cleared, the ward is a
+    // fixture (passive, rooted), and he raises its Skeletons (TickWardRaises). Its 20 s timer gets a margin (the
+    // spell resets only the summon type after this): he dismisses it after its fourth Skeleton.
+    void WardRisen(Creature* ward)
+    {
+        ward->m_spells[0] = 0;
+        ward->SetReactState(REACT_PASSIVE);
+        ward->SetControlled(true, UNIT_STATE_ROOT);
+        if (TempSummon* summon = ward->ToTempSummon())
+            summon->SetTimer(Tune::kWardLifeMs + Tune::kWardLifeMarginMs);
+        if (!_engaged)
+            return;     // a `.dbtest` out of combat: it stands and raises nothing
+        _wards.emplace_back(ward->GetGUID(), WardRaiser(_timeline.Now()));
+    }
+
+    // Each live ward's Skeletons, wild and his (TEMPSUMMON_CORPSE_DESPAWN: until killed), beside it; a dead ward
+    // raises no more (the kill order's point), a spent one goes.
+    void TickWardRaises()
+    {
+        for (auto it = _wards.begin(); it != _wards.end();)
+        {
+            Creature* ward = ObjectAccessor::GetCreature(*me, it->first);
+            if (!ward || !ward->IsAlive())
+            {
+                it = _wards.erase(it);
+                continue;
+            }
+            for (uint32 n = it->second.Raises(_timeline.Now()); n; --n)
+                RaiseSkeleton(ward);
+            if (it->second.Spent())
+            {
+                ward->DespawnOrUnsummon();
+                it = _wards.erase(it);
+            }
+            else
+                ++it;
+        }
+    }
+
+    void RaiseSkeleton(Creature* ward)
+    {
+        float const angle = frand(0.f, 2.f * float(M_PI));
+        Vec2 const p{ ward->GetPositionX() + 2.f * std::cos(angle), ward->GetPositionY() + 2.f * std::sin(angle) };
+        Position pos = OnFloor(ward, p, ward->GetPositionZ(), angle);
+        if (!BowlArena().Contains(p, pos.GetPositionZ()))
+            pos = ward->GetPosition();
+        if (!me->SummonCreature(NPC_SKELETON_OF_ZUMRAH, pos, TEMPSUMMON_CORPSE_DESPAWN))
+            LogZr("skeleton-refused", Acore::StringFormat("ward={}", ward->GetGUID().ToString()));
     }
 
     void TickSkeletons(uint32 diff)
@@ -1043,7 +1102,7 @@ private:
         return true;
     }
 
-    // Landed (not kicked): every player within 30 yd but the walker.
+    // Landed (not kicked): every player on the bowl within 30 yd but the walker (rule 5).
     void VolleyLands()
     {
         float const pct = Tune::kVolleyPct(_heroic);
@@ -1051,7 +1110,8 @@ private:
         for (MapReference const& ref : me->GetMap()->GetPlayers())
         {
             Player* player = ref.GetSource();
-            if (!CountsAsPlayer(player) || IsWalker(player) || !me->IsWithinDist(player, Tune::kVolleyRangeYd))
+            if (!CountsAsPlayer(player) || IsWalker(player) || !me->IsWithinDist(player, Tune::kVolleyRangeYd)
+                || !_arena.Contains(player))
                 continue;
             CastPercent(player, SPELL_ZR_VOLLEY_HIT, pct);
             ++hit;
@@ -1198,6 +1258,7 @@ private:
             if (Creature* s = ObjectAccessor::GetCreature(*me, guid))
                 s->DespawnOrUnsummon();
         _skeletons.clear();
+        _wards.clear();
         summons.DespawnAll();
         me->RemoveAurasDueToSpell(SPELL_ZR_WARD_OF_THE_DEAD);
         if (instance)
@@ -1272,6 +1333,7 @@ private:
     WalkState _walk;
     std::vector<BoundDead> _bound;
     GuidSet _skeletons;
+    std::vector<std::pair<ObjectGuid, WardRaiser>> _wards;
     std::set<uint64> _walked;
     uint64 _lastWalker = 0;
     uint64 _boundEmoteAt = 0;
@@ -1297,16 +1359,14 @@ namespace
     }
 }
 
-// Skeleton of Zum'rah 7786 (stock entry, summoned by the stock ward): lives until killed, goes for the husk first.
+// Skeleton of Zum'rah 7786 (stock entry, raised by Zum'rah beside his ward, wild and corpse-despawn: SP ZR8 "until
+// killed"): goes for the husk first.
 struct npc_zf_zumrah_skeleton : public ScriptedAI
 {
     explicit npc_zf_zumrah_skeleton(Creature* creature) : ScriptedAI(creature) { }
 
     void IsSummonedBy(WorldObject* /*summoner*/) override
     {
-        // SP ZR8 "Skeletons until killed": the stock 11088 summons them for 20 s.
-        if (TempSummon* summon = me->ToTempSummon())
-            summon->SetTempSummonType(TEMPSUMMON_CORPSE_DESPAWN);
         boss_zumrah_rework* boss = ZumrahAI(me);
         if (!boss || !boss->Engaged())
         {

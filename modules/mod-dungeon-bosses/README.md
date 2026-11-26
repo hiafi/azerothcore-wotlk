@@ -51,6 +51,12 @@ so db-import and the dbc-tools replay see one history.
 | `src/Kit/DungeonKitFlex.{h,cpp}` | Engine: DD's scaler for scripts: `Flex::Count`, `OnPull`, `SetFlexLoot`, `SetHealth` |
 | `src/Kit/DungeonKitChaseLogic.h` | Pure: `ChaseClock`, `CrawlClock`, `FallCatchBook` |
 | `src/Kit/DungeonKitChase.{h,cpp}` | Engine: `Chaser`, `CrawlPickups` (pickups that crawl to a goal), `FallWatch` |
+| `src/Kit/DungeonKitWaterLogic.h` | Pure: `WaterSheets` (water and ice sheets: freeze, thaw, grow, merge), `DiscFor` |
+| `src/Kit/DungeonKitWater.{h,cpp}` | Engine: `WaterField` (water sheets as avoid Zones with disc looks; Discharge zones, freezes, thaws) |
+| `src/Kit/DungeonKitArenaEdgeLogic.h` | Pure: `NextEdgeStep` and friends (a boss fighting at his arena's edge) |
+| `src/Kit/DungeonKitArenaEdge.{h,cpp}` | Engine: `DungeonKit::EdgeFight` (`SelfLeash`, `ReachLeash`, `ArenaEdge`; promoted from Ragefire, which keeps its copy) |
+| `src/Kit/DungeonKitSoakLogic.h` | Pure: `SoakAt` (the dwell clock of a held Soak) |
+| `src/Kit/DungeonKitSoaks.{h,cpp}` | Engine: `DwellSoaks` (Soaks held for a dwell on any unit: onDone, onExpire, onLost) |
 | `src/Kit/DungeonKitFrontLogic.h` | Pure: rolling front plans: timing, ring slices, gaps off pools, carrier spots |
 | `src/Kit/DungeonKitFronts.{h,cpp}` | Engine: `FrontDirector` (ring and wall sequences on BM's fronts), `PoolsOf` |
 | `src/Kit/DungeonKitRingLogic.h` | Pure: the ring wall (band, crossings, `RingWatch`, push-out plan, grace) |
@@ -233,8 +239,10 @@ The movers (`DungeonKitChase.h`; each is owned by one AI: Update from `UpdateAI`
 - `CrawlPickups`: walk-over pickups on a unit of their own: a telegraph-only Soak anchored on it (MissedSoak Never),
   taken on touch by an eligible player (`onPick`), crawling along the floor to a goal unit or point after a wait
   (`onReach`); `SetGoal` moves every live one to a new goal. `order` (optional) sets the Soak's claim order for the
-  bots only: its `capStacks` stops bots claiming while `who` still lets anyone touch it. Urok's shards, Wyrmthalak's
-  Stolen Boulders.
+  bots only: its `capStacks` stops bots claiming while `who` still lets anyone touch it. `onlyWhileCarriers` with
+  `SetCarriers` (Zul'Farrak WP-KT) limits the takers to a set the owner names (the walkers): while it is empty the
+  pickup is dormant (no Soak, no touch) and still crawls; `configure` adds registry options to every registration.
+  Urok's shards, Wyrmthalak's Stolen Boulders, Zum'rah's souls.
 - `FallWatch`: catches players and their pets and guardians (no totems, no charmed mobs) inside a region a set height
   under a deck before they land (`onCatch`; a caught player's fall start is reset, so the jump back deals no fall
   damage), once per grace. Omokk's Pit Drop.
@@ -367,17 +375,17 @@ bosses' tables have `hardmode` (arms their hard mode past the trigger).
 | `test` | `arm` (heroic: the Pyramid DONE with all five alive), `hardmode [0\|1]` |
 | `section` | `<entrance\|courtyard\|den\|bowl\|top\|landing\|plaza\|mesa\|pool\|checkpoint>`: teleport |
 | `instance` | `boss <id> <state>`, `where` |
-| `theka` | info |
-| `antusul` | info |
-| `zumrah` | info |
-| `block` | info |
-| `stair` | info |
-| `band` | info |
-| `blyfight` | info |
-| `ukorz` | info |
-| `pool` | velratha gahzrilla |
-| `poolcrew` | info |
-| `deluge` | info |
+| `theka` | info state swarm plague rise hunt stack lament |
+| `antusul` | info state wake rise `calcify [n]` shatter petrify bolt shockwave heal |
+| `zumrah` | info state rend endwalk `soul [n]` `bind [n]` freeall ward volley bolt echo wail graves |
+| `block` | info state `block [member]` wound `bloodprice <n>` (heroic) |
+| `stair` | info state barrel send offering scream adds gutchew sezzziz |
+| `band` | info place `prisoner <member> take\|spare\|execute` start depart |
+| `blyfight` | info state gangup bodyguard ambush gouge rain seed heal res stash |
+| `ukorz` | info state `fury <side> <stacks>` `roar [side]` `storm [side]` stamp sink call lash creep `heroic [0\|1]` |
+| `pool` | velratha gahzrilla state gong spill heal discharge call icicle freeze slam `puddle [radius]` `charged [n]` conductive thaw |
+| `poolcrew` | info state spring charge chosen overcharge dispel twin `devour <member>` |
+| `deluge` | info state start strike `floe [radius]` thaw |
 
 ## Kit: death spots, held bodies and the edge (Blackrock Depths WP-KT-D1)
 

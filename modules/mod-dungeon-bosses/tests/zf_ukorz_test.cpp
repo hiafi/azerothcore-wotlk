@@ -5,6 +5,7 @@
 #include "check.h"
 #include <cmath>
 #include <cstdint>
+#include <span>
 #include <vector>
 
 using namespace ZulFarrakRework;
@@ -320,6 +321,37 @@ namespace
         // SP's space check at 20 yd (about 45 s in at the target): 1,257 sq yd of safe circle.
         float const area20 = 3.14159265f * CreepInnerYd(2) * CreepInnerYd(2);
         CHECK(area20 > 1200.f && area20 < 1300.f);
+
+        // F-1 MI-4: the bots' spots while the donut is up are the safe circle clipped to the mesa: no spot behind the
+        // walls (the bare 29 yd circle has some), and every mesa point inside the circle kept (a 0.5 yd grid; the
+        // 32-gon's rim band, 0.15 yd at 29 yd, is skipped).
+        Vec2 const c = kMesaDonutCenter.XY();
+        for (std::uint32_t step = 0; step <= 6; ++step)
+        {
+            float const r = CreepBoundsYd(CreepInnerYd(step));
+            std::vector<Vec2> const safe = CreepSafeFloor(r);
+            CHECK(safe.size() >= 3);
+            std::uint32_t outside = 0;
+            std::uint32_t lost = 0;
+            std::uint32_t bareOutside = 0;
+            for (float x = c.x - r; x <= c.x + r; x += 0.5f)
+                for (float y = c.y - r; y <= c.y + r; y += 0.5f)
+                {
+                    Vec2 const p{ x + 0.13f, y + 0.07f };
+                    float const d = DungeonKit::Distance(p, c);
+                    bool const mesa = DungeonKit::PointInPolygon(kMesaPolygon, p);
+                    bool const in = DungeonKit::PointInPolygon(std::span<Vec2 const>(safe), p);
+                    bareOutside += d < r && !mesa ? 1 : 0;
+                    outside += in && !mesa ? 1 : 0;
+                    lost += !in && mesa && d < r - 0.2f ? 1 : 0;
+                }
+            CHECK(outside == 0);
+            CHECK(lost == 0);
+            if (step == 0)
+                CHECK(bareOutside > 0);     // the defect the clip removes
+            for (Vec2 const& v : safe)
+                CHECK(DungeonKit::Distance(v, c) <= r + 0.01f);
+        }
     }
 
     void TestTrailAndBeats()

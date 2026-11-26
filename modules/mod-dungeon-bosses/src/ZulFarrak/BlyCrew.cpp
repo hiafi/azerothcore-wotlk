@@ -23,6 +23,7 @@
 #include "GossipDef.h"
 #include "InstanceScript.h"
 #include "Map.h"
+#include "MapReference.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
@@ -32,6 +33,7 @@
 #include "StringFormat.h"
 #include "ZulFarrakKit.h"
 #include "ZulFarrakTestCommand.h"
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -74,6 +76,28 @@ namespace ZfCrew
         char constexpr kGossipTest[] = "Put us to your test, Bly. Your whole crew against us, until one side yields.";
         char constexpr kGossipTestConfirm[] = "Bly's Test: the crew fight you and each yields at 30% health. Win, and "
             "all five join you at the sacred pool, where Gahz'rilla waits stronger than ever. Begin the Test?";
+
+        // R-1-FW M4: a player the crew fight may engage: alive, not a GM, on the plaza (rule 5: never a corpse runner
+        // or a player up the stair), not feigning death, seen by `me` (a vanished rogue is not) and attackable.
+        bool CrewFightTarget(Creature* me, Player* player)
+        {
+            return player && player->IsAlive() && !player->IsGameMaster() && player->IsInMap(me)
+                && !player->HasUnitFlag2(UNIT_FLAG2_FEIGN_DEATH)
+                && PlazaArena().Contains(DungeonKit::PlaneOf(player), player->GetPositionZ())
+                && me->CanSeeOrDetect(player) && me->IsValidAttackTarget(player);
+        }
+
+        // The crew fight's players on the plaza, nearest to `me` first.
+        std::vector<Player*> CrewFightTargets(Creature* me)
+        {
+            std::vector<Player*> out;
+            for (MapReference const& ref : me->GetMap()->GetPlayers())
+                if (Player* player = ref.GetSource(); CrewFightTarget(me, player))
+                    out.push_back(player);
+            std::sort(out.begin(), out.end(), [me](Player* a, Player* b)
+                { return me->GetExactDist2dSq(a) < me->GetExactDist2dSq(b); });
+            return out;
+        }
 
         using FactoryTable = std::array<std::array<CrewModeHandlerFactory, kCrewCount>, kCrewModeCount>;
 
@@ -711,19 +735,51 @@ namespace ZfCrew
 
     void BlyCrewAI::EnterEvadeMode(EvadeReason why)
     {
+        // R-1-FW M4: one fighter's emptied threat list (its target died, fed or vanished) or a lost path no longer
+        // wipes the fight while the group still fights on the plaza: it turns to the nearest plaza player instead.
+        InstanceScript* instance = Instance();
+        bool const running = instance && instance->GetData(DATA_CREW_FIGHT) == DungeonKit::State::InProgress;
+        std::vector<Player*> const targets = (_mode == CrewMode::Boss && running && me->IsAlive())
+            ? CrewFightTargets(me) : std::vector<Player*>{};
+        CrewEvade const verdict = CrewEvadeVerdict(_mode == CrewMode::Boss, running, why == EVADE_REASON_NO_HOSTILES,
+            !targets.empty(), OtherFighterEngaged());
+        if (verdict == CrewEvade::Reengage)
+        {
+            Player* target = targets.front();
+            Log("fight-reengage", Acore::StringFormat("{} reason={} target={}", kCrewNames[_member], uint32(why),
+                target->GetName()));
+            me->GetThreatMgr().AddThreat(target, 0.f, nullptr, true, true);
+            ScriptedAI::AttackStart(target);
+            return;
+        }
+
         if (CrewModeHandler* handler = Handler(); handler && handler->OnEvade(*this, why))
             return;
-        bool const crewWipe = _mode == CrewMode::Boss;
         ScriptedAI::EnterEvadeMode(why);
-        if (!crewWipe)
+        if (verdict != CrewEvade::Wipe)
             return;
-        // CR's default: one fighter out of the fight means the group is gone; the instance restores all five.
-        if (InstanceScript* instance = Instance())
-            if (instance->GetData(DATA_CREW_FIGHT) == DungeonKit::State::InProgress)
-            {
-                Log("fight-wipe", Acore::StringFormat("evade={}", kCrewNames[_member]));
-                instance->SetData(DATA_CREW_FIGHT, DungeonKit::State::NotStarted);
-            }
+        // Nobody left to fight on the plaza (or the last fighter cannot reach anyone): the group is gone; the
+        // instance restores all five.
+        Log("fight-wipe", Acore::StringFormat("evade={} reason={}", kCrewNames[_member], uint32(why)));
+        instance->SetData(DATA_CREW_FIGHT, DungeonKit::State::NotStarted);
+    }
+
+    // Another Boss-mode fighter, alive, fighting a living plaza player (R-1-FW M4).
+    bool BlyCrewAI::OtherFighterEngaged() const
+    {
+        InstanceScript* instance = Instance();
+        for (uint32 m = 0; m < kCrewCount; ++m)
+        {
+            if (m == _member || !(CrewBit(m) & kCrewFighters))
+                continue;
+            BlyCrewAI* other = CrewAI(instance, m);
+            if (!other || other->_mode != CrewMode::Boss || !other->me->IsAlive() || !other->me->IsEngaged())
+                continue;
+            Player* victim = other->me->GetVictim() ? other->me->GetVictim()->ToPlayer() : nullptr;
+            if (victim && CrewFightTarget(other->me, victim))
+                return true;
+        }
+        return false;
     }
 
     void BlyCrewAI::DamageTaken(Unit* attacker, uint32& damage, DamageEffectType type, SpellSchoolMask school)
@@ -1002,10 +1058,16 @@ namespace ZfCrew
             target = me->SelectNearestPlayer(Tune::kFightTargetRangeYd);
         if (!target)
             return;
+        // R-1-FW M4: the four are zone-engaged on the plaza's players (threat 0), so the chooser's death, a Feign
+        // Death or a Vanish leaves each of them someone to fight; then all four go for the chooser.
         for (uint32 m = 0; m < kCrewCount; ++m)
             if (CrewBit(m) & kCrewFighters)
                 if (BlyCrewAI* ai = CrewAI(instance, m); ai && ai->me->IsAlive())
+                {
+                    for (Player* player : CrewFightTargets(ai->me))
+                        ai->me->GetThreatMgr().AddThreat(player, 0.f, nullptr, true, true);
                     ai->AttackStart(target);
+                }
     }
 
     // The default Test end (no Boss handler): every fighter yielded or dead. Bly says line 4, then DONE.

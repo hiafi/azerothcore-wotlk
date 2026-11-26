@@ -3,6 +3,7 @@
 #include "AntusulLogic.h"
 #include "check.h"
 #include <cmath>
+#include <initializer_list>
 #include <vector>
 
 using namespace ZulFarrakRework;
@@ -42,6 +43,12 @@ int main()
     CHECK(SPELL_AS_CALCIFY == 213890);
     CHECK(SPELL_AS_SERVANT_RISE == 213905);
     CHECK(kSpellSlice.Contains(SPELL_AS_SERVANT_RISE));
+    // The drill's tags (BM MechanicDrill.h kZfTagBolt 6, kZfTagShatter 7, kZfTagStoneflesh 8); no other live tag
+    // reuses one of them (R-1-A n1).
+    CHECK(TAG_BOLT == 6 && TAG_SHATTER == 7 && TAG_STONEFLESH == 8);
+    for (std::uint32_t tag : { std::uint32_t(TAG_PETRIFY), std::uint32_t(TAG_CRACK), std::uint32_t(TAG_BOLT_HIT),
+        std::uint32_t(TAG_SHOCKWAVE) })
+        CHECK(tag != 6 && tag != 7 && tag != 8);
     // The spawn is on the arena, and the slot's arena is the same one.
     CHECK(DenArena().Contains(kAntusulSpawn.XY(), kAntusulSpawn.z));
     CHECK(ArenaFor(BOSS_ANTUSUL).Contains(kAntusulSpawn.XY(), kAntusulSpawn.z));

@@ -21,18 +21,35 @@ What it mints (every look unconfirmed until seen in game; scales are first guess
 - 90704 Basilisk gaze: a copy of stock SV 8311 whose channel kit is a copy of kit 7084 with AnimID 124 -> 51.
 - 90705 / 90706 Hydra poses: copies of stock SV 36 / 854 whose precast and cast kits are copies with the animation the
   Hydra lacks (51 / 53) swapped for 32.
-- 90707 Hydra Static Charge: StateKit, BaseEffect = the stock `LightningShield_State_Base` model at scale 7.0, sound 3256
-  (stock SV 37 is the same model at 0.3 yd: nearly invisible on a 24 yd hydra).
+- 90707 Hydra Static Charge: StateKit, BaseEffect = the stock `LightningShield_State_Base` model at scale 7.0, sound
+  3256 (stock SV 37 is the same model at 0.3 yd: nearly invisible on a 24 yd hydra).
 - 90830 / 90831 / 90832 creature displays on the Ascension element discs `target_water_state_projected`,
-  `target_frost_state_projected` and `target_lightning_state_projected` (each a 9.6 yd quad, 0 emitters: creature scale =
-  radius / 4.8). The water disc's second texture names a file that is in no archive (`world\\expansion08\\doodads\\
-  ardenweald\\target_anima_ardenweald_state_3507129.blp`): the script re-points it to the shipped `targetarea_everybase`
-  (a one-string edit of the extracted model, in place, same length rule as lib/m2_patch.set_texture_path).
+  `target_frost_state_projected` and `target_lightning_state_projected` (each a 9.6 yd quad, 0 emitters: creature
+  scale = radius / 4.8). The water disc's second texture names a file that is in no archive
+  (`world\\expansion08\\doodads\\ardenweald\\target_anima_ardenweald_state_3507129.blp`): the script re-points it to
+  the shipped `targetarea_everybase` (a one-string edit of the extracted model, in place, same length rule as
+  lib/m2_patch.set_texture_path).
 
 SpellVisual, CreatureModelData and CreatureDisplayInfo are server-loaded, so `--sql-out PATH` emits their overlay
 (SpellVisualKit and SpellVisualEffectName are client-only) plus the creature_model_info rows: the three discs (radius
 0.5, reach 0.5: flat, so melee targeting does not see them) and the four stock displays whose live row holds 0 or a
 size that is wrong for the use (6697, 25175, 29716, 26252: RB-10; a zero radius makes a boss unhittable).
+These four UPDATEs are by display id, so they reach every creature that wears the display (live SELECT 2026-11-25,
+creature_template_model; R-1-LOOT m-2). The other users, all judged harmless (none is targetable combat content whose
+fight depends on the old size):
+- 6697: only Theka's shapeshift 7791 (ZF). Live row 0 / 0.
+- 29716: Ghostly Troll Celebrant 35253 (4 gossip spawns on map 1, row 0 / 0, an ordinary NPC that gains a troll's
+  radius 0.306 and reach 1.5) and Spectral Troll 300917 (Scarlet Monastery's not-selectable, not-attackable phantom of
+  `npc_sm_hollis_phantom`: reach 0 -> 1.5 only changes its spacing). Both look unchanged.
+- 25175: [ph] exploding barrel 28173 and Barrel o' Fun 29737 (second of two displays, no world spawns): live row 0 / 0,
+  so the new 0.7 / 0.8 only gives them a size.
+- 26252: Goblin Sapper Backpack 29440 and 29556 (type 10, unit_flags 0x2000000, no world spawn, SmartAI or
+  summon-group row, so spell-summoned; the summoning spell is stock DBC, not checked): the one row that SHRINKS
+  (radius 0.75 -> 0.3, reach 3.75 -> 0.5), to the model's own size (PowderKegFused is 0.45 x 0.5 x 0.75 yd). A prop
+  of this kind is not attacked or meleed, so the smaller reach should matter to nothing.
+No ZF-only display copy is made: nothing above changes in a way a player can see, and a copy would need a new display
+row in 90833-90849 that `_visuals.py`, `theka.py`, `pyramid_stair.py` and the C++ constants would all have to follow.
+If a Backpack ever looks or behaves wrong, mint the copy then.
 
 Assets (gitignored working copies; `--extract` pulls them from the read-only Ascension backup (patch-N) into
 var/model-visual-dbc/SPELLS/, where build_patch_m.py packs them into patch-M, and applies the water-disc texture edit):

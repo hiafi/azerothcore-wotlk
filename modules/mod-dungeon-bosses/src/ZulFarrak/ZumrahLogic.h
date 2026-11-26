@@ -9,6 +9,7 @@
  *   Timeline                 his casts: Spirit Rend on its fixed grid and never late, the Volley never started into a
  *                            Rend, the Ward on its own clock, Shadow Bolts only where they fit before both
  *   SoulClock                a Lost Soul rises every 6 s (heroic 2 s) from the pull
+ *   WardRaiser               a ward raises a Skeleton every 5 s for 20 s (four), then goes
  *   RendCandidates           everyone crosses in turn: who has not walked since the last reset of the rotation
  *   WardReductionPct         Ward of the Dead: 10% a Bound Dead to 40% (normal, capped at 4); heroic 15% each to 60%,
  *                            then each cuts 15% of what is left (ruling 45)
@@ -69,7 +70,9 @@ namespace ZfZumrah
     };
     // 213940-213959 spare.
 
-    // The stock Ward of Zum'rah (a totem 7785 raising a Skeleton of Zum'rah 7786 every 5 s for 20 s), cast as it is.
+    // The stock Ward of Zum'rah 11086 (it summons the ward 7785 for 20 s), cast as it is. The ward's own passive 11087
+    // (11088: the Skeletons as the ward's guardians, SummonProperties 61, gone with it: R-1-A M1) is cleared; he
+    // raises its Skeletons himself, wild (WardRaiser).
     inline constexpr std::uint32_t SPELL_WARD_OF_ZUMRAH = 11086;
 
     // Registry tags: G1's zul-farrak-shapes rows 3 and 4 use the same numbers (BM MechanicDrill.h kZfTag*).
@@ -133,6 +136,12 @@ namespace ZfZumrah
         inline constexpr std::uint32_t kWardFirstMs = 2000;
         inline constexpr NH<std::uint32_t> kWardEveryMinMs{ 30000, 25000 };
         inline constexpr NH<std::uint32_t> kWardEveryMaxMs{ 36000, 25000 };
+        // A ward raises a Skeleton every 5 s for 20 s (SP: 4 a ward, as stock), then goes; the Skeletons stay until
+        // killed. The ward's own 20 s timer gets a margin, so the fourth rises before it can lapse.
+        inline constexpr std::uint32_t kWardRaiseEveryMs = 5000;
+        inline constexpr std::uint32_t kWardSkeletons = 4;
+        inline constexpr std::uint32_t kWardLifeMs = kWardRaiseEveryMs * kWardSkeletons;
+        inline constexpr std::uint32_t kWardLifeMarginMs = 2000;
         inline constexpr NH<float> kSkeletonPctPerSec{ 1.5f, 2.5f };
         inline constexpr std::uint32_t kSkeletonStrikeEveryMs = 2000;
         inline constexpr float kVesselThreat = 10000.f;
@@ -391,6 +400,36 @@ namespace ZfZumrah
         std::uint64_t _next = 0;
         std::uint32_t _every = 0;
         bool _running = false;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // ZR8 a Ward of Zum'rah's Skeletons
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // One ward's raises on his clock: a Skeleton 5, 10, 15 and 20 s after it rises, then it is spent (he dismisses
+    // it). A ward killed earlier just stops raising (the caller drops it).
+    class WardRaiser
+    {
+    public:
+        explicit WardRaiser(std::uint64_t risenAt = 0) : _next(risenAt + Tune::kWardRaiseEveryMs) { }
+        // How many Skeletons rise by `now` (0 or 1 a tick; more after a long one), never past the ward's four.
+        std::uint32_t Raises(std::uint64_t now)
+        {
+            std::uint32_t n = 0;
+            while (_raised < Tune::kWardSkeletons && now >= _next)
+            {
+                ++n;
+                ++_raised;
+                _next += Tune::kWardRaiseEveryMs;
+            }
+            return n;
+        }
+        bool Spent() const { return _raised >= Tune::kWardSkeletons; }
+        std::uint32_t Raised() const { return _raised; }
+
+    private:
+        std::uint64_t _next = 0;
+        std::uint32_t _raised = 0;
     };
 
     // The 40 grave sites (gameobject 128308, one of the two objects on each; DB positions, SELECT 2026-11-25), west to

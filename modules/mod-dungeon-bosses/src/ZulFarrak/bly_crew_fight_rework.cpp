@@ -423,8 +423,9 @@ public:
             }
     }
 
-    // Any one's evade evades all (FF 2.5): CR's evade reports the crew wipe after the base evade; the instance puts
-    // all five back (OnLeave to Gather cleans the rest). Only the evading member's own state is undone here.
+    // A real evade (CR re-engages a fighter whose threat list emptied while the group still fights on the plaza,
+    // R-1-FW M4, and only then calls this): CR reports the crew wipe after the base evade; the instance puts all five
+    // back (OnLeave to Gather cleans the rest). Only the evading member's own state is undone here.
     bool OnEvade(BlyCrewAI& /*ai*/, CreatureAI::EvadeReason why) override
     {
         if (_mode == CrewMode::Boss && _started)
@@ -1164,7 +1165,7 @@ private:
         {
             if (now < _vanishUntilMs)
                 return true;    // gone for the Ambush's warning
-            Me()->SetVisible(true);     // the strike never came back (a cancelled shape): she shows again
+            Me()->SetVisible(true);     // the strike never came back (a canceled shape): she shows again
             _vanished = false;
             LogBc("ambush-lost", "raven shows again");
         }

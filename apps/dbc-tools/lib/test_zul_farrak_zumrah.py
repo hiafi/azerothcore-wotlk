@@ -56,6 +56,7 @@ AURA_DUMMY, AURA_INVISIBILITY, AURA_INVISIBILITY_DETECT, AURA_SPEED, AURA_DAMAGE
     87, 247
 PREVENTION_SILENCE = 1
 ATTR0_AURA_IS_DEBUFF = 0x04000000
+ATTR0_NO_IMMUNITIES = 0x20000000
 ATTR1_NO_REDIRECTION, ATTR1_NO_REFLECTION, ATTR1_IS_CHANNELED = 0x8, 0x80, 0x4
 ATTR2_IGNORE_LOS = 0x4
 ATTR3_IGNORE_CASTER_MODIFIERS = 0x20000000
@@ -195,6 +196,7 @@ class ZumrahDeclarationTest(unittest.TestCase):
         self.assertGreaterEqual(walker["duration_ms"], int(_value("kWalkMs")))
         self.assertEqual(walker["dispel"], 0)
         self.assertTrue(walker["attributes"] & ATTR0_AURA_IS_DEBUFF)              # cannot be clicked off
+        self.assertTrue(walker["attributes"] & ATTR0_NO_IMMUNITIES)  # a bubble never strips it
         self.assertTrue(_raw(walker, "AuraInterruptFlags") & CHANGE_MAP)
         hidden = self.spells[SPIRIT_WORLD]["effect1"]
         self.assertEqual((hidden["apply_aura"], hidden["misc_value"], int(hidden["base_points"])),
@@ -208,6 +210,7 @@ class ZumrahDeclarationTest(unittest.TestCase):
         gathered, ward = self.spells[GATHERED], self.spells[WARD]
         self.assertEqual(gathered["effect1"]["apply_aura"], AURA_DUMMY)
         self.assertTrue(gathered["attributes"] & ATTR0_AURA_IS_DEBUFF)
+        self.assertTrue(gathered["attributes"] & ATTR0_NO_IMMUNITIES)             # a class immunity never strips them
         self.assertEqual(gathered["dispel"], 0)
         self.assertEqual(ward["effect1"]["apply_aura"], AURA_DAMAGE_TAKEN)
         self.assertEqual(int(ward["effect1"]["base_points"]), -int(_pair("kWardPctPerBound")[0]))

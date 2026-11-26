@@ -238,6 +238,30 @@ int main()
     // The gong at 30%, once.
     CHECK(!GongDue(30.1f, false) && GongDue(30.f, false) && GongDue(2.f, false) && !GongDue(10.f, true));
 
+    // F-1 MI-2 / DQ-2: she strikes and fights from the gong's bank: on the arena, dry, 3 yd or more past the pool
+    // strip (melee on her never stand in it), near the gong and facing it.
+    {
+        DungeonKit::WaterSheets sheets = PoolOnly();
+        Point3 const spot = GongStrikeSpot();
+        CHECK(Tune::kGongFightsFromBank);
+        CHECK(PoolArena().Contains(spot.XY(), spot.z));
+        CHECK(!PoolWater().Contains(spot.XY(), spot.z));
+        CHECK(!sheets.IsWater(spot.XY(), spot.z));
+        DungeonKit::WaterSheet const* pool = sheets.Find(1);
+        CHECK(pool && pool->IsStrip() && pool->EdgeDistance(spot.XY()) >= 3.f);
+        CHECK(DungeonKit::Distance(spot.XY(), kGong.XY()) <= 10.f);
+        float const face = std::atan2(kGong.y - spot.y, kGong.x - spot.x);
+        CHECK(Near(spot.o, face));
+    }
+
+    // F-1 MA-1: the strike's DATA_GONG_STRUCK value: 2 (the instance may arm) only when the pull built the packages.
+    CHECK(GongStruckData(true) == kGongStruckHardMode && GongStruckData(false) == kGongStruckPlain);
+    CHECK(kGongStruckPlain == 1 && kGongStruckHardMode == 2);
+
+    // F-1 DQ-1 (ruled B): the sheet shock stacks per carrier in every phase, the Deluge included (as built).
+    CHECK(Tune::kSheetShockStack == Tune::SheetShockStack::PerCarrier);
+    CHECK(!SheetShockOncePerTick(true) && !SheetShockOncePerTick(false));
+
     // Gahz'rilla: the Discharge lands on Storm Builds' table, no bar late, nothing runs into a bar.
     {
         GRun const run = RunGahzrilla(true, 150000);

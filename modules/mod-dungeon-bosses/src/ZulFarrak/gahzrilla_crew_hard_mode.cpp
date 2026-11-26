@@ -366,6 +366,17 @@ public:
         if (!(_alive & CrewBit(CREW_RAVEN)))
             d.interrupts.emplace_back(NPC_ZF_SECOND_HEAD, SPELL_HM_TWIN_CALL, kTwinCallKickPriority,
                 Ms(ZfPool::Tune::kCallEveryMs.heroic));
+        // F-1 MI-3: the head takes no damage, so no bot targets it or counts it for AoE while Raven stands and takes
+        // its cast. The condition reads Raven live (this descriptor is rebuilt only on the next tick after her death)
+        // and the ignore ends with her: BM's interrupt pass skips ignored units, and the kick fallback above needs it.
+        else
+            d.ignores.push_back(BossMechanics::IgnoreEntry(NPC_ZF_SECOND_HEAD,
+                BossMechanics::Condition::Custom([](Unit const* head)
+                {
+                    InstanceScript* instance = head ? head->GetInstanceScript() : nullptr;
+                    Creature const* raven = instance ? CrewCreature(instance, CREW_RAVEN) : nullptr;
+                    return raven && raven->IsAlive();
+                })));
     }
 
     // ---- From the crew handler and the add AIs ---------------------------------------------------------------------

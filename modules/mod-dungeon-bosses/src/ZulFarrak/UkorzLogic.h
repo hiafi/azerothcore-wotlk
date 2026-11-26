@@ -16,6 +16,7 @@
  *   HoldDamage     UK9 heroic: a boss's damage clamped at the 30% line
  *   LashChain      UK12: the struck player, then every other player within 8 yd of a struck one, up to 4 jumps
  *   CreepInnerYd   UK13: the safe circle's radius, 30 yd closing 5 yd every 20 s from phase 3's start, to nothing
+ *   CreepSafeFloor F-1 MI-4: the bots' planned spots while the donut is up: the safe circle clipped to the mesa
  *   NextDue        RB-17 / L8: a beat that waited keeps max(due + period, now + period / 2)
  */
 
@@ -25,6 +26,7 @@
 #include "DungeonKitMath.h"
 #include "ZulFarrakRework.h"
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -540,6 +542,61 @@ namespace ZfUkorz
     constexpr float CreepBoundsYd(float innerYd)
     {
         return std::max(3.f, innerYd - 1.f);
+    }
+
+    // F-1 MI-4: the safe circle of `boundsYd` round kMesaDonutCenter, clipped to the mesa's floor (kMesaPolygon), as
+    // one polygon (BM's SpotBounds areas are a union, so the clip is done here). The circle is a regular
+    // kCreepSafeSides-gon inscribed in it; Sutherland-Hodgman clips the non-convex mesa by that convex polygon (where
+    // the mesa leaves and re-enters the circle the result runs along the circle's edge both ways: zero width, so a
+    // point test is unchanged). At 29 yd (the circle at the Call) 11% of the bare circle lies past the walls; from
+    // 19 yd none does and this is the polygon of the circle alone.
+    inline constexpr std::size_t kCreepSafeSides = 32;
+
+    inline std::vector<DungeonKit::Vec2> CreepSafeFloor(float boundsYd)
+    {
+        using DungeonKit::Vec2;
+        Vec2 const c = ZulFarrakRework::kMesaDonutCenter.XY();
+        std::vector<Vec2> clip;
+        clip.reserve(kCreepSafeSides);
+        for (std::size_t i = 0; i < kCreepSafeSides; ++i)
+        {
+            float const a = 6.2831853f * static_cast<float>(i) / static_cast<float>(kCreepSafeSides);
+            clip.push_back({ c.x + boundsYd * std::cos(a), c.y + boundsYd * std::sin(a) });     // counter-clockwise
+        }
+        std::vector<Vec2> out(ZulFarrakRework::kMesaPolygon.begin(), ZulFarrakRework::kMesaPolygon.end());
+        for (std::size_t e = 0; e < clip.size() && !out.empty(); ++e)
+        {
+            Vec2 const a = clip[e];
+            Vec2 const b = clip[(e + 1) % clip.size()];
+            auto inside = [a, b](Vec2 p) { return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x) >= 0.f; };
+            auto cross = [a, b](Vec2 p, Vec2 q)
+            {
+                float const dx = q.x - p.x;
+                float const dy = q.y - p.y;
+                float const den = (b.x - a.x) * dy - (b.y - a.y) * dx;
+                float const t = std::fabs(den) < 1e-6f ? 0.f
+                    : ((b.x - a.x) * (a.y - p.y) - (b.y - a.y) * (a.x - p.x)) / den;
+                return Vec2{ p.x + t * dx, p.y + t * dy };
+            };
+            std::vector<Vec2> const in = std::move(out);
+            out.clear();
+            for (std::size_t i = 0; i < in.size(); ++i)
+            {
+                Vec2 const cur = in[i];
+                Vec2 const prev = in[(i + in.size() - 1) % in.size()];
+                bool const curIn = inside(cur);
+                bool const prevIn = inside(prev);
+                if (curIn)
+                {
+                    if (!prevIn)
+                        out.push_back(cross(prev, cur));
+                    out.push_back(cur);
+                }
+                else if (prevIn)
+                    out.push_back(cross(prev, cur));
+            }
+        }
+        return out;
     }
 
     // ----------------------------------------------------------------------------------------------------------------

@@ -461,6 +461,29 @@ namespace ZfCrew
         static_assert(kPrisonerMoveTimeoutMs >= 1500, "a jump of about 10 yd lands well inside its timeout");
     }
 
+    // R-1-FW M4: a crew fighter in Boss mode wants to evade while the fight runs (its threat list emptied: its only
+    // player died, fed or vanished; or it could not reach its target). One fighter out no longer wipes the fight:
+    enum class CrewEvade : std::uint8_t
+    {
+        Plain,      // not the crew fight: the base evade, nothing reported
+        Reengage,   // the fight goes on: it attacks a living plaza player instead of evading
+        Wipe,       // the base evade, and the crew fight is reported lost (the instance restores all five)
+    };
+
+    // `noHostiles`: the evade's reason is EVADE_REASON_NO_HOSTILES; `plazaTarget`: a living, visible, attackable
+    // player stands on the plaza; `otherEngaged`: another Boss-mode fighter still fights a living plaza player. An
+    // emptied threat list re-engages whenever a plaza player is there (the fighters were zone-engaged at the start); an
+    // unreachable target re-engages only while another fighter still fights (no endless loop on the last one).
+    constexpr CrewEvade CrewEvadeVerdict(bool bossMode, bool fightRunning, bool noHostiles, bool plazaTarget,
+        bool otherEngaged)
+    {
+        if (!bossMode || !fightRunning)
+            return CrewEvade::Plain;
+        if (plazaTarget && (noHostiles || otherEngaged))
+            return CrewEvade::Reengage;
+        return CrewEvade::Wipe;
+    }
+
     // A delay inside a window for a random draw in [0, 1].
     constexpr std::uint32_t InWindow(Window w, float roll01)
     {

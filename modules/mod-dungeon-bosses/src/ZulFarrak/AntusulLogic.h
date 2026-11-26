@@ -56,16 +56,18 @@ namespace ZfAntusul
     // Stock, cast as it is (AS4; DD scales it on heroic): his tank hit, now with a Calcify stack by script.
     std::uint32_t constexpr SPELL_EARTH_SHOCK = 15501;
 
-    // Registry tags (the build spec's AS numbers; 10+ for the helpers).
+    // Registry tags (the build spec's AS numbers; 10+ for the helpers). The drill's (BM MechanicDrill.h kZfTagBolt 6,
+    // kZfTagShatter 7, kZfTagStoneflesh 8) are the same numbers, so a ledger read lines live tags up with DRILL_BARS:
+    // Stoneflesh takes 8 (the drill's), and the Shockwave a helper number.
     enum AntusulTags : std::uint32_t
     {
         TAG_PETRIFY         = 5,    // AS5 the statue's circle: the crack's shrapnel on everyone else
         TAG_BOLT            = 6,    // AS6 the bolt's circle on its target (the warning; the shrapnel is TAG_SHATTER)
         TAG_SHATTER         = 7,    // AS7 a bolt's or a dispel's shrapnel
-        TAG_SHOCKWAVE       = 8,    // AS8 the group hit (one RegistryHit per stack count)
-        TAG_STONEFLESH      = 10,   // AS10 heroic: the bots' Stack at him for 5+ stack carriers
+        TAG_STONEFLESH      = 8,    // AS10 heroic: the bots' Stack at him for 5+ stack carriers (drill Stack/8)
         TAG_CRACK           = 15,   // AS5 the crack on the statue
         TAG_BOLT_HIT        = 16,   // AS6 the bolt on its target
+        TAG_SHOCKWAVE       = 17,   // AS8 the group hit (one RegistryHit per stack count)
     };
 
     // Texts (creature_text 8127; groups as SP prints them, rule 34): 0-2 stock, 3 new (the SQL rev).

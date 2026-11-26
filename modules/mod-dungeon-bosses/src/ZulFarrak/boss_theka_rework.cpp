@@ -1009,7 +1009,8 @@ private:
     void Describe()
     {
         BossMechanics::Descriptor d;
-        // caster 0: any unit of his encounter (the heroic copy's entry is WP-H's, not 7272)
+        // caster 0: any unit of his encounter. He is its only plague caster, so this matches what his entry 7272 would
+        // (on heroic GetEntry() is still 7272: only the template is swapped)
         d.interrupts.emplace_back(0, PlagueSpell(), 1,
             Ms((Tune::kPlagueEveryMinMs + Tune::kPlagueEveryMaxMs) / 2));
         if (_heroic)

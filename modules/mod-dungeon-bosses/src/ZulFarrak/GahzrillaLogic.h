@@ -141,9 +141,13 @@ namespace ZfPool
         inline constexpr std::uint32_t kFrostboltEveryMaxMs = 4000;
         inline constexpr float kFrostboltRangeYd = 30.f;        // the live overlay's range
 
-        // GZ10 the gong: at her 30% she runs to it (about 61 yd), strikes it, and fights on from its water patch.
+        // GZ10 the gong: at her 30% she runs to it (about 61 yd), strikes it, and fights on from where she struck it.
         inline constexpr float kGongHealthPct = 30.f;
-        inline constexpr float kGongStandOffYd = 2.5f;          // her strike spot, toward the shore from the gong
+        // F-1d DQ-2 (provisional ruling, the user has not answered): she strikes and fights from the gong's bank, out
+        // of the pool strip, so melee (bots and humans) reach her dry. False: the built spot, kGongStandOffYd from the
+        // gong toward her spawn (inside the strip: melee on her stand in water, gain Charged, and bots cannot reach).
+        inline constexpr bool kGongFightsFromBank = true;
+        inline constexpr float kGongStandOffYd = 2.5f;          // the built strike spot (kGongFightsFromBank false)
         inline constexpr std::uint32_t kGongRunTimeoutMs = 15000;   // a run that never arrives strikes from there
 
         // Gahz'rilla's rise (section 7 #35 A): from the stock summon point to (1677, 1167), untargetable until there.
@@ -210,6 +214,16 @@ namespace ZfPool
         inline constexpr std::uint32_t kConductiveTickMs = 2000;
         inline constexpr float kConductivePct = 25.f;
         inline constexpr float kConductiveArcYd = 6.f;
+        // F-1d DQ-1 (user ruling B, 2026-11-25): the sheet shock stacks per carrier, as D7 built it (k carriers in
+        // the Deluge's sheet deal k x 25% every 2 s). The switch stays for a different answer. The arc (6 yd) is
+        // always per carrier; one hit a player a carrier's tick either way.
+        enum class SheetShockStack : std::uint8_t
+        {
+            PerCarrier,         // as D7 built it: k carriers in a sheet shock everyone in it k times a tick
+            OnceInDeluge,       // in the Deluge (phase 4), a player takes one sheet shock a tick, whatever the carriers
+            OnceAlways,         // one sheet shock a player a tick in every phase
+        };
+        inline constexpr SheetShockStack kSheetShockStack = SheetShockStack::PerCarrier;
 
         // Bots: the Icicle target may stand in the water it baits this long before the landing (FF B GZ6).
         inline constexpr std::uint32_t kBaitMaxDwellMs = 800;
@@ -485,6 +499,53 @@ namespace ZfPool
     constexpr bool GongDue(float healthPct, bool struck)
     {
         return !struck && healthPct <= Tune::kGongHealthPct;
+    }
+
+    // F-1d DQ-2: the gong's bank, [navmesh estimate] mesh floor 9.3, 98% open within 4 yd, 73 yd by path from her
+    // spawn. It is in front of the gong's face (o -2.39), 8.4 yd from it and 4 yd past the pool strip's square end,
+    // 5.9 yd from the gong patch's water.
+    inline constexpr ZulFarrakRework::Point3 kGongBankSpot{ 1645.0f, 1165.5f, 9.3f, 0.f };
+
+    // GZ10: where she strikes the gong and fights on, facing it (Tune::kGongFightsFromBank).
+    inline ZulFarrakRework::Point3 GongStrikeSpot()
+    {
+        ZulFarrakRework::Point3 const& gong = ZulFarrakRework::kGong;
+        ZulFarrakRework::Point3 const& spawn = ZulFarrakRework::kVelrathaSpawn;
+        if (Tune::kGongFightsFromBank)
+            return { kGongBankSpot.x, kGongBankSpot.y, kGongBankSpot.z,
+                std::atan2(gong.y - kGongBankSpot.y, gong.x - kGongBankSpot.x) };
+        float const dx = spawn.x - gong.x;
+        float const dy = spawn.y - gong.y;
+        float const len = std::max(0.1f, std::sqrt(dx * dx + dy * dy));
+        return { gong.x + dx / len * Tune::kGongStandOffYd, gong.y + dy / len * Tune::kGongStandOffYd, gong.z,
+            std::atan2(-dy, -dx) };
+    }
+
+    // F-1 MA-1, the pool's half of the arm rule: DATA_GONG_STRUCK's value at the strike. The instance arms the hard
+    // mode only on kGongStruckHardMode, sent when Velratha's pull built the hard mode packages (the key or the flag
+    // then); a pull without them sends kGongStruckPlain, so the key turning true mid fight never arms a package-less
+    // Gahz'rilla. An already-armed flag holds either way (it built the packages at the pull).
+    inline constexpr std::uint32_t kGongStruckPlain = 1;
+    inline constexpr std::uint32_t kGongStruckHardMode = 2;
+
+    constexpr std::uint32_t GongStruckData(bool packagesBuilt)
+    {
+        return packagesBuilt ? kGongStruckHardMode : kGongStruckPlain;
+    }
+
+    // DQ-1: whether a player already shocked by one carrier's sheet this tick is spared by the next carrier's.
+    constexpr bool SheetShockOncePerTick(bool deluge)
+    {
+        switch (Tune::kSheetShockStack)
+        {
+            case Tune::SheetShockStack::PerCarrier:
+                return false;
+            case Tune::SheetShockStack::OnceInDeluge:
+                return deluge;
+            case Tune::SheetShockStack::OnceAlways:
+                return true;
+        }
+        return false;
     }
 
     // ---- Gahz'rilla (GZ3, GZ5, GZ6, GZ7, GZ11) ----------------------------------------------------------------------

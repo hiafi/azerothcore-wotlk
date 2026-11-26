@@ -231,7 +231,8 @@ class ZulFarrakSkeletonTest(unittest.TestCase):
         res = id_blocks.RESERVATIONS["zul_farrak"]
         creatures = [int(v) for v in re.findall(r"NPC_ZF_\w+\s*=\s*(\d+)", self.header)]
         gameobjects = [int(v) for v in re.findall(r"GO_ZF_\w+\s*=\s*(\d+)", self.header)]
-        self.assertEqual(len(creatures), 19)
+        self.assertEqual(len(creatures), 18)      # 301007 released to spare (F-1a; D1 declared no stalker)
+        self.assertNotIn(301007, creatures)
         self.assertEqual(gameobjects, [301360, 301361])
         for value in creatures:
             self.assertTrue(res["creature"]["start"] <= value <= res["creature"]["end"], value)

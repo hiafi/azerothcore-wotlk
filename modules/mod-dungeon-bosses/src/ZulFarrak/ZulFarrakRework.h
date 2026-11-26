@@ -122,8 +122,9 @@ namespace ZulFarrakRework
                                         // sends ACTION_ZF_CREW_MODE to the member)
 
         // The pool and the hard mode
-        DATA_GONG_STRUCK        = 60,   // Set(1): Velratha struck the gong (GZ10): the hard mode arms if
-                                        // HardModeArmAllowed, then the instance summons Gahz'rilla
+        DATA_GONG_STRUCK        = 60,   // Set(1|2): Velratha struck the gong (GZ10). 2: her pull built the hard
+                                        // mode packages, the flag arms if HardModeArmAllowed (GongArmsHardMode);
+                                        // 1: it did not, the flag never arms. Then Gahz'rilla is summoned
         DATA_HARD_MODE          = 61,   // Get: The Crew at the Pool is armed (saved; holds for the lockout)
         DATA_HARD_MODE_KILLED   = 62,   // Get: slot 8 DONE
         DATA_HARD_MODE_KEY      = 63,   // Get: 1 when the hard mode would arm now (D7Ha reads it at Velratha's pull)
@@ -197,7 +198,7 @@ namespace ZulFarrakRework
         // build creatures (creature 301005-301099, ids.yaml reservation `zul_farrak`); declared by their WP
         NPC_ZF_PERSECUTOR_SWARM     = 301005,   // D1
         NPC_ZF_PENITENT_SWARM       = 301006,   // D1
-        NPC_ZF_THEKA_STALKER        = 301007,   // D1
+        // 301007 spare (D1 declared no stalker: the swarms cast their own bursts)
         NPC_ZF_EMPTY_VESSEL         = 301010,   // D3 (the husk)
         NPC_ZF_LOST_SOUL            = 301011,   // D3
         NPC_ZF_BOUND_DEAD           = 301012,   // D3
@@ -460,16 +461,18 @@ namespace ZulFarrakRework
     };
 
     // A crew member died during the Pyramid (section 3.2 item 3, PY3, PY16). Weegli never counts. On the Block, while
-    // it runs: one Offering (normal, cap kOfferingsCap) or kBloodPricePerCrew Blood Price (heroic). Elsewhere only the
-    // bit (stage 3's Blood Offering adds nothing). Outside a running stage nothing counts (a reload's settle).
+    // it runs: one Offering (normal, cap kOfferingsCap) or kBloodPricePerCrew Blood Price (heroic). In stages 2 and 3
+    // only the bit (stage 3's Blood Offering adds nothing). Outside a running stage nothing counts, not even the bit
+    // (a stray pull in the descent's 5 s, an idle stage, a reload's settle: R-1-FW m3): the member keeps its bit and
+    // stands up at the next stage's start, at a wipe, or at the Pyramid's end (RestoreCrew).
     constexpr CrewLoss PyramidCrewLost(PyramidState& s, std::uint32_t member, bool heroic)
     {
         CrewLoss loss;
-        if (member >= kCrewCount || member == CREW_WEEGLI || !(s.crewAlive & CrewBit(member)))
+        if (member >= kCrewCount || member == CREW_WEEGLI || !(s.crewAlive & CrewBit(member)) || !s.running)
             return loss;
         s.crewAlive &= ~CrewBit(member);
         loss.counted = true;
-        if (!s.running || s.stage != PYRAMID_STAGE_BLOCK)
+        if (s.stage != PYRAMID_STAGE_BLOCK)
             return loss;
         if (heroic)
         {
@@ -646,6 +649,25 @@ namespace ZulFarrakRework
             && gahzrillaSlot != DungeonKit::State::Done && gahzrillaSlot != DungeonKit::State::InProgress;
     }
 
+    // F-1 MA-1: DATA_GONG_STRUCK's values (GahzrillaLogic.h GongStruckData sends them). Only a strike whose pull built
+    // the hard mode packages may arm the flag; a pull without them (the key shut at her pull, open by the strike)
+    // gives a plain Gahz'rilla.
+    std::uint32_t constexpr kGongDataPlain = 1;
+    std::uint32_t constexpr kGongDataHardMode = 2;
+
+    constexpr bool GongArmsHardMode(std::uint32_t gongValue, bool armAllowed)
+    {
+        return gongValue == kGongDataHardMode && armAllowed;
+    }
+
+    // The heroic Blood Price ticks while a stage runs; the save keeps that stage's start snapshot
+    // (PyramidState::Saved), so a tick changes nothing saved: only a write outside a running stage (a GM's) saves (D4a:
+    // no save a second).
+    constexpr bool BloodPriceWriteSaves(bool stageRunning)
+    {
+        return !stageRunning;
+    }
+
     // `.dbtest zf test hardmode [0|1]`: heroic to arm; never while Gahz'rilla fights or is dead.
     constexpr bool GmHardModeAllowed(bool heroic, std::uint32_t gahzrillaSlot, std::uint32_t value)
     {
@@ -673,6 +695,24 @@ namespace ZulFarrakRework
         std::uint32_t velrathaSlot)
     {
         return slot == BOSS_GAHZRILLA && PoolWiped(slot, before, now) && velrathaSlot == DungeonKit::State::Done;
+    }
+
+    // D5's note: the crew's stash chest is a map summon, so a reload or a restart loses it. The instance summons the
+    // difficulty's chest again while slot 6 is DONE, the chest was not emptied (saved), none stands, and the plaza's
+    // grid is loaded, kStashRestoreMs after the fight's end (D5 summons it at the end; a reload counts as long ago).
+    std::uint32_t constexpr kStashRestoreMs = 6000;
+
+    constexpr bool StashRestoreDue(std::uint32_t crewSlot, std::uint32_t stashLooted, bool chestStands,
+        bool plazaLoaded, std::uint32_t sinceCrewDoneMs)
+    {
+        return crewSlot == DungeonKit::State::Done && !stashLooted && !chestStands && plazaLoaded
+            && sinceCrewDoneMs >= kStashRestoreMs;
+    }
+
+    // A reload with Velratha dead and Gahz'rilla not (R-1-FW M2): nothing could strike the gong again.
+    constexpr bool PoolReloadReopensVelratha(std::uint32_t velrathaSlot, std::uint32_t gahzrillaSlot)
+    {
+        return velrathaSlot == DungeonKit::State::Done && gahzrillaSlot != DungeonKit::State::Done;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -1132,8 +1172,9 @@ namespace ZulFarrakRework
         EXTRA_END_DOOR      = 7,    // 0 or 3
         EXTRA_HARD_MODE     = 8,
         EXTRA_CREW_AT_POOL  = 9,    // CR said the crew arrived at the pool (0 / 1)
+        EXTRA_STASH_LOOTED  = 10,   // the crew's stash chest was emptied (or expired): not summoned again on load
     };
-    std::size_t constexpr kSaveExtraCount = 10;
+    std::size_t constexpr kSaveExtraCount = 11;
 
     using BossStates = std::array<std::uint32_t, kBossCount>;
 
@@ -1150,6 +1191,7 @@ namespace ZulFarrakRework
         std::uint32_t endDoor = DungeonKit::State::NotStarted;
         std::uint32_t hardMode = 0;
         std::uint32_t crewAtPool = 0;
+        std::uint32_t stashLooted = 0;
     };
 
     inline std::string FormatZfrSave(ZfrSave const& s)
@@ -1166,6 +1208,7 @@ namespace ZulFarrakRework
         extras[EXTRA_END_DOOR] = s.endDoor;
         extras[EXTRA_HARD_MODE] = s.hardMode;
         extras[EXTRA_CREW_AT_POOL] = s.crewAtPool;
+        extras[EXTRA_STASH_LOOTED] = s.stashLooted;
         return DungeonKit::FormatStates(kSaveHeader, states, extras);
     }
 
@@ -1200,8 +1243,18 @@ namespace ZulFarrakRework
         s.endDoor = SanitizeDoorState(s.endDoor);
         s.hardMode = s.hardMode ? 1 : 0;
         s.crewAtPool = (crewDone && s.crewPath == CREW_PATH_TEST && s.crewAtPool) ? 1 : 0;
+        // R-1-FW M1: a reload ends a pool attempt, as a pool wipe does (section 7 #16 A): the crew at the pool all
+        // stand again (a member devoured or killed at the pool was saved without its bit).
+        if (crewDone && s.crewPath == CREW_PATH_TEST)
+            s.crewAlive = kCrewAll;
+        s.stashLooted = (crewDone && s.stashLooted) ? 1 : 0;
         if (s.states[BOSS_GAHZRILLA] != DungeonKit::State::Done || !s.hardMode)
             s.states[BOSS_CREW_AT_THE_POOL] = DungeonKit::State::NotStarted;
+        // R-1-FW M2 / R-1-C MA-2: Gahz'rilla is a summon of Velratha's strike and never survives a reload; with her
+        // dead and him not, the pool reopens as a pool wipe would (section 7 #43 h A): slot 0 back to NOT_STARTED and
+        // her body respawned by the instance's Settle.
+        if (PoolReloadReopensVelratha(s.states[BOSS_VELRATHA], s.states[BOSS_GAHZRILLA]))
+            s.states[BOSS_VELRATHA] = DungeonKit::State::NotStarted;
     }
 
     // The stock save (instance_zulfarrak.cpp at c9315e3ec: SetHeaders("ZF"), no boss states, then "<pyramid phase>
@@ -1265,6 +1318,7 @@ namespace ZulFarrakRework
             out.endDoor = raw.extras[EXTRA_END_DOOR];
             out.hardMode = raw.extras[EXTRA_HARD_MODE];
             out.crewAtPool = raw.extras[EXTRA_CREW_AT_POOL];
+            out.stashLooted = raw.extras[EXTRA_STASH_LOOTED];
         }
         for (std::size_t i = 0; i < kBossCount; ++i)
             out.states[i] = raw.states[i];

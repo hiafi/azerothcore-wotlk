@@ -112,7 +112,7 @@ int main()
         CHECK(LandingArena().Contains(kCrewStairPoints[m].XY(), kCrewStairPoints[m].z));
         CHECK(PlazaArena().Contains(kCrewGatherPoints[m].XY(), kCrewGatherPoints[m].z));
         CHECK(InPyramidRegion(kCrewDescentPoints[m].XY()));
-        // the pool spots: on the shore, out of the water, within 5 yd of the disc's centre, at least 2 yd apart
+        // the pool spots: on the shore, out of the water, within 5 yd of the disc's center, at least 2 yd apart
         Point3 const p = kCrewPoolSpots[m];
         CHECK(PoolArena().Contains(p.XY(), p.z));
         CHECK(!PoolWater().Contains(p.XY(), p.z));
@@ -248,6 +248,17 @@ int main()
     CHECK(Tune::kBandsEscapeMs > 10000);
     CHECK(Tune::kPrisonerMoveTimeoutMs < 4000);     // the prisoner is chained well before a 4 s Behead lands
 
+    // --- R-1-FW M4: one fighter's evade no longer wipes the crew fight ---
+    CHECK(CrewEvadeVerdict(false, true, true, true, true) == CrewEvade::Plain);       // not in Boss mode
+    CHECK(CrewEvadeVerdict(true, false, true, true, true) == CrewEvade::Plain);       // no fight running
+    // its only player died / fed / vanished, others stand on the plaza: it turns to one of them
+    CHECK(CrewEvadeVerdict(true, true, true, true, false) == CrewEvade::Reengage);
+    // unreachable target: re-engage only while another fighter still fights, else the fight is lost
+    CHECK(CrewEvadeVerdict(true, true, false, true, true) == CrewEvade::Reengage);
+    CHECK(CrewEvadeVerdict(true, true, false, true, false) == CrewEvade::Wipe);
+    // nobody left on the plaza: the wipe
+    CHECK(CrewEvadeVerdict(true, true, true, false, true) == CrewEvade::Wipe);
+
     // --- the engine half (BlyCrew.cpp / BlyCrew.h) ---
     std::string const cpp = ReadFile(SourceDir() / "BlyCrew.cpp");
     std::string const h = ReadFile(SourceDir() / "BlyCrew.h");
@@ -271,6 +282,10 @@ int main()
     CHECK(h.find("YELL_BLY_BEHIND_ME      = 5") != std::string::npos);
     CHECK(h.find("YELL_WEEGLI_BARRELS     = 3") != std::string::npos);
     CHECK(h.find("YELL_WEEGLI_CHARGE      = 4") != std::string::npos);
+    // R-1-FW M4: the fight start zone-engages the plaza, the evade asks the verdict before the base evade
+    CHECK(cpp.find("CrewEvadeVerdict(") != std::string::npos);
+    CHECK(cpp.find("CrewFightTargets(ai->me)") != std::string::npos);
+    CHECK(cpp.find("CrewEvadeVerdict(") < cpp.find("ScriptedAI::EnterEvadeMode(why)"));
     // RB-20 is the instance's (respawn by spawn id); CR never respawns a member itself
     CHECK(cpp.find("ForceCreatureRespawn") == std::string::npos && cpp.find("->Respawn(") == std::string::npos);
 
@@ -281,6 +296,8 @@ int main()
     CHECK(!sql.empty());
     CHECK(sql.find("WHERE `entry` IN (7605, 7606, 7607, 7608)") != std::string::npos);
     CHECK(sql.find("`type_flags` = `type_flags` | 4096") != std::string::npos);
+    // R-1-LOOT m-3: the heroic copies take it from dbc-tools' _crew() (no UPDATE of a write-run row here)
+    CHECK(sql.find("WHERE `entry` = 3105") == std::string::npos);
     for (char const* row : { "(7604, 3, 0,", "(7604, 4, 0,", "(7604, 5, 0,", "(7607, 3, 0,", "(7607, 4, 0," })
         CHECK(sql.find(row) != std::string::npos);
     CHECK(sql.find("npc_bly_crew") == std::string::npos);      // the S0 rev binds the scripts

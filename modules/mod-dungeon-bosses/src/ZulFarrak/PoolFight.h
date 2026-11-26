@@ -22,7 +22,8 @@
  *                      (the pull is plain heroic, logged). At the gong, if the flag did not arm (a crew member died
  *                      during her phase: the key is gone), every object gets OnGongStruck(false) and then
  *                      OnEnd(false) and is dropped: Gahz'rilla is plain heroic. Armed, Gahz'rilla's 500,000 is set as
- *                      he comes ashore.
+ *                      he comes ashore. The strike tells the instance whether the packages exist (F-1 MA-1:
+ *                      DATA_GONG_STRUCK 2 with them, 1 without, GahzrillaLogic.h GongStruckData): it arms only on 2.
  *
  * Hook order on a pull of the hard mode:
  *   Velratha's pull      D7's encounter, the pool strip, then OnEngage (each package), then the descriptors (D7's, then
@@ -36,8 +37,9 @@
  *                        Water. The crew's own hits are the package's (rule 29: NPC damage at the pool is script).
  *   Call the Waters      OnCallTheWaters(landed) after his own cast (landed: after D7's puddles). A second head's cast
  *                        that lands calls fight.LandCallTheWaters(caster) (the same puddles and growth).
- *   a freeze             OnFreeze first (each package in order; true: handled, D7 does nothing more: the Deluge adds a
- *                        floe itself); else D7's rules (Meltwater on heroic, the pool's shore spill).
+ *   a freeze             D7 freezes the sheets it reaches first, then OnFreeze (each package in order; true:
+ *                        handled, no Meltwater and no shore spill: the Deluge adds a floe itself); else D7's rules
+ *                        (Meltwater on heroic, the pool's shore spill).
  *   his damage           OnGahzrillaDamaged before D7 (D7Hb's 40%).
  *   the end              OnEnd(won) first in D7's cleanup (his death, a wipe, an evade), with the fight still usable;
  *                        then D7 clears the water, its handles, its summons, the players' auras, and the stalker.
@@ -182,7 +184,8 @@ namespace ZfPool
         virtual bool ConductiveOnEveryone(PoolFight const& /*fight*/) const { return false; }
         // His own Call the Waters: landed, or stopped (a kick).
         virtual void OnCallTheWaters(PoolFight& /*fight*/, bool /*landed*/) { }
-        // A freeze landed at `at` on `target` (may be gone). True: handled (D7 adds no Meltwater, no shore spill).
+        // A freeze landed at `at` on `target` (may be gone), after D7 froze the sheets in `result`. True: handled (D7
+        // adds no Meltwater, no shore spill).
         virtual bool OnFreeze(PoolFight& /*fight*/, FreezeKind /*kind*/, Unit* /*target*/, Position const& /*at*/,
             DungeonKit::FreezeResult& /*result*/)
         {

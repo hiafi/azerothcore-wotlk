@@ -40,6 +40,7 @@
 // (section 7 #13 A); Gahz'rilla summoned by the instance at Velratha's strike, the gong inert (section 3.2 item 6); the
 // hard mode flag, its kill slot and loot bit (section 3.2 item 7); the "ZFR" save with the stock "Z F" reader.
 
+#include "CrewFightLogic.h"
 #include "Creature.h"
 #include "CreatureAI.h"
 #include "DungeonKit.h"
@@ -58,6 +59,7 @@
 #include "ZulFarrakKit.h"
 #include "ZulFarrakRework.h"
 #include <array>
+#include <cmath>
 #include <memory>
 
 using namespace ZulFarrakRework;
@@ -108,8 +110,13 @@ namespace
 
 // The five Troll Cages 141070-141074 (bound by the S0 rev in place of go_troll_cage): the key's open lock, the
 // Unlocking spell 10738 (spell_zulfarrak_unlocking opens all five) and a click all end in UseDoorOrButton, which sets
-// the loot state to GO_ACTIVATED; the instance opens the stage 2 gate on the first one (refused before the Executioner
-// is dead: the key drops from him).
+// the loot state to GO_ACTIVATED; the instance opens the stage 2 gate on the first one and the other four with it
+// (refused before the Executioner is dead: the key drops from him).
+//
+// R-1-FW M3: a refused open (a spare key 8444 used while the Executioner lives) shuts the cage again on the next
+// update, or it would stay GO_ACTIVATED (no auto close) and never fire again: the Pyramid would be stuck at the Block.
+// Shut by hand (GO_STATE_READY, GO_READY), never through ResetDoorOrButton: its GO_JUST_DEACTIVATED path despawns a
+// door with a respawn delay (the cages' 86,400 s).
 struct go_zf_troll_cage : public GameObjectAI
 {
     explicit go_zf_troll_cage(GameObject* go) : GameObjectAI(go) { }
@@ -118,9 +125,33 @@ struct go_zf_troll_cage : public GameObjectAI
     {
         if (state != GO_ACTIVATED)
             return;
-        if (InstanceScript* instance = me->GetInstanceScript())
-            instance->SetData(DATA_PYRAMID_CAGES, 1);
+        InstanceScript* instance = me->GetInstanceScript();
+        if (!instance)
+            return;
+        instance->SetData(DATA_PYRAMID_CAGES, 1);
+        _shutPending = instance->GetData(DATA_PYRAMID_CAGES) == 0;
     }
+
+    void UpdateAI(uint32 /*diff*/) override
+    {
+        if (!_shutPending)
+            return;
+        _shutPending = false;
+        Shut(me);
+        DungeonKit::LogMechanic(kLogDungeon, "pyramid", "cage-refused", "shut again (the Block is not won)");
+    }
+
+    // A cage back to its shut, usable state (the refusal above, and the instance at the Block's win).
+    static void Shut(GameObject* cage)
+    {
+        if (!cage || cage->getLootState() == GO_READY)
+            return;
+        cage->SetGoState(GO_STATE_READY);
+        cage->SetLootState(GO_READY);
+    }
+
+private:
+    bool _shutPending = false;
 };
 
 class instance_zulfarrak_rework : public InstanceMapScript
@@ -177,8 +208,21 @@ public:
             {
                 case GO_END_DOOR:
                     // Stock (OnGameObjectCreate): a blown door is restored on create; also once slot 6 is DONE.
+                    // R-1-FW m2: never selectable, shut or blown (lock 0: a click would open it and skip the crew).
+                    go->SetGameObjectFlag(GO_FLAG_NOT_SELECTABLE);
                     if (_endDoor == DONE || Slot(BOSS_CREW) == DONE)
                         OpenEndDoor(go);
+                    break;
+                case GO_TROLL_CAGE_1:
+                case GO_TROLL_CAGE_2:
+                case GO_TROLL_CAGE_3:
+                case GO_TROLL_CAGE_4:
+                case GO_TROLL_CAGE_5:
+                    _cages[go->GetEntry() - GO_TROLL_CAGE_1] = go->GetGUID();
+                    break;
+                case GO_ZF_CREW_STASH:
+                case GO_ZF_CREW_STASH_HEROIC:
+                    _stash = go->GetGUID();
                     break;
                 case GO_GONG:
                     go->SetGameObjectFlag(GO_FLAG_NOT_SELECTABLE);     // inert (the S0 rev sets it too)
@@ -283,7 +327,8 @@ public:
                     if (instance->IsHeroic() && _pyramid.stage != PYRAMID_STAGE_DONE && data != _pyramid.bloodPrice)
                     {
                         _pyramid.bloodPrice = data;
-                        SaveToDB();
+                        if (BloodPriceWriteSaves(_pyramid.running))     // a running stage saves its snapshot
+                            SaveToDB();
                     }
                     return;
                 case DATA_PYRAMID_START:
@@ -314,7 +359,7 @@ public:
                     return;
                 case DATA_GONG_STRUCK:
                     if (data)
-                        OnGongStruck();
+                        OnGongStruck(data);
                     return;
                 case DATA_GM_STAGE:
                     GmStage(data);
@@ -465,6 +510,7 @@ public:
             save.endDoor = _endDoor;
             save.hardMode = _hardMode;
             save.crewAtPool = _crewAtPool;
+            save.stashLooted = _stashLooted;
             return FormatZfrSave(save);
         }
 
@@ -495,6 +541,7 @@ public:
             _endDoor = save.endDoor;
             _hardMode = save.hardMode;
             _crewAtPool = save.crewAtPool;
+            _stashLooted = save.stashLooted;
             // Loading: each slot is TO_BE_DECIDED, so the base stores the state and skips the switch.
             for (uint32 i = 0; i < kBossCount; ++i)
                 InstanceScript::SetBossState(i, EncounterState(save.states[i]));
@@ -560,6 +607,10 @@ public:
             }
             if (_pyramid.stage >= PYRAMID_STAGE_BLOCK && _pyramid.stage <= PYRAMID_STAGE_ALTAR)
                 EnterStage(_pyramid.stage);
+            // R-1-FW M2: a save with Velratha DONE and Gahz'rilla not reopened slot 0 (SanitizeZfrSave); her corpse
+            // loaded with its respawn time, so she stands up for the next strike.
+            if (Slot(BOSS_VELRATHA) != DONE)
+                RestoreVelratha("load");
             ApplyCrewModes("load");
             RestoreCrew("load");
             events.ScheduleEvent(EVENT_PYRAMID_WATCH, Milliseconds(kPyramidWatchMs));
@@ -613,6 +664,8 @@ public:
             }
             if (_director)
                 _director->OnStart(restart);
+            // R-1-FW m3: a member that fell while no stage ran kept its bit; it stands up for the stage.
+            RestoreCrew("start");
             ApplyCrewModes("stage");
             NotifyCrew(ACTION_ZF_PYRAMID_STAGE);
             ActionTo(GetCreature(kGuidExecutioner), ACTION_ZF_PYRAMID_STAGE);
@@ -636,6 +689,7 @@ public:
             {
                 case PYRAMID_STAGE_BLOCK:
                     ForceBossState(BOSS_PYRAMID, NOT_STARTED);      // idle until the cages open
+                    ShutCages();                                    // R-1-FW M3: any cage left open is usable again
                     EnterStage(PYRAMID_STAGE_STAIR);
                     break;
                 case PYRAMID_STAGE_STAIR:
@@ -699,8 +753,20 @@ public:
                 return;
             }
             DungeonKit::LogMechanic(kLogDungeon, "pyramid", "cages", "open");
+            // R-1-B nt-1: one cage opened (a bot's UseGO, a click) opens all five, as the key's spell does; each one's
+            // OnStateChanged then finds the cages open and keeps it so.
+            for (ObjectGuid const& guid : _cages)
+                if (GameObject* cage = guid ? instance->GetGameObject(guid) : nullptr)
+                    if (cage->getLootState() == GO_READY)
+                        cage->UseDoorOrButton();
             StartStage(PYRAMID_STAGE_STAIR, "cages");
             SaveToDB();
+        }
+
+        void ShutCages()
+        {
+            for (ObjectGuid const& guid : _cages)
+                go_zf_troll_cage::Shut(guid ? instance->GetGameObject(guid) : nullptr);
         }
 
         // Stage 3 is won: slot 5 DONE with its credit, the crew's mask kept for the Test, and every member stands up
@@ -989,6 +1055,9 @@ public:
             DungeonKit::LogMechanic(kLogDungeon, "crew", "fight", Acore::StringFormat("done how={} path={}", how,
                 _crewPath == CREW_PATH_TEST ? "test" : "betrayal"));
             ApplyCrewModes("crew-done");
+            // R-1-FW m1: a fighter killed past the yield floor stands up (Init places it at the pool).
+            if (_crewPath == CREW_PATH_TEST)
+                RestoreCrew("crew-done");
             NotifyCrew(ACTION_ZF_CREW_FIGHT);
             _crewDoneMs = 0;
             events.ScheduleEvent(EVENT_DOOR_WATCH, Milliseconds(kEndDoorWatchMs));
@@ -1043,8 +1112,8 @@ public:
             }
         }
 
-        // Stock: the blown look (GO_STATE_ACTIVE_ALTERNATIVE). Not selectable, so a click cannot shut it again (the
-        // watch reopens one a GM shut while slot 6 is DONE).
+        // Stock: the blown look (GO_STATE_ACTIVE_ALTERNATIVE). Not selectable (set at create too), so a click can
+        // neither open nor shut it (the watch reopens one a GM shut while slot 6 is DONE).
         static void OpenEndDoor(GameObject* door)
         {
             if (!door)
@@ -1058,8 +1127,7 @@ public:
             _endDoor = NOT_STARTED;
             if (GameObject* door = GetGameObject(kGuidEndDoor))
             {
-                door->SetGoState(GO_STATE_READY);
-                door->RemoveGameObjectFlag(GO_FLAG_NOT_SELECTABLE);
+                door->SetGoState(GO_STATE_READY);      // still not selectable (R-1-FW m2)
             }
             _crewDoneMs = 0;
             DungeonKit::LogMechanic(kLogDungeon, "instance", "door", "shut (gm)");
@@ -1077,6 +1145,41 @@ public:
                 if (GameObject* door = GetGameObject(kGuidEndDoor))
                     if (door->GetGoState() == GO_STATE_READY)
                         OpenEndDoor(door);
+            WatchStash();
+        }
+
+        // ------------------------------------------------------------------------------------------------------------
+        // The crew's stash (section 7 #19 A; D5 summons it at the fight's end): an emptied chest (consumable, so not
+        // spawned once looted) is saved as looted; a chest lost to a reload or a restart is summoned again.
+        // ------------------------------------------------------------------------------------------------------------
+        void WatchStash()
+        {
+            if (_stashLooted)
+                return;
+            GameObject* chest = _stash ? instance->GetGameObject(_stash) : nullptr;
+            if (chest && !chest->isSpawned())
+            {
+                _stashLooted = 1;
+                _stash.Clear();
+                DungeonKit::LogMechanic(kLogDungeon, "crew", "stash", "emptied");
+                SaveToDB();
+                return;
+            }
+            Point3 const& at = ZfCrewFight::kStashSpot;
+            if (!StashRestoreDue(Slot(BOSS_CREW), _stashLooted, chest != nullptr, instance->IsGridLoaded(at.x, at.y),
+                _crewDoneMs))
+                return;
+            float z = instance->GetHeight(at.x, at.y, at.z + 2.f);
+            if (z <= INVALID_HEIGHT)
+                z = at.z;
+            float const half = at.o / 2.f;
+            uint32 const entry = ZfCrewFight::StashEntry(Heroic());
+            if (GameObject* stash = instance->SummonGameObject(entry, at.x, at.y, z, at.o, 0.f, 0.f, std::sin(half),
+                std::cos(half), DAY))
+            {
+                _stash = stash->GetGUID();
+                DungeonKit::LogMechanic(kLogDungeon, "crew", "stash", Acore::StringFormat("restored entry={}", entry));
+            }
         }
 
         // ------------------------------------------------------------------------------------------------------------
@@ -1085,13 +1188,18 @@ public:
 
         // D7's Velratha strikes the gong (GZ10): the hard mode arms on its key, then Gahz'rilla rises (the instance's
         // summon at the stock point; D7 walks him ashore).
-        void OnGongStruck()
+        // F-1 MA-1: `value` is 2 when Velratha's pull built the hard mode packages, 1 when it did not; only 2 arms.
+        void OnGongStruck(uint32 value)
         {
             if (Slot(BOSS_GAHZRILLA) == DONE)
                 return;
-            if (!_hardMode && HardModeArmAllowed(Heroic(), _crewPath, Slot(BOSS_CREW), CrewAtPool(),
-                Slot(BOSS_GAHZRILLA), Slot(BOSS_CREW_AT_THE_POOL)))
+            bool const allowed = HardModeArmAllowed(Heroic(), _crewPath, Slot(BOSS_CREW), CrewAtPool(),
+                Slot(BOSS_GAHZRILLA), Slot(BOSS_CREW_AT_THE_POOL));
+            if (!_hardMode && GongArmsHardMode(value, allowed))
                 SetHardMode(1, "gong");
+            else if (!_hardMode && allowed)
+                DungeonKit::LogMechanic(kLogDungeon, "pool", "hardmode-not-armed",
+                    "the key opened after Velratha's pull (no packages)");
             if (UnitAlive(_gahzrilla))
                 return;
             Position const at(kGahzrillaSummon.x, kGahzrillaSummon.y, kGahzrillaSummon.z, kGahzrillaSummon.o);
@@ -1139,11 +1247,7 @@ public:
             if (PoolWipeReopensVelratha(slot, before, now, Slot(BOSS_VELRATHA)))
             {
                 ForceBossState(BOSS_VELRATHA, NOT_STARTED);
-                Creature* velratha = GetCreature(kGuidBossBase + BOSS_VELRATHA);
-                if (velratha && !velratha->IsAlive())
-                    velratha->Respawn(true);
-                else if (!velratha)
-                    instance->ForceCreatureRespawn(kSpawnVelratha);
+                RestoreVelratha("pool-wipe");
             }
             // Either slot: a Gahz'rilla risen but never pulled must not wait in the pool for the next strike.
             if (Creature* gahzrilla = _gahzrilla ? instance->GetCreature(_gahzrilla) : nullptr)
@@ -1159,6 +1263,23 @@ public:
             SaveToDB();
         }
 
+        // Velratha's body back (RB-20: by spawn id when the dead DB spawn left the store).
+        void RestoreVelratha(char const* how)
+        {
+            Creature* velratha = GetCreature(kGuidBossBase + BOSS_VELRATHA);
+            if (velratha)
+            {
+                if (velratha->IsAlive())
+                    return;
+                velratha->Respawn(true);
+            }
+            else if (instance->GetCreatureRespawnTime(kSpawnVelratha) > GameTime::GetGameTime().count())
+                instance->ForceCreatureRespawn(kSpawnVelratha);
+            else
+                return;
+            DungeonKit::LogMechanic(kLogDungeon, "pool", "velratha-restored", how);
+        }
+
         EventMap events;
         bool _settled = false;
 
@@ -1169,6 +1290,7 @@ public:
         uint32 _endDoor = NOT_STARTED;
         uint32 _hardMode = 0;
         uint32 _crewAtPool = 0;
+        uint32 _stashLooted = 0;
 
         // Per attempt (rebuilt after a reload)
         std::array<CrewMode, kCrewCount> _crewModes{};
@@ -1179,6 +1301,8 @@ public:
         ObjectGuid _gahzrilla;
         ObjectGuid _sezzziz;
         ObjectGuid _nekrum;
+        std::array<ObjectGuid, 5> _cages{};
+        ObjectGuid _stash;
         bool _sezzzizSeen = false;
         bool _nekrumSeen = false;
     };

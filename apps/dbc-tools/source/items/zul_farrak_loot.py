@@ -43,7 +43,8 @@ carriers) and #19 A (the crew's stash) rule where each list drops.
   from the stash chest (gameobject 301360 normal, 301361 heroic), not from the bodies. The chest is gameobject loot,
   which the DSL cannot declare: data/sql/updates/pending_db_world/rev_loot_zul_farrak.sql writes the chest rows and
   empties the five creature tables (Bly 7604, Raven 7605, Oro 7606, Weegli 7607, Murta 7608), so a body carries
-  nothing. This file names no crew lootid.
+  nothing: the crew's templates (and their heroic copies, through `_crew()` in the dungeon file) name `lootid` 0 and
+  no gold, or a boot ERROR and a log line per kill name the deleted tables. This file names no crew lootid.
 - **Sul'thraze the Lasher** is the join of Jang'thraze and Sang'thraze (Call of Sul'thraze), never a drop: no list
   holds it (gear REVIEW n6).
 - **Quest and cloth rows stay**: Troll Temper, the tablets (First Mosh'aru on Theka, Second on Velratha), Nekrum's

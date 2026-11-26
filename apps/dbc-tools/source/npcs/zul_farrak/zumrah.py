@@ -10,8 +10,9 @@ rev_zumrah_zul_farrak.sql).
   health 176,065 = 114.7 on the level 46 paladin base 1,535 (s3.6, s7 #1 A), the stock DamageModifier 2.4, stun
   immunity 1972, INSTANCE_BIND with both assist flags, detection range 12. Heroic 293,284 is WP-H's override
   (source/world/dungeons/zul_farrak.py). Faction 35 until area trigger 962 (stock, kept).
-- 7786 Skeleton of Zum'rah (stock entry, summoned by the stock Ward of Zum'rah 11086 through 7785): bound to
-  npc_zf_zumrah_skeleton (it had no script). Stock health, faction and immunity kept; heroic 1,526 is WP-H's.
+- 7786 Skeleton of Zum'rah (stock entry; Zum'rah raises four beside each Ward of Zum'rah 7785, wild, by script:
+  the ward's stock 11087 / 11088 is cleared, R-1-A M1): bound to npc_zf_zumrah_skeleton (it had no script). Stock
+  health, faction and immunity kept; heroic 1,526 is WP-H's.
 - 301010 Empty Vessel (ZR3): npc_zf_empty_vessel, the walker's husk: faction 495 (friendly to players, hostile to the
   Skeletons), selectable (s8 #11: the husk must be selectable) but never attackable by a player; its look is the
   walker's (aura 247 from the walker, _visuals ZR_EMPTY_VESSEL_AURA). No heroic template.
@@ -50,8 +51,8 @@ redirection and reflection (rule 2, LESSONS L7):
 
 The Volley (both casts) and the Shadow Bolt are the only interruptible casts (Shadow; InterruptFlags 15, PreventionType
 silence). A kick locks Shadow (LESSONS L2), never Spirit Rend (Arcane, no interrupt flags). Ward of Zum'rah 11086 stays
-the stock spell (cast triggered). Retired as casts: Healing Wave 12491, Shadow Bolt Volley 15245, Shadow Bolt 12739
-(the copies above). Looks are copied, never the stock spells.
+the stock spell (cast triggered); the ward's own passive 11087 is cleared by script. Retired as casts: Healing Wave
+12491, Shadow Bolt Volley 15245, Shadow Bolt 12739 (the copies above). Looks are copied, never the stock spells.
 """
 
 from lib.dsl import RANGE_SELF, AuraType, Effect, EffectType, School
@@ -70,6 +71,7 @@ from lib.dsl.registry import creature_model, creature_template, creature_templat
 
 from ._common import (
     ATTR0_AURA_IS_DEBUFF,
+    ATTR0_NO_IMMUNITIES,
     ATTR3_IGNORE_CASTER_MODIFIERS,
     ATTR4_NO_CAST_LOG,
     KIT_CREATURE,
@@ -199,8 +201,9 @@ spirit_rend_213920 = cast_bar(
 )
 
 between_worlds_213921 = spell(
-    id=213921, name='Between Worlds', school=School.SHADOW, dispel=0, mechanic=0, attributes=ATTR0_AURA_IS_DEBUFF,
-    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0,
+    id=213921, name='Between Worlds', school=School.SHADOW, dispel=0, mechanic=0,
+    attributes=ATTR0_AURA_IS_DEBUFF | ATTR0_NO_IMMUNITIES, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,
+    mana_cost=0, mana_cost_pct=0, range_yards=100.0,
     duration_ms=WALK_MS + 500,
     effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=_AURA_MOD_INVISIBILITY_DETECT,
                     base_points=SPIRIT_SIGHT_VALUE, die_sides=0, misc_value=ZR_INVIS_TYPE,
@@ -212,8 +215,9 @@ between_worlds_213921 = spell(
           'is a margin): sees the spirit world (invisibility detection type 11 at 10, over the 1 the souls, the '
           'Bound Dead, the grave looks and BM-1\'s walker-only markers carry), runs 40% faster, wears the ghost look '
           '(Ghostly 16713\'s SV 886). Keeps the full kit (ruling 19): no pacify, silence, phase or immunity (appendix '
-          'B 2.3: the living side is kept off by script). A debuff so it cannot be clicked off; not dispellable. '
-          'Leaving the map drops it (the walk ends).',
+          'B 2.3: the living side is kept off by script). A debuff so it cannot be clicked off; not dispellable; '
+          'NO_IMMUNITIES, so a bubble, Ice Block or Cloak of Shadows neither refuses nor strips it (R-1-A m1: the '
+          'walk would end). Leaving the map drops it (the walk ends).',
     raw_overrides=kit_raw('Tears the spirit from the body.',
                           'Walking the spirit world: gather the lost souls and free the bound dead.', instant=True,
                           SpellVisualID_1=ZR_GHOST, AttributesEx=ATTR1_NO_THREAT,
@@ -282,16 +286,17 @@ spirit_burst_213927 = self_visual(
 )
 
 gathered_souls_213928 = spell(
-    id=213928, name='Gathered Souls', school=School.SHADOW, dispel=0, mechanic=0, attributes=ATTR0_AURA_IS_DEBUFF,
-    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0,
+    id=213928, name='Gathered Souls', school=School.SHADOW, dispel=0, mechanic=0,
+    attributes=ATTR0_AURA_IS_DEBUFF | ATTR0_NO_IMMUNITIES, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,
+    mana_cost=0, mana_cost_pct=0, range_yards=100.0,
     duration_ms=WALK_MS + 500,
     effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.DUMMY, base_points=0,
                     implicit_target_a=TARGET_UNIT_TARGET_ANY)],
     spell_icon_id=_ICON_GHOST,
     notes=f'{_D3}, ZR5: a stack on the walker for every soul touched (DungeonKit::AddStacks); two are spent freeing a '
           'Bound Dead; the rest are lost when the walk ends (the script removes it). The Bound Dead\'s Soaks read it '
-          '(eligibility: 2 stacks). A debuff so it cannot be clicked off; not dispellable. Spirit Particles (green) '
-          '18951\'s SV 5101.',
+          '(eligibility: 2 stacks). A debuff so it cannot be clicked off; not dispellable; NO_IMMUNITIES (a class '
+          'immunity never strips the souls). Spirit Particles (green) 18951\'s SV 5101.',
     raw_overrides=kit_raw('Carrying lost souls.', 'Carrying $u lost souls. Bring two to a Bound Dead to free it.',
                           instant=True, CumulativeAura=STACK_CEILING, SpellVisualID_1=ZR_GATHERED,
                           AttributesEx=ATTR1_NO_THREAT, AttributesEx4=ATTR4_NO_CAST_LOG,
