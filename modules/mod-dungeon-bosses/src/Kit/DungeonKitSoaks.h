@@ -11,6 +11,14 @@
  *                players never rescue each other (heroic UK11 sinks everyone at once). Their carriers set follows the
  *                group and is re-registered when it changes.
  *
+ * Rank (Gnomeregan WP-KT-G, F40: Thermaplugg's plates by face priority): among the live held Soaks of one exclusive
+ * group (oneClaimPerBot, one tag) the registry serves the earliest resolve first, then the lowest id. Once any Soak has
+ * a rank other than 0 (DwellSoakSpec::rank) or Reprioritize is called, the set is ranked: it is kept in rank order
+ * (lowest first, equal ranks in the order they came) and registered in that order, and whenever one Soak registers
+ * anew (a new Soak, a changed carriers set) every Soak ranked after it registers anew in the same tick, so the bots
+ * serve them in rank order. Only Soaks without a life keep the order (a lived Soak's registry warning is its life, and
+ * the registry serves it by that). An unranked set behaves exactly as before.
+ *
  * Call Update from UpdateAI (in combat), Clear from Reset, JustDied and EnterEvadeMode. Lambdas capture guids only.
  *
  *     DungeonKit::DwellSoaks _rescues;
@@ -52,6 +60,7 @@ namespace DungeonKit
         bool draw = true;                   // false: NoTelegraph
         std::optional<BossMechanics::Color> color;
         uint32 tag = 0;
+        int32 rank = 0;                     // lower is served first in a ranked set (see above); all 0: unranked
         // Extra registry options on every registration. Capture guids only.
         std::function<void(BossMechanics::MechanicRef&)> configure;
         // Capture guids only. The held Soak is already gone when these run.
@@ -78,6 +87,14 @@ namespace DungeonKit
         // The held Soak on `anchor`, if any (a rescue that frees by other means).
         void CancelOn(Creature* owner, ObjectGuid anchor);
         void Clear(Creature* owner);
+        // F40: the listed Soaks take ranks 0, 1, 2 ... in that order and every other live one the rank after them
+        // (kept in its current order); the set is ranked from now on and registers anew in the new order at once. A
+        // later Add places itself by its spec's rank against these.
+        void Reprioritize(Creature* owner, std::vector<uint32> const& order);
+        // One Soak's rank; the set is ranked from now on (re-registers from where it moved).
+        void SetRank(Creature* owner, uint32 id, int32 rank);
+        bool Ranked() const { return _ranked; }
+        int32 RankOf(uint32 id) const;
 
         std::size_t Count() const { return _soaks.size(); }
         bool Has(ObjectGuid anchor) const;
@@ -99,12 +116,16 @@ namespace DungeonKit
         };
 
         void Register(Creature* owner, Entry& e, GuidSet carriers);
+        // Every Soak whose carriers set changed registers anew; ranked, every Soak from the first such one on does.
+        // `from` forces the ranked pass to start there at the latest (a new or moved Soak).
+        void RefreshCarriers(Creature* owner, std::size_t from);
         GuidSet CarriersFor(Creature* owner, Entry const& e) const;
         bool Excluded(Unit const* who) const;
 
         std::vector<Entry> _soaks;
         uint32 _nextId = 1;
         uint32 _pollMs = 0;
+        bool _ranked = false;
     };
 }
 

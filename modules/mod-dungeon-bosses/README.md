@@ -55,8 +55,8 @@ so db-import and the dbc-tools replay see one history.
 | `src/Kit/DungeonKitWater.{h,cpp}` | Engine: `WaterField` (water sheets as avoid Zones with disc looks; Discharge zones, freezes, thaws) |
 | `src/Kit/DungeonKitArenaEdgeLogic.h` | Pure: `NextEdgeStep` and friends (a boss fighting at his arena's edge) |
 | `src/Kit/DungeonKitArenaEdge.{h,cpp}` | Engine: `DungeonKit::EdgeFight` (`SelfLeash`, `ReachLeash`, `ArenaEdge`; promoted from Ragefire, which keeps its copy) |
-| `src/Kit/DungeonKitSoakLogic.h` | Pure: `SoakAt` (the dwell clock of a held Soak) |
-| `src/Kit/DungeonKitSoaks.{h,cpp}` | Engine: `DwellSoaks` (Soaks held for a dwell on any unit: onDone, onExpire, onLost) |
+| `src/Kit/DungeonKitSoakLogic.h` | Pure: `SoakAt` (the dwell clock of a held Soak), `SoakRankAt`, `SoakPriorityOrder`, `SoakRegisterMask` |
+| `src/Kit/DungeonKitSoaks.{h,cpp}` | Engine: `DwellSoaks` (Soaks held for a dwell on any unit: onDone, onExpire, onLost; ranked with `rank`, `Reprioritize`, `SetRank`) |
 | `src/Kit/DungeonKitFrontLogic.h` | Pure: rolling front plans: timing, ring slices, gaps off pools, carrier spots |
 | `src/Kit/DungeonKitFronts.{h,cpp}` | Engine: `FrontDirector` (ring and wall sequences on BM's fronts), `PoolsOf` |
 | `src/Kit/DungeonKitRingLogic.h` | Pure: the ring wall (band, crossings, `RingWatch`, push-out plan, grace) |
@@ -69,6 +69,12 @@ so db-import and the dbc-tools replay see one history.
 | `src/Kit/DungeonKitPool.{h,cpp}` | Engine: `SharedHealthPool` (one pool on several creatures, all die in one tick) |
 | `src/Kit/DungeonKitZoneLogic.h` | Pure: `GrowthPlan`, `NearestRung`, `BeamClock`, `BeamSegment` |
 | `src/Kit/DungeonKitZones.{h,cpp}` | Engine: `GrowingZone(s)` (a zone that grows per step), `TurningBeams` (L43) |
+| `src/Kit/DungeonKitLightLogic.h` | Pure: `LightClock` (turning lights: turn, reverse, hold, speed), `LightSector`, the per-player Spotted latch |
+| `src/Kit/DungeonKitLights.{h,cpp}` | Engine: `TurningLights` (searchlight cones on a unit or a point, Spotted by script, the bots' look ahead) |
+| `src/Kit/DungeonKitMineLogic.h` | Pure: `MineRings`, `InBlast`, `MineBook` (arm, life, detonations) |
+| `src/Kit/DungeonKitMines.{h,cpp}` | Engine: `TwoRingMines` (a trigger ring and a blast ring per mine; `DetonateAll`) |
+| `src/Kit/DungeonKitComboLogic.h` | Pure: `ComboFrame`, `ComboShapeDef` (circle, donut, cone, rect, halves, lane), chain timing |
+| `src/Kit/DungeonKitCombo.{h,cpp}` | Engine: `CalledCombination` (a called chain of shapes on a frame: call flashes, live markers, numerals, landed count) |
 | `src/Kit/DungeonKitWingLogic.h` | Pure: `JudgeTraveler`, `ClearOfTriggers`, `SealClock`, `IsStraggler`, `CreditLatch`, `WardRule` |
 | `src/Kit/DungeonKitWings.{h,cpp}` | Engine: `WingPortals`, `PortalTravel`, `WingPortalAI`, `SealedArena`, `CreditEncounterBySpell` |
 | `src/Kit/DungeonKitWard.{h,cpp}` | Engine: `WardOfTheLiving` (L38: less damage per living add) |
@@ -168,6 +174,13 @@ so db-import and the dbc-tools replay see one history.
 | `src/ZulFarrak/ZulFarrakHardModeItemsLogic.h` | Pure: Zul'Farrak item effect ids (213800-213807, 301000-301004), charge and discharge events, one action per cast, single target heal test, crew table |
 | `src/ZulFarrak/sulthraze_join.cpp` | Call of Sul'thraze (213808), the Use on every tier of Jang'thraze: joins it with a Sang'thraze of the same tier into that tier's Sul'thraze, refuses mixed tiers; loads the tiers from `item_budget_variant` at startup |
 | `src/ZulFarrak/SulthrazeJoinLogic.h` | Pure: the Sul'thraze join's base entries, tier table and tier rule |
+| `src/Gnomeregan/GnomereganRework.h` | Pure: entries, 7 states (slot = encounter bit, slot 6 the hard mode kill), data ids, slices, points, the Workshop Door's states, Crowd Pummeler's chest, the End NPCs, the console and the hard mode's verdict, the Finder sections, room polygons, health, the "GNR" save with the stock "G N O" reader |
+| `src/Gnomeregan/instance_gnomeregan_rework.cpp` | Instance (stock name, replaced at load; `npc_kernobee` keeps working): the Workshop Door (sealed, unlocked, open), the Final Chamber held open, the End NPCs, the chest, the hard mode flag, verdict, slot 6 and loot bit, the Finder section; `go_gnomer_workshop_door` |
+| `src/Gnomeregan/GnomereganKit.{h,cpp}` | Glue: `GnomereganRework::NoAssist`, leash options, `OnBossPull`, `<Room>FloorBounds`, instance helpers |
+| `src/Gnomeregan/GnomereganMachines.h` | The machines contract (section 3.2 item 7): `Duplicator`, `DoseField`, `VoltageMeter`, `LightsMachine`, `ComboMachine`, each built by its boss WP in `<Boss>Machine.{h,cpp}` (over the kit's `TurningLights` and `CalledCombination`) and called by the boss and the hard mode |
+| `src/Gnomeregan/GnomereganTestCommand.{h,cpp}` | The `.dbtest gnomer` shell, `section`, `door`, `hardmode`, `chest`, `endnpc`, `go`, `where` and `boss` |
+| `src/Gnomeregan/boss_<name>_rework.cpp`, `<Boss>Logic.h`, `<Boss>Machine.{h,cpp}` | One set per boss WP (D1-D5; D6 has no machine) |
+| `src/Gnomeregan/ThermapluggFight.h`, `thermaplugg_hard_mode.cpp`, `thermaplugg_hard_mode_machines.cpp` | D6's hooks for the Whole Workshop; D6Ha (the console, Techbot, Fallout, the Leak) and D6Hb (Electrocutioner, the Alert System, Pummeler's fist), each with its Logic header |
 | `src/Gnomeregan/hard_mode_items.cpp` | Whole Workshop hard mode item scripts: Meltdown's pulse filter, the Walking Bomb Launcher's roll, mark and bomb, the blast filter, the Master Punch Card's punches and Clearance |
 | `src/Gnomeregan/GnomereganHardModeItemsLogic.h` | Pure: Gnomeregan item effect ids (214240-214247, 301100), item spell test, one roll per cast, bomb steps, punch rule and card memory |
 | `src/DungeonSets/haunted_set_bonuses.cpp` | Haunted set bonus scripts (10 sets x 3 and 5 pieces) and their hooks |
@@ -187,6 +200,7 @@ so db-import and the dbc-tools replay see one history.
 | `tests/scarlet_monastery_test.cpp`, `tests/sm_<boss>_test.cpp` | The Scarlet Monastery skeleton and each boss |
 | `tests/ragefire_chasm_test.cpp`, `tests/rfc_<boss>_test.cpp` | The Ragefire Chasm skeleton and each boss |
 | `tests/zul_farrak_test.cpp`, `tests/zf_<boss>_test.cpp` | The Zul'Farrak skeleton and each WP |
+| `tests/gnomeregan_test.cpp`, `tests/gnomer_<boss>_test.cpp` | The Gnomeregan skeleton and each WP |
 
 ## Adding a dungeon
 
@@ -386,6 +400,53 @@ bosses' tables have `hardmode` (arms their hard mode past the trigger).
 | `pool` | velratha gahzrilla state gong spill heal discharge call icicle freeze slam `puddle [radius]` `charged [n]` conductive thaw |
 | `poolcrew` | info state spring charge chosen overcharge dispel twin `devour <member>` |
 | `deluge` | info state start strike `floe [radius]` thaw |
+
+## Gnomeregan `.dbtest gnomer` subcommands
+
+`.dbtest gnomer <key> <subcommand>` (GM, map 90). Each file's header comment gives the arguments.
+
+| Key | Subcommands |
+| --- | --- |
+| `section` | `<1\|2>`: teleport to the Finder section's start; its Finder ids, end boss and doors |
+| `door` | `shut`, `unlock`, `open`: the Workshop Door |
+| `hardmode` | `arm`, `clear`: the console's flag (heroic; never while Thermaplugg fights or is DONE) |
+| `chest` | `[0\|1]`: place or remove Crowd Pummeler's chest |
+| `endnpc` | `<0\|1\|2>`: summon End NPC 1 or 2, or remove both |
+| `go` | `<entrance\|techbot\|fallout\|electro\|depot\|hall\|pocket\|lower\|thermaplugg\|console\|punch-a>`: teleport |
+| `where` | (none): the Gnomeregan arenas holding the GM's position |
+| `boss` | `<slot> <state>`: set a slot's state |
+| `techbot` | info state `lag` (Lag Spike / Rubber Band now) bug patch `net` (heroic) |
+| `fallout` | info state (clocks, pools by kind, area, Saturated, carriers, the machine) volley ooze halflife `dose <n>` (the selected player or self) sickness leak `pool <volley\|slough\|ooze\|leak>` |
+| `electro` | info state `justice` (the meter to the next threshold) megavolt chainbolt shock `voltage` (+1) `static` (heroic: every carrier one yard short) |
+| `alert` | info state (clock, timers, adds, the machine) `sweep` (normal; at the selected player, else random) `spot` (the selected player, through the latch) patrol `response` (at the selected player) alarm `reverse` (heroic) `clock <s>` (heroic: the Self-destruct clock); all need him in combat |
+| `pummeler` | info state (clocks, round, combinations, landed, the machine) `window` (the window's numbers, the GM's pocket and reach) `combo [length]` (0 or none: the fight's own) trample `round <2\|3>` (normal: the bell now) |
+| `thermaplugg` | info state (clock, mode, faces, bombs, mines, plates, Stickies, next beats, counters, the packages) `face [1-6]` `shut <1-6>` override `bomb [1-6]` (at the selected player) mines sticky bigone detonator knock `heroic [0\|1]` |
+| `workshop` | The Whole Workshop part a (D6Ha): info state (flag, verdict, kill, key, the package) `console` (the console's checks for the GM) `load <techbot\|fallout>` vent `dose <n>` (the selected player or self) `puddle` (at the GM) leak `alarm <0-4>` |
+| `schematics` | The Whole Workshop part b (D6Hb): info state (schematics, factor, Spotted, faces, combinations, next fist, the machines) `load <electro\|alert\|pummeler\|all>` `voltage [n]` `justice` (the meter to the next Justice) `spot` (the selected player) `fist [1-6]`; all need an armed hard mode pull |
+
+## Kit: turning lights, two-ring mines, called combinations, ranked soaks (Gnomeregan WP-KT-G)
+
+All in `src/Kit/`, namespace `DungeonKit`, each owned by one AI (`Update` from UpdateAI; `Stop` / `Clear` from Reset,
+JustDied and EnterEvadeMode). Callbacks named `on*` that take the owner run from the owner's `Update`, never from a
+registry callback. Gnomeregan's machines wrap them under their own names (`LightsMachine`, `ComboMachine`); boss files
+write `DungeonKit::`.
+
+- `TurningLights` (`DungeonKitLights.h`, pure half `DungeonKitLightLogic.h`): `count` cones on a unit or a point,
+  turning at `degPerSec`; `Reverse` (with a stop), `Hold`, `SetSpeed`; Spotted is judged by script (players only) with
+  one 3 s latch per player across every light, `TrySpot` for a caller's own rule. Bots: each light is a hidden sector
+  zone re-registered every 500 ms and on Reverse / SetSpeed (the look ahead). The Alert System, the hard mode's MT23.
+- `TwoRingMines` (`DungeonKitMines.h`, `DungeonKitMineLogic.h`): a 3 yd trigger (a BM trigger) and a hidden 6 yd blast
+  ring per mine, arm and life clocks, players only; `DetonateAll` (armed only by default). Thermaplugg's mines.
+- `CalledCombination` (`DungeonKitCombo.h`, `DungeonKitComboLogic.h`): a chain of frame shapes (circle, donut, cone,
+  rect, the halves, a lane), called in order or drawn all at once; the whole chain is registered at the call (call
+  flashes, live markers, the real zones hidden), One-Two pairs, numerals (`onNumber` or the built-in stalkers),
+  `onCall` / `onEnd` with the landed count. Crowd Pummeler, the hard mode's fist.
+- Ranked `DwellSoaks` (`DungeonKitSoaks.h`): `DwellSoakSpec::rank`, `Reprioritize(owner, order)`, `SetRank`,
+  `RankOf`, `Ranked`. Once ranked, the set registers in rank order (a Soak that registers anew re-registers every
+  Soak ranked after it in the same tick), so the registry serves the lowest rank first; `Clear` unranks it. Unranked
+  sets (Zul'Farrak's Ukorz) are unchanged. Thermaplugg's plates (rank = the face's priority).
+
+Tests: `tests/kit_lights_test.cpp`, `tests/kit_mines_test.cpp`, `tests/kit_combo_test.cpp`, `tests/kit_soak_test.cpp`.
 
 ## Kit: death spots, held bodies and the edge (Blackrock Depths WP-KT-D1)
 

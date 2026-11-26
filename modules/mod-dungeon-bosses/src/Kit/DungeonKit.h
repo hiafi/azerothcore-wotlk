@@ -381,7 +381,7 @@ namespace DungeonKit
     };
 
     // Walk-over pickups owned by one boss AI: Add registers a registry Soak on the spot (the telegraph, and a job for
-    // the bots; outline only, cancelled before it could resolve) and Update polls every 250 ms for the first eligible
+    // the bots; outline only, canceled before it could resolve) and Update polls every 250 ms for the first eligible
     // player inside for `dwell`, who takes it (onPick), or the pickup expires after `life` (onExpire). Eligible is the
     // registry's own check on the Soak (roles, carriers, stacks, `.mech test` scope), so a human taker obeys the same
     // rule as the bots. Call Update from

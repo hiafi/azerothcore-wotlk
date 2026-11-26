@@ -599,7 +599,8 @@ DpsSim.MechanicsDpsProfiles =
 #                      with drill names (smite, cookie, fenrus, soaks, ras, alexei, lanes, deadmines-followups,
 #                      sfk-hunt, scholomance-shapes, stratholme-followups, stratholme-drops, blackrock-spire-followups,
 #                      blackrock-depths-shapes, blackrock-depths-shapes-2, scarlet-monastery-shapes,
-#                      scarlet-monastery-shapes-2, ragefire-chasm-shapes, zul-farrak-shapes; n = cycles) and barrage,
+#                      scarlet-monastery-shapes-2, ragefire-chasm-shapes, zul-farrak-shapes, gnomeregan-shapes;
+#                      n = cycles) and barrage,
 #                      minefield, uminefield (n = seconds). A
 #                      program runs once per iteration (no loop) and is stopped at the iteration's end, so a 120 s run
 #                      of a 30 s drill takes ":4" (the chase sweep: "sfk-hunt:4"; the Scholomance shapes sweep:
@@ -609,7 +610,8 @@ DpsSim.MechanicsDpsProfiles =
 #                      the Blackrock Depths wave 2 sweep: "blackrock-depths-shapes-2:2"; the Scarlet Monastery sweeps
 #                      run 180 s (DpsSim.DurationSeconds 180): "scarlet-monastery-shapes:3" and
 #                      "scarlet-monastery-shapes-2:3"; the Ragefire Chasm sweep, also 180 s:
-#                      "ragefire-chasm-shapes:3"; the Zul'Farrak sweep, 300 s: "zul-farrak-shapes:5"). The M5 boss
+#                      "ragefire-chasm-shapes:3"; the Zul'Farrak sweep, 300 s: "zul-farrak-shapes:5"; the
+#                      Gnomeregan sweep, 360 s: "gnomeregan-shapes:6"). The M5 boss
 #                      descriptor slice is "descriptor:2" (descriptor
 #                      drills: interrupts, dispels, purges, targets, ignore, descriptor, descriptor-drills); it is not
 #                      in the default rotation.

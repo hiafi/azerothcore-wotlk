@@ -170,7 +170,7 @@ namespace DungeonKit
                 _nextAllowed = std::max(_nextAllowed, now + castMs + _spacing);
         }
 
-        // The caster's cast ended early (interrupted, cancelled) at `now`: the hold ends now, the spacing counts from
+        // The caster's cast ended early (interrupted, canceled) at `now`: the hold ends now, the spacing counts from
         // now.
         void Interrupted(Ms now)
         {

@@ -942,3 +942,19 @@ reservations:
   gnomeregan_items:
     spell: {start: 214240, end: 214279}
     creature: {start: 301100, end: 301104}
+  # Gnomeregan build (WP-0, 2026-11-26; .agents/plans/gnomeregan-build/gnomeregan-build.HANDOFF.md s3.3). Sits after
+  # the gear stage's gnomeregan_items (214240-214279, 301100-301104) and the Zul'Farrak build. Checked free 2026-11-26:
+  # no live spell_dbc row in 214280-214679, creature_template row in 301105-301199, gameobject_template row in
+  # 301380-301399, spellvisual row in 90750-90799, creaturedisplayinfo / creaturemodeldata row in 90850-90869,
+  # soundentries row in 90151-90160 or gameobjectdisplayinfo row in 90075-90079, and no other worktree's ids.yaml names
+  # them. Slices in the handoff s3.3. Shared heroic ids (no separate reservation): mapdifficulty 1009, dungeon_access
+  # 131, dungeonencounter 1107-1113, lfgdungeons 320-322, creature_heroic lock lines from 310543.
+  gnomeregan:
+    spell: {start: 214280, end: 214679}
+    creature: {start: 301105, end: 301199}
+    gameobject: {start: 301380, end: 301399}
+    spellvisual: {start: 90750, end: 90799}  # SpellVisual, Kit and EffectName
+    creaturedisplayinfo: {start: 90850, end: 90869}
+    creaturemodeldata: {start: 90850, end: 90869}
+    soundentries: {start: 90151, end: 90160}
+    gameobjectdisplayinfo: {start: 90075, end: 90079}

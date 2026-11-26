@@ -6,6 +6,10 @@
  *   SoakAt          one held Soak's clock: the first eligible player inside for `dwellMs` without a break takes it
  *                   (DwellTracker, the pickups' rule); it expires after `lifeMs` (0: never) when nobody did
  *   SoakAtTakers    who may count inside a held Soak: the players there minus the excluded ones (the anchors, the sunk)
+ *   SoakRankAt, SoakPriorityOrder   the rank order of held Soaks (Gnomeregan WP-KT-G, F40: Thermaplugg's plates by
+ *                   face priority). The registry serves an exclusive group earliest resolve first, then the lowest id,
+ *                   so a ranked set is registered in rank order, and whenever one entry registers anew every entry
+ *                   ranked after it does too
  */
 
 #ifndef MOD_DUNGEON_BOSSES_KIT_DUNGEON_KIT_SOAK_LOGIC_H
@@ -13,6 +17,7 @@
 
 #include "DungeonKitLogic.h"
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -81,6 +86,45 @@ namespace DungeonKit
         out.reserve(present.size());
         for (std::uint64_t const id : present)
             if (std::find(excluded.begin(), excluded.end(), id) == excluded.end())
+                out.push_back(id);
+        return out;
+    }
+
+    // Where an entry of `rank` goes among `ranks` (kept in order, lowest first): after every entry of the same or a
+    // lower rank (equal ranks keep the order they came in).
+    inline std::size_t SoakRankAt(std::vector<std::int32_t> const& ranks, std::int32_t rank)
+    {
+        return static_cast<std::size_t>(std::upper_bound(ranks.begin(), ranks.end(), rank) - ranks.begin());
+    }
+
+    // Which held Soaks register anew this pass. `changed[i]`: entry i's carriers set changed; `from`: an entry that
+    // must register (a new or moved one; changed.size() for none). Unranked: the changed ones and `from`. Ranked: every
+    // entry from the first of those on, so their registry ids follow the rank order.
+    inline std::vector<bool> SoakRegisterMask(bool ranked, std::size_t from, std::vector<bool> const& changed)
+    {
+        std::vector<bool> out(changed.size(), false);
+        std::size_t first = std::min(from, changed.size());
+        for (std::size_t i = 0; i < changed.size(); ++i)
+            if (changed[i])
+                first = std::min(first, i);
+        for (std::size_t i = 0; i < changed.size(); ++i)
+            out[i] = ranked ? i >= first : (i == from || changed[i]);
+        return out;
+    }
+
+    // `current` reordered: the ids of `order` first, in that order (ids not in `current` and repeats skipped), then
+    // the rest of `current` in its own order.
+    inline std::vector<std::uint32_t> SoakPriorityOrder(std::vector<std::uint32_t> const& current,
+        std::vector<std::uint32_t> const& order)
+    {
+        std::vector<std::uint32_t> out;
+        out.reserve(current.size());
+        for (std::uint32_t const id : order)
+            if (std::find(current.begin(), current.end(), id) != current.end()
+                && std::find(out.begin(), out.end(), id) == out.end())
+                out.push_back(id);
+        for (std::uint32_t const id : current)
+            if (std::find(out.begin(), out.end(), id) == out.end())
                 out.push_back(id);
         return out;
     }

@@ -546,6 +546,28 @@ RFC_HEROIC = {1098: (431, 4)}  # heroic id -> (normal, lfg)
 ZF_ENCOUNTERS = {600: "Chief Ukorz Sandscalp"}
 ZF_CREDITS = {600: (7267, 24)}
 ZF_HEROIC = {1104: (600, 24)}  # heroic id -> (normal, lfg)
+# Gnomeregan (the Gnomeregan build): stock entry 14 ended at Thermaplugg (382); the build moves its end to
+# Electrocutioner (380) and ends the new entry 320 at Thermaplugg. The heroic copies 1110 and 1113 complete 321 and 322.
+GN_HEROIC_FIRST = 1108
+GN_ENCOUNTERS = {380: "Electrocutioner 6000", 382: "Mekgineer Thermaplugg"}
+GN_CREDITS = {380: (6235, 0), 382: (7800, 14)}  # normal id -> (credit creature, stock lastEncounterDungeon)
+GN_HEROIC = {1110: (380, 0), 1113: (382, 14)}  # heroic id -> (normal, stock lfg of the normal row)
+GN_START_14 = {"dungeonId": 14, "name": "Gnomeregan", "position_x": -332.22, "position_y": -2.28,
+               "position_z": -150.86, "orientation": 2.77, "VerifiedBuild": 0}
+
+
+def _gn_normal_credits() -> dict:
+    return {e: {"entry": e, "creditType": 0, "creditEntry": c, "lastEncounterDungeon": lfg,
+                "comment": GN_ENCOUNTERS[e]} for e, (c, lfg) in GN_CREDITS.items()}
+
+
+def _gn_heroic_credits() -> list[dict]:
+    rows = []
+    for heroic_id, (normal, lfg) in GN_HEROIC.items():
+        row = _credit(heroic_id, lfg, GN_CREDITS[normal][0])
+        row[lfg_dungeons.NORMAL_ENTRY_KEY] = normal
+        rows.append(row)
+    return rows
 
 
 def _rfc_normal_credits() -> dict:
@@ -973,7 +995,11 @@ class RealSourceTest(unittest.TestCase):
             (318, "heroic", 4),
             # Zul'Farrak: the one heroic entry (319) of its stock entry 24
             (319, "heroic", 24),
+            # Gnomeregan: the two heroic entries (321 of the stock entry 14, 322 of the new 320)
+            (321, "heroic", 14), (322, "heroic", 320),
             (30, "override", None), (308, "dungeon", None), (309, "dungeon", None), (276, "override", None),
+            # Gnomeregan: entry 14 now ends at Electrocutioner, the new entry 320 at Thermaplugg
+            (14, "override", None), (320, "dungeon", None),
         ])
         random = self.dsl["lfg_dungeon_declarations"][0]
         self.assertEqual((random["min_level"], random["max_level"], random["group"]), (60, 62, 12))
@@ -990,15 +1016,16 @@ class RealSourceTest(unittest.TestCase):
                                                                (230, "Blackrock Depths"),
                                                                (189, "Scarlet Monastery"),
                                                                (389, "Ragefire Chasm"),
-                                                               (209, "Zul'Farrak"))]
+                                                               (209, "Zul'Farrak"),
+                                                               (90, "Gnomeregan"))]
         dsl["instance_encounters"] = [_credit(1006, 6), _credit(1014, 8), _credit(1027, 2), _credit(1033, 40),
                                       _credit(1040, 274), _credit(1049, 32, 9568), _credit(1054, 44, 10363),
                                       *_brd_heroic_credits(), *_sm_heroic_credits(), *_rfc_heroic_credits(),
-                                      *_zf_heroic_credits()]
+                                      *_zf_heroic_credits(), *_gn_heroic_credits()]
         out = lfg_dungeons.expand(dsl, lambda: lfg_dungeons.LfgInputs(
             stock_dungeons={int(r["ID"]): r for r in dbcfile.read_dbc(dungeons_file, dbcfmt.LFGDUNGEONS)},
             stock_groups={int(r["ID"]): r for r in dbcfile.read_dbc(groups_file, dbcfmt.LFGDUNGEONGROUP)},
-            positions={**POSITIONS, **_sm_positions(),
+            positions={**POSITIONS, **_sm_positions(), 14: GN_START_14,
                        32: {"dungeonId": 32, "name": "Lower Blackrock Spire", "position_x": 78.5083,
                                          "position_y": -225.044, "position_z": 49.839, "orientation": 5.1,
                                          "VerifiedBuild": 0},
@@ -1011,10 +1038,13 @@ class RealSourceTest(unittest.TestCase):
                         **{e: {"ID": e, "MapID": 389, "Difficulty": 0, "Name_Lang_enUS": n}
                            for e, n in RFC_ENCOUNTERS.items()},
                         **{e: {"ID": e, "MapID": 209, "Difficulty": 0, "Name_Lang_enUS": n}
-                           for e, n in ZF_ENCOUNTERS.items()}},
-            credits={**_brd_credits(), **_sm_normal_credits(), **_rfc_normal_credits(), **_zf_normal_credits()},
+                           for e, n in ZF_ENCOUNTERS.items()},
+                        **{e: {"ID": e, "MapID": 90, "Difficulty": 0, "Name_Lang_enUS": n}
+                           for e, n in GN_ENCOUNTERS.items()}},
+            credits={**_brd_credits(), **_sm_normal_credits(), **_rfc_normal_credits(), **_zf_normal_credits(),
+                     **_gn_normal_credits()},
             base_credits={**_brd_credits(), **_sm_normal_credits(), **_rfc_normal_credits(),
-                          **_zf_normal_credits()},
+                          **_zf_normal_credits(), **_gn_normal_credits()},
         ))
         self.assertEqual(out.errors, [])
         self.assertEqual(out.warnings, [])
@@ -1043,6 +1073,10 @@ class RealSourceTest(unittest.TestCase):
             318: ("Ragefire Chasm", 389, 5, 1, 12),
             # Zul'Farrak: the heroic entry of the stock entry 24 (the Zul'Farrak build)
             319: ("Zul'Farrak", 209, 5, 1, 12),
+            # Gnomeregan: the new section 320 and the two heroic entries (the Gnomeregan build)
+            320: ("Gnomeregan - The Workshop", 90, 1, 0, 1),
+            321: ("Gnomeregan", 90, 5, 1, 12),
+            322: ("Gnomeregan - The Workshop", 90, 5, 1, 12),
         })
         self.assertEqual([c["lastEncounterDungeon"] for c in dsl["instance_encounters"][:7]],
                          [301, 302, 303, 304, 305, 306, 307])
@@ -1050,7 +1084,8 @@ class RealSourceTest(unittest.TestCase):
         # 311, 237 Argelmach 312, 245 the Emperor 313); the normal links follow (227 -> 0, 230 -> 30, 235 -> 308,
         # 237 -> 309, 245 stays 276)
         self.assertEqual(_heroic_links(dsl), {227: 0, 230: 310, 234: 0, 235: 311, 237: 312, 245: 313})
-        self.assertEqual(_links(dsl), {227: 0, 230: 30, 235: 308, 237: 309})
+        # Gnomeregan: entry 14 now ends at Electrocutioner (380), the new 320 at Thermaplugg (382)
+        self.assertEqual(_links(dsl), {227: 0, 230: 30, 235: 308, 237: 309, 380: 14, 382: 320})
         # Scarlet Monastery: each heroic section completes on the heroic copy of its stock last boss (Thalnos 1084 ends
         # 314, Doan 1088 ends 315, Herod 1091 ends 316, Whitemane 1094 ends 317); the four normal rows are untouched
         self.assertEqual(_sm_heroic_links(dsl), {1084: 314, 1088: 315, 1091: 316, 1094: 317})
@@ -1060,6 +1095,9 @@ class RealSourceTest(unittest.TestCase):
         # Zul'Farrak: the heroic Ukorz (1104) completes the heroic entry 319; the normal row 600 is untouched
         self.assertEqual({r["entry"]: r["lastEncounterDungeon"] for r in dsl["instance_encounters"]
                           if lfg_dungeons.NORMAL_ENTRY_KEY in r and r["entry"] in ZF_HEROIC}, {1104: 319})
+        # Gnomeregan: the heroic Electrocutioner (1110) completes 321, the heroic Thermaplugg (1113) completes 322
+        self.assertEqual({r["entry"]: r["lastEncounterDungeon"] for r in dsl["instance_encounters"]
+                          if lfg_dungeons.NORMAL_ENTRY_KEY in r and r["entry"] in GN_HEROIC}, {1110: 321, 1113: 322})
         # row 44: a dungeon entry (Flags 3, levels 55-65), the rest of the stock row kept; row 307 copies it
         edited = next(r for r in dsl["lfg_dungeons"] if r["ID"] == 44)
         stock_44 = next(r for r in dbcfile.read_dbc(dungeons_file, dbcfmt.LFGDUNGEONS) if r["ID"] == 44)
@@ -1085,6 +1123,10 @@ class RealSourceTest(unittest.TestCase):
         self.assertEqual((positions[311], positions[312], positions[313]),
                          (positions[308], positions[309], positions[276]))
         self.assertEqual(positions[310], (458.32, 26.52, -70.67, 4.95))  # section 1 keeps the dungeon entrance
+        # Gnomeregan: 320 starts at the Train Depot landing; 321 copies the stock start of 14, 322 copies 320's
+        self.assertEqual(positions[320], (-736.51, 2.71, -249.99, 3.14))
+        self.assertEqual(positions[321], (-332.22, -2.28, -150.86, 2.77))
+        self.assertEqual(positions[322], positions[320])
         # Scarlet Monastery: each heroic entry copies the stock start of its normal entry
         for heroic, normal in ((314, 18), (315, 165), (316, 163), (317, 164)):
             self.assertEqual(positions[heroic], SM_STARTS[normal], heroic)
@@ -1107,7 +1149,7 @@ class RealSourceTest(unittest.TestCase):
         back = {r["ID"]: r for r in scope.read_dbc_bytes(blob, dbcfmt.LFGDUNGEONS)}
         self.assertEqual(back[301]["TextureFilename"], back[6]["TextureFilename"])
         self.assertEqual(back[300]["Name_Lang_enUS"], "Random Classic Heroic")
-        self.assertEqual(len(back), len(base) + 20)  # twenty new ids (300-319); row 44 replaces a stock row
+        self.assertEqual(len(back), len(base) + 23)  # twenty-three new ids (300-322); row 44 replaces a stock row
         self.assertEqual((back[44]["TypeID"], back[44]["Group_Id"], back[44]["Flags"]), (1, 1, 3))
 
 

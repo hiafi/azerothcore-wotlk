@@ -30,6 +30,8 @@ A section's last boss moves `lastEncounterDungeon` (the Finder's completion link
 section 1 edit, nothing to write by hand), 230 the Ring -> 30, 235 Bael'Gar -> 308, 237 Argelmach -> 309; 245 the
 Emperor stays 276. The same edit is what the heroic copies follow.
 
+Gnomeregan's two sections (14 and 320) follow at the end of the file.
+
 Shared file (no --scope owns it): only a full generate.py run writes these rows. `instance_encounters` rows naming 308
 and 309 need `lfgdungeons_dbc` 308 / 309 loaded first (ObjectMgr::LoadInstanceEncounters skips the row otherwise): the
 Finder rows ship in the same full run.
@@ -63,3 +65,28 @@ lfg_dungeon(
 # to S4b (843.8, -167.8, -49.7), the lower Guzzler floor (clearance 20.3 yd, 36-47 yd from Hurley, Ribbly and Plugger),
 # facing the Bar Door.
 lfg_override(276, position=(843.8, -167.8, -49.7, 4.64))
+
+# Gnomeregan's two Dungeon Finder sections (Gnomeregan build, WP-H; handoff 3.3, 3.8 and 7 #5 / #6 A). Stock has one
+# entry on map 90, 14 "Gnomeregan" (levels 23-33, target 27, start (-332.22, -2.28, -150.86), Thermaplugg ends it). The
+# rework splits the dungeon in two runs: section 1 (entry 14, the dungeon's front: Techbot, Viscous Fallout and
+# Electrocutioner 6000) and section 2 (the new entry 320 "Gnomeregan - The Workshop": from the Train Depot through the
+# Mobile Alert System, Crowd Pummeler and Thermaplugg). The heroic entries 321 and 322 (source/world/
+# lfg_classic_heroic.py) copy each row's start and complete on the heroic copy of the same boss.
+#
+# | Section | Finder entry | Window (target) | Start | Last boss (completes the run) |
+# | 1 | 14 (stock row) | 23-33 (27), stock | the stock start | Electrocutioner 6000 (380) |
+# | 2 | 320 (new) | 23-33 (27) | the Train Depot landing | Mekgineer Thermaplugg (382) |
+#
+# Section 1: the stock row's final boss moves from Thermaplugg (382) to Electrocutioner (380); 382 loses the link and
+# the new entry 320 takes it. The stock start stays (the Finder drops a group 2.0 yd above the floor, a harmless drop).
+lfg_override(14, last_encounter=380)
+
+# Section 2: The Workshop, Thermaplugg ends the run. The start is the Train Depot landing (area trigger 523's target,
+# -736.51, 2.71, -249.99, facing 3.14; the NAVMESH report found it clean); the Workshop Door is sealed until the
+# Mobile Alert System dies, which opens it. `like=14` gives the texture (GNOMEREGAN), descriptions, expansion and order
+# of the stock row; the window is the stock row's. Its checkpoint row (the Depot landing, reached only) is in the
+# checkpoint SQL of mod-dungeon-checkpoint.
+lfg_dungeon(
+    320, "Gnomeregan - The Workshop", map_id=90, like=14, min_level=23, max_level=33, target_level=27,
+    last_encounter=382, position=(-736.51, 2.71, -249.99, 3.14),
+)

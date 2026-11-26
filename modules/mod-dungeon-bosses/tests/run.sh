@@ -2,9 +2,10 @@
 # Builds and runs the standalone mod-dungeon-bosses tests with every available host compiler (g++ and clang++).
 # Pure headers only (src/<Dungeon>/*Logic.h, src/DungeonSets/*Logic.h, DeadminesKitMath.h, DeadminesRework.h,
 # ShadowfangKeepRework.h, ScholomanceRework.h, SoloLessonLogic.h, StratholmeRework.h, BlackrockSpireRework.h,
-# BlackrockDepthsRework.h, ScarletMonasteryRework.h, RagefireChasmRework.h, ZulFarrakRework.h, the shared kit's pure
+# BlackrockDepthsRework.h, ScarletMonasteryRework.h, RagefireChasmRework.h, ZulFarrakRework.h, GnomereganRework.h,
+# the shared kit's pure
 # src/Kit/DungeonKit{Math,State,Arena,Logic,Ids,Floor,Flow,WallLogic,FrontLogic,RingLogic,ZoneLogic,WingLogic,
-# WaterLogic,SoakLogic,ArenaEdgeLogic}.h, the
+# WaterLogic,SoakLogic,ArenaEdgeLogic,LightLogic,MineLogic,ComboLogic}.h, the
 # generated src/Generated/ItemSpellCopies.h): no server build needed.
 # A boss WP adds nothing here: every tests/<boss>_test.cpp is listed below already (one per boss file).
 set -euo pipefail
@@ -97,6 +98,9 @@ tests=(
   kit_water_test
   kit_edge_test
   kit_soak_test
+  kit_lights_test
+  kit_mines_test
+  kit_combo_test
   blackrock_spire_test
   brs_omokk_test
   brs_voshgajin_test
@@ -175,6 +179,15 @@ tests=(
   zf_gahzrilla_test
   zf_hard_mode_test
   zf_deluge_test
+  gnomeregan_test
+  gnomer_techbot_test
+  gnomer_fallout_test
+  gnomer_electro_test
+  gnomer_alert_test
+  gnomer_pummeler_test
+  gnomer_thermaplugg_test
+  gnomer_hard_mode_test
+  gnomer_hard_mode_machines_test
 )
 
 status=0
@@ -184,7 +197,7 @@ for cxx in "${compilers[@]}"; do
     "$cxx" -std=c++20 -Wall -Wextra -Werror -O1 -I "$root/src/Kit" -I "$root/src/Deadmines" \
       -I "$root/src/ShadowfangKeep" -I "$root/src/Scholomance" -I "$root/src/Stratholme" -I "$root/src/Generated" \
       -I "$root/src/BlackrockSpire" -I "$root/src/BlackrockDepths" -I "$root/src/ScarletMonastery" \
-      -I "$root/src/RagefireChasm" -I "$root/src/ZulFarrak" -I "$here" \
+      -I "$root/src/RagefireChasm" -I "$root/src/ZulFarrak" -I "$root/src/Gnomeregan" -I "$here" \
       "$here/$test.cpp" -o "$out/$test-$cxx"
     if ! "$out/$test-$cxx"; then
       status=1
@@ -219,6 +232,17 @@ if [[ -f "$bm_src/MechanicFront.h" ]]; then
   done
 else
   echo "== skip kit_fronts_parity_test (no mod-boss-mechanics source: set BM_SRC)"
+fi
+# F-1d (Gnomeregan): Thermaplugg's plate plan against BM's claim model (one claim per bot, nearest free plate).
+if [[ -f "$bm_src/MechanicAssign.h" ]]; then
+  for cxx in "${compilers[@]}"; do
+    echo "== $cxx gnomer_plate_plan_bm_test"
+    "$cxx" -std=c++20 -Wall -Wextra -Werror -O1 -I "$root/src/Kit" -I "$root/src/Gnomeregan" -I "$bm_src" \
+      -I "$here" "$here/gnomer_plate_plan_bm_test.cpp" -o "$out/gnomer_plate_plan_bm_test-$cxx"
+    if ! "$out/gnomer_plate_plan_bm_test-$cxx"; then status=1; fi
+  done
+else
+  echo "== skip gnomer_plate_plan_bm_test (no mod-boss-mechanics source: set BM_SRC)"
 fi
 # WP-B10: Emberseer's pulses against BM's solver and brain model (the bots' ring and nova hits).
 if [[ -f "$bm_src/MechanicFront.h" && -f "$bm_src/../tests/brain_model.h" ]]; then
