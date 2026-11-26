@@ -69,13 +69,13 @@ W0A_IDS = (HS, CLEAVE, SLAM, OVERPOWER, MS, BT, REVENGE, REND, THUNDER_CLAP, COM
 # MS x1.5 x1.4 x0.8 x1.1 x0.95, Overpower x1.5 x1.4 x0.8, on both parts
 # DPS balance pass 1031 (2026-10-31, user): HS x0.85 (Fury -15%), Slam / MS / Overpower x0.75 (Arms -25%), both parts
 # Round R5 (2026-11-02, user): HS weapon percent 156 -> 172 (about +10%), the flat part unchanged
-PERCENTS = {HS: 189, CLEAVE: 144, SLAM: 190, MS: 225, OVERPOWER: 185}  # 2026-11-15 BAL1/2/4 (MS -5%); S9 MS x0.85; S13 x1.08; S19 x1.044; RBS R1 Slam x1.15, MS/OP x1.21
+PERCENTS = {HS: 189, CLEAVE: 144, SLAM: 190, MS: 215, OVERPOWER: 180}  # 2026-11-15 BAL1/2/4 (MS -5%); S9 MS x0.85; S13 x1.08; S19 x1.044; RBS R1 Slam x1.15, MS/OP x1.21; R2 MS x0.956, OP x0.973
 # strike -> (percent effect index, flat effect index, flat carrier type)
 STRIKE_SHAPE = {HS: (1, 2, WEAPON_DAMAGE), CLEAVE: (1, 2, WEAPON_DAMAGE), SLAM: (1, 2, WEAPON_DAMAGE),
                 MS: (2, 3, NORMALIZED_WEAPON), OVERPOWER: (1, 2, NORMALIZED_WEAPON)}
-FLAT_POT = {HS: 11.22, CLEAVE: 12, SLAM: 17.0775, OVERPOWER: 18.6673, MS: 18.013}  # BAL1/2/4; S9 MS x0.85; S13 x1.08; S19 x1.045; RBS R1
-FLAT_L60 = {HS: 29, CLEAVE: 31, SLAM: 44, OVERPOWER: 48, MS: 46}  # BAL1, BAL2 (flat +10%), BAL4 MS -5%; S9 MS x0.85; S13 x1.08; S19 x1.045; RBS R1
-FLAT_L22 = {HS: 5, CLEAVE: 5, SLAM: 15, OVERPOWER: 7, MS: 7}
+FLAT_POT = {HS: 11.22, CLEAVE: 12, SLAM: 17.0775, OVERPOWER: 18.1628, MS: 17.2124}  # BAL1/2/4; S9 MS x0.85; S13 x1.08; S19 x1.045; RBS R1
+FLAT_L60 = {HS: 29, CLEAVE: 31, SLAM: 44, OVERPOWER: 46, MS: 44}  # BAL1, BAL2 (flat +10%), BAL4 MS -5%; S9 MS x0.85; S13 x1.08; S19 x1.045; RBS R1
+FLAT_L22 = {HS: 5, CLEAVE: 5, SLAM: 15, OVERPOWER: 7, MS: 6}
 
 # WP-BRIEF ruling 2 / 0VERIFY 2e: ShapeshiftMask -> 0
 ZERO_LIST = (72, 100, 355, 676, 772, 871, 1680, 1715, 1719, 2565, 3411, 5308, 6343, 6552, 6572, 7384, 7922, 12328,
@@ -698,8 +698,8 @@ def _strike_rows() -> dict[int, dict]:
         CLEAVE: strike(CLEAVE, 1, 2, WEAPON_DAMAGE, 144, 14, -1, 4.8 / 7, EffectChainTargets_1=2,
                        EffectChainTargets_2=2),
         SLAM: strike(SLAM, 1, 2, WEAPON_DAMAGE, 190, 30, 14, 6.831 / 7),
-        OVERPOWER: strike(OVERPOWER, 1, 2, NORMALIZED_WEAPON, 185, 12, -4, 7.46692 / 7),
-        MS: strike(MS, 2, 3, NORMALIZED_WEAPON, 225, 20, 4, 7.2052 / 7, Effect_1=APPLY_AURA, EffectAura_1=118),
+        OVERPOWER: strike(OVERPOWER, 1, 2, NORMALIZED_WEAPON, 180, 12, -4, 7.26512 / 7),
+        MS: strike(MS, 2, 3, NORMALIZED_WEAPON, 215, 20, 4, 6.88496 / 7, Effect_1=APPLY_AURA, EffectAura_1=118),
     }
 
 

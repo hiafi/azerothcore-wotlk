@@ -285,13 +285,13 @@ glacial_advance_203273 = spell(
 scripted_by(glacial_advance_203273, 'spell_dk_glacial_advance')
 
 # =====================================================================================================================
-# Gravefrost (203275-203277, talent 60347, row 4): Heart Strike and Plague Strike +5/10/15%; rank 3 = Shadowfrost
+# Gravefrost (203275-203277, talent 60347, row 4): Heart Strike and Plague Strike +20/40/60% (was 5/10/15, R2); rank 3 = Shadowfrost
 # =====================================================================================================================
 
 _GRAVEFROST_CAPSTONE = 'Heart Strike and Plague Strike deal Shadowfrost damage.'
 _GRAVEFROST_NOTE = (
     'death-knight-rework S2a, Frost doc "Gravefrost" (4,2), U15: hidden passive, eff0 ADD_PCT_MODIFIER SPELLMOD_DAMAGE '
-    'stored 4 / 9 / 14 (= +5 / 10 / 15%) on m.GRAVEFROST_READ = Heart Strike d0 b24 + Plague Strike d0 b0 (the Heart '
+    'stored 19 / 39 / 59 (= +20 / 40 / 60%; was stored 4 / 9 / 14 = +5 / 10 / 15%, changed (2026-11-26, raid-buff-sets retune R2, user ruling: Breath package B)) on m.GRAVEFROST_READ = Heart Strike d0 b24 + Plague Strike d0 b0 (the Heart '
     'Strike off-hand copy 203322 carries b24 too). Rank 3 (203277) is the capstone marker: the Heart Strike / Plague '
     'Strike scripts test HasAura(203277) and switch the cast school to Shadowfrost (U5). SpellLevel 9 + 5 x 4 + rank.'
 )
@@ -308,9 +308,9 @@ def _gravefrost_rank(spell_id, rank, stored, percent):
     )
 
 
-gravefrost_203275 = _gravefrost_rank(203275, 1, 4, 5)
-gravefrost_203276 = _gravefrost_rank(203276, 2, 9, 10)
-gravefrost_203277 = _gravefrost_rank(203277, 3, 14, 15)
+gravefrost_203275 = _gravefrost_rank(203275, 1, 19, 20)
+gravefrost_203276 = _gravefrost_rank(203276, 2, 39, 40)
+gravefrost_203277 = _gravefrost_rank(203277, 3, 59, 60)
 
 # =====================================================================================================================
 # Koltira's Favor (203278-203279, talent 60348, row 5): Obliterate +5/10% and a 5/10% Frost Rune refund
@@ -472,7 +472,7 @@ toravons_whiteout_buff_203288 = _buff(
 # =====================================================================================================================
 
 _FINAL_ROAR_CAPSTONE = (
-    'When Breath of Sindragosa ends, Sindragosa unleashes a final roar, dealing Frost damage equal to 10% of the '
+    'When Breath of Sindragosa ends, Sindragosa unleashes a final roar, dealing Frost damage equal to 15% of the '
     'damage '
     'your Breath dealt, split among enemies in a cone in front of you.'
 )
@@ -480,7 +480,7 @@ _FINAL_ROAR_NOTE = (
     'death-knight-rework S2a, Frost doc "Final Roar" (7,3), U12 / U19: hidden passive. eff0 ADD_FLAT_MODIFIER '
     'SPELLMOD_EFFECT1 stored 99 / 199 (= +100 / +200 internal = +10 / +20 RP) on Rune Tap (EffectSpellClassMaskA_1 = '
     'm.RUNE_TAP, d0 b27); Rune Tap\'s ENERGIZE is its effect index 0 (DK0a seam). Rank 2 (203290) adds eff1 DUMMY '
-    'stored 9 (value 10 = FINAL_ROAR_SHARE_PCT, informational): the capstone flag, an APPLY_AURA on a passive so '
+    'stored 14 (value 15 = FINAL_ROAR_SHARE_PCT, informational; was stored 9 / 10, changed (2026-11-26, raid-buff-sets retune R2, user ruling: Breath package B)): the capstone flag, an APPLY_AURA on a passive so '
     'spell_dk_breath_of_sindragosa tests HasAura(203290) (L4). SpellLevel 9 + 5 x 7 + rank.'
 )
 final_roar_203289 = _passive_rank(
@@ -492,7 +492,7 @@ final_roar_203289 = _passive_rank(
 )
 final_roar_203290 = _passive_rank(
     203290, 'Final Roar',
-    [_aura(AuraType.ADD_FLAT_MODIFIER, base_points=199, misc_value=int(SpellModOp.EFFECT1)), _dummy_aura(9)],
+    [_aura(AuraType.ADD_FLAT_MODIFIER, base_points=199, misc_value=int(SpellModOp.EFFECT1)), _dummy_aura(14)],
     _ICON_FINAL_ROAR, _ROW_FINAL_ROAR, 2,
     _capstone_text('Your Rune Tap generates 20 additional Runic Power.', _FINAL_ROAR_CAPSTONE, True),
     _FINAL_ROAR_NOTE, masks={1: (m.RUNE_TAP, 0, 0)},
@@ -513,7 +513,7 @@ final_roar_burst_203291 = spell(
     spell_icon_id=_ICON_FINAL_ROAR,
     notes=(
         'death-knight-rework S2a (U12 / D2), Frost doc "Final Roar": the capstone burst. SCHOOL_DAMAGE value 0 '
-        '(potency_excluded: spell_dk_final_roar OnHit SetHitDamage(store x 10% / n)), cone TARGET_UNIT_CONE_ENEMY_104 '
+        '(potency_excluded: spell_dk_final_roar OnHit SetHitDamage(store x 15% / n)), cone TARGET_UNIT_CONE_ENEMY_104 '
         '(104 degree total arc) radius 12 yd, self range, Frost, magic class, visual 14711. Family 15 with NO bits. '
         'AttributesEx3 IGNORE_CASTER_MODIFIERS (0x20000000) | SUPPRESS_CASTER_PROCS (0x10000), AttributesEx2 '
         'CANT_CRIT. '
@@ -656,14 +656,14 @@ seal_of_necrofantasia_203301 = _seal_rank(203301, 3, -60001, 60)
 # Frostwyrm's Wrath (203302-203303, talent 60357, row 9), its energize (203304) and the Breath ramp buff (203305)
 # =====================================================================================================================
 
-_FROSTWYRMS_CAPSTONE = 'Breath of Sindragosa deals 10% more damage for every 5 sec it remains active.'
+_FROSTWYRMS_CAPSTONE = 'Breath of Sindragosa deals 15% more damage for every 5 sec it remains active.'
 _FROSTWYRMS_NOTE = (
     'death-knight-rework S2a, Frost doc "Frostwyrm\'s Wrath" (9,3), U19 / L3: hidden passive, eff0 '
     'PROC_TRIGGER_SPELL_WITH_VALUE (231) -> 203304 with the Runic Power as the aura amount (stored 49 / 99 = 5 / 10 '
     'RP, '
     'RP x10). Per-rank spell_proc row (declared below): CAST phase (1) on Horn of Winter (d1 b30, m.HORN_OF_WINTER), '
     'positive magic-class done-spell flag, Chance 100, once per cast; the energize helper targets the caster because '
-    'the CAST-phase proc has no victim. Rank 2 (203303) adds eff1 DUMMY stored 9 (value 10 = FROSTWYRM_RAMP_PCT): the '
+    'the CAST-phase proc has no victim. Rank 2 (203303) adds eff1 DUMMY stored 14 (value 15 = FROSTWYRM_RAMP_PCT; was stored 9 / 10, changed (2026-11-26, raid-buff-sets retune R2, user ruling: Breath package B)): the '
     'capstone flag (APPLY_AURA on a passive, L4), the Breath script tests HasAura(203303) and stacks the ramp 203305. '
     'SpellLevel 9 + 5 x 9 + rank.'
 )
@@ -676,7 +676,7 @@ frostwyrms_wrath_203302 = _passive_rank(
 )
 frostwyrms_wrath_203303 = _passive_rank(
     203303, "Frostwyrm's Wrath",
-    [_aura(AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, base_points=99, trigger_spell=203304), _dummy_aura(9)],
+    [_aura(AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, base_points=99, trigger_spell=203304), _dummy_aura(14)],
     _ICON_FROSTWYRMS_WRATH, _ROW_FROSTWYRMS_WRATH, 2,
     _capstone_text('Your Horn of Winter generates 10 additional Runic Power.', _FROSTWYRMS_CAPSTONE, True),
     _FROSTWYRMS_NOTE,
@@ -803,9 +803,9 @@ _C = [
     ("BREATH_SECONDARY_PCT", 25, "Breath damage percent on secondary targets. "
      "BREATH_SECONDARY_PCT 50 -> 40 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Breath of Sindragosa secondary targets 40%). "
      "BREATH_SECONDARY_PCT 40 -> 25 (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Frost DK Breath build, secondaries 25% plus Breath x0.70)."),
-    ("FROSTWYRM_RAMP_PCT", 10, "Frostwyrm's Wrath ramp: Breath damage percent per stack."),
+    ("FROSTWYRM_RAMP_PCT", 15, "Frostwyrm's Wrath ramp: Breath damage percent per stack; 10 -> 15 on 2026-11-26, raid-buff-sets retune R2, user ruling: Breath package B."),
     ("FROSTWYRM_RAMP_TICKS", 5, "Frostwyrm's Wrath ramp: ticks per stack."),
-    ("FINAL_ROAR_SHARE_PCT", 10, "Final Roar: share of Breath damage dealt (stored, split among the cone)."),
+    ("FINAL_ROAR_SHARE_PCT", 15, "Final Roar: share of Breath damage dealt (stored, split among the cone); 10 -> 15 on 2026-11-26, raid-buff-sets retune R2, user ruling: Breath package B."),
     ("RIME_AVALANCHE_TARGETS", 5, "Avalanche icicle target cap."),
     ("RAGE_FROZEN_CHAMPION_RIME_PCT", 8, "Rage of the Frozen Champion capstone: Rime chance percent per Breath tick."),
     ("MERCILESS_COMBAT_HP_PCT", 35, "Merciless Combat threshold: target health percent."),

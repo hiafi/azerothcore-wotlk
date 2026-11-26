@@ -86,7 +86,7 @@ _OPH_POT = pot_text(on_a_pale_horse_damage_203477)
 
 # U24 (S2-HANDOFF, user 2026-10-24) + S3-HANDOFF U28: spell-named unconditional % talents show on the tooltip.
 # 1254 Heart Strike + Plague Strike, ONE entry and ONE owner (this file): S3a edited S2's Gravefrost entry in place.
-#   Heart Strike: Gravefrost (203275-203277 eff0 SPELLMOD_DAMAGE +5/10/15%). Heart Strike keeps the Bloody Strikes multiplier it
+#   Heart Strike: Gravefrost (203275-203277 eff0 SPELLMOD_DAMAGE +20/40/60%, was 5/10/15 until R2). Heart Strike keeps the Bloody Strikes multiplier it
 #   read from entry 1250, so `heart` is the product of the two; its text is unchanged.
 #   Plague Strike: `plague` = Gravefrost x Outbreak (49013 / 55236 / 55237 eff0 SPELLMOD_DAMAGE +10/20/30% on d0 b0).
 heart_plague_strike_tooltip_1254 = tooltip_vars(

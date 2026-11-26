@@ -62,9 +62,10 @@ namespace Warrior
         // D5: the shield's maximum, percent of max health before the capstone's Mastery.
         constexpr float STORMS_BULWARK_CAP_PCT = 30.0f;
         // Every Storm's Bulwark grant (all sources, never the cap) x this (2026-11-26, raid-buff-sets retune R1, user
-        // ruling 6A: Protection survivability x0.85). Mirrored by STORMS_BULWARK_GRANT_SCALE in dbc-tools
-        // source/classes/warrior/_tooltips.py for the tooltips; lib/test_warrior_s1.py pins the two equal.
-        constexpr float STORMS_BULWARK_GRANT_SCALE = 0.85f;
+        // ruling 6A: Protection survivability x0.85; retune R2: 0.85 -> 0.75 for about 80 s survive). Mirrored by
+        // STORMS_BULWARK_GRANT_SCALE in dbc-tools source/classes/warrior/_tooltips.py for the tooltips;
+        // lib/test_warrior_s1.py pins the two equal.
+        constexpr float STORMS_BULWARK_GRANT_SCALE = 0.75f;
         // D4: Unrelenting never ends Last Stand's cooldown before 50% of its hasted length has passed.
         constexpr uint32 LAST_STAND_FLOOR_PCT = 50;
         // D11: a Revenge stamp older than this cannot feed Incite (its hits land in the cast's own launch).

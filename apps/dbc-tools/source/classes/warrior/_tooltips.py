@@ -46,13 +46,14 @@ def _desc(text, capstone=None, last=False):
 
 
 # Storm's Bulwark grant scale (2026-11-26, raid-buff-sets retune R1, user ruling 6A: Protection survivability x0.85).
+# Retune R2 (2026-11-26, user ruling): 0.85 -> 0.75, sized for about 80 s survive.
 # Every grant (Thunder Clap talent and its echo, Shockwave, Reprisal, Incite, Empowered Revenge) is multiplied by it in
 # C++ (STORMS_BULWARK_GRANT_SCALE in src/server/game/Entities/Unit/WarriorMechanics.cpp; the 30% cap is not); the
 # talent carriers and script constants keep the unscaled design percents. Change both together:
 # lib/test_warrior_s1.py pins the two equal.
-STORMS_BULWARK_GRANT_SCALE = 0.85
+STORMS_BULWARK_GRANT_SCALE = 0.75
 
 
 def bulwark_pct(pct):
-    """A Storm's Bulwark grant percent as the tooltip shows it after the grant scale (2 -> '1.7', 20 -> '17')."""
+    """A Storm's Bulwark grant percent as the tooltip shows it after the grant scale (2 -> '1.5', 20 -> '15')."""
     return f"{round(pct * STORMS_BULWARK_GRANT_SCALE, 3):.3f}".rstrip("0").rstrip(".")

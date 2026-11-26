@@ -833,8 +833,8 @@ overpower_7384 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=185, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=18.6673, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=180, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=18.1628, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=battlelord_tooltip,
@@ -851,6 +851,7 @@ overpower_7384 = spell(
           ' Effect 1 weapon_potency 126 -> 139 (138.6 rounded to a whole number) (2026-11-15, balance on the Normal-tier kits, user ruling: Overpower +10%). Effect 2 sp_potency 12.75 -> 14.025 (2026-11-15, balance on the Normal-tier kits, user ruling: Overpower +10%).'
           ' Effect 1 weapon_potency 139 -> 153 (153.0 from 139 x1.10 = 152.9, whole number) (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Overpower +10% Effect 2 sp_potency 14.025 -> 15.4275 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Overpower +10%)'
           ' Effect 1 weapon_potency 153 -> 185 (185.13 rounded to a whole number, so x1.209); Effect 2 sp_potency 15.4275 -> 18.6673 (2026-11-26, raid-buff-sets retune R1, user ruling: Arms only, x1.21).'
+          ' Effect 1 weapon_potency 185 -> 180 (x0.973); Effect 2 sp_potency 18.6673 -> 18.1628 (x0.973) (2026-11-26, raid-buff-sets retune R2: R1 overshot by crit and Overpower-charge luck, user ruling: Proposal A, Overpower x0.973).'
     ),
     raw_overrides={'AttributesEx': 1476395520, 'AttributesEx3': 1024, 'AttributesEx4': 512, 'AttributesEx6': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CasterAuraSpell': 204403, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly overpower the enemy, dealing ${$m1*$<bl>}% weapon damage plus {pot2.avg*bl}. Usable only with an Overpower charge. Parrying an attack grants a charge.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 0, 'SpellClassMask_1': 4, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 12, 'SpellVisualID_1': 39, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1185,8 +1186,8 @@ mortal_strike_12294 = spell(
     duration_ms=10000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=6, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=225, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=18.013, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=215, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=17.2124, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=improved_mortal_strike_tooltip,
@@ -1206,6 +1207,7 @@ mortal_strike_12294 = spell(
           ' Effect 2 weapon_potency 167 -> 180 (180.36 rounded to a whole number, so x1.078); effect 3 sp_potency 13.1905 -> 14.2457 (2026-11-21, level60-stat-curve round S13: trims after S12, user ruling: Arms Mortal Strike and Rend x1.08).'
           ' Effect 2 weapon_potency 180 -> 188 (188.1 rounded, x1.044); effect 3 sp_potency 14.2457 -> 14.8868 (x1.045) (2026-11-22, level60-stat-curve round S19: AoE rule A, user ruling: Arms, Mortal Strike covers the 1T loss from Bladestorm x0.63).'
           ' Effect 2 weapon_potency 188 -> 225 (227.48 rounded to the nearest 5, so x1.197; R1 revision 2026-11-26, user ruling: visible weapon percents on a multiple of 5); effect 3 sp_potency 14.8868 -> 18.013 (2026-11-26, raid-buff-sets retune R1, user ruling: Arms only, x1.21).'
+          ' Effect 2 weapon_potency 225 -> 215 (x0.956); effect 3 sp_potency 18.013 -> 17.2124 (x0.956) (2026-11-26, raid-buff-sets retune R2: R1 overshot by crit and Overpower-charge luck, user ruling: Proposal A, Mortal Strike x0.956).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing received is reduced.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals ${$m2*$<ims>}% weapon damage plus {pot3.avg*ims} and wounds the target, reducing the healing it receives by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'SpellClassMask_1': 33554432, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 39, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1501,7 +1503,7 @@ shockwave_46968 = spell(
         ' Tooltip Storm\'s Bulwark percents 20% -> 17% and 1% per target -> 0.85% through bulwark_pct; the script constants '
         '(SHOCKWAVE_BULWARK_PCT 20, 1 per target) stay the unscaled design percents, the grant scale is '
         'STORMS_BULWARK_GRANT_SCALE in WarriorMechanics.cpp (2026-11-26, raid-buff-sets retune R1, user ruling 6A: '
-        'Protection survivability, every Storm\'s Bulwark source x0.85).'
+        'Protection survivability, every Storm\'s Bulwark source x0.85). Grant scale 0.85 -> 0.75, so the tooltip percents follow through bulwark_pct (2026-11-26, raid-buff-sets retune R2: survive was 109 s at 0.85, sized for about 80 s, user ruling).'
     ),
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Stunned.', 'AuraInterruptFlags': 4718592, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Sends a wave of force in front of the caster, causing {pot2*ts} damage (based on attack power) and stunning all enemy targets in a frontal cone for $d.  Targets that cannot be stunned take double damage instead.  Shockwave adds an amount equal to ' + bulwark_pct(20) + '% of your maximum health to your Storm\'s Bulwark shield, plus an additional ' + bulwark_pct(1) + '% for each target struck, up to 5 targets.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 32768, 'SpellClassSet': 4, 'SpellLevel': 60, 'SpellVisualID_1': 10703, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
