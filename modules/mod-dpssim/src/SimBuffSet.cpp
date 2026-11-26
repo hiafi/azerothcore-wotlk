@@ -45,7 +45,7 @@ namespace SimBuffSet
     // (hunter-pet-families DATA-INVENTORY 4.1), so that family's own cast adds nothing; dpssim.conf.dist lists the
     // values at level 60.
     char const* const DEFAULT_RAID_BUFFS_HUNTER =
-        "24932, 8076:01, 53137, 202210:01, 24907:0, 50172, 5677, 202211, 23948, 25898:0, 202212, 31583:1, 57669";
+        "24932, 57330:01, 53137, 202210:01, 24907:0, 50172, 25894, 208867, 23948, 25898:0, 202212, 31583:1, 57669";
     char const* const DEFAULT_RAID_DEBUFFS_HUNTER = "8647, 21183:0@3, 60431, 1160, 6343, 1714:0, 30070";
     char const* const DEFAULT_RAID_PULL_BUFFS = "2825, 57724";
     // Flask of Might, Flask of Grace, Flask of Supreme Power (their target is the drinker, so the effect is explicit)

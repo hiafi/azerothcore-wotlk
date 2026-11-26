@@ -487,16 +487,16 @@ DpsSim.BuffSet =
 #                      suppressed by the group rule and adds nothing (hunter-pet-families DATA-INVENTORY 4.1,
 #                      BRAINSTORM ruling 7):
 #                        24932      Leader of the Pack          melee/ranged crit 5%         group 1023 -> 1025
-#                        8076:01    Strength of Earth           Strength and Agility         group 1064 -> 1088
+#                        57330:01   Horn of Winter              Strength and Agility (86)    group 1065 -> 1088
 #                        53137      Abomination's Might r1      attack power 5%              group 1026 -> 1029
 #                        202210:01  Air Attunement              melee and ranged haste 10%   group 1022
 #                        24907:0    Moonkin Aura                spell crit 5%                group 1034 -> 1036
 #                        50172      Improved Moonkin Form r3    all haste 3% (spell haste)   group 1054
-#                        5677       Mana Spring                 mana per 5 sec               group 1105
-#                        202211     Earth Attunement Armor      armor                        group 1086
+#                        25894      Greater Blessing of Wisdom  mana per 5 sec (33)          group 1005 -> 1105
+#                        208867     Scroll of Stoneskin         armor (735)                  group 1086
 #                        23948      Power Word: Fortitude r6    Stamina                      group 1084
 #                        25898:0    Greater Blessing of Kings   all stats 10%                group 1006
-#                        202212     Fire Attunement Spell Power spell power (pet AP)         group 1048
+#                        202212     Fire Attunement Spell Power spell power (120)            group 1048
 #                        31583:1    Arcane Empowerment r3       party damage 3%              group 1056
 #                        57669      Replenishment
 #                      Debuffs, hunters:
