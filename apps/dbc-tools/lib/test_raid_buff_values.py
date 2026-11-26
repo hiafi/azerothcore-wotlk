@@ -55,6 +55,8 @@ EXPECTED = {
     (202212, 2): {20: 30, 40: 63, 60: 120},
     (201779, 1): {20: 30, 40: 63, 60: 120},         # Arcane Resonance
     (201779, 2): {20: 30, 40: 63, 60: 120},
+    (205102, 1): {26: 30, 40: 63, 60: 120},         # Arcane Infusion (mage, learned at 26): 202212's curve
+    (205102, 2): {26: 30, 40: 63, 60: 120},
     (57330, 1): {20: 27, 40: 56, 60: 86},           # Horn of Winter
     (57330, 2): {20: 27, 40: 56, 60: 86},
     (1459, 1): {20: 11, 40: 21, 60: 31},            # Arcane Intellect
@@ -153,6 +155,27 @@ class RaidBuffValuesTest(unittest.TestCase):
                 if single != double:
                     bad.append(f"{sid} effect {eff} at {level}: float32 {single}, float64 {double}")
         self.assertEqual(bad, [], "\n" + "\n".join(bad))
+
+    def test_arcane_infusion_is_the_fire_attunement_spell_power_curve(self):
+        # one spell, both effects on the 202212 columns: aura 13 school mask 126 and aura 135 mask 127, raid target 56
+        rows = _rows()
+        ai, fire = rows[205102], rows[202212]
+        for col in ("BaseLevel", "SpellLevel", "MaxLevel"):
+            self.assertEqual(ai[col], fire[col], col)
+        for eff in (1, 2):
+            for col in ("EffectBasePoints", "EffectRealPointsPerLevel", "EffectAura", "EffectMiscValue"):
+                self.assertEqual(ai[f"{col}_{eff}"], fire[f"{col}_{eff}"], f"{col}_{eff}")
+            self.assertEqual(_i(ai, f"ImplicitTargetA_{eff}"), 56)
+        self.assertEqual((_i(ai, "EffectAura_1"), _i(ai, "EffectMiscValue_1")), (13, 126))
+        self.assertEqual((_i(ai, "EffectAura_2"), _i(ai, "EffectMiscValue_2")), (135, 127))
+        self.assertEqual(_i(ai, "EffectAura_3"), 0)
+        # not Arcane Intellect's family bit, icon, visual or consolidated-buffs flag
+        arcane_intellect = rows.get(1459) or {}
+        self.assertEqual(_i(ai, "SpellClassMask_1"), 0)
+        self.assertNotEqual(_i(ai, "SpellIconID"), 125)
+        self.assertNotEqual(_i(ai, "SpellIconID"), 1694)
+        self.assertNotEqual(_i(ai, "SpellVisualID_1"), _i(arcane_intellect, "SpellVisualID_1"))
+        self.assertEqual(_i(ai, "AttributesEx7") & 0x10000000, 0)
 
     def test_the_check_can_fail(self):
         # 59 x 0.8644 = 51.0 - 0.0004: the old Power Word: Fortitude slope truncates one short in float32

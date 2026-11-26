@@ -6,7 +6,7 @@ Split from a single source/classes/mage.py via split_class_file.py (.agents/plan
 
 from lib import potency as _potency
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
-from lib.dsl.registry import bonus_coefficients, pot_text, scripted_by, skill_line_ability, spell, trained_by, unbind_bonus_coefficients
+from lib.dsl.registry import bonus_coefficients, pot_text, scripted_by, skill_line_ability, spell, spell_group, trained_by, unbind_bonus_coefficients
 from .mage_trigger_spells import arcane_blast_debuff, arcane_missile_7268, blizzard_42208, frost_talent_tooltip, meteor_impact_200096, molten_armor_34913
 
 
@@ -1152,6 +1152,68 @@ arcane_brilliance_23028 = spell(
 )
 # Only on a stock TrainerId no NPC uses; 212 is the live Mage trainer (docs/spell_learn_level.md).
 trained_by(arcane_brilliance_23028, trainer_id=212, req_level=56, money_cost=38000)
+
+
+# Arcane Infusion (raid buff sets, user ruling 2026-11-25): the mage's baseline source of the raid spell power buff,
+# next to the shaman's Fire Attunement (202209 -> child 202212). Its own spell and its own icon and visual, so it sits
+# beside Arcane Intellect / Arcane Brilliance (Intellect, untouched) on the buff bar as a second buff. Shaped like
+# Arcane Brilliance 23028: instant, 1 hour, 40 yd cast range, APPLY_AURA on TARGET_UNIT_CASTER_AREA_RAID (56) with the
+# 100 yd effect radius, 81% of base mana, no reagent, GCD 1500 / 133. Not SpellClassMask 1024 (Arcane Intellect's
+# family bit): nothing that modifies Arcane Intellect / Brilliance touches it. AttributesEx7 0x10000000 (the
+# Consolidated Buffs box) is cleared so it reads on the bar. Value: Fire Attunement Spell Power 202212's curve (aura 13
+# school mask 126 + aura 135 mask 127, BP 29, 2.82 per level, BaseLevel 28, SpellLevel 26, MaxLevel 60): 30 at 26, 63
+# at 40, 92 at 50, 120 at 60 (stock Totem of Wrath's level 60 value). One spell carries both effects, so the rule 4
+# (highest wins) group 1048 holds it whole, the way it holds Arcane Resonance 201779. Icon 2215 (Spell_Arcane_
+# FocusedPower; Arcane Intellect is 125, Arcane Brilliance 1694), cast visual 4370 (Arcane Power's glow; Intellect is
+# 158). Id 205102 from the mage slice (ids.yaml `mage`), SkillLineAbility 30428 (Arcane, 237) so a Classless pick
+# learns it, trainer 212 (priced by the learn-level curve) at level 26.
+arcane_infusion_205102 = spell(
+    id=205102,
+    name='Arcane Infusion',
+    school=School.ARCANE,
+    dispel=DispelType.MAGIC,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=81,
+    range_yards=40.0,
+    duration_ms=3600000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=29, points_per_level=2.82, implicit_target_a=56,
+               apply_aura=AuraType.MOD_DAMAGE_DONE, misc_value=126, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, points_per_level=2.82, implicit_target_a=56,
+               apply_aura=AuraType.MOD_HEALING_DONE, misc_value=127, radius_yards=100.0),
+    ],
+    spell_icon_id=2215,
+    notes=(
+        'raid buff sets, Arcane Infusion (user ruling 2026-11-25): the mage baseline spell power raid buff, learned at '
+        '26 from trainer 212. Shape of Arcane Brilliance 23028 (instant, 1 h, 40 yd, 100 yd raid radius, 81% base '
+        'mana); value = Fire Attunement Spell Power 202212 (30 flat to level 28, 63 at 40, 120 at 60). Group 1048 '
+        '(rule 4) with 202212, Arcane Resonance 201779, the Scroll of Flame and the Demonic Pact group. It joins no '
+        'other group, so it never blocks or is blocked by Arcane Intellect / Brilliance.'
+    ),
+    raw_overrides={
+        'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190,
+        'AuraDescription_Lang_enUS': 'Spell power increased by $s1.',
+        'BaseLevel': 28, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': 'Infuses party and raid members within $a1 yards with arcane power, increasing '
+                                 'spell power by $s1 for $d. Does not stack with Fire Attunement, Arcane Resonance, '
+                                 'Flametongue Totem, Totem of Wrath or Demonic Pact.',
+        'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 60, 'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101,
+        'SpellClassSet': 3, 'SpellLevel': 26, 'SpellVisualID_1': 4370, 'StartRecoveryCategory': 133,
+        'StartRecoveryTime': 1500,
+    },
+)
+# Trainer 212 is the live Mage trainer; money_cost 0 leaves the price to the learn-level curve (trainer_pricing).
+trained_by(arcane_infusion_205102, trainer_id=212, req_level=26)
+# The SkillLineAbility row is how the trainer window lists it and how a Classless pick learns it (Systems.md section 11).
+skill_line_ability(id=30428, skill_line=237, spell_id=205102, class_mask=128, acquire_method=0)
+# Stock group 1048 Spell Power Buffs (rule 4, highest wins) already has its rule row; only the member is added here.
+spell_group(1048, arcane_infusion_205102)
 
 
 frostbolt_25304 = spell(
