@@ -328,6 +328,8 @@ namespace DungeonKit
             ref.Color(*e.spec.color);
         if (e.spec.tag)
             ref.Tag(e.spec.tag);
+        if (e.spec.configure)
+            e.spec.configure(ref);
         e.soak = ref.Handle();
     }
 

@@ -22,7 +22,7 @@ in its ZfCreatures enum, gameobject ids in ZfGameObjects; ids.yaml reservation `
   ukorz.py                    D6    spells 214070-214109, creatures 301025-301026
   gahzrilla.py                D7    spells 214110-214149, creature 301030
   gahzrilla_crew_hard_mode.py D7Ha  spells 214150-214189, creature 301031
-  gahzrilla_deluge.py         D7Hb  spells 214190-214209, creatures 301032-301033
+  gahzrilla_deluge.py         D7Hb  spells 214190-214209, creature 301033 (301032, the second head: D7Ha)
   dungeon_quests.py           Q     creature 301090 (the entrance goblin)
   The crew (7604-7608) are CR's: their script names and AIName are the S0 SQL rev's (rev_skeleton_zul_farrak.sql),
   their type_flags and texts CR's rev; CR's ally-kit spells 213845-213859 are in the shared slice.

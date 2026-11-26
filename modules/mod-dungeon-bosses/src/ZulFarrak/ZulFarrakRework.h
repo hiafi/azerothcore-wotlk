@@ -211,7 +211,7 @@ namespace ZulFarrakRework
         NPC_ZF_CREEPING_SANDS       = 301026,   // D6
         NPC_ZF_PUDDLE               = 301030,   // D7
         NPC_ZF_WELLSPRING           = 301031,   // D7Ha
-        NPC_ZF_SECOND_HEAD          = 301032,   // D7Hb
+        NPC_ZF_SECOND_HEAD          = 301032,   // D7Ha
         NPC_ZF_STRIKE_STALKER       = 301033,   // D7Hb
         NPC_ZF_ENTRANCE_GOBLIN      = 301090,   // the quests WP ("Kizzi Fuseboot", section 10 #53)
     };

@@ -185,7 +185,9 @@ class ZulFarrakSkeletonTest(unittest.TestCase):
                 self.assertIn(f"UPDATE `creature_template` SET `AIName` = '', `ScriptName` = '{script}' "
                               f"WHERE `entry` = {entry}", self.rev)
                 self.assertIn(script, self.creature_scripts)
-                self.assertNotIn(entry, self.edits, "one owner per column: the crew's script is the rev's")
+                # D5 declares the crew's fight columns (health, immunity, flags_extra); the script stays the rev's
+                self.assertFalse({"ScriptName", "AIName"} & set(self.edits.get(entry, {})),
+                                 "the crew's script is the rev's")
         cages = [re.fullmatch(r"UPDATE `gameobject_template` SET `ScriptName` = 'go_zf_troll_cage' WHERE `entry` "
                               r"IN \(([\d, ]+)\)", s) for s in self.rev]
         cages = [m for m in cages if m]

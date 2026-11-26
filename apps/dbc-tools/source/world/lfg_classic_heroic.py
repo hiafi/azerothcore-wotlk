@@ -79,3 +79,9 @@ lfg_heroic(317, normal=164, group=CLASSIC_HEROIC)  # Scarlet Monastery - Cathedr
 # none either. It completes on the heroic copy of Taragaman the Hungerer (1098, the stock final boss 431 of the normal
 # entry): one heroic bind for the four bosses.
 lfg_heroic(318, normal=4, group=CLASSIC_HEROIC)  # Ragefire Chasm
+
+# Zul'Farrak (map 209, the Zul'Farrak build, WP-H): one section, one 5-player heroic map. The stock normal row 24
+# (levels 41 to 51) has no lfg_dungeon_template row (the Finder falls back to the areatrigger 924), so the heroic entry
+# copies none either. It completes on the heroic copy of Chief Ukorz Sandscalp (1104, the stock final boss 600 of the
+# normal entry; the script credits it once Ruuzlu is dead too): one heroic bind for the eight encounter rows.
+lfg_heroic(319, normal=24, group=CLASSIC_HEROIC)  # Zul'Farrak

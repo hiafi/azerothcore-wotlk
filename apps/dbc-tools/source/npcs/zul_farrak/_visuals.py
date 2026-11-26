@@ -138,6 +138,8 @@ ZR_WARD_SHIELD = 7519
 ZR_WAIL = 14508
 ZR_WAIL_ALT = 7180
 ZR_GRAVE = 634
+ZR_SHADOW_BOLT = 64                     # Shadow Bolt 12739's own SV, kept by the copy (D3)
+ZR_VOLLEY = 2318                        # Shadow Bolt Volley 15245's own SV, kept by the copy (D3)
 GODI_GRAVE = 1767                       # Shallow Graves (each grave point holds two GOs: 128308 and 128403)
 ZR_INVIS_TYPE = 11                      # the spirit world invisibility type (not a visual id)
 ZR_INVIS_TYPE_ALT = 7
@@ -257,6 +259,7 @@ GZ_BLAST_ALT = 729
 GZ_BLAST_ALT_2 = 572
 GZ_MASS_DISPEL = 8140
 GZ_SLAM = 2377
+GZ_DELUGE_BURST = 6501                  # the Deluge's one-shot burst on Gahz'rilla (VISUALS 'The Deluge', D7Hb)
 GODI_GONG = 1827
 GODI_FLOE_ALT = 8557                    # UL_IcePlatform_01 (19.8 x 20.8 yd): the alternate to the ice disc as a floe
 

@@ -144,6 +144,8 @@ namespace DungeonKit
         bool onlyWhileCarriers = false;
         std::optional<BossMechanics::Color> color;
         uint32 tag = 0;
+        // extra registry options on every registration (capture guids only)
+        std::function<void(BossMechanics::MechanicRef&)> configure;
         // Capture guids only. `at` is where the pickup was when it was taken / arrived.
         std::function<void(Player* taker, Position const& at)> onPick;
         std::function<void(ObjectGuid goal, Position const& at)> onReach;
