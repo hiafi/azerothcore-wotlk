@@ -287,7 +287,8 @@ class TestSql(unittest.TestCase):
             m = re.search(r"WHERE `ID` = (\d+) AND `BreadcrumbForQuestId` = (\d+)$", s)
             self.assertIsNotNone(m, s)
             found[int(m.group(1))] = int(m.group(2))
-        self.assertEqual(found, {2923: 2922, 2925: 2924, 2931: 2930}, "guarded on the stock value, so it runs twice safely")
+        self.assertEqual(found, {2923: 2922, 2925: 2924, 2931: 2930},
+                         "guarded on the stock value, so it runs twice safely")
         self.assertNotRegex(self.code, r"RewardNextQuest", "the stock flow still offers 2922 and 2930 next")
 
     def test_the_ring_text_names_the_three_silver_coins(self):
