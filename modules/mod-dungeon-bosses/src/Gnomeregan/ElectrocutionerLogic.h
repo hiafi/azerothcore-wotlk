@@ -181,6 +181,8 @@ namespace GnomerElectro
         static_assert(kMegavoltCastMs >= kWarningFloorMs, "Megavolt meets the warning floor");
         float constexpr kMegavoltAngleDeg = 40.f;
         float constexpr kMegavoltLengthYd = 30.f;
+        // RF-2 Minor-2 (ruling A): Megavolt picks only a player its cone reaches; the walkway (31-46 yd) is past it.
+        float constexpr kMegavoltPickRangeYd = kMegavoltLengthYd;
         inline constexpr NH<float> kMegavoltPct{ 40.f, 60.f };
         inline constexpr NH<std::uint32_t> kMegavoltTargets{ 1, 2 };
         inline constexpr NH<std::uint32_t> kMegavoltVoltsPerHit{ 1, 2 };
@@ -636,6 +638,15 @@ namespace GnomerElectro
     {
         static DungeonKit::Arena const floor = JusticeFloor();
         return floor.Contains(at, z);
+    }
+
+    // A pick for one cast: on the pick floor and, when the cast has a reach (Shock's 20 yd, Megavolt's 30 yd cone),
+    // within it of the boss; maxRangeYd 0 means the whole floor (Chain Bolt, the Justice, heroic Static).
+    inline bool CanPick(Vec2 boss, Vec2 at, float z, float maxRangeYd)
+    {
+        if (!OnPickFloor(at, z))
+            return false;
+        return maxRangeYd <= 0.f || DungeonKit::Distance(boss, at) <= maxRangeYd;
     }
 }
 

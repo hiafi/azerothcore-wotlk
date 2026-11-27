@@ -78,12 +78,15 @@ UPDATE `item_template` SET `RequiredLevel` = 23 WHERE `entry` = 9326 AND `Requir
 UPDATE `quest_template_addon` SET `PrevQuestID` = 0 WHERE `ID` = 2922 AND `PrevQuestID` = 2923;
 
 -- Breadcrumbs (designer call DQ1 B, orchestrator ruling 2026-11-26). 2923 Tinkmaster Overspark is the stock breadcrumb
--- of 2922 and 2931 Castpipe's Task of 2930 (both Alliance only). Player::SatisfyQuestBreadcrumb refuses a quest while
--- one of its breadcrumbs is incomplete, complete or failed, and CanSeeStartQuest calls it too: an Alliance player who
--- picked up 2923 or 2931 in the world would see no "!" for 2922 or 2930 at the exile until they abandoned it or turned
--- it in. Both stop being breadcrumbs and become plain lead-ins (their RewardNextQuest 2922 and 2930 stay, so the stock
--- flow is unchanged). Stock values read from the live quest_template_addon: 2923 -> 2922, 2931 -> 2930.
+-- of 2922, 2925 Klockmort's Essentials of 2924 and 2931 Castpipe's Task of 2930 (all Alliance only).
+-- Player::SatisfyQuestBreadcrumb refuses a quest while one of its breadcrumbs is incomplete, complete or failed, and
+-- CanSeeStartQuest calls it too: an Alliance player who picked up 2923, 2925 or 2931 in the world would see no "!" for
+-- 2922, 2924 or 2930 at the exile until they abandoned it or turned it in. All three stop being breadcrumbs and become
+-- plain lead-ins (their RewardNextQuest 2922, 2924 and 2930 stay, so the stock flow is unchanged). Stock values read
+-- from the live quest_template_addon: 2923 -> 2922, 2925 -> 2924, 2931 -> 2930 (no other row names an exile quest).
+-- A plain lead-in stays takeable after its target quest is done (only a breadcrumb is hidden then): harmless.
 UPDATE `quest_template_addon` SET `BreadcrumbForQuestId` = 0 WHERE `ID` = 2923 AND `BreadcrumbForQuestId` = 2922;
+UPDATE `quest_template_addon` SET `BreadcrumbForQuestId` = 0 WHERE `ID` = 2925 AND `BreadcrumbForQuestId` = 2924;
 UPDATE `quest_template_addon` SET `BreadcrumbForQuestId` = 0 WHERE `ID` = 2931 AND `BreadcrumbForQuestId` = 2930;
 
 -- 2924 Essential Artificials: 12 -> 4 (the 47 Artificial Extrapolator chests, 24 above the Workshop and 23 below; 5

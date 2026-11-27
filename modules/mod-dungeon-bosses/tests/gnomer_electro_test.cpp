@@ -294,7 +294,26 @@ namespace
             CHECK(DungeonKit::Distance(kPlatformCenter.XY(), p) > 31.f);
             CHECK(OnPickFloor(p, -218.f));
             CHECK(!OnPickFloor(p, -218.f - 56.f));
+            // RF-2 Minor-2 (ruling A): Megavolt's 30 yd cone from the held center never reaches the walkway, so it
+            // never picks there; Chain Bolt and the Justice (no reach) still do, Shock (20 yd) does not.
+            CHECK(!CanPick(kPlatformCenter.XY(), p, -218.f, Tune::kMegavoltPickRangeYd));
+            CHECK(!CanPick(kPlatformCenter.XY(), p, -218.f, Tune::kShockRangeYd));
+            CHECK(CanPick(kPlatformCenter.XY(), p, -218.f, 0.f));
         }
+        // Megavolt picks within its cone: the pick range is the cone's length, and a player on the rim (22 yd) and
+        // at the reach's edge (29.5 yd, on the platform floor) is pickable; past it, or fallen, is not.
+        CHECK(Tune::kMegavoltPickRangeYd == Tune::kMegavoltLengthYd);
+        CHECK(CanPick(kPlatformCenter.XY(), DungeonKit::Advance(kPlatformCenter.XY(), 1.f, 22.f), kPlatformCenter.z,
+            Tune::kMegavoltPickRangeYd));
+        for (float bearing = 0.f; bearing < 6.28f; bearing += 0.05f)
+        {
+            Vec2 const edge = DungeonKit::Advance(kPlatformCenter.XY(), bearing, 29.5f);
+            if (OnPickFloor(edge, kPlatformCenter.z))
+                CHECK(CanPick(kPlatformCenter.XY(), edge, kPlatformCenter.z, Tune::kMegavoltPickRangeYd));
+            Vec2 const past = DungeonKit::Advance(kPlatformCenter.XY(), bearing, 30.5f);
+            CHECK(!CanPick(kPlatformCenter.XY(), past, -218.f, Tune::kMegavoltPickRangeYd));
+        }
+        CHECK(!CanPick(kPlatformCenter.XY(), kPlatformCenter.XY(), kPlatformCenter.z - 56.f, 0.f));
         // The heroic circle's safe ring fits on the bots' disc.
         CHECK(PlatformPickArena().Contains(DungeonKit::Advance(kPlatformCenter.XY(), 2.f, Tune::kJusticeCircleYd + 1.f),
             kPlatformCenter.z));

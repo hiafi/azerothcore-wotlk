@@ -19,7 +19,8 @@ Checks:
   - the reward UPDATEs keep the literal ids and each also carries a fail-closed name guard (`AND EXISTS (SELECT 1 FROM
     `item_template` WHERE `entry` = N AND `name` = '...')`): the guard's id is the choice's id and its name is the
     declaration's, so a shifted id leaves the quest unchanged instead of paying another item;
-  - the breadcrumbs 2923 and 2931 are cleared (DQ1 B), so an Alliance player holding one still sees 2922 / 2930;
+  - the breadcrumbs 2923, 2925 and 2931 are cleared (DQ1 B), so an Alliance player holding one still sees 2922 /
+    2924 / 2930;
   - quest_rewards.lock: the stock rewards this dungeon keeps (9604, 9605, 9608, 9609) are untouched.
 
 THE DEPLOY GATE. CHECK runs this between the generate.py write run and db-import, from the repo root of the tree being
@@ -276,16 +277,17 @@ class TestSql(unittest.TestCase):
         self.assertIn("`PrevQuestID` = 2923", prereq)
 
     def test_the_breadcrumbs_become_plain_lead_ins(self):
-        """DQ1 B: 2923 and 2931 stop being the breadcrumbs of 2922 and 2930, or a held one hides the exile's quest."""
+        """DQ1 B: 2923, 2925 and 2931 stop being the breadcrumbs of 2922, 2924 and 2930, or a held one hides the
+        exile's quest (2925 Klockmort's Essentials -> 2924 was missed at first, RF-2 Minor-1)."""
         stmts = [s for s in self.stmts if "`BreadcrumbForQuestId`" in s]
-        self.assertEqual(len(stmts), 2)
+        self.assertEqual(len(stmts), 3)
         found = {}
         for s in stmts:
             self.assertTrue(s.startswith("UPDATE `quest_template_addon` SET `BreadcrumbForQuestId` = 0"), s)
             m = re.search(r"WHERE `ID` = (\d+) AND `BreadcrumbForQuestId` = (\d+)$", s)
             self.assertIsNotNone(m, s)
             found[int(m.group(1))] = int(m.group(2))
-        self.assertEqual(found, {2923: 2922, 2931: 2930}, "guarded on the stock value, so it runs twice safely")
+        self.assertEqual(found, {2923: 2922, 2925: 2924, 2931: 2930}, "guarded on the stock value, so it runs twice safely")
         self.assertNotRegex(self.code, r"RewardNextQuest", "the stock flow still offers 2922 and 2930 next")
 
     def test_the_ring_text_names_the_three_silver_coins(self):

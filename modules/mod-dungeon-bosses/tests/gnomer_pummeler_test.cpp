@@ -399,6 +399,17 @@ namespace
         CHECK(!PetChaseNeedsFix(true, true, true, Tune::kPetChaseAimRetryMs - 1));
         CHECK(PetChaseNeedsFix(true, true, true, Tune::kPetChaseAimRetryMs));
         static_assert(Tune::kPetChaseAimRetryMs < Tune::kPetChaseRetryMs);
+        // RF-2 Minor-3: the sweep covers the pet and every PetAI controllable guardian (Feral Spirit, Treants,
+        // Shadowfiend), not totems, charmed mobs or script-AI guardians.
+        CHECK(SweepsControlled(true, false, true, false, false));       // a hunter or warlock pet
+        CHECK(SweepsControlled(true, true, false, false, false));       // a pet on a script AI: as before
+        CHECK(SweepsControlled(false, true, true, false, false));       // Feral Spirit, a Treant, the Shadowfiend
+        CHECK(!SweepsControlled(false, true, false, false, false));     // a script-AI guardian keeps its own chase
+        CHECK(!SweepsControlled(false, false, false, false, false));    // a plain guardian (no PetAI, no control)
+        CHECK(!SweepsControlled(false, true, true, true, false));       // a totem
+        CHECK(!SweepsControlled(false, false, true, false, true));      // a charmed mob
+        CHECK(!SweepsControlled(true, true, true, false, true));
+
         // The angled chase aims at his back, the glass (off the pocket); a no-angle one at his pocket side.
         Point3 const& spot = kPummelerSpot;
         CHECK(!FromThePocket(spot.x + 3.f, spot.y, kPocketFloorZ));

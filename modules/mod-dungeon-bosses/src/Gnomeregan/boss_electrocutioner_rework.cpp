@@ -9,8 +9,8 @@
  *
  *   Pull       the aggro yell (group 1); he walks to the platform's center (section 7 #20 A; his spawn is 2.3 yd off
  *              it) and is held there by SetControlled(ROOT) (rule 8); a walk that does not arrive is finished by a
- *              teleport. Every pick stands on the platform arena (rule 5: the disc, the rim, the walkway mouth); the
- *              bots' spots stay on the 21 yd pick disc.
+ *              teleport. Every pick stands on the Justice's floor (rule 5, RF-1 DQ1: the disc, the rim and the
+ *              walkway; Megavolt within its 30 yd cone, Shock within 20 yd); the bots' spots stay on the 21 yd disc.
  *   EL1, EL2   the VoltageMeter machine (ElectrocutionerMachine.h): Voltage +1 every 5 s and per mistake; Electric
  *              Justice at 6 (heroic every 6th), a 4 s Physical bar, the donut safe within 8 yd out over the platform
  *              and the walkway (heroic in turn with the 15 yd circle on him), 75%; normal resets to 0 and pauses 10 s
@@ -26,8 +26,9 @@
  *              (a kick's Nature lockout refuses it: the reward, not retried).
  *   EL6        Static (heroic): every player's yards moved (250 ms samples, ElectrocutionerLogic.h StaticCharge) as the
  *              stack count of SPELL_STATIC; at 20 a discharge: 40% and Weakened on the carrier, 40% on the nearest
- *              ally within 10 yd, +1 V. Counted from 5 s after the pull and on the platform arena only (a fall
- *              holds it). The descriptor carries BM-G's move cost (above 12) and the 11-12 yd band.
+ *              ally within 10 yd, +1 V. Counted from 5 s after the pull and on the pick floor only (the platform
+ *              and the walkway; a fall holds it). The descriptor carries BM-G's move cost (above 12) and the 11-12
+ *              yd band.
  *   Heroic     every lightning hit times the meter's DamageMultiplier (3% a stack, no cap), read when it is drawn.
  *   RB-4       a held boss answers: his victim out of melee reach for 5 s is Shocked every 3 s.
  *   Death      the instance unlocks the Workshop Door and summons End NPC 1 on normal (STAGE-S0 Q1): nothing here. The
@@ -350,7 +351,7 @@ private:
         CastShock(victim, true);
     }
 
-    // ---- picks (rule 5: on the platform arena; section 7 #36 A: the tank included) -------------------------------
+    // ---- picks (rule 5: on the Justice's floor, walkway included; section 7 #36 A: the tank included) ------------
 
     // The players of the fight: alive, not GMs, in combat with him, on his map.
     std::vector<Player*> FightPlayers() const
@@ -370,9 +371,7 @@ private:
         std::vector<Player*> pool;
         for (Player* player : FightPlayers())
         {
-            if (!OnPickFloor(DungeonKit::PlaneOf(player), player->GetPositionZ()))
-                continue;
-            if (maxRangeYd > 0.f && me->GetExactDist2d(player) > maxRangeYd)
+            if (!CanPick(DungeonKit::PlaneOf(me), DungeonKit::PlaneOf(player), player->GetPositionZ(), maxRangeYd))
                 continue;
             pool.push_back(player);
         }
@@ -396,10 +395,10 @@ private:
     bool StartMegavolt(Player* forced)
     {
         std::vector<Player*> targets = forced ? std::vector<Player*>{ forced }
-            : PickOnPlatform(Tune::kMegavoltTargets(_heroic));
+            : PickOnPlatform(Tune::kMegavoltTargets(_heroic), Tune::kMegavoltPickRangeYd);
         if (targets.empty())
         {
-            _megavoltAt = _now + Tune::kBarRetryMs;     // nobody on the platform: look again in a second
+            _megavoltAt = _now + Tune::kBarRetryMs;     // nobody in the cone's reach: look again in a second
             return false;
         }
         SpellCastResult const result = me->CastSpell(me, SPELL_MEGAVOLT_BAR, false);
@@ -607,8 +606,8 @@ private:
         for (Player* player : players)
         {
             StaticCharge& charge = _static[player->GetGUID()];
-            // m4: only a player on the platform charges; off it (fallen, or past the walkway mouth) the meter holds
-            // and the first sample back on it starts from where they stand.
+            // m4: only a player on the pick floor (the platform or the walkway) charges; off it (fallen) the meter
+            // holds and the first sample back on it starts from where they stand.
             if (!OnPickFloor(DungeonKit::PlaneOf(player), player->GetPositionZ()))
                 charge.Forget();
             else if (charge.Step(DungeonKit::PlaneOf(player), sample))

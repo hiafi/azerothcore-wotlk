@@ -312,6 +312,17 @@ namespace GnomerPummeler
         return DungeonKit::Distance(at, Vec2{ Tune::kBlindCornerX, Tune::kBlindCornerY }) < Tune::kBlindCornerYd;
     }
 
+    // RF-2 Minor-3: which of a player's controlled units (Unit::m_Controlled) the pet sweep fixes. The player's pet,
+    // whatever its AI (as before), and every controllable guardian on PetAI (Feral Spirit, Treants, Shadowfiend, an
+    // Infernal: PetAI::Permissible gives them PetAI, and PetAI::StartChase angles their melee chase at his back the
+    // same way). Totems, charmed creatures and guardians on a script AI (their own chase, no angle) are left alone.
+    // A caster on PetAI (the imp, the water elementals: the only entries PetAI gives a combat range) is skipped by
+    // entry at the call site, as before.
+    constexpr bool SweepsControlled(bool pet, bool controllableGuardian, bool onPetAi, bool totem, bool charmed)
+    {
+        return !totem && !charmed && (pet || (controllableGuardian && onPetAi));
+    }
+
     // R-1-B M2, RF-1 Minor-3: re-issue a pet's chase without the angle when the chase is new, when its spline aims
     // off the pocket (kPetChaseAimRetryMs after the last fix), or when the pet is still out of his reach
     // kPetChaseRetryMs after the last fix. "New" is not keyed on the generator's address (a re-chase can reuse the

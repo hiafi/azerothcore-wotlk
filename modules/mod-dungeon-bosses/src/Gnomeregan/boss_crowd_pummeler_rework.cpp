@@ -633,27 +633,42 @@ private:
 
     // R-1-B M2 (a script-side mitigation; the root cause is core's pet chase, left alone): a melee pet sent at him
     // chases to his back (PetAI::StartChase's ChaseAngle(pi)), the glass over the lower room; no path reaches it and
-    // the chase's failure makes the pet AttackStop. Each tick, every player's pet whose victim he is and whose active
-    // motion is a chase gets the same chase without the angle (ChaseRange(0, 0) as PetAI's melee chase), which paths
-    // to his center on the pocket side and stops in his reach: once per new chase, again when its spline heads off
-    // the pocket, and again every Tune::kPetChaseRetryMs while it is out of reach. RF-1 Minor-3: a chase is "new"
-    // unless this sweep saw the pet chasing him on every tick since its fix (never the generator's address).
-    // Imps and water elementals keep their own (ranged, no angle). A chase that fails before his tick (the pet
-    // updated first) still stops the pet: the playtest line stays.
+    // the chase's failure makes the pet AttackStop. Each tick, every player's pet or PetAI controllable guardian
+    // (RF-2 Minor-3: Feral Spirit, Treants, Shadowfiend; SweepsControlled) whose victim he is and whose active motion
+    // is a chase gets the same chase without the angle (ChaseRange(0, 0) as PetAI's melee chase), which paths to his
+    // center on the pocket side and stops in his reach: once per new chase, again when its spline heads off the
+    // pocket, and again every Tune::kPetChaseRetryMs while it is out of reach. RF-1 Minor-3: a chase is "new" unless
+    // this sweep saw the unit chasing him on every tick since its fix (never the generator's address). Imps and water
+    // elementals keep their own (ranged, no angle). A chase that fails before his tick (the pet updated first) still
+    // stops the pet: the playtest line stays.
     void KeepPetsOffTheGlass()
     {
         if (!me->IsInWorld())
             return;
-        _petChases.Begin();
+        // Units first: a re-chase never changes m_Controlled, but nothing is walked while a unit is moved.
+        std::vector<std::pair<Creature*, Player*>> chasers;
         for (auto const& ref : me->GetMap()->GetPlayers())
         {
             Player* player = ref.GetSource();
-            Pet* pet = player ? player->GetPet() : nullptr;
-            if (!pet || !pet->IsInWorld() || !pet->IsAlive() || pet->GetVictim() != me)
+            if (!player)
                 continue;
-            uint32 const entry = pet->GetEntry();
-            if (entry == ENTRY_IMP || entry == ENTRY_WATER_ELEMENTAL || entry == ENTRY_WATER_ELEMENTAL_PERM)
-                continue;
+            for (Unit* controlled : player->m_Controlled)
+            {
+                Creature* unit = controlled ? controlled->ToCreature() : nullptr;
+                if (!unit || !unit->IsInWorld() || !unit->IsAlive() || unit->GetVictim() != me)
+                    continue;
+                if (!SweepsControlled(unit->IsPet(), unit->HasUnitTypeMask(UNIT_MASK_CONTROLLABLE_GUARDIAN),
+                        dynamic_cast<PetAI*>(unit->AI()) != nullptr, unit->IsTotem(), unit->IsCharmed()))
+                    continue;
+                uint32 const entry = unit->GetEntry();
+                if (entry == ENTRY_IMP || entry == ENTRY_WATER_ELEMENTAL || entry == ENTRY_WATER_ELEMENTAL_PERM)
+                    continue;
+                chasers.emplace_back(unit, player);
+            }
+        }
+        _petChases.Begin();
+        for (auto const& [pet, player] : chasers)
+        {
             MotionMaster* motion = pet->GetMotionMaster();
             if (motion->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE
                 || motion->GetMotionSlotType(MOTION_SLOT_ACTIVE) != CHASE_MOTION_TYPE)
@@ -673,9 +688,9 @@ private:
             ++_petChaseFixes;
             if (!tracked || aimsOffPocket)
                 PummelerLog("pet-chase", Acore::StringFormat(
-                    "pet={} owner={} at=({:.1f}, {:.1f}, {:.1f}) new={} off_pocket={} fixes={}", pet->GetName(),
-                    player->GetName(), pet->GetPositionX(), pet->GetPositionY(), pet->GetPositionZ(), tracked ? 0 : 1,
-                    aimsOffPocket ? 1 : 0, _petChaseFixes));
+                    "pet={} entry={} owner={} at=({:.1f}, {:.1f}, {:.1f}) new={} off_pocket={} fixes={}",
+                    pet->GetName(), pet->GetEntry(), player->GetName(), pet->GetPositionX(), pet->GetPositionY(),
+                    pet->GetPositionZ(), tracked ? 0 : 1, aimsOffPocket ? 1 : 0, _petChaseFixes));
         }
         _petChases.End();
     }
