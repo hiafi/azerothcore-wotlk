@@ -6718,12 +6718,12 @@ dire_bear_form_passive_9635 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=249, implicit_target_a=1, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=334, implicit_target_a=1, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
         Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=2),
         Effect(type=EffectType.APPLY_AURA, base_points=29, points_per_level=3.0, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER),
     ],
     spell_icon_id=107,
-    notes="druid-rework FERAL §0.16 / CORE-AUDIT row 37 + user decision 2026-09-24: the form-8 passive is the everyday bear's at every level now, so it scales from level 10 - BaseLevel = SpellLevel = 10, no MaxLevel, eff2 attack power 30 + 3/level (stock Bear Form's values below 40, stock Dire Bear's from 40 on: 120 at 40, 240 at 80); eff0 armor contribution +370% and eff1 Stamina +25% flat at every level. Stock spell_dru_bear_form_passive unbound. Eff0 armor contribution +370% -> +250% (2026-11-27, gear-scaling GS3, user ruling: Bear tank survival cut toward ~80 s on the ilvl 66 kits; Bestial Fury's own passive copy keeps +370%).",
+    notes="druid-rework FERAL §0.16 / CORE-AUDIT row 37 + user decision 2026-09-24: the form-8 passive is the everyday bear's at every level now, so it scales from level 10 - BaseLevel = SpellLevel = 10, no MaxLevel, eff2 attack power 30 + 3/level (stock Bear Form's values below 40, stock Dire Bear's from 40 on: 120 at 40, 240 at 80); eff0 armor contribution +370% and eff1 Stamina +25% flat at every level. Stock spell_dru_bear_form_passive unbound. Eff0 armor contribution +370% -> +250% (2026-11-27, gear-scaling GS3, user ruling: Bear tank survival cut toward ~80 s on the ilvl 66 kits; Bestial Fury's own passive copy keeps +370%). R3: +250% -> +335% (Bear tank survived 51 s at +250%; variants +300% 65 s, +370% 97 s, both with Savage Defense 2/4%).",
     raw_overrides={'ShapeshiftMask': SS_BEAR, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 10, 'SpellLevel': 10, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Passive', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 7, 'SpellClassMask_3': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 

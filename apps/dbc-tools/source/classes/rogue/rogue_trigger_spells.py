@@ -6945,7 +6945,7 @@ killing_spree_main_57841 = spell(
     range_yards=5.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=155, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=150, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=6, trigger_spell=57842),
     ],
@@ -6958,6 +6958,7 @@ killing_spree_main_57841 = spell(
         'index: spell_rog_killing_spree_rework_aura casts 57841 plainly). weapon_potency 200 -> 175 (176 rounded to a multiple of 5; 2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88).'
         ' weapon_potency 175 -> 145 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Combat x0.84, Combat 1,733 -> ~1,520).'
         ' weapon_potency 145 -> 155 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat 1,479 -> ~1,520).'
+        ' (R3 2026-11-27: R2 overshot to 1,601; back to x1.02 / 150 / 200, about a third of the R2 step): 155 -> 150.'
     ),
     raw_overrides={
         'AttributesEx': 512,
@@ -7003,7 +7004,7 @@ killing_spree_off_57842 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=155, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=150, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
     ],
     spell_icon_id=83,
@@ -7013,6 +7014,7 @@ killing_spree_off_57842 = spell(
         'FIRST, eff1 the stock NORMALIZED_WEAPON_DMG bp -1 (the 57841 shape). weapon_potency 200 -> 175 (176 rounded to a multiple of 5; 2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88).'
         ' weapon_potency 175 -> 145 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Combat x0.84, Combat 1,733 -> ~1,520).'
         ' weapon_potency 145 -> 155 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat 1,479 -> ~1,520).'
+        ' (R3 2026-11-27: R2 overshot to 1,601; back to x1.02 / 150 / 200, about a third of the R2 step): 155 -> 150.'
     ),
     raw_overrides={
         'AttributesEx': 16,

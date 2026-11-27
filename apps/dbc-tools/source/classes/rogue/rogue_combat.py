@@ -433,7 +433,7 @@ pistol_shot_203958 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=30, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=65.7749, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=62.7013, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
@@ -450,7 +450,7 @@ pistol_shot_203958 = spell(
           'matches); ap_potency 90 -> 72 (2026-11-01, DPS balance pass 1031, user ruling: Pistol Shot -20%; 203988 matches); '
           'ap_potency 72 -> 79.2 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Pistol Shot +10%; 203988 matches). ap_potency 79.2 -> 83.16 (2026-11-15, balance round 4 on the Normal-tier kits, user ruling: Pistol Shot +5%). ap_potency 83.16 -> 73.1808 (2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88; 203988 matches).'
           ' ap_potency 73.1808 -> 61.4719 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Combat x0.84, Combat 1,733 -> ~1,520; 203988 matches).'
-          ' ap_potency 61.4719 -> 65.7749 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat x1.07; Combat 1,479 -> ~1,520; 203988 matches).',
+          ' ap_potency 61.4719 -> 65.7749 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat x1.07; Combat 1,479 -> ~1,520; 203988 matches). (R3 2026-11-27: R2 overshot to 1,601; back to x1.02 / 150 / 200, about a third of the R2 step): 65.7749 -> 62.7013.',
     tooltip_vars=tooltip_pistol_shot_1351,
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.PISTOL_SHOT_CLASS), 'EquippedItemClass': -1,
@@ -469,9 +469,9 @@ scripted_by(pistol_shot_203958, 'spell_rog_pistol_shot')
 # 20.475 / 32.34, which were 75% of Eviscerate; now ~104% of Eviscerate's 35.49 / 56.056, the ratio is no longer fixed), SpellLevel 20, 35 energy, 20 yd, Speed 0, no stun, GCD 133 / 1000, SV 90252. d2 b5 | d2 b18, never
 # d0 b17 (m.BETWEEN_THE_EYES_CLASS).
 _BTE_FLAT = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=55.9634, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=20)
+    _potency.PotencyEffect(ap_potency=57.0827, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=20)
 _BTE_CP = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=88.296, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=20)
+    _potency.PotencyEffect(ap_potency=90.0619, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=20)
 
 
 def _expr_plus(resolved, extra, *, ticks=1.0, scale=1.0):
@@ -501,7 +501,7 @@ between_the_eyes_203959 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=35, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=59.8808, cp_ap_potency=94.4767, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=57.0827, cp_ap_potency=90.0619, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_BETWEEN_THE_EYES,
@@ -515,7 +515,8 @@ between_the_eyes_203959 = spell(
           '5-point value like Deadly Throw\'s and multiplies it by Coup de Grace x Surprise Attacks (SDV 1352). '
           'spell_rog_between_the_eyes: removes Primed Powder, ConsumeBladeRush on the hit.'
           ' ap_potency 66.62304 -> 55.9634 and cp_ap_potency 105.11424 -> 88.296 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Combat x0.84, Combat 1,733 -> ~1,520; tooltip constants _BTE_FLAT / _BTE_CP follow).'
-          ' ap_potency 55.9634 -> 59.8808 and cp_ap_potency 88.296 -> 94.4767 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat x1.07 on Between the Eyes; Combat 1,479 -> ~1,520; tooltip constants _BTE_FLAT / _BTE_CP follow).',
+          ' ap_potency 55.9634 -> 59.8808 and cp_ap_potency 88.296 -> 94.4767 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat x1.07 on Between the Eyes; Combat 1,479 -> ~1,520; tooltip constants _BTE_FLAT / _BTE_CP follow).'
+          ' (R3 2026-11-27: R2 overshot to 1,601; back to x1.02 of the R1 values: 57.0827 / 90.0619).',
     tooltip_vars=tooltip_between_the_eyes_1352,
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.BETWEEN_THE_EYES_CLASS), 'EquippedItemClass': -1,
@@ -574,7 +575,7 @@ sinister_strike_second_strike_203986 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=205, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=200, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=7.688, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
@@ -590,7 +591,7 @@ sinister_strike_second_strike_203986 = spell(
           'SV 253, hidden. weapon_potency 250 -> 200 and sp_potency 10 -> 8 (2026-11-01, DPS balance pass 1031, user ruling: Sinister Strike -20%; '
           'mirrors 1752). weapon_potency 200 -> 260 and sp_potency 8 -> 10.4 (2026-11-15, balance on the Normal-tier kits, user ruling: Sinister Strike +30%; mirrors 1752). weapon_potency 260 -> 230 (228.8 rounded to a multiple of 5) and sp_potency 10.4 -> 9.152 (2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88; 1752 itself takes the shared x0.85 to 220 / 8.84).'
           ' weapon_potency 230 -> 195 and sp_potency 9.152 -> 7.688 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Combat x0.84, Combat 1,733 -> ~1,520).'
-          ' weapon_potency 195 -> 205 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat; Combat 1,479 -> ~1,520; hidden second strike, 1752 stays 185).',
+          ' weapon_potency 195 -> 205 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat; Combat 1,479 -> ~1,520; hidden second strike, 1752 stays 185). (R3 2026-11-27: R2 overshot to 1,601; back to x1.02 / 150 / 200, about a third of the R2 step): 205 -> 200.',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.SS_SECOND_STRIKE_CLASS),
         'EquippedItemClass': _ITEM_CLASS_WEAPON, 'EquippedItemSubclass': _ANY_MELEE_WEAPON, 'CastingTimeIndex': 1,
@@ -622,7 +623,7 @@ pistol_shot_extra_203988 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=65.7749, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=62.7013, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_PISTOL_SHOT,
@@ -635,7 +636,7 @@ pistol_shot_extra_203988 = spell(
           'ap_potency 90 -> 72 (2026-11-01, DPS balance pass 1031, user ruling: Pistol Shot -20%; same line as 203958); '
           ' ap_potency 73.1808 -> 61.4719 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Combat x0.84, Combat 1,733 -> ~1,520; same line as 203958).'
           'ap_potency 72 -> 79.2 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Pistol Shot +10%; same line as 203958). ap_potency 79.2 -> 83.16 (2026-11-15, balance round 4 on the Normal-tier kits, user ruling: Pistol Shot +5%). ap_potency 83.16 -> 73.1808 (2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88; same line as 203958).'
-          ' ap_potency 61.4719 -> 65.7749 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat x1.07; Combat 1,479 -> ~1,520; same line as 203958).',
+          ' ap_potency 61.4719 -> 65.7749 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat x1.07; Combat 1,479 -> ~1,520; same line as 203958). (R3 2026-11-27: R2 overshot to 1,601; back to x1.02 / 150 / 200, about a third of the R2 step): 65.7749 -> 62.7013.',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.PISTOL_SHOT_EXTRA_CLASS), 'EquippedItemClass': -1,
         'CastingTimeIndex': 1, 'AttributesEx3': _ATTR3_SUPPRESS_CASTER_PROCS, 'DefenseType': _DEFENSE_MELEE,
