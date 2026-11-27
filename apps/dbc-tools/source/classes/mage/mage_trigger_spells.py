@@ -5404,10 +5404,10 @@ arcane_overload_200092 = spell(
     range_yards=30.0,
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, die_sides=0, implicit_target_a=6, misc_value=6),
-        Effect(type=EffectType.DUMMY, base_points=62, die_sides=0, implicit_target_a=6),
-        # LS5b ruling 7 (level60-stat-curve, 2026-11-20): the stock spell power share 34% x b (potency.SP_COEF_SCALE): 66
-        # at b 1.93 (65.62, S7b refit). The mana-spent share (effect 2) is not a C(L) base and stays.
-        Effect(type=EffectType.DUMMY, base_points=round(34 * 0.975 * 0.926 * _potency.SP_COEF_SCALE), die_sides=0, implicit_target_a=6),
+        Effect(type=EffectType.DUMMY, base_points=60, die_sides=0, implicit_target_a=6),
+        # Both shares are shown in 200079's tooltip ($200092s2% / $200092s3%), so they are round numbers (GS3 review fix,
+        # 2026-11-27): 60% of the mana spent and 60% of spell power (was 62 and round(34 x 0.975 x 0.926 x SP_COEF_SCALE) = 59).
+        Effect(type=EffectType.DUMMY, base_points=60, die_sides=0, implicit_target_a=6),
     ],
     spell_icon_id=2210,
     notes="Bugfix (playtest report, 2026-09-08) - implicit_target_a was 1 (TARGET_UNIT_CASTER), a leftover default that made this sub-spell always hit the caster instead of the passed CastCustomSpell target ('Arcane Overload deals damage to you and not the target'); fixed to 6 (TARGET_UNIT_TARGET_ENEMY). misc_value (the SPELL_EFFECT_SCHOOL_DAMAGE school index, 0=Physical/6=Arcane - distinct from the row's own SchoolMask column, which was already 64/Arcane) was left at its 0 default, so the hit rolled as Physical damage ('needs to be in the Arcane School'); fixed to 6. Original note: Arcane Mage rework (docs/arcane-mage-rework-design.md, Phase 3 Batch D) - Arcane Overload's (10,1) actual damage-dealing sub-spell, hit once per target (primary + AoE-around-caster, apps/dbc-tools' own 200079 effect2) by spell_mage_arcane_overload. die_sides=0 so the CastCustomSpell-injected value (mana spent + placeholder spell power coefficient, with falloff beyond 5 targets) is used exactly as passed."
@@ -5415,7 +5415,8 @@ arcane_overload_200092 = spell(
           ' Effect 2 base_points 90 -> 69 (the 90% mana-spent share x0.764 = 68.76, rounded) (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Arcane x0.764).'
           ' Effect 3 base_points 45 -> 34 (the 45% spell power share x0.764 = 34.38, rounded) (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Arcane x0.764).'
           ' Effect 2 base_points 69 -> 67 (the 69% mana-spent share x0.975 = 67.3, rounded), effect 3 base_points 66 -> 64 (round(34 x 0.975 x SP_COEF_SCALE) = 63.98) (2026-11-26, raid-buff-sets retune R1, user ruling: Arcane x0.975; the integer rounding lands at x0.971 and x0.970).'
-          ' Effect 2 base_points 67 -> 62 (x0.926 = 62.0), effect 3 base_points 64 -> 59 (round(34 x 0.975 x 0.926 x SP_COEF_SCALE) = 59.3) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Arcane x0.926).',
+          ' Effect 2 base_points 67 -> 62 (x0.926 = 62.0), effect 3 base_points 64 -> 59 (round(34 x 0.975 x 0.926 x SP_COEF_SCALE) = 59.3) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Arcane x0.926).'
+          ' Effect 2 base_points 62 -> 60 and effect 3 base_points 59 -> 60 (2026-11-27, gear-scaling GS3 review fix, both shares are now shown in 200079\'s tooltip as $200092s2% / $200092s3%, so they are round numbers; effect 3 is now a literal, no longer round(34 x 0.975 x 0.926 x SP_COEF_SCALE)).',
     raw_overrides={'BaseLevel': 80, 'SpellLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 6, 'SpellClassSet': 3, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Arcane damage.', 'SpellClassMask_3': 2},
 )
 

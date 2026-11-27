@@ -575,8 +575,8 @@ sinister_strike_second_strike_203986 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=200, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=7.688, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=185, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=7.4256, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_SINISTER_STRIKE,
@@ -591,7 +591,8 @@ sinister_strike_second_strike_203986 = spell(
           'SV 253, hidden. weapon_potency 250 -> 200 and sp_potency 10 -> 8 (2026-11-01, DPS balance pass 1031, user ruling: Sinister Strike -20%; '
           'mirrors 1752). weapon_potency 200 -> 260 and sp_potency 8 -> 10.4 (2026-11-15, balance on the Normal-tier kits, user ruling: Sinister Strike +30%; mirrors 1752). weapon_potency 260 -> 230 (228.8 rounded to a multiple of 5) and sp_potency 10.4 -> 9.152 (2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88; 1752 itself takes the shared x0.85 to 220 / 8.84).'
           ' weapon_potency 230 -> 195 and sp_potency 9.152 -> 7.688 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Combat x0.84, Combat 1,733 -> ~1,520).'
-          ' weapon_potency 195 -> 205 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat; Combat 1,479 -> ~1,520; hidden second strike, 1752 stays 185). (R3 2026-11-27: R2 overshot to 1,601; back to x1.02 / 150 / 200, about a third of the R2 step): 205 -> 200.',
+          ' weapon_potency 195 -> 205 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat; Combat 1,479 -> ~1,520; hidden second strike, 1752 stays 185). (R3 2026-11-27: R2 overshot to 1,601; back to x1.02 / 150 / 200, about a third of the R2 step): 205 -> 200.'
+          ' weapon_potency 200 -> 185 and sp_potency 7.688 -> 7.4256 (2026-11-27, gear-scaling GS3 review fix, the hidden second strike carried its own tuning; it now mirrors Sinister Strike 1752 exactly so "strikes a second time for Sinister Strike\'s damage" is true).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.SS_SECOND_STRIKE_CLASS),
         'EquippedItemClass': _ITEM_CLASS_WEAPON, 'EquippedItemSubclass': _ANY_MELEE_WEAPON, 'CastingTimeIndex': 1,
@@ -1152,7 +1153,7 @@ improved_riposte_cleave_203993 = spell(
     id=203993, name='Riposte', school=School.NORMAL, attributes=_ATTR0_IS_ABILITY | _ATTR0_DO_NOT_DISPLAY,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
-    effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=683,
+    effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=500,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_IMPROVED_RIPOSTE,
     notes='rogue-rework S3a A3, combat doc "Improved Riposte" (U72, R20): the capstone\'s cleave Rogue::OnRiposteHit '
@@ -1162,7 +1163,8 @@ improved_riposte_cleave_203993 = spell(
           'slow, no combo point, d1 b8 only (m.RIPOSTE_CLEAVE_CLASS: Improved Riposte\'s threat mod reaches it, '
           'never d2 b19), A 6, RangeIndex 6, FacingCasterFlags 0, Ex3 SUPPRESS_CASTER_PROCS, DefenseType 2, SV 3799, '
           'hidden. weapon_potency 150 -> 525 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Riposte +250%; same line as 14251). '
-          'weapon_potency 525 -> 683 (682.5 rounded up) (2026-11-02, DPS balance pass 1031 round R5, user ruling: Riposte +30%; same line as 14251).',
+          'weapon_potency 525 -> 683 (682.5 rounded up) (2026-11-02, DPS balance pass 1031 round R5, user ruling: Riposte +30%; same line as 14251). '
+          'weapon_potency 683 -> 500 (2026-11-27, gear-scaling GS3 review fix, Combat tank 787 -> ~750; same line as 14251).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.RIPOSTE_CLEAVE_CLASS), 'EquippedItemClass': -1,
         'CastingTimeIndex': 1, 'AttributesEx3': _ATTR3_SUPPRESS_CASTER_PROCS, 'DefenseType': _DEFENSE_MELEE,

@@ -156,7 +156,7 @@ def _weapon_percent(effect: dict) -> int:
 
 # class -> (spell id, expected (effect index, weapon percent) list); every one must also be free of S3 findings.
 # Percents follow the DPS balance pass 10-31 user rulings: Lava Lash 220 (154 +40%, 169 +10%, 220 +30%), Stormstrike and its copies 140 (+40%),
-# Riposte 683 (+250% then +30%), Plague Strike 54 (+10%).
+# Riposte 500 (+250%, +30%, then 683 -> 500 in the GS3 review fix, 2026-11-27), Plague Strike 54 (+10%).
 # Fury Swipe 200429: 310 -> 240 (2026-11-17, weapon scaling WS2 Normal trim, Bear DPS x0.774).
 # Fury Swipe 200429: 240 -> 225 (2026-11-26, raid-buff-sets retune R1 revised, Feral x0.934 rounded to a multiple of 5).
 # Fury Swipe 200429: 225 -> 180 (2026-11-27, gear-scaling GS3 ilvl 66 retune, Bear DPS x0.80, Feral x0.80).
@@ -166,7 +166,7 @@ PERCENTS = {
     "druid": {200429: [(0, 180)]},
     "warlock": {30213: [(0, 95)]},  # 110 -> 95 (2026-11-27, gear-scaling GS3, Demonology x0.871); 100 -> 109 (2026-11-22, level60-stat-curve S23, Demonology x1.09) -> 110 (2026-11-26, raid-buff-sets R1, Demonology x1.02)
     "warrior": {20240: [(0, 100)]},
-    "rogue": {14251: [(0, 683)], 51675: [(1, 50)], 51677: [(1, 100)], 51723: [(0, 250)], 52874: [(0, 250)]},
+    "rogue": {14251: [(0, 500)], 51675: [(1, 50)], 51677: [(1, 100)], 51723: [(0, 250)], 52874: [(0, 250)]},
     "deathknight": {45462: [(1, 62)]},
 }
 
