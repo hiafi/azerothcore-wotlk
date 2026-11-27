@@ -183,6 +183,8 @@ so db-import and the dbc-tools replay see one history.
 | `src/Gnomeregan/ThermapluggFight.h`, `thermaplugg_hard_mode.cpp`, `thermaplugg_hard_mode_machines.cpp` | D6's hooks for the Whole Workshop; D6Ha (the console, Techbot, Fallout, the Leak) and D6Hb (Electrocutioner, the Alert System, Pummeler's fist), each with its Logic header |
 | `src/Gnomeregan/hard_mode_items.cpp` | Whole Workshop hard mode item scripts: Meltdown's pulse filter, the Walking Bomb Launcher's roll, mark and bomb, the blast filter, the Master Punch Card's punches and Clearance |
 | `src/Gnomeregan/GnomereganHardModeItemsLogic.h` | Pure: Gnomeregan item effect ids (214240-214247, 301100), item spell test, one roll per cast, bomb steps, punch rule and card memory |
+| `src/Uldaman/hard_mode_items.cpp` | The Makers' Lights hard mode item scripts: the Waking Stone's march and trample, the trample's knockback rule, the Lightbound Choker's schools and Two Lights, the Fragment of the Disks' recording and replay |
+| `src/Uldaman/UldamanHardModeItemsLogic.h` | Pure: Uldaman item effect ids (214680-214686, 301200), item spell test, march path and steps, knockback rule, Choker school memory, Disk record and replay split |
 | `src/DungeonSets/haunted_set_bonuses.cpp` | Haunted set bonus scripts (10 sets x 3 and 5 pieces) and their hooks |
 | `src/DungeonSets/HauntedSetLogic.h` | Pure: Haunted set bonus ids (205700-205793), script numbers, rolls, picks |
 | `src/DungeonSets/molten_set_bonuses.cpp` | Molten set bonus scripts (10 sets x 3 and 5 pieces): Heat, eruptions, cooldown hooks |

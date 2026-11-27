@@ -180,7 +180,7 @@ class BlockShapeTest(unittest.TestCase):
     def test_talent_tab_and_spell_blocks_are_unchanged(self):
         # The earlier blocks keep their numbers: a reader that hardcodes one must keep working.
         self.assertEqual(_bounds(BLOCKS["spell"]), {"start": 200000, "end": 399999})
-        self.assertEqual(BLOCKS["creature"], {"start": 300000, "end": 301199})
+        self.assertEqual(BLOCKS["creature"], {"start": 300000, "end": 301399})  # widened by Uldaman (was 301199)
         self.assertEqual(BLOCKS["spell_group"], {"start": 1200, "end": 1399})  # widened by Rogue T1 (was 1299)
         self.assertEqual(BLOCKS["spellicon"], {"start": 90100, "end": 90499})  # widened by Rogue T1 (was 90399)
 
@@ -1590,6 +1590,22 @@ class ClassDeclarationsTest(unittest.TestCase):
             out_of_reservation("shaman", {"spell": [202106], "creature": [300219]}),
             ["spell 202106", "creature 300219"],
         )
+
+
+
+class UldamanGearIdsTest(unittest.TestCase):
+    """Uldaman gear stage (WP-0, 2026-11-26): the `uldaman_items` reservation, pinned exactly
+    (uldaman-gear.HANDOFF.md s4). The dungeon build adds its own reservation after these ids."""
+
+    def test_uldaman_items_reservation(self):
+        got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["uldaman_items"].items()}
+        self.assertEqual(got, {"spell": (214680, 214719), "creature": (301200, 301204)})
+
+    def test_uldaman_items_overlaps_no_other_reservation(self):
+        for table, cfg in RESERVATIONS["uldaman_items"].items():
+            for owner, tables in RESERVATIONS.items():
+                if owner != "uldaman_items" and table in tables:
+                    self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
 
 
 if __name__ == "__main__":

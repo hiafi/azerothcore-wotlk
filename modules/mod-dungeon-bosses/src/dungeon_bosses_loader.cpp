@@ -251,6 +251,12 @@ void AddSC_gnomer_hard_mode_items();        // spell_gnomer_item_meltdown_pulse,
                                             // spell_gnomer_item_walking_bomb_blast,
                                             // spell_gnomer_item_master_punch_card
 
+// Uldaman hard mode items (uldaman gear): The Makers' Lights items
+void AddSC_uldaman_hard_mode_items();       // spell_uldaman_item_waking_stone, spell_uldaman_item_earthen_trample,
+                                            // spell_uldaman_item_lightbound_choker,
+                                            // spell_uldaman_item_fragment_of_the_disks,
+                                            // spell_uldaman_item_disk_replay
+
 // Dungeon sets (item variants, Haunted set track): the Haunted set bonuses
 void AddSC_haunted_set_bonuses();           // spell_haunted_* bonus scripts, HauntedSetSpellHooks, HauntedSetUnitHooks
 
@@ -416,6 +422,7 @@ void Addmod_dungeon_bossesScripts()
     AddSC_zf_hard_mode_items();
     AddSC_zf_sulthraze_join();
     AddSC_gnomer_hard_mode_items();
+    AddSC_uldaman_hard_mode_items();
     AddSC_haunted_set_bonuses();
     AddSC_molten_set_bonuses();
     AddSC_zealot_set_bonuses();
