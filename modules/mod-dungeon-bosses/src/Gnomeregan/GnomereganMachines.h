@@ -119,6 +119,11 @@ namespace GnomereganMachines
     //     them: set them up there or in onCopy, never Track them again (a second Track is buffered while the machine
     //     updates, then ignored for a guid it already tracks).
     //   - `entries` filters Track: a unit of another entry is not tracked.
+    //   - (F-1b) A bar spell that applies an aura is judged by that aura alone: a bar that ends without it (a late
+    //     kick) is a stop, never a copy.
+    //   - (F-1b) capAlive counts the bars in flight with the units alive, so two bars started in one tick never
+    //     overshoot the cap.
+    //   - (F-1b, STAGE-R-1-A DQ1) A once-only spec's copies (repeatMs 0) are spent at birth: a copy never duplicates.
 
     class Duplicator : public Machine
     {

@@ -22,6 +22,7 @@
 #include "InstanceScript.h"
 #include "Map.h"
 #include "Player.h"
+#include "ElectrocutionerLogic.h"
 #include "GnomereganRework.h"
 #include <array>
 #include <cctype>
@@ -213,11 +214,12 @@ namespace
         Player* gm = handler->GetPlayer();
         Vec2 const p{ gm->GetPositionX(), gm->GetPositionY() };
         float const z = gm->GetPositionZ();
-        std::array<std::pair<char const*, Arena>, 7> const places{ {
+        std::array<std::pair<char const*, Arena>, 8> const places{ {
             { "Techbot's dish", DishArena() },
             { "Viscous Fallout's cave", CaveArena() },
             { "Electrocutioner's platform", PlatformArena() },
-            { "the platform's pick disc (21 yd)", PlatformPickArena() },
+            { "Electrocutioner's pick and Justice floor (platform and walkway)", GnomerElectro::JusticeFloor() },
+            { "the bots' disc (21 yd)", PlatformPickArena() },
             { "the Alert hall", HallArena() },
             { "Crowd Pummeler's pocket", PocketArena() },
             { "Thermaplugg's room", RoomArena() },

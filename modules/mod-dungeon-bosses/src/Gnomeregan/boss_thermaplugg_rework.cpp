@@ -439,7 +439,8 @@ public:
         return player && player->HasAura(SPELL_MT_LOCKED_OUT);
     }
 
-    void SetPlatePlan(BossMechanics::Ordering const& order, std::vector<uint32> const& first) override
+    void SetPlatePlan(BossMechanics::Ordering const& order, std::vector<uint32> const& first,
+        std::vector<uint64> const& planned) override
     {
         if (!_engaged)
             return;
@@ -451,9 +452,11 @@ public:
         std::vector<uint32> const now = _plates.Ids();
         bool const reorder = DungeonKit::SoakPriorityOrder(now, ids) != now;
         bool const rule = !SameOrdering(*_plateOrder, order);
-        if (!reorder && !rule)
+        bool const bots = planned != _platePlanned;     // RF-1 Minor-5: a bot joined or left the plan
+        if (!reorder && !rule && !bots)
             return;
         *_plateOrder = order;       // every registration from here on reads it (LightPlate's configure)
+        _platePlanned = planned;
         if (now.empty())
             return;
         if (reorder)
@@ -463,9 +466,9 @@ public:
         std::string faces;
         for (uint32 const face : first)
             faces += Acore::StringFormat("{}{}", faces.empty() ? "" : ",", face + 1);
-        Log("plate-plan", Acore::StringFormat("first={} order={}:{}:{} lit={}", faces.empty() ? "-" : faces,
+        Log("plate-plan", Acore::StringFormat("first={} order={}:{}:{} lit={} planned={}", faces.empty() ? "-" : faces,
             order.auraSpell, order.ascending ? "asc" : "desc", order.roleLast == BossMechanics::Role::Tank ? "tank-last"
-            : "tank-in", now.size()));
+            : "tank-in", now.size(), planned.size()));
     }
 
     std::vector<ObjectGuid> Bombs() const override
@@ -1600,6 +1603,7 @@ private:
         _plates.Clear(me);
         _plateTouches.clear();
         *_plateOrder = DefaultPlateOrder();
+        _platePlanned.clear();
         _mines.Clear(me);
         _mineBodies.clear();
         _stickies.clear();
@@ -1644,6 +1648,7 @@ private:
     // The plates' Ordering (SetPlatePlan); LightPlate's configure holds a copy of the pointer.
     std::shared_ptr<BossMechanics::Ordering> _plateOrder =
         std::make_shared<BossMechanics::Ordering>(DefaultPlateOrder());
+    std::vector<uint64> _platePlanned;      // the bots the last plate plan placed (SetPlatePlan, RF-1 Minor-5)
     std::vector<std::pair<uint32, ObjectGuid>> _plateTouches;
     DungeonKit::TwoRingMines _mines;
     std::unordered_map<uint32, ObjectGuid> _mineBodies;

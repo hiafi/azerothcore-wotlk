@@ -227,6 +227,11 @@ namespace
         CHECK(HalfLifeHeal(Health::kViscousFallout.heroic, 0) == 0);
         CHECK(HalfLifeHeal(Health::kViscousFallout.heroic, 10) == 23333);
         CHECK(HalfLifeHeal(Health::kViscousFallout.normal, 1) == 330);
+        // RF-1 Minor-2: the bots' shapes warn for the bar's real length (a slowed 3 s bar runs about 4.8 s).
+        CHECK(HalfLifeBarMs(4800) == 4800);
+        CHECK(HalfLifeBarMs(3000) == Tune::kHalfLifeCastMs);
+        CHECK(HalfLifeBarMs(0) == Tune::kHalfLifeCastMs);
+        CHECK(HalfLifeBarMs(-1) == Tune::kHalfLifeCastMs);
         // Hits on the reference rows (section 3.6): the glob 40% on normal is 678 (the tank row 683); the pool 8%.
         CHECK(DungeonKit::RefFlatValue(kReferenceNormal.nonTank, kReferenceNormal.tank, Tune::kOozePct.normal, false)
             == 678);

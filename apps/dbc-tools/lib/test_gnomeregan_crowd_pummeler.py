@@ -272,7 +272,9 @@ class PummelerDeclarationTest(unittest.TestCase):
         code = _code(self.cpp)
         # R-1-B M1: the ranged band past the hunters' line, described at engage.
         self.assertEqual((_value("kRangedBandMinYd"), _value("kRangedBandMaxYd")), (19, 26))
-        self.assertIn("d.rangeBands.emplace_back(Tune::kRangedBandMinYd, Tune::kRangedBandMaxYd);",
+        # RF-1 Minor-4: the blind corner is clipped out of the band.
+        self.assertIn("d.rangeBands.emplace_back(Tune::kRangedBandMinYd, Tune::kRangedBandMaxYd)\n"
+                      "            .KeepOut(Tune::kBlindCornerX, Tune::kBlindCornerY, Tune::kBlindCornerYd);",
                       _body(code, "void Describe()"))
         engage = _body(code, "void JustEngagedWith(Unit* who) override")
         self.assertLess(engage.index("Mechanic::BeginEncounter(me, options);"), engage.index("Describe();"))
@@ -286,7 +288,11 @@ class PummelerDeclarationTest(unittest.TestCase):
         pets = _body(code, "void KeepPetsOffTheGlass()")
         self.assertIn("motion->MoveChase(me, ChaseRange(0.f, 0.f));", pets)
         self.assertIn("ENTRY_IMP", pets)
-        self.assertIn("_petChases.clear();", _body(code, "void Cleanup(char const* why)"))
+        self.assertIn("_petChases.Clear();", _body(code, "void Cleanup(char const* why)"))
+        # RF-1 Minor-3: never keyed on the chase generator's address.
+        self.assertNotIn("GetMotionSlot(MOTION_SLOT_ACTIVE)", pets)
+        self.assertIn("_petChases.Begin();", pets)
+        self.assertIn("_petChases.End();", pets)
         # R-1-B n1: the body is put back every time, a fall spline stopped first.
         body = _body(code, "void KeepTheBody()")
         self.assertIn("me->StopMovingOnCurrentPos();", body)

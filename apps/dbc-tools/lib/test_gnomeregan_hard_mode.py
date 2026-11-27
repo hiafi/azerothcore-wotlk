@@ -226,7 +226,8 @@ class HardModeDeclarationTest(unittest.TestCase):
         plan = plan[:plan.index("\n        }\n")]
         for piece in ("order.auraSpell = SPELL_HM_IRRADIATED;", "order.ascending = false;",
                       "TankPlatesLast(players)", "PlatePlan(std::move(plates), players, tankLast)",
-                      "_fight.SetPlatePlan(order, _plan);", "player->GetAuraCount(SPELL_HM_IRRADIATED)",
+                      "_fight.SetPlatePlan(order, _plan, PlatePlanBots(players, tankLast));",
+                      "player->GetAuraCount(SPELL_HM_IRRADIATED)",
                       "_fight.LockedOut(player)"):
             self.assertIn(piece, plan)
         self.assertNotIn("minStacks", code)

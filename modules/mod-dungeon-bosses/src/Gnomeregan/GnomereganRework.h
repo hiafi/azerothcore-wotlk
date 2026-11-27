@@ -648,8 +648,9 @@ namespace GnomereganRework
     float constexpr kCaveZMin = -214.f;
     float constexpr kCaveZMax = -201.f;
 
-    // Electrocutioner's platform out to 30 yd from its center (the disc and the walkway mouth). Picks, landings and the
+    // Electrocutioner's platform out to 30 yd from its center (the disc and the walkway mouth). Landings and the
     // ranged band stay within kPlatformPickRadius of the center (section 7 #20 A): the rim drops 56 yd on three sides.
+    // Picks and heroic Static use this polygon plus the walkway (GnomerElectro::JusticeFloor; R-1-A M1, RF-1 DQ1).
     inline std::array<Vec2, 13> constexpr kPlatformPolygon{ {
         { -578.0f, 505.5f }, { -565.5f, 482.0f }, { -549.5f, 478.5f }, { -531.0f, 488.0f }, { -523.5f, 503.5f },
         { -534.0f, 524.0f }, { -538.0f, 525.5f }, { -536.5f, 531.5f }, { -549.0f, 535.0f }, { -550.5f, 535.0f },

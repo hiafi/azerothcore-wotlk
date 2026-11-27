@@ -3,8 +3,9 @@
 // The plates while the Fallout schematic runs are D6's one exclusive group (tag 71): every lit plate a Soak of count
 // 1, ordered by the dose (the highest first, no floor), the tank last unless it sheds (TankPlatesLast), served in the
 // plan's order. Checked here: every bot holds at most one claim, every bot at 8 or more ends on the nearest lit plate
-// not yet taken, and the tank goes only when DQ1 says so. The old two-group form (D6's plates by ETA plus the dose
-// claim's own group, minStacks 8) is modelled too: a bot at 8 or more held a claim in both groups (the finding).
+// not yet taken, and the tank goes only when DQ1 says so; RF-1 Minor-5: a sticky claim yields when the plan's bots
+// change. The old two-group form (D6's plates by ETA plus the dose claim's own group, minStacks 8) is modeled too: a
+// bot at 8 or more held a claim in both groups (the finding).
 // Needs BM_SRC (tests/run.sh builds it beside kit_fronts_parity_test).
 #include "MechanicAssign.h"
 #include "ThermapluggHardModeLogic.h"
@@ -35,8 +36,12 @@ namespace
     }
 
     // One plate's BM input: the eligible players with their dose, ETA and tier, under the plate's rule.
+    // `sticky`: a bot's live claim (its plate's face) from before this pass, as BM's view gives it (claimedSince on
+    // that plate's Soak only; a registration anew starts with none).
+    using Sticky = std::map<std::uint64_t, std::uint32_t>;
+
     Assign::SoakInput Input(LitPlate const& plate, std::vector<PlatePlayer> const& players, bool orderedByDose,
-        bool tankLast, std::uint32_t minStacks)
+        bool tankLast, std::uint32_t minStacks, Sticky const& sticky = {})
     {
         Assign::SoakInput in;
         for (PlatePlayer const& p : players)
@@ -49,6 +54,9 @@ namespace
             c.stacks = orderedByDose ? p.dose : 0;
             c.etaMs = std::int64_t(DungeonKit::Distance(p.at, plate.at) * 1000.f) / kRunYdPerSec;
             c.last = tankLast && p.tank;
+            auto const held = sticky.find(p.guid);
+            if (p.bot && held != sticky.end() && held->second == plate.face)
+                c.claimedSince = 1000;
             in.players.push_back(c);
         }
         in.rule.count = 1;
@@ -61,14 +69,15 @@ namespace
 
     // The merged group as the bots see it: the plates in `order`, the dose ordering, the tank per DQ1.
     std::map<std::uint64_t, std::uint32_t> Claims(std::vector<LitPlate> const& plates,
-        std::vector<std::uint32_t> const& order, std::vector<PlatePlayer> const& players, bool& oneEach)
+        std::vector<std::uint32_t> const& order, std::vector<PlatePlayer> const& players, bool& oneEach,
+        Sticky const& sticky = {})
     {
         bool const tankLast = TankPlatesLast(players);
         std::vector<Assign::SoakInput> inputs;
         for (std::uint32_t const face : order)
             for (LitPlate const& plate : plates)
                 if (plate.face == face)
-                    inputs.push_back(Input(plate, players, true, tankLast, 0));
+                    inputs.push_back(Input(plate, players, true, tankLast, 0, sticky));
         std::vector<std::vector<std::uint64_t>> const lists = Assign::ExclusiveSoakClaimers(inputs);
         std::map<std::uint64_t, std::uint32_t> out;
         oneEach = true;
@@ -150,6 +159,36 @@ namespace
         CHECK(oneEach && !low.count(1) && low.size() == 2);
     }
 
+    // RF-1 Minor-5: B (dose 4) holds a sticky claim on P1; A reaches 8 next to P1. P1 is already first in the serve
+    // order, so only the plan's bot set changes: D6 registers anew on it (PlatePlanBots), the claims start over, and
+    // A takes its nearest plate. Kept on the old registration, B's claim would win P1 and A would cross to P2.
+    void TestStickyClaim()
+    {
+        std::vector<LitPlate> const plates{ { 0, { 0.f, 0.f }, 0 }, { 2, { 30.f, 0.f }, 2 } };
+        std::vector<PlatePlayer> before{ Bot(10, 4, { 3.f, 0.f }), Bot(11, 7, { 2.f, 1.f }) };
+        std::vector<PlatePlayer> after{ Bot(10, 4, { 3.f, 0.f }), Bot(11, 9, { 2.f, 1.f }) };
+        std::vector<std::uint32_t> const planBefore = PlatePlan(plates, before, TankPlatesLast(before));
+        std::vector<std::uint32_t> const planAfter = PlatePlan(plates, after, TankPlatesLast(after));
+        CHECK(planBefore == planAfter);     // the serve order alone does not move
+        CHECK(PlatePlanBots(before, TankPlatesLast(before)).empty());
+        CHECK(PlatePlanBots(after, TankPlatesLast(after)) == std::vector<std::uint64_t>({ 11 }));
+
+        bool oneEach = false;
+        Sticky const held{ { 10, 0 } };
+        std::map<std::uint64_t, std::uint32_t> const kept = Claims(plates, planAfter, after, oneEach, held);
+        CHECK(oneEach && kept.at(10) == 0 && kept.at(11) == 2);     // the defect: the sticky claim beats the plan
+        std::map<std::uint64_t, std::uint32_t> const anew = Claims(plates, planAfter, after, oneEach);
+        CHECK(oneEach && anew.at(11) == 0 && anew.at(10) == 2);     // registered anew: A on its nearest plate
+
+        // The set: sorted, each bot once; humans, the ineligible and (while last) the tank are not planned.
+        std::vector<PlatePlayer> mixed{ Bot(5, 12, { 0.f, 0.f }), Bot(3, 8, { 0.f, 0.f }),
+            Bot(4, 9, { 0.f, 0.f }, true), Bot(6, 10, { 0.f, 0.f }), Bot(7, 7, { 0.f, 0.f }) };
+        mixed[3].bot = false;
+        mixed[1].eligible = false;
+        CHECK(PlatePlanBots(mixed, true) == std::vector<std::uint64_t>({ 5 }));
+        CHECK(PlatePlanBots(mixed, false) == std::vector<std::uint64_t>({ 4, 5 }));
+    }
+
     // Every layout: one claim a bot, and every bot at 8 or more that got a plate is on the nearest one no
     // higher-dose bot took (SP MT18, greedy by dose).
     void TestSweep()
@@ -217,6 +256,7 @@ int main()
 {
     TestTheFinding();
     TestTheTank();
+    TestStickyClaim();
     TestSweep();
     return Report("gnomer_plate_plan_bm_test");
 }

@@ -34,6 +34,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <vector>
 
@@ -170,11 +171,21 @@ namespace GnomerPummeler
         // 33 yd; a ranged bot in a corridor deals nothing). A healer at 26 is within 38 yd of a tank in melee.
         float constexpr kRangedBandMinYd = 19.f;
         float constexpr kRangedBandMaxYd = 26.f;
+        // RF-1 Minor-4: the band's blind corner, clipped out of it (BM RangeBandEntry::KeepOut). NAVMESH D2: from the
+        // pocket's north alcove (the failing samples x -899 to -893, y 379 to 388 on a 3 yd grid) no line of sight
+        // reaches him; this circle covers every one of those samples' 3 yd cells, so a ranged bot is walked out of it
+        // and the band walk never ends in it. The band's 19 yd floor (the hunters' line) is unchanged.
+        float constexpr kBlindCornerX = -896.f;
+        float constexpr kBlindCornerY = 383.5f;
+        float constexpr kBlindCornerYd = 7.75f;
 
         // R-1-B M2: a player's melee pet chases a creature to its back (PetAI::StartChase: ChaseAngle(pi)); his back
         // is the glass over the lower room, so the angled point has no path and the pet stops attacking. The script
         // drops the angle for each new chase, and again every kPetChaseRetryMs while the pet is out of his reach.
         std::uint32_t constexpr kPetChaseRetryMs = 2000;
+        // RF-1 Minor-3: a tracked chase whose spline heads off the pocket (only the angled chase aims at the glass at
+        // his back) is fixed again, at most this often (a re-angle in place, or a re-chase within one tick).
+        std::uint32_t constexpr kPetChaseAimRetryMs = 500;
 
         // The frame (section 7 #28 A, section 3.8): the near line 12 yd from the origin, the far donut to 40 yd, the
         // halves 30 yd forward and across (every pocket cell), the Uppercut lane 8 yd wide to the south wall (25.2
@@ -295,12 +306,68 @@ namespace GnomerPummeler
         "the ranged band starts past the hunters' too-close line");
     static_assert(Tune::kRangedBandMinYd < Tune::kRangedBandMaxYd, "the ranged band is a band");
 
-    // R-1-B M2: re-issue a pet's chase without the angle when the chase is new (another generator than the one fixed
-    // last), or when the pet is still out of his reach kPetChaseRetryMs after the last fix.
-    constexpr bool PetChaseNeedsFix(bool newChase, bool inReach, std::uint32_t sinceFixMs)
+    // RF-1 Minor-4: inside the band's blind corner (no line of sight to him).
+    inline bool InBlindCorner(Vec2 at)
     {
-        return newChase || (!inReach && sinceFixMs >= Tune::kPetChaseRetryMs);
+        return DungeonKit::Distance(at, Vec2{ Tune::kBlindCornerX, Tune::kBlindCornerY }) < Tune::kBlindCornerYd;
     }
+
+    // R-1-B M2, RF-1 Minor-3: re-issue a pet's chase without the angle when the chase is new, when its spline aims
+    // off the pocket (kPetChaseAimRetryMs after the last fix), or when the pet is still out of his reach
+    // kPetChaseRetryMs after the last fix. "New" is not keyed on the generator's address (a re-chase can reuse the
+    // freed allocation, and PetAI's MoveChase on a running chase re-angles it in place): `tracked` holds only while
+    // the sweep saw the pet chasing him on every tick since the fix (PetChaseTracker drops it on any other tick).
+    constexpr bool PetChaseNeedsFix(bool tracked, bool inReach, bool aimsOffPocket, std::uint32_t sinceFixMs)
+    {
+        return !tracked || (aimsOffPocket && sinceFixMs >= Tune::kPetChaseAimRetryMs)
+            || (!inReach && sinceFixMs >= Tune::kPetChaseRetryMs);
+    }
+
+    // RF-1 Minor-3: the pets whose no-angle chase the sweep has fixed, and when. Each sweep calls Begin, then Seen for
+    // every pet chasing him, then End, which forgets every pet not seen chasing him this sweep (it stopped, switched
+    // target, died or left): its next chase reads as new whatever generator it gets.
+    template <typename Key>
+    class PetChaseTracker
+    {
+    public:
+        void Begin() { _seen.clear(); }
+
+        // Seen chasing him this sweep: true when tracked since a fix (the time of that fix in `fixedAt`).
+        bool Seen(Key const& key, std::uint32_t& fixedAt)
+        {
+            _seen.push_back(key);
+            auto const it = _fixed.find(key);
+            if (it == _fixed.end())
+                return false;
+            fixedAt = it->second;
+            return true;
+        }
+
+        void Fixed(Key const& key, std::uint32_t now) { _fixed[key] = now; }
+
+        void End()
+        {
+            for (auto it = _fixed.begin(); it != _fixed.end();)
+            {
+                if (std::find(_seen.begin(), _seen.end(), it->first) == _seen.end())
+                    it = _fixed.erase(it);
+                else
+                    ++it;
+            }
+        }
+
+        void Clear()
+        {
+            _fixed.clear();
+            _seen.clear();
+        }
+
+        std::size_t Size() const { return _fixed.size(); }
+
+    private:
+        std::map<Key, std::uint32_t> _fixed;
+        std::vector<Key> _seen;
+    };
 
     // Pull and damage only from the pocket (handoff section 3.5 row D5, section 3.8 the pocket box): an attacker
     // anywhere else (the lower room 44 yd down, the corridors) deals nothing and cannot pull him.

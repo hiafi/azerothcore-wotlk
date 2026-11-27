@@ -55,6 +55,7 @@
 #include "Map.h"
 #include "ObjectAccessor.h"
 #include "MotionMaster.h"
+#include "MoveSpline.h"
 #include "PassiveAI.h"
 #include "Pet.h"
 #include "PetAI.h"
@@ -65,7 +66,6 @@
 #include <cmath>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 using namespace Acore::ChatCommands;
@@ -625,7 +625,9 @@ private:
     void Describe()
     {
         BossMechanics::Descriptor d;
-        d.rangeBands.emplace_back(Tune::kRangedBandMinYd, Tune::kRangedBandMaxYd);
+        // RF-1 Minor-4: the blind corner is clipped out of the band (BM keeps ranged bots off it).
+        d.rangeBands.emplace_back(Tune::kRangedBandMinYd, Tune::kRangedBandMaxYd)
+            .KeepOut(Tune::kBlindCornerX, Tune::kBlindCornerY, Tune::kBlindCornerYd);
         Mechanic::Describe(me, std::move(d));
     }
 
@@ -633,13 +635,16 @@ private:
     // chases to his back (PetAI::StartChase's ChaseAngle(pi)), the glass over the lower room; no path reaches it and
     // the chase's failure makes the pet AttackStop. Each tick, every player's pet whose victim he is and whose active
     // motion is a chase gets the same chase without the angle (ChaseRange(0, 0) as PetAI's melee chase), which paths
-    // to his center on the pocket side and stops in his reach: once per new chase, and again every
-    // Tune::kPetChaseRetryMs while it is out of reach. Imps and water elementals keep their own (ranged, no angle).
-    // A chase that fails before his tick (the pet updated first) still stops the pet: the playtest line stays.
+    // to his center on the pocket side and stops in his reach: once per new chase, again when its spline heads off
+    // the pocket, and again every Tune::kPetChaseRetryMs while it is out of reach. RF-1 Minor-3: a chase is "new"
+    // unless this sweep saw the pet chasing him on every tick since its fix (never the generator's address).
+    // Imps and water elementals keep their own (ranged, no angle). A chase that fails before his tick (the pet
+    // updated first) still stops the pet: the playtest line stays.
     void KeepPetsOffTheGlass()
     {
         if (!me->IsInWorld())
             return;
+        _petChases.Begin();
         for (auto const& ref : me->GetMap()->GetPlayers())
         {
             Player* player = ref.GetSource();
@@ -653,20 +658,26 @@ private:
             if (motion->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE
                 || motion->GetMotionSlotType(MOTION_SLOT_ACTIVE) != CHASE_MOTION_TYPE)
                 continue;
-            MovementGenerator const* gen = motion->GetMotionSlot(MOTION_SLOT_ACTIVE);
-            PetChase& fix = _petChases[pet->GetGUID()];
-            bool const newChase = fix.gen != gen;
-            if (!PetChaseNeedsFix(newChase, me->IsWithinMeleeRange(pet), _now - fix.fixedAt))
+            uint32 fixedAt = 0;
+            bool const tracked = _petChases.Seen(pet->GetGUID(), fixedAt);
+            bool aimsOffPocket = false;
+            if (pet->movespline->Initialized() && !pet->movespline->Finalized())
+            {
+                G3D::Vector3 const dest = pet->movespline->FinalDestination();
+                aimsOffPocket = !FromThePocket(dest.x, dest.y, dest.z);
+            }
+            if (!PetChaseNeedsFix(tracked, me->IsWithinMeleeRange(pet), aimsOffPocket, _now - fixedAt))
                 continue;
             motion->MoveChase(me, ChaseRange(0.f, 0.f));
-            fix.gen = gen;
-            fix.fixedAt = _now;
+            _petChases.Fixed(pet->GetGUID(), _now);
             ++_petChaseFixes;
-            if (newChase)
-                PummelerLog("pet-chase", Acore::StringFormat("pet={} owner={} at=({:.1f}, {:.1f}, {:.1f}) fixes={}",
-                    pet->GetName(), player->GetName(), pet->GetPositionX(), pet->GetPositionY(), pet->GetPositionZ(),
-                    _petChaseFixes));
+            if (!tracked || aimsOffPocket)
+                PummelerLog("pet-chase", Acore::StringFormat(
+                    "pet={} owner={} at=({:.1f}, {:.1f}, {:.1f}) new={} off_pocket={} fixes={}", pet->GetName(),
+                    player->GetName(), pet->GetPositionX(), pet->GetPositionY(), pet->GetPositionZ(), tracked ? 0 : 1,
+                    aimsOffPocket ? 1 : 0, _petChaseFixes));
         }
+        _petChases.End();
     }
 
     // ---- helpers ---------------------------------------------------------------------------------------------------
@@ -721,23 +732,16 @@ private:
         _testLength = 0;
         _comboRunning = false;
         _engaged = false;
-        _petChases.clear();
+        _petChases.Clear();
         _petChaseFixes = 0;
         _arena.Reset();
         if (was)
             PummelerLog("cleanup", why);
     }
 
-    // The chase last fixed for each pet (compared, never dereferenced) and when (fight clock).
-    struct PetChase
-    {
-        MovementGenerator const* gen = nullptr;
-        uint32 fixedAt = 0;
-    };
-
     DungeonKit::ArenaGuard _arena;
     std::unique_ptr<GnomereganMachines::ComboMachine> _combo;
-    std::unordered_map<ObjectGuid, PetChase> _petChases;
+    PetChaseTracker<ObjectGuid> _petChases;     // the pets whose chase is fixed, and when (fight clock)
     std::vector<MechanicHandle> _live;
     ObjectGuid _stalker;
     uint64 _replacedAtMs = 0;       // the last re-placement on his spot (wall clock: it runs out of combat too)

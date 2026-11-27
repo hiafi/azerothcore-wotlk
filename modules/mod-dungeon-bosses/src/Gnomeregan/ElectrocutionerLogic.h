@@ -243,8 +243,9 @@ namespace GnomerElectro
 
     // ----------------------------------------------------------------------------------------------------------------
     // Beats: RB-17, no beat starves another. The next due time after a beat that was due at `due` and fired at `now`.
+    // The argument order is every Gnomeregan NextDue's (due, period, now): RF-1 Nit-1, RB-16.
     // ----------------------------------------------------------------------------------------------------------------
-    constexpr std::uint32_t NextDue(std::uint32_t due, std::uint32_t now, std::uint32_t period)
+    constexpr std::uint32_t NextDue(std::uint32_t due, std::uint32_t period, std::uint32_t now)
     {
         return std::max(due + period, now + period / 2);
     }
@@ -609,14 +610,6 @@ namespace GnomerElectro
     // Section 7 #20 A: the platform's picks
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Rule 5 and section 3.8 (the guard and pick polygon): a pick stands on the platform arena (the disc, its rim and
-    // the walkway mouth, the platform's z band): a player who fell off is never picked. The 21 yd pick disc is the
-    // bots' bounds only (ElectrocutionerFloorBounds: their spots, dodges and the band), never who can be targeted.
-    inline bool OnPickFloor(Vec2 at, float z)
-    {
-        return GnomereganRework::PlatformArena().Contains(at, z);
-    }
-
     // The walkway past the platform polygon's mouth (NAVMESH 3: x -550.2 to -534.2, y 535.2 to 547.8, rails on both
     // sides, z -218.2 to -216.5; the slope band from z -222.5).
     inline std::array<Vec2, 7> constexpr kWalkwayPolygon{ {
@@ -633,6 +626,16 @@ namespace GnomerElectro
         DungeonKit::Arena floor = GnomereganRework::PlatformArena();
         floor.Add(GnomereganRework::PolygonRegion(kWalkwayPolygon, kWalkwayZMin, GnomereganRework::kPlatformZMax));
         return floor;
+    }
+
+    // Rule 5 and section 3.8 (the guard and pick polygon), HANDOFF s10 STAGE-RF-1 DQ1: a pick stands on the Justice's
+    // floor (the platform arena plus the walkway, in their z bands), so a player on the walkway is picked for his casts
+    // and charges heroic Static like one on the platform; a player who fell off is never picked. The 21 yd pick disc is
+    // the bots' bounds only (ElectrocutionerFloorBounds: their spots, dodges and the band), never who can be targeted.
+    inline bool OnPickFloor(Vec2 at, float z)
+    {
+        static DungeonKit::Arena const floor = JusticeFloor();
+        return floor.Contains(at, z);
     }
 }
 

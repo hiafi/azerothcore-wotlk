@@ -612,7 +612,7 @@ namespace
             order.roleLast = tankLast ? BossMechanics::Role::Tank : BossMechanics::Role::None;
             _plan = PlatePlan(std::move(plates), players, tankLast);
             _tankLast = tankLast;
-            _fight.SetPlatePlan(order, _plan);
+            _fight.SetPlatePlan(order, _plan, PlatePlanBots(players, tankLast));
         }
 
         void UpdateVenting(uint64 now)

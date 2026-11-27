@@ -543,6 +543,14 @@ namespace GnomerFallout
         return static_cast<std::uint32_t>(std::max<long>(0, std::lround(v)));
     }
 
+    // VF9 (RF-1 Minor-2): the bots' Stack and keep-out warn for the bar's own cast time, so they resolve when the
+    // halving does (OnSpellCast): a cast slow (Curse of Tongues, Mind-numbing Poison, Slow) stretches the 3 s bar to
+    // about 4.5-4.8 s. A bar that reports no cast time keeps the nominal one.
+    constexpr std::uint32_t HalfLifeBarMs(std::int32_t castMs)
+    {
+        return castMs > 0 ? std::uint32_t(castMs) : Tune::kHalfLifeCastMs;
+    }
+
     // The pool disc's object scale for a radius (the nature disc is a 9.6 yd quad at scale 1).
     constexpr float DiscScale(float radiusYd)
     {

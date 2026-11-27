@@ -52,6 +52,7 @@
 #include "PassiveAI.h"
 #include "Player.h"
 #include "ScriptedCreature.h"
+#include "Spell.h"
 #include "SpellInfo.h"
 #include "StringFormat.h"
 #include "TemporarySummon.h"
@@ -778,9 +779,13 @@ private:
             Log("half-life-refused", Acore::StringFormat("result={} why={}", uint32(result), why));
             return false;
         }
+        // RF-1 Minor-2: the shapes and the fallback run on the bar's real length (a cast slow stretches it).
+        Spell const* bar = me->GetCurrentSpell(CURRENT_GENERIC_SPELL);
+        uint32 const barMs = HalfLifeBarMs(bar && bar->GetSpellInfo()->Id == SPELL_VF_HALF_LIFE
+            ? bar->GetCastTime() : 0);
         ++_counts.halfLifes;
         _halfLifeCasting = true;
-        _halfLifeEndsAt = _now + Tune::kHalfLifeCastMs;
+        _halfLifeEndsAt = _now + barMs;
         _halfLife.Fired(_now);
         Talk(EMOTE_HALF_LIFE);
         // Bots: 8 dose and up stack on him, the rest keep out (the tank never: role), players only.
@@ -788,7 +793,7 @@ private:
         hot.auraSpell = SPELL_VF_IRRADIATED;
         hot.minStacks = Tune::kHalfLifeBotStacks;
         hot.playersOnly = true;
-        MechanicRef stack = Mechanic::Stack(me, me, Tune::kHalfLifeYd, Ms(Tune::kHalfLifeCastMs));
+        MechanicRef stack = Mechanic::Stack(me, me, Tune::kHalfLifeYd, Ms(barMs));
         if (stack.IsValid())
         {
             stack.Eligible(hot).Within(FalloutFloorBounds()).ZTolerance(Tune::kZToleranceYd).Tag(TAG_VF_HALF_LIFE);
@@ -800,21 +805,21 @@ private:
         cool.minStacks = 0;
         cool.maxStacks = uint8(Tune::kHalfLifeBotStacks - 1);
         cool.playersOnly = true;
-        MechanicRef out = Mechanic::Circle(me, me, Tune::kHalfLifeYd, Ms(Tune::kHalfLifeCastMs));
+        MechanicRef out = Mechanic::Circle(me, me, Tune::kHalfLifeYd, Ms(barMs));
         if (out.IsValid())
         {
             out.Eligible(cool).Within(FalloutFloorBounds()).ZTolerance(Tune::kZToleranceYd)
                 .Tag(TAG_VF_HALF_LIFE_OUT);
             _halfLifeOut = out.Handle();
         }
-        Log("half-life", Acore::StringFormat("ends_in={} why={}", Tune::kHalfLifeCastMs, why));
+        Log("half-life", Acore::StringFormat("ends_in={} why={}", barMs, why));
         return true;
     }
 
     void ResolveHalfLife()
     {
         _halfLifeCasting = false;
-        _halfLifeStack = MechanicHandle();      // resolved on their own at the same moment
+        _halfLifeStack = MechanicHandle();      // registered for the bar's own length: they resolve on this tick
         _halfLifeOut = MechanicHandle();
         uint32 shed = 0;
         uint32 inside = 0;

@@ -365,16 +365,65 @@ namespace
                 ++inBand;
         }
         CHECK(inBand * 0.25f > 250.f);     // about 345 sq yd of the pocket's 1,030 lie in the band
+
+        // RF-1 Minor-4: the blind corner (NAVMESH D2's failing samples, each with its 3 yd cell) is clipped out, and
+        // enough of the band stays to stand in.
+        for (float x = -899.f; x <= -893.f; x += 3.f)
+            for (float y = 379.f; y <= 388.f; y += 3.f)
+                for (float dx : { -1.5f, 1.5f })
+                    for (float dy : { -1.5f, 1.5f })
+                        CHECK(InBlindCorner({ x + dx, y + dy }));
+        CHECK(!InBlindCorner(kPummelerSpot.XY()));
+        std::size_t clear = 0, clipped = 0;
+        for (Vec2 const& cell : PocketCells())
+        {
+            float const d = DungeonKit::Distance(kPummelerSpot.XY(), cell);
+            if (d < Tune::kRangedBandMinYd || d > Tune::kRangedBandMaxYd)
+                continue;
+            ++(InBlindCorner(cell) ? clipped : clear);
+        }
+        CHECK(clipped > 0);
+        CHECK(clear * 0.25f > 200.f);       // about 270 sq yd clear, about 75 clipped
     }
 
     // R-1-B M2: a pet's chase loses its angle once per new chase, and again while it stays out of reach.
+    // RF-1 Minor-3: "new" means not tracked since a fix (no generator address), and a spline aimed off the pocket is
+    // fixed again.
     void TestPetChase()
     {
-        CHECK(PetChaseNeedsFix(true, true, 0));
-        CHECK(PetChaseNeedsFix(true, false, 0));
-        CHECK(!PetChaseNeedsFix(false, true, 60000));
-        CHECK(!PetChaseNeedsFix(false, false, Tune::kPetChaseRetryMs - 1));
-        CHECK(PetChaseNeedsFix(false, false, Tune::kPetChaseRetryMs));
+        CHECK(PetChaseNeedsFix(false, true, false, 0));
+        CHECK(PetChaseNeedsFix(false, false, false, 0));
+        CHECK(!PetChaseNeedsFix(true, true, false, 60000));
+        CHECK(!PetChaseNeedsFix(true, false, false, Tune::kPetChaseRetryMs - 1));
+        CHECK(PetChaseNeedsFix(true, false, false, Tune::kPetChaseRetryMs));
+        CHECK(!PetChaseNeedsFix(true, true, true, Tune::kPetChaseAimRetryMs - 1));
+        CHECK(PetChaseNeedsFix(true, true, true, Tune::kPetChaseAimRetryMs));
+        static_assert(Tune::kPetChaseAimRetryMs < Tune::kPetChaseRetryMs);
+        // The angled chase aims at his back, the glass (off the pocket); a no-angle one at his pocket side.
+        Point3 const& spot = kPummelerSpot;
+        CHECK(!FromThePocket(spot.x + 3.f, spot.y, kPocketFloorZ));
+        CHECK(FromThePocket(spot.x - 3.f, spot.y, kPocketFloorZ));
+
+        // The tracker: a pet seen chasing him on every sweep since its fix stays tracked; one sweep without it (a
+        // re-chase that reuses the old generator's memory) and the next chase reads as new.
+        PetChaseTracker<int> pets;
+        std::uint32_t at = 0;
+        pets.Begin();
+        CHECK(!pets.Seen(7, at));
+        pets.Fixed(7, 100);
+        pets.End();
+        pets.Begin();
+        CHECK(pets.Seen(7, at) && at == 100);
+        pets.End();
+        pets.Begin();       // the pet stopped (AttackStop, a recall, a new target): not seen
+        pets.End();
+        CHECK(pets.Size() == 0);
+        pets.Begin();
+        CHECK(!pets.Seen(7, at));
+        pets.End();
+        pets.Fixed(7, 300);
+        pets.Clear();
+        CHECK(pets.Size() == 0);
     }
 }
 

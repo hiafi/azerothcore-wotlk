@@ -93,8 +93,9 @@ namespace
         CHECK(Tune::kRangedBandMinYd > Tune::kJusticeSafeYd && Tune::kRangedBandMaxYd < Tune::kJusticeCircleYd);
         CHECK(Tune::kRangedBandMaxYd < kPlatformPickRadius);
         // Rule 17: no beat starves another.
-        CHECK(NextDue(10000, 10000, 12000) == 22000);
-        CHECK(NextDue(10000, 30000, 12000) == 36000);
+        // RF-1 Nit-1: (due, period, now), the order of Thermaplugg's, Techbot's and the Alert System's.
+        CHECK(NextDue(10000, 12000, 10000) == 22000);
+        CHECK(NextDue(10000, 12000, 30000) == 36000);
     }
 
     void TestNormalCadence()
@@ -285,6 +286,15 @@ namespace
         CHECK(OnPickFloor(kEndNpc1Spot.XY(), kEndNpc1Spot.z));
         CHECK(!PlatformPickArena().Contains(DungeonKit::Advance(kPlatformCenter.XY(), 1.f, 22.f), kPlatformCenter.z));
         CHECK(!OnPickFloor(kPlatformCenter.XY(), kPlatformCenter.z - 56.f));    // fell off: never picked
+        // HANDOFF s10 STAGE-RF-1 DQ1 (RF-1 Minor-1): the walkway past the platform's mouth (31-46 yd out) is pickable
+        // and charges Static, the same floor the Justice reaches; a player fallen below it is not.
+        for (Vec2 const& p : std::vector<Vec2>{ { -548.f, 546.f }, { -542.f, 547.f }, { -537.f, 545.f },
+                 { -535.f, 542.f } })
+        {
+            CHECK(DungeonKit::Distance(kPlatformCenter.XY(), p) > 31.f);
+            CHECK(OnPickFloor(p, -218.f));
+            CHECK(!OnPickFloor(p, -218.f - 56.f));
+        }
         // The heroic circle's safe ring fits on the bots' disc.
         CHECK(PlatformPickArena().Contains(DungeonKit::Advance(kPlatformCenter.XY(), 2.f, Tune::kJusticeCircleYd + 1.f),
             kPlatformCenter.z));

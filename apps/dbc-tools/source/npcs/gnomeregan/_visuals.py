@@ -263,7 +263,6 @@ MT_LEAK_SCREEN_EFFECT = 282             # ScreenEffect "Icecrown - Emerald Night
 MT_LEAK_SCREEN_EFFECT_ALT = 61          # "Jungle Madness", a softer green
 MT_LEAK_ALARM_SOUND = 5763              # SoundEntries loop
 MT_LEAK_ALARM_SOUND_ALT = 4894          # GnomeHazardLightStandLoop
-MT_LOAD_VOICE = 5808                    # "My machines are the future!" on the console schematic line
 MT_NUMERAL_1 = DISPLAY_NUMERAL_1
 MT_NUMERAL_2 = DISPLAY_NUMERAL_2
 MT_NUMERAL_3 = DISPLAY_NUMERAL_3
@@ -293,7 +292,7 @@ BOSS_CODE_DISPLAY_NAMES = frozenset({
 })
 BOSS_CODE_SOUND_NAMES = frozenset({
     "VF_CLICK", "VF_CLICK_ALT", "VF_CLICK_FALLBACK", "MA_ALARM_VOICE", "MA_ALARM_LOOP", "CP_BELL",
-    "MT_LEAK_ALARM_SOUND", "MT_LEAK_ALARM_SOUND_ALT", "MT_LOAD_VOICE", "MT_GEIGER", "MT_GEIGER_ALT",
+    "MT_LEAK_ALARM_SOUND", "MT_LEAK_ALARM_SOUND_ALT", "MT_GEIGER", "MT_GEIGER_ALT",
 })
 NOT_SPELL_VISUAL_NAMES = frozenset({
     "MA_DECOR_HAZARD_LIGHT_GO", "MA_DECOR_SPOTLIGHT_GO", "MT_PUNCHOGRAPH_GO", "MT_LEAK_SCREEN_EFFECT",
@@ -305,7 +304,7 @@ SHIPPED_SPELL_VISUALS = (SHIPPED_SKULL_STATE, SHIPPED_FIRE_ZONE, SHIPPED_HOLY_ZO
                          SHIPPED_FOG_MEDIUM, SHIPPED_FOG_LARGE, SHIPPED_FOG_EXTRA, SHIPPED_STORM_STRIKE)
 
 # Stock SoundEntries ids the picks use (checked against the working-copy SoundEntries.dbc)
-STOCK_SOUNDS = (11757, 5805, 5763, 6555, 5808, 4894)
+STOCK_SOUNDS = (11757, 5805, 5763, 6555, 4894)
 
 _BOSS_PREFIXES = ("TB_", "VF_", "EL_", "MA_", "CP_", "MT_", "QN_")
 

@@ -409,7 +409,7 @@ private:
             LogEl("megavolt-refused", Acore::StringFormat("result={}", uint32(result)));
             return false;
         }
-        _megavoltAt = NextDue(_megavoltAt, _now, Tune::kMegavoltEveryMs);
+        _megavoltAt = NextDue(_megavoltAt, Tune::kMegavoltEveryMs, _now);
         ++_megavolts;
         float const pct = Tune::kMegavoltPct(_heroic) * Multiplier();
         Vec2 const from = DungeonKit::PlaneOf(me);
@@ -465,7 +465,7 @@ private:
             LogEl("chain-bolt-refused", Acore::StringFormat("target={} result={}", target->GetName(), uint32(result)));
             return false;
         }
-        _chainAt = NextDue(_chainAt, _now, Tune::kChainEveryMs);
+        _chainAt = NextDue(_chainAt, Tune::kChainEveryMs, _now);
         ++_chainBolts;
         _chainTarget = target->GetGUID();
         _chainName = target->GetName();
@@ -546,7 +546,7 @@ private:
     void CastShock(Unit* forced, bool fallback)
     {
         if (!fallback)
-            _shockAt = NextDue(_shockAt, _now, Tune::kShockEveryMs);
+            _shockAt = NextDue(_shockAt, Tune::kShockEveryMs, _now);
         Unit* target = forced;
         if (!target)
         {

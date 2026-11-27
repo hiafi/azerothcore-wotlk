@@ -410,7 +410,7 @@ bosses' tables have `hardmode` (arms their hard mode past the trigger).
 | `section` | `<1\|2>`: teleport to the Finder section's start; its Finder ids, end boss and doors |
 | `door` | `shut`, `unlock`, `open`: the Workshop Door |
 | `hardmode` | `arm`, `clear`: the console's flag (heroic; never while Thermaplugg fights or is DONE) |
-| `chest` | `[0\|1]`: place or remove Crowd Pummeler's chest |
+| `chest` | `[0\|1]`: place or remove Crowd Pummeler's chest; `0` holds it off (the instance does not place it again) until `chest 1` or a reload |
 | `endnpc` | `<0\|1\|2>`: summon End NPC 1 or 2, or remove both |
 | `go` | `<entrance\|techbot\|fallout\|electro\|depot\|hall\|pocket\|lower\|thermaplugg\|console\|punch-a>`: teleport |
 | `where` | (none): the Gnomeregan arenas holding the GM's position |

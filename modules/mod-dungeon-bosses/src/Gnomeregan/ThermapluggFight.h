@@ -39,8 +39,8 @@
  *                     nullptr when D6 shuts it at the end).
  *   a plate touch     OnPlateTouched(player, face) right after the touch shut the face and Locked Out landed (MT18:
  *                     the dose halves here).
- *   the plates' rule  SetPlatePlan(order, first) (a package, any time in the pull): the Ordering of D6's plate Soak
- *                     and the lit plates the bots serve first (MT18's dose bots, D6Ha).
+ *   the plates' rule  SetPlatePlan(order, first, planned) (a package, any time in the pull): the Ordering of D6's
+ *                     plate Soak, the lit plates the bots serve first and the bots planned (MT18's dose bots, D6Ha).
  *   a bomb            OnBombSpawned(bomb, type, copy) once D6 has set it up (marked, walking, tracked); `copy` is true
  *                     for a unit D6 adopted through AdoptBomb (a Duplicator copy: the machine already tracks it).
  *                     The Sticky Bomb is an aura, never a unit: no call. OnBombGone(guid, why) when a bomb leaves
@@ -134,11 +134,14 @@ namespace GnomerThermaplugg
         // The bots' plate rule (D6's one plate Soak per lit plate: tag 71, one claim a bot, the one exclusive group;
         // F-1d, STAGE-R-1-C Minor-1). `order` is every plate Soak's Ordering from now on (D6's own until a package
         // sets one: non-tanks first, by ETA); `first` lists lit faces the bots serve first, in that order (the other
-        // lit plates follow in their current order). A call that changes neither the Ordering nor the serve order does
-        // nothing; one that does registers every lit plate anew at once (the bots' claims start over). Plates lit
-        // later register with `order` and take their face priority until the next call. D6Ha calls it while the
-        // Fallout schematic runs (GnomerWorkshop::PlatePlan); D6 resets it at the end of the encounter.
-        virtual void SetPlatePlan(BossMechanics::Ordering const& order, std::vector<uint32> const& first) = 0;
+        // lit plates follow in their current order); `planned` the bots the plan places (GnomerWorkshop::PlatePlanBots,
+        // sorted guids). A call that changes none of the Ordering, the serve order and `planned` does nothing; one
+        // that does registers every lit plate anew at once (the bots' claims start over, so an older sticky claim
+        // cannot keep a plate the plan gives a bot that just reached 8: RF-1 Minor-5). Plates lit later register with
+        // `order` and take their face priority until the next call. D6Ha calls it while the Fallout schematic runs
+        // (GnomerWorkshop::PlatePlan); D6 resets it at the end of the encounter.
+        virtual void SetPlatePlan(BossMechanics::Ordering const& order, std::vector<uint32> const& first,
+            std::vector<uint64> const& planned) = 0;
 
         // ---- The bombs ----
         // The living bombs (walking bombs and The Big One), in spawn order.

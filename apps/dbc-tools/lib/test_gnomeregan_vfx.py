@@ -494,6 +494,15 @@ class ConstantsTest(unittest.TestCase):
         # shipped rows belong to Deadmines (90506-90509), Scarlet Monastery (90558-90561) and Zul'Farrak (90702)
         self.assertEqual(set(v.SHIPPED_SPELL_VISUALS), {90506, 90508, 90509, 90558, 90559, 90560, 90561, 90702})
 
+    def test_no_unused_load_voice(self):
+        # RF-1 Nit-5: group 9 has no voice (STAGE-R-1-C Nit-2), so its sound alias and stock id are gone, and every
+        # stock sound left is named by a constant.
+        v = self.v
+        self.assertFalse(hasattr(v, "MT_LOAD_VOICE"))
+        self.assertNotIn("MT_LOAD_VOICE", v.BOSS_CODE_SOUND_NAMES)
+        named = {value for name, value in self._int_constants().items() if self._table(name) == "sound"}
+        self.assertFalse(set(v.STOCK_SOUNDS) - named)
+
     def test_the_shipped_names_are_all_in_the_shipped_tuple(self):
         for name, value in self._int_constants().items():
             if name.startswith("SHIPPED_"):

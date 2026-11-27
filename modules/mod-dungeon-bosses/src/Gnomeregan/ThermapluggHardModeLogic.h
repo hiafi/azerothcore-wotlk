@@ -280,6 +280,21 @@ namespace GnomerWorkshop
         return !tankAtFloor;
     }
 
+    // RF-1 Minor-5: the bots PlatePlan places (at the floor or more, eligible; the tank only when TankPlatesLast is
+    // false), by guid, sorted. D6 registers the plates anew whenever this set changes, not only when the serve order
+    // does: a bot that just reached 8 is then served in its plan turn, not after an older sticky claim (BM serves a
+    // sticky bot claim before the rule order, and a claim lives on its registration).
+    inline std::vector<std::uint64_t> PlatePlanBots(std::vector<PlatePlayer> const& players, bool tankLast)
+    {
+        std::vector<std::uint64_t> out;
+        for (PlatePlayer const& p : players)
+            if (p.bot && p.eligible && p.dose >= Tune::kPlateDoseFloor && !(p.tank && tankLast))
+                out.push_back(p.guid);
+        std::sort(out.begin(), out.end());
+        out.erase(std::unique(out.begin(), out.end()), out.end());
+        return out;
+    }
+
     // SP MT18: the lit plates in the order the bots serve them. The bots at the floor or more (eligible; the tank
     // only when TankPlatesLast is false) go highest dose first, each to the nearest lit plate not yet taken; among
     // bots of one dose the closest bot and plate pair goes first (BM breaks a dose tie by the ETA to the plate, so
