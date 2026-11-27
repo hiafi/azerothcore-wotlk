@@ -183,12 +183,14 @@ illuminated_steel_r3_201248 = _steel(201248, 99, 100)
 
 # =====================================================================================================================
 # (1,3) Merciful Strikes 60112 - row 1 (level 15). eff1 DUMMY window % (4/9/14, selects 201217/18/19), eff2 DUMMY heal %
-# (9/19/29). Row: Crusader Strike hits, HIT phase, DisableEffectsMask 0x2. Script: spell_pal_merciful_strikes.
+# (11/23/35). Row: Crusader Strike hits, HIT phase, DisableEffectsMask 0x2. Script: spell_pal_merciful_strikes.
 # =====================================================================================================================
 
 _MERCIFUL_NOTE = (
     'paladin-rework S2 HOLY section 5 (1,3): eff1 DUMMY = Merciful window % (selects the 201217-9 buff), eff2 DUMMY = heal %; '
     'spell_proc row (section 7) on Crusader Strike with DisableEffectsMask 0x2 (the script handles EFFECT_0).'
+    ' Heal 10/20/30% -> 12/24/36% (2026-11-27, gear-scaling GS3 review fix, user ruling: restore Holy healing after the'
+    ' ~15% Crusader Strike / Judgement damage cut).'
 )
 
 
@@ -201,9 +203,9 @@ def _merciful(spell_id, rank, window_bp, window_pct, heal_bp, heal_pct):
     )
 
 
-merciful_strikes_talent_r1_201249 = _merciful(201249, 1, 4, 5, 9, 10)
-merciful_strikes_talent_r2_201250 = _merciful(201250, 2, 9, 10, 19, 20)
-merciful_strikes_talent_r3_201251 = _merciful(201251, 3, 14, 15, 29, 30)
+merciful_strikes_talent_r1_201249 = _merciful(201249, 1, 4, 5, 11, 12)
+merciful_strikes_talent_r2_201250 = _merciful(201250, 2, 9, 10, 23, 24)
+merciful_strikes_talent_r3_201251 = _merciful(201251, 3, 14, 15, 35, 36)
 
 # =====================================================================================================================
 # (2,3) Zealous Exorcism 1463 - row 2 (level 20). eff1 ADD_PCT_MODIFIER COST on Exorcism -40/-80%, eff2 DUMMY cooldown
