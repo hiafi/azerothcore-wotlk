@@ -125,7 +125,7 @@ namespace DungeonKit
 
         bool Active() const { return !_seqs.empty(); }
         bool Active(uint32 id) const { return Find(id) != nullptr; }
-        // The fronts a sequence registered so far (handles of cancelled or finished ones may be stale).
+        // The fronts a sequence registered so far (handles of canceled or finished ones may be stale).
         std::vector<BossMechanics::MechanicHandle> Handles(uint32 id) const;
         // A ring sequence's plan (ms from its start; nullptr: none or a wall sequence).
         std::vector<Fronts::RingStep> const* RingPlan(uint32 id) const;

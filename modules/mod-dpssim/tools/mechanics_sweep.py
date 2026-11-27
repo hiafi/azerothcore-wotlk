@@ -247,6 +247,38 @@ DRILL_BARS: dict[str, dict] = {
         "group": {9: 5, 10: 1, 20: 2},
         "cycle_ms": 60000, "default_cycles": 5,
     },
+    "gnomeregan-shapes": {
+        # Gnomeregan WP-G1 (HANDOFF §3.9: each row gates its own boss's heroic sign-off, row 10 the hard mode's load is
+        # reported); six 60 s cycles, one boss a cycle, so the sweep runs 360 s (`--programs gnomeregan-shapes:6
+        # --duration 360`). Cycle 0, Techbot (D1): Zone/1 the normal Lag Spikes, RunOut/2 the Rubber Band's run
+        # reported, Zone/3 a save point burst on someone but its owner, Zone/4 the chained spikes, Zone/5 the bug
+        # echoes, Zone/6 Battle Net; Soak/10 a duplicating head not stopped (6 a cycle, 30 a run: at most 2), Soak/11
+        # Patch not kicked while a bug lives (10 a run: at most 1), Soak/12 the never-kick Patch stopped (0). Cycle 1,
+        # Viscous Fallout (D2): Zone/20 the lasting pools, Zone/21 the boss in an armed pool (on its tank, a tick a
+        # second: 2), Zone/22 the Volley pools, Zone/23 the globs, Zone/24 Leaking, Spread/25 Meltdown, Stack/26
+        # Half-Life for 8+, Zone/27 its keep-out. Cycle 2, Electrocutioner (D3, under BM-G's move cost and 11-12 yd
+        # band): Zone/40 the donut, Zone/41 the 15 yd circle, Zone/42 Megavolt, Soak/43 Chain Bolt not kicked (10 a
+        # run: at most 1), Spread/44 and Spread/45 the 10 and 6 yd spreads, Spread/46 a Static discharge, Zone/47 the
+        # healer past 13 yd reported, Zone/48 a carrier's dodge. Cycle 3, the Alert System (D4): Zone/50 Spotted by the
+        # normal lock-on light, Zone/52 by the heroic lights (a latch every 3 s: 2, to be set on the first sweep),
+        # Zone/51 and Zone/53 their swept floors reported, Zone/54 past 30 yd (every 3 s: 2). Cycle 4, Crowd Pummeler
+        # (D5): Zone/60-64 the hooks, Pummel, Clinch and Uppercut; The Big One (D6): Stack/70. Cycle 5, Thermaplugg
+        # (D6): Soak/71 a plate nobody touched (25 a run: at most 2), Zone/72 the bomb's own circle and Zone/73 its
+        # blast reported, RunOut/74 the mark near others, Zone/75 a mine set off, Zone/76 its 6 yd ring reported,
+        # Soak/77 the Detonator not kicked (5 a run: at most 1); the Whole Workshop (D6Hb) reported: Zone/80 mines,
+        # Zone/81 moving puddles, Zone/82 and Zone/83 the lights, Zone/84 the fist, Zone/85 Justice. Every gated tag
+        # takes any member, the tank included (Saturated the tank): all barred on the reference members too.
+        "gated": {1: 1, 3: 1, 4: 1, 5: 1, 6: 1, 20: 1, 21: 2, 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 40: 1, 41: 1,
+                  42: 1, 44: 1, 45: 1, 46: 1, 48: 1, 50: 1, 52: 2, 54: 2, 60: 1, 61: 1, 62: 1, 63: 1, 64: 1, 70: 1,
+                  74: 1, 75: 1},
+        "reported": {2, 47, 51, 53, 72, 73, 76, 80, 81, 82, 83, 84, 85},
+        "cross_specs": 3,
+        "references": {1: 1, 3: 1, 4: 1, 5: 1, 6: 1, 20: 1, 21: 2, 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 40: 1,
+                       41: 1, 42: 1, 44: 1, 45: 1, 46: 1, 48: 1, 50: 1, 52: 2, 54: 2, 60: 1, 61: 1, 62: 1, 63: 1,
+                       64: 1, 70: 1, 74: 1, 75: 1},
+        "group": {10: 2, 11: 1, 12: 0, 43: 1, 71: 2, 77: 1},
+        "cycle_ms": 60000, "default_cycles": 6,
+    },
 }
 # Drill::kProgramGapMs: the quiet time after each comma entry of a program
 PROGRAM_GAP_MS = 4000

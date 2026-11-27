@@ -116,6 +116,7 @@ DUNGEON_VFX_SCRIPTS = {
     "shadowfang_keep": "patch_shadowfang_keep_vfx_models.py",
     "scholomance": "patch_scholomance_vfx_models.py",
     "stratholme": "patch_stratholme_vfx_models.py",
+    "gnomeregan": "patch_gnomeregan_vfx_models.py",
 }
 
 
@@ -900,6 +901,40 @@ class GnomereganGearIdsTest(unittest.TestCase):
     def test_gnomeregan_items_sit_inside_the_blocks(self):
         for table, cfg in RESERVATIONS["gnomeregan_items"].items():
             self.assertTrue(BLOCKS[table]["start"] <= cfg["start"] and cfg["end"] <= BLOCKS[table]["end"], table)
+
+
+class GnomereganIdsTest(unittest.TestCase):
+    """Gnomeregan build WP-0 (2026-11-26): the dungeon's reservation, pinned exactly
+    (gnomeregan-build.HANDOFF.md s3.3)."""
+
+    def test_gnomeregan_reservation(self):
+        got = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["gnomeregan"].items()}
+        self.assertEqual(got, {
+            "spell": (214280, 214679),
+            "creature": (301105, 301199),
+            "gameobject": (301380, 301399),
+            "spellvisual": (90750, 90799),
+            "creaturedisplayinfo": (90850, 90869),
+            "creaturemodeldata": (90850, 90869),
+            "soundentries": (90151, 90160),
+            "gameobjectdisplayinfo": (90075, 90079),
+        })
+
+    def test_gnomeregan_overlaps_no_other_reservation(self):
+        for table, cfg in RESERVATIONS["gnomeregan"].items():
+            for owner, tables in RESERVATIONS.items():
+                if owner != "gnomeregan" and table in tables:
+                    self.assertFalse(_overlap(cfg, tables[table]), f"{table} vs {owner}")
+
+    def test_gnomeregan_sits_inside_the_blocks(self):
+        for table, cfg in RESERVATIONS["gnomeregan"].items():
+            self.assertTrue(BLOCKS[table]["start"] <= cfg["start"] and cfg["end"] <= BLOCKS[table]["end"], table)
+
+    def test_gnomeregan_starts_after_its_gear_stage(self):
+        self.assertEqual(RESERVATIONS["gnomeregan_items"]["spell"]["end"] + 1,
+                         RESERVATIONS["gnomeregan"]["spell"]["start"])
+        self.assertEqual(RESERVATIONS["gnomeregan_items"]["creature"]["end"] + 1,
+                         RESERVATIONS["gnomeregan"]["creature"]["start"])
 
 
 class RagefireChasmIdsTest(unittest.TestCase):

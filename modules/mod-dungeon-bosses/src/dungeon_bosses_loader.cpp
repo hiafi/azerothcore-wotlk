@@ -195,6 +195,19 @@ void AddSC_gahzrilla_crew_hard_mode();      // D7Ha: The Crew at the Pool (`.dbt
 void AddSC_gahzrilla_deluge();              // D7Hb: the Deluge (`.dbtest zf deluge`)
 void AddSC_instance_zulfarrak_rework();     // S0: the instance, go_zf_troll_cage
 void AddSC_dungeon_bosses_zf_commandscript();
+// Gnomeregan (map 90): the Gnomeregan skeleton (WP-S0): the bosses (one file per WP), the hard mode packages, the
+// instance (registered under the stock name instance_gnomeregan, replacing the stock one; npc_kernobee stays) and the
+// `.dbtest gnomer` shell
+void AddSC_boss_techbot_rework();               // D1: boss_techbot_rework
+void AddSC_boss_viscous_fallout_rework();       // D2: boss_viscous_fallout_rework
+void AddSC_boss_electrocutioner_rework();       // D3: boss_electrocutioner_rework
+void AddSC_boss_mobile_alert_system_rework();   // D4: boss_mobile_alert_system_rework
+void AddSC_boss_crowd_pummeler_rework();        // D5: boss_crowd_pummeler_rework
+void AddSC_boss_thermaplugg_rework();           // D6: boss_thermaplugg_rework (ThermapluggFight.h's registry)
+void AddSC_thermaplugg_hard_mode();             // D6Ha: the Whole Workshop, part a (`.dbtest gnomer workshop`)
+void AddSC_thermaplugg_hard_mode_machines();    // D6Hb: the Whole Workshop, part b (`.dbtest gnomer schematics`)
+void AddSC_instance_gnomeregan_rework();        // S0: the instance, go_gnomer_workshop_door
+void AddSC_dungeon_bosses_gnomer_commandscript();
 // Stratholme hard mode items (wave 1 dungeon items): the Balnazzar and Baron Rivendare hard mode item effects
 void AddSC_strat_hard_mode_items();         // spell_strat_dust_of_the_nathrezim, spell_strat_two_faced_tome,
                                             // spell_strat_ysidas_locket, spell_strat_blade_of_the_condemned,
@@ -385,6 +398,15 @@ void Addmod_dungeon_bossesScripts()
     AddSC_gahzrilla_crew_hard_mode();
     AddSC_gahzrilla_deluge();
     AddSC_instance_zulfarrak_rework();
+    AddSC_boss_techbot_rework();
+    AddSC_boss_viscous_fallout_rework();
+    AddSC_boss_electrocutioner_rework();
+    AddSC_boss_mobile_alert_system_rework();
+    AddSC_boss_crowd_pummeler_rework();
+    AddSC_boss_thermaplugg_rework();
+    AddSC_thermaplugg_hard_mode();
+    AddSC_thermaplugg_hard_mode_machines();
+    AddSC_instance_gnomeregan_rework();
     AddSC_strat_hard_mode_items();
     AddSC_sfk_hard_mode_items();
     AddSC_brs_hard_mode_items();
@@ -398,8 +420,8 @@ void Addmod_dungeon_bossesScripts()
     AddSC_molten_set_bonuses();
     AddSC_zealot_set_bonuses();
     // after the boss files: they register their `.dmtest` / `.sfktest` / `.dbtest scholo` / `.dbtest strat` /
-    // `.dbtest brs` / `.dbtest brd` / `.dbtest sm` / `.dbtest rfc` / `.dbtest zf` tables from their AddSC_
-    // functions
+    // `.dbtest brs` / `.dbtest brd` / `.dbtest sm` / `.dbtest rfc` / `.dbtest zf` / `.dbtest gnomer` tables from
+    // their AddSC_ functions
     AddSC_dungeon_bosses_dmtest_commandscript();
     AddSC_dungeon_bosses_sfktest_commandscript();
     AddSC_dungeon_bosses_scholo_commandscript();
@@ -409,4 +431,5 @@ void Addmod_dungeon_bossesScripts()
     AddSC_dungeon_bosses_sm_commandscript();
     AddSC_dungeon_bosses_rfc_commandscript();
     AddSC_dungeon_bosses_zf_commandscript();
+    AddSC_dungeon_bosses_gnomer_commandscript();
 }

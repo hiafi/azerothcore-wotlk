@@ -268,6 +268,39 @@ class SweepIndexTests(unittest.TestCase):
         self.assertFalse(set(bar["gated"]) & bar["reported"])
         self.assertEqual(set(bar["gated"]) | bar["reported"] | set(bar["group"]), set(range(1, 41)))
 
+    def test_gnomeregan_shapes_bars_and_groups(self):
+        # Gnomeregan WP-G1: 10 rows over six 60 s cycles (360 s), the hard mode's load reported (§3.9), six group
+        # tags, every gated tag barred on the reference members too
+        e = self.entry("gnomeregan-shapes:6",
+                       actor_failures={"Hit": {"Zone/3": 2, "Zone/52": 2, "Zone/80": 6, "Zone/51": 9},
+                                       "OffSpot": {"Zone/21": 3, "Zone/47": 4}},
+                       ref_failures={"ProtWarriorTankSim": {"OffSpot": {"Zone/21": 3}},
+                                     "FireMageSim": {"Hit": {"Zone/62": 1}}},
+                       group={"MissedSoak": {"Soak/10": 3, "Soak/12": 1, "Soak/71": 2, "Soak/77": 1}},
+                       config={"durationMs": 360000})
+        self.assertEqual(self.bar_problems(e), ["bar: Zone/21 x3 (bar 2), Zone/3 x2 (bar 1)",
+                                                "reference ProtWarriorTankSim bar: Zone/21 x3 (bar 2)",
+                                                "group bar: Soak/10 x3 (bar 2), Soak/12 x1 (bar 0)"])
+        self.assertEqual(e["reportedHits"], {"Zone/47": 4, "Zone/51": 9, "Zone/80": 6})
+        self.assertEqual(ms.program_length_ms("gnomeregan-shapes"), (360000, [("gnomeregan-shapes", 0)]))
+        self.assertEqual(ms.program_warnings("gnomeregan-shapes:6", 360000), [])
+        self.assertEqual(len(ms.program_warnings("gnomeregan-shapes:6", 300000)), 1)
+        bar = ms.DRILL_BARS["gnomeregan-shapes"]
+        self.assertEqual(set(bar["references"]), set(bar["gated"]))
+        self.assertFalse(set(bar["group"]) & (set(bar["gated"]) | bar["reported"]))
+        self.assertFalse(set(bar["gated"]) & bar["reported"])
+        # the hard mode's load (tags 80+) is reported, never gated
+        self.assertEqual({t for t in set(bar["gated"]) | set(bar["group"]) if t >= 80}, set())
+        # F-1f: the live fights post Chain Bolt, the discharges and Spotted as RunOut/<tag> where the drill posts
+        # Spread/<tag> and Zone/<tag>; the bar reads the tag alone, so either kind is judged the same
+        live_bar = ms.program_bar("gnomeregan-shapes:6")
+        for live, drill in (("RunOut/52", "Zone/52"), ("RunOut/44", "Spread/44"), ("RunOut/54", "Zone/54")):
+            self.assertEqual(ms.key_tag(live), ms.key_tag(drill))
+            fails_live = ms.judge_against_bar(live_bar, {"Hit": {live: 3}})[0]
+            fails_drill = ms.judge_against_bar(live_bar, {"Hit": {drill: 3}})[0]
+            self.assertEqual([f.split(" ", 1)[1] for f in fails_live], [f.split(" ", 1)[1] for f in fails_drill])
+            self.assertEqual(len(fails_live), 1)
+
     def test_comma_program_length_and_late_entries(self):
         length, starts = ms.program_length_ms("deadmines-followups,sfk-hunt,scholomance-shapes")
         self.assertEqual(length, 248000)
@@ -362,7 +395,8 @@ class BarTableMatchesTheModule(unittest.TestCase):
                              ("scarlet-monastery-shapes", "kSmBarTags"),
                              ("scarlet-monastery-shapes-2", "kSm2BarTags"),
                              ("ragefire-chasm-shapes", "kRfcBarTags"),
-                             ("zul-farrak-shapes", "kZfBarTags")):
+                             ("zul-farrak-shapes", "kZfBarTags"),
+                             ("gnomeregan-shapes", "kGnBarTags")):
             self.assertEqual(set(ms.DRILL_BARS[drill]["gated"]), self.array(array), drill)
         self.assertEqual(set(ms.DRILL_BARS["blackrock-depths-shapes-2"]["group"]), self.array("kBrd2GroupTags"))
         self.assertEqual(set(ms.DRILL_BARS["scarlet-monastery-shapes"]["group"]), self.array("kSmGroupTags"))
@@ -376,6 +410,9 @@ class BarTableMatchesTheModule(unittest.TestCase):
         self.assertEqual(set(ms.DRILL_BARS["zul-farrak-shapes"]["group"]), self.array("kZfGroupTags"))
         self.assertEqual(set(ms.DRILL_BARS["zul-farrak-shapes"]["references"]), self.array("kZfReferenceTags"))
         self.assertEqual(ms.DRILL_BARS["zul-farrak-shapes"]["reported"], self.array("kZfReportedTags"))
+        self.assertEqual(set(ms.DRILL_BARS["gnomeregan-shapes"]["group"]), self.array("kGnGroupTags"))
+        self.assertEqual(set(ms.DRILL_BARS["gnomeregan-shapes"]["references"]), self.array("kGnReferenceTags"))
+        self.assertEqual(ms.DRILL_BARS["gnomeregan-shapes"]["reported"], self.array("kGnReportedTags"))
 
     def test_every_tag_and_cycle(self):
         seen = set()

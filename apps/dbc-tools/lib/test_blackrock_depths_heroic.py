@@ -442,7 +442,8 @@ class ExpansionTest(unittest.TestCase):
             cls.dsl["lfg_group_declarations"] = list(heroic.lfg_group_declarations)
             cls.dsl["lfg_dungeon_declarations"] = [
                 d for d in (*heroic.lfg_dungeon_declarations, *sections.lfg_dungeon_declarations)
-                if d["kind"] in ("random", "dungeon") or d["id"] in (30, 276) or d.get("normal") in (30, 308, 309, 276)
+                if d["kind"] == "random" or (d["kind"] == "dungeon" and d["map_id"] == 230) or d["id"] in (30, 276)
+                or d.get("normal") in (30, 308, 309, 276)
             ]
             cls.lfg_out = lfg_dungeons.expand(cls.dsl, lambda: lfg_dungeons.load_inputs(cls.index))
         finally:

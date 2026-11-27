@@ -85,3 +85,11 @@ lfg_heroic(318, normal=4, group=CLASSIC_HEROIC)  # Ragefire Chasm
 # copies none either. It completes on the heroic copy of Chief Ukorz Sandscalp (1104, the stock final boss 600 of the
 # normal entry; the script credits it once Ruuzlu is dead too): one heroic bind for the eight encounter rows.
 lfg_heroic(319, normal=24, group=CLASSIC_HEROIC)  # Zul'Farrak
+
+# Gnomeregan (map 90, the Gnomeregan build, WP-H): two sections of one 5-player heroic map, each a heroic entry of its
+# normal row (14 is stock, 320 is declared in source/world/lfg_classic_sections.py) that copies the normal row's start
+# and completes on the heroic copy of the section's last boss: 1110 Electrocutioner 6000 (the section 1 end, entry 14
+# after `lfg_override(14, last_encounter=380)`) and 1113 Mekgineer Thermaplugg (entry 320). One map, one instance, one
+# heroic lock for both (a player who ran section 1 heroic today is bound to the same instance for section 2).
+lfg_heroic(321, normal=14, group=CLASSIC_HEROIC)  # Gnomeregan
+lfg_heroic(322, normal=320, group=CLASSIC_HEROIC)  # Gnomeregan - The Workshop

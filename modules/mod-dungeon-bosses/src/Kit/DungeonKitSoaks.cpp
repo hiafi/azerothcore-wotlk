@@ -111,15 +111,22 @@ namespace DungeonKit
         e.anchor = anchor->GetGUID();
         e.clock = SoakAt(Ms(spec.dwell), Ms(spec.life));
         e.spec = std::move(spec);
-        _soaks.push_back(std::move(e));
-        // A new anchor leaves every other held Soak's carriers: bring them all up to date.
-        for (Entry& other : _soaks)
+        if (e.spec.rank != 0)
+            _ranked = true;
+        std::size_t at = _soaks.size();
+        if (_ranked)
         {
-            GuidSet carriers = CarriersFor(owner, other);
-            if (other.id == _soaks.back().id || carriers != other.carriers)
-                Register(owner, other, std::move(carriers));
+            std::vector<int32> ranks;
+            ranks.reserve(_soaks.size());
+            for (Entry const& other : _soaks)
+                ranks.push_back(other.spec.rank);
+            at = SoakRankAt(ranks, e.spec.rank);
         }
-        Entry const& added = _soaks.back();
+        uint32 const id = e.id;
+        _soaks.insert(_soaks.begin() + static_cast<std::ptrdiff_t>(at), std::move(e));
+        // A new anchor leaves every other held Soak's carriers: bring them all up to date (the new one registers).
+        RefreshCarriers(owner, at);
+        Entry const& added = *std::find_if(_soaks.begin(), _soaks.end(), [id](Entry const& x) { return x.id == id; });
         Say(added.spec, "start", Acore::StringFormat("id={} anchor={} dwell={}ms life={}ms carriers={}", added.id,
             added.anchor.ToString(), Ms(added.spec.dwell), Ms(added.spec.life), added.carriers.size()));
         return added.id;
@@ -199,12 +206,76 @@ namespace DungeonKit
         }
 
         // The group changed (an anchor went, a player died or arrived, an aura came or went): the bots' sets follow.
-        for (Entry& e : _soaks)
+        RefreshCarriers(owner, _soaks.size());
+    }
+
+    void DwellSoaks::RefreshCarriers(Creature* owner, std::size_t from)
+    {
+        std::vector<GuidSet> want;
+        std::vector<bool> changed;
+        want.reserve(_soaks.size());
+        changed.reserve(_soaks.size());
+        for (Entry const& e : _soaks)
         {
-            GuidSet carriers = CarriersFor(owner, e);
-            if (carriers != e.carriers)
-                Register(owner, e, std::move(carriers));
+            want.push_back(CarriersFor(owner, e));
+            changed.push_back(want.back() != e.carriers);
         }
+        // Unranked: only the changed ones (and the forced one). Ranked: every one from the first change on, in rank
+        // order, so the registry's ids follow the ranks.
+        std::vector<bool> const again = SoakRegisterMask(_ranked, from, changed);
+        for (std::size_t i = 0; i < _soaks.size(); ++i)
+            if (again[i])
+                Register(owner, _soaks[i], std::move(want[i]));
+    }
+
+    void DwellSoaks::Reprioritize(Creature* owner, std::vector<uint32> const& order)
+    {
+        std::vector<uint32> const ids = SoakPriorityOrder(Ids(), order);
+        std::vector<Entry> sorted;
+        sorted.reserve(_soaks.size());
+        std::size_t listed = 0;     // SoakPriorityOrder puts the listed ones first
+        while (listed < ids.size() && std::find(order.begin(), order.end(), ids[listed]) != order.end())
+            ++listed;
+        for (std::size_t i = 0; i < ids.size(); ++i)
+        {
+            uint32 const id = ids[i];
+            auto it = std::find_if(_soaks.begin(), _soaks.end(), [id](Entry const& e) { return e.id == id; });
+            it->spec.rank = static_cast<int32>(std::min(i, listed));
+            sorted.push_back(std::move(*it));
+        }
+        _soaks = std::move(sorted);
+        _ranked = true;
+        std::string line;
+        for (Entry const& e : _soaks)
+            line += (line.empty() ? "" : ",") + Acore::StringFormat("{}:{}", e.id, e.spec.rank);
+        if (!_soaks.empty())
+            Say(_soaks.front().spec, "rank", Acore::StringFormat("order={}", line));
+        if (owner && owner->IsInWorld())
+            RefreshCarriers(owner, 0);
+    }
+
+    void DwellSoaks::SetRank(Creature* owner, uint32 id, int32 rank)
+    {
+        auto it = std::find_if(_soaks.begin(), _soaks.end(), [id](Entry const& e) { return e.id == id; });
+        if (it == _soaks.end())
+            return;
+        std::size_t const was = static_cast<std::size_t>(it - _soaks.begin());
+        it->spec.rank = rank;
+        _ranked = true;
+        std::stable_sort(_soaks.begin(), _soaks.end(),
+            [](Entry const& a, Entry const& b) { return a.spec.rank < b.spec.rank; });
+        std::size_t const now = static_cast<std::size_t>(std::find_if(_soaks.begin(), _soaks.end(),
+            [id](Entry const& e) { return e.id == id; }) - _soaks.begin());
+        if (owner && owner->IsInWorld())
+            RefreshCarriers(owner, std::min(was, now));
+    }
+
+    int32 DwellSoaks::RankOf(uint32 id) const
+    {
+        for (Entry const& e : _soaks)
+            if (e.id == id)
+                return e.spec.rank;
+        return 0;
     }
 
     void DwellSoaks::Cancel(Creature* owner, uint32 id)
@@ -218,12 +289,7 @@ namespace DungeonKit
         {
             Mechanic::Cancel(owner, e.soak);
             if (owner->IsInWorld())
-                for (Entry& other : _soaks)
-                {
-                    GuidSet carriers = CarriersFor(owner, other);
-                    if (carriers != other.carriers)
-                        Register(owner, other, std::move(carriers));
-                }
+                RefreshCarriers(owner, _soaks.size());
         }
     }
 
@@ -242,6 +308,7 @@ namespace DungeonKit
         std::vector<Entry> all = std::move(_soaks);
         _soaks.clear();
         _pollMs = 0;
+        _ranked = false;
         if (owner)
             for (Entry const& e : all)
                 Mechanic::Cancel(owner, e.soak);

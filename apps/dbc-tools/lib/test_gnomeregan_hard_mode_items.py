@@ -188,7 +188,8 @@ class GnomereganHardModeItemsTest(unittest.TestCase):
     def test_the_bomb(self):
         """One look in the reservation: untargetable, friendly, passive, the stock bomb's model, no script."""
         declared = id_blocks.declared_ids(NPCS)
-        self.assertEqual(set(declared["creature"]), {BOMB})  # the template and its model
+        # the template and its model; the build's own creatures (301105+) sit in the package too (the ZF gear pattern)
+        self.assertTrue({BOMB} <= set(declared["creature"]))
         self.assertEqual(id_blocks.out_of_reservation("gnomeregan_items", {"creature": {BOMB}}), [])
         text = (NPCS / "hard_mode_items.py").read_text()
         self.assertEqual(re.findall(r"creature_template\((\d+), '([^']+)'", text),
