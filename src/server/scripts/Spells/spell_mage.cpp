@@ -27,6 +27,7 @@
 #include "Pet.h"
 #include "Player.h"
 #include "PlayerScript.h"
+#include "ProcChanceCooldown.h" // Custom: gear-scaling GS2
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
@@ -2758,6 +2759,8 @@ class spell_mage_living_bomb : public AuraScript
             return;
 
         caster->CastSpell(caster, SPELL_MAGE_FANNED_FLAMES_ICD, true);
+        // Custom: gear-scaling GS2 (Systems.md section 5) - the 2.5 s marker lasts 2.5 s / (1 + Proc Chance).
+        ProcChanceCooldown::ScaleMarkerAura(caster->GetAura(SPELL_MAGE_FANNED_FLAMES_ICD), float(marker->GetAmount()));
         caster->CastSpell(caster, SPELL_MAGE_FANNED_FLAMES_READY, true);
     }
 

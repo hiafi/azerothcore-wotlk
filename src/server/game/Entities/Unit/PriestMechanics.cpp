@@ -19,6 +19,7 @@
 #include "Creature.h"
 #include "GameTime.h"
 #include "Player.h"
+#include "ProcChanceCooldown.h" // Custom: gear-scaling GS2
 #include "Random.h"
 #include "Spell.h"
 #include "SpellAuraEffects.h"
@@ -135,6 +136,9 @@ namespace
 
     constexpr uint32 PRIEST_TENTACLE_MAX_COUNT = 5;
     constexpr uint32 PRIEST_TENTACLE_SHARED_ICD_MS = 1500;           // S22: 3 s -> 1.5 s (ICD report candidate 5)
+    // gear-scaling GS2: every ICD-gated spawn is a chance roll under 100% (Writhing Agony / Lash of Insanity 5-15%,
+    // Shadow Word: Death backlash 15-45%), so the shared ICD scales with Proc Chance; this is the highest of them.
+    constexpr float PRIEST_TENTACLE_ICD_GATED_MAX_CHANCE_PCT = 45.0f;
     constexpr uint32 PRIEST_TENTACLE_MIND_BLAST_GUARANTEE_MS = 25000;
 
     // Shadow Power's (6,2) capstone flat bonus and Improved Devouring Plague's (0,1) capstone flat
@@ -758,7 +762,9 @@ namespace Priest
             uint32& icdEnd = tentacleIcdEndByPlayer[guid];
             if (now < icdEnd)
                 return false;
-            icdEnd = now + PRIEST_TENTACLE_SHARED_ICD_MS;
+            // Custom: gear-scaling GS2 (Systems.md section 5) - the rolls take Proc Chance, so does their ICD.
+            icdEnd = now + ProcChanceCooldown::ScaleFor(player, PRIEST_TENTACLE_SHARED_ICD_MS,
+                PRIEST_TENTACLE_ICD_GATED_MAX_CHANCE_PCT);
         }
 
         // "Always summons one if none has been summoned this way in the last 25 sec" (design doc

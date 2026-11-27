@@ -269,7 +269,7 @@ namespace
         CHECK(!StepHeat(4, CooldownHookHeat(Archetype::FiveThunders), 10).erupts);
         CHECK(StepHeat(5, CooldownHookHeat(Archetype::FiveThunders), 10).erupts);
 
-        // The Cooldown Haste rule: a base or category cooldown of 30 s or more, the allow list, never the deny list.
+        // The hook rule: a base or category cooldown of 30 s or more, the Molten trigger list, never the deny list.
         CHECK(IsCooldownHookSpell(12292, 180000, 0));     // a 3 min cooldown
         CHECK(IsCooldownHookSpell(1, 30000, 0));          // exactly 30 s
         CHECK(!IsCooldownHookSpell(1, 29999, 0));
@@ -277,6 +277,9 @@ namespace
         CHECK(!IsCooldownHookSpell(1, 6000, 6000));
         CHECK(IsCooldownHookSpell(200333, 10000, 0));     // Starsurge, allow list
         CHECK(IsCooldownHookSpell(204148, 20000, 0));     // Death from Above, allow list
+        // gear-scaling GS2: on the Cooldown Haste allow list, deliberately not on the Molten trigger list.
+        CHECK(!IsCooldownHookSpell(20473, 0, 6000));      // Holy Shock
+        CHECK(!IsCooldownHookSpell(60103, 6000, 0));      // Lava Lash
         CHECK(!IsCooldownHookSpell(21169, 1800000, 0));   // Reincarnation, deny list
         CHECK(!IsCooldownHookSpell(20154, 0, 0));         // a seal, deny list
         CHECK(kCooldownHookMinMs == 30000);

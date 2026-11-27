@@ -122,3 +122,41 @@ TEST(SpellPotencyTest, ZeroVarianceNeverRolls)
     for (int i = 0; i < 50; ++i)
         EXPECT_FLOAT_EQ(SpellPotency::ApplyCorrection(value, 60, FROSTBOLT_K, BREAKPOINT, 0.0f), value);
 }
+
+// Custom: gear-scaling GS2 D - attack power weapon factor (SpellPotency.h).
+TEST(SpellPotencyTest, ApWeaponReferenceItemLevel)
+{
+    EXPECT_EQ(SpellPotency::ApWeaponReferenceItemLevel(60, 0), 0u);  // key 0: off at every level
+    EXPECT_EQ(SpellPotency::ApWeaponReferenceItemLevel(20, 0), 0u);
+    EXPECT_EQ(SpellPotency::ApWeaponReferenceItemLevel(60, 60), 60u);
+    EXPECT_EQ(SpellPotency::ApWeaponReferenceItemLevel(70, 60), 60u);
+    EXPECT_EQ(SpellPotency::ApWeaponReferenceItemLevel(20, 60), 25u); // level + 5 below 60
+    EXPECT_EQ(SpellPotency::ApWeaponReferenceItemLevel(59, 60), 60u); // capped at the key
+}
+
+TEST(SpellPotencyTest, ApWeaponReferenceQuality)
+{
+    EXPECT_EQ(SpellPotency::ApWeaponReferenceQuality(60), 3u); // Rare at 60 and above
+    EXPECT_EQ(SpellPotency::ApWeaponReferenceQuality(80), 3u);
+    EXPECT_EQ(SpellPotency::ApWeaponReferenceQuality(59), 2u); // Uncommon below 60 (levelers wear greens)
+    EXPECT_EQ(SpellPotency::ApWeaponReferenceQuality(1), 2u);
+}
+
+TEST(SpellPotencyTest, ApFlatShare)
+{
+    EXPECT_FLOAT_EQ(SpellPotency::ApFlatShare(0.5f, 0.0f), 0.0f); // spell potency only: untouched
+    EXPECT_FLOAT_EQ(SpellPotency::ApFlatShare(0.0f, 0.3f), 1.0f); // attack power potency only: whole flat part
+    // Exorcism 879 (P_sp = P_ap): sp 0.506625, ap 0.304012 -> a_ap / (a_sp + a_ap) = 0.71 / 1.19.
+    EXPECT_NEAR(SpellPotency::ApFlatShare(0.506625f, 0.304012f), 0.71f / 1.19f, 0.001f);
+}
+
+TEST(SpellPotencyTest, ApWeaponFlatMultiplier)
+{
+    EXPECT_FLOAT_EQ(SpellPotency::ApWeaponFlatMultiplier(1.0f, 39.46f, 39.46f), 1.0f); // reference weapon
+    EXPECT_FLOAT_EQ(SpellPotency::ApWeaponFlatMultiplier(1.0f, 59.19f, 39.46f), 1.5f);
+    EXPECT_FLOAT_EQ(SpellPotency::ApWeaponFlatMultiplier(1.0f, 19.73f, 39.46f), 0.5f); // not clamped
+    EXPECT_FLOAT_EQ(SpellPotency::ApWeaponFlatMultiplier(0.5f, 59.19f, 39.46f), 1.25f); // hybrid: half the flat part
+    EXPECT_FLOAT_EQ(SpellPotency::ApWeaponFlatMultiplier(0.0f, 59.19f, 39.46f), 1.0f);
+    EXPECT_FLOAT_EQ(SpellPotency::ApWeaponFlatMultiplier(1.0f, 0.0f, 39.46f), 1.0f);  // no weapon
+    EXPECT_FLOAT_EQ(SpellPotency::ApWeaponFlatMultiplier(1.0f, 59.19f, 0.0f), 1.0f);  // no curve row
+}

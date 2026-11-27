@@ -44,6 +44,7 @@
 #include "MoltenSetLogic.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "ProcChanceCooldown.h"
 #include "RagefireChasmHardModeItemsLogic.h"
 #include "Random.h"
 #include "RogueMechanics.h"
@@ -862,10 +863,13 @@ private:
             RollSetChance(player, kGraveRotPct);
         if (!venom && !rot)
             return;
+        // gear-scaling GS2 (docs/Systems.md section 5): set bonus rolls take Proc Chance, so do their ICDs.
         if (venom)
-            player->AddSpellCooldown(SPELL_WRAITH_VENOM, 0, kWraithVenomCooldownMs);
+            player->AddSpellCooldown(SPELL_WRAITH_VENOM, 0,
+                ProcChanceCooldown::ScaleFor(player, kWraithVenomCooldownMs, float(kWraithVenomPct)));
         if (rot)
-            player->AddSpellCooldown(SPELL_GRAVE_ROT, 0, kGraveRotCooldownMs);
+            player->AddSpellCooldown(SPELL_GRAVE_ROT, 0,
+                ProcChanceCooldown::ScaleFor(player, kGraveRotCooldownMs, float(kGraveRotPct)));
 
         ObjectGuid const playerGuid = player->GetGUID();
         ObjectGuid const targetGuid = target->GetGUID();

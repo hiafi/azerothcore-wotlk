@@ -4948,6 +4948,23 @@ WeaponScaling.FeralApPerDps = 0
 WeaponScaling.RangedApPerDps = 0
 
 #
+#    WeaponScaling.ApPotencyReferenceItemLevel
+#        Description: Gear scaling (plan gear-scaling, GS2 D). Attack power abilities grow with the
+#                     weapon: the attack power share of a potency effect's flat part (the part on the
+#                     level curve, not the attack power coefficient) is multiplied by main-hand weapon
+#                     DPS / reference weapon DPS. The reference is item_weapon_dps_curve for the
+#                     weapon's hand type (one-hand or two-hand): Quality Rare at this item level for
+#                     level 60 and above; below 60 Quality Uncommon at level + 5, capped at this item
+#                     level. Player damage only:
+#                     not in Cat or Bear form, not for spells that read ranged attack power, not for
+#                     heals, absorbs, pets or item procs. Tooltips keep showing the reference value.
+#                     Read at startup only: .reload config logs a change but keeps the old value.
+#                     Implemented by src/server/game/Spells/SpellPotency.cpp.
+#        Default:     0 - (Off)
+
+WeaponScaling.ApPotencyReferenceItemLevel = 0
+
+#
 ###################################################################################################
 
 ###################################################################################################

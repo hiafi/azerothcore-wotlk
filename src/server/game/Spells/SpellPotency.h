@@ -70,6 +70,39 @@ namespace SpellPotency
     /// hard-coded stock bonus that is not tied to one effect: Rune Strike's 0.15 x AP and Kill
     /// Shot's 0.4 x RAP in Spell::EffectWeaponDmg (potency audit S2, F11, F14).
     bool IsDeclared(uint32 spellId);
+
+    // Custom: gear-scaling GS2 D - attack power abilities grow with the weapon
+    // (.agents/plans/gear-scaling, GS1 proposal "Potency, attack power abilities"). The attack power share of a potency
+    // effect's flat part (the part on C(L)) is multiplied by main-hand weapon DPS / the reference weapon DPS for the
+    // caster's level and the weapon's hand type: item_weapon_dps_curve at the level's reference item level, Rare at 60+
+    // and Uncommon below 60. The
+    // attack power coefficient is untouched. Applied inside Apply(); the tooltip keeps showing the reference value.
+
+    /// WeaponScaling.ApPotencyReferenceItemLevel, set once at startup (custom_weapon_scaling.cpp). 0 turns the
+    /// weapon factor off.
+    void SetApWeaponReferenceItemLevel(uint32 itemLevel);
+    uint32 GetApWeaponReferenceItemLevel();
+
+    /// Fills the per-level reference DPS cache from item_weapon_dps_curve (ItemBudget). Called from OnStartup, after
+    /// the config and the item templates have loaded.
+    void BuildApWeaponReference();
+
+    /// The reference item level for a caster level: the configured item level at 60 and above; below 60 the item
+    /// level of a weapon a player of that level wears (required level + 5), capped at the configured item level.
+    /// 0 when the configured item level is 0.
+    uint32 ApWeaponReferenceItemLevel(uint8 level, uint32 itemLevelAt60);
+
+    /// The reference weapon's quality for a caster level: Rare (3) at 60 and above, Uncommon (2) below 60, where
+    /// levelers wear greens.
+    uint32 ApWeaponReferenceQuality(uint8 level);
+
+    /// The attack power share of a potency effect's flat part, from its spell_bonus_data coefficients (the pair for
+    /// the effect's kind): 1 for a pure attack power effect, 0 with no attack power coefficient, else the hybrid
+    /// split dbc-tools bakes (lib/potency.py: a_ap x P_ap over a_sp x P_sp + a_ap x P_ap).
+    float ApFlatShare(float spCoefficient, float apCoefficient);
+
+    /// The multiplier on the whole flat part: 1 + share x (weapon DPS / reference DPS - 1). 1 when either DPS is 0.
+    float ApWeaponFlatMultiplier(float share, float weaponDps, float referenceDps);
 }
 
 #endif

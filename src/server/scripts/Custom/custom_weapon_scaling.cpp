@@ -37,6 +37,10 @@
 // ITEM_MOD_RANGED_ATTACK_POWER uses. Melee attack power is untouched. The hunter's pet inherits it through its owner
 // ranged attack power share. Like k_f, k_h is read at startup only; with k_h at 0 the hook leaves the value at 0 and
 // the core does nothing.
+//
+// Custom: gear-scaling GS2 D (.agents/plans/gear-scaling): WeaponScaling.ApPotencyReferenceItemLevel turns on the
+// attack power potency weapon factor (SpellPotency::Apply). Read at startup only, like k_f and k_h; the reference DPS
+// cache is built from it at OnStartup (custom_spell_potency.cpp).
 
 #include "Config.h"
 #include "DruidMechanics.h"
@@ -45,6 +49,7 @@
 #include "Log.h"
 #include "Player.h"
 #include "ScriptMgr.h"
+#include "SpellPotency.h"
 #include <cmath>
 
 namespace
@@ -63,6 +68,8 @@ public:
     {
         float const feralValue = sConfigMgr->GetOption<float>("WeaponScaling.FeralApPerDps", 0.0f);
         float const rangedValue = sConfigMgr->GetOption<float>("WeaponScaling.RangedApPerDps", 0.0f);
+        uint32 const apReferenceItemLevel =
+            sConfigMgr->GetOption<uint32>("WeaponScaling.ApPotencyReferenceItemLevel", 0);
 
         // Changing k_f or k_h with players online would unapply a different value than was applied (m_baseFeralAP, the
         // ranged attack power flat modifier), so a reload keeps the startup values.
@@ -70,11 +77,14 @@ public:
         {
             WarnIfChanged("WeaponScaling.FeralApPerDps", Druid::GetWeaponFeralApPerDps(), feralValue);
             WarnIfChanged("WeaponScaling.RangedApPerDps", Hunter::GetWeaponRangedApPerDps(), rangedValue);
+            WarnIfChanged("WeaponScaling.ApPotencyReferenceItemLevel",
+                float(SpellPotency::GetApWeaponReferenceItemLevel()), float(apReferenceItemLevel));
             return;
         }
 
         Druid::SetWeaponFeralApPerDps(feralValue);
         Hunter::SetWeaponRangedApPerDps(rangedValue);
+        SpellPotency::SetApWeaponReferenceItemLevel(apReferenceItemLevel);
     }
 
 private:

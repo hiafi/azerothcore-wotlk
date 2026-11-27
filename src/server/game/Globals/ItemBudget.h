@@ -155,6 +155,12 @@ namespace ItemBudget
     // Breakdown::SuffixFactor), computed once at startup. 0 for every other item: GenerateEnchSuffixFactor
     // (ItemEnchantmentMgr.cpp) then sizes the suffix from RandPropPoints as stock does.
     uint32 GetSuffixFactor(uint32 entry);
+
+    // Custom: gear-scaling GS2 D - item_weapon_dps_curve at (item level, quality, hand type), 0 when the row is
+    // missing, and the hand type of an inventory type (two-hand, ranged, thrown and relic are single slot). Read by
+    // SpellPotency's attack power weapon factor.
+    float GetWeaponDpsCurve(uint32 itemLevel, uint32 quality, bool singleSlot);
+    bool IsSingleSlotWeaponType(uint32 inventoryType);
 }
 
 #endif

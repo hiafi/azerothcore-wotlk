@@ -373,7 +373,8 @@ namespace Hunter
     void   ClearLockAndLoadPulse(ObjectGuid hunterGuid);                    // called from ClearState (logout)
     // false while 67544 is up or the pulse already rolled, else RollProcChance
     bool   TryLockAndLoad(Player* hunter, float baseChancePct, uint32 sourceSpellId);
-    void   TriggerLockAndLoad(Player* hunter);                   // 56453, 67544, reset category 1173; r3: CB -2 s
+    // 56453, 67544 (its ICD scaled by Proc Chance when listedChancePct < 100), reset category 1173; r3: CB -2 s
+    void   TriggerLockAndLoad(Player* hunter, float listedChancePct);
 
     void   TryShrapnel(Player* hunter, Unit* primary);           // §5.7
     // Explosive Shot recast carry (V3): a done-final amount per remaining blast, keyed (caster GUID, target GUID).
