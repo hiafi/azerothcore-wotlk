@@ -142,8 +142,8 @@ heroic_strike_78 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=189, implicit_target_a=6),
-        Effect(type=EffectType.WEAPON_DAMAGE, sp_potency=11.22, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=180, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_DAMAGE, sp_potency=10.686, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=heroic_strike_tooltip,
@@ -161,6 +161,7 @@ heroic_strike_78 = spell(
           ' Effect 1 weapon_potency 183 -> 156 (155.55 rounded to a whole number) (2026-10-31, DPS balance pass 1031, user ruling: Fury damage -15%). Effect 2 sp_potency 12 -> 10.2 (2026-10-31, DPS balance pass 1031, user ruling: Fury damage -15%).'
           ' Effect 1 weapon_potency 156 -> 172 (171.6 rounded to a whole number); the flat part stays 10.2 (2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%).'
           ' Effect 1 weapon_potency 172 -> 189 (188.9 rounded to a whole number) (2026-11-15, balance on the Normal-tier kits, user ruling: Heroic Strike +10%). Effect 2 sp_potency 10.2 -> 11.22 (2026-11-15, balance on the Normal-tier kits, user ruling: Heroic Strike +10%).'
+          ' Effect 1 weapon_potency 189 -> 180 (x0.952, nearest 5); Effect 2 sp_potency 11.22 -> 10.686 (x0.952) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Fury x0.95).'
     ),
     raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant strike that deals ${$m1*$<mult>}% weapon damage plus {pot2.avg*mult}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 64, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 39, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -313,7 +314,7 @@ rend_772 = spell(
     range_yards=5.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, ap_potency=13.2039, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=10.5631, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
     ],
     tooltip_vars=improved_rend_tooltip,
     spell_icon_id=245,
@@ -333,6 +334,7 @@ rend_772 = spell(
           ' Effect 1 (periodic) ap_potency 12.63 -> 10.104 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Arms, Rend x0.80).'
           ' Effect 1 (periodic) ap_potency 10.104 -> 10.9123 (2026-11-21, level60-stat-curve round S13: trims after S12, user ruling: Arms Mortal Strike and Rend x1.08).'
           ' Effect 1 (periodic) ap_potency 10.9123 -> 13.2039 (2026-11-26, raid-buff-sets retune R1, user ruling: Arms only, x1.21).'
+          ' Effect 1 ap_potency 13.2039 -> 10.5631 (x0.80) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Arms about x0.80).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bleeding.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Wounds the target, causing it to bleed for {pot1*ir} every $t1 sec for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 0, 'SpellClassMask_1': 32, 'SpellClassSet': 4, 'SpellLevel': 4, 'SpellVisualID_1': 372, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -455,8 +457,8 @@ slam_1464 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=190, implicit_target_a=6),
-        Effect(type=EffectType.WEAPON_DAMAGE, sp_potency=17.0775, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=150, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_DAMAGE, sp_potency=13.4825, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=slam_tooltip,
@@ -474,6 +476,7 @@ slam_1464 = spell(
           ' Effect 1 weapon_potency 200 -> 150 (2026-10-31, DPS balance pass 1031, user ruling: Arms and Fury damage -25%). Effect 2 sp_potency 18 -> 13.5 (2026-10-31, DPS balance pass 1031, user ruling: Arms and Fury damage -25%).'
           ' Effect 1 weapon_potency 150 -> 165 (2026-11-15, balance on the Normal-tier kits, user ruling: Slam +10%). Effect 2 sp_potency 13.5 -> 14.85 (2026-11-15, balance on the Normal-tier kits, user ruling: Slam +10%).'
           ' Effect 1 weapon_potency 165 -> 190 (189.75 rounded to a whole number, so x1.152); Effect 2 sp_potency 14.85 -> 17.0775 (2026-11-26, raid-buff-sets retune R1, user ruling: Arms and Fury, Slam x1.15).'
+          ' Effect 1 weapon_potency 190 -> 150 (x0.789, nearest 5); Effect 2 sp_potency 17.0775 -> 13.4825 (x0.789) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Arms and Fury, Slam about x0.79).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 131072, 'AttributesEx3': 1024, 'AttributesEx6': 32, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant strike that deals ${$m1*$<mult>}% weapon damage plus {pot2.avg*mult}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 2097152, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 30, 'SpellVisualID_1': 1165, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -711,7 +714,7 @@ thunder_clap_6343 = spell(
     range_yards=0.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=99.6, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=91.632, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-11, mechanic=8, implicit_target_a=22, implicit_target_b=15, apply_aura=138, radius_yards=8.0),
     ],
     tooltip_vars=thunder_clap_tooltip,
@@ -727,6 +730,7 @@ thunder_clap_6343 = spell(
         'value of 10 s); ShapeshiftMask -> 0; tooltips from the doc. warrior-rework S1 D26: the damage reads '
         '{pot1*mult} (Improved Thunder Clap x Thunderstruck, tooltip_vars 1422). '
         'Effect 0 ap_potency 83 -> 99.6 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Thunder Clap +20%).'
+          ' Effect 1 ap_potency 99.6 -> 91.632 (x0.92) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Protection tank DPS x0.92).'
     ),
     raw_overrides={'AttributesEx': 136, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Time between attacks increased.', 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts nearby enemies, dealing {pot1*mult} Physical damage and increasing the time between their attacks by $s2% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'RangeIndex': 1, 'ShapeshiftMask': 0, 'SpellClassMask_1': 128, 'SpellClassSet': 4, 'SpellLevel': 6, 'SpellVisualID_1': 145, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -768,7 +772,7 @@ revenge_6572 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=127.152, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=116.9798, potency_kind='direct', implicit_target_a=6),
     ],
     tooltip_vars=revenge_tooltip,
     spell_icon_id=562,
@@ -786,6 +790,7 @@ revenge_6572 = spell(
         'Effect 0 ap_potency 176.6 -> 141.28 (2026-11-15, balance on the Normal-tier kits, user ruling: Revenge -20%).'
         ' Effect 0 ap_potency 141.28 -> 127.152 '
         '(2026-11-26, raid-buff-sets retune R3: Protection tank damage 808 -> about 750 on the tank-dps scenario, user ruling: Revenge x0.90).'
+          ' Effect 1 ap_potency 127.152 -> 116.9798 (x0.92) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Protection tank DPS x0.92).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 14, 'CasterAuraState': 1, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly counterattack an enemy for {pot1*ir}. Usable for 5 sec after you block, dodge or parry.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 0, 'SpellClassMask_1': 1024, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 14, 'SpellPriority': 50, 'SpellVisualID_1': 342, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -835,8 +840,8 @@ overpower_7384 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=180, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=18.1628, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=145, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=14.632, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=battlelord_tooltip,
@@ -854,6 +859,7 @@ overpower_7384 = spell(
           ' Effect 1 weapon_potency 139 -> 153 (153.0 from 139 x1.10 = 152.9, whole number) (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Overpower +10% Effect 2 sp_potency 14.025 -> 15.4275 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Overpower +10%)'
           ' Effect 1 weapon_potency 153 -> 185 (185.13 rounded to a whole number, so x1.209); Effect 2 sp_potency 15.4275 -> 18.6673 (2026-11-26, raid-buff-sets retune R1, user ruling: Arms only, x1.21).'
           ' Effect 1 weapon_potency 185 -> 180 (x0.973); Effect 2 sp_potency 18.6673 -> 18.1628 (x0.973) (2026-11-26, raid-buff-sets retune R2: R1 overshot by crit and Overpower-charge luck, user ruling: Proposal A, Overpower x0.973).'
+          ' Effect 1 weapon_potency 180 -> 145 (x0.806, nearest 5); Effect 2 sp_potency 18.1628 -> 14.632 (x0.806) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Arms about x0.80).'
     ),
     raw_overrides={'AttributesEx': 1476395520, 'AttributesEx3': 1024, 'AttributesEx4': 512, 'AttributesEx6': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CasterAuraSpell': 204403, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly overpower the enemy, dealing ${$m1*$<bl>}% weapon damage plus {pot2.avg*bl}. Usable only with an Overpower charge. Parrying an attack grants a charge.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 0, 'SpellClassMask_1': 4, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 12, 'SpellVisualID_1': 39, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -999,7 +1005,7 @@ shield_slam_23922 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=EffectType.DISPEL, implicit_target_a=6, misc_value=1),
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=141.921, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=130.5673, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=413,
     notes=(
@@ -1016,6 +1022,7 @@ shield_slam_23922 = spell(
         'system) - reframed to AP, which is what the ability actually scales with for every real '
         'Warrior build. Effect 1 ap_potency 242.6 -> 157.69 (2026-11-15, balance on the Normal-tier kits, user ruling: Shield Slam -35%).'
         ' Effect 1 ap_potency 157.69 -> 141.921 (the shield block value part is added in C++ and is unchanged) (2026-11-26, raid-buff-sets retune R3: Protection tank damage 808 -> about 750 on the tank-dps scenario, user ruling: Shield Slam x0.90).'
+          ' Effect 2 ap_potency 141.921 -> 130.5673 (x0.92) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Protection tank DPS x0.92).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Slam the target with your shield, causing {pot2} damage, modified by your shield block value, and dispels $s1 magic effect on the target.  Also causes a high amount of threat.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 512, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 40, 'SpellVisualID_1': 42, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1189,8 +1196,8 @@ mortal_strike_12294 = spell(
     duration_ms=10000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=6, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=215, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=17.2124, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=170, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=13.6103, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=improved_mortal_strike_tooltip,
@@ -1211,6 +1218,7 @@ mortal_strike_12294 = spell(
           ' Effect 2 weapon_potency 180 -> 188 (188.1 rounded, x1.044); effect 3 sp_potency 14.2457 -> 14.8868 (x1.045) (2026-11-22, level60-stat-curve round S19: AoE rule A, user ruling: Arms, Mortal Strike covers the 1T loss from Bladestorm x0.63).'
           ' Effect 2 weapon_potency 188 -> 225 (227.48 rounded to the nearest 5, so x1.197; R1 revision 2026-11-26, user ruling: visible weapon percents on a multiple of 5); effect 3 sp_potency 14.8868 -> 18.013 (2026-11-26, raid-buff-sets retune R1, user ruling: Arms only, x1.21).'
           ' Effect 2 weapon_potency 225 -> 215 (x0.956); effect 3 sp_potency 18.013 -> 17.2124 (x0.956) (2026-11-26, raid-buff-sets retune R2: R1 overshot by crit and Overpower-charge luck, user ruling: Proposal A, Mortal Strike x0.956).'
+          ' Effect 2 weapon_potency 215 -> 170 (x0.791, nearest 5); Effect 3 sp_potency 17.2124 -> 13.6103 (x0.791) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Arms about x0.80).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing received is reduced.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals ${$m2*$<ims>}% weapon damage plus {pot3.avg*ims} and wounds the target, reducing the healing it receives by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'SpellClassMask_1': 33554432, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 39, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1230,8 +1238,8 @@ devastate_20243 = spell(
     range_yards=5.0,
     effects=[
         None,
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=220, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=18, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=200, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=16.36, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     tooltip_vars=devastate_tooltip,
@@ -1248,6 +1256,7 @@ devastate_20243 = spell(
         'read Puncture through {pot3.avg*pun} / ${$m2*$<pun>} (tooltip_vars 1421). '
         'Effect 1 weapon_potency 120 -> 240 and effect 2 sp_potency 10 -> 20 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Devastate +100%).'
         ' Effect 1 weapon_potency 240 -> 220 (x0.917, nearest multiple of 5 within 10%), effect 2 sp_potency 20 -> 18 (x0.90) (2026-11-26, raid-buff-sets retune R3: Protection tank damage 808 -> about 750 on the tank-dps scenario, user ruling: Devastate about x0.91).'
+          ' Effect 2 weapon_potency 220 -> 200 (x0.909, nearest 5); Effect 3 sp_potency 18 -> 16.36 (x0.909, also the per-Sunder flat part) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Protection tank DPS x0.92).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': '', 'CastingTimeIndex': 1, 'CumulativeAura': 5, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Sunder the target's armor causing the Sunder Armor effect.  In addition, causes ${$m2*$<pun>}% weapon damage plus {pot3.avg*pun} for each application of Sunder Armor on the target, counting the application from this attack.  The Sunder Armor effect can stack up to $u times.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'FacingCasterFlags': 1, 'ImplicitTargetA_1': 6, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 64, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 10, 'SpellVisualID_1': 12295, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1348,7 +1357,7 @@ concussion_blow_12809 = spell(
     duration_ms=5000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, mechanic=Mechanic.STUN, implicit_target_a=6, apply_aura=AuraType.MOD_STUN),
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=54.6, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=50.232, potency_kind='direct', implicit_target_a=6),
         None,
     ],
     spell_icon_id=25,
@@ -1359,6 +1368,7 @@ concussion_blow_12809 = spell(
         'moves from the stock script-overwritten DUMMY (eff2, 38% of attack power via spell_warr_concussion_blow, now '
         'unbound) onto eff1 SCHOOL_DAMAGE ap_potency 54.6 (= stock 38% AP at about 1,000 AP; about 139 + 0.234 x AP); '
         'eff2 cleared. SpellLevel 30 (open level; BaseLevel follows). Cooldown stays 30 s. Tooltip reads {pot2}.'
+          ' Effect 2 ap_potency 54.6 -> 50.232 (x0.92) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Protection tank DPS x0.92).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Stunned.', 'AuraInterruptFlags': 4718592, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Stuns the opponent for $d and deals {pot2} damage (based on attack power). Targets that cannot be stunned are instead Concussed, dealing 15% reduced damage for 10 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 67108864, 'SpellClassMask_3': _masks.DAMAGING_ABILITY_GROUP, 'SpellClassSet': 4, 'SpellLevel': 30, 'SpellVisualID_1': 2719, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1482,7 +1492,7 @@ shockwave_46968 = spell(
     duration_ms=4000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, mechanic=Mechanic.STUN, implicit_target_a=104, apply_aura=AuraType.MOD_STUN, radius_yards=10.0),
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=96.93, potency_kind='direct', implicit_target_a=104, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=89.1756, potency_kind='direct', implicit_target_a=104, radius_yards=10.0),
         Effect(type=EffectType.DUMMY, base_points=74),
     ],
     tooltip_vars=shockwave_tooltip,
@@ -1509,6 +1519,7 @@ shockwave_46968 = spell(
         'STORMS_BULWARK_GRANT_SCALE in WarriorMechanics.cpp (2026-11-26, raid-buff-sets retune R1, user ruling 6A: '
         'Protection survivability, every Storm\'s Bulwark source x0.85). Grant scale 0.85 -> 0.75, so the tooltip percents follow through bulwark_pct (2026-11-26, raid-buff-sets retune R2: survive was 109 s at 0.85, sized for about 80 s, user ruling). Grant scale 0.75 -> 0.65 (2026-11-26, raid-buff-sets retune R3, user ruling: Bulwark 0.65, R2 measured 98.7 s survive at 0.75).'
         ' Effect 1 ap_potency 107.7 -> 96.93 (2026-11-26, raid-buff-sets retune R3: Protection tank damage 808 -> about 750 on the tank-dps scenario, user ruling: Shockwave x0.90). The Storm\'s Bulwark grant is untouched.'
+          ' Effect 2 ap_potency 96.93 -> 89.1756 (x0.92) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Protection tank DPS x0.92).'
     ),
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Stunned.', 'AuraInterruptFlags': 4718592, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Sends a wave of force in front of the caster, causing {pot2*ts} damage (based on attack power) and stunning all enemy targets in a frontal cone for $d.  Targets that cannot be stunned take double damage instead.  Shockwave adds an amount equal to ' + bulwark_pct(20) + '% of your maximum health to your Storm\'s Bulwark shield, plus an additional ' + bulwark_pct(1) + '% for each target struck, up to 5 targets.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 32768, 'SpellClassSet': 4, 'SpellLevel': 60, 'SpellVisualID_1': 10703, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )

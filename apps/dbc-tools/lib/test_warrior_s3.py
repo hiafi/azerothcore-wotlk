@@ -240,8 +240,8 @@ NEW_ROW_PINS: dict[int, dict] = {
                 "SpellClassMask_2": 0, "SpellClassMask_3": 0x4, "EffectBasePoints_1": 209, "Effect_2": 0},
     # D19 Frenzied Blows strikes: copies of the Heroic Strike / Cleave damage rows, d0 b6 / b22 + d2 b3, chain 0
     FB_HS: {**STRIKE_BASE, **OFFHAND_STRIKE, "Name_Lang_enUS": "Frenzied Blows", "SpellClassMask_1": 0x40,
-            "SpellClassMask_2": 0, "SpellClassMask_3": 0x8, "EffectBasePoints_1": 224,
-            "Effect_2": EFF_WEAPON_DAMAGE_FLAT, "EffectBasePoints_2": -12},  # 78's x1.20 (RBS R1)
+            "SpellClassMask_2": 0, "SpellClassMask_3": 0x8, "EffectBasePoints_1": 214,
+            "Effect_2": EFF_WEAPON_DAMAGE_FLAT, "EffectBasePoints_2": -11},  # 78's x1.20 (RBS R1), GS3 x0.956
     FB_CLEAVE: {**STRIKE_BASE, **OFFHAND_STRIKE, "Name_Lang_enUS": "Frenzied Blows", "SpellClassMask_1": 0x400000,
                 "SpellClassMask_2": 0, "SpellClassMask_3": 0x8, "EffectBasePoints_1": 143,
                 "Effect_2": EFF_WEAPON_DAMAGE_FLAT, "EffectBasePoints_2": -1},
@@ -327,8 +327,8 @@ STRIKE_IDS = (STRIKE_MH, STRIKE_OH, FB_HS, FB_CLEAVE)
 STRIKE_PARENTS = {FB_HS: HEROIC_STRIKE, FB_CLEAVE: CLEAVE}
 # Value columns where a strike no longer copies its parent: the off-hand Heroic Strike is 78's x1.20 (2026-11-26,
 # raid-buff-sets retune R1, user ruling: Fury only x1.20; Heroic Strike 78 stays, Protection casts it).
-STRIKE_VALUE_OVERRIDES = {FB_HS: {"EffectBasePoints_1": 224, "EffectBasePoints_2": -12,
-                                  "EffectRealPointsPerLevel_2": 0.7693714285714285}}
+STRIKE_VALUE_OVERRIDES = {FB_HS: {"EffectBasePoints_1": 214, "EffectBasePoints_2": -11,
+                                  "EffectRealPointsPerLevel_2": 0.7352571428571427}}  # GS3 ilvl 66 retune: 215% / 12.867
 # custom attrs: CU_AURA_CANNOT_BE_SAVED on the meter and the Titan's Grip penalty only (reset on login)
 CUSTOM_ATTR_IDS = {METER: CU_AURA_CANNOT_BE_SAVED, TG_PENALTY: CU_AURA_CANNOT_BE_SAVED}
 # consuming rows / helpers that must carry no spell_proc row at all (ProcTypeMask 0 charged buffs, plain auras)

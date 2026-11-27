@@ -220,14 +220,15 @@ starfall_50288 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=39.83885, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=34.26141, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=6, trigger_spell=50294),
     ],
     spell_icon_id=2854,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=58.3 (potency-report default, base/coef already agreed). Effect 1 sp_potency 58.3 -> 47.6894 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818).'
           ' sp_potency 47.6894 -> 42.9205 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell).'
           ' Effect 1 sp_potency 42.9205 -> 39.0577 (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91, a Balance-only spell).'
-          ' sp_potency 39.0577 -> 39.83885 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).',
+          ' sp_potency 39.0577 -> 39.83885 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).'
+          ' sp_potency 39.83885 -> 34.26141 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Balance x0.86 (pet treants unchanged)).',
     raw_overrides={'AttributesEx': 128, 'AttributesEx2': 1073741828, 'AttributesEx3': 1049089, 'AttributesEx4': 128, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'You summon a flurry of stars from the sky on all targets within 30 yards of the caster, each dealing {pot1} Arcane damage. Also causes $50294s1 Arcane damage to all other enemies within $50294a1 yards of the enemy target. Maximum 20 stars. Lasts $48505d.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You summon a flurry of stars from the sky on all targets within 30 yards of the caster, each dealing {pot1} Arcane damage. Also causes $50294s1 Arcane damage to all other enemies within $50294a1 yards of the enemy target. Maximum 20 stars. Lasts $48505d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 8388608, 'SpellClassSet': 7, 'SpellLevel': 60, 'SpellVisualID_1': 11040},
 )
 
@@ -244,13 +245,14 @@ starfall_50294 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=6.62837, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=5.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=5.7004, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=5.0),
     ],
     spell_icon_id=2854,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=9.7 (potency-report default, base/coef already agreed). Effect 1 sp_potency 9.7 -> 7.9346 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818).'
           ' sp_potency 7.9346 -> 7.1411 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell (the Starfall splash, AoE only)).'
           ' Effect 1 sp_potency 7.1411 -> 6.4984 (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91, a Balance-only spell).'
-          ' sp_potency 6.4984 -> 6.62837 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).',
+          ' sp_potency 6.4984 -> 6.62837 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).'
+          ' sp_potency 6.62837 -> 5.7004 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Balance x0.86 (pet treants unchanged)).',
     raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'You summon a flurry of stars from the sky on all targets within 30 yards of the caster, each dealing $50288s1 Arcane damage. Also causes {pot1} Arcane damage to all other enemies within $50294a1 yards of the enemy target. Maximum 20 stars. Lasts $48505d.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You summon a flurry of stars from the sky on all targets within 30 yards of the caster, each dealing $50288s1 Arcane damage. Also causes {pot1} Arcane damage to all other enemies within $50294a1 yards of the enemy target. Maximum 20 stars. Lasts $48505d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 8388608, 'SpellClassSet': 7, 'SpellLevel': 60, 'StartRecoveryCategory': 133},
 )
 
@@ -4966,12 +4968,13 @@ lunar_flare_200341 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=13.89464, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=11.94939, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=225,
     notes='NEW (druid-rework BALANCE §6 row 1,2 capstone hit): scales with level (PLAN B3), learn level 15 (Improved Moonfire\'s tier), level-60 value 50 -> ppl 50/60; cast by spell_dru_improved_moonfire_capstone (WP-B). Potency system P5 (druid pass): converted to sp_potency=18.3 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.1) spell_bonus_data override is retired in favor of the generated DBC coefficient. Effect 1 sp_potency 18.3 -> 14.9694 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818).'
           ' Effect 1 sp_potency 14.9694 -> 13.6222 (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91, a Balance-only spell).'
-          ' sp_potency 13.6222 -> 13.89464 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).',
+          ' sp_potency 13.6222 -> 13.89464 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).'
+          ' sp_potency 13.89464 -> 11.94939 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Balance x0.86 (pet treants unchanged)).',
     raw_overrides={'BaseLevel': 15, 'SpellLevel': 15, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'AttributesEx2': 536870912, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Arcane damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
@@ -5185,13 +5188,14 @@ insect_swarm_200352 = spell(
     range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     duration_ms=14000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=10.40318, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=8.94673, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=1771,
     notes="NEW (druid-rework BALANCE §6 row 3,1 capstone copy): clone of 5570's eff1 only (same base/ppl/coefficient), shares Insect Swarm's family bit (INSECT_SWARM), no script binding - propagation is linear only (spell_dru_swarming_rot never re-triggers off a copy). Potency system P5 (druid pass): converted to sp_potency=34.8, same as 5570 (not mismatched; potency-report base-damage default). sp_potency 34.8 -> 17.3 (2026-11-02, DPS balance pass 1031 round R5, user ruling: the copy must be identical to Insect Swarm 5570; it never took the 2026-10-08 Balance cuts 5570 got, so it was about 2x). Effect 1 sp_potency 17.3 -> 15.224 (2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: the propagation copy equals Insect Swarm 5570, which is 15.224 after the round-2 -20%). Effect 1 sp_potency 15.224 -> 12.45323 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818)."
           ' sp_potency 12.45323 -> 11.2079 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell; the capstone copy stays identical to Insect Swarm 5570).'
           ' Effect 1 sp_potency 11.2079 -> 10.1992 (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91, a Balance-only spell).'
-          ' sp_potency 10.1992 -> 10.40318 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).',
+          ' sp_potency 10.1992 -> 10.40318 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).'
+          ' sp_potency 10.40318 -> 8.94673 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Balance x0.86 (pet treants unchanged)).',
     raw_overrides={'BaseLevel': 20, 'SpellLevel': 20, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_1': INSECT_SWARM, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The enemy target is swarmed by insects, causing {pot1.total} Nature damage over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Nature damage every $t1 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
@@ -5510,13 +5514,14 @@ starfire_cleave_200337 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=44.28055, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=38.08127, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=1485,
     notes='NEW (druid-rework BALANCE §4 "Starfire cleave"): half of 2912\'s own base/ppl (120/29/14.3 -> 59/15/7.15); shares Starfire\'s family bit deliberately (Tentacle Mind Flay precedent); scripted_by(spell_dru_starfall_aoe) reuses the stock area-target filter that drops GetExplTargetUnit() (see druid_talents.py); cast by spell_dru_starfire_cleave AfterHit on 2912 (WP-B). Potency system P5 (druid pass): converted to sp_potency=185.4 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.5) spell_bonus_data override is retired in favor of the generated DBC coefficient. This spell previously had no explicit BaseLevel/SpellLevel/MaxLevel (defaulted to 0) since it is never learned or cast directly - potency requires SpellLevel set (BaseLevel must equal it, "Caveats and checks"), so added BaseLevel=SpellLevel=20/MaxLevel=80 matching Starfire 2912\'s own SpellLevel (this is conceptually half of that spell). Effect 1 sp_potency 185.4 -> 64.8 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Balance option A, the cleave back to half of Starfire\'s damage: 185.4 x 592 / 1,693, the live Starfire hit halved over the live cleave hit in the 5-target sim; the analytic half of Starfire 2912\'s 72.27 at its 2.5 s time basis is 72.27 x 2.5 / 1.5 / 2 = 60.2 at the cleave\'s 1.5 s, confirm the per-hit ratio in the re-sim). Effect 1 sp_potency 64.8 -> 53.0064 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818).'
           ' sp_potency 53.0064 -> 47.7058 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell).'
           ' Effect 1 sp_potency 47.7058 -> 43.4123 (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91, a Balance-only spell).'
-          ' sp_potency 43.4123 -> 44.28055 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).',
+          ' sp_potency 43.4123 -> 44.28055 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).'
+          ' sp_potency 44.28055 -> 38.08127 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Balance x0.86 (pet treants unchanged)).',
     raw_overrides={'BaseLevel': 20, 'SpellLevel': 20, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'MaxTargets': 2, 'EquippedItemClass': -1, 'SpellClassMask_1': STARFIRE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Arcane damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
@@ -5533,13 +5538,14 @@ fury_of_elune_beam_200338 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=15.37517, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=13.22265, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90111,
     notes='NEW (druid-rework BALANCE §5 "Fury of Elune"): live damage every 0.5s tick, scales with level (learn 60, level-60 value 40 -> ppl 40/60); cast by the 200336 AuraScript\'s OnEffectPeriodic (WP-B); SpellVisualID_1 90020 (patch_druid_vfx_models.py): stock Moonfire impact + Fury of Elune damage-impact sound on every tick, under the beam 200336 carries. Potency system P5 (druid pass): converted to sp_potency=15.0 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.1) spell_bonus_data override is retired in favor of the generated DBC coefficient. Effect 1 sp_potency 15.0 -> 22.5 (2026-11-15, balance on the Normal-tier kits, user ruling: Fury of Elune +50%) Effect 1 sp_potency 22.5 -> 18.405 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818).'
           ' sp_potency 18.405 -> 16.5645 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell).'
           ' Effect 1 sp_potency 16.5645 -> 15.0737 (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91, a Balance-only spell).'
-          ' sp_potency 15.0737 -> 15.37517 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).',
+          ' sp_potency 15.0737 -> 15.37517 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).'
+          ' sp_potency 15.37517 -> 13.22265 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Balance x0.86 (pet treants unchanged)).',
     raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_3': FURY_OF_ELUNE, 'SpellVisualID_1': 90020, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Astral damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
@@ -5556,13 +5562,14 @@ fury_of_elune_splash_200339 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=7.68764, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=6.61137, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=90111,
     notes='NEW (druid-rework BALANCE §5): half of 200338, scripted_by(spell_dru_starfall_aoe) filters the primary target out (see druid_talents.py). Potency system P5 (druid pass): converted to sp_potency=7.5 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.05) spell_bonus_data override is retired in favor of the generated DBC coefficient. Effect 1 sp_potency 7.5 -> 11.25 (2026-11-15, balance on the Normal-tier kits, user ruling: Fury of Elune +50%, splash half kept at half of 200338) Effect 1 sp_potency 11.25 -> 9.2025 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818).'
           ' sp_potency 9.2025 -> 8.2823 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell (the Fury of Elune splash, half of 200338, AoE only)).'
           ' Effect 1 sp_potency 8.2823 -> 7.5369 (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91, a Balance-only spell).'
-          ' sp_potency 7.5369 -> 7.68764 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).',
+          ' sp_potency 7.5369 -> 7.68764 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).'
+          ' sp_potency 7.68764 -> 6.61137 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Balance x0.86 (pet treants unchanged)).',
     raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_3': FURY_OF_ELUNE, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Astral damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
@@ -6711,12 +6718,12 @@ dire_bear_form_passive_9635 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=369, implicit_target_a=1, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=249, implicit_target_a=1, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
         Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=2),
         Effect(type=EffectType.APPLY_AURA, base_points=29, points_per_level=3.0, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER),
     ],
     spell_icon_id=107,
-    notes="druid-rework FERAL §0.16 / CORE-AUDIT row 37 + user decision 2026-09-24: the form-8 passive is the everyday bear's at every level now, so it scales from level 10 - BaseLevel = SpellLevel = 10, no MaxLevel, eff2 attack power 30 + 3/level (stock Bear Form's values below 40, stock Dire Bear's from 40 on: 120 at 40, 240 at 80); eff0 armor contribution +370% and eff1 Stamina +25% flat at every level. Stock spell_dru_bear_form_passive unbound.",
+    notes="druid-rework FERAL §0.16 / CORE-AUDIT row 37 + user decision 2026-09-24: the form-8 passive is the everyday bear's at every level now, so it scales from level 10 - BaseLevel = SpellLevel = 10, no MaxLevel, eff2 attack power 30 + 3/level (stock Bear Form's values below 40, stock Dire Bear's from 40 on: 120 at 40, 240 at 80); eff0 armor contribution +370% and eff1 Stamina +25% flat at every level. Stock spell_dru_bear_form_passive unbound. Eff0 armor contribution +370% -> +250% (2026-11-27, gear-scaling GS3, user ruling: Bear tank survival cut toward ~80 s on the ilvl 66 kits; Bestial Fury's own passive copy keeps +370%).",
     raw_overrides={'ShapeshiftMask': SS_BEAR, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 10, 'SpellLevel': 10, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Passive', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 7, 'SpellClassMask_3': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
@@ -6895,7 +6902,7 @@ fury_swipe_200429 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=225, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=180, implicit_target_a=6),
         Effect(type=EffectType.ENERGIZE, base_points=199, implicit_target_a=1, misc_value=1),
     ],
     spell_icon_id=4114,
@@ -6905,7 +6912,8 @@ fury_swipe_200429 = spell(
           "Savage Defense'): without it a proc-triggered spell can't trigger other auras. No family bit. Visual: "
           "Swipe (Bear)'s. Eff0 base_points 309 -> weapon_potency 310 (the same 310% weapon hit; SpellLevel 0 declared "
           "as the potency system requires, as before) (2026-11-01, potency audit fix F14). Effect 1 weapon_potency 310 -> 240 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS x0.774)."
-          ' weapon_potency 240 -> 225 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Feral x0.934 = 224.16, rounded to a multiple of 5 so the visible percent is round).',
+          ' weapon_potency 240 -> 225 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Feral x0.934 = 224.16, rounded to a multiple of 5 so the visible percent is round).'
+          ' weapon_potency 225 -> 180 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Bear DPS x0.80; shared with Feral Cat, which also takes x0.80 here).',
     raw_overrides=_feral_raw(
         "Deals $s1% weapon damage.  In Bear Form, also generates $/10;s2 rage.",
         DefenseType=2, PreventionType=2, RangeIndex=2, AttributesEx3=_SPELL_ATTR3_NOT_A_PROC, SpellVisualID_1=189,
@@ -7331,7 +7339,7 @@ _SAVAGE_DEFENSE_TEXT = ("Each time you land a direct damage critical strike whil
                         "an absorb equal to $s1% of your current armor to Savage Defense.  The pool lasts $62606d.  "
                         "Cannot occur more than once every 3 sec.  Does not function while Bestial Fury is active.  "
                         "Periodic damage does not trigger this effect.")
-_SAVAGE_DEFENSE_NOTES = ("NEW (druid-rework FERAL §7 (6,0), WP-BRIEF §3), talent 1793: eff0 DUMMY 4/8 = % of current "
+_SAVAGE_DEFENSE_NOTES = ("NEW (druid-rework FERAL §7 (6,0), WP-BRIEF §3), talent 1793: eff0 DUMMY 2/4 (4/8 before GS3, 2026-11-27) = % of current "
                          "armor added to the 62606 absorb pool (x2 during Berserk) by spell_dru_savage_defense_talent; "
                          "ShapeshiftMask 0x80 (everyday bear only - off in Bestial Fury). procs_on: direct melee crits, no "
                          "DONE_PERIODIC, 3 sec ICD.")
@@ -7339,9 +7347,9 @@ _SAVAGE_DEFENSE_NOTES = ("NEW (druid-rework FERAL §7 (6,0), WP-BRIEF §3), tale
 savage_defense_200459 = spell(
     id=200459, name='Savage Defense', **_dru_passive_talent_kwargs(),
     effects=[
-        _aura(AuraType.DUMMY, 3),
+        _aura(AuraType.DUMMY, 1),
     ],
-    spell_icon_id=2323, notes=_SAVAGE_DEFENSE_NOTES + " Rank 1/2.",
+    spell_icon_id=2323, notes=_SAVAGE_DEFENSE_NOTES + " Rank 1/2. 4% -> 2% of armor (2026-11-27, gear-scaling GS3, user ruling: Bear tank survival cut).",
     raw_overrides=_feral_talent_raw(_SAVAGE_DEFENSE_TEXT, ShapeshiftMask=SS_BEAR),
 )
 
@@ -7352,9 +7360,9 @@ procs_on(savage_defense_200459, proc_flags=PROC_FLAG_DONE_MELEE_AUTO_ATTACK | PR
 savage_defense_200460 = spell(
     id=200460, name='Savage Defense', **_dru_passive_talent_kwargs(),
     effects=[
-        _aura(AuraType.DUMMY, 7),
+        _aura(AuraType.DUMMY, 3),
     ],
-    spell_icon_id=2323, notes=_SAVAGE_DEFENSE_NOTES + " Rank 2/2.",
+    spell_icon_id=2323, notes=_SAVAGE_DEFENSE_NOTES + " Rank 2/2. 8% -> 4% of armor (2026-11-27, gear-scaling GS3, user ruling: Bear tank survival cut).",
     raw_overrides=_feral_talent_raw(_SAVAGE_DEFENSE_TEXT, ShapeshiftMask=SS_BEAR),
 )
 

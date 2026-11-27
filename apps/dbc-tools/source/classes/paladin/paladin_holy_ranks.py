@@ -94,11 +94,11 @@ _MISC_SCHOOL_HOLY_DISEASE = 3  # aura 246 misc 3 = Disease
 # --- Sunlight tooltip ----------------------------------------------------------------------------------------------
 # A talent-pane rank tooltip must show its own rank's fraction, which a tooltip variable can't do, so each rank keeps
 # the literal ${...} expression of Sunlight's hit 201232 scaled by the rank constant (HOLY section 4.1 exception).
-# 201232 (A2a, paladin_holy_spells.py): hybrid 6.0408 SP + 6.0408 AP (6.2925 x 0.96, 2026-11-26 raid-buff-sets retune R1 revision; 7.5 x 0.839 on 2026-11-17),
+# 201232 (A2a, paladin_holy_spells.py): hybrid 5.2796 SP + 5.2796 AP (6.0408 x 0.874, 2026-11-27 gear-scaling GS3 ilvl 66 retune; 6.2925 x 0.96 on 2026-11-26; 7.5 x 0.839 on 2026-11-17),
 # direct, instant (time basis 1.5 s), SpellLevel 25.
 # Re-copy these numbers here if 201232's potency ever changes (HOLY section 11 risk 8).
 _SUNLIGHT_HIT = _potency.resolve(
-    _potency.PotencyEffect(sp_potency=6.0408, ap_potency=6.0408, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=25,
+    _potency.PotencyEffect(sp_potency=5.2796, ap_potency=5.2796, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=25,
 )
 
 
@@ -238,7 +238,8 @@ _SUNLIGHT_NOTE = (
     'rank % applied by spell_pal_sunlight_hit; spell_proc row on autos + Crusader Strike, DisableEffectsMask 0x2. Tooltip keeps the '
     'literal ${...} expression of 201232 scaled by the rank fraction (section 4.1 exception). Tooltip expression re-copied for '
     '201232 sp_potency and ap_potency 7.5 -> 6.2925 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839) and '
-    '6.2925 -> 6.0408 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Shockadin x0.96 from the pre-R1 value; an intermediate x1.064 was dropped).'
+    '6.2925 -> 6.0408 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Shockadin x0.96 from the pre-R1 value; an intermediate x1.064 was dropped) and '
+    '6.0408 -> 5.2796 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Shockadin damage only, x0.874).'
 )
 _SUNLIGHT_CAPSTONE = "Each Sunlight has a 10% chance to strike the target again."
 

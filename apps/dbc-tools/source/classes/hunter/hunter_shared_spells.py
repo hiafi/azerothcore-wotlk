@@ -42,7 +42,7 @@ glaive_toss_201600 = spell(
 aspect_of_the_dragonhawk_explosion_201601 = spell(
     id=201601, name='Aspect of the Dragonhawk', school=School.FIRE,
     cast_time_ms=0, range_yards=50000.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=38.6942, potency_kind='direct', time_basis_ms=1500,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=32.8901, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=53, implicit_target_b=16, radius_yards=5.0)],   # placeholder, M (§0.5)
     spell_icon_id=2328,
     tooltip_vars=bm_dragonhawk_1155,
@@ -50,7 +50,8 @@ aspect_of_the_dragonhawk_explosion_201601 = spell(
           'the Dragonhawk explosion is part of the Survival rotation, the Beast Mastery sim never casts it).'
           ' Effect 1 ap_potency 41.34 -> 37.206 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user '
           'ruling: SV x0.90).'
-          ' Effect 1 ap_potency 37.206 -> 38.6942 (2026-11-26, raid-buff-sets retune R1, user ruling: Survival x1.04).',
+          ' Effect 1 ap_potency 37.206 -> 38.6942 (2026-11-26, raid-buff-sets retune R1, user ruling: Survival x1.04).'
+          ' Effect 1 ap_potency 38.6942 -> 32.8901 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Survival x0.85 on its Survival-only abilities, SV 1,708 -> ~1,520).',
     raw_overrides={'SpellLevel': 16, 'DefenseType': 3, 'SpellClassSet': 9, 'SpellClassMask_3': 0x2000000,
                    'AttributesEx3': 0x10000, 'EquippedItemClass': -1,
                    'Description_Lang_enUS': 'Explodes for {pot1*idh} Fire damage to the target and all enemies within $a1 yards.'},

@@ -23,7 +23,8 @@ from . import _masks
 # follow-up, user ruling: soften the Mind Flay cut to -10% overall, 83.97 x 0.90; Shadow fell to 966 at -25%).
 # MIND_FLAY_TICK_POTENCY 75.573 -> 56.906 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).
 # MIND_FLAY_TICK_POTENCY 56.906 -> 53.2091 (2026-11-26, raid-buff-sets retune R1, user ruling: Shadow Priest x0.935).
-MIND_FLAY_TICK_POTENCY = 53.2091
+# MIND_FLAY_TICK_POTENCY 53.2091 -> 47.356 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Shadow-only spells x0.89).
+MIND_FLAY_TICK_POTENCY = 47.356
 
 # Proc flags/phases used by the procs_on() calls below - src/server/game/Spells/SpellMgr.h's
 # ProcFlags / ProcFlagsSpellPhase / ProcAttributes enums. Named here rather than as bare ints so a
@@ -7963,7 +7964,8 @@ mind_flay_58381 = spell(
           "EffectBonusMultiplier_1 0.257 -> 0.2399. MIND_FLAY_TICK_POTENCY 83.97 -> 62.978 (2026-11-16, single-target pass to 1,000 on the "
           "Normal-tier kits, user ruling: Mind Flay -25%), so EffectBonusMultiplier_1 0.2399 -> 0.1799."
           ' MIND_FLAY_TICK_POTENCY 75.573 -> 56.906 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753); sp_potency follows the constant.'
-          ' MIND_FLAY_TICK_POTENCY 56.906 -> 53.2091 (2026-11-26, raid-buff-sets retune R1, user ruling: Shadow Priest x0.935); sp_potency follows the constant.',
+          ' MIND_FLAY_TICK_POTENCY 56.906 -> 53.2091 (2026-11-26, raid-buff-sets retune R1, user ruling: Shadow Priest x0.935); sp_potency follows the constant.'
+          ' MIND_FLAY_TICK_POTENCY 53.2091 -> 47.356 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Shadow-only spells x0.89); sp_potency follows the constant.',
     raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 1073741824, 'CastingTimeIndex': 1, 'InterruptFlags': 15, 'ChannelInterruptFlags': 31788, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 9', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Assault the target's mind with Shadow energy, causing Shadow damage over $48156d and slowing the target to $15407s2% of their movement speed.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed slowed to $15407s2% of normal.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 6, 'SpellClassMask_1': 8388608, 'SpellLevel': 0, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0},
 )
 unbind_bonus_coefficients(mind_flay_58381)  # retires the stock spell_bonus_data row (58381, direct_bonus 0.257) that beat the generated potency coefficient (D1)
@@ -7980,7 +7982,7 @@ tentacle_mind_flay_200246 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=29.0884, base_potency=0.0, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=25.88868, base_potency=0.0, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
     ],
     spell_icon_id=548,
     notes="Priest Shadow rework (SHADOW.md (3,0) / ID map): the tentacle's own channeled Mind Flay "
@@ -8015,7 +8017,8 @@ tentacle_mind_flay_200246 = spell(
           ' sp_potency 68.859 -> 51.851 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shadow Priest x0.753).'
           ' sp_potency 51.851 -> 25.9255 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Shadow, Tentacle of Madness Mind Flay x0.50).'
           ' sp_potency 25.9255 -> 31.1106 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Shadow, Tentacle of Madness Mind Flay x0.60 of the S8 value instead of x0.50).'
-          ' Effect 1 sp_potency 31.1106 -> 29.0884 (2026-11-26, raid-buff-sets retune R1, user ruling: Shadow Priest x0.935).',
+          ' Effect 1 sp_potency 31.1106 -> 29.0884 (2026-11-26, raid-buff-sets retune R1, user ruling: Shadow Priest x0.935).'
+          ' sp_potency 29.0884 -> 25.88868 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Shadow-only spells x0.89).',
     raw_overrides={'AttributesEx': 67126276, 'AttributesEx2': 524288, 'AttributesEx5': 134225920, 'AttributesEx6': 8388608, 'SpellVisualID_1': 12637, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'CastingTimeIndex': 1, 'SpellClassSet': 6, 'SpellLevel': 0, 'SpellClassMask_3': _masks.MIND_FLAY, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Assaults the target's mind with Shadow energy, causing Shadow damage over 3 sec.", 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
 )
 # SpellVisualID_1 12637 is stock Mind Flay's own channel visual (shared by 15407/17313/17314).

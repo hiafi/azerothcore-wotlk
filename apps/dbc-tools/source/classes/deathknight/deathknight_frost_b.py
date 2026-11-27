@@ -378,7 +378,7 @@ avalanche_203321 = spell(
     id=203321, name='Avalanche', school=School.FROST, attributes=0, cast_time_ms=0, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=25.0, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=21.25, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_ICICLE,
@@ -389,6 +389,7 @@ avalanche_203321 = spell(
         'SpellLevel 27 = 9 + 5 x 3 + 3 '
         '(L6). d2 b16 FROST_OTHER_MAGIC (Runic Focus 200% crit and Razorice read it). AttributesEx3 SUPPRESS_CASTER_PROCS: '
         'rolls no procs and grants no Killing Machine. SpellVisual 14570 (Ice Burst).'
+        ' ap_potency 25.0 -> 21.25 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Frost DK builds x0.85 (Breath, Howling Blast, Frost Strike, Avalanche; shared by Obliteration and Breath)).'
     ),
     raw_overrides=_base_raw(
         27, 'Icicles deal {pot1} Frost damage.', SpellClassMask_3=m.FROST_OTHER_MAGIC, DefenseType=1, PreventionType=1,

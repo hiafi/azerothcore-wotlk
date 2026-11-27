@@ -69,7 +69,7 @@ corruption_172 = spell(
     range_yards=30.0,
     duration_ms=18000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=15.8933, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=14.5742, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
         Effect(type=EffectType.DUMMY, die_sides=0),
     ],
     spell_icon_id=313,
@@ -77,7 +77,8 @@ corruption_172 = spell(
           ' Effect 1 sp_potency 16.30125 -> 12.6335 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Affliction x0.775).'
           ' Effect 1 sp_potency 12.6335 -> 11.6228 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Affliction x0.92 on Bane of Agony, Unstable Affliction, Corruption, Shadow Bolt and Haunt; shared with the other warlock specs).'
           ' Effect 1 sp_potency 11.6228 -> 12.6689 (2026-11-22, level60-stat-curve round S23, user ruling 14: x1.09, the Demonology multiplier, on this spell shared by the specs; Affliction and Destruction get their x1.18 from the hidden passive 200992 (+8%, linked from Malediction and Shadow and Flame rank 3)).'
-          ' Effect 1 sp_potency 12.6689 -> 16.2177 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853 on top of x1.08, the +8% of the retired hidden passive 200992 that Corruption no longer gets; no Demonology or Destruction kit casts Corruption, so it follows Affliction only). Effect 1 sp_potency 16.2177 -> 15.7474 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971). Effect 1 sp_potency 15.7474 -> 15.8933 (2026-11-26, raid-buff-sets retune R4: x0.98 instead of x0.971, R3 measured 1,498).',
+          ' Effect 1 sp_potency 12.6689 -> 16.2177 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853 on top of x1.08, the +8% of the retired hidden passive 200992 that Corruption no longer gets; no Demonology or Destruction kit casts Corruption, so it follows Affliction only). Effect 1 sp_potency 16.2177 -> 15.7474 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971). Effect 1 sp_potency 15.7474 -> 15.8933 (2026-11-26, raid-buff-sets retune R4: x0.98 instead of x0.971, R3 measured 1,498).'
+          ' Effect 1 sp_potency 15.8933 -> 14.5742 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Affliction x0.917).',
     raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Shadow damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Corrupts the target, causing {pot1.total} Shadow damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2, 'SpellClassSet': 5, 'SpellLevel': 4, 'SpellPriority': 50, 'SpellVisualID_1': 8629, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(corruption_172, 'spell_warl_corruption_affliction')
@@ -100,8 +101,8 @@ immolate_348 = spell(
     range_yards=30.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=15.7943, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=57.1092, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=13.899, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=50.2561, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.MOD_DAMAGE_FROM_CASTER),
     ],
     spell_icon_id=31,
@@ -110,7 +111,8 @@ immolate_348 = spell(
           ' Effect 2 sp_potency 64.0 -> 50.304 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Destruction x0.786).'
           ' Effect 1 sp_potency 13.9122 -> 12.9662 and Effect 2 sp_potency 50.304 -> 46.8833 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Destruction x0.932 on Chaos Bolt, Incinerate and Immolate; Conflagrate copies the DoT total, so it follows).'
           ' Effect 1 sp_potency 12.9662 -> 15.3001, Effect 2 sp_potency 46.8833 -> 55.3223 (2026-11-22, level60-stat-curve round S23, user ruling 14: Destruction x1.18).'
-          ' Effect 1 sp_potency 15.3001 -> 15.7943, Effect 2 sp_potency 55.3223 -> 57.1092 (2026-11-26, raid-buff-sets retune R1, user ruling: Destruction x1.0323).',
+          ' Effect 1 sp_potency 15.3001 -> 15.7943, Effect 2 sp_potency 55.3223 -> 57.1092 (2026-11-26, raid-buff-sets retune R1, user ruling: Destruction x1.0323).'
+          ' Effect 1 sp_potency 15.7943 -> 13.899 Effect 2 sp_potency 57.1092 -> 50.2561 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Destruction x0.88).',
     raw_overrides={'AttributesEx4': 1048576, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Fire damage every $t1 seconds.', 'CastingTimeIndex': 5, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Burns the enemy for {pot2} Fire damage and then an additional {pot1.total} Fire damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': m.FNB_IMMOLATE_BONUS[0], 'EffectSpellClassMaskC_2': m.FNB_IMMOLATE_BONUS[1], 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 4, 'SpellClassSet': 5, 'SpellLevel': 1, 'SpellVisualID_1': 46, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -153,14 +155,15 @@ shadow_bolt_686 = spell(
     mana_cost_pct=12,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=40.1797, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=36.1617, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=213,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1). PLAN A9 (druid-rework code review finding #9): cast_time_ms=2000, raw CastingTimeIndex (90, 1700ms) dropped. Potency system P4 (warlock pilot): converted to sp_potency=140.0 (user-reviewed, mismatched row). mana_cost_pct 17 -> 12 (2026-10-08, DPS balance pass, user ruling: Warlock mana). Effect 1 sp_potency 140.0 -> 84.0 (2026-10-08, DPS balance pass, user ruling: Affliction damage). Effect 1 sp_potency 84.0 -> 58.8 (2026-10-08, DPS balance pass, user ruling: Affliction Shadow Bolt -30%). Effect 1 sp_potency 58.8 -> 51.7 (2026-10-08, DPS balance pass, user ruling: Affliction -12%). Shared by Affliction and Demonology.'
           ' Effect 1 sp_potency 51.7 -> 40.0675 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Affliction x0.775).'
           ' Effect 1 sp_potency 40.0675 -> 36.8621 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Affliction x0.92 on Bane of Agony, Unstable Affliction, Corruption, Shadow Bolt and Haunt; shared with the other warlock specs).'
           ' Effect 1 sp_potency 36.8621 -> 40.1797 (2026-11-22, level60-stat-curve round S23, user ruling 14: x1.09, the Demonology multiplier, on this spell shared by the specs; Affliction and Destruction get their x1.18 from the hidden passive 200992 (+8%, linked from Malediction and Shadow and Flame rank 3)).'
-          ' No change to the potency (2026-11-26, raid-buff-sets retune R1, user ruling: no hidden tuning passives; 200992 is retired, the potency stays as it is and the tooltip no longer multiplies by the passive).',
+          ' No change to the potency (2026-11-26, raid-buff-sets retune R1, user ruling: no hidden tuning passives; 200992 is retired, the potency stays as it is and the tooltip no longer multiplies by the passive).'
+          ' Effect 1 sp_potency 40.1797 -> 36.1617 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Shadow Bolt x0.90, shared by Affliction and Demonology).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Sends a shadowy bolt at the enemy, causing {pot1} Shadow damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_1': 1, 'SpellClassSet': 5, 'SpellLevel': 1, 'SpellVisualID_1': 64, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(shadow_bolt_686, 'spell_warl_shadow_bolt_affliction', 'spell_warl_shadow_bolt_demonology')
@@ -223,14 +226,15 @@ drain_life_689 = spell(
     range_yards=30.0,
     duration_ms=5000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=2.0217, implicit_target_a=6, apply_aura=AuraType.PERIODIC_LEECH, amplitude=1000),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=1.8539, implicit_target_a=6, apply_aura=AuraType.PERIODIC_LEECH, amplitude=1000),
     ],
     spell_icon_id=546,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 14); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 Live damage scaled x0.88 (2026-10-08, DPS balance pass, user ruling: Affliction -12%): base_points 9 -> 8 (live base value 10 -> 9, x0.88 = 8.8 rounded), points_per_level 1.8636 -> 1.64, EffectBonusMultiplier_1 (the live spell power coefficient; no spell_bonus_data row) 0.143 -> 0.12584. base_points 8 -> 9, points_per_level 1.64 -> 1.886, EffectBonusMultiplier_1 0.12584 -> 0.14472 (2026-11-15, balance on the Normal-tier kits, user ruling: Drain Life +15%; x1.15 on the level-60 total 84.4 -> 96.8 = x1.147, base rounded to the integer).'
           ' base_points 9 -> 7, points_per_level 1.886 -> 1.456, EffectBonusMultiplier_1 0.14472 -> 0.11216 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Affliction x0.775; x0.775 on the level-60 total 96.8 -> 75.0, base rounded to the integer, coefficient 0.14472 x 0.775).'
           ' base_points 7 -> 8, points_per_level 1.456 -> 1.7276, EffectBonusMultiplier_1 0.11216 -> 0.13235 (2026-11-22, level60-stat-curve round S23, user ruling 14: Affliction x1.18; x1.18 on the level-60 total 75.0 -> 88.5, base rounded to the integer, coefficient 0.11216 x 1.18).'
-          ' base_points 8 -> 9, points_per_level 1.7276 -> 2.063, EffectBonusMultiplier_1 0.13235 -> 0.15688 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853; x1.1853 on the level-60 total 88.5 -> 104.9, base rounded to the integer, coefficient 0.13235 x 1.1853). base_points 9 kept, points_per_level 2.063 -> 2.003, EffectBonusMultiplier_1 0.15688 -> 0.15233 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971): x0.971 on the level-60 total 104.9 -> ~101.9. points_per_level 2.003 -> 2.0217, EffectBonusMultiplier_1 0.15233 -> 0.15374 (2026-11-26, raid-buff-sets retune R4: x0.98 instead of x0.971, R3 measured 1,498): x0.98 of the pre-R3 values, level-60 total ~102.8.',
-    raw_overrides={'AttributesEx': 16388, 'AttributesEx5': 8192, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Drains $s1 health every $t1 sec to the caster.', 'BaseLevel': 14, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Transfers $s1 health every $t1 sec from the target to the caster.  Lasts $d.', 'EffectBonusMultiplier_1': 0.15374, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 8, 'SpellClassSet': 5, 'SpellLevel': 14, 'SpellVisualID_1': 12655, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+          ' base_points 8 -> 9, points_per_level 1.7276 -> 2.063, EffectBonusMultiplier_1 0.13235 -> 0.15688 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853; x1.1853 on the level-60 total 88.5 -> 104.9, base rounded to the integer, coefficient 0.13235 x 1.1853). base_points 9 kept, points_per_level 2.063 -> 2.003, EffectBonusMultiplier_1 0.15688 -> 0.15233 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971): x0.971 on the level-60 total 104.9 -> ~101.9. points_per_level 2.003 -> 2.0217, EffectBonusMultiplier_1 0.15233 -> 0.15374 (2026-11-26, raid-buff-sets retune R4: x0.98 instead of x0.971, R3 measured 1,498): x0.98 of the pre-R3 values, level-60 total ~102.8.'
+          ' points_per_level 2.0217 -> 1.8539, EffectBonusMultiplier_1 (effect and raw_overrides) 0.15374 -> 0.14098; base_points 9 kept (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Affliction x0.917; x0.917 on the level-60 total ~104 -> ~96).',
+    raw_overrides={'AttributesEx': 16388, 'AttributesEx5': 8192, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Drains $s1 health every $t1 sec to the caster.', 'BaseLevel': 14, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Transfers $s1 health every $t1 sec from the target to the caster.  Lasts $d.', 'EffectBonusMultiplier_1': 0.14098, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 8, 'SpellClassSet': 5, 'SpellLevel': 14, 'SpellVisualID_1': 12655, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(drain_life_689, 'spell_warl_drain_life_affliction')
 
@@ -387,14 +391,15 @@ bane_of_agony_980 = spell(
     range_yards=30.0,
     duration_ms=24000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=9.9126, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=9.0899, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=544,
     notes="warlock-rework AFFLICTION §4.5 B14: renamed from Curse of Agony (banes stay Dispel=Curse but leave the curse slot - B14); the stack ramp lives on this aura itself (CumulativeAura 15 = max cap with Improved Curses r2; live cap via Warlock::GetAgonyStackCap) so the target shows one debuff with a stack count - spell_warl_bane_of_agony_aura keeps its own 1-stack snapshot and writes snapshot x (1 + 0.1 x stacks) before each tick (F8: multiplies the already-potency-scaled amount, doesn't discard it), and the SpellScript undoes the +1 stack a recast adds (recast still re-snapshots, R2). Replaces the old separate 200720 tracker. Potency system P4 (warlock pilot): converted to sp_potency=24.0 (user-reviewed, mismatched row). Effect 1 sp_potency 24.0 -> 19.2 (2026-10-08, DPS balance pass, user ruling: Bane of Agony -20%). Effect 1 sp_potency 19.2 -> 9.6 (2026-10-08, DPS balance pass, user ruling: Affliction damage). Effect 1 sp_potency 9.6 -> 8.4 (2026-10-08, DPS balance pass, user ruling: Affliction -12%). Effect 1 sp_potency 8.4 -> 8.82 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Bane of Agony +5%). Effect 1 sp_potency 8.82 -> 10.143 (2026-11-15, balance on the Normal-tier kits, user ruling: Bane of Agony +15%)."
           ' Effect 1 sp_potency 10.143 -> 7.8608 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Affliction x0.775).'
           ' Effect 1 sp_potency 7.8608 -> 7.2319 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Affliction x0.92 on Bane of Agony, Unstable Affliction, Corruption, Shadow Bolt and Haunt).'
           ' Effect 1 sp_potency 7.2319 -> 8.5336 (2026-11-22, level60-stat-curve round S23, user ruling 14: Affliction x1.18).'
-          ' Effect 1 sp_potency 8.5336 -> 10.1149 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853). Effect 1 sp_potency 10.1149 -> 9.8216 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971). Effect 1 sp_potency 9.8216 -> 9.9126 (2026-11-26, raid-buff-sets retune R4: x0.98 instead of x0.971, R3 measured 1,498).',
+          ' Effect 1 sp_potency 8.5336 -> 10.1149 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853). Effect 1 sp_potency 10.1149 -> 9.8216 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971). Effect 1 sp_potency 9.8216 -> 9.9126 (2026-11-26, raid-buff-sets retune R4: x0.98 instead of x0.971, R3 measured 1,498).'
+          ' Effect 1 sp_potency 9.9126 -> 9.0899 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Affliction x0.917).',
     raw_overrides={'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Shadow damage every $t1 sec, increased by 10% per stack.', 'CastingTimeIndex': 1, 'CumulativeAura': 15, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Afflicts the target with agony, causing {pot1.total} Shadow damage over $d.  Each tick adds a stack that increases its damage by 10%, up to 10 stacks.  Only one Bane per Warlock can be active on any one target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 1024, 'SpellClassSet': 5, 'SpellLevel': 8, 'SpellVisualID_1': 824, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(bane_of_agony_980, 'spell_warl_bane_of_agony')
@@ -595,14 +600,15 @@ firebolt_3110 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=15.0979, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=13.2862, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=18,
     notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/mana_cost_pct from max rank; MaxLevel set to 80. PLAN A9 (druid-rework code review finding #9): keeps its live cast time - cast_time_ms=2000, raw CastingTimeIndex (5, 2000ms) dropped; no behaviour change. Potency system P8 (warlock pets): cast by the Imp (pet AI, stock spellbook path, no custom base points - the hook applies naturally). Converted to sp_potency=43.0, the user's own pre-set warlock-potency-proposals.txt value (recorded 2026-10-01, held for P8 since this is pet-cast) - not the plain report default (43.2, effectively the same number, rounding only)."
           ' Effect 1 sp_potency 43.0 -> 33.798 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Destruction x0.786).'
           ' Effect 1 sp_potency 33.798 -> 12.3945 (x0.3667: the pet now gets 100% of the owner\'s spell power instead of 15% (spell_warl_generic_scaling, user ruling 1A); sized so the Destruction Normal-kit hit stays the same at owner spell power 453.6: (1 + 0.006442 x 0.15 x 453.6) / (1 + 0.006442 x 453.6)) (2026-11-21, level60-stat-curve round S9: targeted trims after S8).'
           ' Effect 1 sp_potency 12.3945 -> 14.6255 (2026-11-22, level60-stat-curve round S23, user ruling 14: Destruction x1.18 (the Imp, the Destruction pet)).'
-          ' Effect 1 sp_potency 14.6255 -> 15.0979 (2026-11-26, raid-buff-sets retune R1, user ruling: Destruction x1.0323).',
+          ' Effect 1 sp_potency 14.6255 -> 15.0979 (2026-11-26, raid-buff-sets retune R1, user ruling: Destruction x1.0323).'
+          ' Effect 1 sp_potency 15.0979 -> 13.2862 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Destruction x0.88).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Fire damage to a target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 16.0, 'SpellClassMask_1': 4096, 'SpellClassSet': 5, 'SpellLevel': 1, 'SpellVisualID_1': 67, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
@@ -826,7 +832,7 @@ soul_fire_6353 = spell(
     mana_cost_pct=4,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=33.5354, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=29.2093, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=184,
     notes="warlock-rework DEMONOLOGY §4.4/§0.1.7: learn level 48 -> 30. Cast time/mana_cost_pct unchanged (3.3.5 values). trained_by replaces the old 48/14000 row below. Potency system P4 (warlock pilot): converted to sp_potency=85.0 (user-reviewed, mismatched row) - replaces the old _scaling.sb_units(1.8, 30, 868, 875) SB-units derivation. mana_cost_pct 9 -> 6 (2026-10-08, DPS balance pass, user ruling: Demonology mana). Effect 1 sp_potency 85.0 -> 59.5 (2026-10-08, DPS balance pass, user ruling: Demonology damage). Effect 1 sp_potency 59.5 -> 53.6 (2026-10-08, DPS balance pass, user ruling: Demonology -10%)."
@@ -834,7 +840,8 @@ soul_fire_6353 = spell(
           ' Effect 1 sp_potency 53.6 -> 37.52 (2026-11-01, DPS balance pass 1031, user ruling: Soul Fire -30%; shared with Destruction, covered by the ruling).'
           ' Effect 1 sp_potency 37.52 -> 30.7664 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Demonology x0.820).'
           ' Effect 1 sp_potency 30.7664 -> 33.5354 (2026-11-22, level60-stat-curve round S23, user ruling 14: x1.09, the Demonology multiplier, on this spell shared by the specs; Affliction and Destruction get their x1.18 from the hidden passive 200992 (+8%, linked from Malediction and Shadow and Flame rank 3)).'
-          ' No change to the potency (2026-11-26, raid-buff-sets retune R1, user ruling: no hidden tuning passives; 200992 is retired, the potency stays as it is and the tooltip no longer multiplies by the passive).',
+          ' No change to the potency (2026-11-26, raid-buff-sets retune R1, user ruling: no hidden tuning passives; 200992 is retired, the potency stays as it is and the tooltip no longer multiplies by the passive).'
+          ' Effect 1 sp_potency 33.5354 -> 29.2093 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Demonology x0.871).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 171, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Burn the enemy's soul, causing {pot1} Fire damage.", 'EffectBonusMultiplier_1': 1.5426, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 0, 'Reagent_1': 0, 'Speed': 24.0, 'SpellClassMask_2': 128, 'SpellClassSet': 5, 'SpellLevel': 30, 'SpellVisualID_1': 2253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(soul_fire_6353, 'spell_warl_soul_fire_destruction', 'spell_warl_soul_fire_demonology')
@@ -1208,14 +1215,15 @@ incinerate_29722 = spell(
     mana_cost_pct=14,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=54.0987, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=47.6069, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90170,
     notes='warlock-rework DESTRUCTION §4.1 (B3 rebase, learn level 64->24). Icon moved off 2128 to 90170 (B17(b)/C11 - makes the stock "+25% vs Immolate" hardcode inert; Fire and Brimstone (9,1) owns that bonus now via Immolate eff2). Description drops the stock $/4;s1 Immolate clause. Potency system P4 (warlock pilot): converted to sp_potency=97.6 (potency-report default, base/coef already agreed). Effect 1 sp_potency 97.6 -> 63.4 (2026-10-08, DPS balance pass, user ruling: Destruction damage). Effect 1 sp_potency 63.4 -> 57.06 (2026-10-08, DPS balance pass, user ruling: Destruction Incinerate x0.90, round 10). Effect 1 sp_potency 57.06 -> 48.501 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Incinerate -15%). Effect 1 sp_potency 48.501 -> 60.62625 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Incinerate +25%, exactly x1.25).'
           ' Effect 1 sp_potency 60.62625 -> 47.6522 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Destruction x0.786).'
           ' Effect 1 sp_potency 47.6522 -> 44.4119 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Destruction x0.932 on Chaos Bolt, Incinerate and Immolate).'
           ' Effect 1 sp_potency 44.4119 -> 52.406 (2026-11-22, level60-stat-curve round S23, user ruling 14: Destruction x1.18).'
-          ' Effect 1 sp_potency 52.406 -> 54.0987 (2026-11-26, raid-buff-sets retune R1, user ruling: Destruction x1.0323).',
+          ' Effect 1 sp_potency 52.406 -> 54.0987 (2026-11-26, raid-buff-sets retune R1, user ruling: Destruction x1.0323).'
+          ' Effect 1 sp_potency 54.0987 -> 47.6069 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Destruction x0.88).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 19, 'CumulativeAura': 5, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Fire damage to your target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 4, 'EffectSpellClassMaskC_1': 4, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 1, 'Speed': 20.0, 'SpellClassMask_2': 64, 'SpellClassSet': 5, 'SpellLevel': 24, 'SpellVisualID_1': 7675, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(incinerate_29722, trainer_id=214, req_level=24, money_cost=3000)
@@ -1343,8 +1351,8 @@ felguard_cleave_30213 = spell(
     mana_cost_pct=10,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=110, implicit_target_a=6, chain_targets=2),
-        Effect(type=EffectType.WEAPON_DAMAGE, sp_potency=21.1509, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=95, implicit_target_a=6, chain_targets=2),
+        Effect(type=EffectType.WEAPON_DAMAGE, sp_potency=18.4226, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6, chain_targets=2),
     ],
     spell_icon_id=277,
@@ -1361,7 +1369,8 @@ felguard_cleave_30213 = spell(
           'flat from effect 1 (2026-11-01, potency audit fix F14).'
           ' Effect 2 sp_potency 23.2 -> 19.024 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Demonology x0.820).'
           ' Effect 1 weapon_potency 100 -> 109, Effect 2 sp_potency 19.024 -> 20.7362 (2026-11-22, level60-stat-curve round S23, user ruling 14: Demonology x1.09).'
-          ' Effect 1 weapon_potency 109 -> 110, Effect 2 sp_potency 20.7362 -> 21.1509 (2026-11-26, raid-buff-sets retune R1, user ruling: Demonology x1.02; weapon potency set to a round 110, a visible percent (109 x 1.02 = 111.18; user ruling 2026-11-26)).',
+          ' Effect 1 weapon_potency 109 -> 110, Effect 2 sp_potency 20.7362 -> 21.1509 (2026-11-26, raid-buff-sets retune R1, user ruling: Demonology x1.02; weapon potency set to a round 110, a visible percent (109 x 1.02 = 111.18; user ruling 2026-11-26)).'
+          ' Effect 1 weapon_potency 110 -> 95 (the visible percent, a multiple of 5; x0.864); Effect 2 sp_potency 21.1509 -> 18.4226 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Demonology x0.871).',
     raw_overrides={'AttributesEx': 512, 'AttributesEx2': 4096, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "A sweeping attack that does the Felguard's weapon damage plus {pot2.avg} to the target and his nearest ally.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 4194304, 'SpellClassSet': 4, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 219, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 unbind_bonus_coefficients(felguard_cleave_30213)  # stray stock spell_bonus_data ap 0.1429 (D1)
@@ -1449,14 +1458,15 @@ shadow_bite_54049 = spell(
     mana_cost_pct=3,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=22.4446, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=20.5817, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=2027,
     notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 42); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P8 (warlock pets): cast by the Felhunter (pet AI, stock spellbook path, no custom base points - the hook applies naturally). eff0 converted to sp_potency=60.0, the user's own pre-set warlock-potency-proposals.txt value (recorded 2026-10-01, held for P8 since this is pet-cast) - not the plain report default (26.2); the live SP coefficient (0.429) implied 100.1, so the user's own reviewed number sits between the two. eff1/eff2 (the per-DoT percent bonus, read via GetAmount()/CalcValue() by spell_warl_shadow_bite_improved_felhunter) are flat tier-2 constants, untouched."
           ' Effect 1 sp_potency 60.0 -> 46.5 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Affliction x0.775).'
           ' Effect 1 sp_potency 46.5 -> 16.3748 (x0.3521: the pet now gets 100% of the owner\'s spell power instead of 15% (spell_warl_generic_scaling, user ruling 1A); sized so the Affliction Normal-kit hit stays the same at owner spell power 497.5: (1 + 0.006442 x 0.15 x 497.5) / (1 + 0.006442 x 497.5)) (2026-11-21, level60-stat-curve round S9: targeted trims after S8).'
           ' Effect 1 sp_potency 16.3748 -> 19.3223 (2026-11-22, level60-stat-curve round S23, user ruling 14: Affliction x1.18 (the Felhunter, the Affliction pet)).'
-          ' Effect 1 sp_potency 19.3223 -> 22.9027 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853). Effect 1 sp_potency 22.9027 -> 22.2385 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971). Effect 1 sp_potency 22.2385 -> 22.4446 (2026-11-26, raid-buff-sets retune R4: x0.98 instead of x0.971, R3 measured 1,498).',
+          ' Effect 1 sp_potency 19.3223 -> 22.9027 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853). Effect 1 sp_potency 22.9027 -> 22.2385 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971). Effect 1 sp_potency 22.2385 -> 22.4446 (2026-11-26, raid-buff-sets retune R4: x0.98 instead of x0.971, R3 measured 1,498).'
+          ' Effect 1 sp_potency 22.4446 -> 20.5817 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Affliction x0.917).',
     raw_overrides={'AttributesEx': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Bite the enemy, causing {pot1} Shadow damage plus an additional $s3% damage for each of your damage over time effects on the target.', 'EffectBasePoints_2': -1, 'EffectBasePoints_3': 14, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 4194304, 'SpellClassSet': 5, 'SpellLevel': 42, 'SpellVisualID_1': 11837, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(shadow_bite_54049, 'spell_warl_shadow_bite_improved_felhunter')
@@ -1507,7 +1517,7 @@ unstable_affliction_30108 = spell(
     range_yards=30.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=20.9229, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=19.1863, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
         Effect(type=77, die_sides=0, implicit_target_a=6),
     ],
     spell_icon_id=2039,
@@ -1515,7 +1525,8 @@ unstable_affliction_30108 = spell(
           ' Effect 1 sp_potency 21.409 -> 16.592 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Affliction x0.775).'
           ' Effect 1 sp_potency 16.592 -> 15.2646 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Affliction x0.92 on Bane of Agony, Unstable Affliction, Corruption, Shadow Bolt and Haunt).'
           ' Effect 1 sp_potency 15.2646 -> 18.0122 (2026-11-22, level60-stat-curve round S23, user ruling 14: Affliction x1.18).'
-          ' Effect 1 sp_potency 18.0122 -> 21.3499 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853). Effect 1 sp_potency 21.3499 -> 20.7308 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971). Effect 1 sp_potency 20.7308 -> 20.9229 (2026-11-26, raid-buff-sets retune R4: x0.98 instead of x0.971, R3 measured 1,498).',
+          ' Effect 1 sp_potency 18.0122 -> 21.3499 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853). Effect 1 sp_potency 21.3499 -> 20.7308 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971). Effect 1 sp_potency 20.7308 -> 20.9229 (2026-11-26, raid-buff-sets retune R4: x0.98 instead of x0.971, R3 measured 1,498).'
+          ' Effect 1 sp_potency 20.9229 -> 19.1863 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Affliction x0.917).',
     raw_overrides={'AttributesEx4': 1048576, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Shadow damage every $t1 sec.  If dispelled, will cause $*9;s1 damage to the dispeller and silence them for $31117d.', 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Shadow energy slowly destroys the target, causing {pot1.total} damage over $d.  In addition, if the Unstable Affliction is dispelled it will cause $*9;s1 damage to the dispeller and silence them for $31117d. Only one Unstable Affliction or Immolate per Warlock can be active on any one target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 256, 'SpellClassSet': 5, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 8141, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(unstable_affliction_30108, 'spell_warl_unstable_affliction_affliction')
@@ -1536,14 +1547,15 @@ shadowfury_30283 = spell(
     range_yards=30.0,
     duration_ms=3000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=187.7631, potency_kind='direct', implicit_target_a=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=165.2315, potency_kind='direct', implicit_target_a=16, radius_yards=8.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, mechanic=Mechanic.STUN, implicit_target_a=16, apply_aura=AuraType.MOD_STUN, radius_yards=8.0),
     ],
     spell_icon_id=1988,
     notes='warlock-rework DESTRUCTION §4.1 (B3 rebase, moved (8,1)->(6,0), learn level 50->40). Fury of the Void (7,0) capstone script bound on this id (WP-B). Potency system P4 (warlock pilot): converted to sp_potency=217.9 (user-reviewed, mismatched row). Effect 1 sp_potency 217.9 -> 196.11 (2026-10-08, DPS balance pass, user ruling: Destruction Shadowfury x0.90, round 10).'
           ' Effect 1 sp_potency 196.11 -> 154.1425 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Destruction x0.786).'
           ' Effect 1 sp_potency 154.1425 -> 181.8881 (2026-11-22, level60-stat-curve round S23, user ruling 14: Destruction x1.18).'
-          ' Effect 1 sp_potency 181.8881 -> 187.7631 (2026-11-26, raid-buff-sets retune R1, user ruling: Destruction x1.0323).',
+          ' Effect 1 sp_potency 181.8881 -> 187.7631 (2026-11-26, raid-buff-sets retune R1, user ruling: Destruction x1.0323).'
+          ' Effect 1 sp_potency 187.7631 -> 165.2315 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Destruction x0.88).',
     raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Stunned.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Shadowfury is unleashed, causing {pot1} Shadow damage and stunning all enemies within $a1 yds for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 4096, 'SpellClassSet': 5, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 7732, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 500, 'Targets': 64},
 )
 scripted_by(shadowfury_30283, 'spell_warl_fury_of_the_void')
@@ -1563,7 +1575,7 @@ haunt_48181 = spell(
     range_yards=30.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=162.1774, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=148.7167, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=6, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=6, apply_aura=271),
     ],
@@ -1572,7 +1584,8 @@ haunt_48181 = spell(
           ' Effect 1 sp_potency 165.945 -> 128.6074 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Affliction x0.775).'
           ' Effect 1 sp_potency 128.6074 -> 118.3188 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Affliction x0.92 on Bane of Agony, Unstable Affliction, Corruption, Shadow Bolt and Haunt).'
           ' Effect 1 sp_potency 118.3188 -> 139.6162 (2026-11-22, level60-stat-curve round S23, user ruling 14: Affliction x1.18).'
-          ' Effect 1 sp_potency 139.6162 -> 165.4871 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853). Effect 1 sp_potency 165.4871 -> 160.688 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971). Effect 1 sp_potency 160.688 -> 162.1774 (2026-11-26, raid-buff-sets retune R4: x0.98 instead of x0.971, R3 measured 1,498).',
+          ' Effect 1 sp_potency 139.6162 -> 165.4871 (2026-11-26, raid-buff-sets retune R1, user ruling: Affliction x1.1853). Effect 1 sp_potency 165.4871 -> 160.688 (2026-11-26, raid-buff-sets retune R3, user ruling: Affliction x0.971). Effect 1 sp_potency 160.688 -> 162.1774 (2026-11-26, raid-buff-sets retune R4: x0.98 instead of x0.971, R3 measured 1,498).'
+          ' Effect 1 sp_potency 162.1774 -> 148.7167 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Affliction x0.917).',
     raw_overrides={'AttributesEx3': 67108992, 'AttributesEx5': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage taken from Shadow damage-over-time effects increased by $s3%.', 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You send a ghostly soul into the target, dealing {pot1} Shadow damage and increasing all damage done by your Shadow damage-over-time effects on the target by $s3% for $d. When the Haunt spell ends or is dispelled, the soul returns to you, healing you for $s2% of the damage it did to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': m.SHADOW_PERIODIC[0], 'EffectSpellClassMaskC_2': m.SHADOW_PERIODIC[1], 'EffectSpellClassMaskC_3': m.SHADOW_PERIODIC[2], 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': 262144, 'SpellClassSet': 5, 'SpellLevel': 60, 'SpellVisualID_1': 10731, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 unbind_bonus_coefficients(haunt_48181)  # stale spell_bonus_data row overrode the potency coefficient (D1)
@@ -1592,7 +1605,7 @@ chaos_bolt_50796 = spell(
     mana_cost_pct=7,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=182.4641, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=160.5684, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=3178,
     notes="warlock-rework DESTRUCTION §4.1 (B3 rebase, moved (10,1)->(6,1), learn level 60->40). School Fire (4) -> 36 (Fire|Shadow, Shadowflame per §0.2.5; crit still reads GetFirstSchoolInMask=Fire, unchanged). Description names Chaotic Burn and Soulburn: Chaos Bolt/Soul Fire (§6.1); Mastery capstone is spell_warl_chaos_bolt_mastery (WP-B). Potency system P4 (warlock pilot): converted to sp_potency=213.0 (user-reviewed, mismatched row)."
@@ -1601,7 +1614,8 @@ chaos_bolt_50796 = spell(
           ' Effect 1 sp_potency 204.48 -> 160.7213 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Destruction x0.786).'
           ' Effect 1 sp_potency 160.7213 -> 149.7923 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Destruction x0.932 on Chaos Bolt, Incinerate and Immolate).'
           ' Effect 1 sp_potency 149.7923 -> 176.7549 (2026-11-22, level60-stat-curve round S23, user ruling 14: Destruction x1.18).'
-          ' Effect 1 sp_potency 176.7549 -> 182.4641 (2026-11-26, raid-buff-sets retune R1, user ruling: Destruction x1.0323).',
+          ' Effect 1 sp_potency 176.7549 -> 182.4641 (2026-11-26, raid-buff-sets retune R1, user ruling: Destruction x1.0323).'
+          ' Effect 1 sp_potency 182.4641 -> 160.5684 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Destruction x0.88).',
     raw_overrides={'AttributesEx3': 262144, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Sends a bolt of chaotic fire at the enemy, dealing {pot1} Shadowflame damage and leaving Chaotic Burn on the target. Chaos Bolt cannot be resisted, and pierces through all absorption effects. Learning Chaos Bolt also grants Soulburn: Chaos Bolt and Soulburn: Soul Fire.\n\nChaotic Burn: deals 25% of Chaos Bolt's damage as Shadowflame damage over 6 sec, ticking every 2 sec. Your Conflagrate deals 20% more damage to targets afflicted by your Chaotic Burn.\n\nCapstone Bonus: Chaos Bolt's damage is increased by your Mastery.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': 131072, 'SpellClassSet': 5, 'SpellLevel': 40, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(chaos_bolt_50796, 'spell_warl_chaos_bolt', 'spell_warl_chaos_bolt_mastery')
@@ -2465,7 +2479,7 @@ hand_of_guldan_200820 = spell(
     mana_cost_pct=5,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=125.1549, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=109.0099, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=2, implicit_target_a=6),
     ],
     spell_icon_id=90160,
@@ -2475,7 +2489,8 @@ hand_of_guldan_200820 = spell(
           ' Effect 1 sp_potency 171.6 -> 137.28 (2026-11-01, DPS balance pass 1031, user ruling: Hand of Gul\'dan -20%).'
           ' Effect 1 sp_potency 137.28 -> 112.5696 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Demonology x0.820).'
           ' Effect 1 sp_potency 112.5696 -> 122.7009 (2026-11-22, level60-stat-curve round S23, user ruling 14: Demonology x1.09).'
-          ' Effect 1 sp_potency 122.7009 -> 125.1549 (2026-11-26, raid-buff-sets retune R1, user ruling: Demonology x1.02).',
+          ' Effect 1 sp_potency 122.7009 -> 125.1549 (2026-11-26, raid-buff-sets retune R1, user ruling: Demonology x1.02).'
+          ' Effect 1 sp_potency 125.1549 -> 109.0099 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Demonology x0.871).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Calls down a demonic meteor on the target, dealing {pot1} Shadowflame damage and summoning $s2 Wild Imps. While you are in Metamorphosis, it also deals $200821s1 Shadowflame damage to all other enemies within 8 yards of the target. Wild Imps cast Fel Firebolt at your target and last up to 60 sec.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.HAND_OF_GULDAN, 'SpellClassSet': 5, 'SpellVisualID_1': 90025, 'SpellLevel': 10, 'Speed': 0.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(hand_of_guldan_200820, 214, 10, 600)
@@ -2499,7 +2514,7 @@ bane_of_doom_200825 = spell(
     range_yards=30.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=21.8802, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=6000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=19.0577, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=6000),
     ],
     spell_icon_id=91,
     notes="warlock-rework DEMONOLOGY §4.2 (B14/B15): baseline castable, learn 20. Bane, not a curse-slot curse - dispel=CURSE, category 0 (not stock Curse of Doom's 1179, C27), joins spell_group 1202 (bane slot) below, Warlock::IsBane extended by WP-0. amplitude 6000 (haste adds ticks automatically). AttributesEx6 copied from Curse of Agony/Doom's. Potency system P4 (warlock pilot): converted to sp_potency=40.0 (user-reviewed, mismatched row) - replaces the old _scaling.sb_units(0.80, 20, 386, 389) SB-units derivation. Effect 1 sp_potency 40.0 -> 32.0 (2026-10-08, DPS balance pass, user ruling: Demonology damage)."
@@ -2507,7 +2522,8 @@ bane_of_doom_200825 = spell(
           ' Effect 1 sp_potency 32.0 -> 24.0 (2026-11-01, DPS balance pass 1031, user ruling: Bane of Doom -25%).'
           ' Effect 1 sp_potency 24.0 -> 19.68 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Demonology x0.820).'
           ' Effect 1 sp_potency 19.68 -> 21.4512 (2026-11-22, level60-stat-curve round S23, user ruling 14: Demonology x1.09).'
-          ' Effect 1 sp_potency 21.4512 -> 21.8802 (2026-11-26, raid-buff-sets retune R1, user ruling: Demonology x1.02).',
+          ' Effect 1 sp_potency 21.4512 -> 21.8802 (2026-11-26, raid-buff-sets retune R1, user ruling: Demonology x1.02).'
+          ' Effect 1 sp_potency 21.8802 -> 19.0577 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Demonology x0.871).',
     raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Suffering Shadow damage over time.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Inflicts impending doom on the target, causing {pot1.total} Shadow damage over $d. Bane of Doom does not occupy your curse slot and can be active on several targets at once. Only one Bane per target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.BANE_OF_DOOM, 'SpellClassSet': 5, 'SpellLevel': 20, 'SpellVisualID_1': 5019, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(bane_of_doom_200825, 214, 20, 2000)

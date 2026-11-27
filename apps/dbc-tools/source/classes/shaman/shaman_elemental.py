@@ -430,13 +430,13 @@ call_of_thunder_rank3_202534 = _call_of_thunder(202534, 6, True)
 
 # ---- Booming Echoes rank 3 (talent 2262, row 7): shocks + Elemental Blast +15%; capstone = Echo (C++) ------------------------
 booming_echoes_rank3_202535 = _rank(
-    202535, 'Booming Echoes', [_mod(SpellModOp.DAMAGE, True, 29), _mod(SpellModOp.DOT, True, 29)], ICON_ECHOES, 45,
-    _desc('Increases the damage of your Shock spells and Elemental Blast by 30%.',
+    202535, 'Booming Echoes', [_mod(SpellModOp.DAMAGE, True, 14), _mod(SpellModOp.DOT, True, 14)], ICON_ECHOES, 45,
+    _desc('Increases the damage of your Shock spells and Elemental Blast by 15%.',
           'Each of your Lightning Overloads grants 1 Echo, stacking up to 10 times. Lasts 30 sec. Each Echo increases '
           'the damage of your next Earth Shock by 30% and its critical strike damage bonus by 10%. Summoning your Earth '
           'Elemental grants 5 Echoes. Earth Shock consumes all Echoes, or half of them while your Earth Elemental is active.', True),
-    'Booming Echoes rank 3 (capstone): SPELLMOD_DAMAGE pct +30% (15% until 2026-11-26, raid-buff-sets retune R1, user ruling: Booming Echoes 5/10/15% -> 10/20/30%) on the three shocks (d0) and Elemental Blast (d2 b20), '
-    'effect 2 SPELLMOD_DOT +30% on Flame Shock; same shape as A2\'s ranks 1 / 2. Echo 202565 is granted by the overload '
+    'Booming Echoes rank 3 (capstone): SPELLMOD_DAMAGE pct +15% (was 15% until 2026-11-26, raid-buff-sets retune R1, user ruling: Booming Echoes 5/10/15% -> 10/20/30%; back to +15% 2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Booming Echoes 10/20/30% -> 5/10/15%) on the three shocks (d0) and Elemental Blast (d2 b20), '
+    'effect 2 SPELLMOD_DOT +15% on Flame Shock; same shape as A2\'s ranks 1 / 2. Echo 202565 is granted by the overload '
     'script when it casts a copy.',
     **_emask(1, (SHOCKS, 0, ELEMENTAL_BLAST)), **_emask(2, FLAME_SHOCK),
 )

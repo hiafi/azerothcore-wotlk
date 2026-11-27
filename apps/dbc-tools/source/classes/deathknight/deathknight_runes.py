@@ -417,7 +417,7 @@ boiling_blight_203043 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=105.0, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=100.0, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=4068,
@@ -428,7 +428,8 @@ boiling_blight_203043 = spell(
           'doubles it), family 15 with d2 b11 only (_masks.ROT_DAMAGE, the N4 Rot damage group), AttributesEx3 0x50000 (ALWAYS_HIT + no caster procs) '
           'SUPPRESS_CASTER_PROCS (rolls no procs), no facing check and IGNORE_LOS (ticks land on targets beside, '
           'behind or out of sight of the DK; DK0b review M1). No GCD, no cost, 50000 yd (script/proc cast at another unit, bug '
-          '554). Mastery / Rage of Rivendare are S3\'s.',
+          '554). Mastery / Rage of Rivendare are S3\'s.'
+          '  Effect 1 ap_potency 105.0 -> 100.0 (back to the pre-R1 value) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Unholy shared x0.95 on Boiling Blight (Plague and Minion)).',
     raw_overrides={
         'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'FacingCasterFlags': 0,
         'AttributesEx2': _ATTR2_IGNORE_LOS, 'AttributesEx3': _ATTR3_ALWAYS_HIT | _ATTR3_SUPPRESS_CASTER_PROCS,

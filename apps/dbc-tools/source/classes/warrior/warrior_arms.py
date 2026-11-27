@@ -216,7 +216,7 @@ def _weapon_strike(percent, target=_TARGET_UNIT_TARGET_ENEMY, **kwargs):
 # button's own id as well, D3). Icon 90421 (patch-I, playtest 2026-10-30; was Slam's 559). Visual 39.
 colossus_smash_204490 = _arms(
     204490, 'Colossus Smash',
-    [_weapon_strike(455),
+    [_weapon_strike(365),
      Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY,
             trigger_spell=204491)],
     _ICON_COLOSSUS_SMASH,
@@ -226,8 +226,8 @@ colossus_smash_204490 = _arms(
     'gain it), SpellLevel = BaseLevel 40, SpellClassMask_3 = 0xA (d2 b1 Colossus Smash | b3 damaging-ability group). '
     'eff0 WEAPON_PERCENT_DAMAGE 150% [tune], eff1 TRIGGER_SPELL -> 204491 on the target. Icon 90421 (patch-I; was '
     'Slam\'s 559), visual 39 (Mortal Strike\'s swing). Effect 1 weapon_potency 420 -> 315 '
-    '(2026-10-31, DPS balance pass 1031, user ruling: Arms damage -25%). Effect 1 weapon_potency 315 -> 378 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Colossus Smash +20%). Effect 1 weapon_potency 378 -> 455 (457.38 rounded to the nearest 5, so x1.204; R1 revision 2026-11-26, user ruling: visible weapon percents on a multiple of 5), tooltip 378% -> 455% (2026-11-26, raid-buff-sets retune R1, user ruling: Arms only, x1.21).',
-    _raw('Smash the target for 455% weapon damage and expose it for 6 sec, increasing the damage it takes from you by '
+    '(2026-10-31, DPS balance pass 1031, user ruling: Arms damage -25%). Effect 1 weapon_potency 315 -> 378 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Colossus Smash +20%). Effect 1 weapon_potency 378 -> 455 (457.38 rounded to the nearest 5, so x1.204; R1 revision 2026-11-26, user ruling: visible weapon percents on a multiple of 5), tooltip 378% -> 455% (2026-11-26, raid-buff-sets retune R1,  user ruling: Arms only, x1.21). Effect 1 weapon_potency 455 -> 365 (x0.802, nearest 5), tooltip 455% -> 365% (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Arms about x0.80).',
+    _raw('Smash the target for 365% weapon damage and expose it for 6 sec, increasing the damage it takes from you by '
          '15% plus your Mastery. Your Mortal Strike reduces the remaining cooldown of Colossus Smash by 2 sec.',
          level=40, RangeIndex=_RANGE_INDEX_MELEE, FacingCasterFlags=1, DefenseType=_DMG_CLASS_MELEE,
          PreventionType=_PREVENTION_PACIFY, EquippedItemClass=_WEAPON_CLASS, EquippedItemSubclass=_WEAPON_SUBCLASSES,
@@ -344,7 +344,7 @@ sweeping_strikes_copy_204494 = _arms(
 # the stock whirl visual 11756. One whirl per second, the once-per-whirl proc roll is the spell script's AfterCast.
 bladestorm_whirl_204495 = _arms(
     204495, 'Bladestorm',
-    [Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=185.0, implicit_target_a=_TARGET_UNIT_SRC_AREA_ENEMY,
+    [Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=150.0, implicit_target_a=_TARGET_UNIT_SRC_AREA_ENEMY,
             implicit_target_b=_TARGET_SRC_CASTER, radius_yards=8.0)],
     2782,
     'warrior-rework S2 A2 (D10, doc "Bladestorm"): the Arms Bladestorm whirl, 46924\'s periodic trigger target. '
@@ -358,7 +358,7 @@ bladestorm_whirl_204495 = _arms(
     'little, x0.90, no MaxTargets change). eff0 weapon_potency 245 -> 154 (x0.63) (2026-11-22, level60-stat-curve '
     'round S19: AoE rule A, user ruling: Arms 132% at 30 s; no MaxTargets cap, Bladestorm is a signature ability; '
     'Mortal Strike x1.045 covers the 1T loss). eff0 weapon_potency 154 -> 185 (186.34 rounded to the nearest 5, so '
-    'x1.201; R1 revision 2026-11-26, user ruling: visible weapon percents on a multiple of 5) (2026-11-26, raid-buff-sets retune R1, user ruling: Arms only, x1.21).',
+    'x1.201; R1 revision 2026-11-26, user ruling: visible weapon percents on a multiple of 5) (2026-11-26, raid-buff-sets retune R1,  user ruling: Arms only, x1.21). Effect 1 weapon_potency 185 -> 150 (x0.811, nearest 5) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Arms about x0.80).',
     _raw('A whirl of steel strikes up to 5 nearby enemies.', level=50, MaxTargets=5, DefenseType=_DMG_CLASS_MELEE,
          PreventionType=_PREVENTION_PACIFY, SpellClassMask_2=_BLADESTORM_D1, AttributesEx3=_ATTR3_SUPPRESS_CASTER_PROCS,
          SpellVisualID_1=_SV_BLADESTORM_WHIRL, SpellPriority=50, RangeIndex=_RANGE_INDEX_SELF,

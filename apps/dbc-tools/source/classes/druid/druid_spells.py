@@ -331,7 +331,7 @@ rip_1079 = spell(
     range_yards=5.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, ap_potency=1.7329, cp_ap_potency=3.19218, potency_kind='periodic'),
+        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, ap_potency=1.47297, cp_ap_potency=2.71335, potency_kind='periodic'),
     ],
     spell_icon_id=108,
     notes=(
@@ -347,8 +347,9 @@ rip_1079 = spell(
         ' Effect 1 ap_potency 1.9 -> 2.28, cp_ap_potency 3.5 -> 4.2 (2026-10-08, DPS balance pass, user ruling: Cat Rip x1.20). Tooltip AP terms rewritten for 2.28 + n*4.2.'
         ' Effect 1 ap_potency 2.28 -> 2.394, cp_ap_potency 4.2 -> 4.41; tooltip AP terms rewritten for 2.394 + n*4.41 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Rip +5%). Effect 1 ap_potency 2.394 -> 1.85535 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Feral Cat x0.775). Effect 1 cp_ap_potency 4.41 -> 3.41775 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Feral Cat x0.775). Tooltip AP terms rewritten for 1.85535 + n*3.41775: 0.0389/0.0641/0.0893/0.1145/0.1397 -> 0.0301/0.0497/0.0692/0.0887/0.1083 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Feral Cat x0.775).'
           ' ap_potency 1.85535 -> 1.7329; cp_ap_potency 3.41775 -> 3.19218 (2026-11-26, raid-buff-sets retune R1, user ruling: Feral x0.934). Tooltip AP terms rewritten for 1.7329 + n*3.19218: 0.0301/0.0497/0.0692/0.0887/0.1083 -> 0.0281/0.0464/0.0646/0.0829/0.1011.'
+        ' ap_potency 1.7329 -> 1.47297; cp_ap_potency 3.19218 -> 2.71335 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Feral x0.85). Tooltip AP terms rewritten for 1.47297 + n*2.71335: 0.0281/0.0464/0.0646/0.0829/0.1011 -> 0.0239/0.0394/0.0549/0.0704/0.0859.'
     ),
-    raw_overrides={'AttributesEx': 1049088, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bleed damage every $t1 seconds.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that causes damage over time.  Damage increases per combo point and by your attack power:\r\n   1 point: ${($m1+$b1*1+0.0281*$AP)*$<dur>} damage over $d.\r\n   2 points: ${($m1+$b1*2+0.0464*$AP)*$<dur>} damage over $d.\r\n   3 points: ${($m1+$b1*3+0.0646*$AP)*$<dur>} damage over $d.\r\n   4 points: ${($m1+$b1*4+0.0829*$AP)*$<dur>} damage over $d.\r\n   5 points: ${($m1+$b1*5+0.1011*$AP)*$<dur>} damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 8388608, 'SpellClassMask_3': 2097152, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 165, 'SpellLevel': 20, 'SpellVisualID_1': 3941, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx': 1049088, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bleed damage every $t1 seconds.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that causes damage over time.  Damage increases per combo point and by your attack power:\r\n   1 point: ${($m1+$b1*1+0.0239*$AP)*$<dur>} damage over $d.\r\n   2 points: ${($m1+$b1*2+0.0394*$AP)*$<dur>} damage over $d.\r\n   3 points: ${($m1+$b1*3+0.0549*$AP)*$<dur>} damage over $d.\r\n   4 points: ${($m1+$b1*4+0.0704*$AP)*$<dur>} damage over $d.\r\n   5 points: ${($m1+$b1*5+0.0859*$AP)*$<dur>} damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 8388608, 'SpellClassMask_3': 2097152, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 165, 'SpellLevel': 20, 'SpellVisualID_1': 3941, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -417,8 +418,8 @@ rake_1822 = spell(
     range_yards=5.0,
     duration_ms=9000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=31.24892, potency_kind='direct', mechanic=15, implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, ap_potency=10.1053, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=26.56158, potency_kind='direct', mechanic=15, implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=8.5895, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
     spell_icon_id=494,
@@ -434,6 +435,7 @@ rake_1822 = spell(
         ' Effect 1 (direct) ap_potency 41.53 -> 45.683, effect 2 (periodic) 13.43 -> 14.773 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Rake +10%). Effect 1 ap_potency 45.683 -> 35.40433 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Feral Cat x0.775). Effect 2 ap_potency 14.773 -> 11.44908 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Feral Cat x0.775).'
           ' ap_potency 35.40433 -> 33.06764; ap_potency 11.44908 -> 10.69344 (2026-11-26, raid-buff-sets retune R1, user ruling: Feral x0.934).'
           ' ap_potency 33.06764 -> 31.24892; 10.69344 -> 10.1053 (2026-11-26, raid-buff-sets retune R3, user ruling: Feral Rake x0.945).'
+        ' ap_potency 31.24892 -> 26.56158; ap_potency 10.1053 -> 8.5895 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Feral x0.85).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 8, 'AttributesEx4': 1048576, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} damage every $t2 seconds.', 'BaseLevel': 24, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Rake the target, causing {pot1} damage and an additional {pot2.total} damage over $d.  Awards $s3 combo $lpoint:points;.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 4096, 'SpellClassSet': 7, 'SpellLevel': 24, 'SpellVisualID_1': 750, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -561,13 +563,14 @@ starfire_2912 = spell(
     mana_cost_pct=12,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=49.38503, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=42.47113, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=1485,
     notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 7 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast 3.5s->2.5s (Starlight Wrath's stock cast-cut is gone, §6 row 0,1), raw CastingTimeIndex dropped (resolves via the plain 2500ms row, 30002); now cleaves (spell_dru_starfire_cleave AfterHit casts 200337, WP-B). Potency system P5 (druid pass): converted to sp_potency=158.6 (potency-report default, base/coef already agreed). mana_cost_pct 16 -> 12 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 sp_potency 158.6 -> 95.2 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 95.2 -> 87.6 (2026-10-08, DPS balance pass, user ruling: Balance -8%). Effect 1 sp_potency 87.6 -> 96.36 (2026-11-15, balance on the Normal-tier kits, user ruling: Starfire +10%). Effect 1 sp_potency 96.36 -> 72.27 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Starfire -25%) Effect 1 sp_potency 72.27 -> 59.11686 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818)."
           ' sp_potency 59.11686 -> 53.2052 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell).'
           ' Effect 1 sp_potency 53.2052 -> 48.4167 (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91, a Balance-only spell).'
-          ' sp_potency 48.4167 -> 49.38503 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).',
+          ' sp_potency 48.4167 -> 49.38503 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).'
+          ' sp_potency 49.38503 -> 42.47113 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Balance x0.86 (pet treants unchanged)).',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Arcane damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 4, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 1264, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(starfire_2912, 'spell_dru_starfire_cleave')
@@ -585,13 +588,14 @@ wrath_5176 = spell(
     mana_cost_pct=8,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=66.29168, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=57.01084, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=263,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 8 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast_time_ms now says the 1500ms it already resolved to; raw CastingTimeIndex dropped (resolves via the plain 1500ms row, 30004). Potency system P5 (druid pass): converted to sp_potency=119.3 (potency-report default, base/coef already agreed). mana_cost_pct 11 -> 8 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 sp_potency 119.3 -> 71.6 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 71.6 -> 78.76 (2026-10-08, DPS balance pass, user ruling: Balance Wrath x1.10, round 10). Effect 1 sp_potency 78.76 -> 86.636 (2026-11-15, balance on the Normal-tier kits, user ruling: Wrath +10%). Effect 1 sp_potency 86.636 -> 121.29 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Balance option A, Wrath +40%; real ratio 1.39999). Effect 1 sp_potency 121.29 -> 97.032 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Wrath -20%) Effect 1 sp_potency 97.032 -> 79.37218 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818).'
           ' sp_potency 79.37218 -> 71.435 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell).'
           ' Potency unchanged (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91): Restoration also casts it, so Balance took its -9% from the hidden passive 200606, linked from Eclipse rank 3; tooltip variables 1010 showed it.'
-          ' sp_potency 71.435 -> 66.29168 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x0.928 from the pre-R1 values; Balance Tuning 200606 stays retired).',
+          ' sp_potency 71.435 -> 66.29168 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x0.928 from the pre-R1 values; Balance Tuning 200606 stays retired).'
+          ' sp_potency 66.29168 -> 57.01084 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Balance x0.86 (pet treants unchanged); Wrath is shared with Restoration).',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Nature damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'Speed': 20.0, 'SpellClassMask_1': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellVisualID_1': 3860, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -726,7 +730,7 @@ shred_5221 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=91.3202, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=77.62217, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
     spell_icon_id=147,
@@ -741,7 +745,8 @@ shred_5221 = spell(
           'moot, since there\'s no percent to round). Dropping SPELL_EFFECT_WEAPON_PERCENT_DAMAGE/WEAPON_DAMAGE removes this spell from '
           'Spell::EffectWeaponDmg entirely, which was the only place "Shred, Maul - Rend and Tear" (SpellFamilyFlags[0] & 0x8800, bonus damage '
           'vs bleeding targets) lived - ported into Spell::EffectSchoolDMG\'s own Druid case (SpellEffects.cpp) so the talent keeps working. Effect 1 ap_potency 108.3 -> 75.8 (2026-10-08, DPS balance pass, user ruling: Cat -30%). 2026-10-12, melee-haste-gcd T4-CAT, Predatory Strikes leak removed: x1.513 (ap_potency 75.8 -> 114.69). Effect 1 ap_potency 114.69 -> 126.159 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Shred +10%). Effect 1 ap_potency 126.159 -> 97.77323 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Feral Cat x0.775).'
-          ' ap_potency 97.77323 -> 91.3202 (2026-11-26, raid-buff-sets retune R1, user ruling: Feral x0.934).',
+          ' ap_potency 97.77323 -> 91.3202 (2026-11-26, raid-buff-sets retune R1, user ruling: Feral x0.934).'
+          ' ap_potency 91.3202 -> 77.62217 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Feral x0.85).',
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Shred the target, causing {pot1} damage.  Awards $s2 combo $lpoint:points;.  Effects which increase Bleed damage also increase Shred damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 32768, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 3950, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
@@ -776,7 +781,7 @@ enrage_5229 = spell(
 # (eff2 MOD_DAMAGE_PERCENT_DONE, EquippedItemClass -1 so it counts for every swing and ability). Bestial Fury is a
 # different form (5) and its aura carries none of it, so the Bear DPS build is untouched. 2026-11-01, DPS balance
 # pass 1031 round R4, user ruling: tank Bear damage to ~750 (536 x ~1.08 Survival of the Fittest x 1.30).
-BEAR_FORM_DAMAGE_PCT = 45  # 30 -> 45 (2026-11-15, balance on the Normal-tier kits: Lacerate/Mangle (Bear) -20% compensation, BearTankSim DPS held)
+BEAR_FORM_DAMAGE_PCT = 80  # 45 -> 80 (2026-11-27, gear-scaling GS3 follow-up: Bear tank DPS back to ~750 after the shared Bear cuts; form 8 only, Bestial Fury never gets it). 30 -> 45 (2026-11-15, balance on the Normal-tier kits: Lacerate/Mangle (Bear) -20% compensation, BearTankSim DPS held)
 
 
 bear_form_5487 = spell(
@@ -797,7 +802,7 @@ bear_form_5487 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=BEAR_FORM_DAMAGE_PCT - 1, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=1),
     ],
     spell_icon_id=107,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1->covers-60 (anchor rank 2 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework FERAL §0.16 / CORE-AUDIT row 37: eff0 form 5 -> 8 - the everyday bear is FORM_DIREBEAR at every level (Bestial Fury 200425 takes FORM_BEAR); tooltips read the form-8 passive 9635 instead of 1178. Eff2 (new) MOD_DAMAGE_PERCENT_DONE physical, +BEAR_FORM_DAMAGE_PCT% - the form-8 aura carries it so Bestial Fury (form 5) never gets it (2026-11-01, DPS balance pass 1031 round R4, user ruling: tank Bear damage to ~750). MOD_DAMAGE_PERCENT_DONE base_points 29 -> 44, +30% -> +45% (2026-11-15, balance on the Normal-tier kits, user ruling: Lacerate and Mangle (Bear) -20%, tank Bear DPS held). Tooltip adds plus Agility: both bear forms add 1 attack power per Agility like Cat Form (DruidBearAgilityAttackPower, druid_hooks.cpp; user 2026-11-09).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1->covers-60 (anchor rank 2 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework FERAL §0.16 / CORE-AUDIT row 37: eff0 form 5 -> 8 - the everyday bear is FORM_DIREBEAR at every level (Bestial Fury 200425 takes FORM_BEAR); tooltips read the form-8 passive 9635 instead of 1178. Eff2 (new) MOD_DAMAGE_PERCENT_DONE physical, +BEAR_FORM_DAMAGE_PCT% - the form-8 aura carries it so Bestial Fury (form 5) never gets it (2026-11-01, DPS balance pass 1031 round R4, user ruling: tank Bear damage to ~750). MOD_DAMAGE_PERCENT_DONE base_points 29 -> 44, +30% -> +45% (2026-11-15, balance on the Normal-tier kits, user ruling: Lacerate and Mangle (Bear) -20%, tank Bear DPS held). Tooltip adds plus Agility: both bear forms add 1 attack power per Agility like Cat Form (DruidBearAgilityAttackPower, druid_hooks.cpp; user 2026-11-09). BEAR_FORM_DAMAGE_PCT 45 -> 80 (2026-11-27, gear-scaling GS3 ilvl 66 retune follow-up, user ruling: Bear tank DPS back to ~750 after the shared Bear cuts; form 8 only, Bestial Fury never gets it; tooltip reads $s3).',
     raw_overrides={'ActiveIconID': 122, 'AttributesEx': 98304, 'AttributesEx4': 2097152, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Immune to Polymorph effects.  Increases melee attack power by $9635s3 plus Agility, armor contribution from cloth and leather items by $9635s1%, Stamina by $9635s2%, and physical damage done by $s3%.', 'BaseLevel': 10, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Shapeshift into bear form, increasing melee attack power by $9635s3 plus Agility, armor contribution from cloth and leather items by $9635s1%, Stamina by $9635s2%, and physical damage done by $s3%.  Also protects the caster from Polymorph effects and allows the use of various bear abilities.\r\n\r\nThe act of shapeshifting frees the caster of Polymorph and Movement Impairing effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 1073741826, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 7, 'SpellLevel': 10, 'SpellVisualID_1': 653, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -868,7 +873,7 @@ maul_6807 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=54.98221, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=39.03737, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=261,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework FERAL §5: no longer on-next-swing (attributes 1044 -> 262160: drops ON_NEXT_SWING/ON_NEXT_SWING_NO_DAMAGE, adds DO_NOT_SHEATH), bear GCD, 5 sec cooldown (below 30 sec, so no Cooldown Haste), 25 rage; spell_dru_maul grants Swell in Bestial Fury. '
@@ -889,7 +894,8 @@ maul_6807 = spell(
           ' Effect 1 ap_potency 61.87 -> 86.62 (2026-11-01, DPS balance pass 1031, user ruling: Maul +40%) Effect 1 ap_potency 86.62 -> 65.8312 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS and Bear tank shared x0.76).'
           ' ap_potency 65.8312 -> 57.27314 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Bear DPS and Bear tank shared x0.87 from the pre-R1 values).'
           ' ap_potency 57.27314 -> 54.12312 (2026-11-26, raid-buff-sets retune R3, user ruling: Bear DPS and Bear tank shared x0.945).'
-          'ap_potency 54.12312 -> 54.98221 (2026-11-26, raid-buff-sets retune R4: x0.96 instead of x0.945, R3 measured 1,485).',
+          'ap_potency 54.12312 -> 54.98221 (2026-11-26, raid-buff-sets retune R4: x0.96 instead of x0.945, R3 measured 1,485).'
+          ' ap_potency 54.98221 -> 39.03737 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Bear DPS and Bear tank shared x0.71).',
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 4096, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A strong attack that deals {pot1} damage and causes a high amount of threat.  While Bestial Fury is active, Maul grants 1 stack of Swell and has a 15% chance to grant Tooth and Claw.  Effects which increase Bleed damage also increase Maul damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 144, 'SpellClassMask_1': 2048, 'SpellClassSet': 7, 'SpellLevel': 10, 'SpellVisualID_1': 166, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(maul_6807, 'spell_dru_maul')  # druid-rework FERAL §5: AfterCast AddSwell(1) in Bestial Fury
@@ -909,14 +915,15 @@ moonfire_8921 = spell(
     range_yards=30.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=10.37086, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=42.15988, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=8.91894, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=36.2575, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=225,
     notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 14 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13: duration 9s->12s (WotLK max rank; the single-rank bootstrap kept rank 1's 9s DurationIndex), 4 ticks at 3s; druid-rework FERAL §5 / §0.9: ShapeshiftExclude gains cat, bear and dire bear (0x91) so the client also refuses/auto-unshifts. Potency system P5 (druid pass): converted to sp_potency=27.7 (eff1, periodic) / 112.9 (eff2, direct) (potency-report default, base/coef already agreed). mana_cost_pct 21 -> 15 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 (periodic) sp_potency 27.7 -> 16.6, effect 2 (direct) sp_potency 112.9 -> 67.7 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 16.6 -> 15.3 (2026-10-08, DPS balance pass, user ruling: Balance -8%). Effect 2 sp_potency 67.7 -> 62.3 (2026-10-08, DPS balance pass, user ruling: Balance -8%). Effect 1 (periodic) sp_potency 15.3 -> 13.8 (2026-10-08, DPS balance pass, user ruling: Balance -10%). Effect 2 (direct) sp_potency 62.3 -> 56.1 (2026-10-08, DPS balance pass, user ruling: Balance -10%). Effect 1 (periodic) sp_potency 13.8 -> 15.18, effect 2 (direct) sp_potency 56.1 -> 61.71 (2026-11-15, balance on the Normal-tier kits, user ruling: Moonfire +10%) Effect 1 sp_potency 15.18 -> 12.41724 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818). Effect 2 sp_potency 61.71 -> 50.47878 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818)."
           ' sp_potency 12.41724 -> 11.1755; sp_potency 50.47878 -> 45.4309 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell).'
           ' Potency unchanged (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91): Restoration also casts it, so Balance took its -9% from the hidden passive 200606, linked from Eclipse rank 3; tooltip variables 1010 showed it.'
-          ' sp_potency 11.1755 -> 10.37086; 45.4309 -> 42.15988 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x0.928 from the pre-R1 values; Balance Tuning 200606 stays retired).',
+          ' sp_potency 11.1755 -> 10.37086; 45.4309 -> 42.15988 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x0.928 from the pre-R1 values; Balance Tuning 200606 stays retired).'
+          ' sp_potency 10.37086 -> 8.91894; sp_potency 42.15988 -> 36.2575 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Balance x0.86 (pet treants unchanged); Moonfire is shared with Restoration).',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Arcane damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Burns the enemy for {pot2} Arcane damage and then an additional {pot1.total} Arcane damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': SS_FERAL, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 2, 'SpellClassSet': 7, 'SpellLevel': 4, 'SpellVisualID_1': 1263, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1204,7 +1211,7 @@ ferocious_bite_22568 = spell(
     range_yards=5.0,
     effects=[
         Effect(
-            type=EffectType.SCHOOL_DAMAGE, base_potency=63.38827, cp_ap_potency=33.40206, cp_base_potency=27.51788,
+            type=EffectType.SCHOOL_DAMAGE, base_potency=53.88003, cp_ap_potency=28.39175, cp_base_potency=23.3902,
             potency_kind='direct', implicit_target_a=6,
         ),
     ],
@@ -1244,8 +1251,9 @@ ferocious_bite_22568 = spell(
         ' Tooltip per-point term -> ${$max(0,55.957+0.1775*$AP)}: stale since the potency rebase of 2026-11-20 (cp_line 55.9565, cp_ap 0.177505); '
         'the $max() keeps the client from dropping what follows the + (user ruling 47, 2026-11-25).'
           ' base_potency 67.86753 -> 63.38827; cp_ap_potency 35.76238 -> 33.40206; cp_base_potency 29.4624 -> 27.51788 (2026-11-26, raid-buff-sets retune R1, user ruling: Feral x0.934). Tooltip per-point term 55.957+0.1775*$AP -> 52.263+0.1658*$AP (linear x0.934 on cp_line 55.9565 and cp_ap 0.177505; re-derive from the generated spell_potency_correction after the write run if it differs).'
+        ' base_potency 63.38827 -> 53.88003; cp_ap_potency 33.40206 -> 28.39175; cp_base_potency 27.51788 -> 23.3902 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Feral x0.85). Tooltip per-point term 52.263+0.1658*$AP -> 44.423+0.1409*$AP (x0.85; re-derive from the generated spell_potency_correction after the write run if it differs).'
     ),
-    raw_overrides={'AttributesEx': 1049088, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 32, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that causes damage per combo point and converts each extra point of energy (up to a maximum of $s2 extra energy) into $f1.1 additional damage.  Damage is increased by your attack power.\r\n   Base damage: {pot1}\r\n   Plus ${$max(0,52.263+0.1658*$AP)} per combo point', 'EffectBasePoints_2': 29, 'EffectBonusMultiplier_1': 0.0, 'EffectChainAmplitude_1': 0.699999988079071, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 8388608, 'SpellClassSet': 7, 'SpellLevel': 32, 'SpellVisualID_1': 6587, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx': 1049088, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 32, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that causes damage per combo point and converts each extra point of energy (up to a maximum of $s2 extra energy) into $f1.1 additional damage.  Damage is increased by your attack power.\r\n   Base damage: {pot1}\r\n   Plus ${$max(0,44.423+0.1409*$AP)} per combo point', 'EffectBasePoints_2': 29, 'EffectBonusMultiplier_1': 0.0, 'EffectChainAmplitude_1': 0.699999988079071, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 8388608, 'SpellClassSet': 7, 'SpellLevel': 32, 'SpellVisualID_1': 6587, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -1522,8 +1530,8 @@ lacerate_33745 = spell(
     range_yards=5.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, ap_potency=2.2522, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=18.32047, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=1.59906, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=13.00753, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=2246,
     notes=(
@@ -1547,6 +1555,7 @@ lacerate_33745 = spell(
           ' ap_potency 2.6966 -> 2.34604; 21.93542 -> 19.08382 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Bear DPS and Bear tank shared x0.87 from the pre-R1 values).'
           ' ap_potency 2.34604 -> 2.21701; 19.08382 -> 18.03421 (2026-11-26, raid-buff-sets retune R3, user ruling: Bear DPS and Bear tank shared x0.945).'
           '2.21701 -> 2.2522; 18.03421 -> 18.32047 (2026-11-26, raid-buff-sets retune R4: x0.96 instead of x0.945, R3 measured 1,485).'
+        ' ap_potency 2.2522 -> 1.59906; ap_potency 18.32047 -> 13.00753 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Bear DPS and Bear tank shared x0.71).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} damage every $t sec', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Lacerates the enemy target, dealing {pot2} damage and making them bleed for {pot1.total} damage over $d and causing a high amount of threat.  This effect stacks up to $u times on the same target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 144, 'SpellClassMask_2': 256, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 8146, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1689,7 +1698,7 @@ mangle_cat_33876 = spell(
     range_yards=5.0,
     duration_ms=60000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=114.05704, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=96.94848, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=6, apply_aura=255, misc_value=15),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
@@ -1705,7 +1714,8 @@ mangle_cat_33876 = spell(
           'AddComboPointGain, with its own CalcValue, defaulting to 1 via the same die_sides=1 "+1" roll every potency effect already relies '
           'on), and no core C++ edit needed. Mangle (Bear) does not award combo points (its own SpellFamilyFlags don\'t match this case) so '
           'doesn\'t need this addition - see its own declaration. 2026-10-12, melee-haste-gcd T4-CAT, Predatory Strikes leak removed: x1.590 (ap_potency 99.1 -> 157.57). Effect 1 ap_potency 157.57 -> 122.11675 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Feral Cat x0.775).'
-          ' ap_potency 122.11675 -> 114.05704 (2026-11-26, raid-buff-sets retune R1, user ruling: Feral x0.934).',
+          ' ap_potency 122.11675 -> 114.05704 (2026-11-26, raid-buff-sets retune R1, user ruling: Feral x0.934).'
+          ' ap_potency 114.05704 -> 96.94848 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Feral x0.85).',
     raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'All bleed effects cause $s2% additional damage.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mangle the target for {pot1} damage and causes the target to take $s2% additional damage from bleed effects for $d.  Awards $s3 combo $lpoint:points;.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_2': 1024, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 8634, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 trained_by(mangle_cat_33876, trainer_id=216, req_level=20, money_cost=2000)  # druid-rework FERAL §5: talent -> baseline
@@ -1726,7 +1736,7 @@ mangle_bear_33878 = spell(
     range_yards=5.0,
     duration_ms=60000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=52.80146, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=37.48904, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=6, apply_aura=255, misc_value=15),
     ],
     spell_icon_id=2312,
@@ -1748,7 +1758,8 @@ mangle_bear_33878 = spell(
           ' Effect 1 ap_potency 74.37664 -> 63.22014 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Bear DPS, Mangle (Bear) x0.85; shared with the Bear tank).'
           ' ap_potency 63.22014 -> 55.00152 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Bear DPS and Bear tank shared x0.87 from the pre-R1 values).'
           ' ap_potency 55.00152 -> 51.97644 (2026-11-26, raid-buff-sets retune R3, user ruling: Bear DPS and Bear tank shared x0.945).'
-          'ap_potency 51.97644 -> 52.80146 (2026-11-26, raid-buff-sets retune R4: x0.96 instead of x0.945, R3 measured 1,485).',
+          'ap_potency 51.97644 -> 52.80146 (2026-11-26, raid-buff-sets retune R4: x0.96 instead of x0.945, R3 measured 1,485).'
+          ' ap_potency 52.80146 -> 37.48904 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Bear DPS and Bear tank shared x0.71).',
     raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'All bleed effects cause $s2% additional damage.', 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mangle the target for {pot1} damage and causes the target to take $s2% additional damage from bleed effects for $d.  While Bestial Fury is active, has a 15% chance to grant Tooth and Claw.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': SS_ANY_BEAR, 'SpellClassMask_2': 64, 'SpellClassSet': 7, 'SpellLevel': 10, 'SpellVisualID_1': 6586, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(mangle_bear_33878, trainer_id=216, req_level=10, money_cost=600)  # druid-rework FERAL §5: talent -> baseline
@@ -1916,13 +1927,14 @@ insect_swarm_5570 = spell(
     range_yards=30.0,
     duration_ms=14000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=10.40318, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=8.94673, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=1771,
     notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §6 row (2,1): duration 12s->14s (7 ticks), hit-reduction eff2 dropped (12.12); scripted_by(spell_dru_insect_swarm_cast) removes the caster's Swarming Rot copy (200352) on a real cast. Potency system P5 (druid pass): converted to sp_potency=34.8 (not mismatched; potency-report base-damage default). mana_cost_pct 8 -> 6 (2026-10-08, DPS balance pass, user ruling: Balance mana). Effect 1 sp_potency 34.8 -> 20.9 (2026-10-08, DPS balance pass, user ruling: Balance damage -40%). Effect 1 sp_potency 20.9 -> 19.2 (2026-10-08, DPS balance pass, user ruling: Balance -8%). Effect 1 sp_potency 19.2 -> 17.3 (2026-10-08, DPS balance pass, user ruling: Balance -10%). Effect 1 sp_potency 17.3 -> 19.03 (2026-11-15, balance on the Normal-tier kits, user ruling: Insect Swarm +10%). Effect 1 sp_potency 19.03 -> 15.224 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Insect Swarm -20%) Effect 1 sp_potency 15.224 -> 12.45323 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818)."
           ' sp_potency 12.45323 -> 11.2079 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell).'
           ' Effect 1 sp_potency 11.2079 -> 10.1992 (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91, a Balance-only spell).'
-          ' sp_potency 10.1992 -> 10.40318 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).',
+          ' sp_potency 10.1992 -> 10.40318 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).'
+          ' sp_potency 10.40318 -> 8.94673 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Balance x0.86 (pet treants unchanged)).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Nature damage every $t1 sec.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The enemy target is swarmed by insects, causing {pot1.total} Nature damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 2097152, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 7333, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -2154,13 +2166,14 @@ starsurge_200333 = spell(
     mana_cost_pct=5,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=106.76513, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=91.81801, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=1957,
     notes='NEW (druid-rework BALANCE §5 "Starsurge"): scales with level (PLAN B3), learn level 22, level-60 value 200 -> ppl 200/60; on the Cooldown Haste allow list (A3); shares icon 1957 with Genesis talent (spell vs talent, accepted 12.14); a projectile at Speed 35 (Ice Lance is 38) with Ascension\'s own Starsurge missile/hand-flare/impact art, SpellVisualID_1 90018 (patch_druid_vfx_models.py), replacing the borrowed Starfire visual 1264. Potency system P5 (druid pass): converted to sp_potency=74.4 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.5) spell_bonus_data override is retired in favor of the generated DBC coefficient. Effect 1 sp_potency 74.4 -> 111.6 (2026-11-15, balance on the Normal-tier kits, user ruling: Starsurge +50%). Effect 1 sp_potency 111.6 -> 156.24 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Balance option A, Starsurge +40%) Effect 1 sp_potency 156.24 -> 127.80432 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Balance x0.818).'
           ' sp_potency 127.80432 -> 115.0239 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Balance x0.90 on every Balance spell).'
           ' Effect 1 sp_potency 115.0239 -> 104.6717 (2026-11-22, level60-stat-curve round S23, user ruling 16: Balance x0.91, a Balance-only spell).'
-          ' sp_potency 104.6717 -> 106.76513 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).',
+          ' sp_potency 104.6717 -> 106.76513 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Balance x1.02 from the pre-R1 values).'
+          ' sp_potency 106.76513 -> 91.81801 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Balance x0.86 (pet treants unchanged)).',
     raw_overrides={'BaseLevel': 22, 'SpellLevel': 22, 'MaxLevel': 80, 'FacingCasterFlags': 1, 'PreventionType': 1, 'DefenseType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': STARSURGE, 'ShapeshiftMask': 1073741824, 'SpellVisualID_1': 90018, 'Speed': 35.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a surge of stellar energies at the target, dealing {pot1} Astral damage.', 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 trained_by(starsurge_200333, trainer_id=216, req_level=22, money_cost=3000)
@@ -2415,7 +2428,7 @@ dire_bear_form_9634 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=BEAR_FORM_DAMAGE_PCT - 1, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=1),
     ],
     spell_icon_id=107,
-    notes='pulled from existing data; eff2 (new) MOD_DAMAGE_PERCENT_DONE physical, +BEAR_FORM_DAMAGE_PCT% - same as Bear Form 5487, the form-8 aura carries it so Bestial Fury (form 5) never gets it (2026-11-01, DPS balance pass 1031 round R4, user ruling: tank Bear damage to ~750). MOD_DAMAGE_PERCENT_DONE base_points 29 -> 44, +30% -> +45% (2026-11-15, balance on the Normal-tier kits, user ruling: Lacerate and Mangle (Bear) -20%, tank Bear DPS held). Tooltip adds plus Agility: both bear forms add 1 attack power per Agility like Cat Form (DruidBearAgilityAttackPower, druid_hooks.cpp; user 2026-11-09).',
+    notes='pulled from existing data; eff2 (new) MOD_DAMAGE_PERCENT_DONE physical, +BEAR_FORM_DAMAGE_PCT% - same as Bear Form 5487, the form-8 aura carries it so Bestial Fury (form 5) never gets it (2026-11-01, DPS balance pass 1031 round R4, user ruling: tank Bear damage to ~750). MOD_DAMAGE_PERCENT_DONE base_points 29 -> 44, +30% -> +45% (2026-11-15, balance on the Normal-tier kits, user ruling: Lacerate and Mangle (Bear) -20%, tank Bear DPS held). Tooltip adds plus Agility: both bear forms add 1 attack power per Agility like Cat Form (DruidBearAgilityAttackPower, druid_hooks.cpp; user 2026-11-09). BEAR_FORM_DAMAGE_PCT 45 -> 80 (2026-11-27, gear-scaling GS3 ilvl 66 retune follow-up, user ruling: Bear tank DPS back to ~750 after the shared Bear cuts; form 8 only, Bestial Fury never gets it; tooltip reads $s3).',
     raw_overrides={'AttributesEx': 98304, 'AttributesEx4': 2097152, 'ShapeshiftExclude': 1073741826, 'CastingTimeIndex': 1, 'ProcChance': 101, 'MaxLevel': 100, 'BaseLevel': 40, 'SpellLevel': 40, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 4227, 'ActiveIconID': 122, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Shapeshift', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Shapeshift into dire bear form, increasing melee attack power by $9635s3 plus Agility, armor contribution from cloth and leather items by $9635s1%, Stamina by $9635s2%, and physical damage done by $s3%.  Also protects the caster from Polymorph effects and allows the use of various bear abilities.\r\n\r\nThe act of shapeshifting frees the caster of Polymorph and Movement Impairing effects.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Immune to Polymorph effects.  Increases melee attack power by $9635s3 plus Agility, armor contribution from cloth and leather items by $9635s1%, Stamina by $9635s2%, and physical damage done by $s3%.', 'AuraDescription_Lang_Mask': 16712190, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassSet': 7, 'SpellClassMask_1': 1073741824, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
@@ -2498,7 +2511,7 @@ pulverize_200421 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=25.42435, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=18.05129, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=19, implicit_target_a=6),
     ],
     spell_icon_id=102,
@@ -2522,7 +2535,8 @@ pulverize_200421 = spell(
           ' Effect 1 ap_potency 50.067 -> 40.054 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Pulverize -20%). Effect 1 ap_potency 40.054 -> 30.44104 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS and Bear tank shared x0.76).'
           ' ap_potency 30.44104 -> 26.4837 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Bear DPS and Bear tank shared x0.87 from the pre-R1 values).'
           ' ap_potency 26.4837 -> 25.0271 (2026-11-26, raid-buff-sets retune R3, user ruling: Bear DPS and Bear tank shared x0.945).'
-          'ap_potency 25.0271 -> 25.42435 (2026-11-26, raid-buff-sets retune R4: x0.96 instead of x0.945, R3 measured 1,485).',
+          'ap_potency 25.0271 -> 25.42435 (2026-11-26, raid-buff-sets retune R4: x0.96 instead of x0.945, R3 measured 1,485).'
+          ' ap_potency 25.42435 -> 18.05129 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Bear DPS and Bear tank shared x0.71).',
     raw_overrides=_feral_new_raw(
         "Requires 3 applications of Lacerate on the target.  Deals {pot1} damage, increased by $s2% "
         "for each application of your Lacerate on the target, then consumes Lacerate and reapplies it with 1 "
@@ -2591,8 +2605,8 @@ thrash_200423 = spell(
     duration_ms=12000,
     effects=[
         # All three effects share targets and radius so spell_dru_thrash's EFFECT_ALL target hook sees one list.
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=68.742, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
-        Effect(type=EffectType.APPLY_AURA, ap_potency=11.3088, potency_kind='periodic', mechanic=15, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=27.4968, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=4.52352, potency_kind='periodic', mechanic=15, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000, radius_yards=10.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-6, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_RESISTANCE_PCT, misc_value=1, radius_yards=10.0),
     ],
     spell_icon_id=496,
@@ -2608,7 +2622,8 @@ thrash_200423 = spell(
           "component and is left untouched. Same structural follow-up as Pulverize/Savage Bite/Lacerate, just not "
           "named in the original pass's scope."
           ' Effect 1 (direct) ap_potency 40.7 -> 24.42, effect 2 (periodic) ap_potency 6.7 -> 4.02 (2026-10-12, melee-haste-gcd T4, user ruling: Bear DPS Thrash x0.60). Effect 1 (direct) ap_potency 24.42 -> 30.15, effect 2 (periodic) 4.02 -> 4.96 (2026-10-12, melee-haste-gcd T4-FIX, Predatory Strikes leak removed).'
-          ' Effect 1 (direct) ap_potency 30.15 -> 90.45, effect 2 (periodic) 4.96 -> 14.88 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Thrash +200%). Effect 1 ap_potency 90.45 -> 68.742 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS and Bear tank shared x0.76). Effect 2 ap_potency 14.88 -> 11.3088 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS and Bear tank shared x0.76).',
+          ' Effect 1 (direct) ap_potency 30.15 -> 90.45, effect 2 (periodic) 4.96 -> 14.88 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Thrash +200%). Effect 1 ap_potency 90.45 -> 68.742 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS and Bear tank shared x0.76). Effect 2 ap_potency 14.88 -> 11.3088 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS and Bear tank shared x0.76).'
+          ' ap_potency 68.742 -> 27.4968; ap_potency 11.3088 -> 4.52352 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Bear DPS and Bear tank shared Thrash x0.40).',
     raw_overrides=_feral_new_raw(
         "Deals {pot1} damage to enemies within $a1 yards and causes them to bleed for {pot2.total} damage over $d.  "
         "Also reduces their armor by $s3% for $d.  While Bestial Fury is active, hitting 3 or more targets grants 1 "
@@ -2679,7 +2694,7 @@ savage_bite_200439 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=56.65146, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=40.22254, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90122,  # spell_druid_bearhug, build_patch_i.py
     notes="NEW (docs/reworks/druid-feral.md §2, FERAL-ADDENDUM §3.3): physical SCHOOL_DAMAGE, not a weapon "
@@ -2705,7 +2720,8 @@ savage_bite_200439 = spell(
           ' Effect 1 ap_potency 124.08 -> 93.06 (2026-10-08, DPS balance pass, user ruling: Bear DPS Savage Bite x0.75, round 9).'
           ' Effect 1 ap_potency 93.06 -> 71.66 (2026-10-08, DPS balance pass, user ruling: Bear DPS Savage Bite x0.77, round 10).'
           ' Effect 1 ap_potency 71.66 -> 57.33 (2026-10-12, melee-haste-gcd T4, user ruling: Bear DPS Savage Bite x0.80). Effect 1 ap_potency 57.33 -> 84.13 (2026-10-12, melee-haste-gcd T4-FIX, Predatory Strikes leak removed). Effect 1 ap_potency 84.13 -> 65.11662 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Bear DPS x0.774).'
-          ' ap_potency 65.11662 -> 56.65146 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Bear DPS x0.87 from the pre-R1 values).',
+          ' ap_potency 65.11662 -> 56.65146 (2026-11-26, raid-buff-sets retune R1 revised, user ruling: Bear DPS x0.87 from the pre-R1 values).'
+          ' ap_potency 56.65146 -> 40.22254 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Bear DPS x0.71).',
     raw_overrides=_feral_new_raw(
         "Requires Tooth and Claw.  Deals {pot1} damage.  Consumes 1 charge of Tooth and "
         "Claw.",

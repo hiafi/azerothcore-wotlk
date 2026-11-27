@@ -7567,7 +7567,7 @@ explosive_shot_53352 = spell(
     range_yards=50000.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6, ap_potency=14.0587, potency_kind='direct'),
+        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6, ap_potency=11.9499, potency_kind='direct'),
     ],
     spell_icon_id=3407,
     notes=(
@@ -7580,6 +7580,7 @@ explosive_shot_53352 = spell(
         ' Effect 1 ap_potency 21.8 -> 15.02 (2026-11-17, weapon scaling WSH2 Normal trim, user ruling: SV x0.689).'
         ' Effect 1 ap_potency 15.02 -> 13.518 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: SV x0.90).'
         ' Effect 1 ap_potency 13.518 -> 14.0587 (2026-11-26, raid-buff-sets retune R1, user ruling: Survival x1.04).'
+        ' Effect 1 ap_potency 14.0587 -> 11.9499 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Survival x0.85 on its Survival-only abilities, SV 1,708 -> ~1,520).'
     ),
     raw_overrides={
         'AttributesEx2': 4,

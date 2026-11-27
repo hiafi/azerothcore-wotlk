@@ -250,7 +250,7 @@ rampage_strike_oh_204632 = _rampage_strike(
 # Recklessness' crit, Impale) reaches the strike as part of the parent cast. Hidden (0x80).
 frenzied_blows_heroic_strike_204633 = _fury(
     204633, 'Frenzied Blows',
-    [_weapon_strike(225), _weapon_flat(13.464)],
+    [_weapon_strike(215), _weapon_flat(12.867)],
     _ICON_HEROIC_STRIKE,
     'warrior-rework S3 A2a (D19): the off-hand Heroic Strike, cast by spell_warr_hs_cleave_fury (AfterHit, per landed '
     'target, triggered, synchronous). Copy of 78\'s damage rows: eff0 WEAPON_PERCENT_DAMAGE 150%, eff1 WEAPON_DAMAGE '
@@ -259,7 +259,7 @@ frenzied_blows_heroic_strike_204633 = _fury(
     'facing flag, cost 0, carriers d0 0x40 + d2 0x8, hidden (0x80), SpellLevel 1, visual 39. Effect 1 weapon_potency '
     '183 -> 156 (155.55 rounded to a whole number), Effect 2 sp_potency 12 -> 10.2, kept equal to Heroic Strike 78 '
     '(2026-10-31, DPS balance pass 1031, user ruling: Fury damage -15%). Effect 1 weapon_potency 156 -> 172, kept '
-    'equal to Heroic Strike 78 (2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%). Effect 1 weapon_potency 172 -> 189, Effect 2 sp_potency 10.2 -> 11.22, kept equal to Heroic Strike 78 (2026-11-15, balance on the Normal-tier kits, user ruling: Heroic Strike +10%). Effect 1 weapon_potency 189 -> 225 (226.8 rounded to the nearest 5, so x1.190; R1 revision 2026-11-26, user ruling: visible weapon percents on a multiple of 5), Effect 2 sp_potency 11.22 -> 13.464 (2026-11-26, raid-buff-sets retune R1, user ruling: Fury only, x1.20); no longer equal to Heroic Strike 78, which stays (Protection casts it).',
+    'equal to Heroic Strike 78 (2026-11-02, DPS balance pass 1031 round R5, user ruling: buff Rampage, Heroic Strike and Bloodthirst a bit, about +10%). Effect 1 weapon_potency 172 -> 189, Effect 2 sp_potency 10.2 -> 11.22, kept equal to Heroic Strike 78 (2026-11-15, balance on the Normal-tier kits, user ruling: Heroic Strike +10%). Effect 1 weapon_potency 189 -> 225 (226.8 rounded to the nearest 5, so x1.190; R1 revision 2026-11-26, user ruling: visible weapon percents on a multiple of 5), Effect 2 sp_potency 11.22 -> 13.464 (2026-11-26, raid-buff-sets retune R1, user ruling: Fury only, x1.20); no longer equal to Heroic Strike 78, which stays (Protection casts it). Effect 1 weapon_potency 225 -> 215 (x0.956, nearest 5); Effect 2 sp_potency 13.464 -> 12.867 (x0.956) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Fury x0.95).',
     _raw('Strike the target with your off-hand weapon.', level=1, DefenseType=_DMG_CLASS_MELEE,
          PreventionType=_PREVENTION_PACIFY,
          AttributesEx3=_ATTR3_REQUIRES_OFF_HAND_WEAPON | _ATTR3_SUPPRESS_CASTER_PROCS,

@@ -526,7 +526,7 @@ namespace DeathKnightData
     constexpr int32 MINION_CRIT_SHARE_PCT = 100; // Share of owner crit the minion inherits, percent (DK0b U8).
     constexpr int32 MINION_GHOUL_AP_SHARE_PCT = 60; // Permanent ghoul (Raise Dead) attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 90).
     constexpr int32 MINION_HASTE_SHARE_PCT = 100; // Share of owner spell haste the minion inherits, percent (DK0b U8).
-    constexpr int32 MINION_LESSER_GHOUL_AP_SHARE_PCT = 36; // Lesser Ghoul attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 50; 25 -> 32 on 2026-11-26, raid-buff-sets retune R1, user ruling: Unholy Minion pet melee, only the Minion build (Necromancy) summons Lesser Ghouls; 32 -> 36 in R2 after the R1 sim, Minion 1,473 vs 1,520).
+    constexpr int32 MINION_LESSER_GHOUL_AP_SHARE_PCT = 30; // Lesser Ghoul attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 50; 25 -> 32 on 2026-11-26, raid-buff-sets retune R1, user ruling: Unholy Minion pet melee, only the Minion build (Necromancy) summons Lesser Ghouls; 32 -> 36 in R2 after the R1 sim, Minion 1,473 vs 1,520; 36 -> 30 on 2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Minion 1,590 -> 1,520).
     constexpr int32 MINION_SP_SHARE_PCT = 47; // Minion spell power per owner attack power, percent (DK0b U8, Gargoyle; 100 / potency R).
     constexpr int32 MINION_STAMINA_SHARE_PCT = 30; // Minion stamina inherited from owner stamina, percent, computed live (DK0b U9).
     constexpr int32 MINION_VERSATILITY_SHARE_PCT = 100; // Share of owner versatility the minion inherits, percent (DK0b U8).

@@ -37,7 +37,7 @@ INCANTERS_SP = 0.15            # spell_mage_incanters_absorption_shield's placeh
 INFERNAL_BASE = 166.0          # Infernal melee: two Immolation ticks at 80 (DEMONOLOGY.md 4.0: 83 + 0.1114 x SP)
 INFERNAL_SP = 0.2228
 ARCANE_OVERLOAD_SP_PCT = 34    # Arcane Overload 200092 effect 3: spell power share, percent
-ARCANE_OVERLOAD_R1_FACTOR = 0.975  # raid-buff-sets retune R1, Arcane x0.975
+ARCANE_OVERLOAD_R1_FACTOR = 0.975 * 0.926  # raid-buff-sets retune R1 Arcane x0.975, then gear-scaling GS3 Arcane x0.926
 GARGOYLE_SP_SHARE_PCT = 100    # Ebon Gargoyle spell power per owner attack power, percent
 
 

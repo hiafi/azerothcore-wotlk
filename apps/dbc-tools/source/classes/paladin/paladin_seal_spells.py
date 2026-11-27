@@ -231,12 +231,13 @@ unleash_righteousness_201069 = spell(
     id=201069, name='Judgement of Righteousness', school=_HOLY,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0,
-    effects=[_unleash_direct(95.55)],
+    effects=[_unleash_direct(81.2175)],
     spell_icon_id=_ICON_SOR,
     notes='paladin-rework SHARED B4.1: Righteousness unleash (single target), 75/75 potency. Speed 0 and instant on purpose: the unleash context needs a synchronous cast - never give this a missile visual.'
           ' Effect 1 potency 75.0 -> 97.5 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).'
           ' Effect 1 potency 97.5 -> 136.5 (2026-10-08, DPS balance pass, user ruling: Retribution x1.40, round 9).'
-          ' Effect 1 potency 136.5 -> 95.55 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
+          ' Effect 1 potency 136.5 -> 95.55 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).'
+          ' Effect 1 potency 95.55 -> 81.2175 (x0.85) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Paladin shared by Ret, Shockadin and Prot, x0.85).',
     raw_overrides=_unleash_raw('Deals {pot1} Holy damage.'),
 )
 
@@ -256,7 +257,7 @@ unleash_vengeance_201071 = spell(
     id=201071, name='Judgement of Vengeance', school=_HOLY_SHADOW,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0, duration_ms=15000,
-    effects=[_unleash_dot(14.3107)],
+    effects=[_unleash_dot(12.064)],
     spell_icon_id=_ICON_SOV_DOT_ALIAS,
     notes='paladin-rework SHARED B4.1: Vengeance unleash DoT, 9/9 per 3 s tick over 15 s (snapshots natively). Icon 90182 (alias of the 2292 texture) and no d1 0x400000, so the JoV +10%/stack hardcode never fires. The script sets canBeRecalculated = false.'
           ' Effect 1 (periodic) potency per tick 9.0 -> 10.8 (2026-10-08, DPS balance pass, user ruling: Retribution x1.20).'
@@ -264,7 +265,8 @@ unleash_vengeance_201071 = spell(
           ' Effect 1 (periodic) potency per tick 15.12 -> 10.58 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).'
           ' Effect 1 (periodic) potency per tick 10.58 -> 12.0612 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).'
           ' Effect 1 (periodic) potency per tick 12.0612 -> 13.6292 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).'
-          ' Effect 1 (periodic) potency per tick 13.6292 -> 14.3107 (2026-11-26, raid-buff-sets retune R3, user ruling: Retribution-only x1.05).',
+          ' Effect 1 (periodic) potency per tick 13.6292 -> 14.3107 (2026-11-26, raid-buff-sets retune R3, user ruling: Retribution-only x1.05).'
+          ' Effect 1 (periodic) potency per tick 14.3107 -> 12.064 (x0.843) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Retribution only, about x0.84).',
     raw_overrides=_unleash_raw('Afflicts the target with Twilight damage over time.', '{pot1} Twilight damage every $t1 sec.'),
 )
 
@@ -293,11 +295,12 @@ unleash_wisdom_201074 = spell(
     id=201074, name='Judgement of Wisdom', school=_HOLY_ARCANE,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0,
-    effects=[_unleash_direct(87.75)],
+    effects=[_unleash_direct(74.5875)],
     spell_icon_id=_ICON_SOW,
     notes='paladin-rework SHARED B4.1: Wisdom unleash (single target), 45/45 potency.'
           ' Effect 1 potency 45.0 -> 58.5 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).'
-          ' Effect 1 potency 58.5 -> 87.75 (2026-10-08, DPS balance pass, user ruling: Retribution x1.50, round 9).',
+          ' Effect 1 potency 58.5 -> 87.75 (2026-10-08, DPS balance pass, user ruling: Retribution x1.50, round 9).'
+          ' Effect 1 potency 87.75 -> 74.5875 (x0.85) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Paladin shared by Ret, Shockadin and Prot, x0.85).',
     raw_overrides=_unleash_raw('Deals {pot1} Holy and Arcane damage.'),
 )
 

@@ -63,11 +63,12 @@ righteousness_echo_201401 = spell(
     range_yards=50000.0,
     effects=[
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=70.0, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=60.0, implicit_target_a=6),
     ],
     spell_icon_id=90210,
     notes='paladin-rework S1 RETRIBUTION §4.2: Blade of Justice echo = the seal ability-form passive (B1.4) at x3 weapon potency; SUPPRESS_CASTER_PROCS so it never procs a seal passive or a talent. Righteousness: 60 weapon.'
-          ' Effect 2 weapon_potency 60.0 -> 70.0 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Retribution-only x1.13 = 67.8, weapon potency whole and a multiple of 5: x1.167; the echo is Blade of Justice only, Prot never casts it).',
+          ' Effect 2 weapon_potency 60.0 -> 70.0 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Retribution-only x1.13 = 67.8, weapon potency whole and a multiple of 5: x1.167; the echo is Blade of Justice only, Prot never casts it).'
+          ' Effect 2 weapon_potency 70 -> 60 (x0.857, nearest 5) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Retribution only, about x0.84).',
     raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Strikes the target with the power of your seal.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassMask_3': m.SEAL_PASSIVE, 'DefenseType': 2, 'AttributesEx3': 327680, 'AttributesEx2': 4, 'SpellLevel': 30},
 )
 
@@ -94,11 +95,12 @@ vengeance_echo_201403 = spell(
     range_yards=50000.0,
     effects=[
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=35.0, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=30.0, implicit_target_a=6),
     ],
     spell_icon_id=90210,
     notes='paladin-rework S1 RETRIBUTION §4.2: Blade of Justice echo = the seal ability-form passive (B1.4) at x3 weapon potency; SUPPRESS_CASTER_PROCS so it never procs a seal passive or a talent. Vengeance: the script then applies Echoing Vengeance 201407.'
-          ' Effect 2 weapon_potency 30.0 -> 35.0 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Retribution-only x1.13 = 33.9, weapon potency whole and a multiple of 5: x1.167).',
+          ' Effect 2 weapon_potency 30.0 -> 35.0 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Retribution-only x1.13 = 33.9, weapon potency whole and a multiple of 5: x1.167).'
+          ' Effect 2 weapon_potency 35 -> 30 (x0.857, nearest 5) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Retribution only, about x0.84).',
     raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Strikes the target with the power of your seal.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassMask_3': m.SEAL_PASSIVE, 'DefenseType': 2, 'AttributesEx3': 327680, 'AttributesEx2': 4, 'SpellLevel': 30},
 )
 
@@ -154,11 +156,12 @@ echoing_vengeance_201407 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0, duration_ms=5000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=6.102, ap_potency=6.102, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=5.1438, ap_potency=5.1438, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
     ],
     spell_icon_id=90210,
     notes='paladin-rework S1 RETRIBUTION §4.2: DoT of the Vengeance echo, 5 s, 36 total; icon 90210 (never 2292) and no d1 bits (JoV hardcode); a new application from the same caster replaces the old one.'
-          ' Effect 1 (periodic) sp_potency/ap_potency 5.4 -> 6.102 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).',
+          ' Effect 1 (periodic) sp_potency/ap_potency 5.4 -> 6.102 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).'
+          ' Effect 1 (periodic) sp_potency and ap_potency 6.102 -> 5.1438 (x0.843) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Retribution only, about x0.84).',
     raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Burns the target with twilight fire.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Taking {pot1} Twilight damage every $t1 sec.", 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassMask_3': m.SEAL_PASSIVE, 'DefenseType': 1, 'AttributesEx2': 4, 'SpellLevel': 30},
 )
 
@@ -194,11 +197,12 @@ vindication_strike_201420 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=22.6, ap_potency=22.6, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=19.0518, ap_potency=19.0518, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=1798,
     notes='paladin-rework S1 RETRIBUTION §4.5: the Vindication proc hit (rank eff0 triggers it), no family bits. Never use 26017/67 (C12 key).'
-          ' Effect 1 sp_potency/ap_potency 20.0 -> 22.6 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13; the rank tooltips quote it through pot_text).',
+          ' Effect 1 sp_potency/ap_potency 20.0 -> 22.6 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13; the rank tooltips quote it through pot_text).'
+          ' Effect 1 sp_potency and ap_potency 22.6 -> 19.0518 (x0.843) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Retribution only, about x0.84).',
     raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Deals {pot1} Holy damage.", 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'DefenseType': 1, 'SpellLevel': 25},
 )
 
@@ -688,13 +692,14 @@ holy_shock_25912 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=179.2104, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=156.6303, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=156,
     tooltip_vars=holy_heal_tooltip,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=250.0 (paladin-potency-proposals.txt, user value; was 305.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: SpellLevel 40 -> 30; description quotes only its own value ({pot1*shock}, entry 1105 owned by paladin_holy_spells.py); NOT_A_PROC (AttributesEx3 0x200) kept for the resolver Effect 1 sp_potency 250.0 -> 209.75 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839).'
           ' sp_potency 209.75 -> 186.6775 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Shockadin, Holy Shock damage x0.89 (Divine Toll damage 201205 and the Glimmer damage pulses are ComputeShockValue of this row, so they follow)).'
-          ' Effect 1 sp_potency 186.6775 -> 179.2104 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Shockadin x0.96 from the pre-R1 value (an intermediate x1.064 was dropped), damage side only; the heal side is 25914, untouched. Divine Toll damage 201205 and the Glimmer damage pulses 201210 are ComputeShockValue of this row, so they follow).',
+          ' Effect 1 sp_potency 186.6775 -> 179.2104 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Shockadin x0.96 from the pre-R1 value (an intermediate x1.064 was dropped), damage side only; the heal side is 25914, untouched. Divine Toll damage 201205 and the Glimmer damage pulses 201210 are ComputeShockValue of this row, so they follow).'
+          ' Effect 1 (damage side only, the heal is 25914) sp_potency 179.2104 -> 156.6303 (x0.874) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Shockadin damage only, about x0.874).',
     raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, causing {pot1*shock} Holy damage.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2097152, 'SpellClassSet': 10, 'SpellLevel': 30, 'SpellVisualID_1': 128, 'StartRecoveryCategory': 133},
 )
 

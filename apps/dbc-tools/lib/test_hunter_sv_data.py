@@ -262,7 +262,7 @@ EXPLOSIVE_SHOT_FIELDS = {
     "EffectBasePoints_2": -1, "Effect_3": 0, "SpellDescriptionVariableID": 1180,
 }
 # S9 2026-11-21 (SV x0.90): were 44.303 and 15.02; WSH2 2026-11-17: were 64.3 and 21.8
-EXPLOSIVE_SHOT_AP, BLAST_AP, BLAST_STALE_AP_BONUS = 41.4676, 14.0587, 0.16   # R1 x1.04
+EXPLOSIVE_SHOT_AP, BLAST_AP, BLAST_STALE_AP_BONUS = 35.2475, 11.9499, 0.16   # R1 x1.04, GS3 x0.85
 EXPLOSIVE_SHOT_DURATION_MS = 2000
 SPLASH_PCT = 40
 
@@ -1526,7 +1526,7 @@ def good_explosive() -> tuple[dict, dict, str]:
     row = {"ID": EXPLOSIVE_SHOT, **EXPLOSIVE_SHOT_FIELDS, "Speed": 40.0, "SpellClassSet": 9,
            "SpellClassMask_2": D1_EXPLOSIVE_SHOT, "DurationIndex": DUR2000, "AttributesEx5": 0,
            "AttributesEx2": 0x20000}
-    entry = {"id": EXPLOSIVE_SHOT, "effect1": {"_potency": {"kind": "direct", "total_potency": 41.4676,
+    entry = {"id": EXPLOSIVE_SHOT, "effect1": {"_potency": {"kind": "direct", "total_potency": 35.2475,
                                                             "ap_coefficient": 0.43}},
              "effect2": {}}
     source = ("explosive_shot_53301 = spell(\n    id=53301,\n    raw_overrides={'SpellLevel': 30, "
@@ -1537,7 +1537,7 @@ def good_explosive() -> tuple[dict, dict, str]:
 def good_blast() -> tuple[dict, dict, list[dict]]:
     row = {"ID": EXPLOSIVE_BLAST, "Effect_1": EFFECT_SCHOOL_DAMAGE, "SpellLevel": 30, "BaseLevel": 30, "MaxLevel": 0,
            "EquippedItemClass": -1, "SpellClassMask_3": D2_EXPLOSIVE_SHOT_TICK, "AttributesEx2": 0x4}
-    entry = {"id": EXPLOSIVE_BLAST, "effect1": {"_potency": {"kind": "direct", "total_potency": 14.0587,
+    entry = {"id": EXPLOSIVE_BLAST, "effect1": {"_potency": {"kind": "direct", "total_potency": 11.9499,
                                                              "ap_coefficient": 0.1429}}}
     return row, entry, [{"entry": EXPLOSIVE_BLAST, "ap_bonus": 0.1429}]
 

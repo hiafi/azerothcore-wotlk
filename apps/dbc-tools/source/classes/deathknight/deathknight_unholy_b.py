@@ -178,17 +178,17 @@ def _wound_burst(spell_id, name_note, role, ap_potency=25.0, potency_note=''):
 festering_wound_burst_203457 = _wound_burst(
     203457, 'RP (3 per wound) and Wandering Plague are granted in the script AfterHit, by source.',
     'wound burst (Scourge Strike, Rotten Touch, Pestilence overflow rules in the script)',
-    ap_potency=29.12,
+    ap_potency=21.69,
     potency_note=' ap_potency 25 -> 26.8 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: '
                  'Festering Wound burst 203457 +7%; 25 x 1.07 = 26.75, kept to one decimal, x1.072; the overflow 203458 '
-                 'and the death explosion 203459 keep their values). ap_potency 26.8 -> 28.408 (2026-11-26, raid-buff-sets retune R1, user ruling: Unholy Plague only x1.06). ap_potency 28.408 -> 29.83 (2026-11-26, raid-buff-sets retune R3, user ruling: Plague +23, x1.05; 29.83 -> 29.12 (2026-11-26, raid-buff-sets retune R4: Plague measured 1,548 after R3, x1.025 of the pre-R3 28.408)).')
+                 'and the death explosion 203459 keep their values). ap_potency 26.8 -> 28.408 (2026-11-26, raid-buff-sets retune R1, user ruling: Unholy Plague only x1.06). ap_potency 28.408 -> 29.83 (2026-11-26, raid-buff-sets retune R3, user ruling: Plague +23, x1.05; 29.83 -> 29.12 (2026-11-26, raid-buff-sets retune R4: Plague measured 1,548 after R3, x1.025 of the pre-R3 28.408)). ap_potency 29.12 -> 21.69 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Unholy Plague only x0.745; Wandering Plague follows the burst).')
 scripted_by(festering_wound_burst_203457, 'spell_dk_festering_wound_damage')
 
 festering_wound_overflow_203458 = _wound_burst(
     203458, 'Its own id so the combat log and the sim tell an overflow from a burst; damage only.',
     'overflow burst (a wound added at 10 stacks bursts at once)',
-    ap_potency=27.16,
-    potency_note=' ap_potency 25.0 -> 26.5 (2026-11-26, raid-buff-sets retune R1, user ruling: Unholy Plague only x1.06; the death explosion 203459 keeps its value). ap_potency 26.5 -> 27.83 (2026-11-26, raid-buff-sets retune R3, user ruling: Plague +23, x1.05; 27.83 -> 27.16 (2026-11-26, raid-buff-sets retune R4: x1.025 of the pre-R3 26.5)).')
+    ap_potency=20.23,
+    potency_note=' ap_potency 25.0 -> 26.5 (2026-11-26, raid-buff-sets retune R1, user ruling: Unholy Plague only x1.06; the death explosion 203459 keeps its value). ap_potency 26.5 -> 27.83 (2026-11-26, raid-buff-sets retune R3, user ruling: Plague +23, x1.05; 27.83 -> 27.16 (2026-11-26, raid-buff-sets retune R4: x1.025 of the pre-R3 26.5)). ap_potency 27.16 -> 20.23 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Unholy Plague only x0.745).')
 scripted_by(festering_wound_overflow_203458, 'spell_dk_festering_wound_damage')
 
 # The explosion: cast by the Death Knight at the dying enemy's position (an explicit dest captured at death), 8 yd around

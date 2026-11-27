@@ -72,7 +72,7 @@ frostbolt_116 = spell(
     duration_ms=5000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-41, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED),
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=66.6913, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=63.6902, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
     ],
     spell_icon_id=188,
@@ -81,7 +81,8 @@ frostbolt_116 = spell(
           ' Tooltip {pot2*mult} -> {pot2*fbmult} (2026-11-07, balance 1107: shows Empowering Frostbolt\'s +7/15%).'
           ' Effect 2 sp_potency 85.68 -> 65.9736 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Frost x0.770).'
           ' Effect 2 sp_potency 65.9736 -> 68.6125 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Frost Mage x1.04 on Ice Lance, Glacial Spike, Frostbolt, Frozen Orb, Flurry and Piercing Cold).'
-          ' Effect 2 sp_potency 68.6125 -> 66.6913 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).',
+          ' Effect 2 sp_potency 68.6125 -> 66.6913 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).'
+          ' Effect 1 sp_potency 66.6913 -> 63.6902 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Frost x0.955).',
     tooltip_vars=frost_talent_tooltip,
     raw_overrides={'AttributesEx6': 2097152, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement slowed by $s1%.', 'BaseLevel': 4, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a bolt of frost at the enemy, causing {pot2*fbmult} Frost damage and slowing movement speed by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 28.0, 'SpellClassMask_1': 32, 'SpellClassSet': 3, 'SpellLevel': 4, 'SpellPriority': 50, 'SpellVisualID_1': 13, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -199,8 +200,8 @@ fireball_133 = spell(
     range_yards=35.0,
     duration_ms=4000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=52.4254, potency_kind='direct', implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, sp_potency=11.8601, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=49.0702, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=11.1011, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=185,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): eff1 converted to sp_potency=126.7 (mage-potency-proposals.txt), eff2 to sp_potency=4.8 (potency-report default, base/coef already agreed). 2026-10-07: mana_cost_pct 19 -> 15 (DPS balance pass, user ruling: Fire mana). mana_cost_pct 15 -> 13 (2026-10-08, DPS balance pass, user ruling: Fire mana). mana_cost_pct 13 -> 11 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana). Effect 1 sp_potency 126.7 -> 101.4 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana). Effect 2 sp_potency 4.8 -> 3.8 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana).'
@@ -218,7 +219,8 @@ fireball_133 = spell(
           ' sp_potency 48.8087 -> 56.13; sp_potency 11.0419 -> 12.6982 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Fire Mage, Fireball and Pyroblast x1.15).'
           ' Potency unchanged (2026-11-22, level60-stat-curve round S23, user ruling 18: Fire x0.96): Frost also casts it, so Fire takes its -4% from the hidden passive 205101, linked from Fanned Flames rank 3; the tooltip reads it through `fire` in tooltip variables 1000.'
           ' Effect 1 sp_potency 56.13 -> 52.4254 Effect 2 sp_potency 12.6982 -> 11.8601 (2026-11-26, raid-buff-sets retune R1, user ruling: Fire x0.934; Frost also casts it, intended).'
-          ' Fire Tuning 205101 retired (2026-11-26, raid-buff-sets retune R1, user ruling: no hidden tuning passives): its -4% on Fireball and Blizzard, the `fire` tooltip variable and its Fanned Flames rank 3 link are gone, so Fireball carries only its potency (x0.934 above) for Fire and Frost alike; the id stays unused (clients may have cached it).',
+          ' Fire Tuning 205101 retired (2026-11-26, raid-buff-sets retune R1, user ruling: no hidden tuning passives): its -4% on Fireball and Blizzard, the `fire` tooltip variable and its Fanned Flames rank 3 link are gone, so Fireball carries only its potency (x0.934 above) for Fire and Frost alike; the id stays unused (clients may have cached it).'
+          ' Effect 1 sp_potency 52.4254 -> 49.0702 Effect 2 sp_potency 11.8601 -> 11.1011 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Fire x0.936).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} Fire damage every $t2 seconds.', 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls a fiery ball that causes {pot1} Fire damage and an additional {pot2.total} Fire damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 24.0, 'SpellClassMask_1': 1, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 67, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
     tooltip_vars=frost_talent_tooltip,
 )
@@ -606,7 +608,7 @@ fire_blast_2136 = spell(
     mana_cost_pct=10,
     range_yards=20.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=67.2315, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=62.9287, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=12,
     notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 sec 3.1: category cooldown 12 sec (was 8). 'Always critically strikes' is Mage::ApplySpellCritChanceMods (Phase 3) - there is no DBC attribute for a guaranteed crit. Potency system P5 (Mage pass): converted to sp_potency=347.3 (mage-potency-proposals.txt). 2026-10-07: mana_cost_pct 21 -> 12 (DPS balance pass, user ruling: Fire mana). mana_cost_pct 12 -> 10 (2026-10-08, DPS balance pass, user ruling: Fire mana). Effect 1 sp_potency 347.3 -> 208.4 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana)."
@@ -620,7 +622,8 @@ fire_blast_2136 = spell(
           ' Effect 1 sp_potency 77.3006 -> 74.2086 (2026-11-22, level60-stat-curve round S23, user ruling 18: Fire x0.96, a Fire-only spell).'
           ' Effect 1 sp_potency 74.2086 -> 69.3108 (2026-11-26, raid-buff-sets retune R1, user ruling: Fire x0.934).'
           ' Effect 1 sp_potency 69.3108 -> 65.1522 (2026-11-26, raid-buff-sets retune R3, user ruling: Fire x0.94).'
-          ' Effect 1 sp_potency 69.3108 -> 67.2315 (2026-11-26, raid-buff-sets retune R4: Fire x0.97 instead of x0.94, R3 measured 1,448).',
+          ' Effect 1 sp_potency 69.3108 -> 67.2315 (2026-11-26, raid-buff-sets retune R4: Fire x0.97 instead of x0.94, R3 measured 1,448).'
+          ' Effect 1 sp_potency 67.2315 -> 62.9287 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Fire x0.936).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the enemy for {pot1} Fire damage. Always critically strikes.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2, 'SpellClassSet': 3, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 143, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -659,7 +662,7 @@ scorch_2948 = spell(
     mana_cost_pct=5,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=44.8681, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=41.9965, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=816,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 22); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=90.8 (mage-potency-proposals.txt). 2026-10-07: mana_cost_pct 8 -> 6 (DPS balance pass, user ruling: Fire mana). mana_cost_pct 6 -> 5 (2026-10-08, DPS balance pass, user ruling: Fire mana).'
@@ -669,7 +672,8 @@ scorch_2948 = spell(
           ' Effect 1 sp_potency 51.5879 -> 49.5244 (2026-11-22, level60-stat-curve round S23, user ruling 18: Fire x0.96, a Fire-only spell).'
           ' Effect 1 sp_potency 49.5244 -> 46.2558 (2026-11-26, raid-buff-sets retune R1, user ruling: Fire x0.934).'
           ' Effect 1 sp_potency 46.2558 -> 43.4805 (2026-11-26, raid-buff-sets retune R3, user ruling: Fire x0.94).'
-          ' Effect 1 sp_potency 46.2558 -> 44.8681 (2026-11-26, raid-buff-sets retune R4: Fire x0.97 instead of x0.94, R3 measured 1,448).',
+          ' Effect 1 sp_potency 46.2558 -> 44.8681 (2026-11-26, raid-buff-sets retune R4: Fire x0.97 instead of x0.94, R3 measured 1,448).'
+          ' Effect 1 sp_potency 44.8681 -> 41.9965 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Fire x0.936).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 22, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Scorch the enemy for {pot1} Fire damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 16, 'SpellClassSet': 3, 'SpellLevel': 22, 'SpellPriority': 50, 'SpellVisualID_1': 945, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1456,7 +1460,7 @@ arcane_blast = spell(
     mana_cost_pct=12,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=57.1902, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=52.9581, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=1, trigger_spell=arcane_blast_debuff.id),
     ],
     spell_icon_id=2294,
@@ -1465,7 +1469,8 @@ arcane_blast = spell(
           ' Effect 1 sp_potency 91.7 -> 77.945 (2026-11-15, balance on the Normal-tier kits, user ruling: Arcane Blast -15%).'
           ' Effect 1 sp_potency 77.945 -> 59.55 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Arcane x0.764).'
           ' Effect 1 sp_potency 59.55 -> 58.0612 (2026-11-26, raid-buff-sets retune R1, user ruling: Arcane x0.975).'
-          ' Effect 1 sp_potency 58.0612 -> 57.1902 (2026-11-26, raid-buff-sets retune R3, user ruling: Arcane x0.985).',
+          ' Effect 1 sp_potency 58.0612 -> 57.1902 (2026-11-26, raid-buff-sets retune R3, user ruling: Arcane x0.985).'
+          ' Effect 1 sp_potency 57.1902 -> 52.9581 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Arcane x0.926).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 10, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with energy, dealing {pot1} Arcane damage.  Each time you cast Arcane Blast, the damage of all Arcane spells is increased by $36032s1% and mana cost of Arcane Blast is increased by $36032s2%.  Effect stacks up to $36032u times and lasts $36032d or until any Arcane damage spell except Arcane Blast is cast.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 536870912, 'EffectSpellClassMaskC_1': 536870912, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 536870912, 'SpellClassSet': 3, 'SpellLevel': 10, 'SpellVisualID_1': 7749, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1482,7 +1487,7 @@ ice_lance_30455 = spell(
     mana_cost_pct=6,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=43.9783, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=41.9993, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=186,
     notes='EDITED for docs/frost-mage-redesign.md sec 2 (Ice Lance): "Now learnable at level 15, will need to create scaling for it." BaseLevel/SpellLevel 66->15; base_points/points_per_level rescaled to keep the same level-80 ceiling the old 66-anchored single-rank bootstrap landed on (~217 before spell power) - a real balance pass should replace this placeholder slope. single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 66); RealPointsPerLevel from rank1→top rank\'s own top level (82, chain has a gap at 60) slope (anchor rank 42914, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (42914, rank 3); MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=60.7 (mage-potency-proposals.txt). Effect 1 sp_potency 60.7 -> 72.8 (2026-10-08, DPS balance pass, user ruling: Frost burst +20%). Effect 1 sp_potency 72.8 -> 87.4 (2026-10-08, DPS balance pass, user ruling: Frost damage and mana). Effect 1 sp_potency 87.4 -> 91.8 (2026-10-08, DPS balance pass, user ruling: Frost +5%).'
@@ -1491,7 +1496,8 @@ ice_lance_30455 = spell(
           ' Effect 1 sp_potency 50.49 -> 56.5 (56.549 kept to one decimal, so +11.9%) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Ice Lance +12%).'
           ' Effect 1 sp_potency 56.5 -> 43.505 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Frost x0.770).'
           ' Effect 1 sp_potency 43.505 -> 45.2452 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Frost Mage x1.04 on Ice Lance, Glacial Spike, Frostbolt, Frozen Orb, Flurry and Piercing Cold).'
-          ' Effect 1 sp_potency 45.2452 -> 43.9783 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).',
+          ' Effect 1 sp_potency 45.2452 -> 43.9783 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).'
+          ' Effect 1 sp_potency 43.9783 -> 41.9993 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Frost x0.955).',
     tooltip_vars=frost_talent_tooltip,
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 15, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1*mult} Frost damage to an enemy target.  Causes triple damage against Frozen targets.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 38.0, 'SpellClassMask_1': 131072, 'SpellClassSet': 3, 'SpellLevel': 15, 'SpellVisualID_1': 7906, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -2238,8 +2244,8 @@ pyroblast_11366 = spell(
     range_yards=35.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=48.8561, potency_kind='direct', implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, sp_potency=14.0391, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=45.7293, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=13.1406, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
     ],
     spell_icon_id=184,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): eff1 converted to sp_potency=72.7, eff2 to sp_potency=10.7 (both mage-potency-proposals.txt). 2026-10-07: mana_cost_pct 22 -> 18 (DPS balance pass, user ruling: Fire mana). mana_cost_pct 18 -> 15 (2026-10-08, DPS balance pass, user ruling: Fire mana). Effect 1 sp_potency 72.7 -> 58.2 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana). Effect 2 sp_potency 10.7 -> 8.6 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana).'
@@ -2255,7 +2261,8 @@ pyroblast_11366 = spell(
           ' Effect 1 sp_potency 56.1731 -> 53.9262, Effect 2 sp_potency 16.1417 -> 15.496 (2026-11-22, level60-stat-curve round S23, user ruling 18: Fire x0.96, a Fire-only spell).'
           ' Effect 1 sp_potency 53.9262 -> 50.3671 Effect 2 sp_potency 15.496 -> 14.4733 (2026-11-26, raid-buff-sets retune R1, user ruling: Fire x0.934).'
           ' Effect 1 sp_potency 50.3671 -> 47.3451 Effect 2 sp_potency 14.4733 -> 13.6049 (2026-11-26, raid-buff-sets retune R3, user ruling: Fire x0.94).'
-          ' Effect 1 sp_potency 50.3671 -> 48.8561 Effect 2 sp_potency 14.4733 -> 14.0391 (2026-11-26, raid-buff-sets retune R4: Fire x0.97 instead of x0.94, R3 measured 1,448).',
+          ' Effect 1 sp_potency 50.3671 -> 48.8561 Effect 2 sp_potency 14.4733 -> 14.0391 (2026-11-26, raid-buff-sets retune R4: Fire x0.97 instead of x0.94, R3 measured 1,448).'
+          ' Effect 1 sp_potency 48.8561 -> 45.7293 Effect 2 sp_potency 14.0391 -> 13.1406 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Fire x0.936).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} Fire damage every $t2 seconds.', 'BaseLevel': 20, 'CastingTimeIndex': 6, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls an immense fiery boulder that causes {pot1} Fire damage and an additional {pot2.total} Fire damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 24.0, 'SpellClassMask_1': 4194304, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 2253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -2327,13 +2334,14 @@ arcane_barrage_44425 = spell(
     mana_cost_pct=18,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=105.6566, potency_kind='direct', implicit_target_a=6, chain_targets=5),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=97.838, potency_kind='direct', implicit_target_a=6, chain_targets=5),
     ],
     spell_icon_id=3376,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (86, chain has a gap at 60) slope (anchor rank 44781, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (44781, rank 3); MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=160.0 (potency-report default, base/coef already agreed). Effect 1 sp_potency 160.0 -> 144.0 (2026-11-15, AoE round 2 on the Normal-tier kits, user ruling: Arcane Barrage -10%). EffectChainAmplitude_1 1.0 -> 0.7 (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling: Arcane Barrage chain falloff, each extra target takes 0.7x the previous one; the primary target keeps full damage, so 1T is unchanged)."
           ' Effect 1 sp_potency 144.0 -> 110.016 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Arcane x0.764).'
           ' Effect 1 sp_potency 110.016 -> 107.2656 (2026-11-26, raid-buff-sets retune R1, user ruling: Arcane x0.975).'
-          ' Effect 1 sp_potency 107.2656 -> 105.6566 (2026-11-26, raid-buff-sets retune R3, user ruling: Arcane x0.985).',
+          ' Effect 1 sp_potency 107.2656 -> 105.6566 (2026-11-26, raid-buff-sets retune R3, user ruling: Arcane x0.985).'
+          ' Effect 1 sp_potency 105.6566 -> 97.838 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Arcane x0.926).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches several missiles at the enemy target, causing {pot1} Arcane damage. Each stack of Arcane Blast on you causes Arcane Barrage to hit an additional target. Consumes all stacks of Arcane Blast and restores 2.5% of your maximum mana per stack consumed.', 'EffectChainAmplitude_1': 0.7, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 24.0, 'SpellClassMask_2': 32768, 'SpellClassSet': 3, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 9947, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -2352,7 +2360,7 @@ living_bomb_44457 = spell(
     range_yards=35.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=11.3158, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=10.5916, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
         Effect(type=EffectType.APPLY_AURA, base_points=44460, implicit_target_a=6, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3000,
@@ -2363,7 +2371,8 @@ living_bomb_44457 = spell(
           ' Effect 1 sp_potency 13.0105 -> 12.4901 (2026-11-22, level60-stat-curve round S23, user ruling 18: Fire x0.96, a Fire-only spell).'
           ' Effect 1 sp_potency 12.4901 -> 11.6658 (2026-11-26, raid-buff-sets retune R1, user ruling: Fire x0.934).'
           ' Effect 1 sp_potency 11.6658 -> 10.9659 (2026-11-26, raid-buff-sets retune R3, user ruling: Fire x0.94).'
-          ' Effect 1 sp_potency 11.6658 -> 11.3158 (2026-11-26, raid-buff-sets retune R4: Fire x0.97 instead of x0.94, R3 measured 1,448).',
+          ' Effect 1 sp_potency 11.6658 -> 11.3158 (2026-11-26, raid-buff-sets retune R4: Fire x0.97 instead of x0.94, R3 measured 1,448).'
+          ' Effect 1 sp_potency 11.3158 -> 10.5916 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Fire x0.936).',
     raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Causes {pot1} Fire damage every $t1 sec.  After $d or when the spell is dispelled, the target explodes causing $44461s1 Fire damage to all enemies within $44461a1 yards.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The target becomes a Living Bomb, taking {pot1.total} Fire damage over $d.  After $d or when the spell is dispelled, the target explodes dealing $44461s1 Fire damage to all enemies within $44461a1 yards.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 12582935, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 131072, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 10692, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

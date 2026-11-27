@@ -59,8 +59,9 @@ namespace
     // Custom: 0.2 -> 0.242 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling:
     // Enhancement-only spells x1.21). 0.242 -> 0.2529 (2026-11-26, raid-buff-sets retune R1, user ruling:
     // Enhancement-only spells x1.045). 0.2529 -> 0.25 (same day, user ruling: rounded numbers; weapon potency
-    // 125 and 0.25 are both x125/121 of the original).
-    constexpr float WINDFURY_AP_BONUS = 0.25f;
+    // 125 and 0.25 are both x125/121 of the original). 0.25 -> 0.21 (2026-11-27, gear-scaling GS3 ilvl 66
+    // retune, user ruling: Enhancement-only spells x0.84, with weapon potency 125 -> 105).
+    constexpr float WINDFURY_AP_BONUS = 0.21f;
 
     // Talent rank chains the Enhancement hooks read, in rank order (reads go through Shaman::GetTalentRank).
     // Improved Lightning Shield (was Improved Shields); Maelstrom Weapon (ranks 4 and 5 are dropped from the talent).

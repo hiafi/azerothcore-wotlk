@@ -398,7 +398,7 @@ DpsSim.InfiniteMana =
 #                      Setting any of them for a DPS or heal profile aborts the job. DpsSim.TargetCount works as in DPS
 #                      mode (1 = the boss dummy, 2+ = the elite pack); every dummy swings. The boss dummy is a real
 #                      level actor + 3 and stun immune in tank mode; the pack dummies keep the actor's level.
-#        Default:     "" - (Use the profile's own values: dps, 2250-2750, 500-600, 2000, true)
+#        Default:     "" - (Use the profile's own values: dps, 2850-3450, 500-600, 2000, true)
 #
 
 DpsSim.TankScenario =

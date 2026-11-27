@@ -45,7 +45,7 @@ arcane_missile_7268 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=67.6096, potency_kind='direct', implicit_target_a=77),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=62.6065, potency_kind='direct', implicit_target_a=77),
     ],
     spell_icon_id=225,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | Bugfix (playtest report, 2026-09-08): SpellVisualID_1 was left at rank 1\'s own value (268) instead of being carried over from the max rank\'s damage sub-spell (25346, mage.csv/npc.csv - SpellVisualID_1 270) like every other field in this bootstrap was - "arcane missiles has the rank 1 model instead of the max rank model for its missiles". Fixed to 270. Potency system P5 (Mage pass): converted to sp_potency=72.9 (potency-report default, base/coef already agreed). Effect 1 sp_potency 72.9 -> 94.8 (2026-10-08, DPS balance pass, user ruling: Arcane Missiles +30%).'
@@ -54,7 +54,8 @@ arcane_missile_7268 = spell(
           ' Effect 1 sp_potency 102.384 -> 92.1456 (2026-11-15, balance on the Normal-tier kits, user ruling: Arcane Missiles -10%).'
           ' Effect 1 sp_potency 92.1456 -> 70.3992 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Arcane x0.764).'
           ' Effect 1 sp_potency 70.3992 -> 68.6392 (2026-11-26, raid-buff-sets retune R1, user ruling: Arcane x0.975).'
-          ' Effect 1 sp_potency 68.6392 -> 67.6096 (2026-11-26, raid-buff-sets retune R3, user ruling: Arcane x0.985).',
+          ' Effect 1 sp_potency 68.6392 -> 67.6096 (2026-11-26, raid-buff-sets retune R3, user ruling: Arcane x0.985).'
+          ' Effect 1 sp_potency 67.6096 -> 62.6065 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Arcane x0.926).',
     raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches Arcane Missiles at the enemy, causing {pot1} Arcane damage every $5143t2 sec for $5143d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_1': 2097152, 'SpellClassSet': 3, 'SpellLevel': 8, 'SpellPriority': 50, 'SpellVisualID_1': 270},
 )
 
@@ -203,7 +204,7 @@ living_bomb_44461 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=45.2139, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=42.3202, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=3000,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (86, chain has a gap at 60) slope (anchor rank 55362, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (55362, rank 3); MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=114.4 (mage-potency-proposals.txt) - cast natively via spell_mage_living_bomb::AfterRemove's caster->CastSpell(target, id, true) (no custom bp), so it's a genuine potency candidate, not script-driven. Effect 1 sp_potency 114.4 -> 91.5 (2026-10-08, DPS balance pass, user ruling: Fire damage and mana)."
@@ -213,7 +214,8 @@ living_bomb_44461 = spell(
           ' Effect 1 sp_potency 51.9855 -> 49.9061 (2026-11-22, level60-stat-curve round S23, user ruling 18: Fire x0.96, a Fire-only spell).'
           ' Effect 1 sp_potency 49.9061 -> 46.6123 (2026-11-26, raid-buff-sets retune R1, user ruling: Fire x0.934).'
           ' Effect 1 sp_potency 46.6123 -> 43.8156 (2026-11-26, raid-buff-sets retune R3, user ruling: Fire x0.94).'
-          ' Effect 1 sp_potency 46.6123 -> 45.2139 (2026-11-26, raid-buff-sets retune R4: Fire x0.97 instead of x0.94, R3 measured 1,448).',
+          ' Effect 1 sp_potency 46.6123 -> 45.2139 (2026-11-26, raid-buff-sets retune R4: Fire x0.97 instead of x0.94, R3 measured 1,448).'
+          ' Effect 1 sp_potency 45.2139 -> 42.3202 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Fire x0.936).',
     raw_overrides={'AttributesEx2': 1073741824, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The target becomes a Living Bomb, taking $44457o1 Fire damage over $44457d.  After $44457d or when the spell is dispelled, the target explodes dealing {pot1} Fire damage to all enemies within $44461a1 yards.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 12582935, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 65536, 'SpellClassSet': 3, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 10693},
 )
 
@@ -302,7 +304,7 @@ glacial_spike_impact_200027 = spell(
     mana_cost=0,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=849.2295, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=811.0142, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90453,
     notes="Frost Mage rework (docs/reworks/frost-mage-rework.md sec 1, Glacial Spike): the real, damage-dealing leg - same flat 1500 base Frost damage (EffectBasePoints stored as 1499) with a 1.2 spell power coefficient this row carried under ID 200002 before the original ramp redesign (see that row's notes and docs/reworks/frost-mage-rework.md's art-pass discussion). Fired via caster->CastSpell(target, 200027, true) from spell_mage_glacial_spike::LaunchImpact (spell_mage.cpp) immediately when the player's 2.5s cast completes - no post-cast delay (2026-09-18: previously ~800ms after cast completion, via an intermediate 200025->200026 cosmetic ramp; removed once the icicles-converging visual moved onto 200002's own CastKit, see 200002's notes). Icicle consumption, Fingers-of-Frost-charge consumption, and the Arctic Winds R3 shatter-cleave (spell_mage_glacial_spike_impact::ConsumeIciclesAndFrostCharge) all live here, since this is the stage that represents the spell actually landing - not yet implemented is Arctic Winds R3's cleave depending on the Row 9 Arctic Winds talent, same TODO as before. SpellIconID 1236 (Spell_Frost_IceShard, from apps/dbc-tools/var/spell_icon_names.csv). Speed 60 (doubled from 30 on 2026-09-18 playtest feedback - the missile visibly travels too slowly at 30). SpellVisualID_1 90008 (patch_mage_vfx_models.py): HasMissile/MissileModel=cfx_mage_iciclemastery_launchedmissile (the actual spike in flight - not from the cfx_mage_glacialspike_* asset family; both cfx_mage_glacialspike_launchedmissile and cfx_mage_glacialspike_dummyholdmissile were tried first and rejected on 2026-09-18 playtest feedback for looking like mostly particle effects with little solid mesh live. iciclemastery_launchedmissile was found by browsing patch-N.MPQ for any Spike/Glacial/Icicle-named model and user-confirmed correct after inspecting it in a model viewer) + ImpactKit wrapping cfx_mage_glacialspike_impactchest for the hit. See docs/reworks/fire-mage-rework.md. | potency system P5 (Mage pass): converted to sp_potency=560.7 (mage-potency-proposals.txt); dropped the dead `coeff_weight=1.2` kwarg (lib/build.py: never wired into spell_bonus_data by this build); added SpellLevel=1 (required for potency, matching this file's other trigger-only spells - none was set before, so BaseLevel/SpellLevel previously defaulted to 0). Effect 1 sp_potency 560.7 -> 672.8 (2026-10-08, DPS balance pass, user ruling: Frost burst +20%). Effect 1 sp_potency 672.8 -> 807.4 (2026-10-08, DPS balance pass, user ruling: Frost damage). Effect 1 sp_potency 807.4 -> 888.1 (2026-10-08, DPS balance pass, user ruling: Frost damage and mana). Effect 1 sp_potency 888.1 -> 932.5 (2026-10-08, DPS balance pass, user ruling: Frost +5%)."
@@ -310,7 +312,8 @@ glacial_spike_impact_200027 = spell(
           ' Effect 1 sp_potency 839.25 -> 1091.025 (2026-11-15, balance on the Normal-tier kits, user ruling: Glacial Spike +30%).'
           ' Effect 1 sp_potency 1091.025 -> 840.0893 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Frost x0.770).'
           ' Effect 1 sp_potency 840.0893 -> 873.6929 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Frost Mage x1.04 on Ice Lance, Glacial Spike, Frostbolt, Frozen Orb, Flurry and Piercing Cold).'
-          ' Effect 1 sp_potency 873.6929 -> 849.2295 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).',
+          ' Effect 1 sp_potency 873.6929 -> 849.2295 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).'
+          ' Effect 1 sp_potency 849.2295 -> 811.0142 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Frost x0.955).',
     raw_overrides={'SpellClassSet': 3, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'EquippedItemClass': -1, 'PreventionType': 1, 'ProcChance': 101, 'SpellPriority': 50, 'Description_Lang_enUS': 'Consumes all Icicles to hurl a massive spike of ice at the target, dealing Frost damage.', 'DefenseType': 1, 'Speed': 60.0, 'SpellVisualID_1': 90008, 'SpellLevel': 1},
 )
 unbind_bonus_coefficients(glacial_spike_impact_200027)  # P5: retires the live spell_bonus_data row
@@ -332,13 +335,14 @@ flurry_bolt_200037 = spell(
     mana_cost=0,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=45.8854, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=43.8206, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90452,
     notes="Frost Mage rework - internal plumbing spell, not player-facing (never cast by a player directly). One of 3 sequential bolts fired by spell_mage_flurry::FireBolts (spell_mage.cpp) - cast via caster->CastSpell(target, 200037, true) at 0ms/200ms/400ms after Flurry's (200004) own cast completes, target re-resolved by GUID + ObjectAccessor for the 2nd/3rd bolt same as Glacial Spike's old ramp did (see FireBolts' own comment). Same per-bolt numbers as the pre-redesign 200004 (100 base each, EffectBasePoints stored as 99), just split into 3 separately-cast, separately-scaled, separately-timed instances instead of 3 simultaneous effects on one entry - total damage output unchanged, only the pacing/visual changed (2026-09-18 playtest feedback: wanted a genuine burst of 3 sequential bolts, not one bolt worth of triple damage). Shattering Cold (200003) is applied once, right after the 3rd/last bolt is cast (not from this row) - FireBolts casts it in the same scheduled callback as the final bolt, preserving 'Flurry's own bolts do not benefit from Shattering Cold' on a best-effort/cast-order basis; note this has no live consumer yet (FrostMageRework::IsFrozenFor/HasShatteringCold, spell_mage.cpp, are currently uncalled - see docs/reworks/frost-mage-rework.md), so nothing currently depends on this ordering being exact down to travel-time precision. SpellIconID 187 (Spell_Frost_ChillingBlast, apps/dbc-tools/var/spell_icon_names.csv). SpellVisualID_1 90010 (patch_mage_vfx_models.py): HasMissile/MissileModel=cfx_mage_flurry_missile + ImpactKit wrapping cfx_mage_flurry_impactchest - the missile/impact visual 200004's own SpellVisualID_1 (90009) used to carry, moved here since this is what actually travels and hits now. See docs/reworks/fire-mage-rework.md. | potency system P5 (Mage pass): converted to sp_potency=37.4 (potency-report default). Dropped the dead `coeff_weight=0.3` kwarg - lib/build.py: never wired into spell_bonus_data by this build, and the report's own live-DB read confirms the coefficient was in fact 0.000 live (not the 0.3 the old notes/coeff_weight claimed) - the pending SQL this row's notes describe as carrying 'this row's own spell_bonus_data' apparently never survived to the current DB state (same squash-drop risk class as docs/bugs-and-fixes.md's pending-SQL-squash entry); potency conversion fixes this going forward regardless of root cause. Added SpellLevel=1 (required for potency; none was set before). Effect 1 sp_potency 37.4 -> 39.3 (2026-10-08, DPS balance pass, user ruling: Frost +5%). Effect 1 sp_potency 39.3 -> 58.95 (2026-11-15, balance on the Normal-tier kits, user ruling: Flurry +50%)."
           ' Effect 1 sp_potency 58.95 -> 45.3915 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Frost x0.770).'
           ' Effect 1 sp_potency 45.3915 -> 47.2072 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Frost Mage x1.04 on Ice Lance, Glacial Spike, Frostbolt, Frozen Orb, Flurry and Piercing Cold).'
-          ' Effect 1 sp_potency 47.2072 -> 45.8854 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).',
+          ' Effect 1 sp_potency 47.2072 -> 45.8854 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).'
+          ' Effect 1 sp_potency 45.8854 -> 43.8206 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Frost x0.955).',
     raw_overrides={'SpellClassSet': 3, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'EquippedItemClass': -1, 'PreventionType': 1, 'ProcChance': 101, 'SpellPriority': 50, 'Description_Lang_enUS': 'Internal: one bolt of Flurry.', 'Speed': 38.0, 'DefenseType': 1, 'SpellVisualID_1': 90010, 'SpellLevel': 1},
 )
 
@@ -393,14 +397,15 @@ frozen_orb_pulse_200008 = spell(
     radius_yards=8.0,
     duration_ms=4000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=73.401, potency_kind='direct', implicit_target_a=16),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=70.098, potency_kind='direct', implicit_target_a=16),
         Effect(type=EffectType.APPLY_AURA, base_points=-31, mechanic=Mechanic.SNARE, implicit_target_a=16, apply_aura=AuraType.MOD_DECREASE_SPEED),
     ],
     spell_icon_id=90454,
     notes='Radius 10 -> 8 yards (2026-10-31 bug-fix batch K, user ruling: reduce the orb\'s damage AREA by 20% instead of shrinking its model; SpellRadius.dbc 8.0 is an existing row, reuse.find_or_mint reuses it). The notes below still say 10 yards for the original design. Frost Mage rework (docs/frost-mage-redesign.md sec 1, Frozen Orb\'s pulse): "Every 1 sec, deals 200 Frost damage plus 0.15 spell power coefficient to all enemies within 10 yards, and applies a chill reducing movement speed by 30% for 4 sec." Two effects on one row, same shape as the real Cone of Cold (120): SCHOOL_DAMAGE (base_points 199, -1 convention) + APPLY_AURA MOD_DECREASE_SPEED (base_points -31, -1 convention for -30%, EffectMechanic MECHANIC_SNARE=11), both TARGET_UNIT_DEST_AREA_ENEMY (16, not the SRC variant this row originally shipped with - see "Cast by" below for why). Neither effect JSON sets its own "radius_yards" key (build.py only falls back to the row\'s top-level radius_yards when the per-effect key is absent, not when it\'s present-but-null - learned the hard way diffing a hand-built row against generate.py\'s actual output), so both inherit the row\'s radius_yards (10, -> EffectRadiusIndex 13, the same row Cone of Cold\'s own radius already reuses) and duration_ms (4000, -> DurationIndex 35, the same row Shattering Cold/200003 already reuses). Cast by the OWNING PLAYER (not the orb) at an explicit dest = the orb\'s live position, once per second, from npc_mage_frozen_orb::UpdateAI (spell_mage.cpp) - a deliberate change from the original SRC-based "orb self-casts via a periodic aura (200009)" design, which silently attributed all damage/threat/combat-log entries to the orb instead of the player (root-caused via live playtest: FoF procced and the pulse showed in the combat log, but never in the player\'s own damage meter). TARGET_UNIT_DEST_AREA_ENEMY lets the player be the actual spell caster (correct attribution *and* correct spell-power scaling off the player\'s own stats) while still centering the AoE on the orb\'s moving position rather than the stationary player. 200009 (Frozen Orb Periodic) is no longer cast by anything - left as an orphaned row rather than deleted, see spell_mage.cpp\'s own notes. spell_mage_frozen_orb_pulse (spell_mage.cpp) still exists for BoostChillEffect (Chilled to the Bone) and to tell the orb\'s AI a pulse landed (halts movement, starts the FoF grant chain) - it does not touch the damage/slow itself, both of which are native DBC effects needing no script. Attributes=0 and no player-facing name/description text (Description_Lang_Mask=0) - never cast directly by a player action, never shown in a spellbook/tooltip. | potency system P5 (Mage pass): converted to sp_potency=74.8 (mage-potency-proposals.txt). Dropped the dead `coeff_weight=0.15` kwarg (lib/build.py: never wired into spell_bonus_data by this build - the report\'s own live-DB read confirms the coefficient was 0.000 live, not the 0.15 these old notes claimed; same pending-SQL-squash-drop pattern noted on Flurry Bolt (200037)). Added SpellLevel=1 (required for potency; none was set before). No Description/AuraDescription text change - this spell has Description_Lang_Mask=0 and no description key at all (never shown in any UI). Effect 1 sp_potency 74.8 -> 89.8 (2026-10-08, DPS balance pass, user ruling: Frost damage and mana). Effect 1 sp_potency 89.8 -> 94.3 (2026-10-08, DPS balance pass, user ruling: Frost +5%). DefenseType 0 -> 1 (2026-11-01, potency audit fix F4): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit).'
           ' Effect 1 sp_potency 94.3 -> 72.611 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Frost x0.770).'
           ' Effect 1 sp_potency 72.611 -> 75.5154 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Frost Mage x1.04 on Ice Lance, Glacial Spike, Frostbolt, Frozen Orb, Flurry and Piercing Cold).'
-          ' Effect 1 sp_potency 75.5154 -> 73.401 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).',
+          ' Effect 1 sp_potency 75.5154 -> 73.401 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).'
+          ' Effect 1 sp_potency 73.401 -> 70.098 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Frost x0.955).',
     raw_overrides={'SpellClassSet': 0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 0, 'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Movement speed reduced.', 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellPriority': 50, 'SpellLevel': 1, 'DefenseType': 1},
 )
 unbind_bonus_coefficients(frozen_orb_pulse_200008)  # stale spell_bonus_data row overrode the potency coefficient (D1)
@@ -4549,13 +4554,14 @@ frozen_core_piercing_cold_200019 = spell(
     range_yards=40.0,
     duration_ms=8000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=17.4356, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=16.651, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=2132,
     notes='Frost Mage rework (docs/frost-mage-redesign.md sec 4 Row 5, Frozen Core capstone). Triggered only (spell_mage_frozen_core, spell_mage.cpp) on an Ice Lance critical strike against a frozen target. 80 base damage/tick (EffectBasePoints stored 79), 4 ticks over 8 sec -- modest, first-pass tuning value like this session\'s other new proc-only spells. \'Does not stack, refreshes on reapplication\' is free from native single-target same-spell-ID reapplication, no extra data needed. Playtest bugfix (2026-08-27, user call): range_yards was left blank, which reuse.py\'s range_index() defaults to RangeIndex 0 (self-only/no-range sentinel) - same root cause as the Shattering Cold bug found the same session. Since this is cast at the enemy target (not self), that silently blocked the DoT from ever landing. Set to 40 to match the other enemy-targeted triggered spells in this file (Glacial Spike, Shattering Cold, Flurry, Icy Bite/Shatter). Playtest bugfix #2 (2026-08-28, user call, "DoT lands on the caster, not the target"): effect1\'s implicit_target_a was 1 (TARGET_UNIT_CASTER/self) - wrong for an effect meant to land on the enemy target that caster->CastSpell(target, ...) in spell_mage_frozen_core (spell_mage.cpp) explicitly passes in; a self-implicit-target effect ignores the explicit CastSpell target and always resolves to the caster regardless. Set to 6 (TARGET_UNIT_TARGET_ENEMY) to match every other enemy-targeted triggered spell in this file. | potency system P5 (Mage pass): converted to sp_potency=22.4 (mage-potency-proposals.txt). Dropped the dead `coeff_weight=0.05` kwarg (lib/build.py: never wired into spell_bonus_data by this build - the report\'s own live-DB read confirms the coefficient was 0.000 live, not the claimed 0.05). DefenseType 0 -> 1 (2026-11-01, potency audit fix F4): DmgClass NONE made SpellDamageBonusDone / SpellHealingBonusDone return the bare base, so the generated spell power coefficient never applied; MAGIC lets it through (and allows spell crit).'
           ' Effect 1 sp_potency 22.4 -> 17.248 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Frost x0.770).'
           ' Effect 1 sp_potency 17.248 -> 17.9379 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Frost Mage x1.04 on Ice Lance, Glacial Spike, Frostbolt, Frozen Orb, Flurry and Piercing Cold).'
-          ' Effect 1 sp_potency 17.9379 -> 17.4356 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).',
+          ' Effect 1 sp_potency 17.9379 -> 17.4356 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).'
+          ' Effect 1 sp_potency 17.4356 -> 16.651 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Frost x0.955).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': "Frost damage over time, pierced into the target's core.", 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Frost damage over time, pierced into the target's core.", 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'DefenseType': 1},
 )
 unbind_bonus_coefficients(frozen_core_piercing_cold_200019)  # stale spell_bonus_data row overrode the potency coefficient (D1)
@@ -5396,17 +5402,18 @@ arcane_overload_200092 = spell(
     range_yards=30.0,
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, die_sides=0, implicit_target_a=6, misc_value=6),
-        Effect(type=EffectType.DUMMY, base_points=67, die_sides=0, implicit_target_a=6),
+        Effect(type=EffectType.DUMMY, base_points=62, die_sides=0, implicit_target_a=6),
         # LS5b ruling 7 (level60-stat-curve, 2026-11-20): the stock spell power share 34% x b (potency.SP_COEF_SCALE): 66
         # at b 1.93 (65.62, S7b refit). The mana-spent share (effect 2) is not a C(L) base and stays.
-        Effect(type=EffectType.DUMMY, base_points=round(34 * 0.975 * _potency.SP_COEF_SCALE), die_sides=0, implicit_target_a=6),
+        Effect(type=EffectType.DUMMY, base_points=round(34 * 0.975 * 0.926 * _potency.SP_COEF_SCALE), die_sides=0, implicit_target_a=6),
     ],
     spell_icon_id=2210,
     notes="Bugfix (playtest report, 2026-09-08) - implicit_target_a was 1 (TARGET_UNIT_CASTER), a leftover default that made this sub-spell always hit the caster instead of the passed CastCustomSpell target ('Arcane Overload deals damage to you and not the target'); fixed to 6 (TARGET_UNIT_TARGET_ENEMY). misc_value (the SPELL_EFFECT_SCHOOL_DAMAGE school index, 0=Physical/6=Arcane - distinct from the row's own SchoolMask column, which was already 64/Arcane) was left at its 0 default, so the hit rolled as Physical damage ('needs to be in the Arcane School'); fixed to 6. Original note: Arcane Mage rework (docs/arcane-mage-rework-design.md, Phase 3 Batch D) - Arcane Overload's (10,1) actual damage-dealing sub-spell, hit once per target (primary + AoE-around-caster, apps/dbc-tools' own 200079 effect2) by spell_mage_arcane_overload. die_sides=0 so the CastCustomSpell-injected value (mana spent + placeholder spell power coefficient, with falloff beyond 5 targets) is used exactly as passed."
           ' Effects 2 and 3 added: data-driven damage, spell_mage_arcane_overload reads effect 2 (EFFECT_1) as the percent of the mana spent (100 -> 90) and effect 3 (EFFECT_2) as the spell power coefficient in percent (50 -> 45), both -10% of the previous damage (2026-10-31, DPS balance pass 1031, user ruling: Arcane damage -10%)'
           ' Effect 2 base_points 90 -> 69 (the 90% mana-spent share x0.764 = 68.76, rounded) (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Arcane x0.764).'
           ' Effect 3 base_points 45 -> 34 (the 45% spell power share x0.764 = 34.38, rounded) (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Arcane x0.764).'
-          ' Effect 2 base_points 69 -> 67 (the 69% mana-spent share x0.975 = 67.3, rounded), effect 3 base_points 66 -> 64 (round(34 x 0.975 x SP_COEF_SCALE) = 63.98) (2026-11-26, raid-buff-sets retune R1, user ruling: Arcane x0.975; the integer rounding lands at x0.971 and x0.970).',
+          ' Effect 2 base_points 69 -> 67 (the 69% mana-spent share x0.975 = 67.3, rounded), effect 3 base_points 66 -> 64 (round(34 x 0.975 x SP_COEF_SCALE) = 63.98) (2026-11-26, raid-buff-sets retune R1, user ruling: Arcane x0.975; the integer rounding lands at x0.971 and x0.970).'
+          ' Effect 2 base_points 67 -> 62 (x0.926 = 62.0), effect 3 base_points 64 -> 59 (round(34 x 0.975 x 0.926 x SP_COEF_SCALE) = 59.3) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Arcane x0.926).',
     raw_overrides={'BaseLevel': 80, 'SpellLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 6, 'SpellClassSet': 3, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Arcane damage.', 'SpellClassMask_3': 2},
 )
 
@@ -5469,8 +5476,8 @@ meteor_impact_200096 = spell(
     radius_yards=8.0,
     duration_ms=4000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=147.7977, potency_kind='direct', implicit_target_a=16, radius_yards=8.0),
-        Effect(type=EffectType.PERSISTENT_AREA_AURA, sp_potency=46.2518, potency_kind='periodic', implicit_target_a=28, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=138.3386, potency_kind='direct', implicit_target_a=16, radius_yards=8.0),
+        Effect(type=EffectType.PERSISTENT_AREA_AURA, sp_potency=43.2917, potency_kind='periodic', implicit_target_a=28, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000, radius_yards=8.0),
     ],
     spell_icon_id=1516,
     notes="Fire Mage rework sec 2 - Meteor's impact + ground burn, cast by spell_mage_meteor 3 sec after the player's Meteor (200095). Same shape as Flamestrike (2120): effect1 direct damage to every enemy in the 8yd area, effect2 a 4-sec persistent ground aura ticking every 1 sec. Budget (user call, 2026-09-15): ~2x Flamestrike - direct 751+14.1/lvl (die 41) vs Flamestrike's 51+7.4955/lvl anchored at Meteor's own SpellLevel 58; burn 160+3.3/lvl per 1-sec tick x4 vs Flamestrike's 84->117 per 2-sec tick x4. Only the impact can crit -> only the impact banks Ignite (sec 4.1a); the burn is periodic and never does. SpellVisualID_1 90003 (patch_mage_vfx_models.py) - superseded the earlier Flamestrike reuse (10383) now that a purpose-built Ascension model exists: InstantAreaKit + PersistentAreaKit both point at the same kit wrapping mage_meteor_impactstate_world, so the burst and the 4-sec ground-burn's own visual are the same asset (its name suggests it's already a combined burst+decal, not two separate assets - see docs/reworks/fire-mage-rework.md). | potency system P5 (Mage pass): eff1 converted to sp_potency=299.1 (mage-potency-proposals.txt). eff2 (PERSISTENT_AREA_AURA burn) is invisible to potency_report.py's classifier (same gap P4 found on Rain of Fire, also hit on Flamestrike eff2 this stage) - converted by hand to sp_potency=93.6, the base-damage-implied potency from its live 160+3.3/lvl @ 1s tick (V60=167) vs its old explicit 0.15 dot_bonus (52.5-implied) - a notably large (~78%) disagreement, well above every other row this stage, flagged prominently for review since it wasn't independently user-reviewed and the two source numbers disagree far more than usual."
@@ -5481,7 +5488,8 @@ meteor_impact_200096 = spell(
           ' Effect 1 sp_potency 169.9331 -> 163.1358, Effect 2 sp_potency 53.1787 -> 51.0516 (2026-11-22, level60-stat-curve round S23, user ruling 18: Fire x0.96, a Fire-only spell).'
           ' Effect 1 sp_potency 163.1358 -> 152.3688 Effect 2 sp_potency 51.0516 -> 47.6822 (2026-11-26, raid-buff-sets retune R1, user ruling: Fire x0.934).'
           ' Effect 1 sp_potency 152.3688 -> 143.2367 Effect 2 sp_potency 47.6822 -> 44.8213 (2026-11-26, raid-buff-sets retune R3, user ruling: Fire x0.94).'
-          ' Effect 1 sp_potency 152.3688 -> 147.7977 Effect 2 sp_potency 47.6822 -> 46.2518 (2026-11-26, raid-buff-sets retune R4: Fire x0.97 instead of x0.94, R3 measured 1,448).',
+          ' Effect 1 sp_potency 152.3688 -> 147.7977 Effect 2 sp_potency 47.6822 -> 46.2518 (2026-11-26, raid-buff-sets retune R4: Fire x0.97 instead of x0.94, R3 measured 1,448).'
+          ' Effect 1 sp_potency 147.7977 -> 138.3386 Effect 2 sp_potency 46.2518 -> 43.2917 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Fire x0.936).',
     raw_overrides={'BaseLevel': 58, 'SpellLevel': 58, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 3, 'SpellClassMask_3': 32, 'SpellPriority': 50, 'SpellVisualID_1': 90003, 'Targets': 64, 'AttributesEx': 268435592, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Fire damage to all enemies in the area and burns the ground for {pot2.total} Fire damage over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} Fire damage every $t2 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
@@ -6284,7 +6292,7 @@ waterbolt_31707 = spell(
     range_yards=45.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=51.2532, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=48.9468, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=176,
     notes="pulled from existing data. Potency system P8: Water Elemental's own spellbook cast (no "
@@ -6295,7 +6303,8 @@ waterbolt_31707 = spell(
           "wins by default (docs/potency-system.md)."
           ' Effect 1 sp_potency 91.3 -> 68.48 (2026-10-31, DPS balance pass 1031, user ruling: Frost damage -25%).'
           ' Effect 1 sp_potency 68.48 -> 52.7296 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Frost x0.770).'
-          ' Effect 1 sp_potency 52.7296 -> 51.2532 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).',
+          ' Effect 1 sp_potency 52.7296 -> 51.2532 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).'
+          ' Effect 1 sp_potency 51.2532 -> 48.9468 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Frost x0.955).',
     raw_overrides={'CastingTimeIndex': 20, 'InterruptFlags': 15, 'ProcChance': 101, 'BaseLevel': 50, 'SpellLevel': 50, 'Speed': 16.0, 'EquippedItemClass': -1, 'SpellVisualID_1': 7875, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals {pot1} Frost damage to the target.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassSet': 5, 'SpellClassMask_1': 4096, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 unbind_bonus_coefficients(waterbolt_31707)  # stale spell_bonus_data row overrode the potency coefficient (D1)
@@ -6321,7 +6330,7 @@ freeze_33395 = spell(
     range_yards=45.0,
     duration_ms=8000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=27.9917, potency_kind='direct', implicit_target_a=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=26.7321, potency_kind='direct', implicit_target_a=16, radius_yards=8.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, mechanic=Mechanic.ROOT, implicit_target_a=16, apply_aura=AuraType.MOD_ROOT, radius_yards=8.0),
     ],
     spell_icon_id=193,
@@ -6331,7 +6340,8 @@ freeze_33395 = spell(
           "int((60-50)*2.0)=20 + die_sides=13 mean 7); the live EffectBonusMultiplier_1 (0.029) "
           "implied a far lower 6.8 - base wins by default."
           ' Effect 1 sp_potency 37.4 -> 28.798 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Frost x0.770).'
-          ' Effect 1 sp_potency 28.798 -> 27.9917 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).',
+          ' Effect 1 sp_potency 28.798 -> 27.9917 (2026-11-26, raid-buff-sets retune R1, user ruling: Frost x0.972).'
+          ' Effect 1 sp_potency 27.9917 -> 26.7321 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Frost x0.955).',
     raw_overrides={'AttributesEx': 131208, 'AttributesEx4': 160, 'Targets': 64, 'CastingTimeIndex': 1, 'InterruptFlags': 8, 'ProcTypeMask': 664232, 'ProcChance': 100, 'BaseLevel': 50, 'SpellLevel': 50, 'EquippedItemClass': -1, 'SpellVisualID_1': 8058, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Blasts enemies in a $a1 yard radius for {pot1} Frost damage and freezes them in place for up to $d.  Damage caused may interrupt the effect.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Frozen in place.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 3, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 

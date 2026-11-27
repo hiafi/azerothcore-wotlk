@@ -788,8 +788,8 @@ frost_strike_66196 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=105, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=8.755, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=90, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=7.504, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2740,
@@ -802,6 +802,7 @@ frost_strike_66196 = spell(
         'BasePoints[E2] -1, DieSides[E2], ImplicitTargetA_3 6 and E2.d1 0x4 twins of the stock row are deleted). SpellLevel 10 = '
         'the main hand\'s.'
         ' weapon_potency 62 -> 105 and sp_potency 5.15 -> 8.755 (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Frost Strike x1.70 so FrostDkObliterationSim 1T keeps ~1,080 after the Breath x0.70 cut; shared by every Frost DK build, the off-hand copy follows the main hand).'
+        ' weapon_potency 105 -> 90 and sp_potency 8.755 -> 7.504 (the off-hand copy follows 49143, x0.857) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Frost DK builds x0.85 (Breath, Howling Blast, Frost Strike, Avalanche; shared by Obliteration and Breath)).'
     ),
     raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy with your off-hand weapon for $s1% weapon damage plus {pot2.avg} as Frost damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RuneCostID': 1824, 'SpellClassMask_2': 4, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellVisualID_1': 11612, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -939,7 +940,7 @@ scourge_strike_55090 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=95, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=90, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=11, implicit_target_a=6),
     ],
@@ -961,6 +962,7 @@ scourge_strike_55090 = spell(
         'weapon_potency 70 -> 77 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Scourge Strike +10%; the Shadow part is a percent of the dealt damage and follows). '
         'weapon_potency 77 -> 89 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Scourge Strike +15%; 77 x 1.15 = 88.55 rounded to the whole number 89, so +15.6%; the Shadow part 70890 is a percent of the dealt damage and follows). '
         'weapon_potency 89 -> 93 (2026-11-26, raid-buff-sets retune R1, Unholy shared x1.05 = 93.45), then 93 -> 95 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: multiples of 5 for visible weapon percents: x1.067 on 89; the Shadow part 70890 follows).'
+        ' weapon_potency 95 -> 90 (x0.947, a multiple of 5) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Unholy shared x0.95 on Scourge Strike (Plague and Minion)).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An unholy strike that deals ${$s1*$<outbreak>}% weapon damage as Physical damage, plus $s3% of that damage as Shadow damage for each of your diseases on the target. Bursts half the Festering Wounds on the target, rounded down, minimum 2. Each rune it spends has a 33% chance to return as a Death Rune.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 2602, 'SpellClassMask_2': m.SCOURGE_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 15, 'SpellPriority': 50, 'SpellVisualID_1': 11832, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )

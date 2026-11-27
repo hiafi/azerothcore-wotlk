@@ -494,8 +494,8 @@ frost_strike_49143 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=105, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=8.755, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=90, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=7.504, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2740,
@@ -508,6 +508,7 @@ frost_strike_49143 = spell(
         'flat, 54% weapon) are gone; the stale EffectSpellClassMaskC_2 twin (no aura on effect 2) is dropped. '
         'EFFECT_3 stays empty. 40 RP cost (PowerType 6 / ManaCost 400), RuneCostID 621 (0,0,0,0) kept.'
         ' weapon_potency 62 -> 105 (105.4 rounded to a whole number, so x1.694) and sp_potency 5.15 -> 8.755 (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Frost Strike x1.70 so FrostDkObliterationSim 1T keeps ~1,080 after the Breath x0.70 cut; shared by every Frost DK build).'
+        ' weapon_potency 105 -> 90 (x0.857, a multiple of 5) and sp_potency 8.755 -> 7.504 (x0.857) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Frost DK builds x0.85 (Breath, Howling Blast, Frost Strike, Avalanche; shared by Obliteration and Breath)).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy, dealing $s1% weapon damage plus {pot2.avg} as Frost damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 621, 'SpellClassMask_2': m.FROST_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellVisualID_1': 11612, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -560,7 +561,7 @@ howling_blast_49184 = spell(
     range_yards=20.0,
     effects=[
         Effect(type=EffectType.DUMMY, base_points=149, implicit_target_a=6),
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=99, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=84.15, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=53, implicit_target_b=16, radius_yards=10.0,
                trigger_spell=55095),
     ],
@@ -580,6 +581,7 @@ howling_blast_49184 = spell(
         'always counts); the stale EffectBasePoints_3 / EffectSpellClassMaskC_1 twins are dropped. Rime keeps its '
         'EFFECT_1 trigger of Freezing Fog 59052 (a SPELLMOD_COST on this spell). '
         'ap_potency 90 -> 99 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Howling Blast +10%).'
+        ' Effect 1 ap_potency 99 -> 84.15 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Frost DK builds x0.85 (Breath, Howling Blast, Frost Strike, Avalanche; shared by Obliteration and Breath)).'
     ),
     raw_overrides={'AttributesEx': 134217864, 'AttributesEx6': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blast the target with a frigid wind, dealing {pot2} Frost damage to all enemies within 10 yards and infecting them with Frost Fever.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 647, 'SpellClassMask_2': 2, 'SpellClassSet': 15, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 11617, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )

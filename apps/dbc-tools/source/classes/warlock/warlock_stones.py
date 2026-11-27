@@ -76,7 +76,7 @@ warlock_stones_1430 = tooltip_vars(
 fire_blast_200716 = spell(
     id=200716, name='Fire Blast', school=School.FIRE, attributes=0,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=34.2696, potency_kind='direct', time_basis_ms=1500,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=30.1572, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_FIRE_BLAST,
     notes='dungeon-prereqs S5b (WARLOCK-STONES s3): the Firestone proc, triggered by 200714 eff1. '
@@ -90,7 +90,8 @@ fire_blast_200716 = spell(
           ' is a Demonology talent); Affliction and Destruction get their x1.18 from the hidden passive 200992 (+8%,'
           ' linked from Malediction and Shadow and Flame rank 3)).'
           ' No change to the potency (2026-11-26, raid-buff-sets retune R1, user ruling: no hidden tuning passives; 200992 is retired,'
-          ' the potency stays as it is, and the tooltip no longer multiplies by the passive).',
+          ' the potency stays as it is, and the tooltip no longer multiplies by the passive).'
+          ' Effect 1 sp_potency 34.2696 -> 30.1572 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Destruction x0.88).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_WARLOCK, 'SpellClassMask_2': m.STONE_FIRE_BLAST, 'DefenseType': _DMG_MAGIC,
         'EquippedItemClass': -1, 'SpellLevel': 28, 'CastingTimeIndex': 1,

@@ -1395,7 +1395,7 @@ S11_PET_TRIM = {201720: 0.96, 201721: 0.96}
 # Kill Command are not in these tables), on top of S11.
 R1_PET_TRIM = {201720: 0.931, 201721: 0.931}
 # raid-buff-sets retune R3 (user ruling 2026-11-26): BM x0.935 more on the same abilities, on top of R1.
-R3_R4_PET_TRIM = {201720: 0.95, 201721: 0.95}  # R4: 0.95 replaces R3's 0.935 (R3 measured 1,491)
+R3_R4_PET_TRIM = {201720: 0.95 * 0.8, 201721: 0.95 * 0.8}  # R4: 0.95 replaces R3's 0.935; GS3 (2026-11-27) x0.80 on top
 
 
 def check_f1_potency(entries_by_id: dict[int, dict], table=F1_POTENCY, extra_scale: float = 1.0,
@@ -2151,10 +2151,10 @@ class HunterBmDataTest(unittest.TestCase):
         package = package_data()["package"]
         bonus = [r for r in package.spell_bonus_data if int(r["entry"]) == 56641]
         self.assertEqual(len(bonus), 1)
-        # S9: ap_potency 33.0534 (2026-11-21 BM / MM x0.90 on 36.726; WSH2 2026-11-17 Normal trim x0.694 on 52.92;
+        # GS3: ap_potency 29.7481 (x0.90 on 33.0534); S9: 33.0534 (2026-11-21 BM / MM x0.90 on 36.726; WSH2 2026-11-17 Normal trim x0.694 on 52.92;
         # BAL1 2026-11-15: was 44.1; pass 1031: was 49; TUNE1 70, was 100), so the coefficient is
         # 0.330534 * (1.5 / 3.5), x b / R since the potency rebase (level60-stat-curve HANDOFF 1.9, LS5b)
-        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.330534 * 1.5 / 3.5 * potency.AP_COEF_SCALE / potency.DEFAULT_R,
+        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.297481 * 1.5 / 3.5 * potency.AP_COEF_SCALE / potency.DEFAULT_R,
                                places=4)
 
     def test_s1b_ids_have_equipped_item_class_minus_one(self):

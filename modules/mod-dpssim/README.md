@@ -215,7 +215,7 @@ to expect.
 
 - Profile keys: `TankScenario` (`dps` refills the actor's health after every step so it never dies; `survive` does not,
   the run ends at its death and `ActorDiedAtMs` is the time to death), `TankHitDamage` (the boss, 1 target, default
-  `2250-2750` before armor) and `TankPackHitDamage` (each dummy of a 2+ target run, `500-600`), `TankSwingMs` (2000),
+  `2850-3450` before armor) and `TankPackHitDamage` (each dummy of a 2+ target run, `500-600`), `TankSwingMs` (2000),
   `TankDummyCrit` (true). `DpsSim.Tank*` in the conf override them; `DpsSim.TankPullAuras` (conf only) casts spells on
   the dummies at the pull for known-value runs. There is no dummy parry-haste switch: the PvE always-hit rule means a
   dummy never parries the actor. The tank's own parry haste (a parry by the actor speeding up its next swing) is the
@@ -265,11 +265,11 @@ value applies; a bad value or a non-tank profile is refused before anything star
 | Variable | Conf key | Values |
 |---|---|---|
 | `TANKSIM_SCENARIO` | `DpsSim.TankScenario` | `dps` or `survive` |
-| `TANKSIM_HIT` | `DpsSim.TankHitDamage` | the boss's hit before armor, `2250-2750` or one value |
+| `TANKSIM_HIT` | `DpsSim.TankHitDamage` | the boss's hit before armor, `2850-3450` or one value |
 | `TANKSIM_PACK_HIT` | `DpsSim.TankPackHitDamage` | each pack dummy's hit before armor, `500-600` |
 | `TANKSIM_SWING_MS` | `DpsSim.TankSwingMs` | 500-10000 |
 
-Presets (the profile defaults, plan T3/T4): a boss hit of 2,250-2,750 before armor every 2.0 s with crits on, or each
+Presets (the profile defaults, plan T3/T4): a boss hit of 2,850-3,450 before armor every 2.0 s with crits on, or each
 pack dummy for 500-600; the boss is a level actor+3, the pack elites the actor's level. Files:
 `reports/<Profile>.tank-<scenario>.<targets>t[.x<hash>].<ts>.report.json` (and `.iterN.` files), so aggregation never
 mixes scenarios or pack sizes (`x<hash>` is added when `TANKSIM_HIT`, `TANKSIM_PACK_HIT` or `TANKSIM_SWING_MS`

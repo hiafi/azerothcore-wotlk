@@ -159,11 +159,12 @@ def _weapon_percent(effect: dict) -> int:
 # Riposte 683 (+250% then +30%), Plague Strike 54 (+10%).
 # Fury Swipe 200429: 310 -> 240 (2026-11-17, weapon scaling WS2 Normal trim, Bear DPS x0.774).
 # Fury Swipe 200429: 240 -> 225 (2026-11-26, raid-buff-sets retune R1 revised, Feral x0.934 rounded to a multiple of 5).
+# Fury Swipe 200429: 225 -> 180 (2026-11-27, gear-scaling GS3 ilvl 66 retune, Bear DPS x0.80, Feral x0.80).
 PERCENTS = {
     "hunter": {2643: [(1, 66)]},   # 100 -> 66 (2026-11-17, weapon scaling WSH2 Normal trim, MM x0.664)
-    "shaman": {60103: [(0, 280)], 32175: [(0, 265)], 32176: [(0, 265)], 202413: [(0, 140)], 202415: [(0, 140)]},
-    "druid": {200429: [(0, 225)]},
-    "warlock": {30213: [(0, 110)]},  # 100 -> 109 (2026-11-22, level60-stat-curve S23, Demonology x1.09) -> 110 (2026-11-26, raid-buff-sets R1, Demonology x1.02)
+    "shaman": {60103: [(0, 235)], 32175: [(0, 225)], 32176: [(0, 225)], 202413: [(0, 140)], 202415: [(0, 140)]},
+    "druid": {200429: [(0, 180)]},
+    "warlock": {30213: [(0, 95)]},  # 110 -> 95 (2026-11-27, gear-scaling GS3, Demonology x0.871); 100 -> 109 (2026-11-22, level60-stat-curve S23, Demonology x1.09) -> 110 (2026-11-26, raid-buff-sets R1, Demonology x1.02)
     "warrior": {20240: [(0, 100)]},
     "rogue": {14251: [(0, 683)], 51675: [(1, 50)], 51677: [(1, 100)], 51723: [(0, 250)], 52874: [(0, 250)]},
     "deathknight": {45462: [(1, 62)]},
@@ -199,7 +200,8 @@ class MigratedStrikesTest(unittest.TestCase):
             # warlock: was 62 (bp 31 + int(10 x 3.0667) + 1, sp_potency 23.2); sp_potency 19.024 after WS2 Demonology x0.82
             # (2026-11-17), 50.4; sp_potency 20.7362 after S23 Demonology x1.09 (2026-11-22), 50.4 x 1.09 = 54.9;
             # sp_potency 21.1509 after R1 Demonology x1.02 (2026-11-26), 54.9 x 1.02 = 56.0
-            ("warlock", 30213, 1, 56.0, 1.5),
+            # sp_potency 18.4226 after GS3 Demonology x0.871 (2026-11-27), 56.0 x 0.871 = 48.8
+            ("warlock", 30213, 1, 48.8, 1.5),
             ("deathknight", 45462, 0, 151, 1.5),    # bp 9 + int(59 x 2.3899) + 1; sp_potency 56.4
         ):
             effect = _package(class_name)[spell_id][f"effect{index + 1}"]

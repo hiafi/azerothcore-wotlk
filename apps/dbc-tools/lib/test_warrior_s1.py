@@ -610,8 +610,8 @@ def check_echo(rows: dict, entries: dict, dur_ms) -> list[str]:
     r = rows[ECHO]
     sid = ECHO
     pot = (entries[sid].get("effect1") or {}).get("_potency") or {}
-    if pot.get("total_potency") != 49.8:
-        bad.append(f"{sid}: effect 1 potency {pot.get('total_potency')!r}, expected 49.8 (half of Thunder Clap's 99.6)")
+    if pot.get("total_potency") != 45.816:
+        bad.append(f"{sid}: effect 1 potency {pot.get('total_potency')!r}, expected 45.816 (half of Thunder Clap's 91.632, GS3 x0.92)")
     if _eff(r, 0)[0] != EFF_SCHOOL_DAMAGE:
         bad.append(f"{sid}: e0 type {_eff(r, 0)[0]}, expected SCHOOL_DAMAGE")
     bad += _aura_effect(r, 1, AURA_MELEE_HASTE, 0, -11, None, sid, "slow")
@@ -779,19 +779,19 @@ def check_devastate(rows: dict, entries: dict, corrections: list[dict]) -> list[
     if _eff(r, 2)[0] != EFF_NORMALIZED:
         bad.append(f"{sid}: e2 type {_eff(r, 2)[0]}, expected NORMALIZED_WEAPON_DMG 121")
     weapon = _potency_of(entries, sid, 2)
-    if weapon.get("kind") != "weapon" or weapon.get("total_potency") != 220:
+    if weapon.get("kind") != "weapon" or weapon.get("total_potency") != 200:
         bad.append(f"{sid}: effect 1 (DBC Effect_2) weapon potency {weapon.get('total_potency')!r}/"
-                   f"{weapon.get('kind')!r}, expected 220 / weapon")
+                   f"{weapon.get('kind')!r}, expected 200 / weapon (GS3 x0.909)")
     flat = _potency_of(entries, sid, 3)
-    if flat.get("total_potency") != 18 or flat.get("kind") != "direct":
+    if flat.get("total_potency") != 16.36 or flat.get("kind") != "direct":
         bad.append(f"{sid}: effect 2 (DBC Effect_3) potency {flat.get('total_potency')!r}/{flat.get('kind')!r}, "
-                   "expected 18 / direct")
+                   "expected 16.36 / direct (GS3 x0.909)")
     # V = the built correction resolves to 25-27.5 at level 60; the 5-stack hit adds 5V = 50 potency (127-137.5 dmg)
     v = float(flat.get("level60_value") or 0)
-    if not 45.0 <= v <= 49.5:
-        bad.append(f"{sid}: V (effect 2 at level 60) {v}, expected 45-49.5")
-    if not 225.0 <= 5 * v <= 247.5:
-        bad.append(f"{sid}: 5 stacks add {5 * v}, expected 225-247.5")
+    if not 38.0 <= v <= 44.0:
+        bad.append(f"{sid}: V (effect 2 at level 60) {v}, expected 38-44 (GS3 x0.909)")
+    if not 190.0 <= 5 * v <= 220.0:
+        bad.append(f"{sid}: 5 stacks add {5 * v}, expected 190-220 (GS3 x0.909)")
     if not any(int(c["spell_id"]) == sid and int(c["effect_index"]) == 2 for c in corrections):
         bad.append(f"{sid}: no potency correction row (20243, 2)")
     if _i(r, "EquippedItemClass") != 4 or _i(r, "EquippedItemSubclass") != 64:
@@ -816,8 +816,8 @@ def check_concussion_and_shockwave(rows: dict, entries: dict, corrections: list[
     if _eff(cb, 1)[0] != EFF_SCHOOL_DAMAGE:
         bad.append(f"{CONCUSSION_BLOW}: e1 type {_eff(cb, 1)[0]}, expected SCHOOL_DAMAGE (the potency effect)")
     pot = _potency_of(entries, CONCUSSION_BLOW, 2)
-    if pot.get("total_potency") != 54.6 or pot.get("kind") != "direct":
-        bad.append(f"{CONCUSSION_BLOW}: effect 1 potency {pot.get('total_potency')!r}, expected 54.6 direct")
+    if pot.get("total_potency") != 50.232 or pot.get("kind") != "direct":
+        bad.append(f"{CONCUSSION_BLOW}: effect 1 potency {pot.get('total_potency')!r}, expected 50.232 direct (GS3 x0.92)")
     if _potency_of(entries, CONCUSSION_BLOW, 3):
         bad.append(f"{CONCUSSION_BLOW}: effect 2 still carries a potency row")
     bad += _effect_empty(cb, 2, CONCUSSION_BLOW, "old DUMMY 38%")
@@ -828,8 +828,8 @@ def check_concussion_and_shockwave(rows: dict, entries: dict, corrections: list[
     if _eff(sw, 1)[0] != EFF_SCHOOL_DAMAGE:
         bad.append(f"{SHOCKWAVE}: e1 type {_eff(sw, 1)[0]}, expected SCHOOL_DAMAGE")
     pot = _potency_of(entries, SHOCKWAVE, 2)
-    if pot.get("total_potency") != 96.93:
-        bad.append(f"{SHOCKWAVE}: effect 1 potency {pot.get('total_potency')!r}, expected 96.93")
+    if pot.get("total_potency") != 89.1756:
+        bad.append(f"{SHOCKWAVE}: effect 1 potency {pot.get('total_potency')!r}, expected 89.1756 (GS3 x0.92)")
     if _u32(sw.get(M2)) & 0x8000 == 0:
         bad.append(f"{SHOCKWAVE}: lost its identity bit d1 0x8000 (Thunderstruck reads it)")
     return bad
