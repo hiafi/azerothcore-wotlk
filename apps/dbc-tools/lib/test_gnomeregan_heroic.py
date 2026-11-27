@@ -651,8 +651,9 @@ class ExpansionTest(unittest.TestCase):
         self.assertEqual(tuple(edit["_update_columns"])[:2], ("HealthModifier", "DamageModifier"))
         self.assertLessEqual(set(edit["_update_columns"]), {"HealthModifier", "DamageModifier", "difficulty_entry_1"})
         self.assertEqual((edit["HealthModifier"], edit["DamageModifier"]), (57.4, 3.0))
-        self.assertEqual((float(self.existing[AMBASSADOR]["HealthModifier"]),
-                          float(self.existing[AMBASSADOR]["DamageModifier"])), (5.0, 7.5))
+        # the stock 5 / 7.5 before the write run; once its rev is pending the replay already reads the new values
+        self.assertIn((float(self.existing[AMBASSADOR]["HealthModifier"]),
+                       float(self.existing[AMBASSADOR]["DamageModifier"])), {(5.0, 7.5), (57.4, 3.0)})
 
     def test_the_unscaled_adds(self):
         heroic_entry = self.entry["heroic_entries"]
