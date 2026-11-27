@@ -270,9 +270,11 @@ spell_group:
 # Widened to 301199 for Zul'Farrak (2026-11-25): Ragefire Chasm's reservation ended at 300999; no live
 # creature_template row, declaration or pending SQL names a creature in 301000-301199 (301000+ gameobjects are their
 # own table).
+# Widened to 301399 for Uldaman (2026-11-26): no live creature_template row, declaration or pending SQL names a
+# creature in 301200-301399 (the 3012xx-3013xx ids in source/ are gameobjects, their own table).
 creature:
   start: 300000
-  end: 301199
+  end: 301399
 
 # Test and tool NPCs that belong to no class rework - declared with the same creature_template()
 # helper as the block above, from source/npcs/training_dummies.py (dpssim stage MT0,
@@ -958,3 +960,11 @@ reservations:
     creaturemodeldata: {start: 90850, end: 90869}
     soundentries: {start: 90151, end: 90160}
     gameobjectdisplayinfo: {start: 90075, end: 90079}
+  # Uldaman gear stage (.agents/plans/uldaman-gear/, 2026-11-26): the three Archaedas hard mode item effects
+  # (source/items/uldaman_hard_mode_effects.py; their per-tier copies mint from `item_copies`) and the Waking Stone's
+  # earthen. Checked free 2026-11-26: no live spell_dbc row in 214680-215199, no live creature_template row in
+  # 301200-301399, and no worktree's ids.yaml names them. The Uldaman build reserves its own blocks after these (spells
+  # from 214720, creatures from 301205).
+  uldaman_items:
+    spell: {start: 214680, end: 214719}
+    creature: {start: 301200, end: 301204}

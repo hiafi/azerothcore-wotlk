@@ -54,6 +54,8 @@ scopes:
     reservations: [zul_farrak_items]
   gnomeregan:  # gear stage (2026-11-25) + the dungeon build (2026-11-26, also owns the same-name reservation)
     reservations: [gnomeregan_items]
+  uldaman:  # gear stage (2026-11-26) + the dungeon build (folded into one core PR, user 2026-11-26)
+    reservations: [uldaman_items]
 
   # Dungeon sets and tools.
   haunted_set:
