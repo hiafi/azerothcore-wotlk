@@ -313,8 +313,23 @@ namespace ItemSpellCopies
         { 219096, 214247, 219095 },  // gnomer_master_punch_card empowered_2_hm
         { 219097, 214245, 219097 },  // gnomer_master_punch_card empowered_3_hm
         { 219098, 214247, 219097 },  // gnomer_master_punch_card empowered_3_hm
+        { 219099, 214680, 219099 },  // uldaman_waking_stone empowered_1_hm
+        { 219100, 214681, 219099 },  // uldaman_waking_stone empowered_1_hm
+        { 219101, 214680, 219101 },  // uldaman_waking_stone empowered_2_hm
+        { 219102, 214681, 219101 },  // uldaman_waking_stone empowered_2_hm
+        { 219103, 214680, 219103 },  // uldaman_waking_stone empowered_3_hm
+        { 219104, 214681, 219103 },  // uldaman_waking_stone empowered_3_hm
+        { 219105, 214682, 219105 },  // uldaman_lightbound_choker empowered_1_hm
+        { 219106, 214683, 219105 },  // uldaman_lightbound_choker empowered_1_hm
+        { 219107, 214682, 219107 },  // uldaman_lightbound_choker empowered_2_hm
+        { 219108, 214683, 219107 },  // uldaman_lightbound_choker empowered_2_hm
+        { 219109, 214682, 219109 },  // uldaman_lightbound_choker empowered_3_hm
+        { 219110, 214683, 219109 },  // uldaman_lightbound_choker empowered_3_hm
+        { 219111, 214684, 219111 },  // uldaman_fragment_of_the_disks empowered_1_hm
+        { 219112, 214684, 219112 },  // uldaman_fragment_of_the_disks empowered_2_hm
+        { 219113, 214684, 219113 },  // uldaman_fragment_of_the_disks empowered_3_hm
     };
-    inline constexpr std::size_t kCopyCount = 289;
+    inline constexpr std::size_t kCopyCount = 304;
 
     // The group of `spellId` when it is a copy, else 0.
     constexpr std::uint32_t GroupOf(std::uint32_t spellId)
