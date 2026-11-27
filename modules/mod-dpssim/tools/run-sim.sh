@@ -65,6 +65,7 @@
 #                       (e.g. acore/ac-wotlk-worldserver:master after a `docker compose build` the live container has
 #                       not been recreated for).
 #   DPSSIM_EXTRA_CONF   Extra lines appended to the generated dpssim.conf (printf %b, so "\n" separates lines).
+#   DPSSIM_WORLD_EXTRA_CONF  Extra lines appended to the run's worldserver.conf (printf %b), for core keys under test.
 #   DPSSIM_PET_FAMILY   Hunter profiles: the pet family to sim instead of the profile's pet, by key, name or number
 #                       from modules/mod-dpssim/tools/pet_families.tsv (one creature per family), e.g. "cat",
 #                       "bird-of-prey", "Bird of Prey" or 26 (DpsSim.PetCreatureEntry). Adds ".pet-<key>" to the names.
@@ -742,6 +743,9 @@ cp -r env/dist/etc/. "$SCRATCH/etc/"
 # Boot this throwaway worldserver in sim-daemon mode - never a connectable realm (no socket
 # listeners at all in this mode), so it's safe to run alongside the real ac-worldserver.
 printf '\nDpsSim.Enabled = 1\n' >> "$SCRATCH/etc/worldserver.conf"
+# DPSSIM_WORLD_EXTRA_CONF: extra worldserver.conf lines for this run only (printf %b), e.g. a core key under test
+# ("WeaponScaling.ApPotencyReferenceItemLevel = 60"). Never DpsSim.* keys (those go through DPSSIM_EXTRA_CONF).
+if [[ -n "${DPSSIM_WORLD_EXTRA_CONF:-}" ]]; then printf '%b\n' "$DPSSIM_WORLD_EXTRA_CONF" >> "$SCRATCH/etc/worldserver.conf"; fi
 
 # SimBot::Create() needs a real, working PlayerbotAI - flip this on for the sim run regardless
 # of the live deployment's own playerbots.conf (confirmed 2026-09-12: the live server currently
