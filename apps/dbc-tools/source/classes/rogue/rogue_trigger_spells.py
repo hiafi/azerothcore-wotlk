@@ -6945,7 +6945,7 @@ killing_spree_main_57841 = spell(
     range_yards=5.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=145, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=155, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=6, trigger_spell=57842),
     ],
@@ -6957,6 +6957,7 @@ killing_spree_main_57841 = spell(
         '(bp -1 = no flat part, keeps the strike normalized), eff2 TRIGGER_SPELL 57842 (was eff1; no C++ reads its '
         'index: spell_rog_killing_spree_rework_aura casts 57841 plainly). weapon_potency 200 -> 175 (176 rounded to a multiple of 5; 2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88).'
         ' weapon_potency 175 -> 145 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Combat x0.84, Combat 1,733 -> ~1,520).'
+        ' weapon_potency 145 -> 155 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat 1,479 -> ~1,520).'
     ),
     raw_overrides={
         'AttributesEx': 512,
@@ -7002,7 +7003,7 @@ killing_spree_off_57842 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=145, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=155, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
     ],
     spell_icon_id=83,
@@ -7011,6 +7012,7 @@ killing_spree_off_57842 = spell(
         'rogue-rework M2a (M1 C2, [tune]): 100% -> 200% weapon damage, eff0 WEAPON_PERCENT_DAMAGE weapon_potency 200 '
         'FIRST, eff1 the stock NORMALIZED_WEAPON_DMG bp -1 (the 57841 shape). weapon_potency 200 -> 175 (176 rounded to a multiple of 5; 2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88).'
         ' weapon_potency 175 -> 145 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Combat x0.84, Combat 1,733 -> ~1,520).'
+        ' weapon_potency 145 -> 155 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat 1,479 -> ~1,520).'
     ),
     raw_overrides={
         'AttributesEx': 16,
