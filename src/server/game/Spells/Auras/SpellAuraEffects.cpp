@@ -601,6 +601,26 @@ bool IsFixedCadencePeriodic(uint32 spellId)
         != FIXED_CADENCE_PERIODIC_SPELLS.end();
 }
 
+// Custom: channels: stock hasted duration, fixed ticks; DoTs keep the Cata behavior, b84f1011a. Stock's
+// PERIODIC_HASTE / ATTR5 test plus the fork's baseline DoT/HoT rule (SpellInfo::HasPeriodicDamageOrHealEffect).
+bool IsHasteAffectedPeriodic(Unit const* caster, SpellInfo const* spellInfo)
+{
+    if (!caster || !spellInfo)
+        return false;
+
+    return caster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, spellInfo)
+        || spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC)
+        || spellInfo->HasPeriodicDamageOrHealEffect();
+}
+
+int32 CalcHastedChannelDuration(Unit const* caster, SpellInfo const* spellInfo, int32 duration)
+{
+    if (duration <= 0 || !IsHasteAffectedPeriodic(caster, spellInfo))
+        return duration;
+
+    return int32(duration * caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
+}
+
 void AuraEffect::CalculatePeriodicData()
 {
     // xinef: save caster depending auras with pct mods
@@ -667,9 +687,9 @@ void AuraEffect::CalculatePeriodic(Unit* caster, bool create, bool load)
 
         if (caster)
         {
-            bool const hasteAffectsPeriodic = caster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, m_spellInfo)
-                || m_spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC)
-                || m_spellInfo->HasPeriodicDamageOrHealEffect();
+            // Custom: channels: stock hasted duration, fixed ticks; DoTs keep the Cata behavior, b84f1011a.
+            // One test shared with the channel length (CalcHastedChannelDuration).
+            bool const hasteAffectsPeriodic = IsHasteAffectedPeriodic(caster, m_spellInfo);
             if (hasteAffectsPeriodic && !IsFixedCadencePeriodic(m_spellInfo->Id))
                 m_amplitude = int32(m_amplitude * caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
         }
@@ -7165,6 +7185,11 @@ int32 AuraEffect::GetTotalTicks() const
 // fraction is folded into extra damage/healing on the last regular tick. 1.0 on every other tick.
 float AuraEffect::GetFinalTickBonusMultiplier() const
 {
+    // Custom: channels: stock hasted duration, fixed ticks; DoTs keep the Cata behavior, b84f1011a. A channel's
+    // aura and interval are hasted together, so its ticks are whole: the few ms of rounding left over are no bonus.
+    if (m_spellInfo->IsChanneled())
+        return 1.0f;
+
     int32 totalTicks = GetTotalTicks();
     if (totalTicks <= 0 || (int32)GetTickNumber() != totalTicks || m_amplitude <= 0)
         return 1.0f;
