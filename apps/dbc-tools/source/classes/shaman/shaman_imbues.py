@@ -289,7 +289,7 @@ stoneskin_202206 = spell(
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'EquippedItemClass': -1, 'SpellLevel': 1, 'CastingTimeIndex': 1,
         'CumulativeAura': 15,
-        'Description_Lang_enUS': 'Each stack of Stoneskin reduces all damage you take by 1%, up to 15 stacks. '
+        'Description_Lang_enUS': 'Each stack of Stoneskin reduces all damage you take by 1%, up to $u stacks. '
                                  'Taking damage erodes your stacks.',
         'AuraDescription_Lang_enUS': 'Damage taken reduced. Taking damage erodes this effect.',
     },

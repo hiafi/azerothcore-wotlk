@@ -69,7 +69,7 @@ public:
         float const feralValue = sConfigMgr->GetOption<float>("WeaponScaling.FeralApPerDps", 0.0f);
         float const rangedValue = sConfigMgr->GetOption<float>("WeaponScaling.RangedApPerDps", 0.0f);
         uint32 const apReferenceItemLevel =
-            sConfigMgr->GetOption<uint32>("WeaponScaling.ApPotencyReferenceItemLevel", 0);
+            sConfigMgr->GetOption<uint32>("WeaponScaling.ApPotencyReferenceItemLevel", 66);
 
         // Changing k_f or k_h with players online would unapply a different value than was applied (m_baseFeralAP, the
         // ranged attack power flat modifier), so a reload keeps the startup values.

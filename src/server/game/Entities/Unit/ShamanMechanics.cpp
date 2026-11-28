@@ -194,7 +194,8 @@ namespace
 
     // DPS balance pass 1031 T1, Spirit Guard capstone (rank 3, under Rockbiter): the `stacksLost` a hit eroded crumble
     // into the 202442 shell, its effect 0 (potency) per stack, added to what is left of the current shell and capped
-    // at the Stoneskin cap's worth (GetStoneskinCap). The new cast replaces the old shell with the total and restarts its duration.
+    // at the Stoneskin cap's worth (GetStoneskinCap). The new cast replaces the old shell with the total and restarts
+    // its duration.
     void AddCrumbledStone(Player* victim, uint32 stacksLost)
     {
         SpellInfo const* shellInfo = sSpellMgr->GetSpellInfo(ShamanData::SPELL_SPIRIT_GUARD_SHELL);

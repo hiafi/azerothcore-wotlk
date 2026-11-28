@@ -1347,7 +1347,7 @@ spirit_guard_stormstrike_r3_202453 = _spirit_guard_stormstrike(202453, 3)
 _SPIRIT_GUARD_BONUS = (1, 2, 3)
 _SPIRIT_GUARD_STONESKIN = (3, 6, 10)
 _SPIRIT_GUARD_CAPSTONE = ('While Rockbiter is active, each Stoneskin stack you lose to damage crumbles into stone, absorbing '
-                          + pot_text(spirit_guard_shell_202442) + ' damage, up to 15 stacks\' worth. Lasts 6 sec.')
+                          + pot_text(spirit_guard_shell_202442) + ' damage, up to your maximum Stoneskin stacks\' worth. Lasts 6 sec.')
 
 
 def _spirit_guard(spell_id: int, rank: int):

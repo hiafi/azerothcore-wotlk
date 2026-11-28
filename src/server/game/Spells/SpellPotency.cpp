@@ -299,7 +299,7 @@ float SpellPotency::Apply(uint32 spellId, uint8 effIndex, Unit const* caster, fl
     {
         float perPoint = ApplyCorrection(row.CpLine, caster->GetLevel(), row.CpCorrectionPerLevel, row.BreakpointLevel, 0.0f);
         perPoint *= apFlatMultiplier; // Custom: gear-scaling GS2 D - the per-point flat line is on C(L) too
-        perPoint +=row.CpAp * caster->GetTotalAttackPowerValue(BASE_ATTACK);
+        perPoint += row.CpAp * caster->GetTotalAttackPowerValue(BASE_ATTACK);
         value += perPoint * float(comboPoints);
     }
 

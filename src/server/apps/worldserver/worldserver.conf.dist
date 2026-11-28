@@ -4960,9 +4960,10 @@ WeaponScaling.RangedApPerDps = 0
 #                     heals, absorbs, pets or item procs. Tooltips keep showing the reference value.
 #                     Read at startup only: .reload config logs a change but keeps the old value.
 #                     Implemented by src/server/game/Spells/SpellPotency.cpp.
-#        Default:     0 - (Off)
+#        Default:     66 - (the Heroic dungeon kits the gear-scaling retune is tuned on)
+#                     0  - (Off)
 
-WeaponScaling.ApPotencyReferenceItemLevel = 0
+WeaponScaling.ApPotencyReferenceItemLevel = 66
 
 #
 ###################################################################################################
