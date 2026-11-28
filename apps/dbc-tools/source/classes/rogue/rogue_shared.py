@@ -333,7 +333,7 @@ enforcer_stance_crit_immunity_203721 = spell(
 # AttributesEx3
 # 0x100000 survives death (Blood Presence precedent). Attributes 0x29050010 = Defensive Stance 71's. eff0 aura 142 misc
 # 1
-# stored 149 (+150% armor from items; round 5 2026-11-28, was 399 / +400% from M2a, 79 / +80% before), eff1 aura 10 misc 127 stored 104 (+105% threat; M2a
+# stored 99 (+100% armor from items; round 5 2026-11-28, sim-picked from +150/+200/+100, was 399 / +400% from M2a, 79 / +80% before), eff1 aura 10 misc 127 stored 104 (+105% threat; M2a
 # tried 149 / +150%, reverted 2026-10-28), eff2 aura 79 misc 127 stored -11
 # (-10% damage done). custom_attr 0x08000000 (POSITIVE_EFF2, brief C6): the negative aura 79 on eff2 would make the buff
 # a debuff. U2: with the hidden 29% reduction (Rogue Passive 21184) +105% nets about x1.46, so Enforcer links "Tank
@@ -349,7 +349,7 @@ enforcer_stance_203720 = spell(
     power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=RANGE_SELF, duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, base_points=149,
+        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, base_points=99,
                misc_value=_MISC_ARMOR, implicit_target_a=_TARGET_UNIT_CASTER),
         Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_THREAT, base_points=104,
                misc_value=_MISC_ALL_SCHOOLS, implicit_target_a=_TARGET_UNIT_CASTER),
@@ -368,7 +368,7 @@ enforcer_stance_203720 = spell(
           'Defensive Stance icon 276, no visual (V stage). No family bits. M2a (M1 tank rulings T-C + threat): armor '
           'stored 79 -> 399 (+400%), threat kept at stored 104 (+105%; +150% tried and reverted), and the new -20% '
           'damage taken clause on the linked child 203721 eff2 (quoted as $203721s3). eff0 armor from items +400% -> '
-          '+150% (stored 399 -> 149) (2026-11-28, gear-scaling tank survival pass round 5, user ruling: with the Riposte swing-timer fix the Combat Rogue tank survived 167-174 s of 180; cut its survival by about half toward 80 s, stance-only).',
+          '+150% (stored 399 -> 149) (2026-11-28, gear-scaling tank survival pass round 5, user ruling: with the Riposte swing-timer fix the Combat Rogue tank survived 167-174 s of 180; cut its survival by about half toward 80 s, stance-only). Sim (180 s x60, gs4r14): +150% 113 s, +200% 120 s, +100% 89 s -> +100% (stored 99).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE,
         'EquippedItemClass': -1,
