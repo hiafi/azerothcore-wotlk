@@ -63,7 +63,7 @@ def expectations(idx: dict) -> tuple[dict, dict, dict]:
             "Attributes": 0x29050010, "SpellLevel": 10, "BaseLevel": 10, "EquippedItemClass": -1, "DurationIndex": inf,
             "RecoveryTime": 1000, "Category": 0, "CategoryRecoveryTime": 0, "StartRecoveryCategory": 0,
             "StartRecoveryTime": 0, "ManaCost": 0, "RangeIndex": 1, "CastingTimeIndex": 1,
-            "Effect_1": 6, "EffectAura_1": 142, "EffectMiscValue_1": 1, "EffectBasePoints_1": 399,   # M2a: +400%
+            "Effect_1": 6, "EffectAura_1": 142, "EffectMiscValue_1": 1, "EffectBasePoints_1": 149,   # M2a: +400%; gear-scaling round 5: +150%
             "Effect_2": 6, "EffectAura_2": 10, "EffectMiscValue_2": 127, "EffectBasePoints_2": 104,   # +105% (M2a tried +150%, reverted)
             "Effect_3": 6, "EffectAura_3": 79, "EffectMiscValue_3": 127, "EffectBasePoints_3": -11,
             "SpellIconID": 276, "SpellVisualID_1": 0,
@@ -74,7 +74,7 @@ def expectations(idx: dict) -> tuple[dict, dict, dict]:
             "EquippedItemClass": -1, "DurationIndex": inf,
             "Effect_1": 6, "EffectAura_1": 187, "EffectBasePoints_1": -1001,
             "Effect_2": 6, "EffectAura_2": 188, "EffectBasePoints_2": -1001,
-            "Effect_3": 6, "EffectAura_3": 87, "EffectMiscValue_3": 127, "EffectBasePoints_3": -21,   # M2a: -20% taken
+            "Effect_3": 6, "EffectAura_3": 87, "EffectMiscValue_3": 127, "EffectBasePoints_3": -11,   # M2a: -20% taken; gear-scaling round 5: -10%
             "SpellClassMask_1": 0, "SpellClassMask_2": 0, "SpellClassMask_3": 0,
         },
         INSULT: {

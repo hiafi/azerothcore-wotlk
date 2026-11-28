@@ -1278,12 +1278,12 @@ def _self_heal_raw(description):
     }
 
 
-# ---- Endurance's Riposte heal 204004: HEAL_PCT 10% of max health [tune] (stored 9), once per Riposte hit ----
+# ---- Endurance's Riposte heal 204004: HEAL_PCT 14% of max health [tune] (stored 13), once per Riposte hit ----
 endurance_riposte_heal_204004 = spell(
     id=204004, name='Endurance', school=School.NORMAL, attributes=_ATTR0_IS_ABILITY, cast_time_ms=0, cooldown_ms=0,
     category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF,
     effects=[
-        Effect(type=EffectType.HEAL_PCT, base_points=9, implicit_target_a=_TARGET_UNIT_CASTER,
+        Effect(type=EffectType.HEAL_PCT, base_points=13, implicit_target_a=_TARGET_UNIT_CASTER,
                potency_excluded='percent of maximum health (Spell::EffectHealPct); a tank heal that scales with '
                                 'Stamina, not attack power'),
     ],
@@ -1294,7 +1294,9 @@ endurance_riposte_heal_204004 = spell(
           'Rogue::OnRiposteHit (once per Riposte hit; Improved Riposte\'s cleave never heals) with Enforcer Stance up '
           'and Endurance rank 2 (13872) held. Endurance\'s rank text quotes $204004s1. eff0 HEAL_PCT 14% -> 10% (stored 13 -> 9) '
           '(2026-11-28, gear-scaling tank survival pass, user ruling: Combat Rogue tank survival 101 s -> about 80 s; '
-          'Enforcer Stance only).',
+          'Enforcer Stance only). 10% -> 14% (stored 9 -> 13) restored (2026-11-28, gear-scaling tank survival pass '
+          'round 5, user ruling: the round 1 cut rested on sims where Riposte\'s attack-speed debuff toggled the boss\'s '
+          'swing timer; the survival cut moved to Enforcer Stance).',
     raw_overrides=_self_heal_raw('Heals you for $s1% of your maximum health.'),
 )
 

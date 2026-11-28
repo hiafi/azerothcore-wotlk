@@ -288,7 +288,8 @@ _CUSTOM_ATTR_POSITIVE_EFF2 = 0x08000000
 # Hidden passive child of 203720 (spell_linked_spell type 2 below: added and removed with the parent). eff0 / eff1
 # attacker
 # melee / ranged crit chance stored -1001 (live -1000) = crit immunity that belongs to the stance, not to the rogue.
-# M2a (M1 tank ruling T-C): eff2 MOD_DAMAGE_PERCENT_TAKEN misc 127 stored -21 (-20% damage taken, all schools) [tune].
+# M2a (M1 tank ruling T-C): eff2 MOD_DAMAGE_PERCENT_TAKEN misc 127 stored -21 (-20% damage taken, all schools) [tune];
+# -20% -> -10% (stored -11) in round 5 of the 2026-11-28 gear-scaling tank survival pass.
 # Enforcer Stance's own three slots are full, so the clause rides this linked child (no new id, no C++).
 enforcer_stance_crit_immunity_203721 = spell(
     id=203721, name='Enforcer Stance Crit Immunity', school=School.NORMAL,
@@ -300,7 +301,7 @@ enforcer_stance_crit_immunity_203721 = spell(
                implicit_target_a=_TARGET_UNIT_CASTER),
         Effect(type=EffectType.APPLY_AURA, apply_aura=_AURA_MOD_ATTACKER_RANGED_CRIT_CHANCE, base_points=-1001,
                implicit_target_a=_TARGET_UNIT_CASTER),
-        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, base_points=-21,
+        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, base_points=-11,
                misc_value=_MISC_ALL_SCHOOLS, implicit_target_a=_TARGET_UNIT_CASTER),
     ],
     spell_icon_id=_ICON_DEFENSIVE_STANCE,
@@ -311,7 +312,8 @@ enforcer_stance_crit_immunity_203721 = spell(
           'stance. DK Blood Presence child 203000 clone: AttributesEx2 0x1 + AttributesEx3 0x100000 so it follows the '
           'parent through death, SpellLevel 1, family 8 with no bits, no SkillLineAbility. M2a (M1 T-C ruling): eff2 '
           'MOD_DAMAGE_PERCENT_TAKEN misc 127 stored -21 (-20% damage taken) [tune]; Enforcer Stance quotes it as '
-          '$203721s3.',
+          '$203721s3. eff2 -20% -> -10% damage taken (stored -21 -> -11) '
+          '(2026-11-28, gear-scaling tank survival pass round 5, user ruling: with the Riposte swing-timer fix the Combat Rogue tank survived 167-174 s of 180; cut its survival by about half toward 80 s, stance-only).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE,
         'EquippedItemClass': -1,
@@ -331,7 +333,7 @@ enforcer_stance_crit_immunity_203721 = spell(
 # AttributesEx3
 # 0x100000 survives death (Blood Presence precedent). Attributes 0x29050010 = Defensive Stance 71's. eff0 aura 142 misc
 # 1
-# stored 399 (+400% armor from items; M2a, was 79 / +80%), eff1 aura 10 misc 127 stored 104 (+105% threat; M2a
+# stored 149 (+150% armor from items; round 5 2026-11-28, was 399 / +400% from M2a, 79 / +80% before), eff1 aura 10 misc 127 stored 104 (+105% threat; M2a
 # tried 149 / +150%, reverted 2026-10-28), eff2 aura 79 misc 127 stored -11
 # (-10% damage done). custom_attr 0x08000000 (POSITIVE_EFF2, brief C6): the negative aura 79 on eff2 would make the buff
 # a debuff. U2: with the hidden 29% reduction (Rogue Passive 21184) +105% nets about x1.46, so Enforcer links "Tank
@@ -347,7 +349,7 @@ enforcer_stance_203720 = spell(
     power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=RANGE_SELF, duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, base_points=399,
+        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, base_points=149,
                misc_value=_MISC_ARMOR, implicit_target_a=_TARGET_UNIT_CASTER),
         Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_THREAT, base_points=104,
                misc_value=_MISC_ALL_SCHOOLS, implicit_target_a=_TARGET_UNIT_CASTER),
@@ -365,7 +367,8 @@ enforcer_stance_203720 = spell(
           '(linked type 2); 57340 Tank Class Passive Threat linked for x2.08 total (U2). custom_attr 0x08000000. Stock '
           'Defensive Stance icon 276, no visual (V stage). No family bits. M2a (M1 tank rulings T-C + threat): armor '
           'stored 79 -> 399 (+400%), threat kept at stored 104 (+105%; +150% tried and reverted), and the new -20% '
-          'damage taken clause on the linked child 203721 eff2 (quoted as $203721s3).',
+          'damage taken clause on the linked child 203721 eff2 (quoted as $203721s3). eff0 armor from items +400% -> '
+          '+150% (stored 399 -> 149) (2026-11-28, gear-scaling tank survival pass round 5, user ruling: with the Riposte swing-timer fix the Combat Rogue tank survived 167-174 s of 180; cut its survival by about half toward 80 s, stance-only).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE,
         'EquippedItemClass': -1,
