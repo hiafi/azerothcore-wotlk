@@ -3316,6 +3316,12 @@ SpellMissInfo Spell::DoSpellHitOnUnit(Unit* unit, uint32 effectMask, bool scaleA
                 // Haste no longer shrinks periodic-aura duration -- see Aura::RefreshDuration
                 // and AuraEffect::GetFinalTickBonusMultiplier.
 
+                // Custom: channels: stock hasted duration, fixed ticks; DoTs keep the Cata behavior, b84f1011a.
+                // A channel's own aura is hasted like the channel (handle_immediate), so it ends with the
+                // channel and its hasted interval fits the base tick count (Arcane Missiles: 5 missiles).
+                if (m_spellInfo->IsChanneled())
+                    duration = CalcHastedChannelDuration(m_originalCaster, m_spellInfo, duration);
+
                 if (m_spellValue->AuraDuration != 0)
                 {
                     if (m_spellAura->GetMaxDuration() != -1)

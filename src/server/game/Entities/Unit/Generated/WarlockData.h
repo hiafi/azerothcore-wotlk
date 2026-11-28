@@ -539,7 +539,6 @@ namespace WarlockData
     constexpr uint32 SPELL_HELLSTORM_200989 = 200989; // hellstorm_200989
     constexpr uint32 SPELL_FIRE_AND_BRIMSTONE_200990 = 200990; // fire_and_brimstone_200990
     constexpr uint32 SPELL_DESTRUCTIVE_REACH_CRIT = 200991; // destructive_reach_crit_200991
-    constexpr uint32 SPELL_SPEC_TUNING = 200992; // spec_tuning_200992
 
     // Creature (NPC) ids
     constexpr uint32 NPC_WILD_IMP = 300150; // wild_imp_300150

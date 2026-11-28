@@ -210,11 +210,13 @@ class Scroll:
 SCROLLS = (
     Scroll("kings", "Scroll of Kings", ((137, -1, 10),), (1391,), "Blessing of Kings",
            "All stats increased by $s1%."),
-    Scroll("wild", "Scroll of the Wild", ((22, 1, 410), (29, -1, 19), (143, 126, 28)), (1089,), "Gift of the Wild",
+    # 285 / 12 / 20: Mark of the Wild and Gift of the Wild at 60 (raid buff sets, user ruling 2026-11-25; was 410 / 19 / 28)
+    Scroll("wild", "Scroll of the Wild", ((22, 1, 285), (29, -1, 12), (143, 126, 20)), (1089,), "Gift of the Wild",
            "Armor increased by $s1, all attributes by $s2 and all resistances by $s3."),
     Scroll("fortitude", "Scroll of Fortitude", ((29, STAT_STAMINA, 54),), (1084,), "Prayer of Fortitude",
            "Stamina increased by $s1."),
-    Scroll("command", "Scroll of Command", ((230, 0, 297),), (1093,), "Commanding Shout",
+    # 738: Commanding Shout at 60 (raid buff sets, user ruling 2026-11-25, option B; was 297)
+    Scroll("command", "Scroll of Command", ((230, 0, 738),), (1093,), "Commanding Shout",
            "Maximum health increased by $s1."),
     Scroll("brilliance", "Scroll of Brilliance", ((29, STAT_INTELLECT, 31),), (1083,), "Arcane Brilliance",
            "Intellect increased by $s1."),
@@ -222,8 +224,10 @@ SCROLLS = (
            "Spirit increased by $s1."),
     Scroll("winter", "Scroll of Winter's Horn", ((29, STAT_STRENGTH, 86), (29, STAT_AGILITY, 86)), (1088, 1253),
            "Horn of Winter", "Strength and Agility increased by $s1."),
-    Scroll("stoneskin", "Scroll of Stoneskin", ((22, 1, 913),), (1086,), "Devotion Aura", "Armor increased by $s1."),
-    Scroll("battle", "Scroll of Battle", ((99, 0, 414), (124, 0, 414)), (1004,), "Battle Shout",
+    # 735: Devotion Aura at 60 (raid buff sets, user ruling 2026-11-25; was 913)
+    Scroll("stoneskin", "Scroll of Stoneskin", ((22, 1, 735),), (1086,), "Devotion Aura", "Armor increased by $s1."),
+    # 232: Battle Shout and Blessing of Might at 60 (raid buff sets, user ruling 2026-11-25; was 414)
+    Scroll("battle", "Scroll of Battle", ((99, 0, 232), (124, 0, 232)), (1004,), "Battle Shout",
            "Attack power increased by $s1."),
     Scroll("trueshot", "Scroll of True Aim", ((166, 0, 10), (167, 0, 10)), (1390,), "Trueshot Aura",
            "Attack power increased by $s1%."),
@@ -235,11 +239,14 @@ SCROLLS = (
            "Spell critical strike chance increased by $s1%."),
     Scroll("pack", "Scroll of the Pack", ((52, 0, 5),), (1025,), "Leader of the Pack",
            "Melee and ranged critical strike chance increased by $s1%."),
-    Scroll("flame", "Scroll of Flame", ((13, 126, 140), (135, 127, 140)), (1048,), "Fire Attunement",
+    # 120: Fire Attunement and Arcane Resonance at 60, stock Totem of Wrath's level 60 value (raid buff sets, user ruling
+    # 2026-11-25; was 140)
+    Scroll("flame", "Scroll of Flame", ((13, 126, 120), (135, 127, 120)), (1048,), "Fire Attunement",
            "Spell power increased by $s1."),
     Scroll("empowerment", "Scroll of Empowerment", ((79, 127, 3),), (1056,), "Arcane Empowerment",
            "Damage done increased by $s1%."),
-    Scroll("wisdom", "Scroll of Wisdom", ((85, 0, 67),), (1105,), "Blessing of Wisdom",
+    # 33: Blessing of Wisdom at 60 (raid buff sets, user ruling 2026-11-25; was 67)
+    Scroll("wisdom", "Scroll of Wisdom", ((85, 0, 33),), (1105,), "Blessing of Wisdom",
            "Restores $s1 mana every 5 sec."),
 )
 # A scroll never joins a stack-rule-1 (exclusive) class group: landing on a raid member, it would remove their own

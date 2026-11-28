@@ -144,11 +144,14 @@ namespace MoltenSet
     // Rekindle: the extra combo point.
     std::int32_t constexpr kRekindleComboPoints = 1;
 
-    // The Cooldown Haste rule's list (docs/Systems.md section 4), mirrored from Player.cpp
-    // (CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS, _ALLOW_LIST, _DENY_LIST; lib/test_molten_set.py checks they agree):
-    // an unmodified base RecoveryTime or CategoryRecoveryTime of 30 s or more, or the allow list, never the deny list.
+    // The cooldown hooks' trigger rule: an unmodified base RecoveryTime or CategoryRecoveryTime of 30 s or more, or
+    // the Molten trigger allow list, never the deny list. The floor and the deny list mirror Player.cpp's Cooldown
+    // Haste rule (CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS, _DENY_LIST; lib/test_molten_set.py checks they agree).
+    // kMoltenCooldownTriggerAllowList is deliberately NOT the Cooldown Haste allow list: the short damage cooldowns
+    // gear-scaling GS2 put on that list (Holy Shock, Exorcism, Hand of Gul'dan, ...) must not fire the hooks (user
+    // ruling 2026-11-27). Its source is COOLDOWN_TRIGGER_ALLOW_LIST in dbc-tools molten_set_bonuses.py.
     std::uint32_t constexpr kCooldownHookMinMs = 30000;
-    std::uint32_t constexpr kCooldownHasteAllowList[] = { 200333, 200829, 204148 };
+    std::uint32_t constexpr kMoltenCooldownTriggerAllowList[] = { 200333, 200829, 204148 };
     std::uint32_t constexpr kCooldownHasteDenyList[] = { 20154, 20164, 20165, 20166, 20375, 21084, 31801, 21169 };
 
     constexpr bool InList(std::uint32_t id, std::uint32_t const* list, std::uint32_t size)
@@ -164,8 +167,8 @@ namespace MoltenSet
     {
         if (InList(spellId, kCooldownHasteDenyList, sizeof(kCooldownHasteDenyList) / sizeof(kCooldownHasteDenyList[0])))
             return false;
-        if (InList(spellId, kCooldownHasteAllowList,
-                sizeof(kCooldownHasteAllowList) / sizeof(kCooldownHasteAllowList[0])))
+        if (InList(spellId, kMoltenCooldownTriggerAllowList,
+                sizeof(kMoltenCooldownTriggerAllowList) / sizeof(kMoltenCooldownTriggerAllowList[0])))
             return true;
         return recoveryMs >= kCooldownHookMinMs || categoryRecoveryMs >= kCooldownHookMinMs;
     }

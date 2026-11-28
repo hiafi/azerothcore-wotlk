@@ -25,7 +25,9 @@ Ids (Enhancement block 202360-202519):
     202450         [balance round 3 on the Normal-tier kits, 2026-11-15] Toughness's Shield Strike (the shield tank's Stormstrike
                    strike with the shield).
     202451-202453  [balance round 5 on the Normal-tier kits, 2026-11-15] Spirit Guard's Stormstrike damage children, one per
-                   rank (33 / 66 / 100 %); 202454-202519 stay spare.
+                   rank (33 / 66 / 100 %).
+    202454         [gear-scaling tank survival pass round 3, 2026-11-28] Toughness's shield clause child (block +10%, Stoneskin
+                   cap -5 with a shield); 202455-202519 stay spare.
 SkillLineAbility 30680 (Living Earth), creatures 300262-300265 (the four Elemental Spirit wolves), tooltip entries 1217-1219,
 spell_group 1259.
 
@@ -98,6 +100,7 @@ TARGET_DEST_DEST = 87
 EFFECT_DISPEL_MECHANIC = 108
 EFFECT_ATTACK_ME = 114
 AURA_MOD_PARRY_PERCENT = 47            # not in the DSL's AuraType subset
+AURA_MOD_BLOCK_PERCENT = 51            # not in the DSL's AuraType subset
 MECHANIC_ROOT = 7
 MECHANIC_SNARE = 11
 STAT_AGILITY = 1
@@ -432,8 +435,8 @@ def _burst(spell_id: int, name: str, school, effect_description: str, icon: int,
            notes: str, magic: bool, **raw_extra):
     """An Elemental Burst: SCHOOL_DAMAGE 150 potency per target on the area around a destination (Fire Nova 8349's A 87 /
     B 16 shape, 5 yd), triggered by Shaman::CastElementalBurst at the shaman's target (or the shaman), range 50000 (L6)."""
-    sp = 272.25 if magic else 0.0
-    ap = 0.0 if magic else 272.25
+    sp = 213.376 if magic else 0.0
+    ap = 0.0 if magic else 213.376
     raw = _raw(spell_description, '', 15, family=magic, DefenseType=1 if magic else 2, PreventionType=1 if magic else 0,
                AttributesEx3=ATTR3_SUPPRESS_CASTER_PROCS, **raw_extra)
     return spell(
@@ -444,7 +447,8 @@ def _burst(spell_id: int, name: str, school, effect_description: str, icon: int,
             implicit_target_a=TARGET_DEST_DEST, implicit_target_b=TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=5.0,
         )],
         spell_icon_id=icon,
-        notes=NOTE + notes + ' Potency 225 direct, T 1500, SpellLevel 15 (Elemental Charge\'s row). sp_potency / ap_potency 150 -> 225 (2026-11-15, balance on the Normal-tier kits, user ruling: Flame Burst / Storm Burst / Wind Burst +50%). sp_potency / ap_potency 225 -> 272.25 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21). SchoolMask ' + effect_description +
+        notes=NOTE + notes + ' Potency 225 direct, T 1500, SpellLevel 15 (Elemental Charge\'s row). sp_potency / ap_potency 150 -> 225 (2026-11-15, balance on the Normal-tier kits, user ruling: Flame Burst / Storm Burst / Wind Burst +50%). sp_potency / ap_potency 225 -> 272.25 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21). sp_potency / ap_potency 272.25 -> 284.5013 (2026-11-26, raid-buff-sets retune R1, user ruling: Enhancement-only spells x1.045; each of the three Bursts). SchoolMask ' + effect_description +
+              ' sp_potency / ap_potency 284.5013 -> 213.376 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Enhancement-only spells x0.75).'
               '. Area targets as Fire Nova 8349 (A 87 DEST_DEST, B 16, radius 5 yd = BURST_RADIUS_YD) so the caster picks the '
               'centre by the cast target (the shaman\'s current target, else the shaman); spell_sha_enh_burst filters to '
               'enemies in combat with the shaman or the group and keeps the BURST_TARGETS nearest (Q16). Triggered with no '
@@ -510,8 +514,8 @@ def _gust(spell_id: int, name: str, potency: float, description: str, notes: str
 
 
 gust_202391 = _gust(
-    202391, 'Gust', 42.35, 'Deals {pot1} Physical damage to the target.',
-    'the Gust: rolled by Wind / Elemental Ascendance (the aura proc rows below) and by the Wind Spirit. ap_potency 35.0 -> 42.35 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).')
+    202391, 'Gust', 36.29, 'Deals {pot1} Physical damage to the target.',
+    'the Gust: rolled by Wind / Elemental Ascendance (the aura proc rows below) and by the Wind Spirit. ap_potency 35.0 -> 42.35 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21). ap_potency 42.35 -> 44.2558 (2026-11-26, raid-buff-sets retune R1, user ruling: Enhancement-only spells x1.045; the Gust splash 202392 stays at 42.35, an AoE number left for the AoE pass). ap_potency 44.2558 -> 36.29 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Enhancement-only spells x0.82; the splash 202392 still stays at 42.35).')
 gust_splash_202392 = _gust(
     202392, 'Gust', 42.35, 'Deals {pot1} Physical damage to the target.',
     'the Gust splash, as much as the Gust since S17 (half before), cast by spell_sha_enh_gust at up to GUST_SPLASH_TARGETS other enemies within '
@@ -1158,10 +1162,11 @@ spirit_guard_shell_202442 = _buff(
     'Absorbs {pot1} damage for each Stoneskin stack lost.',
     'Spirit Guard capstone (2026-11-01, DPS balance pass 1031 round T1, user ruling): under Rockbiter, the Stoneskin stacks a hit '
     'erodes crumble into this shell (Shaman::ErodeStoneskin): E0 per stack lost, 1 potency absorb on the healing scale (T 1500, '
-    'about 10.6 at 60 [tune]), added to what is left of the current shell and capped at STONESKIN_MAX stacks\' worth; the C++ '
+    'about 10.6 at 60 [tune]), added to what is left of the current shell and capped at the Stoneskin cap\'s worth (Shaman::GetStoneskinCap); the C++ '
     'reads E0 with Shaman::GetSelfAbsorbAmount and passes the total as bp0. 6 s [fixed], refreshed by each new crumble. No '
     'family bits. Visible, not consolidated; aura text number-free. No visual (it refreshes on most hits; V stage). '
-    'sp_potency 1 -> 0.25 (2026-11-01, DPS balance pass 1031 round R4, user ruling: shaman tank damage to ~750 / survival to ~80 s): about 2.6 per stack, 132 at the 50-stack cap.',
+    'sp_potency 1 -> 0.25 (2026-11-01, DPS balance pass 1031 round R4, user ruling: shaman tank damage to ~750 / survival to ~80 s): about 2.6 per stack, 132 at the 50-stack cap. Cap 50 -> 30 stacks\' worth with STONESKIN_MAX, tooltip text '
+    'with it (2026-11-28, gear-scaling tank survival pass, user ruling: Enhancement tank survival cut); 30 -> 25 in round 2, 25 -> 15 in round 4 (text only; the C++ reads the cap).',
     level=45, family=False,
 )
 
@@ -1218,6 +1223,21 @@ anticipation_jumps_202447 = _hidden_child(
     'Shock\'s orb child. A flat parry percent is not diminished.',
     **_emask(1, CHAIN_LIGHTNING_D0),
 )
+
+toughness_shield_202454 = _hidden_child(
+    202454, 'Toughness', [_aura(AURA_MOD_BLOCK_PERCENT, 9), _dummy(4)], ICON_TOUGHNESS,
+    School.NATURE, 'Your chance to block is increased, and your maximum Stoneskin stacks are reduced while a shield is equipped.',
+    'hidden child of Rockbiter for Toughness (any rank), the shield tank\'s trade-off '
+    + "(2026-11-28, gear-scaling tank survival pass round 3, user ruling: Enhancement shield tank 115 s -> about 80 s, "
+    'dual-wield keeps the base cap): E0 aura 51 MOD_BLOCK_PERCENT +10% (stored 9); only a shield can block, so it does '
+    'nothing for a dual wield. E1 DUMMY 5 (stored 4; 10 in round 3): Shaman::GetStoneskinCap takes this many stacks off 202206\'s '
+    'CumulativeAura while a usable shield (ITEM_SUBCLASS_ARMOR_SHIELD) is in the off hand. No EquippedItemClass gate: '
+    'Player::RemoveItemDependentAurasAndCasts would drop a script-applied child on unequip and nothing re-applies it on '
+    'equip, so the shield check is the C++\'s. Applied by Shaman::SyncRockbiterChildren while Rockbiter is up and '
+    'Toughness has a rank. Toughness\'s rank text quotes $202454s1 / $202454s2. Passive + DO_NOT_DISPLAY with the L5 pair. '
+    'E1 Stoneskin cut 10 -> 5 (stored 9 -> 4) (2026-11-28, gear-scaling tank survival pass round 4, user ruling: precision sims put cap 25 at DW 82 / shield 85 s; cap 15 with a shield cut of 5 aims at DW ~55 s, shield ~84 s).',
+)
+
 
 static_shock_orb_damage_202448 = _hidden_child(
     202448, 'Static Shock', [_mod(SpellModOp.DAMAGE, True, STATIC_SHOCK_ORB_DAMAGE_R3['value'] - 1)], ICON_STATIC_SHOCK,
@@ -1327,7 +1347,7 @@ spirit_guard_stormstrike_r3_202453 = _spirit_guard_stormstrike(202453, 3)
 _SPIRIT_GUARD_BONUS = (1, 2, 3)
 _SPIRIT_GUARD_STONESKIN = (3, 6, 10)
 _SPIRIT_GUARD_CAPSTONE = ('While Rockbiter is active, each Stoneskin stack you lose to damage crumbles into stone, absorbing '
-                          + pot_text(spirit_guard_shell_202442) + ' damage, up to 50 stacks\' worth. Lasts 6 sec.')
+                          + pot_text(spirit_guard_shell_202442) + ' damage, up to your maximum Stoneskin stacks\' worth. Lasts 6 sec.')
 
 
 def _spirit_guard(spell_id: int, rank: int):

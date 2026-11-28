@@ -270,7 +270,7 @@ shriek_command_201641 = _command(
 
 screech_201771 = _utility(
     201771, 'Screech', SCREECH_LEVEL,
-    [Effect(type=EffectType.APPLY_AURA, base_points=-36, points_per_level=-5.696969696969697,
+    [Effect(type=EffectType.APPLY_AURA, base_points=-36, points_per_level=-2.4135,
             implicit_target_a=_TARGET_SRC_CASTER, implicit_target_b=_TARGET_UNIT_SRC_AREA_ENEMY,
             apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=10.0)],
     91, 7302,
@@ -280,10 +280,13 @@ screech_201771 = _utility(
     cooldown_ms=10000, duration_ms=30000, defense=1, prevention=1,
     MaxLevel=80, AttributesEx=kits.ATTR1_INITIATE_COMBAT, AttributesEx6=8388608, RangeIndex=1,
     AuraDescription_Lang_enUS='Attack power reduced.',
-    notes='hunter-pet-families F3: Bat slot 2, autocast. Demoralizing Screech 201754\'s shape (Demoralizing Shout '
+    notes=(
+        'hunter-pet-families F3: Bat slot 2, autocast. Demoralizing Screech 201754\'s shape (Demoralizing Shout '
           '1160: bp -36, -5.697/level from 14 to 80, around the pet 10 yd), 30 s, 10 s cooldown. Group 1062 AP Debuffs '
           '(rule '
-          '4, aura 99). Visual 7302 (Demoralizing Screech 24423), icon 91 (Screech 31273).',
+          '4, aura 99). Visual 7302 (Demoralizing Screech 24423), icon 91 (Screech 31273).'
+        ' points_per_level -5.697 -> -2.4135 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): Demoralizing Shout 1160\'s curve, -49 at 20, -97 at 40, -146 at 60.'
+    ),
 )
 
 sonic_blast_202004 = _utility(
@@ -885,8 +888,8 @@ froststorm_breath_command_201657 = _command(
 
 arcane_resonance_201779 = _utility(
     201779, 'Arcane Resonance', ARCANE_RESONANCE_LEVEL,
-    [_raid_aura(AuraType.MOD_DAMAGE_DONE, 29, misc_value=_SCHOOL_MASK_MAGIC, points_per_level=3.24546),
-     _raid_aura(AuraType.MOD_HEALING_DONE, 29, misc_value=_SCHOOL_MASK_ALL, points_per_level=3.24546)],
+    [_raid_aura(AuraType.MOD_DAMAGE_DONE, 29, misc_value=_SCHOOL_MASK_MAGIC, points_per_level=2.82),
+     _raid_aura(AuraType.MOD_HEALING_DONE, 29, misc_value=_SCHOOL_MASK_ALL, points_per_level=2.82)],
     3220, 965,
     'Your pet resonates with arcane power, increasing the spell damage and healing of all party and raid members by '
     '$s1 for $d. Does not stack with Fire Attunement, Flametongue Totem, Totem of Wrath or Demonic Pact.',
@@ -896,7 +899,9 @@ arcane_resonance_201779 = _utility(
           '(aura 13 misc 126 + aura 135 misc 127, bp 29, 3.24546/level, SpellLevel 26, BaseLevel 28, MaxLevel 60: the '
           'same value at every level), raid 100 yd, 2 min, 40 s cooldown. Group 1048 Spell Power Buffs (rule 4). '
           'Visual '
-          '965 (Arcane Explosion 1449), icon 3220 (Demonic Pact).',
+          '965 (Arcane Explosion 1449), icon 3220 (Demonic Pact).'
+          ' points_per_level 3.24546 -> 2.82 (2026-11-25, raid buff sets, user ruling): the same curve as Fire '
+          'Attunement Spell Power 202212, 120 at 60 (stock Totem of Wrath\'s level 60 value; 30 at 20, 63 at 40).',
 )
 
 frost_nova_202012 = _utility(

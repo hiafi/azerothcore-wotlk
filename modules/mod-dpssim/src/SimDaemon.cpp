@@ -333,15 +333,15 @@ namespace
         LOG_INFO("server.dpssim", "mod-dpssim: auras on the bot at the pull: [{}]", list);
     }
 
-    // How often a full_raid run puts back a pinned raid aura that went missing (sim ms)
+    // How often a standard or full_raid run puts back a pinned raid aura that went missing (sim ms)
     constexpr uint32 RAID_AURA_REFRESH_MS = 1000;
 
-    // full_raid (SimBuffSet.h): the raid buffs on the actor and its pet, the raid debuffs on every dummy (all pinned)
-    // and Bloodlust / Sated at the pull. Logs what landed and with what amounts, and every failure, on the run's first
-    // pull only. Does nothing for self_only.
+    // standard and full_raid (SimBuffSet.h): the raid buffs on the actor and its pet, the raid debuffs on every dummy
+    // (all pinned) and the pull auras (Bloodlust / Sated, or Sated / Exhaustion). Logs what landed and with what
+    // amounts, and every failure, on the run's first pull only. Does nothing for self_only.
     void ApplyRaidAuras(SimDaemon::RunConfig const& config, Player* player, std::vector<Creature*> const& dummies)
     {
-        if (config.BuffSet.BuffSet != SimBuffSet::Set::FullRaid)
+        if (!SimBuffSet::AddsAuras(config.BuffSet.BuffSet))
             return;
 
         SimBuffSet::Phase const phase =
@@ -473,8 +473,9 @@ namespace
         {
             uint32 const buffMs = std::min(config.PrePullBuffMs, ITERATION_GAP_MS);
             result.PrePullComplete = RunBuffPhase(config, buffMs, measuredStartMs, player, map, bot, castRecorder);
-            // full_raid: the raid's buffs, debuffs and Bloodlust go up at the end of the phase (the pet is in place by
-            // now, re-tamed or revived above), before the recorders rewind, so they count as present at the pull
+            // standard, full_raid: the raid's buffs, debuffs and pull auras go up at the end of the phase (the pet is
+            // in place by now, re-tamed or revived above), before the recorders rewind, so they count as present at
+            // the pull
             ApplyRaidAuras(config, player, dummies);
             recorder->Reset();
             castRecorder->Reset();
@@ -489,7 +490,7 @@ namespace
         else
         {
             ApplyRaidAuras(config, player, dummies);
-            if (config.BuffSet.BuffSet == SimBuffSet::Set::FullRaid)
+            if (SimBuffSet::AddsAuras(config.BuffSet.BuffSet))
             {
                 // the raid's auras are up from the first measured ms, as after a buff phase
                 recorder->RecordAurasPresent(player);
@@ -528,8 +529,8 @@ namespace
         // The bot's own current target, seeded with the primary at the pull (D5: measured, not inferred from casts)
         ObjectGuid lastTarget = bot.GetCurrentTarget();
         uint32 targetSwitches = 0;
-        // full_raid: once a sim second, every pinned raid aura that went missing (a dispel, a stronger aura of its
-        // group that has since expired, the pet's own cast of the same spell replacing it) is put back
+        // standard, full_raid: once a sim second, every pinned raid aura that went missing (a dispel, a stronger aura
+        // of its group that has since expired, the pet's own cast of the same spell replacing it) is put back
         uint32 nextRaidRefreshMs = RAID_AURA_REFRESH_MS;
         SimBuffSet::RefreshLog raidRefresh;
         // The "SimActor in-combat sheet" line: the actor's power stats over the measured fight (SimActor.h)
@@ -538,7 +539,7 @@ namespace
         {
             clock.Tick(map);
 
-            if (config.BuffSet.BuffSet == SimBuffSet::Set::FullRaid && clock.GetElapsedMs() >= nextRaidRefreshMs)
+            if (SimBuffSet::AddsAuras(config.BuffSet.BuffSet) && clock.GetElapsedMs() >= nextRaidRefreshMs)
             {
                 // Once per run, before the first pass: what the pass would otherwise add directly and so hide
                 if (!config.BuffSet.State.CoverageLogged)
@@ -595,7 +596,7 @@ namespace
             result.ActorDiedAtMs = config.DurationMs;
         }
 
-        SimBuffSet::LogRefresh(raidRefresh);
+        SimBuffSet::LogRefresh(config.BuffSet.BuffSet, raidRefresh);
         inCombatSheet.LogAndReset(player->GetName());
 
         result.Success = true;

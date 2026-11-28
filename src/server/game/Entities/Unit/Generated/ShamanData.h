@@ -511,6 +511,7 @@ namespace ShamanData
     constexpr uint32 SPELL_SPIRIT_GUARD_STORMSTRIKE_R1 = 202451; // spirit_guard_stormstrike_r1_202451
     constexpr uint32 SPELL_SPIRIT_GUARD_STORMSTRIKE_R2 = 202452; // spirit_guard_stormstrike_r2_202452
     constexpr uint32 SPELL_SPIRIT_GUARD_STORMSTRIKE_R3 = 202453; // spirit_guard_stormstrike_r3_202453
+    constexpr uint32 SPELL_TOUGHNESS_SHIELD = 202454; // toughness_shield_202454
     constexpr uint32 SPELL_RAZE_RANK1 = 202520; // raze_rank1_202520
     constexpr uint32 SPELL_RAZE_RANK2 = 202521; // raze_rank2_202521
     constexpr uint32 SPELL_RAZE_RANK3 = 202522; // raze_rank3_202522
@@ -670,7 +671,7 @@ namespace ShamanData
     constexpr int32 ELEMENTAL_STAT_REFRESH_MS = 2000; // Owner-stat aura refresh period on Water / Storm Elementals, ms [tune].
     constexpr float ELEMENTAL_TARGET_RANGE_YD = 40.0f; // Engaged-target search radius of every elemental, yd [tune].
     constexpr uint32 ELEMENTAL_TOTEM_DISPLAY_INVISIBLE = 11686; // Invisible-stalker display the elemental totems switch to in IsSummonedBy.
-    constexpr int32 EMPOWERMENT_PCT = 10; // Elemental Empowerment, percent damage [fixed]; Conduit capstone adds Mastery.
+    constexpr int32 EMPOWERMENT_PCT = 20; // Elemental Empowerment, percent damage [fixed]; Conduit capstone adds Mastery. 10 -> 20 (2026-11-26, raid-buff-sets retune R1, user ruling: Power of the Elements Empowerment 10% -> 20%).
     constexpr int32 ES_TAUNT_DURATION_MS = 3000; // Earth Shock under Rockbiter: taunt duration, ms [tune].
     constexpr int32 FOCUS_COST_R1 = 15; // Elemental Focus rank 1 Clearcasting mana cost reduction, percent [fixed].
     constexpr int32 FOCUS_COST_R2 = 30; // Elemental Focus rank 2 Clearcasting mana cost reduction, percent [fixed].
@@ -710,9 +711,9 @@ namespace ShamanData
     constexpr int32 LE_EARTH_CHARGE_COST = 30; // Living Earth: Earth Charge spent for Earthen Ascendance [fixed].
     constexpr int32 LE_STONESKIN = 10; // Living Earth: Stoneskin stacks granted [fixed].
     constexpr int32 LM_CHANCE_PER_STACK = 7; // Lightning Mastery chance per Raw Power stack, percent [tune] (5 until the 2026-10-20 smoke-test fix pass).
-    constexpr int32 LO_CHANCE_R1 = 6; // Lightning Overload rank 1 chance per target hit, percent [fixed].
-    constexpr int32 LO_CHANCE_R2 = 13; // Lightning Overload rank 2 chance, percent [fixed].
-    constexpr int32 LO_CHANCE_R3 = 20; // Lightning Overload rank 3 chance, percent [fixed].
+    constexpr int32 LO_CHANCE_R1 = 10; // Lightning Overload rank 1 chance per target hit, percent [fixed]. 6 -> 10 (2026-11-26, raid-buff-sets retune R1, user ruling: 6/13/20% -> 10/20/30%).
+    constexpr int32 LO_CHANCE_R2 = 20; // Lightning Overload rank 2 chance, percent [fixed].
+    constexpr int32 LO_CHANCE_R3 = 30; // Lightning Overload rank 3 chance, percent [fixed].
     constexpr int32 LO_CRIT_MULT = 3; // Lightning Overload chance multiplier on a critical hit [fixed].
     constexpr int32 MANA_TIDE_PARTY_PCT_X10 = 25; // Mana Tide Totem: party mana per pulse, tenths of a percent of maximum mana (2.5%) [fixed].
     constexpr int32 MANA_TIDE_SELF_PCT = 5; // Mana Tide Totem: shaman mana per pulse, percent of maximum mana [fixed].
@@ -766,7 +767,6 @@ namespace ShamanData
     constexpr int32 STONESKIN_CHAIN_LIGHTNING = 1; // Stoneskin stacks Chain Lightning grants per target hit [tune].
     constexpr int32 STONESKIN_EARTH_SHOCK = 15; // Stoneskin stacks Earth Shock grants, once per cast [tune].
     constexpr int32 STONESKIN_LAVA_LASH = 5; // Stoneskin stacks Lava Lash grants [tune].
-    constexpr int32 STONESKIN_MAX = 50; // Stoneskin stack cap [fixed]; also spell 202206's CumulativeAura.
     constexpr int32 STONESKIN_OOC_MS = 120000; // Out-of-combat time before the Stoneskin stacks fall off, ms [fixed].
     constexpr int32 STONESKIN_STORMSTRIKE = 5; // Stoneskin stacks Stormstrike grants [tune].
     constexpr int32 TF_DURATION_MS = 10000; // Tidal Force: duration of the caster aura 202672, ms [fixed].
@@ -819,7 +819,7 @@ namespace ShamanData
     constexpr int32 WARDING_HEALTH_PCT = 10; // Elemental Warding capstone maximum health, percent [fixed].
     constexpr float WATER_BOLT_HEAL_RANGE_YD = 40.0f; // Radius around the Water Elemental that Water Bolt heals, yd [fixed].
     constexpr int32 WATER_BOLT_HEAL_TARGETS = 3; // Players Water Bolt heals, lowest health percent first [fixed].
-    constexpr int32 WATER_ELEMENTAL_BONUS_PCT = 30; // Water Elemental damage bonus (Power of the Elements), percent [fixed].
+    constexpr int32 WATER_ELEMENTAL_BONUS_PCT = 50; // Water Elemental damage bonus (Power of the Elements), percent [fixed]. 30 -> 50 (2026-11-26, raid-buff-sets retune R1, user ruling).
     constexpr int32 WOLF_DURATION_MS = 20000; // Elemental Spirits: wolf duration, ms [fixed]; also 51533's and the timer 202407's duration.
     constexpr int32 WOLF_FS_POTENCY = 25; // Spirit Flame Shock: potency per 3 s tick [tune]; also the 202408 row.
 }

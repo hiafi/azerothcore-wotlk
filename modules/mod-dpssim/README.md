@@ -33,14 +33,21 @@ A dead pet is revived and a missing one tamed again. The pet's swings and spells
 read "(pet)" in the report). A hunter actor also gets the "Requires No Ammo" aura, so its ranged weapon needs no
 arrows. The run log shows what ran: "tamed pet ...", and "strategies resolved: combat [...], non-combat [...]".
 
-### Any pet family, the full_raid buff set, the family sweep
+### Any pet family, the buff sets, the family sweep
 
 - **Family switch.** `DpsSim.PetCreatureEntry` replaces the profile's pet for one run. `run-sim.sh` sets it from
   `DPSSIM_PET_FAMILY` (a key, name or family number of `tools/pet_families.tsv`, one "Tamable <family>" creature per
   family, all 32) or `DPSSIM_PET_ENTRY`, and the names carry it: `BmHunterSim.pet-cat.<ts>...`.
 - **Buff sets** (`DpsSim.BuffSet`, `SimBuffSet.h`, DPS runs only; a profile's own `BuffSet = full_raid` key sets
-  it for that profile and `DPSSIM_BUFF_SET` beats the profile). `self_only`, the default, adds nothing (every run
-  before this). `full_raid` puts `DpsSim.RaidBuffs` on the actor and its pet at the end of the pre-pull buff phase
+  it for that profile and `DPSSIM_BUFF_SET` beats the profile). Three sets: `self_only` (alias `self`), `standard` and
+  `full_raid` (alias `all`). `self_only`, the default, adds nothing (every run before this). `standard` is the set the
+  balance target is measured on (user ruling 2026-11-25): the common raid buffs (Kings, Wild, Fortitude, Command,
+  Intellect, Spirit, Strength and Agility, armor, flat attack power, spell crit, melee and ranged crit, spell power;
+  `DpsSim.StandardBuffs`), major armor and magic damage taken on the dummies (`DpsSim.StandardDebuffs`), and Sated and
+  Exhaustion at the pull (`DpsSim.StandardPullBuffs`), so nobody's Bloodlust or Heroism fires, the actor's own
+  included. No flask, no Replenishment, none of the percent attack power, haste, damage done, crit taken or physical
+  taken auras. It works as `full_raid` below otherwise (pinned, put back, own buff wins). `full_raid` puts
+  `DpsSim.RaidBuffs` on the actor and its pet at the end of the pre-pull buff phase
   (after a pet re-tame or revive), `DpsSim.RaidDebuffs` on every dummy, both pinned (no expiry) and put back once a sim
   second if they go missing, and `DpsSim.RaidPullBuffs` (Bloodlust and Sated) on the actor and pet with their own
   duration. One flask of `DpsSim.RaidFlasks` goes on the actor, the one of its highest of Strength, Agility and
@@ -58,11 +65,16 @@ arrows. The run log shows what ran: "tamed pet ...", and "strategies resolved: c
     pinned again within a second.
   - Hunters: class buffs and debuffs (and Replenishment), each in the same `spell_group` as the hunter pet family effect
     of its category, so a family's own cast is suppressed by the group rule and adds nothing (hunter-pet-families
-    ruling 7). Families cast the other set's debuffs themselves.
+    ruling 7). Families cast the other set's debuffs themselves. This is `full_raid` only: `standard` has one set of
+    lists for every class, hunters included, and applies the "own buff wins" rule to them too, so the fixed pet's
+    family buff or debuff counts like any class's own buff (user ruling 2026-11-25).
 
-  `run-sim.sh` takes `DPSSIM_BUFF_SET=full_raid` (".full_raid" in the names) and `DPSSIM_RAID_BUFFS` /
-  `DPSSIM_RAID_DEBUFFS` / `DPSSIM_RAID_PULL_BUFFS` / `DPSSIM_RAID_FLASKS` to replace a list (".full_raid-x<hash>"; an
-  empty value is an empty list, so `DPSSIM_RAID_PULL_BUFFS=` is a run without Bloodlust). The run log names each
+  `run-sim.sh` takes `DPSSIM_BUFF_SET=standard` or `full_raid` (".standard" / ".full_raid" in the names, `self` and
+  `all` are accepted too) and `DPSSIM_RAID_BUFFS` / `DPSSIM_RAID_DEBUFFS` / `DPSSIM_RAID_PULL_BUFFS` /
+  `DPSSIM_RAID_FLASKS` (full_raid) or `DPSSIM_STANDARD_BUFFS` / `DPSSIM_STANDARD_DEBUFFS` / `DPSSIM_STANDARD_PULL_BUFFS`
+  (standard) to replace a list (".full_raid-x<hash>"; an empty value is an empty list, so `DPSSIM_RAID_PULL_BUFFS=` is a
+  run without Bloodlust). `DPSSIM_WORLD_DB=acore_world_sim_<name>` reads a prepared copy of the world DB instead of the
+  live one (for data the live server does not have yet). The run log names each
   member with its effects and groups ("raid buffs (actor and pet): ...") and, on the first iteration, the amounts it
   landed with ("buff set: 24932 Leader of the Pack on the actor: aura 52 = 5, ..."), or that it did not land.
   An entry may end in "@amount" ("21183:0@3", a negative amount is allowed) to set the amount of its applied effects:
@@ -203,7 +215,7 @@ to expect.
 
 - Profile keys: `TankScenario` (`dps` refills the actor's health after every step so it never dies; `survive` does not,
   the run ends at its death and `ActorDiedAtMs` is the time to death), `TankHitDamage` (the boss, 1 target, default
-  `2250-2750` before armor) and `TankPackHitDamage` (each dummy of a 2+ target run, `500-600`), `TankSwingMs` (2000),
+  `2850-3450` before armor) and `TankPackHitDamage` (each dummy of a 2+ target run, `500-600`), `TankSwingMs` (2000),
   `TankDummyCrit` (true). `DpsSim.Tank*` in the conf override them; `DpsSim.TankPullAuras` (conf only) casts spells on
   the dummies at the pull for known-value runs. There is no dummy parry-haste switch: the PvE always-hit rule means a
   dummy never parries the actor. The tank's own parry haste (a parry by the actor speeding up its next swing) is the
@@ -253,11 +265,11 @@ value applies; a bad value or a non-tank profile is refused before anything star
 | Variable | Conf key | Values |
 |---|---|---|
 | `TANKSIM_SCENARIO` | `DpsSim.TankScenario` | `dps` or `survive` |
-| `TANKSIM_HIT` | `DpsSim.TankHitDamage` | the boss's hit before armor, `2250-2750` or one value |
+| `TANKSIM_HIT` | `DpsSim.TankHitDamage` | the boss's hit before armor, `2850-3450` or one value |
 | `TANKSIM_PACK_HIT` | `DpsSim.TankPackHitDamage` | each pack dummy's hit before armor, `500-600` |
 | `TANKSIM_SWING_MS` | `DpsSim.TankSwingMs` | 500-10000 |
 
-Presets (the profile defaults, plan T3/T4): a boss hit of 2,250-2,750 before armor every 2.0 s with crits on, or each
+Presets (the profile defaults, plan T3/T4): a boss hit of 2,850-3,450 before armor every 2.0 s with crits on, or each
 pack dummy for 500-600; the boss is a level actor+3, the pack elites the actor's level. Files:
 `reports/<Profile>.tank-<scenario>.<targets>t[.x<hash>].<ts>.report.json` (and `.iterN.` files), so aggregation never
 mixes scenarios or pack sizes (`x<hash>` is added when `TANKSIM_HIT`, `TANKSIM_PACK_HIT` or `TANKSIM_SWING_MS`

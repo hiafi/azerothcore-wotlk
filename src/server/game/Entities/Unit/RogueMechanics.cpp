@@ -28,6 +28,7 @@
 #include "ObjectAccessor.h"
 #include "ObjectGuid.h"
 #include "Player.h"
+#include "ProcChanceCooldown.h"
 #include "Random.h"
 #include "ScriptMgr.h"
 #include "Spell.h"
@@ -1293,7 +1294,9 @@ namespace Rogue
         if (brewPct <= 0 || !RollProcChance(rogue, float(brewPct)))
             return;
 
-        StartTalentCooldown(rogue, RogueData::SPELL_DEADLY_BREW, RogueData::DEADLY_BREW_ICD_MS);
+        // gear-scaling GS2 (Systems.md section 5): the roll takes Proc Chance, so does its ICD.
+        StartTalentCooldown(rogue, RogueData::SPELL_DEADLY_BREW,
+            int32(ProcChanceCooldown::ScaleFor(rogue, uint32(RogueData::DEADLY_BREW_ICD_MS), float(brewPct))));
         ApplyPoison(rogue, target, RogueData::SPELL_CRIPPLING_POISON, nullptr, PoisonSource::Talent);
     }
 
@@ -1550,7 +1553,10 @@ namespace Rogue
                 RogueData::SPELL_RUTHLESSNESS_14160, RogueData::SPELL_RUTHLESSNESS_14161 }, EFFECT_2);
             if (ruthlessPct > 0 && RollProcChance(rogue, float(ruthlessPct)))
             {
-                StartTalentCooldown(rogue, RogueData::SPELL_RUTHLESSNESS, RogueData::RUTHLESSNESS_ICD_MS);
+                // gear-scaling GS2 (Systems.md section 5): the roll takes Proc Chance, so does its ICD.
+                StartTalentCooldown(rogue, RogueData::SPELL_RUTHLESSNESS,
+                    int32(ProcChanceCooldown::ScaleFor(rogue, uint32(RogueData::RUTHLESSNESS_ICD_MS),
+                        float(ruthlessPct))));
                 ObjectGuid const targetGuid = target ? target->GetGUID() : ObjectGuid::Empty;
                 // A finisher that misses, is dodged or parried keeps its points (Spell.cpp clears them only for a
                 // hit): the point is granted only if they were spent (fewer than at cast: Premeditation may add

@@ -136,7 +136,7 @@ lightning_bolt_403 = spell(
     mana_cost_pct=7,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=79.632, potency_kind='direct', implicit_target_a=6),  # 65.2 -> 126 (fills to ~1,000, user) -> 100.8 (DPS balance pass 1031, Lightning Bolt -20%)
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=69.678, potency_kind='direct', implicit_target_a=6),  # 65.2 -> 126 (fills to ~1,000, user) -> 100.8 (DPS balance pass 1031, Lightning Bolt -20%)
     ],
     spell_icon_id=62,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 14 @ level 80); coefficient/mana_cost_pct from max rank; MaxLevel set to 80. PLAN A9 (druid-rework code review finding #9): cast_time_ms=2000, raw CastingTimeIndex (16, 1500ms) dropped. '
@@ -144,7 +144,8 @@ lightning_bolt_403 = spell(
           '2026-10-20 smoke-test fix pass: sp_potency 151.7 -> 65.2 (x0.43, rough damage cut so the Elemental bot lands near 1,000 DPS; tooltip follows {pot1}). '
           '2026-10-22 playtest fix pass (P1): base mana 10% -> 7% (user, all specs). '
           '2026-11-01 sp_potency 126.0 -> 100.8 (2026-11-01, DPS balance pass 1031, user ruling: Lightning Bolt -20%; the user\'s "Lightning Strike" row means Lightning Bolt; the overload copy 202591 follows at half automatically).'
-          ' sp_potency 100.8 -> 79.632 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Lightning Bolt x0.790 (Elemental, shared with Enhancement)).',
+          ' sp_potency 100.8 -> 79.632 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Lightning Bolt x0.790 (Elemental, shared with Enhancement)).'
+          ' sp_potency 79.632 -> 69.678 (the overload copy 202591 follows at 75%). (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Elemental x0.875 (shared with Enhancement)).',
     tooltip_vars=shaman_lightning_1210,
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Casts a bolt of lightning at the target for {pot1*mult} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_1': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellVisualID_1': 173, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -162,14 +163,15 @@ chain_lightning_421 = spell(
     mana_cost_pct=12,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=78.605, potency_kind='direct', implicit_target_a=6, chain_targets=3),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=68.779, potency_kind='direct', implicit_target_a=6, chain_targets=3),
     ],
     spell_icon_id=165,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 32); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
           'Potency system P7-Shaman: converted to sp_potency=185.0 (shaman-potency-proposals.txt, mismatched row - old coefficient 0.571 undershot the base-implied value). '
           '2026-10-20 smoke-test fix pass: sp_potency 185.0 -> 79.6 (x0.43, rough damage cut; tooltip follows {pot1}). '
           'sp_potency 79.6 -> 99.5 (x1.25) and EffectChainAmplitude_1 0.7 -> 1.0 (no per-jump falloff: every target takes the full hit; the tooltip\'s "Each jump reduces the damage by 30%." is gone), base mana 26% -> 12% (2026-11-02, DPS balance pass 1031 round S1, user ruling: shaman package). Revision 3 (Chain Lightning base raise, the AoE half is the falloff) and Revision 5 (the big base mana costs: Elemental was mana-bound at 5 targets); the overload copy 202592 follows at half automatically.'
-          ' sp_potency 99.5 -> 78.605 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Elemental x0.79).',
+          ' sp_potency 99.5 -> 78.605 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Elemental x0.79).'
+          ' sp_potency 78.605 -> 68.779 (the overload copy 202592 follows). (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Elemental x0.875 (shared with Enhancement)).',
     tooltip_vars=shaman_lightning_1210,
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 32, 'CastingTimeIndex': 5, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls a lightning bolt at the enemy, dealing {pot1*mult} Nature damage and then jumping to additional nearby enemies.  Affects $x1 total targets.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2, 'SpellClassSet': 11, 'SpellLevel': 32, 'SpellVisualID_1': 36, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -683,7 +685,7 @@ earth_shock_8042 = spell(
     duration_ms=8000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-11, mechanic=8, implicit_target_a=6, apply_aura=138),
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=75.84, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),  # 45 -> 60 (user) -> 96 (B3)
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=66.36, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),  # 45 -> 60 (user) -> 96 (B3)
     ],
     spell_icon_id=687,
     notes='SH0a: own 6 s cooldown (Category 19 and the shared category cooldown removed, RecoveryTime 6000), potency 75 T 1500, mana 6%; aura text per shared doc. Was: pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
@@ -691,7 +693,8 @@ earth_shock_8042 = spell(
           '2026-10-20 smoke-test fix pass: eff2 sp_potency 75 -> 32.3 (x0.43, rough damage cut; tooltip follows {pot2}). '
           '2026-10-20 Earth Shock burst (user): eff2 sp_potency 32.3 -> 45 (Echo burst budget; the other shocks stay 32.3). '
           'Effect 2 sp_potency 60 -> 96 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Earth Shock +60%).'
-          ' sp_potency 96.0 -> 75.84 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Earth Shock x0.790 (Elemental, shared with Enhancement)).',
+          ' sp_potency 96.0 -> 75.84 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Earth Shock x0.790 (Elemental, shared with Enhancement)).'
+          ' Effect 1 sp_potency 75.84 -> 66.36. (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Elemental x0.875 (shared with Enhancement)).',
     tooltip_vars=shaman_shocks_1212,
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attack speed slowed.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly shocks the target with concussive force, dealing {pot2*mult} Nature damage and reducing its melee attack speed by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 1048576, 'SpellClassSet': 11, 'SpellLevel': 4, 'SpellVisualID_1': 3444, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -711,8 +714,8 @@ flame_shock_8050 = spell(
     range_yards=25.0,
     duration_ms=18000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=20.414, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, sp_potency=6.826, potency_kind='periodic', time_basis_ms=3000, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=17.862, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=5.973, potency_kind='periodic', time_basis_ms=3000, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
     ],
     spell_icon_id=678,
     notes='SH0a: own 6 s cooldown (category removed), potency 75 direct / 25 per 3 s tick (T 1500 / 3000), mana 6%; tooltip per shared doc. Was: pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
@@ -720,7 +723,8 @@ flame_shock_8050 = spell(
           '2026-10-20 smoke-test fix pass: direct 75 -> 32.3, tick 25 -> 10.8 (x0.43, rough damage cut; tooltip follows {pot1}/{pot2}). '
           '2026-11-01 sp_potency (direct) 32.3 -> 25.84 and sp_potency (tick) 10.8 -> 8.64 (2026-11-01, DPS balance pass 1031, user ruling: Flame Shock -20%).'
           ' Effect 0 sp_potency 25.84 -> 20.414 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Flame Shock x0.790 (Elemental, shared with Enhancement)).'
-          ' Effect 1 sp_potency 8.64 -> 6.826 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Flame Shock x0.790 (Elemental, shared with Enhancement)).',
+          ' Effect 1 sp_potency 8.64 -> 6.826 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Flame Shock x0.790 (Elemental, shared with Enhancement)).'
+          ' Effect 0 sp_potency 20.414 -> 17.862, effect 1 sp_potency 6.826 -> 5.973. (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Elemental x0.875 (shared with Enhancement)).',
     tooltip_vars=shaman_shocks_1212,
     raw_overrides={'AttributesEx5': 8192, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Burning for Fire damage over time.', 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly sears the target with fire, dealing {pot1*mult} Fire damage immediately and {pot2*dot} Fire damage every $t2 sec for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 268435456, 'SpellClassSet': 11, 'SpellLevel': 10, 'SpellVisualID_1': 3445, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -741,14 +745,15 @@ frost_shock_8056 = spell(
     duration_ms=8000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED),
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=25.517, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=22.327, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),
     ],
     spell_icon_id=976,
     notes='SH0a: own 6 s cooldown (category removed), potency 75 T 1500, mana 6%; bonus threat removed (spell_threat 8056 row deleted in 0-world SQL, tooltip sentence dropped). Was: pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
           'Potency system P7-Shaman: eff2 (the Frost damage) converted to sp_potency=214.6 (shaman-potency-proposals.txt, mismatched row); eff1 (the snare) is not a damage/heal/absorb effect, left untouched. '
           '2026-10-20 smoke-test fix pass: eff2 sp_potency 75 -> 32.3 (x0.43, rough damage cut; tooltip follows {pot2}). '
           '2026-10-22 playtest fix pass (P1): base mana 6% -> 4% (user, all specs).'
-          ' sp_potency 32.3 -> 25.517 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Elemental x0.79).',
+          ' sp_potency 32.3 -> 25.517 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Elemental x0.79).'
+          ' Effect 1 sp_potency 25.517 -> 22.327. (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Elemental x0.875 (shared with Enhancement)).',
     tooltip_vars=shaman_shocks_1212,
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed slowed.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly shocks the target with frost, dealing {pot2*mult} Frost damage and slowing its movement speed by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2147483648, 'SpellClassSet': 11, 'SpellLevel': 20, 'SpellVisualID_1': 144, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1127,7 +1132,7 @@ lava_burst_51505 = spell(
     mana_cost_pct=10,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=25.485, potency_kind='direct', implicit_target_a=6),  # 80.7 -> 57.6 (Elemental trim, user 2026-10-22) -> 46.08 (DPS balance pass 1031, Lava Burst -20%) -> 32.26 (ST1000, Lava Burst -30%)
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=22.299, potency_kind='direct', implicit_target_a=6),  # 80.7 -> 57.6 (Elemental trim, user 2026-10-22) -> 46.08 (DPS balance pass 1031, Lava Burst -20%) -> 32.26 (ST1000, Lava Burst -30%)
     ],
     spell_icon_id=3064,
     notes='SH0a: learn level 75 -> 42 (potency 322.7 kept; BaseLevel derived from SpellLevel by the potency pass). Was: pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 75); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 2 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
@@ -1136,7 +1141,8 @@ lava_burst_51505 = spell(
           '2026-10-22 Elemental trim (user): sp_potency 80.7 -> 57.6 (x0.714) so Elemental lands about 1,000 DPS at 300 s after the cost cut; Lava Burst is 28% of Ele damage and 2% of Enhancement\'s (the overload copy follows at half). '
           '2026-11-01 sp_potency 57.6 -> 46.08 (2026-11-01, DPS balance pass 1031, user ruling: Lava Burst -20%; the overload copy 202593 follows at half automatically). '
           'sp_potency 46.08 -> 32.26 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Lava Burst -30%; 46.08 x 0.70 = 32.256, kept to two decimals like the surrounding data, x0.7000; the overload copy 202593 follows at half, 16.13).'
-          ' sp_potency 32.26 -> 25.485 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Elemental x0.79).',
+          ' sp_potency 32.26 -> 25.485 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Elemental x0.79).'
+          ' sp_potency 25.485 -> 22.299 (the overload copy 202593 follows). (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Elemental x0.875 (shared with Enhancement)).',
     tooltip_vars=shaman_lava_1211,
     raw_overrides={'AttributesEx3': 1048576, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 5, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You hurl molten lava at the target, dealing {pot1*mult} Fire damage. If your Flame Shock is on the target, Lava Burst will deal a critical strike.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 24.0, 'SpellClassMask_2': 4096, 'SpellClassSet': 11, 'SpellLevel': 42, 'SpellPriority': 50, 'SpellVisualID_1': 11565, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1484,13 +1490,15 @@ stormstrike_main_hand_32175 = spell(
     range_yards=5.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=254, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=225, implicit_target_a=6),
     ],
     spell_icon_id=2562,
     notes='pulled from existing data (stock main-hand strike, was in npc.csv). Eff0 WEAPON_DAMAGE base 0 / die 0 -> '
           'WEAPON_PERCENT_DAMAGE weapon_potency 100: the same 100% main-hand hit, now on potency (2026-11-01, potency '
           'audit fix F14). Effect 1 weapon_potency 100 -> 140 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Stormstrike +40%). weapon_potency 140 -> 210 (2026-11-15, balance on the Normal-tier kits, user ruling: Stormstrike +50%).'
-          ' weapon_potency 210 -> 254 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
+          ' weapon_potency 210 -> 254 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).'
+          ' weapon_potency 254 -> 265 (2026-11-26, raid-buff-sets retune R1, user ruling: Enhancement-only spells x1.045; 254 x 1.045 = 265.4, rounded: weapon potency must be whole, so x1.043).'
+          ' weapon_potency 265 -> 225 (x0.849: weapon potency must be whole). (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Enhancement-only spells x0.85).',
     raw_overrides={'AttributesEx': 512, 'AttributesEx3': 263680, 'AttributesEx4': 1, 'FacingCasterFlags': 1, 'CastingTimeIndex': 1, 'ProcTypeMask': 139944, 'ProcChance': 100, 'ProcCharges': 2, 'SpellLevel': 40, 'RangeIndex': 2, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'SpellVisualID_1': 7660, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly attack with both weapons.  In addition, the next 2 sources of Nature damage dealt to the target are increased by $17364s1%.  Lasts $17364d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 11, 'SpellClassMask_2': 16, 'SpellClassMask_3': 5120, 'DefenseType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
 )
 
@@ -1509,13 +1517,15 @@ stormstrike_off_hand_32176 = spell(
     range_yards=5.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=254, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=225, implicit_target_a=6),
     ],
     spell_icon_id=2562,
     notes='pulled from existing data (stock off-hand strike, was in npc.csv). Eff0 WEAPON_DAMAGE base 0 / die 0 -> '
           'WEAPON_PERCENT_DAMAGE weapon_potency 100: the same 100% off-hand hit, now on potency (2026-11-01, potency '
           'audit fix F14). Effect 1 weapon_potency 100 -> 140 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Stormstrike +40%). weapon_potency 140 -> 210 (2026-11-15, balance on the Normal-tier kits, user ruling: Stormstrike +50%).'
-          ' weapon_potency 210 -> 254 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
+          ' weapon_potency 210 -> 254 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).'
+          ' weapon_potency 254 -> 265 (2026-11-26, raid-buff-sets retune R1, user ruling: Enhancement-only spells x1.045; 254 x 1.045 = 265.4, rounded: weapon potency must be whole, so x1.043).'
+          ' weapon_potency 265 -> 225 (x0.849: weapon potency must be whole). (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Enhancement-only spells x0.85).',
     raw_overrides={'AttributesEx3': 17039872, 'AttributesEx4': 1, 'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 40, 'RangeIndex': 2, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly attack with both weapons.  In addition, the next 2 sources of Nature damage dealt to the target are increased by $17364s1%.  Lasts $17364d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 11, 'SpellClassMask_2': 16, 'SpellClassMask_3': 5120, 'DefenseType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
 )
 
@@ -1633,7 +1643,7 @@ lava_lash_60103 = spell(
     mana_cost_pct=4,
     range_yards=5.0,
     effects=[
-        Effect(type=31, weapon_potency=266, implicit_target_a=6),
+        Effect(type=31, weapon_potency=235, implicit_target_a=6),
     ],
     spell_icon_id=3741,
     notes='S3a A4 (Enhancement doc, Lava Lash): eff0 WEAPON_PERCENT_DAMAGE 110% off-hand weapon, Fire (stock 100%, raised to 250% then trimmed to 110% 2026-10-22 [tune], S3-ENH-TRIM-DIAG: the engine skips the off-hand penalty on Fire strikes) '
@@ -1648,8 +1658,11 @@ lava_lash_60103 = spell(
           'Eff0 weapon_potency 154 -> 169 (154 x 1.10 = 169.4, rounded: potency must be whole) (2026-11-15, balance on the Normal-tier kits, user ruling: Lava Lash +10%). '
           'Eff0 weapon_potency 169 -> 220 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Lava Lash +30%; 169 x 1.30 = 219.7, rounded: potency must be whole, so x1.302). '
           'Was: pulled from existing data'
-          ' weapon_potency 220 -> 266 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 16777216, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You charge your off-hand weapon with lava and instantly strike, dealing 266% off-hand weapon damage as Fire damage. Deals 40% more damage while Flametongue is active. 6 sec cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemInvTypes': 4194304, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_3': 4, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellPriority': 50, 'SpellVisualID_1': 12759, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+          ' weapon_potency 220 -> 266 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).'
+          ' weapon_potency 266 -> 278 (2026-11-26, raid-buff-sets retune R1, user ruling: Enhancement-only spells x1.045; 266 x 1.045 = 277.97, rounded: weapon potency must be whole, so x1.045).'
+          ' weapon_potency 278 -> 280 (2026-11-26, raid-buff-sets retune R1, user ruling: rounded to a visible 280%). The tooltip text (266% -> 280%) follows.'
+          ' weapon_potency 280 -> 235 (x0.839, a visible multiple of 5); tooltip text 280% -> 235%. (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Enhancement-only spells x0.84).',
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 16777216, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You charge your off-hand weapon with lava and instantly strike, dealing 235% off-hand weapon damage as Fire damage. Deals 40% more damage while Flametongue is active. 6 sec cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemInvTypes': 4194304, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_3': 4, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellPriority': 50, 'SpellVisualID_1': 12759, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 

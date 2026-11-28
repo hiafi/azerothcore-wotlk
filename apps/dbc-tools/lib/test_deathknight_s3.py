@@ -11,7 +11,7 @@ and skipped by the other checks.
      (Ebon Plaguebringer -> Crypt Fever rank index 2), skill_line 772. 2. SkillLineAbility 30760 / 30761 (skill 772).
   3. Scourge Strike 55090: percent effect first, normalized 0-value second, rune cost 2602, SpellLevel 15, d1 b27.
   4. Festering Wound debuff 203456: CumulativeAura 10, DOT_STACKING_RULE, no dispel, not periodic / linked, no bits.
-  5. Burst / overflow / explosion 203457-9: d2 b11, Mechanic 22, potency 26.8 / 25 / 7.5 (RETUNE; burst +7% 2026-11-16), SpellLevel 20.
+  5. Burst / overflow / explosion 203457-9: d2 b11, Mechanic 22, potency 29.12 / 27.16 / 7.5 (RETUNE; burst +7% 2026-11-16; x1.06 on both 2026-11-26; x1.025 on burst and overflow in raid-buff-sets retune R4), SpellLevel 20.
   6. On a Pale Horse damage 203477 d2 b17 (potency 40, SL 25). 7. Lesser Ghoul summon 203469 d2 b14, finite duration, props 61.
   8. Carriers of d2 b11 / b14 / b17 exactly per S3-HANDOFF section 5. 9. No S3 row on a FORBIDDEN bit.
  10. Runic Focus holds d2 b17; Razorice's reader mask is unchanged. 11. Rage of Rivendare ranks lose misc 7293 / aura 240.
@@ -78,7 +78,7 @@ S3_NEW = tuple(range(203440, 203479))
 S3_NEW_TALENTS = tuple(range(60365, 60373))
 SCOURGE_STRIKE_ID, SS_RUNE_COST, SS_LEVEL = 55090, 2602, 15
 WOUND, WOUND_BURST, WOUND_OVERFLOW, WOUND_EXPLOSION = 203456, 203457, 203458, 203459
-WOUND_DAMAGE = {WOUND_BURST: 26.8, WOUND_OVERFLOW: 25.0, WOUND_EXPLOSION: 7.5}  # RETUNE 2026-10-25: was 30 / 30 / 9; burst 25 -> 26.8 (2026-11-16, ST1000, +7%)
+WOUND_DAMAGE = {WOUND_BURST: 21.69, WOUND_OVERFLOW: 20.23, WOUND_EXPLOSION: 7.5}  # RETUNE 2026-10-25: was 30 / 30 / 9; burst 25 -> 26.8 (2026-11-16, ST1000, +7%); burst 28.408, overflow 26.5 (2026-11-26, raid-buff-sets retune R1, Unholy Plague x1.06); burst 29.83, overflow 27.83 (R3, x1.05); burst 29.12, overflow 27.16 (R4, x1.025 of pre-R3)  # GS3 ilvl 66 retune (2026-11-27): burst 21.69, overflow 20.23 (x0.745)
 WOUND_LEVEL, WOUND_MECHANIC = 20, 22
 OPH_DAMAGE, OPH_POTENCY, OPH_LEVEL = 203477, 40.0, 25
 LESSER_GHOUL_SUMMON, LESSER_GHOUL_PROPS = 203469, 61

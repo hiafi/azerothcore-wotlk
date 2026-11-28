@@ -17,7 +17,7 @@ tests prove each one can fail.
   4. D9 stance zero list (22 ids) and the untouched ids (28880, the removed three, talent passives, ranks).
   5. Battle Stance aura 213 (+10), no aura 280; Stance Mastery 12678 (149 / icon 139 / family 4 / SLA skill 26
      acquire 2); 8616 teaches 2458 only.
-  6. Rend (9 potency / 3 s tick, -772 unbound), Thunder Clap 30 s, Commanding Shout (113 at 22, 297 at 60, MaxLevel 60).
+  6. Rend (9 potency / 3 s tick, -772 unbound), Thunder Clap 30 s, Commanding Shout (293 at 22, 738 at 60, MaxLevel 60).
   7. Moved learn levels and level-60 values; trainer rows (D3); the consts; no FORBIDDEN_* bit; no "Capstone"; the spike
      ids declared nowhere.
   8. The rage worked example (D12, D22) as a pure-Python reference at the live m 1.35, with the spell-haste factor.
@@ -69,13 +69,13 @@ W0A_IDS = (HS, CLEAVE, SLAM, OVERPOWER, MS, BT, REVENGE, REND, THUNDER_CLAP, COM
 # MS x1.5 x1.4 x0.8 x1.1 x0.95, Overpower x1.5 x1.4 x0.8, on both parts
 # DPS balance pass 1031 (2026-10-31, user): HS x0.85 (Fury -15%), Slam / MS / Overpower x0.75 (Arms -25%), both parts
 # Round R5 (2026-11-02, user): HS weapon percent 156 -> 172 (about +10%), the flat part unchanged
-PERCENTS = {HS: 189, CLEAVE: 144, SLAM: 165, MS: 188, OVERPOWER: 153}  # 2026-11-15 BAL1/2/4 (MS -5%); S9 MS x0.85; S13 x1.08; S19 x1.044
+PERCENTS = {HS: 180, CLEAVE: 144, SLAM: 150, MS: 170, OVERPOWER: 145}  # 2026-11-15 BAL1/2/4 (MS -5%); S9 MS x0.85; S13 x1.08; S19 x1.044; RBS R1 Slam x1.15, MS/OP x1.21; R2 MS x0.956, OP x0.973; GS3 HS 180, Slam 150, MS 170, OP 145
 # strike -> (percent effect index, flat effect index, flat carrier type)
 STRIKE_SHAPE = {HS: (1, 2, WEAPON_DAMAGE), CLEAVE: (1, 2, WEAPON_DAMAGE), SLAM: (1, 2, WEAPON_DAMAGE),
                 MS: (2, 3, NORMALIZED_WEAPON), OVERPOWER: (1, 2, NORMALIZED_WEAPON)}
-FLAT_POT = {HS: 11.22, CLEAVE: 12, SLAM: 14.85, OVERPOWER: 15.4275, MS: 14.8868}  # BAL1/2/4; S9 MS x0.85; S13 x1.08; S19 x1.045
-FLAT_L60 = {HS: 29, CLEAVE: 31, SLAM: 38, OVERPOWER: 39, MS: 38}  # BAL1, BAL2 (flat +10%), BAL4 MS -5%; S9 MS x0.85; S13 x1.08; S19 x1.045
-FLAT_L22 = {HS: 5, CLEAVE: 5, SLAM: 13, OVERPOWER: 5, MS: 5}
+FLAT_POT = {HS: 10.686, CLEAVE: 12, SLAM: 13.4825, OVERPOWER: 14.632, MS: 13.6103}  # BAL1/2/4; S9 MS x0.85; S13 x1.08; S19 x1.045; RBS R1
+FLAT_L60 = {HS: 27, CLEAVE: 31, SLAM: 34, OVERPOWER: 37, MS: 35}  # BAL1, BAL2 (flat +10%), BAL4 MS -5%; S9 MS x0.85; S13 x1.08; S19 x1.045; RBS R1
+FLAT_L22 = {HS: 3, CLEAVE: 5, SLAM: 11, OVERPOWER: 5, MS: 5}  # GS3 ilvl 66 retune: HS x0.95, Slam / OP / MS about x0.79 (2026-11-27)
 
 # WP-BRIEF ruling 2 / 0VERIFY 2e: ShapeshiftMask -> 0
 ZERO_LIST = (72, 100, 355, 676, 772, 871, 1680, 1715, 1719, 2565, 3411, 5308, 6343, 6552, 6572, 7384, 7922, 12328,
@@ -350,18 +350,18 @@ def check_rend(rows: dict[int, dict], entries: dict[int, dict], script_removals:
         return [f"{REND}: not built"]
     bad = []
     pot = (e.get("effect1") or {}).get("_potency") or {}
-    if (pot.get("kind"), pot.get("total_potency"), pot.get("t_seconds")) != ("periodic", 10.9123, 3.0):
+    if (pot.get("kind"), pot.get("total_potency"), pot.get("t_seconds")) != ("periodic", 10.5631, 3.0):
         bad.append(f"potency {pot.get('kind')}/{pot.get('total_potency')}/T {pot.get('t_seconds')}, "
-                   "expected periodic/10.9123/T 3 (S9 Rend x0.80, S13 x1.08)")
+                   "expected periodic/10.5631/T 3 (S9 Rend x0.80, S13 x1.08, RBS R1 x1.21, GS3 x0.80)")
     if not float(pot.get("ap_coefficient") or 0):
         bad.append("no attack-power coefficient")
     if (_i(r, "EffectAura_1"), _i(r, "EffectAuraPeriod_1")) != (3, 3000):
         bad.append(f"aura/period {r.get('EffectAura_1')}/{r.get('EffectAuraPeriod_1')}, expected 3 / 3000")
     # 11 / 68 before the potency rebase; its base x a = 0.57 (level60-stat-curve HANDOFF 1.9, LS5b): 6 / 39; attack power
     # side a 0.71 (level60-stat-curve S7b in-combat refit): 7 / 48; S9 Rend x0.80 (2026-11-21): 5 / 38;
-    # S13 x1.08: 5 / 41.
-    if calc_value(r, 1, 60) != 41 or calc_value(r, 1, 22) != 5:
-        bad.append(f"per-tick value {calc_value(r, 1, 22)} at 22 / {calc_value(r, 1, 60)} at 60, expected 5 / 41")
+    # S13 x1.08: 5 / 41; raid-buff-sets R1 x1.21 (2026-11-26): 8 / 50; GS3 x0.80 (2026-11-27): 6 / 40.
+    if calc_value(r, 1, 60) != 40 or calc_value(r, 1, 22) != 6:
+        bad.append(f"per-tick value {calc_value(r, 1, 22)} at 22 / {calc_value(r, 1, 60)} at 60, expected 6 / 40")
     if not any(int(x["spell_id"]) == -REND and x["ScriptName"] == "spell_warr_rend" for x in script_removals):
         bad.append("unbind_script(-772, 'spell_warr_rend') is not declared")
     if any(int(x["spell_id"]) == -REND for x in script_names):
@@ -386,7 +386,7 @@ def check_commanding_shout(rows: dict[int, dict]) -> list[str]:
     if r is None:
         return [f"{COMMANDING_SHOUT}: not built"]
     bad = []
-    for lvl, want in ((22, 113), (60, 297)):
+    for lvl, want in ((22, 293), (60, 738)):  # raid buff sets 2026-11-25, option B (was 113 / 297)
         if calc_value(r, 1, lvl) != want:
             bad.append(f"value at level {lvl} is {calc_value(r, 1, lvl)}, expected {want}")
     if calc_value(r, 1, 70) != calc_value(r, 1, 60):
@@ -694,12 +694,12 @@ def _strike_rows() -> dict[int, dict]:
         r.update(extra)
         return r
     return {
-        HS: strike(HS, 1, 2, WEAPON_DAMAGE, 189, 1, -9, 4.488 / 7),
+        HS: strike(HS, 1, 2, WEAPON_DAMAGE, 180, 1, -10, 4.2744 / 7),
         CLEAVE: strike(CLEAVE, 1, 2, WEAPON_DAMAGE, 144, 14, -1, 4.8 / 7, EffectChainTargets_1=2,
                        EffectChainTargets_2=2),
-        SLAM: strike(SLAM, 1, 2, WEAPON_DAMAGE, 165, 30, 12, 5.94 / 7),
-        OVERPOWER: strike(OVERPOWER, 1, 2, NORMALIZED_WEAPON, 153, 12, -4, 6.2 / 7),
-        MS: strike(MS, 2, 3, NORMALIZED_WEAPON, 188, 20, 3, 5.95472 / 7, Effect_1=APPLY_AURA, EffectAura_1=118),
+        SLAM: strike(SLAM, 1, 2, WEAPON_DAMAGE, 150, 30, 10, 5.393 / 7),
+        OVERPOWER: strike(OVERPOWER, 1, 2, NORMALIZED_WEAPON, 145, 12, -4, 5.8528 / 7),
+        MS: strike(MS, 2, 3, NORMALIZED_WEAPON, 170, 20, 3, 5.44412 / 7, Effect_1=APPLY_AURA, EffectAura_1=118),
     }
 
 
@@ -850,9 +850,9 @@ class WarriorW0aNegativeTest(unittest.TestCase):
 
     def test_rend(self):
         row = {"ID": REND, "EffectAura_1": 3, "EffectAuraPeriod_1": 3000, "BaseLevel": 4, "SpellLevel": 4,
-               "EffectBasePoints_1": -12, "EffectRealPointsPerLevel_1": 0.929728, "EffectDieSides_1": 1}  # S9 x0.80, S13 x1.08
-        ent = {"id": REND, "effect1": {"_potency": {"kind": "periodic", "total_potency": 10.9123, "t_seconds": 3.0,
-                                                    "ap_coefficient": 0.0578}}}
+               "EffectBasePoints_1": -11, "EffectRealPointsPerLevel_1": 0.89997612, "EffectDieSides_1": 1}  # S9 x0.80, S13 x1.08, R1 x1.21
+        ent = {"id": REND, "effect1": {"_potency": {"kind": "periodic", "total_potency": 10.5631, "t_seconds": 3.0,
+                                                    "ap_coefficient": 0.1311}}}
         rem = [{"spell_id": -REND, "ScriptName": "spell_warr_rend"}]
         self.assertEqual(check_rend({REND: row}, {REND: ent}, rem, []), [])
         for key, val in (("total_potency", 11.23), ("kind", "direct"), ("t_seconds", 1.5)):
@@ -878,13 +878,13 @@ class WarriorW0aNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_thunder_clap({}, {}, 9)), 1)
 
     def test_commanding_shout(self):
-        row = {"ID": COMMANDING_SHOUT, "BaseLevel": 22, "SpellLevel": 22, "MaxLevel": 60, "EffectBasePoints_1": 112,
-               "EffectRealPointsPerLevel_1": 4.8422, "EffectDieSides_1": 1}
+        row = {"ID": COMMANDING_SHOUT, "BaseLevel": 22, "SpellLevel": 22, "MaxLevel": 60, "EffectBasePoints_1": 292,
+               "EffectRealPointsPerLevel_1": 11.72, "EffectDieSides_1": 1}
         self.assertEqual(check_commanding_shout({COMMANDING_SHOUT: row}), [])
-        self.assertEqual(calc_value(row, 1, 22), 113)
-        self.assertEqual(calc_value(row, 1, 60), 297)
+        self.assertEqual(calc_value(row, 1, 22), 293)
+        self.assertEqual(calc_value(row, 1, 60), 738)
         for col, val in (("EffectBasePoints_1", 1079), ("EffectRealPointsPerLevel_1", 3.0), ("MaxLevel", 80),
-                         ("SpellLevel", 68), ("BaseLevel", 68), ("EffectBasePoints_1", 111)):
+                         ("SpellLevel", 68), ("BaseLevel", 68), ("EffectBasePoints_1", 291)):
             self.assertGreaterEqual(len(check_commanding_shout({COMMANDING_SHOUT: {**row, col: val}})), 1, col)
         self.assertEqual(len(check_commanding_shout({})), 1)
 

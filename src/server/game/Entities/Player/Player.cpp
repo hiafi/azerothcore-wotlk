@@ -172,7 +172,14 @@ static Milliseconds GetCooldownHasteCorrectionDelay(SpellInfo const* spellInfo)
 // would otherwise fail CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS), + Call Dreadstalkers 200829
 // (warlock-rework Demonology, 20 s base cooldown, DEMONOLOGY.md §7.12), + Death from Above 204148
 // (rogue-rework S2 Subtlety capstone, 20 s base cooldown, DOCFIX U31).
-static constexpr std::array<uint32, 3> CUSTOM_COOLDOWN_HASTE_ALLOW_LIST = { 200333, 200829, 204148 };
+// Custom: gear-scaling GS2 (lever A, Systems.md section 4) - the short damage cooldowns of the specs that gained too
+// little from gear, keyed by the id the player casts: Holy Shock 20473 (category 892, 6 s; its heal side scales too),
+// Exorcism 879 (category 19, 15 s), Blade of Justice 201400 (10 s), Divine Storm 53385 (10 s), Lava Lash 60103
+// (6 s), Stormstrike 17364 (8 s) and Hand of Gul'dan 200820 (12 s). Only the cast id is hasted: the stale ranks
+// sharing categories 892 / 19 (Holy Shock 20929 ... 48825, Exorcism 5614 ... 48801) keep the full category cooldown.
+// Not mirrored by the Molten set's cooldown hooks: MoltenSetLogic.h keeps its own kMoltenCooldownTriggerAllowList.
+static constexpr std::array<uint32, 10> CUSTOM_COOLDOWN_HASTE_ALLOW_LIST =
+    { 200333, 200829, 204148, 20473, 879, 201400, 53385, 60103, 17364, 200820 };
 
 // Custom: paladin-rework A7 (PLAN §1A, SHARED B5.12) - never Cooldown Haste eligible, whatever the base
 // cooldown or the allow list says: every player seal (30/60 s base would pass the >= 30 s rule). Talent

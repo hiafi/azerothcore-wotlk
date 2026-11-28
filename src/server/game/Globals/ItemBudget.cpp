@@ -1300,4 +1300,16 @@ namespace ItemBudget
         auto itr = _suffixFactor.find(entry);
         return itr != _suffixFactor.end() ? itr->second : 0;
     }
+
+    // Custom: gear-scaling GS2 D - the reference weapon DPS for attack power potency (SpellPotency).
+    float GetWeaponDpsCurve(uint32 itemLevel, uint32 quality, bool singleSlot)
+    {
+        auto itr = _weaponDpsCurve.find({itemLevel, quality, singleSlot});
+        return itr != _weaponDpsCurve.end() ? itr->second : 0.0f;
+    }
+
+    bool IsSingleSlotWeaponType(uint32 inventoryType)
+    {
+        return IsSingleSlotWeapon(inventoryType);
+    }
 }

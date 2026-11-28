@@ -87,12 +87,12 @@ holy_light_635 = spell(
     mana_cost_pct=29,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=95.74267, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=79.78556, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=70,
     tooltip_vars=holy_heal_tooltip,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 13 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=135.0 (paladin-potency-proposals.txt, user value; was 207.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: sp_potency 150 -> 135 (2,383 at 60); description {pot1} -> {pot1*hl} (entry 1105 owned by paladin_holy_spells.py). sp_potency 135 -> 94.5 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Holy Light healing -30%). sp_potency 94.5 -> 108.675 (2026-11-01, DPS balance pass 1031 round T2, user ruling: Holy Light healing +15%). Effect 1 sp_potency 108.675 -> 95.74267 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Paladin x0.881).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 20, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1*hl}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2147483648, 'SpellClassSet': 10, 'SpellLevel': 1, 'SpellVisualID_1': 2936, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 13 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=135.0 (paladin-potency-proposals.txt, user value; was 207.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: sp_potency 150 -> 135 (2,383 at 60); description {pot1} -> {pot1*hl} (entry 1105 owned by paladin_holy_spells.py). sp_potency 135 -> 94.5 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Holy Light healing -30%). sp_potency 94.5 -> 108.675 (2026-11-01, DPS balance pass 1031 round T2, user ruling: Holy Light healing +15%). Effect 1 sp_potency 108.675 -> 95.74267 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Holy Paladin x0.881). Effect 1 sp_potency 95.74267 -> 87.03879 (x1/1.1), description {pot1*hl} -> {pot1*hlhg} (2026-11-28, gear-scaling tank survival pass, user ruling: lower Holy Light\'s base healing to cut Protection self-healing, Prot Paladin 93 s -> about 80 s, and give it back to Holy through Holy Guidance (7,2) +3/7/10% Holy Light healing, so a 3/3 Holy Guidance Holy Paladin heals exactly as before). Effect 1 sp_potency 87.03879 -> 79.78556 (x1/1.2 of the original 95.74267), Holy Guidance +3/7/10% -> +7/14/20% (2026-11-28, gear-scaling tank survival pass round 2, user ruling: Prot Paladin 87.2 s, Holy Light /1.2 in total; 3/3 Holy Guidance restores x1.2 exactly).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 20, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1*hlhg}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2147483648, 'SpellClassSet': 10, 'SpellLevel': 1, 'SpellVisualID_1': 2936, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -134,12 +134,14 @@ exorcism_879 = spell(
     mana_cost_pct=8,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=61.25, ap_potency=61.25, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=55.7019, ap_potency=55.7019, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=292,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=140.0 / ap_potency=140.0 (paladin-potency-proposals.txt total 280.0, user value; was 271.8 from a stale worktree copy, corrected 2026-10-02; split evenly - matches the pre-existing 0.15/0.15 equal SP/AP coefficient split); also fixes PLAN F13 (the single-rank migration had zeroed this spell\'s spell_bonus_data direct_bonus, killing its live SP scaling - this conversion restores it as a side effect, same as docs/potency-system.md\'s "Known live bug" note).'
           ' Effect 1 sp_potency/ap_potency 125.0 -> 87.5 (2026-10-08, DPS balance pass, user ruling: Retribution Exorcism x0.70, round 9).'
-          ' Effect 1 sp_potency/ap_potency 87.5 -> 61.25 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
+          ' Effect 1 sp_potency/ap_potency 87.5 -> 61.25 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).'
+          ' Effect 1 sp_potency/ap_potency 61.25 -> 65.5375 (2026-11-26, raid-buff-sets retune R1, user ruling: Exorcism x1.07, Retribution and Shockadin only).'
+          ' Effect 1 sp_potency and ap_potency 65.5375 -> 55.7019 (x0.85) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Ret and Shockadin shared, x0.85).',
     raw_overrides={'AttributesEx': 512, 'AttributesEx6': 33554432, 'AttributesEx7': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1*mult_exo} Holy damage to an enemy target.  If the target is Undead or Demon, it will always critically hit.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 2, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1104, 'SpellLevel': 20, 'SpellVisualID_1': 324, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -253,10 +255,11 @@ holy_wrath_2812 = spell(
     mana_cost_pct=20,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=100.0, ap_potency=100.0, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=85.0, ap_potency=85.0, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
     ],
     spell_icon_id=158,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=125.0 / ap_potency=125.0 (paladin-potency-proposals.txt total 250.0, user value; was 244.5 from a stale worktree copy, corrected 2026-10-02; split evenly - matches the pre-existing 0.07/0.07 equal SP/AP coefficient split); also fixes PLAN F13 (zeroed direct_bonus restored as a side effect of the conversion).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=125.0 / ap_potency=125.0 (paladin-potency-proposals.txt total 250.0, user value; was 244.5 from a stale worktree copy, corrected 2026-10-02; split evenly - matches the pre-existing 0.07/0.07 equal SP/AP coefficient split); also fixes PLAN F13 (zeroed direct_bonus restored as a side effect of the conversion).'
+          ' Effect 1 sp_potency and ap_potency 100.0 -> 85.0 (x0.85) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Ret and Shockadin shared, x0.85).',
     raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Sends bolts of holy power in all directions, causing {pot1*mult_hw} Holy damage to all enemies within $a1 yards, doubled against Demons and Undead, and stunning Demons and Undead for $201141d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'Speed': 20.0, 'SpellClassMask_2': 2097152, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1104, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 126, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -322,11 +325,16 @@ blessing_of_might_19740 = spell(
     range_yards=30.0,
     duration_ms=600000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, points_per_level=6.973684210526316, implicit_target_a=21, apply_aura=AuraType.MOD_ATTACK_POWER),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, points_per_level=6.973684210526316, implicit_target_a=21, apply_aura=124),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, points_per_level=3.786, implicit_target_a=21, apply_aura=AuraType.MOD_ATTACK_POWER),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, points_per_level=3.786, implicit_target_a=21, apply_aura=124),
     ],
     spell_icon_id=298,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
+        'e0/e1 points_per_level 6.9737 -> 3.786 (2026-11-25, raid buff sets, user ruling: Blessing of Might gives 232 attack '
+        'power at level 60, the stock level 60 rank, as Battle Shout): 20 at 4, 80 at 20, 156 at 40, 232 at 60 (307 at 80 until '
+        'the 70/80 brackets retune it).'
+    ),
     raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases attack power by $s1.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Places a Blessing on the friendly target, increasing attack power by $s1 for $d.  Players may only have one Blessing on them per Paladin at any one time.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2, 'SpellClassSet': 10, 'SpellLevel': 4, 'SpellVisualID_1': 9179, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -345,10 +353,13 @@ blessing_of_wisdom_19742 = spell(
     range_yards=30.0,
     duration_ms=600000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=1.2424242424242424, implicit_target_a=21, apply_aura=85),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=0.5, implicit_target_a=21, apply_aura=85),
     ],
     spell_icon_id=306,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 14); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 14); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ' points_per_level 1.2424 -> 0.5 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): 13 at 20, 23 at 40, 33 at 60 (stock 33). The old line gave 67 at 60. The Scroll of Wisdom 208876 follows at 33.'
+    ),
     raw_overrides={'AttributesEx': 1024, 'AttributesEx3': 1, 'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Restores $s1 mana every 5 seconds.', 'BaseLevel': 14, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Places a Blessing on the friendly target, restoring $s1 mana every 5 seconds for $d.  Players may only have one Blessing on them per Paladin at any one time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 65536, 'SpellClassSet': 10, 'SpellLevel': 14, 'SpellVisualID_1': 5400, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -597,12 +608,15 @@ greater_blessing_of_might_25782 = spell(
     range_yards=40.0,
     duration_ms=1800000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=184, points_per_level=13.035714285714286, implicit_target_a=61, apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=100.0),
-        Effect(type=EffectType.APPLY_AURA, base_points=184, points_per_level=13.035714285714286, implicit_target_a=61, apply_aura=124, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, points_per_level=3.786, implicit_target_a=61, apply_aura=AuraType.MOD_ATTACK_POWER, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, points_per_level=3.786, implicit_target_a=61, apply_aura=124, radius_yards=100.0),
     ],
     spell_icon_id=1802,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 52); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases attack power by $s1.', 'BaseLevel': 52, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives all members of the raid or group that share the same class with the target the Greater Blessing of Might, increasing attack power by $s1 for $d.  Players may only have one Blessing on them per Paladin at any one time.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 0, 'Reagent_1': 0, 'SpellClassMask_1': 2, 'SpellClassSet': 10, 'SpellLevel': 52, 'SpellVisualID_1': 9179, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 52); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ' Copies Blessing of Might 19740\'s curve (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): BaseLevel / SpellLevel 52 -> 4, base 184 -> 19, points_per_level 13.0357 -> 3.786 (MaxLevel 80), so it equals Blessing of Might at every level: 232 attack power at 60 (+25% over it before). The trainer row still teaches it at 52.'
+    ),
+    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases attack power by $s1.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives all members of the raid or group that share the same class with the target the Greater Blessing of Might, increasing attack power by $s1 for $d.  Players may only have one Blessing on them per Paladin at any one time.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 0, 'Reagent_1': 0, 'SpellClassMask_1': 2, 'SpellClassSet': 10, 'SpellLevel': 4, 'SpellVisualID_1': 9179, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -620,10 +634,13 @@ greater_blessing_of_wisdom_25894 = spell(
     range_yards=40.0,
     duration_ms=1800000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, points_per_level=2.3846153846153846, implicit_target_a=61, apply_aura=85, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, points_per_level=0.5, implicit_target_a=61, apply_aura=85, radius_yards=100.0),
     ],
     spell_icon_id=1805,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 54); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 54); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ' points_per_level 2.3846 -> 0.5 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): 33 at 60, equal to Blessing of Wisdom 19742 from level 54 on (stock 33). The old line gave 44 at 60.'
+    ),
     raw_overrides={'AttributesEx': 1024, 'AttributesEx3': 1, 'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Restores $s1 mana every 5 seconds.', 'BaseLevel': 54, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives all members of the raid or group that share the same class with the target the Greater Blessing of Wisdom, restoring $s1 mana every 5 seconds for $d.  Players may only have one Blessing on them per Paladin at any one time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 0, 'Reagent_1': 0, 'SpellClassMask_1': 65536, 'SpellClassSet': 10, 'SpellLevel': 54, 'SpellVisualID_1': 5400, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -776,7 +793,7 @@ seal_of_vengeance_31801 = spell(
     ],
     spell_icon_id=2292,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee attacks deal Twilight damage.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'CumulativeAura': 10, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fills you with holy power for $d.  Each melee hit deals ${10*$<mult_seal>}% weapon damage as Twilight (Holy and Shadow) damage.  Crusader Strike and other seal builders add a stack (max 10).  When the seal expires it becomes Primed for 20 sec; Judgement and Deliverance unleash it.  Only one seal can be active at a time.\n\nUnleash: Afflicts the target with Twilight damage over 15 sec, increased by 10% per stack, and shields you for 20% of the damage it will deal.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassMask_2': 2048, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1102, 'SpellLevel': 20, 'SpellVisualID_1': 8062, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee attacks deal Twilight damage.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'CumulativeAura': 10, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fills you with holy power for $d.  Each melee hit deals ${11*$<mult_seal>}% weapon damage as Twilight (Holy and Shadow) damage.  Crusader Strike and other seal builders add a stack (max 10).  When the seal expires it becomes Primed for 20 sec; Judgement and Deliverance unleash it.  Only one seal can be active at a time.\n\nUnleash: Afflicts the target with Twilight damage over 15 sec, increased by 10% per stack, and shields you for 20% of the damage it will deal.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassMask_2': 2048, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1102, 'SpellLevel': 20, 'SpellVisualID_1': 8062, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -885,12 +902,13 @@ shield_of_righteousness_53600 = spell(
     mana_cost_pct=4,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=236.7792, potency_kind='direct', implicit_target_a=6, chain_targets=1),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=220.7, potency_kind='direct', implicit_target_a=6, chain_targets=1),
     ],
     spell_icon_id=3031,
     tooltip_vars=prot_sor_tooltip,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 75); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 2 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=145.8 (potency-report base-damage default; not mismatched - this flat bonus never had an SP coefficient at all live, so the new 0.625 coefficient is a real, intended gain from "move to the formula", docs/potency-system.md D4). Only this flat $s1 bonus effect is touched - the separate block-value-based effect (EffectBasePoints_2=99, not modeled by this Effect() list) is untouched. sp_potency 145.8 -> 291.6 and EffectBasePoints_2 99 -> 199 (block-value percent 100% -> 200%, read by SpellEffects.cpp Shield of Righteousness) (2026-11-01, DPS balance pass 1031 round T1, user ruling: Shield of Righteousness +100%). mana_cost_pct 6 -> 4 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Prot Paladin mana costs). sp_potency 291.6 -> 204.12 and EffectBasePoints_2 199 -> 139 (block-value percent 200% -> 140%) (2026-11-02, DPS balance pass 1031 round R6, user ruling: Shield of the Righteous -30%).'
-          ' sp_potency 204.12 -> 236.7792 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Prot Paladin, Avenger\'s Shield, Shield of Righteousness and Hammer of the Righteous x1.16).',
+          ' sp_potency 204.12 -> 236.7792 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Prot Paladin, Avenger\'s Shield, Shield of Righteousness and Hammer of the Righteous x1.16).'
+          ' Effect 1 sp_potency 236.7792 -> 220.7 (x0.932) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Protection tank DPS, about x0.93).',
     raw_overrides={'AttributesEx': 512, 'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Slam the target with your shield, causing Holy damage based on your block value plus an additional {pot1*il}.', 'EffectBasePoints_2': 139, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 1048576, 'SpellClassSet': 10, 'SpellLevel': 48, 'SpellVisualID_1': 11792, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1054,12 +1072,13 @@ avenger_s_shield_31935 = spell(
     range_yards=30.0,
     duration_ms=10000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=307.052, ap_potency=307.052, potency_kind='direct', implicit_target_a=6, chain_targets=3),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=286.1, ap_potency=286.1, potency_kind='direct', implicit_target_a=6, chain_targets=3),
         Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED, chain_targets=3),
     ],
     spell_icon_id=2172,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=132.35 / ap_potency=132.35 (paladin-potency-proposals.txt total 264.7, split evenly - matches the pre-existing 0.07/0.07 equal SP/AP coefficient split); also fixes PLAN F13 (zeroed direct_bonus restored as a side effect of the conversion). sp_potency 132.35 -> 264.7 and ap_potency 132.35 -> 264.7 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Avenger’s Shield +100%). mana_cost_pct 26 -> 16 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Prot Paladin mana costs).'
-          ' sp_potency 264.7 -> 307.052; ap_potency 264.7 -> 307.052 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Prot Paladin, Avenger\'s Shield, Shield of Righteousness and Hammer of the Righteous x1.16).',
+          ' sp_potency 264.7 -> 307.052; ap_potency 264.7 -> 307.052 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Prot Paladin, Avenger\'s Shield, Shield of Righteousness and Hammer of the Righteous x1.16).'
+          ' Effect 1 sp_potency and ap_potency 307.052 -> 286.1 (x0.932) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Protection tank DPS, about x0.93).',
     raw_overrides={'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Dazed.', 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls a holy shield at the enemy, dealing {pot1} Holy damage, Dazing them and then jumping to additional nearby enemies.  Affects $x1 total targets.  Lasts $d. Grants 2 stacks of Bulwark.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 35.0, 'SpellClassMask_1': 16384, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 7886, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1216,13 +1235,14 @@ crusader_strike_35395 = spell(
     duration_ms=1,
     effects=[
         Effect(type=121, base_points=-1, implicit_target_a=6),
-        Effect(type=31, weapon_potency=118, implicit_target_a=6),
+        Effect(type=31, weapon_potency=100, implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=6, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2309,
     notes='pulled from existing data'
           ' Effect 2 weapon_potency 140 -> 168 (2026-10-08, DPS balance pass, user ruling: Retribution x1.20).'
-          ' Effect 2 weapon_potency 168 -> 118 (117.6 rounded to a whole number, weapon_potency must be whole) (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
+          ' Effect 2 weapon_potency 168 -> 118 (117.6 rounded to a whole number, weapon_potency must be whole) (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).'
+          ' Effect 2 weapon_potency 118 -> 100 (x0.847, nearest 5) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Paladin shared by Ret, Shockadin and Prot, x0.85).',
     raw_overrides={'AttributesEx': 268435968, 'AttributesEx6': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant strike that causes ${$m2*$<mult_cs>}% weapon damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 32768, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1103, 'SpellLevel': 1, 'SpellVisualID_1': 8316, 'StanceBarOrder': 4294967295, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1243,12 +1263,14 @@ divine_storm_53385 = spell(
     effects=[
         Effect(type=EffectType.DUMMY, base_points=149, implicit_target_a=1),
         Effect(type=EffectType.DUMMY, base_points=24, implicit_target_a=1),
-        Effect(type=31, weapon_potency=126, implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
+        Effect(type=31, weapon_potency=120, implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
     ],
     spell_icon_id=3027,
     notes='pulled from existing data'
           ' Effect 3 weapon_potency 150 -> 180 (2026-10-08, DPS balance pass, user ruling: Retribution x1.20).'
-          ' Effect 3 weapon_potency 180 -> 126 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
+          ' Effect 3 weapon_potency 180 -> 126 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).'
+          ' Effect 3 weapon_potency 126 -> 140 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Retribution-only x1.13 = 142.38, shown as a multiple of 5: x1.111).'
+          ' Effect 3 weapon_potency 140 -> 120 (x0.857, nearest 5) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Retribution only, about x0.84).',
     raw_overrides={'AttributesEx': 16, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant weapon attack that causes $s3% of weapon damage to up to 5 enemies within $a3 yards.  The Divine Storm heals up to 3 injured party or raid members for a total of $s2% of the damage caused.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'MaxTargets': 5, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 12006, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1291,11 +1313,12 @@ hammer_of_the_righteous_53595 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6, chain_targets=3),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=365, implicit_target_a=6, chain_targets=3),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=340, implicit_target_a=6, chain_targets=3),
     ],
     spell_icon_id=3023,
     notes='pulled from existing data. paladin-rework S3 PROTECTION 4.1: eff0 NORMALIZED_WEAPON_DMG + eff1 WEAPON_PERCENT_DAMAGE weapon_potency 75 (Crusader Strike shape, both chain 3), no direct-damage effect left (stock main-hand DPS hardcode inert), stale effect-2/3 keys + MaxLevel 59 / BaseLevel 50 removed, SpellLevel 20 (generator sets BaseLevel/MaxLevel). Effect 1 weapon_potency 75 -> 225 (2026-11-01, DPS balance pass 1031 round T1, user ruling: Hammer of the Righteous +200%). Effect 1 weapon_potency 225 -> 394 (225 x 1.75 = 393.75, rounded to a whole number) (2026-11-01, DPS balance pass 1031 round R4, user ruling: Hammer of the Righteous +75%). mana_cost_pct 6 -> 4 (2026-11-02, DPS balance pass 1031 round R5, user ruling: Prot Paladin mana costs). Effect 1 weapon_potency 394 -> 315 (394 x 0.8 = 315.2, rounded to a whole number) (2026-11-02, DPS balance pass 1031 round R6, user ruling: Hammer of the Righteous -20%).'
-          ' weapon_potency 315 -> 365 (x1.159; weapon potency stays whole) (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Prot Paladin, Avenger\'s Shield, Shield of Righteousness and Hammer of the Righteous x1.16).',
+          ' weapon_potency 315 -> 365 (x1.159; weapon potency stays whole) (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Prot Paladin, Avenger\'s Shield, Shield of Righteousness and Hammer of the Righteous x1.16).'
+          ' Effect 2 weapon_potency 365 -> 340 (x0.932, nearest 5) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Protection tank DPS, about x0.93).',
     raw_overrides={'AttributesEx': 512, 'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hammer the current target and up to ${$x2-1} additional nearby targets, causing $s2% weapon damage as Holy damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41105, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'Speed': 35.0, 'SpellClassMask_2': 262144, 'SpellClassSet': 10, 'SpellLevel': 20, 'SpellVisualID_1': 11927, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1452,12 +1475,13 @@ judgement_201060 = spell(
     mana_cost_pct=5,
     range_yards=10.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=35.0, ap_potency=35.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=29.75, ap_potency=29.75, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=205,
     notes='paladin-rework S1 SHARED B3.1: own hit 100 potency hybrid (50 SP / 50 AP), MAGIC class, family bit J (d2 0x8), shared 6 s cooldown with Deliverance, castable with no Primed aura (D1). '
           'Visual copied from stock Judgement of Light 20271 (5651). spell_pal_judgement_dispatch does the Primed consume / unleash.'
-          ' Effect 1 sp_potency/ap_potency 50.0 -> 35.0 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).',
+          ' Effect 1 sp_potency/ap_potency 50.0 -> 35.0 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).'
+          ' Effect 1 sp_potency and ap_potency 35.0 -> 29.75 (x0.85) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Paladin shared by Ret, Shockadin and Prot, x0.85).',
     raw_overrides=_raw(
         castable=True,
         SpellClassMask_3=m.JUDGEMENT,
@@ -1582,14 +1606,17 @@ blade_of_justice_201400 = spell(
     mana_cost_pct=4,
     range_yards=20.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=55.575, ap_potency=55.575, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=58.2348, ap_potency=58.2348, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90210,
     notes='paladin-rework S1 RETRIBUTION §4.1: 100 / 100 potency, 10 s cooldown (< 30 s: no Cooldown Haste), BoJ bit d2 0x800, learn 30. Visual = Crusader Strike SV 8316 placeholder (VFX follow-up). '
           'The six seal echoes 201401-201409 are paladin_trigger_spells.py.'
           ' Effect 1 sp_potency/ap_potency 100.0 -> 65.0 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -35%).'
           ' Effect 1 sp_potency/ap_potency 65.0 -> 48.75 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Blade of Justice -25%).'
-          ' sp_potency 48.75 -> 55.575; ap_potency 48.75 -> 55.575 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).',
+          ' sp_potency 48.75 -> 55.575; ap_potency 48.75 -> 55.575 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).'
+          ' sp_potency 55.575 -> 62.7997; ap_potency 55.575 -> 62.7997 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).'
+          ' sp_potency 62.7997 -> 69.0797; ap_potency 62.7997 -> 69.0797 (2026-11-26, raid-buff-sets retune R3, user ruling: Retribution-only x1.1).'
+          ' Effect 1 sp_potency and ap_potency 69.0797 -> 58.2348 (x0.843) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Retribution only, about x0.84).',
     raw_overrides=_raw(
         castable=True,
         SpellClassMask_3=m.BLADE_OF_JUSTICE,
@@ -1617,7 +1644,7 @@ execution_sentence_burst_201411 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=149.3856, ap_potency=149.3856, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=156.5361, ap_potency=156.5361, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90212,
     notes='paladin-rework S1 RETRIBUTION §4.3: the hammer\'s main-target strike, 180 / 180, triggered only. Range 50000 (the hammer can expire with the paladin far away). '
@@ -1625,7 +1652,10 @@ execution_sentence_burst_201411 = spell(
           ' Effect 1 sp_potency/ap_potency 180.0 -> 234.0 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).'
           ' Effect 1 sp_potency/ap_potency 234.0 -> 163.8 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).'
           ' Effect 1 sp_potency/ap_potency 163.8 -> 131.04 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Execution Sentence -20%).'
-          ' sp_potency 131.04 -> 149.3856; ap_potency 131.04 -> 149.3856 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).',
+          ' sp_potency 131.04 -> 149.3856; ap_potency 131.04 -> 149.3856 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).'
+          ' sp_potency 149.3856 -> 168.8057; ap_potency 149.3856 -> 168.8057 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).'
+          ' sp_potency 168.8057 -> 185.6863; ap_potency 168.8057 -> 185.6863 (2026-11-26, raid-buff-sets retune R3, user ruling: Retribution-only x1.1).'
+          ' Effect 1 sp_potency and ap_potency 185.6863 -> 156.5361 (x0.843) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Retribution only, about x0.84).',
     raw_overrides=_raw(
         AttributesEx2=0x4,  # SPELL_ATTR2_IGNORE_LINE_OF_SIGHT: script-cast at a target / dest the paladin may not see
         SpellClassMask_3=m.EXECUTION_SENTENCE,
@@ -1686,7 +1716,7 @@ execution_sentence_201410 = spell(
     duration_ms=10000,
     effects=[
         Effect(
-            type=EffectType.APPLY_AURA, sp_potency=29.8771, ap_potency=29.8771, potency_kind='periodic', implicit_target_a=6,
+            type=EffectType.APPLY_AURA, sp_potency=31.3072, ap_potency=31.3072, potency_kind='periodic', implicit_target_a=6,
             apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000,
         ),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.MOD_DAMAGE_FROM_CASTER),
@@ -1697,7 +1727,10 @@ execution_sentence_201410 = spell(
           ' Effect 1 (periodic) sp_potency/ap_potency 36.0 -> 46.8 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).'
           ' Effect 1 (periodic) sp_potency/ap_potency 46.8 -> 32.76 (2026-10-31, DPS balance pass 1031, user ruling: Retribution damage -30%).'
           ' Effect 1 (periodic) sp_potency/ap_potency 32.76 -> 26.208 (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Execution Sentence -20%).'
-          ' sp_potency 26.208 -> 29.8771; ap_potency 26.208 -> 29.8771 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).',
+          ' sp_potency 26.208 -> 29.8771; ap_potency 26.208 -> 29.8771 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).'
+          ' Effect 1 (periodic) sp_potency 29.8771 -> 33.7611; ap_potency 29.8771 -> 33.7611 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).'
+          ' Effect 1 (periodic) sp_potency 33.7611 -> 37.1372; ap_potency 33.7611 -> 37.1372 (2026-11-26, raid-buff-sets retune R3, user ruling: Retribution-only x1.10).'
+          ' Effect 1 (periodic) sp_potency and ap_potency 37.1372 -> 31.3072 (x0.843) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Retribution only, about x0.84).',
     raw_overrides=_raw(
         castable=True,
         AuraDescription_Lang_Mask=16712190,
@@ -1735,14 +1768,17 @@ wake_of_ashes_201413 = spell(
     range_yards=RANGE_SELF,
     effects=[
         Effect(
-            type=EffectType.SCHOOL_DAMAGE, sp_potency=233.7, ap_potency=233.7, potency_kind='direct',
+            type=EffectType.SCHOOL_DAMAGE, sp_potency=244.8845, ap_potency=244.8845, potency_kind='direct',
             implicit_target_a=104, radius_yards=12.0,
         ),
     ],
     spell_icon_id=90211,
     notes='paladin-rework S1 RETRIBUTION §4.4: 205 / 205 potency in a 12 yd 104 degree cone, up to 5 targets, 45 s cooldown (Cooldown Haste applies), WoA bit d2 0x1000, learn 60. '
           'Visual = Divine Storm SV 12006 placeholder (VFX follow-up). Stun 201414 and the +3 seal stacks come from spell_pal_wake_of_ashes / the builder script.'
-          ' sp_potency 205.0 -> 233.7; ap_potency 205.0 -> 233.7 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).',
+          ' sp_potency 205.0 -> 233.7; ap_potency 205.0 -> 233.7 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Retribution x1.14 on Judgement of Vengeance, Blade of Justice, Wake of Ashes and Execution Sentence).'
+          ' sp_potency 233.7 -> 264.081; ap_potency 233.7 -> 264.081 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).'
+          ' sp_potency 264.081 -> 290.4891; ap_potency 264.081 -> 290.4891 (2026-11-26, raid-buff-sets retune R3, user ruling: Retribution-only x1.1).'
+          ' Effect 1 sp_potency and ap_potency 290.4891 -> 244.8845 (x0.843) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Retribution only, about x0.84).',
     raw_overrides=_raw(
         castable=True,
         MaxTargets=5,

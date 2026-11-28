@@ -17,7 +17,8 @@ is one cast; periodic ticks are their own events (only Stoked Flame counts them,
 
 **Cooldown hooks** (Flare-up, Thunderhead, Stoke the Forge, Banked Coals): "a spell or ability with a cooldown of 30
 sec or more" is the Cooldown Haste rule's list (docs/Systems.md section 4): an unmodified base RecoveryTime or
-CategoryRecoveryTime of 30 sec or more, plus the allow list, minus the deny list (mirrored from Player.cpp in
+CategoryRecoveryTime of 30 sec or more, plus COOLDOWN_TRIGGER_ALLOW_LIST (its own list, not the Cooldown Haste allow
+list since gear-scaling GS2), minus the deny list (the floor and deny list mirrored from Player.cpp in
 MoltenSetLogic.h; lib/test_molten_set.py checks they agree). Item casts never count (trinkets, potions: the rule
 skips item cooldowns). Cast phase, one per cast.
 
@@ -201,6 +202,10 @@ SCORCHING_HIDE_HEAT = 10
 MOLTEN_PLATE_HEAT = 10
 CRIT_HEAT = 2
 COOLDOWN_HOOK_MIN_S = 30
+# The short cooldowns that still fire the cooldown hooks (Starsurge, Call Dreadstalkers, Death from Above), mirrored
+# by MoltenSetLogic.h kMoltenCooldownTriggerAllowList. Deliberately not Player.cpp's Cooldown Haste allow list:
+# gear-scaling GS2 widened that one, and those spells must not fire the hooks (user ruling 2026-11-27).
+COOLDOWN_TRIGGER_ALLOW_LIST = (200333, 200829, 204148)
 CAUTERIZE_EXTRA_ALLIES = 3
 CAUTERIZE_RADIUS = 10
 MENDING_FLAME_HEALTH_PCT = 50

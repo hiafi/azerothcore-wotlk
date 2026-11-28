@@ -66,7 +66,9 @@ righteousness_echo_201401 = spell(
         Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=60.0, implicit_target_a=6),
     ],
     spell_icon_id=90210,
-    notes='paladin-rework S1 RETRIBUTION §4.2: Blade of Justice echo = the seal ability-form passive (B1.4) at x3 weapon potency; SUPPRESS_CASTER_PROCS so it never procs a seal passive or a talent. Righteousness: 60 weapon.',
+    notes='paladin-rework S1 RETRIBUTION §4.2: Blade of Justice echo = the seal ability-form passive (B1.4) at x3 weapon potency; SUPPRESS_CASTER_PROCS so it never procs a seal passive or a talent. Righteousness: 60 weapon.'
+          ' Effect 2 weapon_potency 60.0 -> 70.0 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Retribution-only x1.13 = 67.8, weapon potency whole and a multiple of 5: x1.167; the echo is Blade of Justice only, Prot never casts it).'
+          ' Effect 2 weapon_potency 70 -> 60 (x0.857, nearest 5) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Retribution only, about x0.84).',
     raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Strikes the target with the power of your seal.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassMask_3': m.SEAL_PASSIVE, 'DefenseType': 2, 'AttributesEx3': 327680, 'AttributesEx2': 4, 'SpellLevel': 30},
 )
 
@@ -96,7 +98,9 @@ vengeance_echo_201403 = spell(
         Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=30.0, implicit_target_a=6),
     ],
     spell_icon_id=90210,
-    notes='paladin-rework S1 RETRIBUTION §4.2: Blade of Justice echo = the seal ability-form passive (B1.4) at x3 weapon potency; SUPPRESS_CASTER_PROCS so it never procs a seal passive or a talent. Vengeance: the script then applies Echoing Vengeance 201407.',
+    notes='paladin-rework S1 RETRIBUTION §4.2: Blade of Justice echo = the seal ability-form passive (B1.4) at x3 weapon potency; SUPPRESS_CASTER_PROCS so it never procs a seal passive or a talent. Vengeance: the script then applies Echoing Vengeance 201407.'
+          ' Effect 2 weapon_potency 30.0 -> 35.0 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Retribution-only x1.13 = 33.9, weapon potency whole and a multiple of 5: x1.167).'
+          ' Effect 2 weapon_potency 35 -> 30 (x0.857, nearest 5) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Retribution only, about x0.84).',
     raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Strikes the target with the power of your seal.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassMask_3': m.SEAL_PASSIVE, 'DefenseType': 2, 'AttributesEx3': 327680, 'AttributesEx2': 4, 'SpellLevel': 30},
 )
 
@@ -152,10 +156,12 @@ echoing_vengeance_201407 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0, duration_ms=5000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=5.4, ap_potency=5.4, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=5.1438, ap_potency=5.1438, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
     ],
     spell_icon_id=90210,
-    notes='paladin-rework S1 RETRIBUTION §4.2: DoT of the Vengeance echo, 5 s, 36 total; icon 90210 (never 2292) and no d1 bits (JoV hardcode); a new application from the same caster replaces the old one.',
+    notes='paladin-rework S1 RETRIBUTION §4.2: DoT of the Vengeance echo, 5 s, 36 total; icon 90210 (never 2292) and no d1 bits (JoV hardcode); a new application from the same caster replaces the old one.'
+          ' Effect 1 (periodic) sp_potency/ap_potency 5.4 -> 6.102 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13).'
+          ' Effect 1 (periodic) sp_potency and ap_potency 6.102 -> 5.1438 (x0.843) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Retribution only, about x0.84).',
     raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Burns the target with twilight fire.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Taking {pot1} Twilight damage every $t1 sec.", 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassMask_3': m.SEAL_PASSIVE, 'DefenseType': 1, 'AttributesEx2': 4, 'SpellLevel': 30},
 )
 
@@ -191,10 +197,12 @@ vindication_strike_201420 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=20.0, ap_potency=20.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=19.0518, ap_potency=19.0518, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=1798,
-    notes='paladin-rework S1 RETRIBUTION §4.5: the Vindication proc hit (rank eff0 triggers it), no family bits. Never use 26017/67 (C12 key).',
+    notes='paladin-rework S1 RETRIBUTION §4.5: the Vindication proc hit (rank eff0 triggers it), no family bits. Never use 26017/67 (C12 key).'
+          ' Effect 1 sp_potency/ap_potency 20.0 -> 22.6 (2026-11-26, raid-buff-sets retune R1, user ruling: Retribution-only x1.13; the rank tooltips quote it through pot_text).'
+          ' Effect 1 sp_potency and ap_potency 22.6 -> 19.0518 (x0.843) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Retribution only, about x0.84).',
     raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Deals {pot1} Holy damage.", 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'DefenseType': 1, 'SpellLevel': 25},
 )
 
@@ -420,10 +428,13 @@ devotion_aura_465 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=65, base_points=54, points_per_level=14.556962025316455, implicit_target_a=1, apply_aura=22, misc_value=1, radius_yards=40.0),
+        Effect(type=65, base_points=54, points_per_level=11.526, implicit_target_a=1, apply_aura=22, misc_value=1, radius_yards=40.0),
     ],
     spell_icon_id=291,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | paladin-rework S1 SHARED Part C C1.2: button (60 s RecoveryTime, Category 1300 / 15 s, IS_ABILITY flat GCD).',
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | paladin-rework S1 SHARED Part C C1.2: button (60 s RecoveryTime, Category 1300 / 15 s, IS_ABILITY flat GCD).'
+        ' e0 points_per_level 14.557 -> 11.526 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): 273 at 20, 504 at 40, 735 at 60 (stock rank 7 735 at 60). The old line gave 913 at 60. The Scroll of Stoneskin 208867 and Hardened Shell 201764 follow at 735.'
+    ),
     category=1300,
     raw_overrides={'ActiveIconID': 122, 'AttributesEx2': 17, 'AttributesEx3': 1114112, 'AttributesEx4': 3145728, 'AttributesEx7': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases armor by $s1.', 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives $s1 additional armor to party and raid members within $a1 yards. Activating it also reduces damage taken by party and raid members within $a1 yards by $201161s2% for $201161d. Players may only have one Aura on them per Paladin at any one time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 64, 'SpellClassMask_3': 32, 'SpellClassSet': 10, 'SpellLevel': 1, 'SpellVisualID_1': 160, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -681,12 +692,14 @@ holy_shock_25912 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=186.6775, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=156.6303, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=156,
     tooltip_vars=holy_heal_tooltip,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=250.0 (paladin-potency-proposals.txt, user value; was 305.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: SpellLevel 40 -> 30; description quotes only its own value ({pot1*shock}, entry 1105 owned by paladin_holy_spells.py); NOT_A_PROC (AttributesEx3 0x200) kept for the resolver Effect 1 sp_potency 250.0 -> 209.75 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839).'
-          ' sp_potency 209.75 -> 186.6775 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Shockadin, Holy Shock damage x0.89 (Divine Toll damage 201205 and the Glimmer damage pulses are ComputeShockValue of this row, so they follow)).',
+          ' sp_potency 209.75 -> 186.6775 (2026-11-21, level60-stat-curve round S9: targeted trims after S8, user ruling: Shockadin, Holy Shock damage x0.89 (Divine Toll damage 201205 and the Glimmer damage pulses are ComputeShockValue of this row, so they follow)).'
+          ' Effect 1 sp_potency 186.6775 -> 179.2104 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Shockadin x0.96 from the pre-R1 value (an intermediate x1.064 was dropped), damage side only; the heal side is 25914, untouched. Divine Toll damage 201205 and the Glimmer damage pulses 201210 are ComputeShockValue of this row, so they follow).'
+          ' Effect 1 (damage side only, the heal is 25914) sp_potency 179.2104 -> 156.6303 (x0.874) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Shockadin damage only, about x0.874).',
     raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, causing {pot1*shock} Holy damage.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2097152, 'SpellClassSet': 10, 'SpellLevel': 30, 'SpellVisualID_1': 128, 'StartRecoveryCategory': 133},
 )
 
@@ -2043,10 +2056,11 @@ holy_guidance_31837 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_DAMAGE_OF_STAT_PERCENT, misc_value=2),
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_HEALING_OF_STAT_PERCENT, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=2139,
-    notes='pulled from existing data | paladin-rework S2 HOLY 5 (7,2): eff1 misc 126 -> 2 (Holy); stray mask A_1 deleted; EffectMiscValueB_1 3 (the Intellect stat selector of aura 174) deliberately kept',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Holy spell power and your healing power by $s1% of your Intellect.\n\n|cFF9D9D9DCapstone Bonus: Your Holy Shock increases the critical strike chance of all attacks against an enemy target by 5%, or the critical strike chance of your heals on a friendly target by 5%, for 20 sec.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (7,2): eff1 misc 126 -> 2 (Holy); stray mask A_1 deleted; EffectMiscValueB_1 3 (the Intellect stat selector of aura 174) deliberately kept. eff3 ADD_PCT_MODIFIER SPELLMOD_DAMAGE +3% (stored 2) on Holy Light 635 only (EffectSpellClassMaskC_1 = HOLY_LIGHT d0 b31; heal SPELLMOD_DAMAGE mods multiply), text "and the healing of your Holy Light by $s3%" added (2026-11-28, gear-scaling tank survival pass, user ruling: Holy Light base healing x1/1.1 to cut Protection self-healing, given back to Holy here: 1.1 x 1/1.1 = Holy unchanged at 3/3; row 7 needs 35 Holy points, out of Protection\'s reach). eff3 +3% -> +7% (stored 2 -> 6) (2026-11-28, gear-scaling tank survival pass round 2, user ruling: Prot Paladin 87.2 s: Holy Light base healing x1/1.2 in total, 1.2 x 1/1.2 = Holy unchanged at 3/3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Holy spell power and your healing power by $s1% of your Intellect, and the healing of your Holy Light by $s3%.\n\n|cFF9D9D9DCapstone Bonus: Your Holy Shock increases the critical strike chance of all attacks against an enemy target by 5%, or the critical strike chance of your heals on a friendly target by 5%, for 20 sec.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(3, (m.HOLY_LIGHT, 0, 0))},
 )
 
 
@@ -2064,10 +2078,11 @@ holy_guidance_31838 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_DAMAGE_OF_STAT_PERCENT, misc_value=2),
         Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_HEALING_OF_STAT_PERCENT, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=2139,
-    notes='pulled from existing data | paladin-rework S2 HOLY 5 (7,2): eff1 misc 126 -> 2 (Holy); stray mask A_1 deleted; EffectMiscValueB_1 3 (the Intellect stat selector of aura 174) deliberately kept',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Holy spell power and your healing power by $s1% of your Intellect.\n\n|cFF9D9D9DCapstone Bonus: Your Holy Shock increases the critical strike chance of all attacks against an enemy target by 5%, or the critical strike chance of your heals on a friendly target by 5%, for 20 sec.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (7,2): eff1 misc 126 -> 2 (Holy); stray mask A_1 deleted; EffectMiscValueB_1 3 (the Intellect stat selector of aura 174) deliberately kept. eff3 ADD_PCT_MODIFIER SPELLMOD_DAMAGE +7% (stored 6) on Holy Light 635 only (EffectSpellClassMaskC_1 = HOLY_LIGHT d0 b31; heal SPELLMOD_DAMAGE mods multiply), text "and the healing of your Holy Light by $s3%" added (2026-11-28, gear-scaling tank survival pass, user ruling: Holy Light base healing x1/1.1 to cut Protection self-healing, given back to Holy here: 1.1 x 1/1.1 = Holy unchanged at 3/3; row 7 needs 35 Holy points, out of Protection\'s reach). eff3 +7% -> +14% (stored 6 -> 13) (2026-11-28, gear-scaling tank survival pass round 2, user ruling: Prot Paladin 87.2 s: Holy Light base healing x1/1.2 in total, 1.2 x 1/1.2 = Holy unchanged at 3/3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Holy spell power and your healing power by $s1% of your Intellect, and the healing of your Holy Light by $s3%.\n\n|cFF9D9D9DCapstone Bonus: Your Holy Shock increases the critical strike chance of all attacks against an enemy target by 5%, or the critical strike chance of your heals on a friendly target by 5%, for 20 sec.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(3, (m.HOLY_LIGHT, 0, 0))},
 )
 
 
@@ -2085,10 +2100,11 @@ holy_guidance_31839 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_DAMAGE_OF_STAT_PERCENT, misc_value=2),
         Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_HEALING_OF_STAT_PERCENT, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=2139,
-    notes='pulled from existing data | paladin-rework S2 HOLY 5 (7,2): eff1 misc 126 -> 2 (Holy); stray mask A_1 deleted; EffectMiscValueB_1 3 (the Intellect stat selector of aura 174) deliberately kept',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Holy spell power and your healing power by $s1% of your Intellect.\n\nCapstone Bonus: Your Holy Shock increases the critical strike chance of all attacks against an enemy target by 5%, or the critical strike chance of your heals on a friendly target by 5%, for 20 sec.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (7,2): eff1 misc 126 -> 2 (Holy); stray mask A_1 deleted; EffectMiscValueB_1 3 (the Intellect stat selector of aura 174) deliberately kept. eff3 ADD_PCT_MODIFIER SPELLMOD_DAMAGE +10% (stored 9) on Holy Light 635 only (EffectSpellClassMaskC_1 = HOLY_LIGHT d0 b31; heal SPELLMOD_DAMAGE mods multiply), text "and the healing of your Holy Light by $s3%" added (2026-11-28, gear-scaling tank survival pass, user ruling: Holy Light base healing x1/1.1 to cut Protection self-healing, given back to Holy here: 1.1 x 1/1.1 = Holy unchanged at 3/3; row 7 needs 35 Holy points, out of Protection\'s reach). eff3 +10% -> +20% (stored 9 -> 19) (2026-11-28, gear-scaling tank survival pass round 2, user ruling: Prot Paladin 87.2 s: Holy Light base healing x1/1.2 in total, 1.2 x 1/1.2 = Holy unchanged at 3/3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Holy spell power and your healing power by $s1% of your Intellect, and the healing of your Holy Light by $s3%.\n\nCapstone Bonus: Your Holy Shock increases the critical strike chance of all attacks against an enemy target by 5%, or the critical strike chance of your heals on a friendly target by 5%, for 20 sec.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(3, (m.HOLY_LIGHT, 0, 0))},
 )
 
 

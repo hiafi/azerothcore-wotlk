@@ -41,15 +41,28 @@ namespace SimBuffSet
         "208860, 208861, 208862, 208863, 208864, 208865, 208866, 208867, 208868, 208869, 208870, 208871, 208872, "
         "208873, 208874, 208875, 208876, 57669";
     char const* const DEFAULT_RAID_DEBUFFS = "201716, 201766, 201773, 201754, 201763, 201768, 30070";
-    // Each id (Replenishment aside) sits in the spell_group of the hunter pet family effect of its category
-    // (hunter-pet-families DATA-INVENTORY 4.1), so that family's own cast adds nothing; dpssim.conf.dist lists the
-    // values at level 60.
+    // Each id up to 31583 sits in the spell_group of the hunter pet family effect of its category (hunter-pet-families
+    // DATA-INVENTORY 4.1), so that family's own cast adds nothing; the scrolls after it (Wild, Command, Brilliance,
+    // Devotion, Battle) are the standard categories no pet family casts (raid-buff-sets retune, user ruling
+    // 2026-11-26: full_raid is never weaker than standard for hunters). dpssim.conf.dist lists the values at level 60.
     char const* const DEFAULT_RAID_BUFFS_HUNTER =
-        "24932, 8076:01, 53137, 202210:01, 24907:0, 50172, 5677, 202211, 23948, 25898:0, 202212, 31583:1, 57669";
+        "24932, 57330:01, 53137, 202210:01, 24907:0, 50172, 25894, 208867, 23948, 25898:0, 202212, 31583:1, "
+        "208861, 208863, 208864, 208865, 208868, 57669";
     char const* const DEFAULT_RAID_DEBUFFS_HUNTER = "8647, 21183:0@3, 60431, 1160, 6343, 1714:0, 30070";
     char const* const DEFAULT_RAID_PULL_BUFFS = "2825, 57724";
     // Flask of Might, Flask of Grace, Flask of Supreme Power (their target is the drinker, so the effect is explicit)
     char const* const DEFAULT_RAID_FLASKS = "208850:0, 208851:0, 17628:0";
+
+    // standard (user rulings 2026-11-25, plan .agents/plans/raid-buff-sets/), every class, hunters too: Kings, Wild,
+    // Fortitude, Command, Brilliance, Devotion, Winter's Horn, Stoneskin, Battle, Insight (spell crit), the Pack
+    // (melee/ranged crit) and Flame (spell power); major armor and magic damage taken on the dummies. Left out on
+    // purpose: attack power 10%, melee haste 10%, all haste 3%, damage 3%, crit taken 3%, physical taken 4%, mana
+    // per 5, the minor debuffs, Replenishment and the flask.
+    char const* const DEFAULT_STANDARD_BUFFS =
+        "208860, 208861, 208862, 208863, 208864, 208865, 208866, 208867, 208868, 208872, 208873, 208874";
+    char const* const DEFAULT_STANDARD_DEBUFFS = "201716, 201773";
+    // Sated and Exhaustion, no Bloodlust: the actor's own Bloodlust or Heroism cannot be cast either
+    char const* const DEFAULT_STANDARD_PULL_BUFFS = "57724, 57723";
 
     namespace
     {
@@ -257,19 +270,29 @@ namespace SimBuffSet
 
     char const* SetName(Set set)
     {
-        return set == Set::FullRaid ? "full_raid" : "self_only";
+        switch (set)
+        {
+            case Set::Standard:
+                return "standard";
+            case Set::FullRaid:
+                return "full_raid";
+            default:
+                return "self_only";
+        }
     }
 
     bool ParseSet(std::string const& text, Set& out, std::string& error)
     {
         std::string const value = Trim(text);
-        if (StringEqualI(value, "self_only"))
+        if (StringEqualI(value, "self_only") || StringEqualI(value, "self"))
             out = Set::SelfOnly;
-        else if (StringEqualI(value, "full_raid"))
+        else if (StringEqualI(value, "standard"))
+            out = Set::Standard;
+        else if (StringEqualI(value, "full_raid") || StringEqualI(value, "all"))
             out = Set::FullRaid;
         else
         {
-            error = Acore::StringFormat("'{}' is not self_only or full_raid", value);
+            error = Acore::StringFormat("'{}' is not self_only (self), standard or full_raid (all)", value);
             return false;
         }
 
@@ -422,6 +445,19 @@ namespace SimBuffSet
         return true;
     }
 
+    bool IsRaidScroll(uint32 spellId)
+    {
+        return spellId >= 208860 && spellId <= 208876;
+    }
+
+    uint32 DropRaidScrolls(std::vector<AuraSpec>& specs)
+    {
+        std::size_t const before = specs.size();
+        specs.erase(std::remove_if(specs.begin(), specs.end(),
+            [](AuraSpec const& spec) { return IsRaidScroll(spec.SpellId); }), specs.end());
+        return uint32(before - specs.size());
+    }
+
     std::string Describe(std::vector<AuraSpec> const& specs)
     {
         std::string text;
@@ -449,7 +485,7 @@ namespace SimBuffSet
 
     void BeginIteration(Config const& config, Player* actor, std::vector<Creature*> const& dummies)
     {
-        if (config.BuffSet != Set::FullRaid || !actor)
+        if (!AddsAuras(config.BuffSet) || !actor)
             return;
 
         RunState& state = config.State;
@@ -499,7 +535,7 @@ namespace SimBuffSet
     uint32 ApplyPinned(Config const& config, Player* actor, std::vector<Creature*> const& dummies, Phase phase,
         RefreshLog* refresh)
     {
-        if (config.BuffSet != Set::FullRaid || !actor)
+        if (!AddsAuras(config.BuffSet) || !actor)
             return 0;
 
         uint32 added = 0;
@@ -532,7 +568,7 @@ namespace SimBuffSet
 
     void ApplyPullBuffs(Config const& config, Player* actor, Phase phase)
     {
-        if (config.BuffSet != Set::FullRaid || !actor)
+        if (!AddsAuras(config.BuffSet) || !actor)
             return;
 
         for (AuraSpec const& spec : config.PullBuffs)
@@ -544,7 +580,7 @@ namespace SimBuffSet
 
     void LogCoverage(Config const& config, Player* actor, std::vector<Creature*> const& dummies)
     {
-        if (config.BuffSet != Set::FullRaid || !actor)
+        if (!AddsAuras(config.BuffSet) || !actor)
             return;
 
         auto idList = [](std::vector<uint32> const& ids)
@@ -595,7 +631,7 @@ namespace SimBuffSet
         }
     }
 
-    void LogRefresh(RefreshLog const& refresh)
+    void LogRefresh(Set set, RefreshLog const& refresh)
     {
         uint32 putBack = 0;
         for (auto const& entry : refresh.PutBack)
@@ -605,9 +641,9 @@ namespace SimBuffSet
             std::string text;
             for (auto const& [what, count] : refresh.PutBack)
                 text += Acore::StringFormat("{}{} x{}", text.empty() ? "" : "; ", what, count);
-            LOG_INFO("server.dpssim", "mod-dpssim: full_raid - {} raid aura(s) went missing during the iteration and "
+            LOG_INFO("server.dpssim", "mod-dpssim: {} - {} raid aura(s) went missing during the iteration and "
                 "were put back (a stronger aura of the same group that has since gone, a dispel, or the pet's own "
-                "cast replacing one): {}.", putBack, text);
+                "cast replacing one): {}.", SetName(set), putBack, text);
         }
 
         if (!refresh.Failed.empty())
@@ -615,8 +651,8 @@ namespace SimBuffSet
             std::string text;
             for (auto const& [what, count] : refresh.Failed)
                 text += Acore::StringFormat("{}{} x{}", text.empty() ? "" : "; ", what, count);
-            LOG_WARN("server.dpssim", "mod-dpssim: full_raid - raid aura(s) went missing and could not be put back "
-                "(the DPS of that stretch counts the aura that blocked it, not the baseline): {}.", text);
+            LOG_WARN("server.dpssim", "mod-dpssim: {} - raid aura(s) went missing and could not be put back "
+                "(the DPS of that stretch counts the aura that blocked it, not the baseline): {}.", SetName(set), text);
         }
     }
 }

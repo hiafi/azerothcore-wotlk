@@ -45,6 +45,7 @@
 #include "ObjectAccessor.h"
 #include "Pet.h"
 #include "Player.h"
+#include "ProcChanceCooldown.h"
 #include "Random.h"
 #include "ScriptMgr.h"
 #include "Spell.h"
@@ -85,6 +86,9 @@ namespace
     // spells\infernal_impact_base.m2): its falling bone's translation track reaches the ground at
     // 1000 ms of the model's 2500 ms animation.
     constexpr uint32 INFERNAL_METEOR_IMPACT_MS = 1000;
+
+    // Demonic Calling's internal cooldown before Proc Chance (gear-scaling GS2 divides it by 1 + Proc Chance).
+    constexpr uint32 DEMONIC_CALLING_ICD_MS = 10000;
 
     // Highest known rank's aura-effect amount / rank index - private copies of
     // WarlockMechanics.cpp's own helpers (internal linkage; every WP-B file that needs a "read live
@@ -424,7 +428,10 @@ class spell_warl_shadow_bolt_demonology : public SpellScript
                     roll_chance_f(float(chancePct) * (1.0f + player->GetProcChancePercentage() / 100.0f)))
                 {
                     player->RemoveSpellCooldown(Warlock::SPELL_HAND_OF_GULDAN, true);
-                    player->AddSpellCooldown(rankId, 0, uint32(GameTime::GetGameTimeMS().count()) + 10000);
+                    // Custom: gear-scaling GS2 (Systems.md section 5) - 10 s / (1 + Proc Chance). AddSpellCooldown
+                    // takes a duration: the old "game time + 10000" made the ICD last the server's uptime + 10 s.
+                    player->AddSpellCooldown(rankId, 0, ProcChanceCooldown::ScaleFor(player, DEMONIC_CALLING_ICD_MS,
+                        float(chancePct)));
                 }
             }
         }

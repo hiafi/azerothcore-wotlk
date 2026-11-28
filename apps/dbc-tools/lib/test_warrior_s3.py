@@ -232,16 +232,16 @@ NEW_ROW_PINS: dict[int, dict] = {
               "Effect_1": EFF_DUMMY, "Effect_2": 0, "Effect_3": 0, "ImplicitTargetA_1": 6, "SpellIconID": 2006,
               "EquippedItemClass": 2, "EquippedItemSubclass": 173555},
     # strikes: d2 b2 only (never b3), 173% weapon [tune] (bp 172, balance 2026-10-30 x1.1 x1.1 x0.85, DPS balance pass 1031 x0.85,
-    # round R5 2026-11-02 157 -> 173; 208 -> 177 level60-stat-curve S9 2026-11-21 x0.85), hidden,
+    # round R5 2026-11-02 157 -> 173; 208 -> 177 level60-stat-curve S9 2026-11-21 x0.85; 177 -> 210 RBS R1 x1.20, nearest 5), hidden,
     # triggered-only, suppress, 50000 yd, no facing
     STRIKE_MH: {**STRIKE_BASE, "Name_Lang_enUS": "Rampage", "SpellClassMask_1": 0, "SpellClassMask_2": 0,
-                "SpellClassMask_3": 0x4, "EffectBasePoints_1": 176, "Effect_2": 0},
+                "SpellClassMask_3": 0x4, "EffectBasePoints_1": 209, "Effect_2": 0},
     STRIKE_OH: {**STRIKE_BASE, **OFFHAND_STRIKE, "Name_Lang_enUS": "Rampage", "SpellClassMask_1": 0,
-                "SpellClassMask_2": 0, "SpellClassMask_3": 0x4, "EffectBasePoints_1": 176, "Effect_2": 0},
+                "SpellClassMask_2": 0, "SpellClassMask_3": 0x4, "EffectBasePoints_1": 209, "Effect_2": 0},
     # D19 Frenzied Blows strikes: copies of the Heroic Strike / Cleave damage rows, d0 b6 / b22 + d2 b3, chain 0
     FB_HS: {**STRIKE_BASE, **OFFHAND_STRIKE, "Name_Lang_enUS": "Frenzied Blows", "SpellClassMask_1": 0x40,
-            "SpellClassMask_2": 0, "SpellClassMask_3": 0x8, "EffectBasePoints_1": 188,
-            "Effect_2": EFF_WEAPON_DAMAGE_FLAT, "EffectBasePoints_2": -9},
+            "SpellClassMask_2": 0, "SpellClassMask_3": 0x8, "EffectBasePoints_1": 214,
+            "Effect_2": EFF_WEAPON_DAMAGE_FLAT, "EffectBasePoints_2": -11},  # 78's x1.20 (RBS R1), GS3 x0.956
     FB_CLEAVE: {**STRIKE_BASE, **OFFHAND_STRIKE, "Name_Lang_enUS": "Frenzied Blows", "SpellClassMask_1": 0x400000,
                 "SpellClassMask_2": 0, "SpellClassMask_3": 0x8, "EffectBasePoints_1": 143,
                 "Effect_2": EFF_WEAPON_DAMAGE_FLAT, "EffectBasePoints_2": -1},
@@ -325,6 +325,10 @@ OH_WEAPON_IDS = (STRIKE_OH, FB_HS, FB_CLEAVE)                                # R
 STRIKE_IDS = (STRIKE_MH, STRIKE_OH, FB_HS, FB_CLEAVE)
 # Frenzied Blows' strikes copy the damage rows of the parent (same weapon percent and flat part)
 STRIKE_PARENTS = {FB_HS: HEROIC_STRIKE, FB_CLEAVE: CLEAVE}
+# Value columns where a strike no longer copies its parent: the off-hand Heroic Strike is 78's x1.20 (2026-11-26,
+# raid-buff-sets retune R1, user ruling: Fury only x1.20; Heroic Strike 78 stays, Protection casts it).
+STRIKE_VALUE_OVERRIDES = {FB_HS: {"EffectBasePoints_1": 214, "EffectBasePoints_2": -11,
+                                  "EffectRealPointsPerLevel_2": 0.7352571428571427}}  # GS3 ilvl 66 retune: 215% / 12.867
 # custom attrs: CU_AURA_CANNOT_BE_SAVED on the meter and the Titan's Grip penalty only (reset on login)
 CUSTOM_ATTR_IDS = {METER: CU_AURA_CANNOT_BE_SAVED, TG_PENALTY: CU_AURA_CANNOT_BE_SAVED}
 # consuming rows / helpers that must carry no spell_proc row at all (ProcTypeMask 0 charged buffs, plain auras)
@@ -484,7 +488,7 @@ TOOLTIP_FRAGMENTS = {
     56927: ("damage done by your Bloodthirst, Whirlwind, Slam, Heroic Strike and Cleave by 5%",
             "Each Cleave reduces the remaining cooldown of your Whirlwind by 1.5 sec"),
     56929: ("Cleave by 10%",), 56930: ("Cleave by 15%",),
-    RAMPAGE: ("Strike the target 4 times", "alternating main hand and off hand", "177% weapon damage",
+    RAMPAGE: ("Strike the target 4 times", "alternating main hand and off hand", "210% weapon damage",
               "increased by your Enrage bonus a second time"),
     BLOODTHIRST: ("generating 10 rage",
                   "Each bleed applied by you increases the damage of Bloodthirst by 8%, up to 40%",
@@ -714,7 +718,11 @@ def check_strikes(rows: dict, range_yd) -> list[str]:
     for sid, parent in STRIKE_PARENTS.items():
         for n in (1, 2):
             for col in (f"Effect_{n}", f"EffectBasePoints_{n}", f"EffectDieSides_{n}", f"EffectRealPointsPerLevel_{n}"):
-                if rows[sid].get(col) != rows[parent].get(col):
+                override = STRIKE_VALUE_OVERRIDES.get(sid, {})
+                if col in override:
+                    if rows[sid].get(col) != override[col]:
+                        bad.append(f"{sid}: {col} {rows[sid].get(col)!r}, expected {override[col]!r} (R1 x1.20)")
+                elif rows[sid].get(col) != rows[parent].get(col):
                     bad.append(f"{sid}: {col} {rows[sid].get(col)!r} differs from {parent}'s {rows[parent].get(col)!r}")
     if rows[RAMPAGE].get("DefenseType") != 2:
         bad.append(f"{RAMPAGE}: DmgClass {rows[RAMPAGE].get('DefenseType')!r}, expected 2 (one CAST-phase melee event)")

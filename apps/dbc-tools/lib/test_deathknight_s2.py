@@ -112,8 +112,8 @@ POTENCY = {
     # RETUNE 2026-10-25 (on the re-anchored footing): HB 62 -> 90, GA eruption 52 -> 75, Breath tick 42 -> 70,
     # HC tick 10 -> 15, Avalanche 17 -> 25 (S2 TUNE 2026-10-25 had cut them from the doc's 90 / 75 / 60 / 15 / 25)
     # 203307 96.009 -> 67.2063 (2026-11-22, level60-stat-curve S17: Breath x0.70)
-    HOWLING_BLAST: (99.0, 1.5, 20), 203274: (75.0, 1.5, 30), 203307: (67.2063, 1.0, 60), 203316: (15.0, 2.0, 40),
-    AVALANCHE_ID: (25.0, 1.5, 27),
+    HOWLING_BLAST: (84.15, 1.5, 20), 203274: (75.0, 1.5, 30), 203307: (57.1254, 1.0, 60), 203316: (15.0, 2.0, 40),
+    AVALANCHE_ID: (21.25, 1.5, 27),   # GS3 ilvl 66 retune 2026-11-27: HB 99 -> 84.15, Breath 67.2063 -> 57.1254, Avalanche 25 -> 21.25 (x0.85)
 }
 GLACIAL_ADVANCE, BREATH, BREATH_TICK, HC_TICK, GLACIAL_ERUPTION = 203273, 203306, 203307, 203316, 203274
 BREATH_COOLDOWN_MS = 120000
@@ -126,7 +126,7 @@ OFFHAND = {
     66216: (45462, None, None),  # PS: half of PS's own flat (value read from the main-hand entry)
     # Frost Strike OH is always Frost = non-physical: the FULL flat, the helper adds x p; 5.15 -> 8.755 Frost Strike x1.70
     # (2026-11-22, level60-stat-curve S17)
-    66196: (49143, 8.755, 8.755),
+    66196: (49143, 7.504, 7.504),  # 8.755 -> 7.504 (GS3 2026-11-27, x0.857)
 }
 FULL_FLAT_COPIES = {66196}
 # copies whose weapon percent was cut on its own: spell id -> EffectBasePoints_1 (percent - 1); 66198 off-hand Obliterate 130 -> 98 (2026-11-16, ST1000)
@@ -865,7 +865,7 @@ class DeathKnightS2NegativeTest(unittest.TestCase):
         rows = {sid: _row(sid, SpellLevel=lvl) for sid, (_, _, lvl) in POTENCY.items()}
         self.assertEqual(check_potency(rows, entries), [])
         # wrong potency / time basis (the 1500 default on a 1 s or 2 s tick) / missing SpellLevel
-        self.assertEqual(len(check_potency(rows, {**entries, 203307: _entry(203307, [(67.2063, 1.5, 60)])})), 1)
+        self.assertEqual(len(check_potency(rows, {**entries, 203307: _entry(203307, [(57.1254, 1.5, 60)])})), 1)
         self.assertEqual(len(check_potency(rows, {**entries, 203316: _entry(203316, [(15.0, 1.5, 40)])})), 1)
         self.assertEqual(len(check_potency(rows, {**entries, 49184: _entry(49184, [(100.9, 1.5, 20)])})), 1)
         self.assertEqual(len(check_potency({**rows, 203274: _row(203274, SpellLevel=0)}, entries)), 1)

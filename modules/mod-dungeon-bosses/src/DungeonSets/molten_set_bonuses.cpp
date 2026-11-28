@@ -10,7 +10,7 @@
  *                                      once per cast), the Heat buff's stacks (AddHeat), the set's eruption at its
  *                                      count (Erupt).
  *   spell_molten_cooldown_heat         206901 Flare-up, 206931 Thunderhead, 206951 Stoke the Forge, 206991 Banked
- *                                      Coals: a cast on the Cooldown Haste rule's list (no item cast) erupts at once
+ *                                      Coals: a cast on the cooldown hook list (no item cast) erupts at once
  *                                      (Flare-up) or adds Heat.
  *   spell_molten_eruption_in_combat    206903 / 206933 / 206973: the area reaches only enemies already in combat (and
  *                                      the eruption's own target).
@@ -422,8 +422,9 @@ class spell_molten_heat : public AuraScript
     bool _healing = false;
 };
 
-// 206901 Flare-up, 206931 Thunderhead, 206951 Stoke the Forge, 206991 Banked Coals: a cast on the Cooldown Haste rule's
-// list (base cooldown 30 s or more, the allow list, never the deny list; never an item cast), at its cast phase.
+// 206901 Flare-up, 206931 Thunderhead, 206951 Stoke the Forge, 206991 Banked Coals: a cast on the cooldown hook list
+// (base cooldown 30 s or more, kMoltenCooldownTriggerAllowList - not the Cooldown Haste allow list since gear-scaling
+// GS2 -, never the deny list; never an item cast), at its cast phase.
 // Flare-up erupts at full strength whatever the Heat (no enemy: nothing happens); the others add Heat.
 class spell_molten_cooldown_heat : public AuraScript
 {

@@ -29,6 +29,7 @@
 #include "ObjectAccessor.h"
 #include "Pet.h"
 #include "Player.h"
+#include "ProcChanceCooldown.h"
 #include "Random.h"
 #include "Spell.h"
 #include "SpellAuraEffects.h"
@@ -2679,11 +2680,11 @@ namespace Hunter
         if (!RollProcChance(hunter, baseChancePct))
             return false;
 
-        TriggerLockAndLoad(hunter);
+        TriggerLockAndLoad(hunter, baseChancePct);
         return true;
     }
 
-    void TriggerLockAndLoad(Player* hunter)
+    void TriggerLockAndLoad(Player* hunter, float listedChancePct)
     {
         // C49 / S3b B4: one charge (56453, consumed by its own CAST row), the ICD marker, and Arcane Shot +
         // Explosive Shot (category 1173) off cooldown; Chain Reaction (rank 3) cuts Cluster Bombs by its eff2.
@@ -2692,6 +2693,9 @@ namespace Hunter
 
         hunter->CastSpell(hunter, SPELL_LOCK_AND_LOAD_BUFF, TRIGGERED_FULL_MASK);
         hunter->CastSpell(hunter, SPELL_LOCK_AND_LOAD_MARKER, TRIGGERED_FULL_MASK);
+        // gear-scaling GS2 (Systems.md section 5): the 3 s ICD marker lasts 3 s / (1 + Proc Chance) when the roll that
+        // granted it was under 100% (the fire pulse's 3/6/10%; rank 3's 100% Frost Trap clause keeps 3 s).
+        ProcChanceCooldown::ScaleMarkerAura(hunter->GetAura(SPELL_LOCK_AND_LOAD_MARKER), listedChancePct);
         hunter->RemoveCategoryCooldown(CATEGORY_ARCANE_EXPLOSIVE);
 
         // "Known" = the rank's passive aura (GetKnownRank's rule). eff2 DUMMY bp 1999, live 2000 ms (V-m15).

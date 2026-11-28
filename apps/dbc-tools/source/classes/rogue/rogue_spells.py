@@ -20,7 +20,14 @@ from .rogue_assassination import (
 )
 from .rogue_shared import ghostly_veil_203723
 from .rogue_subtlety import FAN_OF_KNIVES_WEAPON_POTENCY, tooltip_ambush_1336, tooltip_backstab_1335
-from .rogue_trigger_spells import vanish_11327
+from .rogue_trigger_spells import instant_poison_8680, vanish_11327
+
+
+# Instant Poison weapon-coating tooltips: the AP term of the 8680 hit, derived from the 8680 effect's own ap_potency
+# (direct, T 1.5 s, SpellLevel 20) so the text follows every retune (GS3 review fix, 2026-11-27: it read a stale 0.10).
+_IP_COAT_AP = _potency._fmt(_potency.resolve(
+    _potency.PotencyEffect(ap_potency=instant_poison_8680.effects[0].ap_potency, kind=_potency.KIND_DIRECT,
+                           t_ms=1500.0), spell_level=20).ap_coefficient)
 
 
 # S1 (WP-BRIEF R3): the one-hand weapon mask, raw EquippedItemSubclass 0xA091 = axe 0, mace 4, sword 7, fist 13, dagger 15.
@@ -59,9 +66,9 @@ _dt_cp = _potency.resolve(
 # SDV 1323), each line one `$max()` (potency.md "Tooltips").
 _EVISCERATE_LEVEL = 1
 _ev_flat = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=43.184232, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=_EVISCERATE_LEVEL)
+    _potency.PotencyEffect(ap_potency=33.0359, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=_EVISCERATE_LEVEL)
 _ev_cp = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=68.2089408, kind=_potency.KIND_PERIODIC, t_ms=1500.0),
+    _potency.PotencyEffect(ap_potency=52.1798, kind=_potency.KIND_PERIODIC, t_ms=1500.0),
     spell_level=_EVISCERATE_LEVEL)
 
 
@@ -94,8 +101,8 @@ backstab_53 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=600, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=24, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=370, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=14.784, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
@@ -110,7 +117,8 @@ backstab_53 = spell(
         'and every other column kept. Cost not talent-reducible (shared doc). '
         'rogue-rework M2a (M1 U4, [tune]): weapon_potency 150 -> 250. '
         'weapon_potency 250 -> 500 and sp_potency 10 -> 20 (2026-11-01, DPS balance pass 1031, user ruling: Backstab +100%); '
-        'weapon_potency 500 -> 600 and sp_potency 20 -> 24 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Backstab +20%).'
+        'weapon_potency 500 -> 600 and sp_potency 20 -> 24 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Backstab +20%). weapon_potency 600 -> 460 (462 rounded to a multiple of 5) and sp_potency 24 -> 18.48 (2026-11-26, raid-buff-sets retune R1, user ruling: Subtlety x0.77).'
+        ' weapon_potency 460 -> 370 and sp_potency 18.48 -> 14.784 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Subtlety x0.80, Subtlety 1,761 -> ~1,520).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Backstab the target, causing ${$s1*$<bsall>}% weapon damage plus {pot2.avg*bsall}. Awards 1 combo point. Requires a dagger in the main hand. Must be behind the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 32768, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8388612, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 4, 'SpellPriority': 50, 'SpellVisualID_1': 155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -215,8 +223,8 @@ sinister_strike_1752 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=260, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10.4, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=185, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=7.4256, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
@@ -233,7 +241,8 @@ sinister_strike_1752 = spell(
         'Attacks) on the weapon percent and the flat part; second binding spell_rog_sinister_strike_combat. '
         'rogue-rework M2a (M1 S2, [tune]): weapon_potency 100 -> 250 (the second strike 203986 mirrors it). '
         'weapon_potency 250 -> 200 and sp_potency 10 -> 8 (2026-11-01, DPS balance pass 1031, user ruling: Sinister Strike -20%; 203986 mirrors it). '
-        'weapon_potency 200 -> 260 and sp_potency 8 -> 10.4 (2026-11-15, balance on the Normal-tier kits, user ruling: Sinister Strike +30%; 203986 mirrors it).'
+        'weapon_potency 200 -> 260 and sp_potency 8 -> 10.4 (2026-11-15, balance on the Normal-tier kits, user ruling: Sinister Strike +30%; 203986 mirrors it). weapon_potency 260 -> 220 (221 rounded to a multiple of 5) and sp_potency 10.4 -> 8.84 (2026-11-26, raid-buff-sets retune R1, user ruling: shared rogue spells x0.85; the Combat-only second strike 203986 takes x0.88 on its own).'
+        ' weapon_potency 220 -> 185 and sp_potency 8.84 -> 7.4256 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Combat x0.84, Combat 1,733 -> ~1,520; Blindside follows).'
     ),
     tooltip_vars=tooltip_sinister_strike_1350,
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant strike that causes ${$s1*$<ssmult>}% weapon damage plus {pot2.avg*ssmult}. Awards 1 combo point.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8388610, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 1, 'SpellVisualID_1': 253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
@@ -435,7 +444,7 @@ rupture_1943 = spell(
     duration_ms=4000,
     max_duration_ms=24000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, base_potency=47.64015, ap_potency=15.946875, potency_kind='periodic'),
+        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, base_potency=36.4447, ap_potency=12.1994, potency_kind='periodic'),
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=1),
     ],
     tooltip_vars=tooltip_blood_spatter_1322,
@@ -473,7 +482,8 @@ rupture_1943 = spell(
         'variables) dropped. '
         'rogue-rework M2a (M1 S1, [tune]): tick x1.5, base_potency 19.605 -> 29.4075, ap_potency 6.5625 -> 9.84375. '
         'base_potency 29.4075 -> 35.289 and ap_potency 9.84375 -> 11.8125 (2026-11-01, DPS balance pass 1031, user ruling: Rupture +20%). '
-        'base_potency 35.289 -> 47.64015 and ap_potency 11.8125 -> 15.946875 (2026-11-20, level60-stat-curve round S7: rogue buffs after the potency rebase, user ruling: Rupture x1.35).'
+        'base_potency 35.289 -> 47.64015 and ap_potency 11.8125 -> 15.946875 (2026-11-20, level60-stat-curve round S7: rogue buffs after the potency rebase, user ruling: Rupture x1.35). base_potency 47.64015 -> 40.4941275 and ap_potency 15.946875 -> 13.55484375 (2026-11-26, raid-buff-sets retune R1, user ruling: shared rogue spells x0.85).'
+        ' base_potency 40.4941275 -> 36.4447 and ap_potency 13.55484375 -> 12.1994 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Rogue shared spells x0.90 (Rupture, Eviscerate, Deadly Poison, Instant Poison)).'
     ),
     raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 8, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bleeding.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _RUPTURE_DESCRIPTION, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 1048576, 'SpellClassMask_3': m.FINISHER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 20, 'SpellVisualID_1': 250, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -551,7 +561,7 @@ eviscerate_2098 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=43.184232, cp_ap_potency=68.2089408, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=33.0359, cp_ap_potency=52.1798, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=1),
     ],
     tooltip_vars=tooltip_seal_fate_1323,
@@ -569,10 +579,11 @@ eviscerate_2098 = spell(
         'ap_potency 35.49 -> 28.392 and cp_ap_potency 56.056 -> 44.8448 (2026-11-01, DPS balance pass 1031, user ruling: Eviscerate -20%); '
         'ap_potency 28.392 -> 36.9096 and cp_ap_potency 44.8448 -> 58.29824 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Eviscerate +30%); '
         'ap_potency 36.9096 -> 47.98248 and cp_ap_potency 58.29824 -> 75.787712 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Eviscerate +30%); '
-        'ap_potency 47.98248 -> 43.184232 and cp_ap_potency 75.787712 -> 68.2089408 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Eviscerate -10%). Deadly Throw keeps its 75% ratio; '
+        'ap_potency 47.98248 -> 43.184232 and cp_ap_potency 75.787712 -> 68.2089408 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Eviscerate -10%); ap_potency 43.184232 -> 36.7065972 and cp_ap_potency 68.2089408 -> 57.97759968 (2026-11-26, raid-buff-sets retune R1, user ruling: shared rogue spells x0.85). Deadly Throw keeps its 75% ratio; '
         'Between the Eyes (x1.8 of M2a) and the Death from Above landing (x1.15 of M2a) were set on their own in M2c. '
         'The stock-shaped ladder ($m1 / $b1 / $AP x 0.03-0.35) is replaced by the potency '
         'ladder _EVISCERATE_LADDER (average per combo point, both AP terms melee $AP, times $<evmult>).'
+        ' ap_potency 36.7065972 -> 33.0359 and cp_ap_potency 57.97759968 -> 52.1798 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Rogue shared spells x0.90 (Rupture, Eviscerate, Deadly Poison, Instant Poison); tooltip constants _ev_flat / _ev_cp follow).'
     ),
     raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 8, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _EVISCERATE_LADDER, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8519680, 'SpellClassMask_3': m.FINISHER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 1, 'SpellVisualID_1': 671, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -771,8 +782,8 @@ ambush_8676 = spell(
     mana_cost_pct=0,
     range_yards=25.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=378, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10.8, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=230, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=6.6528, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, base_points=1, implicit_target_a=6),
     ],
@@ -791,7 +802,8 @@ ambush_8676 = spell(
         'Kill Self on 8676) keep landing a spell hit. '
         'rogue-rework M2a (M1 U1, [tune]): weapon_potency 175 -> 350; '
         'weapon_potency 350 -> 315 and the NORMALIZED_WEAPON_DMG sp_potency 10 -> 9 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Ambush -10%); '
-        'weapon_potency 315 -> 378 and sp_potency 9 -> 10.8 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Ambush +20%).'
+        'weapon_potency 315 -> 378 and sp_potency 9 -> 10.8 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Ambush +20%). weapon_potency 378 -> 290 (291.06 rounded to a multiple of 5) and sp_potency 10.8 -> 8.316 (2026-11-26, raid-buff-sets retune R1, user ruling: Subtlety x0.77).'
+        ' weapon_potency 290 -> 230 and sp_potency 8.316 -> 6.6528 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Subtlety x0.80, Subtlety 1,761 -> ~1,520; the Akaari echo follows).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Ambush the target, causing ${$s1*$<amall>}% weapon damage plus {pot2.avg*amall}. If you are stealthed and more than melee range away, you first teleport behind the target. Awards 2 combo points. Must be Hidden.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'ShapeshiftMask': 536870912, 'SpellClassMask_1': 8389120, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 18, 'SpellPriority': 50, 'SpellVisualID_1': 155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -818,8 +830,8 @@ instant_poison_8679 = spell(
         Effect(type=54, misc_value=323),
     ],
     spell_icon_id=247,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor 11340, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (57968, rank 9); MaxLevel set to 80; flat energy cost kept as-is (Rogue is Energy-based, not Mana); effect1 (type 54, ENCHANT_ITEM_TEMPORARY-family) left untouched -- base_points unused by that effect handler, not a real scaling quantity',
-    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$8680m1+0.10*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 20, 'SpellVisualID_1': 12720, 'Targets': 16},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor 11340, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (57968, rank 9); MaxLevel set to 80; flat energy cost kept as-is (Rogue is Energy-based, not Mana); effect1 (type 54, ENCHANT_ITEM_TEMPORARY-family) left untouched -- base_points unused by that effect handler, not a real scaling quantity (2026-11-27, gear-scaling GS3 review fix, coat tooltip AP term 0.10*$AP -> the real Instant Poison 8680 coefficient, read from the ap_potency of 8680 through _IP_COAT_AP so it cannot drift)',
+    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$8680m1+' + _IP_COAT_AP + '*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 20, 'SpellVisualID_1': 12720, 'Targets': 16},
 )
 
 
@@ -838,8 +850,8 @@ instant_poison_ii_8686 = spell(
         Effect(type=54, misc_value=324),
     ],
     spell_icon_id=247,
-    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only',
-    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 28, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$8685m1+0.10*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 28, 'SpellVisualID_1': 12720, 'Targets': 16},
+    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only (2026-11-27, gear-scaling GS3 review fix, coat tooltip AP term 0.10*$AP -> the real Instant Poison 8680 coefficient, read from the ap_potency of 8680 through _IP_COAT_AP so it cannot drift)',
+    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 28, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$8685m1+' + _IP_COAT_AP + '*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 28, 'SpellVisualID_1': 12720, 'Targets': 16},
 )
 
 
@@ -858,8 +870,8 @@ instant_poison_iii_8688 = spell(
         Effect(type=54, misc_value=325),
     ],
     spell_icon_id=247,
-    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only',
-    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 36, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$8689m1+0.10*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 36, 'SpellVisualID_1': 12720, 'Targets': 16},
+    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only (2026-11-27, gear-scaling GS3 review fix, coat tooltip AP term 0.10*$AP -> the real Instant Poison 8680 coefficient, read from the ap_potency of 8680 through _IP_COAT_AP so it cannot drift)',
+    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 36, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$8689m1+' + _IP_COAT_AP + '*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 36, 'SpellVisualID_1': 12720, 'Targets': 16},
 )
 
 
@@ -878,8 +890,8 @@ instant_poison_iv_11338 = spell(
         Effect(type=54, misc_value=623),
     ],
     spell_icon_id=247,
-    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only',
-    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 44, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$11335m1+0.10*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 44, 'SpellVisualID_1': 12720, 'Targets': 16},
+    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only (2026-11-27, gear-scaling GS3 review fix, coat tooltip AP term 0.10*$AP -> the real Instant Poison 8680 coefficient, read from the ap_potency of 8680 through _IP_COAT_AP so it cannot drift)',
+    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 44, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$11335m1+' + _IP_COAT_AP + '*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 44, 'SpellVisualID_1': 12720, 'Targets': 16},
 )
 
 
@@ -898,8 +910,8 @@ instant_poison_v_11339 = spell(
         Effect(type=54, misc_value=624),
     ],
     spell_icon_id=247,
-    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only',
-    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 52, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$11336m1+0.10*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 52, 'SpellVisualID_1': 12720, 'Targets': 16},
+    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only (2026-11-27, gear-scaling GS3 review fix, coat tooltip AP term 0.10*$AP -> the real Instant Poison 8680 coefficient, read from the ap_potency of 8680 through _IP_COAT_AP so it cannot drift)',
+    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 52, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$11336m1+' + _IP_COAT_AP + '*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 52, 'SpellVisualID_1': 12720, 'Targets': 16},
 )
 
 
@@ -918,8 +930,8 @@ instant_poison_vi_11340 = spell(
         Effect(type=54, misc_value=625),
     ],
     spell_icon_id=247,
-    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only',
-    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$11337m1+0.10*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 6', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 60, 'SpellVisualID_1': 12720, 'Targets': 16},
+    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only (2026-11-27, gear-scaling GS3 review fix, coat tooltip AP term 0.10*$AP -> the real Instant Poison 8680 coefficient, read from the ap_potency of 8680 through _IP_COAT_AP so it cannot drift)',
+    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$11337m1+' + _IP_COAT_AP + '*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 6', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 60, 'SpellVisualID_1': 12720, 'Targets': 16},
 )
 
 
@@ -1184,8 +1196,8 @@ instant_poison_vii_26891 = spell(
         Effect(type=54, misc_value=2641),
     ],
     spell_icon_id=247,
-    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only',
-    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 68, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$26890m1+0.10*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 7', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 68, 'SpellVisualID_1': 12720, 'Targets': 16},
+    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only (2026-11-27, gear-scaling GS3 review fix, coat tooltip AP term 0.10*$AP -> the real Instant Poison 8680 coefficient, read from the ap_potency of 8680 through _IP_COAT_AP so it cannot drift)',
+    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 68, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$26890m1+' + _IP_COAT_AP + '*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 7', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 68, 'SpellVisualID_1': 12720, 'Targets': 16},
 )
 
 
@@ -1316,7 +1328,7 @@ envenom_32645 = spell(
     range_yards=5.0,
     duration_ms=1000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_base_potency=50.44, cp_ap_potency=24.024, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_base_potency=41.6887, cp_ap_potency=19.8558, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER,
                misc_value=SpellModOp.CRITICAL_CHANCE),
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=18),
@@ -1344,6 +1356,8 @@ envenom_32645 = spell(
         " Effect 1 cp_base_potency 44.112 -> 48.5 (48.523 kept to one decimal, so +9.95%) and cp_ap_potency 21.0 -> 23.1 (the AP coefficient 0.09 -> 0.099) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Envenom +10%)."
         " Effect 1 cp_base_potency 48.5 -> 63.05 and cp_ap_potency 23.1 -> 30.03 (2026-11-20, level60-stat-curve round S7: rogue buffs after the potency rebase, user ruling: Envenom x1.30)."
         " Effect 1 cp_base_potency 63.05 -> 50.44 and cp_ap_potency 30.03 -> 24.024 (2026-11-21, level60-stat-curve round S11: trims after S10, user ruling: Assassination, Envenom x0.80)."
+        " Effect 1 cp_base_potency 50.44 -> 47.918 and cp_ap_potency 24.024 -> 22.8228 (2026-11-26, raid-buff-sets retune R1, user ruling: Assassination x0.95)."
+        " cp_base_potency 47.918 -> 41.6887 and cp_ap_potency 22.8228 -> 19.8558 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Assassination x0.87, Assassination 1,684 -> ~1,520)."
     ),
     raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 9, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$?s203821[Your poisons are applied more often and are more likely to critically strike.]'
                                       '?s203820[Your poisons are applied more often and are more likely to critically strike.]'
@@ -1487,8 +1501,8 @@ instant_poison_viii_57967 = spell(
         Effect(type=54, misc_value=3768),
     ],
     spell_icon_id=247,
-    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only',
-    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 73, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$57964m1+0.10*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 8', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 73, 'SpellVisualID_1': 12720, 'Targets': 16},
+    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only (2026-11-27, gear-scaling GS3 review fix, coat tooltip AP term 0.10*$AP -> the real Instant Poison 8680 coefficient, read from the ap_potency of 8680 through _IP_COAT_AP so it cannot drift)',
+    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 73, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$57964m1+' + _IP_COAT_AP + '*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 8', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 73, 'SpellVisualID_1': 12720, 'Targets': 16},
 )
 
 
@@ -1507,8 +1521,8 @@ instant_poison_ix_57968 = spell(
         Effect(type=54, misc_value=3769),
     ],
     spell_icon_id=247,
-    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only',
-    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 79, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$57965m1+0.10*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 9', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 79, 'SpellVisualID_1': 12720, 'Targets': 16},
+    notes='pulled from existing data | single-rank conversion (rogue): superseded rank kept in rogue.csv -- still referenced by item_template (spellid/RequiredSpell), not creature-only (2026-11-27, gear-scaling GS3 review fix, coat tooltip AP term 0.10*$AP -> the real Instant Poison 8680 coefficient, read from the ap_potency of 8680 through _IP_COAT_AP so it cannot drift)',
+    raw_overrides={'AttributesEx': 32, 'AttributesEx2': 8200, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 79, 'CastingTimeIndex': 14, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a chance of poisoning the enemy which instantly inflicts ${$57965m1+' + _IP_COAT_AP + '*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 9', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 79, 'SpellVisualID_1': 12720, 'Targets': 16},
 )
 
 
@@ -1829,7 +1843,7 @@ riposte_14251 = spell(
     range_yards=5.0,
     duration_ms=30000,
     effects=[
-        Effect(type=31, weapon_potency=683, implicit_target_a=6),
+        Effect(type=31, weapon_potency=500, implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=-21, mechanic=8, implicit_target_a=6, apply_aura=138),
         Effect(type=EffectType.ADD_COMBO_POINTS, base_points=1, implicit_target_a=6),
     ],
@@ -1846,6 +1860,7 @@ riposte_14251 = spell(
         'system requires, as stock) (2026-11-01, potency audit fix F14). '
         'weapon_potency 150 -> 525 (the Improved Riposte cleave 203993 matches) (2026-11-01, DPS balance pass 1031 round R4, user ruling: Riposte +250%). '
         'weapon_potency 525 -> 683 (682.5 rounded up; the cleave 203993 matches) (2026-11-02, DPS balance pass 1031 round R5, user ruling: Riposte +30%).'
+        ' weapon_potency 683 -> 500 (2026-11-27, gear-scaling GS3 review fix, Combat tank 787 -> ~750 off the tank-only lines instead of the shared Combat spells; round number, the tooltip follows through $s1%; the cleave 203993 matches).'
     ),
     raw_overrides={'SpellLevel': 0, 'AttributesEx': 131584, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attack speed reduced.', 'CasterAuraState': 1, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "A strike that becomes active after you dodge or parry an attack. Deals $s1% weapon damage, slows the target's melee attack speed by $s2% for $d, awards $s3 combo points and grants Opportunity.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, **m.class_mask_keys(m.RIPOSTE_CLASS_S3), 'SpellClassSet': 8, 'SpellVisualID_1': 3799, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )

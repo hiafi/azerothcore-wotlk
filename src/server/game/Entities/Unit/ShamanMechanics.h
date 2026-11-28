@@ -64,7 +64,7 @@ namespace Shaman
     void   RestoreImbueGlow(Player* player);                  // re-runs SetVisibleItemSlot for both weapon slots
     void   WriteImbueGlow(Player* player, uint8 slot);        // single slot, called from the visible-slot hook
 
-    // Stoneskin (only while Rockbiter is up; cap Shaman STONESKIN_MAX).
+    // Stoneskin (only while Rockbiter is up; cap 202206's StackAmount, less Toughness's shield clause with a shield).
     void AddStoneskin(Player* shaman, uint32 stacks);
     // B15: a landed hit of `landedDamage` on `victim` (after armor and every reduction, Stoneskin's included)
     // removes the same percent of current stacks as the hit is of max health before Stoneskin's reduction.

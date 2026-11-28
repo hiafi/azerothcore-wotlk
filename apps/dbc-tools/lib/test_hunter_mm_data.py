@@ -36,7 +36,7 @@ S2b (S2b-HANDOFF WP-A row A2, B2 / B6 / B7 / B9, the S2a review's m-1 and the 34
 
   (n) the ricochet 201934 / bounce 201935 (B2): d0 b17 only, Speed 0, CastingTimeIndex 18, EquippedItemClass -1,
       SUPPRESS_CASTER_PROCS, eff0 NORMALIZED_WEAPON_DMG bp -1, eff1 live weapon potency = PACK_SHOT_DAMAGE_PCT of
-      Aimed Shot 19434's (A1 derives it from a private literal 224: the built equality is the guard), 112 today;
+      Aimed Shot 19434's (A1 derives it from a private literal 190: the built equality is the guard), 95 today;
   (o) the half Volley 201936 / tick 201937 (B6): 201936 d2 b30 only, hidden (0x80), 3 s / 1 s = 3 unhasted ticks
       (no AttributesEx5 0x2000), eff0 the dynobj with ap potency 41.1082 direct time_basis 1500 (spell_bonus_data equal
       to the Volley tick 42243's); 201937 potency_excluded (no bonus row), no family bit, AttributesEx3 0x20010000;
@@ -378,9 +378,9 @@ PACK_SHOT_FIELDS = {
     "Effect_1": EFFECT_NORMALIZED_WEAPON_DMG, "EffectBasePoints_1": -1, "ImplicitTargetA_1": 6,
     "Effect_2": EFFECT_WEAPON_PERCENT_DAMAGE, "ImplicitTargetA_2": 6, "Effect_3": 0,
 }
-# B2 literal: half of Aimed Shot's 224 (S9 2026-11-21: was 138 of 276; WSH2 2026-11-17: was 208 of 416; pass 1031: was
+# B2 literal: half of Aimed Shot's 190 (GS3 2026-11-27: was 112 of 224; S9 2026-11-21: was 138 of 276; WSH2 2026-11-17: was 208 of 416; pass 1031: was
 # 297 of 594; TUNE3; TUNE1 220 of 440)
-PACK_SHOT_WEAPON_POTENCY = 112
+PACK_SHOT_WEAPON_POTENCY = 95
 # (o) the half Volley
 HALF_VOLLEY_DURATION_MS, HALF_VOLLEY_AMPLITUDE_MS, HALF_VOLLEY_TICKS = 3000, 1000, 3
 HALF_VOLLEY_AP_POTENCY, HALF_VOLLEY_TIME_BASIS_S = 41.1082, 1.5   # WSH2 2026-11-17: was 75.5; S17 2026-11-22: was 50.132
@@ -1677,12 +1677,12 @@ def good_bindings() -> tuple[list[dict], list[dict], list[dict]]:
 
 
 def good_pack_rows() -> dict[int, dict]:
-    aimed = {"ID": AIMED_SHOT, "Effect_2": EFFECT_WEAPON_PERCENT_DAMAGE, "EffectBasePoints_2": 223,
+    aimed = {"ID": AIMED_SHOT, "Effect_2": EFFECT_WEAPON_PERCENT_DAMAGE, "EffectBasePoints_2": 189,
              "EffectDieSides_2": 1}
     rows = {AIMED_SHOT: aimed}
     for i in PACK_SHOTS:
         rows[i] = {"ID": i, **PACK_SHOT_FIELDS, "Speed": 0.0, "AttributesEx3": ATTR_EX3_SUPPRESS_CASTER_PROCS,
-                   "EffectBasePoints_2": 111, "EffectDieSides_2": 1, "EffectDieSides_1": 1}
+                   "EffectBasePoints_2": 94, "EffectDieSides_2": 1, "EffectDieSides_1": 1}
     return rows
 
 

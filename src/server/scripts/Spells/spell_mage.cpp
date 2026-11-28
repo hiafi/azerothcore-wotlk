@@ -27,6 +27,7 @@
 #include "Pet.h"
 #include "Player.h"
 #include "PlayerScript.h"
+#include "ProcChanceCooldown.h" // Custom: gear-scaling GS2
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
@@ -2758,6 +2759,8 @@ class spell_mage_living_bomb : public AuraScript
             return;
 
         caster->CastSpell(caster, SPELL_MAGE_FANNED_FLAMES_ICD, true);
+        // Custom: gear-scaling GS2 (Systems.md section 5) - the 2.5 s marker lasts 2.5 s / (1 + Proc Chance).
+        ProcChanceCooldown::ScaleMarkerAura(caster->GetAura(SPELL_MAGE_FANNED_FLAMES_ICD), float(marker->GetAmount()));
         caster->CastSpell(caster, SPELL_MAGE_FANNED_FLAMES_READY, true);
     }
 
@@ -3496,7 +3499,8 @@ namespace
 
         // A second of slack so the marker can never time out ahead of the channel's last missile;
         // the aura's own removal takes it away on time (spell_mage_arcane_missiles). The aura,
-        // not the channel Spell: its duration is unhasted, so with haste it outlives the channel.
+        // not the channel Spell (since the 2026-11-27 channel haste ruling both are hasted alike;
+        // reading the aura still covers a pushback, which shortens the aura with the channel).
         int32 duration = channel->GetDuration() + 1000;
         marker->SetMaxDuration(duration);
         marker->SetDuration(duration);
@@ -3613,10 +3617,12 @@ class spell_mage_magic_absorption : public AuraScript
 
 // -5143 - Arcane Missiles
 // Mastery fix review S1: Arcane Missiles 5143 hastes its channel (ATTR5 haste-affects-periodic) but
-// not its aura's duration, so with haste the aura lingers after the channel bar ends. A recast in
-// that window refreshes the aura (ModStackAmount: REAPPLY mode only, no REAL apply/remove). This
-// SpellScript drops any leftover marker before this cast's own Clearcasting (CAST phase) or
-// Missile Barrage (FINISH phase) grant; the AuraScript re-syncs the marker on apply and on refresh.
+// used to leave its aura's duration unhasted, so with haste the aura lingered after the channel bar
+// ended (no longer: channels: stock hasted duration, fixed ticks, 2026-11-27; kept as a guard for a
+// recast that refreshes a still-present aura). A recast in that window refreshes the aura
+// (ModStackAmount: REAPPLY mode only, no REAL apply/remove). This SpellScript drops any leftover marker
+// before this cast's own Clearcasting (CAST phase) or Missile Barrage (FINISH phase) grant; the AuraScript
+// re-syncs the marker on apply and on refresh.
 class spell_mage_arcane_missiles_spell : public SpellScript
 {
     PrepareSpellScript(spell_mage_arcane_missiles_spell);

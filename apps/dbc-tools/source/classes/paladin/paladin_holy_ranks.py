@@ -94,11 +94,11 @@ _MISC_SCHOOL_HOLY_DISEASE = 3  # aura 246 misc 3 = Disease
 # --- Sunlight tooltip ----------------------------------------------------------------------------------------------
 # A talent-pane rank tooltip must show its own rank's fraction, which a tooltip variable can't do, so each rank keeps
 # the literal ${...} expression of Sunlight's hit 201232 scaled by the rank constant (HOLY section 4.1 exception).
-# 201232 (A2a, paladin_holy_spells.py): hybrid 6.2925 SP + 6.2925 AP (7.5 x 0.839, 2026-11-17 weapon scaling WS2 Normal trim),
+# 201232 (A2a, paladin_holy_spells.py): hybrid 5.2796 SP + 5.2796 AP (6.0408 x 0.874, 2026-11-27 gear-scaling GS3 ilvl 66 retune; 6.2925 x 0.96 on 2026-11-26; 7.5 x 0.839 on 2026-11-17),
 # direct, instant (time basis 1.5 s), SpellLevel 25.
 # Re-copy these numbers here if 201232's potency ever changes (HOLY section 11 risk 8).
 _SUNLIGHT_HIT = _potency.resolve(
-    _potency.PotencyEffect(sp_potency=6.2925, ap_potency=6.2925, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=25,
+    _potency.PotencyEffect(sp_potency=5.2796, ap_potency=5.2796, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=25,
 )
 
 
@@ -183,12 +183,14 @@ illuminated_steel_r3_201248 = _steel(201248, 99, 100)
 
 # =====================================================================================================================
 # (1,3) Merciful Strikes 60112 - row 1 (level 15). eff1 DUMMY window % (4/9/14, selects 201217/18/19), eff2 DUMMY heal %
-# (9/19/29). Row: Crusader Strike hits, HIT phase, DisableEffectsMask 0x2. Script: spell_pal_merciful_strikes.
+# (11/23/35). Row: Crusader Strike hits, HIT phase, DisableEffectsMask 0x2. Script: spell_pal_merciful_strikes.
 # =====================================================================================================================
 
 _MERCIFUL_NOTE = (
     'paladin-rework S2 HOLY section 5 (1,3): eff1 DUMMY = Merciful window % (selects the 201217-9 buff), eff2 DUMMY = heal %; '
     'spell_proc row (section 7) on Crusader Strike with DisableEffectsMask 0x2 (the script handles EFFECT_0).'
+    ' Heal 10/20/30% -> 12/24/36% (2026-11-27, gear-scaling GS3 review fix, user ruling: restore Holy healing after the'
+    ' ~15% Crusader Strike / Judgement damage cut).'
 )
 
 
@@ -201,9 +203,9 @@ def _merciful(spell_id, rank, window_bp, window_pct, heal_bp, heal_pct):
     )
 
 
-merciful_strikes_talent_r1_201249 = _merciful(201249, 1, 4, 5, 9, 10)
-merciful_strikes_talent_r2_201250 = _merciful(201250, 2, 9, 10, 19, 20)
-merciful_strikes_talent_r3_201251 = _merciful(201251, 3, 14, 15, 29, 30)
+merciful_strikes_talent_r1_201249 = _merciful(201249, 1, 4, 5, 11, 12)
+merciful_strikes_talent_r2_201250 = _merciful(201250, 2, 9, 10, 23, 24)
+merciful_strikes_talent_r3_201251 = _merciful(201251, 3, 14, 15, 35, 36)
 
 # =====================================================================================================================
 # (2,3) Zealous Exorcism 1463 - row 2 (level 20). eff1 ADD_PCT_MODIFIER COST on Exorcism -40/-80%, eff2 DUMMY cooldown
@@ -237,7 +239,9 @@ _SUNLIGHT_NOTE = (
     'paladin-rework S2 HOLY section 5 (3,3): eff1 PROC_TRIGGER_SPELL -> Sunlight 201232 (default handler, no script), eff2 DUMMY = '
     'rank % applied by spell_pal_sunlight_hit; spell_proc row on autos + Crusader Strike, DisableEffectsMask 0x2. Tooltip keeps the '
     'literal ${...} expression of 201232 scaled by the rank fraction (section 4.1 exception). Tooltip expression re-copied for '
-    '201232 sp_potency and ap_potency 7.5 -> 6.2925 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839).'
+    '201232 sp_potency and ap_potency 7.5 -> 6.2925 (2026-11-17, weapon scaling WS2 Normal trim, user ruling: Shockadin x0.839) and '
+    '6.2925 -> 6.0408 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: Shockadin x0.96 from the pre-R1 value; an intermediate x1.064 was dropped) and '
+    '6.0408 -> 5.2796 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Shockadin damage only, x0.874).'
 )
 _SUNLIGHT_CAPSTONE = "Each Sunlight has a 10% chance to strike the target again."
 

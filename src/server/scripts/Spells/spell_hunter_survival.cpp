@@ -1171,12 +1171,18 @@ class spell_hun_lock_and_load_rework : public AuraScript
         return Hunter::RollProcChance(GetUnitOwner(), float(aurEff->GetAmount()));
     }
 
-    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    void HandleProc(ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
 
-        if (Player* player = AsPlayer(GetUnitOwner()))
-            Hunter::TriggerLockAndLoad(player);
+        // gear-scaling GS2: the clause's own base chance (trap eff0, fire pulse eff1) decides whether the ICD scales
+        Player* player = AsPlayer(GetUnitOwner());
+        if (!player)
+            return;
+
+        AuraEffect const* clause =
+            GetEffect((eventInfo.GetTypeMask() & PROC_FLAG_DONE_TRAP_ACTIVATION) ? EFFECT_0 : EFFECT_1);
+        Hunter::TriggerLockAndLoad(player, clause ? float(clause->GetAmount()) : 100.0f);
     }
 
     void Register() override

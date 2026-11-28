@@ -462,7 +462,7 @@ def check_unleashed_rage(rows: dict, ids=UNLEASHED_RAGE) -> list[str]:
 
 
 LAVA_LASH = 60103
-LAVA_LASH_WEAPON_PERCENT = 266   # off-hand weapon damage % [tune], stock 100, 250 on 2026-10-22 then trimmed to 110 (S3-ENH-TRIM-DIAG option 3), 154 on 2026-11-01 (B3, +40%), 169 on 2026-11-15 (BAL1, +10%, whole potency), 220 on 2026-11-16 (ST1000, +30%), 266 on 2026-11-17 (WS3 Enhancement compensation, x1.21)
+LAVA_LASH_WEAPON_PERCENT = 235   # off-hand weapon damage % [tune], stock 100, 250 on 2026-10-22 then trimmed to 110 (S3-ENH-TRIM-DIAG option 3), 154 on 2026-11-01 (B3, +40%), 169 on 2026-11-15 (BAL1, +10%, whole potency), 220 on 2026-11-16 (ST1000, +30%), 266 on 2026-11-17 (WS3 Enhancement compensation, x1.21), 278 on 2026-11-26 (raid-buff-sets retune R1, x1.045), rounded to 280 in the R1 revision
 EFFECT_WEAPON_PERCENT_DAMAGE = 31
 
 
@@ -1107,8 +1107,8 @@ class ShamanS3aNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_unleashed_rage({30802: _row(30802, EffectAura_1=137, EffectAura_2=240)})), 1)
 
     def test_lava_lash(self):
-        good = _row(60103, Effect_1=31, EffectBasePoints_1=265, EffectDieSides_1=1,
-                    Description_Lang_enUS="Strike for 266% off-hand weapon damage as Fire damage.")
+        good = _row(60103, Effect_1=31, EffectBasePoints_1=234, EffectDieSides_1=1,
+                    Description_Lang_enUS="Strike for 235% off-hand weapon damage as Fire damage.")
         self.assertEqual(check_lava_lash({60103: good}), [])
         self.assertEqual(len(check_lava_lash({60103: {**good, "EffectBasePoints_1": 99}})), 1)
         self.assertEqual(len(check_lava_lash({60103: {**good, "Description_Lang_enUS": "100% off-hand weapon damage"}})), 1)

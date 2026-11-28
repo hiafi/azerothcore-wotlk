@@ -43,6 +43,8 @@ public:
     void OnStartup() override
     {
         SpellPotency::Validate();
+        // Custom: gear-scaling GS2 D - the config and item_weapon_dps_curve (ItemBudget) have loaded by now.
+        SpellPotency::BuildApWeaponReference();
     }
 };
 

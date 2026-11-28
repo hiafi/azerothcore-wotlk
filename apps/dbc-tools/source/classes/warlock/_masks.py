@@ -148,13 +148,6 @@ NIGHTFALL_TRIGGER = (0x400A, SHADOWFLAME, SHADOWFLAME_DOT)  # = (0x400A, 0x10000
 SHADOW_TRANCE_CONSUMERS = (SHADOW_BOLT, SEED_OF_CORRUPTION_DOT, 0)  # = (0x1, 0x4, 0)
 EVERLASTING_TRIGGER = (0x4009, 0x40008, 0)  # SB, DL, DS; Haunt, Howl
 CORRUPTION_UA = (0x2, 0x100, 0)  # Malediction, Empowered Corruption (d1 part), EA eff2
-# The spells the three specs share at different potency multipliers (level60-stat-curve S23, user ruling 14, 2026-11-22:
-# Affliction and Destruction x1.18, Demonology x1.09). Their potency carries x1.09; the hidden passive 200992 (linked
-# from Malediction 32484 and Shadow and Flame 30290, both rank 3) adds +8% for Affliction and Destruction. Collision
-# search 2026-11-22 (stock Spell.dbc, live spell_dbc and the DSL, family 5): these bits sit only on the old ranks and
-# NPC copies of the same spells, besides the four below.
-SPEC_TUNE_DIRECT = (SHADOW_BOLT, SOUL_FIRE | STONE_FIRE_BLAST, 0)  # Shadow Bolt; Soul Fire, Fire Blast 200716
-SPEC_TUNE_DOT = (CORRUPTION, 0, 0)  # Corruption
 SIPHON_LIFE_DOT = (0x2, 0x104, 0)
 LINGERING_AGONY = (0x400, 0x100, 0)
 IMPROVED_CURSES_EXH_TONGUES = (0x400000, 0, CURSE_OF_TONGUES)

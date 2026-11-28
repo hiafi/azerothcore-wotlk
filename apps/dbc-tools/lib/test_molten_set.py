@@ -15,8 +15,9 @@ Checks:
   - the vendors: 16 creatures in the `molten_set` creature slice (vendor flag, friendly to all), every set and tier
     sold by exactly one vendor of its own armor type;
   - the bonus spells: ids in the reservation and mirrored by MoltenSetLogic.h, every scripted_by() name registered by
-    molten_set_bonuses.cpp, the tooltip literals and Heat counts equal to the C++ numbers, the Cooldown Haste list
-    equal to Player.cpp's, the Heat buffs (count, 30 s, leave combat, number-free), the proc rows (Heat at 100%, never
+    molten_set_bonuses.cpp, the tooltip literals and Heat counts equal to the C++ numbers, the cooldown hook floor
+    and deny list equal to Player.cpp's and the Molten trigger list equal to its DSL source, the Heat buffs (count,
+    30 s, leave combat, number-free), the proc rows (Heat at 100%, never
     a chance), damage and heals on potency, payouts suppress caster procs.
 
 Run directly:
@@ -304,7 +305,7 @@ class MoltenSetTest(unittest.TestCase):
             self.assertIn("Heat lasts 30 sec", desc)
             self.assertIn("2 when they critically" if k != 7 else "1 more when they critically", desc)
 
-    def test_cooldown_haste_list_matches_player_cpp(self):
+    def test_cooldown_hook_lists(self):
         source = PLAYER_CPP.read_text(encoding="utf-8")
 
         def array(name: str) -> list[int]:
@@ -312,7 +313,12 @@ class MoltenSetTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return [int(v) for v in re.findall(r"\d+", match.group(1))]
 
-        self.assertEqual(self.header_list("kCooldownHasteAllowList"), array("CUSTOM_COOLDOWN_HASTE_ALLOW_LIST"))
+        # The Molten trigger list is its own (gear-scaling GS2 ruling 2026-11-27), checked against its DSL source.
+        source_list = re.search(r"^COOLDOWN_TRIGGER_ALLOW_LIST = \(([^)]*)\)", self.bonus_source, re.MULTILINE)
+        self.assertIsNotNone(source_list)
+        self.assertEqual(self.header_list("kMoltenCooldownTriggerAllowList"),
+                         [int(v) for v in re.findall(r"\d+", source_list.group(1))])
+        self.assertEqual(self.header_list("kMoltenCooldownTriggerAllowList"), [200333, 200829, 204148])
         self.assertEqual(self.header_list("kCooldownHasteDenyList"), array("CUSTOM_COOLDOWN_HASTE_DENY_LIST"))
         minimum = re.search(r"CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS\s*=\s*(\d+)\s*\*\s*IN_MILLISECONDS", source)
         self.assertIsNotNone(minimum)

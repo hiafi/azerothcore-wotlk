@@ -161,7 +161,7 @@ flametongue_attack_202202 = spell(
     id=202202, name='Flametongue Attack', school=School.FIRE, attributes=_ATTR0_DO_NOT_SHEATH,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=8.228, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=7.0506, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         Effect(type=EffectType.DUMMY, base_points=999, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
@@ -174,7 +174,9 @@ flametongue_attack_202202 = spell(
           'RangeIndex as stock 10444; AttributesEx3 0x10000 (marker only; the real no-proc guard is the cast being triggered with no NOT_A_PROC, '
           'SpellAuras.cpp GetProcEffectMask). '
           '2026-11-01 sp_potency 8.0 -> 6.8 (2026-11-01, DPS balance pass 1031, user ruling: Flametongue Attack -15%; the user wrote "15%" with no sign, read as a cut because Enhancement is over target).'
-          ' sp_potency 6.8 -> 8.228 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
+          ' sp_potency 6.8 -> 8.228 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).'
+          ' sp_potency 8.228 -> 8.5983 (2026-11-26, raid-buff-sets retune R1, user ruling: Enhancement-only spells x1.045; the per-hit weapon-speed scaling is unchanged).'
+          ' sp_potency 8.5983 -> 7.0506. (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Enhancement-only spells x0.82).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_1': m.FLAMETONGUE_ATTACK, 'DefenseType': _DMG_MAGIC,
         'EquippedItemClass': -1, 'SpellLevel': 10, 'CastingTimeIndex': 1, 'AttributesEx': 0x88,
@@ -188,7 +190,7 @@ flametongue_attack_202202 = spell(
 frostbrand_attack_202203 = spell(
     id=202203, name='Frostbrand Attack', school=School.FROST, attributes=_ATTR0_DO_NOT_SHEATH,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=24.2, potency_kind='direct', time_basis_ms=1500,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=20.737, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_FROSTBRAND,
     tooltip_vars=shaman_imbuehits_1218,   # S3a A4: Elemental Weapons (`mult`) on the hit number
@@ -196,7 +198,9 @@ frostbrand_attack_202203 = spell(
           '20 Frost direct, T 1500, d0 b24. Stock 8034\'s slow dropped (not in the rework text). AttributesEx 0x88 as '
           'stock 8034/10444; AttributesEx3 0x10000 (marker only; the real no-proc guard is the cast being triggered with no NOT_A_PROC, '
           'SpellAuras.cpp GetProcEffectMask).'
-          ' sp_potency 20.0 -> 24.2 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
+          ' sp_potency 20.0 -> 24.2 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).'
+          ' sp_potency 24.2 -> 25.289 (2026-11-26, raid-buff-sets retune R1, user ruling: Enhancement-only spells x1.045).'
+          ' sp_potency 25.289 -> 20.737. (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Enhancement-only spells x0.82).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_1': m.FROSTBRAND_ATTACK, 'DefenseType': _DMG_MAGIC,
         'EquippedItemClass': -1, 'SpellLevel': 20, 'CastingTimeIndex': 1, 'AttributesEx': 0x88,
@@ -215,13 +219,16 @@ frostbrand_attack_202203 = spell(
 windfury_attack_mh_202204 = spell(
     id=202204, name='Windfury Attack', school=School.NORMAL, attributes=_ATTR0_DO_NOT_SHEATH,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
-    effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=121, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
+    effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=105, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_WINDFURY,
     tooltip_vars=shaman_imbuehits_1218,   # S3a A4: `wf` = Elemental Weapons x Improved Windfury x Spirit Weapons on the weapon %
     notes='SH0a A3, shared doc "Windfury": main-hand extra attack, two per proc (spell_sha_windfury_proc). One '
           'WEAPON_PERCENT_DAMAGE effect, weapon_potency 100, d0 b23 (H7 Flurry, Spirit Weapons). BASE_ATTACK weapon. '
           'spell_sha_windfury_attack adds +20% AP. No NOT_A_PROC and no SUPPRESS_CASTER_PROCS (they roll Maelstrom Weapon).'
-          ' weapon_potency 100 -> 121 and the C++ +20% attack power part (WINDFURY_AP_BONUS 0.2 -> 0.242, spell_shaman_shared.cpp) (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
+          ' weapon_potency 100 -> 121 and the C++ +20% attack power part (WINDFURY_AP_BONUS 0.2 -> 0.242, spell_shaman_shared.cpp) (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).'
+          ' weapon_potency 121 -> 126 and WINDFURY_AP_BONUS 0.242 -> 0.2529 (2026-11-26, raid-buff-sets retune R1, user ruling: Enhancement-only spells x1.045; 121 x 1.045 = 126.4, rounded: weapon potency must be whole, so x1.041 on the weapon part, x1.045 on the attack power part).'
+          ' weapon_potency 126 -> 125 and WINDFURY_AP_BONUS 0.2529 -> 0.25 (2026-11-26, raid-buff-sets retune R1, user ruling: rounded numbers, both parts x125/121 = x1.033 of the original).'
+          ' weapon_potency 125 -> 105 and WINDFURY_AP_BONUS 0.25 -> 0.21 (spell_shaman_shared.cpp), both x0.84. (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Enhancement-only spells x0.84).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_1': m.WINDFURY_ATTACK, 'DefenseType': _DMG_MELEE,
         'EquippedItemClass': -1, 'SpellLevel': 30, 'CastingTimeIndex': 1, 'SpellVisualID_1': _SV_WINDFURY_ATTACK,
@@ -233,13 +240,16 @@ windfury_attack_mh_202204 = spell(
 windfury_attack_oh_202205 = spell(
     id=202205, name='Windfury Attack', school=School.NORMAL, attributes=_ATTR0_DO_NOT_SHEATH,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
-    effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=121, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
+    effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=105, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_WINDFURY,
     tooltip_vars=shaman_imbuehits_1218,   # S3a A4: as 202204
     notes='SH0a A3, shared doc "Windfury": off-hand extra attack, cast only for an off-hand hit. Same as 202204 with '
           'AttributesEx3 REQUIRES_OFF_HAND_WEAPON 0x1000000, which makes Spell::m_attackType OFF_ATTACK; the cast-time '
           'weapon check is skipped for EquippedItemClass -1, so spell_sha_windfury_proc is the gate (off-hand hit only).'
-          ' weapon_potency 100 -> 121 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).',
+          ' weapon_potency 100 -> 121 (2026-11-17, weapon scaling WS3 Enhancement compensation, user ruling: Enhancement-only spells x1.21).'
+          ' weapon_potency 121 -> 126 (2026-11-26, raid-buff-sets retune R1, user ruling: Enhancement-only spells x1.045; 121 x 1.045 = 126.4, rounded: weapon potency must be whole; the +25% attack power part is in spell_sha_windfury_attack, see 202204).'
+          ' weapon_potency 126 -> 125 (2026-11-26, raid-buff-sets retune R1, user ruling: rounded numbers).'
+          ' weapon_potency 125 -> 105 (x0.84; the attack power part is in spell_sha_windfury_attack, see 202204). (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Enhancement-only spells x0.84).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_1': m.WINDFURY_ATTACK, 'DefenseType': _DMG_MELEE,
         'EquippedItemClass': -1, 'SpellLevel': 30, 'CastingTimeIndex': 1, 'SpellVisualID_1': _SV_WINDFURY_ATTACK,
@@ -254,9 +264,9 @@ windfury_attack_oh_202205 = spell(
 # Stoneskin (shared doc "Stoneskin")
 # =====================================================================================================================
 
-# "Each stack of Stoneskin reduces all damage you take by 1%, up to 50 stacks. Taking damage erodes your stacks." A visible
+# "Each stack of Stoneskin reduces all damage you take by 1%, up to 15 stacks. Taking damage erodes your stacks." A visible
 # (not passive, not consolidated) buff, applied and stacked only by scripts (Shaman::AddStoneskin) while Rockbiter is up and
-# eroded by Shaman::ErodeStoneskin. CumulativeAura 50 is the StackAmount; aura 87 (damage taken %) misc 127 (all schools)
+# eroded by Shaman::ErodeStoneskin. CumulativeAura 15 is the StackAmount and the cap Shaman::GetStoneskinCap reads; aura 87 (damage taken %) misc 127 (all schools)
 # -1 per stack, stored -2 (live -1); AuraEffect::CalculateAmount multiplies it by the stack count. Permanent duration: the
 # 2 min out-of-combat timer is the shaman's (STONESKIN_OOC_MS). The buff icon is the Stoneskin Totem buff's (8072, 690).
 # Not a death-surviving aura: it falls off with the shaman's death and is re-earned.
@@ -269,11 +279,17 @@ stoneskin_202206 = spell(
     spell_icon_id=_ICON_STONESKIN,
     notes='SH0a A3, shared doc "Stoneskin": visible stacking buff, CumulativeAura (StackAmount) 50, aura 87 misc 127 stored -2 '
           '(live -1% per stack). Built by Shaman::AddStoneskin under Rockbiter, eroded by Shaman::ErodeStoneskin. No family '
-          'bits, no SkillLineAbility. Icon 690 = the Stoneskin Totem buff (8072).',
+          'bits, no SkillLineAbility. Icon 690 = the Stoneskin Totem buff (8072).'
+          ' CumulativeAura 50 -> 30, tooltip "up to 50 stacks" -> "up to 30 stacks" (2026-11-28, gear-scaling tank survival '
+          'pass, user ruling: Enhancement dual-wield tank the least survivable tank at about 70-75 s, shield tank about 80 s). '
+          'CumulativeAura 30 -> 25, tooltip "up to 30 stacks" -> "up to 25 stacks" (2026-11-28, gear-scaling tank survival '
+          'pass round 2, user ruling: Enh DW tank 76.2 s, below Bear\'s 75 s). Round 3: the C++ reads this CumulativeAura as '
+          'the cap (Shaman::GetStoneskinCap; the STONESKIN_MAX const is retired), less Toughness\'s shield clause (202454 E1). CumulativeAura 25 -> 15, tooltip "up to 25 stacks" -> "up to 15 '
+          'stacks" (2026-11-28, gear-scaling tank survival pass round 4, user ruling: precision sims put cap 25 at DW 82 / shield 85 s; cap 15 with a shield cut of 5 aims at DW ~55 s, shield ~84 s).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'EquippedItemClass': -1, 'SpellLevel': 1, 'CastingTimeIndex': 1,
-        'CumulativeAura': 50,
-        'Description_Lang_enUS': 'Each stack of Stoneskin reduces all damage you take by 1%, up to 50 stacks. '
+        'CumulativeAura': 15,
+        'Description_Lang_enUS': 'Each stack of Stoneskin reduces all damage you take by 1%, up to $u stacks. '
                                  'Taking damage erodes your stacks.',
         'AuraDescription_Lang_enUS': 'Damage taken reduced. Taking damage erodes this effect.',
     },
@@ -284,7 +300,8 @@ STONESKIN_EARTH_SHOCK = const('STONESKIN_EARTH_SHOCK', 15, 'Stoneskin stacks Ear
 STONESKIN_STORMSTRIKE = const('STONESKIN_STORMSTRIKE', 5, 'Stoneskin stacks Stormstrike grants [tune].')
 STONESKIN_LAVA_LASH = const('STONESKIN_LAVA_LASH', 5, 'Stoneskin stacks Lava Lash grants [tune].')
 STONESKIN_CHAIN_LIGHTNING = const('STONESKIN_CHAIN_LIGHTNING', 1, 'Stoneskin stacks Chain Lightning grants per target hit [tune].')
-STONESKIN_MAX = const('STONESKIN_MAX', 50, 'Stoneskin stack cap [fixed]; also spell 202206\'s CumulativeAura.')
+# STONESKIN_MAX (const) retired in round 3 of the 2026-11-28 gear-scaling tank survival pass: the C++
+# (Shaman::GetStoneskinCap) reads 202206's CumulativeAura (StackAmount), so cap tuning is data-only (no rebuild).
 STONESKIN_OOC_MS = const('STONESKIN_OOC_MS', 120000, 'Out-of-combat time before the Stoneskin stacks fall off, ms [fixed].')
 
 

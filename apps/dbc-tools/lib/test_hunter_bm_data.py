@@ -1391,6 +1391,11 @@ S9_PET_TRIM = {17253: 0.9, 201720: 0.9, 201721: 0.9}
 # level60-stat-curve S11 (user ruling 2026-11-21): BM x0.96 on its BM-only abilities (Lunge, Rip Throat; Stomp and
 # Kill Command are not in these tables), on top of S9. The shared Bite basic is unchanged.
 S11_PET_TRIM = {201720: 0.96, 201721: 0.96}
+# raid-buff-sets retune R1 (user ruling 2026-11-26): BM x0.931 on its BM-only abilities (Lunge, Rip Throat; Stomp and
+# Kill Command are not in these tables), on top of S11.
+R1_PET_TRIM = {201720: 0.931, 201721: 0.931}
+# raid-buff-sets retune R3 (user ruling 2026-11-26): BM x0.935 more on the same abilities, on top of R1.
+R3_R4_PET_TRIM = {201720: 0.95 * 0.8, 201721: 0.95 * 0.8}  # R4: 0.95 replaces R3's 0.935; GS3 (2026-11-27) x0.80 on top
 
 
 def check_f1_potency(entries_by_id: dict[int, dict], table=F1_POTENCY, extra_scale: float = 1.0,
@@ -1408,7 +1413,7 @@ def check_f1_potency(entries_by_id: dict[int, dict], table=F1_POTENCY, extra_sca
         for effect, authored, slot, kind in rows:
             got = _potency_of(entry, effect, kind)
             want = (authored * F1_SCALE[slot] * scale * WSH2_PET_TRIM * S9_PET_TRIM.get(spell_id, 1.0)
-                    * S11_PET_TRIM.get(spell_id, 1.0))
+                    * S11_PET_TRIM.get(spell_id, 1.0) * R1_PET_TRIM.get(spell_id, 1.0) * R3_R4_PET_TRIM.get(spell_id, 1.0))
             if got is None or abs(got - want) > 0.01:
                 bad.append(f"{spell_id} eff{effect}: potency ({kind}) {got}, expected {authored} x {F1_SCALE[slot]}"
                            f"{f' x {round(scale, 4)}' if scale != 1.0 else ''} x {WSH2_PET_TRIM} (WSH2)"
@@ -1457,7 +1462,8 @@ def check_ruling_23_potency(entries_by_id: dict[int, dict], table=R23_POTENCY) -
             continue
         for effect, current, kind, scale in rows:
             got = _potency_of(entry, effect, kind)
-            want = current * scale * WSH2_PET_TRIM * S9_PET_TRIM.get(spell_id, 1.0) * S11_PET_TRIM.get(spell_id, 1.0)
+            want = (current * scale * WSH2_PET_TRIM * S9_PET_TRIM.get(spell_id, 1.0) * S11_PET_TRIM.get(spell_id, 1.0)
+                    * R1_PET_TRIM.get(spell_id, 1.0) * R3_R4_PET_TRIM.get(spell_id, 1.0))
             if got is None or abs(got - want) > 0.01:
                 bad.append(f"{spell_id} eff{effect}: potency ({kind}) {got}, expected {current} x {scale} x "
                            f"{WSH2_PET_TRIM} (WSH2)"
@@ -2145,10 +2151,10 @@ class HunterBmDataTest(unittest.TestCase):
         package = package_data()["package"]
         bonus = [r for r in package.spell_bonus_data if int(r["entry"]) == 56641]
         self.assertEqual(len(bonus), 1)
-        # S9: ap_potency 33.0534 (2026-11-21 BM / MM x0.90 on 36.726; WSH2 2026-11-17 Normal trim x0.694 on 52.92;
+        # GS3: ap_potency 29.7481 (x0.90 on 33.0534); S9: 33.0534 (2026-11-21 BM / MM x0.90 on 36.726; WSH2 2026-11-17 Normal trim x0.694 on 52.92;
         # BAL1 2026-11-15: was 44.1; pass 1031: was 49; TUNE1 70, was 100), so the coefficient is
         # 0.330534 * (1.5 / 3.5), x b / R since the potency rebase (level60-stat-curve HANDOFF 1.9, LS5b)
-        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.330534 * 1.5 / 3.5 * potency.AP_COEF_SCALE / potency.DEFAULT_R,
+        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.297481 * 1.5 / 3.5 * potency.AP_COEF_SCALE / potency.DEFAULT_R,
                                places=4)
 
     def test_s1b_ids_have_equipped_item_class_minus_one(self):
@@ -2318,8 +2324,9 @@ class HunterBmDataTest(unittest.TestCase):
         package = package_data()["package"]
         bonus = {int(r["entry"]): r["ap_bonus"] for r in package.spell_bonus_data}
         # ruling 23b: x0.80 on top of the ruling 19 numbers; the reference Rip Throat took ruling 24's Ferocity x1.07
-        # S9: BM x0.90 on Rip Throat; S11: x0.96 on top
-        rip_throat = 552.5 * R24_FEROCITY_ST_SCALE * S9_PET_TRIM[201721] * S11_PET_TRIM[201721]
+        # S9: BM x0.90 on Rip Throat; S11: x0.96 on top; R1: x0.931 on top
+        rip_throat = (552.5 * R24_FEROCITY_ST_SCALE * S9_PET_TRIM[201721] * S11_PET_TRIM[201721]
+                      * R1_PET_TRIM[201721] * R3_R4_PET_TRIM[201721])
         self.assertAlmostEqual(bonus[201726] / bonus[201721], 420.0 * R23B_TENACITY_SCALE / rip_throat, places=6)
         self.assertAlmostEqual(bonus[201727] / bonus[201721], 715.0 * R23B_TENACITY_SCALE / rip_throat, places=6)
         swipe = {r["ScriptName"] for r in package.spell_script_names if int(r["spell_id"]) == 201726}

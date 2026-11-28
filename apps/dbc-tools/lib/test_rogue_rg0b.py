@@ -63,7 +63,7 @@ def expectations(idx: dict) -> tuple[dict, dict, dict]:
             "Attributes": 0x29050010, "SpellLevel": 10, "BaseLevel": 10, "EquippedItemClass": -1, "DurationIndex": inf,
             "RecoveryTime": 1000, "Category": 0, "CategoryRecoveryTime": 0, "StartRecoveryCategory": 0,
             "StartRecoveryTime": 0, "ManaCost": 0, "RangeIndex": 1, "CastingTimeIndex": 1,
-            "Effect_1": 6, "EffectAura_1": 142, "EffectMiscValue_1": 1, "EffectBasePoints_1": 399,   # M2a: +400%
+            "Effect_1": 6, "EffectAura_1": 142, "EffectMiscValue_1": 1, "EffectBasePoints_1": 99,   # M2a: +400%; gear-scaling round 5: +100%
             "Effect_2": 6, "EffectAura_2": 10, "EffectMiscValue_2": 127, "EffectBasePoints_2": 104,   # +105% (M2a tried +150%, reverted)
             "Effect_3": 6, "EffectAura_3": 79, "EffectMiscValue_3": 127, "EffectBasePoints_3": -11,
             "SpellIconID": 276, "SpellVisualID_1": 0,
@@ -74,7 +74,7 @@ def expectations(idx: dict) -> tuple[dict, dict, dict]:
             "EquippedItemClass": -1, "DurationIndex": inf,
             "Effect_1": 6, "EffectAura_1": 187, "EffectBasePoints_1": -1001,
             "Effect_2": 6, "EffectAura_2": 188, "EffectBasePoints_2": -1001,
-            "Effect_3": 6, "EffectAura_3": 87, "EffectMiscValue_3": 127, "EffectBasePoints_3": -21,   # M2a: -20% taken
+            "Effect_3": 6, "EffectAura_3": 87, "EffectMiscValue_3": 127, "EffectBasePoints_3": -11,   # M2a: -20% taken; gear-scaling round 5: -10%
             "SpellClassMask_1": 0, "SpellClassMask_2": 0, "SpellClassMask_3": 0,
         },
         INSULT: {
@@ -115,11 +115,11 @@ def expectations(idx: dict) -> tuple[dict, dict, dict]:
             "SpellClassMask_1": 0, "SpellClassMask_2": 0, "SpellClassMask_3": 0,
         },
         # ---- reworked stock rows: costs, effect order (percent first), levels
-        SS: {"ManaCost": 40, "SpellLevel": 1, "BaseLevel": 1, "Effect_1": 31, "EffectBasePoints_1": 259,   # BAL1 2026-11-15: 260% (1031: 200%, M2a 250%)
+        SS: {"ManaCost": 40, "SpellLevel": 1, "BaseLevel": 1, "Effect_1": 31, "EffectBasePoints_1": 184,   # raid-buff-sets R1 2026-11-26: 220% (x0.85; BAL1 2026-11-15: 260% (1031: 200%, M2a 250%)
              "Effect_2": 121, "Effect_3": 80, "MaxLevel": 0, "StartRecoveryCategory": 133, "StartRecoveryTime": 1000},
-        BS: {"ManaCost": 45, "SpellLevel": 4, "BaseLevel": 4, "Effect_1": 31, "EffectBasePoints_1": 599,   # BAL2 round 2: 600% (DPS balance pass 1031 500%, M2a 250%)
+        BS: {"ManaCost": 45, "SpellLevel": 4, "BaseLevel": 4, "Effect_1": 31, "EffectBasePoints_1": 369,   # raid-buff-sets R1 2026-11-26: 460% (Subtlety x0.77; BAL2 round 2: 600% (DPS balance pass 1031 500%, M2a 250%)
              "Effect_2": 121, "Effect_3": 80},
-        AMBUSH: {"ManaCost": 45, "SpellLevel": 18, "BaseLevel": 18, "Effect_1": 31, "EffectBasePoints_1": 377,   # BAL2 round 2: 378% (R4 315%, M2a 350%)
+        AMBUSH: {"ManaCost": 45, "SpellLevel": 18, "BaseLevel": 18, "Effect_1": 31, "EffectBasePoints_1": 229,   # raid-buff-sets R1 2026-11-26: 290% (Subtlety x0.77; BAL2 round 2: 378% (R4 315%, M2a 350%)
                  "Effect_2": 121, "Effect_3": 80, "EffectBasePoints_3": 1, "RangeIndex": idx["r25"],
                  "EquippedItemClass": 2, "EquippedItemSubclass": 0x2A5F3},
         GS: {"RecoveryTime": 0, "Category": 0, "CategoryRecoveryTime": 0, "DurationIndex": inf, "SpellLevel": 10,
@@ -399,7 +399,9 @@ _DT_FLAT = potency.resolve(
 _RUPTURE_TICK = potency.resolve(
     # base_side AP: the real effect carries ap_potency too, so its base is on the attack power side (S7a split).
     # level60-stat-curve S7 (2026-11-20, user ruling): Rupture x1.35, 35.289 / 11.8125 -> 47.64015 / 15.946875.
-    potency.PotencyEffect(base_potency=47.64015, kind=potency.KIND_PERIODIC, t_ms=2000.0, base_side=potency.SIDE_AP),
+    # raid-buff-sets retune R1 (2026-11-26, user ruling): shared rogue spells x0.85, 47.64015 / 15.946875 -> 40.4941275 / 13.55484375.
+    # gear-scaling GS3 (2026-11-27, user ruling): shared rogue spells x0.90, 40.4941275 / 13.55484375 -> 36.4447 / 12.1994.
+    potency.PotencyEffect(base_potency=36.4447, kind=potency.KIND_PERIODIC, t_ms=2000.0, base_side=potency.SIDE_AP),
     spell_level=20)
 # Before the potency rebase (level60-stat-curve HANDOFF 1.9, LS5b) these were hand pins: cp_line 112.46235 per point,
 # cp AP 0.18018 per point, flat AP 0.114075, Rupture AP 0.0675 per tick. Now resolved, so a / b / R follow.
@@ -408,7 +410,7 @@ _DT_CP = potency.resolve(
 _DT_CP_LINE = 5 * _DT_CP.level60_value  # 5 points (cp_line 112.46235 per point before the rebase)
 _DT_CP_AP = 5 * _DT_CP.ap_coefficient  # token $AP (melee); 0.9009 before the rebase
 _DT_FLAT_AP = _DT_FLAT.ap_coefficient  # ap_bonus of ap_potency 26.6175, token $RAP; 0.114075 before the rebase
-_RUP_AP_TICK = potency.resolve(potency.PotencyEffect(ap_potency=15.946875, kind=potency.KIND_PERIODIC, t_ms=2000.0),
+_RUP_AP_TICK = potency.resolve(potency.PotencyEffect(ap_potency=12.1994, kind=potency.KIND_PERIODIC, t_ms=2000.0),
                                spell_level=20).ap_coefficient  # per 2 s tick; 0.0675 before the rebase
 _A = potency.AP_BASE_SCALE
 
@@ -465,9 +467,9 @@ def check_tooltips(dt_desc: str, rupture_desc: str) -> list[str]:
                 # 1.5 (was 1.0): the 1031 x1.2 tick makes the integer base-points rounding at L20 reach 1.06
                 if abs(got - want) > 1.5:
                     bad.append(f"{RUPTURE}: tooltip at L{level} = {got:.2f}, simulate_value says {want:.2f}")
-            if abs(eval_tooltip(ru, 60) - 170.1 * _A) > 0.6:
-                bad.append(f"{RUPTURE}: L60 tick {eval_tooltip(ru, 60):.2f}, expected 170.1 x a (M2a x1.5 of 70.0, "
-                           "then x1.2, DPS balance pass 1031; x a since LS5b; x1.35, level60-stat-curve S7)")
+            if abs(eval_tooltip(ru, 60) - 130.1265 * _A) > 0.6:
+                bad.append(f"{RUPTURE}: L60 tick {eval_tooltip(ru, 60):.2f}, expected 130.1265 x a (M2a x1.5 of 70.0, "
+                           "then x1.2, DPS balance pass 1031; x a since LS5b; x1.35, level60-stat-curve S7; x0.85, raid-buff-sets R1; x0.90, gear-scaling GS3)")
             if abs(eval_tooltip(ru, 60, ap=100) - eval_tooltip(ru, 60) - 100 * _RUP_AP_TICK) > 0.05:
                 bad.append(f"{RUPTURE}: AP term per 100 is not {100 * _RUP_AP_TICK:.2f} (9.1125 x b / R per tick)")
         except Exception as exc:
@@ -591,9 +593,11 @@ def _good_descs() -> tuple[str, str]:
     # Potency rebase (level60-stat-curve HANDOFF 1.9, LS5b): the lines x a, the AP terms x b / R.
     # level60-stat-curve S7 (2026-11-20, user ruling): Rupture's tick x1.35.
     # level60-stat-curve S7b (2026-11-21): attack power side refit a 0.71 / b 2.49.
+    # raid-buff-sets retune R1 (2026-11-26): Rupture's tick x0.85.
+    # gear-scaling GS3 (2026-11-27): Rupture's tick x0.90.
     dt = ("causing ${$max($max(0.1321*$RAP+399.2413+1.0434*$AP,3.1301+0.3095*$PL+0.1321*$RAP+399.2413+1.0434*$AP),"
           "1.1339*$max(0,$PL-15.5519)+0.1321*$RAP+399.2413+1.0434*$AP)} Physical damage.")
-    ru = ("causes ${$max($max(0.1055*$AP,7.4696+0.7385*$PL+0.1055*$AP),2.706*$max(0,$PL-15.2839)+0.1055*$AP)} "
+    ru = ("causes ${$max($max(0.0807*$AP,5.7143+0.5649*$PL+0.0807*$AP),2.0701*$max(0,$PL-15.2839)+0.0807*$AP)} "
           "Physical damage every 2 sec. Lasts longer per combo point: 1 point: 8 sec, 5 points: 24 sec.")
     return dt, ru
 
@@ -777,8 +781,8 @@ class RogueRG0bNegativeTest(unittest.TestCase):
         for old, new in (("399.2413", "300"), ("1.0434*$AP", "1.1*$AP"), ("0.1321*$RAP", "0.1507*$AP"),
                          ("1.1339*$max", "2.4*$max")):
             self.assertGreaterEqual(len(check_tooltips(dt.replace(old, new), ru)), 1, old)
-        for old, new in (("2.706", "1.0"), ("0.1055*$AP", "0.045*$AP"), ("0.1055*$AP", "0.1204*$RAP"),
-                         ("7.4696+0.7385", "27.4696+0.7385"), ("every 2 sec", "over time")):
+        for old, new in (("2.0701", "1.0"), ("0.0807*$AP", "0.045*$AP"), ("0.0807*$AP", "0.1204*$RAP"),
+                         ("5.7143+0.5649", "25.7143+0.5649"), ("every 2 sec", "over time")):
             self.assertGreaterEqual(len(check_tooltips(dt, ru.replace(old, new))), 1, old)
         self.assertGreaterEqual(len(check_tooltips("no block", ru)), 1)
         self.assertGreaterEqual(len(check_tooltips(dt, "no block")), 1)

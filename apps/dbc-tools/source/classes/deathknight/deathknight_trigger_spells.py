@@ -86,7 +86,7 @@ _OPH_POT = pot_text(on_a_pale_horse_damage_203477)
 
 # U24 (S2-HANDOFF, user 2026-10-24) + S3-HANDOFF U28: spell-named unconditional % talents show on the tooltip.
 # 1254 Heart Strike + Plague Strike, ONE entry and ONE owner (this file): S3a edited S2's Gravefrost entry in place.
-#   Heart Strike: Gravefrost (203275-203277 eff0 SPELLMOD_DAMAGE +5/10/15%). Heart Strike keeps the Bloody Strikes multiplier it
+#   Heart Strike: Gravefrost (203275-203277 eff0 SPELLMOD_DAMAGE +30/60/90% since retune R4 (5/10/15 before R2, 20/40/60 R2, 25/50/75 R3)). Heart Strike keeps the Bloody Strikes multiplier it
 #   read from entry 1250, so `heart` is the product of the two; its text is unchanged.
 #   Plague Strike: `plague` = Gravefrost x Outbreak (49013 / 55236 / 55237 eff0 SPELLMOD_DAMAGE +10/20/30% on d0 b0).
 heart_plague_strike_tooltip_1254 = tooltip_vars(
@@ -788,8 +788,8 @@ frost_strike_66196 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=105, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=8.755, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=90, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=7.504, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2740,
@@ -802,6 +802,7 @@ frost_strike_66196 = spell(
         'BasePoints[E2] -1, DieSides[E2], ImplicitTargetA_3 6 and E2.d1 0x4 twins of the stock row are deleted). SpellLevel 10 = '
         'the main hand\'s.'
         ' weapon_potency 62 -> 105 and sp_potency 5.15 -> 8.755 (2026-11-22, level60-stat-curve round S17: AoE rule A, user ruling: Frost Strike x1.70 so FrostDkObliterationSim 1T keeps ~1,080 after the Breath x0.70 cut; shared by every Frost DK build, the off-hand copy follows the main hand).'
+        ' weapon_potency 105 -> 90 and sp_potency 8.755 -> 7.504 (the off-hand copy follows 49143, x0.857) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Frost DK builds x0.85 (Breath, Howling Blast, Frost Strike, Avalanche; shared by Obliteration and Breath)).'
     ),
     raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy with your off-hand weapon for $s1% weapon damage plus {pot2.avg} as Frost damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RuneCostID': 1824, 'SpellClassMask_2': 4, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellVisualID_1': 11612, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -939,7 +940,7 @@ scourge_strike_55090 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=89, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=90, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=11, implicit_target_a=6),
     ],
@@ -959,7 +960,9 @@ scourge_strike_55090 = spell(
         '(superseded by 55265) is harmless. The tooltip reads Outbreak through tooltip_vars 1280 ($outbreak). Rebinds '
         '-55090 to spell_dk_scourge_strike_rework (end of this file). '
         'weapon_potency 70 -> 77 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Scourge Strike +10%; the Shadow part is a percent of the dealt damage and follows). '
-        'weapon_potency 77 -> 89 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Scourge Strike +15%; 77 x 1.15 = 88.55 rounded to the whole number 89, so +15.6%; the Shadow part 70890 is a percent of the dealt damage and follows).'
+        'weapon_potency 77 -> 89 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Scourge Strike +15%; 77 x 1.15 = 88.55 rounded to the whole number 89, so +15.6%; the Shadow part 70890 is a percent of the dealt damage and follows). '
+        'weapon_potency 89 -> 93 (2026-11-26, raid-buff-sets retune R1, Unholy shared x1.05 = 93.45), then 93 -> 95 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: multiples of 5 for visible weapon percents: x1.067 on 89; the Shadow part 70890 follows).'
+        ' weapon_potency 95 -> 90 (x0.947, a multiple of 5) (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Unholy shared x0.95 on Scourge Strike (Plague and Minion)).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An unholy strike that deals ${$s1*$<outbreak>}% weapon damage as Physical damage, plus $s3% of that damage as Shadow damage for each of your diseases on the target. Bursts half the Festering Wounds on the target, rounded down, minimum 2. Each rune it spends has a 33% chance to return as a Death Rune.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 2602, 'SpellClassMask_2': m.SCOURGE_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 15, 'SpellPriority': 50, 'SpellVisualID_1': 11832, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -3444,11 +3447,12 @@ necrosis_51462 = _frost_rank(
     51462, 'Necrosis', rank=2, row=2, icon=2709,
     proc_chance=100, proc_type_mask=20,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=12, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
     description='Your auto attacks deal an additional $s1% Shadow damage.',
     notes=(
-        'death-knight-rework S3a (Unholy doc "Necrosis", U27): talent row 2, rank 2 of 3 (51464 / 51465 are not granted). eff0 DUMMY 13% (stock 4 / 8 / 12 / 16 / 20%) read by the stock spell_dk_necrosis on -51459. ProcTypeMask 20 and ProcChance 100 kept; the stock spell_proc row -51459 (flags 0x4, phase 0) is unchanged. The eff1 mask twin (0x400) and the eff2 residue are gone.'
+        'death-knight-rework S3a (Unholy doc "Necrosis", U27): talent row 2, rank 2 of 3 (51464 / 51465 are not granted). eff0 DUMMY 13% (stock 4 / 8 / 12 / 16 / 20%) read by the stock spell_dk_necrosis on -51459. ProcTypeMask 20 and ProcChance 100 kept; the stock spell_proc row -51459 (flags 0x4, phase 0) is unchanged. The eff1 mask twin (0x400) and the eff2 residue are gone. '
+        'eff0 base_points 12 -> 13, 13% -> 14% (2026-11-26, raid-buff-sets retune R1, user ruling: Unholy shared x1.05 = 13.65).'
     ),
 )
 
@@ -3457,11 +3461,12 @@ necrosis_51463 = _frost_rank(
     51463, 'Necrosis', rank=3, row=2, icon=2709,
     proc_chance=100, proc_type_mask=20,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=20, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
     description='Your auto attacks deal an additional $s1% Shadow damage.',
     notes=(
-        'death-knight-rework S3a (Unholy doc "Necrosis", U27): talent row 2, rank 3 of 3 (51464 / 51465 are not granted). eff0 DUMMY 20% (stock 4 / 8 / 12 / 16 / 20%) read by the stock spell_dk_necrosis on -51459. ProcTypeMask 20 and ProcChance 100 kept; the stock spell_proc row -51459 (flags 0x4, phase 0) is unchanged. The eff1 mask twin (0x400) and the eff2 residue are gone.'
+        'death-knight-rework S3a (Unholy doc "Necrosis", U27): talent row 2, rank 3 of 3 (51464 / 51465 are not granted). eff0 DUMMY 20% (stock 4 / 8 / 12 / 16 / 20%) read by the stock spell_dk_necrosis on -51459. ProcTypeMask 20 and ProcChance 100 kept; the stock spell_proc row -51459 (flags 0x4, phase 0) is unchanged. The eff1 mask twin (0x400) and the eff2 residue are gone. '
+        'eff0 base_points 19 -> 20, 20% -> 21% (2026-11-26, raid-buff-sets retune R1, user ruling: Unholy shared x1.05).'
     ),
 )
 
@@ -4136,11 +4141,11 @@ improved_death_strike_62905 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=2751,
-    notes='S1a (Blood doc "Improved Death Strike"): E1 damage +15 / 30% and E2 crit +3 / 6% on Death Strike (d0 b4) as before. E3 is now a typed ADD_PCT_MODIFIER SPELLMOD_DAMAGE +25 / +50% on the Death Strike heal 45470 (EffectSpellClassMaskC_3 = d2 b2 DEATH_STRIKE_HEAL); the stale raw E3 residue (EffectBasePoints_3 24 / 49, DieSides_3, ImplicitTargetA_3, the d0 0x10 mask C_1) is gone. NameSubtext fixed to Rank 2 on 62908.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Death Strike by 15%, its critical strike chance by 3%, and the healing it grants by 25%.\n\n|cFF9D9D9DCapstone Bonus: Healing from your Death Strike that exceeds your maximum health becomes a Blood Shield, absorbing damage of any school. Blood Shield stacks up to 100% of your maximum health and lasts 10 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_1': 16, 'EffectSpellClassMaskC_3': m.DEATH_STRIKE_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Improved Death Strike"): E1 damage +15 / 30% and E2 crit +3 / 6% on Death Strike (d0 b4) as before. E3 is now a typed ADD_PCT_MODIFIER SPELLMOD_DAMAGE +25 / +50% on the Death Strike heal 45470 (EffectSpellClassMaskC_3 = d2 b2 DEATH_STRIKE_HEAL); the stale raw E3 residue (EffectBasePoints_3 24 / 49, DieSides_3, ImplicitTargetA_3, the d0 0x10 mask C_1) is gone. NameSubtext fixed to Rank 2 on 62908. E3 heal +25 / +50% -> +10 / +20% (2026-11-28, gear-scaling tank survival pass, user ruling: Blood DK tank survival 113 s -> about 80 s; the heal clause only reaches Death Strike\'s heal 45470, and Improved Death Strike is a Blood-tree talent). E3 +10 / +20% -> +15 / +30% (2026-11-28, gear-scaling tank survival pass round 2, user ruling: Blood Presence damage dealt -5% -> -25% cuts Blood DPS, and with it Vendetta\'s and Voracious\'s damage-based heals; Death Strike healing makes up the difference to keep about 78 s). E3 +15 / +30% -> +10 / +20% (2026-11-28, gear-scaling tank survival pass round 4, user ruling: 180 s precision sims put Blood DK at 96 s with the round 2 values, target about 80 s; Blood Presence stays -25%).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Death Strike by 15%, its critical strike chance by 3%, and the healing it grants by 10%.\n\n|cFF9D9D9DCapstone Bonus: Healing from your Death Strike that exceeds your maximum health becomes a Blood Shield, absorbing damage of any school. Blood Shield stacks up to 100% of your maximum health and lasts 10 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_1': 16, 'EffectSpellClassMaskC_3': m.DEATH_STRIKE_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4158,11 +4163,11 @@ improved_death_strike_62908 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=2751,
-    notes='S1a (Blood doc "Improved Death Strike"): E1 damage +15 / 30% and E2 crit +3 / 6% on Death Strike (d0 b4) as before. E3 is now a typed ADD_PCT_MODIFIER SPELLMOD_DAMAGE +25 / +50% on the Death Strike heal 45470 (EffectSpellClassMaskC_3 = d2 b2 DEATH_STRIKE_HEAL); the stale raw E3 residue (EffectBasePoints_3 24 / 49, DieSides_3, ImplicitTargetA_3, the d0 0x10 mask C_1) is gone. NameSubtext fixed to Rank 2 on 62908.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Death Strike by 30%, its critical strike chance by 6%, and the healing it grants by 50%.\n\nCapstone Bonus: Healing from your Death Strike that exceeds your maximum health becomes a Blood Shield, absorbing damage of any school. Blood Shield stacks up to 100% of your maximum health and lasts 10 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_1': 16, 'EffectSpellClassMaskC_3': m.DEATH_STRIKE_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Improved Death Strike"): E1 damage +15 / 30% and E2 crit +3 / 6% on Death Strike (d0 b4) as before. E3 is now a typed ADD_PCT_MODIFIER SPELLMOD_DAMAGE +25 / +50% on the Death Strike heal 45470 (EffectSpellClassMaskC_3 = d2 b2 DEATH_STRIKE_HEAL); the stale raw E3 residue (EffectBasePoints_3 24 / 49, DieSides_3, ImplicitTargetA_3, the d0 0x10 mask C_1) is gone. NameSubtext fixed to Rank 2 on 62908. E3 heal +25 / +50% -> +10 / +20% (2026-11-28, gear-scaling tank survival pass, user ruling: Blood DK tank survival 113 s -> about 80 s; the heal clause only reaches Death Strike\'s heal 45470, and Improved Death Strike is a Blood-tree talent). E3 +10 / +20% -> +15 / +30% (2026-11-28, gear-scaling tank survival pass round 2, user ruling: Blood Presence damage dealt -5% -> -25% cuts Blood DPS, and with it Vendetta\'s and Voracious\'s damage-based heals; Death Strike healing makes up the difference to keep about 78 s). E3 +15 / +30% -> +10 / +20% (2026-11-28, gear-scaling tank survival pass round 4, user ruling: 180 s precision sims put Blood DK at 96 s with the round 2 values, target about 80 s; Blood Presence stays -25%).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Death Strike by 30%, its critical strike chance by 6%, and the healing it grants by 20%.\n\nCapstone Bonus: Healing from your Death Strike that exceeds your maximum health becomes a Blood Shield, absorbing damage of any school. Blood Shield stacks up to 100% of your maximum health and lasts 10 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_1': 16, 'EffectSpellClassMaskC_3': m.DEATH_STRIKE_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4361,10 +4366,10 @@ gargoyle_strike_51963 = spell(
     mana_cost_pct=0,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=60.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=65.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=213,
-    notes="RETUNE 2026-10-25: sp_potency 100 -> 60 [tune] (Unholy U36 TUNE on the re-anchored footing). "
+    notes="Effect 1 sp_potency 60.0 -> 63.0 (2026-11-26, raid-buff-sets retune R1, Unholy shared x1.05), then 63.0 -> 65.0 (2026-11-26, raid-buff-sets retune R1 revision, user ruling: visible number to a multiple of 5, x1.083 on 60). RETUNE 2026-10-25: sp_potency 100 -> 60 [tune] (Unholy U36 TUNE on the re-anchored footing). "
           "pulled from existing data. Potency system P8: Ebon Gargoyle's own attack (DoCastVictim, "
           "no custom bp). Base-implied sp_potency=16.8 from the flat (no RealPointsPerLevel) V60 "
           "average of 60 (50 base + die_sides=19 mean 10); the live EffectBonusMultiplier_1 (0.453) "

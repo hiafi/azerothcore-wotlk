@@ -35,6 +35,18 @@ typedef void(AuraEffect::*pAuraEffectHandler)(AuraApplication const* aurApp, uin
 // the per-tick done/taken bonus re-evaluation (Unit::Spell{Healing,Damage}Bonus{Done,Taken}).
 bool IsFixedCadencePeriodic(uint32 spellId);
 
+// Custom: channels: stock hasted duration, fixed ticks; DoTs keep the Cata behavior, b84f1011a (gear scaling, user
+// ruling 2026-11-27). True when haste shortens this spell's tick interval (AuraEffect::CalculatePeriodic). A DoT/HoT
+// keeps its duration and gains ticks (the DoT/HoT clause skips channels); a channel uses stock's PERIODIC_HASTE /
+// ATTR5 test, the one Spell::handle_immediate hastes the channel with, for its own auras (Spell::DoSpellHitOnUnit)
+// too, so it keeps its base tick count.
+bool IsHasteAffectedPeriodic(Unit const* caster, SpellInfo const* spellInfo);
+
+// Custom: channels: stock hasted duration, fixed ticks; DoTs keep the Cata behavior, b84f1011a. `duration` (after
+// SPELLMOD_DURATION) times the caster's UNIT_MOD_CAST_SPEED when IsHasteAffectedPeriodic, else unchanged. The channel
+// length the core uses; mod-playerbots' PlayerbotAI::WaitForSpellCast waits the same value.
+int32 CalcHastedChannelDuration(Unit const* caster, SpellInfo const* spellInfo, int32 duration);
+
 enum BrewfestEntries
 {
     BREWFEST_KODO = 30507,

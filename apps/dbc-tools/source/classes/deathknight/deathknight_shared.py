@@ -97,7 +97,7 @@ blood_presence_crit_immunity_203000 = spell(
 )
 
 # Stock 48266 rewritten in place (the SPELL_SPECIFIC_PRESENCE hardcode in SpellInfo.cpp keys on the id). eff0 aura 79
-# stored -6 = -5% damage done; eff1 aura 10 (MOD_THREAT) stored 44 = +45% threat (doc [tune], stock Frost Presence's);
+# stored -26 = -25% damage done (was -6 = -5%); eff1 aura 10 (MOD_THREAT) stored 44 = +45% threat (doc [tune], stock Frost Presence's);
 # stock eff1 aura 118 and eff2 aura 10 -20% are gone, so the third slot builds empty. Rune power type with RuneCostID 0
 # (no cost; stock cost 1 Blood Rune, RuneCostID 484), StartRecovery 0 / 0 (off the GCD) and the 1 s category cooldown
 # stay. AttributesEx2 0x11 keeps USE_SHAPESHIFT_BAR so it sits on the stance bar. SpellLevel 10 (trainer level, was 55).
@@ -116,7 +116,7 @@ blood_presence_48266 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-6, implicit_target_a=_TARGET_UNIT_CASTER,
+        Effect(type=EffectType.APPLY_AURA, base_points=-26, implicit_target_a=_TARGET_UNIT_CASTER,
                apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=_MISC_ALL_SCHOOLS),
         Effect(type=EffectType.APPLY_AURA, base_points=44, implicit_target_a=_TARGET_UNIT_CASTER,
                apply_aura=AuraType.MOD_THREAT, misc_value=_MISC_ALL_SCHOOLS),
@@ -130,7 +130,9 @@ blood_presence_48266 = spell(
         '(stance bar), Category 47 / 1 s, off the GCD, RuneCostID 0, SpellLevel 10 (trainer @10, was 55). The crit '
         'immunity is the 203000 child (linked type 2); the Tank Class Passive Threat 57340 link (U1) is linked below. '
         'custom_attr 0x06000000 makes eff0 / eff1 positive (aura 79 with a negative amount reads as a debuff, P0 2d). '
-        'Bound to no script (spell_dk_presence unbound: it stays on 48263 / 48265, which are never cast again).'
+        'Bound to no script (spell_dk_presence unbound: it stays on 48263 / 48265, which are never cast again). '
+        'eff0 -5% -> -25% (stored -6 -> -26), tooltip 5% -> 25% '
+        '(2026-11-28, gear-scaling tank survival pass round 2, user ruling: Blood DK tank DPS 928 -> about 750 at ilvl 66; Blood Presence is the tank aura, the DPS Death Knight bots cancel it, and Frost and Unholy Presence are removed).'
     ),
     raw_overrides={
         'AttributesEx': _BLOOD_PRESENCE_ATTR1, 'AttributesEx2': 17, 'AttributesEx3': 1114112,
@@ -138,7 +140,7 @@ blood_presence_48266 = spell(
         'BaseLevel': 10, 'SpellLevel': 10, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 11114,
         'ActiveIconID': _BLOOD_PRESENCE_ICON, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190,
         'Description_Lang_enUS': 'You are immune to critical strikes from melee and ranged attacks, and you generate '
-                                 'more threat. Your damage dealt is reduced by 5%. Lasts until cancelled.',
+                                 'more threat. Your damage dealt is reduced by 25%. Lasts until cancelled.',
         'Description_Lang_Mask': 16712190,
         'AuraDescription_Lang_enUS': 'Immune to critical strikes from melee and ranged attacks. Threat generated '
                                      'increased. Damage dealt reduced.',

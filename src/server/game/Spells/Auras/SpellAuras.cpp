@@ -25,6 +25,7 @@
 #include "ObjectMgr.h"
 #include "Opcodes.h"
 #include "Player.h"
+#include "ProcChanceCooldown.h" // Custom: gear-scaling GS2
 #include "ScriptMgr.h"
 #include "Spell.h"
 #include "SpellAuraEffects.h"
@@ -2132,9 +2133,30 @@ void Aura::AddProcCooldown(TimePoint cooldownEnd)
     m_procCooldown = cooldownEnd;
 }
 
+// Custom: gear-scaling GS2 - the one gate for the Proc Chance stat on an aura's proc, its chance (CalcProcChance) and
+// its internal cooldown (AddProcCooldown): a player caster and no cast item (10-31 bug F, Systems.md section 5: items
+// get none; set bonuses have no CastItemGUID and still scale). 0 when the aura does not qualify.
+static float GetAuraProcChanceStatPct(Aura const* aura)
+{
+    if (aura->GetCastItemGUID())
+        return 0.0f;
+
+    Unit* caster = aura->GetCaster();
+    return caster && caster->IsPlayer() ? caster->ToPlayer()->GetProcChancePercentage() : 0.0f;
+}
+
 void Aura::AddProcCooldown(SpellProcEntry const* procEntry, TimePoint now)
 {
-    AddProcCooldown(now + procEntry->Cooldown);
+    // Custom: gear-scaling GS2 (Systems.md section 5) - Proc Chance shortens the internal cooldown: ICD / (1 + Proc
+    // Chance), at the chance's gate, for a row with a chance roll (listed Chance under 100%; a PPM row rolls too).
+    // 100% rows and charge/stack-spending auras keep the listed ICD (ProcChanceCooldown::IsScaledProc).
+    Milliseconds cooldown = procEntry->Cooldown;
+    bool const spendsCharges = IsUsingCharges() || (procEntry->AttributesMask & PROC_ATTR_USE_STACKS_FOR_CHARGES);
+    float const listedChance = procEntry->ProcsPerMinute > 0.0f ? 0.0f : procEntry->Chance;
+    if (ProcChanceCooldown::IsScaledProc(listedChance, spendsCharges))
+        cooldown = ProcChanceCooldown::Scale(cooldown, GetAuraProcChanceStatPct(this));
+
+    AddProcCooldown(now + cooldown);
 }
 
 void Aura::ResetProcCooldown()
@@ -2160,7 +2182,7 @@ void Aura::PrepareProcToTrigger(AuraApplication* aurApp, ProcEventInfo& eventInf
     ASSERT(procEntry);
 
     // cooldowns should be added to the whole aura (see 51698 area aura)
-    AddProcCooldown(now + procEntry->Cooldown);
+    AddProcCooldown(procEntry, now); // Custom: gear-scaling GS2 - was now + procEntry->Cooldown (Proc Chance scales it)
 }
 
 uint8 Aura::GetProcEffectMask(AuraApplication* aurApp, ProcEventInfo& eventInfo, TimePoint now) const
@@ -2339,9 +2361,8 @@ float Aura::CalcProcChance(SpellProcEntry const& procEntry, ProcEventInfo& event
     // Custom: 10-31 bug F (Systems.md section 5) - items get no Proc Chance: skip auras applied by an item
     // (equip spells, enchant/gem equip spells, on-use buffs; their legacy PPM rows included). Set bonuses have
     // no CastItemGUID and still scale.
-    if (Unit* caster = GetCaster(); caster && !GetCastItemGUID())
-        if (caster->IsPlayer())
-            chance *= 1.0f + caster->ToPlayer()->GetProcChancePercentage() / 100.0f;
+    // Custom: gear-scaling GS2 - the gate lives in GetAuraProcChanceStatPct, shared with the internal cooldown.
+    chance *= 1.0f + GetAuraProcChanceStatPct(this) / 100.0f;
 
     return chance;
 }

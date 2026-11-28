@@ -290,7 +290,7 @@ death_from_above_area_204169 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None, radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_ap_potency=46.368, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_ap_potency=29.0359, potency_kind='direct',
                implicit_target_a=_TARGET_DEST_TARGET_ENEMY, implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY,
                radius_yards=8.0),
     ],
@@ -304,7 +304,8 @@ death_from_above_area_204169 = spell(
           '(R12), EquippedItemClass -1, hidden. d2 b7 | d2 b18 (m.DEATH_FROM_ABOVE_CLASS), never d0 b17. '
           'cp_ap_potency 27.6 -> 38.64 (2026-11-01, DPS balance pass 1031, user ruling: Death from Above +40%). The castable tooltip '
           '_DFA_CP was still the original 8.0 (stale since M2a) and is now 38.64 too; '
-          'cp_ap_potency 38.64 -> 46.368 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Death from Above +20%) (the tooltip _DFA_CP follows).',
+          'cp_ap_potency 38.64 -> 46.368 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Death from Above +20%) (the tooltip _DFA_CP follows); cp_ap_potency 46.368 -> 35.70336 (2026-11-26, raid-buff-sets retune R1, user ruling: Subtlety x0.77; _DFA_CP follows).'
+          ' cp_ap_potency 35.70336 -> 29.0359 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Subtlety, the Death from Above landing keeps its ratio to Eviscerate at a round 50% stronger; _DFA_CP follows).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.DEATH_FROM_ABOVE_CLASS), 'EquippedItemClass': -1,
         'CastingTimeIndex': 1, 'SpellLevel': 60, 'DefenseType': 2, 'PreventionType': 0, 'RangeIndex': _RANGE_100_YD,
@@ -323,7 +324,7 @@ death_from_above_landing_204170 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=79.1154, cp_ap_potency=124.96176, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=49.5538, cp_ap_potency=78.2697, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_DEATH_FROM_ABOVE,
@@ -335,12 +336,13 @@ death_from_above_landing_204170 = spell(
           '(~10% of a 5-point landing); no potency_excluded. ap_potency 47.0925 -> 65.9295 and cp_ap_potency '
           '74.382 -> 104.1348 (2026-11-01, DPS balance pass 1031, user ruling: Death from Above +40%). Eviscerate fell 20% in the same pass, so '
           'the landing is now 2.32 x Eviscerate: text "33% stronger" -> "132% stronger"; '
-          'ap_potency 65.9295 -> 79.1154 and cp_ap_potency 104.1348 -> 124.96176 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Death from Above +20%); text "132% stronger" -> "83% stronger": both landing lines are now 1.83 x Eviscerate\'s (79.1154 / 43.184232 and 124.96176 / 68.2089408; the 2.32 above compared against a stale Eviscerate).',
+          'ap_potency 65.9295 -> 79.1154 and cp_ap_potency 104.1348 -> 124.96176 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Death from Above +20%); text "132% stronger" -> "83% stronger": both landing lines are now 1.83 x Eviscerate\'s (79.1154 / 43.184232 and 124.96176 / 68.2089408; the 2.32 above compared against a stale Eviscerate); ap_potency 79.1154 -> 60.918858 and cp_ap_potency 124.96176 -> 96.2205552 (2026-11-26, raid-buff-sets retune R1, user ruling: Subtlety x0.77); Eviscerate fell x0.85 in the same round, so both landing lines are now 1.66 x Eviscerate\'s (60.918858 / 36.7065972 and 96.2205552 / 57.97759968): text "83% stronger" -> "66% stronger".'
+          ' ap_potency 60.918858 -> 49.5538 and cp_ap_potency 96.2205552 -> 78.2697, now 1.5 x the Eviscerate 33.0359 / 52.1798: text 66% stronger -> 50% stronger (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Subtlety x0.813).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.DFA_LANDING_CLASS), 'EquippedItemClass': -1,
         'CastingTimeIndex': 1, 'SpellLevel': 60, 'DefenseType': 2, 'PreventionType': 0, 'RangeIndex': _RANGE_100_YD,
         'FacingCasterFlags': 0, 'SpellVisualID_1': _SV_EVISCERATE,
-        'Description_Lang_enUS': 'Comes down on the target with an Eviscerate that is 83% stronger.',
+        'Description_Lang_enUS': 'Comes down on the target with an Eviscerate that is 50% stronger.',
     },
 )
 scripted_by(death_from_above_landing_204170, 'spell_rog_death_from_above_landing')
@@ -365,14 +367,14 @@ death_from_above_flight_204171 = _buff(
 # Death from Above 204148: the castable
 # ---------------------------------------------------------------------------------------------------------------------
 _DFA_CP = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=46.368, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=60)
+    _potency.PotencyEffect(ap_potency=29.0359, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=60)
 # The 5-combo-point area damage (193.2 potency, 38.64 per point after the DPS balance pass 1031; was 8.0 / 40 here, stale since M2a): 5 x the level-60 line + 5 x the AP coefficient x AP, inside one `$max()`
 # (a top-level `+` outside it is dropped by the client; potency.md "Tooltips").
 _DFA_AREA_5CP = ('${$max(0,' + _potency._fmt(5 * _DFA_CP.level60_value) + '+'
                  + _potency._fmt(5 * _DFA_CP.ap_coefficient) + '*$AP)}')
 _DEATH_FROM_ABOVE_TEXT = (
     f'Finishing move that strikes the target and all enemies within $204169a1 yards for {_DFA_AREA_5CP} Physical damage, '
-    'then leaps into the air and comes down on the target with an Eviscerate that is 83% stronger. Damage per combo '
+    'then leaps into the air and comes down on the target with an Eviscerate that is 50% stronger. Damage per combo '
     'point.')
 
 # Eviscerate's frame (R15): typed Attributes 327696, raw AttributesEx 0x100200, Ex3 0x400, weapon requirement 2 / 173555,

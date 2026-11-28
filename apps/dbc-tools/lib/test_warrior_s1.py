@@ -179,21 +179,24 @@ TOOLTIP_FRAGMENTS = {
     200039: ("armor value from your equipped Shield by 20%", "Stamina by 2%", "block value by 4%"),
     200040: ("armor value from your equipped Shield by 30%", "Stamina by 3%", "block value by 6%"),
     50685: ("critical strike chance of your Revenge by 10%",
-            "1.5% of your maximum health to your Storm's Bulwark shield", "does not extend the shield's duration"),
+            "0.975% of your maximum health to your Storm's Bulwark shield", "does not extend the shield's duration"),
     50686: ("chance of your Revenge by 20%",), 50687: ("chance of your Revenge by 30%",),
-    200056: ("0.5% of your maximum health to your Storm's Bulwark shield", "increased by 20% for each application of "
+    200056: ("0.325% of your maximum health to your Storm's Bulwark shield", "increased by 20% for each application of "
                                                                           "Sunder Armor"),
-    200057: ("1% of your maximum health to your Storm's Bulwark shield", "increased by 20%"),
-    200058: ("absorb shield equal to 2% of your maximum health",
-             "additional 1% for each target struck, up to 5 targets", "Lasts 15 sec",
+    200057: ("0.65% of your maximum health to your Storm's Bulwark shield", "increased by 20%"),
+    # Storm's Bulwark percents x0.65 (2026-11-26, raid-buff-sets retune R1 0.85, R2 0.75, R3 0.65; STORMS_BULWARK_GRANT_SCALE)
+    200058: ("absorb shield equal to 1.3% of your maximum health",
+             "additional 0.65% for each target struck, up to 5 targets", "Lasts 15 sec",
              "Mastery increases every amount added to your Storm's Bulwark shield, and raises its maximum"),
-    200059: ("equal to 4% of your maximum health", "Lasts 15 sec"),
-    200060: ("equal to 6% of your maximum health", "Lasts 15 sec"),
+    200059: ("equal to 2.6% of your maximum health", "Lasts 15 sec"),
+    200060: ("equal to 3.9% of your maximum health", "Lasts 15 sec"),
+    SHOCKWAVE: ("equal to 13% of your maximum health to your Storm's Bulwark shield",
+                "additional 0.65% for each target struck, up to 5 targets"),
     12797: ("Revenge ability by 15%", "next Devastate within 8 sec will strike an additional target",
             "Your Revenge strikes 4 additional targets"),
     12799: ("Revenge ability by 30%", "next Devastate within 8 sec will strike an additional target"),
     200049: ("reduces the remaining cooldown of your Last Stand by 1 sec", "increasing its damage by 30%",
-             "equal to 2% of your maximum health"),
+             "equal to 1.3% of your maximum health"),
     200062: ("increases the absorb granted by your next Thunder Clap by 25%",),
     200063: ("increases the absorb granted by your next Thunder Clap by 50%",),
     200054: ("bleed for 15% of the damage dealt over 9 sec",),
@@ -607,8 +610,8 @@ def check_echo(rows: dict, entries: dict, dur_ms) -> list[str]:
     r = rows[ECHO]
     sid = ECHO
     pot = (entries[sid].get("effect1") or {}).get("_potency") or {}
-    if pot.get("total_potency") != 49.8:
-        bad.append(f"{sid}: effect 1 potency {pot.get('total_potency')!r}, expected 49.8 (half of Thunder Clap's 99.6)")
+    if pot.get("total_potency") != 45.816:
+        bad.append(f"{sid}: effect 1 potency {pot.get('total_potency')!r}, expected 45.816 (half of Thunder Clap's 91.632, GS3 x0.92)")
     if _eff(r, 0)[0] != EFF_SCHOOL_DAMAGE:
         bad.append(f"{sid}: e0 type {_eff(r, 0)[0]}, expected SCHOOL_DAMAGE")
     bad += _aura_effect(r, 1, AURA_MELEE_HASTE, 0, -11, None, sid, "slow")
@@ -776,19 +779,19 @@ def check_devastate(rows: dict, entries: dict, corrections: list[dict]) -> list[
     if _eff(r, 2)[0] != EFF_NORMALIZED:
         bad.append(f"{sid}: e2 type {_eff(r, 2)[0]}, expected NORMALIZED_WEAPON_DMG 121")
     weapon = _potency_of(entries, sid, 2)
-    if weapon.get("kind") != "weapon" or weapon.get("total_potency") != 240:
+    if weapon.get("kind") != "weapon" or weapon.get("total_potency") != 200:
         bad.append(f"{sid}: effect 1 (DBC Effect_2) weapon potency {weapon.get('total_potency')!r}/"
-                   f"{weapon.get('kind')!r}, expected 240 / weapon")
+                   f"{weapon.get('kind')!r}, expected 200 / weapon (GS3 x0.909)")
     flat = _potency_of(entries, sid, 3)
-    if flat.get("total_potency") != 20 or flat.get("kind") != "direct":
+    if flat.get("total_potency") != 16.36 or flat.get("kind") != "direct":
         bad.append(f"{sid}: effect 2 (DBC Effect_3) potency {flat.get('total_potency')!r}/{flat.get('kind')!r}, "
-                   "expected 20 / direct")
+                   "expected 16.36 / direct (GS3 x0.909)")
     # V = the built correction resolves to 25-27.5 at level 60; the 5-stack hit adds 5V = 50 potency (127-137.5 dmg)
     v = float(flat.get("level60_value") or 0)
-    if not 50.0 <= v <= 55.0:
-        bad.append(f"{sid}: V (effect 2 at level 60) {v}, expected 50-55")
-    if not 250.0 <= 5 * v <= 275.0:
-        bad.append(f"{sid}: 5 stacks add {5 * v}, expected 250-275")
+    if not 38.0 <= v <= 44.0:
+        bad.append(f"{sid}: V (effect 2 at level 60) {v}, expected 38-44 (GS3 x0.909)")
+    if not 190.0 <= 5 * v <= 220.0:
+        bad.append(f"{sid}: 5 stacks add {5 * v}, expected 190-220 (GS3 x0.909)")
     if not any(int(c["spell_id"]) == sid and int(c["effect_index"]) == 2 for c in corrections):
         bad.append(f"{sid}: no potency correction row (20243, 2)")
     if _i(r, "EquippedItemClass") != 4 or _i(r, "EquippedItemSubclass") != 64:
@@ -813,8 +816,8 @@ def check_concussion_and_shockwave(rows: dict, entries: dict, corrections: list[
     if _eff(cb, 1)[0] != EFF_SCHOOL_DAMAGE:
         bad.append(f"{CONCUSSION_BLOW}: e1 type {_eff(cb, 1)[0]}, expected SCHOOL_DAMAGE (the potency effect)")
     pot = _potency_of(entries, CONCUSSION_BLOW, 2)
-    if pot.get("total_potency") != 54.6 or pot.get("kind") != "direct":
-        bad.append(f"{CONCUSSION_BLOW}: effect 1 potency {pot.get('total_potency')!r}, expected 54.6 direct")
+    if pot.get("total_potency") != 50.232 or pot.get("kind") != "direct":
+        bad.append(f"{CONCUSSION_BLOW}: effect 1 potency {pot.get('total_potency')!r}, expected 50.232 direct (GS3 x0.92)")
     if _potency_of(entries, CONCUSSION_BLOW, 3):
         bad.append(f"{CONCUSSION_BLOW}: effect 2 still carries a potency row")
     bad += _effect_empty(cb, 2, CONCUSSION_BLOW, "old DUMMY 38%")
@@ -825,8 +828,8 @@ def check_concussion_and_shockwave(rows: dict, entries: dict, corrections: list[
     if _eff(sw, 1)[0] != EFF_SCHOOL_DAMAGE:
         bad.append(f"{SHOCKWAVE}: e1 type {_eff(sw, 1)[0]}, expected SCHOOL_DAMAGE")
     pot = _potency_of(entries, SHOCKWAVE, 2)
-    if pot.get("total_potency") != 107.7:
-        bad.append(f"{SHOCKWAVE}: effect 1 potency {pot.get('total_potency')!r}, expected 107.7")
+    if pot.get("total_potency") != 89.1756:
+        bad.append(f"{SHOCKWAVE}: effect 1 potency {pot.get('total_potency')!r}, expected 89.1756 (GS3 x0.92)")
     if _u32(sw.get(M2)) & 0x8000 == 0:
         bad.append(f"{SHOCKWAVE}: lost its identity bit d1 0x8000 (Thunderstruck reads it)")
     return bad
@@ -1498,6 +1501,25 @@ class WarriorS1NegativeTest(unittest.TestCase):
             self.assertGreaterEqual(len(check_capstones(in_aura)), 1, name)
         self.assertGreaterEqual(len(check_capstones({k: v for k, v in self.rows.items() if k != 12803})), 1)
         self.assertGreaterEqual(len(check_capstones(_mut(self.rows, 12312, Name_Lang_enUS="Improved Disciplines"))), 1)
+
+
+class StormsBulwarkGrantScaleTest(unittest.TestCase):
+    """Retune R1 (2026-11-26, user ruling 6A): the C++ grant scale and the tooltip helper's must stay equal."""
+
+    CPP = TOOL_ROOT.parents[1] / "src" / "server" / "game" / "Entities" / "Unit" / "WarriorMechanics.cpp"
+
+    def test_cpp_and_tooltip_scale_match(self):
+        from source.classes.warrior import _tooltips
+        m = re.search(r"constexpr float STORMS_BULWARK_GRANT_SCALE = ([0-9.]+)f;", self.CPP.read_text())
+        self.assertIsNotNone(m, "STORMS_BULWARK_GRANT_SCALE not found in WarriorMechanics.cpp")
+        self.assertAlmostEqual(float(m.group(1)), _tooltips.STORMS_BULWARK_GRANT_SCALE, places=6)
+        self.assertIn("* STORMS_BULWARK_GRANT_SCALE", self.CPP.read_text(), "the add no longer applies the scale")
+
+    def test_bulwark_pct_format(self):
+        from source.classes.warrior import _tooltips
+        scale = _tooltips.STORMS_BULWARK_GRANT_SCALE
+        self.assertEqual(float(_tooltips.bulwark_pct(2)), round(2 * scale, 3))
+        self.assertEqual(float(_tooltips.bulwark_pct(20)), round(20 * scale, 3))
 
 
 if __name__ == "__main__":

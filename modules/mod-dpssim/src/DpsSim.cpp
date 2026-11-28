@@ -38,7 +38,7 @@
 
 namespace
 {
-    // The level whose class buff values the raid buff scrolls carry (DpsSim.BuffSet full_raid)
+    // The level whose class buff values the raid buff scrolls carry (DpsSim.BuffSet standard and full_raid)
     constexpr uint8 RAID_SCROLL_LEVEL = 60;
 
     // Derives iteration i's own report path from the single DpsSim.ReportPath the conf gives -
@@ -508,8 +508,8 @@ void DpsSimWorldScript::OnDpsSimRun()
             }
         }
 
-        // DpsSim.BuffSet (self_only | full_raid; empty = the profile's BuffSet, else self_only) and the full_raid
-        // lists, DPS mode only (SimBuffSet.h)
+        // DpsSim.BuffSet (self_only | standard | full_raid, or self | all; empty = the profile's BuffSet, else
+        // self_only) and the lists of the set, DPS mode only (SimBuffSet.h)
         {
             std::string error;
             SimBuffSet::Config& buffSet = config.BuffSet;
@@ -517,7 +517,6 @@ void DpsSimWorldScript::OnDpsSimRun()
             // class does not own (it would see the aura as its own: its bot skips the cast, or the two replace each
             // other every second). See SimBuffSet.h.
             bool const hunter = config.ActorClass == CLASS_HUNTER;
-            buffSet.OwnBuffWins = !hunter;
             std::string setText = sConfigMgr->GetOption<std::string>("DpsSim.BuffSet", "");
             // The profile's key is for its DPS runs: a mechanics run of the same profile stays self_only
             if (setText.empty() && config.RunMode == SimDaemon::Mode::Dps)
@@ -526,14 +525,21 @@ void DpsSimWorldScript::OnDpsSimRun()
                 setText = "self_only";
             if (!SimBuffSet::ParseSet(setText, buffSet.BuffSet, error))
                 error = "DpsSim.BuffSet: " + error;
-            else if (buffSet.BuffSet == SimBuffSet::Set::FullRaid)
+            else if (SimBuffSet::AddsAuras(buffSet.BuffSet))
             {
+                bool const standard = buffSet.BuffSet == SimBuffSet::Set::Standard;
+                char const* const setName = SimBuffSet::SetName(buffSet.BuffSet);
+                // standard: one neutral list for every class, so a hunter's pet family buff or debuff is its own
+                // like any class buff (user ruling 2026-11-25); full_raid keeps the hunter lists without the rule
+                bool const hunterLists = hunter && !standard;
+                buffSet.OwnBuffWins = !hunterLists;
                 if (config.RunMode != SimDaemon::Mode::Dps)
-                    error = "DpsSim.BuffSet full_raid is for DPS runs only (not heal, tank or mechanics)";
+                    error = Acore::StringFormat("DpsSim.BuffSet {} is for DPS runs only (not heal, tank or mechanics)",
+                        setName);
                 // The scrolls have one fixed amount, the level 60 one
-                else if (!hunter && config.ActorLevel != RAID_SCROLL_LEVEL)
-                    error = Acore::StringFormat("DpsSim.BuffSet full_raid is for level {} actors (the raid scrolls' "
-                        "amounts are fixed), not level {}", RAID_SCROLL_LEVEL, config.ActorLevel);
+                else if (!hunterLists && config.ActorLevel != RAID_SCROLL_LEVEL)
+                    error = Acore::StringFormat("DpsSim.BuffSet {} is for level {} actors (the raid scrolls' "
+                        "amounts are fixed), not level {}", setName, RAID_SCROLL_LEVEL, config.ActorLevel);
 
                 struct ListKey
                 {
@@ -541,13 +547,21 @@ void DpsSimWorldScript::OnDpsSimRun()
                     char const* Default;
                     std::vector<SimBuffSet::AuraSpec>* Out;
                 };
-                ListKey const lists[] = {
-                    {"DpsSim.RaidBuffs", hunter ? SimBuffSet::DEFAULT_RAID_BUFFS_HUNTER :
-                        SimBuffSet::DEFAULT_RAID_BUFFS, &buffSet.Buffs},
-                    {"DpsSim.RaidDebuffs", hunter ? SimBuffSet::DEFAULT_RAID_DEBUFFS_HUNTER :
-                        SimBuffSet::DEFAULT_RAID_DEBUFFS, &buffSet.Debuffs},
-                    {"DpsSim.RaidPullBuffs", SimBuffSet::DEFAULT_RAID_PULL_BUFFS, &buffSet.PullBuffs},
-                    {"DpsSim.RaidFlasks", SimBuffSet::DEFAULT_RAID_FLASKS, &buffSet.Flasks}};
+                // standard has no flask key: its Flasks list stays empty
+                std::vector<ListKey> lists;
+                if (standard)
+                    lists = {
+                        {"DpsSim.StandardBuffs", SimBuffSet::DEFAULT_STANDARD_BUFFS, &buffSet.Buffs},
+                        {"DpsSim.StandardDebuffs", SimBuffSet::DEFAULT_STANDARD_DEBUFFS, &buffSet.Debuffs},
+                        {"DpsSim.StandardPullBuffs", SimBuffSet::DEFAULT_STANDARD_PULL_BUFFS, &buffSet.PullBuffs}};
+                else
+                    lists = {
+                        {"DpsSim.RaidBuffs", hunter ? SimBuffSet::DEFAULT_RAID_BUFFS_HUNTER :
+                            SimBuffSet::DEFAULT_RAID_BUFFS, &buffSet.Buffs},
+                        {"DpsSim.RaidDebuffs", hunter ? SimBuffSet::DEFAULT_RAID_DEBUFFS_HUNTER :
+                            SimBuffSet::DEFAULT_RAID_DEBUFFS, &buffSet.Debuffs},
+                        {"DpsSim.RaidPullBuffs", SimBuffSet::DEFAULT_RAID_PULL_BUFFS, &buffSet.PullBuffs},
+                        {"DpsSim.RaidFlasks", SimBuffSet::DEFAULT_RAID_FLASKS, &buffSet.Flasks}};
                 for (ListKey const& list : lists)
                 {
                     if (!error.empty())
@@ -561,12 +575,24 @@ void DpsSimWorldScript::OnDpsSimRun()
                         !SimBuffSet::Validate(*list.Out, listError))
                         error = Acore::StringFormat("{}: {}", list.Key, listError);
                 }
+
+                // full_raid for a hunter below level 60: the pet family spells have ranks, but the scrolls in the
+                // list have only their level 60 amount, so they are left out (full_raid then has no scrolls)
+                if (error.empty() && hunterLists && config.ActorLevel != RAID_SCROLL_LEVEL)
+                {
+                    uint32 const dropped = SimBuffSet::DropRaidScrolls(buffSet.Buffs) +
+                        SimBuffSet::DropRaidScrolls(buffSet.Debuffs);
+                    if (dropped)
+                        LOG_INFO("server.dpssim", "mod-dpssim: {} for a level {} hunter: the {} raid scroll(s) are "
+                            "left out (their amounts are the level {} ones).", setName, config.ActorLevel, dropped,
+                            RAID_SCROLL_LEVEL);
+                }
             }
 
             if (error.empty())
             {
                 LOG_INFO("server.dpssim", "mod-dpssim: buff set {}.", SimBuffSet::SetName(buffSet.BuffSet));
-                if (buffSet.BuffSet == SimBuffSet::Set::FullRaid)
+                if (SimBuffSet::AddsAuras(buffSet.BuffSet))
                 {
                     LOG_INFO("server.dpssim", "mod-dpssim:   raid buffs (actor and pet): {}",
                         SimBuffSet::Describe(buffSet.Buffs));

@@ -424,9 +424,10 @@ class spell_sha_enh_maelstrom_weapon : public AuraScript
 };
 
 // -51525 Static Shock (replaces spell_sha_static_shock). Chance 5/10/15% and the 1.5 s cooldown are data (native
-// Proc Chance). The shaman's own Lightning Shield fires an orb at the target and spends a charge; with Improved
-// Lightning Shield rank 3 the charge is kept ILS_NO_EXPEND_CHANCE x Proc Chance of the time; under Rockbiter with
-// Improved Lightning Shield the orb grants ILS_ORB_STONESKIN (its double threat is the Rockbiter child's SpellMod).
+// Proc Chance). Under Rockbiter, off-hand attacks do not proc it. The shaman's own Lightning Shield fires an orb at
+// the target and spends a charge; with Improved Lightning Shield rank 3 the charge is kept ILS_NO_EXPEND_CHANCE x
+// Proc Chance of the time; under Rockbiter with Improved Lightning Shield the orb grants ILS_ORB_STONESKIN (its double
+// threat is the Rockbiter child's SpellMod).
 class spell_sha_enh_static_shock : public AuraScript
 {
     PrepareAuraScript(spell_sha_enh_static_shock);
@@ -445,6 +446,13 @@ class spell_sha_enh_static_shock : public AuraScript
     {
         Player* player = GetProcPlayer(GetUnitOwner(), eventInfo);
         if (!player || !player->HasAura(ShamanData::SPELL_LIGHTNING_SHIELD, player->GetGUID()))
+            return false;
+
+        // Under Rockbiter only main-hand attacks fire the orb (2026-11-27, gear-scaling GS3, user ruling: the
+        // dual-wield tank's off-hand doubled its orbs; the tooltip's Rockbiter clause says so). Windfury DPS keeps
+        // both. Off-hand abilities (Lava Lash, Stormstrike's off-hand strike) carry the off-hand proc flag too.
+        if ((eventInfo.GetTypeMask() & PROC_FLAG_DONE_OFFHAND_ATTACK)
+            && Shaman::GetActiveImbue(player) == ShamanData::SPELL_ROCKBITER_WEAPON)
             return false;
 
         Unit* target = eventInfo.GetActionTarget();

@@ -35,6 +35,7 @@
 #include "GameTime.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "ProcChanceCooldown.h"
 #include "ScriptMgr.h"
 #include "ShamanMechanics.h"
 #include "Spell.h"
@@ -1038,7 +1039,10 @@ class spell_sha_ele_reach_capstone : public AuraScript
         if (!player)
             return;
 
-        GetState(player)->reachReadyMs = NowMs() + uint32(ShamanData::REACH_ICD_MS);
+        // gear-scaling GS2 (Systems.md section 5): the roll takes Proc Chance, so does its ICD.
+        GetState(player)->reachReadyMs = NowMs() +
+            ProcChanceCooldown::ScaleFor(player, uint32(ShamanData::REACH_ICD_MS),
+                float(ShamanData::REACH_CAPSTONE_CHANCE));
         player->CastSpell(player, ShamanData::SPELL_REACH_BUFF, true);
     }
 

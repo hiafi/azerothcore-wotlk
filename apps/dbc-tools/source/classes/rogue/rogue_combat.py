@@ -433,7 +433,7 @@ pistol_shot_203958 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=30, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=83.16, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=62.7013, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
@@ -448,7 +448,9 @@ pistol_shot_203958 = spell(
           '(SDV 1351). spell_rog_pistol_shot: latches Opportunity, OnPistolShotHit, spends one stack in AfterCast. '
           'M2a (M1 C1, [tune]): ap_potency 50 -> 120; M2c (user 2026-10-28, -25%): 120 -> 90 (the extra shot 203988 '
           'matches); ap_potency 90 -> 72 (2026-11-01, DPS balance pass 1031, user ruling: Pistol Shot -20%; 203988 matches); '
-          'ap_potency 72 -> 79.2 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Pistol Shot +10%; 203988 matches). ap_potency 79.2 -> 83.16 (2026-11-15, balance round 4 on the Normal-tier kits, user ruling: Pistol Shot +5%).',
+          'ap_potency 72 -> 79.2 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Pistol Shot +10%; 203988 matches). ap_potency 79.2 -> 83.16 (2026-11-15, balance round 4 on the Normal-tier kits, user ruling: Pistol Shot +5%). ap_potency 83.16 -> 73.1808 (2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88; 203988 matches).'
+          ' ap_potency 73.1808 -> 61.4719 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Combat x0.84, Combat 1,733 -> ~1,520; 203988 matches).'
+          ' ap_potency 61.4719 -> 65.7749 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat x1.07; Combat 1,479 -> ~1,520; 203988 matches). (R3 2026-11-27: R2 overshot to 1,601; back to x1.02 / 150 / 200, about a third of the R2 step): 65.7749 -> 62.7013.',
     tooltip_vars=tooltip_pistol_shot_1351,
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.PISTOL_SHOT_CLASS), 'EquippedItemClass': -1,
@@ -467,9 +469,9 @@ scripted_by(pistol_shot_203958, 'spell_rog_pistol_shot')
 # 20.475 / 32.34, which were 75% of Eviscerate; now ~104% of Eviscerate's 35.49 / 56.056, the ratio is no longer fixed), SpellLevel 20, 35 energy, 20 yd, Speed 0, no stun, GCD 133 / 1000, SV 90252. d2 b5 | d2 b18, never
 # d0 b17 (m.BETWEEN_THE_EYES_CLASS).
 _BTE_FLAT = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=94.635, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=20)
+    _potency.PotencyEffect(ap_potency=57.0827, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=20)
 _BTE_CP = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=149.31, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=20)
+    _potency.PotencyEffect(ap_potency=90.0619, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=20)
 
 
 def _expr_plus(resolved, extra, *, ticks=1.0, scale=1.0):
@@ -499,7 +501,7 @@ between_the_eyes_203959 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=35, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=94.635, cp_ap_potency=149.31, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=57.0827, cp_ap_potency=90.0619, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_BETWEEN_THE_EYES,
@@ -507,11 +509,14 @@ between_the_eyes_203959 = spell(
           '203956 (SkillLineAbility 30811). Eviscerate 2098\'s finisher frame (typed 327696, AttributesEx 0x100200, '
           'PreventionType 2) without the weapon requirement and Ex3 0x400 (R25: EquippedItemClass -1). eff0 Physical '
           'SCHOOL_DAMAGE ap_potency 58.968 + cp_ap_potency 93.1392 direct [tune] (M2c: x1.8 of M2a\'s 20.475 / 32.34, ~104% '
-          'of Eviscerate; M2a R2 was 75% of Eviscerate, before that 14.625 / 23.1; ap_potency 36.855 -> 58.968 and cp_ap_potency 58.212 -> 93.1392 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Between the Eyes +60%); ap_potency 58.968 -> 64.8648 and cp_ap_potency 93.1392 -> 102.45312 (2026-11-15, balance on the Normal-tier kits, user ruling: Between the Eyes +10%); ap_potency 64.8648 -> 58.37832 and cp_ap_potency 102.45312 -> 92.207808 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Between the Eyes -10%); ap_potency 58.37832 -> 70.1 (70.054 kept to one decimal, so +20.1%) and cp_ap_potency 92.207808 -> 110.6 (110.649 kept to one decimal, so +19.9%) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Between the Eyes +20%); ap_potency 70.1 -> 94.635 and cp_ap_potency 110.6 -> 149.31 (2026-11-20, level60-stat-curve round S7: rogue buffs after the potency rebase, user ruling: Between the Eyes x1.35)) at SpellLevel 20, 35 energy, 20 yd (idx 3), Speed 0, DefenseType 2, no stun, GCD '
+          'of Eviscerate; M2a R2 was 75% of Eviscerate, before that 14.625 / 23.1; ap_potency 36.855 -> 58.968 and cp_ap_potency 58.212 -> 93.1392 (2026-11-01, DPS balance pass 1031 round B3, user ruling: Between the Eyes +60%); ap_potency 58.968 -> 64.8648 and cp_ap_potency 93.1392 -> 102.45312 (2026-11-15, balance on the Normal-tier kits, user ruling: Between the Eyes +10%); ap_potency 64.8648 -> 58.37832 and cp_ap_potency 102.45312 -> 92.207808 (2026-11-15, balance round 2 on the Normal-tier kits, user ruling: Between the Eyes -10%); ap_potency 58.37832 -> 70.1 (70.054 kept to one decimal, so +20.1%) and cp_ap_potency 92.207808 -> 110.6 (110.649 kept to one decimal, so +19.9%) (2026-11-16, single-target pass to 1,000 on the Normal-tier kits, user ruling: Between the Eyes +20%); ap_potency 70.1 -> 94.635 and cp_ap_potency 110.6 -> 149.31 (2026-11-20, level60-stat-curve round S7: rogue buffs after the potency rebase, user ruling: Between the Eyes x1.35); ap_potency 94.635 -> 83.2788 and cp_ap_potency 149.31 -> 131.3928 (2026-11-26, raid-buff-sets retune R1, Combat-only x0.88); ap_potency 83.2788 -> 58.29516 and cp_ap_potency 131.3928 -> 91.97496 (2026-11-26, raid-buff-sets retune R3, user ruling A: Between the Eyes x0.70, ~1.6 x Eviscerate\'s base); ap_potency 58.29516 -> 66.62304 and cp_ap_potency 91.97496 -> 105.11424 (2026-11-26, raid-buff-sets retune R4: x0.80 of the R1 value instead of x0.70, R3 measured Combat 1,428, ~1.8 x Eviscerate\'s base)) at SpellLevel 20, 35 energy, 20 yd (idx 3), Speed 0, DefenseType 2, no stun, GCD '
           '133 '
           '/ 1000, SV 90252. d2 b5 | d2 b18 (m.BETWEEN_THE_EYES_CLASS), never d0 b17. The tooltip hand-builds the '
           '5-point value like Deadly Throw\'s and multiplies it by Coup de Grace x Surprise Attacks (SDV 1352). '
-          'spell_rog_between_the_eyes: removes Primed Powder, ConsumeBladeRush on the hit.',
+          'spell_rog_between_the_eyes: removes Primed Powder, ConsumeBladeRush on the hit.'
+          ' ap_potency 66.62304 -> 55.9634 and cp_ap_potency 105.11424 -> 88.296 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Combat x0.84, Combat 1,733 -> ~1,520; tooltip constants _BTE_FLAT / _BTE_CP follow).'
+          ' ap_potency 55.9634 -> 59.8808 and cp_ap_potency 88.296 -> 94.4767 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat x1.07 on Between the Eyes; Combat 1,479 -> ~1,520; tooltip constants _BTE_FLAT / _BTE_CP follow).'
+          ' (R3 2026-11-27: R2 overshot to 1,601; back to x1.02 of the R1 values: 57.0827 / 90.0619).',
     tooltip_vars=tooltip_between_the_eyes_1352,
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.BETWEEN_THE_EYES_CLASS), 'EquippedItemClass': -1,
@@ -570,8 +575,8 @@ sinister_strike_second_strike_203986 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=260, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10.4, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=185, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=7.4256, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_SINISTER_STRIKE,
@@ -584,7 +589,10 @@ sinister_strike_second_strike_203986 = spell(
           'the companion never land on it), Ex3 SUPPRESS_CASTER_PROCS | REQUIRES_MAIN_HAND, Ex4 '
           'SUPPRESS_WEAPON_PROCS, weapon requirement as 1752, 100 yd (idx 6), FacingCasterFlags 0, DefenseType 2, '
           'SV 253, hidden. weapon_potency 250 -> 200 and sp_potency 10 -> 8 (2026-11-01, DPS balance pass 1031, user ruling: Sinister Strike -20%; '
-          'mirrors 1752). weapon_potency 200 -> 260 and sp_potency 8 -> 10.4 (2026-11-15, balance on the Normal-tier kits, user ruling: Sinister Strike +30%; mirrors 1752).',
+          'mirrors 1752). weapon_potency 200 -> 260 and sp_potency 8 -> 10.4 (2026-11-15, balance on the Normal-tier kits, user ruling: Sinister Strike +30%; mirrors 1752). weapon_potency 260 -> 230 (228.8 rounded to a multiple of 5) and sp_potency 10.4 -> 9.152 (2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88; 1752 itself takes the shared x0.85 to 220 / 8.84).'
+          ' weapon_potency 230 -> 195 and sp_potency 9.152 -> 7.688 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Combat x0.84, Combat 1,733 -> ~1,520).'
+          ' weapon_potency 195 -> 205 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat; Combat 1,479 -> ~1,520; hidden second strike, 1752 stays 185). (R3 2026-11-27: R2 overshot to 1,601; back to x1.02 / 150 / 200, about a third of the R2 step): 205 -> 200.'
+          ' weapon_potency 200 -> 185 and sp_potency 7.688 -> 7.4256 (2026-11-27, gear-scaling GS3 review fix, the hidden second strike carried its own tuning; it now mirrors Sinister Strike 1752 exactly so "strikes a second time for Sinister Strike\'s damage" is true).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.SS_SECOND_STRIKE_CLASS),
         'EquippedItemClass': _ITEM_CLASS_WEAPON, 'EquippedItemSubclass': _ANY_MELEE_WEAPON, 'CastingTimeIndex': 1,
@@ -616,7 +624,7 @@ pistol_shot_extra_203988 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=83.16, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=62.7013, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_PISTOL_SHOT,
@@ -627,7 +635,9 @@ pistol_shot_extra_203988 = spell(
           'DefenseType 2, Ex3 SUPPRESS_CASTER_PROCS, SV 90252, hidden. spell_rog_pistol_shot_extra multiplies the '
           'hit by (100 + OPPORTUNITY_EMPOWER_PCT)% when the stamp says the first shot was empowered. '
           'ap_potency 90 -> 72 (2026-11-01, DPS balance pass 1031, user ruling: Pistol Shot -20%; same line as 203958); '
-          'ap_potency 72 -> 79.2 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Pistol Shot +10%; same line as 203958). ap_potency 79.2 -> 83.16 (2026-11-15, balance round 4 on the Normal-tier kits, user ruling: Pistol Shot +5%).',
+          ' ap_potency 73.1808 -> 61.4719 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Combat x0.84, Combat 1,733 -> ~1,520; same line as 203958).'
+          'ap_potency 72 -> 79.2 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Pistol Shot +10%; same line as 203958). ap_potency 79.2 -> 83.16 (2026-11-15, balance round 4 on the Normal-tier kits, user ruling: Pistol Shot +5%). ap_potency 83.16 -> 73.1808 (2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88; same line as 203958).'
+          ' ap_potency 61.4719 -> 65.7749 (2026-11-27, gear-scaling GS3 R2, user ruling: Combat x1.07; Combat 1,479 -> ~1,520; same line as 203958). (R3 2026-11-27: R2 overshot to 1,601; back to x1.02 / 150 / 200, about a third of the R2 step): 65.7749 -> 62.7013.',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.PISTOL_SHOT_EXTRA_CLASS), 'EquippedItemClass': -1,
         'CastingTimeIndex': 1, 'AttributesEx3': _ATTR3_SUPPRESS_CASTER_PROCS, 'DefenseType': _DEFENSE_MELEE,
@@ -943,7 +953,7 @@ blade_rush_203980 = spell(
     mana_cost_pct=0, range_yards=None,
     effects=[
         Effect(type=EffectType.CHARGE, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=_TARGET_DEST_TARGET_ENEMY,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=75, implicit_target_a=_TARGET_DEST_TARGET_ENEMY,
                implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=5.0),
     ],
     spell_icon_id=_ICON_BLADE_RUSH,
@@ -955,7 +965,8 @@ blade_rush_203980 = spell(
           'DefenseType 2, PreventionType 2, weapon requirement as Eviscerate\'s (a weapon strike), SV 90254, no '
           'SUPPRESS_CASTER_PROCS (R13: poisons roll per enemy through PoisonRollAllowed, other procs once). No combo '
           'points; Blade Flurry never copies it. d2 b15 (m.BLADE_RUSH_CLASS). SkillLineAbility 30814 via the talent '
-          'bundling.',
+          'bundling. weapon_potency 100 -> 90 (88 rounded to a multiple of 5; 2026-11-26, raid-buff-sets retune R1, user ruling: Combat x0.88).'
+          ' weapon_potency 90 -> 75 (2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Combat x0.84, Combat 1,733 -> ~1,520).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.BLADE_RUSH_CLASS),
         'EquippedItemClass': _ITEM_CLASS_WEAPON, 'EquippedItemSubclass': _ANY_MELEE_WEAPON, 'CastingTimeIndex': 1,
@@ -1142,7 +1153,7 @@ improved_riposte_cleave_203993 = spell(
     id=203993, name='Riposte', school=School.NORMAL, attributes=_ATTR0_IS_ABILITY | _ATTR0_DO_NOT_DISPLAY,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
-    effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=683,
+    effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=500,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_IMPROVED_RIPOSTE,
     notes='rogue-rework S3a A3, combat doc "Improved Riposte" (U72, R20): the capstone\'s cleave Rogue::OnRiposteHit '
@@ -1152,7 +1163,8 @@ improved_riposte_cleave_203993 = spell(
           'slow, no combo point, d1 b8 only (m.RIPOSTE_CLEAVE_CLASS: Improved Riposte\'s threat mod reaches it, '
           'never d2 b19), A 6, RangeIndex 6, FacingCasterFlags 0, Ex3 SUPPRESS_CASTER_PROCS, DefenseType 2, SV 3799, '
           'hidden. weapon_potency 150 -> 525 (2026-11-01, DPS balance pass 1031 round R4, user ruling: Riposte +250%; same line as 14251). '
-          'weapon_potency 525 -> 683 (682.5 rounded up) (2026-11-02, DPS balance pass 1031 round R5, user ruling: Riposte +30%; same line as 14251).',
+          'weapon_potency 525 -> 683 (682.5 rounded up) (2026-11-02, DPS balance pass 1031 round R5, user ruling: Riposte +30%; same line as 14251). '
+          'weapon_potency 683 -> 500 (2026-11-27, gear-scaling GS3 review fix, Combat tank 787 -> ~750; same line as 14251).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.RIPOSTE_CLEAVE_CLASS), 'EquippedItemClass': -1,
         'CastingTimeIndex': 1, 'AttributesEx3': _ATTR3_SUPPRESS_CASTER_PROCS, 'DefenseType': _DEFENSE_MELEE,
@@ -1280,7 +1292,11 @@ endurance_riposte_heal_204004 = spell(
           'max health [tune] (stored 13), A 1, self range, instant, no 0x80 so the heal shows in the combat log '
           '(Victory Rush 204409\'s frame), DmgClass NONE, no SkillLineAbility. Cast triggered on the rogue by '
           'Rogue::OnRiposteHit (once per Riposte hit; Improved Riposte\'s cleave never heals) with Enforcer Stance up '
-          'and Endurance rank 2 (13872) held. Endurance\'s rank text quotes $204004s1.',
+          'and Endurance rank 2 (13872) held. Endurance\'s rank text quotes $204004s1. eff0 HEAL_PCT 14% -> 10% (stored 13 -> 9) '
+          '(2026-11-28, gear-scaling tank survival pass, user ruling: Combat Rogue tank survival 101 s -> about 80 s; '
+          'Enforcer Stance only). 10% -> 14% (stored 9 -> 13) restored (2026-11-28, gear-scaling tank survival pass '
+          'round 5, user ruling: the round 1 cut rested on sims where Riposte\'s attack-speed debuff toggled the boss\'s '
+          'swing timer; the survival cut moved to Enforcer Stance).',
     raw_overrides=_self_heal_raw('Heals you for $s1% of your maximum health.'),
 )
 
@@ -1324,5 +1340,8 @@ reinforced_leather_shield_204006 = _buff(
           'Rogue::ApplyCombatSpentClauses (CastCustomSpell bp0 = CountPctFromMaxHealth(eff1 x the points Between the '
           'Eyes actually spent)); eff1 aura DUMMY 5% per combo point [tune] (stored 4; the tooltip\'s $204006s2). '
           'Visible, non-passive, number-free aura text, 15 s, AttributesEx7 0 (not a Consolidated Buff), Ex1 0x20. '
-          'Needs Enforcer Stance and Reinforced Leather rank 3 (203962) at the spend; a new shield replaces the old.',
+          'Needs Enforcer Stance and Reinforced Leather rank 3 (203962) at the spend; a new shield replaces the old. '
+          'eff1 5% -> 4% per combo point (stored 4 -> 3) (2026-11-28, gear-scaling tank survival pass, user ruling: '
+          'Combat Rogue tank survival 101 s -> about 80 s; Enforcer Stance only). eff1 4% -> 5% (stored 3 -> 4) '
+          '(2026-11-28, gear-scaling tank survival pass round 2, user ruling: Combat Rogue tank overshot to 61.1 s, Reinforced Leather back to 5%, Endurance stays 10%).',
 )

@@ -354,15 +354,18 @@ shell_spin_command_201627 = _command(
 
 hardened_shell_201764 = _utility(
     201764, 'Hardened Shell', HARDENED_SHELL_LEVEL,
-    [_raid_aura(_AURA_MOD_RESISTANCE, 185, misc_value=_SCHOOL_MASK_PHYSICAL, points_per_level=14.557)],
+    [_raid_aura(_AURA_MOD_RESISTANCE, 157, misc_value=_SCHOOL_MASK_PHYSICAL, points_per_level=11.541)],
     2553, 7425,
     'Your pet hardens its shell, increasing the armor of all party and raid members by $s1 for $d. Does not stack '
     'with Devotion Aura or Earth Attunement.',
     cooldown_ms=40000, duration_ms=120000, RangeIndex=1, MaxLevel=80,
     AuraDescription_Lang_enUS='Armor increased by $s1.',
-    notes='hunter-pet-families F2: Turtle slot 2, autocast. Aura 22 armor, Devotion Aura 465\'s values moved to '
+    notes=(
+        'hunter-pet-families F2: Turtle slot 2, autocast. Aura 22 armor, Devotion Aura 465\'s values moved to '
           'SpellLevel 10 (bp 54 + 9 x 14.557 = 185, 14.557/level: 914 at 60, as Devotion Aura), raid 100 yd, 2 min, '
-          '40 s cooldown. Group 1086 Armor Buffs (rule 4). Visual 7425 (Shell Shield), icon 2553 (Shell).',
+          '40 s cooldown. Group 1086 Armor Buffs (rule 4). Visual 7425 (Shell Shield), icon 2553 (Shell).'
+        ' Armor base 185 -> 157, points_per_level 14.557 -> 11.541 from level 10 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): 273 at 20, 504 at 40, 735 at 60, Devotion Aura 465\'s values (within 1 below level 46).'
+    ),
 )
 
 shell_shield_201997 = _utility(
@@ -545,16 +548,19 @@ pound_command_201633 = _command(
 
 primal_might_201767 = _utility(
     201767, 'Primal Might', PRIMAL_MIGHT_LEVEL,
-    [_raid_aura(AuraType.MOD_STAT, 9, misc_value=0, points_per_level=2.0714285714285716),
-     _raid_aura(AuraType.MOD_STAT, 9, misc_value=1, points_per_level=2.0714285714285716)],
+    [_raid_aura(AuraType.MOD_STAT, 9, misc_value=0, points_per_level=1.34),
+     _raid_aura(AuraType.MOD_STAT, 9, misc_value=1, points_per_level=1.34)],
     1582, 7429,
     'Your pet beats its chest, increasing the Strength and Agility of all party and raid members by $s1 for $d. Does '
     'not stack with Roar of Courage or Horn of Winter.',
     cooldown_ms=40000, duration_ms=120000, RangeIndex=1, MaxLevel=80,
     AuraDescription_Lang_enUS='Increases Strength and Agility by $s1.',
-    notes='hunter-pet-families F2: Gorilla slot 2, autocast. Roar of Courage 201715\'s effects (Strength of Earth '
+    notes=(
+        'hunter-pet-families F2: Gorilla slot 2, autocast. Roar of Courage 201715\'s effects (Strength of Earth '
           '8076: bp 9, 2.0714/level from 10 to 80), raid 100 yd, 2 min, 40 s cooldown. Group 1088 Strength and Agility '
-          'Buffs (rule 4). Visual 7429 (Thunderstomp), icon 1582 (Gorilla).',
+          'Buffs (rule 4). Visual 7429 (Thunderstomp), icon 1582 (Gorilla).'
+        ' Strength and Agility points_per_level 2.0714 -> 1.34 from level 10 (2026-11-25, raid buff sets, user ruling: baseline buffs at the stock level 60 value): the stock Strength of Earth (base 9, 1.34 per level): 23 at 20, 50 at 40, 77 at 60. The old line was the bootstrapped one (113 at 60).'
+    ),
 )
 
 pummel_202000 = _utility(

@@ -12,7 +12,7 @@ MINION_AP_SHARE_PCT = const('MINION_AP_SHARE_PCT', 100, 'Minion attack power per
 # RefreshMinionMirror and spell_dk_minion_mirror::CalcAttackPower; MINION_AP_SHARE_PCT stays the DK0b default.
 MINION_ARMY_AP_SHARE_PCT = const('MINION_ARMY_AP_SHARE_PCT', 15, 'Army of the Dead ghoul attack power per owner attack power, percent (S3a U15, [tune]).')
 MINION_GHOUL_AP_SHARE_PCT = const('MINION_GHOUL_AP_SHARE_PCT', 60, 'Permanent ghoul (Raise Dead) attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 90).')
-MINION_LESSER_GHOUL_AP_SHARE_PCT = const('MINION_LESSER_GHOUL_AP_SHARE_PCT', 25, 'Lesser Ghoul attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 50).')
+MINION_LESSER_GHOUL_AP_SHARE_PCT = const('MINION_LESSER_GHOUL_AP_SHARE_PCT', 27, 'Lesser Ghoul attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 50; 25 -> 32 on 2026-11-26, raid-buff-sets retune R1, user ruling: Unholy Minion pet melee, only the Minion build (Necromancy) summons Lesser Ghouls; 32 -> 36 in R2 after the R1 sim, Minion 1,473 vs 1,520; 36 -> 30 on 2026-11-27, gear-scaling GS3 ilvl 66 retune, user ruling: Minion 1,590 -> 1,520; 30 -> 27 in GS3 R2, Minion 1,548 vs 1,520).')
 MINION_ABOMINATION_AP_SHARE_PCT = const('MINION_ABOMINATION_AP_SHARE_PCT', 70, 'Abomination attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 100).')
 # The Gargoyle turns owner attack power into spell power for a spell-potency strike (Gargoyle Strike 51963). One
 # point of attack power is worth 1 / R of spell power in potency (DEFAULT_R), so the share is 100 / R: 47 at R 2.15

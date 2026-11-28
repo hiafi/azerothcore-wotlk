@@ -61,6 +61,12 @@ namespace Warrior
 
         // D5: the shield's maximum, percent of max health before the capstone's Mastery.
         constexpr float STORMS_BULWARK_CAP_PCT = 30.0f;
+        // Every Storm's Bulwark grant (all sources, never the cap) x this (2026-11-26, raid-buff-sets retune R1, user
+        // ruling 6A: Protection survivability x0.85; retune R2: 0.85 -> 0.75 for about 80 s survive; R3: 0.75 -> 0.65).
+        // Mirrored by
+        // STORMS_BULWARK_GRANT_SCALE in dbc-tools source/classes/warrior/_tooltips.py for the tooltips;
+        // lib/test_warrior_s1.py pins the two equal.
+        constexpr float STORMS_BULWARK_GRANT_SCALE = 0.65f;
         // D4: Unrelenting never ends Last Stand's cooldown before 50% of its hasted length has passed.
         constexpr uint32 LAST_STAND_FLOOR_PCT = 50;
         // D11: a Revenge stamp older than this cannot feed Incite (its hits land in the cast's own launch).
@@ -1412,7 +1418,7 @@ namespace Warrior
         float const masteryFactor = warrior->HasAura(WarriorData::SPELL_STORM_S_BULWARK_200060)
             ? 1.0f + warrior->GetMasteryPercentage() / 100.0f : 1.0f;
         float const maxHealth = float(warrior->GetMaxHealth());
-        int32 const add = int32(maxHealth * pctOfMaxHealth / 100.0f * masteryFactor);
+        int32 const add = int32(maxHealth * pctOfMaxHealth / 100.0f * masteryFactor * STORMS_BULWARK_GRANT_SCALE);
         int32 const cap = int32(maxHealth * STORMS_BULWARK_CAP_PCT / 100.0f * masteryFactor);
 
         Aura* aura = warrior->GetAura(WarriorData::SPELL_STORM_S_BULWARK, warrior->GetGUID());

@@ -65,17 +65,29 @@
 #                       (e.g. acore/ac-wotlk-worldserver:master after a `docker compose build` the live container has
 #                       not been recreated for).
 #   DPSSIM_EXTRA_CONF   Extra lines appended to the generated dpssim.conf (printf %b, so "\n" separates lines).
+#   DPSSIM_WORLD_EXTRA_CONF  Extra lines appended to the run's worldserver.conf (printf %b), for core keys under test.
 #   DPSSIM_PET_FAMILY   Hunter profiles: the pet family to sim instead of the profile's pet, by key, name or number
 #                       from modules/mod-dpssim/tools/pet_families.tsv (one creature per family), e.g. "cat",
 #                       "bird-of-prey", "Bird of Prey" or 26 (DpsSim.PetCreatureEntry). Adds ".pet-<key>" to the names.
 #   DPSSIM_PET_ENTRY    The same with a creature_template entry ("pet<entry>" in the names unless the table has it).
-#   DPSSIM_BUFF_SET     self_only or full_raid (DpsSim.BuffSet, DPS profiles at level 60): raid buffs on the actor and
-#                       its pet, its flask, raid debuffs on the dummies, Bloodlust at the pull. Adds ".full_raid" to the
-#                       names. Unset: the profile's "BuffSet" key, else self_only.
+#   DPSSIM_BUFF_SET     self_only (alias self), standard or full_raid (alias all) (DpsSim.BuffSet, DPS profiles at
+#                       level 60). standard: the common raid buffs on the actor and its pet, major armor and magic
+#                       damage taken on the dummies, Sated and Exhaustion at the pull (no Bloodlust), no flask; the
+#                       balance target's set. full_raid: every raid buff and debuff, the flask, Replenishment and
+#                       Bloodlust at the pull. Adds ".standard" or ".full_raid" to the names (self_only adds nothing).
+#                       Unset: the profile's "BuffSet" key, else self_only.
 #   DPSSIM_RAID_BUFFS / DPSSIM_RAID_DEBUFFS / DPSSIM_RAID_PULL_BUFFS / DPSSIM_RAID_FLASKS
 #                       full_raid only: replace that list (DpsSim.RaidBuffs / RaidDebuffs / RaidPullBuffs / RaidFlasks,
 #                       see dpssim.conf.dist; empty = none of it, e.g. DPSSIM_RAID_PULL_BUFFS= for no Bloodlust); the
 #                       names then read ".full_raid-x<hash>".
+#   DPSSIM_STANDARD_BUFFS / DPSSIM_STANDARD_DEBUFFS / DPSSIM_STANDARD_PULL_BUFFS
+#                       standard only: the same for DpsSim.StandardBuffs / StandardDebuffs / StandardPullBuffs; the
+#                       names then read ".standard-x<hash>".
+#   DPSSIM_WORLD_DB     A world schema to read instead of the live one, e.g. acore_world_sim_rbs: a copy of acore_world
+#                       made beforehand (mysqldump | mysql inside the database container) with a change under test
+#                       applied, so a sim can read data the live server does not have yet. Must be named
+#                       acore_world_sim_<name> and exist; the run never creates, changes or drops it, and the DB
+#                       updater stays off (AC_UPDATES_ENABLE_DATABASES=0). The names do not carry it.
 #   DPSSIM_DISABLE_SPELLS  Spell ids taken out of the actor's and its pet's spellbooks (DpsSim.DisableSpells), e.g.
 #                       "24604". Adds ".no24604" to the names.
 #   DPSSIM_DUMMY_IMMUNE_AURAS  Spell ids the dummies are immune to (DpsSim.DummyImmuneAuras): the hit that applies the
@@ -167,7 +179,8 @@
 # CHARS_COPY_DATA_TABLES) into a throwaway schema "acore_characters_sim_<pid>", points the sim container's
 # AC_CHARACTER_DATABASE_INFO at it, and drops it on exit (also after a failed or interrupted run). mod-dpssim itself
 # refuses to run on any characters DB not named acore_characters_sim*. The login, world and playerbots databases
-# are shared as before (the sim only reads the first two; it doesn't write the playerbots one).
+# are shared as before (the sim only reads the first two; it doesn't write the playerbots one); DPSSIM_WORLD_DB points
+# the world connection at a prepared acore_world_sim_* copy instead.
 #
 # Requires: the normal Docker stack already up (ac-database healthy, ac-worldserver running -
 # its image, network, volume, and DB credentials are all discovered by inspecting that live
@@ -499,11 +512,12 @@ fi
 
 # --- hunter pet family, buff set, disabled spells (the names carry them, so never via DPSSIM_EXTRA_CONF) -------------
 EXTRA_KEYS_RE='^[[:space:]]*DpsSim\.(PetCreatureEntry|BuffSet|RaidBuffs|RaidDebuffs|RaidPullBuffs|RaidFlasks|'
-EXTRA_KEYS_RE+='DisableSpells|DummyImmuneAuras)\b'
+EXTRA_KEYS_RE+='StandardBuffs|StandardDebuffs|StandardPullBuffs|DisableSpells|DummyImmuneAuras)\b'
 if printf '%b' "${DPSSIM_EXTRA_CONF:-}" | grep -qiE "$EXTRA_KEYS_RE"; then
-    die "DPSSIM_EXTRA_CONF sets DpsSim.PetCreatureEntry / BuffSet / Raid*Buffs / RaidFlasks / DisableSpells /" \
-        "DummyImmuneAuras: use DPSSIM_PET_ENTRY, DPSSIM_PET_FAMILY, DPSSIM_BUFF_SET, DPSSIM_RAID_BUFFS /" \
-        "DPSSIM_RAID_DEBUFFS / DPSSIM_RAID_PULL_BUFFS / DPSSIM_RAID_FLASKS, DPSSIM_DISABLE_SPELLS or" \
+    die "DPSSIM_EXTRA_CONF sets DpsSim.PetCreatureEntry / BuffSet / Raid*Buffs / RaidFlasks / Standard*Buffs /" \
+        "DisableSpells / DummyImmuneAuras: use DPSSIM_PET_ENTRY, DPSSIM_PET_FAMILY, DPSSIM_BUFF_SET," \
+        "DPSSIM_RAID_BUFFS / DPSSIM_RAID_DEBUFFS / DPSSIM_RAID_PULL_BUFFS / DPSSIM_RAID_FLASKS," \
+        "DPSSIM_STANDARD_BUFFS / DPSSIM_STANDARD_DEBUFFS / DPSSIM_STANDARD_PULL_BUFFS, DPSSIM_DISABLE_SPELLS or" \
         "DPSSIM_DUMMY_IMMUNE_AURAS" \
         "instead, so the report file names carry the setting"
 fi
@@ -555,17 +569,39 @@ if [[ -z "$BUFF_SET" && "$IS_HEAL" -eq 0 && "$IS_TANK" -eq 0 && "$IS_MECH" -eq 0
     BUFF_SET_FROM="the profile's BuffSet"
 fi
 BUFF_SET="$(printf '%s' "${BUFF_SET:-self_only}" | tr 'A-Z' 'a-z')"
-if ! [[ "$BUFF_SET" =~ ^(self_only|full_raid)$ ]]; then
-    die "${BUFF_SET_FROM} must be self_only or full_raid, got '$BUFF_SET'"
+# The aliases: self = self_only, all = full_raid (the names always carry the long form)
+case "$BUFF_SET" in
+    self) BUFF_SET=self_only ;;
+    all) BUFF_SET=full_raid ;;
+esac
+if ! [[ "$BUFF_SET" =~ ^(self_only|standard|full_raid)$ ]]; then
+    die "${BUFF_SET_FROM} must be self_only (self), standard or full_raid (all), got '$BUFF_SET'"
 fi
+# The list variables of each set: "<variable>:<conf key>"
+FULL_RAID_LIST_VARS=("DPSSIM_RAID_BUFFS:DpsSim.RaidBuffs" "DPSSIM_RAID_DEBUFFS:DpsSim.RaidDebuffs"
+    "DPSSIM_RAID_PULL_BUFFS:DpsSim.RaidPullBuffs" "DPSSIM_RAID_FLASKS:DpsSim.RaidFlasks")
+STANDARD_LIST_VARS=("DPSSIM_STANDARD_BUFFS:DpsSim.StandardBuffs" "DPSSIM_STANDARD_DEBUFFS:DpsSim.StandardDebuffs"
+    "DPSSIM_STANDARD_PULL_BUFFS:DpsSim.StandardPullBuffs")
+SET_LIST_VARS=()
+OTHER_LIST_VARS=("${FULL_RAID_LIST_VARS[@]}" "${STANDARD_LIST_VARS[@]}")
 if [[ "$BUFF_SET" == full_raid ]]; then
+    SET_LIST_VARS=("${FULL_RAID_LIST_VARS[@]}")
+    OTHER_LIST_VARS=("${STANDARD_LIST_VARS[@]}")
+elif [[ "$BUFF_SET" == standard ]]; then
+    SET_LIST_VARS=("${STANDARD_LIST_VARS[@]}")
+    OTHER_LIST_VARS=("${FULL_RAID_LIST_VARS[@]}")
+fi
+for pair in "${OTHER_LIST_VARS[@]}"; do
+    v="${pair%%:*}"
+    if [[ -n "${!v+x}" ]]; then die "$v is set but the buff set is $BUFF_SET"; fi
+done
+if [[ "$BUFF_SET" != self_only ]]; then
     if [[ "$IS_HEAL" -eq 1 || "$IS_TANK" -eq 1 || "$IS_MECH" -eq 1 ]]; then
-        die "DPSSIM_BUFF_SET=full_raid is for DPS profiles only"
+        die "DPSSIM_BUFF_SET=$BUFF_SET is for DPS profiles only"
     fi
-    EXTRA_DPS_CONF+="DpsSim.BuffSet = full_raid"$'\n'
+    EXTRA_DPS_CONF+="DpsSim.BuffSet = ${BUFF_SET}"$'\n'
     RAID_LISTS=""
-    for pair in "DPSSIM_RAID_BUFFS:DpsSim.RaidBuffs" "DPSSIM_RAID_DEBUFFS:DpsSim.RaidDebuffs" \
-            "DPSSIM_RAID_PULL_BUFFS:DpsSim.RaidPullBuffs" "DPSSIM_RAID_FLASKS:DpsSim.RaidFlasks"; do
+    for pair in "${SET_LIST_VARS[@]}"; do
         v="${pair%%:*}"; key="${pair#*:}"
         if [[ -n "${!v+x}" ]]; then
             if ! [[ "${!v}" =~ ^[0-9:@,\ -]*$ ]]; then
@@ -575,14 +611,11 @@ if [[ "$BUFF_SET" == full_raid ]]; then
             RAID_LISTS+="${key}=${!v};"
         fi
     done
-    # ".full_raid" with the default lists, ".full_raid-x1a2b3c" when a DPSSIM_RAID_* variable replaced one
-    EXTRA_NAME+=".full_raid"
+    # ".full_raid" / ".standard" with the default lists, ".full_raid-x1a2b3c" when a list variable replaced one
+    EXTRA_NAME+=".${BUFF_SET}"
     if [[ -n "$RAID_LISTS" ]]; then EXTRA_NAME+="-x$(short_hash "$RAID_LISTS")"; fi
 else
-    for v in DPSSIM_RAID_BUFFS DPSSIM_RAID_DEBUFFS DPSSIM_RAID_PULL_BUFFS DPSSIM_RAID_FLASKS; do
-        if [[ -n "${!v+x}" ]]; then die "$v is set but the buff set is not full_raid"; fi
-    done
-    # A self_only run of a full_raid profile: the profile's key must not win
+    # A self_only run of a standard or full_raid profile: the profile's key must not win
     EXTRA_DPS_CONF+="DpsSim.BuffSet = self_only"$'\n'
 fi
 
@@ -632,16 +665,34 @@ if [[ "${#DB_ENV[@]}" -lt 4 ]]; then
 fi
 
 # The characters DB is the one connection that is NOT passed through: the sim gets a throwaway clone (below).
+# DPSSIM_WORLD_DB replaces the world DB's name (an acore_world_sim_* schema someone prepared, see the header).
 SIM_CHARS_DB="acore_characters_sim_$$"
+SIM_WORLD_DB="${DPSSIM_WORLD_DB:-}"
 DB_ENV_ARGS=()
 LIVE_CHARS_INFO=""
+LIVE_WORLD_DB=""
 for kv in "${DB_ENV[@]}"; do
     if [[ "$kv" == AC_CHARACTER_DATABASE_INFO=* ]]; then
         LIVE_CHARS_INFO="${kv#AC_CHARACTER_DATABASE_INFO=}"
+    elif [[ -n "$SIM_WORLD_DB" && "$kv" == AC_WORLD_DATABASE_INFO=* ]]; then
+        # "host;port;user;password;database": keep the connection, swap the schema
+        LIVE_WORLD_DB="${kv##*;}"
+        DB_ENV_ARGS+=(-e "${kv%;*};${SIM_WORLD_DB}")
     else
         DB_ENV_ARGS+=(-e "$kv")
     fi
 done
+if [[ -n "$SIM_WORLD_DB" ]]; then
+    if [[ ! "$SIM_WORLD_DB" =~ ^acore_world_sim_[A-Za-z0-9_]+$ || -z "$LIVE_WORLD_DB" ||
+            "$SIM_WORLD_DB" == "$LIVE_WORLD_DB" ]]; then
+        echo "error: refusing to run: DPSSIM_WORLD_DB '$SIM_WORLD_DB' must be named acore_world_sim_<name> and" \
+            "must not be the live world DB." >&2
+        exit 1
+    fi
+    # The DB updater stays off, so the sim never applies or records a migration in the scratch world schema
+    # (the image sets this too; the explicit value keeps a differently built image from running it)
+    DB_ENV_ARGS+=(-e "AC_UPDATES_ENABLE_DATABASES=0")
+fi
 # "host;port;user;password;database"
 IFS=';' read -r DB_HOST DB_PORT DB_USER DB_PASS LIVE_CHARS_DB <<< "$LIVE_CHARS_INFO"
 if [[ -z "$DB_HOST" || -z "$DB_USER" || -z "$LIVE_CHARS_DB" ]]; then
@@ -669,6 +720,11 @@ if [[ -z "$DB_CONTAINER" ]]; then
 fi
 # MYSQL_PWD keeps the password out of the process list; mysql on stdin so the multi-statement scripts need no quoting.
 db_sql() { docker exec -i -e MYSQL_PWD="$DB_PASS" "$DB_CONTAINER" mysql -u"$DB_USER" -N -B "$@"; }
+if [[ -n "$SIM_WORLD_DB" ]] && [[ -z "$(db_sql -e "SELECT 1 FROM information_schema.schemata
+        WHERE schema_name = '${SIM_WORLD_DB}'")" ]]; then
+    die "DPSSIM_WORLD_DB '$SIM_WORLD_DB' does not exist (create it first: a copy of the live world DB)"
+fi
+if [[ -n "$SIM_WORLD_DB" ]]; then echo "World DB: ${SIM_WORLD_DB} (DPSSIM_WORLD_DB), not ${LIVE_WORLD_DB}." >&2; fi
 
 # --- build a scratch etc/ + logs/ dir for this one run ------------------------------------
 SCRATCH="$(mktemp -d -t dpssim-run.XXXXXX)"
@@ -687,6 +743,9 @@ cp -r env/dist/etc/. "$SCRATCH/etc/"
 # Boot this throwaway worldserver in sim-daemon mode - never a connectable realm (no socket
 # listeners at all in this mode), so it's safe to run alongside the real ac-worldserver.
 printf '\nDpsSim.Enabled = 1\n' >> "$SCRATCH/etc/worldserver.conf"
+# DPSSIM_WORLD_EXTRA_CONF: extra worldserver.conf lines for this run only (printf %b), e.g. a core key under test
+# ("WeaponScaling.ApPotencyReferenceItemLevel = 60"). Never DpsSim.* keys (those go through DPSSIM_EXTRA_CONF).
+if [[ -n "${DPSSIM_WORLD_EXTRA_CONF:-}" ]]; then printf '%b\n' "$DPSSIM_WORLD_EXTRA_CONF" >> "$SCRATCH/etc/worldserver.conf"; fi
 
 # SimBot::Create() needs a real, working PlayerbotAI - flip this on for the sim run regardless
 # of the live deployment's own playerbots.conf (confirmed 2026-09-12: the live server currently

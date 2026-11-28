@@ -108,8 +108,9 @@ namespace Warrior
     // From WarriorUnitScript::OnSpellDamageTakenFinal (post-mitigation, carries isCrit). S1: Incite's capstone (D11).
     void OnSpellDamageTakenFinal(Unit* target, Unit* attacker, int32 damage, SpellInfo const* spellInfo, bool isCrit);
 
-    // Storm's Bulwark (D5). add = pctOfMaxHealth % of max health, x (1 + Mastery) only with Storm's Bulwark rank 3
-    // (200060); cap = 30% of max health x (1 + Mastery if 200060), read at this grant; the new amount is
+    // Storm's Bulwark (D5). add = pctOfMaxHealth % of max health x STORMS_BULWARK_GRANT_SCALE (WarriorMechanics.cpp;
+    // callers pass the unscaled design percent), x (1 + Mastery) only with Storm's Bulwark rank 3 (200060); cap = 30%
+    // of max health x (1 + Mastery if 200060), read at this grant; the new amount is
     // max(current, min(current + add, cap)) (no source ever lowers it); creates 200028 if absent; refreshes its 15 s
     // except BulwarkSource::Incite. No Versatility, no healing modifiers. Shield Discipline's amplification is the
     // Thunder Clap script's job (its part only), not this function's.
