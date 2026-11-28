@@ -264,9 +264,9 @@ windfury_attack_oh_202205 = spell(
 # Stoneskin (shared doc "Stoneskin")
 # =====================================================================================================================
 
-# "Each stack of Stoneskin reduces all damage you take by 1%, up to 25 stacks. Taking damage erodes your stacks." A visible
+# "Each stack of Stoneskin reduces all damage you take by 1%, up to 15 stacks. Taking damage erodes your stacks." A visible
 # (not passive, not consolidated) buff, applied and stacked only by scripts (Shaman::AddStoneskin) while Rockbiter is up and
-# eroded by Shaman::ErodeStoneskin. CumulativeAura 25 is the StackAmount and the cap Shaman::GetStoneskinCap reads; aura 87 (damage taken %) misc 127 (all schools)
+# eroded by Shaman::ErodeStoneskin. CumulativeAura 15 is the StackAmount and the cap Shaman::GetStoneskinCap reads; aura 87 (damage taken %) misc 127 (all schools)
 # -1 per stack, stored -2 (live -1); AuraEffect::CalculateAmount multiplies it by the stack count. Permanent duration: the
 # 2 min out-of-combat timer is the shaman's (STONESKIN_OOC_MS). The buff icon is the Stoneskin Totem buff's (8072, 690).
 # Not a death-surviving aura: it falls off with the shaman's death and is re-earned.
@@ -284,11 +284,12 @@ stoneskin_202206 = spell(
           'pass, user ruling: Enhancement dual-wield tank the least survivable tank at about 70-75 s, shield tank about 80 s). '
           'CumulativeAura 30 -> 25, tooltip "up to 30 stacks" -> "up to 25 stacks" (2026-11-28, gear-scaling tank survival '
           'pass round 2, user ruling: Enh DW tank 76.2 s, below Bear\'s 75 s). Round 3: the C++ reads this CumulativeAura as '
-          'the cap (Shaman::GetStoneskinCap; the STONESKIN_MAX const is retired), less Toughness\'s shield clause (202454 E1).',
+          'the cap (Shaman::GetStoneskinCap; the STONESKIN_MAX const is retired), less Toughness\'s shield clause (202454 E1). CumulativeAura 25 -> 15, tooltip "up to 25 stacks" -> "up to 15 '
+          'stacks" (2026-11-28, gear-scaling tank survival pass round 4, user ruling: precision sims put cap 25 at DW 82 / shield 85 s; cap 15 with a shield cut of 5 aims at DW ~55 s, shield ~84 s).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'EquippedItemClass': -1, 'SpellLevel': 1, 'CastingTimeIndex': 1,
-        'CumulativeAura': 25,
-        'Description_Lang_enUS': 'Each stack of Stoneskin reduces all damage you take by 1%, up to 25 stacks. '
+        'CumulativeAura': 15,
+        'Description_Lang_enUS': 'Each stack of Stoneskin reduces all damage you take by 1%, up to 15 stacks. '
                                  'Taking damage erodes your stacks.',
         'AuraDescription_Lang_enUS': 'Damage taken reduced. Taking damage erodes this effect.',
     },
