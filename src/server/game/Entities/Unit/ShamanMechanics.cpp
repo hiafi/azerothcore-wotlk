@@ -143,6 +143,25 @@ namespace
         return std::clamp(-amount / 100.0, 0.0, 0.99);
     }
 
+    // Gear-scaling tank survival pass round 3 (2026-11-28): the Stoneskin cap is 202206's CumulativeAura (StackAmount,
+    // so cap tuning is data-only), less Toughness's shield clause (202454 effect 1, a DUMMY) while a usable shield is
+    // in the off hand. 0 if the row is missing; otherwise at least 1.
+    int32 GetStoneskinCap(Player const* player)
+    {
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(SPELL_STONESKIN_STACKS);
+        int32 cap = info ? int32(info->StackAmount) : 0;
+        if (cap <= 0)
+            return 0;
+
+        if (AuraEffect const* clause = player->GetAuraEffect(ShamanData::SPELL_TOUGHNESS_SHIELD, EFFECT_1,
+            player->GetGUID()))
+            if (Item const* shield = player->GetShield(true))
+                if (shield->GetTemplate()->SubClass == ITEM_SUBCLASS_ARMOR_SHIELD)
+                    cap -= std::max(0, clause->GetAmount());
+
+        return std::max(1, cap);
+    }
+
     // Starts (or restarts) the 2 min out-of-combat timer. A newer arm, a combat entry or ClearState makes the
     // pending event stale through the generation counter.
     void ArmStoneskinTimer(Player* player)
@@ -175,7 +194,7 @@ namespace
 
     // DPS balance pass 1031 T1, Spirit Guard capstone (rank 3, under Rockbiter): the `stacksLost` a hit eroded crumble
     // into the 202442 shell, its effect 0 (potency) per stack, added to what is left of the current shell and capped
-    // at STONESKIN_MAX stacks' worth. The new cast replaces the old shell with the total and restarts its duration.
+    // at the Stoneskin cap's worth (GetStoneskinCap). The new cast replaces the old shell with the total and restarts its duration.
     void AddCrumbledStone(Player* victim, uint32 stacksLost)
     {
         SpellInfo const* shellInfo = sSpellMgr->GetSpellInfo(ShamanData::SPELL_SPIRIT_GUARD_SHELL);
@@ -191,7 +210,7 @@ namespace
             victim->GetGUID()))
             left = std::max(0, shell->GetAmount());
 
-        int32 const cap = perStack * int32(ShamanData::STONESKIN_MAX);
+        int32 const cap = perStack * GetStoneskinCap(victim);
         int32 const amount = std::min(cap, left + perStack * int32(stacksLost));
         victim->CastCustomSpell(ShamanData::SPELL_SPIRIT_GUARD_SHELL, SPELLVALUE_BASE_POINT0, amount, victim, true);
     }
@@ -319,13 +338,22 @@ namespace Shaman
         if (!shaman || !stacks || !shaman->HasAura(ShamanData::SPELL_ROCKBITER_WEAPON))
             return;
 
-        int32 const cap = ShamanData::STONESKIN_MAX;
+        int32 const cap = GetStoneskinCap(shaman);
+        if (cap <= 0)
+            return;
+
         int32 const grant = int32(std::min<uint32>(stacks, uint32(cap)));
 
         if (Aura* aura = shaman->GetAura(SPELL_STONESKIN_STACKS, shaman->GetGUID()))
         {
+            // Round 3: a shield equipped mid-fight lowers the cap; the stacks above it go at the next grant (a
+            // negative ModStackAmount neither refreshes nor removes here, cap >= 1).
+            int32 const current = int32(aura->GetStackAmount());
+            if (current > cap)
+                aura->ModStackAmount(cap - current);
+
             // At the cap the delta is 0, which still refreshes the aura (ModStackAmount's refresh branch).
-            int32 const delta = std::max(0, std::min(grant, cap - int32(aura->GetStackAmount())));
+            int32 const delta = std::max(0, std::min(grant, cap - std::min(current, cap)));
             aura->ModStackAmount(delta);
         }
         else
@@ -2220,6 +2248,11 @@ namespace
         for (size_t i = 0; i < SPIRIT_GUARD_STORMSTRIKE_CHILDREN.size(); ++i)
             SetOwnerAura(player, player, SPIRIT_GUARD_STORMSTRIKE_CHILDREN[i], parryWanted && spiritGuardRank == i + 1);
 
+        // Gear-scaling tank survival pass round 3 (2026-11-28): Toughness's shield clause child at any rank (block
+        // +10%, which only a shield can use; GetStoneskinCap applies its cap cut only with a shield equipped).
+        SetOwnerAura(player, player, ShamanData::SPELL_TOUGHNESS_SHIELD,
+            rockbiter && Shaman::GetTalentRank(player, TOUGHNESS_RANKS) > 0);
+
         SetOwnerAura(player, player, ShamanData::SPELL_ROCKBITER_ILS_THREAT,
             rockbiter && Shaman::GetTalentRank(player, IMPROVED_LIGHTNING_SHIELD_RANKS) > 0);
 
@@ -2725,8 +2758,8 @@ namespace Shaman
                     break;
                 }
 
-        // Ascendance capstone: 1% x (1 + Mastery) per stack, rounded once on the total (the cap stays 50 stacks, so
-        // the total can pass 50% at high Mastery, by design).
+        // Ascendance capstone: 1% x (1 + Mastery) per stack, rounded once on the total (the stack cap stays, so
+        // the total can pass the cap in percent at high Mastery, by design).
         double const mastery = player ? double(GetAscendanceMasteryPct(player)) : 0.0;
         return int32(std::lround(double(perStack) * double(stacks) * (1.0 + mastery / 100.0)));
     }

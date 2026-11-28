@@ -25,7 +25,9 @@ Ids (Enhancement block 202360-202519):
     202450         [balance round 3 on the Normal-tier kits, 2026-11-15] Toughness's Shield Strike (the shield tank's Stormstrike
                    strike with the shield).
     202451-202453  [balance round 5 on the Normal-tier kits, 2026-11-15] Spirit Guard's Stormstrike damage children, one per
-                   rank (33 / 66 / 100 %); 202454-202519 stay spare.
+                   rank (33 / 66 / 100 %).
+    202454         [gear-scaling tank survival pass round 3, 2026-11-28] Toughness's shield clause child (block +10%, Stoneskin
+                   cap -10 with a shield); 202455-202519 stay spare.
 SkillLineAbility 30680 (Living Earth), creatures 300262-300265 (the four Elemental Spirit wolves), tooltip entries 1217-1219,
 spell_group 1259.
 
@@ -98,6 +100,7 @@ TARGET_DEST_DEST = 87
 EFFECT_DISPEL_MECHANIC = 108
 EFFECT_ATTACK_ME = 114
 AURA_MOD_PARRY_PERCENT = 47            # not in the DSL's AuraType subset
+AURA_MOD_BLOCK_PERCENT = 51            # not in the DSL's AuraType subset
 MECHANIC_ROOT = 7
 MECHANIC_SNARE = 11
 STAT_AGILITY = 1
@@ -1159,7 +1162,7 @@ spirit_guard_shell_202442 = _buff(
     'Absorbs {pot1} damage for each Stoneskin stack lost.',
     'Spirit Guard capstone (2026-11-01, DPS balance pass 1031 round T1, user ruling): under Rockbiter, the Stoneskin stacks a hit '
     'erodes crumble into this shell (Shaman::ErodeStoneskin): E0 per stack lost, 1 potency absorb on the healing scale (T 1500, '
-    'about 10.6 at 60 [tune]), added to what is left of the current shell and capped at STONESKIN_MAX stacks\' worth; the C++ '
+    'about 10.6 at 60 [tune]), added to what is left of the current shell and capped at the Stoneskin cap\'s worth (Shaman::GetStoneskinCap); the C++ '
     'reads E0 with Shaman::GetSelfAbsorbAmount and passes the total as bp0. 6 s [fixed], refreshed by each new crumble. No '
     'family bits. Visible, not consolidated; aura text number-free. No visual (it refreshes on most hits; V stage). '
     'sp_potency 1 -> 0.25 (2026-11-01, DPS balance pass 1031 round R4, user ruling: shaman tank damage to ~750 / survival to ~80 s): about 2.6 per stack, 132 at the 50-stack cap. Cap 50 -> 30 stacks\' worth with STONESKIN_MAX, tooltip text '
@@ -1220,6 +1223,20 @@ anticipation_jumps_202447 = _hidden_child(
     'Shock\'s orb child. A flat parry percent is not diminished.',
     **_emask(1, CHAIN_LIGHTNING_D0),
 )
+
+toughness_shield_202454 = _hidden_child(
+    202454, 'Toughness', [_aura(AURA_MOD_BLOCK_PERCENT, 9), _dummy(9)], ICON_TOUGHNESS,
+    School.NATURE, 'Your chance to block is increased, and your maximum Stoneskin stacks are reduced while a shield is equipped.',
+    'hidden child of Rockbiter for Toughness (any rank), the shield tank\'s trade-off '
+    + "(2026-11-28, gear-scaling tank survival pass round 3, user ruling: Enhancement shield tank 115 s -> about 80 s, "
+    'dual-wield keeps the base cap): E0 aura 51 MOD_BLOCK_PERCENT +10% (stored 9); only a shield can block, so it does '
+    'nothing for a dual wield. E1 DUMMY 10 (stored 9): Shaman::GetStoneskinCap takes this many stacks off 202206\'s '
+    'CumulativeAura while a usable shield (ITEM_SUBCLASS_ARMOR_SHIELD) is in the off hand. No EquippedItemClass gate: '
+    'Player::RemoveItemDependentAurasAndCasts would drop a script-applied child on unequip and nothing re-applies it on '
+    'equip, so the shield check is the C++\'s. Applied by Shaman::SyncRockbiterChildren while Rockbiter is up and '
+    'Toughness has a rank. Toughness\'s rank text quotes $202454s1 / $202454s2. Passive + DO_NOT_DISPLAY with the L5 pair.',
+)
+
 
 static_shock_orb_damage_202448 = _hidden_child(
     202448, 'Static Shock', [_mod(SpellModOp.DAMAGE, True, STATIC_SHOCK_ORB_DAMAGE_R3['value'] - 1)], ICON_STATIC_SHOCK,

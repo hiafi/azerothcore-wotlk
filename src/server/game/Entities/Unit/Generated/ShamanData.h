@@ -511,6 +511,7 @@ namespace ShamanData
     constexpr uint32 SPELL_SPIRIT_GUARD_STORMSTRIKE_R1 = 202451; // spirit_guard_stormstrike_r1_202451
     constexpr uint32 SPELL_SPIRIT_GUARD_STORMSTRIKE_R2 = 202452; // spirit_guard_stormstrike_r2_202452
     constexpr uint32 SPELL_SPIRIT_GUARD_STORMSTRIKE_R3 = 202453; // spirit_guard_stormstrike_r3_202453
+    constexpr uint32 SPELL_TOUGHNESS_SHIELD = 202454; // toughness_shield_202454
     constexpr uint32 SPELL_RAZE_RANK1 = 202520; // raze_rank1_202520
     constexpr uint32 SPELL_RAZE_RANK2 = 202521; // raze_rank2_202521
     constexpr uint32 SPELL_RAZE_RANK3 = 202522; // raze_rank3_202522
@@ -766,7 +767,6 @@ namespace ShamanData
     constexpr int32 STONESKIN_CHAIN_LIGHTNING = 1; // Stoneskin stacks Chain Lightning grants per target hit [tune].
     constexpr int32 STONESKIN_EARTH_SHOCK = 15; // Stoneskin stacks Earth Shock grants, once per cast [tune].
     constexpr int32 STONESKIN_LAVA_LASH = 5; // Stoneskin stacks Lava Lash grants [tune].
-    constexpr int32 STONESKIN_MAX = 25; // Stoneskin stack cap [tune]; also spell 202206's CumulativeAura. 50 -> 30 (2026-11-28, gear-scaling tank survival pass, user ruling: Enhancement dual-wield tank the least survivable tank at about 70-75 s, shield tank about 80 s). 30 -> 25 (2026-11-28, gear-scaling tank survival pass round 2, user ruling: Enh DW tank 76.2 s, below Bear's 75 s).
     constexpr int32 STONESKIN_OOC_MS = 120000; // Out-of-combat time before the Stoneskin stacks fall off, ms [fixed].
     constexpr int32 STONESKIN_STORMSTRIKE = 5; // Stoneskin stacks Stormstrike grants [tune].
     constexpr int32 TF_DURATION_MS = 10000; // Tidal Force: duration of the caster aura 202672, ms [fixed].

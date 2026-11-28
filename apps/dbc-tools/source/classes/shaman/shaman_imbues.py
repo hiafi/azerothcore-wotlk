@@ -266,7 +266,7 @@ windfury_attack_oh_202205 = spell(
 
 # "Each stack of Stoneskin reduces all damage you take by 1%, up to 25 stacks. Taking damage erodes your stacks." A visible
 # (not passive, not consolidated) buff, applied and stacked only by scripts (Shaman::AddStoneskin) while Rockbiter is up and
-# eroded by Shaman::ErodeStoneskin. CumulativeAura 25 (STONESKIN_MAX) is the StackAmount; aura 87 (damage taken %) misc 127 (all schools)
+# eroded by Shaman::ErodeStoneskin. CumulativeAura 25 is the StackAmount and the cap Shaman::GetStoneskinCap reads; aura 87 (damage taken %) misc 127 (all schools)
 # -1 per stack, stored -2 (live -1); AuraEffect::CalculateAmount multiplies it by the stack count. Permanent duration: the
 # 2 min out-of-combat timer is the shaman's (STONESKIN_OOC_MS). The buff icon is the Stoneskin Totem buff's (8072, 690).
 # Not a death-surviving aura: it falls off with the shaman's death and is re-earned.
@@ -283,7 +283,8 @@ stoneskin_202206 = spell(
           ' CumulativeAura 50 -> 30, tooltip "up to 50 stacks" -> "up to 30 stacks" (2026-11-28, gear-scaling tank survival '
           'pass, user ruling: Enhancement dual-wield tank the least survivable tank at about 70-75 s, shield tank about 80 s). '
           'CumulativeAura 30 -> 25, tooltip "up to 30 stacks" -> "up to 25 stacks" (2026-11-28, gear-scaling tank survival '
-          'pass round 2, user ruling: Enh DW tank 76.2 s, below Bear\'s 75 s).',
+          'pass round 2, user ruling: Enh DW tank 76.2 s, below Bear\'s 75 s). Round 3: the C++ reads this CumulativeAura as '
+          'the cap (Shaman::GetStoneskinCap; the STONESKIN_MAX const is retired), less Toughness\'s shield clause (202454 E1).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'EquippedItemClass': -1, 'SpellLevel': 1, 'CastingTimeIndex': 1,
         'CumulativeAura': 25,
@@ -298,7 +299,8 @@ STONESKIN_EARTH_SHOCK = const('STONESKIN_EARTH_SHOCK', 15, 'Stoneskin stacks Ear
 STONESKIN_STORMSTRIKE = const('STONESKIN_STORMSTRIKE', 5, 'Stoneskin stacks Stormstrike grants [tune].')
 STONESKIN_LAVA_LASH = const('STONESKIN_LAVA_LASH', 5, 'Stoneskin stacks Lava Lash grants [tune].')
 STONESKIN_CHAIN_LIGHTNING = const('STONESKIN_CHAIN_LIGHTNING', 1, 'Stoneskin stacks Chain Lightning grants per target hit [tune].')
-STONESKIN_MAX = const('STONESKIN_MAX', 25, 'Stoneskin stack cap [tune]; also spell 202206\'s CumulativeAura. 50 -> 30 (2026-11-28, gear-scaling tank survival pass, user ruling: Enhancement dual-wield tank the least survivable tank at about 70-75 s, shield tank about 80 s). 30 -> 25 (2026-11-28, gear-scaling tank survival pass round 2, user ruling: Enh DW tank 76.2 s, below Bear\'s 75 s).')
+# STONESKIN_MAX (const) retired in round 3 of the 2026-11-28 gear-scaling tank survival pass: the C++
+# (Shaman::GetStoneskinCap) reads 202206's CumulativeAura (StackAmount), so cap tuning is data-only (no rebuild).
 STONESKIN_OOC_MS = const('STONESKIN_OOC_MS', 120000, 'Out-of-combat time before the Stoneskin stacks fall off, ms [fixed].')
 
 

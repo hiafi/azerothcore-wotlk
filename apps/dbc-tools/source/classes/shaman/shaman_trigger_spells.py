@@ -140,7 +140,11 @@ def _toughness_clause(rank):
 # shield (Shield Strike 202450). The percent is every Toughness rank's DUMMY effect 3 ($s3, SHIELD_STRIKE_ARMOR_PCT), which
 # spell_sha_enh_stormstrike::ShieldStrike reads.
 _TOUGHNESS_SHIELD_STRIKE = (' While Rockbiter is active and you have a shield equipped, your Stormstrike also strikes with '
-                            'your shield, dealing Physical damage equal to $s3% of your shield\'s armor.')
+                            'your shield, dealing Physical damage equal to $s3% of your shield\'s armor. With a shield '
+                            'equipped, your maximum Stoneskin stacks are also reduced by $202454s2, but your chance to block '
+                            'is increased by $202454s1%.')
+# Round 3 of the 2026-11-28 gear-scaling tank survival pass (user ruling: Enhancement shield tank about 80 s): the shield
+# trade-off sentence above; values on the Rockbiter child 202454 (Shaman::SyncRockbiterChildren, Shaman::GetStoneskinCap).
 _TOUGHNESS_BAL3_NOTE = (' (2026-11-15, balance round 3 on the Normal-tier kits, user ruling: the shield tank\'s Stormstrike '
                         'also strikes with the shield) Effect 3 DUMMY = SHIELD_STRIKE_ARMOR_PCT (70, stored 69; 45, stored 44 '
                         'since 2026-11-15, balance round 5 on the Normal-tier kits, user ruling: shaman tank option B), the Shield '
