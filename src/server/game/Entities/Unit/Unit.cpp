@@ -7553,6 +7553,12 @@ void Unit::ModifyAuraState(AuraStateType flag, bool apply)
                 if ((*itr).second->IsRemoved())
                     continue;
 
+                // Custom: CasterAuraState is the caster's state, so only toggle auras this unit cast on itself. A
+                // debuff another unit cast here (Riposte's slow on a boss) was re-applied each time the boss
+                // blocked, drifting its attack speed (docs/bugs-and-fixes.md, "Boss swing speed drifts").
+                if ((*itr).second->GetCasterGUID() != GetGUID())
+                    continue;
+
                 if ((*itr).second->GetSpellInfo()->CasterAuraState == flag )
                     if (AuraApplication* aurApp = (*itr).second->GetApplicationOfTarget(GetGUID()))
                         (*itr).second->HandleAllEffects(aurApp, AURA_EFFECT_HANDLE_REAL, true);
@@ -7570,6 +7576,10 @@ void Unit::ModifyAuraState(AuraStateType flag, bool apply)
                 Unit::AuraMap& tAuras = GetOwnedAuras();
                 for (Unit::AuraMap::iterator itr = tAuras.begin(); itr != tAuras.end(); ++itr)
                 {
+                    // Custom: self-cast auras only, as in the apply branch above.
+                    if ((*itr).second->GetCasterGUID() != GetGUID())
+                        continue;
+
                     if ((*itr).second->GetSpellInfo()->CasterAuraState == flag )
                         if (AuraApplication* aurApp = (*itr).second->GetApplicationOfTarget(GetGUID()))
                             (*itr).second->HandleAllEffects(aurApp, AURA_EFFECT_HANDLE_REAL, false);
