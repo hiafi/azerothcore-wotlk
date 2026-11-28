@@ -4274,10 +4274,6 @@ void Spell::handle_immediate()
             // Apply haste mods
             if (unitCaster && (unitCaster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, m_spellInfo) || m_spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC)))
                 duration = int32(duration * unitCaster->GetFloatValue(UNIT_MOD_CAST_SPEED));
-            // Custom: channels: stock hasted duration, fixed ticks; DoTs keep the Cata behavior, b84f1011a.
-            // A DoT/HoT channel without ATTR5 hastes its interval (baseline DoT rule), so haste its channel too.
-            else
-                duration = CalcHastedChannelDuration(unitCaster, m_spellInfo, duration);
 
             m_spellState = SPELL_STATE_CASTING;
             if (unitCaster)

@@ -602,7 +602,8 @@ bool IsFixedCadencePeriodic(uint32 spellId)
 }
 
 // Custom: channels: stock hasted duration, fixed ticks; DoTs keep the Cata behavior, b84f1011a. Stock's
-// PERIODIC_HASTE / ATTR5 test plus the fork's baseline DoT/HoT rule (SpellInfo::HasPeriodicDamageOrHealEffect).
+// PERIODIC_HASTE / ATTR5 test plus the fork's baseline DoT/HoT rule (SpellInfo::HasPeriodicDamageOrHealEffect) for
+// non-channeled spells only: a channel is hasted exactly as in stock (PERIODIC_HASTE / ATTR5).
 bool IsHasteAffectedPeriodic(Unit const* caster, SpellInfo const* spellInfo)
 {
     if (!caster || !spellInfo)
@@ -610,15 +611,17 @@ bool IsHasteAffectedPeriodic(Unit const* caster, SpellInfo const* spellInfo)
 
     return caster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, spellInfo)
         || spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC)
-        || spellInfo->HasPeriodicDamageOrHealEffect();
+        || (spellInfo->HasPeriodicDamageOrHealEffect() && !spellInfo->IsChanneled());
 }
 
+// Custom: channels: stock hasted duration, fixed ticks; DoTs keep the Cata behavior, b84f1011a. Multiplied in double
+// so that the duration and the interval (CalculatePeriodic) round alike and never lose a tick to float error.
 int32 CalcHastedChannelDuration(Unit const* caster, SpellInfo const* spellInfo, int32 duration)
 {
     if (duration <= 0 || !IsHasteAffectedPeriodic(caster, spellInfo))
         return duration;
 
-    return int32(duration * caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
+    return int32(double(duration) * caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
 }
 
 void AuraEffect::CalculatePeriodicData()
@@ -688,10 +691,10 @@ void AuraEffect::CalculatePeriodic(Unit* caster, bool create, bool load)
         if (caster)
         {
             // Custom: channels: stock hasted duration, fixed ticks; DoTs keep the Cata behavior, b84f1011a.
-            // One test shared with the channel length (CalcHastedChannelDuration).
+            // One test shared with the channel length (CalcHastedChannelDuration); both multiply in double.
             bool const hasteAffectsPeriodic = IsHasteAffectedPeriodic(caster, m_spellInfo);
             if (hasteAffectsPeriodic && !IsFixedCadencePeriodic(m_spellInfo->Id))
-                m_amplitude = int32(m_amplitude * caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
+                m_amplitude = int32(double(m_amplitude) * caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
         }
     }
 

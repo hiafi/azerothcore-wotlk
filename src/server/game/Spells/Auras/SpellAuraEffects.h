@@ -37,8 +37,9 @@ bool IsFixedCadencePeriodic(uint32 spellId);
 
 // Custom: channels: stock hasted duration, fixed ticks; DoTs keep the Cata behavior, b84f1011a (gear scaling, user
 // ruling 2026-11-27). True when haste shortens this spell's tick interval (AuraEffect::CalculatePeriodic). A DoT/HoT
-// keeps its duration and gains ticks; a channel uses the same test to shrink the channel (Spell::handle_immediate)
-// and its own auras (Spell::DoSpellHitOnUnit), so it keeps its base tick count.
+// keeps its duration and gains ticks (the DoT/HoT clause skips channels); a channel uses stock's PERIODIC_HASTE /
+// ATTR5 test, the one Spell::handle_immediate hastes the channel with, for its own auras (Spell::DoSpellHitOnUnit)
+// too, so it keeps its base tick count.
 bool IsHasteAffectedPeriodic(Unit const* caster, SpellInfo const* spellInfo);
 
 // Custom: channels: stock hasted duration, fixed ticks; DoTs keep the Cata behavior, b84f1011a. `duration` (after

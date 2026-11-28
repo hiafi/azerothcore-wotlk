@@ -3620,8 +3620,9 @@ class spell_mage_magic_absorption : public AuraScript
 // used to leave its aura's duration unhasted, so with haste the aura lingered after the channel bar
 // ended (no longer: channels: stock hasted duration, fixed ticks, 2026-11-27; kept as a guard for a
 // recast that refreshes a still-present aura). A recast in that window refreshes the aura
-// (ModStackAmount: REAPPLY mode only, no REAL apply/remove). This SpellScript drops any leftover marker before this cast's own Clearcasting (CAST phase) or
-// Missile Barrage (FINISH phase) grant; the AuraScript re-syncs the marker on apply and on refresh.
+// (ModStackAmount: REAPPLY mode only, no REAL apply/remove). This SpellScript drops any leftover marker
+// before this cast's own Clearcasting (CAST phase) or Missile Barrage (FINISH phase) grant; the AuraScript
+// re-syncs the marker on apply and on refresh.
 class spell_mage_arcane_missiles_spell : public SpellScript
 {
     PrepareSpellScript(spell_mage_arcane_missiles_spell);
