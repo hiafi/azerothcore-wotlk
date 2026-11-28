@@ -1162,7 +1162,8 @@ spirit_guard_shell_202442 = _buff(
     'about 10.6 at 60 [tune]), added to what is left of the current shell and capped at STONESKIN_MAX stacks\' worth; the C++ '
     'reads E0 with Shaman::GetSelfAbsorbAmount and passes the total as bp0. 6 s [fixed], refreshed by each new crumble. No '
     'family bits. Visible, not consolidated; aura text number-free. No visual (it refreshes on most hits; V stage). '
-    'sp_potency 1 -> 0.25 (2026-11-01, DPS balance pass 1031 round R4, user ruling: shaman tank damage to ~750 / survival to ~80 s): about 2.6 per stack, 132 at the 50-stack cap.',
+    'sp_potency 1 -> 0.25 (2026-11-01, DPS balance pass 1031 round R4, user ruling: shaman tank damage to ~750 / survival to ~80 s): about 2.6 per stack, 132 at the 50-stack cap. Cap 50 -> 30 stacks\' worth with STONESKIN_MAX, tooltip text '
+    'with it (2026-11-28, gear-scaling tank survival pass, user ruling: Enhancement tank survival cut).',
     level=45, family=False,
 )
 
@@ -1328,7 +1329,7 @@ spirit_guard_stormstrike_r3_202453 = _spirit_guard_stormstrike(202453, 3)
 _SPIRIT_GUARD_BONUS = (1, 2, 3)
 _SPIRIT_GUARD_STONESKIN = (3, 6, 10)
 _SPIRIT_GUARD_CAPSTONE = ('While Rockbiter is active, each Stoneskin stack you lose to damage crumbles into stone, absorbing '
-                          + pot_text(spirit_guard_shell_202442) + ' damage, up to 50 stacks\' worth. Lasts 6 sec.')
+                          + pot_text(spirit_guard_shell_202442) + ' damage, up to 30 stacks\' worth. Lasts 6 sec.')
 
 
 def _spirit_guard(spell_id: int, rank: int):

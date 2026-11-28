@@ -1278,12 +1278,12 @@ def _self_heal_raw(description):
     }
 
 
-# ---- Endurance's Riposte heal 204004: HEAL_PCT 14% of max health [tune] (stored 13), once per Riposte hit ----
+# ---- Endurance's Riposte heal 204004: HEAL_PCT 10% of max health [tune] (stored 9), once per Riposte hit ----
 endurance_riposte_heal_204004 = spell(
     id=204004, name='Endurance', school=School.NORMAL, attributes=_ATTR0_IS_ABILITY, cast_time_ms=0, cooldown_ms=0,
     category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF,
     effects=[
-        Effect(type=EffectType.HEAL_PCT, base_points=13, implicit_target_a=_TARGET_UNIT_CASTER,
+        Effect(type=EffectType.HEAL_PCT, base_points=9, implicit_target_a=_TARGET_UNIT_CASTER,
                potency_excluded='percent of maximum health (Spell::EffectHealPct); a tank heal that scales with '
                                 'Stamina, not attack power'),
     ],
@@ -1292,7 +1292,9 @@ endurance_riposte_heal_204004 = spell(
           'max health [tune] (stored 13), A 1, self range, instant, no 0x80 so the heal shows in the combat log '
           '(Victory Rush 204409\'s frame), DmgClass NONE, no SkillLineAbility. Cast triggered on the rogue by '
           'Rogue::OnRiposteHit (once per Riposte hit; Improved Riposte\'s cleave never heals) with Enforcer Stance up '
-          'and Endurance rank 2 (13872) held. Endurance\'s rank text quotes $204004s1.',
+          'and Endurance rank 2 (13872) held. Endurance\'s rank text quotes $204004s1. eff0 HEAL_PCT 14% -> 10% (stored 13 -> 9) '
+          '(2026-11-28, gear-scaling tank survival pass, user ruling: Combat Rogue tank survival 101 s -> about 80 s; '
+          'Enforcer Stance only).',
     raw_overrides=_self_heal_raw('Heals you for $s1% of your maximum health.'),
 )
 
@@ -1319,8 +1321,8 @@ deflection_eviscerate_heal_204005 = spell(
     raw_overrides=_self_heal_raw('Heals you for a percentage of your maximum health.'),
 )
 
-# ---- Reinforced Leather's Between the Eyes shield 204006: 5% of max health per combo point [tune], 15 s, all schools --
-# eff0 SCHOOL_ABSORB misc 127 stored 0 / DieSides 0 (the script supplies the amount), eff1 DUMMY 5 per point (the
+# ---- Reinforced Leather's Between the Eyes shield 204006: 4% of max health per combo point [tune], 15 s, all schools --
+# eff0 SCHOOL_ABSORB misc 127 stored 0 / DieSides 0 (the script supplies the amount), eff1 DUMMY 4 per point (the
 # tooltip's $204006s2). A new shield replaces the running one (same caster: the refresh takes the new base amount).
 reinforced_leather_shield_204006 = _buff(
     204006, 'Reinforced Leather',
@@ -1328,7 +1330,7 @@ reinforced_leather_shield_204006 = _buff(
             misc_value=_MISC_ALL_SCHOOLS, implicit_target_a=_TARGET_UNIT_CASTER,
             potency_excluded='percent of maximum health per combo point: Rogue::ApplyCombatSpentClauses supplies the '
                              'amount (CountPctFromMaxHealth(eff1 x points spent)), the Storm\'s Bulwark 200028 shape'),
-     _aura(AuraType.DUMMY, 4,
+     _aura(AuraType.DUMMY, 3,
            potency_excluded='percent of maximum health per combo point, read by Rogue::ApplyCombatSpentClauses')],
     _ICON_REINFORCED_LEATHER, 15000, 'Absorbs damage.',
     notes='DPS balance pass 1031 (rogue tank capstones, user 2026-11-01): Reinforced Leather\'s capstone. eff0 aura 69 '
@@ -1336,5 +1338,7 @@ reinforced_leather_shield_204006 = _buff(
           'Rogue::ApplyCombatSpentClauses (CastCustomSpell bp0 = CountPctFromMaxHealth(eff1 x the points Between the '
           'Eyes actually spent)); eff1 aura DUMMY 5% per combo point [tune] (stored 4; the tooltip\'s $204006s2). '
           'Visible, non-passive, number-free aura text, 15 s, AttributesEx7 0 (not a Consolidated Buff), Ex1 0x20. '
-          'Needs Enforcer Stance and Reinforced Leather rank 3 (203962) at the spend; a new shield replaces the old.',
+          'Needs Enforcer Stance and Reinforced Leather rank 3 (203962) at the spend; a new shield replaces the old. '
+          'eff1 5% -> 4% per combo point (stored 4 -> 3) (2026-11-28, gear-scaling tank survival pass, user ruling: '
+          'Combat Rogue tank survival 101 s -> about 80 s; Enforcer Stance only).',
 )

@@ -766,7 +766,7 @@ namespace ShamanData
     constexpr int32 STONESKIN_CHAIN_LIGHTNING = 1; // Stoneskin stacks Chain Lightning grants per target hit [tune].
     constexpr int32 STONESKIN_EARTH_SHOCK = 15; // Stoneskin stacks Earth Shock grants, once per cast [tune].
     constexpr int32 STONESKIN_LAVA_LASH = 5; // Stoneskin stacks Lava Lash grants [tune].
-    constexpr int32 STONESKIN_MAX = 50; // Stoneskin stack cap [fixed]; also spell 202206's CumulativeAura.
+    constexpr int32 STONESKIN_MAX = 30; // Stoneskin stack cap [tune]; also spell 202206's CumulativeAura. 50 -> 30 (2026-11-28, gear-scaling tank survival pass, user ruling: Enhancement dual-wield tank the least survivable tank at about 70-75 s, shield tank about 80 s).
     constexpr int32 STONESKIN_OOC_MS = 120000; // Out-of-combat time before the Stoneskin stacks fall off, ms [fixed].
     constexpr int32 STONESKIN_STORMSTRIKE = 5; // Stoneskin stacks Stormstrike grants [tune].
     constexpr int32 TF_DURATION_MS = 10000; // Tidal Force: duration of the caster aura 202672, ms [fixed].

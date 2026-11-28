@@ -264,9 +264,9 @@ windfury_attack_oh_202205 = spell(
 # Stoneskin (shared doc "Stoneskin")
 # =====================================================================================================================
 
-# "Each stack of Stoneskin reduces all damage you take by 1%, up to 50 stacks. Taking damage erodes your stacks." A visible
+# "Each stack of Stoneskin reduces all damage you take by 1%, up to 30 stacks. Taking damage erodes your stacks." A visible
 # (not passive, not consolidated) buff, applied and stacked only by scripts (Shaman::AddStoneskin) while Rockbiter is up and
-# eroded by Shaman::ErodeStoneskin. CumulativeAura 50 is the StackAmount; aura 87 (damage taken %) misc 127 (all schools)
+# eroded by Shaman::ErodeStoneskin. CumulativeAura 30 (STONESKIN_MAX) is the StackAmount; aura 87 (damage taken %) misc 127 (all schools)
 # -1 per stack, stored -2 (live -1); AuraEffect::CalculateAmount multiplies it by the stack count. Permanent duration: the
 # 2 min out-of-combat timer is the shaman's (STONESKIN_OOC_MS). The buff icon is the Stoneskin Totem buff's (8072, 690).
 # Not a death-surviving aura: it falls off with the shaman's death and is re-earned.
@@ -279,11 +279,13 @@ stoneskin_202206 = spell(
     spell_icon_id=_ICON_STONESKIN,
     notes='SH0a A3, shared doc "Stoneskin": visible stacking buff, CumulativeAura (StackAmount) 50, aura 87 misc 127 stored -2 '
           '(live -1% per stack). Built by Shaman::AddStoneskin under Rockbiter, eroded by Shaman::ErodeStoneskin. No family '
-          'bits, no SkillLineAbility. Icon 690 = the Stoneskin Totem buff (8072).',
+          'bits, no SkillLineAbility. Icon 690 = the Stoneskin Totem buff (8072).'
+          ' CumulativeAura 50 -> 30, tooltip "up to 50 stacks" -> "up to 30 stacks" (2026-11-28, gear-scaling tank survival '
+          'pass, user ruling: Enhancement dual-wield tank the least survivable tank at about 70-75 s, shield tank about 80 s).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'EquippedItemClass': -1, 'SpellLevel': 1, 'CastingTimeIndex': 1,
-        'CumulativeAura': 50,
-        'Description_Lang_enUS': 'Each stack of Stoneskin reduces all damage you take by 1%, up to 50 stacks. '
+        'CumulativeAura': 30,
+        'Description_Lang_enUS': 'Each stack of Stoneskin reduces all damage you take by 1%, up to 30 stacks. '
                                  'Taking damage erodes your stacks.',
         'AuraDescription_Lang_enUS': 'Damage taken reduced. Taking damage erodes this effect.',
     },
@@ -294,7 +296,7 @@ STONESKIN_EARTH_SHOCK = const('STONESKIN_EARTH_SHOCK', 15, 'Stoneskin stacks Ear
 STONESKIN_STORMSTRIKE = const('STONESKIN_STORMSTRIKE', 5, 'Stoneskin stacks Stormstrike grants [tune].')
 STONESKIN_LAVA_LASH = const('STONESKIN_LAVA_LASH', 5, 'Stoneskin stacks Lava Lash grants [tune].')
 STONESKIN_CHAIN_LIGHTNING = const('STONESKIN_CHAIN_LIGHTNING', 1, 'Stoneskin stacks Chain Lightning grants per target hit [tune].')
-STONESKIN_MAX = const('STONESKIN_MAX', 50, 'Stoneskin stack cap [fixed]; also spell 202206\'s CumulativeAura.')
+STONESKIN_MAX = const('STONESKIN_MAX', 30, 'Stoneskin stack cap [tune]; also spell 202206\'s CumulativeAura. 50 -> 30 (2026-11-28, gear-scaling tank survival pass, user ruling: Enhancement dual-wield tank the least survivable tank at about 70-75 s, shield tank about 80 s).')
 STONESKIN_OOC_MS = const('STONESKIN_OOC_MS', 120000, 'Out-of-combat time before the Stoneskin stacks fall off, ms [fixed].')
 
 

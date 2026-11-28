@@ -154,6 +154,10 @@ holy_heal_tooltip = tooltip_vars(
     illum=talent_mult([20210, 20212, 20213], effect=3),  # Illumination eff3 +10/20/30% Light's Hammer
     shock=product("hl", "glim"),
     lh=product("hl", "illum"),
+    # Holy Guidance eff3 +3/7/10% Holy Light healing (2026-11-28, gear-scaling tank survival pass: Holy Light's base
+    # healing x1/1.1 cut Protection self-healing; Holy gets it back at 3/3 Holy Guidance). Holy Light 635 only.
+    hg=talent_mult([31837, 31838, 31839], effect=3),
+    hlhg=product("hl", "hg"),
 )
 
 # 1106: Concentration Aura 19746 and Concentration Burst 201164 (HOLY §5.2). Improved Concentration Aura 20254-6 eff0
